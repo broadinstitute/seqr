@@ -6,7 +6,7 @@ from datetime import datetime
 from django.core.exceptions import PermissionDenied
 
 from seqr.views.utils.test_utils import AuthenticationTestCase, TEST_TERRA_API_ROOT_URL, GOOGLE_TOKEN_RESULT,\
-    GOOGLE_ACCESS_TOKEN_URL, TOKEN_AUTH_TIME, REGISTER_RESPONSE, TEST_SERVICE_ACCOUNT, TEST_OAUTH2_KEY
+    GOOGLE_ACCESS_TOKEN_URL, TOKEN_AUTH_TIME, REGISTER_RESPONSE, TEST_SERVICE_ACCOUNT, TEST_OAUTH2_PROVIDER
 from seqr.views.utils.terra_api_utils import list_anvil_workspaces, user_get_workspace_acl,\
     anvil_call, user_get_workspace_access_level, TerraNotFoundException, TerraAPIException, \
     TerraRefreshTokenFailedException,  is_anvil_authenticated, is_google_authenticated, remove_token, \
@@ -31,7 +31,7 @@ EXCEPTIONS = {
 class TerraApiUtilsHelpersCase(AuthenticationTestCase):
     fixtures = ['users', 'social_auth']
 
-    @mock.patch('seqr.views.utils.terra_api_utils.SOCIAL_AUTH_GOOGLE_OAUTH2_KEY')
+    @mock.patch('seqr.views.utils.terra_api_utils.SOCIAL_AUTH_PROVIDER', '')
     def test_is_google_authenticated(self, mock_social_auth_key):
         r = is_google_authenticated(self.analyst_user)
         self.assertTrue(r)
@@ -48,7 +48,7 @@ class TerraApiUtilsHelpersCase(AuthenticationTestCase):
         self.assertFalse(r)
 
     @mock.patch('seqr.views.utils.terra_api_utils.TERRA_API_ROOT_URL')
-    @mock.patch('seqr.views.utils.terra_api_utils.SOCIAL_AUTH_GOOGLE_OAUTH2_KEY')
+    @mock.patch('seqr.views.utils.terra_api_utils.SOCIAL_AUTH_PROVIDER', '')
     def test_is_anvil_authenticated(self, mock_social_auth_key, mock_terra_url):
         mock_social_auth_key.__bool__.return_value = False
         mock_terra_url.__bool__.return_value = True
@@ -70,7 +70,7 @@ class TerraApiUtilsHelpersCase(AuthenticationTestCase):
 
 @mock.patch('seqr.views.utils.terra_api_utils.SERVICE_ACCOUNT_FOR_ANVIL', TEST_SERVICE_ACCOUNT)
 @mock.patch('seqr.views.utils.terra_api_utils.TERRA_API_ROOT_URL', TEST_TERRA_API_ROOT_URL)
-@mock.patch('seqr.views.utils.terra_api_utils.SOCIAL_AUTH_GOOGLE_OAUTH2_KEY', TEST_OAUTH2_KEY)
+@mock.patch('seqr.views.utils.terra_api_utils.SOCIAL_AUTH_PROVIDER', TEST_OAUTH2_PROVIDER)
 @mock.patch('seqr.views.utils.terra_api_utils.time.time', lambda: AUTH_EXTRA_DATA['auth_time'] + 10)
 @mock.patch('seqr.utils.redis_utils.logger', mock.MagicMock())
 class TerraApiUtilsCallsCase(AuthenticationTestCase):

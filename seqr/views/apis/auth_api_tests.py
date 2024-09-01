@@ -88,7 +88,7 @@ class AuthAPITest(TestCase):
         self.assertEqual(response.status_code, 401)
         self.assertEqual(response.reason_phrase, 'Invalid credentials')
 
-    @mock.patch('seqr.views.utils.terra_api_utils.SOCIAL_AUTH_GOOGLE_OAUTH2_KEY', 'test_key')
+    @mock.patch('seqr.views.utils.terra_api_utils.SOCIAL_AUTH_PROVIDER', 'cloud')
     def test_login_view_with_google(self):
         url = reverse(login_view)
         response = self.client.post(url)
