@@ -287,7 +287,7 @@ class BaseHailTableQuery(object):
         project_samples = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
         for s in sample_data:
             families.add(s['family_guid'])
-            project_samples[s['project_guid']][s['family_guid']][s['sample_type']].append(s)
+            project_samples[s['project_guid']][s['sample_type']][s['family_guid']].append(s)
 
         num_families = len(families)
         logger.info(f'Loading {self.DATA_TYPE} data for {num_families} families in {len(project_samples)} projects')
@@ -297,13 +297,12 @@ class BaseHailTableQuery(object):
         if len(project_samples) == 1:
             project_guid = list(project_samples.keys())[0]
             # for variant lookup, project_samples looks like
-            #   {<project_guid>: {<family_guid>: {<sample_type>: True}, {<family_guid>: {<sample_type_2>: True}}, <project_guid_2>: ...}
+            #   {<project_guid>: {<sample_type>: {<family_guid>: True}, <sample_type_2>: {<family_guid_2>: True}}, <project_guid_2>: ...}
             # for variant search, project_samples looks like
-            #   {<project_guid>: {<family_guid>: {<sample_type>: [<sample_data>, <sample_data>, ...], <sample_type_2>: ...}, <family_guid_2>: ...}, <project_guid_2>: ...}
-            first_family_samples = list(project_samples[project_guid].values())[0]
-            sample_type = list(first_family_samples.keys())[0]
+            #   {<project_guid>: {<sample_type>: {<family_guid>: [<sample_data>, <sample_data>, ...]}, <sample_type_2>: {<family_guid_2>: []} ...}, <project_guid_2>: ...}
+            sample_type = list(project_samples[project_guid].keys())[0]
             project_ht = self._read_table(f'projects/{sample_type}/{project_guid}.ht', use_ssd_dir=True)
-            return self._filter_entries_table(project_ht, project_samples[project_guid], **kwargs)
+            return self._filter_entries_table(project_ht, project_samples[project_guid][sample_type], **kwargs)
 
         # Need to chunk tables or else evaluating table globals throws LineTooLong exception
         # However, minimizing number of chunks minimizes number of aggregations/ evals and improves performance
@@ -314,14 +313,13 @@ class BaseHailTableQuery(object):
         project_hts = []
         sample_data = {}
         for project_guid, project_sample_data in project_samples.items():
-            first_family_samples = list(project_sample_data.values())[0]
-            sample_type = list(first_family_samples.keys())[0]
+            sample_type = list(project_sample_data.keys())[0]
             project_ht = self._read_table(f'projects/{sample_type}/{project_guid}.ht', use_ssd_dir=True)
 
             if project_ht is None:
                 continue
             project_hts.append(project_ht.select_globals('sample_type', 'family_guids', 'family_samples'))
-            sample_data.update(project_sample_data)
+            sample_data.update(project_sample_data[sample_type])
 
             if len(project_hts) >= chunk_size:
                 self._filter_merged_project_hts(
@@ -342,14 +340,14 @@ class BaseHailTableQuery(object):
     def import_filtered_table(self, project_samples, num_families, **kwargs):
         if num_families == 1:
             family_sample_data = list(project_samples.values())[0]
-            family_guid = list(family_sample_data.keys())[0]
-            sample_type = list(family_sample_data[family_guid].keys())[0]
+            sample_type = list(family_sample_data.keys())[0]
+            family_guid = list(family_sample_data[sample_type].keys())[0]
             family_ht = self._read_table(f'families/{sample_type}/{family_guid}.ht', use_ssd_dir=True)
             family_ht = family_ht.transmute(family_entries=[family_ht.entries])
             family_ht = family_ht.annotate_globals(
                 family_guids=[family_guid], family_samples={family_guid: family_ht.sample_ids},
             )
-            families_ht, comp_het_families_ht = self._filter_entries_table(family_ht, family_sample_data, **kwargs)
+            families_ht, comp_het_families_ht = self._filter_entries_table(family_ht, family_sample_data[sample_type], **kwargs)
         else:
             families_ht, comp_het_families_ht = self._load_filtered_project_hts(project_samples, **kwargs)
 
@@ -398,14 +396,6 @@ class BaseHailTableQuery(object):
 
     def _filter_entries_table(self, ht, sample_data, inheritance_filter=None, quality_filter=None, **kwargs):
         ht = self._prefilter_entries_table(ht, **kwargs)
-
-        # Temporarily reset sample_data until full blended eS/GS support is added
-        for family_guid, samples_by_sample_type in sample_data.items():
-            if isinstance(list(samples_by_sample_type.values())[0], list):
-                samples = [s for samples in samples_by_sample_type.values() for s in samples]
-                sample_data[family_guid] = samples
-            else:
-                sample_data[family_guid] = True
 
         ht, sorted_family_sample_data = self._add_entry_sample_families(ht, sample_data)
 
@@ -647,10 +637,7 @@ class BaseHailTableQuery(object):
             intervals = [[f'chr{interval[0]}', *interval[1:]] for interval in (intervals or [])]
 
         if len(intervals) > MAX_GENE_INTERVALS and len(intervals) == len(gene_ids or []):
-            super_intervals = defaultdict(lambda: (1e9, 0))
-            for chrom, start, end in intervals:
-                super_intervals[chrom] = (min(super_intervals[chrom][0], start), max(super_intervals[chrom][1], end))
-            intervals = [(chrom, start, end) for chrom, (start, end) in super_intervals.items()]
+            intervals = self.cluster_intervals(sorted(intervals))
 
         parsed_intervals = [
             hl.eval(hl.locus_interval(*interval, reference_genome=self.GENOME_VERSION, invalid_missing=True))
@@ -668,6 +655,21 @@ class BaseHailTableQuery(object):
             )
 
         return parsed_intervals
+
+    @classmethod
+    def cluster_intervals(cls, intervals, distance=100000, max_intervals=MAX_GENE_INTERVALS):
+        if len(intervals) <= max_intervals:
+            return intervals
+
+        merged_intervals = [intervals[0]]
+        for chrom, start, end in intervals[1:]:
+            prev_chrom, prev_start, prev_end = merged_intervals[-1]
+            if chrom == prev_chrom and start - prev_end < distance:
+                merged_intervals[-1] = [chrom, prev_start, max(prev_end, end)]
+            else:
+                merged_intervals.append([chrom, start, end])
+
+        return cls.cluster_intervals(merged_intervals, distance=distance+100000, max_intervals=max_intervals)
 
     def _should_add_chr_prefix(self):
         return self.GENOME_VERSION == GENOME_VERSION_GRCh38

@@ -58,12 +58,16 @@ def send_html_email(email_body, process_message=None, **kwargs):
 def send_project_notification(project, notification, email, subject):
     users = project.subscribers.user_set.all()
     notify.send(project, recipient=users, verb=notification)
-    send_html_email(
+    email_kwargs = dict(
         email_body=BASE_EMAIL_TEMPLATE.format(email),
         to=list(users.values_list('email', flat=True)),
         subject=subject,
         process_message=_set_bulk_notification_stream,
     )
+    try:
+        send_html_email(**email_kwargs)
+    except Exception as e:
+        logger.error(f'Error sending project email for {project.guid}: {e}', extra={'detail': email_kwargs})
 
 
 def _set_bulk_notification_stream(message):

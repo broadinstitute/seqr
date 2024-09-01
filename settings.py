@@ -82,8 +82,8 @@ CSP_CONNECT_SRC = ("'self'", 'https://gtexportal.org', 'https://www.google-analy
                    'https://reg.genome.network')
 CSP_SCRIPT_SRC = ("'self'", "'unsafe-eval'", 'https://www.googletagmanager.com')
 CSP_IMG_SRC = ("'self'", 'https://www.google-analytics.com', 'https://storage.googleapis.com',
-               'https://user-images.githubusercontent.com',  # for images in GitHub discussions on Feature Updates page
-               'data:')
+   'https://user-images.githubusercontent.com', 'https://private-user-images.githubusercontent.com', # for images in GitHub discussions on Feature Updates page
+   'data:')
 CSP_OBJECT_SRC = ("'none'")
 CSP_BASE_URI = ("'none'")
 # IGV js injects CSS into the page head so there is no way to set nonce. Therefore, support hashed value of the CSS
@@ -154,6 +154,8 @@ else:
     GENERATED_FILES_DIR = os.path.join(os.environ.get('STATIC_MEDIA_DIR', BASE_DIR), 'generated_files')
     MEDIA_ROOT = os.path.join(GENERATED_FILES_DIR, 'media/')
     MEDIA_URL = '/media/'
+
+LOADING_DATASETS_DIR = os.environ.get('LOADING_DATASETS_DIR')
 
 LOGGING = {
     'version': 1,
@@ -350,6 +352,10 @@ HAIL_BACKEND_SERVICE_PORT = int(os.environ.get('HAIL_BACKEND_SERVICE_PORT', '500
 
 REDIS_SERVICE_HOSTNAME = os.environ.get('REDIS_SERVICE_HOSTNAME', 'localhost')
 REDIS_SERVICE_PORT = int(os.environ.get('REDIS_SERVICE_PORT', '6379'))
+
+PIPELINE_RUNNER_HOSTNAME = os.environ.get('PIPELINE_RUNNER_HOSTNAME', 'pipeline-runner')
+PIPELINE_RUNNER_PORT = os.environ.get('PIPELINE_RUNNER_PORT', '6000')
+PIPELINE_RUNNER_SERVER = f'http://{PIPELINE_RUNNER_HOSTNAME}:{PIPELINE_RUNNER_PORT}'
 
 # Matchmaker
 MME_DEFAULT_CONTACT_NAME = 'Samantha Baxter'

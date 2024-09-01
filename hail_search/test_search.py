@@ -12,6 +12,7 @@ from hail_search.test_utils import get_hail_search_body, FAMILY_2_VARIANT_SAMPLE
     FAMILY_2_MITO_SAMPLE_DATA, FAMILY_2_ALL_SAMPLE_DATA, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3, \
     EXPECTED_SAMPLE_DATA_WITH_SEX, SV_WGS_SAMPLE_DATA_WITH_SEX, VARIANT_LOOKUP_VARIANT
 from hail_search.web_app import init_web_app, sync_to_async_hail_query
+from hail_search.queries.base import BaseHailTableQuery
 
 PROJECT_2_VARIANT = {
     'variantId': '1-10146-ACC-A',
@@ -580,6 +581,26 @@ class HailSearchTestCase(AioHTTPTestCase):
             [SV_VARIANT1, SV_VARIANT2], sample_data=SV_WGS_SAMPLE_DATA, intervals=nearest_tss_gene_intervals,
             gene_ids=['ENSG00000171621'],
         )
+
+    async def test_cluster_intervals(self):
+        intervals = [
+            ['1', 11785723, 11806455], ['1', 91500851, 91525764], ['2', 1234, 5678], ['2', 12345, 67890],
+            ['7', 1, 11100], ['7', 202020, 20202020],
+        ]
+
+        self.assertListEqual(BaseHailTableQuery.cluster_intervals(intervals, max_intervals=5), [
+            ['1', 11785723, 11806455], ['1', 91500851, 91525764], ['2', 1234, 67890],
+            ['7', 1, 11100], ['7', 202020, 20202020],
+        ])
+
+        self.assertListEqual(BaseHailTableQuery.cluster_intervals(intervals, max_intervals=4), [
+            ['1', 11785723, 11806455], ['1', 91500851, 91525764], ['2', 1234, 67890], ['7', 1, 20202020],
+        ])
+
+        self.assertListEqual(BaseHailTableQuery.cluster_intervals(intervals, max_intervals=3), [
+            ['1', 11785723, 91525764], ['2', 1234, 67890], ['7', 1, 20202020],
+        ])
+
 
     async def test_variant_id_search(self):
         await self._assert_expected_search([VARIANT2], omit_data_type='SV_WES', **RSID_SEARCH)

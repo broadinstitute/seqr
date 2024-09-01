@@ -15,16 +15,17 @@ from django.views.decorators.csrf import csrf_exempt
 from requests.exceptions import ConnectionError as RequestConnectionError
 
 from seqr.utils.communication_utils import send_project_notification
+from seqr.utils.search.add_data_utils import prepare_data_loading_request
 from seqr.utils.search.utils import get_search_backend_status, delete_search_backend_data
 from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.vcf_utils import validate_vcf_exists
 
-from seqr.views.utils.airflow_utils import trigger_data_loading, write_data_loading_pedigree
-from seqr.views.utils.airtable_utils import AirtableSession
+from seqr.views.utils.airflow_utils import trigger_airflow_data_loading
+from seqr.views.utils.airtable_utils import AirtableSession, LOADABLE_PDO_STATUSES, AVAILABLE_PDO_STATUS
 from seqr.views.utils.dataset_utils import load_rna_seq, load_phenotype_prioritization_data_file, RNA_DATA_TYPE_CONFIGS, \
-    post_process_rna_data
+    post_process_rna_data, convert_django_meta_to_http_headers
 from seqr.views.utils.file_utils import parse_file, get_temp_file_path, load_uploaded_file, persist_temp_file
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
@@ -33,7 +34,7 @@ from seqr.views.utils.permissions_utils import data_manager_required, pm_or_data
 from seqr.models import Sample, RnaSample, Individual, Project, PhenotypePrioritization
 
 from settings import KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD, KIBANA_ELASTICSEARCH_USER, \
-    SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, BASE_URL
+    SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, BASE_URL, LOADING_DATASETS_DIR, PIPELINE_RUNNER_SERVER
 
 logger = SeqrLogger(__name__)
 
@@ -432,28 +433,13 @@ def load_phenotype_prioritization_data(request):
     })
 
 
-@data_manager_required
-def write_pedigree(request, project_guid):
-    project = Project.objects.get(guid=project_guid)
-    try:
-        write_data_loading_pedigree(project, request.user)
-    except ValueError as e:
-        return create_json_response({'error': str(e)}, status=400)
-
-    return create_json_response({'success': True})
-
-
 DATA_TYPE_FILE_EXTS = {
     Sample.DATASET_TYPE_MITO_CALLS: ('.mt',),
     Sample.DATASET_TYPE_SV_CALLS: ('.bed', '.bed.gz'),
 }
 
-LOADABLE_PDO_STATUSES = [
-    'On hold for phenotips, but ready to load',
-    'Methods (Loading)',
-]
 AVAILABLE_PDO_STATUSES = {
-    'Available in seqr',
+    AVAILABLE_PDO_STATUS,
     'Historic',
 }
 
@@ -472,16 +458,19 @@ def get_loaded_projects(request, sample_type, dataset_type):
     projects = get_internal_projects().filter(is_demo=False)
     project_samples = None
     if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
-        project_samples = _fetch_airtable_loadable_project_samples(request.user)
-        projects = projects.filter(guid__in=project_samples.keys())
+        if AirtableSession.is_airtable_enabled():
+            project_samples = _fetch_airtable_loadable_project_samples(request.user)
+            projects = projects.filter(guid__in=project_samples.keys())
         exclude_sample_type = Sample.SAMPLE_TYPE_WES if sample_type == Sample.SAMPLE_TYPE_WGS else Sample.SAMPLE_TYPE_WGS
         # Include projects with either the matched sample type OR with no loaded data
         projects = projects.exclude(family__individual__sample__sample_type=exclude_sample_type)
     else:
+        # All other data types can only be loaded to projects which already have loaded data
         projects = projects.filter(family__individual__sample__sample_type=sample_type)
 
     projects = projects.distinct().order_by('name').values('name', projectGuid=F('guid'), dataTypeLastLoaded=Max(
-        'family__individual__sample__loaded_date', filter=Q(family__individual__sample__dataset_type=dataset_type),
+        'family__individual__sample__loaded_date',
+        filter=Q(family__individual__sample__dataset_type=dataset_type) & Q(family__individual__sample__sample_type=sample_type),
     ))
 
     if project_samples:
@@ -520,21 +509,28 @@ def load_data(request):
         missing = sorted(set(project_samples.keys()) - {p.guid for p in project_models})
         return create_json_response({'error': f'The following projects are invalid: {", ".join(missing)}'}, status=400)
 
-    additional_project_files = None
+    has_airtable = AirtableSession.is_airtable_enabled()
     individual_ids = None
-    if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
+    if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS and has_airtable:
         individual_ids = _get_valid_project_samples(project_samples, sample_type, request.user)
-        additional_project_files = {
-            project_guid: (f'{project_guid}_ids', ['s'], [{'s': sample_id} for sample_id in sample_ids])
-            for project_guid, sample_ids in project_samples.items()
-        }
 
-    success_message = f'*{request.user.email}* triggered loading internal {sample_type} {dataset_type} data for {len(projects)} projects'
-    trigger_data_loading(
-        project_models, sample_type, dataset_type, request_json['filePath'], request.user, success_message,
-        SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, f'ERROR triggering internal {sample_type} {dataset_type} loading',
-        is_internal=True, individual_ids=individual_ids, additional_project_files=additional_project_files,
+    loading_args = (
+        project_models, sample_type, dataset_type, request_json['genomeVersion'], request_json['filePath'],
     )
+    if has_airtable:
+        success_message = f'*{request.user.email}* triggered loading internal {sample_type} {dataset_type} data for {len(projects)} projects'
+        error_message = f'ERROR triggering internal {sample_type} {dataset_type} loading'
+        trigger_airflow_data_loading(
+            *loading_args, user=request.user, success_message=success_message, error_message=error_message,
+            success_slack_channel=SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, is_internal=True, individual_ids=individual_ids,
+        )
+    else:
+        request_json, _ = prepare_data_loading_request(
+            *loading_args, user=request.user, pedigree_dir=LOADING_DATASETS_DIR, raise_pedigree_error=True,
+        )
+        response = requests.post(f'{PIPELINE_RUNNER_SERVER}/loading_pipeline_enqueue', json=request_json, timeout=60)
+        response.raise_for_status()
+        logger.info('Triggered loading pipeline', request.user, detail=request_json)
 
     return create_json_response({'success': True})
 
@@ -619,7 +615,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 @data_manager_required
 @csrf_exempt
 def proxy_to_kibana(request):
-    headers = _convert_django_meta_to_http_headers(request.META)
+    headers = convert_django_meta_to_http_headers(request)
     headers['Host'] = KIBANA_SERVER
     if KIBANA_ELASTICSEARCH_PASSWORD:
         token = base64.b64encode('{}:{}'.format(KIBANA_ELASTICSEARCH_USER, KIBANA_ELASTICSEARCH_PASSWORD).encode('utf-8'))
@@ -653,19 +649,3 @@ def proxy_to_kibana(request):
     except (ConnectionError, RequestConnectionError) as e:
         logger.error(str(e), request.user)
         return HttpResponse("Error: Unable to connect to Kibana {}".format(e), status=400)
-
-
-def _convert_django_meta_to_http_headers(request_meta_dict):
-    """Converts django request.META dictionary into a dictionary of HTTP headers."""
-
-    def convert_key(key):
-        # converting Django's all-caps keys (eg. 'HTTP_RANGE') to regular HTTP header keys (eg. 'Range')
-        return key.replace("HTTP_", "").replace('_', '-').title()
-
-    http_headers = {
-        convert_key(key): str(value).lstrip()
-        for key, value in request_meta_dict.items()
-        if key.startswith("HTTP_") or (key in ('CONTENT_LENGTH', 'CONTENT_TYPE') and value)
-    }
-
-    return http_headers
