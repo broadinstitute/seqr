@@ -690,7 +690,8 @@ class HailSearchTestCase(AioHTTPTestCase):
             expected_results, gene_counts=GENE_COUNTS, sample_data=MULTI_PROJECT_SAMPLE_TYPES_SAMPLE_DATA,
         )
 
-        # Variant is de novo in exome but maternally inherited in genome. Expect variant to be returned.
+        # Variant is de novo in exome but maternally inherited in genome.
+        # Expect variant with genotypes from both sample types to be returned.
         inheritance_mode = 'de_novo'
         await self._assert_expected_search(
             [FAMILY_4_VARIANT], sample_data=FAMILY_4_SAMPLE_DATA, inheritance_mode=inheritance_mode,

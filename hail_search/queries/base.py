@@ -507,26 +507,8 @@ class BaseHailTableQuery(object):
             wgs_ht = wgs_ht.rename({'family_entries': 'wgs_family_entries', 'filters': 'wgs_filters'})
             ht = wes_ht.join(wgs_ht, how='outer')
 
-            # Filter by quality, keeping variants that pass quality filter in at least one sample type
-            wes_passes_quality_filter = self._get_family_passes_quality_filter(quality_filter, ht, 'wes_filters')
-            if wes_passes_quality_filter is not None:
-                ht = ht.annotate(
-                    wes_passes=ht.wes_family_entries.map(
-                        lambda entries: hl.or_missing(wes_passes_quality_filter(entries), entries)
-                    ))
-            else:
-                ht = ht.annotate(wes_passes=ht.wes_family_entries)
-
-            wgs_passes_quality_filter = self._get_family_passes_quality_filter(quality_filter, ht, 'wgs_filters')
-            if wgs_passes_quality_filter is not None:
-                ht = ht.annotate(
-                    wgs_passes=ht.wgs_family_entries.map(
-                        lambda entries: hl.or_missing(wgs_passes_quality_filter(entries), entries)
-                    ))
-            else:
-                ht = ht.annotate(wgs_passes=ht.wgs_family_entries)
-
-            ht = ht.filter(ht.wes_passes.any(hl.is_defined) | ht.wgs_passes.any(hl.is_defined))
+            # Filter by quality, keeping variants that pass quality filter in at least one sample type.
+            ht = self._filter_quality_both_sample_types(ht, quality_filter)
 
             # Filter by inheritance, keeping both genotypes for variants even if only one passes inheritance
             ht, ch_ht =  self._filter_inheritance_both_sample_types(
@@ -538,31 +520,6 @@ class BaseHailTableQuery(object):
                 filtered_comp_het_project_hts.append(self._merge_both_sample_types_project_ht(ch_ht))
 
         return filtered_project_hts, filtered_comp_het_project_hts
-
-    @staticmethod
-    def _merge_both_sample_types_project_ht(ht: hl.Table):
-        ht = ht.drop('wes_passes', 'wgs_passes')
-        family_entries_dtype = hl.tarray(hl.tstruct(
-            GQ=hl.tint32,
-            AB=hl.tfloat64,
-            DP=hl.tint32,
-            GT=hl.tcall,
-            sampleType=hl.tstr,
-            familyGuid=hl.tstr,
-            sampleId=hl.tstr,
-            individualGuid=hl.tstr,
-            affected_id=hl.tint32,
-            is_male=hl.tbool
-        ))
-        ht = ht.transmute(
-            family_entries=hl.coalesce(ht.wes_family_entries, hl.empty_array(family_entries_dtype)).extend(
-                hl.coalesce(ht.wgs_family_entries, hl.empty_array(family_entries_dtype))
-            ),
-            filters=hl.coalesce(ht.wes_filters, hl.empty_set(hl.tstr)).union(
-                hl.coalesce(ht.wgs_filters, hl.empty_set(hl.tstr))
-            )
-        )
-        return ht.transmute_globals(family_guids=ht.family_guids.extend(ht.family_guids_1))
 
     def _add_entry_sample_families(self, ht: hl.Table, sample_data: dict, sample_type: str):
         ht_globals = hl.eval(ht.globals)
@@ -661,11 +618,58 @@ class BaseHailTableQuery(object):
             ht = ht.filter(ht.family_entries.any(hl.is_defined)).select_globals('family_guids')
         return ht, comp_het_ht
 
+
+    def _filter_quality_both_sample_types(self, ht: hl.Table, quality_filter: dict):
+        wes_passes_quality_filter = self._get_family_passes_quality_filter(quality_filter, ht, 'wes_filters')
+        if wes_passes_quality_filter is not None:
+            ht = ht.annotate(
+                wes_passes=ht.wes_family_entries.map(
+                    lambda entries: hl.or_missing(wes_passes_quality_filter(entries), entries)
+                ))
+        else:
+            ht = ht.annotate(wes_passes=ht.wes_family_entries)
+        wgs_passes_quality_filter = self._get_family_passes_quality_filter(quality_filter, ht, 'wgs_filters')
+        if wgs_passes_quality_filter is not None:
+            ht = ht.annotate(
+                wgs_passes=ht.wgs_family_entries.map(
+                    lambda entries: hl.or_missing(wgs_passes_quality_filter(entries), entries)
+                ))
+        else:
+            ht = ht.annotate(wgs_passes=ht.wgs_family_entries)
+        ht = ht.filter(ht.wes_passes.any(hl.is_defined) | ht.wgs_passes.any(hl.is_defined))
+        return ht
+
+    @staticmethod
+    def _merge_both_sample_types_project_ht(ht: hl.Table):
+        ht = ht.drop('wes_passes', 'wgs_passes')
+        family_entries_dtype = hl.tarray(hl.tstruct(
+            GQ=hl.tint32,
+            AB=hl.tfloat64,
+            DP=hl.tint32,
+            GT=hl.tcall,
+            sampleType=hl.tstr,
+            familyGuid=hl.tstr,
+            sampleId=hl.tstr,
+            individualGuid=hl.tstr,
+            affected_id=hl.tint32,
+            is_male=hl.tbool
+        ))
+        ht = ht.transmute(
+            family_entries=hl.coalesce(ht.wes_family_entries, hl.empty_array(family_entries_dtype)).extend(
+                hl.coalesce(ht.wgs_family_entries, hl.empty_array(family_entries_dtype))
+            ),
+            filters=hl.coalesce(ht.wes_filters, hl.empty_set(hl.tstr)).union(
+                hl.coalesce(ht.wgs_filters, hl.empty_set(hl.tstr))
+            )
+        )
+        return ht.transmute_globals(family_guids=ht.family_guids.extend(ht.family_guids_1))
+
     def _annotate_families_inheritance(
         self, ht, inheritance_mode, inheritance_filter, sorted_family_sample_data, sample_type=None,
     ):
         individual_genotype_filter = (inheritance_filter or {}).get('genotype')
 
+        # Create a mapping of genotypes to check against a list of samples for a family
         entry_indices_by_gt = defaultdict(lambda: defaultdict(list))
         for family_index, samples in enumerate(sorted_family_sample_data):
             for sample_index, s in enumerate(samples):
@@ -707,20 +711,23 @@ class BaseHailTableQuery(object):
         return ht
 
     @classmethod
-    def _valid_genotype_family_entries(cls, entries, gentoype_entry_indices, genotype, min_unaffected):
-        is_valid = hl.is_missing(gentoype_entry_indices) | gentoype_entry_indices.all(
+    def _valid_genotype_family_entries(cls, entries: list, genotype_entry_indices, genotype: str, min_unaffected: int):
+        is_valid = hl.is_missing(genotype_entry_indices) | genotype_entry_indices.all(
             lambda i: cls.GENOTYPE_QUERY_MAP[genotype](entries[i].GT)
         )
         if min_unaffected is not None and genotype == HAS_REF:
-            unaffected_filter = gentoype_entry_indices.any(
+            unaffected_filter = genotype_entry_indices.any(
                 lambda i: cls.GENOTYPE_QUERY_MAP[REF_REF](entries[i].GT)
             )
             if min_unaffected < 2:
-                unaffected_filter |= gentoype_entry_indices.size() < 2
+                unaffected_filter |= genotype_entry_indices.size() < 2
             is_valid &= unaffected_filter
         return hl.or_missing(is_valid, entries)
 
-    def _filter_inheritance_both_sample_types(self, ht, inheritance_filter, sorted_wes_family_sample_data, sorted_wgs_family_sample_data):
+    def _filter_inheritance_both_sample_types(
+        self, ht, inheritance_filter, sorted_wes_family_sample_data, sorted_wgs_family_sample_data
+    ):
+        # At least 1 family member must have non-ref gt
         any_valid_entry, is_any_affected = self._get_any_family_member_gt_has_alt_filter()
         ht = ht.annotate(
             wes_passes=ht.wes_family_entries.map(
