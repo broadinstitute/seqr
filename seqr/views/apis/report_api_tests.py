@@ -6,7 +6,7 @@ from settings import AIRTABLE_URL
 
 from seqr.models import Project, SavedVariant
 from seqr.views.apis.report_api import seqr_stats, anvil_export, gregor_export, family_metadata, variant_metadata
-from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, AirtableTest
+from seqr.views.utils.test_utils import TEST_OAUTH2_PROVIDER, AuthenticationTestCase, AnvilAuthenticationTestCase, AirtableTest
 
 
 PROJECT_GUID = 'R0001_1kg'
@@ -645,6 +645,7 @@ RNA_TABLE_HEADER = [
 ]
 
 
+@mock.patch('seqr.views.utils.terra_api_utils.SOCIAL_AUTH_PROVIDER', TEST_OAUTH2_PROVIDER)
 class ReportAPITest(AirtableTest):
 
     def _get_zip_files(self, mock_zip, filenames):

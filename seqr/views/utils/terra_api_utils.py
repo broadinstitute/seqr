@@ -66,7 +66,7 @@ def anvil_enabled():
     return bool(TERRA_API_ROOT_URL)
 
 
-def is_google_authenticated(user):
+def is_cloud_authenticated(user):
     return bool(_safe_get_social(user))
 
 

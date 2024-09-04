@@ -13,7 +13,7 @@ from seqr.utils.search.elasticsearch.es_utils import InvalidIndexException
 from seqr.views.apis.variant_search_api import query_variants_handler, query_single_variant_handler, \
     export_variants_handler, search_context_handler, get_saved_search_handler, create_saved_search_handler, \
     update_saved_search_handler, delete_saved_search_handler, get_variant_gene_breakdown, variant_lookup_handler
-from seqr.views.utils.test_utils import AuthenticationTestCase, VARIANTS, AnvilAuthenticationTestCase,\
+from seqr.views.utils.test_utils import TEST_OAUTH2_PROVIDER, AuthenticationTestCase, VARIANTS, AnvilAuthenticationTestCase,\
     GENE_VARIANT_FIELDS, GENE_VARIANT_DISPLAY_FIELDS, LOCUS_LIST_FIELDS, FAMILY_FIELDS, \
     PA_LOCUS_LIST_FIELDS, INDIVIDUAL_FIELDS, FUNCTIONAL_FIELDS, IGV_SAMPLE_FIELDS, FAMILY_NOTE_FIELDS, ANALYSIS_GROUP_FIELDS, \
     VARIANT_NOTE_FIELDS, TAG_FIELDS, MATCHMAKER_SUBMISSION_FIELDS, SAVED_VARIANT_DETAIL_FIELDS, DYNAMIC_ANALYSIS_GROUP_FIELDS
@@ -1062,6 +1062,7 @@ def assert_workspace_calls(self, group_call_count, user=None):
 
 
 # Test for permissions from AnVIL only
+@mock.patch('seqr.views.utils.terra_api_utils.SOCIAL_AUTH_PROVIDER', TEST_OAUTH2_PROVIDER)
 class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, VariantSearchAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data', 'variant_searches']
 

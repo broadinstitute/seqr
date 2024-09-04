@@ -11,7 +11,7 @@ from seqr.views.apis.data_manager_api import elasticsearch_status, upload_qc_pip
     update_rna_seq, load_rna_seq_sample_data, load_phenotype_prioritization_data, validate_callset, \
     get_loaded_projects, load_data
 from seqr.views.utils.orm_to_json_utils import _get_json_for_models
-from seqr.views.utils.test_utils import AuthenticationTestCase, AirflowTestCase, AirtableTest
+from seqr.views.utils.test_utils import TEST_OAUTH2_PROVIDER, AuthenticationTestCase, AirflowTestCase, AirtableTest
 from seqr.utils.search.elasticsearch.es_utils_tests import urllib3_responses
 from seqr.models import Individual, RnaSeqOutlier, RnaSeqTpm, RnaSeqSpliceOutlier, RnaSample, Project, PhenotypePrioritization
 from settings import SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
@@ -1418,6 +1418,7 @@ class DataManagerAPITest(AirtableTest):
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
 
+    @mock.patch('seqr.views.utils.terra_api_utils.SOCIAL_AUTH_PROVIDER', TEST_OAUTH2_PROVIDER)
     @mock.patch('seqr.views.utils.permissions_utils.INTERNAL_NAMESPACES', ['my-seqr-billing', 'ext-data'])
     @mock.patch('seqr.views.apis.data_manager_api.BASE_URL', 'https://seqr.broadinstitute.org/')
     @responses.activate
@@ -1454,6 +1455,7 @@ class DataManagerAPITest(AirtableTest):
         self.assertDictEqual(response.json(), {'projects': self.WES_PROJECT_OPTIONS})
 
     @responses.activate
+    @mock.patch('seqr.views.utils.terra_api_utils.SOCIAL_AUTH_PROVIDER', TEST_OAUTH2_PROVIDER)
     @mock.patch('seqr.views.apis.data_manager_api.LOADING_DATASETS_DIR', '/local_datasets')
     @mock.patch('seqr.views.apis.data_manager_api.BASE_URL', 'https://seqr.broadinstitute.org/')
     @mock.patch('seqr.views.utils.export_utils.os.makedirs')

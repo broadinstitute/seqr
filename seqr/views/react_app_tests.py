@@ -4,7 +4,7 @@ import mock
 
 from seqr.views.react_app import main_app, no_login_main_app
 from seqr.views.utils.terra_api_utils import TerraRefreshTokenFailedException
-from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, USER_FIELDS
+from seqr.views.utils.test_utils import TEST_OAUTH2_PROVIDER, AuthenticationTestCase, AnvilAuthenticationTestCase, USER_FIELDS
 
 MOCK_GA_TOKEN = 'mock_ga_token' # nosec
 
@@ -104,7 +104,7 @@ class LocalAppPageTest(AuthenticationTestCase, AppPageTest):
 
 class AnvilAppPageTest(AnvilAuthenticationTestCase, AppPageTest):
     fixtures = ['users']
-    OAUTH_PROVIDER = 'cloud'
+    OAUTH_PROVIDER = TEST_OAUTH2_PROVIDER
 
     def test_react_page(self, *args, **kwargs):
         super(AnvilAppPageTest, self).test_react_page(*args, **kwargs)

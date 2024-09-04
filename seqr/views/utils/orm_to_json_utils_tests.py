@@ -5,7 +5,7 @@ from seqr.models import Project, Sample, IgvSample, SavedVariant, VariantNote, L
 from seqr.views.utils.orm_to_json_utils import get_json_for_user, _get_json_for_project, \
     get_json_for_sample, get_json_for_saved_variants, get_json_for_variant_note, get_json_for_locus_list, \
     get_json_for_saved_searches, get_json_for_saved_variants_with_tags, get_json_for_current_user
-from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, \
+from seqr.views.utils.test_utils import TEST_OAUTH2_PROVIDER, AuthenticationTestCase, AnvilAuthenticationTestCase, \
     PROJECT_FIELDS,  INTERNAL_FAMILY_FIELDS, \
     INDIVIDUAL_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, SAMPLE_FIELDS, SAVED_VARIANT_FIELDS,  \
     FUNCTIONAL_FIELDS, SAVED_SEARCH_FIELDS, LOCUS_LIST_DETAIL_FIELDS, PA_LOCUS_LIST_FIELDS, IGV_SAMPLE_FIELDS, \
@@ -28,6 +28,7 @@ class JSONUtilsTest(object):
                 {'firstName', 'email', 'displayName', 'isActive', 'isDataManager'},
             )
 
+    @mock.patch('seqr.views.utils.terra_api_utils.SOCIAL_AUTH_PROVIDER', TEST_OAUTH2_PROVIDER)
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP')
     def test_json_for_current_user(self, mock_pm_group):
         pm_user = User.objects.get(username='test_pm_user')

@@ -8,7 +8,7 @@ from django.urls.base import reverse
 from seqr.views.apis.igv_api import fetch_igv_track, receive_igv_table_handler, update_individual_igv_sample, \
     igv_genomes_proxy, receive_bulk_igv_table_handler
 from seqr.views.apis.igv_api import GS_STORAGE_ACCESS_CACHE_KEY
-from seqr.views.utils.test_utils import AnvilAuthenticationTestCase
+from seqr.views.utils.test_utils import TEST_OAUTH2_PROVIDER, AnvilAuthenticationTestCase
 
 STREAMING_READS_CONTENT = [b'CRAM\x03\x83', b'\\\t\xfb\xa3\xf7%\x01', b'[\xfc\xc9\t\xae']
 PROJECT_GUID = 'R0001_1kg'
@@ -134,6 +134,7 @@ class IgvAPITest(AnvilAuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
 
     @mock.patch('seqr.views.apis.igv_api.load_uploaded_file')
+    @mock.patch('seqr.views.utils.terra_api_utils.SOCIAL_AUTH_PROVIDER', TEST_OAUTH2_PROVIDER)
     def test_receive_bulk_alignment_table_handler(self, mock_load_uploaded_file, mock_subprocess):
         mock_subprocess.return_value.wait.return_value = 0
         url = reverse(receive_bulk_igv_table_handler)

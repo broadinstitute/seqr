@@ -442,7 +442,7 @@ for group, users in ANVIL_GROUPS.items():
 
 
 TEST_TERRA_API_ROOT_URL =  'https://terra.api/'
-TEST_OAUTH2_PROVIDER = 'cloud'
+TEST_OAUTH2_PROVIDER = 'google-oauth2'
 
 # the time must the same as that in 'auth_time' in the social_auth fixture data
 TOKEN_AUTH_TIME = 1603287741
