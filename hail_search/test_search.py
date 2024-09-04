@@ -417,20 +417,62 @@ FAMILY_5_VARIANT = {
     "xpos": 2044312653,
     "rsid": None,
     "CAID": "CA127830",
-    "genotypes": {},
+    "genotypes": {
+        "I00001_bon_b15_95_1_d1": [
+            {
+                "sampleId": "BON_B15-95_1_D1",
+                "sampleType": "WES",
+                "familyGuid": "F000005_5",
+                "individualGuid": "I00001_bon_b15_95_1_d1",
+                "numAlt": 1,
+                "dp": 71,
+                "gq": 99,
+                "ab": 0.5211267471313477,
+            },
+            {
+                "sampleId": "BON_B15-95_1_D1",
+                "sampleType": "WGS",
+                "familyGuid": "F000005_5",
+                "individualGuid": "I00001_bon_b15_95_1_d1",
+                "numAlt": 1,
+                "dp": 49,
+                "gq": 99,
+                "ab": 0.5306122303009033,
+            },
+        ],
+        "I00003_bon_b15_95_3_d1": [
+            {
+                "sampleId": "BON_B15-95_3_D1",
+                "sampleType": "WES",
+                "familyGuid": "F000005_5",
+                "individualGuid": "I00003_bon_b15_95_3_d1",
+                "numAlt": 1,
+                "dp": 78,
+                "gq": 99,
+                "ab": 0.4743589758872986,
+            }
+        ],
+        "I00004_bon_b15_95_4_d1": [
+            {
+                "sampleId": "BON_B15-95_4_D1",
+                "sampleType": "WES",
+                "familyGuid": "F000005_5",
+                "individualGuid": "I00004_bon_b15_95_4_d1",
+                "numAlt": 0,
+                "dp": None,
+                "gq": 40,
+                "ab": None,
+            }
+        ],
+    },
     "populations": {
-        "seqr": {
-            "af": 0.003060524584725499,
-            "ac": 232,
-            "an": 75804,
-            "hom": 3
-        },
+        "seqr": {"af": 0.003060524584725499, "ac": 232, "an": 75804, "hom": 3},
         "topmed": {
             "af": 0.002274360042065382,
             "ac": 602,
             "an": 264690,
             "hom": 1,
-            "het": 600
+            "het": 600,
         },
         "exac": {
             "af": 0.0,
@@ -439,7 +481,7 @@ FAMILY_5_VARIANT = {
             "hom": 0,
             "hemi": 0,
             "het": 0,
-            "filter_af": 0.0
+            "filter_af": 0.0,
         },
         "gnomad_exomes": {
             "af": 0.0,
@@ -447,7 +489,7 @@ FAMILY_5_VARIANT = {
             "an": 0,
             "hom": 0,
             "hemi": 0,
-            "filter_af": 0.0
+            "filter_af": 0.0,
         },
         "gnomad_genomes": {
             "af": 0.0,
@@ -455,8 +497,8 @@ FAMILY_5_VARIANT = {
             "an": 0,
             "hom": 0,
             "hemi": 0,
-            "filter_af": 0.0
-        }
+            "filter_af": 0.0,
+        },
     },
     "predictions": {
         "cadd": 22.799999237060547,
@@ -472,7 +514,7 @@ FAMILY_5_VARIANT = {
         "fathmm": None,
         "mut_pred": None,
         "vest": None,
-        "gnomad_noncoding": -3.0888006687164307
+        "gnomad_noncoding": -3.0888006687164307,
     },
     "chrom": "2",
     "pos": 44312653,
@@ -480,7 +522,7 @@ FAMILY_5_VARIANT = {
     "alt": "C",
     "mainTranscriptId": None,
     "selectedMainTranscriptId": None,
-    "familyGuids": [],
+    "familyGuids": ["F000005_5"],
     "genotypeFilters": "",
     "variantId": "2-44312653-T-C",
     "liftedOverGenomeVersion": "37",
@@ -494,20 +536,15 @@ FAMILY_5_VARIANT = {
         "conditions": [],
         "pathogenicity": "Pathogenic/Likely_pathogenic",
         "assertions": [],
-        "version": "2024-02-21"
+        "version": "2024-02-21",
     },
-    "hgmd": {
-        "accession": "CM941281",
-        "class": "DM"
-    },
+    "hgmd": {"accession": "CM941281", "class": "DM"},
     "screenRegionType": None,
     "transcripts": {},
     "sortedMotifFeatureConsequences": None,
     "sortedRegulatoryFeatureConsequences": None,
-    "_sort": [
-        2044312653
-    ],
-    "genomeVersion": "38"
+    "_sort": [2044312653],
+    "genomeVersion": "38",
 }
 
 FAMILY_5_SAMPLE_DATA = {
@@ -698,9 +735,12 @@ class HailSearchTestCase(AioHTTPTestCase):
         )
 
         # Variant is inherited in exome and there is no parental data for this variant in genome.
-        # Expect variant to be absent from response.
-        # TODO: this test fails. Fix it.
+        # Expect variant to be present in recessive response but absent in de novo response.
         inheritance_mode = 'de_novo'
+        await self._assert_expected_search(
+            [], sample_data=FAMILY_5_SAMPLE_DATA, inheritance_mode=inheritance_mode,
+        )
+        inheritance_mode = 'recessive'
         await self._assert_expected_search(
             [FAMILY_5_VARIANT], sample_data=FAMILY_5_SAMPLE_DATA, inheritance_mode=inheritance_mode,
         )

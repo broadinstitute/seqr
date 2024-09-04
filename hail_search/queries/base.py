@@ -5,9 +5,10 @@ import logging
 import os
 
 from hail_search.constants import AFFECTED_ID, ALT_ALT, ANNOTATION_OVERRIDE_FIELDS, ANY_AFFECTED, COMP_HET_ALT, \
-    COMPOUND_HET, GENOME_VERSION_GRCh38, GROUPED_VARIANTS_FIELD, ALLOWED_TRANSCRIPTS, ALLOWED_SECONDARY_TRANSCRIPTS,  HAS_ANNOTATION_OVERRIDE, \
-    HAS_ALT, HAS_REF,INHERITANCE_FILTERS, PATH_FREQ_OVERRIDE_CUTOFF, MALE, RECESSIVE, REF_ALT, REF_REF, \
-    UNAFFECTED_ID, X_LINKED_RECESSIVE, XPOS, OMIM_SORT, FAMILY_GUID_FIELD, GENOTYPES_FIELD, AFFECTED_ID_MAP
+    COMPOUND_HET, GENOME_VERSION_GRCh38, GROUPED_VARIANTS_FIELD, ALLOWED_TRANSCRIPTS, ALLOWED_SECONDARY_TRANSCRIPTS, \
+    HAS_ANNOTATION_OVERRIDE, \
+    HAS_ALT, HAS_REF, INHERITANCE_FILTERS, PATH_FREQ_OVERRIDE_CUTOFF, MALE, RECESSIVE, REF_ALT, REF_REF, \
+    UNAFFECTED_ID, X_LINKED_RECESSIVE, XPOS, OMIM_SORT, FAMILY_GUID_FIELD, GENOTYPES_FIELD, AFFECTED_ID_MAP, DE_NOVO
 
 DATASETS_DIR = os.environ.get('DATASETS_DIR', '/hail_datasets')
 SSD_DATASETS_DIR = os.environ.get('SSD_DATASETS_DIR', DATASETS_DIR)
@@ -748,6 +749,7 @@ class BaseHailTableQuery(object):
                 comp_het_ht, COMPOUND_HET, inheritance_filter, sorted_wgs_family_sample_data,
                 sample_type='WGS',
             )
+            comp_het_ht = self._post_process_inheritance_both_sample_types(comp_het_ht)
             comp_het_ht = comp_het_ht.filter(
                 comp_het_ht.wes_passes.any(hl.is_defined) | comp_het_ht.wgs_passes.any(hl.is_defined)
             ).select_globals('family_guids', 'family_guids_1')
@@ -767,11 +769,29 @@ class BaseHailTableQuery(object):
                 ht, self._inheritance_mode, inheritance_filter, sorted_wgs_family_sample_data,
                 sample_type='WGS',
             )
+            ht = self._post_process_inheritance_both_sample_types(ht)
             ht = ht.filter(
                 ht.wes_passes.any(hl.is_defined) | ht.wgs_passes.any(hl.is_defined)
             ).select_globals('family_guids', 'family_guids_1')
 
         return ht, comp_het_ht
+
+    def _post_process_inheritance_both_sample_types(self, ht):
+        if self._inheritance_mode == DE_NOVO:
+            def _validate_de_novo(passes, other_passes):
+                return hl.enumerate(passes).map(
+                    lambda family_entries: hl.if_else(  # family_entries: (idx, [<family_1_sample_1>, <family_1_sample_2>, ...]) or (idx, NA)
+                        hl.is_missing(other_passes[family_entries[0]]) & hl.is_defined(family_entries[1]),
+                        hl.or_missing(~(hl.len(family_entries[1]) == 1), family_entries[1]),
+                        family_entries[1]
+                    )
+                )
+            ht = ht.annotate(
+                wes_passes=_validate_de_novo(ht.wes_passes, ht.wgs_passes),
+                wgs_passes=_validate_de_novo(ht.wgs_passes, ht.wes_passes)
+            )
+        return ht
+
 
     def _get_family_passes_quality_filter(self, quality_filter, ht, filters_field_name, **kwargs):
         quality_filter = quality_filter or {}
@@ -1043,7 +1063,7 @@ class BaseHailTableQuery(object):
             self._has_allowed_transcript_filter(ht, field) if field in transcript_filter_fields else ht[field]
             for field in filter_fields
         ]
-        return ht.filter(hl.any(all_filters))
+        return ht if not all_filters else ht.filter(hl.any(all_filters))
 
     def _get_allowed_consequence_ids(self, annotations):
         allowed_consequences = {
