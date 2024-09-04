@@ -15,7 +15,7 @@ def get_all_users(request):
     analyst_users = get_analyst_user_emails(request.user)
     pm_users = get_pm_user_emails(request.user)
     users = [dict(
-        hasGoogleAuth=is_cloud_authenticated(user),
+        hasCloudAuth=is_cloud_authenticated(user),
         isAnalyst=user.email in analyst_users,
         isPm=user.email in pm_users,
         **user_json
