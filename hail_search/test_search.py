@@ -560,6 +560,9 @@ FAMILY_5_SAMPLE_DATA = {
     ]
 }
 
+FAMILIES_4_5_SAMPLE_DATA = deepcopy(FAMILY_4_SAMPLE_DATA)
+FAMILIES_4_5_SAMPLE_DATA['SNV_INDEL'] += FAMILY_5_SAMPLE_DATA['SNV_INDEL']
+
 # Ensures no variants are filtered out by annotation/path filters for compound hets
 COMP_HET_ALL_PASS_FILTERS = {
     'annotations': {'splice_ai': '0.0', 'structural': ['DEL', 'CPX', 'INS', 'gCNV_DEL', 'gCNV_DUP']},
@@ -714,7 +717,8 @@ class HailSearchTestCase(AioHTTPTestCase):
             sample_data={**MULTI_PROJECT_SAMPLE_DATA, **SV_WGS_SAMPLE_DATA},
         )
 
-    async def test_both_sample_type_search(self):
+    async def test_both_sample_types_search(self):
+        # One family in a multi-project search has identical exome and genome data.
         expected_variants = [PROJECT_2_VARIANT, MULTI_PROJECT_VARIANT1, MULTI_PROJECT_VARIANT2, VARIANT3, VARIANT4]
         expected_results = []
         for variant in expected_variants:
@@ -727,22 +731,34 @@ class HailSearchTestCase(AioHTTPTestCase):
             expected_results, gene_counts=GENE_COUNTS, sample_data=MULTI_PROJECT_SAMPLE_TYPES_SAMPLE_DATA,
         )
 
-        # Variant is de novo in exome but maternally inherited in genome.
-        # Expect variant with genotypes from both sample types to be returned.
+        # Variant in family_4 is de novo in exome but maternally inherited in genome.
+        inheritance_mode = 'recessive'
+        await self._assert_expected_search(
+            [FAMILY_4_VARIANT], sample_data=FAMILY_4_SAMPLE_DATA, inheritance_mode=inheritance_mode,
+        )
         inheritance_mode = 'de_novo'
         await self._assert_expected_search(
             [FAMILY_4_VARIANT], sample_data=FAMILY_4_SAMPLE_DATA, inheritance_mode=inheritance_mode,
         )
 
-        # Variant is inherited in exome and there is no parental data for this variant in genome.
-        # Expect variant to be present in recessive response but absent in de novo response.
+        # Variant in family_5 is inherited in exome and there is no parental data in gemone.
+        inheritance_mode = 'recessive'
+        await self._assert_expected_search(
+            [FAMILY_5_VARIANT], sample_data=FAMILY_5_SAMPLE_DATA, inheritance_mode=inheritance_mode,
+        )
         inheritance_mode = 'de_novo'
         await self._assert_expected_search(
             [], sample_data=FAMILY_5_SAMPLE_DATA, inheritance_mode=inheritance_mode,
         )
+
+        # Search with variants from families 4 and 5 together. They are in the same project.
         inheritance_mode = 'recessive'
         await self._assert_expected_search(
-            [FAMILY_5_VARIANT], sample_data=FAMILY_5_SAMPLE_DATA, inheritance_mode=inheritance_mode,
+            [FAMILY_5_VARIANT, FAMILY_4_VARIANT], sample_data=FAMILIES_4_5_SAMPLE_DATA, inheritance_mode=inheritance_mode,
+        )
+        inheritance_mode = 'de_novo'
+        await self._assert_expected_search(
+            [FAMILY_4_VARIANT], sample_data=FAMILIES_4_5_SAMPLE_DATA, inheritance_mode=inheritance_mode,
         )
 
     async def test_inheritance_filter(self):

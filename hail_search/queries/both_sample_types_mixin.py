@@ -8,10 +8,10 @@ class BothSampleTypesMixin:
     def filter_entries_table_both_sample_types(
         self, entries_hts_map: dict[str, list[tuple[hl.Table, dict]]], inheritance_filter=None, quality_filter=None, **kwargs
     ):
-        # entries_hts_map: {<sample_type>: [(ht, project_samples), (ht, project_samples), ...]}
         filtered_project_hts = []
         filtered_comp_het_project_hts = []
-        wes_entries, wgs_entries = entries_hts_map['WES'], entries_hts_map['WGS']
+        wes_entries, wgs_entries = entries_hts_map['WES'], entries_hts_map['WGS']  # entries_hts_map: {<sample_type>: [(ht, project_samples), ...]}
+
         for (wes_ht, wes_project_samples), (wgs_ht, wgs_project_samples) in zip(wes_entries, wgs_entries):
             wes_ht, sorted_wes_family_sample_data = self._add_entry_sample_families(
                 wes_ht, wes_project_samples, 'WES'
@@ -23,10 +23,7 @@ class BothSampleTypesMixin:
             wgs_ht = wgs_ht.rename({'family_entries': 'wgs_family_entries', 'filters': 'wgs_filters'})
             ht = wes_ht.join(wgs_ht, how='outer')
 
-            # Filter by quality, keeping variants that pass quality filter in at least one sample type.
             ht = self._filter_quality_both_sample_types(ht, quality_filter)
-
-            # Filter by inheritance, keeping both genotypes for variants even if only one passes inheritance
             ht, ch_ht = self._filter_inheritance_both_sample_types(
                 ht, inheritance_filter, sorted_wes_family_sample_data, sorted_wgs_family_sample_data
             )
@@ -38,6 +35,9 @@ class BothSampleTypesMixin:
         return filtered_project_hts, filtered_comp_het_project_hts
 
     def _filter_quality_both_sample_types(self, ht: hl.Table, quality_filter: dict):
+        """
+        Filter by quality, keeping variants that pass quality filter in at least one sample type.
+        """
         wes_passes_quality_filter = self._get_family_passes_quality_filter(quality_filter, ht, 'wes_filters')
         if wes_passes_quality_filter is not None:
             ht = ht.annotate(
@@ -74,7 +74,7 @@ class BothSampleTypesMixin:
     def _filter_inheritance_both_sample_types(
         self, ht, inheritance_filter, sorted_wes_family_sample_data, sorted_wgs_family_sample_data
     ):
-        # At least 1 family member must have non-ref gt
+        # At least one family member must have non-ref gt
         any_valid_entry, is_any_affected = self._get_any_family_member_gt_has_alt_filter()
         ht = ht.annotate(
             wes_passes=ht.wes_family_entries.map(
@@ -124,10 +124,12 @@ class BothSampleTypesMixin:
 
     def _post_process_inheritance_both_sample_types(self, ht: hl.Table):
         if self._inheritance_mode == DE_NOVO:
-            def _validate_de_novo(passes, other_passes):
-                return hl.enumerate(passes).map(
+            def _validate_de_novo(sample_type_1_passes, sample_type_2_passes):
+                # Remove a variant if it was filtered out due to inheritance in one sample type
+                # and is de novo in the other sample type but there is only one affected sample.
+                return hl.enumerate(sample_type_1_passes).map(
                     lambda family_entries: hl.if_else(  # family_entries: (idx, [<family_1_sample_1>, <family_1_sample_2>, ...]) or (idx, NA)
-                        hl.is_missing(other_passes[family_entries[0]]) & hl.is_defined(family_entries[1]),
+                        hl.is_missing(sample_type_2_passes[family_entries[0]]) & hl.is_defined(family_entries[1]),
                         hl.or_missing(~(hl.len(family_entries[1]) == 1), family_entries[1]),
                         family_entries[1]
                     )
