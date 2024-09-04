@@ -714,7 +714,7 @@ class HailSearchTestCase(AioHTTPTestCase):
             sample_data={**MULTI_PROJECT_SAMPLE_DATA, **SV_WGS_SAMPLE_DATA},
         )
 
-    async def test_multi_project_multi_sample_type_search(self):
+    async def test_both_sample_type_search(self):
         expected_variants = [PROJECT_2_VARIANT, MULTI_PROJECT_VARIANT1, MULTI_PROJECT_VARIANT2, VARIANT3, VARIANT4]
         expected_results = []
         for variant in expected_variants:
