@@ -89,9 +89,14 @@ class BaseHailTableQuery(object):
 
     @classmethod
     def load_globals(cls):
-        ht_path = cls._get_table_path('annotations.ht')
-        ht_globals = hl.eval(hl.read_table(ht_path).globals.select(*cls.GLOBALS))
-        cls.LOADED_GLOBALS = {k: ht_globals[k] for k in cls.GLOBALS}
+        if cls.LOADED_GLOBALS:
+            return
+        try:
+            ht_path = cls._get_table_path('annotations.ht')
+            ht_globals = hl.eval(hl.read_table(ht_path).globals.select(*cls.GLOBALS))
+            cls.LOADED_GLOBALS = {k: ht_globals[k] for k in cls.GLOBALS}
+        except hl.utils.java.FatalError:
+            pass
 
     @classmethod
     def _format_population_config(cls, pop_config):

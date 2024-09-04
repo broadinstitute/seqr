@@ -15,6 +15,7 @@ def search_hail_backend(request, gene_counts=False):
         query_cls = MultiDataTypeHailTableQuery
 
     query = query_cls(sample_data, **request)
+    query.load_globals()
     if gene_counts:
         return query.gene_counts()
     else:
@@ -24,11 +25,13 @@ def search_hail_backend(request, gene_counts=False):
 def lookup_variant(request):
     data_type = request.get('data_type', SNV_INDEL_DATA_TYPE)
     query = QUERY_CLASS_MAP[(data_type, request['genome_version'])](sample_data=None)
+    query.load_globals()
     return query.lookup_variant(request['variant_id'], sample_data=request.get('sample_data'))
 
 
 def lookup_variants(request):
     query = QUERY_CLASS_MAP[(request['data_type'], request['genome_version'])](sample_data=None)
+    query.load_globals()
     return query.lookup_variants(request['variant_ids'])
 
 
