@@ -721,7 +721,7 @@ PARSED_SV_COMPOUND_HET_VARIANTS[0].update({
 del PARSED_SV_COMPOUND_HET_VARIANTS[0]['svSourceDetail']
 PARSED_SV_COMPOUND_HET_VARIANTS[0]['transcripts']['ENSG00000186092'] = [{'geneId': 'ENSG00000186092'}]
 for gen in PARSED_SV_COMPOUND_HET_VARIANTS[0]['genotypes'].values():
-    gen.update({'start': None, 'end': None, 'numExon': None, 'geneIds': None})
+    gen[0].update({'start': None, 'end': None, 'numExon': None, 'geneIds': None})
 PARSED_SV_COMPOUND_HET_VARIANTS[1]['familyGuids'] = ['F000002_2']
 
 PARSED_COMPOUND_HET_VARIANTS_PROJECT_2 = deepcopy(PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT)
@@ -747,9 +747,9 @@ PARSED_CADD_VARIANTS[1]['_sort'][0] = maxsize
 
 PARSED_MULTI_INDEX_VARIANT = deepcopy(PARSED_VARIANTS[1])
 PARSED_MULTI_INDEX_VARIANT['familyGuids'].append('F000011_11')
-PARSED_MULTI_INDEX_VARIANT['genotypes']['I000015_na20885'] = {
+PARSED_MULTI_INDEX_VARIANT['genotypes']['I000015_na20885'] = [{
     'ab': 0.631, 'ad': None, 'gq': 99, 'sampleId': 'NA20885', 'numAlt': 1, 'dp': 50, 'pl': None, 'sampleType': 'WES',
-}
+}]
 
 PARSED_HG38_VARIANT = deepcopy(PARSED_VARIANTS[1])
 PARSED_HG38_VARIANT.update({
@@ -772,20 +772,20 @@ PARSED_HG38_VARIANT['clinvar']['version'] = None
 
 PARSED_MULTI_SAMPLE_MULTI_INDEX_VARIANT = deepcopy(PARSED_MULTI_INDEX_VARIANT)
 for guid, genotype in PARSED_MULTI_SAMPLE_MULTI_INDEX_VARIANT['genotypes'].items():
-    PARSED_MULTI_SAMPLE_MULTI_INDEX_VARIANT['genotypes'][guid] = dict(otherSample=genotype, **genotype)
+    PARSED_MULTI_SAMPLE_MULTI_INDEX_VARIANT['genotypes'][guid] = [dict(otherSample=genotype[0], **genotype[0])]
 
 PARSED_MULTI_SAMPLE_VARIANT = deepcopy(PARSED_VARIANTS[1])
 for guid, genotype in PARSED_MULTI_SAMPLE_VARIANT['genotypes'].items():
-    PARSED_MULTI_SAMPLE_VARIANT['genotypes'][guid] = dict(otherSample=genotype, **genotype)
+    PARSED_MULTI_SAMPLE_VARIANT['genotypes'][guid] = [dict(otherSample=genotype[0], **genotype[0])]
 
 PARSED_MULTI_SAMPLE_VARIANT_0 = deepcopy(PARSED_VARIANTS[0])
 for guid, genotype in PARSED_MULTI_SAMPLE_VARIANT_0['genotypes'].items():
-    PARSED_MULTI_SAMPLE_VARIANT_0['genotypes'][guid] = dict(otherSample=genotype, **genotype)
+    PARSED_MULTI_SAMPLE_VARIANT_0['genotypes'][guid] = [dict(otherSample=genotype[0], **genotype[0])]
 
 PARSED_MULTI_SAMPLE_COMPOUND_HET_VARIANTS = deepcopy(PARSED_COMPOUND_HET_VARIANTS)
 for variant in PARSED_MULTI_SAMPLE_COMPOUND_HET_VARIANTS:
     for guid, genotype in variant['genotypes'].items():
-        variant['genotypes'][guid] = dict(otherSample=genotype, **genotype)
+        variant['genotypes'][guid] = [dict(otherSample=genotype[0], **genotype[0])]
 
 
 PARSED_ANY_AFFECTED_MULTI_INDEX_VERSION_VARIANT = deepcopy(PARSED_MULTI_INDEX_VARIANT)
