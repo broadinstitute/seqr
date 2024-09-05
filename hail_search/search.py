@@ -31,6 +31,7 @@ def lookup_variants(request):
     query = QUERY_CLASS_MAP[(request['data_type'], request['genome_version'])](sample_data=None)
     return query.lookup_variants(request['variant_ids'])
 
+
 def load_globals():
     for cls in QUERY_CLASS_MAP.values():
         cls.load_globals()
