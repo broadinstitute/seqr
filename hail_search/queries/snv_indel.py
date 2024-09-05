@@ -24,7 +24,8 @@ class SnvIndelHailTableQuery(SnvIndelHailTableQuery37):
         SCREEN_KEY, MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY,
     ]
     FREQUENCY_PREFILTER_FIELDS = OrderedDict([
-        (True, PREFILTER_FREQ_CUTOFF),
+        (True, 0.001),
+        ('is_gt_1_percent', PREFILTER_FREQ_CUTOFF),
         ('is_gt_3_percent', 0.03),
         ('is_gt_5_percent', 0.05),
         ('is_gt_10_percent', 0.1),

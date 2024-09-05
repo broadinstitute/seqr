@@ -11,6 +11,7 @@ import {
   DATASET_TYPE_SV_CALLS,
   DATASET_TYPE_MITO_CALLS,
   DATASET_TYPE_SNV_INDEL_CALLS,
+  GENOME_VERSION_FIELD,
 } from 'shared/utils/constants'
 
 const formatProjectOption = opt => ({
@@ -70,6 +71,11 @@ const LOAD_DATA_PAGES = [
         ].map(value => ({ value, text: value.replace('_', '/') })),
         validate: validators.required,
       },
+      {
+        ...GENOME_VERSION_FIELD,
+        component: ButtonRadioGroup,
+        validate: validators.required,
+      },
     ],
     submitUrl: '/api/data_management/validate_callset',
   },
@@ -91,7 +97,7 @@ const LoadData = () => (
   <FormWizard
     pages={LOAD_DATA_PAGES}
     formatSubmitUrl={formatSubmitUrl}
-    successMessage="Data loading has been triggered, and further updates will be posted in slack"
+    successMessage="Data loading has been triggered"
     noModal
   />
 )

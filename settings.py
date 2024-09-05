@@ -155,6 +155,8 @@ else:
     MEDIA_ROOT = os.path.join(GENERATED_FILES_DIR, 'media/')
     MEDIA_URL = '/media/'
 
+LOADING_DATASETS_DIR = os.environ.get('LOADING_DATASETS_DIR')
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -347,6 +349,10 @@ HAIL_BACKEND_SERVICE_PORT = int(os.environ.get('HAIL_BACKEND_SERVICE_PORT', '500
 
 REDIS_SERVICE_HOSTNAME = os.environ.get('REDIS_SERVICE_HOSTNAME', 'localhost')
 REDIS_SERVICE_PORT = int(os.environ.get('REDIS_SERVICE_PORT', '6379'))
+
+PIPELINE_RUNNER_HOSTNAME = os.environ.get('PIPELINE_RUNNER_HOSTNAME', 'pipeline-runner')
+PIPELINE_RUNNER_PORT = os.environ.get('PIPELINE_RUNNER_PORT', '6000')
+PIPELINE_RUNNER_SERVER = f'http://{PIPELINE_RUNNER_HOSTNAME}:{PIPELINE_RUNNER_PORT}'
 
 # Matchmaker
 MME_DEFAULT_CONTACT_NAME = 'Samantha Baxter'

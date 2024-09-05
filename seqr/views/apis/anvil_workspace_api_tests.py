@@ -774,10 +774,10 @@ class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
         dag_json = {
             'projects_to_run': [project.guid],
             'callset_path': 'gs://test_bucket/test_path.vcf',
-            'sample_source': 'AnVIL',
             'sample_type': 'WES',
             'dataset_type': 'SNV_INDEL',
             'reference_genome': genome_version,
+            'sample_source': 'AnVIL',
         }
         sample_summary = '3 new'
         if test_add_data:
@@ -786,7 +786,7 @@ class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
         *test_user_manager@test.com* requested to load {sample_summary} WES samples ({version}) from AnVIL workspace *my-seqr-billing/{workspace_name}* at 
         gs://test_bucket/test_path.vcf to seqr project <http://testserver/project/{guid}/project_page|*{project_name}*> (guid: {guid})
 
-        Pedigree files have been uploaded to gs://seqr-loading-temp/v3.1/{version}/SNV_INDEL/pedigrees/WES/
+        Pedigree files have been uploaded to gs://seqr-loading-temp/v3.1/{version}/SNV_INDEL/pedigrees/WES
 
         DAG LOADING_PIPELINE is triggered with following:
         ```{dag}```
@@ -840,7 +840,7 @@ class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
         project = Project.objects.get(**workspace)
 
         self.mock_add_data_utils_logger.error.assert_called_with(
-            'Uploading Pedigrees to Google Storage failed. Errors: Something wrong while moving the file.',
+            'Uploading Pedigrees failed. Errors: Something wrong while moving the file.',
             self.manager_user, detail={f'{project.guid}_pedigree': sample_data})
         self.mock_api_logger.error.assert_not_called()
         self.mock_airflow_logger.warning.assert_called_with(
@@ -858,10 +858,10 @@ class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
             dag=json.dumps({
                 'projects_to_run': [project.guid],
                 'callset_path': 'gs://test_bucket/test_path.vcf',
-                'sample_source': 'AnVIL',
                 'sample_type': 'WES',
                 'dataset_type': 'SNV_INDEL',
                 'reference_genome': genome_version,
+                'sample_source': 'AnVIL',
             }, indent=4),
         )
 
