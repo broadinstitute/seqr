@@ -10,7 +10,7 @@ import logging
 import traceback
 from typing import Callable
 
-from hail_search.search import search_hail_backend, lookup_variant, lookup_variants
+from hail_search.search import search_hail_backend, load_globals, lookup_variant, lookup_variants
 
 logger = logging.getLogger(__name__)
 
@@ -112,6 +112,7 @@ async def init_web_app():
         spark_conf.update({f'spark.{field}.extraJavaOptions': f'-Xss{JAVA_OPTS_XSS}' for field in ['driver', 'executor']})
     hl.init(idempotent=True, spark_conf=spark_conf or None)
     hl._set_flags(use_new_shuffle='1')
+    load_globals()
     app = web.Application(middlewares=[error_middleware], client_max_size=(1024**2)*10)
     app.add_routes([
         web.get('/status', status),

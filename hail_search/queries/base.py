@@ -37,7 +37,7 @@ class BaseHailTableQuery(object):
 
     DATA_TYPE = None
     KEY_FIELD = None
-    LOADED_GLOBALS = {}
+    LOADED_GLOBALS = None
 
     GENOTYPE_QUERY_MAP = {
         REF_REF: lambda gt: gt.is_hom_ref(),
@@ -89,12 +89,10 @@ class BaseHailTableQuery(object):
 
     @classmethod
     def load_globals(cls):
-        if cls.LOADED_GLOBALS.get((cls.GENOME_VERSION, cls.DATA_TYPE)):
-            return
         try:
             ht_path = cls._get_table_path('annotations.ht')
             ht_globals = hl.eval(hl.read_table(ht_path).globals.select(*cls.GLOBALS))
-            cls.LOADED_GLOBALS[(cls.GENOME_VERSION, cls.DATA_TYPE)] = {k: ht_globals[k] for k in cls.GLOBALS}
+            cls.LOADED_GLOBALS = {k: ht_globals[k] for k in cls.GLOBALS}
         except hl.utils.java.FatalError:
             pass
 
@@ -254,7 +252,7 @@ class BaseHailTableQuery(object):
 
     @property
     def _globals(self):
-        return self.LOADED_GLOBALS[(self.GENOME_VERSION, self.DATA_TYPE)]
+        return self.LOADED_GLOBALS
 
     @property
     def _enums(self):
