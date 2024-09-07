@@ -10,7 +10,7 @@ from hail_search.constants import AFFECTED_ID, ALT_ALT, ANNOTATION_OVERRIDE_FIEL
     UNAFFECTED_ID, X_LINKED_RECESSIVE, XPOS, OMIM_SORT, FAMILY_GUID_FIELD, GENOTYPES_FIELD, AFFECTED_ID_MAP
 
 DATASETS_DIR = os.environ.get('DATASETS_DIR', '/hail_datasets')
-REFERENCE_DATA_DIR = os.environ.get('REFERENCE_DATA_DIR', '/seqr-reference-data')
+REFERENCE_DATA_DIR = os.environ.get('REFERENCE_DATA_DIR', '/seqr/seqr-reference-data')
 SSD_DATASETS_DIR = os.environ.get('SSD_DATASETS_DIR', DATASETS_DIR)
 
 # Number of filtered genes at which pre-filtering a table by gene-intervals does not improve performance
