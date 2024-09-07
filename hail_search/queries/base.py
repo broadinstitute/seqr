@@ -10,6 +10,7 @@ from hail_search.constants import AFFECTED_ID, ALT_ALT, ANNOTATION_OVERRIDE_FIEL
     UNAFFECTED_ID, X_LINKED_RECESSIVE, XPOS, OMIM_SORT, FAMILY_GUID_FIELD, GENOTYPES_FIELD, AFFECTED_ID_MAP
 
 DATASETS_DIR = os.environ.get('DATASETS_DIR', '/hail_datasets')
+REFERENCE_DATA_DIR = os.environ.get('REFERENCE_DATA_DIR', '/seqr-reference-data')
 SSD_DATASETS_DIR = os.environ.get('SSD_DATASETS_DIR', DATASETS_DIR)
 
 # Number of filtered genes at which pre-filtering a table by gene-intervals does not improve performance
@@ -262,11 +263,13 @@ class BaseHailTableQuery(object):
             *self._parse_sample_data(sample_data), parsed_intervals=parsed_intervals, raw_intervals=intervals, parsed_annotations=parsed_annotations, **kwargs)
 
     @classmethod
-    def _get_table_path(cls, path, use_ssd_dir=False):
+    def _get_table_path(cls, path, use_ssd_dir=False, is_prefilter_table=False):
+        if is_prefilter_table:
+            return f'{REFERENCE_DATA_DIR}/{cls.GENOME_VERSION}/{cls.DATA_TYPE}/cached_reference_dataset_queries/{path}'
         return f'{SSD_DATASETS_DIR if use_ssd_dir else DATASETS_DIR}/{cls.GENOME_VERSION}/{cls.DATA_TYPE}/{path}'
 
-    def _read_table(self, path, drop_globals=None, use_ssd_dir=False, skip_missing_field=None):
-        table_path = self._get_table_path(path, use_ssd_dir=use_ssd_dir)
+    def _read_table(self, path, drop_globals=None, use_ssd_dir=False, skip_missing_field=None, is_prefilter_table=False):
+        table_path = self._get_table_path(path, use_ssd_dir=use_ssd_dir, is_prefilter_table=is_prefilter_table)
         if 'variant_ht' in self._load_table_kwargs:
             ht = self._query_table_annotations(self._load_table_kwargs['variant_ht'], table_path)
             if skip_missing_field and not ht.any(hl.is_defined(ht[skip_missing_field])):
