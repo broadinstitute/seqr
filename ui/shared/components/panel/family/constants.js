@@ -90,10 +90,10 @@ const REFERENCE_URLS = [
   },
   {
     key: 'cytobandURL',
-    baseUrl: `${BASE_REFERENCE_URL}/s3`,
+    baseUrl: 'https://hgdownload.soe.ucsc.edu/goldenPath',
     path: {
-      37: 'igv.broadinstitute.org/genomes/seq/hg19/cytoBand.txt',
-      38: 'igv.org.genomes/hg38/annotations/cytoBandIdeo.txt.gz',
+      37: 'hg19/database/cytoBand.txt.gz',
+      38: 'hg38/database/cytoBandIdeo.txt.gz',
     },
   },
   {
