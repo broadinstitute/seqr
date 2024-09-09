@@ -78,7 +78,7 @@ SECURE_BROWSER_XSS_FILTER = True
 CSP_INCLUDE_NONCE_IN = ['script-src', 'style-src', 'style-src-elem']
 CSP_FONT_SRC = ('https://fonts.gstatic.com', 'data:', "'self'")
 CSP_CONNECT_SRC = ("'self'", 'https://gtexportal.org', 'https://www.google-analytics.com', 'https://igv.org',
-                   'https://storage.googleapis.com', 'https://hgdownload.soe.ucsc.edu',  # used by IGV
+                   'https://storage.googleapis.com', 'https://s3.amazonaws.com', 'https://igv-genepattern-org.s3.amazonaws.com', 'https://hgdownload.soe.ucsc.edu',  # used by IGV
                    'https://reg.genome.network')
 CSP_SCRIPT_SRC = ("'self'", "'unsafe-eval'", 'https://www.googletagmanager.com')
 CSP_IMG_SRC = ("'self'", 'https://www.google-analytics.com', 'https://storage.googleapis.com',
