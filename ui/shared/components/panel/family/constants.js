@@ -98,7 +98,7 @@ const REFERENCE_URLS = [
   },
   {
     key: 'aliasURL',
-    baseUrl: 'https://igv-genepattern-org.s3.amazonaws.com/genomes',
+    baseUrl: `${BASE_REFERENCE_URL}/s3/igv.org.genomes`,
     path: {
       37: 'hg19/hg19_alias.tab',
       38: 'hg38/hg38_alias.tab',
@@ -121,7 +121,7 @@ const REFERENCE_TRACKS = [
   {
     name: 'Refseq',
     indexPostfix: 'tbi',
-    baseUrl: 'https://s3.amazonaws.com/igv.org.genomes',
+    baseUrl: `${BASE_REFERENCE_URL}/s3/igv.org.genomes`,
     path: {
       37: 'hg19/refGene.sorted.txt.gz',
       38: 'hg38/refGene.sorted.txt.gz',
