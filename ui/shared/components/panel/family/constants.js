@@ -77,15 +77,13 @@ export const IGV_OPTIONS = {
   showCommandBar: true,
 }
 
-const BASE_REFERENCE_URL = '/api/igv_genomes'
-
 const REFERENCE_URLS = [
   {
     key: 'fastaURL',
-    baseUrl: BASE_REFERENCE_URL,
+    baseUrl: 'https://igv-genepattern-org.s3.amazonaws.com/genomes/seq',
     path: {
-      37: 's3/igv.broadinstitute.org/genomes/seq/hg19/hg19.fasta',
-      38: 'gs/gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.fasta',
+      37: 'hg19/hg19.fasta',
+      38: 'hg38/hg38.fa',
     },
   },
   {
@@ -98,10 +96,10 @@ const REFERENCE_URLS = [
   },
   {
     key: 'aliasURL',
-    baseUrl: 'https://igv-genepattern-org.s3.amazonaws.com/genomes',
+    baseUrl: undefined,
     path: {
-      37: 'hg19/hg19_alias.tab',
-      38: 'hg38/hg38_alias.tab',
+      37: 'https://igv.org/genomes/data/hg19/hg19_alias.tab',
+      38: 'https://igv-genepattern-org.s3.amazonaws.com/genomes/hg38/hg38_alias.tab',
     },
   },
 ]
@@ -141,7 +139,7 @@ export const REFERENCE_LOOKUP = ['37', '38'].reduce((acc, genome) => ({
       indexURL: indexPostfix ? `${baseUrl}/${path[genome]}.${indexPostfix}` : null,
       ...track,
     })),
-    ...REFERENCE_URLS.reduce((acc2, { key, baseUrl, path }) => ({ ...acc2, [key]: `${baseUrl}/${path[genome]}` }), {}),
+    ...REFERENCE_URLS.reduce((acc2, { key, baseUrl, path }) => ({ ...acc2, [key]: baseUrl ? `${baseUrl}/${path[genome]}` : path[genome] }), {}),
   },
 }), {})
 
