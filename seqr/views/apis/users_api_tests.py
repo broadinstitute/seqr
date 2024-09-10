@@ -13,7 +13,7 @@ from seqr.views.apis.users_api import get_all_collaborator_options, set_password
     create_project_collaborator, update_project_collaborator, delete_project_collaborator, forgot_password, \
     get_project_collaborator_options, update_policies, update_user, get_all_user_group_options, \
     update_project_collaborator_group, delete_project_collaborator_group
-from seqr.views.utils.test_utils import TEST_OAUTH2_PROVIDER, AuthenticationTestCase, AnvilAuthenticationTestCase
+from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase
 
 
 PROJECT_GUID = 'R0001_1kg'
@@ -447,7 +447,6 @@ class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):
         self.mock_list_workspaces.assert_not_called()
         self.mock_get_ws_acl.assert_not_called()
 
-    @mock.patch('seqr.views.utils.terra_api_utils.SOCIAL_AUTH_PROVIDER', TEST_OAUTH2_PROVIDER)
     def test_forgot_password(self, *args, **kwargs):
         super(AnvilUsersAPITest, self).test_forgot_password(*args, **kwargs)
         self.mock_list_workspaces.assert_not_called()

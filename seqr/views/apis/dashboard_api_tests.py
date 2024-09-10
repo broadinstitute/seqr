@@ -4,7 +4,7 @@ from django.urls.base import reverse
 
 from seqr.views.apis.dashboard_api import dashboard_page_data
 from seqr.views.utils.terra_api_utils import TerraAPIException
-from seqr.views.utils.test_utils import TEST_OAUTH2_PROVIDER, AuthenticationTestCase, AnvilAuthenticationTestCase, PROJECT_FIELDS
+from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, PROJECT_FIELDS
 from seqr.models import Project
 
 DASHBOARD_PROJECT_FIELDS = {
@@ -138,7 +138,6 @@ class AnvilDashboardPageTest(AnvilAuthenticationTestCase, DashboardPageTest):
     fixtures = ['users', 'social_auth', '1kg_project']
     NUM_COLLABORATOR_PROJECTS = 2
 
-    @mock.patch('seqr.views.utils.terra_api_utils.SOCIAL_AUTH_PROVIDER', TEST_OAUTH2_PROVIDER)
     def test_dashboard_page_data(self, *args):
         super(AnvilDashboardPageTest, self).test_dashboard_page_data(*args)
         assert_has_anvil_calls(self)

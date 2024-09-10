@@ -1,7 +1,7 @@
 import mock
 from django.urls.base import reverse
 from seqr.views.apis.awesomebar_api import awesomebar_autocomplete_handler
-from seqr.views.utils.test_utils import TEST_OAUTH2_PROVIDER, AuthenticationTestCase, AnvilAuthenticationTestCase
+from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase
 
 
 @mock.patch('seqr.views.utils.permissions_utils.safe_redis_get_json', lambda *args: None)
@@ -152,7 +152,6 @@ class LocalAwesomebarAPITest(AuthenticationTestCase, AwesomebarAPITest):
 class AnvilAwesomebarAPITest(AnvilAuthenticationTestCase, AwesomebarAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
 
-    @mock.patch('seqr.views.utils.terra_api_utils.SOCIAL_AUTH_PROVIDER', TEST_OAUTH2_PROVIDER)
     def test_awesomebar_autocomplete_handler(self):
         super(AnvilAwesomebarAPITest, self).test_awesomebar_autocomplete_handler()
         calls = [
