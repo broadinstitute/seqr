@@ -135,7 +135,7 @@ export const REFERENCE_LOOKUP = ['37', '38'].reduce((acc, genome) => ({
   [genome]: {
     id: GENOME_VERSION_DISPLAY_LOOKUP[GENOME_VERSION_LOOKUP[genome]],
     tracks: REFERENCE_TRACKS.map(({ baseUrl, path, indexPostfix, ...track }) => ({
-      url: baseUrl ? `${baseUrl}/${path[genome]}` : path[genome],
+      url: `${baseUrl}/${path[genome]}`,
       indexURL: indexPostfix ? `${baseUrl}/${path[genome]}.${indexPostfix}` : null,
       ...track,
     })),
