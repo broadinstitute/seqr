@@ -136,7 +136,7 @@ from seqr.views.apis.superuser_api import get_all_users
 from seqr.views.apis.awesomebar_api import awesomebar_autocomplete_handler
 from seqr.views.apis.auth_api import login_required_error, login_view, logout_view, policies_required_error
 from seqr.views.apis.igv_api import fetch_igv_track, receive_igv_table_handler, update_individual_igv_sample, \
-    igv_genomes_proxy, receive_bulk_igv_table_handler
+    receive_bulk_igv_table_handler
 from seqr.views.apis.analysis_group_api import update_analysis_group_handler, delete_analysis_group_handler, \
     update_dynamic_analysis_group_handler, delete_dynamic_analysis_group_handler
 from seqr.views.apis.project_api import create_project_handler, update_project_handler, delete_project_handler, \
@@ -277,7 +277,6 @@ api_endpoints = {
     'gene_info/(?P<gene_id>[^/]+)/note/(?P<note_guid>[^/]+)/delete': delete_gene_note_handler,
 
     'hpo_terms/(?P<hpo_parent_id>[^/]+)': get_hpo_terms,
-    'igv_genomes/(?P<cloud_host>[^/]+)/(?P<file_path>.*)': igv_genomes_proxy,
 
     'locus_lists/(?P<locus_list_guid>[^/]+)/update': update_locus_list_handler,
     'locus_lists/(?P<locus_list_guid>[^/]+)/delete': delete_locus_list_handler,
