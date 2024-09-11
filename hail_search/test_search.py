@@ -219,6 +219,12 @@ class HailSearchTestCase(AioHTTPTestCase):
             resp_json = await resp.json()
         self.assertDictEqual(resp_json, {'success': True})
 
+    async def test_reload_globals(self):
+        async with self.client.request('POST', '/reload_globals') as resp:
+            self.assertEqual(resp.status, 200)
+            resp_json = await resp.json()
+        self.assertDictEqual(resp_json, {'success': True})
+
     async def _assert_expected_search(self, results, gene_counts=None, **search_kwargs):
         search_body = get_hail_search_body(**search_kwargs)
         async with self.client.request('POST', '/search', json=search_body) as resp:
