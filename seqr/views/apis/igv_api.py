@@ -20,11 +20,6 @@ from seqr.views.utils.permissions_utils import get_project_and_check_permissions
 
 GS_STORAGE_ACCESS_CACHE_KEY = 'gs_storage_access_cache_entry'
 GS_STORAGE_URL = 'https://storage.googleapis.com'
-S3_KEY = 's3'
-CLOUD_STORAGE_URLS = {
-    S3_KEY: 'https://s3.amazonaws.com',
-    'gs': GS_STORAGE_URL,
-}
 TIMEOUT = 300
 
 
@@ -265,22 +260,3 @@ def _stream_file(request, path):
         resp = StreamingHttpResponse(file_iter(path, raw_content=True, user=request.user), content_type=content_type)
     resp['Accept-Ranges'] = 'bytes'
     return resp
-
-
-def igv_genomes_proxy(request, cloud_host, file_path):
-    # IGV does not properly set CORS header and cannot directly access the genomes resource from the browser without
-    # using this server-side proxy
-    headers = {}
-    range_header = request.META.get('HTTP_RANGE')
-    if range_header:
-        headers['Range'] = range_header
-    if cloud_host == S3_KEY:
-        headers.update(convert_django_meta_to_http_headers(request))
-
-    genome_response = requests.get(f'{CLOUD_STORAGE_URLS[cloud_host]}/{file_path}', headers=headers, timeout=TIMEOUT)
-    proxy_response = HttpResponse(
-        content=genome_response.content,
-        status=genome_response.status_code,
-    )
-    return proxy_response
-
