@@ -99,7 +99,6 @@ async def multi_lookup(request: web.Request) -> web.Response:
 
 
 async def reload_globals(request: web.Request) -> web.Response:
-    # Make sure the hail backend process is still alive.
     await sync_to_async_hail_query(request, lambda _: load_globals())
     return web.json_response({'success': True})
 
