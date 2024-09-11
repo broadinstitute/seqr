@@ -11,7 +11,6 @@ import traceback
 from typing import Callable
 
 from hail_search.search import search_hail_backend, load_globals, lookup_variant, lookup_variants
-from hail_search.queries.multi_data_types import QUERY_CLASS_MAP
 
 logger = logging.getLogger(__name__)
 
