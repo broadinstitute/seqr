@@ -221,6 +221,11 @@ class HailSearchTestCase(AioHTTPTestCase):
         self.assertDictEqual(resp_json, {'success': True})
 
     async def test_reload_globals(self):
+        async with self.client.request('POST', '/reload_globals') as resp:
+            resp_json = await resp.json()
+        self.assertTrue(
+            resp_json["('SNV_INDEL', 'GRCh38')"]['versions']['gnomad_genomes'],
+        )
         with mock.patch('hail_search.queries.base.hl.read_table') as mock_read_table:
             mock_read_table.return_value = hl.Table.parallelize(
                 [],
