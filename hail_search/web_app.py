@@ -11,6 +11,7 @@ import traceback
 from typing import Callable
 
 from hail_search.search import search_hail_backend, load_globals, lookup_variant, lookup_variants
+from hail_search.queries.multi_data_types import QUERY_CLASS_MAP
 
 logger = logging.getLogger(__name__)
 
@@ -99,7 +100,13 @@ async def multi_lookup(request: web.Request) -> web.Response:
 
 async def reload_globals(request: web.Request) -> web.Response:
     await sync_to_async_hail_query(request, lambda _: load_globals())
-    return web.json_response({'success': True})
+    return web.json_response(
+        {
+            str(k): v.LOADED_GLOBALS
+            for k, v in QUERY_CLASS_MAP.items()
+        },
+        dumps=hl_json_dumps
+    )
 
 
 async def status(request: web.Request) -> web.Response:
