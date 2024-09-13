@@ -99,12 +99,9 @@ async def multi_lookup(request: web.Request) -> web.Response:
 
 
 async def reload_globals(request: web.Request) -> web.Response:
-    await sync_to_async_hail_query(request, lambda _: load_globals())
+    result = await sync_to_async_hail_query(request, lambda _: load_globals())
     return web.json_response(
-        {
-            str(k): v.LOADED_GLOBALS
-            for k, v in QUERY_CLASS_MAP.items()
-        },
+        result,
         dumps=hl_json_dumps
     )
 
