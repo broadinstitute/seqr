@@ -97,6 +97,14 @@ async def multi_lookup(request: web.Request) -> web.Response:
     return web.json_response({'results': result}, dumps=hl_json_dumps)
 
 
+async def reload_globals(request: web.Request) -> web.Response:
+    result = await sync_to_async_hail_query(request, lambda _: load_globals())
+    return web.json_response(
+        result,
+        dumps=hl_json_dumps
+    )
+
+
 async def status(request: web.Request) -> web.Response:
     # Make sure the hail backend process is still alive.
     await sync_to_async_hail_query(request, lambda _: hl.eval(1 + 1))
@@ -116,6 +124,7 @@ async def init_web_app():
     app = web.Application(middlewares=[error_middleware], client_max_size=(1024**2)*10)
     app.add_routes([
         web.get('/status', status),
+        web.post('/reload_globals', reload_globals),
         web.post('/search', search),
         web.post('/gene_counts', gene_counts),
         web.post('/lookup', lookup),

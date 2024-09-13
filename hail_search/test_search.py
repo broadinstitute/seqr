@@ -1,6 +1,7 @@
 from aiohttp.test_utils import AioHTTPTestCase
 import asyncio
 from copy import deepcopy
+import hail as hl
 import time
 from unittest import mock
 
@@ -218,6 +219,32 @@ class HailSearchTestCase(AioHTTPTestCase):
             self.assertEqual(resp.status, 200)
             resp_json = await resp.json()
         self.assertDictEqual(resp_json, {'success': True})
+
+    async def test_reload_globals(self):
+        async with self.client.request('POST', '/reload_globals') as resp:
+            resp_json = await resp.json()
+        self.assertTrue(
+            resp_json["('SNV_INDEL', 'GRCh38')"]['versions']['gnomad_genomes'],
+        )
+        with mock.patch('hail_search.queries.base.hl.read_table') as mock_read_table:
+            mock_read_table.return_value = hl.Table.parallelize(
+                [],
+                hl.tstruct(),
+                globals=hl.Struct(
+                    enums=hl.Struct(reloaded_enum=1),
+                    versions=hl.Struct(reloaded_version=2),
+                )
+            )
+            async with self.client.request('POST', '/reload_globals') as resp:
+                self.assertEqual(resp.status, 200)
+                resp_json = await resp.json()
+        self.assertDictEqual(
+            resp_json["('SNV_INDEL', 'GRCh38')"],
+            {
+                'enums': {'reloaded_enum': 1},
+                'versions': {'reloaded_version': 2},
+            },
+        )
 
     async def _assert_expected_search(self, results, gene_counts=None, **search_kwargs):
         search_body = get_hail_search_body(**search_kwargs)
