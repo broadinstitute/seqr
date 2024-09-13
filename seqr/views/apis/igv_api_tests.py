@@ -6,7 +6,7 @@ import subprocess # nosec
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls.base import reverse
 from seqr.views.apis.igv_api import fetch_igv_track, receive_igv_table_handler, update_individual_igv_sample, \
-    igv_genomes_proxy, receive_bulk_igv_table_handler
+    receive_bulk_igv_table_handler
 from seqr.views.apis.igv_api import GS_STORAGE_ACCESS_CACHE_KEY
 from seqr.views.utils.test_utils import AnvilAuthenticationTestCase
 
@@ -306,32 +306,3 @@ class IgvAPITest(AnvilAuthenticationTestCase):
             'filePath': '/readviz/NA21987.cram',
         }))
         self.assertEqual(response.status_code, 200)
-
-    @responses.activate
-    def test_igv_genomes_proxy(self, mock_subprocess):
-        url_path = 'igv.org.genomes/foo?query=true'
-        s3_url = reverse(igv_genomes_proxy, args=['s3', url_path])
-
-        expected_body = {'genes': ['GENE1', 'GENE2']}
-        responses.add(
-            responses.GET, 'https://s3.amazonaws.com/igv.org.genomes/foo?query=true', match_querystring=True,
-            content_type='application/json', body=json.dumps(expected_body))
-
-        response = self.client.get(s3_url, HTTP_TEST_HEADER='test/value')
-        self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(json.loads(response.content), expected_body)
-        self.assertIsNone(responses.calls[0].request.headers.get('Range'))
-        self.assertEqual(responses.calls[0].request.headers.get('Test-Header'), 'test/value')
-
-        # test with range header proxy
-        gs_url = reverse(igv_genomes_proxy, args=['gs', 'test-bucket/foo.fasta'])
-        expected_content = 'test file content'
-        responses.add(
-            responses.GET, 'https://storage.googleapis.com/test-bucket/foo.fasta', match_querystring=True,
-            body=expected_content)
-
-        response = self.client.get(gs_url, HTTP_RANGE='bytes=100-200', HTTP_TEST_HEADER='test/value')
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.content.decode(), expected_content)
-        self.assertEqual(responses.calls[1].request.headers.get('Range'), 'bytes=100-200')
-        self.assertIsNone(responses.calls[1].request.headers.get('Test-Header'))
