@@ -7,7 +7,7 @@ import responses
 
 from seqr.views.apis.summary_data_api import mme_details, success_story, saved_variants_page, hpo_summary_data, \
     bulk_update_family_external_analysis, individual_metadata, send_vlm_email
-from seqr.views.utils.test_utils import TEST_OAUTH2_PROVIDER, AuthenticationTestCase, AnvilAuthenticationTestCase, AirtableTest, PARSED_VARIANTS
+from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, AirtableTest, PARSED_VARIANTS
 from seqr.models import FamilyAnalysedBy, SavedVariant, VariantTag
 from settings import AIRTABLE_URL
 
@@ -262,7 +262,6 @@ AIRTABLE_COLLABORATOR_RECORDS = {
 }
 
 
-@mock.patch('seqr.views.utils.terra_api_utils.SOCIAL_AUTH_PROVIDER', TEST_OAUTH2_PROVIDER)
 @mock.patch('seqr.views.utils.permissions_utils.safe_redis_get_json', lambda *args: None)
 class SummaryDataAPITest(AirtableTest):
 

@@ -706,6 +706,7 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
         raise NotImplementedError
 
 
+@mock.patch('seqr.views.utils.terra_api_utils.SOCIAL_AUTH_PROVIDER', TEST_OAUTH2_PROVIDER)
 class AirtableTest(object):
 
     def assert_expected_airtable_call(self, call_index, filter_formula, fields, additional_params=None):
