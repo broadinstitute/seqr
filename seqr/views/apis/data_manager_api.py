@@ -448,9 +448,17 @@ AVAILABLE_PDO_STATUSES = {
 def validate_callset(request):
     request_json = json.loads(request.body)
     validate_vcf_exists(
-        request_json['filePath'], request.user, allowed_exts=DATA_TYPE_FILE_EXTS.get(request_json['datasetType'])
+        _callset_path(request_json), request.user, allowed_exts=DATA_TYPE_FILE_EXTS.get(request_json['datasetType']),
+        path_name=request_json['filePath'],
     )
     return create_json_response({'success': True})
+
+
+def _callset_path(request_json):
+    file_path = request_json['filePath']
+    if not AirtableSession.is_airtable_enabled():
+        file_path = os.path.join(LOADING_DATASETS_DIR, file_path.lstrip('/'))
+    return file_path
 
 
 @pm_or_data_manager_required
@@ -515,7 +523,7 @@ def load_data(request):
         individual_ids = _get_valid_project_samples(project_samples, sample_type, request.user)
 
     loading_args = (
-        project_models, sample_type, dataset_type, request_json['genomeVersion'], request_json['filePath'],
+        project_models, sample_type, dataset_type, request_json['genomeVersion'], _callset_path(request_json),
     )
     if has_airtable:
         success_message = f'*{request.user.email}* triggered loading internal {sample_type} {dataset_type} data for {len(projects)} projects'

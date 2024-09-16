@@ -465,6 +465,7 @@ AIRTABLE_SECONDARY_SAMPLE_RECORDS = {
 PIPELINE_RUNNER_URL = 'http://pipeline-runner:6000/loading_pipeline_enqueue'
 
 
+@mock.patch('seqr.views.apis.data_manager_api.LOADING_DATASETS_DIR', '/local_datasets')
 @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
 class DataManagerAPITest(AirtableTest):
 
@@ -1454,7 +1455,6 @@ class DataManagerAPITest(AirtableTest):
         self.assertDictEqual(response.json(), {'projects': self.WES_PROJECT_OPTIONS})
 
     @responses.activate
-    @mock.patch('seqr.views.apis.data_manager_api.LOADING_DATASETS_DIR', '/local_datasets')
     @mock.patch('seqr.views.apis.data_manager_api.BASE_URL', 'https://seqr.broadinstitute.org/')
     @mock.patch('seqr.views.utils.export_utils.os.makedirs')
     @mock.patch('seqr.views.utils.export_utils.open')
@@ -1486,7 +1486,7 @@ class DataManagerAPITest(AirtableTest):
                 'R0001_1kg',
                 'R0004_non_analyst_project'
             ],
-            'callset_path': f'{self.CALLSET_DIR}/mito_callset.mt',
+            'callset_path': f'{self.TRIGGER_CALLSET_DIR}/mito_callset.mt',
             'sample_type': 'WGS',
             'dataset_type': 'MITO',
             'reference_genome': 'GRCh38',
@@ -1562,7 +1562,8 @@ class DataManagerAPITest(AirtableTest):
 class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
     fixtures = ['users', '1kg_project', 'reference_data']
 
-    CALLSET_DIR = '/local_datasets'
+    TRIGGER_CALLSET_DIR = '/local_datasets'
+    CALLSET_DIR = ''
     WGS_PROJECT_OPTIONS = [EMPTY_PROJECT_OPTION, PROJECT_OPTION]
     WES_PROJECT_OPTIONS = [
         {'name': '1kg project nåme with uniçøde', 'projectGuid': 'R0001_1kg', 'dataTypeLastLoaded': '2017-02-05T06:25:55.397Z'},
@@ -1655,6 +1656,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
 
     LOADING_PROJECT_GUID = NON_ANALYST_PROJECT_GUID
     CALLSET_DIR = 'gs://test_bucket'
+    TRIGGER_CALLSET_DIR = CALLSET_DIR
     LOCAL_WRITE_DIR = '/mock/tmp'
     WGS_PROJECT_OPTIONS = [EMPTY_PROJECT_SAMPLES_OPTION, PROJECT_SAMPLES_OPTION]
     WES_PROJECT_OPTIONS = [EMPTY_PROJECT_SAMPLES_OPTION]
