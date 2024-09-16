@@ -49,7 +49,6 @@ HAS_ALT = 'has_alt'
 HAS_REF = 'has_ref'
 COMP_HET_ALT = 'COMP_HET_ALT'
 
-DE_NOVO = 'de_novo'
 RECESSIVE = 'recessive'
 X_LINKED_RECESSIVE = 'x_linked_recessive'
 COMPOUND_HET = 'compound_het'
@@ -66,7 +65,7 @@ INHERITANCE_FILTERS = {
         AFFECTED_ID: COMP_HET_ALT,
         UNAFFECTED_ID: HAS_REF,
     },
-    DE_NOVO: {
+    'de_novo': {
         AFFECTED_ID: HAS_ALT,
         UNAFFECTED_ID: REF_REF,
     },
