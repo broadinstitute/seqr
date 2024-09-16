@@ -525,7 +525,7 @@ class BaseHailTableQuery(object):
 
         comp_het_ht = None
         if self._has_comp_het_search:
-            comp_het_ht = self._annotate_families_inheritance(
+            comp_het_ht = self._filter_families_inheritance(
                 ht, COMPOUND_HET, inheritance_filter, sorted_family_sample_data,
             )
             comp_het_ht = comp_het_ht.filter(
@@ -536,12 +536,17 @@ class BaseHailTableQuery(object):
             # No sample-specific inheritance filtering needed
             sorted_family_sample_data = []
 
-        ht = None if self._inheritance_mode == COMPOUND_HET else self._annotate_families_inheritance(
+        ht = None if self._inheritance_mode == COMPOUND_HET else self._filter_families_inheritance(
             ht, self._inheritance_mode, inheritance_filter, sorted_family_sample_data,
         )
-        if ht:
-            ht = ht.filter(ht.family_entries.any(hl.is_defined)).select_globals('family_guids')
         return ht, comp_het_ht
+
+    def _filter_families_inheritance(self, ht, inheritance_mode, inheritance_filter, sorted_family_sample_data, **kwargs):
+        ht = self._annotate_families_inheritance(
+            ht, inheritance_mode, inheritance_filter, sorted_family_sample_data, **kwargs
+        )
+        return ht.filter(ht.family_entries.any(hl.is_defined)).select_globals('family_guids')
+
 
     def _annotate_families_inheritance(
         self, ht, inheritance_mode, inheritance_filter, sorted_family_sample_data, annotation_field='family_entries',
