@@ -1501,10 +1501,7 @@ class DataManagerAPITest(AirtableTest):
         self.reset_logs()
 
         body.update({'datasetType': 'SV', 'filePath': f'{self.CALLSET_DIR}/sv_callset.vcf', 'sampleType': 'WES'})
-        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
-        self._assert_trigger_error(response, body, dag_json)
-        self._assert_expected_load_data_requests(trigger_error=True, dataset_type='GCNV', sample_type='WES')
-        self._has_expected_ped_files(mock_open, mock_mkdir, 'SV', sample_type='WES')
+        self._trigger_error(url, body, dag_json, mock_open, mock_mkdir)
 
         # Test loading with sample subset
         responses.add(responses.POST, PIPELINE_RUNNER_URL)
@@ -1531,6 +1528,12 @@ class DataManagerAPITest(AirtableTest):
                 'detail': {'R0004_non_analyst_project_pedigree': mock.ANY},
             }),
         ])
+
+    def _trigger_error(self, url, body, dag_json, mock_open, mock_mkdir):
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self._assert_expected_load_data_requests(trigger_error=True, dataset_type='GCNV', sample_type='WES')
+        self._assert_trigger_error(response, body, dag_json)
+        self._has_expected_ped_files(mock_open, mock_mkdir, 'SV', sample_type='WES')
 
     def _has_expected_ped_files(self, mock_open, mock_mkdir, dataset_type, sample_type='WGS', has_project_subset=False, single_project=False):
         mock_open.assert_has_calls([
@@ -1617,11 +1620,19 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
     def _set_loading_trigger_error(self):
         responses.add(responses.POST, PIPELINE_RUNNER_URL, status=400)
 
-    def _assert_trigger_error(self, response, body, *args):
+    def _trigger_error(self, url, body, dag_json, mock_open, mock_mkdir):
+        super()._trigger_error(url, body, dag_json, mock_open, mock_mkdir)
+
+        responses.add(responses.POST, PIPELINE_RUNNER_URL, status=409)
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self._assert_trigger_error(response, body, dag_json, response_body={
+            'errors': ['Loading pipeline is already running. Wait for it to complete and resubmit'], 'warnings': None,
+        })
+
+    def _assert_trigger_error(self, response, body, *args, response_body=None, **kwargs):
         self.assertEqual(response.status_code, 400)
         error = f'400 Client Error: Bad Request for url: {PIPELINE_RUNNER_URL}'
-        self.assertDictEqual(response.json(), {'error': error})
-        self.maxDiff = None
+        self.assertDictEqual(response.json(), response_body or {'error': error})
         self.assert_json_logs(self.pm_user, [
             (error, {'severity': 'WARNING', 'requestBody': body, 'httpRequest': mock.ANY, 'traceback': mock.ANY}),
         ])
@@ -1730,7 +1741,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         self.mock_slack.assert_called_once_with(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, message)
         self.mock_slack.reset_mock()
 
-    def _assert_trigger_error(self, response, body, dag_json):
+    def _assert_trigger_error(self, response, body, dag_json, **kwargs):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'success': True})
 

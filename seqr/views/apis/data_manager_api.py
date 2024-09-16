@@ -529,6 +529,8 @@ def load_data(request):
             *loading_args, user=request.user, pedigree_dir=LOADING_DATASETS_DIR, raise_pedigree_error=True,
         )
         response = requests.post(f'{PIPELINE_RUNNER_SERVER}/loading_pipeline_enqueue', json=request_json, timeout=60)
+        if response.status_code == 409:
+            raise ErrorsWarningsException(['Loading pipeline is already running. Wait for it to complete and resubmit'])
         response.raise_for_status()
         logger.info('Triggered loading pipeline', request.user, detail=request_json)
 
