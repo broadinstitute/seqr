@@ -130,10 +130,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
                 ht, sample_data = self._load_prefiltered_project_ht(project_guid, sample_type, project_sample_type_data, **kwargs)
             entries_hts_map[sample_type] = [(ht, sample_data)]
 
-        unmerged_hts, unmerged_comp_het_hts = self._filter_entries_ht_both_sample_types(entries_hts_map, **kwargs)
-        merged_ht = self._merge_project_hts(unmerged_hts)
-        merged_comp_het_ht = self._merge_project_hts(unmerged_comp_het_hts)
-        return merged_ht, merged_comp_het_ht
+        return self._filter_entries_ht_both_sample_types(entries_hts_map, **kwargs)
 
     def _filter_entries_ht_both_sample_types(
         self, entries_hts_map: dict[str, list[tuple[hl.Table, dict]]], inheritance_filter=None, quality_filter=None, **kwargs
@@ -187,7 +184,9 @@ class MitoHailTableQuery(BaseHailTableQuery):
                 ht = self._merge_both_sample_types_hts(wes_ht, wgs_ht)
                 filtered_hts.append(ht)
 
-        return filtered_hts, filtered_comp_het_hts
+        merged_ht = self._merge_project_hts(filtered_hts)
+        merged_comp_het_ht = self._merge_project_hts(filtered_comp_het_hts)
+        return merged_ht, merged_comp_het_ht
 
     @staticmethod
     def _build_index_map(sorted_family_sample_data):
@@ -267,18 +266,15 @@ class MitoHailTableQuery(BaseHailTableQuery):
 
     def _import_and_filter_multiple_project_hts(self, project_samples: dict, **kwargs) -> tuple[hl.Table, hl.Table]:
         sample_types = set()
-        for project_guid, sample_dict in project_samples.items():
+        for sample_dict in project_samples.values():
             sample_types.update(sample_dict.keys())
         if len(sample_types) == 1:
             return super()._import_and_filter_multiple_project_hts(project_samples, **kwargs)
 
+        # entries_hts_map = self._load_prefiltered_project_hts_both_sample_types(project_samples, **kwargs)
+        # return self._filter_entries_ht_both_sample_types(entries_hts_map, **kwargs)
+
     # TODO: Multi-project type control flow for both sample types.
-    #
-    #     entries_hts_map = self._load_prefiltered_project_hts_both_sample_types(project_samples, **kwargs)
-    #     unmerged_hts, unmerged_comp_het_hts = self._filter_entries_table_both_sample_types(entries_hts_map, **kwargs)
-    #     merged_ht = self._merge_project_hts(unmerged_hts)
-    #     merged_comp_het_ht = self._merge_project_hts(unmerged_comp_het_hts)
-    #     return merged_ht, merged_comp_het_ht
     #
     # def _load_prefiltered_project_hts_both_sample_types(self, project_samples, **kwargs) -> dict[str, list[tuple[hl.Table, dict]]]:
     #     entries_hts_map = {}
