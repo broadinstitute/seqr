@@ -635,15 +635,18 @@ def _update_conditions(family_subject_row, variants, omim_conditions, mondo_cond
                 variant_conditions += omim_conditions[mim_number][gene_id]
 
         if set_conditions_for_variants:
-            if v['sv_type'] and mim_numbers and not variant_conditions:
+            if v['sv_type'] and mim_numbers:
                 # For SVs report the gene linked to the condition instead of the annotated gene if conflicting
-                possible_gene_conditions = [
-                    conditions for mim_number in mim_numbers
-                    for gene_id, conditions in omim_conditions[mim_number].items() if gene_id and conditions
-                ]
-                if len(possible_gene_conditions) == 1:
-                    variant_conditions = possible_gene_conditions[0]
-                    v[GENE_COLUMN] = variant_conditions[0]['gene__gene_symbol']
+                if not variant_conditions:
+                    possible_gene_conditions = [
+                        conditions for mim_number in mim_numbers
+                        for gene_id, conditions in omim_conditions[mim_number].items() if gene_id and conditions
+                    ]
+                    if len(possible_gene_conditions) == 1:
+                        variant_conditions = possible_gene_conditions[0]
+                condition_genes = {c['gene__gene_symbol'] for c in variant_conditions}
+                if len(condition_genes) == 1:
+                    v[GENE_COLUMN] = list(condition_genes)[0]
             conditions = _format_omim_conditions(variant_conditions) if variant_conditions else mondo_condition
             v.update(conditions)
         else:
