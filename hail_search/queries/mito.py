@@ -4,9 +4,11 @@ from aiohttp.web import HTTPNotFound
 import hail as hl
 import logging
 
-from hail_search.constants import ABSENT_PATH_SORT_OFFSET, CLINVAR_KEY, CLINVAR_MITO_KEY, CLINVAR_LIKELY_PATH_FILTER, CLINVAR_PATH_FILTER, \
-    CLINVAR_PATH_RANGES, CLINVAR_PATH_SIGNIFICANCES, ALLOWED_TRANSCRIPTS, ALLOWED_SECONDARY_TRANSCRIPTS, PATHOGENICTY_SORT_KEY, CONSEQUENCE_SORT, \
-    PATHOGENICTY_HGMD_SORT_KEY
+from hail_search.constants import ABSENT_PATH_SORT_OFFSET, CLINVAR_KEY, CLINVAR_MITO_KEY, CLINVAR_LIKELY_PATH_FILTER, \
+    CLINVAR_PATH_FILTER, \
+    CLINVAR_PATH_RANGES, CLINVAR_PATH_SIGNIFICANCES, ALLOWED_TRANSCRIPTS, ALLOWED_SECONDARY_TRANSCRIPTS, \
+    PATHOGENICTY_SORT_KEY, CONSEQUENCE_SORT, \
+    PATHOGENICTY_HGMD_SORT_KEY, SAMPLE_TYPE_WES, SAMPLE_TYPE_WGS, COMPOUND_HET
 from hail_search.queries.base import BaseHailTableQuery, PredictionPath, QualityFilterFormat
 
 MAX_LOAD_INTERVALS = 1000
@@ -112,6 +114,212 @@ class MitoHailTableQuery(BaseHailTableQuery):
     }
     SORTS[PATHOGENICTY_HGMD_SORT_KEY] = SORTS[PATHOGENICTY_SORT_KEY]
 
+    def _import_and_filter_entries_ht(
+        self, project_guid: str, num_families: int, project_sample_type_data, **kwargs
+    ) -> tuple[hl.Table, hl.Table]:
+        sample_types = set(project_sample_type_data.keys())
+        if len(sample_types) == 1:
+            return super()._import_and_filter_entries_ht(project_guid, num_families, project_sample_type_data, **kwargs)
+
+        entries_hts_map: dict[str, list[tuple[hl.Table, dict]]] = {}
+        for sample_type in sample_types:
+            if num_families == 1:
+                family_guid = list(list(project_sample_type_data.values())[0].keys())[0]
+                ht, sample_data = self._load_prefiltered_family_ht(family_guid, sample_type, project_sample_type_data, **kwargs)
+            else:
+                ht, sample_data = self._load_prefiltered_project_ht(project_guid, sample_type, project_sample_type_data, **kwargs)
+            entries_hts_map[sample_type] = [(ht, sample_data)]
+
+        unmerged_hts, unmerged_comp_het_hts = self._filter_entries_ht_both_sample_types(entries_hts_map, **kwargs)
+        merged_ht = self._merge_project_hts(unmerged_hts)
+        merged_comp_het_ht = self._merge_project_hts(unmerged_comp_het_hts)
+        return merged_ht, merged_comp_het_ht
+
+    def _filter_entries_ht_both_sample_types(
+        self, entries_hts_map: dict[str, list[tuple[hl.Table, dict]]], inheritance_filter=None, quality_filter=None, **kwargs
+    ):
+        filtered_hts = []
+        filtered_comp_het_hts = []
+        wes_entries, wgs_entries = entries_hts_map[SAMPLE_TYPE_WES], entries_hts_map[SAMPLE_TYPE_WGS]  # entries_hts_map: {<sample_type>: [(ht, project_samples), ...]}
+
+        for (wes_ht, wes_project_samples), (wgs_ht, wgs_project_samples) in zip(wes_entries, wgs_entries):
+            wes_ht, sorted_wes_family_sample_data = self._add_entry_sample_families(wes_ht, wes_project_samples, SAMPLE_TYPE_WES)
+            wes_family_idx_map = self._build_index_map(sorted_wes_family_sample_data)
+
+            wgs_ht, sorted_wgs_family_sample_data = self._add_entry_sample_families(wgs_ht, wgs_project_samples,SAMPLE_TYPE_WGS)
+            wgs_family_idx_map = self._build_index_map(sorted_wgs_family_sample_data)
+
+            # Filter by quality, keeping variants that pass quality filter in at least one sample type per family.
+            wes_ht = self._annotate_passes_quality_filter(wes_ht, quality_filter)
+            wgs_ht = self._annotate_passes_quality_filter(wgs_ht, quality_filter)
+            wes_ht, wgs_ht = self._apply_filter(wes_family_idx_map, wes_ht, wgs_family_idx_map, wgs_ht)
+
+            # Filter by inheritance
+            any_valid_entry, is_any_affected = self._get_any_family_member_gt_has_alt_filter()
+            wes_ht = wes_ht.annotate(passes_filter=wes_ht.family_entries.map(
+                lambda entries: hl.or_missing(any_valid_entry(entries), entries)
+            ))
+            wgs_ht = wgs_ht.annotate(passes_filter=wgs_ht.family_entries.map(
+                lambda entries: hl.or_missing(any_valid_entry(entries), entries)
+            ))
+
+            if self._has_comp_het_search:
+                comp_het_wes_ht = self._annotate_families_inheritance(
+                    wes_ht, COMPOUND_HET, inheritance_filter, sorted_wes_family_sample_data
+                )
+                comp_het_wgs_ht = self._annotate_families_inheritance(
+                    wgs_ht, COMPOUND_HET, inheritance_filter, sorted_wgs_family_sample_data
+                )
+                comp_het_wes_ht, comp_het_wgs_ht = self._apply_filter(
+                    wes_family_idx_map, comp_het_wes_ht, wgs_family_idx_map, comp_het_wgs_ht
+                )
+                comp_het_ht = self._merge_both_sample_types_hts(comp_het_wes_ht, comp_het_wgs_ht)
+                filtered_comp_het_hts.append(comp_het_ht)
+
+            if is_any_affected or not (inheritance_filter or self._inheritance_mode):
+                # No sample-specific inheritance filtering needed
+                sorted_wes_family_sample_data = sorted_wgs_family_sample_data = []
+
+            if self._inheritance_mode != COMPOUND_HET:
+                wes_ht = self._annotate_families_inheritance(wes_ht, self._inheritance_mode, inheritance_filter, sorted_wes_family_sample_data)
+                wgs_ht = self._annotate_families_inheritance(wgs_ht, self._inheritance_mode, inheritance_filter, sorted_wgs_family_sample_data)
+                wes_ht, wgs_ht = self._apply_filter(wes_family_idx_map, wes_ht, wgs_family_idx_map, wgs_ht)
+                ht = self._merge_both_sample_types_hts(wes_ht, wgs_ht)
+                filtered_hts.append(ht)
+
+        return filtered_hts, filtered_comp_het_hts
+
+    @staticmethod
+    def _build_index_map(sorted_family_sample_data):
+        return {
+            samples[0]['familyGuid']: family_idx
+            for family_idx, samples in enumerate(sorted_family_sample_data)
+        }
+
+    def _annotate_passes_quality_filter(self, ht: hl.Table, quality_filter, **kwargs):
+        passes_quality_filter = self._get_family_passes_quality_filter(quality_filter, ht, **kwargs)
+        if passes_quality_filter is not None:
+            ht = ht.annotate(passes_filter=ht.family_entries.map(
+                lambda entries: hl.or_missing(passes_quality_filter(entries), entries)
+            ))
+        else:
+            ht = ht.annotate(passes_filter=ht.family_entries)
+        return ht
+
+    @staticmethod
+    def _apply_filter(wes_family_idx_map, wes_ht, wgs_family_idx_map, wgs_ht):
+        # TODO: This function doesn't work like I want it to!
+
+        # family_guids_to_keep = set()
+        # for family_guid in set(wes_family_idx_map.keys()).union(set(wgs_family_idx_map.keys())):
+        #     wes_family_passes = (
+        #         family_guid in wes_family_idx_map and
+        #         hl.is_defined(wes_ht.passes_filter[wes_family_idx_map[family_guid]])
+        #     )
+        #     wgs_family_passes = (
+        #         family_guid in wgs_family_idx_map and
+        #         hl.is_defined(wgs_ht.passes_filter[wgs_family_idx_map[family_guid]])
+        #     )
+        #     if hl.eval(wes_family_passes) or hl.eval(wgs_family_passes):
+        #         family_guids_to_keep.add(family_guid)
+        # wes_ht = wes_ht.filter(hl.any(lambda samples: samples[0].familyGuid in family_guids_to_keep, wes_ht.family_entries))
+        # wgs_ht = wgs_ht.filter(hl.any(lambda samples: samples[0].familyGuid in family_guids_to_keep, wgs_ht.family_entries))
+
+        wes_ht = wes_ht.annotate(
+            passes_joined_filter=hl.enumerate(wes_ht.family_entries).map(
+                # x[0] is family index, x[1] is list of samples
+                lambda x: hl.is_defined(wes_ht.passes_filter[x[0]]) | hl.if_else(
+                    hl.literal(wgs_family_idx_map).contains(x[1][0]['familyGuid']),
+                    hl.is_defined(wgs_ht.passes_filter[hl.literal(wgs_family_idx_map)[x[1][0]['familyGuid']]]),
+                    False
+                )
+            ))
+
+        wgs_ht = wgs_ht.annotate(
+            passes_joined_filter=hl.enumerate(wgs_ht.family_entries).map(
+                lambda x: hl.is_defined(wgs_ht.passes_filter[x[0]]) | hl.if_else(
+                    hl.literal(wes_family_idx_map).contains(x[1][0]['familyGuid']),
+                    hl.is_defined(wes_ht.passes_filter[wes_family_idx_map[x[1][0]['familyGuid']]]),
+                    False
+                )
+            ))
+
+        wes_ht = wes_ht.filter(wes_ht.passes_joined_filter.any(hl.is_defined))
+        wgs_ht = wgs_ht.filter(wgs_ht.passes_joined_filter.any(hl.is_defined))
+        wes_ht = wes_ht.drop('passes_filter', 'passes_joined_filter')
+        wgs_ht = wgs_ht.drop('passes_filter', 'passes_joined_filter')
+        return wes_ht, wgs_ht
+
+    @staticmethod
+    def _merge_both_sample_types_hts(wes_ht, wgs_ht):
+        wes_ht = wes_ht.rename({'family_entries': 'wes_family_entries', 'filters': 'wes_filters'})
+        wgs_ht = wgs_ht.rename({'family_entries': 'wgs_family_entries', 'filters': 'wgs_filters'})
+        ht = wes_ht.join(wgs_ht, how='outer')
+        ht = ht.transmute(
+            family_entries=hl.coalesce(ht.wes_family_entries, hl.empty_array(ht.wes_family_entries[0].dtype)).extend(
+                hl.coalesce(ht.wgs_family_entries, hl.empty_array(ht.wgs_family_entries[0].dtype))
+            ),
+            filters=hl.coalesce(ht.wes_filters, hl.empty_set(hl.tstr)).union(
+                hl.coalesce(ht.wgs_filters, hl.empty_set(hl.tstr))
+            )
+        )
+        return ht.transmute_globals(family_guids=ht.family_guids.extend(ht.family_guids_1))
+
+    def _import_and_filter_multiple_project_hts(self, project_samples: dict, **kwargs) -> tuple[hl.Table, hl.Table]:
+        sample_types = set()
+        for project_guid, sample_dict in project_samples.items():
+            sample_types.update(sample_dict.keys())
+        if len(sample_types) == 1:
+            return super()._import_and_filter_multiple_project_hts(project_samples, **kwargs)
+
+    # TODO: Multi-project type control flow for both sample types.
+    #
+    #     entries_hts_map = self._load_prefiltered_project_hts_both_sample_types(project_samples, **kwargs)
+    #     unmerged_hts, unmerged_comp_het_hts = self._filter_entries_table_both_sample_types(entries_hts_map, **kwargs)
+    #     merged_ht = self._merge_project_hts(unmerged_hts)
+    #     merged_comp_het_ht = self._merge_project_hts(unmerged_comp_het_hts)
+    #     return merged_ht, merged_comp_het_ht
+    #
+    # def _load_prefiltered_project_hts_both_sample_types(self, project_samples, **kwargs) -> dict[str, list[tuple[hl.Table, dict]]]:
+    #     entries_hts_map = {}
+    #     chunk_size = 64
+    #     project_guid_chunks: list[list[str]] = []
+    #     current_chunk: list[str] = []
+    #     unmerged_entries_hts_map = defaultdict(dict)
+    #     for project_guid, project_sample_type_data in project_samples.items():
+    #         for sample_type, family_sample_data in project_sample_type_data.items():
+    #             ht = self._read_table(f'projects/{sample_type}/{project_guid}.ht',use_ssd_dir=True)
+    #             if ht is None:
+    #                 continue
+    #             unmerged_entries_hts_map[sample_type][project_guid] = (ht, family_sample_data)
+    #
+    #         current_chunk.append(project_guid)
+    #         if len(current_chunk) >= chunk_size:
+    #             project_guid_chunks.append(current_chunk)
+    #             current_chunk = []
+    #
+    #     project_guid_chunks.append(current_chunk)
+    #
+    #     # The project tables are chunked such that for both sample types, the same variants should be in the same chunk
+    #     for sample_type, project_data in unmerged_entries_hts_map.items():
+    #         project_hts = []
+    #         project_family_data = {}
+    #         prefiltered_project_hts: list[tuple[hl.Table, dict]] = []  # Ordered list of merged, prefiltered projects
+    #         for chunk in project_guid_chunks:
+    #             for project_guid in chunk:
+    #                 if project_guid not in project_data:  # There is no project ht for this sample_type
+    #                     continue
+    #                 project_ht, family_sample_data = project_data[project_guid]
+    #                 project_hts.append(project_ht.select_globals('sample_type', 'family_guids', 'family_samples'))
+    #                 project_family_data.update(family_sample_data)
+    #
+    #             self._prefilter_merged_project_hts(project_hts, project_family_data, prefiltered_project_hts, **kwargs)
+    #             project_hts = []
+    #             project_family_data = {}
+    #
+    #         entries_hts_map[sample_type] = prefiltered_project_hts
+    #     return entries_hts_map
+
     @staticmethod
     def _selected_main_transcript_expr(ht):
         comp_het_gene_ids = getattr(ht, 'comp_het_gene_ids', None)
@@ -152,8 +360,8 @@ class MitoHailTableQuery(BaseHailTableQuery):
             self._load_table_kwargs = {'_intervals': parsed_intervals, '_filter_intervals': True}
         return parsed_intervals
 
-    def _get_family_passes_quality_filter(self, quality_filter, ht, filters_field_name, pathogenicity=None, **kwargs):
-        passes_quality = super()._get_family_passes_quality_filter(quality_filter, ht, filters_field_name)
+    def _get_family_passes_quality_filter(self, quality_filter, ht, pathogenicity=None, **kwargs):
+        passes_quality = super()._get_family_passes_quality_filter(quality_filter, ht)
         clinvar_path_ht = False if passes_quality is None else self._get_loaded_clinvar_prefilter_ht(pathogenicity)
         if not clinvar_path_ht:
             return passes_quality

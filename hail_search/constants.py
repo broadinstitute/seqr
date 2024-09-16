@@ -89,3 +89,6 @@ HGMD_PATH_RANGES = [
     ('likely_disease_causing', 'DM?', 'DM?'),
     ('hgmd_other', 'DP', None),
 ]
+
+SAMPLE_TYPE_WES = 'WES'
+SAMPLE_TYPE_WGS = 'WGS'
