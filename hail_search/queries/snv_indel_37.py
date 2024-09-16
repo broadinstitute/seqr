@@ -96,18 +96,25 @@ class SnvIndelHailTableQuery37(MitoHailTableQuery):
         if af_cutoff_field is None:
             return False
 
-        af_filter = True if af_cutoff_field is True else lambda ht: ht[af_cutoff_field]
-
+        clinvar_path_ht = False
         if af_cutoff < PATH_FREQ_OVERRIDE_CUTOFF:
             clinvar_path_ht = self._get_loaded_clinvar_prefilter_ht(pathogenicity)
-            if clinvar_path_ht is not False:
-                path_cutoff_field = self._get_af_prefilter_field(PATH_FREQ_OVERRIDE_CUTOFF)
-                non_clinvar_filter = lambda ht: hl.is_missing(clinvar_path_ht[ht.key])
-                if af_filter is not True:
-                    non_clinvar_filter = lambda ht: non_clinvar_filter(ht) & af_filter(ht)
-                af_filter = lambda ht: ht[path_cutoff_field] | non_clinvar_filter(ht)
+
+        if clinvar_path_ht is not False:
+            path_cutoff_field = self._get_af_prefilter_field(PATH_FREQ_OVERRIDE_CUTOFF)
+            non_clinvar_filter = lambda ht: hl.is_missing(clinvar_path_ht[ht.key])
+            if af_cutoff_field is not True:
+                non_clinvar_var_filter = non_clinvar_filter
+                non_clinvar_filter = lambda ht: non_clinvar_var_filter(ht) & self._af_prefilter(af_cutoff_field)(ht)
+            af_filter = lambda ht: ht[path_cutoff_field] | non_clinvar_filter(ht)
+        else:
+            af_filter = self._af_prefilter(af_cutoff_field)
 
         return af_filter
+
+    @staticmethod
+    def _af_prefilter(af_cutoff_field):
+        return True if af_cutoff_field is True else lambda ht: ht[af_cutoff_field]
 
     def _get_af_prefilter_field(self, af_cutoff):
         return next((field for field, cutoff in self.FREQUENCY_PREFILTER_FIELDS.items() if af_cutoff <= cutoff), None)

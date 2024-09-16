@@ -301,7 +301,9 @@ def _get_genotype_zygosity(genotype, individual=None, variant=None):
 
 def _get_discovery_notes(variant, gene_variants, omit_parent_mnvs):
     parent_mnv = next((v for v in gene_variants if len(v['individual_genotype']) == 1), gene_variants[0])
-    if parent_mnv['genetic_findings_id'] == variant['genetic_findings_id'] and omit_parent_mnvs:
+    is_parent_mnv = (parent_mnv['genetic_findings_id'], parent_mnv['alt']) == (variant['genetic_findings_id'], variant['alt'])
+    should_skip = is_parent_mnv if omit_parent_mnvs else not is_parent_mnv
+    if should_skip:
         return None
     variant_type = 'complex structural' if parent_mnv.get('sv_type') else 'multinucleotide'
     parent_name = _get_nested_variant_name(parent_mnv)

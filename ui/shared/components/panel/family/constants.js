@@ -77,31 +77,29 @@ export const IGV_OPTIONS = {
   showCommandBar: true,
 }
 
-const BASE_REFERENCE_URL = '/api/igv_genomes'
-
 const REFERENCE_URLS = [
   {
     key: 'fastaURL',
-    baseUrl: BASE_REFERENCE_URL,
+    baseUrl: 'https://igv-genepattern-org.s3.amazonaws.com/genomes/seq',
     path: {
-      37: 's3/igv.broadinstitute.org/genomes/seq/hg19/hg19.fasta',
-      38: 'gs/gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.fasta',
+      37: 'hg19/hg19.fasta',
+      38: 'hg38/hg38.fa',
     },
   },
   {
     key: 'cytobandURL',
-    baseUrl: `${BASE_REFERENCE_URL}/s3`,
+    baseUrl: 'https://hgdownload.soe.ucsc.edu/goldenPath',
     path: {
-      37: 'igv.broadinstitute.org/genomes/seq/hg19/cytoBand.txt',
-      38: 'igv.org.genomes/hg38/annotations/cytoBandIdeo.txt.gz',
+      37: 'hg19/database/cytoBand.txt.gz',
+      38: 'hg38/database/cytoBandIdeo.txt.gz',
     },
   },
   {
     key: 'aliasURL',
-    baseUrl: `${BASE_REFERENCE_URL}/s3/igv.org.genomes`,
+    baseUrl: undefined,
     path: {
-      37: 'hg19/hg19_alias.tab',
-      38: 'hg38/hg38_alias.tab',
+      37: 'https://igv.org/genomes/data/hg19/hg19_alias.tab',
+      38: 'https://igv-genepattern-org.s3.amazonaws.com/genomes/hg38/hg38_alias.tab',
     },
   },
 ]
@@ -121,7 +119,7 @@ const REFERENCE_TRACKS = [
   {
     name: 'Refseq',
     indexPostfix: 'tbi',
-    baseUrl: `${BASE_REFERENCE_URL}/s3/igv.org.genomes`,
+    baseUrl: 'https://s3.amazonaws.com/igv.org.genomes',
     path: {
       37: 'hg19/refGene.sorted.txt.gz',
       38: 'hg38/refGene.sorted.txt.gz',
@@ -141,7 +139,7 @@ export const REFERENCE_LOOKUP = ['37', '38'].reduce((acc, genome) => ({
       indexURL: indexPostfix ? `${baseUrl}/${path[genome]}.${indexPostfix}` : null,
       ...track,
     })),
-    ...REFERENCE_URLS.reduce((acc2, { key, baseUrl, path }) => ({ ...acc2, [key]: `${baseUrl}/${path[genome]}` }), {}),
+    ...REFERENCE_URLS.reduce((acc2, { key, baseUrl, path }) => ({ ...acc2, [key]: baseUrl ? `${baseUrl}/${path[genome]}` : path[genome] }), {}),
   },
 }), {})
 

@@ -612,9 +612,9 @@ GENETIC_FINDINGS_TABLE = [
         '248367227', 'TC', 'T', 'CA1501729', 'RP11', '', '', '', 'Homozygous', '', 'paternal', '', '', 'Known', '',
         'MONDO:0044970', '', 'Uncertain', '', 'Broad_HG00732', 'SR-ES', '', '', '', '', '', '', '',
     ], [
-        'Broad_HG00731_19_1912634', 'Broad_HG00731', 'Broad_exome_VCGS_FAM203_621_D2', 'SNV/INDEL', 'GRCh38', '19',
-        '1912634', 'C', 'T', 'CA403171634', 'OR4G11P', 'ENST00000371839', '', '', 'Heterozygous', '', 'unknown',
-        'Broad_HG00731_19_1912633', '', 'Known', '', 'MONDO:0044970', '', 'Full', '', '', 'SR-ES',
+        'Broad_HG00731_19_1912632', 'Broad_HG00731', 'Broad_exome_VCGS_FAM203_621_D2', 'SNV/INDEL', 'GRCh38', '19',
+        '1912632', 'GC', 'TT', '', 'OR4G11P', 'ENST00000371839', 'c.586_587delinsTT', 'p.Ala196Leu', 'Heterozygous', '', 'unknown',
+        'Broad_HG00731_19_1912634', '', 'Known', '', 'MONDO:0044970', '', 'Full', '', '', 'SR-ES',
         'The following variants are part of the multinucleotide variant 19-1912632-GC-TT (c.586_587delinsTT, p.Ala196Leu): 19-1912633-G-T, 19-1912634-C-T',
         '', '', '', '', '', '',
     ], [
@@ -830,7 +830,7 @@ class ReportAPITest(AirtableTest):
             'The following entries are missing recommended "reported_race" in the "participant" table: Broad_HG00733, Broad_NA19678, Broad_NA19679, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20881, Broad_NA20888',
             'The following entries are missing recommended "phenotype_description" in the "participant" table: Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20881, Broad_NA20888',
             'The following entries are missing recommended "age_at_enrollment" in the "participant" table: Broad_HG00731, Broad_NA20870, Broad_NA20872, Broad_NA20875, Broad_NA20876, Broad_NA20881, Broad_NA20888',
-            'The following entries are missing recommended "known_condition_name" in the "genetic_findings" table: Broad_HG00731_19_1912632, Broad_HG00731_19_1912633, Broad_HG00731_19_1912634, Broad_HG00731_1_248367227',
+            'The following entries are missing recommended "known_condition_name" in the "genetic_findings" table: Broad_HG00731_19_1912632, Broad_HG00731_1_248367227',
         ]
         validation_warnings = [
             'The following columns are specified as "enumeration" in the "participant" data model but are missing the allowed values definition: prior_testing',
@@ -853,7 +853,7 @@ class ReportAPITest(AirtableTest):
             'The following entries have invalid values for "analysis_details" (from Airtable) in the "aligned_dna_short_read" table. Allowed values are a google bucket path starting with gs://. Invalid values: Broad_exome_VCGS_FAM203_621_D2_1 (DOI:10.5281/zenodo.4469317)',
             'The following entries have invalid values for "date_data_generation" (from Airtable) in the "experiment_rna_short_read" table. Allowed values have data type float. Invalid values: NA19679 (2023-02-11)',
             'The following entries are missing required "experiment_id" (from Airtable) in the "genetic_findings" table: Broad_NA19675_1_21_3343353',
-            'The following entries have non-unique values for "experiment_id" (from Airtable) in the "genetic_findings" table: Broad_exome_VCGS_FAM203_621_D2 (Broad_HG00731_19_1912632, Broad_HG00731_19_1912633, Broad_HG00731_19_1912634, Broad_HG00731_1_248367227)',
+            'The following entries have non-unique values for "experiment_id" (from Airtable) in the "genetic_findings" table: Broad_exome_VCGS_FAM203_621_D2 (Broad_HG00731_19_1912632, Broad_HG00731_1_248367227)',
         ]
         self.assertListEqual(response.json()['errors'], validation_errors)
 
@@ -909,13 +909,7 @@ class ReportAPITest(AirtableTest):
             'Broad_HG00731_1_248367227', 'Broad_HG00731', 'Broad_exome_VCGS_FAM203_621_D2', 'SNV/INDEL', 'GRCh37', '1',
             '248367227', 'TC', 'T', 'CA1501729', 'RP11', '', '', '', 'Homozygous', '', 'paternal', '', '', 'Known', '',
             'MONDO:0044970', '', 'Uncertain', '', 'Broad_HG00732', 'SR-ES', '', '', '', '', '', '', '',
-        ], [
-            'Broad_HG00731_19_1912634', 'Broad_HG00731', 'Broad_exome_VCGS_FAM203_621_D2', 'SNV/INDEL', 'GRCh38', '19',
-            '1912634', 'C', 'T', 'CA403171634', 'OR4G11P', 'ENST00000371839', '', '', 'Heterozygous', '', 'unknown',
-            'Broad_HG00731_19_1912633', '', 'Known', '', 'MONDO:0044970', '', 'Full', '', '', 'SR-ES',
-            'The following variants are part of the multinucleotide variant 19-1912632-GC-TT (c.586_587delinsTT, p.Ala196Leu): 19-1912633-G-T, 19-1912634-C-T',
-            '', '', '', '', '', '',
-        ]], additional_calls=2)
+        ]], additional_calls=1)
 
         responses.calls.reset()
         mock_subprocess.reset_mock()
@@ -1103,7 +1097,6 @@ class ReportAPITest(AirtableTest):
             genetic_findings_file,
             expected_rows=GENETIC_FINDINGS_TABLE if has_second_project else GENETIC_FINDINGS_TABLE[:4],
             absent_rows=None,
-            additional_calls=2,
         )
 
     def _assert_expected_file(self, actual_rows, expected_rows, additional_calls=0, absent_rows=None):
@@ -1251,7 +1244,7 @@ class ReportAPITest(AirtableTest):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertListEqual(list(response_json.keys()), ['rows'])
-        row_ids = ['NA19675_1_21_3343353', 'HG00731_1_248367227', 'HG00731_19_1912634', 'HG00731_19_1912633', 'HG00731_19_1912632']
+        row_ids = ['NA19675_1_21_3343353', 'HG00731_1_248367227', 'HG00731_19_1912632']
         self.assertListEqual([r['genetic_findings_id'] for r in response_json['rows']], row_ids)
         self.assertDictEqual(response_json['rows'][0], {
             **BASE_VARIANT_METADATA_ROW,
@@ -1313,9 +1306,8 @@ class ReportAPITest(AirtableTest):
         self.assertDictEqual(response_json['rows'][1], expected_row)
         expected_mnv = {
             **BASE_VARIANT_METADATA_ROW,
-            'alt': 'T',
+            'alt': 'TT',
             'chrom': '19',
-            'ClinGen_allele_ID': 'CA403171634',
             'condition_id': 'MONDO:0044970',
             'condition_inheritance': 'Unknown',
             'displayName': '2',
@@ -1324,13 +1316,15 @@ class ReportAPITest(AirtableTest):
             'gene_of_interest': 'OR4G11P',
             'gene_id': 'ENSG00000240361',
             'gene_known_for_phenotype': 'Known',
-            'genetic_findings_id': 'HG00731_19_1912634',
+            'genetic_findings_id': 'HG00731_19_1912632',
+            'hgvsc': 'c.586_587delinsTT',
+            'hgvsp': 'p.Ala196Leu',
             'known_condition_name': 'mitochondrial disease',
             'notes': 'The following variants are part of the multinucleotide variant 19-1912632-GC-TT (c.586_587delinsTT, p.Ala196Leu): 19-1912633-G-T, 19-1912634-C-T',
             'participant_id': 'HG00731',
-            'pos': 1912634,
+            'pos': 1912632,
             'projectGuid': 'R0001_1kg',
-            'ref': 'C',
+            'ref': 'GC',
             'tags': ['Known gene for phenotype'],
             'transcript': 'ENST00000371839',
             'variant_inheritance': 'unknown',
@@ -1349,7 +1343,7 @@ class ReportAPITest(AirtableTest):
         self.assertListEqual([r['genetic_findings_id'] for r in response_json['rows']], row_ids)
         self.assertDictEqual(response_json['rows'][1], expected_row)
         self.assertDictEqual(response_json['rows'][2], expected_mnv)
-        self.assertDictEqual(response_json['rows'][5], {
+        self.assertDictEqual(response_json['rows'][3], {
             **BASE_VARIANT_METADATA_ROW,
             'MME': True,
             'alt': 'T',
@@ -1382,7 +1376,7 @@ class ReportAPITest(AirtableTest):
             'variant_reference_assembly': 'GRCh37',
             'zygosity': 'Heterozygous',
         })
-        self.assertDictEqual(response_json['rows'][6], {
+        self.assertDictEqual(response_json['rows'][4], {
             **BASE_VARIANT_METADATA_ROW,
             'alt': None,
             'chrom': '1',
