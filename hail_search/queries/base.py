@@ -333,24 +333,6 @@ class BaseHailTableQuery(object):
             ht, sample_data = self._load_prefiltered_project_ht(project_guid, sample_type, project_sample_type_data, **kwargs)
         return self._filter_single_entries_table(ht, sample_data, sample_type, **kwargs)
 
-    def import_filtered_table(self, project_samples: dict, num_families: int, **kwargs):
-        if num_families == 1 or len(project_samples) == 1:
-            project_guid, project_sample_type_data = list(project_samples.items())[0]
-            families_ht, comp_het_families_ht = self._import_and_filter_entries_ht(
-                project_guid, num_families, project_sample_type_data, **kwargs
-            )
-        else:
-            families_ht, comp_het_families_ht = self._import_and_filter_multiple_project_hts(project_samples, **kwargs)
-
-        if comp_het_families_ht is not None:
-            self._comp_het_ht = self._query_table_annotations(comp_het_families_ht, self._get_table_path('annotations.ht'))
-            self._comp_het_ht = self._filter_annotated_table(self._comp_het_ht, is_comp_het=True, **kwargs)
-            self._comp_het_ht = self._filter_compound_hets()
-
-        if families_ht is not None:
-            self._ht = self._query_table_annotations(families_ht, self._get_table_path('annotations.ht'))
-            self._ht = self._filter_annotated_table(self._ht, **kwargs)
-
     def _import_and_filter_multiple_project_hts(self, project_samples: dict, **kwargs) -> tuple[hl.Table, hl.Table]:
         """
         In the variant lookup control flow, project_samples looks like this:
@@ -400,6 +382,24 @@ class BaseHailTableQuery(object):
             unmerged_project_hts, sample_data, prefiltered_project_hts, **kwargs
         )
         return prefiltered_project_hts, sample_type
+
+    def import_filtered_table(self, project_samples: dict, num_families: int, **kwargs):
+        if num_families == 1 or len(project_samples) == 1:
+            project_guid, project_sample_type_data = list(project_samples.items())[0]
+            families_ht, comp_het_families_ht = self._import_and_filter_entries_ht(
+                project_guid, num_families, project_sample_type_data, **kwargs
+            )
+        else:
+            families_ht, comp_het_families_ht = self._import_and_filter_multiple_project_hts(project_samples, **kwargs)
+
+        if comp_het_families_ht is not None:
+            self._comp_het_ht = self._query_table_annotations(comp_het_families_ht, self._get_table_path('annotations.ht'))
+            self._comp_het_ht = self._filter_annotated_table(self._comp_het_ht, is_comp_het=True, **kwargs)
+            self._comp_het_ht = self._filter_compound_hets()
+
+        if families_ht is not None:
+            self._ht = self._query_table_annotations(families_ht, self._get_table_path('annotations.ht'))
+            self._ht = self._filter_annotated_table(self._ht, **kwargs)
 
     def _prefilter_merged_project_hts(self, project_hts, project_families, prefiltered_project_hts, **kwargs):
         if not project_hts:
