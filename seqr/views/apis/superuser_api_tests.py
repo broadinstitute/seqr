@@ -2,7 +2,7 @@ from django.urls.base import reverse
 import mock
 
 from seqr.views.apis.superuser_api import get_all_users
-from seqr.views.utils.test_utils import TEST_OAUTH2_PROVIDER, AuthenticationTestCase, AnvilAuthenticationTestCase, USER_FIELDS
+from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, USER_FIELDS
 
 ALL_USERS_USER_FIELDS = {'hasCloudAuth'}
 ALL_USERS_USER_FIELDS.update(USER_FIELDS)
@@ -17,7 +17,6 @@ EXPECTED_USERS = {
 class SuperusersAPITest(object):
 
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP')
-    @mock.patch('seqr.views.utils.terra_api_utils.SOCIAL_AUTH_PROVIDER', TEST_OAUTH2_PROVIDER)
     def test_get_all_users(self, mock_pm_group):
         url = reverse(get_all_users)
         self.check_superuser_login(url)

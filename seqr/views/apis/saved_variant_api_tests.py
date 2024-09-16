@@ -9,7 +9,7 @@ from seqr.views.apis.saved_variant_api import saved_variant_data, create_variant
     update_variant_note_handler, delete_variant_note_handler, update_variant_tags_handler, update_saved_variant_json, \
     update_variant_main_transcript, update_variant_functional_data_handler, update_variant_acmg_classification_handler
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants
-from seqr.views.utils.test_utils import TEST_OAUTH2_PROVIDER, AuthenticationTestCase, SAVED_VARIANT_DETAIL_FIELDS, TAG_FIELDS, GENE_VARIANT_FIELDS, \
+from seqr.views.utils.test_utils import AuthenticationTestCase, SAVED_VARIANT_DETAIL_FIELDS, TAG_FIELDS, GENE_VARIANT_FIELDS, \
     TAG_TYPE_FIELDS, LOCUS_LIST_FIELDS, PA_LOCUS_LIST_FIELDS, FAMILY_FIELDS, INDIVIDUAL_FIELDS, IGV_SAMPLE_FIELDS, \
     FAMILY_NOTE_FIELDS, MATCHMAKER_SUBMISSION_FIELDS, AnvilAuthenticationTestCase
 
@@ -124,7 +124,6 @@ INVALID_CREATE_VARIANT_REQUEST_BODY['variant']['chrom'] = '27'
 class SavedVariantAPITest(object):
 
     @mock.patch('seqr.views.utils.variant_utils.OMIM_GENOME_VERSION', '37')
-    @mock.patch('seqr.views.utils.terra_api_utils.SOCIAL_AUTH_PROVIDER', TEST_OAUTH2_PROVIDER)
     def test_saved_variant_data(self):
         url = reverse(saved_variant_data, args=[PROJECT_GUID])
         self.check_collaborator_login(url)

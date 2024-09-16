@@ -12,7 +12,7 @@ from seqr.views.apis.project_api import create_project_handler, delete_project_h
     project_analysis_groups, update_project_workspace, project_family_notes, project_collaborators, project_locus_lists, \
     project_samples, project_notifications, mark_read_project_notifications, subscribe_project_notifications
 from seqr.views.utils.terra_api_utils import TerraAPIException, TerraRefreshTokenFailedException
-from seqr.views.utils.test_utils import TEST_OAUTH2_PROVIDER, AuthenticationTestCase, AnvilAuthenticationTestCase, \
+from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, \
     PROJECT_FIELDS, LOCUS_LIST_FIELDS, PA_LOCUS_LIST_FIELDS, NO_INTERNAL_CASE_REVIEW_INDIVIDUAL_FIELDS, \
     SAMPLE_FIELDS, SUMMARY_FAMILY_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INDIVIDUAL_FIELDS, TAG_TYPE_FIELDS, \
     FAMILY_NOTE_FIELDS, MATCHMAKER_SUBMISSION_FIELDS, ANALYSIS_GROUP_FIELDS, \
@@ -186,7 +186,6 @@ class ProjectAPITest(object):
         self.assertSetEqual(set(response.json()['projectsByGuid'].keys()), {new_project.guid})
 
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
-    @mock.patch('seqr.views.utils.terra_api_utils.SOCIAL_AUTH_PROVIDER', TEST_OAUTH2_PROVIDER)
     def test_update_project_workspace(self):
         url = reverse(update_project_workspace, args=[PROJECT_GUID])
         self.check_pm_login(url)
