@@ -553,6 +553,14 @@ class Individual(ModelWithGUID):
         ('CF', 'UBERON:0001359'),  # cerebrospinal fluid
         ('U', 'UBERON:0001088'),  # urine
         ('NE', 'UBERON:0019306'),  # nose epithelium
+        ('IP', 'CL:0000034'),  # iPSC
+        ('MO', 'CL:0000576'),  # monocytes - PBMCs
+        ('LY', 'CL:0000542'),  # lymphocytes - LCLs
+        ('FI', 'CL:0000057'),  # fibroblasts
+        ('EM', 'UBERON:0005291'),  # embryonic tissue
+        ('NP', 'CL:0011020'),  # iPSC NPC
+        ('CE', 'UBERON:0002037'),  # cerebellum tissue
+        ('CA', 'UBERON:0001133'),  # cardiac tissue
     ]
 
     ANALYTE_CHOICES = [
