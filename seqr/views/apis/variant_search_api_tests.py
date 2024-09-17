@@ -167,8 +167,6 @@ def _get_compound_het_es_variants(results_model, **kwargs):
 @mock.patch('seqr.views.utils.permissions_utils.safe_redis_get_json', lambda *args: None)
 class VariantSearchAPITest(object):
 
-    maxDiff = None
-
     def _assert_expected_search_context(self, response_json):
         self.assertSetEqual(set(response_json), set(EXPECTED_SEARCH_CONTEXT_RESPONSE))
         self.assertDictEqual(response_json, EXPECTED_SEARCH_CONTEXT_RESPONSE)
@@ -424,11 +422,13 @@ class VariantSearchAPITest(object):
             ['1', '38724419', 'T', 'G', 'ENSG00000177000', 'missense_variant', '0.31111112236976624', '0.29499998688697815', '0',
              '0.28899794816970825', '0.24615199863910675', '20.899999618530273', '0.19699999690055847',
              '2.000999927520752', '0.0', '0.1', '0.05', '', '', 'rs1801131', 'ENST00000383791.8:c.156A>C',
-             'ENSP00000373301.3:p.Leu52Phe','Conflicting_classifications_of_pathogenicity', '1', '', '2', '', '', '', '', '', '', '', '', '',
-             '', '', '', '', '', '', '', ''],
+             'ENSP00000373301.3:p.Leu52Phe','Conflicting_classifications_of_pathogenicity', '1', '', '2', '', '', '', '', '',
+             "HG00731", "2", "99", "1.0", "HG00732", "1", "99", "0.625", "HG00733", "0", "40", "0.0",],
             ['1', '91502721', 'G', 'A', 'ENSG00000097046', 'intron_variant', '0.6666666865348816', '0.0','0.38041073083877563', '0.0',
              '0.36268100142478943', '2.753999948501587', '', '1.378000020980835', '0.009999999776482582', '', '', '',
-             '', 'rs13447464', 'ENST00000234626.11:c.-63-251G>A', '', '', '', '', '2']
+             '', 'rs13447464', 'ENST00000234626.11:c.-63-251G>A', '', '', '', '', '2',
+             "", "", "", "", "", "HG00731", "1", "99", "1.0", "HG00732", "0", "99", "0.4594594594594595", "HG00733",
+             "1", "99", "0.4074074074074074"]
         ]
         self.assertListEqual([line.split('\t') for line in response.content.decode().strip().split('\n')], expected_content)
 
@@ -457,12 +457,15 @@ class VariantSearchAPITest(object):
                 ['1', '38724419', 'T', 'G', 'ENSG00000177000', 'missense_variant', '0.31111112236976624', '0.29499998688697815', '0',
                  '0.28899794816970825', '0.24615199863910675', '20.899999618530273', '0.19699999690055847',
                  '2.000999927520752', '0.0', '0.1', '0.05', '', '', 'rs1801131', 'ENST00000383791.8:c.156A>C',
-                 'ENSP00000373301.3:p.Leu52Phe', 'Conflicting_classifications_of_pathogenicity', '1', '', '2', '', '', '', '', '', '',
-                 '', '', '', '', '', '', '', ''],
+                 'ENSP00000373301.3:p.Leu52Phe', 'Conflicting_classifications_of_pathogenicity', '1', '', '2', '', '', 'HG00731', '2', '99', '1.0',
+                 'HG00732', '1', '99', '0.625', 'HG00733', '0', '40', '0.0'],
                 ['1', '91502721', 'G', 'A', 'ENSG00000097046', 'intron_variant', '0.6666666865348816', '0.0', '0.38041073083877563', '0.0',
                  '0.36268100142478943', '2.753999948501587', '', '1.378000020980835', '0.009999999776482582', '', '',
-                 '', '', 'rs13447464', 'ENST00000234626.11:c.-63-251G>A', '', '', '', '', '2'],
+                 '', '', 'rs13447464', 'ENST00000234626.11:c.-63-251G>A', '', '', '', '', '2', '', '', 'HG00731',
+                 '1', '99', '1.0', 'HG00732', '0', '99', '0.4594594594594595', 'HG00733', '1', '99',
+                 '0.4074074074074074'],
             ]
+            self.assertListEqual([line.split('\t') for line in response.content.decode().strip().split('\n')], expected_content)
 
         mock_get_variants.assert_called_with(results_model, page=1, load_all=True, user=self.collaborator_user)
         mock_error_logger.assert_not_called()
