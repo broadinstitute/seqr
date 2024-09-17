@@ -1085,10 +1085,10 @@ PARSED_VARIANTS = [
         'cpxIntervals': None,
         'algorithms': None,
         'genotypes': {
-            'I000007_na20870': [{
+            'I000007_na20870': {
                 'ab': 1, 'ad': None, 'gq': 99, 'sampleId': 'NA20870', 'numAlt': 2, 'dp': 74, 'pl': None,
                 'sampleType': 'WES',
-            }]
+            }
         },
         'genomeVersion': '37',
         'genotypeFilters': '',
@@ -1156,22 +1156,22 @@ PARSED_VARIANTS = [
         'cpxIntervals': None,
         'algorithms': None,
         'genotypes': {
-            'I000004_hg00731': [{
+            'I000004_hg00731': {
                 'ab': 0, 'ad': None, 'gq': 99, 'sampleId': 'HG00731', 'numAlt': 2, 'dp': 67, 'pl': None,
                 'sampleType': 'WES',
-            }],
-            'I000005_hg00732': [{
+            },
+            'I000005_hg00732': {
                 'ab': 0, 'ad': None, 'gq': 96, 'sampleId': 'HG00732', 'numAlt': 1, 'dp': 42, 'pl': None,
                 'sampleType': 'WES',
-            }],
-            'I000006_hg00733': [{
+            },
+            'I000006_hg00733': {
                 'ab': 0, 'ad': None, 'gq': 96, 'sampleId': 'HG00733', 'numAlt': 0, 'dp': 42, 'pl': None,
                 'sampleType': 'WES',
-            }],
-            'I000007_na20870': [{
+            },
+            'I000007_na20870': {
                 'ab': 0.70212764, 'ad': None, 'gq': 46, 'sampleId': 'NA20870', 'numAlt': 1, 'dp': 50, 'pl': None,
                 'sampleType': 'WES',
-            }],
+            },
         },
         'genotypeFilters': '',
         'genomeVersion': '37',
@@ -1241,21 +1241,21 @@ PARSED_SV_VARIANT = {
     'highConstraintRegion': None,
     'mitomapPathogenic': None,
     'genotypes': {
-        'I000004_hg00731': [{
+        'I000004_hg00731': {
             'sampleId': 'HG00731', 'sampleType': 'WES', 'numAlt': -1, 'geneIds': ['ENSG00000228198'],
             'cn': 1, 'end': None, 'start': None, 'numExon': None, 'defragged': False, 'qs': 33, 'gq': None,
             'prevCall': False, 'prevOverlap': False, 'newCall': True, 'prevNumAlt': None,
-        }],
-        'I000005_hg00732': [{
+        },
+        'I000005_hg00732': {
             'sampleId': 'HG00732', 'numAlt': -1, 'sampleType': None,  'geneIds': None, 'gq': None,
             'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None, 'isRef': True,
             'prevCall': None, 'prevOverlap': None, 'newCall': None, 'prevNumAlt': None,
-        }],
-        'I000006_hg00733': [{
+        },
+        'I000006_hg00733': {
             'sampleId': 'HG00733', 'sampleType': 'WES', 'numAlt': -1,  'geneIds': None, 'gq': None,
             'cn': 2, 'end': 49045890, 'start': 49045987, 'numExon': 1, 'defragged': False, 'qs': 80,
             'prevCall': False, 'prevOverlap': True, 'newCall': False, 'prevNumAlt': None,
-        }],
+        },
     },
     'clinvar': {'clinicalSignificance': None, 'alleleId': None, 'variationId': None, 'goldStars': None, 'version': None},
     'hgmd': {'accession': None, 'class': None},
@@ -1333,11 +1333,11 @@ PARSED_SV_WGS_VARIANT = {
     'highConstraintRegion': None,
     'mitomapPathogenic': None,
     'genotypes': {
-        'I000018_na21234': [{
+        'I000018_na21234': {
             'gq': 33, 'sampleId': 'NA21234', 'numAlt': 1, 'geneIds': None,
             'cn': -1, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None, 'sampleType': 'WGS',
             'prevCall': None, 'prevOverlap': None, 'newCall': None, 'prevNumAlt': 2,
-        }],
+        },
     },
     'clinvar': {'clinicalSignificance': None, 'alleleId': None, 'variationId': None, 'goldStars': None, 'version': None},
     'hgmd': {'accession': None, 'class': None},
@@ -1432,9 +1432,9 @@ PARSED_MITO_VARIANT = {
     'genomeVersion': '37',
     'genotypeFilters': '',
     'genotypes':
-        {'I000004_hg00731': [
+        {'I000004_hg00731':
              {'contamination': 0.0, 'dp': 5139.0, 'gq': 60.0, 'hl': 1.0, 'mitoCn': 319.03225806451616, 'numAlt': 2,
-              'sampleId': 'HG00731', 'sampleType': 'WES'}]},
+              'sampleId': 'HG00731', 'sampleType': 'WES'}},
     'hgmd': {'accession': None, 'class': None},
     'highConstraintRegion': True,
     'mainTranscriptId': 'ENST00000361227',
@@ -1504,10 +1504,10 @@ for variant in PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT:
     variant['_sort'][0] += 100
     variant['familyGuids'].append('F000011_11')
     variant['genotypes'].update({
-        'I000015_na20885': [{
+        'I000015_na20885': {
             'ab': 0.631, 'ad': None, 'gq': 99, 'sampleId': 'NA20885', 'numAlt': 1, 'dp': 50, 'pl': None,
             'sampleType': 'WES',
-        }],
+        },
     })
 
 GOOGLE_API_TOKEN_URL = 'https://oauth2.googleapis.com/token'  # nosec
