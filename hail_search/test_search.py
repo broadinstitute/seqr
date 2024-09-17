@@ -29,10 +29,10 @@ PROJECT_2_VARIANT = {
     'rsid': 'rs375931351',
     'familyGuids': ['F000011_11'],
     'genotypes': {
-        'I000015_na20885': [{
+        'I000015_na20885': {
             'sampleId': 'NA20885', 'sampleType': 'WES', 'individualGuid': 'I000015_na20885', 'familyGuid': 'F000011_11',
             'numAlt': 1, 'dp': 8, 'gq': 14, 'ab': 0.875,
-        }],
+        },
     },
     'genotypeFilters': '',
     'clinvar': None,
@@ -70,10 +70,10 @@ PROJECT_2_VARIANT = {
     'CAID': 'CA520798130',
 }
 PROJECT_2_VARIANT_BOTH_SAMPLE_TYPES = deepcopy(PROJECT_2_VARIANT)
-PROJECT_2_VARIANT_BOTH_SAMPLE_TYPES['genotypes']['I000015_na20885'].append({
+PROJECT_2_VARIANT_BOTH_SAMPLE_TYPES['genotypes']['I000015_na20885'] = {
     'sampleId': 'NA20885', 'sampleType': 'WGS', 'individualGuid': 'I000015_na20885', 'familyGuid': 'F000011_11',
     'numAlt': 1, 'dp': 8, 'gq': 14, 'ab': 0.875,
-})
+}
 
 GRCH37_VARIANT = {
     'variantId': '7-143270172-A-G',
