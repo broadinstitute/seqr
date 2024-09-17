@@ -17,6 +17,11 @@ SSD_DATASETS_DIR = os.environ.get('SSD_DATASETS_DIR', DATASETS_DIR)
 # Estimated based on behavior for several representative gene lists
 MAX_GENE_INTERVALS = int(os.environ.get('MAX_GENE_INTERVALS', 100))
 
+# Optimal number of entry table partitions, balancing parallelization with partition overhead
+# Experimentally determined based on compound het search performance:
+# https://github.com/broadinstitute/seqr-private/issues/1283#issuecomment-1973392719
+MAX_PARTITIONS = 12
+
 logger = logging.getLogger(__name__)
 
 
@@ -83,11 +88,6 @@ class BaseHailTableQuery(object):
         XPOS: lambda r: [r.xpos],
     }
 
-    # Optimal number of entry table partitions, balancing parallelization with partition overhead
-    # Experimentally determined based on compound het search performance:
-    # https://github.com/broadinstitute/seqr-private/issues/1283#issuecomment-1973392719
-    MAX_PARTITIONS = 12
-
     @classmethod
     def load_globals(cls):
         ht_path = cls._get_table_path('annotations.ht')
@@ -102,13 +102,8 @@ class BaseHailTableQuery(object):
         return base_pop_config
 
     def annotation_fields(self, include_genotype_overrides=True):
-        annotation_fields = {
-            GENOTYPES_FIELD: lambda r: r.family_entries.flatmap(lambda x: x).filter(
-                lambda gt: hl.is_defined(gt.individualGuid)
-            ).group_by(lambda x: x.individualGuid).map_values(lambda x: x.map(
-                lambda sample: self._get_sample_genotype(
-                    sample, r, select_fields=['individualGuid'], include_genotype_overrides=include_genotype_overrides,
-            ))),
+        annotation_fields = self._get_genotypes_annotation(include_genotype_overrides)
+        annotation_fields.update({
             'populations': lambda r: hl.struct(**{
                 population: self.population_expression(r, population) for population in self.POPULATIONS.keys()
             }),
@@ -117,7 +112,7 @@ class BaseHailTableQuery(object):
                 if self._enums.get(path.source, {}).get(path.field) else path.format(r[path.source][path.field])
                 for prediction, path in self.PREDICTION_FIELDS_CONFIG.items()
             }),
-        }
+        })
         annotation_fields.update(self.BASE_ANNOTATION_FIELDS)
         annotation_fields.update(self.LIFTOVER_ANNOTATION_FIELDS)
         annotation_fields.update(self._additional_annotation_fields())
@@ -129,6 +124,15 @@ class BaseHailTableQuery(object):
         ])
 
         return annotation_fields
+
+    def _get_genotypes_annotation(self, include_genotype_overrides):
+        return {
+            GENOTYPES_FIELD: lambda r: r.family_entries.flatmap(lambda x: x).filter(
+                lambda gt: hl.is_defined(gt.individualGuid)
+            ).group_by(lambda x: x.individualGuid).map_values(lambda x: self._get_sample_genotype(
+                x[0], r, select_fields=['individualGuid'], include_genotype_overrides=include_genotype_overrides,
+            ))
+        }
 
     def _get_sample_genotype(self, sample, r=None, include_genotype_overrides=False, select_fields=None):
         return sample.select(
@@ -239,8 +243,9 @@ class BaseHailTableQuery(object):
         self._has_secondary_annotations = False
         self._is_multi_data_type_comp_het = False
         self.max_unaffected_samples = None
-        self._load_table_kwargs = {'_n_partitions': min(self.MAX_PARTITIONS, (os.cpu_count() or 2)-1)}
+        self._load_table_kwargs = {'_n_partitions': min(MAX_PARTITIONS, (os.cpu_count() or 2)-1)}
         self.entry_samples_by_family_guid = {}
+        self._has_both_sample_types = False
 
         if sample_data:
             self._load_filtered_table(sample_data, **kwargs)
@@ -331,14 +336,16 @@ class BaseHailTableQuery(object):
             ht, sample_data = self._load_prefiltered_project_ht(project_guid, sample_type, project_sample_type_data, **kwargs)
         return self._filter_single_entries_table(ht, sample_data, sample_type, **kwargs)
 
-    def _import_and_filter_multiple_project_hts(self, project_samples: dict, **kwargs) -> tuple[hl.Table, hl.Table]:
+    def _import_and_filter_multiple_project_hts(
+        self, project_samples: dict, n_partitions=MAX_PARTITIONS, **kwargs
+    ) -> tuple[hl.Table, hl.Table]:
         """
         In the variant lookup control flow, project_samples looks like this:
             {<project_guid>: {<sample_type>: {<family_guid>: True}, <sample_type_2>: {<family_guid_2>: True}}, <project_guid_2>: ...}
         In the variant search control flow, project_samples looks like this:
             {<project_guid>: {<sample_type>: {<family_guid>: [<sample_data>, <sample_data>, ...]}, <sample_type_2>: {<family_guid_2>: []} ...}, <project_guid_2>: ...}
         """
-        entries_hts, sample_type = self._load_prefiltered_project_hts(project_samples, **kwargs)
+        entries_hts, sample_type = self._load_prefiltered_project_hts(project_samples, n_partitions, **kwargs)
         filtered_project_hts = []
         filtered_comp_het_project_hts = []
         for ht, project_families in entries_hts:
@@ -348,11 +355,11 @@ class BaseHailTableQuery(object):
             if comp_het_ht is not None:
                 filtered_comp_het_project_hts.append(comp_het_ht)
 
-        ht = self._merge_project_hts(filtered_project_hts)
-        comp_het_ht = self._merge_project_hts(filtered_comp_het_project_hts)
+        ht = self._merge_project_hts(filtered_project_hts, n_partitions)
+        comp_het_ht = self._merge_project_hts(filtered_comp_het_project_hts, n_partitions)
         return ht, comp_het_ht
 
-    def _load_prefiltered_project_hts(self, project_samples, **kwargs):
+    def _load_prefiltered_project_hts(self, project_samples: dict, n_partitions: int, **kwargs):
         # Need to chunk tables or else evaluating table globals throws LineTooLong exception
         # However, minimizing number of chunks minimizes number of aggregations/ evals and improves performance
         # Adapted from https://discuss.hail.is/t/importing-many-sample-specific-vcfs/2002/8
@@ -371,13 +378,13 @@ class BaseHailTableQuery(object):
 
             if len(unmerged_project_hts) >= chunk_size:
                 self._prefilter_merged_project_hts(
-                    unmerged_project_hts, sample_data, prefiltered_project_hts, **kwargs
+                    unmerged_project_hts, sample_data, prefiltered_project_hts, n_partitions, **kwargs
                 )
                 unmerged_project_hts = []
                 sample_data = {}
 
         self._prefilter_merged_project_hts(
-            unmerged_project_hts, sample_data, prefiltered_project_hts, **kwargs
+            unmerged_project_hts, sample_data, prefiltered_project_hts, n_partitions, **kwargs
         )
         return prefiltered_project_hts, sample_type
 
@@ -399,18 +406,19 @@ class BaseHailTableQuery(object):
             self._ht = self._query_table_annotations(families_ht, self._get_table_path('annotations.ht'))
             self._ht = self._filter_annotated_table(self._ht, **kwargs)
 
-    def _prefilter_merged_project_hts(self, project_hts, project_families, prefiltered_project_hts, **kwargs):
+    def _prefilter_merged_project_hts(self, project_hts, project_families, prefiltered_project_hts, n_partitions, **kwargs):
         if not project_hts:
             return
-        ht = self._merge_project_hts(project_hts, include_all_globals=True)
+        ht = self._merge_project_hts(project_hts, n_partitions, include_all_globals=True)
         ht = self._prefilter_entries_table(ht, **kwargs)
         prefiltered_project_hts.append((ht, project_families))
 
-    def _merge_project_hts(self, project_hts, include_all_globals=False):
+    @staticmethod
+    def _merge_project_hts(project_hts, n_partitions, include_all_globals=False):
         if not project_hts:
             return None
         ht = hl.Table.multi_way_zip_join(project_hts, 'project_entries', 'project_globals')
-        ht = ht.repartition(self.MAX_PARTITIONS)
+        ht = ht.repartition(n_partitions)
         ht = ht.transmute(
             filters=ht.project_entries.fold(lambda f, x: f.union(x.filters), hl.empty_set(hl.tstr)),
             family_entries=hl.enumerate(ht.project_entries).starmap(lambda i, x: hl.or_else(

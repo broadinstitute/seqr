@@ -8,8 +8,8 @@ from hail_search.constants import ABSENT_PATH_SORT_OFFSET, CLINVAR_KEY, CLINVAR_
     CLINVAR_PATH_FILTER, \
     CLINVAR_PATH_RANGES, CLINVAR_PATH_SIGNIFICANCES, ALLOWED_TRANSCRIPTS, ALLOWED_SECONDARY_TRANSCRIPTS, \
     PATHOGENICTY_SORT_KEY, CONSEQUENCE_SORT, \
-    PATHOGENICTY_HGMD_SORT_KEY, SAMPLE_TYPE_WES, SAMPLE_TYPE_WGS, COMPOUND_HET
-from hail_search.queries.base import BaseHailTableQuery, PredictionPath, QualityFilterFormat
+    PATHOGENICTY_HGMD_SORT_KEY, SAMPLE_TYPE_WES, SAMPLE_TYPE_WGS, COMPOUND_HET, GENOTYPES_FIELD
+from hail_search.queries.base import BaseHailTableQuery, PredictionPath, QualityFilterFormat, MAX_PARTITIONS
 
 MAX_LOAD_INTERVALS = 1000
 
@@ -121,6 +121,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
         if len(sample_types) == 1:
             return super()._import_and_filter_entries_ht(project_guid, num_families, project_sample_type_data, **kwargs)
 
+        self._has_both_sample_types = True
         entries_hts_map: dict[str, list[tuple[hl.Table, dict]]] = {}
         for sample_type in sample_types:
             if num_families == 1:
@@ -264,13 +265,16 @@ class MitoHailTableQuery(BaseHailTableQuery):
         )
         return ht.transmute_globals(family_guids=ht.family_guids.extend(ht.family_guids_1))
 
-    def _import_and_filter_multiple_project_hts(self, project_samples: dict, **kwargs) -> tuple[hl.Table, hl.Table]:
+    def _import_and_filter_multiple_project_hts(
+        self, project_samples: dict, n_partitions=MAX_PARTITIONS, **kwargs
+    ) -> tuple[hl.Table, hl.Table]:
         sample_types = set()
         for sample_dict in project_samples.values():
             sample_types.update(sample_dict.keys())
         if len(sample_types) == 1:
-            return super()._import_and_filter_multiple_project_hts(project_samples, **kwargs)
+            return super()._import_and_filter_multiple_project_hts(project_samples, n_partitions, **kwargs)
 
+        self._has_both_sample_types = True
         # entries_hts_map = self._load_prefiltered_project_hts_both_sample_types(project_samples, **kwargs)
         # return self._filter_entries_ht_both_sample_types(entries_hts_map, **kwargs)
 
@@ -315,6 +319,19 @@ class MitoHailTableQuery(BaseHailTableQuery):
     #
     #         entries_hts_map[sample_type] = prefiltered_project_hts
     #     return entries_hts_map
+
+    def _get_genotypes_annotation(self, include_genotype_overrides):
+        if not self._has_both_sample_types:
+            return super()._get_genotypes_annotation(include_genotype_overrides)
+
+        return {
+            GENOTYPES_FIELD: lambda r: r.family_entries.flatmap(lambda x: x).filter(
+                lambda gt: hl.is_defined(gt.individualGuid)
+            ).group_by(lambda x: x.individualGuid).map_values(lambda x: x.map(
+                lambda sample: self._get_sample_genotype(
+                    sample, r, select_fields=['individualGuid'], include_genotype_overrides=include_genotype_overrides,
+                )))
+        }
 
     @staticmethod
     def _selected_main_transcript_expr(ht):

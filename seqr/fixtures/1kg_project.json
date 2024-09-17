@@ -1819,7 +1819,7 @@
                 {"transcriptId": "ENST00000437075", "lofFilter": "", "biotype": "nonsense_mediated_decay", "geneSymbol": "MFSD9", "majorConsequence": "3_prime_UTR_variant", "canonical": "", "hgvsp": "", "lof": "", "lofFlags": "", "codons": "", "hgvsc": "ENST00000437075.2:c.*176_*178delTCT", "transcriptRank": 100, "geneId": "ENSG00000135953", "aminoAcids": "", "cdnaPosition": "541-543"},
                 {"transcriptId": "ENST00000438943", "lofFilter": "", "biotype": "nonsense_mediated_decay", "geneSymbol": "MFSD9", "majorConsequence": "3_prime_UTR_variant", "canonical": "", "hgvsp": "", "lof": "", "lofFlags": "", "codons": "", "hgvsc": "ENST00000438943.1:c.*211_*213delTCT", "transcriptRank": 100, "geneId": "ENSG00000135953", "aminoAcids": "", "cdnaPosition": "558-560"}]},
             "chrom": "21",
-            "genotypes": {"I000003_na19679": [{"sampleId": "NA19679", "ab": 0.0, "ad": "45,0", "gq": 99.0, "dp": "45", "pl": "0,135,1525", "cnvs": {"size": null, "snps": null, "cn": null, "LRR_sd": null, "array": null, "caller": null, "type": null, "freq": null, "LRR_median": null}, "numAlt": 0}], "I000002_na19678": [{"sampleId": "NA19678", "ab": 0.0, "ad": "42,0", "gq": 99.0, "dp": "43", "pl": "0,126,1479", "cnvs": {"size": null, "snps": null, "cn": null, "LRR_sd": null, "array": null, "caller": null, "type": null, "freq": null, "LRR_median": null}, "numAlt": 0}], "I000001_na19675": [{"sampleId": "NA19675_1", "ab": 0.7021276595744681, "ad": "14,33", "gq": 46.0, "dp": "50", "pl": "46,0,686", "cnvs": {"size": null, "snps": null, "cn": null, "LRR_sd": null, "array": null, "caller": null, "type": null, "freq": null, "LRR_median": null}, "numAlt": 1}]},
+            "genotypes": {"I000003_na19679": {"sampleId": "NA19679", "ab": 0.0, "ad": "45,0", "gq": 99.0, "dp": "45", "pl": "0,135,1525", "cnvs": {"size": null, "snps": null, "cn": null, "LRR_sd": null, "array": null, "caller": null, "type": null, "freq": null, "LRR_median": null}, "numAlt": 0}, "I000002_na19678": {"sampleId": "NA19678", "ab": 0.0, "ad": "42,0", "gq": 99.0, "dp": "43", "pl": "0,126,1479", "cnvs": {"size": null, "snps": null, "cn": null, "LRR_sd": null, "array": null, "caller": null, "type": null, "freq": null, "LRR_median": null}, "numAlt": 0}, "I000001_na19675": {"sampleId": "NA19675_1", "ab": 0.7021276595744681, "ad": "14,33", "gq": 46.0, "dp": "50", "pl": "46,0,686", "cnvs": {"size": null, "snps": null, "cn": null, "LRR_sd": null, "array": null, "caller": null, "type": null, "freq": null, "LRR_median": null}, "numAlt": 1}},
             "CAID":  null
         },
         "family": 1
@@ -1921,12 +1921,12 @@
             },
             "chrom": "1",
             "genotypes": {
-                "I000004_hg00731": [{
+                "I000004_hg00731": {
                     "numAlt": 2
-                }],
-                "I000005_hg00732": [{
+                },
+                "I000005_hg00732": {
                     "numAlt": 1
-                }]
+                }
             },
             "CAID": "CA1501729"
         },
@@ -1967,9 +1967,9 @@
             },
             "chrom": "1",
             "genotypes": {
-                "I000003_na19679": [{"sampleId": "NA19679", "ab": 0, "ad": null, "gq": 21, "dp": 7, "pl": null, "numAlt": 0}],
-                "I000002_na19678": [{"sampleId": "NA19678", "ab": 0, "ad": null, "gq": 6, "dp": 2, "pl": null, "numAlt": 0}],
-                "I000002_na19675": [{"sampleId": "NA19675", "ab": 0.125, "ad": null, "gq": 7, "dp": 8, "pl": null, "numAlt": 1}]
+                "I000003_na19679": {"sampleId": "NA19679", "ab": 0, "ad": null, "gq": 21, "dp": 7, "pl": null, "numAlt": 0},
+                "I000002_na19678": {"sampleId": "NA19678", "ab": 0, "ad": null, "gq": 6, "dp": 2, "pl": null, "numAlt": 0},
+                "I000002_na19675": {"sampleId": "NA19675", "ab": 0.125, "ad": null, "gq": 7, "dp": 8, "pl": null, "numAlt": 1}
             }
         },
         "family": 1
@@ -2052,9 +2052,9 @@
             },
             "chrom": "1",
             "genotypes": {
-                "I000003_na19679": [{"sampleId": "NA19679", "ab": 0.71428573, "ad": null, "gq": 58, "dp": 7, "pl": null, "numAlt": 1}],
-                "I000002_na19678": [{"sampleId": "NA19678", "ab": 0, "ad": null, "gq": 30, "dp": 10, "pl": null, "numAlt": 0}],
-                "I000002_na19675": [{"sampleId": "NA19675", "ab": 0.5555556, "ad": null, "gq": 99, "dp": 9, "pl": null, "numAlt": 1}]
+                "I000003_na19679": {"sampleId": "NA19679", "ab": 0.71428573, "ad": null, "gq": 58, "dp": 7, "pl": null, "numAlt": 1},
+                "I000002_na19678": {"sampleId": "NA19678", "ab": 0, "ad": null, "gq": 30, "dp": 10, "pl": null, "numAlt": 0},
+                "I000002_na19675": {"sampleId": "NA19675", "ab": 0.5555556, "ad": null, "gq": 99, "dp": 9, "pl": null, "numAlt": 1}
             },
             "CAID": null
         },
@@ -2099,8 +2099,8 @@
                         "aminoAcids": "V/M", "cdnaPosition": "3955"}
                 ]
             }, "chrom": "1", "genotypes": {
-                "I000002_na19675": [{"sampleId": "NA19675", "ab": 0.5555556, "ad": null, "gq": 99, "dp": 9, "pl": null, "numAlt": 1}],
-                "I000017_na20889": [{"sampleId": "NA20885", "ab": 0.0, "ad": "71,0", "gq": 99.0, "dp": "71", "pl": "0,213,1918", "numAlt": 1}]
+                "I000002_na19675": {"sampleId": "NA19675", "ab": 0.5555556, "ad": null, "gq": 99, "dp": 9, "pl": null, "numAlt": 1},
+                "I000017_na20889": {"sampleId": "NA20885", "ab": 0.0, "ad": "71,0", "gq": 99.0, "dp": "71", "pl": "0,213,1918", "numAlt": 1}
             },
             "CAID": "CA1501729"
         },
@@ -2131,7 +2131,7 @@
             "genotypeFilters": [],
             "ref": null,
             "genotypes": {
-                "I000017_na20889": [{ "cn": 1, "sampleId": "NA20885", "numAlt": -1,  "defragged": false, "qs": 33, "numExon": 2}]
+                "I000017_na20889": { "cn": 1, "sampleId": "NA20885", "numAlt": -1,  "defragged": false, "qs": 33, "numExon": 2}
             },
             "liftedOverPos": null,
             "liftedOverChrom": null,
@@ -2159,9 +2159,9 @@
         "variant_id": "1-248367227-TC-T",
         "saved_variant_json": {
             "liftedOverGenomeVersion": "37",  "liftedOverPos": "", "genomeVersion": "38", "pos": 248367227,
-            "transcripts": {}, "chrom": "1", "genotypes": [{
+            "transcripts": {}, "chrom": "1", "genotypes": {
                 "I000018_na21234": {"sampleId": "NA20885", "ab": 0.0, "gq": 99.0, "numAlt": 1}
-            }],
+            },
             "CAID": "CA1501729"
         },
         "family": 14

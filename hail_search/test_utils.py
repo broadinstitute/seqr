@@ -94,18 +94,18 @@ VARIANT1 = {
     'rsid': 'rs112766696',
     'familyGuids': ['F000002_2'],
     'genotypes': {
-        'I000004_hg00731': [{
+        'I000004_hg00731': {
             'sampleId': 'HG00731', 'sampleType': 'WES', 'individualGuid': 'I000004_hg00731', 'familyGuid': 'F000002_2',
             'numAlt': 1, 'dp': 10, 'gq': 99, 'ab': 0.5,
-        }],
-        'I000005_hg00732': [{
+        },
+        'I000005_hg00732': {
             'sampleId': 'HG00732', 'sampleType': 'WES', 'individualGuid': 'I000005_hg00732', 'familyGuid': 'F000002_2',
             'numAlt': 0, 'dp': 24, 'gq': 0, 'ab': 0.0,
-        }],
-        'I000006_hg00733': [{
+        },
+        'I000006_hg00733': {
             'sampleId': 'HG00733', 'sampleType': 'WES', 'individualGuid': 'I000006_hg00733', 'familyGuid': 'F000002_2',
             'numAlt': 0, 'dp': 60, 'gq': 20, 'ab': 0.0,
-        }],
+        },
     },
     'genotypeFilters': '',
     'clinvar': {
@@ -165,18 +165,18 @@ VARIANT2 = {
     'rsid': 'rs1801131',
     'familyGuids': ['F000002_2'],
     'genotypes': {
-       'I000004_hg00731': [{
+       'I000004_hg00731': {
            'sampleId': 'HG00731', 'sampleType': 'WES', 'individualGuid': 'I000004_hg00731', 'familyGuid': 'F000002_2',
            'numAlt': 2, 'dp': 36, 'gq': 99, 'ab': 1.0,
-       }],
-       'I000005_hg00732': [{
+       },
+       'I000005_hg00732': {
            'sampleId': 'HG00732', 'sampleType': 'WES', 'individualGuid': 'I000005_hg00732', 'familyGuid': 'F000002_2',
            'numAlt': 1, 'dp': 32, 'gq': 99, 'ab': 0.625,
-       }],
-       'I000006_hg00733': [{
+       },
+       'I000006_hg00733': {
            'sampleId': 'HG00733', 'sampleType': 'WES', 'individualGuid': 'I000006_hg00733', 'familyGuid': 'F000002_2',
            'numAlt': 0, 'dp': 33, 'gq': 40, 'ab': 0.0,
-       }],
+       },
     },
     'genotypeFilters': '',
     'clinvar': {
@@ -269,18 +269,18 @@ VARIANT3 = {
     'rsid': 'rs13447464',
     'familyGuids': ['F000002_2'],
     'genotypes': {
-        'I000004_hg00731': [{
+        'I000004_hg00731': {
             'sampleId': 'HG00731', 'sampleType': 'WES', 'individualGuid': 'I000004_hg00731', 'familyGuid': 'F000002_2',
             'numAlt': 1, 'dp': 40, 'gq': 99, 'ab': 1.0,
-        }],
-        'I000005_hg00732': [{
+        },
+        'I000005_hg00732': {
             'sampleId': 'HG00732', 'sampleType': 'WES', 'individualGuid': 'I000005_hg00732', 'familyGuid': 'F000002_2',
             'numAlt': 0, 'dp': 37, 'gq': 99, 'ab': 0.4594594594594595,
-        }],
-        'I000006_hg00733': [{
+        },
+        'I000006_hg00733': {
             'sampleId': 'HG00733', 'sampleType': 'WES', 'individualGuid': 'I000006_hg00733', 'familyGuid': 'F000002_2',
             'numAlt': 1, 'dp': 27, 'gq': 99, 'ab': 0.4074074074074074,
-        }],
+        },
     },
     'genotypeFilters': '',
     'clinvar': None,
@@ -340,18 +340,18 @@ VARIANT4 = {
     'rsid': None,
     'familyGuids': ['F000002_2'],
     'genotypes': {
-        'I000004_hg00731': [{
+        'I000004_hg00731': {
             'sampleId': 'HG00731', 'sampleType': 'WES', 'individualGuid': 'I000004_hg00731', 'familyGuid': 'F000002_2',
             'numAlt': 1, 'dp': 29, 'gq': 58, 'ab': 0.1724137931034483,
-        }],
-        'I000005_hg00732': [{
+        },
+        'I000005_hg00732': {
             'sampleId': 'HG00732', 'sampleType': 'WES', 'individualGuid': 'I000005_hg00732', 'familyGuid': 'F000002_2',
             'numAlt': 0, 'dp': 24, 'gq': 0, 'ab': 0.0,
-        }],
-        'I000006_hg00733': [{
+        },
+        'I000006_hg00733': {
             'sampleId': 'HG00733', 'sampleType': 'WES', 'individualGuid': 'I000006_hg00733', 'familyGuid': 'F000002_2',
             'numAlt': 0, 'dp': 45, 'gq': 0, 'ab': 0.0,
-        }],
+        },
     },
     'genotypeFilters': 'VQSRTrancheSNP99.95to100.00',
     'clinvar': None,
@@ -404,7 +404,7 @@ VARIANT_LOOKUP_VARIANT = {
     **VARIANT1,
     'familyGenotypes': {
         VARIANT1['familyGuids'][0]: sorted([
-            {k: v for k, v in g[0].items() if k != 'individualGuid'} for g in VARIANT1['genotypes'].values()
+            {k: v for k, v in g.items() if k != 'individualGuid'} for g in VARIANT1['genotypes'].values()
         ], key=lambda x: x['sampleId'], reverse=True),
         'F000011_11': [{
             'sampleId': 'NA20885', 'sampleType': 'WES', 'familyGuid': 'F000011_11',
@@ -447,16 +447,16 @@ SV_VARIANT1 = {
     'familyGuids': ['F000011_11'],
     'genotypeFilters': 'HIGH_SR_BACKGROUND',
     'genotypes': {
-        'I000015_na20885': [{
+        'I000015_na20885': {
             'sampleId': 'NA20885', 'sampleType': 'WGS', 'individualGuid': 'I000015_na20885', 'familyGuid': 'F000011_11',
             'numAlt': 1, 'cn': 2, 'gq': 0, 'newCall': False, 'prevCall': True, 'prevNumAlt': None,
-        }], 'I000025_na20884': [{
+        }, 'I000025_na20884': {
             'sampleId': 'NA20884', 'sampleType': 'WGS', 'individualGuid': 'I000025_na20884', 'familyGuid': 'F000011_11',
             'numAlt': 0, 'cn': 2, 'gq': 6, 'newCall': False, 'prevCall': True, 'prevNumAlt': None,
-        }], 'I000035_na20883': [{
+        }, 'I000035_na20883': {
             'sampleId': 'NA20883', 'sampleType': 'WGS', 'individualGuid': 'I000035_na20883', 'familyGuid': 'F000011_11',
             'numAlt': 0, 'cn': 2, 'gq': 99, 'newCall': False, 'prevCall': True, 'prevNumAlt': None,
-        }],
+        },
     },
     'populations': {
         'sv_callset': {'af': 0.02421800047159195, 'ac': 141, 'an': 5822, 'hom': 0, 'het': 141},
@@ -489,16 +489,16 @@ SV_VARIANT2 = {
     'familyGuids': ['F000011_11'],
     'genotypeFilters': 'HIGH_SR_BACKGROUND',
     'genotypes': {
-        'I000015_na20885': [{
+        'I000015_na20885': {
             'sampleId': 'NA20885', 'sampleType': 'WGS', 'individualGuid': 'I000015_na20885', 'familyGuid': 'F000011_11',
             'numAlt': 1, 'cn': None, 'gq': 0, 'newCall': True, 'prevCall': False, 'prevNumAlt': None,
-        }], 'I000025_na20884': [{
+        }, 'I000025_na20884': {
             'sampleId': 'NA20884', 'sampleType': 'WGS', 'individualGuid': 'I000025_na20884', 'familyGuid': 'F000011_11',
             'numAlt': 0, 'cn': None, 'gq': 99, 'newCall': True, 'prevCall': False, 'prevNumAlt': None,
-        }], 'I000035_na20883': [{
+        }, 'I000035_na20883': {
             'sampleId': 'NA20883', 'sampleType': 'WGS', 'individualGuid': 'I000035_na20883', 'familyGuid': 'F000011_11',
             'numAlt': 1, 'cn': None, 'gq': 0, 'newCall': True, 'prevCall': False, 'prevNumAlt': None,
-        }],
+        },
     },
     'populations': {
         'sv_callset': {'af': 0.199072003364563, 'ac': 1159, 'an': 5822, 'hom': 0, 'het': 1159},
@@ -531,16 +531,16 @@ SV_VARIANT3 = {
     'familyGuids': ['F000011_11'],
     'genotypeFilters': 'HIGH_SR_BACKGROUND',
     'genotypes': {
-        'I000015_na20885': [{
+        'I000015_na20885': {
             'sampleId': 'NA20885', 'sampleType': 'WGS', 'individualGuid': 'I000015_na20885', 'familyGuid': 'F000011_11',
             'numAlt': 1, 'cn': None, 'gq': 62, 'newCall': False, 'prevCall': True, 'prevNumAlt': None,
-        }], 'I000025_na20884': [{
+        }, 'I000025_na20884': {
             'sampleId': 'NA20884', 'sampleType': 'WGS', 'individualGuid': 'I000025_na20884', 'familyGuid': 'F000011_11',
             'numAlt': 2, 'cn': None, 'gq': 42, 'newCall': False, 'prevCall': True, 'prevNumAlt': None,
-        }], 'I000035_na20883': [{
+        }, 'I000035_na20883': {
             'sampleId': 'NA20883', 'sampleType': 'WGS', 'individualGuid': 'I000035_na20883', 'familyGuid': 'F000011_11',
             'numAlt': 1, 'cn': None, 'gq': 79, 'newCall': False, 'prevCall': True, 'prevNumAlt': None,
-        }],
+        },
     }, 'populations': {
         'sv_callset': {'af': 0.5778080224990845, 'ac': 3364, 'an': 5822, 'hom': 459, 'het': 2446},
         'gnomad_svs': {'af': 0.0, 'id': ''},
@@ -573,16 +573,16 @@ SV_VARIANT4 = {
     'familyGuids': ['F000011_11'],
     'genotypeFilters': '',
     'genotypes': {
-        'I000015_na20885': [{
+        'I000015_na20885': {
             'sampleId': 'NA20885', 'sampleType': 'WGS', 'individualGuid': 'I000015_na20885', 'familyGuid': 'F000011_11',
             'numAlt': 2, 'cn': 0, 'gq': 99, 'newCall': False, 'prevCall': True, 'prevNumAlt': None,
-        }], 'I000025_na20884': [{
+        }, 'I000025_na20884': {
             'sampleId': 'NA20884', 'sampleType': 'WGS', 'individualGuid': 'I000025_na20884', 'familyGuid': 'F000011_11',
             'numAlt': 1, 'cn': 1, 'gq': 99, 'newCall': False, 'prevCall': False, 'prevNumAlt': 2,
-        }], 'I000035_na20883': [{
+        }, 'I000035_na20883': {
             'sampleId': 'NA20883', 'sampleType': 'WGS', 'individualGuid': 'I000035_na20883', 'familyGuid': 'F000011_11',
             'numAlt': 1, 'cn': 1, 'gq': 99, 'newCall': False, 'prevCall': False, 'prevNumAlt': 2,
-        }],
+        },
     },
     'populations': {
         'sv_callset': {'af': 0.6100999712944031, 'ac': 3552, 'an': 5822, 'hom': 1053, 'het': 1446},
@@ -612,21 +612,21 @@ GCNV_VARIANT1 = {
     'familyGuids': ['F000002_2'],
     'genotypeFilters': '',
     'genotypes': {
-        'I000004_hg00731': [{
+        'I000004_hg00731': {
             'sampleId': 'HG00731', 'sampleType': 'WES', 'individualGuid': 'I000004_hg00731', 'familyGuid': 'F000002_2',
             'numAlt': 1, 'cn': 3, 'qs': 38, 'defragged': False, 'start': None, 'end': None, 'numExon': None,
             'geneIds': None, 'newCall': False, 'prevCall': True, 'prevOverlap': False,
-        }],
-        'I000005_hg00732': [{
+        },
+        'I000005_hg00732': {
             'sampleId': 'HG00732', 'sampleType': 'WES', 'individualGuid': 'I000005_hg00732', 'familyGuid': 'F000002_2',
             'numAlt': 0, 'cn': None, 'qs': None, 'defragged': None, 'start': None, 'end': None, 'numExon': None,
             'geneIds': None, 'newCall': None, 'prevCall': None, 'prevOverlap': None,
-        }],
-        'I000006_hg00733': [{
+        },
+        'I000006_hg00733': {
             'sampleId': 'HG00733', 'sampleType': 'WES', 'individualGuid': 'I000006_hg00733', 'familyGuid': 'F000002_2',
             'numAlt': 0, 'cn': None, 'qs': None, 'defragged': None, 'start': None, 'end': None, 'numExon': None,
             'geneIds': None, 'newCall': None, 'prevCall': None, 'prevOverlap': None,
-        }]
+        }
     },
     'populations': {'sv_callset': {'af': 0.076492540538311, 'ac': 1763, 'an': 23048, 'hom': 0, 'het': 0}},
     'predictions': {'strvctvre': 0.1809999942779541},
@@ -650,21 +650,21 @@ GCNV_VARIANT2 = {
     'familyGuids': ['F000002_2'],
     'genotypeFilters': '',
     'genotypes': {
-        'I000004_hg00731': [{
+        'I000004_hg00731': {
             'sampleId': 'HG00731', 'sampleType': 'WES', 'individualGuid': 'I000004_hg00731', 'familyGuid': 'F000002_2',
             'numAlt': 1, 'cn': 3, 'qs': 29, 'defragged': False, 'start': None, 'end': None, 'numExon': None,
             'geneIds': None, 'newCall': False, 'prevCall': True, 'prevOverlap': False,
-        }],
-        'I000005_hg00732': [{
+        },
+        'I000005_hg00732': {
             'sampleId': 'HG00732', 'sampleType': 'WES', 'individualGuid': 'I000005_hg00732', 'familyGuid': 'F000002_2',
             'numAlt': 1, 'cn': 3, 'qs': 46, 'defragged': False, 'start': None, 'end': None, 'numExon': None,
             'geneIds': None, 'newCall': False, 'prevCall': True, 'prevOverlap': False,
-        }],
-        'I000006_hg00733': [{
+        },
+        'I000006_hg00733': {
             'sampleId': 'HG00733', 'sampleType': 'WES', 'individualGuid': 'I000006_hg00733', 'familyGuid': 'F000002_2',
             'numAlt': 1, 'cn': 3, 'qs': 37, 'defragged': False, 'start': None, 'end': None, 'numExon': None,
             'geneIds': None, 'newCall': False, 'prevCall': True, 'prevOverlap': False,
-        }]
+        }
     },
     'populations': {'sv_callset': {'af': 0.012322110123932362, 'ac': 284, 'an': 23047, 'hom': 0, 'het': 0}},
     'predictions': {'strvctvre': 0.5479999780654907},
@@ -691,21 +691,21 @@ GCNV_VARIANT3 = {
     'familyGuids': ['F000002_2'],
     'genotypeFilters': '',
     'genotypes': {
-        'I000004_hg00731': [{
+        'I000004_hg00731': {
             'sampleId': 'HG00731', 'sampleType': 'WES', 'individualGuid': 'I000004_hg00731', 'familyGuid': 'F000002_2',
             'numAlt': 2, 'cn': 4, 'qs': 13, 'defragged': True, 'start': None, 'end': None, 'numExon': None,
             'geneIds': None, 'newCall': True, 'prevCall': False, 'prevOverlap': False,
-        }],
-        'I000005_hg00732': [{
+        },
+        'I000005_hg00732': {
             'sampleId': 'HG00732', 'sampleType': 'WES', 'individualGuid': 'I000005_hg00732', 'familyGuid': 'F000002_2',
             'numAlt': 1, 'cn': 3, 'qs': 7, 'defragged': False, 'start': None, 'end': None, 'numExon': None,
             'geneIds': None, 'newCall': False, 'prevCall': False, 'prevOverlap': True,
-        }],
-        'I000006_hg00733': [{
+        },
+        'I000006_hg00733': {
             'sampleId': 'HG00733', 'sampleType': 'WES', 'individualGuid': 'I000006_hg00733', 'familyGuid': 'F000002_2', 'numAlt': 0,
             'cn': None, 'qs': None, 'defragged': None, 'start': None, 'end': None, 'numExon': None, 'geneIds': None,
             'newCall': None, 'prevCall': None, 'prevOverlap': None,
-        }],
+        },
     },
     'populations': {'sv_callset': {'af': 0.0015185698866844177, 'ac': 35, 'an': 23048, 'hom': 0, 'het': 0}},
     'predictions': {'strvctvre': 0.7860000133514404},
@@ -730,21 +730,21 @@ GCNV_VARIANT4 = {
     'genotypeFilters': '',
     'xpos': 17038721781,
     'genotypes': {
-        'I000004_hg00731': [{
+        'I000004_hg00731': {
             'sampleId': 'HG00731', 'sampleType': 'WES', 'individualGuid': 'I000004_hg00731', 'familyGuid': 'F000002_2',
             'numAlt': 1, 'cn': 3, 'qs': 28, 'defragged': False, 'start': None, 'end': None, 'numExon': None,
             'geneIds': None, 'newCall': False, 'prevCall': True, 'prevOverlap': False,
-        }],
-        'I000005_hg00732': [{
+        },
+        'I000005_hg00732': {
             'sampleId': 'HG00732', 'sampleType': 'WES', 'individualGuid': 'I000005_hg00732', 'familyGuid': 'F000002_2',
             'numAlt': 0, 'cn': None, 'qs': None, 'defragged': None, 'start': None, 'end': None, 'numExon': None,
             'geneIds': None, 'newCall': None, 'prevCall': None, 'prevOverlap': None,
-        }],
-        'I000006_hg00733': [{
+        },
+        'I000006_hg00733': {
             'sampleId': 'HG00733', 'sampleType': 'WES', 'individualGuid': 'I000006_hg00733', 'familyGuid': 'F000002_2',
             'numAlt': 1, 'cn': 3, 'qs': 29, 'defragged': False, 'start': None, 'end': 38734440, 'numExon': None,
             'geneIds': None, 'newCall': False, 'prevCall': True, 'prevOverlap': False,
-        }],
+        },
     },
     'populations': {'sv_callset': {'af': 0.004989586770534515, 'ac': 115, 'an': 23048, 'hom': 0, 'het': 0}},
     'predictions': {'strvctvre': 0.7099999785423279},
@@ -767,23 +767,23 @@ GCNV_MULTI_FAMILY_VARIANT1.update({
     },
 })
 GCNV_MULTI_FAMILY_VARIANT1['familyGuids'].append('F000003_3')
-GCNV_MULTI_FAMILY_VARIANT1['genotypes'].update({'I000007_na20870': [{
+GCNV_MULTI_FAMILY_VARIANT1['genotypes'].update({'I000007_na20870': {
     'sampleId': 'NA20870', 'sampleType': 'WES', 'individualGuid': 'I000007_na20870', 'familyGuid': 'F000003_3',
     'numAlt': 1, 'cn': 3, 'qs': 164, 'defragged': False, 'start': None, 'end': None, 'numExon': None,
     'geneIds': None, 'newCall': False, 'prevCall': True, 'prevOverlap': False,
-}]})
-GCNV_MULTI_FAMILY_VARIANT1['genotypes']['I000004_hg00731'][0].update({'start': 22438910, 'end': 22469796, 'geneIds': []})
+}})
+GCNV_MULTI_FAMILY_VARIANT1['genotypes']['I000004_hg00731'].update({'start': 22438910, 'end': 22469796, 'geneIds': []})
 
 GCNV_MULTI_FAMILY_VARIANT2 = deepcopy(GCNV_VARIANT2)
 GCNV_MULTI_FAMILY_VARIANT2['numExon'] = 26
 GCNV_MULTI_FAMILY_VARIANT2['familyGuids'].append('F000003_3')
 for genotype in GCNV_MULTI_FAMILY_VARIANT2['genotypes'].values():
-    genotype[0].update({'numExon': 8, 'geneIds': ['ENSG00000103495', 'ENSG00000167371', 'ENSG00000280893']})
-GCNV_MULTI_FAMILY_VARIANT2['genotypes'].update({'I000007_na20870': [{
+    genotype.update({'numExon': 8, 'geneIds': ['ENSG00000103495', 'ENSG00000167371', 'ENSG00000280893']})
+GCNV_MULTI_FAMILY_VARIANT2['genotypes'].update({'I000007_na20870': {
     'sampleId': 'NA20870', 'sampleType': 'WES', 'individualGuid': 'I000007_na20870', 'familyGuid': 'F000003_3',
     'numAlt': 1, 'cn': 3, 'qs': 40, 'defragged': False, 'start': None, 'end': None, 'numExon': None,
     'geneIds': None, 'newCall': False, 'prevCall': True, 'prevOverlap': False,
-}]})
+}})
 GCNV_MULTI_FAMILY_VARIANT2['transcripts'].update({
     'ENSG00000013364': [{'geneId': 'ENSG00000013364', 'majorConsequence': 'LOF'}],
     'ENSG00000079616': [{'geneId': 'ENSG00000079616', 'majorConsequence': 'LOF'}],
@@ -804,10 +804,10 @@ MITO_VARIANT1 = {
     'xpos': 25000004429,
     'rsid': 'rs1603219456',
     'familyGuids': ['F000002_2'],
-    'genotypes': {'I000006_hg00733': [{
+    'genotypes': {'I000006_hg00733': {
         'sampleId': 'HG00733', 'sampleType': 'WES', 'individualGuid': 'I000006_hg00733', 'familyGuid': 'F000002_2',
         'numAlt': 1, 'dp': 3955, 'hl': 0.083, 'mitoCn': 230, 'contamination': 0.0,
-    }]},
+    }},
     'genotypeFilters': '',
     'populations': {
         'seqr': {'af': 0.0, 'ac': 0, 'an': 154},
@@ -858,10 +858,10 @@ MITO_VARIANT2 = {
     'liftedOverPos': 11597,
     'rsid': None,
     'familyGuids': ['F000002_2'],
-    'genotypes': {'I000006_hg00733': [{
+    'genotypes': {'I000006_hg00733': {
         'sampleId': 'HG00733', 'sampleType': 'WES', 'individualGuid': 'I000006_hg00733', 'familyGuid': 'F000002_2',
         'numAlt': 1, 'dp': 3845, 'hl': 0.029, 'mitoCn': 247, 'contamination': 0.015,
-    }]},
+    }},
     'genotypeFilters': '',
     'populations': {
         'seqr': {'af': 0.0, 'ac': 0, 'an': 154},
@@ -905,10 +905,10 @@ MITO_VARIANT3 = {
     'liftedOverPos': 14783,
     'rsid': 'rs193302982',
     'familyGuids': ['F000002_2'],
-    'genotypes': {'I000006_hg00733': [{
+    'genotypes': {'I000006_hg00733': {
         'sampleId': 'HG00733', 'sampleType': 'WES', 'individualGuid': 'I000006_hg00733', 'familyGuid': 'F000002_2',
         'numAlt': 2, 'dp': 3943, 'hl': 1.0, 'mitoCn': 214, 'contamination': 0.0,
-    }]},
+    }},
     'genotypeFilters': 'artifact_prone_site',
     'populations': {
         'seqr': {'af': 0.019480518996715546, 'ac': 3, 'an': 154},
