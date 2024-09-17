@@ -442,7 +442,7 @@ for group, users in ANVIL_GROUPS.items():
 
 
 TEST_TERRA_API_ROOT_URL =  'https://terra.api/'
-TEST_OAUTH2_KEY = 'abc123'
+TEST_OAUTH2_PROVIDER = 'google-oauth2'
 
 # the time must the same as that in 'auth_time' in the social_auth fixture data
 TOKEN_AUTH_TIME = 1603287741
@@ -514,7 +514,10 @@ class AnvilAuthenticationTestCase(AuthenticationTestCase):
         patcher = mock.patch('seqr.views.utils.terra_api_utils.TERRA_API_ROOT_URL', TEST_TERRA_API_ROOT_URL)
         patcher.start()
         self.addCleanup(patcher.stop)
-        patcher = mock.patch('seqr.views.utils.terra_api_utils.SOCIAL_AUTH_GOOGLE_OAUTH2_KEY', TEST_OAUTH2_KEY)
+        patcher = mock.patch('seqr.views.react_app.SOCIAL_AUTH_PROVIDER', TEST_OAUTH2_PROVIDER)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.terra_api_utils.SOCIAL_AUTH_PROVIDER', TEST_OAUTH2_PROVIDER)
         patcher.start()
         self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.utils.orm_to_json_utils.SERVICE_ACCOUNT_FOR_ANVIL', TEST_SERVICE_ACCOUNT)
@@ -703,6 +706,7 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
         raise NotImplementedError
 
 
+@mock.patch('seqr.views.utils.terra_api_utils.SOCIAL_AUTH_PROVIDER', TEST_OAUTH2_PROVIDER)
 class AirtableTest(object):
 
     def assert_expected_airtable_call(self, call_index, filter_formula, fields, additional_params=None):

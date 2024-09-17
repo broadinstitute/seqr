@@ -4,7 +4,7 @@ import mock
 from seqr.views.apis.superuser_api import get_all_users
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, USER_FIELDS
 
-ALL_USERS_USER_FIELDS = {'hasGoogleAuth'}
+ALL_USERS_USER_FIELDS = {'hasCloudAuth'}
 ALL_USERS_USER_FIELDS.update(USER_FIELDS)
 ALL_USERS_USER_FIELDS -= {'firstName', 'lastName', 'isAnvil'}
 
@@ -48,7 +48,7 @@ class SuperusersAPITest(object):
 
         pm_user = users_by_username['test_pm_user']
         self.assertSetEqual(set(pm_user.keys()), ALL_USERS_USER_FIELDS)
-        self.assertEqual(pm_user['hasGoogleAuth'], self.HAS_GOOGLE_AUTH)
+        self.assertEqual(pm_user['hasCloudAuth'], self.HAS_CLOUD_AUTH)
         self.assertEqual(pm_user['isPm'], pm_enabled)
         self.assertEqual(pm_user['isAnalyst'], analyst_enabled)
 
@@ -63,12 +63,12 @@ class SuperusersAPITest(object):
 
 class LocalSuperusersAPITest(AuthenticationTestCase, SuperusersAPITest):
     fixtures = ['users']
-    HAS_GOOGLE_AUTH = False
+    HAS_CLOUD_AUTH = False
 
 
 class AnvilSuperusersAPITest(AnvilAuthenticationTestCase, SuperusersAPITest):
     fixtures = ['users', 'social_auth']
-    HAS_GOOGLE_AUTH = True
+    HAS_CLOUD_AUTH = True
 
     def _test_pm_users(self, url):
 
