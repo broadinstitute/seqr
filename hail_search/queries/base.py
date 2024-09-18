@@ -1081,7 +1081,6 @@ class BaseHailTableQuery(object):
             '_sort': self._sort_order(ht),
             'genomeVersion': self.GENOME_VERSION.replace('GRCh', ''),
         })
-
         results = ht.annotate(**annotations)
         return results.select(*self.CORE_FIELDS, *list(annotations.keys()))
 

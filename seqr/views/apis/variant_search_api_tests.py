@@ -904,6 +904,7 @@ class VariantSearchAPITest(object):
         del expected_body['savedVariantsByGuid']['SV0000001_2103343353_r0390_100']
         for k in ['VT1708633_2103343353_r0390_100', 'VT1726961_2103343353_r0390_100']:
             del expected_body['variantTagsByGuid'][k]
+
         self.assertDictEqual(response.json(), expected_body)
         mock_variant_lookup.assert_called_with(
             self.collaborator_user, ('1', 10439, 'AC', 'A'), genome_version='37',
