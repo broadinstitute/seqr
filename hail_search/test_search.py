@@ -298,7 +298,7 @@ FAMILY_4_VARIANT = {
     'alt': 'C',
     'mainTranscriptId': 'ENST00000381431',
     'selectedMainTranscriptId': None,
-    'familyGuids': ['F000004_4'],
+    'familyGuids': ['F000004_4', 'F000004_4'],
     'genotypeFilters': '',
     'variantId': '4-52038257-CAT-C',
     'liftedOverGenomeVersion': '37',
@@ -522,7 +522,7 @@ FAMILY_5_VARIANT = {
     "alt": "C",
     "mainTranscriptId": None,
     "selectedMainTranscriptId": None,
-    "familyGuids": ["F000005_5"],
+    "familyGuids": ["F000005_5", "F000005_5"],
     "genotypeFilters": "",
     "variantId": "2-44312653-T-C",
     "liftedOverGenomeVersion": "37",
@@ -724,7 +724,9 @@ class HailSearchTestCase(AioHTTPTestCase):
         # for variant in expected_variants:
         #     v = deepcopy(variant)
         #     if 'I000015_na20885' in v['genotypes']:
+        #         v['genotypes']['I000015_na20885'] = [v['genotypes']['I000015_na20885']]
         #         v['genotypes']['I000015_na20885'].append({**v['genotypes']['I000015_na20885'][0], 'sampleType': 'WGS'})
+        #         v['familyGuids'].append('F000011_11')
         #     expected_results.append(v)
         #
         # await self._assert_expected_search(
@@ -741,14 +743,14 @@ class HailSearchTestCase(AioHTTPTestCase):
             [FAMILY_4_VARIANT], sample_data=FAMILY_4_SAMPLE_DATA, inheritance_mode=inheritance_mode,
         )
 
-        # Variant in family_5 is inherited in exome and there is no parental data in gemone.
+        # Variant in family_5 is inherited in exome and there is no parental data in genome.
         inheritance_mode = 'recessive'
         await self._assert_expected_search(
             [FAMILY_5_VARIANT], sample_data=FAMILY_5_SAMPLE_DATA, inheritance_mode=inheritance_mode,
         )
         inheritance_mode = 'de_novo'
         await self._assert_expected_search(
-            [], sample_data=FAMILY_5_SAMPLE_DATA, inheritance_mode=inheritance_mode,
+            [FAMILY_5_VARIANT], sample_data=FAMILY_5_SAMPLE_DATA, inheritance_mode=inheritance_mode,
         )
 
         # Search with variants from families 4 and 5 together. They are in the same project.

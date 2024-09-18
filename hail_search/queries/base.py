@@ -547,15 +547,12 @@ class BaseHailTableQuery(object):
         )
         return ht, comp_het_ht
 
-    def _filter_families_inheritance(self, ht, inheritance_mode, inheritance_filter, sorted_family_sample_data, **kwargs):
-        ht = self._annotate_families_inheritance(
-            ht, inheritance_mode, inheritance_filter, sorted_family_sample_data, **kwargs
-        )
+    def _filter_families_inheritance(self, ht, inheritance_mode, inheritance_filter, sorted_family_sample_data):
+        ht = self._annotate_families_inheritance(ht, inheritance_mode, inheritance_filter, sorted_family_sample_data)
         return ht.filter(ht.family_entries.any(hl.is_defined)).select_globals('family_guids')
 
-
     def _annotate_families_inheritance(
-        self, ht, inheritance_mode, inheritance_filter, sorted_family_sample_data, annotation_field='family_entries',
+        self, ht, inheritance_mode, inheritance_filter, sorted_family_sample_data, sample_type=None,
     ):
         individual_genotype_filter = (inheritance_filter or {}).get('genotype')
 
@@ -585,10 +582,18 @@ class BaseHailTableQuery(object):
             if not entry_indices:
                 continue
             entry_indices = hl.dict(entry_indices)
+
+            if sample_type is None:
+                annotation = entries_field = 'family_entries'
+            else:
+                annotation = f'{sample_type.lower()}_passes_inheritance'
+                entries_field = f'{sample_type.lower()}_family_entries'
+
             entries_annotations = {
-                annotation_field: hl.enumerate(ht.family_entries).map(
+                annotation: hl.enumerate(ht[entries_field]).map(
                     lambda x: self._valid_genotype_family_entries(x[1], entry_indices.get(x[0]), genotype, min_unaffected)
-            )}
+                )
+            }
             ht = ht.annotate(**entries_annotations)
 
         return ht
@@ -607,7 +612,7 @@ class BaseHailTableQuery(object):
             is_valid &= unaffected_filter
         return hl.or_missing(is_valid, entries)
 
-    def _get_family_passes_quality_filter(self, quality_filter, ht, **kwargs):
+    def _get_family_passes_quality_filter(self, quality_filter, ht, filters_field_name='filters', **kwargs):
         quality_filter = quality_filter or {}
 
         affected_only = quality_filter.get('affected_only')
@@ -624,7 +629,7 @@ class BaseHailTableQuery(object):
 
         def passes_quality(entries):
             passes_filters = entries.all(lambda gt: hl.all([f(gt) for f in passes_quality_filters])) if passes_quality_filters else True
-            passes_vcf_filters = self._passes_vcf_filters(ht) if has_vcf_filter else True
+            passes_vcf_filters = self._passes_vcf_filters(ht, filters_field_name) if has_vcf_filter else True
             return passes_filters & passes_vcf_filters
 
         return passes_quality
@@ -646,8 +651,8 @@ class BaseHailTableQuery(object):
         return passes_quality_field
 
     @staticmethod
-    def _passes_vcf_filters(ht):
-        return hl.is_missing(ht.filters) | (ht.filters.length() < 1)
+    def _passes_vcf_filters(ht: hl.Table, filters_field_name: str):
+        return hl.is_missing(ht[filters_field_name]) | (ht[filters_field_name].length() < 1)
 
     def _parse_variant_keys(self, variant_keys=None, **kwargs):
         return [hl.struct(**{self.KEY_FIELD[0]: key}) for key in (variant_keys or [])]
