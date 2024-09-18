@@ -67,7 +67,9 @@ class BaseHailTableQuery(object):
     TRANSCRIPTS_FIELD = None
     CORE_FIELDS = [XPOS]
     BASE_ANNOTATION_FIELDS = {
-        FAMILY_GUID_FIELD: lambda r: hl.array(hl.set(r.family_entries.filter(hl.is_defined).map(lambda entries: entries.first().familyGuid))),
+        FAMILY_GUID_FIELD: lambda r: hl.array(hl.set(
+            r.family_entries.filter(hl.is_defined).map(lambda entries: entries.first().familyGuid))
+        ).filter(hl.is_defined),
         'genotypeFilters': lambda r: hl.str(' ,').join(r.filters),
         'variantId': lambda r: r.variant_id,
     }

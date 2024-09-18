@@ -758,7 +758,7 @@ class HailSearchTestCase(AioHTTPTestCase):
         )
         inheritance_mode = 'de_novo'
         await self._assert_expected_search(
-            [FAMILY_4_VARIANT], sample_data=FAMILIES_4_5_SAMPLE_DATA, inheritance_mode=inheritance_mode,
+            [FAMILY_5_VARIANT, FAMILY_4_VARIANT], sample_data=FAMILIES_4_5_SAMPLE_DATA, inheritance_mode=inheritance_mode,
         )
 
     async def test_inheritance_filter(self):
