@@ -418,10 +418,10 @@ for k in {'familyGuids', 'genotypes', 'genotypeFilters'}:
 FAMILY_3_VARIANT = deepcopy(VARIANT3)
 FAMILY_3_VARIANT['familyGuids'] = ['F000003_3']
 FAMILY_3_VARIANT['genotypes'] = {
-    'I000007_na20870': [{
+    'I000007_na20870': {
         'sampleId': 'NA20870', 'sampleType': 'WES', 'individualGuid': 'I000007_na20870', 'familyGuid': 'F000003_3',
         'numAlt': 1, 'dp': 28, 'gq': 99, 'ab': 0.6785714285714286,
-    }],
+    },
 }
 MULTI_FAMILY_VARIANT = deepcopy(VARIANT3)
 MULTI_FAMILY_VARIANT['familyGuids'] += FAMILY_3_VARIANT['familyGuids']

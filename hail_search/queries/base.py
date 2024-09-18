@@ -67,7 +67,7 @@ class BaseHailTableQuery(object):
     TRANSCRIPTS_FIELD = None
     CORE_FIELDS = [XPOS]
     BASE_ANNOTATION_FIELDS = {
-        FAMILY_GUID_FIELD: lambda r: r.family_entries.filter(hl.is_defined).map(lambda entries: entries.first().familyGuid),
+        FAMILY_GUID_FIELD: lambda r: hl.array(hl.set(r.family_entries.filter(hl.is_defined).map(lambda entries: entries.first().familyGuid))),
         'genotypeFilters': lambda r: hl.str(' ,').join(r.filters),
         'variantId': lambda r: r.variant_id,
     }
@@ -113,6 +113,7 @@ class BaseHailTableQuery(object):
                 for prediction, path in self.PREDICTION_FIELDS_CONFIG.items()
             }),
         })
+
         annotation_fields.update(self.BASE_ANNOTATION_FIELDS)
         annotation_fields.update(self.LIFTOVER_ANNOTATION_FIELDS)
         annotation_fields.update(self._additional_annotation_fields())
@@ -370,10 +371,11 @@ class BaseHailTableQuery(object):
         sample_type = None
         for project_guid, project_sample_type_data in project_samples.items():
             sample_type, family_sample_data = list(project_sample_type_data.items())[0]
-            ht = self._read_table(f'projects/{sample_type}/{project_guid}.ht',use_ssd_dir=True)
-            if ht is None:
+            project_ht = self._read_table(f'projects/{sample_type}/{project_guid}.ht',use_ssd_dir=True)
+            if project_ht is None:
                 continue
-            unmerged_project_hts.append(ht.select_globals('sample_type', 'family_guids', 'family_samples'))
+            project_ht = project_ht.annotate_globals(sample_type=sample_type) # SV and GCNV do not already have sample_type in their globals
+            unmerged_project_hts.append(project_ht.select_globals('sample_type', 'family_guids', 'family_samples'))
             sample_data.update(family_sample_data)
 
             if len(unmerged_project_hts) >= chunk_size:
@@ -1077,6 +1079,7 @@ class BaseHailTableQuery(object):
             '_sort': self._sort_order(ht),
             'genomeVersion': self.GENOME_VERSION.replace('GRCh', ''),
         })
+
         results = ht.annotate(**annotations)
         return results.select(*self.CORE_FIELDS, *list(annotations.keys()))
 

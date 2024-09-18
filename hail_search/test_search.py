@@ -298,7 +298,7 @@ FAMILY_4_VARIANT = {
     'alt': 'C',
     'mainTranscriptId': 'ENST00000381431',
     'selectedMainTranscriptId': None,
-    'familyGuids': ['F000004_4', 'F000004_4'],
+    'familyGuids': ['F000004_4'],
     'genotypeFilters': '',
     'variantId': '4-52038257-CAT-C',
     'liftedOverGenomeVersion': '37',
@@ -522,7 +522,7 @@ FAMILY_5_VARIANT = {
     "alt": "C",
     "mainTranscriptId": None,
     "selectedMainTranscriptId": None,
-    "familyGuids": ["F000005_5", "F000005_5"],
+    "familyGuids": ["F000005_5"],
     "genotypeFilters": "",
     "variantId": "2-44312653-T-C",
     "liftedOverGenomeVersion": "37",
@@ -595,8 +595,6 @@ def _sorted(variant, sorts):
 
 
 class HailSearchTestCase(AioHTTPTestCase):
-
-    maxDiff = None
 
     async def get_application(self):
         return await init_web_app()
@@ -718,20 +716,20 @@ class HailSearchTestCase(AioHTTPTestCase):
         )
 
     async def test_both_sample_types_search(self):
-        # # One family in a multi-project search has identical exome and genome data.
-        # expected_variants = [PROJECT_2_VARIANT, MULTI_PROJECT_VARIANT1, MULTI_PROJECT_VARIANT2, VARIANT3, VARIANT4]
-        # expected_results = []
-        # for variant in expected_variants:
-        #     v = deepcopy(variant)
-        #     if 'I000015_na20885' in v['genotypes']:
-        #         v['genotypes']['I000015_na20885'] = [v['genotypes']['I000015_na20885']]
-        #         v['genotypes']['I000015_na20885'].append({**v['genotypes']['I000015_na20885'][0], 'sampleType': 'WGS'})
-        #         v['familyGuids'].append('F000011_11')
-        #     expected_results.append(v)
-        #
-        # await self._assert_expected_search(
-        #     expected_results, gene_counts=GENE_COUNTS, sample_data=MULTI_PROJECT_SAMPLE_TYPES_SAMPLE_DATA,
-        # )
+        # One family in a multi-project search has identical exome and genome data.
+        expected_variants = [PROJECT_2_VARIANT, MULTI_PROJECT_VARIANT1, MULTI_PROJECT_VARIANT2, VARIANT3, VARIANT4]
+        expected_results = []
+        for variant in expected_variants:
+            v = deepcopy(variant)
+            for indiv_id, gts in v['genotypes'].items():
+                v['genotypes'][indiv_id] = [gts]
+            if 'I000015_na20885' in v['genotypes']:
+                v['genotypes']['I000015_na20885'].append({**v['genotypes']['I000015_na20885'][0], 'sampleType': 'WGS'})
+            expected_results.append(v)
+
+        await self._assert_expected_search(
+            expected_results, gene_counts=GENE_COUNTS, sample_data=MULTI_PROJECT_SAMPLE_TYPES_SAMPLE_DATA,
+        )
 
         # Variant in family_4 is de novo in exome but maternally inherited in genome.
         inheritance_mode = 'recessive'
@@ -1090,7 +1088,7 @@ class HailSearchTestCase(AioHTTPTestCase):
         self.assertDictEqual(resp_json, {
             **{k: v for k, v in GRCH37_VARIANT.items() if k not in {'familyGuids', 'genotypes', 'genotypeFilters'}},
             'familyGenotypes': {GRCH37_VARIANT['familyGuids'][0]: [
-                {k: v for k, v in g[0].items() if k != 'individualGuid'} for g in GRCH37_VARIANT['genotypes'].values()
+                {k: v for k, v in g.items() if k != 'individualGuid'} for g in GRCH37_VARIANT['genotypes'].values()
             ]},
         })
 
@@ -1101,7 +1099,7 @@ class HailSearchTestCase(AioHTTPTestCase):
         self.assertDictEqual(resp_json, {
             **{k: v for k, v in MITO_VARIANT1.items() if k not in {'familyGuids', 'genotypes', 'genotypeFilters'}},
             'familyGenotypes': {MITO_VARIANT1['familyGuids'][0]: [
-                {k: v for k, v in g[0].items() if k != 'individualGuid'} for g in MITO_VARIANT1['genotypes'].values()
+                {k: v for k, v in g.items() if k != 'individualGuid'} for g in MITO_VARIANT1['genotypes'].values()
             ]},
         })
 
@@ -1117,8 +1115,8 @@ class HailSearchTestCase(AioHTTPTestCase):
             resp_json = await resp.json()
         self.assertDictEqual(resp_json, {
             **NO_GENOTYPE_GCNV_VARIANT, 'genotypes': {
-                individual: [{k: v for k, v in sample.items() if k not in {'start', 'end', 'numExon', 'geneIds'}}  for sample in genotypes]
-                for individual, genotypes in GCNV_VARIANT4['genotypes'].items()
+                individual: {k: v for k, v in genotype.items() if k not in {'start', 'end', 'numExon', 'geneIds'}}
+                for individual, genotype in GCNV_VARIANT4['genotypes'].items()
             }
         })
 

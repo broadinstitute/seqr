@@ -203,22 +203,16 @@ class MitoHailTableQuery(BaseHailTableQuery):
 
     def _annotate_passes_quality_filter(self, ht: hl.Table, quality_filter, **kwargs) -> hl.Table:
         wes_passes_quality_filter = self._get_family_passes_quality_filter(quality_filter, ht, WES_FILTERS_FIELD, **kwargs)
-        if wes_passes_quality_filter is not None:
-            ht = ht.annotate(
-                wes_passes_quality=ht[WES_FAMILY_ENTRIES_FIELD].map(
-                    lambda entries: hl.or_missing(wes_passes_quality_filter(entries), entries)
-                ))
-        else:
-            ht = ht.annotate(wes_passes_quality=ht[WES_FAMILY_ENTRIES_FIELD])
+        wes_passes = ht[WES_FAMILY_ENTRIES_FIELD] if wes_passes_quality_filter is None else (
+            ht[WES_FAMILY_ENTRIES_FIELD].map(lambda entries: hl.or_missing(wes_passes_quality_filter(entries), entries))
+        )
+        ht = ht.annotate(wes_passes_quality=wes_passes)
 
         wgs_passes_quality_filter = self._get_family_passes_quality_filter(quality_filter, ht, WGS_FILTERS_FIELD, **kwargs)
-        if wgs_passes_quality_filter is not None:
-            ht = ht.annotate(
-                wgs_passes_quality=ht[WGS_FAMILY_ENTRIES_FIELD].map(
-                    lambda entries: hl.or_missing(wgs_passes_quality_filter(entries), entries)
-                ))
-        else:
-            ht = ht.annotate(wgs_passes_quality=ht[WGS_FAMILY_ENTRIES_FIELD])
+        wgs_passes = ht[WGS_FAMILY_ENTRIES_FIELD] if wgs_passes_quality_filter is None else (
+            ht[WGS_FAMILY_ENTRIES_FIELD].map(lambda entries: hl.or_missing(wgs_passes_quality_filter(entries), entries))
+        )
+        ht = ht.annotate(wgs_passes_quality=wgs_passes)
         return ht
 
     @staticmethod
