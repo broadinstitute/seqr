@@ -88,3 +88,5 @@ HGMD_PATH_RANGES = [
     ('likely_disease_causing', 'DM?', 'DM?'),
     ('hgmd_other', 'DP', None),
 ]
+
+MAX_LOAD_INTERVALS = 1000
