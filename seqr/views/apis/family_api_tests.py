@@ -179,6 +179,10 @@ class FamilyAPITest(object):
         self.assertSetEqual(set(response_json['familiesByGuid'][FAMILY_GUID].keys()), family_fields)
         self.assertSetEqual(set(next(iter(response_json['individualsByGuid'].values())).keys()), individual_fields)
 
+        # Test invalid family guid
+        response = self.client.get(url.replace(FAMILY_GUID, 'invalid_guid'))
+        self.assertEqual(response.status_code, 404)
+
     def test_family_variant_tag_summary(self):
         url = reverse(family_variant_tag_summary, args=[FAMILY_GUID])
         self.check_collaborator_login(url)

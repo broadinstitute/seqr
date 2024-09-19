@@ -36,7 +36,7 @@ PREVIOUS_FAMILY_ID_FIELD = 'previousFamilyId'
 @login_and_policies_required
 def family_page_data(request, family_guid):
     families = Family.objects.filter(guid=family_guid)
-    family = families.first()
+    family = families.get(guid=family_guid)
     project = family.project
     check_project_permissions(project, request.user)
     is_analyst = user_is_analyst(request.user)
