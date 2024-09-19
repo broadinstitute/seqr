@@ -4,7 +4,7 @@ import mock
 
 from seqr.views.react_app import main_app, no_login_main_app
 from seqr.views.utils.terra_api_utils import TerraRefreshTokenFailedException
-from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, USER_FIELDS
+from seqr.views.utils.test_utils import TEST_OAUTH2_PROVIDER, AuthenticationTestCase, AnvilAuthenticationTestCase, USER_FIELDS
 
 MOCK_GA_TOKEN = 'mock_ga_token' # nosec
 
@@ -23,7 +23,7 @@ class AppPageTest(object):
         self.assertDictEqual(initial_json['meta'], {
             'version': mock.ANY,
             'hijakEnabled': False,
-            'googleLoginEnabled': self.GOOGLE_ENABLED,
+            'oauthLoginProvider': self.OAUTH_PROVIDER,
             'elasticsearchEnabled': bool(self.ES_HOSTNAME),
             'warningMessages': [{'id': 1, 'header': 'Warning!', 'message': 'A sample warning'}],
             'anvilLoadingDelayDate': anvil_loading_date,
@@ -99,12 +99,12 @@ class AppPageTest(object):
 
 class LocalAppPageTest(AuthenticationTestCase, AppPageTest):
     fixtures = ['users']
-    GOOGLE_ENABLED = False
+    OAUTH_PROVIDER = ''
 
 
 class AnvilAppPageTest(AnvilAuthenticationTestCase, AppPageTest):
     fixtures = ['users']
-    GOOGLE_ENABLED = True
+    OAUTH_PROVIDER = TEST_OAUTH2_PROVIDER
 
     def test_react_page(self, *args, **kwargs):
         super(AnvilAppPageTest, self).test_react_page(*args, **kwargs)

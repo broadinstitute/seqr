@@ -6,6 +6,8 @@ from django.urls.base import reverse
 from seqr.views.apis.auth_api import login_view, logout_view, login_required_error, policies_required_error
 from django.contrib.auth.models import User
 
+from seqr.views.utils.test_utils import TEST_OAUTH2_PROVIDER
+
 
 class AuthAPITest(TestCase):
     fixtures = ['users']
@@ -88,7 +90,7 @@ class AuthAPITest(TestCase):
         self.assertEqual(response.status_code, 401)
         self.assertEqual(response.reason_phrase, 'Invalid credentials')
 
-    @mock.patch('seqr.views.utils.terra_api_utils.SOCIAL_AUTH_GOOGLE_OAUTH2_KEY', 'test_key')
+    @mock.patch('seqr.views.utils.terra_api_utils.SOCIAL_AUTH_PROVIDER', TEST_OAUTH2_PROVIDER)
     def test_login_view_with_google(self):
         url = reverse(login_view)
         response = self.client.post(url)

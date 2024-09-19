@@ -6,7 +6,7 @@ import os
 
 from hail_search.constants import AFFECTED_ID, ALT_ALT, ANNOTATION_OVERRIDE_FIELDS, ANY_AFFECTED, COMP_HET_ALT, \
     COMPOUND_HET, GENOME_VERSION_GRCh38, GROUPED_VARIANTS_FIELD, ALLOWED_TRANSCRIPTS, ALLOWED_SECONDARY_TRANSCRIPTS,  HAS_ANNOTATION_OVERRIDE, \
-    HAS_ALT, HAS_REF,INHERITANCE_FILTERS, PATH_FREQ_OVERRIDE_CUTOFF, MALE, RECESSIVE, REF_ALT, REF_REF, \
+    HAS_ALT, HAS_REF,INHERITANCE_FILTERS, PATH_FREQ_OVERRIDE_CUTOFF, MALE, RECESSIVE, REF_ALT, REF_REF, MAX_LOAD_INTERVALS, \
     UNAFFECTED_ID, X_LINKED_RECESSIVE, XPOS, OMIM_SORT, FAMILY_GUID_FIELD, GENOTYPES_FIELD, AFFECTED_ID_MAP
 
 DATASETS_DIR = os.environ.get('DATASETS_DIR', '/hail_datasets')
@@ -14,7 +14,7 @@ SSD_DATASETS_DIR = os.environ.get('SSD_DATASETS_DIR', DATASETS_DIR)
 
 # Number of filtered genes at which pre-filtering a table by gene-intervals does not improve performance
 # Estimated based on behavior for several representative gene lists
-MAX_GENE_INTERVALS = int(os.environ.get('MAX_GENE_INTERVALS', 100))
+MAX_GENE_INTERVALS = int(os.environ.get('MAX_GENE_INTERVALS', MAX_LOAD_INTERVALS))
 
 # Optimal number of entry table partitions, balancing parallelization with partition overhead
 # Experimentally determined based on compound het search performance:
@@ -92,6 +92,7 @@ class BaseHailTableQuery(object):
         ht_path = cls._get_table_path('annotations.ht')
         ht_globals = hl.eval(hl.read_table(ht_path).globals.select(*cls.GLOBALS))
         cls.LOADED_GLOBALS = {k: ht_globals[k] for k in cls.GLOBALS}
+        return cls.LOADED_GLOBALS
 
     @classmethod
     def _format_population_config(cls, pop_config):
@@ -237,7 +238,8 @@ class BaseHailTableQuery(object):
         self._has_secondary_annotations = False
         self._is_multi_data_type_comp_het = False
         self.max_unaffected_samples = None
-        self._load_table_kwargs = {'_n_partitions': min(MAX_PARTITIONS, (os.cpu_count() or 2)-1)}
+        self._n_partitions = min(MAX_PARTITIONS, (os.cpu_count() or 2)-1)
+        self._load_table_kwargs = {'_n_partitions': self._n_partitions}
         self.entry_samples_by_family_guid = {}
 
         if sample_data:
