@@ -4,6 +4,7 @@
 
 ## 9/19/24
 * Update Biosample choices (REQUIRES DB MIGRATION)
+* Add support for Azure OAuth
 
 ## 8/14/24
 * Remove ONT support (REQUIRES DB MIGRATION)
