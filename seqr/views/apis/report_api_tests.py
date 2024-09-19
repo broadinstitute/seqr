@@ -1388,7 +1388,7 @@ class ReportAPITest(AirtableTest):
             'pos_end': 249045898,
             'familyGuid': 'F000012_12',
             'family_id': '12',
-            'gene_of_interest': None,
+            'gene_of_interest': 'OR4G11P',
             'gene_id': None,
             'gene_known_for_phenotype': 'Candidate',
             'genetic_findings_id': 'NA20889_1_249045487_DEL',
