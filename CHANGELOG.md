@@ -2,6 +2,9 @@
 
 ## dev
 
+## 9/19/24
+* Update Biosample choices (REQUIRES DB MIGRATION)
+
 ## 8/14/24
 * Remove ONT support (REQUIRES DB MIGRATION)
 * Add "Validated Name" functional tag (REQUIRES DB MIGRATION)
