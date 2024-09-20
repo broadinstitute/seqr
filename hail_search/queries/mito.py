@@ -181,7 +181,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
                 comp_het_ht = self._annotate_families_inheritance(
                     comp_het_ht, COMPOUND_HET, inheritance_filter, sorted_wgs_family_sample_data, **wgs_field_names
                 )
-                comp_het_ht = self._apply_filters(comp_het_ht, family_idx_map)
+                comp_het_ht = self._apply_multi_sample_type_entry_filters(comp_het_ht, family_idx_map)
                 filtered_comp_het_hts.append(comp_het_ht)
 
             if is_any_affected or not (inheritance_filter or self._inheritance_mode):
@@ -195,7 +195,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
                 ht = self._annotate_families_inheritance(
                     ht, self._inheritance_mode, inheritance_filter, sorted_wgs_family_sample_data, **wgs_field_names
                 )
-                ht = self._apply_filters(ht, family_idx_map)
+                ht = self._apply_multi_sample_type_entry_filters(ht, family_idx_map)
                 filtered_hts.append(ht)
 
         merged_ht = self._merge_project_hts(filtered_hts, n_partitions)
@@ -231,7 +231,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
         return ht
 
     @staticmethod
-    def _apply_filters(ht, family_idx_map) -> hl.Table:
+    def _apply_multi_sample_type_entry_filters(ht, family_idx_map) -> hl.Table:
         # Keep family from both sample types if either passes quality and either passes inheritance
         ht = ht.annotate(
             wes_family_entries=hl.enumerate(ht[WES_FAMILY_ENTRIES_FIELD]).map(
