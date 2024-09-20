@@ -3,7 +3,7 @@ from collections import defaultdict
 from django.core.exceptions import PermissionDenied
 
 from seqr.utils.logging_utils import SeqrLogger
-from seqr.views.utils.terra_api_utils import is_google_authenticated
+from seqr.views.utils.terra_api_utils import is_cloud_authenticated
 
 from settings import AIRTABLE_API_KEY, AIRTABLE_URL
 
@@ -48,7 +48,7 @@ class AirtableSession(object):
         self._session.headers.update({'Authorization': f'Bearer {AIRTABLE_API_KEY}'})
 
     def _check_user_access(self, base):
-        has_access = is_google_authenticated(self._user)
+        has_access = is_cloud_authenticated(self._user)
         if base != self.ANVIL_BASE:
             has_access &= self._user.email.endswith('broadinstitute.org')
         if not has_access:

@@ -37,7 +37,8 @@ export const getUser = state => state.user
 export const getUserOptionsByUsername = state => state.userOptionsByUsername
 export const getUserOptionsIsLoading = state => state.userOptionsLoading.isLoading
 export const getVersion = state => state.meta.version
-export const getGoogleLoginEnabled = state => state.meta.googleLoginEnabled
+export const getOauthLoginEnabled = state => !!state.meta.oauthLoginProvider
+export const getOauthLoginProvider = state => state.meta.oauthLoginProvider
 export const getElasticsearchEnabled = state => state.meta.elasticsearchEnabled
 export const getHijakEnabled = state => state.meta.hijakEnabled
 export const getWarningMessages = state => state.meta.warningMessages

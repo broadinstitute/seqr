@@ -14,7 +14,7 @@ from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 
 from settings import SEQR_VERSION, TERRA_API_ROOT_URL, TERRA_PERMS_CACHE_EXPIRE_SECONDS, SERVICE_ACCOUNT_CREDENTIALS, \
-    TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS, SOCIAL_AUTH_GOOGLE_OAUTH2_KEY, SERVICE_ACCOUNT_FOR_ANVIL, SOCIAL_AUTH_PROVIDER
+    TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS, SERVICE_ACCOUNT_FOR_ANVIL, SOCIAL_AUTH_PROVIDER
 
 SEQR_USER_AGENT = "seqr/" + SEQR_VERSION
 OWNER_ACCESS_LEVEL = 'OWNER'
@@ -58,15 +58,15 @@ class TerraRefreshTokenFailedException(TerraAPIException):
         super(TerraRefreshTokenFailedException, self).__init__(message, 401)
 
 
-def google_auth_enabled():
-    return bool(SOCIAL_AUTH_GOOGLE_OAUTH2_KEY)
+def oauth_enabled():
+    return bool(SOCIAL_AUTH_PROVIDER)
 
 
 def anvil_enabled():
     return bool(TERRA_API_ROOT_URL)
 
 
-def is_google_authenticated(user):
+def is_cloud_authenticated(user):
     return bool(_safe_get_social(user))
 
 
@@ -100,7 +100,7 @@ def _get_call_args(path, headers=None, root_url=None):
 
 
 def _safe_get_social(user):
-    if not google_auth_enabled() or not hasattr(user, 'social_auth'):
+    if not oauth_enabled() or not hasattr(user, 'social_auth'):
         return None
     return user.social_auth.filter(provider=SOCIAL_AUTH_PROVIDER).first()
 

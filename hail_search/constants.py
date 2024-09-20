@@ -89,5 +89,7 @@ HGMD_PATH_RANGES = [
     ('hgmd_other', 'DP', None),
 ]
 
+MAX_LOAD_INTERVALS = 1000
+
 SAMPLE_TYPE_WES = 'WES'
 SAMPLE_TYPE_WGS = 'WGS'

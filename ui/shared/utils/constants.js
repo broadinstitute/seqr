@@ -18,7 +18,6 @@ import { ColoredIcon } from '../components/StyledComponents'
 import HpoPanel from '../components/panel/HpoPanel'
 
 export const ANVIL_URL = 'https://anvil.terra.bio'
-export const GOOGLE_LOGIN_URL = '/login/google-oauth2'
 export const LOCAL_LOGIN_URL = '/login'
 
 export const VCF_DOCUMENTATION_URL = 'https://storage.googleapis.com/seqr-reference-data/seqr-vcf-info.pdf'

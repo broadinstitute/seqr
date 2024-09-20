@@ -33,8 +33,8 @@ from seqr.views.utils.permissions_utils import data_manager_required, pm_or_data
 
 from seqr.models import Sample, RnaSample, Individual, Project, PhenotypePrioritization
 
-from settings import KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD, SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, BASE_URL, \
-    LOADING_DATASETS_DIR, PIPELINE_RUNNER_SERVER
+from settings import KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD, KIBANA_ELASTICSEARCH_USER, \
+    SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, BASE_URL, LOADING_DATASETS_DIR, PIPELINE_RUNNER_SERVER
 
 logger = SeqrLogger(__name__)
 
@@ -448,9 +448,17 @@ AVAILABLE_PDO_STATUSES = {
 def validate_callset(request):
     request_json = json.loads(request.body)
     validate_vcf_exists(
-        request_json['filePath'], request.user, allowed_exts=DATA_TYPE_FILE_EXTS.get(request_json['datasetType'])
+        _callset_path(request_json), request.user, allowed_exts=DATA_TYPE_FILE_EXTS.get(request_json['datasetType']),
+        path_name=request_json['filePath'],
     )
     return create_json_response({'success': True})
+
+
+def _callset_path(request_json):
+    file_path = request_json['filePath']
+    if not AirtableSession.is_airtable_enabled():
+        file_path = os.path.join(LOADING_DATASETS_DIR, file_path.lstrip('/'))
+    return file_path
 
 
 @pm_or_data_manager_required
@@ -515,7 +523,7 @@ def load_data(request):
         individual_ids = _get_valid_project_samples(project_samples, sample_type, request.user)
 
     loading_args = (
-        project_models, sample_type, dataset_type, request_json['genomeVersion'], request_json['filePath'],
+        project_models, sample_type, dataset_type, request_json['genomeVersion'], _callset_path(request_json),
     )
     if has_airtable:
         success_message = f'*{request.user.email}* triggered loading internal {sample_type} {dataset_type} data for {len(projects)} projects'
@@ -529,6 +537,8 @@ def load_data(request):
             *loading_args, user=request.user, pedigree_dir=LOADING_DATASETS_DIR, raise_pedigree_error=True,
         )
         response = requests.post(f'{PIPELINE_RUNNER_SERVER}/loading_pipeline_enqueue', json=request_json, timeout=60)
+        if response.status_code == 409:
+            raise ErrorsWarningsException(['Loading pipeline is already running. Wait for it to complete and resubmit'])
         response.raise_for_status()
         logger.info('Triggered loading pipeline', request.user, detail=request_json)
 
@@ -618,7 +628,7 @@ def proxy_to_kibana(request):
     headers = convert_django_meta_to_http_headers(request)
     headers['Host'] = KIBANA_SERVER
     if KIBANA_ELASTICSEARCH_PASSWORD:
-        token = base64.b64encode('kibana:{}'.format(KIBANA_ELASTICSEARCH_PASSWORD).encode('utf-8'))
+        token = base64.b64encode('{}:{}'.format(KIBANA_ELASTICSEARCH_USER, KIBANA_ELASTICSEARCH_PASSWORD).encode('utf-8'))
         headers['Authorization'] = 'Basic {}'.format(token.decode('utf-8'))
 
     url = "http://{host}{path}".format(host=KIBANA_SERVER, path=request.get_full_path())

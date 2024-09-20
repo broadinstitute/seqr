@@ -78,7 +78,7 @@ SECURE_BROWSER_XSS_FILTER = True
 CSP_INCLUDE_NONCE_IN = ['script-src', 'style-src', 'style-src-elem']
 CSP_FONT_SRC = ('https://fonts.gstatic.com', 'data:', "'self'")
 CSP_CONNECT_SRC = ("'self'", 'https://gtexportal.org', 'https://www.google-analytics.com', 'https://igv.org',
-                   'https://storage.googleapis.com',  # google storage used by IGV
+                   'https://storage.googleapis.com', 'https://s3.amazonaws.com', 'https://igv-genepattern-org.s3.amazonaws.com', 'https://hgdownload.soe.ucsc.edu',  # used by IGV
                    'https://reg.genome.network')
 CSP_SCRIPT_SRC = ("'self'", "'unsafe-eval'", 'https://www.googletagmanager.com')
 CSP_IMG_SRC = ("'self'", 'https://www.google-analytics.com', 'https://storage.googleapis.com',
@@ -204,6 +204,7 @@ ANVIL_UI_URL = 'https://anvil.terra.bio/'
 
 AUTHENTICATION_BACKENDS = (
     'social_core.backends.google.GoogleOAuth2',
+    'social_core.backends.azuread_tenant.AzureADV2TenantOAuth2',
     'django.contrib.auth.backends.ModelBackend',
     'guardian.backends.ObjectPermissionBackend',
 )
@@ -329,7 +330,8 @@ ELASTICSEARCH_SERVER = '{host}:{port}'.format(
     host=ELASTICSEARCH_SERVICE_HOSTNAME, port=ELASTICSEARCH_SERVICE_PORT)
 
 SEQR_ELASTICSEARCH_PASSWORD = os.environ.get('SEQR_ES_PASSWORD')
-ELASTICSEARCH_CREDENTIALS = ('seqr', SEQR_ELASTICSEARCH_PASSWORD) if SEQR_ELASTICSEARCH_PASSWORD else None
+ELASTICSEARCH_USER = os.environ.get('ELASTICSEARCH_USER', 'seqr')
+ELASTICSEARCH_CREDENTIALS = (ELASTICSEARCH_USER, SEQR_ELASTICSEARCH_PASSWORD) if SEQR_ELASTICSEARCH_PASSWORD else None
 ELASTICSEARCH_PROTOCOL = os.environ.get('ELASTICSEARCH_PROTOCOL', 'http')
 ELASTICSEARCH_CA_PATH = os.environ.get('ELASTICSEARCH_CA_PATH')
 # if we have a custom CA certificate for elasticsearch, add it to the verification path for connections
@@ -342,6 +344,7 @@ KIBANA_SERVER = '{host}:{port}'.format(
     host=os.environ.get('KIBANA_SERVICE_HOSTNAME', 'localhost'),
     port=os.environ.get('KIBANA_SERVICE_PORT', 5601)
 )
+KIBANA_ELASTICSEARCH_USER = os.environ.get('KIBANA_ELASTICSEARCH_USER', 'kibana')
 KIBANA_ELASTICSEARCH_PASSWORD = os.environ.get('KIBANA_ES_PASSWORD')
 
 HAIL_BACKEND_SERVICE_HOSTNAME = os.environ.get('HAIL_BACKEND_SERVICE_HOSTNAME')
@@ -386,7 +389,18 @@ SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL = 'seqr_loading_notifications'
 #########################################################
 #  Social auth specific settings
 #########################################################
-SOCIAL_AUTH_JSONFIELD_ENABLED = True
+SOCIAL_AUTH_PROVIDER = ''
+
+#########################################################
+#  AZUREAD
+SOCIAL_AUTH_AZUREAD_V2_TENANT_OAUTH2_KEY = os.environ.get('SOCIAL_AUTH_AZUREAD_V2_OAUTH2_CLIENT_ID')
+SOCIAL_AUTH_AZUREAD_V2_TENANT_OAUTH2_SECRET = os.environ.get('SOCIAL_AUTH_AZUREAD_V2_OAUTH2_SECRET')
+SOCIAL_AUTH_AZUREAD_V2_TENANT_OAUTH2_TENANT_ID = os.environ.get('SOCIAL_AUTH_AZUREAD_V2_OAUTH2_TENANT')
+if SOCIAL_AUTH_AZUREAD_V2_TENANT_OAUTH2_KEY:
+    SOCIAL_AUTH_PROVIDER = 'azuread-v2-tenant-oauth2'
+
+#########################################################
+# GOOGLE
 SOCIAL_AUTH_GOOGLE_OAUTH2_IGNORE_DEFAULT_SCOPE = True
 SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
     'https://www.googleapis.com/auth/userinfo.profile',
@@ -394,17 +408,16 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
     'openid'
 ]
 
-SOCIAL_AUTH_PROVIDER = 'google-oauth2'
-GOOGLE_LOGIN_REQUIRED_URL = '/login/{}'.format(SOCIAL_AUTH_PROVIDER)
-
-
 # Use Google sub ID as the user ID, safer than using email
 USE_UNIQUE_USER_ID = True
-
+GOOGLE_LOGIN_REQUIRED_URL = '/login/google-oauth2'
 SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = os.environ.get('SOCIAL_AUTH_GOOGLE_OAUTH2_CLIENT_ID')
 SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.environ.get('SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET')
-LOGIN_URL = GOOGLE_LOGIN_REQUIRED_URL if SOCIAL_AUTH_GOOGLE_OAUTH2_KEY else '/login'
+if SOCIAL_AUTH_GOOGLE_OAUTH2_KEY:
+    SOCIAL_AUTH_PROVIDER = 'google-oauth2'
 
+# Build the login URL based on the provider (if any).
+LOGIN_URL = '/'.join(filter(None, ['/login', SOCIAL_AUTH_PROVIDER]))
 
 SOCIAL_AUTH_JSONFIELD_ENABLED = True
 SOCIAL_AUTH_URL_NAMESPACE = 'social'
@@ -420,6 +433,12 @@ SOCIAL_AUTH_PIPELINE_BASE = (
 SOCIAL_AUTH_PIPELINE_USER_EXIST = ('seqr.utils.social_auth_pipeline.validate_user_exist',)
 SOCIAL_AUTH_PIPELINE_ASSOCIATE_USER = ('social_core.pipeline.social_auth.associate_user',)
 SOCIAL_AUTH_PIPELINE_LOG = ('seqr.utils.social_auth_pipeline.log_signed_in',)
+SOCIAL_AUTH_PIPELINE_CLOUD_BASE = (
+    'social_core.pipeline.user.get_username',
+    'social_core.pipeline.user.create_user') + \
+    SOCIAL_AUTH_PIPELINE_ASSOCIATE_USER + \
+    ('social_core.pipeline.social_auth.load_extra_data',
+     'social_core.pipeline.user.user_details')
 
 TERRA_PERMS_CACHE_EXPIRE_SECONDS = os.environ.get('TERRA_PERMS_CACHE_EXPIRE_SECONDS', 60)
 TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS = os.environ.get('TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS', 300)
@@ -453,12 +472,12 @@ if TERRA_API_ROOT_URL:
 
     SOCIAL_AUTH_PIPELINE = ('seqr.utils.social_auth_pipeline.validate_anvil_registration',) + \
                            SOCIAL_AUTH_PIPELINE_BASE + \
-                           ('social_core.pipeline.user.get_username',
-                            'social_core.pipeline.user.create_user') + \
-                           SOCIAL_AUTH_PIPELINE_ASSOCIATE_USER + \
-                           ('social_core.pipeline.social_auth.load_extra_data',
-                            'social_core.pipeline.user.user_details') + \
+                           SOCIAL_AUTH_PIPELINE_CLOUD_BASE + \
                            SOCIAL_AUTH_PIPELINE_LOG
+elif SOCIAL_AUTH_AZUREAD_V2_TENANT_OAUTH2_KEY:
+    SOCIAL_AUTH_PIPELINE = SOCIAL_AUTH_PIPELINE_BASE + \
+                           SOCIAL_AUTH_PIPELINE_CLOUD_BASE + \
+                           ('seqr.utils.social_auth_pipeline.log_azure_signed_in',)
 else:
     SOCIAL_AUTH_PIPELINE = SOCIAL_AUTH_PIPELINE_BASE + SOCIAL_AUTH_PIPELINE_USER_EXIST + \
                            SOCIAL_AUTH_PIPELINE_ASSOCIATE_USER + SOCIAL_AUTH_PIPELINE_LOG

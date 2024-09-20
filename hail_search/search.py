@@ -33,5 +33,7 @@ def lookup_variants(request):
 
 
 def load_globals():
-    for cls in QUERY_CLASS_MAP.values():
-        cls.load_globals()
+    return {
+        str(k): v.load_globals()
+        for k, v in QUERY_CLASS_MAP.items()
+    }
