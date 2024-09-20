@@ -9,6 +9,7 @@ from hail_search.constants import ABSENT_PATH_SORT_OFFSET, CLINVAR_KEY, CLINVAR_
     PATHOGENICTY_HGMD_SORT_KEY, MAX_LOAD_INTERVALS
 from hail_search.queries.base import BaseHailTableQuery, PredictionPath, QualityFilterFormat
 
+REFERENCE_DATASETS_DIR = os.environ.get('REFERENCE_DATASETS_DIR', '/seqr/seqr-reference-data')
 
 logger = logging.getLogger(__name__)
 
@@ -111,6 +112,10 @@ class MitoHailTableQuery(BaseHailTableQuery):
     }
     SORTS[PATHOGENICTY_HGMD_SORT_KEY] = SORTS[PATHOGENICTY_SORT_KEY]
 
+    PREFILTER_TABLES = {
+        CLINVAR_KEY: 'clinvar_path_variants.ht',
+    }
+
     @staticmethod
     def _selected_main_transcript_expr(ht):
         comp_het_gene_ids = getattr(ht, 'comp_het_gene_ids', None)
@@ -159,22 +164,28 @@ class MitoHailTableQuery(BaseHailTableQuery):
 
         return lambda entries: hl.is_defined(clinvar_path_ht[ht.key]) | passes_quality(entries)
 
-    def _get_loaded_filter_ht(self, key, table_path, get_filters, **kwargs):
+    def _get_loaded_filter_ht(self, key, get_filters, **kwargs):
         if self._filter_hts.get(key) is None:
             ht_filter = get_filters(**kwargs)
             if ht_filter is False:
                 self._filter_hts[key] = False
             else:
-                ht = self._read_table(table_path)  # TODO
+                ht = self._read_table(self.PREFILTER_TABLES[key])
                 if ht_filter is not True:
                     ht = ht.filter(ht_filter(ht))
                 self._filter_hts[key] = ht
 
         return self._filter_hts[key]
 
+    @classmethod
+    def _get_table_dir(cls, path):
+        if path in cls.PREFILTER_TABLES.values():
+            return REFERENCE_DATASETS_DIR
+        return super()._get_table_dir(path)
+
     def _get_loaded_clinvar_prefilter_ht(self, pathogenicity):
         return self._get_loaded_filter_ht(
-            CLINVAR_KEY, 'clinvar_path_variants.ht', self._get_clinvar_prefilter, pathogenicity=pathogenicity)
+            CLINVAR_KEY, self._get_clinvar_prefilter, pathogenicity=pathogenicity)
 
     def _get_clinvar_prefilter(self, pathogenicity=None):
         clinvar_path_filters = self._get_clinvar_path_filters(pathogenicity)
