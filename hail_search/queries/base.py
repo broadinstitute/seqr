@@ -9,8 +9,9 @@ from hail_search.constants import AFFECTED_ID, ALT_ALT, ANNOTATION_OVERRIDE_FIEL
     HAS_ALT, HAS_REF,INHERITANCE_FILTERS, PATH_FREQ_OVERRIDE_CUTOFF, MALE, RECESSIVE, REF_ALT, REF_REF, MAX_LOAD_INTERVALS, \
     UNAFFECTED_ID, X_LINKED_RECESSIVE, XPOS, OMIM_SORT, FAMILY_GUID_FIELD, GENOTYPES_FIELD, AFFECTED_ID_MAP
 
-DATASETS_DIR = os.environ.get('DATASETS_DIR', '/hail_datasets')
-SSD_DATASETS_DIR = os.environ.get('SSD_DATASETS_DIR', DATASETS_DIR)
+REFERENCE_DATASETS_DIR = os.environ.get('REFERENCE_DATASETS_DIR', '/seqr/seqr-reference-data ')
+HAIL_SEARCH_DATA_DIR = os.environ.get('HAIL_SEARCH_DATA_DIR', '/seqr/seqr-hail-search-data')
+IN_MEMORY_DIR = os.environ.get('IN_MEMORY_DIR', HAIL_SEARCH_DATA_DIR)
 
 # Number of filtered genes at which pre-filtering a table by gene-intervals does not improve performance
 # Estimated based on behavior for several representative gene lists
@@ -259,16 +260,20 @@ class BaseHailTableQuery(object):
 
     def _load_filtered_table(self, sample_data, intervals=None, annotations=None, annotations_secondary=None, **kwargs):
         parsed_intervals = self._parse_intervals(intervals, **kwargs)
-        parsed_annotations = self._parse_annotations(annotations, annotations_secondary, **kwargs)
+        parsed_annotations = self._parqse_annotations(annotations, annotations_secondary, **kwargs)
         self.import_filtered_table(
             *self._parse_sample_data(sample_data), parsed_intervals=parsed_intervals, raw_intervals=intervals, parsed_annotations=parsed_annotations, **kwargs)
 
     @classmethod
-    def _get_table_path(cls, path, use_ssd_dir=False):
-        return f'{SSD_DATASETS_DIR if use_ssd_dir else DATASETS_DIR}/{cls.GENOME_VERSION}/{cls.DATA_TYPE}/{path}'
+    def _get_table_dir(cls, path):
+        return IN_MEMORY_DIR if path == 'annotations.ht' else HAIL_SEARCH_DATA_DIR
 
-    def _read_table(self, path, drop_globals=None, use_ssd_dir=False, skip_missing_field=None):
-        table_path = self._get_table_path(path, use_ssd_dir=use_ssd_dir)
+    @classmethod
+    def _get_table_path(cls, path):
+        return f'{cls._get_table_dir(path)}/{cls.GENOME_VERSION}/{cls.DATA_TYPE}/{path}'
+
+    def _read_table(self, path, drop_globals=None, skip_missing_field=None):
+        table_path = self._get_table_path(path)
         if 'variant_ht' in self._load_table_kwargs:
             ht = self._query_table_annotations(self._load_table_kwargs['variant_ht'], table_path)
             if skip_missing_field and not ht.any(hl.is_defined(ht[skip_missing_field])):
@@ -303,7 +308,7 @@ class BaseHailTableQuery(object):
             # for variant search, project_samples looks like
             #   {<project_guid>: {<sample_type>: {<family_guid>: [<sample_data>, <sample_data>, ...]}, <sample_type_2>: {<family_guid_2>: []} ...}, <project_guid_2>: ...}
             sample_type = list(project_samples[project_guid].keys())[0]
-            project_ht = self._read_table(f'projects/{sample_type}/{project_guid}.ht', use_ssd_dir=True)
+            project_ht = self._read_table(f'projects/{sample_type}/{project_guid}.ht')
             return self._filter_entries_table(project_ht, project_samples[project_guid][sample_type], **kwargs)
 
         # Need to chunk tables or else evaluating table globals throws LineTooLong exception
@@ -316,7 +321,7 @@ class BaseHailTableQuery(object):
         sample_data = {}
         for project_guid, project_sample_data in project_samples.items():
             sample_type = list(project_sample_data.keys())[0]
-            project_ht = self._read_table(f'projects/{sample_type}/{project_guid}.ht', use_ssd_dir=True)
+            project_ht = self._read_table(f'projects/{sample_type}/{project_guid}.ht')
 
             if project_ht is None:
                 continue
@@ -344,7 +349,7 @@ class BaseHailTableQuery(object):
             family_sample_data = list(project_samples.values())[0]
             sample_type = list(family_sample_data.keys())[0]
             family_guid = list(family_sample_data[sample_type].keys())[0]
-            family_ht = self._read_table(f'families/{sample_type}/{family_guid}.ht', use_ssd_dir=True)
+            family_ht = self._read_table(f'families/{sample_type}/{family_guid}.ht')
             family_ht = family_ht.transmute(family_entries=[family_ht.entries])
             family_ht = family_ht.annotate_globals(
                 family_guids=[family_guid], family_samples={family_guid: family_ht.sample_ids},

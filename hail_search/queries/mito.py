@@ -165,7 +165,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
             if ht_filter is False:
                 self._filter_hts[key] = False
             else:
-                ht = self._read_table(table_path)
+                ht = self._read_table(table_path)  # TODO
                 if ht_filter is not True:
                     ht = ht.filter(ht_filter(ht))
                 self._filter_hts[key] = ht
@@ -315,7 +315,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
     def _add_project_lookup_data(self, ht, annotation_fields, *args, **kwargs):
         # Get all the project-families for the looked up variant formatted as a dict of dicts:
         # {<project_guid>: {<sample_type>: {<family_guid>: True}, <sample_type_2>: {<family_guid_2>: True}}, <project_guid_2>: ...}
-        lookup_ht = self._read_table('lookup.ht', use_ssd_dir=True, skip_missing_field='project_stats')
+        lookup_ht = self._read_table('lookup.ht', skip_missing_field='project_stats')
         if lookup_ht is None:
             raise HTTPNotFound()
         variant_projects = lookup_ht.aggregate(hl.agg.take(
