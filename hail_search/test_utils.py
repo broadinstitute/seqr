@@ -805,7 +805,7 @@ MITO_VARIANT1 = {
     'rsid': 'rs1603219456',
     'familyGuids': ['F000002_2'],
     'genotypes': {'I000006_hg00733': {
-        'sampleId': 'HG00733', 'sampleType': 'WES', 'individualGuid': 'I000006_hg00733', 'familyGuid': 'F000002_2',
+        'sampleId': 'HG00733', 'sampleType': 'WGS', 'individualGuid': 'I000006_hg00733', 'familyGuid': 'F000002_2',
         'numAlt': 1, 'dp': 3955, 'hl': 0.083, 'mitoCn': 230, 'contamination': 0.0,
     }},
     'genotypeFilters': '',
@@ -859,7 +859,7 @@ MITO_VARIANT2 = {
     'rsid': None,
     'familyGuids': ['F000002_2'],
     'genotypes': {'I000006_hg00733': {
-        'sampleId': 'HG00733', 'sampleType': 'WES', 'individualGuid': 'I000006_hg00733', 'familyGuid': 'F000002_2',
+        'sampleId': 'HG00733', 'sampleType': 'WGS', 'individualGuid': 'I000006_hg00733', 'familyGuid': 'F000002_2',
         'numAlt': 1, 'dp': 3845, 'hl': 0.029, 'mitoCn': 247, 'contamination': 0.015,
     }},
     'genotypeFilters': '',
@@ -906,7 +906,7 @@ MITO_VARIANT3 = {
     'rsid': 'rs193302982',
     'familyGuids': ['F000002_2'],
     'genotypes': {'I000006_hg00733': {
-        'sampleId': 'HG00733', 'sampleType': 'WES', 'individualGuid': 'I000006_hg00733', 'familyGuid': 'F000002_2',
+        'sampleId': 'HG00733', 'sampleType': 'WGS', 'individualGuid': 'I000006_hg00733', 'familyGuid': 'F000002_2',
         'numAlt': 2, 'dp': 3943, 'hl': 1.0, 'mitoCn': 214, 'contamination': 0.0,
     }},
     'genotypeFilters': 'artifact_prone_site',

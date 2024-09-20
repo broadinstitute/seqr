@@ -4,10 +4,12 @@ from aiohttp.web import HTTPNotFound
 import hail as hl
 import logging
 
-from hail_search.constants import ABSENT_PATH_SORT_OFFSET, CLINVAR_KEY, CLINVAR_MITO_KEY, CLINVAR_LIKELY_PATH_FILTER, CLINVAR_PATH_FILTER, \
-    CLINVAR_PATH_RANGES, CLINVAR_PATH_SIGNIFICANCES, ALLOWED_TRANSCRIPTS, ALLOWED_SECONDARY_TRANSCRIPTS, PATHOGENICTY_SORT_KEY, CONSEQUENCE_SORT, \
-    PATHOGENICTY_HGMD_SORT_KEY, SAMPLE_TYPE_WES, SAMPLE_TYPE_WGS, COMPOUND_HET, GENOTYPES_FIELD
-from hail_search.queries.base import BaseHailTableQuery, PredictionPath, QualityFilterFormat
+from hail_search.constants import ABSENT_PATH_SORT_OFFSET, CLINVAR_KEY, CLINVAR_MITO_KEY, CLINVAR_LIKELY_PATH_FILTER, \
+    CLINVAR_PATH_FILTER, \
+    CLINVAR_PATH_RANGES, CLINVAR_PATH_SIGNIFICANCES, ALLOWED_TRANSCRIPTS, ALLOWED_SECONDARY_TRANSCRIPTS, \
+    PATHOGENICTY_SORT_KEY, CONSEQUENCE_SORT, \
+    PATHOGENICTY_HGMD_SORT_KEY, SAMPLE_TYPE_WES, SAMPLE_TYPE_WGS, COMPOUND_HET, MAX_LOAD_INTERVALS, XPOS
+from hail_search.queries.base import BaseHailTableQuery, PredictionPath, QualityFilterFormat, MAX_PARTITIONS
 
 WES_FAMILY_ENTRIES_FIELD = 'wes_family_entries'
 WGS_FAMILY_ENTRIES_FIELD = 'wgs_family_entries'
@@ -115,6 +117,11 @@ class MitoHailTableQuery(BaseHailTableQuery):
     }
     SORTS[PATHOGENICTY_HGMD_SORT_KEY] = SORTS[PATHOGENICTY_SORT_KEY]
 
+    def __init__(self, sample_data, sort=XPOS, sort_metadata=None, num_results=100, inheritance_mode=None,
+                 override_comp_het_alt=False, **kwargs):
+        super().__init__(sample_data, sort, sort_metadata, num_results, inheritance_mode, override_comp_het_alt, **kwargs)
+        self._has_both_sample_types = False
+
     def _import_and_filter_entries_ht(
         self, project_guid: str, num_families: int, project_sample_type_data, **kwargs
     ) -> tuple[hl.Table, hl.Table]:
@@ -144,8 +151,8 @@ class MitoHailTableQuery(BaseHailTableQuery):
 
         # Iterate over each chunk of project tables
         for (wes_ht, wes_project_samples), (wgs_ht, wgs_project_samples) in zip(wes_entries, wgs_entries):
-            wes_ht, sorted_wes_family_sample_data = self._add_entry_sample_families(wes_ht, wes_project_samples, SAMPLE_TYPE_WES)
-            wgs_ht, sorted_wgs_family_sample_data = self._add_entry_sample_families(wgs_ht, wgs_project_samples, SAMPLE_TYPE_WGS)
+            wes_ht, sorted_wes_family_sample_data = self._add_entry_sample_families(wes_ht, wes_project_samples)
+            wgs_ht, sorted_wgs_family_sample_data = self._add_entry_sample_families(wgs_ht, wgs_project_samples)
             family_idx_map = self._build_family_index_map(sorted_wes_family_sample_data, sorted_wgs_family_sample_data)
 
             wes_ht = wes_ht.rename({'family_entries': WES_FAMILY_ENTRIES_FIELD, 'filters': WES_FILTERS_FIELD})
@@ -164,9 +171,16 @@ class MitoHailTableQuery(BaseHailTableQuery):
                 lambda entries: hl.or_missing(entries.any(any_valid_entry), entries)
             ))
 
+            wes_field_names = self._get_inheritance_field_names(SAMPLE_TYPE_WES)
+            wgs_field_names = self._get_inheritance_field_names(SAMPLE_TYPE_WGS)
+
             if self._has_comp_het_search:
-                comp_het_ht = self._annotate_families_inheritance(ht, COMPOUND_HET, inheritance_filter, sorted_wes_family_sample_data, SAMPLE_TYPE_WES)
-                comp_het_ht = self._annotate_families_inheritance(comp_het_ht, COMPOUND_HET, inheritance_filter, sorted_wgs_family_sample_data, SAMPLE_TYPE_WGS)
+                comp_het_ht = self._annotate_families_inheritance(
+                    ht, COMPOUND_HET, inheritance_filter, sorted_wes_family_sample_data, **wes_field_names
+                )
+                comp_het_ht = self._annotate_families_inheritance(
+                    comp_het_ht, COMPOUND_HET, inheritance_filter, sorted_wgs_family_sample_data, **wgs_field_names
+                )
                 comp_het_ht = self._apply_filters(comp_het_ht, family_idx_map)
                 filtered_comp_het_hts.append(comp_het_ht)
 
@@ -175,8 +189,12 @@ class MitoHailTableQuery(BaseHailTableQuery):
                 sorted_wes_family_sample_data = sorted_wgs_family_sample_data = []
 
             if self._inheritance_mode != COMPOUND_HET:
-                ht = self._annotate_families_inheritance(ht, self._inheritance_mode, inheritance_filter, sorted_wes_family_sample_data, SAMPLE_TYPE_WES)
-                ht = self._annotate_families_inheritance(ht, self._inheritance_mode, inheritance_filter, sorted_wgs_family_sample_data, SAMPLE_TYPE_WGS)
+                ht = self._annotate_families_inheritance(
+                    ht, self._inheritance_mode, inheritance_filter, sorted_wes_family_sample_data, **wes_field_names
+                )
+                ht = self._annotate_families_inheritance(
+                    ht, self._inheritance_mode, inheritance_filter, sorted_wgs_family_sample_data, **wgs_field_names
+                )
                 ht = self._apply_filters(ht, family_idx_map)
                 filtered_hts.append(ht)
 
@@ -311,17 +329,19 @@ class MitoHailTableQuery(BaseHailTableQuery):
             entries_hts_map[sample_type] = prefiltered_project_hts
         return entries_hts_map
 
-    def _get_genotypes_annotation(self, include_genotype_overrides):
+    def _get_sample_genotype(self, samples, r=None, include_genotype_overrides=False, select_fields=None):
         if not self._has_both_sample_types:
-            return super()._get_genotypes_annotation(include_genotype_overrides)
+            return super()._get_sample_genotype(samples, r, include_genotype_overrides, select_fields)
 
+        return samples.map(lambda sample: self._select_genotype_for_sample(
+            sample, r, include_genotype_overrides, select_fields
+        ))
+
+    @staticmethod
+    def _get_inheritance_field_names(sample_type: str):
         return {
-            GENOTYPES_FIELD: lambda r: r.family_entries.flatmap(lambda x: x).filter(
-                lambda gt: hl.is_defined(gt.individualGuid)
-            ).group_by(lambda x: x.individualGuid).map_values(lambda x: x.map(
-                lambda sample: self._get_sample_genotype(
-                    sample, r, select_fields=['individualGuid'], include_genotype_overrides=include_genotype_overrides,
-                )))
+            'annotation': f'{sample_type.lower()}_passes_inheritance',
+            'entries_ht_field': f'{sample_type.lower()}_family_entries'
         }
 
     @staticmethod

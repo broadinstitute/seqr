@@ -104,8 +104,12 @@ class BaseHailTableQuery(object):
         return base_pop_config
 
     def annotation_fields(self, include_genotype_overrides=True):
-        annotation_fields = self._get_genotypes_annotation(include_genotype_overrides)
-        annotation_fields.update({
+        annotation_fields = {
+            GENOTYPES_FIELD: lambda r: r.family_entries.flatmap(lambda x: x).filter(
+                lambda gt: hl.is_defined(gt.individualGuid)
+            ).group_by(lambda x: x.individualGuid).map_values(lambda x: self._get_sample_genotype(
+                x, r, select_fields=['individualGuid'], include_genotype_overrides=include_genotype_overrides,
+            )),
             'populations': lambda r: hl.struct(**{
                 population: self.population_expression(r, population) for population in self.POPULATIONS.keys()
             }),
@@ -114,7 +118,7 @@ class BaseHailTableQuery(object):
                 if self._enums.get(path.source, {}).get(path.field) else path.format(r[path.source][path.field])
                 for prediction, path in self.PREDICTION_FIELDS_CONFIG.items()
             }),
-        })
+        }
         annotation_fields.update(self.BASE_ANNOTATION_FIELDS)
         annotation_fields.update(self.LIFTOVER_ANNOTATION_FIELDS)
         annotation_fields.update(self._additional_annotation_fields())
@@ -127,16 +131,12 @@ class BaseHailTableQuery(object):
 
         return annotation_fields
 
-    def _get_genotypes_annotation(self, include_genotype_overrides):
-        return {
-            GENOTYPES_FIELD: lambda r: r.family_entries.flatmap(lambda x: x).filter(
-                lambda gt: hl.is_defined(gt.individualGuid)
-            ).group_by(lambda x: x.individualGuid).map_values(lambda x: self._get_sample_genotype(
-                x[0], r, select_fields=['individualGuid'], include_genotype_overrides=include_genotype_overrides,
-            ))
-        }
 
-    def _get_sample_genotype(self, sample, r=None, include_genotype_overrides=False, select_fields=None):
+    def _get_sample_genotype(self, samples, r=None, include_genotype_overrides=False, select_fields=None):
+        sample = samples[0]
+        return self._select_genotype_for_sample(sample, r, include_genotype_overrides, select_fields)
+
+    def _select_genotype_for_sample(self, sample, r, include_genotype_overrides, select_fields):
         return sample.select(
             'sampleId', 'sampleType', 'familyGuid', *(select_fields or []),
             numAlt=hl.if_else(hl.is_defined(sample.GT), sample.GT.n_alt_alleles(), self.MISSING_NUM_ALT),
@@ -248,7 +248,6 @@ class BaseHailTableQuery(object):
         self._n_partitions = min(MAX_PARTITIONS, (os.cpu_count() or 2)-1)
         self._load_table_kwargs = {'_n_partitions': self._n_partitions}
         self.entry_samples_by_family_guid = {}
-        self._has_both_sample_types = False
 
         if sample_data:
             self._load_filtered_table(sample_data, **kwargs)
@@ -339,7 +338,8 @@ class BaseHailTableQuery(object):
             ht, sample_data = self._load_prefiltered_family_ht(family_guid, sample_type, project_sample_type_data, **kwargs)
         else:
             ht, sample_data = self._load_prefiltered_project_ht(project_guid, sample_type, project_sample_type_data, **kwargs)
-        return self._filter_single_entries_table(ht, sample_data, sample_type, **kwargs)
+
+        return self._filter_single_entries_table(ht, sample_data, **kwargs)
 
     def _import_and_filter_multiple_project_hts(
         self, project_samples: dict, n_partitions=MAX_PARTITIONS, **kwargs
@@ -435,6 +435,7 @@ class BaseHailTableQuery(object):
         }
         if include_all_globals:
             global_expressions.update({
+                'sample_types': ht.project_globals.flatmap(lambda x: x.family_guids.map(lambda _: x.sample_type)),
                 'family_samples': hl.dict(ht.project_globals.flatmap(lambda x: x.family_samples.items())),
             })
 
@@ -463,7 +464,6 @@ class BaseHailTableQuery(object):
             sorted in the same order as is in family_entries. [[<sample_1>, <sample_2>]]
         """
         ht_globals = hl.eval(ht.globals)
-
         missing_samples = set()
         family_sample_index_data = []
         sorted_family_sample_data = []
@@ -562,7 +562,8 @@ class BaseHailTableQuery(object):
         return ht.filter(ht.family_entries.any(hl.is_defined)).select_globals('family_guids')
 
     def _annotate_families_inheritance(
-        self, ht, inheritance_mode, inheritance_filter, sorted_family_sample_data, sample_type=None,
+        self, ht, inheritance_mode, inheritance_filter, sorted_family_sample_data,
+        annotation = 'family_entries', entries_ht_field = 'family_entries',
     ):
         individual_genotype_filter = (inheritance_filter or {}).get('genotype')
 
@@ -592,19 +593,11 @@ class BaseHailTableQuery(object):
             if not entry_indices:
                 continue
             entry_indices = hl.dict(entry_indices)
-
-            if sample_type is None:
-                annotation = entries_field = 'family_entries'
-            else:
-                annotation = f'{sample_type.lower()}_passes_inheritance'
-                entries_field = f'{sample_type.lower()}_family_entries'
-
-            entries_annotations = {
-                annotation: hl.enumerate(ht[entries_field]).map(
+            ht = ht.annotate(**{
+                annotation: hl.enumerate(ht[entries_ht_field]).map(
                     lambda x: self._valid_genotype_family_entries(x[1], entry_indices.get(x[0]), genotype, min_unaffected)
                 )
-            }
-            ht = ht.annotate(**entries_annotations)
+            })
 
         return ht
 
