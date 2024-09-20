@@ -259,17 +259,17 @@ class BaseHailTableQuery(object):
 
     def _load_filtered_table(self, sample_data, intervals=None, annotations=None, annotations_secondary=None, **kwargs):
         parsed_intervals = self._parse_intervals(intervals, **kwargs)
-        parsed_annotations = self._parqse_annotations(annotations, annotations_secondary, **kwargs)
+        parsed_annotations = self._parse_annotations(annotations, annotations_secondary, **kwargs)
         self.import_filtered_table(
             *self._parse_sample_data(sample_data), parsed_intervals=parsed_intervals, raw_intervals=intervals, parsed_annotations=parsed_annotations, **kwargs)
 
     @classmethod
-    def _get_table_dir(cls, path):
-        return IN_MEMORY_DIR if path == 'annotations.ht' else HAIL_SEARCH_DATA_DIR
-
-    @classmethod
     def _get_table_path(cls, path):
         return f'{cls._get_table_dir(path)}/{cls.GENOME_VERSION}/{cls.DATA_TYPE}/{path}'
+
+    @classmethod
+    def _get_table_dir(cls, path):
+        return IN_MEMORY_DIR if path == 'annotations.ht' else HAIL_SEARCH_DATA_DIR
 
     def _read_table(self, path, drop_globals=None, skip_missing_field=None):
         table_path = self._get_table_path(path)
