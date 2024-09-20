@@ -322,11 +322,13 @@ class BaseHailTableQuery(object):
     def _load_prefiltered_project_ht(
         self, project_guid: str, sample_type: str, project_sample_type_data: dict, **kwargs
     ) -> tuple[hl.Table, dict]:
-        path = f'projects/{sample_type}/{project_guid}.ht'
-        ht = self._read_table(path, use_ssd_dir=True)
+        ht = self._read_project_table(project_guid, sample_type)
         ht = self._prefilter_entries_table(ht, **kwargs)
         sample_data = project_sample_type_data[sample_type]
         return ht, sample_data
+
+    def _read_project_table(self, project_guid: str, sample_type: str):
+        return self._read_table(f'projects/{sample_type}/{project_guid}.ht', use_ssd_dir=True)
 
     def _import_and_filter_entries_ht(
         self, project_guid: str, num_families: int, project_sample_type_data, **kwargs
@@ -348,11 +350,11 @@ class BaseHailTableQuery(object):
         In the variant search control flow, project_samples looks like this:
             {<project_guid>: {<sample_type>: {<family_guid>: [<sample_data>, <sample_data>, ...]}, <sample_type_2>: {<family_guid_2>: []} ...}, <project_guid_2>: ...}
         """
-        entries_hts, sample_type = self._load_prefiltered_project_hts(project_samples, n_partitions, **kwargs)
+        entries_hts = self._load_prefiltered_project_hts(project_samples, n_partitions, **kwargs)
         filtered_project_hts = []
         filtered_comp_het_project_hts = []
         for ht, project_families in entries_hts:
-            ht, comp_het_ht = self._filter_single_entries_table(ht, project_families, sample_type, **kwargs)
+            ht, comp_het_ht = self._filter_single_entries_table(ht, project_families, **kwargs)
             if ht is not None:
                 filtered_project_hts.append(ht)
             if comp_het_ht is not None:
@@ -368,29 +370,27 @@ class BaseHailTableQuery(object):
         # Adapted from https://discuss.hail.is/t/importing-many-sample-specific-vcfs/2002/8
         chunk_size = 64
         prefiltered_project_hts = []
-        unmerged_project_hts = []
+        project_hts = []
         sample_data = {}
-        sample_type = None
         for project_guid, project_sample_type_data in project_samples.items():
             sample_type, family_sample_data = list(project_sample_type_data.items())[0]
-            project_ht = self._read_table(f'projects/{sample_type}/{project_guid}.ht',use_ssd_dir=True)
+            project_ht = self._read_project_table(project_guid, sample_type)
             if project_ht is None:
                 continue
-            project_ht = project_ht.annotate_globals(sample_type=sample_type) # SV and GCNV do not already have sample_type in their globals
-            unmerged_project_hts.append(project_ht.select_globals('sample_type', 'family_guids', 'family_samples'))
+            project_hts.append(project_ht.select_globals('sample_type', 'family_guids', 'family_samples'))
             sample_data.update(family_sample_data)
 
-            if len(unmerged_project_hts) >= chunk_size:
+            if len(project_hts) >= chunk_size:
                 self._prefilter_merged_project_hts(
-                    unmerged_project_hts, sample_data, prefiltered_project_hts, n_partitions, **kwargs
+                    project_hts, sample_data, prefiltered_project_hts, n_partitions, **kwargs
                 )
-                unmerged_project_hts = []
+                project_hts = []
                 sample_data = {}
 
         self._prefilter_merged_project_hts(
-            unmerged_project_hts, sample_data, prefiltered_project_hts, n_partitions, **kwargs
+            project_hts, sample_data, prefiltered_project_hts, n_partitions, **kwargs
         )
-        return prefiltered_project_hts, sample_type
+        return prefiltered_project_hts
 
     def import_filtered_table(self, project_samples: dict, num_families: int, **kwargs):
         if num_families == 1 or len(project_samples) == 1:
@@ -440,8 +440,8 @@ class BaseHailTableQuery(object):
 
         return ht.transmute_globals(**global_expressions)
 
-    def _filter_single_entries_table(self, ht, project_families, sample_type: str, inheritance_filter=None, quality_filter=None, **kwargs):
-        ht, sorted_family_sample_data = self._add_entry_sample_families(ht, project_families, sample_type)
+    def _filter_single_entries_table(self, ht, project_families, inheritance_filter=None, quality_filter=None, **kwargs):
+        ht, sorted_family_sample_data = self._add_entry_sample_families(ht, project_families)
         passes_quality_filter = self._get_family_passes_quality_filter(quality_filter, ht, **kwargs)
         if passes_quality_filter is not None:
             ht = ht.annotate(family_entries=ht.family_entries.map(
@@ -454,7 +454,7 @@ class BaseHailTableQuery(object):
         )
         return ht, ch_ht
 
-    def _add_entry_sample_families(self, ht: hl.Table, sample_data: dict, sample_type: str):
+    def _add_entry_sample_families(self, ht: hl.Table, sample_data: dict):
         """
         Annotates samples in family_entries with additional sample-level data.
         returns a tuple containing:
@@ -483,7 +483,7 @@ class BaseHailTableQuery(object):
             else:
                 family_index = ht_globals.family_guids.index(family_guid)
                 family_entry_data = {
-                    'sampleType': sample_type,
+                    'sampleType': self._get_sample_type(family_index, ht_globals),
                     'familyGuid': family_guid,
                 }
                 formatted_samples = [{**family_entry_data, **get_sample_data(s)} for s in samples]
@@ -515,6 +515,12 @@ class BaseHailTableQuery(object):
             affected_id=AFFECTED_ID_MAP.get(sample['affected']),
             is_male='sex' in sample and sample['sex'] == MALE,
         )
+
+    @classmethod
+    def _get_sample_type(cls, family_index, ht_globals):
+        if 'sample_types' in ht_globals:
+            return ht_globals.sample_types[family_index]
+        return ht_globals.sample_type
 
     def _get_any_family_member_gt_has_alt_filter(self):
         any_valid_entry = lambda x: self.GENOTYPE_QUERY_MAP[HAS_ALT](x.GT)
