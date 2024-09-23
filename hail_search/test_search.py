@@ -763,6 +763,7 @@ class HailSearchTestCase(AioHTTPTestCase):
         inheritance_mode = 'recessive'
         await self._assert_expected_search(
             [FAMILY_4_VARIANT], sample_data=FAMILY_4_SAMPLE_DATA, inheritance_mode=inheritance_mode,
+            **COMP_HET_ALL_PASS_FILTERS,
         )
         # Exome passes quality and inheritance, show genotypes for both sample types.
         inheritance_mode = 'de_novo'
@@ -775,6 +776,7 @@ class HailSearchTestCase(AioHTTPTestCase):
         inheritance_mode = 'recessive'
         await self._assert_expected_search(
             [FAMILY_5_VARIANT], sample_data=FAMILY_5_SAMPLE_DATA, inheritance_mode=inheritance_mode,
+            **COMP_HET_ALL_PASS_FILTERS,
         )
         # Exome passes quality and inheritance, show genotypes for both sample types.
         inheritance_mode = 'de_novo'
@@ -786,6 +788,7 @@ class HailSearchTestCase(AioHTTPTestCase):
         inheritance_mode = 'recessive'
         await self._assert_expected_search(
             [FAMILY_5_VARIANT, FAMILY_4_VARIANT], sample_data=FAMILIES_4_5_SAMPLE_DATA, inheritance_mode=inheritance_mode,
+            **COMP_HET_ALL_PASS_FILTERS,
         )
         inheritance_mode = 'de_novo'
         await self._assert_expected_search(

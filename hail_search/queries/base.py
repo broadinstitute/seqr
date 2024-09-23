@@ -890,7 +890,7 @@ class BaseHailTableQuery(object):
             self._has_allowed_transcript_filter(ht, field) if field in transcript_filter_fields else ht[field]
             for field in filter_fields
         ]
-        return ht if not all_filters else ht.filter(hl.any(all_filters))
+        return ht.filter(hl.any(all_filters))
 
     def _get_allowed_consequence_ids(self, annotations):
         allowed_consequences = {
