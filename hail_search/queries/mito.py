@@ -214,7 +214,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
             family_guid = samples[0]['familyGuid']
             family_guid_idx_map[family_guid][SAMPLE_TYPE_WGS] = family_idx
 
-        return hl.literal(family_guid_idx_map)
+        return hl.dict(family_guid_idx_map)
 
     def _annotate_passes_quality_filter(self, ht: hl.Table, quality_filter, **kwargs) -> hl.Table:
         wes_passes_quality_filter = self._get_family_passes_quality_filter(quality_filter, ht, WES_FILTERS_FIELD, **kwargs)
