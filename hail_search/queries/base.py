@@ -9,8 +9,8 @@ from hail_search.constants import AFFECTED_ID, ALT_ALT, ANNOTATION_OVERRIDE_FIEL
     HAS_ALT, HAS_REF,INHERITANCE_FILTERS, PATH_FREQ_OVERRIDE_CUTOFF, MALE, RECESSIVE, REF_ALT, REF_REF, MAX_LOAD_INTERVALS, \
     UNAFFECTED_ID, X_LINKED_RECESSIVE, XPOS, OMIM_SORT, FAMILY_GUID_FIELD, GENOTYPES_FIELD, AFFECTED_ID_MAP
 
-DATASETS_DIR = os.environ.get('DATASETS_DIR', '/hail_datasets')
-SSD_DATASETS_DIR = os.environ.get('SSD_DATASETS_DIR', DATASETS_DIR)
+HAIL_SEARCH_DATA_DIR = os.environ.get('HAIL_SEARCH_DATA_DIR', '/seqr/seqr-hail-search-data')
+IN_MEMORY_DIR = os.environ.get('IN_MEMORY_DIR', HAIL_SEARCH_DATA_DIR)
 
 # Number of filtered genes at which pre-filtering a table by gene-intervals does not improve performance
 # Estimated based on behavior for several representative gene lists
@@ -135,7 +135,6 @@ class BaseHailTableQuery(object):
         ])
 
         return annotation_fields
-
 
     def _get_sample_genotype(self, samples, r=None, include_genotype_overrides=False, select_fields=None):
         sample = samples[0]
@@ -276,11 +275,15 @@ class BaseHailTableQuery(object):
             *self._parse_sample_data(sample_data), parsed_intervals=parsed_intervals, raw_intervals=intervals, parsed_annotations=parsed_annotations, **kwargs)
 
     @classmethod
-    def _get_table_path(cls, path, use_ssd_dir=False):
-        return f'{SSD_DATASETS_DIR if use_ssd_dir else DATASETS_DIR}/{cls.GENOME_VERSION}/{cls.DATA_TYPE}/{path}'
+    def _get_table_path(cls, path):
+        return f'{cls._get_table_dir(path)}/{cls.GENOME_VERSION}/{cls.DATA_TYPE}/{path}'
 
-    def _read_table(self, path, drop_globals=None, use_ssd_dir=False, skip_missing_field=None):
-        table_path = self._get_table_path(path, use_ssd_dir=use_ssd_dir)
+    @classmethod
+    def _get_table_dir(cls, path):
+        return IN_MEMORY_DIR if path == 'annotations.ht' else HAIL_SEARCH_DATA_DIR
+
+    def _read_table(self, path, drop_globals=None, skip_missing_field=None):
+        table_path = self._get_table_path(path)
         if 'variant_ht' in self._load_table_kwargs:
             ht = self._query_table_annotations(self._load_table_kwargs['variant_ht'], table_path)
             if skip_missing_field and not ht.any(hl.is_defined(ht[skip_missing_field])):
@@ -316,7 +319,7 @@ class BaseHailTableQuery(object):
     def _load_prefiltered_family_ht(
         self, family_guid: str, sample_type: str, project_sample_type_data: dict, **kwargs
     ) -> tuple[hl.Table, dict]:
-        ht = self._read_table(f'families/{sample_type}/{family_guid}.ht', use_ssd_dir=True)
+        ht = self._read_table(f'families/{sample_type}/{family_guid}.ht')
         ht = ht.transmute(family_entries=[ht.entries])
         ht = ht.annotate_globals(family_guids=[family_guid], family_samples={family_guid: ht.sample_ids})
         ht = self._prefilter_entries_table(ht, **kwargs)
@@ -332,7 +335,7 @@ class BaseHailTableQuery(object):
         return ht, sample_data
 
     def _read_project_table(self, project_guid: str, sample_type: str):
-        return self._read_table(f'projects/{sample_type}/{project_guid}.ht', use_ssd_dir=True)
+        return self._read_table(f'projects/{sample_type}/{project_guid}.ht')
 
     def _import_and_filter_entries_ht(
         self, project_guid: str, num_families: int, project_sample_type_data, **kwargs
@@ -466,6 +469,7 @@ class BaseHailTableQuery(object):
             sorted in the same order as is in family_entries. [[<sample_1>, <sample_2>]]
         """
         ht_globals = hl.eval(ht.globals)
+
         missing_samples = set()
         family_sample_index_data = []
         sorted_family_sample_data = []
@@ -554,6 +558,7 @@ class BaseHailTableQuery(object):
         ht = None if self._inheritance_mode == COMPOUND_HET else self._filter_families_inheritance(
             ht, self._inheritance_mode, inheritance_filter, sorted_family_sample_data,
         )
+
         return ht, comp_het_ht
 
     def _filter_families_inheritance(self, ht, inheritance_mode, inheritance_filter, sorted_family_sample_data):
