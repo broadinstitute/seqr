@@ -9,7 +9,8 @@ from hail_search.constants import ABSENT_PATH_SORT_OFFSET, CLINVAR_KEY, CLINVAR_
     CLINVAR_PATH_RANGES, CLINVAR_PATH_SIGNIFICANCES, ALLOWED_TRANSCRIPTS, ALLOWED_SECONDARY_TRANSCRIPTS, \
     PATHOGENICTY_SORT_KEY, CONSEQUENCE_SORT, \
     PATHOGENICTY_HGMD_SORT_KEY, SAMPLE_TYPE_WES, SAMPLE_TYPE_WGS, COMPOUND_HET, MAX_LOAD_INTERVALS, XPOS
-from hail_search.queries.base import BaseHailTableQuery, PredictionPath, QualityFilterFormat, MAX_PARTITIONS
+from hail_search.queries.base import BaseHailTableQuery, PredictionPath, QualityFilterFormat, MAX_PARTITIONS, \
+    HT_CHUNK_SIZE
 
 WES_FAMILY_ENTRIES_FIELD = 'wes_family_entries'
 WGS_FAMILY_ENTRIES_FIELD = 'wgs_family_entries'
@@ -127,27 +128,31 @@ class MitoHailTableQuery(BaseHailTableQuery):
     ) -> tuple[hl.Table, hl.Table]:
         sample_types = set(project_sample_type_data.keys())
         if len(sample_types) == 1:
+            # Import and filter entry table for one family or one project with one sample type
             return super()._import_and_filter_entries_ht(project_guid, num_families, project_sample_type_data, **kwargs)
 
         self._has_both_sample_types = True
-        entries_hts_map: dict[str, list[tuple[hl.Table, dict]]] = {}
+        entries = {}
         for sample_type in sample_types:
             if num_families == 1:
                 family_guid = list(list(project_sample_type_data.values())[0].keys())[0]
                 ht, sample_data = self._load_prefiltered_family_ht(family_guid, sample_type, project_sample_type_data, **kwargs)
             else:
                 ht, sample_data = self._load_prefiltered_project_ht(project_guid, sample_type, project_sample_type_data, **kwargs)
-            entries_hts_map[sample_type] = [(ht, sample_data)]
+            entries[sample_type] = (ht, sample_data)
 
-        return self._filter_entries_ht_both_sample_types(entries_hts_map, **kwargs)
+        return self._filter_entries_ht_both_sample_types(
+            [entries[SAMPLE_TYPE_WES]],
+            [entries[SAMPLE_TYPE_WGS]],
+            **kwargs
+        )
 
     def _filter_entries_ht_both_sample_types(
-        self, entries_hts_map: dict[str, list[tuple[hl.Table, dict]]], n_partitions=MAX_PARTITIONS,
-        inheritance_filter=None, quality_filter=None, **kwargs
+        self, wes_entries: list[tuple[hl.Table, dict]], wgs_entries: list[tuple[hl.Table, dict]],
+        n_partitions=MAX_PARTITIONS, inheritance_filter=None, quality_filter=None, **kwargs
     ):
         filtered_hts = []
         filtered_comp_het_hts = []
-        wes_entries, wgs_entries = entries_hts_map[SAMPLE_TYPE_WES], entries_hts_map[SAMPLE_TYPE_WGS]  # entries_hts_map: {<sample_type>: [(ht, project_samples), ...]}
 
         # Iterate over each chunk of project tables
         for (wes_ht, wes_project_samples), (wgs_ht, wgs_project_samples) in zip(wes_entries, wgs_entries):
@@ -281,53 +286,44 @@ class MitoHailTableQuery(BaseHailTableQuery):
             return super()._import_and_filter_multiple_project_hts(project_samples, n_partitions, **kwargs)
 
         self._has_both_sample_types = True
-        entries_hts_map = self._load_prefiltered_project_hts_both_sample_types(project_samples, **kwargs)
-        return self._filter_entries_ht_both_sample_types(entries_hts_map, n_partitions, **kwargs)
-
+        entries = self._load_prefiltered_project_hts_both_sample_types(project_samples, n_partitions, **kwargs)
+        return self._filter_entries_ht_both_sample_types(
+            entries[SAMPLE_TYPE_WES],
+            entries[SAMPLE_TYPE_WGS],
+            **kwargs
+        )
 
     def _load_prefiltered_project_hts_both_sample_types(
-        self, project_samples: dict, n_partitions=MAX_PARTITIONS, **kwargs
+        self, project_samples: dict, n_partitions: int, **kwargs
     ) -> dict[str, list[tuple[hl.Table, dict]]]:
-        entries_hts_map = {}
-        chunk_size = 64
-        project_guid_chunks: list[list[str]] = []
-        current_project_guid_chunk: list[str] = []
-        unmerged_entries_hts_map = defaultdict(dict)
+        prefiltered_project_hts = {SAMPLE_TYPE_WES: [], SAMPLE_TYPE_WGS: []}
+        project_hts = {SAMPLE_TYPE_WES: [], SAMPLE_TYPE_WGS: []}
+        sample_data = {SAMPLE_TYPE_WES: {}, SAMPLE_TYPE_WGS: {}}
         for project_guid, project_sample_type_data in project_samples.items():
             for sample_type, family_sample_data in project_sample_type_data.items():
-                ht = self._read_table(f'projects/{sample_type}/{project_guid}.ht',use_ssd_dir=True)
-                if ht is None:
+                project_ht = self._read_project_table(project_guid, sample_type)
+                if project_ht is None:
                     continue
-                unmerged_entries_hts_map[sample_type][project_guid] = (ht, family_sample_data)
+                project_ht = project_ht.select_globals('sample_type', 'family_guids', 'family_samples')
+                project_hts[sample_type].append(project_ht)
+                sample_data[sample_type].update(family_sample_data)
 
-            current_project_guid_chunk.append(project_guid)
-            if len(current_project_guid_chunk) >= chunk_size:
-                project_guid_chunks.append(current_project_guid_chunk)
-                current_project_guid_chunk = []
+            # Merge both WES and WGS project_hts when either of their lengths reaches the chunk size
+            if len(project_hts[SAMPLE_TYPE_WES]) >= HT_CHUNK_SIZE or len(project_hts[SAMPLE_TYPE_WGS]) >= HT_CHUNK_SIZE:
+                for sample_type in project_hts:
+                    self._prefilter_merged_project_hts(
+                        project_hts[sample_type], sample_data[sample_type],
+                        prefiltered_project_hts[sample_type], n_partitions, **kwargs
+                    )
+                project_hts = {SAMPLE_TYPE_WES: [], SAMPLE_TYPE_WGS: []}
+                sample_data = {SAMPLE_TYPE_WES: {}, SAMPLE_TYPE_WGS: {}}
 
-        project_guid_chunks.append(current_project_guid_chunk)
-
-        # The project tables are chunked such that for both sample types, the same variants should be in the same chunk
-        for sample_type, project_data in unmerged_entries_hts_map.items():
-            project_hts = []
-            project_family_data = {}
-            prefiltered_project_hts: list[tuple[hl.Table, dict]] = []  # Ordered list of merged, prefiltered project hts
-            for chunk in project_guid_chunks:
-                for project_guid in chunk:
-                    if project_guid not in project_data:  # There is no project ht for this sample_type
-                        continue
-                    project_ht, family_sample_data = project_data[project_guid]
-                    project_hts.append(project_ht.select_globals('sample_type', 'family_guids', 'family_samples'))
-                    project_family_data.update(family_sample_data)
-
-                self._prefilter_merged_project_hts(
-                    project_hts, project_family_data, prefiltered_project_hts, n_partitions, **kwargs
-                )
-                project_hts = []
-                project_family_data = {}
-
-            entries_hts_map[sample_type] = prefiltered_project_hts
-        return entries_hts_map
+        for sample_type in project_hts:
+            self._prefilter_merged_project_hts(
+                project_hts[sample_type], sample_data[sample_type],
+                prefiltered_project_hts[sample_type], n_partitions, **kwargs
+            )
+        return prefiltered_project_hts
 
     def _get_sample_genotype(self, samples, r=None, include_genotype_overrides=False, select_fields=None):
         if not self._has_both_sample_types:

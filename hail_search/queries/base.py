@@ -21,6 +21,11 @@ MAX_GENE_INTERVALS = int(os.environ.get('MAX_GENE_INTERVALS', MAX_LOAD_INTERVALS
 # https://github.com/broadinstitute/seqr-private/issues/1283#issuecomment-1973392719
 MAX_PARTITIONS = 12
 
+# Need to chunk tables or else evaluating table globals throws LineTooLong exception
+# However, minimizing number of chunks minimizes number of aggregations/ evals and improves performance
+# Adapted from https://discuss.hail.is/t/importing-many-sample-specific-vcfs/2002/8
+HT_CHUNK_SIZE = 64
+
 logger = logging.getLogger(__name__)
 
 
@@ -365,10 +370,6 @@ class BaseHailTableQuery(object):
         return ht, comp_het_ht
 
     def _load_prefiltered_project_hts(self, project_samples: dict, n_partitions: int, **kwargs):
-        # Need to chunk tables or else evaluating table globals throws LineTooLong exception
-        # However, minimizing number of chunks minimizes number of aggregations/ evals and improves performance
-        # Adapted from https://discuss.hail.is/t/importing-many-sample-specific-vcfs/2002/8
-        chunk_size = 64
         prefiltered_project_hts = []
         project_hts = []
         sample_data = {}
@@ -377,10 +378,11 @@ class BaseHailTableQuery(object):
             project_ht = self._read_project_table(project_guid, sample_type)
             if project_ht is None:
                 continue
-            project_hts.append(project_ht.select_globals('sample_type', 'family_guids', 'family_samples'))
+            project_ht = project_ht.select_globals('sample_type', 'family_guids', 'family_samples')
+            project_hts.append(project_ht)
             sample_data.update(family_sample_data)
 
-            if len(project_hts) >= chunk_size:
+            if len(project_hts) >= HT_CHUNK_SIZE:
                 self._prefilter_merged_project_hts(
                     project_hts, sample_data, prefiltered_project_hts, n_partitions, **kwargs
                 )
