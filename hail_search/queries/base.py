@@ -546,9 +546,6 @@ class BaseHailTableQuery(object):
             comp_het_ht = self._filter_families_inheritance(
                 ht, COMPOUND_HET, inheritance_filter, sorted_family_sample_data,
             )
-            comp_het_ht = comp_het_ht.filter(
-                comp_het_ht.family_entries.any(hl.is_defined)
-            ).select_globals('family_guids')
 
         if is_any_affected or not (inheritance_filter or self._inheritance_mode):
             # No sample-specific inheritance filtering needed

@@ -8,7 +8,7 @@ from hail_search.constants import ABSENT_PATH_SORT_OFFSET, CLINVAR_KEY, CLINVAR_
     CLINVAR_PATH_FILTER, \
     CLINVAR_PATH_RANGES, CLINVAR_PATH_SIGNIFICANCES, ALLOWED_TRANSCRIPTS, ALLOWED_SECONDARY_TRANSCRIPTS, \
     PATHOGENICTY_SORT_KEY, CONSEQUENCE_SORT, \
-    PATHOGENICTY_HGMD_SORT_KEY, SAMPLE_TYPE_WES, SAMPLE_TYPE_WGS, COMPOUND_HET, MAX_LOAD_INTERVALS, XPOS
+    PATHOGENICTY_HGMD_SORT_KEY, SAMPLE_TYPE_WES, SAMPLE_TYPE_WGS, COMPOUND_HET, MAX_LOAD_INTERVALS
 from hail_search.queries.base import BaseHailTableQuery, PredictionPath, QualityFilterFormat, MAX_PARTITIONS, \
     HT_CHUNK_SIZE
 
@@ -137,70 +137,136 @@ class MitoHailTableQuery(BaseHailTableQuery):
             entries[sample_type] = (ht, sample_data)
 
         return self._filter_entries_ht_both_sample_types(
-            [entries[SAMPLE_TYPE_WES]],
-            [entries[SAMPLE_TYPE_WGS]],
-            **kwargs
+            *entries[SAMPLE_TYPE_WES], *entries[SAMPLE_TYPE_WGS], **kwargs
         )
 
+
+    def _import_and_filter_multiple_project_hts(
+        self, project_samples: dict, n_partitions=MAX_PARTITIONS, **kwargs
+    ) -> tuple[hl.Table, hl.Table]:
+        sample_types = set()
+        for sample_dict in project_samples.values():
+            sample_types.update(sample_dict.keys())
+        if len(sample_types) == 1:
+            return super()._import_and_filter_multiple_project_hts(project_samples, n_partitions, **kwargs)
+
+        self._has_both_sample_types = True
+        entries = self._load_prefiltered_project_hts_both_sample_types(project_samples, n_partitions, **kwargs)
+
+        filtered_project_hts = []
+        filtered_comp_het_project_hts = []
+        for (wes_ht, wes_project_samples), (wgs_ht, wgs_project_samples) in zip(entries[SAMPLE_TYPE_WES], entries[SAMPLE_TYPE_WGS]):
+            ht, comp_het_ht = self._filter_entries_ht_both_sample_types(
+                wes_ht, wes_project_samples, wgs_ht, wgs_project_samples, **kwargs
+            )
+            if ht is not None:
+                filtered_project_hts.append(ht)
+            if comp_het_ht is not None:
+                filtered_comp_het_project_hts.append(comp_het_ht)
+
+        ht = self._merge_project_hts(filtered_project_hts, n_partitions)
+        comp_het_ht = self._merge_project_hts(filtered_comp_het_project_hts, n_partitions)
+        return ht, comp_het_ht
+
+    def _load_prefiltered_project_hts_both_sample_types(
+        self, project_samples: dict, n_partitions: int, **kwargs
+    ) -> dict[str, list[tuple[hl.Table, dict]]]:
+        prefiltered_project_hts = {SAMPLE_TYPE_WES: [], SAMPLE_TYPE_WGS: []}
+        project_hts = {SAMPLE_TYPE_WES: [], SAMPLE_TYPE_WGS: []}
+        sample_data = {SAMPLE_TYPE_WES: {}, SAMPLE_TYPE_WGS: {}}
+        for project_guid, project_sample_type_data in project_samples.items():
+            for sample_type, family_sample_data in project_sample_type_data.items():
+                project_ht = self._read_project_table(project_guid, sample_type)
+                if project_ht is None:
+                    continue
+                project_ht = project_ht.select_globals('sample_type', 'family_guids', 'family_samples')
+                project_hts[sample_type].append(project_ht)
+                sample_data[sample_type].update(family_sample_data)
+
+            # Merge both WES and WGS project_hts when either of their lengths reaches the chunk size
+            if len(project_hts[SAMPLE_TYPE_WES]) >= HT_CHUNK_SIZE or len(project_hts[SAMPLE_TYPE_WGS]) >= HT_CHUNK_SIZE:
+                for sample_type in project_hts:
+                    self._prefilter_merged_project_hts(
+                        project_hts[sample_type], sample_data[sample_type],
+                        prefiltered_project_hts[sample_type], n_partitions, **kwargs
+                    )
+                project_hts = {SAMPLE_TYPE_WES: [], SAMPLE_TYPE_WGS: []}
+                sample_data = {SAMPLE_TYPE_WES: {}, SAMPLE_TYPE_WGS: {}}
+
+        for sample_type in project_hts:
+            self._prefilter_merged_project_hts(
+                project_hts[sample_type], sample_data[sample_type],
+                prefiltered_project_hts[sample_type], n_partitions, **kwargs
+            )
+        return prefiltered_project_hts
+
     def _filter_entries_ht_both_sample_types(
-        self, wes_entries: list[tuple[hl.Table, dict]], wgs_entries: list[tuple[hl.Table, dict]],
-        n_partitions=MAX_PARTITIONS, inheritance_filter=None, quality_filter=None, **kwargs
+        self, wes_ht, wes_project_samples, wgs_ht, wgs_project_samples, inheritance_filter=None, quality_filter=None, **kwargs
     ):
-        filtered_hts = []
-        filtered_comp_het_hts = []
+        wes_ht, sorted_wes_family_sample_data = self._add_entry_sample_families(wes_ht, wes_project_samples)
+        wgs_ht, sorted_wgs_family_sample_data = self._add_entry_sample_families(wgs_ht, wgs_project_samples)
+        wes_ht = wes_ht.rename({'family_entries': WES_FAMILY_ENTRIES_FIELD, 'filters': WES_FILTERS_FIELD})
+        wgs_ht = wgs_ht.rename({'family_entries': WGS_FAMILY_ENTRIES_FIELD, 'filters': WGS_FILTERS_FIELD})
+        ht = wes_ht.join(wgs_ht, how='outer')
 
-        # Iterate over each chunk of project tables
-        for (wes_ht, wes_project_samples), (wgs_ht, wgs_project_samples) in zip(wes_entries, wgs_entries):
-            wes_ht, sorted_wes_family_sample_data = self._add_entry_sample_families(wes_ht, wes_project_samples)
-            wgs_ht, sorted_wgs_family_sample_data = self._add_entry_sample_families(wgs_ht, wgs_project_samples)
-            family_idx_map = self._build_family_index_map(sorted_wes_family_sample_data, sorted_wgs_family_sample_data)
+        ht = self._annotate_passes_quality_filter(ht, quality_filter, **kwargs)
 
-            wes_ht = wes_ht.rename({'family_entries': WES_FAMILY_ENTRIES_FIELD, 'filters': WES_FILTERS_FIELD})
-            wgs_ht = wgs_ht.rename({'family_entries': WGS_FAMILY_ENTRIES_FIELD, 'filters': WGS_FILTERS_FIELD})
-            ht = wes_ht.join(wgs_ht, how='outer')
+        ht, ch_ht = self._filter_inheritance_both_sample_types(
+            ht, inheritance_filter, sorted_wes_family_sample_data, sorted_wgs_family_sample_data,
+        )
+        return ht, ch_ht
 
-            # Filter by quality
-            ht = self._annotate_passes_quality_filter(ht, quality_filter, **kwargs)
+    def _filter_inheritance_both_sample_types(self, ht, inheritance_filter, sorted_wes_family_sample_data, sorted_wgs_family_sample_data):
+        family_idx_map = self._build_family_index_map(sorted_wes_family_sample_data, sorted_wgs_family_sample_data)
+        any_valid_entry, is_any_affected = self._get_any_family_member_gt_has_alt_filter()
+        ht = ht.annotate(wes_passes_inheritance=ht[WES_FAMILY_ENTRIES_FIELD].map(
+            lambda entries: hl.or_missing(entries.any(any_valid_entry), entries)
+        ))
+        ht = ht.annotate(wgs_passes_inheritance=ht[WGS_FAMILY_ENTRIES_FIELD].map(
+            lambda entries: hl.or_missing(entries.any(any_valid_entry), entries)
+        ))
+        comp_het_ht = None
+        if self._has_comp_het_search:
+            comp_het_ht = self._filter_families_inheritance_both_sample_types(
+                ht, COMPOUND_HET, inheritance_filter,
+                sorted_wes_family_sample_data, sorted_wgs_family_sample_data, family_idx_map
+            )
 
-            # Filter by inheritance
-            any_valid_entry, is_any_affected = self._get_any_family_member_gt_has_alt_filter()
-            ht = ht.annotate(wes_passes_inheritance=ht[WES_FAMILY_ENTRIES_FIELD].map(
-                lambda entries: hl.or_missing(entries.any(any_valid_entry), entries)
-            ))
-            ht = ht.annotate(wgs_passes_inheritance=ht[WGS_FAMILY_ENTRIES_FIELD].map(
-                lambda entries: hl.or_missing(entries.any(any_valid_entry), entries)
-            ))
+        if is_any_affected or not (inheritance_filter or self._inheritance_mode):
+            # No sample-specific inheritance filtering needed
+            sorted_wes_family_sample_data = sorted_wgs_family_sample_data = []
 
-            wes_field_names = self._get_inheritance_field_names(SAMPLE_TYPE_WES)
-            wgs_field_names = self._get_inheritance_field_names(SAMPLE_TYPE_WGS)
+        ht = None if self._inheritance_mode == COMPOUND_HET else self._filter_families_inheritance_both_sample_types(
+            ht, self._inheritance_mode, inheritance_filter, sorted_wes_family_sample_data,
+            sorted_wgs_family_sample_data, family_idx_map
+        )
+        return ht, comp_het_ht
 
-            if self._has_comp_het_search:
-                comp_het_ht = self._annotate_families_inheritance(
-                    ht, COMPOUND_HET, inheritance_filter, sorted_wes_family_sample_data, **wes_field_names
-                )
-                comp_het_ht = self._annotate_families_inheritance(
-                    comp_het_ht, COMPOUND_HET, inheritance_filter, sorted_wgs_family_sample_data, **wgs_field_names
-                )
-                comp_het_ht = self._apply_multi_sample_type_entry_filters(comp_het_ht, family_idx_map)
-                filtered_comp_het_hts.append(comp_het_ht)
+    def _filter_families_inheritance_both_sample_types(
+        self, ht, inheritance_mode, inheritance_filter,
+        sorted_wes_family_sample_data, sorted_wgs_family_sample_data, family_idx_map
+    ):
+        wes_field_names = self._get_inheritance_field_names(SAMPLE_TYPE_WES)
+        wgs_field_names = self._get_inheritance_field_names(SAMPLE_TYPE_WGS)
+        ht = self._annotate_families_inheritance(
+            ht, inheritance_mode, inheritance_filter, sorted_wes_family_sample_data, **wes_field_names
+        )
+        ht = self._annotate_families_inheritance(
+            ht, inheritance_mode, inheritance_filter, sorted_wgs_family_sample_data, **wgs_field_names
+        )
+        return self._apply_multi_sample_type_entry_filters(ht, family_idx_map)
 
-            if is_any_affected or not (inheritance_filter or self._inheritance_mode):
-                # No sample-specific inheritance filtering needed
-                sorted_wes_family_sample_data = sorted_wgs_family_sample_data = []
-
-            if self._inheritance_mode != COMPOUND_HET:
-                ht = self._annotate_families_inheritance(
-                    ht, self._inheritance_mode, inheritance_filter, sorted_wes_family_sample_data, **wes_field_names
-                )
-                ht = self._annotate_families_inheritance(
-                    ht, self._inheritance_mode, inheritance_filter, sorted_wgs_family_sample_data, **wgs_field_names
-                )
-                ht = self._apply_multi_sample_type_entry_filters(ht, family_idx_map)
-                filtered_hts.append(ht)
-
-        merged_ht = self._merge_project_hts(filtered_hts, n_partitions)
-        merged_comp_het_ht = self._merge_project_hts(filtered_comp_het_hts, n_partitions)
-        return merged_ht, merged_comp_het_ht
+    def _annotate_passes_quality_filter(self, ht: hl.Table, quality_filter, **kwargs) -> hl.Table:
+        wes_passes_quality_filter = self._get_family_passes_quality_filter(quality_filter, ht, WES_FILTERS_FIELD, **kwargs)
+        wes_passes = ht[WES_FAMILY_ENTRIES_FIELD] if wes_passes_quality_filter is None else (
+            ht[WES_FAMILY_ENTRIES_FIELD].map(lambda entries: hl.or_missing(wes_passes_quality_filter(entries), entries))
+        )
+        ht = ht.annotate(wes_passes_quality=wes_passes)
+        wgs_passes_quality_filter = self._get_family_passes_quality_filter(quality_filter, ht, WGS_FILTERS_FIELD, **kwargs)
+        wgs_passes = ht[WGS_FAMILY_ENTRIES_FIELD] if wgs_passes_quality_filter is None else (
+            ht[WGS_FAMILY_ENTRIES_FIELD].map(lambda entries: hl.or_missing(wgs_passes_quality_filter(entries), entries))
+        )
+        return ht.annotate(wgs_passes_quality=wgs_passes)
 
     @staticmethod
     def _build_family_index_map(sorted_wes_family_sample_data, sorted_wgs_family_sample_data):
@@ -215,20 +281,6 @@ class MitoHailTableQuery(BaseHailTableQuery):
             family_guid_idx_map[family_guid][SAMPLE_TYPE_WGS] = family_idx
 
         return hl.dict(family_guid_idx_map)
-
-    def _annotate_passes_quality_filter(self, ht: hl.Table, quality_filter, **kwargs) -> hl.Table:
-        wes_passes_quality_filter = self._get_family_passes_quality_filter(quality_filter, ht, WES_FILTERS_FIELD, **kwargs)
-        wes_passes = ht[WES_FAMILY_ENTRIES_FIELD] if wes_passes_quality_filter is None else (
-            ht[WES_FAMILY_ENTRIES_FIELD].map(lambda entries: hl.or_missing(wes_passes_quality_filter(entries), entries))
-        )
-        ht = ht.annotate(wes_passes_quality=wes_passes)
-
-        wgs_passes_quality_filter = self._get_family_passes_quality_filter(quality_filter, ht, WGS_FILTERS_FIELD, **kwargs)
-        wgs_passes = ht[WGS_FAMILY_ENTRIES_FIELD] if wgs_passes_quality_filter is None else (
-            ht[WGS_FAMILY_ENTRIES_FIELD].map(lambda entries: hl.or_missing(wgs_passes_quality_filter(entries), entries))
-        )
-        ht = ht.annotate(wgs_passes_quality=wgs_passes)
-        return ht
 
     def _apply_multi_sample_type_entry_filters(self, ht, family_idx_map) -> hl.Table:
         # Keep family from both sample types if either passes quality AND inheritance
@@ -283,55 +335,6 @@ class MitoHailTableQuery(BaseHailTableQuery):
                 hl.is_defined(ht[other_sample_type_inheritance_field][other_sample_type_family_idx])
             ), family_idx_map[family_guid][other_sample_type])
         )
-
-    def _import_and_filter_multiple_project_hts(
-        self, project_samples: dict, n_partitions=MAX_PARTITIONS, **kwargs
-    ) -> tuple[hl.Table, hl.Table]:
-        sample_types = set()
-        for sample_dict in project_samples.values():
-            sample_types.update(sample_dict.keys())
-        if len(sample_types) == 1:
-            return super()._import_and_filter_multiple_project_hts(project_samples, n_partitions, **kwargs)
-
-        self._has_both_sample_types = True
-        entries = self._load_prefiltered_project_hts_both_sample_types(project_samples, n_partitions, **kwargs)
-        return self._filter_entries_ht_both_sample_types(
-            entries[SAMPLE_TYPE_WES],
-            entries[SAMPLE_TYPE_WGS],
-            **kwargs
-        )
-
-    def _load_prefiltered_project_hts_both_sample_types(
-        self, project_samples: dict, n_partitions: int, **kwargs
-    ) -> dict[str, list[tuple[hl.Table, dict]]]:
-        prefiltered_project_hts = {SAMPLE_TYPE_WES: [], SAMPLE_TYPE_WGS: []}
-        project_hts = {SAMPLE_TYPE_WES: [], SAMPLE_TYPE_WGS: []}
-        sample_data = {SAMPLE_TYPE_WES: {}, SAMPLE_TYPE_WGS: {}}
-        for project_guid, project_sample_type_data in project_samples.items():
-            for sample_type, family_sample_data in project_sample_type_data.items():
-                project_ht = self._read_project_table(project_guid, sample_type)
-                if project_ht is None:
-                    continue
-                project_ht = project_ht.select_globals('sample_type', 'family_guids', 'family_samples')
-                project_hts[sample_type].append(project_ht)
-                sample_data[sample_type].update(family_sample_data)
-
-            # Merge both WES and WGS project_hts when either of their lengths reaches the chunk size
-            if len(project_hts[SAMPLE_TYPE_WES]) >= HT_CHUNK_SIZE or len(project_hts[SAMPLE_TYPE_WGS]) >= HT_CHUNK_SIZE:
-                for sample_type in project_hts:
-                    self._prefilter_merged_project_hts(
-                        project_hts[sample_type], sample_data[sample_type],
-                        prefiltered_project_hts[sample_type], n_partitions, **kwargs
-                    )
-                project_hts = {SAMPLE_TYPE_WES: [], SAMPLE_TYPE_WGS: []}
-                sample_data = {SAMPLE_TYPE_WES: {}, SAMPLE_TYPE_WGS: {}}
-
-        for sample_type in project_hts:
-            self._prefilter_merged_project_hts(
-                project_hts[sample_type], sample_data[sample_type],
-                prefiltered_project_hts[sample_type], n_partitions, **kwargs
-            )
-        return prefiltered_project_hts
 
     def _get_sample_genotype(self, samples, r=None, include_genotype_overrides=False, select_fields=None):
         if not self._has_both_sample_types:
