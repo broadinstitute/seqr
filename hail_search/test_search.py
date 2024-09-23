@@ -759,20 +759,24 @@ class HailSearchTestCase(AioHTTPTestCase):
         )
 
         # Variant in family_4 is de novo in exome but maternally inherited in genome.
+        # Genome passes quality and inheritance, show genotypes for both sample types.
         inheritance_mode = 'recessive'
         await self._assert_expected_search(
             [FAMILY_4_VARIANT], sample_data=FAMILY_4_SAMPLE_DATA, inheritance_mode=inheritance_mode,
         )
+        # Exome passes quality and inheritance, show genotypes for both sample types.
         inheritance_mode = 'de_novo'
         await self._assert_expected_search(
             [FAMILY_4_VARIANT], sample_data=FAMILY_4_SAMPLE_DATA, inheritance_mode=inheritance_mode,
         )
 
         # Variant in family_5 is inherited in exome and there is no parental data in genome.
+        # Genome passes quality and inheritance (since there is no parental data), show genotypes for both sample types.
         inheritance_mode = 'recessive'
         await self._assert_expected_search(
             [FAMILY_5_VARIANT], sample_data=FAMILY_5_SAMPLE_DATA, inheritance_mode=inheritance_mode,
         )
+        # Exome passes quality and inheritance, show genotypes for both sample types.
         inheritance_mode = 'de_novo'
         await self._assert_expected_search(
             [FAMILY_5_VARIANT], sample_data=FAMILY_5_SAMPLE_DATA, inheritance_mode=inheritance_mode,

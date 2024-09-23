@@ -118,11 +118,6 @@ class MitoHailTableQuery(BaseHailTableQuery):
     }
     SORTS[PATHOGENICTY_HGMD_SORT_KEY] = SORTS[PATHOGENICTY_SORT_KEY]
 
-    def __init__(self, sample_data, sort=XPOS, sort_metadata=None, num_results=100, inheritance_mode=None,
-                 override_comp_het_alt=False, **kwargs):
-        super().__init__(sample_data, sort, sort_metadata, num_results, inheritance_mode, override_comp_het_alt, **kwargs)
-        self._has_both_sample_types = False
-
     def _import_and_filter_entries_ht(
         self, project_guid: str, num_families: int, project_sample_type_data, **kwargs
     ) -> tuple[hl.Table, hl.Table]:
@@ -235,34 +230,22 @@ class MitoHailTableQuery(BaseHailTableQuery):
         ht = ht.annotate(wgs_passes_quality=wgs_passes)
         return ht
 
-    @staticmethod
-    def _apply_multi_sample_type_entry_filters(ht, family_idx_map) -> hl.Table:
-        # Keep family from both sample types if either passes quality and either passes inheritance
+    def _apply_multi_sample_type_entry_filters(self, ht, family_idx_map) -> hl.Table:
+        # Keep family from both sample types if either passes quality AND inheritance
         ht = ht.annotate(
             wes_family_entries=hl.enumerate(ht[WES_FAMILY_ENTRIES_FIELD]).map(
                 lambda x: hl.or_missing(  # x[0] is family index, x[1] is list of samples
-                    (hl.is_defined(ht.wes_passes_quality[x[0]]) | hl.if_else(
-                        family_idx_map.get(x[1][0]['familyGuid'], hl.empty_dict(hl.tstr, hl.tint32)).contains(SAMPLE_TYPE_WGS),
-                        hl.is_defined(ht.wgs_passes_quality[family_idx_map[x[1][0]['familyGuid']][SAMPLE_TYPE_WGS]]),
-                        False
-                    )) & (hl.is_defined(ht.wes_passes_inheritance[x[0]]) | hl.if_else(
-                        family_idx_map.get(x[1][0]['familyGuid'], hl.empty_dict(hl.tstr, hl.tint32)).contains(SAMPLE_TYPE_WGS),
-                        hl.is_defined(ht.wgs_passes_inheritance[family_idx_map[x[1][0]['familyGuid']][SAMPLE_TYPE_WGS]]),
-                        False
-                    )), x[1]
-            )),
-            wgs_family_entries=hl.enumerate(ht[WGS_FAMILY_ENTRIES_FIELD]).map(
+                    self._family_passes_quality_inheritance(
+                        ht, SAMPLE_TYPE_WES, x[0], x[1][0]['familyGuid'], family_idx_map
+                    ), x[1]
+                )
+            ), wgs_family_entries=hl.enumerate(ht[WGS_FAMILY_ENTRIES_FIELD]).map(
                 lambda x: hl.or_missing(
-                    (hl.is_defined(ht.wgs_passes_quality[x[0]]) | hl.if_else(
-                        family_idx_map.get(x[1][0]['familyGuid'], hl.empty_dict(hl.tstr, hl.tint32)).contains(SAMPLE_TYPE_WES),
-                        hl.is_defined(ht.wes_passes_quality[family_idx_map[x[1][0]['familyGuid']][SAMPLE_TYPE_WES]]),
-                        False
-                    )) & ( hl.is_defined(ht.wgs_passes_inheritance[x[0]]) | hl.if_else(
-                        family_idx_map.get(x[1][0]['familyGuid'], hl.empty_dict(hl.tstr, hl.tint32)).contains(SAMPLE_TYPE_WES),
-                        hl.is_defined(ht.wes_passes_inheritance[family_idx_map[x[1][0]['familyGuid']][SAMPLE_TYPE_WES]]),
-                        False
-                    )), x[1]
-            ))
+                    self._family_passes_quality_inheritance(
+                        ht, SAMPLE_TYPE_WGS, x[0], x[1][0]['familyGuid'], family_idx_map
+                    ), x[1]
+                )
+            )
         )
         ht = ht.transmute(
             family_entries=hl.coalesce(
@@ -275,6 +258,31 @@ class MitoHailTableQuery(BaseHailTableQuery):
         )
         return ht
 
+    @staticmethod
+    def _family_passes_quality_inheritance(ht, sample_type, sample_type_family_idx, family_guid, family_idx_map):
+        if sample_type == SAMPLE_TYPE_WES:
+            sample_type_quality_field = 'wes_passes_quality'
+            sample_type_inheritance_field = 'wes_passes_inheritance'
+            other_sample_type_quality_field = 'wgs_passes_quality'
+            other_sample_type_inheritance_field = 'wgs_passes_inheritance'
+            other_sample_type = SAMPLE_TYPE_WGS
+        else:
+            sample_type_quality_field = 'wgs_passes_quality'
+            sample_type_inheritance_field = 'wgs_passes_inheritance'
+            other_sample_type_quality_field = 'wes_passes_quality'
+            other_sample_type_inheritance_field = 'wes_passes_inheritance'
+            other_sample_type = SAMPLE_TYPE_WES
+
+        return (
+            hl.is_defined(ht[sample_type_quality_field][sample_type_family_idx]) &
+            hl.is_defined(ht[sample_type_inheritance_field][sample_type_family_idx])
+        ) | (
+            (hl.is_defined(family_guid) & family_idx_map.get(family_guid).contains(other_sample_type)) &
+            hl.bind(lambda other_sample_type_family_idx: (
+                hl.is_defined(ht[other_sample_type_quality_field][other_sample_type_family_idx]) &
+                hl.is_defined(ht[other_sample_type_inheritance_field][other_sample_type_family_idx])
+            ), family_idx_map[family_guid][other_sample_type])
+        )
 
     def _import_and_filter_multiple_project_hts(
         self, project_samples: dict, n_partitions=MAX_PARTITIONS, **kwargs
@@ -372,6 +380,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
 
     def __init__(self, *args, **kwargs):
         self._filter_hts = {}
+        self._has_both_sample_types = False
         super().__init__(*args, **kwargs)
 
     def _parse_intervals(self, intervals, exclude_intervals=False, **kwargs):
