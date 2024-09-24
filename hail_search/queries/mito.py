@@ -169,9 +169,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
             if comp_het_ht is not None:
                 filtered_comp_het_project_hts.append(comp_het_ht)
 
-        ht = self._merge_project_hts(filtered_project_hts, n_partitions)
-        comp_het_ht = self._merge_project_hts(filtered_comp_het_project_hts, n_partitions)
-        return ht, comp_het_ht
+        return self._merge_filtered_hts(filtered_comp_het_project_hts, filtered_project_hts, n_partitions)
 
     def _load_prefiltered_project_hts_both_sample_types(
         self, project_samples: dict, n_partitions: int, **kwargs
@@ -213,9 +211,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
         wes_ht = wes_ht.rename({'family_entries': WES_FAMILY_ENTRIES_FIELD, 'filters': WES_FILTERS_FIELD})
         wgs_ht = wgs_ht.rename({'family_entries': WGS_FAMILY_ENTRIES_FIELD, 'filters': WGS_FILTERS_FIELD})
         ht = wes_ht.join(wgs_ht, how='outer')
-
         ht = self._annotate_passes_quality_filter(ht, quality_filter, **kwargs)
-
         ht, ch_ht = self._filter_inheritance_both_sample_types(
             ht, inheritance_filter, sorted_wes_family_sample_data, sorted_wgs_family_sample_data,
         )
@@ -304,16 +300,18 @@ class MitoHailTableQuery(BaseHailTableQuery):
                 )
             )
         )
-        ht = ht.transmute(
+        # Filter out families with no valid entries in either sample type
+        ht = ht.filter(ht.wes_family_entries.any(hl.is_defined) | ht.wgs_family_entries.any(hl.is_defined))
+        return ht.transmute(
             family_entries=hl.coalesce(
-                ht.wes_family_entries, hl.empty_array(ht.wes_family_entries.dtype.element_type)).extend(
-                hl.coalesce(ht.wgs_family_entries, hl.empty_array(ht.wgs_family_entries.dtype.element_type))
-            ),
+                ht.wes_family_entries, hl.empty_array(ht.wes_family_entries.dtype.element_type)
+            ).extend(hl.coalesce(
+                ht.wgs_family_entries, hl.empty_array(ht.wgs_family_entries.dtype.element_type)
+            )).filter(lambda entries: entries.any(hl.is_defined)),
             filters=hl.coalesce(ht.wes_filters, hl.empty_set(hl.tstr)).union(
                 hl.coalesce(ht.wgs_filters, hl.empty_set(hl.tstr))
             )
         )
-        return ht
 
     @staticmethod
     def _family_passes_quality_inheritance(ht, sample_type, sample_type_family_idx, family_guid, family_idx_map):

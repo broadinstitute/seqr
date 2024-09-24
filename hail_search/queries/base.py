@@ -73,7 +73,7 @@ class BaseHailTableQuery(object):
     BASE_ANNOTATION_FIELDS = {
         FAMILY_GUID_FIELD: lambda r: hl.array(hl.set(
             r.family_entries.filter(hl.is_defined).map(lambda entries: entries.first().familyGuid))
-        ).filter(hl.is_defined),
+        ),
         'genotypeFilters': lambda r: hl.str(' ,').join(r.filters),
         'variantId': lambda r: r.variant_id,
     }
@@ -368,6 +368,9 @@ class BaseHailTableQuery(object):
             if comp_het_ht is not None:
                 filtered_comp_het_project_hts.append(comp_het_ht)
 
+        return self._merge_filtered_hts(filtered_comp_het_project_hts, filtered_project_hts, n_partitions)
+
+    def _merge_filtered_hts(self, filtered_comp_het_project_hts, filtered_project_hts, n_partitions):
         ht = self._merge_project_hts(filtered_project_hts, n_partitions)
         comp_het_ht = self._merge_project_hts(filtered_comp_het_project_hts, n_partitions)
         return ht, comp_het_ht
