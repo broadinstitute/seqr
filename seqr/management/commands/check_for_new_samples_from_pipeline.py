@@ -5,11 +5,12 @@ from django.db.models import Q
 from django.db.models.functions import JSONObject
 import json
 import logging
+import re
 
 from reference_data.models import GENOME_VERSION_LOOKUP
 from seqr.models import Family, Sample, SavedVariant
 from seqr.utils.communication_utils import safe_post_to_slack
-from seqr.utils.file_utils import file_iter, does_file_exist
+from seqr.utils.file_utils import file_iter, list_files
 from seqr.utils.search.add_data_utils import notify_search_data_loaded
 from seqr.utils.search.utils import parse_valid_variant_id
 from seqr.utils.search.hail_search_utils import hail_variant_multi_lookup, search_data_type
@@ -22,7 +23,10 @@ from settings import SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, BASE_URL
 
 logger = logging.getLogger(__name__)
 
-GS_PATH_TEMPLATE = 'gs://seqr-hail-search-data/v3.1/{path}/runs/{version}/'
+GS_PATH_TEMPLATE = 'gs://seqr-hail-search-data/v3.1/{genome_version}/{dataset_type}/runs/{version}/_SUCCESS'
+GS_PATH_FIELDS = ['genome_version', 'dataset_type', 'version']
+GS_PATH_REGEX = GS_PATH_TEMPLATE.format(**{field: f'(?P<{field}>[^/]+)' for field in GS_PATH_FIELDS})
+
 DATASET_TYPE_MAP = {'GCNV': Sample.DATASET_TYPE_SV_CALLS}
 USER_EMAIL = 'manage_command'
 MAX_LOOKUP_VARIANTS = 5000
@@ -39,32 +43,61 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('path')
-        parser.add_argument('version')
-        parser.add_argument('--allow-failed', action='store_true')
+        parser.add_argument('--genome_version')
+        parser.add_argument('--dataset_type')
+        parser.add_argument('--version')
 
     def handle(self, *args, **options):
-        path = options['path']
-        version = options['version']
-        genome_version, dataset_type = path.split('/')
-        dataset_type = DATASET_TYPE_MAP.get(dataset_type, dataset_type)
+        gs_path = GS_PATH_TEMPLATE.format(**{field: options[field] or '*' for field in GS_PATH_FIELDS})
+        success_runs = {path: re.match(GS_PATH_REGEX, path).groupdict() for path in list_files(gs_path, user=None)}
+        if not success_runs:
+            user_args = {f'{k}={v}' for k, v in options.items() if v}
+            raise CommandError(f'No successful runs found for {", ".join(user_args)}')
 
-        if Sample.objects.filter(data_source=version, is_active=True).exists():
-            logger.info(f'Data already loaded for {path}: {version}')
+        loaded_runs = set(Sample.objects.filter(data_source__isnull=False, is_active=True).values_list('data_source', flat=True))
+        new_runs = {path: run for path, run in success_runs.items() if run['version'] not in loaded_runs}
+        if not new_runs:
+            logger.info(f'Data already loaded for all {len(success_runs)} runs')
             return
 
-        logger.info(f'Loading new samples from {path}: {version}')
-        gs_path = GS_PATH_TEMPLATE.format(path=path, version=version)
-        if not does_file_exist(gs_path + '_SUCCESS'):
-            if options['allow_failed']:
-                logger.warning(f'Loading for failed run {path}: {version}')
-            else:
-                raise CommandError(f'Run failed for {path}: {version}, unable to load data')
+        logger.info(f'Loading new samples from {len(success_runs)} run(s)')
+        updated_families_by_data_type = defaultdict(set)
+        updated_variants_by_data_type = defaultdict(list)
+        errors = []
+        for path, run in new_runs.items():
+            try:
+                metadata_path = path.replace('_SUCCESS', 'metadata.json')
+                data_type, updated_families, updated_variants_by_id = self._load_new_samples(metadata_path, **run)
+                data_type_key = (data_type, run['genome_version'])
+                updated_families_by_data_type[data_type_key].update(updated_families)
+                updated_variants_by_data_type[data_type_key].update(updated_variants_by_id)
+            except CommandError as e:
+                errors.append(f'Error loading {run["version"]}: {e}')
 
-        metadata = json.loads(next(line for line in file_iter(gs_path + 'metadata.json')))
+        # Reset cached results for all projects, as seqr AFs will have changed for all projects when new data is added
+        reset_cached_search_results(project=None)
+
+        for data_type_key, updated_families in updated_families_by_data_type.items():
+            self._reload_shared_variant_annotations(
+                *data_type_key, updated_variants_by_data_type[data_type_key], exclude_families=updated_families,
+            )
+
+        for error in errors:
+            logger.error(error)
+
+        logger.info('DONE')
+
+    @classmethod
+    def _load_new_samples(cls, metadata_path, genome_version, dataset_type, version):
+        dataset_type = DATASET_TYPE_MAP.get(dataset_type, dataset_type)
+
+        logger.info(f'Loading new samples from {genome_version}/{dataset_type}: {version}')
+
+        metadata = json.loads(next(line for line in file_iter(metadata_path)))
         families = Family.objects.filter(guid__in=metadata['family_samples'].keys())
         if len(families) < len(metadata['family_samples']):
             invalid = metadata['family_samples'].keys() - set(families.values_list('guid', flat=True))
-            raise CommandError(f'Invalid families in run metadata {path}: {version} - {", ".join(invalid)}')
+            raise CommandError(f'Invalid families in run metadata {genome_version}/{dataset_type}: {version} - {", ".join(invalid)}')
 
         family_project_map = {f.guid: f.project for f in families.select_related('project')}
         samples_by_project = defaultdict(list)
@@ -96,9 +129,6 @@ class Command(BaseCommand):
             user=None,
         )
 
-        # Reset cached results for all projects, as seqr AFs will have changed for all projects when new data is added
-        reset_cached_search_results(project=None)
-
         # Send loading notifications and update Airtable PDOs
         update_sample_data_by_project = {
             s['individual__family__project']: s for s in updated_samples.values('individual__family__project').annotate(
@@ -121,7 +151,7 @@ class Command(BaseCommand):
             updated_families.update(project_families)
             updated_project_families.append((project.id, project.name, project.genome_version, project_families))
             if is_internal and dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
-                split_project_pdos[project.name] = self._update_pdos(session, project.guid, sample_ids)
+                split_project_pdos[project.name] = cls._update_pdos(session, project.guid, sample_ids)
 
         # Send failure notifications
         failed_family_samples = metadata.get('failed_family_samples', {})
@@ -149,10 +179,7 @@ class Command(BaseCommand):
         updated_variants_by_id = update_projects_saved_variant_json(
             updated_project_families, user_email=USER_EMAIL, dataset_type=dataset_type)
 
-        self._reload_shared_variant_annotations(
-            search_data_type(dataset_type, sample_type), genome_version, updated_variants_by_id, exclude_families=updated_families)
-
-        logger.info('DONE')
+        return search_data_type(dataset_type, sample_type), updated_families, updated_variants_by_id
 
     @staticmethod
     def _update_pdos(session, project_guid, sample_ids):
@@ -228,7 +255,8 @@ class Command(BaseCommand):
         for v in variant_models:
             variants_by_id[v.variant_id].append(v)
 
-        logger.info(f'Reloading shared annotations for {len(variant_models)} {data_type} {genome_version} saved variants ({len(variants_by_id)} unique)')
+        variant_type_summary = f'{data_type} {genome_version} saved variants'
+        logger.info(f'Reloading shared annotations for {len(variant_models)} {variant_type_summary} ({len(variants_by_id)} unique)')
 
         updated_variants_by_id = {
             variant_id: {k: v for k, v in variant.items() if k not in {'familyGuids', 'genotypes', 'genotypeFilters'}}
@@ -250,7 +278,7 @@ class Command(BaseCommand):
                 updated_variant_models.append(variant_model)
 
         SavedVariant.objects.bulk_update(updated_variant_models, ['saved_variant_json'], batch_size=10000)
-        logger.info(f'Updated {len(updated_variant_models)} saved variants')
+        logger.info(f'Updated {len(updated_variant_models)} {variant_type_summary}')
 
 
 reload_shared_variant_annotations = Command._reload_shared_variant_annotations
