@@ -54,7 +54,7 @@ class Command(BaseCommand):
             user_args = {f'{k}={v}' for k, v in options.items() if v}
             raise CommandError(f'No successful runs found for {", ".join(user_args)}')
 
-        loaded_runs = set(Sample.objects.filter(data_source__isnull=False, is_active=True).values_list('data_source', flat=True))
+        loaded_runs = set(Sample.objects.filter(data_source__isnull=False).values_list('data_source', flat=True))
         new_runs = {path: run for path, run in success_runs.items() if run['version'] not in loaded_runs}
         if not new_runs:
             logger.info(f'Data already loaded for all {len(success_runs)} runs')
