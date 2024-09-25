@@ -113,6 +113,56 @@ AIRTABLE_PDO_RECORDS = {
   ]
 }
 
+RUN_PATHS = [
+    b'gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/auto__2023-08-09/_SUCCESS',
+    b'gs://seqr-hail-search-data/v3.1/GRCh37/SNV_INDEL/runs/manual__2023-11-02/_SUCCESS',
+    b'gs://seqr-hail-search-data/v3.1/GRCh37/MITO/runs/auto__2024-08-12/_SUCCESS',
+    b'gs://seqr-hail-search-data/v3.1/GRCh38/GCNV/runs/auto__2024-09-14/_SUCCESS',
+]
+METADATA_FILES = [{
+    'callsets': ['1kg.vcf.gz'],
+    'sample_type': 'WES',
+    'family_samples': {
+        'F000011_11': ['NA20885'],
+        'F000012_12': ['NA20888', 'NA20889'],
+        'F000014_14': ['NA21234'],
+    },
+    'failed_family_samples': {
+        'relatedness_check': {
+            'F000001_1': {'reasons': [
+                'Sample NA19679 has expected relation "parent" to NA19675 but has coefficients [0.0, 0.8505002045292791, 0.14949979547072176, 0.5747498977353613]',
+                'Sample NA19678 has expected relation "sibling" to NA19675 but has coefficients [0.17424888135104177, 0.6041745754450025, 0.22157654320395614, 0.5236638309264574]',
+            ]},
+        },
+        'sex_check': {
+            'F000001_1': {'reasons': ['Sample NA19679 has pedigree sex F but imputed sex M']},
+            'F000014_14': {'reasons': ['Sample NA21987 has pedigree sex M but imputed sex F']},
+        },
+        'missing_samples': {
+            'F000002_2': {'reasons': ["Missing samples: {'HG00732', 'HG00733'}"]},
+            'F000003_3': {'reasons': ["Missing samples: {'NA20870'}"]},
+        },
+    }
+}, {
+    'callsets': ['invalid_family.vcf'],
+    'sample_type': 'WGS',
+    'family_samples': {'F0000123_ABC': ['NA22882', 'NA20885']},
+}, {
+    'callsets': ['invalid_sample.vcf'],
+    'sample_type': 'WGS',
+    'family_samples': {'F000003_3': ['NA22882', 'NA20885']},
+}, {
+    'callsets': ['gcnv.bed.gz'],
+    'sample_type': 'WES',
+    'family_samples': {'F000004_4': ['NA20872'], 'F000012_12': ['NA20889']},
+}]
+
+
+def mock_metadata_file(index):
+    m = mock.MagicMock()
+    m.stdout = [json.dumps(METADATA_FILES[index]).encode()]
+    return m
+
 
 @mock.patch('seqr.utils.search.hail_search_utils.HAIL_BACKEND_SERVICE_HOSTNAME', MOCK_HAIL_HOST)
 @mock.patch('seqr.models.random.randint', lambda *args: GUID_ID)
@@ -142,30 +192,47 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         self.addCleanup(patcher.stop)
         super().setUp()
 
-    def _test_success(self, path, metadata, dataset_type, sample_guids, reload_calls, reload_annotations_logs, has_additional_requests=False):
-        self.mock_subprocess.return_value.stdout = [json.dumps(metadata).encode()]
-        self.mock_subprocess.return_value.wait.return_value = 0
+    def _test_call(self, reload_calls, reload_annotations_logs, has_additional_requests=False, additional_errors=None):
+        self.mock_subprocess.reset_mock()
+        mock_ls_process = mock.MagicMock()
+        mock_ls_process.communicate.return_value = b'\n'.join(RUN_PATHS), b''
+        self.mock_subprocess.side_effect = [mock_ls_process] + [mock_metadata_file(i) for i in range(len(RUN_PATHS))]
 
-        call_command('check_for_new_samples_from_pipeline', path, 'auto__2023-08-08')
+        call_command('check_for_new_samples_from_pipeline')
 
-        self.mock_subprocess.assert_has_calls([mock.call(command, stdout=-1, stderr=-2, shell=True) for command in [
-            f'gsutil ls gs://seqr-hail-search-data/v3.1/{path}/runs/auto__2023-08-08/_SUCCESS',
-            f'gsutil cat gs://seqr-hail-search-data/v3.1/{path}/runs/auto__2023-08-08/metadata.json',
-        ]], any_order=True)
+        self.mock_subprocess.assert_has_calls([mock.call(command, stdout=-1, stderr=stderr, shell=True) for (command, stderr) in [
+            ('gsutil ls gs://seqr-hail-search-data/v3.1/*/*/runs/*/_SUCCESS', -1),
+            ('gsutil cat gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/auto__2023-08-09/metadata.json', -2),
+            ('gsutil cat gs://seqr-hail-search-data/v3.1/GRCh37/SNV_INDEL/runs/manual__2023-11-02/metadata.json', -2),
+            ('gsutil cat gs://seqr-hail-search-data/v3.1/GRCh37/MITO/runs/auto__2024-08-12/metadata.json', -2),
+            ('gsutil cat gs://seqr-hail-search-data/v3.1/GRCh38/GCNV/runs/auto__2024-09-14/metadata.json', -2),
+        ]])
 
         self.mock_logger.info.assert_has_calls([
-            mock.call(f'Loading new samples from {path}: auto__2023-08-08'),
-            mock.call(f'Loading {len(sample_guids)} WES {dataset_type} samples in 2 projects'),
+            mock.call('Loading new samples from 4 run(s)'),
+            mock.call('Loading new samples from GRCh38/SNV_INDEL: auto__2023-08-09'),
+            mock.call('Loading new samples from GRCh37/SNV_INDEL: manual__2023-11-02'),
+            mock.call('Loading new samples from GRCh37/MITO: auto__2024-08-12'),
+            mock.call('Loading 2 WGS MITO samples in 1 projects'),
+            mock.call('Loading new samples from GRCh38/SV: auto__2024-09-14'),
         ] + [mock.call(log) for log in reload_annotations_logs] + [
             mock.call('DONE'),
         ])
-        self.mock_logger.warining.assert_not_called()
+        self.mock_logger.warning.assert_not_called()
+        error_logs = [
+            mock.call('Error loading manual__2023-11-02: Invalid families in run metadata GRCh37/SNV_INDEL: manual__2023-11-02 - F0000123_ABC'),
+            mock.call('Error loading auto__2024-08-12: Matches not found for sample ids: NA20885, NA22882'),
+        ]
+        if additional_errors:
+            additional_error_logs = [mock.call(error) for error in additional_errors]
+            error_logs = [additional_error_logs[0]] + error_logs + additional_error_logs[1:]
+        self.mock_logger.error.assert_has_calls(error_logs)
 
         self.mock_redis.return_value.delete.assert_called_with('search_results__*', 'variant_lookup_results__*')
-        self.mock_utils_logger.info.assert_has_calls([
-            mock.call('Reset 2 cached results'),
-            mock.call('Reloading saved variants in 2 projects'),
-        ])
+        util_info_logs = [mock.call('Reset 2 cached results')]
+        if reload_calls:
+            util_info_logs.append(mock.call('Reloading saved variants in 2 projects'))
+        self.mock_utils_logger.info.assert_has_calls(util_info_logs)
 
         # Test reload saved variants
         self.assertEqual(len(responses.calls), len(reload_calls) + (9 if has_additional_requests else 0))
@@ -174,19 +241,6 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
             self.assertEqual(resp.request.url, f'{MOCK_HAIL_HOST}:5000/search')
             self.assertEqual(resp.request.headers.get('From'), 'manage_command')
             self.assertDictEqual(json.loads(resp.request.body), call)
-
-        # Tests Sample models created/updated
-        updated_sample_models = Sample.objects.filter(guid__in=sample_guids)
-        self.assertEqual(len(updated_sample_models), len(sample_guids))
-        self.assertSetEqual({'WES'}, set(updated_sample_models.values_list('sample_type', flat=True)))
-        self.assertSetEqual({dataset_type}, set(updated_sample_models.values_list('dataset_type', flat=True)))
-        self.assertSetEqual({True}, set(updated_sample_models.values_list('is_active', flat=True)))
-        self.assertSetEqual({'1kg.vcf.gz'}, set(updated_sample_models.values_list('elasticsearch_index', flat=True)))
-        self.assertSetEqual({'auto__2023-08-08'}, set(updated_sample_models.values_list('data_source', flat=True)))
-        self.assertSetEqual(
-            {datetime.now().strftime('%Y-%m-%d')},
-            {date.strftime('%Y-%m-%d') for date in updated_sample_models.values_list('loaded_date', flat=True)}
-        )
 
     @mock.patch('seqr.management.commands.check_for_new_samples_from_pipeline.MAX_LOOKUP_VARIANTS', 1)
     @mock.patch('seqr.management.commands.check_for_new_samples_from_pipeline.BASE_URL', 'https://test-seqr.org/')
@@ -223,56 +277,18 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         })
 
         # Test errors
+        self.mock_subprocess.return_value.communicate.return_value = b'', b'One or more URLs matched no objects'
         with self.assertRaises(CommandError) as ce:
-            call_command('check_for_new_samples_from_pipeline')
-        self.assertEqual(str(ce.exception), 'Error: the following arguments are required: path, version')
+            call_command('check_for_new_samples_from_pipeline', '--genome_version=GRCh37', '--dataset_type=MITO')
+        self.assertEqual(str(ce.exception), 'No successful runs found for genome_version=GRCh37, dataset_type=MITO')
+        self.mock_subprocess.assert_called_with(
+            f'gsutil ls gs://seqr-hail-search-data/v3.1/GRCh37/MITO/runs/*/_SUCCESS', stdout=-1, stderr=-1, shell=True
+        )
 
-        with self.assertRaises(CommandError) as ce:
-            call_command('check_for_new_samples_from_pipeline', 'GRCh38/SNV_INDEL', 'auto__2023-08-08')
-        self.assertEqual(str(ce.exception), 'Run failed for GRCh38/SNV_INDEL: auto__2023-08-08, unable to load data')
-
-        metadata = {
-            'callsets': ['1kg.vcf.gz'],
-            'sample_type': 'WES',
-            'family_samples': {
-                'F0000123_ABC': ['NA22882', 'NA20885'],
-                'F000012_12': ['NA20888', 'NA20889'],
-                'F000014_14': ['NA21234'],
-            },
-            'failed_family_samples': {
-                'relatedness_check': {
-                    'F000001_1': {'reasons': [
-                        'Sample NA19679 has expected relation "parent" to NA19675 but has coefficients [0.0, 0.8505002045292791, 0.14949979547072176, 0.5747498977353613]',
-                        'Sample NA19678 has expected relation "sibling" to NA19675 but has coefficients [0.17424888135104177, 0.6041745754450025, 0.22157654320395614, 0.5236638309264574]',
-                    ]},
-                },
-                'sex_check': {
-                    'F000001_1': {'reasons': ['Sample NA19679 has pedigree sex F but imputed sex M']},
-                    'F000014_14': {'reasons': ['Sample NA21987 has pedigree sex M but imputed sex F']},
-                },
-                'missing_samples': {
-                    'F000002_2': {'reasons': ["Missing samples: {'HG00732', 'HG00733'}"]},
-                    'F000003_3': {'reasons': ["Missing samples: {'NA20870'}"]},
-                },
-            }
-        }
-        self.mock_subprocess.return_value.wait.return_value = 1
-        self.mock_subprocess.return_value.stdout = [json.dumps(metadata).encode()]
-
-        with self.assertRaises(CommandError) as ce:
-            call_command('check_for_new_samples_from_pipeline', 'GRCh38/SNV_INDEL', 'auto__2023-08-08', '--allow-failed')
-        self.assertEqual(
-            str(ce.exception), 'Invalid families in run metadata GRCh38/SNV_INDEL: auto__2023-08-08 - F0000123_ABC')
-        self.mock_logger.warning.assert_called_with('Loading for failed run GRCh38/SNV_INDEL: auto__2023-08-08')
-
-        metadata['family_samples']['F000011_11'] = metadata['family_samples'].pop('F0000123_ABC')
-        self.mock_subprocess.return_value.stdout = [json.dumps(metadata).encode()]
-        self.mock_subprocess.return_value.wait.return_value = 0
-        with self.assertRaises(CommandError) as ce:
-            call_command('check_for_new_samples_from_pipeline', 'GRCh38/SNV_INDEL', 'auto__2023-08-08')
-        self.assertEqual(
-            str(ce.exception),
-            'Data has genome version GRCh38 but the following projects have conflicting versions: R0003_test (GRCh37)')
+        self._test_call([], [], additional_errors=[
+            'Error loading auto__2023-08-09: Data has genome version GRCh38 but the following projects have conflicting versions: R0003_test (GRCh37)',
+            'Error loading auto__2024-09-14: Data has genome version GRCh38 but the following projects have conflicting versions: R0001_1kg (GRCh37), R0003_test (GRCh37)',
+        ])
 
         # Update fixture data to allow testing edge cases
         Project.objects.filter(id__in=[1, 3]).update(genome_version=38)
@@ -281,21 +297,12 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
             sv.saved_variant_json['genomeVersion'] = '38'
             sv.save()
 
-        with self.assertRaises(ValueError) as ce:
-            call_command('check_for_new_samples_from_pipeline', 'GRCh38/SNV_INDEL', 'auto__2023-08-08')
-        self.assertEqual(str(ce.exception), 'Matches not found for sample ids: NA22882')
-
-        metadata['family_samples']['F000011_11'] = metadata['family_samples']['F000011_11'][1:]
-
         # Test success
         self.mock_logger.reset_mock()
-        self.mock_subprocess.reset_mock()
         search_body = {
             'genome_version': 'GRCh38', 'num_results': 1, 'variant_ids': [['1', 248367227, 'TC', 'T']], 'variant_keys': [],
         }
-        self._test_success('GRCh38/SNV_INDEL', metadata, dataset_type='SNV_INDEL', sample_guids={
-            EXISTING_SAMPLE_GUID, REPLACED_SAMPLE_GUID, NEW_SAMPLE_GUID_P3, NEW_SAMPLE_GUID_P4,
-        }, has_additional_requests=True, reload_calls=[
+        self._test_call(has_additional_requests=True, reload_calls=[
             {**search_body, 'sample_data': {'SNV_INDEL': [
                 {'individual_guid': 'I000017_na20889', 'family_guid': 'F000012_12', 'project_guid': 'R0003_test', 'affected': 'A', 'sample_id': 'NA20889', 'sample_type': 'WES'},
                 {'individual_guid': 'I000016_na20888', 'family_guid': 'F000012_12', 'project_guid': 'R0003_test', 'affected': 'A', 'sample_id': 'NA20888', 'sample_type': 'WES'},
@@ -307,6 +314,23 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
             'Reloading shared annotations for 3 SNV_INDEL GRCh38 saved variants (3 unique)', 'Fetched 1 additional variants', 'Fetched 1 additional variants', 'Updated 2 saved variants',
         ])
 
+        # Tests Sample models created/updated
+        # TODO test GCNV
+        sample_guids = {
+            EXISTING_SAMPLE_GUID, REPLACED_SAMPLE_GUID, NEW_SAMPLE_GUID_P3, NEW_SAMPLE_GUID_P4,
+        }
+        dataset_type = 'SNV_INDEL'
+        updated_sample_models = Sample.objects.filter(guid__in=sample_guids)
+        self.assertEqual(len(updated_sample_models), len(sample_guids))
+        self.assertSetEqual({'WES'}, set(updated_sample_models.values_list('sample_type', flat=True)))
+        self.assertSetEqual({dataset_type}, set(updated_sample_models.values_list('dataset_type', flat=True)))
+        self.assertSetEqual({True}, set(updated_sample_models.values_list('is_active', flat=True)))
+        self.assertSetEqual({'1kg.vcf.gz'}, set(updated_sample_models.values_list('elasticsearch_index', flat=True)))
+        self.assertSetEqual({'auto__2023-08-08'}, set(updated_sample_models.values_list('data_source', flat=True)))
+        self.assertSetEqual(
+            {datetime.now().strftime('%Y-%m-%d')},
+            {date.strftime('%Y-%m-%d') for date in updated_sample_models.values_list('loaded_date', flat=True)}
+        )
         old_data_sample_guid = 'S000143_na20885'
         self.assertFalse(Sample.objects.get(guid=old_data_sample_guid).is_active)
 
@@ -492,31 +516,31 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         self.mock_send_slack.assert_not_called()
         self.assertFalse(Sample.objects.filter(last_modified_date__gt=sample_last_modified).exists())
 
-    @responses.activate
-    def test_gcnv_command(self):
-        responses.add(responses.POST, f'{MOCK_HAIL_HOST}:5000/search', status=400)
-        metadata = {
-            'callsets': ['1kg.vcf.gz'],
-            'sample_type': 'WES',
-            'family_samples': {'F000004_4': ['NA20872'], 'F000012_12': ['NA20889']},
-        }
-        self._test_success('GRCh37/GCNV', metadata, dataset_type='SV', sample_guids={f'S00000{GUID_ID}_na20872', f'S00000{GUID_ID}_na20889'}, reload_calls=[{
-            'genome_version': 'GRCh37', 'num_results': 1, 'variant_ids': [], 'variant_keys': ['prefix_19107_DEL'],
-            'sample_data': {'SV_WES': [{'individual_guid': 'I000017_na20889', 'family_guid': 'F000012_12', 'project_guid': 'R0003_test', 'affected': 'A', 'sample_id': 'NA20889', 'sample_type': 'WES'}]},
-        }], reload_annotations_logs=['No additional saved variants to update'])
-
-        self.mock_send_slack.assert_has_calls([
-            mock.call(
-                'seqr-data-loading', f'1 new WES SV samples are loaded in {SEQR_URL}project/R0001_1kg/project_page\n```NA20872```',
-            ), mock.call(
-                'seqr-data-loading', f'1 new WES SV samples are loaded in {SEQR_URL}project/{PROJECT_GUID}/project_page\n```NA20889```',
-            ),
-        ])
-
-        self.mock_utils_logger.error.assert_called_with('Error in project Test Reprocessed Project: Bad Request')
-        self.mock_utils_logger.info.assert_has_calls([
-            mock.call('Reload Summary: '),
-            mock.call('Skipped the following 1 project with no saved variants: 1kg project nåme with uniçøde'),
-            mock.call('1 failed projects'),
-            mock.call('  Test Reprocessed Project: Bad Request'),
-        ])
+    # @responses.activate
+    # def test_gcnv_command(self):
+    #     responses.add(responses.POST, f'{MOCK_HAIL_HOST}:5000/search', status=400)
+    #     metadata = {
+    #         'callsets': ['1kg.vcf.gz'],
+    #         'sample_type': 'WES',
+    #         'family_samples': {'F000004_4': ['NA20872'], 'F000012_12': ['NA20889']},
+    #     }
+    #     self._test_call('GRCh37/GCNV', metadata, dataset_type='SV', sample_guids={f'S00000{GUID_ID}_na20872', f'S00000{GUID_ID}_na20889'}, reload_calls=[{
+    #         'genome_version': 'GRCh37', 'num_results': 1, 'variant_ids': [], 'variant_keys': ['prefix_19107_DEL'],
+    #         'sample_data': {'SV_WES': [{'individual_guid': 'I000017_na20889', 'family_guid': 'F000012_12', 'project_guid': 'R0003_test', 'affected': 'A', 'sample_id': 'NA20889', 'sample_type': 'WES'}]},
+    #     }], reload_annotations_logs=['No additional saved variants to update'])
+    #
+    #     self.mock_send_slack.assert_has_calls([
+    #         mock.call(
+    #             'seqr-data-loading', f'1 new WES SV samples are loaded in {SEQR_URL}project/R0001_1kg/project_page\n```NA20872```',
+    #         ), mock.call(
+    #             'seqr-data-loading', f'1 new WES SV samples are loaded in {SEQR_URL}project/{PROJECT_GUID}/project_page\n```NA20889```',
+    #         ),
+    #     ])
+    #
+    #     self.mock_utils_logger.error.assert_called_with('Error in project Test Reprocessed Project: Bad Request')
+    #     self.mock_utils_logger.info.assert_has_calls([
+    #         mock.call('Reload Summary: '),
+    #         mock.call('Skipped the following 1 project with no saved variants: 1kg project nåme with uniçøde'),
+    #         mock.call('1 failed projects'),
+    #         mock.call('  Test Reprocessed Project: Bad Request'),
+    #     ])

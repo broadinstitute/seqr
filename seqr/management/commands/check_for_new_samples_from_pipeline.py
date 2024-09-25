@@ -23,8 +23,8 @@ from settings import SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, BASE_URL
 
 logger = logging.getLogger(__name__)
 
-GS_PATH_TEMPLATE = 'gs://seqr-hail-search-data/v3.1/{genome_version}/{dataset_type}/runs/{version}/_SUCCESS'
-GS_PATH_FIELDS = ['genome_version', 'dataset_type', 'version']
+GS_PATH_TEMPLATE = 'gs://seqr-hail-search-data/v3.1/{genome_version}/{dataset_type}/runs/{run_version}/_SUCCESS'
+GS_PATH_FIELDS = ['genome_version', 'dataset_type', 'run_version']
 GS_PATH_REGEX = GS_PATH_TEMPLATE.format(**{field: f'(?P<{field}>[^/]+)' for field in GS_PATH_FIELDS})
 
 DATASET_TYPE_MAP = {'GCNV': Sample.DATASET_TYPE_SV_CALLS}
@@ -42,20 +42,19 @@ class Command(BaseCommand):
     help = 'Check for newly loaded seqr samples'
 
     def add_arguments(self, parser):
-        parser.add_argument('path')
         parser.add_argument('--genome_version')
         parser.add_argument('--dataset_type')
-        parser.add_argument('--version')
+        parser.add_argument('--run-version')
 
     def handle(self, *args, **options):
         gs_path = GS_PATH_TEMPLATE.format(**{field: options[field] or '*' for field in GS_PATH_FIELDS})
         success_runs = {path: re.match(GS_PATH_REGEX, path).groupdict() for path in list_files(gs_path, user=None)}
         if not success_runs:
-            user_args = {f'{k}={v}' for k, v in options.items() if v}
+            user_args = [f'{k}={options[k]}' for k in GS_PATH_FIELDS if options[k]]
             raise CommandError(f'No successful runs found for {", ".join(user_args)}')
 
         loaded_runs = set(Sample.objects.filter(data_source__isnull=False).values_list('data_source', flat=True))
-        new_runs = {path: run for path, run in success_runs.items() if run['version'] not in loaded_runs}
+        new_runs = {path: run for path, run in success_runs.items() if run['run_version'] not in loaded_runs}
         if not new_runs:
             logger.info(f'Data already loaded for all {len(success_runs)} runs')
             return
@@ -71,8 +70,8 @@ class Command(BaseCommand):
                 data_type_key = (data_type, run['genome_version'])
                 updated_families_by_data_type[data_type_key].update(updated_families)
                 updated_variants_by_data_type[data_type_key].update(updated_variants_by_id)
-            except CommandError as e:
-                errors.append(f'Error loading {run["version"]}: {e}')
+            except Exception as e:
+                errors.append(f'Error loading {run["run_version"]}: {e}')
 
         # Reset cached results for all projects, as seqr AFs will have changed for all projects when new data is added
         reset_cached_search_results(project=None)
@@ -88,16 +87,16 @@ class Command(BaseCommand):
         logger.info('DONE')
 
     @classmethod
-    def _load_new_samples(cls, metadata_path, genome_version, dataset_type, version):
+    def _load_new_samples(cls, metadata_path, genome_version, dataset_type, run_version):
         dataset_type = DATASET_TYPE_MAP.get(dataset_type, dataset_type)
 
-        logger.info(f'Loading new samples from {genome_version}/{dataset_type}: {version}')
+        logger.info(f'Loading new samples from {genome_version}/{dataset_type}: {run_version}')
 
         metadata = json.loads(next(line for line in file_iter(metadata_path)))
         families = Family.objects.filter(guid__in=metadata['family_samples'].keys())
         if len(families) < len(metadata['family_samples']):
             invalid = metadata['family_samples'].keys() - set(families.values_list('guid', flat=True))
-            raise CommandError(f'Invalid families in run metadata {genome_version}/{dataset_type}: {version} - {", ".join(invalid)}')
+            raise CommandError(f'Invalid families in run metadata {genome_version}/{dataset_type}: {run_version} - {", ".join(invalid)}')
 
         family_project_map = {f.guid: f.project for f in families.select_related('project')}
         samples_by_project = defaultdict(list)
@@ -123,7 +122,7 @@ class Command(BaseCommand):
         updated_samples, inactivated_sample_guids, *args = match_and_update_search_samples(
             projects=samples_by_project.keys(),
             sample_project_tuples=sample_project_tuples,
-            sample_data={'data_source': version, 'elasticsearch_index': ';'.join(metadata['callsets'])},
+            sample_data={'data_source': run_version, 'elasticsearch_index': ';'.join(metadata['callsets'])},
             sample_type=sample_type,
             dataset_type=dataset_type,
             user=None,
