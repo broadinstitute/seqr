@@ -9,15 +9,12 @@ from hail_search.constants import ABSENT_PATH_SORT_OFFSET, CLINVAR_KEY, CLINVAR_
     CLINVAR_PATH_FILTER, \
     CLINVAR_PATH_RANGES, CLINVAR_PATH_SIGNIFICANCES, ALLOWED_TRANSCRIPTS, ALLOWED_SECONDARY_TRANSCRIPTS, \
     PATHOGENICTY_SORT_KEY, CONSEQUENCE_SORT, \
-    PATHOGENICTY_HGMD_SORT_KEY, SAMPLE_TYPE_WES, SAMPLE_TYPE_WGS, COMPOUND_HET, MAX_LOAD_INTERVALS
+    PATHOGENICTY_HGMD_SORT_KEY, COMPOUND_HET, MAX_LOAD_INTERVALS
+from hail_search.definitions import SampleType
 from hail_search.queries.base import BaseHailTableQuery, PredictionPath, QualityFilterFormat, MAX_PARTITIONS, \
     HT_CHUNK_SIZE
 
 REFERENCE_DATASETS_DIR = os.environ.get('REFERENCE_DATASETS_DIR', '/seqr/seqr-reference-data')
-WES_FAMILY_ENTRIES_FIELD = 'wes_family_entries'
-WGS_FAMILY_ENTRIES_FIELD = 'wgs_family_entries'
-WES_FILTERS_FIELD = 'wes_filters'
-WGS_FILTERS_FIELD = 'wgs_filters'
 
 logger = logging.getLogger(__name__)
 
@@ -143,7 +140,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
             entries[sample_type] = (ht, sample_data)
 
         return self._filter_entries_ht_both_sample_types(
-            *entries[SAMPLE_TYPE_WES], *entries[SAMPLE_TYPE_WGS], **kwargs
+            *entries[SampleType.WES.value], *entries[SampleType.WGS.value], **kwargs
         )
 
     def _import_and_filter_multiple_project_hts(
@@ -160,7 +157,9 @@ class MitoHailTableQuery(BaseHailTableQuery):
 
         filtered_project_hts = []
         filtered_comp_het_project_hts = []
-        for (wes_ht, wes_project_samples), (wgs_ht, wgs_project_samples) in zip(entries[SAMPLE_TYPE_WES], entries[SAMPLE_TYPE_WGS]):
+        for (wes_ht, wes_project_samples), (wgs_ht, wgs_project_samples) in zip(
+            entries[SampleType.WES.value], entries[SampleType.WGS.value]
+        ):
             ht, comp_het_ht = self._filter_entries_ht_both_sample_types(
                 wes_ht, wes_project_samples, wgs_ht, wgs_project_samples, **kwargs
             )
@@ -174,9 +173,9 @@ class MitoHailTableQuery(BaseHailTableQuery):
     def _load_prefiltered_project_hts_both_sample_types(
         self, project_samples: dict, n_partitions: int, **kwargs
     ) -> dict[str, list[tuple[hl.Table, dict]]]:
-        prefiltered_project_hts = {SAMPLE_TYPE_WES: [], SAMPLE_TYPE_WGS: []}
-        project_hts = {SAMPLE_TYPE_WES: [], SAMPLE_TYPE_WGS: []}
-        sample_data = {SAMPLE_TYPE_WES: {}, SAMPLE_TYPE_WGS: {}}
+        prefiltered_project_hts = {sample_type.value: [] for sample_type in SampleType}
+        project_hts = {sample_type.value: [] for sample_type in SampleType}
+        sample_data = {sample_type.value: {} for sample_type in SampleType}
         for project_guid, project_sample_type_data in project_samples.items():
             for sample_type, family_sample_data in project_sample_type_data.items():
                 project_ht = self._read_project_table(project_guid, sample_type)
@@ -187,14 +186,14 @@ class MitoHailTableQuery(BaseHailTableQuery):
                 sample_data[sample_type].update(family_sample_data)
 
             # Merge both WES and WGS project_hts when either of their lengths reaches the chunk size
-            if len(project_hts[SAMPLE_TYPE_WES]) >= HT_CHUNK_SIZE or len(project_hts[SAMPLE_TYPE_WGS]) >= HT_CHUNK_SIZE:
+            if len(project_hts[SampleType.WES.value]) >= HT_CHUNK_SIZE or len(project_hts[SampleType.WGS.value]) >= HT_CHUNK_SIZE:
                 for sample_type in project_hts:
                     self._prefilter_merged_project_hts(
                         project_hts[sample_type], sample_data[sample_type],
                         prefiltered_project_hts[sample_type], n_partitions, **kwargs
                     )
-                project_hts = {SAMPLE_TYPE_WES: [], SAMPLE_TYPE_WGS: []}
-                sample_data = {SAMPLE_TYPE_WES: {}, SAMPLE_TYPE_WGS: {}}
+                project_hts = {sample_type.value: [] for sample_type in SampleType}
+                sample_data = {sample_type.value: {} for sample_type in SampleType}
 
         for sample_type in project_hts:
             self._prefilter_merged_project_hts(
@@ -208,8 +207,8 @@ class MitoHailTableQuery(BaseHailTableQuery):
     ):
         wes_ht, sorted_wes_family_sample_data = self._add_entry_sample_families(wes_ht, wes_project_samples)
         wgs_ht, sorted_wgs_family_sample_data = self._add_entry_sample_families(wgs_ht, wgs_project_samples)
-        wes_ht = wes_ht.rename({'family_entries': WES_FAMILY_ENTRIES_FIELD, 'filters': WES_FILTERS_FIELD})
-        wgs_ht = wgs_ht.rename({'family_entries': WGS_FAMILY_ENTRIES_FIELD, 'filters': WGS_FILTERS_FIELD})
+        wes_ht = wes_ht.rename({'family_entries': SampleType.WES.family_entries_field, 'filters': SampleType.WES.filters_field})
+        wgs_ht = wgs_ht.rename({'family_entries': SampleType.WGS.family_entries_field, 'filters': SampleType.WGS.filters_field})
         ht = wes_ht.join(wgs_ht, how='outer')
         ht = self._annotate_passes_quality_filter(ht, quality_filter, **kwargs)
         ht, ch_ht = self._filter_inheritance_both_sample_types(
@@ -217,15 +216,28 @@ class MitoHailTableQuery(BaseHailTableQuery):
         )
         return ht, ch_ht
 
+    def _annotate_passes_quality_filter(self, ht: hl.Table, quality_filter, **kwargs) -> hl.Table:
+        for sample_type in SampleType:
+            passes_quality_filter = self._get_family_passes_quality_filter(
+                quality_filter, ht, sample_type.filters_field, **kwargs
+            )
+            ht = ht.annotate(**{
+                sample_type.passes_quality_field: ht[sample_type.family_entries_field] if passes_quality_filter is None
+                else (ht[sample_type.family_entries_field].map(
+                        lambda entries: hl.or_missing(passes_quality_filter(entries), entries)
+                    ))
+                })
+        return ht
+
     def _filter_inheritance_both_sample_types(self, ht, inheritance_filter, sorted_wes_family_sample_data, sorted_wgs_family_sample_data):
         family_idx_map = self._build_family_index_map(sorted_wes_family_sample_data, sorted_wgs_family_sample_data)
         any_valid_entry, is_any_affected = self._get_any_family_member_gt_has_alt_filter()
-        ht = ht.annotate(wes_passes_inheritance=ht[WES_FAMILY_ENTRIES_FIELD].map(
-            lambda entries: hl.or_missing(entries.any(any_valid_entry), entries)
-        ))
-        ht = ht.annotate(wgs_passes_inheritance=ht[WGS_FAMILY_ENTRIES_FIELD].map(
-            lambda entries: hl.or_missing(entries.any(any_valid_entry), entries)
-        ))
+        for sample_type in SampleType:
+            ht = ht.annotate(**{
+                sample_type.passes_inheritance_field: ht[sample_type.family_entries_field].map(
+                    lambda entries: hl.or_missing(entries.any(any_valid_entry), entries)
+            )})
+
         comp_het_ht = None
         if self._has_comp_het_search:
             comp_het_ht = self._filter_families_inheritance_both_sample_types(
@@ -247,112 +259,78 @@ class MitoHailTableQuery(BaseHailTableQuery):
         self, ht, inheritance_mode, inheritance_filter,
         sorted_wes_family_sample_data, sorted_wgs_family_sample_data, family_idx_map
     ):
-        wes_field_names = self._get_inheritance_field_names(SAMPLE_TYPE_WES)
-        wgs_field_names = self._get_inheritance_field_names(SAMPLE_TYPE_WGS)
-        ht = self._annotate_families_inheritance(
-            ht, inheritance_mode, inheritance_filter, sorted_wes_family_sample_data, **wes_field_names
-        )
-        ht = self._annotate_families_inheritance(
-            ht, inheritance_mode, inheritance_filter, sorted_wgs_family_sample_data, **wgs_field_names
-        )
+        sample_types = [
+            (SampleType.WES, sorted_wes_family_sample_data),
+            (SampleType.WGS, sorted_wgs_family_sample_data)
+        ]
+        for sample_type, sorted_family_sample_data in sample_types:
+            ht = self._annotate_families_inheritance(
+                ht, inheritance_mode, inheritance_filter, sorted_family_sample_data,
+                annotation=sample_type.passes_inheritance_field, entries_ht_field=sample_type.family_entries_field
+            )
         return self._apply_multi_sample_type_entry_filters(ht, family_idx_map)
-
-    def _annotate_passes_quality_filter(self, ht: hl.Table, quality_filter, **kwargs) -> hl.Table:
-        wes_passes_quality_filter = self._get_family_passes_quality_filter(quality_filter, ht, WES_FILTERS_FIELD, **kwargs)
-        wes_passes = ht[WES_FAMILY_ENTRIES_FIELD] if wes_passes_quality_filter is None else (
-            ht[WES_FAMILY_ENTRIES_FIELD].map(lambda entries: hl.or_missing(wes_passes_quality_filter(entries), entries))
-        )
-        ht = ht.annotate(wes_passes_quality=wes_passes)
-        wgs_passes_quality_filter = self._get_family_passes_quality_filter(quality_filter, ht, WGS_FILTERS_FIELD, **kwargs)
-        wgs_passes = ht[WGS_FAMILY_ENTRIES_FIELD] if wgs_passes_quality_filter is None else (
-            ht[WGS_FAMILY_ENTRIES_FIELD].map(lambda entries: hl.or_missing(wgs_passes_quality_filter(entries), entries))
-        )
-        return ht.annotate(wgs_passes_quality=wgs_passes)
 
     @staticmethod
     def _build_family_index_map(sorted_wes_family_sample_data, sorted_wgs_family_sample_data):
         family_guid_idx_map = defaultdict(dict)
-
-        for family_idx, samples in enumerate(sorted_wes_family_sample_data):
-            family_guid = samples[0]['familyGuid']
-            family_guid_idx_map[family_guid][SAMPLE_TYPE_WES] = family_idx
-
-        for family_idx, samples in enumerate(sorted_wgs_family_sample_data):
-            family_guid = samples[0]['familyGuid']
-            family_guid_idx_map[family_guid][SAMPLE_TYPE_WGS] = family_idx
-
+        sample_types = [
+            (SampleType.WES, sorted_wes_family_sample_data),
+            (SampleType.WGS, sorted_wgs_family_sample_data)
+        ]
+        for sample_type, sorted_family_sample_data in sample_types:
+            for family_idx, samples in enumerate(sorted_family_sample_data):
+                family_guid = samples[0]['familyGuid']
+                family_guid_idx_map[family_guid][sample_type.value] = family_idx
         return hl.dict(family_guid_idx_map)
 
     def _apply_multi_sample_type_entry_filters(self, ht, family_idx_map) -> hl.Table:
         # Keep family from both sample types if either passes quality AND inheritance
-        ht = ht.annotate(
-            wes_family_entries=hl.enumerate(ht[WES_FAMILY_ENTRIES_FIELD]).map(
-                lambda x: hl.or_missing(  # x[0] is family index, x[1] is list of samples
-                    self._family_passes_quality_inheritance(
-                        ht, SAMPLE_TYPE_WES, x[0], x[1][0]['familyGuid'], family_idx_map
-                    ), x[1]
-                )
-            ), wgs_family_entries=hl.enumerate(ht[WGS_FAMILY_ENTRIES_FIELD]).map(
-                lambda x: hl.or_missing(
-                    self._family_passes_quality_inheritance(
-                        ht, SAMPLE_TYPE_WGS, x[0], x[1][0]['familyGuid'], family_idx_map
-                    ), x[1]
-                )
-            )
-        )
+        for sample_type in SampleType:
+            ht = ht.annotate(**{
+                sample_type.family_entries_field: hl.enumerate(ht[sample_type.family_entries_field]).map(
+                    lambda x: hl.or_missing(  # x[0] is family index, x[1] is list of samples
+                        self._family_passes_quality_inheritance(
+                            ht, sample_type, x[0], x[1][0]['familyGuid'], family_idx_map
+                        ), x[1]
+                    )
+                )})
         # Filter out families with no valid entries in either sample type
-        ht = ht.filter(ht.wes_family_entries.any(hl.is_defined) | ht.wgs_family_entries.any(hl.is_defined))
+        ht = ht.filter(
+            ht[SampleType.WES.family_entries_field].any(hl.is_defined) | ht[SampleType.WGS.family_entries_field].any(hl.is_defined)
+        )
         return ht.transmute(
             family_entries=hl.coalesce(
-                ht.wes_family_entries, hl.empty_array(ht.wes_family_entries.dtype.element_type)
+                ht[SampleType.WES.family_entries_field], hl.empty_array(ht[SampleType.WES.family_entries_field].dtype.element_type)
             ).extend(hl.coalesce(
-                ht.wgs_family_entries, hl.empty_array(ht.wgs_family_entries.dtype.element_type)
+                ht[SampleType.WGS.family_entries_field], hl.empty_array(ht[SampleType.WGS.family_entries_field].dtype.element_type)
             )).filter(lambda entries: entries.any(hl.is_defined)),
-            filters=hl.coalesce(ht.wes_filters, hl.empty_set(hl.tstr)).union(
-                hl.coalesce(ht.wgs_filters, hl.empty_set(hl.tstr))
+            filters=hl.coalesce(ht[SampleType.WES.filters_field], hl.empty_set(hl.tstr)).union(
+                hl.coalesce(ht[SampleType.WGS.filters_field], hl.empty_set(hl.tstr))
             )
         )
 
     @staticmethod
     def _family_passes_quality_inheritance(ht, sample_type, sample_type_family_idx, family_guid, family_idx_map):
-        if sample_type == SAMPLE_TYPE_WES:
-            sample_type_quality_field = 'wes_passes_quality'
-            sample_type_inheritance_field = 'wes_passes_inheritance'
-            other_sample_type_quality_field = 'wgs_passes_quality'
-            other_sample_type_inheritance_field = 'wgs_passes_inheritance'
-            other_sample_type = SAMPLE_TYPE_WGS
-        else:
-            sample_type_quality_field = 'wgs_passes_quality'
-            sample_type_inheritance_field = 'wgs_passes_inheritance'
-            other_sample_type_quality_field = 'wes_passes_quality'
-            other_sample_type_inheritance_field = 'wes_passes_inheritance'
-            other_sample_type = SAMPLE_TYPE_WES
-
         return (
-            hl.is_defined(ht[sample_type_quality_field][sample_type_family_idx]) &
-            hl.is_defined(ht[sample_type_inheritance_field][sample_type_family_idx])
+            hl.is_defined(ht[sample_type.passes_quality_field][sample_type_family_idx]) &
+            hl.is_defined(ht[sample_type.passes_inheritance_field][sample_type_family_idx])
         ) | (
-            (hl.is_defined(family_guid) & family_idx_map.get(family_guid).contains(other_sample_type)) &
+            (hl.is_defined(family_guid) & family_idx_map.get(family_guid).contains(sample_type.other_sample_type.value)) &
             hl.bind(lambda other_sample_type_family_idx: (
-                hl.is_defined(ht[other_sample_type_quality_field][other_sample_type_family_idx]) &
-                hl.is_defined(ht[other_sample_type_inheritance_field][other_sample_type_family_idx])
-            ), family_idx_map[family_guid][other_sample_type])
+                hl.is_defined(ht[sample_type.other_sample_type.passes_quality_field][other_sample_type_family_idx]) &
+                hl.is_defined(ht[sample_type.other_sample_type.passes_inheritance_field][other_sample_type_family_idx])
+            ), family_idx_map[family_guid][sample_type.other_sample_type.value])
         )
 
-    def _get_sample_genotype(self, samples, r=None, include_genotype_overrides=False, select_fields=None):
-        if not self._has_both_sample_types:
+    def _get_sample_genotype(
+        self, samples, r=None, include_genotype_overrides=False, select_fields=None, all_samples=False,
+    ):
+        if not self._has_both_sample_types and not all_samples:
             return super()._get_sample_genotype(samples, r, include_genotype_overrides, select_fields)
 
         return samples.map(lambda sample: self._select_genotype_for_sample(
             sample, r, include_genotype_overrides, select_fields
         ))
-
-    @staticmethod
-    def _get_inheritance_field_names(sample_type: str):
-        return {
-            'annotation': f'{sample_type.lower()}_passes_inheritance',
-            'entries_ht_field': f'{sample_type.lower()}_family_entries'
-        }
 
     @staticmethod
     def _selected_main_transcript_expr(ht):
@@ -593,7 +571,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
 
         annotation_fields.update({
             'familyGenotypes': lambda r: hl.dict(r.family_entries.map(
-                lambda entries: (entries.first().familyGuid, entries.filter(hl.is_defined).map(self._get_sample_genotype))
+                lambda entries: (entries.first().familyGuid, self._get_sample_genotype(entries.filter(hl.is_defined), all_samples=True))
             )),
         })
 

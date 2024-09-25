@@ -136,7 +136,7 @@ class BaseHailTableQuery(object):
 
         return annotation_fields
 
-    def _get_sample_genotype(self, samples, r=None, include_genotype_overrides=False, select_fields=None):
+    def _get_sample_genotype(self, samples, r=None, include_genotype_overrides=False, select_fields=None, **kwargs):
         sample = samples[0]
         return self._select_genotype_for_sample(sample, r, include_genotype_overrides, select_fields)
 
@@ -1197,7 +1197,6 @@ class BaseHailTableQuery(object):
                 k: v for k, v in annotation_fields.items()
                 if k not in {FAMILY_GUID_FIELD, GENOTYPES_FIELD, 'genotypeFilters'}
             }
-
         formatted = self._format_results(ht.key_by(), annotation_fields=annotation_fields, include_genotype_overrides=False)
 
         return formatted.aggregate(hl.agg.take(formatted.row, len(variant_ids)))
