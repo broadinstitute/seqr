@@ -414,7 +414,7 @@ FAMILY_4_SAMPLE_DATA = {
     ]
 }
 
-FAMILY_5_VARIANT = {
+FAMILY_5_VARIANT_1 = {
     "xpos": 2044312653,
     "rsid": None,
     "CAID": "CA127830",
@@ -548,6 +548,125 @@ FAMILY_5_VARIANT = {
     "genomeVersion": "38",
 }
 
+FAMILY_5_VARIANT_2 = {
+    "xpos": None,
+    "rsid": None,
+    "CAID": None,
+    "genotypes": {
+        "I00001_bon_b15_95_1_d1": [
+            {
+                "sampleId": "BON_B15-95_1_D1",
+                "sampleType": "WES",
+                "familyGuid": "F000005_5",
+                "individualGuid": "I00001_bon_b15_95_1_d1",
+                "numAlt": 1,
+                "dp": 71,
+                "gq": 99,
+                "ab": 0.5211267471313477,
+            },
+            {
+                "sampleId": "BON_B15-95_1_D1",
+                "sampleType": "WGS",
+                "familyGuid": "F000005_5",
+                "individualGuid": "I00001_bon_b15_95_1_d1",
+                "numAlt": 1,
+                "dp": 49,
+                "gq": 99,
+                "ab": 0.5306122303009033,
+            },
+        ],
+        "I00003_bon_b15_95_3_d1": [
+            {
+                "sampleId": "BON_B15-95_3_D1",
+                "sampleType": "WES",
+                "familyGuid": "F000005_5",
+                "individualGuid": "I00003_bon_b15_95_3_d1",
+                "numAlt": 1,
+                "dp": 78,
+                "gq": 20,
+                "ab": 0.4743589758872986,
+            }
+        ],
+        "I00004_bon_b15_95_4_d1": [
+            {
+                "sampleId": "BON_B15-95_4_D1",
+                "sampleType": "WES",
+                "familyGuid": "F000005_5",
+                "individualGuid": "I00004_bon_b15_95_4_d1",
+                "numAlt": 0,
+                "dp": None,
+                "gq": 40,
+                "ab": None,
+            }
+        ],
+    },
+    "populations": {
+        "seqr": {"af": 0.0, "ac": 0, "an": 0, "hom": 0},
+        "topmed": {"af": 0.0, "ac": 0, "an": 0, "hom": 0, "het": 0},
+        "exac": {
+            "af": 0.0,
+            "ac": 0,
+            "an": 0,
+            "hom": 0,
+            "hemi": 0,
+            "het": 0,
+            "filter_af": 0.0,
+        },
+        "gnomad_exomes": {
+            "af": 0.0,
+            "ac": 0,
+            "an": 0,
+            "hom": 0,
+            "hemi": 0,
+            "filter_af": 0.0,
+        },
+        "gnomad_genomes": {
+            "af": 0.0,
+            "ac": 0,
+            "an": 0,
+            "hom": 0,
+            "hemi": 0,
+            "filter_af": 0.0,
+        },
+    },
+    "predictions": {
+        "cadd": None,
+        "eigen": None,
+        "mpc": None,
+        "primate_ai": None,
+        "splice_ai": None,
+        "splice_ai_consequence": None,
+        "mut_taster": None,
+        "polyphen": None,
+        "revel": None,
+        "sift": None,
+        "fathmm": None,
+        "mut_pred": None,
+        "vest": None,
+        "gnomad_noncoding": None,
+    },
+    "chrom": "2",
+    "pos": 44312654,
+    "ref": "T",
+    "alt": "C",
+    "mainTranscriptId": None,
+    "selectedMainTranscriptId": None,
+    "familyGuids": ["F000005_5"],
+    "genotypeFilters": "",
+    "variantId": None,
+    "liftedOverGenomeVersion": None,
+    "liftedOverChrom": None,
+    "liftedOverPos": None,
+    "clinvar": None,
+    "hgmd": None,
+    "screenRegionType": None,
+    "transcripts": {},
+    "sortedMotifFeatureConsequences": None,
+    "sortedRegulatoryFeatureConsequences": None,
+    "_sort": [None],
+    "genomeVersion": "38",
+}
+
 FAMILY_5_SAMPLE_DATA = {
     'SNV_INDEL': [
         {'sample_id': 'BON_B15-95_1_D1', 'individual_guid': 'I00001_bon_b15_95_1_d1', 'family_guid': 'F000005_5',
@@ -652,6 +771,7 @@ class HailSearchTestCase(AioHTTPTestCase):
             self.assertEqual(resp.status, 200)
             resp_json = await resp.json()
         self.assertSetEqual(set(resp_json.keys()), {'results', 'total'})
+        print(results)
         self.assertEqual(resp_json['total'], len(results))
         for i, result in enumerate(resp_json['results']):
             self.assertEqual(result, results[i])
@@ -743,7 +863,7 @@ class HailSearchTestCase(AioHTTPTestCase):
         )
 
     async def test_both_sample_types_search(self):
-        # One family in a multi-project search has identical exome and genome data.
+        # One family (F000011_11) in a multi-project search has identical exome and genome data.
         expected_variants = [PROJECT_2_VARIANT, MULTI_PROJECT_VARIANT1, MULTI_PROJECT_VARIANT2, VARIANT3, VARIANT4]
         expected_results = []
         for variant in expected_variants:
@@ -771,28 +891,31 @@ class HailSearchTestCase(AioHTTPTestCase):
             [FAMILY_4_VARIANT], sample_data=FAMILY_4_SAMPLE_DATA, inheritance_mode=inheritance_mode,
         )
 
-        # Variant in family_5 is inherited in exome and there is no parental data in genome.
-        # Genome passes quality and inheritance (since there is no parental data), show genotypes for both sample types.
+        # Variant 1 in family_5 is inherited in exome and there is no parental data in genome.
+        # Variant 2 in family_5 is inherited in exome with low parental GQ.
+        # Variant 1 genome passes quality and inheritance (since there is no parental data), show genotypes for both sample types.
+        # Variant 2 genome passes, but exome does not pass quality check. Do not show variant.
         inheritance_mode = 'recessive'
         await self._assert_expected_search(
-            [FAMILY_5_VARIANT], sample_data=FAMILY_5_SAMPLE_DATA, inheritance_mode=inheritance_mode,
+            [FAMILY_5_VARIANT_1], sample_data=FAMILY_5_SAMPLE_DATA, inheritance_mode=inheritance_mode,
             **COMP_HET_ALL_PASS_FILTERS,
         )
-        # Exome passes quality and inheritance, show genotypes for both sample types.
+        # Variant 1 exome passes quality and inheritance, show genotypes for both sample types.
+        # Variant 2 exome does not pass quality but does pass inheritance, show genotypes for both sample types.
         inheritance_mode = 'de_novo'
         await self._assert_expected_search(
-            [FAMILY_5_VARIANT], sample_data=FAMILY_5_SAMPLE_DATA, inheritance_mode=inheritance_mode,
+            [FAMILY_5_VARIANT_1, FAMILY_5_VARIANT_2], sample_data=FAMILY_5_SAMPLE_DATA, inheritance_mode=inheritance_mode,
         )
 
         # Search with variants from families 4 and 5 together. They are in the same project.
         inheritance_mode = 'recessive'
         await self._assert_expected_search(
-            [FAMILY_5_VARIANT, FAMILY_4_VARIANT], sample_data=FAMILIES_4_5_SAMPLE_DATA, inheritance_mode=inheritance_mode,
+            [FAMILY_5_VARIANT_1, FAMILY_4_VARIANT], sample_data=FAMILIES_4_5_SAMPLE_DATA, inheritance_mode=inheritance_mode,
             **COMP_HET_ALL_PASS_FILTERS,
         )
         inheritance_mode = 'de_novo'
         await self._assert_expected_search(
-            [FAMILY_5_VARIANT, FAMILY_4_VARIANT], sample_data=FAMILIES_4_5_SAMPLE_DATA, inheritance_mode=inheritance_mode,
+            [FAMILY_5_VARIANT_1, FAMILY_4_VARIANT], sample_data=FAMILIES_4_5_SAMPLE_DATA, inheritance_mode=inheritance_mode,
         )
 
     async def test_inheritance_filter(self):
