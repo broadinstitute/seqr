@@ -369,13 +369,13 @@ class BaseHailTableQuery(object):
         if not project_hts:
             return
         ht = self._merge_project_hts(project_hts, n_partitions, include_all_globals=True)
-        ht, comp_het_ht = self._filter_entries_table(ht, sample_data, **kwargs)
+        ht, comp_het_ht = self._filter_entries_table(ht, sample_data, is_merged_ht=True, **kwargs)
         if ht is not None:
             filtered_project_hts.append(ht)
         if comp_het_ht is not None:
             filtered_comp_het_project_hts.append(comp_het_ht)
 
-    @classemthod
+    @classmethod
     def _merge_project_hts(cls, project_hts, n_partitions, include_all_globals=False):
         if not project_hts:
             return None
@@ -401,10 +401,10 @@ class BaseHailTableQuery(object):
 
         return ht.transmute_globals(**global_expressions)
 
-    def _filter_entries_table(self, ht, sample_data, inheritance_filter=None, quality_filter=None, **kwargs):
+    def _filter_entries_table(self, ht, sample_data, inheritance_filter=None, quality_filter=None, is_merged_ht=False, **kwargs):
         ht = self._prefilter_entries_table(ht, **kwargs)
 
-        ht, sorted_family_sample_data = self._add_entry_sample_families(ht, sample_data)
+        ht, sorted_family_sample_data = self._add_entry_sample_families(ht, sample_data, is_merged_ht)
 
         passes_quality_filter = self._get_family_passes_quality_filter(quality_filter, ht, **kwargs)
         if passes_quality_filter is not None:
@@ -419,7 +419,7 @@ class BaseHailTableQuery(object):
 
         return ht, ch_ht
 
-    def _add_entry_sample_families(self, ht, sample_data):
+    def _add_entry_sample_families(self, ht, sample_data, is_merged_ht):
         ht_globals = hl.eval(ht.globals)
 
         missing_samples = set()
@@ -462,7 +462,7 @@ class BaseHailTableQuery(object):
         ht = ht.transmute(family_entries=family_sample_index_data.map(lambda family_tuple: family_tuple[1].map(
             lambda sample_tuple: ht.family_entries[family_tuple[0]][sample_tuple[0]].annotate(**sample_tuple[1])
         )))
-        if 'filters' in ht:
+        if not is_merged_ht:
             ht = self._annotate_entry_filters(ht)
 
         return ht, sorted_family_sample_data
@@ -1134,7 +1134,7 @@ class BaseHailTableQuery(object):
         if not include_sample_annotations:
             annotation_fields = {
                 k: v for k, v in annotation_fields.items()
-                if k not in {FAMILY_GUID_FIELD, GENOTYPES_FIELD, 'genotypeFilters'}
+                if k not in {FAMILY_GUID_FIELD, GENOTYPES_FIELD}
             }
 
         formatted = self._format_results(ht.key_by(), annotation_fields=annotation_fields, include_genotype_overrides=False)
