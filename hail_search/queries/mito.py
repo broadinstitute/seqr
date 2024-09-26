@@ -11,6 +11,7 @@ from hail_search.constants import ABSENT_PATH_SORT_OFFSET, CLINVAR_KEY, CLINVAR_
 from hail_search.queries.base import BaseHailTableQuery, PredictionPath, QualityFilterFormat
 
 REFERENCE_DATASETS_DIR = os.environ.get('REFERENCE_DATASETS_DIR', '/seqr/seqr-reference-data')
+REFERENCE_DATASET_SUBDIR = 'cached_reference_dataset_queries'
 
 logger = logging.getLogger(__name__)
 
@@ -171,7 +172,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
             if ht_filter is False:
                 self._filter_hts[key] = False
             else:
-                ht = self._read_table(self.PREFILTER_TABLES[key])
+                ht = self._read_table(f'{REFERENCE_DATASET_SUBDIR}/{self.PREFILTER_TABLES[key]}')
                 if ht_filter is not True:
                     ht = ht.filter(ht_filter(ht))
                 self._filter_hts[key] = ht
@@ -180,7 +181,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
 
     @classmethod
     def _get_table_dir(cls, path):
-        if path in cls.PREFILTER_TABLES.values():
+        if REFERENCE_DATASET_SUBDIR in path:
             return REFERENCE_DATASETS_DIR
         return super()._get_table_dir(path)
 
