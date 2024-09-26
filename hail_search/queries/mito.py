@@ -9,7 +9,7 @@ from hail_search.constants import ABSENT_PATH_SORT_OFFSET, CLINVAR_KEY, CLINVAR_
     CLINVAR_PATH_FILTER, \
     CLINVAR_PATH_RANGES, CLINVAR_PATH_SIGNIFICANCES, ALLOWED_TRANSCRIPTS, ALLOWED_SECONDARY_TRANSCRIPTS, \
     PATHOGENICTY_SORT_KEY, CONSEQUENCE_SORT, \
-    PATHOGENICTY_HGMD_SORT_KEY, COMPOUND_HET, MAX_LOAD_INTERVALS
+    PATHOGENICTY_HGMD_SORT_KEY, MAX_LOAD_INTERVALS
 from hail_search.definitions import SampleType
 from hail_search.queries.base import BaseHailTableQuery, PredictionPath, QualityFilterFormat, MAX_PARTITIONS, \
     HT_CHUNK_SIZE
@@ -226,19 +226,15 @@ class MitoHailTableQuery(BaseHailTableQuery):
                 annotation=sample_type.passes_inheritance_field, entries_ht_field=sample_type.family_entries_field
             )
 
-        family_idx_map = self._build_family_index_map(sorted_wes_family_sample_data, sorted_wgs_family_sample_data)
+        family_idx_map = self._build_family_index_map(sample_types, sorted_wes_family_sample_data, sorted_wgs_family_sample_data)
         ht = self._apply_multi_sample_type_entry_filters(ht, family_idx_map)
         ch_ht = self._apply_multi_sample_type_entry_filters(ch_ht, family_idx_map)
 
         return ht, ch_ht
 
     @staticmethod
-    def _build_family_index_map(sorted_wes_family_sample_data, sorted_wgs_family_sample_data):
+    def _build_family_index_map(sample_types, sorted_wes_family_sample_data, sorted_wgs_family_sample_data):
         family_guid_idx_map = defaultdict(dict)
-        sample_types = [
-            (SampleType.WES, sorted_wes_family_sample_data),
-            (SampleType.WGS, sorted_wgs_family_sample_data)
-        ]
         for sample_type, sorted_family_sample_data in sample_types:
             for family_idx, samples in enumerate(sorted_family_sample_data):
                 family_guid = samples[0]['familyGuid']
@@ -289,7 +285,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
         )
 
     def _get_sample_genotype(
-        self, samples, r=None, include_genotype_overrides=False, select_fields=None, all_samples=False,
+        self, samples, r=None, include_genotype_overrides=False, select_fields=None, all_samples=False, **kwargs
     ):
         if not self._has_both_sample_types and not all_samples:
             return super()._get_sample_genotype(samples, r, include_genotype_overrides, select_fields)
