@@ -459,7 +459,7 @@ class BaseHailTableQuery(object):
         ht, sorted_family_sample_data = self._add_entry_sample_families(ht, project_families)
         ht = self._filter_quality(ht, quality_filter, **kwargs)
         ht, ch_ht = self._filter_inheritance(
-            ht, None, inheritance_filter, sorted_family_sample_data,
+            ht, None, inheritance_filter, sorted_family_sample_data, **kwargs
         )
 
         ht = self._apply_entry_filters(ht)
@@ -548,7 +548,10 @@ class BaseHailTableQuery(object):
             return ht_globals.sample_types[family_index]
         return ht_globals.sample_type
 
-    def _get_any_family_member_gt_has_alt_filter(self):
+    def _filter_inheritance(
+        self, ht, comp_het_ht, inheritance_filter, sorted_family_sample_data,
+        annotation='family_entries', entries_ht_field='family_entries', **kwargs
+    ):
         any_valid_entry = lambda x: self.GENOTYPE_QUERY_MAP[HAS_ALT](x.GT)
 
         is_any_affected = self._inheritance_mode == ANY_AFFECTED
@@ -556,20 +559,10 @@ class BaseHailTableQuery(object):
             prev_any_valid_entry = any_valid_entry
             any_valid_entry = lambda x: prev_any_valid_entry(x) & (x.affected_id == AFFECTED_ID)
 
-        return any_valid_entry, is_any_affected
-
-    @staticmethod
-    def _apply_any_valid_entry_filter(
-        ht, any_valid_entry, annotation='family_entries', entries_ht_field='family_entries'
-    ):
-        return ht.annotate(**{
+        ht = ht.annotate(**{
             annotation: ht[entries_ht_field].map(
                 lambda entries: hl.or_missing(entries.any(any_valid_entry), entries)
             )})
-
-    def _filter_inheritance(self, ht, comp_het_ht, inheritance_filter, sorted_family_sample_data, **kwargs):
-        any_valid_entry, is_any_affected = self._get_any_family_member_gt_has_alt_filter()
-        ht = self._apply_any_valid_entry_filter(ht, any_valid_entry, **kwargs)
 
         if self._has_comp_het_search:
             comp_het_ht = self._annotate_families_inheritance(
