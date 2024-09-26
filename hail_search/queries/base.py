@@ -541,12 +541,22 @@ class BaseHailTableQuery(object):
 
         return any_valid_entry, is_any_affected
 
-    def _filter_inheritance(self, ht, inheritance_filter, sorted_family_sample_data):
-        any_valid_entry, is_any_affected = self._get_any_family_member_gt_has_alt_filter()
+    @staticmethod
+    def _apply_any_valid_entry_filter(
+        ht, any_valid_entry, annotation='family_entries', entries_ht_field='family_entries'
+    ):
+        return ht.annotate(**{
+            annotation: ht[entries_ht_field].map(
+                lambda entries: hl.or_missing(entries.any(any_valid_entry), entries)
+            )})
 
-        ht = ht.annotate(family_entries=ht.family_entries.map(
-            lambda entries: hl.or_missing(entries.any(any_valid_entry), entries))
-        )
+    def _filter_any_valid_entry(self, ht):
+        any_valid_entry, is_any_affected = self._get_any_family_member_gt_has_alt_filter()
+        ht = self._apply_any_valid_entry_filter(ht, any_valid_entry)
+        return ht, is_any_affected
+
+    def _filter_inheritance(self, ht, inheritance_filter, sorted_family_sample_data):
+        ht, is_any_affected = self._filter_any_valid_entry(ht)
 
         comp_het_ht = None
         if self._has_comp_het_search:
@@ -556,13 +566,17 @@ class BaseHailTableQuery(object):
 
         if is_any_affected or not (inheritance_filter or self._inheritance_mode):
             # No sample-specific inheritance filtering needed
-            sorted_family_sample_data = []
+            self._reset_sorted_family_sample_data(sorted_family_sample_data)
 
         ht = None if self._inheritance_mode == COMPOUND_HET else self._filter_families_inheritance(
             ht, self._inheritance_mode, inheritance_filter, sorted_family_sample_data,
         )
 
         return ht, comp_het_ht
+
+    @staticmethod
+    def _reset_sorted_family_sample_data(sorted_family_sample_data):
+        sorted_family_sample_data.clear()
 
     def _filter_families_inheritance(self, ht, inheritance_mode, inheritance_filter, sorted_family_sample_data):
         ht = self._annotate_families_inheritance(ht, inheritance_mode, inheritance_filter, sorted_family_sample_data)

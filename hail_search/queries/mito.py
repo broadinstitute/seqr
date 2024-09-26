@@ -227,36 +227,35 @@ class MitoHailTableQuery(BaseHailTableQuery):
                 })
         return ht
 
-    def _filter_inheritance_both_sample_types(self, ht, inheritance_filter, sorted_wes_family_sample_data, sorted_wgs_family_sample_data):
-        family_idx_map = self._build_family_index_map(sorted_wes_family_sample_data, sorted_wgs_family_sample_data)
+    def _filter_any_valid_entry(self, ht):
+        if not self._has_both_sample_types:
+            return super()._filter_any_valid_entry(ht)
+
         any_valid_entry, is_any_affected = self._get_any_family_member_gt_has_alt_filter()
         for sample_type in SampleType:
-            ht = ht.annotate(**{
-                sample_type.passes_inheritance_field: ht[sample_type.family_entries_field].map(
-                    lambda entries: hl.or_missing(entries.any(any_valid_entry), entries)
-            )})
-
-        comp_het_ht = None
-        if self._has_comp_het_search:
-            comp_het_ht = self._filter_families_inheritance_both_sample_types(
-                ht, COMPOUND_HET, inheritance_filter,
-                sorted_wes_family_sample_data, sorted_wgs_family_sample_data, family_idx_map
+            ht = self._apply_any_valid_entry_filter(
+                ht, any_valid_entry, sample_type.passes_inheritance_field, sample_type.family_entries_field
             )
+        return ht, is_any_affected
 
-        if is_any_affected or not (inheritance_filter or self._inheritance_mode):
-            # No sample-specific inheritance filtering needed
-            sorted_wes_family_sample_data = sorted_wgs_family_sample_data = []
+    def _filter_inheritance_both_sample_types(self, ht, inheritance_filter, sorted_wes_family_sample_data, sorted_wgs_family_sample_data):
+        family_idx_map = self._build_family_index_map(sorted_wes_family_sample_data, sorted_wgs_family_sample_data)
+        family_sample_data = (sorted_wes_family_sample_data, sorted_wgs_family_sample_data, family_idx_map)
+        return super()._filter_inheritance(ht, inheritance_filter, family_sample_data)
 
-        ht = None if self._inheritance_mode == COMPOUND_HET else self._filter_families_inheritance_both_sample_types(
-            ht, self._inheritance_mode, inheritance_filter, sorted_wes_family_sample_data,
-            sorted_wgs_family_sample_data, family_idx_map
-        )
-        return ht, comp_het_ht
+    def _reset_sorted_family_sample_data(self, sorted_family_sample_data):
+        if not self._has_both_sample_types:
+            return super()._reset_sorted_family_sample_data(sorted_family_sample_data)
+        sorted_family_sample_data[0].clear()
+        sorted_family_sample_data[1].clear()
 
-    def _filter_families_inheritance_both_sample_types(
-        self, ht, inheritance_mode, inheritance_filter,
-        sorted_wes_family_sample_data, sorted_wgs_family_sample_data, family_idx_map
+    def _filter_families_inheritance(
+        self, ht, inheritance_mode, inheritance_filter, sorted_family_sample_data
     ):
+        if not self._has_both_sample_types:
+            return super()._filter_families_inheritance(ht, inheritance_mode, inheritance_filter, sorted_family_sample_data)
+
+        sorted_wes_family_sample_data, sorted_wgs_family_sample_data, family_idx_map = sorted_family_sample_data
         sample_types = [
             (SampleType.WES, sorted_wes_family_sample_data),
             (SampleType.WGS, sorted_wgs_family_sample_data)
