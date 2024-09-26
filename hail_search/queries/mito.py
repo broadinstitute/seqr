@@ -208,64 +208,29 @@ class MitoHailTableQuery(BaseHailTableQuery):
         wes_ht = wes_ht.rename({'family_entries': SampleType.WES.family_entries_field, 'filters': SampleType.WES.filters_field})
         wgs_ht = wgs_ht.rename({'family_entries': SampleType.WGS.family_entries_field, 'filters': SampleType.WGS.filters_field})
         ht = wes_ht.join(wgs_ht, how='outer')
-        ht = self._annotate_passes_quality_filter(ht, quality_filter, **kwargs)
-        ht, ch_ht = self._filter_inheritance_both_sample_types(
-            ht, inheritance_filter, sorted_wes_family_sample_data, sorted_wgs_family_sample_data,
-        )
-        return ht, ch_ht
 
-    def _annotate_passes_quality_filter(self, ht: hl.Table, quality_filter, **kwargs) -> hl.Table:
-        for sample_type in SampleType:
-            passes_quality_filter = self._get_family_passes_quality_filter(
-                quality_filter, ht, filters_field_name=sample_type.filters_field, **kwargs
-            )
-            ht = ht.annotate(**{
-                sample_type.passes_quality_field: ht[sample_type.family_entries_field] if passes_quality_filter is None
-                else (ht[sample_type.family_entries_field].map(
-                        lambda entries: hl.or_missing(passes_quality_filter(entries), entries)
-                    ))
-                })
-        return ht
-
-    def _filter_any_valid_entry(self, ht):
-        if not self._has_both_sample_types:
-            return super()._filter_any_valid_entry(ht)
-
-        any_valid_entry, is_any_affected = self._get_any_family_member_gt_has_alt_filter()
-        for sample_type in SampleType:
-            ht = self._apply_any_valid_entry_filter(
-                ht, any_valid_entry, sample_type.passes_inheritance_field, sample_type.family_entries_field
-            )
-        return ht, is_any_affected
-
-    def _filter_inheritance_both_sample_types(self, ht, inheritance_filter, sorted_wes_family_sample_data, sorted_wgs_family_sample_data):
-        family_idx_map = self._build_family_index_map(sorted_wes_family_sample_data, sorted_wgs_family_sample_data)
-        family_sample_data = (sorted_wes_family_sample_data, sorted_wgs_family_sample_data, family_idx_map)
-        return super()._filter_inheritance(ht, inheritance_filter, family_sample_data)
-
-    def _reset_sorted_family_sample_data(self, sorted_family_sample_data):
-        if not self._has_both_sample_types:
-            return super()._reset_sorted_family_sample_data(sorted_family_sample_data)
-        sorted_family_sample_data[0].clear()
-        sorted_family_sample_data[1].clear()
-
-    def _filter_families_inheritance(
-        self, ht, inheritance_mode, inheritance_filter, sorted_family_sample_data
-    ):
-        if not self._has_both_sample_types:
-            return super()._filter_families_inheritance(ht, inheritance_mode, inheritance_filter, sorted_family_sample_data)
-
-        sorted_wes_family_sample_data, sorted_wgs_family_sample_data, family_idx_map = sorted_family_sample_data
         sample_types = [
             (SampleType.WES, sorted_wes_family_sample_data),
             (SampleType.WGS, sorted_wgs_family_sample_data)
         ]
-        for sample_type, sorted_family_sample_data in sample_types:
-            ht = self._annotate_families_inheritance(
-                ht, inheritance_mode, inheritance_filter, sorted_family_sample_data,
+        for sample_type, _ in sample_types:
+            ht = self._filter_quality(
+                ht, quality_filter, filters_field_name=sample_type.filters_field,
+                annotation=sample_type.passes_quality_field, entries_ht_field=sample_type.family_entries_field, **kwargs
+            )
+
+        ch_ht = None
+        for sample_type, family_sample_data in sample_types:
+            ht, ch_ht = self._filter_inheritance(
+                ht, ch_ht, inheritance_filter, family_sample_data,
                 annotation=sample_type.passes_inheritance_field, entries_ht_field=sample_type.family_entries_field
             )
-        return self._apply_multi_sample_type_entry_filters(ht, family_idx_map)
+
+        family_idx_map = self._build_family_index_map(sorted_wes_family_sample_data, sorted_wgs_family_sample_data)
+        ht = self._apply_multi_sample_type_entry_filters(ht, family_idx_map)
+        ch_ht = self._apply_multi_sample_type_entry_filters(ch_ht, family_idx_map)
+
+        return ht, ch_ht
 
     @staticmethod
     def _build_family_index_map(sorted_wes_family_sample_data, sorted_wgs_family_sample_data):
@@ -280,7 +245,10 @@ class MitoHailTableQuery(BaseHailTableQuery):
                 family_guid_idx_map[family_guid][sample_type.value] = family_idx
         return hl.dict(family_guid_idx_map)
 
-    def _apply_multi_sample_type_entry_filters(self, ht, family_idx_map) -> hl.Table:
+    def _apply_multi_sample_type_entry_filters(self, ht, family_idx_map):
+        if ht is None:
+            return ht
+
         # Keep family from both sample types if either passes quality AND inheritance
         for sample_type in SampleType:
             ht = ht.annotate(**{
@@ -307,7 +275,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
 
     @staticmethod
     def _family_passes_quality_inheritance(ht, sample_type, sample_type_family_idx, family_guid, family_idx_map):
-        # Note: This logic does not sufficiently handle case 2 here: https://docs.google.com/presentation/d/1hqDV8ulhviUcR5C4PtNUqkCLXKDsc6pccgFVlFmWUAU/edit?usp=sharing
+        # Note: This logic does not sufficiently handle case 2 here https://docs.google.com/presentation/d/1hqDV8ulhviUcR5C4PtNUqkCLXKDsc6pccgFVlFmWUAU/edit?usp=sharing
         # and will need to be changed to support it.
         return (
             hl.is_defined(ht[sample_type.passes_quality_field][sample_type_family_idx]) &

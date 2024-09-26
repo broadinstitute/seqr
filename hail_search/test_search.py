@@ -771,7 +771,6 @@ class HailSearchTestCase(AioHTTPTestCase):
             self.assertEqual(resp.status, 200)
             resp_json = await resp.json()
         self.assertSetEqual(set(resp_json.keys()), {'results', 'total'})
-        print(results)
         self.assertEqual(resp_json['total'], len(results))
         for i, result in enumerate(resp_json['results']):
             self.assertEqual(result, results[i])
@@ -894,6 +893,7 @@ class HailSearchTestCase(AioHTTPTestCase):
         # Variant 1 in family_5 is inherited in exome and there is no parental data in genome.
         # Variant 2 in family_5 is inherited in exome with low parental GQ.
         # Variant 1 genome passes quality and inheritance (since there is no parental data), show genotypes for both sample types.
+        # Note: ^ This is incorrect, as the variant should not be returned.
         # Variant 2 genome passes, but exome does not pass quality check. Do not show variant.
         inheritance_mode = 'recessive'
         await self._assert_expected_search(

@@ -449,19 +449,36 @@ class BaseHailTableQuery(object):
 
         return ht.transmute_globals(**global_expressions)
 
+    @staticmethod
+    def _apply_entry_filters(ht):
+        if ht is None:
+            return ht
+        return ht.filter(ht.family_entries.any(hl.is_defined)).select_globals('family_guids')
+
     def _filter_single_entries_table(self, ht, project_families, inheritance_filter=None, quality_filter=None, **kwargs):
         ht, sorted_family_sample_data = self._add_entry_sample_families(ht, project_families)
-        passes_quality_filter = self._get_family_passes_quality_filter(quality_filter, ht, **kwargs)
-        if passes_quality_filter is not None:
-            ht = ht.annotate(family_entries=ht.family_entries.map(
-                lambda entries: hl.or_missing(passes_quality_filter(entries), entries)
-            ))
-            ht = ht.filter(ht.family_entries.any(hl.is_defined))
-
+        ht = self._filter_quality(ht, quality_filter, **kwargs)
         ht, ch_ht = self._filter_inheritance(
-            ht, inheritance_filter, sorted_family_sample_data,
+            ht, None, inheritance_filter, sorted_family_sample_data,
         )
+
+        ht = self._apply_entry_filters(ht)
+        ch_ht = self._apply_entry_filters(ch_ht)
+
         return ht, ch_ht
+
+    def _filter_quality(
+        self, ht, quality_filter, filters_field_name='filters',
+        annotation='family_entries', entries_ht_field='family_entries', **kwargs
+    ):
+        passes_quality_filter = self._get_family_passes_quality_filter(
+            quality_filter, ht, filters_field_name=filters_field_name, **kwargs
+        ) or (lambda _: True)
+
+        return ht.annotate(**{
+            annotation: ht[entries_ht_field].map(
+                lambda entries: hl.or_missing(entries.any(passes_quality_filter), entries)
+            )})
 
     def _add_entry_sample_families(self, ht: hl.Table, sample_data: dict):
         """
@@ -550,41 +567,29 @@ class BaseHailTableQuery(object):
                 lambda entries: hl.or_missing(entries.any(any_valid_entry), entries)
             )})
 
-    def _filter_any_valid_entry(self, ht):
+    def _filter_inheritance(self, ht, comp_het_ht, inheritance_filter, sorted_family_sample_data, **kwargs):
         any_valid_entry, is_any_affected = self._get_any_family_member_gt_has_alt_filter()
-        ht = self._apply_any_valid_entry_filter(ht, any_valid_entry)
-        return ht, is_any_affected
+        ht = self._apply_any_valid_entry_filter(ht, any_valid_entry, **kwargs)
 
-    def _filter_inheritance(self, ht, inheritance_filter, sorted_family_sample_data):
-        ht, is_any_affected = self._filter_any_valid_entry(ht)
-
-        comp_het_ht = None
         if self._has_comp_het_search:
-            comp_het_ht = self._filter_families_inheritance(
-                ht, COMPOUND_HET, inheritance_filter, sorted_family_sample_data,
+            comp_het_ht = self._annotate_families_inheritance(
+                comp_het_ht if comp_het_ht is not None else ht,
+                COMPOUND_HET, inheritance_filter, sorted_family_sample_data, **kwargs
             )
 
         if is_any_affected or not (inheritance_filter or self._inheritance_mode):
             # No sample-specific inheritance filtering needed
-            self._reset_sorted_family_sample_data(sorted_family_sample_data)
+            sorted_family_sample_data = []
 
-        ht = None if self._inheritance_mode == COMPOUND_HET else self._filter_families_inheritance(
-            ht, self._inheritance_mode, inheritance_filter, sorted_family_sample_data,
+        ht = None if self._inheritance_mode == COMPOUND_HET else self._annotate_families_inheritance(
+            ht, self._inheritance_mode, inheritance_filter, sorted_family_sample_data, **kwargs
         )
 
         return ht, comp_het_ht
 
-    @staticmethod
-    def _reset_sorted_family_sample_data(sorted_family_sample_data):
-        sorted_family_sample_data.clear()
-
-    def _filter_families_inheritance(self, ht, inheritance_mode, inheritance_filter, sorted_family_sample_data):
-        ht = self._annotate_families_inheritance(ht, inheritance_mode, inheritance_filter, sorted_family_sample_data)
-        return ht.filter(ht.family_entries.any(hl.is_defined)).select_globals('family_guids')
-
     def _annotate_families_inheritance(
         self, ht, inheritance_mode, inheritance_filter, sorted_family_sample_data,
-        annotation = 'family_entries', entries_ht_field = 'family_entries',
+        annotation='family_entries', entries_ht_field='family_entries',
     ):
         individual_genotype_filter = (inheritance_filter or {}).get('genotype')
 
