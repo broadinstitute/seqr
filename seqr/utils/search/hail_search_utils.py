@@ -143,7 +143,7 @@ def _get_sample_data(samples, inheritance_filter=None, inheritance_mode=None, **
     )
     if inheritance_mode == X_LINKED_RECESSIVE:
         sample_values['sex'] = F('individual__sex')
-    sample_data = samples.order_by('id').values('individual__individual_id', 'dataset_type', 'sample_type', **sample_values)
+    sample_data = samples.order_by('guid').values('individual__individual_id', 'dataset_type', 'sample_type', **sample_values)
 
     custom_affected = (inheritance_filter or {}).pop('affected', None)
     if custom_affected:

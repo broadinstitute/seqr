@@ -61,8 +61,7 @@ class Command(BaseCommand):
 
         logger.info(f'Loading new samples from {len(success_runs)} run(s)')
         updated_families_by_data_type = defaultdict(set)
-        updated_variants_by_data_type = defaultdict(list)
-        errors = []
+        updated_variants_by_data_type = defaultdict(dict)
         for path, run in new_runs.items():
             try:
                 metadata_path = path.replace('_SUCCESS', 'metadata.json')
@@ -71,7 +70,7 @@ class Command(BaseCommand):
                 updated_families_by_data_type[data_type_key].update(updated_families)
                 updated_variants_by_data_type[data_type_key].update(updated_variants_by_id)
             except Exception as e:
-                errors.append(f'Error loading {run["run_version"]}: {e}')
+                logger.error(f'Error loading {run["run_version"]}: {e}')
 
         # Reset cached results for all projects, as seqr AFs will have changed for all projects when new data is added
         reset_cached_search_results(project=None)
@@ -80,9 +79,6 @@ class Command(BaseCommand):
             self._reload_shared_variant_annotations(
                 *data_type_key, updated_variants_by_data_type[data_type_key], exclude_families=updated_families,
             )
-
-        for error in errors:
-            logger.error(error)
 
         logger.info('DONE')
 
@@ -246,15 +242,15 @@ class Command(BaseCommand):
             family_guids=updated_annotation_samples.values_list('individual__family__guid', flat=True).distinct(),
         )
 
+        variant_type_summary = f'{data_type} {genome_version} saved variants'
         if not variant_models:
-            logger.info('No additional saved variants to update')
+            logger.info(f'No additional {variant_type_summary} to update')
             return
 
         variants_by_id = defaultdict(list)
         for v in variant_models:
             variants_by_id[v.variant_id].append(v)
 
-        variant_type_summary = f'{data_type} {genome_version} saved variants'
         logger.info(f'Reloading shared annotations for {len(variant_models)} {variant_type_summary} ({len(variants_by_id)} unique)')
 
         updated_variants_by_id = {
