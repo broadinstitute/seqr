@@ -279,6 +279,11 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         responses.add(responses.POST, f'{MOCK_HAIL_HOST}:5000/multi_lookup', status=200, json={
             'results': [{'variantId': '1-46859832-G-A', 'updated_new_field': 'updated_value', 'rsid': 'rs123'}],
         })
+        responses.add(responses.POST, f'{MOCK_HAIL_HOST}:5000/search', status=200, json={
+            'results': [{'variantId': '1-248367227-TC-T', 'familyGuids': ['F000014_14'], 'updated_field': 'updated_value'}],
+            'total': 1,
+        })
+        responses.add(responses.POST, f'{MOCK_HAIL_HOST}:5000/search', status=400)
 
         # Test errors
         self.mock_subprocess.return_value.communicate.return_value = b'', b'One or more URLs matched no objects'
@@ -299,7 +304,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
 
         # Update fixture data to allow testing edge cases
         Project.objects.filter(id__in=[1, 3]).update(genome_version=38)
-        svs = SavedVariant.objects.filter(guid__in=['SV0000002_1248367227_r0390_100', 'SV0000006_1248367227_r0003_tes'])
+        svs = SavedVariant.objects.filter(guid__in=['SV0000002_1248367227_r0390_100', 'SV0000006_1248367227_r0003_tes', 'SV0000007_prefix_19107_DEL_r00'])
         for sv in svs:
             sv.saved_variant_json['genomeVersion'] = '38'
             sv.save()
@@ -316,6 +321,9 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
             ]}},
             {**search_body, 'sample_data': {'SNV_INDEL': [
                 {'individual_guid': 'I000018_na21234', 'family_guid': 'F000014_14', 'project_guid': 'R0004_non_analyst_project', 'affected': 'A', 'sample_id': 'NA21234', 'sample_type': 'WES'},
+            ]}},
+            {'genome_version': 'GRCh38', 'num_results': 1, 'variant_ids': [], 'variant_keys': ['prefix_19107_DEL'], 'sample_data': {'SV_WES': [
+                {'individual_guid': 'I000017_na20889', 'family_guid': 'F000012_12', 'project_guid': 'R0003_test', 'affected': 'A', 'sample_id': 'NA20889', 'sample_type': 'WES'},
             ]}},
         ], reload_annotations_logs=[
             'Reloading shared annotations for 3 SNV_INDEL GRCh38 saved variants (3 unique)', 'Fetched 1 additional variants', 'Fetched 1 additional variants', 'Updated 2 SNV_INDEL GRCh38 saved variants',
@@ -421,7 +429,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
 
         # Test SavedVariant model updated
         for i, variant_id in enumerate([['1', 1562437, 'G', 'CA'], ['1', 46859832, 'G', 'A']]):
-            multi_lookup_request = responses.calls[9+i].request
+            multi_lookup_request = responses.calls[10+i].request
             self.assertEqual(multi_lookup_request.url, f'{MOCK_HAIL_HOST}:5000/multi_lookup')
             self.assertEqual(multi_lookup_request.headers.get('From'), 'manage_command')
             self.assertDictEqual(json.loads(multi_lookup_request.body), {
@@ -450,12 +458,19 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         self.assertEqual(annotation_updated_json['mainTranscriptId'], 'ENST00000505820')
         self.assertEqual(len(annotation_updated_json['genotypes']), 3)
 
-        self.mock_utils_logger.error.assert_not_called()
+        self.mock_utils_logger.error.assert_called_with('Error in project Test Reprocessed Project: Bad Request')
         self.mock_utils_logger.info.assert_has_calls([
+            mock.call('Reset 2 cached results'),
+            mock.call('Reloading saved variants in 2 projects'),
             mock.call('Updated 0 variants for project Test Reprocessed Project'),
             mock.call('Updated 1 variants for project Non-Analyst Project'),
             mock.call('Reload Summary: '),
             mock.call('  Non-Analyst Project: Updated 1 variants'),
+            mock.call('Reloading saved variants in 2 projects'),
+            mock.call('Reload Summary: '),
+            mock.call('Skipped the following 1 project with no saved variants: 1kg project nåme with uniçøde'),
+            mock.call('1 failed projects'),
+            mock.call('  Test Reprocessed Project: Bad Request'),
         ])
 
         # Test notifications
@@ -542,26 +557,3 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         mock_email.assert_not_called()
         self.mock_send_slack.assert_not_called()
         self.assertFalse(Sample.objects.filter(last_modified_date__gt=sample_last_modified).exists())
-
-    # @responses.activate
-    # def test_gcnv_command(self):
-    #     responses.add(responses.POST, f'{MOCK_HAIL_HOST}:5000/search', status=400)
-    #     metadata = {
-    #         'callsets': ['1kg.vcf.gz'],
-    #         'sample_type': 'WES',
-    #         'family_samples': {'F000004_4': ['NA20872'], 'F000012_12': ['NA20889']},
-    #     }
-    #     self._test_call('GRCh37/GCNV', metadata, dataset_type='SV', sample_guids={f'S00000{GUID_ID}_na20872', f'S00000{GUID_ID}_na20889'}, reload_calls=[{
-    #         'genome_version': 'GRCh37', 'num_results': 1, 'variant_ids': [], 'variant_keys': ['prefix_19107_DEL'],
-    #         'sample_data': {'SV_WES': [{'individual_guid': 'I000017_na20889', 'family_guid': 'F000012_12', 'project_guid': 'R0003_test', 'affected': 'A', 'sample_id': 'NA20889', 'sample_type': 'WES'}]},
-    #     }], reload_annotations_logs=['No additional saved variants to update'])
-    #
-
-    #
-    #     self.mock_utils_logger.error.assert_called_with('Error in project Test Reprocessed Project: Bad Request')
-    #     self.mock_utils_logger.info.assert_has_calls([
-    #         mock.call('Reload Summary: '),
-    #         mock.call('Skipped the following 1 project with no saved variants: 1kg project nåme with uniçøde'),
-    #         mock.call('1 failed projects'),
-    #         mock.call('  Test Reprocessed Project: Bad Request'),
-    #     ])
