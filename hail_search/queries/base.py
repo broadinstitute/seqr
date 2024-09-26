@@ -459,7 +459,7 @@ class BaseHailTableQuery(object):
         ht, sorted_family_sample_data = self._add_entry_sample_families(ht, project_families)
         ht = self._filter_quality(ht, quality_filter, **kwargs)
         ht, ch_ht = self._filter_inheritance(
-            ht, None, inheritance_filter, sorted_family_sample_data, **kwargs
+            ht, None, inheritance_filter, sorted_family_sample_data,
         )
 
         ht = self._apply_entry_filters(ht)
