@@ -134,9 +134,9 @@ class MitoHailTableQuery(BaseHailTableQuery):
         for sample_type in sample_types:
             if num_families == 1:
                 family_guid = list(list(project_sample_type_data.values())[0].keys())[0]
-                ht, sample_data = self._load_prefiltered_family_ht(family_guid, sample_type, project_sample_type_data, **kwargs)
+                ht, sample_data = self._load_family_ht(family_guid, sample_type, project_sample_type_data, **kwargs)
             else:
-                ht, sample_data = self._load_prefiltered_project_ht(project_guid, sample_type, project_sample_type_data, **kwargs)
+                ht, sample_data = self._load_project_ht(project_guid, sample_type, project_sample_type_data, **kwargs)
             entries[sample_type] = (ht, sample_data)
 
         return self._filter_entries_ht_both_sample_types(
@@ -153,13 +153,13 @@ class MitoHailTableQuery(BaseHailTableQuery):
             return super()._import_and_filter_multiple_project_hts(project_samples, n_partitions, **kwargs)
 
         self._has_both_sample_types = True
-        entries = self._load_prefiltered_project_hts_both_sample_types(project_samples, n_partitions, **kwargs)
+        entries = self._load_project_hts_both_sample_types(project_samples, n_partitions, **kwargs)
 
         filtered_project_hts = []
         filtered_comp_het_project_hts = []
-        for (wes_ht, wes_project_samples), (wgs_ht, wgs_project_samples) in zip(
-            entries[SampleType.WES.value], entries[SampleType.WGS.value]
-        ):
+        for entry in entries:
+            wes_ht, wes_project_samples = entry[SampleType.WES.value]
+            wgs_ht, wgs_project_samples = entry[SampleType.WGS.value]
             ht, comp_het_ht = self._filter_entries_ht_both_sample_types(
                 wes_ht, wes_project_samples, wgs_ht, wgs_project_samples, **kwargs
             )
@@ -170,12 +170,12 @@ class MitoHailTableQuery(BaseHailTableQuery):
 
         return self._merge_filtered_hts(filtered_comp_het_project_hts, filtered_project_hts, n_partitions)
 
-    def _load_prefiltered_project_hts_both_sample_types(
+    def _load_project_hts_both_sample_types(
         self, project_samples: dict, n_partitions: int, **kwargs
-    ) -> dict[str, list[tuple[hl.Table, dict]]]:
-        prefiltered_project_hts = {sample_type.value: [] for sample_type in SampleType}
-        project_hts = {sample_type.value: [] for sample_type in SampleType}
-        sample_data = {sample_type.value: {} for sample_type in SampleType}
+    ) -> list[dict[str, tuple[hl.Table, dict]]]:
+        all_project_hts = []
+        project_hts = defaultdict(list)
+        sample_data = defaultdict(dict)
         for project_guid, project_sample_type_data in project_samples.items():
             for sample_type, family_sample_data in project_sample_type_data.items():
                 project_ht = self._read_project_table(project_guid, sample_type)
@@ -187,20 +187,20 @@ class MitoHailTableQuery(BaseHailTableQuery):
 
             # Merge both WES and WGS project_hts when either of their lengths reaches the chunk size
             if len(project_hts[SampleType.WES.value]) >= HT_CHUNK_SIZE or len(project_hts[SampleType.WGS.value]) >= HT_CHUNK_SIZE:
+                project_ht_dict = {}
                 for sample_type in project_hts:
-                    self._prefilter_merged_project_hts(
-                        project_hts[sample_type], sample_data[sample_type],
-                        prefiltered_project_hts[sample_type], n_partitions, **kwargs
-                    )
-                project_hts = {sample_type.value: [] for sample_type in SampleType}
-                sample_data = {sample_type.value: {} for sample_type in SampleType}
+                    ht = self._prefilter_merged_project_hts(project_hts[sample_type], n_partitions, **kwargs)
+                    project_ht_dict[sample_type] = (ht, sample_data[sample_type])
+                all_project_hts.append(project_ht_dict)
+                project_hts = defaultdict(list)
+                sample_data = defaultdict(dict)
 
+        project_ht_dict = {}
         for sample_type in project_hts:
-            self._prefilter_merged_project_hts(
-                project_hts[sample_type], sample_data[sample_type],
-                prefiltered_project_hts[sample_type], n_partitions, **kwargs
-            )
-        return prefiltered_project_hts
+            ht = self._prefilter_merged_project_hts(project_hts[sample_type], n_partitions, **kwargs)
+            project_ht_dict[sample_type] = (ht, sample_data[sample_type])
+        all_project_hts.append(project_ht_dict)
+        return all_project_hts
 
     def _filter_entries_ht_both_sample_types(
         self, wes_ht, wes_project_samples, wgs_ht, wgs_project_samples, inheritance_filter=None, quality_filter=None, **kwargs

@@ -316,7 +316,7 @@ class BaseHailTableQuery(object):
         logger.info(f'Loading {self.DATA_TYPE} data for {num_families} families in {len(project_samples)} projects')
         return project_samples, num_families
 
-    def _load_prefiltered_family_ht(
+    def _load_family_ht(
         self, family_guid: str, sample_type: str, project_sample_type_data: dict, **kwargs
     ) -> tuple[hl.Table, dict]:
         ht = self._read_table(f'families/{sample_type}/{family_guid}.ht')
@@ -326,7 +326,7 @@ class BaseHailTableQuery(object):
         sample_data = project_sample_type_data[sample_type]
         return ht, sample_data
 
-    def _load_prefiltered_project_ht(
+    def _load_project_ht(
         self, project_guid: str, sample_type: str, project_sample_type_data: dict, **kwargs
     ) -> tuple[hl.Table, dict]:
         ht = self._read_project_table(project_guid, sample_type)
@@ -343,9 +343,9 @@ class BaseHailTableQuery(object):
         sample_type = list(project_sample_type_data.keys())[0]
         if num_families == 1:
             family_guid = list(project_sample_type_data[sample_type].keys())[0]
-            ht, sample_data = self._load_prefiltered_family_ht(family_guid, sample_type, project_sample_type_data, **kwargs)
+            ht, sample_data = self._load_family_ht(family_guid, sample_type, project_sample_type_data, **kwargs)
         else:
-            ht, sample_data = self._load_prefiltered_project_ht(project_guid, sample_type, project_sample_type_data, **kwargs)
+            ht, sample_data = self._load_project_ht(project_guid, sample_type, project_sample_type_data, **kwargs)
 
         return self._filter_single_entries_table(ht, sample_data, **kwargs)
 
@@ -358,7 +358,7 @@ class BaseHailTableQuery(object):
         In the variant search control flow, project_samples looks like this:
             {<project_guid>: {<sample_type>: {<family_guid>: [<sample_data>, <sample_data>, ...]}, <sample_type_2>: {<family_guid_2>: []} ...}, <project_guid_2>: ...}
         """
-        entries_hts = self._load_prefiltered_project_hts(project_samples, n_partitions, **kwargs)
+        entries_hts = self._load_project_hts(project_samples, n_partitions, **kwargs)
         filtered_project_hts = []
         filtered_comp_het_project_hts = []
         for ht, project_families in entries_hts:
@@ -375,8 +375,8 @@ class BaseHailTableQuery(object):
         comp_het_ht = self._merge_project_hts(filtered_comp_het_project_hts, n_partitions)
         return ht, comp_het_ht
 
-    def _load_prefiltered_project_hts(self, project_samples: dict, n_partitions: int, **kwargs):
-        prefiltered_project_hts = []
+    def _load_project_hts(self, project_samples: dict, n_partitions: int, **kwargs) -> list[tuple[hl.Table, dict]]:
+        all_project_hts = []
         project_hts = []
         sample_data = {}
         for project_guid, project_sample_type_data in project_samples.items():
@@ -389,16 +389,15 @@ class BaseHailTableQuery(object):
             sample_data.update(family_sample_data)
 
             if len(project_hts) >= HT_CHUNK_SIZE:
-                self._prefilter_merged_project_hts(
-                    project_hts, sample_data, prefiltered_project_hts, n_partitions, **kwargs
-                )
+                ht = self._prefilter_merged_project_hts(project_hts, n_partitions, **kwargs)
+                all_project_hts.append((ht, sample_data))
                 project_hts = []
                 sample_data = {}
 
-        self._prefilter_merged_project_hts(
-            project_hts, sample_data, prefiltered_project_hts, n_partitions, **kwargs
-        )
-        return prefiltered_project_hts
+        if project_hts:
+            ht = self._prefilter_merged_project_hts(project_hts, n_partitions, **kwargs)
+            all_project_hts.append((ht, sample_data))
+        return all_project_hts
 
     def import_filtered_table(self, project_samples: dict, num_families: int, **kwargs):
         if num_families == 1 or len(project_samples) == 1:
@@ -418,12 +417,9 @@ class BaseHailTableQuery(object):
             self._ht = self._query_table_annotations(families_ht, self._get_table_path('annotations.ht'))
             self._ht = self._filter_annotated_table(self._ht, **kwargs)
 
-    def _prefilter_merged_project_hts(self, project_hts, project_families, prefiltered_project_hts, n_partitions, **kwargs):
-        if not project_hts:
-            return
+    def _prefilter_merged_project_hts(self, project_hts, n_partitions, **kwargs):
         ht = self._merge_project_hts(project_hts, n_partitions, include_all_globals=True)
-        ht = self._prefilter_entries_table(ht, **kwargs)
-        prefiltered_project_hts.append((ht, project_families))
+        return self._prefilter_entries_table(ht, **kwargs)
 
     @staticmethod
     def _merge_project_hts(project_hts, n_partitions, include_all_globals=False):

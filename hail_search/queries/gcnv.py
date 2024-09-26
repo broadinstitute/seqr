@@ -61,10 +61,6 @@ class GcnvHailTableQuery(SvHailTableQuery):
 
     POPULATIONS = {k: v for k, v in SvHailTableQuery.POPULATIONS.items() if k != 'gnomad_svs'}
 
-    def _read_project_table(self, project_guid: str, sample_type: str):
-        ht = super()._read_project_table(project_guid, sample_type)
-        return ht.annotate_globals(sample_type=sample_type)
-
     @classmethod
     def _get_genotype_override_field(cls, r, field):
         agg, get_default = cls.GENOTYPE_OVERRIDE_FIELDS[field]
