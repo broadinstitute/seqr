@@ -222,7 +222,6 @@ VARIANT_EXPORT_DATA = [
     {'header': 'hgvsp', 'value_path': '{transcripts: transcripts.*[].{value: hgvsp, transcriptId: transcriptId}, mainTranscriptId: mainTranscriptId}', 'process': _get_variant_main_transcript_field_val},
     {'header': 'clinvar_clinical_significance', 'value_path': 'clinvar.clinicalSignificance || clinvar.pathogenicity'},
     {'header': 'clinvar_gold_stars', 'value_path': 'clinvar.goldStars'},
-    {'header': 'filter', 'value_path': 'genotypeFilters'},
 ]
 
 VARIANT_FAMILY_EXPORT_DATA = [
@@ -240,6 +239,7 @@ VARIANT_FAMILY_EXPORT_DATA = [
 VARIANT_SAMPLE_DATA = [
     {'header': 'sample', 'value_path': 'sampleId'},
     {'header': 'num_alt_alleles', 'value_path': 'numAlt'},
+    {'header': 'filters', 'process': lambda val: ';'.join(val or []), 'variant_value_path': '[genotypeFilters][*]'},
     {'header': 'gq'},
     {'header': 'ab'},
 ]
@@ -325,7 +325,7 @@ def export_variants_handler(request, search_hash):
 
         genotypes = list(variant['genotypes'].values())
         for genotype in genotypes:
-            row += [_get_field_value(genotype, config) for config in VARIANT_SAMPLE_DATA]
+            row += [_get_field_value(genotype, config, variant=variant) for config in VARIANT_SAMPLE_DATA]
         row += ['' for i in range(len(VARIANT_SAMPLE_DATA) * (max_samples_per_variant - len(genotypes)))]
         rows.append(row)
 
@@ -340,8 +340,10 @@ def export_variants_handler(request, search_hash):
     return export_table('search_results_{}'.format(search_hash), header, rows, file_format, titlecase_header=False)
 
 
-def _get_field_value(value, config):
+def _get_field_value(value, config, variant=None):
     field_value = jmespath.search(config.get('value_path', config['header']), value)
+    if config.get('variant_value_path') and not field_value:
+        field_value = jmespath.search(config['variant_value_path'], variant)
     if config.get('process'):
         field_value = config['process'](field_value)
     return field_value

@@ -913,6 +913,7 @@ VARIANTS = [
             'callset': {'af': 0.13, 'ac': 4192, 'an': '32588'},
             'gnomad_genomes': {'af': 0.007},
         },
+        'genotypeFilters': 'VQSRTrancheSNP99.95to100.00',
         'genotypes': {
             'NA19675': {
                 'sampleId': 'NA19675',
@@ -945,6 +946,7 @@ VARIANTS = [
         'familyGuids': ['F000001_1'],
         'genotypes': {
             'NA19679': {
+                'filters': ['artifact_prone_site'],
                 'sampleId': 'NA19679',
                 'ab': 0.0,
                 'gq': 99.0,
@@ -965,6 +967,7 @@ VARIANTS = [
         'variantId': '1-248367227-TC-T',
         'transcripts': {'ENSG00000233653': {}},
         'familyGuids': ['F000002_2'],
+        'genotypeFilters': '',
         'genotypes': {}
     }
 ]
