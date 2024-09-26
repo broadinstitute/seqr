@@ -71,9 +71,8 @@ class BaseHailTableQuery(object):
     TRANSCRIPTS_FIELD = None
     CORE_FIELDS = [XPOS]
     BASE_ANNOTATION_FIELDS = {
-        FAMILY_GUID_FIELD: lambda r: hl.array(hl.set(
-            r.family_entries.filter(hl.is_defined).map(lambda entries: entries.first().familyGuid))
-        ),
+        FAMILY_GUID_FIELD: lambda r: hl.set(
+            r.family_entries.filter(hl.is_defined).map(lambda entries: entries.first().familyGuid)),
         'genotypeFilters': lambda r: hl.str(' ,').join(r.filters),
         'variantId': lambda r: r.variant_id,
     }
@@ -341,13 +340,18 @@ class BaseHailTableQuery(object):
         self, project_guid: str, num_families: int, project_sample_type_data, **kwargs
     ) -> tuple[hl.Table, hl.Table]:
         sample_type = list(project_sample_type_data.keys())[0]
+        ht, sample_data = self._load_family_or_project_ht(
+            num_families, project_guid, project_sample_type_data, sample_type, **kwargs
+        )
+        return self._filter_single_entries_table(ht, sample_data, **kwargs)
+
+    def _load_family_or_project_ht(self, num_families, project_guid, project_sample_type_data, sample_type, **kwargs):
         if num_families == 1:
             family_guid = list(project_sample_type_data[sample_type].keys())[0]
             ht, sample_data = self._load_family_ht(family_guid, sample_type, project_sample_type_data, **kwargs)
         else:
             ht, sample_data = self._load_project_ht(project_guid, sample_type, project_sample_type_data, **kwargs)
-
-        return self._filter_single_entries_table(ht, sample_data, **kwargs)
+        return ht, sample_data
 
     def _import_and_filter_multiple_project_hts(
         self, project_samples: dict, n_partitions=MAX_PARTITIONS, **kwargs

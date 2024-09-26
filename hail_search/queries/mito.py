@@ -132,11 +132,9 @@ class MitoHailTableQuery(BaseHailTableQuery):
         self._has_both_sample_types = True
         entries = {}
         for sample_type in sample_types:
-            if num_families == 1:
-                family_guid = list(list(project_sample_type_data.values())[0].keys())[0]
-                ht, sample_data = self._load_family_ht(family_guid, sample_type, project_sample_type_data, **kwargs)
-            else:
-                ht, sample_data = self._load_project_ht(project_guid, sample_type, project_sample_type_data, **kwargs)
+            ht, sample_data = self._load_family_or_project_ht(
+                num_families, project_guid, project_sample_type_data, sample_type, **kwargs
+            )
             entries[sample_type] = (ht, sample_data)
 
         return self._filter_entries_ht_both_sample_types(
@@ -219,7 +217,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
     def _annotate_passes_quality_filter(self, ht: hl.Table, quality_filter, **kwargs) -> hl.Table:
         for sample_type in SampleType:
             passes_quality_filter = self._get_family_passes_quality_filter(
-                quality_filter, ht, sample_type.filters_field, **kwargs
+                quality_filter, ht, filters_field_name=sample_type.filters_field, **kwargs
             )
             ht = ht.annotate(**{
                 sample_type.passes_quality_field: ht[sample_type.family_entries_field] if passes_quality_filter is None
@@ -287,18 +285,15 @@ class MitoHailTableQuery(BaseHailTableQuery):
         # Keep family from both sample types if either passes quality AND inheritance
         for sample_type in SampleType:
             ht = ht.annotate(**{
-                sample_type.family_entries_field: hl.enumerate(ht[sample_type.family_entries_field]).map(
-                    lambda x: hl.or_missing(  # x[0] is family index, x[1] is list of samples
+                sample_type.family_entries_field: hl.enumerate(ht[sample_type.family_entries_field]).starmap(
+                    lambda i, samples: hl.or_missing(
                         self._family_passes_quality_inheritance(
-                            ht, sample_type, x[0], x[1][0]['familyGuid'], family_idx_map
-                        ), x[1]
-                    )
+                            ht, sample_type, i, samples[0]['familyGuid'], family_idx_map
+                        ), samples)
                 )})
-        # Filter out families with no valid entries in either sample type
-        ht = ht.filter(
-            ht[SampleType.WES.family_entries_field].any(hl.is_defined) | ht[SampleType.WGS.family_entries_field].any(hl.is_defined)
-        )
-        return ht.transmute(
+
+        # Merge family entries and filters from both sample types
+        ht = ht.transmute(
             family_entries=hl.coalesce(
                 ht[SampleType.WES.family_entries_field], hl.empty_array(ht[SampleType.WES.family_entries_field].dtype.element_type)
             ).extend(hl.coalesce(
@@ -308,9 +303,13 @@ class MitoHailTableQuery(BaseHailTableQuery):
                 hl.coalesce(ht[SampleType.WGS.filters_field], hl.empty_set(hl.tstr))
             )
         )
+        # Filter out families with no valid entries in either sample type
+        return ht.filter(ht.family_entries.any(hl.is_defined))
 
     @staticmethod
     def _family_passes_quality_inheritance(ht, sample_type, sample_type_family_idx, family_guid, family_idx_map):
+        # Note: This logic does not sufficiently handle case 2 here: https://docs.google.com/presentation/d/1hqDV8ulhviUcR5C4PtNUqkCLXKDsc6pccgFVlFmWUAU/edit?usp=sharing
+        # and will need to be changed to support it.
         return (
             hl.is_defined(ht[sample_type.passes_quality_field][sample_type_family_idx]) &
             hl.is_defined(ht[sample_type.passes_inheritance_field][sample_type_family_idx])
@@ -373,8 +372,8 @@ class MitoHailTableQuery(BaseHailTableQuery):
             self._load_table_kwargs = {'_intervals': parsed_intervals, '_filter_intervals': True}
         return parsed_intervals
 
-    def _get_family_passes_quality_filter(self, quality_filter, ht, filters_field_name='filters', pathogenicity=None, **kwargs):
-        passes_quality = super()._get_family_passes_quality_filter(quality_filter, ht, filters_field_name)
+    def _get_family_passes_quality_filter(self, quality_filter, ht, pathogenicity=None, **kwargs):
+        passes_quality = super()._get_family_passes_quality_filter(quality_filter, ht)
         clinvar_path_ht = False if passes_quality is None else self._get_loaded_clinvar_prefilter_ht(pathogenicity)
         if not clinvar_path_ht:
             return passes_quality

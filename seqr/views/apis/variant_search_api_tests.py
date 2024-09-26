@@ -807,10 +807,10 @@ class VariantSearchAPITest(object):
             'familyGuids': [],
             'lookupFamilyGuids': ['F0_1-10439-AC-A', 'F1_1-10439-AC-A'],
             'genotypes': {
-                'I0_F0_1-10439-AC-A': [{'ab': 0.0, 'dp': 60, 'gq': 20, 'numAlt': 0, 'sampleType': 'WES'}],
-                'I1_F0_1-10439-AC-A': [{'ab': 0.0, 'dp': 24, 'gq': 0, 'numAlt': 0, 'sampleType': 'WES'}],
-                'I2_F0_1-10439-AC-A': [{'ab': 0.5, 'dp': 10, 'gq': 99, 'numAlt': 1, 'sampleType': 'WES'}],
-                'I0_F1_1-10439-AC-A': [{'ab': 1.0, 'dp': 6, 'gq': 16, 'numAlt': 2, 'sampleType': 'WES'}],
+                'I0_F0_1-10439-AC-A': {'ab': 0.0, 'dp': 60, 'gq': 20, 'numAlt': 0, 'sampleType': 'WES'},
+                'I1_F0_1-10439-AC-A': {'ab': 0.0, 'dp': 24, 'gq': 0, 'numAlt': 0, 'sampleType': 'WES'},
+                'I2_F0_1-10439-AC-A': {'ab': 0.5, 'dp': 10, 'gq': 99, 'numAlt': 1, 'sampleType': 'WES'},
+                'I0_F1_1-10439-AC-A': {'ab': 1.0, 'dp': 6, 'gq': 16, 'numAlt': 2, 'sampleType': 'WES'},
             },
         }
         del expected_variant['familyGenotypes']
@@ -874,7 +874,7 @@ class VariantSearchAPITest(object):
         expected_variant.update({
             'lookupFamilyGuids': ['F000002_2', 'F000011_11'],
             'genotypes': {
-                individual_guid: [{**expected_variant['genotypes'][anon_individual_guid][0], **genotype}]
+                individual_guid: {**expected_variant['genotypes'][anon_individual_guid], **genotype}
                 for individual_guid, anon_individual_guid, genotype in individual_guid_map
             },
             'genomeVersion': '37',
