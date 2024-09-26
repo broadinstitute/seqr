@@ -3,12 +3,14 @@ from collections import defaultdict
 from aiohttp.web import HTTPNotFound
 import hail as hl
 import logging
+import os
 
 from hail_search.constants import ABSENT_PATH_SORT_OFFSET, CLINVAR_KEY, CLINVAR_MITO_KEY, CLINVAR_LIKELY_PATH_FILTER, CLINVAR_PATH_FILTER, \
     CLINVAR_PATH_RANGES, CLINVAR_PATH_SIGNIFICANCES, ALLOWED_TRANSCRIPTS, ALLOWED_SECONDARY_TRANSCRIPTS, PATHOGENICTY_SORT_KEY, CONSEQUENCE_SORT, \
     PATHOGENICTY_HGMD_SORT_KEY, MAX_LOAD_INTERVALS
 from hail_search.queries.base import BaseHailTableQuery, PredictionPath, QualityFilterFormat
 
+REFERENCE_DATASETS_DIR = os.environ.get('REFERENCE_DATASETS_DIR', '/seqr/seqr-reference-data')
 
 logger = logging.getLogger(__name__)
 
@@ -111,6 +113,10 @@ class MitoHailTableQuery(BaseHailTableQuery):
     }
     SORTS[PATHOGENICTY_HGMD_SORT_KEY] = SORTS[PATHOGENICTY_SORT_KEY]
 
+    PREFILTER_TABLES = {
+        CLINVAR_KEY: 'clinvar_path_variants.ht',
+    }
+
     @staticmethod
     def _selected_main_transcript_expr(ht):
         comp_het_gene_ids = getattr(ht, 'comp_het_gene_ids', None)
@@ -159,22 +165,28 @@ class MitoHailTableQuery(BaseHailTableQuery):
 
         return lambda entries: hl.is_defined(clinvar_path_ht[ht.key]) | passes_quality(entries)
 
-    def _get_loaded_filter_ht(self, key, table_path, get_filters, **kwargs):
+    def _get_loaded_filter_ht(self, key, get_filters, **kwargs):
         if self._filter_hts.get(key) is None:
             ht_filter = get_filters(**kwargs)
             if ht_filter is False:
                 self._filter_hts[key] = False
             else:
-                ht = self._read_table(table_path)
+                ht = self._read_table(self.PREFILTER_TABLES[key])
                 if ht_filter is not True:
                     ht = ht.filter(ht_filter(ht))
                 self._filter_hts[key] = ht
 
         return self._filter_hts[key]
 
+    @classmethod
+    def _get_table_dir(cls, path):
+        if path in cls.PREFILTER_TABLES.values():
+            return REFERENCE_DATASETS_DIR
+        return super()._get_table_dir(path)
+
     def _get_loaded_clinvar_prefilter_ht(self, pathogenicity):
         return self._get_loaded_filter_ht(
-            CLINVAR_KEY, 'clinvar_path_variants.ht', self._get_clinvar_prefilter, pathogenicity=pathogenicity)
+            CLINVAR_KEY, self._get_clinvar_prefilter, pathogenicity=pathogenicity)
 
     def _get_clinvar_prefilter(self, pathogenicity=None):
         clinvar_path_filters = self._get_clinvar_path_filters(pathogenicity)
@@ -315,7 +327,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
     def _add_project_lookup_data(self, ht, annotation_fields, *args, **kwargs):
         # Get all the project-families for the looked up variant formatted as a dict of dicts:
         # {<project_guid>: {<sample_type>: {<family_guid>: True}, <sample_type_2>: {<family_guid_2>: True}}, <project_guid_2>: ...}
-        lookup_ht = self._read_table('lookup.ht', use_ssd_dir=True, skip_missing_field='project_stats')
+        lookup_ht = self._read_table('lookup.ht', skip_missing_field='project_stats')
         if lookup_ht is None:
             raise HTTPNotFound()
         variant_projects = lookup_ht.aggregate(hl.agg.take(

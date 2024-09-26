@@ -27,7 +27,8 @@ jobs:
           pip install -r hail_search/requirements-test.txt
       - name: Run coverage tests
         run: |
-          export DATASETS_DIR=./hail_search/fixtures
+          export HAIL_SEARCH_DATA_DIR=./hail_search/fixtures
+          export REFERENCE_DATASETS_DIR=./hail_search/fixtures
           export MAX_GENE_INTERVALS=3
           export MACHINE_MEM=24
           export JAVA_OPTS_XSS=16M
