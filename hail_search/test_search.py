@@ -158,7 +158,7 @@ MULTI_PROJECT_VARIANT2 = deepcopy(VARIANT2)
 MULTI_PROJECT_VARIANT2['familyGuids'].append('F000011_11')
 MULTI_PROJECT_VARIANT2['genotypes']['I000015_na20885'] = {
     'sampleId': 'NA20885', 'sampleType': 'WES', 'individualGuid': 'I000015_na20885', 'familyGuid': 'F000011_11',
-    'numAlt': 1, 'dp': 28, 'gq': 99, 'ab': 0.5,
+    'numAlt': 1, 'dp': 28, 'gq': 99, 'ab': 0.5, 'filters': [],
 }
 
 NO_GENOTYPE_GCNV_VARIANT = {**GCNV_VARIANT4, 'numExon': 8, 'end': 38736268}
