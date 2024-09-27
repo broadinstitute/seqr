@@ -73,7 +73,6 @@ class BaseHailTableQuery(object):
     BASE_ANNOTATION_FIELDS = {
         FAMILY_GUID_FIELD: lambda r: hl.set(
             r.family_entries.filter(hl.is_defined).map(lambda entries: entries.first().familyGuid)),
-        'genotypeFilters': lambda r: hl.str(' ,').join(r.filters),
         'variantId': lambda r: r.variant_id,
     }
     ENUM_ANNOTATION_FIELDS = {
@@ -96,7 +95,12 @@ class BaseHailTableQuery(object):
     @classmethod
     def load_globals(cls):
         ht_path = cls._get_table_path('annotations.ht')
-        ht_globals = hl.eval(hl.read_table(ht_path).globals.select(*cls.GLOBALS))
+        try:
+            ht = hl.read_table(ht_path)
+        except Exception:
+            return None
+
+        ht_globals = hl.eval(ht.globals.select(*cls.GLOBALS))
         cls.LOADED_GLOBALS = {k: ht_globals[k] for k in cls.GLOBALS}
         return cls.LOADED_GLOBALS
 
@@ -141,7 +145,7 @@ class BaseHailTableQuery(object):
 
     def _select_genotype_for_sample(self, sample, r, include_genotype_overrides, select_fields):
         return sample.select(
-            'sampleId', 'sampleType', 'familyGuid', *(select_fields or []),
+            'sampleId', 'sampleType', 'familyGuid', 'filters', *(select_fields or []),
             numAlt=hl.if_else(hl.is_defined(sample.GT), sample.GT.n_alt_alleles(), self.MISSING_NUM_ALT),
             **{k: sample[field] for k, field in self.GENOTYPE_FIELDS.items()},
             **{_to_camel_case(k): v(sample, k, r) for k, v in self.COMPUTED_GENOTYPE_FIELDS.items()
@@ -366,7 +370,7 @@ class BaseHailTableQuery(object):
         filtered_project_hts = []
         filtered_comp_het_project_hts = []
         for ht, project_families in entries_hts:
-            ht, comp_het_ht = self._filter_single_entries_table(ht, project_families, **kwargs)
+            ht, comp_het_ht = self._filter_single_entries_table(ht, project_families, is_merged_ht=True, **kwargs)
             if ht is not None:
                 filtered_project_hts.append(ht)
             if comp_het_ht is not None:
@@ -431,15 +435,17 @@ class BaseHailTableQuery(object):
         ht = self._merge_project_hts(project_hts, n_partitions, include_all_globals=True)
         return self._prefilter_entries_table(ht, **kwargs)
 
-    @staticmethod
-    def _merge_project_hts(project_hts, n_partitions, include_all_globals=False):
+    @classmethod
+    def _merge_project_hts(cls, project_hts, n_partitions, include_all_globals=False):
         if not project_hts:
             return None
         ht = hl.Table.multi_way_zip_join(project_hts, 'project_entries', 'project_globals')
         ht = ht.repartition(n_partitions)
+        project_entries = ht.project_entries
+        if include_all_globals:
+            project_entries = project_entries.map(cls._annotate_entry_filters)
         ht = ht.transmute(
-            filters=ht.project_entries.fold(lambda f, x: f.union(x.filters), hl.empty_set(hl.tstr)),
-            family_entries=hl.enumerate(ht.project_entries).starmap(lambda i, x: hl.or_else(
+            family_entries=hl.enumerate(project_entries).starmap(lambda i, x: hl.or_else(
                 x.family_entries,
                 ht.project_globals[i].family_guids.map(lambda f: hl.missing(x.family_entries.dtype.element_type)),
             )).flatmap(lambda x: x),
@@ -461,8 +467,8 @@ class BaseHailTableQuery(object):
             return ht
         return ht.filter(ht.family_entries.any(hl.is_defined)).select_globals('family_guids')
 
-    def _filter_single_entries_table(self, ht, project_families, inheritance_filter=None, quality_filter=None, **kwargs):
-        ht, sorted_family_sample_data = self._add_entry_sample_families(ht, project_families)
+    def _filter_single_entries_table(self, ht, project_families, inheritance_filter=None, quality_filter=None, is_merged_ht=False, **kwargs):
+        ht, sorted_family_sample_data = self._add_entry_sample_families(ht, project_families, is_merged_ht)
         ht = self._filter_quality(ht, quality_filter, **kwargs)
         ht, ch_ht = self._filter_inheritance(
             ht, None, inheritance_filter, sorted_family_sample_data,
@@ -486,7 +492,7 @@ class BaseHailTableQuery(object):
                 lambda entries: hl.or_missing(passes_quality_filter(entries), entries)
             )})
 
-    def _add_entry_sample_families(self, ht: hl.Table, sample_data: dict):
+    def _add_entry_sample_families(self, ht, sample_data, is_merged_ht):
         """
         Annotates samples in family_entries with additional sample-level data.
         returns a tuple containing:
@@ -536,8 +542,16 @@ class BaseHailTableQuery(object):
         ht = ht.transmute(family_entries=family_sample_index_data.map(lambda family_tuple: family_tuple[1].map(
             lambda sample_tuple: ht.family_entries[family_tuple[0]][sample_tuple[0]].annotate(**sample_tuple[1])
         )))
+        if not is_merged_ht:
+            ht = self._annotate_entry_filters(ht)
 
         return ht, sorted_family_sample_data
+
+    @staticmethod
+    def _annotate_entry_filters(ht):
+        return ht.annotate(family_entries=ht.family_entries.map(
+            lambda entries: entries.map(lambda x: x.annotate(filters=ht.filters))
+        ))
 
     @classmethod
     def _sample_entry_data(cls, sample):
@@ -652,16 +666,13 @@ class BaseHailTableQuery(object):
             if field and value:
                 passes_quality_filters.append(self._get_genotype_passes_quality_field(field, value, affected_only))
 
-        has_vcf_filter = quality_filter.get('vcf_filter')
-        if not (passes_quality_filters or has_vcf_filter):
+        if quality_filter.get('vcf_filter'):
+            passes_quality_filters.append(self._passes_vcf_filters(ht, filters_field_name))
+
+        if not passes_quality_filters:
             return None
 
-        def passes_quality(entries):
-            passes_filters = entries.all(lambda gt: hl.all([f(gt) for f in passes_quality_filters])) if passes_quality_filters else True
-            passes_vcf_filters = self._passes_vcf_filters(ht, filters_field_name) if has_vcf_filter else True
-            return passes_filters & passes_vcf_filters
-
-        return passes_quality
+        return lambda entries: entries.all(lambda gt: hl.all([f(gt) for f in passes_quality_filters]))
 
     @classmethod
     def _get_genotype_passes_quality_field(cls, field, value, affected_only):
@@ -1214,8 +1225,9 @@ class BaseHailTableQuery(object):
         if not include_sample_annotations:
             annotation_fields = {
                 k: v for k, v in annotation_fields.items()
-                if k not in {FAMILY_GUID_FIELD, GENOTYPES_FIELD, 'genotypeFilters'}
+                if k not in {FAMILY_GUID_FIELD, GENOTYPES_FIELD}
             }
+
         formatted = self._format_results(ht.key_by(), annotation_fields=annotation_fields, include_genotype_overrides=False)
 
         return formatted.aggregate(hl.agg.take(formatted.row, len(variant_ids)))

@@ -913,8 +913,9 @@ VARIANTS = [
             'callset': {'af': 0.13, 'ac': 4192, 'an': '32588'},
             'gnomad_genomes': {'af': 0.007},
         },
+        'genotypeFilters': 'VQSRTrancheSNP99.95to100.00',
         'genotypes': {
-            'NA19675': [{
+            'NA19675': {
                 'sampleId': 'NA19675',
                 'ab': 0.702127659574,
                 'gq': 46.0,
@@ -922,8 +923,8 @@ VARIANTS = [
                 'dp': '50',
                 'ad': '14,33',
                 'sampleType': 'WES'
-            }],
-            'NA19679': [{
+            },
+            'NA19679': {
                 'sampleId': 'NA19679',
                 'ab': 0.0,
                 'gq': 99.0,
@@ -931,7 +932,7 @@ VARIANTS = [
                 'dp': '45',
                 'ad': '45,0',
                 'sampleType': 'WES'
-            }]
+            }
         }
     },
     {
@@ -946,7 +947,8 @@ VARIANTS = [
         'transcripts': {},
         'familyGuids': ['F000001_1'],
         'genotypes': {
-            'NA19679': [{
+            'NA19679': {
+                'filters': ['artifact_prone_site'],
                 'sampleId': 'NA19679',
                 'ab': 0.0,
                 'gq': 99.0,
@@ -954,7 +956,7 @@ VARIANTS = [
                 'dp': '45',
                 'ad': '45,0',
                 'sampleType': 'WES'
-            }]
+            }
         }
     },
     {
@@ -968,6 +970,7 @@ VARIANTS = [
         'variantId': '1-248367227-TC-T',
         'transcripts': {'ENSG00000233653': {}},
         'familyGuids': ['F000002_2'],
+        'genotypeFilters': '',
         'genotypes': {}
     }
 ]
@@ -1175,7 +1178,7 @@ PARSED_VARIANTS = [
             'I000007_na20870': {
                 'ab': 0.70212764, 'ad': None, 'gq': 46, 'sampleId': 'NA20870', 'numAlt': 1, 'dp': 50, 'pl': None,
                 'sampleType': 'WES',
-            },
+            }
         },
         'genotypeFilters': '',
         'genomeVersion': '37',

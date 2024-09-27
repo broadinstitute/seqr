@@ -207,7 +207,7 @@ const GENOTYPE_DETAILS = [
   { title: 'Read Depth', field: 'dp' },
   { title: 'Genotype Quality', field: 'gq' },
   { title: 'Allelic Balance', field: 'ab', format: val => val && val.toPrecision(2) },
-  { title: 'Filter', variantField: 'genotypeFilters', shouldHide: val => (val || []).length < 1 },
+  { title: 'Filter', field: 'filters', variantField: 'genotypeFilters', shouldHide: val => (val || []).length < 1 },
   { title: 'Phred Likelihoods', field: 'pl' },
   { title: 'Quality Score', field: 'qs' },
   {
@@ -233,7 +233,7 @@ const SV_GENOTYPE_DETAILS = [
 
 const formattedGenotypeDetails = (details, genotype, variant, genesById) => details.map(
   ({ shouldHide, title, field, variantField, format, comment }) => {
-    const value = field ? genotype[field] : variant[variantField]
+    const value = genotype[field] || variant[variantField]
     return value && !(shouldHide && shouldHide(value, variant)) ? (
       <div key={title}>
         {`${title}:  `}
@@ -334,6 +334,7 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet, genesById }) 
   const secondaryQuality = genotype.ab || genotype.hl
 
   const quality = Number.isInteger(genotype.gq) ? genotype.gq : genotype.qs
+  const filters = genotype.filters?.join(', ') || variant.genotypeFilters
 
   const content = (
     <span>
@@ -365,10 +366,10 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet, genesById }) 
       )}
       {Number.isInteger(quality) ? quality : '-'}
       {showSecondaryQuality && `, ${secondaryQuality ? secondaryQuality.toPrecision(2) : '-'}`}
-      {variant.genotypeFilters && (
+      {filters && (
         <small>
           <br />
-          {variant.genotypeFilters}
+          {filters}
         </small>
       )}
     </span>

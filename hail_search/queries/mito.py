@@ -15,6 +15,7 @@ from hail_search.queries.base import BaseHailTableQuery, PredictionPath, Quality
     HT_CHUNK_SIZE
 
 REFERENCE_DATASETS_DIR = os.environ.get('REFERENCE_DATASETS_DIR', '/seqr/seqr-reference-data')
+REFERENCE_DATASET_SUBDIR = 'cached_reference_dataset_queries'
 
 logger = logging.getLogger(__name__)
 
@@ -159,7 +160,8 @@ class MitoHailTableQuery(BaseHailTableQuery):
             wes_ht, wes_project_samples = entry[SampleType.WES.value]
             wgs_ht, wgs_project_samples = entry[SampleType.WGS.value]
             ht, comp_het_ht = self._filter_entries_ht_both_sample_types(
-                wes_ht, wes_project_samples, wgs_ht, wgs_project_samples, **kwargs
+                wes_ht, wes_project_samples, wgs_ht, wgs_project_samples,
+                is_merged_ht=True, **kwargs
             )
             if ht is not None:
                 filtered_project_hts.append(ht)
@@ -201,12 +203,13 @@ class MitoHailTableQuery(BaseHailTableQuery):
         return all_project_hts
 
     def _filter_entries_ht_both_sample_types(
-        self, wes_ht, wes_project_samples, wgs_ht, wgs_project_samples, inheritance_filter=None, quality_filter=None, **kwargs
+        self, wes_ht, wes_project_samples, wgs_ht, wgs_project_samples, inheritance_filter=None, quality_filter=None,
+        is_merged_ht=False, **kwargs
     ):
-        wes_ht, sorted_wes_family_sample_data = self._add_entry_sample_families(wes_ht, wes_project_samples)
-        wgs_ht, sorted_wgs_family_sample_data = self._add_entry_sample_families(wgs_ht, wgs_project_samples)
-        wes_ht = wes_ht.rename({'family_entries': SampleType.WES.family_entries_field, 'filters': SampleType.WES.filters_field})
-        wgs_ht = wgs_ht.rename({'family_entries': SampleType.WGS.family_entries_field, 'filters': SampleType.WGS.filters_field})
+        wes_ht, sorted_wes_family_sample_data = self._add_entry_sample_families(wes_ht, wes_project_samples, is_merged_ht)
+        wgs_ht, sorted_wgs_family_sample_data = self._add_entry_sample_families(wgs_ht, wgs_project_samples, is_merged_ht)
+        wes_ht = wes_ht.rename({'family_entries': SampleType.WES.family_entries_field})
+        wgs_ht = wgs_ht.rename({'family_entries': SampleType.WGS.family_entries_field})
         ht = wes_ht.join(wgs_ht, how='outer')
 
         sample_types = [
@@ -261,10 +264,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
                 ht[SampleType.WES.family_entries_field], hl.empty_array(ht[SampleType.WES.family_entries_field].dtype.element_type)
             ).extend(hl.coalesce(
                 ht[SampleType.WGS.family_entries_field], hl.empty_array(ht[SampleType.WGS.family_entries_field].dtype.element_type)
-            )).filter(lambda entries: entries.any(hl.is_defined)),
-            filters=hl.coalesce(ht[SampleType.WES.filters_field], hl.empty_set(hl.tstr)).union(
-                hl.coalesce(ht[SampleType.WGS.filters_field], hl.empty_set(hl.tstr))
-            )
+            )).filter(lambda entries: entries.any(hl.is_defined))
         )
         # Filter out families with no valid entries in either sample type
         return ht.filter(ht.family_entries.any(hl.is_defined))
@@ -349,7 +349,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
             if ht_filter is False:
                 self._filter_hts[key] = False
             else:
-                ht = self._read_table(self.PREFILTER_TABLES[key])
+                ht = self._read_table(f'{REFERENCE_DATASET_SUBDIR}/{self.PREFILTER_TABLES[key]}')
                 if ht_filter is not True:
                     ht = ht.filter(ht_filter(ht))
                 self._filter_hts[key] = ht
@@ -358,7 +358,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
 
     @classmethod
     def _get_table_dir(cls, path):
-        if path in cls.PREFILTER_TABLES.values():
+        if REFERENCE_DATASET_SUBDIR in path:
             return REFERENCE_DATASETS_DIR
         return super()._get_table_dir(path)
 

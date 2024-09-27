@@ -231,7 +231,7 @@ class Command(BaseCommand):
         logger.info(f'Reloading shared annotations for {len(variant_models)} {data_type} {genome_version} saved variants ({len(variants_by_id)} unique)')
 
         updated_variants_by_id = {
-            variant_id: {k: v for k, v in variant.items() if k not in {'familyGuids', 'genotypes', 'genotypeFilters'}}
+            variant_id: {k: v for k, v in variant.items() if k not in {'familyGuids', 'genotypes'}}
             for variant_id, variant in (updated_variants_by_id or {}).items()
         }
         fetch_variant_ids = sorted(set(variants_by_id.keys()) - set(updated_variants_by_id.keys()))

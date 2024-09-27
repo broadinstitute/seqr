@@ -16,7 +16,7 @@ import Variants, { Variant, StyledVariantRow } from 'shared/components/panel/var
 import { FamilyVariantIndividuals } from 'shared/components/panel/variants/VariantIndividuals'
 import { GENOME_VERSION_FIELD } from 'shared/utils/constants'
 import { sendVlmContactEmail } from '../reducers'
-import { geVlmDefaultContactEmailByFamily } from '../selectors'
+import { getVlmDefaultContactEmails, getVlmFamiliesByContactEmail } from '../selectors'
 
 const FIELDS = [
   {
@@ -37,56 +37,98 @@ const FIELDS = [
   { required: true, ...GENOME_VERSION_FIELD },
 ]
 
-const mapContactStateToProps = (state, ownProps) => {
-  const defaultEmail = geVlmDefaultContactEmailByFamily(state, ownProps)[ownProps.familyGuid]
-  const disabled = !defaultEmail?.to
-  return {
-    defaultEmail,
-    disabled,
-    buttonText: disabled ? 'Contact Opted Out' : null,
-    modalId: ownProps.familyGuid,
-  }
-}
-
 const mapContactDispatchToProps = {
   onSubmit: sendVlmContactEmail,
 }
 
-const ContactButton = connect(mapContactStateToProps, mapContactDispatchToProps)(SendEmailButton)
+const ContactButton = connect(null, mapContactDispatchToProps)(SendEmailButton)
 
-const LookupFamily = ({ familyGuid, variant, reads, showReads }) => (
+const LookupFamilyLayout = ({ topContent, bottomContent, children, ...buttonProps }) => (
   <StyledVariantRow>
-    <Grid.Column width={16}>
-      <FamilyVariantTags familyGuid={familyGuid} variant={variant} linkToSavedVariants />
+    {topContent}
+    <Grid.Column width={4}>
+      <ContactButton {...buttonProps} />
     </Grid.Column>
-    <Grid.Column width={4}><ContactButton familyGuid={familyGuid} variant={variant} /></Grid.Column>
     <Grid.Column width={12}>
-      <FamilyVariantIndividuals familyGuid={familyGuid} variant={variant} />
-      {showReads}
+      {children}
     </Grid.Column>
-    <Grid.Column width={16}>{reads}</Grid.Column>
+    {bottomContent}
   </StyledVariantRow>
 )
 
-LookupFamily.propTypes = {
+LookupFamilyLayout.propTypes = {
+  topContent: PropTypes.node,
+  bottomContent: PropTypes.node,
+  children: PropTypes.node,
+}
+
+const InternalFamily = ({ familyGuid, variant, reads, showReads }) => (
+  <LookupFamilyLayout
+    topContent={(
+      <Grid.Column width={16}>
+        <FamilyVariantTags familyGuid={familyGuid} variant={variant} linkToSavedVariants />
+      </Grid.Column>
+    )}
+    bottomContent={<Grid.Column width={16}>{reads}</Grid.Column>}
+  >
+    <FamilyVariantIndividuals familyGuid={familyGuid} variant={variant} />
+    {showReads}
+  </LookupFamilyLayout>
+)
+
+InternalFamily.propTypes = {
   familyGuid: PropTypes.string.isRequired,
   variant: PropTypes.object.isRequired,
   reads: PropTypes.object,
   showReads: PropTypes.object,
 }
 
-const LookupVariant = ({ variant }) => (
-  <Grid stackable divided="vertically">
-    <Variant variant={variant} />
-    {variant.lookupFamilyGuids.map(familyGuid => (
-      <FamilyReads key={familyGuid} layout={LookupFamily} familyGuid={familyGuid} variant={variant} />
-    ))}
-  </Grid>
-)
-
-LookupVariant.propTypes = {
-  variant: PropTypes.object,
+const BaseLookupVariant = ({ variant, familiesByContactEmail, vlmDefaultContactEmails }) => {
+  const { internal, disabled, ...familiesByContact } = familiesByContactEmail
+  return (
+    <Grid stackable divided="vertically">
+      <Variant variant={variant} />
+      {(internal || []).map(familyGuid => (
+        <FamilyReads key={familyGuid} layout={InternalFamily} familyGuid={familyGuid} variant={variant} />
+      ))}
+      {Object.entries(familiesByContact).map(([contactEmail, families]) => (
+        <LookupFamilyLayout
+          key={contactEmail}
+          defaultEmail={vlmDefaultContactEmails[contactEmail]}
+          modalId={contactEmail}
+        >
+          <Grid stackable divided="vertically">
+            {families.map(familyGuid => (
+              <Grid.Row key={familyGuid}>
+                <Grid.Column width={16}>
+                  <FamilyVariantIndividuals familyGuid={familyGuid} variant={variant} />
+                </Grid.Column>
+              </Grid.Row>
+            ))}
+          </Grid>
+        </LookupFamilyLayout>
+      ))}
+      {(disabled || []).map(familyGuid => (
+        <LookupFamilyLayout key={familyGuid} defaultEmail={vlmDefaultContactEmails.disabled} disabled buttonText="Contact Opted Out">
+          <FamilyVariantIndividuals familyGuid={familyGuid} variant={variant} />
+        </LookupFamilyLayout>
+      ))}
+    </Grid>
+  )
 }
+
+BaseLookupVariant.propTypes = {
+  variant: PropTypes.object,
+  familiesByContactEmail: PropTypes.object,
+  vlmDefaultContactEmails: PropTypes.object,
+}
+
+const mapStateToProps = (state, ownProps) => ({
+  familiesByContactEmail: getVlmFamiliesByContactEmail(state, ownProps),
+  vlmDefaultContactEmails: getVlmDefaultContactEmails(state, ownProps),
+})
+
+const LookupVariant = connect(mapStateToProps)(BaseLookupVariant)
 
 const VariantDisplay = ({ variants }) => (
   (variants || [])[0]?.lookupFamilyGuids ? <LookupVariant variant={variants[0]} /> : <Variants variants={variants} />
