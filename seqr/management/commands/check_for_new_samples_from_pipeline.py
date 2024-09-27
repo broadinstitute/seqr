@@ -156,6 +156,8 @@ class Command(BaseCommand):
 
     @staticmethod
     def _update_pdos(session, project_guid, sample_ids):
+        # TODO only matches on Samples in exactly 1 PDO
+        # Shared utility with _fetch_airtable_loadable_project_samples
         airtable_samples = session.fetch_records(
             'Samples', fields=['CollaboratorSampleID', 'SeqrCollaboratorSampleID', 'PDOID'],
             or_filters={'PDOStatus': LOADABLE_PDO_STATUSES},

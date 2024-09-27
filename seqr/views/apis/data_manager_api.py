@@ -465,10 +465,10 @@ def _callset_path(request_json):
 def get_loaded_projects(request, sample_type, dataset_type):
     projects = get_internal_projects().filter(is_demo=False)
     project_samples = None
+    if AirtableSession.is_airtable_enabled():
+        project_samples = _fetch_airtable_loadable_project_samples(request.user, dataset_type)
+        projects = projects.filter(guid__in=project_samples.keys())
     if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
-        if AirtableSession.is_airtable_enabled():
-            project_samples = _fetch_airtable_loadable_project_samples(request.user)
-            projects = projects.filter(guid__in=project_samples.keys())
         exclude_sample_type = Sample.SAMPLE_TYPE_WES if sample_type == Sample.SAMPLE_TYPE_WGS else Sample.SAMPLE_TYPE_WGS
         # Include projects with either the matched sample type OR with no loaded data
         projects = projects.exclude(family__individual__sample__sample_type=exclude_sample_type)
@@ -488,19 +488,22 @@ def get_loaded_projects(request, sample_type, dataset_type):
     return create_json_response({'projects': list(projects)})
 
 
-def _fetch_airtable_loadable_project_samples(user):
-    pdos = AirtableSession(user).fetch_records(
-        'PDO', fields=['PassingCollaboratorSampleIDs', 'SeqrIDs', 'SeqrProjectURL'],
-        or_filters={'PDOStatus': LOADABLE_PDO_STATUSES}
+def _fetch_airtable_loadable_project_samples(user, dataset_type):
+    # TODO cleanup duplicated calls with _get_loaded_samples
+    # TODO filter based on dataset_type/sample type if applicable
+    samples = AirtableSession(user).fetch_records(
+        'Samples', fields=['CollaboratorSampleID', 'SeqrCollaboratorSampleID', 'SeqrProject', 'PDOStatus'],
+        or_filters={'PDOStatus': LOADABLE_PDO_STATUSES}, or_template="SEARCH('{value}', ARRAYJOIN({key}, ';'))"
+        # TODO filtering logic for arrays belongs in AirtableSession
     )
     project_samples = defaultdict(set)
-    for pdo in pdos.values():
-        project_guid = re.match(
-            f'{BASE_URL}project/([^/]+)/project_page', pdo['SeqrProjectURL'],
-        ).group(1)
-        project_samples[project_guid].update([
-            sample_id for sample_id in pdo['PassingCollaboratorSampleIDs'] + pdo['SeqrIDs'] if sample_id
-        ])
+    for sample in samples.values():
+        project_guids = [
+            re.match(f'{BASE_URL}project/([^/]+)/project_page', project_url).group(1)
+            for i, project_url in enumerate(sample['SeqrProject']) if sample['PDOStatus'][i] in LOADABLE_PDO_STATUSES
+        ]
+        for project_guid in project_guids:
+            project_samples[project_guid].add(sample.get('SeqrCollaboratorSampleID') or sample['CollaboratorSampleID'])
     return project_samples
 
 

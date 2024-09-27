@@ -102,11 +102,11 @@ class AirtableSession(object):
 
         return updated_records
 
-    def fetch_records(self, record_type, fields, or_filters, and_filters=None, page_size=PAGE_SIZE):
+    def fetch_records(self, record_type, fields, or_filters, and_filters=None, or_template="{key}='{value}'", page_size=PAGE_SIZE):
         self._session.params.update({'fields[]': fields, 'pageSize': page_size})
         filter_formulas = []
         for key, values in or_filters.items():
-            filter_formulas += [f"{key}='{value}'" for value in sorted(values)]
+            filter_formulas += [or_template.format(key=key, value=value) for value in sorted(values)]
         and_filter_formulas = ','.join([f"{{{key}}}='{value}'" for key, value in (and_filters or {}).items()])
         records = {}
         for i in range(0, len(filter_formulas), MAX_OR_FILTERS):
