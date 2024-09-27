@@ -1,3 +1,5 @@
+from aiohttp.web import HTTPInternalServerError
+
 from hail_search.queries.multi_data_types import QUERY_CLASS_MAP, SNV_INDEL_DATA_TYPE, MultiDataTypeHailTableQuery
 
 
@@ -33,7 +35,10 @@ def lookup_variants(request):
 
 
 def load_globals():
-    return {
+    data_type_globals = {
         str(k): v.load_globals()
         for k, v in QUERY_CLASS_MAP.items()
     }
+    if all(g is None for g in data_type_globals.values()):
+        raise HTTPInternalServerError(reason='No loaded data found')
+    return data_type_globals

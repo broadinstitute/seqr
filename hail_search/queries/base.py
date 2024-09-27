@@ -90,7 +90,10 @@ class BaseHailTableQuery(object):
     @classmethod
     def load_globals(cls):
         ht_path = cls._get_table_path('annotations.ht')
-        ht_globals = hl.eval(hl.read_table(ht_path).globals.select(*cls.GLOBALS))
+        try:
+            ht_globals = hl.eval(hl.read_table(ht_path).globals.select(*cls.GLOBALS))
+        except Exception:
+            return None
         cls.LOADED_GLOBALS = {k: ht_globals[k] for k in cls.GLOBALS}
         return cls.LOADED_GLOBALS
 
