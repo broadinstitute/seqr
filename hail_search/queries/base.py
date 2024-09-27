@@ -473,11 +473,14 @@ class BaseHailTableQuery(object):
     ):
         passes_quality_filter = self._get_family_passes_quality_filter(
             quality_filter, ht, filters_field_name=filters_field_name, **kwargs
-        ) or (lambda _: True)
+        )
+
+        if passes_quality_filter is None:
+            return ht
 
         return ht.annotate(**{
             annotation: ht[entries_ht_field].map(
-                lambda entries: hl.or_missing(entries.any(passes_quality_filter), entries)
+                lambda entries: hl.or_missing(passes_quality_filter(entries), entries)
             )})
 
     def _add_entry_sample_families(self, ht: hl.Table, sample_data: dict):
@@ -566,8 +569,8 @@ class BaseHailTableQuery(object):
 
         if self._has_comp_het_search:
             comp_het_ht = self._annotate_families_inheritance(
-                comp_het_ht if comp_het_ht is not None else ht,
-                COMPOUND_HET, inheritance_filter, sorted_family_sample_data, **kwargs
+                comp_het_ht if comp_het_ht is not None else ht, COMPOUND_HET, inheritance_filter,
+                sorted_family_sample_data, annotation, entries_ht_field
             )
 
         if is_any_affected or not (inheritance_filter or self._inheritance_mode):
@@ -575,7 +578,8 @@ class BaseHailTableQuery(object):
             sorted_family_sample_data = []
 
         ht = None if self._inheritance_mode == COMPOUND_HET else self._annotate_families_inheritance(
-            ht, self._inheritance_mode, inheritance_filter, sorted_family_sample_data, **kwargs
+            ht, self._inheritance_mode, inheritance_filter, sorted_family_sample_data,
+            annotation, entries_ht_field
         )
 
         return ht, comp_het_ht

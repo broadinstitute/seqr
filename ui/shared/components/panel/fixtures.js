@@ -31,6 +31,15 @@ export const VARIANT = {
       gq: 99,
       numAlt: 2,
       pl: "358,132,0",
+    }, {
+      ab: 1,
+      ad: "0,74",
+      alleles: ["TC", "T"],
+      dp: "74",
+      filter: "pass",
+      gq: 99,
+      numAlt: 2,
+      pl: "358,132,0",
     }],
     NA19678: [{
       ab: 0,
@@ -101,19 +110,19 @@ export const SV_VARIANT = {
   genomeVersion: "37",
   geneIds: ['ENSG00000228198', 'ENSG00000164458'],
   genotypes: {
-    NA19675: [{
+    NA19675: {
       cn: 0,
       qs: 57,
       numAlt: -1,
-    }],
-    NA19678: [{
+    },
+    NA19678: {
       cn: 2,
       numAlt: -1,
-    }],
-    NA19679: [{
+    },
+    NA19679: {
       cn: 2,
       numAlt: -1,
-    }],
+    },
   },
   liftedOverChrom: "",
   liftedOverGenomeVersion: "38",
