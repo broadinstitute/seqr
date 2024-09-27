@@ -174,14 +174,14 @@ class MitoHailTableQuery(BaseHailTableQuery):
         all_project_hts = []
         project_hts = defaultdict(list)
         sample_data = defaultdict(dict)
+
         for project_guid, project_sample_type_data in project_samples.items():
             for sample_type, family_sample_data in project_sample_type_data.items():
-                project_ht = self._read_project_table(project_guid, sample_type)
+                project_ht = self._read_project_data(
+                    family_sample_data, project_guid, sample_type, project_hts[sample_type], sample_data[sample_type]
+                )
                 if project_ht is None:
                     continue
-                project_ht = project_ht.select_globals('sample_type', 'family_guids', 'family_samples')
-                project_hts[sample_type].append(project_ht)
-                sample_data[sample_type].update(family_sample_data)
 
             # Merge both WES and WGS project_hts when either of their lengths reaches the chunk size
             if len(project_hts[SampleType.WES.value]) >= HT_CHUNK_SIZE or len(project_hts[SampleType.WGS.value]) >= HT_CHUNK_SIZE:

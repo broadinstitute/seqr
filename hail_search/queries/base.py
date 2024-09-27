@@ -385,12 +385,9 @@ class BaseHailTableQuery(object):
         sample_data = {}
         for project_guid, project_sample_type_data in project_samples.items():
             sample_type, family_sample_data = list(project_sample_type_data.items())[0]
-            project_ht = self._read_project_table(project_guid, sample_type)
+            project_ht = self._read_project_data(family_sample_data, project_guid, sample_type, project_hts, sample_data)
             if project_ht is None:
                 continue
-            project_ht = project_ht.select_globals('sample_type', 'family_guids', 'family_samples')
-            project_hts.append(project_ht)
-            sample_data.update(family_sample_data)
 
             if len(project_hts) >= HT_CHUNK_SIZE:
                 ht = self._prefilter_merged_project_hts(project_hts, n_partitions, **kwargs)
@@ -402,6 +399,15 @@ class BaseHailTableQuery(object):
             ht = self._prefilter_merged_project_hts(project_hts, n_partitions, **kwargs)
             all_project_hts.append((ht, sample_data))
         return all_project_hts
+
+    def _read_project_data(self, family_sample_data, project_guid, sample_type, project_hts, sample_data):
+        project_ht = self._read_project_table(project_guid, sample_type)
+        if project_ht is not None:
+            project_ht = project_ht.select_globals('sample_type', 'family_guids', 'family_samples')
+            project_hts.append(project_ht)
+            sample_data.update(family_sample_data)
+
+        return project_ht
 
     def import_filtered_table(self, project_samples: dict, num_families: int, **kwargs):
         if num_families == 1 or len(project_samples) == 1:
@@ -473,10 +479,7 @@ class BaseHailTableQuery(object):
     ):
         passes_quality_filter = self._get_family_passes_quality_filter(
             quality_filter, ht, filters_field_name=filters_field_name, **kwargs
-        )
-
-        if passes_quality_filter is None:
-            return ht
+        ) or (lambda x: True)
 
         return ht.annotate(**{
             annotation: ht[entries_ht_field].map(
