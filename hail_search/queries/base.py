@@ -319,44 +319,6 @@ class BaseHailTableQuery(object):
         logger.info(f'Loading {self.DATA_TYPE} data for {num_families} families in {len(project_samples)} projects')
         return project_samples, num_families
 
-    def _load_family_ht(
-        self, family_guid: str, sample_type: str, project_sample_type_data: dict, **kwargs
-    ) -> tuple[hl.Table, dict]:
-        ht = self._read_table(f'families/{sample_type}/{family_guid}.ht')
-        ht = ht.transmute(family_entries=[ht.entries])
-        ht = ht.annotate_globals(family_guids=[family_guid], family_samples={family_guid: ht.sample_ids})
-        ht = self._prefilter_entries_table(ht, **kwargs)
-        sample_data = project_sample_type_data[sample_type]
-        return ht, sample_data
-
-    def _load_project_ht(
-        self, project_guid: str, sample_type: str, project_sample_type_data: dict, **kwargs
-    ) -> tuple[hl.Table, dict]:
-        ht = self._read_project_table(project_guid, sample_type)
-        ht = self._prefilter_entries_table(ht, **kwargs)
-        sample_data = project_sample_type_data[sample_type]
-        return ht, sample_data
-
-    def _read_project_table(self, project_guid: str, sample_type: str):
-        return self._read_table(f'projects/{sample_type}/{project_guid}.ht')
-
-    def _import_and_filter_entries_ht(
-        self, project_guid: str, num_families: int, project_sample_type_data, **kwargs
-    ) -> tuple[hl.Table, hl.Table]:
-        sample_type = list(project_sample_type_data.keys())[0]
-        ht, sample_data = self._load_family_or_project_ht(
-            num_families, project_guid, project_sample_type_data, sample_type, **kwargs
-        )
-        return self._filter_single_entries_table(ht, sample_data, **kwargs)
-
-    def _load_family_or_project_ht(self, num_families, project_guid, project_sample_type_data, sample_type, **kwargs):
-        if num_families == 1:
-            family_guid = list(project_sample_type_data[sample_type].keys())[0]
-            ht, sample_data = self._load_family_ht(family_guid, sample_type, project_sample_type_data, **kwargs)
-        else:
-            ht, sample_data = self._load_project_ht(project_guid, sample_type, project_sample_type_data, **kwargs)
-        return ht, sample_data
-
     def _import_and_filter_multiple_project_hts(
         self, project_samples: dict, n_partitions=MAX_PARTITIONS, **kwargs
     ) -> tuple[hl.Table, hl.Table]:
@@ -377,11 +339,6 @@ class BaseHailTableQuery(object):
                 filtered_comp_het_project_hts.append(comp_het_ht)
 
         return self._merge_filtered_hts(filtered_comp_het_project_hts, filtered_project_hts, n_partitions)
-
-    def _merge_filtered_hts(self, filtered_comp_het_project_hts, filtered_project_hts, n_partitions):
-        ht = self._merge_project_hts(filtered_project_hts, n_partitions)
-        comp_het_ht = self._merge_project_hts(filtered_comp_het_project_hts, n_partitions)
-        return ht, comp_het_ht
 
     def _load_project_hts(self, project_samples: dict, n_partitions: int, **kwargs) -> list[tuple[hl.Table, dict]]:
         all_project_hts = []
@@ -431,6 +388,44 @@ class BaseHailTableQuery(object):
             self._ht = self._query_table_annotations(families_ht, self._get_table_path('annotations.ht'))
             self._ht = self._filter_annotated_table(self._ht, **kwargs)
 
+    def _import_and_filter_entries_ht(
+        self, project_guid: str, num_families: int, project_sample_type_data, **kwargs
+    ) -> tuple[hl.Table, hl.Table]:
+        sample_type = list(project_sample_type_data.keys())[0]
+        ht, sample_data = self._load_family_or_project_ht(
+            num_families, project_guid, project_sample_type_data, sample_type, **kwargs
+        )
+        return self._filter_single_entries_table(ht, sample_data, **kwargs)
+
+    def _load_family_or_project_ht(self, num_families, project_guid, project_sample_type_data, sample_type, **kwargs):
+        if num_families == 1:
+            family_guid = list(project_sample_type_data[sample_type].keys())[0]
+            ht, sample_data = self._load_family_ht(family_guid, sample_type, project_sample_type_data, **kwargs)
+        else:
+            ht, sample_data = self._load_project_ht(project_guid, sample_type, project_sample_type_data, **kwargs)
+        return ht, sample_data
+
+    def _load_family_ht(
+        self, family_guid: str, sample_type: str, project_sample_type_data: dict, **kwargs
+    ) -> tuple[hl.Table, dict]:
+        ht = self._read_table(f'families/{sample_type}/{family_guid}.ht')
+        ht = ht.transmute(family_entries=[ht.entries])
+        ht = ht.annotate_globals(family_guids=[family_guid], family_samples={family_guid: ht.sample_ids})
+        ht = self._prefilter_entries_table(ht, **kwargs)
+        sample_data = project_sample_type_data[sample_type]
+        return ht, sample_data
+
+    def _load_project_ht(
+        self, project_guid: str, sample_type: str, project_sample_type_data: dict, **kwargs
+    ) -> tuple[hl.Table, dict]:
+        ht = self._read_project_table(project_guid, sample_type)
+        ht = self._prefilter_entries_table(ht, **kwargs)
+        sample_data = project_sample_type_data[sample_type]
+        return ht, sample_data
+
+    def _read_project_table(self, project_guid: str, sample_type: str):
+        return self._read_table(f'projects/{sample_type}/{project_guid}.ht')
+
     def _prefilter_merged_project_hts(self, project_hts, n_partitions, **kwargs):
         ht = self._merge_project_hts(project_hts, n_partitions, include_all_globals=True)
         return self._prefilter_entries_table(ht, **kwargs)
@@ -461,11 +456,16 @@ class BaseHailTableQuery(object):
 
         return ht.transmute_globals(**global_expressions)
 
+    def _merge_filtered_hts(self, filtered_comp_het_project_hts, filtered_project_hts, n_partitions):
+        ht = self._merge_project_hts(filtered_project_hts, n_partitions)
+        comp_het_ht = self._merge_project_hts(filtered_comp_het_project_hts, n_partitions)
+        return ht, comp_het_ht
+
     @staticmethod
     def _apply_entry_filters(ht):
-        if ht is None:
-            return ht
-        return ht.filter(ht.family_entries.any(hl.is_defined)).select_globals('family_guids')
+        if ht is not None:
+            ht = ht.filter(ht.family_entries.any(hl.is_defined)).select_globals('family_guids')
+        return ht
 
     def _filter_single_entries_table(self, ht, project_families, inheritance_filter=None, quality_filter=None, is_merged_ht=False, **kwargs):
         ht, sorted_family_sample_data = self._add_entry_sample_families(ht, project_families, is_merged_ht)
@@ -473,7 +473,6 @@ class BaseHailTableQuery(object):
         ht, ch_ht = self._filter_inheritance(
             ht, None, inheritance_filter, sorted_family_sample_data,
         )
-
         ht = self._apply_entry_filters(ht)
         ch_ht = self._apply_entry_filters(ch_ht)
 
