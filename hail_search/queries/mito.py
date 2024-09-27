@@ -218,7 +218,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
         ]
         for sample_type, _ in sample_types:
             ht = self._filter_quality(
-                ht, quality_filter, filters_field_name=sample_type.filters_field,
+                ht, quality_filter,
                 annotation=sample_type.passes_quality_field, entries_ht_field=sample_type.family_entries_field, **kwargs
             )
 

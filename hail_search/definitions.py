@@ -13,13 +13,6 @@ class SampleType(str, Enum):
         }[self]
 
     @property
-    def filters_field(self) -> str:
-        return {
-            SampleType.WES: 'wes_filters',
-            SampleType.WGS: 'wgs_filters',
-        }[self]
-
-    @property
     def passes_inheritance_field(self) -> str:
         return {
             SampleType.WES: 'wes_passes_inheritance',

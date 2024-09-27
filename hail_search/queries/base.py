@@ -479,12 +479,11 @@ class BaseHailTableQuery(object):
         return ht, ch_ht
 
     def _filter_quality(
-        self, ht, quality_filter, filters_field_name='filters',
-        annotation='family_entries', entries_ht_field='family_entries', **kwargs
+        self, ht, quality_filter, annotation='family_entries', entries_ht_field='family_entries', **kwargs
     ):
         passes_quality_filter = self._get_family_passes_quality_filter(
-            quality_filter, ht, filters_field_name=filters_field_name, **kwargs
-        ) or (lambda x: True)
+            quality_filter, ht, **kwargs
+        ) or (lambda _: True)
 
         return ht.annotate(**{
             annotation: ht[entries_ht_field].map(
@@ -654,7 +653,7 @@ class BaseHailTableQuery(object):
             is_valid &= unaffected_filter
         return hl.or_missing(is_valid, entries)
 
-    def _get_family_passes_quality_filter(self, quality_filter, ht, filters_field_name='filters', **kwargs):
+    def _get_family_passes_quality_filter(self, quality_filter, ht, **kwargs):
         quality_filter = quality_filter or {}
 
         affected_only = quality_filter.get('affected_only')
@@ -666,7 +665,7 @@ class BaseHailTableQuery(object):
                 passes_quality_filters.append(self._get_genotype_passes_quality_field(field, value, affected_only))
 
         if quality_filter.get('vcf_filter'):
-            passes_quality_filters.append(self._passes_vcf_filters(ht, filters_field_name))
+            passes_quality_filters.append(self._passes_vcf_filters)
 
         if not passes_quality_filters:
             return None
@@ -674,7 +673,7 @@ class BaseHailTableQuery(object):
         return lambda entries: entries.all(lambda gt: hl.all([f(gt) for f in passes_quality_filters]))
 
     @classmethod
-    def _get_genotype_passes_quality_field(cls, field, value, affected_only):
+    def _get_genotype_passes_quality_field(cls, field, value, affected_only, **kwargs):
         field_config = cls.QUALITY_FILTER_FORMAT.get(field) or QualityFilterFormat()
         if field_config.scale:
             value = value / field_config.scale
@@ -690,8 +689,8 @@ class BaseHailTableQuery(object):
         return passes_quality_field
 
     @staticmethod
-    def _passes_vcf_filters(ht: hl.Table, filters_field_name: str):
-        return hl.is_missing(ht[filters_field_name]) | (ht[filters_field_name].length() < 1)
+    def _passes_vcf_filters(gt):
+        return hl.is_missing(gt.filters) | (gt.filters.length() < 1)
 
     def _parse_variant_keys(self, variant_keys=None, **kwargs):
         return [hl.struct(**{self.KEY_FIELD[0]: key}) for key in (variant_keys or [])]
