@@ -28,7 +28,7 @@ jobs:
       - name: Run coverage tests
         run: |
           export HAIL_SEARCH_DATA_DIR=./hail_search/fixtures
-          export REFERENCE_DATASETS_DIR=./hail_search/fixtures
+          export REFERENCE_DATASETS_DIR=./hail_search/fixtures/reference_data
           export MAX_GENE_INTERVALS=3
           export MACHINE_MEM=24
           export JAVA_OPTS_XSS=16M
