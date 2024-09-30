@@ -187,20 +187,19 @@ class MitoHailTableQuery(BaseHailTableQuery):
 
             # Merge both WES and WGS project_hts when either of their lengths reaches the chunk size
             if len(project_hts[SampleType.WES.value]) >= HT_CHUNK_SIZE or len(project_hts[SampleType.WGS.value]) >= HT_CHUNK_SIZE:
-                project_ht_dict = {}
-                for sample_type in project_hts:
-                    ht = self._prefilter_merged_project_hts(project_hts[sample_type], n_partitions, **kwargs)
-                    project_ht_dict[sample_type] = (ht, sample_data[sample_type])
-                all_project_hts.append(project_ht_dict)
+                self._load_project_ht_chunks(all_project_hts, kwargs, n_partitions, project_hts, sample_data)
                 project_hts = defaultdict(list)
                 sample_data = defaultdict(dict)
 
+        self._load_project_ht_chunks(all_project_hts, kwargs, n_partitions, project_hts, sample_data)
+        return all_project_hts
+
+    def _load_project_ht_chunks(self, all_project_hts, kwargs, n_partitions, project_hts, sample_data):
         project_ht_dict = {}
         for sample_type in project_hts:
             ht = self._prefilter_merged_project_hts(project_hts[sample_type], n_partitions, **kwargs)
             project_ht_dict[sample_type] = (ht, sample_data[sample_type])
         all_project_hts.append(project_ht_dict)
-        return all_project_hts
 
     def _filter_entries_ht_both_sample_types(
         self, wes_ht, wes_project_samples, wgs_ht, wgs_project_samples, inheritance_filter=None, quality_filter=None,
