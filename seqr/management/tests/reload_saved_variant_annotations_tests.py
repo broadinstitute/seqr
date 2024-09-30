@@ -39,7 +39,7 @@ class ReloadVariantAnnotationsTest(AnvilAuthenticationTestCase):
         mock_logger.info.assert_has_calls([mock.call(log) for log in [
             'Reloading shared annotations for 3 SNV_INDEL GRCh37 saved variants (3 unique)',
             'Fetched 2 additional variants',
-            'Updated 2 saved variants',
+            'Updated 2 SNV_INDEL GRCh37 saved variants',
         ]])
 
         self.assertEqual(len(responses.calls), 1)

@@ -1,3 +1,4 @@
+import re
 import requests
 from collections import defaultdict
 from django.core.exceptions import PermissionDenied
@@ -5,7 +6,7 @@ from django.core.exceptions import PermissionDenied
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.views.utils.terra_api_utils import is_cloud_authenticated
 
-from settings import AIRTABLE_API_KEY, AIRTABLE_URL
+from settings import AIRTABLE_API_KEY, AIRTABLE_URL, BASE_URL
 
 logger = SeqrLogger(__name__)
 
@@ -102,12 +103,14 @@ class AirtableSession(object):
 
         return updated_records
 
-    def fetch_records(self, record_type, fields, or_filters, and_filters=None, or_template="{key}='{value}'", page_size=PAGE_SIZE):
+    def fetch_records(self, record_type, fields, or_filters, and_filters=None, page_size=PAGE_SIZE, filter_query_template="{key}='{value}'"):
         self._session.params.update({'fields[]': fields, 'pageSize': page_size})
         filter_formulas = []
         for key, values in or_filters.items():
-            filter_formulas += [or_template.format(key=key, value=value) for value in sorted(values)]
-        and_filter_formulas = ','.join([f"{{{key}}}='{value}'" for key, value in (and_filters or {}).items()])
+            filter_formulas += [filter_query_template.format(key=key, value=value) for value in sorted(values)]
+        and_filter_formulas = ','.join([
+            filter_query_template.format(key=f'{{{key}}}', value=value) for key, value in (and_filters or {}).items()
+        ])
         records = {}
         for i in range(0, len(filter_formulas), MAX_OR_FILTERS):
             filter_formula_group = filter_formulas[i:i + MAX_OR_FILTERS]
@@ -149,3 +152,28 @@ class AirtableSession(object):
         if missing:
             records_by_id.update(self._get_samples_for_id_field(missing, 'SeqrCollaboratorSampleID', fields))
         return records_by_id
+
+    def get_samples_for_matched_pdos(self, pdo_statuses, pdo_fields, project_guid=None):
+        sample_records = self.fetch_records(
+            'Samples', fields=[
+                'CollaboratorSampleID', 'SeqrCollaboratorSampleID', 'PDOStatus', 'SeqrProject', *pdo_fields,
+            ],
+            or_filters={'PDOStatus': pdo_statuses},
+            and_filters={'SeqrProject': f'{BASE_URL}project/{project_guid}/project_page'},
+            # Filter for array contains value instead of exact match
+            filter_query_template="SEARCH('{value}',ARRAYJOIN({key},';'))",
+        )
+
+        for sample in sample_records.values():
+            pdos = [{
+                'project_guid': re.match(f'{BASE_URL}project/([^/]+)/project_page', sample['SeqrProject'][i]).group(1),
+                **{field: sample[field][i] for field in pdo_fields}
+            } for i, status in enumerate(sample['PDOStatus']) if status in pdo_statuses]
+            if project_guid:
+                pdos = [pdo for pdo in pdos if pdo['project_guid'] == project_guid]
+            sample.update({
+                'pdos': pdos,
+                'sample_id': sample.get('SeqrCollaboratorSampleID') or sample['CollaboratorSampleID'],
+            })
+
+        return {record_id: sample for record_id, sample in sample_records.items() if sample['pdos']}
