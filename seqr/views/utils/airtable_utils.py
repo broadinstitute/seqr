@@ -166,8 +166,11 @@ class AirtableSession(object):
         )
 
         for sample in sample_records.values():
+            project_guids = [
+                re.match(f'{BASE_URL}project/([^/]+)/project_page', url).group(1) for url in sample['SeqrProject']
+            ]
             pdos = [{
-                'project_guid': re.match(f'{BASE_URL}project/([^/]+)/project_page', sample['SeqrProject'][i]).group(1),
+                'project_guid': project_guids[i] if len(project_guids) > 1 else project_guids[0],
                 **{field: sample[field][i] for field in pdo_fields}
             } for i, status in enumerate(sample['PDOStatus']) if status in pdo_statuses]
             if project_guid:
