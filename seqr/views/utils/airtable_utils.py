@@ -161,7 +161,7 @@ class AirtableSession(object):
             or_filters={'PDOStatus': pdo_statuses},
             and_filters={'SeqrProject': f'{BASE_URL}project/{project_guid}/project_page'},
             # Filter for array contains value instead of exact match
-            filter_query_template="SEARCH('{value}', ARRAYJOIN({key}, ';'))",
+            filter_query_template="SEARCH('{value}',ARRAYJOIN({key},';'))",
         )
 
         for sample in sample_records.values():

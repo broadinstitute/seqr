@@ -63,7 +63,9 @@ AIRTABLE_SAMPLE_RECORDS = {
       'id': 'rec2B6OGmQpAkQW3s',
       'fields': {
         'CollaboratorSampleID': 'NA19675_1',
-        'PDOID': ['recW24C2CJW5lT64K'],
+        'PDOID': ['rec2B67GmXpAkQW8z', 'recW24C2CJW5lT64K'],
+        'SeqrProject': ['https://test-seqr.org/project/R0002_empty/project_page', 'https://test-seqr.org/project/R0003_test/project_page'],
+        'PDOStatus': ['Historic', 'Methods (Loading)'],
       },
     },
     {
@@ -71,6 +73,8 @@ AIRTABLE_SAMPLE_RECORDS = {
       'fields': {
         'CollaboratorSampleID': 'NA19678',
         'PDOID': ['recW24C2CJW5lT64K'],
+        'SeqrProject': ['https://test-seqr.org/project/R0003_test/project_page'],
+        'PDOStatus': ['Methods (Loading)'],
       },
     },
     {
@@ -78,6 +82,8 @@ AIRTABLE_SAMPLE_RECORDS = {
       'fields': {
         'CollaboratorSampleID': 'NA19679',
         'PDOID': ['rec2Nkg10N1KssPc3'],
+        'SeqrProject': ['https://test-seqr.org/project/R0003_test/project_page'],
+        'PDOStatus': ['Methods (Loading)'],
       },
     },
     {
@@ -86,6 +92,8 @@ AIRTABLE_SAMPLE_RECORDS = {
         'SeqrCollaboratorSampleID': 'HG00731',
         'CollaboratorSampleID': 'VCGS_FAM203_621_D2',
         'PDOID': ['recW24C2CJW5lT64K'],
+        'SeqrProject': ['https://test-seqr.org/project/R0003_test/project_page'],
+        'PDOStatus': ['Methods (Loading)'],
       },
     },
     {
@@ -94,6 +102,8 @@ AIRTABLE_SAMPLE_RECORDS = {
         'SeqrCollaboratorSampleID': 'NA20888',
         'CollaboratorSampleID': 'NA20888_D1',
         'PDOID': ['recW24C2CJW5lT64K'],
+        'SeqrProject': ['https://test-seqr.org/project/R0003_test/project_page'],
+        'PDOStatus': ['Methods (Loading)'],
       },
     },
     {
@@ -101,6 +111,17 @@ AIRTABLE_SAMPLE_RECORDS = {
       'fields': {
         'CollaboratorSampleID': 'NA20889',
         'PDOID': ['rec0RWBVfDVbtlBSL'],
+        'SeqrProject': ['https://test-seqr.org/project/R0003_test/project_page'],
+        'PDOStatus': ['Methods (Loading)'],
+      },
+    },
+    {
+      'id': 'rec2gRFoDBeHJc7',
+      'fields': {
+        'CollaboratorSampleID': 'NA20887',
+        'PDOID': ['rec0RWBVfDVbtlBSL', 'rec2Nkg1fKgsJc7'],
+        'SeqrProject': ['https://test-seqr.org/project/R0002_empty/project_page', 'https://test-seqr.org/project/R0003_test/project_page'],
+        'PDOStatus': ['Methods (Loading)', 'Historic'],
       },
     },
 ]}
@@ -247,7 +268,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
             self.assertDictEqual(json.loads(resp.request.body), call)
 
     @mock.patch('seqr.management.commands.check_for_new_samples_from_pipeline.MAX_LOOKUP_VARIANTS', 1)
-    @mock.patch('seqr.management.commands.check_for_new_samples_from_pipeline.BASE_URL', 'https://test-seqr.org/')
+    @mock.patch('seqr.views.utils.airtable_utils.BASE_URL', 'https://test-seqr.org/')
     @mock.patch('seqr.views.utils.airtable_utils.MAX_UPDATE_RECORDS', 2)
     @mock.patch('seqr.views.utils.airtable_utils.logger')
     @mock.patch('seqr.utils.communication_utils.EmailMultiAlternatives')
@@ -261,7 +282,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         airtable_pdo_url = 'http://testairtable/app3Y97xtbbaOopVR/PDO'
         responses.add(
             responses.GET,
-            f"{airtable_samples_url}?fields[]=CollaboratorSampleID&fields[]=SeqrCollaboratorSampleID&fields[]=PDOID&pageSize=100&filterByFormula=AND({{SeqrProject}}='https://test-seqr.org/project/R0003_test/project_page',OR(PDOStatus='Methods (Loading)',PDOStatus='On hold for phenotips, but ready to load'))",
+            f"{airtable_samples_url}?fields[]=CollaboratorSampleID&fields[]=SeqrCollaboratorSampleID&fields[]=PDOStatus&fields[]=SeqrProject&fields[]=PDOID&pageSize=100&filterByFormula=AND(SEARCH('https://test-seqr.org/project/R0003_test/project_page',ARRAYJOIN({{SeqrProject}},';')),OR(SEARCH('Methods (Loading)',ARRAYJOIN(PDOStatus,';')),SEARCH('On hold for phenotips, but ready to load',ARRAYJOIN(PDOStatus,';'))))",
             json=AIRTABLE_SAMPLE_RECORDS)
         responses.add(
             responses.GET,

@@ -19,7 +19,7 @@ from seqr.views.utils.dataset_utils import match_and_update_search_samples
 from seqr.views.utils.permissions_utils import is_internal_anvil_project, project_has_anvil
 from seqr.views.utils.variant_utils import reset_cached_search_results, update_projects_saved_variant_json, \
     get_saved_variants
-from settings import SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, BASE_URL
+from settings import SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
 
 logger = logging.getLogger(__name__)
 
