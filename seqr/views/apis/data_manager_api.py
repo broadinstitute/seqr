@@ -491,19 +491,11 @@ def get_loaded_projects(request, sample_type, dataset_type):
 def _fetch_airtable_loadable_project_samples(user, dataset_type):
     # TODO cleanup duplicated calls with _get_loaded_samples
     # TODO filter based on dataset_type/sample type if applicable
-    samples = AirtableSession(user).fetch_records(
-        'Samples', fields=['CollaboratorSampleID', 'SeqrCollaboratorSampleID', 'SeqrProject', 'PDOStatus'],
-        or_filters={'PDOStatus': LOADABLE_PDO_STATUSES}, or_template="SEARCH('{value}', ARRAYJOIN({key}, ';'))"
-        # TODO filtering logic for arrays belongs in AirtableSession
-    )
+    samples = AirtableSession(user).get_samples_for_matched_pdos(LOADABLE_PDO_STATUSES)
     project_samples = defaultdict(set)
     for sample in samples.values():
-        project_guids = [
-            re.match(f'{BASE_URL}project/([^/]+)/project_page', project_url).group(1)
-            for i, project_url in enumerate(sample['SeqrProject']) if sample['PDOStatus'][i] in LOADABLE_PDO_STATUSES
-        ]
-        for project_guid in project_guids:
-            project_samples[project_guid].add(sample.get('SeqrCollaboratorSampleID') or sample['CollaboratorSampleID'])
+        for pdo in sample['pdos']:
+            project_samples[pdo['project_guid']].add(sample['sample_id'])
     return project_samples
 
 

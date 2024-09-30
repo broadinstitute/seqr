@@ -153,13 +153,14 @@ class AirtableSession(object):
             records_by_id.update(self._get_samples_for_id_field(missing, 'SeqrCollaboratorSampleID', fields))
         return records_by_id
 
-    def get_samples_for_matched_pdos(self, pdo_statuses, pdo_fields, project_guid=None):
+    def get_samples_for_matched_pdos(self, pdo_statuses, pdo_fields=None, project_guid=None):
+        pdo_fields = pdo_fields or []
         sample_records = self.fetch_records(
             'Samples', fields=[
                 'CollaboratorSampleID', 'SeqrCollaboratorSampleID', 'PDOStatus', 'SeqrProject', *pdo_fields,
             ],
             or_filters={'PDOStatus': pdo_statuses},
-            and_filters={'SeqrProject': f'{BASE_URL}project/{project_guid}/project_page'},
+            and_filters={'SeqrProject': f'{BASE_URL}project/{project_guid}/project_page'} if project_guid else {},
             # Filter for array contains value instead of exact match
             filter_query_template="SEARCH('{value}',ARRAYJOIN({key},';'))",
         )
