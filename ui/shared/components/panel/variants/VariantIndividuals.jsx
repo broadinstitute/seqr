@@ -246,6 +246,7 @@ const formattedGenotypeDetails = (details, genotype, variant, genesById) => deta
 
 const genotypeDetails = (genotype, variant, genesById) => {
   const details = formattedGenotypeDetails(GENOTYPE_DETAILS, genotype, variant)
+  console.log(details)
   const svDetails = formattedGenotypeDetails(SV_GENOTYPE_DETAILS, genotype, variant, genesById)
   if (svDetails.length < 1) {
     return details
@@ -258,18 +259,7 @@ const genotypeDetails = (genotype, variant, genesById) => {
   ]
 }
 
-const Genotype = React.memo(({ variant, individual, isCompoundHet, genesById }) => {
-  if (!variant.genotypes) {
-    return null
-  }
-
-  let genotype = variant.genotypes[individual.individualGuid]
-  if (!genotype) {
-    return null
-  }
-  // Temporarily use the first genotype for an individual until blended es/gs are supported in UI
-  genotype = Array.isArray(genotype) ? genotype[0] : genotype
-
+const Genotype = React.memo(({ variant, individual, genotype, isCompoundHet, genesById }) => {
   const hasCnCall = isCalled(genotype.cn)
   if (!hasCnCall && !isCalled(genotype.numAlt)) {
     return <b>NO CALL</b>
@@ -381,6 +371,7 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet, genesById }) 
 Genotype.propTypes = {
   variant: PropTypes.object,
   individual: PropTypes.object,
+  genotype: PropTypes.object,
   isCompoundHet: PropTypes.bool,
   genesById: PropTypes.object,
 }
@@ -430,7 +421,15 @@ const BaseVariantIndividuals = React.memo(({ variant, individuals, isCompoundHet
           ))}
         />
         <br />
-        <Genotype variant={variant} individual={individual} isCompoundHet={isCompoundHet} genesById={genesById} />
+        {variant.genotypes?.[individual.individualGuid] && (
+          <Genotypes
+            variant={variant}
+            indivGenotype={variant.genotypes[individual.individualGuid]}
+            individual={individual}
+            isCompoundHet={isCompoundHet}
+            genesById={genesById}
+          />
+        )}
       </IndividualCell>
     ))}
   </IndividualsContainer>
@@ -439,6 +438,33 @@ const BaseVariantIndividuals = React.memo(({ variant, individuals, isCompoundHet
 BaseVariantIndividuals.propTypes = {
   variant: PropTypes.object,
   individuals: PropTypes.arrayOf(PropTypes.object),
+  isCompoundHet: PropTypes.bool,
+  genesById: PropTypes.object,
+}
+
+const Genotypes = React.memo(({ variant, indivGenotype, individual, isCompoundHet, genesById }) => {
+  const renderGenotype = genotype => (
+    <Genotype
+      variant={variant}
+      individual={individual}
+      genotype={genotype}
+      isCompoundHet={isCompoundHet}
+      genesById={genesById}
+    />
+  )
+  return (
+    <div>
+      {Array.isArray(indivGenotype) ?
+        indivGenotype.map(renderGenotype) :
+        renderGenotype(indivGenotype)}
+    </div>
+  )
+})
+
+Genotypes.propTypes = {
+  variant: PropTypes.object,
+  indivGenotype: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
+  individual: PropTypes.object,
   isCompoundHet: PropTypes.bool,
   genesById: PropTypes.object,
 }
