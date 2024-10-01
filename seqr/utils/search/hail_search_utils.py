@@ -12,7 +12,12 @@ from settings import HAIL_BACKEND_SERVICE_HOSTNAME, HAIL_BACKEND_SERVICE_PORT
 
 
 def _hail_backend_url(path):
-    return f'{HAIL_BACKEND_SERVICE_HOSTNAME}:{HAIL_BACKEND_SERVICE_PORT}/{path}'
+    return (
+        f'{HAIL_BACKEND_SERVICE_HOSTNAME}:{HAIL_BACKEND_SERVICE_PORT}/{path}'
+        if HAIL_BACKEND_SERVICE_HOSTNAME.startswith('http')
+        else
+        f'http://{HAIL_BACKEND_SERVICE_HOSTNAME}:{HAIL_BACKEND_SERVICE_PORT}/{path}'
+    )
 
 
 def _execute_search(search_body, user, path='search', exception_map=None, user_email=None):

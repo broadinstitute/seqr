@@ -7,7 +7,8 @@ import responses
 from seqr.views.utils.test_utils import AnvilAuthenticationTestCase
 from seqr.models import Sample, SavedVariant
 
-MOCK_HAIL_HOST = 'http://test-hail-host'
+MOCK_HAIL_HOST = 'test-hail-host'
+MOCK_HAIL_ORIGIN = f'http://{MOCK_HAIL_HOST}'
 
 
 @mock.patch('seqr.utils.search.hail_search_utils.HAIL_BACKEND_SERVICE_HOSTNAME', MOCK_HAIL_HOST)
@@ -17,7 +18,7 @@ class ReloadVariantAnnotationsTest(AnvilAuthenticationTestCase):
     @mock.patch('seqr.management.commands.check_for_new_samples_from_pipeline.logger')
     @responses.activate
     def test_command(self, mock_logger):
-        responses.add(responses.POST, f'{MOCK_HAIL_HOST}:5000/multi_lookup', status=200, json={
+        responses.add(responses.POST, f'{MOCK_HAIL_ORIGIN}:5000/multi_lookup', status=200, json={
             'results': [
                 {'variantId': '1-46859832-G-A', 'updated_new_field': 'updated_value', 'rsid': 'rs123'},
                 {'variantId': '1-248367227-TC-T', 'updated_field': 'updated_value'},
@@ -44,7 +45,7 @@ class ReloadVariantAnnotationsTest(AnvilAuthenticationTestCase):
 
         self.assertEqual(len(responses.calls), 1)
         multi_lookup_request = responses.calls[0].request
-        self.assertEqual(multi_lookup_request.url, f'{MOCK_HAIL_HOST}:5000/multi_lookup')
+        self.assertEqual(multi_lookup_request.url, f'{MOCK_HAIL_ORIGIN}:5000/multi_lookup')
         self.assertEqual(multi_lookup_request.headers.get('From'), 'manage_command')
         self.assertDictEqual(json.loads(multi_lookup_request.body), {
             'genome_version': 'GRCh37',
