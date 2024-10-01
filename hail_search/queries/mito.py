@@ -12,7 +12,7 @@ from hail_search.constants import ABSENT_PATH_SORT_OFFSET, CLINVAR_KEY, CLINVAR_
     PATHOGENICTY_HGMD_SORT_KEY, MAX_LOAD_INTERVALS
 from hail_search.definitions import SampleType
 from hail_search.queries.base import BaseHailTableQuery, PredictionPath, QualityFilterFormat, MAX_PARTITIONS, \
-    HT_CHUNK_SIZE
+    MAX_HTS_TO_JOIN
 
 REFERENCE_DATASETS_DIR = os.environ.get('REFERENCE_DATASETS_DIR', '/seqr/seqr-reference-data')
 REFERENCE_DATASET_SUBDIR = 'cached_reference_dataset_queries'
@@ -186,7 +186,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
                     continue
 
             # Merge both WES and WGS project_hts when either of their lengths reaches the chunk size
-            if len(project_hts[SampleType.WES.value]) >= HT_CHUNK_SIZE or len(project_hts[SampleType.WGS.value]) >= HT_CHUNK_SIZE:
+            if len(project_hts[SampleType.WES.value]) >= MAX_HTS_TO_JOIN or len(project_hts[SampleType.WGS.value]) >= MAX_HTS_TO_JOIN:
                 self._load_project_ht_chunks(all_project_hts, kwargs, n_partitions, project_hts, sample_data)
                 project_hts = defaultdict(list)
                 sample_data = defaultdict(dict)
@@ -252,9 +252,14 @@ class MitoHailTableQuery(BaseHailTableQuery):
             ht = ht.annotate(**{
                 sample_type.family_entries_field: hl.enumerate(ht[sample_type.family_entries_field]).starmap(
                     lambda i, samples: hl.or_missing(
-                        self._family_passes_quality_inheritance(
-                            ht, sample_type, i, samples[0]['familyGuid'], family_idx_map
-                        ), samples)
+                        (hl.case()
+                        .when(hl.is_defined(samples[0]['familyGuid']),
+                            self._multi_sample_type_family_passes_quality_inheritance(
+                                ht, sample_type, i, samples[0]['familyGuid'],
+                                family_idx_map[samples[0]['familyGuid']].get(sample_type.other_sample_type.value)
+                            ))
+                        .or_missing()
+                     ), samples)
                 )})
 
         # Merge family entries and filters from both sample types
@@ -269,24 +274,20 @@ class MitoHailTableQuery(BaseHailTableQuery):
         return ht.filter(ht.family_entries.any(hl.is_defined))
 
     @staticmethod
-    def _family_passes_quality_inheritance(ht, sample_type, sample_type_family_idx, family_guid, family_idx_map):
+    def _multi_sample_type_family_passes_quality_inheritance(ht, sample_type, sample_type_family_idx, family_guid, other_sample_type_family_idx):
         # Note: This logic does not sufficiently handle case 2 here https://docs.google.com/presentation/d/1hqDV8ulhviUcR5C4PtNUqkCLXKDsc6pccgFVlFmWUAU/edit?usp=sharing
-        # and will need to be changed to support it.
-        return (
+        # and will need to be changed to support it - https://github.com/broadinstitute/seqr/issues/4403
+        return (  # Family passes quality and inheritance
             hl.is_defined(ht[sample_type.passes_quality_field][sample_type_family_idx]) &
             hl.is_defined(ht[sample_type.passes_inheritance_field][sample_type_family_idx])
-        ) | (
-            (hl.is_defined(family_guid) & family_idx_map.get(family_guid).contains(sample_type.other_sample_type.value)) &
-            hl.bind(lambda other_sample_type_family_idx: (
-                hl.is_defined(ht[sample_type.other_sample_type.passes_quality_field][other_sample_type_family_idx]) &
-                hl.is_defined(ht[sample_type.other_sample_type.passes_inheritance_field][other_sample_type_family_idx])
-            ), family_idx_map[family_guid][sample_type.other_sample_type.value])
+        ) | (  # Family from other sample type passes quality and inheritance
+            (hl.is_defined(other_sample_type_family_idx)) &
+            (hl.is_defined(ht[sample_type.other_sample_type.passes_quality_field][other_sample_type_family_idx]) &
+             hl.is_defined(ht[sample_type.other_sample_type.passes_inheritance_field][other_sample_type_family_idx]))
         )
 
-    def _get_sample_genotype(
-        self, samples, r=None, include_genotype_overrides=False, select_fields=None, all_samples=False, **kwargs
-    ):
-        if not self._has_both_sample_types and not all_samples:
+    def _get_sample_genotype(self, samples, r=None, include_genotype_overrides=False, select_fields=None, **kwargs):
+        if not self._has_both_sample_types:
             return super()._get_sample_genotype(samples, r, include_genotype_overrides, select_fields)
 
         return samples.map(lambda sample: self._select_genotype_for_sample(
@@ -530,9 +531,10 @@ class MitoHailTableQuery(BaseHailTableQuery):
         if not variant_projects:
             raise HTTPNotFound()
 
+        self._has_both_sample_types = True
         annotation_fields.update({
             'familyGenotypes': lambda r: hl.dict(r.family_entries.map(
-                lambda entries: (entries.first().familyGuid, self._get_sample_genotype(entries.filter(hl.is_defined), all_samples=True))
+                lambda entries: (entries.first().familyGuid, self._get_sample_genotype(entries.filter(hl.is_defined)))
             )),
         })
 

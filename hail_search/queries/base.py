@@ -24,7 +24,7 @@ MAX_PARTITIONS = 12
 # Need to chunk tables or else evaluating table globals throws LineTooLong exception
 # However, minimizing number of chunks minimizes number of aggregations/ evals and improves performance
 # Adapted from https://discuss.hail.is/t/importing-many-sample-specific-vcfs/2002/8
-HT_CHUNK_SIZE = 64
+MAX_HTS_TO_JOIN = 64
 
 logger = logging.getLogger(__name__)
 
@@ -350,7 +350,7 @@ class BaseHailTableQuery(object):
             if project_ht is None:
                 continue
 
-            if len(project_hts) >= HT_CHUNK_SIZE:
+            if len(project_hts) >= MAX_HTS_TO_JOIN:
                 ht = self._prefilter_merged_project_hts(project_hts, n_partitions, **kwargs)
                 all_project_hts.append((ht, sample_data))
                 project_hts = []
@@ -483,12 +483,16 @@ class BaseHailTableQuery(object):
     ):
         passes_quality_filter = self._get_family_passes_quality_filter(
             quality_filter, ht, **kwargs
-        ) or (lambda _: True)
+        )
+        ht_entries = ht[entries_ht_field]
 
-        return ht.annotate(**{
-            annotation: ht[entries_ht_field].map(
-                lambda entries: hl.or_missing(passes_quality_filter(entries), entries)
-            )})
+        if passes_quality_filter is not None:
+            return ht.annotate(**{
+                annotation: ht_entries.map(
+                    lambda entries: hl.or_missing(passes_quality_filter(entries), entries)
+                )})
+
+        return ht.annotate(**{annotation: ht_entries})
 
     def _add_entry_sample_families(self, ht, sample_data, is_merged_ht):
         """
