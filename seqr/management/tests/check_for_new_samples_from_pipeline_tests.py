@@ -548,6 +548,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         self.mock_logger.reset_mock()
         mock_email.reset_mock()
         self.mock_send_slack.reset_mock()
+        self.mock_redis.reset_mock()
         sample_last_modified = Sample.objects.filter(
             last_modified_date__isnull=False).values_list('last_modified_date', flat=True).order_by('-last_modified_date')[0]
 
@@ -556,3 +557,4 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         mock_email.assert_not_called()
         self.mock_send_slack.assert_not_called()
         self.assertFalse(Sample.objects.filter(last_modified_date__gt=sample_last_modified).exists())
+        self.mock_redis.return_value.delete.assert_not_called()
