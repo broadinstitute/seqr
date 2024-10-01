@@ -169,6 +169,7 @@ def mock_metadata_file(index):
     return m
 
 
+@mock.patch('seqr.management.commands.check_for_new_samples_from_pipeline.HAIL_SEARCH_DATA_DIR', 'gs://seqr-hail-search-data/v3.1')
 @mock.patch('seqr.utils.search.hail_search_utils.HAIL_BACKEND_SERVICE_HOSTNAME', MOCK_HAIL_HOST)
 @mock.patch('seqr.views.utils.airtable_utils.AIRTABLE_URL', 'http://testairtable')
 @mock.patch('seqr.utils.search.add_data_utils.BASE_URL', SEQR_URL)
