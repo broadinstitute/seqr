@@ -253,7 +253,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
                 sample_type.family_entries_field: hl.enumerate(ht[sample_type.family_entries_field]).starmap(
                     lambda i, samples: hl.or_missing(
                         (hl.case()
-                        .when(hl.is_defined(samples[0]['familyGuid']),
+                        .when(hl.is_defined(samples[0]['familyGuid']),  # Family will not be defined if there are no entries for the variant
                             self._multi_sample_type_family_passes_quality_inheritance(
                                 ht, sample_type, i, samples[0]['familyGuid'],
                                 family_idx_map[samples[0]['familyGuid']].get(sample_type.other_sample_type.value)
