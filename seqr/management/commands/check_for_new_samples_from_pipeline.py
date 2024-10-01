@@ -19,13 +19,12 @@ from seqr.views.utils.dataset_utils import match_and_update_search_samples
 from seqr.views.utils.permissions_utils import is_internal_anvil_project, project_has_anvil
 from seqr.views.utils.variant_utils import reset_cached_search_results, update_projects_saved_variant_json, \
     get_saved_variants
-from settings import SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
+from settings import SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, HAIL_SEARCH_DATA_DIR
 
 logger = logging.getLogger(__name__)
 
-GS_PATH_TEMPLATE = 'gs://seqr-hail-search-data/v3.1/{genome_version}/{dataset_type}/runs/{run_version}/_SUCCESS'
-GS_PATH_FIELDS = ['genome_version', 'dataset_type', 'run_version']
-GS_PATH_REGEX = GS_PATH_TEMPLATE.format(**{field: f'(?P<{field}>[^/]+)' for field in GS_PATH_FIELDS})
+RUN_SUCCESS_PATH_TEMPLATE = '{data_dir}/{genome_version}/{dataset_type}/runs/{run_version}/_SUCCESS'
+RUN_PATH_FIELDS = ['genome_version', 'dataset_type', 'run_version']
 
 DATASET_TYPE_MAP = {'GCNV': Sample.DATASET_TYPE_SV_CALLS}
 USER_EMAIL = 'manage_command'
@@ -47,10 +46,11 @@ class Command(BaseCommand):
         parser.add_argument('--run-version')
 
     def handle(self, *args, **options):
-        gs_path = GS_PATH_TEMPLATE.format(**{field: options[field] or '*' for field in GS_PATH_FIELDS})
-        success_runs = {path: re.match(GS_PATH_REGEX, path).groupdict() for path in list_files(gs_path, user=None)}
+        path = self._run_success_path(lambda field: options[field] or '*')
+        path_regex = self._run_success_path(lambda field: f'(?P<{field}>[^/]+)')
+        success_runs = {path: re.match(path_regex, path).groupdict() for path in list_files(path, user=None)}
         if not success_runs:
-            user_args = [f'{k}={options[k]}' for k in GS_PATH_FIELDS if options[k]]
+            user_args = [f'{k}={options[k]}' for k in RUN_PATH_FIELDS if options[k]]
             raise CommandError(f'No successful runs found for {", ".join(user_args)}')
 
         loaded_runs = set(Sample.objects.filter(data_source__isnull=False).values_list('data_source', flat=True))
@@ -81,6 +81,13 @@ class Command(BaseCommand):
             )
 
         logger.info('DONE')
+
+    @staticmethod
+    def _run_success_path(get_field_format):
+        return RUN_SUCCESS_PATH_TEMPLATE.format(
+            data_dir=HAIL_SEARCH_DATA_DIR,
+            **{field: get_field_format(field) for field in RUN_PATH_FIELDS}
+        )
 
     @classmethod
     def _load_new_samples(cls, metadata_path, genome_version, dataset_type, run_version):
@@ -251,7 +258,7 @@ class Command(BaseCommand):
         logger.info(f'Reloading shared annotations for {len(variant_models)} {variant_type_summary} ({len(variants_by_id)} unique)')
 
         updated_variants_by_id = {
-            variant_id: {k: v for k, v in variant.items() if k not in {'familyGuids', 'genotypes', 'genotypeFilters'}}
+            variant_id: {k: v for k, v in variant.items() if k not in {'familyGuids', 'genotypes'}}
             for variant_id, variant in (updated_variants_by_id or {}).items()
         }
         fetch_variant_ids = sorted(set(variants_by_id.keys()) - set(updated_variants_by_id.keys()))

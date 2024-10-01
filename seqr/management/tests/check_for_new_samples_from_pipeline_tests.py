@@ -11,7 +11,8 @@ from seqr.models import Project, Family, Individual, Sample, SavedVariant
 SEQR_URL = 'https://seqr.broadinstitute.org/'
 PROJECT_GUID = 'R0003_test'
 EXTERNAL_PROJECT_GUID = 'R0004_non_analyst_project'
-MOCK_HAIL_HOST = 'http://test-hail-host'
+MOCK_HAIL_HOST = 'test-hail-host'
+MOCK_HAIL_ORIGIN = f'http://{MOCK_HAIL_HOST}'
 
 GUID_ID = 54321
 GCNV_GUID_ID = 12345
@@ -190,6 +191,7 @@ def mock_metadata_file(index):
     return m
 
 
+@mock.patch('seqr.utils.file_utils.os.path.isfile', lambda *args: True)
 @mock.patch('seqr.utils.search.hail_search_utils.HAIL_BACKEND_SERVICE_HOSTNAME', MOCK_HAIL_HOST)
 @mock.patch('seqr.views.utils.airtable_utils.AIRTABLE_URL', 'http://testairtable')
 @mock.patch('seqr.utils.search.add_data_utils.BASE_URL', SEQR_URL)
@@ -211,6 +213,12 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         patcher = mock.patch('seqr.utils.file_utils.subprocess.Popen')
         self.mock_subprocess = patcher.start()
         self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.utils.file_utils.glob.glob')
+        self.mock_glob = patcher.start()
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.utils.file_utils.open')
+        self.mock_open = patcher.start()
+        self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.utils.variant_utils.redis.StrictRedis')
         self.mock_redis = patcher.start()
         self.mock_redis.return_value.keys.side_effect = lambda pattern: [pattern]
@@ -221,6 +229,9 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         self.addCleanup(patcher.stop)
         self.mock_ls_process = mock.MagicMock()
         self.mock_ls_process.communicate.return_value = b'\n'.join(RUN_PATHS), b''
+        patcher = mock.patch('seqr.management.commands.check_for_new_samples_from_pipeline.HAIL_SEARCH_DATA_DIR')
+        self.mock_data_dir = patcher.start()
+        self.addCleanup(patcher.stop)
         super().setUp()
 
     def _test_call(self, error_logs, reload_annotations_logs=None, run_loading_logs=None, reload_calls=None):
@@ -263,7 +274,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         self.assertEqual(len(responses.calls), len(reload_calls) + 9 if reload_calls else 0)
         for i, call in enumerate(reload_calls or []):
             resp = responses.calls[i+7]
-            self.assertEqual(resp.request.url, f'{MOCK_HAIL_HOST}:5000/search')
+            self.assertEqual(resp.request.url, f'{MOCK_HAIL_ORIGIN}:5000/search')
             self.assertEqual(resp.request.headers.get('From'), 'manage_command')
             self.assertDictEqual(json.loads(resp.request.body), call)
 
@@ -293,34 +304,63 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         responses.add_callback(responses.POST, airtable_pdo_url, callback=lambda request: (200, {}, json.dumps({
             'records': [{'id': f'rec{i}ABC123', **r} for i, r in enumerate(json.loads(request.body)['records'])]
         })))
-        responses.add(responses.POST, f'{MOCK_HAIL_HOST}:5000/search', status=200, json={
+        responses.add(responses.POST, f'{MOCK_HAIL_ORIGIN}:5000/search', status=200, json={
             'results': [{'variantId': '1-248367227-TC-T', 'familyGuids': ['F000014_14'], 'updated_field': 'updated_value'}],
             'total': 1,
         })
-        responses.add(responses.POST, f'{MOCK_HAIL_HOST}:5000/multi_lookup', status=200, json={
+        responses.add(responses.POST, f'{MOCK_HAIL_ORIGIN}:5000/multi_lookup', status=200, json={
             'results': [{'variantId': '1-46859832-G-A', 'updated_new_field': 'updated_value', 'rsid': 'rs123'}],
         })
-        responses.add(responses.POST, f'{MOCK_HAIL_HOST}:5000/search', status=200, json={
+        responses.add(responses.POST, f'{MOCK_HAIL_ORIGIN}:5000/search', status=200, json={
             'results': [{'variantId': '1-248367227-TC-T', 'familyGuids': ['F000014_14'], 'updated_field': 'updated_value'}],
             'total': 1,
         })
-        responses.add(responses.POST, f'{MOCK_HAIL_HOST}:5000/search', status=400)
+        responses.add(responses.POST, f'{MOCK_HAIL_ORIGIN}:5000/search', status=400)
 
         # Test errors
-        self.mock_subprocess.return_value.communicate.return_value = b'', b'One or more URLs matched no objects'
+        self.mock_data_dir.__str__.return_value = '/seqr/seqr-hail-search-data'
+        self.mock_glob.return_value = []
         with self.assertRaises(CommandError) as ce:
             call_command('check_for_new_samples_from_pipeline', '--genome_version=GRCh37', '--dataset_type=MITO')
         self.assertEqual(str(ce.exception), 'No successful runs found for genome_version=GRCh37, dataset_type=MITO')
-        self.mock_subprocess.assert_called_with(
-            f'gsutil ls gs://seqr-hail-search-data/v3.1/GRCh37/MITO/runs/*/_SUCCESS', stdout=-1, stderr=-1, shell=True
-        )
+        self.mock_glob.assert_called_with('/seqr/seqr-hail-search-data/GRCh37/MITO/runs/*/_SUCCESS')
+        self.mock_subprocess.assert_not_called()
 
-        self._test_call(error_logs=[
+        local_files = [
+            '/seqr/seqr-hail-search-data/GRCh38/SNV_INDEL/runs/auto__2023-08-09/_SUCCESS',
+            '/seqr/seqr-hail-search-data/GRCh37/SNV_INDEL/runs/manual__2023-11-02/_SUCCESS',
+            '/seqr/seqr-hail-search-data/GRCh38/MITO/runs/auto__2024-08-12/_SUCCESS',
+            '/seqr/seqr-hail-search-data/GRCh38/GCNV/runs/auto__2024-09-14/_SUCCESS',
+        ]
+        self.mock_glob.return_value = local_files
+        self.mock_open.return_value.__enter__.return_value.__iter__.side_effect = [
+            iter([json.dumps(METADATA_FILES[i])]) for i in range(len(local_files))
+        ]
+        call_command('check_for_new_samples_from_pipeline')
+        self.mock_glob.assert_called_with('/seqr/seqr-hail-search-data/*/*/runs/*/_SUCCESS')
+        self.mock_open.assert_has_calls(
+            [mock.call(path.replace('_SUCCESS', 'metadata.json'), 'r') for path in local_files], any_order=True)
+        self.mock_subprocess.assert_not_called()
+        error_logs = [
             'Error loading auto__2023-08-09: Data has genome version GRCh38 but the following projects have conflicting versions: R0003_test (GRCh37)',
             'Error loading manual__2023-11-02: Invalid families in run metadata GRCh37/SNV_INDEL: manual__2023-11-02 - F0000123_ABC',
             'Error loading auto__2024-08-12: Data has genome version GRCh38 but the following projects have conflicting versions: R0001_1kg (GRCh37)',
             'Error loading auto__2024-09-14: Data has genome version GRCh38 but the following projects have conflicting versions: R0001_1kg (GRCh37), R0003_test (GRCh37)',
-        ])
+        ]
+        self.mock_logger.error.assert_has_calls([mock.call(error) for error in error_logs])
+
+        self.mock_glob.reset_mock()
+        self.mock_subprocess.return_value.communicate.return_value = b'', b'One or more URLs matched no objects'
+        self.mock_data_dir.__str__.return_value = 'gs://seqr-hail-search-data/v3.1'
+        with self.assertRaises(CommandError) as ce:
+            call_command('check_for_new_samples_from_pipeline', '--genome_version=GRCh37', '--dataset_type=MITO')
+        self.assertEqual(str(ce.exception), 'No successful runs found for genome_version=GRCh37, dataset_type=MITO')
+        self.mock_subprocess.assert_called_with(
+            'gsutil ls gs://seqr-hail-search-data/v3.1/GRCh37/MITO/runs/*/_SUCCESS', stdout=-1, stderr=-1, shell=True
+        )
+        self.mock_glob.assert_not_called()
+
+        self._test_call(error_logs=error_logs)
         self.assertEqual(Sample.objects.filter(guid__in=SAMPLE_GUIDS + GCNV_SAMPLE_GUIDS).count(), 0)
 
         # Update fixture data to allow testing edge cases
@@ -451,7 +491,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         # Test SavedVariant model updated
         for i, variant_id in enumerate([['1', 1562437, 'G', 'CA'], ['1', 46859832, 'G', 'A']]):
             multi_lookup_request = responses.calls[10+i].request
-            self.assertEqual(multi_lookup_request.url, f'{MOCK_HAIL_HOST}:5000/multi_lookup')
+            self.assertEqual(multi_lookup_request.url, f'{MOCK_HAIL_ORIGIN}:5000/multi_lookup')
             self.assertEqual(multi_lookup_request.headers.get('From'), 'manage_command')
             self.assertDictEqual(json.loads(multi_lookup_request.body), {
                 'genome_version': 'GRCh38',
@@ -568,6 +608,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         self.mock_logger.reset_mock()
         mock_email.reset_mock()
         self.mock_send_slack.reset_mock()
+        self.mock_redis.reset_mock()
         sample_last_modified = Sample.objects.filter(
             last_modified_date__isnull=False).values_list('last_modified_date', flat=True).order_by('-last_modified_date')[0]
 
@@ -576,3 +617,4 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         mock_email.assert_not_called()
         self.mock_send_slack.assert_not_called()
         self.assertFalse(Sample.objects.filter(last_modified_date__gt=sample_last_modified).exists())
+        self.mock_redis.return_value.delete.assert_not_called()

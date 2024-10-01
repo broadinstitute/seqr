@@ -14,7 +14,8 @@ from hail_search.test_utils import get_hail_search_body, EXPECTED_SAMPLE_DATA, F
     LOCATION_SEARCH, EXCLUDE_LOCATION_SEARCH, VARIANT_ID_SEARCH, RSID_SEARCH, GENE_COUNTS, FAMILY_2_VARIANT_SAMPLE_DATA, \
     FAMILY_2_MITO_SAMPLE_DATA, EXPECTED_SAMPLE_DATA_WITH_SEX, VARIANT_LOOKUP_VARIANT, MULTI_PROJECT_SAMPLE_DATA, \
     GCNV_VARIANT4, SV_VARIANT2
-MOCK_HOST = 'http://test-hail-host'
+MOCK_HOST = 'test-hail-host'
+MOCK_ORIGIN = f'http://{MOCK_HOST}'
 
 SV_WGS_SAMPLE_DATA = [{
     'individual_guid': 'I000018_na21234', 'family_guid': 'F000014_14', 'project_guid': 'R0004_non_analyst_project',
@@ -35,7 +36,7 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
     def setUp(self):
         Project.objects.update(genome_version='37')
         super(HailSearchUtilsTests, self).set_up()
-        responses.add(responses.POST, f'{MOCK_HOST}:5000/search', status=200, json={
+        responses.add(responses.POST, f'{MOCK_ORIGIN}:5000/search', status=200, json={
             'results': HAIL_BACKEND_VARIANTS, 'total': 5,
         })
 
@@ -228,7 +229,7 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
             sort='prioritized_gene', sort_metadata={'ENSG00000268903': 1, 'ENSG00000268904': 11},
         )
 
-        responses.add(responses.POST, f'{MOCK_HOST}:5000/search', status=400, body='Bad Search Error')
+        responses.add(responses.POST, f'{MOCK_ORIGIN}:5000/search', status=400, body='Bad Search Error')
         with self.assertRaises(HTTPError) as cm:
             query_variants(self.results_model, user=self.user)
         self.assertEqual(cm.exception.response.status_code, 400)
@@ -236,7 +237,7 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
 
     @responses.activate
     def test_get_variant_query_gene_counts(self):
-        responses.add(responses.POST, f'{MOCK_HOST}:5000/gene_counts', json=GENE_COUNTS, status=200)
+        responses.add(responses.POST, f'{MOCK_ORIGIN}:5000/gene_counts', json=GENE_COUNTS, status=200)
 
         gene_counts = get_variant_query_gene_counts(self.results_model, self.user)
         self.assertDictEqual(gene_counts, GENE_COUNTS)
@@ -245,14 +246,14 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
 
     @responses.activate
     def test_variant_lookup(self):
-        responses.add(responses.POST, f'{MOCK_HOST}:5000/lookup', status=200, json=VARIANT_LOOKUP_VARIANT)
+        responses.add(responses.POST, f'{MOCK_ORIGIN}:5000/lookup', status=200, json=VARIANT_LOOKUP_VARIANT)
         variant = variant_lookup(self.user, ('1', 10439, 'AC', 'A'), genome_version='37', foo='bar')
         self.assertDictEqual(variant, VARIANT_LOOKUP_VARIANT)
         self._test_minimal_search_call(url_path='lookup', expected_search_body={
             'variant_id': ['1', 10439, 'AC', 'A'], 'genome_version': 'GRCh37', 'foo': 'bar', 'data_type': 'SNV_INDEL',
         })
 
-        responses.add(responses.POST, f'{MOCK_HOST}:5000/lookup', status=404)
+        responses.add(responses.POST, f'{MOCK_ORIGIN}:5000/lookup', status=404)
         with self.assertRaises(HTTPError) as cm:
             variant_lookup(self.user, ('1', 10439, 'AC', 'A'))
         self.assertEqual(cm.exception.response.status_code, 404)
@@ -262,7 +263,7 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         })
 
         # Test mitochondrial variant lookup
-        responses.add(responses.POST, f'{MOCK_HOST}:5000/lookup', status=400)
+        responses.add(responses.POST, f'{MOCK_ORIGIN}:5000/lookup', status=400)
         with self.assertRaises(InvalidSearchException) as cm:
             variant_lookup(self.user, ('M', 11018, 'G', 'T'), genome_version='37')
         self.assertEqual(str(cm.exception), 'MITO variants are not available for GRCh37')
@@ -274,7 +275,7 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
             sv_variant_lookup(self.user, 'suffix_140608_DUP', sv_families)
         self.assertEqual(str(cm.exception), 'Sample type must be specified to look up a structural variant')
 
-        responses.add(responses.POST, f'{MOCK_HOST}:5000/lookup', status=200, json=GCNV_VARIANT4)
+        responses.add(responses.POST, f'{MOCK_ORIGIN}:5000/lookup', status=200, json=GCNV_VARIANT4)
         variants = sv_variant_lookup(self.user, 'suffix_140608_DUP', sv_families, sample_type='WES')
         self.assertListEqual(variants, [GCNV_VARIANT4] + HAIL_BACKEND_VARIANTS)
         self._test_minimal_search_call(url_path='lookup', call_offset=-2, expected_search_body={
@@ -288,7 +289,7 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         })
 
         # No second lookup call is made for non DELs/DUPs
-        responses.add(responses.POST, f'{MOCK_HOST}:5000/lookup', status=200, json=SV_VARIANT2)
+        responses.add(responses.POST, f'{MOCK_ORIGIN}:5000/lookup', status=200, json=SV_VARIANT2)
         variants = sv_variant_lookup(self.user, 'cohort_2911.chr1.final_cleanup_INS_chr1_160', sv_families, sample_type='WGS')
         self._test_minimal_search_call(url_path='lookup', expected_search_body={
             'variant_id': 'cohort_2911.chr1.final_cleanup_INS_chr1_160', 'genome_version': 'GRCh38', 'data_type': 'SV_WGS',
@@ -296,7 +297,7 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         })
         self.assertListEqual(variants, [SV_VARIANT2])
 
-        responses.add(responses.POST, f'{MOCK_HOST}:5000/lookup', status=404)
+        responses.add(responses.POST, f'{MOCK_ORIGIN}:5000/lookup', status=404)
         with self.assertRaises(HTTPError) as cm:
             sv_variant_lookup(self.user, 'suffix_140608_DUP', sv_families, sample_type='WES')
         self.assertEqual(cm.exception.response.status_code, 404)
@@ -332,7 +333,7 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
             variant_ids=[['2', 103343353, 'GAGA', 'G']], variant_keys=[],
             num_results=1, sample_data=FAMILY_2_VARIANT_SAMPLE_DATA)
 
-        responses.add(responses.POST, f'{MOCK_HOST}:5000/search', status=200, json={'results': [], 'total': 0})
+        responses.add(responses.POST, f'{MOCK_ORIGIN}:5000/search', status=200, json={'results': [], 'total': 0})
         with self.assertRaises(InvalidSearchException) as cm:
             get_single_variant(self.families, '10-10334333-A-G', user=self.user)
         self.assertEqual(str(cm.exception), 'Variant 10-10334333-A-G not found')
