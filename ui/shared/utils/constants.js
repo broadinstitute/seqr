@@ -1585,7 +1585,6 @@ export const VARIANT_EXPORT_DATA = [
   { header: 'hgvsp', getVal: variant => getVariantMainTranscript(variant).hgvsp },
   { header: 'clinvar_clinical_significance', getVal: variant => (variant.clinvar || {}).clinicalSignificance || (variant.clinvar || {}).pathogenicity },
   { header: 'clinvar_gold_stars', getVal: variant => (variant.clinvar || {}).goldStars },
-  { header: 'filter', getVal: variant => variant.genotypeFilters },
   { header: 'project' },
   { header: 'family' },
   { header: 'tags', getVal: (variant, tagsByGuid) => variant.tagGuids.map(tagGuid => tagsByGuid[tagGuid].name).join('|') },
