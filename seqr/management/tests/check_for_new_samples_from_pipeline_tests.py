@@ -11,7 +11,8 @@ from seqr.models import Project, Family, Individual, Sample, SavedVariant
 SEQR_URL = 'https://seqr.broadinstitute.org/'
 PROJECT_GUID = 'R0003_test'
 EXTERNAL_PROJECT_GUID = 'R0004_non_analyst_project'
-MOCK_HAIL_HOST = 'http://test-hail-host'
+MOCK_HAIL_HOST = 'test-hail-host'
+MOCK_HAIL_ORIGIN = f'http://{MOCK_HAIL_HOST}'
 
 GUID_ID = 54321
 GCNV_GUID_ID = 12345
@@ -252,7 +253,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         self.assertEqual(len(responses.calls), len(reload_calls) + 9 if reload_calls else 0)
         for i, call in enumerate(reload_calls or []):
             resp = responses.calls[i+7]
-            self.assertEqual(resp.request.url, f'{MOCK_HAIL_HOST}:5000/search')
+            self.assertEqual(resp.request.url, f'{MOCK_HAIL_ORIGIN}:5000/search')
             self.assertEqual(resp.request.headers.get('From'), 'manage_command')
             self.assertDictEqual(json.loads(resp.request.body), call)
 
@@ -282,18 +283,18 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         responses.add_callback(responses.POST, airtable_pdo_url, callback=lambda request: (200, {}, json.dumps({
             'records': [{'id': f'rec{i}ABC123', **r} for i, r in enumerate(json.loads(request.body)['records'])]
         })))
-        responses.add(responses.POST, f'{MOCK_HAIL_HOST}:5000/search', status=200, json={
+        responses.add(responses.POST, f'{MOCK_HAIL_ORIGIN}:5000/search', status=200, json={
             'results': [{'variantId': '1-248367227-TC-T', 'familyGuids': ['F000014_14'], 'updated_field': 'updated_value'}],
             'total': 1,
         })
-        responses.add(responses.POST, f'{MOCK_HAIL_HOST}:5000/multi_lookup', status=200, json={
+        responses.add(responses.POST, f'{MOCK_HAIL_ORIGIN}:5000/multi_lookup', status=200, json={
             'results': [{'variantId': '1-46859832-G-A', 'updated_new_field': 'updated_value', 'rsid': 'rs123'}],
         })
-        responses.add(responses.POST, f'{MOCK_HAIL_HOST}:5000/search', status=200, json={
+        responses.add(responses.POST, f'{MOCK_HAIL_ORIGIN}:5000/search', status=200, json={
             'results': [{'variantId': '1-248367227-TC-T', 'familyGuids': ['F000014_14'], 'updated_field': 'updated_value'}],
             'total': 1,
         })
-        responses.add(responses.POST, f'{MOCK_HAIL_HOST}:5000/search', status=400)
+        responses.add(responses.POST, f'{MOCK_HAIL_ORIGIN}:5000/search', status=400)
 
         # Test errors
         self.mock_data_dir.__str__.return_value = '/seqr/seqr-hail-search-data'
@@ -469,7 +470,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         # Test SavedVariant model updated
         for i, variant_id in enumerate([['1', 1562437, 'G', 'CA'], ['1', 46859832, 'G', 'A']]):
             multi_lookup_request = responses.calls[10+i].request
-            self.assertEqual(multi_lookup_request.url, f'{MOCK_HAIL_HOST}:5000/multi_lookup')
+            self.assertEqual(multi_lookup_request.url, f'{MOCK_HAIL_ORIGIN}:5000/multi_lookup')
             self.assertEqual(multi_lookup_request.headers.get('From'), 'manage_command')
             self.assertDictEqual(json.loads(multi_lookup_request.body), {
                 'genome_version': 'GRCh38',
