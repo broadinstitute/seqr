@@ -246,7 +246,6 @@ const formattedGenotypeDetails = (details, genotype, variant, genesById) => deta
 
 const genotypeDetails = (genotype, variant, genesById) => {
   const details = formattedGenotypeDetails(GENOTYPE_DETAILS, genotype, variant)
-  console.log(details)
   const svDetails = formattedGenotypeDetails(SV_GENOTYPE_DETAILS, genotype, variant, genesById)
   if (svDetails.length < 1) {
     return details
