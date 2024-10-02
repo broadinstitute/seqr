@@ -251,15 +251,14 @@ class MitoHailTableQuery(BaseHailTableQuery):
         for sample_type in SampleType:
             ht = ht.annotate(**{
                 sample_type.family_entries_field: hl.enumerate(ht[sample_type.family_entries_field]).starmap(
-                    lambda i, samples: hl.or_missing(
-                        (hl.case()
-                        .when(hl.is_defined(samples[0]['familyGuid']),  # Family will not be defined if there are no entries for the variant
-                            self._multi_sample_type_family_passes_quality_inheritance(
-                                ht, sample_type, i, samples[0]['familyGuid'],
-                                family_idx_map[samples[0]['familyGuid']].get(sample_type.other_sample_type.value)
-                            ))
-                        .or_missing()
-                     ), samples)
+                    lambda i, samples:  hl.or_missing(
+                        hl.bind(
+                            lambda other_sample_type_idx: (
+                                self._family_has_valid_sample_type_entries(ht, sample_type, i) |
+                                self._family_has_valid_sample_type_entries(ht, sample_type.other_sample_type, other_sample_type_idx)
+                            ),
+                            family_idx_map.get(hl.coalesce(samples)[0]['familyGuid']).get(sample_type.other_sample_type.value),
+                       ), samples)
                 )})
 
         # Merge family entries and filters from both sample types
@@ -284,6 +283,14 @@ class MitoHailTableQuery(BaseHailTableQuery):
             (hl.is_defined(other_sample_type_family_idx)) &
             (hl.is_defined(ht[sample_type.other_sample_type.passes_quality_field][other_sample_type_family_idx]) &
              hl.is_defined(ht[sample_type.other_sample_type.passes_inheritance_field][other_sample_type_family_idx]))
+        )
+
+    @staticmethod
+    def _family_has_valid_sample_type_entries(ht, sample_type, sample_type_family_idx):
+        return (
+            hl.is_defined(sample_type_family_idx) &
+            hl.is_defined(ht[sample_type.passes_quality_field][sample_type_family_idx]) &
+            hl.is_defined(ht[sample_type.passes_inheritance_field][sample_type_family_idx])
         )
 
     def _get_sample_genotype(self, samples, r=None, include_genotype_overrides=False, select_fields=None, **kwargs):

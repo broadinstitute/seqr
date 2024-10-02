@@ -921,8 +921,7 @@ VARIANTS = [
                 'gq': 46.0,
                 'numAlt': 1,
                 'dp': '50',
-                'ad': '14,33',
-                'sampleType': 'WES'
+                'ad': '14,33'
             },
             'NA19679': {
                 'sampleId': 'NA19679',
@@ -930,8 +929,7 @@ VARIANTS = [
                 'gq': 99.0,
                 'numAlt': 0,
                 'dp': '45',
-                'ad': '45,0',
-                'sampleType': 'WES'
+                'ad': '45,0'
             }
         }
     },
@@ -954,8 +952,7 @@ VARIANTS = [
                 'gq': 99.0,
                 'numAlt': 0,
                 'dp': '45',
-                'ad': '45,0',
-                'sampleType': 'WES'
+                'ad': '45,0'
             }
         }
     },
