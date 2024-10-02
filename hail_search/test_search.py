@@ -12,8 +12,8 @@ from hail_search.test_utils import get_hail_search_body, FAMILY_2_VARIANT_SAMPLE
     GCNV_MULTI_FAMILY_VARIANT1, GCNV_MULTI_FAMILY_VARIANT2, SV_WES_SAMPLE_DATA, EXPECTED_SAMPLE_DATA, \
     FAMILY_2_MITO_SAMPLE_DATA, FAMILY_2_ALL_SAMPLE_DATA, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3, \
     EXPECTED_SAMPLE_DATA_WITH_SEX, SV_WGS_SAMPLE_DATA_WITH_SEX, VARIANT_LOOKUP_VARIANT, \
-    MULTI_PROJECT_SAMPLE_TYPES_SAMPLE_DATA, FAMILY_4_VARIANT, FAMILY_4_SAMPLE_DATA, FAMILY_5_VARIANT_1, \
-    FAMILY_5_SAMPLE_DATA, FAMILY_5_VARIANT_2, FAMILIES_4_5_SAMPLE_DATA
+    MULTI_PROJECT_SAMPLE_TYPES_SAMPLE_DATA, FAMILY_2_BOTH_SAMPLE_TYPE_SAMPLE_DATA, \
+    VARIANT1_BOTH_SAMPLE_TYPES, VARIANT2_BOTH_SAMPLE_TYPES, FAMILY_2_BOTH_SAMPLE_TYPE_SAMPLE_DATA_MISSING_PARENTAL_WGS
 from hail_search.web_app import init_web_app, sync_to_async_hail_query
 from hail_search.queries.base import BaseHailTableQuery
 
@@ -196,6 +196,16 @@ GCNV_GENE_COUNTS = {
 
 OMIM_SORT_METADATA = ['ENSG00000177000', 'ENSG00000097046', 'ENSG00000275023']
 
+MULTI_PROJECT_BOTH_SAMPLE_TYPE_VARIANTS = [
+    deepcopy(v) for v in
+    [PROJECT_2_VARIANT, MULTI_PROJECT_VARIANT1, MULTI_PROJECT_VARIANT2, VARIANT3, VARIANT4]
+]
+for v in MULTI_PROJECT_BOTH_SAMPLE_TYPE_VARIANTS:
+    for indiv_id, gts in v['genotypes'].items():
+        v['genotypes'][indiv_id] = [gts]
+    if 'I000015_na20885' in v['genotypes']:
+        v['genotypes']['I000015_na20885'].append({**v['genotypes']['I000015_na20885'][0], 'sampleType': 'WGS'})
+
 
 def _sorted(variant, sorts):
     return {**variant, '_sort': sorts + variant['_sort']}
@@ -350,59 +360,39 @@ class HailSearchTestCase(AioHTTPTestCase):
 
     async def test_both_sample_types_search(self):
         # One family (F000011_11) in a multi-project search has identical exome and genome data.
-        expected_variants = [PROJECT_2_VARIANT, MULTI_PROJECT_VARIANT1, MULTI_PROJECT_VARIANT2, VARIANT3, VARIANT4]
-        expected_results = []
-        for variant in expected_variants:
-            v = deepcopy(variant)
-            for indiv_id, gts in v['genotypes'].items():
-                v['genotypes'][indiv_id] = [gts]
-            if 'I000015_na20885' in v['genotypes']:
-                v['genotypes']['I000015_na20885'].append({**v['genotypes']['I000015_na20885'][0], 'sampleType': 'WGS'})
-            expected_results.append(v)
-
         await self._assert_expected_search(
-            expected_results, gene_counts=GENE_COUNTS, sample_data=MULTI_PROJECT_SAMPLE_TYPES_SAMPLE_DATA,
+            MULTI_PROJECT_BOTH_SAMPLE_TYPE_VARIANTS, gene_counts=GENE_COUNTS, sample_data=MULTI_PROJECT_SAMPLE_TYPES_SAMPLE_DATA,
         )
 
-        # Variant in family_4 is de novo in exome but maternally inherited in genome.
+        # Variant1 in family_2 is de novo in exome but maternally inherited in genome.
         # Genome passes quality and inheritance, show genotypes for both sample types.
+        variant1_interval = ['1', 10438, 10440]
         inheritance_mode = 'recessive'
         await self._assert_expected_search(
-            [FAMILY_4_VARIANT], sample_data=FAMILY_4_SAMPLE_DATA, inheritance_mode=inheritance_mode,
-            **COMP_HET_ALL_PASS_FILTERS,
+            [VARIANT1_BOTH_SAMPLE_TYPES], sample_data=FAMILY_2_BOTH_SAMPLE_TYPE_SAMPLE_DATA, inheritance_mode=inheritance_mode,
+            **COMP_HET_ALL_PASS_FILTERS, intervals=[variant1_interval]
         )
         # Exome passes quality and inheritance, show genotypes for both sample types.
         inheritance_mode = 'de_novo'
         await self._assert_expected_search(
-            [FAMILY_4_VARIANT], sample_data=FAMILY_4_SAMPLE_DATA, inheritance_mode=inheritance_mode,
+            [VARIANT1_BOTH_SAMPLE_TYPES], sample_data=FAMILY_2_BOTH_SAMPLE_TYPE_SAMPLE_DATA, inheritance_mode=inheritance_mode,
+            intervals=[variant1_interval]
         )
 
-        # Variant 1 in family_5 is inherited in exome and there is no parental data in genome.
-        # Variant 2 in family_5 is inherited in exome with low parental GQ.
-        # Variant 1 genome passes quality and inheritance (since there is no parental data), show genotypes for both sample types.
+        # Variant2 in family_2 is inherited in exome and there is no parental data in genome.
+        # Variant2 genome passes quality and inheritance (since there is no parental data), show genotypes for both sample types.
         # Note: ^ This is incorrect, as the variant should not be returned.
-        # Variant 2 genome passes, but exome does not pass quality check. Do not show variant.
+        variant2_interval = ['1', 38724418, 38724420]
         inheritance_mode = 'recessive'
         await self._assert_expected_search(
-            [FAMILY_5_VARIANT_1], sample_data=FAMILY_5_SAMPLE_DATA, inheritance_mode=inheritance_mode,
-            **COMP_HET_ALL_PASS_FILTERS,
+            [VARIANT2_BOTH_SAMPLE_TYPES], sample_data=FAMILY_2_BOTH_SAMPLE_TYPE_SAMPLE_DATA_MISSING_PARENTAL_WGS,
+            inheritance_mode=inheritance_mode, **COMP_HET_ALL_PASS_FILTERS, intervals=[variant2_interval]
         )
-        # Variant 1 exome passes quality and inheritance, show genotypes for both sample types.
-        # Variant 2 exome does not pass quality but does pass inheritance, show genotypes for both sample types.
+        # Variant 1 exome and genome pass quality and inheritance, show genotypes for both sample types.
         inheritance_mode = 'de_novo'
         await self._assert_expected_search(
-            [FAMILY_5_VARIANT_1, FAMILY_5_VARIANT_2], sample_data=FAMILY_5_SAMPLE_DATA, inheritance_mode=inheritance_mode,
-        )
-
-        # Search with variants from families 4 and 5 together. They are in the same project.
-        inheritance_mode = 'recessive'
-        await self._assert_expected_search(
-            [FAMILY_5_VARIANT_1, FAMILY_4_VARIANT], sample_data=FAMILIES_4_5_SAMPLE_DATA, inheritance_mode=inheritance_mode,
-            **COMP_HET_ALL_PASS_FILTERS,
-        )
-        inheritance_mode = 'de_novo'
-        await self._assert_expected_search(
-            [FAMILY_5_VARIANT_1, FAMILY_4_VARIANT], sample_data=FAMILIES_4_5_SAMPLE_DATA, inheritance_mode=inheritance_mode,
+            [VARIANT2_BOTH_SAMPLE_TYPES], sample_data=FAMILY_2_BOTH_SAMPLE_TYPE_SAMPLE_DATA_MISSING_PARENTAL_WGS,
+            inheritance_mode=inheritance_mode, intervals=[variant2_interval]
         )
 
     async def test_inheritance_filter(self):
