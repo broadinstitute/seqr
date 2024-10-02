@@ -521,15 +521,11 @@ def load_data(request):
         missing = sorted(set(project_samples.keys()) - {p.guid for p in project_models})
         return create_json_response({'error': f'The following projects are invalid: {", ".join(missing)}'}, status=400)
 
-    has_airtable = AirtableSession.is_airtable_enabled()
-    individual_ids = None
-    if has_airtable:
-        individual_ids = _get_valid_project_samples(project_samples, dataset_type, sample_type, request.user)
-
     loading_args = (
         project_models, sample_type, dataset_type, request_json['genomeVersion'], _callset_path(request_json),
     )
-    if has_airtable:
+    if AirtableSession.is_airtable_enabled():
+        individual_ids = _get_valid_project_samples(project_samples, dataset_type, sample_type, request.user)
         success_message = f'*{request.user.email}* triggered loading internal {sample_type} {dataset_type} data for {len(projects)} projects'
         error_message = f'ERROR triggering internal {sample_type} {dataset_type} loading'
         trigger_airflow_data_loading(
