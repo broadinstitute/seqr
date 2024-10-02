@@ -523,8 +523,8 @@ def load_data(request):
 
     has_airtable = AirtableSession.is_airtable_enabled()
     individual_ids = None
-    if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS and has_airtable:
-        individual_ids = _get_valid_project_samples(project_samples, sample_type, request.user)
+    if has_airtable:
+        individual_ids = _get_valid_project_samples(project_samples, dataset_type, sample_type, request.user)
 
     loading_args = (
         project_models, sample_type, dataset_type, request_json['genomeVersion'], _callset_path(request_json),
@@ -549,13 +549,14 @@ def load_data(request):
     return create_json_response({'success': True})
 
 
-def _get_valid_project_samples(project_samples, sample_type, user):
+def _get_valid_project_samples(project_samples, dataset_type, sample_type, user):
+
     individuals = {
         (i['project'], i['individual_id']): i for i in Individual.objects.filter(family__project__guid__in=project_samples).values(
             'id', 'individual_id',
             project=F('family__project__guid'),
             family_name=F('family__family_id'),
-            sampleCount=Count('sample', filter=Q(sample__is_active=True) & Q(sample__sample_type=sample_type)),
+            sampleCount=Count('sample', filter=Q(sample__is_active=True) & Q(sample__sample_type=sample_type) & Q(sample__dataset_type=dataset_type)),
         )
     }
 
