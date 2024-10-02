@@ -466,7 +466,7 @@ def get_loaded_projects(request, sample_type, dataset_type):
     projects = get_internal_projects().filter(is_demo=False)
     project_samples = None
     if AirtableSession.is_airtable_enabled():
-        project_samples = _fetch_airtable_loadable_project_samples(request.user, dataset_type)
+        project_samples = _fetch_airtable_loadable_project_samples(request.user, dataset_type, sample_type)
         projects = projects.filter(guid__in=project_samples.keys())
     if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
         exclude_sample_type = Sample.SAMPLE_TYPE_WES if sample_type == Sample.SAMPLE_TYPE_WGS else Sample.SAMPLE_TYPE_WGS
@@ -488,10 +488,19 @@ def get_loaded_projects(request, sample_type, dataset_type):
     return create_json_response({'projects': list(projects)})
 
 
-def _fetch_airtable_loadable_project_samples(user, dataset_type):
+AIRTABLE_CALLSET_FIELDS = {
+    (Sample.DATASET_TYPE_MITO_CALLS, Sample.SAMPLE_TYPE_WES): 'MITO_WES_CallsetPath',
+    (Sample.DATASET_TYPE_MITO_CALLS, Sample.SAMPLE_TYPE_WGS): 'MITO_WGS_CallsetPath',
+    (Sample.DATASET_TYPE_SV_CALLS, Sample.SAMPLE_TYPE_WES): 'gCNV_CallsetPath',
+    (Sample.DATASET_TYPE_SV_CALLS, Sample.SAMPLE_TYPE_WGS): 'SV_CallsetPath',
+}
+
+
+def _fetch_airtable_loadable_project_samples(user, dataset_type, sample_type):
     # TODO cleanup duplicated calls with _get_loaded_samples
-    # TODO filter based on dataset_type/sample type if applicable
-    samples = AirtableSession(user).get_samples_for_matched_pdos(LOADABLE_PDO_STATUSES)
+    samples = AirtableSession(user).get_samples_for_matched_pdos(
+        LOADABLE_PDO_STATUSES, required_sample_field=AIRTABLE_CALLSET_FIELDS.get((dataset_type, sample_type)),
+    )
     project_samples = defaultdict(set)
     for sample in samples.values():
         for pdo in sample['pdos']:

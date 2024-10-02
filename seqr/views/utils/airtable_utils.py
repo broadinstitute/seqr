@@ -103,19 +103,19 @@ class AirtableSession(object):
 
         return updated_records
 
-    def fetch_records(self, record_type, fields, or_filters, and_filters=None, page_size=PAGE_SIZE, filter_query_template="{key}='{value}'"):
+    def fetch_records(self, record_type, fields, or_filters, and_filters=None, page_size=PAGE_SIZE, filter_query_template="{key}='{value}'", additional_and_filters=None):
         self._session.params.update({'fields[]': fields, 'pageSize': page_size})
         filter_formulas = []
         for key, values in or_filters.items():
             filter_formulas += [filter_query_template.format(key=key, value=value) for value in sorted(values)]
         and_filter_formulas = ','.join([
             filter_query_template.format(key=f'{{{key}}}', value=value) for key, value in (and_filters or {}).items()
-        ])
+        ] + (additional_and_filters or []))
         records = {}
         for i in range(0, len(filter_formulas), MAX_OR_FILTERS):
             filter_formula_group = filter_formulas[i:i + MAX_OR_FILTERS]
             filter_formula = f'OR({",".join(filter_formula_group)})'
-            if and_filters:
+            if and_filter_formulas:
                 filter_formula = f'AND({and_filter_formulas},{filter_formula})'
             self._session.params.update({'filterByFormula': filter_formula})
             logger.info(f'Fetching {record_type} records {i}-{i + len(filter_formula_group)} from airtable', self._user)
@@ -153,7 +153,7 @@ class AirtableSession(object):
             records_by_id.update(self._get_samples_for_id_field(missing, 'SeqrCollaboratorSampleID', fields))
         return records_by_id
 
-    def get_samples_for_matched_pdos(self, pdo_statuses, pdo_fields=None, project_guid=None):
+    def get_samples_for_matched_pdos(self, pdo_statuses, pdo_fields=None, project_guid=None, required_sample_field=None):
         pdo_fields = pdo_fields or []
         sample_records = self.fetch_records(
             'Samples', fields=[
@@ -161,6 +161,7 @@ class AirtableSession(object):
             ],
             or_filters={'PDOStatus': pdo_statuses},
             and_filters={'SeqrProject': f'{BASE_URL}project/{project_guid}/project_page'} if project_guid else {},
+            additional_and_filters=[f'LEN({{{required_sample_field}}})>0'] if required_sample_field else None,
             # Filter for array contains value instead of exact match
             filter_query_template="SEARCH('{value}',ARRAYJOIN({key},';'))",
         )
