@@ -496,11 +496,14 @@ AIRTABLE_CALLSET_FIELDS = {
 }
 
 
-def _fetch_airtable_loadable_project_samples(user, dataset_type, sample_type):
-    # TODO cleanup duplicated calls with _get_loaded_samples
-    samples = AirtableSession(user).get_samples_for_matched_pdos(
-        LOADABLE_PDO_STATUSES, required_sample_field=AIRTABLE_CALLSET_FIELDS.get((dataset_type, sample_type)),
+def _get_dataset_type_samples_for_matched_pdos(user, dataset_type, sample_type, pdo_statuses, **kwargs):
+    return AirtableSession(user).get_samples_for_matched_pdos(
+        pdo_statuses, required_sample_field=AIRTABLE_CALLSET_FIELDS.get((dataset_type, sample_type)), **kwargs,
     )
+
+
+def _fetch_airtable_loadable_project_samples(user, dataset_type, sample_type):
+    samples = _get_dataset_type_samples_for_matched_pdos(user, dataset_type, sample_type, LOADABLE_PDO_STATUSES)
     project_samples = defaultdict(set)
     for sample in samples.values():
         for pdo in sample['pdos']:
@@ -601,6 +604,7 @@ def _get_valid_project_samples(project_samples, dataset_type, sample_type, user)
 
 
 def _get_loaded_samples(project_samples, user):
+    # TODO refactor and use _get_dataset_type_samples_for_matched_pdos
     sample_ids = [sample_id for _, sample_id in project_samples]
     samples_by_id = AirtableSession(user).get_samples_for_sample_ids(sample_ids, ['PDOStatus', 'SeqrProject'])
     return [(project, sample_id) for project, sample_id in project_samples if any(
