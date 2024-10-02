@@ -19,7 +19,7 @@ from seqr.views.utils.dataset_utils import match_and_update_search_samples
 from seqr.views.utils.permissions_utils import is_internal_anvil_project, project_has_anvil
 from seqr.views.utils.variant_utils import reset_cached_search_results, update_projects_saved_variant_json, \
     get_saved_variants
-from settings import SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, BASE_URL, HAIL_SEARCH_DATA_DIR
+from settings import SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, HAIL_SEARCH_DATA_DIR
 
 logger = logging.getLogger(__name__)
 
@@ -185,18 +185,15 @@ class Command(BaseCommand):
 
     @staticmethod
     def _update_pdos(session, project_guid, sample_ids):
-        airtable_samples = session.fetch_records(
-            'Samples', fields=['CollaboratorSampleID', 'SeqrCollaboratorSampleID', 'PDOID'],
-            or_filters={'PDOStatus': LOADABLE_PDO_STATUSES},
-            and_filters={'SeqrProject': f'{BASE_URL}project/{project_guid}/project_page'}
+        airtable_samples = session.get_samples_for_matched_pdos(
+            LOADABLE_PDO_STATUSES, pdo_fields=['PDOID'], project_guid=project_guid,
         )
 
         pdo_ids = set()
         skipped_pdo_samples = defaultdict(list)
         for record_id, sample in airtable_samples.items():
-            pdo_id = sample['PDOID'][0]
-            sample_id = sample.get('SeqrCollaboratorSampleID') or sample['CollaboratorSampleID']
-            if sample_id in sample_ids:
+            pdo_id = sample['pdos'][0]['PDOID']
+            if sample['sample_id'] in sample_ids:
                 pdo_ids.add(pdo_id)
             else:
                 skipped_pdo_samples[pdo_id].append(record_id)
