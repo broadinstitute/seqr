@@ -21,11 +21,6 @@ MAX_GENE_INTERVALS = int(os.environ.get('MAX_GENE_INTERVALS', MAX_LOAD_INTERVALS
 # https://github.com/broadinstitute/seqr-private/issues/1283#issuecomment-1973392719
 MAX_PARTITIONS = 12
 
-# Need to chunk tables or else evaluating table globals throws LineTooLong exception
-# However, minimizing number of chunks minimizes number of aggregations/ evals and improves performance
-# Adapted from https://discuss.hail.is/t/importing-many-sample-specific-vcfs/2002/8
-MAX_HTS_TO_JOIN = 64
-
 logger = logging.getLogger(__name__)
 
 
@@ -340,35 +335,49 @@ class BaseHailTableQuery(object):
 
         return self._merge_filtered_hts(filtered_comp_het_project_hts, filtered_project_hts, n_partitions)
 
-    def _load_project_hts(self, project_samples: dict, n_partitions: int, **kwargs) -> list[tuple[hl.Table, dict]]:
+    def _load_project_hts(
+        self, project_samples, n_partitions,
+        initialize_project_hts=None, initialize_sample_data=None, aggregate_project_data=None, load_project_ht_chunks=None,
+        **kwargs
+    ):
+        # Need to chunk tables or else evaluating table globals throws LineTooLong exception
+        # However, minimizing number of chunks minimizes number of aggregations/ evals and improves performance
+        # Adapted from https://discuss.hail.is/t/importing-many-sample-specific-vcfs/2002/8
+        chunk_size = 64
         all_project_hts = []
-        project_hts = []
-        sample_data = {}
-        for project_guid, project_sample_type_data in project_samples.items():
-            sample_type, family_sample_data = list(project_sample_type_data.items())[0]
-            project_ht = self._read_project_data(family_sample_data, project_guid, sample_type, project_hts, sample_data)
-            if project_ht is None:
-                continue
+        if initialize_project_hts is None:
+            initialize_project_hts = lambda: []
 
-            if len(project_hts) >= MAX_HTS_TO_JOIN:
+        if initialize_sample_data is None:
+            initialize_sample_data = lambda: {}
+
+        if aggregate_project_data is None:
+            def aggregate_project_data(family_sample_data, ht, project_hts, sample_data, _):
+                project_hts.append(ht)
+                sample_data.update(family_sample_data)
+
+        if load_project_ht_chunks is None:
+            def load_project_ht_chunks(all_project_hts, n_partitions, project_hts, sample_data, **kwargs):
                 ht = self._prefilter_merged_project_hts(project_hts, n_partitions, **kwargs)
                 all_project_hts.append((ht, sample_data))
-                project_hts = []
-                sample_data = {}
 
-        if project_hts:
-            ht = self._prefilter_merged_project_hts(project_hts, n_partitions, **kwargs)
-            all_project_hts.append((ht, sample_data))
+        project_hts = initialize_project_hts()
+        sample_data = initialize_sample_data()
+
+        for project_guid, project_sample_type_data in project_samples.items():
+            for sample_type, family_sample_data in project_sample_type_data.items():
+                project_ht = self._read_project_data(project_guid, sample_type)
+                if project_ht is None:
+                    continue
+                aggregate_project_data(family_sample_data, project_ht, project_hts, sample_data, sample_type)
+
+            if len(project_hts) >= chunk_size:
+                load_project_ht_chunks(all_project_hts, n_partitions, project_hts, sample_data, **kwargs)
+                project_hts = initialize_project_hts()
+                sample_data = initialize_sample_data()
+
+        load_project_ht_chunks(all_project_hts, n_partitions, project_hts, sample_data, **kwargs)
         return all_project_hts
-
-    def _read_project_data(self, family_sample_data, project_guid, sample_type, project_hts, sample_data):
-        project_ht = self._read_project_table(project_guid, sample_type)
-        if project_ht is not None:
-            project_ht = project_ht.select_globals('sample_type', 'family_guids', 'family_samples')
-            project_hts.append(project_ht)
-            sample_data.update(family_sample_data)
-
-        return project_ht
 
     def import_filtered_table(self, project_samples: dict, num_families: int, **kwargs):
         if num_families == 1 or len(project_samples) == 1:
@@ -425,6 +434,12 @@ class BaseHailTableQuery(object):
 
     def _read_project_table(self, project_guid: str, sample_type: str):
         return self._read_table(f'projects/{sample_type}/{project_guid}.ht')
+
+    def _read_project_data(self, project_guid: str, sample_type: str):
+        project_ht = self._read_project_table(project_guid, sample_type)
+        if project_ht is not None:
+            project_ht = project_ht.select_globals('sample_type', 'family_guids', 'family_samples')
+        return project_ht
 
     def _prefilter_merged_project_hts(self, project_hts, n_partitions, **kwargs):
         ht = self._merge_project_hts(project_hts, n_partitions, include_all_globals=True)
