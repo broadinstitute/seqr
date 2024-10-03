@@ -277,20 +277,9 @@ class MitoHailTableQuery(BaseHailTableQuery):
         return ht.filter(ht.family_entries.any(hl.is_defined))
 
     @staticmethod
-    def _multi_sample_type_family_passes_quality_inheritance(ht, sample_type, sample_type_family_idx, family_guid, other_sample_type_family_idx):
+    def _family_has_valid_sample_type_entries(ht, sample_type, sample_type_family_idx):
         # Note: This logic does not sufficiently handle case 2 here https://docs.google.com/presentation/d/1hqDV8ulhviUcR5C4PtNUqkCLXKDsc6pccgFVlFmWUAU/edit?usp=sharing
         # and will need to be changed to support it - https://github.com/broadinstitute/seqr/issues/4403
-        return (  # Family passes quality and inheritance
-            hl.is_defined(ht[sample_type.passes_quality_field][sample_type_family_idx]) &
-            hl.is_defined(ht[sample_type.passes_inheritance_field][sample_type_family_idx])
-        ) | (  # Family from other sample type passes quality and inheritance
-            (hl.is_defined(other_sample_type_family_idx)) &
-            (hl.is_defined(ht[sample_type.other_sample_type.passes_quality_field][other_sample_type_family_idx]) &
-             hl.is_defined(ht[sample_type.other_sample_type.passes_inheritance_field][other_sample_type_family_idx]))
-        )
-
-    @staticmethod
-    def _family_has_valid_sample_type_entries(ht, sample_type, sample_type_family_idx):
         return (
             hl.is_defined(sample_type_family_idx) &
             hl.is_defined(ht[sample_type.passes_quality_field][sample_type_family_idx]) &
@@ -301,13 +290,9 @@ class MitoHailTableQuery(BaseHailTableQuery):
         if not self._has_both_sample_types:
             return super()._get_sample_genotype(samples, r, include_genotype_overrides, select_fields)
 
-        return hl.if_else(
-            hl.len(hl.set(samples.map(lambda sample: sample.sampleType))) > 1,
-            samples.map(lambda sample: self._select_genotype_for_sample(
-                sample, r, include_genotype_overrides, select_fields
-            )),
-            [super()._get_sample_genotype(samples, r, include_genotype_overrides, select_fields)]
-        )
+        return hl.array(hl.set(samples.map(lambda sample: self._select_genotype_for_sample(
+            sample, r, include_genotype_overrides, select_fields
+        ))))
 
     @staticmethod
     def _selected_main_transcript_expr(ht):
