@@ -165,7 +165,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
 
         if both_sample_type_project_samples:
             self._has_both_sample_types = True
-            entries = self._load_project_hts_both_sample_types(project_samples, n_partitions, **kwargs)
+            entries = self._load_project_hts_both_sample_types(both_sample_type_project_samples, n_partitions, **kwargs)
             for entry in entries:
                 wes_ht, wes_project_samples = entry[SampleType.WES.value]
                 wgs_ht, wgs_project_samples = entry[SampleType.WGS.value]
@@ -290,9 +290,9 @@ class MitoHailTableQuery(BaseHailTableQuery):
         if not self._has_both_sample_types:
             return super()._get_sample_genotype(samples, r, include_genotype_overrides, select_fields)
 
-        return hl.array(hl.set(samples.map(lambda sample: self._select_genotype_for_sample(
+        return samples.map(lambda sample: self._select_genotype_for_sample(
             sample, r, include_genotype_overrides, select_fields
-        ))))
+        ))
 
     @staticmethod
     def _selected_main_transcript_expr(ht):
