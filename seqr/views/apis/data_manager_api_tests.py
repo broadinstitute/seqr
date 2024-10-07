@@ -456,6 +456,7 @@ AIRTABLE_SAMPLE_RECORDS = {
         },
     ]
 }
+# TODO combine sample records
 AIRTABLE_SAMPLE_RECORDS_TODO = {
     'records': [
         {
@@ -466,12 +467,8 @@ AIRTABLE_SAMPLE_RECORDS_TODO = {
                 'PDOStatus': ['Available in seqr'],
             }
         },
-    ],
-}
-AIRTABLE_SECONDARY_SAMPLE_RECORDS = {
-    'records': [
         {
-            'id': 'recW24C2CJW5lT64K',
+            'id': 'recW24C2CJW5lT67K',
             'fields': {
                 'SeqrCollaboratorSampleID': 'NA21234',
                 'SeqrProject': ['https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page'],
@@ -1450,12 +1447,7 @@ class DataManagerAPITest(AirtableTest):
         self.check_pm_login(url)
 
         self.reset_logs()
-        response = self.client.get(url)
-        self._assert_expected_pm_access(response)
-
-        self.login_data_manager_user()
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
+        response = self._assert_expected_pm_access(lambda: self.client.get(url))
         self.assertDictEqual(response.json(), {'projects': [{**self.PROJECT_OPTION, 'dataTypeLastLoaded': '2018-02-05T06:31:55.397Z'}]})
 
         response = self.client.get(url.replace('SV', 'MITO'))
@@ -1473,11 +1465,14 @@ class DataManagerAPITest(AirtableTest):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'projects': self.WES_PROJECT_OPTIONS})
 
-    def _assert_expected_pm_access(self, response):
+    def _assert_expected_pm_access(self, get_response):
+        response = get_response()
         self.assertEqual(response.status_code, 200)
+        self.login_data_manager_user()
+        return response
 
     @responses.activate
-    @mock.patch('seqr.views.apis.data_manager_api.BASE_URL', 'https://seqr.broadinstitute.org/')
+    @mock.patch('seqr.views.utils.airtable_utils.BASE_URL', 'https://seqr.broadinstitute.org/')
     @mock.patch('seqr.views.utils.export_utils.os.makedirs')
     @mock.patch('seqr.views.utils.export_utils.open')
     @mock.patch('seqr.views.utils.export_utils.TemporaryDirectory')
@@ -1488,7 +1483,7 @@ class DataManagerAPITest(AirtableTest):
         responses.add(responses.POST, PIPELINE_RUNNER_URL)
         mock_temp_dir.return_value.__enter__.return_value = '/mock/tmp'
         body = {'filePath': f'{self.CALLSET_DIR}/mito_callset.mt', 'datasetType': 'MITO', 'sampleType': 'WGS', 'genomeVersion': '38', 'projects': [
-            json.dumps({'projectGuid': 'R0001_1kg'}), json.dumps(PROJECT_OPTION), json.dumps({'projectGuid': 'R0005_not_project'}),
+            json.dumps({**self.PROJECT_OPTION, 'projectGuid': 'R0001_1kg'}), json.dumps(self.PROJECT_OPTION), json.dumps({'projectGuid': 'R0005_not_project'}),
         ]}
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
@@ -1496,8 +1491,9 @@ class DataManagerAPITest(AirtableTest):
 
         self.reset_logs()
         body['projects'] = body['projects'][:-1]
-        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
-        self.assertEqual(response.status_code, 200)
+        response = self._assert_expected_pm_access(
+            lambda: self.client.post(url, content_type='application/json', data=json.dumps(body))
+        )
         self.assertDictEqual(response.json(), {'success': True})
 
         self._assert_expected_load_data_requests()
@@ -1540,7 +1536,6 @@ class DataManagerAPITest(AirtableTest):
         mock_mkdir.reset_mock()
         mock_open.reset_mock()
         mock_open.side_effect = OSError('Restricted filesystem')
-        self.login_data_manager_user()
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self._assert_write_pedigree_error(response)
         self.assert_json_logs(self.data_manager_user, [
@@ -1557,7 +1552,7 @@ class DataManagerAPITest(AirtableTest):
         self._assert_trigger_error(response, body, dag_json)
         self._has_expected_ped_files(mock_open, mock_mkdir, 'SV', sample_type='WES')
 
-    def _has_expected_ped_files(self, mock_open, mock_mkdir, dataset_type, sample_type='WGS', has_project_subset=False, single_project=False):
+    def _has_expected_ped_files(self, mock_open, mock_mkdir, dataset_type, sample_type='WGS', single_project=False):
         mock_open.assert_has_calls([
             mock.call(f'{self._local_pedigree_path(dataset_type, sample_type)}/{project}_pedigree.tsv', 'w')
             for project in self.PROJECTS[(1 if single_project else 0):]
@@ -1568,7 +1563,7 @@ class DataManagerAPITest(AirtableTest):
         ]
         self.assertEqual(len(files), 1 if single_project else 2)
 
-        num_rows = 4 if has_project_subset else 15
+        num_rows = 4 if self.MOCK_AIRTABLE_KEY else 15
         if not single_project:
             self.assertEqual(len(files[0]), num_rows)
             self.assertListEqual(files[0][:5], [PEDIGREE_HEADER] + EXPECTED_PEDIGREE_ROWS[:num_rows-1])
@@ -1657,7 +1652,7 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
         self.assertEqual(response.status_code, 400)
         error = f'400 Client Error: Bad Request for url: {PIPELINE_RUNNER_URL}'
         self.assertDictEqual(response.json(), response_body or {'error': error})
-        self.assert_json_logs(self.pm_user, [
+        self.assert_json_logs(self.data_manager_user, [
             (error, {'severity': 'WARNING', 'requestBody': body, 'httpRequest': mock.ANY, 'traceback': mock.ANY}),
         ])
 
@@ -1745,11 +1740,14 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
                 fields=['CollaboratorSampleID', 'SeqrCollaboratorSampleID', 'PDOStatus', 'SeqrProject'],
             )
 
-    def _assert_expected_pm_access(self, response):
+    def _assert_expected_pm_access(self, get_response):
+        response = get_response()
         self.assertEqual(response.status_code, 403)
         self.assert_json_logs(self.pm_user, [
             ('PermissionDenied: Error: To access RDG airtable user must login with Broad email.', {'severity': 'WARNING'})
         ])
+        self.login_data_manager_user()
+        return super()._assert_expected_pm_access(get_response)
 
     @staticmethod
     def _get_dag_variable_overrides(*args, **kwargs):
@@ -1808,16 +1806,13 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
 
         sample_ids = PROJECT_SAMPLES_OPTION['sampleIds']
         body['projects'] = [json.dumps({**PROJECT_OPTION, 'sampleIds': [sample_ids[1]]})]
-        airtable_samples_url = 'https://api.airtable.com/v0/app3Y97xtbbaOopVR/Samples'
-        responses.add(responses.GET, airtable_samples_url, json=AIRTABLE_SAMPLE_RECORDS_TODO, status=200)
-        responses.add(responses.GET, airtable_samples_url, json=AIRTABLE_SECONDARY_SAMPLE_RECORDS, status=200)
+        responses.add(responses.GET, 'https://api.airtable.com/v0/app3Y97xtbbaOopVR/Samples', json=AIRTABLE_SAMPLE_RECORDS_TODO, status=200)
 
         # Non-Broad users can not access airtable
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 403)
 
         responses.calls.reset()
-        self.login_data_manager_user()
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {
@@ -1836,7 +1831,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         )
 
         responses.calls.reset()
-        responses.add(responses.GET, airtable_samples_url, json=AIRTABLE_SAMPLE_RECORDS_TODO, status=200)
+        # TODO shared
         body['projects'] = [
             json.dumps({'projectGuid': 'R0001_1kg', 'sampleIds': ['NA19675_1', 'NA19679']}),
             json.dumps({**PROJECT_OPTION, 'sampleIds': sample_ids[:2]}),
@@ -1845,7 +1840,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'success': True})
-        self._has_expected_ped_files(mock_open, mock_mkdir, 'SNV_INDEL', sample_type='WES', has_project_subset=True)
+        self._has_expected_ped_files(mock_open, mock_mkdir, 'SNV_INDEL', sample_type='WES')
         self.assert_expected_airtable_call(
             call_index=0,
             filter_formula="OR({CollaboratorSampleID}='NA19678')",
