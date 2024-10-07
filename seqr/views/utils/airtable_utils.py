@@ -49,11 +49,13 @@ class AirtableSession(object):
         self._session.headers.update({'Authorization': f'Bearer {AIRTABLE_API_KEY}'})
 
     def _check_user_access(self, base):
-        has_access = is_cloud_authenticated(self._user)
-        if base != self.ANVIL_BASE:
-            has_access &= self._user.email.endswith('broadinstitute.org')
-        if not has_access:
-            raise PermissionDenied('Error: To access airtable user must login with Google authentication.')
+        error = None
+        if not is_cloud_authenticated(self._user):
+            error = 'To access airtable user must login with Google authentication'
+        elif base != self.ANVIL_BASE and not self._user.email.endswith('broadinstitute.org'):
+            error = 'To access RDG airtable user must login with Broad email'
+        if error:
+            raise PermissionDenied(f'Error: {error}.')
 
     def safe_create_records(self, record_type, records):
         return self._safe_bulk_update_records(
