@@ -409,35 +409,54 @@ EMPTY_PROJECT_OPTION = {
 }
 EMPTY_PROJECT_SAMPLES_OPTION = {**EMPTY_PROJECT_OPTION, 'sampleIds': ['HG00738', 'HG00739']}
 
-AIRTABLE_PDO_RECORDS = {
+AIRTABLE_SAMPLE_RECORDS = {
     'records': [
         {
             'id': 'recW24C2CJW5lT64K',
             'fields': {
-                'SeqrProjectURL': 'https://seqr.broadinstitute.org/project/R0002_empty/project_page',
-                'PassingCollaboratorSampleIDs': ['HG00738', None],
-                'SeqrIDs': [None, 'HG00739'],
+                'SeqrProject': ['https://seqr.broadinstitute.org/project/R0002_empty/project_page'],
+                'PDOStatus': ['Methods (Loading)'],
+                'CollaboratorSampleID': 'HG00738',
+            }
+        },
+        {
+            'id': 'recW24C2CJW5lT64L',
+            'fields': {
+                'SeqrProject': ['https://seqr.broadinstitute.org/project/R0002_empty/project_page'],
+                'PDOStatus': ['Methods (Loading)'],
+                'SeqrCollaboratorSampleID': 'HG00739',
             }
         },
         {
             'id': 'rec2B6OGmQpAkQW3s',
             'fields': {
-                'SeqrProjectURL': 'https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page',
-                'PassingCollaboratorSampleIDs': ['NA21234', 'NA21987'],
-                'SeqrIDs': [None, None],
+                'SeqrProject': [
+                    'https://seqr.broadinstitute.org/project/R0002_empty/project_page',
+                    'https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page',
+                ],
+                'PDOStatus': ['Historic', 'Methods (Loading)'],
+                'CollaboratorSampleID': 'NA21234',
+            }
+        },
+        {
+            'id': 'rec2B6OGmQpAkQW7s',
+            'fields': {
+                'SeqrProject': ['https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page'],
+                'PDOStatus': ['Methods (Loading)'],
+                'CollaboratorSampleID': 'NA21987',
             }
         },
         {
             'id': 'rec2Nkg10N1KssPc3',
             'fields': {
-                'SeqrProjectURL': 'https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page',
-                'PassingCollaboratorSampleIDs': [None],
-                'SeqrIDs': ['NA21988'],
+                'SeqrProject': ['https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page'],
+                'PDOStatus': ['Methods (Loading)'],
+                'SeqrCollaboratorSampleID': 'NA21988',
             }
         },
     ]
 }
-AIRTABLE_SAMPLE_RECORDS = {
+AIRTABLE_SAMPLE_RECORDS_TODO = {
     'records': [
         {
             'id': 'recW24C2CJW5lT64K',
@@ -1420,7 +1439,7 @@ class DataManagerAPITest(AirtableTest):
         self.assertEqual(response.status_code, 200)
 
     @mock.patch('seqr.views.utils.permissions_utils.INTERNAL_NAMESPACES', ['my-seqr-billing', 'ext-data'])
-    @mock.patch('seqr.views.apis.data_manager_api.BASE_URL', 'https://seqr.broadinstitute.org/')
+    @mock.patch('seqr.views.utils.airtable_utils.BASE_URL', 'https://seqr.broadinstitute.org/')
     @responses.activate
     def test_get_loaded_projects(self):
         url = reverse(get_loaded_projects, args=['WGS', 'SV'])
@@ -1441,7 +1460,7 @@ class DataManagerAPITest(AirtableTest):
 
         # test with airtable filter
         responses.add(
-            responses.GET, 'https://api.airtable.com/v0/app3Y97xtbbaOopVR/PDO', json=AIRTABLE_PDO_RECORDS, status=200,
+            responses.GET, 'https://api.airtable.com/v0/app3Y97xtbbaOopVR/Samples', json=AIRTABLE_SAMPLE_RECORDS, status=200,
         )
         snv_indel_url = url.replace('SV', 'SNV_INDEL')
         response = self.client.get(snv_indel_url)
@@ -1710,8 +1729,8 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         self.assertEqual(len(responses.calls), 1)
         self.assert_expected_airtable_call(
             call_index=0,
-            filter_formula="OR(PDOStatus='Methods (Loading)',PDOStatus='On hold for phenotips, but ready to load')",
-            fields=['PassingCollaboratorSampleIDs', 'SeqrIDs', 'SeqrProjectURL'],
+            filter_formula="OR(SEARCH('Methods (Loading)',ARRAYJOIN(PDOStatus,';')),SEARCH('On hold for phenotips, but ready to load',ARRAYJOIN(PDOStatus,';')))",
+            fields=['CollaboratorSampleID', 'SeqrCollaboratorSampleID', 'PDOStatus', 'SeqrProject'],
         )
 
     @staticmethod
@@ -1772,7 +1791,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         sample_ids = PROJECT_SAMPLES_OPTION['sampleIds']
         body['projects'] = [json.dumps({**PROJECT_OPTION, 'sampleIds': [sample_ids[1]]})]
         airtable_samples_url = 'https://api.airtable.com/v0/app3Y97xtbbaOopVR/Samples'
-        responses.add(responses.GET, airtable_samples_url, json=AIRTABLE_SAMPLE_RECORDS, status=200)
+        responses.add(responses.GET, airtable_samples_url, json=AIRTABLE_SAMPLE_RECORDS_TODO, status=200)
         responses.add(responses.GET, airtable_samples_url, json=AIRTABLE_SECONDARY_SAMPLE_RECORDS, status=200)
 
         # Non-Broad users can not access airtable
@@ -1799,7 +1818,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         )
 
         responses.calls.reset()
-        responses.add(responses.GET, airtable_samples_url, json=AIRTABLE_SAMPLE_RECORDS, status=200)
+        responses.add(responses.GET, airtable_samples_url, json=AIRTABLE_SAMPLE_RECORDS_TODO, status=200)
         body['projects'] = [
             json.dumps({'projectGuid': 'R0001_1kg', 'sampleIds': ['NA19675_1', 'NA19679']}),
             json.dumps({**PROJECT_OPTION, 'sampleIds': sample_ids[:2]}),
