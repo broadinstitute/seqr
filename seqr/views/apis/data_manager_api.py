@@ -499,13 +499,13 @@ AIRTABLE_CALLSET_FIELDS = {
 def _get_dataset_type_samples_for_matched_pdos(user, dataset_type, sample_type, pdo_statuses, **kwargs):
     return AirtableSession(user).get_samples_for_matched_pdos(
         pdo_statuses, required_sample_field=AIRTABLE_CALLSET_FIELDS.get((dataset_type, sample_type)), **kwargs,
-    )
+    ).values()
 
 
 def _fetch_airtable_loadable_project_samples(user, dataset_type, sample_type):
     samples = _get_dataset_type_samples_for_matched_pdos(user, dataset_type, sample_type, LOADABLE_PDO_STATUSES)
     project_samples = defaultdict(set)
-    for sample in samples.values():
+    for sample in samples:
         for pdo in sample['pdos']:
             project_samples[pdo['project_guid']].add(sample['sample_id'])
     return project_samples
@@ -575,21 +575,23 @@ def _get_valid_project_samples(project_samples, dataset_type, sample_type, user)
     if missing_samples:
         errors.append(f'The following samples are included in airtable but missing from seqr: {", ".join(missing_samples)}')
 
-    missing_samples = {}
+    missing_project_samples = defaultdict(dict)
     for (project, sample_id), individual in individuals.items():
         family_key = (project, individual['family_name'])
         if sample_id not in project_samples[project] and family_key in airtable_families and individual['sampleCount']:
-            missing_samples[(project, sample_id)] = individual
-
-    loaded_samples = _get_loaded_samples(missing_samples.keys(), user) if missing_samples else []
+            missing_project_samples[project][sample_id] = individual
 
     missing_family_samples = defaultdict(list)
-    for (project, sample_id), individual in missing_samples.items():
-        if (project, sample_id) in loaded_samples:
-            individual_ids.append(individual['id'])
-            project_samples[project].append(sample_id)
-        else:
-            missing_family_samples[(project, individual['family_name'])].append(sample_id)
+    for project, individuals_by_sample_id in missing_project_samples.items():
+        loaded_samples = {sample['sample_id'] for sample in _get_dataset_type_samples_for_matched_pdos(
+            user, dataset_type, sample_type, AVAILABLE_PDO_STATUSES, project_guid=project,
+        )}
+        for sample_id, individual in individuals_by_sample_id.items():
+            if sample_id in loaded_samples:
+                individual_ids.append(individual['id'])
+                project_samples[project].append(sample_id)
+            else:
+                missing_family_samples[(project, individual['family_name'])].append(sample_id)
 
     if missing_family_samples:
         family_errors = [
@@ -601,20 +603,6 @@ def _get_valid_project_samples(project_samples, dataset_type, sample_type, user)
         raise ErrorsWarningsException(errors)
 
     return individual_ids
-
-
-def _get_loaded_samples(project_samples, user):
-    # TODO refactor and use _get_dataset_type_samples_for_matched_pdos
-    sample_ids = [sample_id for _, sample_id in project_samples]
-    samples_by_id = AirtableSession(user).get_samples_for_sample_ids(sample_ids, ['PDOStatus', 'SeqrProject'])
-    return [(project, sample_id) for project, sample_id in project_samples if any(
-        _is_loaded_airtable_sample(s, project) for s in samples_by_id.get(sample_id, [])
-    )]
-
-
-def _is_loaded_airtable_sample(sample, project_guid):
-    return f'{BASE_URL}project/{project_guid}/project_page' in sample['SeqrProject'] and any(
-        status in AVAILABLE_PDO_STATUSES for status in sample['PDOStatus'])
 
 
 # Hop-by-hop HTTP response headers shouldn't be forwarded.
