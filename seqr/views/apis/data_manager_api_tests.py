@@ -468,6 +468,14 @@ AIRTABLE_SAMPLE_RECORDS_TODO = {
             }
         },
         {
+            'id': 'recW24C2CJW5lT65K',
+            'fields': {
+                'CollaboratorSampleID': 'HG00731',
+                'SeqrProject': ['https://seqr.broadinstitute.org/project/R0001_1kg/project_page'],
+                'PDOStatus': ['Available in seqr'],
+            }
+        },
+        {
             'id': 'recW24C2CJW5lT67K',
             'fields': {
                 'SeqrCollaboratorSampleID': 'NA21234',
@@ -1480,24 +1488,26 @@ class DataManagerAPITest(AirtableTest):
         url = reverse(load_data)
         self.check_pm_login(url)
 
+        responses.add(responses.GET, 'https://api.airtable.com/v0/app3Y97xtbbaOopVR/Samples', json=AIRTABLE_SAMPLE_RECORDS_TODO, status=200)
         responses.add(responses.POST, PIPELINE_RUNNER_URL)
         mock_temp_dir.return_value.__enter__.return_value = '/mock/tmp'
-        body = {'filePath': f'{self.CALLSET_DIR}/mito_callset.mt', 'datasetType': 'MITO', 'sampleType': 'WGS', 'genomeVersion': '38', 'projects': [
-            json.dumps({**self.PROJECT_OPTION, 'projectGuid': 'R0001_1kg'}), json.dumps(self.PROJECT_OPTION), json.dumps({'projectGuid': 'R0005_not_project'}),
+        body = {'filePath': f'{self.CALLSET_DIR}/mito_callset.mt', 'datasetType': 'MITO', 'sampleType': 'WES', 'genomeVersion': '38', 'projects': [
+            json.dumps(option) for option in self.MITO_PROJECT_OPTIONS + [{'projectGuid': 'R0005_not_project'}]
         ]}
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'error': 'The following projects are invalid: R0005_not_project'})
 
         self.reset_logs()
+        responses.calls.reset()
         body['projects'] = body['projects'][:-1]
         response = self._assert_expected_pm_access(
             lambda: self.client.post(url, content_type='application/json', data=json.dumps(body))
         )
         self.assertDictEqual(response.json(), {'success': True})
 
-        self._assert_expected_load_data_requests()
-        self._has_expected_ped_files(mock_open, mock_mkdir, 'MITO')
+        self._assert_expected_load_data_requests(sample_type='WES')
+        self._has_expected_ped_files(mock_open, mock_mkdir, 'MITO', sample_type='WES')
 
         dag_json = {
             'projects_to_run': [
@@ -1505,7 +1515,7 @@ class DataManagerAPITest(AirtableTest):
                 'R0004_non_analyst_project'
             ],
             'callset_path': f'{self.TRIGGER_CALLSET_DIR}/mito_callset.mt',
-            'sample_type': 'WGS',
+            'sample_type': 'WES',
             'dataset_type': 'MITO',
             'reference_genome': 'GRCh38',
         }
@@ -1518,7 +1528,7 @@ class DataManagerAPITest(AirtableTest):
         responses.calls.reset()
         self.reset_logs()
 
-        body.update({'datasetType': 'SV', 'filePath': f'{self.CALLSET_DIR}/sv_callset.vcf', 'sampleType': 'WES'})
+        body.update({'datasetType': 'SV', 'filePath': f'{self.CALLSET_DIR}/sv_callset.vcf'})
         self._trigger_error(url, body, dag_json, mock_open, mock_mkdir)
 
         # Test loading with sample subset
@@ -1563,7 +1573,7 @@ class DataManagerAPITest(AirtableTest):
         ]
         self.assertEqual(len(files), 1 if single_project else 2)
 
-        num_rows = 4 if self.MOCK_AIRTABLE_KEY else 15
+        num_rows = 6 if self.MOCK_AIRTABLE_KEY else 15
         if not single_project:
             self.assertEqual(len(files[0]), num_rows)
             self.assertListEqual(files[0][:5], [PEDIGREE_HEADER] + EXPECTED_PEDIGREE_ROWS[:num_rows-1])
@@ -1587,6 +1597,7 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
         {'name': '1kg project nåme with uniçøde', 'projectGuid': 'R0001_1kg', 'dataTypeLastLoaded': '2017-02-05T06:25:55.397Z'},
         EMPTY_PROJECT_OPTION,
     ]
+    MITO_PROJECT_OPTIONS = [{'projectGuid': 'R0001_1kg'}, PROJECT_OPTION]
 
     def setUp(self):
         patcher = mock.patch('seqr.utils.file_utils.os.path.isfile')
@@ -1672,6 +1683,7 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
 class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
 
+    ADDITIONAL_REQUEST_COUNT = 1
     LOADING_PROJECT_GUID = NON_ANALYST_PROJECT_GUID
     CALLSET_DIR = 'gs://test_bucket'
     TRIGGER_CALLSET_DIR = CALLSET_DIR
@@ -1679,6 +1691,10 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
     PROJECT_OPTION = PROJECT_SAMPLES_OPTION
     WGS_PROJECT_OPTIONS = [EMPTY_PROJECT_SAMPLES_OPTION, PROJECT_SAMPLES_OPTION]
     WES_PROJECT_OPTIONS = [EMPTY_PROJECT_SAMPLES_OPTION]
+    MITO_PROJECT_OPTIONS = [
+        {'projectGuid': 'R0001_1kg', 'sampleIds': ['NA19675_1', 'NA19678', 'NA19679', 'HG00732']},
+        {**PROJECT_OPTION, 'sampleIds': PROJECT_SAMPLES_OPTION['sampleIds'][:2]},
+    ]
 
     def setUp(self):
         patcher = mock.patch('seqr.utils.file_utils.subprocess.Popen')
@@ -1754,12 +1770,17 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         return {
             'callset_path': 'mito_callset.mt',
             'sample_source': 'Broad_Internal',
-            'sample_type': 'WGS',
+            'sample_type': 'WES',
             'dataset_type': 'MITO',
         }
 
     def _assert_expected_load_data_requests(self, **kwargs):
-        self.assert_airflow_calls(**kwargs)
+        self.assert_expected_airtable_call(
+            call_index=0,
+            filter_formula="AND(SEARCH('https://seqr.broadinstitute.org/project/R0001_1kg/project_page',ARRAYJOIN({SeqrProject},';')),LEN({MITO_WES_CallsetPath})>0,OR(SEARCH('Available in seqr',ARRAYJOIN(PDOStatus,';')),SEARCH('Historic',ARRAYJOIN(PDOStatus,';'))))",
+            fields=['CollaboratorSampleID', 'SeqrCollaboratorSampleID', 'PDOStatus', 'SeqrProject'],
+        )
+        self.assert_airflow_calls(offset=1, **kwargs)
 
     def _set_loading_trigger_error(self):
         self.set_dag_trigger_error_response(status=400)
@@ -1768,9 +1789,9 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
     def _assert_success_notification(self, dag_json):
         dag_json['sample_source'] = 'Broad_Internal'
 
-        message = f"""*test_pm_user@test.com* triggered loading internal WGS MITO data for 2 projects
+        message = f"""*test_data_manager@broadinstitute.org* triggered loading internal WES MITO data for 2 projects
 
-        Pedigree files have been uploaded to gs://seqr-loading-temp/v3.1/GRCh38/MITO/pedigrees/WGS
+        Pedigree files have been uploaded to gs://seqr-loading-temp/v3.1/GRCh38/MITO/pedigrees/WES
 
         DAG LOADING_PIPELINE is triggered with following:
         ```{json.dumps(dag_json, indent=4)}```
@@ -1806,11 +1827,6 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
 
         sample_ids = PROJECT_SAMPLES_OPTION['sampleIds']
         body['projects'] = [json.dumps({**PROJECT_OPTION, 'sampleIds': [sample_ids[1]]})]
-        responses.add(responses.GET, 'https://api.airtable.com/v0/app3Y97xtbbaOopVR/Samples', json=AIRTABLE_SAMPLE_RECORDS_TODO, status=200)
-
-        # Non-Broad users can not access airtable
-        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
-        self.assertEqual(response.status_code, 403)
 
         responses.calls.reset()
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
