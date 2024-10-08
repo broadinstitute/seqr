@@ -165,7 +165,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
 
         if both_sample_type_project_samples:
             self._has_both_sample_types = True
-            entries = self._load_project_hts_both_sample_types(both_sample_type_project_samples, n_partitions, **kwargs)
+            entries = self._load_project_hts(both_sample_type_project_samples, n_partitions, **kwargs)
             for entry in entries:
                 wes_ht, wes_project_samples = entry[SampleType.WES.value]
                 wgs_ht, wgs_project_samples = entry[SampleType.WGS.value]
@@ -180,33 +180,40 @@ class MitoHailTableQuery(BaseHailTableQuery):
 
         return self._merge_filtered_hts(filtered_comp_het_project_hts, filtered_project_hts, n_partitions)
 
-    def _load_project_hts_both_sample_types(self, project_samples, n_partitions, **kwargs):
-        def initialize_project_hts():
-            return defaultdict(list)
+    @staticmethod
+    def _initialize_project_hts():
+        return defaultdict(list)
 
-        def initialize_sample_data():
-            return defaultdict(dict)
+    @staticmethod
+    def _initialize_sample_data():
+        return defaultdict(dict)
 
-        def aggregate_project_data(family_sample_data, ht, project_hts, sample_data, sample_type):
-            project_hts[sample_type].append(ht)
-            sample_data[sample_type].update(family_sample_data)
+    @staticmethod
+    def _aggregate_project_data(family_sample_data, ht, project_hts, sample_data, sample_type):
+        project_hts[sample_type].append(ht)
+        sample_data[sample_type].update(family_sample_data)
 
-        def load_project_ht_chunks(all_project_hts, n_partitions, project_hts, sample_data, **kwargs):
-            project_ht_dict = {}
-            for sample_type in project_hts:
-                ht = self._prefilter_merged_project_hts(project_hts[sample_type], n_partitions, **kwargs)
-                project_ht_dict[sample_type] = (ht, sample_data[sample_type])
-            all_project_hts.append(project_ht_dict)
+    def _load_project_ht_chunks(self, all_project_hts, n_partitions, project_hts, sample_data, **kwargs):
+        project_ht_dict = {}
+        for sample_type in project_hts:
+            ht = self._prefilter_merged_project_hts(project_hts[sample_type], n_partitions, **kwargs)
+            project_ht_dict[sample_type] = (ht, sample_data[sample_type])
+        all_project_hts.append(project_ht_dict)
 
-        return super()._load_project_hts(
-            project_samples,
-            n_partitions,
-            initialize_project_hts,
-            initialize_sample_data,
-            aggregate_project_data,
-            load_project_ht_chunks,
-            **kwargs
-        )
+    def _load_project_hts(self, project_samples, n_partitions, **kwargs):
+        all_project_hts = super()._load_project_hts(project_samples, n_partitions, **kwargs)
+
+        # Return a list of ht/sample_data tuples instead of a list of dicts if there is only one sample type
+        unique_sample_types = set()
+        flattened_project_hts = []
+        for project_dict in all_project_hts:
+            unique_sample_types.update(project_dict.keys())
+            flattened_project_hts.extend(project_dict.values())
+
+        if len(unique_sample_types) == 1:
+            all_project_hts = flattened_project_hts
+
+        return all_project_hts
 
     def _filter_entries_ht_both_sample_types(
         self, wes_ht, wes_project_samples, wgs_ht, wgs_project_samples, inheritance_filter=None, quality_filter=None,
