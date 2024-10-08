@@ -145,12 +145,13 @@ class MitoHailTableQuery(BaseHailTableQuery):
         self, project_samples: dict, n_partitions=MAX_PARTITIONS, **kwargs
     ) -> tuple[hl.Table, hl.Table]:
         single_sample_type_project_samples = {}
-        both_sample_type_project_samples = {}
+        both_sample_type_project_samples = defaultdict(dict)
         for project_guid, sample_dict in project_samples.items():
             if len(sample_dict) == 1:
                 single_sample_type_project_samples[project_guid] = sample_dict
             else:
-                both_sample_type_project_samples[project_guid] = sample_dict
+                both_sample_type_project_samples[SampleType.WES][project_guid] = {SampleType.WES.value: sample_dict[SampleType.WES]}
+                both_sample_type_project_samples[SampleType.WGS][project_guid] = {SampleType.WGS.value: sample_dict[SampleType.WGS]}
 
         filtered_project_hts = []
         filtered_comp_het_project_hts = []
@@ -165,10 +166,14 @@ class MitoHailTableQuery(BaseHailTableQuery):
 
         if both_sample_type_project_samples:
             self._has_both_sample_types = True
-            entries = self._load_project_hts(both_sample_type_project_samples, n_partitions, **kwargs)
-            for entry in entries:
-                wes_ht, wes_project_samples = entry[SampleType.WES.value]
-                wgs_ht, wgs_project_samples = entry[SampleType.WGS.value]
+            wes_entries = self._load_project_hts(
+                both_sample_type_project_samples[SampleType.WES], n_partitions, **kwargs,
+            )
+            wgs_entries = self._load_project_hts(
+                both_sample_type_project_samples[SampleType.WGS], n_partitions, **kwargs,
+            )
+            for i, (wes_ht, wes_project_samples) in enumerate(wes_entries):
+                wgs_ht, wgs_project_samples = wgs_entries[i]
                 ht, comp_het_ht = self._filter_entries_ht_both_sample_types(
                     wes_ht, wes_project_samples, wgs_ht, wgs_project_samples,
                     is_merged_ht=True, **kwargs
@@ -179,41 +184,6 @@ class MitoHailTableQuery(BaseHailTableQuery):
                     filtered_comp_het_project_hts.append(comp_het_ht)
 
         return self._merge_filtered_hts(filtered_comp_het_project_hts, filtered_project_hts, n_partitions)
-
-    @staticmethod
-    def _initialize_project_hts():
-        return defaultdict(list)
-
-    @staticmethod
-    def _initialize_sample_data():
-        return defaultdict(dict)
-
-    @staticmethod
-    def _aggregate_project_data(family_sample_data, ht, project_hts, sample_data, sample_type):
-        project_hts[sample_type].append(ht)
-        sample_data[sample_type].update(family_sample_data)
-
-    def _load_project_ht_chunks(self, all_project_hts, n_partitions, project_hts, sample_data, **kwargs):
-        project_ht_dict = {}
-        for sample_type in project_hts:
-            ht = self._prefilter_merged_project_hts(project_hts[sample_type], n_partitions, **kwargs)
-            project_ht_dict[sample_type] = (ht, sample_data[sample_type])
-        all_project_hts.append(project_ht_dict)
-
-    def _load_project_hts(self, project_samples, n_partitions, **kwargs):
-        all_project_hts = super()._load_project_hts(project_samples, n_partitions, **kwargs)
-
-        # Return a list of ht/sample_data tuples instead of a list of dicts if there is only one sample type
-        unique_sample_types = set()
-        flattened_project_hts = []
-        for project_dict in all_project_hts:
-            unique_sample_types.update(project_dict.keys())
-            flattened_project_hts.extend(project_dict.values())
-
-        if len(unique_sample_types) == 1:
-            all_project_hts = flattened_project_hts
-
-        return all_project_hts
 
     def _filter_entries_ht_both_sample_types(
         self, wes_ht, wes_project_samples, wgs_ht, wgs_project_samples, inheritance_filter=None, quality_filter=None,

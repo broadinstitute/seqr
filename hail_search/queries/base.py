@@ -335,45 +335,32 @@ class BaseHailTableQuery(object):
 
         return self._merge_filtered_hts(filtered_comp_het_project_hts, filtered_project_hts, n_partitions)
 
-    @staticmethod
-    def _initialize_project_hts():
-        return []
-
-    @staticmethod
-    def _initialize_sample_data():
-        return {}
-
-    @staticmethod
-    def _aggregate_project_data(family_sample_data, ht, project_hts, sample_data, sample_type):
-        project_hts.append(ht)
-        sample_data.update(family_sample_data)
-
-    def _load_project_ht_chunks(self, all_project_hts, n_partitions, project_hts, sample_data, **kwargs):
-        ht = self._prefilter_merged_project_hts(project_hts, n_partitions, **kwargs)
-        all_project_hts.append((ht, sample_data))
-
     def _load_project_hts(self, project_samples, n_partitions, **kwargs):
         # Need to chunk tables or else evaluating table globals throws LineTooLong exception
         # However, minimizing number of chunks minimizes number of aggregations/ evals and improves performance
         # Adapted from https://discuss.hail.is/t/importing-many-sample-specific-vcfs/2002/8
         chunk_size = 64
         all_project_hts = []
-        project_hts = self._initialize_project_hts()
-        sample_data = self._initialize_sample_data()
+        project_hts = []
+        sample_data = {}
 
         for project_guid, project_sample_type_data in project_samples.items():
             for sample_type, family_sample_data in project_sample_type_data.items():
                 project_ht = self._read_project_data(project_guid, sample_type)
                 if project_ht is None:
                     continue
-                self._aggregate_project_data(family_sample_data, project_ht, project_hts, sample_data, sample_type)
+                project_hts.append(project_ht)
+                sample_data.update(family_sample_data)
 
             if len(project_hts) >= chunk_size:
-                self._load_project_ht_chunks(all_project_hts, n_partitions, project_hts, sample_data, **kwargs)
-                project_hts = self._initialize_project_hts()
-                sample_data = self._initialize_sample_data()
+                ht = self._prefilter_merged_project_hts(project_hts, n_partitions, **kwargs)
+                all_project_hts.append((ht, sample_data))
+                project_hts = []
+                sample_data = {}
 
-        self._load_project_ht_chunks(all_project_hts, n_partitions, project_hts, sample_data, **kwargs)
+        if project_hts:
+            ht = self._prefilter_merged_project_hts(project_hts, n_partitions, **kwargs)
+            all_project_hts.append((ht, sample_data))
         return all_project_hts
 
     def import_filtered_table(self, project_samples: dict, num_families: int, **kwargs):
