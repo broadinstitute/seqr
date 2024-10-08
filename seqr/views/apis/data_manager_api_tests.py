@@ -1776,12 +1776,15 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
 
     def _assert_expected_load_data_requests(self, dataset_type='MITO', **kwargs):
         required_sample_field = 'MITO_WES_CallsetPath' if dataset_type == 'MITO' else 'gCNV_CallsetPath'
+        self._assert_expected_airtable_call(required_sample_field, 'R0001_1kg')
+        self.assert_airflow_calls(offset=1, dataset_type=dataset_type, **kwargs)
+
+    def _assert_expected_airtable_call(self, required_sample_field, project_guid):
         self.assert_expected_airtable_call(
             call_index=0,
-            filter_formula=f"AND(SEARCH('https://seqr.broadinstitute.org/project/R0001_1kg/project_page',ARRAYJOIN({{SeqrProject}},';')),LEN({{{required_sample_field}}})>0,OR(SEARCH('Available in seqr',ARRAYJOIN(PDOStatus,';')),SEARCH('Historic',ARRAYJOIN(PDOStatus,';'))))",
+            filter_formula=f"AND(SEARCH('https://seqr.broadinstitute.org/project/{project_guid}/project_page',ARRAYJOIN({{SeqrProject}},';')),LEN({{{required_sample_field}}})>0,OR(SEARCH('Available in seqr',ARRAYJOIN(PDOStatus,';')),SEARCH('Historic',ARRAYJOIN(PDOStatus,';'))))",
             fields=['CollaboratorSampleID', 'SeqrCollaboratorSampleID', 'PDOStatus', 'SeqrProject'],
         )
-        self.assert_airflow_calls(offset=1, **kwargs)
 
     def _set_loading_trigger_error(self):
         self.set_dag_trigger_error_response(status=400)
@@ -1819,40 +1822,35 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         """
         self.mock_slack.assert_called_once_with(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, error_message)
 
-    def _test_load_sample_subset(self, mock_open, mock_mkdir, response, url, body):
+    def _trigger_error(self, url, body, dag_json, mock_open, mock_mkdir):
+        super()._trigger_error(url, body, dag_json, mock_open, mock_mkdir)
+
+        responses.calls.reset()
+        body['projects'] = [json.dumps(PROJECT_SAMPLES_OPTION)]
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {
             'warnings': None,
             'errors': ['The following samples are included in airtable but missing from seqr: NA21988'],
         })
+        body['projects'] = [json.dumps({**PROJECT_OPTION, 'sampleIds': [PROJECT_SAMPLES_OPTION['sampleIds'][1]]})]
+        body['sampleType'] = 'WGS'
 
-        # TODO clean up
-        sample_ids = PROJECT_SAMPLES_OPTION['sampleIds']
-        body['projects'] = [json.dumps({**PROJECT_OPTION, 'sampleIds': [sample_ids[1]]})]
-
-        responses.calls.reset()
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {
             'warnings': None,
             'errors': ['The following families have previously loaded samples absent from airtable: 14 (NA21234)'],
         })
-        self.assert_expected_airtable_call(
-            call_index=0,
-            filter_formula="OR({CollaboratorSampleID}='NA21234')",
-            fields=['CollaboratorSampleID', 'PDOStatus', 'SeqrProject'],
-        )
-        self.assert_expected_airtable_call(
-            call_index=1,
-            filter_formula="OR({SeqrCollaboratorSampleID}='NA21234')",
-            fields=['SeqrCollaboratorSampleID', 'PDOStatus', 'SeqrProject'],
-        )
+        self.assertEqual(len(responses.calls), 1)
+        self._assert_expected_airtable_call(required_sample_field='SV_CallsetPath', project_guid='R0004_non_analyst_project')
 
-        responses.calls.reset()
+    def _test_load_sample_subset(self, mock_open, mock_mkdir, response, url, body):
         # TODO shared?
+        # TOD cleanup, use response
         body['projects'] = [
             json.dumps({'projectGuid': 'R0001_1kg', 'sampleIds': ['NA19675_1', 'NA19679']}),
-            json.dumps({**PROJECT_OPTION, 'sampleIds': sample_ids[:2]}),
+            json.dumps({**PROJECT_OPTION, 'sampleIds':  PROJECT_SAMPLES_OPTION['sampleIds'][:2]}),
         ]
         body['sampleType'] = 'WES'
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
