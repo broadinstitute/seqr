@@ -1573,7 +1573,7 @@ class DataManagerAPITest(AirtableTest):
         ]
         self.assertEqual(len(files), 1 if single_project else 2)
 
-        num_rows = 6 if self.MOCK_AIRTABLE_KEY else 15
+        num_rows = 7 if self.MOCK_AIRTABLE_KEY else 15
         if not single_project:
             self.assertEqual(len(files[0]), num_rows)
             self.assertListEqual(files[0][:5], [PEDIGREE_HEADER] + EXPECTED_PEDIGREE_ROWS[:num_rows-1])
@@ -1692,7 +1692,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
     WGS_PROJECT_OPTIONS = [EMPTY_PROJECT_SAMPLES_OPTION, PROJECT_SAMPLES_OPTION]
     WES_PROJECT_OPTIONS = [EMPTY_PROJECT_SAMPLES_OPTION]
     MITO_PROJECT_OPTIONS = [
-        {'projectGuid': 'R0001_1kg', 'sampleIds': ['NA19675_1', 'NA19678', 'NA19679', 'HG00732']},
+        {'projectGuid': 'R0001_1kg', 'sampleIds': ['NA19675_1', 'NA19678', 'NA19679', 'HG00732', 'HG00733']},
         {**PROJECT_OPTION, 'sampleIds': PROJECT_SAMPLES_OPTION['sampleIds'][:2]},
     ]
 
@@ -1774,10 +1774,11 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
             'dataset_type': 'MITO',
         }
 
-    def _assert_expected_load_data_requests(self, **kwargs):
+    def _assert_expected_load_data_requests(self, dataset_type='MITO', **kwargs):
+        required_sample_field = 'MITO_WES_CallsetPath' if dataset_type == 'MITO' else 'gCNV_CallsetPath'
         self.assert_expected_airtable_call(
             call_index=0,
-            filter_formula="AND(SEARCH('https://seqr.broadinstitute.org/project/R0001_1kg/project_page',ARRAYJOIN({SeqrProject},';')),LEN({MITO_WES_CallsetPath})>0,OR(SEARCH('Available in seqr',ARRAYJOIN(PDOStatus,';')),SEARCH('Historic',ARRAYJOIN(PDOStatus,';'))))",
+            filter_formula=f"AND(SEARCH('https://seqr.broadinstitute.org/project/R0001_1kg/project_page',ARRAYJOIN({{SeqrProject}},';')),LEN({{{required_sample_field}}})>0,OR(SEARCH('Available in seqr',ARRAYJOIN(PDOStatus,';')),SEARCH('Historic',ARRAYJOIN(PDOStatus,';'))))",
             fields=['CollaboratorSampleID', 'SeqrCollaboratorSampleID', 'PDOStatus', 'SeqrProject'],
         )
         self.assert_airflow_calls(offset=1, **kwargs)
@@ -1804,7 +1805,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         self.assertDictEqual(response.json(), {'success': True})
 
         self.mock_airflow_logger.warning.assert_not_called()
-        self.mock_airflow_logger.error.assert_called_with(mock.ANY, self.pm_user)
+        self.mock_airflow_logger.error.assert_called_with(mock.ANY, self.data_manager_user)
         errors = [call.args[0] for call in self.mock_airflow_logger.error.call_args_list]
         for error in errors:
             self.assertRegex(error, '400 Client Error: Bad Request')
@@ -1825,6 +1826,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
             'errors': ['The following samples are included in airtable but missing from seqr: NA21988'],
         })
 
+        # TODO clean up
         sample_ids = PROJECT_SAMPLES_OPTION['sampleIds']
         body['projects'] = [json.dumps({**PROJECT_OPTION, 'sampleIds': [sample_ids[1]]})]
 
@@ -1847,7 +1849,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         )
 
         responses.calls.reset()
-        # TODO shared
+        # TODO shared?
         body['projects'] = [
             json.dumps({'projectGuid': 'R0001_1kg', 'sampleIds': ['NA19675_1', 'NA19679']}),
             json.dumps({**PROJECT_OPTION, 'sampleIds': sample_ids[:2]}),
