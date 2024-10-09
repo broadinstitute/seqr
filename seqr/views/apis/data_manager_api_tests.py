@@ -446,13 +446,8 @@ AIRTABLE_SAMPLE_RECORDS = {
                 'CollaboratorSampleID': 'NA21987',
             }
         },
-    ]
-}
-# TODO combine sample records
-AIRTABLE_SAMPLE_RECORDS_TODO = {
-    'records': [
         {
-            'id': 'recW24C2CJW5lT64K',
+            'id': 'recW24C2CJW5lT67K',
             'fields': {
                 'CollaboratorSampleID': 'NA19678',
                 'SeqrProject': ['https://seqr.broadinstitute.org/project/R0001_1kg/project_page'],
@@ -465,14 +460,6 @@ AIRTABLE_SAMPLE_RECORDS_TODO = {
                 'CollaboratorSampleID': 'HG00731',
                 'SeqrProject': ['https://seqr.broadinstitute.org/project/R0001_1kg/project_page'],
                 'PDOStatus': ['Available in seqr'],
-            }
-        },
-        {
-            'id': 'recW24C2CJW5lT67K',
-            'fields': {
-                'SeqrCollaboratorSampleID': 'NA21234',
-                'SeqrProject': ['https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page'],
-                'PDOStatus': ['Hold for phenotips'],
             }
         },
     ],
@@ -1480,7 +1467,7 @@ class DataManagerAPITest(AirtableTest):
         url = reverse(load_data)
         self.check_pm_login(url)
 
-        responses.add(responses.GET, 'https://api.airtable.com/v0/app3Y97xtbbaOopVR/Samples', json=AIRTABLE_SAMPLE_RECORDS_TODO, status=200)
+        responses.add(responses.GET, 'https://api.airtable.com/v0/app3Y97xtbbaOopVR/Samples', json=AIRTABLE_SAMPLE_RECORDS, status=200)
         responses.add(responses.POST, PIPELINE_RUNNER_URL)
         mock_temp_dir.return_value.__enter__.return_value = '/mock/tmp'
         body = {'filePath': f'{self.CALLSET_DIR}/mito_callset.mt', 'datasetType': 'MITO', 'sampleType': 'WES', 'genomeVersion': '38', 'projects': [
@@ -1515,7 +1502,6 @@ class DataManagerAPITest(AirtableTest):
 
         # Test loading trigger error
         self._set_loading_trigger_error()
-        # TODO shared rest behavior
         mock_open.reset_mock()
         mock_mkdir.reset_mock()
         responses.calls.reset()
