@@ -1829,7 +1829,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         self._assert_expected_airtable_call(required_sample_field='SV_CallsetPath', project_guid='R0004_non_analyst_project')
         self.mock_authorized_session.reset_mock()
 
-    def _test_load_single_project(self, mock_open, mock_mkdir, response, url=None, body=None, **kwargs):
+    def _test_load_single_project(self, mock_open, mock_mkdir, response, *args, url=None, body=None, **kwargs):
         super()._test_load_single_project(mock_open, mock_mkdir, response, url, body)
         self.ADDITIONAL_REQUEST_COUNT = 0
         self.assert_airflow_calls(offset=0, dataset_type='SNV_INDEL', trigger_error=True)
