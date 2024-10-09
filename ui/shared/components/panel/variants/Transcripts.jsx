@@ -51,7 +51,7 @@ export const ConsequenceDetails = (
             {idDetails && idDetails(c, variant, props)}
           </Table.Cell>
           <Table.Cell width={4}>
-            {c.majorConsequence || c.consequenceTerms.join('; ')}
+            {(c.consequenceTerms || [c.majorConsequence]).join('; ')}
             {consequenceDetails && consequenceDetails(c)}
           </Table.Cell>
           <Table.Cell width={9}>
