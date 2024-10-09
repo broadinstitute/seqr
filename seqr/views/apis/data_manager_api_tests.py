@@ -401,7 +401,7 @@ PROJECT_OPTION = {
     'name': 'Non-Analyst Project',
     'projectGuid': 'R0004_non_analyst_project',
 }
-PROJECT_SAMPLES_OPTION = {**PROJECT_OPTION, 'sampleIds': ['NA21234', 'NA21987', 'NA21988']}
+PROJECT_SAMPLES_OPTION = {**PROJECT_OPTION, 'sampleIds': ['NA21234', 'NA21987']}
 EMPTY_PROJECT_OPTION = {
     'dataTypeLastLoaded': None,
     'name': 'Empty Project',
@@ -444,14 +444,6 @@ AIRTABLE_SAMPLE_RECORDS = {
                 'SeqrProject': ['https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page'],
                 'PDOStatus': ['Methods (Loading)'],
                 'CollaboratorSampleID': 'NA21987',
-            }
-        },
-        {
-            'id': 'rec2Nkg10N1KssPc3',
-            'fields': {
-                'SeqrProject': ['https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page'],
-                'PDOStatus': ['Methods (Loading)'],
-                'SeqrCollaboratorSampleID': 'NA21988',
             }
         },
     ]
@@ -1492,7 +1484,7 @@ class DataManagerAPITest(AirtableTest):
         responses.add(responses.POST, PIPELINE_RUNNER_URL)
         mock_temp_dir.return_value.__enter__.return_value = '/mock/tmp'
         body = {'filePath': f'{self.CALLSET_DIR}/mito_callset.mt', 'datasetType': 'MITO', 'sampleType': 'WES', 'genomeVersion': '38', 'projects': [
-            json.dumps(option) for option in self.MITO_PROJECT_OPTIONS + [{'projectGuid': 'R0005_not_project'}]
+            json.dumps(option) for option in self.PROJECT_OPTIONS + [{'projectGuid': 'R0005_not_project'}]
         ]}
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
@@ -1523,6 +1515,7 @@ class DataManagerAPITest(AirtableTest):
 
         # Test loading trigger error
         self._set_loading_trigger_error()
+        # TODO shared rest behavior
         mock_open.reset_mock()
         mock_mkdir.reset_mock()
         responses.calls.reset()
@@ -1531,14 +1524,13 @@ class DataManagerAPITest(AirtableTest):
         body.update({'datasetType': 'SV', 'filePath': f'{self.CALLSET_DIR}/sv_callset.vcf'})
         self._trigger_error(url, body, dag_json, mock_open, mock_mkdir)
 
-        # Test loading with sample subset
         responses.add(responses.POST, PIPELINE_RUNNER_URL)
         responses.calls.reset()
         mock_open.reset_mock()
         mock_mkdir.reset_mock()
-        body.update({'datasetType': 'SNV_INDEL', 'sampleType': 'WGS', 'projects': [json.dumps(PROJECT_SAMPLES_OPTION)]})
+        body.update({'datasetType': 'SNV_INDEL', 'sampleType': 'WGS', 'projects': [json.dumps(self.PROJECT_OPTION)]})
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
-        self._test_load_sample_subset(mock_open, mock_mkdir, response, url, body)
+        self._test_load_single_project(mock_open, mock_mkdir, response, url, body)
 
         # Test write pedigree error
         self.reset_logs()
@@ -1585,6 +1577,13 @@ class DataManagerAPITest(AirtableTest):
             ['R0004_non_analyst_project', 'F000014_14', '14', 'NA21987', '', '', 'M'],
         ])
 
+    def _test_load_single_project(self, mock_open, mock_mkdir, response, *args):
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'success': True})
+        self._has_expected_ped_files(mock_open, mock_mkdir, 'SNV_INDEL', single_project=True)
+        # Only a DAG trigger, no airtable calls as there is no previously loaded WGS SNV_INDEL data for these samples
+        self.assertEqual(len(responses.calls), 1)
+
 
 class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
     fixtures = ['users', '1kg_project', 'reference_data']
@@ -1597,7 +1596,7 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
         {'name': '1kg project nåme with uniçøde', 'projectGuid': 'R0001_1kg', 'dataTypeLastLoaded': '2017-02-05T06:25:55.397Z'},
         EMPTY_PROJECT_OPTION,
     ]
-    MITO_PROJECT_OPTIONS = [{'projectGuid': 'R0001_1kg'}, PROJECT_OPTION]
+    PROJECT_OPTIONS = [{'projectGuid': 'R0001_1kg'}, PROJECT_OPTION]
 
     def setUp(self):
         patcher = mock.patch('seqr.utils.file_utils.os.path.isfile')
@@ -1667,11 +1666,9 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
             (error, {'severity': 'WARNING', 'requestBody': body, 'httpRequest': mock.ANY, 'traceback': mock.ANY}),
         ])
 
-    def _test_load_sample_subset(self, mock_open, mock_mkdir, response, *args):
-        # Loading with sample subset does not change behavior when airtable is disabled
-        self.assertEqual(response.status_code, 200)
+    def _test_load_single_project(self, *args):
+        super()._test_load_single_project(*args)
         self._assert_expected_load_data_requests(dataset_type='SNV_INDEL', skip_project=True, trigger_error=True)
-        self._has_expected_ped_files(mock_open, mock_mkdir, 'SNV_INDEL', single_project=True)
 
     def _assert_write_pedigree_error(self, response):
         self.assertEqual(response.status_code, 500)
@@ -1691,9 +1688,9 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
     PROJECT_OPTION = PROJECT_SAMPLES_OPTION
     WGS_PROJECT_OPTIONS = [EMPTY_PROJECT_SAMPLES_OPTION, PROJECT_SAMPLES_OPTION]
     WES_PROJECT_OPTIONS = [EMPTY_PROJECT_SAMPLES_OPTION]
-    MITO_PROJECT_OPTIONS = [
+    PROJECT_OPTIONS = [
         {'projectGuid': 'R0001_1kg', 'sampleIds': ['NA19675_1', 'NA19678', 'NA19679', 'HG00732', 'HG00733']},
-        {**PROJECT_OPTION, 'sampleIds': PROJECT_SAMPLES_OPTION['sampleIds'][:2]},
+        PROJECT_SAMPLES_OPTION,
     ]
 
     def setUp(self):
@@ -1826,7 +1823,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         super()._trigger_error(url, body, dag_json, mock_open, mock_mkdir)
 
         responses.calls.reset()
-        body['projects'] = [json.dumps(PROJECT_SAMPLES_OPTION)]
+        body['projects'] = [json.dumps({**PROJECT_OPTION, 'sampleIds': PROJECT_SAMPLES_OPTION['sampleIds'] + ['NA21988']})]
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {
@@ -1844,23 +1841,27 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         })
         self.assertEqual(len(responses.calls), 1)
         self._assert_expected_airtable_call(required_sample_field='SV_CallsetPath', project_guid='R0004_non_analyst_project')
+        self.mock_authorized_session.reset_mock()
 
-    def _test_load_sample_subset(self, mock_open, mock_mkdir, response, url, body):
-        # TODO shared?
-        # TOD cleanup, use response
-        body['projects'] = [
-            json.dumps({'projectGuid': 'R0001_1kg', 'sampleIds': ['NA19675_1', 'NA19679']}),
-            json.dumps({**PROJECT_OPTION, 'sampleIds':  PROJECT_SAMPLES_OPTION['sampleIds'][:2]}),
-        ]
+    def _test_load_single_project(self, mock_open, mock_mkdir, response, url, body):
+        super()._test_load_single_project(mock_open, mock_mkdir, response, url, body)
+        self.ADDITIONAL_REQUEST_COUNT = 0
+        self.assert_airflow_calls(offset=0, dataset_type='SNV_INDEL', trigger_error=True)
+
+        responses.calls.reset()
+        mock_open.reset_mock()
+        mock_mkdir.reset_mock()
+        body['projects'] = [json.dumps(option) for option in self.PROJECT_OPTIONS]
         body['sampleType'] = 'WES'
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'success': True})
         self._has_expected_ped_files(mock_open, mock_mkdir, 'SNV_INDEL', sample_type='WES')
+        self.assertEqual(len(responses.calls), 2)
         self.assert_expected_airtable_call(
             call_index=0,
-            filter_formula="OR({CollaboratorSampleID}='NA19678')",
-            fields=['CollaboratorSampleID', 'PDOStatus', 'SeqrProject'],
+            filter_formula="AND(SEARCH('https://seqr.broadinstitute.org/project/R0001_1kg/project_page',ARRAYJOIN({SeqrProject},';')),OR(SEARCH('Available in seqr',ARRAYJOIN(PDOStatus,';')),SEARCH('Historic',ARRAYJOIN(PDOStatus,';'))))",
+            fields=['CollaboratorSampleID', 'SeqrCollaboratorSampleID', 'PDOStatus', 'SeqrProject'],
         )
         body['projects'] = body['projects'][1:]
 
