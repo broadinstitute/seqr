@@ -217,6 +217,8 @@ class MitoHailTableQuery(BaseHailTableQuery):
                 family_guid_idx_map[family_guid][sample_type.value] = family_idx
 
         family_idx_map = hl.dict(family_guid_idx_map)
+        ht = self._post_process_inheritance_filter(ht, family_idx_map)
+        ch_ht = self._post_process_inheritance_filter(ch_ht, family_idx_map)
         ht = self._apply_multi_sample_type_entry_filters(ht, family_idx_map)
         ch_ht = self._apply_multi_sample_type_entry_filters(ch_ht, family_idx_map)
         return ht, ch_ht
@@ -229,13 +231,13 @@ class MitoHailTableQuery(BaseHailTableQuery):
         for sample_type in SampleType:
             ht = ht.annotate(**{
                 sample_type.family_entries_field: hl.enumerate(ht[sample_type.family_entries_field]).starmap(
-                    lambda i, samples:  hl.or_missing(
+                    lambda i, samples: hl.or_missing(
                         hl.bind(
                             lambda other_sample_type_idx: (
                                 self._family_has_valid_sample_type_entries(ht, sample_type, i) |
                                 self._family_has_valid_sample_type_entries(ht, sample_type.other_sample_type, other_sample_type_idx)
                             ),
-                            family_idx_map.get(hl.coalesce(samples)[0]['familyGuid']).get(sample_type.other_sample_type.value),
+                            self._get_other_sample_type_family_idx(samples, family_idx_map, sample_type)
                        ), samples)
                 )})
 
@@ -254,6 +256,10 @@ class MitoHailTableQuery(BaseHailTableQuery):
         return ht.filter(ht.family_entries.any(hl.is_defined))
 
     @staticmethod
+    def _get_other_sample_type_family_idx(samples, family_idx_map, sample_type):
+        return family_idx_map.get(hl.coalesce(samples)[0]['familyGuid']).get(sample_type.other_sample_type.value)
+
+    @staticmethod
     def _family_has_valid_sample_type_entries(ht, sample_type, sample_type_family_idx):
         # Note: This logic does not sufficiently handle case 2 here https://docs.google.com/presentation/d/1hqDV8ulhviUcR5C4PtNUqkCLXKDsc6pccgFVlFmWUAU/edit?usp=sharing
         # and will need to be changed to support it - https://github.com/broadinstitute/seqr/issues/4403
@@ -262,6 +268,31 @@ class MitoHailTableQuery(BaseHailTableQuery):
             hl.is_defined(ht[sample_type.passes_quality_field][sample_type_family_idx]) &
             hl.is_defined(ht[sample_type.passes_inheritance_field][sample_type_family_idx])
         )
+
+    def _post_process_inheritance_filter(self, ht, family_idx_map):
+        if ht is None:
+            return ht
+
+        # If a family has variants in both sample types but one sample type is proband-only,
+        # keep the family in the proband-only sample type only if the proband-only call passes the inheritance filtering
+        # AND the same family with multiple samples in the other sample type also passes inheritance filtering.
+        for sample_type in SampleType:
+            ht = ht.annotate(**{
+                sample_type.passes_inheritance_field: hl.enumerate(ht[sample_type.family_entries_field]).starmap(
+                    lambda i, family_samples: hl.or_missing(
+                        hl.bind(
+                            lambda other_sample_type_idx: (
+                                (hl.is_defined(ht[sample_type.passes_inheritance_field][i]) & (hl.len(family_samples) > 1)) |  # Keep if the row is not already missing and the family has > 1 samples
+                                (hl.is_defined(ht[sample_type.passes_inheritance_field][i]) & (hl.len(family_samples) == 1) &
+                                    hl.is_defined(ht[sample_type.other_sample_type.passes_inheritance_field][other_sample_type_idx])
+                                )
+                            ), self._get_other_sample_type_family_idx(family_samples, family_idx_map, sample_type)
+                        ),
+                        ht[sample_type.passes_inheritance_field][i]
+                    )
+                )
+            })
+        return ht
 
     def _get_sample_genotype(self, samples, r=None, include_genotype_overrides=False, select_fields=None, **kwargs):
         if not self._has_both_sample_types:

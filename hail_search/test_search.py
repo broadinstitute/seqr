@@ -380,18 +380,19 @@ class HailSearchTestCase(AioHTTPTestCase):
         )
 
         # Variant2 in family_2 is inherited in exome and there is no parental data in genome.
-        # Variant2 genome passes quality and inheritance (since there is no parental data), show genotypes for both sample types.
-        # Note: ^ This is incorrect, as the variant should not be returned.
+        # Variant2 genome passes quality and inheritance (proband-only),
+        # and exome passes quality and inheritance, show genotypes for both sample types.
         variant2_interval = ['1', 38724418, 38724420]
         inheritance_mode = 'recessive'
         await self._assert_expected_search(
             [VARIANT2_BOTH_SAMPLE_TYPES], sample_data=FAMILY_2_BOTH_SAMPLE_TYPE_SAMPLE_DATA_MISSING_PARENTAL_WGS,
             inheritance_mode=inheritance_mode, **COMP_HET_ALL_PASS_FILTERS, intervals=[variant2_interval]
         )
-        # Variant 1 exome and genome pass quality and inheritance, show genotypes for both sample types.
+        # Variant2 in family_2 genome passes quality and inheritance (proband-only), but
+        # exome fails inheritance (parental data shows variant is inherited). Do not show genotypes for either sample type.
         inheritance_mode = 'de_novo'
         await self._assert_expected_search(
-            [VARIANT2_BOTH_SAMPLE_TYPES], sample_data=FAMILY_2_BOTH_SAMPLE_TYPE_SAMPLE_DATA_MISSING_PARENTAL_WGS,
+            [], sample_data=FAMILY_2_BOTH_SAMPLE_TYPE_SAMPLE_DATA_MISSING_PARENTAL_WGS,
             inheritance_mode=inheritance_mode, intervals=[variant2_interval]
         )
 
