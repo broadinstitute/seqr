@@ -1516,7 +1516,7 @@ class DataManagerAPITest(AirtableTest):
         mock_mkdir.reset_mock()
         body.update({'datasetType': 'SNV_INDEL', 'sampleType': 'WGS', 'projects': [json.dumps(self.PROJECT_OPTION)]})
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
-        self._test_load_single_project(mock_open, mock_mkdir, response, url, body)
+        self._test_load_single_project(mock_open, mock_mkdir, response, url=url, body=body)
 
         # Test write pedigree error
         self.reset_logs()
@@ -1563,7 +1563,7 @@ class DataManagerAPITest(AirtableTest):
             ['R0004_non_analyst_project', 'F000014_14', '14', 'NA21987', '', '', 'M'],
         ])
 
-    def _test_load_single_project(self, mock_open, mock_mkdir, response, *args):
+    def _test_load_single_project(self, mock_open, mock_mkdir, response, *args, **kwargs):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'success': True})
         self._has_expected_ped_files(mock_open, mock_mkdir, 'SNV_INDEL', single_project=True)
@@ -1652,8 +1652,8 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
             (error, {'severity': 'WARNING', 'requestBody': body, 'httpRequest': mock.ANY, 'traceback': mock.ANY}),
         ])
 
-    def _test_load_single_project(self, *args):
-        super()._test_load_single_project(*args)
+    def _test_load_single_project(self, *args, **kwargs):
+        super()._test_load_single_project(*args, **kwargs)
         self._assert_expected_load_data_requests(dataset_type='SNV_INDEL', skip_project=True, trigger_error=True)
 
     def _assert_write_pedigree_error(self, response):
@@ -1829,7 +1829,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         self._assert_expected_airtable_call(required_sample_field='SV_CallsetPath', project_guid='R0004_non_analyst_project')
         self.mock_authorized_session.reset_mock()
 
-    def _test_load_single_project(self, mock_open, mock_mkdir, response, url, body):
+    def _test_load_single_project(self, mock_open, mock_mkdir, response, url=None, body=None, **kwargs):
         super()._test_load_single_project(mock_open, mock_mkdir, response, url, body)
         self.ADDITIONAL_REQUEST_COUNT = 0
         self.assert_airflow_calls(offset=0, dataset_type='SNV_INDEL', trigger_error=True)
