@@ -529,7 +529,7 @@ PARTICIPANT_TABLE = [
         'Middle Eastern or North African', '', '', '21', 'Affected', 'myopathy', '18', 'Unsolved', 'No',
     ], [
         'Broad_HG00731', 'Broad_1kg project nme with unide', 'BROAD', 'HMB', '', '', '', 'Broad_2', 'Broad_HG00732',
-        'Broad_HG00733', '', 'Self', '', 'Female', '', '', 'Hispanic or Latino', 'Other', '', 'Affected',
+        'Broad_HG00733', '', 'Self', '', 'Female', 'X0', '', 'Hispanic or Latino', 'Other', '', 'Affected',
         'microcephaly; seizures', '', 'Unsolved', 'No',
     ], [
         'Broad_HG00732', 'Broad_1kg project nme with unide', 'BROAD', 'HMB', '', '', '', 'Broad_2', '0', '0', '',
@@ -881,7 +881,7 @@ class ReportAPITest(AirtableTest):
             '', 'Male', '', '', '', 'Unaffected', 'myopathy', '', 'Unaffected',
         ], [
             'Broad_HG00731', 'Broad_1kg project nme with unide', 'BROAD', 'HMB', '', '', 'Broad_2', 'Broad_HG00732',
-            'Broad_HG00733', '', 'Self', '', 'Female', '', '', 'Hispanic or Latino', 'Affected',
+            'Broad_HG00733', '', 'Self', '', 'Female', 'X0', '', 'Hispanic or Latino', 'Affected',
             'microcephaly; seizures', '', 'Unsolved',
         ]], additional_calls=10)
         self._assert_expected_file(read_file, [READ_TABLE_HEADER, [
