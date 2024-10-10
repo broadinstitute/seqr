@@ -293,7 +293,7 @@ def _get_genotype_zygosity(genotype, individual=None, variant=None):
     num_alt = genotype.get('numAlt')
     cn = genotype.get('cn')
     if num_alt == 2 or cn == 0 or (cn != None and cn > 3):
-        return HEMI if (variant or {}).get('chrom') == 'X' and individual.sex == Individual.SEX_MALE else HOM_ALT
+        return HEMI if (variant or {}).get('chrom') == 'X' and individual.sex == Individual.SEX_MALE else HOM_ALT  # TODO sex update
     if num_alt == 1 or cn == 1 or cn == 3:
         return HET
     return None
@@ -413,7 +413,7 @@ def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, indivi
     maternal_ids = individual_ids_map.get(individual.mother_id, ('', ''))
     subject_row = {
         'participant_id': format_id(individual.individual_id),
-        'sex': Individual.SEX_LOOKUP[individual.sex],
+        'sex': Individual.SEX_LOOKUP[individual.sex],  # TODO sex update
         'reported_race': ANCESTRY_MAP.get(individual.population, ''),
         'ancestry_detail': ANCESTRY_DETAIL_MAP.get(individual.population, ''),
         'reported_ethnicity': ETHNICITY_MAP.get(individual.population, ''),

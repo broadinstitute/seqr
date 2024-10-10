@@ -128,6 +128,7 @@ def _parse_pedigree_table_json(project, rows, header=None, column_map=None, erro
 
 
 def _parse_sex(sex):
+    # TODO sex update
     if sex == '1' or sex.upper().startswith('M'):
         return 'M'
     elif sex == '2' or sex.upper().startswith('F'):
@@ -290,7 +291,7 @@ def validate_fam_file_records(project, records, fail_on_warnings=False, errors=N
             errors.append(f'{individual_id} already has loaded data and cannot be moved to a different family')
 
         # check proband relationship has valid gender
-        if r.get(JsonConstants.PROBAND_RELATIONSHIP) and r.get(JsonConstants.SEX_COLUMN):
+        if r.get(JsonConstants.PROBAND_RELATIONSHIP) and r.get(JsonConstants.SEX_COLUMN):  # TODO sex update
             invalid_choices = {}
             if r[JsonConstants.SEX_COLUMN] == Individual.SEX_MALE:
                 invalid_choices = Individual.FEMALE_RELATIONSHIP_CHOICES
@@ -365,7 +366,7 @@ def _validate_parent(row, parent_id_type, parent_id_field, expected_sex, individ
         errors.append('{} is recorded as their own {}'.format(parent_id, parent_id_type))
 
     # is father male and mother female?
-    if JsonConstants.SEX_COLUMN in records_by_id[parent_id]:
+    if JsonConstants.SEX_COLUMN in records_by_id[parent_id]:  # TODO sex update
         actual_sex = records_by_id[parent_id][JsonConstants.SEX_COLUMN]
         if actual_sex != expected_sex:
             actual_sex_label = dict(Individual.SEX_CHOICES)[actual_sex]
@@ -1035,7 +1036,7 @@ class DSMConstants:
 
     MALE_SEX = 'MALE'
     FEMALE_SEX = 'FEMALE'
-    RELATIONSHIP_MAP = {
+    RELATIONSHIP_MAP = {  # TODO sex update
         'MYSELF': {MALE_SEX: 'Myself (male)', FEMALE_SEX: 'Myself (female)', PREFER_NOT_ANSWER: 'Myself (unspecified sex)'},
         'CHILD': {MALE_SEX: 'Son', FEMALE_SEX: 'Daughter', PREFER_NOT_ANSWER: 'Child (unspecified sex)'},
         'SIBLING': {MALE_SEX: 'Brother', FEMALE_SEX: 'Sister', PREFER_NOT_ANSWER: 'Sibling (unspecified sex)'},
@@ -1105,7 +1106,7 @@ class DSMConstants:
         OTHER_RELATIVES: 'RELATIVE',
     }
 
-    RELATIVE_SEX_MAP = {
+    RELATIVE_SEX_MAP = { # TODO sex update
         SIBLINGS: {'MALE': 'Brother', 'FEMALE': 'Sister', 'Other': 'Sibling (unspecified sex)'},
         CHILDREN: {'MALE': 'Son', 'FEMALE': 'Daughter', 'Other': 'Child (unspecified sex)'},
         OTHER_RELATIVES: {'MALE': 'Male', 'FEMALE': 'Female', 'Other': 'unspecified sex'},

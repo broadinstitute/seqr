@@ -140,7 +140,7 @@ def _upload_data_loading_files(projects: list[Project], user: User, file_path: s
         'Project_GUID': F('family__project__guid'), 'Family_GUID': F('family__guid'),
         'Family_ID': F('family__family_id'),
         'Individual_ID': F('individual_id'),
-        'Paternal_ID': F('father__individual_id'), 'Maternal_ID': F('mother__individual_id'), 'Sex': F('sex'),
+        'Paternal_ID': F('father__individual_id'), 'Maternal_ID': F('mother__individual_id'), 'Sex': F('sex'),  # TODO sex update
     })
     annotations = {'project': F('family__project__guid'), **file_annotations}
     individual_filter = {'id__in': individual_ids} if individual_ids else {'family__project__in': projects}

@@ -73,7 +73,7 @@ const EDIT_INDIVIDUAL_FIELDS = [
 const INDIVIDUAL_FIELD_MAP = {
   name: 'individualGuid',
   label: 'displayName',
-  sex: 'sex',
+  sex: 'sex', // TODO sex update
   affected: 'affected',
   yob: 'birthYear',
   mother: 'maternalGuid',

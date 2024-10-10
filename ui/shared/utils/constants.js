@@ -395,7 +395,7 @@ export const CATEGORY_FAMILY_FILTERS = {
 
 // INDIVIDUAL FIELDS
 
-export const SEX_OPTIONS = [
+export const SEX_OPTIONS = [ // TODO sex update
   { value: 'M', text: 'Male' },
   { value: 'F', text: 'Female' },
   { value: 'U', text: '?' },

@@ -878,7 +878,7 @@ class EsSearch(object):
                             {'sample_id': sample_id}, genotype_fields_config)
                         genotypes[sample.individual.guid]['isRef'] = True
                         genotypes[sample.individual.guid]['cn'] = \
-                            1 if hit['contig'] == 'X' and sample.individual.sex == Individual.SEX_MALE else 2
+                            1 if hit['contig'] == 'X' and sample.individual.sex == Individual.SEX_MALE else 2  # TODO sex update
 
         return family_guids, genotypes
 
@@ -1367,7 +1367,7 @@ def _family_genotype_inheritance_filter(inheritance_mode, inheritance_filter, sa
         samples_q = Q('range', xpos={'gte': get_xpos('X', 1), 'lte': get_xpos('Y', 1)})
         for individual in individuals:
             if individual_affected_status[individual.guid] == Individual.AFFECTED_STATUS_UNAFFECTED \
-                    and individual.sex == Individual.SEX_MALE:
+                    and individual.sex == Individual.SEX_MALE:  # TODO sex update
                 individual_genotype_filter[individual.guid] = REF_REF
 
     is_sv_comp_het = inheritance_mode == COMPOUND_HET and 'samples' in index_fields

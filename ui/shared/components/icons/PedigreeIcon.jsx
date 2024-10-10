@@ -33,7 +33,7 @@ const ICON_LOOKUP = {
 }
 
 const PedigreeIcon = React.memo((props) => {
-  const iconProps = ICON_LOOKUP[`${props.sex}${props.affected}`]
+  const iconProps = ICON_LOOKUP[`${props.sex}${props.affected}`] // TODO sex update
   return (
     <Popup
       trigger={(
