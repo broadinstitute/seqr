@@ -16,6 +16,8 @@ SNV_INDEL_DATA_TYPE = SnvIndelHailTableQuery.DATA_TYPE
 
 class MultiDataTypeHailTableQuery(BaseHailTableQuery):
 
+    LOADED_GLOBALS = True
+
     def __init__(self, sample_data, *args, **kwargs):
         self._data_type_queries = {
             k: QUERY_CLASS_MAP[(k, GENOME_VERSION_GRCh38)](v, *args, override_comp_het_alt=k == SNV_INDEL_DATA_TYPE, **kwargs)
