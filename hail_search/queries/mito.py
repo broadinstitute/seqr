@@ -1,5 +1,3 @@
-from collections import defaultdict
-
 from aiohttp.web import HTTPNotFound
 import hail as hl
 import logging
