@@ -1,5 +1,4 @@
 import hail as hl
-import os
 
 from hail_search.constants import ALT_ALT, REF_REF, CONSEQUENCE_SORT, OMIM_SORT, GROUPED_VARIANTS_FIELD, GENOME_VERSION_GRCh38
 from hail_search.queries.base import BaseHailTableQuery
