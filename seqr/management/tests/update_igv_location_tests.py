@@ -20,6 +20,8 @@ class TUpdateIgvPathsTest(TestCase):
             mock.call('Done'),
         ])
         self.assertEqual(IgvSample.objects.get(id=145).file_path, '/seqr/static_media/igv/NA19675.cram')
+        # Other IGV samples are unchanged
+        self.assertEqual(IgvSample.objects.get(id=146).file_path, 'gs://readviz/NA20870.cram')
 
         with self.assertRaises(CommandError) as err:
             call_command('update_igv_location', '/readviz/', '/seqr/static_media/igv/')

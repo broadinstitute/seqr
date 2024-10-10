@@ -22,5 +22,5 @@ class Command(BaseCommand):
         logger.info(f'Updating {len(igv_samples)} IGV samples')
         for sample in tqdm(igv_samples):
             sample.file_path = sample.file_path.replace(old_prefix, new_prefix)
-            sample.save()
+        IgvSample.objects.bulk_update(igv_samples, ['file_path'], batch_size=10000)
         logger.info('Done')
