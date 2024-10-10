@@ -1,4 +1,4 @@
-from aiohttp.web import HTTPBadRequest, HTTPNotFound
+from aiohttp.web import HTTPBadRequest, HTTPNotFound, HTTPInternalServerError
 from collections import defaultdict, namedtuple
 import hail as hl
 import logging
@@ -6,7 +6,7 @@ import os
 
 from hail_search.constants import AFFECTED_ID, ALT_ALT, ANNOTATION_OVERRIDE_FIELDS, ANY_AFFECTED, COMP_HET_ALT, \
     COMPOUND_HET, GENOME_VERSION_GRCh38, GROUPED_VARIANTS_FIELD, ALLOWED_TRANSCRIPTS, ALLOWED_SECONDARY_TRANSCRIPTS,  HAS_ANNOTATION_OVERRIDE, \
-    HAS_ALT, HAS_REF,INHERITANCE_FILTERS, PATH_FREQ_OVERRIDE_CUTOFF, MALE, RECESSIVE, REF_ALT, REF_REF, MAX_LOAD_INTERVALS, \
+    HAS_ALT, HAS_REF,INHERITANCE_FILTERS, PATH_FREQ_OVERRIDE_CUTOFF, RECESSIVE, REF_ALT, REF_REF, MAX_LOAD_INTERVALS, \
     UNAFFECTED_ID, X_LINKED_RECESSIVE, XPOS, OMIM_SORT, FAMILY_GUID_FIELD, GENOTYPES_FIELD, AFFECTED_ID_MAP
 
 HAIL_SEARCH_DATA_DIR = os.environ.get('HAIL_SEARCH_DATA_DIR', '/seqr/seqr-hail-search-data')
@@ -231,6 +231,9 @@ class BaseHailTableQuery(object):
 
     def __init__(self, sample_data, sort=XPOS, sort_metadata=None, num_results=100, inheritance_mode=None,
                  override_comp_het_alt=False, **kwargs):
+        if not self.LOADED_GLOBALS:
+            raise HTTPInternalServerError(reason=f'No loaded {self.DATA_TYPE} data found')
+
         self.unfiltered_comp_het_ht = None
         self._sort = sort
         self._sort_metadata = sort_metadata
@@ -484,7 +487,7 @@ class BaseHailTableQuery(object):
             sampleId=sample['sample_id'],
             individualGuid=sample['individual_guid'],
             affected_id=AFFECTED_ID_MAP.get(sample['affected']),
-            is_male='sex' in sample and sample['sex'] == MALE,
+            is_male=sample.get('is_male', False),
         )
 
     @classmethod

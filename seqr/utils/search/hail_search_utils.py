@@ -1,11 +1,11 @@
 from collections import defaultdict
 
-from django.db.models import F, Min, Count
+from django.db.models import F, Min, Count, Case, When
 from urllib3.connectionpool import connection_from_url
 
 import requests
 from reference_data.models import Omim, GeneConstraint, GENOME_VERSION_LOOKUP
-from seqr.models import Sample, PhenotypePrioritization
+from seqr.models import Sample, PhenotypePrioritization, Individual
 from seqr.utils.search.constants import PRIORITIZED_GENE_SORT, X_LINKED_RECESSIVE
 from seqr.utils.xpos_utils import MIN_POS, MAX_POS
 from settings import HAIL_BACKEND_SERVICE_HOSTNAME, HAIL_BACKEND_SERVICE_PORT
@@ -141,7 +141,7 @@ def _get_sample_data(samples, inheritance_filter=None, inheritance_mode=None, **
         affected=F('individual__affected'),
     )
     if inheritance_mode == X_LINKED_RECESSIVE:
-        sample_values['sex'] = F('individual__sex')  # TODO sex update
+        sample_values['is_male'] = Case(When(individual__sex=Individual.SEX_MALE, then=True), default=False)  # TODO sex update
     sample_data = samples.order_by('guid').values('individual__individual_id', 'dataset_type', 'sample_type', **sample_values)
 
     custom_affected = (inheritance_filter or {}).pop('affected', None)
