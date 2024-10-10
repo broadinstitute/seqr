@@ -203,8 +203,8 @@ MULTI_PROJECT_BOTH_SAMPLE_TYPE_VARIANTS = [
 for v in MULTI_PROJECT_BOTH_SAMPLE_TYPE_VARIANTS:
     for indiv_id, gts in v['genotypes'].items():
         v['genotypes'][indiv_id] = [gts]
-    if 'I000015_na20885' in v['genotypes']:
-        v['genotypes']['I000015_na20885'].append({**v['genotypes']['I000015_na20885'][0], 'sampleType': 'WGS'})
+for v in MULTI_PROJECT_BOTH_SAMPLE_TYPE_VARIANTS[:-2]:
+    v['genotypes']['I000015_na20885'].append({**v['genotypes']['I000015_na20885'][0], 'sampleType': 'WGS'})
 
 
 def _sorted(variant, sorts):

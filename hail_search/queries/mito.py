@@ -132,10 +132,9 @@ class MitoHailTableQuery(BaseHailTableQuery):
         self._has_both_sample_types = True
         entries = {}
         for sample_type in sample_types:
-            ht, sample_data = self._load_family_or_project_ht(
+            entries[sample_type] = self._load_family_or_project_ht(
                 num_families, project_guid, project_sample_type_data, sample_type, **kwargs
             )
-            entries[sample_type] = (ht, sample_data)
 
         return self._filter_entries_ht_both_sample_types(
             *entries[SampleType.WES.value], *entries[SampleType.WGS.value], **kwargs
@@ -150,8 +149,8 @@ class MitoHailTableQuery(BaseHailTableQuery):
             if len(sample_dict) == 1:
                 single_sample_type_project_samples[project_guid] = sample_dict
             else:
-                both_sample_type_project_samples[SampleType.WES][project_guid] = {SampleType.WES.value: sample_dict[SampleType.WES]}
-                both_sample_type_project_samples[SampleType.WGS][project_guid] = {SampleType.WGS.value: sample_dict[SampleType.WGS]}
+                both_sample_type_project_samples[SampleType.WES][project_guid] = {SampleType.WES: sample_dict[SampleType.WES]}
+                both_sample_type_project_samples[SampleType.WGS][project_guid] = {SampleType.WGS: sample_dict[SampleType.WGS]}
 
         filtered_project_hts = []
         filtered_comp_het_project_hts = []
