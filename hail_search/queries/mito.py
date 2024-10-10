@@ -1,5 +1,3 @@
-from collections import defaultdict
-
 from aiohttp.web import HTTPNotFound
 import hail as hl
 import logging
@@ -96,7 +94,6 @@ class MitoHailTableQuery(BaseHailTableQuery):
         TRANSCRIPTS_FIELD: {
             **BaseHailTableQuery.ENUM_ANNOTATION_FIELDS['transcripts'],
             'annotate_value': lambda transcript, *args: {'major_consequence': transcript.consequence_terms.first()},
-            'drop_fields': ['consequence_terms'],
             'format_array_values': lambda values, *args: BaseHailTableQuery.ENUM_ANNOTATION_FIELDS['transcripts']['format_array_values'](values).map_values(
                 lambda transcripts: hl.enumerate(transcripts).starmap(lambda i, t: t.annotate(transcriptRank=i))
             ),
