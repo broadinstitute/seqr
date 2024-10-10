@@ -525,7 +525,7 @@ PARTICIPANT_TABLE = [
         'missing_variant_case',
     ], [
         'Broad_NA19675_1', 'Broad_1kg project nme with unide', 'BROAD', 'HMB', 'Yes', 'IKBKAP|CCDC102B|CMA - normal',
-        '34415322', 'Broad_1', 'Broad_NA19678', 'Broad_NA19679', '', 'Self', '', 'Male', '',
+        '34415322', 'Broad_1', 'Broad_NA19678', 'Broad_NA19679', '', 'Self', '', 'Male', 'XXY',
         'Middle Eastern or North African', '', '', '21', 'Affected', 'myopathy', '18', 'Unsolved', 'No',
     ], [
         'Broad_HG00731', 'Broad_1kg project nme with unide', 'BROAD', 'HMB', '', '', '', 'Broad_2', 'Broad_HG00732',
@@ -874,7 +874,7 @@ class ReportAPITest(AirtableTest):
             [c for c in PARTICIPANT_TABLE[0] if c not in {'pmid_id', 'ancestry_detail', 'age_at_last_observation', 'missing_variant_case'}],
             [
             'Broad_NA19675_1', 'Broad_1kg project nme with unide', 'BROAD', 'HMB', 'Yes', 'IKBKAP|CCDC102B|CMA - normal',
-            'Broad_1', 'Broad_NA19678', 'Broad_NA19679', '', 'Self', '', 'Male', '', 'Middle Eastern or North African',
+            'Broad_1', 'Broad_NA19678', 'Broad_NA19679', '', 'Self', '', 'Male', 'XXY', 'Middle Eastern or North African',
             '', 'Affected', 'myopathy', '18', 'Unsolved',
         ], [
             'Broad_NA19678', 'Broad_1kg project nme with unide', 'BROAD', 'HMB', '', '', 'Broad_1', '0', '0', '', '',

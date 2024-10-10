@@ -411,9 +411,18 @@ def _get_transcript_field(field, config, transcript):
 def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, individual_ids_map, get_additional_individual_fields, format_id):
     paternal_ids = individual_ids_map.get(individual.father_id, ('', ''))
     maternal_ids = individual_ids_map.get(individual.mother_id, ('', ''))
+    sex = individual.sex
+    sex_detail = None
+    if sex in Individual.MALE_ANEUPLOIDIES:
+        sex_detail = sex
+        sex = Individual.SEX_MALE
+    elif sex in Individual.FEMALE_ANEUPLOIDIES:
+        sex_detail = sex
+        sex = Individual.SEX_FEMALE
     subject_row = {
         'participant_id': format_id(individual.individual_id),
-        'sex': dict(Individual.SEX_CHOICES)[individual.sex],  # TODO sex update
+        'sex': dict(Individual.SEX_CHOICES)[sex],
+        'sex_detail': sex_detail,
         'reported_race': ANCESTRY_MAP.get(individual.population, ''),
         'ancestry_detail': ANCESTRY_DETAIL_MAP.get(individual.population, ''),
         'reported_ethnicity': ETHNICITY_MAP.get(individual.population, ''),
