@@ -413,7 +413,7 @@ def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, indivi
     maternal_ids = individual_ids_map.get(individual.mother_id, ('', ''))
     subject_row = {
         'participant_id': format_id(individual.individual_id),
-        'sex': Individual.SEX_LOOKUP[individual.sex],  # TODO sex update
+        'sex': dict(Individual.SEX_CHOICES)[individual.sex],  # TODO sex update
         'reported_race': ANCESTRY_MAP.get(individual.population, ''),
         'ancestry_detail': ANCESTRY_DETAIL_MAP.get(individual.population, ''),
         'reported_ethnicity': ETHNICITY_MAP.get(individual.population, ''),
