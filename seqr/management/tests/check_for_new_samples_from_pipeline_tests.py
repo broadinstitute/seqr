@@ -326,6 +326,12 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         self.mock_glob.assert_called_with('/seqr/seqr-hail-search-data/GRCh37/MITO/runs/*/_SUCCESS')
         self.mock_subprocess.assert_not_called()
 
+        call_command('check_for_new_samples_from_pipeline')
+        self.mock_logger.info.assert_called_with('No loaded data available')
+        self.mock_subprocess.assert_not_called()
+        mock_email.assert_not_called()
+        self.mock_send_slack.assert_not_called()
+
         local_files = [
             '/seqr/seqr-hail-search-data/GRCh38/SNV_INDEL/runs/auto__2023-08-09/_SUCCESS',
             '/seqr/seqr-hail-search-data/GRCh37/SNV_INDEL/runs/manual__2023-11-02/_SUCCESS',
