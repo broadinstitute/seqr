@@ -84,7 +84,7 @@ class HailSearchStatusTest(TestCase, StatusTest):
     HAS_KIBANA = False
 
     @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', '')
-    @mock.patch('seqr.utils.search.hail_search_utils.HAIL_BACKEND_SERVICE_HOSTNAME', 'http://test-hail')
+    @mock.patch('seqr.utils.search.hail_search_utils.HAIL_BACKEND_SERVICE_HOSTNAME', 'test-hail')
     def test_status(self, *args):
         super(HailSearchStatusTest, self).test_status(*args)
 

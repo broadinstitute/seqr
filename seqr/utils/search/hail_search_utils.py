@@ -12,8 +12,7 @@ from settings import HAIL_BACKEND_SERVICE_HOSTNAME, HAIL_BACKEND_SERVICE_PORT
 
 
 def _hail_backend_url(path):
-    return f'{HAIL_BACKEND_SERVICE_HOSTNAME}:{HAIL_BACKEND_SERVICE_PORT}/{path}'
-
+    return f'http://{HAIL_BACKEND_SERVICE_HOSTNAME}:{HAIL_BACKEND_SERVICE_PORT}/{path}'
 
 def _execute_search(search_body, user, path='search', exception_map=None, user_email=None):
     response = requests.post(_hail_backend_url(path), json=search_body, headers={'From': user_email or user.email}, timeout=300)
@@ -143,7 +142,7 @@ def _get_sample_data(samples, inheritance_filter=None, inheritance_mode=None, **
     )
     if inheritance_mode == X_LINKED_RECESSIVE:
         sample_values['sex'] = F('individual__sex')
-    sample_data = samples.order_by('id').values('individual__individual_id', 'dataset_type', 'sample_type', **sample_values)
+    sample_data = samples.order_by('guid').values('individual__individual_id', 'dataset_type', 'sample_type', **sample_values)
 
     custom_affected = (inheritance_filter or {}).pop('affected', None)
     if custom_affected:
