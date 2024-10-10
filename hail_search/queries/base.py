@@ -1,4 +1,4 @@
-from aiohttp.web import HTTPBadRequest, HTTPNotFound
+from aiohttp.web import HTTPBadRequest, HTTPNotFound, HTTPInternalServerError
 from collections import defaultdict, namedtuple
 import hail as hl
 import logging
@@ -231,6 +231,9 @@ class BaseHailTableQuery(object):
 
     def __init__(self, sample_data, sort=XPOS, sort_metadata=None, num_results=100, inheritance_mode=None,
                  override_comp_het_alt=False, **kwargs):
+        if not self.LOADED_GLOBALS:
+            raise HTTPInternalServerError(reason=f'No loaded {self.DATA_TYPE} data found')
+
         self.unfiltered_comp_het_ht = None
         self._sort = sort
         self._sort_metadata = sort_metadata
