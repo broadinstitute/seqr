@@ -22,7 +22,7 @@ export const VARIANT = {
   genomeVersion: "37",
   geneIds: ['ENSG00000228198'],
   genotypes: {
-    NA19675: {
+    NA19675: [{
       ab: 1,
       ad: "0,74",
       alleles: ["T", "T"],
@@ -31,7 +31,18 @@ export const VARIANT = {
       gq: 99,
       numAlt: 2,
       pl: "358,132,0",
-    },
+      sampleType: "WES",
+    }, {
+      ab: 1,
+      ad: "0,74",
+      alleles: ["T", "T"],
+      dp: "74",
+      filter: "pass",
+      gq: 99,
+      numAlt: 2,
+      pl: "358,132,0",
+      sampleType: "WGS",
+    }],
     NA19678: {
       ab: 0,
       ad: "77,0",

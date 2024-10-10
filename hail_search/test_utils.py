@@ -61,6 +61,21 @@ FAMILY_11_SAMPLE_WES = {
 }
 MULTI_PROJECT_SAMPLE_DATA = deepcopy(FAMILY_2_VARIANT_SAMPLE_DATA)
 MULTI_PROJECT_SAMPLE_DATA['SNV_INDEL'].append(FAMILY_11_SAMPLE_WES)
+
+FAMILY_2_BOTH_SAMPLE_TYPE_SAMPLE_DATA = deepcopy(FAMILY_2_VARIANT_SAMPLE_DATA)
+FAMILY_2_BOTH_SAMPLE_TYPE_SAMPLE_DATA['SNV_INDEL'].extend([
+    {**s, 'sample_type': 'WGS'} for s in FAMILY_2_VARIANT_SAMPLE_DATA['SNV_INDEL']]
+)
+
+FAMILY_2_BOTH_SAMPLE_TYPE_SAMPLE_DATA_MISSING_PARENTAL_WGS = deepcopy(FAMILY_2_VARIANT_SAMPLE_DATA)
+FAMILY_2_BOTH_SAMPLE_TYPE_SAMPLE_DATA_MISSING_PARENTAL_WGS['SNV_INDEL'].extend([
+    {**s, 'sample_type': 'WGS'} for s in FAMILY_2_VARIANT_SAMPLE_DATA['SNV_INDEL'] if s['sample_id'] == 'HG00731']
+)
+
+MULTI_PROJECT_SAMPLE_TYPES_SAMPLE_DATA = deepcopy(FAMILY_2_VARIANT_SAMPLE_DATA)
+MULTI_PROJECT_SAMPLE_TYPES_SAMPLE_DATA['SNV_INDEL'].append(FAMILY_11_SAMPLE_WES)
+MULTI_PROJECT_SAMPLE_TYPES_SAMPLE_DATA['SNV_INDEL'].append({**FAMILY_11_SAMPLE_WES, 'sample_type': 'WGS'})
+
 MULTI_PROJECT_MISSING_SAMPLE_DATA = deepcopy(FAMILY_2_MISSING_SAMPLE_DATA)
 MULTI_PROJECT_MISSING_SAMPLE_DATA['SNV_INDEL'].append(FAMILY_11_SAMPLE_WES)
 
@@ -145,6 +160,23 @@ VARIANT1 = {
     '_sort': [1000010439],
     'CAID': 'CA16717152',
 }
+VARIANT1_BOTH_SAMPLE_TYPES = deepcopy(VARIANT1)
+genotypes = VARIANT1['genotypes']
+VARIANT1_BOTH_SAMPLE_TYPES['genotypes'] = {
+    'I000004_hg00731': [
+        genotypes['I000004_hg00731'],
+        {**genotypes['I000004_hg00731'], 'sampleType': 'WGS'}
+    ],
+    'I000005_hg00732': [
+        genotypes['I000005_hg00732'],
+        {**genotypes['I000005_hg00732'], 'gq': 99, 'numAlt': 1, 'sampleType': 'WGS'}
+    ],
+    'I000006_hg00733': [
+        genotypes['I000006_hg00733'],
+        {**genotypes['I000006_hg00733'], 'sampleType': 'WGS'}
+    ],
+}
+
 VARIANT2 = {
     'variantId': '1-38724419-T-G',
     'chrom': '1',
@@ -248,6 +280,17 @@ VARIANT2 = {
     '_sort': [1038724419],
     'CAID': None,
 }
+VARIANT2_BOTH_SAMPLE_TYPES = deepcopy(VARIANT2)
+genotypes = VARIANT2_BOTH_SAMPLE_TYPES['genotypes']
+VARIANT2_BOTH_SAMPLE_TYPES['genotypes'] = {
+    'I000004_hg00731': [
+        genotypes['I000004_hg00731'],
+        {**genotypes['I000004_hg00731'], 'sampleType': 'WGS'}
+    ],
+    'I000005_hg00732': [genotypes['I000005_hg00732']],
+    'I000006_hg00733': [genotypes['I000006_hg00733']],
+}
+
 VARIANT3 = {
     'variantId': '1-91502721-G-A',
     'chrom': '1',
