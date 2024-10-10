@@ -447,8 +447,9 @@ class Individual(ModelWithGUID):
     SEX_MALE = 'M'
     SEX_FEMALE = 'F'
     SEX_UNKNOWN = 'U'
-    MALE_ANEUPLOIDIES = ['XXY', 'XYY']
     FEMALE_ANEUPLOIDIES = ['XXX', 'X0']
+    MALE_ANEUPLOIDIES = ['XXY', 'XYY']
+    MALE_SEXES = [SEX_MALE] + MALE_ANEUPLOIDIES
     SEX_CHOICES = (
         (SEX_MALE, 'Male'),
         ('F', 'Female'),

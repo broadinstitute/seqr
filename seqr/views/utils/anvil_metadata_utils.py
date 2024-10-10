@@ -293,7 +293,7 @@ def _get_genotype_zygosity(genotype, individual=None, variant=None):
     num_alt = genotype.get('numAlt')
     cn = genotype.get('cn')
     if num_alt == 2 or cn == 0 or (cn != None and cn > 3):
-        return HEMI if (variant or {}).get('chrom') == 'X' and individual.sex == Individual.SEX_MALE else HOM_ALT  # TODO sex update
+        return HEMI if (variant or {}).get('chrom') == 'X' and individual.sex in Individual.MALE_SEXES else HOM_ALT
     if num_alt == 1 or cn == 1 or cn == 3:
         return HET
     return None

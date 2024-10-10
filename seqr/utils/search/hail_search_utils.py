@@ -141,7 +141,7 @@ def _get_sample_data(samples, inheritance_filter=None, inheritance_mode=None, **
         affected=F('individual__affected'),
     )
     if inheritance_mode == X_LINKED_RECESSIVE:
-        sample_values['is_male'] = Case(When(individual__sex=Individual.SEX_MALE, then=True), default=False)  # TODO sex update
+        sample_values['is_male'] = Case(When(individual__sex__in=Individual.MALE_SEXES, then=True), default=False)
     sample_data = samples.order_by('guid').values('individual__individual_id', 'dataset_type', 'sample_type', **sample_values)
 
     custom_affected = (inheritance_filter or {}).pop('affected', None)
