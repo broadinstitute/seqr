@@ -128,14 +128,13 @@ def _parse_pedigree_table_json(project, rows, header=None, column_map=None, erro
 
 
 def _parse_sex(sex):
-    # TODO sex update
     if sex == '1' or sex.upper().startswith('M'):
         return 'M'
     elif sex == '2' or sex.upper().startswith('F'):
         return 'F'
     elif sex == '0' or not sex or sex.lower() in {'unknown', 'prefer_not_answer'}:
         return 'U'
-    return None
+    return Individual.SEX_LOOKUP.get(sex)
 
 
 def _parse_affected(affected):
@@ -291,11 +290,11 @@ def validate_fam_file_records(project, records, fail_on_warnings=False, errors=N
             errors.append(f'{individual_id} already has loaded data and cannot be moved to a different family')
 
         # check proband relationship has valid gender
-        if r.get(JsonConstants.PROBAND_RELATIONSHIP) and r.get(JsonConstants.SEX_COLUMN):  # TODO sex update
+        if r.get(JsonConstants.PROBAND_RELATIONSHIP) and r.get(JsonConstants.SEX_COLUMN):
             invalid_choices = {}
-            if r[JsonConstants.SEX_COLUMN] == Individual.SEX_MALE:
+            if r[JsonConstants.SEX_COLUMN] in Individual.MALE_SEXES:
                 invalid_choices = Individual.FEMALE_RELATIONSHIP_CHOICES
-            elif r[JsonConstants.SEX_COLUMN] == Individual.SEX_FEMALE:
+            elif r[JsonConstants.SEX_COLUMN] in Individual.FEMALE_SEXES:
                 invalid_choices = Individual.MALE_RELATIONSHIP_CHOICES
             if invalid_choices and r[JsonConstants.PROBAND_RELATIONSHIP] in invalid_choices:
                 message = 'Invalid proband relationship "{relationship}" for {individual_id} with given gender {sex}'.format(
@@ -311,8 +310,8 @@ def validate_fam_file_records(project, records, fail_on_warnings=False, errors=N
 
         # check maternal and paternal ids for consistency
         for parent in [
-            ('father', JsonConstants.PATERNAL_ID_COLUMN, 'M'),
-            ('mother', JsonConstants.MATERNAL_ID_COLUMN, 'F')
+            ('father', JsonConstants.PATERNAL_ID_COLUMN, Individual.MALE_SEXES),
+            ('mother', JsonConstants.MATERNAL_ID_COLUMN, Individual.FEMALE_SEXES)
         ]:
             _validate_parent(r, *parent, individual_id, family_id, records_by_id, warnings, errors, clear_invalid_values)
 
@@ -346,7 +345,7 @@ def get_valid_hpo_terms(records, additional_feature_columns=None):
     return set(HumanPhenotypeOntology.objects.filter(hpo_id__in=all_hpo_terms).values_list('hpo_id', flat=True))
 
 
-def _validate_parent(row, parent_id_type, parent_id_field, expected_sex, individual_id, family_id, records_by_id, warnings, errors, clear_invalid_values):
+def _validate_parent(row, parent_id_type, parent_id_field, expected_sexes, individual_id, family_id, records_by_id, warnings, errors, clear_invalid_values):
     parent_id = row.get(parent_id_field)
     if not parent_id:
         return
@@ -366,9 +365,9 @@ def _validate_parent(row, parent_id_type, parent_id_field, expected_sex, individ
         errors.append('{} is recorded as their own {}'.format(parent_id, parent_id_type))
 
     # is father male and mother female?
-    if JsonConstants.SEX_COLUMN in records_by_id[parent_id]:  # TODO sex update
+    if JsonConstants.SEX_COLUMN in records_by_id[parent_id]:
         actual_sex = records_by_id[parent_id][JsonConstants.SEX_COLUMN]
-        if actual_sex != expected_sex:
+        if actual_sex not in expected_sexes:
             actual_sex_label = Individual.SEX_LOOKUP[actual_sex]
             errors.append(
                 "%(parent_id)s is recorded as %(actual_sex_label)s sex and also as the %(parent_id_type)s of %(individual_id)s" % locals())
