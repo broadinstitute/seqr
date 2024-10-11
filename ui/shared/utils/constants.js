@@ -395,10 +395,14 @@ export const CATEGORY_FAMILY_FILTERS = {
 
 // INDIVIDUAL FIELDS
 
-export const SEX_OPTIONS = [ // TODO sex update
+export const SEX_OPTIONS = [
   { value: 'M', text: 'Male' },
   { value: 'F', text: 'Female' },
   { value: 'U', text: '?' },
+  { value: 'XXY', text: 'Male (XXY)' },
+  { value: 'XYY', text: 'Male (XYY)' },
+  { value: 'XXX', text: 'Female (XXX)' },
+  { value: 'X0', text: 'Female (X0)' },
 ]
 
 export const SEX_LOOKUP = SEX_OPTIONS.reduce(
@@ -477,7 +481,7 @@ export const INDIVIDUAL_FIELD_CONFIGS = {
     format: sex => SEX_LOOKUP[sex],
     width: 3,
     description: 'Male, Female, or Unknown',
-    formFieldProps: { component: RadioGroup, options: SEX_OPTIONS },
+    formFieldProps: { component: Select, options: SEX_OPTIONS },
   },
   [INDIVIDUAL_FIELD_AFFECTED]: {
     label: 'Affected Status',

@@ -64,6 +64,15 @@ const IndividualContainer = styled.div`
 
 const PaddedRadioButtonGroup = styled(RadioButtonGroup)`
   padding: 10px;
+  
+  .button {
+    padding-left: 1em !important;
+    padding-right: 1em !important;
+    
+    &.labeled .label {
+      margin-left: 0px !important;
+    }
+  }
 `
 
 const POPULATION_MAP = {
