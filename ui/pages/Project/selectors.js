@@ -12,6 +12,7 @@ import {
   INDIVIDUAL_HAS_DATA_FIELD,
   MME_TAG_NAME,
   TISSUE_DISPLAY,
+  SIMPLIFIED_SEX_LOOKUP,
 } from 'shared/utils/constants'
 import { toCamelcase, toSnakecase, snakecaseToTitlecase } from 'shared/utils/stringUtils'
 
@@ -639,8 +640,8 @@ export const getParentOptionsByIndividual = createSelector( // TODO sex update
     ...individuals.reduce((indAcc, { individualGuid }) => ({
       ...indAcc,
       [individualGuid]: {
-        M: individuals.filter(i => i.sex === 'M' && i.individualGuid !== individualGuid).map(individualOption),
-        F: individuals.filter(i => i.sex === 'F' && i.individualGuid !== individualGuid).map(individualOption),
+        M: individuals.filter(i => SIMPLIFIED_SEX_LOOKUP[i.sex] === 'M' && i.individualGuid !== individualGuid).map(individualOption),
+        F: individuals.filter(i => SIMPLIFIED_SEX_LOOKUP[i.sex] === 'F' && i.individualGuid !== individualGuid).map(individualOption),
       },
     }), {}),
   }), {}),
