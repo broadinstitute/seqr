@@ -359,7 +359,7 @@ api_endpoints = {
     'matchmaker/v1/metrics': external_api.mme_metrics_proxy,
 }
 
-urlpatterns = [path('status', status_view), path('luigi_ui', proxy_to_luigi)]
+urlpatterns = [path('status', status_view), re_path('^(?:luigi_ui)', proxy_to_luigi)]
 
 # anvil workspace
 anvil_workspace_url = 'workspace/(?P<namespace>[^/]+)/(?P<name>[^/]+)'
