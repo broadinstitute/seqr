@@ -633,7 +633,7 @@ export const getMmeDefaultContactEmail = createSelector(
 
 const individualOption = ({ individualGuid, displayName }) => ({ value: individualGuid, text: displayName })
 
-export const getParentOptionsByIndividual = createSelector( // TODO sex update
+export const getParentOptionsByIndividual = createSelector(
   getSortedIndividualsByFamily,
   individualsByFamily => Object.values(individualsByFamily).reduce((acc, individuals) => ({
     ...acc,
