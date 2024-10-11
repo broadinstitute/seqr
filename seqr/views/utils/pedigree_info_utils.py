@@ -301,7 +301,7 @@ def validate_fam_file_records(project, records, fail_on_warnings=False, errors=N
                 message = 'Invalid proband relationship "{relationship}" for {individual_id} with given gender {sex}'.format(
                     relationship=Individual.RELATIONSHIP_LOOKUP[r[JsonConstants.PROBAND_RELATIONSHIP]],
                     individual_id=individual_id,
-                    sex=dict(Individual.SEX_CHOICES)[r[JsonConstants.SEX_COLUMN]]
+                    sex=Individual.SEX_LOOKUP[r[JsonConstants.SEX_COLUMN]]
                 )
                 if clear_invalid_values:
                     r[JsonConstants.PROBAND_RELATIONSHIP] = None
@@ -369,7 +369,7 @@ def _validate_parent(row, parent_id_type, parent_id_field, expected_sex, individ
     if JsonConstants.SEX_COLUMN in records_by_id[parent_id]:  # TODO sex update
         actual_sex = records_by_id[parent_id][JsonConstants.SEX_COLUMN]
         if actual_sex != expected_sex:
-            actual_sex_label = dict(Individual.SEX_CHOICES)[actual_sex]
+            actual_sex_label = Individual.SEX_LOOKUP[actual_sex]
             errors.append(
                 "%(parent_id)s is recorded as %(actual_sex_label)s sex and also as the %(parent_id_type)s of %(individual_id)s" % locals())
 
@@ -1036,7 +1036,7 @@ class DSMConstants:
 
     MALE_SEX = 'MALE'
     FEMALE_SEX = 'FEMALE'
-    RELATIONSHIP_MAP = {  # TODO sex update
+    RELATIONSHIP_MAP = {
         'MYSELF': {MALE_SEX: 'Myself (male)', FEMALE_SEX: 'Myself (female)', PREFER_NOT_ANSWER: 'Myself (unspecified sex)'},
         'CHILD': {MALE_SEX: 'Son', FEMALE_SEX: 'Daughter', PREFER_NOT_ANSWER: 'Child (unspecified sex)'},
         'SIBLING': {MALE_SEX: 'Brother', FEMALE_SEX: 'Sister', PREFER_NOT_ANSWER: 'Sibling (unspecified sex)'},
@@ -1106,7 +1106,7 @@ class DSMConstants:
         OTHER_RELATIVES: 'RELATIVE',
     }
 
-    RELATIVE_SEX_MAP = { # TODO sex update
+    RELATIVE_SEX_MAP = {
         SIBLINGS: {'MALE': 'Brother', 'FEMALE': 'Sister', 'Other': 'Sibling (unspecified sex)'},
         CHILDREN: {'MALE': 'Son', 'FEMALE': 'Daughter', 'Other': 'Child (unspecified sex)'},
         OTHER_RELATIVES: {'MALE': 'Male', 'FEMALE': 'Female', 'Other': 'unspecified sex'},

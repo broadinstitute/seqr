@@ -588,6 +588,7 @@ class Individual(ModelWithGUID):
         (UNSOLVED, 'Unsolved'),
     ]
 
+    SEX_LOOKUP = dict(SEX_CHOICES)
     AFFECTED_STATUS_LOOKUP = dict(AFFECTED_STATUS_CHOICES)
     CASE_REVIEW_STATUS_LOOKUP = dict(CASE_REVIEW_STATUS_CHOICES)
     CASE_REVIEW_STATUS_REVERSE_LOOKUP = {name.lower(): key for key, name in CASE_REVIEW_STATUS_CHOICES}
