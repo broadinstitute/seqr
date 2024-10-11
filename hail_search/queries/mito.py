@@ -227,14 +227,14 @@ class MitoHailTableQuery(BaseHailTableQuery):
         for sample_type in SampleType:
             ht = ht.annotate(**{
                 sample_type.family_entries_field: hl.enumerate(ht[sample_type.family_entries_field]).starmap(
-                    lambda i, samples: hl.or_missing(
+                    lambda i, family_samples: hl.or_missing(
                         hl.bind(
                             lambda other_sample_type_idx: (
                                 self._family_has_valid_sample_type_entries(ht, sample_type, i) |
                                 self._family_has_valid_sample_type_entries(ht, sample_type.other_sample_type, other_sample_type_idx)
                             ),
-                            family_idx_map.get(hl.coalesce(samples)[0]['familyGuid']).get(sample_type.other_sample_type.value),
-                       ), samples)
+                            family_idx_map.get(hl.coalesce(family_samples)[0]['familyGuid']).get(sample_type.other_sample_type.value),
+                       ), family_samples)
                 )})
 
         # Merge family entries and filters from both sample types

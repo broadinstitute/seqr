@@ -635,8 +635,10 @@ class BaseHailTableQuery(object):
                 continue
             entry_indices = hl.dict(entry_indices)
             ht = ht.annotate(**{
-                annotation: hl.enumerate(ht[entries_ht_field]).map(
-                    lambda x: self._valid_genotype_family_entries(x[1], entry_indices.get(x[0]), genotype, min_unaffected)
+                annotation: hl.enumerate(ht[entries_ht_field]).starmap(
+                    lambda i, family_samples: self._valid_genotype_family_entries(
+                        family_samples, entry_indices.get(i), genotype, min_unaffected
+                    )
                 )
             })
 
