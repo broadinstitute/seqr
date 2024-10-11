@@ -394,16 +394,22 @@ export const CATEGORY_FAMILY_FILTERS = {
 }
 
 // INDIVIDUAL FIELDS
-
+const SEX_MALE = 'M'
+const SEX_FEMALE = 'F'
+const MALE_ANEUPLOIDIES = ['XXY', 'XYY']
+const FEMALE_ANEUPLOIDIES = ['XXX', 'X0']
 export const SEX_OPTIONS = [
   { value: 'M', text: 'Male' },
   { value: 'F', text: 'Female' },
   { value: 'U', text: '?' },
-  { value: 'XXY', text: 'Male (XXY)' },
-  { value: 'XYY', text: 'Male (XYY)' },
-  { value: 'XXX', text: 'Female (XXX)' },
-  { value: 'X0', text: 'Female (X0)' },
+  ...MALE_ANEUPLOIDIES.map(value => ({ value, text: `Male (${value})` })),
+  ...FEMALE_ANEUPLOIDIES.map(value => ({ value, text: `Female (${value})` })),
 ]
+
+export const SIMPLIFIED_SEX_LOOKUP = {
+  ...[SEX_MALE, ...MALE_ANEUPLOIDIES].reduce((acc, val) => ({ ...acc, [val]: SEX_MALE }), {}),
+  ...[SEX_FEMALE, ...FEMALE_ANEUPLOIDIES].reduce((acc, val) => ({ ...acc, [val]: SEX_FEMALE }), {}),
+}
 
 export const SEX_LOOKUP = SEX_OPTIONS.reduce(
   (acc, opt) => ({
