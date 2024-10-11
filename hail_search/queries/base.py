@@ -571,7 +571,7 @@ class BaseHailTableQuery(object):
 
     def _filter_inheritance(
         self, ht, comp_het_ht, inheritance_filter, sorted_family_sample_data,
-        annotation='family_entries', entries_ht_field='family_entries', **kwargs
+        annotation='family_entries', entries_ht_field='family_entries'
     ):
         any_valid_entry = lambda x: self.GENOTYPE_QUERY_MAP[HAS_ALT](x.GT)
 
@@ -604,7 +604,7 @@ class BaseHailTableQuery(object):
 
     def _annotate_families_inheritance(
         self, ht, inheritance_mode, inheritance_filter, sorted_family_sample_data,
-        annotation='family_entries', entries_ht_field='family_entries',
+        annotation, entries_ht_field,
     ):
         individual_genotype_filter = (inheritance_filter or {}).get('genotype')
 

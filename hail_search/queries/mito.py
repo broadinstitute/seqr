@@ -227,7 +227,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
         for sample_type in SampleType:
             ht = ht.annotate(**{
                 sample_type.family_entries_field: hl.enumerate(ht[sample_type.family_entries_field]).starmap(
-                    lambda i, samples:  hl.or_missing(
+                    lambda i, samples: hl.or_missing(
                         hl.bind(
                             lambda other_sample_type_idx: (
                                 self._family_has_valid_sample_type_entries(ht, sample_type, i) |
