@@ -687,13 +687,24 @@ class DataManagerAPITest(AirtableTest):
         url = '/api/kibana/random/path'
         self.check_data_manager_login(url)
 
+        self._test_request_proxy('localhost:5601', url, auth_header='Basic a2liYW5hOmFiYzEyMw==')
+
+        # Test with error response
+        response = self.client.get('{}/bad_response'.format(url))
+        self.assertEqual(response.status_code, 500)
+
+        # Test with connection error
+        response = self.client.get('{}/bad_path'.format(url))
+        self.assertContains(response, 'Error: Unable to connect to Kibana', status_code=400)
+
+    def _test_request_proxy(self, host, url, auth_header=None, proxy_path=None):
         response_args = {
             'stream': True,
             'body': 'Test response',
             'content_type': 'text/custom',
             'headers': {'x-test-header': 'test', 'keep-alive': 'true'},
         }
-        proxy_url = 'http://localhost:5601{}'.format(url)
+        proxy_url = f'http://{host}{proxy_path or url}'
         responses.add(responses.GET, proxy_url, status=200, **response_args)
         responses.add(responses.POST, proxy_url, status=201, **response_args)
         responses.add(responses.GET, '{}/bad_response'.format(proxy_url), body=HTTPError())
@@ -712,24 +723,44 @@ class DataManagerAPITest(AirtableTest):
         self.assertEqual(len(responses.calls), 2)
 
         get_request = responses.calls[0].request
-        self.assertEqual(get_request.headers['Host'], 'localhost:5601')
-        self.assertEqual(get_request.headers['Authorization'], 'Basic a2liYW5hOmFiYzEyMw==')
+        self.assertEqual(get_request.headers['Host'], host)
         self.assertEqual(get_request.headers['Test-Header'], 'some/value')
+        if auth_header:
+            self.assertEqual(get_request.headers['Authorization'], auth_header)
+        else:
+            self.assertFalse('Authorization' in get_request.headers)
 
         post_request = responses.calls[1].request
-        self.assertEqual(post_request.headers['Host'], 'localhost:5601')
-        self.assertEqual(get_request.headers['Authorization'], 'Basic a2liYW5hOmFiYzEyMw==')
+        self.assertEqual(post_request.headers['Host'], host)
         self.assertEqual(post_request.headers['Content-Type'], 'application/json')
         self.assertEqual(post_request.headers['Content-Length'], '26')
         self.assertEqual(post_request.body, data.encode('utf-8'))
+        if auth_header:
+            self.assertEqual(get_request.headers['Authorization'], auth_header)
+        else:
+            self.assertFalse('Authorization' in get_request.headers)
 
-        # Test with error response
-        response = self.client.get('{}/bad_response'.format(url))
-        self.assertEqual(response.status_code, 500)
+    @mock.patch('seqr.views.apis.data_manager_api.LUIGI_UI_SERVICE_HOSTNAME')
+    @responses.activate
+    def test_luigi_proxy(self, mock_hostname):
+        mock_hostname.__bool__.return_value = False
 
-        # Test with connection error
-        response = self.client.get('{}/bad_path'.format(url))
-        self.assertContains(response, 'Error: Unable to connect to Kibana', status_code=400)
+        url = '/luigi_ui/api/task_list'
+        self.check_data_manager_login(url)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.content, b'Loading Pipeline UI is not configured')
+
+        mock_hostname.__str__.return_value = 'pipeline-runner-ui'
+        mock_hostname.__bool__.return_value = True
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 400)
+        self.assertContains(response, 'Error: Unable to connect to Luigi UI', status_code=400)
+
+        responses.calls.reset()
+        self._test_request_proxy('pipeline-runner-ui:8082', url, proxy_path='/api/task_list')
 
     RNA_DATA_TYPE_PARAMS = {
         'outlier': {

@@ -676,5 +676,5 @@ def proxy_to_luigi(request):
     if not LUIGI_UI_SERVICE_HOSTNAME:
         return HttpResponse('Loading Pipeline UI is not configured', status=404)
     return _proxy_iframe_page(
-        request, 'Luigi UI', f'{LUIGI_UI_SERVICE_HOSTNAME}:{LUIGI_UI_SERVICE_PORT}', path_prefix='luigi_ui',
+        request, 'Luigi UI', f'{LUIGI_UI_SERVICE_HOSTNAME}:{LUIGI_UI_SERVICE_PORT}', path_prefix='/luigi_ui',
     )
