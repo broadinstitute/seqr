@@ -80,7 +80,8 @@ CSP_FONT_SRC = ('https://fonts.gstatic.com', 'data:', "'self'")
 CSP_CONNECT_SRC = ("'self'", 'https://gtexportal.org', 'https://www.google-analytics.com', 'https://igv.org',
                    'https://storage.googleapis.com', 'https://s3.amazonaws.com', 'https://igv-genepattern-org.s3.amazonaws.com', 'https://hgdownload.soe.ucsc.edu',  # used by IGV
                    'https://reg.genome.network')
-CSP_SCRIPT_SRC = ("'self'", "'unsafe-eval'", 'https://www.googletagmanager.com')
+CSP_SCRIPT_SRC = ("'self'", "'unsafe-eval'", 'https://www.googletagmanager.com',
+                  "'sha256-A16xkExeIj9J9P70pOQ+HDBXdFYcm2Cn3J/phdqk9hc='")  # luigi UI script
 CSP_IMG_SRC = ("'self'", 'https://www.google-analytics.com', 'https://storage.googleapis.com',
    'https://user-images.githubusercontent.com', 'https://private-user-images.githubusercontent.com', # for images in GitHub discussions on Feature Updates page
    'data:')
