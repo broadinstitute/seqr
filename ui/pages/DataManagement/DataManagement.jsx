@@ -48,7 +48,7 @@ const ES_DATA_MANAGEMENT_PAGES = [
 
 const HAIL_SEARCH_DATA_MANAGEMENT_PAGES = [
   ...DATA_MANAGEMENT_PAGES,
-  { path: 'luigi', component: () => <IframePage title="Loading UI" src="/luigi_ui/static/visualiser/index.html" /> },
+  { path: 'pipeline_status', component: () => <IframePage title="Loading UI" src="/luigi_ui/static/visualiser/index.html" /> },
 ]
 
 const dataManagementPages = (isDataManager, elasticsearchEnabled) => {
