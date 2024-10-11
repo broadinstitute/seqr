@@ -899,7 +899,7 @@ class IndividualAPITest(object):
             response_json['individualsByGuid']['I000001_na19675']['absentFeatures'],
             [{'id': 'HP:0012469', 'category': 'HP:0025031', 'label': 'Infantile spasms'}]
         )
-        self.assertEqual(response_json['individualsByGuid']['I000001_na19675']['sex'], 'M')
+        self.assertEqual(response_json['individualsByGuid']['I000001_na19675']['sex'], 'XXY')
         self.assertEqual(response_json['individualsByGuid']['I000001_na19675']['birthYear'], 2000)
         self.assertTrue(response_json['individualsByGuid']['I000001_na19675']['affectedRelatives'])
         self.assertEqual(response_json['individualsByGuid']['I000001_na19675']['onsetAge'], 'J')
