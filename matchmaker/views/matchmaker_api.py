@@ -257,7 +257,7 @@ def update_mme_submission(request, submission_guid=None):
         return create_json_response({}, status=400, reason='Gene and variant IDs are required for genomic features')
     if len(gene_variants) > MAX_SUBMISSION_VARIANTS:
         return create_json_response({}, status=400, reason=f'No more than {MAX_SUBMISSION_VARIANTS} variants can be submitted per individual')
-    
+
     submission_json.update({
         'features': phenotypes,
         'deletedDate': None,
