@@ -566,7 +566,7 @@ def _process_hpo_records(records, filename, project, user):
             elif 'family' in key or 'pedigree' in key:
                 column_map[FAMILY_ID_COL] = i
             else:
-                # Add: proband relationship
+                # Add: proband relationship, analyteType, primaryBiosample, tissueAffectedStatus
                 col_key = next((col for col, text in [
                     (NOTES_COL, 'notes'), (INDIVIDUAL_ID_COL, 'individual'), (AFFECTED_REL_COL, 'affected relative'),
                     (AFFECTED_FEATURE_COL, 'affected'), (BIRTH_COL, 'birth'), (DEATH_COL, 'death'),

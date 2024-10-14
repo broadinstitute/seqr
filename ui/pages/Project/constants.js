@@ -75,7 +75,7 @@ export const CASE_REVIEW_STATUS_OPT_LOOKUP = CASE_REVIEW_STATUS_OPTIONS.reduce(
   }), {},
 )
 
-export const ONSET_AGE_OPTIONS = [
+const ONSET_AGE_OPTIONS = [
   { value: 'G', text: 'Congenital onset' },
   { value: 'E', text: 'Embryonal onset' },
   { value: 'F', text: 'Fetal onset' },
@@ -91,7 +91,7 @@ export const ONSET_AGE_OPTIONS = [
 
 const ONSET_AGE_LOOKUP = ONSET_AGE_OPTIONS.reduce((acc, option) => ({ ...acc, [option.value]: option.text }), {})
 
-export const INHERITANCE_MODE_OPTIONS = [
+const INHERITANCE_MODE_OPTIONS = [
   { value: 'S', text: 'Sporadic' },
   { value: 'D', text: 'Autosomal dominant inheritance' },
   { value: 'L', text: 'Sex-limited autosomal dominant' },
@@ -129,7 +129,7 @@ export const INDIVIDUAL_DETAIL_FIELDS = [
     isEditable: true,
     isPrivate: true,
     isRequiredInternal: true,
-    description: `One of the following: ${PROBAND_RELATIONSHIP_OPTIONS.map(({ name }) => name).join(', ')}`,
+    tagOptions: PROBAND_RELATIONSHIP_OPTIONS,
   },
   {
     field: 'age',
@@ -145,7 +145,7 @@ export const INDIVIDUAL_DETAIL_FIELDS = [
     field: 'onsetAge',
     header: 'Age of Onset',
     isEditable: true,
-    description: `One of the following: ${ONSET_AGE_OPTIONS.map(({ text }) => text).join(', ')}`,
+    tagOptions: ONSET_AGE_OPTIONS,
     format: val => ONSET_AGE_LOOKUP[val],
   },
   {
@@ -171,7 +171,8 @@ export const INDIVIDUAL_DETAIL_FIELDS = [
     field: 'expectedInheritance',
     header: 'Expected Mode of Inheritance',
     isEditable: true,
-    description: `comma-separated list of the following: ${INHERITANCE_MODE_OPTIONS.map(({ text }) => text).join(', ')}`,
+    tagOptions: INHERITANCE_MODE_OPTIONS,
+    description: 'comma-separated list of the following',
     format: modes => (modes || []).map(inheritance => INHERITANCE_MODE_LOOKUP[inheritance]).join(', '),
   },
   {
@@ -469,11 +470,13 @@ export const INDIVIDUAL_FIELDS = [
 ].map(tableConfigForField(INDIVIDUAL_FIELD_CONFIGS))
 
 const ALL_DETAIL_EXPORT_DATA = INDIVIDUAL_DETAIL_FIELDS.reduce(
-  (acc, { isEditable, isCollaboratorEditable, isPrivate, subFields, ...field }) => {
+  (acc, { isEditable, isCollaboratorEditable, isPrivate, subFields, tagOptions, description, ...field }) => {
     if (!isEditable || field.field === 'features') {
       return acc
     }
-    const fields = subFields || [field]
+    const optionDescription = tagOptions ?
+      `${description || 'One of the following'}: ${tagOptions.map(({ text, name }) => text || name).join(', ')}` : ''
+    const fields = subFields || [{ ...field, description: optionDescription || description }]
     if (!isPrivate) {
       acc.public = [...acc.public, ...fields]
     }

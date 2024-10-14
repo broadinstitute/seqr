@@ -24,7 +24,7 @@ import FamilyLayout from 'shared/components/panel/family/FamilyLayout'
 import { ColoredIcon, ButtonLink } from 'shared/components/StyledComponents'
 import { VerticalSpacer } from 'shared/components/Spacers'
 import {
-  AFFECTED, PROBAND_RELATIONSHIP_OPTIONS, INDIVIDUAL_FIELD_CONFIGS, INDIVIDUAL_FIELD_SEX,
+  AFFECTED, INDIVIDUAL_FIELD_CONFIGS, INDIVIDUAL_FIELD_SEX,
   INDIVIDUAL_FIELD_AFFECTED, INDIVIDUAL_FIELD_FEATURES, INDIVIDUAL_FIELD_LOOKUP, DATASET_TITLE_LOOKUP,
   DATA_TYPE_EXPRESSION_OUTLIER, DATA_TYPE_SPLICE_OUTLIER,
 } from 'shared/utils/constants'
@@ -35,7 +35,7 @@ import { getSamplesByGuid, getMmeSubmissionsByGuid, getIGVSamplesByFamilySampleI
 import { HPO_FORM_FIELDS } from '../HpoTerms'
 import {
   CASE_REVIEW_STATUS_MORE_INFO_NEEDED, CASE_REVIEW_STATUS_OPTIONS, CASE_REVIEW_TABLE_NAME, INDIVIDUAL_DETAIL_FIELDS,
-  ONSET_AGE_OPTIONS, INHERITANCE_MODE_OPTIONS, INHERITANCE_MODE_LOOKUP, AR_FIELDS,
+  INHERITANCE_MODE_LOOKUP, AR_FIELDS,
 } from '../../constants'
 import { updateIndividuals, updateIndividualIGV } from '../../reducers'
 import { getCurrentProject, getParentOptionsByIndividual } from '../../selectors'
@@ -294,7 +294,6 @@ const GENES_FIELD = {
 const INDIVIDUAL_FIELD_RENDER_LOOKUP = {
   probandRelationship: {
     component: OptionFieldView,
-    tagOptions: PROBAND_RELATIONSHIP_OPTIONS,
     formFieldProps: {
       search: true,
     },
@@ -315,7 +314,6 @@ const INDIVIDUAL_FIELD_RENDER_LOOKUP = {
   },
   onsetAge: {
     component: OptionFieldView,
-    tagOptions: ONSET_AGE_OPTIONS,
     formFieldProps: {
       search: true,
     },
@@ -340,7 +338,6 @@ const INDIVIDUAL_FIELD_RENDER_LOOKUP = {
   },
   expectedInheritance: {
     component: TagFieldView,
-    tagOptions: INHERITANCE_MODE_OPTIONS,
     simplifiedValue: true,
     fieldDisplay: modes => modes.map(inheritance => INHERITANCE_MODE_LOOKUP[inheritance]).join(', '),
     individualFields: ({ affected }) => ({
@@ -384,10 +381,10 @@ const INDIVIDUAL_FIELD_RENDER_LOOKUP = {
 }
 
 const INDIVIDUAL_FIELDS = INDIVIDUAL_DETAIL_FIELDS.map(
-  ({ field, header, subFields, isEditable, isCollaboratorEditable, isRequiredInternal, isPrivate }) => {
+  ({ field, header, subFields, isEditable, isCollaboratorEditable, isRequiredInternal, isPrivate, tagOptions }) => {
     const { subFieldsLookup, subFieldProps, ...fieldProps } = INDIVIDUAL_FIELD_RENDER_LOOKUP[field] || {}
     const coreField = {
-      field, fieldName: header, isEditable, isCollaboratorEditable, isRequiredInternal, isPrivate,
+      field, fieldName: header, isEditable, isCollaboratorEditable, isRequiredInternal, isPrivate, tagOptions,
     }
     const formattedField = { ...(INDIVIDUAL_FIELD_LOOKUP[field] || {}), ...coreField, ...fieldProps }
     if (subFields) {
@@ -410,7 +407,7 @@ const CASE_REVIEW_FIELDS = [
       individualField: 'case_review_discussion',
     }),
   },
-  ...INDIVIDUAL_FIELDS,
+  ...INDIVIDUAL_FIELDS.filter(({ omitCaseReview }) => !omitCaseReview),
 ]
 
 const NON_CASE_REVIEW_FIELDS = [
@@ -434,6 +431,7 @@ const NON_CASE_REVIEW_FIELDS = [
     fieldName: 'Analyte Type',
     isEditable: true,
     isPrivate: true,
+    omitCaseReview: true,
     component: OptionFieldView,
     tagOptions: [
       { value: 'D', text: 'DNA' },
@@ -449,6 +447,7 @@ const NON_CASE_REVIEW_FIELDS = [
     fieldName: 'Primary Biosample',
     isEditable: true,
     isPrivate: true,
+    omitCaseReview: true,
     component: OptionFieldView,
     tagOptions: [
       { value: 'T', text: 'UBERON:0000479 (tissue)' },
@@ -477,6 +476,7 @@ const NON_CASE_REVIEW_FIELDS = [
     fieldName: 'Tissue Affected Status',
     isEditable: true,
     isPrivate: true,
+    omitCaseReview: true,
     component: NullableBoolFieldView,
   },
   {
