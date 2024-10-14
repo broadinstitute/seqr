@@ -59,6 +59,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
         'mitotip': PredictionPath('mitotip', 'trna_prediction'),
         'mut_taster': PredictionPath('dbnsfp_mito', 'MutationTaster_pred'),
         'sift': PredictionPath('dbnsfp_mito', 'SIFT_score'),
+        'mlc': PredictionPath('local_constraint_mito', 'score'),
     }
 
     PATHOGENICITY_FILTERS = {
