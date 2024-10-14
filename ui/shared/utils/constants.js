@@ -493,7 +493,7 @@ const BIOSAMPLE_OPTIONS = [
   { value: 'FI', text: 'CL:0000057 (fibroblasts)' },
 ]
 
-const BIOSAMPLE_LOOKUP = ANALYTE_TYPE_OPTIONS.reduce(
+const BIOSAMPLE_LOOKUP = BIOSAMPLE_OPTIONS.reduce(
   (acc, opt) => ({
     ...acc,
     ...{ [opt.value]: opt.text },
