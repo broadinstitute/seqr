@@ -39,6 +39,7 @@ import {
   SNP_DATA_TYPE,
   MME_TAG_NAME,
   FAMILY_EXTERNAL_DATA_LOOKUP,
+  PROBAND_RELATIONSHIP_OPTIONS,
 } from 'shared/utils/constants'
 
 export const CASE_REVIEW_TABLE_NAME = 'Case Review'
@@ -128,6 +129,7 @@ export const INDIVIDUAL_DETAIL_FIELDS = [
     isEditable: true,
     isPrivate: true,
     isRequiredInternal: true,
+    description: `One of the following: ${PROBAND_RELATIONSHIP_OPTIONS.map(({ name }) => name).join(', ')}`,
   },
   {
     field: 'age',
@@ -466,15 +468,29 @@ export const INDIVIDUAL_FIELDS = [
   INDIVIDUAL_FIELD_PROBAND_RELATIONSHIP,
 ].map(tableConfigForField(INDIVIDUAL_FIELD_CONFIGS))
 
-export const INDIVIDUAL_DETAIL_EXPORT_DATA = [
-  ...INDIVIDUAL_HPO_EXPORT_DATA,
-  ...INDIVIDUAL_DETAIL_FIELDS.reduce((acc, { isEditable, isCollaboratorEditable, isPrivate, subFields, ...field }) => {
-    if (isPrivate || !isEditable || field.field === 'features') {
+const ALL_DETAIL_EXPORT_DATA = INDIVIDUAL_DETAIL_FIELDS.reduce(
+  (acc, { isEditable, isCollaboratorEditable, isPrivate, subFields, ...field }) => {
+    if (!isEditable || field.field === 'features') {
       return acc
     }
     const fields = subFields || [field]
-    return [...acc, ...fields]
-  }, []),
+    if (!isPrivate) {
+      acc.public = [...acc.public, ...fields]
+    }
+    acc.private = [...acc.private, ...fields]
+    return acc
+  },
+  { private: [], public: [] },
+)
+
+export const INDIVIDUAL_DETAIL_EXPORT_DATA = [
+  ...INDIVIDUAL_HPO_EXPORT_DATA,
+  ...ALL_DETAIL_EXPORT_DATA.public,
+]
+
+export const INDIVIDUAL_INTERNAL_DETAIL_EXPORT_DATA = [
+  ...INDIVIDUAL_HPO_EXPORT_DATA,
+  ...ALL_DETAIL_EXPORT_DATA.private,
 ]
 
 export const CASE_REVIEW_FAMILY_EXPORT_DATA = [

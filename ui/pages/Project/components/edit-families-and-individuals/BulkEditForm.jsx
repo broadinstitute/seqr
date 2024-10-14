@@ -14,7 +14,11 @@ import {
   INDIVIDUAL_BULK_UPDATE_EXPORT_DATA,
   INDIVIDUAL_ID_EXPORT_DATA,
 } from 'shared/utils/constants'
-import { FAMILY_BULK_EDIT_EXPORT_DATA, INDIVIDUAL_DETAIL_EXPORT_DATA } from '../../constants'
+import {
+  FAMILY_BULK_EDIT_EXPORT_DATA,
+  INDIVIDUAL_DETAIL_EXPORT_DATA,
+  INDIVIDUAL_INTERNAL_DETAIL_EXPORT_DATA,
+} from '../../constants'
 import { loadIndividuals, updateFamilies, updateIndividuals, updateIndividualsMetadata } from '../../reducers'
 import {
   getCurrentProject,
@@ -142,14 +146,14 @@ export const EditIndividualsBulkForm = connect(
   mapIndividualsStateToProps, mapIndividualsDispatchToProps,
 )(IndividualsBulkForm)
 
-const IndividualMetadataBulkForm = React.memo(({ load, loading, ...props }) => (
+const IndividualMetadataBulkForm = React.memo(({ load, loading, user, ...props }) => (
   <DataLoader load={load} loading={loading} content>
     <EditBulkForm
       name="individuals_metadata"
       actionDescription="edit individual's metadata"
       details="Alternately, the table can have a single row per HPO term"
       requiredFields={INDIVIDUAL_ID_EXPORT_DATA}
-      optionalFields={INDIVIDUAL_DETAIL_EXPORT_DATA}
+      optionalFields={user.isAnalyst ? INDIVIDUAL_INTERNAL_DETAIL_EXPORT_DATA : INDIVIDUAL_DETAIL_EXPORT_DATA}
       uploadFormats={FILE_FORMATS}
       {...props}
     />
@@ -159,9 +163,11 @@ const IndividualMetadataBulkForm = React.memo(({ load, loading, ...props }) => (
 IndividualMetadataBulkForm.propTypes = {
   load: PropTypes.func,
   loading: PropTypes.bool,
+  user: PropTypes.object,
 }
 
 const mapIndividualsMetadataStateToProps = state => ({
+  user: getUser(state),
   loading: getIndivdualsLoading(state),
 })
 
