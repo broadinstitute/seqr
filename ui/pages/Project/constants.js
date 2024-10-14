@@ -466,6 +466,10 @@ export const INDIVIDUAL_FIELDS = [
   INDIVIDUAL_FIELD_PROBAND_RELATIONSHIP,
 ].map(tableConfigForField(INDIVIDUAL_FIELD_CONFIGS))
 
+export const INDIVIDUAL_INTERNAL_EXPORT_DATA = [
+  INDIVIDUAL_FIELD_PROBAND_RELATIONSHIP,
+].map(exportConfigForField(INDIVIDUAL_FIELD_CONFIGS))
+
 export const INDIVIDUAL_DETAIL_EXPORT_DATA = [
   ...INDIVIDUAL_HPO_EXPORT_DATA,
   ...INDIVIDUAL_DETAIL_FIELDS.reduce((acc, { isEditable, isCollaboratorEditable, isPrivate, subFields, ...field }) => {
