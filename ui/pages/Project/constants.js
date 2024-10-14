@@ -89,8 +89,6 @@ const ONSET_AGE_OPTIONS = [
   { value: 'L', text: 'Late onset' },
 ]
 
-const ONSET_AGE_LOOKUP = ONSET_AGE_OPTIONS.reduce((acc, option) => ({ ...acc, [option.value]: option.text }), {})
-
 const INHERITANCE_MODE_OPTIONS = [
   { value: 'S', text: 'Sporadic' },
   { value: 'D', text: 'Autosomal dominant inheritance' },
@@ -169,7 +167,7 @@ export const INDIVIDUAL_DETAIL_FIELDS = [
     header: 'Tissue Affected Status',
     isEditable: true,
     isPrivate: true,
-    description: 'Yes, No, or blank if unknown',
+    description: 'true, false, or blank if unknown',
   },
   {
     field: 'probandRelationship',
@@ -194,7 +192,6 @@ export const INDIVIDUAL_DETAIL_FIELDS = [
     header: 'Age of Onset',
     isEditable: true,
     tagOptions: ONSET_AGE_OPTIONS,
-    format: val => ONSET_AGE_LOOKUP[val],
   },
   {
     isEditable: true,
@@ -518,13 +515,23 @@ export const INDIVIDUAL_FIELDS = [
 ].map(tableConfigForField(INDIVIDUAL_FIELD_CONFIGS))
 
 const ALL_DETAIL_EXPORT_DATA = INDIVIDUAL_DETAIL_FIELDS.reduce(
-  (acc, { isEditable, isCollaboratorEditable, isPrivate, subFields, tagOptions, description, ...field }) => {
+  (acc, { isEditable, isCollaboratorEditable, isPrivate, subFields, tagOptions, description, format, ...field }) => {
     if (!isEditable || field.field === 'features') {
       return acc
     }
+
     const optionDescription = tagOptions ?
       `${description || 'One of the following'}: ${tagOptions.map(({ text, name }) => text || name).join(', ')}` : ''
-    const fields = subFields || [{ ...field, description: optionDescription || description }]
+    const optionLookup = (tagOptions || []).reduce(
+      (optAcc, { value, text, name }) => ({ ...optAcc, [value]: text || name }), {},
+    )
+    const optionFormat = tagOptions ? val => optionLookup[val] : null
+
+    const fields = subFields || [{
+      description: optionDescription || description,
+      format: optionFormat || format,
+      ...field,
+    }]
     if (!isPrivate) {
       acc.public = [...acc.public, ...fields]
     }
