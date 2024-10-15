@@ -109,7 +109,7 @@ const getFamilySizeHistogram = familyCounts => familyCounts.reduce((acc, { size,
   ))
   const sizeAcc = acc[size] || { total: 0, withParents: 0 }
   sizeAcc.total += 1
-  if (size === 2 && parentCounts.length === 1 && parentCounts[0].numChildren === 1) {
+  if (size === 2 && parentCounts.length === 1) {
     sizeAcc.withParents += 1
   } else if (size > 2 && parentCounts.length === 1 && parentCounts[0].numParents === 2 &&
     parentCounts[0].numChildren === 1) {
@@ -134,10 +134,10 @@ export const getProjectAnalysisGroupDataLoadedFamilySizeHistogram = createSelect
       sample => sample.isActive,
     ).map(sample => sample.individualGuid))
     const hasSampleParents = (family.parents || []).reduce(
-      (acc, { maternalGuid, paternalGuid }) => {
+      (acc, { individualGuid, maternalGuid, paternalGuid }) => {
         const hasSampleMaternal = sampleIndividuals.has(maternalGuid)
         const hasSamplePaternal = sampleIndividuals.has(paternalGuid)
-        if (hasSampleMaternal || hasSamplePaternal) {
+        if (sampleIndividuals.has(individualGuid) && (hasSampleMaternal || hasSamplePaternal)) {
           acc.push({
             maternalGuid: hasSampleMaternal ? maternalGuid : null,
             paternalGuid: hasSamplePaternal ? paternalGuid : null,
