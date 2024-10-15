@@ -172,7 +172,8 @@ const FamiliesIndividuals = React.memo(({ canEdit, hasCaseReview, familySizes, u
     }
     acc[MAX_FAMILY_HIST_SIZE].total += counts.total
     acc[MAX_FAMILY_HIST_SIZE].trioPlus += counts.trioPlus
-    acc[MAX_FAMILY_HIST_SIZE].quadPlus += counts.withParents + counts.quadPlus
+    acc[MAX_FAMILY_HIST_SIZE].quadPlus += acc[MAX_FAMILY_HIST_SIZE].withParents + counts.withParents + counts.quadPlus
+    acc[MAX_FAMILY_HIST_SIZE].withParents = 0
     return acc
   }, {})
 

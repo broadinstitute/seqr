@@ -100,9 +100,10 @@ const getFamilySizeHistogram = familyCounts => familyCounts.reduce((acc, { size,
   const parentCounts = Object.values(parents.reduce(
     (parentAcc, { maternalGuid, paternalGuid }) => {
       const parentKey = `${maternalGuid || ''}-${paternalGuid || ''}`
-      const numParents = [maternalGuid, paternalGuid].filter(g => g).length
-      const parent = parentAcc[parentKey] || { numParents: 0, numChildren: 0 }
-      parent.numParents += numParents
+      const parent = parentAcc[parentKey] || {
+        numParents: [maternalGuid, paternalGuid].filter(g => g).length,
+        numChildren: 0,
+      }
       parent.numChildren += 1
       return { ...parentAcc, [parentKey]: parent }
     }, {},
