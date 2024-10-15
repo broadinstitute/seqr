@@ -637,8 +637,8 @@ class BaseHailTableQuery(object):
             ht = ht.annotate(**{
                 annotation: hl.enumerate(ht[entries_ht_field]).starmap(
                     lambda family_i, family_samples: hl.or_missing(
-                        ~entry_indices.get(family_i).any(
-                            lambda sample_i: ~self.GENOTYPE_QUERY_MAP[genotype](family_samples[sample_i].GT)
+                        ~entry_indices.contains(family_i) | entry_indices[family_i].all(
+                            lambda sample_i: self.GENOTYPE_QUERY_MAP[genotype](family_samples[sample_i].GT)
                         ), family_samples,
                     ),
                 )
