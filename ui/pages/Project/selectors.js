@@ -96,7 +96,10 @@ export const getProjectAnalysisGroupFamiliesByGuid = createSelector(
   },
 )
 
-const getFamilySizeHistogram = familyCounts => familyCounts.reduce((acc, { size, numParents }) => {
+const getFamilySizeHistogram = familyCounts => familyCounts.reduce((acc, { size, parents }) => {
+  const numParents = (parents || []).length === 1 ? (
+    [parents[0].maternalGuid, parents[0].paternalGuid].filter(g => g).length
+  ) : 0
   const sizeAcc = acc[size] || { total: 0, withParents: 0 }
   sizeAcc.total += 1
   if (size === 2 && numParents) {
@@ -111,8 +114,7 @@ export const getProjectAnalysisGroupFamilySizeHistogram = createSelector(
   getProjectAnalysisGroupFamiliesByGuid,
   familiesByGuid => getFamilySizeHistogram(Object.values(familiesByGuid).map(family => ({
     size: (family.individualGuids || []).length,
-    numParents: (family.parents || []).length === 1 ?
-      [family.parents[0].maternalGuid, family.parents[0].paternalGuid].filter(g => g).length : 0,
+    parents: family.parents,
   }))),
 )
 
@@ -123,12 +125,22 @@ export const getProjectAnalysisGroupDataLoadedFamilySizeHistogram = createSelect
     const sampleIndividuals = new Set((samplesByFamily[family.familyGuid] || []).filter(
       sample => sample.isActive,
     ).map(sample => sample.individualGuid))
-    const hasSampleParentCounts = (family.parents || []).map(
-      ({ maternalGuid, paternalGuid }) => [maternalGuid, paternalGuid].filter(guid => sampleIndividuals.has(guid)),
-    ).filter(parents => parents.length > 0)
+    const hasSampleParents = (family.parents || []).reduce(
+      (acc, { maternalGuid, paternalGuid }) => {
+        const hasSampleMaternal = sampleIndividuals.has(maternalGuid)
+        const hasSamplePaternal = sampleIndividuals.has(paternalGuid)
+        if (hasSampleMaternal || hasSamplePaternal) {
+          acc.push({
+            maternalGuid: hasSampleMaternal ? maternalGuid : null,
+            paternalGuid: hasSamplePaternal ? paternalGuid : null,
+          })
+        }
+        return acc
+      }, [],
+    )
     return {
       size: sampleIndividuals.size,
-      numParents: hasSampleParentCounts.length === 1 ? hasSampleParentCounts[0].length : 0,
+      parents: hasSampleParents,
     }
   })).filter(({ size }) => size > 0)),
 )
