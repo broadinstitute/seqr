@@ -5,7 +5,7 @@ import mock
 from seqr.models import IgvSample
 
 
-class TUpdateIgvPathsTest(TestCase):
+class UpdateIgvPathsTest(TestCase):
     fixtures = ['users', '1kg_project']
 
     @mock.patch('seqr.management.commands.update_igv_location.logger.info')
