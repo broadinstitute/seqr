@@ -624,14 +624,11 @@ class BaseHailTableQuery(object):
                 if genotype:
                     entry_indices_by_gt[genotype][family_index].append(sample_index)
 
-        min_unaffected = None
         if inheritance_mode == COMPOUND_HET:
             family_unaffected_counts = [
                 len(i) for i in entry_indices_by_gt[INHERITANCE_FILTERS[COMPOUND_HET][UNAFFECTED_ID]].values()
             ]
             self.max_unaffected_samples = max(family_unaffected_counts) if family_unaffected_counts else 0
-            if self.max_unaffected_samples > 1:
-                min_unaffected = min(family_unaffected_counts)
 
         for genotype, entry_indices in entry_indices_by_gt.items():
             if not entry_indices:
@@ -639,27 +636,15 @@ class BaseHailTableQuery(object):
             entry_indices = hl.dict(entry_indices)
             ht = ht.annotate(**{
                 annotation: hl.enumerate(ht[entries_ht_field]).starmap(
-                    lambda i, family_samples: self._valid_genotype_family_entries(
-                        family_samples, entry_indices.get(i), genotype, min_unaffected
-                    )
+                    lambda family_i, family_samples: hl.or_missing(
+                        ~entry_indices.get(family_i).any(
+                            lambda sample_i: ~self.GENOTYPE_QUERY_MAP[genotype](family_samples[sample_i].GT)
+                        ), family_samples,
+                    ),
                 )
             })
 
         return ht
-
-    @classmethod
-    def _valid_genotype_family_entries(cls, entries: list, genotype_entry_indices, genotype: str, min_unaffected: int):
-        is_valid = hl.is_missing(genotype_entry_indices) | genotype_entry_indices.all(
-            lambda i: cls.GENOTYPE_QUERY_MAP[genotype](entries[i].GT)
-        )
-        if min_unaffected is not None and genotype == HAS_REF:
-            unaffected_filter = genotype_entry_indices.any(
-                lambda i: cls.GENOTYPE_QUERY_MAP[REF_REF](entries[i].GT)
-            )
-            if min_unaffected < 2:
-                unaffected_filter |= genotype_entry_indices.size() < 2
-            is_valid &= unaffected_filter
-        return hl.or_missing(is_valid, entries)
 
     def _get_family_passes_quality_filter(self, quality_filter, ht, **kwargs):
         quality_filter = quality_filter or {}
