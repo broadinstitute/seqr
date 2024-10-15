@@ -1515,6 +1515,7 @@ export const ORDERED_PREDICTOR_FIELDS = [
   { field: 'haplogroup_defining', indicatorMap: { Y: { color: 'green', value: '' } } },
   { field: 'mitotip', indicatorMap: MITOTIP_MAP, fieldTitle: 'MitoTIP' },
   { field: 'hmtvar', thresholds: [undefined, undefined, 0.35, 0.35, undefined], fieldTitle: 'HmtVar' },
+  { field: 'mlc', thresholds: [undefined, 0.5, 0.5, 0.75, undefined], fieldTitle: 'MLC' },
 ]
 
 export const coloredIcon = color => React.createElement(color.startsWith('#') ? ColoredIcon : Icon, { name: 'circle', size: 'small', color })
