@@ -97,7 +97,7 @@ export const getProjectAnalysisGroupFamiliesByGuid = createSelector(
 )
 
 const getFamilySizeHistogram = familyCounts => familyCounts.reduce((acc, { size, parents }) => {
-  const numParents = (parents || []).length === 1 ? (
+  const numParents = parents.length === 1 ? (
     [parents[0].maternalGuid, parents[0].paternalGuid].filter(g => g).length
   ) : 0
   const sizeAcc = acc[size] || { total: 0, withParents: 0 }
@@ -114,7 +114,7 @@ export const getProjectAnalysisGroupFamilySizeHistogram = createSelector(
   getProjectAnalysisGroupFamiliesByGuid,
   familiesByGuid => getFamilySizeHistogram(Object.values(familiesByGuid).map(family => ({
     size: (family.individualGuids || []).length,
-    parents: family.parents,
+    parents: family.parents || [],
   }))),
 )
 
