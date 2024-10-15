@@ -34,7 +34,8 @@ from seqr.views.utils.permissions_utils import data_manager_required, pm_or_data
 from seqr.models import Sample, RnaSample, Individual, Project, PhenotypePrioritization
 
 from settings import KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD, KIBANA_ELASTICSEARCH_USER, \
-    SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, BASE_URL, LOADING_DATASETS_DIR, PIPELINE_RUNNER_SERVER
+    SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, BASE_URL, LOADING_DATASETS_DIR, PIPELINE_RUNNER_SERVER, \
+    LUIGI_UI_SERVICE_HOSTNAME, LUIGI_UI_SERVICE_PORT
 
 logger = SeqrLogger(__name__)
 
@@ -618,13 +619,22 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 @data_manager_required
 @csrf_exempt
 def proxy_to_kibana(request):
-    headers = convert_django_meta_to_http_headers(request)
-    headers['Host'] = KIBANA_SERVER
+    headers = {}
     if KIBANA_ELASTICSEARCH_PASSWORD:
         token = base64.b64encode('{}:{}'.format(KIBANA_ELASTICSEARCH_USER, KIBANA_ELASTICSEARCH_PASSWORD).encode('utf-8'))
         headers['Authorization'] = 'Basic {}'.format(token.decode('utf-8'))
+    return _proxy_iframe_page(request, 'Kibana', KIBANA_SERVER, additional_headers=headers)
 
-    url = "http://{host}{path}".format(host=KIBANA_SERVER, path=request.get_full_path())
+
+def _proxy_iframe_page(request, page_name, host, additional_headers=None, path_prefix=None):
+    headers = convert_django_meta_to_http_headers(request)
+    headers['Host'] = host
+    headers.update(additional_headers or {})
+
+    path = request.get_full_path()
+    if path_prefix:
+        path = path.replace(path_prefix, '')
+    url = f'http://{host}{path}'
 
     request_method = getattr(requests.Session(), request.method.lower())
 
@@ -651,4 +661,13 @@ def proxy_to_kibana(request):
         return proxy_response
     except (ConnectionError, RequestConnectionError) as e:
         logger.error(str(e), request.user)
-        return HttpResponse("Error: Unable to connect to Kibana {}".format(e), status=400)
+        return HttpResponse(f'Error: Unable to connect to {page_name} {e}', status=400)
+
+
+@data_manager_required
+def proxy_to_luigi(request):
+    if not LUIGI_UI_SERVICE_HOSTNAME:
+        return HttpResponse('Loading Pipeline UI is not configured', status=404)
+    return _proxy_iframe_page(
+        request, 'Luigi UI', f'{LUIGI_UI_SERVICE_HOSTNAME}:{LUIGI_UI_SERVICE_PORT}', path_prefix='/luigi_ui',
+    )
