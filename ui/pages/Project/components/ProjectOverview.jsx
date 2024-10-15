@@ -170,10 +170,11 @@ const FamiliesIndividuals = React.memo(({ canEdit, hasCaseReview, familySizes, u
       return { ...acc, [size]: counts }
     }
     if (!acc[MAX_FAMILY_HIST_SIZE]) {
-      acc[MAX_FAMILY_HIST_SIZE] = { total: 0, withParents: 0 }
+      acc[MAX_FAMILY_HIST_SIZE] = { total: 0, withParents: 0, trioPlus: 0, quadPlus: 0 }
     }
     acc[MAX_FAMILY_HIST_SIZE].total += counts.total
-    acc[MAX_FAMILY_HIST_SIZE].withParents += counts.withParents
+    acc[MAX_FAMILY_HIST_SIZE].trioPlus += counts.trioPlus
+    acc[MAX_FAMILY_HIST_SIZE].quadPlus += counts.withParents + counts.quadPlus
     return acc
   }, {})
 
@@ -194,7 +195,7 @@ const FamiliesIndividuals = React.memo(({ canEdit, hasCaseReview, familySizes, u
         </span>
       )}
       content={
-        sortBy(Object.entries(familySizeHistogram)).map(([size, { total, withParents }]) => (
+        sortBy(Object.entries(familySizeHistogram)).map(([size, { total, withParents, trioPlus, quadPlus }]) => (
           <div key={size}>
             {`${total} famil${total === 1 ? 'y' : 'ies'} with ${FAMILY_SIZE_LABELS[size] || size} individual${size === '1' ? '' : 's'}`}
             {withParents > 0 && (
@@ -204,6 +205,26 @@ const FamiliesIndividuals = React.memo(({ canEdit, hasCaseReview, familySizes, u
                 <Popup
                   trigger={<span>{FAMILY_STRUCTURE_SIZE_LABELS[size](total > 1)}</span>}
                   content={FAMILY_STRUCTURE_HOVER[size]}
+                />
+              </div>
+            )}
+            {trioPlus > 0 && (
+              <div>
+                &nbsp;&nbsp;&nbsp;&nbsp;
+                {trioPlus}
+                <Popup
+                  trigger={<span> trio+</span>}
+                  content={FAMILY_STRUCTURE_HOVER[size]} // TODO
+                />
+              </div>
+            )}
+            {quadPlus > 0 && (
+              <div>
+                &nbsp;&nbsp;&nbsp;&nbsp;
+                {quadPlus}
+                <Popup
+                  trigger={<span> quad+</span>}
+                  content={FAMILY_STRUCTURE_HOVER[size]} // TODO
                 />
               </div>
             )}

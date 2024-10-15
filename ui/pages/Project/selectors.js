@@ -107,13 +107,16 @@ const getFamilySizeHistogram = familyCounts => familyCounts.reduce((acc, { size,
       return { ...parentAcc, [parentKey]: parent }
     }, {},
   ))
-  const sizeAcc = acc[size] || { total: 0, withParents: 0 }
+  const sizeAcc = acc[size] || { total: 0, withParents: 0, trioPlus: 0, quadPlus: 0 }
   sizeAcc.total += 1
-  if (size === 2 && parentCounts.length === 1) {
+  const mainParentCount = parentCounts.find(({ numParents }) => numParents === (size === 2 ? 1 : 2))
+  const mainFamilySize = mainParentCount ? mainParentCount.numChildren + mainParentCount.numParents : 0
+  if (mainFamilySize === size) {
     sizeAcc.withParents += 1
-  } else if (size > 2 && parentCounts.length === 1 && parentCounts[0].numParents === 2 &&
-    parentCounts[0].numChildren === 1) {
-    sizeAcc.withParents += 1
+  } else if (mainFamilySize === 3) {
+    sizeAcc.trioPlus += 1
+  } else if (mainFamilySize > 3) {
+    sizeAcc.quadPlus += 1
   }
   return { ...acc, [size]: sizeAcc }
 }, {})
