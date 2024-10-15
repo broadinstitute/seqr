@@ -97,14 +97,22 @@ export const getProjectAnalysisGroupFamiliesByGuid = createSelector(
 )
 
 const getFamilySizeHistogram = familyCounts => familyCounts.reduce((acc, { size, parents }) => {
-  const numParents = parents.length === 1 ? (
-    [parents[0].maternalGuid, parents[0].paternalGuid].filter(g => g).length
-  ) : 0
+  const parentCounts = Object.values(parents.reduce(
+    (parentAcc, { maternalGuid, paternalGuid }) => {
+      const parentKey = `${maternalGuid || ''}-${paternalGuid || ''}`
+      const numParents = [maternalGuid, paternalGuid].filter(g => g).length
+      const parent = parentAcc[parentKey] || { numParents: 0, numChildren: 0 }
+      parent.numParents += numParents
+      parent.numChildren += 1
+      return { ...parentAcc, [parentKey]: parent }
+    }, {},
+  ))
   const sizeAcc = acc[size] || { total: 0, withParents: 0 }
   sizeAcc.total += 1
-  if (size === 2 && numParents) {
+  if (size === 2 && parentCounts.length === 1 && parentCounts[0].numChildren === 1) {
     sizeAcc.withParents += 1
-  } else if (size > 2 && numParents === 2) {
+  } else if (size > 2 && parentCounts.length === 1 && parentCounts[0].numParents === 2 &&
+    parentCounts[0].numChildren === 1) {
     sizeAcc.withParents += 1
   }
   return { ...acc, [size]: sizeAcc }
