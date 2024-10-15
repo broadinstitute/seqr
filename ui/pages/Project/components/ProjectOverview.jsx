@@ -46,17 +46,15 @@ const FAMILY_SIZE_LABELS = {
 }
 
 const FAMILY_STRUCTURE_SIZE_LABELS = {
-  2: plural => ` duo${plural ? 's' : ''}`,
-  3: plural => ` trio${plural ? 's' : ''}`,
-  4: plural => ` quad${plural ? 's' : ''}`,
-  5: plural => ` trio${plural ? 's' : ''}+`,
+  2: 'duo',
+  3: 'trio',
+  4: 'quad',
 }
 
 const FAMILY_STRUCTURE_HOVER = {
   2: 'A family with one parent and one child',
   3: 'A family with two parents and one child',
   4: 'A family with two parents and two children',
-  5: 'A family with two parents and three or more other family members',
 }
 
 const SAMPLE_TYPE_LOOKUP = SAMPLE_TYPE_OPTIONS.reduce(
@@ -198,36 +196,20 @@ const FamiliesIndividuals = React.memo(({ canEdit, hasCaseReview, familySizes, u
         sortBy(Object.entries(familySizeHistogram)).map(([size, { total, withParents, trioPlus, quadPlus }]) => (
           <div key={size}>
             {`${total} famil${total === 1 ? 'y' : 'ies'} with ${FAMILY_SIZE_LABELS[size] || size} individual${size === '1' ? '' : 's'}`}
-            {withParents > 0 && (
-              <div>
+            {[
+              [withParents, FAMILY_STRUCTURE_SIZE_LABELS[size], FAMILY_STRUCTURE_HOVER[size], total > 1],
+              [trioPlus, 'trio+', 'A family with two parents, one child, and other family members'],
+              [quadPlus, 'quad+', 'A family with two parents, at least two children, and other family members'],
+            ].filter(([count]) => count > 0).map(([count, label, hover, plural]) => (
+              <div key="label">
                 &nbsp;&nbsp;&nbsp;&nbsp;
-                {withParents}
+                {count}
                 <Popup
-                  trigger={<span>{FAMILY_STRUCTURE_SIZE_LABELS[size](total > 1)}</span>}
-                  content={FAMILY_STRUCTURE_HOVER[size]}
+                  trigger={<span>{` ${label}${plural ? 's' : ''}`}</span>}
+                  content={hover}
                 />
               </div>
-            )}
-            {trioPlus > 0 && (
-              <div>
-                &nbsp;&nbsp;&nbsp;&nbsp;
-                {trioPlus}
-                <Popup
-                  trigger={<span> trio+</span>}
-                  content={FAMILY_STRUCTURE_HOVER[size]} // TODO
-                />
-              </div>
-            )}
-            {quadPlus > 0 && (
-              <div>
-                &nbsp;&nbsp;&nbsp;&nbsp;
-                {quadPlus}
-                <Popup
-                  trigger={<span> quad+</span>}
-                  content={FAMILY_STRUCTURE_HOVER[size]} // TODO
-                />
-              </div>
-            )}
+            ))}
           </div>
         ))
       }
