@@ -49,11 +49,13 @@ class AirtableSession(object):
         self._session.headers.update({'Authorization': f'Bearer {AIRTABLE_API_KEY}'})
 
     def _check_user_access(self, base):
-        has_access = is_cloud_authenticated(self._user)
-        if base != self.ANVIL_BASE:
-            has_access &= self._user.email.endswith('broadinstitute.org')
-        if not has_access:
-            raise PermissionDenied('Error: To access airtable user must login with Google authentication.')
+        error = None
+        if not is_cloud_authenticated(self._user):
+            error = 'To access airtable user must login with Google authentication'
+        elif base != self.ANVIL_BASE and not self._user.email.endswith('broadinstitute.org'):
+            error = 'To access RDG airtable user must login with Broad email'
+        if error:
+            raise PermissionDenied(f'Error: {error}.')
 
     def safe_create_records(self, record_type, records):
         return self._safe_bulk_update_records(
@@ -103,19 +105,19 @@ class AirtableSession(object):
 
         return updated_records
 
-    def fetch_records(self, record_type, fields, or_filters, and_filters=None, page_size=PAGE_SIZE, filter_query_template="{key}='{value}'"):
+    def fetch_records(self, record_type, fields, or_filters, and_filters=None, page_size=PAGE_SIZE, filter_query_template="{key}='{value}'", additional_and_filters=None):
         self._session.params.update({'fields[]': fields, 'pageSize': page_size})
         filter_formulas = []
         for key, values in or_filters.items():
             filter_formulas += [filter_query_template.format(key=key, value=value) for value in sorted(values)]
         and_filter_formulas = ','.join([
             filter_query_template.format(key=f'{{{key}}}', value=value) for key, value in (and_filters or {}).items()
-        ])
+        ] + (additional_and_filters or []))
         records = {}
         for i in range(0, len(filter_formulas), MAX_OR_FILTERS):
             filter_formula_group = filter_formulas[i:i + MAX_OR_FILTERS]
             filter_formula = f'OR({",".join(filter_formula_group)})'
-            if and_filters:
+            if and_filter_formulas:
                 filter_formula = f'AND({and_filter_formulas},{filter_formula})'
             self._session.params.update({'filterByFormula': filter_formula})
             logger.info(f'Fetching {record_type} records {i}-{i + len(filter_formula_group)} from airtable', self._user)
@@ -153,20 +155,25 @@ class AirtableSession(object):
             records_by_id.update(self._get_samples_for_id_field(missing, 'SeqrCollaboratorSampleID', fields))
         return records_by_id
 
-    def get_samples_for_matched_pdos(self, pdo_statuses, pdo_fields, project_guid=None):
+    def get_samples_for_matched_pdos(self, pdo_statuses, pdo_fields=None, project_guid=None, required_sample_field=None):
+        pdo_fields = pdo_fields or []
         sample_records = self.fetch_records(
             'Samples', fields=[
                 'CollaboratorSampleID', 'SeqrCollaboratorSampleID', 'PDOStatus', 'SeqrProject', *pdo_fields,
             ],
             or_filters={'PDOStatus': pdo_statuses},
-            and_filters={'SeqrProject': f'{BASE_URL}project/{project_guid}/project_page'},
+            and_filters={'SeqrProject': f'{BASE_URL}project/{project_guid}/project_page'} if project_guid else {},
+            additional_and_filters=[f'LEN({{{required_sample_field}}})>0'] if required_sample_field else None,
             # Filter for array contains value instead of exact match
             filter_query_template="SEARCH('{value}',ARRAYJOIN({key},';'))",
         )
 
         for sample in sample_records.values():
+            project_guids = [
+                re.match(f'{BASE_URL}project/([^/]+)/project_page', url).group(1) for url in sample['SeqrProject']
+            ]
             pdos = [{
-                'project_guid': re.match(f'{BASE_URL}project/([^/]+)/project_page', sample['SeqrProject'][i]).group(1),
+                'project_guid': project_guids[i] if len(project_guids) > 1 else project_guids[0],
                 **{field: sample[field][i] for field in pdo_fields}
             } for i, status in enumerate(sample['PDOStatus']) if status in pdo_statuses]
             if project_guid:
