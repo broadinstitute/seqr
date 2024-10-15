@@ -300,7 +300,7 @@ const getSavedVariantExportHeaders = createSelector(
     return [
       ...VARIANT_EXPORT_DATA.map(config => config.header),
       ...[...Array(maxGenotypes).keys()].reduce((acc, i) => (
-        [...acc, `sample_${i + 1}`, `num_alt_alleles_${i + 1}`, `gq_${i + 1}`, `ab_${i + 1}`]), []),
+        [...acc, `sample_${i + 1}`, `num_alt_alleles_${i + 1}`, `filters_${i + 1}`, `gq_${i + 1}`, `ab_${i + 1}`]), []),
     ]
   },
 )
@@ -332,7 +332,9 @@ export const getSavedVariantExportConfig = createSelector(
         ...VARIANT_EXPORT_DATA.map(config => (
           config.getVal ? config.getVal(variant, tagsByGuid, notesByGuid, genesById) : variant[config.header])),
         ...Object.values(variant.genotypes).reduce(
-          (acc, { sampleId, numAlt, gq, ab }) => ([...acc, sampleId, numAlt, gq, ab]), [],
+          (acc, { sampleId, numAlt, gq, ab, filters }) => (
+            [...acc, sampleId, numAlt, filters?.join(';') || variant.genotypeFilters, gq, ab]
+          ), [],
         ),
       ]),
     }]

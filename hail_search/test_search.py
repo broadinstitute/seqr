@@ -11,7 +11,9 @@ from hail_search.test_utils import get_hail_search_body, FAMILY_2_VARIANT_SAMPLE
     SV_VARIANT1, SV_VARIANT2, SV_VARIANT3, SV_VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, \
     GCNV_MULTI_FAMILY_VARIANT1, GCNV_MULTI_FAMILY_VARIANT2, SV_WES_SAMPLE_DATA, EXPECTED_SAMPLE_DATA, \
     FAMILY_2_MITO_SAMPLE_DATA, FAMILY_2_ALL_SAMPLE_DATA, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3, \
-    EXPECTED_SAMPLE_DATA_WITH_SEX, SV_WGS_SAMPLE_DATA_WITH_SEX, VARIANT_LOOKUP_VARIANT
+    EXPECTED_SAMPLE_DATA_WITH_SEX, SV_WGS_SAMPLE_DATA_WITH_SEX, VARIANT_LOOKUP_VARIANT, \
+    MULTI_PROJECT_SAMPLE_TYPES_SAMPLE_DATA, FAMILY_2_BOTH_SAMPLE_TYPE_SAMPLE_DATA, \
+    VARIANT1_BOTH_SAMPLE_TYPES, VARIANT2_BOTH_SAMPLE_TYPES, FAMILY_2_BOTH_SAMPLE_TYPE_SAMPLE_DATA_MISSING_PARENTAL_WGS
 from hail_search.web_app import init_web_app, sync_to_async_hail_query
 from hail_search.queries.base import BaseHailTableQuery
 
@@ -31,10 +33,9 @@ PROJECT_2_VARIANT = {
     'genotypes': {
         'I000015_na20885': {
             'sampleId': 'NA20885', 'sampleType': 'WES', 'individualGuid': 'I000015_na20885', 'familyGuid': 'F000011_11',
-            'numAlt': 1, 'dp': 8, 'gq': 14, 'ab': 0.875,
+            'numAlt': 1, 'dp': 8, 'gq': 14, 'ab': 0.875, 'filters': [],
         }
     },
-    'genotypeFilters': '',
     'clinvar': None,
     'hgmd': None,
     'screenRegionType': None,
@@ -69,6 +70,11 @@ PROJECT_2_VARIANT = {
     '_sort': [1000010146],
     'CAID': 'CA520798130',
 }
+PROJECT_2_VARIANT_BOTH_SAMPLE_TYPES = deepcopy(PROJECT_2_VARIANT)
+PROJECT_2_VARIANT_BOTH_SAMPLE_TYPES['genotypes']['I000015_na20885'] = {
+    'sampleId': 'NA20885', 'sampleType': 'WGS', 'individualGuid': 'I000015_na20885', 'familyGuid': 'F000011_11',
+    'numAlt': 1, 'dp': 8, 'gq': 14, 'ab': 0.875, 'filters': [],
+}
 
 GRCH37_VARIANT = {
     'variantId': '7-143270172-A-G',
@@ -83,13 +89,13 @@ GRCH37_VARIANT = {
     'genotypes': {
         'I000004_hg00731': {
             'sampleId': 'HG00731', 'sampleType': 'WGS', 'individualGuid': 'I000004_hg00731',
-            'familyGuid': 'F000002_2', 'numAlt': 2, 'dp': 16, 'gq': 48, 'ab': 1,
+            'familyGuid': 'F000002_2', 'numAlt': 2, 'dp': 16, 'gq': 48, 'ab': 1, 'filters': ['VQSRTrancheSNP99.90to99.95'],
         }, 'I000006_hg00733': {
             'sampleId': 'HG00733', 'sampleType': 'WGS', 'individualGuid': 'I000006_hg00733',
             'familyGuid': 'F000002_2', 'numAlt': 1, 'dp': 49, 'gq': 99, 'ab': 0.6530612111091614,
+            'filters': ['VQSRTrancheSNP99.90to99.95'],
         },
     },
-    'genotypeFilters': 'VQSRTrancheSNP99.90to99.95',
     'populations': {
         'seqr': {'af': 0.5912399888038635, 'ac': 4711, 'an': 7968, 'hom': 1508},
         'topmed': {'af': 0.5213189721107483, 'ac': 65461, 'an': 125568, 'hom': 16156, 'het': 33149},
@@ -108,14 +114,15 @@ GRCH37_VARIANT = {
         'ENSG00000271079': [
             {'aminoAcids': 'E/G', 'canonical': 1, 'codons': 'gAa/gGa', 'geneId': 'ENSG00000271079',
              'hgvsc': 'ENST00000420911.2:c.1262A>G', 'hgvsp': 'ENSP00000474204.1:p.Glu421Gly',
-             'transcriptId': 'ENST00000420911', 'isLofNagnag': None, 'transcriptRank': 0,
+             'transcriptId': 'ENST00000420911', 'isLofNagnag': None, 'transcriptRank': 0, 'consequenceTerms': ['missense_variant'],
              'biotype': 'protein_coding', 'lofFilters': None, 'majorConsequence': 'missense_variant'},
         ],
         'ENSG00000176227': [
             {'aminoAcids': None, 'canonical': 1, 'codons': None, 'geneId': 'ENSG00000176227',
              'hgvsc': 'ENST00000447022.1:n.1354A>G', 'hgvsp': None,
              'transcriptId': 'ENST00000447022', 'isLofNagnag': None, 'transcriptRank': 0,
-             'biotype': 'processed_pseudogene', 'lofFilters': None, 'majorConsequence': 'non_coding_transcript_exon_variant'},
+             'biotype': 'processed_pseudogene', 'lofFilters': None, 'majorConsequence': 'non_coding_transcript_exon_variant',
+             'consequenceTerms': ['non_coding_transcript_exon_variant', 'non_coding_transcript_variant']},
         ],
     },
     'mainTranscriptId': 'ENST00000420911',
@@ -129,7 +136,7 @@ FAMILY_3_VARIANT['familyGuids'] = ['F000003_3']
 FAMILY_3_VARIANT['genotypes'] = {
     'I000007_na20870': {
         'sampleId': 'NA20870', 'sampleType': 'WES', 'individualGuid': 'I000007_na20870', 'familyGuid': 'F000003_3',
-        'numAlt': 1, 'dp': 28, 'gq': 99, 'ab': 0.6785714285714286,
+        'numAlt': 1, 'dp': 28, 'gq': 99, 'ab': 0.6785714285714286, 'filters': [],
     },
 }
 
@@ -149,7 +156,7 @@ PROJECT_2_VARIANT1['familyGuids'] = ['F000011_11']
 PROJECT_2_VARIANT1['genotypes'] = {
     'I000015_na20885': {
         'sampleId': 'NA20885', 'sampleType': 'WES', 'individualGuid': 'I000015_na20885', 'familyGuid': 'F000011_11',
-        'numAlt': 2, 'dp': 6, 'gq': 16, 'ab': 1.0,
+        'numAlt': 2, 'dp': 6, 'gq': 16, 'ab': 1.0, 'filters': [],
     },
 }
 MULTI_PROJECT_VARIANT1 = deepcopy(VARIANT1)
@@ -159,7 +166,7 @@ MULTI_PROJECT_VARIANT2 = deepcopy(VARIANT2)
 MULTI_PROJECT_VARIANT2['familyGuids'].append('F000011_11')
 MULTI_PROJECT_VARIANT2['genotypes']['I000015_na20885'] = {
     'sampleId': 'NA20885', 'sampleType': 'WES', 'individualGuid': 'I000015_na20885', 'familyGuid': 'F000011_11',
-    'numAlt': 1, 'dp': 28, 'gq': 99, 'ab': 0.5,
+    'numAlt': 1, 'dp': 28, 'gq': 99, 'ab': 0.5, 'filters': [],
 }
 
 NO_GENOTYPE_GCNV_VARIANT = {**GCNV_VARIANT4, 'numExon': 8, 'end': 38736268}
@@ -189,6 +196,16 @@ GCNV_GENE_COUNTS = {
 }
 
 OMIM_SORT_METADATA = ['ENSG00000177000', 'ENSG00000097046', 'ENSG00000275023']
+
+MULTI_PROJECT_BOTH_SAMPLE_TYPE_VARIANTS = [
+    deepcopy(v) for v in
+    [PROJECT_2_VARIANT, MULTI_PROJECT_VARIANT1, MULTI_PROJECT_VARIANT2, VARIANT3, VARIANT4]
+]
+for v in MULTI_PROJECT_BOTH_SAMPLE_TYPE_VARIANTS:
+    for indiv_id, gts in v['genotypes'].items():
+        v['genotypes'][indiv_id] = [gts]
+for v in MULTI_PROJECT_BOTH_SAMPLE_TYPE_VARIANTS[:-2]:
+    v['genotypes']['I000015_na20885'].append({**v['genotypes']['I000015_na20885'][0], 'sampleType': 'WGS'})
 
 
 def _sorted(variant, sorts):
@@ -340,6 +357,42 @@ class HailSearchTestCase(AioHTTPTestCase):
             [PROJECT_2_VARIANT, MULTI_PROJECT_VARIANT1, SV_VARIANT1, SV_VARIANT2, MULTI_PROJECT_VARIANT2, VARIANT3,
              VARIANT4, SV_VARIANT3, SV_VARIANT4], gene_counts={**GENE_COUNTS, **SV_GENE_COUNTS},
             sample_data={**MULTI_PROJECT_SAMPLE_DATA, **SV_WGS_SAMPLE_DATA},
+        )
+
+    async def test_both_sample_types_search(self):
+        # One family (F000011_11) in a multi-project search has identical exome and genome data.
+        await self._assert_expected_search(
+            MULTI_PROJECT_BOTH_SAMPLE_TYPE_VARIANTS, gene_counts=GENE_COUNTS, sample_data=MULTI_PROJECT_SAMPLE_TYPES_SAMPLE_DATA,
+        )
+
+        # Variant1 in family_2 is de novo in exome but maternally inherited in genome.
+        # Genome passes quality and inheritance, show genotypes for both sample types.
+        variant1_interval = ['1', 10438, 10440]
+        inheritance_mode = 'recessive'
+        await self._assert_expected_search(
+            [VARIANT1_BOTH_SAMPLE_TYPES], sample_data=FAMILY_2_BOTH_SAMPLE_TYPE_SAMPLE_DATA, inheritance_mode=inheritance_mode,
+            **COMP_HET_ALL_PASS_FILTERS, intervals=[variant1_interval]
+        )
+        # Exome passes quality and inheritance, show genotypes for both sample types.
+        inheritance_mode = 'de_novo'
+        await self._assert_expected_search(
+            [VARIANT1_BOTH_SAMPLE_TYPES], sample_data=FAMILY_2_BOTH_SAMPLE_TYPE_SAMPLE_DATA, inheritance_mode=inheritance_mode,
+            intervals=[variant1_interval]
+        )
+
+        # Variant 2 in family_2 is inherited in exome and there is no parental data in genome.
+        # Genome and exome pass quality and inheritance, show genotypes for both sample types.
+        variant2_interval = ['1', 38724418, 38724420]
+        inheritance_mode = 'recessive'
+        await self._assert_expected_search(
+            [VARIANT2_BOTH_SAMPLE_TYPES], sample_data=FAMILY_2_BOTH_SAMPLE_TYPE_SAMPLE_DATA_MISSING_PARENTAL_WGS,
+            inheritance_mode=inheritance_mode, **COMP_HET_ALL_PASS_FILTERS, intervals=[variant2_interval]
+        )
+        # Genome passes quality and inheritance exome fails inheritance (parental data shows variant is inherited).
+        inheritance_mode = 'de_novo'
+        await self._assert_expected_search(
+            [VARIANT2_BOTH_SAMPLE_TYPES], sample_data=FAMILY_2_BOTH_SAMPLE_TYPE_SAMPLE_DATA_MISSING_PARENTAL_WGS,
+            inheritance_mode=inheritance_mode, intervals=[variant2_interval]
         )
 
     async def test_inheritance_filter(self):
@@ -667,7 +720,7 @@ class HailSearchTestCase(AioHTTPTestCase):
             self.assertEqual(resp.status, 200)
             resp_json = await resp.json()
         self.assertDictEqual(resp_json, {
-            **{k: v for k, v in GRCH37_VARIANT.items() if k not in {'familyGuids', 'genotypes', 'genotypeFilters'}},
+            **{k: v for k, v in GRCH37_VARIANT.items() if k not in {'familyGuids', 'genotypes'}},
             'familyGenotypes': {GRCH37_VARIANT['familyGuids'][0]: [
                 {k: v for k, v in g.items() if k != 'individualGuid'} for g in GRCH37_VARIANT['genotypes'].values()
             ]},
@@ -678,7 +731,7 @@ class HailSearchTestCase(AioHTTPTestCase):
             self.assertEqual(resp.status, 200)
             resp_json = await resp.json()
         self.assertDictEqual(resp_json, {
-            **{k: v for k, v in MITO_VARIANT1.items() if k not in {'familyGuids', 'genotypes', 'genotypeFilters'}},
+            **{k: v for k, v in MITO_VARIANT1.items() if k not in {'familyGuids', 'genotypes'}},
             'familyGenotypes': {MITO_VARIANT1['familyGuids'][0]: [
                 {k: v for k, v in g.items() if k != 'individualGuid'} for g in MITO_VARIANT1['genotypes'].values()
             ]},
@@ -725,7 +778,7 @@ class HailSearchTestCase(AioHTTPTestCase):
             self.assertEqual(resp.status, 200)
             resp_json = await resp.json()
         self.assertDictEqual(resp_json, {'results': [
-            {k: v for k, v in variant.items() if k not in {'familyGuids', 'genotypes', 'genotypeFilters'}}
+            {k: v for k, v in variant.items() if k not in {'familyGuids', 'genotypes'}}
             for variant in results
         ]})
 

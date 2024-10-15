@@ -5,10 +5,13 @@ import hail as hl
 import logging
 import os
 
-from hail_search.constants import ABSENT_PATH_SORT_OFFSET, CLINVAR_KEY, CLINVAR_MITO_KEY, CLINVAR_LIKELY_PATH_FILTER, CLINVAR_PATH_FILTER, \
-    CLINVAR_PATH_RANGES, CLINVAR_PATH_SIGNIFICANCES, ALLOWED_TRANSCRIPTS, ALLOWED_SECONDARY_TRANSCRIPTS, PATHOGENICTY_SORT_KEY, CONSEQUENCE_SORT, \
+from hail_search.constants import ABSENT_PATH_SORT_OFFSET, CLINVAR_KEY, CLINVAR_MITO_KEY, CLINVAR_LIKELY_PATH_FILTER, \
+    CLINVAR_PATH_FILTER, \
+    CLINVAR_PATH_RANGES, CLINVAR_PATH_SIGNIFICANCES, ALLOWED_TRANSCRIPTS, ALLOWED_SECONDARY_TRANSCRIPTS, \
+    PATHOGENICTY_SORT_KEY, CONSEQUENCE_SORT, \
     PATHOGENICTY_HGMD_SORT_KEY, MAX_LOAD_INTERVALS
-from hail_search.queries.base import BaseHailTableQuery, PredictionPath, QualityFilterFormat
+from hail_search.definitions import SampleType
+from hail_search.queries.base import BaseHailTableQuery, PredictionPath, QualityFilterFormat, MAX_PARTITIONS
 
 REFERENCE_DATASETS_DIR = os.environ.get('REFERENCE_DATASETS_DIR', '/seqr/seqr-reference-data')
 REFERENCE_DATASET_SUBDIR = 'cached_reference_dataset_queries'
@@ -56,6 +59,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
         'mitotip': PredictionPath('mitotip', 'trna_prediction'),
         'mut_taster': PredictionPath('dbnsfp_mito', 'MutationTaster_pred'),
         'sift': PredictionPath('dbnsfp_mito', 'SIFT_score'),
+        'mlc': PredictionPath('local_constraint_mito', 'score'),
     }
 
     PATHOGENICITY_FILTERS = {
@@ -96,7 +100,6 @@ class MitoHailTableQuery(BaseHailTableQuery):
         TRANSCRIPTS_FIELD: {
             **BaseHailTableQuery.ENUM_ANNOTATION_FIELDS['transcripts'],
             'annotate_value': lambda transcript, *args: {'major_consequence': transcript.consequence_terms.first()},
-            'drop_fields': ['consequence_terms'],
             'format_array_values': lambda values, *args: BaseHailTableQuery.ENUM_ANNOTATION_FIELDS['transcripts']['format_array_values'](values).map_values(
                 lambda transcripts: hl.enumerate(transcripts).starmap(lambda i, t: t.annotate(transcriptRank=i))
             ),
@@ -117,6 +120,155 @@ class MitoHailTableQuery(BaseHailTableQuery):
     PREFILTER_TABLES = {
         CLINVAR_KEY: 'clinvar_path_variants.ht',
     }
+
+    def _import_and_filter_entries_ht(
+        self, project_guid: str, num_families: int, project_sample_type_data, **kwargs
+    ) -> tuple[hl.Table, hl.Table]:
+        sample_types = set(project_sample_type_data.keys())
+        if len(sample_types) == 1:
+            # Import and filter entry table for one family or one project with one sample type
+            return super()._import_and_filter_entries_ht(project_guid, num_families, project_sample_type_data, **kwargs)
+
+        self._has_both_sample_types = True
+        entries = {}
+        for sample_type in sample_types:
+            entries[sample_type] = self._load_family_or_project_ht(
+                num_families, project_guid, project_sample_type_data, sample_type, **kwargs
+            )
+
+        return self._filter_entries_ht_both_sample_types(
+            *entries[SampleType.WES.value], *entries[SampleType.WGS.value], **kwargs
+        )
+
+    def _import_and_filter_multiple_project_hts(
+        self, project_samples: dict, n_partitions=MAX_PARTITIONS, **kwargs
+    ) -> tuple[hl.Table, hl.Table]:
+        single_sample_type_project_samples = {}
+        both_sample_type_project_samples = defaultdict(dict)
+        for project_guid, sample_dict in project_samples.items():
+            if len(sample_dict) == 1:
+                single_sample_type_project_samples[project_guid] = sample_dict
+            else:
+                both_sample_type_project_samples[SampleType.WES][project_guid] = {SampleType.WES: sample_dict[SampleType.WES]}
+                both_sample_type_project_samples[SampleType.WGS][project_guid] = {SampleType.WGS: sample_dict[SampleType.WGS]}
+
+        filtered_project_hts = []
+        filtered_comp_het_project_hts = []
+
+        # Process projects with only one sample type separately
+        if single_sample_type_project_samples:
+            ht, ch_ht = super()._import_and_filter_multiple_project_hts(single_sample_type_project_samples, n_partitions, **kwargs)
+            if ht is not None:
+                filtered_project_hts.append(ht)
+            if ch_ht is not None:
+                filtered_comp_het_project_hts.append(ch_ht)
+
+        if both_sample_type_project_samples:
+            self._has_both_sample_types = True
+            wes_entries = self._load_project_hts(
+                both_sample_type_project_samples[SampleType.WES], n_partitions, **kwargs,
+            )
+            wgs_entries = self._load_project_hts(
+                both_sample_type_project_samples[SampleType.WGS], n_partitions, **kwargs,
+            )
+            for i, (wes_ht, wes_project_samples) in enumerate(wes_entries):
+                wgs_ht, wgs_project_samples = wgs_entries[i]
+                ht, comp_het_ht = self._filter_entries_ht_both_sample_types(
+                    wes_ht, wes_project_samples, wgs_ht, wgs_project_samples,
+                    is_merged_ht=True, **kwargs
+                )
+                if ht is not None:
+                    filtered_project_hts.append(ht)
+                if comp_het_ht is not None:
+                    filtered_comp_het_project_hts.append(comp_het_ht)
+
+        return self._merge_filtered_hts(filtered_comp_het_project_hts, filtered_project_hts, n_partitions)
+
+    def _filter_entries_ht_both_sample_types(
+        self, wes_ht, wes_project_samples, wgs_ht, wgs_project_samples, inheritance_filter=None, quality_filter=None,
+        is_merged_ht=False, **kwargs
+    ):
+        wes_ht, sorted_wes_family_sample_data = self._add_entry_sample_families(wes_ht, wes_project_samples, is_merged_ht)
+        wgs_ht, sorted_wgs_family_sample_data = self._add_entry_sample_families(wgs_ht, wgs_project_samples, is_merged_ht)
+        wes_ht = wes_ht.rename({'family_entries': SampleType.WES.family_entries_field})
+        wgs_ht = wgs_ht.rename({'family_entries': SampleType.WGS.family_entries_field})
+        ht = wes_ht.join(wgs_ht, how='outer')
+
+        sample_types = [
+            (SampleType.WES, sorted_wes_family_sample_data),
+            (SampleType.WGS, sorted_wgs_family_sample_data)
+        ]
+        for sample_type, _ in sample_types:
+            ht = self._filter_quality(
+                ht, quality_filter,
+                annotation=sample_type.passes_quality_field, entries_ht_field=sample_type.family_entries_field, **kwargs
+            )
+
+        ch_ht = None
+        family_guid_idx_map = defaultdict(dict)
+        for sample_type, sorted_family_sample_data in sample_types:
+            ht, ch_ht = self._filter_inheritance(
+                ht, ch_ht, inheritance_filter, sorted_family_sample_data,
+                annotation=sample_type.passes_inheritance_field, entries_ht_field=sample_type.family_entries_field
+            )
+            for family_idx, samples in enumerate(sorted_family_sample_data):
+                family_guid = samples[0]['familyGuid']
+                family_guid_idx_map[family_guid][sample_type.value] = family_idx
+
+        family_idx_map = hl.dict(family_guid_idx_map)
+        ht = self._apply_multi_sample_type_entry_filters(ht, family_idx_map)
+        ch_ht = self._apply_multi_sample_type_entry_filters(ch_ht, family_idx_map)
+        return ht, ch_ht
+
+    def _apply_multi_sample_type_entry_filters(self, ht, family_idx_map):
+        if ht is None:
+            return ht
+
+        # Keep family from both sample types if either passes quality AND inheritance
+        for sample_type in SampleType:
+            ht = ht.annotate(**{
+                sample_type.family_entries_field: hl.enumerate(ht[sample_type.family_entries_field]).starmap(
+                    lambda i, family_samples: hl.or_missing(
+                        hl.bind(
+                            lambda other_sample_type_idx: (
+                                self._family_has_valid_sample_type_entries(ht, sample_type, i) |
+                                self._family_has_valid_sample_type_entries(ht, sample_type.other_sample_type, other_sample_type_idx)
+                            ),
+                            family_idx_map.get(hl.coalesce(family_samples)[0]['familyGuid']).get(sample_type.other_sample_type.value),
+                       ), family_samples)
+                )})
+
+        # Merge family entries and filters from both sample types
+        ht = ht.transmute(
+            family_entries=hl.coalesce(
+                ht[SampleType.WES.family_entries_field], hl.empty_array(ht[SampleType.WES.family_entries_field].dtype.element_type)
+            ).extend(hl.coalesce(
+                ht[SampleType.WGS.family_entries_field], hl.empty_array(ht[SampleType.WGS.family_entries_field].dtype.element_type)
+            )).filter(lambda entries: entries.any(hl.is_defined))
+        )
+        ht = ht.select('family_entries')
+        ht = ht.select_globals('family_guids')
+
+        # Filter out families with no valid entries in either sample type
+        return ht.filter(ht.family_entries.any(hl.is_defined))
+
+    @staticmethod
+    def _family_has_valid_sample_type_entries(ht, sample_type, sample_type_family_idx):
+        # Note: This logic does not sufficiently handle case 2 here https://docs.google.com/presentation/d/1hqDV8ulhviUcR5C4PtNUqkCLXKDsc6pccgFVlFmWUAU/edit?usp=sharing
+        # and will need to be changed to support it - https://github.com/broadinstitute/seqr/issues/4403
+        return (
+            hl.is_defined(sample_type_family_idx) &
+            hl.is_defined(ht[sample_type.passes_quality_field][sample_type_family_idx]) &
+            hl.is_defined(ht[sample_type.passes_inheritance_field][sample_type_family_idx])
+        )
+
+    def _get_sample_genotype(self, samples, r=None, include_genotype_overrides=False, select_fields=None, **kwargs):
+        if not self._has_both_sample_types:
+            return super()._get_sample_genotype(samples, r, include_genotype_overrides, select_fields)
+
+        return samples.map(lambda sample: self._select_genotype_for_sample(
+            sample, r, include_genotype_overrides, select_fields
+        ))
 
     @staticmethod
     def _selected_main_transcript_expr(ht):
@@ -150,6 +302,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
 
     def __init__(self, *args, **kwargs):
         self._filter_hts = {}
+        self._has_both_sample_types = False
         super().__init__(*args, **kwargs)
 
     def _parse_intervals(self, intervals, exclude_intervals=False, **kwargs):
@@ -354,9 +507,10 @@ class MitoHailTableQuery(BaseHailTableQuery):
         if not variant_projects:
             raise HTTPNotFound()
 
+        self._has_both_sample_types = True
         annotation_fields.update({
             'familyGenotypes': lambda r: hl.dict(r.family_entries.map(
-                lambda entries: (entries.first().familyGuid, entries.filter(hl.is_defined).map(self._get_sample_genotype))
+                lambda entries: (entries.first().familyGuid, self._get_sample_genotype(entries.filter(hl.is_defined)))
             )),
         })
 

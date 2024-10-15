@@ -30,20 +30,32 @@ const DATA_MANAGEMENT_PAGES = [
   { path: 'phenotype_prioritization', component: PhenotypePrioritization },
 ]
 
+const IframePage = ({ title, src }) => <iframe width="100%" height="100%" title={title} style={IFRAME_STYLE} src={src} />
+
+IframePage.propTypes = {
+  title: PropTypes.string,
+  src: PropTypes.string,
+}
+
 const ES_DATA_MANAGEMENT_PAGES = [
   { path: 'elasticsearch_status', component: ElasticsearchStatus },
   {
     path: 'kibana',
-    component: () => <iframe width="100%" height="100%" title="Kibana" style={IFRAME_STYLE} src="/app/kibana" />,
+    component: () => <IframePage title="Kibana" src="/app/kibana" />,
   },
   ...DATA_MANAGEMENT_PAGES,
+]
+
+const HAIL_SEARCH_DATA_MANAGEMENT_PAGES = [
+  ...DATA_MANAGEMENT_PAGES,
+  { path: 'pipeline_status', component: () => <IframePage title="Loading UI" src="/luigi_ui/static/visualiser/index.html" /> },
 ]
 
 const dataManagementPages = (isDataManager, elasticsearchEnabled) => {
   if (!isDataManager) {
     return PM_DATA_MANAGEMENT_PAGES
   }
-  return elasticsearchEnabled ? ES_DATA_MANAGEMENT_PAGES : DATA_MANAGEMENT_PAGES
+  return elasticsearchEnabled ? ES_DATA_MANAGEMENT_PAGES : HAIL_SEARCH_DATA_MANAGEMENT_PAGES
 }
 
 const mapPageHeaderStateToProps = state => ({
