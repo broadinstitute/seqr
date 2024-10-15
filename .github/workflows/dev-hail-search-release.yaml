@@ -51,7 +51,7 @@ jobs:
         uses: mikefarah/yq@v4.22.1
         with:
           cmd: >
-            yq -i '.hail-search.image.tag = "${{ github.event.workflow_run.head_sha }}"' charts/dev-broad-seqr/values.yaml
+            yq -i '.seqr-platform.hail-search.image.tag = "${{ github.event.workflow_run.head_sha }}"' charts/dev-broad-seqr/values.yaml
 
       - name: Commit and Push changes
         uses: Andro999b/push@v1.3

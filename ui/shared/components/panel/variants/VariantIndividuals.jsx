@@ -262,10 +262,13 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet, genesById }) 
   if (!variant.genotypes) {
     return null
   }
-  const genotype = variant.genotypes[individual.individualGuid]
+
+  let genotype = variant.genotypes[individual.individualGuid]
   if (!genotype) {
     return null
   }
+  // Temporarily use the first genotype for an individual until blended es/gs are supported in UI - https://github.com/broadinstitute/seqr/issues/4269
+  genotype = Array.isArray(genotype) ? genotype[0] : genotype
 
   const hasCnCall = isCalled(genotype.cn)
   if (!hasCnCall && !isCalled(genotype.numAlt)) {

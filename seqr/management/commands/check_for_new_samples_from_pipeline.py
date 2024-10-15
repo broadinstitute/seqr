@@ -51,7 +51,11 @@ class Command(BaseCommand):
         success_runs = {path: re.match(path_regex, path).groupdict() for path in list_files(path, user=None)}
         if not success_runs:
             user_args = [f'{k}={options[k]}' for k in RUN_PATH_FIELDS if options[k]]
-            raise CommandError(f'No successful runs found for {", ".join(user_args)}')
+            if user_args:
+                raise CommandError(f'No successful runs found for {", ".join(user_args)}')
+            else:
+                logger.info('No loaded data available')
+                return
 
         loaded_runs = set(Sample.objects.filter(data_source__isnull=False).values_list('data_source', flat=True))
         new_runs = {path: run for path, run in success_runs.items() if run['run_version'] not in loaded_runs}

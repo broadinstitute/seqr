@@ -543,6 +543,19 @@ class MatchmakerAPITest(AuthenticationTestCase):
         self.assertEqual(response.reason_phrase, 'Gene and variant IDs are required for genomic features')
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({
+            'geneVariants': [
+                {'geneId': 'ENSG00000235249', 'variantGuid': 'SV0000002_1248367227_r0390_100'},
+                {'geneId': 'ENSG00000135953', 'variantGuid': 'SV0000002_1248367227_r0390_100'},
+                {'geneId': 'ENSG00000235249', 'variantGuid': 'SV0000003_1248367227_r0390_100'},
+                {'geneId': 'ENSG00000135953', 'variantGuid': 'SV0000003_1248367227_r0390_100'},
+                {'geneId': 'ENSG00000235249', 'variantGuid': 'SV0000004_1248367227_r0390_100'},
+                {'geneId': 'ENSG00000135953', 'variantGuid': 'SV0000004_1248367227_r0390_100'},
+            ],
+        }))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.reason_phrase, 'No more than 5 variants can be submitted per individual')
+
+        response = self.client.post(url, content_type='application/json', data=json.dumps({
             'phenotypes': [{'id': 'HP:0012469'}]
         }))
         self.assertEqual(response.status_code, 400)
