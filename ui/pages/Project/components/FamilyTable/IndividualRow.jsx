@@ -26,7 +26,8 @@ import { VerticalSpacer } from 'shared/components/Spacers'
 import {
   AFFECTED, PROBAND_RELATIONSHIP_OPTIONS, INDIVIDUAL_FIELD_CONFIGS, INDIVIDUAL_FIELD_SEX,
   INDIVIDUAL_FIELD_AFFECTED, INDIVIDUAL_FIELD_FEATURES, INDIVIDUAL_FIELD_LOOKUP, DATASET_TITLE_LOOKUP,
-  DATA_TYPE_EXPRESSION_OUTLIER, DATA_TYPE_SPLICE_OUTLIER,
+  DATA_TYPE_EXPRESSION_OUTLIER, DATA_TYPE_SPLICE_OUTLIER, INDIVIDUAL_FIELD_ANALYTE_TYPE,
+  INDIVIDUAL_FIELD_TISSUE_AFFECTED, INDIVIDUAL_FIELD_PRIMARY_BIOSAMPLE,
 } from 'shared/utils/constants'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 
@@ -447,56 +448,21 @@ const NON_CASE_REVIEW_FIELDS = [
     component: OptionFieldView,
     tagOptions: INDIVIDUAL_FIELD_CONFIG_SEX.formFieldProps.options,
   },
-  {
-    field: 'analyteType',
-    fieldName: 'Analyte Type',
-    isEditable: true,
-    isPrivate: true,
-    component: OptionFieldView,
-    tagOptions: [
-      { value: 'D', text: 'DNA' },
-      { value: 'R', text: 'RNA' },
-      { value: 'B', text: 'blood plasma' },
-      { value: 'F', text: 'frozen whole blood' },
-      { value: 'H', text: 'high molecular weight DNA' },
-      { value: 'U', text: 'urine' },
-    ],
-  },
-  {
-    field: 'primaryBiosample',
-    fieldName: 'Primary Biosample',
-    isEditable: true,
-    isPrivate: true,
-    component: OptionFieldView,
-    tagOptions: [
-      { value: 'T', text: 'UBERON:0000479 (tissue)' },
-      { value: 'NT', text: 'UBERON:0003714 (neural tissue)' },
-      { value: 'S', text: 'UBERON:0001836 (saliva)' },
-      { value: 'SE', text: 'UBERON:0001003 (skin epidermis)' },
-      { value: 'MT', text: 'UBERON:0002385 (muscle tissue)' },
-      { value: 'WB', text: 'UBERON:0000178 (whole blood)' },
-      { value: 'BM', text: 'UBERON:0002371 (bone marrow)' },
-      { value: 'CC', text: 'UBERON:0006956 (buccal mucosa)' },
-      { value: 'CF', text: 'UBERON:0001359 (cerebrospinal fluid)' },
-      { value: 'U', text: 'UBERON:0001088 (urine)' },
-      { value: 'NE', text: 'UBERON:0019306 (nose epithelium)' },
-      { value: 'EM', text: 'UBERON:0005291 (embryonic tissue)' },
-      { value: 'CE', text: 'UBERON:0002037 (cerebellum tissue)' },
-      { value: 'CA', text: 'UBERON:0001133 (cardiac tissue)' },
-      { value: 'IP', text: 'CL:0000034 (iPSC)' },
-      { value: 'NP', text: 'CL:0011020 (iPSC NPC)' },
-      { value: 'MO', text: 'CL:0000576 (monocytes - PBMCs)' },
-      { value: 'LY', text: 'CL:0000542 (lymphocytes - LCLs)' },
-      { value: 'FI', text: 'CL:0000057 (fibroblasts)' },
-    ],
-  },
-  {
-    field: 'tissueAffectedStatus',
-    fieldName: 'Tissue Affected Status',
-    isEditable: true,
-    isPrivate: true,
-    component: NullableBoolFieldView,
-  },
+  ...[
+    INDIVIDUAL_FIELD_ANALYTE_TYPE,
+    INDIVIDUAL_FIELD_PRIMARY_BIOSAMPLE,
+    INDIVIDUAL_FIELD_TISSUE_AFFECTED,
+  ].map((field) => {
+    const { label, formFieldProps = {} } = INDIVIDUAL_FIELD_CONFIGS[field]
+    return {
+      field,
+      fieldName: label,
+      isEditable: true,
+      isPrivate: true,
+      component: formFieldProps.options ? OptionFieldView : NullableBoolFieldView,
+      tagOptions: formFieldProps.options,
+    }
+  }),
   {
     field: 'solveStatus',
     fieldName: 'Participant Solve Status',
