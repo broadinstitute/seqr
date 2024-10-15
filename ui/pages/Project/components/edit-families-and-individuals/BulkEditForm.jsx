@@ -11,10 +11,9 @@ import {
   FILE_FIELD_NAME,
   FILE_FORMATS,
   INDIVIDUAL_CORE_EXPORT_DATA,
-  INDIVIDUAL_BULK_UPDATE_EXPORT_DATA,
   INDIVIDUAL_ID_EXPORT_DATA,
 } from 'shared/utils/constants'
-import { FAMILY_BULK_EDIT_EXPORT_DATA, INDIVIDUAL_DETAIL_EXPORT_DATA } from '../../constants'
+import { FAMILY_BULK_EDIT_EXPORT_DATA, INDIVIDUAL_DETAIL_EXPORT_DATA, INDIVIDUAL_INTERNAL_EXPORT_DATA } from '../../constants'
 import { loadIndividuals, updateFamilies, updateIndividuals, updateIndividualsMetadata } from '../../reducers'
 import {
   getCurrentProject,
@@ -99,6 +98,8 @@ const mapFamiliesDispatchToProps = {
 }
 
 export const EditFamiliesBulkForm = connect(null, mapFamiliesDispatchToProps)(FamiliesBulkForm)
+
+const INDIVIDUAL_BULK_UPDATE_EXPORT_DATA = [...INDIVIDUAL_CORE_EXPORT_DATA, ...INDIVIDUAL_INTERNAL_EXPORT_DATA]
 
 const IndividualsBulkForm = React.memo(({ user, load, loading, ...props }) => (
   <DataLoader load={load} loading={loading} content>
