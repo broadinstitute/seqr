@@ -96,19 +96,30 @@ export const getProjectAnalysisGroupFamiliesByGuid = createSelector(
   },
 )
 
-export const getProjectAnalysisGroupFamilyIndividualCounts = createSelector(
+const getFamilySizeHistogram = familyCounts => familyCounts.reduce((acc, { size, numParents }) => {
+  const sizeAcc = acc[size] || { total: 0, withParents: 0 }
+  sizeAcc.total += 1
+  if (size === 2 && numParents) {
+    sizeAcc.withParents += 1
+  } else if (size > 2 && numParents === 2) {
+    sizeAcc.withParents += 1
+  }
+  return { ...acc, [size]: sizeAcc }
+}, {})
+
+export const getProjectAnalysisGroupFamilySizeHistogram = createSelector(
   getProjectAnalysisGroupFamiliesByGuid,
-  familiesByGuid => Object.values(familiesByGuid).map(family => ({
+  familiesByGuid => getFamilySizeHistogram(Object.values(familiesByGuid).map(family => ({
     size: (family.individualGuids || []).length,
     numParents: (family.parents || []).length === 1 ?
       [family.parents[0].maternalGuid, family.parents[0].paternalGuid].filter(g => g).length : 0,
-  })),
+  }))),
 )
 
-export const getProjectAnalysisGroupDataLoadedFamilyIndividualCounts = createSelector(
+export const getProjectAnalysisGroupDataLoadedFamilySizeHistogram = createSelector(
   getProjectAnalysisGroupFamiliesByGuid,
   getSamplesByFamily,
-  (familiesByGuid, samplesByFamily) => Object.values(familiesByGuid).map(((family) => {
+  (familiesByGuid, samplesByFamily) => getFamilySizeHistogram(Object.values(familiesByGuid).map(((family) => {
     const sampleIndividuals = new Set((samplesByFamily[family.familyGuid] || []).filter(
       sample => sample.isActive,
     ).map(sample => sample.individualGuid))
@@ -119,7 +130,7 @@ export const getProjectAnalysisGroupDataLoadedFamilyIndividualCounts = createSel
       size: sampleIndividuals.size,
       numParents: hasSampleParentCounts.length === 1 ? hasSampleParentCounts[0].length : 0,
     }
-  })).filter(({ size }) => size > 0),
+  })).filter(({ size }) => size > 0)),
 )
 
 export const getProjectAnalysisGroupIndividualsByGuid = createSelector(

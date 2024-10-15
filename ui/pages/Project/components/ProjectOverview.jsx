@@ -26,8 +26,8 @@ import { updateProjectMmeContact, loadMmeSubmissions, updateAnvilWorkspace } fro
 import {
   getCurrentProject,
   getAnalysisStatusCounts,
-  getProjectAnalysisGroupFamilyIndividualCounts,
-  getProjectAnalysisGroupDataLoadedFamilyIndividualCounts,
+  getProjectAnalysisGroupFamilySizeHistogram,
+  getProjectAnalysisGroupDataLoadedFamilySizeHistogram,
   getProjectAnalysisGroupSamplesByTypes,
   getProjectAnalysisGroupMmeSubmissionDetails,
   getMmeSubmissionsLoading,
@@ -160,19 +160,22 @@ const MatchmakerSubmissionOverview = connect(
   mapMatchmakerSubmissionsStateToProps, mapDispatchToProps,
 )(BaseMatchmakerSubmissionOverview)
 
-const FamiliesIndividuals = React.memo(({ canEdit, hasCaseReview, familyCounts, user, title }) => {
-  const familySizeHistogram = familyCounts.reduce((acc, { size, numParents }) => {
-    const familySize = Math.min(size, 5)
-    const sizeAcc = acc[familySize] || { total: 0, withParents: 0 }
-    sizeAcc.total += 1
-    if (familySize === 2 && numParents) {
-      sizeAcc.withParents += 1
-    } else if (familySize > 2 && numParents === 2) {
-      sizeAcc.withParents += 1
+const MAX_FAMILY_HIST_SIZE = 5
+
+const FamiliesIndividuals = React.memo(({ canEdit, hasCaseReview, familySizes, user, title }) => {
+  const familiesCount = Object.values(familySizes).reduce((acc, { total }) => acc + total, 0)
+  const individualsCount = Object.entries(familySizes).reduce((acc, [size, { total }]) => acc + (size * total), 0)
+  const familySizeHistogram = Object.entries(familySizes).reduce((acc, [size, counts]) => {
+    if (size <= MAX_FAMILY_HIST_SIZE) {
+      return { ...acc, [size]: counts }
     }
-    return { ...acc, [familySize]: sizeAcc }
+    if (!acc[MAX_FAMILY_HIST_SIZE]) {
+      acc[MAX_FAMILY_HIST_SIZE] = { total: 0, withParents: 0 }
+    }
+    acc[MAX_FAMILY_HIST_SIZE].total += counts.total
+    acc[MAX_FAMILY_HIST_SIZE].withParents += counts.withParents
+    return acc
   }, {})
-  const individualsCount = familyCounts.reduce((acc, { size }) => acc + size, 0)
 
   let editIndividualsButton = null
   if (user && (user.isPm || (hasCaseReview && canEdit))) {
@@ -185,7 +188,7 @@ const FamiliesIndividuals = React.memo(({ canEdit, hasCaseReview, familyCounts, 
     <DetailSection
       title={(
         <span>
-          {`${Object.keys(familyCounts).length} Families${title || ''},`}
+          {`${familiesCount} Families${title || ''},`}
           <br />
           {`${individualsCount} Individuals${title || ''}`}
         </span>
@@ -213,7 +216,7 @@ const FamiliesIndividuals = React.memo(({ canEdit, hasCaseReview, familyCounts, 
 })
 
 FamiliesIndividuals.propTypes = {
-  familyCounts: PropTypes.arrayOf(PropTypes.object).isRequired,
+  familySizes: PropTypes.object.isRequired,
   canEdit: PropTypes.bool,
   hasCaseReview: PropTypes.bool,
   user: PropTypes.object,
@@ -222,12 +225,12 @@ FamiliesIndividuals.propTypes = {
 
 const mapFamiliesStateToProps = (state, ownProps) => ({
   user: getUser(state),
-  familyCounts: getProjectAnalysisGroupFamilyIndividualCounts(state, ownProps),
+  familySizes: getProjectAnalysisGroupFamilySizeHistogram(state, ownProps),
 })
 
 const mapDataLoadedFamiliesStateToProps = (state, ownProps) => ({
   title: ' With Data',
-  familyCounts: getProjectAnalysisGroupDataLoadedFamilyIndividualCounts(state, ownProps),
+  familySizes: getProjectAnalysisGroupDataLoadedFamilySizeHistogram(state, ownProps),
 })
 
 const FamiliesIndividualsOverview = connect(mapFamiliesStateToProps)(FamiliesIndividuals)
