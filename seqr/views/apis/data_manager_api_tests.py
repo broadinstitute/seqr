@@ -1399,7 +1399,7 @@ class DataManagerAPITest(AirtableTest):
         mock_subprocess.return_value.communicate.return_value = (
             b'', b'CommandException: One or more URLs matched no objects.',
         )
-        body = {'filePath': f'{self.CALLSET_DIR}/sharded_vcf/part0*.vcf', 'datasetType': 'SNV_INDEL'}
+        body = {'filePath': f'{self.CALLSET_DIR}/sharded_vcf/part0*.vcf'}
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(
@@ -1467,7 +1467,7 @@ class DataManagerAPITest(AirtableTest):
         mock_temp_dir.return_value.__enter__.return_value = '/mock/tmp'
         body = {'filePath': f'{self.CALLSET_DIR}/mito_callset.mt', 'datasetType': 'MITO', 'sampleType': 'WGS', 'genomeVersion': '38', 'projects': [
             json.dumps({'projectGuid': 'R0001_1kg'}), json.dumps(PROJECT_OPTION), json.dumps({'projectGuid': 'R0005_not_project'}),
-        ]}
+        ], 'skipValidation': True}
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'error': 'The following projects are invalid: R0005_not_project'})
@@ -1478,7 +1478,7 @@ class DataManagerAPITest(AirtableTest):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'success': True})
 
-        self._assert_expected_load_data_requests()
+        self._assert_expected_load_data_requests(skip_validation=True)
         self._has_expected_ped_files(mock_open, mock_mkdir, 'MITO')
 
         dag_json = {
@@ -1490,6 +1490,7 @@ class DataManagerAPITest(AirtableTest):
             'sample_type': 'WGS',
             'dataset_type': 'MITO',
             'reference_genome': 'GRCh38',
+            'skip_validation': True,
         }
         self._assert_success_notification(dag_json)
 
@@ -1500,6 +1501,8 @@ class DataManagerAPITest(AirtableTest):
         responses.calls.reset()
         self.reset_logs()
 
+        del body['skipValidation']
+        del dag_json['skip_validation']
         body.update({'datasetType': 'SV', 'filePath': f'{self.CALLSET_DIR}/sv_callset.vcf', 'sampleType': 'WES'})
         self._trigger_error(url, body, dag_json, mock_open, mock_mkdir)
 
@@ -1508,7 +1511,8 @@ class DataManagerAPITest(AirtableTest):
         responses.calls.reset()
         mock_open.reset_mock()
         mock_mkdir.reset_mock()
-        body.update({'datasetType': 'SNV_INDEL', 'sampleType': 'WGS', 'projects': [json.dumps(PROJECT_SAMPLES_OPTION)]})
+        body.update({'sampleType': 'WGS', 'projects': [json.dumps(PROJECT_SAMPLES_OPTION)]})
+        del body['datasetType']
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self._test_load_sample_subset(mock_open, mock_mkdir, response, url, body)
 
@@ -1593,18 +1597,21 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
     def _assert_expected_get_projects_requests(self):
         self.assertEqual(len(responses.calls), 0)
 
-    def _assert_expected_load_data_requests(self, dataset_type='MITO', sample_type='WGS', trigger_error=False, skip_project=False):
+    def _assert_expected_load_data_requests(self, dataset_type='MITO', sample_type='WGS', trigger_error=False, skip_project=False, skip_validation=False):
         self.assertEqual(len(responses.calls), 1)
         projects = [PROJECT_GUID, NON_ANALYST_PROJECT_GUID]
         if skip_project:
             projects = projects[1:]
-        self.assertDictEqual(json.loads(responses.calls[0].request.body), {
+        body = {
             'projects_to_run': projects,
             'callset_path': '/local_datasets/sv_callset.vcf' if trigger_error else '/local_datasets/mito_callset.mt',
             'sample_type': sample_type,
             'dataset_type': dataset_type,
             'reference_genome': 'GRCh38',
-        })
+        }
+        if skip_validation:
+            body['skip_validation'] = True
+        self.assertDictEqual(json.loads(responses.calls[0].request.body), body)
 
     @staticmethod
     def _local_pedigree_path(dataset_type, sample_type):
@@ -1721,6 +1728,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
             'sample_source': 'Broad_Internal',
             'sample_type': 'WGS',
             'dataset_type': 'MITO',
+            'skip_validation': True,
         }
 
     def _assert_expected_load_data_requests(self, **kwargs):
