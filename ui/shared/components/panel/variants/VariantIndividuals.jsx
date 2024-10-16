@@ -411,38 +411,6 @@ const getAllGenotypeDetails = (genotype, variant, individual, isCompoundHet, gen
   }
 }
 
-const EsOtherSamplePopup = ({ variant, genotypeInfo, genesById }) => {
-  const otherSampleGenotypes = useMemo(() => [genotypeInfo], [genotypeInfo])
-  return (
-    <Popup
-      header="Additional Sample Type"
-      trigger={<Icon name="plus circle" color={genotypeInfo.hasConflictingNumAlt ? 'red' : 'green'} />}
-      content={
-        <div>
-          {genotypeInfo.hasConflictingNumAlt && (
-            <div>
-              <VerticalSpacer height={5} />
-              <Alleles variant={variant} genotypes={otherSampleGenotypes} />
-              <VerticalSpacer height={5} />
-            </div>
-          )}
-          {genotypeDetails(genotypeInfo.genotype.otherSample, variant, genesById)}
-        </div>
-      }
-    />
-  )
-}
-
-EsOtherSamplePopup.propTypes = {
-  variant: PropTypes.object,
-  genotypeInfo: PropTypes.shape({
-    genotype: PropTypes.object,
-    hasConflictingNumAlt: PropTypes.bool,
-    isHemiX: PropTypes.bool,
-  }),
-  genesById: PropTypes.object,
-}
-
 const Genotype = React.memo(({ variant, individual, isCompoundHet, genesById }) => {
   if (!variant.genotypes) {
     return null
@@ -466,15 +434,30 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet, genesById }) 
     }
     return acc.concat(details)
   }, [])
+
   const firstGenotype = genotypes[0]
+  const legacyOtherSampleGenotypes = useMemo(() => firstGenotype.genotype?.otherSample && [
+    { genotype: firstGenotype.genotype.otherSample, isHemiX: firstGenotype.isHemiX },
+  ], [firstGenotype])
 
   const content = (
     <span>
       {firstGenotype.genotype?.otherSample && (
-        <EsOtherSamplePopup
-          variant={variant}
-          genotypeInfo={firstGenotype}
-          genesById={genesById}
+        <Popup
+          header="Additional Sample Type"
+          trigger={<Icon name="plus circle" color={firstGenotype.hasConflictingNumAlt ? 'red' : 'green'} />}
+          content={
+            <div>
+              {firstGenotype.hasConflictingNumAlt && (
+                <div>
+                  <VerticalSpacer height={5} />
+                  <Alleles variant={variant} genotypes={legacyOtherSampleGenotypes} />
+                  <VerticalSpacer height={5} />
+                </div>
+              )}
+              {genotypeDetails(firstGenotype.genotype.otherSample, variant, genesById)}
+            </div>
+          }
         />
       )}
       <Alleles variant={variant} genotypes={genotypes} />
