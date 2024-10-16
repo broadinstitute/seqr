@@ -875,7 +875,7 @@ def import_gregor_metadata(request, project_guid):
     genes = set()
     for row in _iter_metadata_table(
         metadata_files_path, FINDINGS_TABLE, request.user,
-            lambda r: r['participant_id'] in participant_individual_map and r['variant_type'] == 'SNV/INDEL',
+            lambda r: r['participant_id'] in participant_individual_map and r['variant_type'] in {'SNV/INDEL', 'SNV', 'INDEL'},
     ):
         individual = participant_individual_map[row['participant_id']]
         variant_id = '-'.join([row[col] for col in ['chrom', 'pos', 'ref', 'alt']])
