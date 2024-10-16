@@ -1,4 +1,4 @@
-import React, {useMemo} from 'react'
+import React, { useMemo } from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
@@ -229,7 +229,12 @@ export const Alleles = React.memo(({ variant, genotypes }) => {
                   <b>Warning: </b>
                   Genotypes differ across sample types
                   {genotypes.slice(1).map(genotypeInfo => (
-                    <AllelesHeaderContent genotypeInfo={genotypeInfo} variant={variant} useStyledAllele={false} />
+                    <AllelesHeaderContent
+                      key={genotypeInfo.genotype.sampleType}
+                      genotypeInfo={genotypeInfo}
+                      variant={variant}
+                      useStyledAllele={false}
+                    />
                   ))}
                 </div>
               )}
@@ -302,7 +307,7 @@ const formattedGenotypeDetails = (details, genotype, variant, genesById) => deta
   ({ shouldHide, title, field, variantField, format, comment }) => {
     const value = genotype[field] || variant[variantField]
     return value && !(shouldHide && shouldHide(value, variant)) ? (
-      <div key={title}>
+      <div>
         {`${title}:  `}
         <b>{format ? format(value, genesById) : value}</b>
         {comment && <ColoredDiv color="grey">{comment}</ColoredDiv> }
