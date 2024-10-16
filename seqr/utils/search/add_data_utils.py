@@ -116,7 +116,7 @@ def notify_search_data_loaded(project, is_internal, dataset_type, sample_type, i
 
 def prepare_data_loading_request(projects: list[Project], sample_type: str, dataset_type: str, genome_version: str,
                                  data_path: str, user: User, pedigree_dir: str,  raise_pedigree_error: bool = False,
-                                 individual_ids: list[str] = None):
+                                 individual_ids: list[str] = None, skip_validation: bool = False):
     project_guids = sorted([p.guid for p in projects])
     variables = {
         'projects_to_run': project_guids,
@@ -125,6 +125,8 @@ def prepare_data_loading_request(projects: list[Project], sample_type: str, data
         'dataset_type': _dag_dataset_type(sample_type, dataset_type),
         'reference_genome': GENOME_VERSION_LOOKUP[genome_version],
     }
+    if skip_validation:
+        variables['skip_validation'] = True
     file_path = _get_pedigree_path(pedigree_dir, genome_version, sample_type, dataset_type)
     _upload_data_loading_files(projects, user, file_path, individual_ids, raise_pedigree_error)
     return variables, file_path
