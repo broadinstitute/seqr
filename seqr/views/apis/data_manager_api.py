@@ -536,8 +536,6 @@ def load_data(request):
             success_slack_channel=SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, is_internal=True, individual_ids=individual_ids,
         )
     else:
-        if dataset_type != Sample.DATASET_TYPE_VARIANT_CALLS:
-            return create_json_response({'error': f'Invalid dataset type {dataset_type}'}, status=400)
         request_json, _ = prepare_data_loading_request(
             *loading_args, **loading_kwargs, pedigree_dir=LOADING_DATASETS_DIR, raise_pedigree_error=True,
         )
