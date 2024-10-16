@@ -122,7 +122,7 @@ from seqr.views.apis.users_api import \
 
 from seqr.views.apis.data_manager_api import elasticsearch_status, upload_qc_pipeline_output, delete_index, \
     update_rna_seq, load_rna_seq_sample_data, proxy_to_kibana, load_phenotype_prioritization_data, \
-    validate_callset, get_loaded_projects, load_data
+    validate_callset, get_loaded_projects, load_data, proxy_to_luigi
 from seqr.views.apis.report_api import \
     anvil_export, \
     family_metadata, \
@@ -359,7 +359,7 @@ api_endpoints = {
     'matchmaker/v1/metrics': external_api.mme_metrics_proxy,
 }
 
-urlpatterns = [path('status', status_view)]
+urlpatterns = [path('status', status_view), re_path('^(?:luigi_ui)', proxy_to_luigi)]
 
 # anvil workspace
 anvil_workspace_url = 'workspace/(?P<namespace>[^/]+)/(?P<name>[^/]+)'

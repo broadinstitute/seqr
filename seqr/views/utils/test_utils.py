@@ -640,7 +640,7 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
             'state': 'running'}
         ]})
 
-    def assert_airflow_calls(self, trigger_error=False, additional_tasks_check=False, dataset_type=None, **kwargs):
+    def assert_airflow_calls(self, trigger_error=False, additional_tasks_check=False, dataset_type=None, offset=0, **kwargs):
         self.mock_airflow_logger.info.assert_not_called()
 
         # Test triggering anvil dags
@@ -663,7 +663,7 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
         if dag_variable_overrides.get('skip_validation'):
             dag_variables['skip_validation'] = True
         dag_variables['sample_source'] = dag_variable_overrides['sample_source']
-        self._assert_airflow_calls(dag_variables, call_count)
+        self._assert_airflow_calls(dag_variables, call_count, offset=offset)
 
     def _assert_airflow_calls(self, dag_variables, call_count, offset=0):
         dag_url = self._dag_url
