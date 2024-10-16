@@ -447,8 +447,9 @@ AVAILABLE_PDO_STATUSES = {
 @pm_or_data_manager_required
 def validate_callset(request):
     request_json = json.loads(request.body)
+    dataset_type = request_json.get('datasetType', Sample.DATASET_TYPE_VARIANT_CALLS)
     validate_vcf_exists(
-        _callset_path(request_json), request.user, allowed_exts=DATA_TYPE_FILE_EXTS.get(request_json['datasetType']),
+        _callset_path(request_json), request.user, allowed_exts=DATA_TYPE_FILE_EXTS.get(dataset_type),
         path_name=request_json['filePath'],
     )
     return create_json_response({'success': True})
@@ -508,7 +509,8 @@ def _fetch_airtable_loadable_project_samples(user):
 def load_data(request):
     request_json = json.loads(request.body)
     sample_type = request_json['sampleType']
-    dataset_type = request_json['datasetType']
+    dataset_type = request_json.get('datasetType', Sample.DATASET_TYPE_VARIANT_CALLS)
+    skip_validation = request_json.get('skipValidation', False)
     projects = [json.loads(project) for project in request_json['projects']]
     project_samples = {p['projectGuid']: p.get('sampleIds') for p in projects}
 
@@ -525,16 +527,17 @@ def load_data(request):
     loading_args = (
         project_models, sample_type, dataset_type, request_json['genomeVersion'], _callset_path(request_json),
     )
+    loading_kwargs = {'user': request.user, 'skip_validation': skip_validation}
     if has_airtable:
         success_message = f'*{request.user.email}* triggered loading internal {sample_type} {dataset_type} data for {len(projects)} projects'
         error_message = f'ERROR triggering internal {sample_type} {dataset_type} loading'
         trigger_airflow_data_loading(
-            *loading_args, user=request.user, success_message=success_message, error_message=error_message,
+            *loading_args, **loading_kwargs, success_message=success_message, error_message=error_message,
             success_slack_channel=SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, is_internal=True, individual_ids=individual_ids,
         )
     else:
         request_json, _ = prepare_data_loading_request(
-            *loading_args, user=request.user, pedigree_dir=LOADING_DATASETS_DIR, raise_pedigree_error=True,
+            *loading_args, **loading_kwargs, pedigree_dir=LOADING_DATASETS_DIR, raise_pedigree_error=True,
         )
         response = requests.post(f'{PIPELINE_RUNNER_SERVER}/loading_pipeline_enqueue', json=request_json, timeout=60)
         if response.status_code == 409:
