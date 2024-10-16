@@ -29,12 +29,6 @@ from seqr.views.utils.project_context_utils import add_project_tag_type_counts
 from seqr.views.utils.individual_utils import delete_individuals, add_or_update_individuals_and_families
 from seqr.views.utils.variant_utils import bulk_create_tagged_variants
 
-_SEX_TO_EXPORTED_VALUE = dict(Individual.SEX_LOOKUP)
-_SEX_TO_EXPORTED_VALUE['U'] = ''
-
-__AFFECTED_TO_EXPORTED_VALUE = dict(Individual.AFFECTED_STATUS_LOOKUP)
-__AFFECTED_TO_EXPORTED_VALUE['U'] = ''
-
 
 @login_and_policies_required
 def update_individual_handler(request, individual_guid):

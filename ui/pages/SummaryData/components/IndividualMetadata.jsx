@@ -34,7 +34,7 @@ const CORE_COLUMNS = [
   { name: 'paternal_id', secondaryExportColumn: 'paternal_guid' },
   { name: 'maternal_id', secondaryExportColumn: 'maternal_guid' },
   { name: 'proband_relationship' },
-  { name: 'sex' },
+  { name: 'sex', format: ({ sex, sex_detail: sexDetail }) => (sexDetail ? `${sex} (${sexDetail})` : sex) },
   { name: 'ancestry' },
   { name: 'affected_status' },
   { name: 'hpo_present', style: { minWidth: '400px' } },

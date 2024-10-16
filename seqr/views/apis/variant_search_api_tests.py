@@ -836,7 +836,7 @@ class VariantSearchAPITest(object):
                     'vlmContactEmail': 'test@broadinstitute.org,vlm@broadinstitute.org',
                 },
                 'I2_F0_1-10439-AC-A': {
-                    'affected': 'A', 'familyGuid': 'F0_1-10439-AC-A', 'individualGuid': 'I2_F0_1-10439-AC-A', 'sex': 'F',
+                    'affected': 'A', 'familyGuid': 'F0_1-10439-AC-A', 'individualGuid': 'I2_F0_1-10439-AC-A', 'sex': 'X0',
                     'features': [{'category': 'HP:0000707', 'label': '1 terms'}, {'category': 'HP:0001626', 'label': '1 terms'}],
                     'vlmContactEmail': 'test@broadinstitute.org,vlm@broadinstitute.org',
                 },

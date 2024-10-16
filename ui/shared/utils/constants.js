@@ -394,12 +394,22 @@ export const CATEGORY_FAMILY_FILTERS = {
 }
 
 // INDIVIDUAL FIELDS
-
+const SEX_MALE = 'M'
+const SEX_FEMALE = 'F'
+const MALE_ANEUPLOIDIES = ['XXY', 'XYY']
+const FEMALE_ANEUPLOIDIES = ['XXX', 'X0']
 export const SEX_OPTIONS = [
   { value: 'M', text: 'Male' },
   { value: 'F', text: 'Female' },
   { value: 'U', text: '?' },
+  ...MALE_ANEUPLOIDIES.map(value => ({ value, text: `Male (${value})` })),
+  ...FEMALE_ANEUPLOIDIES.map(value => ({ value, text: `Female (${value})` })),
 ]
+
+export const SIMPLIFIED_SEX_LOOKUP = {
+  ...[SEX_MALE, ...MALE_ANEUPLOIDIES].reduce((acc, val) => ({ ...acc, [val]: SEX_MALE }), {}),
+  ...[SEX_FEMALE, ...FEMALE_ANEUPLOIDIES].reduce((acc, val) => ({ ...acc, [val]: SEX_FEMALE }), {}),
+}
 
 export const SEX_LOOKUP = SEX_OPTIONS.reduce(
   (acc, opt) => ({
@@ -525,7 +535,7 @@ export const INDIVIDUAL_FIELD_CONFIGS = {
     format: sex => SEX_LOOKUP[sex],
     width: 3,
     description: 'Male, Female, or Unknown',
-    formFieldProps: { component: RadioGroup, options: SEX_OPTIONS },
+    formFieldProps: { component: Select, options: SEX_OPTIONS },
   },
   [INDIVIDUAL_FIELD_AFFECTED]: {
     label: 'Affected Status',

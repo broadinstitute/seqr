@@ -52,6 +52,7 @@ const DATA = [
     'seqr_chosen_consequence-1': 'intron_variant',
     ancestry: 'Ashkenazi Jewish',
     sex: 'Female',
+    sex_detail: 'XXX',
     'chrom-1': '1',
     'alt-1': 'T',
     'gene_of_interest-1': 'OR4G11P',
@@ -99,7 +100,7 @@ test('IndividualMetadata render and export', () => {
     'phenotype_contribution-2', 'partial_contribution_explained-2', 'notes-2', 'ClinGen_allele_ID-2'])
   expect(exportConfig.processRow(DATA[0])).toEqual([
     'Test Reprocessed Project', 'R0003_test', '12', 'F000012_12', 'NA20889', 'I000017_na20889', '', '', '', '',
-    'Self', 'Female', 'Ashkenazi Jewish', 'Affected', 'HP:0011675 (Arrhythmia)|HP:0001509 ()', '', 'Yes', null,
+    'Self', 'Female (XXX)', 'Ashkenazi Jewish', 'Affected', 'HP:0011675 (Arrhythmia)|HP:0001509 ()', '', 'Yes', null,
     'OMIM:616126', 'Immunodeficiency 38', 'Autosomal recessive', null, null, undefined, 'Waiting for data', 'Tier 1',
     'WES', '2017-02-05', '', undefined, 'Yes', 'NA20889_1_248367227', undefined, '1', 248367227, null, null, 'TC', 'T',
     'OR4G11P', 'ENSG00000240361', 'intron_variant', 'ENST00000505820', 'c.3955G>A', 'c.1586-17C>G', 'Heterozygous', null, undefined, undefined, undefined,

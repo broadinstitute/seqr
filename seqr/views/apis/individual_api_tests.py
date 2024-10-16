@@ -453,7 +453,8 @@ class IndividualAPITest(object):
 
         rows += [
             '"1"	"NA19675_1"	"NA19675_1"	"F"	"Father"',
-            '"2"	"NA19675_2"	"NA19675_1"	"M"	""',
+            '"2"	"NA19675_2"	"NA19675_1"	"XXX"	"Nephew"',
+            '"2"	"NA19677"	"NA19675_2"	"M"	""',
         ]
         response = self.client.post(individuals_url, {
             'f': SimpleUploadedFile('test.tsv', '\n'.join(rows).encode('utf-8'))})
@@ -463,8 +464,10 @@ class IndividualAPITest(object):
                 'Invalid proband relationship "Father" for NA19675_1 with given gender Female',
                 'NA19675_1 is recorded as their own father',
                 'NA19675_1 is recorded as Female sex and also as the father of NA19675_1',
+                'Invalid proband relationship "Nephew" for NA19675_2 with given gender XXX',
                 'NA19675_1 is recorded as Female sex and also as the father of NA19675_2',
                 'NA19675_1 is recorded as the father of NA19675_2 but they have different family ids: 1 and 2',
+                'NA19675_2 is recorded as XXX sex and also as the father of NA19677',
                 'NA19675_1 is included as 2 separate records, but must be unique within the project',
             ],
             'warnings': [missing_entry_warning],
@@ -477,7 +480,7 @@ class IndividualAPITest(object):
 
         data = 'Family ID	Individual ID	Previous Individual ID	Paternal ID	Maternal ID	Sex	Affected Status	Notes	familyNotes\n\
 "1"	" NA19675_1 "	""	"NA19678 "	"NA19679"	"Female"	"Affected"	"A affected individual, test1-zsf"	""\n\
-"1"	"NA19678"	""	""	""	"Male"	"Unaffected"	"a individual note"	""\n\
+"1"	"NA19678"	""	""	""	"XXY"	"Unaffected"	"a individual note"	""\n\
 "4"	"NA20872_update"	"NA20872"	""	""	"Male"	"Affected"	""	""\n\
 "21"	" HG00735"	""	""	""	"Female"	"Unaffected"	""	"a new family""'
 
@@ -525,6 +528,7 @@ class IndividualAPITest(object):
         self.assertEqual(response_json['individualsByGuid']['I000001_na19675']['sex'], 'F')
         self.assertEqual(
             response_json['individualsByGuid']['I000001_na19675']['notes'], 'A affected individual, test1-zsf')
+        self.assertEqual(response_json['individualsByGuid']['I000002_na19678']['sex'], 'XXY')
         self.assertEqual(response_json['individualsByGuid'][new_indiv_guid]['individualId'], 'HG00735')
         self.assertEqual(response_json['individualsByGuid'][new_indiv_guid]['sex'], 'F')
         self.assertEqual(response_json['individualsByGuid']['I000008_na20872']['individualId'], 'NA20872_update')
@@ -899,7 +903,7 @@ class IndividualAPITest(object):
             response_json['individualsByGuid']['I000001_na19675']['absentFeatures'],
             [{'id': 'HP:0012469', 'category': 'HP:0025031', 'label': 'Infantile spasms'}]
         )
-        self.assertEqual(response_json['individualsByGuid']['I000001_na19675']['sex'], 'M')
+        self.assertEqual(response_json['individualsByGuid']['I000001_na19675']['sex'], 'XXY')
         self.assertEqual(response_json['individualsByGuid']['I000001_na19675']['birthYear'], 2000)
         self.assertTrue(response_json['individualsByGuid']['I000001_na19675']['affectedRelatives'])
         self.assertEqual(response_json['individualsByGuid']['I000001_na19675']['onsetAge'], 'J')

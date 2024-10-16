@@ -13,13 +13,6 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_individuals, _get_j
 from seqr.views.utils.pedigree_info_utils import JsonConstants
 
 
-_SEX_TO_EXPORTED_VALUE = dict(Individual.SEX_LOOKUP)
-_SEX_TO_EXPORTED_VALUE['U'] = ''
-
-__AFFECTED_TO_EXPORTED_VALUE = dict(Individual.AFFECTED_STATUS_LOOKUP)
-__AFFECTED_TO_EXPORTED_VALUE['U'] = ''
-
-
 def _get_record_family_id(record):
     # family id will be in different places in the json depending on whether it comes from a flat uploaded file or from the nested individual object
     return record.get(JsonConstants.FAMILY_ID_COLUMN) or record.get('family', {})['familyId']
