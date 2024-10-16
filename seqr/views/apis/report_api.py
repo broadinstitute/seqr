@@ -588,7 +588,6 @@ def _post_process_gregor_variant(row, gene_variants):
         'linked_variant': next(
             v['genetic_findings_id'] for v in gene_variants if v['genetic_findings_id'] != row['genetic_findings_id']
         ) if len(gene_variants) > 1 else None,
-        'variant_type': 'SNV/INDEL' if row['alt'] else 'SV',
     }
 
 
