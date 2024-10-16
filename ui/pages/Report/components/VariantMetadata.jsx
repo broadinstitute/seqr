@@ -11,6 +11,7 @@ const VIEW_ALL_PAGES = [
 const COLUMNS = [
   { name: 'participant_id' },
   ...VARIANT_METADATA_COLUMNS.slice(0, -1),
+  { name: 'variant_type' },
   { name: 'allele_balance_or_heteroplasmy_percentage' },
   { name: 'Clinvar allele ID', format: ({ clinvar }) => clinvar?.alleleId },
   { name: 'ClinVar Clinical Significance', format: ({ clinvar }) => clinvarSignificance(clinvar).pathogenicity },

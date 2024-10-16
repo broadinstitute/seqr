@@ -340,6 +340,7 @@ def _get_parsed_saved_discovery_variants_by_family(
         gene_id = main_transcript.get('geneId')
         gene_ids.add(gene_id)
         sv_type = variant_json.get('svType')
+        variant_type = 'SV' if sv_type else 'SNV/INDEL'
 
         partial_hpo_terms = variant.partial_hpo_terms[0] if variant.partial_hpo_terms else ''
         phenotype_contribution = 'Partial' if partial_hpo_terms else 'Full'
@@ -358,6 +359,7 @@ def _get_parsed_saved_discovery_variants_by_family(
             'partial_contribution_explained': partial_hpo_terms.replace(', ', '|'),
             'sv_type': sv_type,
             'sv_name': (variant_json.get('svName') or '{svType}:chr{chrom}:{pos}-{end}'.format(**variant_json)) if sv_type else None,
+            'variant_type': variant_type,
             'validated_name': variant.validated_name[0] if variant.validated_name else None,
             **{k: _get_transcript_field(k, config, main_transcript) for k, config in TRANSCRIPT_FIELDS.items()},
             **{k: variant_json.get(k) for k in ['genotypes'] + (variant_json_fields or [])},

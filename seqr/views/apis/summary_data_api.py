@@ -302,7 +302,7 @@ def individual_metadata(request, project_guid):
         elif row_type == DISCOVERY_ROW_TYPE:
             for i, discovery_row in enumerate(row):
                 participant_id = discovery_row.pop('participant_id')
-                parsed_row = {'{}-{}'.format(k, i + 1): v for k, v in discovery_row.items() if k != 'allele_balance_or_heteroplasmy_percentage'}
+                parsed_row = {'{}-{}'.format(k, i + 1): v for k, v in discovery_row.items() if k not in {'allele_balance_or_heteroplasmy_percentage', 'variant_type'}}
                 parsed_row['num_saved_variants'] = len(row)
                 rows_by_subject_family_id[(participant_id, family_id)].update(parsed_row)
         elif row_type == SUBJECT_ROW_TYPE:

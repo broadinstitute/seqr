@@ -514,6 +514,7 @@ BASE_VARIANT_METADATA_ROW = {
     'sv_name': None,
     'transcript': None,
     'validated_name': None,
+    'variant_type': 'SNV/INDEL',
 }
 
 PARTICIPANT_TABLE = [
@@ -1403,6 +1404,7 @@ class ReportAPITest(AirtableTest):
             'tags': ['Tier 1 - Novel gene and phenotype'],
             'variant_inheritance': 'unknown',
             'variant_reference_assembly': 'GRCh37',
+            'variant_type': 'SV',
             'zygosity': 'Heterozygous',
         })
 
