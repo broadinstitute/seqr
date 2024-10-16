@@ -1,4 +1,4 @@
-import React from 'react'
+import React, {useMemo} from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
@@ -11,6 +11,8 @@ import {
   INDIVIDUAL_FIELD_POP_FILTERS,
   INDIVIDUAL_FIELD_SV_FLAGS,
   INDIVIDUAL_FIELD_LOOKUP,
+  SAMPLE_TYPE_EXOME,
+  SAMPLE_TYPE_GENOME,
 } from 'shared/utils/constants'
 import BaseFieldView from '../view-fields/BaseFieldView'
 import PedigreeIcon from '../../icons/PedigreeIcon'
@@ -159,40 +161,105 @@ const svGenotype = (genotype, isHemiX) => {
   )
 }
 
-export const Alleles = React.memo(({ genotype, variant, isHemiX, warning }) => (
-  <AlleleContainer>
-    {warning && (
-      <Popup
-        wide
-        trigger={<WarningIcon />}
-        content={
-          <div>
-            <b>Warning: </b>
-            {warning}
-          </div>
-        }
-      />
-    )}
-    {variant.svType ? (
-      <Header.Content>
-        {svGenotype(genotype, isHemiX)}
-      </Header.Content>
-    ) : (
-      <Header.Content>
-        <Allele isAlt={genotype.numAlt > (isHemiX ? 0 : 1)} variant={variant} textAlign="right" />
-        /
-        {isHemiX ? '-' : <Allele isAlt={genotype.numAlt > 0} variant={variant} textAlign="left" />}
-        {genotype.mitoCn && (copyNumberGenotype(genotype.mitoCn, true))}
-      </Header.Content>
-    )}
-  </AlleleContainer>
-))
+const AllelesHeaderContent = ({ genotypeInfo, variant, useStyledAllele }) => {
+  const renderAllele = (isAlt, textAlign) => {
+    if (useStyledAllele) {
+      return (
+        <Allele
+          isAlt={isAlt}
+          variant={variant}
+          textAlign={textAlign}
+        />
+      )
+    }
+    return isAlt ? variant.alt : variant.ref
+  }
+
+  return (
+    <div>
+      {renderAllele(genotypeInfo.genotype.numAlt > (genotypeInfo.isHemiX ? 0 : 1), 'right')}
+      /
+      {genotypeInfo.isHemiX ? '-' : renderAllele(genotypeInfo.genotype.numAlt > 0, 'left')}
+      {genotypeInfo.genotype.mitoCn && copyNumberGenotype(genotypeInfo.genotype.mitoCn, true)}
+    </div>
+  )
+}
+
+AllelesHeaderContent.propTypes = {
+  genotypeInfo: PropTypes.object,
+  variant: PropTypes.object,
+  useStyledAllele: PropTypes.bool,
+}
+
+AllelesHeaderContent.defaultProps = { useStyledAllele: true }
+
+export const Alleles = React.memo(({ variant, genotypes }) => {
+  const warnings = genotypes.reduce((acc, genotypeInfo) => {
+    if (genotypeInfo.warning) {
+      acc[genotypeInfo.genotype.sampleType] = genotypeInfo.warning
+    }
+    return acc
+  }, {})
+
+  const firstGenotype = genotypes[0]
+  const hasDifferentNumAlt = genotypes.some(
+    genotypeInfo => genotypeInfo.genotype.numAlt !== firstGenotype.genotype.numAlt,
+  )
+
+  return (
+    <span>
+      <AlleleContainer>
+        {(Object.keys(warnings).length > 0 || hasDifferentNumAlt) && (
+        <Popup
+          wide
+          trigger={<WarningIcon />}
+          content={
+            <span>
+              {Object.entries(warnings).map(([sampleType, warning]) => (
+                <div key={sampleType}>
+                  <b>
+                    {sampleType}
+                    Warning:
+                  </b>
+                  {warning}
+                </div>
+              ))}
+              {hasDifferentNumAlt && (
+                <div>
+                  <b>Warning: </b>
+                  Genotypes differ across sample types
+                  {genotypes.slice(1).map(genotypeInfo => (
+                    <AllelesHeaderContent genotypeInfo={genotypeInfo} variant={variant} useStyledAllele={false} />
+                  ))}
+                </div>
+              )}
+            </span>
+          }
+        />
+        )}
+        {variant.svType ? (
+          <Header.Content>
+            {svGenotype(firstGenotype.genotype, firstGenotype.isHemiX)}
+          </Header.Content>
+        ) : (
+          <Header.Content>
+            <AllelesHeaderContent genotypeInfo={firstGenotype} variant={variant} />
+          </Header.Content>
+        )}
+      </AlleleContainer>
+    </span>
+  )
+})
 
 Alleles.propTypes = {
-  genotype: PropTypes.object,
   variant: PropTypes.object,
-  warning: PropTypes.string,
-  isHemiX: PropTypes.bool,
+  genotypes: PropTypes.arrayOf(
+    PropTypes.shape({
+      genotype: PropTypes.object,
+      warning: PropTypes.string,
+      isHemiX: PropTypes.bool,
+    }),
+  ),
 }
 
 const GENOTYPE_DETAILS = [
@@ -258,18 +325,7 @@ const genotypeDetails = (genotype, variant, genesById) => {
   ]
 }
 
-const Genotype = React.memo(({ variant, individual, isCompoundHet, genesById }) => {
-  if (!variant.genotypes) {
-    return null
-  }
-
-  let genotype = variant.genotypes[individual.individualGuid]
-  if (!genotype) {
-    return null
-  }
-  // Temporarily use the first genotype for an individual until blended es/gs are supported in UI - https://github.com/broadinstitute/seqr/issues/4269
-  genotype = Array.isArray(genotype) ? genotype[0] : genotype
-
+const getAllGenotypeDetails = (genotype, variant, individual, isCompoundHet, genesById) => {
   const hasCnCall = isCalled(genotype.cn)
   if (!hasCnCall && !isCalled(genotype.numAlt)) {
     return <b>NO CALL</b>
@@ -336,46 +392,110 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet, genesById }) 
   const quality = Number.isInteger(genotype.gq) ? genotype.gq : genotype.qs
   const filters = genotype.filters?.join(', ') || variant.genotypeFilters
 
+  return {
+    genotype,
+    isHemiX,
+    warning,
+    previousCall,
+    hasConflictingNumAlt,
+    details,
+    showSecondaryQuality,
+    secondaryQuality,
+    quality,
+    filters,
+  }
+}
+
+const EsOtherSamplePopup = ({ variant, genotypeInfo, genesById }) => {
+  const otherSampleGenotypes = useMemo(() => [genotypeInfo], [genotypeInfo])
+  return (
+    <Popup
+      header="Additional Sample Type"
+      trigger={<Icon name="plus circle" color={genotypeInfo.hasConflictingNumAlt ? 'red' : 'green'} />}
+      content={
+        <div>
+          {genotypeInfo.hasConflictingNumAlt && (
+            <div>
+              <VerticalSpacer height={5} />
+              <Alleles variant={variant} genotypes={otherSampleGenotypes} />
+              <VerticalSpacer height={5} />
+            </div>
+          )}
+          {genotypeDetails(genotypeInfo.genotype.otherSample, variant, genesById)}
+        </div>
+      }
+    />
+  )
+}
+
+EsOtherSamplePopup.propTypes = {
+  variant: PropTypes.object,
+  genotypeInfo: PropTypes.shape({
+    genotype: PropTypes.object,
+    hasConflictingNumAlt: PropTypes.bool,
+    isHemiX: PropTypes.bool,
+  }),
+  genesById: PropTypes.object,
+}
+
+const Genotype = React.memo(({ variant, individual, isCompoundHet, genesById }) => {
+  if (!variant.genotypes) {
+    return null
+  }
+
+  let genotypes = variant.genotypes[individual.individualGuid]
+  if (!genotypes) {
+    return null
+  }
+  genotypes = Array.isArray(genotypes) ? genotypes : [genotypes]
+
+  const sampleTypeOrder = [SAMPLE_TYPE_GENOME, SAMPLE_TYPE_EXOME]
+  genotypes = genotypes.sort(
+    (a, b) => sampleTypeOrder.indexOf(a.sampleType) - sampleTypeOrder.indexOf(b.sampleType),
+  ).map(
+    genotype => getAllGenotypeDetails(genotype, variant, individual, isCompoundHet, genesById),
+  )
+  const allDetails = genotypes.map(info => info.details).reduce((acc, details, index) => {
+    if (index > 0) {
+      acc.push(<Divider />)
+    }
+    return acc.concat(details)
+  }, [])
+  const firstGenotype = genotypes[0]
+
   const content = (
     <span>
-      {genotype.otherSample && (
-        <Popup
-          header="Additional Sample Type"
-          trigger={<Icon name="plus circle" color={hasConflictingNumAlt ? 'red' : 'green'} />}
-          content={
-            <div>
-              {hasConflictingNumAlt && (
-                <div>
-                  <VerticalSpacer height={5} />
-                  <Alleles genotype={genotype.otherSample} variant={variant} isHemiX={isHemiX} />
-                  <VerticalSpacer height={5} />
-                </div>
-              )}
-              {genotypeDetails(genotype.otherSample, variant, genesById)}
-            </div>
-          }
+      {firstGenotype.genotype?.otherSample && (
+        <EsOtherSamplePopup
+          variant={variant}
+          genotypeInfo={firstGenotype}
+          genesById={genesById}
         />
       )}
-      <Alleles genotype={genotype} variant={variant} isHemiX={isHemiX} warning={warning} />
-      {previousCall && (
-        <Popup
-          content={previousCall.hover}
-          position="bottom"
-          trigger={<Label horizontal size="mini" content={previousCall.content} color={previousCall.color} />}
-        />
-      )}
-      {Number.isInteger(quality) ? quality : '-'}
-      {showSecondaryQuality && `, ${secondaryQuality ? secondaryQuality.toPrecision(2) : '-'}`}
-      {filters && (
-        <small>
-          <br />
-          {filters}
-        </small>
-      )}
+      <Alleles variant={variant} genotypes={genotypes} />
+      {genotypes.map(({ genotype, quality, showSecondaryQuality, secondaryQuality, previousCall, filters }) => (
+        <div key={genotype.sampleType}>
+          {`${genotype.sampleType}: `}
+          {previousCall && (
+            <Popup
+              content={previousCall.hover}
+              position="bottom"
+              trigger={<Label horizontal size="mini" content={previousCall.content} color={previousCall.color} />}
+            />
+          )}
+          {Number.isInteger(quality) ? quality : '-'}
+          {showSecondaryQuality && `, ${secondaryQuality ? secondaryQuality.toPrecision(2) : '-'}`}
+          {filters && (
+            <small>
+              <br />
+              {filters}
+            </small>
+          )}
+        </div>
+      ))}
     </span>
   )
-
-  return details.length ? <Popup position="top center" trigger={content} content={details} /> : content
+  return allDetails.length ? <Popup position="top center" trigger={content} content={allDetails} /> : content
 })
 
 Genotype.propTypes = {
