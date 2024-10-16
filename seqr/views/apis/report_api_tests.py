@@ -410,12 +410,12 @@ MOCK_DATA_MODEL = {
                 {'column': 'genetic_findings_id', 'required': True},
                 {'column': 'participant_id', 'required': True},
                 {'column': 'experiment_id'},
-                {'column': 'variant_type', 'required': True, 'data_type': 'enumeration', 'enumerations': ['SNV/INDEL', 'SV', 'CNV', 'RE', 'MEI']},
+                {'column': 'variant_type', 'required': True, 'data_type': 'enumeration', 'enumerations': ['SNV', 'INDEL', 'SV', 'CNV', 'RE', 'MEI']},
                 {'column': 'variant_reference_assembly', 'required': True, 'data_type': 'enumeration', 'enumerations': ['GRCh37', 'GRCh38']},
                 {'column': 'chrom', 'required': True},
                 {'column': 'pos', 'required': True, 'data_type': 'integer'},
-                {'column': 'ref','required': 'CONDITIONAL (variant_type = SNV/INDEL, variant_type = RE)'},
-                {'column': 'alt', 'required': 'CONDITIONAL (variant_type = SNV/INDEL, variant_type = RE)'},
+                {'column': 'ref','required': 'CONDITIONAL (variant_type = SNV, variant_type = INDEL, variant_type = RE)'},
+                {'column': 'alt', 'required': 'CONDITIONAL (variant_type = SNV, variant_type = INDEL, variant_type = RE)'},
                 {'column': 'ClinGen_allele_ID'},
                 {'column': 'gene_of_interest', 'required': True},
                 {'column': 'transcript'},
@@ -514,7 +514,7 @@ BASE_VARIANT_METADATA_ROW = {
     'sv_name': None,
     'transcript': None,
     'validated_name': None,
-    'variant_type': 'SNV/INDEL',
+    'variant_type': 'INDEL',
 }
 
 PARTICIPANT_TABLE = [
@@ -604,22 +604,22 @@ GENETIC_FINDINGS_TABLE = [
         'phenotype_contribution', 'partial_contribution_explained', 'additional_family_members_with_variant',
         'method_of_discovery', 'notes', 'sv_type', 'chrom_end', 'pos_end', 'copy_number', 'hgvs', 'gene_disease_validity',
     ], [
-        'Broad_NA19675_1_21_3343353', 'Broad_NA19675_1', '', 'SNV/INDEL', 'GRCh37', '21', '3343353', 'GAGA', 'G', '',
+        'Broad_NA19675_1_21_3343353', 'Broad_NA19675_1', '', 'INDEL', 'GRCh37', '21', '3343353', 'GAGA', 'G', '',
         'RP11', 'ENST00000258436.5', 'c.375_377delTCT', 'p.Leu126del', 'Heterozygous', '', 'de novo', '', '', 'Candidate',
         'Myasthenic syndrome, congenital, 8, with pre- and postsynaptic defects', 'OMIM:615120', 'Autosomal recessive|X-linked',
         'Full', '', '', 'SR-ES', 'This individual is published in PMID34415322', '', '', '', '', '', '',
     ], [
-        'Broad_HG00731_1_248367227', 'Broad_HG00731', 'Broad_exome_VCGS_FAM203_621_D2', 'SNV/INDEL', 'GRCh37', '1',
+        'Broad_HG00731_1_248367227', 'Broad_HG00731', 'Broad_exome_VCGS_FAM203_621_D2', 'INDEL', 'GRCh37', '1',
         '248367227', 'TC', 'T', 'CA1501729', 'RP11', '', '', '', 'Homozygous', '', 'paternal', '', '', 'Known', '',
         'MONDO:0044970', '', 'Uncertain', '', 'Broad_HG00732', 'SR-ES', '', '', '', '', '', '', '',
     ], [
-        'Broad_HG00731_19_1912632', 'Broad_HG00731', 'Broad_exome_VCGS_FAM203_621_D2', 'SNV/INDEL', 'GRCh38', '19',
+        'Broad_HG00731_19_1912632', 'Broad_HG00731', 'Broad_exome_VCGS_FAM203_621_D2', 'INDEL', 'GRCh38', '19',
         '1912632', 'GC', 'TT', '', 'OR4G11P', 'ENST00000371839', 'c.586_587delinsTT', 'p.Ala196Leu', 'Heterozygous', '', 'unknown',
         'Broad_HG00731_19_1912634', '', 'Known', '', 'MONDO:0044970', '', 'Full', '', '', 'SR-ES',
         'The following variants are part of the multinucleotide variant 19-1912632-GC-TT (c.586_587delinsTT, p.Ala196Leu): 19-1912633-G-T, 19-1912634-C-T',
         '', '', '', '', '', '',
     ], [
-        'Broad_NA20889_1_248367227', 'Broad_NA20889', '', 'SNV/INDEL', 'GRCh37', '1', '248367227', 'TC', 'T',
+        'Broad_NA20889_1_248367227', 'Broad_NA20889', '', 'INDEL', 'GRCh37', '1', '248367227', 'TC', 'T',
         'CA1501729', 'OR4G11P', 'ENST00000505820', 'c.3955G>A', 'c.1586-17C>G', 'Heterozygous', '', 'unknown',
         'Broad_NA20889_1_249045487_DEL', '', 'Candidate', 'Immunodeficiency 38', 'OMIM:616126', 'Autosomal recessive',
         'Partial', 'HP:0000501|HP:0000365', '', 'SR-ES', '', '', '', '', '', '', '',
@@ -901,13 +901,13 @@ class ReportAPITest(AirtableTest):
             '80.2', '1.05', '', '', '', '', '',
         ]])
         self._assert_expected_file(genetic_findings_file, [GENETIC_FINDINGS_TABLE[0], [
-            'Broad_NA19675_1_21_3343353', 'Broad_NA19675_1', '', 'SNV/INDEL', 'GRCh37', '21', '3343353', 'GAGA', 'G', '',
+            'Broad_NA19675_1_21_3343353', 'Broad_NA19675_1', '', 'INDEL', 'GRCh37', '21', '3343353', 'GAGA', 'G', '',
             'RP11', 'ENST00000258436.5', 'c.375_377delTCT', 'p.Leu126del', 'Heterozygous', '', 'de novo', '', '',
             'Candidate', 'Myasthenic syndrome, congenital, 8, with pre- and postsynaptic defects', 'OMIM:615120',
             'Autosomal recessive|X-linked', 'Full', '', '', 'SR-ES', 'This individual is published in PMID34415322',
             '', '', '', '', '', '',
         ], [
-            'Broad_HG00731_1_248367227', 'Broad_HG00731', 'Broad_exome_VCGS_FAM203_621_D2', 'SNV/INDEL', 'GRCh37', '1',
+            'Broad_HG00731_1_248367227', 'Broad_HG00731', 'Broad_exome_VCGS_FAM203_621_D2', 'INDEL', 'GRCh37', '1',
             '248367227', 'TC', 'T', 'CA1501729', 'RP11', '', '', '', 'Homozygous', '', 'paternal', '', '', 'Known', '',
             'MONDO:0044970', '', 'Uncertain', '', 'Broad_HG00732', 'SR-ES', '', '', '', '', '', '', '',
         ]], additional_calls=1)
