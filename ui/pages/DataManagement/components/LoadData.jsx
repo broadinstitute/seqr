@@ -6,7 +6,7 @@ import { FormSpy } from 'react-final-form'
 import { getUser } from 'redux/selectors'
 import { validators } from 'shared/components/form/FormHelpers'
 import FormWizard from 'shared/components/form/FormWizard'
-import { ButtonRadioGroup } from 'shared/components/form/Inputs'
+import { ButtonRadioGroup, InlineToggle } from 'shared/components/form/Inputs'
 import LoadOptionsSelect from 'shared/components/form/LoadOptionsSelect'
 import {
   SAMPLE_TYPE_EXOME,
@@ -54,6 +54,12 @@ const CALLSET_PAGE = {
       label: 'Callset File Path',
       placeholder: 'gs://',
       validate: validators.required,
+    },
+    {
+      name: 'skipValidation',
+      label: 'Skip Callset Validation',
+      component: InlineToggle,
+      asFormInput: true,
     },
     {
       ...GENOME_VERSION_FIELD,
