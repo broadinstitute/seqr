@@ -613,10 +613,10 @@ GENETIC_FINDINGS_TABLE = [
         '248367227', 'TC', 'T', 'CA1501729', 'RP11', '', '', '', 'Homozygous', '', 'paternal', '', '', 'Known', '',
         'MONDO:0044970', '', 'Uncertain', '', 'Broad_HG00732', 'SR-ES', '', '', '', '', '', '', '',
     ], [
-        'Broad_HG00731_19_1912632', 'Broad_HG00731', 'Broad_exome_VCGS_FAM203_621_D2', 'INDEL', 'GRCh38', '19',
-        '1912632', 'GC', 'TT', '', 'OR4G11P', 'ENST00000371839', 'c.586_587delinsTT', 'p.Ala196Leu', 'Heterozygous', '', 'unknown',
+        'Broad_HG00731_19_1912632', 'Broad_HG00731', 'Broad_exome_VCGS_FAM203_621_D2', 'SNV', 'GRCh38', '19',
+        '1912632', 'G', 'C', '', 'OR4G11P', 'ENST00000371839', 'c.586_587delinsTT', 'p.Ala196Leu', 'Heterozygous', '', 'unknown',
         'Broad_HG00731_19_1912634', '', 'Known', '', 'MONDO:0044970', '', 'Full', '', '', 'SR-ES',
-        'The following variants are part of the multinucleotide variant 19-1912632-GC-TT (c.586_587delinsTT, p.Ala196Leu): 19-1912633-G-T, 19-1912634-C-T',
+        'The following variants are part of the multinucleotide variant 19-1912632-G-C (c.586_587delinsTT, p.Ala196Leu): 19-1912633-G-T, 19-1912634-C-T',
         '', '', '', '', '', '',
     ], [
         'Broad_NA20889_1_248367227', 'Broad_NA20889', '', 'INDEL', 'GRCh37', '1', '248367227', 'TC', 'T',
@@ -759,13 +759,13 @@ class ReportAPITest(AirtableTest):
         self.assertIn([
             '19_1912633_HG00731', 'HG00731', 'HG00731', 'OR4G11P', 'Known', 'unknown', 'Heterozygous', 'GRCh38', '19',
             '1912633', 'G', 'T', '-', '-', 'ENST00000371839', '-', '-', '-',
-            'The following variants are part of the multinucleotide variant 19-1912632-GC-TT '
+            'The following variants are part of the multinucleotide variant 19-1912632-G-C '
             '(c.586_587delinsTT, p.Ala196Leu): 19-1912633-G-T, 19-1912634-C-T'],
             discovery_file)
         self.assertIn([
             '19_1912634_HG00731', 'HG00731', 'HG00731', 'OR4G11P', 'Known', 'unknown', 'Heterozygous', 'GRCh38', '19',
             '1912634', 'C', 'T', '-', '-', 'ENST00000371839', '-', '-', '-',
-            'The following variants are part of the multinucleotide variant 19-1912632-GC-TT (c.586_587delinsTT, '
+            'The following variants are part of the multinucleotide variant 19-1912632-G-C (c.586_587delinsTT, '
             'p.Ala196Leu): 19-1912633-G-T, 19-1912634-C-T'],
             discovery_file)
 
@@ -1307,7 +1307,7 @@ class ReportAPITest(AirtableTest):
         self.assertDictEqual(response_json['rows'][1], expected_row)
         expected_mnv = {
             **BASE_VARIANT_METADATA_ROW,
-            'alt': 'TT',
+            'alt': 'C',
             'chrom': '19',
             'condition_id': 'MONDO:0044970',
             'condition_inheritance': 'Unknown',
@@ -1321,15 +1321,16 @@ class ReportAPITest(AirtableTest):
             'hgvsc': 'c.586_587delinsTT',
             'hgvsp': 'p.Ala196Leu',
             'known_condition_name': 'mitochondrial disease',
-            'notes': 'The following variants are part of the multinucleotide variant 19-1912632-GC-TT (c.586_587delinsTT, p.Ala196Leu): 19-1912633-G-T, 19-1912634-C-T',
+            'notes': 'The following variants are part of the multinucleotide variant 19-1912632-G-C (c.586_587delinsTT, p.Ala196Leu): 19-1912633-G-T, 19-1912634-C-T',
             'participant_id': 'HG00731',
             'pos': 1912632,
             'projectGuid': 'R0001_1kg',
-            'ref': 'GC',
+            'ref': 'G',
             'tags': ['Known gene for phenotype'],
             'transcript': 'ENST00000371839',
             'variant_inheritance': 'unknown',
             'variant_reference_assembly': 'GRCh38',
+            'variant_type': 'SNV',
             'zygosity': 'Heterozygous',
         }
         self.assertDictEqual(response_json['rows'][2], expected_mnv)

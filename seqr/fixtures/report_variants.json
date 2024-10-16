@@ -105,9 +105,9 @@
         "last_modified_date": "2018-05-31T16:36:02.805Z",
         "xpos": 19001912632,
         "xpos_end": 19001912632,
-        "ref": "GC",
-        "alt": "TT",
-        "variant_id": "19-1912632-GC-TT",
+        "ref": "G",
+        "alt": "C",
+        "variant_id": "19-1912632-G-C",
         "saved_variant_json": {
             "pos": 1912632,
             "end": 1912632,
@@ -116,7 +116,7 @@
             "genotypes": {
                 "I000004_hg00731": {"numAlt": 1}
             },
-            "variantId": "19-1912632-GC-TT",
+            "variantId": "19-1912632-G-C",
             "chrom": "19",
             "mainTranscriptId": "ENST00000371839",
             "transcripts": {
