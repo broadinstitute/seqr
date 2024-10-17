@@ -187,7 +187,7 @@ FAMILY_INDIVIDUAL_FIELDS = {
     'parental_ids': {
         'agg': ArrayAgg(JSONObject(**{k: k for k in ['id', 'guid', 'father_id', 'mother_id']})),
         'format': lambda parental_ids, id_guid_map: [
-            {'paternalGuid': id_guid_map.get(p['father_id']), 'maternalGuid': id_guid_map.get(p['mother_id'])}
+            {'paternalGuid': id_guid_map.get(p['father_id']), 'maternalGuid': id_guid_map.get(p['mother_id']), 'individualGuid': p['guid']}
             for p in parental_ids if p['father_id'] or p['mother_id']
         ],
         'response_key': 'parents',

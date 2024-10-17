@@ -402,7 +402,7 @@ class ProjectAPITest(object):
         self.assertTrue(family_1['hasRequiredMetadata'])
         self.assertFalse(family_3['hasRequiredMetadata'])
         self.assertFalse(empty_family['hasRequiredMetadata'])
-        self.assertListEqual(family_1['parents'], [{'maternalGuid': 'I000003_na19679', 'paternalGuid': 'I000002_na19678'}])
+        self.assertListEqual(family_1['parents'], [{'maternalGuid': 'I000003_na19679', 'paternalGuid': 'I000002_na19678', 'individualGuid': 'I000001_na19675'}])
         self.assertListEqual(family_3['parents'], [])
         self.assertListEqual(empty_family['parents'], [])
         self.assertEqual(family_1['hasPhenotypePrioritization'], True)
