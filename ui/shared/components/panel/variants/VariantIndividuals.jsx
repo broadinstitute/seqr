@@ -265,7 +265,7 @@ export const MultiSampleTypeAlleles = React.memo(({ variant, genotypes }) => {
                   <b>Warning: </b>
                   Genotypes differ across sample types
                   {genotypes.map(genotypeInfo => (
-                    <div>
+                    <div key={genotypeInfo.sampleType}>
                       <span>
                         {genotypeInfo.genotype.sampleType}
                         :&nbsp;
