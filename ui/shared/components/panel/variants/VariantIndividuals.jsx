@@ -176,12 +176,12 @@ const AllelesHeaderContent = ({ genotypeInfo, variant, useStyledAllele }) => {
   }
 
   return (
-    <div>
+    <span>
       {renderAllele(genotypeInfo.genotype.numAlt > (genotypeInfo.isHemiX ? 0 : 1), 'right')}
       /
       {genotypeInfo.isHemiX ? '-' : renderAllele(genotypeInfo.genotype.numAlt > 0, 'left')}
       {genotypeInfo.genotype.mitoCn && copyNumberGenotype(genotypeInfo.genotype.mitoCn, true)}
-    </div>
+    </span>
   )
 }
 
@@ -228,13 +228,19 @@ export const Alleles = React.memo(({ variant, genotypes }) => {
                 <div>
                   <b>Warning: </b>
                   Genotypes differ across sample types
-                  {genotypes.slice(1).map(genotypeInfo => (
-                    <AllelesHeaderContent
-                      key={genotypeInfo.genotype.sampleType}
-                      genotypeInfo={genotypeInfo}
-                      variant={variant}
-                      useStyledAllele={false}
-                    />
+                  {genotypes.map(genotypeInfo => (
+                    <div>
+                      <span>
+                        {genotypeInfo.genotype.sampleType}
+                        :&nbsp;
+                        <AllelesHeaderContent
+                          key={genotypeInfo.genotype.sampleType}
+                          genotypeInfo={genotypeInfo}
+                          variant={variant}
+                          useStyledAllele={false}
+                        />
+                      </span>
+                    </div>
                   ))}
                 </div>
               )}
