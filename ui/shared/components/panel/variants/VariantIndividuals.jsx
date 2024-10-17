@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
@@ -85,6 +85,8 @@ const PAR_REGIONS = {
   },
 }
 
+const SAMPLE_TYPE_DISPLAY_ORDER = [SAMPLE_TYPE_GENOME, SAMPLE_TYPE_EXOME]
+
 const isHemiXVariant =
   (variant, individual) => individual.sex === 'M' && (variant.chrom === 'X' || variant.chrom === 'Y') &&
   PAR_REGIONS[variant.genomeVersion][variant.chrom].every(region => variant.pos < region[0] || variant.pos > region[1])
@@ -161,7 +163,7 @@ const svGenotype = (genotype, isHemiX) => {
   )
 }
 
-const AllelesHeaderContent = ({ genotypeInfo, variant, useStyledAllele }) => {
+const AllelesHeaderContent = ({ genotype, variant, isHemiX, useStyledAllele }) => {
   const renderAllele = (isAlt, textAlign) => {
     if (useStyledAllele) {
       return (
@@ -177,23 +179,57 @@ const AllelesHeaderContent = ({ genotypeInfo, variant, useStyledAllele }) => {
 
   return (
     <span>
-      {renderAllele(genotypeInfo.genotype.numAlt > (genotypeInfo.isHemiX ? 0 : 1), 'right')}
+      {renderAllele(genotype.numAlt > (isHemiX ? 0 : 1), 'right')}
       /
-      {genotypeInfo.isHemiX ? '-' : renderAllele(genotypeInfo.genotype.numAlt > 0, 'left')}
-      {genotypeInfo.genotype.mitoCn && copyNumberGenotype(genotypeInfo.genotype.mitoCn, true)}
+      {isHemiX ? '-' : renderAllele(genotype.numAlt > 0, 'left')}
+      {genotype.mitoCn && copyNumberGenotype(genotype.mitoCn, true)}
     </span>
   )
 }
 
 AllelesHeaderContent.propTypes = {
-  genotypeInfo: PropTypes.object,
+  genotype: PropTypes.object,
   variant: PropTypes.object,
+  isHemiX: PropTypes.bool,
   useStyledAllele: PropTypes.bool,
 }
 
 AllelesHeaderContent.defaultProps = { useStyledAllele: true }
 
-export const Alleles = React.memo(({ variant, genotypes }) => {
+export const Alleles = React.memo(({ genotype, variant, isHemiX, warning }) => (
+  <AlleleContainer>
+    {warning && (
+      <Popup
+        wide
+        trigger={<WarningIcon />}
+        content={
+          <div>
+            <b>Warning: </b>
+            {warning}
+          </div>
+        }
+      />
+    )}
+    {variant.svType ? (
+      <Header.Content>
+        {svGenotype(genotype, isHemiX)}
+      </Header.Content>
+    ) : (
+      <Header.Content>
+        <AllelesHeaderContent genotype={genotype} variant={variant} isHemiX={isHemiX} />
+      </Header.Content>
+    )}
+  </AlleleContainer>
+))
+
+Alleles.propTypes = {
+  genotype: PropTypes.object,
+  variant: PropTypes.object,
+  warning: PropTypes.string,
+  isHemiX: PropTypes.bool,
+}
+
+export const MultiSampleTypeAlleles = React.memo(({ variant, genotypes }) => {
   const warnings = genotypes.reduce((acc, genotypeInfo) => {
     if (genotypeInfo.warning) {
       acc[genotypeInfo.genotype.sampleType] = genotypeInfo.warning
@@ -235,8 +271,9 @@ export const Alleles = React.memo(({ variant, genotypes }) => {
                         :&nbsp;
                         <AllelesHeaderContent
                           key={genotypeInfo.genotype.sampleType}
-                          genotypeInfo={genotypeInfo}
+                          genotype={genotypeInfo.genotype}
                           variant={variant}
+                          isHemiX={genotypeInfo.isHemiX}
                           useStyledAllele={false}
                         />
                       </span>
@@ -248,21 +285,19 @@ export const Alleles = React.memo(({ variant, genotypes }) => {
           }
         />
         )}
-        {variant.svType ? (
-          <Header.Content>
-            {svGenotype(firstGenotype.genotype, firstGenotype.isHemiX)}
-          </Header.Content>
-        ) : (
-          <Header.Content>
-            <AllelesHeaderContent genotypeInfo={firstGenotype} variant={variant} />
-          </Header.Content>
-        )}
+        <Header.Content>
+          <AllelesHeaderContent
+            genotype={firstGenotype.genotype}
+            variant={variant}
+            isHemiX={firstGenotype.isHemiX}
+          />
+        </Header.Content>
       </AlleleContainer>
     </span>
   )
 })
 
-Alleles.propTypes = {
+MultiSampleTypeAlleles.propTypes = {
   variant: PropTypes.object,
   genotypes: PropTypes.arrayOf(
     PropTypes.shape({
@@ -422,18 +457,16 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet, genesById }) 
     return null
   }
 
-  let genotypes = variant.genotypes[individual.individualGuid]
-  if (!genotypes) {
+  const individualGenotypes = variant.genotypes[individual.individualGuid]
+  if (!individualGenotypes) {
     return null
   }
-  genotypes = Array.isArray(genotypes) ? genotypes : [genotypes]
-
-  const sampleTypeOrder = [SAMPLE_TYPE_GENOME, SAMPLE_TYPE_EXOME]
-  genotypes = genotypes.sort(
-    (a, b) => sampleTypeOrder.indexOf(a.sampleType) - sampleTypeOrder.indexOf(b.sampleType),
+  const genotypes = (Array.isArray(individualGenotypes) ? individualGenotypes : [individualGenotypes]).sort(
+    (a, b) => SAMPLE_TYPE_DISPLAY_ORDER.indexOf(a.sampleType) - SAMPLE_TYPE_DISPLAY_ORDER.indexOf(b.sampleType),
   ).map(
     genotype => getAllGenotypeDetails(genotype, variant, individual, isCompoundHet, genesById),
   )
+
   const allDetails = genotypes.map(info => info.details).reduce((acc, details, index) => {
     if (index > 0) {
       acc.push(<Divider />)
@@ -442,9 +475,6 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet, genesById }) 
   }, [])
 
   const firstGenotype = genotypes[0]
-  const legacyOtherSampleGenotypes = useMemo(() => firstGenotype.genotype?.otherSample && [
-    { genotype: firstGenotype.genotype.otherSample, isHemiX: firstGenotype.isHemiX },
-  ], [firstGenotype])
 
   const content = (
     <span>
@@ -457,7 +487,11 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet, genesById }) 
               {firstGenotype.hasConflictingNumAlt && (
                 <div>
                   <VerticalSpacer height={5} />
-                  <Alleles variant={variant} genotypes={legacyOtherSampleGenotypes} />
+                  <Alleles
+                    genotype={firstGenotype.genotype.otherSample}
+                    variant={variant}
+                    isHemiX={firstGenotype.isHemiX}
+                  />
                   <VerticalSpacer height={5} />
                 </div>
               )}
@@ -466,9 +500,15 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet, genesById }) 
           }
         />
       )}
-      <Alleles variant={variant} genotypes={genotypes} />
+      {genotypes.length === 1 ? (
+        <Alleles
+          genotype={firstGenotype.genotype}
+          variant={variant}
+          isHemiX={firstGenotype.isHemiX}
+        />
+      ) : <MultiSampleTypeAlleles variant={variant} genotypes={genotypes} />}
       {genotypes.map(({ genotype, quality, showSecondaryQuality, secondaryQuality, previousCall, filters }) => (
-        <div key={genotype.sampleType}>
+        <div key={genotype.sampleType || genotype.sampleId}>
           {`${genotype.sampleType}: `}
           {previousCall && (
             <Popup
