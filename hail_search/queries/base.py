@@ -472,7 +472,7 @@ class BaseHailTableQuery(object):
     def _filter_single_entries_table(self, ht, project_families, inheritance_filter=None, quality_filter=None, is_merged_ht=False, **kwargs):
         ht, sorted_family_sample_data = self._add_entry_sample_families(ht, project_families, is_merged_ht)
         ht = self._filter_quality(ht, quality_filter, **kwargs)
-        ht, ch_ht = self._filter_inheritance(
+        ht, ch_ht, _, _ = self._filter_inheritance(
             ht, None, inheritance_filter, sorted_family_sample_data,
         )
         ht = self._apply_entry_filters(ht)
@@ -588,8 +588,9 @@ class BaseHailTableQuery(object):
                 lambda entries: hl.or_missing(entries.any(any_valid_entry), entries)
             )})
 
+        ch_ht_entry_indices_by_gt = None
         if self._has_comp_het_search:
-            comp_het_ht = self._annotate_families_inheritance(
+            comp_het_ht, ch_ht_entry_indices_by_gt = self._annotate_families_inheritance(
                 comp_het_ht if comp_het_ht is not None else ht, COMPOUND_HET, inheritance_filter,
                 sorted_family_sample_data, annotation, entries_ht_field
             )
@@ -598,12 +599,12 @@ class BaseHailTableQuery(object):
             # No sample-specific inheritance filtering needed
             sorted_family_sample_data = []
 
-        ht = None if self._inheritance_mode == COMPOUND_HET else self._annotate_families_inheritance(
+        ht, ht_entry_indices_by_gt = (None, None) if self._inheritance_mode == COMPOUND_HET else self._annotate_families_inheritance(
             ht, self._inheritance_mode, inheritance_filter, sorted_family_sample_data,
             annotation, entries_ht_field
         )
 
-        return ht, comp_het_ht
+        return ht, comp_het_ht, ht_entry_indices_by_gt, ch_ht_entry_indices_by_gt
 
     def _annotate_families_inheritance(
         self, ht, inheritance_mode, inheritance_filter, sorted_family_sample_data,
@@ -644,7 +645,7 @@ class BaseHailTableQuery(object):
                 )
             })
 
-        return ht
+        return ht, entry_indices_by_gt
 
     def _get_family_passes_quality_filter(self, quality_filter, ht, **kwargs):
         quality_filter = quality_filter or {}
