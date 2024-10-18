@@ -250,17 +250,29 @@ class MitoHailTableQuery(BaseHailTableQuery):
             ht = ht.annotate(
                 **{annotation: hl.dict(
                     hl.enumerate(ht[entries_ht_field]).starmap(
-                        lambda family_index, entries: hl.bind(
+                        lambda family_idx, entries: hl.bind(
                             lambda failed_samples: hl.tuple((
-                                family_index,
-                                ht[annotation].get(family_index, hl.empty_array(hl.tint32)).extend(failed_samples)
+                                family_idx,
+                                ht[annotation].get(family_idx, hl.empty_array(hl.tint32)).extend(failed_samples)
                             )),
-                            entry_indices.get(family_index).filter(lambda sample_i: ~self.GENOTYPE_QUERY_MAP[genotype](entries[sample_i].GT))
+                            entry_indices.get(family_idx).filter(lambda sample_i: ~self.GENOTYPE_QUERY_MAP[genotype](entries[sample_i].GT))
                         )
                     )
                 )})
         # print(annotation, ht[annotation].collect())
         return ht
+
+    # ht = ht.annotate(
+    #                 **{annotation: ht[annotation].map_values(
+    #                     lambda existing_failed_samples: existing_failed_samples.extend(
+    #                         hl.enumerate(ht[entries_ht_field]).starmap(
+    #                             lambda family_index, entries: entry_indices.get(family_index).filter(
+    #                                 lambda sample_i: ~self.GENOTYPE_QUERY_MAP[genotype](entries[sample_i].GT)
+    #                             )
+    #                         ).flatmap(lambda x: x)
+    #                     )
+    #                 )
+    #             })
 
     def _apply_multi_sample_type_entry_filters(self, ht, family_idx_map, sample_idx_map):
         if ht is None:
@@ -269,6 +281,8 @@ class MitoHailTableQuery(BaseHailTableQuery):
         # Keep family from both sample types if either passes quality AND inheritance
         for sample_type in SampleType:
             ht = self._apply_quality_entry_filters(ht, sample_type, family_idx_map)
+            # TODO - Since each sample type is processed separately, wgs with 1 sample will not be filtered out if it passes in wes (even though another sample failed in wes)
+            # and the coalesce below keeps that sample even though the family was filtered out in wes. This is a limitation of the current implementation.
             ht = self._apply_inheritance_entry_filters(ht, sample_type, family_idx_map, sample_idx_map)
 
         # Merge family entries and filters from both sample types
@@ -304,38 +318,35 @@ class MitoHailTableQuery(BaseHailTableQuery):
         )
 
     def _apply_inheritance_entry_filters(self, ht, sample_type, family_idx_map, sample_idx_map):
-        return ht.annotate(**{
-            sample_type.family_entries_field: hl.if_else(
-                hl.is_missing(ht[sample_type.family_entries_field]),  # If family entries has already been filtered due to quality do nothing
-                ht[sample_type.family_entries_field],
-                hl.enumerate(ht[sample_type.family_entries_field]).starmap( # Else,
-                    lambda family_i, family_samples: hl.or_missing(
-                        hl.all(hl.enumerate(family_samples).starmap(
-                            lambda sample_i, sample: hl.any( # For each sample in a family,
-                                hl.bind(lambda other_sample_type_indices: ( # Get the sample and family index of the sample in the other sample type family_entries
-                                    hl.if_else(
-                                        hl.is_defined(sample_i) & hl.is_defined(other_sample_type_indices[1]), # If samples are present for both sample types,
-                                        (  # Keep the family entries if family passes inheritance in either sample type.
-                                            hl.is_defined(ht[sample_type.passes_inheritance_field][family_i]) |
-                                            hl.is_defined(ht[sample_type.other_sample_type.passes_inheritance_field][other_sample_type_indices[0]])
-                                        ),  # Else, if sample is in only one sample type, check if that sample did not fail inheritance
-                                        self._family_sample_has_valid_inheritance(ht, sample_type, family_i, sample_i) |
-                                        self._family_sample_has_valid_inheritance(ht, sample_type.other_sample_type, other_sample_type_indices[0], other_sample_type_indices[1])
-                                    )
-                                ),(
-                                    family_idx_map.get(hl.coalesce(sample)['familyGuid']).get(sample_type.other_sample_type.value),
-                                    sample_idx_map.get(hl.coalesce(sample)['familyGuid']).get(hl.coalesce(sample)['sampleId']).get(sample_type.other_sample_type.value)),
-                            ))
-                        )), family_samples)
-                ))
-         })
+        ht = ht.annotate(
+            **{sample_type.family_entries_field: hl.enumerate(ht[sample_type.family_entries_field]).starmap(
+                lambda family_idx, family_samples: hl.or_missing( # Keep a family if
+                    hl.all(hl.enumerate(family_samples).starmap(  # For each sample in the family,
+                        lambda sample_idx, sample: hl.bind(lambda other_sample_type_indices: ( # Get the sample and family index of the sample in the other sample type family_entries
+                            hl.if_else(
+                                hl.is_defined(sample_idx) & hl.is_defined(other_sample_type_indices[1]), # If samples are present for both sample types,
+                                (  # Keep the family entries if family passes inheritance in either sample type.
+                                    hl.is_defined(ht[sample_type.passes_inheritance_field][family_idx]) |
+                                    hl.is_defined(ht[sample_type.other_sample_type.passes_inheritance_field][other_sample_type_indices[0]])
+                                ),  # Else, if sample is in only one sample type, check if that sample did not fail inheritance in either sample type
+                                self._family_sample_has_valid_inheritance(ht, sample_type, family_idx, sample_idx) &
+                                self._family_sample_has_valid_inheritance(ht, sample_type.other_sample_type, other_sample_type_indices[0], other_sample_type_indices[1])
+                            )
+                        ),(
+                            family_idx_map.get(hl.coalesce(sample)['familyGuid']).get(sample_type.other_sample_type.value),
+                            sample_idx_map.get(hl.coalesce(sample)['familyGuid']).get(hl.coalesce(sample)['sampleId']).get(sample_type.other_sample_type.value)),
+                        )
+                )), family_samples)
+            )
+        })
+        return ht
 
     @staticmethod
     def _family_sample_has_valid_inheritance(ht, sample_type, family_idx, sample_idx):
-        return (
-            hl.is_defined(family_idx) &
-            hl.is_defined(sample_idx) &
-            ~hl.is_defined(ht[sample_type.failed_family_sample_field][family_idx].contains(sample_idx))
+        return hl.if_else(
+            hl.is_defined(family_idx) & hl.is_defined(sample_idx),
+            ~ht[sample_type.failed_family_sample_field][family_idx].contains(sample_idx),
+            True
         )
 
     def _get_sample_genotype(self, samples, r=None, include_genotype_overrides=False, select_fields=None, **kwargs):
