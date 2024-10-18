@@ -13,6 +13,13 @@ class SampleType(str, Enum):
         }[self]
 
     @property
+    def failed_family_sample_field(self) -> str:
+        return {
+            SampleType.WES: f'wes_failed_family_sample_indices',
+            SampleType.WGS: f'wgs_failed_family_sample_indices',
+        }[self]
+
+    @property
     def passes_inheritance_field(self) -> str:
         return {
             SampleType.WES: 'wes_passes_inheritance',
