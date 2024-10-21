@@ -298,40 +298,6 @@ const getWarningsForGenotype = (genotype, variant, individual, isHemiX, isCompou
   return warnings.join(', ')
 }
 
-const LegacyAdditionalSampleTypePopup = ({ genotype, variant, isHemiX, genesById }) => {
-  const hasConflictingNumAlt = genotype.otherSample && genotype.otherSample.numAlt !== genotype.numAlt
-
-  return (
-    <div>
-      {genotype.otherSample && (
-      <Popup
-        header="Additional Sample Type"
-        trigger={<Icon name="plus circle" color={hasConflictingNumAlt ? 'red' : 'green'} />}
-        content={
-          <div>
-            {hasConflictingNumAlt && (
-              <div>
-                <VerticalSpacer height={5} />
-                <Alleles genotype={genotype.otherSample} variant={variant} isHemiX={isHemiX} />
-                <VerticalSpacer height={5} />
-              </div>
-            )}
-            {genotypeDetails(genotype.otherSample, variant, genesById)}
-          </div>
-        }
-      />
-      )}
-    </div>
-  )
-}
-
-LegacyAdditionalSampleTypePopup.propTypes = {
-  genotype: PropTypes.object,
-  variant: PropTypes.object,
-  isHemiX: PropTypes.bool,
-  genesById: PropTypes.object,
-}
-
 const PreviousCall = ({ genotype, isHemiX }) => {
   let previousCall
   if (genotype.newCall) {
@@ -399,6 +365,40 @@ const GenotypeQuality = ({ genotype, variant }) => {
 GenotypeQuality.propTypes = {
   genotype: PropTypes.object,
   variant: PropTypes.object,
+}
+
+const LegacyAdditionalSampleTypePopup = ({ genotype, variant, isHemiX, genesById }) => {
+  const hasConflictingNumAlt = genotype.otherSample && genotype.otherSample.numAlt !== genotype.numAlt
+
+  return (
+    <div>
+      {genotype.otherSample && (
+      <Popup
+        header="Additional Sample Type"
+        trigger={<Icon name="plus circle" color={hasConflictingNumAlt ? 'red' : 'green'} />}
+        content={
+          <div>
+            {hasConflictingNumAlt && (
+              <div>
+                <VerticalSpacer height={5} />
+                <Alleles genotype={genotype.otherSample} variant={variant} isHemiX={isHemiX} />
+                <VerticalSpacer height={5} />
+              </div>
+            )}
+            {genotypeDetails(genotype.otherSample, variant, genesById)}
+          </div>
+        }
+      />
+      )}
+    </div>
+  )
+}
+
+LegacyAdditionalSampleTypePopup.propTypes = {
+  genotype: PropTypes.object,
+  variant: PropTypes.object,
+  isHemiX: PropTypes.bool,
+  genesById: PropTypes.object,
 }
 
 export const MultiSampleTypeAlleles = React.memo(({ genotypes, variant, individual, isHemiX, isCompoundHet }) => {
