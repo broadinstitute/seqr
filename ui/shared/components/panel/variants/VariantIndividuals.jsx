@@ -295,7 +295,7 @@ const getWarningsForGenotype = (genotype, variant, individual, isHemiX, isCompou
   if (variant.commonLowHeteroplasmy && genotype.hl > 0) {
     warnings.push('Common low heteroplasmy')
   }
-  return warnings.join(', ')
+  return warnings.join('. ')
 }
 
 const PreviousCall = ({ genotype, isHemiX }) => {
