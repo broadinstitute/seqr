@@ -456,6 +456,7 @@ MultiSampleTypeAlleles.propTypes = {
   isHemiX: PropTypes.bool,
   isCompoundHet: PropTypes.bool,
 }
+
 const Genotype = React.memo(({ variant, individual, isCompoundHet, genesById }) => {
   const individualGenotypes = variant.genotypes[individual.individualGuid]
   if (!individualGenotypes) {
