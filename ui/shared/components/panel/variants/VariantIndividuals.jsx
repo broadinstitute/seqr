@@ -265,30 +265,71 @@ const genotypeDetails = (genotype, variant, genesById) => {
   ]
 }
 
-const GenotypeQuality = ({ genotype, variant }) => {
-  const showSecondaryQuality = !variant.svType && genotype.numAlt >= 0
-  const secondaryQuality = genotype.ab || genotype.hl
-  const quality = Number.isInteger(genotype.gq) ? genotype.gq : genotype.qs
-  const filters = genotype.filters?.join(', ') || variant.genotypeFilters
+const getWarningsForGenotype = (genotype, variant, individual, isHemiX, isCompoundHet) => {
+  const hasCnCall = isCalled(genotype.cn)
+  if (!hasCnCall && !isCalled(genotype.numAlt)) {
+    return <b>NO CALL</b>
+  }
+
+  const warnings = []
+  if (genotype.defragged) {
+    warnings.push('Defragged')
+  } else if (!isHemiX && isHemiUPDVariant(genotype.numAlt, variant, individual)) {
+    warnings.push('Potential UPD/ Hemizygosity')
+  } else if (isCompoundHet &&
+    [individual.maternalGuid, individual.paternalGuid].every(missingParentVariant(variant))) {
+    warnings.push('Variant absent in parents')
+  }
+
+  if (hasCnCall) {
+    const cnWarning = getGentoypeCnWarning(genotype, variant.svType, isHemiX)
+    if (cnWarning) {
+      warnings.push(cnWarning)
+    }
+  }
+
+  if (genotype.contamination) {
+    warnings.push(`Contamination (${genotype.contamination}) > 0`)
+  }
+
+  if (variant.commonLowHeteroplasmy && genotype.hl > 0) {
+    warnings.push('Common low heteroplasmy')
+  }
+  return warnings.join(', ')
+}
+
+const LegacyAdditionalSampleTypePopup = ({ genotype, variant, isHemiX, genesById }) => {
+  const hasConflictingNumAlt = genotype.otherSample && genotype.otherSample.numAlt !== genotype.numAlt
 
   return (
     <div>
-      {genotype.sampleType && `${genotype.sampleType}: `}
-      {Number.isInteger(quality) ? quality : '-'}
-      {showSecondaryQuality && `, ${secondaryQuality ? secondaryQuality.toPrecision(2) : '-'}`}
-      {filters && (
-        <small>
-          <br />
-          {filters}
-        </small>
+      {genotype.otherSample && (
+      <Popup
+        header="Additional Sample Type"
+        trigger={<Icon name="plus circle" color={hasConflictingNumAlt ? 'red' : 'green'} />}
+        content={
+          <div>
+            {hasConflictingNumAlt && (
+              <div>
+                <VerticalSpacer height={5} />
+                <Alleles genotype={genotype.otherSample} variant={variant} isHemiX={isHemiX} />
+                <VerticalSpacer height={5} />
+              </div>
+            )}
+            {genotypeDetails(genotype.otherSample, variant, genesById)}
+          </div>
+        }
+      />
       )}
     </div>
   )
 }
 
-GenotypeQuality.propTypes = {
+LegacyAdditionalSampleTypePopup.propTypes = {
   genotype: PropTypes.object,
   variant: PropTypes.object,
+  isHemiX: PropTypes.bool,
+  genesById: PropTypes.object,
 }
 
 const PreviousCall = ({ genotype, isHemiX }) => {
@@ -334,71 +375,30 @@ PreviousCall.propTypes = {
   isHemiX: PropTypes.bool,
 }
 
-const LegacyAdditionalSampleTypePopup = ({ genotype, variant, isHemiX, genesById }) => {
-  const hasConflictingNumAlt = genotype.otherSample && genotype.otherSample.numAlt !== genotype.numAlt
+const GenotypeQuality = ({ genotype, variant }) => {
+  const showSecondaryQuality = !variant.svType && genotype.numAlt >= 0
+  const secondaryQuality = genotype.ab || genotype.hl
+  const quality = Number.isInteger(genotype.gq) ? genotype.gq : genotype.qs
+  const filters = genotype.filters?.join(', ') || variant.genotypeFilters
 
   return (
     <div>
-      {genotype.otherSample && (
-      <Popup
-        header="Additional Sample Type"
-        trigger={<Icon name="plus circle" color={hasConflictingNumAlt ? 'red' : 'green'} />}
-        content={
-          <div>
-            {hasConflictingNumAlt && (
-              <div>
-                <VerticalSpacer height={5} />
-                <Alleles genotype={genotype.otherSample} variant={variant} isHemiX={isHemiX} />
-                <VerticalSpacer height={5} />
-              </div>
-            )}
-            {genotypeDetails(genotype.otherSample, variant, genesById)}
-          </div>
-        }
-      />
+      {genotype.sampleType && `${genotype.sampleType}: `}
+      {Number.isInteger(quality) ? quality : '-'}
+      {showSecondaryQuality && `, ${secondaryQuality ? secondaryQuality.toPrecision(2) : '-'}`}
+      {filters && (
+        <small>
+          <br />
+          {filters}
+        </small>
       )}
     </div>
   )
 }
 
-LegacyAdditionalSampleTypePopup.propTypes = {
+GenotypeQuality.propTypes = {
   genotype: PropTypes.object,
   variant: PropTypes.object,
-  isHemiX: PropTypes.bool,
-  genesById: PropTypes.object,
-}
-
-const getWarningsForGenotype = (genotype, variant, individual, isHemiX, isCompoundHet) => {
-  const hasCnCall = isCalled(genotype.cn)
-  if (!hasCnCall && !isCalled(genotype.numAlt)) {
-    return <b>NO CALL</b>
-  }
-
-  const warnings = []
-  if (genotype.defragged) {
-    warnings.push('Defragged')
-  } else if (!isHemiX && isHemiUPDVariant(genotype.numAlt, variant, individual)) {
-    warnings.push('Potential UPD/ Hemizygosity')
-  } else if (isCompoundHet &&
-    [individual.maternalGuid, individual.paternalGuid].every(missingParentVariant(variant))) {
-    warnings.push('Variant absent in parents')
-  }
-
-  if (hasCnCall) {
-    const cnWarning = getGentoypeCnWarning(genotype, variant.svType, isHemiX)
-    if (cnWarning) {
-      warnings.push(cnWarning)
-    }
-  }
-
-  if (genotype.contamination) {
-    warnings.push(`Contamination (${genotype.contamination}) > 0`)
-  }
-
-  if (variant.commonLowHeteroplasmy && genotype.hl > 0) {
-    warnings.push('Common low heteroplasmy')
-  }
-  return warnings.join(', ')
 }
 
 export const MultiSampleTypeAlleles = React.memo(({ genotypes, variant, individual, isHemiX, isCompoundHet }) => {
