@@ -163,38 +163,20 @@ const svGenotype = (genotype, isHemiX) => {
   )
 }
 
-const AllelesHeaderContent = ({ genotype, variant, isHemiX, useStyledAllele }) => {
-  const renderAllele = (isAlt, textAlign) => {
-    if (useStyledAllele) {
-      return (
-        <Allele
-          isAlt={isAlt}
-          variant={variant}
-          textAlign={textAlign}
-        />
-      )
-    }
-    return isAlt ? variant.alt : variant.ref
-  }
+const AllelesHeader = ({ genotype, variant, isHemiX }) => (
+  <Header.Content>
+    <Allele isAlt={genotype.numAlt > (isHemiX ? 0 : 1)} variant={variant} textAlign="right" />
+    /
+    {isHemiX ? '-' : <Allele isAlt={genotype.numAlt > 0} variant={variant} textAlign="left" />}
+    {genotype.mitoCn && (copyNumberGenotype(genotype.mitoCn, true))}
+  </Header.Content>
+)
 
-  return (
-    <span>
-      {renderAllele(genotype.numAlt > (isHemiX ? 0 : 1), 'right')}
-      /
-      {isHemiX ? '-' : renderAllele(genotype.numAlt > 0, 'left')}
-      {genotype.mitoCn && copyNumberGenotype(genotype.mitoCn, true)}
-    </span>
-  )
-}
-
-AllelesHeaderContent.propTypes = {
+AllelesHeader.propTypes = {
   genotype: PropTypes.object,
   variant: PropTypes.object,
   isHemiX: PropTypes.bool,
-  useStyledAllele: PropTypes.bool,
 }
-
-AllelesHeaderContent.defaultProps = { useStyledAllele: true }
 
 export const Alleles = React.memo(({ genotype, variant, isHemiX, warning }) => (
   <AlleleContainer>
@@ -202,110 +184,22 @@ export const Alleles = React.memo(({ genotype, variant, isHemiX, warning }) => (
       <Popup
         wide
         trigger={<WarningIcon />}
-        content={
-          <div>
-            <b>Warning: </b>
-            {warning}
-          </div>
-        }
+        content={warning}
       />
     )}
     {variant.svType ? (
       <Header.Content>
         {svGenotype(genotype, isHemiX)}
       </Header.Content>
-    ) : (
-      <Header.Content>
-        <AllelesHeaderContent genotype={genotype} variant={variant} isHemiX={isHemiX} />
-      </Header.Content>
-    )}
+    ) : <AllelesHeader genotype={genotype} variant={variant} isHemiX={isHemiX} />}
   </AlleleContainer>
 ))
 
 Alleles.propTypes = {
   genotype: PropTypes.object,
   variant: PropTypes.object,
-  warning: PropTypes.string,
+  warning: PropTypes.node,
   isHemiX: PropTypes.bool,
-}
-
-export const MultiSampleTypeAlleles = React.memo(({ variant, genotypes }) => {
-  const warnings = genotypes.reduce((acc, genotypeInfo) => {
-    if (genotypeInfo.warning) {
-      acc[genotypeInfo.genotype.sampleType] = genotypeInfo.warning
-    }
-    return acc
-  }, {})
-
-  const firstGenotype = genotypes[0]
-  const hasDifferentNumAlt = genotypes.some(
-    genotypeInfo => genotypeInfo.genotype.numAlt !== firstGenotype.genotype.numAlt,
-  )
-
-  return (
-    <span>
-      <AlleleContainer>
-        {(Object.keys(warnings).length > 0 || hasDifferentNumAlt) && (
-        <Popup
-          wide
-          trigger={<WarningIcon />}
-          content={
-            <span>
-              {Object.entries(warnings).map(([sampleType, warning]) => (
-                <div key={sampleType}>
-                  <b>
-                    {sampleType}
-                    Warning:
-                  </b>
-                  {warning}
-                </div>
-              ))}
-              {hasDifferentNumAlt && (
-                <div>
-                  <b>Warning: </b>
-                  Genotypes differ across sample types
-                  {genotypes.map(genotypeInfo => (
-                    <div key={genotypeInfo.sampleType}>
-                      <span>
-                        {genotypeInfo.genotype.sampleType}
-                        :&nbsp;
-                        <AllelesHeaderContent
-                          key={genotypeInfo.genotype.sampleType}
-                          genotype={genotypeInfo.genotype}
-                          variant={variant}
-                          isHemiX={genotypeInfo.isHemiX}
-                          useStyledAllele={false}
-                        />
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </span>
-          }
-        />
-        )}
-        <Header.Content>
-          <AllelesHeaderContent
-            genotype={firstGenotype.genotype}
-            variant={variant}
-            isHemiX={firstGenotype.isHemiX}
-          />
-        </Header.Content>
-      </AlleleContainer>
-    </span>
-  )
-})
-
-MultiSampleTypeAlleles.propTypes = {
-  variant: PropTypes.object,
-  genotypes: PropTypes.arrayOf(
-    PropTypes.shape({
-      genotype: PropTypes.object,
-      warning: PropTypes.string,
-      isHemiX: PropTypes.bool,
-    }),
-  ),
 }
 
 const GENOTYPE_DETAILS = [
@@ -348,7 +242,7 @@ const formattedGenotypeDetails = (details, genotype, variant, genesById) => deta
   ({ shouldHide, title, field, variantField, format, comment }) => {
     const value = genotype[field] || variant[variantField]
     return value && !(shouldHide && shouldHide(value, variant)) ? (
-      <div>
+      <div key={title}>
         {`${title}:  `}
         <b>{format ? format(value, genesById) : value}</b>
         {comment && <ColoredDiv color="grey">{comment}</ColoredDiv> }
@@ -371,40 +265,33 @@ const genotypeDetails = (genotype, variant, genesById) => {
   ]
 }
 
-const getAllGenotypeDetails = (genotype, variant, individual, isCompoundHet, genesById) => {
-  const hasCnCall = isCalled(genotype.cn)
-  if (!hasCnCall && !isCalled(genotype.numAlt)) {
-    return <b>NO CALL</b>
-  }
+const GenotypeQuality = ({ genotype, variant }) => {
+  const showSecondaryQuality = !variant.svType && genotype.numAlt >= 0
+  const secondaryQuality = genotype.ab || genotype.hl
+  const quality = Number.isInteger(genotype.gq) ? genotype.gq : genotype.qs
+  const filters = genotype.filters?.join(', ') || variant.genotypeFilters
 
-  const isHemiX = isHemiXVariant(variant, individual)
+  return (
+    <div>
+      {genotype.sampleType && `${genotype.sampleType}: `}
+      {Number.isInteger(quality) ? quality : '-'}
+      {showSecondaryQuality && `, ${secondaryQuality ? secondaryQuality.toPrecision(2) : '-'}`}
+      {filters && (
+        <small>
+          <br />
+          {filters}
+        </small>
+      )}
+    </div>
+  )
+}
 
-  const warnings = []
-  if (genotype.defragged) {
-    warnings.push('Defragged')
-  } else if (!isHemiX && isHemiUPDVariant(genotype.numAlt, variant, individual)) {
-    warnings.push('Potential UPD/ Hemizygosity')
-  } else if (isCompoundHet && [individual.maternalGuid, individual.paternalGuid].every(missingParentVariant(variant))) {
-    warnings.push('Variant absent in parents')
-  }
+GenotypeQuality.propTypes = {
+  genotype: PropTypes.object,
+  variant: PropTypes.object,
+}
 
-  if (hasCnCall) {
-    const cnWarning = getGentoypeCnWarning(genotype, variant.svType, isHemiX)
-    if (cnWarning) {
-      warnings.push(cnWarning)
-    }
-  }
-
-  if (genotype.contamination) {
-    warnings.push(`Contamination (${genotype.contamination}) > 0`)
-  }
-
-  if (variant.commonLowHeteroplasmy && genotype.hl > 0) {
-    warnings.push('Common low heteroplasmy')
-  }
-
-  const warning = warnings.join('. ')
-
+const PreviousCall = ({ genotype, isHemiX }) => {
   let previousCall
   if (genotype.newCall) {
     previousCall = { content: 'New Call', hover: 'No overlap in previous callset', color: 'green' }
@@ -429,106 +316,206 @@ const getAllGenotypeDetails = (genotype, variant, individual, isCompoundHet, gen
     }
   }
 
-  const hasConflictingNumAlt = genotype.otherSample && genotype.otherSample.numAlt !== genotype.numAlt
-  const details = genotypeDetails(genotype, variant, genesById)
-
-  const showSecondaryQuality = !variant.svType && genotype.numAlt >= 0
-  const secondaryQuality = genotype.ab || genotype.hl
-
-  const quality = Number.isInteger(genotype.gq) ? genotype.gq : genotype.qs
-  const filters = genotype.filters?.join(', ') || variant.genotypeFilters
-
-  return {
-    genotype,
-    isHemiX,
-    warning,
-    previousCall,
-    hasConflictingNumAlt,
-    details,
-    showSecondaryQuality,
-    secondaryQuality,
-    quality,
-    filters,
-  }
+  return (
+    <div>
+      {previousCall && (
+      <Popup
+        content={previousCall.hover}
+        position="bottom"
+        trigger={<Label horizontal size="mini" content={previousCall.content} color={previousCall.color} />}
+      />
+      )}
+    </div>
+  )
 }
 
-const Genotype = React.memo(({ variant, individual, isCompoundHet, genesById }) => {
-  if (!variant.genotypes) {
-    return null
+PreviousCall.propTypes = {
+  genotype: PropTypes.object,
+  isHemiX: PropTypes.bool,
+}
+
+const LegacyAdditionalSampleTypePopup = ({ genotype, variant, isHemiX, genesById }) => {
+  const hasConflictingNumAlt = genotype.otherSample && genotype.otherSample.numAlt !== genotype.numAlt
+
+  return (
+    <div>
+      {genotype.otherSample && (
+      <Popup
+        header="Additional Sample Type"
+        trigger={<Icon name="plus circle" color={hasConflictingNumAlt ? 'red' : 'green'} />}
+        content={
+          <div>
+            {hasConflictingNumAlt && (
+              <div>
+                <VerticalSpacer height={5} />
+                <Alleles genotype={genotype.otherSample} variant={variant} isHemiX={isHemiX} />
+                <VerticalSpacer height={5} />
+              </div>
+            )}
+            {genotypeDetails(genotype.otherSample, variant, genesById)}
+          </div>
+        }
+      />
+      )}
+    </div>
+  )
+}
+
+LegacyAdditionalSampleTypePopup.propTypes = {
+  genotype: PropTypes.object,
+  variant: PropTypes.object,
+  isHemiX: PropTypes.bool,
+  genesById: PropTypes.object,
+}
+
+const getWarningsForGenotype = (genotype, variant, individual, isHemiX, isCompoundHet) => {
+  const hasCnCall = isCalled(genotype.cn)
+  if (!hasCnCall && !isCalled(genotype.numAlt)) {
+    return <b>NO CALL</b>
   }
 
+  const warnings = []
+  if (genotype.defragged) {
+    warnings.push('Defragged')
+  } else if (!isHemiX && isHemiUPDVariant(genotype.numAlt, variant, individual)) {
+    warnings.push('Potential UPD/ Hemizygosity')
+  } else if (isCompoundHet &&
+    [individual.maternalGuid, individual.paternalGuid].every(missingParentVariant(variant))) {
+    warnings.push('Variant absent in parents')
+  }
+
+  if (hasCnCall) {
+    const cnWarning = getGentoypeCnWarning(genotype, variant.svType, isHemiX)
+    if (cnWarning) {
+      warnings.push(cnWarning)
+    }
+  }
+
+  if (genotype.contamination) {
+    warnings.push(`Contamination (${genotype.contamination}) > 0`)
+  }
+
+  if (variant.commonLowHeteroplasmy && genotype.hl > 0) {
+    warnings.push('Common low heteroplasmy')
+  }
+  return warnings.join(', ')
+}
+
+export const MultiSampleTypeAlleles = React.memo(({ genotypes, variant, individual, isHemiX, isCompoundHet }) => {
+  const warnings = genotypes.reduce((acc, genotype) => {
+    const warning = getWarningsForGenotype(genotype, variant, individual, isHemiX, isCompoundHet)
+    if (warning) {
+      acc[genotype.sampleType] = warning
+    }
+    return acc
+  }, {})
+
+  const hasDifferentNumAlt = genotypes.some(genotype => genotype.numAlt !== genotypes[0].numAlt)
+
+  return (
+    <Alleles
+      genotype={genotypes[0]}
+      variant={variant}
+      isHemiX={isHemiX}
+      warning={(Object.keys(warnings).length > 0 || hasDifferentNumAlt) && (
+        <div>
+          {Object.entries(warnings).map(([sampleType, warning]) => (
+            <div key={sampleType}>
+              <b>
+                {sampleType}
+                Warning:
+              </b>
+              {warning}
+            </div>
+          ))}
+          {hasDifferentNumAlt && (
+            <span>
+              <b>Warning: </b>
+              Genotypes differ across sample types
+              {genotypes.map(genotype => (
+                <div key={genotype.sampleType}>
+                  {genotype.sampleType}
+                  :
+                  <AlleleContainer>
+                    <AllelesHeader genotype={genotype} variant={variant} isHemiX={isHemiX} />
+                  </AlleleContainer>
+                </div>
+              ))}
+            </span>
+          )}
+        </div>
+      )}
+    />
+  )
+})
+
+MultiSampleTypeAlleles.propTypes = {
+  genotypes: PropTypes.arrayOf(PropTypes.object),
+  variant: PropTypes.object,
+  individual: PropTypes.object,
+  isHemiX: PropTypes.bool,
+  isCompoundHet: PropTypes.bool,
+}
+const Genotype = React.memo(({ variant, individual, isCompoundHet, genesById }) => {
   const individualGenotypes = variant.genotypes[individual.individualGuid]
   if (!individualGenotypes) {
     return null
   }
   const genotypes = (Array.isArray(individualGenotypes) ? individualGenotypes : [individualGenotypes]).sort(
     (a, b) => SAMPLE_TYPE_DISPLAY_ORDER.indexOf(a.sampleType) - SAMPLE_TYPE_DISPLAY_ORDER.indexOf(b.sampleType),
-  ).map(
-    genotype => getAllGenotypeDetails(genotype, variant, individual, isCompoundHet, genesById),
   )
 
-  const allDetails = genotypes.map(info => info.details).reduce((acc, details, index) => {
-    if (index > 0) {
-      acc.push(<Divider />)
-    }
-    return acc.concat(details)
-  }, [])
+  const isHemiX = isHemiXVariant(variant, individual)
 
-  const firstGenotype = genotypes[0]
+  const allDetails = genotypes.map(genotype => genotypeDetails(genotype, variant, genesById)).reduce(
+    (acc, genotypeDetail, index) => {
+      if (index > 0) {
+        acc.push(<Divider />)
+      }
+      return acc.concat(genotypeDetail)
+    }, [],
+  )
 
   const content = (
     <span>
-      {firstGenotype.genotype?.otherSample && (
-        <Popup
-          header="Additional Sample Type"
-          trigger={<Icon name="plus circle" color={firstGenotype.hasConflictingNumAlt ? 'red' : 'green'} />}
-          content={
-            <div>
-              {firstGenotype.hasConflictingNumAlt && (
-                <div>
-                  <VerticalSpacer height={5} />
-                  <Alleles
-                    genotype={firstGenotype.genotype.otherSample}
-                    variant={variant}
-                    isHemiX={firstGenotype.isHemiX}
-                  />
-                  <VerticalSpacer height={5} />
-                </div>
-              )}
-              {genotypeDetails(firstGenotype.genotype.otherSample, variant, genesById)}
-            </div>
-          }
+      {genotypes.length === 1 ? (
+        <span>
+          <LegacyAdditionalSampleTypePopup
+            genotype={genotypes[0]}
+            variant={variant}
+            isHemiX={isHemiX}
+            genesById={genesById}
+          />
+          <Alleles
+            genotype={genotypes[0]}
+            variant={variant}
+            isHemiX={isHemiX}
+            warning={
+              <div>
+                <b>Warning: </b>
+                {getWarningsForGenotype(genotypes[0], variant, individual, isHemiX, isCompoundHet)}
+              </div>
+            }
+          />
+        </span>
+      ) : (
+        <MultiSampleTypeAlleles
+          genotypes={genotypes}
+          variant={variant}
+          individual={individual}
+          isHemiX={isHemiX}
+          isCompoundHet={isCompoundHet}
         />
       )}
-      {genotypes.length === 1 ? (
-        <Alleles
-          genotype={firstGenotype.genotype}
-          variant={variant}
-          isHemiX={firstGenotype.isHemiX}
-        />
-      ) : <MultiSampleTypeAlleles variant={variant} genotypes={genotypes} />}
-      {genotypes.map(({ genotype, quality, showSecondaryQuality, secondaryQuality, previousCall, filters }) => (
+      {genotypes.map(genotype => (
         <div key={genotype.sampleType || genotype.sampleId}>
-          {`${genotype.sampleType}: `}
-          {previousCall && (
-            <Popup
-              content={previousCall.hover}
-              position="bottom"
-              trigger={<Label horizontal size="mini" content={previousCall.content} color={previousCall.color} />}
-            />
-          )}
-          {Number.isInteger(quality) ? quality : '-'}
-          {showSecondaryQuality && `, ${secondaryQuality ? secondaryQuality.toPrecision(2) : '-'}`}
-          {filters && (
-            <small>
-              <br />
-              {filters}
-            </small>
-          )}
+          <PreviousCall genotype={genotype} isHemiX={isHemiX} />
+          <GenotypeQuality variant={variant} genotype={genotype} />
         </div>
       ))}
     </span>
   )
+
   return allDetails.length ? <Popup position="top center" trigger={content} content={allDetails} /> : content
 })
 
