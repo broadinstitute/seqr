@@ -550,7 +550,7 @@ class HailSearchUtilsTests(TestCase, SearchUtilsTests):
     def test_cached_get_variant_query_gene_counts(self):
         super(HailSearchUtilsTests, self).test_cached_get_variant_query_gene_counts()
 
-        self.set_cache({'all_results': PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT + [SV_VARIANT1], 'total_results': 3})
+        self.set_cache({'all_results': [PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT] + [SV_VARIANT1], 'total_results': 2})
         gene_counts = get_variant_query_gene_counts(self.results_model, self.user)
         self.assertDictEqual(gene_counts, {
             'ENSG00000135953': {'total': 2, 'families': {'F000003_3': 2, 'F000011_11': 2}},

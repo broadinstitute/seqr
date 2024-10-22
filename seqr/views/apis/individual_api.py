@@ -29,12 +29,6 @@ from seqr.views.utils.project_context_utils import add_project_tag_type_counts
 from seqr.views.utils.individual_utils import delete_individuals, add_or_update_individuals_and_families
 from seqr.views.utils.variant_utils import bulk_create_tagged_variants
 
-_SEX_TO_EXPORTED_VALUE = dict(Individual.SEX_LOOKUP)
-_SEX_TO_EXPORTED_VALUE['U'] = ''
-
-__AFFECTED_TO_EXPORTED_VALUE = dict(Individual.AFFECTED_STATUS_LOOKUP)
-__AFFECTED_TO_EXPORTED_VALUE['U'] = ''
-
 
 @login_and_policies_required
 def update_individual_handler(request, individual_guid):
@@ -875,7 +869,7 @@ def import_gregor_metadata(request, project_guid):
     genes = set()
     for row in _iter_metadata_table(
         metadata_files_path, FINDINGS_TABLE, request.user,
-            lambda r: r['participant_id'] in participant_individual_map and r['variant_type'] == 'SNV/INDEL',
+            lambda r: r['participant_id'] in participant_individual_map and r['variant_type'] in {'SNV/INDEL', 'SNV', 'INDEL'},
     ):
         individual = participant_individual_map[row['participant_id']]
         variant_id = '-'.join([row[col] for col in ['chrom', 'pos', 'ref', 'alt']])

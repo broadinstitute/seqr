@@ -447,10 +447,16 @@ class Individual(ModelWithGUID):
     SEX_MALE = 'M'
     SEX_FEMALE = 'F'
     SEX_UNKNOWN = 'U'
+    FEMALE_ANEUPLOIDIES = ['XXX', 'X0']
+    MALE_ANEUPLOIDIES = ['XXY', 'XYY']
+    FEMALE_SEXES = [SEX_FEMALE] + FEMALE_ANEUPLOIDIES
+    MALE_SEXES = [SEX_MALE] + MALE_ANEUPLOIDIES
     SEX_CHOICES = (
         (SEX_MALE, 'Male'),
         ('F', 'Female'),
         ('U', 'Unknown'),
+        *[(sex, sex) for sex in MALE_ANEUPLOIDIES],
+        *[(sex, sex) for sex in FEMALE_ANEUPLOIDIES],
     )
 
     AFFECTED_STATUS_AFFECTED = 'A'
@@ -603,7 +609,7 @@ class Individual(ModelWithGUID):
     mother = models.ForeignKey('seqr.Individual', null=True, blank=True, on_delete=models.SET_NULL, related_name='maternal_children')
     father = models.ForeignKey('seqr.Individual', null=True, blank=True, on_delete=models.SET_NULL, related_name='paternal_children')
 
-    sex = models.CharField(max_length=1, choices=SEX_CHOICES, default='U')
+    sex = models.CharField(max_length=3, choices=SEX_CHOICES, default='U')
     affected = models.CharField(max_length=1, choices=AFFECTED_STATUS_CHOICES, default=AFFECTED_STATUS_UNKNOWN)
 
     # TODO once sample and individual ids are fully decoupled no reason to maintain this field

@@ -659,8 +659,10 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
             'sample_type': dag_variable_overrides['sample_type'],
             'dataset_type': dataset_type or dag_variable_overrides['dataset_type'],
             'reference_genome': dag_variable_overrides.get('reference_genome', 'GRCh38'),
-            'sample_source': dag_variable_overrides['sample_source'],
         }
+        if dag_variable_overrides.get('skip_validation'):
+            dag_variables['skip_validation'] = True
+        dag_variables['sample_source'] = dag_variable_overrides['sample_source']
         self._assert_airflow_calls(dag_variables, call_count, offset=offset)
 
     def _assert_airflow_calls(self, dag_variables, call_count, offset=0):
