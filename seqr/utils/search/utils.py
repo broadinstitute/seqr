@@ -314,7 +314,12 @@ def get_variant_query_gene_counts(search_model, user):
 
 def _get_gene_aggs_for_cached_variants(previous_search_results):
     gene_aggs = defaultdict(lambda: {'total': 0, 'families': defaultdict(int)})
-    for var in previous_search_results['all_results']:
+    # ES caches compound hets separately from main results, hail search caches everything together
+    flattened_variants = backend_specific_call(
+        lambda results: results,
+        lambda results: [v for variants in results for v in (variants if isinstance(variants, list) else [variants])],
+    )(previous_search_results['all_results'])
+    for var in flattened_variants:
         # ES only reports breakdown for main transcript gene only, hail backend reports for all genes
         gene_ids = backend_specific_call(
             lambda variant_transcripts: next((

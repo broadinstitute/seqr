@@ -6,7 +6,7 @@ import os
 
 from hail_search.constants import AFFECTED_ID, ALT_ALT, ANNOTATION_OVERRIDE_FIELDS, ANY_AFFECTED, COMP_HET_ALT, \
     COMPOUND_HET, GENOME_VERSION_GRCh38, GROUPED_VARIANTS_FIELD, ALLOWED_TRANSCRIPTS, ALLOWED_SECONDARY_TRANSCRIPTS,  HAS_ANNOTATION_OVERRIDE, \
-    HAS_ALT, HAS_REF,INHERITANCE_FILTERS, PATH_FREQ_OVERRIDE_CUTOFF, MALE, RECESSIVE, REF_ALT, REF_REF, MAX_LOAD_INTERVALS, \
+    HAS_ALT, HAS_REF,INHERITANCE_FILTERS, PATH_FREQ_OVERRIDE_CUTOFF, RECESSIVE, REF_ALT, REF_REF, MAX_LOAD_INTERVALS, \
     UNAFFECTED_ID, X_LINKED_RECESSIVE, XPOS, OMIM_SORT, FAMILY_GUID_FIELD, GENOTYPES_FIELD, AFFECTED_ID_MAP
 
 HAIL_SEARCH_DATA_DIR = os.environ.get('HAIL_SEARCH_DATA_DIR', '/seqr/seqr-hail-search-data')
@@ -563,7 +563,7 @@ class BaseHailTableQuery(object):
             sampleId=sample['sample_id'],
             individualGuid=sample['individual_guid'],
             affected_id=AFFECTED_ID_MAP.get(sample['affected']),
-            is_male='sex' in sample and sample['sex'] == MALE,
+            is_male=sample.get('is_male', False),
         )
 
     @classmethod
@@ -624,14 +624,11 @@ class BaseHailTableQuery(object):
                 if genotype:
                     entry_indices_by_gt[genotype][family_index].append(sample_index)
 
-        min_unaffected = None
         if inheritance_mode == COMPOUND_HET:
             family_unaffected_counts = [
                 len(i) for i in entry_indices_by_gt[INHERITANCE_FILTERS[COMPOUND_HET][UNAFFECTED_ID]].values()
             ]
             self.max_unaffected_samples = max(family_unaffected_counts) if family_unaffected_counts else 0
-            if self.max_unaffected_samples > 1:
-                min_unaffected = min(family_unaffected_counts)
 
         for genotype, entry_indices in entry_indices_by_gt.items():
             if not entry_indices:
@@ -639,27 +636,15 @@ class BaseHailTableQuery(object):
             entry_indices = hl.dict(entry_indices)
             ht = ht.annotate(**{
                 annotation: hl.enumerate(ht[entries_ht_field]).starmap(
-                    lambda i, family_samples: self._valid_genotype_family_entries(
-                        family_samples, entry_indices.get(i), genotype, min_unaffected
-                    )
+                    lambda family_i, family_samples: hl.or_missing(
+                        ~entry_indices.contains(family_i) | entry_indices[family_i].all(
+                            lambda sample_i: self.GENOTYPE_QUERY_MAP[genotype](family_samples[sample_i].GT)
+                        ), family_samples,
+                    ),
                 )
             })
 
         return ht
-
-    @classmethod
-    def _valid_genotype_family_entries(cls, entries: list, genotype_entry_indices, genotype: str, min_unaffected: int):
-        is_valid = hl.is_missing(genotype_entry_indices) | genotype_entry_indices.all(
-            lambda i: cls.GENOTYPE_QUERY_MAP[genotype](entries[i].GT)
-        )
-        if min_unaffected is not None and genotype == HAS_REF:
-            unaffected_filter = genotype_entry_indices.any(
-                lambda i: cls.GENOTYPE_QUERY_MAP[REF_REF](entries[i].GT)
-            )
-            if min_unaffected < 2:
-                unaffected_filter |= genotype_entry_indices.size() < 2
-            is_valid &= unaffected_filter
-        return hl.or_missing(is_valid, entries)
 
     def _get_family_passes_quality_filter(self, quality_filter, ht, **kwargs):
         quality_filter = quality_filter or {}

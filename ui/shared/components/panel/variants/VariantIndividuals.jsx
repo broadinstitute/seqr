@@ -13,6 +13,7 @@ import {
   INDIVIDUAL_FIELD_LOOKUP,
   SAMPLE_TYPE_EXOME,
   SAMPLE_TYPE_GENOME,
+  SIMPLIFIED_SEX_LOOKUP,
 } from 'shared/utils/constants'
 import BaseFieldView from '../view-fields/BaseFieldView'
 import PedigreeIcon from '../../icons/PedigreeIcon'
@@ -88,7 +89,7 @@ const PAR_REGIONS = {
 const SAMPLE_TYPE_DISPLAY_ORDER = [SAMPLE_TYPE_GENOME, SAMPLE_TYPE_EXOME]
 
 const isHemiXVariant =
-  (variant, individual) => individual.sex === 'M' && (variant.chrom === 'X' || variant.chrom === 'Y') &&
+  (variant, individual) => SIMPLIFIED_SEX_LOOKUP[individual.sex] === 'M' && (variant.chrom === 'X' || variant.chrom === 'Y') &&
   PAR_REGIONS[variant.genomeVersion][variant.chrom].every(region => variant.pos < region[0] || variant.pos > region[1])
 
 const missingParentVariant = variant => (parentGuid) => {
@@ -294,6 +295,10 @@ const getWarningsForGenotype = (genotype, variant, individual, isHemiX, isCompou
 
   if (variant.commonLowHeteroplasmy && genotype.hl > 0) {
     warnings.push('Common low heteroplasmy')
+  }
+   
+  if ((variant.chrom === 'X' || variant.chrom === 'Y') && SIMPLIFIED_SEX_LOOKUP[individual.sex] !== individual.sex) {
+    warnings.push(`Sex Aneuploidy - ${individual.sex}`)
   }
   return warnings.join('. ')
 }

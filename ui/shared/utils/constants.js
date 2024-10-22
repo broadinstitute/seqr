@@ -394,12 +394,22 @@ export const CATEGORY_FAMILY_FILTERS = {
 }
 
 // INDIVIDUAL FIELDS
-
+const SEX_MALE = 'M'
+const SEX_FEMALE = 'F'
+const MALE_ANEUPLOIDIES = ['XXY', 'XYY']
+const FEMALE_ANEUPLOIDIES = ['XXX', 'X0']
 export const SEX_OPTIONS = [
   { value: 'M', text: 'Male' },
   { value: 'F', text: 'Female' },
   { value: 'U', text: '?' },
+  ...MALE_ANEUPLOIDIES.map(value => ({ value, text: `Male (${value})` })),
+  ...FEMALE_ANEUPLOIDIES.map(value => ({ value, text: `Female (${value})` })),
 ]
+
+export const SIMPLIFIED_SEX_LOOKUP = {
+  ...[SEX_MALE, ...MALE_ANEUPLOIDIES].reduce((acc, val) => ({ ...acc, [val]: SEX_MALE }), {}),
+  ...[SEX_FEMALE, ...FEMALE_ANEUPLOIDIES].reduce((acc, val) => ({ ...acc, [val]: SEX_FEMALE }), {}),
+}
 
 export const SEX_LOOKUP = SEX_OPTIONS.reduce(
   (acc, opt) => ({
@@ -455,6 +465,51 @@ const PROBAND_RELATIONSHIP_LOOKUP = PROBAND_RELATIONSHIP_OPTIONS.reduce(
   }), {},
 )
 
+const ANALYTE_TYPE_OPTIONS = [
+  { value: 'D', text: 'DNA' },
+  { value: 'R', text: 'RNA' },
+  { value: 'B', text: 'blood plasma' },
+  { value: 'F', text: 'frozen whole blood' },
+  { value: 'H', text: 'high molecular weight DNA' },
+  { value: 'U', text: 'urine' },
+]
+
+const ANALYTE_TYPE_LOOKUP = ANALYTE_TYPE_OPTIONS.reduce(
+  (acc, opt) => ({
+    ...acc,
+    ...{ [opt.value]: opt.text },
+  }), {},
+)
+
+const BIOSAMPLE_OPTIONS = [
+  { value: 'T', text: 'UBERON:0000479 (tissue)' },
+  { value: 'NT', text: 'UBERON:0003714 (neural tissue)' },
+  { value: 'S', text: 'UBERON:0001836 (saliva)' },
+  { value: 'SE', text: 'UBERON:0001003 (skin epidermis)' },
+  { value: 'MT', text: 'UBERON:0002385 (muscle tissue)' },
+  { value: 'WB', text: 'UBERON:0000178 (whole blood)' },
+  { value: 'BM', text: 'UBERON:0002371 (bone marrow)' },
+  { value: 'CC', text: 'UBERON:0006956 (buccal mucosa)' },
+  { value: 'CF', text: 'UBERON:0001359 (cerebrospinal fluid)' },
+  { value: 'U', text: 'UBERON:0001088 (urine)' },
+  { value: 'NE', text: 'UBERON:0019306 (nose epithelium)' },
+  { value: 'EM', text: 'UBERON:0005291 (embryonic tissue)' },
+  { value: 'CE', text: 'UBERON:0002037 (cerebellum tissue)' },
+  { value: 'CA', text: 'UBERON:0001133 (cardiac tissue)' },
+  { value: 'IP', text: 'CL:0000034 (iPSC)' },
+  { value: 'NP', text: 'CL:0011020 (iPSC NPC)' },
+  { value: 'MO', text: 'CL:0000576 (monocytes - PBMCs)' },
+  { value: 'LY', text: 'CL:0000542 (lymphocytes - LCLs)' },
+  { value: 'FI', text: 'CL:0000057 (fibroblasts)' },
+]
+
+const BIOSAMPLE_LOOKUP = BIOSAMPLE_OPTIONS.reduce(
+  (acc, opt) => ({
+    ...acc,
+    ...{ [opt.value]: opt.text },
+  }), {},
+)
+
 export const INDIVIDUAL_FIELD_ID = 'individualId'
 export const INDIVIDUAL_FIELD_PATERNAL_ID = 'paternalId'
 export const INDIVIDUAL_FIELD_MATERNAL_ID = 'maternalId'
@@ -466,6 +521,9 @@ export const INDIVIDUAL_FIELD_FEATURES = 'features'
 export const INDIVIDUAL_FIELD_FILTER_FLAGS = 'filterFlags'
 export const INDIVIDUAL_FIELD_POP_FILTERS = 'popPlatformFilters'
 export const INDIVIDUAL_FIELD_SV_FLAGS = 'svFlags'
+export const INDIVIDUAL_FIELD_ANALYTE_TYPE = 'analyteType'
+export const INDIVIDUAL_FIELD_PRIMARY_BIOSAMPLE = 'primaryBiosample'
+export const INDIVIDUAL_FIELD_TISSUE_AFFECTED = 'tissueAffectedStatus'
 
 export const INDIVIDUAL_FIELD_CONFIGS = {
   [FAMILY_FIELD_ID]: { label: 'Family ID' },
@@ -477,7 +535,7 @@ export const INDIVIDUAL_FIELD_CONFIGS = {
     format: sex => SEX_LOOKUP[sex],
     width: 3,
     description: 'Male, Female, or Unknown',
-    formFieldProps: { component: RadioGroup, options: SEX_OPTIONS },
+    formFieldProps: { component: Select, options: SEX_OPTIONS },
   },
   [INDIVIDUAL_FIELD_AFFECTED]: {
     label: 'Affected Status',
@@ -493,6 +551,23 @@ export const INDIVIDUAL_FIELD_CONFIGS = {
       PROBAND_RELATIONSHIP_OPTIONS.map(({ name }) => name).join(', ')}`,
     format: relationship => PROBAND_RELATIONSHIP_LOOKUP[relationship],
     formFieldProps: { component: Select, options: PROBAND_RELATIONSHIP_OPTIONS, search: true },
+  },
+  [INDIVIDUAL_FIELD_ANALYTE_TYPE]: {
+    label: 'Analyte Type',
+    description: `One of: ${ANALYTE_TYPE_OPTIONS.map(({ text }) => text).join(', ')}`,
+    format: val => ANALYTE_TYPE_LOOKUP[val],
+    formFieldProps: { component: Select, options: ANALYTE_TYPE_OPTIONS },
+  },
+  [INDIVIDUAL_FIELD_PRIMARY_BIOSAMPLE]: {
+    label: 'Primary Biosample',
+    description: `One of: ${BIOSAMPLE_OPTIONS.map(({ text }) => text).join(', ')}`,
+    format: val => BIOSAMPLE_LOOKUP[val],
+    formFieldProps: { component: Select, options: BIOSAMPLE_OPTIONS },
+  },
+  [INDIVIDUAL_FIELD_TISSUE_AFFECTED]: {
+    label: 'Tissue Affected Status',
+    description: 'Yes, No, or Unknown',
+    format: val => ({ [true]: 'Yes', [false]: 'No' }[val] || 'Unknown'),
   },
 }
 
@@ -534,10 +609,6 @@ export const INDIVIDUAL_CORE_EXPORT_DATA = [
   INDIVIDUAL_FIELD_AFFECTED,
   INDIVIDUAL_FIELD_NOTES,
 ].map(exportConfigForField(INDIVIDUAL_FIELD_CONFIGS))
-
-export const INDIVIDUAL_BULK_UPDATE_EXPORT_DATA = [
-  ...INDIVIDUAL_CORE_EXPORT_DATA, exportConfigForField(INDIVIDUAL_FIELD_CONFIGS)(INDIVIDUAL_FIELD_PROBAND_RELATIONSHIP),
-]
 
 export const INDIVIDUAL_EXPORT_DATA = [].concat(
   INDIVIDUAL_ID_EXPORT_DATA, INDIVIDUAL_CORE_EXPORT_DATA, [INDIVIDUAL_HAS_DATA_EXPORT_CONFIG],
@@ -1454,6 +1525,7 @@ export const ORDERED_PREDICTOR_FIELDS = [
   { field: 'haplogroup_defining', indicatorMap: { Y: { color: 'green', value: '' } } },
   { field: 'mitotip', indicatorMap: MITOTIP_MAP, fieldTitle: 'MitoTIP' },
   { field: 'hmtvar', thresholds: [undefined, undefined, 0.35, 0.35, undefined], fieldTitle: 'HmtVar' },
+  { field: 'mlc', thresholds: [undefined, 0.5, 0.5, 0.75, undefined], fieldTitle: 'MLC' },
 ]
 
 export const coloredIcon = color => React.createElement(color.startsWith('#') ? ColoredIcon : Icon, { name: 'circle', size: 'small', color })

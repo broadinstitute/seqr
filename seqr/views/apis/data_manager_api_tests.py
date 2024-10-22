@@ -390,10 +390,10 @@ EXPECTED_UPDATED_LIRICAL_DATA = [
 
 PEDIGREE_HEADER = ['Project_GUID', 'Family_GUID', 'Family_ID', 'Individual_ID', 'Paternal_ID', 'Maternal_ID', 'Sex']
 EXPECTED_PEDIGREE_ROWS = [
-    ['R0001_1kg', 'F000001_1', '1', 'NA19675_1', 'NA19678', 'NA19679', 'M'],
+    ['R0001_1kg', 'F000001_1', '1', 'NA19675_1', 'NA19678', 'NA19679', 'XXY'],
     ['R0001_1kg', 'F000001_1', '1', 'NA19678', '', '', 'M'],
     ['R0001_1kg', 'F000001_1', '1', 'NA19679', '', '', 'F'],
-    ['R0001_1kg', 'F000002_2', '2', 'HG00731', 'HG00732', 'HG00733', 'F'],
+    ['R0001_1kg', 'F000002_2', '2', 'HG00731', 'HG00732', 'HG00733', 'X0'],
 ]
 
 PROJECT_OPTION = {
@@ -401,7 +401,7 @@ PROJECT_OPTION = {
     'name': 'Non-Analyst Project',
     'projectGuid': 'R0004_non_analyst_project',
 }
-PROJECT_SAMPLES_OPTION = {**PROJECT_OPTION, 'sampleIds': ['NA21234', 'NA21987', 'NA21988']}
+PROJECT_SAMPLES_OPTION = {**PROJECT_OPTION, 'sampleIds': ['NA21234', 'NA21987']}
 EMPTY_PROJECT_OPTION = {
     'dataTypeLastLoaded': None,
     'name': 'Empty Project',
@@ -409,54 +409,57 @@ EMPTY_PROJECT_OPTION = {
 }
 EMPTY_PROJECT_SAMPLES_OPTION = {**EMPTY_PROJECT_OPTION, 'sampleIds': ['HG00738', 'HG00739']}
 
-AIRTABLE_PDO_RECORDS = {
+AIRTABLE_SAMPLE_RECORDS = {
     'records': [
         {
             'id': 'recW24C2CJW5lT64K',
             'fields': {
-                'SeqrProjectURL': 'https://seqr.broadinstitute.org/project/R0002_empty/project_page',
-                'PassingCollaboratorSampleIDs': ['HG00738', None],
-                'SeqrIDs': [None, 'HG00739'],
+                'SeqrProject': ['https://seqr.broadinstitute.org/project/R0002_empty/project_page'],
+                'PDOStatus': ['Methods (Loading)'],
+                'CollaboratorSampleID': 'HG00738',
+            }
+        },
+        {
+            'id': 'recW24C2CJW5lT64L',
+            'fields': {
+                'SeqrProject': ['https://seqr.broadinstitute.org/project/R0002_empty/project_page'],
+                'PDOStatus': ['Methods (Loading)'],
+                'SeqrCollaboratorSampleID': 'HG00739',
             }
         },
         {
             'id': 'rec2B6OGmQpAkQW3s',
             'fields': {
-                'SeqrProjectURL': 'https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page',
-                'PassingCollaboratorSampleIDs': ['NA21234', 'NA21987'],
-                'SeqrIDs': [None, None],
+                'SeqrProject': [
+                    'https://seqr.broadinstitute.org/project/R0002_empty/project_page',
+                    'https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page',
+                ],
+                'PDOStatus': ['Historic', 'Methods (Loading)'],
+                'CollaboratorSampleID': 'NA21234',
             }
         },
         {
-            'id': 'rec2Nkg10N1KssPc3',
+            'id': 'rec2B6OGmQpAkQW7s',
             'fields': {
-                'SeqrProjectURL': 'https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page',
-                'PassingCollaboratorSampleIDs': [None],
-                'SeqrIDs': ['NA21988'],
+                'SeqrProject': ['https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page'],
+                'PDOStatus': ['Methods (Loading)'],
+                'CollaboratorSampleID': 'NA21987',
             }
         },
-    ]
-}
-AIRTABLE_SAMPLE_RECORDS = {
-    'records': [
         {
-            'id': 'recW24C2CJW5lT64K',
+            'id': 'recW24C2CJW5lT67K',
             'fields': {
                 'CollaboratorSampleID': 'NA19678',
                 'SeqrProject': ['https://seqr.broadinstitute.org/project/R0001_1kg/project_page'],
                 'PDOStatus': ['Available in seqr'],
             }
         },
-    ],
-}
-AIRTABLE_SECONDARY_SAMPLE_RECORDS = {
-    'records': [
         {
-            'id': 'recW24C2CJW5lT64K',
+            'id': 'recW24C2CJW5lT65K',
             'fields': {
-                'SeqrCollaboratorSampleID': 'NA21234',
-                'SeqrProject': ['https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page'],
-                'PDOStatus': ['Hold for phenotips'],
+                'CollaboratorSampleID': 'HG00731',
+                'SeqrProject': ['https://seqr.broadinstitute.org/project/R0001_1kg/project_page'],
+                'PDOStatus': ['Available in seqr'],
             }
         },
     ],
@@ -687,13 +690,24 @@ class DataManagerAPITest(AirtableTest):
         url = '/api/kibana/random/path'
         self.check_data_manager_login(url)
 
+        self._test_request_proxy('localhost:5601', url, auth_header='Basic a2liYW5hOmFiYzEyMw==')
+
+        # Test with error response
+        response = self.client.get('{}/bad_response'.format(url))
+        self.assertEqual(response.status_code, 500)
+
+        # Test with connection error
+        response = self.client.get('{}/bad_path'.format(url))
+        self.assertContains(response, 'Error: Unable to connect to Kibana', status_code=400)
+
+    def _test_request_proxy(self, host, url, auth_header=None, proxy_path=None):
         response_args = {
             'stream': True,
             'body': 'Test response',
             'content_type': 'text/custom',
             'headers': {'x-test-header': 'test', 'keep-alive': 'true'},
         }
-        proxy_url = 'http://localhost:5601{}'.format(url)
+        proxy_url = f'http://{host}{proxy_path or url}'
         responses.add(responses.GET, proxy_url, status=200, **response_args)
         responses.add(responses.POST, proxy_url, status=201, **response_args)
         responses.add(responses.GET, '{}/bad_response'.format(proxy_url), body=HTTPError())
@@ -712,24 +726,44 @@ class DataManagerAPITest(AirtableTest):
         self.assertEqual(len(responses.calls), 2)
 
         get_request = responses.calls[0].request
-        self.assertEqual(get_request.headers['Host'], 'localhost:5601')
-        self.assertEqual(get_request.headers['Authorization'], 'Basic a2liYW5hOmFiYzEyMw==')
+        self.assertEqual(get_request.headers['Host'], host)
         self.assertEqual(get_request.headers['Test-Header'], 'some/value')
+        if auth_header:
+            self.assertEqual(get_request.headers['Authorization'], auth_header)
+        else:
+            self.assertFalse('Authorization' in get_request.headers)
 
         post_request = responses.calls[1].request
-        self.assertEqual(post_request.headers['Host'], 'localhost:5601')
-        self.assertEqual(get_request.headers['Authorization'], 'Basic a2liYW5hOmFiYzEyMw==')
+        self.assertEqual(post_request.headers['Host'], host)
         self.assertEqual(post_request.headers['Content-Type'], 'application/json')
         self.assertEqual(post_request.headers['Content-Length'], '26')
         self.assertEqual(post_request.body, data.encode('utf-8'))
+        if auth_header:
+            self.assertEqual(get_request.headers['Authorization'], auth_header)
+        else:
+            self.assertFalse('Authorization' in get_request.headers)
 
-        # Test with error response
-        response = self.client.get('{}/bad_response'.format(url))
-        self.assertEqual(response.status_code, 500)
+    @mock.patch('seqr.views.apis.data_manager_api.LUIGI_UI_SERVICE_HOSTNAME')
+    @responses.activate
+    def test_luigi_proxy(self, mock_hostname):
+        mock_hostname.__bool__.return_value = False
 
-        # Test with connection error
-        response = self.client.get('{}/bad_path'.format(url))
-        self.assertContains(response, 'Error: Unable to connect to Kibana', status_code=400)
+        url = '/luigi_ui/api/task_list'
+        self.check_data_manager_login(url)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.content, b'Loading Pipeline UI is not configured')
+
+        mock_hostname.__str__.return_value = 'pipeline-runner-ui'
+        mock_hostname.__bool__.return_value = True
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 400)
+        self.assertContains(response, 'Error: Unable to connect to Luigi UI', status_code=400)
+
+        responses.calls.reset()
+        self._test_request_proxy('pipeline-runner-ui:8082', url, proxy_path='/api/task_list')
 
     RNA_DATA_TYPE_PARAMS = {
         'outlier': {
@@ -1399,7 +1433,7 @@ class DataManagerAPITest(AirtableTest):
         mock_subprocess.return_value.communicate.return_value = (
             b'', b'CommandException: One or more URLs matched no objects.',
         )
-        body = {'filePath': f'{self.CALLSET_DIR}/sharded_vcf/part0*.vcf', 'datasetType': 'SNV_INDEL'}
+        body = {'filePath': f'{self.CALLSET_DIR}/sharded_vcf/part0*.vcf'}
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(
@@ -1420,29 +1454,24 @@ class DataManagerAPITest(AirtableTest):
         self.assertEqual(response.status_code, 200)
 
     @mock.patch('seqr.views.utils.permissions_utils.INTERNAL_NAMESPACES', ['my-seqr-billing', 'ext-data'])
-    @mock.patch('seqr.views.apis.data_manager_api.BASE_URL', 'https://seqr.broadinstitute.org/')
+    @mock.patch('seqr.views.utils.airtable_utils.BASE_URL', 'https://seqr.broadinstitute.org/')
     @responses.activate
     def test_get_loaded_projects(self):
+        responses.add(
+            responses.GET, 'https://api.airtable.com/v0/app3Y97xtbbaOopVR/Samples', json=AIRTABLE_SAMPLE_RECORDS, status=200,
+        )
+
         url = reverse(get_loaded_projects, args=['WGS', 'SV'])
         self.check_pm_login(url)
 
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {'projects': [{**PROJECT_OPTION, 'dataTypeLastLoaded': '2018-02-05T06:31:55.397Z'}]})
+        self.reset_logs()
+        response = self._assert_expected_pm_access(lambda: self.client.get(url))
+        self.assertDictEqual(response.json(), {'projects': [{**self.PROJECT_OPTION, 'dataTypeLastLoaded': '2018-02-05T06:31:55.397Z'}]})
 
         response = self.client.get(url.replace('SV', 'MITO'))
         self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {'projects': [PROJECT_OPTION]})
+        self.assertDictEqual(response.json(), {'projects': [self.PROJECT_OPTION]})
 
-        # test data manager access
-        self.login_data_manager_user()
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-
-        # test with airtable filter
-        responses.add(
-            responses.GET, 'https://api.airtable.com/v0/app3Y97xtbbaOopVR/PDO', json=AIRTABLE_PDO_RECORDS, status=200,
-        )
         snv_indel_url = url.replace('SV', 'SNV_INDEL')
         response = self.client.get(snv_indel_url)
         self.assertEqual(response.status_code, 200)
@@ -1454,8 +1483,14 @@ class DataManagerAPITest(AirtableTest):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'projects': self.WES_PROJECT_OPTIONS})
 
+    def _assert_expected_pm_access(self, get_response):
+        response = get_response()
+        self.assertEqual(response.status_code, 200)
+        self.login_data_manager_user()
+        return response
+
     @responses.activate
-    @mock.patch('seqr.views.apis.data_manager_api.BASE_URL', 'https://seqr.broadinstitute.org/')
+    @mock.patch('seqr.views.utils.airtable_utils.BASE_URL', 'https://seqr.broadinstitute.org/')
     @mock.patch('seqr.views.utils.export_utils.os.makedirs')
     @mock.patch('seqr.views.utils.export_utils.open')
     @mock.patch('seqr.views.utils.export_utils.TemporaryDirectory')
@@ -1463,23 +1498,26 @@ class DataManagerAPITest(AirtableTest):
         url = reverse(load_data)
         self.check_pm_login(url)
 
+        responses.add(responses.GET, 'https://api.airtable.com/v0/app3Y97xtbbaOopVR/Samples', json=AIRTABLE_SAMPLE_RECORDS, status=200)
         responses.add(responses.POST, PIPELINE_RUNNER_URL)
         mock_temp_dir.return_value.__enter__.return_value = '/mock/tmp'
-        body = {'filePath': f'{self.CALLSET_DIR}/mito_callset.mt', 'datasetType': 'MITO', 'sampleType': 'WGS', 'genomeVersion': '38', 'projects': [
-            json.dumps({'projectGuid': 'R0001_1kg'}), json.dumps(PROJECT_OPTION), json.dumps({'projectGuid': 'R0005_not_project'}),
-        ]}
+        body = {'filePath': f'{self.CALLSET_DIR}/mito_callset.mt', 'datasetType': 'MITO', 'sampleType': 'WES', 'genomeVersion': '38', 'projects': [
+            json.dumps(option) for option in self.PROJECT_OPTIONS + [{'projectGuid': 'R0005_not_project'}]
+        ], 'skipValidation': True}
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'error': 'The following projects are invalid: R0005_not_project'})
 
         self.reset_logs()
+        responses.calls.reset()
         body['projects'] = body['projects'][:-1]
-        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
-        self.assertEqual(response.status_code, 200)
+        response = self._assert_expected_pm_access(
+            lambda: self.client.post(url, content_type='application/json', data=json.dumps(body))
+        )
         self.assertDictEqual(response.json(), {'success': True})
 
-        self._assert_expected_load_data_requests()
-        self._has_expected_ped_files(mock_open, mock_mkdir, 'MITO')
+        self._assert_expected_load_data_requests(sample_type='WES', skip_validation=True)
+        self._has_expected_ped_files(mock_open, mock_mkdir, 'MITO', sample_type='WES')
 
         dag_json = {
             'projects_to_run': [
@@ -1487,9 +1525,10 @@ class DataManagerAPITest(AirtableTest):
                 'R0004_non_analyst_project'
             ],
             'callset_path': f'{self.TRIGGER_CALLSET_DIR}/mito_callset.mt',
-            'sample_type': 'WGS',
+            'sample_type': 'WES',
             'dataset_type': 'MITO',
             'reference_genome': 'GRCh38',
+            'skip_validation': True,
         }
         self._assert_success_notification(dag_json)
 
@@ -1500,17 +1539,19 @@ class DataManagerAPITest(AirtableTest):
         responses.calls.reset()
         self.reset_logs()
 
-        body.update({'datasetType': 'SV', 'filePath': f'{self.CALLSET_DIR}/sv_callset.vcf', 'sampleType': 'WES'})
+        del body['skipValidation']
+        del dag_json['skip_validation']
+        body.update({'datasetType': 'SV', 'filePath': f'{self.CALLSET_DIR}/sv_callset.vcf'})
         self._trigger_error(url, body, dag_json, mock_open, mock_mkdir)
 
-        # Test loading with sample subset
         responses.add(responses.POST, PIPELINE_RUNNER_URL)
         responses.calls.reset()
         mock_open.reset_mock()
         mock_mkdir.reset_mock()
-        body.update({'datasetType': 'SNV_INDEL', 'sampleType': 'WGS', 'projects': [json.dumps(PROJECT_SAMPLES_OPTION)]})
+        body.update({'sampleType': 'WGS', 'projects': [json.dumps(self.PROJECT_OPTION)]})
+        del body['datasetType']
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
-        self._test_load_sample_subset(mock_open, mock_mkdir, response, url, body)
+        self._test_load_single_project(mock_open, mock_mkdir, response, url=url, body=body)
 
         # Test write pedigree error
         self.reset_logs()
@@ -1518,7 +1559,6 @@ class DataManagerAPITest(AirtableTest):
         mock_mkdir.reset_mock()
         mock_open.reset_mock()
         mock_open.side_effect = OSError('Restricted filesystem')
-        self.login_data_manager_user()
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self._assert_write_pedigree_error(response)
         self.assert_json_logs(self.data_manager_user, [
@@ -1535,7 +1575,7 @@ class DataManagerAPITest(AirtableTest):
         self._assert_trigger_error(response, body, dag_json)
         self._has_expected_ped_files(mock_open, mock_mkdir, 'SV', sample_type='WES')
 
-    def _has_expected_ped_files(self, mock_open, mock_mkdir, dataset_type, sample_type='WGS', has_project_subset=False, single_project=False):
+    def _has_expected_ped_files(self, mock_open, mock_mkdir, dataset_type, sample_type='WGS', single_project=False):
         mock_open.assert_has_calls([
             mock.call(f'{self._local_pedigree_path(dataset_type, sample_type)}/{project}_pedigree.tsv', 'w')
             for project in self.PROJECTS[(1 if single_project else 0):]
@@ -1546,7 +1586,7 @@ class DataManagerAPITest(AirtableTest):
         ]
         self.assertEqual(len(files), 1 if single_project else 2)
 
-        num_rows = 4 if has_project_subset else 15
+        num_rows = 7 if self.MOCK_AIRTABLE_KEY else 15
         if not single_project:
             self.assertEqual(len(files[0]), num_rows)
             self.assertListEqual(files[0][:5], [PEDIGREE_HEADER] + EXPECTED_PEDIGREE_ROWS[:num_rows-1])
@@ -1558,17 +1598,26 @@ class DataManagerAPITest(AirtableTest):
             ['R0004_non_analyst_project', 'F000014_14', '14', 'NA21987', '', '', 'M'],
         ])
 
+    def _test_load_single_project(self, mock_open, mock_mkdir, response, *args, **kwargs):
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'success': True})
+        self._has_expected_ped_files(mock_open, mock_mkdir, 'SNV_INDEL', single_project=True)
+        # Only a DAG trigger, no airtable calls as there is no previously loaded WGS SNV_INDEL data for these samples
+        self.assertEqual(len(responses.calls), 1)
+
 
 class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
     fixtures = ['users', '1kg_project', 'reference_data']
 
     TRIGGER_CALLSET_DIR = '/local_datasets'
     CALLSET_DIR = ''
+    PROJECT_OPTION = PROJECT_OPTION
     WGS_PROJECT_OPTIONS = [EMPTY_PROJECT_OPTION, PROJECT_OPTION]
     WES_PROJECT_OPTIONS = [
         {'name': '1kg project nåme with uniçøde', 'projectGuid': 'R0001_1kg', 'dataTypeLastLoaded': '2017-02-05T06:25:55.397Z'},
         EMPTY_PROJECT_OPTION,
     ]
+    PROJECT_OPTIONS = [{'projectGuid': 'R0001_1kg'}, PROJECT_OPTION]
 
     def setUp(self):
         patcher = mock.patch('seqr.utils.file_utils.os.path.isfile')
@@ -1593,18 +1642,21 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
     def _assert_expected_get_projects_requests(self):
         self.assertEqual(len(responses.calls), 0)
 
-    def _assert_expected_load_data_requests(self, dataset_type='MITO', sample_type='WGS', trigger_error=False, skip_project=False):
+    def _assert_expected_load_data_requests(self, dataset_type='MITO', sample_type='WGS', trigger_error=False, skip_project=False, skip_validation=False):
         self.assertEqual(len(responses.calls), 1)
         projects = [PROJECT_GUID, NON_ANALYST_PROJECT_GUID]
         if skip_project:
             projects = projects[1:]
-        self.assertDictEqual(json.loads(responses.calls[0].request.body), {
+        body = {
             'projects_to_run': projects,
             'callset_path': '/local_datasets/sv_callset.vcf' if trigger_error else '/local_datasets/mito_callset.mt',
             'sample_type': sample_type,
             'dataset_type': dataset_type,
             'reference_genome': 'GRCh38',
-        })
+        }
+        if skip_validation:
+            body['skip_validation'] = True
+        self.assertDictEqual(json.loads(responses.calls[0].request.body), body)
 
     @staticmethod
     def _local_pedigree_path(dataset_type, sample_type):
@@ -1634,15 +1686,13 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
         self.assertEqual(response.status_code, 400)
         error = f'400 Client Error: Bad Request for url: {PIPELINE_RUNNER_URL}'
         self.assertDictEqual(response.json(), response_body or {'error': error})
-        self.assert_json_logs(self.pm_user, [
+        self.assert_json_logs(self.data_manager_user, [
             (error, {'severity': 'WARNING', 'requestBody': body, 'httpRequest': mock.ANY, 'traceback': mock.ANY}),
         ])
 
-    def _test_load_sample_subset(self, mock_open, mock_mkdir, response, *args):
-        # Loading with sample subset does not change behavior when airtable is disabled
-        self.assertEqual(response.status_code, 200)
+    def _test_load_single_project(self, *args, **kwargs):
+        super()._test_load_single_project(*args, **kwargs)
         self._assert_expected_load_data_requests(dataset_type='SNV_INDEL', skip_project=True, trigger_error=True)
-        self._has_expected_ped_files(mock_open, mock_mkdir, 'SNV_INDEL', single_project=True)
 
     def _assert_write_pedigree_error(self, response):
         self.assertEqual(response.status_code, 500)
@@ -1654,12 +1704,18 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
 class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
 
+    ADDITIONAL_REQUEST_COUNT = 1
     LOADING_PROJECT_GUID = NON_ANALYST_PROJECT_GUID
     CALLSET_DIR = 'gs://test_bucket'
     TRIGGER_CALLSET_DIR = CALLSET_DIR
     LOCAL_WRITE_DIR = '/mock/tmp'
+    PROJECT_OPTION = PROJECT_SAMPLES_OPTION
     WGS_PROJECT_OPTIONS = [EMPTY_PROJECT_SAMPLES_OPTION, PROJECT_SAMPLES_OPTION]
     WES_PROJECT_OPTIONS = [EMPTY_PROJECT_SAMPLES_OPTION]
+    PROJECT_OPTIONS = [
+        {'projectGuid': 'R0001_1kg', 'sampleIds': ['NA19675_1', 'NA19678', 'NA19679', 'HG00732', 'HG00733']},
+        PROJECT_SAMPLES_OPTION,
+    ]
 
     def setUp(self):
         patcher = mock.patch('seqr.utils.file_utils.subprocess.Popen')
@@ -1707,24 +1763,50 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         self.assertEqual(response.json()['error'], 'Deleting indices is disabled for the hail backend')
 
     def _assert_expected_get_projects_requests(self):
-        self.assertEqual(len(responses.calls), 1)
-        self.assert_expected_airtable_call(
-            call_index=0,
-            filter_formula="OR(PDOStatus='Methods (Loading)',PDOStatus='On hold for phenotips, but ready to load')",
-            fields=['PassingCollaboratorSampleIDs', 'SeqrIDs', 'SeqrProjectURL'],
-        )
+        pdo_filter = "OR(SEARCH('Methods (Loading)',ARRAYJOIN(PDOStatus,';')),SEARCH('On hold for phenotips, but ready to load',ARRAYJOIN(PDOStatus,';')))"
+        expected_filters = [
+            f'AND(LEN({{SV_CallsetPath}})>0,{pdo_filter})',
+            f'AND(LEN({{MITO_WGS_CallsetPath}})>0,{pdo_filter})',
+            pdo_filter,
+        ]
+        self.assertEqual(len(responses.calls), len(expected_filters))
+        for i, filter_formula in enumerate(expected_filters):
+            self.assert_expected_airtable_call(
+                call_index=i,
+                filter_formula=filter_formula,
+                fields=['CollaboratorSampleID', 'SeqrCollaboratorSampleID', 'PDOStatus', 'SeqrProject'],
+            )
+
+    def _assert_expected_pm_access(self, get_response):
+        response = get_response()
+        self.assertEqual(response.status_code, 403)
+        self.assert_json_logs(self.pm_user, [
+            ('PermissionDenied: Error: To access RDG airtable user must login with Broad email.', {'severity': 'WARNING'})
+        ])
+        self.login_data_manager_user()
+        return super()._assert_expected_pm_access(get_response)
 
     @staticmethod
     def _get_dag_variable_overrides(*args, **kwargs):
         return {
             'callset_path': 'mito_callset.mt',
             'sample_source': 'Broad_Internal',
-            'sample_type': 'WGS',
+            'sample_type': 'WES',
             'dataset_type': 'MITO',
+            'skip_validation': True,
         }
 
-    def _assert_expected_load_data_requests(self, **kwargs):
-        self.assert_airflow_calls(**kwargs)
+    def _assert_expected_load_data_requests(self, dataset_type='MITO', **kwargs):
+        required_sample_field = 'MITO_WES_CallsetPath' if dataset_type == 'MITO' else 'gCNV_CallsetPath'
+        self._assert_expected_airtable_call(required_sample_field, 'R0001_1kg')
+        self.assert_airflow_calls(offset=1, dataset_type=dataset_type, **kwargs)
+
+    def _assert_expected_airtable_call(self, required_sample_field, project_guid):
+        self.assert_expected_airtable_call(
+            call_index=0,
+            filter_formula=f"AND(SEARCH('https://seqr.broadinstitute.org/project/{project_guid}/project_page',ARRAYJOIN({{SeqrProject}},';')),LEN({{{required_sample_field}}})>0,OR(SEARCH('Available in seqr',ARRAYJOIN(PDOStatus,';')),SEARCH('Historic',ARRAYJOIN(PDOStatus,';'))))",
+            fields=['CollaboratorSampleID', 'SeqrCollaboratorSampleID', 'PDOStatus', 'SeqrProject'],
+        )
 
     def _set_loading_trigger_error(self):
         self.set_dag_trigger_error_response(status=400)
@@ -1733,9 +1815,9 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
     def _assert_success_notification(self, dag_json):
         dag_json['sample_source'] = 'Broad_Internal'
 
-        message = f"""*test_pm_user@test.com* triggered loading internal WGS MITO data for 2 projects
+        message = f"""*test_data_manager@broadinstitute.org* triggered loading internal WES MITO data for 2 projects
 
-        Pedigree files have been uploaded to gs://seqr-loading-temp/v3.1/GRCh38/MITO/pedigrees/WGS
+        Pedigree files have been uploaded to gs://seqr-loading-temp/v3.1/GRCh38/MITO/pedigrees/WES
 
         DAG LOADING_PIPELINE is triggered with following:
         ```{json.dumps(dag_json, indent=4)}```
@@ -1748,7 +1830,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         self.assertDictEqual(response.json(), {'success': True})
 
         self.mock_airflow_logger.warning.assert_not_called()
-        self.mock_airflow_logger.error.assert_called_with(mock.ANY, self.pm_user)
+        self.mock_airflow_logger.error.assert_called_with(mock.ANY, self.data_manager_user)
         errors = [call.args[0] for call in self.mock_airflow_logger.error.call_args_list]
         for error in errors:
             self.assertRegex(error, '400 Client Error: Bad Request')
@@ -1762,57 +1844,49 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         """
         self.mock_slack.assert_called_once_with(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, error_message)
 
-    def _test_load_sample_subset(self, mock_open, mock_mkdir, response, url, body):
+    def _trigger_error(self, url, body, dag_json, mock_open, mock_mkdir):
+        super()._trigger_error(url, body, dag_json, mock_open, mock_mkdir)
+
+        responses.calls.reset()
+        body['projects'] = [json.dumps({**PROJECT_OPTION, 'sampleIds': PROJECT_SAMPLES_OPTION['sampleIds'] + ['NA21988']})]
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {
             'warnings': None,
             'errors': ['The following samples are included in airtable but missing from seqr: NA21988'],
         })
+        body['projects'] = [json.dumps({**PROJECT_OPTION, 'sampleIds': [PROJECT_SAMPLES_OPTION['sampleIds'][1]]})]
+        body['sampleType'] = 'WGS'
 
-        sample_ids = PROJECT_SAMPLES_OPTION['sampleIds']
-        body['projects'] = [json.dumps({**PROJECT_OPTION, 'sampleIds': [sample_ids[1]]})]
-        airtable_samples_url = 'https://api.airtable.com/v0/app3Y97xtbbaOopVR/Samples'
-        responses.add(responses.GET, airtable_samples_url, json=AIRTABLE_SAMPLE_RECORDS, status=200)
-        responses.add(responses.GET, airtable_samples_url, json=AIRTABLE_SECONDARY_SAMPLE_RECORDS, status=200)
-
-        # Non-Broad users can not access airtable
-        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
-        self.assertEqual(response.status_code, 403)
-
-        responses.calls.reset()
-        self.login_data_manager_user()
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {
             'warnings': None,
             'errors': ['The following families have previously loaded samples absent from airtable: 14 (NA21234)'],
         })
-        self.assert_expected_airtable_call(
-            call_index=0,
-            filter_formula="OR({CollaboratorSampleID}='NA21234')",
-            fields=['CollaboratorSampleID', 'PDOStatus', 'SeqrProject'],
-        )
-        self.assert_expected_airtable_call(
-            call_index=1,
-            filter_formula="OR({SeqrCollaboratorSampleID}='NA21234')",
-            fields=['SeqrCollaboratorSampleID', 'PDOStatus', 'SeqrProject'],
-        )
+        self.assertEqual(len(responses.calls), 1)
+        self._assert_expected_airtable_call(required_sample_field='SV_CallsetPath', project_guid='R0004_non_analyst_project')
+        self.mock_authorized_session.reset_mock()
+
+    def _test_load_single_project(self, mock_open, mock_mkdir, response, *args, url=None, body=None, **kwargs):
+        super()._test_load_single_project(mock_open, mock_mkdir, response, url, body)
+        self.ADDITIONAL_REQUEST_COUNT = 0
+        self.assert_airflow_calls(offset=0, dataset_type='SNV_INDEL', trigger_error=True)
 
         responses.calls.reset()
-        responses.add(responses.GET, airtable_samples_url, json=AIRTABLE_SAMPLE_RECORDS, status=200)
-        body['projects'] = [
-            json.dumps({'projectGuid': 'R0001_1kg', 'sampleIds': ['NA19675_1', 'NA19679']}),
-            json.dumps({**PROJECT_OPTION, 'sampleIds': sample_ids[:2]}),
-        ]
+        mock_open.reset_mock()
+        mock_mkdir.reset_mock()
+        body['projects'] = [json.dumps(option) for option in self.PROJECT_OPTIONS]
         body['sampleType'] = 'WES'
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'success': True})
-        self._has_expected_ped_files(mock_open, mock_mkdir, 'SNV_INDEL', sample_type='WES', has_project_subset=True)
+        self._has_expected_ped_files(mock_open, mock_mkdir, 'SNV_INDEL', sample_type='WES')
+        self.assertEqual(len(responses.calls), 2)
         self.assert_expected_airtable_call(
             call_index=0,
-            filter_formula="OR({CollaboratorSampleID}='NA19678')",
-            fields=['CollaboratorSampleID', 'PDOStatus', 'SeqrProject'],
+            filter_formula="AND(SEARCH('https://seqr.broadinstitute.org/project/R0001_1kg/project_page',ARRAYJOIN({SeqrProject},';')),OR(SEARCH('Available in seqr',ARRAYJOIN(PDOStatus,';')),SEARCH('Historic',ARRAYJOIN(PDOStatus,';'))))",
+            fields=['CollaboratorSampleID', 'SeqrCollaboratorSampleID', 'PDOStatus', 'SeqrProject'],
         )
         body['projects'] = body['projects'][1:]
 

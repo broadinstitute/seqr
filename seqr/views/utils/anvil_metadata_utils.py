@@ -293,7 +293,7 @@ def _get_genotype_zygosity(genotype, individual=None, variant=None):
     num_alt = genotype.get('numAlt')
     cn = genotype.get('cn')
     if num_alt == 2 or cn == 0 or (cn != None and cn > 3):
-        return HEMI if (variant or {}).get('chrom') == 'X' and individual.sex == Individual.SEX_MALE else HOM_ALT
+        return HEMI if (variant or {}).get('chrom') == 'X' and individual.sex in Individual.MALE_SEXES else HOM_ALT
     if num_alt == 1 or cn == 1 or cn == 3:
         return HET
     return None
@@ -313,6 +313,11 @@ def _get_discovery_notes(variant, gene_variants, omit_parent_mnvs):
     nested_mnvs = sorted([v for v in mnv_names if v != parent_name])
     return f'The following variants are part of the {variant_type} variant {parent}: {", ".join(nested_mnvs)}'
 
+VARIANT_TYPES = [
+    ('SV', lambda ref, alt: not alt),
+    ('SNV', lambda ref, alt: len(ref) == 1 and len(alt) == 1),
+    ('RE', lambda ref, alt: all(['[' in allele and ']' in allele for allele in [ref, alt]])),
+]
 
 def _get_parsed_saved_discovery_variants_by_family(
         families: Iterable[Family], include_metadata: bool, variant_json_fields: list[str],
@@ -340,6 +345,9 @@ def _get_parsed_saved_discovery_variants_by_family(
         gene_id = main_transcript.get('geneId')
         gene_ids.add(gene_id)
         sv_type = variant_json.get('svType')
+        variant_type = next(
+            (variant_type for variant_type, has_type in VARIANT_TYPES if has_type(variant.ref, variant.alt)),
+            'INDEL')
 
         partial_hpo_terms = variant.partial_hpo_terms[0] if variant.partial_hpo_terms else ''
         phenotype_contribution = 'Partial' if partial_hpo_terms else 'Full'
@@ -358,6 +366,7 @@ def _get_parsed_saved_discovery_variants_by_family(
             'partial_contribution_explained': partial_hpo_terms.replace(', ', '|'),
             'sv_type': sv_type,
             'sv_name': (variant_json.get('svName') or '{svType}:chr{chrom}:{pos}-{end}'.format(**variant_json)) if sv_type else None,
+            'variant_type': variant_type,
             'validated_name': variant.validated_name[0] if variant.validated_name else None,
             **{k: _get_transcript_field(k, config, main_transcript) for k, config in TRANSCRIPT_FIELDS.items()},
             **{k: variant_json.get(k) for k in ['genotypes'] + (variant_json_fields or [])},
@@ -411,9 +420,18 @@ def _get_transcript_field(field, config, transcript):
 def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, individual_ids_map, get_additional_individual_fields, format_id):
     paternal_ids = individual_ids_map.get(individual.father_id, ('', ''))
     maternal_ids = individual_ids_map.get(individual.mother_id, ('', ''))
+    sex = individual.sex
+    sex_detail = None
+    if sex in Individual.MALE_ANEUPLOIDIES:
+        sex_detail = sex
+        sex = Individual.SEX_MALE
+    elif sex in Individual.FEMALE_ANEUPLOIDIES:
+        sex_detail = sex
+        sex = Individual.SEX_FEMALE
     subject_row = {
         'participant_id': format_id(individual.individual_id),
-        'sex': Individual.SEX_LOOKUP[individual.sex],
+        'sex': Individual.SEX_LOOKUP[sex],
+        'sex_detail': sex_detail,
         'reported_race': ANCESTRY_MAP.get(individual.population, ''),
         'ancestry_detail': ANCESTRY_DETAIL_MAP.get(individual.population, ''),
         'reported_ethnicity': ETHNICITY_MAP.get(individual.population, ''),

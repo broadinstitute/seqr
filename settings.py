@@ -80,7 +80,8 @@ CSP_FONT_SRC = ('https://fonts.gstatic.com', 'data:', "'self'")
 CSP_CONNECT_SRC = ("'self'", 'https://gtexportal.org', 'https://www.google-analytics.com', 'https://igv.org',
                    'https://storage.googleapis.com', 'https://s3.amazonaws.com', 'https://igv-genepattern-org.s3.amazonaws.com', 'https://hgdownload.soe.ucsc.edu',  # used by IGV
                    'https://reg.genome.network')
-CSP_SCRIPT_SRC = ("'self'", "'unsafe-eval'", 'https://www.googletagmanager.com')
+CSP_SCRIPT_SRC = ("'self'", "'unsafe-eval'", 'https://www.googletagmanager.com',
+                  "'sha256-A16xkExeIj9J9P70pOQ+HDBXdFYcm2Cn3J/phdqk9hc='")  # luigi UI script
 CSP_IMG_SRC = ("'self'", 'https://www.google-analytics.com', 'https://storage.googleapis.com',
    'https://user-images.githubusercontent.com', 'https://private-user-images.githubusercontent.com', # for images in GitHub discussions on Feature Updates page
    'data:')
@@ -357,6 +358,9 @@ REDIS_SERVICE_PORT = int(os.environ.get('REDIS_SERVICE_PORT', '6379'))
 PIPELINE_RUNNER_HOSTNAME = os.environ.get('PIPELINE_RUNNER_HOSTNAME', 'pipeline-runner')
 PIPELINE_RUNNER_PORT = os.environ.get('PIPELINE_RUNNER_PORT', '6000')
 PIPELINE_RUNNER_SERVER = f'http://{PIPELINE_RUNNER_HOSTNAME}:{PIPELINE_RUNNER_PORT}'
+
+LUIGI_UI_SERVICE_HOSTNAME = os.environ.get('LUIGI_UI_SERVICE_HOSTNAME')
+LUIGI_UI_SERVICE_PORT = int(os.environ.get('LUIGI_UI_SERVICE_PORT', '8082'))
 
 # Matchmaker
 MME_DEFAULT_CONTACT_NAME = 'Samantha Baxter'
