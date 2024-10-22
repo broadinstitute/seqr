@@ -293,7 +293,7 @@ def _get_genotype_zygosity(genotype, individual=None, variant=None):
     num_alt = genotype.get('numAlt')
     cn = genotype.get('cn')
     if num_alt == 2 or cn == 0 or (cn != None and cn > 3):
-        return HEMI if (variant or {}).get('chrom') == 'X' and individual.sex == Individual.SEX_MALE else HOM_ALT
+        return HEMI if (variant or {}).get('chrom') == 'X' and individual.sex in Individual.MALE_SEXES else HOM_ALT
     if num_alt == 1 or cn == 1 or cn == 3:
         return HET
     return None
@@ -420,9 +420,18 @@ def _get_transcript_field(field, config, transcript):
 def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, individual_ids_map, get_additional_individual_fields, format_id):
     paternal_ids = individual_ids_map.get(individual.father_id, ('', ''))
     maternal_ids = individual_ids_map.get(individual.mother_id, ('', ''))
+    sex = individual.sex
+    sex_detail = None
+    if sex in Individual.MALE_ANEUPLOIDIES:
+        sex_detail = sex
+        sex = Individual.SEX_MALE
+    elif sex in Individual.FEMALE_ANEUPLOIDIES:
+        sex_detail = sex
+        sex = Individual.SEX_FEMALE
     subject_row = {
         'participant_id': format_id(individual.individual_id),
-        'sex': Individual.SEX_LOOKUP[individual.sex],
+        'sex': Individual.SEX_LOOKUP[sex],
+        'sex_detail': sex_detail,
         'reported_race': ANCESTRY_MAP.get(individual.population, ''),
         'ancestry_detail': ANCESTRY_DETAIL_MAP.get(individual.population, ''),
         'reported_ethnicity': ETHNICITY_MAP.get(individual.population, ''),

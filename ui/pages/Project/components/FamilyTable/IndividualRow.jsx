@@ -65,6 +65,15 @@ const IndividualContainer = styled.div`
 
 const PaddedRadioButtonGroup = styled(RadioButtonGroup)`
   padding: 10px;
+  
+  .button {
+    padding-left: 1em !important;
+    padding-right: 1em !important;
+    
+    &.labeled .label {
+      margin-left: 0px !important;
+    }
+  }
 `
 
 const POPULATION_MAP = {
@@ -414,6 +423,8 @@ const CASE_REVIEW_FIELDS = [
   ...INDIVIDUAL_FIELDS,
 ]
 
+const INDIVIDUAL_FIELD_CONFIG_SEX = INDIVIDUAL_FIELD_CONFIGS[INDIVIDUAL_FIELD_SEX]
+
 const NON_CASE_REVIEW_FIELDS = [
   {
     component: OptionFieldView,
@@ -429,6 +440,13 @@ const NON_CASE_REVIEW_FIELDS = [
     individualFields: ({ caseReviewStatus }) => ({
       isVisible: caseReviewStatus === CASE_REVIEW_STATUS_MORE_INFO_NEEDED,
     }),
+  },
+  {
+    field: INDIVIDUAL_FIELD_SEX,
+    fieldName: INDIVIDUAL_FIELD_CONFIG_SEX.label,
+    isEditable: false,
+    component: OptionFieldView,
+    tagOptions: INDIVIDUAL_FIELD_CONFIG_SEX.formFieldProps.options,
   },
   ...[
     INDIVIDUAL_FIELD_ANALYTE_TYPE,
