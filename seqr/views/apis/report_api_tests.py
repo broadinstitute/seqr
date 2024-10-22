@@ -67,16 +67,6 @@ AIRTABLE_GREGOR_SAMPLE_RECORDS = {
       },
     },
     {
-      "id": "rec2B67GmXpAkQW8z",
-      "fields": {
-        'SeqrCollaboratorSampleID': 'NA19679',
-        'CollaboratorSampleID': 'NA19679',
-        'CollaboratorParticipantID': 'NA19679',
-        'SMID': 'SM-N1P91',
-        'Recontactable': 'Yes',
-      },
-    },
-    {
       "id": "rec2Nkg10N1KssPc3",
       "fields": {
         "SeqrCollaboratorSampleID": "HG00731",
@@ -93,6 +83,20 @@ AIRTABLE_GREGOR_SAMPLE_RECORDS = {
         'CollaboratorParticipantID': 'NA20888',
         'SMID': 'SM-L5QMP',
         'Recontactable': 'No',
+      },
+    },
+]}
+
+AIRTABLE_RNA_ONLY_GREGOR_SAMPLE_RECORDS = {
+  "records": [
+    {
+      "id": "rec2B67GmXpAkQW8z",
+      "fields": {
+        'SeqrCollaboratorSampleID': 'NA19679',
+        'CollaboratorSampleID': 'NA19679',
+        'CollaboratorParticipantID': 'NA19679',
+        'SMID': 'SM-N1P91',
+        'Recontactable': 'Yes',
       },
     },
 ]}
@@ -793,12 +797,25 @@ class ReportAPITest(AirtableTest):
         mock_temp_dir.return_value.__enter__.return_value = '/mock/tmp'
         mock_subprocess.return_value.wait.return_value = 1
 
+        airtable_sample_url = f'{AIRTABLE_URL}/app3Y97xtbbaOopVR/Samples'
         responses.add(
-            responses.GET, '{}/app3Y97xtbbaOopVR/Samples'.format(AIRTABLE_URL), json=AIRTABLE_GREGOR_SAMPLE_RECORDS,
-            status=200)
+            responses.GET, airtable_sample_url, json=AIRTABLE_GREGOR_SAMPLE_RECORDS, status=200, match=[
+                responses.matchers.query_param_matcher({'fields[]': ['CollaboratorSampleID', 'CollaboratorParticipantID', 'Recontactable', 'SMID']}, strict_match=False),
+            ]
+        )
+        responses.add(
+            responses.GET, airtable_sample_url, json=AIRTABLE_GREGOR_SAMPLE_RECORDS, status=200, match=[
+                responses.matchers.query_param_matcher({'fields[]': ['SeqrCollaboratorSampleID', 'CollaboratorParticipantID', 'Recontactable', 'SMID']}, strict_match=False),
+            ]
+        )
+        responses.add(
+            responses.GET, airtable_sample_url, json=AIRTABLE_RNA_ONLY_GREGOR_SAMPLE_RECORDS, status=200,
+            match=[responses.matchers.query_param_matcher({'fields[]': 'SMID'}, strict_match=False)]
+        )
         responses.add(
             responses.GET, '{}/app3Y97xtbbaOopVR/GREGoR Data Model'.format(AIRTABLE_URL), json=AIRTABLE_GREGOR_RECORDS,
             status=200)
+
         responses.add(responses.GET, MOCK_DATA_MODEL_URL, status=404)
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({}))
@@ -827,7 +844,7 @@ class ReportAPITest(AirtableTest):
         self.assertEqual(response.status_code, 400)
 
         recommended_warnings = [
-            'The following entries are missing recommended "recontactable" in the "participant" table: Broad_HG00731, Broad_HG00732, Broad_HG00733, Broad_NA19678, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20881',
+            'The following entries are missing recommended "recontactable" in the "participant" table: Broad_HG00731, Broad_HG00732, Broad_HG00733, Broad_NA19678, Broad_NA19679, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20881',
             'The following entries are missing recommended "reported_race" in the "participant" table: Broad_HG00733, Broad_NA19678, Broad_NA19679, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20881, Broad_NA20888',
             'The following entries are missing recommended "phenotype_description" in the "participant" table: Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20881, Broad_NA20888',
             'The following entries are missing recommended "age_at_enrollment" in the "participant" table: Broad_HG00731, Broad_NA20870, Broad_NA20872, Broad_NA20875, Broad_NA20876, Broad_NA20881, Broad_NA20888',
