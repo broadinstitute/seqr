@@ -239,40 +239,25 @@ class MitoHailTableQuery(BaseHailTableQuery):
         if ht is None:
             return ht
 
-        ht = ht.annotate(**{annotation: hl.empty_dict(hl.tint32, hl.tarray(hl.tint32))})
-        # print(annotation, ht[annotation].collect())
+        # Initialize empty array
+        ht = ht.annotate(**{annotation: ht[entries_ht_field].map(lambda x: hl.empty_array(hl.tint32))})
 
+        # Add failed genotype samples
         for genotype, entry_indices in entry_indices_by_gt.items():
             if not entry_indices:
                 continue
-            # print(genotype, entry_indices)
-            entry_indices = hl.dict(entry_indices)
-            ht = ht.annotate(
-                **{annotation: hl.dict(
-                    hl.enumerate(ht[entries_ht_field]).starmap(
-                        lambda family_idx, entries: hl.bind(
-                            lambda failed_samples: hl.tuple((
-                                family_idx,
-                                ht[annotation].get(family_idx, hl.empty_array(hl.tint32)).extend(failed_samples)
-                            )),
-                            entry_indices.get(family_idx).filter(lambda sample_i: ~self.GENOTYPE_QUERY_MAP[genotype](entries[sample_i].GT))
-                        )
-                    )
-                )})
-        # print(annotation, ht[annotation].collect())
-        return ht
 
-    # ht = ht.annotate(
-    #                 **{annotation: ht[annotation].map_values(
-    #                     lambda existing_failed_samples: existing_failed_samples.extend(
-    #                         hl.enumerate(ht[entries_ht_field]).starmap(
-    #                             lambda family_index, entries: entry_indices.get(family_index).filter(
-    #                                 lambda sample_i: ~self.GENOTYPE_QUERY_MAP[genotype](entries[sample_i].GT)
-    #                             )
-    #                         ).flatmap(lambda x: x)
-    #                     )
-    #                 )
-    #             })
+            entry_indices = hl.dict(entry_indices)
+            ht = ht.annotate(**{annotation: hl.enumerate(ht[entries_ht_field]).starmap(
+                lambda family_idx, entries: hl.bind(
+                    lambda failed_samples: ht[annotation][family_idx].extend(failed_samples),
+                    entry_indices.get(family_idx).filter(
+                        lambda sample_i: ~self.GENOTYPE_QUERY_MAP[genotype](entries[sample_i].GT)
+                    )
+                )
+            )})
+
+        return ht
 
     def _apply_multi_sample_type_entry_filters(self, ht, family_idx_map, sample_idx_map):
         if ht is None:
