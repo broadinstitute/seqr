@@ -9,6 +9,8 @@ place the bam/cram and index files in the `./data/readviz/` sub-directory that w
 the docker-compose.yml file. When you start seqr, docker-compose will mount the `./data/readviz/` directory to a `/readviz`
 top-level directory inside the seqr container.
 
+If running seqr using the [`seqr-helm` charts](https://github.com/broadinstitute/seqr-helm), place the bam/cram and index files inside `/var/seqr/seqr-static-media`.
+
 1) Create a tab-delimited or comma-delimited text file - let's call it `bam_paths.tsv` - with these 2 columns (and no 
 header line):
     

@@ -46,7 +46,7 @@ This is the default authentication mechanism for seqr, and does not need any spe
 
 #### Google OAuth2
 Using Google OAuth2 for authentication requires setting up a Google Cloud project and configuring the seqr instance 
-with the project's client ID and secret by setting the following environment variables in the docker-compose file:
+with the project's client ID and secret by setting the following environment variables in the docker-compose file or your [helm values overrides](https://github.com/broadinstitute/seqr-helm?tab=readme-ov-file#valuesenvironment-overrides):
 ```yaml
   seqr:
     environment:
@@ -59,7 +59,7 @@ gain any access to seqr, and any valid Gmail account can be used.
 
 #### Azure OAuth2
 Using Azure OAuth2 for authentication requires setting up an Azure tenant and configuring the seqr instance with the 
-tenant and it's client ID and secret by setting the following environment variables in the docker-compose file:
+tenant and it's client ID and secret by setting the following environment variables in the docker-compose file or your [helm values overrides](https://github.com/broadinstitute/seqr-helm?tab=readme-ov-file#valuesenvironment-overrides):
 ```yaml
   seqr:
     environment:
@@ -235,8 +235,9 @@ Currently, seqr has a preliminary integration for RNA data, which requires the u
 pipelines run outside of the seqr platform. After these pipelines are run, the output must be annotated with metadata 
 from seqr to ensure samples are properly associated with the correct seqr families. After calling is completed, it can
 be added to seqr from the "Data Management" > "Rna Seq" page. You will need to provide the file path for the data and the 
-data type. Note that the file path can either be a gs:// path to a google bucket or as a local file any of the volumes
-specified in the docker-compose file. The following data types are supported:
+data type. Note that the file path can be a `gs://` path to a google bucket or a local file.  Local files should be in present in `/var/seqr` if running using the [`seqr-helm` charts](https://github.com/broadinstitute/seqr-helm), or may be present in any of the volumes specified in the `docker-compose` file.
+
+The following data types are supported:
 
 #### Gene Expression
 
