@@ -35,7 +35,7 @@ to the tenant will automatically have access to seqr, although they will only be
 have been added to.
 
 ## Enabling Clingen Allele Registration
-- Turning on this feature will register your variants within the Clingen Allele Registery, providing unique variant identifiers and enabling 
+- Turning on this feature will register your variants within the Clingen Allele Registry, providing unique variant identifiers and enabling a "Classify" link on the saved variants page to the Variant Curation Interface and a few other small features.
 - You will first need to [register](https://reg.clinicalgenome.org/cg-prof/new) and receive a login and password.
 - Create a kubernetes secret called `pipeline-secrets` with your login and password embedded:
 ```bash
@@ -59,8 +59,8 @@ pipeline-runner:
           key: clingen_allele_registry_password
 ```
 
-## Using the Load Data Interface to load VCF Callsets
-- Copy your vcf into the directory the loading datasets directory, `/var/seqr/seqr-loading-temp/`.  You should see something your vcf present:
+## Using the Load Data page to load VCF Callsets
+- Copy your vcf into the loading datasets directory on the node running your kubernetes cluster (`/var/seqr/seqr-loading-temp/`).  You should see your vcf present when listing files:
 ```
 ls -h /var/seqr/seqr-loading-temp/
 loading_pipeline_queue  test.vcf.gz
@@ -70,6 +70,7 @@ loading_pipeline_queue  test.vcf.gz
 - Type the name of the callset path into the **Callset File Path** text box (without the directory prefix), and select the appropriate Sample Type (WES/WGS) and Genome Version (GRCh37/GRCh38) for your project.  The pipeline includes a sequence of validation steps to insure the validity of your VCF, but these may be skipped by enabling the **Skip Callset Validation**option.  We strongly recommend leaving validation enabled to ensure the quality of your analysis.
 - Click through to the next page and select your project from the **Projects to Load** dropdown, then click **Submit**.
 - If you wish to check the status of the loading request, you can click through to the **Pipeline Status** tab to view the loading pipeline interface.
+- Data should be loaded into the search backend automatically, usually within a few hours.
 
 ## Loading RNASeq datasets
 
