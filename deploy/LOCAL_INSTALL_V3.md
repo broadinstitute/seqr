@@ -1,6 +1,6 @@
 ## Starting and Updating *seqr*
 
-Detailed instructions for installing and updating *seqr* may be found in the [seqr-helm](https://github.com/broadinstitute/seqr-helm) repository. 
+Detailed instructions for how to install and update *seqr* may be found in the [seqr-helm](https://github.com/broadinstitute/seqr-helm) repository. 
 
 ## Configuring Authentication for *seqr*
 
@@ -40,11 +40,11 @@ loading_pipeline_queue  test.vcf.gz
 ```
 - Type the name of the callset path into the *Callset File Path* text box (without the directory prefix), and select the appropriate Sample Type (WES/WGS) and Genome Version (GRCh37/GRCh38) for your project.  The pipeline includes a sequence of validation steps to insure the validity of your VCF, but these may be skipped by enabling the *Skip Callset Validation*option.  We strongly recommend leaving validation enabled to ensure the quality of your analysis.
 - Click through to the next page and select your project from the *Projects to Load* dropdown, then click *Submit*.
-- If you wish to check the status of the loading request, you can click through to the *Pipeline Status* tab to view the loading pipeline interface
+- If you wish to check the status of the loading request, you can click through to the *Pipeline Status* tab to view the loading pipeline interface.
 
 ## Enable read viewing in the browser
 
-To make .bam/.cram files viewable in the browser through igv.js, see [ReadViz Setup Instructions](READVIZ_SETUP.md).    
+To make .bam/.cram files viewable in the browser through igv.js, see [ReadViz Setup](READVIZ_SETUP.md).
 
 ## Loading RNASeq datasets
 
