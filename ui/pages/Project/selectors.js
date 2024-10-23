@@ -97,30 +97,65 @@ export const getProjectAnalysisGroupFamiliesByGuid = createSelector(
   },
 )
 
-export const getProjectAnalysisGroupFamilyIndividualCounts = createSelector(
+const getFamilySizeHistogram = familyCounts => familyCounts.reduce((acc, { size, parents }) => {
+  const parentCounts = Object.values(parents.reduce(
+    (parentAcc, { maternalGuid, paternalGuid }) => {
+      const parentKey = `${maternalGuid || ''}-${paternalGuid || ''}`
+      const parent = parentAcc[parentKey] || {
+        numParents: [maternalGuid, paternalGuid].filter(g => g).length,
+        numChildren: 0,
+      }
+      parent.numChildren += 1
+      return { ...parentAcc, [parentKey]: parent }
+    }, {},
+  ))
+  const sizeAcc = acc[size] || { total: 0, withParents: 0, trioPlus: 0, quadPlus: 0 }
+  sizeAcc.total += 1
+  const mainParentCount = parentCounts.find(({ numParents }) => numParents === (size === 2 ? 1 : 2))
+  const mainFamilySize = mainParentCount ? mainParentCount.numChildren + mainParentCount.numParents : 0
+  if (mainFamilySize === size) {
+    sizeAcc.withParents += 1
+  } else if (mainFamilySize === 3) {
+    sizeAcc.trioPlus += 1
+  } else if (mainFamilySize > 3) {
+    sizeAcc.quadPlus += 1
+  }
+  return { ...acc, [size]: sizeAcc }
+}, {})
+
+export const getProjectAnalysisGroupFamilySizeHistogram = createSelector(
   getProjectAnalysisGroupFamiliesByGuid,
-  familiesByGuid => Object.values(familiesByGuid).map(family => ({
+  familiesByGuid => getFamilySizeHistogram(Object.values(familiesByGuid).map(family => ({
     size: (family.individualGuids || []).length,
-    numParents: (family.parents || []).length === 1 ?
-      [family.parents[0].maternalGuid, family.parents[0].paternalGuid].filter(g => g).length : 0,
-  })),
+    parents: family.parents || [],
+  }))),
 )
 
-export const getProjectAnalysisGroupDataLoadedFamilyIndividualCounts = createSelector(
+export const getProjectAnalysisGroupDataLoadedFamilySizeHistogram = createSelector(
   getProjectAnalysisGroupFamiliesByGuid,
   getSamplesByFamily,
-  (familiesByGuid, samplesByFamily) => Object.values(familiesByGuid).map(((family) => {
+  (familiesByGuid, samplesByFamily) => getFamilySizeHistogram(Object.values(familiesByGuid).map(((family) => {
     const sampleIndividuals = new Set((samplesByFamily[family.familyGuid] || []).filter(
       sample => sample.isActive,
     ).map(sample => sample.individualGuid))
-    const hasSampleParentCounts = (family.parents || []).map(
-      ({ maternalGuid, paternalGuid }) => [maternalGuid, paternalGuid].filter(guid => sampleIndividuals.has(guid)),
-    ).filter(parents => parents.length > 0)
+    const hasSampleParents = (family.parents || []).reduce(
+      (acc, { individualGuid, maternalGuid, paternalGuid }) => {
+        const hasSampleMaternal = sampleIndividuals.has(maternalGuid)
+        const hasSamplePaternal = sampleIndividuals.has(paternalGuid)
+        if (sampleIndividuals.has(individualGuid) && (hasSampleMaternal || hasSamplePaternal)) {
+          acc.push({
+            maternalGuid: hasSampleMaternal ? maternalGuid : null,
+            paternalGuid: hasSamplePaternal ? paternalGuid : null,
+          })
+        }
+        return acc
+      }, [],
+    )
     return {
       size: sampleIndividuals.size,
-      numParents: hasSampleParentCounts.length === 1 ? hasSampleParentCounts[0].length : 0,
+      parents: hasSampleParents,
     }
-  })).filter(({ size }) => size > 0),
+  })).filter(({ size }) => size > 0)),
 )
 
 export const getProjectAnalysisGroupIndividualsByGuid = createSelector(
