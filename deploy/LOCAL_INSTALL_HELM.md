@@ -59,7 +59,7 @@ pipeline-runner:
           key: clingen_allele_registry_password
 ```
 
-## Using the Load Data Interface to load VCFs
+## Using the Load Data Interface to load VCF Callsets
 - Copy your vcf into the directory the loading datasets directory, `/var/seqr/seqr-loading-temp/`.  You should see something your vcf present:
 ```
 ls -h /var/seqr/seqr-loading-temp/
