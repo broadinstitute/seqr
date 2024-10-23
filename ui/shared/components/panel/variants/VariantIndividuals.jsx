@@ -164,21 +164,6 @@ const svGenotype = (genotype, isHemiX) => {
   )
 }
 
-const AllelesHeader = ({ genotype, variant, isHemiX }) => (
-  <Header.Content>
-    <Allele isAlt={genotype.numAlt > (isHemiX ? 0 : 1)} variant={variant} textAlign="right" />
-    /
-    {isHemiX ? '-' : <Allele isAlt={genotype.numAlt > 0} variant={variant} textAlign="left" />}
-    {genotype.mitoCn && (copyNumberGenotype(genotype.mitoCn, true))}
-  </Header.Content>
-)
-
-AllelesHeader.propTypes = {
-  genotype: PropTypes.object,
-  variant: PropTypes.object,
-  isHemiX: PropTypes.bool,
-}
-
 export const Alleles = React.memo(({ genotype, variant, isHemiX, warning }) => (
   <AlleleContainer>
     {warning && (
@@ -197,7 +182,14 @@ export const Alleles = React.memo(({ genotype, variant, isHemiX, warning }) => (
       <Header.Content>
         {svGenotype(genotype, isHemiX)}
       </Header.Content>
-    ) : <AllelesHeader genotype={genotype} variant={variant} isHemiX={isHemiX} />}
+    ) : (
+      <Header.Content>
+        <Allele isAlt={genotype.numAlt > (isHemiX ? 0 : 1)} variant={variant} textAlign="right" />
+        /
+        {isHemiX ? '-' : <Allele isAlt={genotype.numAlt > 0} variant={variant} textAlign="left" />}
+        {genotype.mitoCn && (copyNumberGenotype(genotype.mitoCn, true))}
+      </Header.Content>
+    )}
   </AlleleContainer>
 ))
 
