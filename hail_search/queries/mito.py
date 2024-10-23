@@ -329,7 +329,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
                                     hl.is_defined(ht[sample_type.passes_inheritance_field][family_idx]) |
                                     hl.is_defined(ht[sample_type.other_sample_type.passes_inheritance_field][other_sample_type_indices[0]])
                                 ),  # Else, if sample is in only one sample type, check if that sample did not fail inheritance in either sample type
-                                self._family_sample_has_valid_inheritance(ht, sample_type, family_idx, sample_idx) &
+                                self._family_sample_has_valid_inheritance(ht, sample_type, family_idx, sample_idx) |
                                 self._family_sample_has_valid_inheritance(ht, sample_type.other_sample_type, other_sample_type_indices[0], other_sample_type_indices[1])
                             )
                         ),(
@@ -343,10 +343,9 @@ class MitoHailTableQuery(BaseHailTableQuery):
 
     @staticmethod
     def _family_sample_has_valid_inheritance(ht, sample_type, family_idx, sample_idx):
-        return hl.if_else(
+        return hl.or_missing(
             hl.is_defined(family_idx) & hl.is_defined(sample_idx),
             ~ht[sample_type.failed_family_sample_field][family_idx].contains(sample_idx),
-            True
         )
 
     def _get_sample_genotype(self, samples, r=None, include_genotype_overrides=False, select_fields=None, **kwargs):
