@@ -38,9 +38,9 @@ pipeline-runner:
 ls -h /var/seqr/seqr-loading-temp/
 loading_pipeline_queue  test.vcf.gz
 ```
-- Type the name of the callset path into the *Callset File Path* text box (without the directory prefix), and select the appropriate Sample Type (WES/WGS) and Genome Version (GRCh37/GRCh38) for your project.  The pipeline includes a sequence of validation steps to insure the validity of your VCF, but these may be skipped by enabling the *Skip Callset Validation*option.  We strongly recommend leaving validation enabled to ensure the quality of your analysis.
-- Click through to the next page and select your project from the *Projects to Load* dropdown, then click *Submit*.
-- If you wish to check the status of the loading request, you can click through to the *Pipeline Status* tab to view the loading pipeline interface.
+- Type the name of the callset path into the **Callset File Path** text box (without the directory prefix), and select the appropriate Sample Type (WES/WGS) and Genome Version (GRCh37/GRCh38) for your project.  The pipeline includes a sequence of validation steps to insure the validity of your VCF, but these may be skipped by enabling the **Skip Callset Validation**option.  We strongly recommend leaving validation enabled to ensure the quality of your analysis.
+- Click through to the next page and select your project from the **Projects to Load** dropdown, then click **Submit**.
+- If you wish to check the status of the loading request, you can click through to the **Pipeline Status** tab to view the loading pipeline interface.
 
 ## Enable read viewing in the browser
 
