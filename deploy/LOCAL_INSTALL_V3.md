@@ -30,7 +30,7 @@ pipeline-runner:
           key: clingen_allele_registry_password
 ```
 
-## How to Use the Load Data Interface
+## Using the Load Data Interface
 - In the top header of *seqr*, click on the **Data Management** button.
 - In the subheader, click on **Load Data**.
 - Copy your vcf into the directory the loading datasets directory, `/var/seqr/seqr-loading-temp/`.  You should see something your vcf present:
