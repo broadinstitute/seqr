@@ -185,7 +185,12 @@ export const Alleles = React.memo(({ genotype, variant, isHemiX, warning }) => (
       <Popup
         wide
         trigger={<WarningIcon />}
-        content={warning}
+        content={
+          <div>
+            <b>Warning: </b>
+            {warning}
+          </div>
+        }
       />
     )}
     {variant.svType ? (
@@ -268,9 +273,6 @@ const genotypeDetails = (genotype, variant, genesById) => {
 
 const getWarningsForGenotype = (genotype, variant, individual, isHemiX, isCompoundHet) => {
   const hasCnCall = isCalled(genotype.cn)
-  if (!hasCnCall && !isCalled(genotype.numAlt)) {
-    return <b>NO CALL</b>
-  }
 
   const warnings = []
   if (genotype.defragged) {
@@ -296,11 +298,12 @@ const getWarningsForGenotype = (genotype, variant, individual, isHemiX, isCompou
   if (variant.commonLowHeteroplasmy && genotype.hl > 0) {
     warnings.push('Common low heteroplasmy')
   }
-   
+
   if ((variant.chrom === 'X' || variant.chrom === 'Y') && SIMPLIFIED_SEX_LOOKUP[individual.sex] !== individual.sex) {
     warnings.push(`Sex Aneuploidy - ${individual.sex}`)
   }
-  return warnings.join('. ')
+
+  return warnings
 }
 
 const PreviousCall = ({ genotype, isHemiX }) => {
@@ -372,94 +375,36 @@ GenotypeQuality.propTypes = {
   variant: PropTypes.object,
 }
 
-const LegacyAdditionalSampleTypePopup = ({ genotype, variant, isHemiX, genesById }) => {
-  const hasConflictingNumAlt = genotype.otherSample && genotype.otherSample.numAlt !== genotype.numAlt
-
-  return (
-    <div>
-      {genotype.otherSample && (
-      <Popup
-        header="Additional Sample Type"
-        trigger={<Icon name="plus circle" color={hasConflictingNumAlt ? 'red' : 'green'} />}
-        content={
-          <div>
-            {hasConflictingNumAlt && (
-              <div>
-                <VerticalSpacer height={5} />
-                <Alleles genotype={genotype.otherSample} variant={variant} isHemiX={isHemiX} />
-                <VerticalSpacer height={5} />
-              </div>
-            )}
-            {genotypeDetails(genotype.otherSample, variant, genesById)}
-          </div>
-        }
-      />
-      )}
-    </div>
-  )
-}
-
-LegacyAdditionalSampleTypePopup.propTypes = {
-  genotype: PropTypes.object,
-  variant: PropTypes.object,
-  isHemiX: PropTypes.bool,
-  genesById: PropTypes.object,
-}
-
-export const MultiSampleTypeAlleles = React.memo(({ genotypes, variant, individual, isHemiX, isCompoundHet }) => {
-  const warnings = genotypes.reduce((acc, genotype) => {
-    const warning = getWarningsForGenotype(genotype, variant, individual, isHemiX, isCompoundHet)
-    if (warning) {
-      acc[genotype.sampleType] = warning
-    }
-    return acc
-  }, {})
+const getWarningsForGenotypes = (genotypes, variant, isHemiX, warnings) => {
+  const formattedWarnings = []
 
   const hasDifferentNumAlt = genotypes.some(genotype => genotype.numAlt !== genotypes[0].numAlt)
-
-  return (
-    <Alleles
-      genotype={genotypes[0]}
-      variant={variant}
-      isHemiX={isHemiX}
-      warning={(Object.keys(warnings).length > 0 || hasDifferentNumAlt) && (
-        <div>
-          {Object.entries(warnings).map(([sampleType, warning]) => (
-            <div key={sampleType}>
-              <b>
-                {sampleType}
-                Warning:
-              </b>
-              {warning}
-            </div>
-          ))}
-          {hasDifferentNumAlt && (
-            <span>
-              <b>Warning: </b>
-              Genotypes differ across sample types
-              {genotypes.map(genotype => (
-                <div key={genotype.sampleType}>
-                  {genotype.sampleType}
-                  :
-                  <AlleleContainer>
-                    <AllelesHeader genotype={genotype} variant={variant} isHemiX={isHemiX} />
-                  </AlleleContainer>
-                </div>
-              ))}
-            </span>
-          )}
+  if (hasDifferentNumAlt) {
+    formattedWarnings.push('Genotypes differ across sample types')
+    formattedWarnings.push(
+      genotypes.map(genotype => (
+        <div key={genotype.sampleType || genotype.sampleId}>
+          {genotype.sampleType || genotype.sampleId}
+          :
+          <Alleles genotype={genotype} variant={variant} isHemiX={isHemiX} />
         </div>
-      )}
-    />
-  )
-})
+      )),
+    )
+  }
 
-MultiSampleTypeAlleles.propTypes = {
-  genotypes: PropTypes.arrayOf(PropTypes.object),
-  variant: PropTypes.object,
-  individual: PropTypes.object,
-  isHemiX: PropTypes.bool,
-  isCompoundHet: PropTypes.bool,
+  if (Object.keys(warnings).length > 0) {
+    Object.entries(warnings).forEach(([warning, sampleTypes]) => {
+      formattedWarnings.push(`${warning} (${Array.from(sampleTypes).join(', ')})`)
+    })
+  }
+
+  return formattedWarnings.length > 0 && (
+    <div>
+      {formattedWarnings.map(warn => (
+        <div key={warn}>{warn}</div>
+      ))}
+    </div>
+  )
 }
 
 const Genotype = React.memo(({ variant, individual, isCompoundHet, genesById }) => {
@@ -471,7 +416,27 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet, genesById }) 
     (a, b) => SAMPLE_TYPE_DISPLAY_ORDER.indexOf(a.sampleType) - SAMPLE_TYPE_DISPLAY_ORDER.indexOf(b.sampleType),
   )
 
+  if (genotypes.every(genotype => !isCalled(genotype.cn) && !isCalled(genotype.numAlt))) {
+    return <b>NO CALL</b>
+  }
+
+  if (genotypes[0].otherSample) {
+    genotypes.push(genotypes[0].otherSample)
+  }
+
   const isHemiX = isHemiXVariant(variant, individual)
+
+  const sampleTypeWarnings = genotypes.reduce((acc, genotype) => {
+    const warnings = getWarningsForGenotype(genotype, variant, individual, isHemiX, isCompoundHet)
+    warnings.forEach((warning) => {
+      if (acc[warning]) {
+        acc[warning].push(genotype.sampleType || genotype.sampleId)
+      } else {
+        acc[warning] = [genotype.sampleType || genotype.sampleId]
+      }
+    })
+    return acc
+  }, {})
 
   const allDetails = genotypes.map(genotype => genotypeDetails(genotype, variant, genesById)).reduce(
     (acc, genotypeDetail, index) => {
@@ -484,35 +449,13 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet, genesById }) 
 
   const content = (
     <span>
-      {genotypes.length === 1 ? (
-        <span>
-          <LegacyAdditionalSampleTypePopup
-            genotype={genotypes[0]}
-            variant={variant}
-            isHemiX={isHemiX}
-            genesById={genesById}
-          />
-          <Alleles
-            genotype={genotypes[0]}
-            variant={variant}
-            isHemiX={isHemiX}
-            warning={
-              <div>
-                <b>Warning: </b>
-                {getWarningsForGenotype(genotypes[0], variant, individual, isHemiX, isCompoundHet)}
-              </div>
-            }
-          />
-        </span>
-      ) : (
-        <MultiSampleTypeAlleles
-          genotypes={genotypes}
-          variant={variant}
-          individual={individual}
-          isHemiX={isHemiX}
-          isCompoundHet={isCompoundHet}
-        />
-      )}
+      <Alleles
+        genotype={genotypes[0]}
+        variant={variant}
+        isHemiX={isHemiX}
+        warning={genotypes.length === 1 ? Object.keys(sampleTypeWarnings).join('. ') :
+          getWarningsForGenotypes(genotypes, variant, isHemiX, sampleTypeWarnings)}
+      />
       {genotypes.map(genotype => (
         <div key={genotype.sampleType || genotype.sampleId}>
           <PreviousCall genotype={genotype} isHemiX={isHemiX} />
