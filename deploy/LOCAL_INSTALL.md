@@ -54,8 +54,7 @@ with the project's client ID and secret by setting the following environment var
       - SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET=your-client-secret
 ```
 Note that user accounts do NOT need to be associated with this Google Cloud 
-project in order to have access to seqr. User's emails must explicitly be added to at least one seqr project for them to
-gain any access to seqr, and any valid Gmail account can be used.
+project in order to have access to seqr. User's emails must explicitly be added to at least one seqr project for them to gain any access to seqr, and any valid Gmail account can be used.
 
 #### Azure OAuth2
 Using Azure OAuth2 for authentication requires setting up an Azure tenant and configuring the seqr instance with the 
@@ -235,7 +234,7 @@ Currently, seqr has a preliminary integration for RNA data, which requires the u
 pipelines run outside of the seqr platform. After these pipelines are run, the output must be annotated with metadata 
 from seqr to ensure samples are properly associated with the correct seqr families. After calling is completed, it can
 be added to seqr from the "Data Management" > "Rna Seq" page. You will need to provide the file path for the data and the 
-data type. Note that the file path can be a `gs://` path to a google bucket or a local file.  Local files should be in present in `/var/seqr` if running using the [`seqr-helm` charts](https://github.com/broadinstitute/seqr-helm), or may be present in any of the volumes specified in the `docker-compose` file.
+data type. Note that the file path can be a `gs://` path to a google bucket or a local file.  Local files should be in present in `/var/seqr` if running using the [`seqr-helm` charts](https://github.com/broadinstitute/seqr-helm), or must be present in any of the local volumes mounted via `docker-compose`.
 
 The following data types are supported:
 
