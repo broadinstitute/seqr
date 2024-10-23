@@ -396,6 +396,7 @@ export const CATEGORY_FAMILY_FILTERS = {
 // INDIVIDUAL FIELDS
 const SEX_MALE = 'M'
 const SEX_FEMALE = 'F'
+const SEX_UNKNOWN = 'U'
 const MALE_ANEUPLOIDIES = ['XXY', 'XYY']
 const FEMALE_ANEUPLOIDIES = ['XXX', 'X0']
 export const SEX_OPTIONS = [
@@ -409,6 +410,7 @@ export const SEX_OPTIONS = [
 export const SIMPLIFIED_SEX_LOOKUP = {
   ...[SEX_MALE, ...MALE_ANEUPLOIDIES].reduce((acc, val) => ({ ...acc, [val]: SEX_MALE }), {}),
   ...[SEX_FEMALE, ...FEMALE_ANEUPLOIDIES].reduce((acc, val) => ({ ...acc, [val]: SEX_FEMALE }), {}),
+  [SEX_UNKNOWN]: SEX_UNKNOWN,
 }
 
 export const SEX_LOOKUP = SEX_OPTIONS.reduce(
