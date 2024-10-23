@@ -341,7 +341,7 @@ PreviousCall.propTypes = {
   isHemiX: PropTypes.bool,
 }
 
-const GenotypeQuality = ({ genotype, variant }) => {
+const GenotypeQuality = ({ genotype, variant, showSampleType }) => {
   const showSecondaryQuality = !variant.svType && genotype.numAlt >= 0
   const secondaryQuality = genotype.ab || genotype.hl
   const quality = Number.isInteger(genotype.gq) ? genotype.gq : genotype.qs
@@ -349,7 +349,7 @@ const GenotypeQuality = ({ genotype, variant }) => {
 
   return (
     <div>
-      {genotype.sampleType && `${genotype.sampleType}: `}
+      {showSampleType && genotype.sampleType && `${genotype.sampleType}: `}
       {Number.isInteger(quality) ? quality : '-'}
       {showSecondaryQuality && `, ${secondaryQuality ? secondaryQuality.toPrecision(2) : '-'}`}
       {filters && (
@@ -365,6 +365,7 @@ const GenotypeQuality = ({ genotype, variant }) => {
 GenotypeQuality.propTypes = {
   genotype: PropTypes.object,
   variant: PropTypes.object,
+  showSampleType: PropTypes.bool,
 }
 
 const getWarningsForGenotypes = (genotypes, variant, isHemiX, warnings) => {
@@ -451,7 +452,7 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet, genesById }) 
       {genotypes.map(genotype => (
         <div key={genotype.sampleType || genotype.sampleId}>
           <PreviousCall genotype={genotype} isHemiX={isHemiX} />
-          <GenotypeQuality variant={variant} genotype={genotype} />
+          <GenotypeQuality variant={variant} genotype={genotype} showSampleType={genotypes.length > 1} />
         </div>
       ))}
     </span>
