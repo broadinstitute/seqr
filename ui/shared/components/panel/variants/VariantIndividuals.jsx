@@ -298,6 +298,45 @@ const getWarningsForGenotype = (genotype, variant, individual, isHemiX, isCompou
   return warnings
 }
 
+const getWarningsForGenotypes = (genotypes, variant, isHemiX, warnings) => {
+  const formattedWarnings = []
+
+  const hasDifferentNumAlt = genotypes.some(genotype => genotype.numAlt !== genotypes[0].numAlt)
+  if (hasDifferentNumAlt) {
+    formattedWarnings.push({
+      id: 'different-num-alt',
+      content: 'Genotypes differ across sample types',
+    })
+    formattedWarnings.push({
+      id: 'genotype-details',
+      content: genotypes.map(genotype => (
+        <div key={genotype.sampleType || genotype.sampleId}>
+          {genotype.sampleType || genotype.sampleId}
+          :
+          <Alleles genotype={genotype} variant={variant} isHemiX={isHemiX} />
+        </div>
+      )),
+    })
+  }
+
+  if (Object.keys(warnings).length > 0) {
+    Object.entries(warnings).forEach(([warning, sampleTypes], index) => {
+      formattedWarnings.push({
+        id: `warning-${index}`,
+        content: `${warning} (${Array.from(sampleTypes).join(', ')})`,
+      })
+    })
+  }
+
+  return formattedWarnings.length > 0 && (
+    <div>
+      {formattedWarnings.map(warning => (
+        <div key={warning.id}>{warning.content}</div>
+      ))}
+    </div>
+  )
+}
+
 const PreviousCall = ({ genotype, isHemiX }) => {
   let previousCall
   if (genotype.newCall) {
@@ -368,45 +407,6 @@ GenotypeQuality.propTypes = {
   showSampleType: PropTypes.bool,
 }
 
-const getWarningsForGenotypes = (genotypes, variant, isHemiX, warnings) => {
-  const formattedWarnings = []
-
-  const hasDifferentNumAlt = genotypes.some(genotype => genotype.numAlt !== genotypes[0].numAlt)
-  if (hasDifferentNumAlt) {
-    formattedWarnings.push({
-      id: 'different-num-alt',
-      content: 'Genotypes differ across sample types',
-    })
-    formattedWarnings.push({
-      id: 'genotype-details',
-      content: genotypes.map(genotype => (
-        <div key={genotype.sampleType || genotype.sampleId}>
-          {genotype.sampleType || genotype.sampleId}
-          :
-          <Alleles genotype={genotype} variant={variant} isHemiX={isHemiX} />
-        </div>
-      )),
-    })
-  }
-
-  if (Object.keys(warnings).length > 0) {
-    Object.entries(warnings).forEach(([warning, sampleTypes], index) => {
-      formattedWarnings.push({
-        id: `warning-${index}`,
-        content: `${warning} (${Array.from(sampleTypes).join(', ')})`,
-      })
-    })
-  }
-
-  return formattedWarnings.length > 0 && (
-    <div>
-      {formattedWarnings.map(warning => (
-        <div key={warning.id}>{warning.content}</div>
-      ))}
-    </div>
-  )
-}
-
 const Genotype = React.memo(({ variant, individual, isCompoundHet, genesById }) => {
   const individualGenotypes = variant.genotypes[individual.individualGuid]
   if (!individualGenotypes) {
@@ -435,7 +435,7 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet, genesById }) 
     return acc
   }, {})
 
-  const allDetails = genotypes.flatMap((genotype, index) => (
+  const details = genotypes.flatMap((genotype, index) => (
     index === 0 ?
       [genotypeDetails(genotype, variant, genesById)] :
       [<Divider />, genotypeDetails(genotype, variant, genesById)]
@@ -459,7 +459,7 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet, genesById }) 
     </span>
   )
 
-  return allDetails.length ? <Popup position="top center" trigger={content} content={allDetails} /> : content
+  return details.length ? <Popup position="top center" trigger={content} content={details} /> : content
 })
 
 Genotype.propTypes = {
