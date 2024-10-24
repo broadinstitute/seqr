@@ -409,7 +409,7 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet, genesById }) 
     (a, b) => SAMPLE_TYPE_DISPLAY_ORDER.indexOf(a.sampleType) - SAMPLE_TYPE_DISPLAY_ORDER.indexOf(b.sampleType),
   )
 
-  if (genotypes.every(genotype => !isCalled(genotype.cn) && !isCalled(genotype.numAlt))) {
+  if (!isCalled(genotypes[0].cn) && !isCalled(genotypes[0].numAlt)) {
     return <b>NO CALL</b>
   }
 
@@ -422,23 +422,17 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet, genesById }) 
   const sampleTypeWarnings = genotypes.reduce((acc, genotype) => {
     const warnings = getWarningsForGenotype(genotype, variant, individual, isHemiX, isCompoundHet)
     warnings.forEach((warning) => {
-      if (acc[warning]) {
-        acc[warning].push(genotype.sampleType || genotype.sampleId)
-      } else {
-        acc[warning] = [genotype.sampleType || genotype.sampleId]
-      }
+      acc[warning] = acc[warning] || []
+      acc[warning].push(genotype.sampleType || genotype.sampleId)
     })
     return acc
   }, {})
 
-  const allDetails = genotypes.map(genotype => genotypeDetails(genotype, variant, genesById)).reduce(
-    (acc, genotypeDetail, index) => {
-      if (index > 0) {
-        acc.push(<Divider />)
-      }
-      return acc.concat(genotypeDetail)
-    }, [],
-  )
+  const allDetails = genotypes.flatMap((genotype, index) => (
+    index === 0 ?
+      [genotypeDetails(genotype, variant, genesById)] :
+      [<Divider />, genotypeDetails(genotype, variant, genesById)]
+  ))
 
   const content = (
     <span>
