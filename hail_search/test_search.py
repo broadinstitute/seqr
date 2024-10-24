@@ -388,10 +388,11 @@ class HailSearchTestCase(AioHTTPTestCase):
             [VARIANT2_BOTH_SAMPLE_TYPES], sample_data=FAMILY_2_BOTH_SAMPLE_TYPE_SAMPLE_DATA_MISSING_PARENTAL_WGS,
             inheritance_mode=inheritance_mode, **COMP_HET_ALL_PASS_FILTERS, intervals=[variant2_interval]
         )
-        # Genome passes quality and inheritance exome fails inheritance (parental data shows variant is inherited).
+        # Genome passes quality and inheritance but exome fails inheritance (parental data shows variant is inherited).
+        # Variant is excluded from search results.
         inheritance_mode = 'de_novo'
         await self._assert_expected_search(
-            [VARIANT2_BOTH_SAMPLE_TYPES], sample_data=FAMILY_2_BOTH_SAMPLE_TYPE_SAMPLE_DATA_MISSING_PARENTAL_WGS,
+            [], sample_data=FAMILY_2_BOTH_SAMPLE_TYPE_SAMPLE_DATA_MISSING_PARENTAL_WGS,
             inheritance_mode=inheritance_mode, intervals=[variant2_interval]
         )
 
