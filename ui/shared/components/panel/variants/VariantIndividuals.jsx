@@ -373,28 +373,35 @@ const getWarningsForGenotypes = (genotypes, variant, isHemiX, warnings) => {
 
   const hasDifferentNumAlt = genotypes.some(genotype => genotype.numAlt !== genotypes[0].numAlt)
   if (hasDifferentNumAlt) {
-    formattedWarnings.push('Genotypes differ across sample types')
-    formattedWarnings.push(
-      genotypes.map(genotype => (
+    formattedWarnings.push({
+      id: 'different-num-alt',
+      content: 'Genotypes differ across sample types',
+    })
+    formattedWarnings.push({
+      id: 'genotype-details',
+      content: genotypes.map(genotype => (
         <div key={genotype.sampleType || genotype.sampleId}>
           {genotype.sampleType || genotype.sampleId}
           :
           <Alleles genotype={genotype} variant={variant} isHemiX={isHemiX} />
         </div>
       )),
-    )
+    })
   }
 
   if (Object.keys(warnings).length > 0) {
-    Object.entries(warnings).forEach(([warning, sampleTypes]) => {
-      formattedWarnings.push(`${warning} (${Array.from(sampleTypes).join(', ')})`)
+    Object.entries(warnings).forEach(([warning, sampleTypes], index) => {
+      formattedWarnings.push({
+        id: `warning-${index}`,
+        content: `${warning} (${Array.from(sampleTypes).join(', ')})`,
+      })
     })
   }
 
   return formattedWarnings.length > 0 && (
     <div>
-      {formattedWarnings.map(warn => (
-        <div key={warn}>{warn}</div>
+      {formattedWarnings.map(warning => (
+        <div key={warning.id}>{warning.content}</div>
       ))}
     </div>
   )
