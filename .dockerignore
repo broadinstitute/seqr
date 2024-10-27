@@ -6,6 +6,7 @@ static/*
 deploy/*
 !deploy/docker/seqr/*
 !deploy/docker/hail_search/*
+!deploy/docker/vlm/*
 hail_search/fixtures/*
 .git
 .vscode
