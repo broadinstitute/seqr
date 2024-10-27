@@ -10,6 +10,7 @@ on:
     paths:
       - deploy/docker/seqr/Dockerfile
       - hail_search/deploy/Dockerfile
+      - vlm/deploy/Dockerfile
       - .hadolint.yaml
       - .docker-compose.yaml
       - .github/workflows/docker-lint.yaml
@@ -21,6 +22,7 @@ on:
     paths:
       - deploy/docker/seqr/Dockerfile
       - hail_search/deploy/Dockerfile
+      - vlm/deploy/Dockerfile
       - .hadolint.yaml
       - .docker-compose.yaml
       - .github/workflows/docker-lint.yaml
@@ -38,3 +40,6 @@ jobs:
       - uses: hadolint/hadolint-action@v1.5.0
         with:
           dockerfile: hail_search/deploy/Dockerfile
+      - uses: hadolint/hadolint-action@v1.5.0
+        with:
+          dockerfile: vlm/deploy/Dockerfile

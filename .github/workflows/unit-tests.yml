@@ -9,11 +9,13 @@ on:
       - dev
     paths-ignore:
       - 'hail_search/**'
+      - 'vlm/**'
       - '.github/workflows/hail-search-unit-tests.yaml'
   pull_request:
     types: [opened, synchronize, reopened]
     paths-ignore:
       - 'hail_search/**'
+      - 'vlm/**'
       - '.github/workflows/hail-search-unit-tests.yaml'
 
 jobs:
