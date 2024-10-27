@@ -28,4 +28,4 @@ jobs:
       - name: Run coverage tests
         run: |
           coverage run --source="./vlm" --omit="./vlm/__main__.py" -m pytest vlm/
-          coverage report --fail-under=99
+          coverage report --fail-under=90

@@ -8,6 +8,10 @@ class VlmTestCase(AioHTTPTestCase):
     async def get_application(self):
         return await init_web_app()
 
+    async def test_error(self):
+        async with self.client.request('GET', '/foo') as resp:
+            self.assertEqual(resp.status, 404)
+
     async def test_status(self):
         async with self.client.request('GET', '/status') as resp:
             self.assertEqual(resp.status, 200)
