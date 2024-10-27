@@ -1,6 +1,7 @@
 # _seqr_ Changes
 
 ## dev
+* Update RNA Tissue Type choices (REQUIRES DB MIGRATION)
 
 ## 9/19/24
 * Update Biosample choices (REQUIRES DB MIGRATION)
