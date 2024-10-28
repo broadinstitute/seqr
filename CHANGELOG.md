@@ -1,6 +1,8 @@
 # _seqr_ Changes
 
 ## dev
+
+## 10/28/24
 * Update RNA Tissue Type choices (REQUIRES DB MIGRATION)
 
 ## 9/19/24
