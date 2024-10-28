@@ -298,7 +298,16 @@ const getWarningsForGenotype = (genotype, variant, individual, isHemiX, isCompou
   return warnings
 }
 
-const getWarningsForGenotypes = (genotypes, variant, isHemiX, warnings) => {
+const getWarningsForGenotypes = (genotypes, variant, isHemiX, genotypeWarnings) => {
+  const sampleTypeWarnings = genotypeWarnings.reduce((acc, warnings, index) => {
+    const { sampleType } = genotypes[index]
+    warnings.forEach((warning) => {
+      acc[warning] = acc[warning] || []
+      acc[warning].push(sampleType)
+    })
+    return acc
+  }, {})
+
   const formattedWarnings = []
 
   const hasDifferentNumAlt = genotypes.some(genotype => genotype.numAlt !== genotypes[0].numAlt)
@@ -319,8 +328,8 @@ const getWarningsForGenotypes = (genotypes, variant, isHemiX, warnings) => {
     })
   }
 
-  if (Object.keys(warnings).length > 0) {
-    Object.entries(warnings).forEach(([warning, sampleTypes], index) => {
+  if (Object.keys(sampleTypeWarnings).length > 0) {
+    Object.entries(sampleTypeWarnings).forEach(([warning, sampleTypes], index) => {
       formattedWarnings.push({
         id: `warning-${index}`,
         content: `${warning} (${Array.from(sampleTypes).join(', ')})`,
@@ -420,20 +429,16 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet, genesById }) 
     return <b>NO CALL</b>
   }
 
+  // Support for legacy elasticsearch formatting
   if (genotypes[0].otherSample) {
     genotypes.push(genotypes[0].otherSample)
   }
 
   const isHemiX = isHemiXVariant(variant, individual)
 
-  const sampleTypeWarnings = genotypes.reduce((acc, genotype) => {
-    const warnings = getWarningsForGenotype(genotype, variant, individual, isHemiX, isCompoundHet)
-    warnings.forEach((warning) => {
-      acc[warning] = acc[warning] || []
-      acc[warning].push(genotype.sampleType || genotype.sampleId)
-    })
-    return acc
-  }, {})
+  const genotypeWarnings = genotypes.map(
+    genotype => getWarningsForGenotype(genotype, variant, individual, isHemiX, isCompoundHet),
+  )
 
   const details = genotypes.flatMap((genotype, index) => (
     index === 0 ?
@@ -447,8 +452,8 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet, genesById }) 
         genotype={genotypes[0]}
         variant={variant}
         isHemiX={isHemiX}
-        warning={genotypes.length === 1 ? Object.keys(sampleTypeWarnings).join('. ') :
-          getWarningsForGenotypes(genotypes, variant, isHemiX, sampleTypeWarnings)}
+        warning={genotypes.length === 1 ? genotypeWarnings[0].join('. ') :
+          getWarningsForGenotypes(genotypes, variant, isHemiX, genotypeWarnings)}
       />
       {genotypes.map(genotype => (
         <div key={genotype.sampleType || genotype.sampleId}>
