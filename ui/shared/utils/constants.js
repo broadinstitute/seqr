@@ -2006,6 +2006,8 @@ export const TISSUE_DISPLAY = {
   F: 'Fibroblast',
   M: 'Muscle',
   L: 'Lymphocyte',
+  A: 'Airway Cultured Epithelium',
+  B: 'Brain',
 }
 
 export const RNASEQ_JUNCTION_PADDING = 200
