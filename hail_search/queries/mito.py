@@ -255,7 +255,6 @@ class MitoHailTableQuery(BaseHailTableQuery):
         if ht is None:
             return ht
 
-        # Keep family from both sample types if either passes quality AND inheritance
         for sample_type in SampleType:
             ht = self._apply_quality_entry_filters(ht, sample_type, family_idx_map)
             ht = self._apply_inheritance_entry_filters(ht, sample_type, family_idx_map)
@@ -317,13 +316,6 @@ class MitoHailTableQuery(BaseHailTableQuery):
             )}
         )
         return ht
-
-    @staticmethod
-    def _family_sample_has_valid_inheritance(ht, sample_type, family_idx, sample_idx):
-        return hl.or_missing(
-            hl.is_defined(family_idx) & hl.is_defined(sample_idx),
-            ~ht[sample_type.failed_family_sample_field][family_idx].contains(sample_idx),
-        )
 
     def _get_sample_genotype(self, samples, r=None, include_genotype_overrides=False, select_fields=None, **kwargs):
         if not self._has_both_sample_types:
