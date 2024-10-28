@@ -26,8 +26,8 @@ import { updateProjectMmeContact, loadMmeSubmissions, updateAnvilWorkspace } fro
 import {
   getCurrentProject,
   getAnalysisStatusCounts,
-  getProjectAnalysisGroupFamilyIndividualCounts,
-  getProjectAnalysisGroupDataLoadedFamilyIndividualCounts,
+  getProjectAnalysisGroupFamilySizeHistogram,
+  getProjectAnalysisGroupDataLoadedFamilySizeHistogram,
   getProjectAnalysisGroupSamplesByTypes,
   getProjectAnalysisGroupMmeSubmissionDetails,
   getMmeSubmissionsLoading,
@@ -46,17 +46,15 @@ const FAMILY_SIZE_LABELS = {
 }
 
 const FAMILY_STRUCTURE_SIZE_LABELS = {
-  2: plural => ` duo${plural ? 's' : ''}`,
-  3: plural => ` trio${plural ? 's' : ''}`,
-  4: plural => ` quad${plural ? 's' : ''}`,
-  5: plural => ` trio${plural ? 's' : ''}+`,
+  2: 'duo',
+  3: 'trio',
+  4: 'quad',
 }
 
 const FAMILY_STRUCTURE_HOVER = {
   2: 'A family with one parent and one child',
   3: 'A family with two parents and one child',
   4: 'A family with two parents and two children',
-  5: 'A family with two parents and three or more other family members',
 }
 
 const SAMPLE_TYPE_LOOKUP = SAMPLE_TYPE_OPTIONS.reduce(
@@ -160,19 +158,24 @@ const MatchmakerSubmissionOverview = connect(
   mapMatchmakerSubmissionsStateToProps, mapDispatchToProps,
 )(BaseMatchmakerSubmissionOverview)
 
-const FamiliesIndividuals = React.memo(({ canEdit, hasCaseReview, familyCounts, user, title }) => {
-  const familySizeHistogram = familyCounts.reduce((acc, { size, numParents }) => {
-    const familySize = Math.min(size, 5)
-    const sizeAcc = acc[familySize] || { total: 0, withParents: 0 }
-    sizeAcc.total += 1
-    if (familySize === 2 && numParents) {
-      sizeAcc.withParents += 1
-    } else if (familySize > 2 && numParents === 2) {
-      sizeAcc.withParents += 1
+const MAX_FAMILY_HIST_SIZE = 5
+
+const FamiliesIndividuals = React.memo(({ canEdit, hasCaseReview, familySizes, user, title }) => {
+  const familiesCount = Object.values(familySizes).reduce((acc, { total }) => acc + total, 0)
+  const individualsCount = Object.entries(familySizes).reduce((acc, [size, { total }]) => acc + (size * total), 0)
+  const familySizeHistogram = Object.entries(familySizes).reduce((acc, [size, counts]) => {
+    if (size <= MAX_FAMILY_HIST_SIZE) {
+      return { ...acc, [size]: counts }
     }
-    return { ...acc, [familySize]: sizeAcc }
+    if (!acc[MAX_FAMILY_HIST_SIZE]) {
+      acc[MAX_FAMILY_HIST_SIZE] = { total: 0, withParents: 0, trioPlus: 0, quadPlus: 0 }
+    }
+    acc[MAX_FAMILY_HIST_SIZE].total += counts.total
+    acc[MAX_FAMILY_HIST_SIZE].trioPlus += counts.trioPlus
+    acc[MAX_FAMILY_HIST_SIZE].quadPlus += acc[MAX_FAMILY_HIST_SIZE].withParents + counts.withParents + counts.quadPlus
+    acc[MAX_FAMILY_HIST_SIZE].withParents = 0
+    return acc
   }, {})
-  const individualsCount = familyCounts.reduce((acc, { size }) => acc + size, 0)
 
   let editIndividualsButton = null
   if (user && (user.isPm || (hasCaseReview && canEdit))) {
@@ -185,25 +188,29 @@ const FamiliesIndividuals = React.memo(({ canEdit, hasCaseReview, familyCounts, 
     <DetailSection
       title={(
         <span>
-          {`${Object.keys(familyCounts).length} Families${title || ''},`}
+          {`${familiesCount} Families${title || ''},`}
           <br />
           {`${individualsCount} Individuals${title || ''}`}
         </span>
       )}
       content={
-        sortBy(Object.entries(familySizeHistogram)).map(([size, { total, withParents }]) => (
+        sortBy(Object.entries(familySizeHistogram)).map(([size, { total, withParents, trioPlus, quadPlus }]) => (
           <div key={size}>
             {`${total} famil${total === 1 ? 'y' : 'ies'} with ${FAMILY_SIZE_LABELS[size] || size} individual${size === '1' ? '' : 's'}`}
-            {withParents > 0 && (
-              <div>
+            {[
+              [withParents, FAMILY_STRUCTURE_SIZE_LABELS[size], FAMILY_STRUCTURE_HOVER[size], total > 1],
+              [trioPlus, 'trio+', 'A family with two parents, one child, and other family members'],
+              [quadPlus, 'quad+', 'A family with two parents, at least two children, and other family members'],
+            ].filter(([count]) => count > 0).map(([count, label, hover, plural]) => (
+              <div key="label">
                 &nbsp;&nbsp;&nbsp;&nbsp;
-                {withParents}
+                {count}
                 <Popup
-                  trigger={<span>{FAMILY_STRUCTURE_SIZE_LABELS[size](total > 1)}</span>}
-                  content={FAMILY_STRUCTURE_HOVER[size]}
+                  trigger={<span>{` ${label}${plural ? 's' : ''}`}</span>}
+                  content={hover}
                 />
               </div>
-            )}
+            ))}
           </div>
         ))
       }
@@ -213,7 +220,7 @@ const FamiliesIndividuals = React.memo(({ canEdit, hasCaseReview, familyCounts, 
 })
 
 FamiliesIndividuals.propTypes = {
-  familyCounts: PropTypes.arrayOf(PropTypes.object).isRequired,
+  familySizes: PropTypes.object.isRequired,
   canEdit: PropTypes.bool,
   hasCaseReview: PropTypes.bool,
   user: PropTypes.object,
@@ -222,12 +229,12 @@ FamiliesIndividuals.propTypes = {
 
 const mapFamiliesStateToProps = (state, ownProps) => ({
   user: getUser(state),
-  familyCounts: getProjectAnalysisGroupFamilyIndividualCounts(state, ownProps),
+  familySizes: getProjectAnalysisGroupFamilySizeHistogram(state, ownProps),
 })
 
 const mapDataLoadedFamiliesStateToProps = (state, ownProps) => ({
   title: ' With Data',
-  familyCounts: getProjectAnalysisGroupDataLoadedFamilyIndividualCounts(state, ownProps),
+  familySizes: getProjectAnalysisGroupDataLoadedFamilySizeHistogram(state, ownProps),
 })
 
 const FamiliesIndividualsOverview = connect(mapFamiliesStateToProps)(FamiliesIndividuals)
