@@ -495,9 +495,9 @@ const EDIT_INDIVIDUAL_FIELDS = [INDIVIDUAL_FIELD_SEX, INDIVIDUAL_FIELD_AFFECTED]
 )))
 
 const mapIgvOptionsStateToProps = (state) => {
-  const { namespace, name } = getCurrentProject(state)
+  const { workspaceNamespace, workspaceName } = getCurrentProject(state)
   return {
-    url: `/api/anvil_workspace/${namespace}/${name}/get_igv_options`,
+    url: `/api/anvil_workspace/${workspaceNamespace}/${workspaceName}/get_igv_options`,
   }
 }
 
