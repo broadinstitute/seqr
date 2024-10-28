@@ -35,7 +35,7 @@ to the tenant will automatically have access to seqr, although they will only be
 have been added to.
 
 ## Enabling Clingen Allele Registration
-- Turning on this feature will register your variants within the Clingen Allele Registry during VCF ingestion. The [Registry](https://reg.clinicalgenome.org/redmine/projects/registry/genboree_registry/landing) provides and maintains unique variant identifiers; enabling this feature will toggle several small features within *seqr*, including a link on the "Saved Variants" page to the Clingen Variant Curation Interface.
+- Turning on this feature will register your variants within the Clingen Allele Registry during VCF ingestion. The [Registry](https://reg.clinicalgenome.org/redmine/projects/registry/genboree_registry/landing) provides and maintains unique variant identifiers; enabling this feature will toggle several small features.
 - You will first need to [register](https://reg.clinicalgenome.org/cg-prof/new) and receive a login and password.
 - Create a kubernetes secret called `pipeline-secrets` with your login and password embedded:
 ```bash
