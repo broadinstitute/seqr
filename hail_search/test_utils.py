@@ -165,7 +165,7 @@ genotypes = VARIANT1['genotypes']
 VARIANT1_BOTH_SAMPLE_TYPES['genotypes'] = {
     'I000004_hg00731': [
         genotypes['I000004_hg00731'],
-        {**genotypes['I000004_hg00731'], 'sampleType': 'WGS'}
+        {**genotypes['I000004_hg00731'], 'numAlt': 2, 'sampleType': 'WGS'}
     ],
     'I000005_hg00732': [
         genotypes['I000005_hg00732'],
