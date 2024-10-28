@@ -425,7 +425,7 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet, genesById }) 
     (a, b) => SAMPLE_TYPE_DISPLAY_ORDER.indexOf(a.sampleType) - SAMPLE_TYPE_DISPLAY_ORDER.indexOf(b.sampleType),
   )
 
-  if (!isCalled(genotypes[0].cn) && !isCalled(genotypes[0].numAlt)) {
+  if (genotypes.every(genotype => !isCalled(genotype.cn) && !isCalled(genotype.numAlt))) {
     return <b>NO CALL</b>
   }
 
