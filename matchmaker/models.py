@@ -8,7 +8,10 @@ from settings import MME_DEFAULT_CONTACT_NAME, MME_DEFAULT_CONTACT_HREF
 
 class MatchmakerSubmission(ModelWithGUID):
 
-    SEX_LOOKUP = {Individual.SEX_MALE: 'MALE', Individual.SEX_FEMALE: 'FEMALE'}
+    SEX_LOOKUP = {
+        **{sex: 'MALE' for sex in Individual.MALE_SEXES},
+        **{sex: 'FEMALE' for sex in Individual.FEMALE_SEXES},
+    }
 
     individual = models.OneToOneField(Individual, on_delete=models.PROTECT)
 
