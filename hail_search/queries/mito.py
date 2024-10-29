@@ -205,7 +205,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
             )
 
         ch_ht = None
-        family_guid_idx_map = defaultdict(dict)
+        family_idx_map = defaultdict(dict)
         for sample_type, sorted_family_sample_data in sample_types:
             ht, ch_ht = self._filter_inheritance(
                 ht, ch_ht, inheritance_filter, sorted_family_sample_data,
@@ -214,11 +214,11 @@ class MitoHailTableQuery(BaseHailTableQuery):
             )
             for family_idx, samples in enumerate(sorted_family_sample_data):
                 family_guid = samples[0]['familyGuid']
-                family_guid_idx_map[family_guid][sample_type.value] = family_idx
+                family_idx_map[family_guid][sample_type.value] = family_idx
 
-        family_guid_idx_map = hl.dict(family_guid_idx_map)
-        ht = self._apply_multi_sample_type_entry_filters(ht, family_guid_idx_map)
-        ch_ht = self._apply_multi_sample_type_entry_filters(ch_ht, family_guid_idx_map)
+        family_idx_map = hl.dict(family_idx_map)
+        ht = self._apply_multi_sample_type_entry_filters(ht, family_idx_map)
+        ch_ht = self._apply_multi_sample_type_entry_filters(ch_ht, family_idx_map)
         return ht, ch_ht
 
     def _annotate_failed_family_samples_inheritance(
@@ -256,8 +256,18 @@ class MitoHailTableQuery(BaseHailTableQuery):
             return ht
 
         for sample_type in SampleType:
-            ht = self._apply_quality_entry_filters(ht, sample_type, family_idx_map)
-            ht = self._apply_inheritance_entry_filters(ht, sample_type, family_idx_map)
+            ht = ht.annotate(**{
+                sample_type.family_entries_field: hl.enumerate(ht[sample_type.family_entries_field]).starmap(
+                    lambda family_idx, family_samples: hl.or_missing(
+                        hl.bind(lambda other_sample_type_family_idx: ((
+                            self._family_has_valid_quality(ht, sample_type, family_idx) |
+                            self._family_has_valid_quality(ht, sample_type.other_sample_type, other_sample_type_family_idx)
+                             ) &
+                            self._family_has_valid_inheritance(ht, sample_type, family_idx, other_sample_type_family_idx) &
+                            self._family_has_valid_inheritance(ht, sample_type.other_sample_type, other_sample_type_family_idx, family_idx)
+                        ), family_idx_map.get(hl.coalesce(family_samples)[0]['familyGuid']).get(sample_type.other_sample_type.value),
+                    ), family_samples)
+                )})
 
         # Merge family entries and filters from both sample types
         ht = ht.transmute(
@@ -273,17 +283,6 @@ class MitoHailTableQuery(BaseHailTableQuery):
         # Filter out families with no valid entries in either sample type
         return ht.filter(ht.family_entries.any(hl.is_defined))
 
-    def _apply_quality_entry_filters(self, ht, sample_type, family_idx_map):
-        return ht.annotate(**{
-            sample_type.family_entries_field: hl.enumerate(ht[sample_type.family_entries_field]).starmap(
-                lambda i, family_samples: hl.or_missing(
-                    hl.bind(lambda other_sample_type_idx: (
-                        self._family_has_valid_quality(ht, sample_type, i) |
-                        self._family_has_valid_quality(ht, sample_type.other_sample_type, other_sample_type_idx)
-                    ), family_idx_map.get(hl.coalesce(family_samples)[0]['familyGuid']).get(sample_type.other_sample_type.value),
-                ), family_samples)
-            )})
-
     @staticmethod
     def _family_has_valid_quality(ht, sample_type, sample_type_family_idx):
         return (
@@ -292,30 +291,14 @@ class MitoHailTableQuery(BaseHailTableQuery):
         )
 
     @staticmethod
-    def _apply_inheritance_entry_filters(ht, sample_type, family_idx_map):
-        ht = ht.annotate(
-            **{sample_type.family_entries_field: hl.enumerate(ht[sample_type.family_entries_field]).starmap(
-                lambda family_idx, family_samples: hl.or_missing(
-                    hl.bind(lambda other_sample_type_family_idx: (
-                        hl.bind(
-                            lambda other_sample_type_pass_samples, sample_type_pass_samples: (
-                                ht[sample_type.failed_family_sample_field][family_idx].all(
-                                    other_sample_type_pass_samples.contains
-                                ) & ht[sample_type.other_sample_type.failed_family_sample_field][other_sample_type_family_idx].all(
-                                    sample_type_pass_samples.contains
-                                )),
-                            ht[sample_type.other_sample_type.family_entries_field][other_sample_type_family_idx].filter(
-                                lambda s: ~ht[sample_type.other_sample_type.failed_family_sample_field][other_sample_type_family_idx].contains(s['sampleId'])
-                            ).map(lambda s: s['sampleId']),
-                            ht[sample_type.other_sample_type.family_entries_field][family_idx].filter(
-                                lambda s: ~ht[sample_type.failed_family_sample_field][family_idx].contains(s['sampleId'])
-                            ).map(lambda s: s['sampleId']),
-                        )
-                    ), family_idx_map.get(hl.coalesce(family_samples)[0]['familyGuid']).get(sample_type.other_sample_type.value)
-                ), family_samples)
-            )}
+    def _family_has_valid_inheritance(ht, sample_type, family_idx, other_sample_type_family_idx):
+        return hl.bind(
+            lambda other_sample_type_pass_samples: (
+                ht[sample_type.failed_family_sample_field][family_idx].all(other_sample_type_pass_samples.contains)
+            ), ht[sample_type.other_sample_type.family_entries_field][other_sample_type_family_idx].filter(
+                lambda s: ~ht[sample_type.other_sample_type.failed_family_sample_field][other_sample_type_family_idx].contains(s['sampleId'])
+            ).map(lambda s: s['sampleId']),
         )
-        return ht
 
     def _get_sample_genotype(self, samples, r=None, include_genotype_overrides=False, select_fields=None, **kwargs):
         if not self._has_both_sample_types:
