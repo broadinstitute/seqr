@@ -92,7 +92,6 @@ AIRTABLE_RNA_ONLY_GREGOR_SAMPLE_RECORDS = {
     {
       "id": "rec2B67GmXpAkQW8z",
       "fields": {
-        # 'CollaboratorSampleID': 'NA19679',
         'SMID': 'SM-N1P91',
       },
     },
@@ -140,6 +139,7 @@ AIRTABLE_GREGOR_RECORDS = {
       "id": "rec4B7OGmQpVkQW7z",
       "fields": {
         'CollaboratorParticipantID': 'NA19679',
+        'CollaboratorSampleID_rna': 'NA19679',
         'SMID_rna': ['rec2B67GmXpAkQW8z'],
         'seq_library_prep_kit_method_rna': 'Unknown',
         'library_prep_type_rna': 'stranded poly-A pulldown',
@@ -865,7 +865,7 @@ class ReportAPITest(AirtableTest):
             'The following entries are missing required "mean_coverage" (from Airtable) in the "aligned_dna_short_read" table: Broad_exome_VCGS_FAM203_621_D2_1',
             'The following entries have non-unique values for "alignment_software" (from Airtable) in the "aligned_dna_short_read" table: BWA-MEM-2.3 (Broad_exome_NA20888_1, Broad_exome_VCGS_FAM203_621_D2_1)',
             'The following entries have invalid values for "analysis_details" (from Airtable) in the "aligned_dna_short_read" table. Allowed values are a google bucket path starting with gs://. Invalid values: Broad_exome_VCGS_FAM203_621_D2_1 (DOI:10.5281/zenodo.4469317)',
-            # 'The following entries have invalid values for "date_data_generation" (from Airtable) in the "experiment_rna_short_read" table. Allowed values have data type float. Invalid values: NA19679 (2023-02-11)',
+            'The following entries have invalid values for "date_data_generation" (from Airtable) in the "experiment_rna_short_read" table. Allowed values have data type float. Invalid values: NA19679 (2023-02-11)',
             'The following entries are missing required "experiment_id" (from Airtable) in the "genetic_findings" table: Broad_NA19675_1_21_3343353',
             'The following entries have non-unique values for "experiment_id" (from Airtable) in the "genetic_findings" table: Broad_exome_VCGS_FAM203_621_D2 (Broad_HG00731_19_1912632, Broad_HG00731_1_248367227)',
         ]
