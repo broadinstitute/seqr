@@ -67,6 +67,15 @@ AIRTABLE_GREGOR_SAMPLE_RECORDS = {
       },
     },
     {
+      "id": "rec2Nkg10N1KssX1c",
+      "fields": {
+        'SeqrCollaboratorSampleID': 'NA19679',
+        'CollaboratorSampleID': 'NA19679',
+        'CollaboratorParticipantID': 'NA19679',
+        'SMID': 'SM-X1P92',
+      },
+    },
+    {
       "id": "rec2Nkg10N1KssPc3",
       "fields": {
         "SeqrCollaboratorSampleID": "HG00731",
@@ -1123,7 +1132,7 @@ class ReportAPITest(AirtableTest):
 
     def _test_expected_gregor_airtable_calls(self, additional_samples=None, additional_mondo_ids=None):
         mondo_ids = ['0044970'] + (additional_mondo_ids or [])
-        self.assertEqual(len(responses.calls), len(mondo_ids) + 4)
+        self.assertEqual(len(responses.calls), len(mondo_ids) + 5)
         self.assertSetEqual(
             {call.request.url for call in responses.calls[:len(mondo_ids)]},
             {f'https://monarchinitiative.org/v3/api/entity/MONDO:{mondo_id}' for mondo_id in mondo_ids}
@@ -1163,8 +1172,11 @@ class ReportAPITest(AirtableTest):
             len(mondo_ids) + 2, "OR(CollaboratorParticipantID='NA19675',CollaboratorParticipantID='NA19679',CollaboratorParticipantID='NA20888',CollaboratorParticipantID='VCGS_FAM203_621')",
             metadata_fields,
         )
+        self.assert_expected_airtable_call(
+            len(mondo_ids) + 3,"OR(RECORD_ID()='rec2B67GmXpAkQW8z')",['SMID'],
+        )
 
-        self.assertEqual(responses.calls[len(mondo_ids) + 3].request.url, MOCK_DATA_MODEL_URL)
+        self.assertEqual(responses.calls[len(mondo_ids) + 4].request.url, MOCK_DATA_MODEL_URL)
 
     def test_family_metadata(self):
         url = reverse(family_metadata, args=['R0003_test'])
