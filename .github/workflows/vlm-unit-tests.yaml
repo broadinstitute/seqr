@@ -1,0 +1,31 @@
+name: VLM Unit Tests
+
+# Run the test suite on pushes (incl. merges) to master and dev
+# Run the test suite when a PR is opened, pushed to, or reopened
+on:
+  push:
+    branches:
+      - master
+      - dev
+    paths:
+      - 'vlm/**'
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'vlm/**'
+
+jobs:
+  vlm:
+    runs-on: ubuntu-latest
+    container: hailgenetics/hail:0.2.128
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install dependencies
+        run: |
+          python3 -m pip install --upgrade pip wheel
+          pip install -r hail_search/requirements-test.txt
+      - name: Run coverage tests
+        run: |
+          coverage run --source="./vlm" --omit="./vlm/__main__.py" -m pytest vlm/
+          coverage report --fail-under=90
