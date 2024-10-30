@@ -261,7 +261,7 @@
                 "other": [
                     "transcript_ablation",
                     "5_prime_UTR_variant",
-                    "3_prime_UTR_variant",
+                    "3_prime_UTR_variant"
                 ],
                 "motif_feature": [
                     "TFBS_ablation",
