@@ -67,12 +67,12 @@ AIRTABLE_GREGOR_SAMPLE_RECORDS = {
       },
     },
     {
-      "id": "rec2B67GmXpAkQW8z",
+      "id": "rec2Nkg10N1KssX1c",
       "fields": {
         'SeqrCollaboratorSampleID': 'NA19679',
         'CollaboratorSampleID': 'NA19679',
         'CollaboratorParticipantID': 'NA19679',
-        'SMID': 'SM-N1P91',
+        'SMID': 'SM-X1P92',
         'Recontactable': 'Yes',
       },
     },
@@ -93,6 +93,16 @@ AIRTABLE_GREGOR_SAMPLE_RECORDS = {
         'CollaboratorParticipantID': 'NA20888',
         'SMID': 'SM-L5QMP',
         'Recontactable': 'No',
+      },
+    },
+]}
+
+AIRTABLE_RNA_ONLY_GREGOR_SAMPLE_RECORDS = {
+  "records": [
+    {
+      "id": "rec2B67GmXpAkQW8z",
+      "fields": {
+        'SMID': 'SM-N1P91',
       },
     },
 ]}
@@ -793,12 +803,25 @@ class ReportAPITest(AirtableTest):
         mock_temp_dir.return_value.__enter__.return_value = '/mock/tmp'
         mock_subprocess.return_value.wait.return_value = 1
 
+        airtable_sample_url = f'{AIRTABLE_URL}/app3Y97xtbbaOopVR/Samples'
         responses.add(
-            responses.GET, '{}/app3Y97xtbbaOopVR/Samples'.format(AIRTABLE_URL), json=AIRTABLE_GREGOR_SAMPLE_RECORDS,
-            status=200)
+            responses.GET, airtable_sample_url, json=AIRTABLE_GREGOR_SAMPLE_RECORDS, status=200, match=[
+                responses.matchers.query_param_matcher({'fields[]': ['CollaboratorSampleID', 'CollaboratorParticipantID', 'Recontactable', 'SMID']}, strict_match=False),
+            ]
+        )
+        responses.add(
+            responses.GET, airtable_sample_url, json=AIRTABLE_GREGOR_SAMPLE_RECORDS, status=200, match=[
+                responses.matchers.query_param_matcher({'fields[]': ['SeqrCollaboratorSampleID', 'CollaboratorParticipantID', 'Recontactable', 'SMID']}, strict_match=False),
+            ]
+        )
+        responses.add(
+            responses.GET, airtable_sample_url, json=AIRTABLE_RNA_ONLY_GREGOR_SAMPLE_RECORDS, status=200,
+            match=[responses.matchers.query_param_matcher({'fields[]': 'SMID'}, strict_match=False)]
+        )
         responses.add(
             responses.GET, '{}/app3Y97xtbbaOopVR/GREGoR Data Model'.format(AIRTABLE_URL), json=AIRTABLE_GREGOR_RECORDS,
             status=200)
+
         responses.add(responses.GET, MOCK_DATA_MODEL_URL, status=404)
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({}))
@@ -1110,7 +1133,7 @@ class ReportAPITest(AirtableTest):
 
     def _test_expected_gregor_airtable_calls(self, additional_samples=None, additional_mondo_ids=None):
         mondo_ids = ['0044970'] + (additional_mondo_ids or [])
-        self.assertEqual(len(responses.calls), len(mondo_ids) + 4)
+        self.assertEqual(len(responses.calls), len(mondo_ids) + 5)
         self.assertSetEqual(
             {call.request.url for call in responses.calls[:len(mondo_ids)]},
             {f'https://monarchinitiative.org/v3/api/entity/MONDO:{mondo_id}' for mondo_id in mondo_ids}
@@ -1150,8 +1173,11 @@ class ReportAPITest(AirtableTest):
             len(mondo_ids) + 2, "OR(CollaboratorParticipantID='NA19675',CollaboratorParticipantID='NA19679',CollaboratorParticipantID='NA20888',CollaboratorParticipantID='VCGS_FAM203_621')",
             metadata_fields,
         )
+        self.assert_expected_airtable_call(
+            len(mondo_ids) + 3,"OR(RECORD_ID()='rec2B67GmXpAkQW8z')",['SMID'],
+        )
 
-        self.assertEqual(responses.calls[len(mondo_ids) + 3].request.url, MOCK_DATA_MODEL_URL)
+        self.assertEqual(responses.calls[len(mondo_ids) + 4].request.url, MOCK_DATA_MODEL_URL)
 
     def test_family_metadata(self):
         url = reverse(family_metadata, args=['R0003_test'])

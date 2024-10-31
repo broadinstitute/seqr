@@ -34,7 +34,7 @@ const LoadedProjectOptions = props => (
   <FormSpy subscription={SUBSCRIPTION}>
     {({ values }) => (
       <LoadOptionsSelect
-        url={`/api/data_management/loaded_projects/${values.sampleType}/${values.datasetType}`}
+        url={`/api/data_management/loaded_projects/${values.sampleType}/${values.datasetType || DATASET_TYPE_SNV_INDEL_CALLS}`}
         formatOption={formatProjectOption}
         optionsResponseKey="projects"
         validationErrorMessage="No Projects Found"

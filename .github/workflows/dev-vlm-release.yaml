@@ -1,0 +1,64 @@
+name: vlm dev release
+on:
+  workflow_run:
+    workflows: ["VLM Unit Tests"]
+    types:
+      - completed
+    branches:
+      - dev
+
+permissions:
+  id-token: write
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.workflow_run.head_branch }}
+
+      - name: authenticate to google cloud
+        id: "auth"
+        uses: google-github-actions/auth@v0
+        with:
+          workload_identity_provider: "${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}"
+          service_account: "${{ secrets.RUN_SA_EMAIL }}"
+
+      - name: "setup gcloud sdk"
+        uses: google-github-actions/setup-gcloud@v0
+
+      - name: Build and push images
+        run: |-
+          gcloud builds submit --quiet --substitutions="COMMIT_SHA=${{ github.event.workflow_run.head_sha }},_CUSTOM_BRANCH_TAG=gcloud-dev" --config .cloudbuild/seqr-vlm-docker.cloudbuild.yaml --gcs-log-dir=gs://seqr-github-actions-logs/logs .
+
+  helm_update:
+    runs-on: ubuntu-latest
+    needs: docker
+    steps:
+      - name: Retrieve tgg-helm repo for broad seqr chart
+        uses: actions/checkout@v3
+        with:
+          repository: broadinstitute/tgg-helm
+          token: ${{ secrets.SEQR_VERSION_UPDATE_TOKEN }}
+          ref: main
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: update image tag in the dev broad seqr chart
+        uses: mikefarah/yq@v4.22.1
+        with:
+          cmd: >
+            yq -i '.seqr-platform.vlm.image.tag = "${{ github.event.workflow_run.head_sha }}"' charts/dev-broad-seqr/values.yaml
+
+      - name: Commit and Push changes
+        uses: Andro999b/push@v1.3
+        with:
+          repository: broadinstitute/tgg-helm
+          branch: main
+          github_token: ${{ secrets.SEQR_VERSION_UPDATE_TOKEN }}
+          author_email: ${{ github.actor }}@users.noreply.github.com
+          author_name: tgg-automation
+          message: "Update VLM dev release docker tag to ${{ github.event.workflow_run.head_sha }}"

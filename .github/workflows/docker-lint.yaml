@@ -10,6 +10,7 @@ on:
     paths:
       - deploy/docker/seqr/Dockerfile
       - hail_search/deploy/Dockerfile
+      - vlm/deploy/Dockerfile
       - .hadolint.yaml
       - .docker-compose.yaml
       - .github/workflows/docker-lint.yaml
@@ -21,6 +22,7 @@ on:
     paths:
       - deploy/docker/seqr/Dockerfile
       - hail_search/deploy/Dockerfile
+      - vlm/deploy/Dockerfile
       - .hadolint.yaml
       - .docker-compose.yaml
       - .github/workflows/docker-lint.yaml
@@ -31,10 +33,13 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Validate docker compose
-        run: docker-compose -f docker-compose.yml config
+        run: docker compose -f docker-compose.yml config
       - uses: hadolint/hadolint-action@v1.5.0
         with:
           dockerfile: deploy/docker/seqr/Dockerfile
       - uses: hadolint/hadolint-action@v1.5.0
         with:
           dockerfile: hail_search/deploy/Dockerfile
+      - uses: hadolint/hadolint-action@v1.5.0
+        with:
+          dockerfile: vlm/deploy/Dockerfile
