@@ -9,10 +9,12 @@ on:
       - dev
     paths:
       - 'vlm/**'
+      - '.github/workflows/*vlm*.yaml'
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
       - 'vlm/**'
+      - '.github/workflows/*vlm*.yaml'
 
 jobs:
   vlm:
