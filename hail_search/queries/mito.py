@@ -207,10 +207,13 @@ class MitoHailTableQuery(BaseHailTableQuery):
         ch_ht = None
         family_idx_map = defaultdict(dict)
         for sample_type, sorted_family_sample_data in sample_types:
+            ht = self._annotate_empty_failed_inheritance(ht, sample_type)
+            ch_ht = self._annotate_empty_failed_inheritance(ch_ht, sample_type)
+
             ht, ch_ht = self._filter_inheritance(
                 ht, ch_ht, inheritance_filter, sorted_family_sample_data,
-                annotate_func=self._annotate_failed_family_samples_inheritance,
                 annotation=sample_type.failed_family_sample_field, entries_ht_field=sample_type.family_entries_field,
+                family_passes_inheritance_filter=self._get_family_passes_inheritance_filter_both_sample_types
             )
             for family_idx, samples in enumerate(sorted_family_sample_data):
                 family_guid = samples[0]['familyGuid']
@@ -221,35 +224,25 @@ class MitoHailTableQuery(BaseHailTableQuery):
         ch_ht = self._apply_multi_sample_type_entry_filters(ch_ht, family_idx_map)
         return ht, ch_ht
 
-    def _annotate_failed_family_samples_inheritance(
-        self, ht, inheritance_mode, inheritance_filter, sorted_family_sample_data, annotation, entries_ht_field
-    ):
-        entry_indices_by_gt = self._get_entry_indices_by_gt_map(
-           inheritance_filter, inheritance_mode, sorted_family_sample_data
-        )
-
+    @staticmethod
+    def _annotate_empty_failed_inheritance(ht, sample_type):
         if ht is None:
             return ht
 
-        # Initialize empty array
-        ht = ht.annotate(**{annotation: ht[entries_ht_field].map(lambda x: hl.empty_array(hl.tstr))})
-
-        # Add failed genotype samples
-        for genotype, entry_indices in entry_indices_by_gt.items():
-            if not entry_indices:
-                continue
-
-            entry_indices = hl.dict(entry_indices)
-            ht = ht.annotate(**{annotation: hl.enumerate(ht[entries_ht_field]).starmap(
-                lambda family_idx, entries: hl.bind(
-                    lambda failed_samples: ht[annotation][family_idx].extend(failed_samples),
-                    entry_indices.get(family_idx).filter(
-                        lambda sample_idx: ~self.GENOTYPE_QUERY_MAP[genotype](entries[sample_idx].GT)
-                    ).map(lambda sample_idx: entries[sample_idx]['sampleId'])
-                )
+        return ht.annotate(**{
+            sample_type.failed_family_sample_field: ht[sample_type.family_entries_field].map(
+                lambda x: hl.empty_array(hl.tstr)
             )})
 
-        return ht
+    def _get_family_passes_inheritance_filter_both_sample_types(
+        self, entry_indices, family_idx, genotype, family_samples, ht, annotation
+    ):
+        return hl.bind(
+            lambda failed_samples: ht[annotation][family_idx].extend(failed_samples),
+            entry_indices.get(family_idx).filter(
+                lambda sample_idx: ~self.GENOTYPE_QUERY_MAP[genotype](family_samples[sample_idx].GT)
+            ).map(lambda sample_idx: family_samples[sample_idx]['sampleId'])
+        )
 
     def _apply_multi_sample_type_entry_filters(self, ht, family_idx_map):
         if ht is None:
