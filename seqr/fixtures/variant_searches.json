@@ -43,7 +43,6 @@
                 ],
                 "missense": [
                     "stop_lost",
-                    "initiator_codon_variant",
                     "start_lost",
                     "protein_altering_variant",
                     "missense_variant"
@@ -143,7 +142,6 @@
                 ],
                 "missense": [
                     "stop_lost",
-                    "initiator_codon_variant",
                     "start_lost",
                     "protein_altering_variant",
                     "missense_variant"
@@ -198,7 +196,6 @@
                 ],
                 "missense": [
                     "stop_lost",
-                    "initiator_codon_variant",
                     "start_lost",
                     "protein_altering_variant",
                     "missense_variant"
@@ -263,13 +260,15 @@
             "annotations": {
                 "other": [
                     "transcript_ablation",
-                    "transcript_amplification",
                     "5_prime_UTR_variant",
-                    "3_prime_UTR_variant",
-                    "non_coding_exon_variant",
+                    "3_prime_UTR_variant"
+                ],
+                "motif_feature": [
                     "TFBS_ablation",
                     "TFBS_amplification",
-                    "TF_binding_site_variant",
+                    "TF_binding_site_variant"
+                ],
+                "regulatory_feature": [
                     "regulatory_region_variant",
                     "regulatory_region_ablation",
                     "regulatory_region_amplification"
@@ -280,7 +279,6 @@
                 ],
                 "missense": [
                     "stop_lost",
-                    "initiator_codon_variant",
                     "start_lost",
                     "protein_altering_variant",
                     "missense_variant"
@@ -311,11 +309,9 @@
                     "LOF",
                     "COPY_GAIN",
                     "DUP_PARTIAL",
-                    "MSV_EXON_OVR",
                     "INTRONIC",
                     "INV_SPAN",
                     "UTR",
-                    "INTERGENIC",
                     "INTRAGENIC_EXON_DUP",
                     "PARTIAL_EXON_DUP",
                     "BREAKEND_EXONIC",
@@ -388,16 +384,13 @@
                 }
             },
             "annotations": {
-                "other": [
-                    "non_coding_exon_variant"
-                ],
+                "other": [],
                 "in_frame": [
                     "inframe_insertion",
                     "inframe_deletion"
                 ],
                 "missense": [
                     "stop_lost",
-                    "initiator_codon_variant",
                     "start_lost",
                     "protein_altering_variant",
                     "missense_variant"
@@ -421,7 +414,6 @@
                 ],
                 "structural_consequence": [
                     "LOF",
-                    "MSV_EXON_OVR",
                     "INTRAGENIC_EXON_DUP",
                     "INV_SPAN",
                     "BREAKEND_EXONIC",
@@ -454,16 +446,19 @@
             "annotations_secondary": {
                 "other": [
                     "transcript_ablation",
-                    "transcript_amplification",
                     "5_prime_UTR_variant",
                     "3_prime_UTR_variant",
+                    "non_coding_transcript_exon_variant__canonical"
+                ],
+                "motif_feature": [
                     "TFBS_ablation",
                     "TFBS_amplification",
-                    "TF_binding_site_variant",
+                    "TF_binding_site_variant"
+                ],
+                "regulatory_feature": [
                     "regulatory_region_variant",
                     "regulatory_region_ablation",
-                    "regulatory_region_amplification",
-                    "non_coding_transcript_exon_variant__canonical"
+                    "regulatory_region_amplification"
                 ],
                 "in_frame": [
                     "inframe_insertion",
@@ -471,7 +466,6 @@
                 ],
                 "missense": [
                     "stop_lost",
-                    "initiator_codon_variant",
                     "start_lost",
                     "protein_altering_variant",
                     "missense_variant"
