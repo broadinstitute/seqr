@@ -5,7 +5,16 @@ Detailed instructions for how to install and update *seqr* may be found in the [
 ### Configuring Authentication for seqr
 
 #### Username/password basic auth
-This is the default authentication mechanism for seqr, and does not need any special steps for configuration.
+This is the default authentication mechanism for seqr. After seqr is running, you can run the following steps to create an inital superuser account. 
+All other user accounts can then be added through normal application use.
+
+```bash
+# Get the name of the running seqr pod
+kubectl get pod
+
+kubectl exec -it seqr-POD-ID -- /bin/bash
+./manage.py createsuperuser
+```
 
 #### Google OAuth2
 Using Google OAuth2 for authentication requires setting up a Google Cloud project and configuring the seqr instance 
