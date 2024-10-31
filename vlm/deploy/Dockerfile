@@ -8,5 +8,5 @@ WORKDIR /vlm
 COPY vlm/ .
 
 WORKDIR /
-EXPOSE 6000
+EXPOSE 7000
 CMD ["python3", "-m", "vlm"]
