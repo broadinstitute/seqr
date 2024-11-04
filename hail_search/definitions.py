@@ -16,7 +16,7 @@ class SampleType(str, Enum):
     def passes_inheritance_field(self) -> str:
         return {
             SampleType.WES: 'wes_passes_inheritance',
-            SampleType.WGS: 'wgs_passes_quality',
+            SampleType.WGS: 'wes_passes_inheritance',
         }[self]
 
     @property
