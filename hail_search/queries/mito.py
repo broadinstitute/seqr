@@ -284,19 +284,24 @@ class MitoHailTableQuery(BaseHailTableQuery):
             hl.is_defined(ht[sample_type.passes_quality_field][sample_type_family_idx])
         )
 
-    def _family_has_valid_inheritance(self, ht, sample_type, family_idx, other_sample_type_family_idx):
-        return self._get_passes_inheritance_samples(ht, sample_type, family_idx).all(
-            self._get_passes_inheritance_samples(ht, sample_type.other_sample_type, other_sample_type_family_idx).contains
-        )
-
     @staticmethod
-    def _get_passes_inheritance_samples(ht, sample_type, family_idx):
-        return hl.enumerate(ht[sample_type.family_entries_field][family_idx]).starmap(
-            lambda sample_idx, sample: hl.or_missing(
-                ht[sample_type.passes_inheritance_field][family_idx][sample_idx],
-                sample['sampleId'],
-            )
-        ).filter(hl.is_defined)
+    def _family_has_valid_inheritance(ht, sample_type, family_idx, other_sample_type_family_idx):
+        return hl.bind(
+            lambda sample_type_fail_samples, other_sample_type_pass_samples: (
+                sample_type_fail_samples.all(other_sample_type_pass_samples.contains)
+            ), hl.enumerate(ht[sample_type.family_entries_field][family_idx]).starmap(
+                lambda sample_idx, sample: hl.or_missing(
+                    ~ht[sample_type.passes_inheritance_field][family_idx][sample_idx],
+                    sample['sampleId'],
+                )
+            ).filter(hl.is_defined),
+            hl.enumerate(ht[sample_type.other_sample_type.family_entries_field][other_sample_type_family_idx]).starmap(
+                lambda sample_idx, sample: hl.or_missing(
+                    ht[sample_type.other_sample_type.passes_inheritance_field][other_sample_type_family_idx][sample_idx],
+                    sample['sampleId'],
+                )
+            ).filter(hl.is_defined),
+        )
 
     def _get_sample_genotype(self, samples, r=None, include_genotype_overrides=False, select_fields=None, **kwargs):
         if not self._has_both_sample_types:
