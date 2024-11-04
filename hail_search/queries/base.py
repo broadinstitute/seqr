@@ -628,6 +628,12 @@ class BaseHailTableQuery(object):
 
         return ht
 
+    def _get_family_passes_inheritance_filter(self, entry_indices, family_idx, genotype, family_samples, *args):
+        return hl.or_missing(
+            ~entry_indices.contains(family_idx) | entry_indices[family_idx].all(
+                lambda sample_i: self.GENOTYPE_QUERY_MAP[genotype](family_samples[sample_i].GT)
+        ), family_samples)
+
     def _get_entry_indices_by_gt_map(self, inheritance_filter, inheritance_mode, sorted_family_sample_data):
         individual_genotype_filter = (inheritance_filter or {}).get('genotype')
 
@@ -651,12 +657,6 @@ class BaseHailTableQuery(object):
             self.max_unaffected_samples = max(family_unaffected_counts) if family_unaffected_counts else 0
 
         return entry_indices_by_gt
-
-    def _get_family_passes_inheritance_filter(self, entry_indices, family_idx, genotype, family_samples, *args):
-        return hl.or_missing(
-            ~entry_indices.contains(family_idx) | entry_indices[family_idx].all(
-                lambda sample_i: self.GENOTYPE_QUERY_MAP[genotype](family_samples[sample_i].GT)
-        ), family_samples)
 
     def _get_family_passes_quality_filter(self, quality_filter, ht, **kwargs):
         quality_filter = quality_filter or {}
