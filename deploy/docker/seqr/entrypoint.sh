@@ -39,8 +39,9 @@ do
     fi
 done
 
-# init and populate seqrdb unless it already exists
-if ! psql --host "$POSTGRES_SERVICE_HOSTNAME" -U "$POSTGRES_USERNAME" -l | grep seqrdb; then
+# init and populate seqrdb & reference_data_db unless there exists a row
+# in the last table updated by the reference data update.
+if ! psql --host "$POSTGRES_SERVICE_HOSTNAME" -U "$POSTGRES_USERNAME" -d reference_data_db -tc 'select exists(select * from reference_data_humanphenotypeontology)' | grep 't'; then
     psql --host "$POSTGRES_SERVICE_HOSTNAME" -U "$POSTGRES_USERNAME" -c 'CREATE DATABASE reference_data_db';
     psql --host "$POSTGRES_SERVICE_HOSTNAME" -U "$POSTGRES_USERNAME" -c 'CREATE DATABASE seqrdb';
     python -u manage.py migrate
