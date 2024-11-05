@@ -368,7 +368,7 @@ class HailSearchTestCase(AioHTTPTestCase):
             MULTI_PROJECT_BOTH_SAMPLE_TYPE_VARIANTS, gene_counts=GENE_COUNTS, sample_data=MULTI_PROJECT_SAMPLE_TYPES_SAMPLE_DATA,
         )
 
-        # Variant 1 is de novo in exome but maternally inherited in genome.
+        # Variant 1 is de novo in exome but inherited and homozygous in genome.
         # Variant 2 is inherited in exome and de novo in genome.
         # Variant 3 is inherited in both sample types. Variant 4 is de novo in both sample types.
         inheritance_mode = 'recessive'
@@ -377,14 +377,6 @@ class HailSearchTestCase(AioHTTPTestCase):
             sample_data=FAMILY_2_BOTH_SAMPLE_TYPE_SAMPLE_DATA, inheritance_mode=inheritance_mode,
             **COMP_HET_ALL_PASS_FILTERS
         )
-        inheritance_mode = 'de_novo'
-        await self._assert_expected_search(
-            [VARIANT1_BOTH_SAMPLE_TYPES, VARIANT2_BOTH_SAMPLE_TYPES, VARIANT4_BOTH_SAMPLE_TYPES],
-            sample_data=FAMILY_2_BOTH_SAMPLE_TYPE_SAMPLE_DATA, inheritance_mode=inheritance_mode,
-            **COMP_HET_ALL_PASS_FILTERS
-        )
-
-        # Same variants, but genome data is proband-only.
         inheritance_mode = 'recessive'
         await self._assert_expected_search(
             [VARIANT1_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY, VARIANT2_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY,
@@ -392,11 +384,16 @@ class HailSearchTestCase(AioHTTPTestCase):
             sample_data=FAMILY_2_BOTH_SAMPLE_TYPE_SAMPLE_DATA_MISSING_PARENTAL_WGS, inheritance_mode=inheritance_mode,
             **COMP_HET_ALL_PASS_FILTERS
         )
+
+        inheritance_mode = 'de_novo'
+        await self._assert_expected_search(
+            [VARIANT1_BOTH_SAMPLE_TYPES, VARIANT2_BOTH_SAMPLE_TYPES, VARIANT4_BOTH_SAMPLE_TYPES],
+            sample_data=FAMILY_2_BOTH_SAMPLE_TYPE_SAMPLE_DATA, inheritance_mode=inheritance_mode,
+        )
         inheritance_mode = 'de_novo'
         await self._assert_expected_search(
             [VARIANT1_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY, VARIANT4_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY],
             sample_data=FAMILY_2_BOTH_SAMPLE_TYPE_SAMPLE_DATA_MISSING_PARENTAL_WGS, inheritance_mode=inheritance_mode,
-            **COMP_HET_ALL_PASS_FILTERS
         )
 
     async def test_inheritance_filter(self):
