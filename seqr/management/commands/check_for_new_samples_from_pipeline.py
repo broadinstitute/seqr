@@ -29,6 +29,7 @@ RUN_PATH_FIELDS = ['genome_version', 'dataset_type', 'run_version']
 DATASET_TYPE_MAP = {'GCNV': Sample.DATASET_TYPE_SV_CALLS}
 USER_EMAIL = 'manage_command'
 MAX_LOOKUP_VARIANTS = 5000
+RELATEDNESS_CHECK_NAME = 'relatedness_check'
 
 PDO_COPY_FIELDS = [
     'PDO', 'PDOStatus', 'SeqrLoadingDate', 'GATKShortReadCallsetPath', 'SeqrProjectURL', 'TerraProjectURL',
@@ -160,6 +161,7 @@ class Command(BaseCommand):
                 split_project_pdos[project.name] = cls._update_pdos(session, project.guid, sample_ids)
 
         # Send failure notifications
+        relatedness_check_file_path = metadata.get('relatedness_check_file_path')
         failed_family_samples = metadata.get('failed_family_samples', {})
         failed_families_by_guid = {f['guid']: f for f in Family.objects.filter(
             guid__in={family for families in failed_family_samples.values() for family in families}
@@ -176,9 +178,15 @@ class Command(BaseCommand):
                 split_pdos = split_project_pdos.get(project)
                 if split_pdos:
                     summary += f'\n\nSkipped samples in this project have been moved to {", ".join(split_pdos)}'
+
+                relatedness_check_message = (
+                    f'\nRelatedness check results: {relatedness_check_file_path}'
+                    if (relatedness_check_file_path and check == RELATEDNESS_CHECK_NAME)
+                    else ''
+                )
                 safe_post_to_slack(
                     SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL,
-                    f'The following {len(failures)} families failed {check.replace("_", " ")} in {project}:\n{summary}'
+                    f'The following {len(failures)} families failed {check.replace("_", " ")} in {project}:\n{summary}{relatedness_check_message}'
                 )
 
         # Reload saved variant JSON
