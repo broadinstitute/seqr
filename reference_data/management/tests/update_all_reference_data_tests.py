@@ -44,6 +44,9 @@ class UpdateAllReferenceDataTest(TestCase):
         patcher = mock.patch('reference_data.management.commands.update_refseq.RefseqReferenceDataHandler', lambda: 'refseq')
         patcher.start()
         self.addCleanup(patcher.stop)
+        patcher = mock.patch('reference_data.management.commands.update_omim.CachedOmimReferenceDataHandler', lambda: 'cached_omim')
+        patcher.start()
+        self.addCleanup(patcher.stop)
 
         patcher = mock.patch('reference_data.management.commands.update_mgi.MGIReferenceDataHandler')
         patcher.start().side_effect = mgi_exception
@@ -54,9 +57,6 @@ class UpdateAllReferenceDataTest(TestCase):
 
         patcher = mock.patch('reference_data.management.commands.update_all_reference_data.OmimReferenceDataHandler')
         self.mock_omim = patcher.start()
-        self.addCleanup(patcher.stop)
-        patcher = mock.patch('reference_data.management.commands.update_all_reference_data.CachedOmimReferenceDataHandler')
-        self.mock_cached_omim = patcher.start()
         self.addCleanup(patcher.stop)
         patcher = mock.patch('reference_data.management.commands.update_all_reference_data.update_gencode')
         self.mock_update_gencode = patcher.start()
@@ -93,7 +93,6 @@ class UpdateAllReferenceDataTest(TestCase):
         self.mock_update_gencode.assert_has_calls(calls)
 
         self.mock_omim.assert_called_with('test_key')
-        self.mock_cached_omim.assert_not_called()
 
         self.assertEqual(self.mock_update_records.call_count, 7)
         calls = [
@@ -128,18 +127,15 @@ class UpdateAllReferenceDataTest(TestCase):
 
         self.mock_update_gencode.assert_not_called()
         self.mock_omim.assert_not_called()
-        self.mock_cached_omim.assert_not_called()
         self.mock_update_records.assert_not_called()
         self.mock_update_hpo.assert_not_called()
         self.mock_logger.info.assert_called_with("Done")
 
     def test_cached_omim_update_reference_data_command(self):
-        self.mock_cached_omim.return_value = 'cached_omim'
 
         call_command(
             'update_all_reference_data', '--use-cached-omim', *SKIP_ARGS)
 
-        self.mock_cached_omim.assert_called_with()
         self.mock_update_records.assert_called_with('cached_omim')
 
         self.mock_omim.assert_not_called()
