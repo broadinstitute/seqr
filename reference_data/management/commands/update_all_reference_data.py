@@ -92,3 +92,5 @@ class Command(BaseCommand):
             logger.info("Updated: {}".format(', '.join(updated)))
         if update_failed:
             logger.info("Failed to Update: {}".format(', '.join(update_failed)))
+
+update_all_reference_data_sources = Command._update_all_reference_data_sources
