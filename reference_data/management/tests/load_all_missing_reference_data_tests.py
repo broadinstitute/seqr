@@ -3,13 +3,7 @@ import mock
 from django.core.management import call_command
 from django.test import TestCase
 
-
-def refseq_exception():
-    raise Exception('Refseq failed')
-
-
-def mgi_exception():
-    raise Exception('MGI failed')
+from reference_data.management.commands.update_mgi import MGIReferenceDataHandler
 
 class LoadAllMissingReferenceDataTest(TestCase):
     databases = '__all__'
@@ -19,14 +13,6 @@ class LoadAllMissingReferenceDataTest(TestCase):
         patcher = mock.patch('reference_data.management.commands.utils.update_utils.ReferenceDataHandler.__init__', lambda *args: None)
         patcher.start()
         self.addCleanup(patcher.stop)
-
-        patcher = mock.patch('reference_data.management.commands.update_mgi.MGIReferenceDataHandler.__init__')
-        patcher.start().side_effect = mgi_exception
-        self.addCleanup(patcher.stop)
-        patcher = mock.patch('reference_data.management.commands.update_refseq.RefseqReferenceDataHandler.__init__')
-        patcher.start().side_effect = refseq_exception
-        self.addCleanup(patcher.stop)
-
         patcher = mock.patch('reference_data.management.commands.update_all_reference_data.update_gencode')
         self.mock_update_gencode = patcher.start()
         self.addCleanup(patcher.stop)
@@ -74,7 +60,25 @@ class LoadAllMissingReferenceDataTest(TestCase):
         self.mock_logger.info.assert_has_calls(calls)
 
         calls = [
-            mock.call('unable to update mgi: MGI failed'),
-            mock.call('unable to update refseq: Refseq failed'),
+            mock.call("unable to update mgi: dbNSFPGene table is empty. Run './manage.py update_dbnsfp_gene' before running this command."),
+            mock.call("unable to update refseq: TranscriptInfo table is empty. Run './manage.py update_gencode' before running this command."),
         ]
         self.mock_logger.error.assert_has_calls(calls)
+
+    def test_load_all_missing_reference_data_data_loaded(self):
+        # Intialize DB
+        call_command('loaddata', 'reference_data', '--database=reference_data')
+
+        call_command('load_all_missing_reference_data')
+
+        self.mock_update_gencode.assert_not_called()
+        self.mock_update_hpo.assert_not_called()
+
+        self.assertEqual(self.mock_update_records.call_count, 1)
+        self.assertIsInstance(self.mock_update_records.mock_calls[0].args[0], MGIReferenceDataHandler)
+
+        self.mock_logger.info.assert_has_calls([
+            mock.call('Done'),
+            mock.call('Updated: mgi'),
+        ])
+        self.mock_logger.error.assert_not_called()
