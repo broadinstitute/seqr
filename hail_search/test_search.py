@@ -369,7 +369,7 @@ class HailSearchTestCase(AioHTTPTestCase):
         )
 
         # Variant 1 is de novo in exome but inherited and homozygous in genome.
-        # Variant 2 is inherited in exome and de novo in genome.
+        # Variant 2 is inherited and homozygous in exome and de novo and homozygous in genome.
         # Variant 3 is inherited in both sample types. Variant 4 is de novo in both sample types.
         inheritance_mode = 'recessive'
         await self._assert_expected_search(
@@ -390,6 +390,7 @@ class HailSearchTestCase(AioHTTPTestCase):
             [VARIANT1_BOTH_SAMPLE_TYPES, VARIANT2_BOTH_SAMPLE_TYPES, VARIANT4_BOTH_SAMPLE_TYPES],
             sample_data=FAMILY_2_BOTH_SAMPLE_TYPE_SAMPLE_DATA, inheritance_mode=inheritance_mode,
         )
+        # Variant 2 fails inheritance when parental data is missing in genome
         inheritance_mode = 'de_novo'
         await self._assert_expected_search(
             [VARIANT1_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY, VARIANT4_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY],
