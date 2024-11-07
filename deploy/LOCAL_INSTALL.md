@@ -34,6 +34,7 @@ wget https://raw.githubusercontent.com/broadinstitute/seqr/master/docker-compose
 docker compose up -d seqr   # start up the seqr docker image in the background after also starting other components it depends on (postgres, redis, elasticsearch). This may take 10+ minutes.
 docker compose logs -f seqr  # (optional) continuously print seqr logs to see when it is done starting up or if there are any errors. Type Ctrl-C to exit from the logs. 
 
+docker compose exec seqr python manage.py update_all_reference_data --use-cached-omim  # Intialize reference data
 docker compose exec seqr python manage.py createsuperuser  # create a seqr Admin user 
 
 open http://localhost     # open the seqr landing page in your browser. Log in to seqr using the email and password from the previous step
