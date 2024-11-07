@@ -377,7 +377,6 @@ class HailSearchTestCase(AioHTTPTestCase):
             sample_data=FAMILY_2_BOTH_SAMPLE_TYPE_SAMPLE_DATA, inheritance_mode=inheritance_mode,
             **COMP_HET_ALL_PASS_FILTERS
         )
-        inheritance_mode = 'recessive'
         await self._assert_expected_search(
             [VARIANT1_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY, VARIANT2_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY,
              [VARIANT3_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY, VARIANT4_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY]],
@@ -391,7 +390,6 @@ class HailSearchTestCase(AioHTTPTestCase):
             sample_data=FAMILY_2_BOTH_SAMPLE_TYPE_SAMPLE_DATA, inheritance_mode=inheritance_mode,
         )
         # Variant 2 fails inheritance when parental data is missing in genome
-        inheritance_mode = 'de_novo'
         await self._assert_expected_search(
             [VARIANT1_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY, VARIANT4_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY],
             sample_data=FAMILY_2_BOTH_SAMPLE_TYPE_SAMPLE_DATA_MISSING_PARENTAL_WGS, inheritance_mode=inheritance_mode,
