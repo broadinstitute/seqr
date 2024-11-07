@@ -9,7 +9,6 @@ from django.core.management import call_command
 from django.test import TestCase
 from django.core.management.base import CommandError
 
-from reference_data.management.commands.utils.update_utils import update_records
 from reference_data.management.commands.update_omim import CachedOmimReferenceDataHandler
 from reference_data.models import Omim, GeneInfo
 
@@ -160,7 +159,7 @@ class UpdateOmimTest(TestCase):
         responses.add(responses.HEAD, data_url, headers={"Content-Length": "1024"})
         responses.add(responses.GET, data_url, body=CACHED_OMIM_DATA)
 
-        update_records(CachedOmimReferenceDataHandler())
+        CachedOmimReferenceDataHandler().update_records()
 
         calls = [
             mock.call('Parsing file'),
