@@ -638,12 +638,6 @@ const Annotations = React.memo(({ variant, mainGeneId, showMainGene, transcripts
           />
         </span>
       )}
-      {variant.highConstraintRegion && (
-        <span>
-          <HorizontalSpacer width={12} />
-          <Label color="red" horizontal size="tiny">High Constraint Region</Label>
-        </span>
-      )}
       {nonMajorConsequences.length > 0 && (
         <div>
           <b>Additonal VEP consequences: &nbsp;</b>

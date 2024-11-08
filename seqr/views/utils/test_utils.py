@@ -1085,7 +1085,6 @@ PARSED_VARIANTS = [
         'bothsidesSupport': None,
         'clinvar': {'clinicalSignificance': 'Pathogenic/Likely_pathogenic', 'alleleId': None, 'variationId': None, 'goldStars': None, 'version': '2023-03-05'},
         'commonLowHeteroplasmy': None,
-        'highConstraintRegion': None,
         'mitomapPathogenic': None,
         'familyGuids': ['F000003_3'],
         'cpxIntervals': None,
@@ -1156,7 +1155,6 @@ PARSED_VARIANTS = [
         'bothsidesSupport': None,
         'clinvar': {'clinicalSignificance': None, 'alleleId': None, 'variationId': None, 'goldStars': None, 'version': '2023-03-05'},
         'commonLowHeteroplasmy': None,
-        'highConstraintRegion': None,
         'mitomapPathogenic': None,
         'familyGuids': ['F000002_2', 'F000003_3'],
         'cpxIntervals': None,
@@ -1244,7 +1242,6 @@ PARSED_SV_VARIANT = {
     'cpxIntervals': None,
     'algorithms': None,
     'commonLowHeteroplasmy': None,
-    'highConstraintRegion': None,
     'mitomapPathogenic': None,
     'genotypes': {
         'I000004_hg00731': {
@@ -1336,7 +1333,6 @@ PARSED_SV_WGS_VARIANT = {
                      {'chrom': '20', 'end': 13000, 'start': 11000, 'type': 'INV'}],
     'algorithms': 'wham, manta',
     'commonLowHeteroplasmy': None,
-    'highConstraintRegion': None,
     'mitomapPathogenic': None,
     'genotypes': {
         'I000018_na21234': {
@@ -1442,7 +1438,6 @@ PARSED_MITO_VARIANT = {
              {'contamination': 0.0, 'dp': 5139.0, 'gq': 60.0, 'hl': 1.0, 'mitoCn': 319.03225806451616, 'numAlt': 2,
               'sampleId': 'HG00731', 'sampleType': 'WES'}},
     'hgmd': {'accession': None, 'class': None},
-    'highConstraintRegion': True,
     'mainTranscriptId': 'ENST00000361227',
     'mitomapPathogenic': True,
     'numExon': None,
