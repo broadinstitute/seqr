@@ -314,7 +314,7 @@ def _trigger_add_workspace_data(project, pedigree_records, user, data_path, samp
     trigger_success = trigger_airflow_data_loading(
         [project], sample_type, Sample.DATASET_TYPE_VARIANT_CALLS, project.genome_version, data_path, user=user, success_message=success_message,
         success_slack_channel=SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, error_message=f'ERROR triggering AnVIL loading for project {project.guid}',
-        individual_ids=individual_ids,  # TODO update function signature for trigger_airflow_data_loading
+        individual_ids=individual_ids,
     )
     AirtableSession(user, base=AirtableSession.ANVIL_BASE).safe_create_records(
         ANVIL_REQUEST_TRACKING_TABLE, [{
