@@ -651,12 +651,13 @@ class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
         # Test missing loaded samples
         self.mock_load_file.return_value = LOAD_SAMPLE_DATA
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
+        import pdb; pdb.set_trace()
         self.assertEqual(response.status_code, 400)
         self.assertEqual(
             response.json()['error'],
-            'In order to add new data to this project, new samples must be joint called in a single VCF with all previously'
+            'In order to load data for families with previously loaded data, new family samples must be joint called in a single VCF with all previously'
             ' loaded samples. The following samples were previously loaded in this project but are missing from the VCF:'
-            ' HG00731, HG00732, HG00733, NA20870, NA20874')
+            '\n Family 1: NA19675_1,  NA19678')
 
         # Test a valid operation
         mock_compute_indiv_guid.return_value = 'I0000020_hg00735'

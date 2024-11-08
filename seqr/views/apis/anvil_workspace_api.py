@@ -241,7 +241,7 @@ def add_workspace_data(request, project_guid):
 
     previous_loaded_individuals = previous_samples.filter(
         individual__family__family_id__in=records_by_family,
-    ).values_list('individual_id', 'individual__family__family_id', 'individual__individual_id')
+    ).values_list('individual_id', 'individual__individual_id', 'individual__family__family_id')
     missing_samples_by_family = defaultdict(list)
     for _, individual_id, family_id in previous_loaded_individuals:
         if individual_id not in request_json['vcfSamples']:
@@ -253,7 +253,7 @@ def add_workspace_data(request, project_guid):
         ]
         return create_json_response({
             'error': 'In order to load data for families with previously loaded data, new family samples must be joint called in a single VCF with all previously loaded samples.'
-                     ' The following samples were previously loaded in this project but are missing from the VCF: {}'.format(
+                     ' The following samples were previously loaded in this project but are missing from the VCF:\n{}'.format(
                 '\n'.join(sorted(missing_family_sample_messages)))}, status=400)
 
     pedigree_json = _trigger_add_workspace_data(
