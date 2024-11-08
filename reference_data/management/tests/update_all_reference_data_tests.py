@@ -6,11 +6,7 @@ from django.test import TestCase
 
 from reference_data.management.commands.utils.update_utils import ReferenceDataHandler
 from reference_data.management.commands.update_dbnsfp_gene import DbNSFPReferenceDataHandler
-from reference_data.management.commands.update_gencode import update_gencode
 from reference_data.management.commands.update_gene_constraint import GeneConstraintReferenceDataHandler
-from reference_data.management.commands.update_omim import OmimReferenceDataHandler, CachedOmimReferenceDataHandler
-from reference_data.management.commands.update_primate_ai import PrimateAIReferenceDataHandler
-from reference_data.management.commands.update_mgi import MGIReferenceDataHandler
 from reference_data.management.commands.update_gene_cn_sensitivity import CNSensitivityReferenceDataHandler
 from reference_data.management.commands.update_gencc import GenCCReferenceDataHandler
 from reference_data.management.commands.update_clingen import ClinGenReferenceDataHandler
