@@ -4,6 +4,8 @@ import gzip
 from tqdm import tqdm
 import traceback
 from django.core.management.base import BaseCommand, CommandError
+from django.db import models
+
 from reference_data.management.commands.utils.download_utils import download_file
 from reference_data.management.commands.utils.gene_utils import get_genes_by_symbol_and_id
 from reference_data.models import GeneInfo
@@ -13,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 class ReferenceDataHandler(object):
 
-    model_cls = None
+    model_cls = models.Model
     url = None
     header_fields = None
     post_process_models = None
@@ -92,7 +94,7 @@ class ReferenceDataHandler(object):
 
                         models.append(self.model_cls(**record))
 
-            if self.post_process_models:
+            if self.post_process_models is not None:
                 self.post_process_models(models)
 
             if not self.keep_existing_records:
