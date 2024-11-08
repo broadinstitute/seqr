@@ -1,7 +1,7 @@
 [
 {
     "model": "seqr.varianttagtype",
-    "pk": null,
+    "pk": 324426,
     "fields": {
         "guid": "VTT_tier_1_novel_gene_and_phen",
         "created_date": "2018-04-27T00:00:00.000Z",
@@ -17,7 +17,7 @@
 },
 {
     "model": "seqr.varianttagtype",
-    "pk": null,
+    "pk": 324427,
     "fields": {
         "guid": "VTT_tier_1_novel_gene_for_know",
         "created_date": "2018-04-27T00:00:00.000Z",
@@ -33,7 +33,7 @@
 },
 {
     "model": "seqr.varianttagtype",
-    "pk": null,
+    "pk": 324428,
     "fields": {
         "guid": "VTT_tier_1_phenotype_expansion",
         "created_date": "2018-04-27T00:00:00.000Z",
@@ -49,7 +49,7 @@
 },
 {
     "model": "seqr.varianttagtype",
-    "pk": null,
+    "pk": 324429,
     "fields": {
         "guid": "VTT_tier_1_phenotype_not_delin",
         "created_date": "2018-04-27T00:00:00.000Z",
@@ -65,7 +65,7 @@
 },
 {
     "model": "seqr.varianttagtype",
-    "pk": null,
+    "pk": 324430,
     "fields": {
         "guid": "VTT_tier_1_novel_mode_of_inher",
         "created_date": "2018-04-27T00:00:00.000Z",
@@ -81,7 +81,7 @@
 },
 {
     "model": "seqr.varianttagtype",
-    "pk": null,
+    "pk": 324458,
     "fields": {
         "guid": "VTT_tier_1_known_gene_new_phen",
         "created_date": "2018-04-27T00:00:00.000Z",
@@ -97,7 +97,7 @@
 },
 {
     "model": "seqr.varianttagtype",
-    "pk": null,
+    "pk": 324431,
     "fields": {
         "guid": "VTT_tier_2_novel_gene_and_phen",
         "created_date": "2018-04-27T00:00:00.000Z",
@@ -113,7 +113,7 @@
 },
 {
     "model": "seqr.varianttagtype",
-    "pk": null,
+    "pk": 324432,
     "fields": {
         "guid": "VTT_tier_2_novel_gene_for_know",
         "created_date": "2018-04-27T00:00:00.000Z",
@@ -129,7 +129,7 @@
 },
 {
     "model": "seqr.varianttagtype",
-    "pk": null,
+    "pk": 324433,
     "fields": {
         "guid": "VTT_tier_2_phenotype_expansion",
         "created_date": "2018-04-27T00:00:00.000Z",
@@ -145,7 +145,7 @@
 },
 {
     "model": "seqr.varianttagtype",
-    "pk": null,
+    "pk": 324434,
     "fields": {
         "guid": "VTT_tier_2_phenotype_not_deli",
         "created_date": "2018-04-27T00:00:00.000Z",
@@ -161,7 +161,7 @@
 },
 {
     "model": "seqr.varianttagtype",
-    "pk": null,
+    "pk": 324459,
     "fields": {
         "guid": "VTT_tier_2_known_gene_new_phen",
         "created_date": "2018-04-27T00:00:00.000Z",
@@ -177,7 +177,7 @@
 },
 {
     "model": "seqr.varianttagtype",
-    "pk": null,
+    "pk": 324435,
     "fields": {
         "guid": "VTT_known_gene_for_phenotype",
         "created_date": "2018-04-27T00:00:00.000Z",
@@ -193,7 +193,7 @@
 },
 {
     "model": "seqr.varianttagtype",
-    "pk": null,
+    "pk": 324436,
     "fields": {
         "guid": "VTT_review",
         "created_date": "2018-04-27T00:00:00.000Z",
@@ -209,7 +209,7 @@
 },
 {
     "model": "seqr.varianttagtype",
-    "pk": null,
+    "pk": 324437,
     "fields": {
         "guid": "VTT_send_for_sanger_validation",
         "created_date": "2018-04-27T00:00:00.000Z",
@@ -226,7 +226,7 @@
 },
 {
     "model": "seqr.varianttagtype",
-    "pk": null,
+    "pk": 324453,
     "fields": {
         "guid": "VTT_validation_in_progress",
         "created_date": "2018-04-27T00:00:00.000Z",
@@ -243,7 +243,7 @@
 },
 {
     "model": "seqr.varianttagtype",
-    "pk": null,
+    "pk": 324438,
     "fields": {
         "guid": "VTT_sanger_validated",
         "created_date": "2018-04-27T00:00:00.000Z",
@@ -260,7 +260,7 @@
 },
 {
     "model": "seqr.varianttagtype",
-    "pk": null,
+    "pk": 324439,
     "fields": {
         "guid": "VTT_sanger_did_not_confirm",
         "created_date": "2018-04-27T00:00:00.000Z",
@@ -277,7 +277,7 @@
 },
 {
     "model": "seqr.varianttagtype",
-    "pk": null,
+    "pk": 324457,
     "fields": {
         "guid": "VTT_sanger_troubleshooting",
         "created_date": "2018-04-27T00:00:00.000Z",
@@ -294,7 +294,7 @@
 },
 {
     "model": "seqr.varianttagtype",
-    "pk": null,
+    "pk": 324440,
     "fields": {
         "guid": "VTT_confident_ar_one_hit",
         "created_date": "2018-04-27T00:00:00.000Z",
@@ -310,7 +310,7 @@
 },
 {
     "model": "seqr.varianttagtype",
-    "pk": null,
+    "pk": 324531,
     "fields": {
         "guid": "VTT_multi_nucleotide_variant",
         "created_date": "2020-11-17T00:00:00.000Z",
@@ -326,7 +326,7 @@
 },
 {
     "model": "seqr.varianttagtype",
-    "pk": null,
+    "pk": 324441,
     "fields": {
         "guid": "VTT_analyst_high_priority",
         "created_date": "2018-04-27T00:00:00.000Z",
@@ -342,7 +342,7 @@
 },
 {
     "model": "seqr.varianttagtype",
-    "pk": null,
+    "pk": 324532,
     "fields": {
         "guid": "VTT_returned",
         "created_date": "2021-04-27T00:00:00.000Z",
@@ -358,7 +358,7 @@
 },
 {
     "model": "seqr.varianttagtype",
-    "pk": null,
+    "pk": 324442,
     "fields": {
         "guid": "VTT_excluded",
         "created_date": "2018-04-27T00:00:00.000Z",
@@ -375,7 +375,7 @@
 },
 {
     "model": "seqr.varianttagtype",
-    "pk": null,
+    "pk": 324443,
     "fields": {
         "guid": "VTT_pathogenic",
         "created_date": "2018-04-27T00:00:00.000Z",
@@ -391,7 +391,7 @@
 },
 {
     "model": "seqr.varianttagtype",
-    "pk": null,
+    "pk": 324444,
     "fields": {
         "guid": "VTT_likely_pathogenic",
         "created_date": "2018-04-27T00:00:00.000Z",
@@ -407,7 +407,7 @@
 },
 {
     "model": "seqr.varianttagtype",
-    "pk": null,
+    "pk": 324445,
     "fields": {
         "guid": "VTT_vus",
         "created_date": "2018-04-27T00:00:00.000Z",
@@ -423,7 +423,7 @@
 },
 {
     "model": "seqr.varianttagtype",
-    "pk": null,
+    "pk": 324446,
     "fields": {
         "guid": "VTT_likely_benign",
         "created_date": "2018-04-27T00:00:00.000Z",
@@ -439,7 +439,7 @@
 },
 {
     "model": "seqr.varianttagtype",
-    "pk": null,
+    "pk": 324447,
     "fields": {
         "guid": "VTT_benign",
         "created_date": "2018-04-27T00:00:00.000Z",
@@ -455,7 +455,7 @@
 },
 {
     "model": "seqr.varianttagtype",
-    "pk": null,
+    "pk": 324448,
     "fields": {
         "guid": "VTT_secondary_finding",
         "created_date": "2018-04-27T00:00:00.000Z",
@@ -471,23 +471,7 @@
 },
 {
     "model": "seqr.varianttagtype",
-    "pk": null,
-    "fields": {
-        "guid": "VTT_matchbox_mme",
-        "created_date": "2018-04-27T00:00:00.000Z",
-        "created_by": null,
-        "last_modified_date": null,
-        "project": null,
-        "name": "MatchBox (MME)",
-        "category": "Data Sharing",
-        "description": "Gene, variant, and phenotype to be submitted to Matchmaker Exchange",
-        "color": "#531B86",
-        "order": 24.0
-    }
-},
-{
-    "model": "seqr.varianttagtype",
-    "pk": null,
+    "pk": 324450,
     "fields": {
         "guid": "VTT_submit_to_clinvar",
         "created_date": "2018-04-27T00:00:00.000Z",
@@ -503,7 +487,7 @@
 },
 {
     "model": "seqr.varianttagtype",
-    "pk": null,
+    "pk": 324451,
     "fields": {
         "guid": "VTT_share_with_komp",
         "created_date": "2018-04-27T00:00:00.000Z",
