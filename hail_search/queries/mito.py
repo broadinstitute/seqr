@@ -71,9 +71,6 @@ class MitoHailTableQuery(BaseHailTableQuery):
     CORE_FIELDS = BaseHailTableQuery.CORE_FIELDS + ['rsid']
     MITO_ANNOTATION_FIELDS = {
         'commonLowHeteroplasmy': lambda r: r.common_low_heteroplasmy,
-        'highConstraintRegion': (
-            lambda r: r.high_constraint_region if hasattr(r, 'high_constraint_region') else r.high_constraint_region_mito
-        ),
         'mitomapPathogenic': lambda r: r.mitomap.pathogenic,
     }
     BASE_ANNOTATION_FIELDS = {

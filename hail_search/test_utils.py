@@ -915,7 +915,6 @@ MITO_VARIANT1 = {
         'mlc': 3.38874,
     },
     'commonLowHeteroplasmy': False,
-    'highConstraintRegion': True,
     'mitomapPathogenic': None,
     'clinvar': {
         'alleleId': 677748,
@@ -969,7 +968,6 @@ MITO_VARIANT2 = {
         'mlc': None,
     },
     'commonLowHeteroplasmy': False,
-    'highConstraintRegion': True,
     'mitomapPathogenic': None,
     'clinvar': None,
     'transcripts': {
@@ -1016,7 +1014,6 @@ MITO_VARIANT3 = {
         'mlc': 0.7514,
     },
     'commonLowHeteroplasmy': True,
-    'highConstraintRegion': False,
     'mitomapPathogenic': True,
     'clinvar': {
         'alleleId': 150280,
