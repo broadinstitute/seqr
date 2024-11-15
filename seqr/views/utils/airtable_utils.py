@@ -171,13 +171,17 @@ class AirtableSession(object):
         invalid_pdo_samples = []
         for sample in sample_records.values():
             sample_id = sample.get('SeqrCollaboratorSampleID') or sample['CollaboratorSampleID']
-            project_guids = [
-                re.match(f'{BASE_URL}project/([^/]+)/project_page', url).group(1) for url in sample['SeqrProject']
+            project_matches = [
+                re.match(f'{BASE_URL}project/([^/]+)/project_page', url)
+                for url in sample.get('SeqrProject', []) if url
             ]
-            if len(project_guids) > 1 and len(project_guids) < len(sample['PDOStatus']):
+            if len(project_matches) < len(sample['PDOStatus']) or any(pm is None for pm in project_matches):
                 invalid_pdo_samples.append(sample_id)
+                continue
+
+            project_guids = [match.group(1) for match in project_matches]
             pdos = [{
-                'project_guid': project_guids[i] if len(project_guids) > 1 else project_guids[0],
+                'project_guid': project_guids[i],
                 **{field: sample[field][i] for field in pdo_fields}
             } for i, status in enumerate(sample['PDOStatus']) if status in pdo_statuses]
             if project_guid:
