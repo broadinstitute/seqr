@@ -174,13 +174,13 @@ class AirtableSession(object):
                 re.match(f'{BASE_URL}project/([^/]+)/project_page', url)
                 for url in sample.get('SeqrProject', []) if url
             ]
-            if len(project_matches) < len(sample['PDOStatus']) or any(pm is None for pm in project_matches):
+            if any(pm is None for pm in project_matches) or (1 < len(project_matches) < len(sample['PDOStatus'])):
                 invalid_pdo_samples.append(sample_id)
                 continue
 
             project_guids = [match.group(1) for match in project_matches]
             pdos = [{
-                'project_guid': project_guids[i],
+                'project_guid': project_guids[i] if len(project_guids) > 1 else project_guids[0],
                 **{field: sample[field][i] for field in pdo_fields}
             } for i, status in enumerate(sample['PDOStatus']) if status in pdo_statuses]
             if project_guid:
