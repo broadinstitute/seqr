@@ -14,7 +14,6 @@ from django.http.response import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from requests.exceptions import ConnectionError as RequestConnectionError
 
-from hail_search.web_app import status
 from seqr.utils.communication_utils import send_project_notification
 from seqr.utils.search.add_data_utils import prepare_data_loading_request
 from seqr.utils.search.utils import get_search_backend_status, delete_search_backend_data
@@ -596,7 +595,7 @@ def _get_valid_project_samples(project_samples, dataset_type, sample_type, user)
                 user, dataset_type, sample_type, AVAILABLE_PDO_STATUSES, project_guid=project,
             )}
         except ValueError as e:
-            errors.append(sttr(e))
+            errors.append(str(e))
             continue
         for sample_id, individual in individuals_by_sample_id.items():
             if sample_id in loaded_samples:
