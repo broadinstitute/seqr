@@ -4,7 +4,6 @@ from collections import defaultdict
 from django.core.exceptions import PermissionDenied
 
 from seqr.utils.logging_utils import SeqrLogger
-from seqr.utils.middleware import ErrorsWarningsException
 from seqr.views.utils.terra_api_utils import is_cloud_authenticated
 
 from settings import AIRTABLE_API_KEY, AIRTABLE_URL, BASE_URL
@@ -193,8 +192,6 @@ class AirtableSession(object):
 
         if invalid_pdo_samples:
             samples = ', '.join(sorted(invalid_pdo_samples))
-            raise ErrorsWarningsException([
-                f'The following samples are associated with misconfigured PDOs in Airtable: {samples}'
-            ])
+            raise ValueError(f'The following samples are associated with misconfigured PDOs in Airtable: {samples}')
 
         return {record_id: sample for record_id, sample in sample_records.items() if sample['pdos']}
