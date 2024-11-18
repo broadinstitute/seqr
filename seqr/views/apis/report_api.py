@@ -428,32 +428,34 @@ def gregor_export(request):
             missing_participant_ids.append(participant['participant_id'])
             continue
 
-        airtable_metadata = airtable_metadata_by_participant.get(participant.pop(PARTICIPANT_ID_FIELD)) or {}
+        airtable_participant_id = participant.pop(PARTICIPANT_ID_FIELD)
+        airtable_metadata = airtable_metadata_by_participant.get(airtable_participant_id) or {}
         seqr_data_types = set(grouped_data_type_individuals[participant['participant_id']].keys())
         airtable_data_types = {dt.upper() for dt in GREGOR_DATA_TYPES if dt.upper() in airtable_metadata}
         for data_type in seqr_data_types - airtable_data_types:
-            missing_airtable_data_types[data_type].append(participant['participant_id'])
+            missing_airtable_data_types[data_type].append(airtable_participant_id)
         for data_type in airtable_data_types - seqr_data_types:
-            missing_seqr_data_types[data_type].append(participant['participant_id'])
+            missing_seqr_data_types[data_type].append(airtable_participant_id)
         _parse_participant_airtable_rows(
             analyte, airtable_metadata, seqr_data_types.intersection(airtable_data_types), experiment_ids_by_participant,
             analyte_rows, airtable_rows, experiment_lookup_rows,
         )
 
-    errors = [
-        f'The following participants are missing {data_type} airtable data: {", ".join(participants)}'
-        for data_type, participants in missing_airtable_data_types.items()
-    ]
-    warnings = [
-        f'The following participants have {data_type} airtable data but do not have equivalent loaded data in seqr, so airtable data is omitted: '
-        f'{", ".join(sorted(missing_participant_ids))}'
-        for data_type, participants in missing_seqr_data_types.items()
-    ]
+    errors = []
     if missing_participant_ids:
-        errors.insert(0,
-            f'The following participants are missing the {PARTICIPANT_ID_FIELD} for the airtable Sample: '
+        errors.append(
+            f'The following participants are missing {PARTICIPANT_ID_FIELD} for the airtable Sample: '
             f'{", ".join(sorted(missing_participant_ids))}'
         )
+    warnings = [
+        f'The following entries are missing {data_type} airtable data: {", ".join(participants)}'
+        for data_type, participants in missing_airtable_data_types.items()
+    ]
+    warnings += [
+        f'The following entries have {data_type} airtable data but do not have equivalent loaded data in seqr, so airtable data is omitted: '
+        f'{", ".join(sorted(participants))}'
+        for data_type, participants in missing_seqr_data_types.items()
+    ]
 
     # Add experiment IDs
     for variant in genetic_findings_rows:
