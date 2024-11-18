@@ -417,6 +417,7 @@ def gregor_export(request):
     experiment_lookup_rows = []
     experiment_ids_by_participant = {}
     missing_participant_ids = []
+    missing_airtable = []
     missing_airtable_data_types = defaultdict(list)
     missing_seqr_data_types = defaultdict(list)
     for participant in participant_rows:
@@ -429,7 +430,11 @@ def gregor_export(request):
             continue
 
         airtable_participant_id = participant.pop(PARTICIPANT_ID_FIELD)
-        airtable_metadata = airtable_metadata_by_participant.get(airtable_participant_id) or {}
+        airtable_metadata = airtable_metadata_by_participant.get(airtable_participant_id)
+        if not airtable_metadata:
+            missing_airtable.append(airtable_participant_id)
+            continue
+
         seqr_data_types = set(grouped_data_type_individuals[participant['participant_id']].keys())
         airtable_data_types = {dt.upper() for dt in GREGOR_DATA_TYPES if dt.upper() in airtable_metadata}
         for data_type in seqr_data_types - airtable_data_types:
@@ -446,6 +451,11 @@ def gregor_export(request):
         errors.append(
             f'The following participants are missing {PARTICIPANT_ID_FIELD} for the airtable Sample: '
             f'{", ".join(sorted(missing_participant_ids))}'
+        )
+    if missing_airtable:
+        errors.append(
+            f'The following entries are missing airtable metadata: '
+            f'{", ".join(sorted(missing_airtable))}'
         )
     warnings = [
         f'The following entries are missing {data_type} airtable data: {", ".join(participants)}'
