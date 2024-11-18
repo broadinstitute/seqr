@@ -4,7 +4,6 @@ from collections import defaultdict
 from django.core.exceptions import PermissionDenied
 
 from seqr.utils.logging_utils import SeqrLogger
-from seqr.utils.middleware import ErrorsWarningsException
 from seqr.views.utils.terra_api_utils import is_cloud_authenticated
 
 from settings import AIRTABLE_API_KEY, AIRTABLE_URL, BASE_URL
@@ -171,11 +170,15 @@ class AirtableSession(object):
         invalid_pdo_samples = []
         for sample in sample_records.values():
             sample_id = sample.get('SeqrCollaboratorSampleID') or sample['CollaboratorSampleID']
-            project_guids = [
-                re.match(f'{BASE_URL}project/([^/]+)/project_page', url).group(1) for url in sample['SeqrProject']
+            project_matches = [
+                re.match(f'{BASE_URL}project/([^/]+)/project_page', url)
+                for url in sample.get('SeqrProject', []) if url
             ]
-            if len(project_guids) > 1 and len(project_guids) < len(sample['PDOStatus']):
+            if any(pm is None for pm in project_matches) or (1 < len(project_matches) < len(sample['PDOStatus'])):
                 invalid_pdo_samples.append(sample_id)
+                continue
+
+            project_guids = [match.group(1) for match in project_matches]
             pdos = [{
                 'project_guid': project_guids[i] if len(project_guids) > 1 else project_guids[0],
                 **{field: sample[field][i] for field in pdo_fields}
@@ -189,8 +192,6 @@ class AirtableSession(object):
 
         if invalid_pdo_samples:
             samples = ', '.join(sorted(invalid_pdo_samples))
-            raise ErrorsWarningsException([
-                f'The following samples are associated with misconfigured PDOs in Airtable: {samples}'
-            ])
+            raise ValueError(f'The following samples are associated with misconfigured PDOs in Airtable: {samples}')
 
         return {record_id: sample for record_id, sample in sample_records.items() if sample['pdos']}
