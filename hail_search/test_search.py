@@ -1022,7 +1022,7 @@ class HailSearchTestCase(AioHTTPTestCase):
             [[MULTI_DATA_TYPE_COMP_HET_VARIANT2, missing_gt_gcnv_variant]],
             inheritance_mode='compound_het', pathogenicity=pathogenicity,
             annotations=gcnv_annotations_2, annotations_secondary=selected_transcript_annotations,
-            sample_data={**EXPECTED_SAMPLE_DATA, 'SV_WES': [EXPECTED_SAMPLE_DATA['SV_WES'][0], EXPECTED_SAMPLE_DATA['SV_WES'][2]]}
+            sample_data={**EXPECTED_SAMPLE_DATA, 'SV_WES': SV_WES_SAMPLE_DATA['SV_WES'][:1] + SV_WES_SAMPLE_DATA['SV_WES'][2:]}
 
         )
 
