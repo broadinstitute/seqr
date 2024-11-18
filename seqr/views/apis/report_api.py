@@ -449,12 +449,12 @@ def gregor_export(request):
         )
     warnings = [
         f'The following entries are missing {data_type} airtable data: {", ".join(participants)}'
-        for data_type, participants in missing_airtable_data_types.items()
+        for data_type, participants in sorted(missing_airtable_data_types.items())
     ]
     warnings += [
         f'The following entries have {data_type} airtable data but do not have equivalent loaded data in seqr, so airtable data is omitted: '
         f'{", ".join(sorted(participants))}'
-        for data_type, participants in missing_seqr_data_types.items()
+        for data_type, participants in sorted(missing_seqr_data_types.items())
     ]
 
     # Add experiment IDs
@@ -737,7 +737,7 @@ def _populate_gregor_files(file_data, errors, warnings):
         for column, config in table_config.items():
             _validate_column_data(column, file_name, data, column_validator=config, warnings=warnings, errors=errors)
 
-    return files, warnings, errors
+    return files
 
 
 def _load_data_model_validators():
