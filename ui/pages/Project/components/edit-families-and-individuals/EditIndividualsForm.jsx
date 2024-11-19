@@ -9,6 +9,8 @@ import { INDIVIDUAL_FIELDS } from '../../constants'
 import { loadIndividuals, updateIndividuals } from '../../reducers'
 import { getProjectAnalysisGroupIndividualsByGuid, getIndivdualsLoading } from '../../selectors'
 
+// TODO filter for internal
+
 const EditIndividualsForm = React.memo(({ load, loading, ...props }) => (
   <DataLoader load={load} content={props.records} loading={loading}>
     <EditRecordsForm

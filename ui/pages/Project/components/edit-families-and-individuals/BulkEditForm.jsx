@@ -70,8 +70,9 @@ EditBulkForm.propTypes = {
 
 const FAMILY_ID_EXPORT_DATA = FAMILY_BULK_EDIT_EXPORT_DATA.slice(0, 1)
 const FAMILY_EXPORT_DATA = FAMILY_BULK_EDIT_EXPORT_DATA.slice(1)
+const FAMILY_CORE_EXPORT_DATA = FAMILY_BULK_EDIT_EXPORT_DATA.slice(1, 5)
 
-const FamiliesBulkForm = React.memo(props => (
+const FamiliesBulkForm = React.memo(({ user, ...props }) => (
   <EditBulkForm
     name="families"
     actionDescription="bulk-add or edit families"
@@ -85,7 +86,7 @@ const FamiliesBulkForm = React.memo(props => (
       </div>
     }
     requiredFields={FAMILY_ID_EXPORT_DATA}
-    optionalFields={FAMILY_EXPORT_DATA}
+    optionalFields={user.isAnalyst ? FAMILY_EXPORT_DATA : FAMILY_CORE_EXPORT_DATA}
     uploadFormats={FILE_FORMATS}
     getRawData={getProjectAnalysisGroupFamiliesByGuid}
     templateLinkContent="current families"
@@ -93,11 +94,19 @@ const FamiliesBulkForm = React.memo(props => (
   />
 ))
 
+FamiliesBulkForm.propTypes = {
+  user: PropTypes.object,
+}
+
+const mapFamiliesStateToProps = state => ({
+  user: getUser(state),
+})
+
 const mapFamiliesDispatchToProps = {
   onSubmit: updateFamilies,
 }
 
-export const EditFamiliesBulkForm = connect(null, mapFamiliesDispatchToProps)(FamiliesBulkForm)
+export const EditFamiliesBulkForm = connect(mapFamiliesStateToProps, mapFamiliesDispatchToProps)(FamiliesBulkForm)
 
 const INDIVIDUAL_BULK_UPDATE_EXPORT_DATA = [...INDIVIDUAL_CORE_EXPORT_DATA, ...INDIVIDUAL_INTERNAL_EXPORT_DATA]
 
