@@ -2177,7 +2177,7 @@
         "last_modified_date": "2018-02-23T17:32:23.054Z",
         "saved_variants": [2],
         "note": "test n\u00f8te",
-        "submit_to_clinvar": false,
+        "report": false,
         "search_hash": null
     }
 },
@@ -2191,7 +2191,7 @@
         "last_modified_date": "2019-02-23T17:32:23.054Z",
         "saved_variants": [2],
         "note": "a later note",
-        "submit_to_clinvar": false,
+        "report": false,
         "search_hash": null
     }
 },

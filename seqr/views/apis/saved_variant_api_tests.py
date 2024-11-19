@@ -518,19 +518,19 @@ class SavedVariantAPITest(object):
 
         # send valid request to create variant_note
         response = self.client.post(create_variant_note_url, content_type='application/json', data=json.dumps(
-            {'note': 'new_variant_note', 'submitToClinvar': True, 'familyGuid': 'F000001_1'}
+            {'note': 'new_variant_note', 'report': True, 'familyGuid': 'F000001_1'}
         ))
 
         self.assertEqual(response.status_code, 200)
         new_note_guid = response.json()['savedVariantsByGuid'][VARIANT_GUID]['noteGuids'][0]
         new_note_response = response.json()['variantNotesByGuid'][new_note_guid]
         self.assertEqual(new_note_response['note'], 'new_variant_note')
-        self.assertEqual(new_note_response['submitToClinvar'], True)
+        self.assertEqual(new_note_response['report'], True)
 
         new_variant_note = VariantNote.objects.filter(guid=new_note_guid).first()
         self.assertIsNotNone(new_variant_note)
         self.assertEqual(new_variant_note.note, new_note_response['note'])
-        self.assertEqual(new_variant_note.submit_to_clinvar, new_note_response['submitToClinvar'])
+        self.assertEqual(new_variant_note.report, new_note_response['report'])
 
         # save variant_note as gene_note
         response = self.client.post(create_variant_note_url, content_type='application/json', data=json.dumps(
@@ -568,18 +568,18 @@ class SavedVariantAPITest(object):
         # update the variant_note
         update_variant_note_url = reverse(update_variant_note_handler, args=[VARIANT_GUID, new_note_guid])
         response = self.client.post(update_variant_note_url, content_type='application/json',  data=json.dumps(
-            {'note': 'updated_variant_note', 'submitToClinvar': False}))
+            {'note': 'updated_variant_note', 'report': False}))
 
         self.assertEqual(response.status_code, 200)
 
         updated_note_response = response.json()['variantNotesByGuid'][new_note_guid]
         self.assertEqual(updated_note_response['note'], 'updated_variant_note')
-        self.assertEqual(updated_note_response['submitToClinvar'], False)
+        self.assertEqual(updated_note_response['report'], False)
 
         updated_variant_note = VariantNote.objects.filter(guid=updated_note_response['noteGuid']).first()
         self.assertIsNotNone(updated_variant_note)
         self.assertEqual(updated_variant_note.note, updated_note_response['note'])
-        self.assertEqual(updated_variant_note.submit_to_clinvar, updated_note_response['submitToClinvar'])
+        self.assertEqual(updated_variant_note.report, updated_note_response['report'])
 
         # delete the variant_note
         delete_variant_note_url = reverse(delete_variant_note_handler, args=[VARIANT_GUID, updated_variant_note.guid])
@@ -603,7 +603,7 @@ class SavedVariantAPITest(object):
                 'tagGuids': ['VT1708633_2103343353_r0390_100', 'VT1726961_2103343353_r0390_100'], 'noteGuids': []},
             ],
             'note': 'one_saved_one_not_saved_compount_hets_note',
-            'submitToClinvar': True,
+            'report': True,
             'familyGuid': 'F000001_1',
         }
         response = self.client.post(create_saved_variant_url, content_type='application/json', data=json.dumps(request_body))
@@ -643,20 +643,20 @@ class SavedVariantAPITest(object):
         invalid_comp_hets_variant_note_url = reverse(
             create_variant_note_handler, args=['not_variant,{}'.format(COMPOUND_HET_1_GUID)])
         response = self.client.post(invalid_comp_hets_variant_note_url, content_type='application/json', data=json.dumps(
-            {'note': 'new_compound_hets_variant_note', 'submitToClinvar': True, 'familyGuid': 'F000001_1'}
+            {'note': 'new_compound_hets_variant_note', 'report': True, 'familyGuid': 'F000001_1'}
         ))
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'error': 'Unable to find the following variant(s): not_variant'})
 
         response = self.client.post(create_comp_hets_variant_note_url, content_type='application/json', data=json.dumps(
-            {'note': 'new_compound_hets_variant_note', 'submitToClinvar': True, 'familyGuid': 'F000001_1'}
+            {'note': 'new_compound_hets_variant_note', 'report': True, 'familyGuid': 'F000001_1'}
         ))
 
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         for note in response.json()['variantNotesByGuid'].values():
             self.assertEqual(note['note'], 'new_compound_hets_variant_note')
-            self.assertEqual(note['submitToClinvar'], True)
+            self.assertEqual(note['report'], True)
 
         self.assertEqual(
             response_json['savedVariantsByGuid'][COMPOUND_HET_1_GUID]['noteGuids'][0],
@@ -666,24 +666,24 @@ class SavedVariantAPITest(object):
         new_variant_note = VariantNote.objects.get(guid=new_note_guid)
         self.assertEqual(new_variant_note.note, response_json['variantNotesByGuid'][new_note_guid]['note'])
         self.assertEqual(
-            new_variant_note.submit_to_clinvar, response_json['variantNotesByGuid'][new_note_guid]['submitToClinvar']
+            new_variant_note.report, response_json['variantNotesByGuid'][new_note_guid]['report']
         )
 
         # update the variants_note for both compound hets
         update_variant_note_url = reverse(update_variant_note_handler,
                                           args=[','.join([COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID]), new_note_guid])
         response = self.client.post(update_variant_note_url, content_type='application/json', data=json.dumps(
-            {'note': 'updated_variant_note', 'submitToClinvar': False}))
+            {'note': 'updated_variant_note', 'report': False}))
 
         self.assertEqual(response.status_code, 200)
 
         updated_note_response = response.json()['variantNotesByGuid'][new_note_guid]
         self.assertEqual(updated_note_response['note'], 'updated_variant_note')
-        self.assertEqual(updated_note_response['submitToClinvar'], False)
+        self.assertEqual(updated_note_response['report'], False)
 
         updated_variant_note = VariantNote.objects.get(guid=new_note_guid)
         self.assertEqual(updated_variant_note.note, updated_note_response['note'])
-        self.assertEqual(updated_variant_note.submit_to_clinvar, updated_note_response['submitToClinvar'])
+        self.assertEqual(updated_variant_note.report, updated_note_response['report'])
 
         # save variant_note as gene_note for both compound hets
         response = self.client.post(
