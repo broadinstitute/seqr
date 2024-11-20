@@ -13,7 +13,7 @@ class VlmTestCase(AioHTTPTestCase):
             self.assertEqual(resp.status, 404)
 
     async def test_status(self):
-        async with self.client.request('GET', '/status') as resp:
+        async with self.client.request('GET', '/vlm/status') as resp:
             self.assertEqual(resp.status, 200)
             resp_json = await resp.json()
         self.assertDictEqual(resp_json, {'success': True})
