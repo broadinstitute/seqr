@@ -439,8 +439,8 @@ class IndividualAPITest(object):
         ]})
 
         rows = [
-            'Family ID	Individual ID	Paternal ID	sex	proband_relation',
-            '"1"	"NA19675_1"	"NA19678_dad"	""	""',
+            'Family ID	Individual ID	Paternal ID	sex	proband_relation	affected',
+            '"1"	"NA19675_1"	"NA19678_dad"	""	""	"affect"',
         ]
         response = self.client.post(individuals_url, {
             'f': SimpleUploadedFile('test.tsv',  '\n'.join(rows).encode('utf-8'))})
@@ -452,9 +452,9 @@ class IndividualAPITest(object):
         })
 
         rows += [
-            '"1"	"NA19675_1"	"NA19675_1"	"F"	"Father"',
-            '"2"	"NA19675_2"	"NA19675_1"	"XXX"	"Nephew"',
-            '"2"	"NA19677"	"NA19675_2"	"M"	""',
+            '"1"	"NA19675_1"	"NA19675_1"	"F"	"Father"	"unaffected"',
+            '"2"	"NA19675_2"	"NA19675_1"	"XXX"	"Nephew"	"unknown"',
+            '"2"	"NA19677"	"NA19675_2"	"M"	""	"unaffected"',
         ]
         response = self.client.post(individuals_url, {
             'f': SimpleUploadedFile('test.tsv', '\n'.join(rows).encode('utf-8'))})
@@ -470,8 +470,16 @@ class IndividualAPITest(object):
                 'NA19675_2 is recorded as XXX sex and also as the father of NA19677',
                 'NA19675_1 is included as 2 separate records, but must be unique within the project',
             ],
-            'warnings': [missing_entry_warning],
+            'warnings': [missing_entry_warning, 'The following families do not have any affected individuals: 2'],
         })
+
+        rows = [rows[0], '"new_fam_1"	"NA19677"	""	"M"	""	"unaffected"']
+        response = self.client.post(individuals_url, {
+            'f': SimpleUploadedFile('test.tsv', '\n'.join(rows).encode('utf-8'))})
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'errors': [
+            'The following families do not have any affected individuals: new_fam_1'
+        ], 'warnings': []})
 
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
     def test_individuals_table_handler(self):
@@ -482,7 +490,7 @@ class IndividualAPITest(object):
 "1"	" NA19675_1 "	""	"NA19678 "	"NA19679"	"Female"	"Affected"	"A affected individual, test1-zsf"	""\n\
 "1"	"NA19678"	""	""	""	"XXY"	"Unaffected"	"a individual note"	""\n\
 "4"	"NA20872_update"	"NA20872"	""	""	"Male"	"Affected"	""	""\n\
-"21"	" HG00735"	""	""	""	"Female"	"Unaffected"	""	"a new family""'
+"21"	" HG00735"	""	""	""	"Female"	"Affected"	""	"a new family""'
 
         f = SimpleUploadedFile("1000_genomes demo_individuals.tsv", data.encode('utf-8'))
 

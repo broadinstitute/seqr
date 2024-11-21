@@ -26,8 +26,9 @@ INVALID_ADDED_SAMPLE_DATA = [['22', 'HG00731', 'HG00731', '', '', 'Female', 'Aff
 
 MISSING_REQUIRED_SAMPLE_DATA = [["21", "HG00736", "", "", "", "", "", "", "", ""]]
 
-LOAD_SAMPLE_DATA_EXTRA_SAMPLE = LOAD_SAMPLE_DATA + [["1", "NA19678", "", "", "", "Male", "Affected", "HP:0011675", "", ""],
-                                                    ["22", "HG00736", "", "", "", "Unknown", "Unknown", "", "", ""]]
+LOAD_SAMPLE_DATA_EXTRA_SAMPLE = LOAD_SAMPLE_DATA + [["1", "NA19678", "", "", "", "Male", "Affected", "HP:0011675", "", ""]]
+
+LOAD_SAMPLE_DATA_NO_AFFECTED = LOAD_SAMPLE_DATA + [["22", "HG00736", "", "", "", "Unknown", "Unknown", "", "", ""]]
 
 FILE_DATA = [
     '##fileformat=VCFv4.2\n',
@@ -709,8 +710,13 @@ class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
         self.assertEqual(response.status_code, 400)
         response_json = response.json()
         self.assertEqual(response_json['errors'],
-                         ['The following samples are included in the pedigree file but are missing from the VCF: NA19678, HG00736',
-                          'The following families do not have any affected individuals: 22'])
+                         ['The following samples are included in the pedigree file but are missing from the VCF: NA19678'])
+
+        self.mock_load_file.return_value = LOAD_SAMPLE_DATA_NO_AFFECTED
+        response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
+        self.assertEqual(response.status_code, 400)
+        response_json = response.json()
+        self.assertEqual(response_json['errors'],['The following families do not have any affected individuals: 22'])
 
     def _assert_valid_operation(self, project, test_add_data=True):
         genome_version = 'GRCh37' if test_add_data else 'GRCh38'
