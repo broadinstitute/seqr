@@ -327,6 +327,7 @@ def _get_parsed_saved_discovery_variants_by_family(
 
     annotations = dict(
         tags=ArrayAgg('varianttag__variant_tag_type__name', distinct=True),
+        notes=ArrayAgg('variantnote__note', distinct=True, filter=Q(variantnote__report=True)),
         partial_hpo_terms=ArrayAgg('variantfunctionaldata__metadata', distinct=True, filter=Q(variantfunctionaldata__functional_data_tag='Partial Phenotype Contribution')),
         validated_name=ArrayAgg('variantfunctionaldata__metadata', distinct=True, filter=Q(variantfunctionaldata__functional_data_tag='Validated Name')),
     )
@@ -364,6 +365,7 @@ def _get_parsed_saved_discovery_variants_by_family(
             'gene_known_for_phenotype': 'Known' if 'Known gene for phenotype' in variant.tags else 'Candidate',
             'phenotype_contribution': phenotype_contribution,
             'partial_contribution_explained': partial_hpo_terms.replace(', ', '|'),
+            'notes': variant.notes,
             'sv_type': sv_type,
             'sv_name': (variant_json.get('svName') or '{svType}:chr{chrom}:{pos}-{end}'.format(**variant_json)) if sv_type else None,
             'variant_type': variant_type,
@@ -527,7 +529,7 @@ def _get_genetic_findings_rows(rows: list[dict], individual: Individual, family_
         del row['genotypes']
 
         gene_variants = variants_by_gene[row[GENE_COLUMN]]
-        notes = []
+        notes = row['notes'] or []
         if len(gene_variants) > 2:
             discovery_notes = _get_discovery_notes(row, gene_variants, omit_parent_mnvs)
             if discovery_notes is None:

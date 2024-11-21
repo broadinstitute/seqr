@@ -108,7 +108,7 @@ EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
     'chrom_end-1': None,
     'pos_end-1': None,
     'notes-1': '',
-    'notes-2': '',
+    'notes-2': 'Phasing incorrect in input VCF',
     'phenotype_contribution-1': 'Partial',
     'phenotype_contribution-2': 'Full',
     'partial_contribution_explained-1': 'HP:0000501|HP:0000365',

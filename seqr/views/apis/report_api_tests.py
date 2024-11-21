@@ -636,8 +636,8 @@ GENETIC_FINDINGS_TABLE = [
     ], [
         'Broad_NA20889_1_249045487_DEL', 'Broad_NA20889', '', 'SV', 'GRCh37', '1', '249045487', '', '', '',
         'OR4G11P', '', '', '', 'Heterozygous', '', 'unknown', 'Broad_NA20889_1_248367227', '', 'Candidate',
-        'Immunodeficiency 38', 'OMIM:616126', 'Autosomal recessive', 'Full', '', '', 'SR-ES', '', 'DEL', '',
-        '249045898', '1', 'DEL:chr1:249045123-249045456', '',
+        'Immunodeficiency 38', 'OMIM:616126', 'Autosomal recessive', 'Full', '', '', 'SR-ES',
+        'Phasing incorrect in input VCF', 'DEL', '', '249045898', '1', 'DEL:chr1:249045123-249045456', '',
     ],
 ]
 
@@ -1428,6 +1428,7 @@ class ReportAPITest(AirtableTest):
             'gene_id': None,
             'gene_known_for_phenotype': 'Candidate',
             'genetic_findings_id': 'NA20889_1_249045487_DEL',
+            'notes': 'Phasing incorrect in input VCF',
             'participant_id': 'NA20889',
             'pos': 249045487,
             'projectGuid': 'R0003_test',

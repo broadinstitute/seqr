@@ -144,6 +144,19 @@
     }
 },
 {
+    "model": "seqr.variantnote",
+    "pk": 123,
+    "fields": {
+        "guid": "VN0000123_prefix_19107_DEL_r0",
+        "created_date": "2019-05-15T14:51:58.410Z",
+        "created_by": null,
+        "last_modified_date": "2019-02-23T17:32:23.054Z",
+        "saved_variants": [7],
+        "note": "Phasing incorrect in input VCF",
+        "report": true
+    }
+},
+{
     "model": "seqr.variantfunctionaldata",
     "pk": 29,
     "fields": {
