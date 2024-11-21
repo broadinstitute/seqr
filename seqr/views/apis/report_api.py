@@ -416,20 +416,56 @@ def gregor_export(request):
     airtable_rows = {table: [] for table in AIRTABLE_TABLE_COLUMNS.keys()}
     experiment_lookup_rows = []
     experiment_ids_by_participant = {}
+    missing_participant_ids = []
+    missing_airtable = []
+    missing_airtable_data_types = defaultdict(list)
+    missing_seqr_data_types = defaultdict(list)
     for participant in participant_rows:
         phenotype_rows += _parse_participant_phenotype_rows(participant)
         analyte = {k: participant.pop(k) for k in [SMID_FIELD, *ANALYTE_TABLE_COLUMNS[2:]]}
         analyte['participant_id'] = participant['participant_id']
 
         if not participant[PARTICIPANT_ID_FIELD]:
+            missing_participant_ids.append(participant['participant_id'])
             continue
 
-        airtable_metadata = airtable_metadata_by_participant.get(participant.pop(PARTICIPANT_ID_FIELD)) or {}
-        data_types = grouped_data_type_individuals[participant['participant_id']]
+        airtable_participant_id = participant.pop(PARTICIPANT_ID_FIELD)
+        airtable_metadata = airtable_metadata_by_participant.get(airtable_participant_id)
+        if not airtable_metadata:
+            missing_airtable.append(airtable_participant_id)
+            continue
+
+        seqr_data_types = set(grouped_data_type_individuals[participant['participant_id']].keys())
+        airtable_data_types = {dt.upper() for dt in GREGOR_DATA_TYPES if dt.upper() in airtable_metadata}
+        for data_type in seqr_data_types - airtable_data_types:
+            missing_airtable_data_types[data_type].append(airtable_participant_id)
+        for data_type in airtable_data_types - seqr_data_types:
+            missing_seqr_data_types[data_type].append(airtable_participant_id)
         _parse_participant_airtable_rows(
-            analyte, airtable_metadata, data_types, experiment_ids_by_participant,
+            analyte, airtable_metadata, seqr_data_types.intersection(airtable_data_types), experiment_ids_by_participant,
             analyte_rows, airtable_rows, experiment_lookup_rows,
         )
+
+    errors = []
+    if missing_participant_ids:
+        errors.append(
+            f'The following participants are missing {PARTICIPANT_ID_FIELD} for the airtable Sample: '
+            f'{", ".join(sorted(missing_participant_ids))}'
+        )
+    if missing_airtable:
+        errors.append(
+            f'The following entries are missing airtable metadata: '
+            f'{", ".join(sorted(missing_airtable))}'
+        )
+    warnings = [
+        f'The following entries are missing {data_type} airtable data: {", ".join(participants)}'
+        for data_type, participants in sorted(missing_airtable_data_types.items())
+    ]
+    warnings += [
+        f'The following entries have {data_type} airtable data but do not have equivalent loaded data in seqr, so airtable data is omitted: '
+        f'{", ".join(sorted(participants))}'
+        for data_type, participants in sorted(missing_seqr_data_types.items())
+    ]
 
     # Add experiment IDs
     for variant in genetic_findings_rows:
@@ -445,7 +481,7 @@ def gregor_export(request):
         (FINDINGS_TABLE, genetic_findings_rows),
     ]
 
-    files, warnings, errors = _populate_gregor_files(file_data)
+    files = _populate_gregor_files(file_data, errors, warnings)
 
     if errors and not request_json.get('overrideValidation'):
         raise ErrorsWarningsException(errors, warnings)
@@ -494,8 +530,6 @@ def _parse_participant_airtable_rows(analyte, airtable_metadata, data_types, exp
     smids = analyte.pop(SMID_FIELD)
     # airtable data
     for data_type in data_types:
-        if data_type not in airtable_metadata:
-            continue
         is_rna, row = _get_airtable_row(data_type, airtable_metadata)
         smids = None
         analyte_rows.append({**analyte, **{k: row[k] for k in ANALYTE_TABLE_COLUMNS if k in row}})
@@ -658,9 +692,7 @@ DATA_TYPE_FORMATTERS = {
 DATA_TYPE_FORMATTERS['float'] = DATA_TYPE_FORMATTERS['integer']
 
 
-def _populate_gregor_files(file_data):
-    errors = []
-    warnings = []
+def _populate_gregor_files(file_data, errors, warnings):
     try:
         table_configs, required_tables = _load_data_model_validators()
     except Exception as e:
@@ -715,7 +747,7 @@ def _populate_gregor_files(file_data):
         for column, config in table_config.items():
             _validate_column_data(column, file_name, data, column_validator=config, warnings=warnings, errors=errors)
 
-    return files, warnings, errors
+    return files
 
 
 def _load_data_model_validators():

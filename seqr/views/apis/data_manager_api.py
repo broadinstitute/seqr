@@ -468,7 +468,10 @@ def get_loaded_projects(request, sample_type, dataset_type):
     projects = get_internal_projects().filter(is_demo=False)
     project_samples = None
     if AirtableSession.is_airtable_enabled():
-        project_samples = _fetch_airtable_loadable_project_samples(request.user, dataset_type, sample_type)
+        try:
+            project_samples = _fetch_airtable_loadable_project_samples(request.user, dataset_type, sample_type)
+        except ValueError as e:
+            return create_json_response({'error': str(e)}, status=400)
         projects = projects.filter(guid__in=project_samples.keys())
     if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
         exclude_sample_type = Sample.SAMPLE_TYPE_WES if sample_type == Sample.SAMPLE_TYPE_WGS else Sample.SAMPLE_TYPE_WGS
@@ -587,9 +590,13 @@ def _get_valid_project_samples(project_samples, dataset_type, sample_type, user)
 
     missing_family_samples = defaultdict(list)
     for project, individuals_by_sample_id in missing_project_samples.items():
-        loaded_samples = {sample['sample_id'] for sample in _get_dataset_type_samples_for_matched_pdos(
-            user, dataset_type, sample_type, AVAILABLE_PDO_STATUSES, project_guid=project,
-        )}
+        try:
+            loaded_samples = {sample['sample_id'] for sample in _get_dataset_type_samples_for_matched_pdos(
+                user, dataset_type, sample_type, AVAILABLE_PDO_STATUSES, project_guid=project,
+            )}
+        except ValueError as e:
+            errors.append(str(e))
+            continue
         for sample_id, individual in individuals_by_sample_id.items():
             if sample_id in loaded_samples:
                 individual_ids.append(individual['id'])

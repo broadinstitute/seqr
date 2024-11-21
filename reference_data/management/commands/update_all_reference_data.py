@@ -3,7 +3,6 @@ from collections import OrderedDict
 from django.core.management.base import BaseCommand
 
 from reference_data.management.commands.utils.gencode_utils import LATEST_GENCODE_RELEASE, OLD_GENCODE_RELEASES
-from reference_data.management.commands.utils.update_utils import update_records
 from reference_data.management.commands.update_human_phenotype_ontology import update_hpo
 from reference_data.management.commands.update_dbnsfp_gene import DbNSFPReferenceDataHandler
 from reference_data.management.commands.update_gencode import update_gencode
@@ -64,7 +63,7 @@ class Command(BaseCommand):
             try:
                 omim_handler = CachedOmimReferenceDataHandler() if options['use_cached_omim'] else \
                     OmimReferenceDataHandler(options["omim_key"])
-                update_records(omim_handler)
+                omim_handler.update_records()
                 updated.append('omim')
             except Exception as e:
                 logger.error("unable to update omim: {}".format(e))
@@ -74,7 +73,7 @@ class Command(BaseCommand):
             if not options["skip_{}".format(source)]:
                 try:
                     if data_handler:
-                        update_records(data_handler())
+                        data_handler().update_records()
                     elif source == "hpo":
                         update_hpo()
                     updated.append(source)

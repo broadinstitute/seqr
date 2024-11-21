@@ -14,6 +14,7 @@ import {
   getVariantId,
   getMmeSubmissionsByGuid,
   getGenesById,
+  getUser,
 } from 'redux/selectors'
 import { DISCOVERY_CATEGORY_NAME, MME_TAG_NAME, GREGOR_FINDING_TAG_NAME } from 'shared/utils/constants'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
@@ -32,31 +33,22 @@ const TagTitle = styled.span`
   color: #999;
 `
 
-const RedItal = styled.i`
-  color: red;
-`
-
 const NO_DISPLAY = { display: 'none' }
 
 const SHORTCUT_TAGS = ['Review', 'Excluded']
 
 const VARIANT_NOTE_FIELDS = [{
-  name: 'submitToClinvar',
-  label: (
-    <label>
-      Add to
-      <RedItal>&nbsp; ClinVar &nbsp;</RedItal>
-      submission
-    </label>
-  ),
-  component: BooleanCheckbox,
-  style: { paddingTop: '2em' },
-},
-{
   name: 'saveAsGeneNote',
   label: 'Add to public gene notes',
   component: BooleanCheckbox,
 }]
+
+const ANALYST_VARIANT_NOTE_FIELDS = [{
+  name: 'report',
+  label: 'Include in report notes',
+  component: BooleanCheckbox,
+}, ...VARIANT_NOTE_FIELDS,
+]
 
 const DEPRECATED_MME_TAG = 'seqr MME (old)'
 const AIP_TAG_TYPE = 'AIP'
@@ -258,7 +250,7 @@ MatchmakerLabel.propTypes = {
 const FamilyVariantTags = React.memo(({
   variant, variantTagNotes, family, projectTagTypes, projectFunctionalTagTypes, dispatchUpdateVariantNote,
   dispatchUpdateFamilyVariantTags, dispatchUpdateFamilyVariantFunctionalTags, isCompoundHet, variantId,
-  linkToSavedVariants, mmeSubmissionsByGuid, genesById,
+  linkToSavedVariants, mmeSubmissionsByGuid, genesById, user,
 }) => (
   family ? (
     <NoBorderTable basic="very" compact="very" celled>
@@ -337,7 +329,7 @@ const FamilyVariantTags = React.memo(({
               initialValues={variantTagNotes}
               modalId={family.familyGuid}
               modalTitle={`Variant Note for Family ${family.displayName}`}
-              additionalEditFields={VARIANT_NOTE_FIELDS}
+              additionalEditFields={user.isAnalyst ? ANALYST_VARIANT_NOTE_FIELDS : VARIANT_NOTE_FIELDS}
               defaultId={variantId}
               idField="variantGuids"
               isEditable
@@ -367,6 +359,7 @@ FamilyVariantTags.propTypes = {
   dispatchUpdateFamilyVariantFunctionalTags: PropTypes.func.isRequired,
   mmeSubmissionsByGuid: PropTypes.object,
   genesById: PropTypes.object,
+  user: PropTypes.object,
 }
 
 FamilyVariantTags.defaultProps = {
@@ -386,6 +379,7 @@ const mapStateToProps = (state, ownProps) => {
     variantTagNotes: ((getVariantTagNotesByFamilyVariants(state) || {})[ownProps.familyGuid] || {})[variantId],
     mmeSubmissionsByGuid: getMmeSubmissionsByGuid(state),
     genesById: getGenesById(state),
+    user: getUser(state),
   }
 }
 

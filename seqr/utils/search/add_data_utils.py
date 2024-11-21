@@ -116,7 +116,7 @@ def notify_search_data_loaded(project, is_internal, dataset_type, sample_type, i
 
 def prepare_data_loading_request(projects: list[Project], sample_type: str, dataset_type: str, genome_version: str,
                                  data_path: str, user: User, pedigree_dir: str,  raise_pedigree_error: bool = False,
-                                 individual_ids: list[str] = None, skip_validation: bool = False):
+                                 individual_ids: list[int] = None, skip_validation: bool = False):
     project_guids = sorted([p.guid for p in projects])
     variables = {
         'projects_to_run': project_guids,
@@ -137,7 +137,7 @@ def _dag_dataset_type(sample_type: str, dataset_type: str):
         else dataset_type
 
 
-def _upload_data_loading_files(projects: list[Project], user: User, file_path: str, individual_ids: list[str], raise_error: bool):
+def _upload_data_loading_files(projects: list[Project], user: User, file_path: str, individual_ids: list[int], raise_error: bool):
     file_annotations = OrderedDict({
         'Project_GUID': F('family__project__guid'), 'Family_GUID': F('family__guid'),
         'Family_ID': F('family__family_id'),

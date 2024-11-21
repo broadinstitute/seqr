@@ -636,8 +636,8 @@ GENETIC_FINDINGS_TABLE = [
     ], [
         'Broad_NA20889_1_249045487_DEL', 'Broad_NA20889', '', 'SV', 'GRCh37', '1', '249045487', '', '', '',
         'OR4G11P', '', '', '', 'Heterozygous', '', 'unknown', 'Broad_NA20889_1_248367227', '', 'Candidate',
-        'Immunodeficiency 38', 'OMIM:616126', 'Autosomal recessive', 'Full', '', '', 'SR-ES', '', 'DEL', '',
-        '249045898', '1', 'DEL:chr1:249045123-249045456', '',
+        'Immunodeficiency 38', 'OMIM:616126', 'Autosomal recessive', 'Full', '', '', 'SR-ES',
+        'Phasing incorrect in input VCF', 'DEL', '', '249045898', '1', 'DEL:chr1:249045123-249045456', '',
     ],
 ]
 
@@ -850,6 +850,9 @@ class ReportAPITest(AirtableTest):
         self.assertEqual(response.status_code, 400)
 
         recommended_warnings = [
+            'The following entries are missing RNA airtable data: NA19675',
+            'The following entries are missing WES airtable data: NA19675, NA19679',
+            'The following entries have WGS airtable data but do not have equivalent loaded data in seqr, so airtable data is omitted: NA19675, NA20888, VCGS_FAM203_621',
             'The following entries are missing recommended "recontactable" in the "participant" table: Broad_HG00731, Broad_HG00732, Broad_HG00733, Broad_NA19678, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20881',
             'The following entries are missing recommended "reported_race" in the "participant" table: Broad_HG00733, Broad_NA19678, Broad_NA19679, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20881, Broad_NA20888',
             'The following entries are missing recommended "phenotype_description" in the "participant" table: Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20881, Broad_NA20888',
@@ -862,9 +865,11 @@ class ReportAPITest(AirtableTest):
             'The following columns are computed for the "participant" table but are missing from the data model: age_at_last_observation, ancestry_detail, missing_variant_case, pmid_id',
         ] + recommended_warnings
         self.assertListEqual(response.json()['warnings'], validation_warnings)
+        missing_participant_error = 'The following participants are missing CollaboratorParticipantID for the airtable Sample: Broad_HG00732, Broad_HG00733, Broad_NA19678, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20881'
         validation_errors = [
             f'No data model found for "{file}" table' for file in reversed(EXPECTED_GREGOR_FILES) if file not in INVALID_MODEL_TABLES
         ] + [
+            missing_participant_error,
             'The following tables are required in the data model but absent from the reports: subject, dna_read_data_set',
         ] + [
             'The following entries are missing required "prior_testing" in the "participant" table: Broad_HG00731, Broad_HG00732',
@@ -939,9 +944,10 @@ class ReportAPITest(AirtableTest):
         mock_subprocess.reset_mock()
         mock_open.reset_mock()
         responses.add(responses.GET, MOCK_DATA_MODEL_URL, body=MOCK_DATA_MODEL_RESPONSE, status=200)
+        body['overrideValidation'] = True
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
-        expected_response['warnings'] = recommended_warnings
+        expected_response['warnings'] = [missing_participant_error] + recommended_warnings
         self.assertDictEqual(response.json(), expected_response)
         self._assert_expected_gregor_files(mock_open, mock_subprocess)
         self._test_expected_gregor_airtable_calls()
@@ -972,10 +978,12 @@ class ReportAPITest(AirtableTest):
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         expected_response['info'][0] = expected_response['info'][0].replace('9', '10')
-        expected_response['warnings'][0] = expected_response['warnings'][0] + ', Broad_NA20885, Broad_NA20889'
-        expected_response['warnings'][1] = expected_response['warnings'][1].replace(', Broad_NA20888', '')
-        expected_response['warnings'][2] = expected_response['warnings'][2].replace('Broad_NA20888', 'Broad_NA20885, Broad_NA20888, Broad_NA20889')
-        expected_response['warnings'][3] = expected_response['warnings'][3].replace('Broad_NA20888', 'Broad_NA20885, Broad_NA20888, Broad_NA20889')
+        expected_response['warnings'][0] = expected_response['warnings'][0].replace('Broad_NA20881', 'Broad_NA20881, Broad_NA20885, Broad_NA20889')
+        expected_response['warnings'][3] = expected_response['warnings'][3].replace(', NA20888', '')
+        expected_response['warnings'][4] = expected_response['warnings'][4] + ', Broad_NA20885, Broad_NA20889'
+        expected_response['warnings'][5] = expected_response['warnings'][5].replace(', Broad_NA20888', '')
+        expected_response['warnings'][6] = expected_response['warnings'][6].replace('Broad_NA20888', 'Broad_NA20885, Broad_NA20888, Broad_NA20889')
+        expected_response['warnings'][7] = expected_response['warnings'][7].replace('Broad_NA20888', 'Broad_NA20885, Broad_NA20888, Broad_NA20889')
         self.assertDictEqual(response.json(), expected_response)
         self._assert_expected_gregor_files(mock_open, mock_subprocess, has_second_project=True)
         self._test_expected_gregor_airtable_calls(additional_samples=['NA20885', 'NA20889'], additional_mondo_ids=['0008788'])
@@ -1420,6 +1428,7 @@ class ReportAPITest(AirtableTest):
             'gene_id': None,
             'gene_known_for_phenotype': 'Candidate',
             'genetic_findings_id': 'NA20889_1_249045487_DEL',
+            'notes': 'Phasing incorrect in input VCF',
             'participant_id': 'NA20889',
             'pos': 249045487,
             'projectGuid': 'R0003_test',

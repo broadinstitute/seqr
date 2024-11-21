@@ -4,7 +4,6 @@ from django.core.management.base import BaseCommand
 
 from reference_data.management.commands.utils.gencode_utils import load_gencode_records, create_transcript_info, \
     LATEST_GENCODE_RELEASE
-from reference_data.management.commands.utils.update_utils import update_records
 from reference_data.management.commands.update_refseq import RefseqReferenceDataHandler
 from reference_data.models import GeneInfo, TranscriptInfo
 
@@ -56,7 +55,7 @@ class Command(BaseCommand):
         existing_transcripts.delete()
         create_transcript_info(transcripts)
 
-        update_records(RefseqReferenceDataHandler())
+        RefseqReferenceDataHandler().update_records()
 
         logger.info('Done')
         logger.info('Stats: ')

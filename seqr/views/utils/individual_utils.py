@@ -22,7 +22,7 @@ def _get_record_individual_id(record):
     return record.get(JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN) or record[JsonConstants.INDIVIDUAL_ID_COLUMN]
 
 
-def add_or_update_individuals_and_families(project, individual_records, user, get_update_json=True, get_updated_individual_ids=False, get_created_counts=False, allow_features_update=False):
+def add_or_update_individuals_and_families(project, individual_records, user, get_update_json=True, get_updated_individual_db_ids=False, get_created_counts=False, allow_features_update=False):
     """
     Add or update individual and family records in the given project.
 
@@ -88,8 +88,8 @@ def add_or_update_individuals_and_families(project, individual_records, user, ge
     if get_update_json:
         pedigree_json = _get_updated_pedigree_json(updated_individuals, updated_family_models, updated_note_ids, user)
 
-    if get_updated_individual_ids:
-        return pedigree_json, {i.individual_id for i in updated_individuals}
+    if get_updated_individual_db_ids:
+        return pedigree_json, {i.id for i in updated_individuals}
 
     if get_created_counts:
         return pedigree_json, num_created_families, num_created_individuals

@@ -13,7 +13,10 @@ from hail_search.test_utils import get_hail_search_body, FAMILY_2_VARIANT_SAMPLE
     FAMILY_2_MITO_SAMPLE_DATA, FAMILY_2_ALL_SAMPLE_DATA, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3, \
     EXPECTED_SAMPLE_DATA_WITH_SEX, SV_WGS_SAMPLE_DATA_WITH_SEX, VARIANT_LOOKUP_VARIANT, \
     MULTI_PROJECT_SAMPLE_TYPES_SAMPLE_DATA, FAMILY_2_BOTH_SAMPLE_TYPE_SAMPLE_DATA, \
-    VARIANT1_BOTH_SAMPLE_TYPES, VARIANT2_BOTH_SAMPLE_TYPES, FAMILY_2_BOTH_SAMPLE_TYPE_SAMPLE_DATA_MISSING_PARENTAL_WGS
+    VARIANT1_BOTH_SAMPLE_TYPES, VARIANT2_BOTH_SAMPLE_TYPES, FAMILY_2_BOTH_SAMPLE_TYPE_SAMPLE_DATA_MISSING_PARENTAL_WGS, \
+    VARIANT3_BOTH_SAMPLE_TYPES, VARIANT4_BOTH_SAMPLE_TYPES, VARIANT2_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY, \
+    VARIANT1_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY, VARIANT3_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY, \
+    VARIANT4_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY
 from hail_search.web_app import init_web_app, sync_to_async_hail_query
 from hail_search.queries.base import BaseHailTableQuery
 
@@ -365,34 +368,31 @@ class HailSearchTestCase(AioHTTPTestCase):
             MULTI_PROJECT_BOTH_SAMPLE_TYPE_VARIANTS, gene_counts=GENE_COUNTS, sample_data=MULTI_PROJECT_SAMPLE_TYPES_SAMPLE_DATA,
         )
 
-        # Variant1 in family_2 is de novo in exome but maternally inherited in genome.
-        # Genome passes quality and inheritance, show genotypes for both sample types.
-        variant1_interval = ['1', 10438, 10440]
+        # Variant 1 is de novo in exome but inherited and homozygous in genome.
+        # Variant 2 is inherited and homozygous in exome and de novo and homozygous in genome.
+        # Variant 3 is inherited in both sample types. Variant 4 is de novo in both sample types.
         inheritance_mode = 'recessive'
         await self._assert_expected_search(
-            [VARIANT1_BOTH_SAMPLE_TYPES], sample_data=FAMILY_2_BOTH_SAMPLE_TYPE_SAMPLE_DATA, inheritance_mode=inheritance_mode,
-            **COMP_HET_ALL_PASS_FILTERS, intervals=[variant1_interval]
+            [VARIANT1_BOTH_SAMPLE_TYPES, VARIANT2_BOTH_SAMPLE_TYPES, [VARIANT3_BOTH_SAMPLE_TYPES, VARIANT4_BOTH_SAMPLE_TYPES]],
+            sample_data=FAMILY_2_BOTH_SAMPLE_TYPE_SAMPLE_DATA, inheritance_mode=inheritance_mode,
+            **COMP_HET_ALL_PASS_FILTERS
         )
-        # Exome passes quality and inheritance, show genotypes for both sample types.
-        inheritance_mode = 'de_novo'
         await self._assert_expected_search(
-            [VARIANT1_BOTH_SAMPLE_TYPES], sample_data=FAMILY_2_BOTH_SAMPLE_TYPE_SAMPLE_DATA, inheritance_mode=inheritance_mode,
-            intervals=[variant1_interval]
+            [VARIANT1_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY, VARIANT2_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY,
+             [VARIANT3_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY, VARIANT4_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY]],
+            sample_data=FAMILY_2_BOTH_SAMPLE_TYPE_SAMPLE_DATA_MISSING_PARENTAL_WGS, inheritance_mode=inheritance_mode,
+            **COMP_HET_ALL_PASS_FILTERS
         )
 
-        # Variant 2 in family_2 is inherited in exome and there is no parental data in genome.
-        # Genome and exome pass quality and inheritance, show genotypes for both sample types.
-        variant2_interval = ['1', 38724418, 38724420]
-        inheritance_mode = 'recessive'
-        await self._assert_expected_search(
-            [VARIANT2_BOTH_SAMPLE_TYPES], sample_data=FAMILY_2_BOTH_SAMPLE_TYPE_SAMPLE_DATA_MISSING_PARENTAL_WGS,
-            inheritance_mode=inheritance_mode, **COMP_HET_ALL_PASS_FILTERS, intervals=[variant2_interval]
-        )
-        # Genome passes quality and inheritance exome fails inheritance (parental data shows variant is inherited).
         inheritance_mode = 'de_novo'
         await self._assert_expected_search(
-            [VARIANT2_BOTH_SAMPLE_TYPES], sample_data=FAMILY_2_BOTH_SAMPLE_TYPE_SAMPLE_DATA_MISSING_PARENTAL_WGS,
-            inheritance_mode=inheritance_mode, intervals=[variant2_interval]
+            [VARIANT1_BOTH_SAMPLE_TYPES, VARIANT2_BOTH_SAMPLE_TYPES, VARIANT4_BOTH_SAMPLE_TYPES],
+            sample_data=FAMILY_2_BOTH_SAMPLE_TYPE_SAMPLE_DATA, inheritance_mode=inheritance_mode,
+        )
+        # Variant 2 fails inheritance when parental data is missing in genome
+        await self._assert_expected_search(
+            [VARIANT1_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY, VARIANT4_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY],
+            sample_data=FAMILY_2_BOTH_SAMPLE_TYPE_SAMPLE_DATA_MISSING_PARENTAL_WGS, inheritance_mode=inheritance_mode,
         )
 
     async def test_inheritance_filter(self):
@@ -1022,7 +1022,7 @@ class HailSearchTestCase(AioHTTPTestCase):
             [[MULTI_DATA_TYPE_COMP_HET_VARIANT2, missing_gt_gcnv_variant]],
             inheritance_mode='compound_het', pathogenicity=pathogenicity,
             annotations=gcnv_annotations_2, annotations_secondary=selected_transcript_annotations,
-            sample_data={**EXPECTED_SAMPLE_DATA, 'SV_WES': [EXPECTED_SAMPLE_DATA['SV_WES'][0], EXPECTED_SAMPLE_DATA['SV_WES'][2]]}
+            sample_data={**EXPECTED_SAMPLE_DATA, 'SV_WES': SV_WES_SAMPLE_DATA['SV_WES'][:1] + SV_WES_SAMPLE_DATA['SV_WES'][2:]}
 
         )
 

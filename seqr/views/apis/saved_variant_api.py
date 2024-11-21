@@ -116,7 +116,7 @@ def create_variant_note_handler(request, variant_guids):
 def _create_variant_note(saved_variants, note_json, user):
     note = create_model_from_json(VariantNote, {
         'note': note_json.get('note'),
-        'submit_to_clinvar': note_json.get('submitToClinvar') or False,
+        'report': note_json.get('report') or False,
         'search_hash': note_json.get('searchHash'),
     }, user)
     note.saved_variants.set(saved_variants)

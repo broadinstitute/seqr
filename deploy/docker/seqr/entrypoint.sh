@@ -39,20 +39,11 @@ do
     fi
 done
 
-# init and populate seqrdb unless it already exists
-if ! psql --host "$POSTGRES_SERVICE_HOSTNAME" -U "$POSTGRES_USERNAME" -l | grep seqrdb; then
-    psql --host "$POSTGRES_SERVICE_HOSTNAME" -U "$POSTGRES_USERNAME" -c 'CREATE DATABASE reference_data_db';
-    psql --host "$POSTGRES_SERVICE_HOSTNAME" -U "$POSTGRES_USERNAME" -c 'CREATE DATABASE seqrdb';
-    python -u manage.py migrate
-    python -u manage.py migrate --database=reference_data
-    python -u manage.py loaddata variant_tag_types
-    python -u manage.py update_all_reference_data --use-cached-omim
-else
-    # run any pending migrations if the database already exists
-    python -u manage.py migrate
-    python -u manage.py migrate --database=reference_data
-fi
+# run any pending migrations and load missing data
+python -u manage.py migrate
+python -u manage.py migrate --database=reference_data
 python -u manage.py loaddata variant_searches
+python -u manage.py loaddata variant_tag_types
 
 python -u manage.py check
 

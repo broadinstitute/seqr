@@ -71,7 +71,13 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
                 for s in variant_samples_by_family[f]
             ] for f in overlapped_families])
             sv_ht = sv_ht.annotate(family_entries=hl.enumerate(sv_sample_indices).starmap(
-                lambda family_i, indices: indices.map(lambda sample_i: sv_ht.family_entries[family_i][sample_i])
+                lambda family_i, indices: hl.bind(
+                    lambda family_entry: hl.or_missing(
+                        hl.is_defined(family_entry),
+                        indices.map(lambda sample_i: family_entry[sample_i]),
+                    ),
+                    sv_ht.family_entries[family_i],
+                )
             ))
 
         variant_ch_ht = variant_ht.group_by('gene_ids').aggregate(v1=hl.agg.collect(variant_ht.row))

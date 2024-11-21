@@ -16,9 +16,10 @@ MAX_UPDATE_RECORDS = 10
 
 ANVIL_REQUEST_TRACKING_TABLE = 'AnVIL Seqr Loading Requests Tracking'
 
+LOADING_PDO_STATUS = 'Methods (Loading)'
 LOADABLE_PDO_STATUSES = [
     'On hold for phenotips, but ready to load',
-    'Methods (Loading)',
+    LOADING_PDO_STATUS,
 ]
 AVAILABLE_PDO_STATUS = 'Available in seqr'
 
@@ -167,11 +168,18 @@ class AirtableSession(object):
             # Filter for array contains value instead of exact match
             filter_query_template="SEARCH('{value}',ARRAYJOIN({key},';'))",
         )
-
+        invalid_pdo_samples = []
         for sample in sample_records.values():
-            project_guids = [
-                re.match(f'{BASE_URL}project/([^/]+)/project_page', url).group(1) for url in sample['SeqrProject']
+            sample_id = sample.get('SeqrCollaboratorSampleID') or sample['CollaboratorSampleID']
+            project_matches = [
+                re.match(f'{BASE_URL}project/([^/]+)/project_page', url)
+                for url in sample.get('SeqrProject', []) if url
             ]
+            if any(pm is None for pm in project_matches) or (1 < len(project_matches) < len(sample['PDOStatus'])):
+                invalid_pdo_samples.append(sample_id)
+                continue
+
+            project_guids = [match.group(1) for match in project_matches]
             pdos = [{
                 'project_guid': project_guids[i] if len(project_guids) > 1 else project_guids[0],
                 **{field: sample[field][i] for field in pdo_fields}
@@ -180,7 +188,11 @@ class AirtableSession(object):
                 pdos = [pdo for pdo in pdos if pdo['project_guid'] == project_guid]
             sample.update({
                 'pdos': pdos,
-                'sample_id': sample.get('SeqrCollaboratorSampleID') or sample['CollaboratorSampleID'],
+                'sample_id': sample_id,
             })
+
+        if invalid_pdo_samples:
+            samples = ', '.join(sorted(invalid_pdo_samples))
+            raise ValueError(f'The following samples are associated with misconfigured PDOs in Airtable: {samples}')
 
         return {record_id: sample for record_id, sample in sample_records.items() if sample['pdos']}

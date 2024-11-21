@@ -2,6 +2,9 @@
 
 ## dev
 
+## 11/21/24
+* Migrate "Submit to Clinvar" to generic report flag for Variant Notes (REQUIRES DB MIGRATION)
+
 ## 10/28/24
 * Update RNA Tissue Type choices (REQUIRES DB MIGRATION)
 
