@@ -16,9 +16,10 @@ MAX_UPDATE_RECORDS = 10
 
 ANVIL_REQUEST_TRACKING_TABLE = 'AnVIL Seqr Loading Requests Tracking'
 
+LOADING_PDO_STATUS = 'Methods (Loading)'
 LOADABLE_PDO_STATUSES = [
     'On hold for phenotips, but ready to load',
-    'Methods (Loading)',
+    LOADING_PDO_STATUS,
 ]
 AVAILABLE_PDO_STATUS = 'Available in seqr'
 
