@@ -6,6 +6,7 @@ from reference_data.models import GENOME_VERSION_LOOKUP
 from seqr.models import Sample, Individual, Project
 from seqr.utils.communication_utils import send_project_notification, safe_post_to_slack
 from seqr.utils.logging_utils import SeqrLogger
+from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.search.utils import backend_specific_call
 from seqr.utils.search.elasticsearch.es_utils import validate_es_index_metadata_and_get_samples
 from seqr.views.utils.airtable_utils import AirtableSession, ANVIL_REQUEST_TRACKING_TABLE
@@ -144,14 +145,26 @@ def _upload_data_loading_files(projects: list[Project], user: User, file_path: s
         'Individual_ID': F('individual_id'),
         'Paternal_ID': F('father__individual_id'), 'Maternal_ID': F('mother__individual_id'), 'Sex': F('sex'),
     })
-    annotations = {'project': F('family__project__guid'), **file_annotations}
+    annotations = {'project': F('family__project__guid'), 'affected_status': F('affected'), **file_annotations}
     individual_filter = {'id__in': individual_ids} if individual_ids else {'family__project__in': projects}
     data = Individual.objects.filter(**individual_filter).order_by('family_id', 'individual_id').values(
         **dict(annotations))
 
     data_by_project = defaultdict(list)
+    affected_by_family = defaultdict(list)
     for row in data:
         data_by_project[row.pop('project')].append(row)
+        affected_by_family[row['Family_GUID']].append(row.pop('affected_status'))
+
+    no_affected_families = [
+        family_id for family_id, affected_statuses in affected_by_family.items()
+        if all(affected != Individual.AFFECTED_STATUS_AFFECTED for affected in affected_statuses)
+    ]
+    if no_affected_families:
+        families = ', '.join(sorted(no_affected_families))
+        raise ErrorsWarningsException(errors=[
+            f'The following families have no affected individuals and can not be loaded to seqr: {families}',
+        ])
 
     header = list(file_annotations.keys())
     files = [(f'{project_guid}_pedigree', header, rows) for project_guid, rows in data_by_project.items()]
