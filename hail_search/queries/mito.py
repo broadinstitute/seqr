@@ -371,7 +371,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
 
     @classmethod
     def _get_table_dir(cls, path):
-        if any(prefilter_table_path in path for prefilter_table_path in self.PREFILTER_TABLES.values()):
+        if any(prefilter_table_path in path for prefilter_table_path in cls.PREFILTER_TABLES.values()):
             return REFERENCE_DATASETS_DIR
         return super()._get_table_dir(path)
 
