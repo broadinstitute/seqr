@@ -362,7 +362,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
             if ht_filter is False:
                 self._filter_hts[key] = False
             else:
-                ht = self._read_table({self.PREFILTER_TABLES[key]})
+                ht = self._read_table(self.PREFILTER_TABLES[key])
                 if ht_filter is not True:
                     ht = ht.filter(ht_filter(ht))
                 self._filter_hts[key] = ht
