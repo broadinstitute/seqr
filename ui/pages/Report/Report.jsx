@@ -26,10 +26,10 @@ export const REPORT_PAGES = [
   ...LOCAL_REPORT_PAGES,
 ]
 
-const Report = ({ match, user }) => (
+const Report = ({ match, user, pages }) => (
   (user.isAnalyst || user.isPm) ? (
     <Switch>
-      {(user.isAnalyst ? REPORT_PAGES : LOCAL_REPORT_PAGES).map(
+      {pages.map(
         ({ path, params, component }) => <Route key={path} path={`${match.url}/${path}${params || ''}`} component={component} />,
       )}
       <Route path={match.url} component={null} />
@@ -41,10 +41,15 @@ const Report = ({ match, user }) => (
 Report.propTypes = {
   user: PropTypes.object,
   match: PropTypes.object,
+  pages: PropTypes.arrayOf(PropTypes.object),
 }
 
-const mapStateToProps = state => ({
-  user: getUser(state),
-})
+export const mapStateToProps = (state) => {
+  const user = getUser(state)
+  return {
+    user,
+    pages: user.isAnalyst ? REPORT_PAGES : LOCAL_REPORT_PAGES,
+  }
+}
 
 export default connect(mapStateToProps)(Report)
