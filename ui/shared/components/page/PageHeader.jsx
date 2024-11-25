@@ -5,8 +5,8 @@ import { Route, Switch } from 'react-router-dom'
 
 import ProjectPageHeader from 'pages/Project/components/PageHeader'
 import VariantSearchPageHeader from 'pages/Search/components/PageHeader'
-import { DataManagementPageHeader } from 'pages/DataManagement/DataManagement'
-import { REPORT_PAGES } from 'pages/Report/Report'
+import { mapStateToProps as mapDataManagementStateToProps } from 'pages/DataManagement/DataManagement'
+import { mapStateToProps as mapReportStateToProps } from 'pages/Report/Report'
 import { SummaryDataPageHeader } from 'pages/SummaryData/SummaryData'
 import { getGenesById } from 'redux/selectors'
 import { PUBLIC_PAGES } from 'shared/utils/constants'
@@ -25,11 +25,11 @@ BaseGenePageHeader.propTypes = {
   match: PropTypes.object,
 }
 
-const mapStateToProps = (state, ownProps) => ({
+const mapGeneStateToProps = (state, ownProps) => ({
   gene: getGenesById(state)[ownProps.match.params.geneId],
 })
 
-export const GenePageHeader = connect(mapStateToProps)(BaseGenePageHeader)
+export const GenePageHeader = connect(mapGeneStateToProps)(BaseGenePageHeader)
 
 const NO_HEADER_PAGES = [
   '/dashboard', '/create_project_from_workspace', '/workspace', '/users', '/login', '/accept_policies', ...PUBLIC_PAGES,
@@ -41,13 +41,13 @@ const NO_HEADER_PAGE_TITLES = {
 }
 
 const SIMPLE_HEADER_PAGES = [
-  { page: 'data_management', component: DataManagementPageHeader },
-  { page: 'report', pages: REPORT_PAGES },
-].map(({ page, component, ...props }) => ({
+  { page: 'data_management', mapStateToProps: mapDataManagementStateToProps },
+  { page: 'report', mapStateToProps: mapReportStateToProps },
+].map(({ page, mapStateToProps, ...props }) => ({
   key: page,
   path: `/${page}/:subPage?`,
   component: ({ match }) => React.createElement(
-    component || SimplePageHeader, { page, subPage: match.params.subPage, ...props },
+    connect(mapStateToProps)(SimplePageHeader), { page, subPage: match.params.subPage, ...props },
   ),
 }))
 
