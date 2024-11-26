@@ -4,7 +4,7 @@ import { connect } from 'react-redux'
 import { FormSpy } from 'react-final-form'
 
 import { getUser } from 'redux/selectors'
-import { validators } from 'shared/components/form/FormHelpers'
+import { validators, LoadDataVCFMessage } from 'shared/components/form/FormHelpers'
 import FormWizard from 'shared/components/form/FormWizard'
 import { ButtonRadioGroup, InlineToggle } from 'shared/components/form/Inputs'
 import LoadOptionsSelect from 'shared/components/form/LoadOptionsSelect'
@@ -15,6 +15,7 @@ import {
   DATASET_TYPE_MITO_CALLS,
   DATASET_TYPE_SNV_INDEL_CALLS,
   GENOME_VERSION_FIELD,
+  VCF_DOCUMENTATION_URL,
 } from 'shared/utils/constants'
 
 const formatProjectOption = opt => ({
@@ -114,12 +115,15 @@ const MULTI_DATA_TYPE_LOAD_DATA_PAGES = [MULTI_DATA_TYPE_CALLSET_PAGE, ...ADDITI
 const formatSubmitUrl = () => '/api/data_management/load_data'
 
 const LoadData = ({ user }) => (
-  <FormWizard
-    pages={user.isAnvil ? MULTI_DATA_TYPE_LOAD_DATA_PAGES : LOAD_DATA_PAGES}
-    formatSubmitUrl={formatSubmitUrl}
-    successMessage="Data loading has been triggered"
-    noModal
-  />
+  <div>
+    {!user.isAnvil && <LoadDataVCFMessage documentationUrl={VCF_DOCUMENTATION_URL} isAnvil={false} />}
+    <FormWizard
+      pages={user.isAnvil ? MULTI_DATA_TYPE_LOAD_DATA_PAGES : LOAD_DATA_PAGES}
+      formatSubmitUrl={formatSubmitUrl}
+      successMessage="Data loading has been triggered"
+      noModal
+    />
+  </div>
 )
 
 LoadData.propTypes = {
