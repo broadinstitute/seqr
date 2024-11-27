@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 
 JAVA_OPTS_XSS = os.environ.get('JAVA_OPTS_XSS')
 MACHINE_MEM = os.environ.get('MACHINE_MEM')
+JVM_MEMORY_FRACTION = 0.9
 
 
 def _handle_exception(e, request):
