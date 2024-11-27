@@ -34,8 +34,7 @@ async def status(request: web.Request) -> web.Response:
 
 
 async def match(request: web.Request) -> web.Response:
-    variant_match = get_variant_match(request.query)
-    return web.json_response({'variant_match': variant_match})
+    return web.json_response(get_variant_match(request.query))
 
 
 async def init_web_app():
