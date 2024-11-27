@@ -17,12 +17,12 @@ import {
   INDIVIDUAL_FIELD_SEX,
   INDIVIDUAL_FIELD_AFFECTED,
   SAMPLE_TYPE_OPTIONS,
-  VCF_DOCUMENTATION_URL,
+  LoadDataVCFMessage,
 } from 'shared/utils/constants'
 import { validateUploadedFile } from 'shared/components/form/XHRUploaderField'
 import BulkUploadForm from 'shared/components/form/BulkUploadForm'
 import FormWizard from 'shared/components/form/FormWizard'
-import { validators, LoadDataVCFMessage } from 'shared/components/form/FormHelpers'
+import { validators } from 'shared/components/form/FormHelpers'
 import { BooleanCheckbox, RadioGroup } from 'shared/components/form/Inputs'
 import PhiWarningUploadField from 'shared/components/form/PhiWarningUploadField'
 import { RECEIVE_DATA } from 'redux/utils/reducerUtils'
@@ -182,7 +182,7 @@ const LoadWorkspaceDataForm = React.memo(({ params, onAddData, createProject, an
       {`Load data to seqr from AnVIL Workspace "${params.workspaceNamespace}/${params.workspaceName}"`}
     </Header>
     <Segment basic textAlign="center">
-      <LoadDataVCFMessage documentationUrl={VCF_DOCUMENTATION_URL} isAnvil />
+      <LoadDataVCFMessage isAnvil />
       {anvilLoadingDelayDate ? (
         <Message
           error

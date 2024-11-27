@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { Field } from 'react-final-form'
 import { FieldArray } from 'react-final-form-arrays'
-import { Form, Icon, Message, Popup } from 'semantic-ui-react'
+import { Form, Icon, Popup } from 'semantic-ui-react'
 
 export const StyledForm = styled(({ hasSubmitButton, inline, ...props }) => <Form {...props} />)`
   min-height: inherit;
@@ -62,22 +62,6 @@ export const helpLabel = (label, labelHelp) => (
 const removeField = (fields, i) => (e) => {
   e.preventDefault()
   fields.remove(i)
-}
-
-export const LoadDataVCFMessage = React.memo(({ documentationUrl, isAnvil }) => (
-  <Message info compact>
-    In order to load your data to seqr, you must
-    {isAnvil ? ' have a joint called VCF available in your workspace. ' : ' use a joint called VCF.'}
-    &nbsp;
-    For more information about generating and validating this file,
-    see &nbsp;
-    <b><a href={documentationUrl} target="_blank" rel="noreferrer">this documentation</a></b>
-  </Message>
-))
-
-LoadDataVCFMessage.propTypes = {
-  documentationUrl: PropTypes.string,
-  isAnvil: PropTypes.bool,
 }
 
 const ArrayFieldItem = ({ addArrayElement, addArrayElementProps, arrayFieldName, singleFieldProps, label, fields }) => (

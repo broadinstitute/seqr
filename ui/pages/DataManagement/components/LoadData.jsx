@@ -4,7 +4,7 @@ import { connect } from 'react-redux'
 import { FormSpy } from 'react-final-form'
 
 import { getUser } from 'redux/selectors'
-import { validators, LoadDataVCFMessage } from 'shared/components/form/FormHelpers'
+import { validators } from 'shared/components/form/FormHelpers'
 import FormWizard from 'shared/components/form/FormWizard'
 import { ButtonRadioGroup, InlineToggle } from 'shared/components/form/Inputs'
 import LoadOptionsSelect from 'shared/components/form/LoadOptionsSelect'
@@ -15,7 +15,7 @@ import {
   DATASET_TYPE_MITO_CALLS,
   DATASET_TYPE_SNV_INDEL_CALLS,
   GENOME_VERSION_FIELD,
-  VCF_DOCUMENTATION_URL,
+  LoadDataVCFMessage,
 } from 'shared/utils/constants'
 
 const formatProjectOption = opt => ({
@@ -116,7 +116,7 @@ const formatSubmitUrl = () => '/api/data_management/load_data'
 
 const LoadData = ({ user }) => (
   <div>
-    {!user.isAnvil && <LoadDataVCFMessage documentationUrl={VCF_DOCUMENTATION_URL} isAnvil={false} />}
+    {!user.isAnvil && <LoadDataVCFMessage isAnvil={false} />}
     <FormWizard
       pages={user.isAnvil ? MULTI_DATA_TYPE_LOAD_DATA_PAGES : LOAD_DATA_PAGES}
       formatSubmitUrl={formatSubmitUrl}
