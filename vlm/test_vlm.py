@@ -17,3 +17,135 @@ class VlmTestCase(AioHTTPTestCase):
             self.assertEqual(resp.status, 200)
             resp_json = await resp.json()
         self.assertDictEqual(resp_json, {'success': True})
+
+    async def test_match(self):
+        async with self.client.request('GET', '/vlm/match?assemblyId=GRCh38&referenceName=1&start=38724419&referenceBases=T&alternateBases=G') as resp:
+            self.assertEqual(resp.status, 200)
+            resp_json = await resp.json()
+        self.assertDictEqual(resp_json, {
+            'beaconHandovers': [
+                {
+                    'handoverType': {
+                        'id': 'TestVLM',
+                        'label': 'TestVLM browser',
+                    },
+                    'url': 'https://test-seqr.org/summary_data/variant_lookup?genomeVersion=38&variantId=chr1-38724419-T-G',
+                }
+            ],
+            'meta': {
+                'apiVersion': 'v1.0',
+                'beaconId': 'com.gnx.beacon.v2',
+                'returnedSchemas': [
+                    {
+                        'entityType': 'genomicVariant',
+                        'schema': 'ga4gh-beacon-variant-v2.0.0',
+                    }
+                ]
+            },
+            'responseSummary': {
+                'exists': True,
+                'total': 28,
+            },
+            'response': {
+                'resultSets': [
+                    {
+                        'exists': True,
+                        'id': f'TestVLM Homozygous',
+                        'results': [],
+                        'resultsCount': 4,
+                        'setType': 'genomicVariant'
+                    },
+                    {
+                        'exists': True,
+                        'id': f'TestVLM Heterozygous',
+                        'results': [],
+                        'resultsCount': 24,
+                        'setType': 'genomicVariant'
+                    },
+                ],
+            }
+        })
+
+        async with self.client.request('GET', '/vlm/match?assemblyId=hg19&referenceName=chr7&start=143270172&referenceBases=A&alternateBases=G') as resp:
+            self.assertEqual(resp.status, 200)
+            resp_json = await resp.json()
+        self.assertDictEqual(resp_json, {
+            'beaconHandovers': [
+                {
+                    'handoverType': {
+                        'id': 'TestVLM',
+                        'label': 'TestVLM browser',
+                    },
+                    'url': 'https://test-seqr.org/summary_data/variant_lookup?genomeVersion=37&variantId=7-143270172-A-G',
+                }
+            ],
+            'meta': {
+                'apiVersion': 'v1.0',
+                'beaconId': 'com.gnx.beacon.v2',
+                'returnedSchemas': [
+                    {
+                        'entityType': 'genomicVariant',
+                        'schema': 'ga4gh-beacon-variant-v2.0.0',
+                    }
+                ]
+            },
+            'responseSummary': {
+                'exists': True,
+                'total': 4711,
+            },
+            'response': {
+                'resultSets': [
+                    {
+                        'exists': True,
+                        'id': f'TestVLM Homozygous',
+                        'results': [],
+                        'resultsCount': 1508,
+                        'setType': 'genomicVariant'
+                    },
+                    {
+                        'exists': True,
+                        'id': f'TestVLM Heterozygous',
+                        'results': [],
+                        'resultsCount': 3203,
+                        'setType': 'genomicVariant'
+                    },
+                ],
+            }
+        })
+
+        async with self.client.request('GET', '/vlm/match?assemblyId=hg38&referenceName=chr7&start=143270172&referenceBases=A&alternateBases=G') as resp:
+            self.assertEqual(resp.status, 200)
+            resp_json = await resp.json()
+        self.assertDictEqual(resp_json, {
+            'beaconHandovers': [
+                {
+                    'handoverType': {
+                        'id': 'TestVLM',
+                        'label': 'TestVLM browser',
+                    },
+                    'url': 'https://test-seqr.org/summary_data/variant_lookup?genomeVersion=38&variantId=chr7-143270172-A-G',
+                }
+            ],
+            'meta': {
+                'apiVersion': 'v1.0',
+                'beaconId': 'com.gnx.beacon.v2',
+                'returnedSchemas': [
+                    {
+                        'entityType': 'genomicVariant',
+                        'schema': 'ga4gh-beacon-variant-v2.0.0',
+                    }
+                ]
+            },
+            'responseSummary': {
+                'exists': False,
+                'total': 0,
+            },
+            'response': {
+                'resultSets': [],
+            }
+        })
+
+    async def test_match_error(self):
+        async with self.client.request('GET', '/vlm/match') as resp:
+            self.assertEqual(resp.status, 400)
+
