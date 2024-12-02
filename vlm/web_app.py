@@ -45,9 +45,7 @@ async def init_web_app():
     if JAVA_OPTS_XSS:
         spark_conf.update(
             {f'spark.{field}.extraJavaOptions': f'-Xss{JAVA_OPTS_XSS}' for field in ['driver', 'executor']})
-    hl.init(idempotent=True, spark_conf=spark_conf or None,
-            backend='local',  # TODO testing only
-            )
+    hl.init(idempotent=True, spark_conf=spark_conf or None)
 
     app = web.Application(middlewares=[error_middleware], client_max_size=(1024 ** 2) * 10)
     app.add_routes([
