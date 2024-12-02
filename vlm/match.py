@@ -35,18 +35,14 @@ ASSEMBLY_LOOKUP = {
 
 def get_variant_match(query: dict) -> dict:
     chrom, pos, ref, alt, genome_build = _parse_match_query(query)
-    key_table = hl.Table.parallelize([
-        hl.struct(
-            locus=hl.locus(chrom, pos, reference_genome=genome_build),
-            alleles=[ref, alt],
-        )
-    ]).key_by('locus', 'alleles')
-    query_result = hl.query_table(
-        f'{VLM_DATA_DIR}/{genome_build}/SNV_INDEL/annotations.ht',
-        key_table.key,
-    ).first().drop(*key_table.key)
-    ht = key_table.annotate(gt_stats=query_result.gt_stats)
-    counts = ht.aggregate(hl.agg.take(ht.gt_stats, 1))[0]
+
+    locus = hl.locus(chrom, pos, reference_genome=genome_build)
+    interval = hl.eval(hl.interval(locus, locus, includes_start=True, includes_end=True))
+    ht = hl.read_table(
+        f'{VLM_DATA_DIR}/{genome_build}/SNV_INDEL/annotations.ht', _intervals=[interval], _filter_intervals=True,
+    )
+    ht = ht.filter(ht.alleles==hl.array([ref, alt]))
+    counts = ht.aggregate(hl.agg.take(ht.gt_stats, 1))
 
     return _format_results(counts, genome_build, f'{chrom}-{pos}-{ref}-{alt}')
 
@@ -77,10 +73,10 @@ def _parse_match_query(query: dict) -> tuple[str, int, str, str, str]:
 
 
 def _format_results(counts: hl.Struct, genome_build: str, variant_id: str) -> dict:
-    result_sets = [] if counts is None else [
-        ('Homozygous', counts.hom),
-        ('Heterozygous', counts.AC - counts.hom),
-    ]
+    result_sets = [
+        ('Homozygous', counts[0].hom),
+        ('Heterozygous', counts[0].AC - counts[0].hom),
+    ] if counts else []
     return {
         'beaconHandovers': [
             {
@@ -91,7 +87,7 @@ def _format_results(counts: hl.Struct, genome_build: str, variant_id: str) -> di
         'meta': BEACON_META,
         'responseSummary': {
             'exists': bool(counts),
-            'total': 0 if counts is None else counts.AC,
+            'total': counts[0].AC if counts else 0
         },
         'response': {
             'resultSets': [
