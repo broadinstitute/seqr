@@ -1,7 +1,7 @@
 from collections import OrderedDict
 import hail as hl
 
-from hail_search.constants import CLINVAR_KEY, CLINVAR_MITO_KEY, HGMD_KEY, HGMD_PATH_RANGES, \
+from hail_search.constants import CLINVAR_KEY, HGMD_KEY, HGMD_PATH_RANGES, \
     GNOMAD_GENOMES_FIELD, PREFILTER_FREQ_CUTOFF, PATH_FREQ_OVERRIDE_CUTOFF, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, \
     SPLICE_AI_FIELD, GENOME_VERSION_GRCh37
 from hail_search.queries.base import PredictionPath, QualityFilterFormat
@@ -43,7 +43,6 @@ class SnvIndelHailTableQuery37(MitoHailTableQuery):
         **MitoHailTableQuery.PATHOGENICITY_FILTERS,
         HGMD_KEY: ('class', HGMD_PATH_RANGES),
     }
-    PATHOGENICITY_FIELD_MAP = {}
     ANNOTATION_OVERRIDE_FIELDS = [SPLICE_AI_FIELD]
 
     CORE_FIELDS = MitoHailTableQuery.CORE_FIELDS + ['CAID']
@@ -60,7 +59,6 @@ class SnvIndelHailTableQuery37(MitoHailTableQuery):
             'format_value': lambda value: value.region_types.first(),
         },
     }
-    ENUM_ANNOTATION_FIELDS[CLINVAR_KEY] = ENUM_ANNOTATION_FIELDS.pop(CLINVAR_MITO_KEY)
 
     SORTS = {
         **MitoHailTableQuery.SORTS,
