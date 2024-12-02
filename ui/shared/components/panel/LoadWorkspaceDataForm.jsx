@@ -17,7 +17,7 @@ import {
   INDIVIDUAL_FIELD_SEX,
   INDIVIDUAL_FIELD_AFFECTED,
   SAMPLE_TYPE_OPTIONS,
-  VCF_DOCUMENTATION_URL,
+  LoadDataVCFMessage,
 } from 'shared/utils/constants'
 import { validateUploadedFile } from 'shared/components/form/XHRUploaderField'
 import BulkUploadForm from 'shared/components/form/BulkUploadForm'
@@ -182,12 +182,7 @@ const LoadWorkspaceDataForm = React.memo(({ params, onAddData, createProject, an
       {`Load data to seqr from AnVIL Workspace "${params.workspaceNamespace}/${params.workspaceName}"`}
     </Header>
     <Segment basic textAlign="center">
-      <Message info compact>
-        In order to load your data to seqr, you must have a joint called VCF available in your workspace. For more
-        information about generating and validating this file,
-        see &nbsp;
-        <b><a href={VCF_DOCUMENTATION_URL} target="_blank" rel="noreferrer">this documentation</a></b>
-      </Message>
+      <LoadDataVCFMessage isAnvil />
       {anvilLoadingDelayDate ? (
         <Message
           error
