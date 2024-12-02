@@ -148,5 +148,23 @@ class VlmTestCase(AioHTTPTestCase):
     async def test_match_error(self):
         async with self.client.request('GET', '/vlm/match') as resp:
             self.assertEqual(resp.status, 400)
-            import pdb; pdb.set_trace()
+            self.assertEqual(
+                resp.reason,
+                'Missing required parameters: assemblyId, referenceName, start, referenceBases, alternateBases',
+            )
 
+        async with self.client.request('GET', '/vlm/match?assemblyId=38&referenceName=chr7&start=143270172&referenceBases=A&alternateBases=G') as resp:
+            self.assertEqual(resp.status, 400)
+            self.assertEqual(resp.reason,'Invalid assemblyId: 38')
+
+        async with self.client.request('GET', '/vlm/match?assemblyId=hg38&referenceName=27&start=143270172&referenceBases=A&alternateBases=G') as resp:
+            self.assertEqual(resp.status, 400)
+            self.assertEqual(resp.reason,'Invalid referenceName: 27')
+
+        async with self.client.request('GET', '/vlm/match?assemblyId=hg38&referenceName=7&start=1x43270172&referenceBases=A&alternateBases=G') as resp:
+            self.assertEqual(resp.status, 400)
+            self.assertEqual(resp.reason,'Invalid start: 1x43270172')
+
+        async with self.client.request('GET', '/vlm/match?assemblyId=hg38&referenceName=7&start=999999999&referenceBases=A&alternateBases=G') as resp:
+            self.assertEqual(resp.status, 400)
+            self.assertEqual(resp.reason,'Invalid start: 999999999')
