@@ -4,7 +4,7 @@ import os
 
 VLM_DATA_DIR = os.environ.get('VLM_DATA_DIR')
 SEQR_BASE_URL = os.environ.get('SEQR_BASE_URL')
-NODE_ID = os.environ.get('NODE_ID', 'Broad seqr')
+NODE_ID = os.environ.get('NODE_ID')
 
 BEACON_HANDOVER_TYPE = {
     'id': NODE_ID,
