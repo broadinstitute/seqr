@@ -148,4 +148,5 @@ class VlmTestCase(AioHTTPTestCase):
     async def test_match_error(self):
         async with self.client.request('GET', '/vlm/match') as resp:
             self.assertEqual(resp.status, 400)
+            import pdb; pdb.set_trace()
 
