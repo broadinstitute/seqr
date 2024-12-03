@@ -14,7 +14,6 @@ from hail_search.definitions import SampleType
 from hail_search.queries.base import BaseHailTableQuery, PredictionPath, QualityFilterFormat, MAX_PARTITIONS
 
 REFERENCE_DATASETS_DIR = os.environ.get('REFERENCE_DATASETS_DIR', '/seqr/seqr-reference-data')
-REFERENCE_DATASET_SUBDIR = 'cached_reference_dataset_queries'
 
 logger = logging.getLogger(__name__)
 
@@ -57,15 +56,14 @@ class MitoHailTableQuery(BaseHailTableQuery):
         'haplogroup_defining': PredictionPath('haplogroup', 'is_defining', lambda v: hl.or_missing(v, 'Y')),
         'hmtvar': PredictionPath('hmtvar', 'score'),
         'mitotip': PredictionPath('mitotip', 'trna_prediction'),
-        'mut_taster': PredictionPath('dbnsfp_mito', 'MutationTaster_pred'),
-        'sift': PredictionPath('dbnsfp_mito', 'SIFT_score'),
+        'mut_taster': PredictionPath('dbnsfp', 'MutationTaster_pred'),
+        'sift': PredictionPath('dbnsfp', 'SIFT_score'),
         'mlc': PredictionPath('local_constraint_mito', 'score'),
     }
 
     PATHOGENICITY_FILTERS = {
         CLINVAR_KEY: ('pathogenicity', CLINVAR_PATH_RANGES),
     }
-    PATHOGENICITY_FIELD_MAP = {CLINVAR_KEY: CLINVAR_MITO_KEY}
 
     GLOBALS = BaseHailTableQuery.GLOBALS + ['versions']
     CORE_FIELDS = BaseHailTableQuery.CORE_FIELDS + ['rsid']
@@ -109,7 +107,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
             hl.min(r.sorted_transcript_consequences.flatmap(lambda t: t.consequence_term_ids)),
             hl.min(r.selected_transcript.consequence_term_ids),
         ],
-        PATHOGENICTY_SORT_KEY: lambda r: [_clinvar_sort(CLINVAR_MITO_KEY, r)],
+        PATHOGENICTY_SORT_KEY: lambda r: [_clinvar_sort(CLINVAR_KEY, r)],
         **BaseHailTableQuery.SORTS,
     }
     SORTS[PATHOGENICTY_HGMD_SORT_KEY] = SORTS[PATHOGENICTY_SORT_KEY]
@@ -363,7 +361,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
             if ht_filter is False:
                 self._filter_hts[key] = False
             else:
-                ht = self._read_table(f'{REFERENCE_DATASET_SUBDIR}/{self.PREFILTER_TABLES[key]}')
+                ht = self._read_table(f'{self.PREFILTER_TABLES[key]}')
                 if ht_filter is not True:
                     ht = ht.filter(ht_filter(ht))
                 self._filter_hts[key] = ht
@@ -372,7 +370,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
 
     @classmethod
     def _get_table_dir(cls, path):
-        if REFERENCE_DATASET_SUBDIR in path:
+        if any(prefilter_table_path in path for prefilter_table_path in cls.PREFILTER_TABLES.values()):
             return REFERENCE_DATASETS_DIR
         return super()._get_table_dir(path)
 
@@ -486,8 +484,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
 
     def _has_path_expr(self, ht, terms, field):
         subfield, range_configs = self.PATHOGENICITY_FILTERS[field]
-        field_name = self.PATHOGENICITY_FIELD_MAP.get(field, field)
-        enum_lookup = self._get_enum_lookup(field_name, subfield)
+        enum_lookup = self._get_enum_lookup(field, subfield)
 
         ranges = [[None, None]]
         for path_filter, start, end in range_configs:
@@ -499,7 +496,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
                 ranges.append([None, None])
 
         ranges = [r for r in ranges if r[0] is not None]
-        value = ht[field_name][f'{subfield}_id']
+        value = ht[field][f'{subfield}_id']
         return hl.any(lambda r: (value >= r[0]) & (value <= r[1]), ranges)
 
     def _format_results(self, ht, *args, **kwargs):

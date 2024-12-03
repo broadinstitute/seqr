@@ -1218,7 +1218,7 @@ class BaseHailTableQuery(object):
 
     def lookup_variants(self, variant_ids, include_project_data=False, **kwargs):
         self._parse_intervals(intervals=None, variant_ids=variant_ids, variant_keys=variant_ids)
-        ht = self._read_table('annotations.ht', drop_globals=['paths', 'versions'])
+        ht = self._read_table('annotations.ht', drop_globals=['versions'])
         ht = ht.filter(hl.is_defined(ht[XPOS]))
 
         annotation_fields = self.annotation_fields(include_genotype_overrides=False)
