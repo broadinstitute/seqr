@@ -911,7 +911,7 @@ class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
         self.assertEqual(response.status_code, 200)
         self.mock_send_email.assert_called_with("""Hi Test Manager User,
             We have received your request to load data to seqr from AnVIL. Currently, the Broad Institute is holding an 
-            internal retreat or closed for the winter break so we are unable to load data until mid-January 
+            internal retreat or closed for the winter break so we may not be able to load data until mid-January 
             2022. We appreciate your understanding and support of our research team taking 
             some well-deserved time off and hope you also have a nice break.
             - The seqr team
