@@ -5,7 +5,7 @@ import hail as hl
 import logging
 import os
 
-from hail_search.constants import ABSENT_PATH_SORT_OFFSET, CLINVAR_KEY, CLINVAR_MITO_KEY, CLINVAR_LIKELY_PATH_FILTER, \
+from hail_search.constants import ABSENT_PATH_SORT_OFFSET, CLINVAR_KEY, CLINVAR_LIKELY_PATH_FILTER, \
     CLINVAR_PATH_FILTER, \
     CLINVAR_PATH_RANGES, CLINVAR_PATH_SIGNIFICANCES, ALLOWED_TRANSCRIPTS, ALLOWED_SECONDARY_TRANSCRIPTS, \
     PATHOGENICTY_SORT_KEY, CONSEQUENCE_SORT, \
@@ -84,7 +84,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
         **BaseHailTableQuery.BASE_ANNOTATION_FIELDS,
     }
     ENUM_ANNOTATION_FIELDS = {
-        CLINVAR_MITO_KEY: {
+        CLINVAR_KEY: {
             'response_key': CLINVAR_KEY,
             'include_version': True,
             'annotate_value': lambda value, enum: {
