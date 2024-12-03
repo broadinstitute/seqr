@@ -28,10 +28,10 @@ class SnvIndelHailTableQuery37(MitoHailTableQuery):
         GNOMAD_GENOMES_FIELD: {'filter_af': 'AF_POPMAX_OR_GLOBAL', 'het': None, 'sort': 'gnomad'},
     }
     PREDICTION_FIELDS_CONFIG = {
-        'cadd': PredictionPath('cadd', 'PHRED'),
+        'cadd': PredictionPath('dbnsfp', 'CADD_phred'),
         'eigen': PredictionPath('eigen', 'Eigen_phred'),
-        'mpc': PredictionPath('mpc', 'MPC'),
-        'primate_ai': PredictionPath('primate_ai', 'score'),
+        'mpc': PredictionPath('dbnsfp', 'MPC_score'),
+        'primate_ai': PredictionPath('dbnsfp', 'PrimateAI_score'),
         SPLICE_AI_FIELD: PredictionPath(SPLICE_AI_FIELD, 'delta_score'),
         'splice_ai_consequence': PredictionPath(SPLICE_AI_FIELD, 'splice_consequence'),
         'mut_taster': PredictionPath('dbnsfp', 'MutationTaster_pred'),
