@@ -9,7 +9,7 @@ docker compose up -d elasticsearch
 docker compose exec -T elasticsearch chmod 777 ./data
 
 mkdir ./data/postgres_init
-cp ./deploy/postgres/initdb.sql elasticsearch:./data/postgres_init/initdb.sql
+cp ./deploy/postgres/initdb.sql ./data/postgres_init/initdb.sql
 
 docker compose up -d seqr
 docker compose logs postgres
