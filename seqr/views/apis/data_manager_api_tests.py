@@ -1508,9 +1508,11 @@ class DataManagerAPITest(AirtableTest):
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'error': 'The following projects are invalid: R0005_not_project'})
 
+        body['projects'] = body['projects'][:-1]
+        self._test_no_affected_family(url, body)
+
         self.reset_logs()
         responses.calls.reset()
-        body['projects'] = body['projects'][:-1]
         response = self._assert_expected_pm_access(
             lambda: self.client.post(url, content_type='application/json', data=json.dumps(body))
         )
@@ -1604,6 +1606,15 @@ class DataManagerAPITest(AirtableTest):
         self._has_expected_ped_files(mock_open, mock_mkdir, 'SNV_INDEL', single_project=True)
         # Only a DAG trigger, no airtable calls as there is no previously loaded WGS SNV_INDEL data for these samples
         self.assertEqual(len(responses.calls), 1)
+
+    def _test_no_affected_family(self, url, body):
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {
+            'errors': ['The following families have no affected individuals and can not be loaded to seqr: F000005_5'],
+            'warnings': None,
+        })
+        Individual.objects.filter(guid='I000009_na20874').update(affected='A')
 
 
 class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
@@ -1907,3 +1918,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
     def _assert_write_pedigree_error(self, response):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(responses.calls), 1)
+
+    def _test_no_affected_family(self, url, body):
+        # Sample ID filtering skips the unaffected family
+        pass

@@ -279,6 +279,7 @@ def validate_fam_file_records(project, records, fail_on_warnings=False, errors=N
     errors = errors or []
     warnings = []
     individual_id_counts = defaultdict(int)
+    affected_status_by_family = defaultdict(list)
     for r in records:
         individual_id = r[JsonConstants.INDIVIDUAL_ID_COLUMN]
         individual_id_counts[individual_id] += 1
@@ -323,10 +324,16 @@ def validate_fam_file_records(project, records, fail_on_warnings=False, errors=N
             if invalid_features:
                 errors.append(f'{individual_id} has invalid HPO terms: {", ".join(sorted(invalid_features))}')
 
+        affected_status_by_family[family_id].append(r.get(JsonConstants.AFFECTED_COLUMN))
+
     errors += [
         f'{individual_id} is included as {count} separate records, but must be unique within the project'
         for individual_id, count in individual_id_counts.items() if count > 1
     ]
+
+    no_affected_families = get_no_affected_families(affected_status_by_family)
+    if no_affected_families:
+        warnings.append('The following families do not have any affected individuals: {}'.format(', '.join(no_affected_families)))
 
     if fail_on_warnings:
         errors += warnings
@@ -334,6 +341,13 @@ def validate_fam_file_records(project, records, fail_on_warnings=False, errors=N
     if errors:
         raise ErrorsWarningsException(errors, warnings)
     return warnings
+
+
+def get_no_affected_families(affected_status_by_family: dict[str, list[str]]) -> list[str]:
+    return [
+        family_id for family_id, affected_statuses in affected_status_by_family.items()
+        if all(affected is not None and affected != Individual.AFFECTED_STATUS_AFFECTED for affected in affected_statuses)
+    ]
 
 
 def get_valid_hpo_terms(records, additional_feature_columns=None):
