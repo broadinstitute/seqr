@@ -7,8 +7,9 @@ docker compose up -d elasticsearch
 # Due to travis filesystem issues, need to explicitly grant permissions for the volume mount from the container
 # This is not required to use docker compose locally, only for testing
 docker compose exec -T elasticsearch chmod 777 ./data
-docker compose exec -T elasticsearch mkdir ./data/postgres_init
-docker compose cp ./deploy/postgres/initdb.sql elasticsearch:./data/postgres_init/initdb.sql
+
+mkdir ./data/postgres_init
+cp ./deploy/postgres/initdb.sql elasticsearch:./data/postgres_init/initdb.sql
 
 docker compose up -d seqr
 docker compose logs postgres
