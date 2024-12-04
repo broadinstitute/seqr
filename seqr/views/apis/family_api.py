@@ -14,8 +14,7 @@ from reference_data.models import Omim
 from seqr.utils.gene_utils import get_genes_for_variant_display
 from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
 from seqr.views.utils.individual_utils import delete_individuals
-from seqr.views.utils.json_to_orm_utils import update_family_from_json, update_model_from_json, \
-    get_or_create_model_from_json, create_model_from_json
+from seqr.views.utils.json_to_orm_utils import update_family_from_json, update_model_from_json, create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.note_utils import create_note_handler, update_note_handler, delete_note_handler
 from seqr.views.utils.orm_to_json_utils import _get_json_for_model,  get_json_for_family_note, get_json_for_samples, \
@@ -162,49 +161,29 @@ def edit_families_handler(request, project_guid):
         return create_json_response(
             {}, status=400, reason="'families' not specified")
 
-    family_guids = [f['familyGuid'] for f in modified_families if f.get('familyGuid')]
-    family_models = {}
-    if family_guids:
-        family_models.update({f.guid: f for f in Family.objects.filter(project=project, guid__in=family_guids)})
-        if len(family_models) != len(family_guids):
-            missing_guids = set(family_guids) - set(family_models.keys())
-            return create_json_response({'error': 'Invalid family guids: {}'.format(', '.join(missing_guids))}, status=400)
+    family_guids = [f.get('familyGuid') for f in modified_families]
+    family_models = {f.guid: f for f in Family.objects.filter(project=project, guid__in=family_guids)}
+    if len(family_models) != len(family_guids):
+        missing_guids = set(family_guids) - set(family_models.keys())
+        return create_json_response({'error': 'Invalid family guids: {}'.format(', '.join(missing_guids))}, status=400)
 
-        updated_family_ids = {
-            fields[FAMILY_ID_FIELD]: family_models[fields['familyGuid']].family_id for fields in modified_families
-            if fields.get('familyGuid') and fields.get(FAMILY_ID_FIELD) and \
-                fields[FAMILY_ID_FIELD] != family_models[fields['familyGuid']].family_id}
-        existing_families = {
-            f.family_id for f in Family.objects.filter(project=project, family_id__in=updated_family_ids.keys())
-        }
-        if existing_families:
-            return create_json_response({
-                'error': 'Cannot update the following family ID(s) as they are already in use: {}'.format(', '.join([
-                    '{} -> {}'.format(old_id, new_id) for new_id, old_id in updated_family_ids.items()
-                    if new_id in existing_families
-                ]))}, status=400)
-
-    no_guid_families = [f for f in modified_families if not f.get('familyGuid')]
-    if no_guid_families:
-        prev_ids = [f[PREVIOUS_FAMILY_ID_FIELD] for f in no_guid_families if f.get(PREVIOUS_FAMILY_ID_FIELD)]
-        prev_id_models = {f.family_id: f for f in Family.objects.filter(project=project, family_id__in=prev_ids)}
-        if len(prev_id_models) != len(prev_ids):
-            missing_ids = set(prev_ids) - set(prev_id_models.keys())
-            return create_json_response(
-                {'error': 'Invalid previous family ids: {}'.format(', '.join(missing_ids))}, status=400)
-        family_models.update(prev_id_models)
+    updated_family_ids = {
+        fields[FAMILY_ID_FIELD]: family_models[fields['familyGuid']].family_id for fields in modified_families
+        if fields.get('familyGuid') and fields.get(FAMILY_ID_FIELD) and \
+            fields[FAMILY_ID_FIELD] != family_models[fields['familyGuid']].family_id}
+    existing_families = {
+        f.family_id for f in Family.objects.filter(project=project, family_id__in=updated_family_ids.keys())
+    }
+    if existing_families:
+        return create_json_response({
+            'error': 'Cannot update the following family ID(s) as they are already in use: {}'.format(', '.join([
+                '{} -> {}'.format(old_id, new_id) for new_id, old_id in updated_family_ids.items()
+                if new_id in existing_families
+            ]))}, status=400)
 
     updated_family_ids = []
     for fields in modified_families:
-        if fields.get('familyGuid'):
-            family = family_models[fields['familyGuid']]
-        elif fields.get(PREVIOUS_FAMILY_ID_FIELD):
-            family = family_models[fields[PREVIOUS_FAMILY_ID_FIELD]]
-        else:
-            family, _ = get_or_create_model_from_json(
-                Family, {'project': project, 'family_id': fields[FAMILY_ID_FIELD]},
-                update_json=None, user=request.user)
-
+        family = family_models[fields['familyGuid']]
         update_family_from_json(family, fields, user=request.user, allow_unknown_keys=True)
         updated_family_ids.append(family.id)
 
@@ -433,33 +412,37 @@ def receive_families_table_handler(request, project_guid):
         if FAMILY_ID_FIELD not in column_map:
             raise ValueError('Invalid header, missing family id column')
 
-        return [{column: PARSE_FAMILY_TABLE_FIELDS.get(column, lambda v: v)(row[index])
+        parsed_records = [{column: PARSE_FAMILY_TABLE_FIELDS.get(column, lambda v: v)(row[index])
                 for column, index in column_map.items()} for row in records[1:]]
+        family_ids = [r.get(PREVIOUS_FAMILY_ID_FIELD) or r[FAMILY_ID_FIELD] for r in parsed_records]
+        family_guid_map = dict(
+            Family.objects.filter(family_id__in=family_ids, project=project).values_list('family_id', 'guid')
+        )
+        return [{
+            'familyGuid': family_guid_map.get(r.get(PREVIOUS_FAMILY_ID_FIELD) or r[FAMILY_ID_FIELD]),
+            **r,
+        } for r in parsed_records]
 
     try:
         uploaded_file_id, filename, json_records = save_uploaded_file(request, process_records=_process_records)
     except Exception as e:
         return create_json_response({'errors': [str(e)], 'warnings': []}, status=400, reason=str(e))
 
-    prev_fam_ids = {r[PREVIOUS_FAMILY_ID_FIELD] for r in json_records if r.get(PREVIOUS_FAMILY_ID_FIELD)}
-    existing_prev_fam_ids = {f.family_id for f in Family.objects.filter(family_id__in=prev_fam_ids, project=project).only('family_id')}
-    if len(prev_fam_ids) != len(existing_prev_fam_ids):
-        missing_prev_ids = [family_id for family_id in prev_fam_ids if family_id not in existing_prev_fam_ids]
+    missing_guid_records = [r for r in json_records if not r['familyGuid']]
+    if missing_guid_records:
+        missing_prev_ids = [r[PREVIOUS_FAMILY_ID_FIELD] for r in missing_guid_records if r.get(PREVIOUS_FAMILY_ID_FIELD)]
+        missing_curr_ids = [r[FAMILY_ID_FIELD] for r in missing_guid_records if not r.get(PREVIOUS_FAMILY_ID_FIELD)]
+        errors = []
+        if missing_prev_ids:
+            errors.append('Could not find families with the following previous IDs: {}'.format(', '.join(missing_prev_ids)))
+        if missing_curr_ids:
+            errors.append('Could not find families with the following current IDs: {}'.format(', '.join(missing_curr_ids)))
         return create_json_response(
-            {'errors': [
-                'Could not find families with the following previous IDs: {}'.format(', '.join(missing_prev_ids))
-            ], 'warnings': []},
+            {'errors': errors, 'warnings': []},
             status=400, reason='Invalid input')
 
-    fam_ids = {r[FAMILY_ID_FIELD] for r in json_records if not r.get(PREVIOUS_FAMILY_ID_FIELD)}
-    num_families_to_update = len(prev_fam_ids) + Family.objects.filter(family_id__in=fam_ids, project=project).count()
-
-    num_families = len(json_records)
-    num_families_to_create = num_families - num_families_to_update
-
     info = [
-        "{num_families} families parsed from {filename}".format(num_families=num_families, filename=filename),
-        "{} new families will be added, {} existing families will be updated".format(num_families_to_create, num_families_to_update),
+       f"{len(json_records)} exisitng families parsed from {filename}",
     ]
 
     return create_json_response({

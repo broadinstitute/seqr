@@ -188,7 +188,7 @@ def create_project_from_workspace(request, namespace, name):
         error = 'Field(s) "{}" are required'.format(', '.join(missing_fields))
         return create_json_response({'error': error}, status=400, reason=error)
 
-    pedigree_records, _ = _parse_uploaded_pedigree(request_json)
+    pedigree_records = _parse_uploaded_pedigree(request_json)
 
     # Create a new Project in seqr
     project_args = {
@@ -229,7 +229,7 @@ def add_workspace_data(request, project_guid):
         error = 'Field(s) "{}" are required'.format(', '.join(missing_fields))
         return create_json_response({'error': error}, status=400, reason=error)
 
-    pedigree_records, records_by_family = _parse_uploaded_pedigree(request_json, project=project)
+    pedigree_records = _parse_uploaded_pedigree(request_json, project=project)
 
     previous_samples = get_search_samples([project]).filter(dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
     sample = previous_samples.first()
@@ -239,8 +239,9 @@ def add_workspace_data(request, project_guid):
         }, status=400)
     sample_type = sample.sample_type
 
+    families = {record[JsonConstants.FAMILY_ID_COLUMN] for record in pedigree_records}
     previous_loaded_individuals = previous_samples.filter(
-        individual__family__family_id__in=records_by_family,
+        individual__family__family_id__in=families,
     ).values_list('individual_id', 'individual__individual_id', 'individual__family__family_id')
     missing_samples_by_family = defaultdict(list)
     for _, individual_id, family_id in previous_loaded_individuals:
@@ -279,22 +280,10 @@ def _parse_uploaded_pedigree(request_json, project=None):
         errors.append('The following samples are included in the pedigree file but are missing from the VCF: {}'.format(
                 ', '.join(missing_samples)))
 
-    records_by_family = defaultdict(list)
-    for record in pedigree_records:
-        records_by_family[record[JsonConstants.FAMILY_ID_COLUMN]].append(record)
-
-    no_affected_families = [
-        family_id for family_id, records in records_by_family.items()
-        if not any(record[JsonConstants.AFFECTED_COLUMN] == Individual.AFFECTED_STATUS_AFFECTED for record in records)
-    ]
-
-    if no_affected_families:
-        errors.append('The following families do not have any affected individuals: {}'.format(', '.join(no_affected_families)))
-
     if errors:
         raise ErrorsWarningsException(errors, [])
 
-    return pedigree_records, records_by_family
+    return pedigree_records
 
 
 def _trigger_add_workspace_data(project, pedigree_records, user, data_path, sample_type, previous_loaded_ids=None, get_pedigree_json=False):
