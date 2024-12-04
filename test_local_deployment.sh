@@ -8,7 +8,7 @@ docker compose up -d elasticsearch
 # This is not required to use docker compose locally, only for testing
 docker compose exec -T elasticsearch chmod 777 ./data
 docker compose exec -T elasticsearch mkdir ./data/postgres_init
-docker compose exec -T elasticsearch wget https://raw.githubusercontent.com/broadinstitute/seqr/master/deploy/postgres/initdb.sql -O ./data/postgres_init/initdb.sql
+docker compose cp ./deploy/postgres/initdb.sql elasticsearch:./data/postgres_init/initdb.sql
 
 docker compose up -d seqr
 docker compose logs postgres
