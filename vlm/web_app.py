@@ -12,6 +12,8 @@ JAVA_OPTS_XSS = os.environ.get('JAVA_OPTS_XSS')
 MACHINE_MEM = os.environ.get('MACHINE_MEM')
 JVM_MEMORY_FRACTION = 0.9
 
+LIFTOVER_DIR = f'{os.path.dirname(os.path.abspath(__file__))}/liftover_references'
+
 
 def _handle_exception(e, request):
     logger.error(f'{request.headers.get("From")} "{e}"')
@@ -49,8 +51,8 @@ async def init_web_app():
 
     rg37 = hl.get_reference(GENOME_VERSION_GRCh37)
     rg38 = hl.get_reference(GENOME_VERSION_GRCh38)
-    rg37.add_liftover('gs://hail-common/references/grch37_to_grch38.over.chain.gz', rg38)
-    rg38.add_liftover('gs://hail-common/references/grch38_to_grch37.over.chain.gz', rg37)
+    rg37.add_liftover(f'{LIFTOVER_DIR}/grch37_to_grch38.over.chain.gz', rg38)
+    rg38.add_liftover(f'{LIFTOVER_DIR}/grch38_to_grch37.over.chain.gz', rg37)
 
     app = web.Application(middlewares=[error_middleware], client_max_size=(1024 ** 2) * 10)
     app.add_routes([
