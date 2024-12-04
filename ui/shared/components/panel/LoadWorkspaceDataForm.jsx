@@ -194,7 +194,7 @@ const LoadWorkspaceDataForm = React.memo(({ params, onAddData, createProject, an
               <br />
               As a result, any requests for data to be loaded as of &nbsp;
               <b>{new Date(`${anvilLoadingDelayDate}T00:00`).toDateString()}</b>
-              &nbsp; will be delayed until the &nbsp;
+              &nbsp; may be delayed until the &nbsp;
               <b>
                 2nd week of January &nbsp;
                 {new Date(`${anvilLoadingDelayDate}T00:00`).getFullYear() + 1}

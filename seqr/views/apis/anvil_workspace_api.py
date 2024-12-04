@@ -331,7 +331,7 @@ def _trigger_add_workspace_data(project, pedigree_records, user, data_path, samp
         try:
             email_body = f"""Hi {user.get_full_name() or user.email},
             We have received your request to load data to seqr from AnVIL. Currently, the Broad Institute is holding an 
-            internal retreat or closed for the winter break so we are unable to load data until mid-January 
+            internal retreat or closed for the winter break so we may not be able to load data until mid-January 
             {loading_warning_date.year + 1}. We appreciate your understanding and support of our research team taking 
             some well-deserved time off and hope you also have a nice break.
             - The seqr team
