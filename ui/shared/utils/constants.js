@@ -1,5 +1,5 @@
 import React from 'react'
-import { Icon, Form, Label } from 'semantic-ui-react'
+import { Icon, Form, Label, Message } from 'semantic-ui-react'
 import flatten from 'lodash/flatten'
 
 import { validators } from '../components/form/FormHelpers'
@@ -21,6 +21,16 @@ export const ANVIL_URL = 'https://anvil.terra.bio'
 export const LOCAL_LOGIN_URL = '/login'
 
 export const VCF_DOCUMENTATION_URL = 'https://storage.googleapis.com/seqr-reference-data/seqr-vcf-info.pdf'
+
+export const LoadDataVCFMessage = isAnvil => (
+  <Message info compact>
+    In order to load your data to seqr, you must
+    {isAnvil ? ' have a joint called VCF available in your workspace. ' : ' use a joint called VCF.'}
+    For more information about generating and validating this file,
+    see &nbsp;
+    <b><a href={VCF_DOCUMENTATION_URL} target="_blank" rel="noreferrer">this documentation</a></b>
+  </Message>
+)
 
 export const GENOME_VERSION_37 = '37'
 export const GENOME_VERSION_38 = '38'

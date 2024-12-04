@@ -17,7 +17,7 @@ import {
   INDIVIDUAL_FIELD_SEX,
   INDIVIDUAL_FIELD_AFFECTED,
   SAMPLE_TYPE_OPTIONS,
-  VCF_DOCUMENTATION_URL,
+  LoadDataVCFMessage,
 } from 'shared/utils/constants'
 import { validateUploadedFile } from 'shared/components/form/XHRUploaderField'
 import BulkUploadForm from 'shared/components/form/BulkUploadForm'
@@ -182,12 +182,7 @@ const LoadWorkspaceDataForm = React.memo(({ params, onAddData, createProject, an
       {`Load data to seqr from AnVIL Workspace "${params.workspaceNamespace}/${params.workspaceName}"`}
     </Header>
     <Segment basic textAlign="center">
-      <Message info compact>
-        In order to load your data to seqr, you must have a joint called VCF available in your workspace. For more
-        information about generating and validating this file,
-        see &nbsp;
-        <b><a href={VCF_DOCUMENTATION_URL} target="_blank" rel="noreferrer">this documentation</a></b>
-      </Message>
+      <LoadDataVCFMessage isAnvil />
       {anvilLoadingDelayDate ? (
         <Message
           error
@@ -199,7 +194,7 @@ const LoadWorkspaceDataForm = React.memo(({ params, onAddData, createProject, an
               <br />
               As a result, any requests for data to be loaded as of &nbsp;
               <b>{new Date(`${anvilLoadingDelayDate}T00:00`).toDateString()}</b>
-              &nbsp; will be delayed until the &nbsp;
+              &nbsp; may be delayed until the &nbsp;
               <b>
                 2nd week of January &nbsp;
                 {new Date(`${anvilLoadingDelayDate}T00:00`).getFullYear() + 1}
