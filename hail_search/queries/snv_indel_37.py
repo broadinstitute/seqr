@@ -2,7 +2,7 @@ from collections import OrderedDict
 import hail as hl
 
 from hail_search.constants import CLINVAR_KEY, HGMD_KEY, HGMD_PATH_RANGES, \
-    GNOMAD_GENOMES_FIELD, PREFILTER_FREQ_CUTOFF, PATH_FREQ_OVERRIDE_CUTOFF, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, \
+    GNOMAD_GENOMES_FIELD, PREFILTER_FREQ_CUTOFF, PATH_FREQ_OVERRIDE_CUTOFF, PATHOGENICTY_HGMD_SORT_KEY, \
     SPLICE_AI_FIELD, GENOME_VERSION_GRCh37
 from hail_search.queries.base import PredictionPath, QualityFilterFormat
 from hail_search.queries.mito import MitoHailTableQuery
