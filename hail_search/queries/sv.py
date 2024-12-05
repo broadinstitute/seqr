@@ -133,9 +133,9 @@ class SvHailTableQuery(BaseHailTableQuery):
             )),
         }
 
-    def _import_variant_projects_ht(self, project_samples, variant_id):
-        parsed_project_samples, _ = self._parse_sample_data(project_samples)
-        projects_ht = super()._import_variant_projects_ht(parsed_project_samples, variant_id)
+    def _import_variant_projects_ht(self, variant_id, sample_data=None, **kwargs):
+        project_samples, _ = self._parse_sample_data(sample_data)
+        projects_ht = super()._import_variant_projects_ht(variant_id, project_samples=project_samples)
 
         annotation_fields = self.annotation_fields(include_genotype_overrides=False)
         return projects_ht.select(**{k: annotation_fields[k](projects_ht) for k in [FAMILY_GUID_FIELD, GENOTYPES_FIELD]})

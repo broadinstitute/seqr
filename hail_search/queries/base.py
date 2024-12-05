@@ -1238,21 +1238,21 @@ class BaseHailTableQuery(object):
 
         return formatted.aggregate(hl.agg.take(formatted.row, len(variant_ids)))
 
-    def _import_variant_projects_ht(self, project_samples, variant_id):
+    def _import_variant_projects_ht(self, variant_id, project_samples=None, **kwargs):
         projects_ht, _ = self._import_and_filter_multiple_project_hts(project_samples, n_partitions=1)
         return self._filter_variant_ids(projects_ht, [variant_id]).key_by()
 
-    def _get_variant_project_data(self, variant, sample_data, variant_id):
-        projects_ht = self._import_variant_projects_ht(sample_data, variant_id)
+    def _get_variant_project_data(self, variant_id, **kwargs):
+        projects_ht = self._import_variant_projects_ht(variant_id, **kwargs)
         project_data = projects_ht.aggregate(hl.agg.take(projects_ht.row, 1))
         return project_data[0] if project_data else {}
 
-    def lookup_variant(self, variant_id, sample_data):
+    def lookup_variant(self, variant_id, **kwargs):
         variants = self.lookup_variants([variant_id], additional_annotations=self._lookup_variant_annotations())
         if not variants:
             raise HTTPNotFound()
         variant = dict(variants[0])
-        variant.update(self._get_variant_project_data(variant, sample_data, variant_id))
+        variant.update(self._get_variant_project_data(variant_id, variant=variant, **kwargs))
         return variant
 
     @staticmethod
