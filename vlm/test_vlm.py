@@ -44,7 +44,7 @@ class VlmTestCase(AioHTTPTestCase):
             },
             'responseSummary': {
                 'exists': True,
-                'total': 37,
+                'total': 30,
             },
             'response': {
                 'resultSets': [
@@ -88,7 +88,7 @@ class VlmTestCase(AioHTTPTestCase):
             },
             'responseSummary': {
                 'exists': True,
-                'total': 4711,
+                'total': 3203,
             },
             'response': {
                 'resultSets': [
