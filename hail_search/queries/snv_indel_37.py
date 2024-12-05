@@ -1,8 +1,8 @@
 from collections import OrderedDict
 import hail as hl
 
-from hail_search.constants import CLINVAR_KEY, CLINVAR_MITO_KEY, HGMD_KEY, HGMD_PATH_RANGES, \
-    GNOMAD_GENOMES_FIELD, PREFILTER_FREQ_CUTOFF, PATH_FREQ_OVERRIDE_CUTOFF, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, \
+from hail_search.constants import CLINVAR_KEY, HGMD_KEY, HGMD_PATH_RANGES, \
+    GNOMAD_GENOMES_FIELD, PREFILTER_FREQ_CUTOFF, PATH_FREQ_OVERRIDE_CUTOFF, PATHOGENICTY_HGMD_SORT_KEY, \
     SPLICE_AI_FIELD, GENOME_VERSION_GRCh37
 from hail_search.queries.base import PredictionPath, QualityFilterFormat
 from hail_search.queries.mito import MitoHailTableQuery
@@ -28,10 +28,10 @@ class SnvIndelHailTableQuery37(MitoHailTableQuery):
         GNOMAD_GENOMES_FIELD: {'filter_af': 'AF_POPMAX_OR_GLOBAL', 'het': None, 'sort': 'gnomad'},
     }
     PREDICTION_FIELDS_CONFIG = {
-        'cadd': PredictionPath('cadd', 'PHRED'),
+        'cadd': PredictionPath('dbnsfp', 'CADD_phred'),
         'eigen': PredictionPath('eigen', 'Eigen_phred'),
-        'mpc': PredictionPath('mpc', 'MPC'),
-        'primate_ai': PredictionPath('primate_ai', 'score'),
+        'mpc': PredictionPath('dbnsfp', 'MPC_score'),
+        'primate_ai': PredictionPath('dbnsfp', 'PrimateAI_score'),
         SPLICE_AI_FIELD: PredictionPath(SPLICE_AI_FIELD, 'delta_score'),
         'splice_ai_consequence': PredictionPath(SPLICE_AI_FIELD, 'splice_consequence'),
         'mut_taster': PredictionPath('dbnsfp', 'MutationTaster_pred'),
@@ -43,7 +43,6 @@ class SnvIndelHailTableQuery37(MitoHailTableQuery):
         **MitoHailTableQuery.PATHOGENICITY_FILTERS,
         HGMD_KEY: ('class', HGMD_PATH_RANGES),
     }
-    PATHOGENICITY_FIELD_MAP = {}
     ANNOTATION_OVERRIDE_FIELDS = [SPLICE_AI_FIELD]
 
     CORE_FIELDS = MitoHailTableQuery.CORE_FIELDS + ['CAID']
@@ -60,11 +59,9 @@ class SnvIndelHailTableQuery37(MitoHailTableQuery):
             'format_value': lambda value: value.region_types.first(),
         },
     }
-    ENUM_ANNOTATION_FIELDS[CLINVAR_KEY] = ENUM_ANNOTATION_FIELDS.pop(CLINVAR_MITO_KEY)
 
     SORTS = {
         **MitoHailTableQuery.SORTS,
-        PATHOGENICTY_SORT_KEY: lambda r: [MitoHailTableQuery.CLINVAR_SORT(CLINVAR_KEY, r)],
         PATHOGENICTY_HGMD_SORT_KEY: lambda r: [MitoHailTableQuery.CLINVAR_SORT(CLINVAR_KEY, r), r.hgmd.class_id],
     }
 

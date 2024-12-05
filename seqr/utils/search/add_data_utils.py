@@ -6,11 +6,13 @@ from reference_data.models import GENOME_VERSION_LOOKUP
 from seqr.models import Sample, Individual, Project
 from seqr.utils.communication_utils import send_project_notification, safe_post_to_slack
 from seqr.utils.logging_utils import SeqrLogger
+from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.search.utils import backend_specific_call
 from seqr.utils.search.elasticsearch.es_utils import validate_es_index_metadata_and_get_samples
 from seqr.views.utils.airtable_utils import AirtableSession, ANVIL_REQUEST_TRACKING_TABLE
 from seqr.views.utils.dataset_utils import match_and_update_search_samples, load_mapping_file
 from seqr.views.utils.export_utils import write_multiple_files
+from seqr.views.utils.pedigree_info_utils import get_no_affected_families
 from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, BASE_URL, ANVIL_UI_URL, \
     SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL
 
@@ -144,14 +146,23 @@ def _upload_data_loading_files(projects: list[Project], user: User, file_path: s
         'Individual_ID': F('individual_id'),
         'Paternal_ID': F('father__individual_id'), 'Maternal_ID': F('mother__individual_id'), 'Sex': F('sex'),
     })
-    annotations = {'project': F('family__project__guid'), **file_annotations}
+    annotations = {'project': F('family__project__guid'), 'affected_status': F('affected'), **file_annotations}
     individual_filter = {'id__in': individual_ids} if individual_ids else {'family__project__in': projects}
     data = Individual.objects.filter(**individual_filter).order_by('family_id', 'individual_id').values(
         **dict(annotations))
 
     data_by_project = defaultdict(list)
+    affected_by_family = defaultdict(list)
     for row in data:
         data_by_project[row.pop('project')].append(row)
+        affected_by_family[row['Family_GUID']].append(row.pop('affected_status'))
+
+    no_affected_families =get_no_affected_families(affected_by_family)
+    if no_affected_families:
+        families = ', '.join(sorted(no_affected_families))
+        raise ErrorsWarningsException(errors=[
+            f'The following families have no affected individuals and can not be loaded to seqr: {families}',
+        ])
 
     header = list(file_annotations.keys())
     files = [(f'{project_guid}_pedigree', header, rows) for project_guid, rows in data_by_project.items()]

@@ -75,12 +75,11 @@ const FAMILY_CORE_EXPORT_DATA = FAMILY_BULK_EDIT_EXPORT_DATA.slice(1, 5)
 const FamiliesBulkForm = React.memo(({ user, ...props }) => (
   <EditBulkForm
     name="families"
-    actionDescription="bulk-add or edit families"
+    actionDescription="bulk edit families"
     details={
       <div>
-        If the Family ID in the table matches those of an existing family in the project,
-        the matching families&apos;s data will be updated with values from the table. Otherwise, a new family
-        will be created. To edit an existing families&apos;s ID include a &nbsp;
+        The Family ID in the table must match those of an existing family in the project.
+        To edit an existing families&apos;s ID include a &nbsp;
         <b>Previous Family ID</b>
         &nbsp; column.
       </div>

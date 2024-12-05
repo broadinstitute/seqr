@@ -13,4 +13,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Run test_local_deployment script
-        run: ./test_local_deployment.sh
+        run: |
+          mkdir ./data
+          chmod 777 ./data
+          ./test_local_deployment.sh

@@ -175,7 +175,7 @@ class AirtableSession(object):
                 re.match(f'{BASE_URL}project/([^/]+)/project_page', url)
                 for url in sample.get('SeqrProject', []) if url
             ]
-            if any(pm is None for pm in project_matches) or (1 < len(project_matches) < len(sample['PDOStatus'])):
+            if any(pm is None for pm in project_matches) or (len(project_matches) < len(sample['PDOStatus']) and len(project_matches) != 1):
                 invalid_pdo_samples.append(sample_id)
                 continue
 

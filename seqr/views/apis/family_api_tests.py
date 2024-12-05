@@ -230,8 +230,7 @@ class FamilyAPITest(object):
         req_values = {
             'families': [
                 {'familyGuid': FAMILY_GUID, 'description': 'Test description 1'},
-                {PREVIOUS_FAMILY_ID_FIELD: '2', FAMILY_ID_FIELD: '22', 'description': 'Test description 2'},
-                {FAMILY_ID_FIELD: 'new_family', 'description': 'Test descriptions for a new family'}
+                {'familyGuid': FAMILY_GUID2, PREVIOUS_FAMILY_ID_FIELD: '2', FAMILY_ID_FIELD: '22', 'description': 'Test description 2'},
             ]
         }
         response = self.client.post(url, content_type='application/json',
@@ -243,9 +242,7 @@ class FamilyAPITest(object):
         self.assertEqual(response_json['familiesByGuid'][FAMILY_GUID]['description'], 'Test description 1')
         self.assertEqual(response_json['familiesByGuid']['F000002_2'][FAMILY_ID_FIELD], '22')
         self.assertEqual(response_json['familiesByGuid']['F000002_2']['description'], 'Test description 2')
-        new_guids = set(response_json['familiesByGuid'].keys()) - set([FAMILY_GUID, 'F000002_2'])
-        new_guid = new_guids.pop()
-        self.assertEqual(response_json['familiesByGuid'][new_guid]['description'], 'Test descriptions for a new family')
+        self.assertSetEqual(set(response_json['familiesByGuid'].keys()), set([FAMILY_GUID, 'F000002_2']))
 
         # Test PM permission
         url = reverse(edit_families_handler, args=[PM_REQUIRED_PROJECT_GUID])
@@ -474,12 +471,13 @@ class FamilyAPITest(object):
 
         data = b'Family ID	Previous Family ID	Display Name	Description	Coded Phenotype\n\
         "1_renamed"	"1_old"	"1"	"family one description"	""\n\
-        "2"	""	"2"	"family two description"	""'
+        "22"	""	"2"	"family two description"	""'
         response = self.client.post(url, {'f': SimpleUploadedFile("1000_genomes demo_families.tsv", data)})
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.reason_phrase, 'Invalid input')
         self.assertDictEqual(response.json(), {
-            'errors': ['Could not find families with the following previous IDs: 1_old'], 'warnings': []})
+            'errors': ['Could not find families with the following previous IDs: 1_old',
+                       'Could not find families with the following current IDs: 22'], 'warnings': []})
 
         # send valid request
         data = b'Family ID	Previous Family ID	Display Name	Description	Phenotype Description	MONDO ID\n\
@@ -511,8 +509,8 @@ class FamilyAPITest(object):
         self.assertEqual(family_2['familyId'], '2')
 
         internal_field_data = b'Family ID	External Data\n\
-"11"	""\n\
-"12"	"ONT lrGS; BioNano"'
+"3"	""\n\
+"2"	"ONT lrGS; BioNano"'
         response = self.client.post(url,  {'f': SimpleUploadedFile('families.tsv', internal_field_data)})
         self.assertEqual(response.status_code, 200)
         response = self.client.post(
@@ -532,6 +530,7 @@ class FamilyAPITest(object):
         mock_pm_group.resolve_expression.return_value = 'project-managers'
         mock_pm_group.__eq__.side_effect = lambda s: s == 'project-managers'
 
+        internal_field_data = internal_field_data.replace(b'3', b'11').replace(b'2', b'12')
         response = self.client.post(url,  {'f': SimpleUploadedFile('families.tsv', internal_field_data)})
         self.assertEqual(response.status_code, 200)
         response = self.client.post(
