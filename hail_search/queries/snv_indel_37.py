@@ -133,3 +133,17 @@ class SnvIndelHailTableQuery37(MitoHailTableQuery):
     @staticmethod
     def _stat_has_non_ref(s):
         return (s.het_samples > 0) | (s.hom_samples > 0)
+
+    @staticmethod
+    def _lookup_variant_annotations():
+        return {'liftover_locus': lambda r: r.rg38_locus}
+
+    def _get_variant_project_data(self, variant, sample_data, variant_id):
+        project_data = super()._get_variant_project_data(variant, sample_data, variant_id)
+        liftover_locus = variant.pop('liftover_locus')
+        if liftover_locus:
+            # TODO change build version
+            lift_project_data = super()._get_variant_project_data(variant, sample_data, variant_id)
+            project_data['familyGenotypes'].update(lift_project_data['familyGenotypes'])
+
+        return project_data

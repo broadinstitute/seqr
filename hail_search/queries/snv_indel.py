@@ -96,3 +96,7 @@ class SnvIndelHailTableQuery(SnvIndelHailTableQuery37):
                 )
 
         return annotation_filters
+
+    @staticmethod
+    def _lookup_variant_annotations():
+        return {'liftover_locus': lambda r: r.rg37_locus}
