@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useRef } from 'react'
 import { BaseSemanticInput } from 'shared/components/form/Inputs'
 import { useSelector } from 'react-redux'
 import { useFormState } from 'react-final-form'
@@ -7,9 +7,9 @@ import { moiToMoiInitials, formatPanelAppItems } from 'shared/utils/panelAppUtil
 import PropTypes from 'prop-types'
 
 const PaLocusListSelector = ({ locus, onChange, color, value, ...props }) => {
-  const [prevValue, setPrevValue] = useState(value)
   const locusList = useSelector(state => getLocusListsWithGenes(state)[locus.locusListGuid])
   const selectedMOIs = Object.values(useFormState().values?.search?.locus?.selectedMOIs ?? {}) || []
+  const prevValue = useRef(value)
 
   const panelAppItems = formatPanelAppItems(
     locusList?.items?.filter((item) => {
@@ -22,11 +22,12 @@ const PaLocusListSelector = ({ locus, onChange, color, value, ...props }) => {
     }),
   )
 
-  // TODO this call to onChange during render might be an issue
-  if (panelAppItems[color] !== prevValue) {
-    setPrevValue(panelAppItems[color])
-    onChange(panelAppItems[color])
-  }
+  useEffect(() => {
+    if (panelAppItems[color] !== prevValue.current) {
+      prevValue.current = panelAppItems[color]
+      onChange(panelAppItems[color])
+    }
+  })
 
   return (
     <BaseSemanticInput
