@@ -35,16 +35,23 @@ ASSEMBLY_LOOKUP = {
 
 def get_variant_match(query: dict) -> dict:
     chrom, pos, ref, alt, genome_build = _parse_match_query(query)
-
     locus = hl.locus(chrom, pos, reference_genome=genome_build)
-    interval = hl.eval(hl.interval(locus, locus, includes_start=True, includes_end=True))
-    ht = hl.read_table(
-        f'{VLM_DATA_DIR}/{genome_build}/SNV_INDEL/annotations.ht', _intervals=[interval], _filter_intervals=True,
-    )
-    ht = ht.filter(ht.alleles==hl.array([ref, alt]))
-    counts = ht.aggregate(hl.agg.take(ht.gt_stats, 1))
 
-    return _format_results(counts, genome_build, f'{chrom}-{pos}-{ref}-{alt}')
+    ac, hom = _get_variant_counts(locus, ref, alt, genome_build)
+
+    liftover_genome_build = GENOME_VERSION_GRCh38 if genome_build == GENOME_VERSION_GRCh37 else GENOME_VERSION_GRCh37
+    liftover_locus = hl.liftover(locus, liftover_genome_build)
+    lift_ac, lift_hom = _get_variant_counts(liftover_locus, ref, alt, liftover_genome_build)
+
+    if lift_ac and not ac:
+        lifted = hl.eval(liftover_locus)
+        chrom = lifted.contig
+        pos = lifted.position
+        genome_build = liftover_genome_build
+    genome_build = genome_build.replace('GRCh', '')
+    url = f'{SEQR_BASE_URL}summary_data/variant_lookup?genomeVersion={genome_build}&variantId={chrom}-{pos}-{ref}-{alt}'
+
+    return _format_results(ac+lift_ac, hom+lift_hom, url)
 
 
 def _parse_match_query(query: dict) -> tuple[str, int, str, str, str]:
@@ -72,22 +79,34 @@ def _parse_match_query(query: dict) -> tuple[str, int, str, str, str]:
     return chrom, start, query['referenceBases'], query['alternateBases'], genome_build
 
 
-def _format_results(counts: hl.Struct, genome_build: str, variant_id: str) -> dict:
+def _get_variant_counts(locus: hl.LocusExpression, ref: str, alt: str, genome_build: str) -> hl.Struct:
+    interval = hl.eval(hl.interval(locus, locus, includes_start=True, includes_end=True))
+    ht = hl.read_table(
+        f'{VLM_DATA_DIR}/{genome_build}/SNV_INDEL/annotations.ht', _intervals=[interval], _filter_intervals=True,
+    )
+    ht = ht.filter(ht.alleles == hl.array([ref, alt]))
+
+    counts = ht.aggregate(hl.agg.take(ht.gt_stats, 1))
+    return (counts[0].AC, counts[0].hom) if counts else (0, 0)
+
+
+def _format_results(ac: int, hom: int, url: str) -> dict:
+    total = ac - hom # Homozygotes count twice toward the total AC
     result_sets = [
-        ('Homozygous', counts[0].hom),
-        ('Heterozygous', counts[0].AC - (counts[0].hom * 2)),
-    ] if counts else []
+        ('Homozygous', hom),
+        ('Heterozygous', total - hom),
+    ] if ac else []
     return {
         'beaconHandovers': [
             {
                 'handoverType': BEACON_HANDOVER_TYPE,
-                'url': f'{SEQR_BASE_URL}summary_data/variant_lookup?genomeVersion={genome_build.replace("GRCh", "")}&variantId={variant_id}',
+                'url': url,
             }
         ],
         'meta': BEACON_META,
         'responseSummary': {
-            'exists': bool(counts),
-            'total': (counts[0].AC - counts[0].hom) if counts else 0
+            'exists': bool(ac),
+            'total': total
         },
         'response': {
             'resultSets': [
