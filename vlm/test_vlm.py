@@ -66,10 +66,7 @@ class VlmTestCase(AioHTTPTestCase):
             }
         })
 
-        async with self.client.request('GET', '/vlm/match?assemblyId=hg19&referenceName=chr7&start=143270172&referenceBases=A&alternateBases=G') as resp:
-            self.assertEqual(resp.status, 200)
-            resp_json = await resp.json()
-        self.assertDictEqual(resp_json, {
+        only_37_response = {
             'beaconHandovers': [
                 {
                     'handoverType': {
@@ -111,7 +108,17 @@ class VlmTestCase(AioHTTPTestCase):
                     },
                 ],
             }
-        })
+        }
+        async with self.client.request('GET', '/vlm/match?assemblyId=hg19&referenceName=chr7&start=143270172&referenceBases=A&alternateBases=G') as resp:
+            self.assertEqual(resp.status, 200)
+            resp_json = await resp.json()
+        self.assertDictEqual(resp_json, only_37_response)
+
+        async with self.client.request('GET', '/vlm/match?assemblyId=GRCh38&referenceName=chr7&start=143573079&referenceBases=A&alternateBases=G') as resp:
+            self.assertEqual(resp.status, 200)
+            resp_json = await resp.json()
+        only_37_response['beaconHandovers'][0]['url'] = 'https://test-seqr.org/summary_data/variant_lookup?genomeVersion=38&variantId=chr7-143573079-A-G'
+        self.assertDictEqual(resp_json, only_37_response)
 
         async with self.client.request('GET', '/vlm/match?assemblyId=hg38&referenceName=chr7&start=143270172&referenceBases=A&alternateBases=G') as resp:
             self.assertEqual(resp.status, 200)
