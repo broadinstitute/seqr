@@ -1238,7 +1238,7 @@ class BaseHailTableQuery(object):
 
     def _import_variant_projects_ht(self, project_samples, variant_id):
         projects_ht, _ = self._import_and_filter_multiple_project_hts(project_samples, n_partitions=1)
-        return projects_ht.key_by()
+        return self._filter_variant_ids(projects_ht, [variant_id]).key_by()
 
     def lookup_variant(self, variant_id, sample_data):
         variants = self.lookup_variants([variant_id])
