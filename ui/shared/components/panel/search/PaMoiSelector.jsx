@@ -4,7 +4,7 @@ import { connect } from 'react-redux'
 
 import { getLocusListsWithGenes } from 'redux/selectors'
 import { Multiselect } from 'shared/components/form/Inputs'
-import { moiToMoiInitials, formatPanelAppItems } from 'shared/utils/panelAppUtils'
+import { moiToMoiInitials } from 'shared/utils/panelAppUtils'
 import { PANEL_APP_MOI_OPTIONS } from 'shared/utils/constants'
 
 const EMPTY_LIST = []
@@ -17,20 +17,8 @@ class PaMoiDropdown extends React.PureComponent {
   }
 
   handleMOIselect = (selectedMOIs) => {
-    const { locusList, onChange } = this.props
-
-    const panelAppItems = formatPanelAppItems(
-      locusList.items?.filter((item) => {
-        let result = true
-        const initials = moiToMoiInitials(item.pagene?.modeOfInheritance, false)
-        if (selectedMOIs && selectedMOIs.length !== 0) {
-          result = selectedMOIs.some(moi => initials.includes(moi))
-        }
-        return result
-      }),
-    )
-
-    onChange({ ...panelAppItems })
+    const { onChange } = this.props
+    onChange(selectedMOIs)
   }
 
   moiOptions = () => {
@@ -49,6 +37,7 @@ class PaMoiDropdown extends React.PureComponent {
     }))
   }
 
+  // TODO use previous selected MOIs on first render
   render() {
     const { selectedMOIs, label, width, locusList } = this.props || []
     const disabled = !locusList?.items
