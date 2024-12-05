@@ -14,6 +14,7 @@ from reference_data.management.commands.update_gene_cn_sensitivity import CNSens
 from reference_data.management.commands.update_gencc import GenCCReferenceDataHandler
 from reference_data.management.commands.update_clingen import ClinGenReferenceDataHandler
 from reference_data.management.commands.update_refseq import RefseqReferenceDataHandler
+from reference_data.models import GeneInfo
 
 
 logger = logging.getLogger(__name__)
@@ -52,6 +53,9 @@ class Command(BaseCommand):
         update_failed = []
 
         if not options["skip_gencode"]:
+            if GeneInfo.objects.count() > 0:
+                logger.info('Skipping update_all_reference_data because GeneInfo is already loaded')
+                return
             # Download latest version first, and then add any genes from old releases not included in the latest release
             # Old gene ids are used in the gene constraint table and other datasets, as well as older sequencing data
             update_gencode(LATEST_GENCODE_RELEASE, reset=True)

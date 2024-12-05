@@ -5,7 +5,6 @@ import { Route, Switch } from 'react-router-dom'
 
 import { getUser, getElasticsearchEnabled } from 'redux/selectors'
 import { Error404, Error401 } from 'shared/components/page/Errors'
-import { SimplePageHeader } from 'shared/components/page/PageHeaderLayout'
 
 import AddIGV from './components/AddIGV'
 import ElasticsearchStatus from './components/ElasticsearchStatus'
@@ -58,16 +57,10 @@ const dataManagementPages = (isDataManager, elasticsearchEnabled) => {
   return elasticsearchEnabled ? ES_DATA_MANAGEMENT_PAGES : HAIL_SEARCH_DATA_MANAGEMENT_PAGES
 }
 
-const mapPageHeaderStateToProps = state => ({
-  pages: dataManagementPages(getUser(state).isDataManager, getElasticsearchEnabled(state)),
-})
-
-export const DataManagementPageHeader = connect(mapPageHeaderStateToProps)(SimplePageHeader)
-
-const DataManagement = ({ match, user, elasticsearchEnabled }) => (
+const DataManagement = ({ match, user, pages }) => (
   (user.isDataManager || user.isPm) ? (
     <Switch>
-      {dataManagementPages(user.isDataManager, elasticsearchEnabled).map(({ path, params, component }) => (
+      {pages.map(({ path, params, component }) => (
         <Route key={path} path={`${match.url}/${path}${params || ''}`} component={component} />))}
       <Route exact path={match.url} component={null} />
       <Route component={Error404} />
@@ -78,12 +71,15 @@ const DataManagement = ({ match, user, elasticsearchEnabled }) => (
 DataManagement.propTypes = {
   user: PropTypes.object,
   match: PropTypes.object,
-  elasticsearchEnabled: PropTypes.bool,
+  pages: PropTypes.arrayOf(PropTypes.object),
 }
 
-const mapStateToProps = state => ({
-  user: getUser(state),
-  elasticsearchEnabled: getElasticsearchEnabled(state),
-})
+export const mapStateToProps = (state) => {
+  const user = getUser(state)
+  return {
+    user,
+    pages: dataManagementPages(user.isDataManager, getElasticsearchEnabled(state)),
+  }
+}
 
 export default connect(mapStateToProps)(DataManagement)
