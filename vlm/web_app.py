@@ -51,8 +51,10 @@ async def init_web_app():
 
     rg37 = hl.get_reference(GENOME_VERSION_GRCh37)
     rg38 = hl.get_reference(GENOME_VERSION_GRCh38)
-    rg37.add_liftover(f'{LIFTOVER_DIR}/grch37_to_grch38.over.chain.gz', rg38)
-    rg38.add_liftover(f'{LIFTOVER_DIR}/grch38_to_grch37.over.chain.gz', rg37)
+    if not rg37.has_liftover(rg38):
+        rg37.add_liftover(f'{LIFTOVER_DIR}/grch37_to_grch38.over.chain.gz', rg38)
+    if not rg38.has_liftover(rg37):
+        rg38.add_liftover(f'{LIFTOVER_DIR}/grch38_to_grch37.over.chain.gz', rg37)
 
     app = web.Application(middlewares=[error_middleware], client_max_size=(1024 ** 2) * 10)
     app.add_routes([
