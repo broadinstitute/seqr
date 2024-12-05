@@ -87,7 +87,7 @@ def _format_results(counts: hl.Struct, genome_build: str, variant_id: str) -> di
         'meta': BEACON_META,
         'responseSummary': {
             'exists': bool(counts),
-            'total': counts[0].AC if counts else 0
+            'total': (counts[0].AC - counts[0].hom) if counts else 0
         },
         'response': {
             'resultSets': [
