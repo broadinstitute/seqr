@@ -75,7 +75,7 @@ def _parse_match_query(query: dict) -> tuple[str, int, str, str, str]:
 def _format_results(counts: hl.Struct, genome_build: str, variant_id: str) -> dict:
     result_sets = [
         ('Homozygous', counts[0].hom),
-        ('Heterozygous', counts[0].AC - counts[0].hom),
+        ('Heterozygous', counts[0].AC - (counts[0].hom * 2)),
     ] if counts else []
     return {
         'beaconHandovers': [
