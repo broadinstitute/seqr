@@ -43,7 +43,15 @@ def get_variant_match(query: dict) -> dict:
     liftover_locus = hl.liftover(locus, liftover_genome_build)
     lift_ac, lift_hom = _get_variant_counts(liftover_locus, ref, alt, liftover_genome_build)
 
-    return _format_results(ac+lift_ac, hom+lift_hom, genome_build, f'{chrom}-{pos}-{ref}-{alt}')
+    if lift_ac and not ac:
+        lifted = hl.eval(liftover_locus)
+        chrom = lifted.contig
+        pos = lifted.position
+        genome_build = liftover_genome_build
+    genome_build = genome_build.replace('GRCh', '')
+    url = f'{SEQR_BASE_URL}summary_data/variant_lookup?genomeVersion={genome_build}&variantId={chrom}-{pos}-{ref}-{alt}'
+
+    return _format_results(ac+lift_ac, hom+lift_hom, url)
 
 
 def _parse_match_query(query: dict) -> tuple[str, int, str, str, str]:
@@ -82,7 +90,7 @@ def _get_variant_counts(locus: hl.LocusExpression, ref: str, alt: str, genome_bu
     return (counts[0].AC, counts[0].hom) if counts else (0, 0)
 
 
-def _format_results(ac: int, hom: int, genome_build: str, variant_id: str) -> dict:
+def _format_results(ac: int, hom: int, url: str) -> dict:
     result_sets = [
         ('Homozygous', hom),
         ('Heterozygous', ac - hom),
@@ -91,7 +99,7 @@ def _format_results(ac: int, hom: int, genome_build: str, variant_id: str) -> di
         'beaconHandovers': [
             {
                 'handoverType': BEACON_HANDOVER_TYPE,
-                'url': f'{SEQR_BASE_URL}summary_data/variant_lookup?genomeVersion={genome_build.replace("GRCh", "")}&variantId={variant_id}',
+                'url': url,
             }
         ],
         'meta': BEACON_META,
