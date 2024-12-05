@@ -138,12 +138,12 @@ class SnvIndelHailTableQuery37(MitoHailTableQuery):
     def _lookup_variant_annotations():
         return {'liftover_locus': lambda r: r.rg38_locus}
 
-    def _get_variant_project_data(self, variant, sample_data, variant_id):
-        project_data = super()._get_variant_project_data(variant, sample_data, variant_id)
+    def _get_variant_project_data(self, variant_id, variant=None, **kwargs):
+        project_data = super()._get_variant_project_data(variant_id, **kwargs)
         liftover_locus = variant.pop('liftover_locus')
         if liftover_locus:
             # TODO change build version
-            lift_project_data = super()._get_variant_project_data(variant, sample_data, variant_id)
+            lift_project_data = super()._get_variant_project_data(variant_id, **kwargs)
             project_data['familyGenotypes'].update(lift_project_data['familyGenotypes'])
 
         return project_data
