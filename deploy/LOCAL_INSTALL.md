@@ -30,6 +30,8 @@ The steps below describe how to create a new empty seqr instance with a single A
 SEQR_DIR=$(pwd)
 
 wget https://raw.githubusercontent.com/broadinstitute/seqr/master/docker-compose.yml
+wget https://raw.githubusercontent.com/broadinstitute/seqr/master/deploy/postgres/initdb.sql
+mv initdb.sql ./data/postgres_init/initdb.sql
 
 docker compose up -d seqr   # start up the seqr docker image in the background after also starting other components it depends on (postgres, redis, elasticsearch). This may take 10+ minutes.
 docker compose logs -f seqr  # (optional) continuously print seqr logs to see when it is done starting up or if there are any errors. Type Ctrl-C to exit from the logs. 

@@ -15,6 +15,7 @@ import {
   DATASET_TYPE_MITO_CALLS,
   DATASET_TYPE_SNV_INDEL_CALLS,
   GENOME_VERSION_FIELD,
+  LoadDataVCFMessage,
 } from 'shared/utils/constants'
 
 const formatProjectOption = opt => ({
@@ -114,12 +115,15 @@ const MULTI_DATA_TYPE_LOAD_DATA_PAGES = [MULTI_DATA_TYPE_CALLSET_PAGE, ...ADDITI
 const formatSubmitUrl = () => '/api/data_management/load_data'
 
 const LoadData = ({ user }) => (
-  <FormWizard
-    pages={user.isAnvil ? MULTI_DATA_TYPE_LOAD_DATA_PAGES : LOAD_DATA_PAGES}
-    formatSubmitUrl={formatSubmitUrl}
-    successMessage="Data loading has been triggered"
-    noModal
-  />
+  <div>
+    {!user.isAnvil && <LoadDataVCFMessage isAnvil={false} />}
+    <FormWizard
+      pages={user.isAnvil ? MULTI_DATA_TYPE_LOAD_DATA_PAGES : LOAD_DATA_PAGES}
+      formatSubmitUrl={formatSubmitUrl}
+      successMessage="Data loading has been triggered"
+      noModal
+    />
+  </div>
 )
 
 LoadData.propTypes = {

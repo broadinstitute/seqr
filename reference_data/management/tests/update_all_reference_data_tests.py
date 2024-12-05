@@ -11,6 +11,7 @@ from reference_data.management.commands.update_gene_cn_sensitivity import CNSens
 from reference_data.management.commands.update_gencc import GenCCReferenceDataHandler
 from reference_data.management.commands.update_clingen import ClinGenReferenceDataHandler
 from reference_data.management.commands.update_refseq import RefseqReferenceDataHandler
+from reference_data.models import GeneInfo
 
 
 def omim_exception(omim_key):
@@ -78,7 +79,15 @@ class UpdateAllReferenceDataTest(TestCase):
             call_command('update_all_reference_data')
         self.assertEqual(str(err.exception), 'Error: one of the arguments --omim-key --use-cached-omim --skip-omim is required')
 
+        # Test update is skipped when data is already loaded
+        self.mock_update_gencode.assert_not_called()
+        self.mock_omim.assert_not_called()
+        self.mock_cached_omim.assert_not_called()
+        self.mock_update_records.assert_not_called()
+        self.mock_update_hpo.assert_not_called()
+
         # Test update all gencode, no skips, fail primate_ai and mgi
+        GeneInfo.objects.all().delete()
         call_command('update_all_reference_data', '--omim-key=test_key')
 
         calls = [
