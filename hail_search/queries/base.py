@@ -1240,15 +1240,15 @@ class BaseHailTableQuery(object):
         projects_ht, _ = self._import_and_filter_multiple_project_hts(project_samples, n_partitions=1)
         return self._filter_variant_ids(projects_ht, [variant_id]).key_by()
 
-    def lookup_variant(self, variant_id, sample_data=None):
+    def _get_variant_project_data(self, variant_id, **kwargs):
+        projects_ht = self._import_variant_projects_ht(variant_id, **kwargs)
+        project_data = projects_ht.aggregate(hl.agg.take(projects_ht.row, 1))
+        return project_data[0] if project_data else {}
+
+    def lookup_variant(self, variant_id, **kwargs):
         variants = self.lookup_variants([variant_id])
         if not variants:
             raise HTTPNotFound()
         variant = dict(variants[0])
-
-        projects_ht = self._import_variant_projects_ht(variant_id, sample_data=sample_data)
-        project_data = projects_ht.aggregate(hl.agg.take(projects_ht.row, 1))
-        if project_data:
-            variant.update(project_data[0])
-
+        variant.update(self._get_variant_project_data(variant_id, **kwargs))
         return variant
