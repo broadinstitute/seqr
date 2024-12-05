@@ -1,6 +1,6 @@
 import PropTypes from 'prop-types'
-import React from 'react'
-import { connect } from 'react-redux'
+import React, { useCallback, useEffect, useRef } from 'react'
+import { useSelector } from 'react-redux'
 
 import { getLocusListsWithGenes } from 'redux/selectors'
 import { Multiselect } from 'shared/components/form/Inputs'
@@ -9,57 +9,56 @@ import { PANEL_APP_MOI_OPTIONS } from 'shared/utils/constants'
 
 const EMPTY_LIST = []
 
-class PaMoiDropdown extends React.PureComponent {
+const PaMoiSelector = ({ locus, onChange, value, ...props }) => {
+  const locusList = useSelector(state => getLocusListsWithGenes(state)[locus.locusListGuid])
 
-  static propTypes = {
-    locusList: PropTypes.object,
-    onChange: PropTypes.func,
-  }
+  const moiInitials = locusList?.items?.reduce((acc, gene) => {
+    moiToMoiInitials(gene.pagene?.modeOfInheritance, false).forEach((initial) => {
+      acc[initial] = true
+    })
+    return acc
+  }, {}) || {}
 
-  handleMOIselect = (selectedMOIs) => {
-    const { onChange } = this.props
-    onChange(selectedMOIs)
-  }
+  const moiOptions = PANEL_APP_MOI_OPTIONS.map(moi => ({
+    ...moi,
+    disabled: !moiInitials[moi.value],
+  }))
 
-  moiOptions = () => {
-    const { locusList } = this.props
+  const prevValue = useRef(value)
 
-    const initials = locusList.items.reduce((acc, gene) => {
-      moiToMoiInitials(gene.pagene?.modeOfInheritance, false).forEach((initial) => {
-        acc[initial] = true
-      })
-      return acc
-    }, {}) || {}
+  const handleMOIselect = useCallback((selectedMOIs) => {
+    if (selectedMOIs !== prevValue) {
+      prevValue.current = selectedMOIs
+      onChange(selectedMOIs)
+    }
+  }, [onChange])
 
-    return PANEL_APP_MOI_OPTIONS.map(moi => ({
-      ...moi,
-      disabled: !initials[moi.value],
-    }))
-  }
+  useEffect(() => {
+    handleMOIselect(value)
+  })
 
-  // TODO use previous selected MOIs on first render
-  render() {
-    const { selectedMOIs, label, width, locusList } = this.props || []
-    const disabled = !locusList?.items
-    return (
-      <Multiselect
-        label={label}
-        value={selectedMOIs}
-        width={width}
-        inline
-        onChange={this.handleMOIselect}
-        placeholder="Showing all MOIs as listed in Panel App"
-        disabled={disabled}
-        options={disabled ? EMPTY_LIST : this.moiOptions()}
-        color="violet"
-      />
-    )
-  }
-
+  return (
+    <Multiselect
+      label={props.label}
+      value={value}
+      width={props.width}
+      inline
+      onChange={handleMOIselect}
+      placeholder="Showing all MOIs as listed in Panel App"
+      disabled={props.disabled}
+      options={props.disabled ? EMPTY_LIST : moiOptions}
+      color="violet"
+    />
+  )
 }
 
-const mapStateToProps = (state, ownProps) => ({
-  locusList: getLocusListsWithGenes(state)[ownProps.locus.locusListGuid],
-})
+export default PaMoiSelector
 
-export default connect(mapStateToProps)(PaMoiDropdown)
+PaMoiSelector.propTypes = {
+  locus: PropTypes.object,
+  onChange: PropTypes.func,
+  value: PropTypes.object,
+  label: PropTypes.string,
+  width: PropTypes.number,
+  disabled: PropTypes.bool,
+}

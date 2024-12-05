@@ -23,6 +23,9 @@ const PaLocusListSelector = ({ locus, onChange, color, value, ...props }) => {
   )
 
   useEffect(() => {
+    // TODO: A saved search with an additional text input will be overridden here
+    // if there are any MOIs selected
+    // Need to figure out a way to reconcile both ways of changing state
     if (panelAppItems[color] !== prevValue.current) {
       prevValue.current = panelAppItems[color]
       onChange(panelAppItems[color])
