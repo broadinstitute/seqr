@@ -93,7 +93,7 @@ def _get_variant_counts(locus: hl.LocusExpression, ref: str, alt: str, genome_bu
 def _format_results(ac: int, hom: int, url: str) -> dict:
     result_sets = [
         ('Homozygous', hom),
-        ('Heterozygous', ac - hom),
+        ('Heterozygous', ac - (hom * 2)),
     ] if ac else []
     return {
         'beaconHandovers': [
