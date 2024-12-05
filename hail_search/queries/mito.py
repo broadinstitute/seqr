@@ -400,23 +400,18 @@ class MitoHailTableQuery(BaseHailTableQuery):
             ])
         return ht.filter(variant_id_q)
 
-    def _parse_variant_keys(self, variant_ids=None, **kwargs):
-        if not variant_ids:
-            return variant_ids
+    def _parse_variant_keys(self, variant_keys):
+        return None
 
-        return [
-            hl.struct(
-                locus=hl.locus(f'chr{chrom}' if self._should_add_chr_prefix() else chrom, pos, reference_genome=self.GENOME_VERSION),
-                alleles=[ref, alt],
-            ) for chrom, pos, ref, alt in variant_ids
-        ]
-
-    def _prefilter_entries_table(self, ht, parsed_intervals=None, exclude_intervals=False, **kwargs):
+    def _prefilter_entries_table(self, ht, parsed_intervals=None, exclude_intervals=False, variant_ids=None, **kwargs):
         num_intervals = len(parsed_intervals or [])
         if exclude_intervals and parsed_intervals:
             ht = hl.filter_intervals(ht, parsed_intervals, keep=False)
         elif num_intervals >= MAX_LOAD_INTERVALS:
             ht = hl.filter_intervals(ht, parsed_intervals)
+
+        if variant_ids:
+            ht = self._filter_variant_ids(ht, variant_ids)
 
         if '_n_partitions' not in self._load_table_kwargs and num_intervals > self._n_partitions:
             ht = ht.naive_coalesce(self._n_partitions)
@@ -513,10 +508,11 @@ class MitoHailTableQuery(BaseHailTableQuery):
     def _gene_rank_sort(cls, r, gene_ranks):
         return [gene_ranks.get(r.selected_transcript.gene_id)] + super()._gene_rank_sort(r, gene_ranks)
 
-    def _add_project_lookup_data(self, ht, annotation_fields, *args, **kwargs):
+    def _add_project_lookup_data(self, ht, annotation_fields, *args, variant_ids=None, **kwargs):
         # Get all the project-families for the looked up variant formatted as a dict of dicts:
         # {<project_guid>: {<sample_type>: {<family_guid>: True}, <sample_type_2>: {<family_guid_2>: True}}, <project_guid_2>: ...}
         lookup_ht = self._read_table('lookup.ht', skip_missing_field='project_stats')
+        lookup_ht = self._filter_variant_ids(lookup_ht, variant_ids)
         if lookup_ht is None:
             raise HTTPNotFound()
         variant_projects = lookup_ht.aggregate(hl.agg.take(
@@ -536,11 +532,12 @@ class MitoHailTableQuery(BaseHailTableQuery):
                 lambda project_data: hl.dict(project_data.starmap(
                     lambda project_key, families: (project_key[1], families)
             )))), 1)
-        )[0]
+        )
 
         # Variant can be present in the lookup table with only ref calls, so is still not present in any projects
-        if not variant_projects:
+        if not (variant_projects and variant_projects[0]):
             raise HTTPNotFound()
+        variant_projects = variant_projects[0]
 
         self._has_both_sample_types = True
         annotation_fields.update({
