@@ -152,5 +152,6 @@ class SnvIndelHailTableQuery37(MitoHailTableQuery):
             self._get_table_path = self._get_lifted_table_path
             lift_project_data = super()._get_variant_project_data(variant_id, **kwargs)
             project_data['familyGenotypes'].update(lift_project_data['familyGenotypes'])
+            project_data = project_data.annotate(liftedFamilyGuids=sorted(lift_project_data['familyGenotypes'].keys()))
 
         return project_data
