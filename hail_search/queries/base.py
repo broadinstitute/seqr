@@ -1222,7 +1222,7 @@ class BaseHailTableQuery(object):
     def _filter_variant_ids(self, ht, variant_ids):
         return ht
 
-    def lookup_variants(self, variant_ids):
+    def lookup_variants(self, variant_ids, additional_annotations=None):
         self._parse_intervals(intervals=None, variant_ids=variant_ids, variant_keys=variant_ids)
         ht = self._read_table('annotations.ht', drop_globals=['versions'])
         ht = self._filter_variant_ids(ht, variant_ids)
@@ -1232,6 +1232,8 @@ class BaseHailTableQuery(object):
             k: v for k, v in self.annotation_fields(include_genotype_overrides=False).items()
             if k not in {FAMILY_GUID_FIELD, GENOTYPES_FIELD}
         }
+        if additional_annotations:
+            annotation_fields.update(additional_annotations)
         formatted = self._format_results(ht.key_by(), annotation_fields=annotation_fields, include_genotype_overrides=False)
 
         return formatted.aggregate(hl.agg.take(formatted.row, len(variant_ids)))
@@ -1246,9 +1248,13 @@ class BaseHailTableQuery(object):
         return project_data[0] if project_data else {}
 
     def lookup_variant(self, variant_id, **kwargs):
-        variants = self.lookup_variants([variant_id])
+        variants = self.lookup_variants([variant_id], additional_annotations=self._lookup_variant_annotations())
         if not variants:
             raise HTTPNotFound()
         variant = dict(variants[0])
-        variant.update(self._get_variant_project_data(variant_id, **kwargs))
+        variant.update(self._get_variant_project_data(variant_id, variant=variant, **kwargs))
         return variant
+
+    @staticmethod
+    def _lookup_variant_annotations():
+        return {}
