@@ -508,7 +508,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
     def _gene_rank_sort(cls, r, gene_ranks):
         return [gene_ranks.get(r.selected_transcript.gene_id)] + super()._gene_rank_sort(r, gene_ranks)
 
-    def _import_variant_projects_ht(self, variant_id, **kwargs):
+    def _import_variant_projects_ht(self, variant_id, *args, **kwargs):
         # Get all the project-families for the looked up variant formatted as a dict of dicts:
         # {<project_guid>: {<sample_type>: {<family_guid>: True}, <sample_type_2>: {<family_guid_2>: True}}, <project_guid_2>: ...}
         lookup_ht = self._read_table('lookup.ht', skip_missing_field='project_stats')
