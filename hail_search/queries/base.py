@@ -697,7 +697,7 @@ class BaseHailTableQuery(object):
     def _passes_vcf_filters(gt):
         return hl.is_missing(gt.filters) | (gt.filters.length() < 1)
 
-    def _parse_variant_keys(self, variant_keys=None, **kwargs):
+    def _parse_variant_keys(self, variant_keys):
         return [hl.struct(**{self.KEY_FIELD[0]: key}) for key in (variant_keys or [])]
 
     def _prefilter_entries_table(self, ht, **kwargs):
@@ -728,11 +728,14 @@ class BaseHailTableQuery(object):
         rs_id_set = hl.set(rs_ids)
         return ht.filter(rs_id_set.contains(ht.rsid))
 
-    def _parse_intervals(self, intervals, gene_ids=None, **kwargs):
-        parsed_variant_keys = self._parse_variant_keys(**kwargs)
+    def _parse_intervals(self, intervals, gene_ids=None, variant_keys=None, variant_ids=None, **kwargs):
+        parsed_variant_keys = self._parse_variant_keys(variant_keys)
         if parsed_variant_keys:
             self._load_table_kwargs['variant_ht'] = hl.Table.parallelize(parsed_variant_keys).key_by(*self.KEY_FIELD)
             return intervals
+
+        if variant_ids:
+            intervals = [(chrom, pos, pos+1) for chrom, pos, _, _ in variant_ids]
 
         is_x_linked = self._inheritance_mode == X_LINKED_RECESSIVE
         if not (intervals or is_x_linked):
@@ -1216,15 +1219,19 @@ class BaseHailTableQuery(object):
             ht.gene_ids, hl.struct(total=hl.agg.count(), families=hl.agg.counter(ht.families))
         ))
 
+    def _filter_variant_ids(self, ht, variant_ids):
+        return ht
+
     def lookup_variants(self, variant_ids, include_project_data=False, **kwargs):
         self._parse_intervals(intervals=None, variant_ids=variant_ids, variant_keys=variant_ids)
         ht = self._read_table('annotations.ht', drop_globals=['versions'])
+        ht = self._filter_variant_ids(ht, variant_ids)
         ht = ht.filter(hl.is_defined(ht[XPOS]))
 
         annotation_fields = self.annotation_fields(include_genotype_overrides=False)
         include_sample_annotations = False
         if include_project_data:
-            ht, include_sample_annotations = self._add_project_lookup_data(ht, annotation_fields, **kwargs)
+            ht, include_sample_annotations = self._add_project_lookup_data(ht, annotation_fields, variant_ids=variant_ids, **kwargs)
         if not include_sample_annotations:
             annotation_fields = {
                 k: v for k, v in annotation_fields.items()
