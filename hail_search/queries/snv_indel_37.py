@@ -3,7 +3,7 @@ import hail as hl
 
 from hail_search.constants import CLINVAR_KEY, HGMD_KEY, HGMD_PATH_RANGES, \
     GNOMAD_GENOMES_FIELD, PREFILTER_FREQ_CUTOFF, PATH_FREQ_OVERRIDE_CUTOFF, PATHOGENICTY_HGMD_SORT_KEY, \
-    SPLICE_AI_FIELD, GENOME_VERSION_GRCh37
+    SPLICE_AI_FIELD, GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38
 from hail_search.queries.base import PredictionPath, QualityFilterFormat
 from hail_search.queries.mito import MitoHailTableQuery
 
@@ -12,6 +12,7 @@ class SnvIndelHailTableQuery37(MitoHailTableQuery):
 
     DATA_TYPE = 'SNV_INDEL'
     GENOME_VERSION = GENOME_VERSION_GRCh37
+    LIFT_GENOME_VERSION = GENOME_VERSION_GRCh38
 
     GENOTYPE_FIELDS = {f.lower(): f for f in ['DP', 'GQ', 'AB']}
     QUALITY_FILTER_FORMAT = {
@@ -138,11 +139,17 @@ class SnvIndelHailTableQuery37(MitoHailTableQuery):
     def _lookup_variant_annotations():
         return {'liftover_locus': lambda r: r.rg38_locus}
 
+    @classmethod
+    def _get_lifted_table_path(cls, path):
+        return f'{cls._get_table_dir(path)}/{cls.LIFT_GENOME_VERSION}/{cls.DATA_TYPE}/{path}'
+
     def _get_variant_project_data(self, variant_id, variant=None, **kwargs):
         project_data = super()._get_variant_project_data(variant_id, **kwargs)
         liftover_locus = variant.pop('liftover_locus')
         if liftover_locus:
-            # TODO change build version
+            interval = hl.eval(hl.interval(liftover_locus, liftover_locus, includes_start=True, includes_end=True))
+            self._load_table_kwargs['_intervals'] = [interval]
+            self._get_table_path = self._get_lifted_table_path
             lift_project_data = super()._get_variant_project_data(variant_id, **kwargs)
             project_data['familyGenotypes'].update(lift_project_data['familyGenotypes'])
 
