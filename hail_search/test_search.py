@@ -14,9 +14,9 @@ from hail_search.test_utils import get_hail_search_body, FAMILY_2_VARIANT_SAMPLE
     EXPECTED_SAMPLE_DATA_WITH_SEX, SV_WGS_SAMPLE_DATA_WITH_SEX, VARIANT_LOOKUP_VARIANT, \
     MULTI_PROJECT_SAMPLE_TYPES_SAMPLE_DATA, FAMILY_2_BOTH_SAMPLE_TYPE_SAMPLE_DATA, \
     VARIANT1_BOTH_SAMPLE_TYPES, VARIANT2_BOTH_SAMPLE_TYPES, FAMILY_2_BOTH_SAMPLE_TYPE_SAMPLE_DATA_MISSING_PARENTAL_WGS, \
-    VARIANT3_BOTH_SAMPLE_TYPES, VARIANT4_BOTH_SAMPLE_TYPES, VARIANT2_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY, \
+    VARIANT4_BOTH_SAMPLE_TYPES, VARIANT2_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY, \
     VARIANT1_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY, VARIANT3_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY, \
-    VARIANT4_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY
+    VARIANT4_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY, VARIANT4_WES_ONLY, VARIANT3_WES_ONLY
 from hail_search.web_app import init_web_app, sync_to_async_hail_query
 from hail_search.queries.base import BaseHailTableQuery
 
@@ -271,6 +271,7 @@ class HailSearchTestCase(AioHTTPTestCase):
         async with self.client.request('POST', '/search', json=search_body) as resp:
             self.assertEqual(resp.status, 200)
             resp_json = await resp.json()
+        print(resp_json['results'])
         self.assertSetEqual(set(resp_json.keys()), {'results', 'total'})
         self.assertEqual(resp_json['total'], len(results))
         for i, result in enumerate(resp_json['results']):
@@ -370,10 +371,11 @@ class HailSearchTestCase(AioHTTPTestCase):
 
         # Variant 1 is de novo in exome but inherited and homozygous in genome.
         # Variant 2 is inherited and homozygous in exome and de novo and homozygous in genome.
-        # Variant 3 is inherited in both sample types. Variant 4 is de novo in both sample types.
+        # Variant 3 is inherited in both sample types.
+        # Variant 4 is de novo in exome, but inherited in genome in the same parent that has variant 3.
         inheritance_mode = 'recessive'
         await self._assert_expected_search(
-            [VARIANT1_BOTH_SAMPLE_TYPES, VARIANT2_BOTH_SAMPLE_TYPES, [VARIANT3_BOTH_SAMPLE_TYPES, VARIANT4_BOTH_SAMPLE_TYPES]],
+            [VARIANT1_BOTH_SAMPLE_TYPES, VARIANT2_BOTH_SAMPLE_TYPES, [VARIANT3_WES_ONLY, VARIANT4_WES_ONLY]],
             sample_data=FAMILY_2_BOTH_SAMPLE_TYPE_SAMPLE_DATA, inheritance_mode=inheritance_mode,
             **COMP_HET_ALL_PASS_FILTERS
         )
