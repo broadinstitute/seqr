@@ -275,7 +275,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
                 ht[SampleType.WES.family_entries_field], hl.empty_array(ht[SampleType.WES.family_entries_field].dtype.element_type)
             ).extend(hl.coalesce(
                 ht[SampleType.WGS.family_entries_field], hl.empty_array(ht[SampleType.WGS.family_entries_field].dtype.element_type)
-            )).filter(lambda entries: entries.any(hl.is_defined))
+            ))
         )
         ht = ht.select('family_entries')
         ht = ht.select_globals('family_guids')
