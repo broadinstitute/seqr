@@ -24,7 +24,7 @@ On-prem installs using the elasticsearch backend can be created using docker-com
 
 On-prem installs using the `hail` backend can be created using **[helm](deploy/LOCAL_INSTALL_HELM.md)**
 
-To help you decide which backend is best suited for your needs, please see the discussion post [announcing the `hail` backend](https://github.com/broadinstitute/seqr/discussions/4531).
+To help you decide which backend is best suited for your needs, please refer to the discussion post [announcing the `hail` backend](https://github.com/broadinstitute/seqr/discussions/4531).
 
 To set up seqr for local development, see instructions **[here](deploy/LOCAL_DEVELOPMENT_INSTALL.md)**  
 
