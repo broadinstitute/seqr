@@ -22,7 +22,7 @@ The seqr production instance runs on Google Kubernetes Engine (GKE) and data is 
 On-prem installs using the elasticsearch backend can be created using docker-compose:
  **[Local installs using docker-compose](deploy/LOCAL_INSTALL.md)**
 
-On-prem installs using the `hail` backend can be created using **[helm](deploy/LOCAL_INSTALL.md)**
+On-prem installs using the `hail` backend can be created using **[helm](deploy/LOCAL_INSTALL_HELM.md)**
 
 In order to decide which backend to use, please see the discussion post [announcing the `hail` backend](https://github.com/broadinstitute/seqr/discussions/4531).
 
