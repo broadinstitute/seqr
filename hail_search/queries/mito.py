@@ -215,7 +215,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
 
         family_idx_map = hl.dict(family_idx_map)
         ht = self._apply_multi_sample_type_entry_filters(ht, family_idx_map)
-        ch_ht = self._apply_multi_sample_type_entry_filters(ch_ht, family_idx_map)
+        ch_ht = self._apply_multi_sample_type_entry_filters(ch_ht, family_idx_map, is_comp_het=True)
         return ht, ch_ht
 
     @staticmethod
@@ -240,9 +240,22 @@ class MitoHailTableQuery(BaseHailTableQuery):
                 .default(passes))
         )
 
-    def _apply_multi_sample_type_entry_filters(self, ht, family_idx_map):
+    def _apply_multi_sample_type_entry_filters(self, ht, family_idx_map, is_comp_het=False):
         if ht is None:
             return ht
+
+        # For comp hets, inheritance filtering is stricter. Filter out any family that does not pass inheritance,
+        # regardless of whether the other sample type passes inheritance.
+        if is_comp_het:
+            for sample_type in SampleType:
+                ht = ht.annotate(**{
+                    sample_type.family_entries_field: hl.enumerate(ht[sample_type.passes_inheritance_field]).starmap(
+                        lambda family_idx, samples_pass_inheritance: hl.or_missing(
+                            hl.all(samples_pass_inheritance),
+                            ht[sample_type.family_entries_field][family_idx]
+                        )
+                    )
+                })
 
         for sample_type in SampleType:
             ht = ht.annotate(**{
@@ -251,9 +264,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
                         hl.bind(lambda other_sample_type_family_idx: ((
                             self._family_has_valid_quality(ht, sample_type, family_idx) |
                             self._family_has_valid_quality(ht, sample_type.other_sample_type, other_sample_type_family_idx)
-                             ) &
-                            self._family_has_valid_inheritance(ht, sample_type, family_idx, other_sample_type_family_idx) &
-                            self._family_has_valid_inheritance(ht, sample_type.other_sample_type, other_sample_type_family_idx, family_idx)
+                             ) & self._family_has_valid_inheritance(ht, sample_type, family_idx, other_sample_type_family_idx, is_comp_het)
                         ), family_idx_map.get(hl.coalesce(family_samples)[0]['familyGuid']).get(sample_type.other_sample_type.value),
                     ), family_samples)
                 )})
@@ -279,8 +290,19 @@ class MitoHailTableQuery(BaseHailTableQuery):
             hl.is_defined(ht[sample_type.passes_quality_field][sample_type_family_idx])
         )
 
+    def _family_has_valid_inheritance(self, ht, sample_type, family_idx, other_sample_type_family_idx, is_comp_het):
+        if is_comp_het:
+            return hl.bool(True)
+
+        if not is_comp_het:
+            return self._family_has_valid_inheritance_one_sample_type(
+                ht, sample_type, family_idx, other_sample_type_family_idx
+            ) & self._family_has_valid_inheritance_one_sample_type(
+                ht, sample_type.other_sample_type, other_sample_type_family_idx, family_idx
+            )
+
     @staticmethod
-    def _family_has_valid_inheritance(ht, sample_type, family_idx, other_sample_type_family_idx):
+    def _family_has_valid_inheritance_one_sample_type(ht, sample_type, family_idx, other_sample_type_family_idx):
         return hl.bind(
             lambda sample_type_fail_samples, other_sample_type_pass_samples: (
                 sample_type_fail_samples.all(other_sample_type_pass_samples.contains)
