@@ -9,7 +9,7 @@ import re
 
 from reference_data.models import GENOME_VERSION_LOOKUP
 from seqr.models import Family, Sample, SavedVariant
-from seqr.utils.communication_utils import safe_post_to_slack
+from seqr.utils.communication_utils import safe_post_to_slack, safe_upload_gcs_file_to_slack
 from seqr.utils.file_utils import file_iter, list_files
 from seqr.utils.search.add_data_utils import notify_search_data_loaded
 from seqr.utils.search.utils import parse_valid_variant_id
@@ -19,7 +19,8 @@ from seqr.views.utils.dataset_utils import match_and_update_search_samples
 from seqr.views.utils.permissions_utils import is_internal_anvil_project, project_has_anvil
 from seqr.views.utils.variant_utils import reset_cached_search_results, update_projects_saved_variant_json, \
     get_saved_variants
-from settings import SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, HAIL_SEARCH_DATA_DIR
+from settings import SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, HAIL_SEARCH_DATA_DIR, \
+    SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL_ID
 
 logger = logging.getLogger(__name__)
 
@@ -178,16 +179,18 @@ class Command(BaseCommand):
                 split_pdos = split_project_pdos.get(project)
                 if split_pdos:
                     summary += f'\n\nSkipped samples in this project have been moved to {", ".join(split_pdos)}'
-
-                relatedness_check_message = (
-                    f'\nRelatedness check results: {relatedness_check_file_path}'
-                    if (relatedness_check_file_path and check == RELATEDNESS_CHECK_NAME)
-                    else ''
-                )
                 safe_post_to_slack(
                     SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL,
-                    f'The following {len(failures)} families failed {check.replace("_", " ")} in {project}:\n{summary}{relatedness_check_message}'
+                    f'The following {len(failures)} families failed {check.replace("_", " ")} in {project}:\n{summary}'
                 )
+
+        if RELATEDNESS_CHECK_NAME in failed_family_samples and relatedness_check_file_path:
+            safe_upload_gcs_file_to_slack(
+                SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL_ID,
+                relatedness_check_file_path,
+                uploaded_filename=f'relatedness-check-results-{run_version}.tsv',
+                message="Download the relatedness check results for this run.",
+            )
 
         # Reload saved variant JSON
         updated_variants_by_id = update_projects_saved_variant_json(

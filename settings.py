@@ -390,6 +390,7 @@ MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL = 'matchmaker_seqr_match'
 SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL = 'seqr-data-loading'
 SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL = 'anvil-data-loading'
 SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL = 'seqr_loading_notifications'
+SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL_ID = 'CMM4R47LH'
 
 #########################################################
 #  Social auth specific settings
