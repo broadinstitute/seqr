@@ -8,7 +8,6 @@ from django.core.mail import EmailMultiAlternatives
 from django.utils.html import strip_tags
 from notifications.signals import notify
 
-
 BASE_EMAIL_TEMPLATE = 'Dear seqr user,\n\n{}\n\nAll the best,\nThe seqr team'
 
 SLACK_GET_UPLOAD_URL = 'https://slack.com/api/files.getUploadURLExternal'
