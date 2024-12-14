@@ -13,6 +13,8 @@ BASE_EMAIL_TEMPLATE = 'Dear seqr user,\n\n{}\n\nAll the best,\nThe seqr team'
 SLACK_GET_UPLOAD_URL = 'https://slack.com/api/files.getUploadURLExternal'
 SLACK_COMPLETE_UPLOAD = 'https://slack.com/api/files.completeUploadExternal'
 
+TIMEOUT_S = 5
+
 logger = logging.getLogger(__name__)
 
 
@@ -54,7 +56,8 @@ def _upload_gcs_file_to_slack(channel_id, gcs_file_path, uploaded_filename, mess
         params={
             "length": len(file_content),
             "filename": uploaded_filename
-        }
+        },
+        timeout=TIMEOUT_S,
     )
     upload_url = upload_url_resp.json().get('upload_url')
     file_id = upload_url_resp.json().get('file_id')
@@ -63,7 +66,8 @@ def _upload_gcs_file_to_slack(channel_id, gcs_file_path, uploaded_filename, mess
     requests.post(
         upload_url,
         headers=headers,
-        data=file_content
+        data=file_content,
+        timeout=TIMEOUT_S,
     )
 
     # Step 3: Finalize the upload
@@ -74,7 +78,8 @@ def _upload_gcs_file_to_slack(channel_id, gcs_file_path, uploaded_filename, mess
             "files": [{"id": file_id}],
             "channel_id": channel_id,
             "initial_comment": message,
-        }
+        },
+        timeout=TIMEOUT_S,
     )
     return complete_upload_res.raw
 
