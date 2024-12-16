@@ -198,4 +198,4 @@ def parse_locus_list_items(request_json, genome_version=None):
     gene_ids.update({gene_ids[0] for gene_ids in gene_symbols_to_ids.values() if len(gene_ids)})
     genes_by_id = get_genes(list(gene_ids), genome_version=genome_version) if gene_ids else {}
     invalid_items += [gene_id for gene_id in gene_ids if not genes_by_id.get(gene_id)]
-    return genes_by_id, intervals, invalid_items
+    return sorted(genes_by_id), intervals, invalid_items
