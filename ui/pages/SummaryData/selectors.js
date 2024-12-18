@@ -30,7 +30,10 @@ export const getVlmDefaultContactEmails = createSelector(
   (familiesByContactEmail, genesById, user, variant) => {
     const gene = genesById[getVariantMainGeneId(variant)]?.geneSymbol
     const subject = `${gene || variant.variantId} variant match in seqr`
-    const defaultEmailContent = `harboring ${getVariantSummary(variant)} in ${gene || 'no genes'} (${window.location.href}).\n\nWe appreciate your assistance and look forward to hearing more from you.\n\nBest wishes,\n${user.displayName}`
+    const defaultEmailContent = `harboring ${getVariantSummary(variant)} in ${gene || 'no genes'} (${window.location.href}).
+    \n\nWe have identified the variant in a case with [replace with phenotype].
+    \n\n[List your specific questions for the researcher here.]
+    \n\nWe appreciate your assistance and look forward to hearing more from you.\n\nBest wishes,\n${user.displayName}`
     return Object.entries(familiesByContactEmail).reduce((acc, [to, familyGuids]) => ({
       ...acc,
       [to]: { to, subject, body: `Dear researcher,\n\nWe are interested in learning more about your ${familyGuids.length} cases in seqr ${defaultEmailContent}` },
