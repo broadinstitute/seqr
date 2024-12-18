@@ -80,7 +80,7 @@ const FAQS = [
       ),
     },
     [SPANISH]: {
-      header: 'P. ¿Qué análisis no admite seqr?',
+      header: 'P. ¿Qué tipos de análisis no admite seqr?',
       content: (
         <List bulleted>
           <List.Item>
@@ -89,7 +89,7 @@ const FAQS = [
             esperar ver.
           </List.Item>
           <List.Item>
-            seqr no es un annotation pipeline para un VCF. Aunque las anotaciones se agregan cuando los datos se cargan
+            seqr no es un canal de anotación para un VCF. Aunque las anotaciones se agregan cuando los datos se cargan
             en seqr, no se puede generar el VCF anotado de seqr.
           </List.Item>
           <List.Item>
@@ -369,7 +369,7 @@ const FAQS = [
       ),
     },
     [SPANISH]: {
-      header: '¿Cómo agrego un nuevo miembro del equipo a un proyecto?',
+      header: 'P. ¿Cómo agrego un nuevo miembro del equipo a un proyecto?',
       content: (
         <div>
           Para agregar un nuevo colaborador, navegue al espacio de trabajo respectivo en AnVIL y seleccione
@@ -466,15 +466,17 @@ const FAQS = [
   }, {
     [ENGLISH]: {
       header: 'Q. How do I add data to an existing project in seqr?',
-      content: `To add new data, create a new joint called VCF with all the samples you want in your seqr project, 
-      including those you had previously loaded, and upload it using the Load Additional Data feature on the Project 
-      Page. All notes and tags saved in previously analyzed cases will be kept.`,
+      content: `To add new data to an existing project, create a joint-called VCF and pedigree file with the new samples only. 
+      If you have new samples within a family that has been previously loaded you need all the previous family members in the new joint-called VCF. 
+      Upload it to seqr using the ‘Load Additional Data’ feature on the Project Page and select the new joint callset from the project’s associated workspace.`,
     },
     [SPANISH]: {
       header: 'P. ¿Cómo puedo agregar datos a un proyecto existente en seqr?',
-      content: `Para agregar nuevos datos, cree un nuevo conjunto denominado VCF con todas las muestras que desee en su 
-      proyecto seqr, incluyendo las que había cargado previamente, y cárgala usando la función “Load Additional Data” en 
-      la página “Project Page”. Se conservarán todas las notas y etiquetas guardadas en casos previamente analizados.`,
+      content: `Para agregar nuevos datos a un proyecto existente, crea un conjunto de datos de familia y un archivo de 
+      pedigrí con las nuevas muestras únicamente. Si tiene nuevas muestras dentro de una familia que se ha cargado previamente, 
+      necesita todos los miembros de la familia preexistente en el nuevo conjunto denominado VCF. 
+      Súbalo a seqr utilizando la función "Cargar datos adicionales" en la página del proyecto y seleccione 
+      el nuevo conjunto de datos de familia del espacio de trabajo asociado al proyecto.`,
     },
   }, {
     [ENGLISH]: {
