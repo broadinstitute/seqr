@@ -182,3 +182,4 @@ urllib3==1.26.19
     #   requests
 whitenoise==6.3.0
     # via -r requirements.in
+zipp>=3.19.1 # not directly required, pinned by Snyk to avoid a vulnerability
