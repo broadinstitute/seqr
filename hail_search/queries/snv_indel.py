@@ -2,7 +2,7 @@ from collections import OrderedDict
 import hail as hl
 
 from hail_search.constants import GENOME_VERSION_GRCh38, SCREEN_KEY, PREFILTER_FREQ_CUTOFF, ALPHAMISSENSE_SORT, \
-    UTR_ANNOTATOR_KEY, EXTENDED_SPLICE_KEY, MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY
+    UTR_ANNOTATOR_KEY, EXTENDED_SPLICE_KEY, MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY, GENOME_VERSION_GRCh37
 from hail_search.queries.base import BaseHailTableQuery, PredictionPath
 from hail_search.queries.snv_indel_37 import SnvIndelHailTableQuery37
 
@@ -12,6 +12,7 @@ EXTENDED_SPLICE_REGION_CONSEQUENCE = 'extended_intronic_splice_region_variant'
 class SnvIndelHailTableQuery(SnvIndelHailTableQuery37):
 
     GENOME_VERSION = GENOME_VERSION_GRCh38
+    LIFT_GENOME_VERSION = GENOME_VERSION_GRCh37
     PREDICTION_FIELDS_CONFIG = {
         **SnvIndelHailTableQuery37.PREDICTION_FIELDS_CONFIG,
         'fathmm': PredictionPath('dbnsfp', 'fathmm_MKL_coding_score'),
@@ -96,3 +97,7 @@ class SnvIndelHailTableQuery(SnvIndelHailTableQuery37):
                 )
 
         return annotation_filters
+
+    @staticmethod
+    def _lookup_variant_annotations():
+        return {'liftover_locus': lambda r: r.rg37_locus}
