@@ -44,4 +44,3 @@ def _get_remote_file_size(url):
     except Exception:
         # file size not yet implemented for FTP and other protocols, and HEAD not supported for all http requests
         return 0
-
