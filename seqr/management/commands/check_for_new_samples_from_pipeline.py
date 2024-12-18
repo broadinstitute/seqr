@@ -179,18 +179,15 @@ class Command(BaseCommand):
                 split_pdos = split_project_pdos.get(project)
                 if split_pdos:
                     summary += f'\n\nSkipped samples in this project have been moved to {", ".join(split_pdos)}'
+
+                if check == RELATEDNESS_CHECK_NAME and relatedness_check_file_path:
+                    downloadable_link = f'https://storage.cloud.google.com/{relatedness_check_file_path[5:]}'
+                    summary += f'\n\nRelatedness check results: {downloadable_link}'
+
                 safe_post_to_slack(
                     SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL,
                     f'The following {len(failures)} families failed {check.replace("_", " ")} in {project}:\n{summary}'
                 )
-
-        if RELATEDNESS_CHECK_NAME in failed_family_samples and relatedness_check_file_path:
-            safe_upload_gcs_file_to_slack(
-                SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL_ID,
-                relatedness_check_file_path,
-                uploaded_filename=f'relatedness-check-results-{run_version}.tsv',
-                message="Download the relatedness check results for this run.",
-            )
 
         # Reload saved variant JSON
         updated_variants_by_id = update_projects_saved_variant_json(

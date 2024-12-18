@@ -3,7 +3,6 @@ import os
 import requests
 import tempfile
 from tqdm import tqdm
-from google.cloud import storage
 
 logger = logging.getLogger(__name__)
 
@@ -45,13 +44,3 @@ def _get_remote_file_size(url):
     except Exception:
         # file size not yet implemented for FTP and other protocols, and HEAD not supported for all http requests
         return 0
-
-
-def download_gcs_file_as_bytes(gcs_file_path: str) -> bytes:
-    bucket_name, blob_path = gcs_file_path[5:].split("/", 1)
-
-    client = storage.Client()
-    bucket = client.bucket(bucket_name)
-    blob = bucket.blob(blob_path)
-
-    return blob.download_as_bytes()

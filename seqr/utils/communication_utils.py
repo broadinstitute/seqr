@@ -1,19 +1,12 @@
 import logging
 from slacker import Slacker
-import requests
 
-from reference_data.management.commands.utils.download_utils import download_gcs_file_as_bytes
 from settings import SLACK_TOKEN, BASE_URL
 from django.core.mail import EmailMultiAlternatives
 from django.utils.html import strip_tags
 from notifications.signals import notify
 
 BASE_EMAIL_TEMPLATE = 'Dear seqr user,\n\n{}\n\nAll the best,\nThe seqr team'
-
-SLACK_GET_UPLOAD_URL = 'https://slack.com/api/files.getUploadURLExternal'
-SLACK_COMPLETE_UPLOAD = 'https://slack.com/api/files.completeUploadExternal'
-
-TIMEOUT_S = 5
 
 logger = logging.getLogger(__name__)
 
@@ -36,52 +29,6 @@ def _post_to_slack(channel, message):
     )
     return response.raw
 
-def safe_upload_gcs_file_to_slack(channel_id, gcs_file_path, uploaded_filename, message):
-    try:
-        _upload_gcs_file_to_slack(channel_id, gcs_file_path, uploaded_filename, message)
-    except Exception as e:
-        logger.error('Slack error: {}: Original message in channel ({}) - {}'.format(e, channel_id, message))
-
-
-def _upload_gcs_file_to_slack(channel_id, gcs_file_path, uploaded_filename, message):
-    file_content = download_gcs_file_as_bytes(gcs_file_path)
-
-    # https://api.slack-gov.com/messaging/files#uploading_files
-    # Note: slackbot needs files:read and files:write scopes
-    # Step 1: Create the file upload URL
-    headers = {"Authorization": f'Bearer {SLACK_TOKEN}'}
-    upload_url_resp = requests.get(
-        SLACK_GET_UPLOAD_URL,
-        headers=headers,
-        params={
-            "length": len(file_content),
-            "filename": uploaded_filename
-        },
-        timeout=TIMEOUT_S,
-    )
-    upload_url = upload_url_resp.json().get('upload_url')
-    file_id = upload_url_resp.json().get('file_id')
-
-    # Step 2: Post the contents of the file to the upload URL
-    requests.post(
-        upload_url,
-        headers=headers,
-        data=file_content,
-        timeout=TIMEOUT_S,
-    )
-
-    # Step 3: Finalize the upload
-    complete_upload_res = requests.post(
-        SLACK_COMPLETE_UPLOAD,
-        headers=headers,
-        json={
-            "files": [{"id": file_id}],
-            "channel_id": channel_id,
-            "initial_comment": message,
-        },
-        timeout=TIMEOUT_S,
-    )
-    return complete_upload_res.raw
 
 def send_welcome_email(user, referrer):
     email_content = f"""
@@ -133,4 +80,3 @@ def set_email_message_stream(message, stream):
     message.esp_extra = {
         'MessageStream': stream,
     }
-
