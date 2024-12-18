@@ -44,7 +44,7 @@ class VlmTestCase(AioHTTPTestCase):
             },
             'responseSummary': {
                 'exists': True,
-                'total': 24,
+                'total': 30,
             },
             'response': {
                 'resultSets': [
@@ -52,24 +52,21 @@ class VlmTestCase(AioHTTPTestCase):
                         'exists': True,
                         'id': 'TestVLM Homozygous',
                         'results': [],
-                        'resultsCount': 4,
+                        'resultsCount': 7,
                         'setType': 'genomicVariant'
                     },
                     {
                         'exists': True,
                         'id': 'TestVLM Heterozygous',
                         'results': [],
-                        'resultsCount': 20,
+                        'resultsCount': 23,
                         'setType': 'genomicVariant'
                     },
                 ],
             }
         })
 
-        async with self.client.request('GET', '/vlm/match?assemblyId=hg19&referenceName=chr7&start=143270172&referenceBases=A&alternateBases=G') as resp:
-            self.assertEqual(resp.status, 200)
-            resp_json = await resp.json()
-        self.assertDictEqual(resp_json, {
+        only_37_response = {
             'beaconHandovers': [
                 {
                     'handoverType': {
@@ -111,7 +108,16 @@ class VlmTestCase(AioHTTPTestCase):
                     },
                 ],
             }
-        })
+        }
+        async with self.client.request('GET', '/vlm/match?assemblyId=hg19&referenceName=chr7&start=143270172&referenceBases=A&alternateBases=G') as resp:
+            self.assertEqual(resp.status, 200)
+            resp_json = await resp.json()
+        self.assertDictEqual(resp_json, only_37_response)
+
+        async with self.client.request('GET', '/vlm/match?assemblyId=GRCh38&referenceName=chr7&start=143573079&referenceBases=A&alternateBases=G') as resp:
+            self.assertEqual(resp.status, 200)
+            resp_json = await resp.json()
+        self.assertDictEqual(resp_json, only_37_response)
 
         async with self.client.request('GET', '/vlm/match?assemblyId=hg38&referenceName=chr7&start=143270172&referenceBases=A&alternateBases=G') as resp:
             self.assertEqual(resp.status, 200)

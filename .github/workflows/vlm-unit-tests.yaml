@@ -10,11 +10,13 @@ on:
     paths:
       - 'vlm/**'
       - '.github/workflows/*vlm*.yaml'
+      - 'hail_search/fixtures/*'
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
       - 'vlm/**'
       - '.github/workflows/*vlm*.yaml'
+      - 'hail_search/fixtures/*'
 
 jobs:
   vlm:
