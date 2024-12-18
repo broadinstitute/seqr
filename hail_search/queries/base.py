@@ -1222,35 +1222,33 @@ class BaseHailTableQuery(object):
     def _filter_variant_ids(self, ht, variant_ids):
         return ht
 
-    def lookup_variants(self, variant_ids, include_project_data=False, **kwargs):
+    def lookup_variants(self, variant_ids):
         self._parse_intervals(intervals=None, variant_ids=variant_ids, variant_keys=variant_ids)
         ht = self._read_table('annotations.ht', drop_globals=['versions'])
         ht = self._filter_variant_ids(ht, variant_ids)
         ht = ht.filter(hl.is_defined(ht[XPOS]))
 
-        annotation_fields = self.annotation_fields(include_genotype_overrides=False)
-        include_sample_annotations = False
-        if include_project_data:
-            ht, include_sample_annotations = self._add_project_lookup_data(ht, annotation_fields, variant_ids=variant_ids, **kwargs)
-        if not include_sample_annotations:
-            annotation_fields = {
-                k: v for k, v in annotation_fields.items()
-                if k not in {FAMILY_GUID_FIELD, GENOTYPES_FIELD}
-            }
-
+        annotation_fields = {
+            k: v for k, v in self.annotation_fields(include_genotype_overrides=False).items()
+            if k not in {FAMILY_GUID_FIELD, GENOTYPES_FIELD}
+        }
         formatted = self._format_results(ht.key_by(), annotation_fields=annotation_fields, include_genotype_overrides=False)
 
         return formatted.aggregate(hl.agg.take(formatted.row, len(variant_ids)))
 
-    def _add_project_lookup_data(self, ht, annotation_fields, include_sample_annotations=False, project_samples=None, **kwargs):
-        if project_samples:
-            projects_ht, _ = self._import_and_filter_multiple_project_hts(project_samples, n_partitions=1)
-            ht = ht.annotate(**projects_ht[ht.key])
+    def _import_variant_projects_ht(self, variant_id, project_samples=None, **kwargs):
+        projects_ht, _ = self._import_and_filter_multiple_project_hts(project_samples, n_partitions=1)
+        return self._filter_variant_ids(projects_ht, [variant_id]).key_by()
 
-        return ht, include_sample_annotations
+    def _get_variant_project_data(self, variant_id, **kwargs):
+        projects_ht = self._import_variant_projects_ht(variant_id, **kwargs)
+        project_data = projects_ht.aggregate(hl.agg.take(projects_ht.row, 1))
+        return project_data[0] if project_data else {}
 
     def lookup_variant(self, variant_id, **kwargs):
-        variants = self.lookup_variants([variant_id], include_project_data=True, **kwargs)
+        variants = self.lookup_variants([variant_id])
         if not variants:
             raise HTTPNotFound()
-        return dict(variants[0])
+        variant = dict(variants[0])
+        variant.update(self._get_variant_project_data(variant_id, **kwargs))
+        return variant
