@@ -540,7 +540,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         ])
 
         # Test notifications
-        self.assertEqual(self.mock_send_slack.call_count, 8)
+        self.assertEqual(self.mock_send_slack.call_count, 9)
         self.mock_send_slack.assert_has_calls([
             mock.call(
                 'seqr-data-loading',
@@ -549,6 +549,21 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
             mock.call(
                 'anvil-data-loading',
                 f'1 new WES samples are loaded in {SEQR_URL}project/{EXTERNAL_PROJECT_GUID}/project_page',
+            ),
+            mock.call(
+                'seqr_loading_notifications',
+                f'''Unable to identify Airtable "AnVIL Seqr Loading Requests Tracking" record to update
+
+Record lookup criteria:
+```
+or_filters: {{"Status": ["Loading", "Loading Requested"]}}
+and_filters: {{"AnVIL Project URL": "{SEQR_URL}project/{EXTERNAL_PROJECT_GUID}/project_page"}}
+```
+
+Desired update:
+```
+{{"Status": "Available in Seqr"}}
+```''',
             ),
             mock.call(
                 'seqr_loading_notifications',
@@ -592,15 +607,11 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         self.assertDictEqual(mock_email.return_value.esp_extra, {'MessageStream': 'seqr-notifications'})
         self.assertDictEqual(mock_email.return_value.merge_data, {})
 
-        self.assertEqual(mock_airtable_utils.error.call_count, 2)
+        self.assertEqual(mock_airtable_utils.error.call_count, 1)
         mock_airtable_utils.error.assert_has_calls([mock.call(
             f'Airtable patch "PDO" error: 400 Client Error: Bad Request for url: {airtable_pdo_url}', None, detail={
                 'record_ids': {'rec0RWBVfDVbtlBSL', 'recW24C2CJW5lT64K'}, 'update': {'PDOStatus': 'Available in seqr'}}
-        ), mock.call(
-            'Airtable patch "AnVIL Seqr Loading Requests Tracking" error: Unable to identify record to update', None, detail={
-                'or_filters': {'Status': ['Loading', 'Loading Requested']},
-                'and_filters': {'AnVIL Project URL': 'https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page'},
-                'update': {'Status': 'Available in Seqr'}})])
+        )])
 
         self.assertEqual(self.manager_user.notifications.count(), 5)
         self.assertEqual(
