@@ -280,7 +280,7 @@ const VARIANT_LINKS = [
   {
     name: 'Iranome',
     shouldShow: ({ svType, chrom }) => !svType && chrom !== 'M',
-    getHref: ({ chrom, pos, ref, alt }) => `http://www.iranome.ir/variant/${chrom}-${pos}-${ref}-${alt}`,
+    getHref: ({ chrom, pos, ref, alt }) => `https://www.iranome.com/variant/${chrom}-${pos}-${ref}-${alt}`,
   },
   {
     name: 'Geno2MP',
