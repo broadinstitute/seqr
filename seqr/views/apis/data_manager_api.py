@@ -464,8 +464,8 @@ def _callset_path(request_json):
 
 
 @pm_or_data_manager_required
-def get_loaded_projects(request, sample_type, dataset_type):
-    projects = get_internal_projects().filter(is_demo=False)
+def get_loaded_projects(request, genome_version, sample_type, dataset_type):
+    projects = get_internal_projects().filter(is_demo=False, genome_version=genome_version)
     project_samples = None
     if AirtableSession.is_airtable_enabled():
         try:

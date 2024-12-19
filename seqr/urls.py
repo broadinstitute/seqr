@@ -333,7 +333,7 @@ api_endpoints = {
     'data_management/load_rna_seq_sample/(?P<sample_guid>[^/]+)': load_rna_seq_sample_data,
     'data_management/load_phenotype_prioritization_data': load_phenotype_prioritization_data,
     'data_management/validate_callset': validate_callset,
-    'data_management/loaded_projects/(?P<sample_type>[^/]+)/(?P<dataset_type>[^/]+)': get_loaded_projects,
+    'data_management/loaded_projects/(?P<genome_version>[^/]+)/(?P<sample_type>[^/]+)/(?P<dataset_type>[^/]+)': get_loaded_projects,
     'data_management/load_data': load_data,
     'data_management/add_igv': receive_bulk_igv_table_handler,
 
