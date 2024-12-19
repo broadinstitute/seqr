@@ -190,8 +190,8 @@ def _parse_location_search(search):
             {field: gene[f'{field}{search["genome_version"].title()}'] for field in ['chrom', 'start', 'end']}
             for gene in genes.values()
         ]
-        parsed_intervals = [_format_interval(**interval) for interval in intervals or []] + [
-            [gene['chrom'], gene['start'], gene['end']] for gene in gene_coords]
+        parsed_intervals = [_format_interval(**interval) for interval in intervals or []] + sorted([
+            [gene['chrom'], gene['start'], gene['end']] for gene in gene_coords])
         if Sample.DATASET_TYPE_MITO_CALLS in search['sample_data'] and not exclude_locations:
             chromosomes = {gene['chrom'] for gene in gene_coords + (intervals or [])}
             if 'M' not in chromosomes:
@@ -202,7 +202,7 @@ def _parse_location_search(search):
     search.update({
         'intervals': parsed_intervals,
         'exclude_intervals': exclude_locations,
-        'gene_ids': None if (exclude_locations or not genes) else list(genes.keys()),
+        'gene_ids': None if (exclude_locations or not genes) else sorted(genes.keys()),
         'variant_ids': parsed_locus.get('parsed_variant_ids'),
         'rs_ids': parsed_locus.get('rs_ids'),
     })
