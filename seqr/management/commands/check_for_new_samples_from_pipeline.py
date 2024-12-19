@@ -166,27 +166,28 @@ class Command(BaseCommand):
         failed_families_by_guid = {f['guid']: f for f in Family.objects.filter(
             guid__in={family for families in failed_family_samples.values() for family in families}
         ).values('guid', 'family_id', 'project__name')}
+        failures_by_project_check = defaultdict(lambda: defaultdict(list))
         for check, check_failures in failed_family_samples.items():
-            failures_by_project = defaultdict(list)
             for family_guid, failure_data in check_failures.items():
                 family = failed_families_by_guid[family_guid]
-                failures_by_project[family['project__name']].append(
+                failures_by_project_check[family['project__name']][check].append(
                     f'- {family["family_id"]}: {"; ".join(failure_data["reasons"])}'
                 )
-            for project, failures in failures_by_project.items():
+        for project, failures_by_check in failures_by_project_check.items():
+            messages = [f'Encountered the following errors loading {project}:']
+            for check, failures in failures_by_check.items():
                 summary = '\n'.join(sorted(failures))
-                split_pdos = split_project_pdos.get(project)
-                if split_pdos:
-                    summary += f'\n\nSkipped samples in this project have been moved to {", ".join(split_pdos)}'
-
+                messages.append(f"The following {len(failures)} families failed {check.replace('_', ' ')}:\n{summary}")
                 if check == RELATEDNESS_CHECK_NAME and relatedness_check_file_path:
                     downloadable_link = f'https://storage.cloud.google.com/{relatedness_check_file_path[5:]}'
-                    summary += f'\n\nRelatedness check results: {downloadable_link}'
+                    messages.append(f'Relatedness check results: {downloadable_link}')
 
-                safe_post_to_slack(
-                    SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL,
-                    f'The following {len(failures)} families failed {check.replace("_", " ")} in {project}:\n{summary}'
-                )
+            split_pdos = split_project_pdos.get(project)
+            if split_pdos:
+                messages.append(f'Skipped samples in this project have been moved to {", ".join(split_pdos)}')
+            safe_post_to_slack(
+                SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, '\n\n'.join(messages),
+            )
 
         # Reload saved variant JSON
         updated_variants_by_id = update_projects_saved_variant_json(
