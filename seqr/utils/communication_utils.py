@@ -80,4 +80,3 @@ def set_email_message_stream(message, stream):
     message.esp_extra = {
         'MessageStream': stream,
     }
-

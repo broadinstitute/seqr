@@ -179,14 +179,13 @@ class Command(BaseCommand):
                 if split_pdos:
                     summary += f'\n\nSkipped samples in this project have been moved to {", ".join(split_pdos)}'
 
-                relatedness_check_message = (
-                    f'\nRelatedness check results: {relatedness_check_file_path}'
-                    if (relatedness_check_file_path and check == RELATEDNESS_CHECK_NAME)
-                    else ''
-                )
+                if check == RELATEDNESS_CHECK_NAME and relatedness_check_file_path:
+                    downloadable_link = f'https://storage.cloud.google.com/{relatedness_check_file_path[5:]}'
+                    summary += f'\n\nRelatedness check results: {downloadable_link}'
+
                 safe_post_to_slack(
                     SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL,
-                    f'The following {len(failures)} families failed {check.replace("_", " ")} in {project}:\n{summary}{relatedness_check_message}'
+                    f'The following {len(failures)} families failed {check.replace("_", " ")} in {project}:\n{summary}'
                 )
 
         # Reload saved variant JSON
