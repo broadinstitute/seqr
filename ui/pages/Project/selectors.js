@@ -302,7 +302,7 @@ export const getIndividualTaggedVariants = createSelector(
         ...variant.genotypes[individualGuid],
         ...variant,
       }
-      return [...acc, ...variant.genes.map(gene => ({
+      return [...acc, ...variant.genes.filter(gene => gene).map(gene => ({
         ...variantDetail,
         variantId: getVariantGeneId(variant, gene.geneId),
         ...gene,
