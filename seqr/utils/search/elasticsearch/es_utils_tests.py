@@ -1901,8 +1901,10 @@ class EsUtilsTest(TestCase):
                 'must': [{'term': {'samples': 'NA21234'}},
                     {'bool': {
                         'must_not': [
-                            {'term': {'samples_gq_sv_0_to_10': 'NA21234'}},
-                            {'term': {'samples_gq_sv_10_to_20': 'NA21234'}},
+                            {'term': {'samples_gq_sv_0_to_5': 'NA21234'}},
+                            {'term': {'samples_gq_sv_5_to_10': 'NA21234'}},
+                            {'term': {'samples_gq_sv_10_to_15': 'NA21234'}},
+                            {'term': {'samples_gq_sv_15_to_20': 'NA21234'}},
                         ],
                     }}
                 ],
