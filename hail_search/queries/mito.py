@@ -508,11 +508,11 @@ class MitoHailTableQuery(BaseHailTableQuery):
     def _gene_rank_sort(cls, r, gene_ranks):
         return [gene_ranks.get(r.selected_transcript.gene_id)] + super()._gene_rank_sort(r, gene_ranks)
 
-    def _add_project_lookup_data(self, ht, annotation_fields, *args, variant_ids=None, **kwargs):
+    def _import_variant_projects_ht(self, variant_id, *args, **kwargs):
         # Get all the project-families for the looked up variant formatted as a dict of dicts:
         # {<project_guid>: {<sample_type>: {<family_guid>: True}, <sample_type_2>: {<family_guid_2>: True}}, <project_guid_2>: ...}
         lookup_ht = self._read_table('lookup.ht', skip_missing_field='project_stats')
-        lookup_ht = self._filter_variant_ids(lookup_ht, variant_ids)
+        lookup_ht = self._filter_variant_ids(lookup_ht, [variant_id])
         if lookup_ht is None:
             raise HTTPNotFound()
         variant_projects = lookup_ht.aggregate(hl.agg.take(
@@ -540,15 +540,12 @@ class MitoHailTableQuery(BaseHailTableQuery):
         variant_projects = variant_projects[0]
 
         self._has_both_sample_types = True
-        annotation_fields.update({
-            'familyGenotypes': lambda r: hl.dict(r.family_entries.map(
-                lambda entries: (entries.first().familyGuid, self._get_sample_genotype(entries.filter(hl.is_defined)))
-            )),
-        })
-
         logger.info(f'Looking up {self.DATA_TYPE} variant in {len(variant_projects)} projects')
 
-        return super()._add_project_lookup_data(ht, annotation_fields, project_samples=variant_projects, **kwargs)
+        projects_ht = super()._import_variant_projects_ht(variant_id, project_samples=variant_projects)
+        return projects_ht.select(familyGenotypes=hl.dict(projects_ht.family_entries.map(
+            lambda entries: (entries.first().familyGuid, self._get_sample_genotype(entries.filter(hl.is_defined)))
+        )))
 
     @staticmethod
     def _stat_has_non_ref(s):

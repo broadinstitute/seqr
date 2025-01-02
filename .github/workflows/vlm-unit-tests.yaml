@@ -10,11 +10,13 @@ on:
     paths:
       - 'vlm/**'
       - '.github/workflows/*vlm*.yaml'
+      - 'hail_search/fixtures/*'
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
       - 'vlm/**'
       - '.github/workflows/*vlm*.yaml'
+      - 'hail_search/fixtures/*'
 
 jobs:
   vlm:
@@ -29,5 +31,10 @@ jobs:
           pip install -r hail_search/requirements-test.txt
       - name: Run coverage tests
         run: |
+          export VLM_DATA_DIR=./hail_search/fixtures
+          export SEQR_BASE_URL=https://test-seqr.org/
+          export NODE_ID=TestVLM
+          export MACHINE_MEM=24
+          export JAVA_OPTS_XSS=16M
           coverage run --source="./vlm" --omit="./vlm/__main__.py" -m pytest vlm/
-          coverage report --fail-under=90
+          coverage report --fail-under=95

@@ -45,11 +45,28 @@ jobs:
           persist-credentials: false # otherwise, the token used is the GITHUB_TOKEN, instead of your personal token
           fetch-depth: 0 # otherwise, you will failed to push refs to dest repo
 
-      - name: Update appVersion in hail-search Chart file
+      - name: Get latest hail-search version
+        uses: mikefarah/yq@v4.22.1
+        id: current
+        with:
+          cmd: >
+            yq -r '.version' charts/hail-search/Chart.yaml
+
+      - name: Bump version
+        id: bump
+        uses: cbrgm/semver-bump-action@main
+        with:
+          current-version: ${{ steps.current.outputs.result }}
+          bump-level: minor
+
+      - name: Update appVersion and version in seqr Chart file
         uses: mikefarah/yq@v4.22.1
         with:
           cmd: >
-            yq -i '.appVersion = "${{ github.event.workflow_run.head_sha }}"' charts/hail-search/Chart.yaml
+            yq -i '
+            .appVersion = "${{ github.event.workflow_run.head_sha }}" |
+            .version = "${{ steps.bump.outputs.new_version }}"
+            ' charts/hail-search/Chart.yaml
 
       - name: Commit and Push changes
         uses: Andro999b/push@v1.3

@@ -1461,7 +1461,7 @@ class DataManagerAPITest(AirtableTest):
             responses.GET, 'https://api.airtable.com/v0/app3Y97xtbbaOopVR/Samples', json=AIRTABLE_SAMPLE_RECORDS, status=200,
         )
 
-        url = reverse(get_loaded_projects, args=['WGS', 'SV'])
+        url = reverse(get_loaded_projects, args=['38', 'WGS', 'SV'])
         self.check_pm_login(url)
 
         self.reset_logs()
@@ -1473,6 +1473,11 @@ class DataManagerAPITest(AirtableTest):
         self.assertDictEqual(response.json(), {'projects': [self.PROJECT_OPTION]})
 
         snv_indel_url = url.replace('SV', 'SNV_INDEL')
+        response = self.client.get(snv_indel_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'projects': [self.PROJECT_OPTION]})
+
+        snv_indel_url = snv_indel_url.replace('38', '37')
         response = self.client.get(snv_indel_url)
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'projects': self.WGS_PROJECT_OPTIONS})
@@ -1623,7 +1628,7 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
     TRIGGER_CALLSET_DIR = '/local_datasets'
     CALLSET_DIR = ''
     PROJECT_OPTION = PROJECT_OPTION
-    WGS_PROJECT_OPTIONS = [EMPTY_PROJECT_OPTION, PROJECT_OPTION]
+    WGS_PROJECT_OPTIONS = [EMPTY_PROJECT_OPTION]
     WES_PROJECT_OPTIONS = [
         {'name': '1kg project nåme with uniçøde', 'projectGuid': 'R0001_1kg', 'dataTypeLastLoaded': '2017-02-05T06:25:55.397Z'},
         EMPTY_PROJECT_OPTION,
@@ -1721,7 +1726,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
     TRIGGER_CALLSET_DIR = CALLSET_DIR
     LOCAL_WRITE_DIR = '/mock/tmp'
     PROJECT_OPTION = PROJECT_SAMPLES_OPTION
-    WGS_PROJECT_OPTIONS = [EMPTY_PROJECT_SAMPLES_OPTION, PROJECT_SAMPLES_OPTION]
+    WGS_PROJECT_OPTIONS = [EMPTY_PROJECT_SAMPLES_OPTION]
     WES_PROJECT_OPTIONS = [EMPTY_PROJECT_SAMPLES_OPTION]
     PROJECT_OPTIONS = [
         {'projectGuid': 'R0001_1kg', 'sampleIds': ['NA19675_1', 'NA19678', 'NA19679', 'HG00732', 'HG00733']},
@@ -1778,6 +1783,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         expected_filters = [
             f'AND(LEN({{SV_CallsetPath}})>0,{pdo_filter})',
             f'AND(LEN({{MITO_WGS_CallsetPath}})>0,{pdo_filter})',
+            pdo_filter,
             pdo_filter,
         ]
         self.assertEqual(len(responses.calls), len(expected_filters))

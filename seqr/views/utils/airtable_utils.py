@@ -1,12 +1,14 @@
+import json
 import re
 import requests
 from collections import defaultdict
 from django.core.exceptions import PermissionDenied
 
+from seqr.utils.communication_utils import safe_post_to_slack
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.views.utils.terra_api_utils import is_cloud_authenticated
 
-from settings import AIRTABLE_API_KEY, AIRTABLE_URL, BASE_URL
+from settings import AIRTABLE_API_KEY, AIRTABLE_URL, BASE_URL, SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
 
 logger = SeqrLogger(__name__)
 
@@ -74,7 +76,20 @@ class AirtableSession(object):
                 page_size=max_records + 1,
             )
             if not records or len(records) > max_records:
-                raise ValueError('Unable to identify record to update')
+                error = f'''Unable to identify Airtable "{record_type}" record to update
+
+Record lookup criteria:
+```
+or_filters: {json.dumps(record_or_filters)}
+and_filters: {json.dumps(record_and_filters)}
+```
+
+Desired update:
+```
+{json.dumps(update)}
+```'''
+                safe_post_to_slack(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, error)
+                return
 
             self.safe_patch_records_by_id(record_type, list(records.keys()), update, error_detail=error_detail)
         except Exception as e:
