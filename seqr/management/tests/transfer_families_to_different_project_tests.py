@@ -1,12 +1,46 @@
+import responses
 from django.core.management import call_command
 from django.test import TestCase
 import mock
 
 from seqr.models import Family, VariantTagType, VariantTag, Sample
+from seqr.views.utils.test_utils import AirflowTestCase
+
+MOCK_AIRFLOW_URL = 'http://testairflowserver'
+DAG_NAME = 'DELETE_FAMILIES'
 
 
-class TransferFamiliesTest(TestCase):
+class TransferFamiliesTest(AirflowTestCase):
     fixtures = ['users', '1kg_project']
+    LOADING_PROJECT_GUID = 'R0001_1kg'  # from-project
+
+    def add_dag_tasks_response(self, projects):
+        tasks = []
+        for project in projects:
+            tasks += [
+                {'task_id': 'create_dataproc_cluster'},
+                {'task_id': f'DeleteProjectFamilyTablesTask_{project}'},
+            ]
+        responses.add(responses.GET, f'{self._dag_url}/tasks', json={
+            'tasks': tasks, 'total_entries': len(tasks),
+        })
+
+    def assert_airflow_calls(self, trigger_error=False, additional_tasks_check=False, dataset_type=None, offset=0, **kwargs):
+        self.mock_airflow_logger.info.assert_not_called()
+
+        call_count = 5
+        if trigger_error:
+            call_count = 1
+
+        self.assertEqual(len(responses.calls), call_count)
+        self.assertEqual(self.mock_authorized_session.call_count, call_count)
+        dag_variables = {
+            'projects_to_run': self.PROJECTS,
+            'sample_type': 'WES',
+            'dataset_type': 'SNV_INDEL',
+            'reference_genome': 'GRCh37',
+        }
+        self._assert_airflow_calls(dag_variables, call_count, offset=offset)
 
     def _test_command(self, mock_logger, additional_family, logs):
         call_command(
@@ -35,14 +69,15 @@ class TransferFamiliesTest(TestCase):
         self.assertEqual(new_tags[0].saved_variants.first().family, family)
 
         return family
+    #
+    # @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', 'testhost')
+    # @mock.patch('seqr.management.commands.transfer_families_to_different_project.logger.info')
+    # def test_es_command(self, mock_logger):
+    #     self._test_command(
+    #         mock_logger, additional_family='12', logs=[mock.call('Found 1 out of 2 families. No match for: 12.')]
+    #     )
 
-    @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', 'testhost')
-    @mock.patch('seqr.management.commands.transfer_families_to_different_project.logger.info')
-    def test_es_command(self, mock_logger):
-        self._test_command(
-            mock_logger, additional_family='12', logs=[mock.call('Found 1 out of 2 families. No match for: 12.')]
-        )
-
+    @responses.activate
     @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', '')
     @mock.patch('seqr.management.commands.transfer_families_to_different_project.logger.info')
     def test_hail_backend_command(self, mock_logger):
@@ -58,3 +93,5 @@ class TransferFamiliesTest(TestCase):
         family = Family.objects.get(family_id='4')
         self.assertEqual(family.project.guid, 'R0003_test')
         self.assertEqual(family.individual_set.count(), 1)
+
+        self.assert_airflow_calls()

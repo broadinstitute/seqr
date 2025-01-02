@@ -124,8 +124,8 @@ def prepare_data_loading_request(projects: list[Project], sample_type: str, data
         'projects_to_run': project_guids,
         'callset_path': data_path,
         'sample_type': sample_type,
-        'dataset_type': _dag_dataset_type(sample_type, dataset_type),
-        'reference_genome': GENOME_VERSION_LOOKUP[genome_version],
+        'dataset_type': dag_dataset_type(sample_type, dataset_type),
+        'reference_genome': reference_genome_version(genome_version),
     }
     if skip_validation:
         variables['skip_validation'] = True
@@ -134,10 +134,12 @@ def prepare_data_loading_request(projects: list[Project], sample_type: str, data
     return variables, file_path
 
 
-def _dag_dataset_type(sample_type: str, dataset_type: str):
+def dag_dataset_type(sample_type: str, dataset_type: str) -> str:
     return 'GCNV' if dataset_type == Sample.DATASET_TYPE_SV_CALLS and sample_type == Sample.SAMPLE_TYPE_WES \
         else dataset_type
 
+def reference_genome_version(genome_version: str) -> str:
+    return GENOME_VERSION_LOOKUP[genome_version]
 
 def _upload_data_loading_files(projects: list[Project], user: User, file_path: str, individual_ids: list[int], raise_error: bool):
     file_annotations = OrderedDict({
