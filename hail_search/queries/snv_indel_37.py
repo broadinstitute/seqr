@@ -147,19 +147,14 @@ class SnvIndelHailTableQuery37(MitoHailTableQuery):
     def _get_variant_project_data(self, variant_id, variant=None, **kwargs):
         project_data = super()._get_variant_project_data(variant_id, **kwargs)
         liftover_locus = variant.pop('liftover_locus')
-        if liftover_locus:
-            liftover_data = self._get_liftover_variant_project_data(variant_id, liftover_locus, **kwargs)
-            if liftover_data:
-                project_data['familyGenotypes'].update(liftover_data['familyGenotypes'])
-                project_data = project_data.annotate(liftedFamilyGuids=sorted(liftover_data['familyGenotypes'].keys()))
-
-        return project_data
-
-    def _get_liftover_variant_project_data(self, variant_id, liftover_locus, **kwargs):
+        if not liftover_locus:
+            return project_data
         interval = hl.eval(hl.interval(liftover_locus, liftover_locus, includes_start=True, includes_end=True))
         self._load_table_kwargs['_intervals'] = [interval]
         self._get_table_path = self._get_lifted_table_path
         try:
-            return super()._get_variant_project_data(variant_id, **kwargs)
+            lift_project_data = super()._get_variant_project_data(variant_id, **kwargs)
         except HTTPNotFound:
-            return None
+            return project_data
+        project_data['familyGenotypes'].update(lift_project_data['familyGenotypes'])
+        return project_data.annotate(liftedFamilyGuids=sorted(lift_project_data['familyGenotypes'].keys()))
