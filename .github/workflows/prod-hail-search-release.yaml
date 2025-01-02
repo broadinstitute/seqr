@@ -58,7 +58,6 @@ jobs:
         with:
           current-version: ${{ steps.current.outputs.result }}
           bump-level: minor
-          prerelease-tag: alpha
 
       - name: Update appVersion and version in seqr Chart file
         uses: mikefarah/yq@v4.22.1
