@@ -540,7 +540,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         ])
 
         # Test notifications
-        self.assertEqual(self.mock_send_slack.call_count, 8)
+        self.assertEqual(self.mock_send_slack.call_count, 7)
         self.mock_send_slack.assert_has_calls([
             mock.call(
                 'seqr-data-loading',
@@ -552,24 +552,39 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
             ),
             mock.call(
                 'seqr_loading_notifications',
-                """The following 1 families failed relatedness check in 1kg project nåme with uniçøde:
-- 1: Sample NA19679 has expected relation "parent" to NA19675 but has coefficients [0.0, 0.8505002045292791, 0.14949979547072176, 0.5747498977353613]; Sample NA19678 has expected relation "sibling" to NA19675 but has coefficients [0.17424888135104177, 0.6041745754450025, 0.22157654320395614, 0.5236638309264574]\nRelatedness check results: gs://seqr-loading-temp/v3.1/GRCh38/SNV_INDEL/relatedness_check/test_callset_hash.tsv""",
+                f'''Unable to identify Airtable "AnVIL Seqr Loading Requests Tracking" record to update
+
+Record lookup criteria:
+```
+or_filters: {{"Status": ["Loading", "Loading Requested"]}}
+and_filters: {{"AnVIL Project URL": "{SEQR_URL}project/{EXTERNAL_PROJECT_GUID}/project_page"}}
+```
+
+Desired update:
+```
+{{"Status": "Available in Seqr"}}
+```''',
             ),
             mock.call(
                 'seqr_loading_notifications',
-                """The following 1 families failed sex check in 1kg project nåme with uniçøde:
-- 1: Sample NA19679 has pedigree sex F but imputed sex M""",
-            ),
-            mock.call(
-                'seqr_loading_notifications',
-                """The following 1 families failed sex check in Non-Analyst Project:
-- 14: Sample NA21987 has pedigree sex M but imputed sex F""",
-            ),
-            mock.call(
-                'seqr_loading_notifications',
-                """The following 2 families failed missing samples in 1kg project nåme with uniçøde:
+                """Encountered the following errors loading 1kg project nåme with uniçøde:
+
+The following 1 families failed relatedness check:
+- 1: Sample NA19679 has expected relation "parent" to NA19675 but has coefficients [0.0, 0.8505002045292791, 0.14949979547072176, 0.5747498977353613]; Sample NA19678 has expected relation "sibling" to NA19675 but has coefficients [0.17424888135104177, 0.6041745754450025, 0.22157654320395614, 0.5236638309264574]\n\nRelatedness check results: https://storage.cloud.google.com/seqr-loading-temp/v3.1/GRCh38/SNV_INDEL/relatedness_check/test_callset_hash.tsv
+
+The following 1 families failed sex check:
+- 1: Sample NA19679 has pedigree sex F but imputed sex M
+
+The following 2 families failed missing samples:
 - 2: Missing samples: {'HG00732', 'HG00733'}
 - 3: Missing samples: {'NA20870'}""",
+            ),
+            mock.call(
+                'seqr_loading_notifications',
+                """Encountered the following errors loading Non-Analyst Project:
+
+The following 1 families failed sex check:
+- 14: Sample NA21987 has pedigree sex M but imputed sex F""",
             ),
             mock.call(
                 'seqr-data-loading',
@@ -592,15 +607,11 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         self.assertDictEqual(mock_email.return_value.esp_extra, {'MessageStream': 'seqr-notifications'})
         self.assertDictEqual(mock_email.return_value.merge_data, {})
 
-        self.assertEqual(mock_airtable_utils.error.call_count, 2)
+        self.assertEqual(mock_airtable_utils.error.call_count, 1)
         mock_airtable_utils.error.assert_has_calls([mock.call(
             f'Airtable patch "PDO" error: 400 Client Error: Bad Request for url: {airtable_pdo_url}', None, detail={
                 'record_ids': {'rec0RWBVfDVbtlBSL', 'recW24C2CJW5lT64K'}, 'update': {'PDOStatus': 'Available in seqr'}}
-        ), mock.call(
-            'Airtable patch "AnVIL Seqr Loading Requests Tracking" error: Unable to identify record to update', None, detail={
-                'or_filters': {'Status': ['Loading', 'Loading Requested']},
-                'and_filters': {'AnVIL Project URL': 'https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page'},
-                'update': {'Status': 'Available in Seqr'}})])
+        )])
 
         self.assertEqual(self.manager_user.notifications.count(), 5)
         self.assertEqual(

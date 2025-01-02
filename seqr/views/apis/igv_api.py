@@ -69,7 +69,7 @@ def _process_igv_table_handler(parse_uploaded_file, get_valid_matched_individual
                 dict(individualGuid=individual.guid, individualId=individual.individual_id, **update)
                 for update in updates
                 if update['filePath'] not in existing_sample_files[individual]
-                   or (update['indexFilePath'] and update['indexFilePath'] not in existing_sample_index_files)
+                   or (update['indexFilePath'] and update['indexFilePath'] not in existing_sample_index_files[individual])
             ]
             all_updates += changed_updates
             num_unchanged_rows += len(updates) - len(changed_updates)

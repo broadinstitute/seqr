@@ -68,7 +68,7 @@ def _check_dag_running_state():
     endpoint = f'dags/{DAG_NAME}/dagRuns'
     resp = _make_airflow_api_request(endpoint, method='GET')
     dag_runs = resp['dag_runs']
-    if dag_runs and dag_runs[-1]['state'] == 'running':
+    if dag_runs and dag_runs[-1]['state'] not in {'success', 'failed'}:
         raise DagRunningException(f'{DAG_NAME} DAG is running and cannot be triggered again.')
 
 

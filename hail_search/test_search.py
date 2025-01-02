@@ -634,7 +634,7 @@ class HailSearchTestCase(AioHTTPTestCase):
 
         await self._assert_expected_search(
             [SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT],  omit_data_type='SV_WES',
-            intervals=LOCATION_SEARCH['intervals'][-1:], gene_ids=LOCATION_SEARCH['gene_ids'][:1]
+            intervals=LOCATION_SEARCH['intervals'][-1:], gene_ids=LOCATION_SEARCH['gene_ids'][1:]
         )
 
         await self._assert_expected_search(
@@ -900,7 +900,7 @@ class HailSearchTestCase(AioHTTPTestCase):
 
         await self._assert_expected_search(
             [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT],
-            gene_ids=LOCATION_SEARCH['gene_ids'][:1], annotations=annotations, omit_data_type='SV_WES',
+            gene_ids=LOCATION_SEARCH['gene_ids'][1:], annotations=annotations, omit_data_type='SV_WES',
         )
 
         annotations['other'] = annotations['other'][:1]
