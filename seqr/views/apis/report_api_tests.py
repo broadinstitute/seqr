@@ -1221,6 +1221,7 @@ class ReportAPITest(AirtableTest):
             'phenotype_description': None,
             'analysisStatus': 'Q',
             'analysis_groups': '',
+            'analysed_by': '',
             'consanguinity': 'Unknown',
         })
 
@@ -1234,6 +1235,34 @@ class ReportAPITest(AirtableTest):
             'F000001_1', 'F000002_2', 'F000003_3', 'F000004_4', 'F000005_5', 'F000006_6', 'F000007_7', 'F000008_8',
             'F000009_9', 'F000010_10', 'F000011_11', 'F000012_12', 'F000013_13']
         self.assertListEqual(sorted([r['familyGuid'] for r in response_json['rows']]), expected_families)
+        test_row = next(r for r in response_json['rows'] if r['familyGuid'] == 'F000001_1')
+        self.assertDictEqual(test_row, {
+            'projectGuid': 'R0001_1kg',
+            'internal_project_id': '1kg project nåme with uniçøde',
+            'familyGuid': 'F000001_1',
+            'family_id': '1',
+            'displayName': '1',
+            'solve_status': 'Unsolved',
+            'actual_inheritance': 'de novo',
+            'date_data_generation': '2017-02-05',
+            'data_type': 'WES',
+            'proband_id': 'NA19675_1',
+            'maternal_id': 'NA19679',
+            'paternal_id': 'NA19678',
+            'other_individual_ids': '',
+            'individual_count': 3,
+            'family_structure': 'trio',
+            'genes': 'RP11',
+            'pmid_id': '34415322',
+            'phenotype_description': 'myopathy',
+            'analysisStatus': 'Q',
+            'analysis_groups': 'Test Group 1',
+            'analysed_by': 'WES/WGS: Test No Access User (7/22/2022)',
+            'consanguinity': 'Present',
+            'condition_id': 'OMIM:615120',
+            'known_condition_name': 'Myasthenic syndrome, congenital, 8, with pre- and postsynaptic defects',
+            'condition_inheritance': 'Autosomal recessive|X-linked',
+        })
         test_row = next(r for r in response_json['rows'] if r['familyGuid'] == 'F000003_3')
         self.assertDictEqual(test_row, {
             'projectGuid': 'R0001_1kg',
@@ -1253,6 +1282,7 @@ class ReportAPITest(AirtableTest):
             'phenotype_description': None,
             'analysisStatus': 'Q',
             'analysis_groups': 'Accepted; Test Group 1',
+            'analysed_by': '',
             'consanguinity': 'Unknown',
             'condition_id': 'OMIM:615123',
             'known_condition_name': '',

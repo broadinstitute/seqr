@@ -1,7 +1,7 @@
 from collections import defaultdict
 
 from datetime import datetime, timedelta
-from django.db.models import Count, Q, Value
+from django.db.models import Count, Q, F, Value
 from django.contrib.postgres.aggregates import ArrayAgg
 import json
 import re
@@ -17,12 +17,13 @@ from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, anvil_ex
     EXPERIMENT_TABLE, EXPERIMENT_LOOKUP_TABLE, FINDINGS_TABLE, GENE_COLUMN, FAMILY_INDIVIDUAL_FIELDS
 from seqr.views.utils.export_utils import export_multiple_files, write_multiple_files
 from seqr.views.utils.json_utils import create_json_response
+from seqr.views.utils.orm_to_json_utils import get_json_for_queryset
 from seqr.views.utils.permissions_utils import user_is_analyst, get_project_and_check_permissions, \
     get_project_guids_user_can_view, get_internal_projects, pm_or_analyst_required, active_user_has_policies_and_passes_test
 from seqr.views.utils.terra_api_utils import anvil_enabled
 from seqr.views.utils.variant_utils import DISCOVERY_CATEGORY
 
-from seqr.models import Project, Family, Sample, RnaSample, Individual
+from seqr.models import Project, Family, FamilyAnalysedBy, Sample, RnaSample, Individual
 from settings import GREGOR_DATA_MODEL_URL
 
 
@@ -890,6 +891,16 @@ def family_metadata(request, project_guid):
     parse_anvil_metadata(
         projects, user=request.user, add_row=_add_row, omit_airtable=True, include_family_sample_metadata=True, include_no_individual_families=True)
 
+    analysed_by = get_json_for_queryset(
+        FamilyAnalysedBy.objects.filter(family_id__in=families_by_id).order_by('last_modified_date'),
+        additional_values={'familyId': F('family_id')},
+    )
+    analysed_by_family_type = defaultdict(lambda: defaultdict(list))
+    for fab in analysed_by:
+        analysed_by_family_type[fab['familyId']][fab['dataType']].append(
+            f"{fab['createdBy']} ({fab['lastModifiedDate']:%-m/%-d/%Y})"
+        )
+
     for family_id, f in families_by_id.items():
         individuals_by_id = family_individuals[family_id]
         proband = next((i for i in individuals_by_id.values() if i['proband_relationship'] == 'Self'), None)
@@ -910,6 +921,10 @@ def family_metadata(request, project_guid):
         sorted_samples = sorted(individuals_by_id.values(), key=lambda x: x.get('date_data_generation', ''))
         earliest_sample = next((s for s in [proband or {}] + sorted_samples if s.get('date_data_generation')), {})
 
+        analysed_by = [
+            f'{ANALYSIS_DATA_TYPE_LOOKUP[data_type]}: {", ".join(analysed)}'
+            for data_type, analysed in analysed_by_family_type[family_id].items()
+        ]
         inheritance_models = f.pop('inheritance_models', [])
         f.update({
             'individual_count': len(individuals_by_id),
@@ -920,6 +935,7 @@ def family_metadata(request, project_guid):
             'genes': '; '.join(sorted(f.get('genes', []))),
             'actual_inheritance': 'unknown' if inheritance_models == {'unknown'} else ';'.join(
                 sorted([i for i in inheritance_models if i != 'unknown'])),
+            'analysed_by': '; '.join(analysed_by),
         })
 
     return create_json_response({'rows': list(families_by_id.values())})
@@ -931,6 +947,9 @@ def _get_metadata_projects(project_guid, user):
     if project_guid == GREGOR_CATEGORY.lower():
         return Project.objects.filter(projectcategory__name=GREGOR_CATEGORY)
     return [get_project_and_check_permissions(project_guid, user)]
+
+
+ANALYSIS_DATA_TYPE_LOOKUP = dict(FamilyAnalysedBy.DATA_TYPE_CHOICES)
 
 
 FAMILY_STRUCTURES = {
