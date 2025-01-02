@@ -1,3 +1,4 @@
+from aiohttp.web import HTTPNotFound
 from collections import OrderedDict
 import hail as hl
 
@@ -147,11 +148,18 @@ class SnvIndelHailTableQuery37(MitoHailTableQuery):
         project_data = super()._get_variant_project_data(variant_id, **kwargs)
         liftover_locus = variant.pop('liftover_locus')
         if liftover_locus:
-            interval = hl.eval(hl.interval(liftover_locus, liftover_locus, includes_start=True, includes_end=True))
-            self._load_table_kwargs['_intervals'] = [interval]
-            self._get_table_path = self._get_lifted_table_path
-            lift_project_data = super()._get_variant_project_data(variant_id, **kwargs)
-            project_data['familyGenotypes'].update(lift_project_data['familyGenotypes'])
-            project_data = project_data.annotate(liftedFamilyGuids=sorted(lift_project_data['familyGenotypes'].keys()))
+            liftover_data = self._get_liftover_variant_project_data(variant_id, liftover_locus, **kwargs)
+            if liftover_data:
+                project_data['familyGenotypes'].update(liftover_data['familyGenotypes'])
+                project_data = project_data.annotate(liftedFamilyGuids=sorted(liftover_data['familyGenotypes'].keys()))
 
         return project_data
+
+    def _get_liftover_variant_project_data(self, variant_id, liftover_locus, **kwargs):
+        interval = hl.eval(hl.interval(liftover_locus, liftover_locus, includes_start=True, includes_end=True))
+        self._load_table_kwargs['_intervals'] = [interval]
+        self._get_table_path = self._get_lifted_table_path
+        try:
+            return super()._get_variant_project_data(variant_id, **kwargs)
+        except HTTPNotFound:
+            return None
