@@ -2,17 +2,16 @@ import json
 
 import responses
 from django.core.management import call_command
-from django.test import TestCase
 import mock
 
 from seqr.models import Family, VariantTagType, VariantTag, Sample
-from seqr.views.utils.test_utils import AirflowTestCase
+from seqr.views.utils.test_utils import BaseAirflowTestCase
 
 MOCK_AIRFLOW_URL = 'http://testairflowserver'
 DAG_NAME = 'DELETE_FAMILIES'
 
 
-class TransferFamiliesTest(AirflowTestCase):
+class TransferFamiliesTest(BaseAirflowTestCase):
     fixtures = ['users', '1kg_project']
     LOADING_PROJECT_GUID = 'R0001_1kg'  # from-project
 

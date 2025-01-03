@@ -562,8 +562,7 @@ class AnvilAuthenticationTestCase(AuthenticationTestCase):
         self.mock_get_group_members.assert_not_called()
 
 
-class AirflowTestCase(TestCase):
-
+class BaseAirflowTestCase(AnvilAuthenticationTestCase):
     def setUp(self):
         patcher = mock.patch('seqr.views.utils.airflow_utils.google.auth.default', lambda **kwargs: (None, None))
         patcher.start()
@@ -587,7 +586,7 @@ MOCK_AIRFLOW_URL = 'http://testairflowserver'
 DAG_NAME = 'LOADING_PIPELINE'
 PROJECT_GUID = 'R0001_1kg'
 
-class AirflowLoadingTestCase(AirflowTestCase, AnvilAuthenticationTestCase):
+class AirflowLoadingTestCase(BaseAirflowTestCase):
     ADDITIONAL_REQUEST_COUNT = 0
 
     def setUp(self):
