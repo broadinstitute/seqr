@@ -16,11 +16,9 @@ const DECORATORS = [
   createDecorator({
     field: `search.${LOCUS_FIELD_NAME}.${PANEL_APP_FIELD_NAME}`,
     updates: {
-      [`search.${LOCUS_FIELD_NAME}.${LOCUS_LIST_ITEMS_FIELD.name}`]: (locusValue) => {
-        const newLocus = { ...locusValue }
-        delete newLocus.selectedMOIs
-        return newLocus && toUniqueCsvString(Object.values(newLocus))
-      },
+      [`search.${LOCUS_FIELD_NAME}.${LOCUS_LIST_ITEMS_FIELD.name}`]: locusValue => (
+        locusValue && toUniqueCsvString(Object.values(locusValue))
+      ),
     },
   }),
 ]

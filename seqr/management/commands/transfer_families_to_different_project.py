@@ -12,11 +12,6 @@ from settings import SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
 
 logger = logging.getLogger(__name__)
 
-
-SAMPLE_TYPE_WES = 'WES'
-SAMPLE_TYPE_WGS = 'WGS'
-
-
 def _disable_search(families):
     search_samples = Sample.objects.filter(is_active=True, individual__family__in=families)
     if search_samples:
