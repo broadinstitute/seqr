@@ -5,6 +5,7 @@
 
 ui/node_modules
 ui/jest*
+ui/dist
 
 *.pyc
 *.DS_Store
@@ -16,5 +17,7 @@ deploy/*.tar.gz
 
 pedigree_images/*
 seqr_settings
+
+static/*
 
 django_key
