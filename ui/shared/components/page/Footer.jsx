@@ -3,10 +3,10 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { Table, Modal, Header } from 'semantic-ui-react'
 import { connect } from 'react-redux'
-import { Link } from 'react-router-dom'
+// import { Link } from 'react-router-dom'
 
 import { getVersion } from 'redux/selectors'
-import { FAQ_PATH, PRIVACY_PATH, TOS_PATH } from 'shared/utils/constants'
+// import { FAQ_PATH, PRIVACY_PATH, TOS_PATH } from 'shared/utils/constants'
 import { ButtonLink } from '../StyledComponents'
 
 const TableHeaderCell = styled(Table.HeaderCell)`
@@ -18,17 +18,28 @@ const TableHeaderCell = styled(Table.HeaderCell)`
   }
 `
 
+/*
 const FOOTER_LINKS = [
   { to: FAQ_PATH, content: 'FAQ' },
   { to: PRIVACY_PATH, content: 'Privacy Policy' },
   { to: TOS_PATH, content: 'Terms of Service' },
 ]
+*/
 
 const SEQR_PAPER_URL = 'https://www.ncbi.nlm.nih.gov/pmc/articles/PMC9903206'
+const BCH_PAPER_URL = 'https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7338382'
+
 export const SeqrPaperLink =
   ({ content }) => <a target="_blank" rel="noreferrer" href={SEQR_PAPER_URL}>{content || SEQR_PAPER_URL}</a>
 
+export const BCHPaperLink =
+  ({ content }) => <a target="_blank" rel="noreferrer" href={BCH_PAPER_URL}>{content || BCH_PAPER_URL}</a>
+
 SeqrPaperLink.propTypes = {
+  content: PropTypes.node,
+}
+
+BCHPaperLink.propTypes = {
   content: PropTypes.node,
 }
 
@@ -42,7 +53,7 @@ const Footer = React.memo(({ version }) => (
           <Modal
             // eslint-disable-next-line react/jsx-one-expression-per-line
             trigger={<ButtonLink content={<span>Cite <i>seqr</i></span>} />}
-            header={<Modal.Header content="For discoveries made using seqr, please cite:" as={Header} size="small" />}
+            header={<Modal.Header content="For discoveries made using BCH seqr, please cite:" as={Header} size="small" />}
             content={
               <Modal.Content>
                 Pais, L., Snow, H., Weisburd, B., Zhang, S., Baxter, S., DiTroia, S., O’Heir, E., England, E.,
@@ -52,21 +63,24 @@ const Footer = React.memo(({ version }) => (
                 seqr: a web-based analysis and collaboration tool for rare disease genomics. Human Mutation (2022).
                 &nbsp;
                 <SeqrPaperLink />
+                <br />
+                <br />
+                Rockowitz S, LeCompte N, Carmack M, Quitadamo A, Wang L, Park M, Knight D, Sexton E, Smith L,
+                Sheidley B, Field M, Holm IA, Brownstein CA, Agrawal PB, Kornetsky S, Poduri A, Snapper SB,
+                Beggs AH, Yu TW, Williams DA, Sliz P.
+                <br />
+                Children’s rare disease cohorts: an integrative research and clinical genomics initiative.
+                NPJ Genom Med. (2020)
+                &nbsp;
+                <BCHPaperLink />
               </Modal.Content>
             }
           />
         </TableHeaderCell>
-        {FOOTER_LINKS.map(({ content, ...props }) => (
-          <TableHeaderCell key={content} collapsing><Link {...props}>{content}</Link></TableHeaderCell>
-        ))}
-        <TableHeaderCell>
-          For bug reports or feature requests please submit  &nbsp;
-          <a href="https://github.com/broadinstitute/seqr/issues">Github Issues</a>
-        </TableHeaderCell>
-        <TableHeaderCell collapsing textAlign="right">
+        <TableHeaderCell collapsing>
           If you have questions or feedback, &nbsp;
           <a
-            href="https://mail.google.com/mail/?view=cm&amp;fs=1&amp;tf=1&amp;to=seqr@broadinstitute.org"
+            href="mailto:Research.Computing@childrens.harvard.edu"
             target="_blank"
             rel="noreferrer"
           >
