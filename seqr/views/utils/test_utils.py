@@ -580,6 +580,7 @@ class AirflowTestCase(TestCase):
         patcher = mock.patch('seqr.views.utils.airflow_utils.logger')
         self.mock_airflow_logger = patcher.start()
         self.addCleanup(patcher.stop)
+        super().setUp()
 
 
 MOCK_AIRFLOW_URL = 'http://testairflowserver'
@@ -616,7 +617,7 @@ class AirflowLoadingTestCase(AirflowTestCase, AnvilAuthenticationTestCase):
         # get task id again if the response of the previous request didn't include the updated guid
         self.add_dag_tasks_response([self.LOADING_PROJECT_GUID, PROJECT_GUID])
 
-        super(AirflowLoadingTestCase, self).setUp()
+        super().setUp()
 
     def add_dag_tasks_response(self, projects):
         tasks = []

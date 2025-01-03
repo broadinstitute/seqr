@@ -100,7 +100,7 @@ def _send_load_data_slack_msg(dag_name: str, messages: list[str], channel: str, 
 
 def _send_slack_msg_on_failure_trigger(dag_name: str, e, dag, error_message):
     message_content = f"""{error_message}: {e}
-
+        
         DAG {dag_name} should be triggered with following: 
         ```{json.dumps(dag, indent=4)}```
         """
