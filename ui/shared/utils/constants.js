@@ -164,6 +164,7 @@ const FAMILY_STATUS_CLOSED = 'C'
 const FAMILY_STATUS_PARTIAL_SOLVE = 'P'
 const FAMILY_STATUS_ANALYSIS_IN_PROGRESS = 'I'
 const FAMILY_STATUS_WAITING_FOR_DATA = 'Q'
+const FAMILY_STATUS_LOADING_FAILED = 'F'
 const FAMILY_STATUS_NO_DATA = 'N'
 
 const DEPRECATED_FAMILY_ANALYSIS_STATUS_OPTIONS = [
@@ -184,6 +185,7 @@ export const SELECTABLE_FAMILY_ANALYSIS_STATUS_OPTIONS = [
   { value: FAMILY_STATUS_PARTIAL_SOLVE, color: '#288582', name: 'Partial Solve - Analysis in Progress' },
   { value: FAMILY_STATUS_ANALYSIS_IN_PROGRESS, color: '#4682B4', name: 'Analysis in Progress' },
   { value: FAMILY_STATUS_WAITING_FOR_DATA, color: '#FFC107', name: 'Waiting for data' },
+  { value: FAMILY_STATUS_LOADING_FAILED, color: '#ba4c12', name: 'Loading failed' },
   { value: FAMILY_STATUS_NO_DATA, color: '#646464', name: 'No data expected' },
 ]
 export const ALL_FAMILY_ANALYSIS_STATUS_OPTIONS = [
