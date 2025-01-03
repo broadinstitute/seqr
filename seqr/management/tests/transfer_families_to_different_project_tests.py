@@ -1,3 +1,5 @@
+import json
+
 import responses
 from django.core.management import call_command
 from django.test import TestCase
@@ -14,33 +16,72 @@ class TransferFamiliesTest(AirflowTestCase):
     fixtures = ['users', '1kg_project']
     LOADING_PROJECT_GUID = 'R0001_1kg'  # from-project
 
-    def add_dag_tasks_response(self, projects):
-        tasks = []
-        for project in projects:
-            tasks += [
-                {'task_id': 'create_dataproc_cluster'},
-                {'task_id': f'DeleteProjectFamilyTablesTask_{project}'},
-            ]
-        responses.add(responses.GET, f'{self._dag_url}/tasks', json={
-            'tasks': tasks, 'total_entries': len(tasks),
-        })
+    DAG_VARIABLES = {
+        'projects_to_run': [LOADING_PROJECT_GUID],
+        'family_guids': ['F000002_2'],
+        'reference_genome': 'GRCh37',
+    }
 
-    def assert_airflow_calls(self, trigger_error=False, additional_tasks_check=False, dataset_type=None, offset=0, **kwargs):
+    def setUp(self):
+        self._dag_url = f'{MOCK_AIRFLOW_URL}/api/v1/dags/{DAG_NAME}'
+
+        for dataset_type in ['MITO', 'SNV_INDEL', 'SV']:
+            # check dag running state
+            responses.add(responses.GET, f'{self._dag_url}/dagRuns', json={
+                'dag_runs': [{'state': 'success'}]
+            })
+            # trigger dag
+            responses.add(responses.POST, f'{self._dag_url}/dagRuns', json={})
+            # update variables
+            responses.add(
+                responses.PATCH, f'{MOCK_AIRFLOW_URL}/api/v1/variables/{DAG_NAME}',
+                json={'key': DAG_NAME, 'value': 'updated variables'},
+            )
+            # get variables
+            responses.add(responses.GET, f'{self._dag_url}/variables', json={'variables': {}})
+            # get variables again if the response of the previous request didn't include the updated variables
+            responses.add(responses.GET, f'{self._dag_url}/variables', json={
+                'variables': {**self.DAG_VARIABLES, 'dataset_type': dataset_type}
+            })
+
+        super().setUp()
+
+    def assert_airflow_calls(self):
         self.mock_airflow_logger.info.assert_not_called()
 
-        call_count = 5
-        if trigger_error:
-            call_count = 1
-
+        call_count = 15
         self.assertEqual(len(responses.calls), call_count)
         self.assertEqual(self.mock_authorized_session.call_count, call_count)
-        dag_variables = {
-            'projects_to_run': self.PROJECTS,
-            'sample_type': 'WES',
-            'dataset_type': 'SNV_INDEL',
-            'reference_genome': 'GRCh37',
-        }
-        self._assert_airflow_calls(dag_variables, call_count, offset=offset)
+
+        dag_url = self._dag_url
+        for dataset_type, offset in [('MITO', 0), ('SNV_INDEL', 5), ('SV', 10)]:
+            # check dag running state
+            self.assertEqual(responses.calls[offset].request.url, f'{dag_url}/dagRuns')
+            self.assertEqual(responses.calls[offset].request.method, "GET")
+
+            # update variables
+            self.assertEqual(responses.calls[offset+1].request.url, f'{MOCK_AIRFLOW_URL}/api/v1/variables/{DAG_NAME}')
+            self.assertEqual(responses.calls[offset+1].request.method, 'PATCH')
+            self.assertDictEqual(json.loads(responses.calls[offset + 1].request.body), {
+                'key': DAG_NAME,
+                'value': json.dumps({**self.DAG_VARIABLES, 'dataset_type': dataset_type}),
+            })
+
+            # get variables
+            self.assertEqual(responses.calls[offset+2].request.url, f'{dag_url}/variables')
+            self.assertEqual(responses.calls[offset+2].request.method, 'GET')
+
+            self.assertEqual(responses.calls[offset+3].request.url, f'{dag_url}/variables')
+            self.assertEqual(responses.calls[offset+3].request.method, 'GET')
+
+            # trigger dag
+            self.assertEqual(responses.calls[offset+4].request.url, f'{dag_url}/dagRuns')
+            self.assertEqual(responses.calls[offset+4].request.method, 'POST')
+            self.assertDictEqual(json.loads(responses.calls[offset+4].request.body), {})
+
+            self.mock_airflow_logger.warning.assert_not_called()
+            self.mock_airflow_logger.error.assert_not_called()
+
 
     def _test_command(self, mock_logger, additional_family, logs):
         call_command(
@@ -69,13 +110,13 @@ class TransferFamiliesTest(AirflowTestCase):
         self.assertEqual(new_tags[0].saved_variants.first().family, family)
 
         return family
-    #
-    # @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', 'testhost')
-    # @mock.patch('seqr.management.commands.transfer_families_to_different_project.logger.info')
-    # def test_es_command(self, mock_logger):
-    #     self._test_command(
-    #         mock_logger, additional_family='12', logs=[mock.call('Found 1 out of 2 families. No match for: 12.')]
-    #     )
+
+    @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', 'testhost')
+    @mock.patch('seqr.management.commands.transfer_families_to_different_project.logger.info')
+    def test_es_command(self, mock_logger):
+        self._test_command(
+            mock_logger, additional_family='12', logs=[mock.call('Found 1 out of 2 families. No match for: 12.')]
+        )
 
     @responses.activate
     @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', '')

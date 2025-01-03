@@ -13,16 +13,7 @@ class PaMoiDropdown extends React.PureComponent {
 
   static propTypes = {
     locusList: PropTypes.object,
-    value: PropTypes.object,
     onChange: PropTypes.func,
-  }
-
-  componentDidUpdate(prevProps) {
-    const { value, onChange } = this.props
-
-    if (prevProps.value.selectedMOIs !== value.selectedMOIs) {
-      onChange(value)
-    }
   }
 
   handleMOIselect = (selectedMOIs) => {
@@ -39,7 +30,7 @@ class PaMoiDropdown extends React.PureComponent {
       }),
     )
 
-    onChange({ selectedMOIs, ...panelAppItems })
+    onChange({ ...panelAppItems })
   }
 
   moiOptions = () => {
@@ -59,9 +50,8 @@ class PaMoiDropdown extends React.PureComponent {
   }
 
   render() {
-    const { value, label, width, locusList } = this.props || []
+    const { selectedMOIs, label, width, locusList } = this.props || []
     const disabled = !locusList?.items
-    const selectedMOIs = value.selectedMOIs || []
     return (
       <Multiselect
         label={label}

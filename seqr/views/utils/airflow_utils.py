@@ -42,33 +42,37 @@ def trigger_airflow_data_loading(
 
 
 def trigger_airflow_delete_families(
-    sample_type: str, dataset_type: str, genome_version: str, error_message: str, families: list[Family],
+    dataset_type: str, genome_version: str, error_message: str, families: list[Family],
     projects: list[Project], success_message: str, success_slack_channel: str
 ):
     variables = {
-        'family_guids': sorted([f.guid for f in families]),
         'projects_to_run': sorted([p.guid for p in projects]),
-        'dataset_type': dag_dataset_type(sample_type, dataset_type),
+        'family_guids': sorted([f.guid for f in families]),
         'reference_genome': reference_genome_version(genome_version),
+        'dataset_type': dag_dataset_type(dataset_type),
     }
     return _trigger_airflow_dag(
         dag_name=DELETE_FAMILIES_DAG_NAME,
         variables=variables,
         success_message=success_message,
         success_slack_channel=success_slack_channel,
-        error_message=error_message
+        error_message=error_message,
+        check_tasks=False,
     )
 
 
 def _trigger_airflow_dag(
     dag_name: str, variables: dict, success_message: str, success_slack_channel: str,
-    error_message: str, upload_info: list[str] = None, user: User = None
+    error_message: str, upload_info: list[str] = None, user: User = None, check_tasks = True
 ) -> bool:
     success = True
     try:
         _check_dag_running_state(dag_name)
         _update_variables(variables, dag_name)
-        _wait_for_dag_variable_update(variables['projects_to_run'], dag_name)
+        if check_tasks:
+            _wait_for_dag_variable_update_via_tasks(variables['projects_to_run'], dag_name)
+        else:
+            _wait_for_dag_variable_update(variables, dag_name)
         _trigger_dag(dag_name)
     except Exception as e:
         logger_call = logger.warning if isinstance(e, DagRunningException) else logger.error
@@ -111,10 +115,16 @@ def _check_dag_running_state(dag_name: str):
         raise DagRunningException(f'{dag_name} DAG is running and cannot be triggered again.')
 
 
-def _wait_for_dag_variable_update(projects: list[str], dag_name: str):
+def _wait_for_dag_variable_update_via_tasks(projects: list[str], dag_name: str):
     dag_projects = _get_task_ids(dag_name)
     while all(p not in ''.join(dag_projects) for p in projects):
         dag_projects = _get_task_ids(dag_name)
+
+
+def _wait_for_dag_variable_update(variables: dict, dag_name: str):
+    existing_variables = _get_variables(dag_name)
+    while any(existing_variables.get(k) != v for k, v in variables.items()):
+        existing_variables = _get_variables(dag_name)
 
 
 def _update_variables(val: dict, dag_name: str):
@@ -134,6 +144,11 @@ def _get_task_ids(dag_name: str):
     tasks = airflow_response['tasks']
     task_ids = [task_dict['task_id'] for task_dict in tasks]
     return task_ids
+
+def _get_variables(dag_name: str):
+    endpoint = f'dags/{dag_name}/variables'
+    airflow_response = _make_airflow_api_request(endpoint, method='GET')
+    return airflow_response['variables']
 
 
 def _trigger_dag(dag_name: str):

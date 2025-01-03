@@ -124,7 +124,7 @@ def prepare_data_loading_request(projects: list[Project], sample_type: str, data
         'projects_to_run': project_guids,
         'callset_path': data_path,
         'sample_type': sample_type,
-        'dataset_type': dag_dataset_type(sample_type, dataset_type),
+        'dataset_type': dag_dataset_type(dataset_type, sample_type),
         'reference_genome': reference_genome_version(genome_version),
     }
     if skip_validation:
@@ -134,7 +134,7 @@ def prepare_data_loading_request(projects: list[Project], sample_type: str, data
     return variables, file_path
 
 
-def dag_dataset_type(sample_type: str, dataset_type: str) -> str:
+def dag_dataset_type(dataset_type: str, sample_type: str = None) -> str:
     return 'GCNV' if dataset_type == Sample.DATASET_TYPE_SV_CALLS and sample_type == Sample.SAMPLE_TYPE_WES \
         else dataset_type
 

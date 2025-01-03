@@ -11,7 +11,7 @@ from seqr.views.apis.data_manager_api import elasticsearch_status, upload_qc_pip
     update_rna_seq, load_rna_seq_sample_data, load_phenotype_prioritization_data, validate_callset, \
     get_loaded_projects, load_data
 from seqr.views.utils.orm_to_json_utils import _get_json_for_models
-from seqr.views.utils.test_utils import AuthenticationTestCase, AirflowTestCase, AirtableTest
+from seqr.views.utils.test_utils import AuthenticationTestCase, AirflowLoadingTestCase, AirtableTest
 from seqr.utils.search.elasticsearch.es_utils_tests import urllib3_responses
 from seqr.models import Individual, RnaSeqOutlier, RnaSeqTpm, RnaSeqSpliceOutlier, RnaSample, Project, PhenotypePrioritization
 from settings import SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
@@ -1717,7 +1717,7 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
 
 
 @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
-class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
+class AnvilDataManagerAPITest(AirflowLoadingTestCase, DataManagerAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
 
     ADDITIONAL_REQUEST_COUNT = 1
