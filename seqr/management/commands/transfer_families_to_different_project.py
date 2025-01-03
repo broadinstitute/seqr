@@ -8,21 +8,28 @@ from seqr.views.utils.airflow_utils import trigger_airflow_delete_families
 
 import logging
 
-from settings import SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
-
 logger = logging.getLogger(__name__)
 
-def _disable_search(families):
+def _disable_search(families, from_project):
     search_samples = Sample.objects.filter(is_active=True, individual__family__in=families)
     if search_samples:
         updated_families = search_samples.values_list("individual__family__family_id", flat=True).distinct()
-        updated_family_dataset_types = list(search_samples.values_list('dataset_type', 'individual__family__family_id').distinct())
+        updated_family_dataset_types = list(search_samples.values_list('dataset_type', 'individual__family__guid').distinct())
         family_summary = ", ".join(sorted(updated_families))
         num_updated = search_samples.update(is_active=False)
         logger.info(
             f'Disabled search for {num_updated} samples in the following {len(updated_families)} families: {family_summary}'
         )
-        return updated_family_dataset_types
+        _trigger_delete_families_dags(from_project, updated_family_dataset_types)
+
+
+def _trigger_delete_families_dags(from_project, updated_family_dataset_types):
+    updated_families_by_dataset_type = defaultdict(list)
+    for dataset_type, family_guid in updated_family_dataset_types:
+        updated_families_by_dataset_type[dataset_type].append(family_guid)
+
+    for dataset_type, family_guids in sorted(updated_families_by_dataset_type.items()):
+        trigger_airflow_delete_families(dataset_type, family_guids, from_project)
 
 
 class Command(BaseCommand):
@@ -42,7 +49,7 @@ class Command(BaseCommand):
         missing_id_message = '' if num_found == num_expected else f' No match for: {", ".join(set(family_ids) - set([f.family_id for f in families]))}.'
         logger.info(f'Found {num_found} out of {num_expected} families.{missing_id_message}')
 
-        updated_family_dataset_types = backend_specific_call(lambda f: None, _disable_search)(families)
+        backend_specific_call(lambda *f: None, _disable_search)(families, from_project)
 
         for variant_tag_type in VariantTagType.objects.filter(project=from_project):
             variant_tags = VariantTag.objects.filter(saved_variants__family__in=families, variant_tag_type=variant_tag_type)
@@ -59,30 +66,6 @@ class Command(BaseCommand):
                     to_tag_type.save()
                 variant_tags.update(variant_tag_type=to_tag_type)
 
-        if updated_family_dataset_types:
-            self.trigger_delete_families_dags(from_project, updated_family_dataset_types)
-
         logger.info("Updating families")
         families.update(project=to_project)
         logger.info("Done.")
-
-    @staticmethod
-    def trigger_delete_families_dags(from_project, updated_family_dataset_types):
-        updated_families_by_dataset_type = defaultdict(list)
-        for dataset_type, family_id in updated_family_dataset_types:
-            updated_families_by_dataset_type[dataset_type].append(family_id)
-
-        for dataset_type, family_ids in updated_families_by_dataset_type.items():
-            families = Family.objects.filter(project=from_project, family_id__in=family_ids)
-            success_message = f'Successfully deleted {len(families)} from {from_project.name} {dataset_type}'
-            error_message = f'ERROR triggering delete families from {from_project.name} {dataset_type}'
-
-            trigger_airflow_delete_families(
-                dataset_type=dataset_type,
-                genome_version=from_project.genome_version,
-                error_message=error_message,
-                families=families,
-                projects=[from_project],
-                success_message=success_message,
-                success_slack_channel=SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL,
-            )

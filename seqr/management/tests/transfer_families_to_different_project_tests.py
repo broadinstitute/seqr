@@ -47,7 +47,7 @@ class TransferFamiliesTest(AirflowTestCase):
         super().setUp()
 
     def assert_airflow_calls(self):
-        self.mock_airflow_logger.info.assert_not_called()
+        self.assertEqual(self.mock_airflow_logger.info.call_count, 3)
 
         call_count = 15
         self.assertEqual(len(responses.calls), call_count)
