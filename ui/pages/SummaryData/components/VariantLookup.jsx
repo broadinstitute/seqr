@@ -1,7 +1,7 @@
 import React from 'react'
 import { connect } from 'react-redux'
 import PropTypes from 'prop-types'
-import { Grid, Header } from 'semantic-ui-react'
+import { Grid, Header, Label } from 'semantic-ui-react'
 
 import { RECEIVE_DATA } from 'redux/utils/reducerUtils'
 import { QueryParamsEditor } from 'shared/components/QueryParamEditor'
@@ -14,7 +14,7 @@ import FamilyReads from 'shared/components/panel/family/FamilyReads'
 import FamilyVariantTags from 'shared/components/panel/variants/FamilyVariantTags'
 import Variants, { Variant, StyledVariantRow } from 'shared/components/panel/variants/Variants'
 import { FamilyVariantIndividuals } from 'shared/components/panel/variants/VariantIndividuals'
-import { GENOME_VERSION_FIELD } from 'shared/utils/constants'
+import { GENOME_VERSION_FIELD, GENOME_VERSION_37, GENOME_VERSION_38 } from 'shared/utils/constants'
 import { sendVlmContactEmail } from '../reducers'
 import { getVlmDefaultContactEmails, getVlmFamiliesByContactEmail } from '../selectors'
 
@@ -43,10 +43,19 @@ const mapContactDispatchToProps = {
 
 const ContactButton = connect(null, mapContactDispatchToProps)(SendEmailButton)
 
-const LookupFamilyLayout = ({ topContent, bottomContent, children, ...buttonProps }) => (
+const liftoverGenomeVersion = genomeVersion => (
+  genomeVersion === GENOME_VERSION_37 ? GENOME_VERSION_38 : GENOME_VERSION_37
+)
+
+const LookupFamilyLayout = ({ topContent, bottomContent, hasLiftover, genomeVersion, children, ...buttonProps }) => (
   <StyledVariantRow>
     {topContent}
     <Grid.Column width={4}>
+      <Label
+        content={`GRCh${hasLiftover ? liftoverGenomeVersion(genomeVersion) : genomeVersion}`}
+        basic
+        color={hasLiftover ? 'orange' : 'green'}
+      />
       <ContactButton {...buttonProps} />
     </Grid.Column>
     <Grid.Column width={12}>
@@ -60,6 +69,8 @@ LookupFamilyLayout.propTypes = {
   topContent: PropTypes.node,
   bottomContent: PropTypes.node,
   children: PropTypes.node,
+  hasLiftover: PropTypes.bool,
+  genomeVersion: PropTypes.string,
 }
 
 const InternalFamily = ({ familyGuid, variant, reads, showReads }) => (
@@ -70,6 +81,8 @@ const InternalFamily = ({ familyGuid, variant, reads, showReads }) => (
       </Grid.Column>
     )}
     bottomContent={<Grid.Column width={16}>{reads}</Grid.Column>}
+    hasLiftover={variant.liftedFamilyGuids?.includes(familyGuid)}
+    genomeVersion={variant.genomeVersion}
   >
     <FamilyVariantIndividuals familyGuid={familyGuid} variant={variant} />
     {showReads}
@@ -96,6 +109,8 @@ const BaseLookupVariant = ({ variant, familiesByContactEmail, vlmDefaultContactE
           key={contactEmail}
           defaultEmail={vlmDefaultContactEmails[contactEmail]}
           modalId={contactEmail}
+          hasLiftover={(variant.liftedFamilyGuids || []).some(familyGuid => families.includes(familyGuid))}
+          genomeVersion={variant.genomeVersion}
         >
           <Grid stackable divided="vertically">
             {families.map(familyGuid => (

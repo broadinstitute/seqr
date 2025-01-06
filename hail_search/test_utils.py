@@ -494,6 +494,7 @@ VARIANT4_BOTH_SAMPLE_TYPES['genotypes']['I000006_hg00733'] = [
 
 VARIANT_LOOKUP_VARIANT = {
     **VARIANT1,
+    'liftedFamilyGuids': ['F000014_14'],
     'familyGenotypes': {
         VARIANT1['familyGuids'][0]: sorted([
             {k: v for k, v in g.items() if k != 'individualGuid'} for g in VARIANT1['genotypes'].values()
@@ -501,6 +502,10 @@ VARIANT_LOOKUP_VARIANT = {
         'F000011_11': [{
             'sampleId': 'NA20885', 'sampleType': 'WES', 'familyGuid': 'F000011_11',
             'numAlt': 2, 'dp': 6, 'gq': 16, 'ab': 1.0, 'filters': [],
+        }],
+        'F000014_14': [{
+            'sampleId': 'NA21234', 'sampleType': 'WGS', 'familyGuid': 'F000014_14',
+            'numAlt': 1, 'dp': 27, 'gq': 87, 'ab': 0.531000018119812, 'filters': None,
         }],
     }
 }
