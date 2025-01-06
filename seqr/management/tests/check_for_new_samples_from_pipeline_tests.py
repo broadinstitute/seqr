@@ -462,6 +462,10 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
             {'analysis_status': 'I', 'analysis_status_last_modified_date': None},
             {'analysis_status': 'I', 'analysis_status_last_modified_date': None},
         ])
+        self.assertSetEqual(
+            set(Family.objects.filter(guid__in=['F000001_1', 'F000002_2', 'F000003_3']).values_list('analysis_status', flat=True)),
+            {'F'},
+        )
         self.assertEqual(Family.objects.get(guid='F000014_14').analysis_status, 'Rncc')
 
         # Test airtable PDO updates
