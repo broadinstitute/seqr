@@ -1,51 +1,61 @@
 import React from 'react'
 import { BaseSemanticInput } from 'shared/components/form/Inputs'
-import { useSelector } from 'react-redux'
+import { connect } from 'react-redux'
 import { getLocusListsWithGenes } from 'redux/selectors'
 import { moiToMoiInitials, formatPanelAppItems } from 'shared/utils/panelAppUtils'
 import PropTypes from 'prop-types'
-import { OnChange } from 'react-final-form-listeners'
 
-const filterPanelAppItems = (locusList, selectedMOIs, color) => formatPanelAppItems(
-  locusList?.items?.filter((item) => {
-    let result = true
-    const initials = moiToMoiInitials(item.pagene?.modeOfInheritance, false)
-    if (selectedMOIs.length > 0) {
-      result = selectedMOIs.some(moi => initials.includes(moi))
-    }
-    return result
-  }),
-)[color]
+const EMPTY_STRING = ''
 
-const PaLocusListSelector = ({ locus, onChange, color, value, ...props }) => {
-  const locusList = useSelector(state => getLocusListsWithGenes(state)[locus.locusListGuid])
-
-  const onSelectedMOIChange = (selectedMOIs) => {
-    const panelAppItems = filterPanelAppItems(locusList, selectedMOIs, color)
-    onChange(panelAppItems)
+class PaLocusListSelector extends React.Component {
+  static propTypes = {
+    locus: PropTypes.object,
+    locusList: PropTypes.object,
+    onChange: PropTypes.func,
+    value: PropTypes.string,
+    color: PropTypes.string,
   }
 
-  return (
-    <span>
-      <OnChange name="search.locus.selectedMOIs">
-        {(newSelectedMOI) => {
-          onSelectedMOIChange(newSelectedMOI)
-        }}
-      </OnChange>
-      <BaseSemanticInput
-        {...props}
-        value={value}
-        onChange={onChange}
-      />
-    </span>
-  )
+  shouldComponentUpdate(nextProps) {
+    const { locusList, locus, onChange } = this.props
+    return nextProps.locus.selectedMOIs !== locus.selectedMOIs ||
+      nextProps.onChange !== onChange ||
+      nextProps.locusList.locusListGuid !== locusList.locusListGuid ||
+      (!!locusList.locusListGuid && nextProps.locusList.rawItems !== locusList.rawItems)
+  }
+
+  componentDidUpdate(prevProps) {
+    const { locus, locusList, onChange, color } = this.props
+    const { selectedMOIs } = locus
+
+    if (prevProps.locus.selectedMOIs !== selectedMOIs) {
+      const panelAppItems = formatPanelAppItems(
+        locusList?.items?.filter((item) => {
+          let result = true
+          const initials = moiToMoiInitials(item.pagene?.modeOfInheritance, false)
+          if (selectedMOIs && selectedMOIs.length > 0) {
+            result = selectedMOIs.some(moi => initials.includes(moi))
+          }
+          return result
+        }),
+      )
+
+      if (panelAppItems[color]) {
+        onChange(panelAppItems[color])
+      } else {
+        onChange(EMPTY_STRING)
+      }
+    }
+  }
+
+  render() {
+    return <BaseSemanticInput {...this.props} />
+  }
+
 }
 
-PaLocusListSelector.propTypes = {
-  locus: PropTypes.object,
-  onChange: PropTypes.func,
-  color: PropTypes.string,
-  value: PropTypes.string,
-}
+const mapStateToProps = (state, ownProps) => ({
+  locusList: getLocusListsWithGenes(state)[ownProps.locus.locusListGuid],
+})
 
-export default PaLocusListSelector
+export default connect(mapStateToProps)(PaLocusListSelector)
