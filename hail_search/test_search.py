@@ -1242,6 +1242,12 @@ class HailSearchTestCase(AioHTTPTestCase):
             sort_metadata={'ENSG00000177000': 3},
         )
 
+        await self._assert_expected_search(
+            [_sorted(MULTI_PROJECT_VARIANT1, [2]), _sorted(MULTI_PROJECT_VARIANT2, [2]),
+             _sorted(VARIANT3, [2]), _sorted(VARIANT4, [2]), _sorted(PROJECT_2_VARIANT, [11])],
+            sort='family_guid', sample_data=MULTI_PROJECT_SAMPLE_DATA,
+        )
+
         # size sort only applies to SVs, so has no impact on other variant
         await self._assert_expected_search(
             [_sorted(GCNV_VARIANT1, [-171766]), _sorted(GCNV_VARIANT2, [-17768]), _sorted(GCNV_VARIANT4, [-14487]),

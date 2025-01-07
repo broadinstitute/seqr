@@ -85,6 +85,9 @@ class BaseHailTableQuery(object):
 
     SORTS = {
         XPOS: lambda r: [r.xpos],
+        'family_guid': lambda r: [
+            hl.int(r.family_entries.find(hl.is_defined).first().familyGuid.first_match_in('(\d+)').first())
+        ],
     }
 
     @classmethod
