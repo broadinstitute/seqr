@@ -3,9 +3,11 @@ import google.auth
 from google.auth.transport.requests import AuthorizedSession
 import json
 
+from reference_data.models import GENOME_VERSION_LOOKUP
 from seqr.models import Project
 from seqr.utils.communication_utils import safe_post_to_slack
-from seqr.utils.search.add_data_utils import prepare_data_loading_request, dag_dataset_type, reference_genome_version
+from seqr.utils.search.add_data_utils import prepare_data_loading_request, _dag_dataset_type, reference_genome_version, \
+    _format_loading_pipeline_variables
 from seqr.utils.logging_utils import SeqrLogger
 from settings import AIRFLOW_WEBSERVER_URL, SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
 
@@ -21,10 +23,8 @@ class DagRunningException(Exception):
     pass
 
 
-def trigger_airflow_data_loading(
-    *args, user: User, individual_ids: list[int], success_message: str, success_slack_channel: str,
-    error_message: str, is_internal: bool = False, **kwargs,
-) -> bool:
+def trigger_airflow_data_loading(*args, user: User, individual_ids: list[int], success_message: str, success_slack_channel: str,
+                                 error_message: str, is_internal: bool = False, **kwargs):
     success = True
     updated_variables, gs_path = prepare_data_loading_request(
         *args, user, individual_ids=individual_ids, pedigree_dir=SEQR_V3_PEDIGREE_GS_PATH, **kwargs,
@@ -40,7 +40,7 @@ def trigger_airflow_data_loading(
     except Exception as e:
         logger_call = logger.warning if isinstance(e, DagRunningException) else logger.error
         logger_call(str(e), user)
-        _send_slack_msg_on_failure_trigger(LOADING_PIPELINE_DAG_NAME, e, updated_variables, error_message)
+        _send_slack_msg_on_failure_trigger(e, updated_variables, error_message)
         success = False
 
     if success or success_slack_channel != SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL:
@@ -53,25 +53,17 @@ def trigger_airflow_data_loading(
 def trigger_airflow_delete_families(
     dataset_type: str, family_guids: list[str], from_project: Project,
 ):
-    success = True
-    variables = {
-        'projects_to_run': [from_project.guid],
-        'family_guids': sorted(family_guids),
-        'reference_genome': reference_genome_version(from_project.genome_version),
-        'dataset_type': dag_dataset_type(dataset_type),
-    }
-    try:
-        _check_dag_running_state(DELETE_FAMILIES_DAG_NAME)
-        _update_variables(variables, DELETE_FAMILIES_DAG_NAME)
-        _wait_for_dag_variable_update(variables, DELETE_FAMILIES_DAG_NAME)
-        _trigger_dag(DELETE_FAMILIES_DAG_NAME)
-    except Exception as e:
-        logger_call = logger.warning if isinstance(e, DagRunningException) else logger.error
-        logger_call(str(e))
-        success = False
-
-    if success:
-        logger.info(f'Successfully triggered DELETE_FAMILIES DAG for {len(family_guids)} family from {from_project.name}/{dataset_type}')
+    variables = _format_loading_pipeline_variables(
+        [from_project],
+        from_project.genome_version,
+        dataset_type,
+        family_guids=sorted(family_guids)
+    )
+    _check_dag_running_state(DELETE_FAMILIES_DAG_NAME)
+    _update_variables(variables, DELETE_FAMILIES_DAG_NAME)
+    _wait_for_dag_variable_update(variables, DELETE_FAMILIES_DAG_NAME)
+    _trigger_dag(DELETE_FAMILIES_DAG_NAME)
+    logger.info(f'Successfully triggered DELETE_FAMILIES DAG for {len(family_guids)} family from {from_project.name}/{dataset_type}')
 
 
 def _send_load_data_slack_msg(dag_name: str, messages: list[str], channel: str, dag: dict):
@@ -84,10 +76,10 @@ def _send_load_data_slack_msg(dag_name: str, messages: list[str], channel: str, 
     safe_post_to_slack(channel, message_content)
 
 
-def _send_slack_msg_on_failure_trigger(dag_name: str, e, dag, error_message):
+def _send_slack_msg_on_failure_trigger(e, dag, error_message):
     message_content = f"""{error_message}: {e}
         
-        DAG {dag_name} should be triggered with following: 
+        DAG {LOADING_PIPELINE_DAG_NAME} should be triggered with following: 
         ```{json.dumps(dag, indent=4)}```
         """
     safe_post_to_slack(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, message_content)

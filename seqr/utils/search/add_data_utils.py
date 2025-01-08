@@ -116,17 +116,30 @@ def notify_search_data_loaded(project, is_internal, dataset_type, sample_type, i
         )
 
 
+def _format_loading_pipeline_variables(
+    projects: list[Project], genome_version: str, dataset_type: str, sample_type: str = None, **kwargs
+):
+    keyword_args = dict(**kwargs)
+    if sample_type:
+        keyword_args['sample_type'] = sample_type
+
+    return {
+        'projects_to_run': sorted([p.guid for p in projects]),
+        'dataset_type': _dag_dataset_type(dataset_type, sample_type),
+        'reference_genome': GENOME_VERSION_LOOKUP[genome_version],
+        **keyword_args
+    }
+
 def prepare_data_loading_request(projects: list[Project], sample_type: str, dataset_type: str, genome_version: str,
                                  data_path: str, user: User, pedigree_dir: str,  raise_pedigree_error: bool = False,
                                  individual_ids: list[int] = None, skip_validation: bool = False):
-    project_guids = sorted([p.guid for p in projects])
-    variables = {
-        'projects_to_run': project_guids,
-        'callset_path': data_path,
-        'sample_type': sample_type,
-        'dataset_type': dag_dataset_type(dataset_type, sample_type),
-        'reference_genome': reference_genome_version(genome_version),
-    }
+    variables = _format_loading_pipeline_variables(
+        projects,
+        genome_version,
+        dataset_type,
+        sample_type,
+        callset_path=data_path,
+    )
     if skip_validation:
         variables['skip_validation'] = True
     file_path = _get_pedigree_path(pedigree_dir, genome_version, sample_type, dataset_type)
@@ -134,7 +147,7 @@ def prepare_data_loading_request(projects: list[Project], sample_type: str, data
     return variables, file_path
 
 
-def dag_dataset_type(dataset_type: str, sample_type: str = None) -> str:
+def _dag_dataset_type(dataset_type: str, sample_type: str) -> str:
     return 'GCNV' if dataset_type == Sample.DATASET_TYPE_SV_CALLS and sample_type == Sample.SAMPLE_TYPE_WES \
         else dataset_type
 

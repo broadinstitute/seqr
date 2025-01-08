@@ -11,7 +11,7 @@ from seqr.views.apis.data_manager_api import elasticsearch_status, upload_qc_pip
     update_rna_seq, load_rna_seq_sample_data, load_phenotype_prioritization_data, validate_callset, \
     get_loaded_projects, load_data
 from seqr.views.utils.orm_to_json_utils import _get_json_for_models
-from seqr.views.utils.test_utils import AuthenticationTestCase, AirflowLoadingTestCase, AirtableTest
+from seqr.views.utils.test_utils import AuthenticationTestCase, AirflowTestCase, AirtableTest
 from seqr.utils.search.elasticsearch.es_utils_tests import urllib3_responses
 from seqr.models import Individual, RnaSeqOutlier, RnaSeqTpm, RnaSeqSpliceOutlier, RnaSample, Project, PhenotypePrioritization
 from settings import SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
@@ -1717,7 +1717,7 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
 
 
 @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
-class AnvilDataManagerAPITest(AirflowLoadingTestCase, DataManagerAPITest):
+class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
 
     ADDITIONAL_REQUEST_COUNT = 1
@@ -1816,7 +1816,7 @@ class AnvilDataManagerAPITest(AirflowLoadingTestCase, DataManagerAPITest):
     def _assert_expected_load_data_requests(self, dataset_type='MITO', **kwargs):
         required_sample_field = 'MITO_WES_CallsetPath' if dataset_type == 'MITO' else 'gCNV_CallsetPath'
         self._assert_expected_airtable_call(required_sample_field, 'R0001_1kg')
-        self.assert_airflow_calls(offset=1, dataset_type=dataset_type, **kwargs)
+        self.assert_airflow_loading_calls(offset=1, dataset_type=dataset_type, **kwargs)
 
     def _assert_expected_airtable_call(self, required_sample_field, project_guid):
         self.assert_expected_airtable_call(
@@ -1888,7 +1888,7 @@ class AnvilDataManagerAPITest(AirflowLoadingTestCase, DataManagerAPITest):
     def _test_load_single_project(self, mock_open, mock_mkdir, response, *args, url=None, body=None, **kwargs):
         super()._test_load_single_project(mock_open, mock_mkdir, response, url, body)
         self.ADDITIONAL_REQUEST_COUNT = 0
-        self.assert_airflow_calls(offset=0, dataset_type='SNV_INDEL', trigger_error=True)
+        self.assert_airflow_loading_calls(offset=0, dataset_type='SNV_INDEL', trigger_error=True)
 
         responses.calls.reset()
         mock_open.reset_mock()

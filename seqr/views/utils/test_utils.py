@@ -562,36 +562,24 @@ class AnvilAuthenticationTestCase(AuthenticationTestCase):
         self.mock_get_group_members.assert_not_called()
 
 
-class BaseAirflowTestCase(AnvilAuthenticationTestCase):
-    def setUp(self):
-        patcher = mock.patch('seqr.views.utils.airflow_utils.google.auth.default', lambda **kwargs: (None, None))
-        patcher.start()
-        self.addCleanup(patcher.stop)
-        patcher = mock.patch('seqr.views.utils.airflow_utils.AuthorizedSession', mock.Mock(return_value=requests))
-        self.mock_authorized_session = patcher.start()
-        self.addCleanup(patcher.stop)
-        patcher = mock.patch('seqr.views.utils.airflow_utils.AIRFLOW_WEBSERVER_URL', MOCK_AIRFLOW_URL)
-        patcher.start()
-        self.addCleanup(patcher.stop)
-        patcher = mock.patch('seqr.views.utils.airflow_utils.safe_post_to_slack')
-        self.mock_slack = patcher.start()
-        self.addCleanup(patcher.stop)
-        patcher = mock.patch('seqr.views.utils.airflow_utils.logger')
-        self.mock_airflow_logger = patcher.start()
-        self.addCleanup(patcher.stop)
-        super().setUp()
 
-
-MOCK_AIRFLOW_URL = 'http://testairflowserver'
 DAG_NAME = 'LOADING_PIPELINE'
 PROJECT_GUID = 'R0001_1kg'
 
-class AirflowLoadingTestCase(BaseAirflowTestCase):
+class AirflowTestCase(AnvilAuthenticationTestCase):
+    MOCK_AIRFLOW_URL = 'http://testairflowserver'
     ADDITIONAL_REQUEST_COUNT = 0
+    DAG_RUNS_KWARGS = [{}]
 
-    def setUp(self):
-        self._dag_url = f'{MOCK_AIRFLOW_URL}/api/v1/dags/{DAG_NAME}'
+    def setUp(self, **kwargs):
+        self._dag_url = f'{self.MOCK_AIRFLOW_URL}/api/v1/dags/{DAG_NAME}'
+        for kwargs in self.DAG_RUNS_KWARGS:
+            self.add_common_dag_responses()
+            self.add_additional_dag_responses(**kwargs)
+        self.mock_airflow_utils()
+        super().setUp()
 
+    def add_common_dag_responses(self):
         # check dag running state
         responses.add(responses.GET, f'{self._dag_url}/dagRuns', json={
             'dag_runs': [{
@@ -606,19 +594,36 @@ class AirflowLoadingTestCase(BaseAirflowTestCase):
         responses.add(responses.POST, f'{self._dag_url}/dagRuns', json={})
         # update variables
         responses.add(
-            responses.PATCH, f'{MOCK_AIRFLOW_URL}/api/v1/variables/{DAG_NAME}',
+            responses.PATCH, f'{self.MOCK_AIRFLOW_URL}/api/v1/variables/{DAG_NAME}',
             json={'key': DAG_NAME, 'value': 'updated variables'},
         )
+
+    def add_additional_dag_responses(self, **kwargs):
         # get task id
-        self.add_dag_tasks_response(['R0006_test'])
+        self._add_dag_tasks_response(['R0006_test'])
         # get task id again if the response of the previous request didn't include the updated guid
-        self.add_dag_tasks_response([self.LOADING_PROJECT_GUID])
+        self._add_dag_tasks_response([self.LOADING_PROJECT_GUID])
         # get task id again if the response of the previous request didn't include the updated guid
-        self.add_dag_tasks_response([self.LOADING_PROJECT_GUID, PROJECT_GUID])
+        self._add_dag_tasks_response([self.LOADING_PROJECT_GUID, PROJECT_GUID])
 
-        super().setUp()
+    def mock_airflow_utils(self):
+        patcher = mock.patch('seqr.views.utils.airflow_utils.google.auth.default', lambda **kwargs: (None, None))
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.airflow_utils.AuthorizedSession', mock.Mock(return_value=requests))
+        self.mock_authorized_session = patcher.start()
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.airflow_utils.AIRFLOW_WEBSERVER_URL', self.MOCK_AIRFLOW_URL)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.airflow_utils.safe_post_to_slack')
+        self.mock_slack = patcher.start()
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.airflow_utils.logger')
+        self.mock_airflow_logger = patcher.start()
+        self.addCleanup(patcher.stop)
 
-    def add_dag_tasks_response(self, projects):
+    def _add_dag_tasks_response(self, projects):
         tasks = []
         for project in projects:
             tasks += [
@@ -643,7 +648,7 @@ class AirflowLoadingTestCase(BaseAirflowTestCase):
             'state': 'running'}
         ]})
 
-    def assert_airflow_calls(self, trigger_error=False, additional_tasks_check=False, dataset_type=None, offset=0, **kwargs):
+    def assert_airflow_loading_calls(self, trigger_error=False, additional_tasks_check=False, dataset_type=None, offset=0, **kwargs):
         self.mock_airflow_logger.info.assert_not_called()
 
         # Test triggering anvil dags
@@ -658,10 +663,10 @@ class AirflowLoadingTestCase(BaseAirflowTestCase):
         dag_variable_overrides = self._get_dag_variable_overrides(additional_tasks_check)
         dag_variables = {
             'projects_to_run': [dag_variable_overrides['project']] if 'project' in dag_variable_overrides else self.PROJECTS,
-            'callset_path': f'gs://test_bucket/{dag_variable_overrides["callset_path"]}',
-            'sample_type': dag_variable_overrides['sample_type'],
             'dataset_type': dataset_type or dag_variable_overrides['dataset_type'],
             'reference_genome': dag_variable_overrides.get('reference_genome', 'GRCh38'),
+            'callset_path': f'gs://test_bucket/{dag_variable_overrides["callset_path"]}',
+            'sample_type': dag_variable_overrides['sample_type'],
         }
         if dag_variable_overrides.get('skip_validation'):
             dag_variables['skip_validation'] = True
@@ -679,7 +684,7 @@ class AirflowLoadingTestCase(BaseAirflowTestCase):
             return
 
         # update variables
-        self.assertEqual(responses.calls[offset+1].request.url, f'{MOCK_AIRFLOW_URL}/api/v1/variables/{DAG_NAME}')
+        self.assertEqual(responses.calls[offset+1].request.url, f'{self.MOCK_AIRFLOW_URL}/api/v1/variables/{DAG_NAME}')
         self.assertEqual(responses.calls[offset+1].request.method, 'PATCH')
         self.assertDictEqual(json.loads(responses.calls[offset+1].request.body), {
             'key': DAG_NAME,

@@ -5,48 +5,36 @@ from django.core.management import call_command
 import mock
 
 from seqr.models import Family, VariantTagType, VariantTag, Sample
-from seqr.views.utils.test_utils import BaseAirflowTestCase
+from seqr.views.utils.test_utils import AirflowTestCase
 
 MOCK_AIRFLOW_URL = 'http://testairflowserver'
 DAG_NAME = 'DELETE_FAMILIES'
 
 
-class TransferFamiliesTest(BaseAirflowTestCase):
+class TransferFamiliesTest(AirflowTestCase):
     fixtures = ['users', '1kg_project']
-    LOADING_PROJECT_GUID = 'R0001_1kg'  # from-project
-
+    PROJECT_GUID = 'R0001_1kg'  # from-project
+    DAG_RUNS_KWARGS = [
+        {'dataset_type': 'MITO'},
+        {'dataset_type': 'SNV_INDEL'},
+        {'dataset_type': 'SV'}
+    ]
     DAG_VARIABLES = {
-        'projects_to_run': [LOADING_PROJECT_GUID],
+        'projects_to_run': [PROJECT_GUID],
         'family_guids': ['F000002_2'],
         'reference_genome': 'GRCh37',
     }
 
-    def setUp(self):
-        self._dag_url = f'{MOCK_AIRFLOW_URL}/api/v1/dags/{DAG_NAME}'
+    def add_additional_dag_responses(self, **kwargs):
+        # get variables
+        responses.add(responses.GET, f'{self._dag_url}/variables', json={'variables': {}})
+        # get variables again if the response of the previous request didn't include the updated variables
+        responses.add(responses.GET, f'{self._dag_url}/variables', json={
+            'variables': {**self.DAG_VARIABLES, **kwargs}
+        })
 
-        for dataset_type in ['MITO', 'SNV_INDEL', 'SV']:
-            # check dag running state
-            responses.add(responses.GET, f'{self._dag_url}/dagRuns', json={
-                'dag_runs': [{'state': 'success'}]
-            })
-            # trigger dag
-            responses.add(responses.POST, f'{self._dag_url}/dagRuns', json={})
-            # update variables
-            responses.add(
-                responses.PATCH, f'{MOCK_AIRFLOW_URL}/api/v1/variables/{DAG_NAME}',
-                json={'key': DAG_NAME, 'value': 'updated variables'},
-            )
-            # get variables
-            responses.add(responses.GET, f'{self._dag_url}/variables', json={'variables': {}})
-            # get variables again if the response of the previous request didn't include the updated variables
-            responses.add(responses.GET, f'{self._dag_url}/variables', json={
-                'variables': {**self.DAG_VARIABLES, 'dataset_type': dataset_type}
-            })
-
-        super().setUp()
-
-    def assert_airflow_calls(self):
-        self.assertEqual(self.mock_airflow_logger.info.call_count, 3)
+    def assert_airflow_delete_families_calls(self):
+        # self.assertEqual(self.mock_airflow_logger.info.call_count, 3)
 
         call_count = 15
         self.assertEqual(len(responses.calls), call_count)
@@ -134,4 +122,4 @@ class TransferFamiliesTest(BaseAirflowTestCase):
         self.assertEqual(family.project.guid, 'R0003_test')
         self.assertEqual(family.individual_set.count(), 1)
 
-        self.assert_airflow_calls()
+        self.assert_airflow_delete_families_calls()

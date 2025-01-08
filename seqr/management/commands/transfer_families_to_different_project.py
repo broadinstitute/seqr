@@ -4,7 +4,7 @@ from django.core.management.base import BaseCommand
 
 from seqr.models import Project, Family, VariantTag, VariantTagType, Sample
 from seqr.utils.search.utils import backend_specific_call
-from seqr.views.utils.airflow_utils import trigger_airflow_delete_families
+from seqr.views.utils.airflow_utils import trigger_airflow_delete_families, DagRunningException
 
 import logging
 logger = logging.getLogger(__name__)
@@ -19,8 +19,11 @@ def _disable_search(families, from_project):
         logger.info(
             f'Disabled search for {num_updated} samples in the following {len(updated_families)} families: {family_summary}'
         )
-        _trigger_delete_families_dags(from_project, updated_family_dataset_types)
-
+        try:
+            _trigger_delete_families_dags(from_project, updated_family_dataset_types)
+        except Exception as e:
+            logger_call = logger.warning if isinstance(e, DagRunningException) else logger.error
+            logger_call(str(e))
 
 def _trigger_delete_families_dags(from_project, updated_family_dataset_types):
     updated_families_by_dataset_type = defaultdict(list)
@@ -48,7 +51,7 @@ class Command(BaseCommand):
         missing_id_message = '' if num_found == num_expected else f' No match for: {", ".join(set(family_ids) - set([f.family_id for f in families]))}.'
         logger.info(f'Found {num_found} out of {num_expected} families.{missing_id_message}')
 
-        backend_specific_call(lambda *f: None, _disable_search)(families, from_project)
+        backend_specific_call(lambda *args: None, _disable_search)(families, from_project)
 
         for variant_tag_type in VariantTagType.objects.filter(project=from_project):
             variant_tags = VariantTag.objects.filter(saved_variants__family__in=families, variant_tag_type=variant_tag_type)
