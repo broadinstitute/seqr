@@ -122,7 +122,7 @@ def get_anvil_vcf_list(request, *args):
 @anvil_workspace_access_required(meta_fields=['workspace.bucketName'])
 def get_anvil_igv_options(request, *args):
     bucket_path = _get_workspace_bucket(*args)
-    file_list = list_files(bucket_path, request.user, check_subfolders=True)
+    file_list = list_files(bucket_path, request.user, check_subfolders=True, allow_missing=False)
     igv_options = [
         {'name': path.replace(bucket_path, ''), 'value': path} for path in file_list
         if path.endswith(IgvSample.SAMPLE_TYPE_FILE_EXTENSIONS[IgvSample.SAMPLE_TYPE_ALIGNMENT])

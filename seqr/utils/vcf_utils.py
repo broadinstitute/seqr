@@ -111,7 +111,7 @@ def validate_vcf_exists(data_path, user, path_name=None, allowed_exts=None):
 
 
 def get_vcf_list(data_path, user):
-    file_list = list_files(data_path, user, check_subfolders=True)
+    file_list = list_files(data_path, user, check_subfolders=True, allow_missing=False)
     data_path_list = [path.replace(data_path, '') for path in file_list if path.endswith(VCF_FILE_EXTENSIONS)]
     return _merge_sharded_vcf(data_path_list)
 
