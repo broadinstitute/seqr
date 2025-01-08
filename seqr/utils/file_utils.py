@@ -52,7 +52,7 @@ def list_files(wildcard_path, user, check_subfolders=False, allow_missing=True):
     if check_subfolders:
         wildcard_path = f'{wildcard_path.rstrip("/")}/**'
     if is_google_bucket_file_path(wildcard_path):
-        return _get_gs_file_list(wildcard_path, user, check_subfolders=check_subfolders, allow_missing=allow_missing)
+        return _get_gs_file_list(wildcard_path, user, check_subfolders, allow_missing)
     return [file_path for file_path in glob.glob(wildcard_path, recursive=check_subfolders) if os.path.isfile(file_path)]
 
 
@@ -93,7 +93,7 @@ def mv_file_to_gs(local_path, gs_path, user=None):
     run_gsutil_with_wait(command, gs_path, user)
 
 
-def _get_gs_file_list(gs_path, user=None, check_subfolders=True, allow_missing=False):
+def _get_gs_file_list(gs_path, user, check_subfolders, allow_missing):
     gs_path = gs_path.rstrip('/')
     command = 'ls'
 
