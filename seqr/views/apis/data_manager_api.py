@@ -20,7 +20,7 @@ from seqr.utils.search.utils import get_search_backend_status, delete_search_bac
 from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
-from seqr.utils.vcf_utils import validate_vcf_exists
+from seqr.utils.vcf_utils import validate_vcf_exists, get_vcf_list
 
 from seqr.views.utils.airflow_utils import trigger_airflow_data_loading
 from seqr.views.utils.airtable_utils import AirtableSession, LOADABLE_PDO_STATUSES, AVAILABLE_PDO_STATUS
@@ -443,6 +443,13 @@ AVAILABLE_PDO_STATUSES = {
     AVAILABLE_PDO_STATUS,
     'Historic',
 }
+
+
+@pm_or_data_manager_required
+def loading_vcfs(request):
+    return create_json_response({
+        'vcfs': get_vcf_list(LOADING_DATASETS_DIR, request.user),
+    })
 
 
 @pm_or_data_manager_required
