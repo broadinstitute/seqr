@@ -324,7 +324,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         with self.assertRaises(CommandError) as ce:
             call_command('check_for_new_samples_from_pipeline', '--genome_version=GRCh37', '--dataset_type=MITO')
         self.assertEqual(str(ce.exception), 'No successful runs found for genome_version=GRCh37, dataset_type=MITO')
-        self.mock_glob.assert_called_with('/seqr/seqr-hail-search-data/GRCh37/MITO/runs/*/_SUCCESS')
+        self.mock_glob.assert_called_with('/seqr/seqr-hail-search-data/GRCh37/MITO/runs/*/_SUCCESS', recursive=False)
         self.mock_subprocess.assert_not_called()
 
         call_command('check_for_new_samples_from_pipeline')
@@ -344,7 +344,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
             iter([json.dumps(METADATA_FILES[i])]) for i in range(len(local_files))
         ]
         call_command('check_for_new_samples_from_pipeline')
-        self.mock_glob.assert_called_with('/seqr/seqr-hail-search-data/*/*/runs/*/_SUCCESS')
+        self.mock_glob.assert_called_with('/seqr/seqr-hail-search-data/*/*/runs/*/_SUCCESS', recursive=False)
         self.mock_open.assert_has_calls(
             [mock.call(path.replace('_SUCCESS', 'metadata.json'), 'r') for path in local_files], any_order=True)
         self.mock_subprocess.assert_not_called()
