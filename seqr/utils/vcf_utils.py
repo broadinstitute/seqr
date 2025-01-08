@@ -1,3 +1,4 @@
+import os
 import re
 
 from collections import defaultdict
@@ -107,3 +108,28 @@ def validate_vcf_exists(data_path, user, path_name=None, allowed_exts=None):
         raise ErrorsWarningsException(['Data file or path {} is not found.'.format(path_name or data_path)])
 
     return file_to_check
+
+
+def get_vcf_list(data_path, user):
+    file_list = list_files(data_path, user, check_subfolders=True, allow_missing=False)
+    data_path_list = [path.replace(data_path, '') for path in file_list if path.endswith(VCF_FILE_EXTENSIONS)]
+    return _merge_sharded_vcf(data_path_list)
+
+
+def _merge_sharded_vcf(vcf_files):
+    files_by_path = defaultdict(list)
+
+    for vcf_file in vcf_files:
+        subfolder_path, file = vcf_file.rsplit('/', 1)
+        files_by_path[subfolder_path].append(file)
+
+    # discover the sharded VCF files in each folder, replace the sharded VCF files with a single path with '*'
+    for subfolder_path, files in files_by_path.items():
+        if len(files) < 2:
+            continue
+        prefix = os.path.commonprefix(files)
+        suffix = re.fullmatch(r'{}\d*(?P<suffix>\D.*)'.format(prefix), files[0]).groupdict()['suffix']
+        if all([re.fullmatch(r'{}\d+{}'.format(prefix, suffix), file) for file in files]):
+            files_by_path[subfolder_path] = [f'{prefix}*{suffix}']
+
+    return [f'{path}/{file}' for path, files in files_by_path.items() for file in files]

@@ -1,8 +1,6 @@
 """APIs for management of projects related to AnVIL workspaces."""
 import json
 import time
-import os
-import re
 from datetime import datetime
 from functools import wraps
 from collections import defaultdict
@@ -16,7 +14,6 @@ from reference_data.models import GENOME_VERSION_LOOKUP
 from seqr.models import Project, CAN_EDIT, Sample, Individual, IgvSample
 from seqr.views.react_app import render_app_html
 from seqr.views.utils.airtable_utils import AirtableSession, ANVIL_REQUEST_TRACKING_TABLE
-from seqr.utils.search.constants import VCF_FILE_EXTENSIONS
 from seqr.utils.search.utils import get_search_samples
 from seqr.views.utils.airflow_utils import trigger_airflow_data_loading
 from seqr.views.utils.json_to_orm_utils import create_model_from_json
@@ -27,8 +24,8 @@ from seqr.views.utils.terra_api_utils import add_service_account, has_service_ac
 from seqr.views.utils.pedigree_info_utils import parse_basic_pedigree_table, JsonConstants
 from seqr.views.utils.individual_utils import add_or_update_individuals_and_families
 from seqr.utils.communication_utils import send_html_email
-from seqr.utils.file_utils import get_gs_file_list
-from seqr.utils.vcf_utils import validate_vcf_and_get_samples, validate_vcf_exists
+from seqr.utils.file_utils import list_files
+from seqr.utils.vcf_utils import validate_vcf_and_get_samples, validate_vcf_exists, get_vcf_list
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.views.utils.permissions_utils import is_anvil_authenticated, check_workspace_perm, login_and_policies_required
@@ -109,24 +106,23 @@ def grant_workspace_access(request, namespace, name):
     return create_json_response({'success': True})
 
 
-def _get_workspace_files(request, namespace, name, workspace_meta):
+def _get_workspace_bucket(namespace, name, workspace_meta):
     bucket_name = workspace_meta['workspace']['bucketName']
-    bucket_path = 'gs://{bucket}'.format(bucket=bucket_name.rstrip('/'))
-    return bucket_path, get_gs_file_list(bucket_path, request.user)
+    return 'gs://{bucket}'.format(bucket=bucket_name.rstrip('/'))
 
 
 @anvil_workspace_access_required(meta_fields=['workspace.bucketName'])
-def get_anvil_vcf_list(*args):
-    bucket_path, file_list = _get_workspace_files(*args)
-    data_path_list = [path.replace(bucket_path, '') for path in file_list if path.endswith(VCF_FILE_EXTENSIONS)]
-    data_path_list = _merge_sharded_vcf(data_path_list)
+def get_anvil_vcf_list(request, *args):
+    bucket_path = _get_workspace_bucket(*args)
+    data_path_list = get_vcf_list(bucket_path, request.user)
 
     return create_json_response({'dataPathList': data_path_list})
 
 
 @anvil_workspace_access_required(meta_fields=['workspace.bucketName'])
-def get_anvil_igv_options(*args):
-    bucket_path, file_list = _get_workspace_files(*args)
+def get_anvil_igv_options(request, *args):
+    bucket_path = _get_workspace_bucket(*args)
+    file_list = list_files(bucket_path, request.user, check_subfolders=True, allow_missing=False)
     igv_options = [
         {'name': path.replace(bucket_path, ''), 'value': path} for path in file_list
         if path.endswith(IgvSample.SAMPLE_TYPE_FILE_EXTENSIONS[IgvSample.SAMPLE_TYPE_ALIGNMENT])
@@ -340,22 +336,3 @@ def _wait_for_service_account_access(user, namespace, name):
 
 def _get_seqr_project_url(project):
     return f'{BASE_URL}project/{project.guid}/project_page'
-
-
-def _merge_sharded_vcf(vcf_files):
-    files_by_path = defaultdict(list)
-
-    for vcf_file in vcf_files:
-        subfolder_path, file = vcf_file.rsplit('/', 1)
-        files_by_path[subfolder_path].append(file)
-
-    # discover the sharded VCF files in each folder, replace the sharded VCF files with a single path with '*'
-    for subfolder_path, files in files_by_path.items():
-        if len(files) < 2:
-            continue
-        prefix = os.path.commonprefix(files)
-        suffix = re.fullmatch(r'{}\d*(?P<suffix>\D.*)'.format(prefix), files[0]).groupdict()['suffix']
-        if all([re.fullmatch(r'{}\d+{}'.format(prefix, suffix), file) for file in files]):
-            files_by_path[subfolder_path] = [f'{prefix}*{suffix}']
-
-    return [f'{path}/{file}' for path, files in files_by_path.items() for file in files]
