@@ -71,4 +71,5 @@ class Command(BaseCommand):
 
         logger.info("Updating families")
         families.update(project=to_project)
+
         logger.info("Done.")
