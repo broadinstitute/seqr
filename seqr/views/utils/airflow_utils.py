@@ -3,11 +3,9 @@ import google.auth
 from google.auth.transport.requests import AuthorizedSession
 import json
 
-from reference_data.models import GENOME_VERSION_LOOKUP
 from seqr.models import Project
 from seqr.utils.communication_utils import safe_post_to_slack
-from seqr.utils.search.add_data_utils import prepare_data_loading_request, _dag_dataset_type, reference_genome_version, \
-    _format_loading_pipeline_variables
+from seqr.utils.search.add_data_utils import prepare_data_loading_request, format_loading_pipeline_variables
 from seqr.utils.logging_utils import SeqrLogger
 from settings import AIRFLOW_WEBSERVER_URL, SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
 
@@ -53,7 +51,7 @@ def trigger_airflow_data_loading(*args, user: User, individual_ids: list[int], s
 def trigger_airflow_delete_families(
     dataset_type: str, family_guids: list[str], from_project: Project,
 ):
-    variables = _format_loading_pipeline_variables(
+    variables = format_loading_pipeline_variables(
         [from_project],
         from_project.genome_version,
         dataset_type,
