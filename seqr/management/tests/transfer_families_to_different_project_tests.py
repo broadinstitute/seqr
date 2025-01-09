@@ -8,7 +8,6 @@ from seqr.views.utils.test_utils import AirflowTestCase
 
 
 class TransferFamiliesTest(TestCase):
-    fix
     tures = ['users', '1kg_project']
 
     def _test_command(self, mock_logger, additional_family, logs):
@@ -46,8 +45,6 @@ class TransferFamiliesTest(TestCase):
             mock_logger, additional_family='12', logs=[mock.call('Found 1 out of 2 families. No match for: 12.')]
         )
 
-
-DAG_NAME = 'DELETE_FAMILIES'
 
 class TransferFamiliesAirflowTest(TransferFamiliesTest, AirflowTestCase):
     fixtures = ['users', '1kg_project']
