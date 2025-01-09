@@ -575,7 +575,7 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
         self._dag_url = f'{self.MOCK_AIRFLOW_URL}/api/v1/dags/{self.DAG_NAME}'
         for kwargs in self.DAG_RUNS_KWARGS:
             self._add_common_dag_responses()
-            self._add_additional_dag_responses(**kwargs)
+            self._add_update_check_dag_responses(**kwargs)
         self._mock_airflow_utils()
         super().setUp()
 
@@ -598,7 +598,7 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
             json={'key': self.DAG_NAME, 'value': 'updated variables'},
         )
 
-    def _add_additional_dag_responses(self, **kwargs):
+    def _add_update_check_dag_responses(self, **kwargs):
         # get task id
         self._add_dag_tasks_response(['R0006_test'])
         # get task id again if the response of the previous request didn't include the updated guid
@@ -681,7 +681,7 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
             return
 
         self._assert_update_variables_airflow_calls(offset, **kwargs)
-        call_cnt = self._assert_additional_airflow_calls(call_count, offset)
+        call_cnt = self._assert_update_check_airflow_calls(call_count, offset)
 
         # trigger dag
         self.assertEqual(responses.calls[offset+call_cnt].request.url, f'{self._dag_url}/dagRuns')
@@ -705,17 +705,16 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
             json.loads(json.dumps({**self._dag_variables, **kwargs}))
         )
 
-    def _assert_additional_airflow_calls(self, call_count, offset):
-        # get task id
-        self.assertEqual(responses.calls[offset + 2].request.url, f'{self._dag_url}/tasks')
+    def _assert_update_check_airflow_calls(self, call_count, offset, check_updated_path='tasks'):
+        self.assertEqual(responses.calls[offset + 2].request.url, f'{self._dag_url}/{check_updated_path}')
         self.assertEqual(responses.calls[offset + 2].request.method, 'GET')
 
-        self.assertEqual(responses.calls[offset + 3].request.url, f'{self._dag_url}/tasks')
+        self.assertEqual(responses.calls[offset + 3].request.url, f'{self._dag_url}/{check_updated_path}')
         self.assertEqual(responses.calls[offset + 3].request.method, 'GET')
 
         call_cnt = call_count - 1
         if call_count > 5:
-            self.assertEqual(responses.calls[offset + 4].request.url, f'{self._dag_url}/tasks')
+            self.assertEqual(responses.calls[offset + 4].request.url, f'{self._dag_url}/{check_updated_path}')
             self.assertEqual(responses.calls[offset + 4].request.method, 'GET')
 
         return call_cnt

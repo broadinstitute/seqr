@@ -65,7 +65,7 @@ class TransferFamiliesAirflowTest(TransferFamiliesTest, AirflowTestCase):
         'reference_genome': 'GRCh37',
     }
 
-    def _add_additional_dag_responses(self, **kwargs):
+    def _add_update_check_dag_responses(self, **kwargs):
         # get variables
         responses.add(responses.GET, f'{self._dag_url}/variables', json={'variables': {}})
         # get variables again if the response of the previous request didn't include the updated variables
@@ -81,18 +81,13 @@ class TransferFamiliesAirflowTest(TransferFamiliesTest, AirflowTestCase):
         self.assertEqual(self.mock_authorized_session.call_count, call_count)
 
         self._dag_variables = self.DAG_VARIABLES
+        call_count_per_dag = 5
         for i, kwargs in enumerate(self.DAG_RUNS_KWARGS):
-            offset = i * 5
-            self._assert_airflow_calls(call_count, offset, **kwargs)
+            offset = i * call_count_per_dag
+            self._assert_airflow_calls(call_count_per_dag, offset, **kwargs)
 
-    def _assert_additional_airflow_calls(self, call_count, offset):
-        # get variables
-        self.assertEqual(responses.calls[offset+2].request.url, f'{self._dag_url}/variables')
-        self.assertEqual(responses.calls[offset+2].request.method, 'GET')
-
-        self.assertEqual(responses.calls[offset+3].request.url, f'{self._dag_url}/variables')
-        self.assertEqual(responses.calls[offset+3].request.method, 'GET')
-        return 4
+    def _assert_update_check_airflow_calls(self, call_count, offset, check_updated_path='variables'):
+        return super()._assert_update_check_airflow_calls(call_count, offset, check_updated_path)
 
     @responses.activate
     @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', '')
