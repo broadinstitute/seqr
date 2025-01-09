@@ -51,7 +51,7 @@ class TransferFamiliesAirflowTest(TransferFamiliesTest, AirflowTestCase):
     PROJECT_GUID = 'R0001_1kg'  # from-project
     DAG_NAME = 'DELETE_FAMILIES'
 
-    def setUp(self):
+    def setUp(self, **kwargs):
         super().setUp(dataset_type='MITO')
         self.set_up_one_dag(dataset_type='SNV_INDEL')
         self.set_up_one_dag(dataset_type='SV')
