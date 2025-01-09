@@ -574,12 +574,12 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
     def setUp(self, **kwargs):
         self._dag_url = f'{self.MOCK_AIRFLOW_URL}/api/v1/dags/{self.DAG_NAME}'
         for kwargs in self.DAG_RUNS_KWARGS:
-            self.add_common_dag_responses()
-            self.add_additional_dag_responses(**kwargs)
-        self.mock_airflow_utils()
+            self._add_common_dag_responses()
+            self._add_additional_dag_responses(**kwargs)
+        self._mock_airflow_utils()
         super().setUp()
 
-    def add_common_dag_responses(self):
+    def _add_common_dag_responses(self):
         # check dag running state
         responses.add(responses.GET, f'{self._dag_url}/dagRuns', json={
             'dag_runs': [{
@@ -598,7 +598,7 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
             json={'key': self.DAG_NAME, 'value': 'updated variables'},
         )
 
-    def add_additional_dag_responses(self, **kwargs):
+    def _add_additional_dag_responses(self, **kwargs):
         # get task id
         self._add_dag_tasks_response(['R0006_test'])
         # get task id again if the response of the previous request didn't include the updated guid
@@ -606,7 +606,7 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
         # get task id again if the response of the previous request didn't include the updated guid
         self._add_dag_tasks_response([self.LOADING_PROJECT_GUID, PROJECT_GUID])
 
-    def mock_airflow_utils(self):
+    def _mock_airflow_utils(self):
         patcher = mock.patch('seqr.views.utils.airflow_utils.google.auth.default', lambda **kwargs: (None, None))
         patcher.start()
         self.addCleanup(patcher.stop)

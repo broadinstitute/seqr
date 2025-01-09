@@ -65,7 +65,7 @@ class TransferFamiliesAirflowTest(TransferFamiliesTest, AirflowTestCase):
         'reference_genome': 'GRCh37',
     }
 
-    def add_additional_dag_responses(self, **kwargs):
+    def _add_additional_dag_responses(self, **kwargs):
         # get variables
         responses.add(responses.GET, f'{self._dag_url}/variables', json={'variables': {}})
         # get variables again if the response of the previous request didn't include the updated variables
