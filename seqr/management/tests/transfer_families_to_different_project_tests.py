@@ -8,7 +8,7 @@ from seqr.views.utils.test_utils import AirflowTestCase
 
 
 class TransferFamiliesTest(TestCase):
-    tures = ['users', '1kg_project']
+    fixtures = ['users', '1kg_project']
 
     def _test_command(self, mock_logger, additional_family, logs):
         call_command(
