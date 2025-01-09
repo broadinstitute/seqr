@@ -147,9 +147,10 @@ def prepare_data_loading_request(projects: list[Project], sample_type: str, data
     return variables, file_path
 
 
-def _dag_dataset_type(sample_type: str, dataset_type: str) -> str:
+def _dag_dataset_type(sample_type: str, dataset_type: str):
     return 'GCNV' if dataset_type == Sample.DATASET_TYPE_SV_CALLS and sample_type == Sample.SAMPLE_TYPE_WES \
         else dataset_type
+
 
 def _upload_data_loading_files(projects: list[Project], user: User, file_path: str, individual_ids: list[int], raise_error: bool):
     file_annotations = OrderedDict({

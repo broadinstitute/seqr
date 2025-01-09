@@ -9,6 +9,7 @@ from seqr.views.utils.airflow_utils import trigger_airflow_delete_families, DagR
 import logging
 logger = logging.getLogger(__name__)
 
+
 def _disable_search(families, from_project):
     search_samples = Sample.objects.filter(is_active=True, individual__family__in=families)
     if search_samples:
