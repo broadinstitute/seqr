@@ -42,9 +42,7 @@ def trigger_airflow_data_loading(*args, user: User, individual_ids: list[int], s
         success = False
 
     if success or success_slack_channel != SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL:
-        _send_load_data_slack_msg(
-            LOADING_PIPELINE_DAG_NAME, [success_message] + upload_info, success_slack_channel, updated_variables
-        )
+        _send_load_data_slack_msg([success_message] + upload_info, success_slack_channel, updated_variables)
     return success
 
 
@@ -61,14 +59,13 @@ def trigger_airflow_delete_families(
     _update_variables(variables, DELETE_FAMILIES_DAG_NAME)
     _wait_for_dag_variable_update(variables, DELETE_FAMILIES_DAG_NAME)
     _trigger_dag(DELETE_FAMILIES_DAG_NAME)
-    logger.info(f'Successfully triggered DELETE_FAMILIES DAG for {len(family_guids)} family from {from_project.name}/{dataset_type}')
 
 
-def _send_load_data_slack_msg(dag_name: str, messages: list[str], channel: str, dag: dict):
+def _send_load_data_slack_msg(messages: list[str], channel: str, dag: dict):
     message = '\n\n        '.join(messages)
     message_content = f"""{message}
 
-        DAG {dag_name} is triggered with following:
+        DAG {LOADING_PIPELINE_DAG_NAME} is triggered with following:
         ```{json.dumps(dag, indent=4)}```
     """
     safe_post_to_slack(channel, message_content)

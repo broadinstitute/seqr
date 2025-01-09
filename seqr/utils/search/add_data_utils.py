@@ -119,16 +119,15 @@ def notify_search_data_loaded(project, is_internal, dataset_type, sample_type, i
 def format_loading_pipeline_variables(
     projects: list[Project], genome_version: str, dataset_type: str, sample_type: str = None, **kwargs
 ):
-    keyword_args = dict(**kwargs)
-    if sample_type:
-        keyword_args['sample_type'] = sample_type
-
-    return {
+    variables = {
         'projects_to_run': sorted([p.guid for p in projects]),
         'dataset_type': _dag_dataset_type(sample_type, dataset_type),
         'reference_genome': GENOME_VERSION_LOOKUP[genome_version],
-        **keyword_args
+        **kwargs
     }
+    if sample_type:
+        variables['sample_type'] = sample_type
+    return variables
 
 def prepare_data_loading_request(projects: list[Project], sample_type: str, dataset_type: str, genome_version: str,
                                  data_path: str, user: User, pedigree_dir: str,  raise_pedigree_error: bool = False,

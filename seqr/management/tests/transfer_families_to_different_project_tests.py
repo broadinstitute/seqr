@@ -49,41 +49,38 @@ class TransferFamiliesTest(TestCase):
 class TransferFamiliesAirflowTest(TransferFamiliesTest, AirflowTestCase):
     fixtures = ['users', '1kg_project']
     PROJECT_GUID = 'R0001_1kg'  # from-project
-    DAG_RUNS_KWARGS = [
-        {'dataset_type': 'MITO'},
-        {'dataset_type': 'SNV_INDEL'},
-        {'dataset_type': 'SV'}
-    ]
     DAG_NAME = 'DELETE_FAMILIES'
-    DAG_VARIABLES = {
-        'projects_to_run': [PROJECT_GUID],
-        'family_guids': ['F000002_2'],
-        'reference_genome': 'GRCh37',
-    }
+
+    def setUp(self):
+        super().setUp(dataset_type='MITO')
+        self.set_up_one_dag(dataset_type='SNV_INDEL')
+        self.set_up_one_dag(dataset_type='SV')
+
+    def _get_dag_variables(self, dataset_type):
+        return {
+            'projects_to_run': [self.PROJECT_GUID],
+            'family_guids': ['F000002_2'],
+            'reference_genome': 'GRCh37',
+            'dataset_type': dataset_type
+        }
 
     def _add_update_check_dag_responses(self, **kwargs):
         # get variables
         responses.add(responses.GET, f'{self._dag_url}/variables', json={'variables': {}})
         # get variables again if the response of the previous request didn't include the updated variables
         responses.add(responses.GET, f'{self._dag_url}/variables', json={
-            'variables': {**self.DAG_VARIABLES, **kwargs}
+            'variables': {**self._get_dag_variables(**kwargs)}
         })
 
     def assert_airflow_delete_families_calls(self):
-        self.assertEqual(self.mock_airflow_logger.info.call_count, 3)
-
-        call_count = 15
-        self.assertEqual(len(responses.calls), call_count)
-        self.assertEqual(self.mock_authorized_session.call_count, call_count)
-
-        self._dag_variables = self.DAG_VARIABLES
+        self._assert_call_counts(15)
         call_count_per_dag = 5
-        for i, kwargs in enumerate(self.DAG_RUNS_KWARGS):
+        for i, dataset_type in enumerate(['MITO', 'SNV_INDEL', 'SV']):
             offset = i * call_count_per_dag
-            self._assert_airflow_calls(call_count_per_dag, offset, **kwargs)
+            self._assert_airflow_calls(self._get_dag_variables(dataset_type), call_count_per_dag, offset)
 
     def _assert_update_check_airflow_calls(self, call_count, offset, check_updated_path='variables'):
-        return super()._assert_update_check_airflow_calls(call_count, offset, check_updated_path)
+        super()._assert_update_check_airflow_calls(call_count, offset, check_updated_path)
 
     @responses.activate
     @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', '')
@@ -92,6 +89,9 @@ class TransferFamiliesAirflowTest(TransferFamiliesTest, AirflowTestCase):
         searchable_family = self._test_command(mock_logger, additional_family='4', logs=[
             mock.call('Found 2 out of 2 families.'),
             mock.call('Disabled search for 7 samples in the following 1 families: 2'),
+            mock.call('Successfully triggered DELETE_FAMILIES DAG for 1 family from 1kg project nåme with uniçøde/MITO'),
+            mock.call('Successfully triggered DELETE_FAMILIES DAG for 1 family from 1kg project nåme with uniçøde/SNV_INDEL'),
+            mock.call('Successfully triggered DELETE_FAMILIES DAG for 1 family from 1kg project nåme with uniçøde/SV'),
         ])
 
         samples = Sample.objects.filter(individual__family=searchable_family)

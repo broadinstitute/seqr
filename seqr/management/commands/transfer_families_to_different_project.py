@@ -33,6 +33,7 @@ def _trigger_delete_families_dags(from_project, updated_family_dataset_types):
 
     for dataset_type, family_guids in sorted(updated_families_by_dataset_type.items()):
         trigger_airflow_delete_families(dataset_type, family_guids, from_project)
+        logger.info(f'Successfully triggered DELETE_FAMILIES DAG for {len(family_guids)} family from {from_project.name}/{dataset_type}')
 
 
 class Command(BaseCommand):
