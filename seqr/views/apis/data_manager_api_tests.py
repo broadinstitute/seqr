@@ -8,7 +8,7 @@ import responses
 
 from seqr.utils.communication_utils import _set_bulk_notification_stream
 from seqr.views.apis.data_manager_api import elasticsearch_status, upload_qc_pipeline_output, delete_index, \
-    update_rna_seq, load_rna_seq_sample_data, load_phenotype_prioritization_data, validate_callset, \
+    update_rna_seq, load_rna_seq_sample_data, load_phenotype_prioritization_data, validate_callset, loading_vcfs, \
     get_loaded_projects, load_data
 from seqr.views.utils.orm_to_json_utils import _get_json_for_models
 from seqr.views.utils.test_utils import AuthenticationTestCase, AirflowTestCase, AirtableTest
@@ -1401,6 +1401,32 @@ class DataManagerAPITest(AirtableTest):
             )
         mock_send_email.assert_has_calls(calls)
 
+    @mock.patch('seqr.utils.file_utils.os.path.isfile', lambda *args: True)
+    @mock.patch('seqr.utils.file_utils.glob.glob')
+    def test_loading_vcfs(self, mock_glob):
+        url = reverse(loading_vcfs)
+        self.check_pm_login(url)
+
+        mock_glob.return_value = []
+        response = self.client.get(url, content_type='application/json')
+        self._test_expected_vcf_responses(response, mock_glob, url)
+
+    def _test_expected_vcf_responses(self, response, mock_glob, url):
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'vcfs': []})
+        mock_glob.assert_called_with('/local_datasets/**', recursive=True)
+
+        mock_glob.return_value = ['/local_datasets/sharded_vcf/part001.vcf', '/local_datasets/sharded_vcf/part002.vcf', '/local_datasets/test.vcf.gz']
+        response = self.client.get(url, content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'vcfs': ['/sharded_vcf/part00*.vcf', '/test.vcf.gz']})
+        mock_glob.assert_called_with('/local_datasets/**', recursive=True)
+
+        # test data manager access
+        self.login_data_manager_user()
+        response = self.client.get(url, content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+
     @mock.patch('seqr.utils.file_utils.os.path.isfile')
     @mock.patch('seqr.utils.file_utils.glob.glob')
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
@@ -1928,3 +1954,6 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
     def _test_no_affected_family(self, url, body):
         # Sample ID filtering skips the unaffected family
         pass
+
+    def _test_expected_vcf_responses(self, response, mock_glob, url):
+        self.assertEqual(response.status_code, 403)
