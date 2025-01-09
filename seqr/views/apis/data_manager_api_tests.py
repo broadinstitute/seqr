@@ -1531,10 +1531,10 @@ class DataManagerAPITest(AirtableTest):
                 'R0001_1kg',
                 'R0004_non_analyst_project'
             ],
-            'callset_path': f'{self.TRIGGER_CALLSET_DIR}/mito_callset.mt',
-            'sample_type': 'WES',
             'dataset_type': 'MITO',
             'reference_genome': 'GRCh38',
+            'callset_path': f'{self.TRIGGER_CALLSET_DIR}/mito_callset.mt',
+            'sample_type': 'WES',
             'skip_validation': True,
         }
         self._assert_success_notification(dag_json)
