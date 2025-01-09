@@ -56,9 +56,9 @@ def send_html_email(email_body, process_message=None, **kwargs):
     email_message.send()
 
 
-def send_project_notification(project, notification, subject, notification_prefix='Loaded ', email_template=None, slack_channel=None, slack_detail=None):
+def send_project_notification(project, notification, subject, email_template=None, slack_channel=None, slack_detail=None):
     users = project.subscribers.user_set.all()
-    notify.send(project, recipient=users, verb=f'{notification_prefix}{notification}')
+    notify.send(project, recipient=users, verb=f'Loaded {notification}')
 
     url = f'{BASE_URL}project/{project.guid}/project_page'
 
