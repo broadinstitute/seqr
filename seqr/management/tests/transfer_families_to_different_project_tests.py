@@ -1,14 +1,15 @@
 import responses
 from django.core.management import call_command
-import mock
 from django.test import TestCase
+import mock
 
 from seqr.models import Family, VariantTagType, VariantTag, Sample
 from seqr.views.utils.test_utils import AirflowTestCase
 
 
 class TransferFamiliesTest(TestCase):
-    fixtures = ['users', '1kg_project']
+    fix
+    tures = ['users', '1kg_project']
 
     def _test_command(self, mock_logger, additional_family, logs):
         call_command(
