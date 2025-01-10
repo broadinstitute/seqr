@@ -9,6 +9,7 @@ import requests
 import urllib3
 
 from django.contrib.postgres.aggregates import ArrayAgg
+from django.core.exceptions import PermissionDenied
 from django.db.models import Max, F, Q, Count
 from django.http.response import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -20,7 +21,7 @@ from seqr.utils.search.utils import get_search_backend_status, delete_search_bac
 from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
-from seqr.utils.vcf_utils import validate_vcf_exists
+from seqr.utils.vcf_utils import validate_vcf_exists, get_vcf_list
 
 from seqr.views.utils.airflow_utils import trigger_airflow_data_loading
 from seqr.views.utils.airtable_utils import AirtableSession, LOADABLE_PDO_STATUSES, AVAILABLE_PDO_STATUS
@@ -30,6 +31,7 @@ from seqr.views.utils.file_utils import parse_file, get_temp_file_path, load_upl
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.permissions_utils import data_manager_required, pm_or_data_manager_required, get_internal_projects
+from seqr.views.utils.terra_api_utils import anvil_enabled
 
 from seqr.models import Sample, RnaSample, Individual, Project, PhenotypePrioritization
 
@@ -346,16 +348,9 @@ def load_rna_seq_sample_data(request, sample_guid):
 
 
 def _notify_phenotype_prioritization_loaded(project, tool, num_samples):
-    url = f'{BASE_URL}project/{project.guid}/project_page'
-    project_link = f'<a href={url}>{project.name}</a>'
-    email = (
-        f'This is to notify you that {tool.title()} data for {num_samples} sample(s) '
-        f'has been loaded in seqr project {project_link}'
-    )
     send_project_notification(
         project,
-        notification=f'Loaded {num_samples} {tool.title()} sample(s)',
-        email=email,
+        notification=f'{num_samples} {tool.title()} sample(s)',
         subject=f'New {tool.title()} data available in seqr',
     )
 
@@ -443,6 +438,15 @@ AVAILABLE_PDO_STATUSES = {
     AVAILABLE_PDO_STATUS,
     'Historic',
 }
+
+
+@pm_or_data_manager_required
+def loading_vcfs(request):
+    if anvil_enabled():
+        raise PermissionDenied()
+    return create_json_response({
+        'vcfs': get_vcf_list(LOADING_DATASETS_DIR, request.user),
+    })
 
 
 @pm_or_data_manager_required

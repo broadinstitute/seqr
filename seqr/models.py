@@ -286,6 +286,7 @@ class Family(ModelWithGUID):
     ANALYSIS_STATUS_PARTIAL_SOLVE = 'P'
     ANALYSIS_STATUS_PROBABLE_SOLVE = 'PB'
     ANALYSIS_STATUS_WAITING_FOR_DATA='Q'
+    ANALYSIS_STATUS_LOADING_FAILED = 'F'
     SOLVED_ANALYSIS_STATUS_CHOICES = (
         ('S', 'Solved'),
         ('S_kgfp', 'Solved - known gene for phenotype'),
@@ -308,6 +309,7 @@ class Family(ModelWithGUID):
         (ANALYSIS_STATUS_PARTIAL_SOLVE, 'Partial Solve - Analysis in Progress'),
         (ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS, 'Analysis in Progress'),
         (ANALYSIS_STATUS_WAITING_FOR_DATA, 'Waiting for data'),
+        (ANALYSIS_STATUS_LOADING_FAILED, 'Loading failed'),
         ('N', 'No data expected'),
     )
     SOLVED_ANALYSIS_STATUSES = [status for status, _ in SOLVED_ANALYSIS_STATUS_CHOICES]

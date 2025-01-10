@@ -443,6 +443,12 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
                                                      .format(TEST_WORKSPACE_NAMESPACE, TEST_WORKSPACE_NAME1),
                                                      self.collaborator_user)
 
+        # Test gsutil error
+        mock_subprocess.return_value.communicate.return_value = b'', b'-bash: gsutil: command not found.\nPlease check the path.\n'
+        response = self.client.get(url, content_type='application/json')
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(response.json()['error'], 'Run command failed: -bash: gsutil: command not found. Please check the path.')
+
         # Test empty bucket
         mock_subprocess.return_value.communicate.return_value = b'', None
         response = self.client.get(url, content_type='application/json')

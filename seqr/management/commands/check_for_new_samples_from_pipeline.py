@@ -166,6 +166,11 @@ class Command(BaseCommand):
         failed_families_by_guid = {f['guid']: f for f in Family.objects.filter(
             guid__in={family for families in failed_family_samples.values() for family in families}
         ).values('guid', 'family_id', 'project__name')}
+        if failed_families_by_guid:
+            Family.bulk_update(
+                user=None, update_json={'analysis_status': Family.ANALYSIS_STATUS_LOADING_FAILED},
+                guid__in=failed_families_by_guid, analysis_status=Family.ANALYSIS_STATUS_WAITING_FOR_DATA
+            )
         failures_by_project_check = defaultdict(lambda: defaultdict(list))
         for check, check_failures in failed_family_samples.items():
             for family_guid, failure_data in check_failures.items():

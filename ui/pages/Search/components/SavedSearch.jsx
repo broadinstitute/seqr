@@ -1,4 +1,5 @@
 import React from 'react'
+import isEqual from 'lodash/isEqual'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { FormSpy } from 'react-final-form'
@@ -31,11 +32,17 @@ const FormButtonContainer = styled.div`
 
 const SUBSCRIPTION = { values: true }
 
+const isSameSearch = ({ locus: locus1, ...search1 }, { locus: locus2, ...search2 }) => (
+  isEqual(search1, search2) && (
+    locus1?.locusListGuid ? locus1.locusListGuid === locus2.locusListGuid : isEqual(locus1, locus2)
+  )
+)
+
 const CurrentSavedSearchProvider = ({ element, ...props }) => (
   <FormSpy subscription={SUBSCRIPTION}>
     {({ values }) => {
       const currentSavedSearch = values.search && Object.values(props.savedSearchesByGuid).find(
-        ({ search }) => search === values.search,
+        ({ search }) => isSameSearch(search, values.search),
       )
       return React.createElement(element, { currentSavedSearch, search: values.search, ...props })
     }}

@@ -8,7 +8,7 @@ import responses
 
 from seqr.utils.communication_utils import _set_bulk_notification_stream
 from seqr.views.apis.data_manager_api import elasticsearch_status, upload_qc_pipeline_output, delete_index, \
-    update_rna_seq, load_rna_seq_sample_data, load_phenotype_prioritization_data, validate_callset, \
+    update_rna_seq, load_rna_seq_sample_data, load_phenotype_prioritization_data, validate_callset, loading_vcfs, \
     get_loaded_projects, load_data
 from seqr.views.utils.orm_to_json_utils import _get_json_for_models
 from seqr.views.utils.test_utils import AuthenticationTestCase, AirflowTestCase, AirtableTest
@@ -936,11 +936,11 @@ class DataManagerAPITest(AirtableTest):
     def test_update_rna_splice_outlier(self, *args, **kwargs):
         self._test_update_rna_seq('splice_outlier', *args, **kwargs)
 
-    @mock.patch('seqr.views.utils.dataset_utils.BASE_URL', 'https://test-seqr.org/')
+    @mock.patch('seqr.utils.communication_utils.BASE_URL', 'https://test-seqr.org/')
     @mock.patch('seqr.views.utils.dataset_utils.SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL', 'seqr-data-loading')
     @mock.patch('seqr.views.utils.file_utils.tempfile.gettempdir', lambda: 'tmp/')
     @mock.patch('seqr.utils.communication_utils.send_html_email')
-    @mock.patch('seqr.views.utils.dataset_utils.safe_post_to_slack')
+    @mock.patch('seqr.utils.communication_utils.safe_post_to_slack')
     @mock.patch('seqr.views.apis.data_manager_api.datetime')
     @mock.patch('seqr.views.apis.data_manager_api.os.mkdir')
     @mock.patch('seqr.views.apis.data_manager_api.os.rename')
@@ -1099,10 +1099,10 @@ class DataManagerAPITest(AirtableTest):
         mock_send_slack.assert_has_calls([
             mock.call(
                 'seqr-data-loading',
-                f'0 new RNA {params["message_data_type"]} samples are loaded in <https://test-seqr.org/project/R0001_1kg/project_page|1kg project nåme with uniçøde>\n``````',
+                f'0 new RNA {params["message_data_type"]} sample(s) are loaded in <https://test-seqr.org/project/R0001_1kg/project_page|1kg project nåme with uniçøde>',
             ), mock.call(
                 'seqr-data-loading',
-                f'1 new RNA {params["message_data_type"]} samples are loaded in <https://test-seqr.org/project/R0003_test/project_page|Test Reprocessed Project>\n```NA20888```',
+                f'1 new RNA {params["message_data_type"]} sample(s) are loaded in <https://test-seqr.org/project/R0003_test/project_page|Test Reprocessed Project>\n```NA20888```',
             ),
         ])
         self.assertEqual(mock_send_email.call_count, 2)
@@ -1262,7 +1262,7 @@ class DataManagerAPITest(AirtableTest):
     def _join_data(cls, data):
         return ['\t'.join(line).encode('utf-8') for line in data]
 
-    @mock.patch('seqr.views.apis.data_manager_api.BASE_URL', 'https://test-seqr.org/')
+    @mock.patch('seqr.utils.communication_utils.BASE_URL', 'https://test-seqr.org/')
     @mock.patch('seqr.models.random')
     @mock.patch('seqr.utils.communication_utils.send_html_email')
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
@@ -1345,10 +1345,10 @@ class DataManagerAPITest(AirtableTest):
         self.assertListEqual(saved_data, EXPECTED_LIRICAL_DATA)
         mock_subprocess.assert_called_with('gsutil cat gs://seqr_data/lirical_data.tsv.gz | gunzip -c -q - ', stdout=-1, stderr=-2, shell=True)  # nosec
         self._assert_expected_notifications(mock_send_email, [
-            {'data_type': 'Lirical', 'user': self.data_manager_user, 'email_body': 'Lirical data for 1 sample(s)'},
-            {'data_type': 'Lirical', 'user': self.data_manager_user, 'email_body': 'Lirical data for 1 sample(s)',
+            {'data_type': 'Lirical', 'user': self.data_manager_user, 'email_body': 'data for 1 Lirical sample(s)'},
+            {'data_type': 'Lirical', 'user': self.data_manager_user, 'email_body': 'data for 1 Lirical sample(s)',
              'project_guid': 'R0003_test', 'project_name': 'Test Reprocessed Project'}
-        ], has_html=True)
+        ])
 
         # Test uploading new data
         self.reset_logs()
@@ -1376,17 +1376,17 @@ class DataManagerAPITest(AirtableTest):
                                           nested_fields=[{'fields': ('individual', 'guid'), 'key': 'individualGuid'}])
         self.assertListEqual(saved_data, EXPECTED_UPDATED_LIRICAL_DATA)
         self._assert_expected_notifications(mock_send_email, [
-            {'data_type': 'Lirical', 'user': self.data_manager_user, 'email_body': 'Lirical data for 2 sample(s)'},
-        ], has_html=True)
+            {'data_type': 'Lirical', 'user': self.data_manager_user, 'email_body': 'data for 2 Lirical sample(s)'},
+        ])
 
     @staticmethod
-    def _assert_expected_notifications(mock_send_email, expected_notifs: list[dict], has_html=False):
+    def _assert_expected_notifications(mock_send_email, expected_notifs: list[dict]):
         calls = []
         for notif_dict in expected_notifs:
             project_guid = notif_dict.get('project_guid', PROJECT_GUID)
             project_name = notif_dict.get('project_name', '1kg project nåme with uniçøde')
             url = f'https://test-seqr.org/project/{project_guid}/project_page'
-            project_link = f'<a href={url}>{project_name}</a>' if has_html else f'<{url}|{project_name}>'
+            project_link = f'<a href={url}>{project_name}</a>'
             expected_email_body = (
                 f'Dear seqr user,\n\nThis is to notify you that {notif_dict["email_body"]} '
                 f'has been loaded in seqr project {project_link}\n\nAll the best,\nThe seqr team'
@@ -1400,6 +1400,32 @@ class DataManagerAPITest(AirtableTest):
                 )
             )
         mock_send_email.assert_has_calls(calls)
+
+    @mock.patch('seqr.utils.file_utils.os.path.isfile', lambda *args: True)
+    @mock.patch('seqr.utils.file_utils.glob.glob')
+    def test_loading_vcfs(self, mock_glob):
+        url = reverse(loading_vcfs)
+        self.check_pm_login(url)
+
+        mock_glob.return_value = []
+        response = self.client.get(url, content_type='application/json')
+        self._test_expected_vcf_responses(response, mock_glob, url)
+
+    def _test_expected_vcf_responses(self, response, mock_glob, url):
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'vcfs': []})
+        mock_glob.assert_called_with('/local_datasets/**', recursive=True)
+
+        mock_glob.return_value = ['/local_datasets/sharded_vcf/part001.vcf', '/local_datasets/sharded_vcf/part002.vcf', '/local_datasets/test.vcf.gz']
+        response = self.client.get(url, content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'vcfs': ['/sharded_vcf/part00*.vcf', '/test.vcf.gz']})
+        mock_glob.assert_called_with('/local_datasets/**', recursive=True)
+
+        # test data manager access
+        self.login_data_manager_user()
+        response = self.client.get(url, content_type='application/json')
+        self.assertEqual(response.status_code, 200)
 
     @mock.patch('seqr.utils.file_utils.os.path.isfile')
     @mock.patch('seqr.utils.file_utils.glob.glob')
@@ -1928,3 +1954,6 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
     def _test_no_affected_family(self, url, body):
         # Sample ID filtering skips the unaffected family
         pass
+
+    def _test_expected_vcf_responses(self, response, mock_glob, url):
+        self.assertEqual(response.status_code, 403)

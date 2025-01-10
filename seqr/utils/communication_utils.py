@@ -7,6 +7,7 @@ from django.utils.html import strip_tags
 from notifications.signals import notify
 
 BASE_EMAIL_TEMPLATE = 'Dear seqr user,\n\n{}\n\nAll the best,\nThe seqr team'
+EMAIL_MESSAGE_TEMPLATE = 'This is to notify you that data for {notification} has been loaded in seqr project {project_link}'
 
 logger = logging.getLogger(__name__)
 
@@ -55,9 +56,16 @@ def send_html_email(email_body, process_message=None, **kwargs):
     email_message.send()
 
 
-def send_project_notification(project, notification, email, subject):
+def send_project_notification(project, notification, subject, email_template=None, slack_channel=None, slack_detail=None):
     users = project.subscribers.user_set.all()
-    notify.send(project, recipient=users, verb=notification)
+    notify.send(project, recipient=users, verb=f'Loaded {notification}')
+
+    url = f'{BASE_URL}project/{project.guid}/project_page'
+
+    email = (email_template or EMAIL_MESSAGE_TEMPLATE).format(
+        notification=notification,
+        project_link=f'<a href={url}>{project.name}</a>',
+    )
     email_kwargs = dict(
         email_body=BASE_EMAIL_TEMPLATE.format(email),
         to=list(users.values_list('email', flat=True)),
@@ -68,6 +76,14 @@ def send_project_notification(project, notification, email, subject):
         send_html_email(**email_kwargs)
     except Exception as e:
         logger.error(f'Error sending project email for {project.guid}: {e}', extra={'detail': email_kwargs})
+
+    if slack_channel:
+        slack_message = f'{notification} are loaded in <{url}|{project.name}>'
+        if slack_detail:
+            slack_message += f'\n```{slack_detail}```'
+        safe_post_to_slack(slack_channel, slack_message)
+
+    return url
 
 
 def _set_bulk_notification_stream(message):

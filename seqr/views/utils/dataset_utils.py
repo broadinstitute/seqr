@@ -5,7 +5,7 @@ from django.utils import timezone
 from tqdm import tqdm
 
 from seqr.models import Sample, Individual, Family, Project, RnaSample, RnaSeqOutlier, RnaSeqTpm, RnaSeqSpliceOutlier
-from seqr.utils.communication_utils import safe_post_to_slack, send_project_notification
+from seqr.utils.communication_utils import send_project_notification
 from seqr.utils.file_utils import file_iter
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
@@ -14,7 +14,7 @@ from seqr.views.utils.file_utils import parse_file
 from seqr.views.utils.permissions_utils import get_internal_projects
 from seqr.views.utils.json_utils import _to_snake_case, _to_camel_case
 from reference_data.models import GeneInfo
-from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, BASE_URL
+from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL
 
 logger = SeqrLogger(__name__)
 
@@ -216,7 +216,8 @@ def match_and_update_search_samples(
     updated_samples = Sample.objects.filter(guid__in=activated_sample_guids)
 
     family_guids_to_update = [
-        family_guid for family_guid, analysis_status in included_families.items() if analysis_status == Family.ANALYSIS_STATUS_WAITING_FOR_DATA
+        family_guid for family_guid, analysis_status in included_families.items()
+        if analysis_status in {Family.ANALYSIS_STATUS_WAITING_FOR_DATA, Family.ANALYSIS_STATUS_LOADING_FAILED}
     ]
     Family.bulk_update(
         user, {'analysis_status': Family.ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS}, guid__in=family_guids_to_update)
@@ -557,20 +558,12 @@ def _notify_rna_loading(model_cls, sample_projects, internal_projects):
     data_type = RNA_MODEL_DISPLAY_NAME[model_cls]
     for project_agg in sample_projects:
         new_ids = project_agg["new_sample_ids"]
-        project_link = f'<{BASE_URL}project/{project_agg["guid"]}/project_page|{project_agg["name"]}>'
-        safe_post_to_slack(
-            SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL,
-            f'{len(new_ids)} new RNA {data_type} samples are loaded in {project_link}\n```{", ".join(new_ids)}```'
-        )
-        email = (
-            f'This is to notify you that data for {len(new_ids)} new RNA {data_type} sample(s) '
-            f'has been loaded in seqr project {project_link}'
-        )
         send_project_notification(
             project=projects_by_name[project_agg["name"]],
-            notification=f'Loaded {len(new_ids)} new RNA {data_type} sample(s)',
-            email=email,
+            notification=f'{len(new_ids)} new RNA {data_type} sample(s)',
             subject=f'New RNA {data_type} data available in seqr',
+            slack_channel=SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL,
+            slack_detail=', '.join(new_ids),
         )
 
 

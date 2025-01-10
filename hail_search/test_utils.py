@@ -380,27 +380,19 @@ VARIANT3 = {
     'CAID': 'CA10960369',
 }
 
-VARIANT3_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY = deepcopy(VARIANT3)
-genotypes = VARIANT3_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY['genotypes']
-VARIANT3_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY['genotypes'] = {
-    'I000004_hg00731': [
-        genotypes['I000004_hg00731'],
-        {**genotypes['I000004_hg00731'], 'sampleType': 'WGS'}
-    ],
+VARIANT3_WES_ONLY = deepcopy(VARIANT3)
+genotypes = VARIANT3_WES_ONLY['genotypes']
+VARIANT3_WES_ONLY['genotypes'] = {
+    'I000004_hg00731': [genotypes['I000004_hg00731']],
     'I000005_hg00732': [genotypes['I000005_hg00732']],
     'I000006_hg00733': [genotypes['I000006_hg00733']],
 }
 
-VARIANT3_BOTH_SAMPLE_TYPES = deepcopy(VARIANT3_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY)
-genotypes = VARIANT3_BOTH_SAMPLE_TYPES['genotypes']
-VARIANT3_BOTH_SAMPLE_TYPES['genotypes']['I000005_hg00732'] = [
-    *genotypes['I000005_hg00732'],
-    {**genotypes['I000005_hg00732'][0], 'sampleType': 'WGS'}
-]
-VARIANT3_BOTH_SAMPLE_TYPES['genotypes']['I000006_hg00733'] = [
-    *genotypes['I000006_hg00733'],
-    {**genotypes['I000006_hg00733'][0], 'sampleType': 'WGS'}
-]
+VARIANT3_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY = deepcopy(VARIANT3_WES_ONLY)
+genotypes = VARIANT3_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY['genotypes']
+VARIANT3_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY['genotypes']['I000004_hg00731'].append(
+    {**genotypes['I000004_hg00731'][0], 'sampleType': 'WGS'}
+)
 
 VARIANT4 = {
     'variantId': '1-91511686-T-G',
@@ -475,16 +467,19 @@ VARIANT4 = {
     'CAID': 'CA341062623',
 }
 
-VARIANT4_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY = deepcopy(VARIANT4)
-genotypes = VARIANT4_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY['genotypes']
-VARIANT4_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY['genotypes'] = {
-    'I000004_hg00731': [
-        genotypes['I000004_hg00731'],
-        {**genotypes['I000004_hg00731'], 'sampleType': 'WGS'}
-    ],
+VARIANT4_WES_ONLY = deepcopy(VARIANT4)
+genotypes = VARIANT4_WES_ONLY['genotypes']
+VARIANT4_WES_ONLY['genotypes'] = {
+    'I000004_hg00731': [genotypes['I000004_hg00731']],
     'I000005_hg00732': [genotypes['I000005_hg00732']],
     'I000006_hg00733': [genotypes['I000006_hg00733']],
 }
+
+VARIANT4_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY = deepcopy(VARIANT4_WES_ONLY)
+genotypes = VARIANT4_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY['genotypes']
+VARIANT4_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY['genotypes']['I000004_hg00731'].append(
+    {**genotypes['I000004_hg00731'][0], 'sampleType': 'WGS'}
+)
 
 VARIANT4_BOTH_SAMPLE_TYPES = deepcopy(VARIANT4_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY)
 genotypes = VARIANT4_BOTH_SAMPLE_TYPES['genotypes']
@@ -494,11 +489,12 @@ VARIANT4_BOTH_SAMPLE_TYPES['genotypes']['I000005_hg00732'] = [
 ]
 VARIANT4_BOTH_SAMPLE_TYPES['genotypes']['I000006_hg00733'] = [
     *genotypes['I000006_hg00733'],
-    {**genotypes['I000006_hg00733'][0], 'sampleType': 'WGS'}
+    {**genotypes['I000006_hg00733'][0], 'numAlt': 2, 'sampleType': 'WGS'}
 ]
 
 VARIANT_LOOKUP_VARIANT = {
     **VARIANT1,
+    'liftedFamilyGuids': ['F000014_14'],
     'familyGenotypes': {
         VARIANT1['familyGuids'][0]: sorted([
             {k: v for k, v in g.items() if k != 'individualGuid'} for g in VARIANT1['genotypes'].values()
@@ -506,6 +502,10 @@ VARIANT_LOOKUP_VARIANT = {
         'F000011_11': [{
             'sampleId': 'NA20885', 'sampleType': 'WES', 'familyGuid': 'F000011_11',
             'numAlt': 2, 'dp': 6, 'gq': 16, 'ab': 1.0, 'filters': [],
+        }],
+        'F000014_14': [{
+            'sampleId': 'NA21234', 'sampleType': 'WGS', 'familyGuid': 'F000014_14',
+            'numAlt': 1, 'dp': 27, 'gq': 87, 'ab': 0.531000018119812, 'filters': None,
         }],
     }
 }

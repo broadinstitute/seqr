@@ -480,7 +480,7 @@
         "project": null,
         "name": "Submit to Clinvar",
         "category": "Data Sharing",
-        "description": "By selecting this tag, you are notifying CMG staff that this variant should be submitted to ClinVar. Generally, this is for pathogenic or likely pathogenic variants in known disease genes or for any benign or likely benign variants that are incorrectly annotated in ClinVar. Please also add a note that describes supporting evidence for how you interpreted this variant.",
+        "description": "",
         "color": "#8A62AE",
         "order": 25.0
     }

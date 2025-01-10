@@ -48,32 +48,43 @@ const LoadedProjectOptions = props => (
   </FormSpy>
 )
 
+const FILE_PATH_FIELD = {
+  name: 'filePath',
+  validate: validators.required,
+}
+
+const CALLSET_PAGE_FIELDS = [
+  {
+    name: 'skipValidation',
+    label: 'Skip Callset Validation',
+    component: InlineToggle,
+    asFormInput: true,
+  },
+  {
+    ...GENOME_VERSION_FIELD,
+    component: ButtonRadioGroup,
+    validate: validators.required,
+  },
+  {
+    name: 'sampleType',
+    label: 'Sample Type',
+    component: ButtonRadioGroup,
+    options: [SAMPLE_TYPE_EXOME, SAMPLE_TYPE_GENOME].map(value => ({ value, text: value })),
+    validate: validators.required,
+  },
+]
+
 const CALLSET_PAGE = {
   fields: [
     {
-      name: 'filePath',
-      label: 'Callset File Path',
-      placeholder: 'gs://',
-      validate: validators.required,
+      label: 'VCF',
+      component: LoadOptionsSelect,
+      url: '/api/data_management/loading_vcfs',
+      optionsResponseKey: 'vcfs',
+      validationErrorMessage: 'No VCFs found in the loading datasets directory',
+      ...FILE_PATH_FIELD,
     },
-    {
-      name: 'skipValidation',
-      label: 'Skip Callset Validation',
-      component: InlineToggle,
-      asFormInput: true,
-    },
-    {
-      ...GENOME_VERSION_FIELD,
-      component: ButtonRadioGroup,
-      validate: validators.required,
-    },
-    {
-      name: 'sampleType',
-      label: 'Sample Type',
-      component: ButtonRadioGroup,
-      options: [SAMPLE_TYPE_EXOME, SAMPLE_TYPE_GENOME].map(value => ({ value, text: value })),
-      validate: validators.required,
-    },
+    ...CALLSET_PAGE_FIELDS,
   ],
   submitUrl: '/api/data_management/validate_callset',
 }
@@ -81,7 +92,12 @@ const CALLSET_PAGE = {
 const MULTI_DATA_TYPE_CALLSET_PAGE = {
   ...CALLSET_PAGE,
   fields: [
-    ...CALLSET_PAGE.fields,
+    {
+      label: 'Callset File Path',
+      placeholder: 'gs://',
+      ...FILE_PATH_FIELD,
+    },
+    ...CALLSET_PAGE_FIELDS,
     {
       name: 'datasetType',
       label: 'Dataset Type',

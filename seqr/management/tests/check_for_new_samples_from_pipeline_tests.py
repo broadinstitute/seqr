@@ -44,12 +44,12 @@ ANVIL_HTML_EMAIL = f'Dear seqr user,<br /><br />' \
                    f'<br />Let us know if you have any questions.<br /><br />All the best,<br />The seqr team'
 INTERNAL_TEXT_EMAIL = """Dear seqr user,
 
-This is to notify you that 2 new WES samples have been loaded in seqr project Test Reprocessed Project
+This is to notify you that data for 2 new WES samples has been loaded in seqr project Test Reprocessed Project
 
 All the best,
 The seqr team"""
 INTERNAL_HTML_EMAIL = f'Dear seqr user,<br /><br />' \
-                      f'This is to notify you that 2 new WES samples have been loaded in seqr project ' \
+                      f'This is to notify you that data for 2 new WES samples has been loaded in seqr project ' \
                       f'<a href=https://seqr.broadinstitute.org/project/{PROJECT_GUID}/project_page>Test Reprocessed Project</a>' \
                       f'<br /><br />All the best,<br />The seqr team'
 
@@ -195,7 +195,7 @@ def mock_metadata_file(index):
 @mock.patch('seqr.utils.file_utils.os.path.isfile', lambda *args: True)
 @mock.patch('seqr.utils.search.hail_search_utils.HAIL_BACKEND_SERVICE_HOSTNAME', MOCK_HAIL_HOST)
 @mock.patch('seqr.views.utils.airtable_utils.AIRTABLE_URL', 'http://testairtable')
-@mock.patch('seqr.utils.search.add_data_utils.BASE_URL', SEQR_URL)
+@mock.patch('seqr.utils.communication_utils.BASE_URL', SEQR_URL)
 @mock.patch('seqr.utils.search.add_data_utils.SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL', 'anvil-data-loading')
 @mock.patch('seqr.utils.search.add_data_utils.SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL', 'seqr-data-loading')
 class CheckNewSamplesTest(AnvilAuthenticationTestCase):
@@ -324,7 +324,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         with self.assertRaises(CommandError) as ce:
             call_command('check_for_new_samples_from_pipeline', '--genome_version=GRCh37', '--dataset_type=MITO')
         self.assertEqual(str(ce.exception), 'No successful runs found for genome_version=GRCh37, dataset_type=MITO')
-        self.mock_glob.assert_called_with('/seqr/seqr-hail-search-data/GRCh37/MITO/runs/*/_SUCCESS')
+        self.mock_glob.assert_called_with('/seqr/seqr-hail-search-data/GRCh37/MITO/runs/*/_SUCCESS', recursive=False)
         self.mock_subprocess.assert_not_called()
 
         call_command('check_for_new_samples_from_pipeline')
@@ -344,7 +344,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
             iter([json.dumps(METADATA_FILES[i])]) for i in range(len(local_files))
         ]
         call_command('check_for_new_samples_from_pipeline')
-        self.mock_glob.assert_called_with('/seqr/seqr-hail-search-data/*/*/runs/*/_SUCCESS')
+        self.mock_glob.assert_called_with('/seqr/seqr-hail-search-data/*/*/runs/*/_SUCCESS', recursive=False)
         self.mock_open.assert_has_calls(
             [mock.call(path.replace('_SUCCESS', 'metadata.json'), 'r') for path in local_files], any_order=True)
         self.mock_subprocess.assert_not_called()
@@ -462,6 +462,10 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
             {'analysis_status': 'I', 'analysis_status_last_modified_date': None},
             {'analysis_status': 'I', 'analysis_status_last_modified_date': None},
         ])
+        self.assertSetEqual(
+            set(Family.objects.filter(guid__in=['F000001_1', 'F000002_2', 'F000003_3']).values_list('analysis_status', flat=True)),
+            {'F'},
+        )
         self.assertEqual(Family.objects.get(guid='F000014_14').analysis_status, 'Rncc')
 
         # Test airtable PDO updates
@@ -544,11 +548,11 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         self.mock_send_slack.assert_has_calls([
             mock.call(
                 'seqr-data-loading',
-                f'2 new WES samples are loaded in {SEQR_URL}project/{PROJECT_GUID}/project_page\n```NA20888, NA20889```',
+                f'2 new WES samples are loaded in <{SEQR_URL}project/{PROJECT_GUID}/project_page|Test Reprocessed Project>\n```NA20888, NA20889```',
             ),
             mock.call(
                 'anvil-data-loading',
-                f'1 new WES samples are loaded in {SEQR_URL}project/{EXTERNAL_PROJECT_GUID}/project_page',
+                f'1 new WES samples are loaded in <{SEQR_URL}project/{EXTERNAL_PROJECT_GUID}/project_page|Non-Analyst Project>',
             ),
             mock.call(
                 'seqr_loading_notifications',
@@ -588,10 +592,10 @@ The following 1 families failed sex check:
             ),
             mock.call(
                 'seqr-data-loading',
-                f'1 new WES SV samples are loaded in {SEQR_URL}project/R0001_1kg/project_page\n```NA20872```',
+                f'1 new WES SV samples are loaded in <{SEQR_URL}project/R0001_1kg/project_page|1kg project nåme with uniçøde>\n```NA20872```',
             ), mock.call(
                 'seqr-data-loading',
-                f'1 new WES SV samples are loaded in {SEQR_URL}project/{PROJECT_GUID}/project_page\n```NA20889```',
+                f'1 new WES SV samples are loaded in <{SEQR_URL}project/{PROJECT_GUID}/project_page|Test Reprocessed Project>\n```NA20889```',
             ),
         ])
 

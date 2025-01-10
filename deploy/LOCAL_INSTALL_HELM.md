@@ -76,7 +76,7 @@ loading_pipeline_queue  test.vcf.gz
 ```
 - In the top header of *seqr*, click on the **Data Management** button.
 - In the subheader, click on **Load Data**.
-- Type the name of the callset path into the **Callset File Path** text box (without the directory prefix), and select the appropriate Sample Type (WES/WGS) and Genome Version (GRCh37/GRCh38) for your project.  The pipeline includes a sequence of validation steps to insure the validity of your VCF, but these may be skipped by enabling the **Skip Callset Validation**option.  We strongly recommend leaving validation enabled to ensure the quality of your analysis.
+- Select your VCF from the dropdown and select the appropriate Sample Type (WES/WGS) and Genome Version (GRCh37/GRCh38) for your project.  The pipeline includes a sequence of validation steps to insure the validity of your VCF, but these may be skipped by enabling the **Skip Callset Validation**option.  We strongly recommend leaving validation enabled to ensure the quality of your analysis.
 - Click through to the next page and select your project from the **Projects to Load** dropdown, then click **Submit**.
 - If you wish to check the status of the loading request, you can click through to the **Pipeline Status** tab to view the loading pipeline interface.
 - Data should be loaded into the search backend automatically, usually within a few hours.

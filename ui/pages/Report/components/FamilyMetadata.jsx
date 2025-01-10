@@ -15,6 +15,7 @@ const COLUMNS = [
   { name: 'paternal_id' },
   { name: 'maternal_id' },
   { name: 'other_individual_ids' },
+  { name: 'analysed_by', style: { minWidth: '400px' } },
 ]
 
 const FamilyMetadata = props => (
