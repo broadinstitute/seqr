@@ -48,7 +48,7 @@ class DatasetAPITest(object):
     @mock.patch('seqr.models.random.randint')
     @mock.patch('seqr.utils.communication_utils.logger')
     @mock.patch('seqr.utils.communication_utils.send_html_email')
-    @mock.patch('seqr.utils.search.add_data_utils.BASE_URL', 'https://seqr.broadinstitute.org/')
+    @mock.patch('seqr.utils.communication_utils.BASE_URL', 'https://seqr.broadinstitute.org/')
     @urllib3_responses.activate
     def test_add_variants_dataset(self, mock_send_email, mock_logger, mock_random):
         url = reverse(add_variants_dataset_handler, args=[PROJECT_GUID])
@@ -269,7 +269,7 @@ class DatasetAPITest(object):
                                       project_guid=PROJECT_GUID, project_name='1kg project nåme with uniçøde',
                                       recipient='test_user_manager@test.com'):
         if not email_content:
-            email_content = f'This is to notify you that {count} new {sample_type} samples have been loaded in seqr project <a href={SEQR_URL}/project/{project_guid}/project_page>{project_name}</a>'
+            email_content = f'This is to notify you that data for {count} new {sample_type} samples has been loaded in seqr project <a href={SEQR_URL}/project/{project_guid}/project_page>{project_name}</a>'
         mock_send_email.assert_called_once_with(
             email_body=f'Dear seqr user,\n\n{email_content}\n\nAll the best,\nThe seqr team',
             subject='New data available in seqr', to=[recipient], process_message=mock.ANY,
