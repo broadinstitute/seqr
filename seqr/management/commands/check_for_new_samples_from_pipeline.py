@@ -1,4 +1,7 @@
+import os
 from collections import defaultdict
+from tempfile import TemporaryDirectory
+
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Q
@@ -10,12 +13,13 @@ import re
 from reference_data.models import GENOME_VERSION_LOOKUP
 from seqr.models import Family, Sample, SavedVariant
 from seqr.utils.communication_utils import safe_post_to_slack
-from seqr.utils.file_utils import file_iter, list_files
+from seqr.utils.file_utils import file_iter, list_files, mv_file_to_gs
 from seqr.utils.search.add_data_utils import notify_search_data_loaded
 from seqr.utils.search.utils import parse_valid_variant_id
 from seqr.utils.search.hail_search_utils import hail_variant_multi_lookup, search_data_type
 from seqr.views.utils.airtable_utils import AirtableSession, LOADABLE_PDO_STATUSES, AVAILABLE_PDO_STATUS, LOADING_PDO_STATUS
 from seqr.views.utils.dataset_utils import match_and_update_search_samples
+from seqr.views.utils.export_utils import write_single_file
 from seqr.views.utils.permissions_utils import is_internal_anvil_project, project_has_anvil
 from seqr.views.utils.variant_utils import reset_cached_search_results, update_projects_saved_variant_json, \
     get_saved_variants
@@ -23,7 +27,10 @@ from settings import SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, HAIL_SEARCH_DATA_D
 
 logger = logging.getLogger(__name__)
 
-RUN_SUCCESS_PATH_TEMPLATE = '{data_dir}/{genome_version}/{dataset_type}/runs/{run_version}/_SUCCESS'
+RUN_FILE_PATH_TEMPLATE = '{data_dir}/{genome_version}/{dataset_type}/runs/{run_version}/{file_name}'
+SUCCESS_FILE_NAME = '_SUCCESS'
+VALIDATION_ERRORS_FILE_NAME = 'validation_errors.json'
+ERRORS_REPORTED_FILE_NAME = '_ERRORS_REPORTED'
 RUN_PATH_FIELDS = ['genome_version', 'dataset_type', 'run_version']
 
 DATASET_TYPE_MAP = {'GCNV': Sample.DATASET_TYPE_SV_CALLS}
@@ -47,9 +54,9 @@ class Command(BaseCommand):
         parser.add_argument('--run-version')
 
     def handle(self, *args, **options):
-        path = self._run_success_path(lambda field: options[field] or '*')
-        path_regex = self._run_success_path(lambda field: f'(?P<{field}>[^/]+)')
-        success_runs = {path: re.match(path_regex, path).groupdict() for path in list_files(path, user=None)}
+        self._report_validation_errors()
+
+        success_runs = self._get_runs_for_file_name(SUCCESS_FILE_NAME)
         if not success_runs:
             user_args = [f'{k}={options[k]}' for k in RUN_PATH_FIELDS if options[k]]
             if user_args:
@@ -87,9 +94,49 @@ class Command(BaseCommand):
 
         logger.info('DONE')
 
+    def _report_validation_errors(self):
+        reported_runs = self._get_runs_for_file_name(VALIDATION_ERRORS_FILE_NAME)
+        reported_run_ids = {run_dict['run_version'] for run_dict in reported_runs.values()}
+
+        error_runs = self._get_runs_for_file_name(VALIDATION_ERRORS_FILE_NAME)
+        messages = []
+        reported_run_paths = set()
+        for path, run_dict in error_runs.items():
+            if run_dict['run_version'] in reported_run_ids:
+                continue
+
+            error_summary = json.loads(next(line for line in file_iter(path)))
+            summary = [
+                f'Callset Validation Failed',
+                f'Projects: {error_summary["project_guids"]}',
+                f'Reference Genome: {run_dict["genome_version"]}',
+                f'Dataset Type: {run_dict["dataset_type"]}',
+                f'Run ID: {run_dict["run_version"]}',
+                f'Validation Errors: {error_summary["error_messages"]}',
+                f'See more at https://storage.cloud.google.com/{path}'
+            ]
+            messages.append('/n'.join(summary))
+            reported_run_paths.add(path)
+
+        if messages:
+            safe_post_to_slack(
+                SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, '\n\n'.join(messages),
+            )
+            with TemporaryDirectory() as temp_dir_name:
+                write_single_file(f'{temp_dir_name}/{ERRORS_REPORTED_FILE_NAME}')
+                for path in reported_run_paths:
+                    run_directory = os.path.dirname(path)
+                    mv_file_to_gs(f'{temp_dir_name}/*', f'{run_directory}/')
+
+    def _get_runs_for_file_name(self, file_name, **kwargs):
+        path = self._run_path(file_name, lambda field: kwargs[field] or '*')
+        path_regex = self._run_path(file_name, lambda field: f'(?P<{field}>[^/]+)')
+        return {path: re.match(path_regex, path).groupdict() for path in list_files(path, user=None)}
+
     @staticmethod
-    def _run_success_path(get_field_format):
-        return RUN_SUCCESS_PATH_TEMPLATE.format(
+    def _run_path(file_name, get_field_format):
+        return RUN_FILE_PATH_TEMPLATE.format(
+            file_name=file_name,
             data_dir=HAIL_SEARCH_DATA_DIR,
             **{field: get_field_format(field) for field in RUN_PATH_FIELDS}
         )

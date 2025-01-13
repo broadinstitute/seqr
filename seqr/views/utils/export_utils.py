@@ -105,7 +105,10 @@ def write_multiple_files(files, file_path, user, **kwargs):
     with TemporaryDirectory() as temp_dir_name:
         dir_name = temp_dir_name if is_gs_path else file_path
         for filename, content in _format_files_content(files, **kwargs):
-            with open(f'{dir_name}/{filename}', 'w') as f:
-                f.write(content)
+            write_single_file(f'{dir_name}/{filename}', content)
         if is_gs_path:
             mv_file_to_gs(f'{temp_dir_name}/*', f'{file_path}/', user)
+
+def write_single_file(file_name, content=''):
+    with open(file_name, 'w') as f:
+        f.write(content)
