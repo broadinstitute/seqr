@@ -2,7 +2,7 @@ import React from 'react'
 import { BaseSemanticInput } from 'shared/components/form/Inputs'
 import { connect } from 'react-redux'
 import { getLocusListsWithGenes } from 'redux/selectors'
-import { moiToMoiInitials, formatPanelAppItems } from 'shared/utils/panelAppUtils'
+import { formatPanelAppItems } from 'shared/utils/panelAppUtils'
 import PropTypes from 'prop-types'
 
 const EMPTY_STRING = ''
@@ -17,11 +17,9 @@ class PaLocusListSelector extends React.Component {
   }
 
   shouldComponentUpdate(nextProps) {
-    const { locusList, locus, onChange } = this.props
+    const { locus, value } = this.props
     return nextProps.locus.selectedMOIs !== locus.selectedMOIs ||
-      nextProps.onChange !== onChange ||
-      nextProps.locusList.locusListGuid !== locusList.locusListGuid ||
-      (!!locusList.locusListGuid && nextProps.locusList.rawItems !== locusList.rawItems)
+      nextProps.value !== value
   }
 
   componentDidUpdate(prevProps) {
@@ -29,17 +27,7 @@ class PaLocusListSelector extends React.Component {
     const { selectedMOIs } = locus
 
     if (prevProps.locus.selectedMOIs !== selectedMOIs) {
-      const panelAppItems = formatPanelAppItems(
-        locusList?.items?.filter((item) => {
-          let result = true
-          const initials = moiToMoiInitials(item.pagene?.modeOfInheritance, false)
-          if (selectedMOIs && selectedMOIs.length > 0) {
-            result = selectedMOIs.some(moi => initials.includes(moi))
-          }
-          return result
-        }),
-      )
-
+      const panelAppItems = formatPanelAppItems(locusList?.items, selectedMOIs)
       if (panelAppItems[color]) {
         onChange(panelAppItems[color])
       } else {
