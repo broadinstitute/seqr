@@ -570,9 +570,9 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
     ADDITIONAL_REQUEST_COUNT = 0
     DAG_NAME = 'LOADING_PIPELINE'
 
-    def setUp(self, **kwargs):
+    def setUp(self):
         self._dag_url = f'{self.MOCK_AIRFLOW_URL}/api/v1/dags/{self.DAG_NAME}'
-        self.set_up_one_dag(**kwargs)
+        self.set_up_one_dag()
 
         patcher = mock.patch('seqr.views.utils.airflow_utils.google.auth.default', lambda **kwargs: (None, None))
         patcher.start()
