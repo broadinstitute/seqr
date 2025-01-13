@@ -66,7 +66,7 @@ jobs:
             yq -i '
             .appVersion = "${{ github.event.workflow_run.head_sha }}" |
             .version = "${{ steps.bump.outputs.new_version }}"
-            ' charts/hail-search/Chart.yaml
+            ' charts/seqr/Chart.yaml
 
       - name: Commit and Push changes
         uses: Andro999b/push@v1.3
