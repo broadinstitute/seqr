@@ -1557,10 +1557,10 @@ class DataManagerAPITest(AirtableTest):
                 'R0001_1kg',
                 'R0004_non_analyst_project'
             ],
-            'callset_path': f'{self.TRIGGER_CALLSET_DIR}/mito_callset.mt',
-            'sample_type': 'WES',
             'dataset_type': 'MITO',
             'reference_genome': 'GRCh38',
+            'callset_path': f'{self.TRIGGER_CALLSET_DIR}/mito_callset.mt',
+            'sample_type': 'WES',
             'skip_validation': True,
         }
         self._assert_success_notification(dag_json)
@@ -1842,7 +1842,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
     def _assert_expected_load_data_requests(self, dataset_type='MITO', **kwargs):
         required_sample_field = 'MITO_WES_CallsetPath' if dataset_type == 'MITO' else 'gCNV_CallsetPath'
         self._assert_expected_airtable_call(required_sample_field, 'R0001_1kg')
-        self.assert_airflow_calls(offset=1, dataset_type=dataset_type, **kwargs)
+        self.assert_airflow_loading_calls(offset=1, dataset_type=dataset_type, **kwargs)
 
     def _assert_expected_airtable_call(self, required_sample_field, project_guid):
         self.assert_expected_airtable_call(
@@ -1914,7 +1914,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
     def _test_load_single_project(self, mock_open, mock_mkdir, response, *args, url=None, body=None, **kwargs):
         super()._test_load_single_project(mock_open, mock_mkdir, response, url, body)
         self.ADDITIONAL_REQUEST_COUNT = 0
-        self.assert_airflow_calls(offset=0, dataset_type='SNV_INDEL', trigger_error=True)
+        self.assert_airflow_loading_calls(offset=0, dataset_type='SNV_INDEL', trigger_error=True)
 
         responses.calls.reset()
         mock_open.reset_mock()

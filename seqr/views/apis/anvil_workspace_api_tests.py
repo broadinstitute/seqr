@@ -754,7 +754,7 @@ class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
             f'{TEMP_PATH}/*', gs_path, self.manager_user
         )
 
-        self.assert_airflow_calls(additional_tasks_check=test_add_data)
+        self.assert_airflow_loading_calls(additional_tasks_check=test_add_data)
 
         # create airtable record
         self.assertDictEqual(json.loads(responses.calls[-1].request.body), {'records': [{'fields': {
@@ -769,10 +769,10 @@ class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
 
         dag_json = {
             'projects_to_run': [project.guid],
-            'callset_path': 'gs://test_bucket/test_path.vcf',
-            'sample_type': 'WES',
             'dataset_type': 'SNV_INDEL',
             'reference_genome': genome_version,
+            'callset_path': 'gs://test_bucket/test_path.vcf',
+            'sample_type': 'WES',
             'sample_source': 'AnVIL',
         }
         sample_summary = '3 new'
@@ -853,10 +853,10 @@ class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
             guid=project.guid,
             dag=json.dumps({
                 'projects_to_run': [project.guid],
-                'callset_path': 'gs://test_bucket/test_path.vcf',
-                'sample_type': 'WES',
                 'dataset_type': 'SNV_INDEL',
                 'reference_genome': genome_version,
+                'callset_path': 'gs://test_bucket/test_path.vcf',
+                'sample_type': 'WES',
                 'sample_source': 'AnVIL',
             }, indent=4),
         )
@@ -865,7 +865,7 @@ class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
             SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, slack_message_on_failure,
         )
         self.mock_send_email.assert_not_called()
-        self.assert_airflow_calls(trigger_error=True)
+        self.assert_airflow_loading_calls(trigger_error=True)
 
         # Airtable record created with correct status
         self.assertDictEqual(json.loads(responses.calls[-1].request.body), {'records': [{'fields': {
@@ -884,7 +884,7 @@ class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
         self.check_manager_login(url, login_redirect_url='/login/google-oauth2')
 
         # make sure the task id including the newly created project to avoid infinitely pulling the tasks
-        self.add_dag_tasks_response([
+        self._add_dag_tasks_response([
             'R0006_anvil_no_project_workspace', 'R0007_anvil_no_project_workspace', 'R0008_anvil_no_project_workspace'])
         self._test_not_yet_email_date(url, REQUEST_BODY)
 
@@ -903,7 +903,7 @@ class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
         self.check_manager_login(url, login_redirect_url='/login/google-oauth2')
 
         # make sure the task id including the newly created project to avoid infinitely pulling the tasks
-        self.add_dag_tasks_response(['R0003_test', 'R0004_test'])
+        self._add_dag_tasks_response(['R0003_test', 'R0004_test'])
         self._test_not_yet_email_date(url, REQUEST_BODY_ADD_DATA)
 
         url = reverse(add_workspace_data, args=[PROJECT2_GUID])
