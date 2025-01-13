@@ -679,7 +679,7 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
             return
 
         self._assert_update_variables_airflow_calls(dag_variables, offset)
-        self._assert_update_check_airflow_calls(call_count, offset)
+        self._assert_update_check_airflow_calls(call_count, offset, update_check_path=f'{self._dag_url}/tasks')
         call_cnt = call_count - 1
 
         # trigger dag
@@ -704,15 +704,15 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
             json.loads(json.dumps(dag_variables))
         )
 
-    def _assert_update_check_airflow_calls(self, call_count, offset, check_updated_path='tasks'):
-        self.assertEqual(responses.calls[offset + 2].request.url, f'{self._dag_url}/{check_updated_path}')
+    def _assert_update_check_airflow_calls(self, call_count, offset, update_check_path):
+        self.assertEqual(responses.calls[offset + 2].request.url, update_check_path)
         self.assertEqual(responses.calls[offset + 2].request.method, 'GET')
 
-        self.assertEqual(responses.calls[offset + 3].request.url, f'{self._dag_url}/{check_updated_path}')
+        self.assertEqual(responses.calls[offset + 3].request.url, update_check_path)
         self.assertEqual(responses.calls[offset + 3].request.method, 'GET')
 
         if call_count > 5:
-            self.assertEqual(responses.calls[offset + 4].request.url, f'{self._dag_url}/{check_updated_path}')
+            self.assertEqual(responses.calls[offset + 4].request.url, update_check_path)
             self.assertEqual(responses.calls[offset + 4].request.method, 'GET')
 
 

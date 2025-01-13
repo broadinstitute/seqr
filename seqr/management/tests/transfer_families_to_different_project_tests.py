@@ -2,6 +2,7 @@ import responses
 from django.core.management import call_command
 from django.test import TestCase
 import mock
+import json
 
 from seqr.models import Family, VariantTagType, VariantTag, Sample
 from seqr.views.utils.test_utils import AirflowTestCase
@@ -66,10 +67,14 @@ class TransferFamiliesAirflowTest(TransferFamiliesTest, AirflowTestCase):
 
     def _add_update_check_dag_responses(self, **kwargs):
         # get variables
-        responses.add(responses.GET, f'{self._dag_url}/variables', json={'variables': {}})
+        responses.add(responses.GET, f'{self.MOCK_AIRFLOW_URL}/api/v1/variables/{self.DAG_NAME}', json={
+            'key': self.DAG_NAME,
+            'value': '{}'
+        })
         # get variables again if the response of the previous request didn't include the updated variables
-        responses.add(responses.GET, f'{self._dag_url}/variables', json={
-            'variables': {**self._get_dag_variables(**kwargs)}
+        responses.add(responses.GET, f'{self.MOCK_AIRFLOW_URL}/api/v1/variables/{self.DAG_NAME}', json={
+            'key': self.DAG_NAME,
+            'value': json.dumps(self._get_dag_variables(**kwargs))
         })
 
     def assert_airflow_delete_families_calls(self):
@@ -79,8 +84,9 @@ class TransferFamiliesAirflowTest(TransferFamiliesTest, AirflowTestCase):
             offset = i * call_count_per_dag
             self._assert_airflow_calls(self._get_dag_variables(dataset_type), call_count_per_dag, offset)
 
-    def _assert_update_check_airflow_calls(self, call_count, offset, check_updated_path='variables'):
-        super()._assert_update_check_airflow_calls(call_count, offset, check_updated_path)
+    def _assert_update_check_airflow_calls(self, call_count, offset, update_check_path):
+        variables_update_check_path = f'{self.MOCK_AIRFLOW_URL}/api/v1/variables/{self.DAG_NAME}'
+        super()._assert_update_check_airflow_calls(call_count, offset, variables_update_check_path)
 
     @responses.activate
     @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', '')
@@ -89,9 +95,9 @@ class TransferFamiliesAirflowTest(TransferFamiliesTest, AirflowTestCase):
         searchable_family = self._test_command(mock_logger, additional_family='4', logs=[
             mock.call('Found 2 out of 2 families.'),
             mock.call('Disabled search for 7 samples in the following 1 families: 2'),
-            mock.call('Successfully triggered DELETE_FAMILIES DAG for 1 family from 1kg project nåme with uniçøde/MITO'),
-            mock.call('Successfully triggered DELETE_FAMILIES DAG for 1 family from 1kg project nåme with uniçøde/SNV_INDEL'),
-            mock.call('Successfully triggered DELETE_FAMILIES DAG for 1 family from 1kg project nåme with uniçøde/SV'),
+            mock.call('Successfully triggered DELETE_FAMILIES DAG for 1 MITO families'),
+            mock.call('Successfully triggered DELETE_FAMILIES DAG for 1 SNV_INDEL families'),
+            mock.call('Successfully triggered DELETE_FAMILIES DAG for 1 SV families'),
         ])
 
         samples = Sample.objects.filter(individual__family=searchable_family)

@@ -20,11 +20,7 @@ def _disable_search(families, from_project):
         logger.info(
             f'Disabled search for {num_updated} samples in the following {len(updated_families)} families: {family_summary}'
         )
-        try:
-            _trigger_delete_families_dags(from_project, updated_family_dataset_types)
-        except Exception as e:
-            logger_call = logger.warning if isinstance(e, DagRunningException) else logger.error
-            logger_call(str(e))
+        _trigger_delete_families_dags(from_project, updated_family_dataset_types)
 
 def _trigger_delete_families_dags(from_project, updated_family_dataset_types):
     updated_families_by_dataset_type = defaultdict(list)
@@ -32,9 +28,12 @@ def _trigger_delete_families_dags(from_project, updated_family_dataset_types):
         updated_families_by_dataset_type[dataset_type].append(family_guid)
 
     for dataset_type, family_guids in sorted(updated_families_by_dataset_type.items()):
-        trigger_airflow_delete_families(dataset_type, family_guids, from_project)
-        logger.info(f'Successfully triggered DELETE_FAMILIES DAG for {len(family_guids)} family from {from_project.name}/{dataset_type}')
-
+        try:
+            trigger_airflow_delete_families(dataset_type, family_guids, from_project)
+            logger.info(f'Successfully triggered DELETE_FAMILIES DAG for {len(family_guids)} {dataset_type} families')
+        except Exception as e:
+            logger_call = logger.warning if isinstance(e, DagRunningException) else logger.error
+            logger_call(str(e))
 
 class Command(BaseCommand):
     def add_arguments(self, parser):

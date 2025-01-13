@@ -119,9 +119,9 @@ def _get_task_ids(dag_name: str):
     return task_ids
 
 def _get_variables(dag_name: str):
-    endpoint = f'dags/{dag_name}/variables'
+    endpoint = f'variables/{dag_name}'
     airflow_response = _make_airflow_api_request(endpoint, method='GET')
-    return airflow_response['variables']
+    return json.loads(airflow_response['value'])
 
 
 def _trigger_dag(dag_name: str):
