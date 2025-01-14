@@ -8,6 +8,7 @@ import PropTypes from 'prop-types'
 const EMPTY_STRING = ''
 
 class PaLocusListSelector extends React.Component {
+
   static propTypes = {
     locus: PropTypes.object,
     locusList: PropTypes.object,

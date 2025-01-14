@@ -87,15 +87,18 @@ export const formatPanelAppItems = (
     return []
   }
 
-  const filteredItems = items.filter((item) => {
+  const hasSelectedMoi = (item: { pagene?: any; display?: string }, selectedMOIs: any[]) => {
     if (!selectedMOIs || selectedMOIs.length === 0) {
       return true
     }
     const initials = moiToMoiInitials(item.pagene?.modeOfInheritance, false)
     return selectedMOIs.some((moi) => initials.includes(moi))
-  })
+  }
 
-  return filteredItems.reduce((acc, item) => {
+  return items.reduce((acc, item) => {
+    if (!hasSelectedMoi(item, selectedMOIs)) {
+      return acc
+    }
     const color: string = PANEL_APP_CONFIDENCE_LEVELS[item.pagene?.confidenceLevel] || PANEL_APP_CONFIDENCE_LEVELS[0]
     return { ...acc, [color]: [acc[color], item.display].filter(val => val).join(', ') }
   }, {} as Record<string, string>)
