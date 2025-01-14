@@ -33,26 +33,28 @@ class BaseLocusListDropdown extends React.Component {
     locusListOptions: PropTypes.arrayOf(PropTypes.object),
     loading: PropTypes.bool,
     onChange: PropTypes.func,
+    selectedMOIs: PropTypes.arrayOf(PropTypes.string),
   }
 
   shouldComponentUpdate(nextProps) {
-    const { locusList, locusListOptions, onChange, loading } = this.props
+    const { locusList, locusListOptions, onChange, loading, selectedMOIs } = this.props
     return nextProps.locusListOptions !== locusListOptions ||
       nextProps.onChange !== onChange ||
       nextProps.loading !== loading ||
       nextProps.locusList.locusListGuid !== locusList.locusListGuid ||
-      (!!locusList.locusListGuid && nextProps.locusList.rawItems !== locusList.rawItems)
+      (!!locusList.locusListGuid && nextProps.locusList.rawItems !== locusList.rawItems) ||
+      nextProps.selectedMOIs !== selectedMOIs
   }
 
   componentDidUpdate(prevProps) {
-    const { locusList, onChange } = this.props
+    const { locusList, onChange, selectedMOIs } = this.props
 
     if (prevProps.locusList.rawItems !== locusList.rawItems) {
       const { locusListGuid } = locusList
 
       if (locusList.paLocusList) {
-        const panelAppItems = formatPanelAppItems(locusList.items)
-        onChange({ locusListGuid, panelAppItems })
+        const panelAppItems = formatPanelAppItems(locusList.items, selectedMOIs)
+        onChange({ locusListGuid, panelAppItems, selectedMOIs })
       } else {
         const { rawItems } = locusList
         onChange({ locusListGuid, rawItems })
@@ -96,7 +98,7 @@ const SUBSCRIPTION = { values: true }
 const LocusListSelector = React.memo(({ value, ...props }) => (
   <LocusListsLoader allProjectLists hideLoading>
     <LocusListItemsLoader locusListGuid={value.locusListGuid} reloadOnIdUpdate content hideLoading>
-      <LocusListDropdown {...props} />
+      <LocusListDropdown selectedMOIs={value?.selectedMOIs} {...props} />
     </LocusListItemsLoader>
   </LocusListsLoader>
 ))
