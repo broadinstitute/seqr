@@ -54,9 +54,9 @@ class Command(BaseCommand):
         parser.add_argument('--run-version')
 
     def handle(self, *args, **options):
-        self._report_validation_errors()
+        self._report_validation_errors(**options)
 
-        success_runs = self._get_runs_for_file_name(SUCCESS_FILE_NAME)
+        success_runs = self._get_runs_for_file_name(SUCCESS_FILE_NAME, **options)
         if not success_runs:
             user_args = [f'{k}={options[k]}' for k in RUN_PATH_FIELDS if options[k]]
             if user_args:
@@ -94,11 +94,11 @@ class Command(BaseCommand):
 
         logger.info('DONE')
 
-    def _report_validation_errors(self):
-        reported_runs = self._get_runs_for_file_name(VALIDATION_ERRORS_FILE_NAME)
+    def _report_validation_errors(self, **kwargs):
+        reported_runs = self._get_runs_for_file_name(ERRORS_REPORTED_FILE_NAME, **kwargs)
         reported_run_ids = {run_dict['run_version'] for run_dict in reported_runs.values()}
 
-        error_runs = self._get_runs_for_file_name(VALIDATION_ERRORS_FILE_NAME)
+        error_runs = self._get_runs_for_file_name(VALIDATION_ERRORS_FILE_NAME, **kwargs)
         messages = []
         reported_run_paths = set()
         for path, run_dict in error_runs.items():
