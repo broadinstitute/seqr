@@ -13,7 +13,7 @@ import re
 from reference_data.models import GENOME_VERSION_LOOKUP
 from seqr.models import Family, Sample, SavedVariant
 from seqr.utils.communication_utils import safe_post_to_slack
-from seqr.utils.file_utils import file_iter, list_files
+from seqr.utils.file_utils import file_iter, list_files, is_google_bucket_file_path
 from seqr.utils.search.add_data_utils import notify_search_data_loaded
 from seqr.utils.search.utils import parse_valid_variant_id
 from seqr.utils.search.hail_search_utils import hail_variant_multi_lookup, search_data_type
@@ -140,17 +140,18 @@ class Command(BaseCommand):
                     f'Dataset Type: {run_details["dataset_type"]}',
                     f'Run ID: {run_details["run_version"]}',
                     f'Validation Errors: {error_summary["error_messages"]}',
-                    f'See more at https://storage.cloud.google.com{file_path}'
                 ]
-                messages.append('/n'.join(summary))
+                if is_google_bucket_file_path(file_path):
+                    summary.append(f'See more at https://storage.cloud.google.com/{file_path[5:]}')
+                messages.append('\n'.join(summary))
                 reported_runs.add(run_dir)
 
         if messages:
             safe_post_to_slack(
                 SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, '\n\n'.join(messages),
             )
-        for run_dir in reported_runs:
-            write_multiple_files([(ERRORS_REPORTED_FILE_NAME, [], [])], run_dir, user=None, file_format=None)
+        # for run_dir in reported_runs:
+        #     write_multiple_files([(ERRORS_REPORTED_FILE_NAME, [], [])], run_dir, user=None, file_format=None)
 
     @classmethod
     def _load_new_samples(cls, metadata_path, genome_version, dataset_type, run_version):
