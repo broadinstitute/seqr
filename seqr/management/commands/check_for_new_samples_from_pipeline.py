@@ -13,13 +13,13 @@ import re
 from reference_data.models import GENOME_VERSION_LOOKUP
 from seqr.models import Family, Sample, SavedVariant
 from seqr.utils.communication_utils import safe_post_to_slack
-from seqr.utils.file_utils import file_iter, list_files, mv_file_to_gs
+from seqr.utils.file_utils import file_iter, list_files
 from seqr.utils.search.add_data_utils import notify_search_data_loaded
 from seqr.utils.search.utils import parse_valid_variant_id
 from seqr.utils.search.hail_search_utils import hail_variant_multi_lookup, search_data_type
 from seqr.views.utils.airtable_utils import AirtableSession, LOADABLE_PDO_STATUSES, AVAILABLE_PDO_STATUS, LOADING_PDO_STATUS
 from seqr.views.utils.dataset_utils import match_and_update_search_samples
-from seqr.views.utils.export_utils import write_single_file
+from seqr.views.utils.export_utils import write_multiple_files
 from seqr.views.utils.permissions_utils import is_internal_anvil_project, project_has_anvil
 from seqr.views.utils.variant_utils import reset_cached_search_results, update_projects_saved_variant_json, \
     get_saved_variants
@@ -31,7 +31,7 @@ RUN_FILE_PATH_TEMPLATE = '{data_dir}/{genome_version}/{dataset_type}/runs/{run_v
 SUCCESS_FILE_NAME = '_SUCCESS'
 VALIDATION_ERRORS_FILE_NAME = 'validation_errors.json'
 ERRORS_REPORTED_FILE_NAME = '_ERRORS_REPORTED'
-RUN_PATH_FIELDS = ['genome_version', 'dataset_type', 'run_version']
+RUN_PATH_FIELDS = ['genome_version', 'dataset_type', 'run_version', 'file_name']
 
 DATASET_TYPE_MAP = {'GCNV': Sample.DATASET_TYPE_SV_CALLS}
 USER_EMAIL = 'manage_command'
@@ -54,11 +54,12 @@ class Command(BaseCommand):
         parser.add_argument('--run-version')
 
     def handle(self, *args, **options):
-        self._report_validation_errors(**options)
+        run_files, run_args = self._get_runs(**options)
+        self._report_validation_errors(run_files, run_args)
 
-        success_runs = self._get_runs_for_file_name(SUCCESS_FILE_NAME, **options)
-        if not success_runs:
-            user_args = [f'{k}={options[k]}' for k in RUN_PATH_FIELDS if options[k]]
+        success_run_dirs = [run_dir for run_dir, files in run_files.items() if SUCCESS_FILE_NAME in files]
+        if not success_run_dirs:
+            user_args = [f'{k}={options.get(k)}' for k in RUN_PATH_FIELDS if options.get(k)]
             if user_args:
                 raise CommandError(f'No successful runs found for {", ".join(user_args)}')
             else:
@@ -66,17 +67,18 @@ class Command(BaseCommand):
                 return
 
         loaded_runs = set(Sample.objects.filter(data_source__isnull=False).values_list('data_source', flat=True))
-        new_runs = {path: run for path, run in success_runs.items() if run['run_version'] not in loaded_runs}
+        new_runs = {run_dir: run for run_dir, run in run_args.items() if run_dir in success_run_dirs and run['run_version'] not in loaded_runs}
+
         if not new_runs:
-            logger.info(f'Data already loaded for all {len(success_runs)} runs')
+            logger.info(f'Data already loaded for all {len(success_run_dirs)} runs')
             return
 
-        logger.info(f'Loading new samples from {len(success_runs)} run(s)')
+        logger.info(f'Loading new samples from {len(success_run_dirs)} run(s)')
         updated_families_by_data_type = defaultdict(set)
         updated_variants_by_data_type = defaultdict(dict)
-        for path, run in new_runs.items():
+        for run_dir, run in new_runs.items():
             try:
-                metadata_path = path.replace('_SUCCESS', 'metadata.json')
+                metadata_path = os.path.join(run_dir, 'metadata.json')
                 data_type, updated_families, updated_variants_by_id = self._load_new_samples(metadata_path, **run)
                 data_type_key = (data_type, run['genome_version'])
                 updated_families_by_data_type[data_type_key].update(updated_families)
@@ -94,52 +96,61 @@ class Command(BaseCommand):
 
         logger.info('DONE')
 
-    def _report_validation_errors(self, **kwargs):
-        reported_runs = self._get_runs_for_file_name(ERRORS_REPORTED_FILE_NAME, **kwargs)
-        reported_run_ids = {run_dict['run_version'] for run_dict in reported_runs.values()}
+    def _get_runs(self, **kwargs):
+        """ Returns two dictionaries:
+            - run_files, a mapping of the run directory to a set of filenames inside the directory
+            - run_args, a mapping of the run directory to a dict of args for that run
+        """
+        path = self._run_path(lambda field: kwargs.get(field, '*') or '*')
+        path_regex = self._run_path(lambda field: f'(?P<{field}>[^/]+)')
 
-        error_runs = self._get_runs_for_file_name(VALIDATION_ERRORS_FILE_NAME, **kwargs)
+        run_files = defaultdict(set)
+        run_args = {}
+        for path in list_files(path, user=None):
+            run_dirname = os.path.dirname(path)
+            match_dict = re.match(path_regex, path).groupdict()
+            file_name = match_dict.pop('file_name')
+            run_files[run_dirname].add(file_name)
+            run_args[run_dirname] = match_dict
+
+        return run_files, run_args
+
+    @staticmethod
+    def _run_path(get_field_format):
+        return RUN_FILE_PATH_TEMPLATE.format(
+            data_dir=HAIL_SEARCH_DATA_DIR,
+            **{field: get_field_format(field) for field in RUN_PATH_FIELDS}
+        )
+
+    @staticmethod
+    def _report_validation_errors(run_files: dict, run_args: dict) -> None:
         messages = []
-        reported_run_paths = set()
-        for path, run_dict in error_runs.items():
-            if run_dict['run_version'] in reported_run_ids:
+        reported_runs = set()
+        for run_dir, files in run_files.items():
+            if ERRORS_REPORTED_FILE_NAME in files:
                 continue
-
-            error_summary = json.loads(next(line for line in file_iter(path)))
-            summary = [
-                f'Callset Validation Failed',
-                f'Projects: {error_summary["project_guids"]}',
-                f'Reference Genome: {run_dict["genome_version"]}',
-                f'Dataset Type: {run_dict["dataset_type"]}',
-                f'Run ID: {run_dict["run_version"]}',
-                f'Validation Errors: {error_summary["error_messages"]}',
-                f'See more at https://storage.cloud.google.com/{path}'
-            ]
-            messages.append('/n'.join(summary))
-            reported_run_paths.add(path)
+            if VALIDATION_ERRORS_FILE_NAME in files:
+                run_details = run_args[run_dir]
+                file_path = os.path.join(run_dir, VALIDATION_ERRORS_FILE_NAME)
+                error_summary = json.loads(next(line for line in file_iter(file_path)))
+                summary = [
+                    'Callset Validation Failed',
+                    f'Projects: {error_summary["project_guids"]}',
+                    f'Reference Genome: {run_details["genome_version"]}',
+                    f'Dataset Type: {run_details["dataset_type"]}',
+                    f'Run ID: {run_details["run_version"]}',
+                    f'Validation Errors: {error_summary["error_messages"]}',
+                    f'See more at https://storage.cloud.google.com{file_path}'
+                ]
+                messages.append('/n'.join(summary))
+                reported_runs.add(run_dir)
 
         if messages:
             safe_post_to_slack(
                 SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, '\n\n'.join(messages),
             )
-            with TemporaryDirectory() as temp_dir_name:
-                write_single_file(f'{temp_dir_name}/{ERRORS_REPORTED_FILE_NAME}')
-                for path in reported_run_paths:
-                    run_directory = os.path.dirname(path)
-                    mv_file_to_gs(f'{temp_dir_name}/*', f'{run_directory}/')
-
-    def _get_runs_for_file_name(self, file_name, **kwargs):
-        path = self._run_path(file_name, lambda field: kwargs[field] or '*')
-        path_regex = self._run_path(file_name, lambda field: f'(?P<{field}>[^/]+)')
-        return {path: re.match(path_regex, path).groupdict() for path in list_files(path, user=None)}
-
-    @staticmethod
-    def _run_path(file_name, get_field_format):
-        return RUN_FILE_PATH_TEMPLATE.format(
-            file_name=file_name,
-            data_dir=HAIL_SEARCH_DATA_DIR,
-            **{field: get_field_format(field) for field in RUN_PATH_FIELDS}
-        )
+        for run_dir in reported_runs:
+            write_multiple_files([ERRORS_REPORTED_FILE_NAME], run_dir, user=None, no_content=True)
 
     @classmethod
     def _load_new_samples(cls, metadata_path, genome_version, dataset_type, run_version):

@@ -67,7 +67,7 @@ def export_table(filename_prefix, header, rows, file_format='tsv', titlecase_hea
         raise ValueError("Invalid file_format: %s" % file_format)
 
 
-def _format_files_content(files,  file_format='csv', add_header_prefix=False, blank_value='', file_suffixes=None):
+def _format_files_content(files, file_format='csv', add_header_prefix=False, blank_value='', file_suffixes=None):
     if file_format not in DELIMITERS:
         raise ValueError('Invalid file_format: {}'.format(file_format))
     parsed_files = []
@@ -98,17 +98,15 @@ def export_multiple_files(files, zip_filename, **kwargs):
         return response
 
 
-def write_multiple_files(files, file_path, user, **kwargs):
+def write_multiple_files(files, file_path, user, no_content=False, **kwargs):
     is_gs_path = is_google_bucket_file_path(file_path)
     if not is_gs_path:
         os.makedirs(file_path, exist_ok=True)
     with TemporaryDirectory() as temp_dir_name:
         dir_name = temp_dir_name if is_gs_path else file_path
-        for filename, content in _format_files_content(files, **kwargs):
-            write_single_file(f'{dir_name}/{filename}', content)
+        formatted_files = [(filename, '') for filename in files] if no_content else _format_files_content(files, **kwargs)
+        for filename, content in formatted_files:
+            with open(f'{dir_name}/{filename}', 'w') as f:
+                f.write(content)
         if is_gs_path:
             mv_file_to_gs(f'{temp_dir_name}/*', f'{file_path}/', user)
-
-def write_single_file(file_name, content=''):
-    with open(file_name, 'w') as f:
-        f.write(content)
