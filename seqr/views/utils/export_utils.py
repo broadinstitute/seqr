@@ -67,8 +67,8 @@ def export_table(filename_prefix, header, rows, file_format='tsv', titlecase_hea
         raise ValueError("Invalid file_format: %s" % file_format)
 
 
-def _format_files_content(files,  file_format='csv', add_header_prefix=False, blank_value='', file_suffixes=None):
-    if file_format not in DELIMITERS:
+def _format_files_content(files, file_format='csv', add_header_prefix=False, blank_value='', file_suffixes=None):
+    if file_format and file_format not in DELIMITERS:
         raise ValueError('Invalid file_format: {}'.format(file_format))
     parsed_files = []
     for filename, header, rows in files:
@@ -83,7 +83,8 @@ def _format_files_content(files,  file_format='csv', add_header_prefix=False, bl
             if any(val != blank_value for val in row)
         ])
         content = str(content.encode('utf-8'), 'ascii', errors='ignore')  # Strip unicode chars in the content
-        parsed_files.append(('{}.{}'.format(filename, (file_suffixes or {}).get(filename, file_format)), content))
+        file_name = '{}.{}'.format(filename, (file_suffixes or {}).get(filename, file_format)) if file_format else filename
+        parsed_files.append((file_name, content))
     return parsed_files
 
 
