@@ -1,3 +1,4 @@
+from collections import defaultdict
 from datetime import datetime
 from django.core.management import call_command
 from django.core.management.base import CommandError
@@ -286,10 +287,14 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
     @mock.patch('seqr.management.commands.check_for_new_samples_from_pipeline.MAX_LOOKUP_VARIANTS', 1)
     @mock.patch('seqr.views.utils.airtable_utils.BASE_URL', 'https://test-seqr.org/')
     @mock.patch('seqr.views.utils.airtable_utils.MAX_UPDATE_RECORDS', 2)
+    @mock.patch('seqr.views.utils.export_utils.os.makedirs')
+    @mock.patch('seqr.views.utils.export_utils.mv_file_to_gs')
+    @mock.patch('seqr.views.utils.export_utils.TemporaryDirectory')
+    @mock.patch('seqr.views.utils.export_utils.open')
     @mock.patch('seqr.views.utils.airtable_utils.logger')
     @mock.patch('seqr.utils.communication_utils.EmailMultiAlternatives')
     @responses.activate
-    def test_command(self, mock_email, mock_airtable_utils):
+    def test_command(self, mock_email, mock_airtable_utils, mock_open_write_file, mock_temp_dir, mock_mv_file_to_gs, mock_mkdir):
         responses.add(
             responses.GET,
             "http://testairtable/appUelDNM3BnWaR7M/AnVIL%20Seqr%20Loading%20Requests%20Tracking?fields[]=Status&pageSize=2&filterByFormula=AND({AnVIL Project URL}='https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page',OR(Status='Loading',Status='Loading Requested'))",
@@ -336,6 +341,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         self.mock_subprocess.assert_not_called()
         mock_email.assert_not_called()
         self.mock_send_slack.assert_not_called()
+        mock_mv_file_to_gs.assert_not_called()
 
         local_files = [
             '/seqr/seqr-hail-search-data/GRCh38/SNV_INDEL/runs/manual__2025-01-13/_ERRORS_REPORTED',
@@ -350,12 +356,18 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         self.mock_open.return_value.__enter__.return_value.__iter__.side_effect = [
             iter([json.dumps(OPENED_RUN_JSON_FILES[i])]) for i in range(len(local_files[2:]))
         ]
+        mock_written_files = defaultdict(mock.MagicMock)
+        mock_open_write_file.side_effect = lambda file_name, *args: mock_written_files[file_name]
+
         call_command('check_for_new_samples_from_pipeline')
         self.mock_glob.assert_called_with('/seqr/seqr-hail-search-data/*/*/runs/*/*', recursive=False)
         self.mock_open.assert_has_calls([
             mock.call(local_files[2], 'r'),
             *[mock.call(path.replace('_SUCCESS', 'metadata.json'), 'r') for path in local_files[3:]]
         ], any_order=True)
+        mock_mkdir.assert_called_once()
+        mock_mv_file_to_gs.assert_not_called()
+        self.assertEqual(list(mock_written_files.keys()), [local_files[2].replace('validation_errors.json', '_ERRORS_REPORTED')])
         self.mock_subprocess.assert_not_called()
         error_logs = [
             'Error loading auto__2023-08-09: Data has genome version GRCh38 but the following projects have conflicting versions: R0003_test (GRCh37)',
@@ -366,6 +378,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         self.mock_logger.error.assert_has_calls([mock.call(error) for error in error_logs])
 
         self.mock_glob.reset_mock()
+        mock_mkdir.reset_mock()
         self.mock_subprocess.return_value.communicate.return_value = b'', b'One or more URLs matched no objects'
         self.mock_data_dir.__str__.return_value = 'gs://seqr-hail-search-data/v3.1'
         with self.assertRaises(CommandError) as ce:
@@ -376,8 +389,13 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         )
         self.mock_glob.assert_not_called()
 
+        mock_temp_dir.return_value.__enter__.return_value = '/mock/tmp'
         self._test_call(error_logs=error_logs)
         self.assertEqual(Sample.objects.filter(guid__in=SAMPLE_GUIDS + GCNV_SAMPLE_GUIDS).count(), 0)
+        mock_mkdir.assert_not_called()
+        mock_mv_file_to_gs.assert_called_once_with(
+            '/mock/tmp/*', 'gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-14/', None
+        )
 
         # Update fixture data to allow testing edge cases
         Project.objects.filter(id__in=[1, 3]).update(genome_version=38)
