@@ -150,7 +150,7 @@ class Command(BaseCommand):
                 SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, '\n\n'.join(messages),
             )
         for run_dir in reported_runs:
-            write_multiple_files([ERRORS_REPORTED_FILE_NAME], run_dir, user=None, no_content=True)
+            write_multiple_files([(ERRORS_REPORTED_FILE_NAME, [], [])], run_dir, user=None, file_format=None)
 
     @classmethod
     def _load_new_samples(cls, metadata_path, genome_version, dataset_type, run_version):

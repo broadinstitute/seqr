@@ -68,7 +68,7 @@ def export_table(filename_prefix, header, rows, file_format='tsv', titlecase_hea
 
 
 def _format_files_content(files, file_format='csv', add_header_prefix=False, blank_value='', file_suffixes=None):
-    if file_format not in DELIMITERS:
+    if file_format and file_format not in DELIMITERS:
         raise ValueError('Invalid file_format: {}'.format(file_format))
     parsed_files = []
     for filename, header, rows in files:
@@ -83,7 +83,8 @@ def _format_files_content(files, file_format='csv', add_header_prefix=False, bla
             if any(val != blank_value for val in row)
         ])
         content = str(content.encode('utf-8'), 'ascii', errors='ignore')  # Strip unicode chars in the content
-        parsed_files.append(('{}.{}'.format(filename, (file_suffixes or {}).get(filename, file_format)), content))
+        file_name = '{}.{}'.format(filename, (file_suffixes or {}).get(filename, file_format)) if file_format else filename
+        parsed_files.append((file_name, content))
     return parsed_files
 
 
@@ -98,14 +99,13 @@ def export_multiple_files(files, zip_filename, **kwargs):
         return response
 
 
-def write_multiple_files(files, file_path, user, no_content=False, **kwargs):
+def write_multiple_files(files, file_path, user, **kwargs):
     is_gs_path = is_google_bucket_file_path(file_path)
     if not is_gs_path:
         os.makedirs(file_path, exist_ok=True)
     with TemporaryDirectory() as temp_dir_name:
         dir_name = temp_dir_name if is_gs_path else file_path
-        formatted_files = [(filename, '') for filename in files] if no_content else _format_files_content(files, **kwargs)
-        for filename, content in formatted_files:
+        for filename, content in _format_files_content(files, **kwargs):
             with open(f'{dir_name}/{filename}', 'w') as f:
                 f.write(content)
         if is_gs_path:
