@@ -70,10 +70,9 @@ def send_project_notification(project, notification, subject, email_template=Non
         email_body=BASE_EMAIL_TEMPLATE.format(email),
         to=list(users.values_list('email', flat=True)),
         subject=subject,
-        process_message=_set_bulk_notification_stream,
     )
     try:
-        send_html_email(**email_kwargs)
+        send_html_email(**email_kwargs, process_message=_set_bulk_notification_stream)
     except Exception as e:
         logger.error(f'Error sending project email for {project.guid}: {e}', extra={'detail': email_kwargs})
 

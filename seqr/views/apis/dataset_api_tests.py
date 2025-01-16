@@ -46,11 +46,10 @@ MOCK_FILE_ITER = MOCK_OPEN.return_value.__enter__.return_value.__iter__
 class DatasetAPITest(object):
 
     @mock.patch('seqr.models.random.randint')
-    @mock.patch('seqr.utils.communication_utils.logger')
     @mock.patch('seqr.utils.communication_utils.send_html_email')
     @mock.patch('seqr.utils.communication_utils.BASE_URL', 'https://seqr.broadinstitute.org/')
     @urllib3_responses.activate
-    def test_add_variants_dataset(self, mock_send_email, mock_logger, mock_random):
+    def test_add_variants_dataset(self, mock_send_email, mock_random):
         url = reverse(add_variants_dataset_handler, args=[PROJECT_GUID])
         self.check_data_manager_login(url)
 
@@ -247,6 +246,7 @@ class DatasetAPITest(object):
             'sample_ids': {'buckets': [{'key': 'NA21234'}]}
         }}, method=urllib3_responses.POST)
 
+        self.reset_logs()
         mock_send_email.reset_mock()
         mock_send_email.side_effect = Exception('Email server is not configured')
         response = self.client.post(url, content_type='application/json', data=json.dumps({
@@ -259,11 +259,15 @@ class DatasetAPITest(object):
             mock_send_email, sample_type='WES', count=1, project_guid=NON_ANALYST_PROJECT_GUID,
             project_name='Non-Analyst Project', recipient='test_user_collaborator@test.com',
         )
-        mock_logger.error.assert_called_with(
-            'Error sending project email for R0004_non_analyst_project: Email server is not configured', extra={'detail': {
-                'email_body': mock.ANY, 'process_message': mock.ANY,
+        self.assert_json_logs(user=None, offset=6, expected=[(
+            'Error sending project email for R0004_non_analyst_project: Email server is not configured', {'detail': {
+                'email_body': mock.ANY,
                 'subject': 'New data available in seqr', 'to': ['test_user_collaborator@test.com'],
-            }})
+            },
+                '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent',
+                'severity': 'ERROR',
+            })
+        ])
 
     def _assert_expected_notification(self, mock_send_email, sample_type, count, email_content=None,
                                       project_guid=PROJECT_GUID, project_name='1kg project nåme with uniçøde',
