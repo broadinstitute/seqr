@@ -1606,7 +1606,7 @@ class DataManagerAPITest(AirtableTest):
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self._assert_expected_load_data_requests(trigger_error=True, dataset_type='GCNV', sample_type='WES')
         self._assert_trigger_error(response, body, dag_json)
-        self._has_expected_ped_files(mock_open, mock_mkdir, 'SV', sample_type='WES')
+        self._has_expected_ped_files(mock_open, mock_mkdir, 'GCNV', sample_type='WES')
 
     def _has_expected_ped_files(self, mock_open, mock_mkdir, dataset_type, sample_type='WGS', single_project=False):
         mock_open.assert_has_calls([
