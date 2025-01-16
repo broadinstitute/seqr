@@ -81,9 +81,12 @@ class Command(BaseCommand):
         reset_cached_search_results(project=None)
 
         for data_type_key, updated_families in updated_families_by_data_type.items():
-            self._reload_shared_variant_annotations(
-                *data_type_key, updated_variants_by_data_type[data_type_key], exclude_families=updated_families,
-            )
+            try:
+                self._reload_shared_variant_annotations(
+                    *data_type_key, updated_variants_by_data_type[data_type_key], exclude_families=updated_families,
+                )
+            except Exception as e:
+                logger.error(f'Error reloading shared annotations for {data_type_key.join("/")}: {e}')
 
         logger.info('DONE')
 
