@@ -562,17 +562,37 @@ class AnvilAuthenticationTestCase(AuthenticationTestCase):
         self.mock_get_group_members.assert_not_called()
 
 
-MOCK_AIRFLOW_URL = 'http://testairflowserver'
-DAG_NAME = 'LOADING_PIPELINE'
+
 PROJECT_GUID = 'R0001_1kg'
 
-
 class AirflowTestCase(AnvilAuthenticationTestCase):
+    MOCK_AIRFLOW_URL = 'http://testairflowserver'
     ADDITIONAL_REQUEST_COUNT = 0
+    DAG_NAME = 'LOADING_PIPELINE'
 
     def setUp(self):
-        self._dag_url = f'{MOCK_AIRFLOW_URL}/api/v1/dags/{DAG_NAME}'
+        self._dag_url = f'{self.MOCK_AIRFLOW_URL}/api/v1/dags/{self.DAG_NAME}'
+        self.set_up_one_dag()
 
+        patcher = mock.patch('seqr.views.utils.airflow_utils.google.auth.default', lambda **kwargs: (None, None))
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.airflow_utils.AuthorizedSession', mock.Mock(return_value=requests))
+        self.mock_authorized_session = patcher.start()
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.airflow_utils.AIRFLOW_WEBSERVER_URL', self.MOCK_AIRFLOW_URL)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.airflow_utils.safe_post_to_slack')
+        self.mock_slack = patcher.start()
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.airflow_utils.logger')
+        self.mock_airflow_logger = patcher.start()
+        self.addCleanup(patcher.stop)
+
+        super().setUp()
+
+    def set_up_one_dag(self, **kwargs):
         # check dag running state
         responses.add(responses.GET, f'{self._dag_url}/dagRuns', json={
             'dag_runs': [{
@@ -587,41 +607,27 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
         responses.add(responses.POST, f'{self._dag_url}/dagRuns', json={})
         # update variables
         responses.add(
-            responses.PATCH, f'{MOCK_AIRFLOW_URL}/api/v1/variables/{DAG_NAME}',
-            json={'key': DAG_NAME, 'value': 'updated variables'},
+            responses.PATCH, f'{self.MOCK_AIRFLOW_URL}/api/v1/variables/{self.DAG_NAME}',
+            json={'key': self.DAG_NAME, 'value': 'updated variables'},
         )
+        # check for updated variables
+        self._add_update_check_dag_responses(**kwargs)
+
+    def _add_update_check_dag_responses(self, **kwargs):
         # get task id
-        self.add_dag_tasks_response(['R0006_test'])
+        self._add_dag_tasks_response(['R0006_test'])
         # get task id again if the response of the previous request didn't include the updated guid
-        self.add_dag_tasks_response([self.LOADING_PROJECT_GUID])
+        self._add_dag_tasks_response([self.LOADING_PROJECT_GUID])
         # get task id again if the response of the previous request didn't include the updated guid
-        self.add_dag_tasks_response([self.LOADING_PROJECT_GUID, PROJECT_GUID])
+        self._add_dag_tasks_response([self.LOADING_PROJECT_GUID, PROJECT_GUID])
 
-        patcher = mock.patch('seqr.views.utils.airflow_utils.google.auth.default', lambda **kwargs: (None, None))
-        patcher.start()
-        self.addCleanup(patcher.stop)
-        patcher = mock.patch('seqr.views.utils.airflow_utils.AuthorizedSession', mock.Mock(return_value=requests))
-        self.mock_authorized_session = patcher.start()
-        self.addCleanup(patcher.stop)
-        patcher = mock.patch('seqr.views.utils.airflow_utils.AIRFLOW_WEBSERVER_URL', MOCK_AIRFLOW_URL)
-        patcher.start()
-        self.addCleanup(patcher.stop)
-        patcher = mock.patch('seqr.views.utils.airflow_utils.safe_post_to_slack')
-        self.mock_slack = patcher.start()
-        self.addCleanup(patcher.stop)
-        patcher = mock.patch('seqr.views.utils.airflow_utils.logger')
-        self.mock_airflow_logger = patcher.start()
-        self.addCleanup(patcher.stop)
-
-        super(AirflowTestCase, self).setUp()
-
-    def add_dag_tasks_response(self, projects):
+    def _add_dag_tasks_response(self, projects):
         tasks = []
         for project in projects:
             tasks += [
                 {'task_id': 'create_dataproc_cluster'},
                 {'task_id': f'pyspark_compute_project_{project}'},
-                {'task_id': f'pyspark_compute_variants_{DAG_NAME}'},
+                {'task_id': f'pyspark_compute_variants_{self.DAG_NAME}'},
                 {'task_id': f'pyspark_export_project_{project}'},
                 {'task_id': 'scale_dataproc_cluster'},
                 {'task_id': f'skip_compute_project_subset_{project}'}
@@ -633,75 +639,82 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
     def set_dag_trigger_error_response(self, status=200):
         responses.replace(responses.GET, f'{self._dag_url}/dagRuns', status=status, json={'dag_runs': [{
             'conf': {},
-            'dag_id': DAG_NAME,
+            'dag_id': self.DAG_NAME,
             'dag_run_id': 'manual__2022-04-28T11:51:22.735124+00:00',
             'end_date': None, 'execution_date': '2022-04-28T11:51:22.735124+00:00',
             'external_trigger': True, 'start_date': '2022-04-28T11:51:25.626176+00:00',
             'state': 'running'}
         ]})
 
-    def assert_airflow_calls(self, trigger_error=False, additional_tasks_check=False, dataset_type=None, offset=0, **kwargs):
-        self.mock_airflow_logger.info.assert_not_called()
-
-        # Test triggering anvil dags
+    def assert_airflow_loading_calls(self, trigger_error=False, additional_tasks_check=False, dataset_type=None, offset=0, **kwargs):
         call_count = 5
         if additional_tasks_check:
             call_count = 6
         if trigger_error:
             call_count = 1
-        self.assertEqual(len(responses.calls), call_count + self.ADDITIONAL_REQUEST_COUNT)
-        self.assertEqual(self.mock_authorized_session.call_count, call_count)
+        self._assert_call_counts(call_count)
 
         dag_variable_overrides = self._get_dag_variable_overrides(additional_tasks_check)
         dag_variables = {
             'projects_to_run': [dag_variable_overrides['project']] if 'project' in dag_variable_overrides else self.PROJECTS,
-            'callset_path': f'gs://test_bucket/{dag_variable_overrides["callset_path"]}',
-            'sample_type': dag_variable_overrides['sample_type'],
             'dataset_type': dataset_type or dag_variable_overrides['dataset_type'],
             'reference_genome': dag_variable_overrides.get('reference_genome', 'GRCh38'),
+            'callset_path': f'gs://test_bucket/{dag_variable_overrides["callset_path"]}',
+            'sample_type': dag_variable_overrides['sample_type'],
         }
         if dag_variable_overrides.get('skip_validation'):
             dag_variables['skip_validation'] = True
         dag_variables['sample_source'] = dag_variable_overrides['sample_source']
         self._assert_airflow_calls(dag_variables, call_count, offset=offset)
 
-    def _assert_airflow_calls(self, dag_variables, call_count, offset=0):
-        dag_url = self._dag_url
+    def _assert_call_counts(self, call_count):
+        self.mock_airflow_logger.info.assert_not_called()
+        self.assertEqual(len(responses.calls), call_count + self.ADDITIONAL_REQUEST_COUNT)
+        self.assertEqual(self.mock_authorized_session.call_count, call_count)
 
-        # check dag running state
-        self.assertEqual(responses.calls[offset].request.url, f'{dag_url}/dagRuns')
-        self.assertEqual(responses.calls[offset].request.method, "GET")
+    def _assert_airflow_calls(self, dag_variables, call_count, offset=0):
+        self._assert_dag_running_state_calls(offset)
 
         if call_count < 2:
             return
 
-        # update variables
-        self.assertEqual(responses.calls[offset+1].request.url, f'{MOCK_AIRFLOW_URL}/api/v1/variables/{DAG_NAME}')
-        self.assertEqual(responses.calls[offset+1].request.method, 'PATCH')
-        self.assertDictEqual(json.loads(responses.calls[offset+1].request.body), {
-            'key': DAG_NAME,
-            'value': json.dumps(dag_variables),
-        })
-
-        # get task id
-        self.assertEqual(responses.calls[offset+2].request.url, f'{dag_url}/tasks')
-        self.assertEqual(responses.calls[offset+2].request.method, 'GET')
-
-        self.assertEqual(responses.calls[offset+3].request.url, f'{dag_url}/tasks')
-        self.assertEqual(responses.calls[offset+3].request.method, 'GET')
-
+        self._assert_update_variables_airflow_calls(dag_variables, offset)
+        self._assert_update_check_airflow_calls(call_count, offset, update_check_path=f'{self._dag_url}/tasks')
         call_cnt = call_count - 1
-        if call_count > 5:
-            self.assertEqual(responses.calls[offset+4].request.url, f'{dag_url}/tasks')
-            self.assertEqual(responses.calls[offset+4].request.method, 'GET')
 
         # trigger dag
-        self.assertEqual(responses.calls[offset+call_cnt].request.url, f'{dag_url}/dagRuns')
+        self.assertEqual(responses.calls[offset+call_cnt].request.url, f'{self._dag_url}/dagRuns')
         self.assertEqual(responses.calls[offset+call_cnt].request.method, 'POST')
         self.assertDictEqual(json.loads(responses.calls[offset+call_cnt].request.body), {})
 
         self.mock_airflow_logger.warning.assert_not_called()
         self.mock_airflow_logger.error.assert_not_called()
+
+    def _assert_dag_running_state_calls(self, offset):
+        self.assertEqual(responses.calls[offset].request.url, f'{self._dag_url}/dagRuns')
+        self.assertEqual(responses.calls[offset].request.method, "GET")
+
+    def _assert_update_variables_airflow_calls(self, dag_variables, offset):
+        self.assertEqual(responses.calls[offset+1].request.url, f'{self.MOCK_AIRFLOW_URL}/api/v1/variables/{self.DAG_NAME}')
+        self.assertEqual(responses.calls[offset+1].request.method, 'PATCH')
+        request_body = json.loads(responses.calls[offset + 1].request.body)
+        self.assertEqual(request_body['key'], self.DAG_NAME)
+        self.assertDictEqual(
+            json.loads(request_body['value']),
+            json.loads(json.dumps(dag_variables))
+        )
+
+    def _assert_update_check_airflow_calls(self, call_count, offset, update_check_path):
+        self.assertEqual(responses.calls[offset + 2].request.url, update_check_path)
+        self.assertEqual(responses.calls[offset + 2].request.method, 'GET')
+
+        self.assertEqual(responses.calls[offset + 3].request.url, update_check_path)
+        self.assertEqual(responses.calls[offset + 3].request.method, 'GET')
+
+        if call_count > 5:
+            self.assertEqual(responses.calls[offset + 4].request.url, update_check_path)
+            self.assertEqual(responses.calls[offset + 4].request.method, 'GET')
+
 
     @staticmethod
     def _get_dag_variable_overrides(additional_tasks_check):

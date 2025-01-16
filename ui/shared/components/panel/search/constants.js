@@ -30,6 +30,7 @@ import {
 
 import LocusListItemsFilter from './LocusListItemsFilter'
 import PaMoiSelector from './PaMoiSelector'
+import PaLocusListSelector from './PaLocusListSelector'
 
 export const getSelectedAnalysisGroups = (
   analysisGroupsByGuid, familyGuids,
@@ -464,6 +465,7 @@ export const FREQUENCIES = [...SNP_FREQUENCIES, ...MITO_FREQUENCIES, ...SV_FREQU
 
 export const LOCUS_FIELD_NAME = 'locus'
 export const PANEL_APP_FIELD_NAME = 'panelAppItems'
+export const SELECTED_MOIS_FIELD_NAME = 'selectedMOIs'
 const VARIANT_FIELD_NAME = 'rawVariantItems'
 const PANEL_APP_COLORS = [...new Set(
   Object.entries(PANEL_APP_CONFIDENCE_LEVELS).sort((a, b) => b[0] - a[0]).map(config => config[1]),
@@ -485,9 +487,11 @@ export const LOCATION_FIELDS = [
     label: color === 'none' ? 'Genes' : `${camelcaseToTitlecase(color)} Genes`,
     labelHelp: 'A list of genes, can be separated by commas or whitespace',
     component: LocusListItemsFilter,
+    filterComponent: PaLocusListSelector,
     width: 3,
     shouldShow: locus => !!locus[PANEL_APP_FIELD_NAME],
     shouldDisable: locus => !!locus[VARIANT_FIELD_NAME],
+    color,
   })),
   {
     name: VARIANT_FIELD_NAME,
@@ -498,7 +502,7 @@ export const LOCATION_FIELDS = [
     shouldDisable: locus => !!locus[LOCUS_LIST_ITEMS_FIELD.name] || !!locus[PANEL_APP_FIELD_NAME],
   },
   {
-    name: PANEL_APP_FIELD_NAME,
+    name: SELECTED_MOIS_FIELD_NAME,
     label: 'Modes of Inheritance',
     labelHelp: 'Filter the Gene List based on Modes of Inheritance from Panel App',
     component: LocusListItemsFilter,

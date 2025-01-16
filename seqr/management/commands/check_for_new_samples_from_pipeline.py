@@ -28,7 +28,7 @@ RUN_PATH_FIELDS = ['genome_version', 'dataset_type', 'run_version']
 
 DATASET_TYPE_MAP = {'GCNV': Sample.DATASET_TYPE_SV_CALLS}
 USER_EMAIL = 'manage_command'
-MAX_LOOKUP_VARIANTS = 5000
+MAX_LOOKUP_VARIANTS = 1000
 RELATEDNESS_CHECK_NAME = 'relatedness_check'
 
 PDO_COPY_FIELDS = [
@@ -81,9 +81,12 @@ class Command(BaseCommand):
         reset_cached_search_results(project=None)
 
         for data_type_key, updated_families in updated_families_by_data_type.items():
-            self._reload_shared_variant_annotations(
-                *data_type_key, updated_variants_by_data_type[data_type_key], exclude_families=updated_families,
-            )
+            try:
+                self._reload_shared_variant_annotations(
+                    *data_type_key, updated_variants_by_data_type[data_type_key], exclude_families=updated_families,
+                )
+            except Exception as e:
+                logger.error(f'Error reloading shared annotations for {data_type_key.join("/")}: {e}')
 
         logger.info('DONE')
 

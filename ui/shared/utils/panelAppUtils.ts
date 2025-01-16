@@ -64,6 +64,7 @@ export const panelAppUrl = (
 
 export type PanelAppItem = {
   pagene?: {
+    modeOfInheritance?: string;
     confidenceLevel?: 0 | 1 | 2 | 3 | 4
   }
   display: string
@@ -74,15 +75,30 @@ export type PanelAppItem = {
  * and concatenated item displays as values.
  *
  * @param {PanelAppItem[] | null | undefined} items - The array of PanelApp items to format.
+ * @param {string[] | null | undefined} selectedMOIs - Optional array of selected MOIs for filtering.
  * @returns {Record<string, string> | never[]} A record where keys represent confidence levels and values
  * are concatenated item displays, or an empty array if `items` is falsy.
  */
-export const formatPanelAppItems = (items: PanelAppItem[] | null | undefined): Record<string, string> | never[] => {
+export const formatPanelAppItems = (
+  items: PanelAppItem[] | null | undefined,
+  selectedMOIs?: string[] | null
+): Record<string, string> | never[] => {
   if (!items) {
     return []
   }
 
+  const hasSelectedMoi = (item: { pagene?: any; display?: string }, selectedMOIs: any[]) => {
+    if (!selectedMOIs || selectedMOIs.length === 0) {
+      return true
+    }
+    const initials = moiToMoiInitials(item.pagene?.modeOfInheritance, false)
+    return selectedMOIs.some((moi) => initials.includes(moi))
+  }
+
   return items.reduce((acc, item) => {
+    if (!hasSelectedMoi(item, selectedMOIs)) {
+      return acc
+    }
     const color: string = PANEL_APP_CONFIDENCE_LEVELS[item.pagene?.confidenceLevel] || PANEL_APP_CONFIDENCE_LEVELS[0]
     return { ...acc, [color]: [acc[color], item.display].filter(val => val).join(', ') }
   }, {} as Record<string, string>)

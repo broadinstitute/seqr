@@ -104,17 +104,29 @@ def notify_search_data_loaded(project, is_internal, dataset_type, sample_type, i
         )
 
 
+def format_loading_pipeline_variables(
+    projects: list[Project], genome_version: str, dataset_type: str, sample_type: str = None, **kwargs
+):
+    variables = {
+        'projects_to_run': sorted([p.guid for p in projects]),
+        'dataset_type': _dag_dataset_type(sample_type, dataset_type),
+        'reference_genome': GENOME_VERSION_LOOKUP[genome_version],
+        **kwargs
+    }
+    if sample_type:
+        variables['sample_type'] = sample_type
+    return variables
+
 def prepare_data_loading_request(projects: list[Project], sample_type: str, dataset_type: str, genome_version: str,
                                  data_path: str, user: User, pedigree_dir: str,  raise_pedigree_error: bool = False,
                                  individual_ids: list[int] = None, skip_validation: bool = False):
-    project_guids = sorted([p.guid for p in projects])
-    variables = {
-        'projects_to_run': project_guids,
-        'callset_path': data_path,
-        'sample_type': sample_type,
-        'dataset_type': _dag_dataset_type(sample_type, dataset_type),
-        'reference_genome': GENOME_VERSION_LOOKUP[genome_version],
-    }
+    variables = format_loading_pipeline_variables(
+        projects,
+        genome_version,
+        dataset_type,
+        sample_type,
+        callset_path=data_path,
+    )
     if skip_validation:
         variables['skip_validation'] = True
     file_path = _get_pedigree_path(pedigree_dir, genome_version, sample_type, dataset_type)
@@ -166,4 +178,5 @@ def _upload_data_loading_files(projects: list[Project], user: User, file_path: s
 
 
 def _get_pedigree_path(pedigree_dir: str, genome_version: str, sample_type: str, dataset_type: str):
-    return f'{pedigree_dir}/{GENOME_VERSION_LOOKUP[genome_version]}/{dataset_type}/pedigrees/{sample_type}'
+    dag_dataset_type = _dag_dataset_type(sample_type, dataset_type)
+    return f'{pedigree_dir}/{GENOME_VERSION_LOOKUP[genome_version]}/{dag_dataset_type}/pedigrees/{sample_type}'
