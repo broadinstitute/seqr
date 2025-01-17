@@ -194,9 +194,9 @@ class Command(BaseCommand):
         )
 
         # Send loading notifications and update Airtable PDOs
-        update_sample_data_by_project = {
-            s['individual__family__project']: s for s in updated_samples.values('individual__family__project').annotate(
-                sample_db_ids=ArrayAgg('id', distinct=True),
+        new_sample_data_by_project = {
+            s['individual__family__project']: s for s in updated_samples.filter(id__in=new_samples).values('individual__family__project').annotate(
+                samples=ArrayAgg('sample_id', distinct=True),
                 family_guids=ArrayAgg('individual__family__guid', distinct=True),
             )
         }
@@ -205,18 +205,16 @@ class Command(BaseCommand):
         split_project_pdos = {}
         session = AirtableSession(user=None, no_auth=True)
         for project, sample_ids in samples_by_project.items():
-            project_sample_data = update_sample_data_by_project[project.id]
-            new_project_samples = [
-                sample_id for db_id, sample_id in new_samples.items() if db_id in project_sample_data['sample_db_ids']
-            ]
+            project_sample_data = new_sample_data_by_project[project.id]
             is_internal = not project_has_anvil(project) or is_internal_anvil_project(project)
             notify_search_data_loaded(
-                project, is_internal, dataset_type, sample_type, new_project_samples,
+                project, is_internal, dataset_type, sample_type, project_sample_data['samples'],
                 num_samples=len(sample_ids),
             )
             project_families = project_sample_data['family_guids']
-            updated_families.update(project_families)
-            updated_project_families.append((project.id, project.name, project.genome_version, project_families))
+            if project_families:
+                updated_families.update(project_families)
+                updated_project_families.append((project.id, project.name, project.genome_version, project_families))
             if is_internal and dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
                 split_project_pdos[project.name] = cls._update_pdos(session, project.guid, sample_ids)
 
