@@ -39,7 +39,7 @@ def add_new_es_search_samples(request_json, project, user, notify=False, expecte
         request_json['mappingFilePath'], user) if request_json.get('mappingFilePath') else {}
     ignore_extra_samples = request_json.get('ignoreExtraSamplesInCallset')
     sample_project_tuples = [(sample_id, project.name) for sample_id in sample_ids]
-    updated_samples, inactivated_sample_guids, num_skipped, updated_family_guids = match_and_update_search_samples(
+    updated_samples, new_samples, inactivated_sample_guids, num_skipped, updated_family_guids = match_and_update_search_samples(
         projects=[project],
         user=user,
         sample_project_tuples=sample_project_tuples,
@@ -52,31 +52,27 @@ def add_new_es_search_samples(request_json, project, user, notify=False, expecte
     )
 
     if notify:
-        updated_sample_data = updated_samples.values('sample_id', 'individual_id')
-        _basic_notify_search_data_loaded(project, dataset_type, sample_type, inactivated_sample_guids, updated_sample_data)
+        _basic_notify_search_data_loaded(project, dataset_type, sample_type, new_samples.values())
 
     return inactivated_sample_guids, updated_family_guids, updated_samples
 
 
-def _basic_notify_search_data_loaded(project, dataset_type, sample_type, inactivated_sample_guids, updated_samples, format_email=None, slack_channel=None, include_slack_detail=False):
-    previous_loaded_individuals = set(Sample.objects.filter(guid__in=inactivated_sample_guids).values_list('individual_id', flat=True))
-    new_sample_ids = [sample['sample_id'] for sample in updated_samples if sample['individual_id'] not in previous_loaded_individuals]
-
+def _basic_notify_search_data_loaded(project, dataset_type, sample_type, new_samples, format_email=None, slack_channel=None, include_slack_detail=False):
     msg_dataset_type = '' if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS else f' {dataset_type}'
-    num_new_samples = len(new_sample_ids)
+    num_new_samples = len(new_samples)
     sample_summary = f'{num_new_samples} new {sample_type}{msg_dataset_type} samples'
 
     return send_project_notification(
         project,
         notification=sample_summary,
-        email_template=format_email(num_new_samples) if format_email else None,
+        email_template=format_email(num_new_samples) if format_email else None, # TODO cleanup format email
         subject='New data available in seqr',
         slack_channel=slack_channel,
-        slack_detail=', '.join(sorted(new_sample_ids)) if include_slack_detail else None,
+        slack_detail=', '.join(sorted(new_samples)) if include_slack_detail else None,
     )
 
 
-def notify_search_data_loaded(project, is_internal, dataset_type, sample_type, inactivated_sample_guids, updated_samples, num_samples):
+def notify_search_data_loaded(project, is_internal, dataset_type, sample_type, new_samples, num_samples):
     if is_internal:
         format_email = None
     else:
@@ -90,7 +86,7 @@ def notify_search_data_loaded(project, is_internal, dataset_type, sample_type, i
             ])
 
     url = _basic_notify_search_data_loaded(
-        project, dataset_type, sample_type, inactivated_sample_guids, updated_samples, format_email=format_email,
+        project, dataset_type, sample_type, new_samples, format_email=format_email,
         slack_channel=SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL if is_internal else SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL,
         include_slack_detail=is_internal,
     )

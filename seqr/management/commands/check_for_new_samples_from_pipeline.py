@@ -1,8 +1,6 @@
 from collections import defaultdict
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.management.base import BaseCommand, CommandError
-from django.db.models import Q
-from django.db.models.functions import JSONObject
 import json
 import logging
 import re
@@ -130,7 +128,7 @@ class Command(BaseCommand):
 
         sample_type = metadata['sample_type']
         logger.info(f'Loading {len(sample_project_tuples)} {sample_type} {dataset_type} samples in {len(samples_by_project)} projects')
-        updated_samples, inactivated_sample_guids, *args = match_and_update_search_samples(
+        updated_samples, new_samples, *args = match_and_update_search_samples(
             projects=samples_by_project.keys(),
             sample_project_tuples=sample_project_tuples,
             sample_data={'data_source': run_version, 'elasticsearch_index': ';'.join(metadata['callsets'])},
@@ -142,7 +140,7 @@ class Command(BaseCommand):
         # Send loading notifications and update Airtable PDOs
         update_sample_data_by_project = {
             s['individual__family__project']: s for s in updated_samples.values('individual__family__project').annotate(
-                samples=ArrayAgg(JSONObject(sample_id='sample_id', individual_id='individual_id')),
+                sample_db_ids=ArrayAgg('id', distinct=True),
                 family_guids=ArrayAgg('individual__family__guid', distinct=True),
             )
         }
@@ -152,10 +150,13 @@ class Command(BaseCommand):
         session = AirtableSession(user=None, no_auth=True)
         for project, sample_ids in samples_by_project.items():
             project_sample_data = update_sample_data_by_project[project.id]
+            new_project_samples = [
+                sample_id for db_id, sample_id in new_samples.items() if db_id in project_sample_data['sample_db_ids']
+            ]
             is_internal = not project_has_anvil(project) or is_internal_anvil_project(project)
             notify_search_data_loaded(
-                project, is_internal, dataset_type, sample_type, inactivated_sample_guids,
-                updated_samples=project_sample_data['samples'], num_samples=len(sample_ids),
+                project, is_internal, dataset_type, sample_type, new_project_samples,
+                num_samples=len(sample_ids),
             )
             project_families = project_sample_data['family_guids']
             updated_families.update(project_families)
