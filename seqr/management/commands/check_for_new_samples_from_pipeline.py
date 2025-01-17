@@ -1,6 +1,5 @@
 import os
 from collections import defaultdict
-from tempfile import TemporaryDirectory
 
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.management.base import BaseCommand, CommandError
@@ -54,10 +53,10 @@ class Command(BaseCommand):
         parser.add_argument('--run-version')
 
     def handle(self, *args, **options):
-        run_files, run_args = self._get_runs(**options)
-        self._report_validation_errors(run_files, run_args)
+        runs = self._get_runs(**options)
+        self._report_validation_errors(runs)
 
-        success_run_dirs = [run_dir for run_dir, files in run_files.items() if SUCCESS_FILE_NAME in files]
+        success_run_dirs = [run_dir for run_dir, run_details in runs.items() if SUCCESS_FILE_NAME in run_details['files']]
         if not success_run_dirs:
             user_args = [f'{k}={options.get(k)}' for k in RUN_PATH_FIELDS if options.get(k)]
             if user_args:
@@ -67,8 +66,10 @@ class Command(BaseCommand):
                 return
 
         loaded_runs = set(Sample.objects.filter(data_source__isnull=False).values_list('data_source', flat=True))
-        new_runs = {run_dir: run for run_dir, run in run_args.items() if run_dir in success_run_dirs and run['run_version'] not in loaded_runs}
-
+        new_runs = {
+            run_dir: run_details for run_dir, run_details in runs.items()
+            if run_dir in success_run_dirs and run_details['run_version'] not in loaded_runs
+        }
         if not new_runs:
             logger.info(f'Data already loaded for all {len(success_run_dirs)} runs')
             return
@@ -76,15 +77,16 @@ class Command(BaseCommand):
         logger.info(f'Loading new samples from {len(success_run_dirs)} run(s)')
         updated_families_by_data_type = defaultdict(set)
         updated_variants_by_data_type = defaultdict(dict)
-        for run_dir, run in new_runs.items():
+        for run_dir, run_details in new_runs.items():
             try:
                 metadata_path = os.path.join(run_dir, 'metadata.json')
-                data_type, updated_families, updated_variants_by_id = self._load_new_samples(metadata_path, **run)
-                data_type_key = (data_type, run['genome_version'])
+                del run_details['files']
+                data_type, updated_families, updated_variants_by_id = self._load_new_samples(metadata_path, **run_details)
+                data_type_key = (data_type, run_details['genome_version'])
                 updated_families_by_data_type[data_type_key].update(updated_families)
                 updated_variants_by_data_type[data_type_key].update(updated_variants_by_id)
             except Exception as e:
-                logger.error(f'Error loading {run["run_version"]}: {e}')
+                logger.error(f'Error loading {run_details["run_version"]}: {e}')
 
         # Reset cached results for all projects, as seqr AFs will have changed for all projects when new data is added
         reset_cached_search_results(project=None)
@@ -97,23 +99,18 @@ class Command(BaseCommand):
         logger.info('DONE')
 
     def _get_runs(self, **kwargs):
-        """ Returns two dictionaries:
-            - run_files, a mapping of the run directory to a set of filenames inside the directory
-            - run_args, a mapping of the run directory to a dict of args for that run
-        """
         path = self._run_path(lambda field: kwargs.get(field, '*') or '*')
         path_regex = self._run_path(lambda field: f'(?P<{field}>[^/]+)')
 
-        run_files = defaultdict(set)
-        run_args = {}
+        runs = defaultdict(lambda: {'files': set()})
         for path in list_files(path, user=None):
             run_dirname = os.path.dirname(path)
             match_dict = re.match(path_regex, path).groupdict()
             file_name = match_dict.pop('file_name')
-            run_files[run_dirname].add(file_name)
-            run_args[run_dirname] = match_dict
+            runs[run_dirname]['files'].add(file_name)
+            runs[run_dirname].update(match_dict)
 
-        return run_files, run_args
+        return runs
 
     @staticmethod
     def _run_path(get_field_format):
@@ -123,14 +120,14 @@ class Command(BaseCommand):
         )
 
     @staticmethod
-    def _report_validation_errors(run_files: dict, run_args: dict) -> None:
+    def _report_validation_errors(runs) -> None:
         messages = []
         reported_runs = set()
-        for run_dir, files in run_files.items():
+        for run_dir, run_details in runs.items():
+            files = run_details['files']
             if ERRORS_REPORTED_FILE_NAME in files:
                 continue
             if VALIDATION_ERRORS_FILE_NAME in files:
-                run_details = run_args[run_dir]
                 file_path = os.path.join(run_dir, VALIDATION_ERRORS_FILE_NAME)
                 error_summary = json.loads(next(line for line in file_iter(file_path)))
                 summary = [

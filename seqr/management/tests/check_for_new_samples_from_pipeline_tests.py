@@ -142,6 +142,8 @@ AIRTABLE_PDO_RECORDS = {
 }
 
 RUN_PATHS = [
+    b'gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-13/_ERRORS_REPORTED',
+    b'gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-13/validation_errors.json',
     b'gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-14/validation_errors.json',
     b'gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/auto__2023-08-09/_SUCCESS',
     b'gs://seqr-hail-search-data/v3.1/GRCh37/SNV_INDEL/runs/manual__2023-11-02/_SUCCESS',
@@ -234,6 +236,8 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         self.addCleanup(patcher.stop)
         self.mock_ls_process = mock.MagicMock()
         self.mock_ls_process.communicate.return_value = b'\n'.join(RUN_PATHS), b''
+        self.mock_mv_process = mock.MagicMock()
+        self.mock_mv_process.wait.return_value = 0
         patcher = mock.patch('seqr.management.commands.check_for_new_samples_from_pipeline.HAIL_SEARCH_DATA_DIR')
         self.mock_data_dir = patcher.start()
         self.addCleanup(patcher.stop)
@@ -241,13 +245,16 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
 
     def _test_call(self, error_logs, reload_annotations_logs=None, run_loading_logs=None, reload_calls=None):
         self.mock_subprocess.reset_mock()
-        self.mock_subprocess.side_effect = [self.mock_ls_process] + [mock_opened_file(i) for i in range(len(RUN_PATHS))]
+        self.mock_subprocess.side_effect = [self.mock_ls_process, mock_opened_file(0), self.mock_mv_process] + [
+            mock_opened_file(i+1) for i in range(len(RUN_PATHS[3:]))
+        ]
 
         call_command('check_for_new_samples_from_pipeline')
 
         self.mock_subprocess.assert_has_calls([mock.call(command, stdout=-1, stderr=stderr, shell=True) for (command, stderr) in [
             ('gsutil ls gs://seqr-hail-search-data/v3.1/*/*/runs/*/*', -1),
             ('gsutil cat gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-14/validation_errors.json', -2),
+            ('gsutil mv /mock/tmp/* gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-14/', -2),
             ('gsutil cat gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/auto__2023-08-09/metadata.json', -2),
             ('gsutil cat gs://seqr-hail-search-data/v3.1/GRCh37/SNV_INDEL/runs/manual__2023-11-02/metadata.json', -2),
             ('gsutil cat gs://seqr-hail-search-data/v3.1/GRCh38/MITO/runs/auto__2024-08-12/metadata.json', -2),
@@ -288,13 +295,12 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
     @mock.patch('seqr.views.utils.airtable_utils.BASE_URL', 'https://test-seqr.org/')
     @mock.patch('seqr.views.utils.airtable_utils.MAX_UPDATE_RECORDS', 2)
     @mock.patch('seqr.views.utils.export_utils.os.makedirs')
-    @mock.patch('seqr.views.utils.export_utils.mv_file_to_gs')
     @mock.patch('seqr.views.utils.export_utils.TemporaryDirectory')
     @mock.patch('seqr.views.utils.export_utils.open')
     @mock.patch('seqr.views.utils.airtable_utils.logger')
     @mock.patch('seqr.utils.communication_utils.EmailMultiAlternatives')
     @responses.activate
-    def test_command(self, mock_email, mock_airtable_utils, mock_open_write_file, mock_temp_dir, mock_mv_file_to_gs, mock_mkdir):
+    def test_command(self, mock_email, mock_airtable_utils, mock_open_write_file, mock_temp_dir, mock_mkdir):
         responses.add(
             responses.GET,
             "http://testairtable/appUelDNM3BnWaR7M/AnVIL%20Seqr%20Loading%20Requests%20Tracking?fields[]=Status&pageSize=2&filterByFormula=AND({AnVIL Project URL}='https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page',OR(Status='Loading',Status='Loading Requested'))",
@@ -341,7 +347,6 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         self.mock_subprocess.assert_not_called()
         mock_email.assert_not_called()
         self.mock_send_slack.assert_not_called()
-        mock_mv_file_to_gs.assert_not_called()
 
         local_files = [
             '/seqr/seqr-hail-search-data/GRCh38/SNV_INDEL/runs/manual__2025-01-13/_ERRORS_REPORTED',
@@ -366,7 +371,6 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
             *[mock.call(path.replace('_SUCCESS', 'metadata.json'), 'r') for path in local_files[3:]]
         ], any_order=True)
         mock_mkdir.assert_called_once()
-        mock_mv_file_to_gs.assert_not_called()
         self.assertEqual(list(mock_written_files.keys()), [local_files[2].replace('validation_errors.json', '_ERRORS_REPORTED')])
         self.mock_subprocess.assert_not_called()
         error_logs = [
@@ -393,9 +397,6 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         self._test_call(error_logs=error_logs)
         self.assertEqual(Sample.objects.filter(guid__in=SAMPLE_GUIDS + GCNV_SAMPLE_GUIDS).count(), 0)
         mock_mkdir.assert_not_called()
-        mock_mv_file_to_gs.assert_called_once_with(
-            '/mock/tmp/*', 'gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-14/', None
-        )
 
         # Update fixture data to allow testing edge cases
         Project.objects.filter(id__in=[1, 3]).update(genome_version=38)
@@ -662,7 +663,7 @@ The following 1 families failed sex check:
             str(self.collaborator_user.notifications.first()), 'Non-Analyst Project Loaded 1 new WES samples 0 minutes ago')
 
         # Test reloading has no effect
-        self.mock_ls_process.communicate.return_value = b'\n'.join([RUN_PATHS[1], RUN_PATHS[4]]), b''
+        self.mock_ls_process.communicate.return_value = b'\n'.join([RUN_PATHS[3], RUN_PATHS[6]]), b''
         self.mock_subprocess.side_effect = [self.mock_ls_process]
         self.mock_logger.reset_mock()
         mock_email.reset_mock()
