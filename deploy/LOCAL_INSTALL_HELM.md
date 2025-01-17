@@ -86,16 +86,14 @@ loading_pipeline_queue  test.vcf.gz
 ### Option #2
 ####  Annotate on and load on a Google Dataproc cluster.
 
-Google Dataproc makes it easy to start a spark cluster which can be used to parallelize annotation across many machines.  This option is available if you are running the seqr application on either a Google Cloud Platform VM or GKE.
+Google Dataproc makes it easy to start a spark cluster which can be used to parallelize annotation across many machines.  This option is available if you are running the *seqr* application on either a Google Cloud Platform VM or GKE.
 
 - Verify that the seqr pod has an associated service account.
-
 ```
 kubectl exec seqr-POD-ID -c seqr -it -- bash
 gcloud auth list
 ```
 This service account must be permissioned to create and modify dataproc clusters, and read and write to the GCS buckets that will host your data.  We also recommend verifying that the Cloud API access scopes are permissioned for both IAM and Compute Engine access.  
-
 - Create or add the following environment variables to your existing `helm` [override values file](https://github.com/broadinstitute/seqr-helm?tab=readme-ov-file#valuesenvironment-overrides):
 ```yaml
 pipeline-runner:
@@ -122,13 +120,10 @@ seqr:
     # Must be identical to `LOADING_DATASETS_DIR` stored above.
     LOADING_DATASETS_DIR: 'gs://...'
 ```
-
 - Install/Upgrade with the override values applied:
 ```
 helm upgrade YOUR_INSTITUTION_NAME-seqr seqr-helm/seqr-platform -f my-values.yaml
 ```
-
-
 - Follow the Option #1 Instructions to load data from the **Load Data** page.
 
 ## Loading RNASeq datasets
