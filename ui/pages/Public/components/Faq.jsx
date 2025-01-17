@@ -509,6 +509,68 @@ const FAQS = [
     },
   }, {
     [ENGLISH]: {
+      header: 'Q. Who has access to my data in seqr?',
+      content: (
+        <div>
+          A seqr project is accessible only to the person who requested the data loading and any additional members
+          they add to the project through the AnVIL workspace. Members of the Broad Institute cannot access the project,
+          except for a small number of engineers and the product owner on the seqr team,
+          who may review the data if necessary. <br /><br />
+
+          Non-identifiable information such as an individual’s affected status, high-level phenotype information,
+          variant quality scores, and aggregate allele counts can be accessed by all seqr users through the
+          Variant Lookup to aid in analysis.
+        </div>
+      ),
+    },
+    [SPANISH]: {
+      header: 'P. ¿Quién tiene acceso a mis datos en seqr?',
+      content: (
+        <div>
+          Un proyecto de seqr es accesible sólo a la persona que solicitó la carga de datos y cualquier miembro
+          adicional que agregue al proyecto a través del espacio de trabajo AnVIL. Los miembros del Broad Institute
+          no pueden acceder al proyecto, excepto una pequeña cantidad de ingenieros y el propietario del producto en el
+          equipo seqr, quienes pueden revisar los datos si es necesario.<br /><br />
+
+          Todos los usuarios de seqr pueden acceder a información no identificable, como el estado de afección de un
+          individuo, información de fenotipo de alto nivel, puntajes de calidad de variantes y recuentos de alelos
+          agregados, a través de la Búsqueda de variantes para ayudar en el análisis.
+        </div>
+      ),
+    },
+  }, {
+    [ENGLISH]: {
+      header: 'Q. How can I delete a project in seqr?',
+      content: (
+        <div>
+          Before data has been loaded to a search project, the person who created the project can delete it from the
+          seqr home page by selecting the hamburger menu on the right side of the project and selecting the delete
+          project option. Once data has been loaded to a project, it can not be deleted. If you later learn that a
+          sample does not have the appropriate permissions to be in seqr, you can reach out to us
+          explaining the situation. <br /><br />
+
+          Please note that deleting an AnVIL workspace does not remove its corresponding project from seqr;
+          however, it will make it impossible for your team to access or manage the project in the future.
+        </div>
+      ),
+    },
+    [SPANISH]: {
+      header: 'P. ¿Cómo puedo eliminar un proyecto de seqr?',
+      content: (
+        <div>
+          Antes de que se hayan cargado los datos en un proyecto de búsqueda, la persona que creó el proyecto puede
+          eliminarlo desde la página de inicio seleccionando el menú al lado derecho del proyecto y seleccionando la
+          opción de eliminar proyecto. Una vez que se han cargado los datos en un proyecto, no se pueden eliminar.
+          Si más adelante descubre que una muestra no tiene los permisos adecuados para estar en seqr,
+          puede comunicarse con nosotros para explicar la situación.<br /><br />
+
+          Tenga en cuenta que eliminando un espacio de trabajo de AnVIL no elimina su proyecto correspondiente de seqr;
+          sin embargo, hará que sea imposible para su equipo acceder o administrar el proyecto en el futuro.
+        </div>
+      ),
+    },
+  }, {
+    [ENGLISH]: {
       header: 'Q. Have ideas for seqr?',
       content: (
         <div>
