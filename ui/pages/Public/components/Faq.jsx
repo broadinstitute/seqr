@@ -466,17 +466,16 @@ const FAQS = [
   }, {
     [ENGLISH]: {
       header: 'Q. How do I add data to an existing project in seqr?',
-      content: `To add new data to an existing project, create a joint-called VCF and pedigree file with the new samples only. 
-      If you have new samples within a family that has been previously loaded you need all the previous family members in the new joint-called VCF. 
-      Upload it to seqr using the ‘Load Additional Data’ feature on the Project Page and select the new joint callset from the project’s associated workspace.`,
+      content: `To add new data, create a new joint called VCF with all the samples you want to include in your update. 
+      This should include any new samples you want to add to the project and any of their family members which have been previously loaded. 
+      Load this VCF using the Load Additional Data feature on the Project Page. All notes and tags saved in previously analyzed cases will be kept.`,
     },
     [SPANISH]: {
       header: 'P. ¿Cómo puedo agregar datos a un proyecto existente en seqr?',
-      content: `Para agregar nuevos datos a un proyecto existente, crea un conjunto de datos de familia y un archivo de 
-      pedigrí con las nuevas muestras únicamente. Si tiene nuevas muestras dentro de una familia que se ha cargado previamente, 
-      necesita todos los miembros de la familia preexistente en el nuevo conjunto denominado VCF. 
-      Súbalo a seqr utilizando la función "Cargar datos adicionales" en la página del proyecto y seleccione 
-      el nuevo conjunto de datos de familia del espacio de trabajo asociado al proyecto.`,
+      content: `Para agregar nuevos datos, crea un nuevo conjunto denominado VCF con todas las muestras que desea incluir en su actualización. 
+      Esto debe incluir todas las muestras nuevas que desea agregar al proyecto y todos los miembros de la familia que se hayan cargado previamente. 
+      Cargue este VCF utilizando la función Cargar datos adicionales en la página del proyecto. 
+      Se conservarán todas las notas y etiquetas guardadas en los casos analizados previamente.`,
     },
   }, {
     [ENGLISH]: {
