@@ -57,7 +57,7 @@ def add_new_es_search_samples(request_json, project, user, notify=False, expecte
     return inactivated_sample_guids, updated_family_guids, updated_samples
 
 
-def _basic_notify_search_data_loaded(project, dataset_type, sample_type, new_samples, format_email=None, slack_channel=None, include_slack_detail=False):
+def _basic_notify_search_data_loaded(project, dataset_type, sample_type, new_samples, email_template=None, slack_channel=None, include_slack_detail=False):
     msg_dataset_type = '' if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS else f' {dataset_type}'
     num_new_samples = len(new_samples)
     sample_summary = f'{num_new_samples} new {sample_type}{msg_dataset_type} samples'
@@ -65,7 +65,7 @@ def _basic_notify_search_data_loaded(project, dataset_type, sample_type, new_sam
     return send_project_notification(
         project,
         notification=sample_summary,
-        email_template=format_email(num_new_samples) if format_email else None, # TODO cleanup format email
+        email_template=email_template,
         subject='New data available in seqr',
         slack_channel=slack_channel,
         slack_detail=', '.join(sorted(new_samples)) if include_slack_detail else None,
@@ -74,19 +74,19 @@ def _basic_notify_search_data_loaded(project, dataset_type, sample_type, new_sam
 
 def notify_search_data_loaded(project, is_internal, dataset_type, sample_type, new_samples, num_samples):
     if is_internal:
-        format_email = None
+        email_template = None
     else:
         workspace_name = f'{project.workspace_namespace}/{project.workspace_name}'
-        def format_email(num_new_samples):
-            reload_summary = f' and {num_samples - num_new_samples} re-loaded samples' if num_samples > num_new_samples else ''
-            return '\n'.join([
-                f'We are following up on the request to load data from AnVIL on {project.created_date.date().strftime("%B %d, %Y")}.',
-                f'We have loaded {{notification}}{reload_summary} from the AnVIL workspace <a href={ANVIL_UI_URL}#workspaces/{workspace_name}>{workspace_name}</a> to the corresponding seqr project {{project_link}}.',
-                'Let us know if you have any questions.',
-            ])
+        num_new_samples = len(new_samples)
+        reload_summary = f' and {num_samples - num_new_samples} re-loaded samples' if num_samples > num_new_samples else ''
+        email_template = '\n'.join([
+            f'We are following up on the request to load data from AnVIL on {project.created_date.date().strftime("%B %d, %Y")}.',
+            f'We have loaded {{notification}}{reload_summary} from the AnVIL workspace <a href={ANVIL_UI_URL}#workspaces/{workspace_name}>{workspace_name}</a> to the corresponding seqr project {{project_link}}.',
+            'Let us know if you have any questions.',
+        ])
 
     url = _basic_notify_search_data_loaded(
-        project, dataset_type, sample_type, new_samples, format_email=format_email,
+        project, dataset_type, sample_type, new_samples, email_template=email_template,
         slack_channel=SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL if is_internal else SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL,
         include_slack_detail=is_internal,
     )
