@@ -650,7 +650,7 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
             'state': 'running'}
         ]})
 
-    def assert_airflow_loading_calls(self, trigger_error=False, additional_tasks_check=False, dataset_type=None, offset=0, **kwargs):
+    def assert_airflow_loading_calls(self, trigger_error=False, additional_tasks_check=False, dataset_type=None, offset=0, skip_validation=False, **kwargs):
         call_count = 5
         if additional_tasks_check:
             call_count = 6
@@ -670,7 +670,7 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
         config_params = {
             'ignore_missing_samples_when_remapping': False,
             'skip_check_sex_and_relatedness': False,
-            'skip_validation': True
+            'skip_validation': skip_validation
         }
         self._assert_airflow_calls(dag_variables, call_count, config_params, offset=offset)
 
