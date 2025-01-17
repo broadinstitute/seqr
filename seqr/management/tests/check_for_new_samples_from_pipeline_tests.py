@@ -561,8 +561,8 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
 
         self.mock_utils_logger.error.assert_called_with('Error in project Test Reprocessed Project: Bad Request')
         self.mock_utils_logger.info.assert_has_calls([
-            mock.call('Updated 0 variants for project Test Reprocessed Project'),
-            mock.call('Updated 1 variants for project Non-Analyst Project'),
+            mock.call('Updated 0 variants in 2 families for project Test Reprocessed Project'),
+            mock.call('Updated 1 variants in 1 families for project Non-Analyst Project'),
             mock.call('Reload Summary: '),
             mock.call('  Non-Analyst Project: Updated 1 variants'),
             mock.call('Reloading saved variants in 2 projects'),

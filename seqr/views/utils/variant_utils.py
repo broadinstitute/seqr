@@ -45,7 +45,8 @@ def update_projects_saved_variant_json(projects, user_email, **kwargs):
                 skipped[project_name] = True
             else:
                 success[project_name] = len(updated_saved_variants)
-                logger.info(f'Updated {len(updated_saved_variants)} variants for project {project_name}')
+                family_summary = f' in {len(family_guids)} families' if family_guids else ''
+                logger.info(f'Updated {len(updated_saved_variants)} variants{family_summary} for project {project_name}')
                 updated_variants_by_id.update({v.variant_id: v.saved_variant_json for v in updated_saved_variants.values()})
         except Exception as e:
             traceback_message = traceback.format_exc()
