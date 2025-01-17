@@ -61,7 +61,7 @@ const CALLSET_PAGE_FIELDS = [
     asFormInput: true,
   },
   {
-    name: 'skipSRCheck',
+    name: 'skipSRChecks',
     label: 'Skip Sex and Relatedness Checks',
     component: InlineToggle,
     asFormInput: true,

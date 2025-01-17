@@ -539,7 +539,7 @@ def load_data(request):
     loading_kwargs = {
         'user': request.user,
         'skip_validation': request_json.get('skipValidation', False),
-        'skip_check_sex_and_relatedness': request_json.get('skipSRCheck', False),
+        'skip_check_sex_and_relatedness': request_json.get('skipSRChecks', False),
         'ignore_missing_samples_when_remapping': request_json.get('ignoreMissingRemapSamples', False),
     }
     if AirtableSession.is_airtable_enabled():
