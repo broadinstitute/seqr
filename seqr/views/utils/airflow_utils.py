@@ -24,7 +24,7 @@ class DagRunningException(Exception):
 def trigger_airflow_data_loading(*args, user: User, individual_ids: list[int], success_message: str, success_slack_channel: str,
                                  error_message: str, is_internal: bool = False, **kwargs):
     success = True
-    updated_variables, gs_path = prepare_data_loading_request(
+    updated_variables, gs_path, config_params = prepare_data_loading_request(
         *args, user, individual_ids=individual_ids, pedigree_dir=SEQR_V3_PEDIGREE_GS_PATH, **kwargs,
     )
     updated_variables['sample_source'] = 'Broad_Internal' if is_internal else 'AnVIL'
@@ -34,7 +34,7 @@ def trigger_airflow_data_loading(*args, user: User, individual_ids: list[int], s
         _check_dag_running_state(LOADING_PIPELINE_DAG_NAME)
         _update_variables(updated_variables, LOADING_PIPELINE_DAG_NAME)
         _wait_for_dag_variable_update_via_tasks(updated_variables['projects_to_run'], LOADING_PIPELINE_DAG_NAME)
-        _trigger_dag(LOADING_PIPELINE_DAG_NAME)
+        _trigger_dag(LOADING_PIPELINE_DAG_NAME, config_params)
     except Exception as e:
         logger_call = logger.warning if isinstance(e, DagRunningException) else logger.error
         logger_call(str(e), user)
@@ -42,7 +42,7 @@ def trigger_airflow_data_loading(*args, user: User, individual_ids: list[int], s
         success = False
 
     if success or success_slack_channel != SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL:
-        _send_load_data_slack_msg([success_message] + upload_info, success_slack_channel, updated_variables)
+        _send_load_data_slack_msg([success_message] + upload_info, success_slack_channel, {**updated_variables, **config_params})
     return success
 
 
@@ -124,9 +124,9 @@ def _get_variables(dag_name: str):
     return json.loads(airflow_response['value'])
 
 
-def _trigger_dag(dag_name: str):
+def _trigger_dag(dag_name: str, config_params: dict = None):
     endpoint = f'dags/{dag_name}/dagRuns'
-    _make_airflow_api_request(endpoint, method='POST', json={})
+    _make_airflow_api_request(endpoint, method='POST', json={'conf': config_params or {}})
 
 
 def _make_airflow_api_request(endpoint, method='GET', timeout=90, **kwargs):

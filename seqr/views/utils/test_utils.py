@@ -665,18 +665,21 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
             'reference_genome': dag_variable_overrides.get('reference_genome', 'GRCh38'),
             'callset_path': f'gs://test_bucket/{dag_variable_overrides["callset_path"]}',
             'sample_type': dag_variable_overrides['sample_type'],
+            'sample_source': dag_variable_overrides['sample_source']
         }
-        if dag_variable_overrides.get('skip_validation'):
-            dag_variables['skip_validation'] = True
-        dag_variables['sample_source'] = dag_variable_overrides['sample_source']
-        self._assert_airflow_calls(dag_variables, call_count, offset=offset)
+        config_params = {
+            'ignore_missing_samples_when_remapping': False,
+            'skip_check_sex_and_relatedness': False,
+            'skip_validation': True
+        }
+        self._assert_airflow_calls(dag_variables, call_count, config_params, offset=offset)
 
     def _assert_call_counts(self, call_count):
         self.mock_airflow_logger.info.assert_not_called()
         self.assertEqual(len(responses.calls), call_count + self.ADDITIONAL_REQUEST_COUNT)
         self.assertEqual(self.mock_authorized_session.call_count, call_count)
 
-    def _assert_airflow_calls(self, dag_variables, call_count, offset=0):
+    def _assert_airflow_calls(self, dag_variables, call_count, config_params, offset=0):
         self._assert_dag_running_state_calls(offset)
 
         if call_count < 2:
@@ -689,7 +692,7 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
         # trigger dag
         self.assertEqual(responses.calls[offset+call_cnt].request.url, f'{self._dag_url}/dagRuns')
         self.assertEqual(responses.calls[offset+call_cnt].request.method, 'POST')
-        self.assertDictEqual(json.loads(responses.calls[offset+call_cnt].request.body), {})
+        self.assertDictEqual(json.loads(responses.calls[offset+call_cnt].request.body), {'conf': config_params})
 
         self.mock_airflow_logger.warning.assert_not_called()
         self.mock_airflow_logger.error.assert_not_called()

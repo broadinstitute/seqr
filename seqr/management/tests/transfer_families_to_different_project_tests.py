@@ -86,7 +86,7 @@ class TransferFamiliesAirflowTest(TransferFamiliesTest, AirflowTestCase):
         call_count_per_dag = 5
         for i, dataset_type in enumerate(['MITO', 'SNV_INDEL', 'SV']):
             offset = i * call_count_per_dag
-            self._assert_airflow_calls(self._get_dag_variables(dataset_type), call_count_per_dag, offset)
+            self._assert_airflow_calls(self._get_dag_variables(dataset_type), call_count_per_dag, {}, offset)
 
     def _assert_update_check_airflow_calls(self, call_count, offset, update_check_path):
         variables_update_check_path = f'{self.MOCK_AIRFLOW_URL}/api/v1/variables/{self.DAG_NAME}'

@@ -61,6 +61,18 @@ const CALLSET_PAGE_FIELDS = [
     asFormInput: true,
   },
   {
+    name: 'skipSRCheck',
+    label: 'Skip Sex and Relatedness Checks',
+    component: InlineToggle,
+    asFormInput: true,
+  },
+  {
+    name: 'ignoreMissingRemapSamples',
+    label: 'Ignore Missing Samples When Remapping',
+    component: InlineToggle,
+    asFormInput: true,
+  },
+  {
     ...GENOME_VERSION_FIELD,
     component: ButtonRadioGroup,
     validate: validators.required,
