@@ -248,15 +248,19 @@ class AuthenticationTestCase(TestCase):
         self._log_stream.truncate(0)
         self._log_stream.seek(0)
 
-    def assert_json_logs(self, user, expected):
+    def assert_json_logs(self, user, expected, offset=0):
         logs = self._log_stream.getvalue().split('\n')
+        if offset:
+            logs = logs[offset:]
         for i, (message, extra) in enumerate(expected):
             extra = extra or {}
             validate = extra.pop('validate', None)
             log_value = json.loads(logs[i])
             expected_log = {
-                'timestamp': mock.ANY, 'severity': 'INFO', 'user': user.email, **extra,
+                'timestamp': mock.ANY, 'severity': 'INFO', **extra,
             }
+            if user:
+                expected_log['user'] = user.email
             if message is not None:
                 expected_log['message'] = message
             self.assertDictEqual(log_value, expected_log)

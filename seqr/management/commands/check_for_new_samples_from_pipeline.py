@@ -86,7 +86,7 @@ class Command(BaseCommand):
                     *data_type_key, updated_variants_by_data_type[data_type_key], exclude_families=updated_families,
                 )
             except Exception as e:
-                logger.error(f'Error reloading shared annotations for {data_type_key.join("/")}: {e}')
+                logger.error(f'Error reloading shared annotations for {"/".join(data_type_key)}: {e}')
 
         logger.info('DONE')
 
