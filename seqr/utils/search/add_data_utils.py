@@ -117,11 +117,9 @@ def format_loading_pipeline_variables(
         variables['sample_type'] = sample_type
     return variables
 
-def prepare_data_loading_request(
-    projects: list[Project], sample_type: str, dataset_type: str, genome_version: str,
-    data_path: str, user: User, pedigree_dir: str, raise_pedigree_error: bool = False, individual_ids: list[int] = None,
-    skip_validation: bool = False, skip_check_sex_and_relatedness: bool = False, ignore_missing_samples_when_remapping: bool = False,
-):
+def prepare_data_loading_request(projects: list[Project], sample_type: str, dataset_type: str, genome_version: str,
+                                 data_path: str, user: User, pedigree_dir: str,  raise_pedigree_error: bool = False,
+                                 individual_ids: list[int] = None, skip_validation: bool = False, skip_check_sex_and_relatedness: bool = False):
     variables = format_loading_pipeline_variables(
         projects,
         genome_version,
@@ -129,14 +127,13 @@ def prepare_data_loading_request(
         sample_type,
         callset_path=data_path,
     )
-    config_params = {
-        'skip_validation': skip_validation,
-        'skip_check_sex_and_relatedness': skip_check_sex_and_relatedness,
-        'ignore_missing_samples_when_remapping': ignore_missing_samples_when_remapping,
-    }
+    if skip_validation:
+        variables['skip_validation'] = True
+    if skip_check_sex_and_relatedness:
+        variables['skip_check_sex_and_relatedness'] = True
     file_path = _get_pedigree_path(pedigree_dir, genome_version, sample_type, dataset_type)
     _upload_data_loading_files(projects, user, file_path, individual_ids, raise_pedigree_error)
-    return variables, file_path, config_params
+    return variables, file_path
 
 
 def _dag_dataset_type(sample_type: str, dataset_type: str):

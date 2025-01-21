@@ -767,16 +767,13 @@ class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
         }}]})
         self.assert_expected_airtable_headers(-1)
 
-        dag_args = {
+        dag_json = {
             'projects_to_run': [project.guid],
             'dataset_type': 'SNV_INDEL',
             'reference_genome': genome_version,
             'callset_path': 'gs://test_bucket/test_path.vcf',
             'sample_type': 'WES',
             'sample_source': 'AnVIL',
-            'skip_validation': False,
-            'skip_check_sex_and_relatedness': False,
-            'ignore_missing_samples_when_remapping': False,
         }
         sample_summary = '3 new'
         if test_add_data:
@@ -791,7 +788,7 @@ class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
         ```{dag}```
     """.format(guid=project.guid, version=genome_version, workspace_name=project.workspace_name,
                    project_name=project.name, sample_summary=sample_summary,
-               dag=json.dumps(dag_args, indent=4),
+               dag=json.dumps(dag_json, indent=4),
                )
         self.mock_slack.assert_called_with(
             SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, slack_message,

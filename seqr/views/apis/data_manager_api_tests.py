@@ -1561,13 +1561,9 @@ class DataManagerAPITest(AirtableTest):
             'reference_genome': 'GRCh38',
             'callset_path': f'{self.TRIGGER_CALLSET_DIR}/mito_callset.mt',
             'sample_type': 'WES',
-        }
-        config_params = {
             'skip_validation': True,
-            'skip_check_sex_and_relatedness': False,
-            'ignore_missing_samples_when_remapping': False,
         }
-        self._assert_success_notification(dag_json, config_params)
+        self._assert_success_notification(dag_json)
 
         # Test loading trigger error
         self._set_loading_trigger_error()
@@ -1577,6 +1573,7 @@ class DataManagerAPITest(AirtableTest):
         self.reset_logs()
 
         del body['skipValidation']
+        del dag_json['skip_validation']
         body.update({'datasetType': 'SV', 'filePath': f'{self.CALLSET_DIR}/sv_callset.vcf'})
         self._trigger_error(url, body, dag_json, mock_open, mock_mkdir)
 
@@ -1698,10 +1695,9 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
             'sample_type': sample_type,
             'dataset_type': dataset_type,
             'reference_genome': 'GRCh38',
-            'skip_validation': skip_validation,
-            'skip_check_sex_and_relatedness': False,
-            'ignore_missing_samples_when_remapping': False,
         }
+        if skip_validation:
+            body['skip_validation'] = True
         self.assertDictEqual(json.loads(responses.calls[0].request.body), body)
 
     @staticmethod
@@ -1712,9 +1708,9 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
         super()._has_expected_ped_files(mock_open, mock_mkdir, dataset_type,  *args, sample_type, **kwargs)
         mock_mkdir.assert_called_once_with(self._local_pedigree_path(dataset_type, sample_type), exist_ok=True)
 
-    def _assert_success_notification(self, dag_json, config_params):
+    def _assert_success_notification(self, dag_json):
         self.maxDiff = None
-        self.assert_json_logs(self.pm_user, [('Triggered loading pipeline', {'detail': {**dag_json, **config_params}})])
+        self.assert_json_logs(self.pm_user, [('Triggered loading pipeline', {'detail': dag_json})])
 
     def _set_loading_trigger_error(self):
         responses.add(responses.POST, PIPELINE_RUNNER_URL, status=400)
@@ -1858,7 +1854,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         self.set_dag_trigger_error_response(status=400)
         self.mock_authorized_session.reset_mock()
 
-    def _assert_success_notification(self, dag_json, config_params):
+    def _assert_success_notification(self, dag_json):
         dag_json['sample_source'] = 'Broad_Internal'
 
         message = f"""*test_data_manager@broadinstitute.org* triggered loading internal WES MITO data for 2 projects
@@ -1866,7 +1862,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         Pedigree files have been uploaded to gs://seqr-loading-temp/v3.1/GRCh38/MITO/pedigrees/WES
 
         DAG LOADING_PIPELINE is triggered with following:
-        ```{json.dumps({**dag_json, **config_params}, indent=4)}```
+        ```{json.dumps(dag_json, indent=4)}```
     """
         self.mock_slack.assert_called_once_with(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, message)
         self.mock_slack.reset_mock()

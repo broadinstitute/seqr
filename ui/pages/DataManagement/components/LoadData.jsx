@@ -61,18 +61,6 @@ const CALLSET_PAGE_FIELDS = [
     asFormInput: true,
   },
   {
-    name: 'skipSRChecks',
-    label: 'Skip Sex and Relatedness Checks',
-    component: InlineToggle,
-    asFormInput: true,
-  },
-  {
-    name: 'ignoreMissingRemapSamples',
-    label: 'Ignore Missing Samples When Remapping',
-    component: InlineToggle,
-    asFormInput: true,
-  },
-  {
     ...GENOME_VERSION_FIELD,
     component: ButtonRadioGroup,
     validate: validators.required,
@@ -109,7 +97,14 @@ const MULTI_DATA_TYPE_CALLSET_PAGE = {
       placeholder: 'gs://',
       ...FILE_PATH_FIELD,
     },
-    ...CALLSET_PAGE_FIELDS,
+    CALLSET_PAGE_FIELDS[0],
+    {
+      name: 'skipSRChecks',
+      label: 'Skip Sex and Relatedness Checks',
+      component: InlineToggle,
+      asFormInput: true,
+    },
+    ...CALLSET_PAGE_FIELDS.slice(1),
     {
       name: 'datasetType',
       label: 'Dataset Type',

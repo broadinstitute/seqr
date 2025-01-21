@@ -540,7 +540,6 @@ def load_data(request):
         'user': request.user,
         'skip_validation': request_json.get('skipValidation', False),
         'skip_check_sex_and_relatedness': request_json.get('skipSRChecks', False),
-        'ignore_missing_samples_when_remapping': request_json.get('ignoreMissingRemapSamples', False),
     }
     if AirtableSession.is_airtable_enabled():
         individual_ids = _get_valid_project_samples(project_samples, dataset_type, sample_type, request.user)
@@ -551,10 +550,9 @@ def load_data(request):
             success_slack_channel=SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, is_internal=True, individual_ids=individual_ids,
         )
     else:
-        request_json, _, config_params = prepare_data_loading_request(
+        request_json, _ = prepare_data_loading_request(
             *loading_args, **loading_kwargs, pedigree_dir=LOADING_DATASETS_DIR, raise_pedigree_error=True,
         )
-        request_json.update(config_params)
         response = requests.post(f'{PIPELINE_RUNNER_SERVER}/loading_pipeline_enqueue', json=request_json, timeout=60)
         if response.status_code == 409:
             raise ErrorsWarningsException(['Loading pipeline is already running. Wait for it to complete and resubmit'])
