@@ -51,7 +51,7 @@ def update_projects_saved_variant_json(projects, user_email, **kwargs):
         except Exception as e:
             traceback_message = traceback.format_exc()
             logger.error(traceback_message)
-            logger.error(f'Error in project {project_name}: {e}')
+            logger.error(f'Error reloading variants in {project_name}: {e}')
             error[project_name] = e
 
     logger.info('Reload Summary: ')
