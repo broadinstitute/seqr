@@ -336,10 +336,11 @@ class Command(BaseCommand):
             variant_id: {k: v for k, v in variant.items() if k not in {'familyGuids', 'genotypes'}}
             for variant_id, variant in (updated_variants_by_id or {}).items()
         }
-        fetch_variant_ids = sorted(set(variants_by_id.keys()) - set(updated_variants_by_id.keys()))
+        fetch_variant_ids = set(variants_by_id.keys()) - set(updated_variants_by_id.keys())
         if fetch_variant_ids:
             if not is_sv:
                 fetch_variant_ids = [parse_valid_variant_id(variant_id) for variant_id in fetch_variant_ids]
+            fetch_variant_ids.sort()
             for i in range(0, len(fetch_variant_ids), MAX_LOOKUP_VARIANTS):
                 updated_variants = hail_variant_multi_lookup(USER_EMAIL, fetch_variant_ids[i:i+MAX_LOOKUP_VARIANTS], data_type, genome_version)
                 logger.info(f'Fetched {len(updated_variants)} additional variants')
