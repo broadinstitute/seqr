@@ -81,4 +81,4 @@ class ReloadSavedVariantJsonTest(TestCase):
         ]
         mock_logger.info.assert_has_calls(logger_info_calls)
 
-        mock_logger.error.assert_called_with('Error in project 1kg project n\xe5me with uni\xe7\xf8de: Database error.')
+        mock_logger.error.assert_called_with('Error reloading variants in 1kg project n\xe5me with uni\xe7\xf8de: Database error.')

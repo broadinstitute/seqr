@@ -559,7 +559,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         self.assertEqual(annotation_updated_json['mainTranscriptId'], 'ENST00000505820')
         self.assertEqual(len(annotation_updated_json['genotypes']), 3)
 
-        self.mock_utils_logger.error.assert_called_with('Error in project Test Reprocessed Project: Bad Request')
+        self.mock_utils_logger.error.assert_called_with('Error reloading variants in Test Reprocessed Project: Bad Request')
         self.mock_utils_logger.info.assert_has_calls([
             mock.call('Updated 0 variants in 1 families for project Test Reprocessed Project'),
             mock.call('Updated 1 variants in 1 families for project Non-Analyst Project'),
