@@ -345,7 +345,7 @@ class Command(BaseCommand):
                 for variant_id in fetch_variant_ids:
                     parsed_id = parse_valid_variant_id(variant_id)
                     variant_ids_by_chrom[parsed_id[0]].append(parsed_id)
-            for chrom, variant_ids in variant_ids_by_chrom.items():
+            for chrom, variant_ids in sorted(variant_ids_by_chrom.items()):
                 variant_ids = sorted(variant_ids)
                 for i in range(0, len(variant_ids), MAX_LOOKUP_VARIANTS):
                     updated_variants = hail_variant_multi_lookup(USER_EMAIL, variant_ids[i:i+MAX_LOOKUP_VARIANTS], data_type, genome_version)
