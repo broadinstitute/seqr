@@ -338,13 +338,19 @@ class Command(BaseCommand):
         }
         fetch_variant_ids = set(variants_by_id.keys()) - set(updated_variants_by_id.keys())
         if fetch_variant_ids:
-            if not is_sv:
-                fetch_variant_ids = [parse_valid_variant_id(variant_id) for variant_id in fetch_variant_ids]
-            fetch_variant_ids.sort()
-            for i in range(0, len(fetch_variant_ids), MAX_LOOKUP_VARIANTS):
-                updated_variants = hail_variant_multi_lookup(USER_EMAIL, fetch_variant_ids[i:i+MAX_LOOKUP_VARIANTS], data_type, genome_version)
-                logger.info(f'Fetched {len(updated_variants)} additional variants')
-                updated_variants_by_id.update({variant['variantId']: variant for variant in updated_variants})
+            if is_sv:
+                variant_ids_by_chrom = {'all': fetch_variant_ids}
+            else:
+                variant_ids_by_chrom = defaultdict(list)
+                for variant_id in fetch_variant_ids:
+                    parsed_id = parse_valid_variant_id(variant_id)
+                    variant_ids_by_chrom[parsed_id[0]].append(parsed_id)
+            for chrom, variant_ids in variant_ids_by_chrom.items():
+                variant_ids = sorted(variant_ids)
+                for i in range(0, len(variant_ids), MAX_LOOKUP_VARIANTS):
+                    updated_variants = hail_variant_multi_lookup(USER_EMAIL, variant_ids[i:i+MAX_LOOKUP_VARIANTS], data_type, genome_version)
+                    logger.info(f'Fetched {len(updated_variants)} additional variants in chromosome {chrom}')
+                    updated_variants_by_id.update({variant['variantId']: variant for variant in updated_variants})
 
         updated_variant_models = []
         for variant_id, variant in updated_variants_by_id.items():
