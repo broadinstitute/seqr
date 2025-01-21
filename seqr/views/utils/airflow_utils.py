@@ -29,6 +29,7 @@ def trigger_airflow_data_loading(*args, user: User, individual_ids: list[int], s
     )
     updated_variables['sample_source'] = 'Broad_Internal' if is_internal else 'AnVIL'
     upload_info = [f'Pedigree files have been uploaded to {gs_path}']
+
     try:
         _check_dag_running_state(LOADING_PIPELINE_DAG_NAME)
         _update_variables(updated_variables, LOADING_PIPELINE_DAG_NAME)

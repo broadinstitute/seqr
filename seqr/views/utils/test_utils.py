@@ -650,7 +650,7 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
             'state': 'running'}
         ]})
 
-    def assert_airflow_loading_calls(self, trigger_error=False, additional_tasks_check=False, dataset_type=None, offset=0, skip_validation=False, **kwargs):
+    def assert_airflow_loading_calls(self, trigger_error=False, additional_tasks_check=False, dataset_type=None, offset=0, **kwargs):
         call_count = 5
         if additional_tasks_check:
             call_count = 6
@@ -665,7 +665,6 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
             'reference_genome': dag_variable_overrides.get('reference_genome', 'GRCh38'),
             'callset_path': f'gs://test_bucket/{dag_variable_overrides["callset_path"]}',
             'sample_type': dag_variable_overrides['sample_type'],
-            'sample_source': dag_variable_overrides['sample_source'],
         }
         if dag_variable_overrides.get('skip_validation'):
             dag_variables['skip_validation'] = True

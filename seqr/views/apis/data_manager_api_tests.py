@@ -1836,6 +1836,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
             'sample_source': 'Broad_Internal',
             'sample_type': 'WES',
             'dataset_type': 'MITO',
+            'skip_validation': True,
         }
 
     def _assert_expected_load_data_requests(self, dataset_type='MITO', **kwargs):
