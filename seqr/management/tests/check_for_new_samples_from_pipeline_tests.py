@@ -6,7 +6,7 @@ import json
 import mock
 import responses
 
-from seqr.views.utils.test_utils import AnvilAuthenticationTestCase
+from seqr.views.utils.test_utils import AnvilAuthenticationTestCase, AuthenticationTestCase
 from seqr.models import Project, Family, Individual, Sample, SavedVariant
 
 SEQR_URL = 'https://seqr.broadinstitute.org/'
@@ -204,10 +204,9 @@ def mock_opened_file(index):
 @mock.patch('seqr.utils.communication_utils.BASE_URL', SEQR_URL)
 @mock.patch('seqr.utils.search.add_data_utils.SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL', 'anvil-data-loading')
 @mock.patch('seqr.utils.search.add_data_utils.SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL', 'seqr-data-loading')
-class CheckNewSamplesTest(AnvilAuthenticationTestCase):
-    fixtures = ['users', '1kg_project']
+class CheckNewSamplesTest(object):
 
-    def setUp(self):
+    def set_up(self):
         patcher = mock.patch('seqr.management.commands.check_for_new_samples_from_pipeline.logger')
         self.mock_logger = patcher.start()
         self.addCleanup(patcher.stop)
@@ -241,7 +240,6 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         patcher = mock.patch('seqr.management.commands.check_for_new_samples_from_pipeline.HAIL_SEARCH_DATA_DIR')
         self.mock_data_dir = patcher.start()
         self.addCleanup(patcher.stop)
-        super().setUp()
 
     def _test_call(self, error_logs, reload_annotations_logs=None, run_loading_logs=None, reload_calls=None):
         self.mock_subprocess.reset_mock()
@@ -678,3 +676,17 @@ The following 1 families failed sex check:
         self.mock_send_slack.assert_not_called()
         self.assertFalse(Sample.objects.filter(last_modified_date__gt=sample_last_modified).exists())
         self.mock_redis.return_value.delete.assert_not_called()
+
+class LocalCheckNewSamplesTest(AuthenticationTestCase, CheckNewSamplesTest):
+    fixtures = ['users', '1kg_project']
+
+    def setUp(self):
+        self.set_up()
+        super().setUp()
+
+class AirtableCheckNewSamplesTest(AnvilAuthenticationTestCase, CheckNewSamplesTest):
+    fixtures = ['users', '1kg_project']
+
+    def setUp(self):
+        self.set_up()
+        super().setUp()
