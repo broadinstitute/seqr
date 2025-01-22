@@ -97,14 +97,13 @@ const MULTI_DATA_TYPE_CALLSET_PAGE = {
       placeholder: 'gs://',
       ...FILE_PATH_FIELD,
     },
-    CALLSET_PAGE_FIELDS[0],
     {
       name: 'skipSRChecks',
       label: 'Skip Sex and Relatedness Checks',
       component: InlineToggle,
       asFormInput: true,
     },
-    ...CALLSET_PAGE_FIELDS.slice(1),
+    ...CALLSET_PAGE_FIELDS,
     {
       name: 'datasetType',
       label: 'Dataset Type',
