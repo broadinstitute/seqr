@@ -423,7 +423,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
                 {'individual_guid': 'I000017_na20889', 'family_guid': 'F000012_12', 'project_guid': 'R0003_test', 'affected': 'A', 'sample_id': 'NA20889', 'sample_type': 'WES'},
             ]}},
         ], reload_annotations_logs=[
-            'Reloading shared annotations for 3 SNV_INDEL GRCh38 saved variants (3 unique)', 'Fetched 1 additional variants', 'Fetched 1 additional variants', 'Updated 2 SNV_INDEL GRCh38 saved variants',
+            'Reloading shared annotations for 3 SNV_INDEL GRCh38 saved variants (3 unique)', 'Fetched 1 additional variants in chromosome 1', 'Fetched 1 additional variants in chromosome 1', 'Updated 2 SNV_INDEL GRCh38 saved variants',
             'No additional SV_WES GRCh38 saved variants to update',
         ], run_loading_logs={
             'GRCh38/SNV_INDEL': 'Loading 4 WES SNV_INDEL samples in 2 projects',
@@ -559,10 +559,10 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         self.assertEqual(annotation_updated_json['mainTranscriptId'], 'ENST00000505820')
         self.assertEqual(len(annotation_updated_json['genotypes']), 3)
 
-        self.mock_utils_logger.error.assert_called_with('Error in project Test Reprocessed Project: Bad Request')
+        self.mock_utils_logger.error.assert_called_with('Error reloading variants in Test Reprocessed Project: Bad Request')
         self.mock_utils_logger.info.assert_has_calls([
-            mock.call('Updated 0 variants for project Test Reprocessed Project'),
-            mock.call('Updated 1 variants for project Non-Analyst Project'),
+            mock.call('Updated 0 variants in 1 families for project Test Reprocessed Project'),
+            mock.call('Updated 1 variants in 1 families for project Non-Analyst Project'),
             mock.call('Reload Summary: '),
             mock.call('  Non-Analyst Project: Updated 1 variants'),
             mock.call('Reloading saved variants in 2 projects'),

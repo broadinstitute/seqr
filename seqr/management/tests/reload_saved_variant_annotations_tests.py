@@ -39,18 +39,24 @@ class ReloadVariantAnnotationsTest(AnvilAuthenticationTestCase):
 
         mock_logger.info.assert_has_calls([mock.call(log) for log in [
             'Reloading shared annotations for 3 SNV_INDEL GRCh37 saved variants (3 unique)',
-            'Fetched 2 additional variants',
+            'Fetched 2 additional variants in chromosome 1',
+            'Fetched 2 additional variants in chromosome 21',
             'Updated 2 SNV_INDEL GRCh37 saved variants',
         ]])
 
-        self.assertEqual(len(responses.calls), 1)
-        multi_lookup_request = responses.calls[0].request
-        self.assertEqual(multi_lookup_request.url, f'{MOCK_HAIL_ORIGIN}:5000/multi_lookup')
-        self.assertEqual(multi_lookup_request.headers.get('From'), 'manage_command')
-        self.assertDictEqual(json.loads(multi_lookup_request.body), {
+        self.assertEqual(len(responses.calls), 2)
+        for call in responses.calls:
+            self.assertEqual(call.request.url, f'{MOCK_HAIL_ORIGIN}:5000/multi_lookup')
+            self.assertEqual(call.request.headers.get('From'), 'manage_command')
+        self.assertDictEqual(json.loads(responses.calls[0].request.body), {
             'genome_version': 'GRCh37',
             'data_type': 'SNV_INDEL',
-            'variant_ids': [['1', 248367227, 'TC', 'T'], ['1', 46859832, 'G', 'A'], ['21', 3343353, 'GAGA', 'G']],
+            'variant_ids': [['1', 46859832, 'G', 'A'], ['1', 248367227, 'TC', 'T']],
+        })
+        self.assertDictEqual(json.loads(responses.calls[1].request.body), {
+            'genome_version': 'GRCh37',
+            'data_type': 'SNV_INDEL',
+            'variant_ids': [['21', 3343353, 'GAGA', 'G']],
         })
 
         annotation_updated_json_1 = SavedVariant.objects.get(guid='SV0000002_1248367227_r0390_100').saved_variant_json
@@ -66,11 +72,12 @@ class ReloadVariantAnnotationsTest(AnvilAuthenticationTestCase):
         self.assertEqual(len(annotation_updated_json_2['genotypes']), 3)
 
         # Test SVs
+        responses.calls.reset()
         Sample.objects.filter(guid='S000147_na21234').update(individual_id=20)
         call_command('reload_saved_variant_annotations', 'SV_WGS', 'GRCh37')
 
-        self.assertEqual(len(responses.calls), 2)
-        self.assertDictEqual(json.loads(responses.calls[1].request.body), {
+        self.assertEqual(len(responses.calls), 1)
+        self.assertDictEqual(json.loads(responses.calls[0].request.body), {
             'genome_version': 'GRCh37',
             'data_type': 'SV_WGS',
             'variant_ids': ['prefix_19107_DEL'],

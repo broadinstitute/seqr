@@ -3,8 +3,6 @@ from collections import defaultdict
 
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.management.base import BaseCommand, CommandError
-from django.db.models import Q
-from django.db.models.functions import JSONObject
 import json
 import logging
 import re
@@ -186,7 +184,7 @@ class Command(BaseCommand):
 
         sample_type = metadata['sample_type']
         logger.info(f'Loading {len(sample_project_tuples)} {sample_type} {dataset_type} samples in {len(samples_by_project)} projects')
-        updated_samples, inactivated_sample_guids, *args = match_and_update_search_samples(
+        updated_samples, new_samples, *args = match_and_update_search_samples(
             projects=samples_by_project.keys(),
             sample_project_tuples=sample_project_tuples,
             sample_data={'data_source': run_version, 'elasticsearch_index': ';'.join(metadata['callsets'])},
@@ -196,9 +194,9 @@ class Command(BaseCommand):
         )
 
         # Send loading notifications and update Airtable PDOs
-        update_sample_data_by_project = {
-            s['individual__family__project']: s for s in updated_samples.values('individual__family__project').annotate(
-                samples=ArrayAgg(JSONObject(sample_id='sample_id', individual_id='individual_id')),
+        new_sample_data_by_project = {
+            s['individual__family__project']: s for s in updated_samples.filter(id__in=new_samples).values('individual__family__project').annotate(
+                samples=ArrayAgg('sample_id', distinct=True),
                 family_guids=ArrayAgg('individual__family__guid', distinct=True),
             )
         }
@@ -207,15 +205,16 @@ class Command(BaseCommand):
         split_project_pdos = {}
         session = AirtableSession(user=None, no_auth=True)
         for project, sample_ids in samples_by_project.items():
-            project_sample_data = update_sample_data_by_project[project.id]
+            project_sample_data = new_sample_data_by_project[project.id]
             is_internal = not project_has_anvil(project) or is_internal_anvil_project(project)
             notify_search_data_loaded(
-                project, is_internal, dataset_type, sample_type, inactivated_sample_guids,
-                updated_samples=project_sample_data['samples'], num_samples=len(sample_ids),
+                project, is_internal, dataset_type, sample_type, project_sample_data['samples'],
+                num_samples=len(sample_ids),
             )
             project_families = project_sample_data['family_guids']
-            updated_families.update(project_families)
-            updated_project_families.append((project.id, project.name, project.genome_version, project_families))
+            if project_families:
+                updated_families.update(project_families)
+                updated_project_families.append((project.id, project.name, project.genome_version, project_families))
             if is_internal and dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
                 split_project_pdos[project.name] = cls._update_pdos(session, project.guid, sample_ids)
 
@@ -337,14 +336,21 @@ class Command(BaseCommand):
             variant_id: {k: v for k, v in variant.items() if k not in {'familyGuids', 'genotypes'}}
             for variant_id, variant in (updated_variants_by_id or {}).items()
         }
-        fetch_variant_ids = sorted(set(variants_by_id.keys()) - set(updated_variants_by_id.keys()))
+        fetch_variant_ids = set(variants_by_id.keys()) - set(updated_variants_by_id.keys())
         if fetch_variant_ids:
-            if not is_sv:
-                fetch_variant_ids = [parse_valid_variant_id(variant_id) for variant_id in fetch_variant_ids]
-            for i in range(0, len(fetch_variant_ids), MAX_LOOKUP_VARIANTS):
-                updated_variants = hail_variant_multi_lookup(USER_EMAIL, fetch_variant_ids[i:i+MAX_LOOKUP_VARIANTS], data_type, genome_version)
-                logger.info(f'Fetched {len(updated_variants)} additional variants')
-                updated_variants_by_id.update({variant['variantId']: variant for variant in updated_variants})
+            if is_sv:
+                variant_ids_by_chrom = {'all': fetch_variant_ids}
+            else:
+                variant_ids_by_chrom = defaultdict(list)
+                for variant_id in fetch_variant_ids:
+                    parsed_id = parse_valid_variant_id(variant_id)
+                    variant_ids_by_chrom[parsed_id[0]].append(parsed_id)
+            for chrom, variant_ids in sorted(variant_ids_by_chrom.items()):
+                variant_ids = sorted(variant_ids)
+                for i in range(0, len(variant_ids), MAX_LOOKUP_VARIANTS):
+                    updated_variants = hail_variant_multi_lookup(USER_EMAIL, variant_ids[i:i+MAX_LOOKUP_VARIANTS], data_type, genome_version)
+                    logger.info(f'Fetched {len(updated_variants)} additional variants in chromosome {chrom}')
+                    updated_variants_by_id.update({variant['variantId']: variant for variant in updated_variants})
 
         updated_variant_models = []
         for variant_id, variant in updated_variants_by_id.items():
