@@ -738,7 +738,12 @@ class BaseHailTableQuery(object):
             return intervals
 
         if variant_ids:
-            intervals = [(chrom, pos, pos+1) for chrom, pos, _, _ in variant_ids]
+            first_chrom = variant_ids[0][0]
+            if all(first_chrom == v[0] for v in variant_ids):
+                positions = [pos for _, pos, _, _ in variant_ids]
+                intervals = [(first_chrom, min(positions), max(positions) + 1)]
+            else:
+                intervals = [(chrom, pos, pos+1) for chrom, pos, _, _ in variant_ids]
 
         is_x_linked = self._inheritance_mode == X_LINKED_RECESSIVE
         if not (intervals or is_x_linked):

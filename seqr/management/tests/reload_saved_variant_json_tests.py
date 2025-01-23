@@ -30,7 +30,7 @@ class ReloadSavedVariantJsonTest(TestCase):
             [family_1], ['1-46859832-G-A','21-3343353-GAGA-G'], user=None, user_email='manage_command')
 
         logger_info_calls = [
-            mock.call('Updated 2 variants for project 1kg project n\xe5me with uni\xe7\xf8de'),
+            mock.call('Updated 2 variants in 1 families for project 1kg project n\xe5me with uni\xe7\xf8de'),
             mock.call('Reload Summary: '),
             mock.call('  1kg project n\xe5me with uni\xe7\xf8de: Updated 2 variants')
         ]
@@ -81,4 +81,4 @@ class ReloadSavedVariantJsonTest(TestCase):
         ]
         mock_logger.info.assert_has_calls(logger_info_calls)
 
-        mock_logger.error.assert_called_with('Error in project 1kg project n\xe5me with uni\xe7\xf8de: Database error.')
+        mock_logger.error.assert_called_with('Error reloading variants in 1kg project n\xe5me with uni\xe7\xf8de: Database error.')

@@ -1,3 +1,4 @@
+from collections import defaultdict
 from datetime import datetime
 from django.core.management import call_command
 from django.core.management.base import CommandError
@@ -5,7 +6,7 @@ import json
 import mock
 import responses
 
-from seqr.views.utils.test_utils import AnvilAuthenticationTestCase
+from seqr.views.utils.test_utils import AnvilAuthenticationTestCase, AuthenticationTestCase
 from seqr.models import Project, Family, Individual, Sample, SavedVariant
 
 SEQR_URL = 'https://seqr.broadinstitute.org/'
@@ -42,16 +43,16 @@ ANVIL_HTML_EMAIL = f'Dear seqr user,<br /><br />' \
                    f'We are following up on the request to load data from AnVIL on March 12, 2017.<br />' \
                    f'We have loaded 1 new WES samples from the AnVIL workspace {anvil_link} to the corresponding seqr project {seqr_link}.' \
                    f'<br />Let us know if you have any questions.<br /><br />All the best,<br />The seqr team'
-INTERNAL_TEXT_EMAIL = """Dear seqr user,
+TEXT_EMAIL_TEMPLATE = """Dear seqr user,
 
-This is to notify you that data for 2 new WES samples has been loaded in seqr project Test Reprocessed Project
+This is to notify you that data for {} new WES samples has been loaded in seqr project {}
 
 All the best,
 The seqr team"""
-INTERNAL_HTML_EMAIL = f'Dear seqr user,<br /><br />' \
-                      f'This is to notify you that data for 2 new WES samples has been loaded in seqr project ' \
-                      f'<a href=https://seqr.broadinstitute.org/project/{PROJECT_GUID}/project_page>Test Reprocessed Project</a>' \
-                      f'<br /><br />All the best,<br />The seqr team'
+HTML_EMAIL_TEMAPLTE = 'Dear seqr user,<br /><br />' \
+                      'This is to notify you that data for {} new WES samples has been loaded in seqr project ' \
+                      '<a href=https://seqr.broadinstitute.org/project/{}/project_page>{}</a>' \
+                      '<br /><br />All the best,<br />The seqr team'
 
 PDO_QUERY_FIELDS = '&'.join([f'fields[]={field}' for field in [
     'PDO', 'PDOStatus', 'SeqrLoadingDate', 'GATKShortReadCallsetPath', 'SeqrProjectURL', 'TerraProjectURL',
@@ -141,12 +142,18 @@ AIRTABLE_PDO_RECORDS = {
 }
 
 RUN_PATHS = [
+    b'gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-13/_ERRORS_REPORTED',
+    b'gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-13/validation_errors.json',
+    b'gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-14/validation_errors.json',
     b'gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/auto__2023-08-09/_SUCCESS',
     b'gs://seqr-hail-search-data/v3.1/GRCh37/SNV_INDEL/runs/manual__2023-11-02/_SUCCESS',
     b'gs://seqr-hail-search-data/v3.1/GRCh38/MITO/runs/auto__2024-08-12/_SUCCESS',
     b'gs://seqr-hail-search-data/v3.1/GRCh38/GCNV/runs/auto__2024-09-14/_SUCCESS',
 ]
-METADATA_FILES = [{
+OPENED_RUN_JSON_FILES = [{
+    'project_guids': ['R0003_test'],
+    'error_messages': ['Missing the following expected contigs:chr17'],
+}, {
     'callsets': ['1kg.vcf.gz', 'new_samples.vcf.gz'],
     'sample_type': 'WES',
     'family_samples': {
@@ -185,10 +192,9 @@ METADATA_FILES = [{
     'family_samples': {'F000004_4': ['NA20872'], 'F000012_12': ['NA20889']},
 }]
 
-
-def mock_metadata_file(index):
+def mock_opened_file(index):
     m = mock.MagicMock()
-    m.stdout = [json.dumps(METADATA_FILES[index]).encode()]
+    m.stdout = [json.dumps(OPENED_RUN_JSON_FILES[index]).encode()]
     return m
 
 
@@ -198,10 +204,9 @@ def mock_metadata_file(index):
 @mock.patch('seqr.utils.communication_utils.BASE_URL', SEQR_URL)
 @mock.patch('seqr.utils.search.add_data_utils.SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL', 'anvil-data-loading')
 @mock.patch('seqr.utils.search.add_data_utils.SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL', 'seqr-data-loading')
-class CheckNewSamplesTest(AnvilAuthenticationTestCase):
-    fixtures = ['users', '1kg_project']
+class CheckNewSamplesTest(object):
 
-    def setUp(self):
+    def set_up(self):
         patcher = mock.patch('seqr.management.commands.check_for_new_samples_from_pipeline.logger')
         self.mock_logger = patcher.start()
         self.addCleanup(patcher.stop)
@@ -230,19 +235,24 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         self.addCleanup(patcher.stop)
         self.mock_ls_process = mock.MagicMock()
         self.mock_ls_process.communicate.return_value = b'\n'.join(RUN_PATHS), b''
+        self.mock_mv_process = mock.MagicMock()
+        self.mock_mv_process.wait.return_value = 0
         patcher = mock.patch('seqr.management.commands.check_for_new_samples_from_pipeline.HAIL_SEARCH_DATA_DIR')
         self.mock_data_dir = patcher.start()
         self.addCleanup(patcher.stop)
-        super().setUp()
 
     def _test_call(self, error_logs, reload_annotations_logs=None, run_loading_logs=None, reload_calls=None):
         self.mock_subprocess.reset_mock()
-        self.mock_subprocess.side_effect = [self.mock_ls_process] + [mock_metadata_file(i) for i in range(len(RUN_PATHS))]
+        self.mock_subprocess.side_effect = [self.mock_ls_process, mock_opened_file(0), self.mock_mv_process] + [
+            mock_opened_file(i+1) for i in range(len(RUN_PATHS[3:]))
+        ]
 
         call_command('check_for_new_samples_from_pipeline')
 
         self.mock_subprocess.assert_has_calls([mock.call(command, stdout=-1, stderr=stderr, shell=True) for (command, stderr) in [
-            ('gsutil ls gs://seqr-hail-search-data/v3.1/*/*/runs/*/_SUCCESS', -1),
+            ('gsutil ls gs://seqr-hail-search-data/v3.1/*/*/runs/*/*', -1),
+            ('gsutil cat gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-14/validation_errors.json', -2),
+            ('gsutil mv /mock/tmp/* gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-14/', -2),
             ('gsutil cat gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/auto__2023-08-09/metadata.json', -2),
             ('gsutil cat gs://seqr-hail-search-data/v3.1/GRCh37/SNV_INDEL/runs/manual__2023-11-02/metadata.json', -2),
             ('gsutil cat gs://seqr-hail-search-data/v3.1/GRCh38/MITO/runs/auto__2024-08-12/metadata.json', -2),
@@ -272,39 +282,37 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         self.mock_utils_logger.info.assert_has_calls(util_info_logs)
 
         # Test reload saved variants
-        self.assertEqual(len(responses.calls), len(reload_calls) + 9 if reload_calls else 0)
+        if not reload_calls:
+            self.assertEqual(len(responses.calls), 0)
+            return
+
+        num_airtable_calls = self._assert_expected_airtable_calls()
+        self.assertEqual(len(responses.calls), len(reload_calls) + 2 + num_airtable_calls)
         for i, call in enumerate(reload_calls or []):
-            resp = responses.calls[i+7]
+            resp = responses.calls[i+num_airtable_calls]
             self.assertEqual(resp.request.url, f'{MOCK_HAIL_ORIGIN}:5000/search')
             self.assertEqual(resp.request.headers.get('From'), 'manage_command')
             self.assertDictEqual(json.loads(resp.request.body), call)
 
+        for i, variant_id in enumerate([['1', 1562437, 'G', 'CA'], ['1', 46859832, 'G', 'A']]):
+            multi_lookup_request = responses.calls[num_airtable_calls+len(reload_calls)+i].request
+            self.assertEqual(multi_lookup_request.url, f'{MOCK_HAIL_ORIGIN}:5000/multi_lookup')
+            self.assertEqual(multi_lookup_request.headers.get('From'), 'manage_command')
+            self.assertDictEqual(json.loads(multi_lookup_request.body), {
+                'genome_version': 'GRCh38',
+                'data_type': 'SNV_INDEL',
+                'variant_ids': [variant_id],
+            })
+
     @mock.patch('seqr.management.commands.check_for_new_samples_from_pipeline.MAX_LOOKUP_VARIANTS', 1)
     @mock.patch('seqr.views.utils.airtable_utils.BASE_URL', 'https://test-seqr.org/')
     @mock.patch('seqr.views.utils.airtable_utils.MAX_UPDATE_RECORDS', 2)
-    @mock.patch('seqr.views.utils.airtable_utils.logger')
+    @mock.patch('seqr.views.utils.export_utils.os.makedirs')
+    @mock.patch('seqr.views.utils.export_utils.TemporaryDirectory')
+    @mock.patch('seqr.views.utils.export_utils.open')
     @mock.patch('seqr.utils.communication_utils.EmailMultiAlternatives')
     @responses.activate
-    def test_command(self, mock_email, mock_airtable_utils):
-        responses.add(
-            responses.GET,
-            "http://testairtable/appUelDNM3BnWaR7M/AnVIL%20Seqr%20Loading%20Requests%20Tracking?fields[]=Status&pageSize=2&filterByFormula=AND({AnVIL Project URL}='https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page',OR(Status='Loading',Status='Loading Requested'))",
-            json={'records': [{'id': 'rec12345', 'fields': {}}, {'id': 'rec67890', 'fields': {}}]})
-        airtable_samples_url = 'http://testairtable/app3Y97xtbbaOopVR/Samples'
-        airtable_pdo_url = 'http://testairtable/app3Y97xtbbaOopVR/PDO'
-        responses.add(
-            responses.GET,
-            f"{airtable_samples_url}?fields[]=CollaboratorSampleID&fields[]=SeqrCollaboratorSampleID&fields[]=PDOStatus&fields[]=SeqrProject&fields[]=PDOID&pageSize=100&filterByFormula=AND(SEARCH('https://test-seqr.org/project/R0003_test/project_page',ARRAYJOIN({{SeqrProject}},';')),OR(SEARCH('Methods (Loading)',ARRAYJOIN(PDOStatus,';')),SEARCH('On hold for phenotips, but ready to load',ARRAYJOIN(PDOStatus,';'))))",
-            json=AIRTABLE_SAMPLE_RECORDS)
-        responses.add(
-            responses.GET,
-            f"{airtable_pdo_url}?{PDO_QUERY_FIELDS}&pageSize=100&filterByFormula=OR(RECORD_ID()='recW24C2CJW5lT64K')",
-            json=AIRTABLE_PDO_RECORDS)
-        responses.add(responses.PATCH, airtable_samples_url, json=AIRTABLE_SAMPLE_RECORDS)
-        responses.add(responses.PATCH, airtable_pdo_url, status=400)
-        responses.add_callback(responses.POST, airtable_pdo_url, callback=lambda request: (200, {}, json.dumps({
-            'records': [{'id': f'rec{i}ABC123', **r} for i, r in enumerate(json.loads(request.body)['records'])]
-        })))
+    def test_command(self, mock_email, mock_open_write_file, mock_temp_dir, mock_mkdir):
         responses.add(responses.POST, f'{MOCK_HAIL_ORIGIN}:5000/search', status=200, json={
             'results': [{'variantId': '1-248367227-TC-T', 'familyGuids': ['F000014_14'], 'updated_field': 'updated_value'}],
             'total': 1,
@@ -324,7 +332,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         with self.assertRaises(CommandError) as ce:
             call_command('check_for_new_samples_from_pipeline', '--genome_version=GRCh37', '--dataset_type=MITO')
         self.assertEqual(str(ce.exception), 'No successful runs found for genome_version=GRCh37, dataset_type=MITO')
-        self.mock_glob.assert_called_with('/seqr/seqr-hail-search-data/GRCh37/MITO/runs/*/_SUCCESS', recursive=False)
+        self.mock_glob.assert_called_with('/seqr/seqr-hail-search-data/GRCh37/MITO/runs/*/*', recursive=False)
         self.mock_subprocess.assert_not_called()
 
         call_command('check_for_new_samples_from_pipeline')
@@ -334,6 +342,9 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         self.mock_send_slack.assert_not_called()
 
         local_files = [
+            '/seqr/seqr-hail-search-data/GRCh38/SNV_INDEL/runs/manual__2025-01-13/_ERRORS_REPORTED',
+            '/seqr/seqr-hail-search-data/GRCh38/SNV_INDEL/runs/manual__2025-01-13/validation_errors.json',
+            '/seqr/seqr-hail-search-data/GRCh38/SNV_INDEL/runs/manual__2025-01-14/validation_errors.json',
             '/seqr/seqr-hail-search-data/GRCh38/SNV_INDEL/runs/auto__2023-08-09/_SUCCESS',
             '/seqr/seqr-hail-search-data/GRCh37/SNV_INDEL/runs/manual__2023-11-02/_SUCCESS',
             '/seqr/seqr-hail-search-data/GRCh38/MITO/runs/auto__2024-08-12/_SUCCESS',
@@ -341,12 +352,19 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         ]
         self.mock_glob.return_value = local_files
         self.mock_open.return_value.__enter__.return_value.__iter__.side_effect = [
-            iter([json.dumps(METADATA_FILES[i])]) for i in range(len(local_files))
+            iter([json.dumps(OPENED_RUN_JSON_FILES[i])]) for i in range(len(local_files[2:]))
         ]
+        mock_written_files = defaultdict(mock.MagicMock)
+        mock_open_write_file.side_effect = lambda file_name, *args: mock_written_files[file_name]
+
         call_command('check_for_new_samples_from_pipeline')
-        self.mock_glob.assert_called_with('/seqr/seqr-hail-search-data/*/*/runs/*/_SUCCESS', recursive=False)
-        self.mock_open.assert_has_calls(
-            [mock.call(path.replace('_SUCCESS', 'metadata.json'), 'r') for path in local_files], any_order=True)
+        self.mock_glob.assert_called_with('/seqr/seqr-hail-search-data/*/*/runs/*/*', recursive=False)
+        self.mock_open.assert_has_calls([
+            mock.call(local_files[2], 'r'),
+            *[mock.call(path.replace('_SUCCESS', 'metadata.json'), 'r') for path in local_files[3:]]
+        ], any_order=True)
+        mock_mkdir.assert_called_once()
+        self.assertEqual(list(mock_written_files.keys()), [local_files[2].replace('validation_errors.json', '_ERRORS_REPORTED')])
         self.mock_subprocess.assert_not_called()
         error_logs = [
             'Error loading auto__2023-08-09: Data has genome version GRCh38 but the following projects have conflicting versions: R0003_test (GRCh37)',
@@ -357,18 +375,21 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         self.mock_logger.error.assert_has_calls([mock.call(error) for error in error_logs])
 
         self.mock_glob.reset_mock()
+        mock_mkdir.reset_mock()
         self.mock_subprocess.return_value.communicate.return_value = b'', b'One or more URLs matched no objects'
         self.mock_data_dir.__str__.return_value = 'gs://seqr-hail-search-data/v3.1'
         with self.assertRaises(CommandError) as ce:
             call_command('check_for_new_samples_from_pipeline', '--genome_version=GRCh37', '--dataset_type=MITO')
         self.assertEqual(str(ce.exception), 'No successful runs found for genome_version=GRCh37, dataset_type=MITO')
         self.mock_subprocess.assert_called_with(
-            'gsutil ls gs://seqr-hail-search-data/v3.1/GRCh37/MITO/runs/*/_SUCCESS', stdout=-1, stderr=-1, shell=True
+            'gsutil ls gs://seqr-hail-search-data/v3.1/GRCh37/MITO/runs/*/*', stdout=-1, stderr=-1, shell=True
         )
         self.mock_glob.assert_not_called()
 
+        mock_temp_dir.return_value.__enter__.return_value = '/mock/tmp'
         self._test_call(error_logs=error_logs)
         self.assertEqual(Sample.objects.filter(guid__in=SAMPLE_GUIDS + GCNV_SAMPLE_GUIDS).count(), 0)
+        mock_mkdir.assert_not_called()
 
         # Update fixture data to allow testing edge cases
         Project.objects.filter(id__in=[1, 3]).update(genome_version=38)
@@ -378,6 +399,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
             sv.save()
 
         # Test success
+        self.mock_send_slack.reset_mock()
         self.mock_logger.reset_mock()
         search_body = {
             'genome_version': 'GRCh38', 'num_results': 1, 'variant_ids': [['1', 248367227, 'TC', 'T']], 'variant_keys': [],
@@ -394,7 +416,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
                 {'individual_guid': 'I000017_na20889', 'family_guid': 'F000012_12', 'project_guid': 'R0003_test', 'affected': 'A', 'sample_id': 'NA20889', 'sample_type': 'WES'},
             ]}},
         ], reload_annotations_logs=[
-            'Reloading shared annotations for 3 SNV_INDEL GRCh38 saved variants (3 unique)', 'Fetched 1 additional variants', 'Fetched 1 additional variants', 'Updated 2 SNV_INDEL GRCh38 saved variants',
+            'Reloading shared annotations for 3 SNV_INDEL GRCh38 saved variants (3 unique)', 'Fetched 1 additional variants in chromosome 1', 'Fetched 1 additional variants in chromosome 1', 'Updated 2 SNV_INDEL GRCh38 saved variants',
             'No additional SV_WES GRCh38 saved variants to update',
         ], run_loading_logs={
             'GRCh38/SNV_INDEL': 'Loading 4 WES SNV_INDEL samples in 2 projects',
@@ -468,48 +490,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         )
         self.assertEqual(Family.objects.get(guid='F000014_14').analysis_status, 'Rncc')
 
-        # Test airtable PDO updates
-        update_pdos_request = responses.calls[1].request
-        self.assertEqual(update_pdos_request.url, airtable_pdo_url)
-        self.assertEqual(update_pdos_request.method, 'PATCH')
-        self.assertDictEqual(json.loads(update_pdos_request.body), {'records': [
-            {'id': 'rec0RWBVfDVbtlBSL', 'fields': {'PDOStatus': 'Available in seqr'}},
-            {'id': 'recW24C2CJW5lT64K', 'fields': {'PDOStatus': 'Available in seqr'}},
-        ]})
-        create_pdos_request = responses.calls[3].request
-        self.assertEqual(create_pdos_request.url, airtable_pdo_url)
-        self.assertEqual(create_pdos_request.method, 'POST')
-        self.assertDictEqual(json.loads(create_pdos_request.body), {'records': [{'fields': {
-            'PDO': 'PDO-1234_sr',
-            'SeqrProjectURL': 'https://test-seqr.org/project/R0003_test/project_page',
-            'PDOStatus': 'Methods (Loading)',
-            'PDOName': 'RGP_WGS_12',
-        }}]})
-        update_samples_request = responses.calls[4].request
-        self.assertEqual(update_samples_request.url, airtable_samples_url)
-        self.assertEqual(update_samples_request.method, 'PATCH')
-        self.assertDictEqual(json.loads(update_samples_request.body), {'records': [
-            {'id': 'rec2B6OGmQpAkQW3s', 'fields': {'PDOID': ['rec0ABC123']}},
-            {'id': 'rec2Nkg10N1KssPc3', 'fields': {'PDOID': ['rec0ABC123']}},
-        ]})
-        update_samples_request_2 = responses.calls[5].request
-        self.assertEqual(update_samples_request_2.url, airtable_samples_url)
-        self.assertEqual(update_samples_request_2.method, 'PATCH')
-        self.assertDictEqual(json.loads(update_samples_request_2.body), {'records': [
-            {'id': 'recfMYDEZpPtzAIeV', 'fields': {'PDOID': ['rec0ABC123']}},
-        ]})
-
         # Test SavedVariant model updated
-        for i, variant_id in enumerate([['1', 1562437, 'G', 'CA'], ['1', 46859832, 'G', 'A']]):
-            multi_lookup_request = responses.calls[10+i].request
-            self.assertEqual(multi_lookup_request.url, f'{MOCK_HAIL_ORIGIN}:5000/multi_lookup')
-            self.assertEqual(multi_lookup_request.headers.get('From'), 'manage_command')
-            self.assertDictEqual(json.loads(multi_lookup_request.body), {
-                'genome_version': 'GRCh38',
-                'data_type': 'SNV_INDEL',
-                'variant_ids': [variant_id],
-            })
-
         updated_variants = SavedVariant.objects.filter(saved_variant_json__updated_field='updated_value')
         self.assertEqual(len(updated_variants), 2)
         self.assertSetEqual(
@@ -530,10 +511,10 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         self.assertEqual(annotation_updated_json['mainTranscriptId'], 'ENST00000505820')
         self.assertEqual(len(annotation_updated_json['genotypes']), 3)
 
-        self.mock_utils_logger.error.assert_called_with('Error in project Test Reprocessed Project: Bad Request')
+        self.mock_utils_logger.error.assert_called_with('Error reloading variants in Test Reprocessed Project: Bad Request')
         self.mock_utils_logger.info.assert_has_calls([
-            mock.call('Updated 0 variants for project Test Reprocessed Project'),
-            mock.call('Updated 1 variants for project Non-Analyst Project'),
+            mock.call('Updated 0 variants in 1 families for project Test Reprocessed Project'),
+            mock.call('Updated 1 variants in 1 families for project Non-Analyst Project'),
             mock.call('Reload Summary: '),
             mock.call('  Non-Analyst Project: Updated 1 variants'),
             mock.call('Reloading saved variants in 2 projects'),
@@ -544,31 +525,22 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         ])
 
         # Test notifications
-        self.assertEqual(self.mock_send_slack.call_count, 7)
+        self.assertEqual(self.mock_send_slack.call_count, 6 + len(self.ADDITIONAL_SLACK_CALLS))
         self.mock_send_slack.assert_has_calls([
+            mock.call('seqr_loading_notifications',
+             f"""Callset Validation Failed
+Projects: ['{PROJECT_GUID}']
+Reference Genome: GRCh38
+Dataset Type: SNV_INDEL
+Run ID: manual__2025-01-14
+Validation Errors: ['Missing the following expected contigs:chr17']
+See more at https://storage.cloud.google.com/seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-14/validation_errors.json"""
+            ),
             mock.call(
                 'seqr-data-loading',
                 f'2 new WES samples are loaded in <{SEQR_URL}project/{PROJECT_GUID}/project_page|Test Reprocessed Project>\n```NA20888, NA20889```',
             ),
-            mock.call(
-                'anvil-data-loading',
-                f'1 new WES samples are loaded in <{SEQR_URL}project/{EXTERNAL_PROJECT_GUID}/project_page|Non-Analyst Project>',
-            ),
-            mock.call(
-                'seqr_loading_notifications',
-                f'''Unable to identify Airtable "AnVIL Seqr Loading Requests Tracking" record to update
-
-Record lookup criteria:
-```
-or_filters: {{"Status": ["Loading", "Loading Requested"]}}
-and_filters: {{"AnVIL Project URL": "{SEQR_URL}project/{EXTERNAL_PROJECT_GUID}/project_page"}}
-```
-
-Desired update:
-```
-{{"Status": "Available in Seqr"}}
-```''',
-            ),
+            ] + self.ADDITIONAL_SLACK_CALLS + [
             mock.call(
                 'seqr_loading_notifications',
                 """Encountered the following errors loading 1kg project nåme with uniçøde:
@@ -601,21 +573,15 @@ The following 1 families failed sex check:
 
         self.assertEqual(mock_email.call_count, 4)
         mock_email.assert_has_calls([
-            mock.call(body=INTERNAL_TEXT_EMAIL, subject='New data available in seqr', to=['test_user_manager@test.com']),
-            mock.call().attach_alternative(INTERNAL_HTML_EMAIL, 'text/html'),
+            mock.call(body=TEXT_EMAIL_TEMPLATE.format(2, 'Test Reprocessed Project'), subject='New data available in seqr', to=['test_user_manager@test.com']),
+            mock.call().attach_alternative(HTML_EMAIL_TEMAPLTE.format(2, PROJECT_GUID, 'Test Reprocessed Project'), 'text/html'),
             mock.call().send(),
-            mock.call(body=ANVIL_TEXT_EMAIL, subject='New data available in seqr', to=['test_user_collaborator@test.com']),
-            mock.call().attach_alternative(ANVIL_HTML_EMAIL, 'text/html'),
+            mock.call(body=self.PROJECT_EMAIL_TEXT, subject='New data available in seqr', to=['test_user_collaborator@test.com']),
+            mock.call().attach_alternative(self.PROJECT_EMAIL_HTML, 'text/html'),
             mock.call().send(),
         ])
         self.assertDictEqual(mock_email.return_value.esp_extra, {'MessageStream': 'seqr-notifications'})
         self.assertDictEqual(mock_email.return_value.merge_data, {})
-
-        self.assertEqual(mock_airtable_utils.error.call_count, 1)
-        mock_airtable_utils.error.assert_has_calls([mock.call(
-            f'Airtable patch "PDO" error: 400 Client Error: Bad Request for url: {airtable_pdo_url}', None, detail={
-                'record_ids': {'rec0RWBVfDVbtlBSL', 'recW24C2CJW5lT64K'}, 'update': {'PDOStatus': 'Available in seqr'}}
-        )])
 
         self.assertEqual(self.manager_user.notifications.count(), 5)
         self.assertEqual(
@@ -625,7 +591,7 @@ The following 1 families failed sex check:
             str(self.collaborator_user.notifications.first()), 'Non-Analyst Project Loaded 1 new WES samples 0 minutes ago')
 
         # Test reloading has no effect
-        self.mock_ls_process.communicate.return_value = b'\n'.join([RUN_PATHS[0], RUN_PATHS[3]]), b''
+        self.mock_ls_process.communicate.return_value = b'\n'.join([RUN_PATHS[3], RUN_PATHS[6]]), b''
         self.mock_subprocess.side_effect = [self.mock_ls_process]
         self.mock_logger.reset_mock()
         mock_email.reset_mock()
@@ -640,3 +606,122 @@ The following 1 families failed sex check:
         self.mock_send_slack.assert_not_called()
         self.assertFalse(Sample.objects.filter(last_modified_date__gt=sample_last_modified).exists())
         self.mock_redis.return_value.delete.assert_not_called()
+
+class LocalCheckNewSamplesTest(AuthenticationTestCase, CheckNewSamplesTest):
+    fixtures = ['users', '1kg_project']
+
+    ES_HOSTNAME = ''
+
+    PROJECT_EMAIL_TEXT = TEXT_EMAIL_TEMPLATE.format(1, 'Non-Analyst Project')
+    PROJECT_EMAIL_HTML = HTML_EMAIL_TEMAPLTE.format(1, EXTERNAL_PROJECT_GUID, 'Non-Analyst Project')
+
+    ADDITIONAL_SLACK_CALLS = [
+        mock.call(
+            'seqr-data-loading',
+            f'1 new WES samples are loaded in <{SEQR_URL}project/{EXTERNAL_PROJECT_GUID}/project_page|Non-Analyst Project>\n```NA21234```',
+        ),
+    ]
+
+    def setUp(self):
+        self.set_up()
+        super().setUp()
+
+    def _assert_expected_airtable_calls(self):
+        return 0
+
+class AirtableCheckNewSamplesTest(AnvilAuthenticationTestCase, CheckNewSamplesTest):
+    fixtures = ['users', '1kg_project']
+
+    airtable_samples_url = 'http://testairtable/app3Y97xtbbaOopVR/Samples'
+    airtable_pdo_url = 'http://testairtable/app3Y97xtbbaOopVR/PDO'
+
+    PROJECT_EMAIL_TEXT = ANVIL_TEXT_EMAIL
+    PROJECT_EMAIL_HTML = ANVIL_HTML_EMAIL
+
+    ADDITIONAL_SLACK_CALLS = [
+        mock.call(
+            'anvil-data-loading',
+            f'1 new WES samples are loaded in <{SEQR_URL}project/{EXTERNAL_PROJECT_GUID}/project_page|Non-Analyst Project>',
+        ),
+        mock.call(
+            'seqr_loading_notifications',
+            f'''Unable to identify Airtable "AnVIL Seqr Loading Requests Tracking" record to update
+
+Record lookup criteria:
+```
+or_filters: {{"Status": ["Loading", "Loading Requested"]}}
+and_filters: {{"AnVIL Project URL": "{SEQR_URL}project/{EXTERNAL_PROJECT_GUID}/project_page"}}
+```
+
+Desired update:
+```
+{{"Status": "Available in Seqr"}}
+```''',
+        ),
+    ]
+
+    def setUp(self):
+        patcher = mock.patch('seqr.views.utils.airtable_utils.logger')
+        self.mock_airtable_utils_logger = patcher.start()
+        self.addCleanup(patcher.stop)
+        self.set_up()
+        super().setUp()
+
+    def test_command(self, *args, **kwargs):
+        responses.add(
+            responses.GET,
+            "http://testairtable/appUelDNM3BnWaR7M/AnVIL%20Seqr%20Loading%20Requests%20Tracking?fields[]=Status&pageSize=2&filterByFormula=AND({AnVIL Project URL}='https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page',OR(Status='Loading',Status='Loading Requested'))",
+            json={'records': [{'id': 'rec12345', 'fields': {}}, {'id': 'rec67890', 'fields': {}}]})
+        responses.add(
+            responses.GET,
+            f"{self.airtable_samples_url}?fields[]=CollaboratorSampleID&fields[]=SeqrCollaboratorSampleID&fields[]=PDOStatus&fields[]=SeqrProject&fields[]=PDOID&pageSize=100&filterByFormula=AND(SEARCH('https://test-seqr.org/project/R0003_test/project_page',ARRAYJOIN({{SeqrProject}},';')),OR(SEARCH('Methods (Loading)',ARRAYJOIN(PDOStatus,';')),SEARCH('On hold for phenotips, but ready to load',ARRAYJOIN(PDOStatus,';'))))",
+            json=AIRTABLE_SAMPLE_RECORDS)
+        responses.add(
+            responses.GET,
+            f"{self.airtable_pdo_url}?{PDO_QUERY_FIELDS}&pageSize=100&filterByFormula=OR(RECORD_ID()='recW24C2CJW5lT64K')",
+            json=AIRTABLE_PDO_RECORDS)
+        responses.add(responses.PATCH, self.airtable_samples_url, json=AIRTABLE_SAMPLE_RECORDS)
+        responses.add(responses.PATCH, self.airtable_pdo_url, status=400)
+        responses.add_callback(responses.POST, self.airtable_pdo_url, callback=lambda request: (200, {}, json.dumps({
+            'records': [{'id': f'rec{i}ABC123', **r} for i, r in enumerate(json.loads(request.body)['records'])]
+        })))
+        super().test_command(*args, **kwargs)
+
+    def _assert_expected_airtable_calls(self):
+        self.assertEqual(self.mock_airtable_utils_logger.error.call_count, 1)
+        self.mock_airtable_utils_logger.error.assert_has_calls([mock.call(
+            f'Airtable patch "PDO" error: 400 Client Error: Bad Request for url: {self.airtable_pdo_url}', None, detail={
+                'record_ids': {'rec0RWBVfDVbtlBSL', 'recW24C2CJW5lT64K'}, 'update': {'PDOStatus': 'Available in seqr'}}
+        )])
+
+        # Test airtable PDO updates
+        update_pdos_request = responses.calls[1].request
+        self.assertEqual(update_pdos_request.url, self.airtable_pdo_url)
+        self.assertEqual(update_pdos_request.method, 'PATCH')
+        self.assertDictEqual(json.loads(update_pdos_request.body), {'records': [
+            {'id': 'rec0RWBVfDVbtlBSL', 'fields': {'PDOStatus': 'Available in seqr'}},
+            {'id': 'recW24C2CJW5lT64K', 'fields': {'PDOStatus': 'Available in seqr'}},
+        ]})
+        create_pdos_request = responses.calls[3].request
+        self.assertEqual(create_pdos_request.url, self.airtable_pdo_url)
+        self.assertEqual(create_pdos_request.method, 'POST')
+        self.assertDictEqual(json.loads(create_pdos_request.body), {'records': [{'fields': {
+            'PDO': 'PDO-1234_sr',
+            'SeqrProjectURL': 'https://test-seqr.org/project/R0003_test/project_page',
+            'PDOStatus': 'Methods (Loading)',
+            'PDOName': 'RGP_WGS_12',
+        }}]})
+        update_samples_request = responses.calls[4].request
+        self.assertEqual(update_samples_request.url, self.airtable_samples_url)
+        self.assertEqual(update_samples_request.method, 'PATCH')
+        self.assertDictEqual(json.loads(update_samples_request.body), {'records': [
+            {'id': 'rec2B6OGmQpAkQW3s', 'fields': {'PDOID': ['rec0ABC123']}},
+            {'id': 'rec2Nkg10N1KssPc3', 'fields': {'PDOID': ['rec0ABC123']}},
+        ]})
+        update_samples_request_2 = responses.calls[5].request
+        self.assertEqual(update_samples_request_2.url, self.airtable_samples_url)
+        self.assertEqual(update_samples_request_2.method, 'PATCH')
+        self.assertDictEqual(json.loads(update_samples_request_2.body), {'records': [
+            {'id': 'recfMYDEZpPtzAIeV', 'fields': {'PDOID': ['rec0ABC123']}},
+        ]})
+        return 7
