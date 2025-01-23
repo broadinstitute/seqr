@@ -1,7 +1,7 @@
-from enum import Enum
+from enum import StrEnum
 
 
-class SampleType(str, Enum):
+class SampleType(StrEnum):
     WES = 'WES'
     WGS = 'WGS'
 
