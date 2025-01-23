@@ -203,7 +203,7 @@ class Command(BaseCommand):
         updated_project_families = []
         updated_families = set()
         split_project_pdos = {}
-        session = AirtableSession(user=None, no_auth=True)
+        session = AirtableSession(user=None, no_auth=True) if AirtableSession.is_airtable_enabled() else None
         for project, sample_ids in samples_by_project.items():
             project_sample_data = new_sample_data_by_project[project.id]
             is_internal = not project_has_anvil(project) or is_internal_anvil_project(project)
@@ -215,7 +215,7 @@ class Command(BaseCommand):
             if project_families:
                 updated_families.update(project_families)
                 updated_project_families.append((project.id, project.name, project.genome_version, project_families))
-            if is_internal and dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
+            if session and is_internal and dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
                 split_project_pdos[project.name] = cls._update_pdos(session, project.guid, sample_ids)
 
         # Send failure notifications
