@@ -106,10 +106,11 @@ class Command(BaseCommand):
         runs = defaultdict(lambda: {'files': set()})
         for path in list_files(path, user=None):
             run_dirname = os.path.dirname(path)
-            match_dict = re.match(path_regex, path).groupdict()
+            match_dict = re.match(f'{path_regex}?', path).groupdict()
             file_name = match_dict.pop('file_name')
-            runs[run_dirname]['files'].add(file_name)
-            runs[run_dirname].update(match_dict)
+            if file_name:
+                runs[run_dirname]['files'].add(file_name)
+                runs[run_dirname].update(match_dict)
 
         return runs
 
