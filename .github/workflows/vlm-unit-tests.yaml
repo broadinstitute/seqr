@@ -21,7 +21,7 @@ on:
 jobs:
   vlm:
     runs-on: ubuntu-latest
-    container: hailgenetics/hail:0.2.132-py3.11
+    container: hailgenetics/hail:0.2.128-py3.11
 
     steps:
       - uses: actions/checkout@v2

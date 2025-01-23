@@ -1,4 +1,4 @@
-FROM hailgenetics/hail:0.2.132-py3.11
+FROM hailgenetics/hail:0.2.128-py3.11
 
 LABEL maintainer="Broad TGG"
 
