@@ -156,6 +156,8 @@ RUN_PATHS = [
     b'gs://seqr-hail-search-data/v3.1/GRCh38/GCNV/runs/auto__2024-09-14/',
     b'gs://seqr-hail-search-data/v3.1/GRCh38/GCNV/runs/auto__2024-09-14/_SUCCESS',
     b'gs://seqr-hail-search-data/v3.1/GRCh38/GCNV/runs/auto__2024-09-14/README.txt',
+    b'gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-24/',
+    b'gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-24/validation_errors.json',
 ]
 OPENED_RUN_JSON_FILES = [{
     'callsets': ['1kg.vcf.gz', 'new_samples.vcf.gz'],
@@ -197,6 +199,8 @@ OPENED_RUN_JSON_FILES = [{
 }, {
     'project_guids': ['R0003_test'],
     'error_messages': ['Missing the following expected contigs:chr17'],
+}, {
+    'error': 'An unhandled error occurred during VCF ingestion',
 }]
 
 def mock_opened_file(index):
@@ -252,7 +256,7 @@ class CheckNewSamplesTest(object):
         self.mock_subprocess.reset_mock()
         self.mock_subprocess.side_effect = [self.mock_ls_process] + [
             mock_opened_file(i) for i in range(len(OPENED_RUN_JSON_FILES))
-        ] + [self.mock_mv_process]
+        ] + [self.mock_mv_process, self.mock_mv_process]
 
         call_command('check_for_new_samples_from_pipeline')
 
@@ -263,7 +267,9 @@ class CheckNewSamplesTest(object):
             ('gsutil cat gs://seqr-hail-search-data/v3.1/GRCh38/MITO/runs/auto__2024-08-12/metadata.json', -2),
             ('gsutil cat gs://seqr-hail-search-data/v3.1/GRCh38/GCNV/runs/auto__2024-09-14/metadata.json', -2),
             ('gsutil cat gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-14/validation_errors.json', -2),
+            ('gsutil cat gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-24/validation_errors.json', -2),
             ('gsutil mv /mock/tmp/* gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-14/', -2),
+            ('gsutil mv /mock/tmp/* gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-24/', -2),
         ]])
 
         loading_logs = []
@@ -356,6 +362,7 @@ class CheckNewSamplesTest(object):
             '/seqr/seqr-hail-search-data/GRCh37/SNV_INDEL/runs/manual__2023-11-02/_SUCCESS',
             '/seqr/seqr-hail-search-data/GRCh38/MITO/runs/auto__2024-08-12/_SUCCESS',
             '/seqr/seqr-hail-search-data/GRCh38/GCNV/runs/auto__2024-09-14/_SUCCESS',
+            '/seqr/seqr-hail-search-data/GRCh38/SNV_INDEL/runs/manual__2025-01-24/validation_errors.json',
         ]
         self.mock_glob.return_value = local_files
         self.mock_open.return_value.__enter__.return_value.__iter__.side_effect = [
@@ -370,8 +377,11 @@ class CheckNewSamplesTest(object):
             mock.call(local_files[2], 'r'),
             *[mock.call(path.replace('_SUCCESS', 'metadata.json'), 'r') for path in local_files[3:]]
         ], any_order=True)
-        mock_mkdir.assert_called_once()
-        self.assertEqual(list(mock_written_files.keys()), [local_files[2].replace('validation_errors.json', '_ERRORS_REPORTED')])
+        self.assertEqual(mock_mkdir.call_count, 2)
+        self.assertEqual(list(mock_written_files.keys()), [
+            file.replace('validation_errors.json', '_ERRORS_REPORTED')
+            for file in [local_files[2], local_files[7]]
+        ])
         self.mock_subprocess.assert_not_called()
         error_logs = [
             'Error loading auto__2023-08-09: Data has genome version GRCh38 but the following projects have conflicting versions: R0003_test (GRCh37)',
@@ -532,7 +542,7 @@ class CheckNewSamplesTest(object):
         ])
 
         # Test notifications
-        self.assertEqual(self.mock_send_slack.call_count, 6 + len(self.ADDITIONAL_SLACK_CALLS))
+        self.assertEqual(self.mock_send_slack.call_count, 7 + len(self.ADDITIONAL_SLACK_CALLS))
         self.mock_send_slack.assert_has_calls([
             mock.call(
                 'seqr-data-loading',
@@ -575,6 +585,14 @@ Dataset Type: SNV_INDEL
 Run ID: manual__2025-01-14
 Validation Errors: ['Missing the following expected contigs:chr17']
 See more at https://storage.cloud.google.com/seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-14/validation_errors.json"""
+        ), mock.call('seqr_loading_notifications',
+                      f"""Callset Validation Failed
+Projects: MISSING FROM ERROR REPORT
+Reference Genome: GRCh38
+Dataset Type: SNV_INDEL
+Run ID: manual__2025-01-24
+Validation Errors: {{"error": "An unhandled error occurred during VCF ingestion"}}
+See more at https://storage.cloud.google.com/seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-24/validation_errors.json"""
         ),
         ])
 

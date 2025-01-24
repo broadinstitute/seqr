@@ -127,8 +127,8 @@ class Command(BaseCommand):
     @staticmethod
     def _report_validation_errors(runs) -> None:
         messages = []
-        reported_runs = set()
-        for run_dir, run_details in runs.items():
+        reported_runs = []
+        for run_dir, run_details in sorted(runs.items()):
             files = run_details['files']
             if ERRORS_REPORTED_FILE_NAME in files:
                 continue
@@ -137,20 +137,20 @@ class Command(BaseCommand):
                 error_summary = json.loads(next(line for line in file_iter(file_path)))
                 summary = [
                     'Callset Validation Failed',
-                    f'Projects: {error_summary["project_guids"]}',
+                    f'Projects: {error_summary.get("project_guids", "MISSING FROM ERROR REPORT")}',
                     f'Reference Genome: {run_details["genome_version"]}',
                     f'Dataset Type: {run_details["dataset_type"]}',
                     f'Run ID: {run_details["run_version"]}',
-                    f'Validation Errors: {error_summary["error_messages"]}',
+                    f'Validation Errors: {error_summary.get("error_messages", json.dumps(error_summary))}',
                 ]
                 if is_google_bucket_file_path(file_path):
                     summary.append(f'See more at https://storage.cloud.google.com/{file_path[5:]}')
                 messages.append('\n'.join(summary))
-                reported_runs.add(run_dir)
+                reported_runs.append(run_dir)
 
-        if messages:
+        for message in messages:
             safe_post_to_slack(
-                SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, '\n\n'.join(messages),
+                SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, message,
             )
         for run_dir in reported_runs:
             write_multiple_files([(ERRORS_REPORTED_FILE_NAME, [], [])], run_dir, user=None, file_format=None)
