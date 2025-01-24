@@ -32,7 +32,7 @@ RUN_PATH_FIELDS = ['genome_version', 'dataset_type', 'run_version', 'file_name']
 
 DATASET_TYPE_MAP = {'GCNV': Sample.DATASET_TYPE_SV_CALLS}
 USER_EMAIL = 'manage_command'
-MAX_LOOKUP_VARIANTS = 1000
+MAX_LOOKUP_VARIANTS = 3000
 RELATEDNESS_CHECK_NAME = 'relatedness_check'
 
 PDO_COPY_FIELDS = [
