@@ -52,17 +52,21 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         runs = self._get_runs(**options)
-        self._report_validation_errors(runs)
 
         success_run_dirs = [run_dir for run_dir, run_details in runs.items() if SUCCESS_FILE_NAME in run_details['files']]
+        if success_run_dirs:
+            self._load_success_runs(runs, success_run_dirs)
         if not success_run_dirs:
             user_args = [f'{k}={options.get(k)}' for k in RUN_PATH_FIELDS if options.get(k)]
             if user_args:
                 raise CommandError(f'No successful runs found for {", ".join(user_args)}')
             else:
                 logger.info('No loaded data available')
-                return
 
+        self._report_validation_errors(runs)
+
+
+    def _load_success_runs(self, runs, success_run_dirs):
         loaded_runs = set(Sample.objects.filter(data_source__isnull=False).values_list('data_source', flat=True))
         new_runs = {
             run_dir: run_details for run_dir, run_details in runs.items()
