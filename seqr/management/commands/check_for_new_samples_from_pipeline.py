@@ -32,7 +32,7 @@ RUN_PATH_FIELDS = ['genome_version', 'dataset_type', 'run_version', 'file_name']
 
 DATASET_TYPE_MAP = {'GCNV': Sample.DATASET_TYPE_SV_CALLS}
 USER_EMAIL = 'manage_command'
-MAX_LOOKUP_VARIANTS = 1000
+MAX_LOOKUP_VARIANTS = 3000
 RELATEDNESS_CHECK_NAME = 'relatedness_check'
 
 PDO_COPY_FIELDS = [
@@ -52,17 +52,21 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         runs = self._get_runs(**options)
-        self._report_validation_errors(runs)
 
         success_run_dirs = [run_dir for run_dir, run_details in runs.items() if SUCCESS_FILE_NAME in run_details['files']]
+        if success_run_dirs:
+            self._load_success_runs(runs, success_run_dirs)
         if not success_run_dirs:
             user_args = [f'{k}={options.get(k)}' for k in RUN_PATH_FIELDS if options.get(k)]
             if user_args:
                 raise CommandError(f'No successful runs found for {", ".join(user_args)}')
             else:
                 logger.info('No loaded data available')
-                return
 
+        self._report_validation_errors(runs)
+
+
+    def _load_success_runs(self, runs, success_run_dirs):
         loaded_runs = set(Sample.objects.filter(data_source__isnull=False).values_list('data_source', flat=True))
         new_runs = {
             run_dir: run_details for run_dir, run_details in runs.items()
@@ -78,7 +82,6 @@ class Command(BaseCommand):
         for run_dir, run_details in new_runs.items():
             try:
                 metadata_path = os.path.join(run_dir, 'metadata.json')
-                del run_details['files']
                 data_type, updated_families, updated_variants_by_id = self._load_new_samples(metadata_path, **run_details)
                 data_type_key = (data_type, run_details['genome_version'])
                 updated_families_by_data_type[data_type_key].update(updated_families)
@@ -124,8 +127,8 @@ class Command(BaseCommand):
     @staticmethod
     def _report_validation_errors(runs) -> None:
         messages = []
-        reported_runs = set()
-        for run_dir, run_details in runs.items():
+        reported_runs = []
+        for run_dir, run_details in sorted(runs.items()):
             files = run_details['files']
             if ERRORS_REPORTED_FILE_NAME in files:
                 continue
@@ -134,26 +137,26 @@ class Command(BaseCommand):
                 error_summary = json.loads(next(line for line in file_iter(file_path)))
                 summary = [
                     'Callset Validation Failed',
-                    f'Projects: {error_summary["project_guids"]}',
+                    f'Projects: {error_summary.get("project_guids", "MISSING FROM ERROR REPORT")}',
                     f'Reference Genome: {run_details["genome_version"]}',
                     f'Dataset Type: {run_details["dataset_type"]}',
                     f'Run ID: {run_details["run_version"]}',
-                    f'Validation Errors: {error_summary["error_messages"]}',
+                    f'Validation Errors: {error_summary.get("error_messages", json.dumps(error_summary))}',
                 ]
                 if is_google_bucket_file_path(file_path):
                     summary.append(f'See more at https://storage.cloud.google.com/{file_path[5:]}')
                 messages.append('\n'.join(summary))
-                reported_runs.add(run_dir)
+                reported_runs.append(run_dir)
 
-        if messages:
+        for message in messages:
             safe_post_to_slack(
-                SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, '\n\n'.join(messages),
+                SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, message,
             )
         for run_dir in reported_runs:
             write_multiple_files([(ERRORS_REPORTED_FILE_NAME, [], [])], run_dir, user=None, file_format=None)
 
     @classmethod
-    def _load_new_samples(cls, metadata_path, genome_version, dataset_type, run_version):
+    def _load_new_samples(cls, metadata_path, genome_version, dataset_type, run_version, **kwargs):
         dataset_type = DATASET_TYPE_MAP.get(dataset_type, dataset_type)
 
         logger.info(f'Loading new samples from {genome_version}/{dataset_type}: {run_version}')
@@ -194,13 +197,16 @@ class Command(BaseCommand):
             user=None,
         )
 
-        # Send loading notifications and update Airtable PDOs
         new_sample_data_by_project = {
             s['individual__family__project']: s for s in updated_samples.filter(id__in=new_samples).values('individual__family__project').annotate(
                 samples=ArrayAgg('sample_id', distinct=True),
                 family_guids=ArrayAgg('individual__family__guid', distinct=True),
             )
         }
+        return cls._report_sample_updates(dataset_type, sample_type, metadata, samples_by_project, new_sample_data_by_project)
+
+    @classmethod
+    def _report_sample_updates(cls, dataset_type, sample_type, metadata, samples_by_project, new_sample_data_by_project):
         updated_project_families = []
         updated_families = set()
         split_project_pdos = {}
