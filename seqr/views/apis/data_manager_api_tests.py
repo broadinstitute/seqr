@@ -1807,10 +1807,8 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
     def _assert_expected_get_projects_requests(self):
         pdo_filter = "OR(SEARCH('Methods (Loading)',ARRAYJOIN(PDOStatus,';')),SEARCH('On hold for phenotips, but ready to load',ARRAYJOIN(PDOStatus,';')))"
         expected_filters = [
-            f'AND(LEN({{SV_CallsetPath}})>0,{pdo_filter})',
-            f'AND(LEN({{MITO_WGS_CallsetPath}})>0,{pdo_filter})',
-            pdo_filter,
-            pdo_filter,
+            f'AND(LEN({{PassingCollaboratorSampleIDs}})>0{additional_filter},{pdo_filter})'
+            for additional_filter in [',LEN({SV_CallsetPath})>0', ',LEN({MITO_WGS_CallsetPath})>0', '', '']
         ]
         self.assertEqual(len(responses.calls), len(expected_filters))
         for i, filter_formula in enumerate(expected_filters):
@@ -1847,7 +1845,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
     def _assert_expected_airtable_call(self, required_sample_field, project_guid):
         self.assert_expected_airtable_call(
             call_index=0,
-            filter_formula=f"AND(SEARCH('https://seqr.broadinstitute.org/project/{project_guid}/project_page',ARRAYJOIN({{SeqrProject}},';')),LEN({{{required_sample_field}}})>0,OR(SEARCH('Available in seqr',ARRAYJOIN(PDOStatus,';')),SEARCH('Historic',ARRAYJOIN(PDOStatus,';'))))",
+            filter_formula=f"AND(SEARCH('https://seqr.broadinstitute.org/project/{project_guid}/project_page',ARRAYJOIN({{SeqrProject}},';')),LEN({{PassingCollaboratorSampleIDs}})>0,LEN({{{required_sample_field}}})>0,OR(SEARCH('Available in seqr',ARRAYJOIN(PDOStatus,';')),SEARCH('Historic',ARRAYJOIN(PDOStatus,';'))))",
             fields=['CollaboratorSampleID', 'SeqrCollaboratorSampleID', 'PDOStatus', 'SeqrProject'],
         )
 
@@ -1928,7 +1926,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         self.assertEqual(len(responses.calls), 2)
         self.assert_expected_airtable_call(
             call_index=0,
-            filter_formula="AND(SEARCH('https://seqr.broadinstitute.org/project/R0001_1kg/project_page',ARRAYJOIN({SeqrProject},';')),OR(SEARCH('Available in seqr',ARRAYJOIN(PDOStatus,';')),SEARCH('Historic',ARRAYJOIN(PDOStatus,';'))))",
+            filter_formula="AND(SEARCH('https://seqr.broadinstitute.org/project/R0001_1kg/project_page',ARRAYJOIN({SeqrProject},';')),LEN({PassingCollaboratorSampleIDs})>0,OR(SEARCH('Available in seqr',ARRAYJOIN(PDOStatus,';')),SEARCH('Historic',ARRAYJOIN(PDOStatus,';'))))",
             fields=['CollaboratorSampleID', 'SeqrCollaboratorSampleID', 'PDOStatus', 'SeqrProject'],
         )
         body['projects'] = body['projects'][1:]
