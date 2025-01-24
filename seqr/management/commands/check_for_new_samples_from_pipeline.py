@@ -197,13 +197,16 @@ class Command(BaseCommand):
             user=None,
         )
 
-        # Send loading notifications and update Airtable PDOs
         new_sample_data_by_project = {
             s['individual__family__project']: s for s in updated_samples.filter(id__in=new_samples).values('individual__family__project').annotate(
                 samples=ArrayAgg('sample_id', distinct=True),
                 family_guids=ArrayAgg('individual__family__guid', distinct=True),
             )
         }
+        return cls._report_sample_updates(dataset_type, sample_type, metadata, samples_by_project, new_sample_data_by_project)
+
+    @classmethod
+    def _report_sample_updates(cls, dataset_type, sample_type, metadata, samples_by_project, new_sample_data_by_project):
         updated_project_families = []
         updated_families = set()
         split_project_pdos = {}
