@@ -158,9 +158,6 @@ RUN_PATHS = [
     b'gs://seqr-hail-search-data/v3.1/GRCh38/GCNV/runs/auto__2024-09-14/README.txt',
 ]
 OPENED_RUN_JSON_FILES = [{
-    'project_guids': ['R0003_test'],
-    'error_messages': ['Missing the following expected contigs:chr17'],
-}, {
     'callsets': ['1kg.vcf.gz', 'new_samples.vcf.gz'],
     'sample_type': 'WES',
     'family_samples': {
@@ -197,6 +194,9 @@ OPENED_RUN_JSON_FILES = [{
     'callsets': ['gcnv.bed.gz'],
     'sample_type': 'WES',
     'family_samples': {'F000004_4': ['NA20872'], 'F000012_12': ['NA20889']},
+}, {
+    'project_guids': ['R0003_test'],
+    'error_messages': ['Missing the following expected contigs:chr17'],
 }]
 
 def mock_opened_file(index):
@@ -250,20 +250,20 @@ class CheckNewSamplesTest(object):
 
     def _test_call(self, error_logs, reload_annotations_logs=None, run_loading_logs=None, reload_calls=None):
         self.mock_subprocess.reset_mock()
-        self.mock_subprocess.side_effect = [self.mock_ls_process, mock_opened_file(0), self.mock_mv_process] + [
-            mock_opened_file(i+1) for i in range(len(OPENED_RUN_JSON_FILES[1:]))
-        ]
+        self.mock_subprocess.side_effect = [self.mock_ls_process] + [
+            mock_opened_file(i) for i in range(len(OPENED_RUN_JSON_FILES))
+        ] + [self.mock_mv_process]
 
         call_command('check_for_new_samples_from_pipeline')
 
         self.mock_subprocess.assert_has_calls([mock.call(command, stdout=-1, stderr=stderr, shell=True) for (command, stderr) in [
             ('gsutil ls gs://seqr-hail-search-data/v3.1/*/*/runs/*/*', -1),
-            ('gsutil cat gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-14/validation_errors.json', -2),
-            ('gsutil mv /mock/tmp/* gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-14/', -2),
             ('gsutil cat gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/auto__2023-08-09/metadata.json', -2),
             ('gsutil cat gs://seqr-hail-search-data/v3.1/GRCh37/SNV_INDEL/runs/manual__2023-11-02/metadata.json', -2),
             ('gsutil cat gs://seqr-hail-search-data/v3.1/GRCh38/MITO/runs/auto__2024-08-12/metadata.json', -2),
             ('gsutil cat gs://seqr-hail-search-data/v3.1/GRCh38/GCNV/runs/auto__2024-09-14/metadata.json', -2),
+            ('gsutil cat gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-14/validation_errors.json', -2),
+            ('gsutil mv /mock/tmp/* gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-14/', -2),
         ]])
 
         loading_logs = []
@@ -534,15 +534,6 @@ class CheckNewSamplesTest(object):
         # Test notifications
         self.assertEqual(self.mock_send_slack.call_count, 6 + len(self.ADDITIONAL_SLACK_CALLS))
         self.mock_send_slack.assert_has_calls([
-            mock.call('seqr_loading_notifications',
-             f"""Callset Validation Failed
-Projects: ['{PROJECT_GUID}']
-Reference Genome: GRCh38
-Dataset Type: SNV_INDEL
-Run ID: manual__2025-01-14
-Validation Errors: ['Missing the following expected contigs:chr17']
-See more at https://storage.cloud.google.com/seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-14/validation_errors.json"""
-            ),
             mock.call(
                 'seqr-data-loading',
                 f'2 new WES samples are loaded in <{SEQR_URL}project/{PROJECT_GUID}/project_page|Test Reprocessed Project>\n```NA20888, NA20889```',
@@ -576,6 +567,15 @@ The following 1 families failed sex check:
                 'seqr-data-loading',
                 f'1 new WES SV samples are loaded in <{SEQR_URL}project/{PROJECT_GUID}/project_page|Test Reprocessed Project>\n```NA20889```',
             ),
+            mock.call('seqr_loading_notifications',
+                      f"""Callset Validation Failed
+Projects: ['{PROJECT_GUID}']
+Reference Genome: GRCh38
+Dataset Type: SNV_INDEL
+Run ID: manual__2025-01-14
+Validation Errors: ['Missing the following expected contigs:chr17']
+See more at https://storage.cloud.google.com/seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-14/validation_errors.json"""
+        ),
         ])
 
         self.assertEqual(mock_email.call_count, 4)

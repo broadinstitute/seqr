@@ -82,7 +82,6 @@ class Command(BaseCommand):
         for run_dir, run_details in new_runs.items():
             try:
                 metadata_path = os.path.join(run_dir, 'metadata.json')
-                del run_details['files']
                 data_type, updated_families, updated_variants_by_id = self._load_new_samples(metadata_path, **run_details)
                 data_type_key = (data_type, run_details['genome_version'])
                 updated_families_by_data_type[data_type_key].update(updated_families)
@@ -157,7 +156,7 @@ class Command(BaseCommand):
             write_multiple_files([(ERRORS_REPORTED_FILE_NAME, [], [])], run_dir, user=None, file_format=None)
 
     @classmethod
-    def _load_new_samples(cls, metadata_path, genome_version, dataset_type, run_version):
+    def _load_new_samples(cls, metadata_path, genome_version, dataset_type, run_version, **kwargs):
         dataset_type = DATASET_TYPE_MAP.get(dataset_type, dataset_type)
 
         logger.info(f'Loading new samples from {genome_version}/{dataset_type}: {run_version}')
