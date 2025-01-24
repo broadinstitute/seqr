@@ -506,8 +506,12 @@ AIRTABLE_CALLSET_FIELDS = {
 
 
 def _get_dataset_type_samples_for_matched_pdos(user, dataset_type, sample_type, pdo_statuses, **kwargs):
+    required_sample_fields = ['PassingCollaboratorSampleIDs']
+    required_data_type_field = AIRTABLE_CALLSET_FIELDS.get((dataset_type, sample_type))
+    if required_data_type_field:
+        required_sample_fields.append(required_data_type_field)
     return AirtableSession(user).get_samples_for_matched_pdos(
-        pdo_statuses, required_sample_field=AIRTABLE_CALLSET_FIELDS.get((dataset_type, sample_type)), **kwargs,
+        pdo_statuses, required_sample_fields=required_sample_fields, **kwargs,
     ).values()
 
 
