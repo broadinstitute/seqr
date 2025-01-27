@@ -213,6 +213,7 @@ def mock_opened_file(index):
 @mock.patch('seqr.utils.search.hail_search_utils.HAIL_BACKEND_SERVICE_HOSTNAME', MOCK_HAIL_HOST)
 @mock.patch('seqr.views.utils.airtable_utils.AIRTABLE_URL', 'http://testairtable')
 @mock.patch('seqr.utils.communication_utils.BASE_URL', SEQR_URL)
+@mock.patch('seqr.utils.search.add_data_utils.BASE_URL', SEQR_URL)
 @mock.patch('seqr.utils.search.add_data_utils.SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL', 'anvil-data-loading')
 @mock.patch('seqr.utils.search.add_data_utils.SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL', 'seqr-data-loading')
 class CheckNewSamplesTest(object):
