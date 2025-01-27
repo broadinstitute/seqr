@@ -197,7 +197,7 @@ OPENED_RUN_JSON_FILES = [{
     'sample_type': 'WES',
     'family_samples': {'F000004_4': ['NA20872'], 'F000012_12': ['NA20889']},
 }, {
-    'project_guids': ['R0003_test'],
+    'project_guids': ['R0004_non_analyst_project'],
     'error_messages': ['Missing the following expected contigs:chr17'],
 }, {
     'error': 'An unhandled error occurred during VCF ingestion',
@@ -580,7 +580,7 @@ The following 1 families failed sex check:
             ),
             mock.call('seqr_loading_notifications',
                       f"""Callset Validation Failed
-*Projects:* ['{PROJECT_GUID}']
+*Projects:* ['{EXTERNAL_PROJECT_GUID}']
 *Reference Genome:* GRCh38
 *Dataset Type:* SNV_INDEL
 *Run ID:* manual__2025-01-14
