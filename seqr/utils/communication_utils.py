@@ -57,17 +57,28 @@ def send_html_email(email_body, process_message=None, **kwargs):
 
 
 def send_project_notification(project, notification, subject, email_template=None, slack_channel=None, slack_detail=None):
-    users = project.subscribers.user_set.all()
-    notify.send(project, recipient=users, verb=f'Loaded {notification}')
-
     url = f'{BASE_URL}project/{project.guid}/project_page'
 
     email = (email_template or EMAIL_MESSAGE_TEMPLATE).format(
         notification=notification,
         project_link=f'<a href={url}>{project.name}</a>',
     )
+    users = send_project_email(project, email, subject)
+
+    notify.send(project, recipient=users, verb=f'Loaded {notification}')
+
+    if slack_channel:
+        slack_message = f'{notification} are loaded in <{url}|{project.name}>'
+        if slack_detail:
+            slack_message += f'\n```{slack_detail}```'
+        safe_post_to_slack(slack_channel, slack_message)
+
+
+def send_project_email(project, email_body, subject):
+    users = project.subscribers.user_set.all()
+
     email_kwargs = dict(
-        email_body=BASE_EMAIL_TEMPLATE.format(email),
+        email_body=BASE_EMAIL_TEMPLATE.format(email_body),
         to=list(users.values_list('email', flat=True)),
         subject=subject,
     )
@@ -76,13 +87,7 @@ def send_project_notification(project, notification, subject, email_template=Non
     except Exception as e:
         logger.error(f'Error sending project email for {project.guid}: {e}', extra={'detail': email_kwargs})
 
-    if slack_channel:
-        slack_message = f'{notification} are loaded in <{url}|{project.name}>'
-        if slack_detail:
-            slack_message += f'\n```{slack_detail}```'
-        safe_post_to_slack(slack_channel, slack_message)
-
-    return url
+    return users
 
 
 def _set_bulk_notification_stream(message):
