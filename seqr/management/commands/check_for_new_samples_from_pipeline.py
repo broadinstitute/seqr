@@ -152,7 +152,7 @@ class Command(BaseCommand):
             f'*Projects:* {project_guids or "MISSING FROM ERROR REPORT"}',
             f'*Reference Genome:* {run_details["genome_version"]}',
             f'*Dataset Type:* {run_details["dataset_type"]}',
-            f'*Run ID: {run_details["run_version"]}',
+            f'*Run ID:* {run_details["run_version"]}',
             f'*Validation Errors:* {error_messages}',
         ]
         if is_google_bucket_file_path(file_path):
@@ -178,7 +178,7 @@ class Command(BaseCommand):
         slack_message = '\n'.join([
             f'Request to load data from *{workspace_name}* failed with the following error(s):',
         ] + error_list + [
-            f'The following users have been notified: {", ".join(recipients.values_list('email', flat=True))}'
+            f'The following users have been notified: {", ".join(recipients.values_list("email", flat=True))}'
         ])
         safe_post_to_slack(SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, slack_message)
 

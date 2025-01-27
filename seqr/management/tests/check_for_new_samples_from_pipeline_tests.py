@@ -255,8 +255,8 @@ class CheckNewSamplesTest(object):
     def _test_call(self, error_logs, reload_annotations_logs=None, run_loading_logs=None, reload_calls=None):
         self.mock_subprocess.reset_mock()
         self.mock_subprocess.side_effect = [self.mock_ls_process] + [
-            mock_opened_file(i) for i in range(len(OPENED_RUN_JSON_FILES))
-        ] + [self.mock_mv_process, self.mock_mv_process]
+            mock_opened_file(i) for i in range(len(OPENED_RUN_JSON_FILES) - 1)
+        ] + [self.mock_mv_process, mock_opened_file(-1), self.mock_mv_process]
 
         call_command('check_for_new_samples_from_pipeline')
 
@@ -267,8 +267,8 @@ class CheckNewSamplesTest(object):
             ('gsutil cat gs://seqr-hail-search-data/v3.1/GRCh38/MITO/runs/auto__2024-08-12/metadata.json', -2),
             ('gsutil cat gs://seqr-hail-search-data/v3.1/GRCh38/GCNV/runs/auto__2024-09-14/metadata.json', -2),
             ('gsutil cat gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-14/validation_errors.json', -2),
-            ('gsutil cat gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-24/validation_errors.json', -2),
             ('gsutil mv /mock/tmp/* gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-14/', -2),
+            ('gsutil cat gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-24/validation_errors.json', -2),
             ('gsutil mv /mock/tmp/* gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-24/', -2),
         ]])
 
@@ -579,19 +579,19 @@ The following 1 families failed sex check:
             ),
             mock.call('seqr_loading_notifications',
                       f"""Callset Validation Failed
-Projects: ['{PROJECT_GUID}']
-Reference Genome: GRCh38
-Dataset Type: SNV_INDEL
-Run ID: manual__2025-01-14
-Validation Errors: ['Missing the following expected contigs:chr17']
+*Projects:* ['{PROJECT_GUID}']
+*Reference Genome:* GRCh38
+*Dataset Type:* SNV_INDEL
+*Run ID:* manual__2025-01-14
+*Validation Errors:* ['Missing the following expected contigs:chr17']
 See more at https://storage.cloud.google.com/seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-14/validation_errors.json"""
         ), mock.call('seqr_loading_notifications',
                       f"""Callset Validation Failed
-Projects: MISSING FROM ERROR REPORT
-Reference Genome: GRCh38
-Dataset Type: SNV_INDEL
-Run ID: manual__2025-01-24
-Validation Errors: {{"error": "An unhandled error occurred during VCF ingestion"}}
+*Projects:* MISSING FROM ERROR REPORT
+*Reference Genome:* GRCh38
+*Dataset Type:* SNV_INDEL
+*Run ID:* manual__2025-01-24
+*Validation Errors:* {{"error": "An unhandled error occurred during VCF ingestion"}}
 See more at https://storage.cloud.google.com/seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-24/validation_errors.json"""
         ),
         ])
