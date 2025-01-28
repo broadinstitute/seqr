@@ -228,12 +228,6 @@ def mock_opened_file(index):
 class CheckNewSamplesTest(object):
 
     def set_up(self):
-        patcher = mock.patch('seqr.management.commands.check_for_new_samples_from_pipeline.logger')
-        self.mock_logger = patcher.start()
-        self.addCleanup(patcher.stop)
-        patcher = mock.patch('seqr.views.utils.variant_utils.logger')
-        self.mock_utils_logger = patcher.start()
-        self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.utils.communication_utils._post_to_slack')
         self.mock_send_slack = patcher.start()
         self.addCleanup(patcher.stop)
@@ -257,32 +251,31 @@ class CheckNewSamplesTest(object):
 
     def _test_call(self, error_logs, reload_annotations_logs=None, run_loading_logs=None, reload_calls=None):
         self._set_loading_files()
+        self.reset_logs()
 
         call_command('check_for_new_samples_from_pipeline')
 
         self._assert_expected_loading_file_calls()
 
-        loading_logs = []
+        logs = self.LIST_FILE_LOGS[:1] + [('Loading new samples from 4 run(s)', None)]
         for data_type, version in [
             ('GRCh38/SNV_INDEL', 'auto__2023-08-09'), ('GRCh37/SNV_INDEL', 'manual__2023-11-02'),
             ('GRCh38/MITO', 'auto__2024-08-12'), ('GRCh38/SV', 'auto__2024-09-14'),
         ]:
-            loading_logs.append(mock.call(f'Loading new samples from {data_type}: {version}'))
+            logs.append((f'Loading new samples from {data_type}: {version}', None))
             if (run_loading_logs or {}).get(data_type):
-                loading_logs.append(mock.call(run_loading_logs[data_type]))
-        self.mock_logger.info.assert_has_calls([
-            mock.call('Loading new samples from 4 run(s)'),
-        ] + loading_logs + [mock.call(log) for log in reload_annotations_logs or []] + [
-            mock.call('DONE'),
-        ])
-        self.mock_logger.warning.assert_not_called()
-        self.mock_logger.error.assert_has_calls([mock.call(error) for error in error_logs])
+                logs += run_loading_logs[data_type]
+            if (error_logs or {}).get(version):
+                logs.append((
+                    f'Error loading {version}: {error_logs[version]}',
+                    {'severity': 'ERROR', '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent'},
+                ))
+        logs.append(('Reset 2 cached results', None))
+        logs += [(log, None) for log in reload_annotations_logs or []]
+        logs.append(('DONE', None))
+        self.assert_json_logs(user=None, expected=logs)
 
         self.mock_redis.return_value.delete.assert_called_with('search_results__*', 'variant_lookup_results__*')
-        util_info_logs = [mock.call('Reset 2 cached results')]
-        if reload_calls:
-            util_info_logs.append(mock.call('Reloading saved variants in 2 projects'))
-        self.mock_utils_logger.info.assert_has_calls(util_info_logs)
 
         # Test reload saved variants
         if not reload_calls:
@@ -334,17 +327,18 @@ class CheckNewSamplesTest(object):
         self.assertEqual(str(ce.exception), 'No successful runs found for genome_version=GRCh37, dataset_type=MITO')
         self._assert_has_expected_empty_list_file_calls()
 
+        self.reset_logs()
         call_command('check_for_new_samples_from_pipeline')
-        self.mock_logger.info.assert_called_with('No loaded data available')
+        self.assert_json_logs(user=None, expected=self.LIST_FILE_LOGS + [('No loaded data available', None)])
         mock_email.assert_not_called()
         self.mock_send_slack.assert_not_called()
 
-        error_logs = [
-            'Error loading auto__2023-08-09: Data has genome version GRCh38 but the following projects have conflicting versions: R0003_test (GRCh37)',
-            'Error loading manual__2023-11-02: Invalid families in run metadata GRCh37/SNV_INDEL: manual__2023-11-02 - F0000123_ABC',
-            'Error loading auto__2024-08-12: Data has genome version GRCh38 but the following projects have conflicting versions: R0001_1kg (GRCh37)',
-            'Error loading auto__2024-09-14: Data has genome version GRCh38 but the following projects have conflicting versions: R0001_1kg (GRCh37), R0003_test (GRCh37)',
-        ]
+        error_logs = {
+            'auto__2023-08-09': 'Data has genome version GRCh38 but the following projects have conflicting versions: R0003_test (GRCh37)',
+            'manual__2023-11-02': 'Invalid families in run metadata GRCh37/SNV_INDEL: manual__2023-11-02 - F0000123_ABC',
+            'auto__2024-08-12': 'Data has genome version GRCh38 but the following projects have conflicting versions: R0001_1kg (GRCh37)',
+            'auto__2024-09-14': 'Data has genome version GRCh38 but the following projects have conflicting versions: R0001_1kg (GRCh37), R0003_test (GRCh37)',
+        }
         mock_temp_dir.return_value.__enter__.return_value = '/mock/tmp'
         self._test_call(error_logs=error_logs)
         self.assertEqual(Sample.objects.filter(guid__in=SAMPLE_GUIDS + GCNV_SAMPLE_GUIDS).count(), 0)
@@ -358,7 +352,6 @@ class CheckNewSamplesTest(object):
 
         # Test success
         self.mock_send_slack.reset_mock()
-        self.mock_logger.reset_mock()
         search_body = {
             'genome_version': 'GRCh38', 'num_results': 1, 'variant_ids': [['1', 248367227, 'TC', 'T']], 'variant_keys': [],
         }
@@ -377,13 +370,38 @@ class CheckNewSamplesTest(object):
             'Reloading shared annotations for 3 SNV_INDEL GRCh38 saved variants (3 unique)', 'Fetched 1 additional variants in chromosome 1', 'Fetched 1 additional variants in chromosome 1', 'Updated 2 SNV_INDEL GRCh38 saved variants',
             'No additional SV_WES GRCh38 saved variants to update',
         ], run_loading_logs={
-            'GRCh38/SNV_INDEL': 'Loading 4 WES SNV_INDEL samples in 2 projects',
-            'GRCh38/MITO': 'Loading 2 WGS MITO samples in 1 projects',
-            'GRCh38/SV': 'Loading 2 WES SV samples in 2 projects',
-        }, error_logs=[
-            'Error loading manual__2023-11-02: Invalid families in run metadata GRCh37/SNV_INDEL: manual__2023-11-02 - F0000123_ABC',
-            'Error loading auto__2024-08-12: Matches not found for sample ids: NA20885, NA22882',
-        ])
+            'GRCh38/SNV_INDEL': [
+                ('Loading 4 WES SNV_INDEL samples in 2 projects', None),
+                ('create 4 Samples', {'dbUpdate': mock.ANY}),
+                ('update 4 Samples', {'dbUpdate': mock.ANY}),
+                ('update 1 Samples', {'dbUpdate': mock.ANY}),
+                ('update 2 Familys', {'dbUpdate': mock.ANY}),
+                ('update 3 Familys', {'dbUpdate': mock.ANY}),
+                ('Reloading saved variants in 2 projects', None),
+                ('Updated 0 variants in 1 families for project Test Reprocessed Project', None),
+                ('update SavedVariant SV0000006_1248367227_r0004_non', {'dbUpdate': mock.ANY}),
+                ('Updated 1 variants in 1 families for project Non-Analyst Project', None),
+                ('Reload Summary: ', None),
+                ('  Non-Analyst Project: Updated 1 variants', None),
+            ],
+            'GRCh38/MITO': [('Loading 2 WGS MITO samples in 1 projects', None)],
+            'GRCh38/SV': [
+                ('Loading 2 WES SV samples in 2 projects', None),
+                ('create 2 Samples', {'dbUpdate': mock.ANY}),
+                ('update 2 Samples', {'dbUpdate': mock.ANY}),
+                ('update 1 Familys', {'dbUpdate': mock.ANY}),
+                ('Reloading saved variants in 2 projects', None),
+                (mock.ANY, {'severity': 'ERROR', '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent'}),
+                ('Error reloading variants in Test Reprocessed Project: Bad Request', {'severity': 'ERROR', '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent'}),
+                ('Reload Summary: ', None),
+                ('Skipped the following 1 project with no saved variants: 1kg project nåme with uniçøde', None),
+                ('1 failed projects', None),
+                ('  Test Reprocessed Project: Bad Request', None),
+            ],
+        }, error_logs={
+            'manual__2023-11-02': 'Invalid families in run metadata GRCh37/SNV_INDEL: manual__2023-11-02 - F0000123_ABC',
+            'auto__2024-08-12': 'Matches not found for sample ids: NA20885, NA22882',
+        })
 
         # Tests Sample models created/updated
         updated_sample_models = Sample.objects.filter(guid__in=SAMPLE_GUIDS+GCNV_SAMPLE_GUIDS)
@@ -469,19 +487,6 @@ class CheckNewSamplesTest(object):
         self.assertEqual(annotation_updated_json['mainTranscriptId'], 'ENST00000505820')
         self.assertEqual(len(annotation_updated_json['genotypes']), 3)
 
-        self.mock_utils_logger.error.assert_called_with('Error reloading variants in Test Reprocessed Project: Bad Request')
-        self.mock_utils_logger.info.assert_has_calls([
-            mock.call('Updated 0 variants in 1 families for project Test Reprocessed Project'),
-            mock.call('Updated 1 variants in 1 families for project Non-Analyst Project'),
-            mock.call('Reload Summary: '),
-            mock.call('  Non-Analyst Project: Updated 1 variants'),
-            mock.call('Reloading saved variants in 2 projects'),
-            mock.call('Reload Summary: '),
-            mock.call('Skipped the following 1 project with no saved variants: 1kg project nåme with uniçøde'),
-            mock.call('1 failed projects'),
-            mock.call('  Test Reprocessed Project: Bad Request'),
-        ])
-
         # Test notifications
         self.assertEqual(self.mock_send_slack.call_count, 7 + len(self.ADDITIONAL_SLACK_CALLS))
         self.mock_send_slack.assert_has_calls([
@@ -556,7 +561,7 @@ Validation Errors: {{"error": "An unhandled error occurred during VCF ingestion"
 
         # Test reloading has no effect
         self._set_reloading_loading_files()
-        self.mock_logger.reset_mock()
+        self.reset_logs()
         mock_email.reset_mock()
         self.mock_send_slack.reset_mock()
         self.mock_redis.reset_mock()
@@ -564,7 +569,7 @@ Validation Errors: {{"error": "An unhandled error occurred during VCF ingestion"
             last_modified_date__isnull=False).values_list('last_modified_date', flat=True).order_by('-last_modified_date')[0]
 
         call_command('check_for_new_samples_from_pipeline')
-        self.mock_logger.info.assert_called_with('Data already loaded for all 2 runs')
+        self.assert_json_logs(user=None, expected=[('Data already loaded for all 2 runs', None)])
         mock_email.assert_not_called()
         self.mock_send_slack.assert_not_called()
         self.assertFalse(Sample.objects.filter(last_modified_date__gt=sample_last_modified).exists())
@@ -579,6 +584,7 @@ class LocalCheckNewSamplesTest(AuthenticationTestCase, CheckNewSamplesTest):
     PROJECT_EMAIL_TEXT = TEXT_EMAIL_TEMPLATE.format(1, 'Non-Analyst Project')
     PROJECT_EMAIL_HTML = HTML_EMAIL_TEMAPLTE.format(1, EXTERNAL_PROJECT_GUID, 'Non-Analyst Project')
 
+    LIST_FILE_LOGS = []
     ADDITIONAL_SLACK_CALLS = [
         mock.call(
             'seqr-data-loading',
@@ -641,6 +647,10 @@ class AirtableCheckNewSamplesTest(AnvilAuthenticationTestCase, CheckNewSamplesTe
     PROJECT_EMAIL_TEXT = ANVIL_TEXT_EMAIL
     PROJECT_EMAIL_HTML = ANVIL_HTML_EMAIL
 
+    LIST_FILE_LOGS = [
+        ('==> gsutil ls gs://seqr-hail-search-data/v3.1/*/*/runs/*/*', None),
+        ('One or more URLs matched no objects', None),
+    ]
     ADDITIONAL_SLACK_CALLS = [
         mock.call(
             'anvil-data-loading',
@@ -665,9 +675,6 @@ Desired update:
     SLACK_VALIDATION_TEMPLATE = '\nSee more at https://storage.cloud.google.com/seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/{}/validation_errors.json'
 
     def setUp(self):
-        patcher = mock.patch('seqr.views.utils.airtable_utils.logger')
-        self.mock_airtable_utils_logger = patcher.start()
-        self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.utils.file_utils.subprocess.Popen')
         self.mock_subprocess = patcher.start()
         self.addCleanup(patcher.stop)
