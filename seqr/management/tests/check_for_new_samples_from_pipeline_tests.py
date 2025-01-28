@@ -591,13 +591,13 @@ class LocalCheckNewSamplesTest(AuthenticationTestCase, CheckNewSamplesTest):
         patcher = mock.patch('seqr.views.utils.export_utils.os.makedirs')
         self.mock_mkdir = patcher.start()
         self.addCleanup(patcher.stop)
-        self.set_up()
         patcher = mock.patch('seqr.utils.file_utils.glob.glob')
         self.mock_glob = patcher.start()
         self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.utils.file_utils.open')
         self.mock_open = patcher.start()
         self.addCleanup(patcher.stop)
+        self.set_up()
         super().setUp()
 
     def _set_empty_loading_files(self):
