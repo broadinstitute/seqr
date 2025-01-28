@@ -237,19 +237,10 @@ class CheckNewSamplesTest(object):
         patcher = mock.patch('seqr.utils.communication_utils._post_to_slack')
         self.mock_send_slack = patcher.start()
         self.addCleanup(patcher.stop)
-        patcher = mock.patch('seqr.utils.file_utils.subprocess.Popen')
-        self.mock_subprocess = patcher.start()
-        self.addCleanup(patcher.stop)
-        patcher = mock.patch('seqr.utils.file_utils.glob.glob')
-        self.mock_glob = patcher.start()
-        self.addCleanup(patcher.stop)
-        patcher = mock.patch('seqr.utils.file_utils.open')
-        self.mock_open = patcher.start()
-        self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.utils.export_utils.open')
-        self.mock_open_write_file = patcher.start()
         self.mock_written_files = defaultdict(mock.MagicMock)
-        self.mock_open_write_file.side_effect = lambda file_name, *args: self.mock_written_files[file_name]
+        mock_open_write_file = patcher.start()
+        mock_open_write_file.side_effect = lambda file_name, *args: self.mock_written_files[file_name]
         self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.utils.variant_utils.redis.StrictRedis')
         self.mock_redis = patcher.start()
@@ -259,10 +250,6 @@ class CheckNewSamplesTest(object):
         mock_rand_int = patcher.start()
         mock_rand_int.side_effect = [GUID_ID, GUID_ID, GUID_ID, GUID_ID, GCNV_GUID_ID, GCNV_GUID_ID]
         self.addCleanup(patcher.stop)
-        self.mock_ls_process = mock.MagicMock()
-        self.mock_ls_process.communicate.return_value = b'\n'.join(RUN_PATHS), b''
-        self.mock_mv_process = mock.MagicMock()
-        self.mock_mv_process.wait.return_value = 0
         patcher = mock.patch('seqr.management.commands.check_for_new_samples_from_pipeline.HAIL_SEARCH_DATA_DIR')
         mock_data_dir = patcher.start()
         mock_data_dir.__str__.return_value = self.MOCK_DATA_DIR
@@ -568,8 +555,6 @@ Validation Errors: {{"error": "An unhandled error occurred during VCF ingestion"
             str(self.collaborator_user.notifications.first()), 'Non-Analyst Project Loaded 1 new WES samples 0 minutes ago')
 
         # Test reloading has no effect
-        self.mock_ls_process.communicate.return_value = b'\n'.join([RUN_PATHS[6], RUN_PATHS[12]]), b''
-        self.mock_subprocess.side_effect = [self.mock_ls_process]
         self._set_reloading_loading_files()
         self.mock_logger.reset_mock()
         mock_email.reset_mock()
@@ -607,6 +592,12 @@ class LocalCheckNewSamplesTest(AuthenticationTestCase, CheckNewSamplesTest):
         self.mock_mkdir = patcher.start()
         self.addCleanup(patcher.stop)
         self.set_up()
+        patcher = mock.patch('seqr.utils.file_utils.glob.glob')
+        self.mock_glob = patcher.start()
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.utils.file_utils.open')
+        self.mock_open = patcher.start()
+        self.addCleanup(patcher.stop)
         super().setUp()
 
     def _set_empty_loading_files(self):
@@ -677,6 +668,13 @@ Desired update:
         patcher = mock.patch('seqr.views.utils.airtable_utils.logger')
         self.mock_airtable_utils_logger = patcher.start()
         self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.utils.file_utils.subprocess.Popen')
+        self.mock_subprocess = patcher.start()
+        self.addCleanup(patcher.stop)
+        self.mock_ls_process = mock.MagicMock()
+        self.mock_ls_process.communicate.return_value = b'\n'.join(RUN_PATHS), b''
+        self.mock_mv_process = mock.MagicMock()
+        self.mock_mv_process.wait.return_value = 0
         self.set_up()
         super().setUp()
 
