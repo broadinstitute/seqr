@@ -263,6 +263,7 @@ class CheckNewSamplesTest(object):
             ('GRCh38/MITO', 'auto__2024-08-12'), ('GRCh38/SV', 'auto__2024-09-14'),
         ]:
             logs.append((f'Loading new samples from {data_type}: {version}', None))
+            logs += self._additional_loading_logs(data_type, version)
             if (run_loading_logs or {}).get(data_type):
                 logs += run_loading_logs[data_type]
             if (error_logs or {}).get(version):
@@ -299,6 +300,9 @@ class CheckNewSamplesTest(object):
                 'data_type': 'SNV_INDEL',
                 'variant_ids': [variant_id],
             })
+
+    def _additional_loading_logs(self, data_type, version):
+        return []
 
     @mock.patch('seqr.management.commands.check_for_new_samples_from_pipeline.MAX_LOOKUP_VARIANTS', 1)
     @mock.patch('seqr.views.utils.airtable_utils.BASE_URL', 'https://test-seqr.org/')
@@ -376,6 +380,7 @@ class CheckNewSamplesTest(object):
                 ('update 4 Samples', {'dbUpdate': mock.ANY}),
                 ('update 1 Samples', {'dbUpdate': mock.ANY}),
                 ('update 2 Familys', {'dbUpdate': mock.ANY}),
+            ] + self.AIRTABLE_LOGS + [
                 ('update 3 Familys', {'dbUpdate': mock.ANY}),
                 ('Reloading saved variants in 2 projects', None),
                 ('Updated 0 variants in 1 families for project Test Reprocessed Project', None),
@@ -569,7 +574,7 @@ Validation Errors: {{"error": "An unhandled error occurred during VCF ingestion"
             last_modified_date__isnull=False).values_list('last_modified_date', flat=True).order_by('-last_modified_date')[0]
 
         call_command('check_for_new_samples_from_pipeline')
-        self.assert_json_logs(user=None, expected=[('Data already loaded for all 2 runs', None)])
+        self.assert_json_logs(user=None, expected=self.LIST_FILE_LOGS[:1] + [('Data already loaded for all 2 runs', None)])
         mock_email.assert_not_called()
         self.mock_send_slack.assert_not_called()
         self.assertFalse(Sample.objects.filter(last_modified_date__gt=sample_last_modified).exists())
@@ -585,6 +590,7 @@ class LocalCheckNewSamplesTest(AuthenticationTestCase, CheckNewSamplesTest):
     PROJECT_EMAIL_HTML = HTML_EMAIL_TEMAPLTE.format(1, EXTERNAL_PROJECT_GUID, 'Non-Analyst Project')
 
     LIST_FILE_LOGS = []
+    AIRTABLE_LOGS = []
     ADDITIONAL_SLACK_CALLS = [
         mock.call(
             'seqr-data-loading',
@@ -650,6 +656,19 @@ class AirtableCheckNewSamplesTest(AnvilAuthenticationTestCase, CheckNewSamplesTe
     LIST_FILE_LOGS = [
         ('==> gsutil ls gs://seqr-hail-search-data/v3.1/*/*/runs/*/*', None),
         ('One or more URLs matched no objects', None),
+    ]
+    AIRTABLE_LOGS = [
+        ('Fetching Samples records 0-2 from airtable', None),
+        ('Fetched 7 Samples records from airtable', None),
+        (f'Airtable patch "PDO" error: 400 Client Error: Bad Request for url: {airtable_pdo_url}', {
+            'severity': 'ERROR',
+            '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent',
+            'detail': {'record_ids': ['rec0RWBVfDVbtlBSL', 'recW24C2CJW5lT64K'], 'update': {'PDOStatus': 'Available in seqr'}},
+        }),
+        ('Fetching PDO records 0-1 from airtable', None),
+        ('Fetched 1 PDO records from airtable', None),
+        ('Fetching AnVIL Seqr Loading Requests Tracking records 0-2 from airtable', None),
+        ('Fetched 2 AnVIL Seqr Loading Requests Tracking records from airtable', None),
     ]
     ADDITIONAL_SLACK_CALLS = [
         mock.call(
@@ -737,13 +756,10 @@ Desired update:
                 ('gsutil mv /mock/tmp/* gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-24/', -2),
             ]])
 
-    def _assert_expected_airtable_calls(self):
-        self.assertEqual(self.mock_airtable_utils_logger.error.call_count, 1)
-        self.mock_airtable_utils_logger.error.assert_has_calls([mock.call(
-            f'Airtable patch "PDO" error: 400 Client Error: Bad Request for url: {self.airtable_pdo_url}', None, detail={
-                'record_ids': {'rec0RWBVfDVbtlBSL', 'recW24C2CJW5lT64K'}, 'update': {'PDOStatus': 'Available in seqr'}}
-        )])
+    def _additional_loading_logs(self, data_type, version):
+        return [(f'==> gsutil cat gs://seqr-hail-search-data/v3.1/{data_type.replace("SV", "GCNV")}/runs/{version}/metadata.json', None)]
 
+    def _assert_expected_airtable_calls(self):
         # Test airtable PDO updates
         update_pdos_request = responses.calls[1].request
         self.assertEqual(update_pdos_request.url, self.airtable_pdo_url)
