@@ -43,14 +43,28 @@ ANVIL_HTML_EMAIL = f'Dear seqr user,<br /><br />' \
                    f'We are following up on the request to load data from AnVIL on March 12, 2017.<br />' \
                    f'We have loaded 1 new WES samples from the AnVIL workspace {anvil_link} to the corresponding seqr project {seqr_link}.' \
                    f'<br />Let us know if you have any questions.<br /><br />All the best,<br />The seqr team'
+ANVIL_ERROR_TEXT_EMAIL = f"""Dear seqr user,
+
+We are following up on the request to load data from AnVIL workspace ext-data/empty on March 12, 2017. This request could not be loaded due to the following error(s):
+- Missing the following expected contigs:chr17
+These errors often occur when a joint called VCF is not created in a supported manner. Please see our documentation for more information about supported calling pipelines and file formats. If you believe this error is incorrect and would like to request a manual review, please respond to this email.
+
+All the best,
+The seqr team"""
+ANVIL_ERROR_HTML_EMAIL = f'Dear seqr user,<br /><br />' \
+f'We are following up on the request to load data from AnVIL workspace {anvil_link.replace("anvil-non-analyst-project 1000 Genomes Demo", "empty")} on March 12, 2017. This request could not be loaded due to the following error(s):<br />' \
+f'- Missing the following expected contigs:chr17<br />' \
+f'These errors often occur when a joint called VCF is not created in a supported manner. ' \
+f'Please see our <a href=https://storage.googleapis.com/seqr-reference-data/seqr-vcf-info.pdf>documentation</a> for more information about supported calling pipelines and file formats. If you believe this error is incorrect and would like to request a manual review, please respond to this email.'\
+f'<br /><br />All the best,<br />The seqr team'
 TEXT_EMAIL_TEMPLATE = """Dear seqr user,
 
-This is to notify you that data for {} new WES samples has been loaded in seqr project {}
+This is to notify you that data for {} new {} samples has been loaded in seqr project {}
 
 All the best,
 The seqr team"""
 HTML_EMAIL_TEMAPLTE = 'Dear seqr user,<br /><br />' \
-                      'This is to notify you that data for {} new WES samples has been loaded in seqr project ' \
+                      'This is to notify you that data for {} new {} samples has been loaded in seqr project ' \
                       '<a href=https://seqr.broadinstitute.org/project/{}/project_page>{}</a>' \
                       '<br /><br />All the best,<br />The seqr team'
 
@@ -207,7 +221,7 @@ OPENED_RUN_JSON_FILES = [{
     'sample_type': 'WES',
     'family_samples': {'F000004_4': ['NA20872'], 'F000012_12': ['NA20889']},
 }, {
-    'project_guids': ['R0004_non_analyst_project'],
+    'project_guids': ['R0002_empty'],
     'error_messages': ['Missing the following expected contigs:chr17'],
 }, {
     'error': 'An unhandled error occurred during VCF ingestion',
@@ -253,6 +267,7 @@ class CheckNewSamplesTest(object):
     def _test_call(self, error_logs, reload_annotations_logs=None, run_loading_logs=None, reload_calls=None):
         self._set_loading_files()
         self.reset_logs()
+        responses.calls.reset()
 
         call_command('check_for_new_samples_from_pipeline')
 
@@ -280,20 +295,20 @@ class CheckNewSamplesTest(object):
         self.mock_redis.return_value.delete.assert_called_with('search_results__*', 'variant_lookup_results__*')
 
         # Test reload saved variants
+        num_airtable_loading_calls, num_airtable_validation_calls = self._assert_expected_airtable_calls(bool(reload_calls))
         if not reload_calls:
-            self.assertEqual(len(responses.calls), 0)
+            self.assertEqual(len(responses.calls), num_airtable_validation_calls)
             return
 
-        num_airtable_calls = self._assert_expected_airtable_calls()
-        self.assertEqual(len(responses.calls), len(reload_calls) + 2 + num_airtable_calls)
+        self.assertEqual(len(responses.calls), len(reload_calls) + 2 + num_airtable_loading_calls + num_airtable_validation_calls)
         for i, call in enumerate(reload_calls or []):
-            resp = responses.calls[i+num_airtable_calls]
+            resp = responses.calls[i+num_airtable_loading_calls]
             self.assertEqual(resp.request.url, f'{MOCK_HAIL_ORIGIN}:5000/search')
             self.assertEqual(resp.request.headers.get('From'), 'manage_command')
             self.assertDictEqual(json.loads(resp.request.body), call)
 
         for i, variant_id in enumerate([['1', 1562437, 'G', 'CA'], ['1', 46859832, 'G', 'A']]):
-            multi_lookup_request = responses.calls[num_airtable_calls+len(reload_calls)+i].request
+            multi_lookup_request = responses.calls[num_airtable_loading_calls+len(reload_calls)+i].request
             self.assertEqual(multi_lookup_request.url, f'{MOCK_HAIL_ORIGIN}:5000/multi_lookup')
             self.assertEqual(multi_lookup_request.headers.get('From'), 'manage_command')
             self.assertDictEqual(json.loads(multi_lookup_request.body), {
@@ -357,6 +372,7 @@ class CheckNewSamplesTest(object):
 
         # Test success
         self.mock_send_slack.reset_mock()
+        mock_email.reset_mock()
         search_body = {
             'genome_version': 'GRCh38', 'num_results': 1, 'variant_ids': [['1', 248367227, 'TC', 'T']], 'variant_keys': [],
         }
@@ -529,32 +545,32 @@ The following 1 families failed sex check:
                 'seqr-data-loading',
                 f'1 new WES SV samples are loaded in <{SEQR_URL}project/{PROJECT_GUID}/project_page|Test Reprocessed Project>\n```NA20889```',
             ),
+            mock.call(*self.SLACK_VALIDATION_CALL),
             mock.call('seqr_loading_notifications',
-                      f"""Callset Validation Failed
-*Projects:* ['{EXTERNAL_PROJECT_GUID}']
-*Reference Genome:* GRCh38
-*Dataset Type:* SNV_INDEL
-*Run ID:* manual__2025-01-14
-*Validation Errors:* ['Missing the following expected contigs:chr17']{self.SLACK_VALIDATION_TEMPLATE.format('manual__2025-01-14')}"""
-        ), mock.call('seqr_loading_notifications',
                       f"""Callset Validation Failed
 *Projects:* MISSING FROM ERROR REPORT
 *Reference Genome:* GRCh38
 *Dataset Type:* SNV_INDEL
 *Run ID:* manual__2025-01-24
-*Validation Errors:* {{"error": "An unhandled error occurred during VCF ingestion"}}{self.SLACK_VALIDATION_TEMPLATE.format('manual__2025-01-24')}"""
+*Validation Errors:* {{"error": "An unhandled error occurred during VCF ingestion"}}{self.SLACK_VALIDATION_MESSAGE}"""
         ),
         ])
 
-        self.assertEqual(mock_email.call_count, 4)
+        self.assertEqual(mock_email.call_count, 5 if self.ANVIL_EMAIL_CALLS else 4)
         mock_email.assert_has_calls([
-            mock.call(body=TEXT_EMAIL_TEMPLATE.format(2, 'Test Reprocessed Project'), subject='New data available in seqr', to=['test_user_manager@test.com']),
-            mock.call().attach_alternative(HTML_EMAIL_TEMAPLTE.format(2, PROJECT_GUID, 'Test Reprocessed Project'), 'text/html'),
+            mock.call(body=TEXT_EMAIL_TEMPLATE.format(2, 'WES', 'Test Reprocessed Project'), subject='New data available in seqr', to=['test_user_manager@test.com']),
+            mock.call().attach_alternative(HTML_EMAIL_TEMAPLTE.format(2, 'WES', PROJECT_GUID, 'Test Reprocessed Project'), 'text/html'),
             mock.call().send(),
             mock.call(body=self.PROJECT_EMAIL_TEXT, subject='New data available in seqr', to=['test_user_collaborator@test.com']),
             mock.call().attach_alternative(self.PROJECT_EMAIL_HTML, 'text/html'),
             mock.call().send(),
-        ])
+            mock.call(body=TEXT_EMAIL_TEMPLATE.format(1, 'WES SV', '1kg project nåme with uniçøde'), subject='New data available in seqr', to=['test_user_manager@test.com']),
+            mock.call().attach_alternative(HTML_EMAIL_TEMAPLTE.format(1, 'WES SV', 'R0001_1kg', '1kg project nåme with uniçøde'), 'text/html'),
+            mock.call().send(),
+            mock.call(body=TEXT_EMAIL_TEMPLATE.format(1, 'WES SV', 'Test Reprocessed Project'), subject='New data available in seqr', to=['test_user_manager@test.com']),
+            mock.call().attach_alternative(HTML_EMAIL_TEMAPLTE.format(1, 'WES SV', PROJECT_GUID, 'Test Reprocessed Project'), 'text/html'),
+            mock.call().send(),
+        ] + self.ANVIL_EMAIL_CALLS)
         self.assertDictEqual(mock_email.return_value.esp_extra, {'MessageStream': 'seqr-notifications'})
         self.assertDictEqual(mock_email.return_value.merge_data, {})
 
@@ -587,8 +603,9 @@ class LocalCheckNewSamplesTest(AuthenticationTestCase, CheckNewSamplesTest):
     ES_HOSTNAME = ''
 
     MOCK_DATA_DIR = '/seqr/seqr-hail-search-data'
-    PROJECT_EMAIL_TEXT = TEXT_EMAIL_TEMPLATE.format(1, 'Non-Analyst Project')
-    PROJECT_EMAIL_HTML = HTML_EMAIL_TEMAPLTE.format(1, EXTERNAL_PROJECT_GUID, 'Non-Analyst Project')
+    PROJECT_EMAIL_TEXT = TEXT_EMAIL_TEMPLATE.format(1, 'WES', 'Non-Analyst Project')
+    PROJECT_EMAIL_HTML = HTML_EMAIL_TEMAPLTE.format(1, 'WES', EXTERNAL_PROJECT_GUID, 'Non-Analyst Project')
+    ANVIL_EMAIL_CALLS = []
 
     LIST_FILE_LOGS = []
     AIRTABLE_LOGS = []
@@ -598,7 +615,13 @@ class LocalCheckNewSamplesTest(AuthenticationTestCase, CheckNewSamplesTest):
             f'1 new WES samples are loaded in <{SEQR_URL}project/{EXTERNAL_PROJECT_GUID}/project_page|Non-Analyst Project>\n```NA21234```',
         ),
     ]
-    SLACK_VALIDATION_TEMPLATE = ''
+    SLACK_VALIDATION_CALL = ('seqr_loading_notifications', """Callset Validation Failed
+*Projects:* ['R0002_empty']
+*Reference Genome:* GRCh38
+*Dataset Type:* SNV_INDEL
+*Run ID:* manual__2025-01-14
+*Validation Errors:* ['Missing the following expected contigs:chr17']""")
+    SLACK_VALIDATION_MESSAGE = ''
 
     def setUp(self):
         patcher = mock.patch('seqr.views.utils.export_utils.os.makedirs')
@@ -641,18 +664,25 @@ class LocalCheckNewSamplesTest(AuthenticationTestCase, CheckNewSamplesTest):
             for file in [LOCAL_RUN_PATHS[2], LOCAL_RUN_PATHS[7]]
         ])
 
-    def _assert_expected_airtable_calls(self):
-        return 0
+    def _assert_expected_airtable_calls(self, has_reload_calls):
+        return 0, 0
 
 class AirtableCheckNewSamplesTest(AnvilAuthenticationTestCase, CheckNewSamplesTest):
     fixtures = ['users', '1kg_project']
 
     airtable_samples_url = 'http://testairtable/app3Y97xtbbaOopVR/Samples'
     airtable_pdo_url = 'http://testairtable/app3Y97xtbbaOopVR/PDO'
+    airtable_loading_tracking_url = "http://testairtable/appUelDNM3BnWaR7M/AnVIL%20Seqr%20Loading%20Requests%20Tracking"
+    AIRTABLE_LOADING_QUERY_TEMPLATE = "?fields[]=Status&pageSize=2&filterByFormula=AND({{AnVIL Project URL}}='https://seqr.broadinstitute.org/project/{}/project_page',OR(Status='Loading',Status='Loading Requested'))"
 
     MOCK_DATA_DIR = 'gs://seqr-hail-search-data/v3.1'
     PROJECT_EMAIL_TEXT = ANVIL_TEXT_EMAIL
     PROJECT_EMAIL_HTML = ANVIL_HTML_EMAIL
+    ANVIL_EMAIL_CALLS = [
+        mock.call(body=ANVIL_ERROR_TEXT_EMAIL, subject='Error loading seqr data', to=['test_user_manager@test.com']),
+        mock.call().attach_alternative(ANVIL_ERROR_HTML_EMAIL, 'text/html'),
+        mock.call().send(),
+    ]
 
     LIST_FILE_LOGS = [
         ('==> gsutil ls gs://seqr-hail-search-data/v3.1/*/*/runs/*/*', None),
@@ -692,7 +722,10 @@ Desired update:
 ```''',
         ),
     ]
-    SLACK_VALIDATION_TEMPLATE = '\nSee more at https://storage.cloud.google.com/seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/{}/validation_errors.json'
+    SLACK_VALIDATION_CALL = ('anvil-data-loading', """Request to load data from *ext-data/empty* failed with the following error(s):
+- Missing the following expected contigs:chr17
+The following users have been notified: test_user_manager@test.com""")
+    SLACK_VALIDATION_MESSAGE = '\nSee more at https://storage.cloud.google.com/seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-24/validation_errors.json'
 
     def setUp(self):
         patcher = mock.patch('seqr.utils.file_utils.subprocess.Popen')
@@ -708,8 +741,16 @@ Desired update:
     def test_command(self, *args, **kwargs):
         responses.add(
             responses.GET,
-            "http://testairtable/appUelDNM3BnWaR7M/AnVIL%20Seqr%20Loading%20Requests%20Tracking?fields[]=Status&pageSize=2&filterByFormula=AND({AnVIL Project URL}='https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page',OR(Status='Loading',Status='Loading Requested'))",
+            self.airtable_loading_tracking_url + self.AIRTABLE_LOADING_QUERY_TEMPLATE.format(EXTERNAL_PROJECT_GUID),
             json={'records': [{'id': 'rec12345', 'fields': {}}, {'id': 'rec67890', 'fields': {}}]})
+        responses.add(
+            responses.GET,
+            self.airtable_loading_tracking_url + self.AIRTABLE_LOADING_QUERY_TEMPLATE.format('R0002_empty'),
+            json={'records': [{'id': 'rec12345', 'fields': {}}]})
+        responses.add(
+            responses.PATCH,
+            self.airtable_loading_tracking_url,
+            json={'records': [{'id': 'rec12345', 'fields': {}}]})
         responses.add(
             responses.GET,
             f"{self.airtable_samples_url}?fields[]=CollaboratorSampleID&fields[]=SeqrCollaboratorSampleID&fields[]=PDOStatus&fields[]=SeqrProject&fields[]=PDOID&pageSize=100&filterByFormula=AND(SEARCH('https://test-seqr.org/project/R0003_test/project_page',ARRAYJOIN({{SeqrProject}},';')),OR(SEARCH('Methods (Loading)',ARRAYJOIN(PDOStatus,';')),SEARCH('On hold for phenotips, but ready to load',ARRAYJOIN(PDOStatus,';'))))",
@@ -760,7 +801,12 @@ Desired update:
     def _additional_loading_logs(self, data_type, version):
         return [(f'==> gsutil cat gs://seqr-hail-search-data/v3.1/{data_type.replace("SV", "GCNV")}/runs/{version}/metadata.json', None)]
 
-    def _assert_expected_airtable_calls(self):
+    def _assert_expected_airtable_calls(self, has_reload_calls):
+        # Test request tracking updates for validation errors
+        # TODO
+        if not has_reload_calls:
+            return 0, 2
+
         # Test airtable PDO updates
         update_pdos_request = responses.calls[1].request
         self.assertEqual(update_pdos_request.url, self.airtable_pdo_url)
@@ -791,4 +837,4 @@ Desired update:
         self.assertDictEqual(json.loads(update_samples_request_2.body), {'records': [
             {'id': 'recfMYDEZpPtzAIeV', 'fields': {'PDOID': ['rec0ABC123']}},
         ]})
-        return 7
+        return 7, 2

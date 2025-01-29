@@ -170,7 +170,7 @@ class Command(BaseCommand):
         ] + error_list + [
             'These errors often occur when a joint called VCF is not created in a supported manner. Please see our '
             '<a href=https://storage.googleapis.com/seqr-reference-data/seqr-vcf-info.pdf>documentation</a> for more '
-            'information about supported calling pipelines and file formats. If you believe this error is incorrect'
+            'information about supported calling pipelines and file formats. If you believe this error is incorrect '
             'and would like to request a manual review, please respond to this email.',
         ])
         recipients = send_project_email(project, email_body, 'Error loading seqr data')
