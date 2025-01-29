@@ -813,7 +813,12 @@ The following users have been notified: test_user_manager@test.com""")
 
     def _assert_expected_airtable_calls(self, has_reload_calls):
         # Test request tracking updates for validation errors
-        # TODO
+        update_loading_tracking_request = responses.calls[-1].request
+        self.assertEqual(update_loading_tracking_request.url, self.airtable_loading_tracking_url)
+        self.assertEqual(update_loading_tracking_request.method, 'PATCH')
+        self.assertDictEqual(json.loads(update_loading_tracking_request.body), {'records': [
+            {'id': 'rec12345', 'fields': {'Status': 'Loading request canceled', 'Notes': 'Callset validation failed'}},
+        ]})
         if not has_reload_calls:
             return 0, 2
 
