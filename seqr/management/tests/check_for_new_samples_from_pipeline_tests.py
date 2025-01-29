@@ -289,9 +289,8 @@ class CheckNewSamplesTest(object):
                 ))
         logs.append(('Reset 2 cached results', None))
         logs += [(log, None) for log in reload_annotations_logs or []]
+        logs += [(log, None) for log in self.VALIDATION_LOGS]
         logs.append(('DONE', None))
-        if run_loading_logs:
-            import pdb; pdb.set_trace()
         self.assert_json_logs(user=None, expected=logs)
 
         self.mock_redis.return_value.delete.assert_called_with('search_results__*', 'variant_lookup_results__*')
@@ -611,6 +610,7 @@ class LocalCheckNewSamplesTest(AuthenticationTestCase, CheckNewSamplesTest):
 
     LIST_FILE_LOGS = []
     AIRTABLE_LOGS = []
+    VALIDATION_LOGS = []
     ADDITIONAL_SLACK_CALLS = [
         mock.call(
             'seqr-data-loading',
@@ -702,6 +702,14 @@ class AirtableCheckNewSamplesTest(AnvilAuthenticationTestCase, CheckNewSamplesTe
         ('Fetched 1 PDO records from airtable', None),
         ('Fetching AnVIL Seqr Loading Requests Tracking records 0-2 from airtable', None),
         ('Fetched 2 AnVIL Seqr Loading Requests Tracking records from airtable', None),
+    ]
+    VALIDATION_LOGS = [
+        '==> gsutil cat gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-14/validation_errors.json',
+        'Fetching AnVIL Seqr Loading Requests Tracking records 0-2 from airtable',
+        'Fetched 1 AnVIL Seqr Loading Requests Tracking records from airtable',
+        '==> gsutil mv /mock/tmp/* gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-14/',
+        '==> gsutil cat gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-24/validation_errors.json',
+        '==> gsutil mv /mock/tmp/* gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-24/',
     ]
     ADDITIONAL_SLACK_CALLS = [
         mock.call(

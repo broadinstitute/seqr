@@ -65,6 +65,7 @@ class Command(BaseCommand):
                 logger.info('No loaded data available')
 
         self._report_validation_errors(runs)
+        logger.info('DONE')
 
 
     def _load_success_runs(self, runs, success_run_dirs):
@@ -100,8 +101,6 @@ class Command(BaseCommand):
                 )
             except Exception as e:
                 logger.error(f'Error reloading shared annotations for {"/".join(data_type_key)}: {e}')
-
-        logger.info('DONE')
 
     def _get_runs(self, **kwargs):
         path = self._run_path(lambda field: kwargs.get(field, '*') or '*')
