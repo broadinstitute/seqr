@@ -774,7 +774,7 @@ Desired update:
         self.assertDictEqual(json.loads(create_pdos_request.body), {'records': [{'fields': {
             'PDO': 'PDO-1234_sr',
             'SeqrProjectURL': 'https://test-seqr.org/project/R0003_test/project_page',
-            'PDOStatus': 'PM team (Relatedness checks)',
+            'PDOStatus': 'Methods (Loading)',
             'PDOName': 'RGP_WGS_12',
         }}]})
         update_samples_request = responses.calls[4].request
