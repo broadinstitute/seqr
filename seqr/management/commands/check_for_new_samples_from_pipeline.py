@@ -14,7 +14,7 @@ from seqr.utils.file_utils import file_iter, list_files, is_google_bucket_file_p
 from seqr.utils.search.add_data_utils import notify_search_data_loaded
 from seqr.utils.search.utils import parse_valid_variant_id
 from seqr.utils.search.hail_search_utils import hail_variant_multi_lookup, search_data_type
-from seqr.views.utils.airtable_utils import AirtableSession, LOADABLE_PDO_STATUSES, AVAILABLE_PDO_STATUS, LOADING_PDO_STATUS
+from seqr.views.utils.airtable_utils import AirtableSession, LOADABLE_PDO_STATUSES, AVAILABLE_PDO_STATUS
 from seqr.views.utils.dataset_utils import match_and_update_search_samples
 from seqr.views.utils.export_utils import write_multiple_files
 from seqr.views.utils.permissions_utils import is_internal_anvil_project, project_has_anvil
@@ -298,7 +298,7 @@ class Command(BaseCommand):
         # Create PDOs and then update Samples with new PDOs
         # Does not create PDOs with Samples directly as that would not remove Samples from old PDOs
         new_pdos = session.safe_create_records('PDO', [
-            {'PDO': pdo_name, **pdo, 'PDOStatus': LOADING_PDO_STATUS} for pdo_name, (_, pdo) in pdos_to_create.items()
+            {'PDO': pdo_name, **pdo, 'PDOStatus': 'PM team (Relatedness checks)'} for pdo_name, (_, pdo) in pdos_to_create.items()
         ])
         pdo_id_map = {pdos_to_create[record['fields']['PDO']][0]: record['id'] for record in new_pdos}
         for pdo_id, sample_record_ids in skipped_pdo_samples.items():
