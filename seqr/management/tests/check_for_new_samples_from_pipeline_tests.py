@@ -290,6 +290,8 @@ class CheckNewSamplesTest(object):
         logs.append(('Reset 2 cached results', None))
         logs += [(log, None) for log in reload_annotations_logs or []]
         logs.append(('DONE', None))
+        if run_loading_logs:
+            import pdb; pdb.set_trace()
         self.assert_json_logs(user=None, expected=logs)
 
         self.mock_redis.return_value.delete.assert_called_with('search_results__*', 'variant_lookup_results__*')
