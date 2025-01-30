@@ -21,7 +21,7 @@ from seqr.utils.search.utils import get_search_backend_status, delete_search_bac
 from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
-from seqr.utils.vcf_utils import validate_vcf_exists, get_vcf_list
+from seqr.utils.vcf_utils import validate_vcf_and_get_samples, get_vcf_list
 
 from seqr.views.utils.airflow_utils import trigger_airflow_data_loading
 from seqr.views.utils.airtable_utils import AirtableSession, LOADABLE_PDO_STATUSES, AVAILABLE_PDO_STATUS
@@ -453,11 +453,11 @@ def loading_vcfs(request):
 def validate_callset(request):
     request_json = json.loads(request.body)
     dataset_type = request_json.get('datasetType', Sample.DATASET_TYPE_VARIANT_CALLS)
-    validate_vcf_exists(
-        _callset_path(request_json), request.user, allowed_exts=DATA_TYPE_FILE_EXTS.get(dataset_type),
+    samples = validate_vcf_and_get_samples(
+        _callset_path(request_json), request.user, request_json['genomeVersion'], allowed_exts=DATA_TYPE_FILE_EXTS.get(dataset_type),
         path_name=request_json['filePath'],
     )
-    return create_json_response({'success': True})
+    return create_json_response({'vcfSamples': sorted(samples)})
 
 
 def _callset_path(request_json):

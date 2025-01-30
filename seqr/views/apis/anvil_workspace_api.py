@@ -25,7 +25,7 @@ from seqr.views.utils.pedigree_info_utils import parse_basic_pedigree_table, Jso
 from seqr.views.utils.individual_utils import add_or_update_individuals_and_families
 from seqr.utils.communication_utils import send_html_email
 from seqr.utils.file_utils import list_files
-from seqr.utils.vcf_utils import validate_vcf_and_get_samples, validate_vcf_exists, get_vcf_list
+from seqr.utils.vcf_utils import validate_vcf_and_get_samples, get_vcf_list
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.views.utils.permissions_utils import is_anvil_authenticated, check_workspace_perm, login_and_policies_required
@@ -152,10 +152,9 @@ def validate_anvil_vcf(request, namespace, name, workspace_meta):
     path = body['dataPath']
     bucket_name = workspace_meta['workspace']['bucketName']
     data_path = 'gs://{bucket}/{path}'.format(bucket=bucket_name.rstrip('/'), path=path.lstrip('/'))
-    file_to_check = validate_vcf_exists(data_path, request.user, path_name=path)
 
     # Validate the VCF to see if it contains all the required samples
-    samples = validate_vcf_and_get_samples(file_to_check, body['genomeVersion'])
+    samples = validate_vcf_and_get_samples(data_path, request.user, body['genomeVersion'], path_name=path)
 
     return create_json_response({'vcfSamples': sorted(samples), 'fullDataPath': data_path})
 
