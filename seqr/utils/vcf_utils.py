@@ -63,7 +63,8 @@ def _get_vcf_meta_info(line):
 def validate_vcf_and_get_samples(data_path, user, genome_version, path_name=None, allowed_exts=None):
     vcf_filename = _validate_vcf_exists(data_path, user, path_name, allowed_exts)
 
-    # TODo handle allowed_exts is not a vcf!
+    if allowed_exts and vcf_filename.endswith(allowed_exts):
+        return None
 
     byte_range = None if vcf_filename.endswith('.vcf') else (0, BLOCK_SIZE)
     samples = {}
