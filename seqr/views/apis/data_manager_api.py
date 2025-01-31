@@ -546,7 +546,7 @@ def load_data(request):
         'skip_check_sex_and_relatedness': request_json.get('skipSRChecks', False),
     }
     if AirtableSession.is_airtable_enabled():
-        individual_ids = _get_valid_project_samples(project_samples, dataset_type, sample_type, request.user)
+        individual_ids = _get_valid_project_samples(project_samples, request_json['vcfSamples'], dataset_type, sample_type, request.user)
         success_message = f'*{request.user.email}* triggered loading internal {sample_type} {dataset_type} data for {len(projects)} projects'
         error_message = f'ERROR triggering internal {sample_type} {dataset_type} loading'
         trigger_airflow_data_loading(
@@ -554,6 +554,7 @@ def load_data(request):
             success_slack_channel=SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, is_internal=True, individual_ids=individual_ids,
         )
     else:
+        # TODO validate missing VCF samples
         request_json, _ = prepare_data_loading_request(
             *loading_args, **loading_kwargs, pedigree_dir=LOADING_DATASETS_DIR, raise_pedigree_error=True,
         )
@@ -566,7 +567,7 @@ def load_data(request):
     return create_json_response({'success': True})
 
 
-def _get_valid_project_samples(project_samples, dataset_type, sample_type, user):
+def _get_valid_project_samples(project_samples, vcf_samples, dataset_type, sample_type, user):
 
     individuals = {
         (i['project'], i['individual_id']): i for i in Individual.objects.filter(family__project__guid__in=project_samples).values(
@@ -580,6 +581,7 @@ def _get_valid_project_samples(project_samples, dataset_type, sample_type, user)
     errors = []
     individual_ids = []
     missing_samples = set()
+    missing_vcf_samples = set()
     airtable_families = set()
     for project, sample_ids in project_samples.items():
         for sample_id in sample_ids:
@@ -620,6 +622,10 @@ def _get_valid_project_samples(project_samples, dataset_type, sample_type, user)
             f'{family} ({", ".join(sorted(samples))})' for (_, family), samples in missing_family_samples.items()
         ]
         errors.append(f'The following families have previously loaded samples absent from airtable: {"; ".join(family_errors)}')
+
+    missing_vcf_samples = set(vcf_samples) - set(individual_ids)
+    if missing_vcf_samples:
+        errors.insert(0, f'The following samples are included in airtable but missing from THE VCF: {", ".join(missing_vcf_samples)}')
 
     if errors:
         raise ErrorsWarningsException(errors)
