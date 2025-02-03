@@ -1454,12 +1454,12 @@ class DataManagerAPITest(AirtableTest):
         mock_subprocess.return_value.wait.return_value = 0
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {'success': True})
+        self.assertDictEqual(response.json(), {'vcfSamples': None})
 
         mock_subprocess.return_value.communicate.return_value = (
             b'', b'CommandException: One or more URLs matched no objects.',
         )
-        body = {'filePath': f'{self.CALLSET_DIR}/sharded_vcf/part0*.vcf'}
+        body = {'filePath': f'{self.CALLSET_DIR}/sharded_vcf/part0*.vcf', 'genomeVersion': '38'}
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(

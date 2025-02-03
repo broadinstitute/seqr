@@ -457,7 +457,7 @@ def validate_callset(request):
         _callset_path(request_json), request.user, request_json['genomeVersion'], allowed_exts=DATA_TYPE_FILE_EXTS.get(dataset_type),
         path_name=request_json['filePath'],
     )
-    return create_json_response({'vcfSamples': sorted(samples)})
+    return create_json_response({'vcfSamples': samples})
 
 
 def _callset_path(request_json):

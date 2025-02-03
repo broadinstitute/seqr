@@ -156,7 +156,7 @@ def validate_anvil_vcf(request, namespace, name, workspace_meta):
     # Validate the VCF to see if it contains all the required samples
     samples = validate_vcf_and_get_samples(data_path, request.user, body['genomeVersion'], path_name=path)
 
-    return create_json_response({'vcfSamples': sorted(samples), 'fullDataPath': data_path})
+    return create_json_response({'vcfSamples': samples, 'fullDataPath': data_path})
 
 
 @anvil_workspace_access_required
