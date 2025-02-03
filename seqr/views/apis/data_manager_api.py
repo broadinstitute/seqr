@@ -622,9 +622,10 @@ def _get_valid_project_samples(project_samples, vcf_samples, dataset_type, sampl
         ]
         errors.append(f'The following families have previously loaded samples absent from airtable: {"; ".join(family_errors)}')
 
-    missing_vcf_samples = set(vcf_samples) - set(individual_ids)
-    if missing_vcf_samples:
-        errors.insert(0, f'The following samples are included in airtable but missing from THE VCF: {", ".join(missing_vcf_samples)}')
+    if vcf_samples is not None:
+        missing_vcf_samples = set(vcf_samples) - set(individual_ids)
+        if missing_vcf_samples:
+            errors.insert(0, f'The following samples are included in airtable but missing from THE VCF: {", ".join(missing_vcf_samples)}')
 
     if errors:
         raise ErrorsWarningsException(errors)
