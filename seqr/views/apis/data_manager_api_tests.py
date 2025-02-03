@@ -1455,17 +1455,17 @@ class DataManagerAPITest(AirtableTest):
         )
 
         self._add_file_list_iter(
-            ['sharded_vcf/part001.vcf.gz', 'sharded_vcf/part002.vcf.gz'], [
-                b'##fileformat=VCFv4.3\n',
-                b'##INFO=<ID=AA,Number=1,Type=String,Description="Ancestral Allele">',
-                b'##INFO=<ID=AC,Number=A,Type=Integer,Description="Allele count in genotypes, for each ALT allele, in the same order as listed">\n',
-                b'##INFO=<ID=AF,Number=A,Type=Float,Description="Allele Frequency, for each ALT allele, in the same order as listed">\n',
-                b'##INFO=<ID=AN,Number=1,Type=Integer,Description="Total number of alleles in called genotypes">\n',
-                b'##FORMAT=<ID=AD,Number=.,Type=Integer,Description="Allelic depths for the ref and alt alleles in the order listed">\n',
-                b'##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Approximate read depth (reads with MQ=255 or with bad mates are filtered)">\n',
-                b'##FORMAT=<ID=GQ,Number=1,Type=Integer,Description="Genotype Quality">\n',
-                b'##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">\n',
-                b'#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tHG00735\tNA19675_1\tNA19679\n'
+            ['sharded_vcf/part001.vcf', 'sharded_vcf/part002.vcf'], [
+                '##fileformat=VCFv4.3\n',
+                '##INFO=<ID=AA,Number=1,Type=String,Description="Ancestral Allele">',
+                '##INFO=<ID=AC,Number=A,Type=Integer,Description="Allele count in genotypes, for each ALT allele, in the same order as listed">\n',
+                '##INFO=<ID=AF,Number=A,Type=Float,Description="Allele Frequency, for each ALT allele, in the same order as listed">\n',
+                '##INFO=<ID=AN,Number=1,Type=Integer,Description="Total number of alleles in called genotypes">\n',
+                '##FORMAT=<ID=AD,Number=.,Type=Integer,Description="Allelic depths for the ref and alt alleles in the order listed">\n',
+                '##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Approximate read depth (reads with MQ=255 or with bad mates are filtered)">\n',
+                '##FORMAT=<ID=GQ,Number=1,Type=Integer,Description="Genotype Quality">\n',
+                '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">\n',
+                '#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tHG00735\tNA19675_1\tNA19679\n'
             ],
         )
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
@@ -1672,8 +1672,10 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
         self.mock_file_iter = self.mock_open.return_value.__enter__.return_value.__iter__
         self.mock_file_iter.return_value = []
         self.addCleanup(patcher.stop)
-        patcher = mock.patch('seqr.utils.file_utils.subprocess.Popen')
-        self.mock_subprocess = patcher.start()
+        patcher = mock.patch('seqr.utils.file_utils.open')
+        self.mock_unzipped_open = patcher.start()
+        self.mock_unzipped_file_iter = self.mock_unzipped_open.return_value.__enter__.return_value.__iter__
+        self.mock_unzipped_file_iter.return_value = []
         self.addCleanup(patcher.stop)
         super().setUp()
 
@@ -1688,7 +1690,7 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
 
     def _add_file_list_iter(self, file_list, stdout):
         self.mock_does_file_exist.return_value = True
-        self.mock_subprocess.return_value.stdout = stdout
+        self.mock_unzipped_file_iter.return_value = stdout
         self.mock_glob.return_value = [f'/local_dir/{file}' for file in file_list]
 
     def _assert_expected_get_projects_requests(self):
@@ -1801,7 +1803,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
     def _add_file_list_iter(self, file_list, stdout):
         formatted_files = '\n'.join([f'{self.CALLSET_DIR}/{file}' for file in file_list])
         self.mock_does_file_exist.communicate.return_value = (f'{formatted_files}\n'.encode('utf-8'), b'')
-        self.mock_file_iter.stdout += stdout
+        self.mock_file_iter.stdout += [row.encode('utf-8') for row in stdout]
         self.mock_subprocess.side_effect = [
             self.mock_does_file_exist, self.mock_file_iter, self.mock_does_file_exist, self.mock_file_iter,
         ]
