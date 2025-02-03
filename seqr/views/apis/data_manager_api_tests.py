@@ -1454,10 +1454,23 @@ class DataManagerAPITest(AirtableTest):
             response.json()['errors'], [f'Data file or path {self.CALLSET_DIR}/sharded_vcf/part0*.vcf is not found.'],
         )
 
-        self._add_file_list(['sharded_vcf/part001.vcf', 'sharded_vcf/part002.vcf'])
+        self._add_file_list_iter(
+            ['sharded_vcf/part001.vcf.gz', 'sharded_vcf/part002.vcf.gz'], [
+                b'##fileformat=VCFv4.3\n',
+                b'##INFO=<ID=AA,Number=1,Type=String,Description="Ancestral Allele">',
+                b'##INFO=<ID=AC,Number=A,Type=Integer,Description="Allele count in genotypes, for each ALT allele, in the same order as listed">\n',
+                b'##INFO=<ID=AF,Number=A,Type=Float,Description="Allele Frequency, for each ALT allele, in the same order as listed">\n',
+                b'##INFO=<ID=AN,Number=1,Type=Integer,Description="Total number of alleles in called genotypes">\n',
+                b'##FORMAT=<ID=AD,Number=.,Type=Integer,Description="Allelic depths for the ref and alt alleles in the order listed">\n',
+                b'##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Approximate read depth (reads with MQ=255 or with bad mates are filtered)">\n',
+                b'##FORMAT=<ID=GQ,Number=1,Type=Integer,Description="Genotype Quality">\n',
+                b'##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">\n',
+                b'#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tHG00735\tNA19675_1\tNA19679\n'
+            ],
+        )
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {'success': True})
+        self.assertDictEqual(response.json(), {'vcfSamples': ['HG00735', 'NA19675_1', 'NA19679']})
 
         # test data manager access
         self.login_data_manager_user()
@@ -1659,6 +1672,9 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
         self.mock_file_iter = self.mock_open.return_value.__enter__.return_value.__iter__
         self.mock_file_iter.return_value = []
         self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.utils.file_utils.subprocess.Popen')
+        self.mock_subprocess = patcher.start()
+        self.addCleanup(patcher.stop)
         super().setUp()
 
     def _set_file_not_found(self, file_name=None, sample_guid=None, list_files=False):
@@ -1670,8 +1686,9 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
         self.mock_does_file_exist.return_value = True
         self.mock_file_iter.return_value += stdout
 
-    def _add_file_list(self, file_list):
+    def _add_file_list_iter(self, file_list, stdout):
         self.mock_does_file_exist.return_value = True
+        self.mock_subprocess.return_value.stdout = stdout
         self.mock_glob.return_value = [f'/local_dir/{file}' for file in file_list]
 
     def _assert_expected_get_projects_requests(self):
@@ -1781,11 +1798,13 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         self.mock_file_iter.stdout += stdout
         self.mock_subprocess.side_effect = [self.mock_does_file_exist, self.mock_file_iter]
 
-    def _add_file_list(self, file_list):
-        self.mock_does_file_exist.wait.return_value = 0
+    def _add_file_list_iter(self, file_list, stdout):
         formatted_files = '\n'.join([f'{self.CALLSET_DIR}/{file}' for file in file_list])
-        self.mock_file_iter.communicate.return_value = (f'{formatted_files}\n'.encode('utf-8'), b'')
-        self.mock_subprocess.side_effect = [self.mock_file_iter, self.mock_file_iter]
+        self.mock_does_file_exist.communicate.return_value = (f'{formatted_files}\n'.encode('utf-8'), b'')
+        self.mock_file_iter.stdout += stdout
+        self.mock_subprocess.side_effect = [
+            self.mock_does_file_exist, self.mock_file_iter, self.mock_does_file_exist, self.mock_file_iter,
+        ]
 
     def _get_expected_read_file_subprocess_calls(self, file_name, sample_guid):
         gsutil_cat = f'gsutil cat gs://seqr-scratch-temp/{file_name}/{sample_guid}.json.gz | gunzip -c -q - '
