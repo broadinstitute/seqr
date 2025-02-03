@@ -1457,7 +1457,7 @@ class DataManagerAPITest(AirtableTest):
             response.json()['errors'], [f'Data file or path {self.CALLSET_DIR}/sharded_vcf/part0*.vcf is not found.'],
         )
 
-        self._add_file_list('sharded_vcf/part001.vcf', 'sharded_vcf/part002.vcf')
+        self._add_file_list(['sharded_vcf/part001.vcf', 'sharded_vcf/part002.vcf'])
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'success': True})
@@ -1781,7 +1781,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
     def _add_file_iter(self, stdout):
         self.mock_does_file_exist.wait.return_value = 0
         self.mock_file_iter.stdout += stdout
-        self.mock_subprocess.side_effect = [self.mock_file_iter, self.mock_file_iter]
+        self.mock_subprocess.side_effect = [self.mock_does_file_exist, self.mock_file_iter]
 
     def _add_file_list(self, file_list):
         self.mock_does_file_exist.wait.return_value = 0
