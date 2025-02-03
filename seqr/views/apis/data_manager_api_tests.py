@@ -7,6 +7,7 @@ from requests import HTTPError
 import responses
 
 from seqr.utils.communication_utils import _set_bulk_notification_stream
+from seqr.utils.file_utils import list_files
 from seqr.views.apis.data_manager_api import elasticsearch_status, upload_qc_pipeline_output, delete_index, \
     update_rna_seq, load_rna_seq_sample_data, load_phenotype_prioritization_data, validate_callset, loading_vcfs, \
     get_loaded_projects, load_data
@@ -1429,15 +1430,13 @@ class DataManagerAPITest(AirtableTest):
 
     @mock.patch('seqr.utils.file_utils.os.path.isfile')
     @mock.patch('seqr.utils.file_utils.glob.glob')
-    @mock.patch('seqr.utils.file_utils.subprocess.Popen')
-    def test_validate_callset(self, mock_subprocess, mock_glob, mock_os_isfile):
+    def test_validate_callset(self, mock_glob, mock_os_isfile):
         url = reverse(validate_callset)
         self.check_pm_login(url)
 
         mock_os_isfile.return_value = False
         mock_glob.return_value = []
-        mock_subprocess.return_value.wait.return_value = -1
-        mock_subprocess.return_value.stdout = [b'File not found']
+        self._set_file_not_found()
         body = {'filePath': f'{self.CALLSET_DIR}/mito_callset.mt', 'datasetType': 'SV'}
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
@@ -1451,14 +1450,12 @@ class DataManagerAPITest(AirtableTest):
         self.assertListEqual(response.json()['errors'], [f'Data file or path {self.CALLSET_DIR}/mito_callset.mt is not found.'])
 
         mock_os_isfile.return_value = True
-        mock_subprocess.return_value.wait.return_value = 0
+        self._add_file_iter(b'')
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'success': True})
 
-        mock_subprocess.return_value.communicate.return_value = (
-            b'', b'CommandException: One or more URLs matched no objects.',
-        )
+        self._set_file_not_found(list_files=True)
         body = {'filePath': f'{self.CALLSET_DIR}/sharded_vcf/part0*.vcf'}
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
@@ -1466,8 +1463,8 @@ class DataManagerAPITest(AirtableTest):
             response.json()['errors'], [f'Data file or path {self.CALLSET_DIR}/sharded_vcf/part0*.vcf is not found.'],
         )
 
-        mock_subprocess.return_value.communicate.return_value = (
-            b'gs://test_bucket/sharded_vcf/part001.vcf\ngs://test_bucket/sharded_vcf/part002.vcf\n', b'',
+        self._add_file_iter(
+            b'gs://test_bucket/sharded_vcf/part001.vcf\ngs://test_bucket/sharded_vcf/part002.vcf\n', list_files=True,
         )
         mock_glob.return_value = ['/local_dir/sharded_vcf/part001.vcf', '/local_dir/sharded_vcf/part002.vcf']
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
@@ -1672,12 +1669,12 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
         self.addCleanup(patcher.stop)
         super().setUp()
 
-    def _set_file_not_found(self, file_name, sample_guid):
+    def _set_file_not_found(self, file_name=None, sample_guid=None, list_files=False):
         self.mock_does_file_exist.return_value = False
         self.mock_file_iter.return_value = []
         return []
 
-    def _add_file_iter(self, stdout):
+    def _add_file_iter(self, stdout, list_files=False):
         self.mock_does_file_exist.return_value = True
         self.mock_file_iter.return_value += stdout
 
@@ -1769,20 +1766,28 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         self.addCleanup(patcher.stop)
         super().setUp()
 
-    def _set_file_not_found(self, file_name, sample_guid):
+    def _set_file_not_found(self, file_name=None, sample_guid=None, list_files=False):
         self.mock_file_iter.stdout = []
         self.mock_does_file_exist.wait.return_value = 1
-        self.mock_does_file_exist.stdout = [b'CommandException: One or more URLs matched no objects']
+        error = b'CommandException: One or more URLs matched no objects'
+        if list_files:
+            self.mock_does_file_exist.communicate.return_value = (b'', error)
+        else:
+            self.mock_does_file_exist.stdout = [error]
         self.mock_subprocess.side_effect = [self.mock_does_file_exist]
         return [
             (f'==> gsutil ls gs://seqr-scratch-temp/{file_name}/{sample_guid}.json.gz', None),
             ('CommandException: One or more URLs matched no objects', None),
         ]
 
-    def _add_file_iter(self, stdout):
+    def _add_file_iter(self, stdout, list_files=False):
         self.mock_does_file_exist.wait.return_value = 0
-        self.mock_file_iter.stdout += stdout
-        self.mock_subprocess.side_effect = [self.mock_does_file_exist, self.mock_file_iter]
+        if list_files:
+            self.mock_file_iter.communicate.return_value = (stdout, b'')
+        else:
+            self.mock_file_iter.stdout += stdout
+        first_call = self.mock_file_iter if list_files else self.mock_does_file_exist
+        self.mock_subprocess.side_effect = [first_call, self.mock_file_iter]
 
     def _get_expected_read_file_subprocess_calls(self, file_name, sample_guid):
         gsutil_cat = f'gsutil cat gs://seqr-scratch-temp/{file_name}/{sample_guid}.json.gz | gunzip -c -q - '
