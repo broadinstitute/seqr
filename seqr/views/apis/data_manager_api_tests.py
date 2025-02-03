@@ -1674,7 +1674,8 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
         self.mock_file_iter.return_value += stdout
 
     def _add_file_list(self, file_list):
-        self.mock_glob.return_value = [f'{self.TRIGGER_CALLSET_DIR}/{file}' for file in file_list]
+        self.mock_does_file_exist.return_value = True
+        self.mock_glob.return_value = [f'/local_dir/{file}' for file in file_list]
 
     def _assert_expected_get_projects_requests(self):
         self.assertEqual(len(responses.calls), 0)
