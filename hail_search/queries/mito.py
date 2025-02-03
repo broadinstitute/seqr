@@ -298,6 +298,25 @@ class MitoHailTableQuery(BaseHailTableQuery):
             ).filter(hl.is_defined),
         )
 
+    def _annotate_comp_het_valid_family_indices(self, variants):
+        if not self._has_both_sample_types:
+            return super()._annotate_comp_het_valid_family_indices(variants)
+
+        # Get familyGuids that are valid comp het families
+        variants = variants.map(lambda v: v.annotate(
+            valid_family_guids=hl.enumerate(v.v1.family_entries).starmap(
+                lambda i, family_samples: hl.or_missing(
+                    self._is_valid_comp_het_family(v.v1, v.v2, i), family_samples[0]['familyGuid']
+                )
+            ).filter(hl.is_defined)
+        ))
+        # Get indices of valid comp het families
+        return variants.map(lambda v: v.annotate(
+            valid_family_indices=hl.enumerate(v.v1.family_entries).map(lambda x: x[0]).filter(
+                lambda i: v.valid_family_guids.contains(v.v1.family_entries[i][0]['familyGuid'])
+            )
+        ))
+
     def _get_sample_genotype(self, samples, r=None, include_genotype_overrides=False, select_fields=None, **kwargs):
         if not self._has_both_sample_types:
             return super()._get_sample_genotype(samples, r, include_genotype_overrides, select_fields)

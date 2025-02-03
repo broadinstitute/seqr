@@ -16,7 +16,7 @@ from hail_search.test_utils import get_hail_search_body, FAMILY_2_VARIANT_SAMPLE
     VARIANT1_BOTH_SAMPLE_TYPES, VARIANT2_BOTH_SAMPLE_TYPES, FAMILY_2_BOTH_SAMPLE_TYPE_SAMPLE_DATA_MISSING_PARENTAL_WGS, \
     VARIANT4_BOTH_SAMPLE_TYPES, VARIANT2_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY, \
     VARIANT1_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY, VARIANT3_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY, \
-    VARIANT4_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY, VARIANT4_WES_ONLY, VARIANT3_WES_ONLY
+    VARIANT4_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY, VARIANT3_BOTH_SAMPLE_TYPES
 from hail_search.web_app import init_web_app, sync_to_async_hail_query
 from hail_search.queries.base import BaseHailTableQuery
 
@@ -374,7 +374,7 @@ class HailSearchTestCase(AioHTTPTestCase):
         # Variant 4 is de novo in exome, but inherited in genome in the same parent that has variant 3.
         inheritance_mode = 'recessive'
         await self._assert_expected_search(
-            [VARIANT1_BOTH_SAMPLE_TYPES, VARIANT2_BOTH_SAMPLE_TYPES, [VARIANT3_WES_ONLY, VARIANT4_WES_ONLY]],
+            [VARIANT1_BOTH_SAMPLE_TYPES, VARIANT2_BOTH_SAMPLE_TYPES, [VARIANT3_BOTH_SAMPLE_TYPES, VARIANT4_BOTH_SAMPLE_TYPES]],
             sample_data=FAMILY_2_BOTH_SAMPLE_TYPE_SAMPLE_DATA, inheritance_mode=inheritance_mode,
             **COMP_HET_ALL_PASS_FILTERS
         )

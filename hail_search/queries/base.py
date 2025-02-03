@@ -1077,15 +1077,19 @@ class BaseHailTableQuery(object):
         )
 
     def _filter_comp_het_families(self, variants, set_secondary_annotations=True):
-        return variants.map(lambda v: v.annotate(
-            valid_family_indices=hl.enumerate(v.v1.family_entries).map(lambda x: x[0]).filter(
-                lambda i: self._is_valid_comp_het_family(v.v1, v.v2, i)
-            )
-        )).filter(
+        variants = self._annotate_comp_het_valid_family_indices(variants)
+        return variants.filter(
             lambda v: v.valid_family_indices.any(hl.is_defined)
         ).map(lambda v: v.select(
             v1=self._annotated_comp_het_variant(v.v1, v.valid_family_indices),
             v2=self._annotated_comp_het_variant(v.v2, v.valid_family_indices, is_secondary=set_secondary_annotations),
+        ))
+
+    def _annotate_comp_het_valid_family_indices(self, variants):
+        return variants.map(lambda v: v.annotate(
+            valid_family_indices=hl.enumerate(v.v1.family_entries).map(lambda x: x[0]).filter(
+                lambda i: self._is_valid_comp_het_family(v.v1, v.v2, i)
+            )
         ))
 
     def _annotated_comp_het_variant(self, variant, valid_family_indices, is_secondary=False):
