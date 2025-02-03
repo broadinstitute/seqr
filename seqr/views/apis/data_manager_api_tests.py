@@ -1401,26 +1401,23 @@ class DataManagerAPITest(AirtableTest):
             )
         mock_send_email.assert_has_calls(calls)
 
-    @mock.patch('seqr.utils.file_utils.os.path.isfile', lambda *args: True)
-    @mock.patch('seqr.utils.file_utils.glob.glob')
-    def test_loading_vcfs(self, mock_glob):
+    def test_loading_vcfs(self):
         url = reverse(loading_vcfs)
         self.check_pm_login(url)
 
-        mock_glob.return_value = []
         response = self.client.get(url, content_type='application/json')
-        self._test_expected_vcf_responses(response, mock_glob, url)
+        self._test_expected_vcf_responses(response, url)
 
-    def _test_expected_vcf_responses(self, response, mock_glob, url):
+    def _test_expected_vcf_responses(self, response, url):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'vcfs': []})
-        mock_glob.assert_called_with('/local_datasets/**', recursive=True)
+        self.mock_glob.assert_called_with('/local_datasets/**', recursive=True)
 
-        mock_glob.return_value = ['/local_datasets/sharded_vcf/part001.vcf', '/local_datasets/sharded_vcf/part002.vcf', '/local_datasets/test.vcf.gz']
+        self.mock_glob.return_value = ['/local_datasets/sharded_vcf/part001.vcf', '/local_datasets/sharded_vcf/part002.vcf', '/local_datasets/test.vcf.gz']
         response = self.client.get(url, content_type='application/json')
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'vcfs': ['/sharded_vcf/part00*.vcf', '/test.vcf.gz']})
-        mock_glob.assert_called_with('/local_datasets/**', recursive=True)
+        self.mock_glob.assert_called_with('/local_datasets/**', recursive=True)
 
         # test data manager access
         self.login_data_manager_user()
@@ -1959,5 +1956,5 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         # Sample ID filtering skips the unaffected family
         pass
 
-    def _test_expected_vcf_responses(self, response, mock_glob, url):
+    def _test_expected_vcf_responses(self, response, url):
         self.assertEqual(response.status_code, 403)
