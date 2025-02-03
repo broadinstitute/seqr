@@ -581,7 +581,6 @@ def _get_valid_project_samples(project_samples, vcf_samples, dataset_type, sampl
     errors = []
     individual_ids = []
     missing_samples = set()
-    missing_vcf_samples = set()
     airtable_families = set()
     for project, sample_ids in project_samples.items():
         for sample_id in sample_ids:
