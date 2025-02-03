@@ -1401,43 +1401,34 @@ class DataManagerAPITest(AirtableTest):
             )
         mock_send_email.assert_has_calls(calls)
 
-    @mock.patch('seqr.utils.file_utils.os.path.isfile', lambda *args: True)
-    @mock.patch('seqr.utils.file_utils.glob.glob')
-    def test_loading_vcfs(self, mock_glob):
+    def test_loading_vcfs(self):
         url = reverse(loading_vcfs)
         self.check_pm_login(url)
 
-        mock_glob.return_value = []
         response = self.client.get(url, content_type='application/json')
-        self._test_expected_vcf_responses(response, mock_glob, url)
+        self._test_expected_vcf_responses(response, url)
 
-    def _test_expected_vcf_responses(self, response, mock_glob, url):
+    def _test_expected_vcf_responses(self, response, url):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'vcfs': []})
-        mock_glob.assert_called_with('/local_datasets/**', recursive=True)
+        self.mock_glob.assert_called_with('/local_datasets/**', recursive=True)
 
-        mock_glob.return_value = ['/local_datasets/sharded_vcf/part001.vcf', '/local_datasets/sharded_vcf/part002.vcf', '/local_datasets/test.vcf.gz']
+        self.mock_glob.return_value = ['/local_datasets/sharded_vcf/part001.vcf', '/local_datasets/sharded_vcf/part002.vcf', '/local_datasets/test.vcf.gz']
         response = self.client.get(url, content_type='application/json')
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'vcfs': ['/sharded_vcf/part00*.vcf', '/test.vcf.gz']})
-        mock_glob.assert_called_with('/local_datasets/**', recursive=True)
+        self.mock_glob.assert_called_with('/local_datasets/**', recursive=True)
 
         # test data manager access
         self.login_data_manager_user()
         response = self.client.get(url, content_type='application/json')
         self.assertEqual(response.status_code, 200)
 
-    @mock.patch('seqr.utils.file_utils.os.path.isfile')
-    @mock.patch('seqr.utils.file_utils.glob.glob')
-    @mock.patch('seqr.utils.file_utils.subprocess.Popen')
-    def test_validate_callset(self, mock_subprocess, mock_glob, mock_os_isfile):
+    def test_validate_callset(self):
         url = reverse(validate_callset)
         self.check_pm_login(url)
 
-        mock_os_isfile.return_value = False
-        mock_glob.return_value = []
-        mock_subprocess.return_value.wait.return_value = -1
-        mock_subprocess.return_value.stdout = [b'File not found']
+        self._set_file_not_found()
         body = {'filePath': f'{self.CALLSET_DIR}/mito_callset.mt', 'datasetType': 'SV', 'genomeVersion': '38'}
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
@@ -1450,15 +1441,12 @@ class DataManagerAPITest(AirtableTest):
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], [f'Data file or path {self.CALLSET_DIR}/mito_callset.mt is not found.'])
 
-        mock_os_isfile.return_value = True
-        mock_subprocess.return_value.wait.return_value = 0
+        self._add_file_iter(b'')
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'vcfSamples': None})
 
-        mock_subprocess.return_value.communicate.return_value = (
-            b'', b'CommandException: One or more URLs matched no objects.',
-        )
+        self._set_file_not_found(list_files=True)
         body = {'filePath': f'{self.CALLSET_DIR}/sharded_vcf/part0*.vcf', 'genomeVersion': '38'}
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
@@ -1466,10 +1454,7 @@ class DataManagerAPITest(AirtableTest):
             response.json()['errors'], [f'Data file or path {self.CALLSET_DIR}/sharded_vcf/part0*.vcf is not found.'],
         )
 
-        mock_subprocess.return_value.communicate.return_value = (
-            b'gs://test_bucket/sharded_vcf/part001.vcf\ngs://test_bucket/sharded_vcf/part002.vcf\n', b'',
-        )
-        mock_glob.return_value = ['/local_dir/sharded_vcf/part001.vcf', '/local_dir/sharded_vcf/part002.vcf']
+        self._add_file_list(['sharded_vcf/part001.vcf', 'sharded_vcf/part002.vcf'])
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'success': True})
@@ -1665,6 +1650,10 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
         patcher = mock.patch('seqr.utils.file_utils.os.path.isfile')
         self.mock_does_file_exist = patcher.start()
         self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.utils.file_utils.glob.glob')
+        self.mock_glob = patcher.start()
+        self.mock_glob.return_value = []
+        self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.utils.file_utils.gzip.open')
         self.mock_open = patcher.start()
         self.mock_file_iter = self.mock_open.return_value.__enter__.return_value.__iter__
@@ -1672,7 +1661,7 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
         self.addCleanup(patcher.stop)
         super().setUp()
 
-    def _set_file_not_found(self, file_name, sample_guid):
+    def _set_file_not_found(self, file_name=None, sample_guid=None, list_files=False):
         self.mock_does_file_exist.return_value = False
         self.mock_file_iter.return_value = []
         return []
@@ -1680,6 +1669,10 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
     def _add_file_iter(self, stdout):
         self.mock_does_file_exist.return_value = True
         self.mock_file_iter.return_value += stdout
+
+    def _add_file_list(self, file_list):
+        self.mock_does_file_exist.return_value = True
+        self.mock_glob.return_value = [f'/local_dir/{file}' for file in file_list]
 
     def _assert_expected_get_projects_requests(self):
         self.assertEqual(len(responses.calls), 0)
@@ -1769,10 +1762,14 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         self.addCleanup(patcher.stop)
         super().setUp()
 
-    def _set_file_not_found(self, file_name, sample_guid):
+    def _set_file_not_found(self, file_name=None, sample_guid=None, list_files=False):
         self.mock_file_iter.stdout = []
         self.mock_does_file_exist.wait.return_value = 1
-        self.mock_does_file_exist.stdout = [b'CommandException: One or more URLs matched no objects']
+        error = b'CommandException: One or more URLs matched no objects'
+        if list_files:
+            self.mock_does_file_exist.communicate.return_value = (b'', error)
+        else:
+            self.mock_does_file_exist.stdout = [error]
         self.mock_subprocess.side_effect = [self.mock_does_file_exist]
         return [
             (f'==> gsutil ls gs://seqr-scratch-temp/{file_name}/{sample_guid}.json.gz', None),
@@ -1783,6 +1780,12 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         self.mock_does_file_exist.wait.return_value = 0
         self.mock_file_iter.stdout += stdout
         self.mock_subprocess.side_effect = [self.mock_does_file_exist, self.mock_file_iter]
+
+    def _add_file_list(self, file_list):
+        self.mock_does_file_exist.wait.return_value = 0
+        formatted_files = '\n'.join([f'{self.CALLSET_DIR}/{file}' for file in file_list])
+        self.mock_file_iter.communicate.return_value = (f'{formatted_files}\n'.encode('utf-8'), b'')
+        self.mock_subprocess.side_effect = [self.mock_file_iter, self.mock_file_iter]
 
     def _get_expected_read_file_subprocess_calls(self, file_name, sample_guid):
         gsutil_cat = f'gsutil cat gs://seqr-scratch-temp/{file_name}/{sample_guid}.json.gz | gunzip -c -q - '
@@ -1953,5 +1956,5 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         # Sample ID filtering skips the unaffected family
         pass
 
-    def _test_expected_vcf_responses(self, response, mock_glob, url):
+    def _test_expected_vcf_responses(self, response, url):
         self.assertEqual(response.status_code, 403)
