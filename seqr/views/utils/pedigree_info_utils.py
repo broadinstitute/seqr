@@ -7,6 +7,7 @@ import tempfile
 import openpyxl as xl
 from collections import defaultdict
 from datetime import date
+from django.db.models import F
 
 from reference_data.models import HumanPhenotypeOntology
 from seqr.utils.communication_utils import send_html_email
@@ -70,19 +71,19 @@ def parse_pedigree_table(parsed_file, filename, user, project):
     except Exception as e:
         raise ErrorsWarningsException(['Error while converting {} rows to json: {}'.format(filename, e)], [])
 
-    json_records, warnings = _parse_pedigree_table_json(project, rows, header=header, column_map=column_map, errors=errors)
+    json_records = _parse_pedigree_table_json(project, rows, header=header, column_map=column_map, errors=errors)
 
     if is_merged_pedigree_sample_manifest:
         _set_proband_relationship(json_records)
         _send_sample_manifest(sample_manifest_rows, kit_id, filename, parsed_file, user, project)
 
-    return json_records, warnings
+    return json_records
 
 
 def parse_basic_pedigree_table(project, parsed_file, filename, required_columns=None, update_features=False):
     rows, header = _parse_pedigree_table_rows(parsed_file, filename)
     return _parse_pedigree_table_json(
-        project, rows, header=header, fail_on_warnings=True, allow_id_update=False,
+        project, rows, header=header, allow_id_update=False,
         required_columns=required_columns, update_features=update_features,
     )
 
@@ -115,7 +116,7 @@ def _parse_pedigree_table_rows(parsed_file, filename, header=None, rows=None):
         raise ErrorsWarningsException(['Error while parsing file: {}. {}'.format(filename, e)], [])
 
 
-def _parse_pedigree_table_json(project, rows, header=None, column_map=None, errors=None, fail_on_warnings=False, required_columns=None, allow_id_update=True, update_features=False):
+def _parse_pedigree_table_json(project, rows, header=None, column_map=None, errors=None, required_columns=None, allow_id_update=True, update_features=False):
     # convert to json and validate
     column_map = column_map or (_parse_header_columns(header, allow_id_update, update_features) if header else None)
     if column_map:
@@ -123,8 +124,8 @@ def _parse_pedigree_table_json(project, rows, header=None, column_map=None, erro
     else:
         json_records = rows
 
-    warnings = validate_fam_file_records(project, json_records, fail_on_warnings=fail_on_warnings, errors=errors, update_features=update_features)
-    return json_records, warnings
+    validate_fam_file_records(project, json_records, fail_on_warnings=True, errors=errors, update_features=update_features)
+    return json_records
 
 
 def _parse_sex(sex):
@@ -271,6 +272,24 @@ def validate_fam_file_records(project, records, fail_on_warnings=False, errors=N
                      if r.get(JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN)}
     records_by_id.update({r[JsonConstants.INDIVIDUAL_ID_COLUMN]: r for r in records})
 
+    record_family_ids = {
+        individual_id: r.get(JsonConstants.FAMILY_ID_COLUMN) or r['family']['familyId']
+        for individual_id, r in records_by_id.items()
+    }
+    related_individuals = Individual.objects.filter(
+        family__family_id__in=set(record_family_ids.values()), family__project=project,
+    ).exclude(
+        individual_id__in=records_by_id,
+    ).values(JsonConstants.SEX_COLUMN, JsonConstants.AFFECTED_COLUMN, **{
+        JsonConstants.INDIVIDUAL_ID_COLUMN: F('individual_id'),
+        JsonConstants.FAMILY_ID_COLUMN: F('family__family_id'),
+    })
+
+    affected_status_by_family = defaultdict(list)
+    for i in related_individuals:
+        records_by_id[i[JsonConstants.INDIVIDUAL_ID_COLUMN]] = i
+        affected_status_by_family[i[JsonConstants.FAMILY_ID_COLUMN]].append(i[JsonConstants.AFFECTED_COLUMN])
+
     loaded_individual_families = dict(Individual.objects.filter(
         family__project=project, sample__is_active=True).values_list('individual_id', 'family__family_id'))
 
@@ -279,11 +298,10 @@ def validate_fam_file_records(project, records, fail_on_warnings=False, errors=N
     errors = errors or []
     warnings = []
     individual_id_counts = defaultdict(int)
-    affected_status_by_family = defaultdict(list)
     for r in records:
         individual_id = r[JsonConstants.INDIVIDUAL_ID_COLUMN]
         individual_id_counts[individual_id] += 1
-        family_id = r.get(JsonConstants.FAMILY_ID_COLUMN) or r['family']['familyId']
+        family_id = record_family_ids[individual_id]
 
         if loaded_individual_families.get(r.get(JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN)):
             errors.append(f'{r[JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN]} already has loaded data and cannot update the ID')
@@ -335,8 +353,8 @@ def validate_fam_file_records(project, records, fail_on_warnings=False, errors=N
     if no_affected_families:
         warnings.append('The following families do not have any affected individuals: {}'.format(', '.join(no_affected_families)))
 
-    if fail_on_warnings:
-        errors += warnings
+    if fail_on_warnings and not errors:
+        errors = warnings
         warnings = []
     if errors:
         raise ErrorsWarningsException(errors, warnings)

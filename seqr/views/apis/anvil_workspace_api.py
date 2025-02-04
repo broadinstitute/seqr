@@ -263,7 +263,7 @@ def add_workspace_data(request, project_guid):
 def _parse_uploaded_pedigree(request_json, project=None):
     # Parse families/individuals in the uploaded pedigree file
     json_records = load_uploaded_file(request_json['uploadedFileId'])
-    pedigree_records, _ = parse_basic_pedigree_table(
+    pedigree_records = parse_basic_pedigree_table(
         project, json_records, 'uploaded pedigree file', update_features=True, required_columns=[
             JsonConstants.SEX_COLUMN, JsonConstants.AFFECTED_COLUMN,
         ])

@@ -418,8 +418,9 @@ class IndividualAPITest(object):
         self.assertDictEqual(response.json(), {
             'errors': [
                 'NA19675_1 already has loaded data and cannot be moved to a different family',
+                'NA19675_1 already has loaded data and cannot be moved to a different family',
                 'NA19675_1 is included as 2 separate records, but must be unique within the project',
-            ], 'warnings': []
+            ], 'warnings': ['The following families do not have any affected individuals: 1']
         })
 
         response = self.client.post(individuals_url, {'f': SimpleUploadedFile(
@@ -470,7 +471,7 @@ class IndividualAPITest(object):
                 'NA19675_2 is recorded as XXX sex and also as the father of NA19677',
                 'NA19675_1 is included as 2 separate records, but must be unique within the project',
             ],
-            'warnings': [missing_entry_warning, 'The following families do not have any affected individuals: 2'],
+            'warnings': [missing_entry_warning],
         })
 
         rows = [rows[0], '"new_fam_1"	"NA19677"	""	"M"	""	"unaffected"']

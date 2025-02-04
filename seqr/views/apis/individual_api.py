@@ -264,30 +264,13 @@ def receive_individuals_table_handler(request, project_guid):
 
     project = get_project_and_check_pm_permissions(project_guid, request.user)
 
-    warnings = []
     def process_records(json_records, filename='ped_file'):
-        pedigree_records, ped_warnings = parse_pedigree_table(json_records, filename, user=request.user, project=project)
-        nonlocal warnings
-        warnings += ped_warnings
-        return pedigree_records
+        return parse_pedigree_table(json_records, filename, user=request.user, project=project)
 
     try:
         uploaded_file_id, filename, json_records = save_uploaded_file(request, process_records=process_records)
     except ValueError as e:
         return create_json_response({'errors': [str(e)], 'warnings': []}, status=400, reason=str(e))
-
-    if warnings:
-        # If there are warnings, it might be because the upload referenced valid existing individuals and there is no
-        # issue, or because it referenced individuals that actually don't exist, so re-validate with all individuals
-        family_ids = {r[JsonConstants.FAMILY_ID_COLUMN] for r in json_records}
-        individual_ids = {r[JsonConstants.INDIVIDUAL_ID_COLUMN] for r in json_records}
-
-        related_individuals = Individual.objects.filter(
-            family__family_id__in=family_ids, family__project=project).exclude(individual_id__in=individual_ids)
-        related_individuals_json = _get_json_for_individuals(
-            related_individuals, project_guid=project_guid, family_fields=['family_id'])
-
-        validate_fam_file_records(project, json_records + list(related_individuals_json), fail_on_warnings=True)
 
     # send back some stats
     individual_ids_by_family = defaultdict(set)
