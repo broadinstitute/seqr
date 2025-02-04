@@ -261,7 +261,7 @@ def _validate_expected_samples(vcf_samples, search_dataset_type, record_family_i
     if search_dataset_type and not sample_type:
         errors.append('New data cannot be added to this project until the previously requested data is loaded')
 
-    missing_samples = set(record_family_ids.keys()) - set(vcf_samples)
+    missing_samples = sorted(set(record_family_ids.keys()) - set(vcf_samples))
     if missing_samples:
         errors.append('The following samples are included in the pedigree file but are missing from the VCF: {}'.format(
             ', '.join(missing_samples)))

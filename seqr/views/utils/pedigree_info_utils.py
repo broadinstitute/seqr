@@ -308,9 +308,6 @@ def validate_fam_file_records(project, records, errors=None, clear_invalid_value
     hpo_terms = get_valid_hpo_terms(records) if update_features else None
 
     errors = errors or []
-    if validate_expected_samples:
-        errors += validate_expected_samples(record_family_ids, previous_loaded_individuals.values(), sample_type)
-
     warnings = []
     individual_id_counts = defaultdict(int)
     for r in records:
@@ -364,6 +361,10 @@ def validate_fam_file_records(project, records, errors=None, clear_invalid_value
         for individual_id, count in individual_id_counts.items() if count > 1
     ]
 
+    if validate_expected_samples:
+        errors += validate_expected_samples(record_family_ids, previous_loaded_individuals.values(), sample_type)
+
+    # TODO or statement and include with other validation
     no_affected_families = get_no_affected_families(affected_status_by_family)
     if no_affected_families:
         warnings.append('The following families do not have any affected individuals: {}'.format(', '.join(no_affected_families)))

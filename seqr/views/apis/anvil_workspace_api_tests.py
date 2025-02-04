@@ -26,8 +26,6 @@ INVALID_ADDED_SAMPLE_DATA = [['22', 'HG00731', 'HG00731', '', '', 'Female', 'Aff
 
 MISSING_REQUIRED_SAMPLE_DATA = [["21", "HG00736", "", "", "", "", "", "", "", ""]]
 
-LOAD_SAMPLE_DATA_EXTRA_SAMPLE = LOAD_SAMPLE_DATA + [["1", "NA19678", "", "", "", "Male", "Affected", "HP:0011675", "", ""]]
-
 LOAD_SAMPLE_DATA_NO_AFFECTED = LOAD_SAMPLE_DATA + [["22", "HG00736", "", "", "", "Unknown", "Unknown", "", "", ""]]
 
 FILE_DATA = [
@@ -699,7 +697,7 @@ class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
         response_json = response.json()
         self.assertListEqual(response_json['errors'], ['Missing Sex in row #4', 'Missing Affected in row #4'])
 
-        # test sample data error
+        # test sample data error and missing samples
         self.mock_load_file.return_value = LOAD_SAMPLE_DATA + BAD_SAMPLE_DATA
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
         self.assertEqual(response.status_code, 400)
@@ -708,15 +706,8 @@ class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
             'NA19674 is affected but has no HPO terms',
             'NA19681 has invalid HPO terms: HP:0100258',
             'NA19678 is the father of NA19674 but is not included. Make sure to create an additional record with NA19678 as the Individual ID',
+            'The following samples are included in the pedigree file but are missing from the VCF: NA19674, NA19681',
         ])
-
-        # test missing samples
-        self.mock_load_file.return_value = LOAD_SAMPLE_DATA_EXTRA_SAMPLE
-        response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
-        self.assertEqual(response.status_code, 400)
-        response_json = response.json()
-        self.assertEqual(response_json['errors'],
-                         ['The following samples are included in the pedigree file but are missing from the VCF: NA19678'])
 
         self.mock_load_file.return_value = LOAD_SAMPLE_DATA_NO_AFFECTED
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
