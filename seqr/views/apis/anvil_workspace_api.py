@@ -4,6 +4,7 @@ import time
 from datetime import datetime
 from functools import wraps
 from collections import defaultdict
+from random import sample
 
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth.views import redirect_to_login
@@ -14,7 +15,6 @@ from reference_data.models import GENOME_VERSION_LOOKUP
 from seqr.models import Project, CAN_EDIT, Sample, Individual, IgvSample
 from seqr.views.react_app import render_app_html
 from seqr.views.utils.airtable_utils import AirtableSession, ANVIL_REQUEST_TRACKING_TABLE
-from seqr.utils.search.utils import get_search_samples
 from seqr.views.utils.airflow_utils import trigger_airflow_data_loading
 from seqr.views.utils.json_to_orm_utils import create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
@@ -184,7 +184,7 @@ def create_project_from_workspace(request, namespace, name):
         error = 'Field(s) "{}" are required'.format(', '.join(missing_fields))
         return create_json_response({'error': error}, status=400, reason=error)
 
-    pedigree_records = _parse_uploaded_pedigree(request_json)
+    pedigree_records = _parse_uploaded_pedigree(request_json)[0]
 
     # Create a new Project in seqr
     project_args = {
@@ -225,61 +225,66 @@ def add_workspace_data(request, project_guid):
         error = 'Field(s) "{}" are required'.format(', '.join(missing_fields))
         return create_json_response({'error': error}, status=400, reason=error)
 
-    pedigree_records = _parse_uploaded_pedigree(request_json, project=project)
+    pedigree_records, loaded_individual_ids, sample_type = _parse_uploaded_pedigree(request_json, project=project, search_dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
 
-    previous_samples = get_search_samples([project]).filter(dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
-    sample = previous_samples.first()
-    if not sample:
-        return create_json_response({
-            'error': 'New data cannot be added to this project until the previously requested data is loaded',
-        }, status=400)
-    sample_type = sample.sample_type
+    pedigree_json = _trigger_add_workspace_data(
+        project, pedigree_records, request.user, request_json['fullDataPath'], sample_type,
+        previous_loaded_ids=loaded_individual_ids, get_pedigree_json=True)
 
-    families = {record[JsonConstants.FAMILY_ID_COLUMN] for record in pedigree_records}
-    previous_loaded_individuals = previous_samples.filter(
-        individual__family__family_id__in=families,
-    ).values_list('individual_id', 'individual__individual_id', 'individual__family__family_id')
+    return create_json_response(pedigree_json)
+
+
+def _parse_uploaded_pedigree(request_json, project=None, search_dataset_type=None):
+    loaded_sample_type = None
+    loaded_individual_ids = []
+    def validate_expected_samples(record_family_ids, previous_loaded_individuals, sample_type):
+        errors, loaded_ids = _validate_expected_samples(
+            request_json['vcfSamples'], search_dataset_type, record_family_ids, previous_loaded_individuals, sample_type,
+        )
+        nonlocal loaded_individual_ids
+        loaded_individual_ids += loaded_ids
+        nonlocal loaded_sample_type
+        loaded_sample_type = sample_type
+        return errors
+
+    json_records = load_uploaded_file(request_json['uploadedFileId'])
+    pedigree_records = parse_basic_pedigree_table(
+        project, json_records, 'uploaded pedigree file', update_features=True, required_columns=[
+            JsonConstants.SEX_COLUMN, JsonConstants.AFFECTED_COLUMN,
+        ], search_dataset_type=search_dataset_type, validate_expected_samples=validate_expected_samples)
+
+    return pedigree_records, loaded_individual_ids, loaded_sample_type
+
+
+def _validate_expected_samples(vcf_samples, search_dataset_type, record_family_ids, previous_loaded_individuals, sample_type):
+    errors = []
+    if search_dataset_type and not sample_type:
+        errors.append('New data cannot be added to this project until the previously requested data is loaded')
+
+    missing_samples = set(record_family_ids.keys()) - set(vcf_samples)
+    if missing_samples:
+        errors.append('The following samples are included in the pedigree file but are missing from the VCF: {}'.format(
+            ', '.join(missing_samples)))
+
+    families = set(record_family_ids.values())
     missing_samples_by_family = defaultdict(list)
-    for _, individual_id, family_id in previous_loaded_individuals:
-        if individual_id not in request_json['vcfSamples']:
+    for loaded_individual in previous_loaded_individuals:
+        individual_id = loaded_individual[JsonConstants.INDIVIDUAL_ID_COLUMN]
+        family_id = loaded_individual[JsonConstants.FAMILY_ID_COLUMN]
+        if family_id in families and individual_id not in vcf_samples:
             missing_samples_by_family[family_id].append(individual_id)
     if missing_samples_by_family:
         missing_family_sample_messages = [
             f'Family {family_id}: {", ".join(sorted(individual_ids))}'
             for family_id, individual_ids in missing_samples_by_family.items()
         ]
-        return create_json_response({
-            'error': 'In order to load data for families with previously loaded data, new family samples must be joint called in a single VCF with all previously loaded samples.'
-                     ' The following samples were previously loaded in this project but are missing from the VCF:\n{}'.format(
-                '\n'.join(sorted(missing_family_sample_messages)))}, status=400)
+        errors.append(
+            'In order to load data for families with previously loaded data, new family samples must be joint called in a single VCF with all previously loaded samples.'
+            ' The following samples were previously loaded in this project but are missing from the VCF:\n' +
+            '\n'.join(sorted(missing_family_sample_messages))
+        )
 
-    pedigree_json = _trigger_add_workspace_data(
-        project, pedigree_records, request.user, request_json['fullDataPath'], sample_type,
-        previous_loaded_ids=[i[0] for i in previous_loaded_individuals], get_pedigree_json=True)
-
-    return create_json_response(pedigree_json)
-
-
-def _parse_uploaded_pedigree(request_json, project=None):
-    # Parse families/individuals in the uploaded pedigree file
-    json_records = load_uploaded_file(request_json['uploadedFileId'])
-    pedigree_records = parse_basic_pedigree_table(
-        project, json_records, 'uploaded pedigree file', update_features=True, required_columns=[
-            JsonConstants.SEX_COLUMN, JsonConstants.AFFECTED_COLUMN,
-        ])
-
-    missing_samples = [record['individualId'] for record in pedigree_records
-                       if record['individualId'] not in request_json['vcfSamples']]
-
-    errors = []
-    if missing_samples:
-        errors.append('The following samples are included in the pedigree file but are missing from the VCF: {}'.format(
-                ', '.join(missing_samples)))
-
-    if errors:
-        raise ErrorsWarningsException(errors, [])
-
-    return pedigree_records
+    return errors, [i['individual_id'] for i in previous_loaded_individuals]
 
 
 def _trigger_add_workspace_data(project, pedigree_records, user, data_path, sample_type, previous_loaded_ids=None, get_pedigree_json=False):

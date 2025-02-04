@@ -13,6 +13,7 @@ from reference_data.models import HumanPhenotypeOntology
 from seqr.utils.communication_utils import send_html_email
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
+from seqr.utils.search.utils import get_search_samples
 from seqr.views.utils.json_utils import _to_snake_case, _to_title_case
 from seqr.views.utils.permissions_utils import user_is_pm, get_pm_user_emails
 from seqr.models import Individual
@@ -80,11 +81,10 @@ def parse_pedigree_table(parsed_file, filename, user, project):
     return json_records
 
 
-def parse_basic_pedigree_table(project, parsed_file, filename, required_columns=None, update_features=False):
+def parse_basic_pedigree_table(project, parsed_file, filename, **kwargs):
     rows, header = _parse_pedigree_table_rows(parsed_file, filename)
     return _parse_pedigree_table_json(
-        project, rows, header=header, allow_id_update=False,
-        required_columns=required_columns, update_features=update_features,
+        project, rows, header=header, allow_id_update=False, **kwargs
     )
 
 
@@ -116,7 +116,7 @@ def _parse_pedigree_table_rows(parsed_file, filename, header=None, rows=None):
         raise ErrorsWarningsException(['Error while parsing file: {}. {}'.format(filename, e)], [])
 
 
-def _parse_pedigree_table_json(project, rows, header=None, column_map=None, errors=None, required_columns=None, allow_id_update=True, update_features=False):
+def _parse_pedigree_table_json(project, rows, header=None, column_map=None, required_columns=None, allow_id_update=True, update_features=False, **kwargs):
     # convert to json and validate
     column_map = column_map or (_parse_header_columns(header, allow_id_update, update_features) if header else None)
     if column_map:
@@ -124,7 +124,7 @@ def _parse_pedigree_table_json(project, rows, header=None, column_map=None, erro
     else:
         json_records = rows
 
-    validate_fam_file_records(project, json_records, errors=errors, update_features=update_features)
+    validate_fam_file_records(project, json_records, update_features=update_features, **kwargs)
     return json_records
 
 
@@ -254,7 +254,7 @@ def _format_value(value, column):
     return value
 
 
-def validate_fam_file_records(project, records, errors=None, clear_invalid_values=False, update_features=False, related_guids=None):
+def validate_fam_file_records(project, records, errors=None, clear_invalid_values=False, update_features=False, related_guids=None, search_dataset_type=None, validate_expected_samples=None):
     """Basic validation such as checking that parents have the same family id as the child, etc.
 
     Args:
@@ -292,12 +292,25 @@ def validate_fam_file_records(project, records, errors=None, clear_invalid_value
             records_by_id[individual_id] = i
             affected_status_by_family[i[JsonConstants.FAMILY_ID_COLUMN]].append(i[JsonConstants.AFFECTED_COLUMN])
 
-    loaded_individual_families = dict(Individual.objects.filter(
-        family__project=project, sample__is_active=True).values_list('individual_id', 'family__family_id'))
+    search_samples = get_search_samples([project])
+    if search_dataset_type:
+        search_samples = search_samples.filter(dataset_type=search_dataset_type)
+    sample_type = search_samples.first().sample_type if search_dataset_type and search_samples else None
+    previous_loaded_individuals = {
+        i[JsonConstants.INDIVIDUAL_ID_COLUMN]: i
+        for i in search_samples.values(
+            'individual_id', **{
+            JsonConstants.INDIVIDUAL_ID_COLUMN: F('individual__individual_id'),
+            JsonConstants.FAMILY_ID_COLUMN: F('individual__family__family_id'),
+        })
+    }
 
     hpo_terms = get_valid_hpo_terms(records) if update_features else None
 
     errors = errors or []
+    if validate_expected_samples:
+        errors += validate_expected_samples(record_family_ids, previous_loaded_individuals.values(), sample_type)
+
     warnings = []
     individual_id_counts = defaultdict(int)
     for r in records:
@@ -305,9 +318,9 @@ def validate_fam_file_records(project, records, errors=None, clear_invalid_value
         individual_id_counts[individual_id] += 1
         family_id = record_family_ids[individual_id]
 
-        if loaded_individual_families.get(r.get(JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN)):
+        if previous_loaded_individuals.get(r.get(JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN)):
             errors.append(f'{r[JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN]} already has loaded data and cannot update the ID')
-        if loaded_individual_families.get(individual_id) and loaded_individual_families[individual_id] != family_id:
+        if previous_loaded_individuals.get(individual_id) and previous_loaded_individuals[individual_id][JsonConstants.FAMILY_ID_COLUMN] != family_id:
             errors.append(f'{individual_id} already has loaded data and cannot be moved to a different family')
 
         # check proband relationship has valid gender
