@@ -183,11 +183,10 @@ class IndividualAPITest(object):
             'individuals': [INDIVIDUAL_IDS_UPDATE_DATA]
         }))
         self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'errors': [
+        self.assertListEqual(response.json()['errors'], [
             'NA19678 already has loaded data and cannot update the ID',
-        ], 'warnings': [
             "NA20870 is the mother of NA19678_1 but is not included. Make sure to create an additional record with NA20870 as the Individual ID",
-        ]})
+        ])
 
         response = self.client.post(edit_individuals_url, content_type='application/json', data=json.dumps({
             'individuals': [INDIVIDUAL_IDS_UPDATE_DATA, INDIVIDUAL_FAMILY_UPDATE_DATA]
@@ -421,7 +420,8 @@ class IndividualAPITest(object):
                 'NA19675_1 already has loaded data and cannot be moved to a different family',
                 'NA19675_1 already has loaded data and cannot be moved to a different family',
                 'NA19675_1 is included as 2 separate records, but must be unique within the project',
-            ], 'warnings': ['The following families do not have any affected individuals: 1']
+                'The following families do not have any affected individuals: 1',
+            ], 'warnings': []
         })
 
         response = self.client.post(individuals_url, {'f': SimpleUploadedFile(
@@ -471,8 +471,9 @@ class IndividualAPITest(object):
                 'NA19675_1 is recorded as the father of NA19675_2 but they have different family ids: 1 and 2',
                 'NA19675_2 is recorded as XXX sex and also as the father of NA19677',
                 'NA19675_1 is included as 2 separate records, but must be unique within the project',
+                missing_entry_warning,
             ],
-            'warnings': [missing_entry_warning],
+            'warnings': [],
         })
 
         rows = [rows[0], '"new_fam_1"	"NA19677"	""	"M"	""	"unaffected"']
@@ -634,16 +635,17 @@ class IndividualAPITest(object):
                            'Make sure to create an additional record with SCO_PED073A_GA0338_1 as the Individual ID'
         missing_columns_error = 'SCO_PED073B_GA0339_1 is missing the following required columns: MONDO ID, MONDO Label, Tissue Affected Status'
         response = _send_request_data(data)
-        self.assertDictEqual(response.json(), {'warnings': [expected_warning], 'errors': [
-            missing_columns_error, 'Multiple consent codes specified in manifest: GMB, HMB',
+        self.assertDictEqual(response.json(), {'warnings': [], 'errors': [
+            missing_columns_error, 'Multiple consent codes specified in manifest: GMB, HMB', expected_warning,
         ]})
 
         data[4][-2] = 'GMB'
         mock_no_validate_categories.resolve_expression.return_value = ['Not-used category']
         response = _send_request_data(data)
         self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'warnings': [expected_warning], 'errors': [
+        self.assertDictEqual(response.json(), {'warnings': [], 'errors': [
             missing_columns_error, 'Consent code in manifest "GMB" does not match project consent code "HMB"',
+            expected_warning,
         ]})
 
         data[3][12] = 'Maybe'

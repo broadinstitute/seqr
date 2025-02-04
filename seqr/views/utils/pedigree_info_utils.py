@@ -369,8 +369,8 @@ def validate_fam_file_records(project, records, errors=None, clear_invalid_value
     if no_affected_families:
         warnings.append('The following families do not have any affected individuals: {}'.format(', '.join(no_affected_families)))
 
-    if not clear_invalid_values and not errors:
-        errors = warnings
+    if not clear_invalid_values:
+        errors += warnings
         warnings = []
     if errors:
         raise ErrorsWarningsException(errors, warnings)

@@ -705,8 +705,8 @@ class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
         self.assertListEqual(response_json['errors'], [
             'NA19674 is affected but has no HPO terms',
             'NA19681 has invalid HPO terms: HP:0100258',
-            'NA19678 is the father of NA19674 but is not included. Make sure to create an additional record with NA19678 as the Individual ID',
             'The following samples are included in the pedigree file but are missing from the VCF: NA19674, NA19681',
+            'NA19678 is the father of NA19674 but is not included. Make sure to create an additional record with NA19678 as the Individual ID',
         ])
 
         self.mock_load_file.return_value = LOAD_SAMPLE_DATA_NO_AFFECTED
