@@ -124,7 +124,7 @@ def _parse_pedigree_table_json(project, rows, header=None, column_map=None, erro
     else:
         json_records = rows
 
-    validate_fam_file_records(project, json_records, fail_on_warnings=True, errors=errors, update_features=update_features)
+    validate_fam_file_records(project, json_records, errors=errors, update_features=update_features)
     return json_records
 
 
@@ -254,7 +254,7 @@ def _format_value(value, column):
     return value
 
 
-def validate_fam_file_records(project, records, fail_on_warnings=False, errors=None, clear_invalid_values=False, update_features=False):
+def validate_fam_file_records(project, records, errors=None, clear_invalid_values=False, update_features=False):
     """Basic validation such as checking that parents have the same family id as the child, etc.
 
     Args:
@@ -353,7 +353,7 @@ def validate_fam_file_records(project, records, fail_on_warnings=False, errors=N
     if no_affected_families:
         warnings.append('The following families do not have any affected individuals: {}'.format(', '.join(no_affected_families)))
 
-    if fail_on_warnings and not errors:
+    if not clear_invalid_values and not errors:
         errors = warnings
         warnings = []
     if errors:

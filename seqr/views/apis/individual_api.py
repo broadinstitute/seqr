@@ -181,7 +181,7 @@ def edit_individuals_handler(request, project_guid):
     related_individuals_json = _get_json_for_individuals(related_individuals, project_guid=project_guid, family_fields=['family_id'])
     individuals_list = modified_individuals_list + list(related_individuals_json)
 
-    validate_fam_file_records(project, individuals_list, fail_on_warnings=True, errors=errors)
+    validate_fam_file_records(project, individuals_list, errors=errors)
 
     return _update_and_parse_individuals_and_families(
         project, modified_individuals_list, user=request.user
