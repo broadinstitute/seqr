@@ -254,7 +254,7 @@ def _format_value(value, column):
     return value
 
 
-def validate_fam_file_records(project, records, errors=None, clear_invalid_values=False, update_features=False):
+def validate_fam_file_records(project, records, errors=None, clear_invalid_values=False, update_features=False, related_guids=None):
     """Basic validation such as checking that parents have the same family id as the child, etc.
 
     Args:
@@ -276,19 +276,21 @@ def validate_fam_file_records(project, records, errors=None, clear_invalid_value
         individual_id: r.get(JsonConstants.FAMILY_ID_COLUMN) or r['family']['familyId']
         for individual_id, r in records_by_id.items()
     }
-    related_individuals = Individual.objects.filter(
+    related_individuals = Individual.objects.filter(guid__in=related_guids) if related_guids else Individual.objects.filter(
         family__family_id__in=set(record_family_ids.values()), family__project=project,
-    ).exclude(
-        individual_id__in=records_by_id,
-    ).values(JsonConstants.SEX_COLUMN, JsonConstants.AFFECTED_COLUMN, **{
-        JsonConstants.INDIVIDUAL_ID_COLUMN: F('individual_id'),
-        JsonConstants.FAMILY_ID_COLUMN: F('family__family_id'),
-    })
+    ).exclude(individual_id__in=records_by_id)
 
     affected_status_by_family = defaultdict(list)
-    for i in related_individuals:
-        records_by_id[i[JsonConstants.INDIVIDUAL_ID_COLUMN]] = i
-        affected_status_by_family[i[JsonConstants.FAMILY_ID_COLUMN]].append(i[JsonConstants.AFFECTED_COLUMN])
+    guid_id_map = {}
+    for i in related_individuals.values('guid', JsonConstants.SEX_COLUMN, JsonConstants.AFFECTED_COLUMN, **{
+        JsonConstants.INDIVIDUAL_ID_COLUMN: F('individual_id'),
+        JsonConstants.FAMILY_ID_COLUMN: F('family__family_id'),
+    }):
+        individual_id = i[JsonConstants.INDIVIDUAL_ID_COLUMN]
+        guid_id_map[i['guid']] = individual_id
+        if individual_id not in records_by_id:
+            records_by_id[individual_id] = i
+            affected_status_by_family[i[JsonConstants.FAMILY_ID_COLUMN]].append(i[JsonConstants.AFFECTED_COLUMN])
 
     loaded_individual_families = dict(Individual.objects.filter(
         family__project=project, sample__is_active=True).values_list('individual_id', 'family__family_id'))
@@ -329,10 +331,10 @@ def validate_fam_file_records(project, records, errors=None, clear_invalid_value
 
         # check maternal and paternal ids for consistency
         for parent in [
-            ('father', JsonConstants.PATERNAL_ID_COLUMN, Individual.MALE_SEXES),
-            ('mother', JsonConstants.MATERNAL_ID_COLUMN, Individual.FEMALE_SEXES)
+            ('father', JsonConstants.PATERNAL_ID_COLUMN, 'paternalGuid', Individual.MALE_SEXES),
+            ('mother', JsonConstants.MATERNAL_ID_COLUMN, 'maternalGuid', Individual.FEMALE_SEXES)
         ]:
-            _validate_parent(r, *parent, individual_id, family_id, records_by_id, warnings, errors, clear_invalid_values)
+            _validate_parent(r, *parent, individual_id, family_id, records_by_id, guid_id_map, warnings, errors, clear_invalid_values)
 
         if update_features:
             features = r[JsonConstants.FEATURES] or []
@@ -377,8 +379,15 @@ def get_valid_hpo_terms(records, additional_feature_columns=None):
     return set(HumanPhenotypeOntology.objects.filter(hpo_id__in=all_hpo_terms).values_list('hpo_id', flat=True))
 
 
-def _validate_parent(row, parent_id_type, parent_id_field, expected_sexes, individual_id, family_id, records_by_id, warnings, errors, clear_invalid_values):
-    parent_id = row.get(parent_id_field)
+def _validate_parent(row, parent_id_type, parent_id_field, parent_guid_field, expected_sexes, individual_id, family_id, records_by_id, guid_id_map, warnings, errors, clear_invalid_values):
+    parent_guid = row.get(parent_guid_field)
+    if parent_guid:
+        parent_id = guid_id_map.get(parent_guid)
+        row[parent_id_field] = parent_id
+        if not parent_id:
+            errors.append(f'Invalid parental guid {parent_guid}')
+    else:
+        parent_id = row.get(parent_id_field)
     if not parent_id:
         return
 

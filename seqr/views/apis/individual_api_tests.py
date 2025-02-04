@@ -75,8 +75,8 @@ EXTERNAL_WORKSPACE_INDIVIDUAL_UPDATE_DATA = {
     'individualId': 'NA21987',
     'paternalGuid': 'I000018_na21234',
     'maternalGuid': 'I000020_na65432',
-    'maternalId': '',
-    'paternalId': 'foobar',
+    'maternalId': 'foobar',
+    'paternalId': '',
     'sex': 'U',
     'affected': 'N',
 }
@@ -183,10 +183,11 @@ class IndividualAPITest(object):
             'individuals': [INDIVIDUAL_IDS_UPDATE_DATA]
         }))
         self.assertEqual(response.status_code, 400)
-        self.assertListEqual(response.json()['errors'], [
+        self.assertDictEqual(response.json(), {'errors': [
             'NA19678 already has loaded data and cannot update the ID',
+        ], 'warnings': [
             "NA20870 is the mother of NA19678_1 but is not included. Make sure to create an additional record with NA20870 as the Individual ID",
-        ])
+        ]})
 
         response = self.client.post(edit_individuals_url, content_type='application/json', data=json.dumps({
             'individuals': [INDIVIDUAL_IDS_UPDATE_DATA, INDIVIDUAL_FAMILY_UPDATE_DATA]
@@ -282,10 +283,10 @@ class IndividualAPITest(object):
             return
 
         self.assertEqual(response.status_code, 400)
-        self.assertListEqual(response.json()['errors'], [
-            'Invalid parental guid I000020_na65432',
+        self.assertDictEqual(response.json(), {'errors': [
             'NA21234 is recorded as Female sex and also as the father of NA21987',
-        ])
+            'Invalid parental guid I000020_na65432',
+        ], 'warnings': []})
 
         update_json = deepcopy(EXTERNAL_WORKSPACE_INDIVIDUAL_UPDATE_DATA)
         update_json['maternalGuid'] = update_json.pop('paternalGuid')
