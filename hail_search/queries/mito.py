@@ -299,23 +299,23 @@ class MitoHailTableQuery(BaseHailTableQuery):
         )
 
     def _annotate_comp_het_valid_family_indices(self, variants):
+        variants = super()._annotate_comp_het_valid_family_indices(variants)
         if not self._has_both_sample_types:
-            return super()._annotate_comp_het_valid_family_indices(variants)
+            return variants
 
-        # Get familyGuids that are valid comp het families
+        # Get valid comp het familyGuids
         variants = variants.map(lambda v: v.annotate(
-            valid_family_guids=hl.enumerate(v.v1.family_entries).starmap(
-                lambda i, family_samples: hl.or_missing(
-                    self._is_valid_comp_het_family(v.v1, v.v2, i), family_samples[0]['familyGuid']
-                )
-            ).filter(hl.is_defined)
-        ))
-        # Get indices of valid comp het families
-        return variants.map(lambda v: v.annotate(
-            valid_family_indices=hl.enumerate(v.v1.family_entries).map(lambda x: x[0]).filter(
-                lambda i: v.valid_family_guids.contains(v.v1.family_entries[i][0]['familyGuid'])
+            valid_family_guids=v.valid_family_indices.map(
+                lambda i: v.v1.family_entries[i][0]['familyGuid']
             )
         ))
+        # Re-annotate valid_family_indices based on valid familyGuids
+        return variants.map(lambda v: v.annotate(
+            valid_family_indices=hl.enumerate(v.v1.family_entries).filter(
+                lambda x: v.valid_family_guids.contains(x[1][0]['familyGuid'])
+            ).map(lambda x: x[0])
+        ))
+
 
     def _get_sample_genotype(self, samples, r=None, include_genotype_overrides=False, select_fields=None, **kwargs):
         if not self._has_both_sample_types:
