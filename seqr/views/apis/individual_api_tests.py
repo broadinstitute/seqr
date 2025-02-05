@@ -75,8 +75,8 @@ EXTERNAL_WORKSPACE_INDIVIDUAL_UPDATE_DATA = {
     'individualId': 'NA21987',
     'paternalGuid': 'I000018_na21234',
     'maternalGuid': 'I000020_na65432',
-    'maternalId': '',
-    'paternalId': 'foobar',
+    'maternalId': 'foobar',
+    'paternalId': '',
     'sex': 'U',
     'affected': 'N',
 }
@@ -282,10 +282,10 @@ class IndividualAPITest(object):
             return
 
         self.assertEqual(response.status_code, 400)
-        self.assertListEqual(response.json()['errors'], [
-            'Invalid parental guid I000020_na65432',
+        self.assertDictEqual(response.json(), {'errors': [
             'NA21234 is recorded as Female sex and also as the father of NA21987',
-        ])
+            'Invalid parental guid I000020_na65432',
+        ], 'warnings': []})
 
         update_json = deepcopy(EXTERNAL_WORKSPACE_INDIVIDUAL_UPDATE_DATA)
         update_json['maternalGuid'] = update_json.pop('paternalGuid')
@@ -418,7 +418,9 @@ class IndividualAPITest(object):
         self.assertDictEqual(response.json(), {
             'errors': [
                 'NA19675_1 already has loaded data and cannot be moved to a different family',
+                'NA19675_1 already has loaded data and cannot be moved to a different family',
                 'NA19675_1 is included as 2 separate records, but must be unique within the project',
+                'The following families do not have any affected individuals: 1',
             ], 'warnings': []
         })
 
@@ -461,6 +463,7 @@ class IndividualAPITest(object):
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {
             'errors': [
+                missing_entry_warning,
                 'Invalid proband relationship "Father" for NA19675_1 with given gender Female',
                 'NA19675_1 is recorded as their own father',
                 'NA19675_1 is recorded as Female sex and also as the father of NA19675_1',
@@ -470,7 +473,7 @@ class IndividualAPITest(object):
                 'NA19675_2 is recorded as XXX sex and also as the father of NA19677',
                 'NA19675_1 is included as 2 separate records, but must be unique within the project',
             ],
-            'warnings': [missing_entry_warning, 'The following families do not have any affected individuals: 2'],
+            'warnings': [],
         })
 
         rows = [rows[0], '"new_fam_1"	"NA19677"	""	"M"	""	"unaffected"']
@@ -632,16 +635,17 @@ class IndividualAPITest(object):
                            'Make sure to create an additional record with SCO_PED073A_GA0338_1 as the Individual ID'
         missing_columns_error = 'SCO_PED073B_GA0339_1 is missing the following required columns: MONDO ID, MONDO Label, Tissue Affected Status'
         response = _send_request_data(data)
-        self.assertDictEqual(response.json(), {'warnings': [expected_warning], 'errors': [
-            missing_columns_error, 'Multiple consent codes specified in manifest: GMB, HMB',
+        self.assertDictEqual(response.json(), {'warnings': [], 'errors': [
+            missing_columns_error, 'Multiple consent codes specified in manifest: GMB, HMB', expected_warning,
         ]})
 
         data[4][-2] = 'GMB'
         mock_no_validate_categories.resolve_expression.return_value = ['Not-used category']
         response = _send_request_data(data)
         self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'warnings': [expected_warning], 'errors': [
+        self.assertDictEqual(response.json(), {'warnings': [], 'errors': [
             missing_columns_error, 'Consent code in manifest "GMB" does not match project consent code "HMB"',
+            expected_warning,
         ]})
 
         data[3][12] = 'Maybe'
