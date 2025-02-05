@@ -286,7 +286,10 @@ def _validate_expected_samples(vcf_samples, search_dataset_type, record_family_i
 
     validate_affected_families(affected_status_by_family, errors)
 
-    return errors, [i['individual_id'] for i in previous_loaded_individuals]
+    loaded_individual_ids = [
+        i['individual_id'] for i in previous_loaded_individuals if i[JsonConstants.FAMILY_ID_COLUMN] in families
+    ]
+    return errors, loaded_individual_ids
 
 
 def _trigger_add_workspace_data(project, pedigree_records, user, data_path, sample_type, previous_loaded_ids=None, get_pedigree_json=False):

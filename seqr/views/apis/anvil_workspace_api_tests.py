@@ -67,7 +67,7 @@ TEMP_PATH = '/temp_path/temp_filename'
 
 MOCK_AIRTABLE_URL = 'http://testairtable'
 
-PROJECT1_SAMPLES = ['HG00735', 'NA19678', 'NA19679', 'NA20870', 'HG00732', 'NA19675_1', 'HG00733', 'HG00731']
+PROJECT1_SAMPLES = ['HG00735', 'NA19678', 'NA19679', 'NA20870', 'HG00732', 'NA19675_1', 'HG00733', 'HG00731', 'NA20874']
 PROJECT2_SAMPLES = ['NA20885', 'NA19675_1', 'NA19679', 'HG00735']
 PROJECT2_SAMPLE_DATA = [
     {'Project_GUID': 'R0003_test', 'Family_GUID': 'F000016_1', 'Family_ID': '1', 'Individual_ID': 'NA19675_1', 'Paternal_ID': None, 'Maternal_ID': 'NA19679', 'Sex': 'F'},
@@ -80,9 +80,6 @@ NEW_PROJECT_SAMPLE_DATA = [
     {'Project_GUID': 'P_anvil-no-project-workspace2', 'Family_GUID': 'F_1_workspace2', 'Family_ID': '1', 'Individual_ID': 'NA19679', 'Paternal_ID': None, 'Maternal_ID': None, 'Sex': 'F'},
     {'Project_GUID': 'P_anvil-no-project-workspace2', 'Family_GUID': 'F_21_workspace2', 'Family_ID': '21', 'Individual_ID': 'HG00735', 'Paternal_ID': None, 'Maternal_ID': None, 'Sex': 'U'},
 ]
-
-REQUEST_BODY_EMPTY_FAMILY = deepcopy(REQUEST_BODY)
-REQUEST_BODY_EMPTY_FAMILY['vcfSamples'] = PROJECT1_SAMPLES + ['NA20874']
 
 REQUEST_BODY_ADD_DATA = deepcopy(REQUEST_BODY)
 REQUEST_BODY_ADD_DATA['vcfSamples'] = PROJECT1_SAMPLES
@@ -656,16 +653,9 @@ class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
             '\nFamily 1: NA19678',
         ])
 
-        # Test family with no affected individuals in reloaded data
+        # Test a valid operation
         self.mock_load_file.return_value = LOAD_SAMPLE_DATA
         mock_compute_indiv_guid.return_value = 'I0000020_hg00735'
-        response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_EMPTY_FAMILY))
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()['errors'],[
-            'The following families do not have any affected individuals: F000005_5',
-        ])  # TODO - add all VCF samples to validation, not just the pedigree samples, use human friendly family ID
-
-        # Test a valid operation
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_ADD_DATA))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
