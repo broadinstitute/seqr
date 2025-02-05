@@ -264,7 +264,7 @@ def _validate_expected_samples(vcf_samples, search_dataset_type, record_family_i
     missing_samples = sorted(set(record_family_ids.keys()) - set(vcf_samples))
     if missing_samples:
         errors.append('The following samples are included in the pedigree file but are missing from the VCF: {}'.format(
-            ', '.join(missing_samples)))
+                ', '.join(missing_samples)))
 
     families = set(record_family_ids.values())
     missing_samples_by_family = defaultdict(list)

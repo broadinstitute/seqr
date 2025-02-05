@@ -67,7 +67,7 @@ TEMP_PATH = '/temp_path/temp_filename'
 
 MOCK_AIRTABLE_URL = 'http://testairtable'
 
-PROJECT1_SAMPLES = ['HG00735', 'NA19678', 'NA19679', 'NA20870', 'HG00732', 'NA19675_1', 'HG00733', 'HG00731', 'NA20874']
+PROJECT1_SAMPLES = ['HG00735', 'NA19678', 'NA19679', 'NA20870', 'HG00732', 'NA19675_1', 'NA20874', 'HG00733', 'HG00731']
 PROJECT2_SAMPLES = ['NA20885', 'NA19675_1', 'NA19679', 'HG00735']
 PROJECT2_SAMPLE_DATA = [
     {'Project_GUID': 'R0003_test', 'Family_GUID': 'F000016_1', 'Family_ID': '1', 'Individual_ID': 'NA19675_1', 'Paternal_ID': None, 'Maternal_ID': 'NA19679', 'Sex': 'F'},
