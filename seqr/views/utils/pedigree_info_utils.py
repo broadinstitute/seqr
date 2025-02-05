@@ -276,34 +276,10 @@ def validate_fam_file_records(project, records, errors=None, clear_invalid_value
         individual_id: r.get(JsonConstants.FAMILY_ID_COLUMN) or r['family']['familyId']
         for individual_id, r in records_by_id.items()
     }
-    related_individuals = Individual.objects.filter(guid__in=related_guids) if related_guids else Individual.objects.filter(
-        family__family_id__in=set(record_family_ids.values()), family__project=project,
-    ).exclude(individual_id__in=records_by_id)
 
-    affected_status_by_family = defaultdict(list)
-    guid_id_map = {}
-    for i in related_individuals.values('guid', JsonConstants.SEX_COLUMN, JsonConstants.AFFECTED_COLUMN, **{
-        JsonConstants.INDIVIDUAL_ID_COLUMN: F('individual_id'),
-        JsonConstants.FAMILY_ID_COLUMN: F('family__family_id'),
-    }):
-        individual_id = i[JsonConstants.INDIVIDUAL_ID_COLUMN]
-        guid_id_map[i['guid']] = individual_id
-        if individual_id not in records_by_id:
-            records_by_id[individual_id] = i
-            affected_status_by_family[i[JsonConstants.FAMILY_ID_COLUMN]].append(i[JsonConstants.AFFECTED_COLUMN])
-
-    search_samples = get_search_samples([project])
-    if search_dataset_type:
-        search_samples = search_samples.filter(dataset_type=search_dataset_type)
-    sample_type = search_samples.first().sample_type if search_dataset_type and search_samples else None
-    previous_loaded_individuals = {
-        i[JsonConstants.INDIVIDUAL_ID_COLUMN]: i
-        for i in search_samples.values(
-            'individual_id', **{
-            JsonConstants.INDIVIDUAL_ID_COLUMN: F('individual__individual_id'),
-            JsonConstants.FAMILY_ID_COLUMN: F('individual__family__family_id'),
-        })
-    }
+    previous_loaded_individuals, affected_status_by_family, guid_id_map, sample_type = _get_related_indivduals(
+        project, records_by_id, set(record_family_ids.values()), related_guids, search_dataset_type,
+    )
 
     hpo_terms = get_valid_hpo_terms(records) if update_features else None
 
@@ -369,6 +345,39 @@ def validate_fam_file_records(project, records, errors=None, clear_invalid_value
     if errors:
         raise ErrorsWarningsException(errors, warnings)
     return warnings
+
+
+def _get_related_indivduals(project, records_by_id, families, related_guids, search_dataset_type):
+    related_individuals = Individual.objects.filter(
+        guid__in=related_guids) if related_guids else Individual.objects.filter(
+        family__family_id__in=families, family__project=project,
+    ).exclude(individual_id__in=records_by_id)
+
+    affected_status_by_family = defaultdict(list)
+    guid_id_map = {}
+    for i in related_individuals.values('guid', JsonConstants.SEX_COLUMN, JsonConstants.AFFECTED_COLUMN, **{
+        JsonConstants.INDIVIDUAL_ID_COLUMN: F('individual_id'),
+        JsonConstants.FAMILY_ID_COLUMN: F('family__family_id'),
+    }):
+        individual_id = i[JsonConstants.INDIVIDUAL_ID_COLUMN]
+        guid_id_map[i['guid']] = individual_id
+        if individual_id not in records_by_id:
+            records_by_id[individual_id] = i
+            affected_status_by_family[i[JsonConstants.FAMILY_ID_COLUMN]].append(i[JsonConstants.AFFECTED_COLUMN])
+
+    search_samples = get_search_samples([project])
+    if search_dataset_type:
+        search_samples = search_samples.filter(dataset_type=search_dataset_type)
+    sample_type = search_samples.first().sample_type if search_dataset_type and search_samples else None
+    previous_loaded_individuals = {
+        i[JsonConstants.INDIVIDUAL_ID_COLUMN]: i
+        for i in search_samples.values(
+            'individual_id', **{
+                JsonConstants.INDIVIDUAL_ID_COLUMN: F('individual__individual_id'),
+                JsonConstants.FAMILY_ID_COLUMN: F('individual__family__family_id'),
+            })
+    }
+    return previous_loaded_individuals, affected_status_by_family, guid_id_map, sample_type
 
 
 def validate_affected_families(affected_status_by_family: dict[str, list[str]], error_list: list[str]) -> None:
