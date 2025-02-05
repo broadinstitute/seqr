@@ -1918,7 +1918,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {
             'warnings': None,
-            'errors': ['The following samples are included in airtable but missing from seqr: NA21988'],
+            'errors': ['The following samples are included in airtable for Non-Analyst Project but are missing from seqr: NA21988'],
         })
         body['projects'] = [json.dumps({**PROJECT_OPTION, 'sampleIds': [PROJECT_SAMPLES_OPTION['sampleIds'][1]]})]
         body['sampleType'] = 'WGS'
