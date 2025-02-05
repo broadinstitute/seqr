@@ -646,11 +646,11 @@ class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
         self.assertEqual(response.status_code, 400)
         response_json = response.json()
         self.assertListEqual(response_json['errors'], [
-            'HG00731 already has loaded data and cannot be moved to a different family',
             'The following samples are included in the pedigree file but are missing from the VCF: HG00731',
             'In order to load data for families with previously loaded data, new family samples must be joint called in a single VCF with all previously'
             ' loaded samples. The following samples were previously loaded in this project but are missing from the VCF:'
             '\nFamily 1: NA19678',
+            'HG00731 already has loaded data and cannot be moved to a different family',
         ])
 
         # Test a valid operation
@@ -697,23 +697,19 @@ class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
         self.assertEqual(response.status_code, 400)
         response_json = response.json()
-        errors = [
-            'NA19674 is affected but has no HPO terms',
-            'NA19681 has invalid HPO terms: HP:0100258',
-            'The following samples are included in the pedigree file but are missing from the VCF: NA19674, NA19681',
-        ]
         missing_vcf_sample_error = (
             'In order to load data for families with previously loaded data, new family samples must be joint called in '
             'a single VCF with all previously loaded samples. The following samples were previously loaded in this '
             'project but are missing from the VCF:\nFamily 1: NA19678'
         )
-        if has_existing_data:
-            errors.append(missing_vcf_sample_error)
-        else:
-            errors.insert(
-                0, 'NA19678 is the father of NA19674 but is not included. Make sure to create an additional record with NA19678 as the Individual ID',
-            )
-        self.assertListEqual(response_json['errors'], errors)
+        missing_row_error = missing_vcf_sample_error if has_existing_data else \
+            'NA19678 is the father of NA19674 but is not included. Make sure to create an additional record with NA19678 as the Individual ID'
+        self.assertListEqual(response_json['errors'], [
+            'The following samples are included in the pedigree file but are missing from the VCF: NA19674, NA19681',
+            missing_row_error,
+            'NA19674 is affected but has no HPO terms',
+            'NA19681 has invalid HPO terms: HP:0100258',
+        ])
 
         self.mock_load_file.return_value = LOAD_SAMPLE_DATA_NO_AFFECTED
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))

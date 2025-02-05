@@ -417,15 +417,15 @@ class IndividualAPITest(object):
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {
             'errors': [
+                'The following families do not have any affected individuals: 1',
                 'NA19675_1 already has loaded data and cannot be moved to a different family',
                 'NA19675_1 already has loaded data and cannot be moved to a different family',
                 'NA19675_1 is included as 2 separate records, but must be unique within the project',
-                'The following families do not have any affected individuals: 1',
             ], 'warnings': []
         })
 
         response = self.client.post(individuals_url, {'f': SimpleUploadedFile(
-            'test.tsv', 'Family ID	Individual ID	Previous Individual ID\n"1"	"NA19675_1"	"NA19675"'.encode('utf-8'))})
+            'test.tsv', 'Family ID	Individual ID	Previous Individual ID	Affected\n"1"	"NA19675_1"	"NA19675"	"A"'.encode('utf-8'))})
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {
             'errors': ['Could not find individuals with the following previous IDs: NA19675'], 'warnings': []
@@ -463,6 +463,7 @@ class IndividualAPITest(object):
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {
             'errors': [
+                'The following families do not have any affected individuals: 1',
                 missing_entry_warning,
                 'Invalid proband relationship "Father" for NA19675_1 with given gender Female',
                 'NA19675_1 is recorded as their own father',
@@ -554,7 +555,7 @@ class IndividualAPITest(object):
 
         self.login_pm_user()
         response = self.client.post(receive_url, {
-            'f': SimpleUploadedFile('individuals.tsv', 'Family ID	Individual ID\n1	2'.encode('utf-8'))})
+            'f': SimpleUploadedFile('individuals.tsv', 'Family ID	Individual ID	Affected\n1	2	A'.encode('utf-8'))})
         self.assertEqual(response.status_code, 200)
         save_url = reverse(save_individuals_table_handler, args=[
             PM_REQUIRED_PROJECT_GUID, response.json()['uploadedFileId']])
