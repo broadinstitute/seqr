@@ -703,17 +703,20 @@ class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
         self.assertEqual(response.status_code, 400)
         response_json = response.json()
         self.assertListEqual(response_json['errors'], [
+            'NA19678 is the father of NA19674 but is not included. Make sure to create an additional record with NA19678 as the Individual ID',
             'NA19674 is affected but has no HPO terms',
             'NA19681 has invalid HPO terms: HP:0100258',
             'The following samples are included in the pedigree file but are missing from the VCF: NA19674, NA19681',
-            'NA19678 is the father of NA19674 but is not included. Make sure to create an additional record with NA19678 as the Individual ID',
         ])
 
         self.mock_load_file.return_value = LOAD_SAMPLE_DATA_NO_AFFECTED
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
         self.assertEqual(response.status_code, 400)
         response_json = response.json()
-        self.assertEqual(response_json['errors'],['The following families do not have any affected individuals: 22'])
+        self.assertEqual(response_json['errors'],[
+            'The following samples are included in the pedigree file but are missing from the VCF: HG00736',
+            'The following families do not have any affected individuals: 22',
+        ])
 
     def _assert_valid_operation(self, project, test_add_data=True):
         genome_version = 'GRCh37' if test_add_data else 'GRCh38'

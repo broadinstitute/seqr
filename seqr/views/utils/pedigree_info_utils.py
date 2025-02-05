@@ -367,11 +367,9 @@ def validate_fam_file_records(project, records, errors=None, clear_invalid_value
     # TODO or statement and include with other validation
     no_affected_families = get_no_affected_families(affected_status_by_family)
     if no_affected_families:
-        warnings.append('The following families do not have any affected individuals: {}'.format(', '.join(no_affected_families)))
+        message_list = warnings if clear_invalid_values else errors
+        message_list.append('The following families do not have any affected individuals: {}'.format(', '.join(no_affected_families)))
 
-    if not clear_invalid_values:
-        errors += warnings
-        warnings = []
     if errors:
         raise ErrorsWarningsException(errors, warnings)
     return warnings
@@ -410,9 +408,9 @@ def _validate_parent(row, parent_id_type, parent_id_field, parent_guid_field, ex
         warning = f'{parent_id} is the {parent_id_type} of {individual_id} but is not included'
         if clear_invalid_values:
             row[parent_id_field] = None
+            warnings.append(warning)
         else:
-            warning += f'. Make sure to create an additional record with {parent_id} as the Individual ID'
-        warnings.append(warning)
+            errors.append(f'{warning}. Make sure to create an additional record with {parent_id} as the Individual ID')
         return
 
     # is the parent the same individuals

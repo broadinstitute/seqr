@@ -463,6 +463,7 @@ class IndividualAPITest(object):
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {
             'errors': [
+                missing_entry_warning,
                 'Invalid proband relationship "Father" for NA19675_1 with given gender Female',
                 'NA19675_1 is recorded as their own father',
                 'NA19675_1 is recorded as Female sex and also as the father of NA19675_1',
@@ -471,7 +472,6 @@ class IndividualAPITest(object):
                 'NA19675_1 is recorded as the father of NA19675_2 but they have different family ids: 1 and 2',
                 'NA19675_2 is recorded as XXX sex and also as the father of NA19677',
                 'NA19675_1 is included as 2 separate records, but must be unique within the project',
-                missing_entry_warning,
             ],
             'warnings': [],
         })
