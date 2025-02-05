@@ -67,7 +67,7 @@ TEMP_PATH = '/temp_path/temp_filename'
 
 MOCK_AIRTABLE_URL = 'http://testairtable'
 
-PROJECT1_SAMPLES = ['HG00735', 'NA19678', 'NA19679', 'NA20870', 'HG00732', 'NA19675_1', 'NA20874', 'HG00733', 'HG00731']
+PROJECT1_SAMPLES = ['HG00735', 'NA19678', 'NA19679', 'NA20870', 'HG00732', 'NA19675_1', 'HG00733', 'HG00731']
 PROJECT2_SAMPLES = ['NA20885', 'NA19675_1', 'NA19679', 'HG00735']
 PROJECT2_SAMPLE_DATA = [
     {'Project_GUID': 'R0003_test', 'Family_GUID': 'F000016_1', 'Family_ID': '1', 'Individual_ID': 'NA19675_1', 'Paternal_ID': None, 'Maternal_ID': 'NA19679', 'Sex': 'F'},
@@ -80,6 +80,9 @@ NEW_PROJECT_SAMPLE_DATA = [
     {'Project_GUID': 'P_anvil-no-project-workspace2', 'Family_GUID': 'F_1_workspace2', 'Family_ID': '1', 'Individual_ID': 'NA19679', 'Paternal_ID': None, 'Maternal_ID': None, 'Sex': 'F'},
     {'Project_GUID': 'P_anvil-no-project-workspace2', 'Family_GUID': 'F_21_workspace2', 'Family_ID': '21', 'Individual_ID': 'HG00735', 'Paternal_ID': None, 'Maternal_ID': None, 'Sex': 'U'},
 ]
+
+REQUEST_BODY_EMPTY_FAMILY = deepcopy(REQUEST_BODY)
+REQUEST_BODY_EMPTY_FAMILY['vcfSamples'] = PROJECT1_SAMPLES + ['NA20874']
 
 REQUEST_BODY_ADD_DATA = deepcopy(REQUEST_BODY)
 REQUEST_BODY_ADD_DATA['vcfSamples'] = PROJECT1_SAMPLES
@@ -633,34 +636,36 @@ class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(
-            response.json()['error'],
-            'New data cannot be added to this project until the previously requested data is loaded',
+            response.json()['errors'],
+            ['New data cannot be added to this project until the previously requested data is loaded'],
         )
 
         url = reverse(add_workspace_data, args=[PROJECT1_GUID])
-        self._test_errors(url, ['uploadedFileId', 'fullDataPath', 'vcfSamples'], TEST_WORKSPACE_NAME)
+        self._test_errors(url, ['uploadedFileId', 'fullDataPath', 'vcfSamples'], TEST_WORKSPACE_NAME, has_existing_data=True)
 
-        # Test Individual ID exists in an omitted family
+        # Test Individual ID exists in an omitted family and missing loaded samples
         self.mock_load_file.return_value = LOAD_SAMPLE_DATA + INVALID_ADDED_SAMPLE_DATA
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
         self.assertEqual(response.status_code, 400)
         response_json = response.json()
         self.assertListEqual(response_json['errors'], [
             'HG00731 already has loaded data and cannot be moved to a different family',
-        ])
-
-        # Test missing loaded samples
-        self.mock_load_file.return_value = LOAD_SAMPLE_DATA
-        response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(
-            response.json()['error'],
+            'The following samples are included in the pedigree file but are missing from the VCF: HG00731',
             'In order to load data for families with previously loaded data, new family samples must be joint called in a single VCF with all previously'
             ' loaded samples. The following samples were previously loaded in this project but are missing from the VCF:'
-            '\nFamily 1: NA19678')
+            '\nFamily 1: NA19678',
+        ])
+
+        # Test family with no affected individuals in reloaded data
+        self.mock_load_file.return_value = LOAD_SAMPLE_DATA
+        mock_compute_indiv_guid.return_value = 'I0000020_hg00735'
+        response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_EMPTY_FAMILY))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['errors'],[
+            'The following families have no affected individuals and can not be loaded to seqr: F000005_5',
+        ])  # TODO - add all VCF samples to validation, not just the pedigree samples
 
         # Test a valid operation
-        mock_compute_indiv_guid.return_value = 'I0000020_hg00735'
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_ADD_DATA))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
@@ -676,7 +681,7 @@ class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
         self._test_mv_file_and_triggering_dag_exception(
             url, {'guid': PROJECT2_GUID}, PROJECT2_SAMPLE_DATA, 'GRCh37', REQUEST_BODY_ADD_DATA2)
 
-    def _test_errors(self, url, fields, workspace_name):
+    def _test_errors(self, url, fields, workspace_name, has_existing_data=False):
         # Test missing required fields in the request body
         response = self.client.post(url, content_type='application/json', data=json.dumps({}))
         self.assertEqual(response.status_code, 400)
@@ -702,21 +707,35 @@ class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
         self.assertEqual(response.status_code, 400)
         response_json = response.json()
-        self.assertListEqual(response_json['errors'], [
-            'NA19678 is the father of NA19674 but is not included. Make sure to create an additional record with NA19678 as the Individual ID',
+        errors = [
             'NA19674 is affected but has no HPO terms',
             'NA19681 has invalid HPO terms: HP:0100258',
             'The following samples are included in the pedigree file but are missing from the VCF: NA19674, NA19681',
-        ])
+        ]
+        missing_vcf_sample_error = (
+            'In order to load data for families with previously loaded data, new family samples must be joint called in '
+            'a single VCF with all previously loaded samples. The following samples were previously loaded in this '
+            'project but are missing from the VCF:\nFamily 1: NA19678'
+        )
+        if has_existing_data:
+            errors.append(missing_vcf_sample_error)
+        else:
+            errors.insert(
+                0, 'NA19678 is the father of NA19674 but is not included. Make sure to create an additional record with NA19678 as the Individual ID',
+            )
+        self.assertListEqual(response_json['errors'], errors)
 
         self.mock_load_file.return_value = LOAD_SAMPLE_DATA_NO_AFFECTED
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
         self.assertEqual(response.status_code, 400)
         response_json = response.json()
-        self.assertEqual(response_json['errors'],[
+        errors = [
             'The following samples are included in the pedigree file but are missing from the VCF: HG00736',
             'The following families do not have any affected individuals: 22',
-        ])
+        ]
+        if has_existing_data:
+            errors.insert(1, missing_vcf_sample_error)
+        self.assertEqual(response_json['errors'],errors)
 
     def _assert_valid_operation(self, project, test_add_data=True):
         genome_version = 'GRCh37' if test_add_data else 'GRCh38'
