@@ -376,9 +376,9 @@ def _get_validated_related_individuals(project, records_by_id, record_family_ids
     }
 
     if validate_expected_samples:
-        errors += validate_expected_samples(record_family_ids, affected_status_by_family, previous_loaded_individuals.values(), sample_type)
-    else:
-        validate_affected_families(affected_status_by_family, errors)
+        errors += validate_expected_samples(record_family_ids, previous_loaded_individuals.values(), sample_type)
+
+    validate_affected_families(affected_status_by_family, errors)
 
     return previous_loaded_individuals, guid_id_map
 

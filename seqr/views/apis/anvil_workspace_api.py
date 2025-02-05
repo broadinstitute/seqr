@@ -235,10 +235,10 @@ def add_workspace_data(request, project_guid):
 def _parse_uploaded_pedigree(request_json, project=None, search_dataset_type=None):
     loaded_sample_type = None
     loaded_individual_ids = []
-    def validate_expected_samples(record_family_ids, affected_status_by_family, previous_loaded_individuals, sample_type):
+    def validate_expected_samples(record_family_ids, previous_loaded_individuals, sample_type):
         errors, loaded_ids = _validate_expected_samples(
             request_json['vcfSamples'], search_dataset_type,
-            record_family_ids, affected_status_by_family, previous_loaded_individuals, sample_type,
+            record_family_ids, previous_loaded_individuals, sample_type,
         )
         nonlocal loaded_individual_ids
         loaded_individual_ids += loaded_ids
@@ -255,7 +255,7 @@ def _parse_uploaded_pedigree(request_json, project=None, search_dataset_type=Non
     return pedigree_records, loaded_individual_ids, loaded_sample_type
 
 
-def _validate_expected_samples(vcf_samples, search_dataset_type, record_family_ids, affected_status_by_family, previous_loaded_individuals, sample_type):
+def _validate_expected_samples(vcf_samples, search_dataset_type, record_family_ids, previous_loaded_individuals, sample_type):
     errors = []
     if search_dataset_type and not sample_type:
         errors.append('New data cannot be added to this project until the previously requested data is loaded')
@@ -282,8 +282,6 @@ def _validate_expected_samples(vcf_samples, search_dataset_type, record_family_i
             ' The following samples were previously loaded in this project but are missing from the VCF:\n' +
             '\n'.join(sorted(missing_family_sample_messages))
         )
-
-    validate_affected_families(affected_status_by_family, errors)
 
     loaded_individual_ids = [
         i['individual_id'] for i in previous_loaded_individuals if i[JsonConstants.FAMILY_ID_COLUMN] in families
