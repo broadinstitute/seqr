@@ -277,14 +277,14 @@ def validate_fam_file_records(project, records, errors=None, clear_invalid_value
         for individual_id, r in records_by_id.items()
     }
 
-    previous_loaded_individuals, affected_status_by_family, guid_id_map, sample_type = _get_related_indivduals(
-        project, records_by_id, set(record_family_ids.values()), related_guids, search_dataset_type,
+    errors = errors or []
+    warnings = []
+    previous_loaded_individuals, guid_id_map = _get_validated_related_individuals(
+        project, records_by_id, record_family_ids, related_guids, search_dataset_type, validate_expected_samples,
+        warnings if clear_invalid_values else errors,
     )
 
     hpo_terms = get_valid_hpo_terms(records) if update_features else None
-
-    errors = errors or []
-    warnings = []
     individual_id_counts = defaultdict(int)
     for r in records:
         individual_id = r[JsonConstants.INDIVIDUAL_ID_COLUMN]
@@ -330,27 +330,20 @@ def validate_fam_file_records(project, records, errors=None, clear_invalid_value
             if invalid_features:
                 errors.append(f'{individual_id} has invalid HPO terms: {", ".join(sorted(invalid_features))}')
 
-        affected_status_by_family[family_id].append(r.get(JsonConstants.AFFECTED_COLUMN))
-
     errors += [
         f'{individual_id} is included as {count} separate records, but must be unique within the project'
         for individual_id, count in individual_id_counts.items() if count > 1
     ]
-
-    if validate_expected_samples:
-        errors += validate_expected_samples(record_family_ids, affected_status_by_family, previous_loaded_individuals.values(), sample_type)
-    else:
-        validate_affected_families(affected_status_by_family, warnings if clear_invalid_values else errors)
 
     if errors:
         raise ErrorsWarningsException(errors, warnings)
     return warnings
 
 
-def _get_related_indivduals(project, records_by_id, families, related_guids, search_dataset_type):
+def _get_validated_related_individuals(project, records_by_id, record_family_ids, related_guids, search_dataset_type, validate_expected_samples, errors):
     related_individuals = Individual.objects.filter(
         guid__in=related_guids) if related_guids else Individual.objects.filter(
-        family__family_id__in=families, family__project=project,
+        family__family_id__in=set(record_family_ids.values()), family__project=project,
     ).exclude(individual_id__in=records_by_id)
 
     affected_status_by_family = defaultdict(list)
@@ -365,6 +358,10 @@ def _get_related_indivduals(project, records_by_id, families, related_guids, sea
             records_by_id[individual_id] = i
             affected_status_by_family[i[JsonConstants.FAMILY_ID_COLUMN]].append(i[JsonConstants.AFFECTED_COLUMN])
 
+    for individual_id, family_id in record_family_ids.items():
+        affected = records_by_id[individual_id].get(JsonConstants.AFFECTED_COLUMN, Individual.AFFECTED_STATUS_UNKNOWN)
+        affected_status_by_family[family_id].append(affected)
+
     search_samples = get_search_samples([project])
     if search_dataset_type:
         search_samples = search_samples.filter(dataset_type=search_dataset_type)
@@ -377,13 +374,19 @@ def _get_related_indivduals(project, records_by_id, families, related_guids, sea
                 JsonConstants.FAMILY_ID_COLUMN: F('individual__family__family_id'),
             })
     }
-    return previous_loaded_individuals, affected_status_by_family, guid_id_map, sample_type
+
+    if validate_expected_samples:
+        errors += validate_expected_samples(record_family_ids, affected_status_by_family, previous_loaded_individuals.values(), sample_type)
+    else:
+        validate_affected_families(affected_status_by_family, errors)
+
+    return previous_loaded_individuals, guid_id_map
 
 
 def validate_affected_families(affected_status_by_family: dict[str, list[str]], error_list: list[str]) -> None:
     no_affected_families = [
         family_id for family_id, affected_statuses in affected_status_by_family.items()
-        if all(affected is not None and affected != Individual.AFFECTED_STATUS_AFFECTED for affected in affected_statuses)
+        if all(affected != Individual.AFFECTED_STATUS_AFFECTED for affected in affected_statuses)
     ]
     if no_affected_families:
         error_list.append(
