@@ -662,8 +662,8 @@ class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_EMPTY_FAMILY))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['errors'],[
-            'The following families have no affected individuals and can not be loaded to seqr: F000005_5',
-        ])  # TODO - add all VCF samples to validation, not just the pedigree samples
+            'The following families do not have any affected individuals: F000005_5',
+        ])  # TODO - add all VCF samples to validation, not just the pedigree samples, use human friendly family ID
 
         # Test a valid operation
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_ADD_DATA))

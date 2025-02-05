@@ -362,24 +362,24 @@ def validate_fam_file_records(project, records, errors=None, clear_invalid_value
     ]
 
     if validate_expected_samples:
-        errors += validate_expected_samples(record_family_ids, previous_loaded_individuals.values(), sample_type)
-
-    # TODO or statement and include with other validation
-    no_affected_families = get_no_affected_families(affected_status_by_family)
-    if no_affected_families:
-        message_list = warnings if clear_invalid_values else errors
-        message_list.append('The following families do not have any affected individuals: {}'.format(', '.join(no_affected_families)))
+        errors += validate_expected_samples(record_family_ids, affected_status_by_family, previous_loaded_individuals.values(), sample_type)
+    else:
+        validate_affected_families(affected_status_by_family, warnings if clear_invalid_values else errors)
 
     if errors:
         raise ErrorsWarningsException(errors, warnings)
     return warnings
 
 
-def get_no_affected_families(affected_status_by_family: dict[str, list[str]]) -> list[str]:
-    return [
+def validate_affected_families(affected_status_by_family: dict[str, list[str]], error_list: list[str]) -> None:
+    no_affected_families = [
         family_id for family_id, affected_statuses in affected_status_by_family.items()
         if all(affected is not None and affected != Individual.AFFECTED_STATUS_AFFECTED for affected in affected_statuses)
     ]
+    if no_affected_families:
+        error_list.append(
+            f'The following families do not have any affected individuals: {", ".join(sorted(no_affected_families))}'
+        )
 
 
 def get_valid_hpo_terms(records, additional_feature_columns=None):

@@ -4,7 +4,6 @@ import time
 from datetime import datetime
 from functools import wraps
 from collections import defaultdict
-from random import sample
 
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth.views import redirect_to_login
@@ -12,7 +11,7 @@ from django.core.exceptions import PermissionDenied
 from django.shortcuts import redirect
 
 from reference_data.models import GENOME_VERSION_LOOKUP
-from seqr.models import Project, CAN_EDIT, Sample, Individual, IgvSample
+from seqr.models import Project, CAN_EDIT, Sample, IgvSample
 from seqr.views.react_app import render_app_html
 from seqr.views.utils.airtable_utils import AirtableSession, ANVIL_REQUEST_TRACKING_TABLE
 from seqr.views.utils.airflow_utils import trigger_airflow_data_loading
@@ -21,7 +20,7 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.file_utils import load_uploaded_file
 from seqr.views.utils.terra_api_utils import add_service_account, has_service_account_access, TerraAPIException, \
     TerraRefreshTokenFailedException
-from seqr.views.utils.pedigree_info_utils import parse_basic_pedigree_table, JsonConstants
+from seqr.views.utils.pedigree_info_utils import parse_basic_pedigree_table, validate_affected_families, JsonConstants
 from seqr.views.utils.individual_utils import add_or_update_individuals_and_families
 from seqr.utils.communication_utils import send_html_email
 from seqr.utils.file_utils import list_files
@@ -237,9 +236,10 @@ def add_workspace_data(request, project_guid):
 def _parse_uploaded_pedigree(request_json, project=None, search_dataset_type=None):
     loaded_sample_type = None
     loaded_individual_ids = []
-    def validate_expected_samples(record_family_ids, previous_loaded_individuals, sample_type):
+    def validate_expected_samples(record_family_ids, affected_status_by_family, previous_loaded_individuals, sample_type):
         errors, loaded_ids = _validate_expected_samples(
-            request_json['vcfSamples'], search_dataset_type, record_family_ids, previous_loaded_individuals, sample_type,
+            request_json['vcfSamples'], search_dataset_type,
+            record_family_ids, affected_status_by_family, previous_loaded_individuals, sample_type,
         )
         nonlocal loaded_individual_ids
         loaded_individual_ids += loaded_ids
@@ -256,7 +256,7 @@ def _parse_uploaded_pedigree(request_json, project=None, search_dataset_type=Non
     return pedigree_records, loaded_individual_ids, loaded_sample_type
 
 
-def _validate_expected_samples(vcf_samples, search_dataset_type, record_family_ids, previous_loaded_individuals, sample_type):
+def _validate_expected_samples(vcf_samples, search_dataset_type, record_family_ids, affected_status_by_family, previous_loaded_individuals, sample_type):
     errors = []
     if search_dataset_type and not sample_type:
         errors.append('New data cannot be added to this project until the previously requested data is loaded')
@@ -283,6 +283,8 @@ def _validate_expected_samples(vcf_samples, search_dataset_type, record_family_i
             ' The following samples were previously loaded in this project but are missing from the VCF:\n' +
             '\n'.join(sorted(missing_family_sample_messages))
         )
+
+    validate_affected_families(affected_status_by_family, errors)
 
     return errors, [i['individual_id'] for i in previous_loaded_individuals]
 

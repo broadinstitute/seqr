@@ -12,7 +12,7 @@ from seqr.utils.search.elasticsearch.es_utils import validate_es_index_metadata_
 from seqr.views.utils.airtable_utils import AirtableSession, ANVIL_REQUEST_TRACKING_TABLE
 from seqr.views.utils.dataset_utils import match_and_update_search_samples, load_mapping_file
 from seqr.views.utils.export_utils import write_multiple_files
-from seqr.views.utils.pedigree_info_utils import get_no_affected_families
+from seqr.views.utils.pedigree_info_utils import validate_affected_families
 from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, ANVIL_UI_URL, \
     SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL
 
@@ -155,12 +155,10 @@ def _upload_data_loading_files(projects: list[Project], user: User, file_path: s
         data_by_project[row.pop('project')].append(row)
         affected_by_family[row['Family_GUID']].append(row.pop('affected_status'))
 
-    no_affected_families =get_no_affected_families(affected_by_family)
-    if no_affected_families:
-        families = ', '.join(sorted(no_affected_families))
-        raise ErrorsWarningsException(errors=[
-            f'The following families have no affected individuals and can not be loaded to seqr: {families}',
-        ])
+    errors = []
+    validate_affected_families(affected_by_family, errors)
+    if errors:
+        raise ErrorsWarningsException(errors=errors)
 
     header = list(file_annotations.keys())
     files = [(f'{project_guid}_pedigree', header, rows) for project_guid, rows in data_by_project.items()]

@@ -1627,7 +1627,7 @@ class DataManagerAPITest(AirtableTest):
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {
-            'errors': ['The following families have no affected individuals and can not be loaded to seqr: F000005_5'],
+            'errors': ['The following families do not have any affected individuals: F000005_5'],
             'warnings': None,
         })
         Individual.objects.filter(guid='I000009_na20874').update(affected='A')
