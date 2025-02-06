@@ -8,10 +8,10 @@ import logging
 import re
 
 from reference_data.models import GENOME_VERSION_LOOKUP
-from seqr.models import Family, Sample, SavedVariant
-from seqr.utils.communication_utils import safe_post_to_slack
+from seqr.models import Family, Sample, SavedVariant, Project
+from seqr.utils.communication_utils import safe_post_to_slack, send_project_email
 from seqr.utils.file_utils import file_iter, list_files, is_google_bucket_file_path
-from seqr.utils.search.add_data_utils import notify_search_data_loaded
+from seqr.utils.search.add_data_utils import notify_search_data_loaded, update_airtable_loading_tracking_status
 from seqr.utils.search.utils import parse_valid_variant_id
 from seqr.utils.search.hail_search_utils import hail_variant_multi_lookup, search_data_type
 from seqr.views.utils.airtable_utils import AirtableSession, LOADABLE_PDO_STATUSES, AVAILABLE_PDO_STATUS
@@ -20,7 +20,8 @@ from seqr.views.utils.export_utils import write_multiple_files
 from seqr.views.utils.permissions_utils import is_internal_anvil_project, project_has_anvil
 from seqr.views.utils.variant_utils import reset_cached_search_results, update_projects_saved_variant_json, \
     get_saved_variants
-from settings import SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, HAIL_SEARCH_DATA_DIR
+from settings import SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, HAIL_SEARCH_DATA_DIR, ANVIL_UI_URL, \
+    SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +65,7 @@ class Command(BaseCommand):
                 logger.info('No loaded data available')
 
         self._report_validation_errors(runs)
+        logger.info('DONE')
 
 
     def _load_success_runs(self, runs, success_run_dirs):
@@ -100,8 +102,6 @@ class Command(BaseCommand):
             except Exception as e:
                 logger.error(f'Error reloading shared annotations for {"/".join(data_type_key)}: {e}')
 
-        logger.info('DONE')
-
     def _get_runs(self, **kwargs):
         path = self._run_path(lambda field: kwargs.get(field, '*') or '*')
         path_regex = self._run_path(lambda field: f'(?P<{field}>[^/]+)')
@@ -124,10 +124,8 @@ class Command(BaseCommand):
             **{field: get_field_format(field) for field in RUN_PATH_FIELDS}
         )
 
-    @staticmethod
-    def _report_validation_errors(runs) -> None:
-        messages = []
-        reported_runs = []
+    @classmethod
+    def _report_validation_errors(cls, runs) -> None:
         for run_dir, run_details in sorted(runs.items()):
             files = run_details['files']
             if ERRORS_REPORTED_FILE_NAME in files:
@@ -135,25 +133,57 @@ class Command(BaseCommand):
             if VALIDATION_ERRORS_FILE_NAME in files:
                 file_path = os.path.join(run_dir, VALIDATION_ERRORS_FILE_NAME)
                 error_summary = json.loads(next(line for line in file_iter(file_path)))
-                summary = [
-                    'Callset Validation Failed',
-                    f'Projects: {error_summary.get("project_guids", "MISSING FROM ERROR REPORT")}',
-                    f'Reference Genome: {run_details["genome_version"]}',
-                    f'Dataset Type: {run_details["dataset_type"]}',
-                    f'Run ID: {run_details["run_version"]}',
-                    f'Validation Errors: {error_summary.get("error_messages", json.dumps(error_summary))}',
-                ]
-                if is_google_bucket_file_path(file_path):
-                    summary.append(f'See more at https://storage.cloud.google.com/{file_path[5:]}')
-                messages.append('\n'.join(summary))
-                reported_runs.append(run_dir)
+                error_messages = error_summary.get('error_messages')
+                project_guids = error_summary.get('project_guids') or []
+                project = Project.objects.filter(guid__in=project_guids).first() if len(project_guids) == 1 else None
+                if error_messages and project and not cls._is_internal_project(project):
+                    cls._report_anvil_project_validation_error(project, error_messages)
+                else:
+                    cls._report_internal_validation_error(
+                        run_details, file_path, project_guids, error_messages or json.dumps(error_summary),
+                    )
+                write_multiple_files([(ERRORS_REPORTED_FILE_NAME, [], [])], run_dir, user=None, file_format=None)
 
-        for message in messages:
-            safe_post_to_slack(
-                SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, message,
-            )
-        for run_dir in reported_runs:
-            write_multiple_files([(ERRORS_REPORTED_FILE_NAME, [], [])], run_dir, user=None, file_format=None)
+    @classmethod
+    def _report_internal_validation_error(cls, run_details, file_path, project_guids, error_messages):
+        summary = [
+            'Callset Validation Failed',
+            f'*Projects:* {project_guids or "MISSING FROM ERROR REPORT"}',
+            f'*Reference Genome:* {run_details["genome_version"]}',
+            f'*Dataset Type:* {run_details["dataset_type"]}',
+            f'*Run ID:* {run_details["run_version"]}',
+            f'*Validation Errors:* {error_messages}',
+        ]
+        if is_google_bucket_file_path(file_path):
+            summary.append(f'See more at https://storage.cloud.google.com/{file_path[5:]}')
+        safe_post_to_slack(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, '\n'.join(summary))
+
+    @classmethod
+    def _report_anvil_project_validation_error(cls, project, error_messages):
+        workspace_name = f'{project.workspace_namespace}/{project.workspace_name}'
+        error_list = [f'- {error}' for error in error_messages]
+        email_body = '\n'.join([
+            f'We are following up on the request to load data from AnVIL workspace '
+            f'<a href={ANVIL_UI_URL}#workspaces/{workspace_name}>{workspace_name}</a> on {project.created_date.date().strftime("%B %d, %Y")}. '
+            f'This request could not be loaded due to the following error(s):'
+        ] + error_list + [
+            'These errors often occur when a joint called VCF is not created in a supported manner. Please see our '
+            '<a href=https://storage.googleapis.com/seqr-reference-data/seqr-vcf-info.pdf>documentation</a> for more '
+            'information about supported calling pipelines and file formats. If you believe this error is incorrect '
+            'and would like to request a manual review, please respond to this email.',
+        ])
+        recipients = send_project_email(project, email_body, 'Error loading seqr data')
+
+        slack_message = '\n'.join([
+            f'Request to load data from *{workspace_name}* failed with the following error(s):',
+        ] + error_list + [
+            f'The following users have been notified: {", ".join(recipients.values_list("email", flat=True))}'
+        ])
+        safe_post_to_slack(SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, slack_message)
+
+        update_airtable_loading_tracking_status(project, 'Loading request canceled', {
+            'Notes': 'Callset validation failed',
+        })
 
     @classmethod
     def _load_new_samples(cls, metadata_path, genome_version, dataset_type, run_version, **kwargs):
@@ -206,6 +236,10 @@ class Command(BaseCommand):
         return cls._report_sample_updates(dataset_type, sample_type, metadata, samples_by_project, new_sample_data_by_project)
 
     @classmethod
+    def _is_internal_project(cls, project):
+        return not project_has_anvil(project) or is_internal_anvil_project(project)
+
+    @classmethod
     def _report_sample_updates(cls, dataset_type, sample_type, metadata, samples_by_project, new_sample_data_by_project):
         updated_project_families = []
         updated_families = set()
@@ -213,7 +247,7 @@ class Command(BaseCommand):
         session = AirtableSession(user=None, no_auth=True) if AirtableSession.is_airtable_enabled() else None
         for project, sample_ids in samples_by_project.items():
             project_sample_data = new_sample_data_by_project[project.id]
-            is_internal = not project_has_anvil(project) or is_internal_anvil_project(project)
+            is_internal = cls._is_internal_project(project)
             notify_search_data_loaded(
                 project, is_internal, dataset_type, sample_type, project_sample_data['samples'],
                 num_samples=len(sample_ids),
