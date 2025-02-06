@@ -3,6 +3,9 @@ import re
 
 from collections import defaultdict
 
+from duckdb.duckdb import NotImplementedException
+
+from seqr.models import Sample
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.file_utils import file_iter, does_file_exist, list_files
 from seqr.utils.search.constants import VCF_FILE_EXTENSIONS
@@ -60,12 +63,16 @@ def _get_vcf_meta_info(line):
     return None
 
 
-def validate_vcf_and_get_samples(data_path, user, genome_version, path_name=None, allowed_exts=None):
+def validate_vcf_and_get_samples(data_path, user, genome_version, path_name=None, dataset_type=None):
+    _get_file_samples, allowed_exts = DATA_TYPE_FILES.get(dataset_type, (_get_vcf_samples, None))
     vcf_filename = _validate_vcf_exists(data_path, user, path_name, allowed_exts)
 
-    if allowed_exts and vcf_filename.endswith(allowed_exts):
-        return None
+    if vcf_filename.endswith(VCF_FILE_EXTENSIONS):
+        _get_file_samples = _get_vcf_samples
 
+    return _get_file_samples(vcf_filename, genome_version)
+
+def _get_vcf_samples(vcf_filename, genome_version):
     byte_range = None if vcf_filename.endswith('.vcf') else (0, BLOCK_SIZE)
     samples = {}
     header = []
@@ -93,6 +100,18 @@ def validate_vcf_and_get_samples(data_path, user, genome_version, path_name=None
 
     return sorted(samples)
 
+
+def _get_mt_samples(vcf_filename, genome_version):
+    raise NotImplementedException
+
+
+def _get_bed_samples(vcf_filename, genome_version):
+    raise NotImplementedException
+
+DATA_TYPE_FILES = {
+    Sample.DATASET_TYPE_MITO_CALLS: (_get_mt_samples, ('.mt',)),
+    Sample.DATASET_TYPE_SV_CALLS: (_get_bed_samples, ('.bed', '.bed.gz')),
+}
 
 def _validate_vcf_exists(data_path, user, path_name, allowed_exts):
     file_extensions = (allowed_exts or ()) + VCF_FILE_EXTENSIONS
