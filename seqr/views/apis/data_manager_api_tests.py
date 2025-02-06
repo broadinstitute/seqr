@@ -1429,17 +1429,20 @@ class DataManagerAPITest(AirtableTest):
         self.check_pm_login(url)
 
         self._set_file_not_found()
-        body = {'filePath': f'{self.CALLSET_DIR}/mito_callset.mt', 'datasetType': 'SV'}
+
+        self._test_validate_dataset_type(url)
+
+        body = {'filePath': f'{self.CALLSET_DIR}/callset.txt', 'datasetType': 'SNV_INDEL'}
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], [
-            'Invalid VCF file format - file path must end with .bed or .bed.gz or .vcf or .vcf.gz or .vcf.bgz',
+            'Invalid VCF file format - file path must end with .vcf or .vcf.gz or .vcf.bgz',
         ])
 
-        body['datasetType'] = 'MITO'
+        body['filePath'] = f'{self.CALLSET_DIR}/callset.vcf'
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
-        self.assertListEqual(response.json()['errors'], [f'Data file or path {self.CALLSET_DIR}/mito_callset.mt is not found.'])
+        self.assertListEqual(response.json()['errors'], [f'Data file or path {self.CALLSET_DIR}/callset.vcf is not found.'])
 
         self._add_file_iter(b'')
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
@@ -1447,7 +1450,7 @@ class DataManagerAPITest(AirtableTest):
         self.assertDictEqual(response.json(), {'success': True})
 
         self._set_file_not_found(list_files=True)
-        body = {'filePath': f'{self.CALLSET_DIR}/sharded_vcf/part0*.vcf'}
+        body = {'filePath': f'{self.CALLSET_DIR}/sharded_vcf/part0*.vcf', 'datasetType': 'SNV_INDEL'}
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(
@@ -1463,6 +1466,7 @@ class DataManagerAPITest(AirtableTest):
         self.login_data_manager_user()
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
+        return url
 
     @mock.patch('seqr.views.utils.permissions_utils.INTERNAL_NAMESPACES', ['my-seqr-billing', 'ext-data'])
     @mock.patch('seqr.views.utils.airtable_utils.BASE_URL', 'https://seqr.broadinstitute.org/')
@@ -1734,6 +1738,9 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
         self.assertDictEqual(response.json(), {'error': 'Restricted filesystem'})
         self.assertEqual(len(responses.calls), 0)
 
+    def _test_validate_dataset_type(self, url):
+        pass
+
 
 @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
 class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
@@ -1958,3 +1965,18 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
 
     def _test_expected_vcf_responses(self, response, url):
         self.assertEqual(response.status_code, 403)
+
+    def _test_validate_dataset_type(self, url):
+        body = {'filePath': f'{self.CALLSET_DIR}/mito_callset.mt', 'datasetType': 'SV'}
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(response.json()['errors'], [
+            'Invalid VCF file format - file path must end with .bed or .bed.gz or .vcf or .vcf.gz or .vcf.bgz',
+        ])
+
+        body['datasetType'] = 'MITO'
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(response.json()['errors'], [f'Data file or path {self.CALLSET_DIR}/mito_callset.mt is not found.'])
+        self._set_file_not_found()
+

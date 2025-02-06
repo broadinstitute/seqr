@@ -452,9 +452,9 @@ def loading_vcfs(request):
 @pm_or_data_manager_required
 def validate_callset(request):
     request_json = json.loads(request.body)
-    dataset_type = request_json.get('datasetType', Sample.DATASET_TYPE_VARIANT_CALLS)
+    allowed_exts = DATA_TYPE_FILE_EXTS.get(request_json['datasetType']) if anvil_enabled() else None
     validate_vcf_exists(
-        _callset_path(request_json), request.user, allowed_exts=DATA_TYPE_FILE_EXTS.get(dataset_type),
+        _callset_path(request_json), request.user, allowed_exts=allowed_exts,
         path_name=request_json['filePath'],
     )
     return create_json_response({'success': True})
