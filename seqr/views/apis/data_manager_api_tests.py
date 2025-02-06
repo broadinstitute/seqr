@@ -409,6 +409,12 @@ EMPTY_PROJECT_OPTION = {
 }
 EMPTY_PROJECT_SAMPLES_OPTION = {**EMPTY_PROJECT_OPTION, 'sampleIds': ['HG00738', 'HG00739']}
 
+CORE_REQUEST_BODY = {
+    'filePath': '/callset.vcf',
+    'sampleType': 'WES',
+    'genomeVersion': '38',
+}
+
 AIRTABLE_SAMPLE_RECORDS = {
     'records': [
         {
@@ -1439,13 +1445,12 @@ class DataManagerAPITest(AirtableTest):
             'Invalid VCF file format - file path must end with .vcf or .vcf.gz or .vcf.bgz',
         ])
 
-        body['filePath'] = f'{self.CALLSET_DIR}/callset.vcf'
-        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        response = self.client.post(url, content_type='application/json', data=json.dumps(self.REQUEST_BODY))
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], [f'Data file or path {self.CALLSET_DIR}/callset.vcf is not found.'])
 
         self._add_file_iter(b'')
-        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        response = self.client.post(url, content_type='application/json', data=json.dumps(self.REQUEST_BODY))
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'success': True})
 
@@ -1521,7 +1526,7 @@ class DataManagerAPITest(AirtableTest):
         responses.add(responses.GET, 'https://api.airtable.com/v0/app3Y97xtbbaOopVR/Samples', json=AIRTABLE_SAMPLE_RECORDS, status=200)
         responses.add(responses.POST, PIPELINE_RUNNER_URL)
         mock_temp_dir.return_value.__enter__.return_value = '/mock/tmp'
-        body = {'filePath': f'{self.CALLSET_DIR}/callset.vcf', 'datasetType': 'SNV_INDEL', 'sampleType': 'WES', 'genomeVersion': '38', 'projects': [
+        body = {**self.REQUEST_BODY, 'projects': [
             json.dumps(option) for option in self.PROJECT_OPTIONS + [{'projectGuid': 'R0005_not_project'}]
         ], 'skipValidation': True}
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
@@ -1649,6 +1654,7 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
         EMPTY_PROJECT_OPTION,
     ]
     PROJECT_OPTIONS = [{'projectGuid': 'R0001_1kg'}, PROJECT_OPTION]
+    REQUEST_BODY = CORE_REQUEST_BODY
 
     def setUp(self):
         patcher = mock.patch('seqr.utils.file_utils.os.path.isfile')
@@ -1758,6 +1764,11 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         {'projectGuid': 'R0001_1kg', 'sampleIds': ['NA19675_1', 'NA19678', 'NA19679', 'HG00732', 'HG00733']},
         PROJECT_SAMPLES_OPTION,
     ]
+    REQUEST_BODY = {
+        **CORE_REQUEST_BODY,
+        'filePath': CALLSET_DIR + CORE_REQUEST_BODY['filePath'],
+        'datasetType': 'SNV_INDEL',
+    }
 
     def setUp(self):
         patcher = mock.patch('seqr.utils.file_utils.subprocess.Popen')
