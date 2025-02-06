@@ -69,6 +69,8 @@ pipeline-runner:
 ```
 
 ## Using the Load Data page to load VCF Callsets
+### Option #1
+#### Annotate and load on-prem
 - Copy your vcf into the loading datasets directory on the node running your kubernetes cluster (`/var/seqr/seqr-loading-temp/`).  You should see your vcf present when listing files:
 ```
 ls -h /var/seqr/seqr-loading-temp/
@@ -80,6 +82,49 @@ loading_pipeline_queue  test.vcf.gz
 - Click through to the next page and select your project from the **Projects to Load** dropdown, then click **Submit**.
 - If you wish to check the status of the loading request, you can click through to the **Pipeline Status** tab to view the loading pipeline interface.
 - Data should be loaded into the search backend automatically, usually within a few hours.
+
+### Option #2
+####  Annotate on and load on a Google Dataproc cluster.
+
+Google Dataproc makes it easy to start a spark cluster which can be used to parallelize annotation across many machines.  This option is available if you are running the *seqr* application on either a Google Cloud Platform VM or GKE.
+
+- Verify that the seqr pod has an associated service account.
+```
+kubectl exec seqr-POD-ID -c seqr -it -- bash
+gcloud auth list
+```
+This service account must be permissioned to create and modify dataproc clusters, and read and write to the GCS buckets that will host your data.  We also recommend verifying that the Cloud API access scopes are permissioned for both IAM and Compute Engine access.  
+- Create or add the following environment variables to your existing `helm` [override values file](https://github.com/broadinstitute/seqr-helm?tab=readme-ov-file#valuesenvironment-overrides):
+```yaml
+pipeline-runner:
+  environment:
+    # Stores authoritative copies of your hail search data.
+    # Objects should not expire from this bucket.
+    HAIL_SEARCH_DATA_DIR: 'gs://...'
+    # Bucket used as a scratch directory by HAIL during loading.
+    # We recommend a <1 week expiration policy for this bucket.
+    HAIL_TMP_DIR: 'gs://...'
+    # Bucket used for caching and worker communcation by the pipeline.
+    # We recommend a ~2 week expiration policy for this bucket.
+    LOADING_DATASETS_DIR: 'gs://...'
+    # Stores a copy of seqr's reference data hosted in your project's account.
+    # Objects should not expire from this bucket.
+    REFERENCE_DATASETS_DIR: 'gs://...'
+    RUN_PIPELINE_ON_DATAPROC: '1'
+    GCLOUD_PROJECT: 'your-gcp-project'
+    GCLOUD_REGION: 'region-of-dataproc-cluster'
+    GCLOUD_ZONE: 'zone-of-dataproc-cluster'
+seqr:
+  environment:
+    # Bucket used for caching and worker communcation by the pipeline.
+    # Must be identical to `LOADING_DATASETS_DIR` stored above.
+    LOADING_DATASETS_DIR: 'gs://...'
+```
+- Install/Upgrade with the override values applied:
+```
+helm upgrade YOUR_INSTITUTION_NAME-seqr seqr-helm/seqr-platform -f my-values.yaml
+```
+- Follow the Option #1 Instructions to load data from the **Load Data** page.
 
 ## Loading RNASeq datasets
 
