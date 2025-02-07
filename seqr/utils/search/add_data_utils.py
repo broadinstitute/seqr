@@ -13,7 +13,7 @@ from seqr.views.utils.airtable_utils import AirtableSession, ANVIL_REQUEST_TRACK
 from seqr.views.utils.dataset_utils import match_and_update_search_samples, load_mapping_file
 from seqr.views.utils.export_utils import write_multiple_files
 from seqr.views.utils.pedigree_info_utils import get_no_affected_families
-from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, ANVIL_UI_URL, \
+from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, BASE_URL, ANVIL_UI_URL, \
     SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL
 
 logger = SeqrLogger(__name__)
@@ -85,20 +85,22 @@ def notify_search_data_loaded(project, is_internal, dataset_type, sample_type, n
             'Let us know if you have any questions.',
         ])
 
-    url = _basic_notify_search_data_loaded(
+    _basic_notify_search_data_loaded(
         project, dataset_type, sample_type, new_samples, email_template=email_template,
         slack_channel=SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL if is_internal else SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL,
         include_slack_detail=is_internal,
     )
 
     if not is_internal:
-        AirtableSession(user=None, base=AirtableSession.ANVIL_BASE, no_auth=True).safe_patch_records(
-            ANVIL_REQUEST_TRACKING_TABLE, max_records=1,
-            record_or_filters={'Status': ['Loading', 'Loading Requested']},
-            record_and_filters={'AnVIL Project URL': url},
-            update={'Status': 'Available in Seqr'},
-        )
+        update_airtable_loading_tracking_status(project, 'Available in Seqr')
 
+def update_airtable_loading_tracking_status(project, status, additional_update=None):
+    AirtableSession(user=None, base=AirtableSession.ANVIL_BASE, no_auth=True).safe_patch_records(
+        ANVIL_REQUEST_TRACKING_TABLE, max_records=1,
+        record_or_filters={'Status': ['Loading', 'Loading Requested']},
+        record_and_filters={'AnVIL Project URL': f'{BASE_URL}project/{project.guid}/project_page'},
+        update={'Status': status, **(additional_update or {})},
+    )
 
 def format_loading_pipeline_variables(
     projects: list[Project], genome_version: str, dataset_type: str, sample_type: str = None, **kwargs
