@@ -409,6 +409,12 @@ EMPTY_PROJECT_OPTION = {
 }
 EMPTY_PROJECT_SAMPLES_OPTION = {**EMPTY_PROJECT_OPTION, 'sampleIds': ['HG00738', 'HG00739']}
 
+CORE_REQUEST_BODY = {
+    'filePath': '/callset.vcf',
+    'sampleType': 'WES',
+    'genomeVersion': '38',
+}
+
 AIRTABLE_SAMPLE_RECORDS = {
     'records': [
         {
@@ -1429,25 +1435,41 @@ class DataManagerAPITest(AirtableTest):
         self.check_pm_login(url)
 
         self._set_file_not_found()
-        body = {'filePath': f'{self.CALLSET_DIR}/mito_callset.mt', 'datasetType': 'SV', 'genomeVersion': '38'}
+
+        self._test_validate_dataset_type(url)
+
+        body = {**self.REQUEST_BODY, 'filePath': f'{self.CALLSET_DIR}/callset.txt'}
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], [
-            'Invalid VCF file format - file path must end with .bed or .bed.gz or .vcf or .vcf.gz or .vcf.bgz',
+            'Invalid VCF file format - file path must end with .vcf or .vcf.gz or .vcf.bgz',
         ])
 
-        body['datasetType'] = 'MITO'
-        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        response = self.client.post(url, content_type='application/json', data=json.dumps(self.REQUEST_BODY))
         self.assertEqual(response.status_code, 400)
-        self.assertListEqual(response.json()['errors'], [f'Data file or path {self.CALLSET_DIR}/mito_callset.mt is not found.'])
+        self.assertListEqual(response.json()['errors'], [f'Data file or path {self.CALLSET_DIR}/callset.vcf is not found.'])
 
-        self._add_file_iter(b'')
-        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        vcf_file_rows = [
+            '##fileformat=VCFv4.3\n',
+            '##INFO=<ID=AA,Number=1,Type=String,Description="Ancestral Allele">',
+            '##INFO=<ID=AC,Number=A,Type=Integer,Description="Allele count in genotypes, for each ALT allele, in the same order as listed">\n',
+            '##INFO=<ID=AF,Number=A,Type=Float,Description="Allele Frequency, for each ALT allele, in the same order as listed">\n',
+            '##INFO=<ID=AN,Number=1,Type=Integer,Description="Total number of alleles in called genotypes">\n',
+            '##FORMAT=<ID=AD,Number=.,Type=Integer,Description="Allelic depths for the ref and alt alleles in the order listed">\n',
+            '##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Approximate read depth (reads with MQ=255 or with bad mates are filtered)">\n',
+            '##FORMAT=<ID=GQ,Number=1,Type=Integer,Description="Genotype Quality">\n',
+            '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">\n',
+            '#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tHG00735\tNA19675_1\tNA19679\n'
+        ]
+        vcf_samples = ['HG00735', 'NA19675_1', 'NA19679']
+        self._add_file_iter(vcf_file_rows, is_gz=False)
+        response = self.client.post(url, content_type='application/json', data=json.dumps(self.REQUEST_BODY))
+
         self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {'vcfSamples': None})
+        self.assertDictEqual(response.json(), {'vcfSamples': vcf_samples})
 
         self._set_file_not_found(list_files=True)
-        body = {'filePath': f'{self.CALLSET_DIR}/sharded_vcf/part0*.vcf', 'genomeVersion': '38'}
+        body = {**self.REQUEST_BODY, 'filePath': f'{self.CALLSET_DIR}/sharded_vcf/part0*.vcf'}
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(
@@ -1455,22 +1477,11 @@ class DataManagerAPITest(AirtableTest):
         )
 
         self._add_file_list_iter(
-            ['sharded_vcf/part001.vcf', 'sharded_vcf/part002.vcf'], [
-                '##fileformat=VCFv4.3\n',
-                '##INFO=<ID=AA,Number=1,Type=String,Description="Ancestral Allele">',
-                '##INFO=<ID=AC,Number=A,Type=Integer,Description="Allele count in genotypes, for each ALT allele, in the same order as listed">\n',
-                '##INFO=<ID=AF,Number=A,Type=Float,Description="Allele Frequency, for each ALT allele, in the same order as listed">\n',
-                '##INFO=<ID=AN,Number=1,Type=Integer,Description="Total number of alleles in called genotypes">\n',
-                '##FORMAT=<ID=AD,Number=.,Type=Integer,Description="Allelic depths for the ref and alt alleles in the order listed">\n',
-                '##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Approximate read depth (reads with MQ=255 or with bad mates are filtered)">\n',
-                '##FORMAT=<ID=GQ,Number=1,Type=Integer,Description="Genotype Quality">\n',
-                '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">\n',
-                '#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tHG00735\tNA19675_1\tNA19679\n'
-            ],
+            ['sharded_vcf/part001.vcf', 'sharded_vcf/part002.vcf'], vcf_file_rows,
         )
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {'vcfSamples': ['HG00735', 'NA19675_1', 'NA19679']})
+        self.assertDictEqual(response.json(), {'vcfSamples': vcf_samples})
 
         # test data manager access
         self.login_data_manager_user()
@@ -1530,7 +1541,7 @@ class DataManagerAPITest(AirtableTest):
         responses.add(responses.GET, 'https://api.airtable.com/v0/app3Y97xtbbaOopVR/Samples', json=AIRTABLE_SAMPLE_RECORDS, status=200)
         responses.add(responses.POST, PIPELINE_RUNNER_URL)
         mock_temp_dir.return_value.__enter__.return_value = '/mock/tmp'
-        body = {'filePath': f'{self.CALLSET_DIR}/mito_callset.mt', 'datasetType': 'MITO', 'sampleType': 'WES', 'genomeVersion': '38', 'projects': [
+        body = {**self.REQUEST_BODY, 'projects': [
             json.dumps(option) for option in self.PROJECT_OPTIONS + [{'projectGuid': 'R0005_not_project'}]
         ], 'vcfSamples': None, 'skipValidation': True}
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
@@ -1548,16 +1559,16 @@ class DataManagerAPITest(AirtableTest):
         self.assertDictEqual(response.json(), {'success': True})
 
         self._assert_expected_load_data_requests(sample_type='WES', skip_validation=True)
-        self._has_expected_ped_files(mock_open, mock_mkdir, 'MITO', sample_type='WES')
+        self._has_expected_ped_files(mock_open, mock_mkdir, 'SNV_INDEL', sample_type='WES')
 
         dag_json = {
             'projects_to_run': [
                 'R0001_1kg',
                 'R0004_non_analyst_project'
             ],
-            'dataset_type': 'MITO',
+            'dataset_type': 'SNV_INDEL',
             'reference_genome': 'GRCh38',
-            'callset_path': f'{self.TRIGGER_CALLSET_DIR}/mito_callset.mt',
+            'callset_path': f'{self.TRIGGER_CALLSET_DIR}/callset.vcf',
             'sample_type': 'WES',
             'skip_validation': True,
         }
@@ -1658,6 +1669,7 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
         EMPTY_PROJECT_OPTION,
     ]
     PROJECT_OPTIONS = [{'projectGuid': 'R0001_1kg'}, PROJECT_OPTION]
+    REQUEST_BODY = CORE_REQUEST_BODY
 
     def setUp(self):
         patcher = mock.patch('seqr.utils.file_utils.os.path.isfile')
@@ -1684,9 +1696,10 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
         self.mock_file_iter.return_value = []
         return []
 
-    def _add_file_iter(self, stdout):
+    def _add_file_iter(self, stdout, is_gz=True):
         self.mock_does_file_exist.return_value = True
-        self.mock_file_iter.return_value += stdout
+        file_iter = self.mock_file_iter if is_gz else self.mock_unzipped_file_iter
+        file_iter.return_value += stdout
 
     def _add_file_list_iter(self, file_list, stdout):
         self.mock_does_file_exist.return_value = True
@@ -1696,14 +1709,14 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
     def _assert_expected_get_projects_requests(self):
         self.assertEqual(len(responses.calls), 0)
 
-    def _assert_expected_load_data_requests(self, dataset_type='MITO', sample_type='WGS', trigger_error=False, skip_project=False, skip_validation=False):
+    def _assert_expected_load_data_requests(self, dataset_type='SNV_INDEL', sample_type='WGS', trigger_error=False, skip_project=False, skip_validation=False):
         self.assertEqual(len(responses.calls), 1)
         projects = [PROJECT_GUID, NON_ANALYST_PROJECT_GUID]
         if skip_project:
             projects = projects[1:]
         body = {
             'projects_to_run': projects,
-            'callset_path': '/local_datasets/sv_callset.vcf' if trigger_error else '/local_datasets/mito_callset.mt',
+            'callset_path': '/local_datasets/sv_callset.vcf' if trigger_error else '/local_datasets/callset.vcf',
             'sample_type': sample_type,
             'dataset_type': dataset_type,
             'reference_genome': 'GRCh38',
@@ -1746,12 +1759,15 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
 
     def _test_load_single_project(self, *args, **kwargs):
         super()._test_load_single_project(*args, **kwargs)
-        self._assert_expected_load_data_requests(dataset_type='SNV_INDEL', skip_project=True, trigger_error=True)
+        self._assert_expected_load_data_requests(skip_project=True, trigger_error=True)
 
     def _assert_write_pedigree_error(self, response):
         self.assertEqual(response.status_code, 500)
         self.assertDictEqual(response.json(), {'error': 'Restricted filesystem'})
         self.assertEqual(len(responses.calls), 0)
+
+    def _test_validate_dataset_type(self, url):
+        pass
 
 
 @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
@@ -1770,6 +1786,11 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         {'projectGuid': 'R0001_1kg', 'sampleIds': ['NA19675_1', 'NA19678', 'NA19679', 'HG00732', 'HG00733']},
         PROJECT_SAMPLES_OPTION,
     ]
+    REQUEST_BODY = {
+        **CORE_REQUEST_BODY,
+        'filePath': CALLSET_DIR + CORE_REQUEST_BODY['filePath'],
+        'datasetType': 'SNV_INDEL',
+    }
 
     def setUp(self):
         patcher = mock.patch('seqr.utils.file_utils.subprocess.Popen')
@@ -1795,8 +1816,10 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
             ('CommandException: One or more URLs matched no objects', None),
         ]
 
-    def _add_file_iter(self, stdout):
+    def _add_file_iter(self, stdout, is_gz=True):
         self.mock_does_file_exist.wait.return_value = 0
+        if not is_gz:
+            stdout = [row.encode('utf-8') for row in stdout]
         self.mock_file_iter.stdout += stdout
         self.mock_subprocess.side_effect = [self.mock_does_file_exist, self.mock_file_iter]
 
@@ -1854,22 +1877,23 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
     @staticmethod
     def _get_dag_variable_overrides(*args, **kwargs):
         return {
-            'callset_path': 'mito_callset.mt',
+            'callset_path': 'callset.vcf',
             'sample_source': 'Broad_Internal',
             'sample_type': 'WES',
             'dataset_type': 'MITO',
             'skip_validation': True,
         }
 
-    def _assert_expected_load_data_requests(self, dataset_type='MITO', **kwargs):
-        required_sample_field = 'MITO_WES_CallsetPath' if dataset_type == 'MITO' else 'gCNV_CallsetPath'
+    def _assert_expected_load_data_requests(self, dataset_type='SNV_INDEL', **kwargs):
+        required_sample_field = 'gCNV_CallsetPath' if dataset_type == 'GCNV' else None
         self._assert_expected_airtable_call(required_sample_field, 'R0001_1kg')
         self.assert_airflow_loading_calls(offset=1, dataset_type=dataset_type, **kwargs)
 
     def _assert_expected_airtable_call(self, required_sample_field, project_guid):
+        required_field_expression = f'LEN({{{required_sample_field}}})>0,' if required_sample_field else ''
         self.assert_expected_airtable_call(
             call_index=0,
-            filter_formula=f"AND(SEARCH('https://seqr.broadinstitute.org/project/{project_guid}/project_page',ARRAYJOIN({{SeqrProject}},';')),LEN({{PassingCollaboratorSampleIDs}})>0,LEN({{{required_sample_field}}})>0,OR(SEARCH('Available in seqr',ARRAYJOIN(PDOStatus,';')),SEARCH('Historic',ARRAYJOIN(PDOStatus,';'))))",
+            filter_formula=f"AND(SEARCH('https://seqr.broadinstitute.org/project/{project_guid}/project_page',ARRAYJOIN({{SeqrProject}},';')),LEN({{PassingCollaboratorSampleIDs}})>0,{required_field_expression}OR(SEARCH('Available in seqr',ARRAYJOIN(PDOStatus,';')),SEARCH('Historic',ARRAYJOIN(PDOStatus,';'))))",
             fields=['CollaboratorSampleID', 'SeqrCollaboratorSampleID', 'PDOStatus', 'SeqrProject'],
         )
 
@@ -1880,9 +1904,9 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
     def _assert_success_notification(self, dag_json):
         dag_json['sample_source'] = 'Broad_Internal'
 
-        message = f"""*test_data_manager@broadinstitute.org* triggered loading internal WES MITO data for 2 projects
+        message = f"""*test_data_manager@broadinstitute.org* triggered loading internal WES SNV_INDEL data for 2 projects
 
-        Pedigree files have been uploaded to gs://seqr-loading-temp/v3.1/GRCh38/MITO/pedigrees/WES
+        Pedigree files have been uploaded to gs://seqr-loading-temp/v3.1/GRCh38/SNV_INDEL/pedigrees/WES
 
         DAG LOADING_PIPELINE is triggered with following:
         ```{json.dumps(dag_json, indent=4)}```
@@ -1900,8 +1924,8 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         for error in errors:
             self.assertRegex(error, '400 Client Error: Bad Request')
 
-        dag_json = json.dumps(dag_json, indent=4).replace('mito_callset.mt', 'sv_callset.vcf').replace(
-            'WGS', 'WES').replace('MITO', 'GCNV').replace('v01', 'v3.1')
+        dag_json = json.dumps(dag_json, indent=4).replace('callset.vcf', 'sv_callset.vcf').replace(
+            'WGS', 'WES').replace('SNV_INDEL', 'GCNV').replace('v01', 'v3.1')
         error_message = f"""ERROR triggering internal WES SV loading: {errors[0]}
         
         DAG LOADING_PIPELINE should be triggered with following: 
@@ -1979,3 +2003,18 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
 
     def _test_expected_vcf_responses(self, response, url):
         self.assertEqual(response.status_code, 403)
+
+    def _test_validate_dataset_type(self, url):
+        body = {'filePath': f'{self.CALLSET_DIR}/mito_callset.mt', 'datasetType': 'SV', 'genomeVersion': 'GRCh38'}
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(response.json()['errors'], [
+            'Invalid VCF file format - file path must end with .bed or .bed.gz or .vcf or .vcf.gz or .vcf.bgz',
+        ])
+
+        body['datasetType'] = 'MITO'
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(response.json()['errors'], [f'Data file or path {self.CALLSET_DIR}/mito_callset.mt is not found.'])
+        self._set_file_not_found()
+

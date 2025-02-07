@@ -452,9 +452,9 @@ def loading_vcfs(request):
 @pm_or_data_manager_required
 def validate_callset(request):
     request_json = json.loads(request.body)
-    dataset_type = request_json.get('datasetType', Sample.DATASET_TYPE_VARIANT_CALLS)
+    allowed_exts = DATA_TYPE_FILE_EXTS.get(request_json['datasetType']) if anvil_enabled() else None
     samples = validate_vcf_and_get_samples(
-        _callset_path(request_json), request.user, request_json['genomeVersion'], allowed_exts=DATA_TYPE_FILE_EXTS.get(dataset_type),
+        _callset_path(request_json), request.user, request_json['genomeVersion'], allowed_exts=allowed_exts,
         path_name=request_json['filePath'],
     )
     return create_json_response({'vcfSamples': samples})
@@ -544,7 +544,7 @@ def load_data(request):
         individual_ids += _get_valid_search_individuals(
             projects_by_guid[project_guid], sample_ids, vcf_samples, dataset_type, sample_type, request.user, errors,
         )
-        
+
     if errors:
         raise ErrorsWarningsException(errors)
 
