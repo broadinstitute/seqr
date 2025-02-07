@@ -272,16 +272,12 @@ def validate_fam_file_records(project, records, errors=None, clear_invalid_value
                      if r.get(JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN)}
     records_by_id.update({r[JsonConstants.INDIVIDUAL_ID_COLUMN]: r for r in records})
 
-    record_family_ids = {
-        individual_id: r.get(JsonConstants.FAMILY_ID_COLUMN) or r['family']['familyId']
-        for individual_id, r in records_by_id.items()
-    }
-
     errors = errors or []
     warnings = []
-    previous_loaded_individuals, guid_id_map = _get_validated_related_individuals(
-        project, records_by_id, record_family_ids, related_guids, search_dataset_type, validate_expected_samples,
-        warnings if clear_invalid_values else errors,
+    previous_loaded_individuals, record_family_ids, guid_id_map = get_validated_related_individuals(
+        project, records_by_id, warnings if clear_invalid_values else errors,
+        related_guids=related_guids, search_dataset_type=search_dataset_type,
+        validate_expected_samples=validate_expected_samples,
     )
 
     hpo_terms = get_valid_hpo_terms(records) if update_features else None
@@ -340,7 +336,12 @@ def validate_fam_file_records(project, records, errors=None, clear_invalid_value
     return warnings
 
 
-def _get_validated_related_individuals(project, records_by_id, record_family_ids, related_guids, search_dataset_type, validate_expected_samples, errors):
+def get_validated_related_individuals(project, records_by_id, errors, related_guids=None, search_dataset_type=None, search_sample_type=None, validate_expected_samples=None):
+    record_family_ids = {
+        individual_id: r.get(JsonConstants.FAMILY_ID_COLUMN) or r['family']['familyId']
+        for individual_id, r in records_by_id.items()
+    }
+    
     related_individuals = Individual.objects.filter(
         guid__in=related_guids) if related_guids else Individual.objects.filter(
         family__family_id__in=set(record_family_ids.values()), family__project=project,
@@ -363,9 +364,14 @@ def _get_validated_related_individuals(project, records_by_id, record_family_ids
         affected_status_by_family[family_id].append(affected)
 
     search_samples = get_search_samples([project])
+
+    sample_type = None
     if search_dataset_type:
         search_samples = search_samples.filter(dataset_type=search_dataset_type)
-    sample_type = search_samples.first().sample_type if search_dataset_type and search_samples else None
+        if search_sample_type:
+            search_samples = search_samples.filter(sample_type=search_sample_type)
+        elif search_samples:
+            sample_type = search_samples.first().sample_type
     previous_loaded_individuals = {
         i[JsonConstants.INDIVIDUAL_ID_COLUMN]: i
         for i in search_samples.values(
@@ -380,7 +386,7 @@ def _get_validated_related_individuals(project, records_by_id, record_family_ids
 
     validate_affected_families(affected_status_by_family, errors)
 
-    return previous_loaded_individuals, guid_id_map
+    return previous_loaded_individuals, record_family_ids, guid_id_map
 
 
 def validate_affected_families(affected_status_by_family: dict[str, list[str]], error_list: list[str]) -> None:

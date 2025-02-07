@@ -30,6 +30,7 @@ from seqr.views.utils.dataset_utils import load_rna_seq, load_phenotype_prioriti
 from seqr.views.utils.file_utils import parse_file, get_temp_file_path, load_uploaded_file, persist_temp_file
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
+from seqr.views.utils.pedigree_info_utils import get_validated_related_individuals, JsonConstants
 from seqr.views.utils.permissions_utils import data_manager_required, pm_or_data_manager_required, get_internal_projects
 from seqr.views.utils.terra_api_utils import anvil_enabled
 
@@ -579,57 +580,74 @@ def load_data(request):
 
 
 def _get_valid_search_individuals(project, airtable_samples, vcf_samples, dataset_type, sample_type, user, errors):
-    individuals = {
-        i['individual_id']: i for i in
-        Individual.objects.filter(family__project=project).values(
-            'id', 'individual_id',
-            family_name=F('family__family_id'),
-            sampleCount=Count('sample', filter=Q(sample__is_active=True) & Q(sample__sample_type=sample_type) & Q(
-                sample__dataset_type=dataset_type)),
+    loading_samples = set(airtable_samples or vcf_samples)
+    search_individuals_by_id = {
+        i[JsonConstants.INDIVIDUAL_ID_COLUMN]: i for i in
+        Individual.objects.filter(family__project=project, individual_id__in=loading_samples).values(
+            'id', JsonConstants.AFFECTED_COLUMN,  **{
+                JsonConstants.INDIVIDUAL_ID_COLUMN: F('individual_id'),
+                JsonConstants.FAMILY_ID_COLUMN: F('family__family_id'),
+            },
         )
     }
 
     if airtable_samples:
-        missing_airtable_samples = {sample_id for sample_id in airtable_samples if sample_id not in individuals}
-        loading_samples = set(airtable_samples) - missing_airtable_samples
+        missing_airtable_samples = {sample_id for sample_id in airtable_samples if sample_id not in search_individuals_by_id}
+        loading_samples -= missing_airtable_samples
         if missing_airtable_samples:
             errors.append(
                 f'The following samples are included in airtable for {project.name} but are missing from seqr: {", ".join(missing_airtable_samples)}')
-    else:
-        loading_samples = set(vcf_samples or individuals.keys())
 
-    loading_families = {individuals[sample_id]['family_name'] for sample_id in loading_samples}
-    missing_loaded_samples = set()
-    for sample_id, individual in individuals.items():
-        if sample_id not in loading_samples and individual['family_name'] in loading_families and individual['sampleCount']:
-            missing_loaded_samples.add(sample_id)
+    # TODO share with anvil
+    loaded_individual_ids = []
+    def validate_expected_samples(record_family_ids, previous_loaded_individuals, sample_type):
+        loading_families = set(record_family_ids.values())
+        # TODO fix variables/ formatting
+        missing_loaded_samples = set()
+        for sample_id, individual in individuals.items():
+            if sample_id not in loading_samples and individual['family_name'] in loading_families and individual[
+                'sampleCount']:
+                missing_loaded_samples.add(sample_id)
 
-    if airtable_samples:
-        try:
-            _fetch_missing_loaded_airtable_samples(
-                missing_loaded_samples, loading_samples, project, dataset_type, sample_type, user,
-            )
-        except ValueError as e:
-            errors.append(str(e))
+        if airtable_samples:
+            try:
+                _fetch_missing_loaded_airtable_samples(
+                    missing_loaded_samples, loading_samples, project, dataset_type, sample_type, user,
+                )
+            except ValueError as e:
+                errors.append(str(e))
 
-    missing_family_samples = defaultdict(list)
-    for sample_id in missing_loaded_samples:
-        missing_family_samples[individuals[sample_id]['family_name']].append(sample_id)
+        missing_family_samples = defaultdict(list)
+        for sample_id in missing_loaded_samples:
+            missing_family_samples[individuals[sample_id]['family_name']].append(sample_id)
 
-    if missing_family_samples:
-        family_errors = [
-            f'{family} ({", ".join(sorted(samples))})' for  family, samples in missing_family_samples.items()
+        if missing_family_samples:
+            family_errors = [
+                f'{family} ({", ".join(sorted(samples))})' for family, samples in missing_family_samples.items()
+            ]
+            source = 'airtable' if airtable_samples else 'the vcf'
+            errors.append(
+                f'The following families have previously loaded samples absent from {source}: {"; ".join(family_errors)}')
+
+        if vcf_samples is not None:
+            missing_vcf_samples = set(vcf_samples) - set(loading_samples)
+            if missing_vcf_samples:
+                errors.insert(0,
+                              f'The following samples are included in airtable but missing from the VCF: {", ".join(missing_vcf_samples)}')
+
+        nonlocal loaded_individual_ids
+        loaded_individual_ids += [
+            i['individual_id'] for i in previous_loaded_individuals if
+            i[JsonConstants.FAMILY_ID_COLUMN] in loading_families
         ]
-        source = 'airtable' if airtable_samples else 'the vcf'
-        errors.append(
-            f'The following families have previously loaded samples absent from {source}: {"; ".join(family_errors)}')
 
-    if vcf_samples is not None:
-        missing_vcf_samples = set(vcf_samples) - set(loading_samples)
-        if missing_vcf_samples:
-            errors.insert(0, f'The following samples are included in airtable but missing from the VCF: {", ".join(missing_vcf_samples)}')
 
-    return [individuals[sample_id]['id'] for sample_id in loading_samples]
+    get_validated_related_individuals(
+        project, search_individuals_by_id, errors, search_dataset_type=dataset_type, search_sample_type=sample_type,
+        validate_expected_samples=validate_expected_samples,
+    )
+
+    return [i['id'] for i in search_individuals_by_id.values()] + loaded_individual_ids
 
 
 def _fetch_missing_loaded_airtable_samples(missing_loaded_samples, loading_samples, project, dataset_type, sample_type, user):

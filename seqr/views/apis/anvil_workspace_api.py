@@ -20,7 +20,7 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.file_utils import load_uploaded_file
 from seqr.views.utils.terra_api_utils import add_service_account, has_service_account_access, TerraAPIException, \
     TerraRefreshTokenFailedException
-from seqr.views.utils.pedigree_info_utils import parse_basic_pedigree_table, validate_affected_families, JsonConstants
+from seqr.views.utils.pedigree_info_utils import parse_basic_pedigree_table, JsonConstants
 from seqr.views.utils.individual_utils import add_or_update_individuals_and_families
 from seqr.utils.communication_utils import send_html_email
 from seqr.utils.file_utils import list_files
