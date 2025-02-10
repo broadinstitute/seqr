@@ -632,21 +632,23 @@ def _get_valid_search_individuals(project, airtable_samples, vcf_samples, datase
 def _validate_expected_samples(vcf_samples, record_family_ids, previous_loaded_individuals, sample_type, fetch_missing_loaded_samples, format_missing_family_samples_error):
     errors = []
     families = set(record_family_ids.values())
-    missing_samples_by_family = defaultdict(list)
+    missing_samples_by_family = defaultdict(set)
+    expected_sample_set = record_family_ids if fetch_missing_loaded_samples else vcf_samples
     for loaded_individual in previous_loaded_individuals:
         individual_id = loaded_individual[JsonConstants.INDIVIDUAL_ID_COLUMN]
         family_id = loaded_individual[JsonConstants.FAMILY_ID_COLUMN]
-        if family_id in families and individual_id not in vcf_samples:
-            missing_samples_by_family[family_id].append(individual_id)
+        if family_id in families and individual_id not in expected_sample_set:
+            missing_samples_by_family[family_id].add(individual_id)
 
-    found_samples = set()
+    loading_samples = set(record_family_ids.keys())
     if missing_samples_by_family and fetch_missing_loaded_samples:
         try:
-            found_samples = fetch_missing_loaded_samples()
+            additional_loaded_samples = fetch_missing_loaded_samples()
+            for missing_samples in missing_samples_by_family.values():
+                loading_samples.update(missing_samples.intersection(additional_loaded_samples))
+                missing_samples -= additional_loaded_samples
             missing_samples_by_family = {
-                family_id: [s for s in samples if s not in found_samples]
-                for family_id, samples in missing_samples_by_family.items()
-                if any(s not in found_samples for s in samples)
+                family_id: samples for family_id, samples in missing_samples_by_family.items() if samples
             }
         except ValueError as e:
             errors.append(str(e))
@@ -655,8 +657,7 @@ def _validate_expected_samples(vcf_samples, record_family_ids, previous_loaded_i
         errors.append(format_missing_family_samples_error(missing_samples_by_family))
 
     if vcf_samples is not None:
-        # TODO incorrect logic
-        missing_vcf_samples = set(vcf_samples) - set(record_family_ids) - found_samples
+        missing_vcf_samples = loading_samples - set(vcf_samples)
         if missing_vcf_samples:
             errors.insert(0,
                           f'The following samples are included in airtable but missing from the VCF: {", ".join(missing_vcf_samples)}')
