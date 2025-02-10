@@ -16,7 +16,7 @@ from django.views.decorators.csrf import csrf_exempt
 from requests.exceptions import ConnectionError as RequestConnectionError
 
 from seqr.utils.communication_utils import send_project_notification
-from seqr.utils.search.add_data_utils import prepare_data_loading_request
+from seqr.utils.search.add_data_utils import prepare_data_loading_request, get_loading_samples_validator
 from seqr.utils.search.utils import get_search_backend_status, delete_search_backend_data
 from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
@@ -591,35 +591,26 @@ def _get_valid_search_individuals(project, airtable_samples, vcf_samples, datase
         )
     }
 
+    fetch_missing_loaded_samples = None
+    sample_source = 'the vcf'
     if airtable_samples:
+        fetch_missing_loaded_samples = lambda: {
+            sample['sample_id'] for sample in _get_dataset_type_samples_for_matched_pdos(
+                user, dataset_type, sample_type, AVAILABLE_PDO_STATUSES, project_guid=project.guid,
+            )
+        }
+        sample_source = 'airtable'
+
         missing_airtable_samples = {sample_id for sample_id in airtable_samples if sample_id not in search_individuals_by_id}
         if missing_airtable_samples:
             errors.append(
                 f'The following samples are included in airtable for {project.name} but are missing from seqr: {", ".join(missing_airtable_samples)}')
 
-    def format_missing_family_samples_error(missing_samples_by_family, ):
-        family_errors = [
-            f'{family} ({", ".join(sorted(samples))})' for family, samples in missing_samples_by_family.items()
-        ]
-        source = 'airtable' if airtable_samples else 'the vcf'
-        return f'The following families have previously loaded samples absent from {source}: {"; ".join(family_errors)}'
-
-    fetch_missing_loaded_samples = lambda: {
-        sample['sample_id'] for sample in _get_dataset_type_samples_for_matched_pdos(
-            user, dataset_type, sample_type, AVAILABLE_PDO_STATUSES, project_guid=project.guid,
-        )
-    } if airtable_samples else None
-
-    # TODO share with anvil
     loaded_individual_ids = []
-    def validate_expected_samples(record_family_ids, previous_loaded_individuals, sample_type):
-        validation_errors, loaded_ids = _validate_expected_samples(
-            vcf_samples, record_family_ids, previous_loaded_individuals, sample_type,
-            fetch_missing_loaded_samples, format_missing_family_samples_error
-        )
-        nonlocal loaded_individual_ids
-        loaded_individual_ids += loaded_ids
-        return validation_errors
+    validate_expected_samples = get_loading_samples_validator(
+        vcf_samples, loaded_individual_ids, sample_source=sample_source, fetch_missing_loaded_samples=fetch_missing_loaded_samples,
+        missing_family_samples_error= f'The following families have previously loaded samples absent from {sample_source}:',
+    )
 
     get_validated_related_individuals(
         project, search_individuals_by_id, errors, search_dataset_type=dataset_type, search_sample_type=sample_type,

@@ -1,6 +1,7 @@
 from collections import defaultdict, OrderedDict
 from django.contrib.auth.models import User
 from django.db.models import F
+from typing import Callable
 
 from reference_data.models import GENOME_VERSION_LOOKUP
 from seqr.models import Sample, Individual, Project
@@ -181,7 +182,11 @@ def _get_pedigree_path(pedigree_dir: str, genome_version: str, sample_type: str,
     return f'{pedigree_dir}/{GENOME_VERSION_LOOKUP[genome_version]}/{dag_dataset_type}/pedigrees/{sample_type}'
 
 
-def get_loading_samples_validator(vcf_samples, loaded_individual_ids, sample_source, missing_family_samples_error, missing_family_samples_template, missing_family_samples_divider='; ', loaded_sample_types=None):
+def get_loading_samples_validator(vcf_samples: list[str], loaded_individual_ids: list[int], sample_source: str,
+                                  missing_family_samples_error: str, missing_family_samples_template: str = '{family} ({samples})',
+                                  missing_family_samples_divider: str ='; ', loaded_sample_types: list[str] = None,
+                                  fetch_missing_loaded_samples: Callable = None) -> Callable:
+
     def validate_expected_samples(record_family_ids, previous_loaded_individuals, sample_type):
         errors = []
 
@@ -193,12 +198,27 @@ def get_loading_samples_validator(vcf_samples, loaded_individual_ids, sample_sou
                 errors.append('New data cannot be added to this project until the previously requested data is loaded')
 
         families = set(record_family_ids.values())
-        missing_samples_by_family = defaultdict(list)
+        missing_samples_by_family = defaultdict(set)
+        expected_sample_set = record_family_ids if fetch_missing_loaded_samples else vcf_samples
         for loaded_individual in previous_loaded_individuals:
             individual_id = loaded_individual[JsonConstants.INDIVIDUAL_ID_COLUMN]
             family_id = loaded_individual[JsonConstants.FAMILY_ID_COLUMN]
-            if family_id in families and individual_id not in vcf_samples:
-                missing_samples_by_family[family_id].append(individual_id)
+            if family_id in families and individual_id not in expected_sample_set:
+                missing_samples_by_family[family_id].add(individual_id)
+
+        loading_samples = set(record_family_ids.keys())
+        if missing_samples_by_family and fetch_missing_loaded_samples:
+            try:
+                additional_loaded_samples = fetch_missing_loaded_samples()
+                for missing_samples in missing_samples_by_family.values():
+                    loading_samples.update(missing_samples.intersection(additional_loaded_samples))
+                    missing_samples -= additional_loaded_samples
+                missing_samples_by_family = {
+                    family_id: samples for family_id, samples in missing_samples_by_family.items() if samples
+                }
+            except ValueError as e:
+                errors.append(str(e))
+
         if missing_samples_by_family:
             missing_family_sample_messages = [
                 missing_family_samples_template.format(family_id=family_id, samples=', '.join(sorted(individual_ids)))
@@ -208,11 +228,12 @@ def get_loading_samples_validator(vcf_samples, loaded_individual_ids, sample_sou
                 missing_family_samples_error + missing_family_samples_divider.join(sorted(missing_family_sample_messages))
             )
 
-        missing_samples = sorted(set(record_family_ids.keys()) - set(vcf_samples))
-        if missing_samples:
-            errors.append(
-                f'The following samples are included in {sample_source} but are missing from the VCF: {", ".join(missing_samples)}'
-            )
+        if vcf_samples is not None:
+            missing_vcf_samples = sorted(loading_samples - set(vcf_samples))
+            if missing_vcf_samples:
+                errors.insert(
+                    0, f'The following samples are included in {sample_source} but are missing from the VCF: {", ".join(missing_vcf_samples)}',
+                )
 
         nonlocal loaded_individual_ids
         loaded_individual_ids += [
