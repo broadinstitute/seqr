@@ -187,12 +187,6 @@ def get_loading_samples_validator(vcf_samples, loaded_individual_ids, loaded_sam
         if search_dataset_type and not sample_type:
             errors.append('New data cannot be added to this project until the previously requested data is loaded')
 
-        missing_samples = sorted(set(record_family_ids.keys()) - set(vcf_samples))
-        if missing_samples:
-            errors.append(
-                'The following samples are included in the pedigree file but are missing from the VCF: {}'.format(
-                    ', '.join(missing_samples)))
-
         families = set(record_family_ids.values())
         missing_samples_by_family = defaultdict(list)
         for loaded_individual in previous_loaded_individuals:
@@ -210,6 +204,12 @@ def get_loading_samples_validator(vcf_samples, loaded_individual_ids, loaded_sam
                 ' The following samples were previously loaded in this project but are missing from the VCF:\n' +
                 '\n'.join(sorted(missing_family_sample_messages))
             )
+
+        missing_samples = sorted(set(record_family_ids.keys()) - set(vcf_samples))
+        if missing_samples:
+            errors.append(
+                'The following samples are included in the pedigree file but are missing from the VCF: {}'.format(
+                    ', '.join(missing_samples)))
 
         nonlocal loaded_individual_ids
         loaded_individual_ids += [
