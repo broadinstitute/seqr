@@ -336,7 +336,7 @@ def validate_fam_file_records(project, records, errors=None, clear_invalid_value
     return warnings
 
 
-def get_validated_related_individuals(project, records_by_id, errors, related_guids=None, search_dataset_type=None, search_sample_type=None, validate_expected_samples=None):
+def get_validated_related_individuals(project, records_by_id, errors, related_guids=None, search_dataset_type=None, search_sample_type=None, validate_expected_samples=None, add_missing_parents=True):
     record_family_ids = {
         individual_id: r.get(JsonConstants.FAMILY_ID_COLUMN) or r['family']['familyId']
         for individual_id, r in records_by_id.items()
@@ -356,8 +356,8 @@ def get_validated_related_individuals(project, records_by_id, errors, related_gu
         individual_id = i[JsonConstants.INDIVIDUAL_ID_COLUMN]
         guid_id_map[i['guid']] = individual_id
         if individual_id not in records_by_id:
-            # TODO does not work for data manger validation case
-            records_by_id[individual_id] = i
+            if add_missing_parents:
+                records_by_id[individual_id] = i
             affected_status_by_family[i[JsonConstants.FAMILY_ID_COLUMN]].append(i[JsonConstants.AFFECTED_COLUMN])
 
     for individual_id, family_id in record_family_ids.items():
