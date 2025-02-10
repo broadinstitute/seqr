@@ -593,54 +593,33 @@ def _get_valid_search_individuals(project, airtable_samples, vcf_samples, datase
 
     if airtable_samples:
         missing_airtable_samples = {sample_id for sample_id in airtable_samples if sample_id not in search_individuals_by_id}
-        loading_samples -= missing_airtable_samples
         if missing_airtable_samples:
             errors.append(
                 f'The following samples are included in airtable for {project.name} but are missing from seqr: {", ".join(missing_airtable_samples)}')
 
+    def format_missing_family_samples_error(missing_samples_by_family, ):
+        family_errors = [
+            f'{family} ({", ".join(sorted([samples]))})' for family, samples in missing_samples_by_family.items()
+        ]
+        source = 'airtable' if airtable_samples else 'the vcf'
+        return f'The following families have previously loaded samples absent from {source}: {"; ".join(family_errors)}'
+
+    fetch_missing_loaded_samples = lambda: {
+        sample['sample_id'] for sample in _get_dataset_type_samples_for_matched_pdos(
+            user, dataset_type, sample_type, AVAILABLE_PDO_STATUSES, project_guid=project.guid,
+        )
+    } if airtable_samples else None
+
     # TODO share with anvil
     loaded_individual_ids = []
     def validate_expected_samples(record_family_ids, previous_loaded_individuals, sample_type):
-        loading_families = set(record_family_ids.values())
-        # TODO fix variables/ formatting
-        missing_loaded_samples = set()
-        for sample_id, individual in individuals.items():
-            if sample_id not in loading_samples and individual['family_name'] in loading_families and individual[
-                'sampleCount']:
-                missing_loaded_samples.add(sample_id)
-
-        if airtable_samples:
-            try:
-                _fetch_missing_loaded_airtable_samples(
-                    missing_loaded_samples, loading_samples, project, dataset_type, sample_type, user,
-                )
-            except ValueError as e:
-                errors.append(str(e))
-
-        missing_family_samples = defaultdict(list)
-        for sample_id in missing_loaded_samples:
-            missing_family_samples[individuals[sample_id]['family_name']].append(sample_id)
-
-        if missing_family_samples:
-            family_errors = [
-                f'{family} ({", ".join(sorted(samples))})' for family, samples in missing_family_samples.items()
-            ]
-            source = 'airtable' if airtable_samples else 'the vcf'
-            errors.append(
-                f'The following families have previously loaded samples absent from {source}: {"; ".join(family_errors)}')
-
-        if vcf_samples is not None:
-            missing_vcf_samples = set(vcf_samples) - set(loading_samples)
-            if missing_vcf_samples:
-                errors.insert(0,
-                              f'The following samples are included in airtable but missing from the VCF: {", ".join(missing_vcf_samples)}')
-
+        validation_errors, loaded_ids = _validate_expected_samples(
+            vcf_samples, record_family_ids, previous_loaded_individuals, sample_type,
+            fetch_missing_loaded_samples, format_missing_family_samples_error
+        )
         nonlocal loaded_individual_ids
-        loaded_individual_ids += [
-            i['individual_id'] for i in previous_loaded_individuals if
-            i[JsonConstants.FAMILY_ID_COLUMN] in loading_families
-        ]
-
+        loaded_individual_ids += loaded_ids
+        return validation_errors
 
     get_validated_related_individuals(
         project, search_individuals_by_id, errors, search_dataset_type=dataset_type, search_sample_type=sample_type,
@@ -650,16 +629,41 @@ def _get_valid_search_individuals(project, airtable_samples, vcf_samples, datase
     return [i['id'] for i in search_individuals_by_id.values()] + loaded_individual_ids
 
 
-def _fetch_missing_loaded_airtable_samples(missing_loaded_samples, loading_samples, project, dataset_type, sample_type, user):
-    if not missing_loaded_samples:
-        return
+def _validate_expected_samples(vcf_samples, record_family_ids, previous_loaded_individuals, sample_type, fetch_missing_loaded_samples, format_missing_family_samples_error):
+    errors = []
+    families = set(record_family_ids.values())
+    missing_samples_by_family = defaultdict(list)
+    for loaded_individual in previous_loaded_individuals:
+        individual_id = loaded_individual[JsonConstants.INDIVIDUAL_ID_COLUMN]
+        family_id = loaded_individual[JsonConstants.FAMILY_ID_COLUMN]
+        if family_id in families and individual_id not in vcf_samples:
+            missing_samples_by_family[family_id].append(individual_id)
 
-    airtable_loaded_samples = {sample['sample_id'] for sample in _get_dataset_type_samples_for_matched_pdos(
-        user, dataset_type, sample_type, AVAILABLE_PDO_STATUSES, project_guid=project.guid,
-    )}
-    found_samples = airtable_loaded_samples.intersection(missing_loaded_samples)
-    loading_samples.update(found_samples)
-    missing_loaded_samples -= found_samples
+    found_samples = set()
+    if missing_samples_by_family and fetch_missing_loaded_samples:
+        try:
+            found_samples = fetch_missing_loaded_samples()
+            missing_samples_by_family = {
+                family_id: [s for s in samples if s not in found_samples]
+                for family_id, samples in missing_samples_by_family.items()
+                if any(s not in found_samples for s in samples)
+            }
+        except ValueError as e:
+            errors.append(str(e))
+
+    if missing_samples_by_family:
+        errors.append(format_missing_family_samples_error(missing_samples_by_family))
+
+    if vcf_samples is not None:
+        # TODO incorrect logic
+        missing_vcf_samples = set(vcf_samples) - set(record_family_ids) - found_samples
+        if missing_vcf_samples:
+            errors.insert(0,
+                          f'The following samples are included in airtable but missing from the VCF: {", ".join(missing_vcf_samples)}')
+
+    return errors, [
+        i['individual_id'] for i in previous_loaded_individuals if i[JsonConstants.FAMILY_ID_COLUMN] in families
+    ]
 
 
 # Hop-by-hop HTTP response headers shouldn't be forwarded.
