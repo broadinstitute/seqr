@@ -356,6 +356,7 @@ def get_validated_related_individuals(project, records_by_id, errors, related_gu
         individual_id = i[JsonConstants.INDIVIDUAL_ID_COLUMN]
         guid_id_map[i['guid']] = individual_id
         if individual_id not in records_by_id:
+            # TODO does not work for data manger validation case
             records_by_id[individual_id] = i
             affected_status_by_family[i[JsonConstants.FAMILY_ID_COLUMN]].append(i[JsonConstants.AFFECTED_COLUMN])
 

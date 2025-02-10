@@ -599,7 +599,7 @@ def _get_valid_search_individuals(project, airtable_samples, vcf_samples, datase
 
     def format_missing_family_samples_error(missing_samples_by_family, ):
         family_errors = [
-            f'{family} ({", ".join(sorted([samples]))})' for family, samples in missing_samples_by_family.items()
+            f'{family} ({", ".join(sorted(samples))})' for family, samples in missing_samples_by_family.items()
         ]
         source = 'airtable' if airtable_samples else 'the vcf'
         return f'The following families have previously loaded samples absent from {source}: {"; ".join(family_errors)}'
