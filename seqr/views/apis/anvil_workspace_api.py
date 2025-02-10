@@ -24,6 +24,7 @@ from seqr.views.utils.pedigree_info_utils import parse_basic_pedigree_table, Jso
 from seqr.views.utils.individual_utils import add_or_update_individuals_and_families
 from seqr.utils.communication_utils import send_html_email
 from seqr.utils.file_utils import list_files
+from seqr.utils.search.add_data_utils import get_loading_samples_validator
 from seqr.utils.vcf_utils import validate_vcf_and_get_samples, get_vcf_list
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
@@ -233,18 +234,12 @@ def add_workspace_data(request, project_guid):
 
 
 def _parse_uploaded_pedigree(request_json, project=None, search_dataset_type=None):
-    loaded_sample_type = None
+    loaded_sample_types = []
     loaded_individual_ids = []
-    def validate_expected_samples(record_family_ids, previous_loaded_individuals, sample_type):
-        errors, loaded_ids = _validate_expected_samples(
-            request_json['vcfSamples'], search_dataset_type,
-            record_family_ids, previous_loaded_individuals, sample_type,
-        )
-        nonlocal loaded_individual_ids
-        loaded_individual_ids += loaded_ids
-        nonlocal loaded_sample_type
-        loaded_sample_type = sample_type
-        return errors
+    validate_expected_samples = get_loading_samples_validator(
+        request_json['vcfSamples'], loaded_individual_ids,
+        loaded_sample_types=loaded_sample_types, search_dataset_type=search_dataset_type,
+    )
 
     json_records = load_uploaded_file(request_json['uploadedFileId'])
     pedigree_records = parse_basic_pedigree_table(
@@ -252,7 +247,7 @@ def _parse_uploaded_pedigree(request_json, project=None, search_dataset_type=Non
             JsonConstants.SEX_COLUMN, JsonConstants.AFFECTED_COLUMN,
         ], search_dataset_type=search_dataset_type, validate_expected_samples=validate_expected_samples)
 
-    return pedigree_records, loaded_individual_ids, loaded_sample_type
+    return pedigree_records, loaded_individual_ids, loaded_sample_types[0] if loaded_sample_types else None
 
 
 def _validate_expected_samples(vcf_samples, search_dataset_type, record_family_ids, previous_loaded_individuals, sample_type):

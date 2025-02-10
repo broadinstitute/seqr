@@ -12,7 +12,7 @@ from seqr.utils.search.elasticsearch.es_utils import validate_es_index_metadata_
 from seqr.views.utils.airtable_utils import AirtableSession, ANVIL_REQUEST_TRACKING_TABLE
 from seqr.views.utils.dataset_utils import match_and_update_search_samples, load_mapping_file
 from seqr.views.utils.export_utils import write_multiple_files
-from seqr.views.utils.pedigree_info_utils import validate_affected_families
+from seqr.views.utils.pedigree_info_utils import validate_affected_families, JsonConstants
 from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, BASE_URL, ANVIL_UI_URL, \
     SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL
 
@@ -157,6 +157,7 @@ def _upload_data_loading_files(projects: list[Project], user: User, file_path: s
         data_by_project[row.pop('project')].append(row)
         affected_by_family[row['Family_GUID']].append(row.pop('affected_status'))
 
+    # TODO remove
     errors = []
     validate_affected_families(affected_by_family, errors)
     if errors:
@@ -178,3 +179,47 @@ def _upload_data_loading_files(projects: list[Project], user: User, file_path: s
 def _get_pedigree_path(pedigree_dir: str, genome_version: str, sample_type: str, dataset_type: str):
     dag_dataset_type = _dag_dataset_type(sample_type, dataset_type)
     return f'{pedigree_dir}/{GENOME_VERSION_LOOKUP[genome_version]}/{dag_dataset_type}/pedigrees/{sample_type}'
+
+
+def get_loading_samples_validator(vcf_samples, loaded_individual_ids, loaded_sample_types=None, search_dataset_type=None):
+    def validate_expected_samples(record_family_ids, previous_loaded_individuals, sample_type):
+        errors = []
+        if search_dataset_type and not sample_type:
+            errors.append('New data cannot be added to this project until the previously requested data is loaded')
+
+        missing_samples = sorted(set(record_family_ids.keys()) - set(vcf_samples))
+        if missing_samples:
+            errors.append(
+                'The following samples are included in the pedigree file but are missing from the VCF: {}'.format(
+                    ', '.join(missing_samples)))
+
+        families = set(record_family_ids.values())
+        missing_samples_by_family = defaultdict(list)
+        for loaded_individual in previous_loaded_individuals:
+            individual_id = loaded_individual[JsonConstants.INDIVIDUAL_ID_COLUMN]
+            family_id = loaded_individual[JsonConstants.FAMILY_ID_COLUMN]
+            if family_id in families and individual_id not in vcf_samples:
+                missing_samples_by_family[family_id].append(individual_id)
+        if missing_samples_by_family:
+            missing_family_sample_messages = [
+                f'Family {family_id}: {", ".join(sorted(individual_ids))}'
+                for family_id, individual_ids in missing_samples_by_family.items()
+            ]
+            errors.append(
+                'In order to load data for families with previously loaded data, new family samples must be joint called in a single VCF with all previously loaded samples.'
+                ' The following samples were previously loaded in this project but are missing from the VCF:\n' +
+                '\n'.join(sorted(missing_family_sample_messages))
+            )
+
+        nonlocal loaded_individual_ids
+        loaded_individual_ids += [
+            i['individual_id'] for i in previous_loaded_individuals if i[JsonConstants.FAMILY_ID_COLUMN] in families
+        ]
+
+        nonlocal loaded_sample_types
+        if sample_type and loaded_sample_types is not None:
+            loaded_sample_types.append(sample_type)
+
+        return errors
+
+    return validate_expected_samples
