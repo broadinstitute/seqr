@@ -234,11 +234,12 @@ def add_workspace_data(request, project_guid):
 
 
 def _parse_uploaded_pedigree(request_json, project=None, search_dataset_type=None):
-    loaded_sample_types = []
+    loaded_sample_types = [] if search_dataset_type else None
     loaded_individual_ids = []
     validate_expected_samples = get_loading_samples_validator(
-        request_json['vcfSamples'], loaded_individual_ids,
-        loaded_sample_types=loaded_sample_types, search_dataset_type=search_dataset_type,
+        request_json['vcfSamples'], loaded_individual_ids, loaded_sample_types=loaded_sample_types, sample_source='the pedigree file',
+        missing_family_samples_template='Family {family_id}: {samples}', missing_family_samples_divider='\n',
+        missing_family_samples_error='In order to load data for families with previously loaded data, new family samples must be joint called in a single VCF with all previously loaded samples. The following samples were previously loaded in this project but are missing from the VCF:\n',
     )
 
     json_records = load_uploaded_file(request_json['uploadedFileId'])
@@ -248,40 +249,6 @@ def _parse_uploaded_pedigree(request_json, project=None, search_dataset_type=Non
         ], search_dataset_type=search_dataset_type, validate_expected_samples=validate_expected_samples)
 
     return pedigree_records, loaded_individual_ids, loaded_sample_types[0] if loaded_sample_types else None
-
-
-def _validate_expected_samples(vcf_samples, search_dataset_type, record_family_ids, previous_loaded_individuals, sample_type):
-    errors = []
-    if search_dataset_type and not sample_type:
-        errors.append('New data cannot be added to this project until the previously requested data is loaded')
-
-    missing_samples = sorted(set(record_family_ids.keys()) - set(vcf_samples))
-    if missing_samples:
-        errors.append('The following samples are included in the pedigree file but are missing from the VCF: {}'.format(
-                ', '.join(missing_samples)))
-
-    families = set(record_family_ids.values())
-    missing_samples_by_family = defaultdict(list)
-    for loaded_individual in previous_loaded_individuals:
-        individual_id = loaded_individual[JsonConstants.INDIVIDUAL_ID_COLUMN]
-        family_id = loaded_individual[JsonConstants.FAMILY_ID_COLUMN]
-        if family_id in families and individual_id not in vcf_samples:
-            missing_samples_by_family[family_id].append(individual_id)
-    if missing_samples_by_family:
-        missing_family_sample_messages = [
-            f'Family {family_id}: {", ".join(sorted(individual_ids))}'
-            for family_id, individual_ids in missing_samples_by_family.items()
-        ]
-        errors.append(
-            'In order to load data for families with previously loaded data, new family samples must be joint called in a single VCF with all previously loaded samples.'
-            ' The following samples were previously loaded in this project but are missing from the VCF:\n' +
-            '\n'.join(sorted(missing_family_sample_messages))
-        )
-
-    loaded_individual_ids = [
-        i['individual_id'] for i in previous_loaded_individuals if i[JsonConstants.FAMILY_ID_COLUMN] in families
-    ]
-    return errors, loaded_individual_ids
 
 
 def _trigger_add_workspace_data(project, pedigree_records, user, data_path, sample_type, previous_loaded_ids=None, get_pedigree_json=False):

@@ -181,11 +181,16 @@ def _get_pedigree_path(pedigree_dir: str, genome_version: str, sample_type: str,
     return f'{pedigree_dir}/{GENOME_VERSION_LOOKUP[genome_version]}/{dag_dataset_type}/pedigrees/{sample_type}'
 
 
-def get_loading_samples_validator(vcf_samples, loaded_individual_ids, loaded_sample_types=None, search_dataset_type=None):
+def get_loading_samples_validator(vcf_samples, loaded_individual_ids, sample_source, missing_family_samples_error, missing_family_samples_template, missing_family_samples_divider='; ', loaded_sample_types=None):
     def validate_expected_samples(record_family_ids, previous_loaded_individuals, sample_type):
         errors = []
-        if search_dataset_type and not sample_type:
-            errors.append('New data cannot be added to this project until the previously requested data is loaded')
+
+        nonlocal loaded_sample_types
+        if loaded_sample_types is not None:
+            if sample_type:
+                loaded_sample_types.append(sample_type)
+            else:
+                errors.append('New data cannot be added to this project until the previously requested data is loaded')
 
         families = set(record_family_ids.values())
         missing_samples_by_family = defaultdict(list)
@@ -196,29 +201,23 @@ def get_loading_samples_validator(vcf_samples, loaded_individual_ids, loaded_sam
                 missing_samples_by_family[family_id].append(individual_id)
         if missing_samples_by_family:
             missing_family_sample_messages = [
-                f'Family {family_id}: {", ".join(sorted(individual_ids))}'
+                missing_family_samples_template.format(family_id=family_id, samples=', '.join(sorted(individual_ids)))
                 for family_id, individual_ids in missing_samples_by_family.items()
             ]
             errors.append(
-                'In order to load data for families with previously loaded data, new family samples must be joint called in a single VCF with all previously loaded samples.'
-                ' The following samples were previously loaded in this project but are missing from the VCF:\n' +
-                '\n'.join(sorted(missing_family_sample_messages))
+                missing_family_samples_error + missing_family_samples_divider.join(sorted(missing_family_sample_messages))
             )
 
         missing_samples = sorted(set(record_family_ids.keys()) - set(vcf_samples))
         if missing_samples:
             errors.append(
-                'The following samples are included in the pedigree file but are missing from the VCF: {}'.format(
-                    ', '.join(missing_samples)))
+                f'The following samples are included in {sample_source} but are missing from the VCF: {", ".join(missing_samples)}'
+            )
 
         nonlocal loaded_individual_ids
         loaded_individual_ids += [
             i['individual_id'] for i in previous_loaded_individuals if i[JsonConstants.FAMILY_ID_COLUMN] in families
         ]
-
-        nonlocal loaded_sample_types
-        if sample_type and loaded_sample_types is not None:
-            loaded_sample_types.append(sample_type)
 
         return errors
 
