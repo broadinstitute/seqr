@@ -238,7 +238,6 @@ def _parse_uploaded_pedigree(request_json, project=None, search_dataset_type=Non
     loaded_individual_ids = []
     validate_expected_samples = get_loading_samples_validator(
         request_json['vcfSamples'], loaded_individual_ids, loaded_sample_types=loaded_sample_types, sample_source='the pedigree file',
-        missing_family_samples_template='Family {family_id}: {samples}', missing_family_samples_divider='\n',
         missing_family_samples_error='In order to load data for families with previously loaded data, new family samples must be joint called in a single VCF with all previously loaded samples. The following samples were previously loaded in this project but are missing from the VCF:\n',
     )
 

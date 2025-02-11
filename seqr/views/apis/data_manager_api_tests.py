@@ -1757,7 +1757,7 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {
-            'errors': ['The following families have previously loaded samples absent from the vcf: 2 (HG00732, HG00733)'],
+            'errors': ['The following families have previously loaded samples absent from the vcf\nFamily 2: HG00732, HG00733'],
             'warnings': None,
         })
 
@@ -1970,7 +1970,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
             'warnings': None,
             'errors': [
                 'The following samples are included in airtable but are missing from the VCF: NA21987',
-                'The following families have previously loaded samples absent from airtable: 14 (NA21234)',
+                'The following families have previously loaded samples absent from airtable\nFamily 14: NA21234',
             ],
         })
         self.assertEqual(len(responses.calls), 1)

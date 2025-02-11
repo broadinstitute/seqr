@@ -183,8 +183,7 @@ def _get_pedigree_path(pedigree_dir: str, genome_version: str, sample_type: str,
 
 
 def get_loading_samples_validator(vcf_samples: list[str], loaded_individual_ids: list[int], sample_source: str,
-                                  missing_family_samples_error: str, missing_family_samples_template: str = '{family_id} ({samples})',
-                                  missing_family_samples_divider: str ='; ', loaded_sample_types: list[str] = None,
+                                  missing_family_samples_error: str, loaded_sample_types: list[str] = None,
                                   fetch_missing_loaded_samples: Callable = None) -> Callable:
 
     def validate_expected_samples(record_family_ids, previous_loaded_individuals, sample_type):
@@ -221,11 +220,11 @@ def get_loading_samples_validator(vcf_samples: list[str], loaded_individual_ids:
 
         if missing_samples_by_family:
             missing_family_sample_messages = [
-                missing_family_samples_template.format(family_id=family_id, samples=', '.join(sorted(individual_ids)))
+                f'Family {family_id}: {", ".join(sorted(individual_ids))}'
                 for family_id, individual_ids in missing_samples_by_family.items()
             ]
             errors.append(
-                missing_family_samples_error + missing_family_samples_divider.join(sorted(missing_family_sample_messages))
+                missing_family_samples_error + '\n'.join(sorted(missing_family_sample_messages))
             )
 
         if vcf_samples is not None:
