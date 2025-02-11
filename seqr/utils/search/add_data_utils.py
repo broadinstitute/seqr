@@ -183,7 +183,7 @@ def _get_pedigree_path(pedigree_dir: str, genome_version: str, sample_type: str,
 
 
 def get_loading_samples_validator(vcf_samples: list[str], loaded_individual_ids: list[int], sample_source: str,
-                                  missing_family_samples_error: str, missing_family_samples_template: str = '{family} ({samples})',
+                                  missing_family_samples_error: str, missing_family_samples_template: str = '{family_id} ({samples})',
                                   missing_family_samples_divider: str ='; ', loaded_sample_types: list[str] = None,
                                   fetch_missing_loaded_samples: Callable = None) -> Callable:
 

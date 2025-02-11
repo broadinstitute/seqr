@@ -1543,7 +1543,9 @@ class DataManagerAPITest(AirtableTest):
         mock_temp_dir.return_value.__enter__.return_value = '/mock/tmp'
         body = {**self.REQUEST_BODY, 'projects': [
             json.dumps(option) for option in self.PROJECT_OPTIONS + [{'projectGuid': 'R0005_not_project'}]
-        ], 'vcfSamples': [], 'skipValidation': True}  # TODO test vcf samples
+        ], 'vcfSamples': [
+            'ABC123', 'NA19675_1', 'NA19678', 'NA19679', 'HG00731', 'HG00732', 'HG00733', 'NA20874',
+        ], 'skipValidation': True}
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'error': 'The following projects are invalid: R0005_not_project'})
@@ -1583,7 +1585,7 @@ class DataManagerAPITest(AirtableTest):
 
         del body['skipValidation']
         del dag_json['skip_validation']
-        body.update({'datasetType': 'SV', 'filePath': f'{self.CALLSET_DIR}/sv_callset.vcf'})
+        body.update({'datasetType': 'SV', 'filePath': f'{self.CALLSET_DIR}/sv_callset.vcf', 'vcfSamples': None})
         self._trigger_error(url, body, dag_json, mock_open, mock_mkdir)
 
         responses.add(responses.POST, PIPELINE_RUNNER_URL)
@@ -1651,7 +1653,7 @@ class DataManagerAPITest(AirtableTest):
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {
-            'errors': ['The following families do not have any affected individuals: F000005_5'],
+            'errors': ['The following families do not have any affected individuals: 5'],
             'warnings': None,
         })
         Individual.objects.filter(guid='I000009_na20874').update(affected='A')

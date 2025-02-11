@@ -614,7 +614,7 @@ def _get_valid_search_individuals(project, airtable_samples, vcf_samples, datase
 
     get_validated_related_individuals(
         project, search_individuals_by_id, errors, search_dataset_type=dataset_type, search_sample_type=sample_type,
-        validate_expected_samples=validate_expected_samples, add_missing_parents=not fetch_missing_loaded_samples,
+        validate_expected_samples=validate_expected_samples, add_missing_parents=False,
     )
 
     return [i['id'] for i in search_individuals_by_id.values()] + loaded_individual_ids
