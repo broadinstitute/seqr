@@ -1590,7 +1590,6 @@ class DataManagerAPITest(AirtableTest):
         body.update({'datasetType': 'SV', 'filePath': f'{self.CALLSET_DIR}/sv_callset.vcf'})
         self._trigger_error(url, body, dag_json, mock_open, mock_mkdir)
 
-        responses.add(responses.POST, PIPELINE_RUNNER_URL)
         responses.calls.reset()
         mock_open.reset_mock()
         mock_mkdir.reset_mock()
@@ -1751,6 +1750,15 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self._assert_trigger_error(response, body, dag_json, response_body={
             'errors': ['Loading pipeline is already running. Wait for it to complete and resubmit'], 'warnings': None,
+        })
+
+        responses.add(responses.POST, PIPELINE_RUNNER_URL)
+        body['vcfSamples'] = body['vcfSamples'][:5]
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {
+            'errors': ['The following families have previously loaded samples absent from the vcf: 2 (HG00732, HG00733)'],
+            'warnings': None,
         })
 
     def _assert_trigger_error(self, response, body, *args, response_body=None, **kwargs):
