@@ -1541,11 +1541,13 @@ class DataManagerAPITest(AirtableTest):
         responses.add(responses.GET, 'https://api.airtable.com/v0/app3Y97xtbbaOopVR/Samples', json=AIRTABLE_SAMPLE_RECORDS, status=200)
         responses.add(responses.POST, PIPELINE_RUNNER_URL)
         mock_temp_dir.return_value.__enter__.return_value = '/mock/tmp'
+        vcf_samples = [
+            'ABC123', 'NA19675_1', 'NA19678', 'NA19679', 'HG00731', 'HG00732', 'HG00733', 'NA20874', 'NA21234',
+            'NA21987',
+        ]
         body = {**self.REQUEST_BODY, 'projects': [
             json.dumps(option) for option in self.PROJECT_OPTIONS + [{'projectGuid': 'R0005_not_project'}]
-        ], 'vcfSamples': [
-            'ABC123', 'NA19675_1', 'NA19678', 'NA19679', 'HG00731', 'HG00732', 'HG00733', 'NA20874', 'NA21234', 'NA21987',
-        ], 'skipValidation': True}
+        ], 'vcfSamples': vcf_samples, 'skipValidation': True}
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'error': 'The following projects are invalid: R0005_not_project'})
@@ -1592,7 +1594,7 @@ class DataManagerAPITest(AirtableTest):
         responses.calls.reset()
         mock_open.reset_mock()
         mock_mkdir.reset_mock()
-        body.update({'sampleType': 'WGS', 'projects': [json.dumps(self.PROJECT_OPTION)]})
+        body.update({'sampleType': 'WGS', 'projects': [json.dumps(self.PROJECT_OPTION)], 'vcfSamples': vcf_samples})
         del body['datasetType']
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self._test_load_single_project(mock_open, mock_mkdir, response, url=url, body=body)
@@ -1946,7 +1948,10 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {
             'warnings': None,
-            'errors': ['The following samples are included in airtable for Non-Analyst Project but are missing from seqr: NA21988'],
+            'errors': [
+                'The following samples are included in airtable for Non-Analyst Project but are missing from seqr: NA21988',
+                'The following samples are included in airtable but are missing from the VCF: NA21234, NA21987',
+            ],
         })
         body['projects'] = [json.dumps({**PROJECT_OPTION, 'sampleIds': [PROJECT_SAMPLES_OPTION['sampleIds'][1]]})]
         body['sampleType'] = 'WGS'
@@ -1955,7 +1960,10 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {
             'warnings': None,
-            'errors': ['The following families have previously loaded samples absent from airtable: 14 (NA21234)'],
+            'errors': [
+                'The following samples are included in airtable but are missing from the VCF: NA21987',
+                'The following families have previously loaded samples absent from airtable: 14 (NA21234)',
+            ],
         })
         self.assertEqual(len(responses.calls), 1)
         self._assert_expected_airtable_call(required_sample_field='SV_CallsetPath', project_guid='R0004_non_analyst_project')
