@@ -609,7 +609,7 @@ def _get_valid_search_individuals(project, airtable_samples, vcf_samples, datase
     loaded_individual_ids = []
     validate_expected_samples = get_loading_samples_validator(
         vcf_samples, loaded_individual_ids, sample_source=sample_source, fetch_missing_loaded_samples=fetch_missing_loaded_samples,
-        missing_family_samples_error= f'The following families have previously loaded samples absent from {sample_source}:',
+        missing_family_samples_error= f'The following families have previously loaded samples absent from {sample_source}: ',
     )
 
     get_validated_related_individuals(

@@ -1544,7 +1544,7 @@ class DataManagerAPITest(AirtableTest):
         body = {**self.REQUEST_BODY, 'projects': [
             json.dumps(option) for option in self.PROJECT_OPTIONS + [{'projectGuid': 'R0005_not_project'}]
         ], 'vcfSamples': [
-            'ABC123', 'NA19675_1', 'NA19678', 'NA19679', 'HG00731', 'HG00732', 'HG00733', 'NA20874',
+            'ABC123', 'NA19675_1', 'NA19678', 'NA19679', 'HG00731', 'HG00732', 'HG00733', 'NA20874', 'NA21234', 'NA21987',
         ], 'skipValidation': True}
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
@@ -1585,7 +1585,7 @@ class DataManagerAPITest(AirtableTest):
 
         del body['skipValidation']
         del dag_json['skip_validation']
-        body.update({'datasetType': 'SV', 'filePath': f'{self.CALLSET_DIR}/sv_callset.vcf', 'vcfSamples': None})
+        body.update({'datasetType': 'SV', 'filePath': f'{self.CALLSET_DIR}/sv_callset.vcf'})
         self._trigger_error(url, body, dag_json, mock_open, mock_mkdir)
 
         responses.add(responses.POST, PIPELINE_RUNNER_URL)
@@ -1630,7 +1630,7 @@ class DataManagerAPITest(AirtableTest):
         ]
         self.assertEqual(len(files), 1 if single_project else 2)
 
-        num_rows = 7 if self.MOCK_AIRTABLE_KEY else 15
+        num_rows = 7 if self.MOCK_AIRTABLE_KEY else 8
         if not single_project:
             self.assertEqual(len(files[0]), num_rows)
             self.assertListEqual(files[0][:5], [PEDIGREE_HEADER] + EXPECTED_PEDIGREE_ROWS[:num_rows-1])
@@ -1936,6 +1936,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         self.mock_slack.assert_called_once_with(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, error_message)
 
     def _trigger_error(self, url, body, dag_json, mock_open, mock_mkdir):
+        body['vcfSamples'] = None
         super()._trigger_error(url, body, dag_json, mock_open, mock_mkdir)
 
         responses.calls.reset()
