@@ -1940,6 +1940,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         super()._trigger_error(url, body, dag_json, mock_open, mock_mkdir)
 
         responses.calls.reset()
+        body['vcfSamples'] = ['ABC123', 'NA19675_1']
         body['projects'] = [json.dumps({**PROJECT_OPTION, 'sampleIds': PROJECT_SAMPLES_OPTION['sampleIds'] + ['NA21988']})]
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
