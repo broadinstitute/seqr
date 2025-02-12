@@ -389,7 +389,7 @@ class CheckNewSamplesTest(object):
                 {'individual_guid': 'I000017_na20889', 'family_guid': 'F000012_12', 'project_guid': 'R0003_test', 'affected': 'A', 'sample_id': 'NA20889', 'sample_type': 'WES'},
             ]}},
         ], reload_annotations_logs=[
-            'Reloading shared annotations for 3 SNV_INDEL GRCh38 saved variants (3 unique)', 'Fetched 1 additional variants in chromosome 1', 'Fetched 1 additional variants in chromosome 1', 'Updated 2 SNV_INDEL GRCh38 saved variants',
+            'Reloading shared annotations for 3 SNV_INDEL GRCh38 saved variants (3 unique)', 'Updated 1 SNV_INDEL GRCh38 saved variants', 'Fetched 1 additional variants in chromosome 1', 'Fetched 1 additional variants in chromosome 1', 'Updated 1 SNV_INDEL GRCh38 saved variants in chromosome 1',
             'No additional SV_WES GRCh38 saved variants to update',
         ], run_loading_logs={
             'GRCh38/SNV_INDEL': [
