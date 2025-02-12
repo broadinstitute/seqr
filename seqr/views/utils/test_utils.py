@@ -594,8 +594,8 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
         patcher = mock.patch('seqr.views.utils.airflow_utils.logger')
         self.mock_airflow_logger = patcher.start()
         self.addCleanup(patcher.stop)
-        patcher = mock.patch('seqr.views.utils.airflow_utils.datetime.utcnow')
-        patcher.start().return_value = datetime(2022, 5, 1, 4, 17, 10, 932012)
+        patcher = mock.patch('seqr.views.utils.airflow_utils.datetime')
+        patcher.start().utcnow.return_value = lambda: datetime(2022, 5, 1, 4, 17, 10, 932012)
         self.addCleanup(patcher.stop)
 
         super().setUp()
