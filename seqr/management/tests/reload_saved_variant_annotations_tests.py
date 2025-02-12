@@ -28,7 +28,7 @@ class ReloadVariantAnnotationsTest(AnvilAuthenticationTestCase):
         # Test errors
         with self.assertRaises(CommandError) as ce:
             call_command('reload_saved_variant_annotations')
-        self.assertEqual(str(ce.exception), 'Error: the following arguments are required: data_type, genome_version')
+        self.assertEqual(str(ce.exception), 'Error: the following arguments are required: data_type, genome_version, chromosomes')
 
         with self.assertRaises(CommandError) as ce:
             call_command('reload_saved_variant_annotations', 'SV', 'GRCh37')
@@ -70,6 +70,30 @@ class ReloadVariantAnnotationsTest(AnvilAuthenticationTestCase):
         self.assertEqual(annotation_updated_json_2['rsid'], 'rs123')
         self.assertEqual(annotation_updated_json_2['mainTranscriptId'], 'ENST00000505820')
         self.assertEqual(len(annotation_updated_json_2['genotypes']), 3)
+
+        # Test chromosome subset
+        responses.calls.reset()
+        mock_logger.reset_mock()
+        call_command('reload_saved_variant_annotations', 'SNV_INDEL', 'GRCh37', '3', '21')
+
+        mock_logger.info.assert_has_calls([mock.call(log) for log in [
+            'Reloading shared annotations for 1 SNV_INDEL GRCh37 saved variants (1 unique)',
+            'Fetched 2 additional variants in chromosome 21',
+            'Updated 0 SNV_INDEL GRCh37 saved variants',
+        ]])
+
+        self.assertEqual(len(responses.calls), 1)
+        self.assertDictEqual(json.loads(responses.calls[0].request.body), {
+            'genome_version': 'GRCh37',
+            'data_type': 'SNV_INDEL',
+            'variant_ids': [['21', 3343353, 'GAGA', 'G']],
+        })
+
+        responses.calls.reset()
+        mock_logger.reset_mock()
+        call_command('reload_saved_variant_annotations', 'SNV_INDEL', 'GRCh37', '3', '6')
+        mock_logger.info.assert_called_with('No additional SNV_INDEL GRCh37 saved variants to update in chromosomes 3, 6')
+        self.assertEqual(len(responses.calls), 0)
 
         # Test SVs
         responses.calls.reset()

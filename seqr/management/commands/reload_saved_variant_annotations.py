@@ -15,6 +15,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('data_type', choices=sorted(DATA_TYPE_CHOICES))
         parser.add_argument('genome_version', choices=sorted(GENOME_VERSION_LOOKUP.values()))
+        parser.add_argument('chromosomes', nargs='*', help='Chromosome(s) to reload. If not specified, defaults to all chromosomes.')
 
     def handle(self, *args, **options):
-        reload_shared_variant_annotations(options['data_type'], options['genome_version'])
+        reload_shared_variant_annotations(options['data_type'], options['genome_version'], chromosomes=options['chromosomes'])

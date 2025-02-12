@@ -343,7 +343,7 @@ class Command(BaseCommand):
         return sorted(pdos_to_create.keys())
 
     @staticmethod
-    def _reload_shared_variant_annotations(data_type, genome_version, updated_variants_by_id=None, exclude_families=None):
+    def _reload_shared_variant_annotations(data_type, genome_version, updated_variants_by_id=None, exclude_families=None, chromosomes=None):
         dataset_type = data_type.split('_')[0]
         is_sv = dataset_type.startswith(Sample.DATASET_TYPE_SV_CALLS)
         dataset_type = data_type.split('_')[0] if is_sv else data_type
@@ -358,13 +358,14 @@ class Command(BaseCommand):
             updated_annotation_samples = updated_annotation_samples.filter(sample_type=data_type.split('_')[1])
 
         variant_models = get_saved_variants(
-            genome_version, dataset_type=dataset_type,
+            genome_version, dataset_type=dataset_type, chromosomes=chromosomes,
             family_guids=updated_annotation_samples.values_list('individual__family__guid', flat=True).distinct(),
         )
 
         variant_type_summary = f'{data_type} {genome_version} saved variants'
         if not variant_models:
-            logger.info(f'No additional {variant_type_summary} to update')
+            chrom_summary = f' in chromosomes {", ".join(chromosomes)}' if chromosomes else ''
+            logger.info(f'No additional {variant_type_summary} to update{chrom_summary}')
             return
 
         variants_by_id = defaultdict(list)
