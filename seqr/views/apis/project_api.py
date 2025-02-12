@@ -452,7 +452,7 @@ def _delete_project(project_guid, user):
     if anvil_enabled() and not is_internal_anvil_project(project):
         AirtableSession(user, base=AirtableSession.ANVIL_BASE).safe_patch_records(
             ANVIL_REQUEST_TRACKING_TABLE,
-            record_or_filters={'Status': ['Loading', 'Loading Requested', 'Available in Seqr']},
+            record_or_filters={'Status': ['Loading', 'Loading Requested', 'Loading request canceled', 'Available in Seqr']},
             record_and_filters={'AnVIL Project URL': f'{BASE_URL}project/{project_guid}/project_page'},
             update={'Status': 'Project Deleted'},
         )
