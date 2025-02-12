@@ -595,7 +595,7 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
         self.mock_airflow_logger = patcher.start()
         self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.utils.airflow_utils.datetime')
-        patcher.start().utcnow.return_value = lambda: datetime(2022, 5, 1, 4, 17, 10, 932012)
+        patcher.start().utcnow.return_value = datetime(2022, 5, 1, 4, 17, 10, 932012)
         self.addCleanup(patcher.stop)
 
         super().setUp()
@@ -691,7 +691,7 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
         call_cnt = call_count - 1
 
         # trigger dag
-        self.assertEqual(responses.calls[offset+call_cnt].request.url, f'{self._dag_url}/dagRuns?execution_date_gte=2022-04-24T04:17:10Z')
+        self.assertEqual(responses.calls[offset+call_cnt].request.url, f'{self._dag_url}/dagRuns')
         self.assertEqual(responses.calls[offset+call_cnt].request.method, 'POST')
         self.assertDictEqual(json.loads(responses.calls[offset+call_cnt].request.body), {})
 
