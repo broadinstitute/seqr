@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 from django.contrib.auth.models import User
 import google.auth
 from google.auth.transport.requests import AuthorizedSession
@@ -81,7 +82,8 @@ def _send_slack_msg_on_failure_trigger(e, dag, error_message):
 
 
 def _check_dag_running_state(dag_name: str):
-    endpoint = f'dags/{dag_name}/dagRuns'
+    week_ago = (datetime.utcnow() - timedelta(weeks=1)).strftime('%Y-%m-%dT%H:%M:%SZ')
+    endpoint = f'dags/{dag_name}/dagRuns?execution_date_gte={week_ago}'
     resp = _make_airflow_api_request(endpoint, method='GET')
     dag_runs = resp['dag_runs']
     if dag_runs and dag_runs[-1]['state'] not in {'success', 'failed'}:
