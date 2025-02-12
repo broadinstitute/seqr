@@ -1,6 +1,7 @@
 # Utilities used for unit and integration tests.
 from collections import defaultdict
 from copy import deepcopy
+from datetime import datetime
 from django.contrib.auth.models import User, Group
 from django.test import TestCase
 from guardian.shortcuts import assign_perm
@@ -593,12 +594,15 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
         patcher = mock.patch('seqr.views.utils.airflow_utils.logger')
         self.mock_airflow_logger = patcher.start()
         self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.airflow_utils.datetime.utcnow')
+        patcher.start().return_value = datetime(2022, 5, 1, 4, 17, 10, 932012)
+        self.addCleanup(patcher.stop)
 
         super().setUp()
 
     def set_up_one_dag(self, **kwargs):
         # check dag running state
-        responses.add(responses.GET, f'{self._dag_url}/dagRuns', json={
+        responses.add(responses.GET, f'{self._dag_url}/dagRuns?execution_date_gte=2022-04-24T04:17:10Z', json={
             'dag_runs': [{
                 'conf': {},
                 'dag_id': 'seqr_vcf_to_es_AnVIL_WGS_v0.0.1',
@@ -641,7 +645,7 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
         })
 
     def set_dag_trigger_error_response(self, status=200):
-        responses.replace(responses.GET, f'{self._dag_url}/dagRuns', status=status, json={'dag_runs': [{
+        responses.replace(responses.GET, f'{self._dag_url}/dagRuns?execution_date_gte=2022-04-24T04:17:10Z', status=status, json={'dag_runs': [{
             'conf': {},
             'dag_id': self.DAG_NAME,
             'dag_run_id': 'manual__2022-04-28T11:51:22.735124+00:00',
@@ -687,7 +691,7 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
         call_cnt = call_count - 1
 
         # trigger dag
-        self.assertEqual(responses.calls[offset+call_cnt].request.url, f'{self._dag_url}/dagRuns')
+        self.assertEqual(responses.calls[offset+call_cnt].request.url, f'{self._dag_url}/dagRuns?execution_date_gte=2022-04-24T04:17:10Z')
         self.assertEqual(responses.calls[offset+call_cnt].request.method, 'POST')
         self.assertDictEqual(json.loads(responses.calls[offset+call_cnt].request.body), {})
 
@@ -695,7 +699,7 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
         self.mock_airflow_logger.error.assert_not_called()
 
     def _assert_dag_running_state_calls(self, offset):
-        self.assertEqual(responses.calls[offset].request.url, f'{self._dag_url}/dagRuns')
+        self.assertEqual(responses.calls[offset].request.url, f'{self._dag_url}/dagRuns?execution_date_gte=2022-04-24T04:17:10Z')
         self.assertEqual(responses.calls[offset].request.method, "GET")
 
     def _assert_update_variables_airflow_calls(self, dag_variables, offset):
