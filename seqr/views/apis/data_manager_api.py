@@ -550,11 +550,10 @@ def load_data(request):
         raise ErrorsWarningsException(errors)
 
     loading_args = (
-        projects_by_guid.values(), sample_type, dataset_type, request_json['genomeVersion'], _callset_path(request_json),
+        projects_by_guid.values(), individual_ids, sample_type, dataset_type, request_json['genomeVersion'], _callset_path(request_json),
     )
     loading_kwargs = {
         'user': request.user,
-        'individual_ids': individual_ids,
         'skip_validation': request_json.get('skipValidation', False),
         'skip_check_sex_and_relatedness': request_json.get('skipSRChecks', False),
     }
@@ -566,7 +565,6 @@ def load_data(request):
             success_slack_channel=SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, is_internal=True,
         )
     else:
-        # TODO individual_ids required for prepare loading requests
         request_json, _ = prepare_data_loading_request(
             *loading_args, **loading_kwargs, pedigree_dir=LOADING_DATASETS_DIR, raise_pedigree_error=True,
         )

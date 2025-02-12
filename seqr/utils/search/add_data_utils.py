@@ -7,13 +7,12 @@ from reference_data.models import GENOME_VERSION_LOOKUP
 from seqr.models import Sample, Individual, Project
 from seqr.utils.communication_utils import send_project_notification
 from seqr.utils.logging_utils import SeqrLogger
-from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.search.utils import backend_specific_call
 from seqr.utils.search.elasticsearch.es_utils import validate_es_index_metadata_and_get_samples
 from seqr.views.utils.airtable_utils import AirtableSession, ANVIL_REQUEST_TRACKING_TABLE
 from seqr.views.utils.dataset_utils import match_and_update_search_samples, load_mapping_file
 from seqr.views.utils.export_utils import write_multiple_files
-from seqr.views.utils.pedigree_info_utils import validate_affected_families, JsonConstants
+from seqr.views.utils.pedigree_info_utils import JsonConstants
 from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, BASE_URL, ANVIL_UI_URL, \
     SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL
 
@@ -116,9 +115,9 @@ def format_loading_pipeline_variables(
         variables['sample_type'] = sample_type
     return variables
 
-def prepare_data_loading_request(projects: list[Project], sample_type: str, dataset_type: str, genome_version: str,
+def prepare_data_loading_request(projects: list[Project], individual_ids: list[int], sample_type: str, dataset_type: str, genome_version: str,
                                  data_path: str, user: User, pedigree_dir: str,  raise_pedigree_error: bool = False,
-                                 individual_ids: list[int] = None, skip_validation: bool = False, skip_check_sex_and_relatedness: bool = False):
+                                 skip_validation: bool = False, skip_check_sex_and_relatedness: bool = False):
     variables = format_loading_pipeline_variables(
         projects,
         genome_version,
@@ -131,7 +130,7 @@ def prepare_data_loading_request(projects: list[Project], sample_type: str, data
     if skip_check_sex_and_relatedness:
         variables['skip_check_sex_and_relatedness'] = True
     file_path = _get_pedigree_path(pedigree_dir, genome_version, sample_type, dataset_type)
-    _upload_data_loading_files(projects, user, file_path, individual_ids, raise_pedigree_error)
+    _upload_data_loading_files(individual_ids, user, file_path, raise_pedigree_error)
     return variables, file_path
 
 
@@ -140,7 +139,7 @@ def _dag_dataset_type(sample_type: str, dataset_type: str):
         else dataset_type
 
 
-def _upload_data_loading_files(projects: list[Project], user: User, file_path: str, individual_ids: list[int], raise_error: bool):
+def _upload_data_loading_files(individual_ids: list[int], user: User, file_path: str, raise_error: bool):
     file_annotations = OrderedDict({
         'Project_GUID': F('family__project__guid'), 'Family_GUID': F('family__guid'),
         'Family_ID': F('family__family_id'),
@@ -148,8 +147,7 @@ def _upload_data_loading_files(projects: list[Project], user: User, file_path: s
         'Paternal_ID': F('father__individual_id'), 'Maternal_ID': F('mother__individual_id'), 'Sex': F('sex'),
     })
     annotations = {'project': F('family__project__guid'), 'affected_status': F('affected'), **file_annotations}
-    individual_filter = {'id__in': individual_ids} if individual_ids else {'family__project__in': projects}
-    data = Individual.objects.filter(**individual_filter).order_by('family_id', 'individual_id').values(
+    data = Individual.objects.filter(id__in=individual_ids).order_by('family_id', 'individual_id').values(
         **dict(annotations))
 
     data_by_project = defaultdict(list)
@@ -157,12 +155,6 @@ def _upload_data_loading_files(projects: list[Project], user: User, file_path: s
     for row in data:
         data_by_project[row.pop('project')].append(row)
         affected_by_family[row['Family_GUID']].append(row.pop('affected_status'))
-
-    # TODO remove
-    errors = []
-    validate_affected_families(affected_by_family, errors)
-    if errors:
-        raise ErrorsWarningsException(errors=errors)
 
     header = list(file_annotations.keys())
     files = [(f'{project_guid}_pedigree', header, rows) for project_guid, rows in data_by_project.items()]

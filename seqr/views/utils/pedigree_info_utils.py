@@ -385,12 +385,12 @@ def get_validated_related_individuals(project, records_by_id, errors, related_gu
     if validate_expected_samples:
         errors += validate_expected_samples(record_family_ids, previous_loaded_individuals.values(), sample_type)
 
-    validate_affected_families(affected_status_by_family, errors)
+    _validate_affected_families(affected_status_by_family, errors)
 
     return previous_loaded_individuals, record_family_ids, guid_id_map
 
 
-def validate_affected_families(affected_status_by_family: dict[str, list[str]], error_list: list[str]) -> None:
+def _validate_affected_families(affected_status_by_family: dict[str, list[str]], error_list: list[str]) -> None:
     no_affected_families = [
         family_id for family_id, affected_statuses in affected_status_by_family.items()
         if all(affected != Individual.AFFECTED_STATUS_AFFECTED for affected in affected_statuses)
