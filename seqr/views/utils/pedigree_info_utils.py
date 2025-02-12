@@ -341,7 +341,7 @@ def get_validated_related_individuals(project, records_by_id, errors, related_gu
         individual_id: r.get(JsonConstants.FAMILY_ID_COLUMN) or r['family']['familyId']
         for individual_id, r in records_by_id.items()
     }
-    
+
     related_individuals = Individual.objects.filter(
         guid__in=related_guids) if related_guids else Individual.objects.filter(
         family__family_id__in=set(record_family_ids.values()), family__project=project,
