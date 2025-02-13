@@ -53,6 +53,13 @@ class SvHailTableQuery(BaseHailTableQuery):
         )],
     }
 
+    def __init__(self, *args, **kwargs):
+        self._is_interval_filtered = False
+        super().__init__(*args, **kwargs)
+
+    def _set_interval_prefilter(self, *args, **kwargs):
+        self._is_interval_filtered = True
+
     @classmethod
     def _get_sample_type(cls, *args):
         return cls.DATA_TYPE.split('_')[-1]

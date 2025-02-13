@@ -731,7 +731,7 @@ class BaseHailTableQuery(object):
         rs_id_set = hl.set(rs_ids)
         return ht.filter(rs_id_set.contains(ht.rsid))
 
-    def _parse_intervals(self, intervals, gene_ids=None, variant_keys=None, variant_ids=None, **kwargs):
+    def _parse_intervals(self, intervals, gene_ids=None, variant_keys=None, variant_ids=None, exclude_intervals=False, **kwargs):
         parsed_variant_keys = self._parse_variant_keys(variant_keys)
         if parsed_variant_keys:
             self._load_table_kwargs['variant_ht'] = hl.Table.parallelize(parsed_variant_keys).key_by(*self.KEY_FIELD)
@@ -771,7 +771,14 @@ class BaseHailTableQuery(object):
                 hl.eval(hl.parse_locus_interval(reference_genome.x_contigs[0], reference_genome=self.GENOME_VERSION))
             )
 
+        if parsed_intervals and not exclude_intervals:
+            self._set_interval_prefilter(parsed_intervals)
+
         return parsed_intervals
+
+    def _set_interval_prefilter(self, parsed_intervals):
+        if len(parsed_intervals) < MAX_LOAD_INTERVALS:
+            self._load_table_kwargs = {'_intervals': parsed_intervals, '_filter_intervals': True}
 
     @classmethod
     def cluster_intervals(cls, intervals, distance=100000, max_intervals=MAX_GENE_INTERVALS):

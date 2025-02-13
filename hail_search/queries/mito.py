@@ -360,12 +360,6 @@ class MitoHailTableQuery(BaseHailTableQuery):
         self._has_both_sample_types = False
         super().__init__(*args, **kwargs)
 
-    def _parse_intervals(self, intervals, exclude_intervals=False, **kwargs):
-        parsed_intervals = super()._parse_intervals(intervals,**kwargs)
-        if parsed_intervals and not exclude_intervals and len(parsed_intervals) < MAX_LOAD_INTERVALS:
-            self._load_table_kwargs = {'_intervals': parsed_intervals, '_filter_intervals': True}
-        return parsed_intervals
-
     def _get_family_passes_quality_filter(self, quality_filter, ht, pathogenicity=None, **kwargs):
         passes_quality = super()._get_family_passes_quality_filter(quality_filter, ht)
         clinvar_path_ht = False if passes_quality is None else self._get_loaded_clinvar_prefilter_ht(pathogenicity)
