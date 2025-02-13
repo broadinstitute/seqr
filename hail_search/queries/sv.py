@@ -79,7 +79,7 @@ class SvHailTableQuery(BaseHailTableQuery):
         families_ht, comp_het_families_ht = self._import_families_tables(*args, **kwargs)
 
         if comp_het_families_ht is not None:
-            self._comp_het_ht = comp_het_families_ht.annotate(**ht[families_ht.key])
+            self._comp_het_ht = comp_het_families_ht.annotate(**ht[comp_het_families_ht.key])
             self._comp_het_ht = self._filter_compound_hets()
 
         if families_ht is not None:
