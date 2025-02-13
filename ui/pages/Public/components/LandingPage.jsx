@@ -30,7 +30,7 @@ export const SeqrAvailability = ({ hasFootnote }) => (
       <Anchor href="https://anvilproject.org">AnVIL platform</Anchor>
       {hasFootnote && '*'}
       &nbsp; where requests can be placed for loading a joint called vcf into seqr. To learn more, see the&nbsp;
-      <Anchor href="https://www.youtube.com/watch?v=TvYz_VI9vN0&ab_channel=BroadInstitute">video tutorial</Anchor>
+      <Anchor href="https://www.youtube.com/watch?v=hnAI55cqGbk&ab_channel=BroadInstitute">video tutorial</Anchor>
     </List.Item>
     <List.Item>
       As a collaborator providing samples for sequencing within the &nbsp;
