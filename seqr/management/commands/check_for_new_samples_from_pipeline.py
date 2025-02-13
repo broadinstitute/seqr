@@ -33,7 +33,7 @@ RUN_PATH_FIELDS = ['genome_version', 'dataset_type', 'run_version', 'file_name']
 
 DATASET_TYPE_MAP = {'GCNV': Sample.DATASET_TYPE_SV_CALLS}
 USER_EMAIL = 'manage_command'
-MAX_LOOKUP_VARIANTS = 2000
+MAX_LOOKUP_VARIANTS = 1000
 RELATEDNESS_CHECK_NAME = 'relatedness_check'
 
 PDO_COPY_FIELDS = [
@@ -342,8 +342,8 @@ class Command(BaseCommand):
 
         return sorted(pdos_to_create.keys())
 
-    @staticmethod
-    def _reload_shared_variant_annotations(data_type, genome_version, updated_variants_by_id=None, exclude_families=None):
+    @classmethod
+    def _reload_shared_variant_annotations(cls, data_type, genome_version, updated_variants_by_id=None, exclude_families=None, chromosomes=None):
         dataset_type = data_type.split('_')[0]
         is_sv = dataset_type.startswith(Sample.DATASET_TYPE_SV_CALLS)
         dataset_type = data_type.split('_')[0] if is_sv else data_type
@@ -358,13 +358,14 @@ class Command(BaseCommand):
             updated_annotation_samples = updated_annotation_samples.filter(sample_type=data_type.split('_')[1])
 
         variant_models = get_saved_variants(
-            genome_version, dataset_type=dataset_type,
+            genome_version, dataset_type=dataset_type, chromosomes=chromosomes,
             family_guids=updated_annotation_samples.values_list('individual__family__guid', flat=True).distinct(),
         )
 
         variant_type_summary = f'{data_type} {genome_version} saved variants'
         if not variant_models:
-            logger.info(f'No additional {variant_type_summary} to update')
+            chrom_summary = f' in chromosomes {", ".join(chromosomes)}' if chromosomes else ''
+            logger.info(f'No additional {variant_type_summary} to update{chrom_summary}')
             return
 
         variants_by_id = defaultdict(list)
@@ -373,11 +374,13 @@ class Command(BaseCommand):
 
         logger.info(f'Reloading shared annotations for {len(variant_models)} {variant_type_summary} ({len(variants_by_id)} unique)')
 
-        updated_variants_by_id = {
-            variant_id: {k: v for k, v in variant.items() if k not in {'familyGuids', 'genotypes'}}
-            for variant_id, variant in (updated_variants_by_id or {}).items()
-        }
-        fetch_variant_ids = set(variants_by_id.keys()) - set(updated_variants_by_id.keys())
+        if updated_variants_by_id:
+            cls._update_variant_models({
+                variant_id: {k: v for k, v in variant.items() if k not in {'familyGuids', 'genotypes'}}
+                for variant_id, variant in updated_variants_by_id.items()
+            }, variants_by_id, variant_type_summary)
+
+        fetch_variant_ids = set(variants_by_id.keys()) - set((updated_variants_by_id or {}).keys())
         if fetch_variant_ids:
             if is_sv:
                 variant_ids_by_chrom = {'all': fetch_variant_ids}
@@ -386,13 +389,20 @@ class Command(BaseCommand):
                 for variant_id in fetch_variant_ids:
                     parsed_id = parse_valid_variant_id(variant_id)
                     variant_ids_by_chrom[parsed_id[0]].append(parsed_id)
+
             for chrom, variant_ids in sorted(variant_ids_by_chrom.items()):
                 variant_ids = sorted(variant_ids)
+                updated_variants_by_id = {}
                 for i in range(0, len(variant_ids), MAX_LOOKUP_VARIANTS):
                     updated_variants = hail_variant_multi_lookup(USER_EMAIL, variant_ids[i:i+MAX_LOOKUP_VARIANTS], data_type, genome_version)
                     logger.info(f'Fetched {len(updated_variants)} additional variants in chromosome {chrom}')
                     updated_variants_by_id.update({variant['variantId']: variant for variant in updated_variants})
+                cls._update_variant_models(
+                    updated_variants_by_id, variants_by_id, f'{variant_type_summary} in chromosome {chrom}',
+                )
 
+    @staticmethod
+    def _update_variant_models(updated_variants_by_id, variants_by_id, variant_type_summary):
         updated_variant_models = []
         for variant_id, variant in updated_variants_by_id.items():
             for variant_model in variants_by_id[variant_id]:
