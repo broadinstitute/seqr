@@ -74,8 +74,8 @@ class SvHailTableQuery(BaseHailTableQuery):
 
         ht = self._read_table('annotations.ht')
         ht = self._filter_annotated_table(ht, is_comp_het=self._has_comp_het_search, **kwargs)
-        self._load_table_kwargs['variant_ht'] = ht.select()
 
+        self._load_table_kwargs['variant_ht'] = ht.select()
         families_ht, comp_het_families_ht = self._import_families_tables(*args, **kwargs)
 
         if comp_het_families_ht is not None:
