@@ -369,14 +369,17 @@ class BaseHailTableQuery(object):
             all_project_hts.append((ht, sample_data))
         return all_project_hts
 
-    def import_filtered_table(self, project_samples: dict, num_families: int, **kwargs):
+    def _import_families_tables(self, project_samples: dict, num_families: int, **kwargs):
         if num_families == 1 or len(project_samples) == 1:
             project_guid, project_sample_type_data = list(project_samples.items())[0]
-            families_ht, comp_het_families_ht = self._import_and_filter_entries_ht(
+            return self._import_and_filter_entries_ht(
                 project_guid, num_families, project_sample_type_data, **kwargs
             )
         else:
-            families_ht, comp_het_families_ht = self._import_and_filter_multiple_project_hts(project_samples, **kwargs)
+            return self._import_and_filter_multiple_project_hts(project_samples, **kwargs)
+
+    def import_filtered_table(self, project_samples: dict, num_families: int, **kwargs):
+        families_ht, comp_het_families_ht = self._import_families_tables(project_samples, num_families, **kwargs)
 
         if comp_het_families_ht is not None:
             self._comp_het_ht = self._query_table_annotations(comp_het_families_ht, self._get_table_path('annotations.ht'))

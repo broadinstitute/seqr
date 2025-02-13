@@ -68,6 +68,25 @@ class SvHailTableQuery(BaseHailTableQuery):
         ht = super()._read_project_table(project_guid, sample_type)
         return ht.annotate_globals(sample_type=sample_type)
 
+    def import_filtered_table(self, *args, **kwargs):
+        if not self._is_interval_filtered:
+            return super().import_filtered_table(*args, **kwargs)
+
+        ht = self._read_table('annotations.ht')
+        ht = self._filter_annotated_table(ht, is_comp_het=self._has_comp_het_search, **kwargs)
+        self._load_table_kwargs['variant_ht'] = ht.select()
+
+        families_ht, comp_het_families_ht = self._import_families_tables(*args, **kwargs)
+
+        if comp_het_families_ht is not None:
+            self._comp_het_ht = comp_het_families_ht.annotate(**ht[families_ht.key])
+            self._comp_het_ht = self._filter_compound_hets()
+
+        if families_ht is not None:
+            self._ht = families_ht.annotate(**ht[families_ht.key])
+            if self._has_secondary_annotations:
+                self._ht = self._ht.filter(hl.any(self._get_annotation_filters(self._ht)))
+
     def _filter_annotated_table(self, ht, *args, parsed_intervals=None, exclude_intervals=False, padded_interval=None, gene_ids=None, **kwargs):
         if parsed_intervals and len(parsed_intervals) != len(gene_ids or []):
             interval_filter = hl.array(parsed_intervals).any(lambda interval: hl.if_else(
