@@ -26,6 +26,7 @@ EXISTING_WGS_SAMPLE_GUID = 'S000144_na20888'
 EXISTING_SV_SAMPLE_GUID = 'S000147_na21234'
 SAMPLE_GUIDS = [ACTIVE_SAMPLE_GUID, REPLACED_SAMPLE_GUID, NEW_SAMPLE_GUID_P3, NEW_SAMPLE_GUID_P4]
 GCNV_SAMPLE_GUID = f'S00000{GCNV_GUID_ID}_na20889'
+EXISTING_GCNV_SAMPLE_GUIDS = ['S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733']
 GCNV_SAMPLE_GUIDS = [f'S00000{GCNV_GUID_ID}_hg00731', f'S00000{GCNV_GUID_ID}_hg00732', f'S00000{GCNV_GUID_ID}_hg00733', GCNV_SAMPLE_GUID]
 
 namespace_path = 'ext-data/anvil-non-analyst-project 1000 Genomes Demo'
@@ -448,6 +449,10 @@ class CheckNewSamplesTest(object):
 
         old_data_sample_guid = 'S000143_na20885'
         self.assertFalse(Sample.objects.get(guid=old_data_sample_guid).is_active)
+
+        previous_gcnv_samples = Sample.objects.filter(guid__in=EXISTING_GCNV_SAMPLE_GUIDS)
+        self.assertEqual(len(previous_gcnv_samples), len(EXISTING_GCNV_SAMPLE_GUIDS))
+        self.assertFalse(any(previous_gcnv_samples.values_list('is_active', flat=True)))
 
         # Previously loaded WGS data should be unchanged by loading WES data
         self.assertEqual(
