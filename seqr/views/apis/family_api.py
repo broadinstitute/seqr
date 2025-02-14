@@ -390,27 +390,7 @@ def receive_families_table_handler(request, project_guid):
     project = get_project_and_check_pm_permissions(project_guid, request.user)
 
     def _process_records(records, filename=''):
-        column_map = {}
-        for i, field in enumerate(records[0]):
-            key = field.lower()
-            if 'family' in key:
-                if 'prev' in key:
-                    column_map[PREVIOUS_FAMILY_ID_FIELD] = i
-                else:
-                    column_map[FAMILY_ID_FIELD] = i
-            elif 'display' in key:
-                column_map['displayName'] = i
-            elif 'phenotype' in key:
-                column_map['codedPhenotype'] = i
-            elif 'mondo' in key and 'id' in key:
-                column_map['mondoId'] = i
-            elif 'description' in key:
-                column_map['description'] = i
-            elif 'external' in key and 'data' in key:
-                column_map['externalData'] = i
-        if FAMILY_ID_FIELD not in column_map:
-            raise ValueError('Invalid header, missing family id column')
-
+        column_map = _get_family_column_map(records[0])
         parsed_records = [{column: PARSE_FAMILY_TABLE_FIELDS.get(column, lambda v: v)(row[index])
                 for column, index in column_map.items()} for row in records[1:]]
         family_ids = [r.get(PREVIOUS_FAMILY_ID_FIELD) or r[FAMILY_ID_FIELD] for r in parsed_records]
@@ -450,6 +430,29 @@ def receive_families_table_handler(request, project_guid):
         'warnings': [],
         'info': info,
     })
+
+def _get_family_column_map(record):
+    column_map = {}
+    for i, field in enumerate(record):
+        key = field.lower()
+        if 'family' in key:
+            if 'prev' in key:
+                column_map[PREVIOUS_FAMILY_ID_FIELD] = i
+            else:
+                column_map[FAMILY_ID_FIELD] = i
+        elif 'display' in key:
+            column_map['displayName'] = i
+        elif 'phenotype' in key:
+            column_map['codedPhenotype'] = i
+        elif 'mondo' in key and 'id' in key:
+            column_map['mondoId'] = i
+        elif 'description' in key:
+            column_map['description'] = i
+        elif 'external' in key and 'data' in key:
+            column_map['externalData'] = i
+    if FAMILY_ID_FIELD not in column_map:
+        raise ValueError('Invalid header, missing family id column')
+    return column_map
 
 @login_and_policies_required
 def create_family_note(request, family_guid):
