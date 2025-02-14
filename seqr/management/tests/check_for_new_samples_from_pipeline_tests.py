@@ -26,7 +26,7 @@ EXISTING_WGS_SAMPLE_GUID = 'S000144_na20888'
 EXISTING_SV_SAMPLE_GUID = 'S000147_na21234'
 SAMPLE_GUIDS = [ACTIVE_SAMPLE_GUID, REPLACED_SAMPLE_GUID, NEW_SAMPLE_GUID_P3, NEW_SAMPLE_GUID_P4]
 GCNV_SAMPLE_GUID = f'S00000{GCNV_GUID_ID}_na20889'
-GCNV_SAMPLE_GUIDS = [GCNV_SAMPLE_GUID]
+GCNV_SAMPLE_GUIDS = [f'S00000{GCNV_GUID_ID}_hg00731', f'S00000{GCNV_GUID_ID}_hg00732', f'S00000{GCNV_GUID_ID}_hg00733', GCNV_SAMPLE_GUID]
 
 namespace_path = 'ext-data/anvil-non-analyst-project 1000 Genomes Demo'
 anvil_link = f'<a href=https://anvil.terra.bio/#workspaces/{namespace_path}>{namespace_path}</a>'
@@ -428,24 +428,23 @@ class CheckNewSamplesTest(object):
         })
 
         # Tests Sample models created/updated
-        updated_sample_models = Sample.objects.filter(guid__in=SAMPLE_GUIDS+GCNV_SAMPLE_GUIDS)
-        self.assertEqual(len(updated_sample_models), len(SAMPLE_GUIDS+GCNV_SAMPLE_GUIDS))
+        snv_indel_samples = Sample.objects.filter(data_source='auto__2023-08-09')
+        gcnv_samples = Sample.objects.filter(data_source='auto__2024-09-14')
+        updated_sample_models = snv_indel_samples | gcnv_samples
         self.assertSetEqual({'WES'}, set(updated_sample_models.values_list('sample_type', flat=True)))
         self.assertSetEqual({True}, set(updated_sample_models.values_list('is_active', flat=True)))
         self.assertSetEqual(
             {datetime.now().strftime('%Y-%m-%d')},
             {date.strftime('%Y-%m-%d') for date in updated_sample_models.values_list('loaded_date', flat=True)}
         )
-        snv_indel_samples = updated_sample_models.filter(guid__in=SAMPLE_GUIDS)
-        self.assertEqual(len(snv_indel_samples), len(SAMPLE_GUIDS))
+
+        self.assertSetEqual(set(snv_indel_samples.values_list('guid', flat=True)), set(SAMPLE_GUIDS))
         self.assertSetEqual({'SNV_INDEL'}, set(snv_indel_samples.values_list('dataset_type', flat=True)))
         self.assertSetEqual({'1kg.vcf.gz;new_samples.vcf.gz'}, set(snv_indel_samples.values_list('elasticsearch_index', flat=True)))
-        self.assertSetEqual({'auto__2023-08-09'}, set(snv_indel_samples.values_list('data_source', flat=True)))
-        gcnv_samples = updated_sample_models.filter(guid__in=GCNV_SAMPLE_GUIDS)
-        self.assertEqual(len(gcnv_samples), len(GCNV_SAMPLE_GUIDS))
+
+        self.assertSetEqual(set(gcnv_samples.values_list('guid', flat=True)), set(GCNV_SAMPLE_GUIDS))
         self.assertSetEqual({'SV'}, set(gcnv_samples.values_list('dataset_type', flat=True)))
         self.assertSetEqual({'gcnv.bed.gz'}, set(gcnv_samples.values_list('elasticsearch_index', flat=True)))
-        self.assertSetEqual({'auto__2024-09-14'}, set(gcnv_samples.values_list('data_source', flat=True)))
 
         old_data_sample_guid = 'S000143_na20885'
         self.assertFalse(Sample.objects.get(guid=old_data_sample_guid).is_active)
