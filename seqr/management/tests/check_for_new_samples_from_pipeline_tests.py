@@ -219,7 +219,7 @@ OPENED_RUN_JSON_FILES = [{
 }, {
     'callsets': ['gcnv.bed.gz'],
     'sample_type': 'WES',
-    'family_samples': {'F000004_4': ['NA20872'], 'F000012_12': ['NA20889']},
+    'family_samples': {'F000002_2': ['HG00731', 'HG00732', 'HG00733'], 'F000012_12': ['NA20889']},
 }, {
     'project_guids': ['R0002_empty'],
     'error_messages': ['Missing the following expected contigs:chr17'],
@@ -257,7 +257,7 @@ class CheckNewSamplesTest(object):
         self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.models.random.randint')
         mock_rand_int = patcher.start()
-        mock_rand_int.side_effect = [GUID_ID, GUID_ID, GUID_ID, GUID_ID, GCNV_GUID_ID, GCNV_GUID_ID]
+        mock_rand_int.side_effect = [GUID_ID, GUID_ID, GUID_ID, GUID_ID, GCNV_GUID_ID, GCNV_GUID_ID, GCNV_GUID_ID, GCNV_GUID_ID]
         self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.management.commands.check_for_new_samples_from_pipeline.HAIL_SEARCH_DATA_DIR')
         mock_data_dir = patcher.start()
@@ -409,9 +409,10 @@ class CheckNewSamplesTest(object):
             ],
             'GRCh38/MITO': [('Loading 2 WGS MITO samples in 1 projects', None)],
             'GRCh38/SV': [
-                ('Loading 2 WES SV samples in 2 projects', None),
-                ('create 2 Samples', {'dbUpdate': mock.ANY}),
-                ('update 2 Samples', {'dbUpdate': mock.ANY}),
+                ('Loading 4 WES SV samples in 2 projects', None),
+                ('create 4 Samples', {'dbUpdate': mock.ANY}),
+                ('update 4 Samples', {'dbUpdate': mock.ANY}),
+                ('update 3 Samples', {'dbUpdate': mock.ANY}),
                 ('update 1 Familys', {'dbUpdate': mock.ANY}),
                 ('Reloading saved variants in 2 projects', None),
                 (mock.ANY, {'severity': 'ERROR', '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent'}),
