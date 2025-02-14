@@ -233,32 +233,52 @@ class Command(BaseCommand):
                 family_guids=ArrayAgg('individual__family__guid', distinct=True),
             )
         }
-        return cls._report_sample_updates(dataset_type, sample_type, metadata, samples_by_project, new_sample_data_by_project)
+
+        split_project_pdos = {}
+        updated_project_families, updated_families = cls._report_loading_success(
+            dataset_type, sample_type, run_version, samples_by_project, new_sample_data_by_project, split_project_pdos,
+        )
+        try:
+            cls._report_loading_failures(metadata, split_project_pdos)
+        except Exception as e:
+            logger.error(f'Error reporting loading failure for {run_version}: {e}')
+
+        # Reload saved variant JSON
+        updated_variants_by_id = update_projects_saved_variant_json(
+            updated_project_families, user_email=USER_EMAIL, dataset_type=dataset_type)
+
+        return search_data_type(dataset_type, sample_type), updated_families, updated_variants_by_id
 
     @classmethod
     def _is_internal_project(cls, project):
         return not project_has_anvil(project) or is_internal_anvil_project(project)
 
     @classmethod
-    def _report_sample_updates(cls, dataset_type, sample_type, metadata, samples_by_project, new_sample_data_by_project):
+    def _report_loading_success(cls, dataset_type, sample_type, run_version, samples_by_project, new_sample_data_by_project, split_project_pdos):
         updated_project_families = []
         updated_families = set()
-        split_project_pdos = {}
         session = AirtableSession(user=None, no_auth=True) if AirtableSession.is_airtable_enabled() else None
         for project, sample_ids in samples_by_project.items():
-            project_sample_data = new_sample_data_by_project.get(project.id, {})
-            is_internal = cls._is_internal_project(project)
-            notify_search_data_loaded(
-                project, is_internal, dataset_type, sample_type, project_sample_data.get('samples', []),
-                num_samples=len(sample_ids),
-            )
-            project_families = project_sample_data.get('family_guids')
-            if project_families:
-                updated_families.update(project_families)
-                updated_project_families.append((project.id, project.name, project.genome_version, project_families))
-            if session and is_internal and dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
-                split_project_pdos[project.name] = cls._update_pdos(session, project.guid, sample_ids)
+            try:
+                project_sample_data = new_sample_data_by_project.get(project.id, {})
+                is_internal = cls._is_internal_project(project)
+                notify_search_data_loaded(
+                    project, is_internal, dataset_type, sample_type, project_sample_data.get('samples', []),
+                    num_samples=len(sample_ids),
+                )
+                project_families = project_sample_data.get('family_guids')
+                if project_families:
+                    updated_families.update(project_families)
+                    updated_project_families.append((project.id, project.name, project.genome_version, project_families))
+                if session and is_internal and dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
+                    split_project_pdos[project.name] = cls._update_pdos(session, project.guid, sample_ids)
+            except Exception as e:
+                logger.error(f'Error reporting loading success for project {project.name} in {run_version}: {e}')
 
+        return updated_project_families, updated_families
+
+    @classmethod
+    def _report_loading_failures(cls, metadata, split_project_pdos):
         # Send failure notifications
         relatedness_check_file_path = metadata.get('relatedness_check_file_path')
         failed_family_samples = metadata.get('failed_family_samples', {})
@@ -292,12 +312,6 @@ class Command(BaseCommand):
             safe_post_to_slack(
                 SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, '\n\n'.join(messages),
             )
-
-        # Reload saved variant JSON
-        updated_variants_by_id = update_projects_saved_variant_json(
-            updated_project_families, user_email=USER_EMAIL, dataset_type=dataset_type)
-
-        return search_data_type(dataset_type, sample_type), updated_families, updated_variants_by_id
 
     @staticmethod
     def _update_pdos(session, project_guid, sample_ids):
