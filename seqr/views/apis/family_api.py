@@ -7,7 +7,6 @@ from django.contrib.auth.models import User
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.db.models import Count, Max, Q
 from django.db.models.fields.files import ImageFieldFile
-from django.db.models.functions import JSONObject, Concat, Upper, Substr
 
 from matchmaker.models import MatchmakerSubmission
 from reference_data.models import Omim
@@ -22,7 +21,7 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_model,  get_json_fo
 from seqr.views.utils.project_context_utils import add_families_context, families_discovery_tags, add_project_tag_types, \
     MME_TAG_NAME
 from seqr.models import Family, FamilyAnalysedBy, Individual, FamilyNote, Sample, VariantTag, AnalysisGroup, RnaSeqTpm, \
-    PhenotypePrioritization, Project, RnaSeqOutlier, RnaSeqSpliceOutlier, RnaSample
+    PhenotypePrioritization, Project, RnaSample
 from seqr.views.utils.permissions_utils import check_project_permissions, get_project_and_check_pm_permissions, \
     login_and_policies_required, user_is_analyst, has_case_review_permissions, external_anvil_project_can_edit
 from seqr.views.utils.variant_utils import get_phenotype_prioritization, get_omim_intervals_query, DISCOVERY_CATEGORY
