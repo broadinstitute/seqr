@@ -233,8 +233,6 @@ class Command(BaseCommand):
                 family_guids=ArrayAgg('individual__family__guid', distinct=True),
             )
         }
-        if not new_samples:
-            import pdb; pdb.set_trace()
         return cls._report_sample_updates(dataset_type, sample_type, metadata, samples_by_project, new_sample_data_by_project)
 
     @classmethod
@@ -248,13 +246,13 @@ class Command(BaseCommand):
         split_project_pdos = {}
         session = AirtableSession(user=None, no_auth=True) if AirtableSession.is_airtable_enabled() else None
         for project, sample_ids in samples_by_project.items():
-            project_sample_data = new_sample_data_by_project[project.id]
+            project_sample_data = new_sample_data_by_project.get(project.id, {})
             is_internal = cls._is_internal_project(project)
             notify_search_data_loaded(
-                project, is_internal, dataset_type, sample_type, project_sample_data['samples'],
+                project, is_internal, dataset_type, sample_type, project_sample_data.get('samples', []),
                 num_samples=len(sample_ids),
             )
-            project_families = project_sample_data['family_guids']
+            project_families = project_sample_data.get('family_guids')
             if project_families:
                 updated_families.update(project_families)
                 updated_project_families.append((project.id, project.name, project.genome_version, project_families))
