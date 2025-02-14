@@ -237,9 +237,8 @@ class Command(BaseCommand):
             )
         }
 
-        split_project_pdos = {}
-        cls._report_loading_success(
-            dataset_type, sample_type, run_version, samples_by_project, new_sample_data_by_project, split_project_pdos,
+        split_project_pdos = cls._report_loading_success(
+            dataset_type, sample_type, run_version, samples_by_project, new_sample_data_by_project,
         )
         try:
             cls._report_loading_failures(metadata, split_project_pdos)
@@ -258,7 +257,8 @@ class Command(BaseCommand):
         return not project_has_anvil(project) or is_internal_anvil_project(project)
 
     @classmethod
-    def _report_loading_success(cls, dataset_type, sample_type, run_version, samples_by_project, new_sample_data_by_project, split_project_pdos):
+    def _report_loading_success(cls, dataset_type, sample_type, run_version, samples_by_project, new_sample_data_by_project):
+        split_project_pdos = {}
         session = AirtableSession(user=None, no_auth=True) if AirtableSession.is_airtable_enabled() else None
         for project, sample_ids in samples_by_project.items():
             try:
@@ -272,6 +272,8 @@ class Command(BaseCommand):
                     split_project_pdos[project.name] = cls._update_pdos(session, project.guid, sample_ids)
             except Exception as e:
                 logger.error(f'Error reporting loading success for project {project.name} in {run_version}: {e}')
+
+        return split_project_pdos
 
     @classmethod
     def _report_loading_failures(cls, metadata, split_project_pdos):
