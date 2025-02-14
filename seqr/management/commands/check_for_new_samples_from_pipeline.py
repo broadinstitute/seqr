@@ -233,6 +233,8 @@ class Command(BaseCommand):
                 family_guids=ArrayAgg('individual__family__guid', distinct=True),
             )
         }
+        if not new_samples:
+            import pdb; pdb.set_trace()
         return cls._report_sample_updates(dataset_type, sample_type, metadata, samples_by_project, new_sample_data_by_project)
 
     @classmethod
