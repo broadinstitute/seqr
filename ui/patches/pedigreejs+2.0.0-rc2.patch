@@ -1,7 +1,7 @@
-diff --git a/node_modules/pedigreejs/es/pedigree_utils.js b/node_modules/pedigreejs/es/pedigree_utils.js
-index 160d8aa..b0e5fd3 100644
---- a/node_modules/pedigreejs/es/pedigree_utils.js
-+++ b/node_modules/pedigreejs/es/pedigree_utils.js
+diff --git a/ui/node_modules/pedigreejs/es/pedigree_utils.js b/ui/node_modules/pedigreejs/es/pedigree_utils.js
+index 160d8aa0b..e08f8198a 100644
+--- a/ui/node_modules/pedigreejs/es/pedigree_utils.js
++++ b/ui/node_modules/pedigreejs/es/pedigree_utils.js
 @@ -65,29 +65,11 @@ export function getFormattedDate(time){
   */
  export function messages(title, msg, onConfirm, opts, dataset) {
@@ -36,3 +36,24 @@ index 160d8aa..b0e5fd3 100644
  	}
  }
  
+@@ -457,13 +439,17 @@ export function ancestors(dataset, node) {
+ 
+ // test if two nodes are consanguinous partners
+ export function consanguity(node1, node2, opts) {
+-	if(node1.depth !== node2.depth) // parents at different depths
+-		return true;
++	let consanguity = false;
++	$.each(getChildren(opts.dataset, node1, node2), function( _index, child ) {
++		if(child.consanguity){
++			consanguity = true;
++			return false;
++		}
++	});
+ 	let ancestors1 = ancestors(opts.dataset, node1);
+ 	let ancestors2 = ancestors(opts.dataset, node2);
+ 	let names1 = $.map(ancestors1, function(ancestor, _i){return ancestor.name;});
+ 	let names2 = $.map(ancestors2, function(ancestor, _i){return ancestor.name;});
+-	let consanguity = false;
+ 	$.each(names1, function( _index, name ) {
+ 		if($.inArray(name, names2) !== -1){
+ 			consanguity = true;
