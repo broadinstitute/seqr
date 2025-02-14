@@ -26,7 +26,7 @@ EXISTING_WGS_SAMPLE_GUID = 'S000144_na20888'
 EXISTING_SV_SAMPLE_GUID = 'S000147_na21234'
 SAMPLE_GUIDS = [ACTIVE_SAMPLE_GUID, REPLACED_SAMPLE_GUID, NEW_SAMPLE_GUID_P3, NEW_SAMPLE_GUID_P4]
 GCNV_SAMPLE_GUID = f'S00000{GCNV_GUID_ID}_na20889'
-GCNV_SAMPLE_GUIDS = [f'S00000{GCNV_GUID_ID}_na20872', GCNV_SAMPLE_GUID]
+GCNV_SAMPLE_GUIDS = [GCNV_SAMPLE_GUID]
 
 namespace_path = 'ext-data/anvil-non-analyst-project 1000 Genomes Demo'
 anvil_link = f'<a href=https://anvil.terra.bio/#workspaces/{namespace_path}>{namespace_path}</a>'
@@ -301,7 +301,7 @@ class CheckNewSamplesTest(object):
             self.assertEqual(len(responses.calls), num_airtable_validation_calls)
             return
 
-        self.assertEqual(len(responses.calls), len(reload_calls) + 2 + num_airtable_loading_calls + num_airtable_validation_calls)
+        self.assertEqual(len(responses.calls), len(reload_calls) + 3 + num_airtable_loading_calls + num_airtable_validation_calls)
         for i, call in enumerate(reload_calls or []):
             resp = responses.calls[i+num_airtable_loading_calls]
             self.assertEqual(resp.request.url, f'{MOCK_HAIL_ORIGIN}:5000/search')
@@ -390,7 +390,7 @@ class CheckNewSamplesTest(object):
             ]}},
         ], reload_annotations_logs=[
             'Reloading shared annotations for 3 SNV_INDEL GRCh38 saved variants (3 unique)', 'Updated 1 SNV_INDEL GRCh38 saved variants', 'Fetched 1 additional variants in chromosome 1', 'Fetched 1 additional variants in chromosome 1', 'Updated 1 SNV_INDEL GRCh38 saved variants in chromosome 1',
-            'No additional SV_WES GRCh38 saved variants to update',
+            'Reloading shared annotations for 1 SV_WES GRCh38 saved variants (1 unique)', 'Fetched 1 additional variants in chromosome all', 'Updated 0 SV_WES GRCh38 saved variants in chromosome all',
         ], run_loading_logs={
             'GRCh38/SNV_INDEL': [
                 ('Loading 4 WES SNV_INDEL samples in 2 projects', None),
@@ -401,7 +401,7 @@ class CheckNewSamplesTest(object):
             ] + self.AIRTABLE_LOGS + [
                 ('update 3 Familys', {'dbUpdate': mock.ANY}),
                 ('Reloading saved variants in 2 projects', None),
-                ('Updated 0 variants in 1 families for project Test Reprocessed Project', None),
+                ('Updated 0 variants in 2 families for project Test Reprocessed Project', None),
                 ('update SavedVariant SV0000006_1248367227_r0004_non', {'dbUpdate': mock.ANY}),
                 ('Updated 1 variants in 1 families for project Non-Analyst Project', None),
                 ('Reload Summary: ', None),
@@ -479,13 +479,14 @@ class CheckNewSamplesTest(object):
 
         # Test Family models updated
         self.assertListEqual(list(Family.objects.filter(
-            guid__in=['F000011_11', 'F000012_12']
+            guid__in=['F000002_2', 'F000011_11', 'F000012_12']
         ).values('analysis_status', 'analysis_status_last_modified_date')), [
+            {'analysis_status': 'I', 'analysis_status_last_modified_date': None},
             {'analysis_status': 'I', 'analysis_status_last_modified_date': None},
             {'analysis_status': 'I', 'analysis_status_last_modified_date': None},
         ])
         self.assertSetEqual(
-            set(Family.objects.filter(guid__in=['F000001_1', 'F000002_2', 'F000003_3']).values_list('analysis_status', flat=True)),
+            set(Family.objects.filter(guid__in=['F000001_1', 'F000003_3']).values_list('analysis_status', flat=True)),
             {'F'},
         )
         self.assertEqual(Family.objects.get(guid='F000014_14').analysis_status, 'Rncc')
@@ -542,7 +543,7 @@ The following 1 families failed sex check:
             ),
             mock.call(
                 'seqr-data-loading',
-                f'1 new WES SV samples are loaded in <{SEQR_URL}project/R0001_1kg/project_page|1kg project nåme with uniçøde>\n```NA20872```',
+                f'0 new WES SV samples are loaded in <{SEQR_URL}project/R0001_1kg/project_page|1kg project nåme with uniçøde>',
             ), mock.call(
                 'seqr-data-loading',
                 f'1 new WES SV samples are loaded in <{SEQR_URL}project/{PROJECT_GUID}/project_page|Test Reprocessed Project>\n```NA20889```',
@@ -566,8 +567,8 @@ The following 1 families failed sex check:
             mock.call(body=self.PROJECT_EMAIL_TEXT, subject='New data available in seqr', to=['test_user_collaborator@test.com']),
             mock.call().attach_alternative(self.PROJECT_EMAIL_HTML, 'text/html'),
             mock.call().send(),
-            mock.call(body=TEXT_EMAIL_TEMPLATE.format(1, 'WES SV', '1kg project nåme with uniçøde'), subject='New data available in seqr', to=['test_user_manager@test.com']),
-            mock.call().attach_alternative(HTML_EMAIL_TEMAPLTE.format(1, 'WES SV', 'R0001_1kg', '1kg project nåme with uniçøde'), 'text/html'),
+            mock.call(body=TEXT_EMAIL_TEMPLATE.format(0, 'WES SV', '1kg project nåme with uniçøde'), subject='New data available in seqr', to=['test_user_manager@test.com']),
+            mock.call().attach_alternative(HTML_EMAIL_TEMAPLTE.format(0, 'WES SV', 'R0001_1kg', '1kg project nåme with uniçøde'), 'text/html'),
             mock.call().send(),
             mock.call(body=TEXT_EMAIL_TEMPLATE.format(1, 'WES SV', 'Test Reprocessed Project'), subject='New data available in seqr', to=['test_user_manager@test.com']),
             mock.call().attach_alternative(HTML_EMAIL_TEMAPLTE.format(1, 'WES SV', PROJECT_GUID, 'Test Reprocessed Project'), 'text/html'),

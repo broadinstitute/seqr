@@ -198,9 +198,12 @@ class Command(BaseCommand):
             raise CommandError(f'Invalid families in run metadata {genome_version}/{dataset_type}: {run_version} - {", ".join(invalid)}')
 
         family_project_map = {f.guid: f.project for f in families.select_related('project')}
+        families_by_project = defaultdict(list)
         samples_by_project = defaultdict(list)
         for family_guid, sample_ids in metadata['family_samples'].items():
-            samples_by_project[family_project_map[family_guid]] += sample_ids
+            project = family_project_map[family_guid]
+            families_by_project[project].append(family_guid)
+            samples_by_project[project] += sample_ids
 
         sample_project_tuples = []
         invalid_genome_version_projects = []
@@ -227,15 +230,15 @@ class Command(BaseCommand):
             user=None,
         )
 
+        # TODO simplify
         new_sample_data_by_project = {
             s['individual__family__project']: s for s in updated_samples.filter(id__in=new_samples).values('individual__family__project').annotate(
                 samples=ArrayAgg('sample_id', distinct=True),
-                family_guids=ArrayAgg('individual__family__guid', distinct=True),
             )
         }
 
         split_project_pdos = {}
-        updated_project_families, updated_families = cls._report_loading_success(
+        cls._report_loading_success(
             dataset_type, sample_type, run_version, samples_by_project, new_sample_data_by_project, split_project_pdos,
         )
         try:
@@ -244,10 +247,11 @@ class Command(BaseCommand):
             logger.error(f'Error reporting loading failure for {run_version}: {e}')
 
         # Reload saved variant JSON
-        updated_variants_by_id = update_projects_saved_variant_json(
-            updated_project_families, user_email=USER_EMAIL, dataset_type=dataset_type)
+        updated_variants_by_id = update_projects_saved_variant_json([
+            (project.id, project.name, project.genome_version, families) for project, families in families_by_project.items()
+        ], user_email=USER_EMAIL, dataset_type=dataset_type)
 
-        return search_data_type(dataset_type, sample_type), updated_families, updated_variants_by_id
+        return search_data_type(dataset_type, sample_type), set(family_project_map.keys()), updated_variants_by_id
 
     @classmethod
     def _is_internal_project(cls, project):
@@ -255,8 +259,6 @@ class Command(BaseCommand):
 
     @classmethod
     def _report_loading_success(cls, dataset_type, sample_type, run_version, samples_by_project, new_sample_data_by_project, split_project_pdos):
-        updated_project_families = []
-        updated_families = set()
         session = AirtableSession(user=None, no_auth=True) if AirtableSession.is_airtable_enabled() else None
         for project, sample_ids in samples_by_project.items():
             try:
@@ -266,16 +268,10 @@ class Command(BaseCommand):
                     project, is_internal, dataset_type, sample_type, project_sample_data.get('samples', []),
                     num_samples=len(sample_ids),
                 )
-                project_families = project_sample_data.get('family_guids')
-                if project_families:
-                    updated_families.update(project_families)
-                    updated_project_families.append((project.id, project.name, project.genome_version, project_families))
                 if session and is_internal and dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
                     split_project_pdos[project.name] = cls._update_pdos(session, project.guid, sample_ids)
             except Exception as e:
                 logger.error(f'Error reporting loading success for project {project.name} in {run_version}: {e}')
-
-        return updated_project_families, updated_families
 
     @classmethod
     def _report_loading_failures(cls, metadata, split_project_pdos):
