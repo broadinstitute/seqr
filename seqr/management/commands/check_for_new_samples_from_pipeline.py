@@ -221,7 +221,7 @@ class Command(BaseCommand):
 
         sample_type = metadata['sample_type']
         logger.info(f'Loading {len(sample_project_tuples)} {sample_type} {dataset_type} samples in {len(samples_by_project)} projects')
-        updated_samples, new_samples, *args = match_and_update_search_samples(
+        new_samples, *args = match_and_update_search_samples(
             projects=samples_by_project.keys(),
             sample_project_tuples=sample_project_tuples,
             sample_data={'data_source': run_version, 'elasticsearch_index': ';'.join(metadata['callsets'])},
@@ -230,15 +230,12 @@ class Command(BaseCommand):
             user=None,
         )
 
-        # TODO simplify
-        new_sample_data_by_project = {
-            s['individual__family__project']: s for s in updated_samples.filter(id__in=new_samples).values('individual__family__project').annotate(
-                samples=ArrayAgg('sample_id', distinct=True),
-            )
-        }
+        new_samples_by_project = dict(new_samples.values('individual__family__project').annotate(
+            samples=ArrayAgg('sample_id', distinct=True),
+        ).values_list('individual__family__project', 'samples'))
 
         split_project_pdos = cls._report_loading_success(
-            dataset_type, sample_type, run_version, samples_by_project, new_sample_data_by_project,
+            dataset_type, sample_type, run_version, samples_by_project, new_samples_by_project,
         )
         try:
             cls._report_loading_failures(metadata, split_project_pdos)
@@ -257,15 +254,14 @@ class Command(BaseCommand):
         return not project_has_anvil(project) or is_internal_anvil_project(project)
 
     @classmethod
-    def _report_loading_success(cls, dataset_type, sample_type, run_version, samples_by_project, new_sample_data_by_project):
+    def _report_loading_success(cls, dataset_type, sample_type, run_version, samples_by_project, new_samples_by_project):
         split_project_pdos = {}
         session = AirtableSession(user=None, no_auth=True) if AirtableSession.is_airtable_enabled() else None
         for project, sample_ids in samples_by_project.items():
             try:
-                project_sample_data = new_sample_data_by_project.get(project.id, {})
                 is_internal = cls._is_internal_project(project)
                 notify_search_data_loaded(
-                    project, is_internal, dataset_type, sample_type, project_sample_data.get('samples', []),
+                    project, is_internal, dataset_type, sample_type, new_samples_by_project.get(project.id, []),
                     num_samples=len(sample_ids),
                 )
                 if session and is_internal and dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
