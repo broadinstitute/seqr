@@ -102,7 +102,7 @@ def _find_or_create_samples(
         )
         samples_guids += [s.guid for s in new_sample_models]
 
-    return samples_guids, individual_ids, remaining_sample_keys, loaded_date
+    return samples_guids, individual_ids, loaded_date
 
 
 def _create_samples(sample_data, user, loaded_date=timezone.now(), **kwargs):
@@ -196,7 +196,7 @@ def match_and_update_search_samples(
         projects, sample_project_tuples, sample_type, dataset_type, sample_data, user, expected_families=None,
         sample_id_to_individual_id_mapping=None, raise_unmatched_error_template='Matches not found for sample ids: {sample_ids}',
 ):
-    samples_guids, individual_ids, remaining_sample_keys, loaded_date = _find_or_create_samples(
+    samples_guids, individual_ids, loaded_date = _find_or_create_samples(
         sample_project_tuples=sample_project_tuples,
         projects=projects,
         user=user,
@@ -225,7 +225,7 @@ def match_and_update_search_samples(
     previous_loaded_individuals = set(Sample.objects.filter(guid__in=inactivated_sample_guids).values_list('individual_id', flat=True))
     new_samples = dict(updated_samples.exclude(individual_id__in=previous_loaded_individuals).values_list('id', 'sample_id'))
 
-    return updated_samples, new_samples, inactivated_sample_guids, len(remaining_sample_keys), family_guids_to_update
+    return updated_samples, new_samples, inactivated_sample_guids, family_guids_to_update
 
 
 def _parse_tsv_row(row):
