@@ -1,7 +1,7 @@
-diff --git a/ui/node_modules/pedigreejs/es/pedigree_utils.js b/ui/node_modules/pedigreejs/es/pedigree_utils.js
+diff --git a/node_modules/pedigreejs/es/pedigree_utils.js b/node_modules/pedigreejs/es/pedigree_utils.js
 index 160d8aa0b..e08f8198a 100644
---- a/ui/node_modules/pedigreejs/es/pedigree_utils.js
-+++ b/ui/node_modules/pedigreejs/es/pedigree_utils.js
+--- a/node_modules/pedigreejs/es/pedigree_utils.js
++++ b/node_modules/pedigreejs/es/pedigree_utils.js
 @@ -65,29 +65,11 @@ export function getFormattedDate(time){
   */
  export function messages(title, msg, onConfirm, opts, dataset) {
