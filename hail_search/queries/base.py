@@ -7,7 +7,7 @@ import os
 from hail_search.constants import AFFECTED_ID, ALT_ALT, ANNOTATION_OVERRIDE_FIELDS, ANY_AFFECTED, COMP_HET_ALT, \
     COMPOUND_HET, GENOME_VERSION_GRCh38, GROUPED_VARIANTS_FIELD, ALLOWED_TRANSCRIPTS, ALLOWED_SECONDARY_TRANSCRIPTS,  HAS_ANNOTATION_OVERRIDE, \
     HAS_ALT, HAS_REF,INHERITANCE_FILTERS, PATH_FREQ_OVERRIDE_CUTOFF, RECESSIVE, REF_ALT, REF_REF, MAX_LOAD_INTERVALS, \
-    UNAFFECTED_ID, X_LINKED_RECESSIVE, XPOS, OMIM_SORT, FAMILY_GUID_FIELD, GENOTYPES_FIELD, AFFECTED_ID_MAP
+    UNAFFECTED_ID, X_LINKED_RECESSIVE, XPOS, OMIM_SORT, FAMILY_GUID_FIELD, GENOTYPES_FIELD, AFFECTED_ID_MAP, FILTERED_GENE_TRANSCRIPTS
 
 HAIL_SEARCH_DATA_DIR = os.environ.get('HAIL_SEARCH_DATA_DIR', '/seqr/seqr-hail-search-data')
 IN_MEMORY_DIR = os.environ.get('IN_MEMORY_DIR', HAIL_SEARCH_DATA_DIR)
@@ -726,9 +726,9 @@ class BaseHailTableQuery(object):
     def _filter_by_gene_ids(self, ht, gene_ids):
         gene_ids = hl.set(gene_ids)
         ht = ht.annotate(
-            gene_transcripts=ht[self.TRANSCRIPTS_FIELD].filter(lambda t: gene_ids.contains(t.gene_id))
+            **{FILTERED_GENE_TRANSCRIPTS: ht[self.TRANSCRIPTS_FIELD].filter(lambda t: gene_ids.contains(t.gene_id))}
         )
-        return ht.filter(hl.is_defined(ht.gene_transcripts.first()))
+        return ht.filter(hl.is_defined(ht[FILTERED_GENE_TRANSCRIPTS].first()))
 
     def _filter_rs_ids(self, ht, rs_ids):
         rs_id_set = hl.set(rs_ids)
@@ -958,7 +958,7 @@ class BaseHailTableQuery(object):
 
     def _get_allowed_transcripts(self, ht, allowed_consequence_ids):
         transcript_filter = self._get_allowed_transcripts_filter(allowed_consequence_ids)
-        return ht[self.TRANSCRIPTS_FIELD].filter(transcript_filter)
+        return getattr(ht, FILTERED_GENE_TRANSCRIPTS, ht[self.TRANSCRIPTS_FIELD]).filter(transcript_filter)
 
     @staticmethod
     def _get_allowed_transcripts_filter(allowed_consequence_ids):

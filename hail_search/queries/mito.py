@@ -8,7 +8,7 @@ import os
 from hail_search.constants import ABSENT_PATH_SORT_OFFSET, CLINVAR_KEY, CLINVAR_LIKELY_PATH_FILTER, \
     CLINVAR_PATH_FILTER, \
     CLINVAR_PATH_RANGES, CLINVAR_PATH_SIGNIFICANCES, ALLOWED_TRANSCRIPTS, ALLOWED_SECONDARY_TRANSCRIPTS, \
-    PATHOGENICTY_SORT_KEY, CONSEQUENCE_SORT, \
+    PATHOGENICTY_SORT_KEY, CONSEQUENCE_SORT, FILTERED_GENE_TRANSCRIPTS, \
     PATHOGENICTY_HGMD_SORT_KEY, MAX_LOAD_INTERVALS
 from hail_search.definitions import SampleType
 from hail_search.queries.base import BaseHailTableQuery, PredictionPath, QualityFilterFormat, MAX_PARTITIONS
@@ -331,7 +331,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
         if comp_het_gene_ids is not None:
             gene_transcripts = ht.sorted_transcript_consequences.filter(lambda t: comp_het_gene_ids.contains(t.gene_id))
         else:
-            gene_transcripts = getattr(ht, 'gene_transcripts', None)
+            gene_transcripts = getattr(ht, FILTERED_GENE_TRANSCRIPTS, None)
 
         allowed_transcripts = getattr(ht, ALLOWED_TRANSCRIPTS, None)
         if comp_het_gene_ids is not None and hasattr(ht, ALLOWED_SECONDARY_TRANSCRIPTS):
