@@ -223,9 +223,9 @@ def match_and_update_search_samples(
         user, {'analysis_status': Family.ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS}, guid__in=family_guids_to_update)
 
     previous_loaded_individuals = set(Sample.objects.filter(guid__in=inactivated_sample_guids).values_list('individual_id', flat=True))
-    new_samples = dict(updated_samples.exclude(individual_id__in=previous_loaded_individuals).values_list('id', 'sample_id'))
+    new_samples = updated_samples.exclude(individual_id__in=previous_loaded_individuals)
 
-    return updated_samples, new_samples, inactivated_sample_guids, family_guids_to_update
+    return new_samples, updated_samples, inactivated_sample_guids, family_guids_to_update
 
 
 def _parse_tsv_row(row):

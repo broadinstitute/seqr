@@ -198,9 +198,12 @@ class Command(BaseCommand):
             raise CommandError(f'Invalid families in run metadata {genome_version}/{dataset_type}: {run_version} - {", ".join(invalid)}')
 
         family_project_map = {f.guid: f.project for f in families.select_related('project')}
+        families_by_project = defaultdict(list)
         samples_by_project = defaultdict(list)
         for family_guid, sample_ids in metadata['family_samples'].items():
-            samples_by_project[family_project_map[family_guid]] += sample_ids
+            project = family_project_map[family_guid]
+            families_by_project[project].append(family_guid)
+            samples_by_project[project] += sample_ids
 
         sample_project_tuples = []
         invalid_genome_version_projects = []
@@ -218,7 +221,7 @@ class Command(BaseCommand):
 
         sample_type = metadata['sample_type']
         logger.info(f'Loading {len(sample_project_tuples)} {sample_type} {dataset_type} samples in {len(samples_by_project)} projects')
-        updated_samples, new_samples, *args = match_and_update_search_samples(
+        new_samples, *args = match_and_update_search_samples(
             projects=samples_by_project.keys(),
             sample_project_tuples=sample_project_tuples,
             sample_data={'data_source': run_version, 'elasticsearch_index': ';'.join(metadata['callsets'])},
@@ -227,38 +230,49 @@ class Command(BaseCommand):
             user=None,
         )
 
-        new_sample_data_by_project = {
-            s['individual__family__project']: s for s in updated_samples.filter(id__in=new_samples).values('individual__family__project').annotate(
-                samples=ArrayAgg('sample_id', distinct=True),
-                family_guids=ArrayAgg('individual__family__guid', distinct=True),
-            )
-        }
-        return cls._report_sample_updates(dataset_type, sample_type, metadata, samples_by_project, new_sample_data_by_project)
+        new_samples_by_project = dict(new_samples.values('individual__family__project').annotate(
+            samples=ArrayAgg('sample_id', distinct=True),
+        ).values_list('individual__family__project', 'samples'))
+
+        split_project_pdos = cls._report_loading_success(
+            dataset_type, sample_type, run_version, samples_by_project, new_samples_by_project,
+        )
+        try:
+            cls._report_loading_failures(metadata, split_project_pdos)
+        except Exception as e:
+            logger.error(f'Error reporting loading failure for {run_version}: {e}')
+
+        # Reload saved variant JSON
+        updated_variants_by_id = update_projects_saved_variant_json([
+            (project.id, project.name, project.genome_version, families) for project, families in families_by_project.items()
+        ], user_email=USER_EMAIL, dataset_type=dataset_type)
+
+        return search_data_type(dataset_type, sample_type), set(family_project_map.keys()), updated_variants_by_id
 
     @classmethod
     def _is_internal_project(cls, project):
         return not project_has_anvil(project) or is_internal_anvil_project(project)
 
     @classmethod
-    def _report_sample_updates(cls, dataset_type, sample_type, metadata, samples_by_project, new_sample_data_by_project):
-        updated_project_families = []
-        updated_families = set()
+    def _report_loading_success(cls, dataset_type, sample_type, run_version, samples_by_project, new_samples_by_project):
         split_project_pdos = {}
         session = AirtableSession(user=None, no_auth=True) if AirtableSession.is_airtable_enabled() else None
         for project, sample_ids in samples_by_project.items():
-            project_sample_data = new_sample_data_by_project[project.id]
-            is_internal = cls._is_internal_project(project)
-            notify_search_data_loaded(
-                project, is_internal, dataset_type, sample_type, project_sample_data['samples'],
-                num_samples=len(sample_ids),
-            )
-            project_families = project_sample_data['family_guids']
-            if project_families:
-                updated_families.update(project_families)
-                updated_project_families.append((project.id, project.name, project.genome_version, project_families))
-            if session and is_internal and dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
-                split_project_pdos[project.name] = cls._update_pdos(session, project.guid, sample_ids)
+            try:
+                is_internal = cls._is_internal_project(project)
+                notify_search_data_loaded(
+                    project, is_internal, dataset_type, sample_type, new_samples_by_project.get(project.id, []),
+                    num_samples=len(sample_ids),
+                )
+                if session and is_internal and dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
+                    split_project_pdos[project.name] = cls._update_pdos(session, project.guid, sample_ids)
+            except Exception as e:
+                logger.error(f'Error reporting loading success for project {project.name} in {run_version}: {e}')
 
+        return split_project_pdos
+
+    @classmethod
+    def _report_loading_failures(cls, metadata, split_project_pdos):
         # Send failure notifications
         relatedness_check_file_path = metadata.get('relatedness_check_file_path')
         failed_family_samples = metadata.get('failed_family_samples', {})
@@ -292,12 +306,6 @@ class Command(BaseCommand):
             safe_post_to_slack(
                 SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, '\n\n'.join(messages),
             )
-
-        # Reload saved variant JSON
-        updated_variants_by_id = update_projects_saved_variant_json(
-            updated_project_families, user_email=USER_EMAIL, dataset_type=dataset_type)
-
-        return search_data_type(dataset_type, sample_type), updated_families, updated_variants_by_id
 
     @staticmethod
     def _update_pdos(session, project_guid, sample_ids):
