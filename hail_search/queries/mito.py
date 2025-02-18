@@ -328,32 +328,21 @@ class MitoHailTableQuery(BaseHailTableQuery):
     @staticmethod
     def _selected_main_transcript_expr(ht):
         comp_het_gene_ids = getattr(ht, 'comp_het_gene_ids', None)
-        if comp_het_gene_ids is not None:
-            gene_transcripts = ht.sorted_transcript_consequences.filter(lambda t: comp_het_gene_ids.contains(t.gene_id))
-        else:
-            gene_transcripts = getattr(ht, FILTERED_GENE_TRANSCRIPTS, None)
-
         allowed_transcripts = getattr(ht, ALLOWED_TRANSCRIPTS, None)
-        if comp_het_gene_ids is not None and hasattr(ht, ALLOWED_SECONDARY_TRANSCRIPTS):
-            allowed_transcripts = hl.if_else(
-                allowed_transcripts.any(hl.is_defined), allowed_transcripts, ht[ALLOWED_SECONDARY_TRANSCRIPTS],
-            ) if allowed_transcripts is not None else ht[ALLOWED_SECONDARY_TRANSCRIPTS]
 
-        main_transcript = ht.sorted_transcript_consequences.first()
-        if gene_transcripts is not None and allowed_transcripts is not None:
-            allowed_transcript_ids = hl.set(allowed_transcripts.map(lambda t: t.transcript_id))
-            matched_transcript = hl.or_else(
-                gene_transcripts.find(lambda t: allowed_transcript_ids.contains(t.transcript_id)),
-                gene_transcripts.first(),
-            )
-        elif gene_transcripts is not None:
-            matched_transcript = gene_transcripts.first()
-        elif allowed_transcripts is not None:
-            matched_transcript = allowed_transcripts.first()
-        else:
-            matched_transcript = main_transcript
+        if comp_het_gene_ids is not None:
+            matched_transcript_lists = [allowed_transcripts, ht.sorted_transcript_consequences]
+            if hasattr(ht, ALLOWED_SECONDARY_TRANSCRIPTS):
+                matched_transcript_lists.insert(1, ht[ALLOWED_SECONDARY_TRANSCRIPTS])
+            return hl.coalesce(*[
+                transcript_list.find(lambda t: comp_het_gene_ids.contains(t.gene_id))
+                for transcript_list in matched_transcript_lists
+            ])
 
-        return hl.or_else(matched_transcript, main_transcript)
+        main_transcript = getattr(ht, FILTERED_GENE_TRANSCRIPTS, ht.sorted_transcript_consequences).first()
+        if allowed_transcripts is not None:
+            return hl.or_else(allowed_transcripts.first(), main_transcript)
+        return main_transcript
 
     def __init__(self, *args, **kwargs):
         self._filter_hts = {}
