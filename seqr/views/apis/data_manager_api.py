@@ -10,18 +10,18 @@ import urllib3
 
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.exceptions import PermissionDenied
-from django.db.models import Max, F, Q, Count
+from django.db.models import Max, F, Q
 from django.http.response import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from requests.exceptions import ConnectionError as RequestConnectionError
 
 from seqr.utils.communication_utils import send_project_notification
-from seqr.utils.search.add_data_utils import prepare_data_loading_request
+from seqr.utils.search.add_data_utils import prepare_data_loading_request, get_loading_samples_validator
 from seqr.utils.search.utils import get_search_backend_status, delete_search_backend_data
 from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
-from seqr.utils.vcf_utils import validate_vcf_exists, get_vcf_list
+from seqr.utils.vcf_utils import validate_vcf_and_get_samples, get_vcf_list
 
 from seqr.views.utils.airflow_utils import trigger_airflow_data_loading
 from seqr.views.utils.airtable_utils import AirtableSession, LOADABLE_PDO_STATUSES, AVAILABLE_PDO_STATUS
@@ -30,13 +30,14 @@ from seqr.views.utils.dataset_utils import load_rna_seq, load_phenotype_prioriti
 from seqr.views.utils.file_utils import parse_file, get_temp_file_path, load_uploaded_file, persist_temp_file
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
+from seqr.views.utils.pedigree_info_utils import get_validated_related_individuals, JsonConstants
 from seqr.views.utils.permissions_utils import data_manager_required, pm_or_data_manager_required, get_internal_projects
 from seqr.views.utils.terra_api_utils import anvil_enabled
 
 from seqr.models import Sample, RnaSample, Individual, Project, PhenotypePrioritization
 
 from settings import KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD, KIBANA_ELASTICSEARCH_USER, \
-    SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, BASE_URL, LOADING_DATASETS_DIR, PIPELINE_RUNNER_SERVER, \
+    SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, LOADING_DATASETS_DIR, PIPELINE_RUNNER_SERVER, \
     LUIGI_UI_SERVICE_HOSTNAME, LUIGI_UI_SERVICE_PORT
 
 logger = SeqrLogger(__name__)
@@ -452,12 +453,12 @@ def loading_vcfs(request):
 @pm_or_data_manager_required
 def validate_callset(request):
     request_json = json.loads(request.body)
-    dataset_type = request_json.get('datasetType', Sample.DATASET_TYPE_VARIANT_CALLS)
-    validate_vcf_exists(
-        _callset_path(request_json), request.user, allowed_exts=DATA_TYPE_FILE_EXTS.get(dataset_type),
+    allowed_exts = DATA_TYPE_FILE_EXTS.get(request_json['datasetType']) if anvil_enabled() else None
+    samples = validate_vcf_and_get_samples(
+        _callset_path(request_json), request.user, request_json['genomeVersion'], allowed_exts=allowed_exts,
         path_name=request_json['filePath'],
     )
-    return create_json_response({'success': True})
+    return create_json_response({'vcfSamples': samples})
 
 
 def _callset_path(request_json):
@@ -527,18 +528,29 @@ def _fetch_airtable_loadable_project_samples(user, dataset_type, sample_type):
 @pm_or_data_manager_required
 def load_data(request):
     request_json = json.loads(request.body)
+    vcf_samples = request_json['vcfSamples']
     sample_type = request_json['sampleType']
     dataset_type = request_json.get('datasetType', Sample.DATASET_TYPE_VARIANT_CALLS)
     projects = [json.loads(project) for project in request_json['projects']]
     project_samples = {p['projectGuid']: p.get('sampleIds') for p in projects}
 
-    project_models = Project.objects.filter(guid__in=project_samples)
-    if len(project_models) < len(projects):
-        missing = sorted(set(project_samples.keys()) - {p.guid for p in project_models})
+    projects_by_guid = {p.guid: p for p in Project.objects.filter(guid__in=project_samples)}
+    if len(projects_by_guid) < len(projects):
+        missing = sorted(set(project_samples.keys()) - set(projects_by_guid.keys()))
         return create_json_response({'error': f'The following projects are invalid: {", ".join(missing)}'}, status=400)
 
+    errors = []
+    individual_ids = []
+    for project_guid, sample_ids in project_samples.items():
+        individual_ids += _get_valid_search_individuals(
+            projects_by_guid[project_guid], sample_ids, vcf_samples, dataset_type, sample_type, request.user, errors,
+        )
+
+    if errors:
+        raise ErrorsWarningsException(errors)
+
     loading_args = (
-        project_models, sample_type, dataset_type, request_json['genomeVersion'], _callset_path(request_json),
+        projects_by_guid.values(), individual_ids, sample_type, dataset_type, request_json['genomeVersion'], _callset_path(request_json),
     )
     loading_kwargs = {
         'user': request.user,
@@ -546,12 +558,11 @@ def load_data(request):
         'skip_check_sex_and_relatedness': request_json.get('skipSRChecks', False),
     }
     if AirtableSession.is_airtable_enabled():
-        individual_ids = _get_valid_project_samples(project_samples, dataset_type, sample_type, request.user)
         success_message = f'*{request.user.email}* triggered loading internal {sample_type} {dataset_type} data for {len(projects)} projects'
         error_message = f'ERROR triggering internal {sample_type} {dataset_type} loading'
         trigger_airflow_data_loading(
             *loading_args, **loading_kwargs, success_message=success_message, error_message=error_message,
-            success_slack_channel=SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, is_internal=True, individual_ids=individual_ids,
+            success_slack_channel=SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, is_internal=True,
         )
     else:
         request_json, _ = prepare_data_loading_request(
@@ -566,65 +577,45 @@ def load_data(request):
     return create_json_response({'success': True})
 
 
-def _get_valid_project_samples(project_samples, dataset_type, sample_type, user):
-
-    individuals = {
-        (i['project'], i['individual_id']): i for i in Individual.objects.filter(family__project__guid__in=project_samples).values(
-            'id', 'individual_id',
-            project=F('family__project__guid'),
-            family_name=F('family__family_id'),
-            sampleCount=Count('sample', filter=Q(sample__is_active=True) & Q(sample__sample_type=sample_type) & Q(sample__dataset_type=dataset_type)),
+def _get_valid_search_individuals(project, airtable_samples, vcf_samples, dataset_type, sample_type, user, errors):
+    loading_samples = set(airtable_samples or vcf_samples)
+    search_individuals_by_id = {
+        i[JsonConstants.INDIVIDUAL_ID_COLUMN]: i for i in
+        Individual.objects.filter(family__project=project, individual_id__in=loading_samples).values(
+            'id', JsonConstants.AFFECTED_COLUMN,  **{
+                JsonConstants.INDIVIDUAL_ID_COLUMN: F('individual_id'),
+                JsonConstants.FAMILY_ID_COLUMN: F('family__family_id'),
+            },
         )
     }
 
-    errors = []
-    individual_ids = []
-    missing_samples = set()
-    airtable_families = set()
-    for project, sample_ids in project_samples.items():
-        for sample_id in sample_ids:
-            individual = individuals.get((project, sample_id))
-            if individual:
-                airtable_families.add((project, individual['family_name']))
-                individual_ids.append(individual['id'])
-            else:
-                missing_samples.add(sample_id)
+    fetch_missing_loaded_samples = None
+    sample_source = 'the vcf'
+    if airtable_samples:
+        fetch_missing_loaded_samples = lambda: {
+            sample['sample_id'] for sample in _get_dataset_type_samples_for_matched_pdos(
+                user, dataset_type, sample_type, AVAILABLE_PDO_STATUSES, project_guid=project.guid,
+            )
+        }
+        sample_source = 'airtable'
 
-    if missing_samples:
-        errors.append(f'The following samples are included in airtable but missing from seqr: {", ".join(missing_samples)}')
+        missing_airtable_samples = {sample_id for sample_id in airtable_samples if sample_id not in search_individuals_by_id}
+        if missing_airtable_samples:
+            errors.append(
+                f'The following samples are included in airtable for {project.name} but are missing from seqr: {", ".join(missing_airtable_samples)}')
 
-    missing_project_samples = defaultdict(dict)
-    for (project, sample_id), individual in individuals.items():
-        family_key = (project, individual['family_name'])
-        if sample_id not in project_samples[project] and family_key in airtable_families and individual['sampleCount']:
-            missing_project_samples[project][sample_id] = individual
+    loaded_individual_ids = []
+    validate_expected_samples = get_loading_samples_validator(
+        vcf_samples, loaded_individual_ids, sample_source=sample_source, fetch_missing_loaded_samples=fetch_missing_loaded_samples,
+        missing_family_samples_error= f'The following families have previously loaded samples absent from {sample_source}\n',
+    )
 
-    missing_family_samples = defaultdict(list)
-    for project, individuals_by_sample_id in missing_project_samples.items():
-        try:
-            loaded_samples = {sample['sample_id'] for sample in _get_dataset_type_samples_for_matched_pdos(
-                user, dataset_type, sample_type, AVAILABLE_PDO_STATUSES, project_guid=project,
-            )}
-        except ValueError as e:
-            errors.append(str(e))
-            continue
-        for sample_id, individual in individuals_by_sample_id.items():
-            if sample_id in loaded_samples:
-                individual_ids.append(individual['id'])
-                project_samples[project].append(sample_id)
-            else:
-                missing_family_samples[(project, individual['family_name'])].append(sample_id)
+    get_validated_related_individuals(
+        project, search_individuals_by_id, errors, search_dataset_type=dataset_type, search_sample_type=sample_type,
+        validate_expected_samples=validate_expected_samples, add_missing_parents=False,
+    )
 
-    if missing_family_samples:
-        family_errors = [
-            f'{family} ({", ".join(sorted(samples))})' for (_, family), samples in missing_family_samples.items()
-        ]
-        errors.append(f'The following families have previously loaded samples absent from airtable: {"; ".join(family_errors)}')
-
-    if errors:
-        raise ErrorsWarningsException(errors)
-
-    return individual_ids
+    return [i['id'] for i in search_individuals_by_id.values()] + loaded_individual_ids
 
 
 # Hop-by-hop HTTP response headers shouldn't be forwarded.

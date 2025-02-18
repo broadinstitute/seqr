@@ -23,7 +23,7 @@ class ExternalAPITest(TestCase):
         self.assertEqual(response.status_code, 401)
 
         response = self.client.get(
-            url, HTTP_ACCEPT='application/vnd.ga4gh.matchmaker.v1.0+json', HTTP_X_AUTH_TOKEN='invalid',
+            url, HTTP_ACCEPT='application/vnd.ga4gh.matchmaker.v1.0+json', HTTP_X_AUTH_TOKEN='invalid', # nosec
         )
         self.assertEqual(response.status_code, 401)
 

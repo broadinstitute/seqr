@@ -106,7 +106,7 @@ class ProjectAPITest(object):
         # delete the project
         responses.add(
             responses.GET,
-            f"{self.AIRTABLE_TRACKING_URL}?fields[]=Status&pageSize=100&filterByFormula=AND({{AnVIL Project URL}}='/project/{project_guid}/project_page',OR(Status='Available in Seqr',Status='Loading',Status='Loading Requested'))",
+            f"{self.AIRTABLE_TRACKING_URL}?fields[]=Status&pageSize=100&filterByFormula=AND({{AnVIL Project URL}}='/project/{project_guid}/project_page',OR(Status='Available in Seqr',Status='Loading',Status='Loading Requested',Status='Loading request canceled'))",
             json=MOCK_RECORDS)
         responses.add(responses.PATCH, self.AIRTABLE_TRACKING_URL, status=400)
         delete_project_url = reverse(delete_project_handler, args=[project_guid])
@@ -729,7 +729,7 @@ class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
         mock_airtable_logger.error.assert_called_with(
             'Airtable patch "AnVIL Seqr Loading Requests Tracking" error: 400 Client Error: Bad Request for url: http://testairtable/appUelDNM3BnWaR7M/AnVIL%20Seqr%20Loading%20Requests%20Tracking',
             self.pm_user, detail={
-                'or_filters': {'Status': ['Loading', 'Loading Requested', 'Available in Seqr']},
+                'or_filters': {'Status': ['Loading', 'Loading Requested', 'Loading request canceled', 'Available in Seqr']},
                 'and_filters': {'AnVIL Project URL': '/project/R0005_new_project/project_page'},
                 'update': {'Status': 'Project Deleted'}})
 

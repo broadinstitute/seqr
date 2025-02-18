@@ -369,14 +369,17 @@ class BaseHailTableQuery(object):
             all_project_hts.append((ht, sample_data))
         return all_project_hts
 
-    def import_filtered_table(self, project_samples: dict, num_families: int, **kwargs):
+    def _import_families_tables(self, project_samples: dict, num_families: int, **kwargs):
         if num_families == 1 or len(project_samples) == 1:
             project_guid, project_sample_type_data = list(project_samples.items())[0]
-            families_ht, comp_het_families_ht = self._import_and_filter_entries_ht(
+            return self._import_and_filter_entries_ht(
                 project_guid, num_families, project_sample_type_data, **kwargs
             )
         else:
-            families_ht, comp_het_families_ht = self._import_and_filter_multiple_project_hts(project_samples, **kwargs)
+            return self._import_and_filter_multiple_project_hts(project_samples, **kwargs)
+
+    def import_filtered_table(self, project_samples: dict, num_families: int, **kwargs):
+        families_ht, comp_het_families_ht = self._import_families_tables(project_samples, num_families, **kwargs)
 
         if comp_het_families_ht is not None:
             self._comp_het_ht = self._query_table_annotations(comp_het_families_ht, self._get_table_path('annotations.ht'))
@@ -731,7 +734,7 @@ class BaseHailTableQuery(object):
         rs_id_set = hl.set(rs_ids)
         return ht.filter(rs_id_set.contains(ht.rsid))
 
-    def _parse_intervals(self, intervals, gene_ids=None, variant_keys=None, variant_ids=None, **kwargs):
+    def _parse_intervals(self, intervals, gene_ids=None, variant_keys=None, variant_ids=None, exclude_intervals=False, **kwargs):
         parsed_variant_keys = self._parse_variant_keys(variant_keys)
         if parsed_variant_keys:
             self._load_table_kwargs['variant_ht'] = hl.Table.parallelize(parsed_variant_keys).key_by(*self.KEY_FIELD)
@@ -771,7 +774,14 @@ class BaseHailTableQuery(object):
                 hl.eval(hl.parse_locus_interval(reference_genome.x_contigs[0], reference_genome=self.GENOME_VERSION))
             )
 
+        if parsed_intervals and not exclude_intervals:
+            self._set_interval_prefilter(parsed_intervals)
+
         return parsed_intervals
+
+    def _set_interval_prefilter(self, parsed_intervals):
+        if len(parsed_intervals) < MAX_LOAD_INTERVALS:
+            self._load_table_kwargs = {'_intervals': parsed_intervals, '_filter_intervals': True}
 
     @classmethod
     def cluster_intervals(cls, intervals, distance=100000, max_intervals=MAX_GENE_INTERVALS):
@@ -879,7 +889,7 @@ class BaseHailTableQuery(object):
                 secondary_annotation_overrides = self._get_annotation_override_fields(
                     annotations_secondary, override_fields=self.SECONDARY_ANNOTATION_OVERRIDE_FIELDS, **kwargs)
                 has_data_type_secondary_annotations |= bool(secondary_annotation_overrides)
-                has_different_secondary &= secondary_annotation_overrides != annotation_overrides
+                has_different_secondary |= secondary_annotation_overrides != annotation_overrides
 
             if not has_data_type_primary_annotations:
                 allowed_consequence_ids = secondary_allowed_consequence_ids

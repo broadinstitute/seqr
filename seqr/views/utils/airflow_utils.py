@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 from django.contrib.auth.models import User
 import google.auth
 from google.auth.transport.requests import AuthorizedSession
@@ -21,11 +22,11 @@ class DagRunningException(Exception):
     pass
 
 
-def trigger_airflow_data_loading(*args, user: User, individual_ids: list[int], success_message: str, success_slack_channel: str,
+def trigger_airflow_data_loading(*args, user: User, success_message: str, success_slack_channel: str,
                                  error_message: str, is_internal: bool = False, **kwargs):
     success = True
     updated_variables, gs_path = prepare_data_loading_request(
-        *args, user, individual_ids=individual_ids, pedigree_dir=SEQR_V3_PEDIGREE_GS_PATH, **kwargs,
+        *args, user, pedigree_dir=SEQR_V3_PEDIGREE_GS_PATH, **kwargs,
     )
     updated_variables['sample_source'] = 'Broad_Internal' if is_internal else 'AnVIL'
     upload_info = [f'Pedigree files have been uploaded to {gs_path}']
@@ -81,7 +82,8 @@ def _send_slack_msg_on_failure_trigger(e, dag, error_message):
 
 
 def _check_dag_running_state(dag_name: str):
-    endpoint = f'dags/{dag_name}/dagRuns'
+    week_ago = (datetime.utcnow() - timedelta(weeks=1)).strftime('%Y-%m-%dT%H:%M:%SZ')
+    endpoint = f'dags/{dag_name}/dagRuns?execution_date_gte={week_ago}'
     resp = _make_airflow_api_request(endpoint, method='GET')
     dag_runs = resp['dag_runs']
     if dag_runs and dag_runs[-1]['state'] not in {'success', 'failed'}:

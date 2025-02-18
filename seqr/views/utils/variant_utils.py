@@ -14,7 +14,7 @@ from seqr.models import SavedVariant, VariantSearchResults, Family, LocusList, L
     RnaSeqTpm, PhenotypePrioritization, Project, Sample, RnaSample, VariantTag, VariantTagType
 from seqr.utils.search.utils import get_variants_for_variant_ids, backend_specific_call
 from seqr.utils.gene_utils import get_genes_for_variants
-from seqr.utils.xpos_utils import get_xpos
+from seqr.utils.xpos_utils import get_xpos, MIN_POS, MAX_POS
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, create_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_discovery_tags, get_json_for_locus_lists, \
     get_json_for_queryset, get_json_for_rna_seq_outliers, get_json_for_saved_variants_with_tags, \
@@ -67,7 +67,7 @@ def update_projects_saved_variant_json(projects, user_email, **kwargs):
     return updated_variants_by_id
 
 
-def get_saved_variants(genome_version, project_id=None, family_guids=None, dataset_type=None):
+def get_saved_variants(genome_version, project_id=None, family_guids=None, dataset_type=None, chromosomes=None):
     saved_variants = SavedVariant.objects.filter(
         Q(saved_variant_json__genomeVersion__isnull=True) |
         Q(saved_variant_json__genomeVersion=genome_version.replace('GRCh', ''))
@@ -78,6 +78,14 @@ def get_saved_variants(genome_version, project_id=None, family_guids=None, datas
         saved_variants = saved_variants.filter(family__guid__in=family_guids)
     if dataset_type:
         saved_variants = saved_variants.filter(**saved_variants_dataset_type_filter(dataset_type))
+    if chromosomes:
+        chrom_filters = [
+            Q(xpos__gte=get_xpos(chrom, MIN_POS), xpos__lte=get_xpos(chrom, MAX_POS)) for chrom in chromosomes
+        ]
+        chrom_filter= chrom_filters[0]
+        for f in chrom_filters[1:]:
+            chrom_filter |= f
+        saved_variants = saved_variants.filter(chrom_filter)
     return saved_variants
 
 
@@ -413,28 +421,9 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
     if any(p.genome_version == OMIM_GENOME_VERSION for p in projects):
         response['omimIntervals'] = _get_omim_intervals(variants)
 
-    mme_submission_genes = MatchmakerSubmissionGenes.objects.filter(
-        saved_variant__guid__in=response['savedVariantsByGuid'].keys()).values(
-        geneId=F('gene_id'), variantGuid=F('saved_variant__guid'), submissionGuid=F('matchmaker_submission__guid'))
-    for s in mme_submission_genes:
-        response_variant = response['savedVariantsByGuid'][s['variantGuid']]
-        if 'mmeSubmissions' not in response_variant:
-            response_variant['mmeSubmissions'] = []
-        response_variant['mmeSubmissions'].append(s)
+    response['mmeSubmissionsByGuid'] = _mme_response_context(response['savedVariantsByGuid'])
 
-    submissions = get_json_for_matchmaker_submissions(MatchmakerSubmission.objects.filter(
-        matchmakersubmissiongenes__saved_variant__guid__in=response['savedVariantsByGuid'].keys()))
-    response['mmeSubmissionsByGuid'] = {s['submissionGuid']: s for s in submissions}
-
-    rna_tpm = None
-    if include_individual_gene_scores:
-        present_family_genes = {k: v for k, v in family_genes.items() if v}
-        rna_sample_family_map = dict(RnaSample.objects.filter(
-            individual__family__guid__in=present_family_genes.keys(), is_active=True,
-        ).values_list('id', 'individual__family__guid'))
-        response['rnaSeqData'] = _get_rna_seq_outliers(genes.keys(), rna_sample_family_map.keys())
-        rna_tpm = _get_family_has_rna_tpm(present_family_genes, genes.keys(), rna_sample_family_map)
-        response['phenotypeGeneScores'] = get_phenotype_prioritization(present_family_genes.keys(), gene_ids=genes.keys())
+    rna_tpm = _set_response_gene_scores(response, family_genes, genes.keys()) if include_individual_gene_scores else None
 
     if add_all_context or request.GET.get(LOAD_PROJECT_TAG_TYPES_CONTEXT_PARAM) == 'true':
         project_fields = {'projectGuid': 'guid'}
@@ -461,3 +450,26 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
             response['familiesByGuid'][family_guid].update(data)
 
     return response
+
+def _mme_response_context(saved_variants_by_guid):
+    mme_submission_genes = MatchmakerSubmissionGenes.objects.filter(
+        saved_variant__guid__in=saved_variants_by_guid.keys()).values(
+        geneId=F('gene_id'), variantGuid=F('saved_variant__guid'), submissionGuid=F('matchmaker_submission__guid'))
+    for s in mme_submission_genes:
+        response_variant = saved_variants_by_guid[s['variantGuid']]
+        if 'mmeSubmissions' not in response_variant:
+            response_variant['mmeSubmissions'] = []
+        response_variant['mmeSubmissions'].append(s)
+
+    submissions = get_json_for_matchmaker_submissions(MatchmakerSubmission.objects.filter(
+        matchmakersubmissiongenes__saved_variant__guid__in=saved_variants_by_guid.keys()))
+    return {s['submissionGuid']: s for s in submissions}
+
+def _set_response_gene_scores(response, family_genes, gene_ids):
+    present_family_genes = {k: v for k, v in family_genes.items() if v}
+    rna_sample_family_map = dict(RnaSample.objects.filter(
+        individual__family__guid__in=present_family_genes.keys(), is_active=True,
+    ).values_list('id', 'individual__family__guid'))
+    response['rnaSeqData'] = _get_rna_seq_outliers(gene_ids, rna_sample_family_map.keys())
+    response['phenotypeGeneScores'] = get_phenotype_prioritization(present_family_genes.keys(), gene_ids=gene_ids)
+    return _get_family_has_rna_tpm(present_family_genes, gene_ids, rna_sample_family_map)

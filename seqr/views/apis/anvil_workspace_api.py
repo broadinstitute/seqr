@@ -11,10 +11,9 @@ from django.core.exceptions import PermissionDenied
 from django.shortcuts import redirect
 
 from reference_data.models import GENOME_VERSION_LOOKUP
-from seqr.models import Project, CAN_EDIT, Sample, Individual, IgvSample
+from seqr.models import Project, CAN_EDIT, Sample, IgvSample
 from seqr.views.react_app import render_app_html
 from seqr.views.utils.airtable_utils import AirtableSession, ANVIL_REQUEST_TRACKING_TABLE
-from seqr.utils.search.utils import get_search_samples
 from seqr.views.utils.airflow_utils import trigger_airflow_data_loading
 from seqr.views.utils.json_to_orm_utils import create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
@@ -25,7 +24,8 @@ from seqr.views.utils.pedigree_info_utils import parse_basic_pedigree_table, Jso
 from seqr.views.utils.individual_utils import add_or_update_individuals_and_families
 from seqr.utils.communication_utils import send_html_email
 from seqr.utils.file_utils import list_files
-from seqr.utils.vcf_utils import validate_vcf_and_get_samples, validate_vcf_exists, get_vcf_list
+from seqr.utils.search.add_data_utils import get_loading_samples_validator
+from seqr.utils.vcf_utils import validate_vcf_and_get_samples, get_vcf_list
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.views.utils.permissions_utils import is_anvil_authenticated, check_workspace_perm, login_and_policies_required
@@ -152,12 +152,11 @@ def validate_anvil_vcf(request, namespace, name, workspace_meta):
     path = body['dataPath']
     bucket_name = workspace_meta['workspace']['bucketName']
     data_path = 'gs://{bucket}/{path}'.format(bucket=bucket_name.rstrip('/'), path=path.lstrip('/'))
-    file_to_check = validate_vcf_exists(data_path, request.user, path_name=path)
 
     # Validate the VCF to see if it contains all the required samples
-    samples = validate_vcf_and_get_samples(file_to_check, body['genomeVersion'])
+    samples = validate_vcf_and_get_samples(data_path, request.user, body['genomeVersion'], path_name=path)
 
-    return create_json_response({'vcfSamples': sorted(samples), 'fullDataPath': data_path})
+    return create_json_response({'vcfSamples': samples, 'fullDataPath': data_path})
 
 
 @anvil_workspace_access_required
@@ -184,7 +183,7 @@ def create_project_from_workspace(request, namespace, name):
         error = 'Field(s) "{}" are required'.format(', '.join(missing_fields))
         return create_json_response({'error': error}, status=400, reason=error)
 
-    pedigree_records = _parse_uploaded_pedigree(request_json)
+    pedigree_records = _parse_uploaded_pedigree(request_json)[0]
 
     # Create a new Project in seqr
     project_args = {
@@ -225,61 +224,30 @@ def add_workspace_data(request, project_guid):
         error = 'Field(s) "{}" are required'.format(', '.join(missing_fields))
         return create_json_response({'error': error}, status=400, reason=error)
 
-    pedigree_records = _parse_uploaded_pedigree(request_json, project=project)
-
-    previous_samples = get_search_samples([project]).filter(dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
-    sample = previous_samples.first()
-    if not sample:
-        return create_json_response({
-            'error': 'New data cannot be added to this project until the previously requested data is loaded',
-        }, status=400)
-    sample_type = sample.sample_type
-
-    families = {record[JsonConstants.FAMILY_ID_COLUMN] for record in pedigree_records}
-    previous_loaded_individuals = previous_samples.filter(
-        individual__family__family_id__in=families,
-    ).values_list('individual_id', 'individual__individual_id', 'individual__family__family_id')
-    missing_samples_by_family = defaultdict(list)
-    for _, individual_id, family_id in previous_loaded_individuals:
-        if individual_id not in request_json['vcfSamples']:
-            missing_samples_by_family[family_id].append(individual_id)
-    if missing_samples_by_family:
-        missing_family_sample_messages = [
-            f'Family {family_id}: {", ".join(sorted(individual_ids))}'
-            for family_id, individual_ids in missing_samples_by_family.items()
-        ]
-        return create_json_response({
-            'error': 'In order to load data for families with previously loaded data, new family samples must be joint called in a single VCF with all previously loaded samples.'
-                     ' The following samples were previously loaded in this project but are missing from the VCF:\n{}'.format(
-                '\n'.join(sorted(missing_family_sample_messages)))}, status=400)
+    pedigree_records, loaded_individual_ids, sample_type = _parse_uploaded_pedigree(request_json, project=project, search_dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
 
     pedigree_json = _trigger_add_workspace_data(
         project, pedigree_records, request.user, request_json['fullDataPath'], sample_type,
-        previous_loaded_ids=[i[0] for i in previous_loaded_individuals], get_pedigree_json=True)
+        previous_loaded_ids=loaded_individual_ids, get_pedigree_json=True)
 
     return create_json_response(pedigree_json)
 
 
-def _parse_uploaded_pedigree(request_json, project=None):
-    # Parse families/individuals in the uploaded pedigree file
+def _parse_uploaded_pedigree(request_json, project=None, search_dataset_type=None):
+    loaded_sample_types = [] if search_dataset_type else None
+    loaded_individual_ids = []
+    validate_expected_samples = get_loading_samples_validator(
+        request_json['vcfSamples'], loaded_individual_ids, loaded_sample_types=loaded_sample_types, sample_source='the pedigree file',
+        missing_family_samples_error='In order to load data for families with previously loaded data, new family samples must be joint called in a single VCF with all previously loaded samples. The following samples were previously loaded in this project but are missing from the VCF:\n',
+    )
+
     json_records = load_uploaded_file(request_json['uploadedFileId'])
-    pedigree_records, _ = parse_basic_pedigree_table(
+    pedigree_records = parse_basic_pedigree_table(
         project, json_records, 'uploaded pedigree file', update_features=True, required_columns=[
             JsonConstants.SEX_COLUMN, JsonConstants.AFFECTED_COLUMN,
-        ])
+        ], search_dataset_type=search_dataset_type, validate_expected_samples=validate_expected_samples)
 
-    missing_samples = [record['individualId'] for record in pedigree_records
-                       if record['individualId'] not in request_json['vcfSamples']]
-
-    errors = []
-    if missing_samples:
-        errors.append('The following samples are included in the pedigree file but are missing from the VCF: {}'.format(
-                ', '.join(missing_samples)))
-
-    if errors:
-        raise ErrorsWarningsException(errors, [])
-
-    return pedigree_records
+    return pedigree_records, loaded_individual_ids, loaded_sample_types[0] if loaded_sample_types else None
 
 
 def _trigger_add_workspace_data(project, pedigree_records, user, data_path, sample_type, previous_loaded_ids=None, get_pedigree_json=False):
@@ -297,9 +265,8 @@ def _trigger_add_workspace_data(project, pedigree_records, user, data_path, samp
         *{user.email}* requested to load {num_updated_individuals} new{reload_summary} {sample_type} samples ({GENOME_VERSION_LOOKUP.get(project.genome_version)}) from AnVIL workspace *{project.workspace_namespace}/{project.workspace_name}* at 
         {data_path} to seqr project <{_get_seqr_project_url(project)}|*{project.name}*> (guid: {project.guid})"""
     trigger_success = trigger_airflow_data_loading(
-        [project], sample_type, Sample.DATASET_TYPE_VARIANT_CALLS, project.genome_version, data_path, user=user, success_message=success_message,
+        [project], individual_ids, sample_type, Sample.DATASET_TYPE_VARIANT_CALLS, project.genome_version, data_path, user=user, success_message=success_message,
         success_slack_channel=SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, error_message=f'ERROR triggering AnVIL loading for project {project.guid}',
-        individual_ids=individual_ids,
     )
     AirtableSession(user, base=AirtableSession.ANVIL_BASE).safe_create_records(
         ANVIL_REQUEST_TRACKING_TABLE, [{
