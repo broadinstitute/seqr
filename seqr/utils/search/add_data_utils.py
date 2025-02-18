@@ -39,7 +39,7 @@ def add_new_es_search_samples(request_json, project, user, notify=False, expecte
         request_json['mappingFilePath'], user) if request_json.get('mappingFilePath') else {}
     ignore_extra_samples = request_json.get('ignoreExtraSamplesInCallset')
     sample_project_tuples = [(sample_id, project.name) for sample_id in sample_ids]
-    new_samples, updated_samples, inactivated_sample_guids, num_skipped, updated_family_guids = match_and_update_search_samples(
+    new_samples, updated_samples, inactivated_sample_guids, updated_family_guids = match_and_update_search_samples(
         projects=[project],
         user=user,
         sample_project_tuples=sample_project_tuples,

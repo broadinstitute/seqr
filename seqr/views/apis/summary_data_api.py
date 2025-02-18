@@ -6,7 +6,6 @@ from django.contrib.auth.models import User
 from django.db.models import CharField, F, Value
 from django.db.models.functions import Coalesce, Concat, JSONObject, NullIf
 import json
-from random import randint
 
 from matchmaker.matchmaker_utils import get_mme_gene_phenotype_ids_for_submissions, parse_mme_features, \
     get_mme_metrics, get_hpo_terms_by_id

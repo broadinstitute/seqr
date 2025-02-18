@@ -194,27 +194,51 @@ class BasePedigreeImage extends React.PureComponent {
       }, {}),
     ).map(row => (row.mother || row.father ? row : { ...row, top_level: true }))
 
+    const nameMap = dataset.reduce((acc, ind) => ({ ...acc, [ind.name]: ind }), {})
+
     // pedigree js does not support having only one parent for an individual
     const newParents = {}
     dataset.filter(
-      ({ mother, father }) => (mother && !father) || ((!mother && father)),
+      ({ mother, father }) => mother || father,
     ).forEach((indiv) => {
-      const placeholderId = `${indiv.mother || indiv.father}-spouse-placeholder`
-      if (!newParents[placeholderId]) {
-        newParents[placeholderId] = {
-          name: placeholderId,
-          sex: indiv.mother ? 'M' : 'F',
-          top_level: true,
+      if (indiv.mother && indiv.father) {
+        // pedigree js incorrectly considers people whose parents are different generations consanguineous
+        const mother = nameMap[indiv.mother]
+        const father = nameMap[indiv.father]
+        let missingGenParent = null
+        if (mother.top_level && !father.top_level) {
+          missingGenParent = mother
+        } else if (father.top_level && !mother.top_level) {
+          missingGenParent = father
         }
+        if (missingGenParent) {
+          missingGenParent.top_level = false
+          this.addParent(`${missingGenParent.name}-father-placeholder`, missingGenParent, newParents, true)
+          this.addParent(`${missingGenParent.name}-mother-placeholder`, missingGenParent, newParents, false)
+        }
+        return
       }
-      if (indiv.mother) {
-        indiv.father = placeholderId // eslint-disable-line no-param-reassign
-      } else {
-        indiv.mother = placeholderId // eslint-disable-line no-param-reassign
-      }
+
+      const placeholderId = `${indiv.mother || indiv.father}-spouse-placeholder`
+      this.addParent(placeholderId, indiv, newParents, !indiv.father)
     })
 
     return this.yobToAge([...dataset, ...Object.values(newParents)])
+  }
+
+  addParent = (placeholderId, indiv, newParents, isFather) => {
+    if (!newParents[placeholderId]) {
+      newParents[placeholderId] = { // eslint-disable-line no-param-reassign
+        name: placeholderId,
+        sex: isFather ? 'M' : 'F',
+        top_level: true,
+      }
+    }
+    if (isFather) {
+      indiv.father = placeholderId // eslint-disable-line no-param-reassign
+    } else {
+      indiv.mother = placeholderId // eslint-disable-line no-param-reassign
+    }
   }
 
   yobToAge = dataset => dataset.map(o => ({ ...o, age: o.yob && new Date().getFullYear() - o.yob }))
