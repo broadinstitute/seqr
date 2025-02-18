@@ -1,18 +1,18 @@
 from collections import defaultdict, OrderedDict
 from django.contrib.auth.models import User
 from django.db.models import F
+from typing import Callable
 
 from reference_data.models import GENOME_VERSION_LOOKUP
 from seqr.models import Sample, Individual, Project
 from seqr.utils.communication_utils import send_project_notification
 from seqr.utils.logging_utils import SeqrLogger
-from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.search.utils import backend_specific_call
 from seqr.utils.search.elasticsearch.es_utils import validate_es_index_metadata_and_get_samples
 from seqr.views.utils.airtable_utils import AirtableSession, ANVIL_REQUEST_TRACKING_TABLE
 from seqr.views.utils.dataset_utils import match_and_update_search_samples, load_mapping_file
 from seqr.views.utils.export_utils import write_multiple_files
-from seqr.views.utils.pedigree_info_utils import validate_affected_families
+from seqr.views.utils.pedigree_info_utils import JsonConstants
 from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, BASE_URL, ANVIL_UI_URL, \
     SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL
 
@@ -115,9 +115,9 @@ def format_loading_pipeline_variables(
         variables['sample_type'] = sample_type
     return variables
 
-def prepare_data_loading_request(projects: list[Project], sample_type: str, dataset_type: str, genome_version: str,
+def prepare_data_loading_request(projects: list[Project], individual_ids: list[int], sample_type: str, dataset_type: str, genome_version: str,
                                  data_path: str, user: User, pedigree_dir: str,  raise_pedigree_error: bool = False,
-                                 individual_ids: list[int] = None, skip_validation: bool = False, skip_check_sex_and_relatedness: bool = False):
+                                 skip_validation: bool = False, skip_check_sex_and_relatedness: bool = False):
     variables = format_loading_pipeline_variables(
         projects,
         genome_version,
@@ -130,7 +130,7 @@ def prepare_data_loading_request(projects: list[Project], sample_type: str, data
     if skip_check_sex_and_relatedness:
         variables['skip_check_sex_and_relatedness'] = True
     file_path = _get_pedigree_path(pedigree_dir, genome_version, sample_type, dataset_type)
-    _upload_data_loading_files(projects, user, file_path, individual_ids, raise_pedigree_error)
+    _upload_data_loading_files(individual_ids, user, file_path, raise_pedigree_error)
     return variables, file_path
 
 
@@ -139,7 +139,7 @@ def _dag_dataset_type(sample_type: str, dataset_type: str):
         else dataset_type
 
 
-def _upload_data_loading_files(projects: list[Project], user: User, file_path: str, individual_ids: list[int], raise_error: bool):
+def _upload_data_loading_files(individual_ids: list[int], user: User, file_path: str, raise_error: bool):
     file_annotations = OrderedDict({
         'Project_GUID': F('family__project__guid'), 'Family_GUID': F('family__guid'),
         'Family_ID': F('family__family_id'),
@@ -147,8 +147,7 @@ def _upload_data_loading_files(projects: list[Project], user: User, file_path: s
         'Paternal_ID': F('father__individual_id'), 'Maternal_ID': F('mother__individual_id'), 'Sex': F('sex'),
     })
     annotations = {'project': F('family__project__guid'), 'affected_status': F('affected'), **file_annotations}
-    individual_filter = {'id__in': individual_ids} if individual_ids else {'family__project__in': projects}
-    data = Individual.objects.filter(**individual_filter).order_by('family_id', 'individual_id').values(
+    data = Individual.objects.filter(id__in=individual_ids).order_by('family_id', 'individual_id').values(
         **dict(annotations))
 
     data_by_project = defaultdict(list)
@@ -156,11 +155,6 @@ def _upload_data_loading_files(projects: list[Project], user: User, file_path: s
     for row in data:
         data_by_project[row.pop('project')].append(row)
         affected_by_family[row['Family_GUID']].append(row.pop('affected_status'))
-
-    errors = []
-    validate_affected_families(affected_by_family, errors)
-    if errors:
-        raise ErrorsWarningsException(errors=errors)
 
     header = list(file_annotations.keys())
     files = [(f'{project_guid}_pedigree', header, rows) for project_guid, rows in data_by_project.items()]
@@ -178,3 +172,65 @@ def _upload_data_loading_files(projects: list[Project], user: User, file_path: s
 def _get_pedigree_path(pedigree_dir: str, genome_version: str, sample_type: str, dataset_type: str):
     dag_dataset_type = _dag_dataset_type(sample_type, dataset_type)
     return f'{pedigree_dir}/{GENOME_VERSION_LOOKUP[genome_version]}/{dag_dataset_type}/pedigrees/{sample_type}'
+
+
+def get_loading_samples_validator(vcf_samples: list[str], loaded_individual_ids: list[int], sample_source: str,
+                                  missing_family_samples_error: str, loaded_sample_types: list[str] = None,
+                                  fetch_missing_loaded_samples: Callable = None) -> Callable:
+
+    def validate_expected_samples(record_family_ids, previous_loaded_individuals, sample_type):
+        errors = []
+
+        nonlocal loaded_sample_types
+        if loaded_sample_types is not None:
+            if sample_type:
+                loaded_sample_types.append(sample_type)
+            else:
+                errors.append('New data cannot be added to this project until the previously requested data is loaded')
+
+        families = set(record_family_ids.values())
+        missing_samples_by_family = defaultdict(set)
+        expected_sample_set = record_family_ids if fetch_missing_loaded_samples else vcf_samples
+        for loaded_individual in previous_loaded_individuals:
+            individual_id = loaded_individual[JsonConstants.INDIVIDUAL_ID_COLUMN]
+            family_id = loaded_individual[JsonConstants.FAMILY_ID_COLUMN]
+            if family_id in families and individual_id not in expected_sample_set:
+                missing_samples_by_family[family_id].add(individual_id)
+
+        loading_samples = set(record_family_ids.keys())
+        if missing_samples_by_family and fetch_missing_loaded_samples:
+            try:
+                additional_loaded_samples = fetch_missing_loaded_samples()
+                for missing_samples in missing_samples_by_family.values():
+                    loading_samples.update(missing_samples.intersection(additional_loaded_samples))
+                    missing_samples -= additional_loaded_samples
+                missing_samples_by_family = {
+                    family_id: samples for family_id, samples in missing_samples_by_family.items() if samples
+                }
+            except ValueError as e:
+                errors.append(str(e))
+
+        if missing_samples_by_family:
+            missing_family_sample_messages = [
+                f'Family {family_id}: {", ".join(sorted(individual_ids))}'
+                for family_id, individual_ids in missing_samples_by_family.items()
+            ]
+            errors.append(
+                missing_family_samples_error + '\n'.join(sorted(missing_family_sample_messages))
+            )
+
+        if vcf_samples is not None:
+            missing_vcf_samples = sorted(loading_samples - set(vcf_samples))
+            if missing_vcf_samples:
+                errors.insert(
+                    0, f'The following samples are included in {sample_source} but are missing from the VCF: {", ".join(missing_vcf_samples)}',
+                )
+
+        nonlocal loaded_individual_ids
+        loaded_individual_ids += [
+            i['individual_id'] for i in previous_loaded_individuals if i[JsonConstants.FAMILY_ID_COLUMN] in families
+        ]
+
+        return errors
+
+    return validate_expected_samples

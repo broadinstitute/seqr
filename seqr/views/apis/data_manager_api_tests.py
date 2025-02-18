@@ -1438,7 +1438,7 @@ class DataManagerAPITest(AirtableTest):
 
         self._test_validate_dataset_type(url)
 
-        body = {'filePath': f'{self.CALLSET_DIR}/callset.txt', 'datasetType': 'SNV_INDEL'}
+        body = {**self.REQUEST_BODY, 'filePath': f'{self.CALLSET_DIR}/callset.txt'}
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], [
@@ -1449,23 +1449,39 @@ class DataManagerAPITest(AirtableTest):
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], [f'Data file or path {self.CALLSET_DIR}/callset.vcf is not found.'])
 
-        self._add_file_iter(b'')
+        vcf_file_rows = [
+            '##fileformat=VCFv4.3\n',
+            '##INFO=<ID=AA,Number=1,Type=String,Description="Ancestral Allele">',
+            '##INFO=<ID=AC,Number=A,Type=Integer,Description="Allele count in genotypes, for each ALT allele, in the same order as listed">\n',
+            '##INFO=<ID=AF,Number=A,Type=Float,Description="Allele Frequency, for each ALT allele, in the same order as listed">\n',
+            '##INFO=<ID=AN,Number=1,Type=Integer,Description="Total number of alleles in called genotypes">\n',
+            '##FORMAT=<ID=AD,Number=.,Type=Integer,Description="Allelic depths for the ref and alt alleles in the order listed">\n',
+            '##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Approximate read depth (reads with MQ=255 or with bad mates are filtered)">\n',
+            '##FORMAT=<ID=GQ,Number=1,Type=Integer,Description="Genotype Quality">\n',
+            '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">\n',
+            '#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tHG00735\tNA19675_1\tNA19679\n'
+        ]
+        vcf_samples = ['HG00735', 'NA19675_1', 'NA19679']
+        self._add_file_iter(vcf_file_rows, is_gz=False)
         response = self.client.post(url, content_type='application/json', data=json.dumps(self.REQUEST_BODY))
+
         self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {'success': True})
+        self.assertDictEqual(response.json(), {'vcfSamples': vcf_samples})
 
         self._set_file_not_found(list_files=True)
-        body = {'filePath': f'{self.CALLSET_DIR}/sharded_vcf/part0*.vcf', 'datasetType': 'SNV_INDEL'}
+        body = {**self.REQUEST_BODY, 'filePath': f'{self.CALLSET_DIR}/sharded_vcf/part0*.vcf'}
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(
             response.json()['errors'], [f'Data file or path {self.CALLSET_DIR}/sharded_vcf/part0*.vcf is not found.'],
         )
 
-        self._add_file_list(['sharded_vcf/part001.vcf', 'sharded_vcf/part002.vcf'])
+        self._add_file_list_iter(
+            ['sharded_vcf/part001.vcf', 'sharded_vcf/part002.vcf'], vcf_file_rows,
+        )
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {'success': True})
+        self.assertDictEqual(response.json(), {'vcfSamples': vcf_samples})
 
         # test data manager access
         self.login_data_manager_user()
@@ -1525,9 +1541,13 @@ class DataManagerAPITest(AirtableTest):
         responses.add(responses.GET, 'https://api.airtable.com/v0/app3Y97xtbbaOopVR/Samples', json=AIRTABLE_SAMPLE_RECORDS, status=200)
         responses.add(responses.POST, PIPELINE_RUNNER_URL)
         mock_temp_dir.return_value.__enter__.return_value = '/mock/tmp'
+        vcf_samples = [
+            'ABC123', 'NA19675_1', 'NA19678', 'NA19679', 'HG00731', 'HG00732', 'HG00733', 'NA20874', 'NA21234',
+            'NA21987',
+        ]
         body = {**self.REQUEST_BODY, 'projects': [
             json.dumps(option) for option in self.PROJECT_OPTIONS + [{'projectGuid': 'R0005_not_project'}]
-        ], 'skipValidation': True}
+        ], 'vcfSamples': vcf_samples, 'skipValidation': True}
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'error': 'The following projects are invalid: R0005_not_project'})
@@ -1570,11 +1590,10 @@ class DataManagerAPITest(AirtableTest):
         body.update({'datasetType': 'SV', 'filePath': f'{self.CALLSET_DIR}/sv_callset.vcf'})
         self._trigger_error(url, body, dag_json, mock_open, mock_mkdir)
 
-        responses.add(responses.POST, PIPELINE_RUNNER_URL)
         responses.calls.reset()
         mock_open.reset_mock()
         mock_mkdir.reset_mock()
-        body.update({'sampleType': 'WGS', 'projects': [json.dumps(self.PROJECT_OPTION)]})
+        body.update({'sampleType': 'WGS', 'projects': [json.dumps(self.PROJECT_OPTION)], 'vcfSamples': vcf_samples})
         del body['datasetType']
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self._test_load_single_project(mock_open, mock_mkdir, response, url=url, body=body)
@@ -1612,7 +1631,7 @@ class DataManagerAPITest(AirtableTest):
         ]
         self.assertEqual(len(files), 1 if single_project else 2)
 
-        num_rows = 7 if self.MOCK_AIRTABLE_KEY else 15
+        num_rows = 7 if self.MOCK_AIRTABLE_KEY else 8
         if not single_project:
             self.assertEqual(len(files[0]), num_rows)
             self.assertListEqual(files[0][:5], [PEDIGREE_HEADER] + EXPECTED_PEDIGREE_ROWS[:num_rows-1])
@@ -1635,7 +1654,7 @@ class DataManagerAPITest(AirtableTest):
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {
-            'errors': ['The following families do not have any affected individuals: F000005_5'],
+            'errors': ['The following families do not have any affected individuals: 5'],
             'warnings': None,
         })
         Individual.objects.filter(guid='I000009_na20874').update(affected='A')
@@ -1668,6 +1687,11 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
         self.mock_file_iter = self.mock_open.return_value.__enter__.return_value.__iter__
         self.mock_file_iter.return_value = []
         self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.utils.file_utils.open')
+        self.mock_unzipped_open = patcher.start()
+        self.mock_unzipped_file_iter = self.mock_unzipped_open.return_value.__enter__.return_value.__iter__
+        self.mock_unzipped_file_iter.return_value = []
+        self.addCleanup(patcher.stop)
         super().setUp()
 
     def _set_file_not_found(self, file_name=None, sample_guid=None, list_files=False):
@@ -1675,12 +1699,14 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
         self.mock_file_iter.return_value = []
         return []
 
-    def _add_file_iter(self, stdout):
+    def _add_file_iter(self, stdout, is_gz=True):
         self.mock_does_file_exist.return_value = True
-        self.mock_file_iter.return_value += stdout
+        file_iter = self.mock_file_iter if is_gz else self.mock_unzipped_file_iter
+        file_iter.return_value += stdout
 
-    def _add_file_list(self, file_list):
+    def _add_file_list_iter(self, file_list, stdout):
         self.mock_does_file_exist.return_value = True
+        self.mock_unzipped_file_iter.return_value = stdout
         self.mock_glob.return_value = [f'/local_dir/{file}' for file in file_list]
 
     def _assert_expected_get_projects_requests(self):
@@ -1724,6 +1750,15 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self._assert_trigger_error(response, body, dag_json, response_body={
             'errors': ['Loading pipeline is already running. Wait for it to complete and resubmit'], 'warnings': None,
+        })
+
+        responses.add(responses.POST, PIPELINE_RUNNER_URL)
+        body['vcfSamples'] = body['vcfSamples'][:5]
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {
+            'errors': ['The following families have previously loaded samples absent from the vcf\nFamily 2: HG00732, HG00733'],
+            'warnings': None,
         })
 
     def _assert_trigger_error(self, response, body, *args, response_body=None, **kwargs):
@@ -1793,16 +1828,20 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
             ('CommandException: One or more URLs matched no objects', None),
         ]
 
-    def _add_file_iter(self, stdout):
+    def _add_file_iter(self, stdout, is_gz=True):
         self.mock_does_file_exist.wait.return_value = 0
+        if not is_gz:
+            stdout = [row.encode('utf-8') for row in stdout]
         self.mock_file_iter.stdout += stdout
         self.mock_subprocess.side_effect = [self.mock_does_file_exist, self.mock_file_iter]
 
-    def _add_file_list(self, file_list):
-        self.mock_does_file_exist.wait.return_value = 0
+    def _add_file_list_iter(self, file_list, stdout):
         formatted_files = '\n'.join([f'{self.CALLSET_DIR}/{file}' for file in file_list])
-        self.mock_file_iter.communicate.return_value = (f'{formatted_files}\n'.encode('utf-8'), b'')
-        self.mock_subprocess.side_effect = [self.mock_file_iter, self.mock_file_iter]
+        self.mock_does_file_exist.communicate.return_value = (f'{formatted_files}\n'.encode('utf-8'), b'')
+        self.mock_file_iter.stdout += [row.encode('utf-8') for row in stdout]
+        self.mock_subprocess.side_effect = [
+            self.mock_does_file_exist, self.mock_file_iter, self.mock_does_file_exist, self.mock_file_iter,
+        ]
 
     def _get_expected_read_file_subprocess_calls(self, file_name, sample_guid):
         gsutil_cat = f'gsutil cat gs://seqr-scratch-temp/{file_name}/{sample_guid}.json.gz | gunzip -c -q - '
@@ -1907,15 +1946,20 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         self.mock_slack.assert_called_once_with(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, error_message)
 
     def _trigger_error(self, url, body, dag_json, mock_open, mock_mkdir):
+        body['vcfSamples'] = None
         super()._trigger_error(url, body, dag_json, mock_open, mock_mkdir)
 
         responses.calls.reset()
+        body['vcfSamples'] = ['ABC123', 'NA19675_1']
         body['projects'] = [json.dumps({**PROJECT_OPTION, 'sampleIds': PROJECT_SAMPLES_OPTION['sampleIds'] + ['NA21988']})]
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {
             'warnings': None,
-            'errors': ['The following samples are included in airtable but missing from seqr: NA21988'],
+            'errors': [
+                'The following samples are included in airtable for Non-Analyst Project but are missing from seqr: NA21988',
+                'The following samples are included in airtable but are missing from the VCF: NA21234, NA21987',
+            ],
         })
         body['projects'] = [json.dumps({**PROJECT_OPTION, 'sampleIds': [PROJECT_SAMPLES_OPTION['sampleIds'][1]]})]
         body['sampleType'] = 'WGS'
@@ -1924,7 +1968,10 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {
             'warnings': None,
-            'errors': ['The following families have previously loaded samples absent from airtable: 14 (NA21234)'],
+            'errors': [
+                'The following samples are included in airtable but are missing from the VCF: NA21987',
+                'The following families have previously loaded samples absent from airtable\nFamily 14: NA21234',
+            ],
         })
         self.assertEqual(len(responses.calls), 1)
         self._assert_expected_airtable_call(required_sample_field='SV_CallsetPath', project_guid='R0004_non_analyst_project')
@@ -1978,7 +2025,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         self.assertEqual(response.status_code, 403)
 
     def _test_validate_dataset_type(self, url):
-        body = {'filePath': f'{self.CALLSET_DIR}/mito_callset.mt', 'datasetType': 'SV'}
+        body = {'filePath': f'{self.CALLSET_DIR}/mito_callset.mt', 'datasetType': 'SV', 'genomeVersion': 'GRCh38'}
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], [

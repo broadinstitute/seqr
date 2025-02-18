@@ -22,11 +22,11 @@ class DagRunningException(Exception):
     pass
 
 
-def trigger_airflow_data_loading(*args, user: User, individual_ids: list[int], success_message: str, success_slack_channel: str,
+def trigger_airflow_data_loading(*args, user: User, success_message: str, success_slack_channel: str,
                                  error_message: str, is_internal: bool = False, **kwargs):
     success = True
     updated_variables, gs_path = prepare_data_loading_request(
-        *args, user, individual_ids=individual_ids, pedigree_dir=SEQR_V3_PEDIGREE_GS_PATH, **kwargs,
+        *args, user, pedigree_dir=SEQR_V3_PEDIGREE_GS_PATH, **kwargs,
     )
     updated_variables['sample_source'] = 'Broad_Internal' if is_internal else 'AnVIL'
     upload_info = [f'Pedigree files have been uploaded to {gs_path}']
