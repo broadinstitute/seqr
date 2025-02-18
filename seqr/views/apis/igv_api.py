@@ -4,7 +4,7 @@ import re
 import requests
 
 from django.core.exceptions import PermissionDenied
-from django.http import StreamingHttpResponse, HttpResponse
+from django.http import StreamingHttpResponse
 
 from seqr.models import Individual, IgvSample
 from seqr.utils.file_utils import file_iter, does_file_exist, is_google_bucket_file_path, run_command, get_google_project

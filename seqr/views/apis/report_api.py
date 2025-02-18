@@ -422,30 +422,14 @@ def gregor_export(request):
     missing_airtable_data_types = defaultdict(list)
     missing_seqr_data_types = defaultdict(list)
     for participant in participant_rows:
-        phenotype_rows += _parse_participant_phenotype_rows(participant)
-        analyte = {k: participant.pop(k) for k in [SMID_FIELD, *ANALYTE_TABLE_COLUMNS[2:]]}
-        analyte['participant_id'] = participant['participant_id']
-
-        if not participant[PARTICIPANT_ID_FIELD]:
-            missing_participant_ids.append(participant['participant_id'])
-            continue
-
-        airtable_participant_id = participant.pop(PARTICIPANT_ID_FIELD)
-        airtable_metadata = airtable_metadata_by_participant.get(airtable_participant_id)
-        if not airtable_metadata:
-            missing_airtable.append(airtable_participant_id)
-            continue
-
-        seqr_data_types = set(grouped_data_type_individuals[participant['participant_id']].keys())
-        airtable_data_types = {dt.upper() for dt in GREGOR_DATA_TYPES if dt.upper() in airtable_metadata}
-        for data_type in seqr_data_types - airtable_data_types:
-            missing_airtable_data_types[data_type].append(airtable_participant_id)
-        for data_type in airtable_data_types - seqr_data_types:
-            missing_seqr_data_types[data_type].append(airtable_participant_id)
-        _parse_participant_airtable_rows(
-            analyte, airtable_metadata, seqr_data_types.intersection(airtable_data_types), experiment_ids_by_participant,
-            analyte_rows, airtable_rows, experiment_lookup_rows,
+        airtable_args = _process_participant_row(
+            participant, phenotype_rows, missing_participant_ids, airtable_metadata_by_participant,
+            missing_airtable, grouped_data_type_individuals, missing_airtable_data_types, missing_seqr_data_types,
         )
+        if airtable_args:
+            _parse_participant_airtable_rows(
+                *airtable_args, experiment_ids_by_participant, analyte_rows, airtable_rows, experiment_lookup_rows,
+            )
 
     errors = []
     if missing_participant_ids:
@@ -495,6 +479,33 @@ def gregor_export(request):
         'info': [f'Successfully validated and uploaded Gregor Report for {len(family_map)} families'],
         'warnings': warnings,
     })
+
+
+def _process_participant_row(participant, phenotype_rows, missing_participant_ids, airtable_metadata_by_participant,
+                             missing_airtable, grouped_data_type_individuals, missing_airtable_data_types,
+                             missing_seqr_data_types):
+    phenotype_rows += _parse_participant_phenotype_rows(participant)
+    analyte = {k: participant.pop(k) for k in [SMID_FIELD, *ANALYTE_TABLE_COLUMNS[2:]]}
+    analyte['participant_id'] = participant['participant_id']
+
+    if not participant[PARTICIPANT_ID_FIELD]:
+        missing_participant_ids.append(participant['participant_id'])
+        return None
+
+    airtable_participant_id = participant.pop(PARTICIPANT_ID_FIELD)
+    airtable_metadata = airtable_metadata_by_participant.get(airtable_participant_id)
+    if not airtable_metadata:
+        missing_airtable.append(airtable_participant_id)
+        return None
+
+    seqr_data_types = set(grouped_data_type_individuals[participant['participant_id']].keys())
+    airtable_data_types = {dt.upper() for dt in GREGOR_DATA_TYPES if dt.upper() in airtable_metadata}
+    for data_type in seqr_data_types - airtable_data_types:
+        missing_airtable_data_types[data_type].append(airtable_participant_id)
+    for data_type in airtable_data_types - seqr_data_types:
+        missing_seqr_data_types[data_type].append(airtable_participant_id)
+
+    return analyte, airtable_metadata, seqr_data_types.intersection(airtable_data_types)
 
 
 def _get_individual_data_types(projects):

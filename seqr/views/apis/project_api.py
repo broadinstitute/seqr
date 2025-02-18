@@ -20,7 +20,7 @@ from seqr.views.utils.json_to_orm_utils import update_project_from_json, create_
 from seqr.views.utils.orm_to_json_utils import _get_json_for_project, get_json_for_samples, \
     get_json_for_project_collaborator_list, get_json_for_matchmaker_submissions, \
     get_json_for_family_notes, _get_json_for_individuals, get_json_for_project_collaborator_groups, \
-    FAMILY_ADDITIONAL_VALUES, INDIVIDUAL_GUIDS_VALUES
+    FAMILY_ADDITIONAL_VALUES
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     check_user_created_object_permissions, pm_required, user_is_pm, login_and_policies_required, \
     has_workspace_perm, has_case_review_permissions, is_internal_anvil_project
