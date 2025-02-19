@@ -1001,7 +1001,7 @@ class BaseHailTableQuery(object):
         def key(v):
             ks = [v[k] for k in self.KEY_FIELD]
             return ks[0] if len(self.KEY_FIELD) == 1 else hl.tuple(ks)
-        ch_ht = ch_ht.annotate(key_=key(ch_ht.row), gene_ids=self._gene_ids_expr(ch_ht))  # TODO only do comp hets in filtered gene
+        ch_ht = ch_ht.annotate(key_=key(ch_ht.row), gene_ids=self._gene_ids_expr(ch_ht, filtered_genes_only=True))
         ch_ht = ch_ht.explode(ch_ht.gene_ids)
 
         # Filter allowed transcripts to the grouped gene
@@ -1111,8 +1111,9 @@ class BaseHailTableQuery(object):
         )
 
     @classmethod
-    def _gene_ids_expr(cls, ht):
-        return hl.set(ht[cls.TRANSCRIPTS_FIELD].map(lambda t: t.gene_id))
+    def _gene_ids_expr(cls, ht, filtered_genes_only=False):
+        field = FILTERED_GENE_TRANSCRIPTS if filtered_genes_only and hasattr(ht, FILTERED_GENE_TRANSCRIPTS) else cls.TRANSCRIPTS_FIELD
+        return hl.set(ht[field].map(lambda t: t.gene_id))
 
     def _is_valid_comp_het_family(self, v1, v2, family_index):
         entries_1 = v1.family_entries[family_index]
