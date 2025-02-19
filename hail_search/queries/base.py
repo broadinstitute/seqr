@@ -712,7 +712,7 @@ class BaseHailTableQuery(object):
     def _filter_annotated_table(self, ht, gene_ids=None, rs_ids=None, frequencies=None, in_silico=None, pathogenicity=None,
                                 parsed_annotations=None, is_comp_het=False, **kwargs):
 
-        ht = self._filter_by_gene_ids(ht, gene_ids)
+        ht = self._filter_by_gene_ids(ht, hl.set(gene_ids) if gene_ids else None)
 
         if rs_ids:
             ht = self._filter_rs_ids(ht, rs_ids)
@@ -724,17 +724,16 @@ class BaseHailTableQuery(object):
         return self._filter_by_annotations(ht, is_comp_het=is_comp_het, **(parsed_annotations or {}))
 
     @classmethod
-    def _get_filter_gene_ids(cls, ht, gene_ids):
-        return hl.set(gene_ids) if gene_ids else None
+    def _annotate_filtered_gene_transcripts(cls, ht, gene_ids):
+        return ht.annotate(
+            **{FILTERED_GENE_TRANSCRIPTS: ht[cls.TRANSCRIPTS_FIELD].filter(lambda t: gene_ids.contains(t.gene_id))}
+        )
 
     def _filter_by_gene_ids(self, ht, gene_ids):
-        gene_ids = self._get_filter_gene_ids(ht, gene_ids)
         if gene_ids is None:
             return ht
 
-        ht = ht.annotate(
-            **{FILTERED_GENE_TRANSCRIPTS: ht[self.TRANSCRIPTS_FIELD].filter(lambda t: gene_ids.contains(t.gene_id))}
-        )
+        ht = self._annotate_filtered_gene_transcripts(ht, gene_ids)
         return ht.filter(hl.is_defined(ht[FILTERED_GENE_TRANSCRIPTS].first()))
 
     def _filter_rs_ids(self, ht, rs_ids):
