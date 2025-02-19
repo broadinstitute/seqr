@@ -1001,7 +1001,7 @@ class BaseHailTableQuery(object):
         def key(v):
             ks = [v[k] for k in self.KEY_FIELD]
             return ks[0] if len(self.KEY_FIELD) == 1 else hl.tuple(ks)
-        ch_ht = ch_ht.annotate(key_=key(ch_ht.row), gene_ids=self._gene_ids_expr(ch_ht))
+        ch_ht = ch_ht.annotate(key_=key(ch_ht.row), gene_ids=self._gene_ids_expr(ch_ht))  # TODO only do comp hets in filtered gene
         ch_ht = ch_ht.explode(ch_ht.gene_ids)
 
         # Filter allowed transcripts to the grouped gene

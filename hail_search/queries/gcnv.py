@@ -86,6 +86,7 @@ class GcnvHailTableQuery(SvHailTableQuery):
 
     @classmethod
     def _gene_ids_expr(cls, ht):
+        # TODO should filter allowed transcripts to
         return hl.or_else(
             cls._get_genotype_override_field(ht, 'gene_ids'),
             super()._gene_ids_expr(ht),
