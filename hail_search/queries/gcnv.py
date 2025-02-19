@@ -85,11 +85,22 @@ class GcnvHailTableQuery(SvHailTableQuery):
         ])
 
     @classmethod
+    def _get_filter_gene_ids(cls, ht, gene_ids):
+        #  Gene and annotation filters should only consider genes present in the genotype override gene_ids
+        row_gene_ids = cls._gene_ids_expr(ht)
+        filter_gene_ids = super()._get_filter_gene_ids(ht, gene_ids)
+        if filter_gene_ids is None:
+            return row_gene_ids
+        return filter_gene_ids.intersection(row_gene_ids)
+
+    @classmethod
     def _gene_ids_expr(cls, ht, filtered_genes_only=False):
-        # TODO should filter allowed transcripts to
+        gene_ids_expr = super()._gene_ids_expr(ht)
+        if filtered_genes_only:
+            return gene_ids_expr
         return hl.or_else(
             cls._get_genotype_override_field(ht, 'gene_ids'),
-            super()._gene_ids_expr(ht),
+            gene_ids_expr,
         )
 
     def _additional_annotation_fields(self):
