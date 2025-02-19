@@ -328,20 +328,16 @@ class MitoHailTableQuery(BaseHailTableQuery):
     @staticmethod
     def _selected_main_transcript_expr(ht):
         comp_het_gene_ids = getattr(ht, 'comp_het_gene_ids', None)
-        allowed_transcripts = getattr(ht, ALLOWED_TRANSCRIPTS, None)
-
         if comp_het_gene_ids is not None:
-            matched_transcript_lists = [allowed_transcripts, ht.sorted_transcript_consequences]
-            if hasattr(ht, ALLOWED_SECONDARY_TRANSCRIPTS):
-                matched_transcript_lists.insert(1, ht[ALLOWED_SECONDARY_TRANSCRIPTS])
             return hl.coalesce(*[
-                transcript_list.find(lambda t: comp_het_gene_ids.contains(t.gene_id))
-                for transcript_list in matched_transcript_lists
+                ht[field].find(lambda t: comp_het_gene_ids.contains(t.gene_id)) for field in [
+                    ALLOWED_TRANSCRIPTS, ALLOWED_SECONDARY_TRANSCRIPTS, 'sorted_transcript_consequences',
+                ] if hasattr(ht, field)
             ])
 
         main_transcript = getattr(ht, FILTERED_GENE_TRANSCRIPTS, ht.sorted_transcript_consequences).first()
-        if allowed_transcripts is not None:
-            return hl.or_else(allowed_transcripts.first(), main_transcript)
+        if hasattr(ht, ALLOWED_TRANSCRIPTS):
+            return hl.or_else(ht[ALLOWED_TRANSCRIPTS].first(), main_transcript)
         return main_transcript
 
     def __init__(self, *args, **kwargs):
