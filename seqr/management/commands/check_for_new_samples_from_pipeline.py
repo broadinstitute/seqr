@@ -366,25 +366,25 @@ class Command(BaseCommand):
         if is_sv:
             updated_annotation_samples = updated_annotation_samples.filter(sample_type=data_type.split('_')[1])
 
-        reload_family_guids = updated_annotation_samples.values_list('individual__family__guid', flat=True).distinct()
+        variant_models = get_saved_variants(
+            genome_version, dataset_type=dataset_type,
+            family_guids=updated_annotation_samples.values_list('individual__family__guid', flat=True).distinct(),
+        )
+
         variant_type_summary = f'{data_type} {genome_version} saved variants'
 
         if updated_variants_by_id:
-            variant_models = get_saved_variants(
-                genome_version, dataset_type=dataset_type, family_guids=reload_family_guids,
-            ).filter(variant_id__in=updated_variants_by_id.keys())
-            if variant_models:
-                logger.info(f'Reloading shared annotations for {len(variant_models)} fetched {variant_type_summary}')
-                for variant_model in variant_models:
+            fetched_variant_models = variant_models.filter(variant_id__in=updated_variants_by_id.keys())
+            if fetched_variant_models:
+                logger.info(f'Reloading shared annotations for {len(fetched_variant_models)} fetched {variant_type_summary}')
+                for variant_model in fetched_variant_models:
                     updated_variant = {
                         k: v for k, v in updated_variants_by_id[variant_model.variant_id].items()
                         if k not in {'familyGuids', 'genotypes'}
                     }
                     variant_model.saved_variant_json.update(updated_variant)
-                SavedVariant.bulk_update_models(None, variant_models, ['saved_variant_json'])
+                SavedVariant.bulk_update_models(None, fetched_variant_models, ['saved_variant_json'])
 
-        variant_models = get_saved_variants(genome_version, dataset_type=dataset_type, family_guids=reload_family_guids)
-        if updated_variants_by_id:
             variant_models = variant_models.exclude(variant_id__in=updated_variants_by_id.keys())
 
         chromosomes = (chromosomes or CHROMOSOMES) if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS else [None]
