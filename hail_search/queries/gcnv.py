@@ -103,14 +103,6 @@ class GcnvHailTableQuery(SvHailTableQuery):
 
         return ht
 
-    @classmethod
-    def _get_filter_gene_ids(cls, ht, gene_ids):
-        filter_gene_ids = super()._get_filter_gene_ids(ht, gene_ids)
-        if filter_gene_ids is None and row_gene_ids is not None:
-            return row_gene_ids
-
-        return filter_gene_ids if row_gene_ids is None else filter_gene_ids.intersection(row_gene_ids)
-
     def _filter_by_gene_ids(self, ht, gene_ids):
         if not hasattr(ht, 'family_entries'):
             return super()._filter_by_gene_ids(ht, gene_ids)
