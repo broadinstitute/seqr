@@ -400,14 +400,12 @@ class Command(BaseCommand):
 
             for chrom, variant_ids in sorted(variant_ids_by_chrom.items()):
                 variant_ids = sorted(variant_ids)
-                updated_variants_by_id = {}
                 for i in range(0, len(variant_ids), MAX_LOOKUP_VARIANTS):
                     updated_variants = hail_variant_multi_lookup(USER_EMAIL, variant_ids[i:i+MAX_LOOKUP_VARIANTS], data_type, genome_version)
                     logger.info(f'Fetched {len(updated_variants)} additional variants in chromosome {chrom}')
-                    updated_variants_by_id.update({variant['variantId']: variant for variant in updated_variants})
-                cls._update_variant_models(
-                    updated_variants_by_id.values(), variants_by_id, f'{variant_type_summary} in chromosome {chrom}',
-                )
+                    cls._update_variant_models(
+                        updated_variants, variants_by_id, f'{variant_type_summary} in chromosome {chrom}',
+                    )
 
     @staticmethod
     def _update_variant_models(updated_variants, variants_by_id, variant_type_summary):
