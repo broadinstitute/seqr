@@ -91,8 +91,6 @@ def _get_or_create_results_model(search_hash, search_context, user):
         all_project_genome_version = _all_project_family_search_genome(search_context)
         if all_project_genome_version:
             families = _all_genome_version_families(all_project_genome_version, user)
-        elif search_context.get('projectGuids'):
-            families = Family.objects.filter(project__guid__in=search_context['projectGuids'])
         elif search_context.get('projectFamilies'):
             all_families = set()
             for project_family in search_context['projectFamilies']:
