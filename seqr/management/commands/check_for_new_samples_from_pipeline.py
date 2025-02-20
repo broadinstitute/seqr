@@ -8,7 +8,7 @@ import logging
 import re
 
 from reference_data.models import GENOME_VERSION_LOOKUP
-from seqr.models import Family, Sample, SavedVariant, Project
+from seqr.models import Family, Sample, SavedVariant, Project, Individual
 from seqr.utils.communication_utils import safe_post_to_slack, send_project_email
 from seqr.utils.file_utils import file_iter, list_files, is_google_bucket_file_path
 from seqr.utils.search.add_data_utils import notify_search_data_loaded, update_airtable_loading_tracking_status
@@ -42,6 +42,12 @@ PDO_COPY_FIELDS = [
     'CallsetCompletionDate', 'Project', 'Metrics Checked', 'gCNV_SV_CallsetPath', 'DRAGENShortReadCallsetPath',
 ]
 
+QC_FILTER_FLAG_COL_MAP = {
+    'callrate': 'filtered_callrate',
+    'contamination': 'PCT_CONTAMINATION',
+    'coverage_exome': 'HS_PCT_TARGET_BASES_20X',
+    'coverage_genome': 'WGS_MEAN_COVERAGE'
+}
 
 class Command(BaseCommand):
     help = 'Check for newly loaded seqr samples'
@@ -242,6 +248,9 @@ class Command(BaseCommand):
         except Exception as e:
             logger.error(f'Error reporting loading failure for {run_version}: {e}')
 
+        # Update sample qc
+        cls.update_individuals_sample_qc(sample_type, samples_by_project.keys(), metadata['sample_qc'])
+
         # Reload saved variant JSON
         updated_variants_by_id = update_projects_saved_variant_json([
             (project.id, project.name, project.genome_version, families) for project, families in families_by_project.items()
@@ -349,6 +358,59 @@ class Command(BaseCommand):
                 session.safe_patch_records_by_id('Samples', sample_record_ids, {'PDOID': [new_pdo_id]})
 
         return sorted(pdos_to_create.keys())
+
+    @classmethod
+    def update_individuals_sample_qc(cls, sample_type, projects, sample_qc_map):
+        sample_individual_map = {
+            i.sample.sample_id: i for i in Individual.objects.filter(
+                family__project__in=projects,
+                sample__sample_id__in=sample_qc_map.keys(),
+            ).select_related('sample')
+        }
+
+        updated_individuals = []
+        unknown_filter_flags = set()
+        unknown_pop_filter_flags = set()
+
+        for sample_id, individual in sample_individual_map.items():
+            record = sample_qc_map[sample_id]
+            filter_flags = {}
+            for flag in json.loads(record['filter_flags']):
+                flag = '{}_{}'.format(flag, sample_type) if flag == 'coverage' else flag
+                flag_col = QC_FILTER_FLAG_COL_MAP.get(flag, flag)
+                if flag_col in record:
+                    filter_flags[flag] = record[flag_col]
+                else:
+                    unknown_filter_flags.add(flag)
+
+            pop_platform_filters = {}
+            for flag in json.loads(record['qc_metrics_filters']):
+                flag_col = 'sample_qc.{}'.format(flag)
+                if flag_col in record:
+                    pop_platform_filters[flag] = record[flag_col]
+                else:
+                    unknown_pop_filter_flags.add(flag)
+
+            individual.filter_flags.update(filter_flags)
+            individual.pop_platform_filters.update(pop_platform_filters)
+            individual.population.update(record['qc_pop'].upper())
+            updated_individuals.append(individual)
+
+        if updated_individuals:
+            Individual.objects.bulk_update(
+                updated_individuals,
+                ['filter_flags', 'pop_platform_filters', 'population'],
+            )
+
+        if unknown_filter_flags:
+            message = 'The following filter flags have no known corresponding value and were not saved: {}'.format(
+                ', '.join(unknown_filter_flags))
+            logger.warning(message)
+
+        if unknown_pop_filter_flags:
+            message = 'The following population platform filters have no known corresponding value and were not saved: {}'.format(
+                ', '.join(unknown_pop_filter_flags))
+            logger.warning(message)
 
     @classmethod
     def _reload_shared_variant_annotations(cls, data_type, genome_version, updated_variants_by_id=None, exclude_families=None, chromosomes=None):
