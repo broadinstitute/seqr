@@ -36,7 +36,7 @@ const mapAddProjectDispatchToProps = {
 }
 
 const PROJECT_FAMILIES_FIELD = {
-  name: 'projectGuids',
+  name: 'projectGuids', // TODO
   component: connect(mapProjectsStateToProps, mapProjectsDispatchToProps)(ProjectFilter),
   addArrayElement: connect(null, mapAddProjectDispatchToProps)(AddProjectButton),
   isArrayField: true,
