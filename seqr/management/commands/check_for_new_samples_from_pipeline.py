@@ -381,9 +381,7 @@ class Command(BaseCommand):
                         if k not in {'familyGuids', 'genotypes'}
                     }
                     variant_model.saved_variant_json.update(updated_variant)
-                SavedVariant.objects.bulk_update(variant_models, ['saved_variant_json'], batch_size=10000)
-                logger.info(f'Updated {len(variant_models)} {variant_type_summary}')
-
+                SavedVariant.bulk_update_models(None, variant_models, ['saved_variant_json'])
 
         variant_models = get_saved_variants(genome_version, dataset_type=dataset_type, family_guids=reload_family_guids)
         if updated_variants_by_id:
@@ -407,8 +405,7 @@ class Command(BaseCommand):
         for v in variant_models:
             variants_by_id[v.variant_id].append(v)
 
-        variant_type_summary += chrom_summary
-        logger.info(f'Reloading shared annotations for {len(variant_models)} {variant_type_summary} ({len(variants_by_id)} unique)')
+        logger.info(f'Reloading shared annotations for {len(variant_models)} {variant_type_summary}{chrom_summary} ({len(variants_by_id)} unique)')
 
         variant_ids = sorted(variants_by_id.keys())
         if chrom:
@@ -424,8 +421,7 @@ class Command(BaseCommand):
                     variant_model.saved_variant_json.update(variant)
                     updated_variant_models.append(variant_model)
 
-            SavedVariant.objects.bulk_update(updated_variant_models, ['saved_variant_json'], batch_size=10000) # TODO shared model-level helper for update/logging
-            logger.info(f'Updated {len(updated_variant_models)} {variant_type_summary}')
+            SavedVariant.bulk_update_models(None, updated_variant_models, ['saved_variant_json'])
 
 
 reload_shared_variant_annotations = Command._reload_shared_variant_annotations
