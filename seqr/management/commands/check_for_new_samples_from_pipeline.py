@@ -44,9 +44,9 @@ PDO_COPY_FIELDS = [
 
 QC_FILTER_FLAG_COL_MAP = {
     'callrate': 'filtered_callrate',
-    'contamination': 'PCT_CONTAMINATION',
-    'coverage_exome': 'HS_PCT_TARGET_BASES_20X',
-    'coverage_genome': 'WGS_MEAN_COVERAGE'
+    'contamination': 'contamination_rate',
+    'coverage_wes': 'percent_bases_at_20x',
+    'coverage_wgs': 'mean_coverage'
 }
 
 class Command(BaseCommand):
@@ -227,7 +227,7 @@ class Command(BaseCommand):
 
         sample_type = metadata['sample_type']
         logger.info(f'Loading {len(sample_project_tuples)} {sample_type} {dataset_type} samples in {len(samples_by_project)} projects')
-        new_samples, *args = match_and_update_search_samples(
+        new_samples, updated_samples, *args = match_and_update_search_samples(
             projects=samples_by_project.keys(),
             sample_project_tuples=sample_project_tuples,
             sample_data={'data_source': run_version, 'elasticsearch_index': ';'.join(metadata['callsets'])},
@@ -249,7 +249,8 @@ class Command(BaseCommand):
             logger.error(f'Error reporting loading failure for {run_version}: {e}')
 
         # Update sample qc
-        cls.update_individuals_sample_qc(sample_type, samples_by_project.keys(), metadata['sample_qc'])
+        if metadata.get('sample_qc'):
+            cls.update_individuals_sample_qc(sample_type, updated_samples, metadata['sample_qc'])
 
         # Reload saved variant JSON
         updated_variants_by_id = update_projects_saved_variant_json([
@@ -360,22 +361,19 @@ class Command(BaseCommand):
         return sorted(pdos_to_create.keys())
 
     @classmethod
-    def update_individuals_sample_qc(cls, sample_type, projects, sample_qc_map):
+    def update_individuals_sample_qc(cls, sample_type, updated_samples, sample_qc_map):
         sample_individual_map = {
-            i.sample.sample_id: i for i in Individual.objects.filter(
-                family__project__in=projects,
-                sample__sample_id__in=sample_qc_map.keys(),
-            ).select_related('sample')
+            i.individual_id: i for i in Individual.objects.filter(sample__in=updated_samples)
         }
 
         updated_individuals = []
         unknown_filter_flags = set()
         unknown_pop_filter_flags = set()
 
-        for sample_id, individual in sample_individual_map.items():
-            record = sample_qc_map[sample_id]
+        for individual_id, record in sample_qc_map.items():
+            individual = sample_individual_map[individual_id]
             filter_flags = {}
-            for flag in json.loads(record['filter_flags']):
+            for flag in record['filter_flags']:
                 flag = '{}_{}'.format(flag, sample_type) if flag == 'coverage' else flag
                 flag_col = QC_FILTER_FLAG_COL_MAP.get(flag, flag)
                 if flag_col in record:
@@ -384,33 +382,35 @@ class Command(BaseCommand):
                     unknown_filter_flags.add(flag)
 
             pop_platform_filters = {}
-            for flag in json.loads(record['qc_metrics_filters']):
+            for flag in record['qc_metrics_filters']:
                 flag_col = 'sample_qc.{}'.format(flag)
                 if flag_col in record:
                     pop_platform_filters[flag] = record[flag_col]
                 else:
                     unknown_pop_filter_flags.add(flag)
 
-            individual.filter_flags.update(filter_flags)
-            individual.pop_platform_filters.update(pop_platform_filters)
-            individual.population.update(record['qc_pop'].upper())
+            individual.filter_flags=filter_flags
+            individual.pop_platform_filters = pop_platform_filters
+            individual.population = record['qc_gen_anc'].upper()
             updated_individuals.append(individual)
 
-        if updated_individuals:
-            Individual.objects.bulk_update(
-                updated_individuals,
-                ['filter_flags', 'pop_platform_filters', 'population'],
-            )
-
+        error_message = ''
         if unknown_filter_flags:
-            message = 'The following filter flags have no known corresponding value and were not saved: {}'.format(
-                ', '.join(unknown_filter_flags))
-            logger.warning(message)
+            error_message += 'Found unknown filter flags {}'.format( ', '.join(unknown_filter_flags))
 
         if unknown_pop_filter_flags:
-            message = 'The following population platform filters have no known corresponding value and were not saved: {}'.format(
-                ', '.join(unknown_pop_filter_flags))
-            logger.warning(message)
+            error_message += '\nFound unknown population platform filters: {}'.format(', '.join(unknown_pop_filter_flags))
+
+        if error_message:
+            print('TODO raise error')
+
+        if updated_individuals:
+            Individual.bulk_update_models(
+                user=None,
+                models=updated_individuals,
+                fields=['filter_flags', 'pop_platform_filters', 'population'],
+            )
+
 
     @classmethod
     def _reload_shared_variant_annotations(cls, data_type, genome_version, updated_variants_by_id=None, exclude_families=None, chromosomes=None):

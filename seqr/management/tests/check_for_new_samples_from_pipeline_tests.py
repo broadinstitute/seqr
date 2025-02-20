@@ -209,6 +209,57 @@ OPENED_RUN_JSON_FILES = [{
         },
     },
     'relatedness_check_file_path': 'gs://seqr-loading-temp/v3.1/GRCh38/SNV_INDEL/relatedness_check/test_callset_hash.tsv',
+    'sample_qc': {
+        'NA20885': {
+            'filtered_callrate': 1.0,
+            'contamination_rate': 5.0,
+            'percent_bases_at_20x': 90.0,
+            'mean_coverage': 28.0,
+            'filter_flags': ['coverage'],
+            'pca_scores': [0.1 for _ in range(20)],
+            'prob_afr': 0.02,
+            'prob_ami': 0.0,
+            'prob_amr': 0.02,
+            'prob_asj': 0.9,
+            'prob_eas': 0.0,
+            'prob_fin': 0.0,
+            'prob_mid': 0.0,
+            'prob_nfe': 0.05,
+            'prob_sas': 0.01,
+            **{f'pop_PC{i + 1}': 0.1 for i in range(20)},
+            'qc_gen_anc': 'oth',
+            'sample_qc.call_rate': 1.0,
+            'sample_qc.n_called': 30,
+            'sample_qc.n_not_called': 0,
+            'sample_qc.n_filtered': 0,
+            'sample_qc.n_hom_ref': 17,
+            'sample_qc.n_het': 3,
+            'sample_qc.n_hom_var': 10,
+            'sample_qc.n_non_ref': 13,
+            'sample_qc.n_singleton': 0,
+            'sample_qc.n_snp': 23,
+            'sample_qc.n_insertion': 0,
+            'sample_qc.n_deletion': 0,
+            'sample_qc.n_transition': 13,
+            'sample_qc.n_transversion': 10,
+            'sample_qc.n_star': 0,
+            'sample_qc.r_ti_tv': 1.3,
+            'sample_qc.r_het_hom_var': 0.3,
+            'sample_qc.r_insertion_deletion': None,
+            'sample_qc.f_inbreeding.f_stat': -0.038400752079048056,
+            'sample_qc.f_inbreeding.n_called': 30,
+            'sample_qc.f_inbreeding.expected_homs': 27.11094199999999,
+            'sample_qc.f_inbreeding.observed_homs': 27,
+            'fail_n_snp': True,
+            'fail_r_ti_tv': False,
+            'fail_r_insertion_deletion': None,
+            'fail_n_insertion': True,
+            'fail_n_deletion': True,
+            'fail_r_het_hom_var': False,
+            'fail_call_rate': False,
+            'qc_metrics_filters': ['n_deletion', 'n_insertion', 'n_snp'],
+        }
+    }
 }, {
     'callsets': ['invalid_family.vcf'],
     'sample_type': 'WGS',
@@ -401,6 +452,10 @@ class CheckNewSamplesTest(object):
                 ('update 2 Familys', {'dbUpdate': mock.ANY}),
             ] + self.AIRTABLE_LOGS + [
                 ('update 3 Familys', {'dbUpdate': mock.ANY}),
+                ('update 1 Individuals', {'dbUpdate': {
+                    'dbEntity': 'Individual', 'entityIds': ['I000015_na20885'],
+                    'updateFields': ['filter_flags', 'pop_platform_filters', 'population'], 'updateType': 'bulk_update'}}
+                 ),
                 ('Reloading saved variants in 2 projects', None),
                 ('Updated 0 variants in 2 families for project Test Reprocessed Project', None),
                 ('update SavedVariant SV0000006_1248367227_r0004_non', {'dbUpdate': mock.ANY}),
@@ -464,6 +519,7 @@ class CheckNewSamplesTest(object):
         self.assertTrue(sv_sample.is_active)
 
         # Test Individual models properly associated with Samples
+        # TODO assert individual model updated with qc
         self.assertSetEqual(
             set(Individual.objects.get(guid='I000015_na20885').sample_set.values_list('guid', flat=True)),
             {REPLACED_SAMPLE_GUID, old_data_sample_guid}
