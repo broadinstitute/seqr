@@ -390,8 +390,9 @@ class CheckNewSamplesTest(object):
                 {'individual_guid': 'I000017_na20889', 'family_guid': 'F000012_12', 'project_guid': 'R0003_test', 'affected': 'A', 'sample_id': 'NA20889', 'sample_type': 'WES'},
             ]}},
         ], reload_annotations_logs=[
-            'Reloading shared annotations for 3 SNV_INDEL GRCh38 saved variants (3 unique)', 'Updated 1 SNV_INDEL GRCh38 saved variants', 'Fetched 1 additional variants in chromosome 1', 'Fetched 1 additional variants in chromosome 1', 'Updated 1 SNV_INDEL GRCh38 saved variants in chromosome 1',
-            'Reloading shared annotations for 1 SV_WES GRCh38 saved variants (1 unique)', 'Fetched 1 additional variants in chromosome all', 'Updated 0 SV_WES GRCh38 saved variants in chromosome all',
+            'Reloading shared annotations for 1 fetched SNV_INDEL GRCh38 saved variants', 'Updated 1 SNV_INDEL GRCh38 saved variants', 'Reloading shared annotations for 2 SNV_INDEL GRCh38 saved variants in chromosome 1 (2 unique)', 'Fetched 1 additional variants in chromosome 1', 'Updated 1 SNV_INDEL GRCh38 saved variants in chromosome 1', 'Fetched 1 additional variants in chromosome 1', 'Updated 1 SNV_INDEL GRCh38 saved variants in chromosome 1',
+        ] + [f'No additional SNV_INDEL GRCh38 saved variants to update in chromosome {chrom}' for chrom in ['2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', 'X', 'Y', 'M']] + [
+            'Reloading shared annotations for 1 SV_WES GRCh38 saved variants (1 unique)', 'Fetched 1 additional variants', 'Updated 0 SV_WES GRCh38 saved variants',
         ], run_loading_logs={
             'GRCh38/SNV_INDEL': [
                 ('Loading 4 WES SNV_INDEL samples in 2 projects', None),
