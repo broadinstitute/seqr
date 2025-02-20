@@ -389,7 +389,7 @@ class Command(BaseCommand):
         if updated_variants_by_id:
             variant_models = variant_models.exclude(variant_id__in=updated_variants_by_id.keys())
 
-        chromosomes = [None] if is_sv else (chromosomes or CHROMOSOMES)  # TODO mito data type correct chroms
+        chromosomes = (chromosomes or CHROMOSOMES) if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS else [None]
         for chrom in chromosomes:
             cls._reload_shared_variant_annotations_by_chrom(chrom, variant_models, data_type, genome_version, variant_type_summary)
 
@@ -424,7 +424,7 @@ class Command(BaseCommand):
                     variant_model.saved_variant_json.update(variant)
                     updated_variant_models.append(variant_model)
 
-            SavedVariant.objects.bulk_update(updated_variant_models, ['saved_variant_json'], batch_size=10000) # TODo shared model-level helper for update/logging
+            SavedVariant.objects.bulk_update(updated_variant_models, ['saved_variant_json'], batch_size=10000) # TODO shared model-level helper for update/logging
             logger.info(f'Updated {len(updated_variant_models)} {variant_type_summary}')
 
 
