@@ -4,7 +4,7 @@ import { Form, Header, Grid, Loader, Table, List } from 'semantic-ui-react'
 
 import { ButtonLink } from 'shared/components/StyledComponents'
 import { CreateLocusListButton } from 'shared/components/buttons/LocusListButtons'
-import { Select, AlignedCheckboxGroup, AlignedBooleanCheckbox } from 'shared/components/form/Inputs'
+import { Select, AlignedCheckboxGroup, AlignedBooleanCheckbox, RadioGroup, InlineToggle } from 'shared/components/form/Inputs'
 import Modal from 'shared/components/modal/Modal'
 import { snakecaseToTitlecase, camelcaseToTitlecase } from 'shared/utils/stringUtils'
 import {
@@ -23,11 +23,9 @@ import {
 
 import {
   FREQUENCIES,
-  QUALITY_FILTER_FIELDS,
-  QUALITY_FILTER_OPTIONS,
-  ALL_QUALITY_FILTER,
-  SNP_FREQUENCIES, SNP_QUALITY_FILTER_FIELDS,
-  MITO_FREQUENCIES, MITO_QUALITY_FILTER_FIELDS, SV_FREQUENCIES, SV_QUALITY_FILTER_FIELDS,
+  SNP_FREQUENCIES,
+  MITO_FREQUENCIES,
+  SV_FREQUENCIES,
 } from 'shared/components/panel/search/constants'
 
 import {
@@ -48,6 +46,8 @@ import {
   ANNOTATION_GROUPS,
   LOCUS_FIELD_NAME,
   PANEL_APP_FIELD_NAME,
+  QUALITY_FILTER_OPTIONS,
+  ALL_QUALITY_FILTER,
 } from '../constants'
 import LocusListSelector from './filters/LocusListSelector'
 import LocusListItemsFilter from './filters/LocusListItemsFilter'
@@ -359,6 +359,84 @@ const IN_SILICO_PANEL = {
   },
   helpText: 'Filter by in-silico predictors. Variants matching any of the applied filters will be returned. For numeric filters, any variant with a score greater than or equal to the provided filter value will be returned.',
 }
+
+const SNP_QUALITY_FILTER_FIELDS = [
+  {
+    name: 'affected_only',
+    label: 'Affected Only',
+    labelHelp: 'Only apply quality filters to affected individuals',
+    control: InlineToggle,
+    color: 'grey',
+    width: 6,
+  },
+  {
+    name: 'vcf_filter',
+    label: 'Filter Value',
+    labelHelp: 'Either show only variants that PASSed variant quality filters applied when the dataset was processed (typically VQSR or Hard Filters), or show all variants',
+    control: RadioGroup,
+    options: [{ value: '', text: 'Show All Variants' }, { value: 'pass', text: 'Pass Variants Only' }],
+    margin: '1em 2em',
+    widths: 'equal',
+  },
+  {
+    name: 'min_gq',
+    label: 'Genotype Quality',
+    labelHelp: 'Genotype Quality (GQ) is a statistical measure of confidence in the genotype call (eg. hom. or het) based on the read data',
+    min: 0,
+    max: 100,
+    step: 5,
+  },
+  {
+    name: 'min_ab',
+    label: 'Allele Balance',
+    labelHelp: 'The allele balance represents the percentage of reads that support the alt allele out of the total number of sequencing reads overlapping a variant. Use this filter to set a minimum percentage for the allele balance in heterozygous individuals.',
+    min: 0,
+    max: 50,
+    step: 5,
+  },
+]
+
+const DividedFormField = styled(Form.Field)`
+  border-left: solid grey 1px;
+`
+
+const MITO_QUALITY_FILTER_FIELDS = [
+  {
+    name: 'min_hl',
+    label: 'Heteroplasmy level',
+    labelHelp: 'Heteroplasmy level (HL) is the percentage of the alt alleles out of all alleles.',
+    min: 0,
+    max: 50,
+    step: 5,
+    component: DividedFormField,
+  },
+]
+
+const SV_QUALITY_FILTER_FIELDS = [
+  {
+    name: 'min_qs',
+    label: 'WES SV Quality Score',
+    labelHelp: 'The quality score (QS) represents the quality of a Structural Variant call. Recommended SV-QS cutoffs for filtering: duplication >= 50, deletion >= 100, homozygous deletion >= 400.',
+    min: 0,
+    max: 1000,
+    step: 10,
+    component: DividedFormField,
+  },
+  {
+    name: 'min_gq_sv',
+    label: 'WGS SV Genotype Quality',
+    labelHelp: 'The genotype quality (GQ) represents the quality of a Structural Variant call. Recommended SV-GQ cutoffs for filtering: > 10.',
+    min: 0,
+    max: 100,
+    step: 5,
+  },
+]
+
+const QUALITY_FILTER_FIELDS = [
+  ...SNP_QUALITY_FILTER_FIELDS,
+  ...MITO_QUALITY_FILTER_FIELDS,
+  ...SV_QUALITY_FILTER_FIELDS,
+]
 
 const QUALITY_PANEL = {
   name: 'qualityFilter',

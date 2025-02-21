@@ -365,3 +365,35 @@ export const ALL_ANNOTATION_FILTER_DETAILS =
 
 export const LOCUS_FIELD_NAME = 'locus'
 export const PANEL_APP_FIELD_NAME = 'panelAppItems'
+
+export const ALL_QUALITY_FILTER = {
+  text: 'All Variants',
+  value: {
+    vcf_filter: null,
+    min_gq: 0,
+    min_ab: 0,
+    min_qs: 0,
+  },
+}
+
+export const QUALITY_FILTER_OPTIONS = [
+  ALL_QUALITY_FILTER,
+  {
+    text: 'High Quality',
+    value: {
+      vcf_filter: 'pass',
+      min_gq: 20,
+      min_ab: 25,
+      min_qs: 100,
+    },
+  },
+  {
+    text: 'All Passing Variants',
+    value: {
+      vcf_filter: 'pass',
+      min_gq: 0,
+      min_ab: 0,
+      min_qs: 10,
+    },
+  },
+]
