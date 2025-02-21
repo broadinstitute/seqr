@@ -519,7 +519,6 @@ class CheckNewSamplesTest(object):
         self.assertTrue(sv_sample.is_active)
 
         # Test Individual models properly associated with Samples
-        # TODO assert individual model updated with qc
         self.assertSetEqual(
             set(Individual.objects.get(guid='I000015_na20885').sample_set.values_list('guid', flat=True)),
             {REPLACED_SAMPLE_GUID, old_data_sample_guid}
@@ -535,6 +534,25 @@ class CheckNewSamplesTest(object):
         self.assertSetEqual(
             set(Individual.objects.get(guid='I000018_na21234').sample_set.values_list('guid', flat=True)),
             {EXISTING_SV_SAMPLE_GUID, NEW_SAMPLE_GUID_P4}
+        )
+
+        print(list(Individual.objects.filter(
+                guid__in=['I000016_na20888', 'I000015_na20885']).values('filter_flags', 'pop_platform_filters', 'population')
+            ))
+        # Test Individual model properly updated with sample qc results
+        self.assertListEqual(
+            list(Individual.objects.filter(
+                guid__in=['I000016_na20888', 'I000015_na20885']).values('filter_flags', 'pop_platform_filters', 'population')
+            ),
+            [{
+                'filter_flags': None,
+                'pop_platform_filters': None,
+                'population': 'SAS'
+            }, {
+                'filter_flags': {'coverage_exome': 90.0},
+                'pop_platform_filters': {'n_deletion': 0, 'n_insertion': 0, 'n_snp': 23},
+                'population': 'OTH'
+            }]
         )
 
         # Test Family models updated

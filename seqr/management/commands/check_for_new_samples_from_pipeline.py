@@ -14,6 +14,7 @@ from seqr.utils.file_utils import file_iter, list_files, is_google_bucket_file_p
 from seqr.utils.search.add_data_utils import notify_search_data_loaded, update_airtable_loading_tracking_status
 from seqr.utils.search.utils import parse_valid_variant_id
 from seqr.utils.search.hail_search_utils import hail_variant_multi_lookup, search_data_type
+from seqr.views.apis.data_manager_api import DATA_TYPE_MAP
 from seqr.views.utils.airtable_utils import AirtableSession, LOADABLE_PDO_STATUSES, AVAILABLE_PDO_STATUS
 from seqr.views.utils.dataset_utils import match_and_update_search_samples
 from seqr.views.utils.export_utils import write_multiple_files
@@ -45,8 +46,8 @@ PDO_COPY_FIELDS = [
 QC_FILTER_FLAG_COL_MAP = {
     'callrate': 'filtered_callrate',
     'contamination': 'contamination_rate',
-    'coverage_wes': 'percent_bases_at_20x',
-    'coverage_wgs': 'mean_coverage'
+    'coverage_exome': 'percent_bases_at_20x',
+    'coverage_genome': 'mean_coverage'
 }
 
 class Command(BaseCommand):
@@ -249,7 +250,7 @@ class Command(BaseCommand):
             logger.error(f'Error reporting loading failure for {run_version}: {e}')
 
         # Update sample qc
-        if metadata.get('sample_qc'):
+        if 'sample_qc' in metadata:
             cls.update_individuals_sample_qc(sample_type, updated_samples, metadata['sample_qc'])
 
         # Reload saved variant JSON
@@ -367,42 +368,23 @@ class Command(BaseCommand):
         }
 
         updated_individuals = []
-        unknown_filter_flags = set()
-        unknown_pop_filter_flags = set()
-
         for individual_id, record in sample_qc_map.items():
             individual = sample_individual_map[individual_id]
             filter_flags = {}
             for flag in record['filter_flags']:
-                flag = '{}_{}'.format(flag, sample_type) if flag == 'coverage' else flag
+                flag = '{}_{}'.format(flag, DATA_TYPE_MAP[sample_type.lower()]) if flag == 'coverage' else flag
                 flag_col = QC_FILTER_FLAG_COL_MAP.get(flag, flag)
-                if flag_col in record:
-                    filter_flags[flag] = record[flag_col]
-                else:
-                    unknown_filter_flags.add(flag)
+                filter_flags[flag] = record[flag_col]
 
             pop_platform_filters = {}
             for flag in record['qc_metrics_filters']:
                 flag_col = 'sample_qc.{}'.format(flag)
-                if flag_col in record:
-                    pop_platform_filters[flag] = record[flag_col]
-                else:
-                    unknown_pop_filter_flags.add(flag)
+                pop_platform_filters[flag] = record[flag_col]
 
-            individual.filter_flags=filter_flags
+            individual.filter_flags = filter_flags
             individual.pop_platform_filters = pop_platform_filters
             individual.population = record['qc_gen_anc'].upper()
             updated_individuals.append(individual)
-
-        error_message = ''
-        if unknown_filter_flags:
-            error_message += 'Found unknown filter flags {}'.format( ', '.join(unknown_filter_flags))
-
-        if unknown_pop_filter_flags:
-            error_message += '\nFound unknown population platform filters: {}'.format(', '.join(unknown_pop_filter_flags))
-
-        if error_message:
-            print('TODO raise error')
 
         if updated_individuals:
             Individual.bulk_update_models(
