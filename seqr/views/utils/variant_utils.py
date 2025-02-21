@@ -14,7 +14,7 @@ from seqr.models import SavedVariant, VariantSearchResults, Family, LocusList, L
     RnaSeqTpm, PhenotypePrioritization, Project, Sample, RnaSample, VariantTag, VariantTagType
 from seqr.utils.search.utils import get_variants_for_variant_ids, backend_specific_call
 from seqr.utils.gene_utils import get_genes_for_variants
-from seqr.utils.xpos_utils import get_xpos, MIN_POS, MAX_POS
+from seqr.utils.xpos_utils import get_xpos
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, create_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_discovery_tags, get_json_for_locus_lists, \
     get_json_for_queryset, get_json_for_rna_seq_outliers, get_json_for_saved_variants_with_tags, \
@@ -67,7 +67,7 @@ def update_projects_saved_variant_json(projects, user_email, **kwargs):
     return updated_variants_by_id
 
 
-def get_saved_variants(genome_version, project_id=None, family_guids=None, dataset_type=None, chromosomes=None):
+def get_saved_variants(genome_version, project_id=None, family_guids=None, dataset_type=None):
     saved_variants = SavedVariant.objects.filter(
         Q(saved_variant_json__genomeVersion__isnull=True) |
         Q(saved_variant_json__genomeVersion=genome_version.replace('GRCh', ''))
@@ -78,14 +78,6 @@ def get_saved_variants(genome_version, project_id=None, family_guids=None, datas
         saved_variants = saved_variants.filter(family__guid__in=family_guids)
     if dataset_type:
         saved_variants = saved_variants.filter(**saved_variants_dataset_type_filter(dataset_type))
-    if chromosomes:
-        chrom_filters = [
-            Q(xpos__gte=get_xpos(chrom, MIN_POS), xpos__lte=get_xpos(chrom, MAX_POS)) for chrom in chromosomes
-        ]
-        chrom_filter= chrom_filters[0]
-        for f in chrom_filters[1:]:
-            chrom_filter |= f
-        saved_variants = saved_variants.filter(chrom_filter)
     return saved_variants
 
 

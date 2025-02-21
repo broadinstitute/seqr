@@ -15,9 +15,8 @@ MOCK_HAIL_ORIGIN = f'http://{MOCK_HAIL_HOST}'
 class ReloadVariantAnnotationsTest(AnvilAuthenticationTestCase):
     fixtures = ['users', '1kg_project']
 
-    @mock.patch('seqr.management.commands.check_for_new_samples_from_pipeline.logger')
     @responses.activate
-    def test_command(self, mock_logger):
+    def test_command(self):
         responses.add(responses.POST, f'{MOCK_HAIL_ORIGIN}:5000/multi_lookup', status=200, json={
             'results': [
                 {'variantId': '1-46859832-G-A', 'updated_new_field': 'updated_value', 'rsid': 'rs123'},
@@ -35,15 +34,22 @@ class ReloadVariantAnnotationsTest(AnvilAuthenticationTestCase):
         self.assertEqual(str(ce.exception), "Error: argument data_type: invalid choice: 'SV' (choose from 'MITO', 'SNV_INDEL', 'SV_WES', 'SV_WGS')")
 
         # Test success
+        self.reset_logs()
         call_command('reload_saved_variant_annotations', 'SNV_INDEL', 'GRCh37')
 
-        mock_logger.info.assert_has_calls([mock.call(log) for log in [
-            'Reloading shared annotations for 3 SNV_INDEL GRCh37 saved variants (3 unique)',
-            'Fetched 2 additional variants in chromosome 1',
-            'Updated 2 SNV_INDEL GRCh37 saved variants in chromosome 1',
-            'Fetched 2 additional variants in chromosome 21',
-            'Updated 2 SNV_INDEL GRCh37 saved variants in chromosome 21',
-        ]])
+        self.assert_json_logs(user=None, expected=[
+            ('Reloading shared annotations for 2 SNV_INDEL GRCh37 saved variants in chromosome 1 (2 unique)', None),
+            ('Fetched 2 additional variants in chromosome 1', None),
+            ('update 2 SavedVariants', {'dbUpdate': {
+                'dbEntity': 'SavedVariant',
+                'entityIds': ['SV0000002_1248367227_r0390_100', 'SV0059956_11560662_f019313_1'],
+                'updateFields': ['saved_variant_json'],
+                'updateType': 'bulk_update'},
+            }),
+        ] + [(f'No additional SNV_INDEL GRCh37 saved variants to update in chromosome {chrom}', None) for chrom in ['2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20']] + [
+            ('Reloading shared annotations for 1 SNV_INDEL GRCh37 saved variants in chromosome 21 (1 unique)', None),
+            ('Fetched 2 additional variants in chromosome 21', None),
+        ] + [(f'No additional SNV_INDEL GRCh37 saved variants to update in chromosome {chrom}', None) for chrom in ['22', 'X', 'Y', 'M']])
 
         self.assertEqual(len(responses.calls), 2)
         for call in responses.calls:
@@ -74,13 +80,13 @@ class ReloadVariantAnnotationsTest(AnvilAuthenticationTestCase):
 
         # Test chromosome subset
         responses.calls.reset()
-        mock_logger.reset_mock()
+        self.reset_logs()
         call_command('reload_saved_variant_annotations', 'SNV_INDEL', 'GRCh37', '3', '21')
 
-        mock_logger.info.assert_has_calls([mock.call(log) for log in [
-            'Reloading shared annotations for 1 SNV_INDEL GRCh37 saved variants (1 unique)',
+        self.assert_json_logs(user=None, expected=[(log, None) for log in [
+            'No additional SNV_INDEL GRCh37 saved variants to update in chromosome 3',
+            'Reloading shared annotations for 1 SNV_INDEL GRCh37 saved variants in chromosome 21 (1 unique)',
             'Fetched 2 additional variants in chromosome 21',
-            'Updated 0 SNV_INDEL GRCh37 saved variants in chromosome 21',
         ]])
 
         self.assertEqual(len(responses.calls), 1)
@@ -91,9 +97,12 @@ class ReloadVariantAnnotationsTest(AnvilAuthenticationTestCase):
         })
 
         responses.calls.reset()
-        mock_logger.reset_mock()
+        self.reset_logs()
         call_command('reload_saved_variant_annotations', 'SNV_INDEL', 'GRCh37', '3', '6')
-        mock_logger.info.assert_called_with('No additional SNV_INDEL GRCh37 saved variants to update in chromosomes 3, 6')
+        self.assert_json_logs(user=None, expected=[
+            (f'No additional SNV_INDEL GRCh37 saved variants to update in chromosome {chrom}', None)
+            for chrom in [3, 6]
+        ])
         self.assertEqual(len(responses.calls), 0)
 
         # Test SVs

@@ -14,6 +14,7 @@ from seqr.utils.file_utils import file_iter, list_files, is_google_bucket_file_p
 from seqr.utils.search.add_data_utils import notify_search_data_loaded, update_airtable_loading_tracking_status
 from seqr.utils.search.utils import parse_valid_variant_id
 from seqr.utils.search.hail_search_utils import hail_variant_multi_lookup, search_data_type
+from seqr.utils.xpos_utils import get_xpos, CHROMOSOMES, MIN_POS, MAX_POS
 from seqr.views.utils.airtable_utils import AirtableSession, LOADABLE_PDO_STATUSES, AVAILABLE_PDO_STATUS
 from seqr.views.utils.dataset_utils import match_and_update_search_samples
 from seqr.views.utils.export_utils import write_multiple_files
@@ -366,13 +367,37 @@ class Command(BaseCommand):
             updated_annotation_samples = updated_annotation_samples.filter(sample_type=data_type.split('_')[1])
 
         variant_models = get_saved_variants(
-            genome_version, dataset_type=dataset_type, chromosomes=chromosomes,
+            genome_version, dataset_type=dataset_type,
             family_guids=updated_annotation_samples.values_list('individual__family__guid', flat=True).distinct(),
         )
 
         variant_type_summary = f'{data_type} {genome_version} saved variants'
+
+        if updated_variants_by_id:
+            fetched_variant_models = variant_models.filter(variant_id__in=updated_variants_by_id.keys())
+            if fetched_variant_models:
+                logger.info(f'Reloading shared annotations for {len(fetched_variant_models)} fetched {variant_type_summary}')
+                for variant_model in fetched_variant_models:
+                    updated_variant = {
+                        k: v for k, v in updated_variants_by_id[variant_model.variant_id].items()
+                        if k not in {'familyGuids', 'genotypes'}
+                    }
+                    variant_model.saved_variant_json.update(updated_variant)
+                SavedVariant.bulk_update_models(None, fetched_variant_models, ['saved_variant_json'])
+
+            variant_models = variant_models.exclude(variant_id__in=updated_variants_by_id.keys())
+
+        chromosomes = (chromosomes or CHROMOSOMES) if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS else [None]
+        for chrom in chromosomes:
+            cls._reload_shared_variant_annotations_by_chrom(chrom, variant_models, data_type, genome_version, variant_type_summary)
+
+    @classmethod
+    def _reload_shared_variant_annotations_by_chrom(cls, chrom, variant_models, data_type, genome_version, variant_type_summary):
+        if chrom:
+            variant_models = variant_models.filter(xpos__gte=get_xpos(chrom, MIN_POS), xpos__lte=get_xpos(chrom, MAX_POS))
+
+        chrom_summary = f' in chromosome {chrom}' if chrom else ''
         if not variant_models:
-            chrom_summary = f' in chromosomes {", ".join(chromosomes)}' if chromosomes else ''
             logger.info(f'No additional {variant_type_summary} to update{chrom_summary}')
             return
 
@@ -380,45 +405,23 @@ class Command(BaseCommand):
         for v in variant_models:
             variants_by_id[v.variant_id].append(v)
 
-        logger.info(f'Reloading shared annotations for {len(variant_models)} {variant_type_summary} ({len(variants_by_id)} unique)')
+        logger.info(f'Reloading shared annotations for {len(variant_models)} {variant_type_summary}{chrom_summary} ({len(variants_by_id)} unique)')
 
-        if updated_variants_by_id:
-            cls._update_variant_models({
-                variant_id: {k: v for k, v in variant.items() if k not in {'familyGuids', 'genotypes'}}
-                for variant_id, variant in updated_variants_by_id.items()
-            }, variants_by_id, variant_type_summary)
+        variant_ids = sorted(variants_by_id.keys())
+        if chrom:
+            variant_ids = sorted([parse_valid_variant_id(variant_id) for variant_id in variant_ids])
 
-        fetch_variant_ids = set(variants_by_id.keys()) - set((updated_variants_by_id or {}).keys())
-        if fetch_variant_ids:
-            if is_sv:
-                variant_ids_by_chrom = {'all': fetch_variant_ids}
-            else:
-                variant_ids_by_chrom = defaultdict(list)
-                for variant_id in fetch_variant_ids:
-                    parsed_id = parse_valid_variant_id(variant_id)
-                    variant_ids_by_chrom[parsed_id[0]].append(parsed_id)
+        for i in range(0, len(variant_ids), MAX_LOOKUP_VARIANTS):
+            updated_variants = hail_variant_multi_lookup(USER_EMAIL, variant_ids[i:i+MAX_LOOKUP_VARIANTS], data_type, genome_version)
+            logger.info(f'Fetched {len(updated_variants)} additional variants{chrom_summary}')
 
-            for chrom, variant_ids in sorted(variant_ids_by_chrom.items()):
-                variant_ids = sorted(variant_ids)
-                updated_variants_by_id = {}
-                for i in range(0, len(variant_ids), MAX_LOOKUP_VARIANTS):
-                    updated_variants = hail_variant_multi_lookup(USER_EMAIL, variant_ids[i:i+MAX_LOOKUP_VARIANTS], data_type, genome_version)
-                    logger.info(f'Fetched {len(updated_variants)} additional variants in chromosome {chrom}')
-                    updated_variants_by_id.update({variant['variantId']: variant for variant in updated_variants})
-                cls._update_variant_models(
-                    updated_variants_by_id, variants_by_id, f'{variant_type_summary} in chromosome {chrom}',
-                )
+            updated_variant_models = []
+            for variant in updated_variants:
+                for variant_model in variants_by_id[variant['variantId']]:
+                    variant_model.saved_variant_json.update(variant)
+                    updated_variant_models.append(variant_model)
 
-    @staticmethod
-    def _update_variant_models(updated_variants_by_id, variants_by_id, variant_type_summary):
-        updated_variant_models = []
-        for variant_id, variant in updated_variants_by_id.items():
-            for variant_model in variants_by_id[variant_id]:
-                variant_model.saved_variant_json.update(variant)
-                updated_variant_models.append(variant_model)
-
-        SavedVariant.objects.bulk_update(updated_variant_models, ['saved_variant_json'], batch_size=10000)
-        logger.info(f'Updated {len(updated_variant_models)} {variant_type_summary}')
+            SavedVariant.bulk_update_models(None, updated_variant_models, ['saved_variant_json'])
 
 
 reload_shared_variant_annotations = Command._reload_shared_variant_annotations
