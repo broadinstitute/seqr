@@ -104,6 +104,7 @@ from seqr.views.apis.variant_search_api import \
     create_saved_search_handler,\
     update_saved_search_handler, \
     variant_lookup_handler, \
+    search_results_redirect, \
     delete_saved_search_handler
 
 from seqr.views.apis.users_api import \
@@ -360,7 +361,11 @@ api_endpoints = {
     'matchmaker/v1/metrics': external_api.mme_metrics_proxy,
 }
 
-urlpatterns = [path('status', status_view), re_path('^(?:luigi_ui)', proxy_to_luigi)]
+urlpatterns = [
+    path('status', status_view),
+    re_path('^(?:luigi_ui)', proxy_to_luigi),
+    re_path('^report/custom_search/.*$', search_results_redirect)
+]
 
 # anvil workspace
 anvil_workspace_url = 'workspace/(?P<namespace>[^/]+)/(?P<name>[^/]+)'

@@ -631,24 +631,22 @@ class VariantSearchAPITest(object):
     @mock.patch('seqr.views.apis.variant_search_api.query_variants')
     def test_query_all_project_families_variants(self, mock_get_variants):
         url = reverse(query_variants_handler, args=['abc'])
-        self.check_collaborator_login(url, request_data={'projectGuids': ['R0003_test']})
+        self.check_collaborator_login(url, request_data={'projectFamilies': [{'projectGuid':  'R0003_test', 'familyGuids': ['F000011_11']}]})
         url = reverse(query_variants_handler, args=[SEARCH_HASH])
 
         mock_get_variants.side_effect = _get_es_variants
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({
-            'projectGuids': ['R0003_test'], 'search': SEARCH,
+            'search': SEARCH,
             'projectFamilies': [{'projectGuid':  'R0003_test', 'familyGuids': ['F000011_11']}],
         }))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertDictEqual(response_json['search'], {
             'search': SEARCH,
-            'projectFamilies': [{'projectGuid': 'R0003_test', 'familyGuids': mock.ANY}],
+            'projectFamilies': [{'projectGuid': 'R0003_test', 'familyGuids': ['F000011_11']}],
             'totalResults': 5,
         })
-        self.assertSetEqual(
-            {'F000011_11', 'F000012_12'}, set(response_json['search']['projectFamilies'][0]['familyGuids']))
 
         mock_get_variants.assert_called_with(
             VariantSearchResults.objects.get(search_hash=SEARCH_HASH), sort='xpos', page=1, num_results=100,
@@ -1026,6 +1024,11 @@ class VariantSearchAPITest(object):
         delete_saved_search_url = reverse(delete_saved_search_handler, args=[global_saved_search_guid])
         response = self.client.get(delete_saved_search_url)
         self.assertEqual(response.status_code, 403)
+
+    def test_search_results_redirect(self):
+        response = self.client.get('/report/custom_search/6ebb895dfca0f63c34be1ca59d950205?page=2&sort=cadd')
+        self.assertEqual(response.status_code, 301)
+        self.assertEqual(response.url, '/variant_search/results/6ebb895dfca0f63c34be1ca59d950205?page=2&sort=cadd')
 
 
 # Tests for AnVIL access disabled
