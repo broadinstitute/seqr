@@ -25,6 +25,7 @@ import {
   VEP_GROUP_SV_NEW,
   PANEL_APP_CONFIDENCE_LEVELS,
   SCREEN_LABELS,
+  ALL_INHERITANCE_FILTER,
   predictorColorRanges,
 } from 'shared/utils/constants'
 
@@ -32,45 +33,12 @@ import LocusListItemsFilter from './LocusListItemsFilter'
 import PaMoiSelector from './PaMoiSelector'
 import PaLocusListSelector from './PaLocusListSelector'
 
-export const getSelectedAnalysisGroups = (
-  analysisGroupsByGuid, familyGuids,
-) => Object.values(analysisGroupsByGuid).filter(
-  group => group.familyGuids.every(familyGuid => familyGuids.includes(familyGuid)),
-)
-
 const REF_REF = 'ref_ref'
 const HAS_REF = 'has_ref'
 const REF_ALT = 'ref_alt'
 const HAS_ALT = 'has_alt'
 const ALT_ALT = 'alt_alt'
-export const NUM_ALT_OPTIONS = [
-  {
-    text: '0',
-    value: REF_REF,
-    description: 'Two ref alleles',
-  },
-  {
-    text: '0-1',
-    value: HAS_REF,
-    description: 'At least one ref allele',
-  },
-  {
-    text: '1',
-    value: REF_ALT,
-    description: 'One ref allele and one alt allele',
-  },
-  {
-    text: '1-2',
-    value: HAS_ALT,
-    description: 'At least one alt allele',
-  },
-  {
-    text: '2',
-    value: ALT_ALT,
-    description: 'Two alt alleles',
-  },
-]
-export const ALL_INHERITANCE_FILTER = 'all'
+
 const RECESSIVE_FILTER = 'recessive'
 const HOM_RECESSIVE_FILTER = 'homozygous_recessive'
 const X_LINKED_RECESSIVE_FILTER = 'x_linked_recessive'
@@ -80,7 +48,7 @@ const ANY_AFFECTED = 'any_affected'
 
 export const ALL_RECESSIVE_INHERITANCE_FILTERS = [RECESSIVE_FILTER, COMPOUND_HET_FILTER]
 
-export const INHERITANCE_LOOKUP = {
+const INHERITANCE_LOOKUP = {
   [ALL_INHERITANCE_FILTER]: { text: 'All' },
   [RECESSIVE_FILTER]: {
     filter: {
