@@ -18,99 +18,17 @@ import {
   VEP_GROUP_SV_CONSEQUENCES,
   GROUPED_VEP_CONSEQUENCES,
   LOCUS_LIST_ITEMS_FIELD,
-  AFFECTED,
-  UNAFFECTED,
   ORDERED_PREDICTOR_FIELDS,
   SPLICE_AI_FIELD,
   VEP_GROUP_SV_NEW,
   PANEL_APP_CONFIDENCE_LEVELS,
   SCREEN_LABELS,
-  ALL_INHERITANCE_FILTER,
   predictorColorRanges,
 } from 'shared/utils/constants'
 
 import LocusListItemsFilter from './LocusListItemsFilter'
 import PaMoiSelector from './PaMoiSelector'
 import PaLocusListSelector from './PaLocusListSelector'
-
-const REF_REF = 'ref_ref'
-const HAS_REF = 'has_ref'
-const REF_ALT = 'ref_alt'
-const HAS_ALT = 'has_alt'
-const ALT_ALT = 'alt_alt'
-
-const RECESSIVE_FILTER = 'recessive'
-const HOM_RECESSIVE_FILTER = 'homozygous_recessive'
-const X_LINKED_RECESSIVE_FILTER = 'x_linked_recessive'
-const COMPOUND_HET_FILTER = 'compound_het'
-const DE_NOVO_FILTER = 'de_novo'
-const ANY_AFFECTED = 'any_affected'
-
-export const ALL_RECESSIVE_INHERITANCE_FILTERS = [RECESSIVE_FILTER, COMPOUND_HET_FILTER]
-
-const INHERITANCE_LOOKUP = {
-  [ALL_INHERITANCE_FILTER]: { text: 'All' },
-  [RECESSIVE_FILTER]: {
-    filter: {
-      [AFFECTED]: null,
-      [UNAFFECTED]: null,
-    },
-    text: 'Recessive',
-    detail: 'This method identifies genes with any evidence of recessive variation. It is the union of all variants returned by the homozygous recessive, x-linked recessive, and compound heterozygous methods.',
-  },
-  [HOM_RECESSIVE_FILTER]: {
-    filter: {
-      [AFFECTED]: ALT_ALT,
-      [UNAFFECTED]: HAS_REF,
-    },
-    color: 'transparent', // Adds an empty label so option is indented
-    text: 'Homozygous Recessive',
-    detail: 'Finds variants where all affected individuals are Alt / Alt and each of their parents Heterozygous.',
-  },
-  [X_LINKED_RECESSIVE_FILTER]: {
-    filter: {
-      [AFFECTED]: ALT_ALT,
-      [UNAFFECTED]: HAS_REF,
-      mother: REF_ALT,
-      father: REF_REF,
-    },
-    color: 'transparent', // Adds an empty label so option is indented
-    text: 'X-Linked Recessive',
-    detail: "Recessive inheritance on the X Chromosome. This is similar to the homozygous recessive search, but a proband's father must be homozygous reference. (This is how hemizygous genotypes are called by current variant calling methods.)",
-  },
-  [DE_NOVO_FILTER]: {
-    filter: {
-      [AFFECTED]: HAS_ALT,
-      [UNAFFECTED]: REF_REF,
-    },
-    text: 'De Novo/ Dominant',
-    detail: 'Finds variants where all affected indivs have at least one alternate allele and all unaffected are homozygous reference.',
-  },
-  [COMPOUND_HET_FILTER]: {
-    filter: {
-      [AFFECTED]: REF_ALT,
-      [UNAFFECTED]: HAS_REF,
-    },
-    color: 'transparent', // Adds an empty label so option is indented
-    text: 'Compound Heterozygous',
-    detail: 'Affected individual(s) have two heterozygous mutations in the same gene on opposite haplotypes. Unaffected individuals cannot have the same combination of alleles as affected individuals, or be homozygous alternate for any of the variants. If parents are not present, this method only searches for pairs of heterozygous variants; they may not be on different haplotypes.',
-  },
-  [ANY_AFFECTED]: {
-    filter: {
-      [AFFECTED]: HAS_ALT,
-    },
-    text: 'Any Affected',
-    detail: 'Finds variants where at least one affected individual has at least one alternate allele.',
-  },
-}
-
-export const INHERITANCE_MODE_LOOKUP = Object.entries(INHERITANCE_LOOKUP).reduce((acc, [mode, { filter }]) => (
-  { ...acc, [JSON.stringify(filter)]: mode }), {})
-
-export const INHERITANCE_FILTER_OPTIONS = [
-  ALL_INHERITANCE_FILTER, RECESSIVE_FILTER, HOM_RECESSIVE_FILTER, X_LINKED_RECESSIVE_FILTER, COMPOUND_HET_FILTER,
-  DE_NOVO_FILTER, ANY_AFFECTED,
-].map(value => ({ value, ...INHERITANCE_LOOKUP[value] }))
 
 const CLINVAR_NAME = 'clinvar'
 const CLIVAR_PATH = 'pathogenic'
