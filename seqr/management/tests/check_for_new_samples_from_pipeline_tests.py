@@ -536,9 +536,6 @@ class CheckNewSamplesTest(object):
             {EXISTING_SV_SAMPLE_GUID, NEW_SAMPLE_GUID_P4}
         )
 
-        print(list(Individual.objects.filter(
-                guid__in=['I000016_na20888', 'I000015_na20885']).values('filter_flags', 'pop_platform_filters', 'population')
-            ))
         # Test Individual model properly updated with sample qc results
         self.assertListEqual(
             list(Individual.objects.filter(
