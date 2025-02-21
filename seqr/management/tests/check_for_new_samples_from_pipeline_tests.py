@@ -542,16 +542,16 @@ class CheckNewSamplesTest(object):
         # Test Individual model properly updated with sample qc results
         self.assertListEqual(
             list(Individual.objects.filter(
-                guid__in=['I000016_na20888', 'I000015_na20885']).values('filter_flags', 'pop_platform_filters', 'population')
+                guid__in=['I000015_na20885', 'I000016_na20888']).order_by('guid').values('filter_flags', 'pop_platform_filters', 'population')
             ),
             [{
-                'filter_flags': None,
-                'pop_platform_filters': None,
-                'population': 'SAS'
-            }, {
                 'filter_flags': {'coverage_exome': 90.0},
                 'pop_platform_filters': {'n_deletion': 0, 'n_insertion': 0, 'n_snp': 23},
                 'population': 'OTH'
+            }, {
+                'filter_flags': None,
+                'pop_platform_filters': None,
+                'population': 'SAS'
             }]
         )
 
