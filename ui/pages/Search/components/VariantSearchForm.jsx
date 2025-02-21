@@ -29,7 +29,7 @@ const DECORATORS = [
 ]
 
 const VariantSearchForm = React.memo((
-  { initialSearch, contentLoading, noEditProjects, match, onSubmit, resultsPath, variantsLoading, submissionError },
+  { initialSearch, contentLoading, noEditProjects, match, onSubmit, variantsLoading, submissionError },
 ) => (
   <div>
     <FormWrapper
@@ -57,14 +57,11 @@ VariantSearchForm.propTypes = {
   variantsLoading: PropTypes.bool,
   noEditProjects: PropTypes.bool,
   onSubmit: PropTypes.func,
-  resultsPath: PropTypes.string,
   submissionError: PropTypes.string,
 }
 
 const mapDispatchToProps = (dispatch, ownProps) => ({
-  onSubmit: values => dispatch(navigateSavedHashedSearch(
-    values, ownProps.history.push, ownProps.resultsPath,
-  )),
+  onSubmit: values => dispatch(navigateSavedHashedSearch(values, ownProps.history.push)),
 })
 
 const getSharedStateToProps = state => ({
