@@ -21,7 +21,6 @@ import {
   DATASET_TYPE_MITO_CALLS,
 } from 'shared/utils/constants'
 
-import { FrequencyFilter, HeaderFrequencyFilter } from 'shared/components/panel/search/FrequencyFilter'
 import {
   FREQUENCIES,
   IN_SILICO_FIELDS,
@@ -54,8 +53,9 @@ import {
 import { getDatasetTypes, getHasHgmdPermission } from '../selectors'
 import LocusListSelector from './filters/LocusListSelector'
 import CustomInheritanceFilter from './filters/CustomInheritanceFilter'
+import { FrequencyFilter, HeaderFrequencyFilter } from './filters/FrequencyFilter'
 
-const LabeledSlider = React.lazy(() => import('shared/components/panel/search/LabeledSlider'))
+const LabeledSlider = React.lazy(() => import('./filters/LabeledSlider'))
 
 const ToggleHeader = styled(Header).attrs({ size: 'huge', block: true })`
   margin-top: 0px !important;
