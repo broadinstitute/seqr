@@ -137,13 +137,20 @@ export const JsonSelectPropsWithAll = (options, all) => ({
   options: options.map(({ value, ...option }) => ({ ...option, value: JSON.stringify(value) })),
 })
 
-export const HGMD_PATHOGENICITY_PANEL = {
+const DATASET_TYPE_VARIANT_MITO = `${DATASET_TYPE_MITO_CALLS},${DATASET_TYPE_SNV_INDEL_CALLS}`
+const DATASET_TYPE_VARIANT_SV = `${DATASET_TYPE_SV_CALLS},${DATASET_TYPE_SNV_INDEL_CALLS}`
+
+const PATHOGENICITY_PANEL = {
   name: 'pathogenicity',
-  headerProps: { title: 'Pathogenicity', inputProps: JsonSelectPropsWithAll(HGMD_PATHOGENICITY_FILTER_OPTIONS, ANY_PATHOGENICITY_FILTER) },
-  fields: HGMD_PATHOGENICITY_FIELDS,
+  headerProps: {
+    title: 'Pathogenicity',
+    inputProps: JsonSelectPropsWithAll(PATHOGENICITY_FILTER_OPTIONS, ANY_PATHOGENICITY_FILTER),
+  },
+  fields: PATHOGENICITY_FIELDS,
   fieldProps: { control: AlignedCheckboxGroup, format: val => val || [] },
   helpText: 'Filter by reported pathogenicity.  This overrides the annotation filter, the frequency filter, and the call quality filter.  Variants will be returned if they have the specified transcript consequence AND the specified frequencies AND all individuals pass all specified quality filters OR if the variant has the specified pathogenicity and a frequency up to 0.05.',
 }
+const HGMD_HEADER_INPUT_PROPS = JsonSelectPropsWithAll(HGMD_PATHOGENICITY_FILTER_OPTIONS, ANY_PATHOGENICITY_FILTER)
 
 const IN_SILICO_SPLICING_FIELD = IN_SILICO_FIELDS.find(({ name }) => name === SPLICE_AI_FIELD)
 const IN_SILICO_GROUP_INDEX_MAP = IN_SILICO_FIELDS.reduce(
@@ -153,7 +160,7 @@ const IN_SILICO_GROUP_INDEX_MAP = IN_SILICO_FIELDS.reduce(
 const ANNOTATION_GROUPS_SPLICE = [...ANNOTATION_GROUPS, IN_SILICO_SPLICING_FIELD]
 const ANNOTATION_GROUP_INDEX_MAP = ANNOTATION_GROUPS_SPLICE.reduce((acc, { name }, i) => ({ ...acc, [name]: i }), {})
 
-export const inSilicoFieldLayout = groups => ([requireComponent, ...fieldComponents]) => (
+const inSilicoFieldLayout = ([requireComponent, ...fieldComponents], groups) => (
   <Form.Field>
     <Grid divided="vertically">
       {groups.map(group => (
@@ -183,7 +190,7 @@ const annotationGroupDisplay = component => (
   <Table.Cell colSpan={annotationColSpan(component.props)} content={component} />
 )
 
-export const annotationFieldLayout = annotationGroups => fieldComponents => (
+const annotationFieldLayout = (fieldComponents, annotationGroups) => (
   <Form.Field>
     <CenteredTable basic="very" collapsing>
       {annotationGroups.map(groups => (
@@ -214,19 +221,25 @@ const freqFieldLayout = fieldComponents => (
   </Form.Field>
 )
 
-export const ANNOTATION_PANEL = {
+const VARIANT_ANNOTATION_LAYOUT_GROUPS = [
+  HIGH_MODERATE_IMPACT_GROUPS, CODING_OTHER_IMPACT_GROUPS, ANNOTATION_OVERRIDE_GROUPS,
+]
+const ANNOTATION_PANEL = {
   name: 'annotations',
   headerProps: { title: 'Annotations', inputProps: JsonSelectPropsWithAll(ANNOTATION_FILTER_OPTIONS, ALL_ANNOTATION_FILTER_DETAILS) },
   fields: ANNOTATION_GROUPS_SPLICE,
   fieldProps: { control: AlignedCheckboxGroup, maxOptionsPerColumn: 7, format: val => val || [] },
-  fieldLayout: annotationFieldLayout([
-    HIGH_MODERATE_IMPACT_GROUPS, CODING_OTHER_IMPACT_GROUPS, ANNOTATION_OVERRIDE_GROUPS, SV_GROUPS,
-  ]),
+  fieldLayout: annotationFieldLayout,
+  fieldLayoutInput: [...VARIANT_ANNOTATION_LAYOUT_GROUPS, SV_GROUPS],
+  datasetTypeFieldLayoutInput: {
+    [DATASET_TYPE_SNV_INDEL_CALLS]: VARIANT_ANNOTATION_LAYOUT_GROUPS,
+    [DATASET_TYPE_VARIANT_MITO]: VARIANT_ANNOTATION_LAYOUT_GROUPS,
+  },
   noPadding: true,
   helpText: 'Filter by reported annotation. Variants will be returned if they have ANY of the specified annotations, including if they have a Splice AI score above the threshold and no other annotations. This filter is overridden by the pathogenicity filter, so variants will be returned if they have the specified pathogenicity even if none of the annotation filters match.',
 }
 
-export const FREQUENCY_PANEL = {
+const FREQUENCY_PANEL = {
   name: 'freqs',
   headerProps: {
     title: 'Frequency',
@@ -237,6 +250,11 @@ export const FREQUENCY_PANEL = {
     },
   },
   fields: FREQUENCIES,
+  datasetTypeFields: {
+    [DATASET_TYPE_SNV_INDEL_CALLS]: SNP_FREQUENCIES,
+    [DATASET_TYPE_VARIANT_MITO]: SNP_FREQUENCIES.concat(MITO_FREQUENCIES),
+    [DATASET_TYPE_VARIANT_SV]: SNP_FREQUENCIES.concat(SV_FREQUENCIES),
+  },
   fieldProps: {
     control: FrequencyFilter,
     format: val => val || {},
@@ -246,7 +264,7 @@ export const FREQUENCY_PANEL = {
   helpText: 'Filter by allele frequency (popmax AF where available) or by allele count (AC). In applicable populations, also filter by homozygous/hemizygous count (H/H).',
 }
 
-export const LOCATION_PANEL = {
+const LOCATION_PANEL = {
   name: LOCUS_FIELD_NAME,
   headerProps: { title: 'Location' },
   fields: LOCATION_FIELDS,
@@ -254,18 +272,28 @@ export const LOCATION_PANEL = {
   helpText: 'Filter by variant location. Entries can be either gene symbols (e.g. CFTR) or intervals in the form <chrom>:<start>-<end> (e.g. 4:6935002-87141054) or separated by tab. Variant entries can be either rsIDs (e.g. rs61753695) or variants in the form <chrom>-<pos>-<ref>-<alt> (e.g. 10-129958997-T-C). Entries can be separated by commas or whitespace.',
 }
 
-export const IN_SILICO_PANEL = {
+const IN_SILICO_PANEL = {
   name: 'in_silico',
   headerProps: { title: 'In Silico Filters' },
   fields: IN_SILICO_FIELDS,
-  fieldLayout: inSilicoFieldLayout([...NO_SV_IN_SILICO_GROUPS, SV_IN_SILICO_GROUP]),
+  fieldLayout: inSilicoFieldLayout,
+  fieldLayoutInput: [...NO_SV_IN_SILICO_GROUPS, SV_IN_SILICO_GROUP],
+  datasetTypeFieldLayoutInput: {
+    [DATASET_TYPE_SNV_INDEL_CALLS]: NO_SV_IN_SILICO_GROUPS,
+    [DATASET_TYPE_VARIANT_MITO]: NO_SV_IN_SILICO_GROUPS,
+  },
   helpText: 'Filter by in-silico predictors. Variants matching any of the applied filters will be returned. For numeric filters, any variant with a score greater than or equal to the provided filter value will be returned.',
 }
 
-export const QUALITY_PANEL = {
+const QUALITY_PANEL = {
   name: 'qualityFilter',
   headerProps: { title: 'Call Quality', inputProps: JsonSelectPropsWithAll(QUALITY_FILTER_OPTIONS, ALL_QUALITY_FILTER) },
   fields: QUALITY_FILTER_FIELDS,
+  datasetTypeFields: {
+    [DATASET_TYPE_SNV_INDEL_CALLS]: SNP_QUALITY_FILTER_FIELDS,
+    [DATASET_TYPE_VARIANT_MITO]: SNP_QUALITY_FILTER_FIELDS.concat(MITO_QUALITY_FILTER_FIELDS),
+    [DATASET_TYPE_VARIANT_SV]: SNP_QUALITY_FILTER_FIELDS.concat(SV_QUALITY_FILTER_FIELDS),
+  },
   fieldProps: { control: LazyLabeledSlider, format: val => val || null },
 }
 
@@ -338,18 +366,6 @@ const LOCATION_PANEL_WITH_GENE_LIST = {
   },
 }
 
-const ALL_DATASET_TYPE = `${DATASET_TYPE_MITO_CALLS},${DATASET_TYPE_SV_CALLS},${DATASET_TYPE_SNV_INDEL_CALLS}`
-const DATASET_TYPE_VARIANT_MITO = `${DATASET_TYPE_MITO_CALLS},${DATASET_TYPE_SNV_INDEL_CALLS}`
-const DATASET_TYPE_VARIANT_SV = `${DATASET_TYPE_SV_CALLS},${DATASET_TYPE_SNV_INDEL_CALLS}`
-
-const NO_HGMD_PANEL_PROPS = {
-  headerProps: {
-    ...HGMD_PATHOGENICITY_PANEL.headerProps,
-    inputProps: JsonSelectPropsWithAll(PATHOGENICITY_FILTER_OPTIONS, ANY_PATHOGENICITY_FILTER),
-  },
-  fields: PATHOGENICITY_FIELDS,
-}
-
 const ANNOTATION_SECONDARY_NAME = 'annotations_secondary'
 const SV_GROUPS_NO_NEW = SV_GROUPS.filter(name => name !== VEP_GROUP_SV_NEW)
 const ANNOTATION_SECONDARY_PANEL = {
@@ -365,14 +381,16 @@ const ANNOTATION_SECONDARY_PANEL = {
       annotations filter.
     </span>
   ),
-  fieldLayout: annotationFieldLayout(
-    [HIGH_MODERATE_IMPACT_GROUPS, CODING_OTHER_IMPACT_GROUPS, SV_GROUPS_NO_NEW],
-  ),
+  fieldLayoutInput: [HIGH_MODERATE_IMPACT_GROUPS, CODING_OTHER_IMPACT_GROUPS, SV_GROUPS_NO_NEW],
+  datasetTypeFieldLayoutInput: {
+    [DATASET_TYPE_SNV_INDEL_CALLS]: [HIGH_MODERATE_IMPACT_GROUPS, CODING_OTHER_IMPACT_GROUPS],
+    [DATASET_TYPE_VARIANT_MITO]: [HIGH_MODERATE_IMPACT_GROUPS, CODING_OTHER_IMPACT_GROUPS],
+  },
 }
 
 const PANELS = [
   INHERITANCE_PANEL,
-  HGMD_PATHOGENICITY_PANEL,
+  PATHOGENICITY_PANEL,
   ANNOTATION_PANEL,
   ANNOTATION_SECONDARY_PANEL,
   IN_SILICO_PANEL,
@@ -381,78 +399,7 @@ const PANELS = [
   QUALITY_PANEL,
 ]
 
-const DATASET_TYPE_PANEL_PROPS = {
-  [DATASET_TYPE_SNV_INDEL_CALLS]: {
-    [ANNOTATION_PANEL.name]: {
-      fieldLayout: annotationFieldLayout(
-        [HIGH_MODERATE_IMPACT_GROUPS, CODING_OTHER_IMPACT_GROUPS, ANNOTATION_OVERRIDE_GROUPS],
-      ),
-    },
-    [ANNOTATION_SECONDARY_NAME]: {
-      fieldLayout: annotationFieldLayout([HIGH_MODERATE_IMPACT_GROUPS, CODING_OTHER_IMPACT_GROUPS]),
-    },
-    [IN_SILICO_PANEL.name]: {
-      fieldLayout: inSilicoFieldLayout(NO_SV_IN_SILICO_GROUPS),
-    },
-    [FREQUENCY_PANEL.name]: {
-      fields: SNP_FREQUENCIES,
-    },
-    [QUALITY_PANEL.name]: {
-      fields: SNP_QUALITY_FILTER_FIELDS,
-    },
-  },
-  [DATASET_TYPE_VARIANT_SV]: {
-    [FREQUENCY_PANEL.name]: {
-      fields: SNP_FREQUENCIES.concat(SV_FREQUENCIES),
-    },
-    [QUALITY_PANEL.name]: {
-      fields: SNP_QUALITY_FILTER_FIELDS.concat(SV_QUALITY_FILTER_FIELDS),
-    },
-  },
-}
-
-DATASET_TYPE_PANEL_PROPS[DATASET_TYPE_VARIANT_MITO] = {
-  ...DATASET_TYPE_PANEL_PROPS[DATASET_TYPE_SNV_INDEL_CALLS],
-  [FREQUENCY_PANEL.name]: {
-    fields: SNP_FREQUENCIES.concat(MITO_FREQUENCIES),
-  },
-  [QUALITY_PANEL.name]: {
-    fields: SNP_QUALITY_FILTER_FIELDS.concat(MITO_QUALITY_FILTER_FIELDS),
-  },
-}
-
-const HAS_HGMD = true
-const NO_HGMD = false
-const HAS_ANN_SECONDARY = true
-const NO_ANN_SECONDARY = false
-
-const PANEL_MAP = [ALL_DATASET_TYPE, DATASET_TYPE_VARIANT_MITO, DATASET_TYPE_VARIANT_SV,
-  DATASET_TYPE_SNV_INDEL_CALLS].reduce((typeAcc, type) => {
-  const typePanelProps = DATASET_TYPE_PANEL_PROPS[type] || {}
-  const typePanels = PANELS.map(panel => ({ ...panel, ...(typePanelProps[panel.name] || {}) }))
-  return {
-    ...typeAcc,
-    [type]: [HAS_HGMD, NO_HGMD].reduce((hgmdAcc, hasHgmdBool) => {
-      const hgmdPanels = typePanels.map(panel => (
-        (!hasHgmdBool && panel.name === HGMD_PATHOGENICITY_PANEL) ? { ...panel, ...NO_HGMD_PANEL_PROPS } : panel
-      ))
-      return {
-        ...hgmdAcc,
-        [hasHgmdBool]: [HAS_ANN_SECONDARY, NO_ANN_SECONDARY].reduce((acc, annSecondaryBool) => ({
-          ...acc,
-          [annSecondaryBool]: annSecondaryBool ? hgmdPanels :
-            hgmdPanels.filter(({ name }) => name !== ANNOTATION_SECONDARY_NAME),
-        }), {}),
-      }
-    }, {}),
-  }
-}, {})
-
 const hasSecondaryAnnotation = inheritance => ALL_RECESSIVE_INHERITANCE_FILTERS.includes(inheritance?.mode)
-
-const getPanels = (hasHgmdPermission, inheritance, datasetTypes) => (
-  (PANEL_MAP[datasetTypes] || PANEL_MAP[ALL_DATASET_TYPE])[hasHgmdPermission][hasSecondaryAnnotation(inheritance)]
-)
 
 const stopPropagation = e => e.stopPropagation()
 
@@ -486,9 +433,14 @@ const formatField = (field, name, esEnabled, { formatNoEsLabel, ...fieldProps })
   label: (!esEnabled && formatNoEsLabel) ? formatNoEsLabel(field.label) : field.label,
 })
 
-const PanelContent = React.memo(({ name, fields, fieldProps, helpText, fieldLayout, esEnabled, noPadding }) => {
-  const fieldComponents = fields && configuredFields(
-    { fields: fields.map(field => formatField(field, name, esEnabled, fieldProps || {})) },
+const PanelContent = React.memo(({
+  name, fields, fieldProps, helpText, fieldLayout, fieldLayoutInput, esEnabled, noPadding, datasetTypes,
+  datasetTypeFields, datasetTypeFieldLayoutInput,
+}) => {
+  const layoutInput = (datasetTypeFieldLayoutInput || {})[datasetTypes] || fieldLayoutInput
+  const panelFields = (datasetTypeFields || {})[datasetTypes] || fields
+  const fieldComponents = datasetTypeFields && configuredFields(
+    { fields: panelFields.map(field => formatField(field, name, esEnabled, fieldProps || {})) },
   )
   return (
     <div>
@@ -500,7 +452,7 @@ const PanelContent = React.memo(({ name, fields, fieldProps, helpText, fieldLayo
       )}
       <Form.Group widths="equal">
         {!noPadding && <Form.Field width={2} />}
-        {fieldLayout ? fieldLayout(fieldComponents) : fieldComponents}
+        {fieldLayout ? fieldLayout(fieldComponents, layoutInput) : fieldComponents}
         {!noPadding && <Form.Field width={2} />}
       </Form.Group>
     </div>
@@ -511,8 +463,12 @@ PanelContent.propTypes = {
   fields: PropTypes.arrayOf(PropTypes.object),
   name: PropTypes.string.isRequired,
   fieldProps: PropTypes.object,
+  datasetTypes: PropTypes.string,
+  datasetTypeFields: PropTypes.object,
   helpText: PropTypes.node,
   fieldLayout: PropTypes.func,
+  fieldLayoutInput: PropTypes.arrayOf(PropTypes.string),
+  datasetTypeFieldLayoutInput: PropTypes.object,
   esEnabled: PropTypes.bool,
   noPadding: PropTypes.bool,
 }
@@ -529,11 +485,8 @@ class VariantSearchFormPanels extends React.PureComponent {
   state = { active: {} }
 
   expandAll = (e) => {
-    // TODO
-    const { hasHgmdPermission, inheritance, datasetTypes } = this.props
-    const panels = getPanels(hasHgmdPermission, inheritance, datasetTypes)
     e.preventDefault()
-    this.setState({ active: panels.reduce((acc, { name }) => ({ ...acc, [name]: true }), {}) })
+    this.setState({ active: PANELS.reduce((acc, { name }) => ({ ...acc, [name]: true }), {}) })
   }
 
   collapseAll = (e) => {
@@ -547,9 +500,7 @@ class VariantSearchFormPanels extends React.PureComponent {
   }
 
   render() {
-    // TODO
     const { esEnabled, hasHgmdPermission, inheritance, datasetTypes } = this.props
-    const panels = getPanels(hasHgmdPermission, inheritance, datasetTypes)
     const { active } = this.state
     return (
       <div>
@@ -566,12 +517,16 @@ class VariantSearchFormPanels extends React.PureComponent {
         </ExpandCollapseCategoryContainer>
         <VerticalSpacer height={10} />
         <Accordion fluid exclusive={false}>
-          {panels.reduce((acc, { name, headerProps, ...panelContentProps }, i) => {
+          {PANELS.reduce((acc, { name, headerProps, fields, ...panelContentProps }, i) => {
+            if (name === ANNOTATION_SECONDARY_NAME && !hasSecondaryAnnotation(inheritance)) {
+              return acc
+            }
+            const showHgmd = name === PATHOGENICITY_PANEL.name && hasHgmdPermission
             const isActive = !!active[name]
             let attachedTitle = true
             if (i === 0) {
               attachedTitle = 'top'
-            } else if (i === panels.length - 1 && !isActive) {
+            } else if (i === PANELS.length - 1 && !isActive) {
               attachedTitle = 'bottom'
             }
             return [...acc,
@@ -584,17 +539,28 @@ class VariantSearchFormPanels extends React.PureComponent {
                 attached={attachedTitle}
               >
                 <Icon name="dropdown" />
-                <HeaderContent name={name} esEnabled={esEnabled} {...headerProps} />
+                <HeaderContent
+                  name={name}
+                  esEnabled={esEnabled}
+                  inputProps={showHgmd ? HGMD_HEADER_INPUT_PROPS : headerProps.inputProps}
+                  {...headerProps}
+                />
               </Accordion.Title>,
               <Accordion.Content
                 key={`${name}-content`}
                 active={isActive}
                 as={Segment}
-                attached={i === panels.length - 1 ? 'bottom' : true}
+                attached={i === PANELS.length - 1 ? 'bottom' : true}
                 padded
                 textAlign="center"
               >
-                <PanelContent name={name} esEnabled={esEnabled} {...panelContentProps} />
+                <PanelContent
+                  name={name}
+                  esEnabled={esEnabled}
+                  datasetTypes={datasetTypes}
+                  fields={showHgmd ? HGMD_PATHOGENICITY_FIELDS : fields}
+                  {...panelContentProps}
+                />
               </Accordion.Content>,
             ]
           }, [])}
