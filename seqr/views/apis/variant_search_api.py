@@ -8,6 +8,7 @@ from django.core.exceptions import MultipleObjectsReturned, PermissionDenied
 from django.db.utils import IntegrityError
 from django.db.models import Q, F, Value
 from django.db.models.functions import JSONObject
+from django.shortcuts import redirect
 from math import ceil
 
 from reference_data.models import GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38
@@ -621,3 +622,6 @@ def _update_lookup_variant(variant, response):
                 ],
             }
             variant['genotypes'][individual_guid] = genotype
+
+def search_results_redirect(request):
+    return redirect(request.get_full_path().replace('/report/custom_search', '/variant_search/results'), permanent=True)

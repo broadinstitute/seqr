@@ -1025,6 +1025,11 @@ class VariantSearchAPITest(object):
         response = self.client.get(delete_saved_search_url)
         self.assertEqual(response.status_code, 403)
 
+    def test_search_results_redirect(self):
+        response = self.client.get('/report/custom_search/6ebb895dfca0f63c34be1ca59d950205?page=2&sort=cadd')
+        self.assertEqual(response.status_code, 301)
+        self.assertEqual(response.url, '/variant_search/results/6ebb895dfca0f63c34be1ca59d950205?page=2&sort=cadd')
+
 
 # Tests for AnVIL access disabled
 class LocalVariantSearchAPITest(AuthenticationTestCase, VariantSearchAPITest):
