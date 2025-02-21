@@ -240,6 +240,27 @@ const ANNOTATION_PANEL = {
   helpText: 'Filter by reported annotation. Variants will be returned if they have ANY of the specified annotations, including if they have a Splice AI score above the threshold and no other annotations. This filter is overridden by the pathogenicity filter, so variants will be returned if they have the specified pathogenicity even if none of the annotation filters match.',
 }
 
+const ANNOTATION_SECONDARY_NAME = 'annotations_secondary'
+const ANNOTATION_SECONDARY_PANEL = {
+  ...ANNOTATION_PANEL,
+  headerProps: { ...ANNOTATION_PANEL.headerProps, title: 'Annotations (Second Hit)' },
+  name: ANNOTATION_SECONDARY_NAME,
+  helpText: (
+    <span>
+      Apply a secondary annotation filter to compound heterozygous pairs. All pairs of variants will include exactly one
+      variant that matches the above annotation filter and one variant that matches this secondary annotation filter.
+      <br />
+      For recessive searches, homozygous and X-linked recessive variants will be filtered using the above main
+      annotations filter.
+    </span>
+  ),
+  fieldLayoutInput: [...ALL_CODING_IMPACT_GROUPS, SV_GROUPS_NO_NEW],
+  datasetTypeFieldLayoutInput: {
+    [DATASET_TYPE_SNV_INDEL_CALLS]: ALL_CODING_IMPACT_GROUPS,
+    [DATASET_TYPE_VARIANT_MITO]: ALL_CODING_IMPACT_GROUPS,
+  },
+}
+
 const FREQUENCY_PANEL = {
   name: 'freqs',
   headerProps: {
@@ -430,27 +451,6 @@ const LOCATION_PANEL_WITH_GENE_LIST = {
     name: 'locus',
     inputSize: 5,
     inputProps: { component: LocusListSelector, format: val => val || {} },
-  },
-}
-
-const ANNOTATION_SECONDARY_NAME = 'annotations_secondary'
-const ANNOTATION_SECONDARY_PANEL = {
-  ...ANNOTATION_PANEL,
-  headerProps: { ...ANNOTATION_PANEL.headerProps, title: 'Annotations (Second Hit)' },
-  name: ANNOTATION_SECONDARY_NAME,
-  helpText: (
-    <span>
-      Apply a secondary annotation filter to compound heterozygous pairs. All pairs of variants will include exactly one
-      variant that matches the above annotation filter and one variant that matches this secondary annotation filter.
-      <br />
-      For recessive searches, homozygous and X-linked recessive variants will be filtered using the above main
-      annotations filter.
-    </span>
-  ),
-  fieldLayoutInput: [...ALL_CODING_IMPACT_GROUPS, SV_GROUPS_NO_NEW],
-  datasetTypeFieldLayoutInput: {
-    [DATASET_TYPE_SNV_INDEL_CALLS]: ALL_CODING_IMPACT_GROUPS,
-    [DATASET_TYPE_VARIANT_MITO]: ALL_CODING_IMPACT_GROUPS,
   },
 }
 
