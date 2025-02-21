@@ -79,13 +79,16 @@ class SvHailTableQuery(BaseHailTableQuery):
         families_ht, comp_het_families_ht = self._import_families_tables(*args, **kwargs)
 
         if comp_het_families_ht is not None:
-            self._comp_het_ht = comp_het_families_ht.annotate(**ht[comp_het_families_ht.key])
+            self._comp_het_ht = self._annotate_families_table_annotations(comp_het_families_ht, ht, is_comp_het=True)
             self._comp_het_ht = self._filter_compound_hets()
 
         if families_ht is not None:
-            self._ht = families_ht.annotate(**ht[families_ht.key])
+            self._ht = self._annotate_families_table_annotations(families_ht, ht)
             if self._has_secondary_annotations:
                 self._ht = self._ht.filter(hl.any(self._get_annotation_filters(self._ht)))
+
+    def _annotate_families_table_annotations(self, families_ht, annotations_ht, is_comp_het=False):
+        return families_ht.annotate(**annotations_ht[families_ht.key])
 
     def _filter_annotated_table(self, ht, *args, parsed_intervals=None, exclude_intervals=False, padded_interval=None, gene_ids=None, **kwargs):
         if parsed_intervals and len(parsed_intervals) != len(gene_ids or []):
