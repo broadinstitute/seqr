@@ -1,14 +1,7 @@
-import React from 'react'
 import { Form } from 'semantic-ui-react'
 import styled from 'styled-components'
 
-import { RadioGroup, AlignedBooleanCheckbox, Select, InlineToggle } from 'shared/components/form/Inputs'
-import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
-import {
-  ORDERED_PREDICTOR_FIELDS,
-  SPLICE_AI_FIELD,
-  predictorColorRanges,
-} from 'shared/utils/constants'
+import { RadioGroup, InlineToggle } from 'shared/components/form/Inputs'
 
 export const THIS_CALLSET_FREQUENCY = 'callset'
 export const SV_CALLSET_FREQUENCY = 'sv_callset'
@@ -67,53 +60,6 @@ export const SV_FREQUENCIES = [
 ]
 
 export const FREQUENCIES = [...SNP_FREQUENCIES, ...MITO_FREQUENCIES, ...SV_FREQUENCIES]
-
-const REQUIRE_SCORE_FIELD = {
-  name: 'requireScore',
-  component: AlignedBooleanCheckbox,
-  label: 'Require Filtered Predictor',
-  labelHelp: 'Only return variants where at least one filtered predictor is present. By default, variants are returned if a predictor meets the filtered value or is missing entirely',
-}
-export const IN_SILICO_FIELDS = [
-  REQUIRE_SCORE_FIELD,
-  ...ORDERED_PREDICTOR_FIELDS.filter(({ displayOnly }) => !displayOnly).map(
-    ({ field, fieldTitle, thresholds, reverseThresholds, indicatorMap, group, min, max, requiresCitation }) => {
-      const label = fieldTitle || snakecaseToTitlecase(field)
-      const filterField = { name: field, label, group }
-
-      if (indicatorMap) {
-        return {
-          labelHelp: `Select a value for ${label}`,
-          component: Select,
-          options: [
-            { text: '', value: null },
-            ...Object.entries(indicatorMap).map(([val, { value, ...opt }]) => ({ value: val, text: value, ...opt })),
-          ],
-          ...filterField,
-        }
-      }
-
-      const labelHelp = (
-        <div>
-          {`Enter a numeric cutoff for ${label}`}
-          {thresholds && predictorColorRanges(thresholds, requiresCitation, reverseThresholds)}
-        </div>
-      )
-      return {
-        labelHelp,
-        control: Form.Input,
-        type: 'number',
-        min: min || 0,
-        max: max || 1,
-        step: max ? 1 : 0.05,
-        ...filterField,
-      }
-    },
-  )]
-export const IN_SILICO_SPLICING_FIELD = IN_SILICO_FIELDS.find(({ name }) => name === SPLICE_AI_FIELD)
-export const IN_SILICO_GROUP_INDEX_MAP = IN_SILICO_FIELDS.reduce(
-  (acc, { group }, i) => ({ ...acc, [group]: [...(acc[group] || []), i] }), {},
-)
 
 export const SNP_QUALITY_FILTER_FIELDS = [
   {

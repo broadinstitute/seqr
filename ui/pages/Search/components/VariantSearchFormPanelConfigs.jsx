@@ -6,7 +6,7 @@ import { ButtonLink } from 'shared/components/StyledComponents'
 import { CreateLocusListButton } from 'shared/components/buttons/LocusListButtons'
 import { Select, AlignedCheckboxGroup, AlignedBooleanCheckbox } from 'shared/components/form/Inputs'
 import Modal from 'shared/components/modal/Modal'
-import { camelcaseToTitlecase } from 'shared/utils/stringUtils'
+import { snakecaseToTitlecase, camelcaseToTitlecase } from 'shared/utils/stringUtils'
 import {
   SV_IN_SILICO_GROUP,
   NO_SV_IN_SILICO_GROUPS,
@@ -16,16 +16,16 @@ import {
   DATASET_TYPE_MITO_CALLS,
   LOCUS_LIST_ITEMS_FIELD,
   PANEL_APP_CONFIDENCE_LEVELS,
+  ORDERED_PREDICTOR_FIELDS,
+  SPLICE_AI_FIELD,
+  predictorColorRanges,
 } from 'shared/utils/constants'
 
 import {
   FREQUENCIES,
-  IN_SILICO_FIELDS,
   QUALITY_FILTER_FIELDS,
   QUALITY_FILTER_OPTIONS,
   ALL_QUALITY_FILTER,
-  IN_SILICO_GROUP_INDEX_MAP,
-  IN_SILICO_SPLICING_FIELD,
   SNP_FREQUENCIES, SNP_QUALITY_FILTER_FIELDS,
   MITO_FREQUENCIES, MITO_QUALITY_FILTER_FIELDS, SV_FREQUENCIES, SV_QUALITY_FILTER_FIELDS,
 } from 'shared/components/panel/search/constants'
@@ -75,7 +75,7 @@ const DetailLink = props => <BaseDetailLink {...props} />
 
 const LazyLabeledSlider = props => <React.Suspense fallback={<Loader />}><LabeledSlider {...props} /></React.Suspense>
 
-export const JsonSelectPropsWithAll = (options, all) => ({
+const JsonSelectPropsWithAll = (options, all) => ({
   component: Select,
   format: val => JSON.stringify(val) || JSON.stringify(all.value),
   parse: val => JSON.parse(val),
@@ -98,6 +98,54 @@ const PATHOGENICITY_PANEL = {
 }
 export const HGMD_HEADER_INPUT_PROPS = JsonSelectPropsWithAll(
   HGMD_PATHOGENICITY_FILTER_OPTIONS, ANY_PATHOGENICITY_FILTER,
+)
+
+const REQUIRE_SCORE_FIELD = {
+  name: 'requireScore',
+  component: AlignedBooleanCheckbox,
+  label: 'Require Filtered Predictor',
+  labelHelp: 'Only return variants where at least one filtered predictor is present. By default, variants are returned if a predictor meets the filtered value or is missing entirely',
+}
+
+const IN_SILICO_FIELDS = [
+  REQUIRE_SCORE_FIELD,
+  ...ORDERED_PREDICTOR_FIELDS.filter(({ displayOnly }) => !displayOnly).map(
+    ({ field, fieldTitle, thresholds, reverseThresholds, indicatorMap, group, min, max, requiresCitation }) => {
+      const label = fieldTitle || snakecaseToTitlecase(field)
+      const filterField = { name: field, label, group }
+
+      if (indicatorMap) {
+        return {
+          labelHelp: `Select a value for ${label}`,
+          component: Select,
+          options: [
+            { text: '', value: null },
+            ...Object.entries(indicatorMap).map(([val, { value, ...opt }]) => ({ value: val, text: value, ...opt })),
+          ],
+          ...filterField,
+        }
+      }
+
+      const labelHelp = (
+        <div>
+          {`Enter a numeric cutoff for ${label}`}
+          {thresholds && predictorColorRanges(thresholds, requiresCitation, reverseThresholds)}
+        </div>
+      )
+      return {
+        labelHelp,
+        control: Form.Input,
+        type: 'number',
+        min: min || 0,
+        max: max || 1,
+        step: max ? 1 : 0.05,
+        ...filterField,
+      }
+    },
+  )]
+const IN_SILICO_SPLICING_FIELD = IN_SILICO_FIELDS.find(({ name }) => name === SPLICE_AI_FIELD)
+const IN_SILICO_GROUP_INDEX_MAP = IN_SILICO_FIELDS.reduce(
+  (acc, { group }, i) => ({ ...acc, [group]: [...(acc[group] || []), i] }), {},
 )
 
 const inSilicoFieldLayout = ([requireComponent, ...fieldComponents], groups) => (
