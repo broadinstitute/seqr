@@ -362,3 +362,6 @@ export const ALL_ANNOTATION_FILTER_DETAILS =
       { ...acc, [group]: GROUPED_VEP_CONSEQUENCES[group].map(({ value }) => value) }
     ), {}),
   }))[0]
+
+export const LOCUS_FIELD_NAME = 'locus'
+export const PANEL_APP_FIELD_NAME = 'panelAppItems'

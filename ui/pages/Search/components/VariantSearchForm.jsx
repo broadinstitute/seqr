@@ -11,10 +11,10 @@ import { toUniqueCsvString } from 'shared/utils/stringUtils'
 import { LOCUS_LIST_ITEMS_FIELD } from 'shared/utils/constants'
 
 import SearchDisplayForm from 'shared/components/panel/search/SearchDisplayForm'
-import { LOCUS_FIELD_NAME, PANEL_APP_FIELD_NAME } from 'shared/components/panel/search/constants'
 
 import { SaveSearchButton } from './SavedSearch'
 import VariantSearchFormContent from './VariantSearchFormContent'
+import { LOCUS_FIELD_NAME, PANEL_APP_FIELD_NAME } from '../constants'
 import { getIntitialSearch, getMultiProjectFamilies } from '../selectors'
 
 const DECORATORS = [

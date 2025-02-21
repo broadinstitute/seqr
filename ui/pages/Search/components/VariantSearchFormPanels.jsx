@@ -6,10 +6,12 @@ import { Form, Accordion, Header, Segment, Grid, Icon, Loader, Table, List } fro
 
 import { getElasticsearchEnabled } from 'redux/selectors'
 import { ButtonLink } from 'shared/components/StyledComponents'
+import { CreateLocusListButton } from 'shared/components/buttons/LocusListButtons'
 import { configuredField, configuredFields } from 'shared/components/form/FormHelpers'
-import { Select, AlignedCheckboxGroup } from 'shared/components/form/Inputs'
+import { Select, AlignedCheckboxGroup, AlignedBooleanCheckbox } from 'shared/components/form/Inputs'
 import Modal from 'shared/components/modal/Modal'
 import { VerticalSpacer } from 'shared/components/Spacers'
+import { camelcaseToTitlecase } from 'shared/utils/stringUtils'
 import {
   SV_IN_SILICO_GROUP,
   NO_SV_IN_SILICO_GROUPS,
@@ -17,6 +19,8 @@ import {
   DATASET_TYPE_SNV_INDEL_CALLS,
   DATASET_TYPE_SV_CALLS,
   DATASET_TYPE_MITO_CALLS,
+  LOCUS_LIST_ITEMS_FIELD,
+  PANEL_APP_CONFIDENCE_LEVELS,
 } from 'shared/utils/constants'
 
 import {
@@ -25,8 +29,6 @@ import {
   QUALITY_FILTER_FIELDS,
   QUALITY_FILTER_OPTIONS,
   ALL_QUALITY_FILTER,
-  LOCATION_FIELDS,
-  LOCUS_FIELD_NAME,
   IN_SILICO_GROUP_INDEX_MAP,
   IN_SILICO_SPLICING_FIELD,
   SNP_FREQUENCIES, SNP_QUALITY_FILTER_FIELDS,
@@ -51,9 +53,14 @@ import {
   SV_GROUPS_NO_NEW,
   VARIANT_ANNOTATION_LAYOUT_GROUPS,
   ANNOTATION_GROUPS,
+  LOCUS_FIELD_NAME,
+  PANEL_APP_FIELD_NAME,
 } from '../constants'
 import { getDatasetTypes, getHasHgmdPermission } from '../selectors'
 import LocusListSelector from './filters/LocusListSelector'
+import LocusListItemsFilter from './filters/LocusListItemsFilter'
+import PaMoiSelector from './filters/PaMoiSelector'
+import PaLocusListSelector from './filters/PaLocusListSelector'
 import CustomInheritanceFilter from './filters/CustomInheritanceFilter'
 import { FrequencyFilter, HeaderFrequencyFilter } from './filters/FrequencyFilter'
 
@@ -257,6 +264,72 @@ const FREQUENCY_PANEL = {
   fieldLayout: freqFieldLayout,
   helpText: 'Filter by allele frequency (popmax AF where available) or by allele count (AC). In applicable populations, also filter by homozygous/hemizygous count (H/H).',
 }
+
+const VARIANT_FIELD_NAME = 'rawVariantItems'
+const SELECTED_MOIS_FIELD_NAME = 'selectedMOIs'
+const PANEL_APP_COLORS = [...new Set(
+  Object.entries(PANEL_APP_CONFIDENCE_LEVELS).sort((a, b) => b[0] - a[0]).map(config => config[1]),
+)]
+const LOCATION_FIELDS = [
+  {
+    name: LOCUS_LIST_ITEMS_FIELD.name,
+    label: LOCUS_LIST_ITEMS_FIELD.label,
+    labelHelp: LOCUS_LIST_ITEMS_FIELD.labelHelp,
+    component: LocusListItemsFilter,
+    width: 9,
+    shouldShow: locus => !locus[PANEL_APP_FIELD_NAME],
+    shouldDisable: locus => !!locus[VARIANT_FIELD_NAME],
+  },
+  ...PANEL_APP_COLORS.map(color => ({
+    key: color,
+    name: `${PANEL_APP_FIELD_NAME}.${color}`,
+    iconColor: color,
+    label: color === 'none' ? 'Genes' : `${camelcaseToTitlecase(color)} Genes`,
+    labelHelp: 'A list of genes, can be separated by commas or whitespace',
+    component: LocusListItemsFilter,
+    filterComponent: PaLocusListSelector,
+    width: 3,
+    shouldShow: locus => !!locus[PANEL_APP_FIELD_NAME],
+    shouldDisable: locus => !!locus[VARIANT_FIELD_NAME],
+    color,
+  })),
+  {
+    name: VARIANT_FIELD_NAME,
+    label: 'Variants',
+    labelHelp: 'A list of variants. Can be separated by commas or whitespace. Variants can be represented by rsID or in the form <chrom>-<pos>-<ref>-<alt>',
+    component: LocusListItemsFilter,
+    width: 4,
+    shouldDisable: locus => !!locus[LOCUS_LIST_ITEMS_FIELD.name] || !!locus[PANEL_APP_FIELD_NAME],
+  },
+  {
+    name: SELECTED_MOIS_FIELD_NAME,
+    label: 'Modes of Inheritance',
+    labelHelp: 'Filter the Gene List based on Modes of Inheritance from Panel App',
+    component: LocusListItemsFilter,
+    filterComponent: PaMoiSelector,
+    width: 6,
+    shouldDisable: locus => !!locus[VARIANT_FIELD_NAME],
+    shouldShow: locus => !!locus[PANEL_APP_FIELD_NAME],
+  },
+  {
+    name: 'create',
+    fullFieldValue: true,
+    component: LocusListItemsFilter,
+    control: CreateLocusListButton,
+    width: 4,
+    shouldShow: locus => !locus[PANEL_APP_FIELD_NAME],
+    shouldDisable: locus => !locus[LOCUS_LIST_ITEMS_FIELD.name],
+  },
+  {
+    name: 'excludeLocations',
+    component: LocusListItemsFilter,
+    filterComponent: AlignedBooleanCheckbox,
+    label: 'Exclude locations',
+    labelHelp: 'Search for variants not in the specified genes/ intervals',
+    width: 10,
+    shouldDisable: locus => !!locus[VARIANT_FIELD_NAME],
+  },
+]
 
 const LOCATION_PANEL = {
   name: LOCUS_FIELD_NAME,
