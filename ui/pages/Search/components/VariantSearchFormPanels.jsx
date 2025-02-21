@@ -11,31 +11,24 @@ import { Select, AlignedCheckboxGroup } from 'shared/components/form/Inputs'
 import Modal from 'shared/components/modal/Modal'
 import { VerticalSpacer } from 'shared/components/Spacers'
 import {
-  SPLICE_AI_FIELD,
   SV_IN_SILICO_GROUP,
   NO_SV_IN_SILICO_GROUPS,
   ALL_INHERITANCE_FILTER,
   DATASET_TYPE_SNV_INDEL_CALLS,
   DATASET_TYPE_SV_CALLS,
-  VEP_GROUP_SV_NEW,
   DATASET_TYPE_MITO_CALLS,
 } from 'shared/utils/constants'
 
 import {
   FREQUENCIES,
   IN_SILICO_FIELDS,
-  ANNOTATION_GROUPS,
-  ANNOTATION_FILTER_OPTIONS,
-  ALL_ANNOTATION_FILTER_DETAILS,
   QUALITY_FILTER_FIELDS,
   QUALITY_FILTER_OPTIONS,
   ALL_QUALITY_FILTER,
   LOCATION_FIELDS,
-  CODING_OTHER_IMPACT_GROUPS,
-  HIGH_MODERATE_IMPACT_GROUPS,
-  ANNOTATION_OVERRIDE_GROUPS,
-  SV_GROUPS,
   LOCUS_FIELD_NAME,
+  IN_SILICO_GROUP_INDEX_MAP,
+  IN_SILICO_SPLICING_FIELD,
   SNP_FREQUENCIES, SNP_QUALITY_FILTER_FIELDS,
   MITO_FREQUENCIES, MITO_QUALITY_FILTER_FIELDS, SV_FREQUENCIES, SV_QUALITY_FILTER_FIELDS,
 } from 'shared/components/panel/search/constants'
@@ -51,6 +44,13 @@ import {
   ANY_PATHOGENICITY_FILTER,
   PATHOGENICITY_FIELDS,
   PATHOGENICITY_FILTER_OPTIONS,
+  ANNOTATION_FILTER_OPTIONS,
+  ALL_ANNOTATION_FILTER_DETAILS,
+  ALL_CODING_IMPACT_GROUPS,
+  SV_GROUPS,
+  SV_GROUPS_NO_NEW,
+  VARIANT_ANNOTATION_LAYOUT_GROUPS,
+  ANNOTATION_GROUPS,
 } from '../constants'
 import { getDatasetTypes, getHasHgmdPermission } from '../selectors'
 import LocusListSelector from './filters/LocusListSelector'
@@ -154,14 +154,6 @@ const PATHOGENICITY_PANEL = {
 }
 const HGMD_HEADER_INPUT_PROPS = JsonSelectPropsWithAll(HGMD_PATHOGENICITY_FILTER_OPTIONS, ANY_PATHOGENICITY_FILTER)
 
-const IN_SILICO_SPLICING_FIELD = IN_SILICO_FIELDS.find(({ name }) => name === SPLICE_AI_FIELD)
-const IN_SILICO_GROUP_INDEX_MAP = IN_SILICO_FIELDS.reduce(
-  (acc, { group }, i) => ({ ...acc, [group]: [...(acc[group] || []), i] }), {},
-)
-
-const ANNOTATION_GROUPS_SPLICE = [...ANNOTATION_GROUPS, IN_SILICO_SPLICING_FIELD]
-const ANNOTATION_GROUP_INDEX_MAP = ANNOTATION_GROUPS_SPLICE.reduce((acc, { name }, i) => ({ ...acc, [name]: i }), {})
-
 const inSilicoFieldLayout = ([requireComponent, ...fieldComponents], groups) => (
   <Form.Field>
     <Grid divided="vertically">
@@ -185,6 +177,9 @@ const inSilicoFieldLayout = ([requireComponent, ...fieldComponents], groups) => 
     </Grid>
   </Form.Field>
 )
+
+const ANNOTATION_GROUPS_SPLICE = [...ANNOTATION_GROUPS, IN_SILICO_SPLICING_FIELD]
+const ANNOTATION_GROUP_INDEX_MAP = ANNOTATION_GROUPS_SPLICE.reduce((acc, { name }, i) => ({ ...acc, [name]: i }), {})
 
 const annotationColSpan = ({ maxOptionsPerColumn, options = [] }) => Math.ceil(options.length / maxOptionsPerColumn)
 
@@ -223,9 +218,6 @@ const freqFieldLayout = fieldComponents => (
   </Form.Field>
 )
 
-const VARIANT_ANNOTATION_LAYOUT_GROUPS = [
-  HIGH_MODERATE_IMPACT_GROUPS, CODING_OTHER_IMPACT_GROUPS, ANNOTATION_OVERRIDE_GROUPS,
-]
 const ANNOTATION_PANEL = {
   name: 'annotations',
   headerProps: { title: 'Annotations', inputProps: JsonSelectPropsWithAll(ANNOTATION_FILTER_OPTIONS, ALL_ANNOTATION_FILTER_DETAILS) },
@@ -369,7 +361,6 @@ const LOCATION_PANEL_WITH_GENE_LIST = {
 }
 
 const ANNOTATION_SECONDARY_NAME = 'annotations_secondary'
-const SV_GROUPS_NO_NEW = SV_GROUPS.filter(name => name !== VEP_GROUP_SV_NEW)
 const ANNOTATION_SECONDARY_PANEL = {
   ...ANNOTATION_PANEL,
   headerProps: { ...ANNOTATION_PANEL.headerProps, title: 'Annotations (Second Hit)' },
@@ -383,10 +374,10 @@ const ANNOTATION_SECONDARY_PANEL = {
       annotations filter.
     </span>
   ),
-  fieldLayoutInput: [HIGH_MODERATE_IMPACT_GROUPS, CODING_OTHER_IMPACT_GROUPS, SV_GROUPS_NO_NEW],
+  fieldLayoutInput: [...ALL_CODING_IMPACT_GROUPS, SV_GROUPS_NO_NEW],
   datasetTypeFieldLayoutInput: {
-    [DATASET_TYPE_SNV_INDEL_CALLS]: [HIGH_MODERATE_IMPACT_GROUPS, CODING_OTHER_IMPACT_GROUPS],
-    [DATASET_TYPE_VARIANT_MITO]: [HIGH_MODERATE_IMPACT_GROUPS, CODING_OTHER_IMPACT_GROUPS],
+    [DATASET_TYPE_SNV_INDEL_CALLS]: ALL_CODING_IMPACT_GROUPS,
+    [DATASET_TYPE_VARIANT_MITO]: ALL_CODING_IMPACT_GROUPS,
   },
 }
 
