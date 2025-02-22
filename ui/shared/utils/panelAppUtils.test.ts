@@ -55,15 +55,15 @@ describe('Test moiToMoiInitials()', () => {
 })
 
 const panelAppData = [{
-  url: 'https://panelapp.agha.umccr.org/api/v1/panels/40/genes',
+  url: 'https://panelapp-aus.org/api/v1/panels/40/genes',
   panel: 40,
   gene: 'SLC2A1',
-  result: 'https://panelapp.agha.umccr.org/panels/40/gene/SLC2A1',
+  result: 'https://panelapp-aus.org/panels/40/gene/SLC2A1',
 }, {
-  url: 'https://panelapp.agha.umccr.org/api/v1/panels/40/genes',
+  url: 'https://panelapp-aus.org/api/v1/panels/40/genes',
   panel: 40,
   gene: 'SLC1A3',
-  result: 'https://panelapp.agha.umccr.org/panels/40/gene/SLC1A3',
+  result: 'https://panelapp-aus.org/panels/40/gene/SLC1A3',
 }, {
   url: 'https://panelapp.genomicsengland.co.uk/api/v1',
   panel: 486,
