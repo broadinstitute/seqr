@@ -10,8 +10,7 @@ import FormWrapper from 'shared/components/form/FormWrapper'
 import { toUniqueCsvString } from 'shared/utils/stringUtils'
 import { LOCUS_LIST_ITEMS_FIELD } from 'shared/utils/constants'
 
-import SearchDisplayForm from 'shared/components/panel/search/SearchDisplayForm'
-
+import SearchDisplayForm from './SearchDisplayForm'
 import { SaveSearchButton } from './SavedSearch'
 import VariantSearchFormContent from './VariantSearchFormContent'
 import { LOCUS_FIELD_NAME, PANEL_APP_FIELD_NAME } from '../constants'

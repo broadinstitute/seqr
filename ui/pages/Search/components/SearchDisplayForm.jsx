@@ -7,8 +7,8 @@ import {
   getTotalVariantsCount,
   getVariantSearchDisplay,
 } from 'redux/selectors'
-import { VARIANT_SEARCH_SORT_FIELD, VARIANT_PAGINATION_FIELD } from '../../../utils/constants'
-import FormWrapper from '../../form/FormWrapper'
+import { VARIANT_SEARCH_SORT_FIELD, VARIANT_PAGINATION_FIELD } from 'shared/utils/constants'
+import FormWrapper from 'shared/components/form/FormWrapper'
 
 const FIELDS = [
   VARIANT_SEARCH_SORT_FIELD,
