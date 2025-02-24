@@ -470,3 +470,5 @@ class Command(BaseCommand):
 
 
 reload_shared_variant_annotations = Command._reload_shared_variant_annotations
+update_individuals_sample_qc = Command._update_individuals_sample_qc
+get_pipeline_runs = Command._get_runs
