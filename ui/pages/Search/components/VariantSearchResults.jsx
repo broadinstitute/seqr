@@ -16,11 +16,19 @@ import DataLoader from 'shared/components/DataLoader'
 import { QueryParamsEditor } from 'shared/components/QueryParamEditor'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 import ExportTableButton from 'shared/components/buttons/ExportTableButton'
+import { InlineToggle } from 'shared/components/form/Inputs'
+import { helpLabel, StyledForm } from 'shared/components/form/FormHelpers'
 import Variants from 'shared/components/panel/variants/Variants'
 import GeneBreakdown from './GeneBreakdown'
 import SearchDisplayForm from './SearchDisplayForm'
-import { loadSingleSearchedVariant } from '../reducers'
-import { getSearchContextIsLoading, getDisplayVariants } from '../selectors'
+import { loadProjectFamiliesContext, loadSingleSearchedVariant, updateCompoundHetDisplay } from '../reducers'
+import {
+  getSearchContextIsLoading,
+  getDisplayVariants,
+  getInhertanceFilterMode,
+  getFlattenCompoundHet,
+} from '../selectors'
+import { ALL_RECESSIVE_INHERITANCE_FILTERS } from '../constants'
 
 const LargeRow = styled(Grid.Row)`
   font-size: 1.15em;
@@ -45,13 +53,28 @@ DisplayVariants.propTypes = {
   compoundHetToggle: PropTypes.func,
 }
 
+const compHetToggleLabel = helpLabel('Unpair', 'Display individual variants instead of pairs for compound heterozygous mutations')
+
+const getCompoundHetToggle = (flattenCompoundHet, toggleUnpair) => geneId => (
+  <StyledForm inline hasSubmitButton={false}>
+    <InlineToggle
+      name={geneId}
+      value={flattenCompoundHet[geneId]}
+      label={compHetToggleLabel}
+      onChange={toggleUnpair(geneId)}
+      padded
+    />
+  </StyledForm>
+)
+
 const BaseVariantSearchResultsContent = React.memo(({
-  match, variantSearchDisplay, searchedVariantExportConfig, totalVariantsCount, additionalDisplayEdit,
-  displayVariants, compoundHetToggle, ...props
+  match, variantSearchDisplay, searchedVariantExportConfig, totalVariantsCount,
+  displayVariants, flattenCompoundHet, toggleUnpair, hasCompHet, ...props
 }) => {
   const { searchHash } = match.params
   const { page = 1, recordsPerPage } = variantSearchDisplay
   const variantDisplayPageOffset = (page - 1) * recordsPerPage
+  const compoundHetToggle = hasCompHet && getCompoundHetToggle(flattenCompoundHet, toggleUnpair)
 
   return [
     <LargeRow key="resultsSummary">
@@ -61,7 +84,7 @@ const BaseVariantSearchResultsContent = React.memo(({
         &nbsp; variants
       </Grid.Column>
       <Grid.Column width={11} floated="right" textAlign="right">
-        {additionalDisplayEdit}
+        {compoundHetToggle && compoundHetToggle('all')}
         <SearchDisplayForm formLocation="Top" match={match} searchOnSubmit {...props} />
         <HorizontalSpacer width={10} />
         {searchedVariantExportConfig && <ExportTableButton downloads={searchedVariantExportConfig} buttonText="Download" disabled={totalVariantsCount > 1000} />}
@@ -87,8 +110,9 @@ BaseVariantSearchResultsContent.propTypes = {
   searchedVariantExportConfig: PropTypes.arrayOf(PropTypes.object),
   totalVariantsCount: PropTypes.number,
   displayVariants: PropTypes.arrayOf(PropTypes.object),
-  additionalDisplayEdit: PropTypes.node,
-  compoundHetToggle: PropTypes.func,
+  hasCompHet: PropTypes.bool,
+  flattenCompoundHet: PropTypes.object,
+  toggleUnpair: PropTypes.func,
 }
 
 const mapContentStateToProps = (state, ownProps) => ({
@@ -97,6 +121,8 @@ const mapContentStateToProps = (state, ownProps) => ({
   searchedVariantExportConfig: getSearchedVariantExportConfig(state, ownProps),
   totalVariantsCount: getTotalVariantsCount(state, ownProps),
   errorMessage: getSearchedVariantsErrorMessage(state),
+  hasCompHet: ALL_RECESSIVE_INHERITANCE_FILTERS.includes(getInhertanceFilterMode(state, ownProps)),
+  flattenCompoundHet: getFlattenCompoundHet(state),
 })
 
 const VariantSearchResultsContent = connect(mapContentStateToProps)(BaseVariantSearchResultsContent)
@@ -129,7 +155,7 @@ const BaseVariantSearchResults = React.memo(({
     loading={variantsLoading || contextLoading}
     load={load}
     unload={unload}
-    initialLoad={initialLoad}
+    initialLoad={!match.params.variantId && initialLoad}
     reloadOnIdUpdate
     errorMessage={errorMessage && <ErrorResults errorMessage={errorMessage} match={match} />}
   >
@@ -165,22 +191,20 @@ const mapDispatchToProps = (dispatch, ownProps) => ({
   unload: () => {
     dispatch(unloadSearchResults())
   },
+  initialLoad: (params) => {
+    dispatch(loadProjectFamiliesContext(params))
+  },
+  toggleUnpair: geneId => (updates) => {
+    dispatch(updateCompoundHetDisplay({ [geneId]: updates }))
+  },
 })
 
 const VariantSearchResults = connect(mapStateToProps, mapDispatchToProps)(BaseVariantSearchResults)
 
-const LoadedVariantSearchResults = React.memo((
-  { compoundHetToggle, ...props },
-) => (
+const LoadedVariantSearchResults = React.memo(props => (
   <QueryParamsEditor {...props}>
-    <VariantSearchResults
-      compoundHetToggle={compoundHetToggle}
-    />
+    <VariantSearchResults />
   </QueryParamsEditor>
 ))
-
-LoadedVariantSearchResults.propTypes = {
-  compoundHetToggle: PropTypes.func,
-}
 
 export default LoadedVariantSearchResults
