@@ -110,9 +110,10 @@ class Command(BaseCommand):
             except Exception as e:
                 logger.error(f'Error reloading shared annotations for {"/".join(data_type_key)}: {e}')
 
-    def _get_runs(self, **kwargs):
-        path = self._run_path(lambda field: kwargs.get(field, '*') or '*')
-        path_regex = self._run_path(lambda field: f'(?P<{field}>[^/]+)')
+    @classmethod
+    def _get_runs(cls, **kwargs):
+        path = cls._run_path(lambda field: kwargs.get(field, '*') or '*')
+        path_regex = cls._run_path(lambda field: f'(?P<{field}>[^/]+)')
 
         runs = defaultdict(lambda: {'files': set()})
         for path in list_files(path, user=None):
@@ -470,3 +471,5 @@ class Command(BaseCommand):
 
 
 reload_shared_variant_annotations = Command._reload_shared_variant_annotations
+update_individuals_sample_qc = Command._update_individuals_sample_qc
+get_pipeline_runs = Command._get_runs
