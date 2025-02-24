@@ -24,7 +24,7 @@ class Command(BaseCommand):
             self._raise_command_error(error_msg, options)
 
         run_dir, run_details = next(iter(runs.items()))
-        metadata_path = os.path.join(run_dir, run_details['files'][0])
+        metadata_path = os.path.join(run_dir, next(iter(run_details['files'])))
         metadata = json.loads(next(line for line in file_iter(metadata_path)))
 
         if 'sample_qc' not in metadata:
