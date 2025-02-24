@@ -106,6 +106,7 @@ const CenteredTable = styled(Table)`
   margin-left: auto !important;
   margin-right: auto !important;
 `
+
 const LazyLabeledSlider = props => <React.Suspense fallback={<Loader />}><LabeledSlider {...props} /></React.Suspense>
 
 const JsonSelectPropsWithAll = (options, all) => ({
