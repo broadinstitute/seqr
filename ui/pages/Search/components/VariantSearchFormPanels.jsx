@@ -117,7 +117,7 @@ const PanelContent = React.memo(({
 }) => {
   const layoutInput = (datasetTypeFieldLayoutInput || {})[datasetTypes] || fieldLayoutInput
   const panelFields = (datasetTypeFields || {})[datasetTypes] || fields
-  const fieldComponents = datasetTypeFields && configuredFields(
+  const fieldComponents = panelFields && configuredFields(
     { fields: panelFields.map(field => formatField(field, name, esEnabled, fieldProps || {})) },
   )
   return (
