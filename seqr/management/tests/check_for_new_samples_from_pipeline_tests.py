@@ -426,7 +426,7 @@ class CheckNewSamplesTest(object):
                 ('update 3 Familys', {'dbUpdate': mock.ANY}),
                 ('Reloading saved variants in 2 projects', None),
                 ('Updated 0 variants in 2 families for project Test Reprocessed Project', None),
-                ('update SavedVariant SV0000006_1248367227_r0004_non', {'dbUpdate': mock.ANY}),
+                ('update 1 SavedVariants', {'dbUpdate': mock.ANY}),
                 ('Updated 1 variants in 1 families for project Non-Analyst Project', None),
                 ('Reload Summary: ', None),
                 ('  Non-Analyst Project: Updated 1 variants', None),
