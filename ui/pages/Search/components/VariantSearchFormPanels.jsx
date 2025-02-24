@@ -6,10 +6,10 @@ import styled from 'styled-components'
 import { Form, Accordion, Header, Segment, Grid, Icon, Loader, Table } from 'semantic-ui-react'
 
 import { getElasticsearchEnabled } from 'redux/selectors'
+import { VerticalSpacer } from 'shared/components/Spacers'
 import { ButtonLink } from 'shared/components/StyledComponents'
 import { Select, AlignedCheckboxGroup } from 'shared/components/form/Inputs'
 import { configuredField, configuredFields } from 'shared/components/form/FormHelpers'
-import { VerticalSpacer } from 'shared/components/Spacers'
 import {
   FREQUENCIES,
   SNP_FREQUENCIES,
