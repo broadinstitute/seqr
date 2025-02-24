@@ -4,7 +4,7 @@ import { Form, Loader } from 'semantic-ui-react'
 
 import { VerticalSpacer } from 'shared/components/Spacers'
 import { IntegerInput, Select } from 'shared/components/form/Inputs'
-import { FREQUENCIES, THIS_CALLSET_FREQUENCY, SV_CALLSET_FREQUENCY } from 'shared/components/panel/search/constants'
+import { FREQUENCIES, THIS_CALLSET_FREQUENCY, SV_CALLSET_FREQUENCY } from 'shared/utils/constants'
 
 const LabeledSlider = React.lazy(() => import('./LabeledSlider'))
 

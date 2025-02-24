@@ -10,8 +10,18 @@ import { ButtonLink } from 'shared/components/StyledComponents'
 import { Select, AlignedCheckboxGroup } from 'shared/components/form/Inputs'
 import { configuredField, configuredFields } from 'shared/components/form/FormHelpers'
 import { VerticalSpacer } from 'shared/components/Spacers'
-import { SPLICE_AI_FIELD, SV_IN_SILICO_GROUP, NO_SV_IN_SILICO_GROUPS, DATASET_TYPE_SNV_INDEL_CALLS, DATASET_TYPE_SV_CALLS, DATASET_TYPE_MITO_CALLS } from 'shared/utils/constants'
-import { FREQUENCIES, SNP_FREQUENCIES, MITO_FREQUENCIES, SV_FREQUENCIES } from 'shared/components/panel/search/constants'
+import {
+  FREQUENCIES,
+  SNP_FREQUENCIES,
+  MITO_FREQUENCIES,
+  SV_FREQUENCIES,
+  SPLICE_AI_FIELD,
+  SV_IN_SILICO_GROUP,
+  NO_SV_IN_SILICO_GROUPS,
+  DATASET_TYPE_SNV_INDEL_CALLS,
+  DATASET_TYPE_SV_CALLS,
+  DATASET_TYPE_MITO_CALLS,
+} from 'shared/utils/constants'
 
 import { FrequencyFilter, HeaderFrequencyFilter } from './filters/FrequencyFilter'
 import LocusListSelector from './filters/LocusListSelector'
