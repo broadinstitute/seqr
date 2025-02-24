@@ -1,6 +1,5 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import { FormSpy } from 'react-final-form'
 import styled from 'styled-components'
 import { Header, Grid } from 'semantic-ui-react'
 
@@ -19,7 +18,7 @@ const SAVED_SEARCH_FIELD = {
   format: val => val || {},
 }
 
-const VariantSearchFormContent = React.memo(({ inheritance, noEditProjects }) => (
+const VariantSearchFormContent = React.memo(({ noEditProjects }) => (
   <div>
     {!noEditProjects && <ProjectFamiliesField />}
     <Header size="huge" block>
@@ -33,25 +32,12 @@ const VariantSearchFormContent = React.memo(({ inheritance, noEditProjects }) =>
       </Grid>
     </Header>
     <Header content="Customize Search:" />
-    <VariantSearchFormPanels inheritance={inheritance} />
+    <VariantSearchFormPanels />
   </div>
 ))
 
 VariantSearchFormContent.propTypes = {
-  inheritance: PropTypes.object,
   noEditProjects: PropTypes.bool,
 }
 
-const SUBSCRIPTION = { values: true }
-
-export default props => (
-  <FormSpy subscription={SUBSCRIPTION}>
-    {({ values }) => (
-      <VariantSearchFormContent
-        {...props}
-        projectFamilies={values.projectFamilies}
-        inheritance={values.search?.inheritance}
-      />
-    )}
-  </FormSpy>
-)
+export default VariantSearchFormContent

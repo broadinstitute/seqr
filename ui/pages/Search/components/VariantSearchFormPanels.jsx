@@ -1,6 +1,7 @@
 import React from 'react'
 import { connect } from 'react-redux'
 import PropTypes from 'prop-types'
+import { FormSpy } from 'react-final-form'
 import styled from 'styled-components'
 import { Form, Accordion, Header, Segment, Grid, Icon } from 'semantic-ui-react'
 
@@ -255,4 +256,18 @@ const mapStateToProps = (state, ownProps) => ({
   esEnabled: getElasticsearchEnabled(state),
 })
 
-export default connect(mapStateToProps)(VariantSearchFormPanels)
+const ConnectedVariantSearchFormPanels = connect(mapStateToProps)(VariantSearchFormPanels)
+
+const SUBSCRIPTION = { values: true }
+
+export default props => (
+  <FormSpy subscription={SUBSCRIPTION}>
+    {({ values }) => (
+      <ConnectedVariantSearchFormPanels
+        {...props}
+        projectFamilies={values.projectFamilies}
+        inheritance={values.search?.inheritance}
+      />
+    )}
+  </FormSpy>
+)
