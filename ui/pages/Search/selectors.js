@@ -1,4 +1,5 @@
 import { createSelector, createSelectorCreator, defaultMemoize } from 'reselect'
+import uniqWith from 'lodash/uniqWith'
 
 import {
   getProjectsByGuid,
@@ -11,9 +12,11 @@ import {
   getUser,
   getProjectDatasetTypes,
   getSearchFamiliesByHash,
+  getSearchedVariants,
 } from 'redux/selectors'
 import { FAMILY_ANALYSIS_STATUS_LOOKUP } from 'shared/utils/constants'
 import { compareObjects } from 'shared/utils/sortUtils'
+import { compHetGene } from 'shared/components/panel/variants/VariantUtils'
 
 export const getSearchContextIsLoading = state => state.searchContextLoading.isLoading
 export const getMultiProjectSearchContextIsLoading = state => state.multiProjectSearchContextLoading.isLoading
@@ -191,4 +194,19 @@ export const getAnalysisGroupOptions = createSelector(
     ...(analysisGroupsGroupedByProjectGuid[projectGuid] || {}),
     ...(analysisGroupsGroupedByProjectGuid.null || {}),
   }).map(group => ({ value: group.analysisGroupGuid, text: group.name, icon: group.criteria ? 'sync' : null })),
+)
+
+export const getDisplayVariants = createSelector(
+  getFlattenCompoundHet,
+  getSearchedVariants,
+  (flattenCompoundHet, searchedVariants) => {
+    const shouldFlatten = Object.values(flattenCompoundHet || {}).some(val => val)
+    if (!shouldFlatten) {
+      return searchedVariants || []
+    }
+    const flattened = flattenCompoundHet.all ? searchedVariants.flat() : searchedVariants.reduce((acc, variant) => (
+      (Array.isArray(variant) && flattenCompoundHet[compHetGene(variant)]) ? [...acc, ...variant] : [...acc, variant]
+    ), [])
+    return uniqWith(flattened, (a, b) => !Array.isArray(a) && !Array.isArray(b) && a.variantId === b.variantId)
+  },
 )

@@ -1,7 +1,5 @@
 import { createSelector } from 'reselect'
-import uniqWith from 'lodash/uniqWith'
 
-import { compHetGene } from 'shared/components/panel/variants/VariantUtils'
 import { compareObjects } from 'shared/utils/sortUtils'
 import { NOTE_TAG_NAME, MME_TAG_NAME, FAMILY_FIELD_ANALYSED_BY, CATEGORY_FAMILY_FILTERS } from 'shared/utils/constants'
 
@@ -304,21 +302,6 @@ export const getCurrentSearchParams = createSelector(
 export const getTotalVariantsCount = createSelector(
   getCurrentSearchParams,
   searchParams => (searchParams || {}).totalResults,
-)
-
-export const getDisplayVariants = createSelector(
-  (state, ownProps) => ownProps.flattenCompoundHet,
-  getSearchedVariants,
-  (flattenCompoundHet, searchedVariants) => {
-    const shouldFlatten = Object.values(flattenCompoundHet || {}).some(val => val)
-    if (!shouldFlatten) {
-      return searchedVariants || []
-    }
-    const flattened = flattenCompoundHet.all ? searchedVariants.flat() : searchedVariants.reduce((acc, variant) => (
-      (Array.isArray(variant) && flattenCompoundHet[compHetGene(variant)]) ? [...acc, ...variant] : [...acc, variant]
-    ), [])
-    return uniqWith(flattened, (a, b) => !Array.isArray(a) && !Array.isArray(b) && a.variantId === b.variantId)
-  },
 )
 
 export const getSearchedVariantExportConfig = createSelector(

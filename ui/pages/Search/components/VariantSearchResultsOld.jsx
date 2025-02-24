@@ -28,15 +28,10 @@ const compoundHetToggle = (flattenCompoundHet, toggleUnpair) => geneId => (
 const BaseVariantSearchResults = React.memo((
   { inheritanceFilter, toggleUnpair, flattenCompoundHet, match, initialLoad, ...props },
 ) => {
-  const resultProps = {
-    loadVariants: loadSearchedVariants,
-    flattenCompoundHet,
-  }
+  const resultProps = {}
 
   const { variantId } = match.params
-  if (variantId) {
-    resultProps.loadVariants = loadSingleSearchedVariant
-  } else {
+  if (!variantId) {
     resultProps.initialLoad = initialLoad
   }
 
@@ -59,7 +54,6 @@ BaseVariantSearchResults.propTypes = {
 }
 
 const mapStateToProps = (state, ownProps) => ({
-  contextLoading: getSearchContextIsLoading(state),
   inheritanceFilter: getInhertanceFilterMode(state, ownProps),
   flattenCompoundHet: getFlattenCompoundHet(state),
 })

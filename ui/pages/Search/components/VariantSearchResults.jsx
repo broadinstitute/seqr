@@ -6,7 +6,6 @@ import styled from 'styled-components'
 
 import { loadSearchedVariants, unloadSearchResults } from 'redux/rootReducer'
 import {
-  getDisplayVariants,
   getSearchedVariantsIsLoading,
   getSearchedVariantsErrorMessage,
   getTotalVariantsCount,
@@ -20,6 +19,8 @@ import ExportTableButton from 'shared/components/buttons/ExportTableButton'
 import Variants from 'shared/components/panel/variants/Variants'
 import GeneBreakdown from './GeneBreakdown'
 import SearchDisplayForm from './SearchDisplayForm'
+import { loadSingleSearchedVariant } from '../reducers'
+import { getSearchContextIsLoading, getDisplayVariants } from '../selectors'
 
 const LargeRow = styled(Grid.Row)`
   font-size: 1.15em;
@@ -150,15 +151,16 @@ BaseVariantSearchResults.propTypes = {
   displayVariants: PropTypes.arrayOf(PropTypes.object),
 }
 
-const mapStateToProps = (state, ownProps) => ({
+const mapStateToProps = state => ({
   variantsLoading: getSearchedVariantsIsLoading(state),
+  contextLoading: getSearchContextIsLoading(state),
   errorMessage: getSearchedVariantsErrorMessage(state),
-  displayVariants: getDisplayVariants(state, ownProps),
+  displayVariants: getDisplayVariants(state),
 })
 
 const mapDispatchToProps = (dispatch, ownProps) => ({
   load: (params) => {
-    dispatch((ownProps.loadVariants || loadSearchedVariants)(params, ownProps))
+    dispatch((ownProps.match.params.variantId ? loadSingleSearchedVariant : loadSearchedVariants)(params, ownProps))
   },
   unload: () => {
     dispatch(unloadSearchResults())
@@ -168,18 +170,16 @@ const mapDispatchToProps = (dispatch, ownProps) => ({
 const VariantSearchResults = connect(mapStateToProps, mapDispatchToProps)(BaseVariantSearchResults)
 
 const LoadedVariantSearchResults = React.memo((
-  { flattenCompoundHet, compoundHetToggle, ...props },
+  { compoundHetToggle, ...props },
 ) => (
   <QueryParamsEditor {...props}>
     <VariantSearchResults
-      flattenCompoundHet={flattenCompoundHet}
       compoundHetToggle={compoundHetToggle}
     />
   </QueryParamsEditor>
 ))
 
 LoadedVariantSearchResults.propTypes = {
-  flattenCompoundHet: PropTypes.bool,
   compoundHetToggle: PropTypes.func,
 }
 
