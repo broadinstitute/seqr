@@ -30,6 +30,7 @@ ANNOTATION_OVERRIDE_FIELDS = [
 ALLOWED_TRANSCRIPTS = 'allowed_transcripts'
 ALLOWED_SECONDARY_TRANSCRIPTS = 'allowed_transcripts_secondary'
 HAS_ANNOTATION_OVERRIDE = 'has_annotation_override'
+FILTERED_GENE_TRANSCRIPTS = 'gene_transcripts'
 
 XPOS = 'xpos'
 

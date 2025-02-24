@@ -340,7 +340,7 @@ class CheckNewSamplesTest(object):
                     {'severity': 'ERROR', '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent'},
                 ))
         logs.append(('Reset 2 cached results', None))
-        logs += [(log, None) for log in reload_annotations_logs or []]
+        logs += reload_annotations_logs or []
         logs += [(log, None) for log in self.VALIDATION_LOGS]
         logs.append(('DONE', None))
         self.assert_json_logs(user=None, expected=logs)
@@ -441,8 +441,31 @@ class CheckNewSamplesTest(object):
                 {'individual_guid': 'I000017_na20889', 'family_guid': 'F000012_12', 'project_guid': 'R0003_test', 'affected': 'A', 'sample_id': 'NA20889', 'sample_type': 'WES'},
             ]}},
         ], reload_annotations_logs=[
-            'Reloading shared annotations for 3 SNV_INDEL GRCh38 saved variants (3 unique)', 'Updated 1 SNV_INDEL GRCh38 saved variants', 'Fetched 1 additional variants in chromosome 1', 'Fetched 1 additional variants in chromosome 1', 'Updated 1 SNV_INDEL GRCh38 saved variants in chromosome 1',
-            'Reloading shared annotations for 1 SV_WES GRCh38 saved variants (1 unique)', 'Fetched 1 additional variants in chromosome all', 'Updated 0 SV_WES GRCh38 saved variants in chromosome all',
+            ('Reloading shared annotations for 1 fetched SNV_INDEL GRCh38 saved variants', None),
+            ('update 1 SavedVariants', {'dbUpdate': {
+                'dbEntity': 'SavedVariant',
+                'entityIds': ['SV0000002_1248367227_r0390_100'],
+                'updateFields': ['saved_variant_json'],
+                'updateType': 'bulk_update'},
+            }),
+            ('Reloading shared annotations for 2 SNV_INDEL GRCh38 saved variants in chromosome 1 (2 unique)', None),
+            ('Fetched 1 additional variants in chromosome 1', None),
+            ('update 1 SavedVariants', {'dbUpdate': {
+                'dbEntity': 'SavedVariant',
+                'entityIds': ['SV0059956_11560662_f019313_1'],
+                'updateFields': ['saved_variant_json'],
+                'updateType': 'bulk_update'},
+            }),
+            ('Fetched 1 additional variants in chromosome 1', None),
+            ('update 1 SavedVariants', {'dbUpdate': {
+               'dbEntity': 'SavedVariant',
+               'entityIds': ['SV0059956_11560662_f019313_1'],
+               'updateFields': ['saved_variant_json'],
+               'updateType': 'bulk_update'},
+            }),
+        ] + [(f'No additional SNV_INDEL GRCh38 saved variants to update in chromosome {chrom}', None) for chrom in ['2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', 'X', 'Y', 'M']] + [
+            ('Reloading shared annotations for 1 SV_WES GRCh38 saved variants (1 unique)', None),
+            ('Fetched 1 additional variants', None),
         ], run_loading_logs={
             'GRCh38/SNV_INDEL': [
                 ('Loading 4 WES SNV_INDEL samples in 2 projects', None),

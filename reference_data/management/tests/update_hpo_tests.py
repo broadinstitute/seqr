@@ -138,7 +138,7 @@ class UpdateHpoTest(TestCase):
         mock_tempfile.gettempdir.return_value = tmp_dir
         tmp_file = '{}/hp.obo'.format(tmp_dir)
 
-        url = 'http://purl.obolibrary.org/obo/hp.obo'
+        url = 'https://github.com/obophenotype/human-phenotype-ontology/releases/latest/download/hp.obo'
         responses.add(responses.HEAD, url, headers={"Content-Length": "1024"})
         responses.add(responses.GET, url, body=''.join(PHO_DATA[:40]))
         responses.add(responses.GET, url, body=''.join(PHO_DATA))

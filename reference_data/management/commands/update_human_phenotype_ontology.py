@@ -11,7 +11,7 @@ from reference_data.models import HumanPhenotypeOntology
 logger = logging.getLogger(__name__)
 
 
-HP_OBO_URL = 'http://purl.obolibrary.org/obo/hp.obo'
+HP_OBO_URL = 'https://github.com/obophenotype/human-phenotype-ontology/releases/latest/download/hp.obo'
 
 
 class Command(BaseCommand):
