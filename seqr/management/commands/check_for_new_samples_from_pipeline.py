@@ -251,7 +251,10 @@ class Command(BaseCommand):
 
         # Update sample qc
         if 'sample_qc' in metadata:
-            cls.update_individuals_sample_qc(sample_type, updated_samples, metadata['sample_qc'])
+            try:
+                cls.update_individuals_sample_qc(sample_type, updated_samples, metadata['sample_qc'])
+            except Exception as e:
+                logger.error(f'Error updating individuals sample qc {run_version}: {e}')
 
         # Reload saved variant JSON
         updated_variants_by_id = update_projects_saved_variant_json([
