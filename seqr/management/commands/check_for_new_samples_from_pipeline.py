@@ -252,7 +252,7 @@ class Command(BaseCommand):
         # Update sample qc
         if 'sample_qc' in metadata:
             try:
-                cls.update_individuals_sample_qc(sample_type, updated_samples, metadata['sample_qc'])
+                cls._update_individuals_sample_qc(sample_type, updated_samples, metadata['sample_qc'])
             except Exception as e:
                 logger.error(f'Error updating individuals sample qc {run_version}: {e}')
 
@@ -365,7 +365,7 @@ class Command(BaseCommand):
         return sorted(pdos_to_create.keys())
 
     @classmethod
-    def update_individuals_sample_qc(cls, sample_type, updated_samples, sample_qc_map):
+    def _update_individuals_sample_qc(cls, sample_type, updated_samples, sample_qc_map):
         sample_individual_map = {
             i.individual_id: i for i in Individual.objects.filter(sample__in=updated_samples)
         }
