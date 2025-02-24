@@ -5,7 +5,7 @@ import { connect } from 'react-redux'
 import { loadSearchedVariants } from 'redux/rootReducer'
 import { InlineToggle } from 'shared/components/form/Inputs'
 import { helpLabel, StyledForm } from 'shared/components/form/FormHelpers'
-import VariantSearchResults, { DisplayVariants } from 'shared/components/panel/search/VariantSearchResults'
+import VariantSearchResults from 'shared/components/panel/search/VariantSearchResults'
 
 import { updateCompoundHetDisplay, loadSingleSearchedVariant, loadProjectFamiliesContext } from '../reducers'
 import { getFlattenCompoundHet, getSearchContextIsLoading, getInhertanceFilterMode } from '../selectors'
@@ -36,7 +36,6 @@ const BaseVariantSearchResults = React.memo((
   const { variantId } = match.params
   if (variantId) {
     resultProps.loadVariants = loadSingleSearchedVariant
-    resultProps.contentComponent = DisplayVariants
   } else {
     resultProps.initialLoad = initialLoad
   }

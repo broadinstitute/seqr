@@ -31,7 +31,7 @@ const LargeRow = styled(Grid.Row)`
 
 const scrollToTop = () => window.scrollTo(0, 0)
 
-export const DisplayVariants = React.memo(({ displayVariants, compoundHetToggle }) => (
+const DisplayVariants = React.memo(({ displayVariants, compoundHetToggle }) => (
   <Grid.Row>
     <Grid.Column width={16}>
       <Variants variants={displayVariants} compoundHetToggle={compoundHetToggle} linkToSavedVariants />
@@ -119,7 +119,7 @@ ErrorResults.propTypes = {
 }
 
 const BaseVariantSearchResults = React.memo(({
-  match, displayVariants, load, unload, initialLoad, variantsLoading, contextLoading, errorMessage, contentComponent,
+  match, displayVariants, load, unload, initialLoad, variantsLoading, contextLoading, errorMessage,
   ...props
 }) => (
   <DataLoader
@@ -132,7 +132,10 @@ const BaseVariantSearchResults = React.memo(({
     reloadOnIdUpdate
     errorMessage={errorMessage && <ErrorResults errorMessage={errorMessage} match={match} />}
   >
-    {React.createElement(contentComponent || VariantSearchResultsContent, { match, displayVariants, ...props })}
+    {React.createElement(
+      match.params.variantId ? DisplayVariants : VariantSearchResultsContent,
+      { match, displayVariants, ...props },
+    )}
   </DataLoader>
 ))
 
@@ -145,7 +148,6 @@ BaseVariantSearchResults.propTypes = {
   contextLoading: PropTypes.bool,
   errorMessage: PropTypes.string,
   displayVariants: PropTypes.arrayOf(PropTypes.object),
-  contentComponent: PropTypes.elementType,
 }
 
 const mapStateToProps = (state, ownProps) => ({
@@ -166,11 +168,10 @@ const mapDispatchToProps = (dispatch, ownProps) => ({
 const VariantSearchResults = connect(mapStateToProps, mapDispatchToProps)(BaseVariantSearchResults)
 
 const LoadedVariantSearchResults = React.memo((
-  { contentComponent, flattenCompoundHet, compoundHetToggle, ...props },
+  { flattenCompoundHet, compoundHetToggle, ...props },
 ) => (
   <QueryParamsEditor {...props}>
     <VariantSearchResults
-      contentComponent={contentComponent}
       flattenCompoundHet={flattenCompoundHet}
       compoundHetToggle={compoundHetToggle}
     />
@@ -178,7 +179,6 @@ const LoadedVariantSearchResults = React.memo((
 ))
 
 LoadedVariantSearchResults.propTypes = {
-  contentComponent: PropTypes.node,
   flattenCompoundHet: PropTypes.bool,
   compoundHetToggle: PropTypes.func,
 }
