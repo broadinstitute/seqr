@@ -4,10 +4,6 @@ import { connect } from 'react-redux'
 import { Grid, Message, Button } from 'semantic-ui-react'
 import styled from 'styled-components'
 
-import {
-  getSearchedVariantsIsLoading,
-  getSearchedVariantsErrorMessage,
-} from 'redux/selectors'
 import DataLoader from 'shared/components/DataLoader'
 import { QueryParamsEditor } from 'shared/components/QueryParamEditor'
 import { HorizontalSpacer } from 'shared/components/Spacers'
@@ -25,13 +21,15 @@ import {
   updateCompoundHetDisplay,
 } from '../reducers'
 import {
-  getSearchContextIsLoading,
   getDisplayVariants,
+  getSearchedVariantsIsLoading,
+  getSearchedVariantsErrorMessage,
+  getTotalVariantsCount,
+  getVariantSearchDisplay,
+  getSearchedVariantExportConfig,
+  getSearchContextIsLoading,
   getInhertanceFilterMode,
   getFlattenCompoundHet,
-  getVariantSearchDisplay,
-  getTotalVariantsCount,
-  getSearchedVariantExportConfig,
 } from '../selectors'
 import { ALL_RECESSIVE_INHERITANCE_FILTERS } from '../constants'
 

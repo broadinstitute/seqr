@@ -5,10 +5,13 @@ import {
   RECEIVE_DATA,
   RECEIVE_SAVED_SEARCHES,
   REQUEST_SAVED_SEARCHES,
-  REQUEST_SEARCHED_VARIANTS,
-  RECEIVE_SEARCHED_VARIANTS,
 } from 'redux/utils/reducerUtils'
-import { loadingReducer, createObjectsByIdReducer, createSingleObjectReducer } from 'redux/utils/reducerFactories'
+import {
+  loadingReducer,
+  createSingleValueReducer,
+  createObjectsByIdReducer,
+  createSingleObjectReducer,
+} from 'redux/utils/reducerFactories'
 import { HttpRequestHelper, getUrlQueryString } from 'shared/utils/httpRequestHelper'
 import { SORT_BY_XPOS } from 'shared/utils/constants'
 
@@ -19,6 +22,8 @@ const REQUEST_SEARCH_CONTEXT = 'REQUEST_SEARCH_CONTEXT'
 const RECEIVE_SEARCH_CONTEXT = 'RECEIVE_SEARCH_CONTEXT'
 const REQUEST_MULTI_PROJECT_SEARCH_CONTEXT = 'REQUEST_MULTI_PROJECT_SEARCH_CONTEXT'
 const RECEIVE_MULTI_PROJECT_SEARCH_CONTEXT = 'RECEIVE_MULTI_PROJECT_SEARCH_CONTEXT'
+const REQUEST_SEARCHED_VARIANTS = 'REQUEST_SEARCHED_VARIANTS'
+const RECEIVE_SEARCHED_VARIANTS = 'RECEIVE_SEARCHED_VARIANTS'
 const REQUEST_SEARCH_GENE_BREAKDOWN = 'REQUEST_SEARCH_GENE_BREAKDOWN'
 const RECEIVE_SEARCH_GENE_BREAKDOWN = 'RECEIVE_SEARCH_GENE_BREAKDOWN'
 const UPDATE_SEARCHED_VARIANT_DISPLAY = 'UPDATE_SEARCHED_VARIANT_DISPLAY'
@@ -222,6 +227,8 @@ export const reducers = {
     REQUEST_MULTI_PROJECT_SEARCH_CONTEXT, RECEIVE_MULTI_PROJECT_SEARCH_CONTEXT,
   ),
   flattenCompoundHet: createSingleObjectReducer(UPDATE_COMPOUND_HET_DISPLAY),
+  searchedVariants: createSingleValueReducer(RECEIVE_SEARCHED_VARIANTS, []),
+  searchedVariantsLoading: loadingReducer(REQUEST_SEARCHED_VARIANTS, RECEIVE_SEARCHED_VARIANTS),
   searchGeneBreakdown: createObjectsByIdReducer(RECEIVE_SEARCH_GENE_BREAKDOWN, 'searchGeneBreakdown'),
   searchGeneBreakdownLoading: loadingReducer(REQUEST_SEARCH_GENE_BREAKDOWN, RECEIVE_SEARCH_GENE_BREAKDOWN),
   variantSearchDisplay: createSingleObjectReducer(UPDATE_SEARCHED_VARIANT_DISPLAY, {

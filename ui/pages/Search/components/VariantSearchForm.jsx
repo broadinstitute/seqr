@@ -5,7 +5,7 @@ import { Segment } from 'semantic-ui-react'
 import createDecorator from 'final-form-calculate'
 
 import { navigateSavedHashedSearch } from 'redux/rootReducer'
-import { getSearchedVariantsErrorMessage, getSearchedVariantsIsLoading, getLocusListIsLoading } from 'redux/selectors'
+import { getLocusListIsLoading } from 'redux/selectors'
 import FormWrapper from 'shared/components/form/FormWrapper'
 import { toUniqueCsvString } from 'shared/utils/stringUtils'
 import { LOCUS_LIST_ITEMS_FIELD } from 'shared/utils/constants'
@@ -14,7 +14,7 @@ import SearchDisplayForm from './SearchDisplayForm'
 import { SaveSearchButton } from './SavedSearch'
 import VariantSearchFormContent from './VariantSearchFormContent'
 import { LOCUS_FIELD_NAME, PANEL_APP_FIELD_NAME } from '../constants'
-import { getIntitialSearch, getMultiProjectFamilies } from '../selectors'
+import { getIntitialSearch, getMultiProjectFamilies, getSearchedVariantsErrorMessage, getSearchedVariantsIsLoading } from '../selectors'
 
 const DECORATORS = [
   createDecorator({

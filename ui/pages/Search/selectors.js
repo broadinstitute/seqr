@@ -11,7 +11,6 @@ import {
   getUser,
   getProjectDatasetTypes,
   getSearchFamiliesByHash,
-  getSearchedVariants,
   getGenesById,
   getSearchesByHash,
 } from 'redux/selectors'
@@ -25,6 +24,9 @@ export const getSavedSearchesByGuid = state => state.savedSearchesByGuid
 export const getSavedSearchesIsLoading = state => state.savedSearchesLoading.isLoading
 export const getSavedSearchesLoadingError = state => state.savedSearchesLoading.errorMessage
 export const getFlattenCompoundHet = state => state.flattenCompoundHet
+export const getSearchedVariants = state => state.searchedVariants
+export const getSearchedVariantsIsLoading = state => state.searchedVariantsLoading.isLoading
+export const getSearchedVariantsErrorMessage = state => state.searchedVariantsLoading.errorMessage
 export const getSearchGeneBreakdown = state => state.searchGeneBreakdown
 export const getSearchGeneBreakdownLoading = state => state.searchGeneBreakdownLoading.isLoading
 export const getSearchGeneBreakdownErrorMessage = state => state.searchGeneBreakdownLoading.errorMessage
