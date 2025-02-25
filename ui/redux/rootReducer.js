@@ -180,14 +180,22 @@ export const updateGeneNote = values => updateEntity(
   values, RECEIVE_DATA, `/api/gene_info/${values.geneId || values.gene_id}/note`, 'noteGuid',
 )
 
-export const navigateSavedHashedSearch = (search, navigateSearch, resultsPath, hashKey) => (dispatch) => {
+const navigateSavedHashedSearchHelper = (resultsPath, hashKey) => (search, navigateSearch) => (dispatch) => {
   // lazy load object-hash library as it is not used anywhere else
   import('object-hash').then((hash) => {
     const searchHash = hash.default.MD5(search)
-    dispatch({ type: RECEIVE_SAVED_SEARCHES, updatesById: { [hashKey || 'searchesByHash']: { [searchHash]: search } } })
-    navigateSearch(`${resultsPath || '/variant_search/results'}/${searchHash}`)
+    dispatch({ type: RECEIVE_SAVED_SEARCHES, updatesById: { [hashKey]: { [searchHash]: search } } })
+    const resultsLink = `/variant_search/${resultsPath}/${searchHash}`
+    if (navigateSearch) {
+      navigateSearch(resultsLink)
+    } else {
+      window.open(resultsLink, '_blank')
+    }
   })
 }
+
+export const navigateSavedHashedSearch = navigateSavedHashedSearchHelper('results', 'searchesByHash')
+export const navigateFamiliesSearch = navigateSavedHashedSearchHelper('families', 'searchFamiliesByHash')
 
 const updateSavedVariant = (values, action = 'create') => (dispatch, getState) => new HttpRequestHelper(
   `/api/saved_variant/${action}`,

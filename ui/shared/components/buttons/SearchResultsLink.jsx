@@ -38,7 +38,6 @@ const mapDispatchToProps = (dispatch, ownProps) => ({
     const projectFamilies = familyGuids && [{ familyGuids }]
     dispatch(navigateSavedHashedSearch(
       { allGenomeProjectFamilies: !projectFamilies && ownProps.genomeVersion, projectFamilies, search },
-      resultsLink => window.open(resultsLink, '_blank'),
     ))
   },
 })

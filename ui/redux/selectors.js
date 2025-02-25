@@ -43,7 +43,6 @@ export const getWarningMessages = state => state.meta.warningMessages
 export const getAnvilLoadingDelayDate = state => state.meta.anvilLoadingDelayDate
 export const getSavedVariantsIsLoading = state => state.savedVariantsLoading.isLoading
 export const getSavedVariantsLoadingError = state => state.savedVariantsLoading.errorMessage
-// TODO
 export const getSearchesByHash = state => state.searchesByHash
 export const getSearchFamiliesByHash = state => state.searchFamiliesByHash
 
