@@ -48,10 +48,6 @@ export const getSearchFamiliesByHash = state => state.searchFamiliesByHash
 export const getSearchedVariants = state => state.searchedVariants
 export const getSearchedVariantsIsLoading = state => state.searchedVariantsLoading.isLoading
 export const getSearchedVariantsErrorMessage = state => state.searchedVariantsLoading.errorMessage
-export const getSearchGeneBreakdown = state => state.searchGeneBreakdown
-export const getSearchGeneBreakdownLoading = state => state.searchGeneBreakdownLoading.isLoading
-export const getSearchGeneBreakdownErrorMessage = state => state.searchGeneBreakdownLoading.errorMessage
-export const getVariantSearchDisplay = state => state.variantSearchDisplay
 
 const groupEntitiesByProjectGuid = entities => Object.entries(entities).reduce((acc, [entityGuid, entity]) => {
   if (!(entity.projectGuid in acc)) {
@@ -321,25 +317,6 @@ export const getSearchedVariantExportConfig = createSelector(
       url: `/api/search/${searchHash}/download`,
     }]
   },
-)
-
-export const getSearchGeneBreakdownValues = createSelector(
-  getSearchGeneBreakdown,
-  (state, props) => props.searchHash,
-  getFamiliesByGuid,
-  getGenesById,
-  getSearchesByHash,
-  (geneBreakdowns, searchHash, familiesByGuid, genesById, searchesByHash) => Object.entries(
-    geneBreakdowns[searchHash] || {},
-  ).map(([geneId, counts]) => ({
-    numVariants: counts.total,
-    numFamilies: Object.keys(counts.families).length,
-    families: Object.entries(counts.families).map(
-      ([familyGuid, count]) => ({ family: familiesByGuid[familyGuid], count }),
-    ),
-    search: searchesByHash[searchHash].search,
-    ...(genesById[geneId] || { geneId, geneSymbol: geneId, omimPhenotypes: [], constraints: {} }),
-  })),
 )
 
 const groupDataNestedByChrom = (initialData, groupedData, nestedKey) => groupedData.reduce(

@@ -6,8 +6,7 @@ import { reducers as searchReducers } from 'pages/Search/reducers'
 import { reducers as dataManagementReducers } from 'pages/DataManagement/reducers'
 import { reducers as reportReducers } from 'pages/Report/reducers'
 import { reducers as summaryDataReducers } from 'pages/SummaryData/reducers'
-import { SORT_BY_XPOS } from 'shared/utils/constants'
-import { HttpRequestHelper, getUrlQueryString } from 'shared/utils/httpRequestHelper'
+import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import {
   createObjectsByIdReducer, loadingReducer, zeroActionsReducer, createSingleObjectReducer, createSingleValueReducer,
 } from './utils/reducerFactories'
@@ -37,9 +36,6 @@ const REQUEST_GENES = 'REQUEST_GENES'
 const REQUEST_GENE_LISTS = 'REQUEST_GENE_LISTS'
 const RECEIVE_GENE_LISTS = 'RECEIVE_GENE_LISTS'
 const REQUEST_GENE_LIST = 'REQUEST_GENE_LIST'
-const REQUEST_SEARCH_GENE_BREAKDOWN = 'REQUEST_SEARCH_GENE_BREAKDOWN'
-const RECEIVE_SEARCH_GENE_BREAKDOWN = 'RECEIVE_SEARCH_GENE_BREAKDOWN'
-const UPDATE_SEARCHED_VARIANT_DISPLAY = 'UPDATE_SEARCHED_VARIANT_DISPLAY'
 const REQUEST_USER_OPTIONS = 'REQUEST_USER_OPTIONS'
 const RECEIVE_USER_OPTIONS = 'RECEIVE_USER_OPTIONS'
 const UPDATE_USER = 'UPDATE_USER'
@@ -196,77 +192,6 @@ export const navigateSavedHashedSearch = (search, navigateSearch, resultsPath, h
   })
 }
 
-export const updateSearchSort = updates => (dispatch) => {
-  dispatch({ type: UPDATE_SEARCHED_VARIANT_DISPLAY, updates })
-}
-
-export const loadSearchedVariants = (
-  { searchHash }, { displayUpdates, queryParams, updateQueryParams },
-) => (dispatch, getState) => {
-  const state = getState()
-  if (state.searchedVariantsLoading.isLoading) {
-    return
-  }
-
-  dispatch({ type: REQUEST_SEARCHED_VARIANTS })
-
-  let { sort, page } = displayUpdates || queryParams
-  if (!page) {
-    page = 1
-  }
-  if (!sort) {
-    sort = state.variantSearchDisplay.sort || SORT_BY_XPOS
-  }
-  const urlQueryParams = { sort: sort.toLowerCase(), page }
-
-  // Update search table state and query params
-  dispatch({ type: UPDATE_SEARCHED_VARIANT_DISPLAY, updates: { sort: sort.toUpperCase(), page } })
-  updateQueryParams(urlQueryParams)
-
-  const apiQueryParams = { ...urlQueryParams, loadFamilyContext: true, loadProjectTagTypes: true }
-  const search = state.searchesByHash[searchHash]
-  if (search && search.projectFamilies && search.projectFamilies.length > 0) {
-    apiQueryParams.loadProjectTagTypes = search.projectFamilies.some(
-      ({ projectGuid }) => !state.projectsByGuid[projectGuid]?.variantTagTypes,
-    )
-    apiQueryParams.loadFamilyContext = search.projectFamilies.some(
-      ({ familyGuids }) => !familyGuids || familyGuids.some(
-        familyGuid => !state.familiesByGuid[familyGuid]?.detailsLoaded,
-      ),
-    )
-  }
-
-  const url = `/api/search/${searchHash}?${getUrlQueryString(apiQueryParams)}`
-
-  // Fetch variants
-  new HttpRequestHelper(url,
-    (responseJson) => {
-      dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
-      dispatch({ type: RECEIVE_SEARCHED_VARIANTS, newValue: responseJson.searchedVariants })
-      dispatch({ type: RECEIVE_SAVED_SEARCHES, updatesById: { searchesByHash: { [searchHash]: responseJson.search } } })
-    },
-    (e) => {
-      dispatch({ type: RECEIVE_SEARCHED_VARIANTS, error: e.message, newValue: [] })
-    }).post(search)
-}
-
-export const unloadSearchResults = () => dispatch => dispatch({ type: RECEIVE_SEARCHED_VARIANTS, newValue: [] })
-
-export const loadGeneBreakdown = searchHash => (dispatch, getState) => {
-  if (!getState().searchGeneBreakdown[searchHash]) {
-    dispatch({ type: REQUEST_SEARCH_GENE_BREAKDOWN })
-
-    new HttpRequestHelper(`/api/search/${searchHash}/gene_breakdown`,
-      (responseJson) => {
-        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
-        dispatch({ type: RECEIVE_SEARCH_GENE_BREAKDOWN, updatesById: responseJson })
-      },
-      (e) => {
-        dispatch({ type: RECEIVE_SEARCH_GENE_BREAKDOWN, error: e.message, updatesById: {} })
-      }).get()
-  }
-}
-
 const updateSavedVariant = (values, action = 'create') => (dispatch, getState) => new HttpRequestHelper(
   `/api/saved_variant/${action}`,
   (responseJson) => {
@@ -350,8 +275,6 @@ const rootReducer = combineReducers({
   searchFamiliesByHash: createObjectsByIdReducer(RECEIVE_SAVED_SEARCHES, 'searchFamiliesByHash'),
   searchedVariants: createSingleValueReducer(RECEIVE_SEARCHED_VARIANTS, []),
   searchedVariantsLoading: loadingReducer(REQUEST_SEARCHED_VARIANTS, RECEIVE_SEARCHED_VARIANTS),
-  searchGeneBreakdown: createObjectsByIdReducer(RECEIVE_SEARCH_GENE_BREAKDOWN, 'searchGeneBreakdown'),
-  searchGeneBreakdownLoading: loadingReducer(REQUEST_SEARCH_GENE_BREAKDOWN, RECEIVE_SEARCH_GENE_BREAKDOWN),
   savedSearchesByGuid: createObjectsByIdReducer(RECEIVE_SAVED_SEARCHES, 'savedSearchesByGuid'),
   savedSearchesLoading: loadingReducer(REQUEST_SAVED_SEARCHES, RECEIVE_SAVED_SEARCHES),
   transcriptsById: createObjectsByIdReducer(RECEIVE_DATA, 'transcriptsById'),
@@ -360,11 +283,6 @@ const rootReducer = combineReducers({
   userOptionsByUsername: createSingleValueReducer(RECEIVE_USER_OPTIONS, {}),
   userOptionsLoading: loadingReducer(REQUEST_USER_OPTIONS, RECEIVE_USER_OPTIONS),
   meta: zeroActionsReducer,
-  variantSearchDisplay: createSingleObjectReducer(UPDATE_SEARCHED_VARIANT_DISPLAY, {
-    sort: SORT_BY_XPOS,
-    page: 1,
-    recordsPerPage: 100,
-  }, false),
   ...modalReducers,
   ...dashboardReducers,
   ...projectReducers,

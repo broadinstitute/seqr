@@ -2,13 +2,13 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 
-import { loadSearchedVariants, updateSearchSort } from 'redux/rootReducer'
 import {
   getTotalVariantsCount,
-  getVariantSearchDisplay,
 } from 'redux/selectors'
 import { VARIANT_SEARCH_SORT_FIELD, VARIANT_PAGINATION_FIELD } from 'shared/utils/constants'
 import FormWrapper from 'shared/components/form/FormWrapper'
+import { loadSearchedVariants, updateSearchSort } from '../reducers'
+import { getVariantSearchDisplay } from '../selectors'
 
 const FIELDS = [
   VARIANT_SEARCH_SORT_FIELD,

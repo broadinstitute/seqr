@@ -13,6 +13,8 @@ import {
   getProjectDatasetTypes,
   getSearchFamiliesByHash,
   getSearchedVariants,
+  getGenesById,
+  getSearchesByHash,
 } from 'redux/selectors'
 import { FAMILY_ANALYSIS_STATUS_LOOKUP } from 'shared/utils/constants'
 import { compareObjects } from 'shared/utils/sortUtils'
@@ -24,6 +26,10 @@ export const getSavedSearchesByGuid = state => state.savedSearchesByGuid
 export const getSavedSearchesIsLoading = state => state.savedSearchesLoading.isLoading
 export const getSavedSearchesLoadingError = state => state.savedSearchesLoading.errorMessage
 export const getFlattenCompoundHet = state => state.flattenCompoundHet
+export const getSearchGeneBreakdown = state => state.searchGeneBreakdown
+export const getSearchGeneBreakdownLoading = state => state.searchGeneBreakdownLoading.isLoading
+export const getSearchGeneBreakdownErrorMessage = state => state.searchGeneBreakdownLoading.errorMessage
+export const getVariantSearchDisplay = state => state.variantSearchDisplay
 
 export const getInhertanceFilterMode = createSelector(
   getCurrentSearchParams,
@@ -209,4 +215,23 @@ export const getDisplayVariants = createSelector(
     ), [])
     return uniqWith(flattened, (a, b) => !Array.isArray(a) && !Array.isArray(b) && a.variantId === b.variantId)
   },
+)
+
+export const getSearchGeneBreakdownValues = createSelector(
+  getSearchGeneBreakdown,
+  (state, props) => props.searchHash,
+  getFamiliesByGuid,
+  getGenesById,
+  getSearchesByHash,
+  (geneBreakdowns, searchHash, familiesByGuid, genesById, searchesByHash) => Object.entries(
+    geneBreakdowns[searchHash] || {},
+  ).map(([geneId, counts]) => ({
+    numVariants: counts.total,
+    numFamilies: Object.keys(counts.families).length,
+    families: Object.entries(counts.families).map(
+      ([familyGuid, count]) => ({ family: familiesByGuid[familyGuid], count }),
+    ),
+    search: searchesByHash[searchHash].search,
+    ...(genesById[geneId] || { geneId, geneSymbol: geneId, omimPhenotypes: [], constraints: {} }),
+  })),
 )

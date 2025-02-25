@@ -4,12 +4,10 @@ import { connect } from 'react-redux'
 import { Grid, Message, Button } from 'semantic-ui-react'
 import styled from 'styled-components'
 
-import { loadSearchedVariants, unloadSearchResults } from 'redux/rootReducer'
 import {
   getSearchedVariantsIsLoading,
   getSearchedVariantsErrorMessage,
   getTotalVariantsCount,
-  getVariantSearchDisplay,
   getSearchedVariantExportConfig,
 } from 'redux/selectors'
 import DataLoader from 'shared/components/DataLoader'
@@ -21,12 +19,19 @@ import { helpLabel, StyledForm } from 'shared/components/form/FormHelpers'
 import Variants from 'shared/components/panel/variants/Variants'
 import GeneBreakdown from './GeneBreakdown'
 import SearchDisplayForm from './SearchDisplayForm'
-import { loadProjectFamiliesContext, loadSingleSearchedVariant, updateCompoundHetDisplay } from '../reducers'
+import {
+  loadSearchedVariants,
+  unloadSearchResults,
+  loadProjectFamiliesContext,
+  loadSingleSearchedVariant,
+  updateCompoundHetDisplay,
+} from '../reducers'
 import {
   getSearchContextIsLoading,
   getDisplayVariants,
   getInhertanceFilterMode,
   getFlattenCompoundHet,
+  getVariantSearchDisplay,
 } from '../selectors'
 import { ALL_RECESSIVE_INHERITANCE_FILTERS } from '../constants'
 
