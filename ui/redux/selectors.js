@@ -56,7 +56,7 @@ const groupEntitiesByProjectGuid = entities => Object.entries(entities).reduce((
 }, {})
 export const getFamiliesGroupedByProjectGuid = createSelector(getFamiliesByGuid, groupEntitiesByProjectGuid)
 export const getAnalysisGroupsGroupedByProjectGuid = createSelector(getAnalysisGroupsByGuid, groupEntitiesByProjectGuid)
-const getSamplesGroupedByProjectGuid = createSelector(getSamplesByGuid, groupEntitiesByProjectGuid)
+export const getSamplesGroupedByProjectGuid = createSelector(getSamplesByGuid, groupEntitiesByProjectGuid)
 
 const groupByFamilyGuid = objs => objs.reduce((acc, o) => {
   if (!acc[o.familyGuid]) {
@@ -163,20 +163,6 @@ export const getIGVSamplesByFamilySampleIndividual = createSelector(
     acc[sample.familyGuid][sample.sampleType][sample.individualGuid] = sample
     return acc
   }, {}),
-)
-
-//  TODO
-export const getProjectDatasetTypes = createSelector(
-  getProjectsByGuid,
-  getSamplesGroupedByProjectGuid,
-  (projectsByGuid, samplesByProjectGuid) => Object.values(projectsByGuid).reduce(
-    (acc, { projectGuid, datasetTypes }) => ({
-      ...acc,
-      [projectGuid]: datasetTypes || [...new Set(Object.values(samplesByProjectGuid[projectGuid] || {}).filter(
-        ({ isActive }) => isActive,
-      ).map(({ datasetType }) => datasetType))],
-    }), {},
-  ),
 )
 
 // Saved variant selectors

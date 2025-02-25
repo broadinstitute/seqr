@@ -9,10 +9,10 @@ import {
   getLocusListsByGuid,
   getAnalysisGroupsGroupedByProjectGuid,
   getUser,
-  getProjectDatasetTypes,
   getSearchFamiliesByHash,
   getGenesById,
   getSearchesByHash,
+  getSamplesGroupedByProjectGuid,
 } from 'redux/selectors'
 import { FAMILY_ANALYSIS_STATUS_LOOKUP } from 'shared/utils/constants'
 import { compareObjects } from 'shared/utils/sortUtils'
@@ -192,6 +192,19 @@ export const getLocusListOptions = createListEqualSelector(
       categoryRank: projectsLocusListGuids.has(locusListGuid) ? 0 : 1,
     })).sort(compareObjects('text')).sort(compareObjects('categoryRank'))
   },
+)
+
+export const getProjectDatasetTypes = createSelector(
+  getProjectsByGuid,
+  getSamplesGroupedByProjectGuid,
+  (projectsByGuid, samplesByProjectGuid) => Object.values(projectsByGuid).reduce(
+    (acc, { projectGuid, datasetTypes }) => ({
+      ...acc,
+      [projectGuid]: datasetTypes || [...new Set(Object.values(samplesByProjectGuid[projectGuid] || {}).filter(
+        ({ isActive }) => isActive,
+      ).map(({ datasetType }) => datasetType))],
+    }), {},
+  ),
 )
 
 export const getDatasetTypes = createSelector(
