@@ -106,8 +106,9 @@ def update_project_saved_variant_json(project_id, genome_version, family_guids=N
         for family_guid in var['familyGuids']:
             saved_variant = saved_variants_map.get((var['variantId'], family_guid))
             if saved_variant:
-                update_model_from_json(saved_variant, {'saved_variant_json': var}, user)
+                saved_variant.saved_variant_json = var
                 updated_saved_variants[saved_variant.guid] = saved_variant
+    SavedVariant.bulk_update_models(user, list(updated_saved_variants.values()), ['saved_variant_json'])
 
     return updated_saved_variants
 
