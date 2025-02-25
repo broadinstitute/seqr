@@ -287,38 +287,6 @@ export const getParsedLocusList = createSelector(
   },
 )
 
-const getCurrentSearchHash = (state, ownProps) => ownProps.match.params.searchHash
-
-export const getCurrentSearchParams = createSelector(
-  getSearchesByHash,
-  getCurrentSearchHash,
-  (searchesByHash, searchHash) => searchesByHash[searchHash],
-)
-
-export const getTotalVariantsCount = createSelector(
-  getCurrentSearchParams,
-  searchParams => (searchParams || {}).totalResults,
-)
-
-export const getSearchedVariantExportConfig = createSelector(
-  getCurrentSearchHash,
-  getCurrentSearchParams,
-  getProjectsByGuid,
-  (searchHash, searchParams, projectsByGuid) => {
-    const { projectFamilies } = searchParams || {}
-    if ((projectFamilies || []).some(
-      ({ projectGuid }) => projectsByGuid[projectGuid]?.isDemo && !projectsByGuid[projectGuid].allUserDemo,
-    )) {
-      // Do not allow downloads for demo projects
-      return null
-    }
-    return [{
-      name: 'Variant Search Results',
-      url: `/api/search/${searchHash}/download`,
-    }]
-  },
-)
-
 const groupDataNestedByChrom = (initialData, groupedData, nestedKey) => groupedData.reduce(
   (acc, data) => {
     const { chrom } = data

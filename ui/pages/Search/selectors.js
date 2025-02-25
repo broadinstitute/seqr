@@ -8,7 +8,6 @@ import {
   getCurrentAnalysisGroupFamilyGuids,
   getLocusListsByGuid,
   getAnalysisGroupsGroupedByProjectGuid,
-  getCurrentSearchParams,
   getUser,
   getProjectDatasetTypes,
   getSearchFamiliesByHash,
@@ -30,6 +29,38 @@ export const getSearchGeneBreakdown = state => state.searchGeneBreakdown
 export const getSearchGeneBreakdownLoading = state => state.searchGeneBreakdownLoading.isLoading
 export const getSearchGeneBreakdownErrorMessage = state => state.searchGeneBreakdownLoading.errorMessage
 export const getVariantSearchDisplay = state => state.variantSearchDisplay
+
+const getCurrentSearchHash = (state, ownProps) => ownProps.match.params.searchHash
+
+export const getCurrentSearchParams = createSelector(
+  getSearchesByHash,
+  getCurrentSearchHash,
+  (searchesByHash, searchHash) => searchesByHash[searchHash],
+)
+
+export const getTotalVariantsCount = createSelector(
+  getCurrentSearchParams,
+  searchParams => (searchParams || {}).totalResults,
+)
+
+export const getSearchedVariantExportConfig = createSelector(
+  getCurrentSearchHash,
+  getCurrentSearchParams,
+  getProjectsByGuid,
+  (searchHash, searchParams, projectsByGuid) => {
+    const { projectFamilies } = searchParams || {}
+    if ((projectFamilies || []).some(
+      ({ projectGuid }) => projectsByGuid[projectGuid]?.isDemo && !projectsByGuid[projectGuid].allUserDemo,
+    )) {
+      // Do not allow downloads for demo projects
+      return null
+    }
+    return [{
+      name: 'Variant Search Results',
+      url: `/api/search/${searchHash}/download`,
+    }]
+  },
+)
 
 export const getInhertanceFilterMode = createSelector(
   getCurrentSearchParams,

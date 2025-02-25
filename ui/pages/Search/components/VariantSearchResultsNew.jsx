@@ -7,8 +7,6 @@ import styled from 'styled-components'
 import {
   getSearchedVariantsIsLoading,
   getSearchedVariantsErrorMessage,
-  getTotalVariantsCount,
-  getSearchedVariantExportConfig,
 } from 'redux/selectors'
 import DataLoader from 'shared/components/DataLoader'
 import { QueryParamsEditor } from 'shared/components/QueryParamEditor'
@@ -32,6 +30,8 @@ import {
   getInhertanceFilterMode,
   getFlattenCompoundHet,
   getVariantSearchDisplay,
+  getTotalVariantsCount,
+  getSearchedVariantExportConfig,
 } from '../selectors'
 import { ALL_RECESSIVE_INHERITANCE_FILTERS } from '../constants'
 
