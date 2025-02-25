@@ -3,7 +3,7 @@ import { shallow, configure } from 'enzyme'
 import Adapter from '@wojtekmaj/enzyme-adapter-react-17'
 import configureStore from 'redux-mock-store'
 
-import VariantSearchResults from './VariantSearchResults'
+import VariantSearchResults from './VariantSearchResultsNew'
 
 import { STATE } from '../fixtures'
 
