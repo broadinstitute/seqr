@@ -1,13 +1,7 @@
 import {
   AFFECTED,
   UNAFFECTED,
-  RECESSIVE_FILTER,
-  HOM_RECESSIVE_FILTER,
-  X_LINKED_RECESSIVE_FILTER,
-  COMPOUND_HET_FILTER,
-  DE_NOVO_FILTER,
   ANY_AFFECTED,
-  INHERITANCE_FILTER_OPTIONS,
   VEP_GROUP_NONSENSE,
   VEP_GROUP_ESSENTIAL_SPLICE_SITE,
   VEP_GROUP_EXTENDED_SPLICE_SITE,
@@ -58,7 +52,50 @@ export const NUM_ALT_OPTIONS = [
   },
 ]
 
+export const ALL_INHERITANCE_FILTER = 'all'
+const RECESSIVE_FILTER = 'recessive'
+const HOM_RECESSIVE_FILTER = 'homozygous_recessive'
+const X_LINKED_RECESSIVE_FILTER = 'x_linked_recessive'
+const COMPOUND_HET_FILTER = 'compound_het'
+const DE_NOVO_FILTER = 'de_novo'
 export const ALL_RECESSIVE_INHERITANCE_FILTERS = [RECESSIVE_FILTER, COMPOUND_HET_FILTER]
+
+const INHERITANCE_FILTER_OPTIONS = [
+  { value: ALL_INHERITANCE_FILTER, text: 'All' },
+  {
+    value: RECESSIVE_FILTER,
+    text: 'Recessive',
+    detail: 'This method identifies genes with any evidence of recessive variation. It is the union of all variants returned by the homozygous recessive, x-linked recessive, and compound heterozygous methods.',
+  },
+  {
+    value: HOM_RECESSIVE_FILTER,
+    color: 'transparent', // Adds an empty label so option is indented
+    text: 'Homozygous Recessive',
+    detail: 'Finds variants where all affected individuals are Alt / Alt and each of their parents Heterozygous.',
+  },
+  {
+    value: X_LINKED_RECESSIVE_FILTER,
+    color: 'transparent', // Adds an empty label so option is indented
+    text: 'X-Linked Recessive',
+    detail: "Recessive inheritance on the X Chromosome. This is similar to the homozygous recessive search, but a proband's father must be homozygous reference. (This is how hemizygous genotypes are called by current variant calling methods.)",
+  },
+  {
+    value: COMPOUND_HET_FILTER,
+    color: 'transparent', // Adds an empty label so option is indented
+    text: 'Compound Heterozygous',
+    detail: 'Affected individual(s) have two heterozygous mutations in the same gene on opposite haplotypes. Unaffected individuals cannot have the same combination of alleles as affected individuals, or be homozygous alternate for any of the variants. If parents are not present, this method only searches for pairs of heterozygous variants; they may not be on different haplotypes.',
+  },
+  {
+    value: DE_NOVO_FILTER,
+    text: 'De Novo/ Dominant',
+    detail: 'Finds variants where all affected individuals have at least one alternate allele and all unaffected are homozygous reference.',
+  },
+  {
+    value: ANY_AFFECTED,
+    text: 'Any Affected',
+    detail: 'Finds variants where at least one affected individual has at least one alternate allele.',
+  },
+]
 
 export const INHERITANCE_FILTER_LOOKUP = {
   [RECESSIVE_FILTER]: {

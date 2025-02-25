@@ -8,7 +8,6 @@ import { Select, AlignedBooleanCheckbox, RadioGroup, InlineToggle } from 'shared
 import Modal from 'shared/components/modal/Modal'
 import { snakecaseToTitlecase, camelcaseToTitlecase } from 'shared/utils/stringUtils'
 import {
-  ALL_INHERITANCE_FILTER,
   LOCUS_LIST_ITEMS_FIELD,
   PANEL_APP_CONFIDENCE_LEVELS,
   ORDERED_PREDICTOR_FIELDS,
@@ -16,6 +15,7 @@ import {
 } from 'shared/utils/constants'
 
 import {
+  ALL_INHERITANCE_FILTER,
   INHERITANCE_FILTER_JSON_OPTIONS,
   INHERITANCE_FILTER_LOOKUP,
   INHERITANCE_MODE_LOOKUP,
