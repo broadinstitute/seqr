@@ -5,7 +5,7 @@ import { Grid } from 'semantic-ui-react'
 
 import { Error404 } from 'shared/components/page/Errors'
 import VariantSearchForm, { NoEditProjectsVariantSearchForm } from './components/VariantSearchForm'
-import VariantSearchResults from './components/VariantSearchResultsNew'
+import VariantSearchResults from './components/VariantSearchResults'
 
 const RESULTS_PATH = 'results/:searchHash'
 const SINGLE_VARIANT_RESULTS_PATH = 'variant/:variantId/family/:familyGuid'
