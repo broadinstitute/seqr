@@ -3,7 +3,7 @@ import { connect } from 'react-redux'
 import PropTypes from 'prop-types'
 import { Divider, Button, Header } from 'semantic-ui-react'
 
-import { navigateSavedHashedSearch } from 'redux/rootReducer'
+import { navigateFamiliesSearch } from 'redux/rootReducer'
 import { NoHoverFamilyLink } from 'shared/components/buttons/FamilyLink'
 import AwesomeBar from 'shared/components/page/AwesomeBar'
 import { Phenotypes } from 'shared/components/panel/MatchmakerPanel'
@@ -160,12 +160,7 @@ class Hpo extends React.PureComponent {
 const mapDispatchToProps = dispatch => ({
   navigateSearch: (e, { projectFamilies }) => {
     e.stopPropagation()
-    dispatch(navigateSavedHashedSearch(
-      projectFamilies,
-      resultsLink => window.open(resultsLink, '_blank'),
-      '/variant_search/families',
-      'searchFamiliesByHash',
-    ))
+    dispatch(navigateFamiliesSearch(projectFamilies))
   },
 })
 

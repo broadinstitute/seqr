@@ -5,12 +5,12 @@ import { FormSpy } from 'react-final-form'
 
 import { configuredField } from 'shared/components/form/FormHelpers'
 import { ButtonRadioGroup, BooleanCheckbox } from 'shared/components/form/Inputs'
-import { AddProjectButton } from 'shared/components/panel/search/ProjectsField'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 import { ButtonLink, InlineHeader } from 'shared/components/StyledComponents'
 import { GENOME_VERSION_OPTIONS } from 'shared/utils/constants'
 import { loadProjectGroupContext } from '../../reducers'
 import ProjectFamiliesFilter from './ProjectFamiliesFilter'
+import { AddProjectButton } from './ProjectsField'
 
 const INCLUDE_ALL_PROJECTS = 'allGenomeProjectFamilies'
 

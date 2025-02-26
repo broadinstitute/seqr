@@ -15,8 +15,8 @@ import {
   getSearchGeneBreakdownValues,
   getSearchGeneBreakdownLoading,
   getSearchGeneBreakdownErrorMessage,
-} from 'redux/selectors'
-import { loadGeneBreakdown } from 'redux/rootReducer'
+} from '../selectors'
+import { loadGeneBreakdown } from '../reducers'
 
 const COLUMNS = [
   {

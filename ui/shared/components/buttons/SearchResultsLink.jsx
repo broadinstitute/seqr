@@ -3,8 +3,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 
 import { navigateSavedHashedSearch } from 'redux/rootReducer'
-import { VEP_GROUP_SV, ANY_AFFECTED } from 'shared/utils/constants'
-import { FREQUENCIES, TOPMED_FREQUENCY } from '../panel/search/constants'
+import { VEP_GROUP_SV, ANY_AFFECTED, FREQUENCIES, TOPMED_FREQUENCY } from 'shared/utils/constants'
 import { ButtonLink } from '../StyledComponents'
 
 const SearchResultsLink = ({
@@ -39,7 +38,6 @@ const mapDispatchToProps = (dispatch, ownProps) => ({
     const projectFamilies = familyGuids && [{ familyGuids }]
     dispatch(navigateSavedHashedSearch(
       { allGenomeProjectFamilies: !projectFamilies && ownProps.genomeVersion, projectFamilies, search },
-      resultsLink => window.open(resultsLink, '_blank'),
     ))
   },
 })
