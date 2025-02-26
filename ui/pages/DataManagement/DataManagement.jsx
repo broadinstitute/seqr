@@ -11,6 +11,7 @@ import ElasticsearchStatus from './components/ElasticsearchStatus'
 import LoadData from './components/LoadData'
 import RnaSeq from './components/RnaSeq'
 import SampleQc from './components/SampleQc'
+import TriggerDag from './components/TriggerDag'
 import Users from './components/Users'
 import PhenotypePrioritization from './components/PhenotypePrioritization'
 
@@ -45,16 +46,24 @@ const ES_DATA_MANAGEMENT_PAGES = [
   ...DATA_MANAGEMENT_PAGES,
 ]
 
-const HAIL_SEARCH_DATA_MANAGEMENT_PAGES = [
+const LOCAL_HAIL_SEARCH_DATA_MANAGEMENT_PAGES = [
   ...DATA_MANAGEMENT_PAGES,
   { path: 'pipeline_status', component: () => <IframePage title="Loading UI" src="/luigi_ui/static/visualiser/index.html" /> },
 ]
 
-const dataManagementPages = (isDataManager, elasticsearchEnabled) => {
-  if (!isDataManager) {
+const AIRFLOW_HAIL_SEARCH_DATA_MANAGEMENT_PAGES = [
+  { path: 'trigger_dag', component: TriggerDag },
+  ...DATA_MANAGEMENT_PAGES,
+]
+
+const dataManagementPages = (user, elasticsearchEnabled) => {
+  if (!user.isDataManager) {
     return PM_DATA_MANAGEMENT_PAGES
   }
-  return elasticsearchEnabled ? ES_DATA_MANAGEMENT_PAGES : HAIL_SEARCH_DATA_MANAGEMENT_PAGES
+  if (elasticsearchEnabled) {
+    return ES_DATA_MANAGEMENT_PAGES
+  }
+  return user.isAnvil ? AIRFLOW_HAIL_SEARCH_DATA_MANAGEMENT_PAGES : LOCAL_HAIL_SEARCH_DATA_MANAGEMENT_PAGES
 }
 
 const DataManagement = ({ match, user, pages }) => (
@@ -78,7 +87,7 @@ export const mapStateToProps = (state) => {
   const user = getUser(state)
   return {
     user,
-    pages: dataManagementPages(user.isDataManager, getElasticsearchEnabled(state)),
+    pages: dataManagementPages(user, getElasticsearchEnabled(state)),
   }
 }
 
