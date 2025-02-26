@@ -2,15 +2,20 @@ import React from 'react'
 import PropTypes from 'prop-types'
 
 import { validators } from 'shared/components/form/FormHelpers'
+import { AwesomeBarFormInput } from 'shared/components/page/AwesomeBar'
 import SubmitFormPage from 'shared/components/page/SubmitFormPage'
 
 const FIELDS = [
   {
-    name: 'file',
-    label: 'QC Pipeline Output File Path',
-    placeholder: 'gs:// Google bucket path',
+    name: 'project',
+    label: 'Project',
+    control: AwesomeBarFormInput,
+    categories: ['projects'],
+    fluid: true,
+    placeholder: 'Search for a project',
     validate: validators.required,
   },
+  // TODO optional dataset type
 ]
 
 const TriggerDagForm = ({ dagName }) => (
