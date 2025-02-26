@@ -132,10 +132,10 @@ const formatField = (field, name, esEnabled, { formatNoEsLabel, ...fieldProps })
 
 const PanelContent = React.memo(({
   name, fields, fieldProps, helpText, fieldLayout, fieldLayoutInput, esEnabled, noPadding, datasetTypes,
-  datasetTypeFields, datasetTypeFieldLayoutInput,
+  datasetTypeFields, datasetTypeFieldLayoutInput, esEnabledFields,
 }) => {
   const layoutInput = (datasetTypeFieldLayoutInput || {})[datasetTypes] || fieldLayoutInput
-  const panelFields = (datasetTypeFields || {})[datasetTypes] || fields
+  const panelFields = (datasetTypeFields || {})[datasetTypes] || (esEnabled && esEnabledFields) || fields
   const fieldComponents = panelFields && configuredFields(
     { fields: panelFields.map(field => formatField(field, name, esEnabled, fieldProps || {})) },
   )
@@ -167,6 +167,7 @@ PanelContent.propTypes = {
   fieldLayoutInput: PropTypes.arrayOf(PropTypes.string),
   datasetTypeFieldLayoutInput: PropTypes.object,
   esEnabled: PropTypes.bool,
+  esEnabledFields: PropTypes.arrayOf(PropTypes.object),
   noPadding: PropTypes.bool,
 }
 

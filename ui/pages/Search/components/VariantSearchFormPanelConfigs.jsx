@@ -501,22 +501,26 @@ export const QUALITY_PANEL = {
   fieldProps: { control: LazyLabeledSlider, format: val => val || null },
 }
 
-const EXCLUDE_FIELDS = [
-  {
-    ...CLINVAR_FIELD,
-    ...PATHOGENICITY_FIELD_PROPS,
-    width: 8,
-  },
+const ES_EXCLUDE_FIELDS = [
   {
     ...BASE_LOCUS_FIELD,
     component: Form.TextArea,
     rows: 8,
   },
 ]
+const EXCLUDE_FIELDS = [
+  {
+    ...CLINVAR_FIELD,
+    ...PATHOGENICITY_FIELD_PROPS,
+    width: 8,
+  },
+  ...ES_EXCLUDE_FIELDS,
+]
 
 export const EXCLUDE_PANEL = {
   name: 'exclude',
   headerProps: { title: 'Exclude' },
   fields: EXCLUDE_FIELDS,
+  esEnabledFields: ES_EXCLUDE_FIELDS,
   helpText: 'Exclude variants from the search results based on the specified criteria. This filter will override any other filters applied.',
 }
