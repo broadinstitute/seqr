@@ -830,12 +830,13 @@ class BaseHailTableQuery(object):
                     pop_filters.append(pop_expr[ac_field] <= freqs['ac'])
 
             if freqs.get('hh') is not None:
-                hom_field = pop_config['hom']
-                hemi_field = pop_config['hemi']
-                if hom_field:
-                    pop_filters.append(pop_expr[hom_field] <= freqs['hh'])
-                if hemi_field:
-                    pop_filters.append(pop_expr[hemi_field] <= freqs['hh'])
+                for field_name in ['hom', 'hemi']:
+                    field = pop_config[field_name]
+                    if field:
+                        pop_filter = pop_expr[field] <= freqs['hh']
+                        if path_override_filter is not None:
+                            pop_filter |= path_override_filter
+                        pop_filters.append(pop_filter)
 
             if pop_filters:
                 filters.append(hl.is_missing(pop_expr) | hl.all(pop_filters))
