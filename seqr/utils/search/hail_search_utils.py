@@ -177,9 +177,8 @@ def _get_sort_metadata(sort, samples):
 
 
 def _parse_location_search(search):
-    locus = search.pop('locus', None) or {}
     parsed_locus = search.pop('parsedLocus')
-    exclude_locations = locus.get('excludeLocations')
+    exclude_locations = parsed_locus.get('exclude_locations')
 
     genes = parsed_locus.get('genes') or {}
     intervals = parsed_locus.get('intervals')

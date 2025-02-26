@@ -448,6 +448,13 @@ class MitoHailTableQuery(BaseHailTableQuery):
              if canonical_consequences else allowed_consequence_ids
         ).contains)
 
+    def _filter_excluded(self, ht, exclude):
+        for key in self.PATHOGENICITY_FILTERS.keys():
+            path_terms = (exclude or {}).get(key)
+            if path_terms:
+                ht = ht.filter(hl.is_missing(ht[key]) | ~self._has_path_expr(ht, path_terms, key))
+        return ht
+
     def _get_annotation_override_fields(self, annotations, pathogenicity=None, **kwargs):
         annotation_overrides = super()._get_annotation_override_fields(annotations, **kwargs)
         for key in self.PATHOGENICITY_FILTERS.keys():

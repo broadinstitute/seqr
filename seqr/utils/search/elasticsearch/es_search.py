@@ -201,13 +201,13 @@ class EsSearch(object):
         self._search = self._search.filter(new_filter)
         return self
 
-    def filter_variants(self, inheritance_mode=None, inheritance_filter=None, genes=None, intervals=None, rs_ids=None, variant_ids=None, locus=None,
+    def filter_variants(self, inheritance_mode=None, inheritance_filter=None, genes=None, intervals=None, rs_ids=None, variant_ids=None, exclude_locations=False,
                         frequencies=None, pathogenicity=None, in_silico=None, annotations=None, annotations_secondary=None,
                         quality_filter=None, custom_query=None, skip_genotype_filter=False, dataset_type=None, secondary_dataset_type=None, **kwargs):
 
         self._filter_custom(custom_query)
 
-        self._filter_by_location(genes, intervals, variant_ids, rs_ids, locus)
+        self._filter_by_location(genes, intervals, variant_ids, rs_ids, exclude_locations)
 
         self._parse_annotation_overrides(annotations, pathogenicity)
 
@@ -272,9 +272,8 @@ class EsSearch(object):
         if new_svs:
             self._consequence_overrides[NEW_SV_FIELD] = new_svs
 
-    def _filter_by_location(self, genes, intervals, variant_ids, rs_ids, locus):
+    def _filter_by_location(self, genes, intervals, variant_ids, rs_ids, exclude_locations):
         if genes or intervals:
-            exclude_locations = locus and locus.get('excludeLocations')
             self._filter(_location_filter(genes, intervals, exclude_locations))
             if genes and not exclude_locations:
                 self._filtered_gene_ids = set(genes.keys())
