@@ -53,9 +53,9 @@ class SvHailTableQuery(BaseHailTableQuery):
         )],
     }
 
-    def __init__(self, *args, **kwargs):
-        self._is_interval_filtered = False
-        super().__init__(*args, **kwargs)
+    def __init__(self, *args, padded_interval=None, **kwargs):
+        self._is_interval_filtered = bool(padded_interval)
+        super().__init__(*args, padded_interval=padded_interval, **kwargs)
 
     def _set_interval_prefilter(self, *args, **kwargs):
         self._is_interval_filtered = True

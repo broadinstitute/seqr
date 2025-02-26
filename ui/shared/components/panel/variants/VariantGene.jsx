@@ -626,7 +626,9 @@ export const BaseVariantGene = React.memo(({
           size="tiny"
         />
         &nbsp; | &nbsp;
-        {!variant.lookupFamilyGuids && <GeneSearchLinkWithPopup location={geneId} familyGuids={variant.familyGuids} />}
+        {variant.familyGuids?.length > 0 && (
+          <GeneSearchLinkWithPopup location={geneId} familyGuids={variant.familyGuids} />
+        )}
       </GeneLinks>
     )
   }
