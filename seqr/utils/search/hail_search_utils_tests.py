@@ -48,7 +48,7 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         self.assertEqual(executed_request.url.split('/')[-1], url_path)
         self.assertDictEqual(json.loads(executed_request.body), expected_search)
 
-    def _test_expected_search_call(self, search_fields=None, gene_ids=None, intervals=None, exclude_intervals= None,
+    def _test_expected_search_call(self, search_fields=None, gene_ids=None, intervals=None, exclude_intervals=False,
                                    rs_ids=None, variant_ids=None, dataset_type=None, secondary_dataset_type=None,
                                    frequencies=None, inheritance_mode='de_novo', inheritance_filter=None,
                                    quality_filter=None, sort='xpos', sort_metadata=None, **kwargs):
@@ -107,7 +107,7 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         query_variants(self.results_model, user=self.user)
         self._test_expected_search_call(**LOCATION_SEARCH, sample_data=EXPECTED_SAMPLE_DATA)
 
-        self.search_model.search['locus']['excludeLocations'] = True
+        self.search_model.search['exclude'] = self.search_model.search.pop('locus')
         query_variants(self.results_model, user=self.user)
         self._test_expected_search_call(**EXCLUDE_LOCATION_SEARCH)
 
