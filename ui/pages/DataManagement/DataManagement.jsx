@@ -52,8 +52,10 @@ const LOCAL_HAIL_SEARCH_DATA_MANAGEMENT_PAGES = [
 ]
 
 const AIRFLOW_HAIL_SEARCH_DATA_MANAGEMENT_PAGES = [
-  { path: 'trigger_dag', component: TriggerDag },
   ...DATA_MANAGEMENT_PAGES,
+  { path: 'delete_search_projects', component: TriggerDag },
+  { path: 'delete_search_families', component: TriggerDag },
+  { path: 'update_search_reference_data', component: TriggerDag },
 ]
 
 const dataManagementPages = (user, elasticsearchEnabled) => {
