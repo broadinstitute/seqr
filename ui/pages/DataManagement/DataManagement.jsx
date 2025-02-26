@@ -11,9 +11,9 @@ import ElasticsearchStatus from './components/ElasticsearchStatus'
 import LoadData from './components/LoadData'
 import RnaSeq from './components/RnaSeq'
 import SampleQc from './components/SampleQc'
-import TriggerDag from './components/TriggerDag'
 import Users from './components/Users'
 import PhenotypePrioritization from './components/PhenotypePrioritization'
+import TRIGGER_DAG_PAGES from './components/TriggerDagPages'
 
 const IFRAME_STYLE = { position: 'fixed', left: '0', top: '95px' }
 
@@ -53,9 +53,7 @@ const LOCAL_HAIL_SEARCH_DATA_MANAGEMENT_PAGES = [
 
 const AIRFLOW_HAIL_SEARCH_DATA_MANAGEMENT_PAGES = [
   ...DATA_MANAGEMENT_PAGES,
-  { path: 'delete_search_projects', component: TriggerDag },
-  { path: 'delete_search_families', component: TriggerDag },
-  { path: 'update_search_reference_data', component: TriggerDag },
+  ...TRIGGER_DAG_PAGES,
 ]
 
 const dataManagementPages = (user, elasticsearchEnabled) => {
