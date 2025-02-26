@@ -187,6 +187,12 @@ class SearchUtilsTests(SearchTestHelper):
             search_func(self.results_model, user=self.user)
         self.assertEqual(str(cm.exception), 'Invalid genes/intervals: DDX11L1, ENSG00000223972')
 
+        self.search_model.search['pathogenicity'] = {'clinvar': ['pathogenic', 'vus']}
+        self.search_model.search['exclude'] = {'clinvar': ['benign', 'vus']}
+        with self.assertRaises(InvalidSearchException) as cm:
+            search_func(self.results_model, user=self.user)
+        self.assertEqual(str(cm.exception), 'ClinVar pathogenicity vus is both included and excluded')
+
         self.search_model.search['exclude'] = {}
         self.search_model.search['inheritance'] = {'mode': 'recessive'}
         with self.assertRaises(InvalidSearchException) as cm:
@@ -274,7 +280,8 @@ class SearchUtilsTests(SearchTestHelper):
 
     def _test_expected_search_call(self, mock_get_variants, results_cache, search_fields=None, genes=None, intervals=None,
                                    rs_ids=None, variant_ids=None, parsed_variant_ids=None, inheritance_mode='de_novo',
-                                   dataset_type=None, secondary_dataset_type=None, omitted_sample_guids=None, exclude_locations=False,  **kwargs):
+                                   dataset_type=None, secondary_dataset_type=None, omitted_sample_guids=None,
+                                   exclude_locations=False, pathogenicity=None, **kwargs):
         expected_search = {
             'inheritance_mode': inheritance_mode,
             'inheritance_filter': {},
@@ -287,6 +294,8 @@ class SearchUtilsTests(SearchTestHelper):
             'secondary_dataset_type': secondary_dataset_type,
         }
         expected_search.update({field: self.search_model.search[field] for field in search_fields or []})
+        if pathogenicity:
+            expected_search['pathogenicity'] = pathogenicity
 
         mock_get_variants.assert_called_with(mock.ANY, expected_search, self.user, results_cache, '37', **kwargs)
         searched_samples = self.affected_search_samples
@@ -384,11 +393,21 @@ class SearchUtilsTests(SearchTestHelper):
             ], exclude_locations=True,
         )
 
-        self.search_model.search.update({'pathogenicity': {'clinvar': ['pathogenic', 'likely_pathogenic']}, 'exclude': {}})
+        self.search_model.search['exclude'] = {'clinvar': ['benign']}
         query_variants(self.results_model, user=self.user)
         self._test_expected_search_call(
             mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
-            search_fields=['pathogenicity'], dataset_type='SNV_INDEL', omitted_sample_guids=SV_SAMPLES,
+            pathogenicity={'exclude_clinvar': ['benign']},
+        )
+
+        self.search_model.search.update({'pathogenicity': {'clinvar': ['pathogenic', 'likely_pathogenic']}})
+        query_variants(self.results_model, user=self.user)
+        self._test_expected_search_call(
+            mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
+            dataset_type='SNV_INDEL', omitted_sample_guids=SV_SAMPLES, pathogenicity={
+                'clinvar': ['pathogenic', 'likely_pathogenic'],
+                'exclude_clinvar': ['benign'],
+            }
         )
 
         self.search_model.search = {

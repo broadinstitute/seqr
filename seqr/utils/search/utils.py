@@ -286,6 +286,15 @@ def _query_variants(search_model, user, previous_search_results, sort=None, num_
     if parsed_search.get('inheritance'):
         samples = _parse_inheritance(parsed_search, samples)
 
+    if exclude.get('clinvar'):
+        pathogenicity = parsed_search.get('pathogenicity') or {}
+        if pathogenicity.get('clinvar'):
+            duplicates = set(pathogenicity['clinvar']).intersection(exclude['clinvar'])
+            if duplicates:
+                raise InvalidSearchException(f'ClinVar pathogenicity {", ".join(sorted(duplicates))} is both included and excluded')
+        pathogenicity['exclude_clinvar'] = exclude['clinvar']
+        parsed_search['pathogenicity'] = pathogenicity
+
     _validate_search(parsed_search, samples, previous_search_results)
 
     variant_results = backend_specific_call(get_es_variants, get_hail_variants)(
