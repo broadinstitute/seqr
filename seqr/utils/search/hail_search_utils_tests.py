@@ -107,9 +107,10 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         query_variants(self.results_model, user=self.user)
         self._test_expected_search_call(**LOCATION_SEARCH, sample_data=EXPECTED_SAMPLE_DATA)
 
-        self.search_model.search['exclude'] = self.search_model.search.pop('locus')
+        locus = self.search_model.search.pop('locus')
+        self.search_model.search['exclude'] = {'rawItems': locus['rawItems']}
         query_variants(self.results_model, user=self.user)
-        self._test_expected_search_call(**EXCLUDE_LOCATION_SEARCH)
+        self._test_expected_search_call(exclude={}, **EXCLUDE_LOCATION_SEARCH)
 
         self.search_model.search = {
             'inheritance': {'mode': 'recessive', 'filter': {'affected': {

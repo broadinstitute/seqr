@@ -281,7 +281,7 @@ class SearchUtilsTests(SearchTestHelper):
     def _test_expected_search_call(self, mock_get_variants, results_cache, search_fields=None, genes=None, intervals=None,
                                    rs_ids=None, variant_ids=None, parsed_variant_ids=None, inheritance_mode='de_novo',
                                    dataset_type=None, secondary_dataset_type=None, omitted_sample_guids=None,
-                                   exclude_locations=False, pathogenicity=None, **kwargs):
+                                   exclude_locations=False, exclude=None, **kwargs):
         expected_search = {
             'inheritance_mode': inheritance_mode,
             'inheritance_filter': {},
@@ -294,8 +294,8 @@ class SearchUtilsTests(SearchTestHelper):
             'secondary_dataset_type': secondary_dataset_type,
         }
         expected_search.update({field: self.search_model.search[field] for field in search_fields or []})
-        if pathogenicity:
-            expected_search['pathogenicity'] = pathogenicity
+        if exclude:
+            expected_search['exclude'] = exclude
 
         mock_get_variants.assert_called_with(mock.ANY, expected_search, self.user, results_cache, '37', **kwargs)
         searched_samples = self.affected_search_samples
@@ -381,7 +381,8 @@ class SearchUtilsTests(SearchTestHelper):
         self.assertEqual(parsed_genes['ENSG00000227232']['geneSymbol'], 'WASH7P')
         self.assertEqual(parsed_genes['ENSG00000186092']['geneSymbol'], 'OR4F5')
 
-        self.search_model.search['exclude'] = self.search_model.search.pop('locus')
+        locus = self.search_model.search.pop('locus')
+        self.search_model.search['exclude'] = {'clinvar': ['benign'], 'rawItems': locus['rawItems']}
         query_variants(self.results_model, user=self.user)
         self._test_expected_search_call(
             mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
@@ -390,24 +391,15 @@ class SearchUtilsTests(SearchTestHelper):
             }, intervals=[
                 {'chrom': '2', 'start': 1234, 'end': 5678, 'offset': None},
                 {'chrom': '7', 'start': 100, 'end': 10100, 'offset': 0.1},
-            ], exclude_locations=True,
+            ], exclude_locations=True, exclude={'clinvar': ['benign']},
         )
 
-        self.search_model.search['exclude'] = {'clinvar': ['benign']}
-        query_variants(self.results_model, user=self.user)
-        self._test_expected_search_call(
-            mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
-            pathogenicity={'exclude_clinvar': ['benign']},
-        )
-
+        del self.search_model.search['exclude']['rawItems']
         self.search_model.search.update({'pathogenicity': {'clinvar': ['pathogenic', 'likely_pathogenic']}})
         query_variants(self.results_model, user=self.user)
         self._test_expected_search_call(
             mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
-            dataset_type='SNV_INDEL', omitted_sample_guids=SV_SAMPLES, pathogenicity={
-                'clinvar': ['pathogenic', 'likely_pathogenic'],
-                'exclude_clinvar': ['benign'],
-            }
+            search_fields=['exclude', 'pathogenicity'], dataset_type='SNV_INDEL', omitted_sample_guids=SV_SAMPLES,
         )
 
         self.search_model.search = {

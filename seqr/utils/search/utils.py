@@ -244,7 +244,7 @@ def _query_variants(search_model, user, previous_search_results, sort=None, num_
     _validate_sort(sort, families)
 
     locus = search.pop('locus', None) or {}
-    exclude = search.pop('exclude', None) or {}
+    exclude = search.get('exclude', None) or {}
     exclude_locations = bool(exclude.get('rawItems'))
     if locus and exclude_locations:
         raise InvalidSearchException('Cannot specify both Location and Excluded Genes/Intervals')
@@ -264,6 +264,12 @@ def _query_variants(search_model, user, previous_search_results, sort=None, num_
 
     if variant_ids:
         num_results = len(variant_ids)
+
+    exclude.pop('rawItems', None)
+    if exclude.get('clinvar') and (search.get('pathogenicity') or {}).get('clinvar'):
+        duplicates = set(search['pathogenicity']['clinvar']).intersection(exclude['clinvar'])
+        if duplicates:
+            raise InvalidSearchException(f'ClinVar pathogenicity {", ".join(sorted(duplicates))} is both included and excluded')
 
     parsed_search = {
         'parsedLocus': {
@@ -285,15 +291,6 @@ def _query_variants(search_model, user, previous_search_results, sort=None, num_
     samples = _get_families_search_data(families, dataset_type=search_dataset_type)
     if parsed_search.get('inheritance'):
         samples = _parse_inheritance(parsed_search, samples)
-
-    if exclude.get('clinvar'):
-        pathogenicity = parsed_search.get('pathogenicity') or {}
-        if pathogenicity.get('clinvar'):
-            duplicates = set(pathogenicity['clinvar']).intersection(exclude['clinvar'])
-            if duplicates:
-                raise InvalidSearchException(f'ClinVar pathogenicity {", ".join(sorted(duplicates))} is both included and excluded')
-        pathogenicity['exclude_clinvar'] = exclude['clinvar']
-        parsed_search['pathogenicity'] = pathogenicity
 
     _validate_search(parsed_search, samples, previous_search_results)
 
