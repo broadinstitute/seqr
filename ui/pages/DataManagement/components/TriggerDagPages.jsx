@@ -15,11 +15,11 @@ import {
 const DATASET_TYPE_FIELD = {
   name: 'datasetType',
   label: 'Dataset Type',
-  labelHelp: 'Optionally specify one dataset type to run. If omitted, all dataset types will be run.',
   component: Select,
   options: [
     DATASET_TYPE_SNV_INDEL_CALLS, DATASET_TYPE_MITO_CALLS, DATASET_TYPE_SV_CALLS,
   ].map(value => ({ value, name: value })),
+  validate: validators.required,
 }
 const PROJECT_FIELDS = [
   {
@@ -47,7 +47,7 @@ const FAMILY_FIELDS = [
 ]
 const REFERENCE_DATASET_FIELDS = [
   { ...GENOME_VERSION_FIELD, validate: validators.required },
-  { ...DATASET_TYPE_FIELD, validate: validators.required, labelHelp: null },
+  DATASET_TYPE_FIELD,
 ]
 
 const TriggerDagForm = ({ dagName, fields }) => (

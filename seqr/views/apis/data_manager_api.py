@@ -23,12 +23,12 @@ from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.vcf_utils import validate_vcf_and_get_samples, get_vcf_list
 
-from seqr.views.utils.airflow_utils import trigger_airflow_data_loading
+from seqr.views.utils.airflow_utils import trigger_airflow_data_loading, trigger_airflow_dag
 from seqr.views.utils.airtable_utils import AirtableSession, LOADABLE_PDO_STATUSES, AVAILABLE_PDO_STATUS
 from seqr.views.utils.dataset_utils import load_rna_seq, load_phenotype_prioritization_data_file, RNA_DATA_TYPE_CONFIGS, \
     post_process_rna_data, convert_django_meta_to_http_headers
 from seqr.views.utils.file_utils import parse_file, get_temp_file_path, load_uploaded_file, persist_temp_file
-from seqr.views.utils.json_utils import create_json_response
+from seqr.views.utils.json_utils import create_json_response, _to_snake_case
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.pedigree_info_utils import get_validated_related_individuals, JsonConstants
 from seqr.views.utils.permissions_utils import data_manager_required, pm_or_data_manager_required, get_internal_projects
@@ -616,6 +616,25 @@ def _get_valid_search_individuals(project, airtable_samples, vcf_samples, datase
     )
 
     return [i['id'] for i in search_individuals_by_id.values()] + loaded_individual_ids
+
+
+@data_manager_required
+def trigger_dag(request, dag_id):
+    request_json = json.loads(request.body)
+    project_guid = request_json.pop('project', None)
+    family_guid = request_json.pop('family', None)
+    kwargs = {_to_snake_case(k): v for k, v in request_json.items()}
+    project = None
+    if project_guid:
+        project = Project.objects.get(guid=project_guid)
+    elif family_guid:
+        project = Project.objects.get(family__guid=family_guid)
+        kwargs['family_guids'] = [family_guid]
+    try:
+        dag_variables = trigger_airflow_dag(dag_id, project, **kwargs)
+    except Exception as e:
+        return create_json_response({'error': str(e)}, status=400)
+    return create_json_response({'info': [f'Triggered DAG {dag_id} with variables: {json.dumps(dag_variables)}']})
 
 
 # Hop-by-hop HTTP response headers shouldn't be forwarded.

@@ -47,19 +47,18 @@ def trigger_airflow_data_loading(*args, user: User, success_message: str, succes
     return success
 
 
-def trigger_airflow_delete_families(
-    dataset_type: str, family_guids: list[str], from_project: Project,
-):
+def trigger_airflow_dag(dag_id: str, project: Project, dataset_type: str, genome_version: str = None, **kwargs):
     variables = format_loading_pipeline_variables(
-        [from_project],
-        from_project.genome_version,
+        [project] if project else [],
+        project.genome_version if project else genome_version,
         dataset_type,
-        family_guids=sorted(family_guids)
+        **kwargs
     )
-    _check_dag_running_state(DELETE_FAMILIES_DAG_NAME)
-    _update_variables(variables, DELETE_FAMILIES_DAG_NAME)
-    _wait_for_dag_variable_update(variables, DELETE_FAMILIES_DAG_NAME)
-    _trigger_dag(DELETE_FAMILIES_DAG_NAME)
+    _check_dag_running_state(dag_id)
+    _update_variables(variables, dag_id)
+    _wait_for_dag_variable_update(variables, dag_id)
+    _trigger_dag(dag_id)
+    return variables
 
 
 def _send_load_data_slack_msg(messages: list[str], channel: str, dag: dict):
