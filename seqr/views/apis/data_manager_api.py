@@ -23,7 +23,7 @@ from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.vcf_utils import validate_vcf_and_get_samples, get_vcf_list
 
-from seqr.views.utils.airflow_utils import trigger_airflow_data_loading, trigger_airflow_dag
+from seqr.views.utils.airflow_utils import trigger_airflow_data_loading, trigger_airflow_dag, is_airflow_enabled
 from seqr.views.utils.airtable_utils import AirtableSession, LOADABLE_PDO_STATUSES, AVAILABLE_PDO_STATUS
 from seqr.views.utils.dataset_utils import load_rna_seq, load_phenotype_prioritization_data_file, RNA_DATA_TYPE_CONFIGS, \
     post_process_rna_data, convert_django_meta_to_http_headers
@@ -620,6 +620,8 @@ def _get_valid_search_individuals(project, airtable_samples, vcf_samples, datase
 
 @data_manager_required
 def trigger_dag(request, dag_id):
+    if not is_airflow_enabled():
+        raise PermissionDenied()
     request_json = json.loads(request.body)
     project_guid = request_json.pop('project', None)
     family_guid = request_json.pop('family', None)

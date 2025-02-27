@@ -22,6 +22,10 @@ class DagRunningException(Exception):
     pass
 
 
+def is_airflow_enabled():
+    return bool(AIRFLOW_WEBSERVER_URL)
+
+
 def trigger_airflow_data_loading(*args, user: User, success_message: str, success_slack_channel: str,
                                  error_message: str, is_internal: bool = False, **kwargs):
     success = True

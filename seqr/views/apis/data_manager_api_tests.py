@@ -9,7 +9,7 @@ import responses
 from seqr.utils.communication_utils import _set_bulk_notification_stream
 from seqr.views.apis.data_manager_api import elasticsearch_status, upload_qc_pipeline_output, delete_index, \
     update_rna_seq, load_rna_seq_sample_data, load_phenotype_prioritization_data, validate_callset, loading_vcfs, \
-    get_loaded_projects, load_data
+    get_loaded_projects, trigger_dag, load_data
 from seqr.views.utils.orm_to_json_utils import _get_json_for_models
 from seqr.views.utils.test_utils import AuthenticationTestCase, AirflowTestCase, AirtableTest
 from seqr.utils.search.elasticsearch.es_utils_tests import urllib3_responses
@@ -1659,6 +1659,49 @@ class DataManagerAPITest(AirtableTest):
         })
         Individual.objects.filter(guid='I000009_na20874').update(affected='A')
 
+    @responses.activate
+    def test_trigger_dag(self):
+        self.check_data_manager_login(reverse(trigger_dag, args=['some_dag']))
+
+        self._test_trigger_single_dag(
+            'DELETE_PROJECTS',
+            {'project': PROJECT_GUID, 'datasetType': 'SNV_INDEL'},
+            {
+                'projects_to_run': [PROJECT_GUID],
+                'dataset_type': 'SNV_INDEL',
+                'reference_genome': 'GRCh37',
+            }
+        )
+        self._test_trigger_single_dag(
+            'DELETE_FAMILIES',
+            {'family': 'F000012_12', 'datasetType': 'MITO'},
+            {
+                'projects_to_run': ['R0003_test'],
+                'dataset_type': 'MITO',
+                'reference_genome': 'GRCh38',
+                'family_guids': ['F000012_12'],
+            }
+        )
+        self._test_trigger_single_dag(
+            'UPDATE_REFERENCE_DATASETS',
+            {'genomeVersion': 'GRCh37', 'datasetType': 'SV'},
+            {'dataset_type': 'SV', 'reference_genome': 'GRCh37'},
+        )
+
+        # TODO test errors
+
+    def _test_trigger_single_dag(self, dag_id, body, dag_variables):
+        self._dag_url = getattr(self, '_dag_url', '').replace(self.DAG_NAME, dag_id)
+        self.DAG_NAME = dag_id
+        self.set_up_one_dag(variables=dag_variables)
+
+        url = reverse(trigger_dag, args=[dag_id])
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self._assert_expected_dag_trigger(response, dag_id, dag_variables)
+
+    def _assert_expected_dag_trigger(self, response, dag_id, variables):
+        self.assertEqual(response.status_code, 403)
+
 
 class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
     fixtures = ['users', '1kg_project', 'reference_data']
@@ -1779,6 +1822,9 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
         self.assertEqual(len(responses.calls), 0)
 
     def _test_validate_dataset_type(self, url):
+        pass
+
+    def set_up_one_dag(self, *args, **kwargs):
         pass
 
 
@@ -2037,4 +2083,26 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], [f'Data file or path {self.CALLSET_DIR}/mito_callset.mt is not found.'])
         self._set_file_not_found()
+
+    def _add_update_check_dag_responses(self, variables=None, **kwargs):
+        # get variables
+        responses.add(responses.GET, f'{self.MOCK_AIRFLOW_URL}/api/v1/variables/{self.DAG_NAME}', json={
+            'key': self.DAG_NAME,
+            'value': '{}'
+        })
+        # get variables again if the response of the previous request didn't include the updated variables
+        responses.add(responses.GET, f'{self.MOCK_AIRFLOW_URL}/api/v1/variables/{self.DAG_NAME}', json={
+            'key': self.DAG_NAME,
+            'value': json.dumps(variables)
+        })
+
+    def _assert_update_check_airflow_calls(self, call_count, offset, update_check_path):
+        variables_update_check_path = f'{self.MOCK_AIRFLOW_URL}/api/v1/variables/{self.DAG_NAME}'
+        super()._assert_update_check_airflow_calls(call_count, offset, variables_update_check_path)
+
+    def _assert_expected_dag_trigger(self, response, dag_id, variables):
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'info': [f'Triggered DAG {dag_id} with variables: {json.dumps(variables)}']})
+
+        self.assert_airflow_calls(variables, 5)
 
