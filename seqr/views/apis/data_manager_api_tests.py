@@ -1678,14 +1678,14 @@ class DataManagerAPITest(AirtableTest):
             {
                 'projects_to_run': ['R0003_test'],
                 'dataset_type': 'MITO',
-                'reference_genome': 'GRCh38',
+                'reference_genome': 'GRCh37',
                 'family_guids': ['F000012_12'],
             }
         )
         self._test_trigger_single_dag(
             'UPDATE_REFERENCE_DATASETS',
-            {'genomeVersion': 'GRCh37', 'datasetType': 'SV'},
-            {'dataset_type': 'SV', 'reference_genome': 'GRCh37'},
+            {'genomeVersion': '38', 'datasetType': 'SV'},
+            {'dataset_type': 'SV', 'reference_genome': 'GRCh38'},
         )
 
         # TODO test errors
