@@ -470,6 +470,29 @@ AIRTABLE_SAMPLE_RECORDS = {
         },
     ],
 }
+INVALID_AIRTABLE_SAMPLE_RECORDS = {
+    'records': [
+        {
+            'id': 'rec2B6OGmQpAkQW3s',
+            'fields': {
+                'SeqrProject': [
+                    'https://seqr.broadinstitute.org/project/R0002_empty/project_page',
+                    'https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page',
+                ],
+                'PDOStatus': ['Historic', 'Methods (Loading)', 'Available in seqr'],
+                'CollaboratorSampleID': 'NA21234',
+            }
+        },
+        {
+            'id': 'recW24C2CJW5lT65K',
+            'fields': {
+                'CollaboratorSampleID': 'HG00731',
+                'SeqrProject': ['https://seqr.broadinstitute.org/project/R0001_1kg/details'],
+                'PDOStatus': ['Available in seqr'],
+            }
+        },
+    ],
+}
 
 PIPELINE_RUNNER_URL = 'http://pipeline-runner:6000/loading_pipeline_enqueue'
 
@@ -1523,11 +1546,16 @@ class DataManagerAPITest(AirtableTest):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'projects': self.WES_PROJECT_OPTIONS})
 
+        self._assert_expected_airtable_errors(url)
+
     def _assert_expected_pm_access(self, get_response):
         response = get_response()
         self.assertEqual(response.status_code, 200)
         self.login_data_manager_user()
         return response
+
+    def _assert_expected_airtable_errors(self, url):
+        return True
 
     @responses.activate
     @mock.patch('seqr.views.utils.airtable_utils.BASE_URL', 'https://seqr.broadinstitute.org/')
@@ -2037,4 +2065,15 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], [f'Data file or path {self.CALLSET_DIR}/mito_callset.mt is not found.'])
         self._set_file_not_found()
+
+    def _assert_expected_airtable_errors(self, url):
+        responses.replace(
+            responses.GET, 'https://api.airtable.com/v0/app3Y97xtbbaOopVR/Samples',
+            json=INVALID_AIRTABLE_SAMPLE_RECORDS, status=200,
+        )
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {
+            'error': 'The following samples are associated with misconfigured PDOs in Airtable: HG00731, NA21234',
+        })
 
