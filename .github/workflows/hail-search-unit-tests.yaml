@@ -34,3 +34,5 @@ jobs:
           export JAVA_OPTS_XSS=16M
           coverage run --source="./hail_search" --omit="./hail_search/__main__.py","./hail_search/test_utils.py" -m pytest hail_search/
           coverage report --fail-under=99
+          coverage report | (! grep [1-8][0-9]%)
+          coverage report | (! grep 9[0-5]%)
