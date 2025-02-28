@@ -87,21 +87,26 @@ class GcnvHailTableQuery(SvHailTableQuery):
 
     def _annotate_families_table_annotations(self, families_ht, annotations_ht, is_comp_het=False):
         ht = super()._annotate_families_table_annotations(families_ht, annotations_ht)
-        gene_ids = self._get_genotype_override_field(ht, 'gene_ids')
-        transcript_has_gene = lambda t: hl.is_missing(gene_ids) | gene_ids.contains(t.gene_id)
+        transcript_fields = [
+            transcript_field for transcript_field in [
+                ALLOWED_TRANSCRIPTS, ALLOWED_SECONDARY_TRANSCRIPTS, FILTERED_GENE_TRANSCRIPTS,
+            ] if hasattr(ht, transcript_field)
+        ]
+        if not transcript_fields:
+            return ht
 
-        for transcript_field in [ALLOWED_TRANSCRIPTS, ALLOWED_SECONDARY_TRANSCRIPTS]:
-            if hasattr(ht, transcript_field):
+        ht = ht.annotate(all_gene_ids=self._get_genotype_override_field(ht, 'gene_ids'))
+        for transcript_field in transcript_fields:
+            transcript_has_gene = lambda t: hl.is_missing(ht.all_gene_ids) | ht.all_gene_ids.contains(t.gene_id)
+            if transcript_field == FILTERED_GENE_TRANSCRIPTS:
+                ht = ht.filter(ht[transcript_field].any(transcript_has_gene))
+            else:
                 ht = ht.annotate(**{transcript_field: ht[transcript_field].filter(transcript_has_gene)})
                 if not is_comp_het:
                     #  Will trigger re-filtering the ht for allowed annotations
                     self._has_secondary_annotations = True
 
-        if hasattr(ht, FILTERED_GENE_TRANSCRIPTS) and not is_comp_het:
-            if hasattr(ht, FILTERED_GENE_TRANSCRIPTS):
-                ht = ht.filter(ht[FILTERED_GENE_TRANSCRIPTS].any(transcript_has_gene))
-
-        return ht
+        return ht.drop('all_gene_ids')
 
     def _filter_by_gene_ids(self, ht, gene_ids):
         if not hasattr(ht, 'family_entries'):

@@ -986,7 +986,8 @@ class HailSearchTestCase(AioHTTPTestCase):
         await self._assert_expected_search(
             [MULTI_DATA_TYPE_COMP_HET_VARIANT2, [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], [GCNV_VARIANT3, GCNV_VARIANT4]],
             inheritance_mode='recessive',
-            annotations={**annotations_1, 'structural': ['gCNV_DEL']}, annotations_secondary={**annotations_2, **gcnv_annotations_1},
+            annotations={**annotations_1, 'structural': ['gCNV_DEL'], 'structural_consequence': ['INTRONIC']},
+            annotations_secondary={**annotations_2, **gcnv_annotations_1},
             gene_ids=['ENSG00000277258', 'ENSG00000275023'], intervals=[['1', 38717636, 38724781], ['17', 38717636, 38724781]],
         )
 
