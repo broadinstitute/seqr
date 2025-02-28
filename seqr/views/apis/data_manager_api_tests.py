@@ -1682,17 +1682,15 @@ class DataManagerAPITest(AirtableTest):
                 'family_guids': ['F000012_12'],
             }
         )
-        self._test_trigger_single_dag(
-            'UPDATE_REFERENCE_DATASETS',
-            {'genomeVersion': '38', 'datasetType': 'SV'},
-            {
-                'projects_to_run': None,
-                'dataset_type': 'SV',
-                'reference_genome': 'GRCh38',
-            },
-        )
 
-        # TODO test errors
+        body = {'genomeVersion': '38', 'datasetType': 'SV'}
+        url = self._test_trigger_single_dag('UPDATE_REFERENCE_DATASETS',body,{
+            'projects_to_run': None,
+            'dataset_type': 'SV',
+            'reference_genome': 'GRCh38',
+        })
+
+        self._test_dag_trigger_errors(url, body)
 
     def _test_trigger_single_dag(self, dag_id, body, dag_variables):
         responses.calls.reset()
@@ -1701,9 +1699,13 @@ class DataManagerAPITest(AirtableTest):
         url = reverse(trigger_dag, args=[dag_id])
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self._assert_expected_dag_trigger(response, dag_id, dag_variables)
+        return url
 
     def _assert_expected_dag_trigger(self, response, dag_id, variables):
         self.assertEqual(response.status_code, 403)
+
+    def _test_dag_trigger_errors(self, *args, **kwargs):
+        pass
 
 
 class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
@@ -2120,3 +2122,8 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
 
         self.assert_airflow_calls(variables, 5)
 
+    def _test_dag_trigger_errors(self, url, body):
+        self.set_dag_trigger_error_response()
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'error': 'UPDATE_REFERENCE_DATASETS DAG is running and cannot be triggered again.'})
