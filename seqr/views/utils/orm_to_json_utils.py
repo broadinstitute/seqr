@@ -162,7 +162,7 @@ def get_json_for_user(user, fields):
 def get_json_for_current_user(user):
     user_json = get_json_for_user(user, fields=MODEL_USER_FIELDS + list(COMPUTED_USER_FIELDS.keys()))
     user_json.update({
-        'isAnvil': is_anvil_authenticated(user) or True,
+        'isAnvil': is_anvil_authenticated(user),
         'isAnalyst': user_is_analyst(user),
         'isPm': user_is_pm(user),
     })
