@@ -1,7 +1,5 @@
 import { createSelector } from 'reselect'
-import uniqWith from 'lodash/uniqWith'
 
-import { compHetGene } from 'shared/components/panel/variants/VariantUtils'
 import { compareObjects } from 'shared/utils/sortUtils'
 import { NOTE_TAG_NAME, MME_TAG_NAME, FAMILY_FIELD_ANALYSED_BY, CATEGORY_FAMILY_FILTERS } from 'shared/utils/constants'
 
@@ -47,13 +45,6 @@ export const getSavedVariantsIsLoading = state => state.savedVariantsLoading.isL
 export const getSavedVariantsLoadingError = state => state.savedVariantsLoading.errorMessage
 export const getSearchesByHash = state => state.searchesByHash
 export const getSearchFamiliesByHash = state => state.searchFamiliesByHash
-export const getSearchedVariants = state => state.searchedVariants
-export const getSearchedVariantsIsLoading = state => state.searchedVariantsLoading.isLoading
-export const getSearchedVariantsErrorMessage = state => state.searchedVariantsLoading.errorMessage
-export const getSearchGeneBreakdown = state => state.searchGeneBreakdown
-export const getSearchGeneBreakdownLoading = state => state.searchGeneBreakdownLoading.isLoading
-export const getSearchGeneBreakdownErrorMessage = state => state.searchGeneBreakdownLoading.errorMessage
-export const getVariantSearchDisplay = state => state.variantSearchDisplay
 
 const groupEntitiesByProjectGuid = entities => Object.entries(entities).reduce((acc, [entityGuid, entity]) => {
   if (!(entity.projectGuid in acc)) {
@@ -65,7 +56,7 @@ const groupEntitiesByProjectGuid = entities => Object.entries(entities).reduce((
 }, {})
 export const getFamiliesGroupedByProjectGuid = createSelector(getFamiliesByGuid, groupEntitiesByProjectGuid)
 export const getAnalysisGroupsGroupedByProjectGuid = createSelector(getAnalysisGroupsByGuid, groupEntitiesByProjectGuid)
-const getSamplesGroupedByProjectGuid = createSelector(getSamplesByGuid, groupEntitiesByProjectGuid)
+export const getSamplesGroupedByProjectGuid = createSelector(getSamplesByGuid, groupEntitiesByProjectGuid)
 
 const groupByFamilyGuid = objs => objs.reduce((acc, o) => {
   if (!acc[o.familyGuid]) {
@@ -174,19 +165,6 @@ export const getIGVSamplesByFamilySampleIndividual = createSelector(
   }, {}),
 )
 
-export const getProjectDatasetTypes = createSelector(
-  getProjectsByGuid,
-  getSamplesGroupedByProjectGuid,
-  (projectsByGuid, samplesByProjectGuid) => Object.values(projectsByGuid).reduce(
-    (acc, { projectGuid, datasetTypes }) => ({
-      ...acc,
-      [projectGuid]: datasetTypes || [...new Set(Object.values(samplesByProjectGuid[projectGuid] || {}).filter(
-        ({ isActive }) => isActive,
-      ).map(({ datasetType }) => datasetType))],
-    }), {},
-  ),
-)
-
 // Saved variant selectors
 export const getVariantId = variant => (
   Array.isArray(variant) ? variant : [variant]).map(({ variantId }) => variantId).sort().join(',')
@@ -291,72 +269,6 @@ export const getParsedLocusList = createSelector(
 
     return locusList
   },
-)
-
-const getCurrentSearchHash = (state, ownProps) => ownProps.match.params.searchHash
-
-export const getCurrentSearchParams = createSelector(
-  getSearchesByHash,
-  getCurrentSearchHash,
-  (searchesByHash, searchHash) => searchesByHash[searchHash],
-)
-
-export const getTotalVariantsCount = createSelector(
-  getCurrentSearchParams,
-  searchParams => (searchParams || {}).totalResults,
-)
-
-export const getDisplayVariants = createSelector(
-  (state, ownProps) => ownProps.flattenCompoundHet,
-  getSearchedVariants,
-  (flattenCompoundHet, searchedVariants) => {
-    const shouldFlatten = Object.values(flattenCompoundHet || {}).some(val => val)
-    if (!shouldFlatten) {
-      return searchedVariants || []
-    }
-    const flattened = flattenCompoundHet.all ? searchedVariants.flat() : searchedVariants.reduce((acc, variant) => (
-      (Array.isArray(variant) && flattenCompoundHet[compHetGene(variant)]) ? [...acc, ...variant] : [...acc, variant]
-    ), [])
-    return uniqWith(flattened, (a, b) => !Array.isArray(a) && !Array.isArray(b) && a.variantId === b.variantId)
-  },
-)
-
-export const getSearchedVariantExportConfig = createSelector(
-  getCurrentSearchHash,
-  getCurrentSearchParams,
-  getProjectsByGuid,
-  (searchHash, searchParams, projectsByGuid) => {
-    const { projectFamilies } = searchParams || {}
-    if ((projectFamilies || []).some(
-      ({ projectGuid }) => projectsByGuid[projectGuid]?.isDemo && !projectsByGuid[projectGuid].allUserDemo,
-    )) {
-      // Do not allow downloads for demo projects
-      return null
-    }
-    return [{
-      name: 'Variant Search Results',
-      url: `/api/search/${searchHash}/download`,
-    }]
-  },
-)
-
-export const getSearchGeneBreakdownValues = createSelector(
-  getSearchGeneBreakdown,
-  (state, props) => props.searchHash,
-  getFamiliesByGuid,
-  getGenesById,
-  getSearchesByHash,
-  (geneBreakdowns, searchHash, familiesByGuid, genesById, searchesByHash) => Object.entries(
-    geneBreakdowns[searchHash] || {},
-  ).map(([geneId, counts]) => ({
-    numVariants: counts.total,
-    numFamilies: Object.keys(counts.families).length,
-    families: Object.entries(counts.families).map(
-      ([familyGuid, count]) => ({ family: familiesByGuid[familyGuid], count }),
-    ),
-    search: searchesByHash[searchHash].search,
-    ...(genesById[geneId] || { geneId, geneSymbol: geneId, omimPhenotypes: [], constraints: {} }),
-  })),
 )
 
 const groupDataNestedByChrom = (initialData, groupedData, nestedKey) => groupedData.reduce(

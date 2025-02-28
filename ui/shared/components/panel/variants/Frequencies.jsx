@@ -4,8 +4,7 @@ import styled from 'styled-components'
 import { Popup, Divider } from 'semantic-ui-react'
 
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
-import { GENOME_VERSION_37, GENOME_VERSION_38, getVariantMainGeneId } from '../../../utils/constants'
-import { GNOMAD_SV_CRITERIA_MESSAGE, SV_CALLSET_CRITERIA_MESSAGE, TOPMED_FREQUENCY } from '../search/constants'
+import { GNOMAD_SV_CRITERIA_MESSAGE, SV_CALLSET_CRITERIA_MESSAGE, TOPMED_FREQUENCY, GENOME_VERSION_37, GENOME_VERSION_38, getVariantMainGeneId } from '../../../utils/constants'
 
 const FreqValue = styled.span`
   color: black;

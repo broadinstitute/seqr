@@ -6,13 +6,12 @@ import { Form, Button } from 'semantic-ui-react'
 import {
   getProjectsByGuid,
   getProjectAnalysisGroupFamilyGuidsByGuid,
-  getProjectDatasetTypes,
 } from 'redux/selectors'
 import { Multiselect, ButtonRadioGroup } from 'shared/components/form/Inputs'
-import { ProjectFilter } from 'shared/components/panel/search/ProjectsField'
 import { SOLVED_FAMILY_STATUS_OPTIONS } from 'shared/utils/constants'
-import { getProjectFamilies, getSearchContextIsLoading, getFamilyOptions, getAnalysisGroupOptions } from '../../selectors'
+import { getProjectFamilies, getSearchContextIsLoading, getFamilyOptions, getAnalysisGroupOptions, getProjectDatasetTypes } from '../../selectors'
 import { loadProjectFamiliesContext } from '../../reducers'
+import { ProjectFilter } from './ProjectsField'
 
 const ALL = 'ALL'
 const UNSOLVED = 'UNSOLVED'

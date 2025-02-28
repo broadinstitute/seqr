@@ -8,7 +8,7 @@ import os
 from hail_search.constants import ABSENT_PATH_SORT_OFFSET, CLINVAR_KEY, CLINVAR_LIKELY_PATH_FILTER, \
     CLINVAR_PATH_FILTER, \
     CLINVAR_PATH_RANGES, CLINVAR_PATH_SIGNIFICANCES, ALLOWED_TRANSCRIPTS, ALLOWED_SECONDARY_TRANSCRIPTS, \
-    PATHOGENICTY_SORT_KEY, CONSEQUENCE_SORT, \
+    PATHOGENICTY_SORT_KEY, CONSEQUENCE_SORT, FILTERED_GENE_TRANSCRIPTS, \
     PATHOGENICTY_HGMD_SORT_KEY, MAX_LOAD_INTERVALS
 from hail_search.definitions import SampleType
 from hail_search.queries.base import BaseHailTableQuery, PredictionPath, QualityFilterFormat, MAX_PARTITIONS
@@ -329,31 +329,16 @@ class MitoHailTableQuery(BaseHailTableQuery):
     def _selected_main_transcript_expr(ht):
         comp_het_gene_ids = getattr(ht, 'comp_het_gene_ids', None)
         if comp_het_gene_ids is not None:
-            gene_transcripts = ht.sorted_transcript_consequences.filter(lambda t: comp_het_gene_ids.contains(t.gene_id))
-        else:
-            gene_transcripts = getattr(ht, 'gene_transcripts', None)
+            return hl.coalesce(*[
+                ht[field].find(lambda t: comp_het_gene_ids.contains(t.gene_id)) for field in [
+                    ALLOWED_TRANSCRIPTS, ALLOWED_SECONDARY_TRANSCRIPTS, 'sorted_transcript_consequences',
+                ] if hasattr(ht, field)
+            ])
 
-        allowed_transcripts = getattr(ht, ALLOWED_TRANSCRIPTS, None)
-        if comp_het_gene_ids is not None and hasattr(ht, ALLOWED_SECONDARY_TRANSCRIPTS):
-            allowed_transcripts = hl.if_else(
-                allowed_transcripts.any(hl.is_defined), allowed_transcripts, ht[ALLOWED_SECONDARY_TRANSCRIPTS],
-            ) if allowed_transcripts is not None else ht[ALLOWED_SECONDARY_TRANSCRIPTS]
-
-        main_transcript = ht.sorted_transcript_consequences.first()
-        if gene_transcripts is not None and allowed_transcripts is not None:
-            allowed_transcript_ids = hl.set(allowed_transcripts.map(lambda t: t.transcript_id))
-            matched_transcript = hl.or_else(
-                gene_transcripts.find(lambda t: allowed_transcript_ids.contains(t.transcript_id)),
-                gene_transcripts.first(),
-            )
-        elif gene_transcripts is not None:
-            matched_transcript = gene_transcripts.first()
-        elif allowed_transcripts is not None:
-            matched_transcript = allowed_transcripts.first()
-        else:
-            matched_transcript = main_transcript
-
-        return hl.or_else(matched_transcript, main_transcript)
+        main_transcript = getattr(ht, FILTERED_GENE_TRANSCRIPTS, ht.sorted_transcript_consequences).first()
+        if hasattr(ht, ALLOWED_TRANSCRIPTS):
+            return hl.or_else(ht[ALLOWED_TRANSCRIPTS].first(), main_transcript)
+        return main_transcript
 
     def __init__(self, *args, **kwargs):
         self._filter_hts = {}

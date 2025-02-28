@@ -839,7 +839,7 @@ class HailSearchTestCase(AioHTTPTestCase):
 
         annotations = {'splice_ai': '0.0'}  # Ensures no variants are filtered out by annotation/path filters
         await self._assert_expected_search(
-            [VARIANT1, VARIANT2, VARIANT4], frequencies={'gnomad_genomes': {'af': 0.01}}, omit_data_type='SV_WES',
+            [VARIANT1, VARIANT2, VARIANT4], frequencies={'gnomad_genomes': {'af': 0.01, 'hh': 10}}, omit_data_type='SV_WES',
             annotations=annotations, pathogenicity={'clinvar': ['pathogenic', 'likely_pathogenic', 'vus_or_conflicting']},
         )
 
@@ -879,7 +879,7 @@ class HailSearchTestCase(AioHTTPTestCase):
         )
 
         await self._assert_expected_search(
-            [VARIANT2, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4], annotations=annotations,
+            [VARIANT2, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4, GCNV_VARIANT3, GCNV_VARIANT4], annotations=annotations,
         )
 
         await self._assert_expected_search([SV_VARIANT1], annotations=annotations, sample_data=SV_WGS_SAMPLE_DATA)
@@ -899,6 +899,12 @@ class HailSearchTestCase(AioHTTPTestCase):
             pathogenicity=pathogenicity, annotations=annotations, sample_data=FAMILY_2_ALL_SAMPLE_DATA,
         )
 
+        await self._assert_expected_search(
+            [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2],
+            gene_ids=LOCATION_SEARCH['gene_ids'][1:], annotations=annotations, omit_data_type='SV_WES',
+        )
+
+        annotations['other'].append('intron_variant')
         await self._assert_expected_search(
             [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT],
             gene_ids=LOCATION_SEARCH['gene_ids'][1:], annotations=annotations, omit_data_type='SV_WES',

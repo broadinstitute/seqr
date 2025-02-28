@@ -7,7 +7,7 @@ import os
 from hail_search.constants import AFFECTED_ID, ALT_ALT, ANNOTATION_OVERRIDE_FIELDS, ANY_AFFECTED, COMP_HET_ALT, \
     COMPOUND_HET, GENOME_VERSION_GRCh38, GROUPED_VARIANTS_FIELD, ALLOWED_TRANSCRIPTS, ALLOWED_SECONDARY_TRANSCRIPTS,  HAS_ANNOTATION_OVERRIDE, \
     HAS_ALT, HAS_REF,INHERITANCE_FILTERS, PATH_FREQ_OVERRIDE_CUTOFF, RECESSIVE, REF_ALT, REF_REF, MAX_LOAD_INTERVALS, \
-    UNAFFECTED_ID, X_LINKED_RECESSIVE, XPOS, OMIM_SORT, FAMILY_GUID_FIELD, GENOTYPES_FIELD, AFFECTED_ID_MAP
+    UNAFFECTED_ID, X_LINKED_RECESSIVE, XPOS, OMIM_SORT, FAMILY_GUID_FIELD, GENOTYPES_FIELD, AFFECTED_ID_MAP, FILTERED_GENE_TRANSCRIPTS
 
 HAIL_SEARCH_DATA_DIR = os.environ.get('HAIL_SEARCH_DATA_DIR', '/seqr/seqr-hail-search-data')
 IN_MEMORY_DIR = os.environ.get('IN_MEMORY_DIR', HAIL_SEARCH_DATA_DIR)
@@ -711,8 +711,8 @@ class BaseHailTableQuery(object):
 
     def _filter_annotated_table(self, ht, gene_ids=None, rs_ids=None, frequencies=None, in_silico=None, pathogenicity=None,
                                 parsed_annotations=None, is_comp_het=False, **kwargs):
-        if gene_ids:
-            ht = self._filter_by_gene_ids(ht, gene_ids)
+
+        ht = self._filter_by_gene_ids(ht, hl.set(gene_ids) if gene_ids else None)
 
         if rs_ids:
             ht = self._filter_rs_ids(ht, rs_ids)
@@ -723,12 +723,18 @@ class BaseHailTableQuery(object):
 
         return self._filter_by_annotations(ht, is_comp_het=is_comp_het, **(parsed_annotations or {}))
 
-    def _filter_by_gene_ids(self, ht, gene_ids):
-        gene_ids = hl.set(gene_ids)
-        ht = ht.annotate(
-            gene_transcripts=ht[self.TRANSCRIPTS_FIELD].filter(lambda t: gene_ids.contains(t.gene_id))
+    @classmethod
+    def _annotate_filtered_gene_transcripts(cls, ht, gene_ids):
+        return ht.annotate(
+            **{FILTERED_GENE_TRANSCRIPTS: ht[cls.TRANSCRIPTS_FIELD].filter(lambda t: gene_ids.contains(t.gene_id))}
         )
-        return ht.filter(hl.is_defined(ht.gene_transcripts.first()))
+
+    def _filter_by_gene_ids(self, ht, gene_ids):
+        if gene_ids is None:
+            return ht
+
+        ht = self._annotate_filtered_gene_transcripts(ht, gene_ids)
+        return ht.filter(hl.is_defined(ht[FILTERED_GENE_TRANSCRIPTS].first()))
 
     def _filter_rs_ids(self, ht, rs_ids):
         rs_id_set = hl.set(rs_ids)
@@ -824,12 +830,13 @@ class BaseHailTableQuery(object):
                     pop_filters.append(pop_expr[ac_field] <= freqs['ac'])
 
             if freqs.get('hh') is not None:
-                hom_field = pop_config['hom']
-                hemi_field = pop_config['hemi']
-                if hom_field:
-                    pop_filters.append(pop_expr[hom_field] <= freqs['hh'])
-                if hemi_field:
-                    pop_filters.append(pop_expr[hemi_field] <= freqs['hh'])
+                for field_name in ['hom', 'hemi']:
+                    field = pop_config[field_name]
+                    if field:
+                        pop_filter = pop_expr[field] <= freqs['hh']
+                        if path_override_filter is not None:
+                            pop_filter |= path_override_filter
+                        pop_filters.append(pop_filter)
 
             if pop_filters:
                 filters.append(hl.is_missing(pop_expr) | hl.all(pop_filters))
@@ -958,7 +965,7 @@ class BaseHailTableQuery(object):
 
     def _get_allowed_transcripts(self, ht, allowed_consequence_ids):
         transcript_filter = self._get_allowed_transcripts_filter(allowed_consequence_ids)
-        return ht[self.TRANSCRIPTS_FIELD].filter(transcript_filter)
+        return getattr(ht, FILTERED_GENE_TRANSCRIPTS, ht[self.TRANSCRIPTS_FIELD]).filter(transcript_filter)
 
     @staticmethod
     def _get_allowed_transcripts_filter(allowed_consequence_ids):
@@ -1001,7 +1008,7 @@ class BaseHailTableQuery(object):
         def key(v):
             ks = [v[k] for k in self.KEY_FIELD]
             return ks[0] if len(self.KEY_FIELD) == 1 else hl.tuple(ks)
-        ch_ht = ch_ht.annotate(key_=key(ch_ht.row), gene_ids=self._gene_ids_expr(ch_ht))
+        ch_ht = ch_ht.annotate(key_=key(ch_ht.row), gene_ids=self._gene_ids_expr(ch_ht, filtered_genes_only=True))
         ch_ht = ch_ht.explode(ch_ht.gene_ids)
 
         # Filter allowed transcripts to the grouped gene
@@ -1111,8 +1118,9 @@ class BaseHailTableQuery(object):
         )
 
     @classmethod
-    def _gene_ids_expr(cls, ht):
-        return hl.set(ht[cls.TRANSCRIPTS_FIELD].map(lambda t: t.gene_id))
+    def _gene_ids_expr(cls, ht, filtered_genes_only=False):
+        field = FILTERED_GENE_TRANSCRIPTS if filtered_genes_only and hasattr(ht, FILTERED_GENE_TRANSCRIPTS) else cls.TRANSCRIPTS_FIELD
+        return hl.set(ht[field].map(lambda t: t.gene_id))
 
     def _is_valid_comp_het_family(self, v1, v2, family_index):
         entries_1 = v1.family_entries[family_index]

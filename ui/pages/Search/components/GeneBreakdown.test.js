@@ -5,12 +5,12 @@ import configureStore from 'redux-mock-store'
 
 import GeneBreakdown from './GeneBreakdown'
 
-import { STATE1, SEARCH_HASH } from '../fixtures'
+import { STATE, SEARCH_HASH } from '../fixtures'
 
 configure({ adapter: new Adapter() })
 
 test('shallow-render without crashing', () => {
-  const store = configureStore()(STATE1)
+  const store = configureStore()(STATE)
 
   shallow(<GeneBreakdown store={store} searchHash={SEARCH_HASH} />)
 })

@@ -3,7 +3,6 @@
 import { STATE_WITH_2_FAMILIES } from 'pages/Project/fixtures'
 import {
   getVariantTagNotesByFamilyVariants,
-  getSearchGeneBreakdownValues,
   getSelectableTagTypesByProject,
   getUserOptions,
   getLocusListIntervalsByChromProject,
@@ -26,17 +25,6 @@ test('getVariantTagNotesByByFamilyVariants', () => {
   expect(tagsNotesByGuid.F011652_2['22-248367227-C-T']).toEqual({ variantGuids: 'SV0000003_2246859832_r0390_100'})
   expect(tagsNotesByGuid.F011652_2['22-248367228-C-T']).toEqual({ variantGuids: 'SV0000005_2246859833_r0390_100'})
   expect(tagsNotesByGuid.F011652_2['22-248367227-C-T,22-248367228-C-T'].tags.length).toEqual(1)
-})
-
-test('getSearchGeneBreakdownValues', () => {
-  expect(getSearchGeneBreakdownValues(STATE, { searchHash: SEARCH_HASH })).toEqual([{
-    numVariants: 3,
-    numFamilies: 1,
-    families: [{ family: STATE.familiesByGuid[FAMILY_GUID], count: 2 }],
-    search: SEARCH.search,
-    geneId: GENE_ID,
-    geneSymbol: 'OR2M3',
-  }])
 })
 
 test('getSelectableTagTypesByProject', () => {
