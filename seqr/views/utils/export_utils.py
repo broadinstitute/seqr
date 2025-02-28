@@ -41,14 +41,6 @@ def export_table(filename_prefix, header, rows, file_format='tsv', titlecase_hea
         response.writelines(['\t'.join(header)+'\n'])
         response.writelines(('\t'.join(map(str, row))+'\n' for row in rows))
         return response
-    elif file_format == "json":
-        response = HttpResponse(content_type='application/json')
-        response['Content-Disposition'] = 'attachment; filename="{}.json"'.format(filename_prefix).encode('ascii', 'ignore')
-        for row in rows:
-            json_keys = [s.replace(" ", "_").lower() for s in header]
-            json_values = list(map(str, row))
-            response.write(json.dumps(OrderedDict(zip(json_keys, json_values)))+'\n')
-        return response
     elif file_format == "xls":
         wb = xl.Workbook(write_only=True)
         ws = wb.create_sheet()

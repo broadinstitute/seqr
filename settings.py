@@ -482,7 +482,7 @@ if TERRA_API_ROOT_URL:
 elif SOCIAL_AUTH_AZUREAD_V2_TENANT_OAUTH2_KEY:
     SOCIAL_AUTH_PIPELINE = SOCIAL_AUTH_PIPELINE_BASE + \
                            SOCIAL_AUTH_PIPELINE_CLOUD_BASE + \
-                           ('seqr.utils.social_auth_pipeline.log_azure_signed_in',)
+                           ('seqr.utils.social_auth_pipeline.log_signed_in',)
 else:
     SOCIAL_AUTH_PIPELINE = SOCIAL_AUTH_PIPELINE_BASE + SOCIAL_AUTH_PIPELINE_USER_EXIST + \
                            SOCIAL_AUTH_PIPELINE_ASSOCIATE_USER + SOCIAL_AUTH_PIPELINE_LOG

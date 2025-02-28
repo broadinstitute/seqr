@@ -65,6 +65,8 @@ class LoadRnaSeqTest(AuthenticationTestCase):
                 'NA19678_D1\t1kg project nåme with uniçøde\t\tENSG00000233750\t 6.04\twhole_blood\n',
                 'NA19677\t1kg project nåme with uniçøde\t\tENSG00000233750\t5.31\tmuscle\n',
                 'NA19678\tTest Reprocessed Project\t\tENSG00000240361\t0.2\twhole_blood\n',
+                'NA20870\tTest Reprocessed Project\t\tENSG00000240361\t0.2\twhole_blood\n',
+                'NA20870\tTest Reprocessed Project\t\tENSG00000240361\t0.7\twhole_blood\n',
             ],
             unmatched_samples='NA19677 (1kg project nåme with uniçøde), NA19678 (Test Reprocessed Project), NA19678_D1 (1kg project nåme with uniçøde)',
             additional_errors=['Samples missing required "tissue": NA19675_D2'],
@@ -97,6 +99,7 @@ class LoadRnaSeqTest(AuthenticationTestCase):
 
         self.mock_logger.info.assert_has_calls([
             mock.call('create 1 RnaSeqTpm for NA19678'),
+            mock.call('Error in T_NA20870: mismatched entries for ENSG00000240361'),
             mock.call('DONE'),
         ])
         mock_utils_logger.warning.assert_has_calls([
@@ -113,6 +116,7 @@ class LoadRnaSeqTest(AuthenticationTestCase):
         self.assertEqual(models.values('sample').distinct().count(), 2)
         self.mock_logger.info.assert_has_calls([
             mock.call('create 1 RnaSeqTpm for NA19678'),
+            mock.call('Error in T_NA20870: mismatched entries for ENSG00000240361'),
             mock.call('DONE'),
         ])
 

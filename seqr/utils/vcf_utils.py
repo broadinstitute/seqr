@@ -91,7 +91,7 @@ def validate_vcf_and_get_samples(data_path, user, genome_version, path_name=None
         raise ErrorsWarningsException(['No samples found in the provided VCF.'], [])
     _validate_vcf_meta(meta, genome_version)
 
-    return sorted(samples)
+    return samples
 
 
 def _validate_vcf_exists(data_path, user, path_name, allowed_exts):

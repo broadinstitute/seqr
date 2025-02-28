@@ -8,7 +8,7 @@ class DjangoJSONEncoderWithSets(DjangoJSONEncoder):
 
     def default(self, o):
         if isinstance(o, set):
-            return list(o)
+            return sorted(o)
 
         return super(DjangoJSONEncoderWithSets, self).default(o)
 
