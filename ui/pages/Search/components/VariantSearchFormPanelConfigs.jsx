@@ -36,6 +36,7 @@ import {
   INHERITANCE_MODE_LOOKUP, LOCUS_FIELD_NAME,
   NUM_ALT_OPTIONS,
   PANEL_APP_FIELD_NAME,
+  CLINVAR_FIELD,
   PATHOGENICITY_FIELDS,
   PATHOGENICITY_FILTER_OPTIONS, QUALITY_FILTER_OPTIONS, SV_GROUPS, SV_GROUPS_NO_NEW, VARIANT_ANNOTATION_LAYOUT_GROUPS,
 } from '../constants'
@@ -107,11 +108,14 @@ const SELECTED_MOIS_FIELD_NAME = 'selectedMOIs'
 const PANEL_APP_COLORS = [...new Set(
   Object.entries(PANEL_APP_CONFIDENCE_LEVELS).sort((a, b) => b[0] - a[0]).map(config => config[1]),
 )]
+const BASE_LOCUS_FIELD = {
+  name: LOCUS_LIST_ITEMS_FIELD.name,
+  label: LOCUS_LIST_ITEMS_FIELD.label,
+  labelHelp: LOCUS_LIST_ITEMS_FIELD.labelHelp,
+}
 export const LOCATION_FIELDS = [
   {
-    name: LOCUS_LIST_ITEMS_FIELD.name,
-    label: LOCUS_LIST_ITEMS_FIELD.label,
-    labelHelp: LOCUS_LIST_ITEMS_FIELD.labelHelp,
+    ...BASE_LOCUS_FIELD,
     component: LocusListItemsFilter,
     width: 9,
     shouldShow: locus => !locus[PANEL_APP_FIELD_NAME],
@@ -156,15 +160,6 @@ export const LOCATION_FIELDS = [
     width: 4,
     shouldShow: locus => !locus[PANEL_APP_FIELD_NAME],
     shouldDisable: locus => !locus[LOCUS_LIST_ITEMS_FIELD.name],
-  },
-  {
-    name: 'excludeLocations',
-    component: LocusListItemsFilter,
-    filterComponent: AlignedBooleanCheckbox,
-    label: 'Exclude locations',
-    labelHelp: 'Search for variants not in the specified genes/ intervals',
-    width: 10,
-    shouldDisable: locus => !!locus[VARIANT_FIELD_NAME],
   },
 ]
 
@@ -320,6 +315,7 @@ const JsonSelectPropsWithAll = (options, all) => ({
 })
 
 export const PATHOGENICITY_PANEL_NAME = 'pathogenicity'
+const PATHOGENICITY_FIELD_PROPS = { control: AlignedCheckboxGroup, format: val => val || [] }
 export const PATHOGENICITY_PANEL = {
   name: PATHOGENICITY_PANEL_NAME,
   headerProps: {
@@ -327,7 +323,7 @@ export const PATHOGENICITY_PANEL = {
     inputProps: JsonSelectPropsWithAll(PATHOGENICITY_FILTER_OPTIONS, ANY_PATHOGENICITY_FILTER),
   },
   fields: PATHOGENICITY_FIELDS,
-  fieldProps: { control: AlignedCheckboxGroup, format: val => val || [] },
+  fieldProps: PATHOGENICITY_FIELD_PROPS,
   helpText: 'Filter by reported pathogenicity.  This overrides the annotation filter, the frequency filter, and the call quality filter.  Variants will be returned if they have the specified transcript consequence AND the specified frequencies AND all individuals pass all specified quality filters OR if the variant has the specified pathogenicity and a frequency up to 0.05.',
 }
 export const HGMD_HEADER_INPUT_PROPS = JsonSelectPropsWithAll(
@@ -503,4 +499,28 @@ export const QUALITY_PANEL = {
     [DATASET_TYPE_VARIANT_SV]: SNP_QUALITY_FILTER_FIELDS.concat(SV_QUALITY_FILTER_FIELDS),
   },
   fieldProps: { control: LazyLabeledSlider, format: val => val || null },
+}
+
+const ES_EXCLUDE_FIELDS = [
+  {
+    ...BASE_LOCUS_FIELD,
+    component: Form.TextArea,
+    rows: 8,
+  },
+]
+const EXCLUDE_FIELDS = [
+  {
+    ...CLINVAR_FIELD,
+    ...PATHOGENICITY_FIELD_PROPS,
+    width: 8,
+  },
+  ...ES_EXCLUDE_FIELDS,
+]
+
+export const EXCLUDE_PANEL = {
+  name: 'exclude',
+  headerProps: { title: 'Exclude' },
+  fields: EXCLUDE_FIELDS,
+  esEnabledFields: ES_EXCLUDE_FIELDS,
+  helpText: 'Exclude variants from the search results based on the specified criteria. This filter will override any other filters applied.',
 }
