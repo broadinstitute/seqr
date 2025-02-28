@@ -1691,9 +1691,7 @@ class DataManagerAPITest(AirtableTest):
         # TODO test errors
 
     def _test_trigger_single_dag(self, dag_id, body, dag_variables):
-        self._dag_url = getattr(self, '_dag_url', '').replace(self.DAG_NAME, dag_id)
-        self.DAG_NAME = dag_id
-        self.set_up_one_dag(variables=dag_variables)
+        self.set_up_one_dag(dag_id, variables=dag_variables)
 
         url = reverse(trigger_dag, args=[dag_id])
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
@@ -2099,6 +2097,11 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
     def _assert_update_check_airflow_calls(self, call_count, offset, update_check_path):
         variables_update_check_path = f'{self.MOCK_AIRFLOW_URL}/api/v1/variables/{self.DAG_NAME}'
         super()._assert_update_check_airflow_calls(call_count, offset, variables_update_check_path)
+
+    def set_up_one_dag(self, dag_id, **kwargs):
+        self._dag_url = self._dag_url.replace(self.DAG_NAME, dag_id)
+        self.DAG_NAME = dag_id
+        super().set_up_one_dag(**kwargs)
 
     def _assert_expected_dag_trigger(self, response, dag_id, variables):
         self.assertEqual(response.status_code, 200)
