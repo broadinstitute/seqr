@@ -1685,12 +1685,17 @@ class DataManagerAPITest(AirtableTest):
         self._test_trigger_single_dag(
             'UPDATE_REFERENCE_DATASETS',
             {'genomeVersion': '38', 'datasetType': 'SV'},
-            {'dataset_type': 'SV', 'reference_genome': 'GRCh38'},
+            {
+                'projects_to_run': None,
+                'dataset_type': 'SV',
+                'reference_genome': 'GRCh38',
+            },
         )
 
         # TODO test errors
 
     def _test_trigger_single_dag(self, dag_id, body, dag_variables):
+        responses.calls.reset()
         self.set_up_one_dag(dag_id, variables=dag_variables)
 
         url = reverse(trigger_dag, args=[dag_id])
@@ -2083,6 +2088,10 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         self._set_file_not_found()
 
     def _add_update_check_dag_responses(self, variables=None, **kwargs):
+        if not variables:
+            super()._add_update_check_dag_responses(**kwargs)
+            return
+
         # get variables
         responses.add(responses.GET, f'{self.MOCK_AIRFLOW_URL}/api/v1/variables/{self.DAG_NAME}', json={
             'key': self.DAG_NAME,
@@ -2095,12 +2104,14 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         })
 
     def _assert_update_check_airflow_calls(self, call_count, offset, update_check_path):
-        variables_update_check_path = f'{self.MOCK_AIRFLOW_URL}/api/v1/variables/{self.DAG_NAME}'
-        super()._assert_update_check_airflow_calls(call_count, offset, variables_update_check_path)
+        if self.DAG_NAME != 'LOADING_PIPELINE':
+            update_check_path = f'{self.MOCK_AIRFLOW_URL}/api/v1/variables/{self.DAG_NAME}'
+        super()._assert_update_check_airflow_calls(call_count, offset, update_check_path)
 
-    def set_up_one_dag(self, dag_id, **kwargs):
-        self._dag_url = self._dag_url.replace(self.DAG_NAME, dag_id)
-        self.DAG_NAME = dag_id
+    def set_up_one_dag(self, dag_id=None, **kwargs):
+        if dag_id:
+            self._dag_url = self._dag_url.replace(self.DAG_NAME, dag_id)
+            self.DAG_NAME = dag_id
         super().set_up_one_dag(**kwargs)
 
     def _assert_expected_dag_trigger(self, response, dag_id, variables):
