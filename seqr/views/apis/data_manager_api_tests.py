@@ -1704,7 +1704,7 @@ class DataManagerAPITest(AirtableTest):
     def _assert_expected_dag_trigger(self, response, dag_id, variables):
         self.assertEqual(response.status_code, 403)
 
-    def _test_dag_trigger_errors(self, *args, **kwargs):
+    def _test_dag_trigger_errors(self, url, body):
         pass
 
 
