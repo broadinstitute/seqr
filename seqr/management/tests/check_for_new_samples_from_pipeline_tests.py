@@ -390,7 +390,7 @@ class CheckNewSamplesTest(object):
         search_body = {
             'genome_version': 'GRCh38', 'num_results': 1, 'variant_ids': [['1', 248367227, 'TC', 'T']], 'variant_keys': [],
         }
-        self._test_call(reload_calls=[
+        reload_snv_indel_calls = [
             {**search_body, 'sample_data': {'SNV_INDEL': [
                 {'individual_guid': 'I000016_na20888', 'family_guid': 'F000012_12', 'project_guid': 'R0003_test', 'affected': 'A', 'sample_id': 'NA20888', 'sample_type': 'WES'},
                 {'individual_guid': 'I000017_na20889', 'family_guid': 'F000012_12', 'project_guid': 'R0003_test', 'affected': 'A', 'sample_id': 'NA20889', 'sample_type': 'WES'},
@@ -398,10 +398,8 @@ class CheckNewSamplesTest(object):
             {**search_body, 'sample_data': {'SNV_INDEL': [
                 {'individual_guid': 'I000018_na21234', 'family_guid': 'F000014_14', 'project_guid': 'R0004_non_analyst_project', 'affected': 'A', 'sample_id': 'NA21234', 'sample_type': 'WES'},
             ]}},
-            {'genome_version': 'GRCh38', 'num_results': 1, 'variant_ids': [], 'variant_keys': ['prefix_19107_DEL'], 'sample_data': {'SV_WES': [
-                {'individual_guid': 'I000017_na20889', 'family_guid': 'F000012_12', 'project_guid': 'R0003_test', 'affected': 'A', 'sample_id': 'NA20889', 'sample_type': 'WES'},
-            ]}},
-        ], reload_annotations_logs=[
+        ]
+        reload_fetched_annotations_logs = [
             ('Reloading shared annotations for 1 fetched SNV_INDEL GRCh38 saved variants', None),
             ('update 1 SavedVariants', {'dbUpdate': {
                 'dbEntity': 'SavedVariant',
@@ -409,6 +407,25 @@ class CheckNewSamplesTest(object):
                 'updateFields': ['saved_variant_json'],
                 'updateType': 'bulk_update'},
             }),
+        ]
+        create_snv_indel_samples_logs = [
+            ('Loading 4 WES SNV_INDEL samples in 2 projects', None),
+            ('create 4 Samples', {'dbUpdate': mock.ANY}),
+            ('update 4 Samples', {'dbUpdate': mock.ANY}),
+        ]
+        reload_project_variants_logs = [
+            ('Reloading saved variants in 2 projects', None),
+            ('Updated 0 variants in 2 families for project Test Reprocessed Project', None),
+            ('update 1 SavedVariants', {'dbUpdate': mock.ANY}),
+            ('Updated 1 variants in 1 families for project Non-Analyst Project', None),
+            ('Reload Summary: ', None),
+            ('  Non-Analyst Project: Updated 1 variants', None),
+        ]
+        self._test_call(reload_calls=reload_snv_indel_calls + [
+            {'genome_version': 'GRCh38', 'num_results': 1, 'variant_ids': [], 'variant_keys': ['prefix_19107_DEL'], 'sample_data': {'SV_WES': [
+                {'individual_guid': 'I000017_na20889', 'family_guid': 'F000012_12', 'project_guid': 'R0003_test', 'affected': 'A', 'sample_id': 'NA20889', 'sample_type': 'WES'},
+            ]}},
+        ], reload_annotations_logs=reload_fetched_annotations_logs + [
             ('Reloading shared annotations for 2 SNV_INDEL GRCh38 saved variants in chromosome 1 (2 unique)', None),
             ('Fetched 1 additional variants in chromosome 1', None),
             ('update 1 SavedVariants', {'dbUpdate': {
@@ -428,21 +445,12 @@ class CheckNewSamplesTest(object):
             ('Reloading shared annotations for 1 SV_WES GRCh38 saved variants (1 unique)', None),
             ('Fetched 1 additional variants', None),
         ], run_loading_logs={
-            'GRCh38/SNV_INDEL': [
-                ('Loading 4 WES SNV_INDEL samples in 2 projects', None),
-                ('create 4 Samples', {'dbUpdate': mock.ANY}),
-                ('update 4 Samples', {'dbUpdate': mock.ANY}),
+            'GRCh38/SNV_INDEL': create_snv_indel_samples_logs + [
                 ('update 1 Samples', {'dbUpdate': mock.ANY}),
                 ('update 2 Familys', {'dbUpdate': mock.ANY}),
             ] + self.AIRTABLE_LOGS + [
                 ('update 3 Familys', {'dbUpdate': mock.ANY}),
-                ('Reloading saved variants in 2 projects', None),
-                ('Updated 0 variants in 2 families for project Test Reprocessed Project', None),
-                ('update 1 SavedVariants', {'dbUpdate': mock.ANY}),
-                ('Updated 1 variants in 1 families for project Non-Analyst Project', None),
-                ('Reload Summary: ', None),
-                ('  Non-Analyst Project: Updated 1 variants', None),
-            ],
+            ] + reload_project_variants_logs,
             'GRCh38/MITO': [('Loading 2 WGS MITO samples in 1 projects', None)],
             'GRCh38/SV': [
                 ('Loading 4 WES SV samples in 2 projects', None),
@@ -642,50 +650,13 @@ The following 1 families failed sex check:
         # Test reloading shared annotations is skipped if too many saved variants
         mock_max_reload_variants.__lt__.return_value = True
         snv_indel_samples.delete()
-        # TODO are these needed?
-        self._set_reloading_loading_files()
-        mock_email.reset_mock()
-        self.mock_send_slack.reset_mock()
-        self.mock_redis.reset_mock()
-        # TODO shared constants
-        self.maxDiff = None
         airtable_logs = self.AIRTABLE_LOGS[:-1]
         if self.AIRTABLE_LOGS:
             airtable_logs.append(('Fetched 1 AnVIL Seqr Loading Requests Tracking records from airtable', None))
-        self._test_call(num_runs=2, reload_calls=[
-            {**search_body, 'sample_data': {'SNV_INDEL': [
-                {'individual_guid': 'I000016_na20888', 'family_guid': 'F000012_12', 'project_guid': 'R0003_test',
-                 'affected': 'A', 'sample_id': 'NA20888', 'sample_type': 'WES'},
-                {'individual_guid': 'I000017_na20889', 'family_guid': 'F000012_12', 'project_guid': 'R0003_test',
-                 'affected': 'A', 'sample_id': 'NA20889', 'sample_type': 'WES'},
-            ]}},
-            {**search_body, 'sample_data': {'SNV_INDEL': [
-                {'individual_guid': 'I000018_na21234', 'family_guid': 'F000014_14',
-                 'project_guid': 'R0004_non_analyst_project', 'affected': 'A', 'sample_id': 'NA21234',
-                 'sample_type': 'WES'},
-            ]}},
-        ], reload_annotations_logs=[
-           ('Reloading shared annotations for 1 fetched SNV_INDEL GRCh38 saved variants', None),
-           ('update 1 SavedVariants', {'dbUpdate': {
-               'dbEntity': 'SavedVariant',
-               'entityIds': ['SV0000002_1248367227_r0390_100'],
-               'updateFields': ['saved_variant_json'],
-               'updateType': 'bulk_update'},
-           }),
+        self._test_call(num_runs=2, reload_annotations_logs=reload_fetched_annotations_logs + [
            ('Skipped reloading all 2 saved variant annotations for SNV_INDEL GRCh38', None),
-       ], run_loading_logs={
-            'GRCh38/SNV_INDEL': [
-                ('Loading 4 WES SNV_INDEL samples in 2 projects', None),
-                ('create 4 Samples', {'dbUpdate': mock.ANY}),
-                ('update 4 Samples', {'dbUpdate': mock.ANY}),
-            ] + airtable_logs + [
-                ('Reloading saved variants in 2 projects', None),
-                ('Updated 0 variants in 2 families for project Test Reprocessed Project', None),
-                ('update 1 SavedVariants', {'dbUpdate': mock.ANY}),
-                ('Updated 1 variants in 1 families for project Non-Analyst Project', None),
-                ('Reload Summary: ', None),
-                ('  Non-Analyst Project: Updated 1 variants', None),
-            ],
+       ], reload_calls=reload_snv_indel_calls, run_loading_logs={
+            'GRCh38/SNV_INDEL': create_snv_indel_samples_logs + airtable_logs + reload_project_variants_logs,
         })
 
 class LocalCheckNewSamplesTest(AuthenticationTestCase, CheckNewSamplesTest):
