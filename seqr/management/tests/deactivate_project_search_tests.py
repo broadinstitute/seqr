@@ -48,5 +48,5 @@ class DeactivateProjectSearchTest(AirflowTestCase):
         call_command('deactivate_project_search', PROJECT_GUID)
         mock_logger.info.assert_called_with('Deactivated 0 samples')
 
-    def _add_update_check_dag_responses(self):
-        return self._add_check_dag_variable_responses(self.DAG_VARIABLES)
+    def _add_update_check_dag_responses(self, **kwargs):
+        return self._add_check_dag_variable_responses(self.DAG_VARIABLES, **kwargs)
