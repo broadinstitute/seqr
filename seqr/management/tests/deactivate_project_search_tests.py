@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import mock
+import responses
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.management import call_command
@@ -21,6 +22,7 @@ class DeactivateProjectSearchTest(AirflowTestCase):
         'reference_genome': 'GRCh37',
     }
 
+    @responses.activate
     @mock.patch('seqr.management.commands.deactivate_project_search.input')
     @mock.patch('seqr.management.commands.deactivate_project_search.logger')
     def test_command(self, mock_logger, mock_input):
