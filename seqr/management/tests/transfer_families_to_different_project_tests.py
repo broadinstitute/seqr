@@ -1,26 +1,24 @@
 import responses
 from django.core.management import call_command
-from django.test import TestCase
 import mock
 import json
 
 from seqr.models import Family, VariantTagType, VariantTag, Sample
-from seqr.views.utils.test_utils import AirflowTestCase
+from seqr.views.utils.test_utils import AirflowTestCase, AuthenticationTestCase
 
 
-class TransferFamiliesTest(TestCase):
-    fixtures = ['users', '1kg_project']
+class TransferFamiliesTest(object):
 
-    def _test_command(self, mock_logger, additional_family, logs):
+    def _test_command(self, additional_family, logs):
         call_command(
             'transfer_families_to_different_project', '--from-project=R0001_1kg', '--to-project=R0003_test', additional_family, '2',
         )
 
-        mock_logger.assert_has_calls([
+        self.assert_json_logs(user=None, expected=[
             *logs,
-            mock.call('Updating "Excluded" tags'),
-            mock.call('Updating families'),
-            mock.call('Done.'),
+            ('Updating "Excluded" tags', None),
+            ('Updating families', None),
+            ('Done.', None),
         ])
 
         family = Family.objects.get(family_id='2')
@@ -39,11 +37,14 @@ class TransferFamiliesTest(TestCase):
 
         return family
 
-    @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', 'testhost')
-    @mock.patch('seqr.management.commands.transfer_families_to_different_project.logger.info')
-    def test_es_command(self, mock_logger):
+
+class TransferFamiliesLocalTest(TransferFamiliesTest, AuthenticationTestCase):
+    fixtures = ['users', '1kg_project']
+
+
+    def test_es_command(self):
         self._test_command(
-            mock_logger, additional_family='12', logs=[mock.call('Found 1 out of 2 families. No match for: 12.')]
+            additional_family='12', logs=[('Found 1 out of 2 families. No match for: 12.', None)]
         )
 
 
@@ -55,11 +56,11 @@ class TransferFamiliesAirflowTest(TransferFamiliesTest, AirflowTestCase):
     def setUp(self):
         super().setUp()
         self.set_up_one_dag(dataset_type='SNV_INDEL')
-        self.set_up_one_dag(dataset_type='SV')
+        self.set_up_one_dag(dataset_type='SV', status=400)
 
     def set_up_one_dag(self, **kwargs):
         dataset_type = kwargs.pop('dataset_type', 'MITO')
-        super().set_up_one_dag(dataset_type=dataset_type)
+        super().set_up_one_dag(dataset_type=dataset_type, **kwargs)
 
     def _get_dag_variables(self, dataset_type):
         return {
@@ -69,24 +70,27 @@ class TransferFamiliesAirflowTest(TransferFamiliesTest, AirflowTestCase):
             'dataset_type': dataset_type
         }
 
-    def _add_update_check_dag_responses(self, **kwargs):
+    def _add_update_check_dag_responses(self, status=200, **kwargs):
         # get variables
         responses.add(responses.GET, f'{self.MOCK_AIRFLOW_URL}/api/v1/variables/{self.DAG_NAME}', json={
             'key': self.DAG_NAME,
             'value': '{}'
-        })
+        }, status=status)
         # get variables again if the response of the previous request didn't include the updated variables
         responses.add(responses.GET, f'{self.MOCK_AIRFLOW_URL}/api/v1/variables/{self.DAG_NAME}', json={
             'key': self.DAG_NAME,
             'value': json.dumps(self._get_dag_variables(**kwargs))
-        })
+        }, status=status)
 
     def assert_airflow_delete_families_calls(self):
-        self._assert_call_counts(15)
+        self._assert_call_counts(13)
         call_count_per_dag = 5
-        for i, dataset_type in enumerate(['MITO', 'SNV_INDEL', 'SV']):
-            offset = i * call_count_per_dag
+        offset = 0
+        for dataset_type in ['MITO', 'SNV_INDEL']:
             self.assert_airflow_calls(self._get_dag_variables(dataset_type), call_count_per_dag, offset)
+            offset += call_count_per_dag
+
+        self._assert_update_variables_airflow_calls(self._get_dag_variables('SV'), offset)
 
     def _assert_update_check_airflow_calls(self, call_count, offset, update_check_path):
         variables_update_check_path = f'{self.MOCK_AIRFLOW_URL}/api/v1/variables/{self.DAG_NAME}'
@@ -94,14 +98,16 @@ class TransferFamiliesAirflowTest(TransferFamiliesTest, AirflowTestCase):
 
     @responses.activate
     @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', '')
-    @mock.patch('seqr.management.commands.transfer_families_to_different_project.logger.info')
-    def test_hail_backend_command(self, mock_logger):
-        searchable_family = self._test_command(mock_logger, additional_family='4', logs=[
-            mock.call('Found 2 out of 2 families.'),
-            mock.call('Disabled search for 7 samples in the following 1 families: 2'),
-            mock.call('Successfully triggered DELETE_FAMILIES DAG for 1 MITO families'),
-            mock.call('Successfully triggered DELETE_FAMILIES DAG for 1 SNV_INDEL families'),
-            mock.call('Successfully triggered DELETE_FAMILIES DAG for 1 SV families'),
+    def test_hail_backend_command(self):
+        searchable_family = self._test_command(additional_family='4', logs=[
+            ('Found 2 out of 2 families.', None),
+            ('Disabled search for 7 samples in the following 1 families: 2', None),
+            ('Successfully triggered DELETE_FAMILIES DAG for 1 MITO families', None),
+            ('Successfully triggered DELETE_FAMILIES DAG for 1 SNV_INDEL families', None),
+            ('400 Client Error: Bad Request for url: http://testairflowserver/api/v1/variables/DELETE_FAMILIES', {
+                'severity': 'ERROR',
+                '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent',
+            })
         ])
 
         samples = Sample.objects.filter(individual__family=searchable_family)

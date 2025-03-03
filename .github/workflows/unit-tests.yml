@@ -70,8 +70,10 @@ jobs:
           pip install -r requirements-dev.txt
       - name: Run coverage tests
         run: |
-          coverage run --source="./matchmaker","./seqr","./reference_data","./panelapp" --omit="*/migrations/*","*/apps.py" manage.py test -p '*_tests.py' -v 2 reference_data seqr matchmaker panelapp
+          coverage run --source="./matchmaker","./seqr","./reference_data","./panelapp" --omit="*/migrations/*","*/apps.py","*/admin.py" manage.py test -p '*_tests.py' -v 2 reference_data seqr matchmaker panelapp
           coverage report --fail-under=99
+          coverage report | (! grep [1-8][0-9]%)
+          coverage report | (! grep 9[0-5]%)
 
   nodejs:
     runs-on: ubuntu-latest
