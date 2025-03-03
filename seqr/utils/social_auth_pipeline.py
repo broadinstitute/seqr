@@ -37,9 +37,3 @@ def log_signed_in(backend, response, is_new=False, *args, **kwargs):
     logger.info('Logged in {} ({})'.format(response['email'], backend.name), extra={'user_email': response['email']})
     if is_new:
         logger.info('Created user {} ({})'.format(response['email'], backend.name), extra={'user_email': response['email']})
-
-
-def log_azure_signed_in(backend, details, is_new=False, *args, **kwargs):
-    logger.info('Logged in {} ({})'.format(details['email'], backend.name), extra={'user_email': details['email']})
-    if is_new:
-        logger.info('Created user {} ({})'.format(details['email'], backend.name), extra={'user_email': details['email']})

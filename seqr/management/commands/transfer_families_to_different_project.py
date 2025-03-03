@@ -4,7 +4,7 @@ from django.core.management.base import BaseCommand
 
 from seqr.models import Project, Family, VariantTag, VariantTagType, Sample
 from seqr.utils.search.utils import backend_specific_call
-from seqr.views.utils.airflow_utils import trigger_airflow_delete_families, DagRunningException
+from seqr.views.utils.airflow_utils import trigger_airflow_dag, DELETE_FAMILIES_DAG_NAME, DagRunningException
 
 import logging
 logger = logging.getLogger(__name__)
@@ -29,7 +29,7 @@ def _trigger_delete_families_dags(from_project, updated_family_dataset_types):
 
     for dataset_type, family_guids in sorted(updated_families_by_dataset_type.items()):
         try:
-            trigger_airflow_delete_families(dataset_type, family_guids, from_project)
+            trigger_airflow_dag(DELETE_FAMILIES_DAG_NAME, from_project, dataset_type, family_guids=sorted(family_guids))
             logger.info(f'Successfully triggered DELETE_FAMILIES DAG for {len(family_guids)} {dataset_type} families')
         except Exception as e:
             logger_call = logger.warning if isinstance(e, DagRunningException) else logger.error
