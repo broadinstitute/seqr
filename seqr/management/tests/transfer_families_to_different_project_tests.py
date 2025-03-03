@@ -62,7 +62,7 @@ class TransferFamiliesAirflowTest(TransferFamiliesTest, AirflowTestCase):
         dataset_type = kwargs.pop('dataset_type', 'MITO')
         super().set_up_one_dag(dataset_type=dataset_type, **kwargs)
 
-    def _get_dag_variables(self, dataset_type):
+    def _get_dag_variables(self, dataset_type, **kwargs):
         return {
             'projects_to_run': [self.PROJECT_GUID],
             'family_guids': ['F000002_2'],
@@ -70,17 +70,8 @@ class TransferFamiliesAirflowTest(TransferFamiliesTest, AirflowTestCase):
             'dataset_type': dataset_type
         }
 
-    def _add_update_check_dag_responses(self, status=200, **kwargs):
-        # get variables
-        responses.add(responses.GET, f'{self.MOCK_AIRFLOW_URL}/api/v1/variables/{self.DAG_NAME}', json={
-            'key': self.DAG_NAME,
-            'value': '{}'
-        }, status=status)
-        # get variables again if the response of the previous request didn't include the updated variables
-        responses.add(responses.GET, f'{self.MOCK_AIRFLOW_URL}/api/v1/variables/{self.DAG_NAME}', json={
-            'key': self.DAG_NAME,
-            'value': json.dumps(self._get_dag_variables(**kwargs))
-        }, status=status)
+    def _add_update_check_dag_responses(self, **kwargs):
+        return self._add_check_dag_variable_responses(self._get_dag_variables(**kwargs), **kwargs)
 
     def assert_airflow_delete_families_calls(self):
         self._assert_call_counts(13)

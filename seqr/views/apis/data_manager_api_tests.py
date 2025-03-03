@@ -2118,20 +2118,10 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         self._set_file_not_found()
 
     def _add_update_check_dag_responses(self, variables=None, **kwargs):
-        if not variables:
-            super()._add_update_check_dag_responses(**kwargs)
-            return
+        if variables:
+            return self._add_check_dag_variable_responses(variables)
 
-        # get variables
-        responses.add(responses.GET, f'{self.MOCK_AIRFLOW_URL}/api/v1/variables/{self.DAG_NAME}', json={
-            'key': self.DAG_NAME,
-            'value': '{}'
-        })
-        # get variables again if the response of the previous request didn't include the updated variables
-        responses.add(responses.GET, f'{self.MOCK_AIRFLOW_URL}/api/v1/variables/{self.DAG_NAME}', json={
-            'key': self.DAG_NAME,
-            'value': json.dumps(variables)
-        })
+        return super()._add_update_check_dag_responses(**kwargs)
 
     def _assert_update_check_airflow_calls(self, call_count, offset, update_check_path):
         if self.DAG_NAME != 'LOADING_PIPELINE':

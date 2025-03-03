@@ -644,6 +644,18 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
             'tasks': tasks, 'total_entries': len(tasks),
         })
 
+    def _add_check_dag_variable_responses(self, variables, status=200, **kwargs):
+        # get variables
+        responses.add(responses.GET, f'{self.MOCK_AIRFLOW_URL}/api/v1/variables/{self.DAG_NAME}', json={
+            'key': self.DAG_NAME,
+            'value': '{}'
+        }, status=status)
+        # get variables again if the response of the previous request didn't include the updated variables
+        responses.add(responses.GET, f'{self.MOCK_AIRFLOW_URL}/api/v1/variables/{self.DAG_NAME}', json={
+            'key': self.DAG_NAME,
+            'value': json.dumps(variables)
+        }, status=status)
+
     def set_dag_trigger_error_response(self, status=200):
         responses.replace(responses.GET, f'{self._dag_url}/dagRuns?execution_date_gte=2022-04-24T04:17:10Z', status=status, json={'dag_runs': [{
             'conf': {},
