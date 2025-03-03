@@ -177,7 +177,23 @@ class SearchUtilsTests(SearchTestHelper):
             search_func(self.results_model, user=self.user)
         self.assertEqual(str(cm.exception), 'Invalid genes/intervals: DDX11L1, ENSG00000223972')
 
+        self.search_model.search['exclude'] = self.search_model.search['locus']
+        with self.assertRaises(InvalidSearchException) as cm:
+            search_func(self.results_model, user=self.user)
+        self.assertEqual(str(cm.exception), 'Cannot specify both Location and Excluded Genes/Intervals')
+
         self.search_model.search['locus'] = {}
+        with self.assertRaises(InvalidSearchException) as cm:
+            search_func(self.results_model, user=self.user)
+        self.assertEqual(str(cm.exception), 'Invalid genes/intervals: DDX11L1, ENSG00000223972')
+
+        self.search_model.search['pathogenicity'] = {'clinvar': ['pathogenic', 'vus']}
+        self.search_model.search['exclude'] = {'clinvar': ['benign', 'vus']}
+        with self.assertRaises(InvalidSearchException) as cm:
+            search_func(self.results_model, user=self.user)
+        self.assertEqual(str(cm.exception), 'ClinVar pathogenicity vus is both included and excluded')
+
+        self.search_model.search['exclude'] = {}
         self.search_model.search['inheritance'] = {'mode': 'recessive'}
         with self.assertRaises(InvalidSearchException) as cm:
             query_variants(self.results_model)
@@ -264,19 +280,22 @@ class SearchUtilsTests(SearchTestHelper):
 
     def _test_expected_search_call(self, mock_get_variants, results_cache, search_fields=None, genes=None, intervals=None,
                                    rs_ids=None, variant_ids=None, parsed_variant_ids=None, inheritance_mode='de_novo',
-                                   dataset_type=None, secondary_dataset_type=None, omitted_sample_guids=None,  **kwargs):
+                                   dataset_type=None, secondary_dataset_type=None, omitted_sample_guids=None,
+                                   exclude_locations=False, exclude=None, **kwargs):
         expected_search = {
             'inheritance_mode': inheritance_mode,
             'inheritance_filter': {},
             'parsedLocus': {
                 'genes': genes, 'intervals': intervals, 'rs_ids': rs_ids, 'variant_ids': variant_ids,
-                'parsed_variant_ids': parsed_variant_ids,
+                'parsed_variant_ids': parsed_variant_ids, 'exclude_locations': exclude_locations,
             },
             'skipped_samples': mock.ANY,
             'dataset_type': dataset_type,
             'secondary_dataset_type': secondary_dataset_type,
         }
         expected_search.update({field: self.search_model.search[field] for field in search_fields or []})
+        if exclude:
+            expected_search['exclude'] = exclude
 
         mock_get_variants.assert_called_with(mock.ANY, expected_search, self.user, results_cache, '37', **kwargs)
         searched_samples = self.affected_search_samples
@@ -333,7 +352,7 @@ class SearchUtilsTests(SearchTestHelper):
         query_variants(self.results_model, user=self.user)
         self._test_expected_search_call(
             mock_get_variants, results_cache, sort='xpos', page=1, num_results=2, skip_genotype_filter=False,
-            search_fields=['locus'], rs_ids=[],  variant_ids=['1-248367227-TC-T', '2-103343353-GAGA-G'],
+            rs_ids=[],  variant_ids=['1-248367227-TC-T', '2-103343353-GAGA-G'],
             parsed_variant_ids=[('1', 248367227, 'TC', 'T'), ('2', 103343353, 'GAGA', 'G')], dataset_type='SNV_INDEL',
             omitted_sample_guids=['S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733', 'S000149_hg00733'],
         )
@@ -342,14 +361,14 @@ class SearchUtilsTests(SearchTestHelper):
         query_variants(self.results_model, user=self.user)
         self._test_expected_search_call(
             mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
-            search_fields=['locus'], rs_ids=['rs9876'], variant_ids=[], parsed_variant_ids=[],
+            rs_ids=['rs9876'], variant_ids=[], parsed_variant_ids=[],
         )
 
         self.search_model.search['locus']['rawItems'] = 'WASH7P, chr2:1234-5678, chr7:100-10100%10, ENSG00000186092'
         query_variants(self.results_model, user=self.user)
         self._test_expected_search_call(
             mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
-            search_fields=['locus'], genes={
+            genes={
                 'ENSG00000227232': mock.ANY, 'ENSG00000186092': mock.ANY,
             }, intervals=[
                 {'chrom': '2', 'start': 1234, 'end': 5678, 'offset': None},
@@ -362,11 +381,25 @@ class SearchUtilsTests(SearchTestHelper):
         self.assertEqual(parsed_genes['ENSG00000227232']['geneSymbol'], 'WASH7P')
         self.assertEqual(parsed_genes['ENSG00000186092']['geneSymbol'], 'OR4F5')
 
-        self.search_model.search.update({'pathogenicity': {'clinvar': ['pathogenic', 'likely_pathogenic']}, 'locus': {}})
+        locus = self.search_model.search.pop('locus')
+        self.search_model.search['exclude'] = {'clinvar': ['benign'], 'rawItems': locus['rawItems']}
         query_variants(self.results_model, user=self.user)
         self._test_expected_search_call(
             mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
-            search_fields=['pathogenicity', 'locus'], dataset_type='SNV_INDEL', omitted_sample_guids=SV_SAMPLES,
+            genes={
+                'ENSG00000227232': mock.ANY, 'ENSG00000186092': mock.ANY,
+            }, intervals=[
+                {'chrom': '2', 'start': 1234, 'end': 5678, 'offset': None},
+                {'chrom': '7', 'start': 100, 'end': 10100, 'offset': 0.1},
+            ], exclude_locations=True, exclude={'clinvar': ['benign']},
+        )
+
+        del self.search_model.search['exclude']['rawItems']
+        self.search_model.search.update({'pathogenicity': {'clinvar': ['pathogenic', 'likely_pathogenic']}})
+        query_variants(self.results_model, user=self.user)
+        self._test_expected_search_call(
+            mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
+            search_fields=['exclude', 'pathogenicity'], dataset_type='SNV_INDEL', omitted_sample_guids=SV_SAMPLES,
         )
 
         self.search_model.search = {
