@@ -856,12 +856,18 @@ class HailSearchTestCase(AioHTTPTestCase):
             [VARIANT1, VARIANT2, MITO_VARIANT1, MITO_VARIANT3], pathogenicity=pathogenicity, sample_data=FAMILY_2_ALL_SAMPLE_DATA,
         )
 
+        exclude = {'clinvar': pathogenicity['clinvar'][1:]}
         pathogenicity['clinvar'] = pathogenicity['clinvar'][:1]
         annotations = {'SCREEN': ['CTCF-only', 'DNase-only'], 'UTRAnnotator': ['5_prime_UTR_stop_codon_loss_variant']}
         selected_transcript_variant_2 = {**VARIANT2, 'selectedMainTranscriptId': 'ENST00000408919'}
         await self._assert_expected_search(
             [VARIANT1, selected_transcript_variant_2, VARIANT4, MITO_VARIANT3], pathogenicity=pathogenicity, annotations=annotations,
             sample_data=FAMILY_2_ALL_SAMPLE_DATA,
+        )
+
+        await self._assert_expected_search(
+            [VARIANT1, VARIANT4, MITO_VARIANT3], exclude=exclude, pathogenicity=pathogenicity,
+            annotations=annotations, sample_data=FAMILY_2_ALL_SAMPLE_DATA,
         )
 
         await self._assert_expected_search(

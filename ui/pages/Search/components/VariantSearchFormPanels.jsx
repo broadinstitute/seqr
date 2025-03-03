@@ -19,6 +19,7 @@ import {
   FREQUENCY_PANEL,
   LOCATION_PANEL,
   QUALITY_PANEL,
+  EXCLUDE_PANEL,
   ANNOTATION_SECONDARY_NAME,
   PATHOGENICITY_PANEL_NAME,
   HGMD_HEADER_INPUT_PROPS,
@@ -94,6 +95,7 @@ const PANELS = [
   FREQUENCY_PANEL,
   LOCATION_PANEL,
   QUALITY_PANEL,
+  EXCLUDE_PANEL,
 ]
 
 const stopPropagation = e => e.stopPropagation()
@@ -130,10 +132,10 @@ const formatField = (field, name, esEnabled, { formatNoEsLabel, ...fieldProps })
 
 const PanelContent = React.memo(({
   name, fields, fieldProps, helpText, fieldLayout, fieldLayoutInput, esEnabled, noPadding, datasetTypes,
-  datasetTypeFields, datasetTypeFieldLayoutInput,
+  datasetTypeFields, datasetTypeFieldLayoutInput, esEnabledFields,
 }) => {
   const layoutInput = (datasetTypeFieldLayoutInput || {})[datasetTypes] || fieldLayoutInput
-  const panelFields = (datasetTypeFields || {})[datasetTypes] || fields
+  const panelFields = (datasetTypeFields || {})[datasetTypes] || (esEnabled && esEnabledFields) || fields
   const fieldComponents = panelFields && configuredFields(
     { fields: panelFields.map(field => formatField(field, name, esEnabled, fieldProps || {})) },
   )
@@ -165,6 +167,7 @@ PanelContent.propTypes = {
   fieldLayoutInput: PropTypes.arrayOf(PropTypes.string),
   datasetTypeFieldLayoutInput: PropTypes.object,
   esEnabled: PropTypes.bool,
+  esEnabledFields: PropTypes.arrayOf(PropTypes.object),
   noPadding: PropTypes.bool,
 }
 

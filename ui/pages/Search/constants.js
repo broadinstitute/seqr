@@ -180,7 +180,7 @@ const HGMD_OPTIONS = [ // see https://portal.biobase-international.com/hgmd/pro/
   },
 ]
 
-const CLINVAR_FIELD = {
+export const CLINVAR_FIELD = {
   name: CLINVAR_NAME,
   options: CLINVAR_OPTIONS,
   groupLabel: 'Clinvar',

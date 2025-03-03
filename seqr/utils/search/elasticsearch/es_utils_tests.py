@@ -1603,7 +1603,7 @@ class EsUtilsTest(TestCase):
             'in_silico': {'cadd': '11.5', 'sift': 'D', 'fathmm': 'D'},
             'inheritance': {'mode': 'de_novo'},
             'customQuery': {'term': {'customFlag': 'flagVal'}},
-            'locus': {'rawItems': 'WASH7P, chr2:1234-5678, chr7:100-10100%10', 'excludeLocations': True},
+            'exclude': {'rawItems': 'WASH7P, chr2:1234-5678, chr7:100-10100%10'},
         })
 
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
