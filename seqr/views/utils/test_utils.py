@@ -673,14 +673,14 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
         if dag_variable_overrides.get('skip_validation'):
             dag_variables['skip_validation'] = True
         dag_variables['sample_source'] = dag_variable_overrides['sample_source']
-        self._assert_airflow_calls(dag_variables, call_count, offset=offset)
+        self.assert_airflow_calls(dag_variables, call_count, offset=offset)
 
     def _assert_call_counts(self, call_count):
         self.mock_airflow_logger.info.assert_not_called()
         self.assertEqual(len(responses.calls), call_count + self.ADDITIONAL_REQUEST_COUNT)
         self.assertEqual(self.mock_authorized_session.call_count, call_count)
 
-    def _assert_airflow_calls(self, dag_variables, call_count, offset=0):
+    def assert_airflow_calls(self, dag_variables, call_count, offset=0):
         self._assert_dag_running_state_calls(offset)
 
         if call_count < 2:
