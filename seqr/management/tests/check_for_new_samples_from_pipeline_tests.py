@@ -258,27 +258,31 @@ class CheckNewSamplesTest(object):
         self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.models.random.randint')
         mock_rand_int = patcher.start()
-        mock_rand_int.side_effect = [GUID_ID, GUID_ID, GUID_ID, GUID_ID, GCNV_GUID_ID, GCNV_GUID_ID, GCNV_GUID_ID, GCNV_GUID_ID]
+        mock_rand_int.side_effect = [GUID_ID, GUID_ID, GUID_ID, GUID_ID, GCNV_GUID_ID, GCNV_GUID_ID, GCNV_GUID_ID, GCNV_GUID_ID, GUID_ID, GUID_ID, GUID_ID, GUID_ID]
         self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.management.commands.check_for_new_samples_from_pipeline.HAIL_SEARCH_DATA_DIR')
         mock_data_dir = patcher.start()
         mock_data_dir.__str__.return_value = self.MOCK_DATA_DIR
         self.addCleanup(patcher.stop)
 
-    def _test_call(self, error_logs, reload_annotations_logs=None, run_loading_logs=None, reload_calls=None):
+    def _test_call(self, error_logs=None, reload_annotations_logs=None, run_loading_logs=None, reload_calls=None, num_runs=4):
         self._set_loading_files()
         self.reset_logs()
         responses.calls.reset()
 
         call_command('check_for_new_samples_from_pipeline')
 
-        self._assert_expected_loading_file_calls()
+        single_call = num_runs < 4
+        self._assert_expected_loading_file_calls(single_call=single_call)
 
-        logs = self.LIST_FILE_LOGS[:1] + [('Loading new samples from 4 run(s)', None)]
-        for data_type, version in [
+        logs = self.LIST_FILE_LOGS[:1] + [(f'Loading new samples from {num_runs} run(s)', None)]
+        runs = [
             ('GRCh38/SNV_INDEL', 'auto__2023-08-09'), ('GRCh37/SNV_INDEL', 'manual__2023-11-02'),
             ('GRCh38/MITO', 'auto__2024-08-12'), ('GRCh38/SV', 'auto__2024-09-14'),
-        ]:
+        ]
+        if single_call:
+            runs = runs[:1]
+        for data_type, version in runs:
             logs.append((f'Loading new samples from {data_type}: {version}', None))
             logs += self._additional_loading_logs(data_type, version)
             if (run_loading_logs or {}).get(data_type):
@@ -290,34 +294,35 @@ class CheckNewSamplesTest(object):
                 ))
         logs.append(('Reset 2 cached results', None))
         logs += reload_annotations_logs or []
-        logs += [(log, None) for log in self.VALIDATION_LOGS]
+        logs += [] if single_call else [(log, None) for log in self.VALIDATION_LOGS]
         logs.append(('DONE', None))
         self.assert_json_logs(user=None, expected=logs)
 
         self.mock_redis.return_value.delete.assert_called_with('search_results__*', 'variant_lookup_results__*')
 
         # Test reload saved variants
-        num_airtable_loading_calls, num_airtable_validation_calls = self._assert_expected_airtable_calls(bool(reload_calls))
+        num_airtable_loading_calls, num_airtable_validation_calls = self._assert_expected_airtable_calls(bool(reload_calls), single_call)
         if not reload_calls:
             self.assertEqual(len(responses.calls), num_airtable_validation_calls)
             return
 
-        self.assertEqual(len(responses.calls), len(reload_calls) + 3 + num_airtable_loading_calls + num_airtable_validation_calls)
+        reload_annotation_calls = [] if single_call else [
+            {'genome_version': 'GRCh38', 'data_type': 'SNV_INDEL', 'variant_ids': [['1', 1562437, 'G', 'CA']]},
+            {'genome_version': 'GRCh38', 'data_type': 'SNV_INDEL', 'variant_ids': [['1', 46859832, 'G', 'A']]},
+            {'genome_version': 'GRCh38', 'data_type': 'SV_WES', 'variant_ids': ['prefix_19107_DEL']}
+        ]
+        self.assertEqual(len(responses.calls), len(reload_calls) +len(reload_annotation_calls) + num_airtable_loading_calls + num_airtable_validation_calls)
         for i, call in enumerate(reload_calls or []):
             resp = responses.calls[i+num_airtable_loading_calls]
             self.assertEqual(resp.request.url, f'{MOCK_HAIL_ORIGIN}:5000/search')
             self.assertEqual(resp.request.headers.get('From'), 'manage_command')
             self.assertDictEqual(json.loads(resp.request.body), call)
 
-        for i, variant_id in enumerate([['1', 1562437, 'G', 'CA'], ['1', 46859832, 'G', 'A']]):
+        for i, body in enumerate(reload_annotation_calls):
             multi_lookup_request = responses.calls[num_airtable_loading_calls+len(reload_calls)+i].request
             self.assertEqual(multi_lookup_request.url, f'{MOCK_HAIL_ORIGIN}:5000/multi_lookup')
             self.assertEqual(multi_lookup_request.headers.get('From'), 'manage_command')
-            self.assertDictEqual(json.loads(multi_lookup_request.body), {
-                'genome_version': 'GRCh38',
-                'data_type': 'SNV_INDEL',
-                'variant_ids': [variant_id],
-            })
+            self.assertDictEqual(json.loads(multi_lookup_request.body), body)
 
     def _additional_loading_logs(self, data_type, version):
         return []
@@ -325,10 +330,13 @@ class CheckNewSamplesTest(object):
     @mock.patch('seqr.management.commands.check_for_new_samples_from_pipeline.MAX_LOOKUP_VARIANTS', 1)
     @mock.patch('seqr.views.utils.airtable_utils.BASE_URL', 'https://test-seqr.org/')
     @mock.patch('seqr.views.utils.airtable_utils.MAX_UPDATE_RECORDS', 2)
+    @mock.patch('seqr.management.commands.check_for_new_samples_from_pipeline.MAX_RELOAD_VARIANTS')
     @mock.patch('seqr.views.utils.export_utils.TemporaryDirectory')
     @mock.patch('seqr.utils.communication_utils.EmailMultiAlternatives')
     @responses.activate
-    def test_command(self, mock_email, mock_temp_dir):
+    def test_command(self, mock_email, mock_temp_dir, mock_max_reload_variants):
+        mock_max_reload_variants.__lt__.return_value = False
+
         responses.add(responses.POST, f'{MOCK_HAIL_ORIGIN}:5000/search', status=200, json={
             'results': [{'variantId': '1-248367227-TC-T', 'familyGuids': ['F000014_14'], 'updated_field': 'updated_value'}],
             'total': 1,
@@ -341,6 +349,10 @@ class CheckNewSamplesTest(object):
             'total': 1,
         })
         responses.add(responses.POST, f'{MOCK_HAIL_ORIGIN}:5000/search', status=400)
+        responses.add(responses.POST, f'{MOCK_HAIL_ORIGIN}:5000/search', status=200, json={
+            'results': [{'variantId': '1-248367227-TC-T', 'familyGuids': ['F000014_14'], 'updated_field': 'updated_value'}],
+            'total': 1,
+        })
 
         # Test errors
         self._set_empty_loading_files()
@@ -627,6 +639,52 @@ The following 1 families failed sex check:
         self.assertFalse(Sample.objects.filter(last_modified_date__gt=sample_last_modified).exists())
         self.mock_redis.return_value.delete.assert_not_called()
 
+        # Test reloading shared annotations is skipped if too many saved variants
+        mock_max_reload_variants.__lt__.return_value = True
+        snv_indel_samples.delete()
+        # TODO are these needed?
+        self._set_reloading_loading_files()
+        mock_email.reset_mock()
+        self.mock_send_slack.reset_mock()
+        self.mock_redis.reset_mock()
+        self.maxDiff = None
+        self._test_call(num_runs=2, reload_calls=[
+            {**search_body, 'sample_data': {'SNV_INDEL': [
+                {'individual_guid': 'I000016_na20888', 'family_guid': 'F000012_12', 'project_guid': 'R0003_test',
+                 'affected': 'A', 'sample_id': 'NA20888', 'sample_type': 'WES'},
+                {'individual_guid': 'I000017_na20889', 'family_guid': 'F000012_12', 'project_guid': 'R0003_test',
+                 'affected': 'A', 'sample_id': 'NA20889', 'sample_type': 'WES'},
+            ]}},
+            {**search_body, 'sample_data': {'SNV_INDEL': [
+                {'individual_guid': 'I000018_na21234', 'family_guid': 'F000014_14',
+                 'project_guid': 'R0004_non_analyst_project', 'affected': 'A', 'sample_id': 'NA21234',
+                 'sample_type': 'WES'},
+            ]}},
+        ], reload_annotations_logs=[
+           ('Reloading shared annotations for 1 fetched SNV_INDEL GRCh38 saved variants', None),
+           ('update 1 SavedVariants', {'dbUpdate': {
+               'dbEntity': 'SavedVariant',
+               'entityIds': ['SV0000002_1248367227_r0390_100'],
+               'updateFields': ['saved_variant_json'],
+               'updateType': 'bulk_update'},
+           }),
+           ('Skipped reloading all 2 saved variant annotations for SNV_INDEL GRCh38', None),
+       ], run_loading_logs={
+            'GRCh38/SNV_INDEL': [
+                ('Loading 4 WES SNV_INDEL samples in 2 projects', None),
+                ('create 4 Samples', {'dbUpdate': mock.ANY}),
+                ('update 4 Samples', {'dbUpdate': mock.ANY}),
+            ] + self.AIRTABLE_LOGS[:-1] + [
+                ('Fetched 1 AnVIL Seqr Loading Requests Tracking records from airtable', None),
+                ('Reloading saved variants in 2 projects', None),
+                ('Updated 0 variants in 2 families for project Test Reprocessed Project', None),
+                ('update 1 SavedVariants', {'dbUpdate': mock.ANY}),
+                ('Updated 1 variants in 1 families for project Non-Analyst Project', None),
+                ('Reload Summary: ', None),
+                ('  Non-Analyst Project: Updated 1 variants', None),
+            ],
+        })
+
 class LocalCheckNewSamplesTest(AuthenticationTestCase, CheckNewSamplesTest):
     fixtures = ['users', '1kg_project']
 
@@ -683,7 +741,7 @@ class LocalCheckNewSamplesTest(AuthenticationTestCase, CheckNewSamplesTest):
         ]
         self.mock_mkdir.reset_mock()
 
-    def _assert_expected_loading_file_calls(self):
+    def _assert_expected_loading_file_calls(self, single_call):
         self.mock_glob.assert_called_with('/seqr/seqr-hail-search-data/*/*/runs/*/*', recursive=False)
         self.mock_open.assert_has_calls([
             mock.call(LOCAL_RUN_PATHS[2], 'r'),
@@ -695,7 +753,7 @@ class LocalCheckNewSamplesTest(AuthenticationTestCase, CheckNewSamplesTest):
             for file in [LOCAL_RUN_PATHS[2], LOCAL_RUN_PATHS[7]]
         ])
 
-    def _assert_expected_airtable_calls(self, has_reload_calls):
+    def _assert_expected_airtable_calls(self, *args, **kwargs):
         return 0, 0
 
 class AirtableCheckNewSamplesTest(AnvilAuthenticationTestCase, CheckNewSamplesTest):
@@ -784,6 +842,10 @@ The following users have been notified: test_user_manager@test.com""")
             json={'records': [{'id': 'rec12345', 'fields': {}}, {'id': 'rec67890', 'fields': {}}]})
         responses.add(
             responses.GET,
+            self.airtable_loading_tracking_url + self.AIRTABLE_LOADING_QUERY_TEMPLATE.format(EXTERNAL_PROJECT_GUID),
+            json={'records': [{'id': 'rec12345', 'fields': {}}]})
+        responses.add(
+            responses.GET,
             self.airtable_loading_tracking_url + self.AIRTABLE_LOADING_QUERY_TEMPLATE.format('R0002_empty'),
             json={'records': [{'id': 'rec12345', 'fields': {}}]})
         responses.add(
@@ -823,11 +885,13 @@ The following users have been notified: test_user_manager@test.com""")
             mock_opened_file(i) for i in range(len(OPENED_RUN_JSON_FILES) - 1)
         ] + [self.mock_mv_process, mock_opened_file(-1), self.mock_mv_process]
 
-    def _assert_expected_loading_file_calls(self):
-        self.mock_subprocess.assert_has_calls(
-            [mock.call(command, stdout=-1, stderr=stderr, shell=True) for (command, stderr) in [
-                ('gsutil ls gs://seqr-hail-search-data/v3.1/*/*/runs/*/*', -1),
-                ('gsutil cat gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/auto__2023-08-09/metadata.json', -2),
+    def _assert_expected_loading_file_calls(self, single_call):
+        calls = [
+            ('gsutil ls gs://seqr-hail-search-data/v3.1/*/*/runs/*/*', -1),
+            ('gsutil cat gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/auto__2023-08-09/metadata.json', -2),
+        ]
+        if not single_call:
+            calls += [
                 ('gsutil cat gs://seqr-hail-search-data/v3.1/GRCh37/SNV_INDEL/runs/manual__2023-11-02/metadata.json', -2),
                 ('gsutil cat gs://seqr-hail-search-data/v3.1/GRCh38/MITO/runs/auto__2024-08-12/metadata.json', -2),
                 ('gsutil cat gs://seqr-hail-search-data/v3.1/GRCh38/GCNV/runs/auto__2024-09-14/metadata.json', -2),
@@ -835,18 +899,27 @@ The following users have been notified: test_user_manager@test.com""")
                 ('gsutil mv /mock/tmp/* gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-14/', -2),
                 ('gsutil cat gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-24/validation_errors.json', -2),
                 ('gsutil mv /mock/tmp/* gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-24/', -2),
-            ]])
+            ]
+        self.mock_subprocess.assert_has_calls(
+            [mock.call(command, stdout=-1, stderr=stderr, shell=True) for (command, stderr) in calls]
+        )
 
     def _additional_loading_logs(self, data_type, version):
         return [(f'==> gsutil cat gs://seqr-hail-search-data/v3.1/{data_type.replace("SV", "GCNV")}/runs/{version}/metadata.json', None)]
 
-    def _assert_expected_airtable_calls(self, has_reload_calls):
+    def _assert_expected_airtable_calls(self, has_reload_calls, single_call):
         # Test request tracking updates for validation errors
-        update_loading_tracking_request = responses.calls[-1].request
+        if single_call:
+            index = -3
+            fields = {'Status': 'Available in Seqr'}
+        else:
+            index = -1
+            fields = {'Status': 'Loading request canceled', 'Notes': 'Callset validation failed'}
+        update_loading_tracking_request = responses.calls[index].request
         self.assertEqual(update_loading_tracking_request.url, self.airtable_loading_tracking_url)
         self.assertEqual(update_loading_tracking_request.method, 'PATCH')
         self.assertDictEqual(json.loads(update_loading_tracking_request.body), {'records': [
-            {'id': 'rec12345', 'fields': {'Status': 'Loading request canceled', 'Notes': 'Callset validation failed'}},
+            {'id': 'rec12345', 'fields': fields},
         ]})
         if not has_reload_calls:
             return 0, 2
@@ -881,4 +954,7 @@ The following users have been notified: test_user_manager@test.com""")
         self.assertDictEqual(json.loads(update_samples_request_2.body), {'records': [
             {'id': 'recfMYDEZpPtzAIeV', 'fields': {'PDOID': ['rec0ABC123']}},
         ]})
+
+        if single_call:
+            return 8, 0
         return 7, 2
