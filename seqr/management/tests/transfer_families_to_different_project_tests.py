@@ -87,7 +87,7 @@ class TransferFamiliesAirflowTest(TransferFamiliesTest, AirflowTestCase):
         call_count_per_dag = 5
         offset = 0
         for dataset_type in ['MITO', 'SNV_INDEL']:
-            self._assert_airflow_calls(self._get_dag_variables(dataset_type), call_count_per_dag, offset)
+            self.assert_airflow_calls(self._get_dag_variables(dataset_type), call_count_per_dag, offset)
             offset += call_count_per_dag
 
         self._assert_update_variables_airflow_calls(self._get_dag_variables('SV'), offset)

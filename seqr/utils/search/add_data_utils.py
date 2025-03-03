@@ -106,7 +106,7 @@ def format_loading_pipeline_variables(
     projects: list[Project], genome_version: str, dataset_type: str, sample_type: str = None, **kwargs
 ):
     variables = {
-        'projects_to_run': sorted([p.guid for p in projects]),
+        'projects_to_run': sorted([p.guid for p in projects]) if projects else None,
         'dataset_type': _dag_dataset_type(sample_type, dataset_type),
         'reference_genome': GENOME_VERSION_LOOKUP[genome_version],
         **kwargs
