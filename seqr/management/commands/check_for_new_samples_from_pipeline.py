@@ -388,12 +388,6 @@ class Command(BaseCommand):
 
             variant_models = variant_models.exclude(variant_id__in=updated_variants_by_id.keys())
 
-        if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
-            if not chromosomes:
-                pass
-        else:
-            chromosomes = [None]
-
         chromosomes = cls._get_chroms_to_reload(chromosomes, dataset_type, genome_version, variant_models)
         if chromosomes is None:
             return

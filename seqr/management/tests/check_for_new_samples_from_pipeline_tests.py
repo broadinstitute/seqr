@@ -647,7 +647,11 @@ The following 1 families failed sex check:
         mock_email.reset_mock()
         self.mock_send_slack.reset_mock()
         self.mock_redis.reset_mock()
+        # TODO shared constants
         self.maxDiff = None
+        airtable_logs = self.AIRTABLE_LOGS[:-1]
+        if self.AIRTABLE_LOGS:
+            airtable_logs.append(('Fetched 1 AnVIL Seqr Loading Requests Tracking records from airtable', None))
         self._test_call(num_runs=2, reload_calls=[
             {**search_body, 'sample_data': {'SNV_INDEL': [
                 {'individual_guid': 'I000016_na20888', 'family_guid': 'F000012_12', 'project_guid': 'R0003_test',
@@ -674,8 +678,7 @@ The following 1 families failed sex check:
                 ('Loading 4 WES SNV_INDEL samples in 2 projects', None),
                 ('create 4 Samples', {'dbUpdate': mock.ANY}),
                 ('update 4 Samples', {'dbUpdate': mock.ANY}),
-            ] + self.AIRTABLE_LOGS[:-1] + [
-                ('Fetched 1 AnVIL Seqr Loading Requests Tracking records from airtable', None),
+            ] + airtable_logs + [
                 ('Reloading saved variants in 2 projects', None),
                 ('Updated 0 variants in 2 families for project Test Reprocessed Project', None),
                 ('update 1 SavedVariants', {'dbUpdate': mock.ANY}),
@@ -735,7 +738,8 @@ class LocalCheckNewSamplesTest(AuthenticationTestCase, CheckNewSamplesTest):
         self.mock_glob.return_value = [LOCAL_RUN_PATHS[3], LOCAL_RUN_PATHS[6]]
 
     def _set_loading_files(self):
-        self.mock_glob.return_value = LOCAL_RUN_PATHS
+        if not self.mock_glob.return_value:
+            self.mock_glob.return_value = LOCAL_RUN_PATHS
         self.mock_open.return_value.__enter__.return_value.__iter__.side_effect = [
             iter([json.dumps(OPENED_RUN_JSON_FILES[i])]) for i in range(len(LOCAL_RUN_PATHS[2:]))
         ]
@@ -747,7 +751,7 @@ class LocalCheckNewSamplesTest(AuthenticationTestCase, CheckNewSamplesTest):
             mock.call(LOCAL_RUN_PATHS[2], 'r'),
             *[mock.call(path.replace('_SUCCESS', 'metadata.json'), 'r') for path in LOCAL_RUN_PATHS[3:]]
         ], any_order=True)
-        self.assertEqual(self.mock_mkdir.call_count, 2)
+        self.assertEqual(self.mock_mkdir.call_count, 0 if single_call else 2)
         self.assertEqual(list(self.mock_written_files.keys()), [
             file.replace('validation_errors.json', '_ERRORS_REPORTED')
             for file in [LOCAL_RUN_PATHS[2], LOCAL_RUN_PATHS[7]]
