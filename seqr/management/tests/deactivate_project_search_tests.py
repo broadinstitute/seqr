@@ -24,8 +24,7 @@ class DeactivateProjectSearchTest(AirflowTestCase):
 
     @responses.activate
     @mock.patch('seqr.management.commands.deactivate_project_search.input')
-    @mock.patch('seqr.management.commands.deactivate_project_search.logger')
-    def test_command(self, mock_logger, mock_input):
+    def test_command(self, mock_input):
         mock_input.return_value = 'n'
 
         # Test invalid project
@@ -39,16 +38,34 @@ class DeactivateProjectSearchTest(AirflowTestCase):
 
         # Test success
         mock_input.return_value = 'y'
+        self.reset_logs()
+        self.maxDiff = None
         call_command('deactivate_project_search', PROJECT_GUID)
-        mock_logger.info.assert_called_with('Deactivated 11 samples')
+        self.assert_json_logs(user=None, expected=[
+            ('update 11 Samples', {'dbUpdate': {
+                'dbEntity': 'Sample',
+                'entityIds': mock.ANY,
+                'updateFields': ['is_active'],
+                'updateType': 'bulk_update'},
+            }),
+            ('Deactivated 11 samples', None),
+            ('Successfully triggered DELETE_PROJECTS DAG for MITO R0001_1kg', None),
+            ('Successfully triggered DELETE_PROJECTS DAG for SV R0001_1kg', None),
+            ('Successfully triggered DELETE_PROJECTS DAG for SNV_INDEL R0001_1kg', None),
+        ])
 
         active_samples = Sample.objects.filter(individual__family__project__guid=PROJECT_GUID, is_active=True)
         self.assertEqual(active_samples.count(), 0)
         self.assert_airflow_calls(self.DAG_VARIABLES, 5)
 
         # Re-running has no effect
+        self.reset_logs()
         call_command('deactivate_project_search', PROJECT_GUID)
-        mock_logger.info.assert_called_with('Deactivated 0 samples')
+        self.assert_json_logs(user=None, expected=[('Deactivated 0 samples', None)])
 
     def _add_update_check_dag_responses(self, **kwargs):
         return self._add_check_dag_variable_responses(self.DAG_VARIABLES, **kwargs)
+
+    def _assert_update_check_airflow_calls(self, call_count, offset, update_check_path):
+        variables_update_check_path = f'{self.MOCK_AIRFLOW_URL}/api/v1/variables/{self.DAG_NAME}'
+        super()._assert_update_check_airflow_calls(call_count, offset, variables_update_check_path)
