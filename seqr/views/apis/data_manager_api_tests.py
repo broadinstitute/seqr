@@ -9,7 +9,7 @@ import responses
 from seqr.utils.communication_utils import _set_bulk_notification_stream
 from seqr.views.apis.data_manager_api import elasticsearch_status, upload_qc_pipeline_output, delete_index, \
     update_rna_seq, load_rna_seq_sample_data, load_phenotype_prioritization_data, validate_callset, loading_vcfs, \
-    get_loaded_projects, load_data
+    get_loaded_projects, trigger_dag, load_data
 from seqr.views.utils.orm_to_json_utils import _get_json_for_models
 from seqr.views.utils.test_utils import AuthenticationTestCase, AirflowTestCase, AirtableTest
 from seqr.utils.search.elasticsearch.es_utils_tests import urllib3_responses
@@ -465,6 +465,29 @@ AIRTABLE_SAMPLE_RECORDS = {
             'fields': {
                 'CollaboratorSampleID': 'HG00731',
                 'SeqrProject': ['https://seqr.broadinstitute.org/project/R0001_1kg/project_page'],
+                'PDOStatus': ['Available in seqr'],
+            }
+        },
+    ],
+}
+INVALID_AIRTABLE_SAMPLE_RECORDS = {
+    'records': [
+        {
+            'id': 'rec2B6OGmQpAkQW3s',
+            'fields': {
+                'SeqrProject': [
+                    'https://seqr.broadinstitute.org/project/R0002_empty/project_page',
+                    'https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page',
+                ],
+                'PDOStatus': ['Historic', 'Methods (Loading)', 'Available in seqr'],
+                'CollaboratorSampleID': 'NA21234',
+            }
+        },
+        {
+            'id': 'recW24C2CJW5lT65K',
+            'fields': {
+                'CollaboratorSampleID': 'HG00731',
+                'SeqrProject': ['https://seqr.broadinstitute.org/project/R0001_1kg/details'],
                 'PDOStatus': ['Available in seqr'],
             }
         },
@@ -1523,11 +1546,16 @@ class DataManagerAPITest(AirtableTest):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'projects': self.WES_PROJECT_OPTIONS})
 
+        self._assert_expected_airtable_errors(url)
+
     def _assert_expected_pm_access(self, get_response):
         response = get_response()
         self.assertEqual(response.status_code, 200)
         self.login_data_manager_user()
         return response
+
+    def _assert_expected_airtable_errors(self, url):
+        return True
 
     @responses.activate
     @mock.patch('seqr.views.utils.airtable_utils.BASE_URL', 'https://seqr.broadinstitute.org/')
@@ -1659,6 +1687,54 @@ class DataManagerAPITest(AirtableTest):
         })
         Individual.objects.filter(guid='I000009_na20874').update(affected='A')
 
+    @responses.activate
+    def test_trigger_dag(self):
+        self.check_data_manager_login(reverse(trigger_dag, args=['some_dag']))
+
+        self._test_trigger_single_dag(
+            'DELETE_PROJECTS',
+            {'project': PROJECT_GUID, 'datasetType': 'SNV_INDEL'},
+            {
+                'projects_to_run': [PROJECT_GUID],
+                'dataset_type': 'SNV_INDEL',
+                'reference_genome': 'GRCh37',
+            }
+        )
+        self._test_trigger_single_dag(
+            'DELETE_FAMILIES',
+            {'family': 'F000012_12', 'datasetType': 'MITO'},
+            {
+                'projects_to_run': ['R0003_test'],
+                'dataset_type': 'MITO',
+                'reference_genome': 'GRCh37',
+                'family_guids': ['F000012_12'],
+            }
+        )
+
+        body = {'genomeVersion': '38', 'datasetType': 'SV'}
+        url = self._test_trigger_single_dag('UPDATE_REFERENCE_DATASETS',body,{
+            'projects_to_run': None,
+            'dataset_type': 'SV',
+            'reference_genome': 'GRCh38',
+        })
+
+        self._test_dag_trigger_errors(url, body)
+
+    def _test_trigger_single_dag(self, dag_id, body, dag_variables):
+        responses.calls.reset()
+        self.set_up_one_dag(dag_id, variables=dag_variables)
+
+        url = reverse(trigger_dag, args=[dag_id])
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self._assert_expected_dag_trigger(response, dag_id, dag_variables)
+        return url
+
+    def _assert_expected_dag_trigger(self, response, dag_id, variables):
+        self.assertEqual(response.status_code, 403)
+
+    def _test_dag_trigger_errors(self, url, body):
+        pass
+
 
 class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
     fixtures = ['users', '1kg_project', 'reference_data']
@@ -1779,6 +1855,9 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
         self.assertEqual(len(responses.calls), 0)
 
     def _test_validate_dataset_type(self, url):
+        pass
+
+    def set_up_one_dag(self, *args, **kwargs):
         pass
 
 
@@ -2037,4 +2116,44 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], [f'Data file or path {self.CALLSET_DIR}/mito_callset.mt is not found.'])
         self._set_file_not_found()
+
+    def _add_update_check_dag_responses(self, variables=None, **kwargs):
+        if variables:
+            return self._add_check_dag_variable_responses(variables)
+
+        return super()._add_update_check_dag_responses(**kwargs)
+
+    def _assert_update_check_airflow_calls(self, call_count, offset, update_check_path):
+        if self.DAG_NAME != 'LOADING_PIPELINE':
+            update_check_path = f'{self.MOCK_AIRFLOW_URL}/api/v1/variables/{self.DAG_NAME}'
+        super()._assert_update_check_airflow_calls(call_count, offset, update_check_path)
+
+    def set_up_one_dag(self, dag_id=None, **kwargs):
+        if dag_id:
+            self._dag_url = self._dag_url.replace(self.DAG_NAME, dag_id)
+            self.DAG_NAME = dag_id
+        super().set_up_one_dag(**kwargs)
+
+    def _assert_expected_dag_trigger(self, response, dag_id, variables):
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'info': [f'Triggered DAG {dag_id} with variables: {json.dumps(variables)}']})
+
+        self.assert_airflow_calls(variables, 5)
+
+    def _test_dag_trigger_errors(self, url, body):
+        self.set_dag_trigger_error_response()
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'error': 'UPDATE_REFERENCE_DATASETS DAG is running and cannot be triggered again.'})
+
+    def _assert_expected_airtable_errors(self, url):
+        responses.replace(
+            responses.GET, 'https://api.airtable.com/v0/app3Y97xtbbaOopVR/Samples',
+            json=INVALID_AIRTABLE_SAMPLE_RECORDS, status=200,
+        )
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {
+            'error': 'The following samples are associated with misconfigured PDOs in Airtable: HG00731, NA21234',
+        })
 
