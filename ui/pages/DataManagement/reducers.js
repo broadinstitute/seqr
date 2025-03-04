@@ -6,7 +6,6 @@ import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 // action creators and reducers in one file as suggested by https://github.com/erikras/ducks-modular-redux
 const REQUEST_ELASTICSEARCH_STATUS = 'REQUEST_ELASTICSEARCH_STATUS'
 const RECEIVE_ELASTICSEARCH_STATUS = 'RECEIVE_ELASTICSEARCH_STATUS'
-const RECEIVE_PIPELINE_UPLOAD_STATS = 'RECEIVE_PIPELINE_UPLOAD_STATS'
 const RECEIVE_RNA_SEQ_UPLOAD_STATS = 'RECEIVE_RNA_SEQ_UPLOAD_STATS'
 const RECEIVE_PHE_PRI_UPLOAD_STATS = 'RECEIVE_PHE_PRI_UPLOAD_STATS'
 const RECEIVE_IGV_UPLOAD_STATS = 'RECEIVE_IGV_UPLOAD_STATS'
@@ -47,10 +46,6 @@ const submitRequest = (urlPath, receiveDataAction, values) => dispatch => new Ht
     dispatch({ type: receiveDataAction, newValue: responseJson })
   },
 ).post(values)
-
-export const uploadQcPipelineOutput = values => submitRequest(
-  'upload_qc_pipeline_output', RECEIVE_PIPELINE_UPLOAD_STATS, values,
-)
 
 export const deleteEsIndex = index => submitRequest('delete_index', RECEIVE_ELASTICSEARCH_STATUS, { index })
 

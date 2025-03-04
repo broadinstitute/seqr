@@ -10,7 +10,6 @@ import AddIGV from './components/AddIGV'
 import ElasticsearchStatus from './components/ElasticsearchStatus'
 import LoadData from './components/LoadData'
 import RnaSeq from './components/RnaSeq'
-import SampleQc from './components/SampleQc'
 import Users from './components/Users'
 import PhenotypePrioritization from './components/PhenotypePrioritization'
 import TRIGGER_DAG_PAGES from './components/TriggerDagPages'
@@ -25,7 +24,6 @@ const PM_DATA_MANAGEMENT_PAGES = [
 
 const DATA_MANAGEMENT_PAGES = [
   ...PM_DATA_MANAGEMENT_PAGES,
-  { path: 'sample_qc', component: SampleQc },
   { path: 'users', component: Users },
   { path: 'phenotype_prioritization', component: PhenotypePrioritization },
 ]

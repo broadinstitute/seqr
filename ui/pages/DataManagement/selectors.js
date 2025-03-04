@@ -1,6 +1,5 @@
 export const getElasticsearchStatusLoading = state => state.elasticsearchStatusLoading.isLoading
 export const getElasticsearchStatusData = state => state.elasticsearchStatus
-export const getQcUploadStats = state => state.qcUploadStats
 export const getRnaSeqUploadStats = state => state.rnaSeqUploadStats
 export const getIgvUploadStats = state => state.igvUploadStats
 export const getAllUsersLoading = state => state.allUsersLoading.isLoading
