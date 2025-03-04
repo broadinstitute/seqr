@@ -14,6 +14,7 @@ logger = SeqrLogger(__name__)
 
 LOADING_PIPELINE_DAG_NAME = 'LOADING_PIPELINE'
 DELETE_FAMILIES_DAG_NAME = 'DELETE_FAMILIES'
+DELETE_PROJECTS_DAG_NAME = 'DELETE_PROJECTS'
 AIRFLOW_AUTH_SCOPE = "https://www.googleapis.com/auth/cloud-platform"
 SEQR_V3_PEDIGREE_GS_PATH = 'gs://seqr-loading-temp/v3.1'
 
