@@ -114,7 +114,6 @@ export const uploadPhenotypePrioritization = values => submitRequest(
 export const reducers = {
   elasticsearchStatusLoading: loadingReducer(REQUEST_ELASTICSEARCH_STATUS, RECEIVE_ELASTICSEARCH_STATUS),
   elasticsearchStatus: createSingleObjectReducer(RECEIVE_ELASTICSEARCH_STATUS),
-  qcUploadStats: createSingleValueReducer(RECEIVE_PIPELINE_UPLOAD_STATS, {}),
   rnaSeqUploadStats: createSingleValueReducer(RECEIVE_RNA_SEQ_UPLOAD_STATS, {}),
   phePriUploadStats: createSingleValueReducer(RECEIVE_PHE_PRI_UPLOAD_STATS, {}),
   igvUploadStats: createSingleValueReducer(RECEIVE_IGV_UPLOAD_STATS, {}),
