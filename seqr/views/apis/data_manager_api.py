@@ -316,7 +316,7 @@ def _fetch_airtable_loadable_project_samples(user, dataset_type, sample_type):
 
 @pm_or_data_manager_required
 def load_data(request):
-    grequest_json = json.loads(request.body)
+    request_json = json.loads(request.body)
     vcf_samples = request_json['vcfSamples']
     sample_type = request_json['sampleType']
     dataset_type = request_json.get('datasetType', Sample.DATASET_TYPE_VARIANT_CALLS)
