@@ -121,7 +121,7 @@ from seqr.views.apis.users_api import \
     update_user, \
     forgot_password
 
-from seqr.views.apis.data_manager_api import elasticsearch_status, upload_qc_pipeline_output, delete_index, \
+from seqr.views.apis.data_manager_api import elasticsearch_status, delete_index, \
     update_rna_seq, load_rna_seq_sample_data, proxy_to_kibana, load_phenotype_prioritization_data, \
     validate_callset, get_loaded_projects, load_data, loading_vcfs, trigger_dag, proxy_to_luigi
 from seqr.views.apis.report_api import \
@@ -328,7 +328,6 @@ api_endpoints = {
 
     'data_management/elasticsearch_status': elasticsearch_status,
     'data_management/delete_index': delete_index,
-    'data_management/upload_qc_pipeline_output': upload_qc_pipeline_output,
     'data_management/get_all_users': get_all_users,
     'data_management/update_rna_seq': update_rna_seq,
     'data_management/load_rna_seq_sample/(?P<sample_guid>[^/]+)': load_rna_seq_sample_data,
