@@ -979,7 +979,7 @@ class BaseHailTableQuery(object):
 
     def _get_annotation_override_fields(self, annotations, override_fields=None, **kwargs):
         override_fields = override_fields or self.ANNOTATION_OVERRIDE_FIELDS
-        return {k: annotations[k] for k in override_fields if k in annotations}
+        return {k: annotations[k] for k in override_fields if annotations.get(k)}
 
     def _get_annotation_override_filters(self, ht, annotation_overrides):
         return []
