@@ -431,11 +431,11 @@ class BaseHailTableQuery(object):
         sample_data = project_sample_type_data[sample_type]
         return ht, sample_data
 
-    def _read_project_table(self, project_guid: str, sample_type: str):
-        return self._read_table(f'projects/{sample_type}/{project_guid}.ht')
+    def _read_project_table(self, project_guid: str, sample_type: str, **kwargs):
+        return self._read_table(f'projects/{sample_type}/{project_guid}.ht', **kwargs)
 
-    def _read_project_data(self, project_guid: str, sample_type: str):
-        project_ht = self._read_project_table(project_guid, sample_type)
+    def _read_project_data(self, project_guid: str, sample_type: str, **kwargs):
+        project_ht = self._read_project_table(project_guid, sample_type, **kwargs)
         if project_ht is not None:
             project_ht = project_ht.select_globals('sample_type', 'family_guids', 'family_samples')
         return project_ht
