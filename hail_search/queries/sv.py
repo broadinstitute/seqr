@@ -64,8 +64,8 @@ class SvHailTableQuery(BaseHailTableQuery):
     def _get_sample_type(cls, *args):
         return cls.DATA_TYPE.split('_')[-1]
 
-    def _read_project_table(self, project_guid: str, sample_type: str):
-        ht = super()._read_project_table(project_guid, sample_type)
+    def _read_project_table(self, project_guid: str, sample_type: str, **kwargs):
+        ht = super()._read_project_table(project_guid, sample_type, **kwargs)
         return ht.annotate_globals(sample_type=sample_type)
 
     def import_filtered_table(self, *args, **kwargs):
