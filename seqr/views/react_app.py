@@ -88,5 +88,10 @@ def render_app_html(request, additional_json=None, include_user=True, status=200
             'window.gaTrackingId=null',
             'window.gaTrackingId="{}"'.format(GA_TOKEN_ID),
         )
+        if include_user:
+            html = html.replace(
+                'window.userEmail=null',
+                f'window.userEmail="{request.user.email}"',
+            )
 
     return HttpResponse(html, content_type="text/html", status=status)
