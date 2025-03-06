@@ -63,7 +63,7 @@ const FreqSummary = React.memo((props) => {
     return null
   }
   const afValue = population.af > 0 ? population.af.toPrecision(precision) : '0.0'
-  const value = population.id ? population.id.replace('gnomAD-SV_v2.1_', '') : afValue
+  const value = population.id ? population.id.replace('gnomAD-SV_v3_', '') : afValue
   const displayValue = population.filter_af > 0 ? population.filter_af.toPrecision(precision) : afValue
 
   let { queryParams } = props
@@ -208,8 +208,8 @@ const POPULATIONS = [
     field: 'gnomad_svs',
     fieldTitle: 'gnomAD SVs',
     precision: 3,
-    urls: { [GENOME_VERSION_37]: 'gnomad.broadinstitute.org' },
-    queryParams: { [GENOME_VERSION_37]: 'dataset=gnomad_sv_r2_1' },
+    urls: { [GENOME_VERSION_38]: 'gnomad.broadinstitute.org' },
+    queryParams: { [GENOME_VERSION_38]: 'dataset=gnomad_sv_r4' },
     helpMessage: GNOMAD_SV_CRITERIA_MESSAGE,
   },
 ]
