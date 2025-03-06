@@ -561,7 +561,7 @@ SV_VARIANT1 = {
     },
     'populations': {
         'sv_callset': {'af': 0.02421800047159195, 'ac': 141, 'an': 5822, 'hom': 0, 'het': 141},
-        'gnomad_svs': {'af': 0.0, 'id': ''},
+        'gnomad_svs': {'af': 0.0, 'id': '', 'hom': 0, 'het': 0},
     },
     'predictions': {'strvctvre': None},
     'cpxIntervals': None,
@@ -602,7 +602,7 @@ SV_VARIANT2 = {
     },
     'populations': {
         'sv_callset': {'af': 0.199072003364563, 'ac': 1159, 'an': 5822, 'hom': 0, 'het': 1159},
-        'gnomad_svs': {'af': 0.005423000082373619, 'id': 'gnomAD-SV_v2.1_INS_1_299'},
+        'gnomad_svs': {'af': 0.005423000082373619, 'id': 'gnomAD-SV_v3_INS_1_299', 'hom': 10359, 'het': 35634},
     },
     'predictions': {'strvctvre': None},
     'cpxIntervals': None,
@@ -642,7 +642,7 @@ SV_VARIANT3 = {
         },
     }, 'populations': {
         'sv_callset': {'af': 0.5778080224990845, 'ac': 3364, 'an': 5822, 'hom': 459, 'het': 2446},
-        'gnomad_svs': {'af': 0.0, 'id': ''},
+        'gnomad_svs': {'af': 0.0, 'id': '', 'hom': 0, 'het': 0},
     },
     'predictions': {'strvctvre': None},
     'cpxIntervals': [{'chrom': 'chr17', 'start': 22150735, 'end': 22151179, 'type': 'DUP'}],
@@ -684,7 +684,7 @@ SV_VARIANT4 = {
     },
     'populations': {
         'sv_callset': {'af': 0.6100999712944031, 'ac': 3552, 'an': 5822, 'hom': 1053, 'het': 1446},
-        'gnomad_svs': {'af': 0.0, 'id': ''},
+        'gnomad_svs': {'af': 0.0, 'id': '', 'hom': 0, 'het': 0},
     },
     'predictions': {'strvctvre': 0.16099999845027924},
     'cpxIntervals': None,
