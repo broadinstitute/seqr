@@ -59,7 +59,17 @@ class ReferenceDataRouter(object):
         return None
 
 
-class HumanPhenotypeOntology(models.Model):
+class LoadableModel(models.Model):
+
+    class Meta:
+        abstract = True
+
+    @staticmethod
+    def get_current_version(cls):
+        return None
+
+
+class HumanPhenotypeOntology(LoadableModel):
     """Human Phenotype Ontology table contains one record per phenotype term parsed from the hp.obo
     file at http://human-phenotype-ontology.github.io/downloads.html
     """
@@ -77,7 +87,7 @@ class HumanPhenotypeOntology(models.Model):
     comment = models.TextField(null=True, blank=True)
 
 
-class GeneInfo(models.Model):
+class GeneInfo(LoadableModel):
     """Human gene models from https://www.gencodegenes.org/releases/
     http://www.gencodegenes.org/gencodeformat.html
     """
@@ -109,8 +119,14 @@ class GeneInfo(models.Model):
         ]
 
 
-class TranscriptInfo(models.Model):
+class GeneMetadataModel(LoadableModel):
     gene = models.ForeignKey(GeneInfo, on_delete=models.CASCADE)
+
+    class Meta:
+        abstract = True
+
+
+class TranscriptInfo(GeneMetadataModel):
 
     transcript_id = models.CharField(max_length=20, db_index=True, unique=True)  # without the version suffix
     is_mane_select = models.BooleanField(default=False)
@@ -131,14 +147,13 @@ class TranscriptInfo(models.Model):
         json_fields = ['transcript_id', 'is_mane_select']
 
 
-class RefseqTranscript(models.Model):
+class RefseqTranscript(LoadableModel):
     transcript = models.OneToOneField(TranscriptInfo, on_delete=models.CASCADE)
     refseq_id = models.CharField(max_length=20)
 
 
 # based on # ftp://ftp.broadinstitute.org/pub/ExAC_release/release0.3.1/functional_gene_constraint/fordist_cleaned_exac_r03_march16_z_pli_rec_null_data.txt
-class GeneConstraint(models.Model):
-    gene = models.ForeignKey(GeneInfo, on_delete=models.CASCADE)
+class GeneConstraint(GeneMetadataModel):
 
     mis_z = models.FloatField()
     mis_z_rank = models.IntegerField()
@@ -151,8 +166,7 @@ class GeneConstraint(models.Model):
         json_fields = ['mis_z', 'mis_z_rank', 'pLI', 'pLI_rank', 'louef', 'louef_rank']
 
 
-class GeneCopyNumberSensitivity(models.Model):
-    gene = models.ForeignKey(GeneInfo, on_delete=models.CASCADE)
+class GeneCopyNumberSensitivity(GeneMetadataModel):
 
     pHI = models.FloatField()
     pTS = models.FloatField()
@@ -161,8 +175,7 @@ class GeneCopyNumberSensitivity(models.Model):
         json_fields = ['pHI', 'pTS']
 
 
-class GeneShet(models.Model):
-    gene = models.ForeignKey(GeneInfo, on_delete=models.CASCADE)
+class GeneShet(GeneMetadataModel):
 
     post_mean = models.FloatField()
 
@@ -170,7 +183,7 @@ class GeneShet(models.Model):
         json_fields = ['post_mean']
 
 
-class Omim(models.Model):
+class Omim(LoadableModel):
     MAP_METHOD_CHOICES = (
         ('1', 'the disorder is placed on the map based on its association with a gene, but the underlying defect is not known.'),
         ('2', 'the disorder has been placed on the map by linkage; no mutation has been found.'),
@@ -201,8 +214,7 @@ class Omim(models.Model):
 
 
 # based on dbNSFPv3.5a_gene fields
-class dbNSFPGene(models.Model):
-    gene = models.ForeignKey(GeneInfo, on_delete=models.CASCADE)
+class dbNSFPGene(GeneMetadataModel):
     gene_names = models.TextField(blank=True)
 
     function_desc = models.TextField(null=True, blank=True)
@@ -242,8 +254,7 @@ class dbNSFPGene(models.Model):
         json_fields = ['function_desc', 'disease_desc', 'gene_names']
 
 
-class PrimateAI(models.Model):
-    gene = models.ForeignKey(GeneInfo, on_delete=models.CASCADE)
+class PrimateAI(GeneMetadataModel):
 
     percentile_25 = models.FloatField()
     percentile_75 = models.FloatField()
@@ -252,8 +263,7 @@ class PrimateAI(models.Model):
         json_fields = ['percentile_25', 'percentile_75']
 
 
-class MGI(models.Model):
-    gene = models.ForeignKey(GeneInfo, on_delete=models.CASCADE)
+class MGI(GeneMetadataModel):
 
     marker_id = models.CharField(max_length=15)
 
@@ -262,8 +272,7 @@ class MGI(models.Model):
         json_fields = ['marker_id']
 
 
-class GenCC(models.Model):
-    gene = models.ForeignKey(GeneInfo, on_delete=models.CASCADE)
+class GenCC(GeneMetadataModel):
 
     hgnc_id = models.CharField(max_length=10)
     classifications = models.JSONField()
@@ -272,8 +281,7 @@ class GenCC(models.Model):
         json_fields = ['classifications', 'hgnc_id']
 
 
-class ClinGen(models.Model):
-    gene = models.ForeignKey(GeneInfo, on_delete=models.CASCADE)
+class ClinGen(GeneMetadataModel):
 
     haploinsufficiency = models.TextField()
     triplosensitivity = models.TextField()
