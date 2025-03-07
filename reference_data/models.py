@@ -160,7 +160,7 @@ class GeneMetadataModel(LoadableModel):
         pass
 
     @classmethod
-    def update_records(cls):
+    def update_records(cls, gene_ids_to_gene, gene_symbols_to_gene):
         logger.info(f'Updating {cls.__name__}')
 
         file_path = download_file(cls.URL)
@@ -179,7 +179,7 @@ class GeneMetadataModel(LoadableModel):
                     if record is None:
                         continue
 
-                    record['gene'] = cls.get_gene_for_record(record)
+                    record['gene'] = cls.get_gene_for_record(record, gene_ids_to_gene, gene_symbols_to_gene)
                     if not record['gene']:
                         skip_counter += 1
                         continue
