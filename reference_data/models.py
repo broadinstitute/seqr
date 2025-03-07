@@ -262,11 +262,22 @@ class GeneConstraint(GeneMetadataModel):
 
 class GeneCopyNumberSensitivity(GeneMetadataModel):
 
+    CURRENT_VERSION = 'Collins_rCNV_2022'
+    URL = f'https://zenodo.org/record/6347673/files/{CURRENT_VERSION}.dosage_sensitivity_scores.tsv.gz'
+
     pHI = models.FloatField()
     pTS = models.FloatField()
 
     class Meta:
         json_fields = ['pHI', 'pTS']
+
+    @staticmethod
+    def parse_record(record):
+        yield {
+            'gene_symbol': record['#gene'],
+            'pHI': float(record['pHaplo']),
+            'pTS': float(record['pTriplo']),
+        }
 
 
 class GeneShet(GeneMetadataModel):
