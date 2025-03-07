@@ -63,6 +63,7 @@ const FreqSummary = React.memo((props) => {
     return null
   }
   const afValue = population.af > 0 ? population.af.toPrecision(precision) : '0.0'
+  // gnomad v4 SVs use "v3" in their ID construction, but we are in fact on v4
   const value = population.id ? population.id.replace('gnomAD-SV_v3_', '') : afValue
   const displayValue = population.filter_af > 0 ? population.filter_af.toPrecision(precision) : afValue
 
