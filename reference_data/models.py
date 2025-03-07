@@ -68,12 +68,14 @@ class ReferenceDataRouter(object):
 
 class LoadableModel(models.Model):
 
+    CURRENT_VERSION = None
+
     class Meta:
         abstract = True
 
-    @staticmethod
+    @classmethod
     def get_current_version(cls):
-        return None
+        return cls.CURRENT_VERSION
 
 
 class HumanPhenotypeOntology(LoadableModel):
@@ -227,6 +229,9 @@ class RefseqTranscript(LoadableModel):
 # based on # ftp://ftp.broadinstitute.org/pub/ExAC_release/release0.3.1/functional_gene_constraint/fordist_cleaned_exac_r03_march16_z_pli_rec_null_data.txt
 class GeneConstraint(GeneMetadataModel):
 
+    CURRENT_VERSION = 'gnomad.v2.1.1.lof_metrics.by_gene'
+    URL = f'http://storage.googleapis.com/seqr-reference-data/gene_constraint/{CURRENT_VERSION}.txt'
+
     mis_z = models.FloatField()
     mis_z_rank = models.IntegerField()
     pLI = models.FloatField()
@@ -236,6 +241,23 @@ class GeneConstraint(GeneMetadataModel):
 
     class Meta:
         json_fields = ['mis_z', 'mis_z_rank', 'pLI', 'pLI_rank', 'louef', 'louef_rank']
+
+    @staticmethod
+    def parse_record(record):
+        yield {
+            'gene_id': record['gene_id'].split(".")[0],
+            'gene_symbol': record['gene'],
+            'mis_z': float(record['mis_z']) if record['mis_z'] != 'NaN' else -100,
+            'pLI': float(record['pLI']) if record['pLI'] != 'NA' else 0,
+            'louef': float(record['oe_lof_upper']) if record['oe_lof'] != 'NA' else 100,
+        }
+
+    @staticmethod
+    def post_process_models(models):
+        # add _rank fields
+        for field, order in [('mis_z', -1), ('pLI', -1), ('louef', 1)]:
+            for i, model in enumerate(sorted(models, key=lambda model: order * getattr(model, field))):
+                setattr(model, '{}_rank'.format(field), i)
 
 
 class GeneCopyNumberSensitivity(GeneMetadataModel):
