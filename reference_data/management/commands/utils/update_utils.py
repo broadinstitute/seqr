@@ -1,10 +1,7 @@
 import logging
-import os
-import gzip
 import traceback
 from django.core.management.base import BaseCommand, CommandError
 
-from reference_data.management.commands.utils.download_utils import download_file
 from reference_data.management.commands.utils.gene_utils import get_genes_by_symbol_and_id
 from reference_data.models import GeneInfo, GeneMetadataModel
 
