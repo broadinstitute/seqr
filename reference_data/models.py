@@ -1,8 +1,10 @@
+import csv
 from django.db import models
 import gzip
 import logging
 from tqdm import tqdm
 
+from reference_data.utils.dbnsfp_utils import DBNSFP_FIELD_MAP, DBNSFP_EXCLUDE_FIELDS
 from reference_data.utils.download_utils import download_file
 
 #  Allow adding the custom json_fields and internal_json_fields to the model Meta
@@ -136,16 +138,16 @@ class GeneMetadataModel(LoadableModel):
     class Meta:
         abstract = True
 
-    @staticmethod
-    def parse_record(record):
+    @classmethod
+    def parse_record(cls, record):
         raise NotImplementedError
 
     @staticmethod
     def get_file_header(f):
         return next(f).rstrip('\n\r').split('\t')
 
-    @staticmethod
-    def get_file_iterator(f):
+    @classmethod
+    def get_file_iterator(cls, f):
         return tqdm(f, unit=' records')
 
     @staticmethod
@@ -242,8 +244,8 @@ class GeneConstraint(GeneMetadataModel):
     class Meta:
         json_fields = ['mis_z', 'mis_z_rank', 'pLI', 'pLI_rank', 'louef', 'louef_rank']
 
-    @staticmethod
-    def parse_record(record):
+    @classmethod
+    def parse_record(cls, record):
         yield {
             'gene_id': record['gene_id'].split(".")[0],
             'gene_symbol': record['gene'],
@@ -271,8 +273,8 @@ class GeneCopyNumberSensitivity(GeneMetadataModel):
     class Meta:
         json_fields = ['pHI', 'pTS']
 
-    @staticmethod
-    def parse_record(record):
+    @classmethod
+    def parse_record(cls, record):
         yield {
             'gene_symbol': record['#gene'],
             'pHI': float(record['pHaplo']),
@@ -282,10 +284,20 @@ class GeneCopyNumberSensitivity(GeneMetadataModel):
 
 class GeneShet(GeneMetadataModel):
 
+    CURRENT_VERSION = '7939768'
+    URL = f'https://zenodo.org/record/{CURRENT_VERSION}/files/s_het_estimates.genebayes.tsv'
+
     post_mean = models.FloatField()
 
     class Meta:
         json_fields = ['post_mean']
+
+    @classmethod
+    def parse_record(cls, record):
+        yield {
+            'gene_id': record['ensg'],
+            'post_mean': float(record['post_mean']),
+        }
 
 
 class Omim(LoadableModel):
@@ -320,6 +332,10 @@ class Omim(LoadableModel):
 
 # based on dbNSFPv3.5a_gene fields
 class dbNSFPGene(GeneMetadataModel):
+
+    CURRENT_VERSION = 'dbNSFP4.0_gene'
+    URL = f'http://storage.googleapis.com/seqr-reference-data/dbnsfp/{CURRENT_VERSION}'
+
     gene_names = models.TextField(blank=True)
 
     function_desc = models.TextField(null=True, blank=True)
@@ -358,8 +374,29 @@ class dbNSFPGene(GeneMetadataModel):
     class Meta:
         json_fields = ['function_desc', 'disease_desc', 'gene_names']
 
+    @classmethod
+    def parse_record(cls, record):
+        parsed_record = {DBNSFP_FIELD_MAP.get(k, k.split('(')[0].lower()): (v if v != '.' else '')
+                         for k, v in record.items() if not k.startswith(DBNSFP_EXCLUDE_FIELDS)}
+        parsed_record["function_desc"] = parsed_record["function_desc"].replace("FUNCTION: ", "")
+        parsed_record['gene_id'] = parsed_record['gene_id'].split(';')[0]
+
+        gene_names = [record['Gene_name']]
+        for gene_name_key in ['Gene_old_names', 'Gene_other_names']:
+            names = record[gene_name_key] if record[gene_name_key] != '.' else ''
+            gene_names += names.split(';')
+        parsed_record['gene_names'] = ';'.join([name for name in gene_names if name])
+
+        if parsed_record['gene_id']:
+            yield parsed_record
+        else:
+            yield None
+
 
 class PrimateAI(GeneMetadataModel):
+
+    CURRENT_VERSION = 'cleaned_v0.2'
+    URL = f'http://storage.googleapis.com/seqr-reference-data/primate_ai/Gene_metrics_clinvar_pcnt.{CURRENT_VERSION}.txt'
 
     percentile_25 = models.FloatField()
     percentile_75 = models.FloatField()
@@ -367,8 +404,17 @@ class PrimateAI(GeneMetadataModel):
     class Meta:
         json_fields = ['percentile_25', 'percentile_75']
 
+    @classmethod
+    def parse_record(cls, record):
+        yield {
+            'gene_symbol': record['genesymbol'],
+            'percentile_25': float(record['pcnt25']),
+            'percentile_75': float(record['pcnt75']),
+        }
+
 
 class MGI(GeneMetadataModel):
+    # TODO complex
 
     marker_id = models.CharField(max_length=15)
 
@@ -379,14 +425,59 @@ class MGI(GeneMetadataModel):
 
 class GenCC(GeneMetadataModel):
 
+    URL = 'https://search.thegencc.org/download/action/submissions-export-csv'
+    CLASSIFICATION_FIELDS = {
+        'disease_title': 'disease',
+        'classification_title': 'classification',
+        'moi_title': 'moi',
+        'submitter_title': 'submitter',
+        'submitted_as_date': 'date',
+    }
+
     hgnc_id = models.CharField(max_length=10)
     classifications = models.JSONField()
 
     class Meta:
         json_fields = ['classifications', 'hgnc_id']
 
+    @classmethod
+    def get_current_version(cls):
+        # GenCC updates regularly and does not have versioned data
+        raise NotImplementedError
+
+    @staticmethod
+    def get_file_header(f):
+        return [k.replace('"', '') for k in next(f).rstrip('\n\r').split(',')]
+
+    @classmethod
+    def get_file_iterator(cls, f):
+        return super().get_file_iterator(csv.reader(f))
+
+    @classmethod
+    def parse_record(cls, record):
+        yield {
+            'gene_symbol': record['gene_symbol'],
+            'hgnc_id': record['gene_curie'],
+            'classifications': [{title: record[field] for field, title in cls.CLASSIFICATION_FIELDS.items()}]
+        }
+
+    @staticmethod
+    def post_process_models(models):
+        #  Group all classifications for a gene into a single model
+        models_by_gene = {}
+        for model in tqdm(models, unit=' models'):
+            if model.gene in models_by_gene:
+                models_by_gene[model.gene].classifications += model.classifications
+            else:
+                models_by_gene[model.gene] = model
+
+        models.clear()
+        models.extend(models_by_gene.values())
+
 
 class ClinGen(GeneMetadataModel):
+
+    URL = 'https://search.clinicalgenome.org/kb/gene-dosage/download'
 
     haploinsufficiency = models.TextField()
     triplosensitivity = models.TextField()
@@ -394,3 +485,30 @@ class ClinGen(GeneMetadataModel):
 
     class Meta:
         json_fields = ['haploinsufficiency', 'triplosensitivity', 'href']
+
+    @classmethod
+    def get_current_version(cls):
+        # ClinGen updates regularly and does not have versioned data
+        raise NotImplementedError
+
+    @staticmethod
+    def get_file_header(f):
+        csv_f = csv.reader(f)
+        next(row for row in csv_f if all(ch == '+' for ch in row[0])) # iterate past the metadata info
+        header_line = next(csv_f)
+        next(csv_f) # there is another padding row before the content starts
+
+        return [col.replace(' ', '_').lower() for col in header_line]
+
+    @classmethod
+    def get_file_iterator(cls, f):
+        return super().get_file_iterator(csv.reader(f))
+
+    @classmethod
+    def parse_record(cls, record):
+        yield {
+            'gene_symbol': record['gene_symbol'],
+            'haploinsufficiency': record['haploinsufficiency'].replace(' for Haploinsufficiency', ''),
+            'triplosensitivity': record['triplosensitivity'].replace(' for Triplosensitivity', ''),
+            'href': record['online_report'],
+        }
