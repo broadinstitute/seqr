@@ -1,8 +1,15 @@
 from django.db import models
+import gzip
+import logging
+from tqdm import tqdm
+
+from reference_data.utils.download_utils import download_file
 
 #  Allow adding the custom json_fields and internal_json_fields to the model Meta
 # (from https://stackoverflow.com/questions/1088431/adding-attributes-into-django-models-meta-class)
 models.options.DEFAULT_NAMES = models.options.DEFAULT_NAMES + ('json_fields',)
+
+logger = logging.getLogger(__name__)
 
 GENOME_VERSION_GRCh37 = "37"
 GENOME_VERSION_GRCh38 = "38"
@@ -120,13 +127,78 @@ class GeneInfo(LoadableModel):
 
 
 class GeneMetadataModel(LoadableModel):
+    URL = None
+
     gene = models.ForeignKey(GeneInfo, on_delete=models.CASCADE)
 
     class Meta:
         abstract = True
 
+    @staticmethod
+    def parse_record(record):
+        raise NotImplementedError
+
+    @staticmethod
+    def get_file_header(f):
+        return next(f).rstrip('\n\r').split('\t')
+
+    @staticmethod
+    def get_file_iterator(f):
+        return tqdm(f, unit=' records')
+
+    @staticmethod
+    def get_gene_for_record(record, gene_ids_to_gene, gene_symbols_to_gene):
+        gene_id = record.pop('gene_id', None)
+        gene_symbol = record.pop('gene_symbol', None)
+
+        return gene_ids_to_gene.get(gene_id) or gene_symbols_to_gene.get(gene_symbol)
+
+    @staticmethod
+    def post_process_models(models):
+        pass
+
+    @classmethod
+    def update_records(cls):
+        logger.info(f'Updating {cls.__name__}')
+
+        file_path = download_file(cls.URL)
+
+        models = []
+        skip_counter = 0
+        logger.info('Parsing file')
+        open_file = gzip.open if file_path.endswith('.gz') else open
+        open_mode = 'rt' if file_path.endswith('.gz') else 'r'
+        with open_file(file_path, open_mode) as f:
+            header_fields = cls.get_file_header(f)
+
+            for line in cls.get_file_iterator(f):
+                record = dict(zip(header_fields, line if isinstance(line, list) else line.rstrip('\r\n').split('\t')))
+                for record in cls.parse_record(record):
+                    if record is None:
+                        continue
+
+                    record['gene'] = cls.get_gene_for_record(record)
+                    if not record['gene']:
+                        skip_counter += 1
+                        continue
+
+                    models.append(cls(**record))
+
+        cls.post_process_models(models)
+
+        cls.objects.all().delete()
+
+        logger.info(f'Creating {len(models)} {cls.__name__} records')
+        cls.objects.bulk_create(models)
+
+        logger.info('Done')
+        logger.info(
+            f'Loaded {cls.objects.count()} {cls.__name__} records from {file_path}. Skipped {skip_counter} records with unrecognized genes.'
+        )
+
 
 class TranscriptInfo(GeneMetadataModel):
+    # TODO is not loaded like other GeneMetadataModels
 
     transcript_id = models.CharField(max_length=20, db_index=True, unique=True)  # without the version suffix
     is_mane_select = models.BooleanField(default=False)
