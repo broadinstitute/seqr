@@ -58,9 +58,11 @@ class Command(BaseCommand):
             # Old gene ids are used in the gene constraint table and other datasets, as well as older sequencing data
             existing_gene_ids = set()
             existing_transcript_ids = set()
+            new_transcripts = {}
             for gencode_release in GeneInfo.ALL_GENCODE_VERSIONS:
-                new_transcripts = GeneInfo.update_records(gencode_release, existing_gene_ids, existing_transcript_ids)
-                create_transcript_info(new_transcripts)
+                new_transcripts.update(
+                    GeneInfo.update_records(gencode_release, existing_gene_ids, existing_transcript_ids)
+                )
             updated.append('gencode')
 
             if new_transcripts:

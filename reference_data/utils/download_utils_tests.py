@@ -4,7 +4,7 @@ import responses
 import tempfile
 import shutil
 
-from reference_data.management.commands.utils.download_utils import download_file
+from reference_data.utils.download_utils import download_file
 
 from django.test import TestCase
 
