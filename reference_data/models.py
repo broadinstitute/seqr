@@ -342,7 +342,6 @@ class GeneMetadataModel(LoadableModel):
 
 
 class TranscriptInfo(GeneMetadataModel):
-    # TODO is not loaded like other GeneMetadataModels
 
     transcript_id = models.CharField(max_length=20, db_index=True, unique=True)  # without the version suffix
     is_mane_select = models.BooleanField(default=False)
@@ -361,6 +360,14 @@ class TranscriptInfo(GeneMetadataModel):
 
     class Meta:
         json_fields = ['transcript_id', 'is_mane_select']
+
+    @classmethod
+    def bulk_create_for_genes(cls, records, gene_id_map):
+        cls.objects.bulk_create([
+            cls(gene_id=gene_id_map[record.pop('gene_id')], **record)
+            for record in records.values()
+        ], batch_size=50000)
+        logger.info(f'Created {len(records)} {cls.__name__} records')
 
 
 class RefseqTranscript(LoadableModel):

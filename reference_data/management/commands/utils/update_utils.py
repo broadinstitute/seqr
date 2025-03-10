@@ -13,6 +13,7 @@ class ReferenceDataHandler(object):
     model_cls = GeneMetadataModel
 
     def __init__(self, **kwargs):
+        # TODO need to be db IDs
         gene_symbols_to_gene, gene_ids_to_gene = get_genes_by_symbol_and_id()
         self.gene_reference = {
             'gene_symbols_to_gene': gene_symbols_to_gene,

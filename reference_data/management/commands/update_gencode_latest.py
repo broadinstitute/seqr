@@ -2,8 +2,8 @@ import logging
 
 from django.core.management.base import BaseCommand
 
-from reference_data.utils.gencode_utils import create_transcript_info
 from reference_data.management.commands.update_refseq import RefseqReferenceDataHandler
+from reference_data.utils.gene_utils import get_genes_by_id_and_symbol
 from reference_data.models import GeneInfo, TranscriptInfo
 
 logger = logging.getLogger(__name__)
@@ -32,7 +32,8 @@ class Command(BaseCommand):
         existing_transcripts = TranscriptInfo.objects.filter(transcript_id__in=transcripts.keys())
         deleted = existing_transcripts.delete()
         logger.info(f'Dropped {deleted} existing TranscriptInfo records')
-        create_transcript_info(transcripts)
-        logger.info(f'Created {len(transcripts)} TranscriptInfo records ({len(transcripts) - deleted} new)')
+
+        gene_id_map, _ = get_genes_by_id_and_symbol()
+        TranscriptInfo.bulk_create_for_genes(transcripts, gene_id_map)
 
         RefseqReferenceDataHandler().update_records()

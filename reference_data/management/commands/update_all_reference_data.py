@@ -11,8 +11,8 @@ from reference_data.management.commands.update_gene_cn_sensitivity import CNSens
 from reference_data.management.commands.update_gencc import GenCCReferenceDataHandler
 from reference_data.management.commands.update_clingen import ClinGenReferenceDataHandler
 from reference_data.management.commands.update_refseq import RefseqReferenceDataHandler
-from reference_data.utils.gencode_utils import create_transcript_info
-from reference_data.models import GeneInfo, HumanPhenotypeOntology
+from reference_data.utils.gene_utils import get_genes_by_id_and_symbol
+from reference_data.models import GeneInfo, HumanPhenotypeOntology, TranscriptInfo
 
 
 logger = logging.getLogger(__name__)
@@ -62,6 +62,10 @@ class Command(BaseCommand):
                 new_transcripts = GeneInfo.update_records(gencode_release, existing_gene_ids, existing_transcript_ids)
                 create_transcript_info(new_transcripts)
             updated.append('gencode')
+
+            if new_transcripts:
+                gene_id_map, _ = get_genes_by_id_and_symbol()
+                TranscriptInfo.bulk_create_for_genes(new_transcripts, gene_id_map)
 
         if not options["skip_omim"]:
             try:

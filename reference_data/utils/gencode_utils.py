@@ -1,26 +1,9 @@
-import logging
-
-from reference_data.models import GeneInfo, TranscriptInfo
-
-logger = logging.getLogger(__name__)
-
-LATEST_GENCODE_RELEASE = 39
-OLD_GENCODE_RELEASES = [31, 29, 28, 27, 19]
-
 GENCODE_URL_TEMPLATE = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_{gencode_release}/{path}gencode.v{gencode_release}{file}'
 
 # expected GTF file header
 GENCODE_FILE_HEADER = [
     'chrom', 'source', 'feature_type', 'start', 'end', 'score', 'strand', 'phase', 'info'
 ]
-
-def create_transcript_info(new_transcripts):
-    gene_id_to_gene_info = {g.gene_id: g for g in GeneInfo.objects.all().only('gene_id')}
-    logger.info('Creating {} TranscriptInfo records'.format(len(new_transcripts)))
-    TranscriptInfo.objects.bulk_create([
-        TranscriptInfo(gene=gene_id_to_gene_info[record.pop('gene_id')], **record) for record in
-        new_transcripts.values()
-    ], batch_size=50000)
 
 
 def parse_gencode_record(record, new_genes, new_transcripts,  existing_gene_ids, existing_transcript_ids, counters, genome_version, gencode_release):
