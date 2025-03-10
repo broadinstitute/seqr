@@ -1,10 +1,9 @@
-import logging
 import os
+
+from django.core.management.base import CommandError
 
 from reference_data.management.commands.utils.update_utils import GeneCommand, ReferenceDataHandler
 from reference_data.models import Omim
-
-logger = logging.getLogger(__name__)
 
 class CachedOmimReferenceDataHandler(ReferenceDataHandler):
 
@@ -14,10 +13,19 @@ class OmimReferenceDataHandler(ReferenceDataHandler):
 
     model_cls = Omim
 
+    def __init__(self, omim_key=None, **kwargs):
+        if not omim_key:
+            raise CommandError("omim_key is required")
+
+        self.omim_key = omim_key
+        super().__init__(**kwargs)
+
+    def update_records(self, **kwargs):
+        super().update_records(omim_key=self.omim_key, **kwargs)
+
 class Command(GeneCommand):
     reference_data_handler = OmimReferenceDataHandler
 
     def add_arguments(self, parser):
         parser.add_argument('--omim-key', help="OMIM key provided with registration", default=os.environ.get("OMIM_KEY"))
-        parser.add_argument('--skip-cache-parsed-records', action='store_true', help='write the parsed records to google storage for reuse')
         super(Command, self).add_arguments(parser)

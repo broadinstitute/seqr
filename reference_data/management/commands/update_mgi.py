@@ -1,10 +1,5 @@
-import logging
-
 from reference_data.management.commands.utils.update_utils import GeneCommand, ReferenceDataHandler
 from reference_data.models import MGI
-
-logger = logging.getLogger(__name__)
-
 
 class MGIReferenceDataHandler(ReferenceDataHandler):
 

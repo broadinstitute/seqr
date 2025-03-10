@@ -3,7 +3,6 @@ from collections import OrderedDict
 from django.core.management.base import BaseCommand
 
 from reference_data.management.commands.utils.gencode_utils import LATEST_GENCODE_RELEASE, OLD_GENCODE_RELEASES
-from reference_data.management.commands.update_human_phenotype_ontology import update_hpo
 from reference_data.management.commands.update_dbnsfp_gene import DbNSFPReferenceDataHandler
 from reference_data.management.commands.update_gencode import update_gencode
 from reference_data.management.commands.update_gene_constraint import GeneConstraintReferenceDataHandler
@@ -14,7 +13,7 @@ from reference_data.management.commands.update_gene_cn_sensitivity import CNSens
 from reference_data.management.commands.update_gencc import GenCCReferenceDataHandler
 from reference_data.management.commands.update_clingen import ClinGenReferenceDataHandler
 from reference_data.management.commands.update_refseq import RefseqReferenceDataHandler
-from reference_data.models import GeneInfo
+from reference_data.models import GeneInfo, HumanPhenotypeOntology
 
 
 logger = logging.getLogger(__name__)
@@ -79,7 +78,7 @@ class Command(BaseCommand):
                     if data_handler:
                         data_handler().update_records()
                     elif source == "hpo":
-                        update_hpo()
+                        HumanPhenotypeOntology.update_records()
                     updated.append(source)
                 except Exception as e:
                     logger.error("unable to update {}: {}".format(source, e))
