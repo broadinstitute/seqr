@@ -218,7 +218,8 @@ class GeneInfo(LoadableModel):
     http://www.gencodegenes.org/gencodeformat.html
     """
 
-    CURRENT_VERSION = 39
+    ALL_GENCODE_VERSIONS = [39, 31, 29, 28, 27, 19]
+    CURRENT_VERSION = ALL_GENCODE_VERSIONS[0]
 
     # gencode fields
     gene_id = models.CharField(max_length=20, db_index=True, unique=True)   # without the version suffix (eg. "ENSG0000012345")
@@ -266,7 +267,7 @@ class GeneInfo(LoadableModel):
                 yield line
 
     @classmethod
-    def update_records(cls, gencode_release=CURRENT_VERSION, **kwargs):
+    def update_records(cls, gencode_release=CURRENT_VERSION, existing_gene_ids=None, existing_transcript_ids=None, **kwargs):
         counters = defaultdict(int)
         genes = defaultdict(dict)
         transcripts = defaultdict(dict)
@@ -278,10 +279,10 @@ class GeneInfo(LoadableModel):
             genome_versions.append(GENOME_VERSION_GRCh38)
 
         for genome_version in genome_versions:
-            for record in cls.load_records(gencode_release=gencode_release, genome_version=genome_version):
+            for record in cls.load_records(gencode_release=gencode_release, genome_version=genome_version, **kwargs):
                 parse_gencode_record(
-                    record, genes, transcripts, gencode_release=gencode_release, genome_version=genome_version, 
-                    counters=counters, **kwargs,
+                    record, genes, transcripts, existing_gene_ids or [], existing_transcript_ids or [], counters,
+                    genome_version, gencode_release
                 )
 
         cls.objects.bulk_create([cls(**record) for record in genes.values()])
@@ -295,6 +296,11 @@ class GeneInfo(LoadableModel):
         })
         for k, v in counters.items():
             logger.info(f'  {k}: {v}')
+
+        if existing_gene_ids is not None:
+            existing_gene_ids.update(genes.keys())
+        if existing_transcript_ids is not None:
+            existing_transcript_ids.update(transcripts.keys())
 
         return transcripts
 

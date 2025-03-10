@@ -2,9 +2,7 @@ import logging
 from collections import OrderedDict
 from django.core.management.base import BaseCommand
 
-from reference_data.management.commands.utils.gencode_utils import LATEST_GENCODE_RELEASE, OLD_GENCODE_RELEASES
 from reference_data.management.commands.update_dbnsfp_gene import DbNSFPReferenceDataHandler
-from reference_data.management.commands.update_gencode import update_gencode
 from reference_data.management.commands.update_gene_constraint import GeneConstraintReferenceDataHandler
 from reference_data.management.commands.update_omim import OmimReferenceDataHandler, CachedOmimReferenceDataHandler
 from reference_data.management.commands.update_primate_ai import PrimateAIReferenceDataHandler
@@ -13,6 +11,7 @@ from reference_data.management.commands.update_gene_cn_sensitivity import CNSens
 from reference_data.management.commands.update_gencc import GenCCReferenceDataHandler
 from reference_data.management.commands.update_clingen import ClinGenReferenceDataHandler
 from reference_data.management.commands.update_refseq import RefseqReferenceDataHandler
+from reference_data.utils.gencode_utils import create_transcript_info
 from reference_data.models import GeneInfo, HumanPhenotypeOntology
 
 
@@ -57,9 +56,11 @@ class Command(BaseCommand):
                 return
             # Download latest version first, and then add any genes from old releases not included in the latest release
             # Old gene ids are used in the gene constraint table and other datasets, as well as older sequencing data
-            update_gencode(LATEST_GENCODE_RELEASE, reset=True)
-            for release in OLD_GENCODE_RELEASES:
-                update_gencode(release)
+            existing_gene_ids = set()
+            existing_transcript_ids = set()
+            for gencode_release in GeneInfo.ALL_GENCODE_VERSIONS:
+                new_transcripts = GeneInfo.update_records(gencode_release, existing_gene_ids, existing_transcript_ids)
+                create_transcript_info(new_transcripts)
             updated.append('gencode')
 
         if not options["skip_omim"]:
