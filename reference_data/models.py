@@ -267,7 +267,7 @@ class GeneInfo(LoadableModel):
                 yield line
 
     @classmethod
-    def update_records(cls, gencode_release=CURRENT_VERSION, existing_gene_ids=None, existing_transcript_ids=None, **kwargs):
+    def update_records(cls, gencode_release=CURRENT_VERSION, existing_gene_ids=None, existing_transcript_ids=None, symbol_changes=None, **kwargs):
         counters = defaultdict(int)
         genes = defaultdict(dict)
         transcripts = defaultdict(dict)
@@ -284,23 +284,29 @@ class GeneInfo(LoadableModel):
                     record, genes, transcripts, existing_gene_ids or [], existing_transcript_ids or [], counters,
                     genome_version, gencode_release
                 )
-
-        cls.objects.bulk_create([cls(**record) for record in genes.values()])
-        logger.info(f'Created {len(genes)} {cls.__name__} records')
-
-        logger.info('Done')
-        logger.info('Stats: ')
-        counters.update({
-            'genes_parsed': len(genes),
-            'transcripts_parsed': len(transcripts),
-        })
         for k, v in counters.items():
-            logger.info(f'  {k}: {v}')
+            logger.info(f'{k}: {v}')
 
         if existing_gene_ids is not None:
             existing_gene_ids.update(genes.keys())
         if existing_transcript_ids is not None:
             existing_transcript_ids.update(transcripts.keys())
+
+        genes_to_update = cls.objects.filter(gene_id__in=genes.keys(), gencode_release__lt=gencode_release)
+        fields = set()
+        for existing in genes_to_update:
+            new_gene = genes.pop(existing.gene_id)
+            if symbol_changes is not None and new_gene['gene_symbol'] != existing.gene_symbol:
+                symbol_changes.append((existing.gene_id, existing.gene_symbol, new_gene['gene_symbol']))
+            fields.update(new_gene.keys())
+            for key, value in new_gene.items():
+                setattr(existing, key, value)
+
+        cls.objects.bulk_update(genes_to_update, fields)
+        logger.info(f'Updated {len(genes_to_update)} previously loaded {cls.__name__} records')
+
+        cls.objects.bulk_create([cls(**record) for record in genes.values()])
+        logger.info(f'Created {len(genes)} {cls.__name__} records')
 
         return transcripts
 
