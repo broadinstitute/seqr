@@ -1,11 +1,16 @@
 import csv
+from os.path import split
+
 from django.db import models, transaction
 import gzip
+import json
 import logging
+import re
 from tqdm import tqdm
 
 from reference_data.utils.dbnsfp_utils import DBNSFP_FIELD_MAP, DBNSFP_EXCLUDE_FIELDS
 from reference_data.utils.download_utils import download_file
+from seqr.views.utils.export_utils import write_multiple_files
 
 #  Allow adding the custom json_fields and internal_json_fields to the model Meta
 # (from https://stackoverflow.com/questions/1088431/adding-attributes-into-django-models-meta-class)
@@ -83,6 +88,10 @@ class LoadableModel(models.Model):
         return cls.CURRENT_VERSION
 
     @classmethod
+    def get_url(cls, **kwargs):
+        return cls.URL
+
+    @classmethod
     def parse_record(cls, record, **kwargs):
         raise NotImplementedError
 
@@ -94,8 +103,8 @@ class LoadableModel(models.Model):
     def get_file_iterator(cls, f):
         return tqdm(f, unit=' records')
 
-    @staticmethod
-    def post_process_models(models):
+    @classmethod
+    def post_process_models(cls, models, **kwargs):
         pass
 
     @classmethod
@@ -106,7 +115,7 @@ class LoadableModel(models.Model):
 
         logger.info(f'Updating {cls.__name__}')
 
-        file_path = download_file(cls.URL)
+        file_path = download_file(cls.get_url(**kwargs))
 
         models = []
         logger.info('Parsing file')
@@ -122,7 +131,7 @@ class LoadableModel(models.Model):
                         continue
                     models.append(cls(**record))
 
-        cls.post_process_models(models)
+        cls.post_process_models(models, **kwargs)
 
         with transaction.atomic():
             deleted = cls.objects.all().delete()
@@ -295,8 +304,8 @@ class GeneConstraint(GeneMetadataModel):
             'louef': float(record['oe_lof_upper']) if record['oe_lof'] != 'NA' else 100,
         }
 
-    @staticmethod
-    def post_process_models(models):
+    @classmethod
+    def post_process_models(cls, models, **kwargs):
         # add _rank fields
         for field, order in [('mis_z', -1), ('pLI', -1), ('louef', 1)]:
             for i, model in enumerate(sorted(models, key=lambda model: order * getattr(model, field))):
@@ -342,6 +351,18 @@ class GeneShet(GeneMetadataModel):
 
 
 class Omim(LoadableModel):
+
+    OMIM_URL = 'https://data.omim.org/downloads/{omim_key}/genemap2.txt'
+
+    CACHED_RECORDS_HEADER = [
+        'gene_id', 'mim_number', 'gene_description', 'comments', 'phenotype_description',
+        'phenotype_mim_number', 'phenotype_map_method', 'phenotype_inheritance',
+        'chrom', 'start', 'end',
+    ]
+    CACHED_RECORDS_BUCKET = 'seqr-reference-data/omim/'
+    CACHED_RECORDS_FILENAME = 'parsed_omim_records.txt'
+    CACHED_OMIM_URL = f'https://storage.googleapis.com/{CACHED_RECORDS_BUCKET}{CACHED_RECORDS_FILENAME}'
+
     MAP_METHOD_CHOICES = (
         ('1', 'the disorder is placed on the map based on its association with a gene, but the underlying defect is not known.'),
         ('2', 'the disorder has been placed on the map by linkage; no mutation has been found.'),
@@ -369,6 +390,81 @@ class Omim(LoadableModel):
 
         json_fields = ['mim_number', 'phenotype_mim_number', 'phenotype_description', 'phenotype_inheritance',
                        'chrom', 'start', 'end',]
+
+    @classmethod
+    def get_url(cls, omim_key=None, **kwargs):
+        return cls.OMIM_URL.format(omim_key=omim_key) if omim_key else cls.CACHED_OMIM_URL
+
+    @staticmethod
+    def get_file_header(f):
+        header_fields = None
+        for i, line in enumerate(f):
+            line = line.rstrip('\r\n')
+            split_line = line.split('\t')
+            if split_line == Omim.CACHED_RECORDS_HEADER:
+                return split_line
+            if line.startswith("# Chrom") and header_fields is None:
+                header_fields = [c.lower().replace(' ', '_') for c in split_line]
+                break
+            elif not line or line.startswith("#"):
+                continue
+            elif 'account is inactive' in line or 'account has expired' in line:
+                raise Exception(line)
+            elif header_fields is None:
+                raise ValueError("Header row not found in genemap2 file before line {}: {}".format(i, line))
+
+        return header_fields
+
+    @classmethod
+    def parse_record(cls, record, omim_key=None, gene_ids_to_gene=None, gene_symbols_to_gene=None, **kwargs):
+        if not omim_key:
+            yield {k: v or None for k, v in record.items()}
+        # skip commented rows
+        elif len(record) == 1:
+            yield None
+        else:
+            gene_id = record['ensembl_gene_id']
+            gene_symbol = record['approved_gene_symbol'].strip() or record['gene/locus_and_other_related_symbols'].split(",")[0]
+
+            output_record = {
+                'gene_id': gene_ids_to_gene.get(gene_id) or gene_symbols_to_gene.get(gene_symbol),
+                'mim_number': int(record['mim_number']),
+                'chrom': record['#_chromosome'].replace('chr', ''),
+                'start': int(record['genomic_position_start']),
+                'end': int(record['genomic_position_end']),
+                'gene_description': record['gene_name'],
+                'comments': record['comments'],
+            }
+
+            phenotype_field = record['phenotypes'].strip()
+
+            record_with_phenotype = None
+            for phenotype_match in re.finditer("[\[{ ]*(.+?)[ }\]]*(, (\d{4,}))? \(([1-4])\)(, ([^;]+))?;?",
+                                               phenotype_field):
+                # Phenotypes example: "Langer mesomelic dysplasia, 249700 (3), Autosomal recessive; Leri-Weill dyschondrosteosis, 127300 (3), Autosomal dominant"
+
+                record_with_phenotype = dict(output_record)  # copy
+                record_with_phenotype["phenotype_description"] = phenotype_match.group(1)
+                record_with_phenotype["phenotype_mim_number"] = int(phenotype_match.group(3)) if phenotype_match.group(
+                    3) else None
+                record_with_phenotype["phenotype_map_method"] = phenotype_match.group(4)
+                record_with_phenotype["phenotype_inheritance"] = phenotype_match.group(6) or None
+
+                yield record_with_phenotype
+
+            if record_with_phenotype is None:
+                if len(phenotype_field) > 0:
+                    raise ValueError("No phenotypes found: {}".format(json.dumps(record)))
+                else:
+                    yield output_record
+
+    @classmethod
+    def post_process_models(cls, models, omim_key=None, **kwargs):
+        if omim_key:
+            content = '\n'.join(cls.CACHED_RECORDS_HEADER + [
+                '\t'.join([str(getattr(model, field) or '') for field in cls.CACHED_RECORDS_HEADER]) for model in models
+            ])
+            write_multiple_files([(cls.CACHED_RECORDS_FILENAME, content)], f'gs://{cls.CACHED_RECORDS_BUCKET}')
 
 
 # based on dbNSFPv3.5a_gene fields
@@ -528,15 +624,15 @@ class GenCC(GeneMetadataModel):
             'classifications': [{title: record[field] for field, title in cls.CLASSIFICATION_FIELDS.items()}]
         }
 
-    @staticmethod
-    def post_process_models(models):
+    @classmethod
+    def post_process_models(cls, models, **kwargs):
         #  Group all classifications for a gene into a single model
         models_by_gene = {}
         for model in tqdm(models, unit=' models'):
             if model.gene in models_by_gene:
-                models_by_gene[model.gene].classifications += model.classifications
+                models_by_gene[model.gene_id].classifications += model.classifications
             else:
-                models_by_gene[model.gene] = model
+                models_by_gene[model.gene_id] = model
 
         models.clear()
         models.extend(models_by_gene.values())
