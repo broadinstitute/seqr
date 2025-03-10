@@ -150,8 +150,8 @@ class GeneMetadataModel(LoadableModel):
     def get_file_iterator(cls, f):
         return tqdm(f, unit=' records')
 
-    @staticmethod
-    def get_gene_for_record(record, gene_ids_to_gene, gene_symbols_to_gene):
+    @classmethod
+    def get_gene_for_record(cls, record, gene_ids_to_gene=None, gene_symbols_to_gene=None, **kwargs):
         gene_id = record.pop('gene_id', None)
         gene_symbol = record.pop('gene_symbol', None)
 
@@ -162,7 +162,7 @@ class GeneMetadataModel(LoadableModel):
         pass
 
     @classmethod
-    def update_records(cls, gene_ids_to_gene, gene_symbols_to_gene):
+    def update_records(cls, **kwargs):
         logger.info(f'Updating {cls.__name__}')
 
         file_path = download_file(cls.URL)
@@ -181,7 +181,7 @@ class GeneMetadataModel(LoadableModel):
                     if record is None:
                         continue
 
-                    record['gene'] = cls.get_gene_for_record(record, gene_ids_to_gene, gene_symbols_to_gene)
+                    record['gene'] = cls.get_gene_for_record(record, **kwargs)
                     if not record['gene']:
                         skip_counter += 1
                         continue
@@ -414,13 +414,43 @@ class PrimateAI(GeneMetadataModel):
 
 
 class MGI(GeneMetadataModel):
-    # TODO complex
+
+    CURRENT_VERSION = 'HMD_HumanPhenotype'
+    URL = f'https://storage.googleapis.com/seqr-reference-data/mgi/{CURRENT_VERSION}.rpt.txt'
 
     marker_id = models.CharField(max_length=15)
 
     class Meta:
         unique_together = ('gene', 'marker_id')
         json_fields = ['marker_id']
+
+    @staticmethod
+    def get_file_header(f):
+        return ['gene_symbol', 'entrez_gene_id', 'mouse_gene_symbol', 'marker_id', 'phenotype_ids']
+
+    @classmethod
+    def parse_record(cls, record):
+        yield {k: v.strip() for k, v in record.items() if k in ['gene_symbol', 'marker_id', 'entrez_gene_id']}
+
+    @classmethod
+    def update_records(cls, **kwargs):
+        if not dbNSFPGene.objects.exists():
+            raise ValueError('MGI data can not be loaded before dbNSFP data')
+        entrez_id_to_gene = {
+            dbnsfp.entrez_gene_id: dbnsfp.gene for dbnsfp in dbNSFPGene.objects.all().prefetch_related('gene')
+        }
+        super().update_records(entrez_id_to_gene=entrez_id_to_gene, **kwargs)
+
+    @classmethod
+    def get_gene_for_record(cls, record, entrez_id_to_gene=None, **kwargs):
+        entrez_gene = entrez_id_to_gene.get(record.pop('entrez_gene_id'))
+
+        try:
+            return super().get_gene_for_record(record, **kwargs)
+        except ValueError as e:
+            if entrez_gene:
+                return entrez_gene
+            raise e
 
 
 class GenCC(GeneMetadataModel):
