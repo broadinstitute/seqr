@@ -326,12 +326,17 @@ class GeneMetadataModel(LoadableModel):
 
     @classmethod
     def parse_record(cls, record, skipped_genes=None, **kwargs):
+        record = cls.parse_gene_record(record)
         if record is not None:
             record['gene_id'] = cls.get_gene_for_record(record, **kwargs)
             if not record['gene_id']:
                 skipped_genes[None] +=1
                 record = None
         yield record
+
+    @staticmethod
+    def parse_gene_record(record):
+        return record
 
     @classmethod
     def update_records(cls, **kwargs):
@@ -389,8 +394,7 @@ class RefseqTranscript(LoadableModel):
             raise ValueError(f'Transcript "{transcript_id}" not found in the TranscriptInfo table')
 
         yield {
-            'transcriptinfo_id': transcript_id_map[transcript_id],
-            'transcript_id': transcript_id,
+            'transcript_id': transcript_id_map[transcript_id],
             'refseq_id': record['refseq_id'],
         }
 
@@ -416,9 +420,9 @@ class GeneConstraint(GeneMetadataModel):
     class Meta:
         json_fields = ['mis_z', 'mis_z_rank', 'pLI', 'pLI_rank', 'louef', 'louef_rank']
 
-    @classmethod
-    def parse_record(cls, record, **kwargs):
-        yield {
+    @staticmethod
+    def parse_gene_record(record):
+        return {
             'gene_id': record['gene_id'].split(".")[0],
             'gene_symbol': record['gene'],
             'mis_z': float(record['mis_z']) if record['mis_z'] != 'NaN' else -100,
@@ -445,9 +449,9 @@ class GeneCopyNumberSensitivity(GeneMetadataModel):
     class Meta:
         json_fields = ['pHI', 'pTS']
 
-    @classmethod
-    def parse_record(cls, record, **kwargs):
-        yield {
+    @staticmethod
+    def parse_gene_record(record):
+        return {
             'gene_symbol': record['#gene'],
             'pHI': float(record['pHaplo']),
             'pTS': float(record['pTriplo']),
@@ -464,9 +468,9 @@ class GeneShet(GeneMetadataModel):
     class Meta:
         json_fields = ['post_mean']
 
-    @classmethod
-    def parse_record(cls, record, **kwargs):
-        yield {
+    @staticmethod
+    def parse_gene_record(record):
+        return {
             'gene_id': record['ensg'],
             'post_mean': float(record['post_mean']),
         }
@@ -633,12 +637,14 @@ class dbNSFPGene(GeneMetadataModel):
     class Meta:
         json_fields = ['function_desc', 'disease_desc', 'gene_names']
 
-    @classmethod
-    def parse_record(cls, record, **kwargs):
+    @staticmethod
+    def parse_gene_record(record):
         parsed_record = {DBNSFP_FIELD_MAP.get(k, k.split('(')[0].lower()): (v if v != '.' else '')
                          for k, v in record.items() if not k.startswith(DBNSFP_EXCLUDE_FIELDS)}
         parsed_record["function_desc"] = parsed_record["function_desc"].replace("FUNCTION: ", "")
         parsed_record['gene_id'] = parsed_record['gene_id'].split(';')[0]
+        if not parsed_record['gene_id']:
+            return None
 
         gene_names = [record['Gene_name']]
         for gene_name_key in ['Gene_old_names', 'Gene_other_names']:
@@ -646,11 +652,7 @@ class dbNSFPGene(GeneMetadataModel):
             gene_names += names.split(';')
         parsed_record['gene_names'] = ';'.join([name for name in gene_names if name])
 
-        if parsed_record['gene_id']:
-            yield parsed_record
-        else:
-            yield None
-
+        return parsed_record
 
 class PrimateAI(GeneMetadataModel):
 
@@ -663,9 +665,9 @@ class PrimateAI(GeneMetadataModel):
     class Meta:
         json_fields = ['percentile_25', 'percentile_75']
 
-    @classmethod
-    def parse_record(cls, record, **kwargs):
-        yield {
+    @staticmethod
+    def parse_gene_record(record):
+        return {
             'gene_symbol': record['genesymbol'],
             'percentile_25': float(record['pcnt25']),
             'percentile_75': float(record['pcnt75']),
@@ -687,9 +689,9 @@ class MGI(GeneMetadataModel):
     def get_file_header(f):
         return ['gene_symbol', 'entrez_gene_id', 'mouse_gene_symbol', 'marker_id', 'phenotype_ids']
 
-    @classmethod
-    def parse_record(cls, record, **kwargs):
-        yield {k: v.strip() for k, v in record.items() if k in ['gene_symbol', 'marker_id', 'entrez_gene_id']}
+    @staticmethod
+    def parse_gene_record(record):
+        return {k: v.strip() for k, v in record.items() if k in ['gene_symbol', 'marker_id', 'entrez_gene_id']}
 
     @classmethod
     def update_records(cls, **kwargs):
@@ -733,12 +735,12 @@ class GenCC(GeneMetadataModel):
     def get_file_iterator(cls, f):
         return super().get_file_iterator(csv.reader(f))
 
-    @classmethod
-    def parse_record(cls, record, **kwargs):
-        yield {
+    @staticmethod
+    def parse_gene_record(record):
+        return {
             'gene_symbol': record['gene_symbol'],
             'hgnc_id': record['gene_curie'],
-            'classifications': [{title: record[field] for field, title in cls.CLASSIFICATION_FIELDS.items()}]
+            'classifications': [{title: record[field] for field, title in GenCC.CLASSIFICATION_FIELDS.items()}]
         }
 
     @classmethod
@@ -779,9 +781,9 @@ class ClinGen(GeneMetadataModel):
     def get_file_iterator(cls, f):
         return super().get_file_iterator(csv.reader(f))
 
-    @classmethod
-    def parse_record(cls, record, **kwargs):
-        yield {
+    @staticmethod
+    def parse_gene_record(record):
+        return {
             'gene_symbol': record['gene_symbol'],
             'haploinsufficiency': record['haploinsufficiency'].replace(' for Haploinsufficiency', ''),
             'triplosensitivity': record['triplosensitivity'].replace(' for Triplosensitivity', ''),
