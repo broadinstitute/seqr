@@ -84,10 +84,6 @@ class LoadableModel(models.Model):
         abstract = True
 
     @classmethod
-    def get_current_version(cls):
-        return cls.CURRENT_VERSION
-
-    @classmethod
     def get_url(cls, **kwargs):
         return cls.URL
 
@@ -160,11 +156,6 @@ class HumanPhenotypeOntology(LoadableModel):
 
     definition = models.TextField(null=True, blank=True)
     comment = models.TextField(null=True, blank=True)
-
-    @classmethod
-    def get_current_version(cls):
-        # HPO updates regularly and does not use versioned data
-        raise NotImplementedError
 
     @staticmethod
     def get_file_header(f):
@@ -449,11 +440,6 @@ class Omim(LoadableModel):
 
         json_fields = ['mim_number', 'phenotype_mim_number', 'phenotype_description', 'phenotype_inheritance',
                        'chrom', 'start', 'end',]
-
-    @classmethod
-    def get_current_version(cls):
-        # OMIM updates regularly and does not have versioned data
-        raise NotImplementedError
     
     @classmethod
     def get_url(cls, omim_key=None, **kwargs):
@@ -667,11 +653,6 @@ class GenCC(GeneMetadataModel):
     class Meta:
         json_fields = ['classifications', 'hgnc_id']
 
-    @classmethod
-    def get_current_version(cls):
-        # GenCC updates regularly and does not have versioned data
-        raise NotImplementedError
-
     @staticmethod
     def get_file_header(f):
         return [k.replace('"', '') for k in next(f).rstrip('\n\r').split(',')]
@@ -712,11 +693,6 @@ class ClinGen(GeneMetadataModel):
 
     class Meta:
         json_fields = ['haploinsufficiency', 'triplosensitivity', 'href']
-
-    @classmethod
-    def get_current_version(cls):
-        # ClinGen updates regularly and does not have versioned data
-        raise NotImplementedError
 
     @staticmethod
     def get_file_header(f):
