@@ -21,9 +21,7 @@ class ReferenceDataHandler(object):
 
     def update_records(self, **kwargs):
         try:
-            self.model_cls.update_records(
-                self.gene_reference['gene_ids_to_gene'], self.gene_reference['gene_symbols_to_gene'], **kwargs,
-            )
+            self.model_cls.update_records(**self.gene_reference, **kwargs)
         except Exception as e:
             logger.error(str(e), extra={'traceback': traceback.format_exc()})
 

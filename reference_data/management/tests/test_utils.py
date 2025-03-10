@@ -20,7 +20,7 @@ class ReferenceDataCommandTestCase(TestCase):
 
         tmp_dir = tempfile.gettempdir()
         self.tmp_file = '{}/{}'.format(tmp_dir, self.URL.split('/')[-1])
-        patcher = mock.patch('reference_data.management.commands.utils.download_utils.tempfile')
+        patcher = mock.patch('reference_data.utils.download_utils.tempfile')
         self.mock_tempfile = patcher.start()
         self.mock_tempfile.gettempdir.return_value = tmp_dir
         self.addCleanup(patcher.stop)

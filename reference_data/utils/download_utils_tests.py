@@ -20,9 +20,9 @@ class DownloadUtilsTest(TestCase):
         shutil.rmtree(self.test_dir)
 
     @responses.activate
-    @mock.patch('reference_data.management.commands.utils.download_utils.logger')
-    @mock.patch('reference_data.management.commands.utils.download_utils.os.path.isfile')
-    @mock.patch('reference_data.management.commands.utils.download_utils.os.path.getsize')
+    @mock.patch('reference_data.utils.download_utils.logger')
+    @mock.patch('reference_data.utils.download_utils.os.path.isfile')
+    @mock.patch('reference_data.utils.download_utils.os.path.getsize')
     def test_download_file(self, mock_getsize, mock_isfile, mock_logger):
         responses.add(responses.HEAD, 'https://mock_url/test_file.gz',
                       headers={"Content-Length": "1024"}, status=200)

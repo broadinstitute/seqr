@@ -72,7 +72,7 @@ class UpdateOmimTest(TestCase):
     @responses.activate
     @mock.patch('reference_data.management.commands.utils.update_utils.logger')
     @mock.patch('reference_data.management.commands.update_omim.logger')
-    @mock.patch('reference_data.management.commands.utils.download_utils.tempfile')
+    @mock.patch('reference_data.utils.download_utils.tempfile')
     @mock.patch('reference_data.management.commands.update_omim.os')
     def test_update_omim_command(self, mock_os, mock_tempfile, mock_omim_logger, mock_utils_logger):
         tmp_dir = tempfile.gettempdir()
@@ -149,7 +149,7 @@ class UpdateOmimTest(TestCase):
 
     @responses.activate
     @mock.patch('reference_data.management.commands.utils.update_utils.logger')
-    @mock.patch('reference_data.management.commands.utils.download_utils.tempfile')
+    @mock.patch('reference_data.utils.download_utils.tempfile')
     def test_update_omim_cached_records(self, mock_tempfile, mock_utils_logger):
         tmp_dir = tempfile.gettempdir()
         mock_tempfile.gettempdir.return_value = tmp_dir

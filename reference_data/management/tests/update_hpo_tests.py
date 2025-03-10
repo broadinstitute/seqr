@@ -132,7 +132,7 @@ class UpdateHpoTest(TestCase):
 
     @responses.activate
     @mock.patch('reference_data.management.commands.update_human_phenotype_ontology.logger')
-    @mock.patch('reference_data.management.commands.utils.download_utils.tempfile')
+    @mock.patch('reference_data.utils.download_utils.tempfile')
     def test_update_hpo_command(self, mock_tempfile, mock_logger):
         tmp_dir = tempfile.gettempdir()
         mock_tempfile.gettempdir.return_value = tmp_dir
