@@ -1,6 +1,6 @@
 import csv
-from os.path import split
 
+from collections import defaultdict
 from django.db import models, transaction
 import gzip
 import json
@@ -10,6 +10,7 @@ from tqdm import tqdm
 
 from reference_data.utils.dbnsfp_utils import DBNSFP_FIELD_MAP, DBNSFP_EXCLUDE_FIELDS
 from reference_data.utils.download_utils import download_file
+from reference_data.utils.gencode_utils import parse_gencode_record, GENCODE_URL_TEMPLATE, GENCODE_FILE_HEADER
 from seqr.views.utils.export_utils import write_multiple_files
 
 #  Allow adding the custom json_fields and internal_json_fields to the model Meta
@@ -26,8 +27,6 @@ GENOME_VERSION_CHOICES = [
     (GENOME_VERSION_GRCh38, "GRCh38")
 ]
 GENOME_VERSION_LOOKUP = {k: v for (k, v) in GENOME_VERSION_CHOICES}
-
-GENCODE_URL_TEMPLATE = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_{gencode_release}/{path}gencode.v{gencode_release}{file}'
 
 
 class ReferenceDataRouter(object):
@@ -104,6 +103,18 @@ class LoadableModel(models.Model):
         pass
 
     @classmethod
+    def load_records(cls, **kwargs):
+        file_path = download_file(cls.get_url(**kwargs))
+
+        logger.info(f'Parsing file {file_path}')
+        open_file = gzip.open if file_path.endswith('.gz') else open
+        open_mode = 'rt' if file_path.endswith('.gz') else 'r'
+        with open_file(file_path, open_mode) as f:
+            header_fields = cls.get_file_header(f)
+            for line in cls.get_file_iterator(f):
+                yield dict(zip(header_fields, line if isinstance(line, list) else line.rstrip('\r\n').split('\t')))
+
+    @classmethod
     def update_records(cls, **kwargs):
         missing_mappings = {k for k, v in kwargs.items() if not v}
         if missing_mappings:
@@ -111,21 +122,12 @@ class LoadableModel(models.Model):
 
         logger.info(f'Updating {cls.__name__}')
 
-        file_path = download_file(cls.get_url(**kwargs))
-
         models = []
-        logger.info('Parsing file')
-        open_file = gzip.open if file_path.endswith('.gz') else open
-        open_mode = 'rt' if file_path.endswith('.gz') else 'r'
-        with open_file(file_path, open_mode) as f:
-            header_fields = cls.get_file_header(f)
-
-            for line in cls.get_file_iterator(f):
-                record = dict(zip(header_fields, line if isinstance(line, list) else line.rstrip('\r\n').split('\t')))
-                for record in cls.parse_record(record, **kwargs):
-                    if record is None:
-                        continue
-                    models.append(cls(**record))
+        for record in cls.load_records(**kwargs):
+            for record in cls.parse_record(record, **kwargs):
+                if record is None:
+                    continue
+                models.append(cls(**record))
 
         cls.post_process_models(models, **kwargs)
 
@@ -136,7 +138,7 @@ class LoadableModel(models.Model):
             logger.info(f'Created {len(models)} {cls.__name__} records')
 
         logger.info('Done')
-        logger.info(f'Loaded {cls.objects.count()} {cls.__name__} records from {file_path}')
+        logger.info(f'Loaded {cls.objects.count()} {cls.__name__} records')
 
 
 class HumanPhenotypeOntology(LoadableModel):
@@ -244,6 +246,58 @@ class GeneInfo(LoadableModel):
             'end_grch38', 'gencode_gene_type', 'coding_region_size_grch37', 'coding_region_size_grch38',
         ]
 
+    @classmethod
+    def get_url(cls, gencode_release=None, genome_version=None, **kwargs):
+        path = ''
+        file = '.annotation.gtf.gz'
+        if gencode_release > 22 and genome_version == GENOME_VERSION_GRCh37:
+            path = 'GRCh37_mapping/'
+            file = 'lift37.annotation.gtf.gz'
+        return GENCODE_URL_TEMPLATE.format(path=path, file=file, gencode_release=gencode_release)
+
+    @staticmethod
+    def get_file_header(f):
+        return GENCODE_FILE_HEADER
+
+    @classmethod
+    def get_file_iterator(cls, f):
+        for i, line in enumerate(super().get_file_iterator(f)):
+            if line and not line.startswith('#'):
+                yield line
+
+    @classmethod
+    def update_records(cls, gencode_release=CURRENT_VERSION, **kwargs):
+        counters = defaultdict(int)
+        genes = defaultdict(dict)
+        transcripts = defaultdict(dict)
+
+        genome_versions = []
+        if gencode_release == 19 or gencode_release > 22:
+            genome_versions.append(GENOME_VERSION_GRCh37)
+        if gencode_release > 19:
+            genome_versions.append(GENOME_VERSION_GRCh38)
+
+        for genome_version in genome_versions:
+            for record in cls.load_records(gencode_release=gencode_release, genome_version=genome_version):
+                parse_gencode_record(
+                    record, genes, transcripts, gencode_release=gencode_release, genome_version=genome_version, 
+                    counters=counters, **kwargs,
+                )
+
+        cls.objects.bulk_create([cls(**record) for record in genes.values()])
+        logger.info(f'Created {len(genes)} {cls.__name__} records')
+
+
+        logger.info('Done')
+        logger.info('Stats: ')
+        counters.update({
+            'genes_parsed': len(genes),
+            'transcripts_parsed': len(transcripts),
+        })
+        for k, v in counters.items():
+            logger.info(f'  {k}: {v}')
+
+        return transcripts
 
 class GeneMetadataModel(LoadableModel):
 
