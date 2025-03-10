@@ -1,5 +1,5 @@
 import csv
-from django.db import models
+from django.db import models, transaction
 import gzip
 import logging
 from tqdm import tqdm
@@ -71,6 +71,7 @@ class ReferenceDataRouter(object):
 class LoadableModel(models.Model):
 
     CURRENT_VERSION = None
+    URL = None
 
     class Meta:
         abstract = True
@@ -78,6 +79,53 @@ class LoadableModel(models.Model):
     @classmethod
     def get_current_version(cls):
         return cls.CURRENT_VERSION
+
+    @classmethod
+    def parse_record(cls, record, **kwargs):
+        raise NotImplementedError
+
+    @staticmethod
+    def get_file_header(f):
+        return next(f).rstrip('\n\r').split('\t')
+
+    @classmethod
+    def get_file_iterator(cls, f):
+        return tqdm(f, unit=' records')
+
+    @staticmethod
+    def post_process_models(models):
+        pass
+
+    @classmethod
+    def update_records(cls, **kwargs):
+        logger.info(f'Updating {cls.__name__}')
+
+        file_path = download_file(cls.URL)
+
+        models = []
+        logger.info('Parsing file')
+        open_file = gzip.open if file_path.endswith('.gz') else open
+        open_mode = 'rt' if file_path.endswith('.gz') else 'r'
+        with open_file(file_path, open_mode) as f:
+            header_fields = cls.get_file_header(f)
+
+            for line in cls.get_file_iterator(f):
+                record = dict(zip(header_fields, line if isinstance(line, list) else line.rstrip('\r\n').split('\t')))
+                for record in cls.parse_record(record, **kwargs):
+                    if record is None:
+                        continue
+                    models.append(cls(**record))
+
+        cls.post_process_models(models)
+
+        with transaction.atomic():
+            deleted = cls.objects.all().delete()
+            logger.info(f'Deleted {deleted} {cls.__name__} records')
+            cls.objects.bulk_create(models)
+            logger.info(f'Created {len(models)} {cls.__name__} records')
+
+        logger.info('Done')
+        logger.info(f'Loaded {cls.objects.count()} {cls.__name__} records from {file_path}')
 
 
 class HumanPhenotypeOntology(LoadableModel):
@@ -131,24 +179,11 @@ class GeneInfo(LoadableModel):
 
 
 class GeneMetadataModel(LoadableModel):
-    URL = None
 
     gene = models.ForeignKey(GeneInfo, on_delete=models.CASCADE)
 
     class Meta:
         abstract = True
-
-    @classmethod
-    def parse_record(cls, record):
-        raise NotImplementedError
-
-    @staticmethod
-    def get_file_header(f):
-        return next(f).rstrip('\n\r').split('\t')
-
-    @classmethod
-    def get_file_iterator(cls, f):
-        return tqdm(f, unit=' records')
 
     @classmethod
     def get_gene_for_record(cls, record, gene_ids_to_gene=None, gene_symbols_to_gene=None, **kwargs):
@@ -157,48 +192,21 @@ class GeneMetadataModel(LoadableModel):
 
         return gene_ids_to_gene.get(gene_id) or gene_symbols_to_gene.get(gene_symbol)
 
-    @staticmethod
-    def post_process_models(models):
-        pass
+    @classmethod
+    def parse_record(cls, record, skipped_genes=None, **kwargs):
+        if record is not None:
+            record['gene'] = cls.get_gene_for_record(record, **kwargs)
+            if not record['gene']:
+                skipped_genes[record['gene']] = True
+                record = None
+        yield record
 
     @classmethod
     def update_records(cls, **kwargs):
-        logger.info(f'Updating {cls.__name__}')
-
-        file_path = download_file(cls.URL)
-
-        models = []
-        skip_counter = 0
-        logger.info('Parsing file')
-        open_file = gzip.open if file_path.endswith('.gz') else open
-        open_mode = 'rt' if file_path.endswith('.gz') else 'r'
-        with open_file(file_path, open_mode) as f:
-            header_fields = cls.get_file_header(f)
-
-            for line in cls.get_file_iterator(f):
-                record = dict(zip(header_fields, line if isinstance(line, list) else line.rstrip('\r\n').split('\t')))
-                for record in cls.parse_record(record):
-                    if record is None:
-                        continue
-
-                    record['gene'] = cls.get_gene_for_record(record, **kwargs)
-                    if not record['gene']:
-                        skip_counter += 1
-                        continue
-
-                    models.append(cls(**record))
-
-        cls.post_process_models(models)
-
-        cls.objects.all().delete()
-
-        logger.info(f'Creating {len(models)} {cls.__name__} records')
-        cls.objects.bulk_create(models)
-
-        logger.info('Done')
-        logger.info(
-            f'Loaded {cls.objects.count()} {cls.__name__} records from {file_path}. Skipped {skip_counter} records with unrecognized genes.'
-        )
+        skipped_genes = {}
+        super().update_records(skipped_genes=skipped_genes, **kwargs)
+        if skipped_genes:
+            logger.info(f'Skipped {len(skipped_genes)} records with unrecognized genes.')
 
 
 class TranscriptInfo(GeneMetadataModel):
@@ -245,7 +253,7 @@ class GeneConstraint(GeneMetadataModel):
         json_fields = ['mis_z', 'mis_z_rank', 'pLI', 'pLI_rank', 'louef', 'louef_rank']
 
     @classmethod
-    def parse_record(cls, record):
+    def parse_record(cls, record, **kwargs):
         yield {
             'gene_id': record['gene_id'].split(".")[0],
             'gene_symbol': record['gene'],
@@ -274,7 +282,7 @@ class GeneCopyNumberSensitivity(GeneMetadataModel):
         json_fields = ['pHI', 'pTS']
 
     @classmethod
-    def parse_record(cls, record):
+    def parse_record(cls, record, **kwargs):
         yield {
             'gene_symbol': record['#gene'],
             'pHI': float(record['pHaplo']),
@@ -293,7 +301,7 @@ class GeneShet(GeneMetadataModel):
         json_fields = ['post_mean']
 
     @classmethod
-    def parse_record(cls, record):
+    def parse_record(cls, record, **kwargs):
         yield {
             'gene_id': record['ensg'],
             'post_mean': float(record['post_mean']),
@@ -375,7 +383,7 @@ class dbNSFPGene(GeneMetadataModel):
         json_fields = ['function_desc', 'disease_desc', 'gene_names']
 
     @classmethod
-    def parse_record(cls, record):
+    def parse_record(cls, record, **kwargs):
         parsed_record = {DBNSFP_FIELD_MAP.get(k, k.split('(')[0].lower()): (v if v != '.' else '')
                          for k, v in record.items() if not k.startswith(DBNSFP_EXCLUDE_FIELDS)}
         parsed_record["function_desc"] = parsed_record["function_desc"].replace("FUNCTION: ", "")
@@ -405,7 +413,7 @@ class PrimateAI(GeneMetadataModel):
         json_fields = ['percentile_25', 'percentile_75']
 
     @classmethod
-    def parse_record(cls, record):
+    def parse_record(cls, record, **kwargs):
         yield {
             'gene_symbol': record['genesymbol'],
             'percentile_25': float(record['pcnt25']),
@@ -429,7 +437,7 @@ class MGI(GeneMetadataModel):
         return ['gene_symbol', 'entrez_gene_id', 'mouse_gene_symbol', 'marker_id', 'phenotype_ids']
 
     @classmethod
-    def parse_record(cls, record):
+    def parse_record(cls, record, **kwargs):
         yield {k: v.strip() for k, v in record.items() if k in ['gene_symbol', 'marker_id', 'entrez_gene_id']}
 
     @classmethod
@@ -484,7 +492,7 @@ class GenCC(GeneMetadataModel):
         return super().get_file_iterator(csv.reader(f))
 
     @classmethod
-    def parse_record(cls, record):
+    def parse_record(cls, record, **kwargs):
         yield {
             'gene_symbol': record['gene_symbol'],
             'hgnc_id': record['gene_curie'],
@@ -535,7 +543,7 @@ class ClinGen(GeneMetadataModel):
         return super().get_file_iterator(csv.reader(f))
 
     @classmethod
-    def parse_record(cls, record):
+    def parse_record(cls, record, **kwargs):
         yield {
             'gene_symbol': record['gene_symbol'],
             'haploinsufficiency': record['haploinsufficiency'].replace(' for Haploinsufficiency', ''),
