@@ -287,7 +287,6 @@ class GeneInfo(LoadableModel):
         cls.objects.bulk_create([cls(**record) for record in genes.values()])
         logger.info(f'Created {len(genes)} {cls.__name__} records')
 
-
         logger.info('Done')
         logger.info('Stats: ')
         counters.update({
