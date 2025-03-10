@@ -22,6 +22,8 @@ GENOME_VERSION_CHOICES = [
 ]
 GENOME_VERSION_LOOKUP = {k: v for (k, v) in GENOME_VERSION_CHOICES}
 
+GENCODE_URL_TEMPLATE = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_{gencode_release}/{path}gencode.v{gencode_release}{file}'
+
 
 class ReferenceDataRouter(object):
     """
@@ -155,6 +157,8 @@ class GeneInfo(LoadableModel):
     http://www.gencodegenes.org/gencodeformat.html
     """
 
+    CURRENT_VERSION = 39
+
     # gencode fields
     gene_id = models.CharField(max_length=20, db_index=True, unique=True)   # without the version suffix (eg. "ENSG0000012345")
     gene_symbol = models.TextField(null=True, blank=True)
@@ -237,8 +241,33 @@ class TranscriptInfo(GeneMetadataModel):
 
 
 class RefseqTranscript(LoadableModel):
+
+    CURRENT_VERSION = GeneInfo.CURRENT_VERSION
+    URL = GENCODE_URL_TEMPLATE.format(path='', file='.metadata.RefSeq.gz', gencode_release=CURRENT_VERSION)
+
     transcript = models.OneToOneField(TranscriptInfo, on_delete=models.CASCADE)
     refseq_id = models.CharField(max_length=20)
+
+    @staticmethod
+    def get_file_header(f):
+        return ['transcript_id', 'refseq_id', 'additional_info']
+
+    @classmethod
+    def parse_record(cls, record, transcript_id_map=None, **kwargs):
+        transcript_id = record['transcript_id'].split('.')[0]
+        if not transcript_id_map.get(transcript_id):
+            raise ValueError(f'Transcript "{transcript_id}" not found in the TranscriptInfo table')
+
+        yield {
+            'transcriptinfo_id': transcript_id_map[transcript_id],
+            'transcript_id': transcript_id,
+            'refseq_id': record['refseq_id'],
+        }
+
+    @classmethod
+    def update_records(cls, **kwargs):
+        transcript_id_map = dict(TranscriptInfo.objects.values_list('transcript_id', 'id'))
+        super().update_records(transcript_id_map=transcript_id_map, **kwargs)
 
 
 # based on # ftp://ftp.broadinstitute.org/pub/ExAC_release/release0.3.1/functional_gene_constraint/fordist_cleaned_exac_r03_march16_z_pli_rec_null_data.txt
