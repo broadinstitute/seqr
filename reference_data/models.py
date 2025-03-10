@@ -203,19 +203,18 @@ class GeneMetadataModel(LoadableModel):
     @classmethod
     def parse_record(cls, record, skipped_genes=None, **kwargs):
         if record is not None:
-            record['gene'] = cls.get_gene_for_record(record, **kwargs)
-            if not record['gene']:
-                skipped_genes[record['gene']] = True
+            record['gene_id'] = cls.get_gene_for_record(record, **kwargs)
+            if not record['gene_id']:
+                skipped_genes[None] +=1
                 record = None
         yield record
 
     @classmethod
     def update_records(cls, **kwargs):
-        skipped_genes = {-1: True}  # Include placeholder to prevent missing mapping validation failure
+        skipped_genes = {None: 0}
         super().update_records(skipped_genes=skipped_genes, **kwargs)
-        del skipped_genes[-1]
-        if skipped_genes:
-            logger.info(f'Skipped {len(skipped_genes)} records with unrecognized genes.')
+        if skipped_genes[None]:
+            logger.info(f'Skipped {skipped_genes[None]} records with unrecognized genes.')
 
 
 class TranscriptInfo(GeneMetadataModel):
@@ -476,9 +475,7 @@ class MGI(GeneMetadataModel):
 
     @classmethod
     def update_records(cls, **kwargs):
-        entrez_id_to_gene = {
-            dbnsfp.entrez_gene_id: dbnsfp.gene for dbnsfp in dbNSFPGene.objects.all().prefetch_related('gene')
-        }
+        entrez_id_to_gene = dict(dbNSFPGene.objects.values_list('entrez_gene_id', 'gene_id'))
         super().update_records(entrez_id_to_gene=entrez_id_to_gene, **kwargs)
 
     @classmethod
