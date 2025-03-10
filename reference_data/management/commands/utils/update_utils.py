@@ -2,7 +2,7 @@ import logging
 import traceback
 from django.core.management.base import BaseCommand
 
-from reference_data.management.commands.utils.gene_utils import get_genes_by_symbol_and_id
+from reference_data.utils.gene_utils import get_genes_by_id_and_symbol
 from reference_data.models import GeneMetadataModel
 
 logger = logging.getLogger(__name__)
@@ -13,8 +13,7 @@ class ReferenceDataHandler(object):
     model_cls = GeneMetadataModel
 
     def __init__(self, **kwargs):
-        # TODO need to be db IDs
-        gene_symbols_to_gene, gene_ids_to_gene = get_genes_by_symbol_and_id()
+        gene_ids_to_gene, gene_symbols_to_gene = get_genes_by_id_and_symbol()
         self.gene_reference = {
             'gene_symbols_to_gene': gene_symbols_to_gene,
             'gene_ids_to_gene': gene_ids_to_gene,
