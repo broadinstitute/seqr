@@ -98,6 +98,10 @@ class LoadableModel(models.Model):
 
     @classmethod
     def update_records(cls, **kwargs):
+        missing_mappings = {k for k, v in kwargs.items() if not v}
+        if missing_mappings:
+            raise ValueError(f'Related data is missing to load {cls.__name__}: {", ".join(sorted(missing_mappings))}')
+
         logger.info(f'Updating {cls.__name__}')
 
         file_path = download_file(cls.URL)
@@ -203,8 +207,9 @@ class GeneMetadataModel(LoadableModel):
 
     @classmethod
     def update_records(cls, **kwargs):
-        skipped_genes = {}
+        skipped_genes = {-1: True}  # Include placeholder to prevent missing mapping validation failure
         super().update_records(skipped_genes=skipped_genes, **kwargs)
+        del skipped_genes[-1]
         if skipped_genes:
             logger.info(f'Skipped {len(skipped_genes)} records with unrecognized genes.')
 
@@ -442,8 +447,6 @@ class MGI(GeneMetadataModel):
 
     @classmethod
     def update_records(cls, **kwargs):
-        if not dbNSFPGene.objects.exists():
-            raise ValueError('MGI data can not be loaded before dbNSFP data')
         entrez_id_to_gene = {
             dbnsfp.entrez_gene_id: dbnsfp.gene for dbnsfp in dbNSFPGene.objects.all().prefetch_related('gene')
         }
