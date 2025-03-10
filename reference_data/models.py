@@ -93,7 +93,7 @@ class LoadableModel(models.Model):
 
     @classmethod
     def parse_record(cls, record, **kwargs):
-        raise NotImplementedError
+        yield record
 
     @staticmethod
     def get_file_header(f):
@@ -144,9 +144,10 @@ class LoadableModel(models.Model):
 
 
 class HumanPhenotypeOntology(LoadableModel):
-    """Human Phenotype Ontology table contains one record per phenotype term parsed from the hp.obo
-    file at http://human-phenotype-ontology.github.io/downloads.html
-    """
+    
+    URL = 'https://github.com/obophenotype/human-phenotype-ontology/releases/latest/download/hp.obo'
+    HEADER = ['hpo_id', 'is_category', 'parent_id', 'name', 'definition', 'comment']
+    
     hpo_id = models.CharField(max_length=20, null=False, blank=False, unique=True, db_index=True)
     parent_id = models.CharField(max_length=20, null=True, blank=True)
     # hpo id of top-level phenotype category (eg. 'cardiovascular')
@@ -160,6 +161,64 @@ class HumanPhenotypeOntology(LoadableModel):
     definition = models.TextField(null=True, blank=True)
     comment = models.TextField(null=True, blank=True)
 
+    @classmethod
+    def get_current_version(cls):
+        # HPO updates regularly and does not use versioned data
+        raise NotImplementedError
+
+    @staticmethod
+    def get_file_header(f):
+        return HumanPhenotypeOntology.HEADER
+
+    @classmethod
+    def get_file_iterator(cls, f):
+        record = {}
+        for line in super().get_file_iterator(f):
+            line = line.rstrip('\n')
+            value = ' '.join(line.split(' ')[1:])
+            if line.startswith('id: '):
+                # When encountering a new hpo ID, yield the previous record and start accumulating a new one
+                yield [record.get(f) for f in cls.HEADER] if record else None
+                record = {
+                    'hpo_id': value,
+                    'is_category': False,
+                }
+            elif line.startswith('is_a: '):
+                is_a = value.split(' ! ')[0]
+                if is_a == 'HP:0000118':
+                    record['is_category'] = True
+                record['parent_id'] = is_a
+            elif line.startswith('name: '):
+                record['name'] = value
+            elif line.startswith('def: '):
+                record['definition'] = value
+            elif line.startswith('comment: '):
+                record['comment'] = value
+                
+        yield [record.get(f) for f in cls.HEADER] if record else None
+
+    @classmethod
+    def post_process_models(cls, models, **kwargs):
+        parent_id_map = {model.hpo_id: model.parent_id for model in models}
+        for model in models:
+            model.category_id = cls._get_category_id(parent_id_map, model.hpo_id)
+            
+    @staticmethod
+    def _get_category_id(parent_id_map, hpo_id):
+        if hpo_id == 'HP:0000001':
+            return None
+
+        if hpo_id not in parent_id_map:
+            return None
+
+        while parent_id_map[hpo_id] != 'HP:0000118':
+            hpo_id = parent_id_map[hpo_id]
+            if hpo_id == 'HP:0000001':
+                return None
+            if hpo_id not in parent_id_map:
+                raise ValueError('Strange id: %s' % hpo_id)
+
+        return hpo_id
 
 class GeneInfo(LoadableModel):
     """Human gene models from https://www.gencodegenes.org/releases/
@@ -391,6 +450,11 @@ class Omim(LoadableModel):
         json_fields = ['mim_number', 'phenotype_mim_number', 'phenotype_description', 'phenotype_inheritance',
                        'chrom', 'start', 'end',]
 
+    @classmethod
+    def get_current_version(cls):
+        # OMIM updates regularly and does not have versioned data
+        raise NotImplementedError
+    
     @classmethod
     def get_url(cls, omim_key=None, **kwargs):
         return cls.OMIM_URL.format(omim_key=omim_key) if omim_key else cls.CACHED_OMIM_URL
