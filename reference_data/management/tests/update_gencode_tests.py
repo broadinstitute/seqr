@@ -108,7 +108,7 @@ class UpdateGencodeTest(TestCase):
         mock_isfile.assert_called_with('mock_path/tmp2.gz')
         self.assertEqual(str(ce.exception), "Invalid genome_version for file: mock_path/tmp2.gz. gencode v23 and up must have 'lift' in the filename or genome_version arg must be GRCh38")
 
-    @mock.patch('reference_data.management.commands.utils.gencode_utils.logger')
+    @mock.patch('reference_data.models.logger')
     def test_update_gencode_command_bad_gtf_data(self, mock_logger):
         # Test wrong number data feilds in a line
         temp_bad_file_path = os.path.join(self.test_dir, 'bad.gencode.v23lift37.annotation.gtf.gz')
@@ -121,7 +121,7 @@ class UpdateGencodeTest(TestCase):
         mock_logger.info.assert_called_with('Loading {} (genome version: 37)'.format(temp_bad_file_path))
 
     @responses.activate
-    @mock.patch('reference_data.management.commands.update_gencode.logger')
+    @mock.patch('reference_data.models.logger')
     def test_update_gencode_command_url_generation(self, mock_logger):
         # Test the code paths of generating urls, gencode_release == 19
         url_19 = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_19/gencode.v19.annotation.gtf.gz'
@@ -264,32 +264,27 @@ class UpdateGencodeTest(TestCase):
         self.assertEqual(responses.calls[1].request.url, url)
 
     @responses.activate
-    @mock.patch('reference_data.management.commands.utils.update_utils.logger')
-    @mock.patch('reference_data.management.commands.utils.gencode_utils.logger')
+    @mock.patch('reference_data.models.logger')
     @mock.patch('reference_data.management.commands.update_gencode_latest.logger')
-    def test_update_gencode_latest_command(self, mock_logger, mock_gencode_utils_logger, mock_update_utils_logger):
+    def test_update_gencode_latest_command(self, mock_command_logger, mock_logger):
         self._add_latest_responses()
         refseq_url = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_39/gencode.v39.metadata.RefSeq.gz'
         responses.add(responses.HEAD, refseq_url, headers={"Content-Length": "1024"})
         responses.add(responses.GET, refseq_url, body=gzip.compress(''.join(REFSEQ_DATA).encode()))
 
         call_command('update_gencode_latest', '--track-symbol-change', f'--output-dir={self.test_dir}')
-        mock_gencode_utils_logger.info.assert_called_with('Creating 2 TranscriptInfo records')
+        mock_command_logger.info.assert_called_with('Dropped 1 existing TranscriptInfo records')
+        temp_dir = os.path.dirname(self.test_dir)
         mock_logger.info.assert_has_calls([
-            mock.call('Updating 1 previously loaded GeneInfo records'),
-            mock.call('Creating 1 GeneInfo records'),
-            mock.call('Dropping 1 existing TranscriptInfo entries'),
-            mock.call('Done'),
-            mock.call('Stats: '),
-            mock.call('  genes_updated: 1'),
-            mock.call('  genes_created: 1'),
-            mock.call('  transcripts_replaced: 1'),
-            mock.call('  transcripts_created: 1'),
-        ])
-        mock_update_utils_logger.info.assert_has_calls([
-            mock.call('Parsing file'),
-            mock.call('Deleting 1 existing RefseqTranscript records'),
-            mock.call('Creating 2 RefseqTranscript records'),
+            mock.call(f'Parsing file {temp_dir}/gencode.v39lift37.annotation.gtf.gz'),
+            mock.call(f'Parsing file {temp_dir}/gencode.v39.annotation.gtf.gz'),
+            mock.call('Updated 1 previously loaded GeneInfo records'),
+            mock.call('Created 1 GeneInfo records'),
+            mock.call('Created 2 TranscriptInfo records'),
+            mock.call('Updating RefseqTranscript'),
+            mock.call(f'Parsing file {temp_dir}/gencode.v39.metadata.RefSeq.gz'),
+            mock.call('Deleted 1 RefseqTranscript records'),
+            mock.call('Created 2 RefseqTranscript records'),
             mock.call('Done'),
         ])
 

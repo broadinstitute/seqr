@@ -30,7 +30,7 @@ class Command(BaseCommand):
 
         # Transcript records child models are also from gencode, so better to reset all data and then repopulate
         existing_transcripts = TranscriptInfo.objects.filter(transcript_id__in=transcripts.keys())
-        deleted = existing_transcripts.delete()
+        deleted, _ = existing_transcripts.delete()
         logger.info(f'Dropped {deleted} existing TranscriptInfo records')
 
         gene_id_map, _ = get_genes_by_id_and_symbol()
