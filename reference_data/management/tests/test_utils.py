@@ -1,5 +1,6 @@
 import gzip
 import mock
+import os
 import responses
 import tempfile
 
@@ -47,10 +48,10 @@ class ReferenceDataCommandTestCase(TestCase):
         ]
         self.mock_logger.info.assert_has_calls(log_calls)
 
-        # test with a file_path parameter
+        # test with a locally cached file
         self.mock_logger.reset_mock()
-        responses.add(responses.HEAD, self.URL, headers={"Content-Length": "1024"})
+        responses.add(responses.HEAD, self.URL, headers={"Content-Length": f"{os.path.getsize(self.tmp_file)}"})
         responses.remove(responses.GET, self.URL)
-        call_command(command_name, self.tmp_file)
-        log_calls[1] = mock.call('Deleting {} existing {} records'.format(created_records, model_name))
+        call_command(command_name)
+        log_calls[2] = mock.call(f'Deleted {created_records} {model_name} records')
         self.mock_logger.info.assert_has_calls(log_calls)

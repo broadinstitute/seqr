@@ -2,7 +2,6 @@ import logging
 import os
 import requests
 import tempfile
-from tqdm import tqdm
 
 logger = logging.getLogger(__name__)
 
