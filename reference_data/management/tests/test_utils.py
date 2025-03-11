@@ -14,7 +14,7 @@ class ReferenceDataCommandTestCase(TestCase):
     DATA = None
 
     def setUp(self):
-        patcher = mock.patch('reference_data.management.commands.utils.update_utils.logger')
+        patcher = mock.patch('reference_data.models.logger')
         self.mock_logger = patcher.start()
         self.addCleanup(patcher.stop)
 
@@ -37,14 +37,13 @@ class ReferenceDataCommandTestCase(TestCase):
 
         self.mock_logger.error.assert_not_called()
         log_calls = [
-            mock.call('Parsing file'),
-            mock.call('Deleting {} existing {} records'.format(existing_records, model_name)),
-            mock.call('Creating {} {} records'.format(created_records, model_name)),
+            mock.call(f'Updating {model_name}'),
+            mock.call(f'Parsing file {self.tmp_file}'),
+            mock.call(f'Deleted {existing_records} {model_name} records'),
+            mock.call(f'Created {created_records} {model_name} records'),
             mock.call('Done'),
-            mock.call(
-                'Loaded {} {} records from {}. Skipped {} records with unrecognized genes.'.format(
-                    created_records, model_name, self.tmp_file, skipped_records)),
-            mock.call('Running ./manage.py update_gencode to update the gencode version might fix missing genes')
+            mock.call(f'Loaded {created_records} {model_name} records'),
+            mock.call(f'Skipped {skipped_records} records with unrecognized genes.'),
         ]
         self.mock_logger.info.assert_has_calls(log_calls)
 

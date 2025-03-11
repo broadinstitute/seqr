@@ -132,7 +132,7 @@ class LoadableModel(models.Model):
         cls.post_process_models(models, **kwargs)
 
         with transaction.atomic():
-            deleted = cls.objects.all().delete()
+            deleted, _ = cls.objects.all().delete()
             logger.info(f'Deleted {deleted} {cls.__name__} records')
             cls.objects.bulk_create(models)
             logger.info(f'Created {len(models)} {cls.__name__} records')
