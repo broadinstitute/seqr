@@ -1,4 +1,5 @@
 from aiohttp.test_utils import AioHTTPTestCase
+import jwt
 
 from vlm.web_app import init_web_app
 
@@ -152,6 +153,43 @@ class VlmTestCase(AioHTTPTestCase):
         })
 
     async def test_match_error(self):
+        async with self.client.request('GET', '/vlm/match') as resp:
+            self.assertEqual(resp.status, 403)
+            self.assertEqual(resp.reason, 'Invalid authorization header')
+
+        headers = {'Authorization': 'token'}
+        async with self.client.request('GET', '/vlm/match', headers=headers) as resp:
+            self.assertEqual(resp.status, 403)
+            self.assertEqual(resp.reason, 'Invalid authorization header')
+
+        headers['Authorization'] =  'JWT token'
+        async with self.client.request('GET', '/vlm/match', headers=headers) as resp:
+            self.assertEqual(resp.status, 403)
+            self.assertEqual(resp.reason, 'Invalid token scheme')
+
+        headers['Authorization'] = 'Bearer token'
+        async with self.client.request('GET', '/vlm/match', headers=headers) as resp:
+            self.assertEqual(resp.status, 403)
+            self.assertEqual(resp.reason, 'Invalid token: Not enough segments')
+
+        jwt_body = {'iss': 'invalid_issuer'}
+        headers['Authorization'] = f'Bearer {jwt.encode(jwt_body, "")}'
+        async with self.client.request('GET', '/vlm/match', headers=headers) as resp:
+            self.assertEqual(resp.status, 403)
+            self.assertEqual(resp.reason, 'Invalid token: Token is missing the "azp" claim')
+
+        jwt_body['azp'] = 'abc123'
+        headers['Authorization'] = f'Bearer {jwt.encode(jwt_body, "")}'
+        async with self.client.request('GET', '/vlm/match', headers=headers) as resp:
+            self.assertEqual(resp.status, 403)
+            self.assertEqual(resp.reason, 'Invalid token: Invalid issuer')
+
+        jwt_body['iss'] = 'https://vlm-auth.us.auth0.com/'
+        headers['Authorization'] = f'Bearer {jwt.encode(jwt_body, "")}'
+        async with self.client.request('GET', '/vlm/match', headers=headers) as resp:
+            self.assertEqual(resp.status, 403)
+            self.assertEqual(resp.reason, 'Invalid token:')
+
         async with self.client.request('GET', '/vlm/match') as resp:
             self.assertEqual(resp.status, 400)
             self.assertEqual(

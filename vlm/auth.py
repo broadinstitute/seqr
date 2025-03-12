@@ -13,13 +13,11 @@ VLM_CREDENTIALS = {'client_id': VLM_CLIENT_ID, 'client_secret': VLM_CLIENT_SECRE
 
 async def authenticate(request: web.Request):
     try:
-        scheme, token = request.headers.get('Authorization').strip().split(' ')
+        scheme, token = request.headers.get('Authorization', '').strip().split(' ')
     except ValueError:
         raise web.HTTPForbidden(reason='Invalid authorization header')
     if scheme.lower() != 'bearer':
         raise web.HTTPForbidden(reason='Invalid token scheme')
-    if not token:
-        raise web.HTTPForbidden(reason='Missing authorization token')
 
     try:
         decoded = jwt.decode(token, algorithms=['RS256'], issuer=VLM_AUTH_API, options={
