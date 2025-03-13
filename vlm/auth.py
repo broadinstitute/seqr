@@ -28,7 +28,7 @@ async def authenticate(request: web.Request):
 
     client_id = decoded['azp']
     client_info = await _get_valid_vlm_client_info(client_id)
-    logger.info(f'Received request from {client_info.get("name", client_id)}: {request.query_string}')
+    logger.info(f'Received match request from {client_info.get("name", client_id)}: {request.query_string}')
 
 
 async def _get_valid_vlm_client_info(client_id: str) -> dict:
