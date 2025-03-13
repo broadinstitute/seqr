@@ -28,7 +28,7 @@ jobs:
       - name: Install dependencies
         run: |
           python3 -m pip install --upgrade pip wheel
-          pip install -r hail_search/requirements-test.txt
+          pip install -r vlm/requirements-test.txt
       - name: Run coverage tests
         run: |
           export VLM_DATA_DIR=./hail_search/fixtures
