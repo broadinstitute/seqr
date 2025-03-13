@@ -7,8 +7,8 @@ logger = logging.getLogger(__name__)
 
 VLM_AUTH_API = 'https://vlm-auth.us.auth0.com/'
 
-VLM_CLIENT_ID = os.environ.get('VLM_CLIENT_ID')
-VLM_CLIENT_SECRET = os.environ.get('VLM_CLIENT_SECRET')
+VLM_CLIENT_ID = os.environ.get('VLM_CLIENT_ID', 'unknown_client_id')
+VLM_CLIENT_SECRET = os.environ.get('VLM_CLIENT_SECRET', 'unknown_client_secret')
 VLM_CREDENTIALS = {'client_id': VLM_CLIENT_ID, 'client_secret': VLM_CLIENT_SECRET}
 
 async def authenticate(request: web.Request):

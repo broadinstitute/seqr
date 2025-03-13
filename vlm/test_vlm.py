@@ -1,7 +1,5 @@
-import mock
 from aiohttp.test_utils import AioHTTPTestCase
-from aioresponses import aioresponses, CallbackResult
-import json
+from aioresponses import aioresponses
 import jwt
 import logging
 import pytest
@@ -33,17 +31,12 @@ class VlmTestCase(AioHTTPTestCase):
     @aioresponses(passthrough=['http://127.0.0.1'])
     async def test_match(self, mocked_responses):
 
-        def get_client_callback(url, headers=None, **kwargs):
-            auth_header = headers.get('Authorization')
-            if auth_header == 'Bearer test_token':
-                return CallbackResult(body=json.dumps({'tenant': 'vlm-auth', 'name': 'Test Node'}))
-            raise Exception(f'Invalid Auth Header {auth_header}')
         mocked_responses.post(
             'https://vlm-auth.us.auth0.com/oauth/token', payload={'access_token': 'test_token'}, repeat=True,
         )
         mocked_responses.get(
             f'https://vlm-auth.us.auth0.com/api/v2/clients/{REQUESTER_CLIENT_ID}',
-            callback=get_client_callback,
+            payload={'tenant': 'vlm-auth', 'name': 'Test Node'},
             repeat=True,
         )
         jwt_body = {'iss': 'https://vlm-auth.us.auth0.com/', 'azp': REQUESTER_CLIENT_ID}
@@ -95,6 +88,15 @@ class VlmTestCase(AioHTTPTestCase):
                 ],
             }
         })
+        mocked_responses.assert_called_with(
+            'https://vlm-auth.us.auth0.com/oauth/token',
+            method='POST',
+            json={'client_id': 'unknown_client_id', 'client_secret': 'unknown_client_secret'},
+        )
+        mocked_responses.assert_called_with(
+            f'https://vlm-auth.us.auth0.com/api/v2/clients/{REQUESTER_CLIENT_ID}',
+            headers={'Authorization': 'Bearer test_token'},
+        )
         self.assertEqual(len(self._caplog.messages), 3)
         self.assertEqual(
             self._caplog.messages[1],
