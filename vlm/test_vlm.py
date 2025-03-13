@@ -1,8 +1,10 @@
 from aiohttp.test_utils import AioHTTPTestCase
+from aioresponses import aioresponses
 import jwt
 
 from vlm.web_app import init_web_app
 
+REQUESTER_CLIENT_ID = 'abc123'
 
 class VlmTestCase(AioHTTPTestCase):
 
@@ -152,7 +154,13 @@ class VlmTestCase(AioHTTPTestCase):
             }
         })
 
-    async def test_match_error(self):
+    @aioresponses(passthrough=['http://127.0.0.1'])
+    async def test_match_error(self, mocked_responses):
+        mocked_responses.post('https://vlm-auth.us.auth0.com/oauth/token', payload={'access_token': 'test_token'}, repeat=True)
+        mocked_responses.get(
+            f'https://vlm-auth.us.auth0.com/api/v2/clients/{REQUESTER_CLIENT_ID}', status=404,
+        )
+
         async with self.client.request('GET', '/vlm/match') as resp:
             self.assertEqual(resp.status, 403)
             self.assertEqual(resp.reason, 'Invalid authorization header')
@@ -178,7 +186,7 @@ class VlmTestCase(AioHTTPTestCase):
             self.assertEqual(resp.status, 403)
             self.assertEqual(resp.reason, 'Invalid token: Token is missing the "azp" claim')
 
-        jwt_body['azp'] = 'abc123'
+        jwt_body['azp'] = REQUESTER_CLIENT_ID
         headers['Authorization'] = f'Bearer {jwt.encode(jwt_body, "")}'
         async with self.client.request('GET', '/vlm/match', headers=headers) as resp:
             self.assertEqual(resp.status, 403)
@@ -188,27 +196,32 @@ class VlmTestCase(AioHTTPTestCase):
         headers['Authorization'] = f'Bearer {jwt.encode(jwt_body, "")}'
         async with self.client.request('GET', '/vlm/match', headers=headers) as resp:
             self.assertEqual(resp.status, 403)
-            self.assertEqual(resp.reason, 'Invalid token:')
+            self.assertEqual(resp.reason, 'Invalid Client ID')
 
-        async with self.client.request('GET', '/vlm/match') as resp:
+        mocked_responses.get(
+            f'https://vlm-auth.us.auth0.com/api/v2/clients/{REQUESTER_CLIENT_ID}',
+            payload={'tenant': 'vlm-auth'},
+            repeat=True,
+        )
+        async with self.client.request('GET', '/vlm/match', headers=headers) as resp:
             self.assertEqual(resp.status, 400)
             self.assertEqual(
                 resp.reason,
                 'Missing required parameters: assemblyId, referenceName, start, referenceBases, alternateBases',
             )
 
-        async with self.client.request('GET', '/vlm/match?assemblyId=38&referenceName=chr7&start=143270172&referenceBases=A&alternateBases=G') as resp:
+        async with self.client.request('GET', '/vlm/match?assemblyId=38&referenceName=chr7&start=143270172&referenceBases=A&alternateBases=G', headers=headers) as resp:
             self.assertEqual(resp.status, 400)
             self.assertEqual(resp.reason,'Invalid assemblyId: 38')
 
-        async with self.client.request('GET', '/vlm/match?assemblyId=hg38&referenceName=27&start=143270172&referenceBases=A&alternateBases=G') as resp:
+        async with self.client.request('GET', '/vlm/match?assemblyId=hg38&referenceName=27&start=143270172&referenceBases=A&alternateBases=G', headers=headers) as resp:
             self.assertEqual(resp.status, 400)
             self.assertEqual(resp.reason,'Invalid referenceName: 27')
 
-        async with self.client.request('GET', '/vlm/match?assemblyId=hg38&referenceName=7&start=1x43270172&referenceBases=A&alternateBases=G') as resp:
+        async with self.client.request('GET', '/vlm/match?assemblyId=hg38&referenceName=7&start=1x43270172&referenceBases=A&alternateBases=G', headers=headers) as resp:
             self.assertEqual(resp.status, 400)
             self.assertEqual(resp.reason,'Invalid start: 1x43270172')
 
-        async with self.client.request('GET', '/vlm/match?assemblyId=hg38&referenceName=7&start=999999999&referenceBases=A&alternateBases=G') as resp:
+        async with self.client.request('GET', '/vlm/match?assemblyId=hg38&referenceName=7&start=999999999&referenceBases=A&alternateBases=G', headers=headers) as resp:
             self.assertEqual(resp.status, 400)
             self.assertEqual(resp.reason,'Invalid start: 999999999')

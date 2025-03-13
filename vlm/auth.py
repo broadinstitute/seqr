@@ -32,12 +32,12 @@ async def authenticate(request: web.Request):
 
 
 async def _get_valid_vlm_client_info(client_id: str) -> dict:
-    with ClientSession(VLM_AUTH_API) as session:
+    async with ClientSession(VLM_AUTH_API) as session:
         async with session.post('/oauth/token', json=VLM_CREDENTIALS) as resp:
             token = (await resp.json()).get('access_token')
 
         headers = {'Authorization': f'Bearer {token}'}
-        async with session.get(f'{VLM_AUTH_API}api/v2/clients/{client_id}', headers=headers) as resp:
+        async with session.get(f'/api/v2/clients/{client_id}', headers=headers) as resp:
             if resp.status != 200:
                 raise web.HTTPForbidden(reason='Invalid Client ID')
             return await resp.json()

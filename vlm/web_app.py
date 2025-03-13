@@ -49,7 +49,7 @@ async def init_web_app():
     if JAVA_OPTS_XSS:
         spark_conf.update(
             {f'spark.{field}.extraJavaOptions': f'-Xss{JAVA_OPTS_XSS}' for field in ['driver', 'executor']})
-    hl.init(idempotent=True, spark_conf=spark_conf or None)
+    hl.init(idempotent=True, spark_conf=spark_conf or None, backend='local')
 
     rg37 = hl.get_reference(GENOME_VERSION_GRCh37)
     rg38 = hl.get_reference(GENOME_VERSION_GRCh38)
