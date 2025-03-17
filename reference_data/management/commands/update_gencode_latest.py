@@ -21,8 +21,9 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         update_gencode(LATEST_GENCODE_RELEASE, **options)
+        RefseqReferenceDataHandler().update_records()
 
-def update_gencode(gencode_release, track_symbol_change=False, output_directory='.'):
+def update_gencode(gencode_release, track_symbol_change=False, output_directory='.', **kwargs):
     existing_gene_ids = set(GeneInfo.objects.filter(gencode_release__gt=gencode_release).values_list('gene_id', flat=True))
     existing_transcript_ids = set(
         TranscriptInfo.objects.filter(gene__gencode_release__gt=gencode_release).values_list('transcript_id', flat=True)
@@ -55,15 +56,14 @@ def update_gencode(gencode_release, track_symbol_change=False, output_directory=
     GeneInfo.objects.bulk_create([GeneInfo(**record) for record in genes.values()], batch_size=BATCH_SIZE)
 
     # Transcript records child models are also from gencode, so better to reset all data and then repopulate
+    counters['transcripts_created'] = len(transcripts)
     existing_transcripts = TranscriptInfo.objects.filter(transcript_id__in=transcripts.keys())
     if existing_transcripts:
+        counters['transcripts_created'] -= len(existing_transcripts)
         counters['transcripts_replaced'] = len(existing_transcripts)
         logger.info(f'Dropping {len(existing_transcripts)} existing TranscriptInfo entries')
         existing_transcripts.delete()
-    counters['transcripts_created'] = len(transcripts) - len(existing_transcripts)
     create_transcript_info(transcripts)
-
-    RefseqReferenceDataHandler().update_records()
 
     logger.info('Done')
     logger.info('Stats: ')

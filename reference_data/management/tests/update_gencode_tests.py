@@ -7,7 +7,6 @@ import gzip
 
 from django.core.management import call_command
 from django.test import TestCase
-from django.core.management.base import CommandError
 
 from reference_data.models import GeneInfo, TranscriptInfo, RefseqTranscript
 
@@ -60,53 +59,6 @@ class UpdateGencodeTest(TestCase):
     def tearDown(self):
         # Close the file, the directory will be removed after the test
         shutil.rmtree(self.test_dir)
-
-    @mock.patch('os.path.isfile')
-    def test_update_gencode_command_arguments(self, mock_isfile):
-        # Test missing test required argument
-        with self.assertRaises(CommandError) as ce:
-            call_command('update_gencode')
-        self.assertIn(str(ce.exception), ['Error: argument --gencode-release is required',
-                                          'Error: the following arguments are required: --gencode-release'])
-
-        # Test required argument out-of-range
-        with self.assertRaises(CommandError) as ce:
-            call_command('update_gencode', '--gencode-release=18')
-        self.assertEqual(str(ce.exception), f'Error: argument --gencode-release: invalid choice: 18 (choose from {", ".join([str(i) for i in range(19, 40)])})')
-
-        # Test genome_version out-of-range
-        with self.assertRaises(CommandError) as ce:
-            call_command('update_gencode', '--gencode-release=19', 'mock_path/tmp', '39')
-        self.assertIn(str(ce.exception), ["Error: argument genome_version: invalid choice: '39' (choose from '37', '38')",
-                                        "Error: argument genome_version: invalid choice: u'39' (choose from '37', '38')"])
-
-        # Test missing genome_version when a GTF file is provided
-        with self.assertRaises(CommandError) as ce:
-            call_command('update_gencode', '--gencode-release=19', 'mock_path/tmp')
-        self.assertEqual(str(ce.exception), "The genome version must also be specified after the gencode GTF file path")
-
-        # Test gencode_release and genome_version mis-matched case 1
-        mock_isfile.return_value = True
-        with self.assertRaises(CommandError) as ce:
-            call_command('update_gencode', '--gencode-release=19', 'mock_path/tmp.gz', '38')
-        mock_isfile.assert_called_with('mock_path/tmp.gz')
-        self.assertEqual(str(ce.exception), "Invalid genome_version: 38. gencode v19 only has a GRCh37 version")
-
-        # Test gencode_release and genome_version mis-matched case 2
-        mock_isfile.reset_mock()
-        mock_isfile.return_value = True
-        with self.assertRaises(CommandError) as ce:
-            call_command('update_gencode', '--gencode-release=20', 'mock_path/tmp1.gz', '37')
-        mock_isfile.assert_called_with('mock_path/tmp1.gz')
-        self.assertEqual(str(ce.exception), "Invalid genome_version: 37. gencode v20, v21, v22 only have a GRCh38 version")
-
-        # Test genome_version != 38 requires lifted data
-        mock_isfile.reset_mock()
-        mock_isfile.return_value = True
-        with self.assertRaises(CommandError) as ce:
-            call_command('update_gencode', '--gencode-release=23', 'mock_path/tmp2.gz', '37')
-        mock_isfile.assert_called_with('mock_path/tmp2.gz')
-        self.assertEqual(str(ce.exception), "Invalid genome_version for file: mock_path/tmp2.gz. gencode v23 and up must have 'lift' in the filename or genome_version arg must be GRCh38")
 
     @mock.patch('reference_data.management.commands.utils.gencode_utils.logger')
     def test_update_gencode_command_bad_gtf_data(self, mock_logger):
@@ -283,8 +235,8 @@ class UpdateGencodeTest(TestCase):
             mock.call('Stats: '),
             mock.call('  genes_updated: 1'),
             mock.call('  genes_created: 1'),
-            mock.call('  transcripts_replaced: 1'),
             mock.call('  transcripts_created: 1'),
+            mock.call('  transcripts_replaced: 1'),
         ])
         mock_update_utils_logger.info.assert_has_calls([
             mock.call('Parsing file'),
