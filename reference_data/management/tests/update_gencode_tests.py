@@ -55,54 +55,30 @@ class UpdateGencodeTest(TestCase):
             f.write(''.join(GTF_DATA))
         with open(self.temp_file_path, 'rb') as f:
             self.gzipped_gtf_data = f.read()
+        #  TODO clean up setup
+        self._add_latest_responses()
 
     def tearDown(self):
         # Close the file, the directory will be removed after the test
         shutil.rmtree(self.test_dir)
 
+    @responses.activate
     @mock.patch('reference_data.management.commands.utils.gencode_utils.logger')
     def test_update_gencode_command_bad_gtf_data(self, mock_logger):
         # Test wrong number data feilds in a line
-        temp_bad_file_path = os.path.join(self.test_dir, 'bad.gencode.v23lift37.annotation.gtf.gz')
+        temp_bad_file_path = os.path.join(self.test_dir, 'bad.gencode.v39lift37.annotation.gtf.gz')
         with gzip.open(temp_bad_file_path, 'wt') as f:
             f.write(''.join(BAD_FIELDS_GTF_DATA))
+        with open(temp_bad_file_path, 'rb') as f:
+            bad_gtf_data = f.read()
+        url = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_39/GRCh37_mapping/gencode.v39lift37.annotation.gtf.gz'
+        responses.replace(responses.GET, url, body=bad_gtf_data, stream=True)
+
         with self.assertRaises(ValueError) as ve:
-            call_command('update_gencode', '--gencode-release=23', temp_bad_file_path, '37')
+            call_command('update_gencode_latest')
         self.assertIn(str(ve.exception), ['Unexpected number of fields on line #0: [\'gene\', \'11869\', \'14412\', \'.\', \'+\', \'.\', \'gene_id "ENSG00000223972.4";\']',
                                           'Unexpected number of fields on line #0: [u\'gene\', u\'11869\', u\'14412\', u\'.\', u\'+\', u\'.\', u\'gene_id "ENSG00000223972.4";\']'])
-        mock_logger.info.assert_called_with('Loading {} (genome version: 37)'.format(temp_bad_file_path))
-
-    @responses.activate
-    @mock.patch('reference_data.management.commands.update_gencode.logger')
-    def test_update_gencode_command_url_generation(self, mock_logger):
-        # Test the code paths of generating urls, gencode_release == 19
-        url_19 = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_19/gencode.v19.annotation.gtf.gz'
-        responses.add(responses.HEAD, url_19, headers={"Content-Length": "1024"})
-        responses.add(responses.GET, url_19, body=self.gzipped_gtf_data, stream=True)
-        call_command('update_gencode', '--gencode-release=19')
-        self.assertEqual(responses.calls[0].request.url, url_19)
-        responses.reset()
-
-        # Test the code paths of generating urls, gencode_release <= 22
-        mock_logger.reset_mock()
-        url_20 = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_20/gencode.v20.annotation.gtf.gz'
-        responses.add(responses.HEAD, url_20, headers={"Content-Length": "1024"})
-        responses.add(responses.GET, url_20, body=self.gzipped_gtf_data, stream=True)
-        call_command('update_gencode', '--gencode-release=20')
-        self.assertEqual(responses.calls[0].request.url, url_20)
-        responses.reset()
-
-        # Test the code paths of generating urls, gencode_release > 22
-        mock_logger.reset_mock()
-        url_23 = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_23/gencode.v23.annotation.gtf.gz'
-        responses.add(responses.HEAD, url_23, headers={"Content-Length": "1024"})
-        responses.add(responses.GET, url_23, body=self.gzipped_gtf_data, stream=True)
-        url_23_lift = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_23/GRCh37_mapping/gencode.v23lift37.annotation.gtf.gz'
-        responses.add(responses.HEAD, url_23_lift, headers={"Content-Length": "1024"})
-        responses.add(responses.GET, url_23_lift, body=self.gzipped_gtf_data, stream=True)
-        call_command('update_gencode', '--gencode-release=23')
-        self.assertEqual(responses.calls[0].request.url, url_23_lift)
-        self.assertEqual(responses.calls[1].request.url, url_23)
+        mock_logger.info.assert_called_with(f'Loading {os.path.dirname(self.test_dir)}/gencode.v39lift37.annotation.gtf.gz (genome version: 37)')
 
     def _has_expected_new_genes(self, expected_release=None):
         gene_info = GeneInfo.objects.get(gene_id='ENSG00000223972')
@@ -140,11 +116,27 @@ class UpdateGencodeTest(TestCase):
 
     @responses.activate
     @mock.patch('reference_data.management.commands.utils.gencode_utils.logger')
-    @mock.patch('reference_data.management.commands.update_gencode_transcripts.logger')
-    @mock.patch('reference_data.management.commands.update_gencode.logger')
-    def test_update_gencode_command(self, mock_logger, mock_update_transcripts_logger, mock_utils_logger):
+    @mock.patch('reference_data.management.commands.update_gencode_latest.logger')
+    def test_load_all_gencode_command(self, mock_logger, mock_utils_logger):
+        # Initial gencode loading can only happen once with an empty gene table
+        GeneInfo.objects.all().delete()
+
+        versions = [27, 28, 29, 31]
+        for version in [19] + versions:
+            url = f'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_{version}/gencode.v{version}.annotation.gtf.gz'
+            responses.add(responses.HEAD, url, headers={"Content-Length": "1024"})
+            responses.add(responses.GET, url, body=self.gzipped_gtf_data, stream=True)
+        for version in versions:
+            url_lift = f'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_{version}/GRCh37_mapping/gencode.v{version}lift37.annotation.gtf.gz'
+            responses.add(responses.HEAD, url_lift, headers={"Content-Length": "1024"})
+            responses.add(responses.GET, url_lift, body=self.gzipped_gtf_data, stream=True)
+
         # Test normal command function
-        call_command('update_gencode', '--gencode-release=31', self.temp_file_path, '37')
+        call_command(
+            'update_all_reference_data', '--skip-omim', '--skip-dbnsfp-gene', '--skip-gene-constraint',
+            '--skip-primate-ai', '--skip-mgi', '--skip-hpo', '--skip-gene-cn-sensitivity', '--skip-gencc',
+            '--skip-clingen', '--skip-refseq',
+        )
         mock_utils_logger.info.assert_has_calls([
             mock.call('Loading {} (genome version: 37)'.format(self.temp_file_path)),
             mock.call('Creating 1 TranscriptInfo records'),
@@ -197,30 +189,11 @@ class UpdateGencodeTest(TestCase):
         self.assertEqual(gene_info.end_grch37, 622053)
         self.assertEqual(gene_info.strand_grch37, '-')
 
-        # Test only reloading transcripts
-        url, url_lift = self._add_latest_responses()
-        call_command('update_gencode_transcripts')
-
-        self.assertEqual(GeneInfo.objects.all().count(), 2)
-        self.assertEqual(TranscriptInfo.objects.all().count(), 2)
-        self._has_expected_new_transcripts(expected_release=39)
-        mock_utils_logger.info.assert_has_calls([
-            mock.call('Loading {} (genome version: 37)'.format(self.temp_file_path)),
-            mock.call('Creating 2 TranscriptInfo records'),
-        ])
-        mock_update_transcripts_logger.info.assert_has_calls([
-            mock.call('Dropping the 2 existing TranscriptInfo entries'),
-        ])
-
-        self.assertEqual(responses.calls[0].request.url, url_lift)
-        self.assertEqual(responses.calls[1].request.url, url)
-
     @responses.activate
     @mock.patch('reference_data.management.commands.utils.update_utils.logger')
     @mock.patch('reference_data.management.commands.utils.gencode_utils.logger')
     @mock.patch('reference_data.management.commands.update_gencode_latest.logger')
     def test_update_gencode_latest_command(self, mock_logger, mock_gencode_utils_logger, mock_update_utils_logger):
-        self._add_latest_responses()
         refseq_url = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_39/gencode.v39.metadata.RefSeq.gz'
         responses.add(responses.HEAD, refseq_url, headers={"Content-Length": "1024"})
         responses.add(responses.GET, refseq_url, body=gzip.compress(''.join(REFSEQ_DATA).encode()))

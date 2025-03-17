@@ -23,8 +23,6 @@ def _get_valid_gencode_gtf_paths(gencode_release):
     gtf_url = GENCODE_URL_TEMPLATE.format(path='', file='.annotation.gtf.gz', gencode_release=gencode_release)
     if gencode_release == 19:
         urls = [('37', gtf_url)]
-    elif gencode_release <= 22:
-        urls = [('38', gtf_url)]
     else:
         urls = [
             ('37', GENCODE_URL_TEMPLATE.format(path='GRCh37_mapping/', file='lift37.annotation.gtf.gz', gencode_release=gencode_release)),
