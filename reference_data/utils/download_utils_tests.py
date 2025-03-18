@@ -1,4 +1,5 @@
 import mock
+import os
 import responses
 
 import tempfile
@@ -44,11 +45,11 @@ class DownloadUtilsTest(TestCase):
         mock_isfile.return_value = False
         mock_getsize.return_value = 0
         mock_logger.reset_mock()
-        result = download_file('https://mock_url/test_file.txt', self.test_dir)
-        mock_logger.info.assert_called_with("Downloading https://mock_url/test_file.txt to {}/test_file.txt".format(self.test_dir))
-        self.assertEqual(result, "{}/test_file.txt".format(self.test_dir))
+        result = download_file('https://mock_url/test_file.txt')
+        mock_logger.info.assert_called_with("Downloading https://mock_url/test_file.txt to {}".format(result))
+        self.assertEqual(result, "{}/test_file.txt".format(os.path.dirname(self.test_dir)))
 
-        with open("{}/test_file.txt".format(self.test_dir), 'r') as f:
+        with open(result, 'r') as f:
             line1 = f.readline()
             line2 = f.readline()
         self.assertEqual(line1, "test data\n")

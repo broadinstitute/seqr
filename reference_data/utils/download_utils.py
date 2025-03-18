@@ -2,6 +2,7 @@ import logging
 import os
 import requests
 import tempfile
+from tqdm import tqdm
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +25,8 @@ def download_file(url):
 
     is_gz = url.endswith(".gz")
     response = requests.get(url, stream=is_gz, timeout=300)
-    input_iter = response if is_gz else response.iter_content()
+    input_iter = tqdm(response, unit=" data") if is_gz else tqdm(response.iter_content(), unit=" lines")
+    logger.info("Downloading {} to {}".format(url, local_file_path))
 
     with open(local_file_path, 'wb') as f:
         f.writelines(input_iter)
