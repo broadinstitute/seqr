@@ -59,11 +59,8 @@ class UpdateGencodeTest(TestCase):
     def setUp(self):
         # Create a temporary directory
         self.test_dir = tempfile.mkdtemp()
-        self.temp_file_path = os.path.join(self.test_dir, 'gencode.v31lift37.annotation.gtf.gz')
-        with gzip.open(self.temp_file_path, 'wt') as f:
-            f.write(''.join(GTF_DATA))
-        with open(self.temp_file_path, 'rb') as f:
-            self.gzipped_gtf_data = f.read()
+        self.test_dirname = os.path.dirname(self.test_dir)
+        self.gzipped_gtf_data = gzip.compress(''.join(GTF_DATA).encode())
         self._add_latest_responses()
 
     def tearDown(self):
@@ -74,11 +71,7 @@ class UpdateGencodeTest(TestCase):
     @mock.patch('reference_data.management.commands.utils.gencode_utils.logger')
     def test_update_gencode_command_bad_gtf_data(self, mock_logger):
         # Test wrong number data feilds in a line
-        temp_bad_file_path = os.path.join(self.test_dir, 'bad.gencode.v39lift37.annotation.gtf.gz')
-        with gzip.open(temp_bad_file_path, 'wt') as f:
-            f.write(''.join(BAD_FIELDS_GTF_DATA))
-        with open(temp_bad_file_path, 'rb') as f:
-            bad_gtf_data = f.read()
+        bad_gtf_data = gzip.compress(''.join(BAD_FIELDS_GTF_DATA).encode())
         url = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_39/GRCh37_mapping/gencode.v39lift37.annotation.gtf.gz'
         responses.replace(responses.GET, url, body=bad_gtf_data, stream=True)
 
@@ -86,7 +79,7 @@ class UpdateGencodeTest(TestCase):
             call_command('update_gencode_latest')
         self.assertIn(str(ve.exception), ['Unexpected number of fields on line #0: [\'gene\', \'11869\', \'14412\', \'.\', \'+\', \'.\', \'gene_id "ENSG00000223972.4";\']',
                                           'Unexpected number of fields on line #0: [u\'gene\', u\'11869\', u\'14412\', u\'.\', u\'+\', u\'.\', u\'gene_id "ENSG00000223972.4";\']'])
-        mock_logger.info.assert_called_with(f'Loading {os.path.dirname(self.test_dir)}/gencode.v39lift37.annotation.gtf.gz (genome version: 37)')
+        mock_logger.info.assert_called_with(f'Loading {self.test_dirname}/gencode.v39lift37.annotation.gtf.gz (genome version: 37)')
 
     def _has_expected_new_genes(self):
         gene_info = GeneInfo.objects.get(gene_id='ENSG00000223972')
@@ -137,11 +130,7 @@ class UpdateGencodeTest(TestCase):
             responses.add(responses.HEAD, url_lift, headers={"Content-Length": "1024"})
             responses.add(responses.GET, url_lift, body=self.gzipped_gtf_data, stream=True)
 
-        temp_file_path = os.path.join(self.test_dir,  'gencode.v19.annotation.gtf.gz')
-        with gzip.open(temp_file_path, 'wt') as f:
-            f.write(''.join(GTF_DATA + ADDITIONAL_GTF_DATA))
-        with open(temp_file_path, 'rb') as f:
-            additional_gtf_data= f.read()
+        additional_gtf_data = gzip.compress(''.join(GTF_DATA + ADDITIONAL_GTF_DATA).encode())
         url_19 = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_19/gencode.v19.annotation.gtf.gz'
         responses.add(responses.HEAD, url_19, headers={"Content-Length": "1024"})
         responses.add(responses.GET, url_19, body=additional_gtf_data, stream=True)
@@ -153,20 +142,19 @@ class UpdateGencodeTest(TestCase):
             '--skip-clingen', '--skip-refseq',
         )
 
-        test_dir = os.path.dirname(self.test_dir)
         mock_utils_logger.info.assert_has_calls([
-            mock.call(f'Loading {test_dir}/gencode.v39lift37.annotation.gtf.gz (genome version: 37)'),
-            mock.call(f'Loading {test_dir}/gencode.v39.annotation.gtf.gz (genome version: 38)'),
+            mock.call(f'Loading {self.test_dirname }/gencode.v39lift37.annotation.gtf.gz (genome version: 37)'),
+            mock.call(f'Loading {self.test_dirname }/gencode.v39.annotation.gtf.gz (genome version: 38)'),
             mock.call('Creating 2 TranscriptInfo records'),
-            mock.call(f'Loading {test_dir}/gencode.v31lift37.annotation.gtf.gz (genome version: 37)'),
-            mock.call(f'Loading {test_dir}/gencode.v31.annotation.gtf.gz (genome version: 38)'),
-            mock.call(f'Loading {test_dir}/gencode.v29lift37.annotation.gtf.gz (genome version: 37)'),
-            mock.call(f'Loading {test_dir}/gencode.v29.annotation.gtf.gz (genome version: 38)'),
-            mock.call(f'Loading {test_dir}/gencode.v28lift37.annotation.gtf.gz (genome version: 37)'),
-            mock.call(f'Loading {test_dir}/gencode.v28.annotation.gtf.gz (genome version: 38)'),
-            mock.call(f'Loading {test_dir}/gencode.v27lift37.annotation.gtf.gz (genome version: 37)'),
-            mock.call(f'Loading {test_dir}/gencode.v27.annotation.gtf.gz (genome version: 38)'),
-            mock.call(f'Loading {test_dir}/gencode.v19.annotation.gtf.gz (genome version: 37)'),
+            mock.call(f'Loading {self.test_dirname }/gencode.v31lift37.annotation.gtf.gz (genome version: 37)'),
+            mock.call(f'Loading {self.test_dirname }/gencode.v31.annotation.gtf.gz (genome version: 38)'),
+            mock.call(f'Loading {self.test_dirname }/gencode.v29lift37.annotation.gtf.gz (genome version: 37)'),
+            mock.call(f'Loading {self.test_dirname }/gencode.v29.annotation.gtf.gz (genome version: 38)'),
+            mock.call(f'Loading {self.test_dirname }/gencode.v28lift37.annotation.gtf.gz (genome version: 37)'),
+            mock.call(f'Loading {self.test_dirname }/gencode.v28.annotation.gtf.gz (genome version: 38)'),
+            mock.call(f'Loading {self.test_dirname }/gencode.v27lift37.annotation.gtf.gz (genome version: 37)'),
+            mock.call(f'Loading {self.test_dirname }/gencode.v27.annotation.gtf.gz (genome version: 38)'),
+            mock.call(f'Loading {self.test_dirname }/gencode.v19.annotation.gtf.gz (genome version: 37)'),
             mock.call('Creating 1 TranscriptInfo records'),
         ])
         all_skipped_logs = [
