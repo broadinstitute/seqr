@@ -292,6 +292,9 @@ class GeneInfo(LoadableModel):
         if existing_transcript_ids is not None:
             existing_transcript_ids.update(transcripts.keys())
 
+        if not genes:
+            return transcripts
+
         genes_to_update = cls.objects.filter(gene_id__in=genes.keys(), gencode_release__lt=gencode_release)
         fields = set()
         for existing in genes_to_update:
@@ -302,8 +305,9 @@ class GeneInfo(LoadableModel):
             for key, value in new_gene.items():
                 setattr(existing, key, value)
 
-        cls.objects.bulk_update(genes_to_update, fields)
-        logger.info(f'Updated {len(genes_to_update)} previously loaded {cls.__name__} records')
+        if genes_to_update:
+            cls.objects.bulk_update(genes_to_update, fields)
+            logger.info(f'Updated {len(genes_to_update)} previously loaded {cls.__name__} records')
 
         cls.objects.bulk_create([cls(**record) for record in genes.values()])
         logger.info(f'Created {len(genes)} {cls.__name__} records')
