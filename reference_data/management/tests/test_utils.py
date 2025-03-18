@@ -27,7 +27,7 @@ class ReferenceDataCommandTestCase(TestCase):
         self.addCleanup(patcher.stop)
 
     @responses.activate
-    def _test_update_command(self, command_name, model_name, existing_records=1, created_records=1, skipped_records=1):
+    def _test_update_command(self, command_name, model_name, existing_records=1, created_records=1, skipped_records=1, skipped_message='genes.'):
         # test without a file_path parameter
         body = ''.join(self.DATA)
         if self.URL.endswith('gz'):
@@ -44,7 +44,7 @@ class ReferenceDataCommandTestCase(TestCase):
             mock.call(f'Created {created_records} {model_name} records'),
             mock.call('Done'),
             mock.call(f'Loaded {created_records} {model_name} records'),
-            mock.call(f'Skipped {skipped_records} records with unrecognized genes.'),
+            mock.call(f'Skipped {skipped_records} records with unrecognized {skipped_message}'),
         ]
         self.mock_logger.info.assert_has_calls(log_calls)
 

@@ -392,20 +392,24 @@ class RefseqTranscript(LoadableModel):
         return ['transcript_id', 'refseq_id', 'additional_info']
 
     @classmethod
-    def parse_record(cls, record, transcript_id_map=None, **kwargs):
+    def parse_record(cls, record, transcript_id_map=None, skipped_transcripts=None, **kwargs):
         transcript_id = record['transcript_id'].split('.')[0]
-        if not transcript_id_map.get(transcript_id):
-            raise ValueError(f'Transcript "{transcript_id}" not found in the TranscriptInfo table')
-
+        # only create a record for the first occurrence of a given transcript
+        transcript = transcript_id_map.pop(transcript_id, None)
+        if not transcript:
+            skipped_transcripts[None] += 1
         yield {
-            'transcript_id': transcript_id_map[transcript_id],
+            'transcript_id': transcript,
             'refseq_id': record['refseq_id'],
-        }
+        } if transcript else None
 
     @classmethod
     def update_records(cls, **kwargs):
         transcript_id_map = dict(TranscriptInfo.objects.values_list('transcript_id', 'id'))
-        super().update_records(transcript_id_map=transcript_id_map, **kwargs)
+        skipped_transcripts = {None: 0}
+        super().update_records(transcript_id_map=transcript_id_map, skipped_transcripts=skipped_transcripts, **kwargs)
+        if skipped_transcripts[None]:
+            logger.info(f'Skipped {skipped_transcripts[None]} records with unrecognized or duplicated transcripts')
 
 
 # based on # ftp://ftp.broadinstitute.org/pub/ExAC_release/release0.3.1/functional_gene_constraint/fordist_cleaned_exac_r03_march16_z_pli_rec_null_data.txt
