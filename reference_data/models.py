@@ -444,7 +444,7 @@ class GeneConstraint(GeneMetadataModel):
     def get_record_models(cls, records, **kwargs):
         # add _rank fields
         for field, order in [('mis_z', -1), ('pLI', -1), ('louef', 1)]:
-            for i, record in enumerate(sorted(records, key=lambda record: order * record['field'])):
+            for i, record in enumerate(sorted(records, key=lambda record: order * record[field])):
                 record['{}_rank'.format(field)] = i
         return super().get_record_models(records, **kwargs)
 
@@ -765,7 +765,7 @@ class GenCC(GeneMetadataModel):
         records_by_gene = {}
         for record in records:
             if record['gene_id'] in records_by_gene:
-                records_by_gene[record['gene_id']].classifications += record['classifications']
+                records_by_gene[record['gene_id']]['classifications'] += record['classifications']
             else:
                 records_by_gene[record['gene_id']] = record
 
