@@ -22,7 +22,7 @@ OMIM_DATA = [
     'chr1	1	567800000	1p36		605462	BCC1	Basal cell carcinoma, susceptibility to, 1		100307118		associated with rs7538876	{Basal cell carcinoma, susceptibility to, 1}, 605462 (2)	\n',
 ]
 
-CACHED_OMIM_DATA = "ENSG00000235249\t607413\tAlzheimer disease neuronal thread protein\t\t\t\t\t\t1\t1\t27600000\nENSG00000186092\t612367\tAlkaline phosphatase, plasma level of, QTL 2\tlinkage with rs1780324\tAlkaline phosphatase, plasma level of, QTL 2\t612367\t2\t\t1\t1\t27600000\n\t606788\tAnorexia nervosa, susceptibility to, 1\t\tAnorexia nervosa, susceptibility to, 1\t606788\t2\t\t1\t1\t123400000\n\t605462\tBasal cell carcinoma, susceptibility to, 1\tassociated with rs7538876\tBasal cell carcinoma, susceptibility to, 1\t605462\t2\t\t1\t1\t567800000"
+CACHED_OMIM_DATA = "gene_id\tmim_number\tgene_description\tcomments\tphenotype_description\tphenotype_mim_number\tphenotype_map_method\tphenotype_inheritance\tchrom\tstart\tend\nENSG00000235249\t607413\tAlzheimer disease neuronal thread protein\t\t\t\t\t\t1\t1\t27600000\nENSG00000186092\t612367\tAlkaline phosphatase, plasma level of, QTL 2\tlinkage with rs1780324\tAlkaline phosphatase, plasma level of, QTL 2\t612367\t2\t\t1\t1\t27600000\n\t606788\tAnorexia nervosa, susceptibility to, 1\t\tAnorexia nervosa, susceptibility to, 1\t606788\t2\t\t1\t1\t123400000\n\t605462\tBasal cell carcinoma, susceptibility to, 1\tassociated with rs7538876\tBasal cell carcinoma, susceptibility to, 1\t605462\t2\t\t1\t1\t567800000"
 
 
 class UpdateOmimTest(TestCase):
@@ -64,60 +64,46 @@ class UpdateOmimTest(TestCase):
         self.assertEqual(Omim.objects.all().count(), 3)
 
         GeneInfo.objects.all().delete()
-        with self.assertRaises(CommandError) as ve:
-            call_command('update_omim', '--omim-key=test_key')
-        self.assertEqual(str(ve.exception), "GeneInfo table is empty. Run './manage.py update_gencode' before running this command.")
+        call_command('update_omim', '--omim-key=test_key')
+        mock_logger.error.assert_called_with('Related data is missing to load Omim: gene_ids_to_gene, gene_symbols_to_gene', extra={'traceback': mock.ANY})
 
 
     @responses.activate
-    @mock.patch('reference_data.management.commands.utils.update_utils.logger')
-    @mock.patch('reference_data.management.commands.update_omim.logger')
-    @mock.patch('reference_data.utils.download_utils.tempfile')
-    @mock.patch('reference_data.management.commands.update_omim.os')
-    def test_update_omim_command(self, mock_os, mock_tempfile, mock_omim_logger, mock_utils_logger):
+    @mock.patch('seqr.utils.file_utils.logger')
+    @mock.patch('reference_data.models.logger')
+    @mock.patch('seqr.views.utils.export_utils.open')
+    @mock.patch('seqr.views.utils.export_utils.TemporaryDirectory')
+    @mock.patch('seqr.utils.file_utils.subprocess.Popen')
+    def test_update_omim_command(self, mock_subprocess, mock_temp_dir, mock_open, mock_logger, mock_file_utils_logger):
+        mock_subprocess.return_value.wait.return_value = 0
+        mock_temp_dir.return_value.__enter__.return_value = '/mock/tmp'
         tmp_dir = tempfile.gettempdir()
-        mock_tempfile.gettempdir.return_value = tmp_dir
         tmp_file = '{}/genemap2.txt'.format(tmp_dir)
 
         data_url = 'https://data.omim.org/downloads/test_key/genemap2.txt'
         responses.add(responses.HEAD, data_url, headers={"Content-Length": "1024"})
         responses.add(responses.GET, data_url, body=''.join(OMIM_DATA))
 
-        # Test without a file_path parameter
-        mock_utils_logger.reset_mock()
-        call_command('update_omim', '--omim-key=test_key', '--skip-cache-parsed-records')
+        call_command('update_omim', '--omim-key=test_key')
 
         calls = [
-            mock.call('Parsing file'),
-            mock.call('Deleting 3 existing Omim records'),
-            mock.call('Creating 4 Omim records'),
+            mock.call('Updating Omim'),
+            mock.call(f'Parsing file {tmp_file}'),
+            mock.call('Deleted 3 Omim records'),
+            mock.call('Created 4 Omim records'),
             mock.call('Done'),
-            mock.call('Loaded 4 Omim records from {}. Skipped 0 records with unrecognized genes.'.format(tmp_file)),
+            mock.call('Loaded 4 Omim records'),
         ]
-        mock_utils_logger.info.assert_has_calls(calls)
-        mock_os.system.assert_not_called()
+        mock_logger.info.assert_has_calls(calls)
 
-        # test with a file_path parameter
-        responses.remove(responses.GET, data_url)
-        mock_utils_logger.reset_mock()
-        mock_omim_logger.reset_mock()
-        call_command('update_omim', '--omim-key=test_key', tmp_file)
         calls = [
-            mock.call('Parsing file'),
-            mock.call('Deleting 4 existing Omim records'),
-            mock.call('Creating 4 Omim records'),
-            mock.call('Done'),
-            mock.call('Loaded 4 Omim records from {}. Skipped 0 records with unrecognized genes.'.format(tmp_file)),
+            mock.call('==> gsutil mv /mock/tmp/* gs://seqr-reference-data/omim/', None),
         ]
-        mock_utils_logger.info.assert_has_calls(calls)
-        calls = [
-            mock.call('gsutil mv parsed_omim_records.txt gs://seqr-reference-data/omim/'),
-        ]
-        mock_omim_logger.info.assert_has_calls(calls)
+        mock_file_utils_logger.info.assert_has_calls(calls)
 
-        mock_os.system.assert_called_with('gsutil mv parsed_omim_records.txt gs://seqr-reference-data/omim/')
-        with open('parsed_omim_records.txt', 'r') as f:
-            self.assertEqual(f.read(), CACHED_OMIM_DATA)
+        mock_subprocess.assert_called_with('gsutil mv /mock/tmp/* gs://seqr-reference-data/omim/', stdout=-1, stderr=-2, shell=True)
+        mock_open.assert_called_with(f'/mock/tmp/parsed_omim_records.txt', 'w')
+        self.assertEqual(mock_open.return_value.__enter__.return_value.write.call_args.args[0], CACHED_OMIM_DATA)
 
         self._assert_has_expected_omim_records()
 
@@ -148,9 +134,9 @@ class UpdateOmimTest(TestCase):
         self.assertEqual(no_gene_record.end, 567800000)
 
     @responses.activate
-    @mock.patch('reference_data.management.commands.utils.update_utils.logger')
+    @mock.patch('reference_data.models.logger')
     @mock.patch('reference_data.utils.download_utils.tempfile')
-    def test_update_omim_cached_records(self, mock_tempfile, mock_utils_logger):
+    def test_update_omim_cached_records(self, mock_tempfile, mock_logger):
         tmp_dir = tempfile.gettempdir()
         mock_tempfile.gettempdir.return_value = tmp_dir
         tmp_file = '{}/parsed_omim_records.txt'.format(tmp_dir)
@@ -168,7 +154,7 @@ class UpdateOmimTest(TestCase):
             mock.call('Done'),
             mock.call('Loaded 4 Omim records from {}. Skipped 0 records with unrecognized genes.'.format(tmp_file)),
         ]
-        mock_utils_logger.info.assert_has_calls(calls)
+        mock_logger.info.assert_has_calls(calls)
 
         self._assert_has_expected_omim_records()
 

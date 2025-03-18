@@ -493,9 +493,9 @@ class Omim(LoadableModel):
         'phenotype_mim_number', 'phenotype_map_method', 'phenotype_inheritance',
         'chrom', 'start', 'end',
     ]
-    CACHED_RECORDS_BUCKET = 'seqr-reference-data/omim/'
-    CACHED_RECORDS_FILENAME = 'parsed_omim_records.txt'
-    CACHED_OMIM_URL = f'https://storage.googleapis.com/{CACHED_RECORDS_BUCKET}{CACHED_RECORDS_FILENAME}'
+    CACHED_RECORDS_BUCKET = 'seqr-reference-data/omim'
+    CACHED_RECORDS_FILENAME = 'parsed_omim_records'
+    CACHED_OMIM_URL = f'https://storage.googleapis.com/{CACHED_RECORDS_BUCKET}/{CACHED_RECORDS_FILENAME}.txt'
 
     MAP_METHOD_CHOICES = (
         ('1', 'the disorder is placed on the map based on its association with a gene, but the underlying defect is not known.'),
@@ -595,10 +595,10 @@ class Omim(LoadableModel):
     @classmethod
     def post_process_models(cls, models, omim_key=None, **kwargs):
         if omim_key:
-            content = '\n'.join(cls.CACHED_RECORDS_HEADER + [
-                '\t'.join([str(getattr(model, field) or '') for field in cls.CACHED_RECORDS_HEADER]) for model in models
-            ])
-            write_multiple_files([(cls.CACHED_RECORDS_FILENAME, content)], f'gs://{cls.CACHED_RECORDS_BUCKET}')
+            write_multiple_files(
+                [(cls.CACHED_RECORDS_FILENAME, cls.CACHED_RECORDS_HEADER, [model.__dict__ for model in models])],
+                f'gs://{cls.CACHED_RECORDS_BUCKET}', file_format='txt', user=None,
+            )
 
 
 # based on dbNSFPv3.5a_gene fields
