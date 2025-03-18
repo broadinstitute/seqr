@@ -187,7 +187,7 @@ class UpdateGencodeTest(TestCase):
         self.assertEqual(gene_info.start_grch37, 367640)
         self.assertEqual(gene_info.end_grch37, 368634)
         self.assertEqual(gene_info.chrom_grch37, '1')
-        self.assertEqual(gene_info.coding_region_size_grch37, 0)  # TODO
+        self.assertEqual(gene_info.coding_region_size_grch37, 995)
         self.assertIsNone(gene_info.start_grch38)
         self.assertEqual(gene_info.coding_region_size_grch38, 0)
 
