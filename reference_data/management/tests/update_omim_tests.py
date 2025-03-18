@@ -139,20 +139,21 @@ class UpdateOmimTest(TestCase):
     def test_update_omim_cached_records(self, mock_tempfile, mock_logger):
         tmp_dir = tempfile.gettempdir()
         mock_tempfile.gettempdir.return_value = tmp_dir
-        tmp_file = '{}/parsed_omim_records.txt'.format(tmp_dir)
+        tmp_file = '{}/parsed_omim_records__latest.txt'.format(tmp_dir)
 
-        data_url = 'https://storage.googleapis.com/seqr-reference-data/omim/parsed_omim_records.txt'
+        data_url = 'https://storage.googleapis.com/seqr-reference-data/omim/parsed_omim_records__latest.txt'
         responses.add(responses.HEAD, data_url, headers={"Content-Length": "1024"})
         responses.add(responses.GET, data_url, body=CACHED_OMIM_DATA)
 
         CachedOmimReferenceDataHandler().update_records()
 
         calls = [
-            mock.call('Parsing file'),
-            mock.call('Deleting 3 existing Omim records'),
-            mock.call('Creating 4 Omim records'),
+            mock.call('Updating Omim'),
+            mock.call(f'Parsing file {tmp_file}'),
+            mock.call('Deleted 3 Omim records'),
+            mock.call('Created 4 Omim records'),
             mock.call('Done'),
-            mock.call('Loaded 4 Omim records from {}. Skipped 0 records with unrecognized genes.'.format(tmp_file)),
+            mock.call('Loaded 4 Omim records'),
         ]
         mock_logger.info.assert_has_calls(calls)
 

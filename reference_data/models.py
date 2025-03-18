@@ -555,7 +555,9 @@ class Omim(LoadableModel):
     @classmethod
     def parse_record(cls, record, omim_key=None, gene_ids_to_gene=None, gene_symbols_to_gene=None, **kwargs):
         if not omim_key:
-            yield {k: v or None for k, v in record.items()}
+            output_record = {k: v or None for k, v in record.items()}
+            output_record['gene_id'] = gene_ids_to_gene.get(output_record.pop('ensembl_gene_id'))
+            yield output_record
         # skip commented rows
         elif len(record) == 1:
             yield None
@@ -603,9 +605,8 @@ class Omim(LoadableModel):
                 [(cls.CACHED_RECORDS_FILENAME, cls.CACHED_RECORDS_HEADER, records)],
                 f'gs://{cls.CACHED_RECORDS_BUCKET}', file_format='txt', user=None,
             )
-
-        for record in records:
-            del record['ensembl_gene_id']
+            for record in records:
+                del record['ensembl_gene_id']
         return super().get_record_models(records, **kwargs)
 
 # based on dbNSFPv3.5a_gene fields
