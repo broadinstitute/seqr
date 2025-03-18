@@ -717,13 +717,8 @@ class MGI(GeneMetadataModel):
     @classmethod
     def get_gene_for_record(cls, record, entrez_id_to_gene=None, **kwargs):
         entrez_gene = entrez_id_to_gene.get(record.pop('entrez_gene_id'))
-
-        try:
-            return super().get_gene_for_record(record, **kwargs)
-        except ValueError as e:
-            if entrez_gene:
-                return entrez_gene
-            raise e
+        gene = super().get_gene_for_record(record, **kwargs)
+        return gene or entrez_gene
 
 
 class GenCC(GeneMetadataModel):

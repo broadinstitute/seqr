@@ -1,8 +1,8 @@
 from django.core.management import call_command
+import mock
 
 from reference_data.models import MGI, dbNSFPGene
 from reference_data.management.tests.test_utils import ReferenceDataCommandTestCase
-from django.core.management.base import CommandError
 
 
 class UpdateMgiTest(ReferenceDataCommandTestCase):
@@ -14,7 +14,8 @@ class UpdateMgiTest(ReferenceDataCommandTestCase):
         'A3GALT2	  127550	16326	  MGI:2685279\n',
     ]
 
-    def test_update_mgi_command(self):
+    @mock.patch('reference_data.management.commands.utils.update_utils.logger')
+    def test_update_mgi_command(self, mock_utils_logger):
         self._test_update_command('update_mgi', 'MGI', existing_records=0, created_records=2, skipped_records=2)
 
         self.assertEqual(MGI.objects.all().count(), 2)
@@ -23,6 +24,5 @@ class UpdateMgiTest(ReferenceDataCommandTestCase):
 
         # Test exception with no dbNSFPGene records
         dbNSFPGene.objects.all().delete()
-        with self.assertRaises(CommandError) as ce:
-            call_command('update_mgi')
-        self.assertEqual(str(ce.exception), 'dbNSFPGene table is empty. Run \'./manage.py update_dbnsfp_gene\' before running this command.')
+        call_command('update_mgi')
+        mock_utils_logger.error.assert_called_with('Related data is missing to load MGI: entrez_id_to_gene', extra={'traceback': mock.ANY})
