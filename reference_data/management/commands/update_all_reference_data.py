@@ -11,8 +11,7 @@ from reference_data.management.commands.update_gene_cn_sensitivity import CNSens
 from reference_data.management.commands.update_gencc import GenCCReferenceDataHandler
 from reference_data.management.commands.update_clingen import ClinGenReferenceDataHandler
 from reference_data.management.commands.update_refseq import RefseqReferenceDataHandler
-from reference_data.utils.gene_utils import get_genes_by_id_and_symbol
-from reference_data.models import GeneInfo, HumanPhenotypeOntology, TranscriptInfo
+from reference_data.models import GeneInfo
 
 
 logger = logging.getLogger(__name__)
