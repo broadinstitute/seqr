@@ -595,8 +595,6 @@ class Omim(LoadableModel):
     @classmethod
     def post_process_models(cls, models, omim_key=None, **kwargs):
         if omim_key:
-            model_data = models.values(cls.CACHED_RECORDS_HEADER)
-            import pdb; pdb.set_trace()
             write_multiple_files(
                 [(cls.CACHED_RECORDS_FILENAME, cls.CACHED_RECORDS_HEADER, [model.__dict__ for model in models])],
                 f'gs://{cls.CACHED_RECORDS_BUCKET}', file_format='txt', user=None,
