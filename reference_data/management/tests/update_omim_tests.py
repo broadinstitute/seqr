@@ -22,7 +22,7 @@ OMIM_DATA = [
     'chr1	1	567800000	1p36		605462	BCC1	Basal cell carcinoma, susceptibility to, 1		100307118		associated with rs7538876	{Basal cell carcinoma, susceptibility to, 1}, 605462 (2)	\n',
 ]
 
-CACHED_OMIM_DATA = "gene_id\tmim_number\tgene_description\tcomments\tphenotype_description\tphenotype_mim_number\tphenotype_map_method\tphenotype_inheritance\tchrom\tstart\tend\nENSG00000235249\t607413\tAlzheimer disease neuronal thread protein\t\t\t\t\t\t1\t1\t27600000\nENSG00000186092\t612367\tAlkaline phosphatase, plasma level of, QTL 2\tlinkage with rs1780324\tAlkaline phosphatase, plasma level of, QTL 2\t612367\t2\t\t1\t1\t27600000\n\t606788\tAnorexia nervosa, susceptibility to, 1\t\tAnorexia nervosa, susceptibility to, 1\t606788\t2\t\t1\t1\t123400000\n\t605462\tBasal cell carcinoma, susceptibility to, 1\tassociated with rs7538876\tBasal cell carcinoma, susceptibility to, 1\t605462\t2\t\t1\t1\t567800000"
+CACHED_OMIM_DATA = "ensembl_gene_id\tmim_number\tgene_description\tcomments\tphenotype_description\tphenotype_mim_number\tphenotype_map_method\tphenotype_inheritance\tchrom\tstart\tend\nENSG00000235249\t607413\tAlzheimer disease neuronal thread protein\t\t\t\t\t\t1\t1\t27600000\nENSG00000186092\t612367\tAlkaline phosphatase, plasma level of, QTL 2\tlinkage with rs1780324\tAlkaline phosphatase, plasma level of, QTL 2\t612367\t2\t\t1\t1\t27600000\n\t606788\tAnorexia nervosa, susceptibility to, 1\t\tAnorexia nervosa, susceptibility to, 1\t606788\t2\t\t1\t1\t123400000\n\t605462\tBasal cell carcinoma, susceptibility to, 1\tassociated with rs7538876\tBasal cell carcinoma, susceptibility to, 1\t605462\t2\t\t1\t1\t567800000"
 
 
 class UpdateOmimTest(TestCase):
@@ -102,7 +102,7 @@ class UpdateOmimTest(TestCase):
         mock_file_utils_logger.info.assert_has_calls(calls)
 
         mock_subprocess.assert_called_with('gsutil mv /mock/tmp/* gs://seqr-reference-data/omim/', stdout=-1, stderr=-2, shell=True)
-        mock_open.assert_called_with(f'/mock/tmp/parsed_omim_records.txt', 'w')
+        mock_open.assert_called_with(f'/mock/tmp/parsed_omim_records__latest.txt', 'w')
         self.assertEqual(mock_open.return_value.__enter__.return_value.write.call_args.args[0], CACHED_OMIM_DATA)
 
         self._assert_has_expected_omim_records()

@@ -99,8 +99,8 @@ class LoadableModel(models.Model):
         return tqdm(f, unit=' records')
 
     @classmethod
-    def post_process_models(cls, models, **kwargs):
-        pass
+    def get_record_models(cls, records, **kwargs):
+        return [cls(**record) for record in records]
 
     @classmethod
     def load_records(cls, **kwargs):
@@ -122,14 +122,14 @@ class LoadableModel(models.Model):
 
         logger.info(f'Updating {cls.__name__}')
 
-        models = []
+        records = []
         for record in cls.load_records(**kwargs):
             for record in cls.parse_record(record, **kwargs):
                 if record is None:
                     continue
-                models.append(cls(**record))
+                records.append(record)
 
-        cls.post_process_models(models, **kwargs)
+        models = cls.get_record_models(records, **kwargs)
 
         with transaction.atomic():
             deleted, _ = cls.objects.all().delete()
@@ -191,10 +191,12 @@ class HumanPhenotypeOntology(LoadableModel):
         yield [record.get(f) for f in cls.HEADER] if record else None
 
     @classmethod
-    def post_process_models(cls, models, **kwargs):
+    def get_record_models(cls, records, **kwargs):
+        models = super().get_record_models(records, **kwargs)
         parent_id_map = {model.hpo_id: model.parent_id for model in models}
         for model in models:
             model.category_id = cls._get_category_id(parent_id_map, model.hpo_id)
+        return models
             
     @staticmethod
     def _get_category_id(parent_id_map, hpo_id):
@@ -323,10 +325,10 @@ class GeneMetadataModel(LoadableModel):
 
     @classmethod
     def get_gene_for_record(cls, record, gene_ids_to_gene=None, gene_symbols_to_gene=None, **kwargs):
-        gene_id = record.pop('gene_id', None)
         gene_symbol = record.pop('gene_symbol', None)
+        gene_id = record.pop('gene_id', None) or gene_symbols_to_gene.get(gene_symbol)
 
-        return gene_ids_to_gene.get(gene_id) or gene_symbols_to_gene.get(gene_symbol)
+        return gene_ids_to_gene.get(gene_id)
 
     @classmethod
     def parse_record(cls, record, skipped_genes=None, **kwargs):
@@ -439,11 +441,12 @@ class GeneConstraint(GeneMetadataModel):
         }
 
     @classmethod
-    def post_process_models(cls, models, **kwargs):
+    def get_record_models(cls, records, **kwargs):
         # add _rank fields
         for field, order in [('mis_z', -1), ('pLI', -1), ('louef', 1)]:
-            for i, model in enumerate(sorted(models, key=lambda model: order * getattr(model, field))):
-                setattr(model, '{}_rank'.format(field), i)
+            for i, record in enumerate(sorted(records, key=lambda record: order * record['field'])):
+                record['{}_rank'.format(field)] = i
+        return super().get_record_models(records, **kwargs)
 
 
 class GeneCopyNumberSensitivity(GeneMetadataModel):
@@ -489,12 +492,12 @@ class Omim(LoadableModel):
     OMIM_URL = 'https://data.omim.org/downloads/{omim_key}/genemap2.txt'
 
     CACHED_RECORDS_HEADER = [
-        'gene_id', 'mim_number', 'gene_description', 'comments', 'phenotype_description',
+        'ensembl_gene_id', 'mim_number', 'gene_description', 'comments', 'phenotype_description',
         'phenotype_mim_number', 'phenotype_map_method', 'phenotype_inheritance',
         'chrom', 'start', 'end',
     ]
     CACHED_RECORDS_BUCKET = 'seqr-reference-data/omim'
-    CACHED_RECORDS_FILENAME = 'parsed_omim_records'
+    CACHED_RECORDS_FILENAME = 'parsed_omim_records__latest'
     CACHED_OMIM_URL = f'https://storage.googleapis.com/{CACHED_RECORDS_BUCKET}/{CACHED_RECORDS_FILENAME}.txt'
 
     MAP_METHOD_CHOICES = (
@@ -557,11 +560,12 @@ class Omim(LoadableModel):
         elif len(record) == 1:
             yield None
         else:
-            gene_id = record['ensembl_gene_id']
             gene_symbol = record['approved_gene_symbol'].strip() or record['gene/locus_and_other_related_symbols'].split(",")[0]
+            ensembl_gene_id = record['ensembl_gene_id'] or gene_symbols_to_gene.get(gene_symbol)
 
             output_record = {
-                'gene_id': gene_ids_to_gene.get(gene_id) or gene_symbols_to_gene.get(gene_symbol),
+                'gene_id': gene_ids_to_gene.get(ensembl_gene_id),
+                'ensembl_gene_id': ensembl_gene_id,
                 'mim_number': int(record['mim_number']),
                 'chrom': record['#_chromosome'].replace('chr', ''),
                 'start': int(record['genomic_position_start']),
@@ -593,13 +597,16 @@ class Omim(LoadableModel):
                     yield output_record
 
     @classmethod
-    def post_process_models(cls, models, omim_key=None, **kwargs):
+    def get_record_models(cls, records, omim_key=None, **kwargs):
         if omim_key:
             write_multiple_files(
-                [(cls.CACHED_RECORDS_FILENAME, cls.CACHED_RECORDS_HEADER, [model.__dict__ for model in models])],
+                [(cls.CACHED_RECORDS_FILENAME, cls.CACHED_RECORDS_HEADER, records)],
                 f'gs://{cls.CACHED_RECORDS_BUCKET}', file_format='txt', user=None,
             )
 
+        for record in records:
+            del record['ensembl_gene_id']
+        return super().get_record_models(records, **kwargs)
 
 # based on dbNSFPv3.5a_gene fields
 class dbNSFPGene(GeneMetadataModel):
@@ -752,17 +759,16 @@ class GenCC(GeneMetadataModel):
         }
 
     @classmethod
-    def post_process_models(cls, models, **kwargs):
+    def get_record_models(cls, records, **kwargs):
         #  Group all classifications for a gene into a single model
-        models_by_gene = {}
-        for model in tqdm(models, unit=' models'):
-            if model.gene in models_by_gene:
-                models_by_gene[model.gene_id].classifications += model.classifications
+        records_by_gene = {}
+        for record in records:
+            if record['gene_id'] in records_by_gene:
+                records_by_gene[record['gene_id']].classifications += record['classifications']
             else:
-                models_by_gene[model.gene_id] = model
+                records_by_gene[record['gene_id']] = record
 
-        models.clear()
-        models.extend(models_by_gene.values())
+        return super().get_record_models(records_by_gene.values(), **kwargs)
 
 
 class ClinGen(GeneMetadataModel):
