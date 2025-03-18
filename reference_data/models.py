@@ -171,7 +171,8 @@ class HumanPhenotypeOntology(LoadableModel):
             value = ' '.join(line.split(' ')[1:])
             if line.startswith('id: '):
                 # When encountering a new hpo ID, yield the previous record and start accumulating a new one
-                yield [record.get(f) for f in cls.HEADER] if record else None
+                if record:
+                    yield [record.get(f) for f in cls.HEADER]
                 record = {
                     'hpo_id': value,
                     'is_category': False,
@@ -206,12 +207,12 @@ class HumanPhenotypeOntology(LoadableModel):
         if hpo_id not in parent_id_map:
             return None
 
-        while parent_id_map[hpo_id] != 'HP:0000118':
+        while hpo_id and parent_id_map.get(hpo_id) != 'HP:0000118':
+            if hpo_id not in parent_id_map:
+                raise ValueError('Strange id: %s' % hpo_id)
             hpo_id = parent_id_map[hpo_id]
             if hpo_id == 'HP:0000001':
                 return None
-            if hpo_id not in parent_id_map:
-                raise ValueError('Strange id: %s' % hpo_id)
 
         return hpo_id
 

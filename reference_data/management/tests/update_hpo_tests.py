@@ -131,7 +131,7 @@ class UpdateHpoTest(TestCase):
     fixtures = ['users', 'reference_data']
 
     @responses.activate
-    @mock.patch('reference_data.management.commands.update_human_phenotype_ontology.logger')
+    @mock.patch('reference_data.models.logger')
     @mock.patch('reference_data.utils.download_utils.tempfile')
     def test_update_hpo_command(self, mock_tempfile, mock_logger):
         tmp_dir = tempfile.gettempdir()
@@ -149,21 +149,14 @@ class UpdateHpoTest(TestCase):
         self.assertEqual(str(ve.exception), "Strange id: HP:0000003")
 
         # test without a file_path parameter
+        mock_logger.reset_mock()
         call_command('update_human_phenotype_ontology')
 
         calls = [
-            mock.call('Deleting HumanPhenotypeOntology table with 12 records and creating new table with 5 records'),
-            mock.call('Done'),
-        ]
-        mock_logger.info.assert_has_calls(calls)
-
-        # test with a hpo_file_path parameter
-        responses.remove(responses.GET, url)
-        mock_logger.reset_mock()
-        call_command('update_human_phenotype_ontology', tmp_file)
-
-        calls = [
-            mock.call('Deleting HumanPhenotypeOntology table with 5 records and creating new table with 5 records'),
+            mock.call('Updating HumanPhenotypeOntology'),
+            mock.call(f'Parsing file {tmp_file}'),
+            mock.call('Deleted 12 HumanPhenotypeOntology records'),
+            mock.call('Created 5 HumanPhenotypeOntology records'),
             mock.call('Done'),
         ]
         mock_logger.info.assert_has_calls(calls)
