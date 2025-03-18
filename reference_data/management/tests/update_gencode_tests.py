@@ -69,7 +69,7 @@ class UpdateGencodeTest(TestCase):
         shutil.rmtree(self.test_dir)
 
     @responses.activate
-    @mock.patch('reference_data.management.commands.utils.gencode_utils.logger')
+    @mock.patch('reference_data.models.logger')
     def test_update_gencode_command_bad_gtf_data(self, mock_logger):
         # Test wrong number data feilds in a line
         bad_gtf_data = gzip.compress(''.join(BAD_FIELDS_GTF_DATA).encode())
@@ -117,7 +117,7 @@ class UpdateGencodeTest(TestCase):
         return url, url_lift
 
     @responses.activate
-    @mock.patch('reference_data.management.commands.utils.gencode_utils.logger')
+    @mock.patch('reference_data.models.logger')
     @mock.patch('reference_data.management.commands.update_gencode_latest.logger')
     def test_load_all_gencode_command(self, mock_logger, mock_utils_logger):
         # Initial gencode loading can only happen once with an empty gene table
@@ -198,31 +198,25 @@ class UpdateGencodeTest(TestCase):
         self.assertEqual(trans_info.gene.gencode_release, 19)
 
     @responses.activate
-    @mock.patch('reference_data.management.commands.utils.update_utils.logger')
-    @mock.patch('reference_data.management.commands.utils.gencode_utils.logger')
+    @mock.patch('reference_data.models.logger')
     @mock.patch('reference_data.management.commands.update_gencode_latest.logger')
-    def test_update_gencode_latest_command(self, mock_logger, mock_gencode_utils_logger, mock_update_utils_logger):
+    def test_update_gencode_latest_command(self, mock_command_logger, mock_logger):
         refseq_url = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_39/gencode.v39.metadata.RefSeq.gz'
         responses.add(responses.HEAD, refseq_url, headers={"Content-Length": "1024"})
         responses.add(responses.GET, refseq_url, body=gzip.compress(''.join(REFSEQ_DATA).encode()))
 
         call_command('update_gencode_latest', '--track-symbol-change', f'--output-dir={self.test_dir}')
-        mock_gencode_utils_logger.info.assert_called_with('Creating 2 TranscriptInfo records')
+        mock_command_logger.info.assert_called_with('Dropped 1 existing TranscriptInfo records')
         mock_logger.info.assert_has_calls([
-            mock.call('Updating 1 previously loaded GeneInfo records'),
-            mock.call('Creating 1 GeneInfo records'),
-            mock.call('Dropping 1 existing TranscriptInfo entries'),
-            mock.call('Done'),
-            mock.call('Stats: '),
-            mock.call('  genes_updated: 1'),
-            mock.call('  genes_created: 1'),
-            mock.call('  transcripts_created: 1'),
-            mock.call('  transcripts_replaced: 1'),
-        ])
-        mock_update_utils_logger.info.assert_has_calls([
-            mock.call('Parsing file'),
-            mock.call('Deleting 1 existing RefseqTranscript records'),
-            mock.call('Creating 2 RefseqTranscript records'),
+            mock.call(f'Parsing file {self.test_dirname}/gencode.v39lift37.annotation.gtf.gz'),
+            mock.call(f'Parsing file {self.test_dirname}/gencode.v39.annotation.gtf.gz'),
+            mock.call('Updated 1 previously loaded GeneInfo records'),
+            mock.call('Created 1 GeneInfo records'),
+            mock.call('Created 2 TranscriptInfo records'),
+            mock.call('Updating RefseqTranscript'),
+            mock.call(f'Parsing file {self.test_dirname}/gencode.v39.metadata.RefSeq.gz'),
+            mock.call('Deleted 1 RefseqTranscript records'),
+            mock.call('Created 2 RefseqTranscript records'),
             mock.call('Done'),
         ])
 
