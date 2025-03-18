@@ -51,19 +51,21 @@ def update_gencode(gencode_release, track_symbol_change=False, output_directory=
         counters['genes_updated'] = len(genes_to_update)
         GeneInfo.objects.bulk_update(genes_to_update, fields, batch_size=BATCH_SIZE)
 
-    logger.info('Creating {} GeneInfo records'.format(len(genes)))
-    counters['genes_created'] = len(genes)
-    GeneInfo.objects.bulk_create([GeneInfo(**record) for record in genes.values()], batch_size=BATCH_SIZE)
+    if genes:
+        logger.info('Creating {} GeneInfo records'.format(len(genes)))
+        counters['genes_created'] = len(genes)
+        GeneInfo.objects.bulk_create([GeneInfo(**record) for record in genes.values()], batch_size=BATCH_SIZE)
 
     # Transcript records child models are also from gencode, so better to reset all data and then repopulate
-    counters['transcripts_created'] = len(transcripts)
-    existing_transcripts = TranscriptInfo.objects.filter(transcript_id__in=transcripts.keys())
-    if existing_transcripts:
-        counters['transcripts_created'] -= len(existing_transcripts)
-        counters['transcripts_replaced'] = len(existing_transcripts)
-        logger.info(f'Dropping {len(existing_transcripts)} existing TranscriptInfo entries')
-        existing_transcripts.delete()
-    create_transcript_info(transcripts)
+    if transcripts:
+        counters['transcripts_created'] = len(transcripts)
+        existing_transcripts = TranscriptInfo.objects.filter(transcript_id__in=transcripts.keys())
+        if existing_transcripts:
+            counters['transcripts_created'] -= len(existing_transcripts)
+            counters['transcripts_replaced'] = len(existing_transcripts)
+            logger.info(f'Dropping {len(existing_transcripts)} existing TranscriptInfo entries')
+            existing_transcripts.delete()
+        create_transcript_info(transcripts)
 
     logger.info('Done')
     logger.info('Stats: ')
