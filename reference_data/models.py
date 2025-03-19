@@ -87,6 +87,10 @@ class LoadableModel(models.Model):
         return cls.URL
 
     @classmethod
+    def get_current_version(cls, **kwargs):
+        return cls.CURRENT_VERSION
+
+    @classmethod
     def parse_record(cls, record, **kwargs):
         yield record
 
