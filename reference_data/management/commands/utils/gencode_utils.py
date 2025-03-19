@@ -1,13 +1,10 @@
 import collections
 import gzip
 import logging
-import os
 from tqdm import tqdm
 
-from django.core.management.base import CommandError
-
 from reference_data.management.commands.utils.download_utils import download_file
-from reference_data.models import GeneInfo, TranscriptInfo, GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38
+from reference_data.models import GeneInfo, TranscriptInfo
 
 logger = logging.getLogger(__name__)
 
@@ -22,40 +19,24 @@ GENCODE_FILE_HEADER = [
 ]
 
 
-def _get_valid_gencode_gtf_paths(gencode_release, gencode_gtf_path, genome_version):
-    if gencode_gtf_path and genome_version and os.path.isfile(gencode_gtf_path):
-        if gencode_release == 19 and genome_version != GENOME_VERSION_GRCh37:
-            raise CommandError("Invalid genome_version: {}. gencode v19 only has a GRCh37 version".format(genome_version))
-        elif gencode_release <= 22 and genome_version != GENOME_VERSION_GRCh38:
-            raise CommandError("Invalid genome_version: {}. gencode v20, v21, v22 only have a GRCh38 version".format(genome_version))
-        elif genome_version != GENOME_VERSION_GRCh38 and "lift" not in gencode_gtf_path.lower():
-            raise CommandError(
-                f"Invalid genome_version for file: {gencode_gtf_path}. gencode v23 and up must have 'lift' in the "
-                "filename or genome_version arg must be GRCh38")
-
-        gencode_gtf_paths = {genome_version: gencode_gtf_path}
-    elif gencode_gtf_path and not genome_version:
-        raise CommandError("The genome version must also be specified after the gencode GTF file path")
+def _get_valid_gencode_gtf_paths(gencode_release):
+    gtf_url = GENCODE_URL_TEMPLATE.format(path='', file='.annotation.gtf.gz', gencode_release=gencode_release)
+    if gencode_release == 19:
+        urls = [('37', gtf_url)]
     else:
-        gtf_url = GENCODE_URL_TEMPLATE.format(path='', file='.annotation.gtf.gz', gencode_release=gencode_release)
-        if gencode_release == 19:
-            urls = [('37', gtf_url)]
-        elif gencode_release <= 22:
-            urls = [('38', gtf_url)]
-        else:
-            urls = [
-                ('37', GENCODE_URL_TEMPLATE.format(path='GRCh37_mapping/', file='lift37.annotation.gtf.gz', gencode_release=gencode_release)),
-                ('38', gtf_url),
-            ]
-        gencode_gtf_paths = {}
-        for genome_version, url in urls:
-            local_filename = download_file(url)
-            gencode_gtf_paths.update({genome_version: local_filename})
+        urls = [
+            ('37', GENCODE_URL_TEMPLATE.format(path='GRCh37_mapping/', file='lift37.annotation.gtf.gz', gencode_release=gencode_release)),
+            ('38', gtf_url),
+        ]
+    gencode_gtf_paths = {}
+    for genome_version, url in urls:
+        local_filename = download_file(url)
+        gencode_gtf_paths.update({genome_version: local_filename})
     return gencode_gtf_paths
 
 
-def load_gencode_records(gencode_release, gencode_gtf_path=None, genome_version=None, existing_gene_ids=None, existing_transcript_ids=None):
-    gencode_gtf_paths = _get_valid_gencode_gtf_paths(gencode_release, gencode_gtf_path, genome_version)
+def load_gencode_records(gencode_release, existing_gene_ids, existing_transcript_ids):
+    gencode_gtf_paths = _get_valid_gencode_gtf_paths(gencode_release)
 
     counters = collections.defaultdict(int)
     new_genes = collections.defaultdict(dict)
@@ -66,7 +47,7 @@ def load_gencode_records(gencode_release, gencode_gtf_path=None, genome_version=
         with gzip.open(gencode_gtf_path, 'rt') as gencode_file:
             for i, line in enumerate(tqdm(gencode_file, unit=' gencode records')):
                 _parse_line(
-                    line, i, new_genes, new_transcripts, existing_gene_ids or set(), existing_transcript_ids or set(),
+                    line, i, new_genes, new_transcripts, existing_gene_ids, existing_transcript_ids,
                     counters, genome_version, gencode_release)
 
     return new_genes, new_transcripts, counters

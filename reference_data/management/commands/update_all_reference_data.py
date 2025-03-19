@@ -5,7 +5,7 @@ from django.core.management.base import BaseCommand
 from reference_data.management.commands.utils.gencode_utils import LATEST_GENCODE_RELEASE, OLD_GENCODE_RELEASES
 from reference_data.management.commands.update_human_phenotype_ontology import update_hpo
 from reference_data.management.commands.update_dbnsfp_gene import DbNSFPReferenceDataHandler
-from reference_data.management.commands.update_gencode import update_gencode
+from reference_data.management.commands.update_gencode_latest import update_gencode
 from reference_data.management.commands.update_gene_constraint import GeneConstraintReferenceDataHandler
 from reference_data.management.commands.update_omim import OmimReferenceDataHandler, CachedOmimReferenceDataHandler
 from reference_data.management.commands.update_primate_ai import PrimateAIReferenceDataHandler
@@ -58,7 +58,7 @@ class Command(BaseCommand):
                 return
             # Download latest version first, and then add any genes from old releases not included in the latest release
             # Old gene ids are used in the gene constraint table and other datasets, as well as older sequencing data
-            update_gencode(LATEST_GENCODE_RELEASE, reset=True)
+            update_gencode(LATEST_GENCODE_RELEASE)
             for release in OLD_GENCODE_RELEASES:
                 update_gencode(release)
             updated.append('gencode')
