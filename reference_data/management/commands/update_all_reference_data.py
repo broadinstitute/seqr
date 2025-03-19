@@ -12,7 +12,7 @@ from reference_data.management.commands.update_gencc import GenCCReferenceDataHa
 from reference_data.management.commands.update_clingen import ClinGenReferenceDataHandler
 from reference_data.management.commands.update_refseq import RefseqReferenceDataHandler
 from reference_data.utils.gene_utils import get_genes_by_id_and_symbol
-from reference_data.models import GeneInfo, TranscriptInfo
+from reference_data.models import GeneInfo, TranscriptInfo, HumanPhenotypeOntology
 
 
 logger = logging.getLogger(__name__)
