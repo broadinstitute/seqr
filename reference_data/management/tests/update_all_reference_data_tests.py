@@ -106,23 +106,17 @@ class UpdateAllReferenceDataTest(TestCase):
             'update_all_reference_data', '--skip-omim', *SKIP_ARGS)
 
         self.mock_update_gencode.assert_not_called()
-        self.mock_omim.assert_not_called()
-        self.mock_cached_omim.assert_not_called()
-        self.mock_update_records.assert_not_called()
-        self.mock_update_hpo.assert_not_called()
+        self.assertListEqual(self.mock_update_calls, [])
         self.mock_logger.info.assert_called_with("Done")
 
     def test_cached_omim_update_reference_data_command(self):
         call_command(
             'update_all_reference_data', '--use-cached-omim', *SKIP_ARGS)
 
-        self.mock_cached_omim.assert_called_with()
-        self.mock_cached_omim.return_value.update_records.assert_called_with()
-        self.mock_update_records.assert_not_called()
-
-        self.mock_omim.assert_not_called()
+        self.assertListEqual(self.mock_update_calls, [
+            (Omim, {'gene_ids_to_gene': mock.ANY, 'gene_symbols_to_gene': mock.ANY}),
+        ])
         self.mock_update_gencode.assert_not_called()
-        self.mock_update_hpo.assert_not_called()
 
         calls = [
             mock.call('Done'),
