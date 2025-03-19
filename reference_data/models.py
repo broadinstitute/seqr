@@ -188,7 +188,7 @@ class HumanPhenotypeOntology(LoadableModel):
                 record['definition'] = value
             elif line.startswith('comment: '):
                 record['comment'] = value
-                
+
         yield [record.get(f) for f in cls.HEADER] if record else None
 
     @classmethod
