@@ -163,6 +163,11 @@ class HumanPhenotypeOntology(LoadableModel):
     definition = models.TextField(null=True, blank=True)
     comment = models.TextField(null=True, blank=True)
 
+    @classmethod
+    def get_current_version(cls, **kwargs):
+        # TODO
+        raise NotImplementedError
+
     @staticmethod
     def get_file_header(f):
         return HumanPhenotypeOntology.HEADER
@@ -546,6 +551,11 @@ class Omim(LoadableModel):
     def get_url(cls, omim_key=None, **kwargs):
         return cls.OMIM_URL.format(omim_key=omim_key) if omim_key else cls.CACHED_OMIM_URL
 
+    @classmethod
+    def get_current_version(cls, **kwargs):
+        # TODO
+        raise NotImplementedError
+
     @staticmethod
     def get_file_header(f):
         header_fields = None
@@ -752,6 +762,11 @@ class GenCC(GeneMetadataModel):
     class Meta:
         json_fields = ['classifications', 'hgnc_id']
 
+    @classmethod
+    def get_current_version(cls, **kwargs):
+        # TODO
+        raise NotImplementedError
+
     @staticmethod
     def get_file_header(f):
         return [k.replace('"', '') for k in next(f).rstrip('\n\r').split(',')]
@@ -791,6 +806,11 @@ class ClinGen(GeneMetadataModel):
 
     class Meta:
         json_fields = ['haploinsufficiency', 'triplosensitivity', 'href']
+
+    @classmethod
+    def get_current_version(cls, **kwargs):
+        # TODO
+        raise NotImplementedError
 
     @staticmethod
     def get_file_header(f):
