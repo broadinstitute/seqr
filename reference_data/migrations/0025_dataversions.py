@@ -8,7 +8,7 @@ from reference_data.models import HumanPhenotypeOntology, GeneInfo, RefseqTransc
 def get_current_versions(apps, schema_editor):
     DataVersions = apps.get_model('reference_data', 'DataVersions')
     db_alias = schema_editor.connection.alias
-    versions = [DataVersions(data_model_name=model.__name__, version=model.CURRENT_VERSION or '') for model in [
+    versions = [DataVersions(data_model_name=model.__name__, version=model.get_current_version() or '') for model in [
         HumanPhenotypeOntology, GeneInfo, RefseqTranscript, GeneConstraint, GeneCopyNumberSensitivity, GeneShet, Omim,
         dbNSFPGene, PrimateAI, MGI, GenCC, ClinGen,
     ]]
@@ -29,5 +29,5 @@ class Migration(migrations.Migration):
                 ('version', models.CharField(max_length=40)),
             ],
         ),
-        migrations.RunPython(get_current_versions),
+        migrations.RunPython(get_current_versions, reverse_code=migrations.RunPython.noop),
     ]

@@ -394,11 +394,14 @@ class TranscriptInfo(GeneMetadataModel):
 
 class RefseqTranscript(LoadableModel):
 
-    CURRENT_VERSION = GeneInfo.CURRENT_VERSION
-    URL = GENCODE_URL_TEMPLATE.format(path='', file='.metadata.RefSeq.gz', gencode_release=CURRENT_VERSION)
+    URL = GENCODE_URL_TEMPLATE.format(path='', file='.metadata.RefSeq.gz', gencode_release=GeneInfo.CURRENT_VERSION)
 
     transcript = models.OneToOneField(TranscriptInfo, on_delete=models.CASCADE)
     refseq_id = models.CharField(max_length=20)
+
+    @classmethod
+    def get_current_version(cls, **kwargs):
+        return GeneInfo.CURRENT_VERSION
 
     @staticmethod
     def get_file_header(f):

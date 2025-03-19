@@ -87,6 +87,3 @@ class Command(BaseCommand):
 
             gene_id_map, _ = get_genes_by_id_and_symbol()
             TranscriptInfo.bulk_create_for_genes(new_transcripts, gene_id_map)
-
-        # TODO pin dependencies together
-        RefseqReferenceDataHandler().update_records()
