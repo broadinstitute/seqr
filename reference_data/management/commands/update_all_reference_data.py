@@ -39,27 +39,20 @@ class Command(BaseCommand):
 
         if to_update[0] == GeneInfo:
             to_update = to_update[1:]
+            data_model_name = GeneInfo.__name__
+            self._update_gencode(current_versions.get(data_model_name))
+            updated.append(data_model_name)
+            # TODO update DataVersions table
 
-            # Download latest version first, and then add any genes from old releases not included in the latest release
-            # Old gene ids are used in the gene constraint table and other datasets, as well as older sequencing data
-            existing_gene_ids = set()
-            existing_transcript_ids = set()
-            new_transcripts = {}
-            for gencode_release in GeneInfo.ALL_GENCODE_VERSIONS:
-                new_transcripts.update(
-                    GeneInfo.update_records(gencode_release, existing_gene_ids, existing_transcript_ids)
-                )
-            updated.append(GeneInfo.__name__)
-
-            if new_transcripts:
-                gene_id_map, _ = get_genes_by_id_and_symbol()
-                TranscriptInfo.bulk_create_for_genes(new_transcripts, gene_id_map)
-
+        gene_ids_to_gene, gene_symbols_to_gene = get_genes_by_id_and_symbol() if to_update else (None, None)
         for data_cls in to_update:
             data_model_name = data_cls.__name__
             try:
-                data_cls.update_records(**options)
+                data_cls.update_records(
+                    gene_ids_to_gene=gene_ids_to_gene, gene_symbols_to_gene=gene_symbols_to_gene, **options,
+                )
                 updated.append(data_model_name)
+                # TODO update DataVersions table
             except Exception as e:
                 logger.error("unable to update {}: {}".format(data_model_name, e))
                 update_failed.append(data_model_name)
@@ -69,3 +62,31 @@ class Command(BaseCommand):
             logger.info("Updated: {}".format(', '.join(updated)))
         if update_failed:
             raise CommandError("Failed to Update: {}".format(', '.join(update_failed)))
+
+    @staticmethod
+    def _update_gencode(current_version):
+        # Download latest version first, and then add any genes from old releases not included in the latest release
+        # Old gene ids are used in the gene constraint table and other datasets, as well as older sequencing data
+        new_versions = GeneInfo.ALL_GENCODE_VERSIONS
+        if current_version:
+            new_versions = new_versions[:new_versions.index(current_version)]
+
+        existing_gene_ids = set()
+        existing_transcript_ids = set()
+        new_transcripts = {}
+        for gencode_release in new_versions:
+            new_transcripts.update(
+                GeneInfo.update_records(gencode_release, existing_gene_ids, existing_transcript_ids, track_symbol_changes=bool(current_version))
+            )
+
+        if new_transcripts:
+            existing_transcripts = TranscriptInfo.objects.filter(transcript_id__in=new_transcripts.keys())
+            if existing_transcripts:
+                deleted, _ = existing_transcripts.delete()
+                logger.info(f'Dropped {deleted} existing TranscriptInfo records')
+
+            gene_id_map, _ = get_genes_by_id_and_symbol()
+            TranscriptInfo.bulk_create_for_genes(new_transcripts, gene_id_map)
+
+        # TODO pin dependencies together
+        RefseqReferenceDataHandler().update_records()

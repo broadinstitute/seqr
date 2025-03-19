@@ -274,7 +274,7 @@ class GeneInfo(LoadableModel):
                 yield line
 
     @classmethod
-    def update_records(cls, gencode_release=CURRENT_VERSION, existing_gene_ids=None, existing_transcript_ids=None, symbol_changes=None, **kwargs):
+    def update_records(cls, gencode_release=CURRENT_VERSION, existing_gene_ids=None, existing_transcript_ids=None, track_symbol_changes=False, **kwargs):
         counters = defaultdict(int)
         genes = defaultdict(dict)
         transcripts = defaultdict(dict)
@@ -304,9 +304,10 @@ class GeneInfo(LoadableModel):
 
         genes_to_update = cls.objects.filter(gene_id__in=genes.keys(), gencode_release__lt=gencode_release)
         fields = set()
+        symbol_changes = []
         for existing in genes_to_update:
             new_gene = genes.pop(existing.gene_id)
-            if symbol_changes is not None and new_gene['gene_symbol'] != existing.gene_symbol:
+            if track_symbol_changes and new_gene['gene_symbol'] != existing.gene_symbol:
                 symbol_changes.append((existing.gene_id, existing.gene_symbol, new_gene['gene_symbol']))
             fields.update(new_gene.keys())
             for key, value in new_gene.items():
@@ -318,6 +319,11 @@ class GeneInfo(LoadableModel):
 
         cls.objects.bulk_create([cls(**record) for record in genes.values()])
         logger.info(f'Created {len(genes)} {cls.__name__} records')
+
+        if symbol_changes:
+            write_multiple_files([
+                (f'gene_symbol_changes__{gencode_release}', ['gene_id', 'old_symbol', 'new_symbol'], symbol_changes)
+            ],'gs://seqr-reference-data/gencode', user=None)
 
         return transcripts
 
