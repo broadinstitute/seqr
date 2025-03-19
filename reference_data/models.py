@@ -142,7 +142,7 @@ class LoadableModel(models.Model):
 
 
 class HumanPhenotypeOntology(LoadableModel):
-    
+
     URL = 'https://github.com/obophenotype/human-phenotype-ontology/releases/latest/download/hp.obo'
     HEADER = ['hpo_id', 'is_category', 'parent_id', 'name', 'definition', 'comment']
     
@@ -265,7 +265,7 @@ class GeneInfo(LoadableModel):
 
     @classmethod
     def get_file_iterator(cls, f):
-        for i, line in enumerate(super().get_file_iterator(f)):
+        for line in super().get_file_iterator(f):
             if line and not line.startswith('#'):
                 yield line
 
@@ -716,9 +716,9 @@ class MGI(GeneMetadataModel):
         super().update_records(entrez_id_to_gene=entrez_id_to_gene, **kwargs)
 
     @classmethod
-    def get_gene_for_record(cls, record, entrez_id_to_gene=None, **kwargs):
+    def get_gene_for_record(cls, record, *args, entrez_id_to_gene=None, **kwargs):
         entrez_gene = entrez_id_to_gene.get(record.pop('entrez_gene_id'))
-        gene = super().get_gene_for_record(record, **kwargs)
+        gene = super().get_gene_for_record(record, *args, **kwargs)
         return gene or entrez_gene
 
 

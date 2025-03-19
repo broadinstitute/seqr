@@ -1,5 +1,4 @@
 from django.core.management import call_command
-import mock
 
 from reference_data.models import MGI, dbNSFPGene
 from reference_data.management.tests.test_utils import ReferenceDataCommandTestCase

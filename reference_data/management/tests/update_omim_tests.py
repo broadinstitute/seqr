@@ -104,8 +104,8 @@ class UpdateOmimTest(TestCase):
         ]
         mock_file_utils_logger.info.assert_has_calls(calls)
 
-        mock_subprocess.assert_called_with('gsutil mv /mock/tmp/* gs://seqr-reference-data/omim/', stdout=-1, stderr=-2, shell=True)
-        mock_open.assert_called_with(f'/mock/tmp/parsed_omim_records__latest.txt', 'w')
+        mock_subprocess.assert_called_with('gsutil mv /mock/tmp/* gs://seqr-reference-data/omim/', stdout=-1, stderr=-2, shell=True)  # nosec
+        mock_open.assert_called_with('/mock/tmp/parsed_omim_records__latest.txt', 'w')
         self.assertEqual(mock_open.return_value.__enter__.return_value.write.call_args.args[0], CACHED_OMIM_DATA)
 
         self._assert_has_expected_omim_records()
