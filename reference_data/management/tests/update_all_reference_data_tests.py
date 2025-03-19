@@ -63,7 +63,6 @@ class UpdateAllReferenceDataTest(TestCase):
         GeneInfo.objects.all().delete()
         call_command('update_all_reference_data', '--omim-key=test_key')
 
-        # TODO test gene passthrough
         calls = [
             mock.call(39, set(), set()),
             mock.call(31, set(), set()),
