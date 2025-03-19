@@ -800,3 +800,7 @@ class ClinGen(GeneMetadataModel):
             'triplosensitivity': record['triplosensitivity'].replace(' for Triplosensitivity', ''),
             'href': record['online_report'],
         }
+
+class DataVersions(models.Model):
+    data_model_name = models.CharField(max_length=30, primary_key=True)
+    version = models.CharField(max_length=40)
