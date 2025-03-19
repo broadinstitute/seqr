@@ -528,7 +528,7 @@ class Omim(LoadableModel):
 
         json_fields = ['mim_number', 'phenotype_mim_number', 'phenotype_description', 'phenotype_inheritance',
                        'chrom', 'start', 'end',]
-    
+
     @classmethod
     def get_url(cls, omim_key=None, **kwargs):
         return cls.OMIM_URL.format(omim_key=omim_key) if omim_key else cls.CACHED_OMIM_URL
