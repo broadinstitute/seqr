@@ -8,10 +8,6 @@ from reference_data.models import GeneInfo, Omim, dbNSFPGene, GeneConstraint, Ge
     RefseqTranscript, HumanPhenotypeOntology, MGI, PrimateAI, LoadableModel
 
 
-def omim_exception(omim_key):
-    raise Exception('Omim exception, key: '+omim_key)
-
-
 def primate_ai_exception():
     raise Exception('Primate_AI failed')
 
@@ -123,21 +119,3 @@ class UpdateAllReferenceDataTest(TestCase):
             mock.call('Updated: omim')
         ]
         self.mock_logger.info.assert_has_calls(calls)
-
-    def test_omim_exception(self):
-        self.mock_omim.side_effect = omim_exception
-        call_command('update_all_reference_data', '--omim=test_key', *SKIP_ARGS)
-
-        self.mock_update_gencode.assert_not_called()
-        self.mock_omim.assert_called_with('test_key')
-        self.mock_update_records.assert_not_called()
-        self.mock_update_hpo.assert_not_called()
-
-        calls = [
-            mock.call('Done'),
-            mock.call('Failed to Update: omim')
-        ]
-        self.mock_logger.info.assert_has_calls(calls)
-
-        self.mock_logger.error.assert_called_with("unable to update omim: Omim exception, key: test_key")
-

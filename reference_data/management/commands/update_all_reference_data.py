@@ -69,17 +69,12 @@ class Command(BaseCommand):
                 gene_id_map, _ = get_genes_by_id_and_symbol()
                 TranscriptInfo.bulk_create_for_genes(new_transcripts, gene_id_map)
 
-        if not options["skip_omim"]:
-            try:
-                omim_handler = CachedOmimReferenceDataHandler() if options['use_cached_omim'] else \
-                    OmimReferenceDataHandler(options["omim_key"])
-                omim_handler.update_records()
-                updated.append('omim')
-            except Exception as e:
-                logger.error("unable to update omim: {}".format(e))
-                update_failed.append('omim')
-
-        for source, data_handler in REFERENCE_DATA_SOURCES.items():
+        reference_data_sources = {
+            'omim': CachedOmimReferenceDataHandler if options['use_cached_omim'] else \
+                    lambda: OmimReferenceDataHandler(options.get('omim_key')),
+            **REFERENCE_DATA_SOURCES,
+        }
+        for source, data_handler in reference_data_sources.items():
             if not options["skip_{}".format(source)]:
                 try:
                     if data_handler:
