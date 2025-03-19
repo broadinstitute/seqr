@@ -547,7 +547,7 @@ class Omim(LoadableModel):
             elif not line or line.startswith("#"):
                 continue
             elif 'account is inactive' in line or 'account has expired' in line:
-                raise Exception(line)
+                raise ValueError(line)
             elif header_fields is None:
                 raise ValueError("Header row not found in genemap2 file before line {}: {}".format(i, line))
 

@@ -1,11 +1,7 @@
-import logging
-import traceback
 from django.core.management.base import BaseCommand
 
 from reference_data.utils.gene_utils import get_genes_by_id_and_symbol
 from reference_data.models import GeneMetadataModel
-
-logger = logging.getLogger(__name__)
 
 
 class ReferenceDataHandler(object):
@@ -20,10 +16,7 @@ class ReferenceDataHandler(object):
         }
 
     def update_records(self, **kwargs):
-        try:
-            self.model_cls.update_records(**self.gene_reference, **kwargs)
-        except Exception as e:
-            logger.error(str(e), extra={'traceback': traceback.format_exc()})
+        self.model_cls.update_records(**self.gene_reference, **kwargs)
 
 
 class GeneCommand(BaseCommand):

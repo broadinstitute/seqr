@@ -30,9 +30,8 @@ class UpdateOmimTest(TestCase):
     fixtures = ['users', 'reference_data']
 
     @responses.activate
-    @mock.patch('reference_data.management.commands.utils.update_utils.logger')
     @mock.patch('reference_data.management.commands.update_omim.os')
-    def test_update_omim_command_exceptions(self, mock_os, mock_logger):
+    def test_update_omim_command_exceptions(self, mock_os):
         url = 'https://data.omim.org/downloads/test_key/genemap2.txt'
         responses.add(responses.HEAD, url, headers={"Content-Length": "1024"})
         responses.add(responses.GET, url, body='This account has expired')
@@ -49,23 +48,27 @@ class UpdateOmimTest(TestCase):
         self.assertEqual(str(ce.exception), 'omim_key is required')
 
         # Test omim account expired
-        call_command('update_omim', '--omim-key=test_key')
-        mock_logger.error.assert_called_with('This account has expired', extra={'traceback': mock.ANY})
+        with self.assertRaises(ValueError) as e:
+            call_command('update_omim', '--omim-key=test_key')
+        self.assertEqual(str(e.exception),'This account has expired')
 
         # Test bad omim data header
-        call_command('update_omim', '--omim-key=test_key')
-        mock_logger.error.assert_called_with('Header row not found in genemap2 file before line 0: chr1	1	27600000	1p36		607413	OR4F29	Alzheimer disease neuronal thread protein						', extra={'traceback': mock.ANY})
+        with self.assertRaises(ValueError) as e:
+            call_command('update_omim', '--omim-key=test_key')
+        self.assertEqual(str(e.exception), 'Header row not found in genemap2 file before line 0: chr1	1	27600000	1p36		607413	OR4F29	Alzheimer disease neuronal thread protein						')
 
         # Test bad phenotype field in the record
-        call_command('update_omim', '--omim-key=test_key')
-        record = json.loads(re.search(r'No phenotypes found: ({.*})', mock_logger.error.call_args.args[0]).group(1))
+        with self.assertRaises(ValueError) as e:
+            call_command('update_omim', '--omim-key=test_key')
+        record = json.loads(re.search(r'No phenotypes found: ({.*})', str(e.exception)).group(1))
         self.assertDictEqual(record, {"gene_name": "Basal cell carcinoma, susceptibility to, 1", "mim_number": "605462", "comments": "associated with rs7538876", "mouse_gene_symbol/id": "", "phenotypes": "{x}, 605462 (5)", "genomic_position_end": "27600000", "ensembl_gene_id": "", "gene/locus_and_other_related_symbols": "BCC1", "approved_gene_symbol": "", "entrez_gene_id": "100307118", "computed_cyto_location": "", "cyto_location": "1p36", "#_chromosome": "chr1", "genomic_position_start": "0"})
 
         self.assertEqual(Omim.objects.all().count(), 3)
 
         GeneInfo.objects.all().delete()
-        call_command('update_omim', '--omim-key=test_key')
-        mock_logger.error.assert_called_with('Related data is missing to load Omim: gene_ids_to_gene, gene_symbols_to_gene', extra={'traceback': mock.ANY})
+        with self.assertRaises(ValueError) as e:
+            call_command('update_omim', '--omim-key=test_key')
+        self.assertEqual(str(e.exception), 'Related data is missing to load Omim: gene_ids_to_gene, gene_symbols_to_gene')
 
 
     @responses.activate
