@@ -198,7 +198,7 @@ class HumanPhenotypeOntology(LoadableModel):
         for model in models:
             model.category_id = cls._get_category_id(parent_id_map, model.hpo_id)
         return models
-            
+
     @staticmethod
     def _get_category_id(parent_id_map, hpo_id):
         if hpo_id == 'HP:0000001':
