@@ -1,4 +1,5 @@
 import logging
+from collections import OrderedDict
 from django.core.management.base import BaseCommand, CommandError
 
 from reference_data.utils.gene_utils import get_genes_by_id_and_symbol
@@ -30,29 +31,29 @@ class Command(BaseCommand):
         parser.add_argument('--omim-key', help="OMIM key provided with registration at http://data.omim.org/downloads")
 
     def handle(self, *args, **options):
-        current_versions = dict(DataVersions.objects.values_list('data_model_name', 'version'))
-        to_update = [
-            model for model in REFERENCE_DATA_MODELS if current_versions.get(model.__name__) != model.CURRENT_VERSION
-        ]
+        current_versions ={dv.data_model_name: dv for dv in DataVersions.objects.all()}
+        latest_versions = {model: model.get_current_version() for model in REFERENCE_DATA_MODELS}
+        to_update = OrderedDict([
+            (model, version) for model, version in latest_versions.items()
+            if current_versions.get(model.__name__).version != version
+        ])
         updated = []
         update_failed = []
 
-        if to_update[0] == GeneInfo:
-            to_update = to_update[1:]
+        if GeneInfo in to_update:
+            latest_version = to_update.pop(GeneInfo)
             data_model_name = GeneInfo.__name__
             self._update_gencode(current_versions.get(data_model_name))
-            updated.append(data_model_name)
-            # TODO update DataVersions table
+            self._track_success_updates(data_model_name, latest_version, current_versions, updated)
 
         gene_ids_to_gene, gene_symbols_to_gene = get_genes_by_id_and_symbol() if to_update else (None, None)
-        for data_cls in to_update:
+        for data_cls, latest_version in to_update:
             data_model_name = data_cls.__name__
             try:
                 data_cls.update_records(
                     gene_ids_to_gene=gene_ids_to_gene, gene_symbols_to_gene=gene_symbols_to_gene, **options,
                 )
-                updated.append(data_model_name)
-                # TODO update DataVersions table
+                self._track_success_updates(data_model_name, latest_version, current_versions, updated)
             except Exception as e:
                 logger.error("unable to update {}: {}".format(data_model_name, e))
                 update_failed.append(data_model_name)
@@ -64,20 +65,30 @@ class Command(BaseCommand):
             raise CommandError("Failed to Update: {}".format(', '.join(update_failed)))
 
     @staticmethod
-    def _update_gencode(current_version):
+    def _track_success_updates(data_model_name, latest_version, current_versions, updated):
+        current_data_version = current_versions.get(data_model_name)
+        updated.append(data_model_name)
+        if current_data_version:
+            current_data_version.version = latest_version
+            current_data_version.save()
+        else:
+            DataVersions.objects.create(data_model_name=data_model_name, version=latest_version)
+
+    @staticmethod
+    def _update_gencode(current_data_version):
         # Download latest version first, and then add any genes from old releases not included in the latest release
         # Old gene ids are used in the gene constraint table and other datasets, as well as older sequencing data
         new_versions = GeneInfo.ALL_GENCODE_VERSIONS
-        if current_version:
-            new_versions = new_versions[:new_versions.index(current_version)]
+        if current_data_version:
+            new_versions = new_versions[:new_versions.index(current_data_version.version)]
 
         existing_gene_ids = set()
         existing_transcript_ids = set()
         new_transcripts = {}
         for gencode_release in new_versions:
-            new_transcripts.update(
-                GeneInfo.update_records(gencode_release, existing_gene_ids, existing_transcript_ids, track_symbol_changes=bool(current_version))
-            )
+            new_transcripts.update(GeneInfo.update_records(
+                gencode_release, existing_gene_ids, existing_transcript_ids, track_symbol_changes=bool(current_data_version),
+            ))
 
         if new_transcripts:
             existing_transcripts = TranscriptInfo.objects.filter(transcript_id__in=new_transcripts.keys())
