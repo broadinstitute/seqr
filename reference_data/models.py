@@ -145,7 +145,7 @@ class HumanPhenotypeOntology(LoadableModel):
 
     URL = 'https://github.com/obophenotype/human-phenotype-ontology/releases/latest/download/hp.obo'
     HEADER = ['hpo_id', 'is_category', 'parent_id', 'name', 'definition', 'comment']
-    
+
     hpo_id = models.CharField(max_length=20, null=False, blank=False, unique=True, db_index=True)
     parent_id = models.CharField(max_length=20, null=True, blank=True)
     # hpo id of top-level phenotype category (eg. 'cardiovascular')
