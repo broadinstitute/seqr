@@ -1,6 +1,7 @@
 import csv
 
 from collections import defaultdict
+from datetime import datetime
 from django.db import models, transaction
 import gzip
 import json
@@ -764,8 +765,8 @@ class GenCC(GeneMetadataModel):
 
     @classmethod
     def get_current_version(cls, **kwargs):
-        # TODO
-        raise NotImplementedError
+        # GenCC does not provide versioning for their data, but updates are added regularly
+        datetime.now().strftime('%Y-%m-%d')
 
     @staticmethod
     def get_file_header(f):
