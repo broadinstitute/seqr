@@ -1,12 +1,12 @@
 import csv
 
 from collections import defaultdict
-from datetime import datetime
 from django.db import models, transaction
 import gzip
 import json
 import logging
 import re
+import requests
 from tqdm import tqdm
 
 from reference_data.utils.dbnsfp_utils import DBNSFP_FIELD_MAP, DBNSFP_EXCLUDE_FIELDS
@@ -765,8 +765,8 @@ class GenCC(GeneMetadataModel):
 
     @classmethod
     def get_current_version(cls, **kwargs):
-        # GenCC does not provide versioning for their data, but updates are added regularly
-        datetime.now().strftime('%Y-%m-%d')
+        response = requests.head(cls.get_url(**kwargs), timeout=60)
+        return response.headers['Last-Modified']
 
     @staticmethod
     def get_file_header(f):
