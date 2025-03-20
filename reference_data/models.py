@@ -92,6 +92,11 @@ class LoadableModel(models.Model):
         return cls.CURRENT_VERSION
 
     @classmethod
+    def _get_file_last_modified(cls, **kwargs):
+        response = requests.head(cls.get_url(**kwargs), timeout=60)
+        return response.headers['Last-Modified']
+
+    @classmethod
     def parse_record(cls, record, **kwargs):
         yield record
 
@@ -557,8 +562,7 @@ class Omim(LoadableModel):
 
     @classmethod
     def get_current_version(cls, **kwargs):
-        # TODO
-        raise NotImplementedError
+        return cls._get_file_last_modified(**kwargs)
 
     @staticmethod
     def get_file_header(f):
@@ -768,8 +772,7 @@ class GenCC(GeneMetadataModel):
 
     @classmethod
     def get_current_version(cls, **kwargs):
-        response = requests.head(cls.get_url(**kwargs), timeout=60)
-        return response.headers['Last-Modified']
+        return cls._get_file_last_modified(**kwargs)
 
     @staticmethod
     def get_file_header(f):

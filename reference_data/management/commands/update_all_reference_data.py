@@ -32,7 +32,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         current_versions ={dv.data_model_name: dv for dv in DataVersions.objects.all()}
-        latest_versions = {model: model.get_current_version() for model in REFERENCE_DATA_MODELS}
+        latest_versions = {model: model.get_current_version(**options) for model in REFERENCE_DATA_MODELS}
         to_update = OrderedDict([
             (model, version) for model, version in latest_versions.items()
             if current_versions.get(model.__name__).version != version
@@ -66,6 +66,7 @@ class Command(BaseCommand):
 
     @staticmethod
     def _track_success_updates(data_model_name, latest_version, current_versions, updated):
+        #  TODO log version change
         current_data_version = current_versions.get(data_model_name)
         updated.append(data_model_name)
         if current_data_version:
