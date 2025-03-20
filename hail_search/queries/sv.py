@@ -36,7 +36,7 @@ class SvHailTableQuery(BaseHailTableQuery):
 
     POPULATIONS = {
         'sv_callset': {'hemi': None, 'sort': 'callset_af'},
-        'gnomad_svs': {'id': 'ID', 'ac': None, 'an': None, 'hom': None, 'hemi': None, 'het': None, 'sort': 'gnomad'},
+        'gnomad_svs': {'id': 'ID', 'ac': None, 'an': None, 'hom': 'N_HOM', 'hemi': None, 'het': 'N_HET', 'sort': 'gnomad'},
     }
     POPULATION_FIELDS = {'sv_callset': 'gt_stats'}
     PREDICTION_FIELDS_CONFIG = {
@@ -64,8 +64,8 @@ class SvHailTableQuery(BaseHailTableQuery):
     def _get_sample_type(cls, *args):
         return cls.DATA_TYPE.split('_')[-1]
 
-    def _read_project_table(self, project_guid: str, sample_type: str):
-        ht = super()._read_project_table(project_guid, sample_type)
+    def _read_project_table(self, project_guid: str, sample_type: str, **kwargs):
+        ht = super()._read_project_table(project_guid, sample_type, **kwargs)
         return ht.annotate_globals(sample_type=sample_type)
 
     def import_filtered_table(self, *args, **kwargs):
@@ -76,7 +76,7 @@ class SvHailTableQuery(BaseHailTableQuery):
         ht = self._filter_annotated_table(ht, is_comp_het=self._has_comp_het_search, **kwargs)
 
         self._load_table_kwargs['variant_ht'] = ht.select()
-        families_ht, comp_het_families_ht = self._import_families_tables(*args, **kwargs)
+        families_ht, comp_het_families_ht = self._import_families_tables(*args, skip_missing_field='family_entries', **kwargs)
 
         if comp_het_families_ht is not None:
             self._comp_het_ht = self._annotate_families_table_annotations(comp_het_families_ht, ht, is_comp_het=True)

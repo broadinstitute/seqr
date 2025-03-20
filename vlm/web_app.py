@@ -4,6 +4,7 @@ import logging
 import os
 import traceback
 
+from vlm.auth import authenticate
 from vlm.match import get_variant_match, GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 
 logger = logging.getLogger(__name__)
@@ -36,6 +37,7 @@ async def status(request: web.Request) -> web.Response:
 
 
 async def match(request: web.Request) -> web.Response:
+    await authenticate(request)
     return web.json_response(get_variant_match(request.query))
 
 

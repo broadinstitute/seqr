@@ -330,7 +330,7 @@ const GeneDetailContent = React.memo(({ gene, user, updateGeneNote: dispatchUpda
     { title: 'Protein Atlas', link: `http://www.proteinatlas.org/${gene.geneId}/tissue`, description: 'Detailed protein and transcript expression' },
     { title: 'NCBI Gene', link: `http://www.ncbi.nlm.nih.gov/gene/?term=${gene.geneId}`, description: 'NCBI\'s gene information resource' },
     { title: 'GTEx Portal', link: `http://www.gtexportal.org/home/gene/${gene.geneId}`, description: 'Reference of public data for this gene' },
-    { title: 'Monarch', link: `http://monarchinitiative.org/gene/ENSEMBL:${gene.geneId}`, description: 'Cross-species gene and phenotype resource' },
+    { title: 'Monarch', link: `https://monarchinitiative.org/explore?search=${gene.geneSymbol}#search`, description: 'Cross-species gene and phenotype resource' },
     { title: 'Decipher', link: getDecipherGeneLink(gene), description: 'DatabasE of genomiC varIation and Phenotype in Humans using Ensembl Resources' },
     { title: 'UniProt', link: `http://www.uniprot.org/uniprot?query=${gene.geneId}+AND(reviewed:true)+AND(organism_id:9606)`, description: 'Protein sequence and functional information' },
     { title: 'Geno2MP', link: `https://geno2mp.gs.washington.edu/Geno2MP/#/gene/${gene.geneSymbol}/gene/0/0/0`, description: 'Genotype to Mendelian Phenotype' },

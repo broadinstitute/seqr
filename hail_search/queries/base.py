@@ -341,7 +341,7 @@ class BaseHailTableQuery(object):
 
         return self._merge_filtered_hts(filtered_comp_het_project_hts, filtered_project_hts, n_partitions)
 
-    def _load_project_hts(self, project_samples, n_partitions, **kwargs):
+    def _load_project_hts(self, project_samples, n_partitions, skip_missing_field=None, **kwargs):
         # Need to chunk tables or else evaluating table globals throws LineTooLong exception
         # However, minimizing number of chunks minimizes number of aggregations/ evals and improves performance
         # Adapted from https://discuss.hail.is/t/importing-many-sample-specific-vcfs/2002/8
@@ -349,11 +349,13 @@ class BaseHailTableQuery(object):
         all_project_hts = []
         project_hts = []
         sample_data = {}
+        skipped = 0
 
         for project_guid, project_sample_type_data in project_samples.items():
             for sample_type, family_sample_data in project_sample_type_data.items():
-                project_ht = self._read_project_data(project_guid, sample_type)
+                project_ht = self._read_project_data(project_guid, sample_type, skip_missing_field=skip_missing_field)
                 if project_ht is None:
+                    skipped += 1
                     continue
                 project_hts.append(project_ht)
                 sample_data.update(family_sample_data)
@@ -367,6 +369,10 @@ class BaseHailTableQuery(object):
         if project_hts:
             ht = self._prefilter_merged_project_hts(project_hts, n_partitions, **kwargs)
             all_project_hts.append((ht, sample_data))
+
+        if skipped:
+            logger.info(f'Skipped {skipped} projects with no matched variants')
+
         return all_project_hts
 
     def _import_families_tables(self, project_samples: dict, num_families: int, **kwargs):
@@ -425,11 +431,11 @@ class BaseHailTableQuery(object):
         sample_data = project_sample_type_data[sample_type]
         return ht, sample_data
 
-    def _read_project_table(self, project_guid: str, sample_type: str):
-        return self._read_table(f'projects/{sample_type}/{project_guid}.ht')
+    def _read_project_table(self, project_guid: str, sample_type: str, **kwargs):
+        return self._read_table(f'projects/{sample_type}/{project_guid}.ht', **kwargs)
 
-    def _read_project_data(self, project_guid: str, sample_type: str):
-        project_ht = self._read_project_table(project_guid, sample_type)
+    def _read_project_data(self, project_guid: str, sample_type: str, **kwargs):
+        project_ht = self._read_project_table(project_guid, sample_type, **kwargs)
         if project_ht is not None:
             project_ht = project_ht.select_globals('sample_type', 'family_guids', 'family_samples')
         return project_ht
@@ -979,7 +985,7 @@ class BaseHailTableQuery(object):
 
     def _get_annotation_override_fields(self, annotations, override_fields=None, **kwargs):
         override_fields = override_fields or self.ANNOTATION_OVERRIDE_FIELDS
-        return {k: annotations[k] for k in override_fields if k in annotations}
+        return {k: annotations[k] for k in override_fields if annotations.get(k)}
 
     def _get_annotation_override_filters(self, ht, annotation_overrides):
         return []

@@ -91,7 +91,7 @@ class UpdateAllReferenceDataTest(TestCase):
         call_command('update_all_reference_data', '--omim-key=test_key')
 
         calls = [
-            mock.call(39, reset=True),
+            mock.call(39),
             mock.call(31),
             mock.call(29),
             mock.call(28),
