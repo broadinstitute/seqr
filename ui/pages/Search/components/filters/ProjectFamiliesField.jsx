@@ -4,10 +4,38 @@ import { connect } from 'react-redux'
 import { FormSpy } from 'react-final-form'
 
 import { configuredField } from 'shared/components/form/FormHelpers'
-import { AddProjectButton } from 'shared/components/panel/search/ProjectsField'
-import { ButtonLink } from 'shared/components/StyledComponents'
+import { ButtonRadioGroup, BooleanCheckbox } from 'shared/components/form/Inputs'
+import { HorizontalSpacer } from 'shared/components/Spacers'
+import { ButtonLink, InlineHeader } from 'shared/components/StyledComponents'
+import { GENOME_VERSION_OPTIONS } from 'shared/utils/constants'
 import { loadProjectGroupContext } from '../../reducers'
 import ProjectFamiliesFilter from './ProjectFamiliesFilter'
+import { AddProjectButton } from './ProjectsField'
+
+const INCLUDE_ALL_PROJECTS = 'allGenomeProjectFamilies'
+
+const INCLUDE_ALL_PROJECTS_FIELD = {
+  name: INCLUDE_ALL_PROJECTS,
+  component: ButtonRadioGroup,
+  options: [
+    ...GENOME_VERSION_OPTIONS.map(opt => ({ ...opt, color: 'black' })),
+    { value: '', text: 'Custom', color: 'grey' },
+  ],
+}
+
+const UNSOLVED_ONLY_FIELD = {
+  name: 'unsolvedFamiliesOnly',
+  component: BooleanCheckbox,
+  label: 'Unsolved Families Only',
+  inline: true,
+}
+
+const TRIO_ONLY_FIELD = {
+  name: 'trioFamiliesOnly',
+  component: BooleanCheckbox,
+  label: 'Trio+ Families Only',
+  inline: true,
+}
 
 const processAddedProject = result => ({ projectGuid: result.key })
 
@@ -52,9 +80,18 @@ class AllProjectFamiliesField extends React.PureComponent {
 const SUBSCRIPTION = { values: true }
 
 export default props => (
-  <FormSpy subscription={SUBSCRIPTION}>
-    {({ values }) => (
-      <AllProjectFamiliesField {...props} numProjects={(values.projectFamilies || []).length} />
-    )}
-  </FormSpy>
+  <div>
+    <InlineHeader content="Include All Projects: " />
+    {configuredField(INCLUDE_ALL_PROJECTS_FIELD)}
+    <HorizontalSpacer width={20} />
+    {configuredField(UNSOLVED_ONLY_FIELD)}
+    <HorizontalSpacer width={20} />
+    {configuredField(TRIO_ONLY_FIELD)}
+    <FormSpy subscription={SUBSCRIPTION}>
+      {({ values }) => (
+        !values[INCLUDE_ALL_PROJECTS] &&
+          <AllProjectFamiliesField {...props} numProjects={(values.projectFamilies || []).length} />
+      )}
+    </FormSpy>
+  </div>
 )

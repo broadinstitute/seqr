@@ -26,7 +26,7 @@ defusedxml==0.7.1
     # via
     #   python3-openid
     #   social-auth-core
-django==4.2.18
+django==4.2.20
     # via
     #   -r requirements.in
     #   django-anymail
@@ -182,4 +182,3 @@ urllib3==1.26.19
     #   requests
 whitenoise==6.3.0
     # via -r requirements.in
-zipp>=3.19.1 # not directly required, pinned by Snyk to avoid a vulnerability

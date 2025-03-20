@@ -839,7 +839,7 @@ class HailSearchTestCase(AioHTTPTestCase):
 
         annotations = {'splice_ai': '0.0'}  # Ensures no variants are filtered out by annotation/path filters
         await self._assert_expected_search(
-            [VARIANT1, VARIANT2, VARIANT4], frequencies={'gnomad_genomes': {'af': 0.01}}, omit_data_type='SV_WES',
+            [VARIANT1, VARIANT2, VARIANT4], frequencies={'gnomad_genomes': {'af': 0.01, 'hh': 10}}, omit_data_type='SV_WES',
             annotations=annotations, pathogenicity={'clinvar': ['pathogenic', 'likely_pathogenic', 'vus_or_conflicting']},
         )
 
@@ -856,12 +856,18 @@ class HailSearchTestCase(AioHTTPTestCase):
             [VARIANT1, VARIANT2, MITO_VARIANT1, MITO_VARIANT3], pathogenicity=pathogenicity, sample_data=FAMILY_2_ALL_SAMPLE_DATA,
         )
 
+        exclude = {'clinvar': pathogenicity['clinvar'][1:]}
         pathogenicity['clinvar'] = pathogenicity['clinvar'][:1]
         annotations = {'SCREEN': ['CTCF-only', 'DNase-only'], 'UTRAnnotator': ['5_prime_UTR_stop_codon_loss_variant']}
         selected_transcript_variant_2 = {**VARIANT2, 'selectedMainTranscriptId': 'ENST00000408919'}
         await self._assert_expected_search(
             [VARIANT1, selected_transcript_variant_2, VARIANT4, MITO_VARIANT3], pathogenicity=pathogenicity, annotations=annotations,
             sample_data=FAMILY_2_ALL_SAMPLE_DATA,
+        )
+
+        await self._assert_expected_search(
+            [VARIANT1, VARIANT4, MITO_VARIANT3], exclude=exclude, pathogenicity=pathogenicity,
+            annotations=annotations, sample_data=FAMILY_2_ALL_SAMPLE_DATA,
         )
 
         await self._assert_expected_search(
@@ -986,7 +992,15 @@ class HailSearchTestCase(AioHTTPTestCase):
         await self._assert_expected_search(
             [MULTI_DATA_TYPE_COMP_HET_VARIANT2, [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], [GCNV_VARIANT3, GCNV_VARIANT4]],
             inheritance_mode='recessive',
-            annotations={**annotations_1, 'structural': ['gCNV_DEL']}, annotations_secondary={**annotations_2, **gcnv_annotations_1},
+            annotations={**annotations_1, 'structural': ['gCNV_DEL'], 'structural_consequence': ['INTRONIC']},
+            annotations_secondary={**annotations_2, **gcnv_annotations_1},
+            gene_ids=['ENSG00000277258', 'ENSG00000275023'], intervals=[['1', 38717636, 38724781], ['17', 38717636, 38724781]],
+        )
+
+        await self._assert_expected_search(
+            [MULTI_DATA_TYPE_COMP_HET_VARIANT2, [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4]],
+            inheritance_mode='recessive', annotations={**annotations_1, 'structural': [], 'structural_consequence': []},
+            annotations_secondary=gcnv_annotations_2,
             gene_ids=['ENSG00000277258', 'ENSG00000275023'], intervals=[['1', 38717636, 38724781], ['17', 38717636, 38724781]],
         )
 

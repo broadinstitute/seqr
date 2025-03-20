@@ -7,7 +7,7 @@ import json
 import logging
 import re
 
-from reference_data.models import GENOME_VERSION_LOOKUP
+from reference_data.models import GENOME_VERSION_LOOKUP, GENOME_VERSION_GRCh38
 from seqr.models import Family, Sample, SavedVariant, Project, Individual
 from seqr.utils.communication_utils import safe_post_to_slack, send_project_email
 from seqr.utils.file_utils import file_iter, list_files, is_google_bucket_file_path
@@ -15,7 +15,6 @@ from seqr.utils.search.add_data_utils import notify_search_data_loaded, update_a
 from seqr.utils.search.utils import parse_valid_variant_id
 from seqr.utils.search.hail_search_utils import hail_variant_multi_lookup, search_data_type
 from seqr.utils.xpos_utils import get_xpos, CHROMOSOMES, MIN_POS, MAX_POS
-from seqr.views.apis.data_manager_api import DATA_TYPE_MAP
 from seqr.views.utils.airtable_utils import AirtableSession, LOADABLE_PDO_STATUSES, AVAILABLE_PDO_STATUS
 from seqr.views.utils.dataset_utils import match_and_update_search_samples
 from seqr.views.utils.export_utils import write_multiple_files
@@ -36,6 +35,7 @@ RUN_PATH_FIELDS = ['genome_version', 'dataset_type', 'run_version', 'file_name']
 DATASET_TYPE_MAP = {'GCNV': Sample.DATASET_TYPE_SV_CALLS}
 USER_EMAIL = 'manage_command'
 MAX_LOOKUP_VARIANTS = 1000
+MAX_RELOAD_VARIANTS = 100000
 RELATEDNESS_CHECK_NAME = 'relatedness_check'
 
 PDO_COPY_FIELDS = [
@@ -375,7 +375,7 @@ class Command(BaseCommand):
             individual = sample_individual_map[individual_id]
             filter_flags = {}
             for flag in record['filter_flags']:
-                flag = '{}_{}'.format(flag, DATA_TYPE_MAP[sample_type.lower()]) if flag == 'coverage' else flag
+                flag = '{}_{}'.format(flag, 'exome' if sample_type.lower() == 'wes' else 'genome') if flag == 'coverage' else flag
                 flag_col = QC_FILTER_FLAG_COL_MAP.get(flag, flag)
                 filter_flags[flag] = record[flag_col]
 
@@ -433,9 +433,26 @@ class Command(BaseCommand):
 
             variant_models = variant_models.exclude(variant_id__in=updated_variants_by_id.keys())
 
-        chromosomes = (chromosomes or CHROMOSOMES) if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS else [None]
+        chromosomes = cls._get_chroms_to_reload(chromosomes, dataset_type, genome_version, variant_models)
+        if chromosomes is None:
+            return
+
         for chrom in chromosomes:
             cls._reload_shared_variant_annotations_by_chrom(chrom, variant_models, data_type, genome_version, variant_type_summary)
+
+    @staticmethod
+    def _get_chroms_to_reload(chromosomes, dataset_type, genome_version, variant_models):
+        if dataset_type != Sample.DATASET_TYPE_VARIANT_CALLS:
+            return [None]
+        if chromosomes:
+            return chromosomes
+
+        num_reload = variant_models.count()
+        if genome_version == GENOME_VERSION_LOOKUP[GENOME_VERSION_GRCh38] and num_reload > MAX_RELOAD_VARIANTS:
+            logger.info(f'Skipped reloading all {num_reload} saved variant annotations for {dataset_type} {genome_version}')
+            return None
+
+        return CHROMOSOMES
 
     @classmethod
     def _reload_shared_variant_annotations_by_chrom(cls, chrom, variant_models, data_type, genome_version, variant_type_summary):

@@ -7,14 +7,12 @@ import { getUser } from 'redux/selectors'
 import { Error404, Error401 } from 'shared/components/page/Errors'
 
 import Anvil from './components/Anvil'
-import CustomSearch from './components/CustomSearch'
 import FamilyMetadata from './components/FamilyMetadata'
 import Gregor from './components/Gregor'
 import SeqrStats from './components/SeqrStats'
 import VariantMetadata from './components/VariantMetadata'
 
 const LOCAL_REPORT_PAGES = [
-  { path: 'custom_search', params: '/:searchHash?', component: CustomSearch },
   { path: 'family_metadata', params: '/:projectGuid?', component: FamilyMetadata },
   { path: 'variant_metadata', params: '/:projectGuid?', component: VariantMetadata },
   { path: 'seqr_stats', component: SeqrStats },

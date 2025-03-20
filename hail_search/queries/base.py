@@ -341,7 +341,7 @@ class BaseHailTableQuery(object):
 
         return self._merge_filtered_hts(filtered_comp_het_project_hts, filtered_project_hts, n_partitions)
 
-    def _load_project_hts(self, project_samples, n_partitions, **kwargs):
+    def _load_project_hts(self, project_samples, n_partitions, skip_missing_field=None, **kwargs):
         # Need to chunk tables or else evaluating table globals throws LineTooLong exception
         # However, minimizing number of chunks minimizes number of aggregations/ evals and improves performance
         # Adapted from https://discuss.hail.is/t/importing-many-sample-specific-vcfs/2002/8
@@ -349,11 +349,13 @@ class BaseHailTableQuery(object):
         all_project_hts = []
         project_hts = []
         sample_data = {}
+        skipped = 0
 
         for project_guid, project_sample_type_data in project_samples.items():
             for sample_type, family_sample_data in project_sample_type_data.items():
-                project_ht = self._read_project_data(project_guid, sample_type)
+                project_ht = self._read_project_data(project_guid, sample_type, skip_missing_field=skip_missing_field)
                 if project_ht is None:
+                    skipped += 1
                     continue
                 project_hts.append(project_ht)
                 sample_data.update(family_sample_data)
@@ -367,6 +369,10 @@ class BaseHailTableQuery(object):
         if project_hts:
             ht = self._prefilter_merged_project_hts(project_hts, n_partitions, **kwargs)
             all_project_hts.append((ht, sample_data))
+
+        if skipped:
+            logger.info(f'Skipped {skipped} projects with no matched variants')
+
         return all_project_hts
 
     def _import_families_tables(self, project_samples: dict, num_families: int, **kwargs):
@@ -425,11 +431,11 @@ class BaseHailTableQuery(object):
         sample_data = project_sample_type_data[sample_type]
         return ht, sample_data
 
-    def _read_project_table(self, project_guid: str, sample_type: str):
-        return self._read_table(f'projects/{sample_type}/{project_guid}.ht')
+    def _read_project_table(self, project_guid: str, sample_type: str, **kwargs):
+        return self._read_table(f'projects/{sample_type}/{project_guid}.ht', **kwargs)
 
-    def _read_project_data(self, project_guid: str, sample_type: str):
-        project_ht = self._read_project_table(project_guid, sample_type)
+    def _read_project_data(self, project_guid: str, sample_type: str, **kwargs):
+        project_ht = self._read_project_table(project_guid, sample_type, **kwargs)
         if project_ht is not None:
             project_ht = project_ht.select_globals('sample_type', 'family_guids', 'family_samples')
         return project_ht
@@ -710,7 +716,9 @@ class BaseHailTableQuery(object):
         return ht
 
     def _filter_annotated_table(self, ht, gene_ids=None, rs_ids=None, frequencies=None, in_silico=None, pathogenicity=None,
-                                parsed_annotations=None, is_comp_het=False, **kwargs):
+                                parsed_annotations=None, is_comp_het=False, exclude=None, **kwargs):
+
+        ht = self._filter_excluded(ht, exclude)
 
         ht = self._filter_by_gene_ids(ht, hl.set(gene_ids) if gene_ids else None)
 
@@ -728,6 +736,9 @@ class BaseHailTableQuery(object):
         return ht.annotate(
             **{FILTERED_GENE_TRANSCRIPTS: ht[cls.TRANSCRIPTS_FIELD].filter(lambda t: gene_ids.contains(t.gene_id))}
         )
+
+    def _filter_excluded(self, ht, exclude):
+        return ht
 
     def _filter_by_gene_ids(self, ht, gene_ids):
         if gene_ids is None:
@@ -830,12 +841,13 @@ class BaseHailTableQuery(object):
                     pop_filters.append(pop_expr[ac_field] <= freqs['ac'])
 
             if freqs.get('hh') is not None:
-                hom_field = pop_config['hom']
-                hemi_field = pop_config['hemi']
-                if hom_field:
-                    pop_filters.append(pop_expr[hom_field] <= freqs['hh'])
-                if hemi_field:
-                    pop_filters.append(pop_expr[hemi_field] <= freqs['hh'])
+                for field_name in ['hom', 'hemi']:
+                    field = pop_config[field_name]
+                    if field:
+                        pop_filter = pop_expr[field] <= freqs['hh']
+                        if path_override_filter is not None:
+                            pop_filter |= path_override_filter
+                        pop_filters.append(pop_filter)
 
             if pop_filters:
                 filters.append(hl.is_missing(pop_expr) | hl.all(pop_filters))
@@ -973,7 +985,7 @@ class BaseHailTableQuery(object):
 
     def _get_annotation_override_fields(self, annotations, override_fields=None, **kwargs):
         override_fields = override_fields or self.ANNOTATION_OVERRIDE_FIELDS
-        return {k: annotations[k] for k in override_fields if k in annotations}
+        return {k: annotations[k] for k in override_fields if annotations.get(k)}
 
     def _get_annotation_override_filters(self, ht, annotation_overrides):
         return []

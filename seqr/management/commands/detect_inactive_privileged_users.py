@@ -8,15 +8,15 @@ import logging
 logger = logging.getLogger(__name__)
 
 WARNING_TEMPLATE = """
-Hi there {} - 
+Hi there {user} - 
 
-You have not logged in to seqr in {} days. Unless you log in within the next {} days, your account will be deactivated.
+You have not logged in to seqr in {days_login} days. Unless you log in within the next {deactivate_days_login} days, your account will be deactivated.
 """
 
 DEACTIVATE_TEMPLATE = """
-Hi there {} - 
+Hi there {user} - 
 
-You have not logged in to seqr in {} days, and therefore your account has been deactivated.
+You have not logged in to seqr in {days_login} days, and therefore your account has been deactivated.
 Please feel free to reach out to the seqr team if you would like your account reinstated.
 """
 
@@ -36,24 +36,24 @@ class Command(BaseCommand):
 
         for user in warn_users:
             logger.info('Warning {} of impending account inactivation'.format(user.email))
-            days_login = (now - user.last_login.replace(tzinfo=None)).days
-            email_content = WARNING_TEMPLATE.format(user.get_full_name(), days_login, 90 - days_login)
-            try:
-                user.email_user('Warning: seqr account deactivation', email_content)
-            except AnymailError as e:
-                logger.error('Unable to send email: {}'.format(e))
+            self._safe_email_user(user, WARNING_TEMPLATE, 'deactivation')
 
         for user in deactivate_users:
             logger.info('Inactivating account for {}'.format(user.email))
             user.is_active = False
             user.save()
-
-            days_login = (now - user.last_login.replace(tzinfo=None)).days
-            email_content = DEACTIVATE_TEMPLATE.format(user.get_full_name(), days_login)
-            try:
-                user.email_user('Warning: seqr account deactivated', email_content)
-            except AnymailError as e:
-                logger.error('Unable to send email: {}'.format(e))
+            self._safe_email_user(user, DEACTIVATE_TEMPLATE, 'deactivated')
 
         logger.info('Inactive user check complete')
+
+    @staticmethod
+    def _safe_email_user(user, email_template, event):
+        days_login = (datetime.now() - user.last_login.replace(tzinfo=None)).days
+        email_content = email_template.format(
+            user=user.get_full_name(), days_login=days_login, deactivate_days_login=90 - days_login,
+        )
+        try:
+            user.email_user(f'Warning: seqr account {event}', email_content)
+        except AnymailError as e:
+            logger.error('Unable to send email: {}'.format(e))
 

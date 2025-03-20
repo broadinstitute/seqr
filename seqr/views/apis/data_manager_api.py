@@ -23,12 +23,12 @@ from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.vcf_utils import validate_vcf_and_get_samples, get_vcf_list
 
-from seqr.views.utils.airflow_utils import trigger_airflow_data_loading
+from seqr.views.utils.airflow_utils import trigger_airflow_data_loading, trigger_airflow_dag, is_airflow_enabled
 from seqr.views.utils.airtable_utils import AirtableSession, LOADABLE_PDO_STATUSES, AVAILABLE_PDO_STATUS
 from seqr.views.utils.dataset_utils import load_rna_seq, load_phenotype_prioritization_data_file, RNA_DATA_TYPE_CONFIGS, \
     post_process_rna_data, convert_django_meta_to_http_headers
 from seqr.views.utils.file_utils import parse_file, get_temp_file_path, load_uploaded_file, persist_temp_file
-from seqr.views.utils.json_utils import create_json_response
+from seqr.views.utils.json_utils import create_json_response, _to_snake_case
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.pedigree_info_utils import get_validated_related_individuals, JsonConstants
 from seqr.views.utils.permissions_utils import data_manager_required, pm_or_data_manager_required, get_internal_projects
@@ -54,217 +54,6 @@ def delete_index(request):
     updated_indices = delete_search_backend_data(index)
 
     return create_json_response({'indices': updated_indices})
-
-
-@data_manager_required
-def upload_qc_pipeline_output(request):
-    file_path = json.loads(request.body)['file'].strip()
-    if not does_file_exist(file_path, user=request.user):
-        return create_json_response({'errors': ['File not found: {}'.format(file_path)]}, status=400)
-    raw_records = parse_file(file_path, file_iter(file_path, user=request.user))
-
-    json_records = [dict(zip(raw_records[0], row)) for row in raw_records[1:]]
-
-    try:
-        dataset_type, data_type, records_by_sample_id = _parse_raw_qc_records(json_records)
-    except ValueError as e:
-        return create_json_response({'errors': [str(e)]}, status=400, reason=str(e))
-
-    info_message = 'Parsed {} {} samples'.format(
-        len(json_records), 'SV' if dataset_type == Sample.DATASET_TYPE_SV_CALLS else data_type)
-    logger.info(info_message, request.user)
-    info = [info_message]
-    warnings = []
-
-    samples = Sample.objects.filter(
-        sample_id__in=records_by_sample_id.keys(),
-        sample_type=Sample.SAMPLE_TYPE_WES if data_type == 'exome' else Sample.SAMPLE_TYPE_WGS,
-        dataset_type=dataset_type,
-    ).exclude(
-        individual__family__project__name__in=EXCLUDE_PROJECTS
-    ).exclude(individual__family__project__is_demo=True)
-
-    sample_individuals = {
-        agg['sample_id']: agg['individuals'] for agg in
-        samples.values('sample_id').annotate(individuals=ArrayAgg('individual_id', distinct=True))
-    }
-
-    sample_individual_max_loaded_date = {
-        agg['individual_id']: agg['max_loaded_date'] for agg in
-        samples.values('individual_id').annotate(max_loaded_date=Max('loaded_date'))
-    }
-    individual_latest_sample_id = {
-        s.individual_id: s.sample_id for s in samples
-        if s.loaded_date == sample_individual_max_loaded_date.get(s.individual_id)
-    }
-
-    for sample_id, record in records_by_sample_id.items():
-        record['individual_ids'] = list({
-            individual_id for individual_id in sample_individuals.get(sample_id, [])
-            if individual_latest_sample_id[individual_id] == sample_id
-        })
-
-    missing_sample_ids = {sample_id for sample_id, record in records_by_sample_id.items() if not record['individual_ids']}
-    if missing_sample_ids:
-        individuals = Individual.objects.filter(individual_id__in=missing_sample_ids).exclude(
-            family__project__name__in=EXCLUDE_PROJECTS).exclude(
-            family__project__is_demo=True).filter(
-            sample__sample_type=Sample.SAMPLE_TYPE_WES if data_type == 'exome' else Sample.SAMPLE_TYPE_WGS).distinct()
-        individual_db_ids_by_id = defaultdict(list)
-        for individual in individuals:
-            individual_db_ids_by_id[individual.individual_id].append(individual.id)
-        for sample_id, record in records_by_sample_id.items():
-            if not record['individual_ids'] and len(individual_db_ids_by_id[sample_id]) >= 1:
-                record['individual_ids'] = individual_db_ids_by_id[sample_id]
-                missing_sample_ids.remove(sample_id)
-
-    multi_individual_samples = {
-        sample_id: len(record['individual_ids']) for sample_id, record in records_by_sample_id.items()
-        if len(record['individual_ids']) > 1}
-    if multi_individual_samples:
-        logger.warning('Found {} multi-individual samples from qc output'.format(len(multi_individual_samples)),
-                    request.user)
-        warnings.append('The following {} samples were added to multiple individuals: {}'.format(
-            len(multi_individual_samples), ', '.join(
-                sorted(['{} ({})'.format(sample_id, count) for sample_id, count in multi_individual_samples.items()]))))
-
-    if missing_sample_ids:
-        logger.warning('Missing {} samples from qc output'.format(len(missing_sample_ids)), request.user)
-        warnings.append('The following {} samples were skipped: {}'.format(
-            len(missing_sample_ids), ', '.join(sorted(list(missing_sample_ids)))))
-
-    records_with_individuals = [
-        record for sample_id, record in records_by_sample_id.items() if sample_id not in missing_sample_ids
-    ]
-
-    if dataset_type == Sample.DATASET_TYPE_SV_CALLS:
-        _update_individuals_sv_qc(records_with_individuals, request.user)
-    else:
-        _update_individuals_variant_qc(records_with_individuals, data_type, warnings, request.user)
-
-    message = 'Found and updated matching seqr individuals for {} samples'.format(len(json_records) - len(missing_sample_ids))
-    info.append(message)
-
-    return create_json_response({
-        'errors': [],
-        'warnings': warnings,
-        'info': info,
-    })
-
-SV_WES_FALSE_FLAGS = {'lt100_raw_calls': 'raw_calls:_>100', 'lt10_highQS_rare_calls': 'high_QS_rare_calls:_>10'}
-SV_WGS_FALSE_FLAGS = {'expected_num_calls': 'outlier_num._calls'}
-SV_FALSE_FLAGS = {}
-SV_FALSE_FLAGS.update(SV_WES_FALSE_FLAGS)
-SV_FALSE_FLAGS.update(SV_WGS_FALSE_FLAGS)
-
-def _parse_raw_qc_records(json_records):
-    # Parse SV WES QC
-    if all(field in json_records[0] for field in ['sample'] + list(SV_WES_FALSE_FLAGS.keys())):
-        records_by_sample_id = {
-            re.search('(\d+)_(?P<sample_id>.+)_v\d_Exome_GCP', record['sample']).group('sample_id'): record
-            for record in json_records}
-        return Sample.DATASET_TYPE_SV_CALLS, 'exome', records_by_sample_id
-
-    # Parse SV WGS QC
-    if all(field in json_records[0] for field in ['sample'] + list(SV_WGS_FALSE_FLAGS.keys())):
-        return Sample.DATASET_TYPE_SV_CALLS, 'genome', {record['sample']: record for record in json_records}
-
-    # Parse regular variant QC
-    missing_columns = [field for field in ['seqr_id', 'data_type', 'filter_flags', 'qc_metrics_filters', 'qc_pop']
-                       if field not in json_records[0]]
-    if missing_columns:
-        raise ValueError('The following required columns are missing: {}'.format(', '.join(missing_columns)))
-
-    data_types = {record['data_type'].lower() for record in json_records if record['data_type'].lower() != 'n/a'}
-    if len(data_types) == 0:
-        raise ValueError('No data type detected')
-    elif len(data_types) > 1:
-        raise ValueError('Multiple data types detected: {}'.format(' ,'.join(sorted(data_types))))
-    elif list(data_types)[0] not in DATA_TYPE_MAP:
-        message = 'Unexpected data type detected: "{}" (should be "exome" or "genome")'.format(list(data_types)[0])
-        raise ValueError(message)
-
-    data_type = DATA_TYPE_MAP[list(data_types)[0]]
-    records_by_sample_id = {record['seqr_id']: record for record in json_records}
-
-    return Sample.DATASET_TYPE_VARIANT_CALLS, data_type, records_by_sample_id
-
-
-def _update_individuals_variant_qc(json_records, data_type, warnings, user):
-    unknown_filter_flags = set()
-    unknown_pop_filter_flags = set()
-
-    inidividuals_by_population = defaultdict(list)
-    for record in json_records:
-        filter_flags = {}
-        for flag in json.loads(record['filter_flags']):
-            flag = '{}_{}'.format(flag, data_type) if flag == 'coverage' else flag
-            flag_col = FILTER_FLAG_COL_MAP.get(flag, flag)
-            if flag_col in record:
-                filter_flags[flag] = record[flag_col]
-            else:
-                unknown_filter_flags.add(flag)
-
-        pop_platform_filters = {}
-        for flag in json.loads(record['qc_metrics_filters']):
-            flag_col = 'sample_qc.{}'.format(flag)
-            if flag_col in record:
-                pop_platform_filters[flag] = record[flag_col]
-            else:
-                unknown_pop_filter_flags.add(flag)
-
-        if filter_flags or pop_platform_filters:
-            Individual.bulk_update(user, {
-                'filter_flags': filter_flags or None, 'pop_platform_filters': pop_platform_filters or None,
-            }, id__in=record['individual_ids'])
-
-        inidividuals_by_population[record['qc_pop'].upper()] += record['individual_ids']
-
-    for population, indiv_ids in inidividuals_by_population.items():
-        Individual.bulk_update(user, {'population': population}, id__in=indiv_ids)
-
-    if unknown_filter_flags:
-        message = 'The following filter flags have no known corresponding value and were not saved: {}'.format(
-            ', '.join(unknown_filter_flags))
-        logger.warning(message, user)
-        warnings.append(message)
-
-    if unknown_pop_filter_flags:
-        message = 'The following population platform filters have no known corresponding value and were not saved: {}'.format(
-            ', '.join(unknown_pop_filter_flags))
-        logger.warning(message, user)
-        warnings.append(message)
-
-
-def _update_individuals_sv_qc(json_records, user):
-    inidividuals_by_qc_flags = defaultdict(list)
-    for record in json_records:
-        flags = tuple(sorted(flag for field, flag in SV_FALSE_FLAGS.items() if record.get(field) == 'FALSE'))
-        inidividuals_by_qc_flags[flags] += record['individual_ids']
-
-    for flags, indiv_ids in inidividuals_by_qc_flags.items():
-        Individual.bulk_update(user, {'sv_flags': list(flags) or None}, id__in=indiv_ids)
-
-
-FILTER_FLAG_COL_MAP = {
-    'callrate': 'filtered_callrate',
-    'contamination': 'PCT_CONTAMINATION',
-    'chimera': 'AL_PCT_CHIMERAS',
-    'coverage_exome': 'HS_PCT_TARGET_BASES_20X',
-    'coverage_genome': 'WGS_MEAN_COVERAGE'
-}
-
-DATA_TYPE_MAP = {
-    'exome': 'exome',
-    'genome': 'genome',
-    'wes': 'exome',
-    'wgs': 'genome',
-}
-
-EXCLUDE_PROJECTS = [
-    '[DISABLED_OLD_CMG_Walsh_WES]', 'Old Engle Lab All Samples 352S', 'Old MEEI Engle Samples',
-    'kl_temp_manton_orphan-diseases_cmg-samples_exomes_v1', 'Interview Exomes', 'v02_loading_test_project',
-]
 
 @pm_or_data_manager_required
 def update_rna_seq(request):
@@ -430,11 +219,6 @@ def load_phenotype_prioritization_data(request):
     })
 
 
-DATA_TYPE_FILE_EXTS = {
-    Sample.DATASET_TYPE_MITO_CALLS: ('.mt',),
-    Sample.DATASET_TYPE_SV_CALLS: ('.bed', '.bed.gz'),
-}
-
 AVAILABLE_PDO_STATUSES = {
     AVAILABLE_PDO_STATUS,
     'Historic',
@@ -453,9 +237,9 @@ def loading_vcfs(request):
 @pm_or_data_manager_required
 def validate_callset(request):
     request_json = json.loads(request.body)
-    allowed_exts = DATA_TYPE_FILE_EXTS.get(request_json['datasetType']) if anvil_enabled() else None
+    dataset_type = request_json['datasetType'] if anvil_enabled() else None
     samples = validate_vcf_and_get_samples(
-        _callset_path(request_json), request.user, request_json['genomeVersion'], allowed_exts=allowed_exts,
+        _callset_path(request_json), request.user, request_json['genomeVersion'], dataset_type=dataset_type,
         path_name=request_json['filePath'],
     )
     return create_json_response({'vcfSamples': samples})
@@ -616,6 +400,27 @@ def _get_valid_search_individuals(project, airtable_samples, vcf_samples, datase
     )
 
     return [i['id'] for i in search_individuals_by_id.values()] + loaded_individual_ids
+
+
+@data_manager_required
+def trigger_dag(request, dag_id):
+    if not is_airflow_enabled():
+        raise PermissionDenied()
+    request_json = json.loads(request.body)
+    project_guid = request_json.pop('project', None)
+    family_guid = request_json.pop('family', None)
+    kwargs = {_to_snake_case(k): v for k, v in request_json.items()}
+    project = None
+    if project_guid:
+        project = Project.objects.get(guid=project_guid)
+    elif family_guid:
+        project = Project.objects.get(family__guid=family_guid)
+        kwargs['family_guids'] = [family_guid]
+    try:
+        dag_variables = trigger_airflow_dag(dag_id, project, **kwargs)
+    except Exception as e:
+        return create_json_response({'error': str(e)}, status=400)
+    return create_json_response({'info': [f'Triggered DAG {dag_id} with variables: {json.dumps(dag_variables)}']})
 
 
 # Hop-by-hop HTTP response headers shouldn't be forwarded.

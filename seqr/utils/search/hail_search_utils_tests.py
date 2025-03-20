@@ -48,9 +48,9 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         self.assertEqual(executed_request.url.split('/')[-1], url_path)
         self.assertDictEqual(json.loads(executed_request.body), expected_search)
 
-    def _test_expected_search_call(self, search_fields=None, gene_ids=None, intervals=None, exclude_intervals= None,
+    def _test_expected_search_call(self, search_fields=None, gene_ids=None, intervals=None, exclude_intervals=False,
                                    rs_ids=None, variant_ids=None, dataset_type=None, secondary_dataset_type=None,
-                                   frequencies=None, custom_query=None, inheritance_mode='de_novo', inheritance_filter=None,
+                                   frequencies=None, inheritance_mode='de_novo', inheritance_filter=None,
                                    quality_filter=None, sort='xpos', sort_metadata=None, **kwargs):
 
         expected_search = {
@@ -62,7 +62,6 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
             'secondary_dataset_type': secondary_dataset_type,
             'frequencies': frequencies,
             'quality_filter': quality_filter,
-            'custom_query': custom_query,
             'intervals': intervals,
             'exclude_intervals': exclude_intervals,
             'gene_ids': gene_ids,
@@ -108,9 +107,10 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         query_variants(self.results_model, user=self.user)
         self._test_expected_search_call(**LOCATION_SEARCH, sample_data=EXPECTED_SAMPLE_DATA)
 
-        self.search_model.search['locus']['excludeLocations'] = True
+        locus = self.search_model.search.pop('locus')
+        self.search_model.search['exclude'] = {'rawItems': locus['rawItems']}
         query_variants(self.results_model, user=self.user)
-        self._test_expected_search_call(**EXCLUDE_LOCATION_SEARCH)
+        self._test_expected_search_call(exclude={}, **EXCLUDE_LOCATION_SEARCH)
 
         self.search_model.search = {
             'inheritance': {'mode': 'recessive', 'filter': {'affected': {
@@ -211,21 +211,19 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
 
         quality_filter = {'min_ab': 10, 'min_gq': 15, 'vcf_filter': 'pass'}
         freq_filter = {'callset': {'af': 0.1}, 'gnomad_genomes': {'af': 0.01, 'ac': 3, 'hh': 3}}
-        custom_query = {'term': {'customFlag': 'flagVal'}}
         genotype_filter = {'genotype': {'I000001_na19675': 'ref_alt'}}
         self.search_model.search = deepcopy({
             'inheritance': {'mode': 'any_affected', 'filter': genotype_filter},
             'freqs': freq_filter,
             'qualityFilter': quality_filter,
             'in_silico': {'cadd': '11.5', 'sift': 'D'},
-            'customQuery': custom_query,
         })
         self.results_model.families.set(Family.objects.filter(guid='F000001_1'))
         query_variants(self.results_model, user=self.user, sort='prioritized_gene')
         expected_freq_filter = {'seqr': freq_filter['callset'], 'gnomad_genomes': freq_filter['gnomad_genomes']}
         self._test_expected_search_call(
             inheritance_mode=None, inheritance_filter=genotype_filter, sample_data=FAMILY_1_SAMPLE_DATA,
-            search_fields=['in_silico'], frequencies=expected_freq_filter, quality_filter=quality_filter, custom_query=custom_query,
+            search_fields=['in_silico'], frequencies=expected_freq_filter, quality_filter=quality_filter,
             sort='prioritized_gene', sort_metadata={'ENSG00000268903': 1, 'ENSG00000268904': 11},
         )
 

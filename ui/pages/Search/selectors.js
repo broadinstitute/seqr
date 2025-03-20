@@ -1,4 +1,5 @@
 import { createSelector, createSelectorCreator, defaultMemoize } from 'reselect'
+import uniqWith from 'lodash/uniqWith'
 
 import {
   getProjectsByGuid,
@@ -7,13 +8,15 @@ import {
   getCurrentAnalysisGroupFamilyGuids,
   getLocusListsByGuid,
   getAnalysisGroupsGroupedByProjectGuid,
-  getCurrentSearchParams,
   getUser,
-  getProjectDatasetTypes,
   getSearchFamiliesByHash,
+  getGenesById,
+  getSearchesByHash,
+  getSamplesGroupedByProjectGuid,
 } from 'redux/selectors'
 import { FAMILY_ANALYSIS_STATUS_LOOKUP } from 'shared/utils/constants'
 import { compareObjects } from 'shared/utils/sortUtils'
+import { compHetGene } from 'shared/components/panel/variants/VariantUtils'
 
 export const getSearchContextIsLoading = state => state.searchContextLoading.isLoading
 export const getMultiProjectSearchContextIsLoading = state => state.multiProjectSearchContextLoading.isLoading
@@ -21,6 +24,45 @@ export const getSavedSearchesByGuid = state => state.savedSearchesByGuid
 export const getSavedSearchesIsLoading = state => state.savedSearchesLoading.isLoading
 export const getSavedSearchesLoadingError = state => state.savedSearchesLoading.errorMessage
 export const getFlattenCompoundHet = state => state.flattenCompoundHet
+export const getSearchedVariants = state => state.searchedVariants
+export const getSearchedVariantsIsLoading = state => state.searchedVariantsLoading.isLoading
+export const getSearchedVariantsErrorMessage = state => state.searchedVariantsLoading.errorMessage
+export const getSearchGeneBreakdown = state => state.searchGeneBreakdown
+export const getSearchGeneBreakdownLoading = state => state.searchGeneBreakdownLoading.isLoading
+export const getSearchGeneBreakdownErrorMessage = state => state.searchGeneBreakdownLoading.errorMessage
+export const getVariantSearchDisplay = state => state.variantSearchDisplay
+
+const getCurrentSearchHash = (state, ownProps) => ownProps.match.params.searchHash
+
+export const getCurrentSearchParams = createSelector(
+  getSearchesByHash,
+  getCurrentSearchHash,
+  (searchesByHash, searchHash) => searchesByHash[searchHash],
+)
+
+export const getTotalVariantsCount = createSelector(
+  getCurrentSearchParams,
+  searchParams => (searchParams || {}).totalResults,
+)
+
+export const getSearchedVariantExportConfig = createSelector(
+  getCurrentSearchHash,
+  getCurrentSearchParams,
+  getProjectsByGuid,
+  (searchHash, searchParams, projectsByGuid) => {
+    const { projectFamilies } = searchParams || {}
+    if ((projectFamilies || []).some(
+      ({ projectGuid }) => projectsByGuid[projectGuid]?.isDemo && !projectsByGuid[projectGuid].allUserDemo,
+    )) {
+      // Do not allow downloads for demo projects
+      return null
+    }
+    return [{
+      name: 'Variant Search Results',
+      url: `/api/search/${searchHash}/download`,
+    }]
+  },
+)
 
 export const getInhertanceFilterMode = createSelector(
   getCurrentSearchParams,
@@ -152,6 +194,19 @@ export const getLocusListOptions = createListEqualSelector(
   },
 )
 
+export const getProjectDatasetTypes = createSelector(
+  getProjectsByGuid,
+  getSamplesGroupedByProjectGuid,
+  (projectsByGuid, samplesByProjectGuid) => Object.values(projectsByGuid).reduce(
+    (acc, { projectGuid, datasetTypes }) => ({
+      ...acc,
+      [projectGuid]: datasetTypes || [...new Set(Object.values(samplesByProjectGuid[projectGuid] || {}).filter(
+        ({ isActive }) => isActive,
+      ).map(({ datasetType }) => datasetType))],
+    }), {},
+  ),
+)
+
 export const getDatasetTypes = createSelector(
   (state, props) => props.projectFamilies,
   getProjectDatasetTypes,
@@ -191,4 +246,38 @@ export const getAnalysisGroupOptions = createSelector(
     ...(analysisGroupsGroupedByProjectGuid[projectGuid] || {}),
     ...(analysisGroupsGroupedByProjectGuid.null || {}),
   }).map(group => ({ value: group.analysisGroupGuid, text: group.name, icon: group.criteria ? 'sync' : null })),
+)
+
+export const getDisplayVariants = createSelector(
+  getFlattenCompoundHet,
+  getSearchedVariants,
+  (flattenCompoundHet, searchedVariants) => {
+    const shouldFlatten = Object.values(flattenCompoundHet || {}).some(val => val)
+    if (!shouldFlatten) {
+      return searchedVariants || []
+    }
+    const flattened = flattenCompoundHet.all ? searchedVariants.flat() : searchedVariants.reduce((acc, variant) => (
+      (Array.isArray(variant) && flattenCompoundHet[compHetGene(variant)]) ? [...acc, ...variant] : [...acc, variant]
+    ), [])
+    return uniqWith(flattened, (a, b) => !Array.isArray(a) && !Array.isArray(b) && a.variantId === b.variantId)
+  },
+)
+
+export const getSearchGeneBreakdownValues = createSelector(
+  getSearchGeneBreakdown,
+  (state, props) => props.searchHash,
+  getFamiliesByGuid,
+  getGenesById,
+  getSearchesByHash,
+  (geneBreakdowns, searchHash, familiesByGuid, genesById, searchesByHash) => Object.entries(
+    geneBreakdowns[searchHash] || {},
+  ).map(([geneId, counts]) => ({
+    numVariants: counts.total,
+    numFamilies: Object.keys(counts.families).length,
+    families: Object.entries(counts.families).map(
+      ([familyGuid, count]) => ({ family: familiesByGuid[familyGuid], count }),
+    ),
+    search: searchesByHash[searchHash].search,
+    ...(genesById[geneId] || { geneId, geneSymbol: geneId, omimPhenotypes: [], constraints: {} }),
+  })),
 )
