@@ -219,11 +219,6 @@ def load_phenotype_prioritization_data(request):
     })
 
 
-DATA_TYPE_FILE_EXTS = {
-    Sample.DATASET_TYPE_MITO_CALLS: ('.mt',),
-    Sample.DATASET_TYPE_SV_CALLS: ('.bed', '.bed.gz'),
-}
-
 AVAILABLE_PDO_STATUSES = {
     AVAILABLE_PDO_STATUS,
     'Historic',
@@ -242,9 +237,9 @@ def loading_vcfs(request):
 @pm_or_data_manager_required
 def validate_callset(request):
     request_json = json.loads(request.body)
-    allowed_exts = DATA_TYPE_FILE_EXTS.get(request_json['datasetType']) if anvil_enabled() else None
+    dataset_type = request_json['datasetType'] if anvil_enabled() else None
     samples = validate_vcf_and_get_samples(
-        _callset_path(request_json), request.user, request_json['genomeVersion'], allowed_exts=allowed_exts,
+        _callset_path(request_json), request.user, request_json['genomeVersion'], dataset_type=dataset_type,
         path_name=request_json['filePath'],
     )
     return create_json_response({'vcfSamples': samples})

@@ -6,15 +6,27 @@ from collections import defaultdict
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.file_utils import file_iter, does_file_exist, list_files
 from seqr.utils.search.constants import VCF_FILE_EXTENSIONS
+from seqr.models import Sample
 
 BLOCK_SIZE = 65536
 
-EXPECTED_META_FIELDS ={
-    'FORMAT': {
-        'AD': 'Integer',
-        'GQ': 'Integer',
-        'GT': 'String'
-    }
+BASE_EXPECTED_FORMAT_FIELDS ={
+    'GQ': 'Integer',
+    'GT': 'String'
+}
+
+ALL_EXPECTED_FORMAT_FIELDS ={
+    'AD': 'Integer',
+    **BASE_EXPECTED_FORMAT_FIELDS,
+}
+
+DATA_TYPE_FORMAT_FIELDS = {
+    Sample.DATASET_TYPE_SV_CALLS: BASE_EXPECTED_FORMAT_FIELDS,
+}
+
+DATA_TYPE_FILE_EXTS = {
+    Sample.DATASET_TYPE_MITO_CALLS: ('.mt',),
+    Sample.DATASET_TYPE_SV_CALLS: ('.bed', '.bed.gz'),
 }
 
 REQUIRED_HEADERS = ['#CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO', 'FORMAT']
@@ -27,17 +39,18 @@ def _validate_vcf_header(header):
         raise ErrorsWarningsException([f'Missing required VCF header field(s) {missing_fields}.'], [])
 
 
-def _validate_vcf_meta(meta, genome_version):
+def _validate_vcf_meta(meta, genome_version, dataset_type):
     errors = []
-    for field, sub_field_meta in EXPECTED_META_FIELDS.items():
-        missing_meta = [m for m in EXPECTED_META_FIELDS[field] if not meta.get(field, {}).get(m)]
-        if missing_meta:
-            missing_fields = ', '.join(missing_meta)
-            errors.append(f'Missing required {field} field(s) {missing_fields}')
-        for sub_field, expected in sub_field_meta.items():
-            value = meta.get(field, {}).get(sub_field)
-            if value and value != expected:
-                errors.append(f'Incorrect meta Type for {field}.{sub_field} - expected "{expected}", got "{value}"')
+    expected_format_fields = DATA_TYPE_FORMAT_FIELDS.get(dataset_type, ALL_EXPECTED_FORMAT_FIELDS)
+    format_meta = meta.get('FORMAT', {})
+    missing_meta = [m for m in expected_format_fields if not format_meta.get(m)]
+    if missing_meta:
+        missing_fields = ', '.join(missing_meta)
+        errors.append(f'Missing required FORMAT field(s) {missing_fields}')
+    for sub_field, expected in expected_format_fields.items():
+        value = format_meta.get(sub_field)
+        if value and value != expected:
+            errors.append(f'Incorrect meta Type for FORMAT.{sub_field} - expected "{expected}", got "{value}"')
 
     if 'reference' in meta and len(meta['reference']) == 1:
         meta_version = next(iter(meta['reference'].keys()))
@@ -60,7 +73,9 @@ def _get_vcf_meta_info(line):
     return None
 
 
-def validate_vcf_and_get_samples(data_path, user, genome_version, path_name=None, allowed_exts=None):
+def validate_vcf_and_get_samples(data_path, user, genome_version, path_name=None, dataset_type=None):
+    allowed_exts = DATA_TYPE_FILE_EXTS.get(dataset_type)
+
     vcf_filename = _validate_vcf_exists(data_path, user, path_name, allowed_exts)
 
     if allowed_exts and vcf_filename.endswith(allowed_exts):
@@ -89,7 +104,7 @@ def validate_vcf_and_get_samples(data_path, user, genome_version, path_name=None
     _validate_vcf_header(header)
     if not samples:
         raise ErrorsWarningsException(['No samples found in the provided VCF.'], [])
-    _validate_vcf_meta(meta, genome_version)
+    _validate_vcf_meta(meta, genome_version, dataset_type)
 
     return samples
 
