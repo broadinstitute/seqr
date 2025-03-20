@@ -5,6 +5,8 @@ from django.core.management.base import BaseCommand, CommandError
 from reference_data.utils.gene_utils import get_genes_by_id_and_symbol
 from reference_data.models import GeneInfo, TranscriptInfo, HumanPhenotypeOntology, RefseqTranscript, GeneConstraint, \
     GeneCopyNumberSensitivity, GeneShet, Omim, dbNSFPGene, PrimateAI, MGI, GenCC, ClinGen, DataVersions
+from seqr.utils.communication_utils import safe_post_to_slack
+from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL
 
 
 logger = logging.getLogger(__name__)
@@ -66,10 +68,11 @@ class Command(BaseCommand):
 
     @staticmethod
     def _track_success_updates(data_model_name, latest_version, current_versions, updated):
-        #  TODO log version change
         current_data_version = current_versions.get(data_model_name)
         updated.append(data_model_name)
         if current_data_version:
+            message = f'Updated {data_model_name} reference data from version "{current_data_version.version}" to version "{latest_version}"'
+            safe_post_to_slack(SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, message)
             current_data_version.version = latest_version
             current_data_version.save()
         else:
