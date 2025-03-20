@@ -164,10 +164,13 @@ class HumanPhenotypeOntology(LoadableModel):
     definition = models.TextField(null=True, blank=True)
     comment = models.TextField(null=True, blank=True)
 
+
     @classmethod
     def get_current_version(cls, **kwargs):
-        # TODO
-        raise NotImplementedError
+        response = requests.head(cls.get_url(**kwargs), timeout=60)
+        #  HPO redirects the "latest" URL to the URL of the latest release, so extract the release from the redirect Location
+        redirect_url = response.headers['Location']
+        return re.match(cls.URL.replace('latest/download', 'download/(.+)'), redirect_url).group(1)
 
     @staticmethod
     def get_file_header(f):
