@@ -1914,17 +1914,33 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         self.assertEqual(response.status_code, 403)
 
     def _test_validate_dataset_type(self, url):
-        body = {'filePath': f'{self.CALLSET_DIR}/mito_callset.mt', 'datasetType': 'SV', 'genomeVersion': 'GRCh38'}
+        body = {'filePath': f'{self.CALLSET_DIR}/mito_callset.mt', 'datasetType': 'MITO', 'genomeVersion': 'GRCh38'}
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(response.json()['errors'], [f'Data file or path {self.CALLSET_DIR}/mito_callset.mt is not found.'])
+
+        body['datasetType'] = 'SV'
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], [
             'Invalid VCF file format - file path must end with .bed or .bed.gz or .vcf or .vcf.gz or .vcf.bgz',
         ])
 
-        body['datasetType'] = 'MITO'
+        body['filePath'] = f'{self.CALLSET_DIR}/sv_callset.vcf'
+        vcf_file_rows = [
+            '##fileformat=VCFv4.3\n',
+            '##INFO=<ID=AA,Number=1,Type=String,Description="Ancestral Allele">',
+            '##INFO=<ID=AC,Number=A,Type=Integer,Description="Allele count in genotypes, for each ALT allele, in the same order as listed">\n',
+            '##INFO=<ID=AF,Number=A,Type=Float,Description="Allele Frequency, for each ALT allele, in the same order as listed">\n',
+            '##INFO=<ID=AN,Number=1,Type=Integer,Description="Total number of alleles in called genotypes">\n',
+            '##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Approximate read depth (reads with MQ=255 or with bad mates are filtered)">\n',
+            '#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tHG00735\tNA19675_1\tNA19679\n'
+        ]
+        self._add_file_iter(vcf_file_rows, is_gz=False)
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
-        self.assertListEqual(response.json()['errors'], [f'Data file or path {self.CALLSET_DIR}/mito_callset.mt is not found.'])
+        self.assertListEqual(response.json()['errors'], ['Missing required FORMAT field(s) GQ, GT'])
+
         self._set_file_not_found()
 
     def _add_update_check_dag_responses(self, variables=None, **kwargs):
