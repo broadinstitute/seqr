@@ -809,8 +809,11 @@ class ClinGen(GeneMetadataModel):
 
     @classmethod
     def get_current_version(cls, **kwargs):
-        # TODO
-        raise NotImplementedError
+        file_path = download_file(cls.get_url(**kwargs))
+        with open(file_path, 'r') as f:
+            csv_f = csv.reader(f)
+            created_meta_row = next(row for row in csv_f if row[0].startswith('FILE CREATED'))
+            return created_meta_row[0].split(':')[-1].strip()
 
     @staticmethod
     def get_file_header(f):
