@@ -39,5 +39,5 @@ async def _get_valid_vlm_client_info(client_id: str) -> dict:
         headers = {'Authorization': f'Bearer {token}'}
         async with session.get(f'/api/v2/clients/{client_id}', headers=headers) as resp:
             if resp.status != 200:
-                raise web.HTTPForbidden(reason=f'Invalid Client ID {client_id}: {resp.status} {resp.reason} - {resp.text}')
+                raise web.HTTPForbidden(reason=f'Invalid Client ID {client_id}: {resp.status} {resp.reason}')
             return await resp.json()
