@@ -2,10 +2,7 @@ import logging
 from collections import OrderedDict
 from django.core.management.base import BaseCommand
 
-from reference_data.management.commands.utils.gencode_utils import LATEST_GENCODE_RELEASE, OLD_GENCODE_RELEASES
-from reference_data.management.commands.update_human_phenotype_ontology import update_hpo
 from reference_data.management.commands.update_dbnsfp_gene import DbNSFPReferenceDataHandler
-from reference_data.management.commands.update_gencode_latest import update_gencode
 from reference_data.management.commands.update_gene_constraint import GeneConstraintReferenceDataHandler
 from reference_data.management.commands.update_omim import OmimReferenceDataHandler, CachedOmimReferenceDataHandler
 from reference_data.management.commands.update_primate_ai import PrimateAIReferenceDataHandler
@@ -14,7 +11,8 @@ from reference_data.management.commands.update_gene_cn_sensitivity import CNSens
 from reference_data.management.commands.update_gencc import GenCCReferenceDataHandler
 from reference_data.management.commands.update_clingen import ClinGenReferenceDataHandler
 from reference_data.management.commands.update_refseq import RefseqReferenceDataHandler
-from reference_data.models import GeneInfo
+from reference_data.utils.gene_utils import get_genes_by_id_and_symbol
+from reference_data.models import GeneInfo, TranscriptInfo, HumanPhenotypeOntology
 
 
 logger = logging.getLogger(__name__)
@@ -58,28 +56,31 @@ class Command(BaseCommand):
                 return
             # Download latest version first, and then add any genes from old releases not included in the latest release
             # Old gene ids are used in the gene constraint table and other datasets, as well as older sequencing data
-            update_gencode(LATEST_GENCODE_RELEASE)
-            for release in OLD_GENCODE_RELEASES:
-                update_gencode(release)
+            existing_gene_ids = set()
+            existing_transcript_ids = set()
+            new_transcripts = {}
+            for gencode_release in GeneInfo.ALL_GENCODE_VERSIONS:
+                new_transcripts.update(
+                    GeneInfo.update_records(gencode_release, existing_gene_ids, existing_transcript_ids)
+                )
             updated.append('gencode')
 
-        if not options["skip_omim"]:
-            try:
-                omim_handler = CachedOmimReferenceDataHandler() if options['use_cached_omim'] else \
-                    OmimReferenceDataHandler(options["omim_key"])
-                omim_handler.update_records()
-                updated.append('omim')
-            except Exception as e:
-                logger.error("unable to update omim: {}".format(e))
-                update_failed.append('omim')
+            if new_transcripts:
+                gene_id_map, _ = get_genes_by_id_and_symbol()
+                TranscriptInfo.bulk_create_for_genes(new_transcripts, gene_id_map)
 
-        for source, data_handler in REFERENCE_DATA_SOURCES.items():
+        reference_data_sources = {
+            'omim': CachedOmimReferenceDataHandler if options['use_cached_omim'] else \
+                    lambda: OmimReferenceDataHandler(options.get('omim_key')),
+            **REFERENCE_DATA_SOURCES,
+        }
+        for source, data_handler in reference_data_sources.items():
             if not options["skip_{}".format(source)]:
                 try:
                     if data_handler:
                         data_handler().update_records()
                     elif source == "hpo":
-                        update_hpo()
+                        HumanPhenotypeOntology.update_records()
                     updated.append(source)
                 except Exception as e:
                     logger.error("unable to update {}: {}".format(source, e))

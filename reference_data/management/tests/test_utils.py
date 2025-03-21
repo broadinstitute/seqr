@@ -1,5 +1,6 @@
 import gzip
 import mock
+import os
 import responses
 import tempfile
 
@@ -14,19 +15,19 @@ class ReferenceDataCommandTestCase(TestCase):
     DATA = None
 
     def setUp(self):
-        patcher = mock.patch('reference_data.management.commands.utils.update_utils.logger')
+        patcher = mock.patch('reference_data.models.logger')
         self.mock_logger = patcher.start()
         self.addCleanup(patcher.stop)
 
         tmp_dir = tempfile.gettempdir()
         self.tmp_file = '{}/{}'.format(tmp_dir, self.URL.split('/')[-1])
-        patcher = mock.patch('reference_data.management.commands.utils.download_utils.tempfile')
+        patcher = mock.patch('reference_data.utils.download_utils.tempfile')
         self.mock_tempfile = patcher.start()
         self.mock_tempfile.gettempdir.return_value = tmp_dir
         self.addCleanup(patcher.stop)
 
     @responses.activate
-    def _test_update_command(self, command_name, model_name, existing_records=1, created_records=1, skipped_records=1):
+    def _test_update_command(self, command_name, model_name, existing_records=1, created_records=1, skipped_records=1, skipped_message='genes.'):
         # test without a file_path parameter
         body = ''.join(self.DATA)
         if self.URL.endswith('gz'):
@@ -37,21 +38,20 @@ class ReferenceDataCommandTestCase(TestCase):
 
         self.mock_logger.error.assert_not_called()
         log_calls = [
-            mock.call('Parsing file'),
-            mock.call('Deleting {} existing {} records'.format(existing_records, model_name)),
-            mock.call('Creating {} {} records'.format(created_records, model_name)),
+            mock.call(f'Updating {model_name}'),
+            mock.call(f'Parsing file {self.tmp_file}'),
+            mock.call(f'Deleted {existing_records} {model_name} records'),
+            mock.call(f'Created {created_records} {model_name} records'),
             mock.call('Done'),
-            mock.call(
-                'Loaded {} {} records from {}. Skipped {} records with unrecognized genes.'.format(
-                    created_records, model_name, self.tmp_file, skipped_records)),
-            mock.call('Running ./manage.py update_gencode to update the gencode version might fix missing genes')
+            mock.call(f'Loaded {created_records} {model_name} records'),
+            mock.call(f'Skipped {skipped_records} records with unrecognized {skipped_message}'),
         ]
         self.mock_logger.info.assert_has_calls(log_calls)
 
-        # test with a file_path parameter
+        # test with a locally cached file
         self.mock_logger.reset_mock()
-        responses.add(responses.HEAD, self.URL, headers={"Content-Length": "1024"})
+        responses.add(responses.HEAD, self.URL, headers={"Content-Length": f"{os.path.getsize(self.tmp_file)}"})
         responses.remove(responses.GET, self.URL)
-        call_command(command_name, self.tmp_file)
-        log_calls[1] = mock.call('Deleting {} existing {} records'.format(created_records, model_name))
+        call_command(command_name)
+        log_calls[2] = mock.call(f'Deleted {created_records} {model_name} records')
         self.mock_logger.info.assert_has_calls(log_calls)

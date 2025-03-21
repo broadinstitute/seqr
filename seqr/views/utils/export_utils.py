@@ -69,7 +69,7 @@ def _format_files_content(files, file_format='csv', add_header_prefix=False, bla
             header_display = ['{}-{}'.format(str(header_tuple[0]).zfill(2), header_tuple[1]) for header_tuple in
                               enumerate(header)]
             header_display[0] = header[0]
-        content_rows = [[row.get(key) or blank_value for key in header] for row in rows]
+        content_rows = [[str(row.get(key) or blank_value) for key in header] for row in rows]
         content = '\n'.join([
             DELIMITERS[file_format].join(row) for row in [header_display] + content_rows
             if any(val != blank_value for val in row)

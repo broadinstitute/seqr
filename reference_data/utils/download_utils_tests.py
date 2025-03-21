@@ -1,10 +1,11 @@
 import mock
+import os
 import responses
 
 import tempfile
 import shutil
 
-from reference_data.management.commands.utils.download_utils import download_file
+from reference_data.utils.download_utils import download_file
 
 from django.test import TestCase
 
@@ -20,9 +21,9 @@ class DownloadUtilsTest(TestCase):
         shutil.rmtree(self.test_dir)
 
     @responses.activate
-    @mock.patch('reference_data.management.commands.utils.download_utils.logger')
-    @mock.patch('reference_data.management.commands.utils.download_utils.os.path.isfile')
-    @mock.patch('reference_data.management.commands.utils.download_utils.os.path.getsize')
+    @mock.patch('reference_data.utils.download_utils.logger')
+    @mock.patch('reference_data.utils.download_utils.os.path.isfile')
+    @mock.patch('reference_data.utils.download_utils.os.path.getsize')
     def test_download_file(self, mock_getsize, mock_isfile, mock_logger):
         responses.add(responses.HEAD, 'https://mock_url/test_file.gz',
                       headers={"Content-Length": "1024"}, status=200)
@@ -44,11 +45,11 @@ class DownloadUtilsTest(TestCase):
         mock_isfile.return_value = False
         mock_getsize.return_value = 0
         mock_logger.reset_mock()
-        result = download_file('https://mock_url/test_file.txt', self.test_dir)
-        mock_logger.info.assert_called_with("Downloading https://mock_url/test_file.txt to {}/test_file.txt".format(self.test_dir))
-        self.assertEqual(result, "{}/test_file.txt".format(self.test_dir))
+        result = download_file('https://mock_url/test_file.txt')
+        mock_logger.info.assert_called_with("Downloading https://mock_url/test_file.txt to {}".format(result))
+        self.assertEqual(result, "{}/test_file.txt".format(os.path.dirname(self.test_dir)))
 
-        with open("{}/test_file.txt".format(self.test_dir), 'r') as f:
+        with open(result, 'r') as f:
             line1 = f.readline()
             line2 = f.readline()
         self.assertEqual(line1, "test data\n")
