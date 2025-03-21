@@ -2,7 +2,7 @@ import mock
 import responses
 import tempfile
 
-from django.core.management import call_command
+from django.core.management import call_command, CommandError
 from django.test import TestCase
 
 from reference_data.models import HumanPhenotypeOntology
@@ -131,26 +131,34 @@ class UpdateHpoTest(TestCase):
     fixtures = ['users', 'reference_data']
 
     @responses.activate
+    @mock.patch('reference_data.models.LoadableModel._get_file_last_modified', lambda **kwargs: 'Thu, 20 Mar 2025 20:52:24 GMT')
+    @mock.patch('reference_data.models.ClinGen.get_current_version', lambda **kwargs: '2025-02-05')
+    @mock.patch('seqr.utils.communication_utils._post_to_slack')
+    @mock.patch('reference_data.management.commands.update_all_reference_data.logger')
     @mock.patch('reference_data.models.logger')
     @mock.patch('reference_data.utils.download_utils.tempfile')
-    def test_update_hpo_command(self, mock_tempfile, mock_logger):
+    def test_update_hpo_command(self, mock_tempfile, mock_logger, mock_command_logger, mock_slack):
         tmp_dir = tempfile.gettempdir()
         mock_tempfile.gettempdir.return_value = tmp_dir
         tmp_file = '{}/hp.obo'.format(tmp_dir)
 
         url = 'https://github.com/obophenotype/human-phenotype-ontology/releases/latest/download/hp.obo'
-        responses.add(responses.HEAD, url, headers={"Content-Length": "1024"})
+        responses.add(responses.HEAD, url, status=301, headers={
+            'Content-Length': '1024',
+            'Location': 'https://github.com/obophenotype/human-phenotype-ontology/releases/download/2025-03-12/hp.obo',
+        })
         responses.add(responses.GET, url, body=''.join(PHO_DATA[:40]))
         responses.add(responses.GET, url, body=''.join(PHO_DATA))
 
         # test data which causes exception (missing parent hpo id)
-        with self.assertRaises(ValueError) as ve:
-            call_command('update_human_phenotype_ontology')
-        self.assertEqual(str(ve.exception), "Strange id: HP:0000003")
+        with self.assertRaises(CommandError) as e:
+            call_command('update_all_reference_data')
+        self.assertEqual(str(e.exception), 'Failed to Update: HumanPhenotypeOntology')
+        mock_command_logger.error.assert_called_with('unable to update HumanPhenotypeOntology: Strange id: HP:0000003')
 
         # test without a file_path parameter
         mock_logger.reset_mock()
-        call_command('update_human_phenotype_ontology')
+        call_command('update_all_reference_data')
 
         calls = [
             mock.call('Updating HumanPhenotypeOntology'),
@@ -160,6 +168,9 @@ class UpdateHpoTest(TestCase):
             mock.call('Done'),
         ]
         mock_logger.info.assert_has_calls(calls)
+        mock_slack.assert_called_with(
+            'seqr-data-loading', 'Updated HumanPhenotypeOntology reference data from version "2025-03-03" to version "2025-03-12"',
+        )
 
         records = {record.hpo_id: {
             'is_category': record.is_category,
