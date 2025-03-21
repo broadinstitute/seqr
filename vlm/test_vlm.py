@@ -229,7 +229,7 @@ class VlmTestCase(AioHTTPTestCase):
         headers['Authorization'] = f'Bearer {jwt.encode(jwt_body, "")}'
         async with self.client.request('GET', '/vlm/match', headers=headers) as resp:
             self.assertEqual(resp.status, 403)
-            self.assertEqual(resp.reason, 'Invalid Client ID')
+            self.assertEqual(resp.reason, 'Invalid Client ID abc123: 404 Not Found')
 
         mocked_responses.get(
             f'https://vlm-auth.us.auth0.com/api/v2/clients/{REQUESTER_CLIENT_ID}',
