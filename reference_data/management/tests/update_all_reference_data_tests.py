@@ -41,6 +41,9 @@ class BaseUpdateAllReferenceDataTest(object):
         patcher = mock.patch('reference_data.management.commands.update_all_reference_data.logger')
         self.mock_logger = patcher.start()
         self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.utils.communication_utils._post_to_slack')
+        self.mock_slack = patcher.start()
+        self.addCleanup(patcher.stop)
         patcher = mock.patch('reference_data.models.LoadableModel._get_file_last_modified')
         self.mock_get_file_last_modified = patcher.start()
         self.mock_get_file_last_modified.return_value = 'Thu, 20 Mar 2025 20:52:24 GMT'
@@ -89,6 +92,7 @@ class NewDbUpdateAllReferenceDataTest(BaseUpdateAllReferenceDataTest, TestCase):
             (HumanPhenotypeOntology, kwargs),
         ])
 
+        self.mock_slack.assert_not_called()
         calls = [
             mock.call('Done'),
             mock.call('Updated: GeneInfo, Omim, dbNSFPGene, GeneConstraint, GeneCopyNumberSensitivity, GenCC, ClinGen, GeneShet, HumanPhenotypeOntology'),
@@ -117,6 +121,7 @@ class UpdateAllReferenceDataTest(BaseUpdateAllReferenceDataTest, TestCase):
         self.mock_update_gencode.assert_not_called()
         self.assertListEqual(self.mock_update_calls, [])
         self.mock_logger.info.assert_called_with("Done")
+        self.mock_slack.assert_not_called()
 
     def test_partial_update_reference_data_command(self):
         self.mock_get_file_last_modified.return_value = 'Sat, 22 Mar 2025 09:21:17 GMT'
@@ -142,3 +147,8 @@ class UpdateAllReferenceDataTest(BaseUpdateAllReferenceDataTest, TestCase):
             mock.call('Updated: Omim, dbNSFPGene, GenCC'),
         ])
         self.mock_logger.error.assert_not_called()
+        self.mock_slack.assert_has_calls([mock.call('seqr-data-loading', message) for message in [
+            'Updated Omim reference data from version "Thu, 20 Mar 2025 20:52:24 GMT" to version "Sat, 22 Mar 2025 09:21:17 GMT"',
+            'Updated dbNSFPGene reference data from version "dbNSFP3.2_gene" to version "dbNSFP4.0_gene"',
+            'Updated GenCC reference data from version "Thu, 20 Mar 2025 20:52:24 GMT" to version "Sat, 22 Mar 2025 09:21:17 GMT"',
+        ]])
