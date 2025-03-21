@@ -20,11 +20,9 @@ SKIP_ARGS = [
     '--skip-gene-cn-sensitivity', '--skip-gencc', '--skip-clingen', '--skip-refseq',
 ]
 
-class UpdateAllReferenceDataTest(TestCase):
-    databases = '__all__'
-    fixtures = ['users', 'reference_data']
+class BaseUpdateAllReferenceDataTest(object):
 
-    def setUp(self):
+    def set_up(self):
         self.mock_update_calls = []
         def _mock_handler(_cls, **kwargs):
             self.mock_update_calls.append((_cls, kwargs))
@@ -43,20 +41,24 @@ class UpdateAllReferenceDataTest(TestCase):
         patcher = mock.patch('reference_data.management.commands.update_all_reference_data.logger')
         self.mock_logger = patcher.start()
         self.addCleanup(patcher.stop)
+        patcher = mock.patch('reference_data.models.LoadableModel._get_file_last_modified')
+        patcher.start().return_value = 'Thu, 20 Mar 2025 20:52:24 GMT'
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('reference_data.models.ClinGen.get_current_version')
+        patcher.start().return_value = '2025-02-05'
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('reference_data.models.HumanPhenotypeOntology.get_current_version')
+        patcher.start().return_value = '2025-03-03'
+        self.addCleanup(patcher.stop)
 
-    def test_update_all_reference_data_command(self):
 
-        # Test missing required arguments
-        with self.assertRaises(CommandError) as err:
-            call_command('update_all_reference_data')
-        self.assertEqual(str(err.exception), 'Error: one of the arguments --omim-key --use-cached-omim --skip-omim is required')
+class NewDbUpdateAllReferenceDataTest(BaseUpdateAllReferenceDataTest, TestCase):
+    databases = '__all__'
 
-        # Test update is skipped when data is already loaded
-        self.mock_update_gencode.assert_not_called()
-        self.assertListEqual(self.mock_update_calls, [])
+    def setUp(self):
+        super().set_up()
 
-        # Test update all gencode, no skips, fail primate_ai and mgi
-        GeneInfo.objects.all().delete()
+    def test_empty_db_update_all_reference_data_command(self):
         call_command('update_all_reference_data', '--omim-key=test_key')
 
         calls = [
@@ -97,25 +99,17 @@ class UpdateAllReferenceDataTest(TestCase):
         ]
         self.mock_logger.error.assert_has_calls(calls)
 
-    def test_skip_all_update_reference_data_command(self):
-        call_command(
-            'update_all_reference_data', '--skip-omim', *SKIP_ARGS)
+
+class UpdateAllReferenceDataTest(BaseUpdateAllReferenceDataTest, TestCase):
+    databases = '__all__'
+    fixtures = ['users', 'reference_data']
+
+    def setUp(self):
+        super().set_up()
+
+    def test_all_loaded_update_reference_data_command(self):
+        call_command('update_all_reference_data')
 
         self.mock_update_gencode.assert_not_called()
         self.assertListEqual(self.mock_update_calls, [])
         self.mock_logger.info.assert_called_with("Done")
-
-    def test_cached_omim_update_reference_data_command(self):
-        call_command(
-            'update_all_reference_data', '--use-cached-omim', *SKIP_ARGS)
-
-        self.assertListEqual(self.mock_update_calls, [
-            (Omim, {'gene_ids_to_gene': mock.ANY, 'gene_symbols_to_gene': mock.ANY}),
-        ])
-        self.mock_update_gencode.assert_not_called()
-
-        calls = [
-            mock.call('Done'),
-            mock.call('Updated: omim')
-        ]
-        self.mock_logger.info.assert_has_calls(calls)
