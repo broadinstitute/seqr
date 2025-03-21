@@ -2,8 +2,8 @@ import mock
 
 from django.core.management import call_command
 from django.core.management.base import CommandError
-from django.test import TestCase
 
+from reference_data.management.tests.test_utils import ReferenceDataCommandTestCase
 from reference_data.models import Omim, dbNSFPGene, GeneConstraint, GeneCopyNumberSensitivity, GenCC, ClinGen, \
     RefseqTranscript, HumanPhenotypeOntology, MGI, PrimateAI, GeneShet, LoadableModel, DataVersions
 
@@ -20,9 +20,11 @@ SKIP_ARGS = [
     '--skip-gene-cn-sensitivity', '--skip-gencc', '--skip-clingen', '--skip-refseq',
 ]
 
-class BaseUpdateAllReferenceDataTest(object):
+class BaseUpdateAllReferenceDataTest(ReferenceDataCommandTestCase):
 
-    def set_up(self):
+    def setUp(self):
+        super().setUp()
+
         self.mock_update_calls = []
         def _mock_handler(_cls, **kwargs):
             self.mock_update_calls.append((_cls, kwargs))
@@ -44,23 +46,10 @@ class BaseUpdateAllReferenceDataTest(object):
         patcher = mock.patch('seqr.utils.communication_utils._post_to_slack')
         self.mock_slack = patcher.start()
         self.addCleanup(patcher.stop)
-        patcher = mock.patch('reference_data.models.LoadableModel._get_file_last_modified')
-        self.mock_get_file_last_modified = patcher.start()
-        self.mock_get_file_last_modified.return_value = 'Thu, 20 Mar 2025 20:52:24 GMT'
-        self.addCleanup(patcher.stop)
-        patcher = mock.patch('reference_data.models.ClinGen.get_current_version')
-        patcher.start().return_value = '2025-02-05'
-        self.addCleanup(patcher.stop)
-        patcher = mock.patch('reference_data.models.HumanPhenotypeOntology.get_current_version')
-        patcher.start().return_value = '2025-03-03'
-        self.addCleanup(patcher.stop)
 
 
-class NewDbUpdateAllReferenceDataTest(BaseUpdateAllReferenceDataTest, TestCase):
-    databases = '__all__'
-
-    def setUp(self):
-        super().set_up()
+class NewDbUpdateAllReferenceDataTest(BaseUpdateAllReferenceDataTest):
+    fixtures = []
 
     def test_empty_db_update_all_reference_data_command(self):
         with self.assertRaises(CommandError) as e:
@@ -108,12 +97,7 @@ class NewDbUpdateAllReferenceDataTest(BaseUpdateAllReferenceDataTest, TestCase):
         self.assertEqual(str(e.exception),'Failed to Update: PrimateAI, MGI')
 
 
-class UpdateAllReferenceDataTest(BaseUpdateAllReferenceDataTest, TestCase):
-    databases = '__all__'
-    fixtures = ['users', 'reference_data']
-
-    def setUp(self):
-        super().set_up()
+class UpdateAllReferenceDataTest(BaseUpdateAllReferenceDataTest):
 
     def test_all_loaded_update_reference_data_command(self):
         call_command('update_all_reference_data')
