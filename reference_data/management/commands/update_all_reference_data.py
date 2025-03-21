@@ -21,7 +21,6 @@ REFERENCE_DATA_MODELS = [
     MGI,
     GenCC,
     ClinGen,
-    RefseqTranscript,
     GeneShet,
     HumanPhenotypeOntology,
 ]
@@ -102,3 +101,5 @@ class Command(BaseCommand):
 
             gene_id_map, _ = get_genes_by_id_and_symbol()
             TranscriptInfo.bulk_create_for_genes(new_transcripts, gene_id_map)
+
+        RefseqTranscript.update_records()

@@ -1524,13 +1524,6 @@
 },
 {
     "model": "reference_data.dataversions",
-    "pk": "RefseqTranscript",
-    "fields": {
-        "version": "39"
-    }
-},
-{
-    "model": "reference_data.dataversions",
     "pk": "dbNSFPGene",
     "fields": {
         "version": "dbNSFP4.0_gene"

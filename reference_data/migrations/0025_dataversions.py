@@ -2,14 +2,14 @@
 
 from django.db import migrations, models
 
-from reference_data.models import HumanPhenotypeOntology, GeneInfo, RefseqTranscript, GeneConstraint, \
+from reference_data.models import HumanPhenotypeOntology, GeneInfo, GeneConstraint, \
     GeneCopyNumberSensitivity, GeneShet, Omim, dbNSFPGene, PrimateAI, MGI, GenCC, ClinGen
 
 def get_current_versions(apps, schema_editor):
     DataVersions = apps.get_model('reference_data', 'DataVersions')
     db_alias = schema_editor.connection.alias
-    versions = [DataVersions(data_model_name=model.__name__, version=model.get_current_version() or '') for model in [
-        HumanPhenotypeOntology, GeneInfo, RefseqTranscript, GeneConstraint, GeneCopyNumberSensitivity, GeneShet, Omim,
+    versions = [DataVersions(data_model_name=model.__name__, version=model.CURRENT_VERSION or '') for model in [
+        HumanPhenotypeOntology, GeneInfo, GeneConstraint, GeneCopyNumberSensitivity, GeneShet, Omim,
         dbNSFPGene, PrimateAI, MGI, GenCC, ClinGen,
     ]]
     DataVersions.objects.using(db_alias).bulk_create(versions)

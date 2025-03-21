@@ -413,10 +413,6 @@ class RefseqTranscript(LoadableModel):
     transcript = models.OneToOneField(TranscriptInfo, on_delete=models.CASCADE)
     refseq_id = models.CharField(max_length=20)
 
-    @classmethod
-    def get_current_version(cls, **kwargs):
-        return GeneInfo.CURRENT_VERSION
-
     @staticmethod
     def get_file_header(f):
         return ['transcript_id', 'refseq_id', 'additional_info']
