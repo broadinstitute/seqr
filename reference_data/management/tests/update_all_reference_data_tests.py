@@ -5,7 +5,7 @@ from django.core.management.base import CommandError
 from django.test import TestCase
 
 from reference_data.models import Omim, dbNSFPGene, GeneConstraint, GeneCopyNumberSensitivity, GenCC, ClinGen, \
-    RefseqTranscript, HumanPhenotypeOntology, MGI, PrimateAI, GeneShet, LoadableModel
+    RefseqTranscript, HumanPhenotypeOntology, MGI, PrimateAI, GeneShet, LoadableModel, DataVersions
 
 
 def primate_ai_exception():
@@ -42,7 +42,8 @@ class BaseUpdateAllReferenceDataTest(object):
         self.mock_logger = patcher.start()
         self.addCleanup(patcher.stop)
         patcher = mock.patch('reference_data.models.LoadableModel._get_file_last_modified')
-        patcher.start().return_value = 'Thu, 20 Mar 2025 20:52:24 GMT'
+        self.mock_get_file_last_modified = patcher.start()
+        self.mock_get_file_last_modified.return_value = 'Thu, 20 Mar 2025 20:52:24 GMT'
         self.addCleanup(patcher.stop)
         patcher = mock.patch('reference_data.models.ClinGen.get_current_version')
         patcher.start().return_value = '2025-02-05'
@@ -116,3 +117,28 @@ class UpdateAllReferenceDataTest(BaseUpdateAllReferenceDataTest, TestCase):
         self.mock_update_gencode.assert_not_called()
         self.assertListEqual(self.mock_update_calls, [])
         self.mock_logger.info.assert_called_with("Done")
+
+    def test_partial_update_reference_data_command(self):
+        self.mock_get_file_last_modified.return_value = 'Sat, 22 Mar 2025 09:21:17 GMT'
+        dbnsfp_version = DataVersions.objects.get(data_model_name='dbNSFPGene')
+        dbnsfp_version.version = 'dbNSFP3.2_gene'
+        dbnsfp_version.save()
+
+        call_command('update_all_reference_data')
+
+        self.mock_update_gencode.assert_not_called()
+        kwargs = {'gene_ids_to_gene': mock.ANY, 'gene_symbols_to_gene': mock.ANY}
+        gene_kwargs = {**kwargs, 'skipped_genes': {None: 0}}
+        self.assertListEqual(self.mock_update_calls, [
+            (Omim, {**kwargs, 'omim_key': None}),
+            (dbNSFPGene, gene_kwargs),
+            (GenCC, gene_kwargs),
+        ])
+        self.assertEqual(len(self.mock_update_calls[0][1]['gene_ids_to_gene']), 51)
+        self.assertEqual(len(self.mock_update_calls[0][1]['gene_symbols_to_gene']), 50)
+
+        self.mock_logger.info.assert_has_calls([
+            mock.call('Done'),
+            mock.call('Updated: Omim, dbNSFPGene, GenCC'),
+        ])
+        self.mock_logger.error.assert_not_called()
