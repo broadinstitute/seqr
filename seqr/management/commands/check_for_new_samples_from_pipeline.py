@@ -8,7 +8,7 @@ import logging
 import re
 
 from reference_data.models import GENOME_VERSION_LOOKUP, GENOME_VERSION_GRCh38
-from seqr.models import Family, Sample, SavedVariant, Project
+from seqr.models import Family, Sample, SavedVariant, Project, Individual
 from seqr.utils.communication_utils import safe_post_to_slack, send_project_email
 from seqr.utils.file_utils import file_iter, list_files, is_google_bucket_file_path
 from seqr.utils.search.add_data_utils import notify_search_data_loaded, update_airtable_loading_tracking_status
@@ -44,6 +44,12 @@ PDO_COPY_FIELDS = [
     'CallsetCompletionDate', 'Project', 'Metrics Checked', 'gCNV_SV_CallsetPath', 'DRAGENShortReadCallsetPath',
 ]
 
+QC_FILTER_FLAG_COL_MAP = {
+    'callrate': 'filtered_callrate',
+    'contamination': 'contamination_rate',
+    'coverage_exome': 'percent_bases_at_20x',
+    'coverage_genome': 'mean_coverage'
+}
 
 class Command(BaseCommand):
     help = 'Check for newly loaded seqr samples'
@@ -104,9 +110,10 @@ class Command(BaseCommand):
             except Exception as e:
                 logger.error(f'Error reloading shared annotations for {"/".join(data_type_key)}: {e}')
 
-    def _get_runs(self, **kwargs):
-        path = self._run_path(lambda field: kwargs.get(field, '*') or '*')
-        path_regex = self._run_path(lambda field: f'(?P<{field}>[^/]+)')
+    @classmethod
+    def _get_runs(cls, **kwargs):
+        path = cls._run_path(lambda field: kwargs.get(field, '*') or '*')
+        path_regex = cls._run_path(lambda field: f'(?P<{field}>[^/]+)')
 
         runs = defaultdict(lambda: {'files': set()})
         for path in list_files(path, user=None):
@@ -223,7 +230,7 @@ class Command(BaseCommand):
 
         sample_type = metadata['sample_type']
         logger.info(f'Loading {len(sample_project_tuples)} {sample_type} {dataset_type} samples in {len(samples_by_project)} projects')
-        new_samples, *args = match_and_update_search_samples(
+        new_samples, updated_samples, *args = match_and_update_search_samples(
             projects=samples_by_project.keys(),
             sample_project_tuples=sample_project_tuples,
             sample_data={'data_source': run_version, 'elasticsearch_index': ';'.join(metadata['callsets'])},
@@ -243,6 +250,14 @@ class Command(BaseCommand):
             cls._report_loading_failures(metadata, split_project_pdos)
         except Exception as e:
             logger.error(f'Error reporting loading failure for {run_version}: {e}')
+
+        # Update sample qc
+        if 'sample_qc' in metadata:
+            try:
+                individuals = Individual.objects.filter(sample__in=updated_samples)
+                cls._update_individuals_sample_qc(sample_type, individuals, metadata['sample_qc'])
+            except Exception as e:
+                logger.error(f'Error updating individuals sample qc {run_version}: {e}')
 
         # Reload saved variant JSON
         updated_variants_by_id = update_projects_saved_variant_json([
@@ -353,6 +368,36 @@ class Command(BaseCommand):
         return sorted(pdos_to_create.keys())
 
     @classmethod
+    def _update_individuals_sample_qc(cls, sample_type, individuals, sample_qc_map):
+        sample_individual_map = {i.individual_id: i for i in individuals}
+        updated_individuals = []
+        for individual_id, record in sample_qc_map.items():
+            individual = sample_individual_map[individual_id]
+            filter_flags = {}
+            for flag in record['filter_flags']:
+                flag = '{}_{}'.format(flag, 'exome' if sample_type.lower() == 'wes' else 'genome') if flag == 'coverage' else flag
+                flag_col = QC_FILTER_FLAG_COL_MAP.get(flag, flag)
+                filter_flags[flag] = record[flag_col]
+
+            pop_platform_filters = {}
+            for flag in record['qc_metrics_filters']:
+                flag_col = 'sample_qc.{}'.format(flag)
+                pop_platform_filters[flag] = record[flag_col]
+
+            individual.filter_flags = filter_flags
+            individual.pop_platform_filters = pop_platform_filters
+            individual.population = record['qc_gen_anc'].upper()
+            updated_individuals.append(individual)
+
+        if updated_individuals:
+            Individual.bulk_update_models(
+                user=None,
+                models=updated_individuals,
+                fields=['filter_flags', 'pop_platform_filters', 'population'],
+            )
+
+
+    @classmethod
     def _reload_shared_variant_annotations(cls, data_type, genome_version, updated_variants_by_id=None, exclude_families=None, chromosomes=None):
         dataset_type = data_type.split('_')[0]
         is_sv = dataset_type.startswith(Sample.DATASET_TYPE_SV_CALLS)
@@ -443,3 +488,5 @@ class Command(BaseCommand):
 
 
 reload_shared_variant_annotations = Command._reload_shared_variant_annotations
+update_individuals_sample_qc = Command._update_individuals_sample_qc
+get_pipeline_runs = Command._get_runs
