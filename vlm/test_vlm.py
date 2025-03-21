@@ -91,14 +91,14 @@ class VlmTestCase(AioHTTPTestCase):
         mocked_responses.assert_called_with(
             'https://vlm-auth.us.auth0.com/oauth/token',
             method='POST',
-            json={'client_id': 'unknown_client_id', 'client_secret': 'unknown_client_secret'},
+            json={'client_id': 'unknown_client_id', 'client_secret': 'unknown_client_secret', 'audience': 'https://vlm-auth.us.auth0.com/api/v2/', 'grant_type': 'client_credentials'},
         )
         mocked_responses.assert_called_with(
             f'https://vlm-auth.us.auth0.com/api/v2/clients/{REQUESTER_CLIENT_ID}',
             headers={'Authorization': 'Bearer test_token'},
         )
         self.assertEqual(
-            self._caplog.messages[1],
+            self._caplog.messages[2],
             'Received match request from Test Node: assemblyId=GRCh38&referenceName=1&start=38724419&referenceBases=T&alternateBases=G',
         )
 

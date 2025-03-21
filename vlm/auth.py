@@ -9,7 +9,12 @@ VLM_AUTH_API = 'https://vlm-auth.us.auth0.com/'
 
 VLM_CLIENT_ID = os.environ.get('VLM_CLIENT_ID', 'unknown_client_id')
 VLM_CLIENT_SECRET = os.environ.get('VLM_CLIENT_SECRET', 'unknown_client_secret')
-VLM_CREDENTIALS = {'client_id': VLM_CLIENT_ID, 'client_secret': VLM_CLIENT_SECRET}
+VLM_CREDENTIALS_BODY = {
+    'client_id': VLM_CLIENT_ID,
+    'client_secret': VLM_CLIENT_SECRET,
+    'audience': f'{VLM_AUTH_API}api/v2/',
+    'grant_type': 'client_credentials',
+}
 
 async def authenticate(request: web.Request):
     try:
@@ -33,7 +38,7 @@ async def authenticate(request: web.Request):
 
 async def _get_valid_vlm_client_info(client_id: str) -> dict:
     async with ClientSession(VLM_AUTH_API) as session:
-        async with session.post('/oauth/token', json=VLM_CREDENTIALS) as resp:
+        async with session.post('/oauth/token', json=VLM_CREDENTIALS_BODY) as resp:
             token = (await _get_success_json(resp, 'Credential Check Error')).get('access_token')
 
         headers = {'Authorization': f'Bearer {token}'}
