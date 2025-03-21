@@ -189,7 +189,6 @@ class VlmTestCase(AioHTTPTestCase):
 
     @aioresponses(passthrough=['http://127.0.0.1'])
     async def test_match_error(self, mocked_responses):
-        mocked_responses.post('https://vlm-auth.us.auth0.com/oauth/token', payload={'access_token': 'test_token'}, repeat=True)
         mocked_responses.get(
             f'https://vlm-auth.us.auth0.com/api/v2/clients/{REQUESTER_CLIENT_ID}', status=404,
         )
@@ -225,11 +224,19 @@ class VlmTestCase(AioHTTPTestCase):
             self.assertEqual(resp.status, 403)
             self.assertEqual(resp.reason, 'Invalid token: Invalid issuer')
 
+        mocked_responses.post('https://vlm-auth.us.auth0.com/oauth/token', status=400, payload={'error': 'invalid_request'})
         jwt_body['iss'] = 'https://vlm-auth.us.auth0.com/'
         headers['Authorization'] = f'Bearer {jwt.encode(jwt_body, "")}'
         async with self.client.request('GET', '/vlm/match', headers=headers) as resp:
             self.assertEqual(resp.status, 403)
-            self.assertEqual(resp.reason, 'Invalid Client ID abc123: 404 Not Found')
+            self.assertEqual(resp.reason, 'Credential Check Error')
+        self.assertEqual(self._caplog.messages[-3], "Credential Check Error: 400 - {'error': 'invalid_request'}")
+
+        mocked_responses.post('https://vlm-auth.us.auth0.com/oauth/token', payload={'access_token': 'test_token'}, repeat=True)
+        async with self.client.request('GET', '/vlm/match', headers=headers) as resp:
+            self.assertEqual(resp.status, 403)
+            self.assertEqual(resp.reason, 'Invalid Client ID abc123')
+        self.assertEqual(self._caplog.messages[-3], "Invalid Client ID abc123: 404 - Not Found")
 
         mocked_responses.get(
             f'https://vlm-auth.us.auth0.com/api/v2/clients/{REQUESTER_CLIENT_ID}',
