@@ -98,7 +98,7 @@ class VlmTestCase(AioHTTPTestCase):
             headers={'Authorization': 'Bearer test_token'},
         )
         self.assertEqual(
-            self._caplog.messages[2],
+            self._caplog.messages[-2],
             'Received match request from Test Node: assemblyId=GRCh38&referenceName=1&start=38724419&referenceBases=T&alternateBases=G',
         )
 
