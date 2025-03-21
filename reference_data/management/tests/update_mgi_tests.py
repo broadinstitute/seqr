@@ -14,7 +14,7 @@ class UpdateMgiTest(ReferenceDataCommandTestCase):
     ]
 
     def test_update_mgi_command(self):
-        self._test_update_command('update_mgi', 'MGI', existing_records=0, created_records=2, skipped_records=2)
+        self._test_update_command('MGI', existing_records=0, created_records=2, skipped_records=2)
 
         self.assertEqual(MGI.objects.all().count(), 2)
         record = MGI.objects.get(gene__gene_id = 'ENSG00000223972')

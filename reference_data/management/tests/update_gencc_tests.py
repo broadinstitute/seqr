@@ -12,7 +12,7 @@ class UpdateGeneCCTest(ReferenceDataCommandTestCase):
     ])
 
     def test_update_gencc_command(self):
-        self._test_update_command('update_gencc', 'GenCC', created_records=2)
+        self._test_update_command('GenCC', created_records=2)
 
         self.assertEqual(GenCC.objects.count(), 2)
         record = GenCC.objects.get(gene__gene_id='ENSG00000186092')

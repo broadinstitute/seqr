@@ -16,7 +16,7 @@ class UpdateClinGenTest(ReferenceDataCommandTestCase):
     ])
 
     def test_update_clingen_command(self):
-        self._test_update_command('update_clingen', 'ClinGen', created_records=2)
+        self._test_update_command('ClinGen', created_records=2)
 
         self.assertEqual(ClinGen.objects.count(), 2)
         record = ClinGen.objects.get(gene__gene_id='ENSG00000186092')
