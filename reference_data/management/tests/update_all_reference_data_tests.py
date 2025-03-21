@@ -96,6 +96,18 @@ class NewDbUpdateAllReferenceDataTest(BaseUpdateAllReferenceDataTest):
 
         self.assertEqual(str(e.exception),'Failed to Update: PrimateAI, MGI')
 
+        self.assertListEqual(sorted(DataVersions.objects.values_list('data_model_name', 'version')), [
+            ('ClinGen', '2025-02-05'),
+            ('GenCC', 'Thu, 20 Mar 2025 20:52:24 GMT'),
+            ('GeneConstraint', 'gnomad.v2.1.1.lof_metrics.by_gene'),
+            ('GeneCopyNumberSensitivity', 'Collins_rCNV_2022'),
+            ('GeneInfo', '39'),
+            ('GeneShet', '7939768'),
+            ('HumanPhenotypeOntology', '2025-03-03'),
+            ('Omim', 'Thu, 20 Mar 2025 20:52:24 GMT'),
+            ('dbNSFPGene', 'dbNSFP4.0_gene'),
+        ])
+
 
 class UpdateAllReferenceDataTest(BaseUpdateAllReferenceDataTest):
 
@@ -136,3 +148,7 @@ class UpdateAllReferenceDataTest(BaseUpdateAllReferenceDataTest):
             'Updated dbNSFPGene reference data from version "dbNSFP3.2_gene" to version "dbNSFP4.0_gene"',
             'Updated GenCC reference data from version "Thu, 20 Mar 2025 20:52:24 GMT" to version "Sat, 22 Mar 2025 09:21:17 GMT"',
         ]])
+
+        self.assertEqual(DataVersions.objects.get(data_model_name='Omim').version, 'Sat, 22 Mar 2025 09:21:17 GMT')
+        self.assertEqual(DataVersions.objects.get(data_model_name='dbNSFPGene').version, 'dbNSFP4.0_gene')
+        self.assertEqual(DataVersions.objects.get(data_model_name='GenCC').version, 'Sat, 22 Mar 2025 09:21:17 GMT')

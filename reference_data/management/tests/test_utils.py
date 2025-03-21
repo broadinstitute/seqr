@@ -40,7 +40,7 @@ class ReferenceDataCommandTestCase(TestCase):
         self.addCleanup(patcher.stop)
 
     @responses.activate
-    def _test_update_command(self, model_name, version, existing_records=1, created_records=1, skipped_records=1, skipped_message='genes.'):
+    def _test_update_command(self, model_name, existing_records=1, created_records=1, skipped_records=1, skipped_message='genes.'):
         DataVersions.objects.filter(data_model_name=model_name).delete()
 
         # test without a file_path parameter
@@ -63,11 +63,8 @@ class ReferenceDataCommandTestCase(TestCase):
         ]
         self.mock_logger.info.assert_has_calls(log_calls)
 
-        data_version = DataVersions.objects.get(data_model_name=model_name)
-        self.assertEqual(data_version.version, version)
-
         # test with a locally cached file
-        data_version.delete()
+        DataVersions.objects.get(data_model_name=model_name).delete()
         self.mock_logger.reset_mock()
         responses.add(responses.HEAD, self.URL, headers={"Content-Length": f"{os.path.getsize(self.tmp_file)}"})
         responses.remove(responses.GET, self.URL)
