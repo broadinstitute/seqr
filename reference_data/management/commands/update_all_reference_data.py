@@ -36,7 +36,7 @@ class Command(BaseCommand):
         latest_versions = {model: model.get_current_version(**options) for model in REFERENCE_DATA_MODELS}
         to_update = OrderedDict([
             (model, version) for model, version in latest_versions.items()
-            if current_versions.get(model.__name__).version != version
+            if not current_versions.get(model.__name__) or current_versions[model.__name__].version != version
         ])
         updated = []
         update_failed = []
@@ -51,9 +51,10 @@ class Command(BaseCommand):
         for data_cls, latest_version in to_update.items():
             data_model_name = data_cls.__name__
             try:
-                data_cls.update_records(
-                    gene_ids_to_gene=gene_ids_to_gene, gene_symbols_to_gene=gene_symbols_to_gene, **options,
-                )
+                kwargs = {'gene_ids_to_gene': gene_ids_to_gene, 'gene_symbols_to_gene': gene_symbols_to_gene}
+                if data_cls == Omim:
+                    kwargs['omim_key'] = options.get('omim_key')
+                data_cls.update_records(**kwargs)
                 self._track_success_updates(data_model_name, latest_version, current_versions, updated)
             except Exception as e:
                 logger.error("unable to update {}: {}".format(data_model_name, e))

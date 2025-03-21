@@ -4,8 +4,8 @@ from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import TestCase
 
-from reference_data.models import GeneInfo, Omim, dbNSFPGene, GeneConstraint, GeneCopyNumberSensitivity, GenCC, ClinGen, \
-    RefseqTranscript, HumanPhenotypeOntology, MGI, PrimateAI, LoadableModel
+from reference_data.models import Omim, dbNSFPGene, GeneConstraint, GeneCopyNumberSensitivity, GenCC, ClinGen, \
+    RefseqTranscript, HumanPhenotypeOntology, MGI, PrimateAI, GeneShet, LoadableModel
 
 
 def primate_ai_exception():
@@ -59,21 +59,23 @@ class NewDbUpdateAllReferenceDataTest(BaseUpdateAllReferenceDataTest, TestCase):
         super().set_up()
 
     def test_empty_db_update_all_reference_data_command(self):
-        call_command('update_all_reference_data', '--omim-key=test_key')
+        with self.assertRaises(CommandError) as e:
+            call_command('update_all_reference_data', '--omim-key=test_key')
 
         calls = [
-            mock.call(39, set(), set()),
-            mock.call(31, set(), set()),
-            mock.call(29, set(), set()),
-            mock.call(28, set(), set()),
-            mock.call(27, set(), set()),
-            mock.call(19, set(), set()),
+            mock.call('39', set(), set(), track_symbol_changes=False),
+            mock.call('31', set(), set(), track_symbol_changes=False),
+            mock.call('29', set(), set(), track_symbol_changes=False),
+            mock.call('28', set(), set(), track_symbol_changes=False),
+            mock.call('27', set(), set(), track_symbol_changes=False),
+            mock.call('19', set(), set(), track_symbol_changes=False),
         ]
         self.mock_update_gencode.assert_has_calls(calls)
 
         kwargs = {'gene_ids_to_gene': {}, 'gene_symbols_to_gene': {}}
         gene_kwargs = {**kwargs, 'skipped_genes': {None: 0}}
         self.assertListEqual(self.mock_update_calls, [
+            (RefseqTranscript, {'transcript_id_map': {}, 'skipped_transcripts': {None: 0}}),
             (Omim, {**kwargs, 'omim_key': 'test_key'}),
             (dbNSFPGene, gene_kwargs),
             (GeneConstraint, gene_kwargs),
@@ -82,22 +84,23 @@ class NewDbUpdateAllReferenceDataTest(BaseUpdateAllReferenceDataTest, TestCase):
             (MGI, {**gene_kwargs, 'entrez_id_to_gene': {}}),
             (GenCC, gene_kwargs),
             (ClinGen, gene_kwargs),
-            (RefseqTranscript, {**kwargs, 'transcript_id_map': {}, 'skipped_transcripts': {None: 0}}),
-            (HumanPhenotypeOntology, {}),
+            (GeneShet, gene_kwargs),
+            (HumanPhenotypeOntology, kwargs),
         ])
 
         calls = [
             mock.call('Done'),
-            mock.call('Updated: gencode, omim, dbnsfp_gene, gene_constraint, gene_cn_sensitivity, gencc, clingen, refseq, hpo'),
-            mock.call('Failed to Update: primate_ai, mgi')
+            mock.call('Updated: GeneInfo, Omim, dbNSFPGene, GeneConstraint, GeneCopyNumberSensitivity, GenCC, ClinGen, GeneShet, HumanPhenotypeOntology'),
         ]
         self.mock_logger.info.assert_has_calls(calls)
 
         calls = [
-            mock.call('unable to update primate_ai: Primate_AI failed'),
-            mock.call('unable to update mgi: MGI failed')
+            mock.call('unable to update PrimateAI: Primate_AI failed'),
+            mock.call('unable to update MGI: MGI failed')
         ]
         self.mock_logger.error.assert_has_calls(calls)
+
+        self.assertEqual(str(e.exception),'Failed to Update: PrimateAI, MGI')
 
 
 class UpdateAllReferenceDataTest(BaseUpdateAllReferenceDataTest, TestCase):

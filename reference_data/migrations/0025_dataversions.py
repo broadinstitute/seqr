@@ -11,7 +11,7 @@ def get_current_versions(apps, schema_editor):
     versions = [DataVersions(data_model_name=model.__name__, version=model.CURRENT_VERSION or '') for model in [
         HumanPhenotypeOntology, GeneInfo, GeneConstraint, GeneCopyNumberSensitivity, GeneShet, Omim,
         dbNSFPGene, PrimateAI, MGI, GenCC, ClinGen,
-    ]]
+    ] if model.objects.exists()]
     DataVersions.objects.using(db_alias).bulk_create(versions)
 
 
