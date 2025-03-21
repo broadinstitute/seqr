@@ -48,7 +48,7 @@ class Command(BaseCommand):
             self._track_success_updates(data_model_name, latest_version, current_versions, updated)
 
         gene_ids_to_gene, gene_symbols_to_gene = get_genes_by_id_and_symbol() if to_update else (None, None)
-        for data_cls, latest_version in to_update:
+        for data_cls, latest_version in to_update.items():
             data_model_name = data_cls.__name__
             try:
                 data_cls.update_records(

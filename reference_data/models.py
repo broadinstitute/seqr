@@ -239,7 +239,7 @@ class GeneInfo(LoadableModel):
     http://www.gencodegenes.org/gencodeformat.html
     """
 
-    ALL_GENCODE_VERSIONS = [39, 31, 29, 28, 27, 19]
+    ALL_GENCODE_VERSIONS = ['39', '31', '29', '28', '27', '19']
     CURRENT_VERSION = ALL_GENCODE_VERSIONS[0]
 
     # gencode fields
