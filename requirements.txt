@@ -84,7 +84,7 @@ google-resumable-media==2.4.1
     # via google-cloud-storage
 googleapis-common-protos==1.58.0
     # via google-api-core
-gunicorn==22.0.0
+gunicorn==23.0.0
     # via -r requirements.in
 idna==3.7
     # via requests
