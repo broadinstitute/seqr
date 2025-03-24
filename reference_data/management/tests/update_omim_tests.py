@@ -3,7 +3,6 @@ import mock
 import json
 import re
 
-from django.core.management import call_command
 from django.core.management.base import CommandError
 
 from reference_data.management.tests.test_utils import ReferenceDataCommandTestCase
