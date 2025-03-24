@@ -359,6 +359,7 @@ class CheckNewSamplesTest(object):
 
         reload_annotation_calls = [] if single_call else [
             {'genome_version': 'GRCh38', 'data_type': 'SNV_INDEL', 'variant_ids': [['1', 1562437, 'G', 'CA']]},
+            {'genome_version': 'GRCh38', 'data_type': 'SNV_INDEL', 'variant_ids': [['1', 1562437, 'G', 'CA']]},
             {'genome_version': 'GRCh38', 'data_type': 'SNV_INDEL', 'variant_ids': [['1', 46859832, 'G', 'A']]},
             {'genome_version': 'GRCh38', 'data_type': 'SV_WES', 'variant_ids': ['prefix_19107_DEL']}
         ]
@@ -392,6 +393,7 @@ class CheckNewSamplesTest(object):
             'results': [{'variantId': '1-248367227-TC-T', 'familyGuids': ['F000014_14'], 'updated_field': 'updated_value'}],
             'total': 1,
         })
+        responses.add(responses.POST, f'{MOCK_HAIL_ORIGIN}:5000/multi_lookup', status=400)
         responses.add(responses.POST, f'{MOCK_HAIL_ORIGIN}:5000/multi_lookup', status=200, json={
             'results': [{'variantId': '1-46859832-G-A', 'updated_new_field': 'updated_value', 'rsid': 'rs123'}],
         })
