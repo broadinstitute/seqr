@@ -20,6 +20,9 @@ class ReferenceDataCommandTestCase(TestCase):
         patcher = mock.patch('reference_data.models.logger')
         self.mock_logger = patcher.start()
         self.addCleanup(patcher.stop)
+        patcher = mock.patch('reference_data.management.commands.update_all_reference_data.logger')
+        self.mock_command_logger = patcher.start()
+        self.addCleanup(patcher.stop)
 
         tmp_dir = tempfile.gettempdir()
         self.tmp_file = '{}/{}'.format(tmp_dir, self.URL.split('/')[-1])
@@ -35,21 +38,28 @@ class ReferenceDataCommandTestCase(TestCase):
         patcher = mock.patch('reference_data.models.ClinGen.get_current_version')
         patcher.start().return_value = '2025-02-05'
         self.addCleanup(patcher.stop)
-        patcher = mock.patch('reference_data.models.HumanPhenotypeOntology.get_current_version')
-        patcher.start().return_value = '2025-03-03'
-        self.addCleanup(patcher.stop)
+        self.mock_hpo_version_patcher = mock.patch('reference_data.models.HumanPhenotypeOntology.get_current_version')
+        self.mock_hpo_version_patcher.start().return_value = '2025-03-03'
+        self.addCleanup(self.mock_hpo_version_patcher.stop)
 
     @responses.activate
-    def _test_update_command(self, model_name, existing_records=1, created_records=1, skipped_records=1, skipped_message='genes.'):
+    def _run_command(self, data, head_response=None):
+        if data:
+            body = ''.join(data)
+            if self.URL.endswith('gz'):
+                body = gzip.compress(body.encode())
+            responses.add(responses.GET, self.URL, body=body)
+        if head_response:
+            responses.add(responses.HEAD, self.URL, **head_response)
+
+        call_command('update_all_reference_data')
+
+
+    def _test_update_command(self, model_name, existing_records=1, created_records=1, skipped_records=1, skipped_message='genes.', head_response=None, expected_version=None):
         DataVersions.objects.filter(data_model_name=model_name).delete()
 
         # test without a file_path parameter
-        body = ''.join(self.DATA)
-        if self.URL.endswith('gz'):
-            body = gzip.compress(body.encode())
-        responses.add(responses.GET, self.URL, body=body)
-
-        call_command('update_all_reference_data')
+        self._run_command(self.DATA, head_response=head_response)
 
         self.mock_logger.error.assert_not_called()
         log_calls = [
@@ -59,15 +69,28 @@ class ReferenceDataCommandTestCase(TestCase):
             mock.call(f'Created {created_records} {model_name} records'),
             mock.call('Done'),
             mock.call(f'Loaded {created_records} {model_name} records'),
-            mock.call(f'Skipped {skipped_records} records with unrecognized {skipped_message}'),
         ]
+        if skipped_records:
+            log_calls.append(mock.call(f'Skipped {skipped_records} records with unrecognized {skipped_message}'))
         self.mock_logger.info.assert_has_calls(log_calls)
+        self.mock_command_logger.error.assert_not_called()
+        self.mock_command_logger.info.assert_has_calls([
+            mock.call('Done'),
+            mock.call(f'Updated: {model_name}'),
+        ])
+
+        dv = DataVersions.objects.get(data_model_name=model_name)
+        if expected_version:
+            self.assertEqual(dv.version, expected_version)
 
         # test with a locally cached file
-        DataVersions.objects.get(data_model_name=model_name).delete()
+        dv.delete()
         self.mock_logger.reset_mock()
-        responses.add(responses.HEAD, self.URL, headers={"Content-Length": f"{os.path.getsize(self.tmp_file)}"})
-        responses.remove(responses.GET, self.URL)
-        call_command('update_all_reference_data')
+        headers = head_response['headers'] if head_response else {}
+        head_response = {
+            **(head_response or {}),
+            'headers': {**headers, "Content-Length": f"{os.path.getsize(self.tmp_file)}"},
+        }
+        self._run_command(data=None, head_response=head_response)
         log_calls[2] = mock.call(f'Deleted {created_records} {model_name} records')
         self.mock_logger.info.assert_has_calls(log_calls)
