@@ -1,3 +1,6 @@
+import mock
+from django.views.decorators.http import last_modified
+
 from reference_data.models import GenCC
 from reference_data.management.tests.test_utils import ReferenceDataCommandTestCase
 
@@ -13,8 +16,18 @@ class UpdateGeneCCTest(ReferenceDataCommandTestCase):
         '"GENCC_000101-HGNC_3039-MONDO_0005258-HP_0000006-GENCC_100003","HGNC:17217","OR4F5","autism spectrum disorder","Definitive","Autosomal dominant","Genomics England PanelApp","1/7/19 19:04","9/28/21"',
     ])
 
+    def setUp(self):
+        super().setUp()
+        self.mock_get_file_last_modified_patcher.stop()
+        patcher = mock.patch('reference_data.models.Omim.get_current_version')
+        patcher.start().return_value = self.mock_get_file_last_modified.return_value
+        self.addCleanup(patcher.stop)
+
     def test_update_gencc_command(self):
-        self._test_update_command('GenCC', created_records=2)
+        last_modified = 'Fri, 28 Mar 2025 11:00:00 GMT'
+        self._test_update_command('GenCC', created_records=2, expected_version=last_modified, head_response={
+            'headers': {'Last-Modified': last_modified}
+        })
 
         self.assertEqual(GenCC.objects.count(), 2)
         record = GenCC.objects.get(gene__gene_id='ENSG00000186092')
