@@ -1,6 +1,7 @@
 from collections import defaultdict
 
 from django.db.models import F, Min, Count, Case, When
+from time import sleep
 from urllib3.connectionpool import connection_from_url
 
 import requests
@@ -14,14 +15,15 @@ from settings import HAIL_BACKEND_SERVICE_HOSTNAME, HAIL_BACKEND_SERVICE_PORT
 def _hail_backend_url(path):
     return f'http://{HAIL_BACKEND_SERVICE_HOSTNAME}:{HAIL_BACKEND_SERVICE_PORT}/{path}'
 
-def _execute_search(search_body, user, path='search', exception_map=None, user_email=None):
-    response = requests.post(_hail_backend_url(path), json=search_body, headers={'From': user_email or user.email}, timeout=300)
+def _execute_search(search_body, user, path='search', exception_map=None, user_email=None, max_retries=0):
+    for _ in range(max_retries + 1):
+        response = requests.post(_hail_backend_url(path), json=search_body, headers={'From': user_email or user.email}, timeout=300)
+        if response.status_code == 200:
+            return response.json()
+        sleep(1)
 
-    if response.status_code >= 400:
-        error = (exception_map or {}).get(response.status_code) or response.text or response.reason
-        raise requests.HTTPError(error, response=response)
-
-    return response.json()
+    error = (exception_map or {}).get(response.status_code) or response.text or response.reason
+    raise requests.HTTPError(error, response=response)
 
 
 def ping_hail_backend():
@@ -114,7 +116,7 @@ def hail_sv_variant_lookup(user, variant_id, dataset_type, samples, sample_type=
 
 def hail_variant_multi_lookup(user_email, variant_ids, data_type, genome_version):
     body = {'genome_version': genome_version, 'data_type': data_type, 'variant_ids': variant_ids}
-    response_json = _execute_search(body, user=None, user_email=user_email, path='multi_lookup')
+    response_json = _execute_search(body, user=None, user_email=user_email, path='multi_lookup', max_retries=2)
     return response_json['results']
 
 
