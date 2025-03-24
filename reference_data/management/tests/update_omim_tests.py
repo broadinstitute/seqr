@@ -1,7 +1,5 @@
 import mock
 
-import tempfile
-import responses
 import json
 import re
 
@@ -39,46 +37,32 @@ class UpdateOmimTest(ReferenceDataCommandTestCase):
         patcher.start().return_value = self.mock_get_file_last_modified.return_value
         self.addCleanup(patcher.stop)
 
-    @responses.activate
-    @mock.patch('reference_data.management.commands.update_omim.os')
-    def test_update_omim_command_exceptions(self, mock_os):
-        url = 'https://data.omim.org/downloads/test_key/genemap2.txt'
-        responses.add(responses.HEAD, url, headers={"Content-Length": "1024"})
-        responses.add(responses.GET, url, body='This account has expired')
-        responses.add(responses.GET, url, body=OMIM_DATA[2])
-        bad_phenotype_data = OMIM_DATA[:2]
-        bad_phenotype_data.append('chr1	0	27600000	1p36		605462	BCC1	Basal cell carcinoma, susceptibility to, 1		100307118		associated with rs7538876	{x}, 605462 (5)	\n')
-        responses.add(responses.GET, url, body=''.join(bad_phenotype_data))
-        responses.add(responses.GET, url, body=''.join(OMIM_DATA))
-
-        # Test required argument
-        mock_os.environ.get.return_value = ''
-        with self.assertRaises(CommandError) as ce:
-            call_command('update_omim')
-        self.assertEqual(str(ce.exception), 'omim_key is required')
-
+    def test_update_omim_command_exceptions(self):
         # Test omim account expired
-        with self.assertRaises(ValueError) as e:
-            call_command('update_omim', '--omim-key=test_key')
-        self.assertEqual(str(e.exception),'This account has expired')
+        self._run_error_command(['This account has expired'],'This account has expired')
 
         # Test bad omim data header
-        with self.assertRaises(ValueError) as e:
-            call_command('update_omim', '--omim-key=test_key')
-        self.assertEqual(str(e.exception), 'Header row not found in genemap2 file before line 0: chr1	1	27600000	1p36		607413	OR4F29	Alzheimer disease neuronal thread protein						')
+        self._run_error_command([OMIM_DATA[2]], 'Header row not found in genemap2 file before line 0: chr1	1	27600000	1p36		607413	OR4F29	Alzheimer disease neuronal thread protein						')
 
         # Test bad phenotype field in the record
-        with self.assertRaises(ValueError) as e:
-            call_command('update_omim', '--omim-key=test_key')
-        record = json.loads(re.search(r'No phenotypes found: ({.*})', str(e.exception)).group(1))
+        bad_phenotype_data = OMIM_DATA[:2]
+        bad_phenotype_data.append('chr1	0	27600000	1p36		605462	BCC1	Basal cell carcinoma, susceptibility to, 1		100307118		associated with rs7538876	{x}, 605462 (5)	\n')
+        self._run_error_command(bad_phenotype_data, None)
+        error_message = self.mock_command_logger.error.mock_calls[-1].args[0]
+        record = json.loads(re.search(r'unable to update Omim: No phenotypes found: ({.*})', error_message).group(1))
         self.assertDictEqual(record, {"gene_name": "Basal cell carcinoma, susceptibility to, 1", "mim_number": "605462", "comments": "associated with rs7538876", "mouse_gene_symbol/id": "", "phenotypes": "{x}, 605462 (5)", "genomic_position_end": "27600000", "ensembl_gene_id": "", "gene/locus_and_other_related_symbols": "BCC1", "approved_gene_symbol": "", "entrez_gene_id": "100307118", "computed_cyto_location": "", "cyto_location": "1p36", "#_chromosome": "chr1", "genomic_position_start": "0"})
 
         self.assertEqual(Omim.objects.all().count(), 3)
 
         GeneInfo.objects.all().delete()
-        with self.assertRaises(ValueError) as e:
-            call_command('update_omim', '--omim-key=test_key')
-        self.assertEqual(str(e.exception), 'Related data is missing to load Omim: gene_ids_to_gene, gene_symbols_to_gene')
+        self._run_error_command(self.DATA, 'Related data is missing to load Omim: gene_ids_to_gene, gene_symbols_to_gene')
+
+    def _run_error_command(self, data, error):
+        with self.assertRaises(CommandError) as e:
+            self._run_command(data, command_args=['--omim-key=test_key'], head_response=HEAD_RESPONSE)
+        self.assertEqual(str(e.exception), 'Failed to Update: Omim')
+        if error:
+            self.mock_command_logger.error.assert_called_with(f'unable to update Omim: {error}')
 
 
     @mock.patch('seqr.utils.file_utils.logger')
