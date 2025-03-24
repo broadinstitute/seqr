@@ -592,17 +592,7 @@ class Omim(LoadableModel):
         else:
             gene_symbol = record['approved_gene_symbol'].strip() or record['gene/locus_and_other_related_symbols'].split(",")[0]
             ensembl_gene_id = record['ensembl_gene_id'] or gene_symbols_to_gene.get(gene_symbol)
-
-            output_record = {
-                'gene_id': gene_ids_to_gene.get(ensembl_gene_id),
-                'ensembl_gene_id': ensembl_gene_id,
-                'mim_number': int(record['mim_number']),
-                'chrom': record['#_chromosome'].replace('chr', ''),
-                'start': int(record['genomic_position_start']),
-                'end': int(record['genomic_position_end']),
-                'gene_description': record['gene_name'],
-                'comments': record['comments'],
-            }
+            gene_id = gene_ids_to_gene.get(ensembl_gene_id)
 
             phenotype_field = record['phenotypes'].strip()
 
@@ -610,21 +600,39 @@ class Omim(LoadableModel):
             for phenotype_match in re.finditer("[\[{ ]*(.+?)[ }\]]*(, (\d{4,}))? \(([1-4])\)(, ([^;]+))?;?",
                                                phenotype_field):
                 # Phenotypes example: "Langer mesomelic dysplasia, 249700 (3), Autosomal recessive; Leri-Weill dyschondrosteosis, 127300 (3), Autosomal dominant"
-
-                record_with_phenotype = dict(output_record)  # copy
-                record_with_phenotype["phenotype_description"] = phenotype_match.group(1)
-                record_with_phenotype["phenotype_mim_number"] = int(phenotype_match.group(3)) if phenotype_match.group(
-                    3) else None
-                record_with_phenotype["phenotype_map_method"] = phenotype_match.group(4)
-                record_with_phenotype["phenotype_inheritance"] = phenotype_match.group(6) or None
-
+                record_with_phenotype = cls._get_parsed_record(record, gene_id, ensembl_gene_id, phenotype_match)
                 yield record_with_phenotype
 
             if record_with_phenotype is None:
                 if len(phenotype_field) > 0:
                     raise ValueError("No phenotypes found: {}".format(json.dumps(record)))
+                elif not gene_id:
+                    # OMIM record requires either gene or phenotype
+                    yield None
                 else:
-                    yield output_record
+                    yield cls._get_parsed_record(record, gene_id, ensembl_gene_id)
+
+    @staticmethod
+    def _get_parsed_record(record, gene_id, ensembl_gene_id, phenotype_match=None):
+        output_record = {
+            'gene_id': gene_id,
+            'ensembl_gene_id': ensembl_gene_id,
+            'mim_number': int(record['mim_number']),
+            'chrom': record['#_chromosome'].replace('chr', ''),
+            'start': int(record['genomic_position_start']),
+            'end': int(record['genomic_position_end']),
+            'gene_description': record['gene_name'],
+            'comments': record['comments'],
+        }
+        if phenotype_match:
+            output_record.update({
+                'phenotype_description': phenotype_match.group(1),
+                'phenotype_mim_number': int(phenotype_match.group(3)) if phenotype_match.group(3) else None,
+                'phenotype_map_method': phenotype_match.group(4),
+                'phenotype_inheritance': phenotype_match.group(6) or None,
+            })
+
+        return output_record
 
     @classmethod
     def get_record_models(cls, records, omim_key=None, **kwargs):
