@@ -131,7 +131,7 @@ class UpdateAllReferenceDataTest(BaseUpdateAllReferenceDataTest):
         kwargs = {'gene_ids_to_gene': mock.ANY, 'gene_symbols_to_gene': mock.ANY}
         gene_kwargs = {**kwargs, 'skipped_genes': {None: 0}}
         self.assertListEqual(self.mock_update_calls, [
-            (Omim, {**kwargs, 'omim_key': None}),
+            (Omim, kwargs),
             (dbNSFPGene, gene_kwargs),
             (GenCC, gene_kwargs),
         ])

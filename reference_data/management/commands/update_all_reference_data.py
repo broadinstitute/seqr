@@ -52,8 +52,8 @@ class Command(BaseCommand):
             data_model_name = data_cls.__name__
             try:
                 kwargs = {'gene_ids_to_gene': gene_ids_to_gene, 'gene_symbols_to_gene': gene_symbols_to_gene}
-                if data_cls == Omim:
-                    kwargs['omim_key'] = options.get('omim_key')
+                if data_cls == Omim and options.get('omim_key'):
+                    kwargs['omim_key'] = options['omim_key']
                 data_cls.update_records(**kwargs)
                 self._track_success_updates(data_model_name, latest_version, current_versions, updated)
             except Exception as e:
