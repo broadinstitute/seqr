@@ -4,18 +4,8 @@ from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import TestCase
 
-from reference_data.management.commands.utils.update_utils import ReferenceDataHandler
-from reference_data.management.commands.update_dbnsfp_gene import DbNSFPReferenceDataHandler
-from reference_data.management.commands.update_gene_constraint import GeneConstraintReferenceDataHandler
-from reference_data.management.commands.update_gene_cn_sensitivity import CNSensitivityReferenceDataHandler
-from reference_data.management.commands.update_gencc import GenCCReferenceDataHandler
-from reference_data.management.commands.update_clingen import ClinGenReferenceDataHandler
-from reference_data.management.commands.update_refseq import RefseqReferenceDataHandler
-from reference_data.models import GeneInfo
-
-
-def omim_exception(omim_key):
-    raise Exception('Omim exception, key: '+omim_key)
+from reference_data.models import GeneInfo, Omim, dbNSFPGene, GeneConstraint, GeneCopyNumberSensitivity, GenCC, ClinGen, \
+    RefseqTranscript, HumanPhenotypeOntology, MGI, PrimateAI, LoadableModel
 
 
 def primate_ai_exception():
@@ -35,38 +25,20 @@ class UpdateAllReferenceDataTest(TestCase):
     fixtures = ['users', 'reference_data']
 
     def setUp(self):
-        self.mock_handlers = []
-        def _mock_init_handler(_self, **kwargs):
-            self.mock_handlers.append(type(_self))
-            return None
-        patcher = mock.patch.object(ReferenceDataHandler, '__init__', _mock_init_handler)
-        patcher.start()
-        self.addCleanup(patcher.stop)
-        patcher = mock.patch.object(RefseqReferenceDataHandler, '__init__', _mock_init_handler)
+        self.mock_update_calls = []
+        def _mock_handler(_cls, **kwargs):
+            self.mock_update_calls.append((_cls, kwargs))
+            if _cls == MGI:
+                mgi_exception()
+            elif _cls == PrimateAI:
+                primate_ai_exception()
+        patcher = mock.patch.object(LoadableModel, 'update_records', new=classmethod(mock.MagicMock(side_effect=_mock_handler)))
         patcher.start()
         self.addCleanup(patcher.stop)
 
-        patcher = mock.patch('reference_data.management.commands.update_mgi.MGIReferenceDataHandler')
-        patcher.start().side_effect = mgi_exception
-        self.addCleanup(patcher.stop)
-        patcher = mock.patch('reference_data.management.commands.update_primate_ai.PrimateAIReferenceDataHandler')
-        patcher.start().side_effect = primate_ai_exception
-        self.addCleanup(patcher.stop)
-
-        patcher = mock.patch('reference_data.management.commands.update_all_reference_data.OmimReferenceDataHandler')
-        self.mock_omim = patcher.start()
-        self.addCleanup(patcher.stop)
-        patcher = mock.patch('reference_data.management.commands.update_all_reference_data.CachedOmimReferenceDataHandler')
-        self.mock_cached_omim = patcher.start()
-        self.addCleanup(patcher.stop)
-        patcher = mock.patch('reference_data.management.commands.update_all_reference_data.update_gencode')
+        patcher = mock.patch('reference_data.models.GeneInfo.update_records')
         self.mock_update_gencode = patcher.start()
-        self.addCleanup(patcher.stop)
-        patcher = mock.patch('reference_data.management.commands.update_all_reference_data.update_hpo')
-        self.mock_update_hpo = patcher.start()
-        self.addCleanup(patcher.stop)
-        patcher = mock.patch.object(ReferenceDataHandler, 'update_records')
-        self.mock_update_records = patcher.start()
+        self.mock_update_gencode.return_value = {}
         self.addCleanup(patcher.stop)
         patcher = mock.patch('reference_data.management.commands.update_all_reference_data.logger')
         self.mock_logger = patcher.start()
@@ -81,39 +53,36 @@ class UpdateAllReferenceDataTest(TestCase):
 
         # Test update is skipped when data is already loaded
         self.mock_update_gencode.assert_not_called()
-        self.mock_omim.assert_not_called()
-        self.mock_cached_omim.assert_not_called()
-        self.mock_update_records.assert_not_called()
-        self.mock_update_hpo.assert_not_called()
+        self.assertListEqual(self.mock_update_calls, [])
 
         # Test update all gencode, no skips, fail primate_ai and mgi
         GeneInfo.objects.all().delete()
         call_command('update_all_reference_data', '--omim-key=test_key')
 
         calls = [
-            mock.call(39),
-            mock.call(31),
-            mock.call(29),
-            mock.call(28),
-            mock.call(27),
-            mock.call(19),
+            mock.call(39, set(), set()),
+            mock.call(31, set(), set()),
+            mock.call(29, set(), set()),
+            mock.call(28, set(), set()),
+            mock.call(27, set(), set()),
+            mock.call(19, set(), set()),
         ]
         self.mock_update_gencode.assert_has_calls(calls)
 
-        self.mock_omim.assert_called_with('test_key')
-        self.mock_cached_omim.assert_not_called()
-        self.mock_omim.return_value.update_records.assert_called_with()
-        self.assertEqual(self.mock_update_records.call_count, 6)
-        self.assertListEqual(self.mock_handlers, [
-            DbNSFPReferenceDataHandler,
-            GeneConstraintReferenceDataHandler,
-            CNSensitivityReferenceDataHandler,
-            GenCCReferenceDataHandler,
-            ClinGenReferenceDataHandler,
-            RefseqReferenceDataHandler,
+        kwargs = {'gene_ids_to_gene': {}, 'gene_symbols_to_gene': {}}
+        gene_kwargs = {**kwargs, 'skipped_genes': {None: 0}}
+        self.assertListEqual(self.mock_update_calls, [
+            (Omim, {**kwargs, 'omim_key': 'test_key'}),
+            (dbNSFPGene, gene_kwargs),
+            (GeneConstraint, gene_kwargs),
+            (GeneCopyNumberSensitivity, gene_kwargs),
+            (PrimateAI, gene_kwargs),
+            (MGI, {**gene_kwargs, 'entrez_id_to_gene': {}}),
+            (GenCC, gene_kwargs),
+            (ClinGen, gene_kwargs),
+            (RefseqTranscript, {**kwargs, 'transcript_id_map': {}, 'skipped_transcripts': {None: 0}}),
+            (HumanPhenotypeOntology, {}),
         ])
-
-        self.mock_update_hpo.assert_called_with()
 
         calls = [
             mock.call('Done'),
@@ -133,44 +102,20 @@ class UpdateAllReferenceDataTest(TestCase):
             'update_all_reference_data', '--skip-omim', *SKIP_ARGS)
 
         self.mock_update_gencode.assert_not_called()
-        self.mock_omim.assert_not_called()
-        self.mock_cached_omim.assert_not_called()
-        self.mock_update_records.assert_not_called()
-        self.mock_update_hpo.assert_not_called()
+        self.assertListEqual(self.mock_update_calls, [])
         self.mock_logger.info.assert_called_with("Done")
 
     def test_cached_omim_update_reference_data_command(self):
         call_command(
             'update_all_reference_data', '--use-cached-omim', *SKIP_ARGS)
 
-        self.mock_cached_omim.assert_called_with()
-        self.mock_cached_omim.return_value.update_records.assert_called_with()
-        self.mock_update_records.assert_not_called()
-
-        self.mock_omim.assert_not_called()
+        self.assertListEqual(self.mock_update_calls, [
+            (Omim, {'gene_ids_to_gene': mock.ANY, 'gene_symbols_to_gene': mock.ANY}),
+        ])
         self.mock_update_gencode.assert_not_called()
-        self.mock_update_hpo.assert_not_called()
 
         calls = [
             mock.call('Done'),
             mock.call('Updated: omim')
         ]
         self.mock_logger.info.assert_has_calls(calls)
-
-    def test_omim_exception(self):
-        self.mock_omim.side_effect = omim_exception
-        call_command('update_all_reference_data', '--omim=test_key', *SKIP_ARGS)
-
-        self.mock_update_gencode.assert_not_called()
-        self.mock_omim.assert_called_with('test_key')
-        self.mock_update_records.assert_not_called()
-        self.mock_update_hpo.assert_not_called()
-
-        calls = [
-            mock.call('Done'),
-            mock.call('Failed to Update: omim')
-        ]
-        self.mock_logger.info.assert_has_calls(calls)
-
-        self.mock_logger.error.assert_called_with("unable to update omim: Omim exception, key: test_key")
-

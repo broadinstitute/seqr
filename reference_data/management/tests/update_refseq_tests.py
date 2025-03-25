@@ -13,7 +13,9 @@ class UpdateRefseqTest(ReferenceDataCommandTestCase):
 
     def test_update_refseq_command(self):
         self._test_update_command(
-            'update_refseq', 'RefseqTranscript', created_records=2, skipped_records=2)
+            'update_refseq', 'RefseqTranscript', created_records=2, skipped_records=2,
+            skipped_message='or duplicated transcripts',
+        )
 
         self.assertEqual(RefseqTranscript.objects.count(), 2)
         self.assertListEqual(
