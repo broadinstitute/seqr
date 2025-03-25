@@ -54,7 +54,7 @@ class ReferenceDataCommandTestCase(TestCase):
         call_command('update_all_reference_data', *(command_args or []))
 
 
-    def _test_update_command(self, model_name, existing_records=1, created_records=1, skipped_records=1, skipped_message='genes.', head_response=None, expected_version=None, command_args=None):
+    def _test_update_command(self, model_name, expected_version, existing_records=1, created_records=1, skipped_records=1, skipped_message='genes.', head_response=None, command_args=None):
         DataVersions.objects.filter(data_model_name=model_name).delete()
 
         # test without a file_path parameter
@@ -80,8 +80,7 @@ class ReferenceDataCommandTestCase(TestCase):
         ])
 
         dv = DataVersions.objects.get(data_model_name=model_name)
-        if expected_version:
-            self.assertEqual(dv.version, expected_version)
+        self.assertEqual(dv.version, expected_version)
 
         # test with a locally cached file
         dv.delete()

@@ -17,7 +17,7 @@ class UpdateClinGenTest(ReferenceDataCommandTestCase):
 
     def test_update_clingen_command(self):
         self.mock_clingen_version_patcher.stop()
-        self._test_update_command('ClinGen', created_records=2, expected_version='2022-04-01')
+        self._test_update_command('ClinGen', '2022-04-01', created_records=2)
 
         self.assertEqual(ClinGen.objects.count(), 2)
         record = ClinGen.objects.get(gene__gene_id='ENSG00000186092')

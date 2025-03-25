@@ -25,7 +25,7 @@ class UpdateGeneCCTest(ReferenceDataCommandTestCase):
 
     def test_update_gencc_command(self):
         last_modified = 'Fri, 28 Mar 2025 11:00:00 GMT'
-        self._test_update_command('GenCC', created_records=2, expected_version=last_modified, head_response={
+        self._test_update_command('GenCC', last_modified, created_records=2, head_response={
             'headers': {'Last-Modified': last_modified}
         })
 

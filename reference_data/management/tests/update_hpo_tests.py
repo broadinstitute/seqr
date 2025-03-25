@@ -137,8 +137,8 @@ class UpdateHpoTest(ReferenceDataCommandTestCase):
             },
         }
         self._test_update_command(
-            'HumanPhenotypeOntology', existing_records=12, created_records=5, skipped_records=0,
-            expected_version='2025-03-12', head_response=head_response,
+            'HumanPhenotypeOntology','2025-03-12',
+            existing_records=12, created_records=5, skipped_records=0, head_response=head_response,
         )
 
         records = {record.hpo_id: {

@@ -85,8 +85,8 @@ class UpdateOmimTest(ReferenceDataCommandTestCase):
 
     def _test_update_omim_command(self, **kwargs):
         self._test_update_command(
-            'Omim', existing_records=3, created_records=4, skipped_records=0,
-            expected_version=LAST_MODIFIED, head_response=HEAD_RESPONSE, **kwargs,
+            'Omim', LAST_MODIFIED, existing_records=3, created_records=4, skipped_records=0,
+            head_response=HEAD_RESPONSE, **kwargs,
         )
         self._assert_has_expected_omim_records()
 
