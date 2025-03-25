@@ -323,7 +323,11 @@ class GeneInfo(LoadableModel):
         for existing in genes_to_update:
             new_gene = genes.pop(existing.gene_id)
             if track_symbol_changes and new_gene['gene_symbol'] != existing.gene_symbol:
-                symbol_changes.append((existing.gene_id, existing.gene_symbol, new_gene['gene_symbol']))
+                symbol_changes.append({
+                    'gene_id': existing.gene_id,
+                    'old_symbol': existing.gene_symbol,
+                    'new_symbol': new_gene['gene_symbol'],
+                })
             fields.update(new_gene.keys())
             for key, value in new_gene.items():
                 setattr(existing, key, value)

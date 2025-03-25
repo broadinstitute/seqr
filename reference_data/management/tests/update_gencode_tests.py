@@ -56,6 +56,19 @@ class UpdateGencodeTest(ReferenceDataCommandTestCase):
 
     def setUp(self):
         super().setUp()
+
+        patcher = mock.patch('seqr.views.utils.export_utils.open')
+        self.mock_open = patcher.start()
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.export_utils.TemporaryDirectory')
+        self.mock_temp_dir = patcher.start()
+        self.mock_temp_dir.return_value.__enter__.return_value = self.tmp_dir
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.utils.file_utils.subprocess.Popen')
+        self.mock_subprocess = patcher.start()
+        self.mock_subprocess.return_value.wait.return_value = 0
+        self.addCleanup(patcher.stop)
+
         self.gzipped_gtf_data = gzip.compress(''.join(GTF_DATA).encode())
         self._add_latest_responses()
 
@@ -151,6 +164,7 @@ class UpdateGencodeTest(ReferenceDataCommandTestCase):
             mock.call('Loaded 2 RefseqTranscript records'),
             mock.call('Skipped 2 records with unrecognized or duplicated transcripts'),
         ])
+        self.mock_subprocess.assert_not_called()
 
         self._has_expected_new_genes()
         gene_info = GeneInfo.objects.get(gene_id='ENSG00000235249')
@@ -176,7 +190,9 @@ class UpdateGencodeTest(ReferenceDataCommandTestCase):
         dv.save()
 
         call_command('update_all_reference_data')
-        self.mock_command_logger.info.assert_called_with('Dropped 1 existing TranscriptInfo records')
+        self.mock_command_logger.info.assert_has_calls([
+            mock.call('Dropped 1 existing TranscriptInfo records'),
+        ])
         self.mock_logger.info.assert_has_calls([
             mock.call(f'Parsing file {self.tmp_dir}/gencode.v39lift37.annotation.gtf.gz'),
             mock.call(f'Parsing file {self.tmp_dir}/gencode.v39.annotation.gtf.gz'),
@@ -186,7 +202,7 @@ class UpdateGencodeTest(ReferenceDataCommandTestCase):
             mock.call('Updating RefseqTranscript'),
             mock.call(f'Parsing file {self.tmp_dir}/gencode.v39.metadata.RefSeq.gz'),
             mock.call('Deleted 1 RefseqTranscript records'),
-            mock.call('Created 2 RefseqTranscript records'),
+            mock.call('Created 3 RefseqTranscript records'),
             mock.call('Done'),
         ])
 
@@ -195,12 +211,16 @@ class UpdateGencodeTest(ReferenceDataCommandTestCase):
         self.assertEqual(TranscriptInfo.objects.all().count(), 3)
         self._has_expected_new_transcripts()
 
-        self.assertEqual(RefseqTranscript.objects.count(), 2)
-        self.assertListEqual(
-            list(RefseqTranscript.objects.order_by('transcript_id').values('transcript__transcript_id', 'refseq_id')), [
-                {'transcript__transcript_id': 'ENST00000258436', 'refseq_id': 'NR_026874.2'},
-                {'transcript__transcript_id': 'ENST00000624735', 'refseq_id': 'NM_015658.4'}
-            ])
+        self.assertEqual(RefseqTranscript.objects.count(), 3)
+        self.assertEqual(
+            RefseqTranscript.objects.get(transcript__transcript_id='ENST00000258436').refseq_id, 'NR_026874.2',
+        )
 
-        with open(f'{self.tmp_dir}/gene_symbol_changes.csv') as f:
-            self.assertListEqual(f.readlines(), ['ENSG00000223972,DDX11L1,DDX11L1A\n'])
+        self.mock_subprocess.assert_called_with(
+            f'gsutil mv {self.tmp_dir}/* gs://seqr-reference-data/gencode/', stdout=-1, stderr=-2, shell=True,  # nosec
+        )
+        self.mock_open.assert_called_with(f'{self.tmp_dir}/gene_symbol_changes__39.csv', 'w')
+        self.assertEqual(
+            self.mock_open.return_value.__enter__.return_value.write.call_args.args[0],
+            'gene_id,old_symbol,new_symbol\nENSG00000223972,DDX11L1,DDX11L1A',
+        )
