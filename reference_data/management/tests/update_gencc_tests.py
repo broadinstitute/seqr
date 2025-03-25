@@ -1,10 +1,8 @@
 import mock
-from django.views.decorators.http import last_modified
 
 from reference_data.models import GenCC
 from reference_data.management.tests.test_utils import ReferenceDataCommandTestCase
 
-# TODO test latest version
 
 class UpdateGeneCCTest(ReferenceDataCommandTestCase):
     URL = 'https://search.thegencc.org/download/action/submissions-export-csv'
