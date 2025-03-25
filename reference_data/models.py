@@ -294,6 +294,7 @@ class GeneInfo(LoadableModel):
         transcripts = defaultdict(dict)
 
         genome_versions = []
+        gencode_release = int(gencode_release)
         if gencode_release == 19 or gencode_release > 22:
             genome_versions.append(GENOME_VERSION_GRCh37)
         if gencode_release > 19:

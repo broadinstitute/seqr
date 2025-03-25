@@ -1,14 +1,11 @@
 import mock
-import os
 import responses
-import tempfile
-import shutil
 import gzip
 
 from django.core.management import call_command
-from django.test import TestCase
 
-from reference_data.models import GeneInfo, TranscriptInfo, RefseqTranscript
+from reference_data.management.tests.test_utils import ReferenceDataCommandTestCase
+from reference_data.models import GeneInfo, TranscriptInfo, RefseqTranscript, DataVersions
 
 BAD_FIELDS_GTF_DATA = [
     'gene	11869	14412	.	+	.	gene_id "ENSG00000223972.4";\n',
@@ -50,23 +47,17 @@ ADDITIONAL_GTF_DATA = [
 REFSEQ_DATA = [
     'ENST00000258436.1	NR_026874.2	\n',
     'ENST00000624735.7	NM_015658.4	NP_056473.3\n',
+    'ENST00000332831.1	NR_122045.1	\n',
+    'ENST00000342066.8	NM_152486.3	NP_689699.2\n',
 ]
 
 
-class UpdateGencodeTest(TestCase):
-    databases = '__all__'
-    fixtures = ['users', 'reference_data']
+class UpdateGencodeTest(ReferenceDataCommandTestCase):
 
     def setUp(self):
-        # Create a temporary directory
-        self.test_dir = tempfile.mkdtemp()
-        self.test_dirname = os.path.dirname(self.test_dir)
+        super().setUp()
         self.gzipped_gtf_data = gzip.compress(''.join(GTF_DATA).encode())
         self._add_latest_responses()
-
-    def tearDown(self):
-        # Close the file, the directory will be removed after the test
-        shutil.rmtree(self.test_dir)
 
     def _has_expected_new_genes(self):
         gene_info = GeneInfo.objects.get(gene_id='ENSG00000223972')
@@ -84,6 +75,7 @@ class UpdateGencodeTest(TestCase):
         self.assertEqual(trans_info.gene.gene_id, 'ENSG00000223972')
         self.assertEqual(trans_info.gene.gencode_release, 39)
         self.assertFalse(trans_info.is_mane_select)
+        self.assertEqual(trans_info.refseqtranscript.refseq_id, 'NM_015658.4')
         trans_info = TranscriptInfo.objects.get(transcript_id='ENST00000332831')
         self.assertEqual(trans_info.start_grch37, 621059)
         self.assertEqual(trans_info.end_grch37, 622053)
@@ -92,6 +84,7 @@ class UpdateGencodeTest(TestCase):
         self.assertEqual(trans_info.gene.gene_id, 'ENSG00000284662')
         self.assertEqual(trans_info.gene.gencode_release, 39)
         self.assertTrue(trans_info.is_mane_select)
+        self.assertEqual(trans_info.refseqtranscript.refseq_id, 'NR_122045.1')
 
     def _add_latest_responses(self):
         url = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_39/gencode.v39.annotation.gtf.gz'
@@ -100,13 +93,14 @@ class UpdateGencodeTest(TestCase):
         url_lift = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_39/GRCh37_mapping/gencode.v39lift37.annotation.gtf.gz'
         responses.add(responses.HEAD, url_lift, headers={"Content-Length": "1024"})
         responses.add(responses.GET, url_lift, body=self.gzipped_gtf_data, stream=True)
+        url_refseq = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_39/gencode.v39.metadata.RefSeq.gz'
+        responses.add(responses.GET, url_refseq, body=gzip.compress(''.join(REFSEQ_DATA).encode()))
         return url, url_lift
 
     @responses.activate
-    @mock.patch('reference_data.models.logger')
-    def test_load_all_gencode_command(self, mock_logger):
-        # Initial gencode loading can only happen once with an empty gene table
+    def test_load_all_gencode_command(self):
         GeneInfo.objects.all().delete()
+        DataVersions.objects.get(data_model_name='GeneInfo').delete()
 
         for version in [27, 28, 29, 31]:
             url = f'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_{version}/gencode.v{version}.annotation.gtf.gz'
@@ -122,37 +116,40 @@ class UpdateGencodeTest(TestCase):
         responses.add(responses.GET, url_19, body=additional_gtf_data, stream=True)
 
         # Test initial load for all gencode data
-        call_command(
-            'update_all_reference_data', '--skip-omim', '--skip-dbnsfp-gene', '--skip-gene-constraint',
-            '--skip-primate-ai', '--skip-mgi', '--skip-hpo', '--skip-gene-cn-sensitivity', '--skip-gencc',
-            '--skip-clingen', '--skip-refseq',
-        )
+        call_command('update_all_reference_data')
 
         skipped_logs = [
             mock.call('genes_skipped: 4'),
             mock.call('transcripts_skipped: 4'),
         ]
-        mock_logger.info.assert_has_calls([
-            mock.call(f'Parsing file {self.test_dirname }/gencode.v39lift37.annotation.gtf.gz'),
-            mock.call(f'Parsing file {self.test_dirname }/gencode.v39.annotation.gtf.gz'),
+        self.mock_logger.info.assert_has_calls([
+            mock.call(f'Parsing file {self.tmp_dir }/gencode.v39lift37.annotation.gtf.gz'),
+            mock.call(f'Parsing file {self.tmp_dir }/gencode.v39.annotation.gtf.gz'),
             mock.call('Created 2 GeneInfo records'),
-            mock.call(f'Parsing file {self.test_dirname }/gencode.v31lift37.annotation.gtf.gz'),
-            mock.call(f'Parsing file {self.test_dirname }/gencode.v31.annotation.gtf.gz'),
+            mock.call(f'Parsing file {self.tmp_dir }/gencode.v31lift37.annotation.gtf.gz'),
+            mock.call(f'Parsing file {self.tmp_dir }/gencode.v31.annotation.gtf.gz'),
         ] + skipped_logs + [
-            mock.call(f'Parsing file {self.test_dirname }/gencode.v29lift37.annotation.gtf.gz'),
-            mock.call(f'Parsing file {self.test_dirname }/gencode.v29.annotation.gtf.gz'),
+            mock.call(f'Parsing file {self.tmp_dir }/gencode.v29lift37.annotation.gtf.gz'),
+            mock.call(f'Parsing file {self.tmp_dir }/gencode.v29.annotation.gtf.gz'),
         ] + skipped_logs + [
-            mock.call(f'Parsing file {self.test_dirname }/gencode.v28lift37.annotation.gtf.gz'),
-            mock.call(f'Parsing file {self.test_dirname }/gencode.v28.annotation.gtf.gz'),
+            mock.call(f'Parsing file {self.tmp_dir }/gencode.v28lift37.annotation.gtf.gz'),
+            mock.call(f'Parsing file {self.tmp_dir }/gencode.v28.annotation.gtf.gz'),
         ] + skipped_logs + [
-            mock.call(f'Parsing file {self.test_dirname }/gencode.v27lift37.annotation.gtf.gz'),
-            mock.call(f'Parsing file {self.test_dirname }/gencode.v27.annotation.gtf.gz'),
+            mock.call(f'Parsing file {self.tmp_dir }/gencode.v27lift37.annotation.gtf.gz'),
+            mock.call(f'Parsing file {self.tmp_dir }/gencode.v27.annotation.gtf.gz'),
         ] + skipped_logs + [
-            mock.call(f'Parsing file {self.test_dirname }/gencode.v19.annotation.gtf.gz'),
+            mock.call(f'Parsing file {self.tmp_dir }/gencode.v19.annotation.gtf.gz'),
             mock.call('genes_skipped: 2'),
             mock.call('transcripts_skipped: 2'),
             mock.call('Created 1 GeneInfo records'),
             mock.call('Created 3 TranscriptInfo records'),
+            mock.call('Updating RefseqTranscript'),
+            mock.call(f'Parsing file {self.tmp_dir}/gencode.v39.metadata.RefSeq.gz'),
+            mock.call('Deleted 0 RefseqTranscript records'),
+            mock.call('Created 2 RefseqTranscript records'),
+            mock.call('Done'),
+            mock.call('Loaded 2 RefseqTranscript records'),
+            mock.call('Skipped 2 records with unrecognized or duplicated transcripts'),
         ])
 
         self._has_expected_new_genes()
@@ -172,23 +169,21 @@ class UpdateGencodeTest(TestCase):
         self.assertEqual(trans_info.gene.gencode_release, 19)
 
     @responses.activate
-    @mock.patch('reference_data.models.logger')
-    @mock.patch('reference_data.management.commands.update_gencode_latest.logger')
-    def test_update_gencode_latest_command(self, mock_command_logger, mock_logger):
+    def test_update_gencode_latest_command(self):
         refseq_url = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_39/gencode.v39.metadata.RefSeq.gz'
         responses.add(responses.HEAD, refseq_url, headers={"Content-Length": "1024"})
         responses.add(responses.GET, refseq_url, body=gzip.compress(''.join(REFSEQ_DATA).encode()))
 
-        call_command('update_gencode_latest', '--track-symbol-change', f'--output-dir={self.test_dir}')
-        mock_command_logger.info.assert_called_with('Dropped 1 existing TranscriptInfo records')
-        mock_logger.info.assert_has_calls([
-            mock.call(f'Parsing file {self.test_dirname}/gencode.v39lift37.annotation.gtf.gz'),
-            mock.call(f'Parsing file {self.test_dirname}/gencode.v39.annotation.gtf.gz'),
+        call_command('update_gencode_latest', '--track-symbol-change', f'--output-dir={self.tmp_dir}')
+        self.mock_command_logger.info.assert_called_with('Dropped 1 existing TranscriptInfo records')
+        self.mock_logger.info.assert_has_calls([
+            mock.call(f'Parsing file {self.tmp_dir}/gencode.v39lift37.annotation.gtf.gz'),
+            mock.call(f'Parsing file {self.tmp_dir}/gencode.v39.annotation.gtf.gz'),
             mock.call('Updated 1 previously loaded GeneInfo records'),
             mock.call('Created 1 GeneInfo records'),
             mock.call('Created 2 TranscriptInfo records'),
             mock.call('Updating RefseqTranscript'),
-            mock.call(f'Parsing file {self.test_dirname}/gencode.v39.metadata.RefSeq.gz'),
+            mock.call(f'Parsing file {self.tmp_dir}/gencode.v39.metadata.RefSeq.gz'),
             mock.call('Deleted 1 RefseqTranscript records'),
             mock.call('Created 2 RefseqTranscript records'),
             mock.call('Done'),
@@ -206,5 +201,5 @@ class UpdateGencodeTest(TestCase):
                 {'transcript__transcript_id': 'ENST00000624735', 'refseq_id': 'NM_015658.4'}
             ])
 
-        with open(f'{self.test_dir}/gene_symbol_changes.csv') as f:
+        with open(f'{self.tmp_dir}/gene_symbol_changes.csv') as f:
             self.assertListEqual(f.readlines(), ['ENSG00000223972,DDX11L1,DDX11L1A\n'])
