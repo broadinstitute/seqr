@@ -54,7 +54,7 @@ class ReferenceDataCommandTestCase(TestCase):
         call_command('update_all_reference_data', *(command_args or []))
 
 
-    def _test_update_command(self, model_name, expected_version, existing_records=1, created_records=1, skipped_records=1, skipped_message='genes.', head_response=None, command_args=None):
+    def _test_update_command(self, model_name, expected_version, existing_records=1, created_records=1, skipped_records=1, head_response=None, command_args=None):
         DataVersions.objects.filter(data_model_name=model_name).delete()
 
         # test without a file_path parameter
@@ -71,7 +71,7 @@ class ReferenceDataCommandTestCase(TestCase):
             mock.call(f'Loaded {created_records} {model_name} records'),
         ]
         if skipped_records:
-            log_calls.append(mock.call(f'Skipped {skipped_records} records with unrecognized {skipped_message}'))
+            log_calls.append(mock.call(f'Skipped {skipped_records} records with unrecognized genes.'))
         self.mock_logger.info.assert_has_calls(log_calls)
         self.mock_command_logger.error.assert_not_called()
         self.mock_command_logger.info.assert_has_calls([
