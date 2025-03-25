@@ -66,7 +66,9 @@ class SvHailTableQuery(BaseHailTableQuery):
 
     def _read_project_table(self, project_guid: str, sample_type: str, **kwargs):
         ht = super()._read_project_table(project_guid, sample_type, **kwargs)
-        return ht.annotate_globals(sample_type=sample_type)
+        if ht is not None:
+            ht = ht.annotate_globals(sample_type=sample_type)
+        return ht
 
     def import_filtered_table(self, *args, **kwargs):
         if not self._is_interval_filtered:
