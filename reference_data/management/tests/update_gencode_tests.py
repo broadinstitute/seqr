@@ -170,11 +170,12 @@ class UpdateGencodeTest(ReferenceDataCommandTestCase):
 
     @responses.activate
     def test_update_gencode_latest_command(self):
-        refseq_url = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_39/gencode.v39.metadata.RefSeq.gz'
-        responses.add(responses.HEAD, refseq_url, headers={"Content-Length": "1024"})
-        responses.add(responses.GET, refseq_url, body=gzip.compress(''.join(REFSEQ_DATA).encode()))
+        # Test only update the latest version
+        dv = DataVersions.objects.get(data_model_name='GeneInfo')
+        dv.version = '31'
+        dv.save()
 
-        call_command('update_gencode_latest', '--track-symbol-change', f'--output-dir={self.tmp_dir}')
+        call_command('update_all_reference_data')
         self.mock_command_logger.info.assert_called_with('Dropped 1 existing TranscriptInfo records')
         self.mock_logger.info.assert_has_calls([
             mock.call(f'Parsing file {self.tmp_dir}/gencode.v39lift37.annotation.gtf.gz'),
