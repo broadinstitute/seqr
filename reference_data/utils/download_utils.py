@@ -7,7 +7,7 @@ from tqdm import tqdm
 logger = logging.getLogger(__name__)
 
 
-def download_file(url, to_dir=tempfile.gettempdir(), verbose=True):
+def download_file(url):
     """Download the given file and returns its local path.
      Args:
         url (string): HTTP or FTP url
@@ -15,6 +15,7 @@ def download_file(url, to_dir=tempfile.gettempdir(), verbose=True):
         string: local file path
     """
 
+    to_dir = tempfile.gettempdir()
     if not (url and url.startswith(("http://", "https://"))):
         raise ValueError("Invalid url: {}".format(url))
     local_file_path = os.path.join(to_dir, os.path.basename(url))
@@ -24,10 +25,8 @@ def download_file(url, to_dir=tempfile.gettempdir(), verbose=True):
 
     is_gz = url.endswith(".gz")
     response = requests.get(url, stream=is_gz, timeout=300)
-    input_iter = response if is_gz else response.iter_content()
-    if verbose:
-        logger.info("Downloading {} to {}".format(url, local_file_path))
-        input_iter = tqdm(input_iter, unit=" data" if is_gz else " lines")
+    input_iter = tqdm(response, unit=" data") if is_gz else tqdm(response.iter_content(), unit=" lines")
+    logger.info("Downloading {} to {}".format(url, local_file_path))
 
     with open(local_file_path, 'wb') as f:
         f.writelines(input_iter)

@@ -121,7 +121,7 @@ async def init_web_app():
     hl.init(idempotent=True, spark_conf=spark_conf or None)
     hl._set_flags(use_new_shuffle='1')
     load_globals()
-    app = web.Application(middlewares=[error_middleware], client_max_size=(1024**2)*10)
+    app = web.Application(middlewares=[error_middleware], client_max_size=(1024**2)*20)
     app.add_routes([
         web.get('/status', status),
         web.post('/reload_globals', reload_globals),
