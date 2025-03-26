@@ -51,8 +51,12 @@ def get_hail_variants(samples, search, user, previous_search_results, genome_ver
 
     _parse_location_search(search_body)
 
-    path = 'gene_counts' if gene_agg else 'search'
-    response_json = _execute_search(search_body, user, path)
+    sv_data_types = [data_type for data_type in search_body['sample_data'] if data_type.startswith(Sample.DATASET_TYPE_SV_CALLS)]
+    if len(sv_data_types) > 1 and not gene_agg:
+        response_json = _execute_multi_sample_types_searches(sv_data_types, search_body, user)
+    else:
+        path = 'gene_counts' if gene_agg else 'search'
+        response_json = _execute_search(search_body, user, path)
 
     if gene_agg:
         previous_search_results['gene_aggs'] = response_json
@@ -61,6 +65,27 @@ def get_hail_variants(samples, search, user, previous_search_results, genome_ver
     previous_search_results['total_results'] = response_json['total']
     previous_search_results['all_results'] = response_json['results']
     return response_json['results'][end_offset - num_results:end_offset]
+
+
+def _execute_multi_sample_types_searches(sv_data_types, search_body, user):
+    sample_data_by_sample_data_type = defaultdict(lambda: defaultdict(list))
+    for data_type, samples in search_body['sample_data'].items():
+        if data_type in sv_data_types:
+            sample_type = samples[0]['sample_type']
+            sample_data_by_sample_data_type[sample_type][data_type] = samples
+        else:
+            for sample in samples:
+                sample_data_by_sample_data_type[sample['sample_type']][data_type].append(sample)
+
+    total = 0
+    results = []
+    for sample_type, sample_data in sample_data_by_sample_data_type.items():
+        search_body['sample_data'] = sample_data
+        sample_response_json = _execute_search(search_body, user)
+        total += sample_response_json['total']
+        results += sample_response_json['results']
+
+    return {'total': total, 'results': sorted(results, key=lambda x: x['_sort'])[:search_body['num_results']]}
 
 
 def get_hail_variants_for_variant_ids(samples, genome_version, parsed_variant_ids, user, user_email=None, return_all_queried_families=False):
