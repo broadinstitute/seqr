@@ -1,0 +1,79 @@
+name: seqr vlm prod release
+on:
+  workflow_run:
+    workflows: ["VLM Unit Tests"]
+    types:
+      - completed
+    branches:
+      - master
+
+permissions:
+  id-token: write
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.workflow_run.head_branch }}
+
+      - name: authenticate to google cloud
+        id: "auth"
+        uses: google-github-actions/auth@v0
+        with:
+          workload_identity_provider: "${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}"
+          service_account: "${{ secrets.RUN_SA_EMAIL }}"
+
+      - name: "setup gcloud sdk"
+        uses: google-github-actions/setup-gcloud@v0
+
+      - name: Build and push images
+        run: |-
+          gcloud builds submit --quiet --substitutions="COMMIT_SHA=${{ github.event.workflow_run.head_sha }},_CUSTOM_BRANCH_TAG=gcloud-prod" --config .cloudbuild/seqr-vlm-docker.cloudbuild.yaml --gcs-log-dir=gs://seqr-github-actions-logs/logs .
+
+  helm_update:
+    runs-on: ubuntu-latest
+    needs: docker
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: broadinstitute/seqr-helm
+          ref: main
+          persist-credentials: false # otherwise, the token used is the GITHUB_TOKEN, instead of your personal token
+          fetch-depth: 0 # otherwise, you will failed to push refs to dest repo
+
+      - name: Get latest vlm version
+        uses: mikefarah/yq@v4.22.1
+        id: current
+        with:
+          cmd: >
+            yq -r '.version' charts/vlm/Chart.yaml
+
+      - name: Bump version
+        id: bump
+        uses: cbrgm/semver-bump-action@main
+        with:
+          current-version: ${{ steps.current.outputs.result }}
+          bump-level: minor
+
+      - name: Update appVersion and version in seqr Chart file
+        uses: mikefarah/yq@v4.22.1
+        with:
+          cmd: >
+            yq -i '
+            .appVersion = "${{ github.event.workflow_run.head_sha }}" |
+            .version = "${{ steps.bump.outputs.new_version }}"
+            ' charts/vlm/Chart.yaml
+
+      - name: Commit and Push changes
+        uses: Andro999b/push@v1.3
+        with:
+          repository: broadinstitute/seqr-helm
+          branch: main
+          github_token: ${{ secrets.SEQR_VERSION_UPDATE_TOKEN }}
+          author_email: ${{ github.actor }}@users.noreply.github.com
+          author_name: tgg-automation
+          message: "Update vlm chart appVersion to ${{ github.event.workflow_run.head_sha }}"
