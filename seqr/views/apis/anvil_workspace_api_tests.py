@@ -431,7 +431,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
     def test_get_anvil_vcf_list(self, *args):
         url = reverse(get_anvil_vcf_list, args=[TEST_WORKSPACE_NAMESPACE, TEST_WORKSPACE_NAME1])
         expected_files = [
-            '/test.vcf', '/data/test.vcf.gz', '/data/test-101.vcf.gz', '/data/test-102.vcf.gz', '/sharded/test-*.vcf.gz',
+            '/test.vcf', '/test.vcf.gz', '/data/test.vcf.gz', '/data/test-101.vcf.gz', '/data/test-102.vcf.gz', '/sharded/test-*.vcf.gz',
         ]
         self._test_get_workspace_files(url, 'dataPathList', expected_files, *args)
 
@@ -460,7 +460,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         mock_file_logger.reset_mock()
         mock_subprocess.return_value.communicate.return_value = b'\n'.join([
             b'Warning: some packages are out of date',
-            b'gs://test_bucket/test.vcf', b'gs://test_bucket/test.tsv',
+            b'gs://test_bucket/test.vcf', b'gs://test_bucket/test.vcf.gz', b'gs://test_bucket/test.tsv',
             b'gs://test_bucket/test.bam', b'gs://test_bucket/test.bam.bai', b'gs://test_bucket/data/test.cram',
             # path with common prefix but not sharded VCFs
             b'gs://test_bucket/data/test.vcf.gz', b'gs://test_bucket/data/test-101.vcf.gz',
