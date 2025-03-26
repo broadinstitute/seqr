@@ -79,8 +79,8 @@ def _execute_multi_sample_types_searches(sv_data_types, search_body, user):
 
     total = 0
     results = []
-    for sample_type, sample_data in sample_data_by_sample_data_type.items():
-        search_body['sample_data'] = sample_data
+    for sample_type in sorted(sample_data_by_sample_data_type.keys()):
+        search_body['sample_data'] = sample_data_by_sample_data_type[sample_type]
         sample_response_json = _execute_search(search_body, user)
         total += sample_response_json['total']
         results += sample_response_json['results']
