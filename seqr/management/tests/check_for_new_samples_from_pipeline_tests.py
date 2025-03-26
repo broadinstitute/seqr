@@ -28,6 +28,7 @@ SAMPLE_GUIDS = [ACTIVE_SAMPLE_GUID, REPLACED_SAMPLE_GUID, NEW_SAMPLE_GUID_P3, NE
 GCNV_SAMPLE_GUID = f'S00000{GCNV_GUID_ID}_na20889'
 EXISTING_GCNV_SAMPLE_GUIDS = ['S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733']
 GCNV_SAMPLE_GUIDS = [f'S00000{GCNV_GUID_ID}_hg00731', f'S00000{GCNV_GUID_ID}_hg00732', f'S00000{GCNV_GUID_ID}_hg00733', GCNV_SAMPLE_GUID]
+OLD_DATA_SAMPLE_GUID = 'S000143_na20885'
 
 namespace_path = 'ext-data/anvil-non-analyst-project 1000 Genomes Demo'
 anvil_link = f'<a href=https://anvil.terra.bio/#workspaces/{namespace_path}>{namespace_path}</a>'
@@ -315,6 +316,7 @@ class CheckNewSamplesTest(object):
         mock_data_dir = patcher.start()
         mock_data_dir.__str__.return_value = self.MOCK_DATA_DIR
         self.addCleanup(patcher.stop)
+        Sample.objects.filter(guid=OLD_DATA_SAMPLE_GUID).update(sample_type='WES')
 
     def _test_call(self, error_logs=None, reload_annotations_logs=None, run_loading_logs=None, reload_calls=None, num_runs=4):
         self._set_loading_files()
@@ -550,8 +552,7 @@ class CheckNewSamplesTest(object):
         self.assertSetEqual({'SV'}, set(gcnv_samples.values_list('dataset_type', flat=True)))
         self.assertSetEqual({'gcnv.bed.gz'}, set(gcnv_samples.values_list('elasticsearch_index', flat=True)))
 
-        old_data_sample_guid = 'S000143_na20885'
-        self.assertFalse(Sample.objects.get(guid=old_data_sample_guid).is_active)
+        self.assertFalse(Sample.objects.get(guid=OLD_DATA_SAMPLE_GUID).is_active)
 
         previous_gcnv_samples = Sample.objects.filter(guid__in=EXISTING_GCNV_SAMPLE_GUIDS)
         self.assertEqual(len(previous_gcnv_samples), len(EXISTING_GCNV_SAMPLE_GUIDS))
@@ -569,7 +570,7 @@ class CheckNewSamplesTest(object):
         # Test Individual models properly associated with Samples
         self.assertSetEqual(
             set(Individual.objects.get(guid='I000015_na20885').sample_set.values_list('guid', flat=True)),
-            {REPLACED_SAMPLE_GUID, old_data_sample_guid}
+            {REPLACED_SAMPLE_GUID, OLD_DATA_SAMPLE_GUID}
         )
         self.assertSetEqual(
             set(Individual.objects.get(guid='I000016_na20888').sample_set.values_list('guid', flat=True)),

@@ -669,7 +669,7 @@ class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
         mock_compute_indiv_guid.side_effect = ['I0000021_na19675_1', 'I0000022_na19678', 'I0000023_hg00735']
         url = reverse(add_workspace_data, args=[PROJECT2_GUID])
         self._test_mv_file_and_triggering_dag_exception(
-            url, {'guid': PROJECT2_GUID}, PROJECT2_SAMPLE_DATA, 'GRCh37', REQUEST_BODY_ADD_DATA2)
+            url, {'guid': PROJECT2_GUID}, PROJECT2_SAMPLE_DATA, 'GRCh37', REQUEST_BODY_ADD_DATA2, sample_type='WGS')
 
     def _test_errors(self, url, fields, workspace_name, has_existing_data=False):
         # Test missing required fields in the request body
@@ -822,7 +822,7 @@ class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
             'father__individual_id': None, 'sex': 'F', 'affected': 'N', 'notes': 'a individual note', 'features': [],
         }, individual_model_data)
 
-    def _test_mv_file_and_triggering_dag_exception(self, url, workspace, sample_data, genome_version, request_body, num_samples=None):
+    def _test_mv_file_and_triggering_dag_exception(self, url, workspace, sample_data, genome_version, request_body, num_samples=None, sample_type='WES'):
         # Test saving ID file exception
         responses.calls.reset()
         self.mock_authorized_session.reset_mock()
@@ -855,7 +855,7 @@ class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
                 'dataset_type': 'SNV_INDEL',
                 'reference_genome': genome_version,
                 'callset_path': 'gs://test_bucket/test_path.vcf',
-                'sample_type': 'WES',
+                'sample_type': sample_type,
                 'sample_source': 'AnVIL',
             }, indent=4),
         )

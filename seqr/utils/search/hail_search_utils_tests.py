@@ -12,7 +12,7 @@ from seqr.utils.search.search_utils_tests import SearchTestHelper
 from hail_search.test_utils import get_hail_search_body, EXPECTED_SAMPLE_DATA, FAMILY_1_SAMPLE_DATA, \
     ALL_AFFECTED_SAMPLE_DATA, CUSTOM_AFFECTED_SAMPLE_DATA, HAIL_BACKEND_VARIANTS, \
     LOCATION_SEARCH, EXCLUDE_LOCATION_SEARCH, VARIANT_ID_SEARCH, RSID_SEARCH, GENE_COUNTS, FAMILY_2_VARIANT_SAMPLE_DATA, \
-    FAMILY_2_MITO_SAMPLE_DATA, EXPECTED_SAMPLE_DATA_WITH_SEX, VARIANT_LOOKUP_VARIANT, MULTI_PROJECT_SAMPLE_DATA, \
+    FAMILY_2_MITO_SAMPLE_DATA, EXPECTED_SAMPLE_DATA_WITH_SEX, VARIANT_LOOKUP_VARIANT, FAMILY_11_SAMPLE_WGS, \
     GCNV_VARIANT4, SV_VARIANT2
 
 MOCK_HOST = 'test-hail-host'
@@ -182,7 +182,9 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         del self.search_model.search['annotations']
         self.search_model.search['locus'] = {'rawVariantItems': raw_variant_locus}
         query_variants(self.results_model, user=self.user)
-        self._test_expected_search_call(**VARIANT_ID_SEARCH, num_results=2,  dataset_type='SNV_INDEL', sample_data=MULTI_PROJECT_SAMPLE_DATA)
+        self._test_expected_search_call(**VARIANT_ID_SEARCH, num_results=2,  dataset_type='SNV_INDEL', sample_data={
+            'SNV_INDEL': FAMILY_2_VARIANT_SAMPLE_DATA['SNV_INDEL'] + [FAMILY_11_SAMPLE_WGS],
+        })
 
         self.search_model.search['locus'] = {'rawItems': 'M:10-100 '}
         query_variants(self.results_model, user=self.user)
@@ -199,18 +201,20 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
             'intervals': [['M', 10, 100]] + LOCATION_SEARCH['intervals'],
         }
         self._test_expected_search_call(**expected_search, call_offset=-2, sample_data={
-            **MULTI_PROJECT_SAMPLE_DATA, 'SV_WES': SV_WES_SAMPLE_DATA, **EXPECTED_MITO_SAMPLE_DATA,
+            **FAMILY_2_VARIANT_SAMPLE_DATA, 'SV_WES': SV_WES_SAMPLE_DATA, **EXPECTED_MITO_SAMPLE_DATA,
         })
         self._test_expected_search_call(**expected_search, call_offset=-1, sample_data={
-            'SV_WGS': SV_WGS_SAMPLE_DATA,
+            'SNV_INDEL': [FAMILY_11_SAMPLE_WGS], 'SV_WGS': SV_WGS_SAMPLE_DATA,
         })
 
         self.search_model.search['locus']['rawItems'] = raw_locus
         query_variants(self.results_model, user=self.user)
         self._test_expected_search_call(**LOCATION_SEARCH, call_offset=-2, sample_data={
-            **MULTI_PROJECT_SAMPLE_DATA, 'SV_WES': SV_WES_SAMPLE_DATA,
+            **FAMILY_2_VARIANT_SAMPLE_DATA, 'SV_WES': SV_WES_SAMPLE_DATA,
         })
-        self._test_expected_search_call(**LOCATION_SEARCH, call_offset=-1, sample_data={'SV_WGS': SV_WGS_SAMPLE_DATA})
+        self._test_expected_search_call(**LOCATION_SEARCH, call_offset=-1, sample_data={
+            'SNV_INDEL': [FAMILY_11_SAMPLE_WGS], 'SV_WGS': SV_WGS_SAMPLE_DATA,
+        })
 
         self.results_model.families.set(Family.objects.filter(project_id=1))
         query_variants(self.results_model, user=self.user)

@@ -1508,7 +1508,8 @@ class LocalReportAPITest(AuthenticationTestCase, ReportAPITest):
         'familiesCount': {'non_demo': 12, 'demo': 2},
         'individualsCount': {'non_demo': 16, 'demo': 4},
         'sampleCountsByType': {
-            'WES__SNV_INDEL': {'demo': 1, 'non_demo': 7},
+            'WES__SNV_INDEL': {'non_demo': 7},
+            'WGS__SNV_INDEL': {'demo': 1},
             'WES__MITO': {'non_demo': 1},
             'WES__SV': {'non_demo': 3},
             'WGS__SV': {'non_demo': 1},
@@ -1534,7 +1535,8 @@ class AnvilReportAPITest(AnvilAuthenticationTestCase, ReportAPITest):
         'familiesCount': {'internal': 11, 'external': 1, 'no_anvil': 0, 'demo': 2},
         'individualsCount': {'internal': 14, 'external': 2, 'no_anvil': 0, 'demo': 4},
         'sampleCountsByType': {
-            'WES__SNV_INDEL': {'internal': 7, 'demo': 1},
+            'WES__SNV_INDEL': {'internal': 7},
+            'WGS__SNV_INDEL': {'demo': 1},
             'WES__MITO': {'internal': 1},
             'WES__SV': {'internal': 3},
             'WGS__SV': {'external': 1},
