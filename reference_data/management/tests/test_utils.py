@@ -36,7 +36,7 @@ class ReferenceDataCommandTestCase(TestCase):
         self.addCleanup(self.mock_get_file_last_modified_patcher.stop)
         self.mock_clingen_version_patcher = mock.patch('reference_data.models.ClinGen.get_current_version')
         self.mock_clingen_version_patcher.start().return_value = '2025-02-05'
-        self.addCleanup(patcher.stop)
+        self.addCleanup(self.mock_clingen_version_patcher.stop)
         self.mock_hpo_version_patcher = mock.patch('reference_data.models.HumanPhenotypeOntology.get_current_version')
         self.mock_hpo_version_patcher.start().return_value = '2025-03-03'
         self.addCleanup(self.mock_hpo_version_patcher.stop)
