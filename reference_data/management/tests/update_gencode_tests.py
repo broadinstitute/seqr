@@ -193,7 +193,7 @@ class UpdateGencodeTest(ReferenceDataCommandTestCase):
         self.mock_command_logger.info.assert_has_calls([
             mock.call('Dropped 1 existing TranscriptInfo records'),
             mock.call('Done'),
-            mock.call(f'Updated: GeneInfo'),
+            mock.call('Updated: GeneInfo'),
         ])
         self.mock_logger.info.assert_has_calls([
             mock.call(f'Parsing file {self.tmp_dir}/gencode.v39lift37.annotation.gtf.gz'),

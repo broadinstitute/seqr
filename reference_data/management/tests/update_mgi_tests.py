@@ -1,4 +1,4 @@
-from django.core.management import call_command, CommandError
+from django.core.management import CommandError
 
 from reference_data.models import MGI, dbNSFPGene
 from reference_data.management.tests.test_utils import ReferenceDataCommandTestCase, DataVersions
