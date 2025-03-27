@@ -51,7 +51,8 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
     def _test_expected_search_call(self, search_fields=None, gene_ids=None, intervals=None, exclude_intervals=False,
                                    rs_ids=None, variant_ids=None, dataset_type=None, secondary_dataset_type=None,
                                    frequencies=None, inheritance_mode='de_novo', inheritance_filter=None,
-                                   quality_filter=None, sort='xpos', sort_metadata=None, **kwargs):
+                                   quality_filter=None, sort='xpos', sort_metadata=None, annotations=None,
+                                   annotations_secondary=None, **kwargs):
 
         expected_search = {
             'sort': sort,
@@ -68,6 +69,10 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
             'variant_ids': variant_ids,
             'rs_ids': rs_ids,
         }
+        if annotations:
+            expected_search['annotations'] = annotations
+        if annotations_secondary:
+            expected_search['annotations_secondary'] = annotations_secondary
         expected_search.update({field: self.search_model.search[field] for field in search_fields or []})
 
         self._test_minimal_search_call(**expected_search, **kwargs)
@@ -141,7 +146,8 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
             search_fields=['annotations', 'annotations_secondary']
         )
 
-        self.search_model.search['annotations_secondary'].update({'SCREEN': ['dELS', 'DNase-only']})
+        screen_annotations = {'SCREEN': ['dELS', 'DNase-only']}
+        self.search_model.search['annotations_secondary'].update(screen_annotations)
         query_variants(self.results_model, user=self.user)
         self._test_expected_search_call(
             inheritance_mode='recessive', dataset_type='SNV_INDEL', secondary_dataset_type='ALL',
@@ -152,14 +158,14 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         query_variants(self.results_model, user=self.user)
         self._test_expected_search_call(
             inheritance_mode='recessive', dataset_type='SNV_INDEL', secondary_dataset_type='SNV_INDEL',
-            search_fields=['annotations', 'annotations_secondary'], omit_data_type='SV_WES',
+            search_fields=['annotations'], annotations_secondary=screen_annotations, omit_data_type='SV_WES',
         )
 
         self.search_model.search['inheritance']['mode'] = 'x_linked_recessive'
         query_variants(self.results_model, user=self.user)
         self._test_expected_search_call(
             inheritance_mode='x_linked_recessive', dataset_type='SNV_INDEL', secondary_dataset_type='SNV_INDEL',
-            search_fields=['annotations', 'annotations_secondary'], sample_data=EXPECTED_SAMPLE_DATA_WITH_SEX,
+            search_fields=['annotations'], annotations_secondary=screen_annotations, sample_data=EXPECTED_SAMPLE_DATA_WITH_SEX,
             omit_data_type='SV_WES',
         )
 

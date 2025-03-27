@@ -278,6 +278,9 @@ def _query_variants(search_model, user, previous_search_results, sort=None, num_
         },
     }
     parsed_search.update(search)
+    for annotation_key in ['annotations', 'annotations_secondary']:
+        if parsed_search.get(annotation_key):
+            parsed_search[annotation_key] = {k: v for k, v in parsed_search[annotation_key].items() if v}
 
     dataset_type, secondary_dataset_type, lookup_dataset_type = _search_dataset_type(parsed_search)
     parsed_search.update({'dataset_type': dataset_type, 'secondary_dataset_type': secondary_dataset_type})
@@ -417,7 +420,7 @@ def _annotation_dataset_type(annotations, pathogenicity=None):
     if not annotations:
         return Sample.DATASET_TYPE_VARIANT_CALLS if pathogenicity else None
 
-    annotation_types = {k for k, v in annotations.items() if v}
+    annotation_types = set(annotations.keys())
     if annotation_types.issubset(SV_ANNOTATION_TYPES):
         return Sample.DATASET_TYPE_SV_CALLS
     elif annotation_types.isdisjoint(SV_ANNOTATION_TYPES):
