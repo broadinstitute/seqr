@@ -1145,7 +1145,7 @@
         "last_modified_date": "2020-03-13T09:07:50.247Z",
         "elasticsearch_index": "test_index_second",
         "sample_id": "NA20885",
-        "sample_type": "WES",
+        "sample_type": "WGS",
         "is_active": true,
         "individual": 15,
         "dataset_type": "SNV_INDEL",
