@@ -12,8 +12,9 @@ from seqr.utils.search.search_utils_tests import SearchTestHelper
 from hail_search.test_utils import get_hail_search_body, EXPECTED_SAMPLE_DATA, FAMILY_1_SAMPLE_DATA, \
     ALL_AFFECTED_SAMPLE_DATA, CUSTOM_AFFECTED_SAMPLE_DATA, HAIL_BACKEND_VARIANTS, \
     LOCATION_SEARCH, EXCLUDE_LOCATION_SEARCH, VARIANT_ID_SEARCH, RSID_SEARCH, GENE_COUNTS, FAMILY_2_VARIANT_SAMPLE_DATA, \
-    FAMILY_2_MITO_SAMPLE_DATA, EXPECTED_SAMPLE_DATA_WITH_SEX, VARIANT_LOOKUP_VARIANT, MULTI_PROJECT_SAMPLE_DATA, \
+    FAMILY_2_MITO_SAMPLE_DATA, EXPECTED_SAMPLE_DATA_WITH_SEX, VARIANT_LOOKUP_VARIANT, FAMILY_11_SAMPLE_WGS, \
     GCNV_VARIANT4, SV_VARIANT2
+
 MOCK_HOST = 'test-hail-host'
 MOCK_ORIGIN = f'http://{MOCK_HOST}'
 
@@ -21,6 +22,7 @@ SV_WGS_SAMPLE_DATA = [{
     'individual_guid': 'I000018_na21234', 'family_guid': 'F000014_14', 'project_guid': 'R0004_non_analyst_project',
     'affected': 'A', 'sample_id': 'NA21234', 'sample_type': 'WGS',
 }]
+SV_WES_SAMPLE_DATA = FAMILY_2_VARIANT_SAMPLE_DATA['SNV_INDEL']
 
 EXPECTED_MITO_SAMPLE_DATA = deepcopy(FAMILY_2_MITO_SAMPLE_DATA)
 EXPECTED_MITO_SAMPLE_DATA['MITO'][0].update({'individual_guid': 'I000004_hg00731', 'sample_id': 'HG00731', 'affected': 'A'})
@@ -51,7 +53,8 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
     def _test_expected_search_call(self, search_fields=None, gene_ids=None, intervals=None, exclude_intervals=False,
                                    rs_ids=None, variant_ids=None, dataset_type=None, secondary_dataset_type=None,
                                    frequencies=None, inheritance_mode='de_novo', inheritance_filter=None,
-                                   quality_filter=None, sort='xpos', sort_metadata=None, **kwargs):
+                                   quality_filter=None, sort='xpos', sort_metadata=None, annotations=None,
+                                   annotations_secondary=None, **kwargs):
 
         expected_search = {
             'sort': sort,
@@ -68,6 +71,10 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
             'variant_ids': variant_ids,
             'rs_ids': rs_ids,
         }
+        if annotations:
+            expected_search['annotations'] = annotations
+        if annotations_secondary:
+            expected_search['annotations_secondary'] = annotations_secondary
         expected_search.update({field: self.search_model.search[field] for field in search_fields or []})
 
         self._test_minimal_search_call(**expected_search, **kwargs)
@@ -141,7 +148,8 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
             search_fields=['annotations', 'annotations_secondary']
         )
 
-        self.search_model.search['annotations_secondary'].update({'SCREEN': ['dELS', 'DNase-only']})
+        screen_annotations = {'SCREEN': ['dELS', 'DNase-only']}
+        self.search_model.search['annotations_secondary'].update(screen_annotations)
         query_variants(self.results_model, user=self.user)
         self._test_expected_search_call(
             inheritance_mode='recessive', dataset_type='SNV_INDEL', secondary_dataset_type='ALL',
@@ -152,14 +160,14 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         query_variants(self.results_model, user=self.user)
         self._test_expected_search_call(
             inheritance_mode='recessive', dataset_type='SNV_INDEL', secondary_dataset_type='SNV_INDEL',
-            search_fields=['annotations', 'annotations_secondary'], omit_data_type='SV_WES',
+            search_fields=['annotations'], annotations_secondary=screen_annotations, omit_data_type='SV_WES',
         )
 
         self.search_model.search['inheritance']['mode'] = 'x_linked_recessive'
         query_variants(self.results_model, user=self.user)
         self._test_expected_search_call(
             inheritance_mode='x_linked_recessive', dataset_type='SNV_INDEL', secondary_dataset_type='SNV_INDEL',
-            search_fields=['annotations', 'annotations_secondary'], sample_data=EXPECTED_SAMPLE_DATA_WITH_SEX,
+            search_fields=['annotations'], annotations_secondary=screen_annotations, sample_data=EXPECTED_SAMPLE_DATA_WITH_SEX,
             omit_data_type='SV_WES',
         )
 
@@ -170,38 +178,55 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
 
         self.search_model.search = {'inheritance': {'mode': 'de_novo'}, 'annotations': {'structural_consequence': ['LOF']}}
         query_variants(self.results_model, user=self.user)
-        sv_sample_data = {
-            'SV_WES': FAMILY_2_VARIANT_SAMPLE_DATA['SNV_INDEL'],
+        self._test_expected_search_call(search_fields=['annotations'], dataset_type='SV', call_offset=-2, sample_data={
+            'SV_WES': SV_WES_SAMPLE_DATA,
+        })
+        self._test_expected_search_call(search_fields=['annotations'], dataset_type='SV', call_offset=-1, sample_data={
             'SV_WGS': SV_WGS_SAMPLE_DATA,
-        }
-        self._test_expected_search_call(search_fields=['annotations'], dataset_type='SV', sample_data=sv_sample_data)
+        })
 
         del self.search_model.search['annotations']
         self.search_model.search['locus'] = {'rawVariantItems': raw_variant_locus}
         query_variants(self.results_model, user=self.user)
-        self._test_expected_search_call(**VARIANT_ID_SEARCH, num_results=2,  dataset_type='SNV_INDEL', sample_data=MULTI_PROJECT_SAMPLE_DATA)
+        self._test_expected_search_call(**VARIANT_ID_SEARCH, num_results=2,  dataset_type='SNV_INDEL', sample_data={
+            'SNV_INDEL': FAMILY_2_VARIANT_SAMPLE_DATA['SNV_INDEL'] + [FAMILY_11_SAMPLE_WGS],
+        })
 
         self.search_model.search['locus'] = {'rawItems': 'M:10-100 '}
         query_variants(self.results_model, user=self.user)
         self._test_expected_search_call(intervals=[['M', 10, 100]], sample_data=EXPECTED_MITO_SAMPLE_DATA)
 
         self.search_model.search['locus']['rawItems'] += raw_locus
-        query_variants(self.results_model, user=self.user)
-        self._test_expected_search_call(
-            gene_ids=LOCATION_SEARCH['gene_ids'],
-            intervals=[['M', 10, 100]] + LOCATION_SEARCH['intervals'],
-            sample_data={**MULTI_PROJECT_SAMPLE_DATA, **sv_sample_data, **EXPECTED_MITO_SAMPLE_DATA},
-        )
+        variants, total = query_variants(self.results_model, user=self.user)
+        self.assertListEqual(variants, [
+            HAIL_BACKEND_VARIANTS[0], HAIL_BACKEND_VARIANTS[0], HAIL_BACKEND_VARIANTS[1], HAIL_BACKEND_VARIANTS[1],
+        ])
+        self.assertEqual(total, 10)
+        expected_search = {
+            'gene_ids': LOCATION_SEARCH['gene_ids'],
+            'intervals': [['M', 10, 100]] + LOCATION_SEARCH['intervals'],
+        }
+        self._test_expected_search_call(**expected_search, call_offset=-2, sample_data={
+            **FAMILY_2_VARIANT_SAMPLE_DATA, 'SV_WES': SV_WES_SAMPLE_DATA, **EXPECTED_MITO_SAMPLE_DATA,
+        })
+        self._test_expected_search_call(**expected_search, call_offset=-1, sample_data={
+            'SNV_INDEL': [FAMILY_11_SAMPLE_WGS], 'SV_WGS': SV_WGS_SAMPLE_DATA,
+        })
 
         self.search_model.search['locus']['rawItems'] = raw_locus
         query_variants(self.results_model, user=self.user)
-        self._test_expected_search_call(**LOCATION_SEARCH, sample_data={**MULTI_PROJECT_SAMPLE_DATA, **sv_sample_data})
+        self._test_expected_search_call(**LOCATION_SEARCH, call_offset=-2, sample_data={
+            **FAMILY_2_VARIANT_SAMPLE_DATA, 'SV_WES': SV_WES_SAMPLE_DATA,
+        })
+        self._test_expected_search_call(**LOCATION_SEARCH, call_offset=-1, sample_data={
+            'SNV_INDEL': [FAMILY_11_SAMPLE_WGS], 'SV_WGS': SV_WGS_SAMPLE_DATA,
+        })
 
         self.results_model.families.set(Family.objects.filter(project_id=1))
         query_variants(self.results_model, user=self.user)
         self._test_expected_search_call(**LOCATION_SEARCH, sample_data={
             'SNV_INDEL': FAMILY_1_SAMPLE_DATA['SNV_INDEL'] + EXPECTED_SAMPLE_DATA['SNV_INDEL'],
-            'SV_WES': sv_sample_data['SV_WES'],
+            'SV_WES': SV_WES_SAMPLE_DATA,
         })
 
         del self.search_model.search['locus']

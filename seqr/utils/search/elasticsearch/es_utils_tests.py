@@ -1323,6 +1323,7 @@ class EsUtilsTest(TestCase):
 
     def setUp(self):
         Sample.objects.filter(sample_id='NA19678').update(is_active=False)
+        Sample.objects.filter(sample_id='NA20885').update(sample_type='WES')
         self.families = Family.objects.filter(guid__in=['F000003_3', 'F000002_2', 'F000005_5'])
 
     def assertExecutedSearch(self, filters=None, start_index=0, size=2, index=INDEX_NAME, expected_source_fields=SOURCE_FIELDS, call_index=-1, **kwargs):
