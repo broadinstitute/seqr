@@ -1,15 +1,11 @@
 import mock
 
-import tempfile
-import responses
 import json
 import re
 
-from django.core.management import call_command
-from django.test import TestCase
 from django.core.management.base import CommandError
 
-from reference_data.management.commands.update_omim import CachedOmimReferenceDataHandler
+from reference_data.management.tests.test_utils import ReferenceDataCommandTestCase
 from reference_data.models import Omim, GeneInfo
 
 OMIM_DATA = [
@@ -25,80 +21,58 @@ OMIM_DATA = [
 
 CACHED_OMIM_DATA = "ensembl_gene_id\tmim_number\tgene_description\tcomments\tphenotype_description\tphenotype_mim_number\tphenotype_map_method\tphenotype_inheritance\tchrom\tstart\tend\nENSG00000235249\t607413\tAlzheimer disease neuronal thread protein\t\t\t\t\t\t1\t1\t27600000\nENSG00000186092\t612367\tAlkaline phosphatase, plasma level of, QTL 2\tlinkage with rs1780324\tAlkaline phosphatase, plasma level of, QTL 2\t612367\t2\t\t1\t1\t27600000\n\t606788\tAnorexia nervosa, susceptibility to, 1\t\tAnorexia nervosa, susceptibility to, 1\t606788\t2\t\t1\t1\t123400000\n\t605462\tBasal cell carcinoma, susceptibility to, 1\tassociated with rs7538876\tBasal cell carcinoma, susceptibility to, 1\t605462\t2\t\t1\t1\t567800000"
 
+LAST_MODIFIED = 'Fri, 21 Mar 2025 10:02:00 GMT'
+HEAD_RESPONSE = {'headers': {'Content-Length': '1024', 'Last-Modified': LAST_MODIFIED}}
 
-class UpdateOmimTest(TestCase):
-    databases = '__all__'
-    fixtures = ['users', 'reference_data']
+class UpdateOmimTest(ReferenceDataCommandTestCase):
 
-    @responses.activate
-    @mock.patch('reference_data.management.commands.update_omim.os')
-    def test_update_omim_command_exceptions(self, mock_os):
-        url = 'https://data.omim.org/downloads/test_key/genemap2.txt'
-        responses.add(responses.HEAD, url, headers={"Content-Length": "1024"})
-        responses.add(responses.GET, url, body='This account has expired')
-        responses.add(responses.GET, url, body=OMIM_DATA[2])
-        bad_phenotype_data = OMIM_DATA[:2]
-        bad_phenotype_data.append('chr1	0	27600000	1p36		605462	BCC1	Basal cell carcinoma, susceptibility to, 1		100307118		associated with rs7538876	{x}, 605462 (5)	\n')
-        responses.add(responses.GET, url, body=''.join(bad_phenotype_data))
-        responses.add(responses.GET, url, body=''.join(OMIM_DATA))
+    URL = 'https://data.omim.org/downloads/test_key/genemap2.txt'
+    DATA = OMIM_DATA
 
-        # Test required argument
-        mock_os.environ.get.return_value = ''
-        with self.assertRaises(CommandError) as ce:
-            call_command('update_omim')
-        self.assertEqual(str(ce.exception), 'omim_key is required')
+    def setUp(self):
+        super().setUp()
+        self.mock_get_file_last_modified_patcher.stop()
+        patcher = mock.patch('reference_data.models.GenCC.get_current_version')
+        patcher.start().return_value = self.mock_get_file_last_modified.return_value
+        self.addCleanup(patcher.stop)
 
+    def test_update_omim_command_exceptions(self):
         # Test omim account expired
-        with self.assertRaises(ValueError) as e:
-            call_command('update_omim', '--omim-key=test_key')
-        self.assertEqual(str(e.exception),'This account has expired')
+        self._run_error_command(['This account has expired'],'This account has expired')
 
         # Test bad omim data header
-        with self.assertRaises(ValueError) as e:
-            call_command('update_omim', '--omim-key=test_key')
-        self.assertEqual(str(e.exception), 'Header row not found in genemap2 file before line 0: chr1	1	27600000	1p36		607413	OR4F29	Alzheimer disease neuronal thread protein						')
+        self._run_error_command([OMIM_DATA[2]], 'Header row not found in genemap2 file before line 0: chr1	1	27600000	1p36		607413	OR4F29	Alzheimer disease neuronal thread protein						')
 
         # Test bad phenotype field in the record
-        with self.assertRaises(ValueError) as e:
-            call_command('update_omim', '--omim-key=test_key')
-        record = json.loads(re.search(r'No phenotypes found: ({.*})', str(e.exception)).group(1))
+        bad_phenotype_data = OMIM_DATA[:2]
+        bad_phenotype_data.append('chr1	0	27600000	1p36		605462	BCC1	Basal cell carcinoma, susceptibility to, 1		100307118		associated with rs7538876	{x}, 605462 (5)	\n')
+        self._run_error_command(bad_phenotype_data, None)
+        error_message = self.mock_command_logger.error.mock_calls[-1].args[0]
+        record = json.loads(re.search(r'unable to update Omim: No phenotypes found: ({.*})', error_message).group(1))
         self.assertDictEqual(record, {"gene_name": "Basal cell carcinoma, susceptibility to, 1", "mim_number": "605462", "comments": "associated with rs7538876", "mouse_gene_symbol/id": "", "phenotypes": "{x}, 605462 (5)", "genomic_position_end": "27600000", "ensembl_gene_id": "", "gene/locus_and_other_related_symbols": "BCC1", "approved_gene_symbol": "", "entrez_gene_id": "100307118", "computed_cyto_location": "", "cyto_location": "1p36", "#_chromosome": "chr1", "genomic_position_start": "0"})
 
         self.assertEqual(Omim.objects.all().count(), 3)
 
         GeneInfo.objects.all().delete()
-        with self.assertRaises(ValueError) as e:
-            call_command('update_omim', '--omim-key=test_key')
-        self.assertEqual(str(e.exception), 'Related data is missing to load Omim: gene_ids_to_gene, gene_symbols_to_gene')
+        self._run_error_command(self.DATA, 'Related data is missing to load Omim: gene_ids_to_gene, gene_symbols_to_gene')
+
+    def _run_error_command(self, data, error):
+        with self.assertRaises(CommandError) as e:
+            self._run_command(data, command_args=['--omim-key=test_key'], head_response=HEAD_RESPONSE)
+        self.assertEqual(str(e.exception), 'Failed to Update: Omim')
+        if error:
+            self.mock_command_logger.error.assert_called_with(f'unable to update Omim: {error}')
 
 
-    @responses.activate
     @mock.patch('seqr.utils.file_utils.logger')
-    @mock.patch('reference_data.models.logger')
     @mock.patch('seqr.views.utils.export_utils.open')
     @mock.patch('seqr.views.utils.export_utils.TemporaryDirectory')
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
-    def test_update_omim_command(self, mock_subprocess, mock_temp_dir, mock_open, mock_logger, mock_file_utils_logger):
+    def test_update_omim_command(self, mock_subprocess, mock_temp_dir, mock_open,mock_file_utils_logger):
         mock_subprocess.return_value.wait.return_value = 0
         mock_temp_dir.return_value.__enter__.return_value = '/mock/tmp'
-        tmp_dir = tempfile.gettempdir()
-        tmp_file = '{}/genemap2.txt'.format(tmp_dir)
 
-        data_url = 'https://data.omim.org/downloads/test_key/genemap2.txt'
-        responses.add(responses.HEAD, data_url, headers={"Content-Length": "1024"})
-        responses.add(responses.GET, data_url, body=''.join(OMIM_DATA))
-
-        call_command('update_omim', '--omim-key=test_key')
-
-        calls = [
-            mock.call('Updating Omim'),
-            mock.call(f'Parsing file {tmp_file}'),
-            mock.call('Deleted 3 Omim records'),
-            mock.call('Created 4 Omim records'),
-            mock.call('Done'),
-            mock.call('Loaded 4 Omim records'),
-        ]
-        mock_logger.info.assert_has_calls(calls)
+        self._test_update_omim_command(command_args=['--omim-key=test_key'])
 
         calls = [
             mock.call('==> gsutil mv /mock/tmp/* gs://seqr-reference-data/omim/', None),
@@ -109,6 +83,11 @@ class UpdateOmimTest(TestCase):
         mock_open.assert_called_with('/mock/tmp/parsed_omim_records__latest.txt', 'w')
         self.assertEqual(mock_open.return_value.__enter__.return_value.write.call_args.args[0], CACHED_OMIM_DATA)
 
+    def _test_update_omim_command(self, **kwargs):
+        self._test_update_command(
+            'Omim', LAST_MODIFIED, existing_records=3, created_records=4, skipped_records=0,
+            head_response=HEAD_RESPONSE, **kwargs,
+        )
         self._assert_has_expected_omim_records()
 
     def _assert_has_expected_omim_records(self):
@@ -137,29 +116,7 @@ class UpdateOmimTest(TestCase):
         self.assertEqual(no_gene_record.start, 1)
         self.assertEqual(no_gene_record.end, 567800000)
 
-    @responses.activate
-    @mock.patch('reference_data.models.logger')
-    @mock.patch('reference_data.utils.download_utils.tempfile')
-    def test_update_omim_cached_records(self, mock_tempfile, mock_logger):
-        tmp_dir = tempfile.gettempdir()
-        mock_tempfile.gettempdir.return_value = tmp_dir
-        tmp_file = '{}/parsed_omim_records__latest.txt'.format(tmp_dir)
-
-        data_url = 'https://storage.googleapis.com/seqr-reference-data/omim/parsed_omim_records__latest.txt'
-        responses.add(responses.HEAD, data_url, headers={"Content-Length": "1024"})
-        responses.add(responses.GET, data_url, body=CACHED_OMIM_DATA)
-
-        CachedOmimReferenceDataHandler().update_records()
-
-        calls = [
-            mock.call('Updating Omim'),
-            mock.call(f'Parsing file {tmp_file}'),
-            mock.call('Deleted 3 Omim records'),
-            mock.call('Created 4 Omim records'),
-            mock.call('Done'),
-            mock.call('Loaded 4 Omim records'),
-        ]
-        mock_logger.info.assert_has_calls(calls)
-
-        self._assert_has_expected_omim_records()
-
+    def test_update_omim_cached_records(self):
+        self.URL = 'https://storage.googleapis.com/seqr-reference-data/omim/parsed_omim_records__latest.txt'
+        self.DATA = [CACHED_OMIM_DATA]
+        self._test_update_omim_command()

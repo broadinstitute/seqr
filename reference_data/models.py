@@ -6,6 +6,7 @@ import gzip
 import json
 import logging
 import re
+import requests
 from tqdm import tqdm
 
 from reference_data.utils.dbnsfp_utils import DBNSFP_FIELD_MAP, DBNSFP_EXCLUDE_FIELDS
@@ -87,6 +88,15 @@ class LoadableModel(models.Model):
         return cls.URL
 
     @classmethod
+    def get_current_version(cls, **kwargs):
+        return cls.CURRENT_VERSION
+
+    @classmethod
+    def _get_file_last_modified(cls, **kwargs):
+        response = requests.head(cls.get_url(**kwargs), timeout=60)
+        return response.headers['Last-Modified']
+
+    @classmethod
     def parse_record(cls, record, **kwargs):
         yield record
 
@@ -159,6 +169,14 @@ class HumanPhenotypeOntology(LoadableModel):
     definition = models.TextField(null=True, blank=True)
     comment = models.TextField(null=True, blank=True)
 
+
+    @classmethod
+    def get_current_version(cls, **kwargs):
+        response = requests.head(cls.get_url(**kwargs), timeout=60)
+        #  HPO redirects the "latest" URL to the URL of the latest release, so extract the release from the redirect Location
+        redirect_url = response.headers['Location']
+        return re.match(cls.URL.replace('latest/download', 'download/(.+)'), redirect_url).group(1)
+
     @staticmethod
     def get_file_header(f):
         return HumanPhenotypeOntology.HEADER
@@ -221,7 +239,7 @@ class GeneInfo(LoadableModel):
     http://www.gencodegenes.org/gencodeformat.html
     """
 
-    ALL_GENCODE_VERSIONS = [39, 31, 29, 28, 27, 19]
+    ALL_GENCODE_VERSIONS = ['39', '31', '29', '28', '27', '19']
     CURRENT_VERSION = ALL_GENCODE_VERSIONS[0]
 
     # gencode fields
@@ -270,12 +288,13 @@ class GeneInfo(LoadableModel):
                 yield line
 
     @classmethod
-    def update_records(cls, gencode_release=CURRENT_VERSION, existing_gene_ids=None, existing_transcript_ids=None, symbol_changes=None, **kwargs):
+    def update_records(cls, gencode_release=CURRENT_VERSION, existing_gene_ids=None, existing_transcript_ids=None, gene_symbol_change_dir=None, **kwargs):
         counters = defaultdict(int)
         genes = defaultdict(dict)
         transcripts = defaultdict(dict)
 
         genome_versions = []
+        gencode_release = int(gencode_release)
         if gencode_release == 19 or gencode_release > 22:
             genome_versions.append(GENOME_VERSION_GRCh37)
         if gencode_release > 19:
@@ -300,10 +319,15 @@ class GeneInfo(LoadableModel):
 
         genes_to_update = cls.objects.filter(gene_id__in=genes.keys(), gencode_release__lt=gencode_release)
         fields = set()
+        symbol_changes = []
         for existing in genes_to_update:
             new_gene = genes.pop(existing.gene_id)
-            if symbol_changes is not None and new_gene['gene_symbol'] != existing.gene_symbol:
-                symbol_changes.append((existing.gene_id, existing.gene_symbol, new_gene['gene_symbol']))
+            if gene_symbol_change_dir and new_gene['gene_symbol'] != existing.gene_symbol:
+                symbol_changes.append({
+                    'gene_id': existing.gene_id,
+                    'old_symbol': existing.gene_symbol,
+                    'new_symbol': new_gene['gene_symbol'],
+                })
             fields.update(new_gene.keys())
             for key, value in new_gene.items():
                 setattr(existing, key, value)
@@ -314,6 +338,11 @@ class GeneInfo(LoadableModel):
 
         cls.objects.bulk_create([cls(**record) for record in genes.values()])
         logger.info(f'Created {len(genes)} {cls.__name__} records')
+
+        if symbol_changes:
+            write_multiple_files([
+                (f'gene_symbol_changes__{gencode_release}', ['gene_id', 'old_symbol', 'new_symbol'], symbol_changes)
+            ], gene_symbol_change_dir, user=None)
 
         return transcripts
 
@@ -384,8 +413,7 @@ class TranscriptInfo(GeneMetadataModel):
 
 class RefseqTranscript(LoadableModel):
 
-    CURRENT_VERSION = GeneInfo.CURRENT_VERSION
-    URL = GENCODE_URL_TEMPLATE.format(path='', file='.metadata.RefSeq.gz', gencode_release=CURRENT_VERSION)
+    URL = GENCODE_URL_TEMPLATE.format(path='', file='.metadata.RefSeq.gz', gencode_release=GeneInfo.CURRENT_VERSION)
 
     transcript = models.OneToOneField(TranscriptInfo, on_delete=models.CASCADE)
     refseq_id = models.CharField(max_length=20)
@@ -532,6 +560,10 @@ class Omim(LoadableModel):
     @classmethod
     def get_url(cls, omim_key=None, **kwargs):
         return cls.OMIM_URL.format(omim_key=omim_key) if omim_key else cls.CACHED_OMIM_URL
+
+    @classmethod
+    def get_current_version(cls, **kwargs):
+        return cls._get_file_last_modified(**kwargs)
 
     @staticmethod
     def get_file_header(f):
@@ -747,6 +779,10 @@ class GenCC(GeneMetadataModel):
     class Meta:
         json_fields = ['classifications', 'hgnc_id']
 
+    @classmethod
+    def get_current_version(cls, **kwargs):
+        return cls._get_file_last_modified(**kwargs)
+
     @staticmethod
     def get_file_header(f):
         return [k.replace('"', '') for k in next(f).rstrip('\n\r').split(',')]
@@ -787,6 +823,14 @@ class ClinGen(GeneMetadataModel):
     class Meta:
         json_fields = ['haploinsufficiency', 'triplosensitivity', 'href']
 
+    @classmethod
+    def get_current_version(cls, **kwargs):
+        file_path = download_file(cls.get_url(**kwargs))
+        with open(file_path, 'r') as f:
+            csv_f = csv.reader(f)
+            created_meta_row = next(row for row in csv_f if row[0].startswith('FILE CREATED'))
+            return created_meta_row[0].split(':')[-1].strip()
+
     @staticmethod
     def get_file_header(f):
         csv_f = csv.reader(f)
@@ -808,3 +852,7 @@ class ClinGen(GeneMetadataModel):
             'triplosensitivity': record['triplosensitivity'].replace(' for Triplosensitivity', ''),
             'href': record['online_report'],
         }
+
+class DataVersions(models.Model):
+    data_model_name = models.CharField(max_length=30, primary_key=True)
+    version = models.CharField(max_length=40)
