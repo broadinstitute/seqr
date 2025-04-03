@@ -189,7 +189,7 @@ class UpdateGencodeTest(ReferenceDataCommandTestCase):
         dv.version = '31'
         dv.save()
 
-        call_command('update_all_reference_data')
+        call_command('update_all_reference_data', '--gene-symbol-change-dir', 'gs://seqr-reference-data/gencode')
         self.mock_command_logger.info.assert_has_calls([
             mock.call('Dropped 1 existing TranscriptInfo records'),
             mock.call('Done'),

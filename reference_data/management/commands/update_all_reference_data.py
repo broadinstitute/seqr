@@ -30,6 +30,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('--omim-key', help="OMIM key provided with registration at http://data.omim.org/downloads")
+        parser.add_argument('--gene-symbol-change-dir', help='Directory to upload tracked gene symbol changes')
 
     def handle(self, *args, **options):
         current_versions ={dv.data_model_name: dv for dv in DataVersions.objects.all()}
@@ -44,7 +45,7 @@ class Command(BaseCommand):
         if GeneInfo in to_update:
             latest_version = to_update.pop(GeneInfo)
             data_model_name = GeneInfo.__name__
-            self._update_gencode(current_versions.get(data_model_name))
+            self._update_gencode(current_versions.get(data_model_name), options['gene_symbol_change_dir'])
             self._track_success_updates(data_model_name, latest_version, current_versions, updated)
 
         gene_ids_to_gene, gene_symbols_to_gene = get_genes_by_id_and_symbol() if to_update else (None, None)
@@ -79,7 +80,7 @@ class Command(BaseCommand):
             DataVersions.objects.create(data_model_name=data_model_name, version=latest_version)
 
     @staticmethod
-    def _update_gencode(current_data_version):
+    def _update_gencode(current_data_version, gene_symbol_change_dir):
         # Download latest version first, and then add any genes from old releases not included in the latest release
         # Old gene ids are used in the gene constraint table and other datasets, as well as older sequencing data
         new_versions = GeneInfo.ALL_GENCODE_VERSIONS
@@ -91,7 +92,7 @@ class Command(BaseCommand):
         new_transcripts = {}
         for gencode_release in new_versions:
             new_transcripts.update(GeneInfo.update_records(
-                gencode_release, existing_gene_ids, existing_transcript_ids, track_symbol_changes=bool(current_data_version),
+                gencode_release, existing_gene_ids, existing_transcript_ids, gene_symbol_change_dir=gene_symbol_change_dir,
             ))
 
         if new_transcripts:

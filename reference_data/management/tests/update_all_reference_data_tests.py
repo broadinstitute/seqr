@@ -56,12 +56,12 @@ class NewDbUpdateAllReferenceDataTest(BaseUpdateAllReferenceDataTest):
             call_command('update_all_reference_data', '--omim-key=test_key')
 
         calls = [
-            mock.call('39', set(), set(), track_symbol_changes=False),
-            mock.call('31', set(), set(), track_symbol_changes=False),
-            mock.call('29', set(), set(), track_symbol_changes=False),
-            mock.call('28', set(), set(), track_symbol_changes=False),
-            mock.call('27', set(), set(), track_symbol_changes=False),
-            mock.call('19', set(), set(), track_symbol_changes=False),
+            mock.call('39', set(), set(), gene_symbol_change_dir=None),
+            mock.call('31', set(), set(), gene_symbol_change_dir=None),
+            mock.call('29', set(), set(), gene_symbol_change_dir=None),
+            mock.call('28', set(), set(), gene_symbol_change_dir=None),
+            mock.call('27', set(), set(), gene_symbol_change_dir=None),
+            mock.call('19', set(), set(), gene_symbol_change_dir=None),
         ]
         self.mock_update_gencode.assert_has_calls(calls)
 
