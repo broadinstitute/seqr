@@ -42,10 +42,14 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
                 overlapped_families=overlapped_families, sort=self._sort, sort_metadata=self._sort_metadata,
                 inheritance_mode=self._inheritance_mode, num_results=self._num_results, **kwargs
             )
-            if overlapped_families is not None and data_type in {self._sv_data_type, SNV_INDEL_DATA_TYPE}:
+            if has_merged_comp_het and data_type in {self._sv_data_type, SNV_INDEL_DATA_TYPE}:
                 ht = self._data_type_queries[data_type].unfiltered_comp_het_ht
-                data_type_families[data_type] = hl.eval(ht.family_guids)
-                overlapped_families = overlapped_families.intersection(data_type_families[data_type])
+                if ht is None:
+                    has_merged_comp_het = False
+                    overlapped_families = set()
+                else:
+                    data_type_families[data_type] = hl.eval(ht.family_guids)
+                    overlapped_families = overlapped_families.intersection(data_type_families[data_type])
 
         if not (has_merged_comp_het and overlapped_families):
             return

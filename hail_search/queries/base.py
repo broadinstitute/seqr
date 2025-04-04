@@ -316,7 +316,7 @@ class BaseHailTableQuery(object):
         families = set()
         project_samples = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
         for s in sample_data:
-            if overlapped_families and s['family_guid'] not in overlapped_families:
+            if overlapped_families is not None and s['family_guid'] not in overlapped_families:
                 continue
             families.add(s['family_guid'])
             project_samples[s['project_guid']][s['sample_type']][s['family_guid']].append(s)
@@ -1191,10 +1191,10 @@ class BaseHailTableQuery(object):
     def search(self):
         ht = self.format_search_ht()
 
-        (total_results, collected) = ht.aggregate((hl.agg.count(), hl.agg.take(ht.row, self._num_results, ordering=ht._sort)))
+        (total_results, collected) = (0, None) if ht is None else ht.aggregate((hl.agg.count(), hl.agg.take(ht.row, self._num_results, ordering=ht._sort)))
         logger.info(f'Total hits: {total_results}. Fetched: {self._num_results}')
 
-        return self._format_collected_rows(collected), total_results
+        return [] if collected is None else self._format_collected_rows(collected), total_results
 
     def _format_collected_rows(self, collected):
         if self._has_comp_het_search:
