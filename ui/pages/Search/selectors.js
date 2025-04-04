@@ -215,7 +215,7 @@ export const getDatasetTypes = createSelector(
   getProjectDatasetTypes,
   getSamplesByFamily,
   (projectFamilies, projectDatasetTypes, samplesByFamily) => {
-    const isSingleFamily = (projectFamilies || []).length === 1 && projectFamilies[0].familyGuids.length === 1
+    const isSingleFamily = (projectFamilies || []).length === 1 && projectFamilies[0].familyGuids?.length === 1
     const datasetTypes = isSingleFamily ? getSampleDatasetTypes(samplesByFamily[projectFamilies[0].familyGuids[0]]) : (
       projectFamilies || []
     ).reduce((acc, { projectGuid }) => new Set([
