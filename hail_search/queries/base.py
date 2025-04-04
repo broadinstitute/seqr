@@ -476,9 +476,11 @@ class BaseHailTableQuery(object):
         return ht, comp_het_ht
 
     @staticmethod
-    def _apply_entry_filters(ht):
+    def _apply_entry_filters(ht, select_globals=True):
         if ht is not None:
-            ht = ht.filter(ht.family_entries.any(hl.is_defined)).select_globals('family_guids')
+            ht = ht.filter(ht.family_entries.any(hl.is_defined))
+            if select_globals:
+                ht = ht.select_globals('family_guids')
         return ht
 
     def _filter_single_entries_table(self, ht, project_families, inheritance_filter=None, quality_filter=None, is_merged_ht=False, **kwargs):

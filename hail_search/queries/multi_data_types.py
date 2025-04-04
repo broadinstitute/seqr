@@ -96,10 +96,13 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
         variants = self._filter_comp_het_families(variants, set_secondary_annotations=False)
         return hl.Table.parallelize(variants)
 
-    @staticmethod
-    def _family_filtered_ch_ht(ht, overlapped_families, families):
+    @classmethod
+    def _family_filtered_ch_ht(cls, ht, overlapped_families, families):
+        if overlapped_families == families:
+            return ht
         family_indices = hl.array([families.index(family_guid) for family_guid in overlapped_families])
-        return ht.annotate(family_entries=family_indices.map(lambda i: ht.family_entries[i]))
+        ht = ht.annotate(family_entries=family_indices.map(lambda i: ht.family_entries[i]))
+        return cls._apply_entry_filters(ht, select_globals=False)
 
     def _is_valid_comp_het_family(self, v1, v2, family_index):
         is_valid = super()._is_valid_comp_het_family(v1, v2, family_index)
