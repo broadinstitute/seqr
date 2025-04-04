@@ -2,6 +2,9 @@
 
 ## dev
 
+## 4/4/25
+* Refactor manage commands to update reference data. May require changes to custom cron jobs. (REQUIRES DB MIGRATION)
+
 ## 11/21/24
 * Migrate "Submit to Clinvar" to generic report flag for Variant Notes (REQUIRES DB MIGRATION)
 

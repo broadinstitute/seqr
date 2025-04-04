@@ -13,7 +13,7 @@ class UpdateDbNsfpGeneTest(ReferenceDataCommandTestCase):
     ]
 
     def test_update_dbnsfp_gene_command(self):
-        self._test_update_command('update_dbnsfp_gene', 'dbNSFPGene', existing_records=3)
+        self._test_update_command('dbNSFPGene', 'dbNSFP4.0_gene', existing_records=3)
 
         self.assertEqual(dbNSFPGene.objects.count(), 1)
         record = dbNSFPGene.objects.get(gene_names = 'OR4F5')

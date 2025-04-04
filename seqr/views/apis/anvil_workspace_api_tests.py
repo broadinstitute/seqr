@@ -431,7 +431,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
     def test_get_anvil_vcf_list(self, *args):
         url = reverse(get_anvil_vcf_list, args=[TEST_WORKSPACE_NAMESPACE, TEST_WORKSPACE_NAME1])
         expected_files = [
-            '/test.vcf', '/data/test.vcf.gz', '/data/test-101.vcf.gz', '/data/test-102.vcf.gz', '/sharded/test-*.vcf.gz',
+            '/test.vcf', '/test.vcf.gz', '/data/test.vcf.gz', '/data/test-101.vcf.gz', '/data/test-102.vcf.gz', '/sharded/test-*.vcf.gz',
         ]
         self._test_get_workspace_files(url, 'dataPathList', expected_files, *args)
 
@@ -460,7 +460,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         mock_file_logger.reset_mock()
         mock_subprocess.return_value.communicate.return_value = b'\n'.join([
             b'Warning: some packages are out of date',
-            b'gs://test_bucket/test.vcf', b'gs://test_bucket/test.tsv',
+            b'gs://test_bucket/test.vcf', b'gs://test_bucket/test.vcf.gz', b'gs://test_bucket/test.tsv',
             b'gs://test_bucket/test.bam', b'gs://test_bucket/test.bam.bai', b'gs://test_bucket/data/test.cram',
             # path with common prefix but not sharded VCFs
             b'gs://test_bucket/data/test.vcf.gz', b'gs://test_bucket/data/test-101.vcf.gz',
@@ -669,7 +669,7 @@ class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
         mock_compute_indiv_guid.side_effect = ['I0000021_na19675_1', 'I0000022_na19678', 'I0000023_hg00735']
         url = reverse(add_workspace_data, args=[PROJECT2_GUID])
         self._test_mv_file_and_triggering_dag_exception(
-            url, {'guid': PROJECT2_GUID}, PROJECT2_SAMPLE_DATA, 'GRCh37', REQUEST_BODY_ADD_DATA2)
+            url, {'guid': PROJECT2_GUID}, PROJECT2_SAMPLE_DATA, 'GRCh37', REQUEST_BODY_ADD_DATA2, sample_type='WGS')
 
     def _test_errors(self, url, fields, workspace_name, has_existing_data=False):
         # Test missing required fields in the request body
@@ -822,7 +822,7 @@ class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
             'father__individual_id': None, 'sex': 'F', 'affected': 'N', 'notes': 'a individual note', 'features': [],
         }, individual_model_data)
 
-    def _test_mv_file_and_triggering_dag_exception(self, url, workspace, sample_data, genome_version, request_body, num_samples=None):
+    def _test_mv_file_and_triggering_dag_exception(self, url, workspace, sample_data, genome_version, request_body, num_samples=None, sample_type='WES'):
         # Test saving ID file exception
         responses.calls.reset()
         self.mock_authorized_session.reset_mock()
@@ -855,7 +855,7 @@ class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
                 'dataset_type': 'SNV_INDEL',
                 'reference_genome': genome_version,
                 'callset_path': 'gs://test_bucket/test_path.vcf',
-                'sample_type': 'WES',
+                'sample_type': sample_type,
                 'sample_source': 'AnVIL',
             }, indent=4),
         )

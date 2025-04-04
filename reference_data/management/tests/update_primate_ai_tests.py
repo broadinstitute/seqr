@@ -13,7 +13,7 @@ class UpdatePrimateAiTest(ReferenceDataCommandTestCase):
     ]
 
     def test_update_primate_ai_command(self):
-        self._test_update_command('update_primate_ai', 'PrimateAI', created_records=2, skipped_records=2)
+        self._test_update_command('PrimateAI', 'cleaned_v0.2', created_records=2, skipped_records=2)
 
         self.assertEqual(PrimateAI.objects.all().count(), 2)
         record = PrimateAI.objects.get(gene__gene_id = 'ENSG00000235249')

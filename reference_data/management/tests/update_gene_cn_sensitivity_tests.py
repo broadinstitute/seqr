@@ -11,7 +11,7 @@ class UpdateGeneCopyNumberSensitivityTest(ReferenceDataCommandTestCase):
     ]
 
     def test_update_gene_cn_sensitivity_command(self):
-        self._test_update_command('update_gene_cn_sensitivity', 'GeneCopyNumberSensitivity', created_records=2)
+        self._test_update_command('GeneCopyNumberSensitivity', 'Collins_rCNV_2022', created_records=2)
 
         self.assertEqual(GeneCopyNumberSensitivity.objects.count(), 2)
         record = GeneCopyNumberSensitivity.objects.get(gene__gene_id='ENSG00000186092')

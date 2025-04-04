@@ -11,7 +11,7 @@ class UpdateGeneConstraintTest(ReferenceDataCommandTestCase):
     ]
 
     def test_update_gene_constraint_command(self):
-        self._test_update_command('update_gene_constraint', 'GeneConstraint', created_records=2)
+        self._test_update_command('GeneConstraint', 'gnomad.v2.1.1.lof_metrics.by_gene', created_records=2)
 
         self.assertEqual(GeneConstraint.objects.count(), 2)
         record = GeneConstraint.objects.get(gene__gene_id = 'ENSG00000237683')

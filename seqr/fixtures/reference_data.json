@@ -1451,5 +1451,82 @@
         "definition": "",
         "comment": ""
     }
+},
+{
+    "model": "reference_data.dataversions",
+    "pk": "ClinGen",
+    "fields": {
+        "version": "2025-02-05"
+    }
+},
+{
+    "model": "reference_data.dataversions",
+    "pk": "GenCC",
+    "fields": {
+        "version": "Thu, 20 Mar 2025 20:52:24 GMT"
+    }
+},
+{
+    "model": "reference_data.dataversions",
+    "pk": "GeneConstraint",
+    "fields": {
+        "version": "gnomad.v2.1.1.lof_metrics.by_gene"
+    }
+},
+{
+    "model": "reference_data.dataversions",
+    "pk": "GeneCopyNumberSensitivity",
+    "fields": {
+        "version": "Collins_rCNV_2022"
+    }
+},
+{
+    "model": "reference_data.dataversions",
+    "pk": "GeneInfo",
+    "fields": {
+        "version": "39"
+    }
+},
+{
+    "model": "reference_data.dataversions",
+    "pk": "GeneShet",
+    "fields": {
+        "version": "7939768"
+    }
+},
+{
+    "model": "reference_data.dataversions",
+    "pk": "HumanPhenotypeOntology",
+    "fields": {
+        "version": "2025-03-03"
+    }
+},
+{
+    "model": "reference_data.dataversions",
+    "pk": "MGI",
+    "fields": {
+        "version": "HMD_HumanPhenotype"
+    }
+},
+{
+    "model": "reference_data.dataversions",
+    "pk": "Omim",
+    "fields": {
+        "version": "Thu, 20 Mar 2025 20:52:24 GMT"
+    }
+},
+{
+    "model": "reference_data.dataversions",
+    "pk": "PrimateAI",
+    "fields": {
+        "version": "cleaned_v0.2"
+    }
+},
+{
+    "model": "reference_data.dataversions",
+    "pk": "dbNSFPGene",
+    "fields": {
+        "version": "dbNSFP4.0_gene"
+    }
 }
 ]

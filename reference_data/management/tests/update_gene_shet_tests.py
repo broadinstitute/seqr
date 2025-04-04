@@ -11,7 +11,7 @@ class UpdateGeneShetTest(ReferenceDataCommandTestCase):
     ]
 
     def test_update_gene_cn_sensitivity_command(self):
-        self._test_update_command('update_gene_shet', 'GeneShet', created_records=2)
+        self._test_update_command('GeneShet', '7939768', created_records=2)
 
         self.assertEqual(GeneShet.objects.count(), 2)
         record = GeneShet.objects.get(gene__gene_id='ENSG00000223972')
