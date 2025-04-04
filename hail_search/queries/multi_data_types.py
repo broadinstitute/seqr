@@ -32,50 +32,42 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
             {s['family_guid'] for s in sample_data[self._sv_data_type]['samples']}
         ) if has_merged_comp_het else None
 
-        if self._sv_data_type:
-            sv_samples = sample_data.pop(self._sv_data_type)
-            self._data_type_queries[self._sv_data_type] = QUERY_CLASS_MAP[(self._sv_data_type, GENOME_VERSION_GRCh38)](
-                sv_samples, *args, overlapped_families=overlapped_families, **kwargs
-            )
-            sv_ht = self._data_type_queries[self._sv_data_type].unfiltered_comp_het_ht
-            sv_families = hl.eval(sv_ht.family_guids)
-            # Multi project SV search skips projects with no matched variants, so possible set of families is reduced
-            overlapped_families = overlapped_families.intersection(sv_families)
-
-        for data_type, data_type_samples in sample_data.items():
+        data_type_families = {}
+        # Multi project SV search skips projects with no matched variants, so run SV search first to reduce search space
+        for data_type in [self._sv_data_type, *sample_data.keys()]:
+            if data_type is None or data_type in self._data_type_queries:
+                continue
             self._data_type_queries[data_type] = QUERY_CLASS_MAP[(data_type, GENOME_VERSION_GRCh38)](
-                data_type_samples, *args, override_comp_het_alt=data_type == SNV_INDEL_DATA_TYPE,
+                sample_data[data_type], *args, override_comp_het_alt=data_type == SNV_INDEL_DATA_TYPE,
                 overlapped_families=overlapped_families, **kwargs
             )
+            if overlapped_families is not None and data_type in {self._sv_data_type, SNV_INDEL_DATA_TYPE}:
+                ht = self._data_type_queries[data_type].unfiltered_comp_het_ht
+                data_type_families[data_type] = hl.eval(ht.family_guids)
+                overlapped_families = overlapped_families.intersection(data_type_families[data_type])
 
-        if not has_merged_comp_het:
+        if not (has_merged_comp_het and overlapped_families):
             return
 
         variant_query = self._data_type_queries[SNV_INDEL_DATA_TYPE]
-        variant_ht = variant_query.unfiltered_comp_het_ht
-        variant_families = hl.eval(variant_ht.family_guids)
         sv_query = self._data_type_queries[self._sv_data_type]
         self.max_unaffected_samples = min(variant_query.max_unaffected_samples, sv_query.max_unaffected_samples)
-        merged_ht = self._filter_data_type_comp_hets(variant_query, variant_families, sv_query)
+        merged_ht = self._filter_data_type_comp_hets(
+            variant_query, sv_query, sorted(overlapped_families), data_type_families,
+        )
         if merged_ht is not None:
             self._merged_comp_het_ht = merged_ht.key_by()
 
-    def _filter_data_type_comp_hets(self, variant_query, variant_families, sv_query):
-        variant_ht = variant_query.unfiltered_comp_het_ht
-        sv_ht = sv_query.unfiltered_comp_het_ht
+    def _filter_data_type_comp_hets(self, variant_query, sv_query, overlapped_families, data_type_families):
+        variant_ht = self._family_filtered_ch_ht(
+            variant_query.unfiltered_comp_het_ht, overlapped_families, data_type_families[SNV_INDEL_DATA_TYPE],
+        )
+        sv_ht = self._family_filtered_ch_ht(
+            sv_query.unfiltered_comp_het_ht, overlapped_families, data_type_families[self._sv_data_type],
+        )
+
         sv_type_del_ids = sv_query.get_allowed_sv_type_ids([f'{getattr(sv_query, "SV_TYPE_PREFIX", "")}DEL'])
         self._sv_type_del_id = list(sv_type_del_ids)[0] if sv_type_del_ids else None
-
-        sv_families = hl.eval(sv_ht.family_guids)
-        overlapped_families = list(set(variant_families).intersection(sv_families))
-        if not overlapped_families:
-            return None
-
-        if variant_families != sv_families:
-            variant_ht = self._family_filtered_ch_ht(variant_ht, overlapped_families, variant_families)
-            sv_ht = self._family_filtered_ch_ht(sv_ht, overlapped_families, sv_families)
-        else:
-            overlapped_families = variant_families
 
         variant_samples_by_family = variant_query.entry_samples_by_family_guid
         sv_samples_by_family = sv_query.entry_samples_by_family_guid
