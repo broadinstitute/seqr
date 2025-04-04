@@ -18,33 +18,47 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
     LOADED_GLOBALS = True
 
     def __init__(self, sample_data, *args, **kwargs):
-        self._data_type_queries = {
-            k: QUERY_CLASS_MAP[(k, GENOME_VERSION_GRCh38)](v, *args, override_comp_het_alt=k == SNV_INDEL_DATA_TYPE, **kwargs)
-            for k, v in sample_data.items()
-        }
-        self._comp_het_hts = {}
+        self._data_type_queries = {}
+        self._merged_comp_het_ht = None
         self._sv_type_del_id = None
-        self._current_sv_data_type = None
+        self._sv_data_type = next(
+            (dt for dt in [SvHailTableQuery.DATA_TYPE, GcnvHailTableQuery.DATA_TYPE] if dt in sample_data), None,
+        )
         super().__init__(sample_data, *args, **kwargs)
 
-    def _load_filtered_table(self, *args, **kwargs):
-        variant_query = self._data_type_queries.get(SNV_INDEL_DATA_TYPE)
-        sv_data_types = [
-            data_type for data_type in [SvHailTableQuery.DATA_TYPE, GcnvHailTableQuery.DATA_TYPE]
-            if data_type in self._data_type_queries
-        ]
-        if not (self._has_comp_het_search and variant_query is not None and sv_data_types):
+    def _load_filtered_table(self, sample_data, *args, **kwargs):
+        has_merged_comp_het = self._has_comp_het_search and SNV_INDEL_DATA_TYPE in sample_data and self._sv_data_type
+        overlapped_families = {s['family_guid'] for s in sample_data[SNV_INDEL_DATA_TYPE]['samples']}.intersection(
+            {s['family_guid'] for s in sample_data[self._sv_data_type]['samples']}
+        ) if has_merged_comp_het else None
+
+        if self._sv_data_type:
+            sv_samples = sample_data.pop(self._sv_data_type)
+            self._data_type_queries[self._sv_data_type] = QUERY_CLASS_MAP[(self._sv_data_type, GENOME_VERSION_GRCh38)](
+                sv_samples, *args, overlapped_families=overlapped_families, **kwargs
+            )
+            sv_ht = self._data_type_queries[self._sv_data_type].unfiltered_comp_het_ht
+            sv_families = hl.eval(sv_ht.family_guids)
+            # Multi project SV search skips projects with no matched variants, so possible set of families is reduced
+            overlapped_families = overlapped_families.intersection(sv_families)
+
+        for data_type, data_type_samples in sample_data.items():
+            self._data_type_queries[data_type] = QUERY_CLASS_MAP[(data_type, GENOME_VERSION_GRCh38)](
+                data_type_samples, *args, override_comp_het_alt=data_type == SNV_INDEL_DATA_TYPE,
+                overlapped_families=overlapped_families, **kwargs
+            )
+
+        if not has_merged_comp_het:
             return
 
+        variant_query = self._data_type_queries[SNV_INDEL_DATA_TYPE]
         variant_ht = variant_query.unfiltered_comp_het_ht
         variant_families = hl.eval(variant_ht.family_guids)
-        for data_type in sv_data_types:
-            self._current_sv_data_type = data_type
-            sv_query = self._data_type_queries[data_type]
-            self.max_unaffected_samples = min(variant_query.max_unaffected_samples, sv_query.max_unaffected_samples)
-            merged_ht = self._filter_data_type_comp_hets(variant_query, variant_families, sv_query)
-            if merged_ht is not None:
-                self._comp_het_hts[data_type] = merged_ht.key_by()
+        sv_query = self._data_type_queries[self._sv_data_type]
+        self.max_unaffected_samples = min(variant_query.max_unaffected_samples, sv_query.max_unaffected_samples)
+        merged_ht = self._filter_data_type_comp_hets(variant_query, variant_families, sv_query)
+        if merged_ht is not None:
+            self._merged_comp_het_ht = merged_ht.key_by()
 
     def _filter_data_type_comp_hets(self, variant_query, variant_families, sv_query):
         variant_ht = variant_query.unfiltered_comp_het_ht
@@ -119,7 +133,7 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
 
     def _comp_het_entry_has_ref(self, gt1, gt2):
         variant_query = self._data_type_queries[SNV_INDEL_DATA_TYPE]
-        sv_query = self._data_type_queries[self._current_sv_data_type]
+        sv_query = self._data_type_queries[self._sv_data_type]
         return [variant_query.GENOTYPE_QUERY_MAP[REF_REF](gt1), sv_query.GENOTYPE_QUERY_MAP[REF_REF](gt2)]
 
     def format_search_ht(self):
@@ -131,14 +145,14 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
             dt_ht = self._merged_sort(data_type, dt_ht)
             hts.append(dt_ht.select('_sort', **{data_type: dt_ht.row}))
 
-        for data_type, ch_ht in self._comp_het_hts.items():
-            ch_ht = ch_ht.annotate(
-                v1=self._format_comp_het_result(ch_ht.v1, SNV_INDEL_DATA_TYPE),
-                v2=self._format_comp_het_result(ch_ht.v2, data_type),
+        if self._merged_comp_het_ht is not None:
+            ch_ht = self._merged_comp_het_ht.annotate(
+                v1=self._format_comp_het_result(self._merged_comp_het_ht.v1, SNV_INDEL_DATA_TYPE),
+                v2=self._format_comp_het_result(self._merged_comp_het_ht.v2, self._sv_data_type),
             )
             hts.append(ch_ht.select(
                 _sort=hl.sorted([ch_ht.v1._sort.map(hl.float64), ch_ht.v2._sort.map(hl.float64)])[0],
-                **{f'comp_het_{data_type}': ch_ht.row},
+                **{f'comp_het_{self._sv_data_type}': ch_ht.row},
             ))
 
         ht = hts[0]
@@ -170,7 +184,9 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
         return ht
 
     def _format_collected_rows(self, collected):
-        data_types = [*self._data_type_queries, *[f'comp_het_{data_type}' for data_type in self._comp_het_hts]]
+        data_types = [*self._data_type_queries]
+        if self._merged_comp_het_ht:
+            data_types.append(f'comp_het_{self._sv_data_type}')
         return super()._format_collected_rows([self._format_collected_row(row, data_types) for row in collected])
 
     @staticmethod
@@ -185,10 +201,10 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
         hts = []
         for query in self._data_type_queries.values():
             hts += query.format_gene_count_hts()
-        for data_type, ch_ht in self._comp_het_hts.items():
+        if self._merged_comp_het_ht is not None:
             hts += [
-                self._comp_het_gene_count_ht(ch_ht, 'v1', SNV_INDEL_DATA_TYPE),
-                self._comp_het_gene_count_ht(ch_ht, 'v2', data_type)
+                self._comp_het_gene_count_ht(self._merged_comp_het_ht, 'v1', SNV_INDEL_DATA_TYPE),
+                self._comp_het_gene_count_ht(self._merged_comp_het_ht, 'v2', self._sv_data_type)
             ]
         return hts
 

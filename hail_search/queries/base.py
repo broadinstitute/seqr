@@ -272,11 +272,11 @@ class BaseHailTableQuery(object):
     def _enums(self):
         return self._globals['enums']
 
-    def _load_filtered_table(self, sample_data, intervals=None, annotations=None, annotations_secondary=None, **kwargs):
+    def _load_filtered_table(self, sample_data, intervals=None, annotations=None, annotations_secondary=None, overlapped_families=None, **kwargs):
         parsed_intervals = self._parse_intervals(intervals, **kwargs)
         parsed_annotations = self._parse_annotations(annotations, annotations_secondary, **kwargs)
         self.import_filtered_table(
-            *self._parse_sample_data(sample_data), parsed_intervals=parsed_intervals, raw_intervals=intervals, parsed_annotations=parsed_annotations, **kwargs)
+            *self._parse_sample_data(sample_data, overlapped_families=overlapped_families), parsed_intervals=parsed_intervals, raw_intervals=intervals, parsed_annotations=parsed_annotations, **kwargs)
 
     @classmethod
     def _get_table_path(cls, path):
@@ -303,16 +303,21 @@ class BaseHailTableQuery(object):
         query_result = hl.query_table(query_table_path, ht.key).first().drop(*ht.key)
         return ht.annotate(**query_result)
 
-    def _parse_sample_data(self, sample_data):
+    def _parse_sample_data(self, sample_data, overlapped_families=None):
         """
         Organizes sample_data by project, sample type, and family in a nested dictionary format.
         Returns a tuple containing:
         - project_samples (defaultdict): {<project_guid>: {<sample_type>: {<family_guid>: [<sample_data>, ...]}}}
         - num_families (int): The number of unique families in the sample data.
         """
+        if not self._is_multi_data_type_comp_het:
+            overlapped_families = None
+
         families = set()
         project_samples = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
         for s in sample_data:
+            if overlapped_families and s['family_guid'] not in overlapped_families:
+                continue
             families.add(s['family_guid'])
             project_samples[s['project_guid']][s['sample_type']][s['family_guid']].append(s)
 
