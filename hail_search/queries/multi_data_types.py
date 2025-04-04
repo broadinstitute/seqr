@@ -39,7 +39,8 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
                 continue
             self._data_type_queries[data_type] = QUERY_CLASS_MAP[(data_type, GENOME_VERSION_GRCh38)](
                 sample_data[data_type], *args, override_comp_het_alt=data_type == SNV_INDEL_DATA_TYPE,
-                overlapped_families=overlapped_families, **kwargs
+                overlapped_families=overlapped_families, sort=self._sort, sort_metadata=self._sort_metadata,
+                inheritance_mode=self._inheritance_mode, num_results=self._num_results, **kwargs
             )
             if overlapped_families is not None and data_type in {self._sv_data_type, SNV_INDEL_DATA_TYPE}:
                 ht = self._data_type_queries[data_type].unfiltered_comp_het_ht
