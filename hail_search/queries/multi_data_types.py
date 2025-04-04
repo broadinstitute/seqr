@@ -28,8 +28,8 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
 
     def _load_filtered_table(self, sample_data, *args, **kwargs):
         has_merged_comp_het = self._has_comp_het_search and SNV_INDEL_DATA_TYPE in sample_data and self._sv_data_type
-        overlapped_families = {s['family_guid'] for s in sample_data[SNV_INDEL_DATA_TYPE]['samples']}.intersection(
-            {s['family_guid'] for s in sample_data[self._sv_data_type]['samples']}
+        overlapped_families = {s['family_guid'] for s in sample_data[SNV_INDEL_DATA_TYPE]}.intersection(
+            {s['family_guid'] for s in sample_data[self._sv_data_type]}
         ) if has_merged_comp_het else None
 
         data_type_families = {}
