@@ -13,6 +13,7 @@ import {
   getGenesById,
   getSearchesByHash,
   getSamplesGroupedByProjectGuid,
+  getSamplesByFamily,
 } from 'redux/selectors'
 import { FAMILY_ANALYSIS_STATUS_LOOKUP } from 'shared/utils/constants'
 import { compareObjects } from 'shared/utils/sortUtils'
@@ -194,15 +195,17 @@ export const getLocusListOptions = createListEqualSelector(
   },
 )
 
+const getSampleDatasetTypes = samples => ([
+  ...new Set((samples || []).filter(({ isActive }) => isActive).map(({ datasetType }) => datasetType)),
+])
+
 export const getProjectDatasetTypes = createSelector(
   getProjectsByGuid,
   getSamplesGroupedByProjectGuid,
   (projectsByGuid, samplesByProjectGuid) => Object.values(projectsByGuid).reduce(
     (acc, { projectGuid, datasetTypes }) => ({
       ...acc,
-      [projectGuid]: datasetTypes || [...new Set(Object.values(samplesByProjectGuid[projectGuid] || {}).filter(
-        ({ isActive }) => isActive,
-      ).map(({ datasetType }) => datasetType))],
+      [projectGuid]: datasetTypes || getSampleDatasetTypes(Object.values(samplesByProjectGuid[projectGuid] || {})),
     }), {},
   ),
 )
@@ -210,8 +213,12 @@ export const getProjectDatasetTypes = createSelector(
 export const getDatasetTypes = createSelector(
   (state, props) => props.projectFamilies,
   getProjectDatasetTypes,
-  (projectFamilies, projectDatasetTypes) => {
-    const datasetTypes = (projectFamilies || []).reduce((acc, { projectGuid }) => new Set([
+  getSamplesByFamily,
+  (projectFamilies, projectDatasetTypes, samplesByFamily) => {
+    const isSingleFamily = (projectFamilies || []).length === 1 && projectFamilies[0].familyGuids.length === 1
+    const datasetTypes = isSingleFamily ? getSampleDatasetTypes(samplesByFamily[projectFamilies[0].familyGuids[0]]) : (
+      projectFamilies || []
+    ).reduce((acc, { projectGuid }) => new Set([
       ...acc, ...(projectDatasetTypes[projectGuid] || [])]), new Set())
     return [...datasetTypes].sort().join(',')
   },
