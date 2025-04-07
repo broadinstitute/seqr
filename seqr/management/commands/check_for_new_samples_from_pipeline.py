@@ -201,9 +201,10 @@ class Command(BaseCommand):
         logger.info(f'Loading new samples from {genome_version}/{dataset_type}: {run_version}')
 
         metadata = json.loads(next(line for line in file_iter(metadata_path)))
-        families = Family.objects.filter(guid__in=metadata['family_samples'].keys())
-        if len(families) < len(metadata['family_samples']):
-            invalid = metadata['family_samples'].keys() - set(families.values_list('guid', flat=True))
+        run_family_guids = set(metadata['family_samples'].keys())
+        families = Family.objects.filter(guid__in=run_family_guids)
+        if len(families) < len(run_family_guids):
+            invalid = run_family_guids - set(families.values_list('guid', flat=True))
             raise CommandError(f'Invalid families in run metadata {genome_version}/{dataset_type}: {run_version} - {", ".join(invalid)}')
 
         family_project_map = {f.guid: f.project for f in families.select_related('project')}
@@ -230,7 +231,7 @@ class Command(BaseCommand):
 
         sample_type = metadata['sample_type']
         logger.info(f'Loading {len(sample_project_tuples)} {sample_type} {dataset_type} samples in {len(samples_by_project)} projects')
-        new_samples, updated_samples, *args = match_and_update_search_samples(
+        new_samples, *args = match_and_update_search_samples(
             projects=samples_by_project.keys(),
             sample_project_tuples=sample_project_tuples,
             sample_data={'data_source': run_version, 'elasticsearch_index': ';'.join(metadata['callsets'])},
@@ -247,15 +248,15 @@ class Command(BaseCommand):
             dataset_type, sample_type, run_version, samples_by_project, new_samples_by_project,
         )
         try:
-            cls._report_loading_failures(metadata, split_project_pdos)
+            failed_family_guids = cls._report_loading_failures(metadata, split_project_pdos)
+            run_family_guids.update(failed_family_guids)
         except Exception as e:
             logger.error(f'Error reporting loading failure for {run_version}: {e}')
 
         # Update sample qc
         if 'sample_qc' in metadata:
             try:
-                individuals = Individual.objects.filter(sample__in=updated_samples)
-                cls._update_individuals_sample_qc(sample_type, individuals, metadata['sample_qc'])
+                cls._update_individuals_sample_qc(sample_type, run_family_guids, metadata['sample_qc'])
             except Exception as e:
                 logger.error(f'Error updating individuals sample qc {run_version}: {e}')
 
@@ -323,6 +324,7 @@ class Command(BaseCommand):
             safe_post_to_slack(
                 SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, '\n\n'.join(messages),
             )
+        return set(failed_families_by_guid.keys())
 
     @staticmethod
     def _update_pdos(session, project_guid, sample_ids):
@@ -368,7 +370,8 @@ class Command(BaseCommand):
         return sorted(pdos_to_create.keys())
 
     @classmethod
-    def _update_individuals_sample_qc(cls, sample_type, individuals, sample_qc_map):
+    def _update_individuals_sample_qc(cls, sample_type, family_guids, sample_qc_map):
+        individuals = Individual.objects.filter(individual_id__in=sample_qc_map.keys(), family__guid__in=family_guids)
         sample_individual_map = {i.individual_id: i for i in individuals}
         updated_individuals = []
         for individual_id, record in sample_qc_map.items():
