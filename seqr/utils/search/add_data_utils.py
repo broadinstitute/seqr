@@ -176,7 +176,7 @@ def _get_pedigree_path(pedigree_dir: str, genome_version: str, sample_type: str,
 
 def get_loading_samples_validator(vcf_samples: list[str], loaded_individual_ids: list[int], sample_source: str,
                                   missing_family_samples_error: str, loaded_sample_types: list[str] = None,
-                                  fetch_missing_loaded_samples: Callable = None) -> Callable:
+                                  fetch_missing_loaded_samples: Callable = None, fetch_missing_vcf_samples: Callable = None) -> Callable:
 
     def validate_expected_samples(record_family_ids, previous_loaded_individuals, sample_type):
         errors = []
@@ -219,12 +219,17 @@ def get_loading_samples_validator(vcf_samples: list[str], loaded_individual_ids:
                 missing_family_samples_error + '\n'.join(sorted(missing_family_sample_messages))
             )
 
-        if vcf_samples is not None:
-            missing_vcf_samples = sorted(loading_samples - set(vcf_samples))
-            if missing_vcf_samples:
-                errors.insert(
-                    0, f'The following samples are included in {sample_source} but are missing from the VCF: {", ".join(missing_vcf_samples)}',
-                )
+        missing_vcf_samples = [] if vcf_samples is None else set(loading_samples - set(vcf_samples))
+        if missing_vcf_samples and fetch_missing_vcf_samples:
+            try:
+                additional_vcf_samples = fetch_missing_vcf_samples(missing_vcf_samples)
+                missing_vcf_samples -= set(additional_vcf_samples)
+            except ValueError as e:
+                errors.append(str(e))
+        if missing_vcf_samples:
+            errors.insert(
+                0, f'The following samples are included in {sample_source} but are missing from the VCF: {", ".join(sorted(missing_vcf_samples))}',
+            )
 
         nonlocal loaded_individual_ids
         loaded_individual_ids += [
