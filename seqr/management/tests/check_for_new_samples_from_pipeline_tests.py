@@ -259,6 +259,54 @@ OPENED_RUN_JSON_FILES = [{
             'fail_r_het_hom_var': False,
             'fail_call_rate': False,
             'qc_metrics_filters': ['n_deletion', 'n_insertion', 'n_snp'],
+        },
+        'NA19675_1': {
+            'filtered_callrate': 1.0,
+            'contamination_rate': 5.0,
+            'percent_bases_at_20x': 90.0,
+            'mean_coverage': 28.0,
+            'filter_flags': ['callrate', 'contamination'],
+            'pca_scores': [0.1 for _ in range(20)],
+            'prob_afr': 0.02,
+            'prob_ami': 0.0,
+            'prob_amr': 0.02,
+            'prob_asj': 0.9,
+            'prob_eas': 0.0,
+            'prob_fin': 0.0,
+            'prob_mid': 0.0,
+            'prob_nfe': 0.05,
+            'prob_sas': 0.01,
+            'qc_gen_anc': 'nfe',
+            'sample_qc.call_rate': 1.0,
+            'sample_qc.n_called': 30,
+            'sample_qc.n_not_called': 0,
+            'sample_qc.n_filtered': 0,
+            'sample_qc.n_hom_ref': 17,
+            'sample_qc.n_het': 3,
+            'sample_qc.n_hom_var': 10,
+            'sample_qc.n_non_ref': 13,
+            'sample_qc.n_singleton': 0,
+            'sample_qc.n_snp': 23,
+            'sample_qc.n_insertion': 0,
+            'sample_qc.n_deletion': 0,
+            'sample_qc.n_transition': 13,
+            'sample_qc.n_transversion': 10,
+            'sample_qc.n_star': 0,
+            'sample_qc.r_ti_tv': 1.3,
+            'sample_qc.r_het_hom_var': 0.3,
+            'sample_qc.r_insertion_deletion': None,
+            'sample_qc.f_inbreeding.f_stat': -0.038400752079048056,
+            'sample_qc.f_inbreeding.n_called': 30,
+            'sample_qc.f_inbreeding.expected_homs': 27.11094199999999,
+            'sample_qc.f_inbreeding.observed_homs': 27,
+            'fail_n_snp': True,
+            'fail_r_ti_tv': False,
+            'fail_r_insertion_deletion': None,
+            'fail_n_insertion': True,
+            'fail_n_deletion': True,
+            'fail_r_het_hom_var': False,
+            'fail_call_rate': False,
+            'qc_metrics_filters': [],
         }
     }
 }, {
@@ -477,8 +525,8 @@ class CheckNewSamplesTest(object):
             ('  Non-Analyst Project: Updated 1 variants', None),
         ]
         update_sample_qc_logs = [
-            ('update 1 Individuals', {'dbUpdate': {
-                'dbEntity': 'Individual', 'entityIds': ['I000015_na20885'],
+            ('update 2 Individuals', {'dbUpdate': {
+                'dbEntity': 'Individual', 'entityIds': ['I000001_na19675', 'I000015_na20885'],
                 'updateFields': ['filter_flags', 'pop_platform_filters', 'population'],
                 'updateType': 'bulk_update'}}
              ),
@@ -588,9 +636,13 @@ class CheckNewSamplesTest(object):
         # Test Individual model properly updated with sample qc results
         self.assertListEqual(
             list(Individual.objects.filter(
-                guid__in=['I000015_na20885', 'I000016_na20888']).order_by('guid').values('filter_flags', 'pop_platform_filters', 'population')
+                guid__in=['I000001_na19675', 'I000015_na20885', 'I000016_na20888']).order_by('guid').values('filter_flags', 'pop_platform_filters', 'population')
             ),
             [{
+                'filter_flags': {'callrate': 1.0, 'contamination': 5.0},
+                'pop_platform_filters': {},
+                'population': 'NFE'
+            },{
                 'filter_flags': {'coverage_exome': 90.0},
                 'pop_platform_filters': {'n_deletion': 0, 'n_insertion': 0, 'n_snp': 23},
                 'population': 'OTH'
