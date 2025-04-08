@@ -1855,9 +1855,16 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         body['projects'] = [json.dumps({**PROJECT_OPTION, 'sampleIds': [PROJECT_SAMPLES_OPTION['sampleIds'][1]]})]
         body['sampleType'] = 'WGS'
         self.assertEqual(len(responses.calls), 1)
+        airtable_filters = [
+            "SEARCH('https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page',ARRAYJOIN({SeqrProject},';'))",
+            "LEN({PassingCollaboratorSampleIDs})>0",
+            "LEN({gCNV_CallsetPath})>0",
+            "OR(VCFIDWithMismatch='NA21234',VCFIDWithMismatch='NA21987')",
+            "OR(SEARCH('Available in seqr',ARRAYJOIN(PDOStatus,';')),SEARCH('Historic',ARRAYJOIN(PDOStatus,';')),SEARCH('Methods (Loading)',ARRAYJOIN(PDOStatus,';')),SEARCH('On hold for phenotips, but ready to load',ARRAYJOIN(PDOStatus,';')))",
+        ]
         self.assert_expected_airtable_call(
             call_index=0,
-            filter_formula=f"AND(SEARCH('https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page',ARRAYJOIN({{SeqrProject}},';')),LEN({{PassingCollaboratorSampleIDs}})>0,OR(SEARCH('NA21234',ARRAYJOIN(VCFIDWithMismatch,';')),SEARCH('NA21987',ARRAYJOIN(VCFIDWithMismatch,';'))))",
+            filter_formula=f"AND({','.join(airtable_filters)})",
             fields=['CollaboratorSampleID', 'SeqrCollaboratorSampleID', 'PDOStatus', 'SeqrProject', 'VCFIDWithMismatch'],
         )
 

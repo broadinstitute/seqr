@@ -391,8 +391,8 @@ def _get_valid_search_individuals(project, airtable_samples, vcf_samples, datase
         }
         def fetch_missing_vcf_samples(missing_vcf_samples):
             samples = _get_dataset_type_samples_for_matched_pdos(
-                LOADABLE_PDO_STATUSES + AVAILABLE_PDO_STATUSES, additional_sample_fields=['VCFIDWithMismatch'],
-                or_filters={'VCFIDWithMismatch': missing_vcf_samples}, **get_sample_kwargs,
+                LOADABLE_PDO_STATUSES + AVAILABLE_PDO_STATUSES, **get_sample_kwargs,
+                additional_sample_filters={'VCFIDWithMismatch': sorted(missing_vcf_samples)},
             )
             vcf_sample_id_map.update({
                 s['sample_id']: s['VCFIDWithMismatch'] for s in samples
