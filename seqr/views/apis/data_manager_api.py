@@ -325,10 +325,13 @@ def load_data(request):
 
     errors = []
     individual_ids = []
+    vcf_sample_id_map = {}
     for project_guid, sample_ids in project_samples.items():
-        individual_ids += _get_valid_search_individuals(
+        project_individual_ids, project_vcf_sample_id_map = _get_valid_search_individuals(
             projects_by_guid[project_guid], sample_ids, vcf_samples, dataset_type, sample_type, request.user, errors,
         )
+        individual_ids += project_individual_ids
+        vcf_sample_id_map.update(project_vcf_sample_id_map)
 
     if errors:
         raise ErrorsWarningsException(errors)
@@ -346,7 +349,7 @@ def load_data(request):
         error_message = f'ERROR triggering internal {sample_type} {dataset_type} loading'
         trigger_airflow_data_loading(
             *loading_args, **loading_kwargs, success_message=success_message, error_message=error_message,
-            success_slack_channel=SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, is_internal=True,
+            success_slack_channel=SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, is_internal=True, vcf_sample_id_map=vcf_sample_id_map,
         )
     else:
         request_json, _ = prepare_data_loading_request(
@@ -414,7 +417,7 @@ def _get_valid_search_individuals(project, airtable_samples, vcf_samples, datase
         validate_expected_samples=validate_expected_samples, add_missing_parents=False,
     )
 
-    return [i['id'] for i in search_individuals_by_id.values()] + loaded_individual_ids
+    return [i['id'] for i in search_individuals_by_id.values()] + loaded_individual_ids, vcf_sample_id_map
 
 
 @data_manager_required

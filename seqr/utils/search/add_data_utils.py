@@ -117,7 +117,7 @@ def format_loading_pipeline_variables(
 
 def prepare_data_loading_request(projects: list[Project], individual_ids: list[int], sample_type: str, dataset_type: str, genome_version: str,
                                  data_path: str, user: User, pedigree_dir: str,  raise_pedigree_error: bool = False,
-                                 skip_validation: bool = False, skip_check_sex_and_relatedness: bool = False):
+                                 skip_validation: bool = False, skip_check_sex_and_relatedness: bool = False, vcf_sample_id_map=None):
     variables = format_loading_pipeline_variables(
         projects,
         genome_version,
@@ -130,7 +130,7 @@ def prepare_data_loading_request(projects: list[Project], individual_ids: list[i
     if skip_check_sex_and_relatedness:
         variables['skip_check_sex_and_relatedness'] = True
     file_path = _get_pedigree_path(pedigree_dir, genome_version, sample_type, dataset_type)
-    _upload_data_loading_files(individual_ids, user, file_path, raise_pedigree_error)
+    _upload_data_loading_files(individual_ids, vcf_sample_id_map or {}, user, file_path, raise_pedigree_error)
     return variables, file_path
 
 
@@ -139,7 +139,7 @@ def _dag_dataset_type(sample_type: str, dataset_type: str):
         else dataset_type
 
 
-def _upload_data_loading_files(individual_ids: list[int], user: User, file_path: str, raise_error: bool):
+def _upload_data_loading_files(individual_ids: list[int], vcf_sample_id_map: dict, user: User, file_path: str, raise_error: bool):
     file_annotations = OrderedDict({
         'Project_GUID': F('family__project__guid'), 'Family_GUID': F('family__guid'),
         'Family_ID': F('family__family_id'),
@@ -151,12 +151,13 @@ def _upload_data_loading_files(individual_ids: list[int], user: User, file_path:
         **dict(annotations))
 
     data_by_project = defaultdict(list)
-    affected_by_family = defaultdict(list)
     for row in data:
         data_by_project[row.pop('project')].append(row)
-        affected_by_family[row['Family_GUID']].append(row.pop('affected_status'))
+        row['VCF_ID'] = vcf_sample_id_map.get(row['Individual_ID'])
 
     header = list(file_annotations.keys())
+    if vcf_sample_id_map:
+        header.append('VCF_ID')
     files = [(f'{project_guid}_pedigree', header, rows) for project_guid, rows in data_by_project.items()]
 
     try:
