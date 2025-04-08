@@ -399,6 +399,7 @@ AIRTABLE_SAMPLE_RECORDS = {
                 ],
                 'PDOStatus': ['Historic', 'Methods (Loading)'],
                 'CollaboratorSampleID': 'NA21234',
+                'VCFIDWithMismatch': 'NA19675_1',
             }
         },
         {
@@ -407,6 +408,7 @@ AIRTABLE_SAMPLE_RECORDS = {
                 'SeqrProject': ['https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page'],
                 'PDOStatus': ['Methods (Loading)'],
                 'CollaboratorSampleID': 'NA21987',
+                'VCFIDWithMismatch': 'NA21987_a',
             }
         },
         {
@@ -1847,12 +1849,19 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
             'warnings': None,
             'errors': [
                 'The following samples are included in airtable for Non-Analyst Project but are missing from seqr: NA21988',
-                'The following samples are included in airtable but are missing from the VCF: NA21234, NA21987',
+                'The following samples are included in airtable but are missing from the VCF: NA21987',
             ],
         })
         body['projects'] = [json.dumps({**PROJECT_OPTION, 'sampleIds': [PROJECT_SAMPLES_OPTION['sampleIds'][1]]})]
         body['sampleType'] = 'WGS'
+        self.assertEqual(len(responses.calls), 1)
+        self.assert_expected_airtable_call(
+            call_index=0,
+            filter_formula=f"AND(SEARCH('https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page',ARRAYJOIN({{SeqrProject}},';')),LEN({{PassingCollaboratorSampleIDs}})>0,OR(SEARCH('NA21234',ARRAYJOIN(VCFIDWithMismatch,';')),SEARCH('NA21987',ARRAYJOIN(VCFIDWithMismatch,';'))))",
+            fields=['CollaboratorSampleID', 'SeqrCollaboratorSampleID', 'PDOStatus', 'SeqrProject', 'VCFIDWithMismatch'],
+        )
 
+        responses.calls.reset()
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {
@@ -1862,7 +1871,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
                 'The following families have previously loaded samples absent from airtable\nFamily 14: NA21234',
             ],
         })
-        self.assertEqual(len(responses.calls), 1)
+        self.assertEqual(len(responses.calls), 2)
         self._assert_expected_airtable_call(required_sample_field='SV_CallsetPath', project_guid='R0004_non_analyst_project')
         self.mock_authorized_session.reset_mock()
 

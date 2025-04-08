@@ -219,10 +219,10 @@ def load_phenotype_prioritization_data(request):
     })
 
 
-AVAILABLE_PDO_STATUSES = {
+AVAILABLE_PDO_STATUSES = [
     AVAILABLE_PDO_STATUS,
     'Historic',
-}
+]
 
 
 @pm_or_data_manager_required
@@ -395,9 +395,10 @@ def _get_valid_search_individuals(project, airtable_samples, vcf_samples, datase
                 or_filters={'VCFIDWithMismatch': missing_vcf_samples}, **get_sample_kwargs,
             )
             vcf_sample_id_map.update({
-                s['sample_id']: s['VCFIDWithMismatch'] for s in samples if s['sample_id'] in airtable_samples
+                s['sample_id']: s['VCFIDWithMismatch'] for s in samples
+                if s['sample_id'] in airtable_samples and s['VCFIDWithMismatch'] in vcf_samples
             })
-            return vcf_sample_id_map.values()
+            return vcf_sample_id_map.keys()
         sample_source = 'airtable'
 
         missing_airtable_samples = {sample_id for sample_id in airtable_samples if sample_id not in search_individuals_by_id}
