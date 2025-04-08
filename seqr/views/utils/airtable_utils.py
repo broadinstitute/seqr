@@ -24,7 +24,6 @@ LOADABLE_PDO_STATUSES = [
     LOADING_PDO_STATUS,
 ]
 AVAILABLE_PDO_STATUS = 'Available in seqr'
-VCF_ID_FIELD = 'VCFIDWithMismatch'
 
 class AirtableSession(object):
 
@@ -171,14 +170,14 @@ Desired update:
             records_by_id.update(self._get_samples_for_id_field(missing, 'SeqrCollaboratorSampleID', fields))
         return records_by_id
 
-    def get_samples_for_matched_pdos(self, pdo_statuses, pdo_fields=None, additional_sample_fields=None, project_guid=None, required_sample_fields=None):
+    def get_samples_for_matched_pdos(self, pdo_statuses, pdo_fields=None, additional_sample_fields=None, or_filters=None, project_guid=None, required_sample_fields=None):
         pdo_fields = pdo_fields or []
         sample_records = self.fetch_records(
             'Samples', fields=[
                 'CollaboratorSampleID', 'SeqrCollaboratorSampleID', 'PDOStatus', 'SeqrProject', *pdo_fields,
                 *(additional_sample_fields or []),
             ],
-            or_filters={'PDOStatus': pdo_statuses},
+            or_filters=or_filters or {'PDOStatus': pdo_statuses},
             and_filters={'SeqrProject': f'{BASE_URL}project/{project_guid}/project_page'} if project_guid else {},
             additional_and_filters=[f'LEN({{{required_sample_field}}})>0' for required_sample_field in required_sample_fields or []],
             # Filter for array contains value instead of exact match

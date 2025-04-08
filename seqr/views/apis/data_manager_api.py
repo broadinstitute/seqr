@@ -290,7 +290,7 @@ AIRTABLE_CALLSET_FIELDS = {
 }
 
 
-def _get_dataset_type_samples_for_matched_pdos(user, dataset_type, sample_type, pdo_statuses, **kwargs):
+def _get_dataset_type_samples_for_matched_pdos(pdo_statuses, user, dataset_type, sample_type, **kwargs):
     required_sample_fields = ['PassingCollaboratorSampleIDs']
     required_data_type_field = AIRTABLE_CALLSET_FIELDS.get((dataset_type, sample_type))
     if required_data_type_field:
@@ -301,7 +301,7 @@ def _get_dataset_type_samples_for_matched_pdos(user, dataset_type, sample_type, 
 
 
 def _fetch_airtable_loadable_project_samples(user, dataset_type, sample_type):
-    samples = _get_dataset_type_samples_for_matched_pdos(user, dataset_type, sample_type, LOADABLE_PDO_STATUSES)
+    samples = _get_dataset_type_samples_for_matched_pdos(LOADABLE_PDO_STATUSES, user, dataset_type, sample_type)
     project_samples = defaultdict(set)
     for sample in samples:
         for pdo in sample['pdos']:
@@ -374,13 +374,27 @@ def _get_valid_search_individuals(project, airtable_samples, vcf_samples, datase
     }
 
     fetch_missing_loaded_samples = None
+    fetch_missing_vcf_samples = None
+    vcf_sample_id_map = {}
     sample_source = 'the vcf'
     if airtable_samples:
+        get_sample_kwargs = {
+            'user': user, 'dataset_type': dataset_type, 'sample_type': sample_type, 'project_guid': project.guid,
+        }
         fetch_missing_loaded_samples = lambda: {
             sample['sample_id'] for sample in _get_dataset_type_samples_for_matched_pdos(
-                user, dataset_type, sample_type, AVAILABLE_PDO_STATUSES, project_guid=project.guid,
+                AVAILABLE_PDO_STATUSES, **get_sample_kwargs,
             )
         }
+        def fetch_missing_vcf_samples(missing_vcf_samples):
+            samples = _get_dataset_type_samples_for_matched_pdos(
+                LOADABLE_PDO_STATUSES + AVAILABLE_PDO_STATUSES, additional_sample_fields=['VCFIDWithMismatch'],
+                or_filters={'VCFIDWithMismatch': missing_vcf_samples}, **get_sample_kwargs,
+            )
+            vcf_sample_id_map.update({
+                s['sample_id']: s['VCFIDWithMismatch'] for s in samples if s['sample_id'] in airtable_samples
+            })
+            return vcf_sample_id_map.values()
         sample_source = 'airtable'
 
         missing_airtable_samples = {sample_id for sample_id in airtable_samples if sample_id not in search_individuals_by_id}
@@ -390,7 +404,8 @@ def _get_valid_search_individuals(project, airtable_samples, vcf_samples, datase
 
     loaded_individual_ids = []
     validate_expected_samples = get_loading_samples_validator(
-        vcf_samples, loaded_individual_ids, sample_source=sample_source, fetch_missing_loaded_samples=fetch_missing_loaded_samples,
+        vcf_samples, loaded_individual_ids, sample_source=sample_source,
+        fetch_missing_loaded_samples=fetch_missing_loaded_samples, fetch_missing_vcf_samples=fetch_missing_vcf_samples,
         missing_family_samples_error= f'The following families have previously loaded samples absent from {sample_source}\n',
     )
 
