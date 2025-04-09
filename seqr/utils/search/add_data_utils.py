@@ -146,14 +146,15 @@ def _upload_data_loading_files(individual_ids: list[int], vcf_sample_id_map: dic
         'Individual_ID': F('individual_id'),
         'Paternal_ID': F('father__individual_id'), 'Maternal_ID': F('mother__individual_id'), 'Sex': F('sex'),
     })
-    annotations = {'project': F('family__project__guid'), 'affected_status': F('affected'), **file_annotations}
+    annotations = {'project': F('family__project__guid'), **file_annotations}
     data = Individual.objects.filter(id__in=individual_ids).order_by('family_id', 'individual_id').values(
         **dict(annotations))
 
     data_by_project = defaultdict(list)
     for row in data:
         data_by_project[row.pop('project')].append(row)
-        row['VCF_ID'] = vcf_sample_id_map.get(row['Individual_ID'])
+        if vcf_sample_id_map:
+            row['VCF_ID'] = vcf_sample_id_map.get(row['Individual_ID'])
 
     header = list(file_annotations.keys())
     if vcf_sample_id_map:
