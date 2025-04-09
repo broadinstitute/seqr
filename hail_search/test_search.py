@@ -1078,7 +1078,7 @@ class HailSearchTestCase(AioHTTPTestCase):
         )
 
         await self._assert_expected_search(
-            [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3, VARIANT4]],
+            [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, [VARIANT3, VARIANT4]],
             annotations={**selected_transcript_annotations, **screen_annotations}, annotations_secondary=annotations_2,
             inheritance_mode='recessive', omit_data_type='SV_WES',
         )
