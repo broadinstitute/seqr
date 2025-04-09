@@ -1798,7 +1798,8 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         self._assert_expected_airtable_call(required_sample_field, 'R0001_1kg')
         if not is_gcnv:
             self._assert_expected_airtable_vcf_id_call(required_sample_field, call_index=1)
-        self.assert_airflow_loading_calls(offset=1 if is_gcnv else 2, dataset_type=dataset_type, **kwargs)
+        self.ADDITIONAL_REQUEST_COUNT = 1 if is_gcnv else 2
+        self.assert_airflow_loading_calls(offset=self.ADDITIONAL_REQUEST_COUNT, dataset_type=dataset_type, **kwargs)
 
     def _assert_expected_airtable_call(self, required_sample_field, project_guid, call_index=0, additional_filter=None, additional_pdo_statuses='', additional_fields=None):
         airtable_filters = [
@@ -1899,6 +1900,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
 
     def _test_load_single_project(self, mock_open, mock_mkdir, response, *args, url=None, body=None, **kwargs):
         super()._test_load_single_project(mock_open, mock_mkdir, response, url, body)
+        self.ADDITIONAL_REQUEST_COUNT = 0
         self.assert_airflow_loading_calls(offset=0, dataset_type='SNV_INDEL', trigger_error=True)
 
         responses.calls.reset()
