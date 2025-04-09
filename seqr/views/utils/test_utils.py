@@ -572,7 +572,6 @@ PROJECT_GUID = 'R0001_1kg'
 
 class AirflowTestCase(AnvilAuthenticationTestCase):
     MOCK_AIRFLOW_URL = 'http://testairflowserver'
-    ADDITIONAL_REQUEST_COUNT = 0
     DAG_NAME = 'LOADING_PIPELINE'
 
     def setUp(self):
@@ -672,7 +671,7 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
             call_count = 6
         if trigger_error:
             call_count = 1
-        self._assert_call_counts(call_count)
+        self._assert_call_counts(call_count, additional_request_count=offset)
 
         dag_variable_overrides = self._get_dag_variable_overrides(additional_tasks_check)
         dag_variables = {
@@ -687,9 +686,9 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
         dag_variables['sample_source'] = dag_variable_overrides['sample_source']
         self.assert_airflow_calls(dag_variables, call_count, offset=offset)
 
-    def _assert_call_counts(self, call_count):
+    def _assert_call_counts(self, call_count, additional_request_count=0):
         self.mock_airflow_logger.info.assert_not_called()
-        self.assertEqual(len(responses.calls), call_count + self.ADDITIONAL_REQUEST_COUNT)
+        self.assertEqual(len(responses.calls), call_count + additional_request_count)
         self.assertEqual(self.mock_authorized_session.call_count, call_count)
 
     def assert_airflow_calls(self, dag_variables, call_count, offset=0):

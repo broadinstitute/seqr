@@ -1679,7 +1679,6 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
 class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
 
-    ADDITIONAL_REQUEST_COUNT = 2
     LOADING_PROJECT_GUID = NON_ANALYST_PROJECT_GUID
     CALLSET_DIR = 'gs://test_bucket'
     TRIGGER_CALLSET_DIR = CALLSET_DIR
@@ -1796,10 +1795,12 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         }
 
     def _assert_expected_load_data_requests(self, dataset_type='SNV_INDEL', **kwargs):
-        required_sample_field = 'gCNV_CallsetPath' if dataset_type == 'GCNV' else None
+        is_gcnv = dataset_type == 'GCNV'
+        required_sample_field = 'gCNV_CallsetPath' if is_gcnv else None
         self._assert_expected_airtable_call(required_sample_field, 'R0001_1kg')
-        self._assert_expected_airtable_vcf_id_call(required_sample_field, call_index=1)
-        self.assert_airflow_loading_calls(offset=2, dataset_type=dataset_type, **kwargs)
+        if not is_gcnv:
+            self._assert_expected_airtable_vcf_id_call(required_sample_field, call_index=1)
+        self.assert_airflow_loading_calls(offset=1 if is_gcnv else 2, dataset_type=dataset_type, **kwargs)
 
     def _assert_expected_airtable_call(self, required_sample_field, project_guid, call_index=0, additional_filter=None, additional_pdo_statuses='', additional_fields=None):
         airtable_filters = [
@@ -1900,7 +1901,6 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
 
     def _test_load_single_project(self, mock_open, mock_mkdir, response, *args, url=None, body=None, **kwargs):
         super()._test_load_single_project(mock_open, mock_mkdir, response, url, body)
-        self.ADDITIONAL_REQUEST_COUNT = 0
         self.assert_airflow_loading_calls(offset=0, dataset_type='SNV_INDEL', trigger_error=True)
 
         responses.calls.reset()
