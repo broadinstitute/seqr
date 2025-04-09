@@ -454,6 +454,10 @@ INVALID_AIRTABLE_SAMPLE_RECORDS = {
     ],
 }
 
+VCF_SAMPLES = [
+    'ABC123', 'NA19675_1', 'NA19678', 'NA19679', 'HG00731', 'HG00732', 'HG00733', 'NA20874', 'NA21234', 'NA21987',
+]
+
 PIPELINE_RUNNER_URL = 'http://pipeline-runner:6000/loading_pipeline_enqueue'
 
 
@@ -462,9 +466,7 @@ PIPELINE_RUNNER_URL = 'http://pipeline-runner:6000/loading_pipeline_enqueue'
 class DataManagerAPITest(AirtableTest):
 
     PROJECTS = [PROJECT_GUID, NON_ANALYST_PROJECT_GUID]
-    VCF_SAMPLES = [
-        'ABC123', 'NA19675_1', 'NA19678', 'NA19679', 'HG00731', 'HG00732', 'HG00733', 'NA20874', 'NA21987',
-    ]
+    VCF_SAMPLES = VCF_SAMPLES
 
     @urllib3_responses.activate
     def test_elasticsearch_status(self):
@@ -1403,7 +1405,7 @@ class DataManagerAPITest(AirtableTest):
         self.assertDictEqual(response.json(), {'success': True})
 
         self._assert_expected_load_data_requests(sample_type='WES', skip_validation=True)
-        self._has_expected_ped_files(mock_open, mock_mkdir, 'SNV_INDEL', sample_type='WES')
+        self._has_expected_ped_files(mock_open, mock_mkdir, 'SNV_INDEL', sample_type='WES', has_remap=bool(self.MOCK_AIRTABLE_KEY))
 
         dag_json = {
             'projects_to_run': [
@@ -1433,7 +1435,7 @@ class DataManagerAPITest(AirtableTest):
         responses.calls.reset()
         mock_open.reset_mock()
         mock_mkdir.reset_mock()
-        body.update({'sampleType': 'WGS', 'projects': [json.dumps(self.PROJECT_OPTION)], 'vcfSamples': self.VCF_SAMPLES})
+        body.update({'sampleType': 'WGS', 'projects': [json.dumps(self.PROJECT_OPTION)], 'vcfSamples': VCF_SAMPLES})
         del body['datasetType']
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self._test_load_single_project(mock_open, mock_mkdir, response, url=url, body=body)
@@ -1445,14 +1447,14 @@ class DataManagerAPITest(AirtableTest):
         mock_open.reset_mock()
         mock_open.side_effect = OSError('Restricted filesystem')
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
-        log_offset = self._assert_write_pedigree_error(response)
+        self._assert_write_pedigree_error(response)
         self.assert_json_logs(self.data_manager_user, [
             ('Uploading Pedigrees failed. Errors: Restricted filesystem', {
                 'severity': 'ERROR',
                 '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent',
                 'detail': {'R0004_non_analyst_project_pedigree': mock.ANY},
             }),
-        ], offset=log_offset)
+        ])
 
     def _trigger_error(self, url, body, dag_json, mock_open, mock_mkdir):
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
@@ -1460,7 +1462,7 @@ class DataManagerAPITest(AirtableTest):
         self._assert_trigger_error(response, body, dag_json)
         self._has_expected_ped_files(mock_open, mock_mkdir, 'GCNV', sample_type='WES')
 
-    def _has_expected_ped_files(self, mock_open, mock_mkdir, dataset_type, sample_type='WGS', single_project=False):
+    def _has_expected_ped_files(self, mock_open, mock_mkdir, dataset_type, sample_type='WGS', single_project=False, has_remap=False):
         mock_open.assert_has_calls([
             mock.call(f'{self._local_pedigree_path(dataset_type, sample_type)}/{project}_pedigree.tsv', 'w')
             for project in self.PROJECTS[(1 if single_project else 0):]
@@ -1472,7 +1474,6 @@ class DataManagerAPITest(AirtableTest):
         self.assertEqual(len(files), 1 if single_project else 2)
 
         num_rows = 7 if self.MOCK_AIRTABLE_KEY else 8
-        has_remap = dataset_type == 'SNV_INDEL' and self.MOCK_AIRTABLE_KEY
         pedigree_header = PEDIGREE_HEADER + ['VCF_ID'] if has_remap else PEDIGREE_HEADER
         if not single_project:
             self.assertEqual(len(files[0]), num_rows)
@@ -1492,6 +1493,8 @@ class DataManagerAPITest(AirtableTest):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'success': True})
         self._has_expected_ped_files(mock_open, mock_mkdir, 'SNV_INDEL', single_project=True)
+        # Only a DAG trigger, no airtable calls as there is no previously loaded WGS SNV_INDEL data for these samples
+        self.assertEqual(len(responses.calls), 1)
 
     def _test_no_affected_family(self, url, body):
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
@@ -1564,7 +1567,6 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
     ]
     PROJECT_OPTIONS = [{'projectGuid': 'R0001_1kg'}, PROJECT_OPTION]
     REQUEST_BODY = CORE_REQUEST_BODY
-    VCF_SAMPLES = DataManagerAPITest.VCF_SAMPLES + ['NA21234']
 
     def setUp(self):
         patcher = mock.patch('seqr.utils.file_utils.os.path.isfile')
@@ -1669,7 +1671,6 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
         self.assertEqual(response.status_code, 500)
         self.assertDictEqual(response.json(), {'error': 'Restricted filesystem'})
         self.assertEqual(len(responses.calls), 0)
-        return 0
 
     def _test_validate_dataset_type(self, url):
         pass
@@ -1698,6 +1699,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         'filePath': CALLSET_DIR + CORE_REQUEST_BODY['filePath'],
         'datasetType': 'SNV_INDEL',
     }
+    VCF_SAMPLES = [s for s in VCF_SAMPLES if s != 'NA21234']
 
     def setUp(self):
         patcher = mock.patch('seqr.utils.file_utils.subprocess.Popen')
@@ -1898,9 +1900,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
 
     def _test_load_single_project(self, mock_open, mock_mkdir, response, *args, url=None, body=None, **kwargs):
         super()._test_load_single_project(mock_open, mock_mkdir, response, url, body)
-        self.assertEqual(len(responses.calls), 2)
-        self._assert_expected_airtable_vcf_id_call()
-        self.assert_airflow_loading_calls(offset=1, dataset_type='SNV_INDEL', trigger_error=True)
+        self.assert_airflow_loading_calls(offset=0, dataset_type='SNV_INDEL', trigger_error=True)
 
         responses.calls.reset()
         mock_open.reset_mock()
@@ -1911,13 +1911,12 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'success': True})
         self._has_expected_ped_files(mock_open, mock_mkdir, 'SNV_INDEL', sample_type='WES')
-        self.assertEqual(len(responses.calls), 3)
+        self.assertEqual(len(responses.calls), 2)
         self.assert_expected_airtable_call(
             call_index=0,
             filter_formula="AND(SEARCH('https://seqr.broadinstitute.org/project/R0001_1kg/project_page',ARRAYJOIN({SeqrProject},';')),LEN({PassingCollaboratorSampleIDs})>0,OR(SEARCH('Available in seqr',ARRAYJOIN(PDOStatus,';')),SEARCH('Historic',ARRAYJOIN(PDOStatus,';'))))",
             fields=['CollaboratorSampleID', 'SeqrCollaboratorSampleID', 'PDOStatus', 'SeqrProject'],
         )
-        self._assert_expected_airtable_vcf_id_call(call_index=1)
         body['projects'] = body['projects'][1:]
 
     @staticmethod
@@ -1936,9 +1935,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
 
     def _assert_write_pedigree_error(self, response):
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(responses.calls), 2)
-        self._assert_expected_airtable_vcf_id_call()
-        return 2
+        self.assertEqual(len(responses.calls), 1)
 
     def _test_no_affected_family(self, url, body):
         # Sample ID filtering skips the unaffected family
