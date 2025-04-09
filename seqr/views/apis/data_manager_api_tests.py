@@ -464,6 +464,12 @@ class DataManagerAPITest(AirtableTest):
     VCF_SAMPLES = [
         'ABC123', 'NA19675_1', 'NA19678', 'NA19679', 'HG00731', 'HG00732', 'HG00733', 'NA20874', 'NA21987',
     ]
+    PEDIGREE_HEADER = PEDIGREE_HEADER
+    EXPECTED_PEDIGREE_ROWS = EXPECTED_PEDIGREE_ROWS
+    SECOND_PROJECT_PEDIGREE_ROWS = [
+        ['R0004_non_analyst_project', 'F000014_14', '14', 'NA21234', '', '', 'F'],
+        ['R0004_non_analyst_project', 'F000014_14', '14', 'NA21987', '', '', 'M'],
+    ]
 
     @urllib3_responses.activate
     def test_elasticsearch_status(self):
@@ -1473,14 +1479,10 @@ class DataManagerAPITest(AirtableTest):
         num_rows = 7 if self.MOCK_AIRTABLE_KEY else 8
         if not single_project:
             self.assertEqual(len(files[0]), num_rows)
-            self.assertListEqual(files[0][:5], [PEDIGREE_HEADER] + EXPECTED_PEDIGREE_ROWS[:num_rows-1])
+            self.assertListEqual(files[0][:5], [self.PEDIGREE_HEADER] + self.EXPECTED_PEDIGREE_ROWS[:num_rows-1])
         file = files[0 if single_project else 1]
         self.assertEqual(len(file), 3)
-        self.assertListEqual(file, [
-            PEDIGREE_HEADER,
-            ['R0004_non_analyst_project', 'F000014_14', '14', 'NA21234', '', '', 'F'],
-            ['R0004_non_analyst_project', 'F000014_14', '14', 'NA21987', '', '', 'M'],
-        ])
+        self.assertListEqual(file, [self.PEDIGREE_HEADER] + self.SECOND_PROJECT_PEDIGREE_ROWS)
 
     def _test_load_single_project(self, mock_open, mock_mkdir, response, *args, **kwargs):
         self.assertEqual(response.status_code, 200)
@@ -1694,6 +1696,12 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         'filePath': CALLSET_DIR + CORE_REQUEST_BODY['filePath'],
         'datasetType': 'SNV_INDEL',
     }
+    PEDIGREE_HEADER = PEDIGREE_HEADER + ['VCF_ID']
+    EXPECTED_PEDIGREE_ROWS = [row + [''] for row in EXPECTED_PEDIGREE_ROWS]
+    SECOND_PROJECT_PEDIGREE_ROWS = [
+        DataManagerAPITest.SECOND_PROJECT_PEDIGREE_ROWS[0] + ['ABC123'],
+        DataManagerAPITest.SECOND_PROJECT_PEDIGREE_ROWS[1] + [''],
+    ]
 
     def setUp(self):
         patcher = mock.patch('seqr.utils.file_utils.subprocess.Popen')
