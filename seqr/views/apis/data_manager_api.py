@@ -376,11 +376,12 @@ def _get_valid_search_individuals(project, airtable_samples, vcf_samples, datase
         )
     }
 
-    fetch_missing_loaded_samples = None
-    fetch_missing_vcf_samples = None
     vcf_sample_id_map = {}
-    sample_source = 'the vcf'
-    if airtable_samples:
+    if not airtable_samples:
+        fetch_missing_loaded_samples = None
+        fetch_missing_vcf_samples = None
+        sample_source = 'the vcf'
+    else:
         get_sample_kwargs = {
             'user': user, 'dataset_type': dataset_type, 'sample_type': sample_type, 'project_guid': project.guid,
         }
