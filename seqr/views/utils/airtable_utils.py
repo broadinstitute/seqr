@@ -25,6 +25,7 @@ LOADABLE_PDO_STATUSES = [
 ]
 AVAILABLE_PDO_STATUS = 'Available in seqr'
 
+
 class AirtableSession(object):
 
     RDG_BASE = 'RDG'

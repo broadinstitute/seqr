@@ -1,6 +1,5 @@
 from collections import defaultdict
 from datetime import datetime
-
 from django.urls.base import reverse
 import json
 import mock
