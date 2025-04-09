@@ -1,5 +1,7 @@
 from collections import defaultdict
 from datetime import datetime
+
+from PIL.ImageChops import offset
 from django.urls.base import reverse
 import json
 import mock
@@ -1444,14 +1446,14 @@ class DataManagerAPITest(AirtableTest):
         mock_open.reset_mock()
         mock_open.side_effect = OSError('Restricted filesystem')
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
-        self._assert_write_pedigree_error(response)
+        log_offset = self._assert_write_pedigree_error(response)
         self.assert_json_logs(self.data_manager_user, [
             ('Uploading Pedigrees failed. Errors: Restricted filesystem', {
                 'severity': 'ERROR',
                 '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent',
                 'detail': {'R0004_non_analyst_project_pedigree': mock.ANY},
             }),
-        ])
+        ], offset=log_offset)
 
     def _trigger_error(self, url, body, dag_json, mock_open, mock_mkdir):
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
@@ -1471,23 +1473,26 @@ class DataManagerAPITest(AirtableTest):
         self.assertEqual(len(files), 1 if single_project else 2)
 
         num_rows = 7 if self.MOCK_AIRTABLE_KEY else 8
+        has_remap = dataset_type == 'SNV_INDEL' and self.MOCK_AIRTABLE_KEY
+        pedigree_header = PEDIGREE_HEADER + ['VCF_ID'] if has_remap else PEDIGREE_HEADER
         if not single_project:
             self.assertEqual(len(files[0]), num_rows)
-            self.assertListEqual(files[0][:5], [PEDIGREE_HEADER] + EXPECTED_PEDIGREE_ROWS[:num_rows-1])
+            expected_rows = EXPECTED_PEDIGREE_ROWS[:num_rows-1]
+            if has_remap:
+                expected_rows = [row + [''] for row in expected_rows]
+            self.assertListEqual(files[0][:5], [pedigree_header] + expected_rows)
         file = files[0 if single_project else 1]
         self.assertEqual(len(file), 3)
         self.assertListEqual(file, [
-            PEDIGREE_HEADER,
-            ['R0004_non_analyst_project', 'F000014_14', '14', 'NA21234', '', '', 'F'],
-            ['R0004_non_analyst_project', 'F000014_14', '14', 'NA21987', '', '', 'M'],
+            pedigree_header,
+            ['R0004_non_analyst_project', 'F000014_14', '14', 'NA21234', '', '', 'F'] + (['ABC123'] if has_remap else []),
+            ['R0004_non_analyst_project', 'F000014_14', '14', 'NA21987', '', '', 'M'] + ([''] if has_remap else []),
         ])
 
     def _test_load_single_project(self, mock_open, mock_mkdir, response, *args, **kwargs):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'success': True})
         self._has_expected_ped_files(mock_open, mock_mkdir, 'SNV_INDEL', single_project=True)
-        # Only a DAG trigger, no airtable calls as there is no previously loaded WGS SNV_INDEL data for these samples
-        self.assertEqual(len(responses.calls), 1)
 
     def _test_no_affected_family(self, url, body):
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
@@ -1665,6 +1670,7 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
         self.assertEqual(response.status_code, 500)
         self.assertDictEqual(response.json(), {'error': 'Restricted filesystem'})
         self.assertEqual(len(responses.calls), 0)
+        return 0
 
     def _test_validate_dataset_type(self, url):
         pass
@@ -1811,7 +1817,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
             fields=['CollaboratorSampleID', 'SeqrCollaboratorSampleID', 'PDOStatus', 'SeqrProject', *(additional_fields or [])],
         )
 
-    def _assert_expected_airtable_vcf_id_call(self, required_sample_field, additional_vcf_ids='', **kwargs):
+    def _assert_expected_airtable_vcf_id_call(self, required_sample_field=None, additional_vcf_ids='', **kwargs):
         self._assert_expected_airtable_call(
             required_sample_field, 'R0004_non_analyst_project', **kwargs, additional_fields=['VCFIDWithMismatch'],
             additional_filter=f"OR(VCFIDWithMismatch='NA21234'{additional_vcf_ids})",
@@ -1893,7 +1899,9 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
 
     def _test_load_single_project(self, mock_open, mock_mkdir, response, *args, url=None, body=None, **kwargs):
         super()._test_load_single_project(mock_open, mock_mkdir, response, url, body)
-        self.assert_airflow_loading_calls(offset=0, dataset_type='SNV_INDEL', trigger_error=True)
+        self.assertEqual(len(responses.calls), 2)
+        self._assert_expected_airtable_vcf_id_call()
+        self.assert_airflow_loading_calls(offset=1, dataset_type='SNV_INDEL', trigger_error=True)
 
         responses.calls.reset()
         mock_open.reset_mock()
@@ -1904,12 +1912,13 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'success': True})
         self._has_expected_ped_files(mock_open, mock_mkdir, 'SNV_INDEL', sample_type='WES')
-        self.assertEqual(len(responses.calls), 2)
+        self.assertEqual(len(responses.calls), 3)
         self.assert_expected_airtable_call(
             call_index=0,
             filter_formula="AND(SEARCH('https://seqr.broadinstitute.org/project/R0001_1kg/project_page',ARRAYJOIN({SeqrProject},';')),LEN({PassingCollaboratorSampleIDs})>0,OR(SEARCH('Available in seqr',ARRAYJOIN(PDOStatus,';')),SEARCH('Historic',ARRAYJOIN(PDOStatus,';'))))",
             fields=['CollaboratorSampleID', 'SeqrCollaboratorSampleID', 'PDOStatus', 'SeqrProject'],
         )
+        self._assert_expected_airtable_vcf_id_call(call_index=1)
         body['projects'] = body['projects'][1:]
 
     @staticmethod
@@ -1928,7 +1937,9 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
 
     def _assert_write_pedigree_error(self, response):
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(responses.calls), 1)
+        self.assertEqual(len(responses.calls), 2)
+        self._assert_expected_airtable_vcf_id_call()
+        return 2
 
     def _test_no_affected_family(self, url, body):
         # Sample ID filtering skips the unaffected family
