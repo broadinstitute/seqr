@@ -117,7 +117,7 @@ def format_loading_pipeline_variables(
 
 def prepare_data_loading_request(projects: list[Project], individual_ids: list[int], sample_type: str, dataset_type: str, genome_version: str,
                                  data_path: str, user: User, pedigree_dir: str,  raise_pedigree_error: bool = False,
-                                 skip_validation: bool = False, skip_check_sex_and_relatedness: bool = False):
+                                 skip_validation: bool = False, skip_check_sex_and_relatedness: bool = False, vcf_sample_id_map=None):
     variables = format_loading_pipeline_variables(
         projects,
         genome_version,
@@ -130,7 +130,7 @@ def prepare_data_loading_request(projects: list[Project], individual_ids: list[i
     if skip_check_sex_and_relatedness:
         variables['skip_check_sex_and_relatedness'] = True
     file_path = _get_pedigree_path(pedigree_dir, genome_version, sample_type, dataset_type)
-    _upload_data_loading_files(individual_ids, user, file_path, raise_pedigree_error)
+    _upload_data_loading_files(individual_ids, vcf_sample_id_map or {}, user, file_path, raise_pedigree_error)
     return variables, file_path
 
 
@@ -139,24 +139,26 @@ def _dag_dataset_type(sample_type: str, dataset_type: str):
         else dataset_type
 
 
-def _upload_data_loading_files(individual_ids: list[int], user: User, file_path: str, raise_error: bool):
+def _upload_data_loading_files(individual_ids: list[int], vcf_sample_id_map: dict, user: User, file_path: str, raise_error: bool):
     file_annotations = OrderedDict({
         'Project_GUID': F('family__project__guid'), 'Family_GUID': F('family__guid'),
         'Family_ID': F('family__family_id'),
         'Individual_ID': F('individual_id'),
         'Paternal_ID': F('father__individual_id'), 'Maternal_ID': F('mother__individual_id'), 'Sex': F('sex'),
     })
-    annotations = {'project': F('family__project__guid'), 'affected_status': F('affected'), **file_annotations}
+    annotations = {'project': F('family__project__guid'), **file_annotations}
     data = Individual.objects.filter(id__in=individual_ids).order_by('family_id', 'individual_id').values(
         **dict(annotations))
 
     data_by_project = defaultdict(list)
-    affected_by_family = defaultdict(list)
     for row in data:
         data_by_project[row.pop('project')].append(row)
-        affected_by_family[row['Family_GUID']].append(row.pop('affected_status'))
+        if vcf_sample_id_map:
+            row['VCF_ID'] = vcf_sample_id_map.get(row['Individual_ID'])
 
     header = list(file_annotations.keys())
+    if vcf_sample_id_map:
+        header.append('VCF_ID')
     files = [(f'{project_guid}_pedigree', header, rows) for project_guid, rows in data_by_project.items()]
 
     try:
@@ -176,7 +178,7 @@ def _get_pedigree_path(pedigree_dir: str, genome_version: str, sample_type: str,
 
 def get_loading_samples_validator(vcf_samples: list[str], loaded_individual_ids: list[int], sample_source: str,
                                   missing_family_samples_error: str, loaded_sample_types: list[str] = None,
-                                  fetch_missing_loaded_samples: Callable = None) -> Callable:
+                                  fetch_missing_loaded_samples: Callable = None, fetch_missing_vcf_samples: Callable = None) -> Callable:
 
     def validate_expected_samples(record_family_ids, previous_loaded_individuals, sample_type):
         errors = []
@@ -219,12 +221,17 @@ def get_loading_samples_validator(vcf_samples: list[str], loaded_individual_ids:
                 missing_family_samples_error + '\n'.join(sorted(missing_family_sample_messages))
             )
 
-        if vcf_samples is not None:
-            missing_vcf_samples = sorted(loading_samples - set(vcf_samples))
-            if missing_vcf_samples:
-                errors.insert(
-                    0, f'The following samples are included in {sample_source} but are missing from the VCF: {", ".join(missing_vcf_samples)}',
-                )
+        missing_vcf_samples = [] if vcf_samples is None else set(loading_samples - set(vcf_samples))
+        if missing_vcf_samples and fetch_missing_vcf_samples:
+            try:
+                additional_vcf_samples = fetch_missing_vcf_samples(missing_vcf_samples)
+                missing_vcf_samples -= set(additional_vcf_samples)
+            except ValueError as e:
+                errors.append(str(e))
+        if missing_vcf_samples:
+            errors.insert(
+                0, f'The following samples are included in {sample_source} but are missing from the VCF: {", ".join(sorted(missing_vcf_samples))}',
+            )
 
         nonlocal loaded_individual_ids
         loaded_individual_ids += [

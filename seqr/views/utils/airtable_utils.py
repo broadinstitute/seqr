@@ -171,15 +171,22 @@ Desired update:
             records_by_id.update(self._get_samples_for_id_field(missing, 'SeqrCollaboratorSampleID', fields))
         return records_by_id
 
-    def get_samples_for_matched_pdos(self, pdo_statuses, pdo_fields=None, project_guid=None, required_sample_fields=None):
+    def get_samples_for_matched_pdos(self, pdo_statuses, pdo_fields=None, additional_sample_filters=None, project_guid=None, required_sample_fields=None):
         pdo_fields = pdo_fields or []
+        additional_and_filters = [
+            f'LEN({{{required_sample_field}}})>0' for required_sample_field in required_sample_fields or []
+        ]
+        for key, values in (additional_sample_filters or {}).items():
+            sample_filters = [f"{key}='{value}'" for value in values]
+            additional_and_filters.append(f'OR({",".join(sample_filters)})')
         sample_records = self.fetch_records(
             'Samples', fields=[
                 'CollaboratorSampleID', 'SeqrCollaboratorSampleID', 'PDOStatus', 'SeqrProject', *pdo_fields,
+                *(additional_sample_filters or {}).keys(),
             ],
             or_filters={'PDOStatus': pdo_statuses},
             and_filters={'SeqrProject': f'{BASE_URL}project/{project_guid}/project_page'} if project_guid else {},
-            additional_and_filters=[f'LEN({{{required_sample_field}}})>0' for required_sample_field in required_sample_fields or []],
+            additional_and_filters=additional_and_filters,
             # Filter for array contains value instead of exact match
             filter_query_template="SEARCH('{value}',ARRAYJOIN({key},';'))",
         )

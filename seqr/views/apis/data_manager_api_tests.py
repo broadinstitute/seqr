@@ -399,6 +399,7 @@ AIRTABLE_SAMPLE_RECORDS = {
                 ],
                 'PDOStatus': ['Historic', 'Methods (Loading)'],
                 'CollaboratorSampleID': 'NA21234',
+                'VCFIDWithMismatch': 'ABC123',
             }
         },
         {
@@ -407,6 +408,7 @@ AIRTABLE_SAMPLE_RECORDS = {
                 'SeqrProject': ['https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page'],
                 'PDOStatus': ['Methods (Loading)'],
                 'CollaboratorSampleID': 'NA21987',
+                'VCFIDWithMismatch': 'NA21987_a',
             }
         },
         {
@@ -451,6 +453,10 @@ INVALID_AIRTABLE_SAMPLE_RECORDS = {
     ],
 }
 
+VCF_SAMPLES = [
+    'ABC123', 'NA19675_1', 'NA19678', 'NA19679', 'HG00731', 'HG00732', 'HG00733', 'NA20874', 'NA21234', 'NA21987',
+]
+
 PIPELINE_RUNNER_URL = 'http://pipeline-runner:6000/loading_pipeline_enqueue'
 
 
@@ -459,6 +465,7 @@ PIPELINE_RUNNER_URL = 'http://pipeline-runner:6000/loading_pipeline_enqueue'
 class DataManagerAPITest(AirtableTest):
 
     PROJECTS = [PROJECT_GUID, NON_ANALYST_PROJECT_GUID]
+    VCF_SAMPLES = VCF_SAMPLES
 
     @urllib3_responses.activate
     def test_elasticsearch_status(self):
@@ -1379,13 +1386,9 @@ class DataManagerAPITest(AirtableTest):
         responses.add(responses.GET, 'https://api.airtable.com/v0/app3Y97xtbbaOopVR/Samples', json=AIRTABLE_SAMPLE_RECORDS, status=200)
         responses.add(responses.POST, PIPELINE_RUNNER_URL)
         mock_temp_dir.return_value.__enter__.return_value = '/mock/tmp'
-        vcf_samples = [
-            'ABC123', 'NA19675_1', 'NA19678', 'NA19679', 'HG00731', 'HG00732', 'HG00733', 'NA20874', 'NA21234',
-            'NA21987',
-        ]
         body = {**self.REQUEST_BODY, 'projects': [
             json.dumps(option) for option in self.PROJECT_OPTIONS + [{'projectGuid': 'R0005_not_project'}]
-        ], 'vcfSamples': vcf_samples, 'skipValidation': True}
+        ], 'vcfSamples': self.VCF_SAMPLES, 'skipValidation': True}
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'error': 'The following projects are invalid: R0005_not_project'})
@@ -1401,7 +1404,7 @@ class DataManagerAPITest(AirtableTest):
         self.assertDictEqual(response.json(), {'success': True})
 
         self._assert_expected_load_data_requests(sample_type='WES', skip_validation=True)
-        self._has_expected_ped_files(mock_open, mock_mkdir, 'SNV_INDEL', sample_type='WES')
+        self._has_expected_ped_files(mock_open, mock_mkdir, 'SNV_INDEL', sample_type='WES', has_remap=bool(self.MOCK_AIRTABLE_KEY))
 
         dag_json = {
             'projects_to_run': [
@@ -1431,7 +1434,7 @@ class DataManagerAPITest(AirtableTest):
         responses.calls.reset()
         mock_open.reset_mock()
         mock_mkdir.reset_mock()
-        body.update({'sampleType': 'WGS', 'projects': [json.dumps(self.PROJECT_OPTION)], 'vcfSamples': vcf_samples})
+        body.update({'sampleType': 'WGS', 'projects': [json.dumps(self.PROJECT_OPTION)], 'vcfSamples': VCF_SAMPLES})
         del body['datasetType']
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self._test_load_single_project(mock_open, mock_mkdir, response, url=url, body=body)
@@ -1458,7 +1461,7 @@ class DataManagerAPITest(AirtableTest):
         self._assert_trigger_error(response, body, dag_json)
         self._has_expected_ped_files(mock_open, mock_mkdir, 'GCNV', sample_type='WES')
 
-    def _has_expected_ped_files(self, mock_open, mock_mkdir, dataset_type, sample_type='WGS', single_project=False):
+    def _has_expected_ped_files(self, mock_open, mock_mkdir, dataset_type, sample_type='WGS', single_project=False, has_remap=False):
         mock_open.assert_has_calls([
             mock.call(f'{self._local_pedigree_path(dataset_type, sample_type)}/{project}_pedigree.tsv', 'w')
             for project in self.PROJECTS[(1 if single_project else 0):]
@@ -1470,15 +1473,19 @@ class DataManagerAPITest(AirtableTest):
         self.assertEqual(len(files), 1 if single_project else 2)
 
         num_rows = 7 if self.MOCK_AIRTABLE_KEY else 8
+        pedigree_header = PEDIGREE_HEADER + ['VCF_ID'] if has_remap else PEDIGREE_HEADER
         if not single_project:
             self.assertEqual(len(files[0]), num_rows)
-            self.assertListEqual(files[0][:5], [PEDIGREE_HEADER] + EXPECTED_PEDIGREE_ROWS[:num_rows-1])
+            expected_rows = EXPECTED_PEDIGREE_ROWS[:num_rows-1]
+            if has_remap:
+                expected_rows = [row + [''] for row in expected_rows]
+            self.assertListEqual(files[0][:5], [pedigree_header] + expected_rows)
         file = files[0 if single_project else 1]
         self.assertEqual(len(file), 3)
         self.assertListEqual(file, [
-            PEDIGREE_HEADER,
-            ['R0004_non_analyst_project', 'F000014_14', '14', 'NA21234', '', '', 'F'],
-            ['R0004_non_analyst_project', 'F000014_14', '14', 'NA21987', '', '', 'M'],
+            pedigree_header,
+            ['R0004_non_analyst_project', 'F000014_14', '14', 'NA21234', '', '', 'F'] + (['ABC123'] if has_remap else []),
+            ['R0004_non_analyst_project', 'F000014_14', '14', 'NA21987', '', '', 'M'] + ([''] if has_remap else []),
         ])
 
     def _test_load_single_project(self, mock_open, mock_mkdir, response, *args, **kwargs):
@@ -1675,7 +1682,6 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
 class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
 
-    ADDITIONAL_REQUEST_COUNT = 1
     LOADING_PROJECT_GUID = NON_ANALYST_PROJECT_GUID
     CALLSET_DIR = 'gs://test_bucket'
     TRIGGER_CALLSET_DIR = CALLSET_DIR
@@ -1692,6 +1698,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         'filePath': CALLSET_DIR + CORE_REQUEST_BODY['filePath'],
         'datasetType': 'SNV_INDEL',
     }
+    VCF_SAMPLES = [s for s in VCF_SAMPLES if s != 'NA21234']
 
     def setUp(self):
         patcher = mock.patch('seqr.utils.file_utils.subprocess.Popen')
@@ -1786,16 +1793,36 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         }
 
     def _assert_expected_load_data_requests(self, dataset_type='SNV_INDEL', **kwargs):
-        required_sample_field = 'gCNV_CallsetPath' if dataset_type == 'GCNV' else None
+        is_gcnv = dataset_type == 'GCNV'
+        required_sample_field = 'gCNV_CallsetPath' if is_gcnv else None
         self._assert_expected_airtable_call(required_sample_field, 'R0001_1kg')
-        self.assert_airflow_loading_calls(offset=1, dataset_type=dataset_type, **kwargs)
+        if not is_gcnv:
+            self._assert_expected_airtable_vcf_id_call(required_sample_field, call_index=1)
+        self.ADDITIONAL_REQUEST_COUNT = 1 if is_gcnv else 2
+        self.assert_airflow_loading_calls(offset=self.ADDITIONAL_REQUEST_COUNT, dataset_type=dataset_type, **kwargs)
 
-    def _assert_expected_airtable_call(self, required_sample_field, project_guid):
-        required_field_expression = f'LEN({{{required_sample_field}}})>0,' if required_sample_field else ''
+    def _assert_expected_airtable_call(self, required_sample_field, project_guid, call_index=0, additional_filter=None, additional_pdo_statuses='', additional_fields=None):
+        airtable_filters = [
+            f"SEARCH('https://seqr.broadinstitute.org/project/{project_guid}/project_page',ARRAYJOIN({{SeqrProject}},';'))",
+            "LEN({PassingCollaboratorSampleIDs})>0",
+            f"OR(SEARCH('Available in seqr',ARRAYJOIN(PDOStatus,';')),SEARCH('Historic',ARRAYJOIN(PDOStatus,';')){additional_pdo_statuses})",
+        ]
+        if additional_filter:
+            airtable_filters.insert(2, additional_filter)
+        if required_sample_field:
+            airtable_filters.insert(2, f'LEN({{{required_sample_field}}})>0')
+
         self.assert_expected_airtable_call(
-            call_index=0,
-            filter_formula=f"AND(SEARCH('https://seqr.broadinstitute.org/project/{project_guid}/project_page',ARRAYJOIN({{SeqrProject}},';')),LEN({{PassingCollaboratorSampleIDs}})>0,{required_field_expression}OR(SEARCH('Available in seqr',ARRAYJOIN(PDOStatus,';')),SEARCH('Historic',ARRAYJOIN(PDOStatus,';'))))",
-            fields=['CollaboratorSampleID', 'SeqrCollaboratorSampleID', 'PDOStatus', 'SeqrProject'],
+            call_index=call_index,
+            filter_formula=f"AND({','.join(airtable_filters)})",
+            fields=['CollaboratorSampleID', 'SeqrCollaboratorSampleID', 'PDOStatus', 'SeqrProject', *(additional_fields or [])],
+        )
+
+    def _assert_expected_airtable_vcf_id_call(self, required_sample_field=None, additional_vcf_ids='', **kwargs):
+        self._assert_expected_airtable_call(
+            required_sample_field, 'R0004_non_analyst_project', **kwargs, additional_fields=['VCFIDWithMismatch'],
+            additional_filter=f"OR(VCFIDWithMismatch='NA21234'{additional_vcf_ids})",
+            additional_pdo_statuses=",SEARCH('Methods (Loading)',ARRAYJOIN(PDOStatus,';')),SEARCH('On hold for phenotips, but ready to load',ARRAYJOIN(PDOStatus,';'))",
         )
 
     def _set_loading_trigger_error(self):
@@ -1847,12 +1874,17 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
             'warnings': None,
             'errors': [
                 'The following samples are included in airtable for Non-Analyst Project but are missing from seqr: NA21988',
-                'The following samples are included in airtable but are missing from the VCF: NA21234, NA21987',
+                'The following samples are included in airtable but are missing from the VCF: NA21987',
             ],
         })
         body['projects'] = [json.dumps({**PROJECT_OPTION, 'sampleIds': [PROJECT_SAMPLES_OPTION['sampleIds'][1]]})]
         body['sampleType'] = 'WGS'
+        self.assertEqual(len(responses.calls), 1)
+        self._assert_expected_airtable_vcf_id_call(
+            required_sample_field='gCNV_CallsetPath', additional_vcf_ids=",VCFIDWithMismatch='NA21987'",
+        )
 
+        responses.calls.reset()
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {
@@ -1862,7 +1894,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
                 'The following families have previously loaded samples absent from airtable\nFamily 14: NA21234',
             ],
         })
-        self.assertEqual(len(responses.calls), 1)
+        self.assertEqual(len(responses.calls), 2)
         self._assert_expected_airtable_call(required_sample_field='SV_CallsetPath', project_guid='R0004_non_analyst_project')
         self.mock_authorized_session.reset_mock()
 
