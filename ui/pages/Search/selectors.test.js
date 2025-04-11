@@ -64,6 +64,7 @@ test('getLocusListOptions', () => {
 
 test('getDatasetTypes', () => {
   expect(getDatasetTypes(STATE, { projectFamilies: [{ projectGuid: PROJECT_GUID }] })).toEqual('SNV_INDEL,SV')
+  expect(getDatasetTypes(STATE, EXPECTED_INITAL_SEARCH)).toEqual('SNV_INDEL')
 })
 
 test('getSearchGeneBreakdownValues', () => {
