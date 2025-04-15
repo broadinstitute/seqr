@@ -42,9 +42,11 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'guardian',
     'anymail',
+    'clickhouse_backend',
     'notifications',
     'seqr',
     'reference_data',
+    'clickhouse_search',
     'matchmaker',
     'social_django',
     'panelapp',
@@ -237,20 +239,15 @@ POSTGRES_DB_CONFIG = {
 DATABASES = {
     'default': dict(NAME='seqrdb', **POSTGRES_DB_CONFIG),
     'reference_data': dict(NAME='reference_data_db', **POSTGRES_DB_CONFIG),
-}
-DATABASE_ROUTERS = ['reference_data.models.ReferenceDataRouter']
-
-CLICKHOUSE_SERVICE_HOSTNAME = os.environ.get('CLICKHOUSE_SERVICE_HOSTNAME')
-if CLICKHOUSE_SERVICE_HOSTNAME:
-    INSTALLED_APPS += ['clickhouse_backend', 'clickhouse_search']
-    DATABASE_ROUTERS.append('clickhouse_search.models.ClickHouseRouter')
-    DATABASES['clickhouse'] = {
+    'clickhouse': {
         'ENGINE': 'clickhouse_backend.backend',
-        'HOST': CLICKHOUSE_SERVICE_HOSTNAME,
+        'HOST': os.environ.get('CLICKHOUSE_SERVICE_HOSTNAME', 'localhost'),
         'PORT': int(os.environ.get('CLICKHOUSE_SERVICE_PORT', '9005')),
         'USER': os.environ.get('CLICKHOUSE_USERNAME', 'clickhouse'),
         'PASSWORD': os.environ.get('CLICKHOUSE_PASSWORD', 'clickhouse_test'),
-    }
+    },
+}
+DATABASE_ROUTERS = ['reference_data.models.ReferenceDataRouter', 'clickhouse_search.models.ClickHouseRouter']
 
 WSGI_APPLICATION = 'wsgi.application'
 
