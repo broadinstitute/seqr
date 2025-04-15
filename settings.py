@@ -242,7 +242,7 @@ DATABASE_ROUTERS = ['reference_data.models.ReferenceDataRouter']
 
 CLICKHOUSE_SERVICE_HOSTNAME = os.environ.get('CLICKHOUSE_SERVICE_HOSTNAME')
 if CLICKHOUSE_SERVICE_HOSTNAME:
-    INSTALLED_APPS.append('clickhouse_backend')
+    INSTALLED_APPS += ['clickhouse_backend', 'clickhouse_search']
     DATABASE_ROUTERS.append('clickhouse_search.models.ClickHouseRouter')
     DATABASES['clickhouse'] = {
         'ENGINE': 'clickhouse_backend.backend',
