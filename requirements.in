@@ -1,5 +1,6 @@
 Django>=4.2,<4.3                  # core server-side framework
 django-anymail                    # for sending emails using cloud-based mail service providers
+django-clickhouse-backend
 django-csp                        # for setting CSP headers
 django-guardian                   # object-level permissions for database records. Behind a major version due to missing Python 2 support
 django-hijack                     # allows admins to login as other user
