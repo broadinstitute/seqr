@@ -240,6 +240,18 @@ DATABASES = {
 }
 DATABASE_ROUTERS = ['reference_data.models.ReferenceDataRouter']
 
+CLICKHOUSE_SERVICE_HOSTNAME = os.environ.get('CLICKHOUSE_SERVICE_HOSTNAME')
+if CLICKHOUSE_SERVICE_HOSTNAME:
+    INSTALLED_APPS.append('clickhouse_backend')
+    DATABASE_ROUTERS.append('dbrouters.ClickHouseRouter')
+    DATABASES['clickhouse'] = {
+        'ENGINE': 'clickhouse_backend.backend',
+        'HOST': CLICKHOUSE_SERVICE_HOSTNAME,
+        'PORT': int(os.environ.get('CLICKHOUSE_SERVICE_PORT', '9005')),
+        'USER': os.environ.get('CLICKHOUSE_USERNAME', 'clickhouse'),
+        'PASSWORD': os.environ.get('CLICKHOUSE_PASSWORD', 'clickhouse_test'),
+    }
+
 WSGI_APPLICATION = 'wsgi.application'
 
 WHITENOISE_ALLOW_ALL_ORIGINS = False
