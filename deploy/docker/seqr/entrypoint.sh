@@ -44,6 +44,9 @@ python -u manage.py migrate
 python -u manage.py migrate --database=reference_data
 python -u manage.py loaddata variant_searches
 python -u manage.py loaddata variant_tag_types
+if [ "$CLICKHOUSE_SERVICE_HOSTNAME" ]; then
+    python -u manage.py migrate --database=clickhouse
+fi
 
 python -u manage.py check
 
