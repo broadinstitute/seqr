@@ -242,7 +242,7 @@ DATABASES = {
     'clickhouse': {
         'ENGINE': 'clickhouse_backend.backend',
         'HOST': os.environ.get('CLICKHOUSE_SERVICE_HOSTNAME', 'localhost'),
-        'PORT': int(os.environ.get('CLICKHOUSE_SERVICE_PORT', '9005')),
+        'PORT': int(os.environ.get('CLICKHOUSE_SERVICE_PORT', '9000')),
         'USER': os.environ.get('CLICKHOUSE_USERNAME', 'clickhouse'),
         'PASSWORD': os.environ.get('CLICKHOUSE_PASSWORD', 'clickhouse_test'),
     },
