@@ -1,4 +1,13 @@
+from django.db.migrations import state
+from django.db.models import options, Func
+
 from clickhouse_backend import models
+
+options.DEFAULT_NAMES = (
+    *options.DEFAULT_NAMES,
+    'projection',
+)
+state.DEFAULT_NAMES = options.DEFAULT_NAMES
 
 
 class ClickHouseRouter:
@@ -46,6 +55,14 @@ def _no_validate(value, name):
     return value
 
 
+class Projection(Func):
+
+    def __init__(self, name, select='*', order_by=None):
+        self.name = name
+        self.select = select
+        self.order_by = order_by
+
+
 class CollapsingMergeTree(models.CollapsingMergeTree):
     setting_types = {
         **models.CollapsingMergeTree.setting_types,
@@ -57,7 +74,7 @@ class EntriesGrch38SnvIndel(models.ClickhouseModel):
     project_guid = models.StringField()
     family_guid = models.StringField()
     sample_ids = models.ArrayField(models.StringField())
-    key = models.UInt32Field(primary_key=True)
+    key = models.UInt32Field(primary_key=True)  # primary_key has no effect on ClickHouse, but prevents Django from adding a default id column
     xpos = models.UInt64Field()
     sample_type = models.Enum8Field(choices=[(1, 'WES'), (2, 'WGS')])
     is_gnomad_gt_5_percent = models.BoolField()
@@ -76,6 +93,7 @@ class EntriesGrch38SnvIndel(models.ClickhouseModel):
             deduplicate_merge_projection_mode='rebuild',
             index_granularity=8192,
         )
+        projection = [Projection('xpos_projection', order_by='xpos')]
         # TODO projection
 
 
