@@ -1,7 +1,8 @@
-from django.db.migrations import state
-from django.db.models import options, ForeignKey, Func, Value, CASCADE
-
 from clickhouse_backend import models
+from django.db.migrations import state
+from django.db.models import options, ForeignKey, Func, CASCADE, PROTECT
+
+from clickhouse_search.engines import CollapsingMergeTree, EmbeddedRocksDB, Join
 
 options.DEFAULT_NAMES = (
     *options.DEFAULT_NAMES,
@@ -51,30 +52,12 @@ class ClickHouseRouter:
         return None
 
 
-def _no_validate(value, name):
-    return value
-
-
 class Projection(Func):
 
     def __init__(self, name, select='*', order_by=None):
         self.name = name
         self.select = select
         self.order_by = order_by
-
-
-class CollapsingMergeTree(models.CollapsingMergeTree):
-    setting_types = {
-        **models.CollapsingMergeTree.setting_types,
-        _no_validate: ['deduplicate_merge_projection_mode']
-    }
-
-
-class EmbeddedRocksDB(models.BaseMergeTree):
-    arity = 2
-
-    def __init__(self, ttl, rocksdb_dir, **settings):
-        super().__init__(ttl, Value(rocksdb_dir), **settings)
 
 
 class NestedField(models.TupleField):
@@ -216,19 +199,33 @@ class AnnotationsSnvIndel(models.ClickhouseModel):
         engine = EmbeddedRocksDB(0, f'/in-memory-dir/{db_table}3', primary_key='key')
 
 
-# class Grch38SnvIndelClinvar(models.ClickhouseModel):
-#     key = models.UInt32Field()
-#     alleleid = models.UInt32Field(db_column='alleleId', null=True, blank=True)  # Field name made lowercase.
-#     conflictingpathogenicities = models.NestedField(db_column='conflictingPathogenicities')  # Field name made lowercase.
-#     goldstars = models.UInt8Field(db_column='goldStars', null=True, blank=True)  # Field name made lowercase.
-#     submitters = models.ArrayField(models.StringField())
-#     conditions = models.ArrayField(models.StringField(null=True, blank=True))
-#     assertions = models.ArrayField(models.Enum8Field(choices=[(0, 'Affects'), (1, 'association'), (2, 'association_not_found'), (3, 'confers_sensitivity'), (4, 'drug_response'), (5, 'low_penetrance'), (6, 'not_provided'), (7, 'other'), (8, 'protective'), (9, 'risk_factor'), (10, 'no_classification_for_the_single_variant'), (11, 'no_classifications_from_unflagged_records')]))
-#     pathogenicity = models.Enum8Field(choices=[(0, 'Pathogenic'), (1, 'Pathogenic/Likely_pathogenic'), (2, 'Pathogenic/Likely_pathogenic/Established_risk_allele'), (3, 'Pathogenic/Likely_pathogenic/Likely_risk_allele'), (4, 'Pathogenic/Likely_risk_allele'), (5, 'Likely_pathogenic'), (6, 'Likely_pathogenic/Likely_risk_allele'), (7, 'Established_risk_allele'), (8, 'Likely_risk_allele'), (9, 'Conflicting_classifications_of_pathogenicity'), (10, 'Uncertain_risk_allele'), (11, 'Uncertain_significance/Uncertain_risk_allele'), (12, 'Uncertain_significance'), (13, 'No_pathogenic_assertion'), (14, 'Likely_benign'), (15, 'Benign/Likely_benign'), (16, 'Benign')])
-#
-#     class Meta:
-#         db_table = 'GRCh38/SNV_INDEL/clinvar'
-#
+class Clinvar(models.ClickhouseModel):
+
+    PATHOGENICITY_CHOICES = list(enumerate([
+        'Pathogenic', 'Pathogenic/Likely_pathogenic', 'Pathogenic/Likely_pathogenic/Established_risk_allele',
+        'Pathogenic/Likely_pathogenic/Likely_risk_allele', 'Pathogenic/Likely_risk_allele', 'Likely_pathogenic', 'Likely_pathogenic/Likely_risk_allele',
+        'Established_risk_allele', 'Likely_risk_allele', 'Conflicting_classifications_of_pathogenicity',
+        'Uncertain_risk_allele', 'Uncertain_significance/Uncertain_risk_allele', 'Uncertain_significance',
+        'No_pathogenic_assertion', 'Likely_benign', 'Benign/Likely_benign', 'Benign'
+    ]))
+
+    key = ForeignKey('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=PROTECT)
+    allele_id = models.UInt32Field(db_column='alleleId', null=True, blank=True)
+    conflicting_pathogenicities = NestedField([
+        ('pathogenicity', models.Enum8Field(choices=PATHOGENICITY_CHOICES)),
+        ('count', models.UInt16Field()),
+
+    ], db_column='conflictingPathogenicities')
+    gold_stars = models.UInt8Field(db_column='goldStars', null=True, blank=True)
+    submitters = models.ArrayField(models.StringField())
+    conditions = models.ArrayField(models.StringField(null=True, blank=True))
+    assertions = models.ArrayField(models.Enum8Field(choices=[(0, 'Affects'), (1, 'association'), (2, 'association_not_found'), (3, 'confers_sensitivity'), (4, 'drug_response'), (5, 'low_penetrance'), (6, 'not_provided'), (7, 'other'), (8, 'protective'), (9, 'risk_factor'), (10, 'no_classification_for_the_single_variant'), (11, 'no_classifications_from_unflagged_records')]))
+    pathogenicity = models.Enum8Field(choices=PATHOGENICITY_CHOICES)
+
+    class Meta:
+        db_table = 'GRCh38/SNV_INDEL/clinvar'
+        engine = Join('ALL', 'LEFT', 'key')
+
 #
 # class Grch38SnvIndelGtStats(models.ClickhouseModel):
 #     project_guid = models.StringField()
