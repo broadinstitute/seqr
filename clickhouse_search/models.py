@@ -70,7 +70,7 @@ class CollapsingMergeTree(models.CollapsingMergeTree):
     }
 
 
-class EntriesGrch38SnvIndel(models.ClickhouseModel):
+class EntriesSnvIndel(models.ClickhouseModel):
     project_guid = models.StringField()
     family_guid = models.StringField()
     sample_ids = models.ArrayField(models.StringField())
@@ -93,9 +93,7 @@ class EntriesGrch38SnvIndel(models.ClickhouseModel):
             deduplicate_merge_projection_mode='rebuild',
             index_granularity=8192,
         )
-        projection = [Projection('xpos_projection', order_by='xpos')]
-        # TODO projection
-
+        projection = Projection('xpos_projection', order_by='xpos')
 
 #
 # class Grch38SnvIndelAnnotations(models.ClickhouseModel):
