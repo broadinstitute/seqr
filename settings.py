@@ -241,7 +241,7 @@ DATABASES = {
     'reference_data': dict(NAME='reference_data_db', **POSTGRES_DB_CONFIG),
     'clickhouse': {
         'ENGINE': 'clickhouse_search.backend',
-        'NAME': 'seqr_django_test',  # TODO migrate command fails if db does not already exist
+        'NAME': 'seqr',
         'HOST': os.environ.get('CLICKHOUSE_SERVICE_HOSTNAME', 'localhost'),
         'PORT': int(os.environ.get('CLICKHOUSE_SERVICE_PORT', '9000')),
         'USER': os.environ.get('CLICKHOUSE_USERNAME', 'clickhouse'),
