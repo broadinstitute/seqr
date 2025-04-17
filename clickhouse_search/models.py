@@ -1,5 +1,5 @@
 from django.db.migrations import state
-from django.db.models import options, Func, Value
+from django.db.models import options, ForeignKey, Func, Value, CASCADE
 
 from clickhouse_backend import models
 
@@ -97,8 +97,7 @@ class EntriesSnvIndel(models.ClickhouseModel):
     project_guid = models.StringField()
     family_guid = models.StringField()
     sample_ids = models.ArrayField(models.StringField())
-    # TODO foreign key
-    key = models.UInt32Field(primary_key=True)  # primary_key has no effect on ClickHouse, but prevents Django from adding a default id column
+    key = ForeignKey('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
     xpos = models.UInt64Field()
     sample_type = models.Enum8Field(choices=[(1, 'WES'), (2, 'WGS')])
     is_gnomad_gt_5_percent = models.BoolField()
@@ -197,7 +196,7 @@ class AnnotationsSnvIndel(models.ClickhouseModel):
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/annotations'
         # TODO add configuration for in-memory-dir, remove trailing suffix? move into engine class def?
-        engine = EmbeddedRocksDB(0, f'/in-memory-dir/{db_table}', primary_key='key')
+        engine = EmbeddedRocksDB(0, f'/in-memory-dir/{db_table}3', primary_key='key')
 
 
 # class Grch38SnvIndelClinvar(models.ClickhouseModel):
