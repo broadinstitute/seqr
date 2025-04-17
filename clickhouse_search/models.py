@@ -84,13 +84,13 @@ class NestedField(models.TupleField):
 
     @property
     def description(self):
-        return super().description().replace('Tuple', 'Nested')
+        return super().description().replace('Tuple', 'Nested', 1)
 
     def db_type(self, connection):
-        return super().db_type(connection).replace('Tuple', 'Nested')
+        return super().db_type(connection).replace('Tuple', 'Nested', 1)
 
     def cast_db_type(self, connection):
-        return super().cast_db_type(connection).replace('Tuple', 'Nested')
+        return super().cast_db_type(connection).replace('Tuple', 'Nested', 1)
 
 
 class EntriesSnvIndel(models.ClickhouseModel):
@@ -186,12 +186,29 @@ class AnnotationsSnvIndel(models.ClickhouseModel):
             ('hom', models.UInt32Field()),
         ])),
     ])
-    # sorted_transcript_consequences = models.NestedField(db_column='sortedTranscriptConsequences')  # TODO
+    sorted_transcript_consequences = NestedField([
+        ('alphamissense', models.TupleField([
+            ('pathogenicity', models.DecimalField(null=True, blank=True, max_digits=9, decimal_places=5)),
+        ])),
+        ('canonical', models.UInt8Field(null=True, blank=True)),
+        ('consequenceTerms', models.ArrayField(models.Enum8Field(null=True, blank=True, choices=[(1, 'transcript_ablation'), (2, 'splice_acceptor_variant'), (3, 'splice_donor_variant'), (4, 'stop_gained'), (5, 'frameshift_variant'), (6, 'stop_lost'), (7, 'start_lost'), (8, 'inframe_insertion'), (9, 'inframe_deletion'), (10, 'missense_variant'), (11, 'protein_altering_variant'), (12, 'splice_donor_5th_base_variant'), (13, 'splice_region_variant'), (14, 'splice_donor_region_variant'), (15, 'splice_polypyrimidine_tract_variant'), (16, 'incomplete_terminal_codon_variant'), (17, 'start_retained_variant'), (18, 'stop_retained_variant'), (19, 'synonymous_variant'), (20, 'coding_sequence_variant'), (21, 'mature_miRNA_variant'), (22, '5_prime_UTR_variant'), (23, '3_prime_UTR_variant'), (24, 'non_coding_transcript_exon_variant'), (25, 'intron_variant'), (26, 'NMD_transcript_variant'), (27, 'non_coding_transcript_variant'), (28, 'coding_transcript_variant'), (29, 'upstream_gene_variant'), (30, 'downstream_gene_variant'), (31, 'intergenic_variant'), (32, 'sequence_variant')]))),
+        ('geneId', models.StringField(null=True, blank=True)),
+        ('spliceregion', models.TupleField([
+            ('extended_intronic_splice_region_variant', models.BoolField(null=True, blank=True)),
+        ])),
+        ('utrannotator', models.TupleField([
+            ('fiveutrConsequence', models.Enum8Field(null=True, blank=True, choices=[(1, '5_prime_UTR_premature_start_codon_gain_variant'), (2, '5_prime_UTR_premature_start_codon_loss_variant'), (3, '5_prime_UTR_stop_codon_gain_variant'), (4, '5_prime_UTR_stop_codon_loss_variant'), (5, '5_prime_UTR_uORF_frameshift_variant')])),
+        ])),
+    ], db_column='sortedTranscriptConsequences')
     sorted_motif_feature_consequences = NestedField([
         ('consequenceTerms', models.ArrayField(models.Enum8Field(null=True, blank=True, choices=[(0, 'TFBS_ablation'), (1, 'TFBS_amplification'), (2, 'TF_binding_site_variant'), (3, 'TFBS_fusion'), (4, 'TFBS_translocation')]))),
         ('motifFeatureId', models.StringField(null=True, blank=True)),
     ], db_column='sortedMotifFeatureConsequences')
-    # sorted_regulatory_feature_consequences = models.NestedField(db_column='sortedRegulatoryFeatureConsequences') # TODO
+    sorted_regulatory_feature_consequences = NestedField([
+        ('biotype', models.Enum8Field(null=True, blank=True, choices=[(0, 'enhancer'), (1, 'promoter'), (2, 'CTCF_binding_site'), (3, 'TF_binding_site'), (4, 'open_chromatin_region')])),
+        ('consequenceTerms', models.ArrayField(models.Enum8Field(null=True, blank=True, choices=[(0, 'regulatory_region_ablation'), (1, 'regulatory_region_amplification'), (2, 'regulatory_region_variant'), (3, 'regulatory_region_fusion')]))),
+        ('regulatoryFeatureId', models.StringField(null=True, blank=True)),
+    ], db_column='sortedRegulatoryFeatureConsequences')
 
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/annotations'
