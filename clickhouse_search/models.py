@@ -77,6 +77,22 @@ class EmbeddedRocksDB(models.BaseMergeTree):
         super().__init__(ttl, Value(rocksdb_dir), **settings)
 
 
+class NestedField(models.TupleField):
+
+    def get_internal_type(self):
+        return "NestedField"
+
+    @property
+    def description(self):
+        return super().description().replace('Tuple', 'Nested')
+
+    def db_type(self, connection):
+        return super().db_type(connection).replace('Tuple', 'Nested')
+
+    def cast_db_type(self, connection):
+        return super().cast_db_type(connection).replace('Tuple', 'Nested')
+
+
 class EntriesSnvIndel(models.ClickhouseModel):
     project_guid = models.StringField()
     family_guid = models.StringField()
@@ -118,8 +134,7 @@ class AnnotationsSnvIndel(models.ClickhouseModel):
     lifted_over_pos = models.StringField(db_column='liftedOverPos', null=True, blank=True)
     hgmd = models.TupleField([
         ('accession', models.StringField(null=True, blank=True)),
-        # TODO field name should just be class
-        ('hgmd_class', models.Enum8Field(null=True, blank=True, choices=[(0, 'DM'), (1, 'DM?'), (2, 'DP'), (3, 'DFP'), (4, 'FP'), (5, 'R')])),
+        ('class_', models.Enum8Field(null=True, blank=True, choices=[(0, 'DM'), (1, 'DM?'), (2, 'DP'), (3, 'DFP'), (4, 'FP'), (5, 'R')])),
     ])
     screen_region_type = models.Enum8Field(db_column='screenRegionType', null=True, blank=True, choices=[(0, 'CTCF-bound'), (1, 'CTCF-only'), (2, 'DNase-H3K4me3'), (3, 'PLS'), (4, 'dELS'), (5, 'pELS'), (6, 'DNase-only'), (7, 'low-DNase')])
     predictions = models.TupleField([
@@ -173,13 +188,16 @@ class AnnotationsSnvIndel(models.ClickhouseModel):
         ])),
     ])
     # sorted_transcript_consequences = models.NestedField(db_column='sortedTranscriptConsequences')  # TODO
-    # sorted_motif_feature_consequences = models.NestedField(db_column='sortedMotifFeatureConsequences') # TODO
+    sorted_motif_feature_consequences = NestedField([
+        ('consequenceTerms', models.ArrayField(models.Enum8Field(null=True, blank=True, choices=[(0, 'TFBS_ablation'), (1, 'TFBS_amplification'), (2, 'TF_binding_site_variant'), (3, 'TFBS_fusion'), (4, 'TFBS_translocation')]))),
+        ('motifFeatureId', models.StringField(null=True, blank=True)),
+    ], db_column='sortedMotifFeatureConsequences')
     # sorted_regulatory_feature_consequences = models.NestedField(db_column='sortedRegulatoryFeatureConsequences') # TODO
 
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/annotations'
         # TODO add configuration for in-memory-dir, remove trailing suffix? move into engine class def?
-        engine = EmbeddedRocksDB(0, f'/in-memory-dir/{db_table}3', primary_key='key')
+        engine = EmbeddedRocksDB(0, f'/in-memory-dir/{db_table}', primary_key='key')
 
 
 # class Grch38SnvIndelClinvar(models.ClickhouseModel):
