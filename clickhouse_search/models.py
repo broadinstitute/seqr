@@ -1,5 +1,5 @@
 from django.db.migrations import state
-from django.db.models import options, Func
+from django.db.models import options, Func, Value
 
 from clickhouse_backend import models
 
@@ -70,10 +70,18 @@ class CollapsingMergeTree(models.CollapsingMergeTree):
     }
 
 
+class EmbeddedRocksDB(models.BaseMergeTree):
+    arity = 2
+
+    def __init__(self, ttl, rocksdb_dir, **settings):
+        super().__init__(ttl, Value(rocksdb_dir), **settings)
+
+
 class EntriesSnvIndel(models.ClickhouseModel):
     project_guid = models.StringField()
     family_guid = models.StringField()
     sample_ids = models.ArrayField(models.StringField())
+    # TODO foreign key
     key = models.UInt32Field(primary_key=True)  # primary_key has no effect on ClickHouse, but prevents Django from adding a default id column
     xpos = models.UInt64Field()
     sample_type = models.Enum8Field(choices=[(1, 'WES'), (2, 'WGS')])
@@ -95,31 +103,85 @@ class EntriesSnvIndel(models.ClickhouseModel):
         )
         projection = Projection('xpos_projection', order_by='xpos')
 
-#
-# class Grch38SnvIndelAnnotations(models.ClickhouseModel):
-#     key = models.UInt32Field(primary_key=True)
-#     xpos = models.UInt64Field()
-#     chrom = models.StringField(low_cardinality=True)
-#     pos = models.UInt32Field()
-#     ref = models.StringField()
-#     alt = models.StringField()
-#     variant_id = models.StringField(db_column='variantId')
-#     rsid = models.StringField(null=True, blank=True)
-#     caid = models.StringField(db_column='CAID', null=True, blank=True)
-#     lifted_over_chrom = models.StringField(db_column='liftedOverChrom', low_cardinality=True, null=True, blank=True)
-#     lifted_over_pos = models.StringField(db_column='liftedOverPos', null=True, blank=True)
-#     hgmd = models.TupleField([models.accessionField()]) # TODO
-#     screen_region_type = models.Enum8Field(db_column='screenRegionType', null=True, blank=True, choices=[(0, 'CTCF-bound'), (1, 'CTCF-only'), (2, 'DNase-H3K4me3'), (3, 'PLS'), (4, 'dELS'), (5, 'pELS'), (6, 'DNase-only'), (7, 'low-DNase')])
-#     predictions = models.TupleField([models.caddField()]) # TODO
-#     populations = models.TupleField([models.exacField()]) # TODO
-#     sorted_transcript_consequences = models.NestedField(db_column='sortedTranscriptConsequences')  # TODO
-#     sorted_motif_feature_consequences = models.NestedField(db_column='sortedMotifFeatureConsequences') # TODO
-#     sorted_regulatory_feature_consequences = models.NestedField(db_column='sortedRegulatoryFeatureConsequences') # TODO
-#
-#     class Meta:
-#         db_table = 'GRCh38/SNV_INDEL/annotations'
-#
-#
+
+class AnnotationsSnvIndel(models.ClickhouseModel):
+    key = models.UInt32Field(primary_key=True)
+    xpos = models.UInt64Field()
+    chrom = models.StringField(low_cardinality=True)
+    pos = models.UInt32Field()
+    ref = models.StringField()
+    alt = models.StringField()
+    variant_id = models.StringField(db_column='variantId')
+    rsid = models.StringField(null=True, blank=True)
+    caid = models.StringField(db_column='CAID', null=True, blank=True)
+    lifted_over_chrom = models.StringField(db_column='liftedOverChrom', low_cardinality=True, null=True, blank=True)
+    lifted_over_pos = models.StringField(db_column='liftedOverPos', null=True, blank=True)
+    hgmd = models.TupleField([
+        ('accession', models.StringField(null=True, blank=True)),
+        # TODO field name should just be class
+        ('hgmd_class', models.Enum8Field(null=True, blank=True, choices=[(0, 'DM'), (1, 'DM?'), (2, 'DP'), (3, 'DFP'), (4, 'FP'), (5, 'R')])),
+    ])
+    screen_region_type = models.Enum8Field(db_column='screenRegionType', null=True, blank=True, choices=[(0, 'CTCF-bound'), (1, 'CTCF-only'), (2, 'DNase-H3K4me3'), (3, 'PLS'), (4, 'dELS'), (5, 'pELS'), (6, 'DNase-only'), (7, 'low-DNase')])
+    predictions = models.TupleField([
+        ('cadd', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('eigen', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('fathmm', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('gnomad_noncoding', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('mpc', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('mut_pred', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('mut_taster', models.Enum8Field(null=True, blank=True, choices=[(0, 'D'), (1, 'A'), (2, 'N'), (3, 'P')])),
+        ('polyphen', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('primate_ai', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('revel', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('sift', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('splice_ai', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('splice_ai_consequence', models.Enum8Field(null=True, blank=True, choices=[(0, 'Acceptor gain'), (1, 'Acceptor loss'), (2, 'Donor gain'), (3, 'Donor loss'), (4, 'No consequence')])),
+        ('vest', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+    ])
+    populations = models.TupleField([
+        ('exac', models.TupleField([
+            ('ac', models.UInt32Field()),
+            ('af', models.DecimalField(max_digits=9, decimal_places=5)),
+            ('an', models.UInt32Field()),
+            ('filter_af', models.DecimalField(max_digits=9, decimal_places=5)),
+            ('hemi', models.UInt32Field()),
+            ('het', models.UInt32Field()),
+            ('hom', models.UInt32Field()),
+        ])),
+        ('gnomad_exomes', models.TupleField([
+            ('ac', models.UInt32Field()),
+            ('af', models.DecimalField(max_digits=9, decimal_places=5)),
+            ('an', models.UInt32Field()),
+            ('filter_af', models.DecimalField(max_digits=9, decimal_places=5)),
+            ('hemi', models.UInt32Field()),
+            ('hom', models.UInt32Field()),
+        ])),
+        ('gnomad_genomes', models.TupleField([
+            ('ac', models.UInt32Field()),
+            ('af', models.DecimalField(max_digits=9, decimal_places=5)),
+            ('an', models.UInt32Field()),
+            ('filter_af', models.DecimalField(max_digits=9, decimal_places=5)),
+            ('hemi', models.UInt32Field()),
+            ('hom', models.UInt32Field()),
+        ])),
+        ('topmed', models.TupleField([
+            ('ac', models.UInt32Field()),
+            ('af', models.DecimalField(max_digits=9, decimal_places=5)),
+            ('an', models.UInt32Field()),
+            ('het', models.UInt32Field()),
+            ('hom', models.UInt32Field()),
+        ])),
+    ])
+    # sorted_transcript_consequences = models.NestedField(db_column='sortedTranscriptConsequences')  # TODO
+    # sorted_motif_feature_consequences = models.NestedField(db_column='sortedMotifFeatureConsequences') # TODO
+    # sorted_regulatory_feature_consequences = models.NestedField(db_column='sortedRegulatoryFeatureConsequences') # TODO
+
+    class Meta:
+        db_table = 'GRCh38/SNV_INDEL/annotations'
+        # TODO add configuration for in-memory-dir, remove trailing suffix? move into engine class def?
+        engine = EmbeddedRocksDB(0, f'/in-memory-dir/{db_table}3', primary_key='key')
+
+
 # class Grch38SnvIndelClinvar(models.ClickhouseModel):
 #     key = models.UInt32Field()
 #     alleleid = models.UInt32Field(db_column='alleleId', null=True, blank=True)  # Field name made lowercase.
