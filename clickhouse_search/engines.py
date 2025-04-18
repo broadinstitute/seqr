@@ -14,10 +14,10 @@ class CollapsingMergeTree(models.CollapsingMergeTree):
 
 
 class EmbeddedRocksDB(models.BaseMergeTree):
-    arity = 2
+    max_arity = 2
 
-    def __init__(self, ttl, rocksdb_dir, **settings):
-        super().__init__(ttl, Value(rocksdb_dir), **settings)
+    def __init__(self, *expressions, **settings):
+        super().__init__(*[Value(e) for e in expressions], **settings)
 
 
 class Join(models.Engine):
