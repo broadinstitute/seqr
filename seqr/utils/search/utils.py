@@ -2,6 +2,7 @@ from collections import defaultdict
 from copy import deepcopy
 from datetime import timedelta
 
+from clickhouse_search.search import clickhouse_backend_enabled
 from reference_data.models import GENOME_VERSION_LOOKUP, GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample, Individual, Project
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
@@ -52,11 +53,17 @@ def _raise_search_error(error):
     return _wrapped
 
 
-def backend_specific_call(es_func, other_func):
+def _raise_clickhouse_not_implemented(*args, **kwargs):
+    raise NotImplementedError('Clickhouse backend is not implemented for this function.')
+
+
+def backend_specific_call(es_func, hail_backend_func, clickhouse_func=_raise_clickhouse_not_implemented):
     if es_backend_enabled():
         return es_func
+    elif clickhouse_backend_enabled():
+        return clickhouse_func
     else:
-        return other_func
+        return hail_backend_func
 
 
 def ping_search_backend():
