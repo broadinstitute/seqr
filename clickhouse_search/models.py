@@ -76,6 +76,11 @@ class NestedField(models.TupleField):
     def cast_db_type(self, connection):
         return super().cast_db_type(connection).replace('Tuple', 'Nested', 1)
 
+    def _from_db_value(self, value, expression, connection):
+        if value is None:
+            return value
+        return [self.container_class(*item) for item in value]
+
 
 class EntriesSnvIndel(models.ClickhouseModel):
     project_guid = models.StringField()
