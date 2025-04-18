@@ -20,8 +20,9 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
     results = results.values('gt', 'gq', 'ab', 'dp', 'xpos', **{
         field.db_column or field.name: F(f'annotations__{field.name}') for field in AnnotationsSnvIndel._meta.local_fields
         if field.name not in ['key', 'xpos']
-    })[:5]
-    print(results)
+    })
+    results = results[(page-1)*num_results:page*num_results]
+    print(results[:5])
 
     return []
 
