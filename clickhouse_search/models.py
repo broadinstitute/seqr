@@ -86,7 +86,7 @@ class EntriesSnvIndel(models.ClickhouseModel):
     project_guid = models.StringField()
     family_guid = models.StringField()
     sample_ids = models.ArrayField(models.StringField())
-    key = ForeignKey('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+    annotations = ForeignKey('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
     xpos = models.UInt64Field()
     sample_type = models.Enum8Field(choices=[(1, 'WES'), (2, 'WGS')])
     is_gnomad_gt_5_percent = models.BoolField()
@@ -98,7 +98,6 @@ class EntriesSnvIndel(models.ClickhouseModel):
 
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/entries'
-        ordering = ['project_guid', 'family_guid', 'is_gnomad_gt_5_percent', 'key']
         engine = CollapsingMergeTree(
             'sign',
             order_by=('project_guid', 'family_guid', 'is_gnomad_gt_5_percent', 'key'),

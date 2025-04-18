@@ -74,7 +74,7 @@ class Migration(migrations.Migration):
                 ('project_guid', clickhouse_backend.models.StringField()),
                 ('family_guid', clickhouse_backend.models.StringField()),
                 ('sample_ids', clickhouse_backend.models.ArrayField(base_field=clickhouse_backend.models.StringField())),
-                ('key', models.ForeignKey(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='clickhouse_search.annotationssnvindel')),
+                ('annotations', models.ForeignKey(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='clickhouse_search.annotationssnvindel')),
                 ('xpos', clickhouse_backend.models.UInt64Field()),
                 ('sample_type', clickhouse_backend.models.Enum8Field(choices=[(1, 'WES'), (2, 'WGS')])),
                 ('is_gnomad_gt_5_percent', clickhouse_backend.models.BoolField()),
@@ -86,7 +86,6 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'GRCh38/SNV_INDEL/entries',
-                'ordering': ['project_guid', 'family_guid', 'is_gnomad_gt_5_percent', 'key'],
                 'engine': clickhouse_search.engines.CollapsingMergeTree('sign', deduplicate_merge_projection_mode='rebuild', index_granularity=8192, order_by=('project_guid', 'family_guid', 'is_gnomad_gt_5_percent', 'key')),
                 'projection': clickhouse_search.models.Projection('xpos_projection', order_by='xpos'),
             },

@@ -20,8 +20,8 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
         project_guid=sample_data['project_guid'],
         family_guid=sample_data['family_guid'],
         sample_type=sample_data['sample_type'],
-    )[:5]
-    print(entries.values('key', 'gt', 'gq', 'ab', 'dp'))
+    ).values('gt', 'gq', 'ab', 'dp', 'annotations__variant_id', 'annotations__xpos')[:num_results]
+    print(entries)
 
     return []
 
