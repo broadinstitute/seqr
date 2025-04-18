@@ -239,18 +239,20 @@ POSTGRES_DB_CONFIG = {
 DATABASES = {
     'default': dict(NAME='seqrdb', **POSTGRES_DB_CONFIG),
     'reference_data': dict(NAME='reference_data_db', **POSTGRES_DB_CONFIG),
-    'clickhouse': {
-        'ENGINE': 'clickhouse_search.backend',
-        'NAME': 'seqr',
-        'HOST': os.environ.get('CLICKHOUSE_SERVICE_HOSTNAME', 'localhost'),
-        'PORT': int(os.environ.get('CLICKHOUSE_SERVICE_PORT', '9000')),
-        'USER': os.environ.get('CLICKHOUSE_USERNAME', 'clickhouse'),
-        'PASSWORD': os.environ.get('CLICKHOUSE_PASSWORD', 'clickhouse_test'),
-    },
 }
 DATABASE_ROUTERS = ['reference_data.models.ReferenceDataRouter', 'clickhouse_search.models.ClickHouseRouter']
 
 CLICKHOUSE_IN_MEMORY_DIR = os.environ.get('CLICKHOUSE_IN_MEMORY_DIR', '/in-memory-dir')
+CLICKHOUSE_SERVICE_HOSTNAME =  os.environ.get('CLICKHOUSE_SERVICE_HOSTNAME')
+if CLICKHOUSE_SERVICE_HOSTNAME:
+    DATABASES['clickhouse'] = {
+        'ENGINE': 'clickhouse_search.backend',
+        'NAME': 'seqr',
+        'HOST': CLICKHOUSE_SERVICE_HOSTNAME,
+        'PORT': int(os.environ.get('CLICKHOUSE_SERVICE_PORT', '9000')),
+        'USER': os.environ.get('CLICKHOUSE_USERNAME', 'clickhouse'),
+        'PASSWORD': os.environ.get('CLICKHOUSE_PASSWORD', 'clickhouse_test'),
+    }
 
 WSGI_APPLICATION = 'wsgi.application'
 
