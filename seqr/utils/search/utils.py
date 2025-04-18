@@ -2,7 +2,7 @@ from collections import defaultdict
 from copy import deepcopy
 from datetime import timedelta
 
-from clickhouse_search.search import clickhouse_backend_enabled
+from clickhouse_search.search import clickhouse_backend_enabled, get_clickhouse_variants
 from reference_data.models import GENOME_VERSION_LOOKUP, GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample, Individual, Project
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
@@ -226,6 +226,7 @@ def query_variants(search_model, sort=XPOS_SORT_KEY, skip_genotype_filter=False,
     previously_loaded_results = backend_specific_call(
         process_es_previously_loaded_results,
         lambda *args: None,  # Other backends need no additional parsing
+        lambda *args: None,
     )(previous_search_results, start_index, end_index)
     if previously_loaded_results is not None:
         return previously_loaded_results, total_results
@@ -304,7 +305,7 @@ def _query_variants(search_model, user, previous_search_results, sort=None, num_
 
     _validate_search(parsed_search, samples, previous_search_results)
 
-    variant_results = backend_specific_call(get_es_variants, get_hail_variants)(
+    variant_results = backend_specific_call(get_es_variants, get_hail_variants, get_clickhouse_variants)(
         samples, parsed_search, user, previous_search_results, genome_version,
         sort=sort, num_results=num_results, **kwargs,
     )
@@ -326,6 +327,7 @@ def get_variant_query_gene_counts(search_model, user):
     previously_loaded_results = backend_specific_call(
         process_es_previously_loaded_gene_aggs,
         lambda *args: None,  # Other backends need no additional parsing
+        lambda *args: None,
     )(previous_search_results)
     if previously_loaded_results is not None:
         return previously_loaded_results
@@ -485,12 +487,12 @@ def _validate_search(search, samples, previous_search_results):
                 )
 
     if not has_location_filter:
-        backend_specific_call(lambda *args: None, validate_hail_backend_no_location_search)(samples)
+        backend_specific_call(lambda *args: None, validate_hail_backend_no_location_search, lambda *args: None)(samples)
 
 
 def _filter_inheritance_family_samples(samples, inheritance_filter):
     family_groups = defaultdict(set)
-    sample_group_field = backend_specific_call('elasticsearch_index', 'dataset_type')
+    sample_group_field = backend_specific_call('elasticsearch_index', 'dataset_type', 'dataset_type')
     individual_affected_status = inheritance_filter.get('affected') or {}
     genotype_filter = None if inheritance_filter.get(Individual.AFFECTED_STATUS_AFFECTED) else inheritance_filter.get('genotype')
     for sample in samples:

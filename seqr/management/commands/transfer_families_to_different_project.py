@@ -52,7 +52,7 @@ class Command(BaseCommand):
         missing_id_message = '' if num_found == num_expected else f' No match for: {", ".join(set(family_ids) - set([f.family_id for f in families]))}.'
         logger.info(f'Found {num_found} out of {num_expected} families.{missing_id_message}')
 
-        backend_specific_call(lambda *args: None, _disable_search)(families, from_project)
+        backend_specific_call(lambda *args: None, _disable_search, _disable_search)(families, from_project)
 
         for variant_tag_type in VariantTagType.objects.filter(project=from_project):
             variant_tags = VariantTag.objects.filter(saved_variants__family__in=families, variant_tag_type=variant_tag_type)

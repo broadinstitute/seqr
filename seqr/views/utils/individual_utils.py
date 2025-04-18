@@ -203,7 +203,7 @@ def check_project_individuals_deletable(project, individual_guids=None):
     if individual_guids is not None:
         individuals_to_delete = individuals_to_delete.filter(guid__in=individual_guids)
 
-    errors = backend_specific_call(_validate_no_submissions, _validate_no_sumissions_no_search_samples)(individuals_to_delete)
+    errors = backend_specific_call(_validate_no_submissions, _validate_no_sumissions_no_search_samples, _validate_no_sumissions_no_search_samples)(individuals_to_delete)
     return errors, individuals_to_delete
 
 
