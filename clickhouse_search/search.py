@@ -16,14 +16,22 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
         raise NotImplementedError('Clickhouse search not implemented for genome version other than GRCh38')
 
     sample_data = _get_sample_data(samples)
-    entries = EntriesSnvIndel.objects.filter(
+    results = _get_filtered_family_entries(sample_data)
+    results = results.values('gt', 'gq', 'ab', 'dp', 'xpos', **{
+        field.db_column or field.name: F(f'annotations__{field.name}') for field in AnnotationsSnvIndel._meta.local_fields
+        if field.name not in ['key', 'xpos']
+    })[:5]
+    print(results)
+
+    return []
+
+
+def _get_filtered_family_entries(sample_data):
+    return EntriesSnvIndel.objects.filter(
         project_guid=sample_data['project_guid'],
         family_guid=sample_data['family_guid'],
         sample_type=sample_data['sample_type'],
-    ).values('gt', 'gq', 'ab', 'dp', 'annotations__variant_id', 'annotations__xpos')[:num_results]
-    print(entries)
-
-    return []
+    )
 
 
 def _get_sample_data(samples):
