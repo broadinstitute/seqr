@@ -18,7 +18,7 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
         return sql, params
 
     def _get_engine_expression(self, model, engine):
-        prev_quote_value = self.quote_value
+        prev_quote_value = self.quote_value   # pylint: disable=access-member-before-definition
         if isinstance(engine, Join):
             self.quote_value = self.no_quote_value
         expression = super()._get_engine_expression(model, engine)
