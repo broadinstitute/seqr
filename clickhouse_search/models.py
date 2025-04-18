@@ -3,6 +3,7 @@ from django.db.migrations import state
 from django.db.models import options, ForeignKey, Func, CASCADE, PROTECT
 
 from clickhouse_search.engines import CollapsingMergeTree, EmbeddedRocksDB, Join
+from settings import CLICKHOUSE_IN_MEMORY_DIR
 
 options.DEFAULT_NAMES = (
     *options.DEFAULT_NAMES,
@@ -195,8 +196,7 @@ class AnnotationsSnvIndel(models.ClickhouseModel):
 
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/annotations'
-        # TODO add configuration for in-memory-dir, remove trailing suffix? move into engine class def?
-        engine = EmbeddedRocksDB(0, f'/in-memory-dir/{db_table}3', primary_key='key')
+        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_IN_MEMORY_DIR}/{db_table}', primary_key='key')
 
 
 class Clinvar(models.ClickhouseModel):
@@ -225,14 +225,3 @@ class Clinvar(models.ClickhouseModel):
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/clinvar'
         engine = Join('ALL', 'LEFT', 'key')
-
-#
-# class Grch38SnvIndelGtStats(models.ClickhouseModel):
-#     project_guid = models.StringField()
-#     key = models.UInt32Field()
-#     ref_samples = models.AggregateFunctionField()
-#     het_samples = models.AggregateFunctionField()
-#     hom_samples = models.AggregateFunctionField()
-#
-#     class Meta:
-#         db_table = 'GRCh38/SNV_INDEL/gt_stats'

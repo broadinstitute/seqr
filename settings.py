@@ -250,6 +250,8 @@ DATABASES = {
 }
 DATABASE_ROUTERS = ['reference_data.models.ReferenceDataRouter', 'clickhouse_search.models.ClickHouseRouter']
 
+CLICKHOUSE_IN_MEMORY_DIR = os.environ.get('CLICKHOUSE_IN_MEMORY_DIR', '/in-memory-dir')
+
 WSGI_APPLICATION = 'wsgi.application'
 
 WHITENOISE_ALLOW_ALL_ORIGINS = False

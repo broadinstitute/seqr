@@ -40,7 +40,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'GRCh38/SNV_INDEL/annotations',
-                'engine': clickhouse_search.engines.EmbeddedRocksDB(0, '/in-memory-dir/GRCh38/SNV_INDEL/annotations1', primary_key='key'),
+                'engine': clickhouse_search.engines.EmbeddedRocksDB(0, '/in-memory-dir/GRCh38/SNV_INDEL/annotations', primary_key='key'),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
