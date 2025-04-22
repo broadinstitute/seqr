@@ -22,6 +22,7 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
 
     sample_data = _get_sample_data(samples)
     results = _get_filtered_family_entries(sample_data)
+    # TODO Subquery with OuterRef
     results = results.values('gt', 'gq', 'ab', 'dp', 'xpos', **ANNOTATION_VALUES)
     results = results[(page-1)*num_results:page*num_results]
     print(results[:5])
