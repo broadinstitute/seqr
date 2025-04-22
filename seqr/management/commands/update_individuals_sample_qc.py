@@ -34,7 +34,7 @@ class Command(BaseCommand):
         sample_type = metadata['sample_type']
         sample_qc = metadata['sample_qc']
 
-        family_guids = metadata['family_samples'].keys()
+        family_guids = set(metadata['family_samples'].keys())
         for family_failures in metadata.get('failed_family_samples', {}).values():
             family_guids.update(family_failures.keys())
 
