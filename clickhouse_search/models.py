@@ -82,6 +82,12 @@ class NestedField(models.TupleField):
         return [self.container_class(*item) for item in value]
 
 
+class UInt8DeltaCodecField(models.UInt8Field):
+
+    def db_type(self, connection):
+        return f'{super().db_type(connection)} CODEC(Delta, ZSTD)'
+
+
 class EntriesSnvIndel(models.ClickhouseModel):
     # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
     annotation = ForeignKey('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
@@ -94,7 +100,7 @@ class EntriesSnvIndel(models.ClickhouseModel):
     calls = models.ArrayField( models.TupleField([
         ('sampleId', models.StringField()),
         ('gt', models.Enum8Field(null=True, blank=True, choices=[(0, 'REF'), (1, 'HET'), (2, 'HOM')])),
-        ('gq', models.UInt8Field(null=True, blank=True)),
+        ('gq', UInt8DeltaCodecField(null=True, blank=True)),
         ('ab', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
         ('dp', models.UInt16Field(null=True, blank=True)),
     ]))
