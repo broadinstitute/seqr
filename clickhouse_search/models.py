@@ -86,12 +86,13 @@ class NestedField(models.TupleField):
 class UInt8DeltaCodecField(models.UInt8Field):
 
     def db_type(self, connection):
+        # TODO use or remove - generates gq Nullable(UInt8) CODEC(Delta, ZSTD)
         return f'{super().db_type(connection)} CODEC(Delta, ZSTD)'
 
 
 class EntriesSnvIndel(models.ClickhouseModel):
     # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
-    annotation = ForeignKey('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = ForeignKey('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
     project_guid = models.StringField(low_cardinality=True)
     family_guid = models.StringField()
     sample_type = models.Enum8Field(choices=[(1, 'WES'), (2, 'WGS')])
@@ -101,7 +102,7 @@ class EntriesSnvIndel(models.ClickhouseModel):
     calls = models.ArrayField( models.TupleField([
         ('sampleId', models.StringField()),
         ('gt', models.Enum8Field(null=True, blank=True, choices=[(0, 'REF'), (1, 'HET'), (2, 'HOM')])),
-        ('gq', UInt8DeltaCodecField(null=True, blank=True)),
+        ('gq', models.UInt8Field(null=True, blank=True)),
         ('ab', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
         ('dp', models.UInt16Field(null=True, blank=True)),
     ]))
@@ -132,10 +133,10 @@ CORE_TRANSCRIPT_FIELDS = [
 ]
 
 
-class AnnotationsSnvIndel(models.ClickhouseModel):
+class BaseAnnotationsSnvIndel(models.ClickhouseModel):
     key = models.UInt32Field(primary_key=True)
     xpos = models.UInt64Field()
-    chrom = models.Enum8Field(choices=list(enumerate(CHROMOSOMES[:-1])))
+    chrom = models.Enum8Field(choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES[:-1])])
     pos = models.UInt32Field()
     ref = models.StringField()
     alt = models.StringField()
@@ -216,19 +217,24 @@ class AnnotationsSnvIndel(models.ClickhouseModel):
     ], db_column='sortedRegulatoryFeatureConsequences')
 
     class Meta:
+        abstract = True
+
+class AnnotationsSnvIndel(BaseAnnotationsSnvIndel):
+
+    class Meta:
         db_table = 'GRCh38/SNV_INDEL/annotations_memory'
-        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_IN_MEMORY_DIR}/{db_table}', primary_key='key')
+        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_IN_MEMORY_DIR}/GRCh38/SNV_INDEL/annotations', primary_key='key')
 
 
 # Future work: create an alias and manager to switch between disk/in-memory annotations
-class AnnotationsDiskSnvIndel(AnnotationsSnvIndel):
+class AnnotationsDiskSnvIndel(BaseAnnotationsSnvIndel):
 
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/annotations_disk'
-        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/{db_table}', primary_key='key')
+        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SNV_INDEL/annotations', primary_key='key')
 
 class TranscriptsSnvIndel(models.ClickhouseModel):
-    annotation = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
     transcripts = models.MapField(models.StringField(), models.ArrayField(models.TupleField([
         *CORE_TRANSCRIPT_FIELDS,
         ('aminoAcids', models.StringField(null=True, blank=True)),
@@ -294,7 +300,7 @@ class Clinvar(models.ClickhouseModel):
         'No_pathogenic_assertion', 'Likely_benign', 'Benign/Likely_benign', 'Benign'
     ]))
 
-    annotation = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=PROTECT)
+    key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=PROTECT)
     allele_id = models.UInt32Field(db_column='alleleId', null=True, blank=True)
     conflicting_pathogenicities = NestedField([
         ('pathogenicity', models.Enum8Field(choices=PATHOGENICITY_CHOICES)),
