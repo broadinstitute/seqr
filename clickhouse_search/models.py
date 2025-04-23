@@ -4,7 +4,7 @@ from django.db.models import options, ForeignKey, OneToOneField, Func, CASCADE, 
 
 from clickhouse_search.engines import CollapsingMergeTree, EmbeddedRocksDB, Join
 from seqr.utils.xpos_utils import CHROMOSOMES
-from settings import CLICKHOUSE_IN_MEMORY_DIR
+from settings import CLICKHOUSE_IN_MEMORY_DIR, CLICKHOUSE_DATA_DIR
 
 options.DEFAULT_NAMES = (
     *options.DEFAULT_NAMES,
@@ -216,9 +216,16 @@ class AnnotationsSnvIndel(models.ClickhouseModel):
     ], db_column='sortedRegulatoryFeatureConsequences')
 
     class Meta:
-        db_table = 'GRCh38/SNV_INDEL/annotations'
+        db_table = 'GRCh38/SNV_INDEL/annotations_memory'
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_IN_MEMORY_DIR}/{db_table}', primary_key='key')
 
+
+# Future work: create an alias and manager to switch between disk/in-memory annotations
+class AnnotationsDiskSnvIndel(AnnotationsSnvIndel):
+
+    class Meta:
+        db_table = 'GRCh38/SNV_INDEL/annotations_disk'
+        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/{db_table}', primary_key='key')
 
 class TranscriptsSnvIndel(models.ClickhouseModel):
     annotation = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
