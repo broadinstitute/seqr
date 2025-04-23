@@ -152,6 +152,9 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
                 **{f'comp_het_{self._sv_data_type}': ch_ht.row},
             ))
 
+        if not hts:
+            return None
+
         ht = hts[0]
         for sub_ht in hts[1:]:
             ht = ht.union(sub_ht, unify=True)
