@@ -86,6 +86,7 @@ def validate_vcf_and_get_samples(data_path, user, genome_version, path_name=None
     header = []
     meta = defaultdict(dict)
     for line in file_iter(vcf_filename, byte_range=byte_range):
+        line_str = line.decode() if isinstance(line, bytes) else line
         if line.startswith('#'):
             if line.startswith('#CHROM'):
                 header_cols = line.rstrip().split('\t')
