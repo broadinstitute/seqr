@@ -87,16 +87,16 @@ def validate_vcf_and_get_samples(data_path, user, genome_version, path_name=None
     meta = defaultdict(dict)
     for line in file_iter(vcf_filename, byte_range=byte_range):
         line_str = line.decode() if isinstance(line, bytes) else line
-        if line.startswith('#'):
-            if line.startswith('#CHROM'):
-                header_cols = line.rstrip().split('\t')
+        if line_str.startswith('#'):
+            if line_str.startswith('#CHROM'):
+                header_cols = line_str.rstrip().split('\t')
                 format_indices = [index for index, col in enumerate(header_cols) if col == 'FORMAT']
                 format_index = format_indices[0] + 1 if format_indices else len(header_cols)
                 header = header_cols[0:format_index]
                 samples = set(header_cols[format_index:])
                 break
             else:
-                meta_info = _get_vcf_meta_info(line)
+                meta_info = _get_vcf_meta_info(line_str)
                 if meta_info:
                     meta[meta_info['field']].update({meta_info['id']: meta_info['type']})
         else:
