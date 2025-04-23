@@ -115,7 +115,7 @@ class EntriesSnvIndel(models.ClickhouseModel):
             deduplicate_merge_projection_mode='rebuild',
             index_granularity=8192,
         )
-        projection = Projection('xpos_projection', order_by='xpos')
+        projection = Projection('xpos_projection', order_by='xpos, is_gnomad_gt_5_percent')
 
 
 class AnnotationsSnvIndel(models.ClickhouseModel):
