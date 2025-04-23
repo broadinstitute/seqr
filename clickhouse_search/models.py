@@ -83,18 +83,21 @@ class NestedField(models.TupleField):
 
 
 class EntriesSnvIndel(models.ClickhouseModel):
-    project_guid = models.StringField()
-    family_guid = models.StringField()
-    sample_ids = models.ArrayField(models.StringField())
     # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
     annotation = ForeignKey('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
-    xpos = models.UInt64Field()
+    project_guid = models.StringField(low_cardinality=True)
+    family_guid = models.StringField()
     sample_type = models.Enum8Field(choices=[(1, 'WES'), (2, 'WGS')])
+    xpos = models.UInt64Field()
     is_gnomad_gt_5_percent = models.BoolField()
-    gt = models.ArrayField(models.Enum8Field(null=True, blank=True, choices=[(0, 'REF'), (1, 'HET'), (2, 'HOM')]), db_column='GT')
-    gq = models.ArrayField(models.Int32Field(null=True, blank=True), db_column='GQ')
-    ab = models.ArrayField(models.Float32Field(null=True, blank=True), db_column='AB')
-    dp = models.ArrayField(models.Int32Field(null=True, blank=True), db_column='DP')
+    filters = models.ArrayField(models.StringField(low_cardinality=True))
+    calls = models.ArrayField( models.TupleField([
+        ('sampleId', models.StringField()),
+        ('gt', models.Enum8Field(null=True, blank=True, choices=[(0, 'REF'), (1, 'HET'), (2, 'HOM')])),
+        ('gq', models.UInt8Field(null=True, blank=True)),
+        ('ab', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('dp', models.UInt16Field(null=True, blank=True)),
+    ]))
     sign = models.Int8Field()
 
     class Meta:
