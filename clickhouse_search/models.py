@@ -3,6 +3,7 @@ from django.db.migrations import state
 from django.db.models import options, ForeignKey, OneToOneField, Func, CASCADE, PROTECT
 
 from clickhouse_search.engines import CollapsingMergeTree, EmbeddedRocksDB, Join
+from seqr.utils.xpos_utils import CHROMOSOMES
 from settings import CLICKHOUSE_IN_MEMORY_DIR
 
 options.DEFAULT_NAMES = (
@@ -121,7 +122,7 @@ class EntriesSnvIndel(models.ClickhouseModel):
 class AnnotationsSnvIndel(models.ClickhouseModel):
     key = models.UInt32Field(primary_key=True)
     xpos = models.UInt64Field()
-    chrom = models.StringField(low_cardinality=True)
+    chrom = models.Enum8Field(choices=list(enumerate(CHROMOSOMES[:-1])))
     pos = models.UInt32Field()
     ref = models.StringField()
     alt = models.StringField()
