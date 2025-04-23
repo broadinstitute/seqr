@@ -85,7 +85,7 @@ def _execute_multi_sample_types_searches(sv_data_types, search_body, user):
         total += sample_response_json['total']
         results += sample_response_json['results']
 
-    return {'total': total, 'results': sorted(results, key=lambda x: x['_sort'])[:search_body['num_results']]}
+    return {'total': total, 'results': sorted(results, key=lambda x: x[0]['_sort'] if isinstance(x, list) else x['_sort'])[:search_body['num_results']]}
 
 
 def get_hail_variants_for_variant_ids(samples, genome_version, parsed_variant_ids, user, user_email=None, return_all_queried_families=False):
