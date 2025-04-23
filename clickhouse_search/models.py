@@ -1,6 +1,6 @@
 from clickhouse_backend import models
 from django.db.migrations import state
-from django.db.models import options, ForeignKey, Func, CASCADE, PROTECT
+from django.db.models import options, ForeignKey, OneToOneField, Func, CASCADE, PROTECT
 
 from clickhouse_search.engines import CollapsingMergeTree, EmbeddedRocksDB, Join
 from settings import CLICKHOUSE_IN_MEMORY_DIR
@@ -86,7 +86,8 @@ class EntriesSnvIndel(models.ClickhouseModel):
     project_guid = models.StringField()
     family_guid = models.StringField()
     sample_ids = models.ArrayField(models.StringField())
-    key = ForeignKey('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+    # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
+    annotation = ForeignKey('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
     xpos = models.UInt64Field()
     sample_type = models.Enum8Field(choices=[(1, 'WES'), (2, 'WGS')])
     is_gnomad_gt_5_percent = models.BoolField()
@@ -98,7 +99,6 @@ class EntriesSnvIndel(models.ClickhouseModel):
 
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/entries'
-        ordering = ['project_guid', 'family_guid', 'is_gnomad_gt_5_percent', 'key']
         engine = CollapsingMergeTree(
             'sign',
             order_by=('project_guid', 'family_guid', 'is_gnomad_gt_5_percent', 'key'),
@@ -205,7 +205,7 @@ class AnnotationsSnvIndel(models.ClickhouseModel):
 
 
 class TranscriptsSnvIndel(models.ClickhouseModel):
-    key = ForeignKey('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+    annotation = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
     transcripts = models.MapField(models.StringField(), models.ArrayField(models.TupleField([
         ('aminoAcids', models.StringField(null=True, blank=True)),
         ('canonical', models.UInt32Field(null=True, blank=True)),
@@ -279,7 +279,7 @@ class Clinvar(models.ClickhouseModel):
         'No_pathogenic_assertion', 'Likely_benign', 'Benign/Likely_benign', 'Benign'
     ]))
 
-    key = ForeignKey('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=PROTECT)
+    annotation = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=PROTECT)
     allele_id = models.UInt32Field(db_column='alleleId', null=True, blank=True)
     conflicting_pathogenicities = NestedField([
         ('pathogenicity', models.Enum8Field(choices=PATHOGENICITY_CHOICES)),
