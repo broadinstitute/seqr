@@ -111,6 +111,7 @@ class EntriesSnvIndel(models.ClickhouseModel):
         engine = CollapsingMergeTree(
             'sign',
             order_by=('project_guid', 'family_guid', 'is_gnomad_gt_5_percent', 'key'),
+            partition_by='project_guid',
             deduplicate_merge_projection_mode='rebuild',
             index_granularity=8192,
         )
