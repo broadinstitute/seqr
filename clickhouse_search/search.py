@@ -28,10 +28,14 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
     results = AnnotationsSnvIndel.objects.annotate(
         entries=Subquery(entries.values('calls'))
     ).values('variant_id', 'entries')
-    results = results[(page-1)*num_results:page*num_results]
-    print(results[:5])
+    results = results[:5]
+    print(results)
 
-    return []
+    total_results = len(results)
+    previous_search_results['total_results'] = total_results
+    previous_search_results['all_results'] = results
+
+    return results[(page-1)*num_results:page*num_results]
 
 
 def _get_filtered_family_entries(sample_data):
