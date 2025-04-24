@@ -99,13 +99,13 @@ class EntriesSnvIndel(models.ClickhouseModel):
     xpos = models.UInt64Field()
     is_gnomad_gt_5_percent = models.BoolField()
     filters = models.ArrayField(models.StringField(low_cardinality=True))
-    calls = models.ArrayField( models.TupleField([
+    calls = NestedField([
         ('sampleId', models.StringField()),
         ('gt', models.Enum8Field(null=True, blank=True, choices=[(0, 'REF'), (1, 'HET'), (2, 'HOM')])),
         ('gq', models.UInt8Field(null=True, blank=True)),
         ('ab', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
         ('dp', models.UInt16Field(null=True, blank=True)),
-    ]))
+    ])
     sign = models.Int8Field()
 
     class Meta:
