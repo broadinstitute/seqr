@@ -42,10 +42,13 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
 
 
 def _get_filtered_family_entries(sample_data):
+    if len(sample_data) > 1:
+        raise NotImplementedError('Clickhouse search not implemented for multiple families or sample types')
+
     return EntriesSnvIndel.objects.filter(
-        project_guid=sample_data['project_guid'],
-        family_guid=sample_data['family_guid'],
-        sample_type=sample_data['sample_type'],
+        project_guid=sample_data[0]['project_guid'],
+        family_guid=sample_data[0]['family_guid'],
+        sample_type=sample_data[0]['sample_type'],
     )
 
 
@@ -54,10 +57,6 @@ def _get_sample_data(samples):
     if not samples:
         raise NotImplementedError('Clickhouse search not implemented for other data types')
 
-    sample_data = samples.values(
+    return samples.values(
         'sample_type', family_guid=F('individual__family__guid'), project_guid=F('individual__family__project__guid'),
     ).annotate(samples=ArrayAgg(JSONObject(affected='individual__affected', sample_id='sample_id')))
-    if len(sample_data) > 1:
-        raise NotImplementedError('Clickhouse search not implemented for multiple families or sample types')
-
-    return sample_data[0]
