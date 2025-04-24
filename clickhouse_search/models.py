@@ -191,9 +191,9 @@ class BaseAnnotationsSnvIndel(models.ClickhouseModel):
         ('alphamissensePathogenicity', models.DecimalField(null=True, blank=True, max_digits=9, decimal_places=5)),
         ('canonical', models.UInt8Field(null=True, blank=True)),
         ('consequenceTerms', models.ArrayField(models.Enum8Field(null=True, blank=True, choices=[(1, 'transcript_ablation'), (2, 'splice_acceptor_variant'), (3, 'splice_donor_variant'), (4, 'stop_gained'), (5, 'frameshift_variant'), (6, 'stop_lost'), (7, 'start_lost'), (8, 'inframe_insertion'), (9, 'inframe_deletion'), (10, 'missense_variant'), (11, 'protein_altering_variant'), (12, 'splice_donor_5th_base_variant'), (13, 'splice_region_variant'), (14, 'splice_donor_region_variant'), (15, 'splice_polypyrimidine_tract_variant'), (16, 'incomplete_terminal_codon_variant'), (17, 'start_retained_variant'), (18, 'stop_retained_variant'), (19, 'synonymous_variant'), (20, 'coding_sequence_variant'), (21, 'mature_miRNA_variant'), (22, '5_prime_UTR_variant'), (23, '3_prime_UTR_variant'), (24, 'non_coding_transcript_exon_variant'), (25, 'intron_variant'), (26, 'NMD_transcript_variant'), (27, 'non_coding_transcript_variant'), (28, 'coding_transcript_variant'), (29, 'upstream_gene_variant'), (30, 'downstream_gene_variant'), (31, 'intergenic_variant'), (32, 'sequence_variant')]))),
-        ('geneId', models.StringField(null=True, blank=True)),
         ('extendedIntronicSpliceRegionVariant', models.BoolField(null=True, blank=True)),
         ('fiveutrConsequence', models.Enum8Field(null=True, blank=True, choices=[(1, '5_prime_UTR_premature_start_codon_gain_variant'), (2, '5_prime_UTR_premature_start_codon_loss_variant'), (3, '5_prime_UTR_stop_codon_gain_variant'), (4, '5_prime_UTR_stop_codon_loss_variant'), (5, '5_prime_UTR_uORF_frameshift_variant')])),
+        ('geneId', models.StringField(null=True, blank=True)),
     ], db_column='sortedTranscriptConsequences')
     sorted_motif_feature_consequences = NestedField([
         ('consequenceTerms', models.ArrayField(models.Enum8Field(null=True, blank=True, choices=[(0, 'TFBS_ablation'), (1, 'TFBS_amplification'), (2, 'TF_binding_site_variant'), (3, 'TFBS_fusion'), (4, 'TFBS_translocation')]))),
@@ -225,34 +225,36 @@ class AnnotationsDiskSnvIndel(BaseAnnotationsSnvIndel):
 class TranscriptsSnvIndel(models.ClickhouseModel):
     key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
     transcripts = models.MapField(models.StringField(), models.ArrayField(models.TupleField([
+        ('alphamissense', models.TupleField([
+            ('pathogenicity', models.DecimalField(null=True, blank=True, max_digits=9, decimal_places=5)),
+        ])),
         ('aminoAcids', models.StringField(null=True, blank=True)),
+        ('biotype', models.StringField(null=True, blank=True)),
         ('canonical', models.UInt8Field(null=True, blank=True)),
         ('codons', models.StringField(null=True, blank=True)),
-        ('geneId', models.StringField(null=True, blank=True)),
-        ('hgvsc', models.StringField(null=True, blank=True)),
-        ('hgvsp', models.StringField(null=True, blank=True)),
-        ('transcriptId', models.StringField(null=True, blank=True)),
-        ('maneSelect', models.StringField(null=True, blank=True)),
-        ('manePlusClinical', models.StringField(null=True, blank=True)),
+        ('consequenceTerms', models.ArrayField(models.StringField(null=True, blank=True))),
         ('exon', models.TupleField([
             ('index', models.Int32Field(null=True, blank=True)),
             ('total', models.Int32Field(null=True, blank=True)),
         ])),
+        ('geneId', models.StringField(null=True, blank=True)),
+        ('hgvsc', models.StringField(null=True, blank=True)),
+        ('hgvsp', models.StringField(null=True, blank=True)),
         ('intron', models.TupleField([
             ('index', models.Int32Field(null=True, blank=True)),
             ('total', models.Int32Field(null=True, blank=True)),
-        ])),
-        ('refseqTranscriptId', models.StringField(null=True, blank=True)),
-        ('alphamissense', models.TupleField([
-            ('pathogenicity', models.DecimalField(null=True, blank=True, max_digits=9, decimal_places=5)),
         ])),
         ('loftee', models.TupleField([
             ('isLofNagnag', models.BoolField(null=True, blank=True)),
             ('lofFilters', models.ArrayField(models.StringField(null=True, blank=True))),
         ])),
+        ('manePlusClinical', models.StringField(null=True, blank=True)),
+        ('maneSelect', models.StringField(null=True, blank=True)),
+        ('refseqTranscriptId', models.StringField(null=True, blank=True)),
         ('spliceregion', models.TupleField([
             ('extended_intronic_splice_region_variant', models.BoolField(null=True, blank=True)),
         ])),
+        ('transcriptId', models.StringField(null=True, blank=True)),
         ('utrannotator', models.TupleField([
             ('existingInframeOorfs', models.Int32Field(null=True, blank=True)),
             ('existingOutofframeOorfs', models.Int32Field(null=True, blank=True)),
@@ -278,8 +280,6 @@ class TranscriptsSnvIndel(models.ClickhouseModel):
             ])),
             ('fiveutrConsequence', models.StringField(null=True, blank=True)),
         ])),
-        ('biotype', models.StringField(null=True, blank=True)),
-        ('consequenceTerms', models.ArrayField(models.StringField(null=True, blank=True))),
     ])))
 
     class Meta:
@@ -300,9 +300,8 @@ class Clinvar(models.ClickhouseModel):
     key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=PROTECT)
     allele_id = models.UInt32Field(db_column='alleleId', null=True, blank=True)
     conflicting_pathogenicities = NestedField([
-        ('pathogenicity', models.Enum8Field(choices=PATHOGENICITY_CHOICES)),
         ('count', models.UInt16Field()),
-
+        ('pathogenicity', models.Enum8Field(choices=PATHOGENICITY_CHOICES)),
     ], db_column='conflictingPathogenicities')
     gold_stars = models.UInt8Field(db_column='goldStars', null=True, blank=True)
     submitters = models.ArrayField(models.StringField())
