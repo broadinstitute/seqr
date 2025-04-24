@@ -7,7 +7,7 @@ from clickhouse_search.models import EntriesSnvIndel, AnnotationsSnvIndel
 from reference_data.models import GENOME_VERSION_GRCh38
 from seqr.models import Sample
 from seqr.utils.logging_utils import SeqrLogger
-from seqr.utils.search.constants import MAX_VARIANTS
+from seqr.utils.search.constants import MAX_VARIANTS, XPOS_SORT_KEY
 from settings import CLICKHOUSE_SERVICE_HOSTNAME
 
 logger = SeqrLogger(__name__)
@@ -44,14 +44,24 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
     results = results[:5]
     # results = results[:MAX_VARIANTS+1]
 
-    results = list(results)
     total_results = len(results)
-    previous_search_results.update({'all_results': results, 'total_results': total_results})
-
     logger.info(f'Total results: {total_results}', user)
 
-    print(results)
-    return results[(page-1)*num_results:page*num_results]
+    sorted_results = sorted(results, key=_get_sort_key(sort))
+    previous_search_results.update({'all_results': sorted_results, 'total_results': total_results})
+
+    print(sorted_results)
+    return sorted_results[(page-1)*num_results:page*num_results]
+
+
+def _get_sample_data(samples):
+    samples = samples.filter(dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
+    if not samples:
+        raise NotImplementedError('Clickhouse search not implemented for other data types')
+
+    return samples.values(
+        'sample_type', family_guid=F('individual__family__guid'), project_guid=F('individual__family__project__guid'),
+    ).annotate(samples=ArrayAgg(JSONObject(affected='individual__affected', sample_id='sample_id')))
 
 
 def _get_filtered_entries(sample_data, **kwargs):
@@ -64,11 +74,9 @@ def _get_filtered_entries(sample_data, **kwargs):
     )
 
 
-def _get_sample_data(samples):
-    samples = samples.filter(dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
-    if not samples:
-        raise NotImplementedError('Clickhouse search not implemented for other data types')
+def _get_sort_key(sort):
+    sort_fields = [XPOS_SORT_KEY]
+    if sort and sort != XPOS_SORT_KEY:
+        sort_fields.insert(0, sort)
 
-    return samples.values(
-        'sample_type', family_guid=F('individual__family__guid'), project_guid=F('individual__family__project__guid'),
-    ).annotate(samples=ArrayAgg(JSONObject(affected='individual__affected', sample_id='sample_id')))
+    return lambda x: tuple(x[field] for field in sort_fields)
