@@ -210,6 +210,30 @@ for v in MULTI_PROJECT_BOTH_SAMPLE_TYPE_VARIANTS:
 for v in MULTI_PROJECT_BOTH_SAMPLE_TYPE_VARIANTS[:-2]:
     v['genotypes']['I000015_na20885'].append({**v['genotypes']['I000015_na20885'][0], 'sampleType': 'WGS'})
 
+SECOND_PROJECT_SV_WES_SAMPLE_DATA = [{**s, 'sample_type': 'WES'} for s in SV_WGS_SAMPLE_DATA['SV_WGS']]
+
+MULTI_PROJECT_GCNV_VARIANT3 = {
+    **GCNV_VARIANT3,
+    'familyGuids': GCNV_VARIANT3['familyGuids'] + ['F000011_11'],
+    'genotypes': {
+        **GCNV_VARIANT3['genotypes'],
+        'I000035_na20883': {
+            'sampleId': 'NA20883', 'sampleType': 'WES', 'individualGuid': 'I000035_na20883', 'familyGuid': 'F000011_11',
+            'numAlt': 2, 'cn': 4, 'qs': 27, 'defragged': True, 'start': None, 'end': None, 'numExon': None,
+            'geneIds': None, 'newCall': True, 'prevCall': False, 'prevOverlap': False, 'filters': [],
+        },
+        'I000015_na20885': {
+            'sampleId': 'NA20885', 'sampleType': 'WES', 'individualGuid': 'I000015_na20885', 'familyGuid': 'F000011_11',
+            'numAlt': 1, 'cn': 3, 'qs': 51, 'defragged': False, 'start': None, 'end': None, 'numExon': None,
+            'geneIds': None, 'newCall': False, 'prevCall': False, 'prevOverlap': True, 'filters': [],
+        },
+        'I000025_na20884': {
+            'sampleId': 'NA20884', 'sampleType': 'WES', 'individualGuid': 'I000025_na20884', 'familyGuid': 'F000011_11', 'numAlt': 0,
+            'cn': None, 'qs': None, 'defragged': None, 'start': None, 'end': None, 'numExon': None, 'geneIds': None,
+            'newCall': None, 'prevCall': None, 'prevOverlap': None, 'filters': [],
+        },
+    },
+}
 
 def _sorted(variant, sorts):
     return {**variant, '_sort': sorts + variant['_sort']}
@@ -617,8 +641,8 @@ class HailSearchTestCase(AioHTTPTestCase):
         )
 
         await self._assert_expected_search(
-            [SV_VARIANT1, SV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4], intervals=sv_intervals,
-            sample_data={'SV_WES': EXPECTED_SAMPLE_DATA['SV_WES'], **SV_WGS_SAMPLE_DATA},
+            [SV_VARIANT1, SV_VARIANT2, MULTI_PROJECT_GCNV_VARIANT3, GCNV_VARIANT4], intervals=sv_intervals,
+            sample_data={'SV_WES': EXPECTED_SAMPLE_DATA['SV_WES'] + SECOND_PROJECT_SV_WES_SAMPLE_DATA, **SV_WGS_SAMPLE_DATA},
         )
 
         await self._assert_expected_search(
