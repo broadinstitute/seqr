@@ -217,13 +217,13 @@ MULTI_PROJECT_GCNV_VARIANT3 = {
     'familyGuids': GCNV_VARIANT3['familyGuids'] + ['F000011_11'],
     'genotypes': {
         **GCNV_VARIANT3['genotypes'],
-        'I000035_na20883': {
-            'sampleId': 'NA20883', 'sampleType': 'WES', 'individualGuid': 'I000035_na20883', 'familyGuid': 'F000011_11',
+        'I000015_na20885': {
+            'sampleId': 'NA20885', 'sampleType': 'WES', 'individualGuid': 'I000015_na20885', 'familyGuid': 'F000011_11',
             'numAlt': 2, 'cn': 4, 'qs': 27, 'defragged': True, 'start': None, 'end': None, 'numExon': None,
             'geneIds': None, 'newCall': True, 'prevCall': False, 'prevOverlap': False, 'filters': [],
         },
-        'I000015_na20885': {
-            'sampleId': 'NA20885', 'sampleType': 'WES', 'individualGuid': 'I000015_na20885', 'familyGuid': 'F000011_11',
+        'I000035_na20883': {
+            'sampleId': 'NA20883', 'sampleType': 'WES', 'individualGuid': 'I000035_na20883', 'familyGuid': 'F000011_11',
             'numAlt': 1, 'cn': 3, 'qs': 51, 'defragged': False, 'start': None, 'end': None, 'numExon': None,
             'geneIds': None, 'newCall': False, 'prevCall': False, 'prevOverlap': True, 'filters': [],
         },
@@ -1011,6 +1011,14 @@ class HailSearchTestCase(AioHTTPTestCase):
             [VARIANT2, [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], [VARIANT3, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4], GCNV_VARIANT3, [GCNV_VARIANT3, GCNV_VARIANT4]],
             inheritance_mode='recessive',
             annotations={**annotations_1, **gcnv_annotations_1}, annotations_secondary={**annotations_2, **gcnv_annotations_2},
+        )
+
+        await self._assert_expected_search(
+            [VARIANT2, [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], MULTI_PROJECT_GCNV_VARIANT3, [GCNV_VARIANT3, GCNV_VARIANT4]],
+            inheritance_mode='recessive',
+            annotations={**annotations_1, **gcnv_annotations_1}, annotations_secondary={**annotations_2, **gcnv_annotations_2},
+            intervals=[['1', 38717636, 38724781], ['17', 38717636, 38724781]],
+            sample_data={**EXPECTED_SAMPLE_DATA, 'SV_WES': EXPECTED_SAMPLE_DATA['SV_WES'] + SECOND_PROJECT_SV_WES_SAMPLE_DATA},
         )
 
         await self._assert_expected_search(
