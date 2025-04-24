@@ -8,7 +8,7 @@ from seqr.models import Sample
 from settings import CLICKHOUSE_SERVICE_HOSTNAME
 
 ANNOTATION_VALUES = {
-    field.db_column or field.name: F(f'annotations__{field.name}') for field in AnnotationsSnvIndel._meta.local_fields
+    field.db_column or field.name: F(f'key__{field.name}') for field in AnnotationsSnvIndel._meta.local_fields
     if field.name not in ['key', 'xpos']
 }
 
