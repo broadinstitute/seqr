@@ -2,6 +2,7 @@ from django.contrib.postgres.aggregates import ArrayAgg
 from django.db.models import F
 from django.db.models.functions import JSONObject
 
+from clickhouse_search.backend.functions import array
 from clickhouse_search.models import EntriesSnvIndel, AnnotationsSnvIndel
 from reference_data.models import GENOME_VERSION_GRCh38
 from seqr.models import Sample
@@ -23,19 +24,26 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
 
     sample_data = _get_sample_data(samples)
     entries = _get_filtered_family_entries(sample_data)
-    # TODO Subquery with OuterRef
-    # results = entries.values('gt', 'gq', 'ab', 'dp', 'xpos', **ANNOTATION_VALUES)
-    from django.db.models import Subquery, OuterRef
-    results = AnnotationsSnvIndel.objects.annotate(
-        entries=Subquery(entries.values('calls'))
-    ).values('variant_id', 'entries')
+    results = entries.values(
+        'xpos',
+        'filters',
+        familyGuids=array('family_guid'),
+        genotypes=F('calls'),
+        **ANNOTATION_VALUES,
+    )
+    # TODO Subquery with OuterRef?
+    # from django.db.models import Subquery, OuterRef
+    # results = AnnotationsSnvIndel.objects.annotate(
+    #     entries=Subquery(entries.values('calls'))
+    # ).values('variant_id', 'entries')
     results = results[:5]
     # results = results[:MAX_VARIANTS+1]
+    results = list(results)
     print(results)
 
     previous_search_results.update({
-        'total_results': len(results),
         'all_results': results,
+        'total_results': len(results),
     })
 
     return results[(page-1)*num_results:page*num_results]
