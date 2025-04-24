@@ -21,9 +21,13 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
         raise NotImplementedError('Clickhouse search not implemented for genome version other than GRCh38')
 
     sample_data = _get_sample_data(samples)
-    results = _get_filtered_family_entries(sample_data)
+    entries = _get_filtered_family_entries(sample_data)
     # TODO Subquery with OuterRef
-    results = results.values('gt', 'gq', 'ab', 'dp', 'xpos', **ANNOTATION_VALUES)
+    # results = results.values('gt', 'gq', 'ab', 'dp', 'xpos', **ANNOTATION_VALUES)
+    from django.db.models import Subquery, OuterRef
+    results = AnnotationsSnvIndel.objects.annotate(
+        entries=Subquery(entries.values('calls'))
+    ).values('variant_id', 'entries')
     results = results[(page-1)*num_results:page*num_results]
     print(results[:5])
 
