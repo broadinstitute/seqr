@@ -54,7 +54,7 @@ def _get_contact_url(chrom: str, pos: int, ref: str, alt: str, genome_build: str
     if VLM_DEFAULT_CONTACT_EMAIL:
         return f'mailto:{VLM_DEFAULT_CONTACT_EMAIL}'
 
-    if liftover_locus:
+    if liftover_locus is not None:
         lifted = hl.eval(liftover_locus)
         chrom = lifted.contig
         pos = lifted.position
