@@ -24,7 +24,7 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
     sample_data = _get_sample_data(samples)
     entries = _get_filtered_family_entries(sample_data)
     # TODO Subquery with OuterRef
-    # results = results.values('gt', 'gq', 'ab', 'dp', 'xpos', **ANNOTATION_VALUES)
+    # results = entries.values('gt', 'gq', 'ab', 'dp', 'xpos', **ANNOTATION_VALUES)
     from django.db.models import Subquery, OuterRef
     results = AnnotationsSnvIndel.objects.annotate(
         entries=Subquery(entries.values('calls'))
