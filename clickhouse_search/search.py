@@ -5,6 +5,7 @@ from django.db.models.functions import JSONObject
 from clickhouse_search.models import EntriesSnvIndel, AnnotationsSnvIndel
 from reference_data.models import GENOME_VERSION_GRCh38
 from seqr.models import Sample
+from seqr.utils.search.constants import MAX_VARIANTS
 from settings import CLICKHOUSE_SERVICE_HOSTNAME
 
 ANNOTATION_VALUES = {
@@ -29,6 +30,7 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
         entries=Subquery(entries.values('calls'))
     ).values('variant_id', 'entries')
     results = results[:5]
+    # results = results[:MAX_VARIANTS+1]
     print(results)
 
     total_results = len(results)
