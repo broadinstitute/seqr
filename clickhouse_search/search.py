@@ -6,27 +6,32 @@ from clickhouse_search.backend.functions import Array
 from clickhouse_search.models import EntriesSnvIndel, AnnotationsSnvIndel
 from reference_data.models import GENOME_VERSION_GRCh38
 from seqr.models import Sample
+from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.search.constants import MAX_VARIANTS
 from settings import CLICKHOUSE_SERVICE_HOSTNAME
 
+logger = SeqrLogger(__name__)
+
+CORE_ENTRIES_FIELDS = ['filters', 'key', 'xpos']
 ANNOTATION_VALUES = {
     field.db_column or field.name: F(f'key__{field.name}') for field in AnnotationsSnvIndel._meta.local_fields
-    if field.name not in ['key', 'xpos']
+    if field.name not in CORE_ENTRIES_FIELDS
 }
 
 def clickhouse_backend_enabled():
     return bool(CLICKHOUSE_SERVICE_HOSTNAME)
 
 
-def get_clickhouse_variants(samples, search, user, previous_search_results, genome_version, sort=None, page=1, num_results=100, gene_agg=False, **kwargs):
+def get_clickhouse_variants(samples, search, user, previous_search_results, genome_version, sort=None, page=1, num_results=100, **kwargs):
     if genome_version != GENOME_VERSION_GRCh38:
         raise NotImplementedError('Clickhouse search not implemented for genome version other than GRCh38')
 
     sample_data = _get_sample_data(samples)
-    entries = _get_filtered_entries(sample_data)
+    logger.info(f'Loading {Sample.DATASET_TYPE_VARIANT_CALLS} data for {len(sample_data)} families', user)
+
+    entries = _get_filtered_entries(sample_data, **search)
     results = entries.values(
-        'xpos',
-        'filters',
+        *CORE_ENTRIES_FIELDS,
         familyGuids=Array('family_guid'),
         genotypes=F('calls'),
         **ANNOTATION_VALUES,
@@ -38,18 +43,18 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
     # ).values('variant_id', 'entries')
     results = results[:5]
     # results = results[:MAX_VARIANTS+1]
+
     results = list(results)
+    total_results = len(results)
+    previous_search_results.update({'all_results': results, 'total_results': total_results})
+
+    logger.info(f'Total results: {total_results}', user)
+
     print(results)
-
-    previous_search_results.update({
-        'all_results': results,
-        'total_results': len(results),
-    })
-
     return results[(page-1)*num_results:page*num_results]
 
 
-def _get_filtered_entries(sample_data):
+def _get_filtered_entries(sample_data, **kwargs):
     if len(sample_data) > 1:
         raise NotImplementedError('Clickhouse search not implemented for multiple families or sample types')
 
