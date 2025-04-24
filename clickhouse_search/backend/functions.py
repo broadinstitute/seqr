@@ -1,4 +1,4 @@
-from clickhouse_backend.models.functions.base import Func
+from django.db.models import Func
 
-class array(Func):
-    pass
+class Array(Func):
+    function = 'array'

@@ -2,7 +2,7 @@ from django.contrib.postgres.aggregates import ArrayAgg
 from django.db.models import F
 from django.db.models.functions import JSONObject
 
-from clickhouse_search.backend.functions import array
+from clickhouse_search.backend.functions import Array
 from clickhouse_search.models import EntriesSnvIndel, AnnotationsSnvIndel
 from reference_data.models import GENOME_VERSION_GRCh38
 from seqr.models import Sample
@@ -27,7 +27,7 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
     results = entries.values(
         'xpos',
         'filters',
-        familyGuids=array('family_guid'),
+        familyGuids=Array('family_guid'),
         genotypes=F('calls'),
         **ANNOTATION_VALUES,
     )
