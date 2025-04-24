@@ -56,7 +56,6 @@ def _get_filtered_family_entries(sample_data):
     return EntriesSnvIndel.objects.filter(
         project_guid=sample_data[0]['project_guid'],
         family_guid=sample_data[0]['family_guid'],
-        sample_type=sample_data[0]['sample_type'],
     )
 
 
