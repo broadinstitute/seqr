@@ -912,7 +912,7 @@ class BaseHailTableQuery(object):
             secondary_annotation_overrides = None
             if self.SECONDARY_ANNOTATION_OVERRIDE_FIELDS:
                 secondary_annotation_overrides = self._get_annotation_override_fields(
-                    annotations_secondary, override_fields=self.SECONDARY_ANNOTATION_OVERRIDE_FIELDS, **kwargs)
+                    annotations_secondary, override_fields=self.SECONDARY_ANNOTATION_OVERRIDE_FIELDS)
                 has_data_type_secondary_annotations |= bool(secondary_annotation_overrides)
                 has_different_secondary |= secondary_annotation_overrides != annotation_overrides
 
