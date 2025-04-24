@@ -23,7 +23,7 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
         raise NotImplementedError('Clickhouse search not implemented for genome version other than GRCh38')
 
     sample_data = _get_sample_data(samples)
-    entries = _get_filtered_family_entries(sample_data)
+    entries = _get_filtered_entries(sample_data)
     results = entries.values(
         'xpos',
         'filters',
@@ -49,7 +49,7 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
     return results[(page-1)*num_results:page*num_results]
 
 
-def _get_filtered_family_entries(sample_data):
+def _get_filtered_entries(sample_data):
     if len(sample_data) > 1:
         raise NotImplementedError('Clickhouse search not implemented for multiple families or sample types')
 
