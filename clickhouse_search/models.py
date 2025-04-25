@@ -2,6 +2,7 @@ from clickhouse_backend import models
 from django.db.migrations import state
 from django.db.models import options, ForeignKey, OneToOneField, Func, CASCADE, PROTECT
 
+from clickhouse_search.backend.fields import NestedField, UInt64FieldDeltaCodecField
 from clickhouse_search.engines import CollapsingMergeTree, EmbeddedRocksDB, Join
 from seqr.utils.xpos_utils import CHROMOSOMES
 from settings import CLICKHOUSE_IN_MEMORY_DIR, CLICKHOUSE_DATA_DIR
@@ -62,50 +63,22 @@ class Projection(Func):
         self.order_by = order_by
 
 
-class NestedField(models.TupleField):
-
-    def get_internal_type(self):
-        return "NestedField"
-
-    @property
-    def description(self):
-        return super().description().replace('Tuple', 'Nested', 1)
-
-    def db_type(self, connection):
-        return super().db_type(connection).replace('Tuple', 'Nested', 1)
-
-    def cast_db_type(self, connection):
-        return super().cast_db_type(connection).replace('Tuple', 'Nested', 1)
-
-    def _from_db_value(self, value, expression, connection):
-        if value is None:
-            return value
-        return [self.container_class(*item) for item in value]
-
-
-class UInt8DeltaCodecField(models.UInt8Field):
-
-    def db_type(self, connection):
-        # TODO use or remove - generates gq Nullable(UInt8) CODEC(Delta, ZSTD)
-        return f'{super().db_type(connection)} CODEC(Delta, ZSTD)'
-
-
 class EntriesSnvIndel(models.ClickhouseModel):
     # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
     key = ForeignKey('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
     project_guid = models.StringField(low_cardinality=True)
     family_guid = models.StringField()
     sample_type = models.Enum8Field(choices=[(1, 'WES'), (2, 'WGS')])
-    xpos = models.UInt64Field()
+    xpos = UInt64FieldDeltaCodecField()
     is_gnomad_gt_5_percent = models.BoolField()
     filters = models.ArrayField(models.StringField(low_cardinality=True))
-    calls = NestedField([
+    calls = models.ArrayField(models.TupleField([
         ('sampleId', models.StringField()),
         ('gt', models.Enum8Field(null=True, blank=True, choices=[(0, 'REF'), (1, 'HET'), (2, 'HOM')])),
         ('gq', models.UInt8Field(null=True, blank=True)),
         ('ab', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
         ('dp', models.UInt16Field(null=True, blank=True)),
-    ])
+    ]))
     sign = models.Int8Field()
 
     class Meta:
