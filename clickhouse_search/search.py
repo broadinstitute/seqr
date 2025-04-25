@@ -44,11 +44,11 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
     results = results[:5]
     # results = results[:MAX_VARIANTS+1]
 
-    total_results = len(results)
-    logger.info(f'Total results: {total_results}', user)
-
     sorted_results = sorted(results, key=_get_sort_key(sort))
+    total_results = len(results)
     previous_search_results.update({'all_results': sorted_results, 'total_results': total_results})
+
+    logger.info(f'Total results: {total_results}', user)
 
     print(sorted_results)
     return sorted_results[(page-1)*num_results:page*num_results]
