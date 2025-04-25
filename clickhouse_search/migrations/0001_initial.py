@@ -8,6 +8,7 @@ from django.db import migrations, models
 import django.db.models.deletion
 import django.db.models.manager
 
+from settings import CLICKHOUSE_IN_MEMORY_DIR, CLICKHOUSE_DATA_DIR
 
 class Migration(migrations.Migration):
 
@@ -41,7 +42,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'GRCh38/SNV_INDEL/annotations_disk',
-                'engine': clickhouse_search.engines.EmbeddedRocksDB(0, '/bitnami/clickhouse/GRCh38/SNV_INDEL/annotations', primary_key='key'),
+                'engine': clickhouse_search.engines.EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SNV_INDEL/annotations', primary_key='key'),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
@@ -72,7 +73,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'GRCh38/SNV_INDEL/annotations_memory',
-                'engine': clickhouse_search.engines.EmbeddedRocksDB(0, '/in-memory-dir/GRCh38/SNV_INDEL/annotations', primary_key='key'),
+                'engine': clickhouse_search.engines.EmbeddedRocksDB(0, f'{CLICKHOUSE_IN_MEMORY_DIR}/GRCh38/SNV_INDEL/annotations', primary_key='key'),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
