@@ -2,7 +2,7 @@
 
 import clickhouse_backend.models
 import clickhouse_search.backend.fields
-import clickhouse_search.engines
+import clickhouse_search.backend.engines
 import clickhouse_search.models
 from django.db import migrations, models
 import django.db.models.deletion
@@ -42,7 +42,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'GRCh38/SNV_INDEL/annotations_disk',
-                'engine': clickhouse_search.engines.EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SNV_INDEL/annotations', primary_key='key'),
+                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SNV_INDEL/annotations', primary_key='key'),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
@@ -73,7 +73,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'GRCh38/SNV_INDEL/annotations_memory',
-                'engine': clickhouse_search.engines.EmbeddedRocksDB(0, f'{CLICKHOUSE_IN_MEMORY_DIR}/GRCh38/SNV_INDEL/annotations', primary_key='key'),
+                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, f'{CLICKHOUSE_IN_MEMORY_DIR}/GRCh38/SNV_INDEL/annotations', primary_key='key'),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
@@ -94,7 +94,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'GRCh38/SNV_INDEL/clinvar',
-                'engine': clickhouse_search.engines.Join('ALL', 'LEFT', 'key'),
+                'engine': clickhouse_search.backend.engines.Join('ALL', 'LEFT', 'key'),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
@@ -116,7 +116,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'GRCh38/SNV_INDEL/entries',
-                'engine': clickhouse_search.engines.CollapsingMergeTree('sign', deduplicate_merge_projection_mode='rebuild', index_granularity=8192, order_by=('project_guid', 'family_guid', 'is_gnomad_gt_5_percent', 'key'), partition_by='project_guid'),
+                'engine': clickhouse_search.backend.engines.CollapsingMergeTree('sign', deduplicate_merge_projection_mode='rebuild', index_granularity=8192, order_by=('project_guid', 'family_guid', 'is_gnomad_gt_5_percent', 'key'), partition_by='project_guid'),
                 'projection': clickhouse_search.models.Projection('xpos_projection', order_by='xpos, is_gnomad_gt_5_percent'),
             },
             managers=[
@@ -132,7 +132,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'GRCh38/SNV_INDEL/transcripts',
-                'engine': clickhouse_search.engines.EmbeddedRocksDB(primary_key='key'),
+                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(primary_key='key'),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
