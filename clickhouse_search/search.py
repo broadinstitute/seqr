@@ -71,7 +71,7 @@ def _get_filtered_entries(sample_data, **kwargs):
 
     return EntriesSnvIndel.objects.filter(
         project_guid=sample_data[0]['project_guid'],
-        family_guid=sample_data[0]['family_guid'],
+        # family_guid=sample_data[0]['family_guid'],
     )
 
 
