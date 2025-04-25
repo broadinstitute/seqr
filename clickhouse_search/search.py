@@ -44,6 +44,7 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
     results = results[:5]
     # results = results[:MAX_VARIANTS+1]
 
+    #  TODO incorrectly json dumping namedtuple as list - no way to override with json serailizer, need to change serialization from db
     sorted_results = sorted(results, key=_get_sort_key(sort))
     total_results = len(results)
     previous_search_results.update({'all_results': sorted_results, 'total_results': total_results})
