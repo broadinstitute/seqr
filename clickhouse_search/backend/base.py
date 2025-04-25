@@ -3,7 +3,7 @@ from clickhouse_backend.backend.base import (
     DatabaseSchemaEditor as BaseDatabaseSchemaEditor,
 )
 
-from clickhouse_search.engines import Join
+from clickhouse_search.backend.engines import Join
 
 class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
 
