@@ -2,6 +2,10 @@ from clickhouse_backend import models
 
 class NestedField(models.TupleField):
 
+    def __init__(self, *args, group_key=None, **kwargs):
+        self.group_key = group_key
+        super().__init__(*args, **kwargs)
+
     def get_internal_type(self):
         return "NestedField"
 
@@ -15,10 +19,16 @@ class NestedField(models.TupleField):
     def cast_db_type(self, connection):
         return super().cast_db_type(connection).replace('Tuple', 'Nested', 1)
 
+    def from_db_value(self, *args, **kwargs):
+        return self._from_db_value(*args, **kwargs)
+
     def _from_db_value(self, value, expression, connection):
         if value is None:
             return value
-        return [self.container_class(*item)._asdict() for item in value]
+        value = [self._convert_type(item)._asdict() for item in value]
+        if self.group_key:
+            value = {item[self.group_key]: item for item in value}
+        return value
 
 
 class UInt64FieldDeltaCodecField(models.UInt64Field):

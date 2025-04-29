@@ -1,8 +1,11 @@
+from clickhouse_backend import models
+from collections import OrderedDict
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.db.models import F
 from django.db.models.functions import JSONObject
 
-from clickhouse_search.backend.functions import Array
+from clickhouse_search.backend.fields import NestedField
+from clickhouse_search.backend.functions import Array, ArrayMap
 from clickhouse_search.models import EntriesSnvIndel, AnnotationsSnvIndel
 from reference_data.models import GENOME_VERSION_GRCh38
 from seqr.models import Sample
@@ -12,11 +15,21 @@ from settings import CLICKHOUSE_SERVICE_HOSTNAME
 
 logger = SeqrLogger(__name__)
 
-CORE_ENTRIES_FIELDS = ['filters', 'key', 'xpos']
+CORE_ENTRIES_FIELDS = ['key', 'xpos']
 ANNOTATION_VALUES = {
     field.db_column or field.name: F(f'key__{field.name}') for field in AnnotationsSnvIndel._meta.local_fields
     if field.name not in CORE_ENTRIES_FIELDS
 }
+
+GENOTYPE_FIELDS = OrderedDict({
+    'project_guid': ('projectGuid', models.StringField()),
+    'family_guid': ('familyGuid', models.StringField()),
+    'sample_type': ('sampleType', models.StringField()),
+    'x.sampleId': ('sampleId', models.StringField()),
+    'filters': ('filters', models.ArrayField(models.StringField())),
+    'x.gt::Nullable(Int8)': ('numAlt', models.Int8Field(null=True, blank=True)),
+    **{f'x.{column[0]}': column for column in EntriesSnvIndel.CALL_FIELDS[2:]}
+})
 
 def clickhouse_backend_enabled():
     return bool(CLICKHOUSE_SERVICE_HOSTNAME)
@@ -33,14 +46,13 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
     results = entries.values(
         *CORE_ENTRIES_FIELDS,
         familyGuids=Array('family_guid'),
-        genotypes=F('calls'),  # TODO format
+        genotypes=ArrayMap(
+            'calls',
+            mapped_expression=f"tuple({_get_sample_map_expression(sample_data)}[x.sampleId], {', '.join(GENOTYPE_FIELDS.keys())})",
+            output_field=NestedField([('individualGuid', models.StringField()), *GENOTYPE_FIELDS.values()], group_key='individualGuid')
+        ),
         **ANNOTATION_VALUES,
     )
-    # TODO Subquery with OuterRef?
-    # from django.db.models import Subquery, OuterRef
-    # results = AnnotationsSnvIndel.objects.annotate(
-    #     entries=Subquery(entries.values('calls'))
-    # ).values('variant_id', 'entries')
     results = results[:5]
     # results = results[:MAX_VARIANTS+1]
 
@@ -61,7 +73,14 @@ def _get_sample_data(samples):
 
     return samples.values(
         'sample_type', family_guid=F('individual__family__guid'), project_guid=F('individual__family__project__guid'),
-    ).annotate(samples=ArrayAgg(JSONObject(affected='individual__affected', sample_id='sample_id')))
+    ).annotate(samples=ArrayAgg(JSONObject(affected='individual__affected', sample_id='sample_id', individual_guid=F('individual__guid'))))
+
+def _get_sample_map_expression(sample_data):
+    sample_map = []
+    for data in sample_data:
+        for s in data['samples']:
+            sample_map += [f"'{s['sample_id']}'", f"'{s['individual_guid']}'"]
+    return f'map({", ".join(sample_map)})'
 
 
 def _get_filtered_entries(sample_data, **kwargs):
@@ -70,7 +89,7 @@ def _get_filtered_entries(sample_data, **kwargs):
 
     return EntriesSnvIndel.objects.filter(
         project_guid=sample_data[0]['project_guid'],
-        # family_guid=sample_data[0]['family_guid'],
+        family_guid=sample_data[0]['family_guid'],
     )
 
 
