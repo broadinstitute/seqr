@@ -1,9 +1,11 @@
 from clickhouse_backend import models
+from itertools import groupby
 
 class NestedField(models.TupleField):
 
-    def __init__(self, *args, group_key=None, **kwargs):
+    def __init__(self, *args, group_key=None, flatten_groups=False, **kwargs):
         self.group_key = group_key
+        self.flatten_groups = flatten_groups
         super().__init__(*args, **kwargs)
 
     def get_internal_type(self):
@@ -27,7 +29,8 @@ class NestedField(models.TupleField):
             return value
         value = [self._convert_type(item)._asdict() for item in value]
         if self.group_key:
-            value = {item[self.group_key]: item for item in value}
+            group_agg = next if self.flatten_groups else list
+            value = {k: group_agg(v) for k, v in groupby(value, lambda x: x[self.group_key])}
         return value
 
 

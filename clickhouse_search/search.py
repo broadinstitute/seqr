@@ -50,7 +50,7 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
         genotypes=ArrayMap(
             'calls',
             mapped_expression=f"tuple({_get_sample_map_expression(sample_data)}[x.sampleId], {', '.join(GENOTYPE_FIELDS.keys())})",
-            output_field=NestedField([('individualGuid', models.StringField()), *GENOTYPE_FIELDS.values()], group_key='individualGuid')
+            output_field=NestedField([('individualGuid', models.StringField()), *GENOTYPE_FIELDS.values()], group_key='individualGuid', flatten_groups=True)
         ),
         **ANNOTATION_VALUES,
     )
