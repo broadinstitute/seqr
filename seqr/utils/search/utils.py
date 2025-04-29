@@ -221,7 +221,6 @@ def query_variants(search_model, sort=XPOS_SORT_KEY, skip_genotype_filter=False,
 
     loaded_results = previous_search_results.get('all_results') or []
     if len(loaded_results) >= end_index:
-        loaded_results = [res for res in loaded_results if res['transcripts']]
         results_page = backend_specific_call(
             lambda results: results, lambda results: results, format_clickhouse_results,
         )(loaded_results[start_index:end_index])
