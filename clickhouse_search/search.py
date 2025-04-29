@@ -53,8 +53,7 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
         ),
         **ANNOTATION_VALUES,
     )
-    results = results[:5]
-    # results = results[:MAX_VARIANTS+1]
+    results = results[:MAX_VARIANTS+1]
 
     sorted_results = sorted(results, key=_get_sort_key(sort))
     total_results = len(results)
@@ -62,7 +61,6 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
 
     logger.info(f'Total results: {total_results}', user)
 
-    print(sorted_results)
     return sorted_results[(page-1)*num_results:page*num_results]
 
 
