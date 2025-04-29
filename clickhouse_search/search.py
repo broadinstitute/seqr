@@ -69,7 +69,7 @@ def format_clickhouse_results(results, **kwargs):
     transcripts_by_key = dict(TranscriptsSnvIndel.objects.filter(
         key__in=[variant['key'] for variant in results if variant['transcripts']],
     ).values_list('key', 'transcripts'))
-    return [{**variant, 'transcripts': transcripts_by_key.get(variant['key'], {}) for variant in results]
+    return [{**variant, 'transcripts': transcripts_by_key.get(variant['key'], {})} for variant in results]
 
 
 def _get_sample_data(samples):
