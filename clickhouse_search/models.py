@@ -199,7 +199,7 @@ class AnnotationsDiskSnvIndel(BaseAnnotationsSnvIndel):
 
 class TranscriptsSnvIndel(models.ClickhouseModel):
     key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
-    transcripts = models.MapField(models.StringField(), models.ArrayField(models.TupleField([
+    transcripts = NestedField([
         ('alphamissense', models.TupleField([
             ('pathogenicity', models.DecimalField(null=True, blank=True, max_digits=9, decimal_places=5)),
         ])),
@@ -255,7 +255,7 @@ class TranscriptsSnvIndel(models.ClickhouseModel):
             ])),
             ('fiveutrConsequence', models.StringField(null=True, blank=True)),
         ])),
-    ])))
+    ], group_key='geneId')
 
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/transcripts'
