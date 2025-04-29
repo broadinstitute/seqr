@@ -6,7 +6,7 @@ from django.db.models.functions import JSONObject
 
 from clickhouse_search.backend.fields import NestedField
 from clickhouse_search.backend.functions import Array, ArrayMap
-from clickhouse_search.models import EntriesSnvIndel, AnnotationsSnvIndel
+from clickhouse_search.models import EntriesSnvIndel, AnnotationsSnvIndel, TranscriptsSnvIndel
 from reference_data.models import GENOME_VERSION_GRCh38
 from seqr.models import Sample
 from seqr.utils.logging_utils import SeqrLogger
@@ -20,6 +20,7 @@ ANNOTATION_VALUES = {
     field.db_column or field.name: F(f'key__{field.name}') for field in AnnotationsSnvIndel._meta.local_fields
     if field.name not in CORE_ENTRIES_FIELDS
 }
+ANNOTATION_VALUES['transcripts'] = ANNOTATION_VALUES.pop('sortedTranscriptConsequences')
 
 GENOTYPE_FIELDS = OrderedDict({
     'project_guid': ('projectGuid', models.StringField()),
@@ -61,7 +62,14 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
 
     logger.info(f'Total results: {total_results}', user)
 
-    return sorted_results[(page-1)*num_results:page*num_results]
+    return format_clickhouse_results(sorted_results[(page-1)*num_results:page*num_results])
+
+
+def format_clickhouse_results(results, **kwargs):
+    transcripts_by_key = dict(TranscriptsSnvIndel.objects.filter(
+        key__in=[variant['key'] for variant in results if variant['transcripts']],
+    ).values_list('key', 'transcripts'))
+    return [{**variant, 'transcripts': transcripts_by_key.get(variant['key'], {}) for variant in results]
 
 
 def _get_sample_data(samples):
