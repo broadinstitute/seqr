@@ -200,7 +200,7 @@ class AnnotationsDiskSnvIndel(BaseAnnotationsSnvIndel):
 class TranscriptsSnvIndel(models.ClickhouseModel):
     key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
     transcripts = NestedField([
-        ('alphamissense', models.TupleField([
+        ('alphamissense', NamedTupleField([
             ('pathogenicity', models.DecimalField(null=True, blank=True, max_digits=9, decimal_places=5)),
         ])),
         ('aminoAcids', models.StringField(null=True, blank=True)),
@@ -208,33 +208,33 @@ class TranscriptsSnvIndel(models.ClickhouseModel):
         ('canonical', models.UInt8Field(null=True, blank=True)),
         ('codons', models.StringField(null=True, blank=True)),
         ('consequenceTerms', models.ArrayField(models.StringField(null=True, blank=True))),
-        ('exon', models.TupleField([
+        ('exon', NamedTupleField([
             ('index', models.Int32Field(null=True, blank=True)),
             ('total', models.Int32Field(null=True, blank=True)),
         ])),
         ('geneId', models.StringField(null=True, blank=True)),
         ('hgvsc', models.StringField(null=True, blank=True)),
         ('hgvsp', models.StringField(null=True, blank=True)),
-        ('intron', models.TupleField([
+        ('intron', NamedTupleField([
             ('index', models.Int32Field(null=True, blank=True)),
             ('total', models.Int32Field(null=True, blank=True)),
         ])),
-        ('loftee', models.TupleField([
+        ('loftee', NamedTupleField([
             ('isLofNagnag', models.BoolField(null=True, blank=True)),
             ('lofFilters', models.ArrayField(models.StringField(null=True, blank=True))),
         ])),
         ('manePlusClinical', models.StringField(null=True, blank=True)),
         ('maneSelect', models.StringField(null=True, blank=True)),
         ('refseqTranscriptId', models.StringField(null=True, blank=True)),
-        ('spliceregion', models.TupleField([
+        ('spliceregion', NamedTupleField([
             ('extended_intronic_splice_region_variant', models.BoolField(null=True, blank=True)),
         ])),
         ('transcriptId', models.StringField(null=True, blank=True)),
-        ('utrannotator', models.TupleField([
+        ('utrannotator', NamedTupleField([
             ('existingInframeOorfs', models.Int32Field(null=True, blank=True)),
             ('existingOutofframeOorfs', models.Int32Field(null=True, blank=True)),
             ('existingUorfs', models.Int32Field(null=True, blank=True)),
-            ('fiveutrAnnotation', models.TupleField([
+            ('fiveutrAnnotation', NamedTupleField([
                 ('type', models.StringField(null=True, blank=True)),
                 ('KozakContext', models.StringField(null=True, blank=True)),
                 ('KozakStrength', models.StringField(null=True, blank=True)),

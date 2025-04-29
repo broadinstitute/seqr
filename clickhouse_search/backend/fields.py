@@ -22,12 +22,15 @@ class NestedField(models.TupleField):
         return super().cast_db_type(connection).replace('Tuple', 'Nested', 1)
 
     def from_db_value(self, *args, **kwargs):
-        return self._from_db_value(*args, **kwargs)
+        return self._from_db_value(*args, format_item=self._convert_type, **kwargs)
 
-    def _from_db_value(self, value, expression, connection):
+    def _from_db_value(self, value, expression, connection, format_item=None):
         if value is None:
             return value
-        value = [self._convert_type(item)._asdict() for item in value]
+        value = [
+            (format_item(item) if format_item else super(NestedField, self)._from_db_value(item, expression, connection))._asdict()
+            for item in value
+        ]
         if self.group_key:
             group_agg = next if self.flatten_groups else list
             value = {k: group_agg(v) for k, v in groupby(value, lambda x: x[self.group_key])}
