@@ -207,7 +207,7 @@ class TranscriptsSnvIndel(models.ClickhouseModel):
         ('biotype', models.StringField(null=True, blank=True)),
         ('canonical', models.UInt8Field(null=True, blank=True)),
         ('codons', models.StringField(null=True, blank=True)),
-        ('consequenceTerms', models.ArrayField(models.StringField(null=True, blank=True))),
+        ('consequenceTerms', models.ArrayField(models.StringField())),
         ('exon', NamedTupleField([
             ('index', models.Int32Field(null=True, blank=True)),
             ('total', models.Int32Field(null=True, blank=True)),
@@ -223,13 +223,15 @@ class TranscriptsSnvIndel(models.ClickhouseModel):
             ('isLofNagnag', models.BoolField(null=True, blank=True)),
             ('lofFilters', models.ArrayField(models.StringField(null=True, blank=True))),
         ])),
+        ('majorConsequence', models.StringField(null=True, blank=True)),
         ('manePlusClinical', models.StringField(null=True, blank=True)),
         ('maneSelect', models.StringField(null=True, blank=True)),
         ('refseqTranscriptId', models.StringField(null=True, blank=True)),
         ('spliceregion', NamedTupleField([
             ('extended_intronic_splice_region_variant', models.BoolField(null=True, blank=True)),
         ])),
-        ('transcriptId', models.StringField(null=True, blank=True)),
+        ('transcriptId', models.StringField()),
+        ('transcriptRank', models.UInt8Field()),
         ('utrannotator', NamedTupleField([
             ('existingInframeOorfs', models.Int32Field(null=True, blank=True)),
             ('existingOutofframeOorfs', models.Int32Field(null=True, blank=True)),
