@@ -55,7 +55,7 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
             mapped_expression=f"tuple({_get_sample_map_expression(sample_data)}[x.sampleId], {', '.join(GENOTYPE_FIELDS.keys())})",
             output_field=NestedField([('individualGuid', models.StringField()), *GENOTYPE_FIELDS.values()], group_by_key='individualGuid')
         ),
-        clinvar=Tuple(*CLINVAR_FIELDS.keys(), output_field=NamedTupleField(list(CLINVAR_FIELDS.values()))),
+        clinvar=Tuple(*CLINVAR_FIELDS.keys(), output_field=NamedTupleField(list(CLINVAR_FIELDS.values()), null_if_empty=True)),
         genomeVersion=Value(genome_version),
         liftedOverGenomeVersion=Value(_liftover_genome_version(genome_version)),
         **ANNOTATION_VALUES,
