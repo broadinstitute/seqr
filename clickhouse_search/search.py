@@ -1,13 +1,13 @@
 from clickhouse_backend import models
 from collections import OrderedDict
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.db.models import F
+from django.db.models import F, Value
 from django.db.models.functions import JSONObject
 
 from clickhouse_search.backend.fields import NestedField
 from clickhouse_search.backend.functions import Array, ArrayMap
 from clickhouse_search.models import EntriesSnvIndel, AnnotationsSnvIndel, TranscriptsSnvIndel
-from reference_data.models import GENOME_VERSION_GRCh38
+from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.search.constants import MAX_VARIANTS, XPOS_SORT_KEY
@@ -52,6 +52,8 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
             mapped_expression=f"tuple({_get_sample_map_expression(sample_data)}[x.sampleId], {', '.join(GENOTYPE_FIELDS.keys())})",
             output_field=NestedField([('individualGuid', models.StringField()), *GENOTYPE_FIELDS.values()], group_key='individualGuid', flatten_groups=True)
         ),
+        genomeVersion=Value(genome_version),
+        liftedOverGenomeVersion=Value(GENOME_VERSION_GRCh37 if genome_version == GENOME_VERSION_GRCh38 else GENOME_VERSION_GRCh38),
         **ANNOTATION_VALUES,
     )
     results = results[:MAX_VARIANTS+1]
@@ -69,7 +71,14 @@ def format_clickhouse_results(results, **kwargs):
     transcripts_by_key = dict(TranscriptsSnvIndel.objects.filter(
         key__in=[variant['key'] for variant in results if variant['transcripts']],
     ).values_list('key', 'transcripts'))
-    return [{**variant, 'transcripts': transcripts_by_key.get(variant['key'], {})} for variant in results]
+    # TODO transcripts are missing: majorConsequence, transcriptRank
+    return [{
+        **variant,
+        #  TODO no transcript id on sorted transcript consequences
+        #'mainTranscriptId': variant['transcripts'][0]['transcriptId'] if variant['transcripts'] else None,
+        'selectedMainTranscriptId': None,
+        'transcripts': transcripts_by_key.get(variant['key'], {}),
+    } for variant in results]
 
 
 def _get_sample_data(samples):
