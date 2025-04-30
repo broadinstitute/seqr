@@ -67,22 +67,25 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
 
 def format_clickhouse_results(results, **kwargs):
     transcripts_by_key = dict(TranscriptsSnvIndel.objects.filter(
-        key__in=[variant['key'] for variant in results if variant['transcripts']],
+        key__in=[variant['key'] for variant in results if variant['sortedTranscriptConsequences']],
     ).values_list('key', 'transcripts'))
 
     formatted_results = []
     for variant in results:
         transcripts = transcripts_by_key.get(variant['key'], {})
-        sorted_minimal_transcripts = variant.pop('sortedTranscriptConsequences')
-        main_gene = sorted_minimal_transcripts[0]['geneId'] if sorted_minimal_transcripts else None
-        formatted_results.append({
+        formatted_variant = {
             **variant,
             'transcripts': transcripts,
-            'mainTranscriptId': next(
-                (t['transcriptId'] for t in transcripts.get(main_gene, []) if t['transcriptRank'] == 0), None,
-            ),
             'selectedMainTranscriptId': None,
-        })
+        }
+        sorted_minimal_transcripts = formatted_variant.pop('sortedTranscriptConsequences')
+        main_transcript_id = None
+        if sorted_minimal_transcripts:
+            main_transcript_id = next(
+                t['transcriptId'] for t in transcripts[sorted_minimal_transcripts[0]['geneId']]
+                if t['transcriptRank'] == 0
+            )
+        formatted_results.append({**formatted_variant, 'mainTranscriptId': main_transcript_id})
 
     return formatted_results
 
