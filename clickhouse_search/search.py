@@ -20,7 +20,6 @@ ANNOTATION_VALUES = {
     field.db_column or field.name: F(f'key__{field.name}') for field in AnnotationsSnvIndel._meta.local_fields
     if field.name not in CORE_ENTRIES_FIELDS
 }
-ANNOTATION_VALUES['transcripts'] = ANNOTATION_VALUES.pop('sortedTranscriptConsequences')
 
 GENOTYPE_FIELDS = OrderedDict({
     'project_guid': ('projectGuid', models.StringField()),
@@ -70,14 +69,22 @@ def format_clickhouse_results(results, **kwargs):
     transcripts_by_key = dict(TranscriptsSnvIndel.objects.filter(
         key__in=[variant['key'] for variant in results if variant['transcripts']],
     ).values_list('key', 'transcripts'))
-    # TODO transcripts are missing: majorConsequence, transcriptRank
-    return [{
-        **variant,
-        #  TODO no transcript id on sorted transcript consequences
-        #'mainTranscriptId': variant['transcripts'][0]['transcriptId'] if variant['transcripts'] else None,
-        'selectedMainTranscriptId': None,
-        'transcripts': transcripts_by_key.get(variant['key'], {}),
-    } for variant in results]
+
+    formatted_results = []
+    for variant in results:
+        transcripts = transcripts_by_key.get(variant['key'], {})
+        sorted_minimal_transcripts = variant.pop('sortedTranscriptConsequences')
+        main_gene = sorted_minimal_transcripts[0]['geneId'] if sorted_minimal_transcripts else None
+        formatted_results.append({
+            **variant,
+            'transcripts': transcripts,
+            'mainTranscriptId': next(
+                (t['transcriptId'] for t in transcripts.get(main_gene, []) if t['transcriptRank'] == 0), None,
+            ),
+            'selectedMainTranscriptId': None,
+        })
+
+    return formatted_results
 
 
 def _get_sample_data(samples):
