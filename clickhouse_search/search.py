@@ -22,8 +22,8 @@ ANNOTATION_VALUES = {
 }
 
 CLINVAR_FIELDS = OrderedDict({
-    f'key__clinvar__{field.name}': (field.db_column or field.name, field.formfield())
-    for field in Clinvar._meta.local_fields
+    f'key__clinvar__{field.name}': (field.db_column or field.name, field.clone())
+    for field in Clinvar._meta.local_fields if field.name not in CORE_ENTRIES_FIELDS
 })
 
 GENOTYPE_FIELDS = OrderedDict({
