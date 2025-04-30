@@ -3,9 +3,9 @@ from itertools import groupby
 
 class NestedField(models.TupleField):
 
-    def __init__(self, *args, group_key=None, flatten_groups=False, **kwargs):
-        self.group_key = group_key
+    def __init__(self, *args, flatten_groups=False, group_by_key=None, **kwargs):
         self.flatten_groups = flatten_groups
+        self.group_by_key = group_by_key
         super().__init__(*args, **kwargs)
 
     def get_internal_type(self):
@@ -31,9 +31,9 @@ class NestedField(models.TupleField):
             (format_item(item) if format_item else super(NestedField, self)._from_db_value(item, expression, connection))._asdict()
             for item in value
         ]
-        if self.group_key:
+        if self.group_by_key:
             group_agg = next if self.flatten_groups else list
-            value = {k: group_agg(v) for k, v in groupby(value, lambda x: x[self.group_key])}
+            value = {k: group_agg(v) for k, v in groupby(value, lambda x: x[self.group_by_key])}
         return value
 
 
