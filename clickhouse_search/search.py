@@ -4,9 +4,9 @@ from django.contrib.postgres.aggregates import ArrayAgg
 from django.db.models import F, Value
 from django.db.models.functions import JSONObject
 
-from clickhouse_search.backend.fields import NestedField
-from clickhouse_search.backend.functions import Array, ArrayMap
-from clickhouse_search.models import EntriesSnvIndel, AnnotationsSnvIndel
+from clickhouse_search.backend.fields import NestedField, NamedTupleField
+from clickhouse_search.backend.functions import Array, ArrayMap, Tuple
+from clickhouse_search.models import EntriesSnvIndel, AnnotationsSnvIndel, Clinvar
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample
 from seqr.utils.logging_utils import SeqrLogger
@@ -20,6 +20,11 @@ ANNOTATION_VALUES = {
     field.db_column or field.name: F(f'key__{field.name}') for field in AnnotationsSnvIndel._meta.local_fields
     if field.name not in CORE_ENTRIES_FIELDS
 }
+
+CLINVAR_FIELDS = OrderedDict({
+    f'key__clinvar__{field.name}': (field.db_column or field.name, field.formfield())
+    for field in Clinvar._meta.local_fields
+})
 
 GENOTYPE_FIELDS = OrderedDict({
     'project_guid': ('projectGuid', models.StringField()),
@@ -50,6 +55,7 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
             mapped_expression=f"tuple({_get_sample_map_expression(sample_data)}[x.sampleId], {', '.join(GENOTYPE_FIELDS.keys())})",
             output_field=NestedField([('individualGuid', models.StringField()), *GENOTYPE_FIELDS.values()], group_by_key='individualGuid')
         ),
+        clinvar=Tuple(*CLINVAR_FIELDS.keys(), output_field=NamedTupleField(list(CLINVAR_FIELDS.values()))),
         genomeVersion=Value(genome_version),
         liftedOverGenomeVersion=Value(_liftover_genome_version(genome_version)),
         **ANNOTATION_VALUES,

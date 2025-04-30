@@ -7,3 +7,7 @@ class Array(Func):
 class ArrayMap(Func):
     function = 'arrayMap'
     template = "%(function)s(x -> %(mapped_expression)s, %(expressions)s)"
+
+
+class Tuple(Func):
+    function = 'tuple'
