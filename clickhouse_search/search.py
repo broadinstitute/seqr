@@ -4,8 +4,8 @@ from django.contrib.postgres.aggregates import ArrayAgg
 from django.db.models import F, Value
 from django.db.models.functions import JSONObject
 
-from clickhouse_search.backend.fields import NestedField
-from clickhouse_search.backend.functions import Array, ArrayMap
+from clickhouse_search.backend.fields import NestedField, NamedTupleField
+from clickhouse_search.backend.functions import Array, ArrayMap, GtStatsDictGet
 from clickhouse_search.models import EntriesSnvIndel, AnnotationsSnvIndel
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample
@@ -16,6 +16,14 @@ from settings import CLICKHOUSE_SERVICE_HOSTNAME
 logger = SeqrLogger(__name__)
 
 CORE_ENTRIES_FIELDS = ['key', 'xpos']
+
+GT_STATS_DICT_FIELDS = OrderedDict({
+    'ac': models.UInt32Field(),
+    'an': models.UInt32Field(),
+    'hom': models.UInt32Field(),
+})
+GT_STATS_DICT_ATTRS = [f"'{field}'" for field in GT_STATS_DICT_FIELDS.keys()]
+
 ANNOTATION_VALUES = {
     field.db_column or field.name: F(f'key__{field.name}') for field in AnnotationsSnvIndel._meta.local_fields
     if field.name not in CORE_ENTRIES_FIELDS
@@ -52,6 +60,11 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
         ),
         genomeVersion=Value(genome_version),
         liftedOverGenomeVersion=Value(_liftover_genome_version(genome_version)),
+        seqrPop=GtStatsDictGet(
+            'key',
+            dict_attrs=f"({', '.join(GT_STATS_DICT_ATTRS)})",
+            output_field=NamedTupleField(list(GT_STATS_DICT_FIELDS.items())),
+        ),
         **ANNOTATION_VALUES,
     )
     results = results[:MAX_VARIANTS+1]
