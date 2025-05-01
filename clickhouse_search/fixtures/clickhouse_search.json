@@ -616,5 +616,649 @@
       "sorted_motif_feature_consequences": [],
       "sorted_regulatory_feature_consequences": []
     }
+}, {
+    "model": "clickhouse.transcriptssnvindel",
+    "pk": 1,
+    "fields": {
+      "key": 1,
+      "transcripts": []
+    }
+}, {
+    "model": "clickhouse.transcriptssnvindel",
+    "pk": 2,
+    "fields": {
+      "key": 2,
+      "transcripts": [
+        {
+          "alphamissense": {
+            "pathogenicity": 0.9977999925613403
+          },
+          "aminoAcids": "L/F",
+          "biotype": 39,
+          "canonical": 1,
+          "codons": "ttA/ttC",
+          "consequenceTerms": [
+            12
+          ],
+          "exon": {
+            "index": 2,
+            "total": 9
+          },
+          "geneId": "ENSG00000177000",
+          "hgvsc": "ENST00000383791.8:c.156A>C",
+          "hgvsp": "ENSP00000373301.3:p.Leu52Phe",
+          "intron": null,
+          "loftee": {
+            "is_lof_nagnag": null,
+            "lof_filter_ids": null
+          },
+          "majorConsequence": 12,
+          "manePlusClinical": null,
+          "maneSelect": "NM_004844.5",
+          "refseqTranscriptId": "NM_004844.5",
+          "spliceregion": {
+            "extended_intronic_splice_region_variant": false
+          },
+          "transcriptId": "ENST00000383791",
+          "transcriptRank": 0,
+          "utrannotator": {
+            "existing_inframe_oorfs": null,
+            "existing_outofframe_oorfs": null,
+            "existing_uorfs": null,
+            "fiveutr_consequence_id": null,
+            "fiveutr_annotation": null
+          }
+        },
+        {
+          "alphamissense": {
+            "pathogenicity": null
+          },
+          "aminoAcids": null,
+          "biotype": 39,
+          "canonical": null,
+          "codons": null,
+          "consequenceTerms": [
+            24
+          ],
+          "exon": {
+            "index": 2,
+            "total": 9
+          },
+          "geneId": "ENSG00000177000",
+          "hgvsc": "ENST00000408919.7:c.-384A>C",
+          "hgvsp": null,
+          "intron": null,
+          "loftee": {
+            "is_lof_nagnag": null,
+            "lof_filter_ids": null
+          },
+          "majorConsequence": 24,
+          "manePlusClinical": null,
+          "maneSelect": null,
+          "refseqTranscriptId": "NM_001018009.4",
+          "spliceregion": {
+            "extended_intronic_splice_region_variant": false
+          },
+          "transcriptId": "ENST00000408919",
+          "transcriptRank": 1,
+          "utrannotator": {
+            "existing_inframe_oorfs": 0,
+            "existing_outofframe_oorfs": 1,
+            "existing_uorfs": 10,
+            "fiveutr_consequence_id": 3,
+            "fiveutr_annotation": {
+              "type": null,
+              "KozakContext": "GCGATGC",
+              "KozakStrength": "Moderate",
+              "DistanceToCDS": null,
+              "CapDistanceToStart": null,
+              "DistanceToStop": null,
+              "Evidence": false,
+              "AltStop": "True",
+              "AltStopDistanceToCDS": 310,
+              "FrameWithCDS": "outOfFrame",
+              "StartDistanceToCDS": null,
+              "newSTOPDistanceToCDS": null,
+              "alt_type": null,
+              "alt_type_length": null,
+              "ref_StartDistanceToCDS": null,
+              "ref_type": null,
+              "ref_type_length": null
+            }
+          }
+        },
+        {
+          "alphamissense": {
+            "pathogenicity": null
+          },
+          "aminoAcids": null,
+          "biotype": 39,
+          "canonical": null,
+          "codons": null,
+          "consequenceTerms": [
+            24
+          ],
+          "exon": {
+            "index": 2,
+            "total": 11
+          },
+          "geneId": "ENSG00000177000",
+          "hgvsc": "ENST00000426925.5:c.-677A>C",
+          "hgvsp": null,
+          "intron": null,
+          "loftee": {
+            "is_lof_nagnag": null,
+            "lof_filter_ids": null
+          },
+          "majorConsequence": 24,
+          "manePlusClinical": null,
+          "maneSelect": null,
+          "refseqTranscriptId": null,
+          "spliceregion": {
+            "extended_intronic_splice_region_variant": false
+          },
+          "transcriptId": "ENST00000426925",
+          "transcriptRank": 2,
+          "utrannotator": {
+            "existing_inframe_oorfs": 0,
+            "existing_outofframe_oorfs": 1,
+            "existing_uorfs": 8,
+            "fiveutr_consequence_id": 3,
+            "fiveutr_annotation": {
+              "type": null,
+              "KozakContext": "TCAATGC",
+              "KozakStrength": "Weak",
+              "DistanceToCDS": null,
+              "CapDistanceToStart": null,
+              "DistanceToStop": null,
+              "Evidence": false,
+              "AltStop": "True",
+              "AltStopDistanceToCDS": 588,
+              "FrameWithCDS": "inFrame",
+              "StartDistanceToCDS": null,
+              "newSTOPDistanceToCDS": null,
+              "alt_type": null,
+              "alt_type_length": null,
+              "ref_StartDistanceToCDS": null,
+              "ref_type": null,
+              "ref_type_length": null
+            }
+          }
+        },
+        {
+          "alphamissense": {
+            "pathogenicity": 0.9977999925613403
+          },
+          "aminoAcids": "L/F",
+          "biotype": 36,
+          "canonical": null,
+          "codons": "ttA/ttC",
+          "consequenceTerms": [
+            12,
+            28
+          ],
+          "exon": {
+            "index": 2,
+            "total": 5
+          },
+          "geneId": "ENSG00000277258",
+          "hgvsc": "ENST00000450625.1:c.156A>C",
+          "hgvsp": "ENSP00000389484.1:p.Leu52Phe",
+          "intron": null,
+          "loftee": {
+            "is_lof_nagnag": null,
+            "lof_filter_ids": null
+          },
+          "majorConsequence": 12,
+          "manePlusClinical": null,
+          "maneSelect": null,
+          "refseqTranscriptId": null,
+          "spliceregion": {
+            "extended_intronic_splice_region_variant": false
+          },
+          "transcriptId": "ENST00000450625",
+          "transcriptRank": 3,
+          "utrannotator": {
+            "existing_inframe_oorfs": null,
+            "existing_outofframe_oorfs": null,
+            "existing_uorfs": null,
+            "fiveutr_consequence_id": null,
+            "fiveutr_annotation": null
+          }
+        },
+        {
+          "alphamissense": {
+            "pathogenicity": null
+          },
+          "aminoAcids": null,
+          "biotype": 36,
+          "canonical": null,
+          "codons": null,
+          "consequenceTerms": [
+            12
+          ],
+          "exon": null,
+          "geneId": "ENSG00000177000",
+          "hgvsc": "ENST00000412806.1:c.138+1722A>C",
+          "hgvsp": null,
+          "intron": {
+            "index": 1,
+            "total": 3
+          },
+          "loftee": {
+            "is_lof_nagnag": null,
+            "lof_filter_ids": null
+          },
+          "majorConsequence": 12,
+          "manePlusClinical": null,
+          "maneSelect": null,
+          "refseqTranscriptId": null,
+          "spliceregion": {
+            "extended_intronic_splice_region_variant": false
+          },
+          "transcriptId": "ENST00000412806",
+          "transcriptRank": 4,
+          "utrannotator": {
+            "existing_inframe_oorfs": null,
+            "existing_outofframe_oorfs": null,
+            "existing_uorfs": null,
+            "fiveutr_consequence_id": null,
+            "fiveutr_annotation": null
+          }
+        },
+        {
+          "alphamissense": {
+            "pathogenicity": null
+          },
+          "aminoAcids": null,
+          "biotype": 41,
+          "canonical": null,
+          "codons": null,
+          "consequenceTerms": [
+            26
+          ],
+          "exon": {
+            "index": 2,
+            "total": 3
+          },
+          "geneId": "ENSG00000177000",
+          "hgvsc": "ENST00000459627.1:n.298A>C",
+          "hgvsp": null,
+          "intron": null,
+          "loftee": {
+            "is_lof_nagnag": null,
+            "lof_filter_ids": null
+          },
+          "majorConsequence": 26,
+          "manePlusClinical": null,
+          "maneSelect": null,
+          "refseqTranscriptId": null,
+          "spliceregion": {
+            "extended_intronic_splice_region_variant": false
+          },
+          "transcriptId": "ENST00000459627",
+          "transcriptRank": 5,
+          "utrannotator": {
+            "existing_inframe_oorfs": null,
+            "existing_outofframe_oorfs": null,
+            "existing_uorfs": null,
+            "fiveutr_consequence_id": null,
+            "fiveutr_annotation": null
+          }
+        },
+        {
+          "alphamissense": {
+            "pathogenicity": null
+          },
+          "aminoAcids": null,
+          "biotype": 41,
+          "canonical": null,
+          "codons": null,
+          "consequenceTerms": [
+            26
+          ],
+          "exon": {
+            "index": 2,
+            "total": 5
+          },
+          "geneId": "ENSG00000177000",
+          "hgvsc": "ENST00000465894.6:n.33A>C",
+          "hgvsp": null,
+          "intron": null,
+          "loftee": {
+            "is_lof_nagnag": null,
+            "lof_filter_ids": null
+          },
+          "majorConsequence": 26,
+          "manePlusClinical": null,
+          "maneSelect": null,
+          "refseqTranscriptId": null,
+          "spliceregion": {
+            "extended_intronic_splice_region_variant": false
+          },
+          "transcriptId": "ENST00000465894",
+          "transcriptRank": 6,
+          "utrannotator": {
+            "existing_inframe_oorfs": null,
+            "existing_outofframe_oorfs": null,
+            "existing_uorfs": null,
+            "fiveutr_consequence_id": null,
+            "fiveutr_annotation": null
+          }
+        }
+      ]
+    }
+}, {
+    "model": "clickhouse.transcriptssnvindel",
+    "pk": 3,
+    "fields": {
+      "key": 3,
+      "transcripts": [
+        {
+          "alphamissense": {
+            "pathogenicity": null
+          },
+          "aminoAcids": null,
+          "biotype": 39,
+          "canonical": 1,
+          "codons": null,
+          "consequenceTerms": [
+            27
+          ],
+          "exon": null,
+          "geneId": "ENSG00000097046",
+          "hgvsc": "ENST00000234626.11:c.-63-251G>A",
+          "hgvsp": null,
+          "intron": {
+            "index": 1,
+            "total": 11
+          },
+          "loftee": {
+            "is_lof_nagnag": null,
+            "lof_filter_ids": null
+          },
+          "majorConsequence": 27,
+          "manePlusClinical": null,
+          "maneSelect": "NM_003503.4",
+          "refseqTranscriptId": "NM_003503.4",
+          "spliceregion": {
+            "extended_intronic_splice_region_variant": false
+          },
+          "transcriptId": "ENST00000234626",
+          "transcriptRank": 0,
+          "utrannotator": {
+            "existing_inframe_oorfs": null,
+            "existing_outofframe_oorfs": null,
+            "existing_uorfs": null,
+            "fiveutr_consequence_id": null,
+            "fiveutr_annotation": null
+          }
+        },
+        {
+          "alphamissense": {
+            "pathogenicity": null
+          },
+          "aminoAcids": null,
+          "biotype": 39,
+          "canonical": null,
+          "codons": null,
+          "consequenceTerms": [
+            27
+          ],
+          "exon": null,
+          "geneId": "ENSG00000177000",
+          "hgvsc": "ENST00000426137.1:c.-64+100G>A",
+          "hgvsp": null,
+          "intron": {
+            "index": 1,
+            "total": 5
+          },
+          "loftee": {
+            "is_lof_nagnag": null,
+            "lof_filter_ids": null
+          },
+          "majorConsequence": 27,
+          "manePlusClinical": null,
+          "maneSelect": null,
+          "refseqTranscriptId": null,
+          "spliceregion": {
+            "extended_intronic_splice_region_variant": false
+          },
+          "transcriptId": "ENST00000426137",
+          "transcriptRank": 1,
+          "utrannotator": {
+            "existing_inframe_oorfs": null,
+            "existing_outofframe_oorfs": null,
+            "existing_uorfs": null,
+            "fiveutr_consequence_id": null,
+            "fiveutr_annotation": null
+          }
+        },
+        {
+          "alphamissense": {
+            "pathogenicity": null
+          },
+          "aminoAcids": null,
+          "biotype": 39,
+          "canonical": null,
+          "codons": null,
+          "consequenceTerms": [
+            27
+          ],
+          "exon": null,
+          "geneId": "ENSG00000097046",
+          "hgvsc": "ENST00000428239.5:c.-64+100G>A",
+          "hgvsp": null,
+          "intron": {
+            "index": 1,
+            "total": 11
+          },
+          "loftee": {
+            "is_lof_nagnag": null,
+            "lof_filter_ids": null
+          },
+          "majorConsequence": 27,
+          "manePlusClinical": null,
+          "maneSelect": null,
+          "refseqTranscriptId": "NM_001134420.2",
+          "spliceregion": {
+            "extended_intronic_splice_region_variant": false
+          },
+          "transcriptId": "ENST00000428239",
+          "transcriptRank": 2,
+          "utrannotator": {
+            "existing_inframe_oorfs": null,
+            "existing_outofframe_oorfs": null,
+            "existing_uorfs": null,
+            "fiveutr_consequence_id": null,
+            "fiveutr_annotation": null
+          }
+        },
+        {
+          "alphamissense": {
+            "pathogenicity": null
+          },
+          "aminoAcids": null,
+          "biotype": 41,
+          "canonical": null,
+          "codons": null,
+          "consequenceTerms": [
+            26
+          ],
+          "exon": {
+            "index": 1,
+            "total": 4
+          },
+          "geneId": "ENSG00000097046",
+          "hgvsc": "ENST00000497611.1:n.244G>A",
+          "hgvsp": null,
+          "intron": null,
+          "loftee": {
+            "is_lof_nagnag": null,
+            "lof_filter_ids": null
+          },
+          "majorConsequence": 26,
+          "manePlusClinical": null,
+          "maneSelect": null,
+          "refseqTranscriptId": null,
+          "spliceregion": {
+            "extended_intronic_splice_region_variant": false
+          },
+          "transcriptId": "ENST00000497611",
+          "transcriptRank": 3,
+          "utrannotator": {
+            "existing_inframe_oorfs": null,
+            "existing_outofframe_oorfs": null,
+            "existing_uorfs": null,
+            "fiveutr_consequence_id": null,
+            "fiveutr_annotation": null
+          }
+        }
+      ]
+    }
+}, {
+    "model": "clickhouse.transcriptssnvindel",
+    "pk": 4,
+    "fields": {
+      "key": 4,
+      "transcripts": [
+        {
+          "alphamissense": {
+            "pathogenicity": null
+          },
+          "aminoAcids": null,
+          "biotype": 39,
+          "canonical": null,
+          "codons": null,
+          "consequenceTerms": [
+            2
+          ],
+          "exon": null,
+          "geneId": "ENSG00000097046",
+          "hgvsc": "ENST00000466716.5:c.-264+1G>A",
+          "hgvsp": null,
+          "intron": {
+            "index": 1,
+            "total": 3
+          },
+          "loftee": {
+            "is_lof_nagnag": null,
+            "lof_filter_ids": [
+              10
+            ]
+          },
+          "majorConsequence": 2,
+          "manePlusClinical": null,
+          "maneSelect": null,
+          "refseqTranscriptId": null,
+          "spliceregion": {
+            "extended_intronic_splice_region_variant": true
+          },
+          "transcriptId": "ENST00000466716",
+          "transcriptRank": 0,
+          "utrannotator": {
+            "existing_inframe_oorfs": null,
+            "existing_outofframe_oorfs": null,
+            "existing_uorfs": null,
+            "fiveutr_consequence_id": null,
+            "fiveutr_annotation": null
+          }
+        },
+        {
+          "alphamissense": {
+            "pathogenicity": null
+          },
+          "aminoAcids": null,
+          "biotype": 39,
+          "canonical": 1,
+          "codons": null,
+          "consequenceTerms": [
+            12
+          ],
+          "exon": null,
+          "geneId": "ENSG00000097046",
+          "hgvsc": "ENST00000350997.12:c.375+139G>A",
+          "hgvsp": null,
+          "intron": {
+            "index": 1,
+            "total": 11
+          },
+          "loftee": {
+            "is_lof_nagnag": null,
+            "lof_filter_ids": null
+          },
+          "majorConsequence": 12,
+          "manePlusClinical": null,
+          "maneSelect": "NM_013402.7",
+          "refseqTranscriptId": "NM_013402.7",
+          "spliceregion": {
+            "extended_intronic_splice_region_variant": false
+          },
+          "transcriptId": "ENST00000350997",
+          "transcriptRank": 1,
+          "utrannotator": {
+            "existing_inframe_oorfs": null,
+            "existing_outofframe_oorfs": null,
+            "existing_uorfs": null,
+            "fiveutr_consequence_id": null,
+            "fiveutr_annotation": null
+          }
+        },
+        {
+          "alphamissense": {
+            "pathogenicity": null
+          },
+          "aminoAcids": "T/I",
+          "biotype": 39,
+          "canonical": null,
+          "codons": "aCc/aTc",
+          "consequenceTerms": [
+            12
+          ],
+          "exon": {
+            "index": 1,
+            "total": 12
+          },
+          "geneId": "ENSG00000097046",
+          "hgvsc": "ENST00000257261.10:c.131C>T",
+          "hgvsp": "ENSP00000257261.6:p.Thr44Ile",
+          "intron": null,
+          "loftee": {
+            "is_lof_nagnag": null,
+            "lof_filter_ids": null
+          },
+          "majorConsequence": 12,
+          "manePlusClinical": null,
+          "maneSelect": null,
+          "refseqTranscriptId": "NM_001281501.1",
+          "spliceregion": {
+            "extended_intronic_splice_region_variant": false
+          },
+          "transcriptId": "ENST00000257261",
+          "transcriptRank": 2,
+          "utrannotator": {
+            "existing_inframe_oorfs": null,
+            "existing_outofframe_oorfs": null,
+            "existing_uorfs": null,
+            "fiveutr_consequence_id": null,
+            "fiveutr_annotation": null
+          }
+        }
+      ]
+    }
+}, {
+    "model": "clickhouse.transcriptssnvindel",
+    "pk": 5,
+    "fields": {
+      "key": 5,
+      "transcripts": []
+    }
+}, {
+    "model": "clickhouse.transcriptssnvindel",
+    "pk": 6,
+    "fields": {
+      "key": 6,
+      "transcripts": []
+    }
 }
 ]
