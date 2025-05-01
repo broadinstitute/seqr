@@ -100,7 +100,7 @@ CSP_STYLE_SRC = ('https://fonts.googleapis.com', "'self'") + IGV_CSS_HASHES
 CSP_STYLE_SRC_ELEM = ('https://fonts.googleapis.com', "'self'") + IGV_CSS_HASHES
 
 # django-debug-toolbar settings
-ENABLE_DJANGO_DEBUG_TOOLBAR = False
+ENABLE_DJANGO_DEBUG_TOOLBAR = True
 if ENABLE_DJANGO_DEBUG_TOOLBAR:
     MIDDLEWARE = ['debug_toolbar.middleware.DebugToolbarMiddleware'] + MIDDLEWARE
     INSTALLED_APPS = ['debug_toolbar'] + INSTALLED_APPS
