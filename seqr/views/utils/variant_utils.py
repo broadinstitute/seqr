@@ -266,7 +266,7 @@ def _saved_variant_genes_transcripts(variants):
         for var in variant:
             for gene_id, transcripts in var.get('transcripts', {}).items():
                 gene_ids.add(gene_id)
-                if backend_specific_call(lambda v: True, _requires_transcript_metadata)(variant):
+                if backend_specific_call(lambda v: True, _requires_transcript_metadata, _requires_transcript_metadata)(variant):
                     transcript_ids.update([t['transcriptId'] for t in transcripts if t.get('transcriptId')])
             for family_guid in var['familyGuids']:
                 family_genes[family_guid].update(var.get('transcripts', {}).keys())

@@ -3,7 +3,7 @@ from django.db.migrations import state
 from django.db.models import options, ForeignKey, OneToOneField, Func, CASCADE, PROTECT
 
 from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocksDB, Join
-from clickhouse_search.backend.fields import NestedField, UInt64FieldDeltaCodecField
+from clickhouse_search.backend.fields import NestedField, UInt64FieldDeltaCodecField, NamedTupleField
 from seqr.utils.xpos_utils import CHROMOSOMES
 from settings import CLICKHOUSE_IN_MEMORY_DIR, CLICKHOUSE_DATA_DIR
 
@@ -64,6 +64,14 @@ class Projection(Func):
 
 
 class EntriesSnvIndel(models.ClickhouseModel):
+    CALL_FIELDS = [
+        ('sampleId', models.StringField()),
+        ('gt', models.Enum8Field(null=True, blank=True, choices=[(0, 'REF'), (1, 'HET'), (2, 'HOM')])),
+        ('gq', models.UInt8Field(null=True, blank=True)),
+        ('ab', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('dp', models.UInt16Field(null=True, blank=True)),
+    ]
+
     # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
     key = ForeignKey('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
     project_guid = models.StringField(low_cardinality=True)
@@ -72,13 +80,7 @@ class EntriesSnvIndel(models.ClickhouseModel):
     xpos = UInt64FieldDeltaCodecField()
     is_gnomad_gt_5_percent = models.BoolField()
     filters = models.ArrayField(models.StringField(low_cardinality=True))
-    calls = models.ArrayField(models.TupleField([
-        ('sampleId', models.StringField()),
-        ('gt', models.Enum8Field(null=True, blank=True, choices=[(0, 'REF'), (1, 'HET'), (2, 'HOM')])),
-        ('gq', models.UInt8Field(null=True, blank=True)),
-        ('ab', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        ('dp', models.UInt16Field(null=True, blank=True)),
-    ]))
+    calls = models.ArrayField(models.TupleField(CALL_FIELDS))
     sign = models.Int8Field()
 
     class Meta:
@@ -96,7 +98,7 @@ class EntriesSnvIndel(models.ClickhouseModel):
 class BaseAnnotationsSnvIndel(models.ClickhouseModel):
     key = models.UInt32Field(primary_key=True)
     xpos = models.UInt64Field()
-    chrom = models.Enum8Field(choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES[:-1])])
+    chrom = models.Enum8Field(return_int=False, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES[:-1])])
     pos = models.UInt32Field()
     ref = models.StringField()
     alt = models.StringField()
@@ -105,29 +107,29 @@ class BaseAnnotationsSnvIndel(models.ClickhouseModel):
     caid = models.StringField(db_column='CAID', null=True, blank=True)
     lifted_over_chrom = models.StringField(db_column='liftedOverChrom', low_cardinality=True, null=True, blank=True)
     lifted_over_pos = models.StringField(db_column='liftedOverPos', null=True, blank=True)
-    hgmd = models.TupleField([
+    hgmd = NamedTupleField([
         ('accession', models.StringField(null=True, blank=True)),
-        ('class_', models.Enum8Field(null=True, blank=True, choices=[(0, 'DM'), (1, 'DM?'), (2, 'DP'), (3, 'DFP'), (4, 'FP'), (5, 'R')])),
+        ('class_', models.Enum8Field(null=True, blank=True, return_int=False, choices=[(0, 'DM'), (1, 'DM?'), (2, 'DP'), (3, 'DFP'), (4, 'FP'), (5, 'R')])),
     ])
-    screen_region_type = models.Enum8Field(db_column='screenRegionType', null=True, blank=True, choices=[(0, 'CTCF-bound'), (1, 'CTCF-only'), (2, 'DNase-H3K4me3'), (3, 'PLS'), (4, 'dELS'), (5, 'pELS'), (6, 'DNase-only'), (7, 'low-DNase')])
-    predictions = models.TupleField([
+    screen_region_type = models.Enum8Field(db_column='screenRegionType', null=True, blank=True, return_int=False, choices=[(0, 'CTCF-bound'), (1, 'CTCF-only'), (2, 'DNase-H3K4me3'), (3, 'PLS'), (4, 'dELS'), (5, 'pELS'), (6, 'DNase-only'), (7, 'low-DNase')])
+    predictions = NamedTupleField([
         ('cadd', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
         ('eigen', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
         ('fathmm', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
         ('gnomad_noncoding', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
         ('mpc', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
         ('mut_pred', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        ('mut_taster', models.Enum8Field(null=True, blank=True, choices=[(0, 'D'), (1, 'A'), (2, 'N'), (3, 'P')])),
+        ('mut_taster', models.Enum8Field(null=True, blank=True, return_int=False, choices=[(0, 'D'), (1, 'A'), (2, 'N'), (3, 'P')])),
         ('polyphen', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
         ('primate_ai', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
         ('revel', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
         ('sift', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
         ('splice_ai', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        ('splice_ai_consequence', models.Enum8Field(null=True, blank=True, choices=[(0, 'Acceptor gain'), (1, 'Acceptor loss'), (2, 'Donor gain'), (3, 'Donor loss'), (4, 'No consequence')])),
+        ('splice_ai_consequence', models.Enum8Field(null=True, blank=True, return_int=False, choices=[(0, 'Acceptor gain'), (1, 'Acceptor loss'), (2, 'Donor gain'), (3, 'Donor loss'), (4, 'No consequence')])),
         ('vest', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
     ])
-    populations = models.TupleField([
-        ('exac', models.TupleField([
+    populations = NamedTupleField([
+        ('exac', NamedTupleField([
             ('ac', models.UInt32Field()),
             ('af', models.DecimalField(max_digits=9, decimal_places=5)),
             ('an', models.UInt32Field()),
@@ -136,7 +138,7 @@ class BaseAnnotationsSnvIndel(models.ClickhouseModel):
             ('het', models.UInt32Field()),
             ('hom', models.UInt32Field()),
         ])),
-        ('gnomad_exomes', models.TupleField([
+        ('gnomad_exomes', NamedTupleField([
             ('ac', models.UInt32Field()),
             ('af', models.DecimalField(max_digits=9, decimal_places=5)),
             ('an', models.UInt32Field()),
@@ -144,7 +146,7 @@ class BaseAnnotationsSnvIndel(models.ClickhouseModel):
             ('hemi', models.UInt32Field()),
             ('hom', models.UInt32Field()),
         ])),
-        ('gnomad_genomes', models.TupleField([
+        ('gnomad_genomes', NamedTupleField([
             ('ac', models.UInt32Field()),
             ('af', models.DecimalField(max_digits=9, decimal_places=5)),
             ('an', models.UInt32Field()),
@@ -152,7 +154,7 @@ class BaseAnnotationsSnvIndel(models.ClickhouseModel):
             ('hemi', models.UInt32Field()),
             ('hom', models.UInt32Field()),
         ])),
-        ('topmed', models.TupleField([
+        ('topmed', NamedTupleField([
             ('ac', models.UInt32Field()),
             ('af', models.DecimalField(max_digits=9, decimal_places=5)),
             ('an', models.UInt32Field()),
