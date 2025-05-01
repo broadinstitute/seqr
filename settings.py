@@ -42,9 +42,11 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'guardian',
     'anymail',
+    'clickhouse_backend',
     'notifications',
     'seqr',
     'reference_data',
+    'clickhouse_search',
     'matchmaker',
     'social_django',
     'panelapp',
@@ -238,7 +240,20 @@ DATABASES = {
     'default': dict(NAME='seqrdb', **POSTGRES_DB_CONFIG),
     'reference_data': dict(NAME='reference_data_db', **POSTGRES_DB_CONFIG),
 }
-DATABASE_ROUTERS = ['reference_data.models.ReferenceDataRouter']
+DATABASE_ROUTERS = ['reference_data.models.ReferenceDataRouter', 'clickhouse_search.models.ClickHouseRouter']
+
+CLICKHOUSE_IN_MEMORY_DIR = os.environ.get('CLICKHOUSE_IN_MEMORY_DIR', '/in-memory-dir')
+CLICKHOUSE_DATA_DIR = os.getenv('CLICKHOUSE_DATA_DIR', '/bitnami/clickhouse')
+CLICKHOUSE_SERVICE_HOSTNAME =  os.environ.get('CLICKHOUSE_SERVICE_HOSTNAME')
+if CLICKHOUSE_SERVICE_HOSTNAME:
+    DATABASES['clickhouse'] = {
+        'ENGINE': 'clickhouse_search.backend',
+        'NAME': 'seqr',
+        'HOST': CLICKHOUSE_SERVICE_HOSTNAME,
+        'PORT': int(os.environ.get('CLICKHOUSE_SERVICE_PORT', '9000')),
+        'USER': os.environ.get('CLICKHOUSE_USER', 'clickhouse'),
+        'PASSWORD': os.environ.get('CLICKHOUSE_PASSWORD', 'clickhouse_test'),
+    }
 
 WSGI_APPLICATION = 'wsgi.application'
 
@@ -368,8 +383,8 @@ MME_DEFAULT_CONTACT_INSTITUTION = 'Broad Center for Mendelian Genomics'
 MME_DEFAULT_CONTACT_EMAIL = 'matchmaker@broadinstitute.org'
 MME_DEFAULT_CONTACT_HREF = 'mailto:{}'.format(MME_DEFAULT_CONTACT_EMAIL)
 
-VLM_DEFAULT_CONTACT_EMAIL = 'vlm@broadinstitute.org'
-VLM_SEND_EMAIL = 'vlm-noreply@broadinstitute.org'
+VLM_DEFAULT_CONTACT_EMAIL = os.environ.get('VLM_DEFAULT_CONTACT_EMAIL', 'vlm@broadinstitute.org')
+VLM_SEND_EMAIL = os.environ.get('VLM_SEND_EMAIL', 'vlm-noreply@broadinstitute.org')
 
 MME_CONFIG_DIR = os.environ.get('MME_CONFIG_DIR', '')
 MME_NODES = {}

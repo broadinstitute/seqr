@@ -70,15 +70,15 @@ class SvHailTableQuery(BaseHailTableQuery):
             ht = ht.annotate_globals(sample_type=sample_type)
         return ht
 
-    def import_filtered_table(self, *args, **kwargs):
-        if not self._is_interval_filtered:
-            return super().import_filtered_table(*args, **kwargs)
+    def import_filtered_table(self, project_samples, *args, **kwargs):
+        if len(project_samples) == 1 or not self._is_interval_filtered:
+            return super().import_filtered_table(project_samples, *args, **kwargs)
 
         ht = self._read_table('annotations.ht')
         ht = self._filter_annotated_table(ht, is_comp_het=self._has_comp_het_search, **kwargs)
 
         self._load_table_kwargs['variant_ht'] = ht.select()
-        families_ht, comp_het_families_ht = self._import_families_tables(*args, skip_missing_field='family_entries', **kwargs)
+        families_ht, comp_het_families_ht = self._import_families_tables(project_samples, *args, skip_missing_field='family_entries', **kwargs)
 
         if comp_het_families_ht is not None:
             self._comp_het_ht = self._annotate_families_table_annotations(comp_het_families_ht, ht, is_comp_het=True)

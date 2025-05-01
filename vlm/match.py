@@ -4,6 +4,7 @@ import os
 
 VLM_DATA_DIR = os.environ.get('VLM_DATA_DIR')
 SEQR_BASE_URL = os.environ.get('SEQR_BASE_URL')
+VLM_DEFAULT_CONTACT_EMAIL = os.environ.get('VLM_DEFAULT_CONTACT_EMAIL')
 NODE_ID = os.environ.get('NODE_ID')
 
 BEACON_HANDOVER_TYPE = {
@@ -43,15 +44,23 @@ def get_variant_match(query: dict) -> dict:
     liftover_locus = hl.liftover(locus, liftover_genome_build)
     lift_ac, lift_hom = _get_variant_counts(liftover_locus, ref, alt, liftover_genome_build)
 
-    if lift_ac and not ac:
+    url = _get_contact_url(
+        chrom, pos, ref, alt, genome_build, liftover_genome_build, liftover_locus if lift_ac and not ac else None,
+    )
+    return _format_results(ac+lift_ac, hom+lift_hom, url)
+
+
+def _get_contact_url(chrom: str, pos: int, ref: str, alt: str, genome_build: str, liftover_genome_build: str, liftover_locus: hl.LocusExpression) -> str:
+    if VLM_DEFAULT_CONTACT_EMAIL:
+        return f'mailto:{VLM_DEFAULT_CONTACT_EMAIL}'
+
+    if liftover_locus is not None:
         lifted = hl.eval(liftover_locus)
         chrom = lifted.contig
         pos = lifted.position
         genome_build = liftover_genome_build
     genome_build = genome_build.replace('GRCh', '')
-    url = f'{SEQR_BASE_URL}summary_data/variant_lookup?genomeVersion={genome_build}&variantId={chrom}-{pos}-{ref}-{alt}'
-
-    return _format_results(ac+lift_ac, hom+lift_hom, url)
+    return f'{SEQR_BASE_URL}summary_data/variant_lookup?genomeVersion={genome_build}&variantId={chrom}-{pos}-{ref}-{alt}'
 
 
 def _parse_match_query(query: dict) -> tuple[str, int, str, str, str]:
