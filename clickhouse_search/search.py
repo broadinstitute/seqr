@@ -66,9 +66,10 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
 
 
 def format_clickhouse_results(results, **kwargs):
-    transcripts_by_key = dict(TranscriptsSnvIndel.objects.filter(
-        key__in=[variant['key'] for variant in results if variant['sortedTranscriptConsequences']],
-    ).values_list('key', 'transcripts'))
+    keys_with_transcripts = [variant['key'] for variant in results if variant['sortedTranscriptConsequences']]
+    transcripts_by_key = dict(
+        TranscriptsSnvIndel.objects.filter(key__in=keys_with_transcripts).values_list('key', 'transcripts')
+    )
 
     formatted_results = []
     for variant in results:
@@ -78,6 +79,7 @@ def format_clickhouse_results(results, **kwargs):
             'transcripts': transcripts,
             'selectedMainTranscriptId': None,
         }
+        # pop sortedTranscriptConsequences from the formatted result and not the original result to ensure the full value is cached properly
         sorted_minimal_transcripts = formatted_variant.pop('sortedTranscriptConsequences')
         main_transcript_id = None
         if sorted_minimal_transcripts:
