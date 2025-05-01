@@ -3,7 +3,8 @@ from itertools import groupby
 
 class NestedField(models.TupleField):
 
-    def __init__(self, *args, flatten_groups=False, group_by_key=None, **kwargs):
+    def __init__(self, *args, null_when_empty=False, flatten_groups=False, group_by_key=None, **kwargs):
+        self.null_when_empty = null_when_empty
         self.flatten_groups = flatten_groups
         self.group_by_key = group_by_key
         super().__init__(*args, **kwargs)
@@ -25,8 +26,8 @@ class NestedField(models.TupleField):
         return self._from_db_value(*args, format_item=self._convert_type, **kwargs)
 
     def _from_db_value(self, value, expression, connection, format_item=None):
-        if value is None:
-            return value
+        if self.null_when_empty and not value:
+            return None
         value = [
             (format_item(item) if format_item else super(NestedField, self)._from_db_value(item, expression, connection))._asdict()
             for item in value

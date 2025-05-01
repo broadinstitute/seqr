@@ -173,12 +173,12 @@ class BaseAnnotationsSnvIndel(models.ClickhouseModel):
     sorted_motif_feature_consequences = NestedField([
         ('consequenceTerms', models.ArrayField(models.Enum8Field(null=True, blank=True, choices=[(0, 'TFBS_ablation'), (1, 'TFBS_amplification'), (2, 'TF_binding_site_variant'), (3, 'TFBS_fusion'), (4, 'TFBS_translocation')]))),
         ('motifFeatureId', models.StringField(null=True, blank=True)),
-    ], db_column='sortedMotifFeatureConsequences')
+    ], db_column='sortedMotifFeatureConsequences', null_when_empty=True)
     sorted_regulatory_feature_consequences = NestedField([
         ('biotype', models.Enum8Field(null=True, blank=True, choices=[(0, 'enhancer'), (1, 'promoter'), (2, 'CTCF_binding_site'), (3, 'TF_binding_site'), (4, 'open_chromatin_region')])),
         ('consequenceTerms', models.ArrayField(models.Enum8Field(null=True, blank=True, choices=[(0, 'regulatory_region_ablation'), (1, 'regulatory_region_amplification'), (2, 'regulatory_region_variant'), (3, 'regulatory_region_fusion')]))),
         ('regulatoryFeatureId', models.StringField(null=True, blank=True)),
-    ], db_column='sortedRegulatoryFeatureConsequences')
+    ], db_column='sortedRegulatoryFeatureConsequences', null_when_empty=True)
 
     class Meta:
         abstract = True
