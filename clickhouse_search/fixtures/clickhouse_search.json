@@ -1260,5 +1260,60 @@
       "key": 6,
       "transcripts": []
     }
+}, {
+    "model": "clickhouse.clinvar",
+    "pk": 1,
+    "fields": {
+      "key": 1,
+      "alleleId": 19473,
+      "conflictingPathogenicities": [],
+      "goldStars": null,
+      "submitters": [],
+      "conditions": [],
+      "assertions": [],
+      "pathogenicity": 4
+    }
+}, {
+    "model": "clickhouse.clinvar",
+    "pk": 2,
+    "fields": {
+      "key": 2,
+      "alleleId": 18560,
+      "conflictingPathogenicities": [
+        {
+          "count": 1,
+          "pathogenicity": 4
+        },
+        {
+          "count": 1,
+          "pathogenicity": 11
+        },
+        {
+          "count": 1,
+          "pathogenicity": 13
+        },
+        {
+          "count": 5,
+          "pathogenicity": 15
+        }
+      ],
+      "goldStars": 1,
+      "submitters": [
+        "Broad Center for Mendelian Genomics, Broad Institute of MIT and Harvard",
+        "Illumina Laboratory Services, Illumina",
+        "Blueprint Genetics",
+        "GenomeConnect, ClinGen"
+      ],
+      "conditions": [
+        "ABCA4-Related Disorders",
+        "Severe early-childhood-onset retinal dystrophy",
+        "not specified",
+        "not provided"
+      ],
+      "assertions": [
+        7
+      ],
+      "pathogenicity": 8
+    }
 }
 ]
