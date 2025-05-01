@@ -47,4 +47,4 @@ class NamedTupleField(models.TupleField):
 
     def _convert_type(self, value):
         value = super()._convert_type(value)
-        return value._asdict() if value is not None else value
+        return value._asdict() if value else None
