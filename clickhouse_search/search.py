@@ -1,7 +1,7 @@
 from clickhouse_backend import models
 from collections import OrderedDict
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.db.models import F, Value
+from django.db.models import F, Q, Value
 from django.db.models.functions import JSONObject
 
 from clickhouse_search.backend.fields import NestedField, NamedTupleField
@@ -23,14 +23,14 @@ GT_STATS_DICT_FIELDS = OrderedDict({
     'hom': models.UInt32Field(),
 })
 GT_STATS_DICT_ATTRS = [f"'{field}'" for field in GT_STATS_DICT_FIELDS.keys()]
+SEQR_POPULATION_KEY = 'seqrPop'
 
 ANNOTATION_VALUES = {
     field.db_column or field.name: F(f'key__{field.name}') for field in AnnotationsSnvIndel._meta.local_fields
     if field.name not in CORE_ENTRIES_FIELDS
 }
 ANNOTATION_VALUES['populations'] = TupleConcat(
-    'key__populations',
-    Tuple(GtStatsDictGet('key', dict_attrs=f"({', '.join(GT_STATS_DICT_ATTRS)})")),
+    'key__populations', Tuple(SEQR_POPULATION_KEY),
     output_field=NamedTupleField([
         *AnnotationsSnvIndel.POPULATION_FIELDS,
         ('seqr', NamedTupleField(list(GT_STATS_DICT_FIELDS.items()))),
@@ -58,7 +58,9 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
     logger.info(f'Loading {Sample.DATASET_TYPE_VARIANT_CALLS} data for {len(sample_data)} families', user)
 
     entries = _get_filtered_entries(sample_data, **search)
-    results = entries.values(
+    results = entries.annotate(**{
+        SEQR_POPULATION_KEY: GtStatsDictGet('key', dict_attrs=f"({', '.join(GT_STATS_DICT_ATTRS)})")
+    }).values(
         *CORE_ENTRIES_FIELDS,
         familyGuids=Array('family_guid'),
         genotypes=ArrayMap(
@@ -134,6 +136,10 @@ def _get_filtered_entries(sample_data, **kwargs):
         project_guid=sample_data[0]['project_guid'],
         family_guid=sample_data[0]['family_guid'],
     )
+
+
+def _get_annotation_filter(**kwargs):
+    return Q()
 
 
 def _liftover_genome_version(genome_version):
