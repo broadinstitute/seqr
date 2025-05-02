@@ -46,6 +46,12 @@ class UInt64FieldDeltaCodecField(models.UInt64Field):
 
 class NamedTupleField(models.TupleField):
 
+    def __init__(self, *args, null_if_empty=False, **kwargs):
+        self.null_if_empty = null_if_empty
+        super().__init__(*args, **kwargs)
+
     def _convert_type(self, value):
         value = super()._convert_type(value)
-        return value._asdict() if value else None
+        if self.null_if_empty and not any(value):
+            return None
+        return value._asdict()
