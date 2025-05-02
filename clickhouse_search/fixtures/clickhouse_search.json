@@ -1315,5 +1315,312 @@
       ],
       "pathogenicity": 8
     }
+}, {
+    "model": "clickhouse.entriessnvindel",
+    "pk": 1,
+    "fields": {
+      "key": 1,
+      "project_guid": "R0001_1kg",
+      "family_guid": "F000002_2",
+      "sample_type": "WES",
+      "xpos": 1000010439,
+      "is_gnomad_gt_5_percent": false,
+      "filters": [],
+      "sign": 1,
+      "calls": [
+        {
+          "sampleId": "HG00733",
+          "gt": 0,
+          "gq": 20,
+          "ab": 0,
+          "dp": 60
+        },
+        {
+          "sampleId": "HG00732",
+          "gt": 0,
+          "gq": 0,
+          "ab": 0,
+          "dp": 24
+        },
+        {
+          "sampleId": "HG00731",
+          "gt": 1,
+          "gq": 99,
+          "ab": 0.5,
+          "dp": 10
+        }
+      ]
+    }
+}, {
+    "model": "clickhouse.entriessnvindel",
+    "pk": 2,
+    "fields": {
+      "key": 2,
+      "project_guid": "R0001_1kg",
+      "family_guid": "F000002_2",
+      "sample_type": "WES",
+      "xpos": 1038724419,
+      "is_gnomad_gt_5_percent": false,
+      "filters": [],
+      "sign": 1,
+      "calls": [
+        {
+          "sampleId": "HG00733",
+          "gt": 0,
+          "gq": 40,
+          "ab": 0,
+          "dp": 33
+        },
+        {
+          "sampleId": "HG00732",
+          "gt": 1,
+          "gq": 99,
+          "ab": 0.625,
+          "dp": 32
+        },
+        {
+          "sampleId": "HG00731",
+          "gt": 2,
+          "gq": 99,
+          "ab": 1,
+          "dp": 36
+        }
+      ]
+    }
+}, {
+    "model": "clickhouse.entriessnvindel",
+    "pk": 3,
+    "fields": {
+      "key": 3,
+      "project_guid": "R0001_1kg",
+      "family_guid": "F000002_2",
+      "sample_type": "WES",
+      "xpos": 1091502721,
+      "is_gnomad_gt_5_percent": true,
+      "filters": [],
+      "sign": 1,
+      "calls": [
+        {
+          "sampleId": "HG00733",
+          "gt": 1,
+          "gq": 99,
+          "ab": 0.4074074074074074,
+          "dp": 27
+        },
+        {
+          "sampleId": "HG00732",
+          "gt": 0,
+          "gq": 99,
+          "ab": 0.4594594594594595,
+          "dp": 37
+        },
+        {
+          "sampleId": "HG00731",
+          "gt": 1,
+          "gq": 99,
+          "ab": 1,
+          "dp": 40
+        }
+      ]
+    }
+}, {
+    "model": "clickhouse.entriessnvindel",
+    "pk": 4,
+    "fields": {
+      "key": 4,
+      "project_guid": "R0001_1kg",
+      "family_guid": "F000002_2",
+      "sample_type": "WES",
+      "xpos": 1091511686,
+      "is_gnomad_gt_5_percent": false,
+      "filters": [
+        "VQSRTrancheSNP99.95to100.00"
+      ],
+      "sign": 1,
+      "calls": [
+        {
+          "sampleId": "HG00733",
+          "gt": 0,
+          "gq": 0,
+          "ab": 0,
+          "dp": 45
+        },
+        {
+          "sampleId": "HG00732",
+          "gt": 0,
+          "gq": 0,
+          "ab": 0,
+          "dp": 24
+        },
+        {
+          "sampleId": "HG00731",
+          "gt": 1,
+          "gq": 58,
+          "ab": 0.1724137931034483,
+          "dp": 29
+        }
+      ]
+    }
+}, {
+    "model": "clickhouse.entriessnvindel",
+    "pk": 5,
+    "fields": {
+      "key": 3,
+      "project_guid": "R0001_1kg",
+      "family_guid": "F000003_3",
+      "sample_type": "WES",
+      "xpos": 1091502721,
+      "is_gnomad_gt_5_percent": true,
+      "filters": [],
+      "sign": 1,
+      "calls": [
+        {
+          "sampleId": "NA20872",
+          "gt": 1,
+          "gq": 99,
+          "ab": 0.34285714285714286,
+          "dp": 35
+        },
+        {
+          "sampleId": "NA20870",
+          "gt": 1,
+          "gq": 99,
+          "ab": 0.6785714285714286,
+          "dp": 28
+        }
+      ]
+    }
+}, {
+    "model": "clickhouse.entriessnvindel",
+    "pk": 6,
+    "fields": {
+      "key": 1,
+      "project_guid": "R0003_test",
+      "family_guid": "F000011_11",
+      "sample_type": "WES",
+      "xpos": 1000010439,
+      "is_gnomad_gt_5_percent": false,
+      "filters": [],
+      "sign": 1,
+      "calls": [
+        {
+          "sampleId": "NA20885",
+          "gt": 2,
+          "gq": 16,
+          "ab": 1,
+          "dp": 6
+        }
+      ]
+    }
+}, {
+    "model": "clickhouse.entriessnvindel",
+    "pk": 7,
+    "fields": {
+      "key": 2,
+      "project_guid": "R0003_test",
+      "family_guid": "F000011_11",
+      "sample_type": "WES",
+      "xpos": 1038724419,
+      "is_gnomad_gt_5_percent": false,
+      "filters": [],
+      "sign": 1,
+      "calls": [
+        {
+          "sampleId": "NA20885",
+          "gt": 1,
+          "gq": 99,
+          "ab": 0.5,
+          "dp": 28
+        }
+      ]
+    }
+}, {
+    "model": "clickhouse.entriessnvindel",
+    "pk": 8,
+    "fields": {
+      "key": 5,
+      "project_guid": "R0003_test",
+      "family_guid": "F000011_11",
+      "sample_type": "WES",
+      "xpos": 1000010146,
+      "is_gnomad_gt_5_percent": false,
+      "filters": [],
+      "sign": 1,
+      "calls": [
+        {
+          "sampleId": "NA20885",
+          "gt": 1,
+          "gq": 14,
+          "ab": 0.875,
+          "dp": 8
+        }
+      ]
+    }
+}, {
+    "model": "clickhouse.entriessnvindel",
+    "pk": 9,
+    "fields": {
+      "key": 1,
+      "project_guid": "R0003_test",
+      "family_guid": "F000011_11",
+      "sample_type": "WGS",
+      "xpos": 1000010439,
+      "is_gnomad_gt_5_percent": false,
+      "filters": [],
+      "sign": 1,
+      "calls": [
+        {
+          "sampleId": "NA20885",
+          "gt": 2,
+          "gq": 16,
+          "ab": 1,
+          "dp": 6
+        }
+      ]
+    }
+}, {
+    "model": "clickhouse.entriessnvindel",
+    "pk": 10,
+    "fields": {
+      "key": 2,
+      "project_guid": "R0003_test",
+      "family_guid": "F000011_11",
+      "sample_type": "WGS",
+      "xpos": 1038724419,
+      "is_gnomad_gt_5_percent": false,
+      "filters": [],
+      "sign": 1,
+      "calls": [
+        {
+          "sampleId": "NA20885",
+          "gt": 1,
+          "gq": 99,
+          "ab": 0.5,
+          "dp": 28
+        }
+      ]
+    }
+}, {
+    "model": "clickhouse.entriessnvindel",
+    "pk": 11,
+    "fields": {
+      "key": 5,
+      "project_guid": "R0003_test",
+      "family_guid": "F000011_11",
+      "sample_type": "WGS",
+      "xpos": 1000010146,
+      "is_gnomad_gt_5_percent": false,
+      "filters": [],
+      "sign": 1,
+      "calls": [
+        {
+          "sampleId": "NA20885",
+          "gt": 1,
+          "gq": 14,
+          "ab": 0.875,
+          "dp": 8
+        }
+      ]
+    }
 }
 ]

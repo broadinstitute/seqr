@@ -78,7 +78,7 @@ class EntriesSnvIndel(models.ClickhouseModel):
     family_guid = models.StringField()
     sample_type = models.Enum8Field(choices=[(1, 'WES'), (2, 'WGS')])
     xpos = UInt64FieldDeltaCodecField()
-    is_gnomad_gt_5_percent = models.BoolField()
+    is_gnomad_gt_5_percent = models.BoolField()  # TODO
     filters = models.ArrayField(models.StringField(low_cardinality=True))
     calls = models.ArrayField(models.TupleField(CALL_FIELDS))
     sign = models.Int8Field()
