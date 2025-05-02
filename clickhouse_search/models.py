@@ -96,39 +96,7 @@ class EntriesSnvIndel(models.ClickhouseModel):
 
 
 class BaseAnnotationsSnvIndel(models.ClickhouseModel):
-    key = models.UInt32Field(primary_key=True)
-    xpos = models.UInt64Field()
-    chrom = models.Enum8Field(return_int=False, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES[:-1])])
-    pos = models.UInt32Field()
-    ref = models.StringField()
-    alt = models.StringField()
-    variant_id = models.StringField(db_column='variantId')
-    rsid = models.StringField(null=True, blank=True)
-    caid = models.StringField(db_column='CAID', null=True, blank=True)
-    lifted_over_chrom = models.StringField(db_column='liftedOverChrom', low_cardinality=True, null=True, blank=True)
-    lifted_over_pos = models.StringField(db_column='liftedOverPos', null=True, blank=True)
-    hgmd = NamedTupleField([
-        ('accession', models.StringField(null=True, blank=True)),
-        ('class_', models.Enum8Field(null=True, blank=True, return_int=False, choices=[(0, 'DM'), (1, 'DM?'), (2, 'DP'), (3, 'DFP'), (4, 'FP'), (5, 'R')])),
-    ])
-    screen_region_type = models.Enum8Field(db_column='screenRegionType', null=True, blank=True, return_int=False, choices=[(0, 'CTCF-bound'), (1, 'CTCF-only'), (2, 'DNase-H3K4me3'), (3, 'PLS'), (4, 'dELS'), (5, 'pELS'), (6, 'DNase-only'), (7, 'low-DNase')])
-    predictions = NamedTupleField([
-        ('cadd', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        ('eigen', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        ('fathmm', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        ('gnomad_noncoding', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        ('mpc', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        ('mut_pred', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        ('mut_taster', models.Enum8Field(null=True, blank=True, return_int=False, choices=[(0, 'D'), (1, 'A'), (2, 'N'), (3, 'P')])),
-        ('polyphen', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        ('primate_ai', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        ('revel', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        ('sift', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        ('splice_ai', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        ('splice_ai_consequence', models.Enum8Field(null=True, blank=True, return_int=False, choices=[(0, 'Acceptor gain'), (1, 'Acceptor loss'), (2, 'Donor gain'), (3, 'Donor loss'), (4, 'No consequence')])),
-        ('vest', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-    ])
-    populations = NamedTupleField([
+    POPULATION_FIELDS = [
         ('exac', NamedTupleField([
             ('ac', models.UInt32Field()),
             ('af', models.DecimalField(max_digits=9, decimal_places=5)),
@@ -161,22 +129,56 @@ class BaseAnnotationsSnvIndel(models.ClickhouseModel):
             ('het', models.UInt32Field()),
             ('hom', models.UInt32Field()),
         ])),
+    ]
+
+    key = models.UInt32Field(primary_key=True)
+    xpos = models.UInt64Field()
+    chrom = models.Enum8Field(return_int=False, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES[:-1])])
+    pos = models.UInt32Field()
+    ref = models.StringField()
+    alt = models.StringField()
+    variant_id = models.StringField(db_column='variantId')
+    rsid = models.StringField(null=True, blank=True)
+    caid = models.StringField(db_column='CAID', null=True, blank=True)
+    lifted_over_chrom = models.StringField(db_column='liftedOverChrom', low_cardinality=True, null=True, blank=True)
+    lifted_over_pos = models.StringField(db_column='liftedOverPos', null=True, blank=True)
+    hgmd = NamedTupleField([
+        ('accession', models.StringField(null=True, blank=True)),
+        ('class_', models.Enum8Field(null=True, blank=True, return_int=False, choices=[(0, 'DM'), (1, 'DM?'), (2, 'DP'), (3, 'DFP'), (4, 'FP'), (5, 'R')])),
     ])
+    screen_region_type = models.Enum8Field(db_column='screenRegionType', null=True, blank=True, return_int=False, choices=[(0, 'CTCF-bound'), (1, 'CTCF-only'), (2, 'DNase-H3K4me3'), (3, 'PLS'), (4, 'dELS'), (5, 'pELS'), (6, 'DNase-only'), (7, 'low-DNase')])
+    predictions = NamedTupleField([
+        ('cadd', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('eigen', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('fathmm', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('gnomad_noncoding', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('mpc', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('mut_pred', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('mut_taster', models.Enum8Field(null=True, blank=True, return_int=False, choices=[(0, 'D'), (1, 'A'), (2, 'N'), (3, 'P')])),
+        ('polyphen', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('primate_ai', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('revel', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('sift', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('splice_ai', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('splice_ai_consequence', models.Enum8Field(null=True, blank=True, return_int=False, choices=[(0, 'Acceptor gain'), (1, 'Acceptor loss'), (2, 'Donor gain'), (3, 'Donor loss'), (4, 'No consequence')])),
+        ('vest', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+    ])
+    populations = NamedTupleField(POPULATION_FIELDS)
     sorted_transcript_consequences = NestedField([
         ('alphamissensePathogenicity', models.DecimalField(null=True, blank=True, max_digits=9, decimal_places=5)),
         ('canonical', models.UInt8Field(null=True, blank=True)),
-        ('consequenceTerms', models.ArrayField(models.Enum8Field(null=True, blank=True, choices=[(1, 'transcript_ablation'), (2, 'splice_acceptor_variant'), (3, 'splice_donor_variant'), (4, 'stop_gained'), (5, 'frameshift_variant'), (6, 'stop_lost'), (7, 'start_lost'), (8, 'inframe_insertion'), (9, 'inframe_deletion'), (10, 'missense_variant'), (11, 'protein_altering_variant'), (12, 'splice_donor_5th_base_variant'), (13, 'splice_region_variant'), (14, 'splice_donor_region_variant'), (15, 'splice_polypyrimidine_tract_variant'), (16, 'incomplete_terminal_codon_variant'), (17, 'start_retained_variant'), (18, 'stop_retained_variant'), (19, 'synonymous_variant'), (20, 'coding_sequence_variant'), (21, 'mature_miRNA_variant'), (22, '5_prime_UTR_variant'), (23, '3_prime_UTR_variant'), (24, 'non_coding_transcript_exon_variant'), (25, 'intron_variant'), (26, 'NMD_transcript_variant'), (27, 'non_coding_transcript_variant'), (28, 'coding_transcript_variant'), (29, 'upstream_gene_variant'), (30, 'downstream_gene_variant'), (31, 'intergenic_variant'), (32, 'sequence_variant')]))),
+        ('consequenceTerms', models.ArrayField(models.Enum8Field(null=True, blank=True, return_int=False, choices=[(1, 'transcript_ablation'), (2, 'splice_acceptor_variant'), (3, 'splice_donor_variant'), (4, 'stop_gained'), (5, 'frameshift_variant'), (6, 'stop_lost'), (7, 'start_lost'), (8, 'inframe_insertion'), (9, 'inframe_deletion'), (10, 'missense_variant'), (11, 'protein_altering_variant'), (12, 'splice_donor_5th_base_variant'), (13, 'splice_region_variant'), (14, 'splice_donor_region_variant'), (15, 'splice_polypyrimidine_tract_variant'), (16, 'incomplete_terminal_codon_variant'), (17, 'start_retained_variant'), (18, 'stop_retained_variant'), (19, 'synonymous_variant'), (20, 'coding_sequence_variant'), (21, 'mature_miRNA_variant'), (22, '5_prime_UTR_variant'), (23, '3_prime_UTR_variant'), (24, 'non_coding_transcript_exon_variant'), (25, 'intron_variant'), (26, 'NMD_transcript_variant'), (27, 'non_coding_transcript_variant'), (28, 'coding_transcript_variant'), (29, 'upstream_gene_variant'), (30, 'downstream_gene_variant'), (31, 'intergenic_variant'), (32, 'sequence_variant')]))),
         ('extendedIntronicSpliceRegionVariant', models.BoolField(null=True, blank=True)),
-        ('fiveutrConsequence', models.Enum8Field(null=True, blank=True, choices=[(1, '5_prime_UTR_premature_start_codon_gain_variant'), (2, '5_prime_UTR_premature_start_codon_loss_variant'), (3, '5_prime_UTR_stop_codon_gain_variant'), (4, '5_prime_UTR_stop_codon_loss_variant'), (5, '5_prime_UTR_uORF_frameshift_variant')])),
+        ('fiveutrConsequence', models.Enum8Field(null=True, blank=True, return_int=False, choices=[(1, '5_prime_UTR_premature_start_codon_gain_variant'), (2, '5_prime_UTR_premature_start_codon_loss_variant'), (3, '5_prime_UTR_stop_codon_gain_variant'), (4, '5_prime_UTR_stop_codon_loss_variant'), (5, '5_prime_UTR_uORF_frameshift_variant')])),
         ('geneId', models.StringField(null=True, blank=True)),
     ], db_column='sortedTranscriptConsequences')
     sorted_motif_feature_consequences = NestedField([
-        ('consequenceTerms', models.ArrayField(models.Enum8Field(null=True, blank=True, choices=[(0, 'TFBS_ablation'), (1, 'TFBS_amplification'), (2, 'TF_binding_site_variant'), (3, 'TFBS_fusion'), (4, 'TFBS_translocation')]))),
+        ('consequenceTerms', models.ArrayField(models.Enum8Field(null=True, blank=True, return_int=False, choices=[(0, 'TFBS_ablation'), (1, 'TFBS_amplification'), (2, 'TF_binding_site_variant'), (3, 'TFBS_fusion'), (4, 'TFBS_translocation')]))),
         ('motifFeatureId', models.StringField(null=True, blank=True)),
     ], db_column='sortedMotifFeatureConsequences', null_when_empty=True)
     sorted_regulatory_feature_consequences = NestedField([
-        ('biotype', models.Enum8Field(null=True, blank=True, choices=[(0, 'enhancer'), (1, 'promoter'), (2, 'CTCF_binding_site'), (3, 'TF_binding_site'), (4, 'open_chromatin_region')])),
-        ('consequenceTerms', models.ArrayField(models.Enum8Field(null=True, blank=True, choices=[(0, 'regulatory_region_ablation'), (1, 'regulatory_region_amplification'), (2, 'regulatory_region_variant'), (3, 'regulatory_region_fusion')]))),
+        ('biotype', models.Enum8Field(null=True, blank=True, return_int=False, choices=[(0, 'enhancer'), (1, 'promoter'), (2, 'CTCF_binding_site'), (3, 'TF_binding_site'), (4, 'open_chromatin_region')])),
+        ('consequenceTerms', models.ArrayField(models.Enum8Field(null=True, blank=True, return_int=False, choices=[(0, 'regulatory_region_ablation'), (1, 'regulatory_region_amplification'), (2, 'regulatory_region_variant'), (3, 'regulatory_region_fusion')]))),
         ('regulatoryFeatureId', models.StringField(null=True, blank=True)),
     ], db_column='sortedRegulatoryFeatureConsequences', null_when_empty=True)
 

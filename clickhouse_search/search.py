@@ -4,9 +4,9 @@ from django.contrib.postgres.aggregates import ArrayAgg
 from django.db.models import F, Value
 from django.db.models.functions import JSONObject
 
-from clickhouse_search.backend.fields import NestedField
-from clickhouse_search.backend.functions import Array, ArrayMap
-from clickhouse_search.models import EntriesSnvIndel, AnnotationsSnvIndel, TranscriptsSnvIndel
+from clickhouse_search.backend.fields import NestedField, NamedTupleField
+from clickhouse_search.backend.functions import Array, ArrayMap, GtStatsDictGet, Tuple, TupleConcat
+from clickhouse_search.models import EntriesSnvIndel, AnnotationsSnvIndel, TranscriptsSnvIndel, Clinvar
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample
 from seqr.utils.logging_utils import SeqrLogger
@@ -16,10 +16,31 @@ from settings import CLICKHOUSE_SERVICE_HOSTNAME
 logger = SeqrLogger(__name__)
 
 CORE_ENTRIES_FIELDS = ['key', 'xpos']
+
+GT_STATS_DICT_FIELDS = OrderedDict({
+    'ac': models.UInt32Field(),
+    'an': models.UInt32Field(),
+    'hom': models.UInt32Field(),
+})
+GT_STATS_DICT_ATTRS = [f"'{field}'" for field in GT_STATS_DICT_FIELDS.keys()]
+SEQR_POPULATION_KEY = 'seqrPop'
+
 ANNOTATION_VALUES = {
     field.db_column or field.name: F(f'key__{field.name}') for field in AnnotationsSnvIndel._meta.local_fields
     if field.name not in CORE_ENTRIES_FIELDS
 }
+ANNOTATION_VALUES['populations'] = TupleConcat(
+    ANNOTATION_VALUES['populations'], Tuple(SEQR_POPULATION_KEY),
+    output_field=NamedTupleField([
+        *AnnotationsSnvIndel.POPULATION_FIELDS,
+        ('seqr', NamedTupleField(list(GT_STATS_DICT_FIELDS.items()))),
+    ]),
+)
+
+CLINVAR_FIELDS = OrderedDict({
+    f'key__clinvar__{field.name}': (field.db_column or field.name, field.clone())
+    for field in Clinvar._meta.local_fields if field.name not in CORE_ENTRIES_FIELDS
+})
 
 GENOTYPE_FIELDS = OrderedDict({
     'project_guid': ('projectGuid', models.StringField()),
@@ -42,7 +63,9 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
     logger.info(f'Loading {Sample.DATASET_TYPE_VARIANT_CALLS} data for {len(sample_data)} families', user)
 
     entries = _get_filtered_entries(sample_data, **search)
-    results = entries.values(
+    results = entries.annotate(**{
+        SEQR_POPULATION_KEY: GtStatsDictGet('key', dict_attrs=f"({', '.join(GT_STATS_DICT_ATTRS)})")
+    }).values(
         *CORE_ENTRIES_FIELDS,
         familyGuids=Array('family_guid'),
         genotypes=ArrayMap(
@@ -50,6 +73,7 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
             mapped_expression=f"tuple({_get_sample_map_expression(sample_data)}[x.sampleId], {', '.join(GENOTYPE_FIELDS.keys())})",
             output_field=NestedField([('individualGuid', models.StringField()), *GENOTYPE_FIELDS.values()], group_by_key='individualGuid', flatten_groups=True)
         ),
+        clinvar=Tuple(*CLINVAR_FIELDS.keys(), output_field=NamedTupleField(list(CLINVAR_FIELDS.values()), null_if_empty=True)),
         genomeVersion=Value(genome_version),
         liftedOverGenomeVersion=Value(_liftover_genome_version(genome_version)),
         **ANNOTATION_VALUES,
