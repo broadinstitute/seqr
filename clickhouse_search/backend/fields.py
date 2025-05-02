@@ -1,8 +1,11 @@
 from clickhouse_backend import models
+from itertools import groupby
 
 class NestedField(models.TupleField):
 
-    def __init__(self, *args, group_by_key=None, **kwargs):
+    def __init__(self, *args, null_when_empty=False, flatten_groups=False, group_by_key=None, **kwargs):
+        self.null_when_empty = null_when_empty
+        self.flatten_groups = flatten_groups
         self.group_by_key = group_by_key
         super().__init__(*args, **kwargs)
 
@@ -20,14 +23,18 @@ class NestedField(models.TupleField):
         return super().cast_db_type(connection).replace('Tuple', 'Nested', 1)
 
     def from_db_value(self, *args, **kwargs):
-        return self._from_db_value(*args, **kwargs)
+        return self._from_db_value(*args, format_item=self._convert_type, **kwargs)
 
-    def _from_db_value(self, value, expression, connection):
-        if value is None:
-            return value
-        value = [self._convert_type(item)._asdict() for item in value]
+    def _from_db_value(self, value, expression, connection, format_item=None):
+        if self.null_when_empty and not value:
+            return None
+        value = [
+            (format_item(item) if format_item else super(NestedField, self)._from_db_value(item, expression, connection))._asdict()
+            for item in value
+        ]
         if self.group_by_key:
-            value = {item[self.group_by_key]: item for item in value}
+            group_agg = next if self.flatten_groups else list
+            value = {k: group_agg(v) for k, v in groupby(value, lambda x: x[self.group_by_key])}
         return value
 
 

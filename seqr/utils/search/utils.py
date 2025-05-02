@@ -2,7 +2,7 @@ from collections import defaultdict
 from copy import deepcopy
 from datetime import timedelta
 
-from clickhouse_search.search import clickhouse_backend_enabled, get_clickhouse_variants
+from clickhouse_search.search import clickhouse_backend_enabled, get_clickhouse_variants, format_clickhouse_results
 from reference_data.models import GENOME_VERSION_LOOKUP, GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample, Individual, Project
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
@@ -221,7 +221,10 @@ def query_variants(search_model, sort=XPOS_SORT_KEY, skip_genotype_filter=False,
 
     loaded_results = previous_search_results.get('all_results') or []
     if len(loaded_results) >= end_index:
-        return loaded_results[start_index:end_index], total_results
+        results_page = backend_specific_call(
+            lambda results: results, lambda results: results, format_clickhouse_results,
+        )(loaded_results[start_index:end_index])
+        return results_page, total_results
 
     previously_loaded_results = backend_specific_call(
         process_es_previously_loaded_results,
