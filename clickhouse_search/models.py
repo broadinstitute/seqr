@@ -96,39 +96,7 @@ class EntriesSnvIndel(models.ClickhouseModel):
 
 
 class BaseAnnotationsSnvIndel(models.ClickhouseModel):
-    key = models.UInt32Field(primary_key=True)
-    xpos = models.UInt64Field()
-    chrom = models.Enum8Field(return_int=False, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES[:-1])])
-    pos = models.UInt32Field()
-    ref = models.StringField()
-    alt = models.StringField()
-    variant_id = models.StringField(db_column='variantId')
-    rsid = models.StringField(null=True, blank=True)
-    caid = models.StringField(db_column='CAID', null=True, blank=True)
-    lifted_over_chrom = models.StringField(db_column='liftedOverChrom', low_cardinality=True, null=True, blank=True)
-    lifted_over_pos = models.StringField(db_column='liftedOverPos', null=True, blank=True)
-    hgmd = NamedTupleField([
-        ('accession', models.StringField(null=True, blank=True)),
-        ('class_', models.Enum8Field(null=True, blank=True, return_int=False, choices=[(0, 'DM'), (1, 'DM?'), (2, 'DP'), (3, 'DFP'), (4, 'FP'), (5, 'R')])),
-    ])
-    screen_region_type = models.Enum8Field(db_column='screenRegionType', null=True, blank=True, return_int=False, choices=[(0, 'CTCF-bound'), (1, 'CTCF-only'), (2, 'DNase-H3K4me3'), (3, 'PLS'), (4, 'dELS'), (5, 'pELS'), (6, 'DNase-only'), (7, 'low-DNase')])
-    predictions = NamedTupleField([
-        ('cadd', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        ('eigen', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        ('fathmm', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        ('gnomad_noncoding', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        ('mpc', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        ('mut_pred', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        ('mut_taster', models.Enum8Field(null=True, blank=True, return_int=False, choices=[(0, 'D'), (1, 'A'), (2, 'N'), (3, 'P')])),
-        ('polyphen', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        ('primate_ai', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        ('revel', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        ('sift', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        ('splice_ai', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        ('splice_ai_consequence', models.Enum8Field(null=True, blank=True, return_int=False, choices=[(0, 'Acceptor gain'), (1, 'Acceptor loss'), (2, 'Donor gain'), (3, 'Donor loss'), (4, 'No consequence')])),
-        ('vest', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-    ])
-    populations = NamedTupleField([
+    POPULATION_FIELDS = [
         ('exac', NamedTupleField([
             ('ac', models.UInt32Field()),
             ('af', models.DecimalField(max_digits=9, decimal_places=5)),
@@ -161,7 +129,41 @@ class BaseAnnotationsSnvIndel(models.ClickhouseModel):
             ('het', models.UInt32Field()),
             ('hom', models.UInt32Field()),
         ])),
+    ]
+
+    key = models.UInt32Field(primary_key=True)
+    xpos = models.UInt64Field()
+    chrom = models.Enum8Field(return_int=False, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES[:-1])])
+    pos = models.UInt32Field()
+    ref = models.StringField()
+    alt = models.StringField()
+    variant_id = models.StringField(db_column='variantId')
+    rsid = models.StringField(null=True, blank=True)
+    caid = models.StringField(db_column='CAID', null=True, blank=True)
+    lifted_over_chrom = models.StringField(db_column='liftedOverChrom', low_cardinality=True, null=True, blank=True)
+    lifted_over_pos = models.StringField(db_column='liftedOverPos', null=True, blank=True)
+    hgmd = NamedTupleField([
+        ('accession', models.StringField(null=True, blank=True)),
+        ('class_', models.Enum8Field(null=True, blank=True, return_int=False, choices=[(0, 'DM'), (1, 'DM?'), (2, 'DP'), (3, 'DFP'), (4, 'FP'), (5, 'R')])),
     ])
+    screen_region_type = models.Enum8Field(db_column='screenRegionType', null=True, blank=True, return_int=False, choices=[(0, 'CTCF-bound'), (1, 'CTCF-only'), (2, 'DNase-H3K4me3'), (3, 'PLS'), (4, 'dELS'), (5, 'pELS'), (6, 'DNase-only'), (7, 'low-DNase')])
+    predictions = NamedTupleField([
+        ('cadd', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('eigen', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('fathmm', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('gnomad_noncoding', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('mpc', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('mut_pred', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('mut_taster', models.Enum8Field(null=True, blank=True, return_int=False, choices=[(0, 'D'), (1, 'A'), (2, 'N'), (3, 'P')])),
+        ('polyphen', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('primate_ai', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('revel', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('sift', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('splice_ai', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('splice_ai_consequence', models.Enum8Field(null=True, blank=True, return_int=False, choices=[(0, 'Acceptor gain'), (1, 'Acceptor loss'), (2, 'Donor gain'), (3, 'Donor loss'), (4, 'No consequence')])),
+        ('vest', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+    ])
+    populations = NamedTupleField(POPULATION_FIELDS)
     sorted_transcript_consequences = NestedField([
         ('alphamissensePathogenicity', models.DecimalField(null=True, blank=True, max_digits=9, decimal_places=5)),
         ('canonical', models.UInt8Field(null=True, blank=True)),
