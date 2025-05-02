@@ -41,6 +41,8 @@ class NestedField(models.TupleField):
         return [super(NestedField, self).to_python(self.container_class(**item)) for item in value]
 
     def call_base_fields(self, func_name, value, *args, **kwargs):
+        if not isinstance(value, list):
+            return super(NestedField, self).call_base_fields(func_name, value, *args, **kwargs)
         return [super(NestedField, self).call_base_fields(
             func_name,
             self.container_class(**item) if isinstance(value, dict) else item,
