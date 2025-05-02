@@ -1,7 +1,7 @@
 from clickhouse_backend import models
 from collections import OrderedDict
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.db.models import F, Q, Value
+from django.db.models import F, Value
 from django.db.models.functions import JSONObject
 
 from clickhouse_search.backend.fields import NestedField, NamedTupleField
@@ -30,7 +30,7 @@ ANNOTATION_VALUES = {
     if field.name not in CORE_ENTRIES_FIELDS
 }
 ANNOTATION_VALUES['populations'] = TupleConcat(
-    'key__populations', Tuple(SEQR_POPULATION_KEY),
+    ANNOTATION_VALUES['populations'], Tuple(SEQR_POPULATION_KEY),
     output_field=NamedTupleField([
         *AnnotationsSnvIndel.POPULATION_FIELDS,
         ('seqr', NamedTupleField(list(GT_STATS_DICT_FIELDS.items()))),
@@ -136,10 +136,6 @@ def _get_filtered_entries(sample_data, **kwargs):
         project_guid=sample_data[0]['project_guid'],
         family_guid=sample_data[0]['family_guid'],
     )
-
-
-def _get_annotation_filter(**kwargs):
-    return Q()
 
 
 def _liftover_genome_version(genome_version):
