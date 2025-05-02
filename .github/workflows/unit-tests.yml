@@ -44,6 +44,18 @@ jobs:
         ports:
           # Maps tcp port 5432 on service container to the host
           - 5432:5432
+      clickhouse:
+        image: clickhouse/clickhouse-server:latest
+        ports:
+          - 9000:9000   # Native client interface
+        options: >-
+          --health-cmd "clickhouse-client --query 'SELECT 1'" 
+          --health-interval 10s 
+          --health-timeout 5s 
+          --health-retries 5
+        env:
+          CLICKHOUSE_USER: clickhouse
+          CLICKHOUSE_PASSWORD: clickhouse_test
 
     steps:
       - uses: actions/checkout@v2
@@ -70,7 +82,8 @@ jobs:
           pip install -r requirements-dev.txt
       - name: Run coverage tests
         run: |
-          coverage run --source="./matchmaker","./seqr","./reference_data","./panelapp" --omit="*/migrations/*","*/apps.py","*/admin.py" manage.py test -p '*_tests.py' -v 2 reference_data seqr matchmaker panelapp
+          export CLICKHOUSE_SERVICE_HOSTNAME=localhost
+          coverage run --source="./matchmaker","./seqr","./reference_data","./panelapp","./clickhouse_search" --omit="*/migrations/*","*/apps.py","*/admin.py" manage.py test -p '*_tests.py' -v 2 reference_data seqr matchmaker panelapp clickhouse_search
           coverage report --fail-under=99
           coverage report | (! grep [1-8][0-9]%)
           coverage report | (! grep 9[0-5]%)
