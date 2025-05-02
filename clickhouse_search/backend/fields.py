@@ -40,6 +40,14 @@ class NestedField(models.TupleField):
     def to_python(self, value):
         return [super(NestedField, self).to_python(self.container_class(**item)) for item in value]
 
+    def call_base_fields(self, func_name, value, *args, **kwargs):
+        return [super(NestedField, self).call_base_fields(
+            func_name,
+            self.container_class(**item) if isinstance(value, dict) else item,
+            *args,
+            **kwargs,
+        ) for item in value]
+
 
 class UInt64FieldDeltaCodecField(models.UInt64Field):
 
@@ -63,3 +71,8 @@ class NamedTupleField(models.TupleField):
         if isinstance(value, dict):
             value = self.container_class(**value)
         return super().to_python(value)
+
+    def call_base_fields(self, func_name, value, *args, **kwargs):
+        if isinstance(value, dict):
+            value = self.container_class(**value)
+        return super().call_base_fields(func_name, value, *args, **kwargs)
