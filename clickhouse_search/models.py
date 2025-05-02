@@ -80,7 +80,7 @@ class EntriesSnvIndel(models.ClickhouseModel):
     xpos = UInt64FieldDeltaCodecField()
     is_gnomad_gt_5_percent = models.BoolField()
     filters = models.ArrayField(models.StringField(low_cardinality=True))
-    calls = models.ArrayField(models.TupleField(CALL_FIELDS))
+    calls = models.ArrayField(NamedTupleField(CALL_FIELDS))
     sign = models.Int8Field()
 
     class Meta:

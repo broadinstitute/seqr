@@ -37,6 +37,9 @@ class NestedField(models.TupleField):
             value = {k: group_agg(v) for k, v in groupby(value, lambda x: x[self.group_by_key])}
         return value
 
+    def to_python(self, value):
+        return [super(NestedField, self).to_python(self.container_class(**item)) for item in value]
+
 
 class UInt64FieldDeltaCodecField(models.UInt64Field):
 
@@ -55,3 +58,8 @@ class NamedTupleField(models.TupleField):
         if self.null_if_empty and not any(value):
             return None
         return value._asdict()
+
+    def to_python(self, value):
+        if isinstance(value, dict):
+            value = self.container_class(**value)
+        return super().to_python(value)

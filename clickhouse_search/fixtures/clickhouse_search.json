@@ -90,7 +90,7 @@
       "lifted_over_pos": 11854476,
       "hgmd": {
         "accession": "CM981315",
-        "class_id": 3
+        "class_": 3
       },
       "screen_region_type": null,
       "predictions": {
@@ -649,8 +649,8 @@
           "hgvsp": "ENSP00000373301.3:p.Leu52Phe",
           "intron": null,
           "loftee": {
-            "is_lof_nagnag": null,
-            "lof_filter_ids": null
+            "isLofNagnag": null,
+            "lofFilters": null
           },
           "majorConsequence": 12,
           "manePlusClinical": null,
@@ -662,11 +662,11 @@
           "transcriptId": "ENST00000383791",
           "transcriptRank": 0,
           "utrannotator": {
-            "existing_inframe_oorfs": null,
-            "existing_outofframe_oorfs": null,
-            "existing_uorfs": null,
-            "fiveutr_consequence_id": null,
-            "fiveutr_annotation": null
+            "existingInframeOorfs": null,
+            "existingOutofframeOorfs": null,
+            "existingUorfs": null,
+            "fiveutrConsequence": null,
+            "fiveutrAnnotation": null
           }
         },
         {
@@ -689,8 +689,8 @@
           "hgvsp": null,
           "intron": null,
           "loftee": {
-            "is_lof_nagnag": null,
-            "lof_filter_ids": null
+            "isLofNagnag": null,
+            "lofFilters": null
           },
           "majorConsequence": 24,
           "manePlusClinical": null,
@@ -702,11 +702,11 @@
           "transcriptId": "ENST00000408919",
           "transcriptRank": 1,
           "utrannotator": {
-            "existing_inframe_oorfs": 0,
-            "existing_outofframe_oorfs": 1,
-            "existing_uorfs": 10,
-            "fiveutr_consequence_id": 3,
-            "fiveutr_annotation": {
+            "existingInframeOorfs": 0,
+            "existingOutofframeOorfs": 1,
+            "existingUorfs": 10,
+            "fiveutrConsequence": 3,
+            "fiveutrAnnotation": {
               "type": null,
               "KozakContext": "GCGATGC",
               "KozakStrength": "Moderate",
@@ -747,8 +747,8 @@
           "hgvsp": null,
           "intron": null,
           "loftee": {
-            "is_lof_nagnag": null,
-            "lof_filter_ids": null
+            "isLofNagnag": null,
+            "lofFilters": null
           },
           "majorConsequence": 24,
           "manePlusClinical": null,
@@ -760,11 +760,11 @@
           "transcriptId": "ENST00000426925",
           "transcriptRank": 2,
           "utrannotator": {
-            "existing_inframe_oorfs": 0,
-            "existing_outofframe_oorfs": 1,
-            "existing_uorfs": 8,
-            "fiveutr_consequence_id": 3,
-            "fiveutr_annotation": {
+            "existingInframeOorfs": 0,
+            "existingOutofframeOorfs": 1,
+            "existingUorfs": 8,
+            "fiveutrConsequence": 3,
+            "fiveutrAnnotation": {
               "type": null,
               "KozakContext": "TCAATGC",
               "KozakStrength": "Weak",
@@ -806,8 +806,8 @@
           "hgvsp": "ENSP00000389484.1:p.Leu52Phe",
           "intron": null,
           "loftee": {
-            "is_lof_nagnag": null,
-            "lof_filter_ids": null
+            "isLofNagnag": null,
+            "lofFilters": null
           },
           "majorConsequence": 12,
           "manePlusClinical": null,
@@ -819,11 +819,11 @@
           "transcriptId": "ENST00000450625",
           "transcriptRank": 3,
           "utrannotator": {
-            "existing_inframe_oorfs": null,
-            "existing_outofframe_oorfs": null,
-            "existing_uorfs": null,
-            "fiveutr_consequence_id": null,
-            "fiveutr_annotation": null
+            "existingInframeOorfs": null,
+            "existingOutofframeOorfs": null,
+            "existingUorfs": null,
+            "fiveutrConsequence": null,
+            "fiveutrAnnotation": null
           }
         },
         {
@@ -846,8 +846,8 @@
             "total": 3
           },
           "loftee": {
-            "is_lof_nagnag": null,
-            "lof_filter_ids": null
+            "isLofNagnag": null,
+            "lofFilters": null
           },
           "majorConsequence": 12,
           "manePlusClinical": null,
@@ -859,11 +859,11 @@
           "transcriptId": "ENST00000412806",
           "transcriptRank": 4,
           "utrannotator": {
-            "existing_inframe_oorfs": null,
-            "existing_outofframe_oorfs": null,
-            "existing_uorfs": null,
-            "fiveutr_consequence_id": null,
-            "fiveutr_annotation": null
+            "existingInframeOorfs": null,
+            "existingOutofframeOorfs": null,
+            "existingUorfs": null,
+            "fiveutrConsequence": null,
+            "fiveutrAnnotation": null
           }
         },
         {
@@ -886,8 +886,8 @@
           "hgvsp": null,
           "intron": null,
           "loftee": {
-            "is_lof_nagnag": null,
-            "lof_filter_ids": null
+            "isLofNagnag": null,
+            "lofFilters": null
           },
           "majorConsequence": 26,
           "manePlusClinical": null,
@@ -899,11 +899,11 @@
           "transcriptId": "ENST00000459627",
           "transcriptRank": 5,
           "utrannotator": {
-            "existing_inframe_oorfs": null,
-            "existing_outofframe_oorfs": null,
-            "existing_uorfs": null,
-            "fiveutr_consequence_id": null,
-            "fiveutr_annotation": null
+            "existingInframeOorfs": null,
+            "existingOutofframeOorfs": null,
+            "existingUorfs": null,
+            "fiveutrConsequence": null,
+            "fiveutrAnnotation": null
           }
         },
         {
@@ -926,8 +926,8 @@
           "hgvsp": null,
           "intron": null,
           "loftee": {
-            "is_lof_nagnag": null,
-            "lof_filter_ids": null
+            "isLofNagnag": null,
+            "lofFilters": null
           },
           "majorConsequence": 26,
           "manePlusClinical": null,
@@ -939,11 +939,11 @@
           "transcriptId": "ENST00000465894",
           "transcriptRank": 6,
           "utrannotator": {
-            "existing_inframe_oorfs": null,
-            "existing_outofframe_oorfs": null,
-            "existing_uorfs": null,
-            "fiveutr_consequence_id": null,
-            "fiveutr_annotation": null
+            "existingInframeOorfs": null,
+            "existingOutofframeOorfs": null,
+            "existingUorfs": null,
+            "fiveutrConsequence": null,
+            "fiveutrAnnotation": null
           }
         }
       ]
@@ -974,8 +974,8 @@
             "total": 11
           },
           "loftee": {
-            "is_lof_nagnag": null,
-            "lof_filter_ids": null
+            "isLofNagnag": null,
+            "lofFilters": null
           },
           "majorConsequence": 27,
           "manePlusClinical": null,
@@ -987,11 +987,11 @@
           "transcriptId": "ENST00000234626",
           "transcriptRank": 0,
           "utrannotator": {
-            "existing_inframe_oorfs": null,
-            "existing_outofframe_oorfs": null,
-            "existing_uorfs": null,
-            "fiveutr_consequence_id": null,
-            "fiveutr_annotation": null
+            "existingInframeOorfs": null,
+            "existingOutofframeOorfs": null,
+            "existingUorfs": null,
+            "fiveutrConsequence": null,
+            "fiveutrAnnotation": null
           }
         },
         {
@@ -1014,8 +1014,8 @@
             "total": 5
           },
           "loftee": {
-            "is_lof_nagnag": null,
-            "lof_filter_ids": null
+            "isLofNagnag": null,
+            "lofFilters": null
           },
           "majorConsequence": 27,
           "manePlusClinical": null,
@@ -1027,11 +1027,11 @@
           "transcriptId": "ENST00000426137",
           "transcriptRank": 1,
           "utrannotator": {
-            "existing_inframe_oorfs": null,
-            "existing_outofframe_oorfs": null,
-            "existing_uorfs": null,
-            "fiveutr_consequence_id": null,
-            "fiveutr_annotation": null
+            "existingInframeOorfs": null,
+            "existingOutofframeOorfs": null,
+            "existingUorfs": null,
+            "fiveutrConsequence": null,
+            "fiveutrAnnotation": null
           }
         },
         {
@@ -1054,8 +1054,8 @@
             "total": 11
           },
           "loftee": {
-            "is_lof_nagnag": null,
-            "lof_filter_ids": null
+            "isLofNagnag": null,
+            "lofFilters": null
           },
           "majorConsequence": 27,
           "manePlusClinical": null,
@@ -1067,11 +1067,11 @@
           "transcriptId": "ENST00000428239",
           "transcriptRank": 2,
           "utrannotator": {
-            "existing_inframe_oorfs": null,
-            "existing_outofframe_oorfs": null,
-            "existing_uorfs": null,
-            "fiveutr_consequence_id": null,
-            "fiveutr_annotation": null
+            "existingInframeOorfs": null,
+            "existingOutofframeOorfs": null,
+            "existingUorfs": null,
+            "fiveutrConsequence": null,
+            "fiveutrAnnotation": null
           }
         },
         {
@@ -1094,8 +1094,8 @@
           "hgvsp": null,
           "intron": null,
           "loftee": {
-            "is_lof_nagnag": null,
-            "lof_filter_ids": null
+            "isLofNagnag": null,
+            "lofFilters": null
           },
           "majorConsequence": 26,
           "manePlusClinical": null,
@@ -1107,11 +1107,11 @@
           "transcriptId": "ENST00000497611",
           "transcriptRank": 3,
           "utrannotator": {
-            "existing_inframe_oorfs": null,
-            "existing_outofframe_oorfs": null,
-            "existing_uorfs": null,
-            "fiveutr_consequence_id": null,
-            "fiveutr_annotation": null
+            "existingInframeOorfs": null,
+            "existingOutofframeOorfs": null,
+            "existingUorfs": null,
+            "fiveutrConsequence": null,
+            "fiveutrAnnotation": null
           }
         }
       ]
@@ -1142,8 +1142,8 @@
             "total": 3
           },
           "loftee": {
-            "is_lof_nagnag": null,
-            "lof_filter_ids": [
+            "isLofNagnag": null,
+            "lofFilters": [
               10
             ]
           },
@@ -1157,11 +1157,11 @@
           "transcriptId": "ENST00000466716",
           "transcriptRank": 0,
           "utrannotator": {
-            "existing_inframe_oorfs": null,
-            "existing_outofframe_oorfs": null,
-            "existing_uorfs": null,
-            "fiveutr_consequence_id": null,
-            "fiveutr_annotation": null
+            "existingInframeOorfs": null,
+            "existingOutofframeOorfs": null,
+            "existingUorfs": null,
+            "fiveutrConsequence": null,
+            "fiveutrAnnotation": null
           }
         },
         {
@@ -1184,8 +1184,8 @@
             "total": 11
           },
           "loftee": {
-            "is_lof_nagnag": null,
-            "lof_filter_ids": null
+            "isLofNagnag": null,
+            "lofFilters": null
           },
           "majorConsequence": 12,
           "manePlusClinical": null,
@@ -1197,11 +1197,11 @@
           "transcriptId": "ENST00000350997",
           "transcriptRank": 1,
           "utrannotator": {
-            "existing_inframe_oorfs": null,
-            "existing_outofframe_oorfs": null,
-            "existing_uorfs": null,
-            "fiveutr_consequence_id": null,
-            "fiveutr_annotation": null
+            "existingInframeOorfs": null,
+            "existingOutofframeOorfs": null,
+            "existingUorfs": null,
+            "fiveutrConsequence": null,
+            "fiveutrAnnotation": null
           }
         },
         {
@@ -1224,8 +1224,8 @@
           "hgvsp": "ENSP00000257261.6:p.Thr44Ile",
           "intron": null,
           "loftee": {
-            "is_lof_nagnag": null,
-            "lof_filter_ids": null
+            "isLofNagnag": null,
+            "lofFilters": null
           },
           "majorConsequence": 12,
           "manePlusClinical": null,
@@ -1237,11 +1237,11 @@
           "transcriptId": "ENST00000257261",
           "transcriptRank": 2,
           "utrannotator": {
-            "existing_inframe_oorfs": null,
-            "existing_outofframe_oorfs": null,
-            "existing_uorfs": null,
-            "fiveutr_consequence_id": null,
-            "fiveutr_annotation": null
+            "existingInframeOorfs": null,
+            "existingOutofframeOorfs": null,
+            "existingUorfs": null,
+            "fiveutrConsequence": null,
+            "fiveutrAnnotation": null
           }
         }
       ]
@@ -1265,9 +1265,9 @@
     "pk": 1,
     "fields": {
       "key": 1,
-      "alleleId": 19473,
-      "conflictingPathogenicities": [],
-      "goldStars": null,
+      "allele_id": 19473,
+      "conflicting_pathogenicities": [],
+      "gold_stars": null,
       "submitters": [],
       "conditions": [],
       "assertions": [],
@@ -1278,8 +1278,8 @@
     "pk": 2,
     "fields": {
       "key": 2,
-      "alleleId": 18560,
-      "conflictingPathogenicities": [
+      "allele_id": 18560,
+      "conflicting_pathogenicities": [
         {
           "count": 1,
           "pathogenicity": 4
@@ -1297,7 +1297,7 @@
           "pathogenicity": 15
         }
       ],
-      "goldStars": 1,
+      "gold_stars": 1,
       "submitters": [
         "Broad Center for Mendelian Genomics, Broad Institute of MIT and Harvard",
         "Illumina Laboratory Services, Illumina",
