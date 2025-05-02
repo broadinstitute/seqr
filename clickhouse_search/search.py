@@ -6,7 +6,7 @@ from django.db.models.functions import JSONObject
 
 from clickhouse_search.backend.fields import NestedField, NamedTupleField
 from clickhouse_search.backend.functions import Array, ArrayMap, GtStatsDictGet, Tuple, TupleConcat
-from clickhouse_search.models import EntriesSnvIndel, AnnotationsSnvIndel
+from clickhouse_search.models import EntriesSnvIndel, AnnotationsSnvIndel, TranscriptsSnvIndel
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample
 from seqr.utils.logging_utils import SeqrLogger
@@ -64,7 +64,7 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
         genotypes=ArrayMap(
             'calls',
             mapped_expression=f"tuple({_get_sample_map_expression(sample_data)}[x.sampleId], {', '.join(GENOTYPE_FIELDS.keys())})",
-            output_field=NestedField([('individualGuid', models.StringField()), *GENOTYPE_FIELDS.values()], group_by_key='individualGuid')
+            output_field=NestedField([('individualGuid', models.StringField()), *GENOTYPE_FIELDS.values()], group_by_key='individualGuid', flatten_groups=True)
         ),
         genomeVersion=Value(genome_version),
         liftedOverGenomeVersion=Value(_liftover_genome_version(genome_version)),
@@ -78,7 +78,34 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
 
     logger.info(f'Total results: {total_results}', user)
 
-    return sorted_results[(page-1)*num_results:page*num_results]
+    return format_clickhouse_results(sorted_results[(page-1)*num_results:page*num_results])
+
+
+def format_clickhouse_results(results, **kwargs):
+    keys_with_transcripts = [variant['key'] for variant in results if variant['sortedTranscriptConsequences']]
+    transcripts_by_key = dict(
+        TranscriptsSnvIndel.objects.filter(key__in=keys_with_transcripts).values_list('key', 'transcripts')
+    )
+
+    formatted_results = []
+    for variant in results:
+        transcripts = transcripts_by_key.get(variant['key'], {})
+        formatted_variant = {
+            **variant,
+            'transcripts': transcripts,
+            'selectedMainTranscriptId': None,
+        }
+        # pop sortedTranscriptConsequences from the formatted result and not the original result to ensure the full value is cached properly
+        sorted_minimal_transcripts = formatted_variant.pop('sortedTranscriptConsequences')
+        main_transcript_id = None
+        if sorted_minimal_transcripts:
+            main_transcript_id = next(
+                t['transcriptId'] for t in transcripts[sorted_minimal_transcripts[0]['geneId']]
+                if t['transcriptRank'] == 0
+            )
+        formatted_results.append({**formatted_variant, 'mainTranscriptId': main_transcript_id})
+
+    return formatted_results
 
 
 def _get_sample_data(samples):
