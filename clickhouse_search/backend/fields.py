@@ -38,17 +38,13 @@ class NestedField(models.TupleField):
         return value
 
     def to_python(self, value):
-        return [super(NestedField, self).to_python(self.container_class(**item)) for item in value]
+        return [self.call_base_fields("to_python", item) for item in value]
 
-    def call_base_fields(self, func_name, value, *args, **kwargs):
-        if not isinstance(value, list):
-            return super(NestedField, self).call_base_fields(func_name, value, *args, **kwargs)
-        return [super(NestedField, self).call_base_fields(
-            func_name,
-            self.container_class(**item) if isinstance(value, dict) else item,
-            *args,
-            **kwargs,
-        ) for item in value]
+    def get_db_prep_value(self, value, connection, prepared=False):
+        return [super(NestedField, self).get_db_prep_value(item, connection, prepared) for item in value]
+
+    def get_db_prep_save(self, value, connection):
+        return [super(NestedField, self).get_db_prep_save(item, connection) for item in value]
 
 
 class UInt64FieldDeltaCodecField(models.UInt64Field):
@@ -70,11 +66,4 @@ class NamedTupleField(models.TupleField):
         return value._asdict()
 
     def to_python(self, value):
-        if isinstance(value, dict):
-            value = self.container_class(**value)
-        return super().to_python(value)
-
-    def call_base_fields(self, func_name, value, *args, **kwargs):
-        if isinstance(value, dict):
-            value = self.container_class(**value)
-        return super().call_base_fields(func_name, value, *args, **kwargs)
+        return self.call_base_fields("to_python", value)

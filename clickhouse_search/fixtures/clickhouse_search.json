@@ -14,61 +14,15 @@
       "caid": "CA16717152",
       "lifted_over_chrom": "1",
       "lifted_over_pos": 10439,
-      "hgmd": {
-        "accession": null,
-        "class_": null
-      },
+      "hgmd": [null, null],
       "screen_region_type": null,
-      "predictions": {
-        "cadd": 4.668000221252441,
-        "eigen": null,
-        "fathmm": null,
-        "gnomad_noncoding": null,
-        "mpc": null,
-        "mut_pred": null,
-        "mut_taster": null,
-        "polyphen": null,
-        "primate_ai": null,
-        "revel": null,
-        "sift": null,
-        "splice_ai": null,
-        "splice_ai_consequence": null,
-        "vest": null
-      },
-      "populations": {
-        "exac": {
-          "ac": 0,
-          "af": 0,
-          "an": 0,
-          "filter_af": 0,
-          "hemi": 0,
-          "het": 0,
-          "hom": 0
-        },
-        "gnomad_exomes": {
-          "ac": 0,
-          "af": 0,
-          "an": 0,
-          "filter_af": 0,
-          "hemi": 0,
-          "hom": 0
-        },
-        "gnomad_genomes": {
-          "ac": 927,
-          "af": 0.034449315071105956,
-          "an": 26912,
-          "filter_af": 0.04027664661407471,
-          "hemi": 0,
-          "hom": 48
-        },
-        "topmed": {
-          "ac": 20757,
-          "af": 0.0784199982881546,
-          "an": 264690,
-          "het": 20757,
-          "hom": 0
-        }
-      },
+      "predictions": [4.668000221252441, null, null, null, null, null, null, null, null, null, null, null, null, null],
+      "populations": [
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0],
+        [927, 0.034449315071105956, 26912, 0.04027664661407471, 0, 48],
+        [20757, 0.0784199982881546, 264690, 20757, 0]
+      ],
       "sorted_transcript_consequences": [],
       "sorted_motif_feature_consequences": [],
       "sorted_regulatory_feature_consequences": []
@@ -88,133 +42,38 @@
       "caid": null,
       "lifted_over_chrom": "1",
       "lifted_over_pos": 11854476,
-      "hgmd": {
-        "accession": "CM981315",
-        "class_": 3
-      },
+      "hgmd": ["CM981315", 3],
       "screen_region_type": null,
-      "predictions": {
-        "cadd": 20.899999618530273,
-        "eigen": 2.000999927520752,
-        "fathmm": 0,
-        "gnomad_noncoding": 5.868505001068115,
-        "mpc": 0.28205373883247375,
-        "mut_pred": null,
-        "mut_taster": 3,
-        "polyphen": 0.1,
-        "primate_ai": 0.4655807614326477,
-        "revel": 0.19699999690055847,
-        "sift": 0.05,
-        "splice_ai": 0,
-        "splice_ai_consequence": 4,
-        "vest": 0.210999995470047
-      },
-      "populations": {
-        "exac": {
-          "ac": 35805,
-          "af": 0.29499998688697815,
-          "an": 121372,
-          "filter_af": 0.4153035283088684,
-          "hemi": null,
-          "het": 24061,
-          "hom": 5872
-        },
-        "gnomad_exomes": {
-          "ac": 72672,
-          "af": 0.28899794816970825,
-          "an": 251462,
-          "filter_af": 0.4116474986076355,
-          "hemi": 0,
-          "hom": 11567
-        },
-        "gnomad_genomes": {
-          "ac": 0,
-          "af": 0,
-          "an": 0,
-          "filter_af": 0,
-          "hemi": 0,
-          "hom": 0
-        },
-        "topmed": {
-          "ac": 65154,
-          "af": 0.24615199863910675,
-          "an": 264690,
-          "het": 47604,
-          "hom": 8775
-        }
-      },
+      "predictions": [
+        20.899999618530273,
+        2.000999927520752,
+        0,
+        5.868505001068115,
+        0.28205373883247375,
+        null,
+        3,
+        0.1,
+        0.4655807614326477,
+        0.19699999690055847,
+        0.05,
+        0,
+        4,
+        0.210999995470047
+      ],
+      "populations": [
+        [35805, 0.29499998688697815, 121372, 0.4153035283088684, 0, 24061, 5872],
+        [72672, 0.28899794816970825, 251462, 0.4116474986076355, 0, 11567],
+        [0, 0, 0, 0, 0, 0],
+        [65154, 0.24615199863910675, 264690, 47604, 8775]
+      ],
       "sorted_transcript_consequences": [
-        {
-          "alphamissensePathogenicity": 0.9977999925613403,
-          "canonical": 1,
-          "consequenceTerms": [
-            12
-          ],
-          "extendedIntronicSpliceRegionVariant": false,
-          "fiveutrConsequence": null,
-          "geneId": "ENSG00000177000"
-        },
-        {
-          "alphamissensePathogenicity": null,
-          "canonical": null,
-          "consequenceTerms": [
-            24
-          ],
-          "extendedIntronicSpliceRegionVariant": false,
-          "fiveutrConsequence": 3,
-          "geneId": "ENSG00000177000"
-        },
-        {
-          "alphamissensePathogenicity": null,
-          "canonical": null,
-          "consequenceTerms": [
-            24
-          ],
-          "extendedIntronicSpliceRegionVariant": false,
-          "fiveutrConsequence": 3,
-          "geneId": "ENSG00000177000"
-        },
-        {
-          "alphamissensePathogenicity": 0.9977999925613403,
-          "canonical": null,
-          "consequenceTerms": [
-            12,
-            28
-          ],
-          "extendedIntronicSpliceRegionVariant": false,
-          "fiveutrConsequence": null,
-          "geneId": "ENSG00000277258"
-        },
-        {
-          "alphamissensePathogenicity": null,
-          "canonical": null,
-          "consequenceTerms": [
-            12
-          ],
-          "extendedIntronicSpliceRegionVariant": false,
-          "fiveutrConsequence": null,
-          "geneId": "ENSG00000177000"
-        },
-        {
-          "alphamissensePathogenicity": null,
-          "canonical": null,
-          "consequenceTerms": [
-            26
-          ],
-          "extendedIntronicSpliceRegionVariant": false,
-          "fiveutrConsequence": null,
-          "geneId": "ENSG00000177000"
-        },
-        {
-          "alphamissensePathogenicity": null,
-          "canonical": null,
-          "consequenceTerms": [
-            26
-          ],
-          "extendedIntronicSpliceRegionVariant": false,
-          "fiveutrConsequence": null,
-          "geneId": "ENSG00000177000"
-        }
+        [0.9977999925613403, 1, [12], false, null, "ENSG00000177000"],
+        [null, null, [24], false, 3, "ENSG00000177000"],
+        [null, null, [24], false, 3, "ENSG00000177000"],
+        [0.9977999925613403, null, [12, 28], false, null, "ENSG00000277258"],
+        [null, null, [12], false, null, "ENSG00000177000"],
+        [null, null, [26], false, null, "ENSG00000177000"],
+        [null, null, [26], false, null, "ENSG00000177000"]
       ],
       "sorted_motif_feature_consequences": [],
       "sorted_regulatory_feature_consequences": []
@@ -234,112 +93,39 @@
       "caid": "CA10960369",
       "lifted_over_chrom": "1",
       "lifted_over_pos": 91968278,
-      "hgmd": {
-        "accession": null,
-        "class_": null
-      },
+      "hgmd": [null, null],
       "screen_region_type": null,
-      "predictions": {
-        "cadd": 2.753999948501587,
-        "eigen": 1.378000020980835,
-        "fathmm": null,
-        "gnomad_noncoding": 0.7389647960662842,
-        "mpc": null,
-        "mut_pred": null,
-        "mut_taster": null,
-        "polyphen": null,
-        "primate_ai": null,
-        "revel": null,
-        "sift": null,
-        "splice_ai": 0.009999999776482582,
-        "splice_ai_consequence": 2,
-        "vest": null
-      },
-      "populations": {
-        "exac": {
-          "ac": 0,
-          "af": 0,
-          "an": 0,
-          "filter_af": 0,
-          "hemi": 0,
-          "het": 0,
-          "hom": 0
-        },
-        "gnomad_exomes": {
-          "ac": 0,
-          "af": 0,
-          "an": 0,
-          "filter_af": 0,
-          "hemi": 0,
-          "hom": 0
-        },
-        "gnomad_genomes": {
-          "ac": 57757,
-          "af": 0.38041073083877563,
-          "an": 151828,
-          "filter_af": 0.4797786474227905,
-          "hemi": 0,
-          "hom": 12204
-        },
-        "topmed": {
-          "ac": 95998,
-          "af": 0.36268100142478943,
-          "an": 264690,
-          "het": 57260,
-          "hom": 19369
-        }
-      },
+      "predictions": [
+        2.753999948501587,
+        1.378000020980835,
+        null,
+        0.7389647960662842,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        0.009999999776482582,
+        2,
+        null
+      ],
+      "populations": [
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0],
+        [57757, 0.38041073083877563, 151828, 0.4797786474227905, 0, 12204],
+        [95998, 0.36268100142478943, 264690, 57260, 19369]
+      ],
       "sorted_transcript_consequences": [
-        {
-          "alphamissensePathogenicity": null,
-          "canonical": 1,
-          "consequenceTerms": [
-            27
-          ],
-          "extendedIntronicSpliceRegionVariant": false,
-          "fiveutrConsequence": null,
-          "geneId": "ENSG00000097046"
-        },
-        {
-          "alphamissensePathogenicity": null,
-          "canonical": null,
-          "consequenceTerms": [
-            27
-          ],
-          "extendedIntronicSpliceRegionVariant": false,
-          "fiveutrConsequence": null,
-          "geneId": "ENSG00000177000"
-        },
-        {
-          "alphamissensePathogenicity": null,
-          "canonical": null,
-          "consequenceTerms": [
-            27
-          ],
-          "extendedIntronicSpliceRegionVariant": false,
-          "fiveutrConsequence": null,
-          "geneId": "ENSG00000097046"
-        },
-        {
-          "alphamissensePathogenicity": null,
-          "canonical": null,
-          "consequenceTerms": [
-            26
-          ],
-          "extendedIntronicSpliceRegionVariant": false,
-          "fiveutrConsequence": null,
-          "geneId": "ENSG00000097046"
-        }
+        [null, 1, [27], false, null, "ENSG00000097046"],
+        [null, null, [27], false, null, "ENSG00000177000"],
+        [null, null, [27], false, null, "ENSG00000097046"],
+        [null, null, [26], false, null, "ENSG00000097046"]
       ],
       "sorted_motif_feature_consequences": [],
       "sorted_regulatory_feature_consequences": [
-        {
-          "biotype": 1,
-          "consequenceTerms": [
-            2
-          ],
-          "regulatoryFeatureId": "ENSR00000009706"
-        }
+        [1, [2], "ENSR00000009706"]
       ]
     }
 }, {
@@ -357,115 +143,41 @@
       "caid": "CA341062623",
       "lifted_over_chrom": "1",
       "lifted_over_pos": 91977243,
-      "hgmd": {
-        "accession": null,
-        "class_": null
-      },
+      "hgmd": [null, null],
       "screen_region_type": 1,
-      "predictions": {
-        "cadd": 29.899999618530273,
-        "eigen": 9.491000175476074,
-        "fathmm": 0,
-        "gnomad_noncoding": 0.2300506979227066,
-        "mpc": 0.8326827883720398,
-        "mut_pred": 0.6869999766349792,
-        "mut_taster": 0,
-        "polyphen": 0,
-        "primate_ai": 0.6995947360992432,
-        "revel": 0.5260000228881836,
-        "sift": 0,
-        "splice_ai": 0,
-        "splice_ai_consequence": 4,
-        "vest": 0.8579999804496765
-      },
-      "populations": {
-        "exac": {
-          "ac": 0,
-          "af": 0,
-          "an": 0,
-          "filter_af": 0,
-          "hemi": 0,
-          "het": 0,
-          "hom": 0
-        },
-        "gnomad_exomes": {
-          "ac": 0,
-          "af": 0,
-          "an": 0,
-          "filter_af": 0,
-          "hemi": 0,
-          "hom": 0
-        },
-        "gnomad_genomes": {
-          "ac": 39,
-          "af": 0.00026519427774474025,
-          "an": 147062,
-          "filter_af": 0.0015030059730634093,
-          "hemi": 0,
-          "hom": 0
-        },
-        "topmed": {
-          "ac": 0,
-          "af": 0,
-          "an": 0,
-          "het": 0,
-          "hom": 0
-        }
-      },
+      "predictions": [
+        29.899999618530273,
+        9.491000175476074,
+        0,
+        0.2300506979227066,
+        0.8326827883720398,
+        0.6869999766349792,
+        0,
+        0,
+        0.6995947360992432,
+        0.5260000228881836,
+        0,
+        0,
+        4,
+        0.8579999804496765
+      ],
+      "populations": [
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0],
+        [39, 0.00026519427774474025, 147062, 0.0015030059730634093, 0, 0],
+        [0, 0, 0, 0, 0]
+      ],
       "sorted_transcript_consequences": [
-        {
-          "alphamissensePathogenicity": null,
-          "canonical": null,
-          "consequenceTerms": [
-            2
-          ],
-          "extendedIntronicSpliceRegionVariant": true,
-          "fiveutrConsequence": null,
-          "geneId": "ENSG00000097046"
-        },
-        {
-          "alphamissensePathogenicity": null,
-          "canonical": 1,
-          "consequenceTerms": [
-            12
-          ],
-          "extendedIntronicSpliceRegionVariant": false,
-          "fiveutrConsequence": null,
-          "geneId": "ENSG00000097046"
-        },
-        {
-          "alphamissensePathogenicity": null,
-          "canonical": null,
-          "consequenceTerms": [
-            12
-          ],
-          "extendedIntronicSpliceRegionVariant": false,
-          "fiveutrConsequence": null,
-          "geneId": "ENSG00000097046"
-        }
+        [null, null, [2], true, null, "ENSG00000097046"],
+        [null, 1, [12], false, null, "ENSG00000097046"],
+        [null, null, [12], false, null, "ENSG00000097046"]
       ],
       "sorted_motif_feature_consequences": [
-        {
-          "consequenceTerms": [
-            2
-          ],
-          "motifFeatureId": "ENSM00093424674"
-        },
-        {
-          "consequenceTerms": [
-            2
-          ],
-          "motifFeatureId": "ENSM00036268032"
-        }
+        [[2], "ENSM00093424674"],
+        [[2], "ENSM00036268032"]
       ],
       "sorted_regulatory_feature_consequences": [
-        {
-          "biotype": 1,
-          "consequenceTerms": [
-            2
-          ],
-          "regulatoryFeatureId": "ENSR00000040341"
-        }
+        [1, [2], "ENSR00000040341"]
       ]
     }
 }, {
@@ -483,61 +195,15 @@
       "caid": "CA520798130",
       "lifted_over_chrom": "1",
       "lifted_over_pos": 10146,
-      "hgmd": {
-        "accession": null,
-        "class_": null
-      },
+      "hgmd": [null, null],
       "screen_region_type": null,
-      "predictions": {
-        "cadd": 4.6529998779296875,
-        "eigen": null,
-        "fathmm": null,
-        "gnomad_noncoding": null,
-        "mpc": null,
-        "mut_pred": null,
-        "mut_taster": null,
-        "polyphen": null,
-        "primate_ai": null,
-        "revel": null,
-        "sift": null,
-        "splice_ai": null,
-        "splice_ai_consequence": null,
-        "vest": null
-      },
-      "populations": {
-        "exac": {
-          "ac": 0,
-          "af": 0,
-          "an": 0,
-          "filter_af": 0,
-          "hemi": 0,
-          "het": 0,
-          "hom": 0
-        },
-        "gnomad_exomes": {
-          "ac": 0,
-          "af": 0,
-          "an": 0,
-          "filter_af": 0,
-          "hemi": 0,
-          "hom": 0
-        },
-        "gnomad_genomes": {
-          "ac": 2,
-          "af": 0.00012430080096237361,
-          "an": 16090,
-          "filter_af": 0.002336448524147272,
-          "hemi": 0,
-          "hom": 0
-        },
-        "topmed": {
-          "ac": 0,
-          "af": 0,
-          "an": 0,
-          "het": 0,
-          "hom": 0
-        }
-      },
+      "predictions": [4.6529998779296875, null, null, null, null, null, null, null, null, null, null, null, null, null],
+      "populations": [
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0],
+        [2, 0.00012430080096237361, 16090, 0.002336448524147272, 0, 0],
+        [0, 0, 0, 0, 0]
+      ],
       "sorted_transcript_consequences": [],
       "sorted_motif_feature_consequences": [],
       "sorted_regulatory_feature_consequences": []
@@ -557,61 +223,15 @@
       "caid": null,
       "lifted_over_chrom": "1",
       "lifted_over_pos": 94818,
-      "hgmd": {
-        "accession": null,
-        "class_": null
-      },
+      "hgmd": [null, null],
       "screen_region_type": null,
-      "predictions": {
-        "cadd": 1.9229999780654907,
-        "eigen": 2.247999906539917,
-        "fathmm": null,
-        "gnomad_noncoding": null,
-        "mpc": null,
-        "mut_pred": null,
-        "mut_taster": null,
-        "polyphen": null,
-        "primate_ai": null,
-        "revel": null,
-        "sift": null,
-        "splice_ai": null,
-        "splice_ai_consequence": null,
-        "vest": null
-      },
-      "populations": {
-        "exac": {
-          "ac": 0,
-          "af": 0,
-          "an": 0,
-          "filter_af": 0,
-          "hemi": 0,
-          "het": 0,
-          "hom": 0
-        },
-        "gnomad_exomes": {
-          "ac": 0,
-          "af": 0,
-          "an": 0,
-          "filter_af": 0,
-          "hemi": 0,
-          "hom": 0
-        },
-        "gnomad_genomes": {
-          "ac": 4,
-          "af": 0.000044254640670260414,
-          "an": 90386,
-          "filter_af": 0.00011118523252662271,
-          "hemi": 0,
-          "hom": 0
-        },
-        "topmed": {
-          "ac": 13,
-          "af": 0.00004911409996566363,
-          "an": 264690,
-          "het": 13,
-          "hom": 0
-        }
-      },
+      "predictions": [1.9229999780654907, 2.247999906539917, null, null, null, null, null, null, null, null, null, null, null, null],
+      "populations": [
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0],
+        [4, 0.000044254640670260414, 90386, 0.00011118523252662271, 0, 0],
+        [13, 0.00004911409996566363, 264690, 13, 0]
+      ],
       "sorted_transcript_consequences": [],
       "sorted_motif_feature_consequences": [],
       "sorted_regulatory_feature_consequences": []
@@ -629,323 +249,54 @@
     "fields": {
       "key": 2,
       "transcripts": [
-        {
-          "alphamissense": {
-            "pathogenicity": 0.9977999925613403
-          },
-          "aminoAcids": "L/F",
-          "biotype": 39,
-          "canonical": 1,
-          "codons": "ttA/ttC",
-          "consequenceTerms": [
-            12
-          ],
-          "exon": {
-            "index": 2,
-            "total": 9
-          },
-          "geneId": "ENSG00000177000",
-          "hgvsc": "ENST00000383791.8:c.156A>C",
-          "hgvsp": "ENSP00000373301.3:p.Leu52Phe",
-          "intron": null,
-          "loftee": {
-            "isLofNagnag": null,
-            "lofFilters": null
-          },
-          "majorConsequence": 12,
-          "manePlusClinical": null,
-          "maneSelect": "NM_004844.5",
-          "refseqTranscriptId": "NM_004844.5",
-          "spliceregion": {
-            "extended_intronic_splice_region_variant": false
-          },
-          "transcriptId": "ENST00000383791",
-          "transcriptRank": 0,
-          "utrannotator": {
-            "existingInframeOorfs": null,
-            "existingOutofframeOorfs": null,
-            "existingUorfs": null,
-            "fiveutrConsequence": null,
-            "fiveutrAnnotation": null
-          }
-        },
-        {
-          "alphamissense": {
-            "pathogenicity": null
-          },
-          "aminoAcids": null,
-          "biotype": 39,
-          "canonical": null,
-          "codons": null,
-          "consequenceTerms": [
-            24
-          ],
-          "exon": {
-            "index": 2,
-            "total": 9
-          },
-          "geneId": "ENSG00000177000",
-          "hgvsc": "ENST00000408919.7:c.-384A>C",
-          "hgvsp": null,
-          "intron": null,
-          "loftee": {
-            "isLofNagnag": null,
-            "lofFilters": null
-          },
-          "majorConsequence": 24,
-          "manePlusClinical": null,
-          "maneSelect": null,
-          "refseqTranscriptId": "NM_001018009.4",
-          "spliceregion": {
-            "extended_intronic_splice_region_variant": false
-          },
-          "transcriptId": "ENST00000408919",
-          "transcriptRank": 1,
-          "utrannotator": {
-            "existingInframeOorfs": 0,
-            "existingOutofframeOorfs": 1,
-            "existingUorfs": 10,
-            "fiveutrConsequence": 3,
-            "fiveutrAnnotation": {
-              "type": null,
-              "KozakContext": "GCGATGC",
-              "KozakStrength": "Moderate",
-              "DistanceToCDS": null,
-              "CapDistanceToStart": null,
-              "DistanceToStop": null,
-              "Evidence": false,
-              "AltStop": "True",
-              "AltStopDistanceToCDS": 310,
-              "FrameWithCDS": "outOfFrame",
-              "StartDistanceToCDS": null,
-              "newSTOPDistanceToCDS": null,
-              "alt_type": null,
-              "alt_type_length": null,
-              "ref_StartDistanceToCDS": null,
-              "ref_type": null,
-              "ref_type_length": null
-            }
-          }
-        },
-        {
-          "alphamissense": {
-            "pathogenicity": null
-          },
-          "aminoAcids": null,
-          "biotype": 39,
-          "canonical": null,
-          "codons": null,
-          "consequenceTerms": [
-            24
-          ],
-          "exon": {
-            "index": 2,
-            "total": 11
-          },
-          "geneId": "ENSG00000177000",
-          "hgvsc": "ENST00000426925.5:c.-677A>C",
-          "hgvsp": null,
-          "intron": null,
-          "loftee": {
-            "isLofNagnag": null,
-            "lofFilters": null
-          },
-          "majorConsequence": 24,
-          "manePlusClinical": null,
-          "maneSelect": null,
-          "refseqTranscriptId": null,
-          "spliceregion": {
-            "extended_intronic_splice_region_variant": false
-          },
-          "transcriptId": "ENST00000426925",
-          "transcriptRank": 2,
-          "utrannotator": {
-            "existingInframeOorfs": 0,
-            "existingOutofframeOorfs": 1,
-            "existingUorfs": 8,
-            "fiveutrConsequence": 3,
-            "fiveutrAnnotation": {
-              "type": null,
-              "KozakContext": "TCAATGC",
-              "KozakStrength": "Weak",
-              "DistanceToCDS": null,
-              "CapDistanceToStart": null,
-              "DistanceToStop": null,
-              "Evidence": false,
-              "AltStop": "True",
-              "AltStopDistanceToCDS": 588,
-              "FrameWithCDS": "inFrame",
-              "StartDistanceToCDS": null,
-              "newSTOPDistanceToCDS": null,
-              "alt_type": null,
-              "alt_type_length": null,
-              "ref_StartDistanceToCDS": null,
-              "ref_type": null,
-              "ref_type_length": null
-            }
-          }
-        },
-        {
-          "alphamissense": {
-            "pathogenicity": 0.9977999925613403
-          },
-          "aminoAcids": "L/F",
-          "biotype": 36,
-          "canonical": null,
-          "codons": "ttA/ttC",
-          "consequenceTerms": [
-            12,
-            28
-          ],
-          "exon": {
-            "index": 2,
-            "total": 5
-          },
-          "geneId": "ENSG00000277258",
-          "hgvsc": "ENST00000450625.1:c.156A>C",
-          "hgvsp": "ENSP00000389484.1:p.Leu52Phe",
-          "intron": null,
-          "loftee": {
-            "isLofNagnag": null,
-            "lofFilters": null
-          },
-          "majorConsequence": 12,
-          "manePlusClinical": null,
-          "maneSelect": null,
-          "refseqTranscriptId": null,
-          "spliceregion": {
-            "extended_intronic_splice_region_variant": false
-          },
-          "transcriptId": "ENST00000450625",
-          "transcriptRank": 3,
-          "utrannotator": {
-            "existingInframeOorfs": null,
-            "existingOutofframeOorfs": null,
-            "existingUorfs": null,
-            "fiveutrConsequence": null,
-            "fiveutrAnnotation": null
-          }
-        },
-        {
-          "alphamissense": {
-            "pathogenicity": null
-          },
-          "aminoAcids": null,
-          "biotype": 36,
-          "canonical": null,
-          "codons": null,
-          "consequenceTerms": [
-            12
-          ],
-          "exon": null,
-          "geneId": "ENSG00000177000",
-          "hgvsc": "ENST00000412806.1:c.138+1722A>C",
-          "hgvsp": null,
-          "intron": {
-            "index": 1,
-            "total": 3
-          },
-          "loftee": {
-            "isLofNagnag": null,
-            "lofFilters": null
-          },
-          "majorConsequence": 12,
-          "manePlusClinical": null,
-          "maneSelect": null,
-          "refseqTranscriptId": null,
-          "spliceregion": {
-            "extended_intronic_splice_region_variant": false
-          },
-          "transcriptId": "ENST00000412806",
-          "transcriptRank": 4,
-          "utrannotator": {
-            "existingInframeOorfs": null,
-            "existingOutofframeOorfs": null,
-            "existingUorfs": null,
-            "fiveutrConsequence": null,
-            "fiveutrAnnotation": null
-          }
-        },
-        {
-          "alphamissense": {
-            "pathogenicity": null
-          },
-          "aminoAcids": null,
-          "biotype": 41,
-          "canonical": null,
-          "codons": null,
-          "consequenceTerms": [
-            26
-          ],
-          "exon": {
-            "index": 2,
-            "total": 3
-          },
-          "geneId": "ENSG00000177000",
-          "hgvsc": "ENST00000459627.1:n.298A>C",
-          "hgvsp": null,
-          "intron": null,
-          "loftee": {
-            "isLofNagnag": null,
-            "lofFilters": null
-          },
-          "majorConsequence": 26,
-          "manePlusClinical": null,
-          "maneSelect": null,
-          "refseqTranscriptId": null,
-          "spliceregion": {
-            "extended_intronic_splice_region_variant": false
-          },
-          "transcriptId": "ENST00000459627",
-          "transcriptRank": 5,
-          "utrannotator": {
-            "existingInframeOorfs": null,
-            "existingOutofframeOorfs": null,
-            "existingUorfs": null,
-            "fiveutrConsequence": null,
-            "fiveutrAnnotation": null
-          }
-        },
-        {
-          "alphamissense": {
-            "pathogenicity": null
-          },
-          "aminoAcids": null,
-          "biotype": 41,
-          "canonical": null,
-          "codons": null,
-          "consequenceTerms": [
-            26
-          ],
-          "exon": {
-            "index": 2,
-            "total": 5
-          },
-          "geneId": "ENSG00000177000",
-          "hgvsc": "ENST00000465894.6:n.33A>C",
-          "hgvsp": null,
-          "intron": null,
-          "loftee": {
-            "isLofNagnag": null,
-            "lofFilters": null
-          },
-          "majorConsequence": 26,
-          "manePlusClinical": null,
-          "maneSelect": null,
-          "refseqTranscriptId": null,
-          "spliceregion": {
-            "extended_intronic_splice_region_variant": false
-          },
-          "transcriptId": "ENST00000465894",
-          "transcriptRank": 6,
-          "utrannotator": {
-            "existingInframeOorfs": null,
-            "existingOutofframeOorfs": null,
-            "existingUorfs": null,
-            "fiveutrConsequence": null,
-            "fiveutrAnnotation": null
-          }
-        }
+        [
+          [0.9977999925613403], "L/F", 39, 1, "ttA/ttC", [12], [2, 9], "ENSG00000177000", "ENST00000383791.8:c.156A>C",
+          "ENSP00000373301.3:p.Leu52Phe", [null, null], [false, []], 12, null, "NM_004844.5", "NM_004844.5", [false],
+          "ENST00000383791", 0, [null, null, null, [
+            null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
+          ], null]
+        ],
+        [
+          [null], null, 39, null, null, [24], [2, 9], "ENSG00000177000", "ENST00000408919.7:c.-384A>C", null,
+          [null, null], [false, []], 24, null, null, "NM_001018009.4", [false], "ENST00000408919", 1, [
+            0, 1, 10, [
+              null, "GCGATGC", "Moderate", null, null, null, false, "True", 310, "outOfFrame", null, null, null, null, null, null, null
+            ], 3
+          ]
+        ],
+        [
+          [null], null, 39, null, null, [24], [2, 11], "ENSG00000177000", "ENST00000426925.5:c.-677A>C", null,
+          [null, null], [false, []], 24, null, null, null, [false], "ENST00000426925", 2, [
+            0, 1, 8, [
+              null, "TCAATGC", "Weak", null, null, null, false, "True", 588, "inFrame", null, null, null, null, null, null, null
+            ], 3
+          ]
+        ],
+        [
+          [0.9977999925613403], "L/F", 36, null, "ttA/ttC", [12, 28], [2, 5], "ENSG00000277258",
+          "ENST00000450625.1:c.156A>C", "ENSP00000389484.1:p.Leu52Phe", [null, null], [false, []], 12, null, null,
+          null, [false], "ENST00000450625", 3, [null, null, null, [
+            null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
+          ], null]
+        ],
+        [
+          [null], null, 36, null, null, [12], [null, null], "ENSG00000177000", "ENST00000412806.1:c.138+1722A>C", null,
+          [1, 3], [false, []], 12, null, null, null, [false], "ENST00000412806", 4, [null, null, null, [
+            null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
+          ], null]
+        ],
+        [
+          [null], null, 41, null, null, [26], [2, 3], "ENSG00000177000", "ENST00000459627.1:n.298A>C", null, [null, null],
+          [false, []], 26, null, null, null, [false], "ENST00000459627", 5, [null, null, null, [
+            null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
+          ], null]
+        ],
+        [
+          [null], null, 41, null, null, [26], [2, 5], "ENSG00000177000", "ENST00000465894.6:n.33A>C", null,
+          [null, null], [false, []], 26, null, null, null, [false], "ENST00000465894", 6, [null, null, null, [
+            null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
+          ], null]
+        ]
       ]
     }
 }, {
@@ -954,166 +305,31 @@
     "fields": {
       "key": 3,
       "transcripts": [
-        {
-          "alphamissense": {
-            "pathogenicity": null
-          },
-          "aminoAcids": null,
-          "biotype": 39,
-          "canonical": 1,
-          "codons": null,
-          "consequenceTerms": [
-            27
-          ],
-          "exon": null,
-          "geneId": "ENSG00000097046",
-          "hgvsc": "ENST00000234626.11:c.-63-251G>A",
-          "hgvsp": null,
-          "intron": {
-            "index": 1,
-            "total": 11
-          },
-          "loftee": {
-            "isLofNagnag": null,
-            "lofFilters": null
-          },
-          "majorConsequence": 27,
-          "manePlusClinical": null,
-          "maneSelect": "NM_003503.4",
-          "refseqTranscriptId": "NM_003503.4",
-          "spliceregion": {
-            "extended_intronic_splice_region_variant": false
-          },
-          "transcriptId": "ENST00000234626",
-          "transcriptRank": 0,
-          "utrannotator": {
-            "existingInframeOorfs": null,
-            "existingOutofframeOorfs": null,
-            "existingUorfs": null,
-            "fiveutrConsequence": null,
-            "fiveutrAnnotation": null
-          }
-        },
-        {
-          "alphamissense": {
-            "pathogenicity": null
-          },
-          "aminoAcids": null,
-          "biotype": 39,
-          "canonical": null,
-          "codons": null,
-          "consequenceTerms": [
-            27
-          ],
-          "exon": null,
-          "geneId": "ENSG00000177000",
-          "hgvsc": "ENST00000426137.1:c.-64+100G>A",
-          "hgvsp": null,
-          "intron": {
-            "index": 1,
-            "total": 5
-          },
-          "loftee": {
-            "isLofNagnag": null,
-            "lofFilters": null
-          },
-          "majorConsequence": 27,
-          "manePlusClinical": null,
-          "maneSelect": null,
-          "refseqTranscriptId": null,
-          "spliceregion": {
-            "extended_intronic_splice_region_variant": false
-          },
-          "transcriptId": "ENST00000426137",
-          "transcriptRank": 1,
-          "utrannotator": {
-            "existingInframeOorfs": null,
-            "existingOutofframeOorfs": null,
-            "existingUorfs": null,
-            "fiveutrConsequence": null,
-            "fiveutrAnnotation": null
-          }
-        },
-        {
-          "alphamissense": {
-            "pathogenicity": null
-          },
-          "aminoAcids": null,
-          "biotype": 39,
-          "canonical": null,
-          "codons": null,
-          "consequenceTerms": [
-            27
-          ],
-          "exon": null,
-          "geneId": "ENSG00000097046",
-          "hgvsc": "ENST00000428239.5:c.-64+100G>A",
-          "hgvsp": null,
-          "intron": {
-            "index": 1,
-            "total": 11
-          },
-          "loftee": {
-            "isLofNagnag": null,
-            "lofFilters": null
-          },
-          "majorConsequence": 27,
-          "manePlusClinical": null,
-          "maneSelect": null,
-          "refseqTranscriptId": "NM_001134420.2",
-          "spliceregion": {
-            "extended_intronic_splice_region_variant": false
-          },
-          "transcriptId": "ENST00000428239",
-          "transcriptRank": 2,
-          "utrannotator": {
-            "existingInframeOorfs": null,
-            "existingOutofframeOorfs": null,
-            "existingUorfs": null,
-            "fiveutrConsequence": null,
-            "fiveutrAnnotation": null
-          }
-        },
-        {
-          "alphamissense": {
-            "pathogenicity": null
-          },
-          "aminoAcids": null,
-          "biotype": 41,
-          "canonical": null,
-          "codons": null,
-          "consequenceTerms": [
-            26
-          ],
-          "exon": {
-            "index": 1,
-            "total": 4
-          },
-          "geneId": "ENSG00000097046",
-          "hgvsc": "ENST00000497611.1:n.244G>A",
-          "hgvsp": null,
-          "intron": null,
-          "loftee": {
-            "isLofNagnag": null,
-            "lofFilters": null
-          },
-          "majorConsequence": 26,
-          "manePlusClinical": null,
-          "maneSelect": null,
-          "refseqTranscriptId": null,
-          "spliceregion": {
-            "extended_intronic_splice_region_variant": false
-          },
-          "transcriptId": "ENST00000497611",
-          "transcriptRank": 3,
-          "utrannotator": {
-            "existingInframeOorfs": null,
-            "existingOutofframeOorfs": null,
-            "existingUorfs": null,
-            "fiveutrConsequence": null,
-            "fiveutrAnnotation": null
-          }
-        }
+        [
+          [null], null, 39, 1, null, [27], [null, null], "ENSG00000097046", "ENST00000234626.11:c.-63-251G>A", null,
+          [1, 11], [false, []], 27, null, "NM_003503.4", "NM_003503.4", [false], "ENST00000234626", 0,
+          [null, null, null, [
+            null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
+          ], null]
+        ],
+        [
+          [null], null, 39, null, null, [27], [null, null], "ENSG00000177000", "ENST00000426137.1:c.-64+100G>A",
+          null, [1, 5], [false, []], 27, null, null, null, [false], "ENST00000426137", 1, [null, null, null, [
+            null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
+          ], null]
+        ],
+        [
+          [null], null, 39, null, null, [27], [null, null], "ENSG00000097046", "ENST00000428239.5:c.-64+100G>A", null, [1, 11],
+          [false, []], 27, null, null, "NM_001134420.2", [false], "ENST00000428239", 2, [null, null, null, [
+            null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
+          ], null]
+        ],
+        [
+          [null], null, 41, null, null, [26], [1, 4], "ENSG00000097046", "ENST00000497611.1:n.244G>A", null, [null, null],
+          [false, []], 26, null, null, null, [false], "ENST00000497611", 3, [null, null, null, [
+            null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
+          ], null]
+        ]
       ]
     }
 }, {
@@ -1122,128 +338,25 @@
     "fields": {
       "key": 4,
       "transcripts": [
-        {
-          "alphamissense": {
-            "pathogenicity": null
-          },
-          "aminoAcids": null,
-          "biotype": 39,
-          "canonical": null,
-          "codons": null,
-          "consequenceTerms": [
-            2
-          ],
-          "exon": null,
-          "geneId": "ENSG00000097046",
-          "hgvsc": "ENST00000466716.5:c.-264+1G>A",
-          "hgvsp": null,
-          "intron": {
-            "index": 1,
-            "total": 3
-          },
-          "loftee": {
-            "isLofNagnag": null,
-            "lofFilters": [
-              10
-            ]
-          },
-          "majorConsequence": 2,
-          "manePlusClinical": null,
-          "maneSelect": null,
-          "refseqTranscriptId": null,
-          "spliceregion": {
-            "extended_intronic_splice_region_variant": true
-          },
-          "transcriptId": "ENST00000466716",
-          "transcriptRank": 0,
-          "utrannotator": {
-            "existingInframeOorfs": null,
-            "existingOutofframeOorfs": null,
-            "existingUorfs": null,
-            "fiveutrConsequence": null,
-            "fiveutrAnnotation": null
-          }
-        },
-        {
-          "alphamissense": {
-            "pathogenicity": null
-          },
-          "aminoAcids": null,
-          "biotype": 39,
-          "canonical": 1,
-          "codons": null,
-          "consequenceTerms": [
-            12
-          ],
-          "exon": null,
-          "geneId": "ENSG00000097046",
-          "hgvsc": "ENST00000350997.12:c.375+139G>A",
-          "hgvsp": null,
-          "intron": {
-            "index": 1,
-            "total": 11
-          },
-          "loftee": {
-            "isLofNagnag": null,
-            "lofFilters": null
-          },
-          "majorConsequence": 12,
-          "manePlusClinical": null,
-          "maneSelect": "NM_013402.7",
-          "refseqTranscriptId": "NM_013402.7",
-          "spliceregion": {
-            "extended_intronic_splice_region_variant": false
-          },
-          "transcriptId": "ENST00000350997",
-          "transcriptRank": 1,
-          "utrannotator": {
-            "existingInframeOorfs": null,
-            "existingOutofframeOorfs": null,
-            "existingUorfs": null,
-            "fiveutrConsequence": null,
-            "fiveutrAnnotation": null
-          }
-        },
-        {
-          "alphamissense": {
-            "pathogenicity": null
-          },
-          "aminoAcids": "T/I",
-          "biotype": 39,
-          "canonical": null,
-          "codons": "aCc/aTc",
-          "consequenceTerms": [
-            12
-          ],
-          "exon": {
-            "index": 1,
-            "total": 12
-          },
-          "geneId": "ENSG00000097046",
-          "hgvsc": "ENST00000257261.10:c.131C>T",
-          "hgvsp": "ENSP00000257261.6:p.Thr44Ile",
-          "intron": null,
-          "loftee": {
-            "isLofNagnag": null,
-            "lofFilters": null
-          },
-          "majorConsequence": 12,
-          "manePlusClinical": null,
-          "maneSelect": null,
-          "refseqTranscriptId": "NM_001281501.1",
-          "spliceregion": {
-            "extended_intronic_splice_region_variant": false
-          },
-          "transcriptId": "ENST00000257261",
-          "transcriptRank": 2,
-          "utrannotator": {
-            "existingInframeOorfs": null,
-            "existingOutofframeOorfs": null,
-            "existingUorfs": null,
-            "fiveutrConsequence": null,
-            "fiveutrAnnotation": null
-          }
-        }
+        [
+          [null], null, 39, null, null, [2], [null, null], "ENSG00000097046", "ENST00000466716.5:c.-264+1G>A", null,
+          [1, 3], [null, [10]], 2, null, null, null, [true], "ENST00000466716", 0, [null, null, null, [
+            null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
+          ], null]
+        ],
+        [
+          [null], null, 39, 1, null, [12], [null, null], "ENSG00000097046", "ENST00000350997.12:c.375+139G>A", null,
+          [1, 11], [null, []], 12, null, "NM_013402.7", "NM_013402.7", [false], "ENST00000350997", 1, [null, null, null, [
+            null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
+          ], null]
+        ],
+        [
+          [null], "T/I", 39, null, "aCc/aTc", [12], [1, 12], "ENSG00000097046", "ENST00000257261.10:c.131C>T",
+          "ENSP00000257261.6:p.Thr44Ile", [null, null], [null, []], 12, null, null, "NM_001281501.1", [false],
+          "ENST00000257261", 2, [null, null, null, [
+            null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
+          ], null]
+        ]
       ]
     }
 }, {
@@ -1280,22 +393,10 @@
       "key": 2,
       "allele_id": 18560,
       "conflicting_pathogenicities": [
-        {
-          "count": 1,
-          "pathogenicity": 4
-        },
-        {
-          "count": 1,
-          "pathogenicity": 11
-        },
-        {
-          "count": 1,
-          "pathogenicity": 13
-        },
-        {
-          "count": 5,
-          "pathogenicity": 15
-        }
+        [1, 4],
+        [1, 11],
+        [1, 13],
+        [1, 15]
       ],
       "gold_stars": 1,
       "submitters": [
@@ -1328,27 +429,9 @@
       "filters": [],
       "sign": 1,
       "calls": [
-        {
-          "sampleId": "HG00733",
-          "gt": 0,
-          "gq": 20,
-          "ab": 0,
-          "dp": 60
-        },
-        {
-          "sampleId": "HG00732",
-          "gt": 0,
-          "gq": 0,
-          "ab": 0,
-          "dp": 24
-        },
-        {
-          "sampleId": "HG00731",
-          "gt": 1,
-          "gq": 99,
-          "ab": 0.5,
-          "dp": 10
-        }
+        ["HG00733", 0, 20, 0, 60],
+        ["HG00732", 0, 0, 0, 24],
+        ["HG00731", 1, 99, 0.5, 10]
       ]
     }
 }, {
@@ -1364,27 +447,9 @@
       "filters": [],
       "sign": 1,
       "calls": [
-        {
-          "sampleId": "HG00733",
-          "gt": 0,
-          "gq": 40,
-          "ab": 0,
-          "dp": 33
-        },
-        {
-          "sampleId": "HG00732",
-          "gt": 1,
-          "gq": 99,
-          "ab": 0.625,
-          "dp": 32
-        },
-        {
-          "sampleId": "HG00731",
-          "gt": 2,
-          "gq": 99,
-          "ab": 1,
-          "dp": 36
-        }
+        ["HG00733", 0, 40, 0, 33],
+        ["HG00732", 1, 99, 0.625, 32],
+        ["HG00731", 2, 99, 1, 36]
       ]
     }
 }, {
@@ -1400,27 +465,9 @@
       "filters": [],
       "sign": 1,
       "calls": [
-        {
-          "sampleId": "HG00733",
-          "gt": 1,
-          "gq": 99,
-          "ab": 0.4074074074074074,
-          "dp": 27
-        },
-        {
-          "sampleId": "HG00732",
-          "gt": 0,
-          "gq": 99,
-          "ab": 0.4594594594594595,
-          "dp": 37
-        },
-        {
-          "sampleId": "HG00731",
-          "gt": 1,
-          "gq": 99,
-          "ab": 1,
-          "dp": 40
-        }
+        ["HG00733", 1, 99, 0.4074074074074074, 27],
+        ["HG00732", 0, 99, 0.4594594594594595, 37],
+        ["HG00731", 1, 99, 1, 40]
       ]
     }
 }, {
@@ -1438,27 +485,9 @@
       ],
       "sign": 1,
       "calls": [
-        {
-          "sampleId": "HG00733",
-          "gt": 0,
-          "gq": 0,
-          "ab": 0,
-          "dp": 45
-        },
-        {
-          "sampleId": "HG00732",
-          "gt": 0,
-          "gq": 0,
-          "ab": 0,
-          "dp": 24
-        },
-        {
-          "sampleId": "HG00731",
-          "gt": 1,
-          "gq": 58,
-          "ab": 0.1724137931034483,
-          "dp": 29
-        }
+        ["HG00733", 0, 0, 0, 45],
+        ["HG00732", 0, 0, 0, 24],
+        ["HG00731", 1, 58, 0.1724137931034483, 29]
       ]
     }
 }, {
@@ -1474,20 +503,8 @@
       "filters": [],
       "sign": 1,
       "calls": [
-        {
-          "sampleId": "NA20872",
-          "gt": 1,
-          "gq": 99,
-          "ab": 0.34285714285714286,
-          "dp": 35
-        },
-        {
-          "sampleId": "NA20870",
-          "gt": 1,
-          "gq": 99,
-          "ab": 0.6785714285714286,
-          "dp": 28
-        }
+        ["NA20872", 1, 99, 0.34285714285714286, 35],
+        ["NA20870", 1, 99, 0.6785714285714286, 28]
       ]
     }
 }, {
@@ -1503,13 +520,7 @@
       "filters": [],
       "sign": 1,
       "calls": [
-        {
-          "sampleId": "NA20885",
-          "gt": 2,
-          "gq": 16,
-          "ab": 1,
-          "dp": 6
-        }
+        ["NA20885", 2, 16, 1, 6]
       ]
     }
 }, {
@@ -1525,13 +536,7 @@
       "filters": [],
       "sign": 1,
       "calls": [
-        {
-          "sampleId": "NA20885",
-          "gt": 1,
-          "gq": 99,
-          "ab": 0.5,
-          "dp": 28
-        }
+        ["NA20885", 1, 99, 0.5, 28]
       ]
     }
 }, {
@@ -1547,13 +552,7 @@
       "filters": [],
       "sign": 1,
       "calls": [
-        {
-          "sampleId": "NA20885",
-          "gt": 1,
-          "gq": 14,
-          "ab": 0.875,
-          "dp": 8
-        }
+        ["NA20885", 1, 14, 0.875, 8]
       ]
     }
 }, {
@@ -1569,13 +568,7 @@
       "filters": [],
       "sign": 1,
       "calls": [
-        {
-          "sampleId": "NA20885",
-          "gt": 2,
-          "gq": 16,
-          "ab": 1,
-          "dp": 6
-        }
+        ["NA20885", 2, 16, 1, 6]
       ]
     }
 }, {
@@ -1591,13 +584,7 @@
       "filters": [],
       "sign": 1,
       "calls": [
-        {
-          "sampleId": "NA20885",
-          "gt": 1,
-          "gq": 99,
-          "ab": 0.5,
-          "dp": 28
-        }
+        ["NA20885", 1, 99, 0.5, 28]
       ]
     }
 }, {
@@ -1613,13 +600,7 @@
       "filters": [],
       "sign": 1,
       "calls": [
-        {
-          "sampleId": "NA20885",
-          "gt": 1,
-          "gq": 14,
-          "ab": 0.875,
-          "dp": 8
-        }
+        ["NA20885", 1, 14, 0.875, 8]
       ]
     }
 }
