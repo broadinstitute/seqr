@@ -6,7 +6,7 @@ from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocks
 from clickhouse_search.backend.fields import NestedField, UInt64FieldDeltaCodecField, NamedTupleField
 from seqr.utils.xpos_utils import CHROMOSOMES
 from settings import CLICKHOUSE_IN_MEMORY_DIR, CLICKHOUSE_DATA_DIR
-
+from clickhouse_backend.models.sql import compiler
 options.DEFAULT_NAMES = (
     *options.DEFAULT_NAMES,
     'projection',

@@ -1,0 +1,45 @@
+[{
+    "model": "clickhouse_search.clinvar",
+    "pk": 1,
+    "fields": {
+      "key": 1,
+      "allele_id": 19473,
+      "conflicting_pathogenicities": [],
+      "gold_stars": null,
+      "submitters": [],
+      "conditions": [],
+      "assertions": [],
+      "pathogenicity": 4
+    }
+}, {
+    "model": "clickhouse_search.clinvar",
+    "pk": 2,
+    "fields": {
+      "key": 2,
+      "allele_id": 18560,
+      "conflicting_pathogenicities": [
+        [1, 4],
+        [1, 11],
+        [1, 13],
+        [1, 15]
+      ],
+      "gold_stars": 1,
+      "submitters": [
+        "Broad Center for Mendelian Genomics, Broad Institute of MIT and Harvard",
+        "Illumina Laboratory Services, Illumina",
+        "Blueprint Genetics",
+        "GenomeConnect, ClinGen"
+      ],
+      "conditions": [
+        "ABCA4-Related Disorders",
+        "Severe early-childhood-onset retinal dystrophy",
+        "not specified",
+        "not provided"
+      ],
+      "assertions": [
+        7
+      ],
+      "pathogenicity": 8
+    }
+}
+]
