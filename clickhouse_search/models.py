@@ -156,11 +156,11 @@ class BaseAnnotationsSnvIndel(models.ClickhouseModel):
     rsid = models.StringField(null=True, blank=True)
     caid = models.StringField(db_column='CAID', null=True, blank=True)
     lifted_over_chrom = models.StringField(db_column='liftedOverChrom', low_cardinality=True, null=True, blank=True)
-    lifted_over_pos = models.StringField(db_column='liftedOverPos', null=True, blank=True)
+    lifted_over_pos = models.UInt32Field(db_column='liftedOverPos', null=True, blank=True)
     hgmd = NamedTupleField([
         ('accession', models.StringField(null=True, blank=True)),
         ('class_', models.Enum8Field(null=True, blank=True, return_int=False, choices=[(0, 'DM'), (1, 'DM?'), (2, 'DP'), (3, 'DFP'), (4, 'FP'), (5, 'R')])),
-    ])
+    ], null_if_empty=True)
     screen_region_type = models.Enum8Field(db_column='screenRegionType', null=True, blank=True, return_int=False, choices=[(0, 'CTCF-bound'), (1, 'CTCF-only'), (2, 'DNase-H3K4me3'), (3, 'PLS'), (4, 'dELS'), (5, 'pELS'), (6, 'DNase-only'), (7, 'low-DNase')])
     predictions = NamedTupleField([
         ('cadd', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
@@ -235,11 +235,11 @@ class TranscriptsSnvIndel(models.ClickhouseModel):
         ('intron', NamedTupleField([
             ('index', models.Int32Field(null=True, blank=True)),
             ('total', models.Int32Field(null=True, blank=True)),
-        ])),
+        ], null_if_empty=True)),
         ('loftee', NamedTupleField([
             ('isLofNagnag', models.BoolField(null=True, blank=True)),
             ('lofFilters', models.ArrayField(models.StringField(null=True, blank=True))),
-        ])),
+        ], null_if_empty=True)),
         ('majorConsequence', models.StringField(null=True, blank=True)),
         ('manePlusClinical', models.StringField(null=True, blank=True)),
         ('maneSelect', models.StringField(null=True, blank=True)),
@@ -254,16 +254,15 @@ class TranscriptsSnvIndel(models.ClickhouseModel):
             ('existingOutofframeOorfs', models.Int32Field(null=True, blank=True)),
             ('existingUorfs', models.Int32Field(null=True, blank=True)),
             ('fiveutrAnnotation', NamedTupleField([
-                ('type', models.StringField(null=True, blank=True)),
-                ('KozakContext', models.StringField(null=True, blank=True)),
-                ('KozakStrength', models.StringField(null=True, blank=True)),
-                ('DistanceToCDS', models.Int32Field(null=True, blank=True)),
-                ('CapDistanceToStart', models.Int32Field(null=True, blank=True)),
-                ('DistanceToStop', models.Int32Field(null=True, blank=True)),
-                ('Evidence', models.BoolField(null=True, blank=True)),
                 ('AltStop', models.StringField(null=True, blank=True)),
                 ('AltStopDistanceToCDS', models.Int32Field(null=True, blank=True)),
+                ('CapDistanceToStart', models.Int32Field(null=True, blank=True)),
+                ('DistanceToCDS', models.Int32Field(null=True, blank=True)),
+                ('DistanceToStop', models.Int32Field(null=True, blank=True)),
+                ('Evidence', models.BoolField(null=True, blank=True)),
                 ('FrameWithCDS', models.StringField(null=True, blank=True)),
+                ('KozakContext', models.StringField(null=True, blank=True)),
+                ('KozakStrength', models.StringField(null=True, blank=True)),
                 ('StartDistanceToCDS', models.Int32Field(null=True, blank=True)),
                 ('newSTOPDistanceToCDS', models.Int32Field(null=True, blank=True)),
                 ('alt_type', models.StringField(null=True, blank=True)),
@@ -271,6 +270,7 @@ class TranscriptsSnvIndel(models.ClickhouseModel):
                 ('ref_StartDistanceToCDS', models.Int32Field(null=True, blank=True)),
                 ('ref_type', models.StringField(null=True, blank=True)),
                 ('ref_type_length', models.Int32Field(null=True, blank=True)),
+                ('type', models.StringField(null=True, blank=True)),
             ])),
             ('fiveutrConsequence', models.StringField(null=True, blank=True)),
         ])),

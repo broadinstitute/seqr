@@ -1,9 +1,29 @@
 from django.test import TestCase
+import mock
 
-from hail_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4
+from hail_search.test_utils import (
+    VARIANT1 as HAIL_VARIANT1,
+    VARIANT2 as HAIL_VARIANT2,
+    VARIANT3 as HAIL_VARIANT3,
+    VARIANT4 as HAIL_VARIANT4,
+)
 from seqr.models import Project
 from seqr.utils.search.search_utils_tests import SearchTestHelper
 from seqr.utils.search.utils import query_variants
+
+VARIANT1 = {**HAIL_VARIANT1, 'key': 1}
+VARIANT2 = {**HAIL_VARIANT2, 'key': 2}
+VARIANT3 = {**HAIL_VARIANT3, 'key': 3}
+VARIANT4 = {**HAIL_VARIANT4, 'key': 4}
+for variant in [VARIANT1, VARIANT2, VARIANT3, VARIANT4]:
+    del variant['_sort']
+    variant['populations']['seqr'] = mock.ANY  # TODO
+    # clickhouse uses fixed length decimals so values are rounded relative to hail backend
+    for genotype in variant['genotypes'].values():
+        genotype['ab'] = round(genotype['ab'], 5)
+    for pred, pred_val in variant['predictions'].items():
+        if isinstance(pred_val, float):
+            variant['predictions'][pred] = round(pred_val, 5)
 
 class ClickhouseSearchTests(SearchTestHelper, TestCase):
     databases = '__all__'

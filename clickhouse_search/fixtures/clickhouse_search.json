@@ -44,33 +44,18 @@
       "lifted_over_pos": 11854476,
       "hgmd": ["CM981315", 3],
       "screen_region_type": null,
-      "predictions": [
-        20.899999618530273,
-        2.000999927520752,
-        0,
-        5.868505001068115,
-        0.28205373883247375,
-        null,
-        3,
-        0.1,
-        0.4655807614326477,
-        0.19699999690055847,
-        0.05,
-        0,
-        4,
-        0.210999995470047
-      ],
+      "predictions": [20.89999, 2.00099, 0, 5.8685, 0.28205, null, 3, 0.1, 0.46558, 0.19699, 0.05, 0, 4, 0.21099],
       "populations": [
-        [35805, 0.29499998688697815, 121372, 0.4153035283088684, 0, 24061, 5872],
-        [72672, 0.28899794816970825, 251462, 0.4116474986076355, 0, 11567],
+        [35805, 0.29499, 121372, 0.4153, 0, 24061, 5872],
+        [72672, 0.28899, 251462, 0.41164, 0, 11567],
         [0, 0, 0, 0, 0, 0],
-        [65154, 0.24615199863910675, 264690, 47604, 8775]
+        [65154, 0.24615, 264690, 47604, 8775]
       ],
       "sorted_transcript_consequences": [
-        [0.9977999925613403, 1, [12], false, null, "ENSG00000177000"],
+        [0.99779, 1, [12], false, null, "ENSG00000177000"],
         [null, null, [24], false, 3, "ENSG00000177000"],
         [null, null, [24], false, 3, "ENSG00000177000"],
-        [0.9977999925613403, null, [12, 28], false, null, "ENSG00000277258"],
+        [0.99779, null, [12, 28], false, null, "ENSG00000277258"],
         [null, null, [12], false, null, "ENSG00000177000"],
         [null, null, [26], false, null, "ENSG00000177000"],
         [null, null, [26], false, null, "ENSG00000177000"]
@@ -95,27 +80,12 @@
       "lifted_over_pos": 91968278,
       "hgmd": [null, null],
       "screen_region_type": null,
-      "predictions": [
-        2.753999948501587,
-        1.378000020980835,
-        null,
-        0.7389647960662842,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        0.009999999776482582,
-        2,
-        null
-      ],
+      "predictions": [2.75399, 1.378, null, 0.73896, null, null, null, null, null, null, null, 0.00999, 2, null],
       "populations": [
         [0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0],
-        [57757, 0.38041073083877563, 151828, 0.4797786474227905, 0, 12204],
-        [95998, 0.36268100142478943, 264690, 57260, 19369]
+        [57757, 0.38041, 151828, 0.47977, 0, 12204],
+        [95998, 0.362681, 264690, 57260, 19369]
       ],
       "sorted_transcript_consequences": [
         [null, 1, [27], false, null, "ENSG00000097046"],
@@ -145,26 +115,11 @@
       "lifted_over_pos": 91977243,
       "hgmd": [null, null],
       "screen_region_type": 1,
-      "predictions": [
-        29.899999618530273,
-        9.491000175476074,
-        0,
-        0.2300506979227066,
-        0.8326827883720398,
-        0.6869999766349792,
-        0,
-        0,
-        0.6995947360992432,
-        0.5260000228881836,
-        0,
-        0,
-        4,
-        0.8579999804496765
-      ],
+      "predictions": [29.8999, 9.491, 0, 0.23005, 0.83268, 0.68699, 2, 0, 0.69959, 0.526, 0, 0, 4, 0.85799],
       "populations": [
         [0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0],
-        [39, 0.00026519427774474025, 147062, 0.0015030059730634093, 0, 0],
+        [39, 0.00026, 147062, 0.0015, 0, 0],
         [0, 0, 0, 0, 0]
       ],
       "sorted_transcript_consequences": [
@@ -197,11 +152,11 @@
       "lifted_over_pos": 10146,
       "hgmd": [null, null],
       "screen_region_type": null,
-      "predictions": [4.6529998779296875, null, null, null, null, null, null, null, null, null, null, null, null, null],
+      "predictions": [4.65299, null, null, null, null, null, null, null, null, null, null, null, null, null],
       "populations": [
         [0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0],
-        [2, 0.00012430080096237361, 16090, 0.002336448524147272, 0, 0],
+        [2, 0.00012, 16090, 0.00233, 0, 0],
         [0, 0, 0, 0, 0]
       ],
       "sorted_transcript_consequences": [],
@@ -225,7 +180,7 @@
       "lifted_over_pos": 94818,
       "hgmd": [null, null],
       "screen_region_type": null,
-      "predictions": [1.9229999780654907, 2.247999906539917, null, null, null, null, null, null, null, null, null, null, null, null],
+      "predictions": [1.92299, 2.24799, null, null, null, null, null, null, null, null, null, null, null, null],
       "populations": [
         [0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0],
@@ -250,50 +205,52 @@
       "key": 2,
       "transcripts": [
         [
-          [0.9977999925613403], "L/F", 39, 1, "ttA/ttC", [12], [2, 9], "ENSG00000177000", "ENST00000383791.8:c.156A>C",
-          "ENSP00000373301.3:p.Leu52Phe", [null, null], [false, []], 12, null, "NM_004844.5", "NM_004844.5", [false],
-          "ENST00000383791", 0, [null, null, null, [
+          [0.9977999925613403], "L/F", "protein_coding", 1, "ttA/ttC", ["missense_variant"], [2, 9], "ENSG00000177000",
+          "ENST00000383791.8:c.156A>C", "ENSP00000373301.3:p.Leu52Phe", [null, null], [false, []], "missense_variant",
+          null, "NM_004844.5", "NM_004844.5", [false], "ENST00000383791", 0, [null, null, null, [
             null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
           ], null]
         ],
         [
-          [null], null, 39, null, null, [24], [2, 9], "ENSG00000177000", "ENST00000408919.7:c.-384A>C", null,
-          [null, null], [false, []], 24, null, null, "NM_001018009.4", [false], "ENST00000408919", 1, [
-            0, 1, 10, [
-              null, "GCGATGC", "Moderate", null, null, null, false, "True", 310, "outOfFrame", null, null, null, null, null, null, null
-            ], 3
-          ]
+          [null], null, "protein_coding", null, null, ["5_prime_UTR_variant"], [2, 9], "ENSG00000177000",
+          "ENST00000408919.7:c.-384A>C", null, [null, null], [false, []], "5_prime_UTR_variant", null, null,
+          "NM_001018009.4", [false], "ENST00000408919", 1, [0, 1, 10, [
+            "True", 310, null, null, null, false, "outOfFrame", "GCGATGC", "Moderate", null, null, null, null, null, null, null, null
+          ], "5_prime_UTR_stop_codon_loss_variant"]
         ],
         [
-          [null], null, 39, null, null, [24], [2, 11], "ENSG00000177000", "ENST00000426925.5:c.-677A>C", null,
+          [null], null, "protein_coding", null, null, ["5_prime_UTR_variant"], [2, 9], "ENSG00000177000", "ENST00000426925.5:c.-677A>C", null,
           [null, null], [false, []], 24, null, null, null, [false], "ENST00000426925", 2, [
             0, 1, 8, [
-              null, "TCAATGC", "Weak", null, null, null, false, "True", 588, "inFrame", null, null, null, null, null, null, null
-            ], 3
+               "True", 588, null, null, null, false, "inFrame", "TCAATGC", "Weak", null, null, null, null, null, null, null, null
+            ], "5_prime_UTR_stop_codon_loss_variant"
           ]
         ],
         [
-          [0.9977999925613403], "L/F", 36, null, "ttA/ttC", [12, 28], [2, 5], "ENSG00000277258",
-          "ENST00000450625.1:c.156A>C", "ENSP00000389484.1:p.Leu52Phe", [null, null], [false, []], 12, null, null,
-          null, [false], "ENST00000450625", 3, [null, null, null, [
+          [0.9977999925613403], "L/F", "nonsense_mediated_decay", null, "ttA/ttC", ["missense_variant", 28], [2, 5],
+          "ENSG00000277258", "ENST00000450625.1:c.156A>C", "ENSP00000389484.1:p.Leu52Phe", [null, null], [false, []], 12,
+          null, null, null, [false], "ENST00000450625", 3, [null, null, null, [
             null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
           ], null]
         ],
         [
-          [null], null, 36, null, null, [12], [null, null], "ENSG00000177000", "ENST00000412806.1:c.138+1722A>C", null,
-          [1, 3], [false, []], 12, null, null, null, [false], "ENST00000412806", 4, [null, null, null, [
+          [null], null, "nonsense_mediated_decay", null, null, ["missense_variant"], [null, null], "ENSG00000177000",
+          "ENST00000412806.1:c.138+1722A>C", null, [1, 3], [false, []], "missense_variant", null, null, null, [false],
+          "ENST00000412806", 4, [null, null, null, [
             null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
           ], null]
         ],
         [
-          [null], null, 41, null, null, [26], [2, 3], "ENSG00000177000", "ENST00000459627.1:n.298A>C", null, [null, null],
-          [false, []], 26, null, null, null, [false], "ENST00000459627", 5, [null, null, null, [
+          [null], null, "protein_coding_CDS_not_defined", null, null, ["non_coding_transcript_exon_variant"],
+          [2, 3], "ENSG00000177000", "ENST00000459627.1:n.298A>C", null, [null, null], [false, []],
+          "non_coding_transcript_exon_variant", null, null, null, [false], "ENST00000459627", 5, [null, null, null, [
             null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
           ], null]
         ],
         [
-          [null], null, 41, null, null, [26], [2, 5], "ENSG00000177000", "ENST00000465894.6:n.33A>C", null,
-          [null, null], [false, []], 26, null, null, null, [false], "ENST00000465894", 6, [null, null, null, [
+          [null], null, "protein_coding_CDS_not_defined", null, null, ["non_coding_transcript_exon_variant"], [2, 5],
+          "ENSG00000177000", "ENST00000465894.6:n.33A>C", null, [null, null], [false, []],
+          "non_coding_transcript_exon_variant", null, null, null, [false], "ENST00000465894", 6, [null, null, null, [
             null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
           ], null]
         ]
@@ -306,27 +263,30 @@
       "key": 3,
       "transcripts": [
         [
-          [null], null, 39, 1, null, [27], [null, null], "ENSG00000097046", "ENST00000234626.11:c.-63-251G>A", null,
-          [1, 11], [false, []], 27, null, "NM_003503.4", "NM_003503.4", [false], "ENST00000234626", 0,
-          [null, null, null, [
+          [null], null, "protein_coding", 1, null, ["intron_variant"], [null, null], "ENSG00000097046",
+          "ENST00000234626.11:c.-63-251G>A", null, [1, 11], [false, []], "intron_variant", null, "NM_003503.4",
+          "NM_003503.4", [false], "ENST00000234626", 0, [null, null, null, [
             null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
           ], null]
         ],
         [
-          [null], null, 39, null, null, [27], [null, null], "ENSG00000177000", "ENST00000426137.1:c.-64+100G>A",
-          null, [1, 5], [false, []], 27, null, null, null, [false], "ENST00000426137", 1, [null, null, null, [
+          [null], null, "protein_coding", null, null, ["intron_variant"], [null, null], "ENSG00000177000",
+          "ENST00000426137.1:c.-64+100G>A", null, [1, 5], [false, []], "intron_variant", null, null, null, [false],
+          "ENST00000426137", 1, [null, null, null, [
             null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
           ], null]
         ],
         [
-          [null], null, 39, null, null, [27], [null, null], "ENSG00000097046", "ENST00000428239.5:c.-64+100G>A", null, [1, 11],
-          [false, []], 27, null, null, "NM_001134420.2", [false], "ENST00000428239", 2, [null, null, null, [
+          [null], null, "protein_coding", null, null, ["intron_variant"], [null, null], "ENSG00000097046",
+          "ENST00000428239.5:c.-64+100G>A", null, [1, 11], [false, []], "intron_variant", null, null, "NM_001134420.2",
+          [false], "ENST00000428239", 2, [null, null, null, [
             null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
           ], null]
         ],
         [
-          [null], null, 41, null, null, [26], [1, 4], "ENSG00000097046", "ENST00000497611.1:n.244G>A", null, [null, null],
-          [false, []], 26, null, null, null, [false], "ENST00000497611", 3, [null, null, null, [
+          [null], null, "protein_coding_CDS_not_defined", null, null, ["non_coding_transcript_exon_variant"], [1, 4],
+          "ENSG00000097046", "ENST00000497611.1:n.244G>A", null, [null, null], [false, []],
+          "non_coding_transcript_exon_variant", null, null, null, [false], "ENST00000497611", 3, [null, null, null, [
             null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
           ], null]
         ]
@@ -339,21 +299,23 @@
       "key": 4,
       "transcripts": [
         [
-          [null], null, 39, null, null, [2], [null, null], "ENSG00000097046", "ENST00000466716.5:c.-264+1G>A", null,
-          [1, 3], [null, [10]], 2, null, null, null, [true], "ENST00000466716", 0, [null, null, null, [
+          [null], null, "protein_coding", null, null, ["splice_donor_variant"], [null, null], "ENSG00000097046",
+          "ENST00000466716.5:c.-264+1G>A", null, [1, 3], [null, ["5UTR_SPLICE"]], "splice_donor_variant", null, null,
+          null, [true], "ENST00000466716", 0, [null, null, null, [
             null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
           ], null]
         ],
         [
-          [null], null, 39, 1, null, [12], [null, null], "ENSG00000097046", "ENST00000350997.12:c.375+139G>A", null,
-          [1, 11], [null, []], 12, null, "NM_013402.7", "NM_013402.7", [false], "ENST00000350997", 1, [null, null, null, [
+          [null], null, "protein_coding", 1, null, ["missense_variant"], [null, null], "ENSG00000097046",
+          "ENST00000350997.12:c.375+139G>A", null, [1, 11], [null, []], "missense_variant", null, "NM_013402.7",
+          "NM_013402.7", [false], "ENST00000350997", 1, [null, null, null, [
             null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
           ], null]
         ],
         [
-          [null], "T/I", 39, null, "aCc/aTc", [12], [1, 12], "ENSG00000097046", "ENST00000257261.10:c.131C>T",
-          "ENSP00000257261.6:p.Thr44Ile", [null, null], [null, []], 12, null, null, "NM_001281501.1", [false],
-          "ENST00000257261", 2, [null, null, null, [
+          [null], "T/I", "protein_coding", null, "aCc/aTc", ["missense_variant"], [1, 12], "ENSG00000097046",
+          "ENST00000257261.10:c.131C>T", "ENSP00000257261.6:p.Thr44Ile", [null, null], [null, []], "missense_variant",
+          null, null, "NM_001281501.1", [false], "ENST00000257261", 2, [null, null, null, [
             null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
           ], null]
         ]
@@ -393,10 +355,10 @@
       "key": 2,
       "allele_id": 18560,
       "conflicting_pathogenicities": [
-        [1, 4],
-        [1, 11],
-        [1, 13],
-        [1, 15]
+        [1, "Likely_pathogenic"],
+        [1, "Uncertain_significance"],
+        [1, "Likely_benign"],
+        [1, "Benign"]
       ],
       "gold_stars": 1,
       "submitters": [
@@ -412,9 +374,9 @@
         "not provided"
       ],
       "assertions": [
-        7
+        "other"
       ],
-      "pathogenicity": 8
+      "pathogenicity": "Conflicting_classifications_of_pathogenicity"
     }
 }, {
     "model": "clickhouse_search.entriessnvindel",
@@ -465,8 +427,8 @@
       "filters": [],
       "sign": 1,
       "calls": [
-        ["HG00733", 1, 99, 0.4074074074074074, 27],
-        ["HG00732", 0, 99, 0.4594594594594595, 37],
+        ["HG00733", 1, 99, 0.4074, 27],
+        ["HG00732", 0, 99, 0.45945, 37],
         ["HG00731", 1, 99, 1, 40]
       ]
     }
@@ -487,7 +449,7 @@
       "calls": [
         ["HG00733", 0, 0, 0, 45],
         ["HG00732", 0, 0, 0, 24],
-        ["HG00731", 1, 58, 0.1724137931034483, 29]
+        ["HG00731", 1, 58, 0.17241, 29]
       ]
     }
 }, {
