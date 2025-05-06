@@ -94,6 +94,21 @@ class EntriesSnvIndel(models.ClickhouseModel):
         )
         projection = Projection('xpos_projection', order_by='xpos, is_gnomad_gt_5_percent')
 
+    def _save_table(
+        self,
+        raw=False,
+        cls=None,
+        force_insert=False,
+        force_update=False,
+        using=None,
+        update_fields=None,
+    ):
+        # Data loading attempts to run an ALTER TABLE to update existing rows, but since primary keys can not be altered
+        # this command fails so need to use the force_insert flag to run an INSERT instead
+        return super()._save_table(
+            raw=raw, cls=cls, force_insert=True, force_update=force_update, using=using, update_fields=update_fields,
+        )
+
 
 class BaseAnnotationsSnvIndel(models.ClickhouseModel):
     POPULATION_FIELDS = [
@@ -291,3 +306,18 @@ class Clinvar(models.ClickhouseModel):
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/clinvar'
         engine = Join('ALL', 'LEFT', 'key')
+
+    def _save_table(
+        self,
+        raw=False,
+        cls=None,
+        force_insert=False,
+        force_update=False,
+        using=None,
+        update_fields=None,
+    ):
+        # Data loading attempts to run an ALTER TABLE to update existing rows, but JOIN tables can not be altered
+        # this command fails so need to use the force_insert flag to run an INSERT instead
+        return super()._save_table(
+            raw=raw, cls=cls, force_insert=True, force_update=force_update, using=using, update_fields=update_fields,
+        )

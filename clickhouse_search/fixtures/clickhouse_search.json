@@ -374,6 +374,49 @@
       "transcripts": []
     }
 }, {
+    "model": "clickhouse_search.clinvar",
+    "pk": 1,
+    "fields": {
+      "key": 1,
+      "allele_id": 19473,
+      "conflicting_pathogenicities": [],
+      "gold_stars": null,
+      "submitters": [],
+      "conditions": [],
+      "assertions": [],
+      "pathogenicity": 4
+    }
+}, {
+    "model": "clickhouse_search.clinvar",
+    "pk": 2,
+    "fields": {
+      "key": 2,
+      "allele_id": 18560,
+      "conflicting_pathogenicities": [
+        [1, 4],
+        [1, 11],
+        [1, 13],
+        [1, 15]
+      ],
+      "gold_stars": 1,
+      "submitters": [
+        "Broad Center for Mendelian Genomics, Broad Institute of MIT and Harvard",
+        "Illumina Laboratory Services, Illumina",
+        "Blueprint Genetics",
+        "GenomeConnect, ClinGen"
+      ],
+      "conditions": [
+        "ABCA4-Related Disorders",
+        "Severe early-childhood-onset retinal dystrophy",
+        "not specified",
+        "not provided"
+      ],
+      "assertions": [
+        7
+      ],
+      "pathogenicity": 8
+    }
+}, {
     "model": "clickhouse_search.entriessnvindel",
     "pk": 1,
     "fields": {
@@ -384,6 +427,7 @@
       "xpos": 1000010439,
       "is_gnomad_gt_5_percent": false,
       "filters": [],
+      "sign": 1,
       "calls": [
         ["HG00733", 0, 20, 0, 60],
         ["HG00732", 0, 0, 0, 24],
@@ -401,6 +445,7 @@
       "xpos": 1038724419,
       "is_gnomad_gt_5_percent": false,
       "filters": [],
+      "sign": 1,
       "calls": [
         ["HG00733", 0, 40, 0, 33],
         ["HG00732", 1, 99, 0.625, 32],
@@ -418,6 +463,7 @@
       "xpos": 1091502721,
       "is_gnomad_gt_5_percent": true,
       "filters": [],
+      "sign": 1,
       "calls": [
         ["HG00733", 1, 99, 0.4074074074074074, 27],
         ["HG00732", 0, 99, 0.4594594594594595, 37],
@@ -437,6 +483,7 @@
       "filters": [
         "VQSRTrancheSNP99.95to100.00"
       ],
+      "sign": 1,
       "calls": [
         ["HG00733", 0, 0, 0, 45],
         ["HG00732", 0, 0, 0, 24],
@@ -454,6 +501,7 @@
       "xpos": 1091502721,
       "is_gnomad_gt_5_percent": true,
       "filters": [],
+      "sign": 1,
       "calls": [
         ["NA20872", 1, 99, 0.34285714285714286, 35],
         ["NA20870", 1, 99, 0.6785714285714286, 28]
@@ -470,6 +518,7 @@
       "xpos": 1000010439,
       "is_gnomad_gt_5_percent": false,
       "filters": [],
+      "sign": 1,
       "calls": [
         ["NA20885", 2, 16, 1, 6]
       ]
@@ -485,6 +534,7 @@
       "xpos": 1038724419,
       "is_gnomad_gt_5_percent": false,
       "filters": [],
+      "sign": 1,
       "calls": [
         ["NA20885", 1, 99, 0.5, 28]
       ]
@@ -500,6 +550,7 @@
       "xpos": 1000010146,
       "is_gnomad_gt_5_percent": false,
       "filters": [],
+      "sign": 1,
       "calls": [
         ["NA20885", 1, 14, 0.875, 8]
       ]
@@ -515,6 +566,7 @@
       "xpos": 1000010439,
       "is_gnomad_gt_5_percent": false,
       "filters": [],
+      "sign": 1,
       "calls": [
         ["NA20885", 2, 16, 1, 6]
       ]
@@ -530,6 +582,7 @@
       "xpos": 1038724419,
       "is_gnomad_gt_5_percent": false,
       "filters": [],
+      "sign": 1,
       "calls": [
         ["NA20885", 1, 99, 0.5, 28]
       ]
@@ -545,6 +598,7 @@
       "xpos": 1000010146,
       "is_gnomad_gt_5_percent": false,
       "filters": [],
+      "sign": 1,
       "calls": [
         ["NA20885", 1, 14, 0.875, 8]
       ]
