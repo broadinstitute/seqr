@@ -103,7 +103,7 @@ class EntriesSnvIndel(models.ClickhouseModel):
         using=None,
         update_fields=None,
     ):
-        # Data loading attempts to run an ALTER TABLE to update existing rows, but since primary keys can not be altered
+        # loaddata attempts to run an ALTER TABLE to update existing rows, but since primary keys can not be altered
         # this command fails so need to use the force_insert flag to run an INSERT instead
         return super()._save_table(
             raw=raw, cls=cls, force_insert=True, force_update=force_update, using=using, update_fields=update_fields,
@@ -316,7 +316,7 @@ class Clinvar(models.ClickhouseModel):
         using=None,
         update_fields=None,
     ):
-        # Data loading attempts to run an ALTER TABLE to update existing rows, but JOIN tables can not be altered
+        # loaddata attempts to run an ALTER TABLE to update existing rows, but since JOIN tables can not be altered
         # this command fails so need to use the force_insert flag to run an INSERT instead
         return super()._save_table(
             raw=raw, cls=cls, force_insert=True, force_update=force_update, using=using, update_fields=update_fields,
