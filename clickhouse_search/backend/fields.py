@@ -1,5 +1,5 @@
 from clickhouse_backend import models
-from itertools import groupby
+from collections import defaultdict
 
 class NestedField(models.TupleField):
 
@@ -32,9 +32,13 @@ class NestedField(models.TupleField):
             (format_item(item) if format_item else super(NestedField, self)._from_db_value(item, expression, connection))._asdict()
             for item in value
         ]
-        if self.group_by_key:
-            group_agg = next if self.flatten_groups else list
-            value = {k: group_agg(v) for k, v in groupby(value, lambda x: x[self.group_by_key])}
+        if self.flatten_groups:
+            value = {item[self.group_by_key]: item for item in value}
+        elif self.group_by_key:
+            group_value = defaultdict(list)
+            for item in value:
+                group_value[item[self.group_by_key]].append(item)
+            value = group_value
         return value
 
     def to_python(self, value):

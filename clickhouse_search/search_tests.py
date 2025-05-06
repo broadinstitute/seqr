@@ -1,6 +1,7 @@
 from django.test import TestCase
 
 from hail_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4
+from seqr.models import Project
 from seqr.utils.search.search_utils_tests import SearchTestHelper
 from seqr.utils.search.utils import query_variants
 
@@ -10,6 +11,8 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 
     def setUp(self):
         super().set_up()
+        Project.objects.update(genome_version='38')
+        self.maxDiff = None
         
     def _assert_expected_search(self, expected_results, gene_counts=None, **search_kwargs):
         self.search_model.search.update(search_kwargs or {})
@@ -29,9 +32,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             'ENSG00000277258': {'total': 1, 'families': {'F000002_2': 1}}
         }
         self._assert_expected_search(
-            [VARIANT1, VARIANT2, VARIANT3, VARIANT4], 
-            # sample_data=FAMILY_2_VARIANT_SAMPLE_DATA, 
-            gene_counts=variant_gene_counts,
+            [VARIANT1, VARIANT2, VARIANT3, VARIANT4], gene_counts=variant_gene_counts,
         )
 
     #     mito_gene_counts = {
