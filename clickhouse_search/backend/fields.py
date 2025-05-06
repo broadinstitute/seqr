@@ -38,7 +38,7 @@ class NestedField(models.TupleField):
             group_value = defaultdict(list)
             for item in value:
                 group_value[item[self.group_by_key]].append(item)
-            value = group_value
+            value = dict(group_value)
         return value
 
     def to_python(self, value):

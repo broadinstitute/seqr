@@ -43,7 +43,6 @@ CLINVAR_FIELDS = OrderedDict({
 })
 
 GENOTYPE_FIELDS = OrderedDict({
-    'project_guid': ('projectGuid', models.StringField()),
     'family_guid': ('familyGuid', models.StringField()),
     'sample_type': ('sampleType', models.StringField()),
     'filters': ('filters', models.ArrayField(models.StringField())),

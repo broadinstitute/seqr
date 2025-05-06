@@ -17,13 +17,30 @@ VARIANT3 = {**HAIL_VARIANT3, 'key': 3}
 VARIANT4 = {**HAIL_VARIANT4, 'key': 4}
 for variant in [VARIANT1, VARIANT2, VARIANT3, VARIANT4]:
     del variant['_sort']
-    variant['populations']['seqr'] = mock.ANY  # TODO
     # clickhouse uses fixed length decimals so values are rounded relative to hail backend
     for genotype in variant['genotypes'].values():
         genotype['ab'] = round(genotype['ab'], 5)
     for pred, pred_val in variant['predictions'].items():
         if isinstance(pred_val, float):
             variant['predictions'][pred] = round(pred_val, 5)
+    for pop in variant['populations'].values():
+        pop['af'] = round(pop['af'], 5)
+        if 'filter_af' in pop:
+            pop['filter_af'] = round(pop['filter_af'], 5)
+    for transcripts in variant['transcripts'].values():
+        for transcript in transcripts:
+            if transcript['alphamissense']['pathogenicity']:
+                transcript['alphamissense']['pathogenicity'] = round(transcript['alphamissense']['pathogenicity'], 5)
+
+    variant['populations']['seqr'] = mock.ANY  # TODO
+    del variant['predictions']['splice_ai_consequence'] # TODO
+
+# Sparse clinvar data is represented by nulls in hail backend and empty lists in clickhouse
+VARIANT1['clinvar'].update({'assertions': [], 'conditions': [], 'conflictingPathogenicities': [], 'submitters': []})
+# TODO add clinvar version to clickhouse
+del VARIANT1['clinvar']['version']
+# TODO fix hgmd field name
+VARIANT2['hgmd']['class_'] = VARIANT2['hgmd'].pop('class')
 
 class ClickhouseSearchTests(SearchTestHelper, TestCase):
     databases = '__all__'

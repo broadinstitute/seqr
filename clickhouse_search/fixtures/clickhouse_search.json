@@ -20,8 +20,8 @@
       "populations": [
         [0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0],
-        [927, 0.034449315071105956, 26912, 0.04027664661407471, 0, 48],
-        [20757, 0.0784199982881546, 264690, 20757, 0]
+        [927, 0.03444, 26912, 0.04027, 0, 48],
+        [20757, 0.07841, 264690, 20757, 0]
       ],
       "sorted_transcript_consequences": [],
       "sorted_motif_feature_consequences": [],
@@ -44,7 +44,7 @@
       "lifted_over_pos": 11854476,
       "hgmd": ["CM981315", 3],
       "screen_region_type": null,
-      "predictions": [20.89999, 2.00099, 0, 5.8685, 0.28205, null, 3, 0.1, 0.46558, 0.19699, 0.05, 0, 4, 0.21099],
+      "predictions": [20.9, 2.001, 0, 5.86851, 0.28205, null, 3, 0.1, 0.46558, 0.1967, 0.05, 0, 4, 0.211],
       "populations": [
         [35805, 0.29499, 121372, 0.4153, 0, 24061, 5872],
         [72672, 0.28899, 251462, 0.41164, 0, 11567],
@@ -205,7 +205,7 @@
       "key": 2,
       "transcripts": [
         [
-          [0.9977999925613403], "L/F", "protein_coding", 1, "ttA/ttC", ["missense_variant"], [2, 9], "ENSG00000177000",
+          [0.99779], "L/F", "protein_coding", 1, "ttA/ttC", ["missense_variant"], [2, 9], "ENSG00000177000",
           "ENST00000383791.8:c.156A>C", "ENSP00000373301.3:p.Leu52Phe", [null, null], [false, []], "missense_variant",
           null, "NM_004844.5", "NM_004844.5", [false], "ENST00000383791", 0, [null, null, null, [
             null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
@@ -227,7 +227,7 @@
           ]
         ],
         [
-          [0.9977999925613403], "L/F", "nonsense_mediated_decay", null, "ttA/ttC", ["missense_variant", 28], [2, 5],
+          [0.99779], "L/F", "nonsense_mediated_decay", null, "ttA/ttC", ["missense_variant", 28], [2, 5],
           "ENSG00000277258", "ENST00000450625.1:c.156A>C", "ENSP00000389484.1:p.Leu52Phe", [null, null], [false, []], 12,
           null, null, null, [false], "ENST00000450625", 3, [null, null, null, [
             null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
@@ -346,7 +346,7 @@
       "submitters": [],
       "conditions": [],
       "assertions": [],
-      "pathogenicity": 4
+      "pathogenicity": "Likely_pathogenic"
     }
 }, {
     "model": "clickhouse_search.clinvar",
