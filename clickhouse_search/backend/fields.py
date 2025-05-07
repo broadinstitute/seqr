@@ -59,24 +59,21 @@ class UInt64FieldDeltaCodecField(models.UInt64Field):
 
 class NamedTupleField(models.TupleField):
 
-    def __init__(self, *args, null_if_empty=False, **kwargs):
+    def __init__(self, *args, null_if_empty=False, null_empty_arrays=False, **kwargs):
         self.null_if_empty = null_if_empty
+        self.null_empty_arrays = null_empty_arrays
         super().__init__(*args, **kwargs)
 
     def _convert_type(self, value):
         value = super()._convert_type(value)
         if self.null_if_empty and not any(value):
             return None
-        return value._asdict()
+        value = value._asdict()
+        if self.null_empty_arrays:
+            for key, item in value.items():
+                if item == []:
+                    value[key] = None
+        return value
 
     def to_python(self, value):
         return self.call_base_fields("to_python", value)
-
-
-class NullableArrayField(models.ArrayField):
-
-    def _from_db_value(self, value, expression, connection):
-        if not value:
-            return None
-        return super()._from_db_value(value, expression, connection)
-

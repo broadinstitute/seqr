@@ -3,7 +3,7 @@ from django.db.migrations import state
 from django.db.models import options, ForeignKey, OneToOneField, Func, CASCADE, PROTECT
 
 from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocksDB, Join
-from clickhouse_search.backend.fields import NestedField, UInt64FieldDeltaCodecField, NamedTupleField, NullableArrayField
+from clickhouse_search.backend.fields import NestedField, UInt64FieldDeltaCodecField, NamedTupleField
 from seqr.utils.xpos_utils import CHROMOSOMES
 from settings import CLICKHOUSE_IN_MEMORY_DIR, CLICKHOUSE_DATA_DIR
 
@@ -238,8 +238,8 @@ class TranscriptsSnvIndel(models.ClickhouseModel):
         ], null_if_empty=True)),
         ('loftee', NamedTupleField([
             ('isLofNagnag', models.BoolField(null=True, blank=True)),
-            ('lofFilters', NullableArrayField(models.StringField(null=True, blank=True))),
-        ])),
+            ('lofFilters', models.ArrayField(models.StringField(null=True, blank=True))),
+        ], null_empty_arrays=True)),
         ('majorConsequence', models.StringField(null=True, blank=True)),
         ('manePlusClinical', models.StringField(null=True, blank=True)),
         ('maneSelect', models.StringField(null=True, blank=True)),
@@ -298,9 +298,9 @@ class Clinvar(models.ClickhouseModel):
         ('pathogenicity', models.Enum8Field(choices=PATHOGENICITY_CHOICES, return_int=False)),
     ], db_column='conflictingPathogenicities', null_when_empty=True)
     gold_stars = models.UInt8Field(db_column='goldStars', null=True, blank=True)
-    submitters = NullableArrayField(models.StringField())
-    conditions = NullableArrayField(models.StringField())
-    assertions = NullableArrayField(models.Enum8Field(choices=[(0, 'Affects'), (1, 'association'), (2, 'association_not_found'), (3, 'confers_sensitivity'), (4, 'drug_response'), (5, 'low_penetrance'), (6, 'not_provided'), (7, 'other'), (8, 'protective'), (9, 'risk_factor'), (10, 'no_classification_for_the_single_variant'), (11, 'no_classifications_from_unflagged_records')], return_int=False))
+    submitters = models.ArrayField(models.StringField())
+    conditions = models.ArrayField(models.StringField())
+    assertions = models.ArrayField(models.Enum8Field(choices=[(0, 'Affects'), (1, 'association'), (2, 'association_not_found'), (3, 'confers_sensitivity'), (4, 'drug_response'), (5, 'low_penetrance'), (6, 'not_provided'), (7, 'other'), (8, 'protective'), (9, 'risk_factor'), (10, 'no_classification_for_the_single_variant'), (11, 'no_classifications_from_unflagged_records')], return_int=False))
     pathogenicity = models.Enum8Field(choices=PATHOGENICITY_CHOICES, return_int=False)
 
     class Meta:
