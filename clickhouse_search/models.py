@@ -1,6 +1,7 @@
 from clickhouse_backend import models
 from django.db.migrations import state
 from django.db.models import options, ForeignKey, OneToOneField, Func, CASCADE, PROTECT
+from numpy.lib.recfunctions import rename_fields
 
 from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocksDB, Join
 from clickhouse_search.backend.fields import NestedField, UInt64FieldDeltaCodecField, NamedTupleField
@@ -160,7 +161,7 @@ class BaseAnnotationsSnvIndel(models.ClickhouseModel):
     hgmd = NamedTupleField([
         ('accession', models.StringField(null=True, blank=True)),
         ('class_', models.Enum8Field(null=True, blank=True, return_int=False, choices=[(0, 'DM'), (1, 'DM?'), (2, 'DP'), (3, 'DFP'), (4, 'FP'), (5, 'R')])),
-    ], null_if_empty=True)
+    ], null_if_empty=True, rename_fields={'class_': 'class'})
     screen_region_type = models.Enum8Field(db_column='screenRegionType', null=True, blank=True, return_int=False, choices=[(0, 'CTCF-bound'), (1, 'CTCF-only'), (2, 'DNase-H3K4me3'), (3, 'PLS'), (4, 'dELS'), (5, 'pELS'), (6, 'DNase-only'), (7, 'low-DNase')])
     predictions = NamedTupleField([
         ('cadd', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),

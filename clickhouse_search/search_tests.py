@@ -39,10 +39,8 @@ for variant in [VARIANT1, VARIANT2, VARIANT3, VARIANT4]:
 # TODO add clinvar version to clickhouse
 del VARIANT1['clinvar']['version']
 del VARIANT2['clinvar']['version']
-# TODO
-VARIANT2['hgmd']['class_'] = VARIANT2['hgmd'].pop('class')
 
-VARIANT_TRANSCRIPT_CONSEQUENCES = {
+TRANSCRIPT_CONSEQUENCES_BY_KEY = {
     2: [{
         'alphamissensePathogenicity': 0.99779,
         'canonical': 1,
@@ -167,7 +165,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 
     def _assert_expected_search_cache(self, variants, total):
         cached_variants = [{
-            'sortedTranscriptConsequences': VARIANT_TRANSCRIPT_CONSEQUENCES.get(variant['key'], []),
+            'sortedTranscriptConsequences': TRANSCRIPT_CONSEQUENCES_BY_KEY.get(variant['key'], []),
             **{k: v for k, v in variant.items() if k not in ['mainTranscriptId', 'selectedMainTranscriptId', 'transcripts']}
         } for variant in variants]
         results_cache = {'all_results': cached_variants, 'total_results': total}

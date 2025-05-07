@@ -59,9 +59,10 @@ class UInt64FieldDeltaCodecField(models.UInt64Field):
 
 class NamedTupleField(models.TupleField):
 
-    def __init__(self, *args, null_if_empty=False, null_empty_arrays=False, **kwargs):
+    def __init__(self, *args, null_if_empty=False, null_empty_arrays=False, rename_fields=None, **kwargs):
         self.null_if_empty = null_if_empty
         self.null_empty_arrays = null_empty_arrays
+        self.rename_fields = rename_fields or {}
         super().__init__(*args, **kwargs)
 
     def _convert_type(self, value):
@@ -69,6 +70,8 @@ class NamedTupleField(models.TupleField):
         if self.null_if_empty and not any(value):
             return None
         value = value._asdict()
+        for key, renamed_key in self.rename_fields.items():
+            value[renamed_key] = value.pop(key)
         if self.null_empty_arrays:
             for key, item in value.items():
                 if item == []:
