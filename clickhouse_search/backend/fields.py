@@ -71,3 +71,12 @@ class NamedTupleField(models.TupleField):
 
     def to_python(self, value):
         return self.call_base_fields("to_python", value)
+
+
+class NullableArrayField(models.ArrayField):
+
+    def _from_db_value(self, value, expression, connection):
+        if not value:
+            return None
+        return super()._from_db_value(value, expression, connection)
+

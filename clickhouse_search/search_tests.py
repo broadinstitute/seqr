@@ -33,13 +33,11 @@ for variant in [VARIANT1, VARIANT2, VARIANT3, VARIANT4]:
                 transcript['alphamissense']['pathogenicity'] = round(transcript['alphamissense']['pathogenicity'], 5)
 
     variant['populations']['seqr'] = mock.ANY  # TODO
-    del variant['predictions']['splice_ai_consequence'] # TODO
 
-# Sparse clinvar data is represented by nulls in hail backend and empty lists in clickhouse
-VARIANT1['clinvar'].update({'assertions': [], 'conditions': [], 'conflictingPathogenicities': [], 'submitters': []})
 # TODO add clinvar version to clickhouse
 del VARIANT1['clinvar']['version']
-# TODO fix hgmd field name
+del VARIANT2['clinvar']['version']
+# TODO
 VARIANT2['hgmd']['class_'] = VARIANT2['hgmd'].pop('class')
 
 class ClickhouseSearchTests(SearchTestHelper, TestCase):
