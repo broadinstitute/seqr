@@ -1,4 +1,5 @@
 from django.test import TestCase
+import json
 import mock
 
 from hail_search.test_utils import (
@@ -10,6 +11,7 @@ from hail_search.test_utils import (
 from seqr.models import Project
 from seqr.utils.search.search_utils_tests import SearchTestHelper
 from seqr.utils.search.utils import query_variants
+from seqr.views.utils.json_utils import DjangoJSONEncoderWithSets
 
 VARIANT1 = {**HAIL_VARIANT1, 'key': 1}
 VARIANT2 = {**HAIL_VARIANT2, 'key': 2}
@@ -53,7 +55,8 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         self.search_model.search.update(search_kwargs or {})
 
         variants, total = query_variants(self.results_model, user=self.user)
-        self.assertListEqual(variants, expected_results)
+        encoded_variants = json.loads(json.dumps(variants, cls=DjangoJSONEncoderWithSets))
+        self.assertListEqual(encoded_variants, expected_results)
         self.assertEqual(total, len(expected_results))
 
         results_cache = {'all_results': variants, 'total_results': total}

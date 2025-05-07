@@ -357,7 +357,7 @@
         [1, "Likely_pathogenic"],
         [1, "Uncertain_significance"],
         [1, "Likely_benign"],
-        [1, "Benign"]
+        [5, "Benign"]
       ],
       "gold_stars": 1,
       "submitters": [
