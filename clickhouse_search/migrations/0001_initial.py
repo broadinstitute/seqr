@@ -82,7 +82,6 @@ class Migration(migrations.Migration):
         ),
         migrations.CreateModel(
             name='Clinvar',
-
             fields=[
                 ('key', models.OneToOneField(db_column='key', on_delete=django.db.models.deletion.PROTECT, primary_key=True, serialize=False, to='clickhouse_search.annotationssnvindel')),
                 ('allele_id', clickhouse_backend.models.UInt32Field(blank=True, db_column='alleleId', null=True)),
