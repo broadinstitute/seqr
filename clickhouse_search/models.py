@@ -1,7 +1,6 @@
 from clickhouse_backend import models
 from django.db.migrations import state
 from django.db.models import options, ForeignKey, OneToOneField, Func, CASCADE, PROTECT
-from numpy.lib.recfunctions import rename_fields
 
 from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocksDB, Join
 from clickhouse_search.backend.fields import NestedField, UInt64FieldDeltaCodecField, NamedTupleField

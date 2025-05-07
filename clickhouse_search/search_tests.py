@@ -1,6 +1,7 @@
+from django.db import connections
 from django.test import TestCase
 import json
-import mock
+import os
 
 from hail_search.test_utils import (
     VARIANT1 as HAIL_VARIANT1,
@@ -18,7 +19,6 @@ VARIANT2 = {**HAIL_VARIANT2, 'key': 2}
 VARIANT3 = {**HAIL_VARIANT3, 'key': 3}
 VARIANT4 = {**HAIL_VARIANT4, 'key': 4}
 for variant in [VARIANT1, VARIANT2, VARIANT3, VARIANT4]:
-    del variant['_sort']
     # clickhouse uses fixed length decimals so values are rounded relative to hail backend
     for genotype in variant['genotypes'].values():
         genotype['ab'] = round(genotype['ab'], 5)
@@ -33,8 +33,10 @@ for variant in [VARIANT1, VARIANT2, VARIANT3, VARIANT4]:
         for transcript in transcripts:
             if transcript['alphamissense']['pathogenicity']:
                 transcript['alphamissense']['pathogenicity'] = round(transcript['alphamissense']['pathogenicity'], 5)
-
-    variant['populations']['seqr'] = mock.ANY  # TODO
+    # global seqr AF is no longer supported
+    del variant['populations']['seqr']['af']
+    # sort is not computed/annotated at query time
+    del variant['_sort']
 
 # TODO add clinvar version to clickhouse
 del VARIANT1['clinvar']['version']
@@ -144,15 +146,47 @@ TRANSCRIPT_CONSEQUENCES_BY_KEY = {
     }],
 }
 
+
 class ClickhouseSearchTests(SearchTestHelper, TestCase):
     databases = '__all__'
     fixtures = ['users', '1kg_project', 'reference_data', 'clickhouse_search']
 
+    def setUpTestData(cls):
+        with connections['clickhouse'].cursor() as cursor:
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS "GRCh38/SNV_INDEL/gt_stats_table"
+            (
+                key UInt32,
+                ac UInt32,
+                an UInt32,
+                hom UInt32,
+            )
+           ENGINE = MergeTree()
+           ORDER BY key
+           PRIMARY KEY key
+           """)
+            cursor.execute('INSERT INTO "GRCh38/SNV_INDEL/gt_stats_table" (*) VALUES (1, 9, 90, 2)')
+            cursor.execute('INSERT INTO "GRCh38/SNV_INDEL/gt_stats_table" (*) VALUES (2, 28, 90, 4)')
+            cursor.execute('INSERT INTO "GRCh38/SNV_INDEL/gt_stats_table" (*) VALUES (3, 4, 6, 1)')
+            cursor.execute('INSERT INTO "GRCh38/SNV_INDEL/gt_stats_table" (*) VALUES (4, 2, 90, 0)')
+            cursor.execute(f"""
+            CREATE DICTIONARY IF NOT EXISTS "GRCh38/SNV_INDEL/gt_stats_dict"
+            (
+                key UInt32,
+                ac UInt32,
+                an UInt32,
+                hom UInt32,
+            )
+            PRIMARY KEY key
+            SOURCE(CLICKHOUSE(USER 'clickhouse' PASSWORD '{os.environ.get('CLICKHOUSE_PASSWORD', 'clickhouse_test')}' QUERY "SELECT key, ac, an, hom FROM test_seqr.`GRCh38/SNV_INDEL/gt_stats_table`" ))
+            LIFETIME(0)
+            LAYOUT(FLAT(MAX_ARRAY_SIZE 500000000))
+            """)
+
     def setUp(self):
         super().set_up()
         Project.objects.update(genome_version='38')
-        self.maxDiff = None  # TODO remove
-        
+
     def _assert_expected_search(self, expected_results, gene_counts=None, **search_kwargs):
         self.search_model.search.update(search_kwargs or {})
 
