@@ -93,7 +93,7 @@ const clinvarPopup = (clinvar) => {
   const lastUpdated = (
     <div>{clinvar.version && `Last Updated: ${new Date(clinvar.version).toLocaleDateString()}`}</div>
   )
-  const conditions = clinvar.conditions && clinvar.conditions.length > 0 && (
+  const conditions = clinvar.conditions && (
     <div>
       Conditions:
       <List bulleted>
