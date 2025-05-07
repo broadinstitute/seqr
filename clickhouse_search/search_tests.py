@@ -42,6 +42,110 @@ del VARIANT2['clinvar']['version']
 # TODO
 VARIANT2['hgmd']['class_'] = VARIANT2['hgmd'].pop('class')
 
+VARIANT_TRANSCRIPT_CONSEQUENCES = {
+    2: [{
+        'alphamissensePathogenicity': 0.99779,
+        'canonical': 1,
+        'consequenceTerms': ['missense_variant'],
+        'extendedIntronicSpliceRegionVariant': False,
+        'fiveutrConsequence': None,
+        'geneId': 'ENSG00000177000',
+    }, {
+        'alphamissensePathogenicity': None,
+        'canonical': None,
+        'consequenceTerms': ['5_prime_UTR_variant'],
+        'extendedIntronicSpliceRegionVariant': False,
+        'fiveutrConsequence': '5_prime_UTR_stop_codon_loss_variant',
+        'geneId': 'ENSG00000177000',
+    }, {
+        'alphamissensePathogenicity': None,
+        'canonical': None,
+        'consequenceTerms': ['5_prime_UTR_variant'],
+        'extendedIntronicSpliceRegionVariant': False,
+        'fiveutrConsequence': '5_prime_UTR_stop_codon_loss_variant',
+        'geneId': 'ENSG00000177000',
+    }, {
+        'alphamissensePathogenicity': 0.99779,
+        'canonical': None,
+        'consequenceTerms': ['missense_variant', 'NMD_transcript_variant'],
+        'extendedIntronicSpliceRegionVariant': False,
+        'fiveutrConsequence': None,
+        'geneId': 'ENSG00000277258',
+    }, {
+        'alphamissensePathogenicity': None,
+        'canonical': None,
+        'consequenceTerms': ['missense_variant'],
+        'extendedIntronicSpliceRegionVariant': False,
+        'fiveutrConsequence': None,
+        'geneId': 'ENSG00000177000',
+    }, {
+        'alphamissensePathogenicity': None,
+        'canonical': None,
+        'consequenceTerms': ['non_coding_transcript_exon_variant'],
+        'extendedIntronicSpliceRegionVariant': False,
+        'fiveutrConsequence': None,
+        'geneId': 'ENSG00000177000',
+    }, {
+        'alphamissensePathogenicity': None,
+        'canonical': None,
+        'consequenceTerms': ['non_coding_transcript_exon_variant'],
+        'extendedIntronicSpliceRegionVariant': False,
+        'fiveutrConsequence': None,
+        'geneId': 'ENSG00000177000',
+    }],
+    3: [{
+        'alphamissensePathogenicity': None,
+        'canonical': 1,
+        'consequenceTerms': ['intron_variant'],
+        'extendedIntronicSpliceRegionVariant': False,
+        'fiveutrConsequence': None,
+        'geneId': 'ENSG00000097046',
+    }, {
+        'alphamissensePathogenicity': None,
+        'canonical': None,
+        'consequenceTerms': ['intron_variant'],
+        'extendedIntronicSpliceRegionVariant': False,
+        'fiveutrConsequence': None,
+        'geneId': 'ENSG00000177000',
+    }, {
+        'alphamissensePathogenicity': None,
+        'canonical': None,
+        'consequenceTerms': ['intron_variant'],
+        'extendedIntronicSpliceRegionVariant': False,
+        'fiveutrConsequence': None,
+        'geneId': 'ENSG00000097046',
+    }, {
+        'alphamissensePathogenicity': None,
+        'canonical': None,
+        'consequenceTerms': ['non_coding_transcript_exon_variant'],
+        'extendedIntronicSpliceRegionVariant': False,
+        'fiveutrConsequence': None,
+        'geneId': 'ENSG00000097046',
+    }],
+    4: [{
+        'alphamissensePathogenicity': None,
+        'canonical': None,
+        'consequenceTerms': ['splice_donor_variant'],
+        'extendedIntronicSpliceRegionVariant': True,
+        'fiveutrConsequence': None,
+        'geneId': 'ENSG00000097046',
+    }, {
+        'alphamissensePathogenicity': None,
+        'canonical': 1,
+        'consequenceTerms': ['missense_variant'],
+        'extendedIntronicSpliceRegionVariant': False,
+        'fiveutrConsequence': None,
+        'geneId': 'ENSG00000097046',
+    }, {
+        'alphamissensePathogenicity': None,
+        'canonical': None,
+        'consequenceTerms': ['missense_variant'],
+        'extendedIntronicSpliceRegionVariant': False,
+        'fiveutrConsequence': None,
+        'geneId': 'ENSG00000097046',
+    }],
+}
+
 class ClickhouseSearchTests(SearchTestHelper, TestCase):
     databases = '__all__'
     fixtures = ['users', '1kg_project', 'reference_data', 'clickhouse_search']
@@ -49,17 +153,24 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
     def setUp(self):
         super().set_up()
         Project.objects.update(genome_version='38')
-        self.maxDiff = None
+        self.maxDiff = None  # TODO remove
         
     def _assert_expected_search(self, expected_results, gene_counts=None, **search_kwargs):
         self.search_model.search.update(search_kwargs or {})
 
         variants, total = query_variants(self.results_model, user=self.user)
         encoded_variants = json.loads(json.dumps(variants, cls=DjangoJSONEncoderWithSets))
+
         self.assertListEqual(encoded_variants, expected_results)
         self.assertEqual(total, len(expected_results))
+        self._assert_expected_search_cache(encoded_variants, total)
 
-        results_cache = {'all_results': variants, 'total_results': total}
+    def _assert_expected_search_cache(self, variants, total):
+        cached_variants = [{
+            'sortedTranscriptConsequences': VARIANT_TRANSCRIPT_CONSEQUENCES.get(variant['key'], []),
+            **{k: v for k, v in variant.items() if k not in ['mainTranscriptId', 'selectedMainTranscriptId', 'transcripts']}
+        } for variant in variants]
+        results_cache = {'all_results': cached_variants, 'total_results': total}
         self.assert_cached_results(results_cache)
 
     def test_single_family_search(self):

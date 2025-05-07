@@ -52,13 +52,13 @@
         [65154, 0.24615, 264690, 47604, 8775]
       ],
       "sorted_transcript_consequences": [
-        [0.99779, 1, [12], false, null, "ENSG00000177000"],
-        [null, null, [24], false, 3, "ENSG00000177000"],
-        [null, null, [24], false, 3, "ENSG00000177000"],
-        [0.99779, null, [12, 28], false, null, "ENSG00000277258"],
-        [null, null, [12], false, null, "ENSG00000177000"],
-        [null, null, [26], false, null, "ENSG00000177000"],
-        [null, null, [26], false, null, "ENSG00000177000"]
+        [0.99779, 1, ["missense_variant"], false, null, "ENSG00000177000"],
+        [null, null, ["5_prime_UTR_variant"], false, "5_prime_UTR_stop_codon_loss_variant", "ENSG00000177000"],
+        [null, null, ["5_prime_UTR_variant"], false, "5_prime_UTR_stop_codon_loss_variant", "ENSG00000177000"],
+        [0.99779, null, ["missense_variant", "NMD_transcript_variant"], false, null, "ENSG00000277258"],
+        [null, null, ["missense_variant"], false, null, "ENSG00000177000"],
+        [null, null, ["non_coding_transcript_exon_variant"], false, null, "ENSG00000177000"],
+        [null, null, ["non_coding_transcript_exon_variant"], false, null, "ENSG00000177000"]
       ],
       "sorted_motif_feature_consequences": [],
       "sorted_regulatory_feature_consequences": []
@@ -88,10 +88,10 @@
         [95998, 0.362681, 264690, 57260, 19369]
       ],
       "sorted_transcript_consequences": [
-        [null, 1, [27], false, null, "ENSG00000097046"],
-        [null, null, [27], false, null, "ENSG00000177000"],
-        [null, null, [27], false, null, "ENSG00000097046"],
-        [null, null, [26], false, null, "ENSG00000097046"]
+        [null, 1, ["intron_variant"], false, null, "ENSG00000097046"],
+        [null, null, ["intron_variant"], false, null, "ENSG00000177000"],
+        [null, null, ["intron_variant"], false, null, "ENSG00000097046"],
+        [null, null, ["non_coding_transcript_exon_variant"], false, null, "ENSG00000097046"]
       ],
       "sorted_motif_feature_consequences": [],
       "sorted_regulatory_feature_consequences": [
@@ -123,9 +123,9 @@
         [0, 0, 0, 0, 0]
       ],
       "sorted_transcript_consequences": [
-        [null, null, [2], true, null, "ENSG00000097046"],
-        [null, 1, [12], false, null, "ENSG00000097046"],
-        [null, null, [12], false, null, "ENSG00000097046"]
+        [null, null, ["splice_donor_variant"], true, null, "ENSG00000097046"],
+        [null, 1, ["missense_variant"], false, null, "ENSG00000097046"],
+        [null, null, ["missense_variant"], false, null, "ENSG00000097046"]
       ],
       "sorted_motif_feature_consequences": [
         [[2], "ENSM00093424674"],
