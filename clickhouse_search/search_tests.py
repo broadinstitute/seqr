@@ -153,22 +153,6 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 
     def setUpTestData(cls):
         with connections['clickhouse'].cursor() as cursor:
-            cursor.execute("""
-            CREATE TABLE IF NOT EXISTS "GRCh38/SNV_INDEL/gt_stats_table"
-            (
-                key UInt32,
-                ac UInt32,
-                an UInt32,
-                hom UInt32,
-            )
-           ENGINE = MergeTree()
-           ORDER BY key
-           PRIMARY KEY key
-           """)
-            cursor.execute('INSERT INTO "GRCh38/SNV_INDEL/gt_stats_table" (*) VALUES (1, 9, 90, 2)')
-            cursor.execute('INSERT INTO "GRCh38/SNV_INDEL/gt_stats_table" (*) VALUES (2, 28, 90, 4)')
-            cursor.execute('INSERT INTO "GRCh38/SNV_INDEL/gt_stats_table" (*) VALUES (3, 4, 6, 1)')
-            cursor.execute('INSERT INTO "GRCh38/SNV_INDEL/gt_stats_table" (*) VALUES (4, 2, 90, 0)')
             cursor.execute(f"""
             CREATE DICTIONARY IF NOT EXISTS "GRCh38/SNV_INDEL/gt_stats_dict"
             (
@@ -178,7 +162,11 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
                 hom UInt32,
             )
             PRIMARY KEY key
-            SOURCE(CLICKHOUSE(USER 'clickhouse' PASSWORD '{os.environ.get('CLICKHOUSE_PASSWORD', 'clickhouse_test')}' QUERY "SELECT key, ac, an, hom FROM test_seqr.`GRCh38/SNV_INDEL/gt_stats_table`" ))
+            SOURCE(CLICKHOUSE(
+                USER 'clickhouse' 
+                PASSWORD '{os.environ.get('CLICKHOUSE_PASSWORD', 'clickhouse_test')}' 
+                QUERY "SELECT * FROM VALUES ((1, 9, 90, 2), (2, 28, 90, 4), (3, 4, 6, 1), (4, 2, 90, 0))"
+            ))
             LIFETIME(0)
             LAYOUT(FLAT(MAX_ARRAY_SIZE 500000000))
             """)
