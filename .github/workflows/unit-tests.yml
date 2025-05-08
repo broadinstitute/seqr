@@ -27,13 +27,6 @@ jobs:
       matrix:
         python-version: [3.9]
 
-    before_script:
-      - name: Mount in-memory filesystem
-        id: tmpfs
-        uses: LeastAuthority/mount-tmpfs-action@v1
-        with:
-          root: '/in-memory-dir'
-
     services:
       # Label used to access the service container
       postgres:
@@ -56,8 +49,8 @@ jobs:
         ports:
           - 9000:9000   # Native client interface
         volumes:
-          - /tmp:/bitnami/clickhouse
-          - ${{ before_script.tmpfs.outputs.mnt }}/clickhouse:/in-memory-dir
+          - /data:/bitnami/clickhouse
+          - /tmp:/in-memory-dir
         options: >-
           --health-cmd "clickhouse-client --query 'SELECT 1'" 
           --health-interval 10s 
