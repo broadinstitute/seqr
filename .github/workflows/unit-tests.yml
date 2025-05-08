@@ -81,9 +81,12 @@ jobs:
           python -m pip install --upgrade pip wheel
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
+      - name: Grant filesystem permissions
+        run: |
+          mkdir /bitnami
+          chmod -R 0777 /bitnami
       - name: Run coverage tests
         run: |
-          chmod -R 0777 /bitnami
           export CLICKHOUSE_SERVICE_HOSTNAME=localhost
           coverage run --source="./matchmaker","./seqr","./reference_data","./panelapp","./clickhouse_search" --omit="*/migrations/*","*/apps.py","*/admin.py" manage.py test -p '*_tests.py' -v 2 reference_data seqr matchmaker panelapp clickhouse_search
           coverage report --fail-under=99
