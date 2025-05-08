@@ -68,8 +68,11 @@ class AuthenticationTestCase(TestCase):
         logging.getLogger().handlers[0].stream = self._log_stream
 
     @classmethod
+    def _databases_support_transactions(cls):
+        return True
+
+    @classmethod
     def setUpTestData(cls):
-        import pdb; pdb.set_trace()
         cls.super_user = User.objects.get(username='test_superuser')
         cls.analyst_user = User.objects.get(username='test_user')
         cls.pm_user = User.objects.get(username='test_pm_user')
