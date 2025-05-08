@@ -209,7 +209,7 @@ class AnnotationsSnvIndel(BaseAnnotationsSnvIndel):
     def _save_table(self, *args, **kwargs):
         from django.db import connections
         with connections['clickhouse'].cursor() as cursor:
-            print(cursor.execute('SHOW TABLE "GRCh38/SNV_INDEL/annotations_memory"'))
+            assert cursor.execute('SHOW TABLE "GRCh38/SNV_INDEL/annotations_memory"') is None
         return super()._save_table(*args, **kwargs)
 
 
