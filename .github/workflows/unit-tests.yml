@@ -50,6 +50,7 @@ jobs:
           - 9000:9000   # Native client interface
         volumes:
           - /tmp:/bitnami/clickhouse
+          - /in-memory-dir:/in-memory-dir
         options: >-
           --health-cmd "clickhouse-client --query 'SELECT 1'" 
           --health-interval 10s 
