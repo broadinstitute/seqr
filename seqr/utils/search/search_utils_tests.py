@@ -37,6 +37,7 @@ class SearchTestHelper(object):
         self.mock_redis.expire.assert_called_with(cache_key, timedelta(weeks=2))
 
 
+@mock.patch('clickhouse_search.search.CLICKHOUSE_SERVICE_HOSTNAME', '')
 class SearchUtilsTests(SearchTestHelper):
 
     def set_up(self):
