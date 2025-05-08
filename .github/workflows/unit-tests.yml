@@ -27,6 +27,13 @@ jobs:
       matrix:
         python-version: [3.9]
 
+    before_script:
+      - name: Mount in-memory filesystem
+        id: tmpfs
+        uses: LeastAuthority/mount-tmpfs-action@v1
+        with:
+          root: '/in-memory-dir'
+
     services:
       # Label used to access the service container
       postgres:
@@ -50,7 +57,7 @@ jobs:
           - 9000:9000   # Native client interface
         volumes:
           - /tmp:/bitnami/clickhouse
-          - ${{ steps.tmpfs.outputs.mnt }}/clickhouse:/in-memory-dir
+          - ${{ before_script.tmpfs.outputs.mnt }}/clickhouse:/in-memory-dir
         options: >-
           --health-cmd "clickhouse-client --query 'SELECT 1'" 
           --health-interval 10s 
@@ -72,11 +79,6 @@ jobs:
           java-version: "8" # The JDK version needed by hail
           java-package: jdk # (jre, jdk, or jdk+fx) - defaults to jdk
           architecture: x64 # (x64 or x86) - defaults to x64
-      - name: Mount in-memory filesystem
-        id: tmpfs
-        uses: LeastAuthority/mount-tmpfs-action@v1
-        with:
-          root: '/in-memory-dir'
       - name: Use pip cache
         uses: actions/cache@v4
         with:
