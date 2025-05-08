@@ -50,7 +50,7 @@ jobs:
           - 9000:9000   # Native client interface
         volumes:
           - /tmp:/bitnami/clickhouse
-          - /tmp/in-memory-dir:/in-memory-dir
+          - /var/tmp:/in-memory-dir
         options: >-
           --health-cmd "clickhouse-client --query 'SELECT 1'" 
           --health-interval 10s 
@@ -62,16 +62,6 @@ jobs:
           ALLOW_EMPTY_PASSWORD: no
 
     steps:
-      - name: ls
-        run: |
-          echo "tmp contents"
-          ls /tmp
-          echo "data contents"
-          ls /data
-          echo "usr contents"
-          ls /usr
-          echo "var contents"
-          ls /var
       - uses: actions/checkout@v2
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
