@@ -64,9 +64,13 @@ jobs:
     steps:
       - name: ls
         run: |
+          echo "tmp contents"
           ls /tmp
+          echo "data contents"
           ls /data
+          echo "usr contents"
           ls /usr
+          echo "var contents"
           ls /var
       - uses: actions/checkout@v2
       - name: Set up Python ${{ matrix.python-version }}
