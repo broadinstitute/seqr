@@ -81,6 +81,8 @@ jobs:
           python -m pip install --upgrade pip wheel
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
+      - name: Grant filesystem permissions
+        run: chmod -R 0777 /bitnami/clickhouse
       - name: Run coverage tests
         run: |
           export CLICKHOUSE_SERVICE_HOSTNAME=localhost
