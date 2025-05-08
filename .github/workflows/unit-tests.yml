@@ -58,6 +58,7 @@ jobs:
           CLICKHOUSE_PASSWORD: clickhouse_test
           CLICKHOUSE_ADMIN_USER: clickhouse
           CLICKHOUSE_ADMIN_PASSWORD: clickhouse_test
+          CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
           ALLOW_EMPTY_PASSWORD: no
 
     steps:
