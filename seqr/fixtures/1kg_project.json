@@ -2830,13 +2830,20 @@
         "patient_id": "NA19675"
     }
 }, {
+    "model": "contenttypes.contenttype",
+    "pk": 1,
+    "fields": {
+      "app_label": "seqr",
+      "model": "project-notification"
+    }
+}, {
     "model": "notifications.notification",
     "pk": 1,
     "fields": {
         "level": "info",
         "recipient": 11,
         "unread": true,
-        "actor_content_type": 80,
+        "actor_content_type": 1,
         "actor_object_id": "1",
         "verb": "Loaded 2 new WES SV samples",
         "description": null,
@@ -2857,7 +2864,7 @@
         "level": "info",
         "recipient": 11,
         "unread": false,
-        "actor_content_type": 80,
+        "actor_content_type": 1,
         "actor_object_id": "1",
         "verb": "Loaded 8 new WES samples",
         "description": null,
@@ -2878,7 +2885,7 @@
         "level": "info",
         "recipient": 12,
         "unread": true,
-        "actor_content_type": 80,
+        "actor_content_type": 1,
         "actor_object_id": "1",
         "verb": "Loaded 8 new WES samples",
         "description": null,
