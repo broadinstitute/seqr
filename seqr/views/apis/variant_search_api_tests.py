@@ -916,6 +916,8 @@ class VariantSearchAPITest(object):
         for k in ['VT1708633_2103343353_r0390_100', 'VT1726961_2103343353_r0390_100']:
             del expected_body['variantTagsByGuid'][k]
 
+        diff = {k: v for k, v in response.json().itmes() if expected_body[k] != v}
+        self.assertDictEqual(diff, {})
         self.assertDictEqual(response.json(), expected_body)
         mock_variant_lookup.assert_called_with(
             self.manager_user, ('1', 10439, 'AC', 'A'), genome_version='37',
