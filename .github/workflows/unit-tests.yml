@@ -48,6 +48,8 @@ jobs:
         image: bitnami/clickhouse:latest
         ports:
           - 9000:9000   # Native client interface
+        volumes:
+          - /tmp:/bitnami/clickhouse
         options: >-
           --health-cmd "clickhouse-client --query 'SELECT 1'" 
           --health-interval 10s 
@@ -81,10 +83,6 @@ jobs:
           python -m pip install --upgrade pip wheel
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
-      - name: Grant filesystem permissions
-        run: |
-          sudo mkdir /bitnami
-          sudo chown bitnami /bitnami
       - name: Run coverage tests
         run: |
           export CLICKHOUSE_SERVICE_HOSTNAME=localhost
