@@ -84,7 +84,7 @@ jobs:
       - name: Grant filesystem permissions
         run: |
           sudo mkdir /bitnami
-          sudo chmod -R 0777 /bitnami
+          sudo chown clickhouse /bitnami
       - name: Run coverage tests
         run: |
           export CLICKHOUSE_SERVICE_HOSTNAME=localhost
