@@ -1,5 +1,3 @@
-from v03_pipeline.lib.reference_datasets.misc import copyfileobj
-
 from copy import deepcopy
 from django.db import connections
 from django.test import TestCase
