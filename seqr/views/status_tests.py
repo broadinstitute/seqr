@@ -17,6 +17,7 @@ class StatusTest(object):
         calls = [
             mock.call('Database "default" connection error: No connection'),
             mock.call('Database "reference_data" connection error: No connection'),
+            mock.call('Database "clickhouse" connection error: No connection'),
             mock.call('Redis connection error: Bad connection'),
             mock.call(f'Search backend connection error: {self.SEARCH_BACKEND_ERROR}'),
         ]
