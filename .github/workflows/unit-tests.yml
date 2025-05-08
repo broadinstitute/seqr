@@ -45,7 +45,7 @@ jobs:
           # Maps tcp port 5432 on service container to the host
           - 5432:5432
       clickhouse:
-        image: clickhouse/clickhouse-server:latest
+        image: bitnami/clickhouse:latest
         ports:
           - 9000:9000   # Native client interface
         options: >-
@@ -56,6 +56,7 @@ jobs:
         env:
           CLICKHOUSE_USER: clickhouse
           CLICKHOUSE_PASSWORD: clickhouse_test
+          ALLOW_EMPTY_PASSWORD: no
 
     steps:
       - uses: actions/checkout@v2
