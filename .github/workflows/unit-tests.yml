@@ -56,6 +56,8 @@ jobs:
         env:
           CLICKHOUSE_USER: clickhouse
           CLICKHOUSE_PASSWORD: clickhouse_test
+          CLICKHOUSE_ADMIN_USER: clickhouse
+          CLICKHOUSE_ADMIN_PASSWORD: clickhouse_test
           ALLOW_EMPTY_PASSWORD: no
 
     steps:
@@ -81,10 +83,6 @@ jobs:
           python -m pip install --upgrade pip wheel
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
-      - name: Grant filesystem permissions
-        run: |
-          sudo mkdir /bitnami
-          sudo chown clickhouse /bitnami
       - name: Run coverage tests
         run: |
           export CLICKHOUSE_SERVICE_HOSTNAME=localhost
