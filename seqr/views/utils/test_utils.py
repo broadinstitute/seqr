@@ -69,6 +69,7 @@ class AuthenticationTestCase(TestCase):
 
     @classmethod
     def setUpTestData(cls):
+        import pdb; pdb.set_trace()
         cls.super_user = User.objects.get(username='test_superuser')
         cls.analyst_user = User.objects.get(username='test_user')
         cls.pm_user = User.objects.get(username='test_pm_user')
