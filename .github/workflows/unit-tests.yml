@@ -49,8 +49,8 @@ jobs:
         ports:
           - 9000:9000   # Native client interface
         volumes:
-          - /tmp:/bitnami/clickhouse
-          - /in-memory-dir:/in-memory-dir
+          - /tmp/clickhouse_disk:/bitnami/clickhouse
+          - /tmp/clickhouse_in_mem:/in-memory-dir
         options: >-
           --health-cmd "clickhouse-client --query 'SELECT 1'" 
           --health-interval 10s 
@@ -72,10 +72,6 @@ jobs:
           java-version: "8" # The JDK version needed by hail
           java-package: jdk # (jre, jdk, or jdk+fx) - defaults to jdk
           architecture: x64 # (x64 or x86) - defaults to x64
-      - name: Mount in-memory filesystem
-        uses: LeastAuthority/mount-tmpfs-action@v1
-        with:
-          root: '/in-memory-dir'
       - name: Use pip cache
         uses: actions/cache@v4
         with:
