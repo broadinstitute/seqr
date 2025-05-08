@@ -791,7 +791,6 @@ class VariantSearchAPITest(object):
 
     @mock.patch('seqr.views.apis.variant_search_api.variant_lookup')
     def test_variant_lookup(self, mock_variant_lookup):
-        self.maxDiff = None
         response_variant = deepcopy(VARIANT_LOOKUP_VARIANT)
         mock_variant_lookup.side_effect = lambda *args, **kwargs: deepcopy(response_variant)
 
