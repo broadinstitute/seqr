@@ -63,7 +63,11 @@ jobs:
 
     steps:
       - name: ls
-        run: ls -l /
+        run: |
+          ls /tmp
+          ls /data
+          ls /usr
+          ls /var
       - uses: actions/checkout@v2
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
