@@ -62,6 +62,8 @@ jobs:
           ALLOW_EMPTY_PASSWORD: no
 
     steps:
+      - name: ls
+        run: ls -l /
       - uses: actions/checkout@v2
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
