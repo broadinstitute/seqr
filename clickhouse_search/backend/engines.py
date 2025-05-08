@@ -22,6 +22,10 @@ class EmbeddedRocksDB(models.BaseMergeTree):
 
 class Join(models.Engine):
     arity = 3
+    setting_types = {
+        **models.Engine.setting_types,
+        _no_validate: ['join_use_nulls']
+    }
 
     def __init__(self, *expressions, **settings):
         super().__init__(*[Value(e) for e in expressions], **settings)

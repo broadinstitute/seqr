@@ -301,11 +301,11 @@ class Clinvar(models.ClickhouseModel):
     submitters = models.ArrayField(models.StringField())
     conditions = models.ArrayField(models.StringField())
     assertions = models.ArrayField(models.Enum8Field(choices=[(0, 'Affects'), (1, 'association'), (2, 'association_not_found'), (3, 'confers_sensitivity'), (4, 'drug_response'), (5, 'low_penetrance'), (6, 'not_provided'), (7, 'other'), (8, 'protective'), (9, 'risk_factor'), (10, 'no_classification_for_the_single_variant'), (11, 'no_classifications_from_unflagged_records')], return_int=False))
-    pathogenicity = models.Enum8Field(choices=PATHOGENICITY_CHOICES, return_int=False, null=True)
+    pathogenicity = models.Enum8Field(choices=PATHOGENICITY_CHOICES, return_int=False)
 
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/clinvar'
-        engine = Join('ALL', 'LEFT', 'key')
+        engine = Join('ALL', 'LEFT', 'key', join_use_nulls=1)
 
     def _save_table(
         self,
