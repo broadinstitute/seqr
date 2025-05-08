@@ -1,3 +1,6 @@
+from v03_pipeline.lib.reference_datasets.misc import copyfileobj
+
+from copy import deepcopy
 from django.db import connections
 from django.test import TestCase
 import json
@@ -14,10 +17,10 @@ from seqr.utils.search.search_utils_tests import SearchTestHelper
 from seqr.utils.search.utils import query_variants
 from seqr.views.utils.json_utils import DjangoJSONEncoderWithSets
 
-VARIANT1 = {**HAIL_VARIANT1, 'key': 1}
-VARIANT2 = {**HAIL_VARIANT2, 'key': 2}
-VARIANT3 = {**HAIL_VARIANT3, 'key': 3}
-VARIANT4 = {**HAIL_VARIANT4, 'key': 4}
+VARIANT1 = {**deepcopy(HAIL_VARIANT1), 'key': 1}
+VARIANT2 = {**deepcopy(HAIL_VARIANT2), 'key': 2}
+VARIANT3 = {**deepcopy(HAIL_VARIANT3), 'key': 3}
+VARIANT4 = {**deepcopy(HAIL_VARIANT4), 'key': 4}
 for variant in [VARIANT1, VARIANT2, VARIANT3, VARIANT4]:
     # clickhouse uses fixed length decimals so values are rounded relative to hail backend
     for genotype in variant['genotypes'].values():
