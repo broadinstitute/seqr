@@ -82,7 +82,7 @@ jobs:
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
       - name: Grant filesystem permissions
-        run: chmod -R 0777 /bitnami/clickhouse
+        run: chmod -R 0777 /bitnami
       - name: Run coverage tests
         run: |
           export CLICKHOUSE_SERVICE_HOSTNAME=localhost
