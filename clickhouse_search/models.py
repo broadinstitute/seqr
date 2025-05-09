@@ -204,7 +204,7 @@ class AnnotationsSnvIndel(BaseAnnotationsSnvIndel):
 
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/annotations_memory'
-        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_IN_MEMORY_DIR}/GRCh38/SNV_INDEL/annotations', primary_key='key')
+        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_IN_MEMORY_DIR}/GRCh38/SNV_INDEL/annotations', primary_key='key', flatten_nested=0)
 
 
 # Future work: create an alias and manager to switch between disk/in-memory annotations
@@ -212,7 +212,7 @@ class AnnotationsDiskSnvIndel(BaseAnnotationsSnvIndel):
 
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/annotations_disk'
-        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SNV_INDEL/annotations', primary_key='key')
+        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SNV_INDEL/annotations', primary_key='key', flatten_nested=0)
 
 class TranscriptsSnvIndel(models.ClickhouseModel):
     key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
@@ -278,7 +278,7 @@ class TranscriptsSnvIndel(models.ClickhouseModel):
 
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/transcripts'
-        engine = EmbeddedRocksDB(primary_key='key')
+        engine = EmbeddedRocksDB(primary_key='key', flatten_nested=0)
 
 
 class Clinvar(models.ClickhouseModel):

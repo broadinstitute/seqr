@@ -18,10 +18,6 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunSQL(
-            'CREATE SETTINGS PROFILE clickhouse SETTINGS flatten_nested=0 TO clickhouse', 
-            hints={'clickhouse':  True},
-        ),
         migrations.CreateModel(
             name='AnnotationsDiskSnvIndel',
             fields=[
