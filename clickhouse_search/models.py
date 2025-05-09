@@ -206,7 +206,6 @@ class AnnotationsSnvIndel(BaseAnnotationsSnvIndel):
         db_table = 'GRCh38/SNV_INDEL/annotations_memory'
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_IN_MEMORY_DIR}/GRCh38/SNV_INDEL/annotations', primary_key='key', flatten_nested=0)
 
-
 # Future work: create an alias and manager to switch between disk/in-memory annotations
 class AnnotationsDiskSnvIndel(BaseAnnotationsSnvIndel):
 
