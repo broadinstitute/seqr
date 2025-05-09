@@ -65,7 +65,7 @@ class DashboardPageTest(object):
         self.assertTrue(response_json['projectsByGuid']['R0002_empty']['userIsCreator'])
         self.assertTrue(response_json['projectsByGuid']['R0004_non_analyst_project']['userIsCreator'])
         self.assertFalse(response_json['projectsByGuid']['R0001_1kg']['userIsCreator'])
-        self.assertFalse(response_json['projectsByGuid']['R0003_test']['userIsCreator'])
+        self.assertTrue(response_json['projectsByGuid']['R0003_test']['userIsCreator'])
         self.assertTrue(response_json['projectsByGuid']['R0002_empty']['userCanDelete'])
         self.assertFalse(response_json['projectsByGuid']['R0004_non_analyst_project']['userCanDelete'])
 
@@ -76,7 +76,7 @@ class DashboardPageTest(object):
         self.assertEqual(len(response_json['projectsByGuid']), 3)
         self.assertFalse(response_json['projectsByGuid']['R0002_empty']['userIsCreator'])
         self.assertTrue(response_json['projectsByGuid']['R0001_1kg']['userIsCreator'])
-        self.assertTrue(response_json['projectsByGuid']['R0003_test']['userIsCreator'])
+        self.assertFalse(response_json['projectsByGuid']['R0003_test']['userIsCreator'])
         mock_get_redis.assert_called_with('projects__test_user')
         mock_set_redis.assert_called_with('projects__test_user', list(response_json['projectsByGuid'].keys()), expire=300)
 
