@@ -590,17 +590,13 @@ class ClickhouseSearchUtilsTests(TestCase, SearchUtilsTests):
 
     @mock.patch('seqr.utils.search.utils.get_clickhouse_variants')
     def test_get_single_variant(self, mock_call):
-        super().test_get_single_variant(mock_call)
+        with self.assertRaises(NotImplementedError):
+            super().test_get_single_variant(mock_call)
 
     @mock.patch('seqr.utils.search.utils.get_clickhouse_variants')
     def test_get_variants_for_variant_ids(self, mock_call):
         with self.assertRaises(NotImplementedError):
             super().test_get_variants_for_variant_ids(mock_call)
-
-    @mock.patch('seqr.utils.search.utils.get_clickhouse_variants')
-    def test_get_single_variant(self, mock_call):
-        with self.assertRaises(NotImplementedError):
-            super().test_get_single_variant(mock_call)
 
     @mock.patch('seqr.utils.search.utils.get_clickhouse_variants')
     def test_query_variants(self, mock_call):
