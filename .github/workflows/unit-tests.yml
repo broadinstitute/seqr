@@ -87,7 +87,7 @@ jobs:
       - name: Run coverage tests
         run: |
           export CLICKHOUSE_SERVICE_HOSTNAME=localhost
-          coverage run --source="./matchmaker","./seqr","./reference_data","./panelapp","./clickhouse_search" --omit="*/migrations/*","*/apps.py","*/admin.py" manage.py test -p '*_tests.py' -v 2 reference_data seqr matchmaker panelapp clickhouse_search
+          coverage run --source="./matchmaker","./seqr","./reference_data","./panelapp","./clickhouse_search" --omit="*/migrations/*","*/apps.py","*/admin.py" manage.py test -p '*_tests.py' -v 2 clickhouse_search
           coverage report --fail-under=99
           coverage report | (! grep [1-8][0-9]%)
           coverage report | (! grep 9[0-5]%)
