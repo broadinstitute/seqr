@@ -152,7 +152,7 @@ def _get_filtered_entries(sample_data, inheritance_mode=None, inheritance_filter
     )
 
     individual_genotype_filter = (inheritance_filter or {}).get('genotype')
-    custom_affected = (inheritance_filter or {}).get('affected')
+    custom_affected = (inheritance_filter or {}).get('affected') or {}
     if not inheritance_mode or individual_genotype_filter:
         return entries
 
