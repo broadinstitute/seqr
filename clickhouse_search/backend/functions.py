@@ -1,3 +1,4 @@
+from clickhouse_backend.models.fields.array import ArrayField, ArrayLookup
 from django.db.models import Func
 
 class Array(Func):
@@ -7,6 +8,19 @@ class Array(Func):
 class ArrayMap(Func):
     function = 'arrayMap'
     template = "%(function)s(x -> %(mapped_expression)s, %(expressions)s)"
+
+
+@ArrayField.register_lookup
+class ArrayExists(ArrayLookup):
+    lookup_name = "array_exists"
+    function = "arrayExists"
+    swap_args = True
+
+    def get_prep_lookup(self):
+        conditions = [f'x.{field} {op} {value}' for field, op, value in self.rhs]
+        condition = f'and({", ".join(conditions)})' if len(conditions) > 1 else conditions[0]
+        self.rhs = f'x -> {condition}'
+        return super().get_prep_lookup()
 
 
 class GtStatsDictGet(Func):

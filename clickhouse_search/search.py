@@ -8,12 +8,21 @@ from clickhouse_search.backend.fields import NestedField, NamedTupleField
 from clickhouse_search.backend.functions import Array, ArrayMap, GtStatsDictGet, Tuple, TupleConcat
 from clickhouse_search.models import EntriesSnvIndel, AnnotationsSnvIndel, TranscriptsSnvIndel, Clinvar
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
-from seqr.models import Sample
+from seqr.models import Sample, Individual
 from seqr.utils.logging_utils import SeqrLogger
-from seqr.utils.search.constants import MAX_VARIANTS, XPOS_SORT_KEY, INHERITANCE_FILTERS
+from seqr.utils.search.constants import MAX_VARIANTS, XPOS_SORT_KEY, INHERITANCE_FILTERS, X_LINKED_RECESSIVE, \
+    REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF
 from settings import CLICKHOUSE_SERVICE_HOSTNAME
 
 logger = SeqrLogger(__name__)
+
+GENOTYPE_LOOKUP = {
+    REF_REF: ('=', 0),
+    REF_ALT: ('=', 1),
+    ALT_ALT: ('=', 2),
+    HAS_ALT: ('>', 0),
+    HAS_REF: ('<', 2),
+}
 
 CORE_ENTRIES_FIELDS = ['key', 'xpos']
 
@@ -122,7 +131,7 @@ def _get_sample_data(samples):
 
     return samples.values(
         'sample_type', family_guid=F('individual__family__guid'), project_guid=F('individual__family__project__guid'),
-    ).annotate(samples=ArrayAgg(JSONObject(affected='individual__affected', sample_id='sample_id', individual_guid=F('individual__guid'))))
+    ).annotate(samples=ArrayAgg(JSONObject(affected='individual__affected', sex='individual__sex', sample_id='sample_id', individual_guid=F('individual__guid'))))
 
 
 def _get_sample_map_expression(sample_data):
@@ -153,9 +162,16 @@ def _get_filtered_entries(sample_data, inheritance_mode=None, inheritance_filter
         else:
             affected = custom_affected.get(sample['individual_guid']) or sample['affected']
             genotype = INHERITANCE_FILTERS[inheritance_mode].get(affected)
+            if (inheritance_mode == X_LINKED_RECESSIVE
+                    and affected == Individual.AFFECTED_STATUS_UNAFFECTED
+                    and sample['sex'] in Individual.MALE_SEXES
+            ):
+                genotype = REF_REF
         if genotype:
-            # TODO
-            entries = entries.filter()
+            entries = entries.filter(calls__array_exists=[
+                ('sampleId', '=', sample['sample_id']),
+                ('gt', *GENOTYPE_LOOKUP[genotype]),
+            ])
 
     return entries
 
