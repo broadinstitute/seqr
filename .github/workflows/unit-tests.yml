@@ -86,7 +86,6 @@ jobs:
           pip install -r requirements-dev.txt
       - name: Run coverage tests
         run: |
-          rm -rf /in-memory-dir/GRCh38
           export CLICKHOUSE_SERVICE_HOSTNAME=localhost
           coverage run --source="./matchmaker","./seqr","./reference_data","./panelapp","./clickhouse_search" --omit="*/migrations/*","*/apps.py","*/admin.py" manage.py test -p '*_tests.py' -v 2 clickhouse_search
           coverage report --fail-under=99

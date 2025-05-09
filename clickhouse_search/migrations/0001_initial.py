@@ -46,7 +46,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'GRCh38/SNV_INDEL/annotations_disk',
-                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SNV_INDEL/annotations', primary_key='key'),
+                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SNV_INDEL/annotations', primary_key='key', flatten_nested=0),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
@@ -77,7 +77,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'GRCh38/SNV_INDEL/annotations_memory',
-                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, f'{CLICKHOUSE_IN_MEMORY_DIR}/GRCh38/SNV_INDEL/annotations', primary_key='key'),
+                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, f'{CLICKHOUSE_IN_MEMORY_DIR}/GRCh38/SNV_INDEL/annotations', primary_key='key', flatten_nested=0),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
@@ -136,7 +136,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'GRCh38/SNV_INDEL/transcripts',
-                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(primary_key='key'),
+                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(primary_key='key', flatten_nested=0),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
