@@ -304,7 +304,7 @@ class Clinvar(models.ClickhouseModel):
 
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/clinvar'
-        engine = Join('ALL', 'LEFT', 'key', join_use_nulls=1)
+        engine = Join('ALL', 'LEFT', 'key', join_use_nulls=1, flatten_nested=0)
 
     def _save_table(
         self,

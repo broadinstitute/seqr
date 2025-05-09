@@ -28,7 +28,7 @@ class Join(models.Engine):
     arity = 3
     setting_types = {
         **models.Engine.setting_types,
-        _no_validate: ['join_use_nulls']
+        _no_validate: ['join_use_nulls', 'flatten_nested']
     }
 
     def __init__(self, *expressions, **settings):
