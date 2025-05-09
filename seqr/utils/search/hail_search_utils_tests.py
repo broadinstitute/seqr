@@ -30,6 +30,7 @@ EXPECTED_MITO_SAMPLE_DATA['MITO'][0].update({'individual_guid': 'I000004_hg00731
 ALL_EXPECTED_SAMPLE_DATA = {**EXPECTED_SAMPLE_DATA, **EXPECTED_MITO_SAMPLE_DATA}
 
 
+@mock.patch('clickhouse_search.search.CLICKHOUSE_SERVICE_HOSTNAME', '')
 @mock.patch('seqr.utils.search.hail_search_utils.HAIL_BACKEND_SERVICE_HOSTNAME', MOCK_HOST)
 class HailSearchUtilsTests(SearchTestHelper, TestCase):
     databases = '__all__'

@@ -7,6 +7,7 @@ from seqr.views.status import status_view
 from seqr.utils.search.elasticsearch.es_utils_tests import urllib3_responses
 
 
+@mock.patch('clickhouse_search.search.CLICKHOUSE_SERVICE_HOSTNAME', '')
 class StatusTest(object):
 
     def _test_status_error(self, url, mock_logger):
@@ -17,6 +18,7 @@ class StatusTest(object):
         calls = [
             mock.call('Database "default" connection error: No connection'),
             mock.call('Database "reference_data" connection error: No connection'),
+            mock.call('Database "clickhouse" connection error: No connection'),
             mock.call('Redis connection error: Bad connection'),
             mock.call(f'Search backend connection error: {self.SEARCH_BACKEND_ERROR}'),
         ]

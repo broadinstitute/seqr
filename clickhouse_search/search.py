@@ -38,12 +38,11 @@ ANNOTATION_VALUES['populations'] = TupleConcat(
 )
 
 CLINVAR_FIELDS = OrderedDict({
-    f'key__clinvar__{field.name}': (field.db_column or field.name, field.clone())
+    f'key__clinvar__{field.name}': (field.db_column or field.name, field)
     for field in Clinvar._meta.local_fields if field.name not in CORE_ENTRIES_FIELDS
 })
 
 GENOTYPE_FIELDS = OrderedDict({
-    'project_guid': ('projectGuid', models.StringField()),
     'family_guid': ('familyGuid', models.StringField()),
     'sample_type': ('sampleType', models.StringField()),
     'filters': ('filters', models.ArrayField(models.StringField())),
@@ -73,7 +72,7 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
             mapped_expression=f"tuple({_get_sample_map_expression(sample_data)}[x.sampleId], {', '.join(GENOTYPE_FIELDS.keys())})",
             output_field=NestedField([('individualGuid', models.StringField()), *GENOTYPE_FIELDS.values()], group_by_key='individualGuid', flatten_groups=True)
         ),
-        clinvar=Tuple(*CLINVAR_FIELDS.keys(), output_field=NamedTupleField(list(CLINVAR_FIELDS.values()), null_if_empty=True)),
+        clinvar=Tuple(*CLINVAR_FIELDS.keys(), output_field=NamedTupleField(list(CLINVAR_FIELDS.values()), null_if_empty=True, null_empty_arrays=True)),
         genomeVersion=Value(genome_version),
         liftedOverGenomeVersion=Value(_liftover_genome_version(genome_version)),
         **ANNOTATION_VALUES,

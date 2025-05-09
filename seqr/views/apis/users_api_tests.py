@@ -163,8 +163,9 @@ class UsersAPITest(object):
         new_collab = next(collab for collab in collaborators if collab['email'] == 'test@test.com')
         self.assertEqual(new_collab['username'], username)
         self.assertEqual(new_collab['displayName'], 'Test Name Update')
-        self.assert_json_logs(user, [('update User 20', {'dbUpdate': {
-            'dbEntity': 'User', 'entityId': 20, 'updateFields': ['last_name'], 'updateType': 'update'}})])
+        new_user_model = User.objects.get(username=new_collab['username'])
+        self.assert_json_logs(user, [(f'update User {new_user_model.id}', {'dbUpdate': {
+            'dbEntity': 'User', 'entityId': new_user_model.id, 'updateFields': ['last_name'], 'updateType': 'update'}})])
 
         # Test email failure
         mock_send_mail.side_effect = AnymailError('Connection err')

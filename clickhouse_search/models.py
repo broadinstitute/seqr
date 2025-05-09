@@ -80,7 +80,7 @@ class EntriesSnvIndel(models.ClickhouseModel):
     xpos = UInt64FieldDeltaCodecField()
     is_gnomad_gt_5_percent = models.BoolField()
     filters = models.ArrayField(models.StringField(low_cardinality=True))
-    calls = models.ArrayField(models.TupleField(CALL_FIELDS))
+    calls = models.ArrayField(NamedTupleField(CALL_FIELDS))
     sign = models.Int8Field()
 
     class Meta:
@@ -93,6 +93,21 @@ class EntriesSnvIndel(models.ClickhouseModel):
             index_granularity=8192,
         )
         projection = Projection('xpos_projection', order_by='xpos, is_gnomad_gt_5_percent')
+
+    def _save_table(
+        self,
+        raw=False,
+        cls=None,
+        force_insert=False,
+        force_update=False,
+        using=None,
+        update_fields=None,
+    ):
+        # loaddata attempts to run an ALTER TABLE to update existing rows, but since primary keys can not be altered
+        # this command fails so need to use the force_insert flag to run an INSERT instead
+        return super()._save_table(
+            raw=raw, cls=cls, force_insert=True, force_update=force_update, using=using, update_fields=update_fields,
+        )
 
 
 class BaseAnnotationsSnvIndel(models.ClickhouseModel):
@@ -141,11 +156,11 @@ class BaseAnnotationsSnvIndel(models.ClickhouseModel):
     rsid = models.StringField(null=True, blank=True)
     caid = models.StringField(db_column='CAID', null=True, blank=True)
     lifted_over_chrom = models.StringField(db_column='liftedOverChrom', low_cardinality=True, null=True, blank=True)
-    lifted_over_pos = models.StringField(db_column='liftedOverPos', null=True, blank=True)
+    lifted_over_pos = models.UInt32Field(db_column='liftedOverPos', null=True, blank=True)
     hgmd = NamedTupleField([
         ('accession', models.StringField(null=True, blank=True)),
         ('class_', models.Enum8Field(null=True, blank=True, return_int=False, choices=[(0, 'DM'), (1, 'DM?'), (2, 'DP'), (3, 'DFP'), (4, 'FP'), (5, 'R')])),
-    ])
+    ], null_if_empty=True, rename_fields={'class_': 'class'})
     screen_region_type = models.Enum8Field(db_column='screenRegionType', null=True, blank=True, return_int=False, choices=[(0, 'CTCF-bound'), (1, 'CTCF-only'), (2, 'DNase-H3K4me3'), (3, 'PLS'), (4, 'dELS'), (5, 'pELS'), (6, 'DNase-only'), (7, 'low-DNase')])
     predictions = NamedTupleField([
         ('cadd', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
@@ -189,15 +204,14 @@ class AnnotationsSnvIndel(BaseAnnotationsSnvIndel):
 
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/annotations_memory'
-        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_IN_MEMORY_DIR}/GRCh38/SNV_INDEL/annotations', primary_key='key')
-
+        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_IN_MEMORY_DIR}/GRCh38/SNV_INDEL/annotations', primary_key='key', flatten_nested=0)
 
 # Future work: create an alias and manager to switch between disk/in-memory annotations
 class AnnotationsDiskSnvIndel(BaseAnnotationsSnvIndel):
 
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/annotations_disk'
-        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SNV_INDEL/annotations', primary_key='key')
+        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SNV_INDEL/annotations', primary_key='key', flatten_nested=0)
 
 class TranscriptsSnvIndel(models.ClickhouseModel):
     key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
@@ -213,18 +227,18 @@ class TranscriptsSnvIndel(models.ClickhouseModel):
         ('exon', NamedTupleField([
             ('index', models.Int32Field(null=True, blank=True)),
             ('total', models.Int32Field(null=True, blank=True)),
-        ])),
+        ], null_if_empty=True)),
         ('geneId', models.StringField(null=True, blank=True)),
         ('hgvsc', models.StringField(null=True, blank=True)),
         ('hgvsp', models.StringField(null=True, blank=True)),
         ('intron', NamedTupleField([
             ('index', models.Int32Field(null=True, blank=True)),
             ('total', models.Int32Field(null=True, blank=True)),
-        ])),
+        ], null_if_empty=True)),
         ('loftee', NamedTupleField([
             ('isLofNagnag', models.BoolField(null=True, blank=True)),
             ('lofFilters', models.ArrayField(models.StringField(null=True, blank=True))),
-        ])),
+        ], null_empty_arrays=True)),
         ('majorConsequence', models.StringField(null=True, blank=True)),
         ('manePlusClinical', models.StringField(null=True, blank=True)),
         ('maneSelect', models.StringField(null=True, blank=True)),
@@ -239,31 +253,31 @@ class TranscriptsSnvIndel(models.ClickhouseModel):
             ('existingOutofframeOorfs', models.Int32Field(null=True, blank=True)),
             ('existingUorfs', models.Int32Field(null=True, blank=True)),
             ('fiveutrAnnotation', NamedTupleField([
-                ('type', models.StringField(null=True, blank=True)),
-                ('KozakContext', models.StringField(null=True, blank=True)),
-                ('KozakStrength', models.StringField(null=True, blank=True)),
-                ('DistanceToCDS', models.Int32Field(null=True, blank=True)),
-                ('CapDistanceToStart', models.Int32Field(null=True, blank=True)),
-                ('DistanceToStop', models.Int32Field(null=True, blank=True)),
-                ('Evidence', models.BoolField(null=True, blank=True)),
                 ('AltStop', models.StringField(null=True, blank=True)),
                 ('AltStopDistanceToCDS', models.Int32Field(null=True, blank=True)),
+                ('CapDistanceToStart', models.Int32Field(null=True, blank=True)),
+                ('DistanceToCDS', models.Int32Field(null=True, blank=True)),
+                ('DistanceToStop', models.Int32Field(null=True, blank=True)),
+                ('Evidence', models.BoolField(null=True, blank=True)),
                 ('FrameWithCDS', models.StringField(null=True, blank=True)),
+                ('KozakContext', models.StringField(null=True, blank=True)),
+                ('KozakStrength', models.StringField(null=True, blank=True)),
                 ('StartDistanceToCDS', models.Int32Field(null=True, blank=True)),
-                ('newSTOPDistanceToCDS', models.Int32Field(null=True, blank=True)),
                 ('alt_type', models.StringField(null=True, blank=True)),
                 ('alt_type_length', models.Int32Field(null=True, blank=True)),
+                ('newSTOPDistanceToCDS', models.Int32Field(null=True, blank=True)),
                 ('ref_StartDistanceToCDS', models.Int32Field(null=True, blank=True)),
                 ('ref_type', models.StringField(null=True, blank=True)),
                 ('ref_type_length', models.Int32Field(null=True, blank=True)),
-            ])),
+                ('type', models.StringField(null=True, blank=True)),
+            ], null_if_empty=True)),
             ('fiveutrConsequence', models.StringField(null=True, blank=True)),
         ])),
     ], group_by_key='geneId')
 
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/transcripts'
-        engine = EmbeddedRocksDB(primary_key='key')
+        engine = EmbeddedRocksDB(primary_key='key', flatten_nested=0)
 
 
 class Clinvar(models.ClickhouseModel):
@@ -280,14 +294,29 @@ class Clinvar(models.ClickhouseModel):
     allele_id = models.UInt32Field(db_column='alleleId', null=True, blank=True)
     conflicting_pathogenicities = NestedField([
         ('count', models.UInt16Field()),
-        ('pathogenicity', models.Enum8Field(choices=PATHOGENICITY_CHOICES)),
-    ], db_column='conflictingPathogenicities')
+        ('pathogenicity', models.Enum8Field(choices=PATHOGENICITY_CHOICES, return_int=False)),
+    ], db_column='conflictingPathogenicities', null_when_empty=True)
     gold_stars = models.UInt8Field(db_column='goldStars', null=True, blank=True)
     submitters = models.ArrayField(models.StringField())
     conditions = models.ArrayField(models.StringField())
-    assertions = models.ArrayField(models.Enum8Field(choices=[(0, 'Affects'), (1, 'association'), (2, 'association_not_found'), (3, 'confers_sensitivity'), (4, 'drug_response'), (5, 'low_penetrance'), (6, 'not_provided'), (7, 'other'), (8, 'protective'), (9, 'risk_factor'), (10, 'no_classification_for_the_single_variant'), (11, 'no_classifications_from_unflagged_records')]))
-    pathogenicity = models.Enum8Field(choices=PATHOGENICITY_CHOICES)
+    assertions = models.ArrayField(models.Enum8Field(choices=[(0, 'Affects'), (1, 'association'), (2, 'association_not_found'), (3, 'confers_sensitivity'), (4, 'drug_response'), (5, 'low_penetrance'), (6, 'not_provided'), (7, 'other'), (8, 'protective'), (9, 'risk_factor'), (10, 'no_classification_for_the_single_variant'), (11, 'no_classifications_from_unflagged_records')], return_int=False))
+    pathogenicity = models.Enum8Field(choices=PATHOGENICITY_CHOICES, return_int=False)
 
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/clinvar'
-        engine = Join('ALL', 'LEFT', 'key')
+        engine = Join('ALL', 'LEFT', 'key', join_use_nulls=1, flatten_nested=0)
+
+    def _save_table(
+        self,
+        raw=False,
+        cls=None,
+        force_insert=False,
+        force_update=False,
+        using=None,
+        update_fields=None,
+    ):
+        # loaddata attempts to run an ALTER TABLE to update existing rows, but since JOIN tables can not be altered
+        # this command fails so need to use the force_insert flag to run an INSERT instead
+        return super()._save_table(
+            raw=raw, cls=cls, force_insert=True, force_update=force_update, using=using, update_fields=update_fields,
+        )
