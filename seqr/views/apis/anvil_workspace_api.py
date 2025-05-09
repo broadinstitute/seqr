@@ -11,7 +11,7 @@ from django.core.exceptions import PermissionDenied
 from django.shortcuts import redirect
 
 from reference_data.models import GENOME_VERSION_LOOKUP
-from seqr.models import Project, CAN_EDIT, Sample, IgvSample
+from seqr.models import Project, Family, CAN_EDIT, Sample, IgvSample
 from seqr.views.react_app import render_app_html
 from seqr.views.utils.airtable_utils import AirtableSession, ANVIL_REQUEST_TRACKING_TABLE
 from seqr.views.utils.airflow_utils import trigger_airflow_data_loading
@@ -142,7 +142,8 @@ def validate_anvil_vcf(request, namespace, name, workspace_meta):
     # Validate no pending loading projects
     pending_project = Project.objects.filter(
         created_by=request.user, genome_version=body['genomeVersion'],
-    ).exclude(family__individual__sample__is_active=True).first()
+        family__analysis_status=Family.ANALYSIS_STATUS_WAITING_FOR_DATA
+    ).first()
     if pending_project:
         raise ErrorsWarningsException([
             f'Project "{pending_project.name}" is awaiting loading. Please wait for loading to complete before requesting additional data loading'
