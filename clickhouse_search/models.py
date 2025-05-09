@@ -206,6 +206,14 @@ class AnnotationsSnvIndel(BaseAnnotationsSnvIndel):
         db_table = 'GRCh38/SNV_INDEL/annotations_memory'
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_IN_MEMORY_DIR}/GRCh38/SNV_INDEL/annotations', primary_key='key', flatten_nested=0)
 
+    def _save_table(self, *args, **kwargs):
+        from django.db import connections
+        with connections['clickhouse'].cursor() as cursor:
+            cursor.execute('SHOW TABLE "GRCh38/SNV_INDEL/annotations_memory"')
+            (table_sql,) = cursor.fetchone()
+            raise Exception(table_sql)
+        return super()._save_table(*args, **kwargs)
+
 
 # Future work: create an alias and manager to switch between disk/in-memory annotations
 class AnnotationsDiskSnvIndel(BaseAnnotationsSnvIndel):
