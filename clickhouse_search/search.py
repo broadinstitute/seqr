@@ -10,7 +10,7 @@ from clickhouse_search.models import EntriesSnvIndel, AnnotationsSnvIndel, Trans
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample
 from seqr.utils.logging_utils import SeqrLogger
-from seqr.utils.search.constants import MAX_VARIANTS, XPOS_SORT_KEY
+from seqr.utils.search.constants import MAX_VARIANTS, XPOS_SORT_KEY, INHERITANCE_FILTERS
 from settings import CLICKHOUSE_SERVICE_HOSTNAME
 
 logger = SeqrLogger(__name__)
@@ -133,14 +133,31 @@ def _get_sample_map_expression(sample_data):
     return f"map({', '.join(sample_map)})"
 
 
-def _get_filtered_entries(sample_data, **kwargs):
+def _get_filtered_entries(sample_data, inheritance_mode=None, inheritance_filter=None, **kwargs):
     if len(sample_data) > 1:
         raise NotImplementedError('Clickhouse search not implemented for multiple families or sample types')
 
-    return EntriesSnvIndel.objects.filter(
+    entries = EntriesSnvIndel.objects.filter(
         project_guid=sample_data[0]['project_guid'],
         family_guid=sample_data[0]['family_guid'],
     )
+
+    individual_genotype_filter = (inheritance_filter or {}).get('genotype')
+    custom_affected = (inheritance_filter or {}).get('affected')
+    if not inheritance_mode or individual_genotype_filter:
+        return entries
+
+    for sample in sample_data[0]['samples']:
+        if individual_genotype_filter:
+            genotype = individual_genotype_filter.get(sample['individual_guid'])
+        else:
+            affected = custom_affected.get(sample['individual_guid']) or sample['affected']
+            genotype = INHERITANCE_FILTERS[inheritance_mode].get(affected)
+        if genotype:
+            # TODO
+            entries = entries.filter()
+
+    return entries
 
 
 def _liftover_genome_version(genome_version):
