@@ -37,9 +37,6 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
                 f"'{os.environ.get('CLICKHOUSE_PASSWORD', 'clickhouse_test')}'",
             ])
 
-            cursor.execute('SHOW CREATE DICTIONARY "GRCh38/SNV_INDEL/gt_stats_dict"')
-            raise Exception(cursor.fetchone())
-
     def setUp(self):
         super().set_up()
         Project.objects.update(genome_version='38')
