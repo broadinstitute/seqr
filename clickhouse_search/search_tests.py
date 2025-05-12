@@ -57,6 +57,9 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         self.assert_cached_results(results_cache)
 
     def test_single_family_search(self):
+        with self.assertRaises(NotImplementedError):
+            query_variants(self.results_model, user=self.user)
+
         self.results_model.families.set(self.families.filter(guid='F000002_2'))
         variant_gene_counts = {
             'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
