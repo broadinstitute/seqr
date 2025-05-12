@@ -76,6 +76,9 @@ jobs:
             echo "Waiting for ClickHouse to start..."
             sleep 2
           done
+      - name: Clickhouse confs ls
+        run: |
+          docker exec clickhouse ls /bitnami/clickhouse/etc/config.d
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
