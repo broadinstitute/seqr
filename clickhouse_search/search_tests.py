@@ -41,8 +41,10 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         super().set_up()
         Project.objects.update(genome_version='38')
 
-    def _assert_expected_search(self, expected_results, gene_counts=None, **search_kwargs):
+    def _assert_expected_search(self, expected_results, gene_counts=None, inheritance_mode=None, **search_kwargs):
         self.search_model.search.update(search_kwargs or {})
+        if inheritance_mode:
+            self.search_model.search['inheritance']['mode'] = inheritance_mode
 
         variants, total = query_variants(self.results_model, user=self.user)
         encoded_variants = json.loads(json.dumps(variants, cls=DjangoJSONEncoderWithSets))
@@ -175,11 +177,12 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #         )
 #
     def test_inheritance_filter(self):
-        inheritance_mode = 'any_affected'
         self.results_model.families.set(self.families.filter(guid='F000002_2'))
+
+        inheritance_mode = 'any_affected'
         self._assert_expected_search(
             # [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
-            [VARIANT1, VARIANT2, VARIANT4],
+            [VARIANT1, VARIANT2, VARIANT3, VARIANT4],
             inheritance_mode=inheritance_mode,
         )
 
