@@ -43,8 +43,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 
     def _assert_expected_search(self, expected_results, gene_counts=None, inheritance_mode=None, **search_kwargs):
         self.search_model.search.update(search_kwargs or {})
-        if inheritance_mode:
-            self.search_model.search['inheritance']['mode'] = inheritance_mode
+        self.search_model.search['inheritance']['mode'] = inheritance_mode
 
         variants, total = query_variants(self.results_model, user=self.user)
         encoded_variants = json.loads(json.dumps(variants, cls=DjangoJSONEncoderWithSets))
