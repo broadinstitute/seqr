@@ -1,6 +1,7 @@
 from django.db import connections
 from django.test import TestCase
 import json
+import mock
 import os
 
 from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4, CACHED_VARIANTS_BY_KEY
@@ -9,6 +10,8 @@ from seqr.utils.search.search_utils_tests import SearchTestHelper
 from seqr.utils.search.utils import query_variants
 from seqr.views.utils.json_utils import DjangoJSONEncoderWithSets
 
+
+@mock.patch('clickhouse_search.search.CLICKHOUSE_SERVICE_HOSTNAME', 'localhost')
 class ClickhouseSearchTests(SearchTestHelper, TestCase):
     databases = '__all__'
     fixtures = ['users', '1kg_project', 'reference_data', 'clickhouse_search', 'clickhouse_transcripts']
@@ -26,13 +29,13 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             )
             PRIMARY KEY key
             SOURCE(CLICKHOUSE(
-                USER 'clickhouse' 
-                PASSWORD '%s' 
+                USER %s
+                PASSWORD %s
                 QUERY "SELECT * FROM VALUES ((1, 9, 90, 2), (2, 28, 90, 4), (3, 4, 6, 1), (4, 2, 90, 0))"
             ))
             LIFETIME(0)
             LAYOUT(FLAT(MAX_ARRAY_SIZE 500000000))
-            """, [os.environ.get('CLICKHOUSE_PASSWORD', 'clickhouse_test')])
+            """, [os.environ.get('CLICKHOUSE_USER', 'clickhouse'), os.environ.get('CLICKHOUSE_PASSWORD', 'clickhouse_test')])
 
     def setUp(self):
         super().set_up()
@@ -54,6 +57,9 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         self.assert_cached_results(results_cache)
 
     def test_single_family_search(self):
+        with self.assertRaises(NotImplementedError):
+            query_variants(self.results_model, user=self.user)
+
         self.results_model.families.set(self.families.filter(guid='F000002_2'))
         variant_gene_counts = {
             'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
