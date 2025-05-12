@@ -578,12 +578,12 @@ class HailSearchUtilsTests(TestCase, SearchUtilsTests):
         self.set_up()
 
     @mock.patch('seqr.utils.search.utils.hail_variant_lookup')
-    def test_variant_lookup(self, mock_call):
-        super().test_variant_lookup(mock_call)
+    def test_variant_lookup(self, mock_variant_lookup):
+        super(HailSearchUtilsTests, self).test_variant_lookup(mock_variant_lookup)
 
     @mock.patch('seqr.utils.search.utils.hail_sv_variant_lookup')
-    def test_sv_variant_lookup(self, mock_call):
-        super().test_sv_variant_lookup(mock_call)
+    def test_sv_variant_lookup(self, mock_sv_variant_lookup):
+        super(HailSearchUtilsTests, self).test_sv_variant_lookup(mock_sv_variant_lookup)
 
     @mock.patch('seqr.utils.search.utils.get_hail_variants_for_variant_ids')
     def test_get_single_variant(self, mock_call):
