@@ -174,53 +174,64 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #             sample_data=FAMILY_2_BOTH_SAMPLE_TYPE_SAMPLE_DATA_MISSING_PARENTAL_WGS, inheritance_mode=inheritance_mode,
 #         )
 #
-#     def test_inheritance_filter(self):
-#         inheritance_mode = 'any_affected'
-#         self._assert_expected_search(
-#             [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
-#             inheritance_mode=inheritance_mode,
-#         )
-#
-#         self._assert_expected_search(
-#             [SV_VARIANT1, SV_VARIANT2, SV_VARIANT3, SV_VARIANT4], inheritance_mode=inheritance_mode, sample_data=SV_WGS_SAMPLE_DATA,
-#         )
-#
-#         self._assert_expected_search(
-#             [GCNV_VARIANT3], inheritance_mode=inheritance_mode, annotations=NEW_SV_FILTER, omit_data_type='SNV_INDEL',
-#         )
-#
-#         self._assert_expected_search(
-#             [SV_VARIANT2], inheritance_mode=inheritance_mode, annotations=NEW_SV_FILTER, sample_data=SV_WGS_SAMPLE_DATA,
-#         )
-#
-#         inheritance_mode = 'de_novo'
-#         self._assert_expected_search(
-#             [VARIANT1, FAMILY_3_VARIANT, VARIANT4, GCNV_VARIANT1], inheritance_mode=inheritance_mode,
-#         )
-#
-#         self._assert_expected_search(
-#             [SV_VARIANT1], inheritance_mode=inheritance_mode,  sample_data=SV_WGS_SAMPLE_DATA,
-#         )
-#
-#         inheritance_mode = 'x_linked_recessive'
-#         self._assert_expected_search([], inheritance_mode=inheritance_mode, sample_data=EXPECTED_SAMPLE_DATA_WITH_SEX)
-#         self._assert_expected_search([], inheritance_mode=inheritance_mode, sample_data=SV_WGS_SAMPLE_DATA_WITH_SEX)
-#
-#         inheritance_mode = 'homozygous_recessive'
-#         self._assert_expected_search([VARIANT2, GCNV_VARIANT3], inheritance_mode=inheritance_mode)
-#
-#         self._assert_expected_search(
-#             [PROJECT_2_VARIANT1, VARIANT2], inheritance_mode=inheritance_mode, sample_data=MULTI_PROJECT_SAMPLE_DATA,
-#         )
-#
-#         self._assert_expected_search(
-#             [SV_VARIANT4], inheritance_mode=inheritance_mode, sample_data=SV_WGS_SAMPLE_DATA,
-#         )
-#
-#         gt_inheritance_filter = {'genotype': {'I000006_hg00733': 'ref_ref', 'I000005_hg00732': 'has_alt'}}
-#         self._assert_expected_search(
-#             [VARIANT2], inheritance_filter=gt_inheritance_filter, sample_data=FAMILY_2_VARIANT_SAMPLE_DATA)
-#
+    def test_inheritance_filter(self):
+        inheritance_mode = 'any_affected'
+        self.results_model.families.set(self.families.filter(guid='F000002_2'))
+        self._assert_expected_search(
+            # [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
+            [VARIANT1, VARIANT2, VARIANT4],
+            inheritance_mode=inheritance_mode,
+        )
+
+        # self._assert_expected_search(
+        #     [SV_VARIANT1, SV_VARIANT2, SV_VARIANT3, SV_VARIANT4], inheritance_mode=inheritance_mode, sample_data=SV_WGS_SAMPLE_DATA,
+        # )
+        #
+        # self._assert_expected_search(
+        #     [GCNV_VARIANT3], inheritance_mode=inheritance_mode, annotations=NEW_SV_FILTER, omit_data_type='SNV_INDEL',
+        # )
+        #
+        # self._assert_expected_search(
+        #     [SV_VARIANT2], inheritance_mode=inheritance_mode, annotations=NEW_SV_FILTER, sample_data=SV_WGS_SAMPLE_DATA,
+        # )
+
+        inheritance_mode = 'de_novo'
+        self._assert_expected_search(
+            # [VARIANT1, FAMILY_3_VARIANT, VARIANT4, GCNV_VARIANT1],
+            [VARIANT1, VARIANT4],
+            inheritance_mode=inheritance_mode,
+        )
+
+        # self._assert_expected_search(
+        #     [SV_VARIANT1], inheritance_mode=inheritance_mode,  sample_data=SV_WGS_SAMPLE_DATA,
+        # )
+
+        inheritance_mode = 'x_linked_recessive'
+        self._assert_expected_search([], inheritance_mode=inheritance_mode)
+        # self._assert_expected_search([], inheritance_mode=inheritance_mode, sample_data=SV_WGS_SAMPLE_DATA_WITH_SEX)
+
+        inheritance_mode = 'homozygous_recessive'
+        self._assert_expected_search(
+            # [VARIANT2, GCNV_VARIANT3],
+            [VARIANT2],
+            inheritance_mode=inheritance_mode,
+        )
+
+        self._assert_expected_search(
+            [VARIANT2],
+            # [PROJECT_2_VARIANT1, VARIANT2],
+            # sample_data=MULTI_PROJECT_SAMPLE_DATA,
+            inheritance_mode=inheritance_mode,
+        )
+
+        # self._assert_expected_search(
+        #     [SV_VARIANT4], inheritance_mode=inheritance_mode, sample_data=SV_WGS_SAMPLE_DATA,
+        # )
+
+        gt_inheritance_filter = {'genotype': {'I000006_hg00733': 'ref_ref', 'I000005_hg00732': 'has_alt'}}
+        self.results_model.families.set(self.families.filter(guid='F000002_2'))
+        self._assert_expected_search([VARIANT2], inheritance_filter=gt_inheritance_filter)
+
 #         inheritance_mode = 'compound_het'
 #         self._assert_expected_search(
 #             [[VARIANT3, VARIANT4]], inheritance_mode=inheritance_mode, sample_data=MULTI_PROJECT_SAMPLE_DATA, gene_counts={
