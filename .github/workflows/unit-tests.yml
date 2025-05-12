@@ -57,12 +57,16 @@ jobs:
           --health-timeout 5s 
           --health-retries 5
         env:
-          CLICKHOUSE_USER: clickhouse
+          CLICKHOUSE_USER: clickhouse_test
           CLICKHOUSE_PASSWORD: clickhouse_test
           ALLOW_EMPTY_PASSWORD: no
 
     steps:
       - uses: actions/checkout@v2
+      - name: Set up Clickhouse Settings
+        run: |
+          docker exec clickhouse clickhouse-client --query "CREATE SETTINGS PROFILE clickhouse_settings SETTINGS flatten_nested=0, join_use_nulls=1 TO clickhouse_test"
+          docker exec clickhouse clickhouse-client --query "ALTER USER clickhouse_test ADD PROFILES clickhouse_settings"
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
@@ -86,6 +90,7 @@ jobs:
           pip install -r requirements-dev.txt
       - name: Run coverage tests
         run: |
+          export CLICKHOUSE_USER=clickhouse_test
           export CLICKHOUSE_SERVICE_HOSTNAME=localhost
           coverage run --source="./matchmaker","./seqr","./reference_data","./panelapp","./clickhouse_search" --omit="*/migrations/*","*/apps.py","*/admin.py" manage.py test -p '*_tests.py' -v 2 clickhouse_search
           coverage report --fail-under=99
