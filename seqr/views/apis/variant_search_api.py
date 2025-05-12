@@ -67,6 +67,11 @@ def query_variants_handler(request, search_hash):
     response['search'] = _get_search_context(results_model)
     response['search']['totalResults'] = total_results
 
+    from settings import ENABLE_DJANGO_DEBUG_TOOLBAR
+    if ENABLE_DJANGO_DEBUG_TOOLBAR:
+        from seqr.views.react_app import render_app_html
+        return render_app_html(request)
+
     return create_json_response(response)
 
 
