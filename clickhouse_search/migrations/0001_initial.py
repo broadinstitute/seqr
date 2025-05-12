@@ -19,7 +19,7 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.RunSQL(
-            'CREATE SETTINGS PROFILE clickhouse SETTINGS flatten_nested=0, join_use_nulls=1 TO clickhouse',
+            'CREATE SETTINGS PROFILE clickhouse SETTINGS flatten_nested=0, join_use_nulls=1 TO ALL',
             hints={'clickhouse':  True},
         ),
         migrations.CreateModel(
