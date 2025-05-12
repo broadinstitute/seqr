@@ -32,10 +32,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             ))
             LIFETIME(0)
             LAYOUT(FLAT(MAX_ARRAY_SIZE 500000000))
-            """, [
-                f"'{os.environ.get('CLICKHOUSE_USER', 'clickhouse')}'",
-                f"'{os.environ.get('CLICKHOUSE_PASSWORD', 'clickhouse_test')}'",
-            ])
+            """, [os.environ.get('CLICKHOUSE_USER', 'clickhouse'), os.environ.get('CLICKHOUSE_PASSWORD', 'clickhouse_test')])
 
     def setUp(self):
         super().set_up()
