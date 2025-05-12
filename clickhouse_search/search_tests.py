@@ -26,13 +26,16 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             )
             PRIMARY KEY key
             SOURCE(CLICKHOUSE(
-                USER '%s' 
-                PASSWORD '%s' 
+                USER %s
+                PASSWORD %s
                 QUERY "SELECT * FROM VALUES ((1, 9, 90, 2), (2, 28, 90, 4), (3, 4, 6, 1), (4, 2, 90, 0))"
             ))
             LIFETIME(0)
             LAYOUT(FLAT(MAX_ARRAY_SIZE 500000000))
-            """, [os.environ.get('CLICKHOUSE_USER', 'clickhouse'), os.environ.get('CLICKHOUSE_PASSWORD', 'clickhouse_test')])
+            """, [
+                f"'{os.environ.get('CLICKHOUSE_USER', 'clickhouse')}'",
+                f"'{os.environ.get('CLICKHOUSE_PASSWORD', 'clickhouse_test')}'",
+            ])
 
             cursor.execute('SHOW CREATE DICTIONARY "GRCh38/SNV_INDEL/gt_stats_dict"')
             raise Exception(cursor.fetchone())
