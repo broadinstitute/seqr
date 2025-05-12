@@ -168,10 +168,10 @@ def _get_filtered_entries(sample_data, inheritance_mode=None, inheritance_filter
             ):
                 genotype = REF_REF
         if genotype:
-            entries = entries.filter(calls__array_exists=[
-                ('sampleId', '=', sample['sample_id']),
-                ('gt', *GENOTYPE_LOOKUP[genotype]),
-            ])
+            entries = entries.filter(calls__array_exists={
+                'sampleId': ('=', f"'{sample['sample_id']}'"),
+                'gt': GENOTYPE_LOOKUP[genotype],
+            })
 
     return entries
 

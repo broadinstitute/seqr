@@ -15,12 +15,17 @@ class ArrayExists(ArrayLookup):
     lookup_name = "array_exists"
     function = "arrayExists"
     swap_args = True
+    prepare_rhs = False
 
     def get_prep_lookup(self):
-        conditions = [f'x.{field} {op} {value}' for field, op, value in self.rhs]
+        conditions = [f'x.{field} {op} {value}' for field, (op, value) in self.rhs.items()]
         condition = f'and({", ".join(conditions)})' if len(conditions) > 1 else conditions[0]
         self.rhs = f'x -> {condition}'
         return super().get_prep_lookup()
+
+    def process_rhs(self, compiler, connection):
+        _, rhs_params = super().process_rhs(compiler, connection)
+        return rhs_params[0], []
 
 
 class GtStatsDictGet(Func):
