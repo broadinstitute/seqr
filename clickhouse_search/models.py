@@ -321,7 +321,7 @@ class Clinvar(models.ClickhouseModel):
             setting_sql = cursor.fetchone()
             cursor.execute("SHOW SETTINGS LIKE 'flatten_nested'")
             setting_sql2 = cursor.fetchone()
-            cursor.execute("SHOW SETTINGS PROFILES")
+            cursor.execute("SHOW CREATE SETTINGS PROFILE clickhouse")
             profile_sql = cursor.fetchone()
             raise Exception(f'SETTINGS\n{setting_sql}\n{setting_sql2}\nPROFILE\n{profile_sql}\n')
         # loaddata attempts to run an ALTER TABLE to update existing rows, but since JOIN tables can not be altered
