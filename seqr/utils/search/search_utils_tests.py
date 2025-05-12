@@ -55,7 +55,6 @@ class SearchUtilsTests(SearchTestHelper):
         ])
         self.search_samples = list(self.affected_search_samples) + list(self.non_affected_search_samples)
 
-    @mock.patch('seqr.utils.search.utils.hail_variant_lookup')
     def test_variant_lookup(self, mock_variant_lookup):
         mock_variant_lookup.return_value = VARIANT_LOOKUP_VARIANT
         variant = variant_lookup(self.user, ('1', 10439, 'AC', 'A'), genome_version='38')
@@ -71,7 +70,6 @@ class SearchUtilsTests(SearchTestHelper):
         mock_variant_lookup.assert_not_called()
         self.mock_redis.get.assert_called_with(cache_key)
 
-    @mock.patch('seqr.utils.search.utils.hail_sv_variant_lookup')
     def test_sv_variant_lookup(self, mock_sv_variant_lookup):
         mock_sv_variant_lookup.return_value = [SV_VARIANT4, SV_VARIANT1]
         variants = sv_variant_lookup(self.user, 'phase2_DEL_chr14_4640', self.families, genome_version='38', sample_type='WGS')
@@ -498,12 +496,12 @@ class ElasticsearchSearchUtilsTests(TestCase, SearchUtilsTests):
 
     def test_variant_lookup(self, *args, **kwargs):
         with self.assertRaises(InvalidSearchException) as cm:
-            super().test_variant_lookup(*args, **kwargs)
+            super().test_variant_lookup(mock.MagicMock())
         self.assertEqual(str(cm.exception), 'Hail backend is disabled')
 
     def test_sv_variant_lookup(self, *args, **kwargs):
         with self.assertRaises(InvalidSearchException) as cm:
-            super().test_sv_variant_lookup(*args, **kwargs)
+            super().test_sv_variant_lookup(mock.MagicMock())
         self.assertEqual(str(cm.exception), 'Hail backend is disabled')
 
     @mock.patch('seqr.utils.search.utils.get_es_variants_for_variant_ids')
@@ -579,6 +577,14 @@ class HailSearchUtilsTests(TestCase, SearchUtilsTests):
     def setUp(self):
         self.set_up()
 
+    @mock.patch('seqr.utils.search.utils.hail_variant_lookup')
+    def test_variant_lookup(self, mock_variant_lookup):
+        super(HailSearchUtilsTests, self).test_variant_lookup(mock_variant_lookup)
+
+    @mock.patch('seqr.utils.search.utils.hail_sv_variant_lookup')
+    def test_sv_variant_lookup(self, mock_sv_variant_lookup):
+        super(HailSearchUtilsTests, self).test_sv_variant_lookup(mock_sv_variant_lookup)
+
     @mock.patch('seqr.utils.search.utils.get_hail_variants_for_variant_ids')
     def test_get_single_variant(self, mock_call):
         super(HailSearchUtilsTests, self).test_get_single_variant(mock_call)
@@ -642,10 +648,12 @@ class ClickhouseSearchUtilsTests(TestCase, SearchUtilsTests):
     def test_get_variant_query_gene_counts(self, mock_call):
         super().test_get_variant_query_gene_counts(mock_call)
 
-    def test_variant_lookup(self, *args, **kwargs):
+    @mock.patch('seqr.utils.search.utils.get_clickhouse_variants')
+    def test_variant_lookup(self, mock_call):
         with self.assertRaises(NotImplementedError):
-            super().test_variant_lookup(*args, **kwargs)
+            super().test_variant_lookup(mock_call)
 
-    def test_sv_variant_lookup(self, *args, **kwargs):
+    @mock.patch('seqr.utils.search.utils.get_clickhouse_variants')
+    def test_sv_variant_lookup(self, mock_call):
         with self.assertRaises(NotImplementedError):
-            super().test_sv_variant_lookup(*args, **kwargs)
+            super().test_sv_variant_lookup(mock_call)
