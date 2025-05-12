@@ -318,7 +318,7 @@ class Clinvar(models.ClickhouseModel):
         from django.db import connections
         with connections['clickhouse'].cursor() as cursor:
             cursor.execute("SHOW SETTINGS LIKE 'join_use_nulls'")
-            (setting_sql,) = cursor.fetchone()
+            setting_sql = cursor.fetchone()
             cursor.execute('SHOW TABLE "GRCh38/SNV_INDEL/annotations_memory"')
             (table_sql,) = cursor.fetchone()
             raise Exception(f'SETTINGS:\n{setting_sql}\nTABLE:\n{table_sql}')
