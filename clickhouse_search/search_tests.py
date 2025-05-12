@@ -26,13 +26,13 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             )
             PRIMARY KEY key
             SOURCE(CLICKHOUSE(
-                USER 'clickhouse' 
+                USER '%s' 
                 PASSWORD '%s' 
                 QUERY "SELECT * FROM VALUES ((1, 9, 90, 2), (2, 28, 90, 4), (3, 4, 6, 1), (4, 2, 90, 0))"
             ))
             LIFETIME(0)
             LAYOUT(FLAT(MAX_ARRAY_SIZE 500000000))
-            """, [os.environ.get('CLICKHOUSE_PASSWORD', 'clickhouse_test')])
+            """, [os.environ.get('CLICKHOUSE_USER', 'clickhouse'), os.environ.get('CLICKHOUSE_PASSWORD', 'clickhouse_test')])
 
     def setUp(self):
         super().set_up()
