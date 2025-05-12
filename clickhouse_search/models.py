@@ -319,11 +319,9 @@ class Clinvar(models.ClickhouseModel):
         with connections['clickhouse'].cursor() as cursor:
             cursor.execute("SHOW SETTINGS LIKE 'join_use_nulls'")
             setting_sql = cursor.fetchone()
-            cursor.execute("SHOW SETTINGS LIKE 'flatten_nested'")
+            cursor.execute("SELECT getSetting('join_use_nulls')")
             setting_sql2 = cursor.fetchone()
-            cursor.execute("SHOW CREATE SETTINGS PROFILE clickhouse")
-            profile_sql = cursor.fetchone()
-            raise Exception(f'SETTINGS\n{setting_sql}\n{setting_sql2}\nPROFILE\n{profile_sql}\n')
+            raise Exception(f'SETTINGS\n{setting_sql}\n{setting_sql2}\n')
         # loaddata attempts to run an ALTER TABLE to update existing rows, but since JOIN tables can not be altered
         # this command fails so need to use the force_insert flag to run an INSERT instead
         return super()._save_table(
