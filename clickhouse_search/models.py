@@ -324,7 +324,8 @@ class Clinvar(models.ClickhouseModel):
             settings.append(cursor.fetchone())
             cursor.execute("SHOW ACCESS")
             settings.append(cursor.fetchone())
-            raise Exception(f'SETTINGS\n{"\n".join(settings)}')
+            settings = "\n".join(settings)
+            raise Exception(f'SETTINGS\n{settings}')
         # loaddata attempts to run an ALTER TABLE to update existing rows, but since JOIN tables can not be altered
         # this command fails so need to use the force_insert flag to run an INSERT instead
         return super()._save_table(
