@@ -41,9 +41,11 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         super().set_up()
         Project.objects.update(genome_version='38')
 
-    def _assert_expected_search(self, expected_results, gene_counts=None, inheritance_mode=None, **search_kwargs):
+    def _assert_expected_search(self, expected_results, gene_counts=None, inheritance_mode=None, inheritance_filter=None, **search_kwargs):
         self.search_model.search.update(search_kwargs or {})
         self.search_model.search['inheritance']['mode'] = inheritance_mode
+        if inheritance_filter:
+            self.search_model.search['inheritance']['filter'] = inheritance_filter
 
         variants, total = query_variants(self.results_model, user=self.user)
         encoded_variants = json.loads(json.dumps(variants, cls=DjangoJSONEncoderWithSets))
@@ -235,9 +237,9 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         self._assert_expected_search([VARIANT2], inheritance_filter=gt_inheritance_filter)
 
         self._assert_expected_search(
-            [VARIANT2], inheritance_mode='any_affected', inheritance={'filter': {'affected': {
+            [VARIANT2], inheritance_mode='any_affected', inheritance_filter={'affected': {
                 'I000004_hg00731': 'N', 'I000005_hg00732': 'A', 'I000006_hg00733': 'U',
-            }}},
+            }},
         )
 
 #         inheritance_mode = 'compound_het'
