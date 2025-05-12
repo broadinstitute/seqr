@@ -52,10 +52,10 @@ jobs:
           cat <<EOF > override.xml
           <clickhouse>
             <profiles>
-              <clickhouse>
+              <default>
                 <flatten_nested>0</flatten_nested>
                 <join_use_nulls>1</join_use_nulls>
-              </clickhouse>
+              </default>
             </profiles>
           </clickhouse>
           EOF
