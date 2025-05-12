@@ -44,41 +44,25 @@ jobs:
         ports:
           # Maps tcp port 5432 on service container to the host
           - 5432:5432
+      clickhouse:
+        image: bitnami/clickhouse:latest
+        ports:
+          - 9000:9000   # Native client interface
+        volumes:
+          - /var/tmp:/bitnami/clickhouse
+          - /tmp:/in-memory-dir
+        options: >-
+          --health-cmd "clickhouse-client --query 'SELECT 1'" 
+          --health-interval 10s 
+          --health-timeout 5s 
+          --health-retries 5
+        env:
+          CLICKHOUSE_USER: clickhouse
+          CLICKHOUSE_PASSWORD: clickhouse_test
+          ALLOW_EMPTY_PASSWORD: no
 
     steps:
       - uses: actions/checkout@v2
-      - name: Create ClickHouse Config
-        run: |
-          cat <<EOF > override.xml
-          <clickhouse>
-            <profiles>
-              <default>
-                <flatten_nested>0</flatten_nested>
-                <join_use_nulls>1</join_use_nulls>
-              </default>
-            </profiles>
-          </clickhouse>
-          EOF
-      - name: Start ClickHouse with mounted config
-        run: |
-          docker run -d --name clickhouse \
-            -v ${{ github.workspace }}/override.xml:/bitnami/clickhouse/etc/config.d/override.xml:ro \
-            -v /var/tmp:/bitnami/clickhouse \
-            -v /tmp:/in-memory-dir \
-            -p 9000:9000 \
-            -e CLICKHOUSE_USER=clickhouse \
-            -e CLICKHOUSE_PASSWORD=clickhouse_test \
-            -e ALLOW_EMPTY_PASSWORD=no \
-            bitnami/clickhouse:latest
-      - name: Wait for ClickHouse
-        run: |
-          until docker exec clickhouse clickhouse-client --query "SELECT 1"; do
-            echo "Waiting for ClickHouse to start..."
-            sleep 2
-          done
-      - name: Clickhouse confs ls
-        run: |
-          docker exec clickhouse ls /bitnami/clickhouse/etc/config.d
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
