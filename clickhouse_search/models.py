@@ -315,18 +315,6 @@ class Clinvar(models.ClickhouseModel):
         using=None,
         update_fields=None,
     ):
-        from django.db import connections
-        import  json
-        with connections['clickhouse'].cursor() as cursor:
-            settings = []
-            cursor.execute("SHOW SETTINGS LIKE 'join_use_nulls'")
-            settings.append(json.dumps(cursor.fetchone()))
-            cursor.execute("SHOW CREATE SETTINGS PROFILE default")
-            settings.append(json.dumps(cursor.fetchone()))
-            cursor.execute("SHOW ACCESS")
-            settings.append(json.dumps(cursor.fetchone()))
-            settings = "\n".join(settings)
-            raise Exception(f'SETTINGS\n{settings}')
         # loaddata attempts to run an ALTER TABLE to update existing rows, but since JOIN tables can not be altered
         # this command fails so need to use the force_insert flag to run an INSERT instead
         return super()._save_table(
