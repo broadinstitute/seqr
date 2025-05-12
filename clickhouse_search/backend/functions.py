@@ -18,7 +18,7 @@ class ArrayExists(ArrayLookup):
     prepare_rhs = False
 
     def get_prep_lookup(self):
-        conditions = [f'x.{field} {op} {value}' for field, (op, value) in self.rhs.items()]
+        conditions = [f'x.{field} {op} {value}' for field, (op, value) in self.rhs.items()] # pylint: disable=access-member-before-definition
         condition = f'and({", ".join(conditions)})' if len(conditions) > 1 else conditions[0]
         self.rhs = f'x -> {condition}'
         return super().get_prep_lookup()
