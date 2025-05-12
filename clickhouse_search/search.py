@@ -10,8 +10,8 @@ from clickhouse_search.models import EntriesSnvIndel, AnnotationsSnvIndel, Trans
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample, Individual
 from seqr.utils.logging_utils import SeqrLogger
-from seqr.utils.search.constants import MAX_VARIANTS, XPOS_SORT_KEY, INHERITANCE_FILTERS, X_LINKED_RECESSIVE, \
-    REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF
+from seqr.utils.search.constants import MAX_VARIANTS, XPOS_SORT_KEY, INHERITANCE_FILTERS as BASE_INHERITANCE_FILTERS, \
+    ANY_AFFECTED, X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF
 from settings import CLICKHOUSE_SERVICE_HOSTNAME
 
 logger = SeqrLogger(__name__)
@@ -22,6 +22,13 @@ GENOTYPE_LOOKUP = {
     ALT_ALT: ('=', 2),
     HAS_ALT: ('>', 0),
     HAS_REF: ('<', 2),
+}
+
+INHERITANCE_FILTERS = {
+    **BASE_INHERITANCE_FILTERS,
+    ANY_AFFECTED: {
+        Individual.AFFECTED_STATUS_AFFECTED: HAS_ALT,
+    }
 }
 
 CORE_ENTRIES_FIELDS = ['key', 'xpos']
