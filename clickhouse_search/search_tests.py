@@ -1,6 +1,7 @@
 from django.db import connections
 from django.test import TestCase
 import json
+import mock
 import os
 
 from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4, CACHED_VARIANTS_BY_KEY
@@ -8,6 +9,7 @@ from seqr.models import Project
 from seqr.utils.search.search_utils_tests import SearchTestHelper
 from seqr.utils.search.utils import query_variants
 from seqr.views.utils.json_utils import DjangoJSONEncoderWithSets
+
 
 @mock.patch('clickhouse_search.search.CLICKHOUSE_SERVICE_HOSTNAME', 'localhost')
 class ClickhouseSearchTests(SearchTestHelper, TestCase):
