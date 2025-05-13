@@ -634,7 +634,7 @@ def vlm_lookup_handler(request):
     parsed_variant_id, _, kwargs = _parse_lookup_request(request)
     if not parsed_variant_id:
         raise InvalidSearchException('VLM lookup is not supported for SVs')
-    return create_json_response(vlm_lookup(request.user, *parsed_variant_id, **kwargs))
+    return create_json_response({'vlmMatches': vlm_lookup(request.user, *parsed_variant_id, **kwargs)})
 
 def search_results_redirect(request):
     return redirect(request.get_full_path().replace('/report/custom_search', '/variant_search/results'), permanent=True)

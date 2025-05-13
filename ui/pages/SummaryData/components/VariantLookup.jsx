@@ -38,7 +38,7 @@ const FIELDS = [
   { required: true, ...GENOME_VERSION_FIELD },
 ]
 
-const VlmDisplay = ({ data }) => JSON.stringify(data)
+const VlmDisplay = ({ vlmMatches }) => JSON.stringify(vlmMatches)
 
 const mapContactDispatchToProps = {
   onSubmit: sendVlmContactEmail,
