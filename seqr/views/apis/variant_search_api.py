@@ -16,6 +16,7 @@ from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch
 from seqr.utils.search.utils import query_variants, get_single_variant, get_variant_query_gene_counts, get_search_samples, \
     variant_lookup, sv_variant_lookup, parse_variant_id
 from seqr.utils.search.constants import XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
+from seqr.utils.search.utils import InvalidSearchException
 from seqr.utils.xpos_utils import get_xpos
 from seqr.views.utils.export_utils import export_table
 from seqr.utils.gene_utils import get_genes_for_variant_display
@@ -28,6 +29,7 @@ from seqr.views.utils.permissions_utils import check_project_permissions, get_pr
     user_is_analyst, login_and_policies_required, check_user_created_object_permissions, check_projects_view_permission
 from seqr.views.utils.project_context_utils import get_projects_child_entities
 from seqr.views.utils.variant_utils import get_variant_key, get_variants_response
+from seqr.views.utils.vlm_utils import vlm_lookup
 
 
 GENOTYPE_AC_LOOKUP = {
@@ -540,13 +542,16 @@ def _flatten_variants(variants):
             flattened_variants.append(variant)
     return flattened_variants
 
-
-@login_and_policies_required
-def variant_lookup_handler(request):
+def _parse_lookup_request(request):
     kwargs = {_to_snake_case(k): v for k, v in request.GET.items()}
 
     variant_id = kwargs.pop('variant_id')
     parsed_variant_id = parse_variant_id(variant_id)
+    return parsed_variant_id, variant_id, kwargs
+
+@login_and_policies_required
+def variant_lookup_handler(request):
+    parsed_variant_id, variant_id, kwargs = _parse_lookup_request(request)
     is_sv = not parsed_variant_id
     if is_sv:
         families = _all_genome_version_families(
@@ -622,6 +627,14 @@ def _update_lookup_variant(variant, response):
                 ],
             }
             variant['genotypes'][individual_guid] = genotype
+
+
+@login_and_policies_required
+def vlm_lookup_handler(request):
+    parsed_variant_id, _, kwargs = _parse_lookup_request(request)
+    if not parsed_variant_id:
+        raise InvalidSearchException('VLM lookup is not supported for SVs')
+    return create_json_response(vlm_lookup(request.user, *parsed_variant_id, **kwargs))
 
 def search_results_redirect(request):
     return redirect(request.get_full_path().replace('/report/custom_search', '/variant_search/results'), permanent=True)
