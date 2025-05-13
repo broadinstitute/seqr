@@ -149,7 +149,7 @@ def _get_sample_map_expression(sample_data):
     return f"map({', '.join(sample_map)})"
 
 
-def _get_filtered_entries(sample_data, inheritance_mode=None, inheritance_filter=None, **kwargs):
+def _get_filtered_entries(sample_data, inheritance_mode=None, inheritance_filter=None, qualityFilter=None, **kwargs):
     if len(sample_data) > 1:
         raise NotImplementedError('Clickhouse search not implemented for multiple families or sample types')
 
@@ -158,29 +158,53 @@ def _get_filtered_entries(sample_data, inheritance_mode=None, inheritance_filter
         family_guid=sample_data[0]['family_guid'],
     )
 
+    quality_filter = qualityFilter or {}
+    if quality_filter.get('vcf_filter'):
+        entries = entries.filter(filters__len=0)
+
     individual_genotype_filter = (inheritance_filter or {}).get('genotype')
     custom_affected = (inheritance_filter or {}).get('affected') or {}
-    if not (inheritance_mode or individual_genotype_filter):
+    if not (inheritance_mode or individual_genotype_filter or quality_filter):
         return entries
 
     for sample in sample_data[0]['samples']:
-        if individual_genotype_filter:
-            genotype = individual_genotype_filter.get(sample['individual_guid'])
-        else:
-            affected = custom_affected.get(sample['individual_guid']) or sample['affected']
-            genotype = INHERITANCE_FILTERS[inheritance_mode].get(affected)
-            if (inheritance_mode == X_LINKED_RECESSIVE
-                    and affected == Individual.AFFECTED_STATUS_UNAFFECTED
-                    and sample['sex'] in Individual.MALE_SEXES
-            ):
-                genotype = REF_REF
-        if genotype:
+        affected = custom_affected.get(sample['individual_guid']) or sample['affected']
+        sample_filter = {}
+        _get_genotype_sample_filter(sample_filter, sample, affected, inheritance_mode, individual_genotype_filter)
+        _get_quality_sample_filter(sample_filter, affected, quality_filter)
+        if sample_filter:
             entries = entries.filter(calls__array_exists={
                 'sampleId': ('=', f"'{sample['sample_id']}'"),
-                'gt': GENOTYPE_LOOKUP[genotype],
+                **sample_filter,
             })
 
     return entries
+
+
+def _get_genotype_sample_filter(sample_filter, sample, affected, inheritance_mode, individual_genotype_filter):
+    if individual_genotype_filter:
+        genotype = individual_genotype_filter.get(sample['individual_guid'])
+    else:
+        genotype = INHERITANCE_FILTERS[inheritance_mode].get(affected)
+        if (inheritance_mode == X_LINKED_RECESSIVE
+                and affected == Individual.AFFECTED_STATUS_UNAFFECTED
+                and sample['sex'] in Individual.MALE_SEXES
+        ):
+            genotype = REF_REF
+    if genotype:
+        sample_filter['gt'] = GENOTYPE_LOOKUP[genotype]
+
+
+def _get_quality_sample_filter(sample_filter, affected, quality_filter):
+    if quality_filter.get('affected_only') and affected == Individual.AFFECTED_STATUS_AFFECTED:
+        return
+
+    if quality_filter.get('min_gq'):
+        sample_filter['gq'] = ('>=', quality_filter['min_gq'])
+
+#     'AB': QualityFilterFormat(override=lambda gt: ~gt.GT.is_het(), scale=100),
+    if quality_filter.get('min_ab'):
+        sample_filter['ab'] = ('>=', quality_filter['min_ab'] / 100)
 
 
 def _liftover_genome_version(genome_version):
