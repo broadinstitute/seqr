@@ -37,6 +37,8 @@ const FIELDS = [
   { required: true, ...GENOME_VERSION_FIELD },
 ]
 
+const VlmDisplay = ({ data }) => JSON.stringify(data)
+
 const mapContactDispatchToProps = {
   onSubmit: sendVlmContactEmail,
 }
@@ -158,6 +160,8 @@ const onSubmit = updateQueryParams => (data) => {
   return Promise.resolve()
 }
 
+const passThroughResponse = response => response
+
 const VariantLookup = ({ queryParams, receiveData, updateQueryParams }) => (
   <Grid divided="vertically" centered>
     <Grid.Row>
@@ -167,6 +171,16 @@ const VariantLookup = ({ queryParams, receiveData, updateQueryParams }) => (
         <FormWrapper noModal fields={FIELDS} initialValues={queryParams} onSubmit={onSubmit(updateQueryParams)} />
       </Grid.Column>
       <Grid.Column width={5} />
+    </Grid.Row>
+    <Grid.Row>
+      <Grid.Column width={16}>
+        <StateDataLoader
+          url={queryParams.variantId && '/api/vlm_lookup'}
+          query={queryParams}
+          parseResponse={passThroughResponse}
+          childComponent={VlmDisplay}
+        />
+      </Grid.Column>
     </Grid.Row>
     <Grid.Row>
       <Grid.Column width={16}>
