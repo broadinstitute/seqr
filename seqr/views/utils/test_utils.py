@@ -32,6 +32,7 @@ class AuthenticationTestCase(TestCase):
 
     ES_HOSTNAME = 'testhost'
     MOCK_AIRTABLE_KEY = ''
+    CLICKHOUSE_HOSTNAME = ''
 
     super_user = None
     analyst_user = None
@@ -44,6 +45,8 @@ class AuthenticationTestCase(TestCase):
     no_policy_user = None
 
     def setUp(self):
+        patcher = mock.patch('clickhouse_search.search.CLICKHOUSE_SERVICE_HOSTNAME', self.CLICKHOUSE_HOSTNAME)
+        patcher.start()
         patcher = mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', self.ES_HOSTNAME)
         patcher.start()
         self.addCleanup(patcher.stop)
@@ -66,6 +69,10 @@ class AuthenticationTestCase(TestCase):
 
         self._log_stream = StringIO()
         logging.getLogger().handlers[0].stream = self._log_stream
+
+    @classmethod
+    def _databases_support_transactions(cls):
+        return True
 
     @classmethod
     def setUpTestData(cls):

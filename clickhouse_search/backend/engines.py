@@ -15,6 +15,10 @@ class CollapsingMergeTree(models.CollapsingMergeTree):
 
 class EmbeddedRocksDB(models.BaseMergeTree):
     max_arity = 2
+    setting_types = {
+        **models.BaseMergeTree.setting_types,
+        _no_validate: ['flatten_nested']
+    }
 
     def __init__(self, *expressions, **settings):
         super().__init__(*[Value(e) for e in expressions], **settings)
@@ -22,6 +26,10 @@ class EmbeddedRocksDB(models.BaseMergeTree):
 
 class Join(models.Engine):
     arity = 3
+    setting_types = {
+        **models.Engine.setting_types,
+        _no_validate: ['join_use_nulls', 'flatten_nested']
+    }
 
     def __init__(self, *expressions, **settings):
         super().__init__(*[Value(e) for e in expressions], **settings)

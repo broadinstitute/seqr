@@ -1,5 +1,5 @@
 from clickhouse_backend import models
-from itertools import groupby
+from collections import defaultdict
 
 class NestedField(models.TupleField):
 
@@ -32,10 +32,23 @@ class NestedField(models.TupleField):
             (format_item(item) if format_item else super(NestedField, self)._from_db_value(item, expression, connection))._asdict()
             for item in value
         ]
-        if self.group_by_key:
-            group_agg = next if self.flatten_groups else list
-            value = {k: group_agg(v) for k, v in groupby(value, lambda x: x[self.group_by_key])}
+        if self.flatten_groups:
+            value = {item[self.group_by_key]: item for item in value}
+        elif self.group_by_key:
+            group_value = defaultdict(list)
+            for item in value:
+                group_value[item[self.group_by_key]].append(item)
+            value = dict(group_value)
         return value
+
+    def to_python(self, value):
+        return [self.call_base_fields("to_python", item) for item in value]
+
+    def get_db_prep_value(self, value, connection, prepared=False):
+        return [super(NestedField, self).get_db_prep_value(item, connection, prepared) for item in value]
+
+    def get_db_prep_save(self, value, connection):
+        return [super(NestedField, self).get_db_prep_save(item, connection) for item in value]
 
 
 class UInt64FieldDeltaCodecField(models.UInt64Field):
@@ -46,12 +59,24 @@ class UInt64FieldDeltaCodecField(models.UInt64Field):
 
 class NamedTupleField(models.TupleField):
 
-    def __init__(self, *args, null_if_empty=False, **kwargs):
+    def __init__(self, *args, null_if_empty=False, null_empty_arrays=False, rename_fields=None, **kwargs):
         self.null_if_empty = null_if_empty
+        self.null_empty_arrays = null_empty_arrays
+        self.rename_fields = rename_fields or {}
         super().__init__(*args, **kwargs)
 
     def _convert_type(self, value):
         value = super()._convert_type(value)
         if self.null_if_empty and not any(value):
             return None
-        return value._asdict()
+        value = value._asdict()
+        for key, renamed_key in self.rename_fields.items():
+            value[renamed_key] = value.pop(key)
+        if self.null_empty_arrays:
+            for key, item in value.items():
+                if item == []:
+                    value[key] = None
+        return value
+
+    def to_python(self, value):
+        return self.call_base_fields("to_python", value)
