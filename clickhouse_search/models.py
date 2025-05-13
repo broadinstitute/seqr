@@ -114,9 +114,10 @@ class EntriesManager(Manager):
 
     @classmethod
     def _sample_genotype_filter(cls, sample_filter, sample, affected, inheritance_mode, individual_genotype_filter):
+        genotype = None
         if individual_genotype_filter:
             genotype = individual_genotype_filter.get(sample['individual_guid'])
-        else:
+        elif inheritance_mode:
             genotype = cls.INHERITANCE_FILTERS[inheritance_mode].get(affected)
             if (inheritance_mode == X_LINKED_RECESSIVE and affected == UNAFFECTED and sample['sex'] in MALE_SEXES):
                 genotype = REF_REF
@@ -125,7 +126,7 @@ class EntriesManager(Manager):
 
     @classmethod
     def _sample_quality_filter(cls, sample_filter, affected, quality_filter):
-        if quality_filter.get('affected_only') and affected == AFFECTED:
+        if quality_filter.get('affected_only') and affected != AFFECTED:
             return
 
         for field, scale, *filters in cls.QUALITY_FILTERS:
