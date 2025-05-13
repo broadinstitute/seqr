@@ -4,6 +4,7 @@ import PropTypes from 'prop-types'
 import { Grid, Header, Label } from 'semantic-ui-react'
 
 import { RECEIVE_DATA } from 'redux/utils/reducerUtils'
+import { getVlmEnabled } from 'redux/selectors'
 import { QueryParamsEditor } from 'shared/components/QueryParamEditor'
 import StateDataLoader from 'shared/components/StateDataLoader'
 import SendEmailButton from 'shared/components/buttons/SendEmailButton'
@@ -162,7 +163,7 @@ const onSubmit = updateQueryParams => (data) => {
 
 const passThroughResponse = response => response
 
-const VariantLookup = ({ queryParams, receiveData, updateQueryParams }) => (
+const VariantLookup = ({ queryParams, receiveData, updateQueryParams, vlmEnabled }) => (
   <Grid divided="vertically" centered>
     <Grid.Row>
       <Grid.Column width={5} />
@@ -172,16 +173,18 @@ const VariantLookup = ({ queryParams, receiveData, updateQueryParams }) => (
       </Grid.Column>
       <Grid.Column width={5} />
     </Grid.Row>
-    <Grid.Row>
-      <Grid.Column width={16}>
-        <StateDataLoader
-          url={queryParams.variantId && '/api/vlm_lookup'}
-          query={queryParams}
-          parseResponse={passThroughResponse}
-          childComponent={VlmDisplay}
-        />
-      </Grid.Column>
-    </Grid.Row>
+    {vlmEnabled && (
+      <Grid.Row>
+        <Grid.Column width={16}>
+          <StateDataLoader
+            url={queryParams.variantId && '/api/vlm_lookup'}
+            query={queryParams}
+            parseResponse={passThroughResponse}
+            childComponent={VlmDisplay}
+          />
+        </Grid.Column>
+      </Grid.Row>
+    )}
     <Grid.Row>
       <Grid.Column width={16}>
         <StateDataLoader
@@ -199,7 +202,12 @@ VariantLookup.propTypes = {
   receiveData: PropTypes.func,
   updateQueryParams: PropTypes.func,
   queryParams: PropTypes.object,
+  vlmEnabled: PropTypes.bool,
 }
+
+const mapGlobalStateToProps = state => ({
+  vlmEnabled: getVlmEnabled(state),
+})
 
 const mapDispatchToProps = dispatch => ({
   receiveData: (updatesById) => {
@@ -208,10 +216,14 @@ const mapDispatchToProps = dispatch => ({
   },
 })
 
-const WrappedVariantLookup = props => (
+const WrappedVariantLookup = ({ vlmEnabled, ...props }) => (
   <QueryParamsEditor {...props}>
-    <VariantLookup />
+    <VariantLookup vlmEnabled={vlmEnabled} />
   </QueryParamsEditor>
 )
 
-export default connect(null, mapDispatchToProps)(WrappedVariantLookup)
+WrappedVariantLookup.propTypes = {
+  vlmEnabled: PropTypes.bool,
+}
+
+export default connect(mapGlobalStateToProps, mapDispatchToProps)(WrappedVariantLookup)
