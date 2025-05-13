@@ -79,6 +79,8 @@ class EntriesManager(Manager):
         ANY_AFFECTED: {AFFECTED: HAS_ALT},
     }
 
+    QUALITY_FILTERS = [('gq', 1), ('ab', 100, 'x.gt != 1')]
+
     def search(self, sample_data, inheritance_mode=None, inheritance_filter=None, qualityFilter=None, **kwargs):
        if len(sample_data) > 1:
            raise NotImplementedError('Clickhouse search not implemented for multiple families or sample types')
@@ -121,15 +123,16 @@ class EntriesManager(Manager):
         if genotype:
             sample_filter['gt'] = cls.GENOTYPE_LOOKUP[genotype]
 
-    def _get_quality_sample_filter(sample_filter, affected, quality_filter):
+    @classmethod
+    def _sample_quality_filter(cls, sample_filter, affected, quality_filter):
         if quality_filter.get('affected_only') and affected == AFFECTED:
             return
 
-        if quality_filter.get('min_gq'):
-            sample_filter['gq'] = (quality_filter['min_gq'], 'or(isNull({field}), {field} >= {value})')
-
-        if quality_filter.get('min_ab'):
-            sample_filter['ab'] = (quality_filter['min_ab'] / 100, 'or(isNull({field}), {field} >= {value}, x.gt != 1)')
+        for field, scale, *filters in cls.QUALITY_FILTERS:
+            value = quality_filter.get(f'min_{field}')
+            if value:
+                or_filters = ['isNull({field})', '{field} >= {value}'] + filters
+                sample_filter[field] = (value / scale, f'or({", ".join(or_filters)})')
 
 
 class EntriesSnvIndel(models.ClickhouseModel):
