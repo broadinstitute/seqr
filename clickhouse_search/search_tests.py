@@ -96,7 +96,10 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #                 'SV_WES': EXPECTED_SAMPLE_DATA['SV_WES'], **FAMILY_2_ALL_SAMPLE_DATA, **SV_WGS_SAMPLE_DATA,
 #             }, gene_counts={**variant_gene_counts, **mito_gene_counts, **GCNV_GENE_COUNTS, **SV_GENE_COUNTS, 'ENSG00000277258': {'total': 2, 'families': {'F000002_2': 2}}},
 #         )
-#
+
+        Project.objects.update(genome_version='37')
+        with self.assertRaises(NotImplementedError):
+            query_variants(self.results_model, user=self.user)
 #         self._assert_expected_search(
 #             [GRCH37_VARIANT], genome_version='GRCh37', sample_data=FAMILY_2_VARIANT_SAMPLE_DATA)
 #
