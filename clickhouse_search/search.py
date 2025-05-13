@@ -15,7 +15,6 @@ from settings import CLICKHOUSE_SERVICE_HOSTNAME
 
 logger = SeqrLogger(__name__)
 
-
 CORE_ENTRIES_FIELDS = ['key', 'xpos']
 
 GT_STATS_DICT_FIELDS = OrderedDict({
