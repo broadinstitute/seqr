@@ -94,20 +94,25 @@ class EntriesManager(Manager):
            return entries
 
        for sample in sample_data[0]['samples']:
-           if individual_genotype_filter:
-               genotype = individual_genotype_filter.get(sample['individual_guid'])
-           else:
-               affected = custom_affected.get(sample['individual_guid']) or sample['affected']
-               genotype = self.INHERITANCE_FILTERS[inheritance_mode].get(affected)
-               if (inheritance_mode == X_LINKED_RECESSIVE and affected == UNAFFECTED and sample['sex'] in MALE_SEXES):
-                   genotype = REF_REF
-           if genotype:
+           affected = custom_affected.get(sample['individual_guid']) or sample['affected']
+           genotype_filter = self._get_sample_genotype(sample, affected, inheritance_mode, individual_genotype_filter)
+           if genotype_filter:
                entries = entries.filter(calls__array_exists={
                    'sampleId': ('=', f"'{sample['sample_id']}'"),
-                   'gt': self.GENOTYPE_LOOKUP[genotype],
+                   'gt': genotype_filter,
                })
 
        return entries
+
+    @classmethod
+    def _get_sample_genotype(cls, sample, affected, inheritance_mode, individual_genotype_filter):
+        if individual_genotype_filter:
+            genotype = individual_genotype_filter.get(sample['individual_guid'])
+        else:
+            genotype = cls.INHERITANCE_FILTERS[inheritance_mode].get(affected)
+            if (inheritance_mode == X_LINKED_RECESSIVE and affected == UNAFFECTED and sample['sex'] in MALE_SEXES):
+                genotype = REF_REF
+        return cls.GENOTYPE_LOOKUP[genotype] if genotype else None
 
 
 class EntriesSnvIndel(models.ClickhouseModel):
