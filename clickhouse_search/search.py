@@ -17,11 +17,11 @@ from settings import CLICKHOUSE_SERVICE_HOSTNAME
 logger = SeqrLogger(__name__)
 
 GENOTYPE_LOOKUP = {
-    REF_REF: ('=', 0),
-    REF_ALT: ('=', 1),
-    ALT_ALT: ('=', 2),
-    HAS_ALT: ('>', 0),
-    HAS_REF: ('<', 2),
+    REF_REF: (0,),
+    REF_ALT: (1,),
+    ALT_ALT: (2,),
+    HAS_ALT: (0, '{field} > {value}'),
+    HAS_REF: (2, '{field} < {value}'),
 }
 
 INHERITANCE_FILTERS = {
@@ -174,7 +174,7 @@ def _get_filtered_entries(sample_data, inheritance_mode=None, inheritance_filter
         _get_quality_sample_filter(sample_filter, affected, quality_filter)
         if sample_filter:
             entries = entries.filter(calls__array_exists={
-                'sampleId': ('=', f"'{sample['sample_id']}'"),
+                'sampleId': (f"'{sample['sample_id']}'",),
                 **sample_filter,
             })
 
@@ -200,11 +200,10 @@ def _get_quality_sample_filter(sample_filter, affected, quality_filter):
         return
 
     if quality_filter.get('min_gq'):
-        sample_filter['gq'] = ('>=', quality_filter['min_gq'])
+        sample_filter['gq'] = (quality_filter['min_gq'], 'or(isNull({field}), {field} >= {value})')
 
-#     'AB': QualityFilterFormat(override=lambda gt: ~gt.GT.is_het(), scale=100),
     if quality_filter.get('min_ab'):
-        sample_filter['ab'] = ('>=', quality_filter['min_ab'] / 100)
+        sample_filter['ab'] = (quality_filter['min_ab'] / 100, 'or(isNull({field}), {field} >= {value}, x.gt != 1)')
 
 
 def _liftover_genome_version(genome_version):
