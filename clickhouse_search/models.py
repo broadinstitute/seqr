@@ -1,9 +1,11 @@
 from clickhouse_backend import models
 from django.db.migrations import state
-from django.db.models import options, ForeignKey, OneToOneField, Func, CASCADE, PROTECT
+from django.db.models import options, ForeignKey, OneToOneField, Func, Manager, CASCADE, PROTECT
 
 from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocksDB, Join
 from clickhouse_search.backend.fields import NestedField, UInt64FieldDeltaCodecField, NamedTupleField
+from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFECTED, UNAFFECTED, MALE_SEXES, \
+    X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF
 from seqr.utils.xpos_utils import CHROMOSOMES
 from settings import CLICKHOUSE_IN_MEMORY_DIR, CLICKHOUSE_DATA_DIR
 
@@ -63,6 +65,73 @@ class Projection(Func):
         self.order_by = order_by
 
 
+class EntriesManager(Manager):
+    GENOTYPE_LOOKUP = {
+        REF_REF: (0,),
+        REF_ALT: (1,),
+        ALT_ALT: (2,),
+        HAS_ALT: (0, '{field} > {value}'),
+        HAS_REF: (2, '{field} < {value}'),
+    }
+
+    INHERITANCE_FILTERS = {
+        **INHERITANCE_FILTERS,
+        ANY_AFFECTED: {AFFECTED: HAS_ALT},
+    }
+
+    def search(self, sample_data, inheritance_mode=None, inheritance_filter=None, qualityFilter=None, **kwargs):
+       if len(sample_data) > 1:
+           raise NotImplementedError('Clickhouse search not implemented for multiple families or sample types')
+
+       entries = self.filter(
+           project_guid=sample_data[0]['project_guid'],
+           family_guid=sample_data[0]['family_guid'],
+       )
+
+       quality_filter = qualityFilter or {}
+       if quality_filter.get('vcf_filter'):
+           entries = entries.filter(filters__len=0)
+
+       individual_genotype_filter = (inheritance_filter or {}).get('genotype')
+       custom_affected = (inheritance_filter or {}).get('affected') or {}
+       if not (inheritance_mode or individual_genotype_filter or quality_filter):
+           return entries
+
+       for sample in sample_data[0]['samples']:
+           affected = custom_affected.get(sample['individual_guid']) or sample['affected']
+           sample_filter = {}
+           self._sample_genotype_filter(sample_filter, sample, affected, inheritance_mode, individual_genotype_filter)
+           self._sample_quality_filter(sample_filter, affected, quality_filter)
+           if sample_filter:
+               entries = entries.filter(calls__array_exists={
+                   'sampleId': (f"'{sample['sample_id']}'",),
+                   **sample_filter,
+               })
+
+       return entries
+
+    @classmethod
+    def _sample_genotype_filter(cls, sample_filter, sample, affected, inheritance_mode, individual_genotype_filter):
+        if individual_genotype_filter:
+            genotype = individual_genotype_filter.get(sample['individual_guid'])
+        else:
+            genotype = cls.INHERITANCE_FILTERS[inheritance_mode].get(affected)
+            if (inheritance_mode == X_LINKED_RECESSIVE and affected == UNAFFECTED and sample['sex'] in MALE_SEXES):
+                genotype = REF_REF
+        if genotype:
+            sample_filter['gt'] = cls.GENOTYPE_LOOKUP[genotype]
+
+    def _get_quality_sample_filter(sample_filter, affected, quality_filter):
+        if quality_filter.get('affected_only') and affected == AFFECTED:
+            return
+
+        if quality_filter.get('min_gq'):
+            sample_filter['gq'] = (quality_filter['min_gq'], 'or(isNull({field}), {field} >= {value})')
+
+        if quality_filter.get('min_ab'):
+            sample_filter['ab'] = (quality_filter['min_ab'] / 100, 'or(isNull({field}), {field} >= {value}, x.gt != 1)')
+
+
 class EntriesSnvIndel(models.ClickhouseModel):
     CALL_FIELDS = [
         ('sampleId', models.StringField()),
@@ -71,6 +140,8 @@ class EntriesSnvIndel(models.ClickhouseModel):
         ('ab', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
         ('dp', models.UInt16Field(null=True, blank=True)),
     ]
+
+    objects = EntriesManager()
 
     # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
     key = ForeignKey('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
