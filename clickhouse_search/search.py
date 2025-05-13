@@ -10,26 +10,11 @@ from clickhouse_search.models import EntriesSnvIndel, AnnotationsSnvIndel, Trans
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample, Individual
 from seqr.utils.logging_utils import SeqrLogger
-from seqr.utils.search.constants import MAX_VARIANTS, XPOS_SORT_KEY, INHERITANCE_FILTERS as BASE_INHERITANCE_FILTERS, \
-    ANY_AFFECTED, X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF
+from seqr.utils.search.constants import MAX_VARIANTS, XPOS_SORT_KEY
 from settings import CLICKHOUSE_SERVICE_HOSTNAME
 
 logger = SeqrLogger(__name__)
 
-GENOTYPE_LOOKUP = {
-    REF_REF: ('=', 0),
-    REF_ALT: ('=', 1),
-    ALT_ALT: ('=', 2),
-    HAS_ALT: ('>', 0),
-    HAS_REF: ('<', 2),
-}
-
-INHERITANCE_FILTERS = {
-    **BASE_INHERITANCE_FILTERS,
-    ANY_AFFECTED: {
-        Individual.AFFECTED_STATUS_AFFECTED: HAS_ALT,
-    }
-}
 
 CORE_ENTRIES_FIELDS = ['key', 'xpos']
 
@@ -77,7 +62,7 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
     sample_data = _get_sample_data(samples)
     logger.info(f'Loading {Sample.DATASET_TYPE_VARIANT_CALLS} data for {len(sample_data)} families', user)
 
-    entries = _get_filtered_entries(sample_data, **search)
+    entries = EntriesSnvIndel.objects.search(sample_data, **search)
     results = entries.annotate(**{
         SEQR_POPULATION_KEY: GtStatsDictGet('key', dict_attrs=f"({', '.join(GT_STATS_DICT_ATTRS)})")
     }).values(
@@ -147,40 +132,6 @@ def _get_sample_map_expression(sample_data):
         for data in sample_data for s in data['samples']
     ]
     return f"map({', '.join(sample_map)})"
-
-
-def _get_filtered_entries(sample_data, inheritance_mode=None, inheritance_filter=None, **kwargs):
-    if len(sample_data) > 1:
-        raise NotImplementedError('Clickhouse search not implemented for multiple families or sample types')
-
-    entries = EntriesSnvIndel.objects.filter(
-        project_guid=sample_data[0]['project_guid'],
-        family_guid=sample_data[0]['family_guid'],
-    )
-
-    individual_genotype_filter = (inheritance_filter or {}).get('genotype')
-    custom_affected = (inheritance_filter or {}).get('affected') or {}
-    if not (inheritance_mode or individual_genotype_filter):
-        return entries
-
-    for sample in sample_data[0]['samples']:
-        if individual_genotype_filter:
-            genotype = individual_genotype_filter.get(sample['individual_guid'])
-        else:
-            affected = custom_affected.get(sample['individual_guid']) or sample['affected']
-            genotype = INHERITANCE_FILTERS[inheritance_mode].get(affected)
-            if (inheritance_mode == X_LINKED_RECESSIVE
-                    and affected == Individual.AFFECTED_STATUS_UNAFFECTED
-                    and sample['sex'] in Individual.MALE_SEXES
-            ):
-                genotype = REF_REF
-        if genotype:
-            entries = entries.filter(calls__array_exists={
-                'sampleId': ('=', f"'{sample['sample_id']}'"),
-                'gt': GENOTYPE_LOOKUP[genotype],
-            })
-
-    return entries
 
 
 def _liftover_genome_version(genome_version):
