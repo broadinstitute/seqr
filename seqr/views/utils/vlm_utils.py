@@ -15,12 +15,12 @@ TOKEN_CACHE_KEY = 'VLM_TOKEN'
 CLIENTS_CACHE_KEY = 'VLM_CLIENTS'
 
 def vlm_lookup(user, chrom, pos, ref, alt, genome_version=None, **kwargs):
-    token = _get_cached_vlm_response(
+    token = _get_cached_auth0_response(
         TOKEN_CACHE_KEY, 'oauth/token', 'POST', data=VLM_CREDENTIALS_BODY, response_key='access_token',
     )
 
     headers = {'Authorization': f'Bearer {token}'}
-    clients = _get_cached_vlm_response(CLIENTS_CACHE_KEY, 'api/v2/clients', headers=headers, params={
+    clients = _get_cached_auth0_response(CLIENTS_CACHE_KEY, 'api/v2/clients', headers=headers, params={
         'fields': 'client_id,name,client_metadata', 'is_global': 'false',
     })
 
@@ -28,7 +28,7 @@ def vlm_lookup(user, chrom, pos, ref, alt, genome_version=None, **kwargs):
     return clients
 
 
-def _get_cached_vlm_response(cache_key, path, method='GET', response_key=None, **kwargs):
+def _get_cached_auth0_response(cache_key, path, method='GET', response_key=None, **kwargs):
     value = safe_redis_get_json(cache_key)
     if value:
         return value
