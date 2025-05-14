@@ -151,7 +151,6 @@ EXPECTED_SEARCH_FAMILY_CONTEXT = {
 
 MOCK_TOKEN = 'mock_token' # nosec
 MOCK_CLIENT_ID = 'mock_client_id'
-MOCK_CLIENT_SECRET = 'mock_client_secret' # nosec
 VLM_CLIENTS_RESPONSE = [
     {'client_id': MOCK_CLIENT_ID, 'name': 'Self', 'client_metadata': {'match_url': 'https://self.com'}},
     {'client_id': 'client1', 'name': 'Node 1', 'client_metadata': {'match_url': 'https://node1.com'}},
@@ -995,7 +994,7 @@ class VariantSearchAPITest(object):
             'F000009_9', 'F000010_10', 'F000013_13',
         }, {f.guid for f in mock_variant_lookup.call_args.args[2]})
 
-    @mock.patch('seqr.views.utils.vlm_utils.VLM_CLIENT_SECRET', MOCK_CLIENT_SECRET)
+    @mock.patch('seqr.views.utils.vlm_utils.VLM_CLIENT_SECRET', 'abc123')
     @mock.patch('seqr.views.utils.vlm_utils.VLM_CLIENT_ID', MOCK_CLIENT_ID)
     @mock.patch('seqr.utils.redis_utils.redis.StrictRedis')
     @responses.activate
