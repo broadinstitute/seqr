@@ -58,7 +58,7 @@ def _get_cached_auth0_response(cache_key, path, parse_response, method='GET', **
     if value and cache_key:
         return value
 
-    response = requests.request(method, f'{VLM_AUTH_API}/{path}', **kwargs)
+    response = requests.request(method, f'{VLM_AUTH_API}{path}', **kwargs)
     response.raise_for_status()
     value = parse_response(response.json())
 
