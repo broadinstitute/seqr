@@ -1,7 +1,7 @@
 import React from 'react'
 import { connect } from 'react-redux'
 import PropTypes from 'prop-types'
-import { Grid, Header, Label } from 'semantic-ui-react'
+import { Grid, Header, Label, Table } from 'semantic-ui-react'
 
 import { RECEIVE_DATA } from 'redux/utils/reducerUtils'
 import { getVlmEnabled } from 'redux/selectors'
@@ -38,7 +38,21 @@ const FIELDS = [
   { required: true, ...GENOME_VERSION_FIELD },
 ]
 
-const VlmDisplay = ({ vlmMatches }) => JSON.stringify(vlmMatches)
+const VlmDisplay = ({ vlmMatches }) => (
+  <Table basic collapsing definition>
+    {Object.entries(vlmMatches).map(([nodeId, results]) => results.map(({ id, resultsCount }, i) => (
+      <Table.Row key={id}>
+        <Table.Cell content={i === 0 ? nodeId : null} />
+        <Table.Cell content={id} />
+        <Table.Cell content={resultsCount} />
+      </Table.Row>
+    )))}
+  </Table>
+)
+
+VlmDisplay.propTypes = {
+  vlmMatches: PropTypes.object,
+}
 
 const mapContactDispatchToProps = {
   onSubmit: sendVlmContactEmail,
@@ -175,7 +189,10 @@ const VariantLookup = ({ queryParams, receiveData, updateQueryParams, vlmEnabled
     </Grid.Row>
     {vlmEnabled && (
       <Grid.Row>
-        <Grid.Column width={16}>
+        <Grid.Column width={4} textAlign="right" verticalAlign="middle">
+          <Header size="large" content="VLM" />
+        </Grid.Column>
+        <Grid.Column width={12}>
           <StateDataLoader
             url={queryParams.variantId && '/api/vlm_lookup'}
             query={queryParams}

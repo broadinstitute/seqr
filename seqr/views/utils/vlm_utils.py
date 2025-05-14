@@ -33,15 +33,16 @@ def vlm_lookup(user, chrom, pos, ref, alt, genome_version=None, **kwargs):
         'assemblyId': genome_version, 'referenceName': chrom, 'start': pos, 'referenceBases': ref, 'alternateBases': alt,
     }
 
-    results = []
+    results = {}
     for client_name, match_url in clients.items():
         logger.info(f'VLM match request to {client_name}', user, detail=params)
         try:
             response = requests.get(match_url, headers=headers, params=params)
             response.raise_for_status()
-            results += response.json()['response']['resultSets']
+            results[client_name] = response.json()['response']['resultSets']
         except Exception as e:
             logger.error(f'VLM match error for {client_name}: {e}', user, detail=params)
+
     return results
 
 
