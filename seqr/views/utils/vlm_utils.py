@@ -16,28 +16,33 @@ CLIENTS_CACHE_KEY = 'VLM_CLIENTS'
 
 def vlm_lookup(user, chrom, pos, ref, alt, genome_version=None, **kwargs):
     token = _get_cached_auth0_response(
-        TOKEN_CACHE_KEY, 'oauth/token', 'POST', data=VLM_CREDENTIALS_BODY, response_key='access_token',
+        TOKEN_CACHE_KEY, path='oauth/token', method='POST', data=VLM_CREDENTIALS_BODY,
+        parse_response=lambda response_json: response_json.get('access_token'),
     )
 
     headers = {'Authorization': f'Bearer {token}'}
-    clients = _get_cached_auth0_response(CLIENTS_CACHE_KEY, 'api/v2/clients', headers=headers, params={
+    clients = _get_cached_auth0_response(CLIENTS_CACHE_KEY, path='api/v2/clients', headers=headers, params={
         'fields': 'client_id,name,client_metadata', 'is_global': 'false',
-    })
+    }, parse_response=_parse_clients_response)
 
     genome_version = genome_version or GENOME_VERSION_GRCh38
     return clients
 
 
-def _get_cached_auth0_response(cache_key, path, method='GET', response_key=None, **kwargs):
+def _get_cached_auth0_response(cache_key, path, parse_response, method='GET', **kwargs):
     value = safe_redis_get_json(cache_key)
-    if value:
+    if value and cache_key:
         return value
 
     response = requests.request(method, f'{VLM_AUTH_API}/{path}', **kwargs)
     response.raise_for_status()
-    value = response.json()
-    if response_key:
-        value = value.get(response_key)
+    value = parse_response(response.json())
 
     safe_redis_set_json(cache_key, value, expire=60*60*24)  # Cache for 24 hours
     return value
+
+def _parse_clients_response(clients):
+    return {
+        client['name']: client['client_metadata']['match_url'] for client in clients
+        if client['client_id'] != VLM_CLIENT_ID and client.get('client_metadata', {}).get('match_url')
+    }
