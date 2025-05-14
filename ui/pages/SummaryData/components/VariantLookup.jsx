@@ -40,13 +40,18 @@ const FIELDS = [
 
 const VlmDisplay = ({ vlmMatches }) => (
   <Table basic collapsing definition>
-    {Object.entries(vlmMatches).map(([nodeId, results]) => results.map(({ id, resultsCount }, i) => (
-      <Table.Row key={id}>
-        <Table.Cell content={i === 0 ? nodeId : null} />
-        <Table.Cell content={id} />
-        <Table.Cell content={resultsCount} />
-      </Table.Row>
-    )))}
+    {Object.entries(vlmMatches).map(
+      ([nodeId, nodeResults]) => Object.entries(nodeResults).map(([id, { url, counts }], i) => (
+        <Table.Row key={id}>
+          <Table.Cell content={i === 0 ? nodeId : null} />
+          <Table.Cell content={`${id} Hom=${counts.Homozygous} Het=${counts.Heterozygous}`}>
+            <a target="_blank" href={url} rel="noreferrer"><b>{id}</b></a>
+            {counts.Homozygous >= 0 && ` Hom=${counts.Homozygous}`}
+            {counts.Heterozygous >= 0 && ` Het=${counts.Heterozygous}`}
+          </Table.Cell>
+        </Table.Row>
+      )),
+    )}
   </Table>
 )
 
@@ -190,7 +195,7 @@ const VariantLookup = ({ queryParams, receiveData, updateQueryParams, vlmEnabled
     {vlmEnabled && (
       <Grid.Row>
         <Grid.Column width={4} textAlign="right" verticalAlign="middle">
-          <Header size="large" content="VLM" />
+          <Header size="large" content="Variant-Level Matching (VLM)" />
         </Grid.Column>
         <Grid.Column width={12}>
           <StateDataLoader
