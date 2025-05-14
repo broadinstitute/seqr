@@ -149,9 +149,9 @@ EXPECTED_SEARCH_FAMILY_CONTEXT = {
     'familyNotesByGuid': mock.ANY,
 }
 
-MOCK_TOKEN = 'mock_token'
+MOCK_TOKEN = 'mock_token' # nosec
 VLM_CLIENT_ID = 'mock_client_id'
-VLM_CLIENT_SECRET = 'mock_client_secret'
+VLM_CLIENT_SECRET = 'mock_client_secret' # nosec
 VLM_CLIENTS_RESPONSE = [
     {'client_id': VLM_CLIENT_ID, 'name': 'Self', 'client_metadata': {'match_url': 'https://self.com'}},
     {'client_id': 'client1', 'name': 'Node 1', 'client_metadata': {'match_url': 'https://node1.com'}},
@@ -1065,8 +1065,8 @@ class VariantSearchAPITest(object):
         self.assertSetEqual({call.request.headers['Authorization'] for call in responses.calls}, {'Bearer mock_token'})
         self.maxDiff = None
         self.assert_json_logs(None, [
-            ('Loaded VLM_TOKEN from redis', None),
-            ('Loaded VLM_CLIENTS from redis', None),
+            ('Loaded VLM_TOKEN_CACHE_KEY from redis', None),
+            ('Loaded VLM_CLIENTS_CACHE_KEY from redis', None),
         ])
         self.assert_json_logs(self.no_access_user, expected_logs, offset=2)
 

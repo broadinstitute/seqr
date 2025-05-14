@@ -14,8 +14,8 @@ VLM_CREDENTIALS_BODY = {
     'grant_type': 'client_credentials',
 }
 
-TOKEN_CACHE_KEY = 'VLM_TOKEN'
-CLIENTS_CACHE_KEY = 'VLM_CLIENTS'
+TOKEN_CACHE_KEY = 'VLM_TOKEN_CACHE_KEY'
+CLIENTS_CACHE_KEY = 'VLM_CLIENTS_CACHE_KEY'
 
 def vlm_lookup(user, chrom, pos, ref, alt, genome_version=None, **kwargs):
     token = _get_cached_auth0_response(
@@ -37,7 +37,7 @@ def vlm_lookup(user, chrom, pos, ref, alt, genome_version=None, **kwargs):
     for client_name, match_url in clients.items():
         logger.info(f'VLM match request to {client_name}', user, detail=params)
         try:
-            response = requests.get(match_url, headers=headers, params=params)
+            response = requests.get(match_url, headers=headers, params=params, timeout=120)
             response.raise_for_status()
             response_json = response.json()
             results[client_name] = {
