@@ -66,9 +66,11 @@ def file_iter(file_path, byte_range=None, raw_content=False, user=None, **kwargs
             size=byte_range[1]-byte_range[0] + 1,
             file_path=file_path,
         )
+        if file_path.endswith("gz"):
+            command += " | gunzip -c -q - "
         process = run_command(command, user=user)
         for line in process.stdout:
-            yield line
+            yield line.decode()
     else:
         mode = 'rb' if raw_content else 'r'
         open_func = gzip.open if file_path.endswith("gz") else open
