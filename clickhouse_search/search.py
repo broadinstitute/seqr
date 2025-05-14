@@ -61,7 +61,7 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
     sample_data = _get_sample_data(samples)
     logger.info(f'Loading {Sample.DATASET_TYPE_VARIANT_CALLS} data for {len(sample_data)} families', user)
 
-    entries = _get_filtered_entries(sample_data, **search)
+    entries = EntriesSnvIndel.objects.search(sample_data, **search)
     results = entries.annotate(**{
         SEQR_POPULATION_KEY: GtStatsDictGet('key', dict_attrs=f"({', '.join(GT_STATS_DICT_ATTRS)})")
     }).values(
@@ -122,7 +122,7 @@ def _get_sample_data(samples):
 
     return samples.values(
         'sample_type', family_guid=F('individual__family__guid'), project_guid=F('individual__family__project__guid'),
-    ).annotate(samples=ArrayAgg(JSONObject(affected='individual__affected', sample_id='sample_id', individual_guid=F('individual__guid'))))
+    ).annotate(samples=ArrayAgg(JSONObject(affected='individual__affected', sex='individual__sex', sample_id='sample_id', individual_guid=F('individual__guid'))))
 
 
 def _get_sample_map_expression(sample_data):
@@ -131,16 +131,6 @@ def _get_sample_map_expression(sample_data):
         for data in sample_data for s in data['samples']
     ]
     return f"map({', '.join(sample_map)})"
-
-
-def _get_filtered_entries(sample_data, **kwargs):
-    if len(sample_data) > 1:
-        raise NotImplementedError('Clickhouse search not implemented for multiple families or sample types')
-
-    return EntriesSnvIndel.objects.filter(
-        project_guid=sample_data[0]['project_guid'],
-        family_guid=sample_data[0]['family_guid'],
-    )
 
 
 def _liftover_genome_version(genome_version):
