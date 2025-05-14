@@ -14,8 +14,8 @@ VLM_CREDENTIALS_BODY = {
     'grant_type': 'client_credentials',
 }
 
-TOKEN_CACHE_KEY = 'VLM_TOKEN_CACHE_KEY'
-CLIENTS_CACHE_KEY = 'VLM_CLIENTS_CACHE_KEY'
+TOKEN_CACHE_KEY = 'VLM_TOKEN' # nosec
+CLIENTS_CACHE_KEY = 'VLM_CLIENTS'
 
 def vlm_lookup(user, chrom, pos, ref, alt, genome_version=None, **kwargs):
     token = _get_cached_auth0_response(

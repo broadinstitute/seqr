@@ -150,10 +150,10 @@ EXPECTED_SEARCH_FAMILY_CONTEXT = {
 }
 
 MOCK_TOKEN = 'mock_token' # nosec
-VLM_CLIENT_ID = 'mock_client_id'
-VLM_CLIENT_SECRET = 'mock_client_secret' # nosec
+MOCK_CLIENT_ID = 'mock_client_id'
+MOCK_CLIENT_SECRET = 'mock_client_secret' # nosec
 VLM_CLIENTS_RESPONSE = [
-    {'client_id': VLM_CLIENT_ID, 'name': 'Self', 'client_metadata': {'match_url': 'https://self.com'}},
+    {'client_id': MOCK_CLIENT_ID, 'name': 'Self', 'client_metadata': {'match_url': 'https://self.com'}},
     {'client_id': 'client1', 'name': 'Node 1', 'client_metadata': {'match_url': 'https://node1.com'}},
     {'client_id': 'client2', 'name': 'Node 2', 'client_metadata': {'match_url': 'https://node2.com'}},
     {'client_id': 'client1', 'name': 'Node 3', 'client_metadata': {'other_url': 'https://node3.com'}},
@@ -995,8 +995,8 @@ class VariantSearchAPITest(object):
             'F000009_9', 'F000010_10', 'F000013_13',
         }, {f.guid for f in mock_variant_lookup.call_args.args[2]})
 
-    @mock.patch('seqr.views.utils.vlm_utils.VLM_CLIENT_SECRET', VLM_CLIENT_SECRET)
-    @mock.patch('seqr.views.utils.vlm_utils.VLM_CLIENT_ID', VLM_CLIENT_ID)
+    @mock.patch('seqr.views.utils.vlm_utils.VLM_CLIENT_SECRET', MOCK_CLIENT_SECRET)
+    @mock.patch('seqr.views.utils.vlm_utils.VLM_CLIENT_ID', MOCK_CLIENT_ID)
     @mock.patch('seqr.utils.redis_utils.redis.StrictRedis')
     @responses.activate
     def test_vlm_lookup(self, mock_redis):
@@ -1065,8 +1065,8 @@ class VariantSearchAPITest(object):
         self.assertSetEqual({call.request.headers['Authorization'] for call in responses.calls}, {'Bearer mock_token'})
         self.maxDiff = None
         self.assert_json_logs(None, [
-            ('Loaded VLM_TOKEN_CACHE_KEY from redis', None),
-            ('Loaded VLM_CLIENTS_CACHE_KEY from redis', None),
+            ('Loaded VLM_TOKEN from redis', None),
+            ('Loaded VLM_CLIENTS from redis', None),
         ])
         self.assert_json_logs(self.no_access_user, expected_logs, offset=2)
 
