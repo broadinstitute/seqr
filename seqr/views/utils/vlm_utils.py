@@ -1,8 +1,11 @@
 import requests
 
-from reference_data.models import GENOME_VERSION_GRCh38
+from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_LOOKUP
+from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from settings import VLM_CLIENT_ID, VLM_CLIENT_SECRET, VLM_AUTH_API
+
+logger = SeqrLogger(__name__)
 
 VLM_CREDENTIALS_BODY = {
     'client_id': VLM_CLIENT_ID,
@@ -25,8 +28,21 @@ def vlm_lookup(user, chrom, pos, ref, alt, genome_version=None, **kwargs):
         'fields': 'client_id,name,client_metadata', 'is_global': 'false',
     }, parse_response=_parse_clients_response)
 
-    genome_version = genome_version or GENOME_VERSION_GRCh38
-    return clients
+    genome_version = GENOME_VERSION_LOOKUP[genome_version or GENOME_VERSION_GRCh38]
+    params = {
+        'assemblyId': genome_version, 'referenceName': chrom, 'start': pos, 'referenceBases': ref, 'alternateBases': alt,
+    }
+
+    results = []
+    for client_name, match_url in clients.items():
+        logger.info(f'VLM match request to {client_name}', user, detail=params)
+        try:
+            response = requests.get(match_url, headers=headers, params=params)
+            response.raise_for_status()
+            results += response.json()['response']['resultSets']
+        except Exception as e:
+            logger.error(f'VLM match error for {client_name}: {e}', user, detail=params)
+    return results
 
 
 def _get_cached_auth0_response(cache_key, path, parse_response, method='GET', **kwargs):
