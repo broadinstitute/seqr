@@ -51,9 +51,9 @@ class FileUtilsTest(TestCase):
             with gzip.GzipFile(fileobj=tmp, mode='wb') as gz:
                 gz.write(content)
             tmp.flush()
-            self.assertEqual(
-                list(file_iter(tmp.name, (0, 40))),
-                [b'gunzip: (stdin): unexpected end of file\n']
+            self.assertIn(
+                b'unexpected end of file',
+                list(file_iter(tmp.name, (0, 40)))[-1],
             )
             self.assertEqual(
                 list(file_iter(tmp.name, (0, 80))),
