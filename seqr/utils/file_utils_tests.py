@@ -47,13 +47,13 @@ class FileUtilsTest(TestCase):
             )
 
 
-        with tempfile.NamedTemporaryFile(delete=True, mode='wb', suffix=".gz") as tmp:
+        with tempfile.NamedTemporaryFile(delete=False, mode='wb', suffix=".gz") as tmp:
             with gzip.GzipFile(fileobj=tmp, mode='wb') as gz:
                 gz.write(content)
             tmp.flush()
             self.assertEqual(
                 list(file_iter(tmp.name, (0, 40))),
-                []
+                [b'gunzip: (stdin): unexpected end of file\n']
             )
             self.assertEqual(
                 list(file_iter(tmp.name, (0, 80))),

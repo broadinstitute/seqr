@@ -67,7 +67,7 @@ def file_iter(file_path, byte_range=None, raw_content=False, user=None, **kwargs
             file_path=file_path,
         )
         if file_path.endswith("gz"):
-            command += " | gunzip -c -q - "
+            command += " | gunzip -c - "
         process = run_command(command, user=user)
         for line in process.stdout:
             yield line
