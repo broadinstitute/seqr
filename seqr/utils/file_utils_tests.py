@@ -42,7 +42,7 @@ class FileUtilsTest(TestCase):
             self.assertEqual(
                 [
                     line for line in file_iter(tmp.name, (0, 34))
-                ], 
+                ],
                 [b'test_content\n', b'test_content_line2\n', b'tes']
             )
 
