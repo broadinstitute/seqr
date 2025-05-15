@@ -13,7 +13,7 @@ class AppPageTest(object):
     databases = '__all__'
     fixtures = ['users']
 
-    def _check_page_html(self, response,  user, user_key='user', user_email=None, user_fields=None, ga_token_id=None, anvil_loading_date=None):
+    def _check_page_html(self, response,  user, user_key='user', vlm_enabled=False, user_email=None, user_fields=None, ga_token_id=None, anvil_loading_date=None):
         user_fields = user_fields or USER_FIELDS
         self.assertEqual(response.status_code, 200)
         initial_json = self.get_initial_page_json(response)
@@ -25,6 +25,7 @@ class AppPageTest(object):
             'hijakEnabled': False,
             'oauthLoginProvider': self.OAUTH_PROVIDER,
             'elasticsearchEnabled': bool(self.ES_HOSTNAME),
+            'vlmEnabled': vlm_enabled,
             'warningMessages': [{'id': 1, 'header': 'Warning!', 'message': 'A sample warning'}],
             'anvilLoadingDelayDate': anvil_loading_date,
         })
@@ -38,13 +39,14 @@ class AppPageTest(object):
         content = response.content.decode('utf-8')
         self.assertEqual(content.count('<script type="text/javascript" nonce="{}">'.format(nonce)), 6)
 
+    @mock.patch('seqr.views.react_app.VLM_CLIENT_ID', 'abc123')
     @mock.patch('seqr.views.react_app.GA_TOKEN_ID', MOCK_GA_TOKEN)
     def test_react_page(self):
         url = reverse(main_app)
         self.check_require_login_no_policies(url, login_redirect_url='/login')
 
         response = self.client.get(url)
-        self._check_page_html(response, 'test_user_no_policies', user_email='test_user_no_policy@test.com', ga_token_id=MOCK_GA_TOKEN)
+        self._check_page_html(response, 'test_user_no_policies', user_email='test_user_no_policy@test.com', ga_token_id=MOCK_GA_TOKEN, vlm_enabled=True)
 
     def test_local_react_page(self):
         url = reverse(no_login_main_app)

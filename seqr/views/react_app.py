@@ -14,6 +14,7 @@ from settings import (
     GA_TOKEN_ID,
     ANVIL_LOADING_DELAY_EMAIL_START_DATE,
     SOCIAL_AUTH_PROVIDER,
+    VLM_CLIENT_ID,
 )
 from seqr.models import WarningMessage
 from seqr.utils.search.utils import backend_specific_call
@@ -60,6 +61,7 @@ def render_app_html(request, additional_json=None, include_user=True, status=200
         'hijakEnabled': DEBUG or False,
         'oauthLoginProvider': SOCIAL_AUTH_PROVIDER,
         'elasticsearchEnabled': backend_specific_call(True, False, False),
+        'vlmEnabled': bool(VLM_CLIENT_ID),
         'warningMessages': [message.json() for message in WarningMessage.objects.all()],
         'anvilLoadingDelayDate': ANVIL_LOADING_DELAY_EMAIL_START_DATE if should_show_loading_delay else None,
     }}
