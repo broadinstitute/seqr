@@ -299,7 +299,7 @@ const DETAIL_SECTIONS = [
   },
   {
     name: 'Allele Counts',
-    hasDetail: pop => pop && pop.ac,
+    hasDetail: pop => pop && pop.ac && pop.an,
     display: () => [{ valueField: 'ac' }],
   },
 ]
