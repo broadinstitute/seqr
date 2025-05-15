@@ -43,7 +43,7 @@ class FileUtilsTest(TestCase):
                 [
                     line for line in file_iter(tmp.name, (0, 34))
                 ], 
-                ['test_content\n', 'test_content_line2\n', 'tes']
+                [b'test_content\n', b'test_content_line2\n', b'tes']
             )
 
 
@@ -57,5 +57,5 @@ class FileUtilsTest(TestCase):
             )
             self.assertEqual(
                 list(file_iter(tmp.name, (0, 80))),
-                ['test_content\n', 'test_content_line2\n', 'test_content3']
+                [b'test_content\n', b'test_content_line2\n', b'test_content3']
             )
