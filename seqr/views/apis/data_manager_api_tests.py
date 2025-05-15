@@ -1832,7 +1832,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
     def _assert_success_notification(self, dag_json):
         dag_json['sample_source'] = 'Broad_Internal'
 
-        message = f"""*test_data_manager@broadinstitute.org* triggered loading internal WES SNV_INDEL data for 2 projects
+        message = f"""*test_data_manager@broadinstitute.org* triggered loading internal WES SNV_INDEL data for 12 samples in 2 projects (1kg project nåme with uniçøde: 10; Non-Analyst Project: 2)
 
         Pedigree files have been uploaded to gs://seqr-loading-temp/v3.1/GRCh38/SNV_INDEL/pedigrees/WES
 
