@@ -838,6 +838,8 @@ class BaseHailTableQuery(object):
             pop_config = self._format_population_config(self.POPULATIONS[pop])
             if freqs.get('af') is not None and freqs['af'] < 1:
                 af_field = pop_config.get('filter_af') or pop_config['af']
+                if af_field is None:
+                    continue
                 pop_filter = pop_expr[af_field] <= freqs['af']
                 if path_override_filter is not None and freqs['af'] < PATH_FREQ_OVERRIDE_CUTOFF:
                     pop_filter |= path_override_filter & (pop_expr[af_field] <= PATH_FREQ_OVERRIDE_CUTOFF)
@@ -1225,9 +1227,12 @@ class BaseHailTableQuery(object):
         if self._sort_metadata:
             return self._gene_rank_sort(ht, hl.dict(self._sort_metadata))
 
-        sort_field = next((field for field, config in self.POPULATIONS.items() if config.get('sort') == sort), None)
+        sort_field, sort_subfield = next(
+            ((field, config.get('sort_subfield', 'af')) for field, config in self.POPULATIONS.items() if config.get('sort') == sort),
+            (None, None),
+        )
         if sort_field:
-            return [hl.float64(self.population_expression(ht, sort_field).af)]
+            return [hl.float64(self.population_expression(ht, sort_field)[sort_subfield])]
 
         return []
 

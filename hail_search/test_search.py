@@ -43,7 +43,7 @@ PROJECT_2_VARIANT = {
     'hgmd': None,
     'screenRegionType': None,
     'populations': {
-        'seqr': {'af': 0.0, 'ac': 0, 'an': 90, 'hom': 0},
+        'seqr': {'ac': 0, 'hom': 0},
         'topmed': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'het': 0},
         'exac': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'hemi': 0, 'het': 0, 'filter_af': 0.0},
         'gnomad_exomes': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'hemi': 0, 'filter_af': 0.0},
@@ -100,7 +100,7 @@ GRCH37_VARIANT = {
         },
     },
     'populations': {
-        'seqr': {'af': 0.5912399888038635, 'ac': 4711, 'an': 7968, 'hom': 1508},
+        'seqr': {'ac': 4711, 'hom': 1508},
         'topmed': {'af': 0.5213189721107483, 'ac': 65461, 'an': 125568, 'hom': 16156, 'het': 33149},
         'exac': {'af': 0.6299999952316284, 'ac': 66593, 'an': 104352, 'hom': 22162, 'hemi': 0, 'het': 22269, 'filter_af': 0.8198773860931396},
         'gnomad_exomes': {'af': 0.6354219317436218, 'ac': 137532, 'an': 216442, 'hom': 45869, 'hemi': 0, 'filter_af': 0.8226116299629211},
@@ -810,8 +810,8 @@ class HailSearchTestCase(AioHTTPTestCase):
     async def test_frequency_filter(self):
         sv_callset_filter = {'sv_callset': {'af': 0.05}}
         await self._assert_expected_search(
-            [VARIANT1, VARIANT4, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
-            frequencies={'seqr': {'af': 0.2}, **sv_callset_filter},
+            [VARIANT3, VARIANT4, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
+            frequencies={'seqr': {'ac': 5}, **sv_callset_filter},
         )
 
         await self._assert_expected_search(
@@ -852,7 +852,7 @@ class HailSearchTestCase(AioHTTPTestCase):
         )
 
         await self._assert_expected_search(
-            [VARIANT4], frequencies={'seqr': {'af': 0.2}, 'gnomad_genomes': {'ac': 50}},
+            [VARIANT4], frequencies={'seqr': {'af': 10}, 'gnomad_genomes': {'ac': 50}},
             omit_data_type='SV_WES',
         )
 
