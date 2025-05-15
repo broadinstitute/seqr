@@ -48,7 +48,7 @@ class FileUtilsTest(TestCase):
 
 
         with tempfile.NamedTemporaryFile(delete=True, mode='wb', suffix=".gz") as tmp:
-            with gzip.open(tmp.name, 'wb') as gz:
+            with gzip.GzipFile(fileobj=tmp, mode='wb') as gz:
                 gz.write(content)
             tmp.flush()
             self.assertEqual(
@@ -56,6 +56,6 @@ class FileUtilsTest(TestCase):
                 []
             )
             self.assertEqual(
-                list(file_iter(tmp.name, (0, 60))),
+                list(file_iter(tmp.name, (0, 80))),
                 ['test_content\n', 'test_content_line2\n', 'test_content3']
             )
