@@ -325,6 +325,7 @@ def load_data(request):
 
     errors = []
     individual_ids = []
+    project_counts = []
     vcf_sample_id_map = {}
     for project_guid, sample_ids in project_samples.items():
         project_individual_ids, project_vcf_sample_id_map = _get_valid_search_individuals(
@@ -332,6 +333,7 @@ def load_data(request):
         )
         individual_ids += project_individual_ids
         vcf_sample_id_map.update(project_vcf_sample_id_map)
+        project_counts.append(f'{projects_by_guid[project_guid].name}: {len(project_individual_ids)}')
 
     if errors:
         raise ErrorsWarningsException(errors)
@@ -345,7 +347,7 @@ def load_data(request):
         'skip_check_sex_and_relatedness': request_json.get('skipSRChecks', False),
     }
     if AirtableSession.is_airtable_enabled():
-        success_message = f'*{request.user.email}* triggered loading internal {sample_type} {dataset_type} data for {len(projects)} projects'
+        success_message = f'*{request.user.email}* triggered loading internal {sample_type} {dataset_type} data for {len(individual_ids)} samples in {len(projects)} projects ({"; ".join(sorted(project_counts))})'
         error_message = f'ERROR triggering internal {sample_type} {dataset_type} loading'
         trigger_airflow_data_loading(
             *loading_args, **loading_kwargs, success_message=success_message, error_message=error_message,
