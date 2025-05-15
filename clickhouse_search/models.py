@@ -67,11 +67,11 @@ class Projection(Func):
 
 class EntriesManager(Manager):
     GENOTYPE_LOOKUP = {
-        REF_REF: ('=', 0),
-        REF_ALT: ('=', 1),
-        ALT_ALT: ('=', 2),
-        HAS_ALT: ('>', 0),
-        HAS_REF: ('<', 2),
+        REF_REF: (0,),
+        REF_ALT: (1,),
+        ALT_ALT: (2,),
+        HAS_ALT: (0, '{field} > {value}'),
+        HAS_REF: (2, '{field} < {value}'),
     }
 
     INHERITANCE_FILTERS = {
@@ -79,7 +79,9 @@ class EntriesManager(Manager):
         ANY_AFFECTED: {AFFECTED: HAS_ALT},
     }
 
-    def search(self, sample_data, inheritance_mode=None, inheritance_filter=None, **kwargs):
+    QUALITY_FILTERS = [('gq', 1), ('ab', 100, 'x.gt != 1')]
+
+    def search(self, sample_data, inheritance_mode=None, inheritance_filter=None, qualityFilter=None, **kwargs):
        if len(sample_data) > 1:
            raise NotImplementedError('Clickhouse search not implemented for multiple families or sample types')
 
@@ -88,31 +90,50 @@ class EntriesManager(Manager):
            family_guid=sample_data[0]['family_guid'],
        )
 
+       quality_filter = qualityFilter or {}
+       if quality_filter.get('vcf_filter'):
+           entries = entries.filter(filters__len=0)
+
        individual_genotype_filter = (inheritance_filter or {}).get('genotype')
        custom_affected = (inheritance_filter or {}).get('affected') or {}
-       if not (inheritance_mode or individual_genotype_filter):
+       if not (inheritance_mode or individual_genotype_filter or quality_filter):
            return entries
 
        for sample in sample_data[0]['samples']:
            affected = custom_affected.get(sample['individual_guid']) or sample['affected']
-           genotype_filter = self._get_sample_genotype(sample, affected, inheritance_mode, individual_genotype_filter)
-           if genotype_filter:
+           sample_filter = {}
+           self._sample_genotype_filter(sample_filter, sample, affected, inheritance_mode, individual_genotype_filter)
+           self._sample_quality_filter(sample_filter, affected, quality_filter)
+           if sample_filter:
                entries = entries.filter(calls__array_exists={
-                   'sampleId': ('=', f"'{sample['sample_id']}'"),
-                   'gt': genotype_filter,
+                   'sampleId': (f"'{sample['sample_id']}'",),
+                   **sample_filter,
                })
 
        return entries
 
     @classmethod
-    def _get_sample_genotype(cls, sample, affected, inheritance_mode, individual_genotype_filter):
+    def _sample_genotype_filter(cls, sample_filter, sample, affected, inheritance_mode, individual_genotype_filter):
+        genotype = None
         if individual_genotype_filter:
             genotype = individual_genotype_filter.get(sample['individual_guid'])
-        else:
+        elif inheritance_mode:
             genotype = cls.INHERITANCE_FILTERS[inheritance_mode].get(affected)
             if (inheritance_mode == X_LINKED_RECESSIVE and affected == UNAFFECTED and sample['sex'] in MALE_SEXES):
                 genotype = REF_REF
-        return cls.GENOTYPE_LOOKUP[genotype] if genotype else None
+        if genotype:
+            sample_filter['gt'] = cls.GENOTYPE_LOOKUP[genotype]
+
+    @classmethod
+    def _sample_quality_filter(cls, sample_filter, affected, quality_filter):
+        if quality_filter.get('affected_only') and affected != AFFECTED:
+            return
+
+        for field, scale, *filters in cls.QUALITY_FILTERS:
+            value = quality_filter.get(f'min_{field}')
+            if value:
+                or_filters = ['isNull({field})', '{field} >= {value}'] + filters
+                sample_filter[field] = (value / scale, f'or({", ".join(or_filters)})')
 
 
 class EntriesSnvIndel(models.ClickhouseModel):
