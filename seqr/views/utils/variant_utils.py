@@ -443,7 +443,7 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
             response['familiesByGuid'][family_guid].update(data)
 
     backend_specific_call(lambda response: response, _add_sample_count_stats, _add_sample_count_stats)(response)
-    
+
     return response
 
 def _mme_response_context(saved_variants_by_guid):
@@ -471,9 +471,6 @@ def _set_response_gene_scores(response, family_genes, gene_ids):
 
 
 def _add_sample_count_stats(response):
-    # response['totalSampleCounts'] = dict(Sample.objects.filter(
-    #     is_active=True, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS, individual__family__project__is_demo=False,
-    # ).values('sample_type').annotate(count=Count('*')).values_list('sample_type', 'count'))
-    return dict(Sample.objects.filter(
+    response['totalSampleCounts'] = dict(Sample.objects.filter(
         is_active=True, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS, individual__family__project__is_demo=False,
     ).values('sample_type').annotate(count=Count('*')).values_list('sample_type', 'count'))
