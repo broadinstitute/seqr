@@ -69,7 +69,6 @@ const FrequencyIntegerInput = React.memo(({ label, value, field, nullField, inli
     label={label}
     value={(value || {})[field]}
     min={0}
-    max={100}
     width={inlineAF ? 4 : 8}
     onChange={updateFrequency({ onChange, field, initialValue: value, nullField })}
   />
