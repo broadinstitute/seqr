@@ -1,8 +1,10 @@
 import React from 'react'
 import PropTypes from 'prop-types'
+import { connect } from 'react-redux'
 import styled from 'styled-components'
 import { Popup, Divider } from 'semantic-ui-react'
 
+import { getTotalSampleCounts } from 'redux/selectors'
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
 import { GNOMAD_SV_CRITERIA_MESSAGE, SV_CALLSET_CRITERIA_MESSAGE, TOPMED_FREQUENCY, GENOME_VERSION_37, GENOME_VERSION_38, getVariantMainGeneId } from '../../../utils/constants'
 
@@ -184,6 +186,31 @@ const sectionTitle = ({ fieldTitle, section }) => (
   </span>
 )
 
+const BaseGlobalAcPopup = ({ totalSampleCounts }) => (
+  Object.keys(totalSampleCounts).length > 0 && (
+    <Popup.Content>
+      <i>
+        The seqr AC and Hom counts reflect all observed occurrences of this variant in seqr.
+        While not all variants are called in all loaded callsets, an upper bound for the total AN can be estimated
+        from the total number of loaded samples in seqr:
+      </i>
+      {Object.entries(totalSampleCounts).map(([sampleType, { count }]) => (
+        <div key={sampleType}>{`${sampleType}: ${count}`}</div>
+      ))}
+    </Popup.Content>
+  )
+)
+
+BaseGlobalAcPopup.propTypes = {
+  totalSampleCounts: PropTypes.object,
+}
+
+const mapStateToProps = state => ({
+  totalSampleCounts: getTotalSampleCounts(state),
+})
+
+const GlobalAcPopup = connect(mapStateToProps)(BaseGlobalAcPopup)
+
 const HOM_SECTION = 'Homoplasmy'
 const HET_SECTION = 'Heteroplasmy'
 
@@ -328,7 +355,11 @@ const Frequencies = React.memo(({ variant }) => {
   const callsetHetPop = populations.callset_heteroplasmy || populations.seqr_heteroplasmy
   const isMito = callsetHetPop && callsetHetPop.af !== null && callsetHetPop.af !== undefined
   const popConfigs = isMito ? MITO_POPULATIONS : POPULATIONS
-  const sections = (isMito ? MITO_DETAIL_SECTIONS : DETAIL_SECTIONS).reduce(
+  const seqrAcSection = {
+    name: 'seqr Global ACs',
+    details: (!isMito && populations[SEQR_POP.field]) ? [<GlobalAcPopup />].filter(s => s) : [],
+  }
+  const sections = [seqrAcSection, ...(isMito ? MITO_DETAIL_SECTIONS : DETAIL_SECTIONS).reduce(
     (acc, section) => ([
       ...acc,
       {
@@ -344,7 +375,7 @@ const Frequencies = React.memo(({ variant }) => {
         )).filter(d => d).reduce((displayAcc, d) => ([...displayAcc, ...d]), []),
       },
     ]), [],
-  ).filter(section => section.details.length)
+  )].filter(section => section.details.length)
 
   const freqContent = (<div>{popConfigs.map(pop => <FreqSummary key={pop.field} variant={variant} {...pop} />)}</div>)
 

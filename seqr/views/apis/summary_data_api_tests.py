@@ -351,7 +351,7 @@ class SummaryDataAPITest(AirtableTest):
             {'projectGuid', 'name', 'variantTagTypes', 'variantFunctionalTagTypes'},
         )
         if 'totalSampleCounts' in response_json:
-            self.assertDictEqual(response_json['totalSampleCounts'], {'WES': 7})
+            self.assertDictEqual(response_json['totalSampleCounts'], {'WES': {'count': 7}})
 
         # Test analyst behavior
         self.login_analyst_user()

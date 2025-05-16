@@ -1086,7 +1086,7 @@ class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, VariantSearchAPITes
 
     EXPECTED_SEARCH_RESPONSE = {
         **EXPECTED_SEARCH_RESPONSE,
-        'totalSampleCounts': {'WES': 7},
+        'totalSampleCounts': {'WES': {'count': 7}},
     }
 
     def test_query_variants(self, *args):

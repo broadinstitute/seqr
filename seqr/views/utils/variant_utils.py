@@ -471,6 +471,9 @@ def _set_response_gene_scores(response, family_genes, gene_ids):
 
 
 def _add_sample_count_stats(response):
-    response['totalSampleCounts'] = dict(Sample.objects.filter(
+    sample_counts = Sample.objects.filter(
         is_active=True, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS, individual__family__project__is_demo=False,
-    ).values('sample_type').annotate(count=Count('*')).values_list('sample_type', 'count'))
+    ).values('sample_type').annotate(count=Count('*'))
+    response['totalSampleCounts'] = {
+        sample_type: {'count': count} for sample_type, count in sample_counts.values_list('sample_type', 'count')
+    }
