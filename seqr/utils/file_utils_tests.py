@@ -1,9 +1,7 @@
-import gzip
 import mock
-import tempfile
 
 from unittest import TestCase
-from seqr.utils.file_utils import mv_file_to_gs, file_iter
+from seqr.utils.file_utils import mv_file_to_gs
 
 
 class FileUtilsTest(TestCase):
