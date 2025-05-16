@@ -820,8 +820,6 @@ class HailSearchTestCase(AioHTTPTestCase):
             frequencies={'seqr': {'ac': 5}, **sv_callset_filter},
         )
 
-
-
         await self._assert_expected_search(
             [MULTI_FAMILY_VARIANT, VARIANT4], frequencies={'seqr': {'ac': 4}}, omit_data_type='SV_WES',
         )

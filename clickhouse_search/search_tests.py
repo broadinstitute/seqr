@@ -594,9 +594,15 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #
 #     def test_frequency_filter(self):
 #         sv_callset_filter = {'sv_callset': {'af': 0.05}}
+#         # seqr af filter is ignored for SNV_INDEL
+#         await self._assert_expected_search(
+#             [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
+#             frequencies={'seqr': {'af': 0.2},  **sv_callset_filter},
+#         )
+#
 #         self._assert_expected_search(
-#             [VARIANT1, VARIANT4, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
-#             frequencies={'seqr': {'af': 0.2}, **sv_callset_filter},
+#             [MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
+#             frequencies={'seqr': {'ac': 5}, **sv_callset_filter},
 #         )
 #
 #         self._assert_expected_search(
@@ -637,7 +643,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #         )
 #
 #         self._assert_expected_search(
-#             [VARIANT4], frequencies={'seqr': {'af': 0.2}, 'gnomad_genomes': {'ac': 50}},
+#             [VARIANT4], frequencies={'seqr': {'ac': 10}, 'gnomad_genomes': {'ac': 50}},
 #             omit_data_type='SV_WES',
 #         )
 #
@@ -1003,18 +1009,17 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #             sort='gnomad_exomes',
 #         )
 #
-#         self._assert_expected_search(
-#             [_sorted(GCNV_VARIANT3, [0.0015185698866844177]), _sorted(GCNV_VARIANT4, [0.004989586770534515]),
-#              _sorted(GCNV_VARIANT2, [0.012322110123932362]), _sorted(VARIANT4, [0.02222222276031971]),
-#              _sorted(GCNV_VARIANT1, [0.076492540538311]), _sorted(VARIANT1, [0.10000000149011612]),
-#              _sorted(VARIANT2, [0.31111112236976624]), _sorted(MULTI_FAMILY_VARIANT, [0.6666666865348816])],
+#         await self._assert_expected_search(
+#             [_sorted(VARIANT4, [2]),_sorted(MULTI_FAMILY_VARIANT, [4]), _sorted(VARIANT1, [9]),
+#              _sorted(VARIANT2, [28]), _sorted(GCNV_VARIANT3, [35]), _sorted(GCNV_VARIANT4, [115]),
+#              _sorted(GCNV_VARIANT2, [284]), _sorted(GCNV_VARIANT1, [1763])],
 #             sort='callset_af',
 #         )
 #
-#         self._assert_expected_search(
-#             [_sorted(MITO_VARIANT1, [0]), _sorted(MITO_VARIANT2, [0]), _sorted(MITO_VARIANT3, [0.019480518996715546]),
-#              _sorted(VARIANT4, [0.02222222276031971]), _sorted(VARIANT1, [0.10000000149011612]),
-#              _sorted(VARIANT2, [0.31111112236976624]), _sorted(VARIANT3, [0.6666666865348816])],
+#        await self._assert_expected_search(
+#             [_sorted(MITO_VARIANT1, [0]), _sorted(MITO_VARIANT2, [0]), _sorted(VARIANT4, [2]),
+#              _sorted(MITO_VARIANT3, [3]), _sorted(VARIANT3, [4]), _sorted(VARIANT1, [9]),
+#              _sorted(VARIANT2, [28])],
 #             sort='callset_af', sample_data=FAMILY_2_ALL_SAMPLE_DATA,
 #         )
 #
@@ -1159,10 +1164,10 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #             sort='strvctvre', inheritance_mode='compound_het', **COMP_HET_ALL_PASS_FILTERS,
 #         )
 #
-#         self._assert_expected_search(
-#             [[_sorted(GCNV_VARIANT3, [0.0015185698866844177]), _sorted(GCNV_VARIANT4, [0.004989586770534515])],
-#              [_sorted(GCNV_VARIANT4, [0.004989586770534515]), _sorted(MULTI_DATA_TYPE_COMP_HET_VARIANT2, [0.31111112236976624])],
-#              [_sorted(VARIANT4, [0.02222222276031971]), _sorted(VARIANT3, [0.6666666865348816])]],
+#         await self._assert_expected_search(
+#             [[_sorted(VARIANT4, [2]), _sorted(VARIANT3, [4])],
+#              [_sorted(MULTI_DATA_TYPE_COMP_HET_VARIANT2, [28]), _sorted(GCNV_VARIANT4, [115])],
+#              [_sorted(GCNV_VARIANT3, [35]), _sorted(GCNV_VARIANT4, [115])]],
 #             sort='callset_af', inheritance_mode='compound_het', **COMP_HET_ALL_PASS_FILTERS,
 #         )
 #
