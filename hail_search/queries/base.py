@@ -107,6 +107,7 @@ class BaseHailTableQuery(object):
         base_pop_config = {field.lower(): field for field in cls.POPULATION_KEYS}
         base_pop_config.update(pop_config)
         base_pop_config.pop('sort', None)
+        base_pop_config.pop('sort_subfield', None)
         return base_pop_config
 
     def annotation_fields(self, include_genotype_overrides=True):
