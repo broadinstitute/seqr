@@ -1308,6 +1308,23 @@ class DataManagerAPITest(AirtableTest):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'vcfSamples': vcf_samples})
 
+        self._add_file_iter(vcf_file_rows, is_gz=True)
+        body = {**self.REQUEST_BODY, 'filePath': f'{self.CALLSET_DIR}/callset.vcf.gz'}        
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'vcfSamples': vcf_samples})
+        if self.CALLSET_DIR.startswith('gs://'):
+            self.mock_subprocess.assert_has_calls([
+                mock.call(command, stdout=-1, stderr=-2, shell=True) # nosec
+                for command in [
+                    f'gsutil cat -r 0-65536 {body["filePath"]} | gunzip -c -q - ',
+                ]
+            ])
+        else:
+            self.mock_subprocess.assert_has_calls([
+                mock.call(f'dd skip=0 count=65537 bs=1 if={self.TRIGGER_CALLSET_DIR}{body["filePath"]} status="none" | gunzip -c - ', stdout=-1, stderr=-2, shell=True) # nosec
+            ])
+
         self._set_file_not_found(list_files=True)
         body = {**self.REQUEST_BODY, 'filePath': f'{self.CALLSET_DIR}/sharded_vcf/part0*.vcf'}
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
@@ -1579,11 +1596,16 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
         self.mock_open = patcher.start()
         self.mock_file_iter = self.mock_open.return_value.__enter__.return_value.__iter__
         self.mock_file_iter.return_value = []
+        self.mock_file_iter.stdout = []
         self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.utils.file_utils.open')
         self.mock_unzipped_open = patcher.start()
         self.mock_unzipped_file_iter = self.mock_unzipped_open.return_value.__enter__.return_value.__iter__
         self.mock_unzipped_file_iter.return_value = []
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.utils.file_utils.subprocess.Popen')
+        self.mock_subprocess = patcher.start()
+        self.mock_subprocess.side_effect = [self.mock_file_iter]
         self.addCleanup(patcher.stop)
         super().setUp()
 
@@ -1596,6 +1618,7 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
         self.mock_does_file_exist.return_value = True
         file_iter = self.mock_file_iter if is_gz else self.mock_unzipped_file_iter
         file_iter.return_value += stdout
+        file_iter.stdout += stdout
 
     def _add_file_list_iter(self, file_list, stdout):
         self.mock_does_file_exist.return_value = True
