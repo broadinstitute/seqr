@@ -445,6 +445,7 @@ const NO_ES_SNP_FREQUENCIES = [
     name: THIS_CALLSET_FREQUENCY,
     label: 'seqr',
     homHemi: true,
+    skipAf: true,
     labelHelp: 'Filter by allele count (AC) across all the samples in seqr.',
   },
 ]

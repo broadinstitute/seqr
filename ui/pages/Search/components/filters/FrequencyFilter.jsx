@@ -101,9 +101,9 @@ AfFilter.propTypes = {
   width: PropTypes.number,
 }
 
-export const FrequencyFilter = ({ value, onChange, homHemi, inlineAF, children }) => (
+export const FrequencyFilter = ({ value, onChange, homHemi, inlineAF, skipAf, children }) => (
   <span>
-    {!inlineAF && (
+    {!inlineAF && !skipAf && (
       <div>
         <AfFilter value={value} onChange={onChange} />
         <VerticalSpacer height={15} />
@@ -131,6 +131,7 @@ FrequencyFilter.propTypes = {
   onChange: PropTypes.func,
   homHemi: PropTypes.bool,
   inlineAF: PropTypes.bool,
+  skipAf: PropTypes.bool,
   children: PropTypes.node,
 }
 
