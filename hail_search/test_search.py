@@ -809,7 +809,7 @@ class HailSearchTestCase(AioHTTPTestCase):
 
     async def test_frequency_filter(self):
         sv_callset_filter = {'sv_callset': {'af': 0.05}}
-        # seqr af filter is ignored
+        # seqr af filter is ignored for SNV_INDEL
         await self._assert_expected_search(
             [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
             frequencies={'seqr': {'af': 0.2},  **sv_callset_filter},
