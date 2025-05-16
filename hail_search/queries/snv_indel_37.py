@@ -20,7 +20,7 @@ class SnvIndelHailTableQuery37(MitoHailTableQuery):
         'AB': QualityFilterFormat(override=lambda gt: ~gt.GT.is_het(), scale=100),
     }
     POPULATIONS = {
-        'seqr': {'hom': 'hom', 'hemi': None, 'het': None, 'sort': 'callset_af'},
+        'seqr': {'af': None, 'an': None, 'hom': 'hom', 'hemi': None, 'het': None, 'sort': 'callset_af', 'sort_subfield': 'ac'},
         'topmed': {'hemi': None},
         'exac': {
             'filter_af': 'AF_POPMAX', 'ac': 'AC_Adj', 'an': 'AN_Adj', 'hom': 'AC_Hom', 'hemi': 'AC_Hemi',

@@ -279,6 +279,7 @@ const rootReducer = combineReducers({
   searchesByHash: createObjectsByIdReducer(RECEIVE_SAVED_SEARCHES, 'searchesByHash'),
   searchFamiliesByHash: createObjectsByIdReducer(RECEIVE_SAVED_SEARCHES, 'searchFamiliesByHash'),
   transcriptsById: createObjectsByIdReducer(RECEIVE_DATA, 'transcriptsById'),
+  totalSampleCounts: createObjectsByIdReducer(RECEIVE_DATA, 'totalSampleCounts'),
   user: createSingleObjectReducer(UPDATE_USER),
   newUser: zeroActionsReducer,
   userOptionsByUsername: createSingleValueReducer(RECEIVE_USER_OPTIONS, {}),

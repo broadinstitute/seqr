@@ -15,6 +15,7 @@ import {
   SNP_FREQUENCIES,
   MITO_FREQUENCIES,
   SV_FREQUENCIES,
+  THIS_CALLSET_FREQUENCY,
   SPLICE_AI_FIELD,
   SV_IN_SILICO_GROUP,
   NO_SV_IN_SILICO_GROUPS,
@@ -438,18 +439,35 @@ export const ANNOTATION_SECONDARY_PANEL = {
   },
 }
 
+const NO_ES_SNP_FREQUENCIES = [
+  ...SNP_FREQUENCIES.slice(0, -1),
+  {
+    name: THIS_CALLSET_FREQUENCY,
+    label: 'seqr',
+    homHemi: true,
+    skipAf: true,
+    labelHelp: 'Filter by allele count (AC) across all the samples in seqr.',
+  },
+]
+
 export const FREQUENCY_PANEL = {
   name: 'freqs',
   headerProps: {
     title: 'Frequency',
-    inputSize: 12,
+    inputSize: 11,
     inputProps: {
       component: HeaderFrequencyFilter,
       format: val => val || {},
     },
   },
-  fields: FREQUENCIES,
+  esEnabledFields: FREQUENCIES,
+  fields: [...NO_ES_SNP_FREQUENCIES, ...MITO_FREQUENCIES, ...SV_FREQUENCIES],
   datasetTypeFields: {
+    [DATASET_TYPE_SNV_INDEL_CALLS]: NO_ES_SNP_FREQUENCIES,
+    [DATASET_TYPE_VARIANT_MITO]: NO_ES_SNP_FREQUENCIES.concat(MITO_FREQUENCIES),
+    [DATASET_TYPE_VARIANT_SV]: NO_ES_SNP_FREQUENCIES.concat(SV_FREQUENCIES),
+  },
+  esEnabledDatasetTypeFields: {
     [DATASET_TYPE_SNV_INDEL_CALLS]: SNP_FREQUENCIES,
     [DATASET_TYPE_VARIANT_MITO]: SNP_FREQUENCIES.concat(MITO_FREQUENCIES),
     [DATASET_TYPE_VARIANT_SV]: SNP_FREQUENCIES.concat(SV_FREQUENCIES),
@@ -457,7 +475,6 @@ export const FREQUENCY_PANEL = {
   fieldProps: {
     control: FrequencyFilter,
     format: val => val || {},
-    formatNoEsLabel: label => label.replace('Callset', '').replace('This', 'seqr'),
   },
   fieldLayout: freqFieldLayout,
   helpText: 'Filter by allele frequency (popmax AF where available) or by allele count (AC). In applicable populations, also filter by homozygous/hemizygous count (H/H).',

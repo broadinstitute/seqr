@@ -51,6 +51,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
             },
         })
         POPULATION_FIELDS[pop_het] = POPULATION_FIELDS.get(pop, pop)
+    POPULATIONS['seqr']['sort_subfield'] = 'ac'
     PREDICTION_FIELDS_CONFIG = {
         'apogee': PredictionPath('mitimpact', 'score'),
         'haplogroup_defining': PredictionPath('haplogroup', 'is_defining', lambda v: hl.or_missing(v, 'Y')),

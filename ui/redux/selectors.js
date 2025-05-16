@@ -24,6 +24,7 @@ export const getMmeResultsByGuid = state => state.mmeResultsByGuid
 export const getGenesById = state => state.genesById
 export const getGenesIsLoading = state => state.genesLoading.isLoading
 export const getTranscriptsById = state => state.transcriptsById
+export const getTotalSampleCounts = state => state.totalSampleCounts
 export const getHpoTermsByParent = state => state.hpoTermsByParent
 export const getHpoTermsIsLoading = state => state.hpoTermsLoading.isLoading
 export const getLocusListsByGuid = state => state.locusListsByGuid

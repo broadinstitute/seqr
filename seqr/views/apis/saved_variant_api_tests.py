@@ -132,7 +132,7 @@ class SavedVariantAPITest(object):
         self.assertEqual(response.status_code, 200)
 
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), SAVED_VARIANT_RESPONSE_KEYS)
+        self.assertSetEqual(set(response_json.keys()), self.SAVED_VARIANT_RESPONSE_KEYS)
 
         variants = response_json['savedVariantsByGuid']
         self.assertSetEqual(set(variants.keys()), {'SV0000002_1248367227_r0390_100', VARIANT_GUID})
@@ -192,7 +192,7 @@ class SavedVariantAPITest(object):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         response_keys = {'projectsByGuid'}
-        response_keys.update(SAVED_VARIANT_RESPONSE_KEYS)
+        response_keys.update(self.SAVED_VARIANT_RESPONSE_KEYS)
         self.assertSetEqual(set(response_json.keys()), response_keys)
         self.assertEqual(len(response_json['savedVariantsByGuid']), 2)
         project = response_json['projectsByGuid'][PROJECT_GUID]
@@ -203,7 +203,7 @@ class SavedVariantAPITest(object):
         response = self.client.get('{}?includeLocusLists=true'.format(url))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), SAVED_VARIANT_RESPONSE_KEYS)
+        self.assertSetEqual(set(response_json.keys()), self.SAVED_VARIANT_RESPONSE_KEYS)
         self.assertEqual(len(response_json['savedVariantsByGuid']), 2)
         locus_list_fields.update(LOCUS_LIST_FIELDS)
         locus_list_fields.update(PA_LOCUS_LIST_FIELDS)
@@ -218,7 +218,7 @@ class SavedVariantAPITest(object):
         family_context_response_keys = {
             'individualsByGuid', 'familyNotesByGuid', 'igvSamplesByGuid', 'projectsByGuid'
         }
-        family_context_response_keys.update(SAVED_VARIANT_RESPONSE_KEYS)
+        family_context_response_keys.update(self.SAVED_VARIANT_RESPONSE_KEYS)
         self.assertSetEqual(set(response_json.keys()), family_context_response_keys)
         self.assertEqual(len(response_json['savedVariantsByGuid']), 2)
         self.assertEqual(set(response_json['familiesByGuid'].keys()), {'F000001_1', 'F000002_2'})
@@ -237,7 +237,7 @@ class SavedVariantAPITest(object):
         # get variants with no tags for whole project
         response = self.client.get('{}?includeNoteVariants=true'.format(url))
         self.assertEqual(response.status_code, 200)
-        no_families_response_keys = {*SAVED_VARIANT_RESPONSE_KEYS}
+        no_families_response_keys = {*self.SAVED_VARIANT_RESPONSE_KEYS}
         no_families_response_keys.remove('familiesByGuid')
         no_families_response_keys.remove('transcriptsById')
         self.assertSetEqual(set(response.json().keys()), no_families_response_keys)
@@ -293,7 +293,7 @@ class SavedVariantAPITest(object):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), SAVED_VARIANT_RESPONSE_KEYS)
+        self.assertSetEqual(set(response_json.keys()), self.SAVED_VARIANT_RESPONSE_KEYS)
         variants = response_json['savedVariantsByGuid']
         self.assertSetEqual(
             set(variants.keys()),
@@ -994,6 +994,8 @@ class SavedVariantAPITest(object):
 class LocalSavedVariantAPITest(AuthenticationTestCase, SavedVariantAPITest):
     fixtures = ['users', '1kg_project', 'reference_data']
 
+    SAVED_VARIANT_RESPONSE_KEYS = SAVED_VARIANT_RESPONSE_KEYS
+
 
 def assert_no_list_ws_has_al(self, acl_call_count):
     self.mock_list_workspaces.assert_not_called()
@@ -1006,6 +1008,8 @@ def assert_no_list_ws_has_al(self, acl_call_count):
 # Test for permissions from AnVIL only
 class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, SavedVariantAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
+
+    SAVED_VARIANT_RESPONSE_KEYS = {*SAVED_VARIANT_RESPONSE_KEYS, 'totalSampleCounts'}
 
     def test_saved_variant_data(self, *args):
         super(AnvilSavedVariantAPITest, self).test_saved_variant_data(*args)

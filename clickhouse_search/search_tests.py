@@ -24,14 +24,13 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             (
                 key UInt32,
                 ac UInt32,
-                an UInt32,
                 hom UInt32,
             )
             PRIMARY KEY key
             SOURCE(CLICKHOUSE(
                 USER %s
                 PASSWORD %s
-                QUERY "SELECT * FROM VALUES ((1, 9, 90, 2), (2, 28, 90, 4), (3, 4, 6, 1), (4, 2, 90, 0))"
+                QUERY "SELECT * FROM VALUES ((1, 9, 2), (2, 28, 4), (3, 4, 1), (4, 2, 0))"
             ))
             LIFETIME(0)
             LAYOUT(FLAT(MAX_ARRAY_SIZE 500000000))

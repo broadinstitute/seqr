@@ -123,21 +123,15 @@ HeaderContent.propTypes = {
 
 const searchFieldName = (name, field) => (field.fullFieldValue ? `search.${name}` : `search.${name}.${field.name}`)
 
-const formatField = (field, name, esEnabled, { formatNoEsLabel, ...fieldProps }) => ({
-  ...fieldProps,
-  ...field,
-  name: searchFieldName(name, field),
-  label: (!esEnabled && formatNoEsLabel) ? formatNoEsLabel(field.label) : field.label,
-})
-
 const PanelContent = React.memo(({
   name, fields, fieldProps, helpText, fieldLayout, fieldLayoutInput, esEnabled, noPadding, datasetTypes,
-  datasetTypeFields, datasetTypeFieldLayoutInput, esEnabledFields,
+  datasetTypeFields, datasetTypeFieldLayoutInput, esEnabledFields, esEnabledDatasetTypeFields,
 }) => {
   const layoutInput = (datasetTypeFieldLayoutInput || {})[datasetTypes] || fieldLayoutInput
-  const panelFields = (datasetTypeFields || {})[datasetTypes] || (esEnabled && esEnabledFields) || fields
+  const currentDatasetTypeFields = esEnabled ? (esEnabledDatasetTypeFields || datasetTypeFields) : datasetTypeFields
+  const panelFields = (currentDatasetTypeFields || {})[datasetTypes] || (esEnabled && esEnabledFields) || fields
   const fieldComponents = panelFields && configuredFields(
-    { fields: panelFields.map(field => formatField(field, name, esEnabled, fieldProps || {})) },
+    { fields: panelFields.map(field => ({ ...(fieldProps || {}), ...field, name: searchFieldName(name, field) })) },
   )
   return (
     <div>
@@ -168,6 +162,7 @@ PanelContent.propTypes = {
   datasetTypeFieldLayoutInput: PropTypes.object,
   esEnabled: PropTypes.bool,
   esEnabledFields: PropTypes.arrayOf(PropTypes.object),
+  esEnabledDatasetTypeFields: PropTypes.object,
   noPadding: PropTypes.bool,
 }
 

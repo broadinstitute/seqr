@@ -341,7 +341,7 @@ class SummaryDataAPITest(AirtableTest):
         response = self.client.get(gene_url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), SAVED_VARIANT_RESPONSE_KEYS)
+        self.assertSetEqual(set(response_json.keys()), self.SAVED_VARIANT_RESPONSE_KEYS)
         expected_variant_guids = {
             'SV0000001_2103343353_r0390_100', 'SV0000007_prefix_19107_DEL_r00', 'SV0000006_1248367227_r0003_tes',
         }
@@ -350,13 +350,15 @@ class SummaryDataAPITest(AirtableTest):
             set(response_json['projectsByGuid'][PROJECT_GUID].keys()),
             {'projectGuid', 'name', 'variantTagTypes', 'variantFunctionalTagTypes'},
         )
+        if 'totalSampleCounts' in response_json:
+            self.assertDictEqual(response_json['totalSampleCounts'], {'WES': {'count': 7}})
 
         # Test analyst behavior
         self.login_analyst_user()
         response = self.client.get(gene_url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), SAVED_VARIANT_RESPONSE_KEYS)
+        self.assertSetEqual(set(response_json.keys()), self.SAVED_VARIANT_RESPONSE_KEYS)
         self.assertSetEqual(set(response_json['savedVariantsByGuid'].keys()), expected_variant_guids)
 
         all_tag_url = reverse(saved_variants_page, args=['ALL'])
@@ -770,6 +772,7 @@ class LocalSummaryDataAPITest(AuthenticationTestCase, SummaryDataAPITest):
     NUM_MANAGER_SUBMISSIONS = 4
     ADDITIONAL_SAMPLES = ['NA21234', 'NA21987']
     HAS_AIRTABLE = False
+    SAVED_VARIANT_RESPONSE_KEYS = SAVED_VARIANT_RESPONSE_KEYS
 
     def _test_metadata_airtable_responses(self, include_airtable_url, expected_individuals):
         # Returns successfully without airtable data when disabled
@@ -793,6 +796,7 @@ class AnvilSummaryDataAPITest(AnvilAuthenticationTestCase, SummaryDataAPITest):
     NUM_MANAGER_SUBMISSIONS = 4
     ADDITIONAL_SAMPLES = []
     HAS_AIRTABLE = True
+    SAVED_VARIANT_RESPONSE_KEYS = {*SAVED_VARIANT_RESPONSE_KEYS, 'totalSampleCounts'}
 
     def test_mme_details(self, *args):
         super(AnvilSummaryDataAPITest, self).test_mme_details(*args)

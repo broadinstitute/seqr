@@ -69,8 +69,7 @@ const FrequencyIntegerInput = React.memo(({ label, value, field, nullField, inli
     label={label}
     value={(value || {})[field]}
     min={0}
-    max={100}
-    width={inlineAF ? 3 : 8}
+    width={inlineAF ? 4 : 8}
     onChange={updateFrequency({ onChange, field, initialValue: value, nullField })}
   />
 ))
@@ -102,9 +101,9 @@ AfFilter.propTypes = {
   width: PropTypes.number,
 }
 
-export const FrequencyFilter = ({ value, onChange, homHemi, inlineAF, children }) => (
+export const FrequencyFilter = ({ value, onChange, homHemi, inlineAF, skipAf, children }) => (
   <span>
-    {!inlineAF && (
+    {!inlineAF && !skipAf && (
       <div>
         <AfFilter value={value} onChange={onChange} />
         <VerticalSpacer height={15} />
@@ -132,6 +131,7 @@ FrequencyFilter.propTypes = {
   onChange: PropTypes.func,
   homHemi: PropTypes.bool,
   inlineAF: PropTypes.bool,
+  skipAf: PropTypes.bool,
   children: PropTypes.node,
 }
 
@@ -160,7 +160,7 @@ export const HeaderFrequencyFilter = ({ value, onChange, esEnabled, ...props }) 
 
   return (
     <FrequencyFilter {...props} value={headerValue} onChange={onFreqChange} homHemi inlineAF>
-      <AfFilter value={callset} onChange={onCallsetChange} inline label={`${callsetTitle} AF`} />
+      {esEnabled && <AfFilter value={callset} onChange={onCallsetChange} inline label={`${callsetTitle} AF`} />}
       <FrequencyIntegerInput
         label={`${callsetTitle} AC`}
         field="ac"
