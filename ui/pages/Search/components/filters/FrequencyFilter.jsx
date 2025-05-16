@@ -70,7 +70,7 @@ const FrequencyIntegerInput = React.memo(({ label, value, field, nullField, inli
     value={(value || {})[field]}
     min={0}
     max={100}
-    width={inlineAF ? 3 : 8}
+    width={inlineAF ? 4 : 8}
     onChange={updateFrequency({ onChange, field, initialValue: value, nullField })}
   />
 ))
@@ -160,7 +160,7 @@ export const HeaderFrequencyFilter = ({ value, onChange, esEnabled, ...props }) 
 
   return (
     <FrequencyFilter {...props} value={headerValue} onChange={onFreqChange} homHemi inlineAF>
-      <AfFilter value={callset} onChange={onCallsetChange} inline label={`${callsetTitle} AF`} />
+      {esEnabled && <AfFilter value={callset} onChange={onCallsetChange} inline label={`${callsetTitle} AF`} />}
       <FrequencyIntegerInput
         label={`${callsetTitle} AC`}
         field="ac"
