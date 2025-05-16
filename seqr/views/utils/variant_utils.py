@@ -1,7 +1,7 @@
 from collections import defaultdict
 from django.contrib.auth.models import User
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.db.models import F, Q
+from django.db.models import F, Q, Count
 import json
 import logging
 import redis
@@ -442,6 +442,8 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
                 response['familiesByGuid'][family_guid] = {}
             response['familiesByGuid'][family_guid].update(data)
 
+    backend_specific_call(lambda response: response, _add_sample_count_stats, _add_sample_count_stats)(response)
+    
     return response
 
 def _mme_response_context(saved_variants_by_guid):
@@ -466,3 +468,12 @@ def _set_response_gene_scores(response, family_genes, gene_ids):
     response['rnaSeqData'] = _get_rna_seq_outliers(gene_ids, rna_sample_family_map.keys())
     response['phenotypeGeneScores'] = get_phenotype_prioritization(present_family_genes.keys(), gene_ids=gene_ids)
     return _get_family_has_rna_tpm(present_family_genes, gene_ids, rna_sample_family_map)
+
+
+def _add_sample_count_stats(response):
+    # response['totalSampleCounts'] = dict(Sample.objects.filter(
+    #     is_active=True, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS, individual__family__project__is_demo=False,
+    # ).values('sample_type').annotate(count=Count('*')).values_list('sample_type', 'count'))
+    return dict(Sample.objects.filter(
+        is_active=True, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS, individual__family__project__is_demo=False,
+    ).values('sample_type').annotate(count=Count('*')).values_list('sample_type', 'count'))
