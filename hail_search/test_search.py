@@ -810,8 +810,14 @@ class HailSearchTestCase(AioHTTPTestCase):
     async def test_frequency_filter(self):
         sv_callset_filter = {'sv_callset': {'af': 0.05}}
         await self._assert_expected_search(
-            [VARIANT3, VARIANT4, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
+            [MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
             frequencies={'seqr': {'ac': 5}, **sv_callset_filter},
+        )
+
+        # seqr af filter is ignored
+        await self._assert_expected_search(
+            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4],
+            frequencies={'seqr': {'af': 0.2}},
         )
 
         await self._assert_expected_search(
@@ -852,7 +858,7 @@ class HailSearchTestCase(AioHTTPTestCase):
         )
 
         await self._assert_expected_search(
-            [VARIANT4], frequencies={'seqr': {'af': 10}, 'gnomad_genomes': {'ac': 50}},
+            [VARIANT4], frequencies={'seqr': {'ac': 10}, 'gnomad_genomes': {'ac': 50}},
             omit_data_type='SV_WES',
         )
 
