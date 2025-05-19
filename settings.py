@@ -385,6 +385,9 @@ MME_DEFAULT_CONTACT_HREF = 'mailto:{}'.format(MME_DEFAULT_CONTACT_EMAIL)
 
 VLM_DEFAULT_CONTACT_EMAIL = os.environ.get('VLM_DEFAULT_CONTACT_EMAIL', 'vlm@broadinstitute.org')
 VLM_SEND_EMAIL = os.environ.get('VLM_SEND_EMAIL', 'vlm-noreply@broadinstitute.org')
+VLM_CLIENT_ID = os.environ.get('VLM_CLIENT_ID')
+VLM_CLIENT_SECRET = os.environ.get('VLM_CLIENT_SECRET')
+VLM_AUTH_API = 'https://vlm-auth.us.auth0.com/'
 
 MME_CONFIG_DIR = os.environ.get('MME_CONFIG_DIR', '')
 MME_NODES = {}
