@@ -1,12 +1,12 @@
 from clickhouse_backend import models
 from django.db.migrations import state
-from django.db.models import options, ForeignKey, OneToOneField, Func, Manager, CASCADE, PROTECT
+from django.db.models import options, ForeignKey, OneToOneField, Func, Manager, Q, CASCADE, PROTECT
 
 from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocksDB, Join
 from clickhouse_search.backend.fields import NestedField, UInt64FieldDeltaCodecField, NamedTupleField
 from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFECTED, UNAFFECTED, MALE_SEXES, \
     X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF
-from seqr.utils.xpos_utils import CHROMOSOMES
+from seqr.utils.xpos_utils import get_xpos, CHROMOSOMES
 from settings import CLICKHOUSE_IN_MEMORY_DIR, CLICKHOUSE_DATA_DIR
 
 options.DEFAULT_NAMES = (
@@ -81,7 +81,12 @@ class EntriesManager(Manager):
 
     QUALITY_FILTERS = [('gq', 1), ('ab', 100, 'x.gt != 1')]
 
-    def search(self, sample_data, inheritance_mode=None, inheritance_filter=None, qualityFilter=None, **kwargs):
+    def search(self, sample_data, parsed_locus=None, **kwargs):
+        entries = self._search_call_data(sample_data, **kwargs)
+        entries = self._filter_location(entries, **(parsed_locus or {}))
+        return entries
+
+    def _search_call_data(self, sample_data, inheritance_mode=None, inheritance_filter=None, qualityFilter=None, **kwargs):
        if len(sample_data) > 1:
            raise NotImplementedError('Clickhouse search not implemented for multiple families or sample types')
 
@@ -135,6 +140,34 @@ class EntriesManager(Manager):
                 or_filters = ['isNull({field})', '{field} >= {value}'] + filters
                 sample_filter[field] = (value / scale, f'or({", ".join(or_filters)})')
 
+    @classmethod
+    def _filter_location(cls, entries, exclude_intervals=False, intervals=None, gene_ids=None, variant_ids=None, rs_ids=None):
+        if variant_ids:
+            entries = entries.filter(
+                key__variant_id__in=[f'{chrom}-{pos}-{ref}-{alt}' for chrom, pos, ref, alt in variant_ids]
+            )
+            # although technically redundant, the interval query is applied to the entries table before join and reduces the join size,
+            # while the variant_id filter is applied to the annotation table after the join
+            intervals = [(chrom, pos, pos) for chrom, pos, _, _ in variant_ids]
+
+        if intervals:
+            interval_q = cls._interval_query(*intervals[0])
+            for interval in intervals[1:]:
+                interval_q |= cls._interval_query(*interval)
+            filter_func = entries.exclude if exclude_intervals else entries.filter
+            entries = filter_func(interval_q)
+
+        if gene_ids:
+            entries = entries.filter(key__sorted_transcript_consequences__geneId__in=gene_ids)
+
+        if rs_ids:
+            entries = entries.filter(key__rsid__in=rs_ids)
+
+        return entries
+
+    @staticmethod
+    def _interval_query(chrom, start, end):
+        return Q(xpos__range=(get_xpos(chrom, start), get_xpos(chrom, end)))
 
 class EntriesSnvIndel(models.ClickhouseModel):
     CALL_FIELDS = [
