@@ -8,7 +8,6 @@ import requests
 from reference_data.models import Omim, GeneConstraint, GENOME_VERSION_LOOKUP
 from seqr.models import Sample, PhenotypePrioritization, Individual
 from seqr.utils.search.constants import PRIORITIZED_GENE_SORT, X_LINKED_RECESSIVE
-from seqr.utils.xpos_utils import MIN_POS, MAX_POS
 from settings import HAIL_BACKEND_SERVICE_HOSTNAME, HAIL_BACKEND_SERVICE_PORT
 
 
@@ -46,10 +45,9 @@ def get_hail_variants(samples, search, user, previous_search_results, genome_ver
         'sort_metadata': _get_sort_metadata(sort, samples),
         'frequencies': frequencies,
         'quality_filter': search_body.pop('qualityFilter', None),
+        **search_body.pop('parsedLocus')
     })
     search_body.pop('skipped_samples', None)
-
-    _parse_location_search(search_body)
 
     sv_data_types = [data_type for data_type in search_body['sample_data'] if data_type.startswith(Sample.DATASET_TYPE_SV_CALLS)]
     if len(sv_data_types) > 1 and not gene_agg:
@@ -152,6 +150,8 @@ def _format_search_body(samples, genome_version, num_results, search):
     }
     search_body.update(search)
     search_body['sample_data'] = _get_sample_data(samples, **search_body)
+    search_body.pop('dataset_type', None)
+    search_body.pop('secondary_dataset_type', None)
     return search_body
 
 
@@ -201,44 +201,6 @@ def _get_sort_metadata(sort, samples):
             ).values('gene_id').annotate(min_rank=Min('rank'))
         }
     return sort_metadata
-
-
-def _parse_location_search(search):
-    parsed_locus = search.pop('parsedLocus')
-    exclude_locations = parsed_locus.get('exclude_locations')
-
-    genes = parsed_locus.get('genes') or {}
-    intervals = parsed_locus.get('intervals')
-    parsed_intervals = None
-    if genes or intervals:
-        gene_coords = [
-            {field: gene[f'{field}{search["genome_version"].title()}'] for field in ['chrom', 'start', 'end']}
-            for gene in genes.values()
-        ]
-        parsed_intervals = [_format_interval(**interval) for interval in intervals or []] + sorted([
-            [gene['chrom'], gene['start'], gene['end']] for gene in gene_coords])
-        if Sample.DATASET_TYPE_MITO_CALLS in search['sample_data'] and not exclude_locations:
-            chromosomes = {gene['chrom'] for gene in gene_coords + (intervals or [])}
-            if 'M' not in chromosomes:
-                search['sample_data'].pop(Sample.DATASET_TYPE_MITO_CALLS)
-            elif chromosomes == {'M'}:
-                search['sample_data'] = {Sample.DATASET_TYPE_MITO_CALLS: search['sample_data'][Sample.DATASET_TYPE_MITO_CALLS]}
-
-    search.update({
-        'intervals': parsed_intervals,
-        'exclude_intervals': exclude_locations,
-        'gene_ids': None if (exclude_locations or not genes) else sorted(genes.keys()),
-        'variant_ids': parsed_locus.get('parsed_variant_ids'),
-        'rs_ids': parsed_locus.get('rs_ids'),
-    })
-
-
-def _format_interval(chrom=None, start=None, end=None, offset=None, **kwargs):
-    if offset:
-        offset_pos = int((end - start) * offset)
-        start = max(start - offset_pos, MIN_POS)
-        end = min(end + offset_pos, MAX_POS)
-    return chrom, start, end
 
 
 def _validate_expected_families(results, expected_families):
