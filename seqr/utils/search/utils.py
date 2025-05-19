@@ -283,7 +283,7 @@ def _query_variants(search_model, user, previous_search_results, sort=None, num_
             raise InvalidSearchException(f'ClinVar pathogenicity {", ".join(sorted(duplicates))} is both included and excluded')
 
     parsed_search = {
-        'parsedLocus': backend_specific_call(
+        'parsed_locus': backend_specific_call(
             lambda genome_version, **kwargs: kwargs, _parse_locus_intervals, _parse_locus_intervals,
         )(genome_version, genes=genes, intervals=intervals, rs_ids=rs_ids, variant_ids=variant_ids,
           parsed_variant_ids=parsed_variant_ids, exclude_locations=exclude_locations),
@@ -407,7 +407,7 @@ def _validate_sort(sort, families):
 
 
 def _search_dataset_type(search):
-    locus = search['parsedLocus']
+    locus = search['parsed_locus']
     parsed_variant_ids = locus.get('parsed_variant_ids', locus['variant_ids'])
     if parsed_variant_ids:
         return Sample.DATASET_TYPE_VARIANT_CALLS, None, _variant_ids_dataset_type(parsed_variant_ids)
@@ -480,7 +480,7 @@ def _parse_inheritance(search, samples):
 
 def _validate_search(search, samples, previous_search_results):
     has_comp_het_search = search.get('inheritance_mode') in {RECESSIVE, COMPOUND_HET} and not previous_search_results.get('grouped_results')
-    has_location_filter = any(search['parsedLocus'].get(field) for field in ['genes', 'gene_ids', 'intervals', 'variant_ids'])
+    has_location_filter = any(search['parsed_locus'].get(field) for field in ['genes', 'gene_ids', 'intervals', 'variant_ids'])
     if has_comp_het_search:
         if not search.get('annotations'):
             raise InvalidSearchException('Annotations must be specified to search for compound heterozygous variants')

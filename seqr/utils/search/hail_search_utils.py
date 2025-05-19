@@ -45,7 +45,7 @@ def get_hail_variants(samples, search, user, previous_search_results, genome_ver
         'sort_metadata': _get_sort_metadata(sort, samples),
         'frequencies': frequencies,
         'quality_filter': search_body.pop('qualityFilter', None),
-        **search_body.pop('parsedLocus')
+        **search_body.pop('parsed_locus')
     })
     search_body.pop('skipped_samples', None)
 

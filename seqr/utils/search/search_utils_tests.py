@@ -288,7 +288,7 @@ class SearchUtilsTests(SearchTestHelper):
         expected_search = {
             'inheritance_mode': inheritance_mode,
             'inheritance_filter': {},
-            'parsedLocus': mock.ANY,
+            'parsed_locus': mock.ANY,
             'skipped_samples': mock.ANY,
             'dataset_type': mock.ANY,
             'secondary_dataset_type': secondary_dataset_type,
@@ -326,7 +326,7 @@ class SearchUtilsTests(SearchTestHelper):
         if has_gene_search:
             gene_ids = ['ENSG00000186092', 'ENSG00000227232'] if has_included_gene_search else None
             intervals =  [['2', 1234, 5678], ['7', 1, 11100], ['1', 14404, 29570], ['1', 65419, 71585]]
-        self.assertDictEqual(search_body['parsedLocus'], {
+        self.assertDictEqual(search_body['parsed_locus'], {
             'gene_ids': gene_ids, 'intervals': intervals, 'rs_ids': rs_ids,
             'variant_ids': parsed_variant_ids, 'exclude_intervals': exclude_locations,
         })
@@ -510,14 +510,14 @@ class ElasticsearchSearchUtilsTests(TestCase, SearchUtilsTests):
                 {'chrom': '7', 'start': 100, 'end': 10100, 'offset': 0.1},
             ]
 
-        self.assertDictEqual(search_body['parsedLocus'], {
+        self.assertDictEqual(search_body['parsed_locus'], {
             'genes': genes, 'intervals': intervals, 'rs_ids': rs_ids, 'variant_ids': variant_ids,
             'parsed_variant_ids': parsed_variant_ids, 'exclude_locations': exclude_locations,
         })
         self.assertEqual(search_body['dataset_type'], dataset_type)
 
         if has_gene_search:
-            parsed_genes = search_body['parsedLocus']['genes']
+            parsed_genes = search_body['parsed_locus']['genes']
             for gene in parsed_genes.values():
                 self.assertSetEqual(set(gene.keys()), GENE_FIELDS)
             self.assertEqual(parsed_genes['ENSG00000227232']['geneSymbol'], 'WASH7P')
