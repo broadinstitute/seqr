@@ -1316,7 +1316,7 @@ class DataManagerAPITest(AirtableTest):
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'vcfSamples': vcf_samples})
-        self._assert_expected_read_vcf_header_subprocess_calls()
+        self._assert_expected_read_vcf_header_subprocess_calls(body)
 
         self._set_file_not_found(list_files=True)
         body = {**self.REQUEST_BODY, 'filePath': f'{self.CALLSET_DIR}/sharded_vcf/part0*.vcf'}
