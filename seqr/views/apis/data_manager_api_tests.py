@@ -1270,6 +1270,9 @@ class DataManagerAPITest(AirtableTest):
         response = self.client.get(url, content_type='application/json')
         self.assertEqual(response.status_code, 200)
 
+    def _assert_expected_read_vcf_header_subprocess_calls(self):
+        return True
+
     def test_validate_callset(self):
         url = reverse(validate_callset)
         self.check_pm_login(url)
@@ -1313,17 +1316,7 @@ class DataManagerAPITest(AirtableTest):
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'vcfSamples': vcf_samples})
-        if self.CALLSET_DIR.startswith('gs://'):
-            self.mock_subprocess.assert_has_calls([
-                mock.call(command, stdout=-1, stderr=-2, shell=True) # nosec
-                for command in [
-                    f'gsutil cat -r 0-65536 {body["filePath"]} | gunzip -c -q - ',
-                ]
-            ])
-        else:
-            self.mock_subprocess.assert_has_calls([
-                mock.call(f'dd skip=0 count=65537 bs=1 if={self.TRIGGER_CALLSET_DIR}{body["filePath"]} status="none" | gunzip -c - ', stdout=-1, stderr=-2, shell=True) # nosec
-            ])
+        self._assert_expected_read_vcf_header_subprocess_calls()
 
         self._set_file_not_found(list_files=True)
         body = {**self.REQUEST_BODY, 'filePath': f'{self.CALLSET_DIR}/sharded_vcf/part0*.vcf'}
@@ -1569,7 +1562,6 @@ class DataManagerAPITest(AirtableTest):
     def _test_dag_trigger_errors(self, url, body):
         pass
 
-
 class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
     fixtures = ['users', '1kg_project', 'reference_data']
 
@@ -1683,6 +1675,11 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
         self.assertDictEqual(response.json(), response_body or {'error': error})
         self.assert_json_logs(self.data_manager_user, [
             (error, {'severity': 'WARNING', 'requestBody': body, 'httpRequest': mock.ANY, 'traceback': mock.ANY}),
+        ])
+
+    def _assert_expected_read_vcf_header_subprocess_calls(self):
+        self.mock_subprocess.assert_has_calls([
+            mock.call(f'dd skip=0 count=65537 bs=1 if={self.TRIGGER_CALLSET_DIR}{body["filePath"]} status="none" | gunzip -c - ', stdout=-1, stderr=-2, shell=True) # nosec
         ])
 
     def _test_load_single_project(self, *args, **kwargs):
@@ -1967,6 +1964,14 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
 
     def _test_expected_vcf_responses(self, response, url):
         self.assertEqual(response.status_code, 403)
+
+    def _assert_expected_read_vcf_header_subprocess_calls(self):
+        self.mock_subprocess.assert_has_calls([
+            mock.call(command, stdout=-1, stderr=-2, shell=True) # nosec
+            for command in [
+                f'gsutil cat -r 0-65536 {body["filePath"]} | gunzip -c -q - ',
+            ]
+        ])
 
     def _test_validate_dataset_type(self, url):
         body = {'filePath': f'{self.CALLSET_DIR}/mito_callset.mt', 'datasetType': 'MITO', 'genomeVersion': 'GRCh38'}
