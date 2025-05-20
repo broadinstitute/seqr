@@ -1270,7 +1270,7 @@ class DataManagerAPITest(AirtableTest):
         response = self.client.get(url, content_type='application/json')
         self.assertEqual(response.status_code, 200)
 
-    def _assert_expected_read_vcf_header_subprocess_calls(self):
+    def _assert_expected_read_vcf_header_subprocess_calls(self, body):
         return True
 
     def test_validate_callset(self):
@@ -1677,7 +1677,7 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
             (error, {'severity': 'WARNING', 'requestBody': body, 'httpRequest': mock.ANY, 'traceback': mock.ANY}),
         ])
 
-    def _assert_expected_read_vcf_header_subprocess_calls(self):
+    def _assert_expected_read_vcf_header_subprocess_calls(self, body):
         self.mock_subprocess.assert_has_calls([
             mock.call(f'dd skip=0 count=65537 bs=1 if={self.TRIGGER_CALLSET_DIR}{body["filePath"]} status="none" | gunzip -c - ', stdout=-1, stderr=-2, shell=True) # nosec
         ])
@@ -1965,7 +1965,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
     def _test_expected_vcf_responses(self, response, url):
         self.assertEqual(response.status_code, 403)
 
-    def _assert_expected_read_vcf_header_subprocess_calls(self):
+    def _assert_expected_read_vcf_header_subprocess_calls(self, body):
         self.mock_subprocess.assert_has_calls([
             mock.call(command, stdout=-1, stderr=-2, shell=True) # nosec
             for command in [
