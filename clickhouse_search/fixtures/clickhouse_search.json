@@ -1,0 +1,425 @@
+[
+{
+    "model": "clickhouse_search.annotationssnvindel",
+    "pk": 1,
+    "fields": {
+      "key": 1,
+      "xpos": 1000010439,
+      "chrom": "1",
+      "pos": 10439,
+      "ref": "AC",
+      "alt": "A",
+      "variant_id": "1-10439-AC-A",
+      "rsid": "rs112766696",
+      "caid": "CA16717152",
+      "lifted_over_chrom": "1",
+      "lifted_over_pos": 10439,
+      "hgmd": [null, null],
+      "screen_region_type": null,
+      "predictions": [4.668000221252441, null, null, null, null, null, null, null, null, null, null, null, null, null],
+      "populations": [
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0],
+        [927, 0.03445, 26912, 0.04028, 0, 48],
+        [20757, 0.07842, 264690, 20757, 0]
+      ],
+      "sorted_transcript_consequences": [],
+      "sorted_motif_feature_consequences": [],
+      "sorted_regulatory_feature_consequences": []
+    }
+}, {
+    "model": "clickhouse_search.annotationssnvindel",
+    "pk": 2,
+    "fields": {
+      "key": 2,
+      "xpos": 1038724419,
+      "chrom": "1",
+      "pos": 38724419,
+      "ref": "T",
+      "alt": "G",
+      "variant_id": "1-38724419-T-G",
+      "rsid": "rs1801131",
+      "caid": null,
+      "lifted_over_chrom": "1",
+      "lifted_over_pos": 11854476,
+      "hgmd": ["CM981315", 3],
+      "screen_region_type": null,
+      "predictions": [20.9, 2.001, 0, 5.86851, 0.28205, null, 3, 0.1, 0.46558, 0.197, 0.05, 0, 4, 0.211],
+      "populations": [
+        [35805, 0.295, 121372, 0.4153, 0, 24061, 5872],
+        [72672, 0.289, 251462, 0.41165, 0, 11567],
+        [0, 0, 0, 0, 0, 0],
+        [65154, 0.24615, 264690, 47604, 8775]
+      ],
+      "sorted_transcript_consequences": [
+        [0.99779, 1, ["missense_variant"], false, null, "ENSG00000177000"],
+        [null, null, ["5_prime_UTR_variant"], false, "5_prime_UTR_stop_codon_loss_variant", "ENSG00000177000"],
+        [null, null, ["5_prime_UTR_variant"], false, "5_prime_UTR_stop_codon_loss_variant", "ENSG00000177000"],
+        [0.99779, null, ["missense_variant", "NMD_transcript_variant"], false, null, "ENSG00000277258"],
+        [null, null, ["missense_variant"], false, null, "ENSG00000177000"],
+        [null, null, ["non_coding_transcript_exon_variant"], false, null, "ENSG00000177000"],
+        [null, null, ["non_coding_transcript_exon_variant"], false, null, "ENSG00000177000"]
+      ],
+      "sorted_motif_feature_consequences": [],
+      "sorted_regulatory_feature_consequences": []
+    }
+}, {
+    "model": "clickhouse_search.annotationssnvindel",
+    "pk": 3,
+    "fields": {
+      "key": 3,
+      "xpos": 1091502721,
+      "chrom": "1",
+      "pos": 91502721,
+      "ref": "G",
+      "alt": "A",
+      "variant_id": "1-91502721-G-A",
+      "rsid": "rs13447464",
+      "caid": "CA10960369",
+      "lifted_over_chrom": "1",
+      "lifted_over_pos": 91968278,
+      "hgmd": [null, null],
+      "screen_region_type": null,
+      "predictions": [2.754, 1.378, null, 0.73896, null, null, null, null, null, null, null, 0.01, 2, null],
+      "populations": [
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0],
+        [57757, 0.38041, 151828, 0.47978, 0, 12204],
+        [95998, 0.362681, 264690, 57260, 19369]
+      ],
+      "sorted_transcript_consequences": [
+        [null, 1, ["intron_variant"], false, null, "ENSG00000097046"],
+        [null, null, ["intron_variant"], false, null, "ENSG00000177000"],
+        [null, null, ["intron_variant"], false, null, "ENSG00000097046"],
+        [null, null, ["non_coding_transcript_exon_variant"], false, null, "ENSG00000097046"]
+      ],
+      "sorted_motif_feature_consequences": [],
+      "sorted_regulatory_feature_consequences": [
+        [1, [2], "ENSR00000009706"]
+      ]
+    }
+}, {
+    "model": "clickhouse_search.annotationssnvindel",
+    "pk": 4,
+    "fields": {
+      "key": 4,
+      "xpos": 1091511686,
+      "chrom": "1",
+      "pos": 91511686,
+      "ref": "T",
+      "alt": "G",
+      "variant_id": "1-91511686-T-G",
+      "rsid": null,
+      "caid": "CA341062623",
+      "lifted_over_chrom": "1",
+      "lifted_over_pos": 91977243,
+      "hgmd": [null, null],
+      "screen_region_type": 1,
+      "predictions": [29.9, 9.491, 0, 0.23005, 0.83268, 0.687, 2, 0, 0.69959, 0.526, 0, 0, 4, 0.858],
+      "populations": [
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0],
+        [39, 0.00027, 147062, 0.0015, 0, 0],
+        [0, 0, 0, 0, 0]
+      ],
+      "sorted_transcript_consequences": [
+        [null, null, ["splice_donor_variant"], true, null, "ENSG00000097046"],
+        [null, 1, ["missense_variant"], false, null, "ENSG00000097046"],
+        [null, null, ["missense_variant"], false, null, "ENSG00000097046"]
+      ],
+      "sorted_motif_feature_consequences": [
+        [[2], "ENSM00093424674"],
+        [[2], "ENSM00036268032"]
+      ],
+      "sorted_regulatory_feature_consequences": [
+        [1, [2], "ENSR00000040341"]
+      ]
+    }
+}, {
+    "model": "clickhouse_search.annotationssnvindel",
+    "pk": 5,
+    "fields": {
+      "key": 5,
+      "xpos": 1000010146,
+      "chrom": "1",
+      "pos": 10146,
+      "ref": "ACC",
+      "alt": "A",
+      "variant_id": "1-10146-ACC-A",
+      "rsid": "rs375931351",
+      "caid": "CA520798130",
+      "lifted_over_chrom": "1",
+      "lifted_over_pos": 10146,
+      "hgmd": [null, null],
+      "screen_region_type": null,
+      "predictions": [4.65299, null, null, null, null, null, null, null, null, null, null, null, null, null],
+      "populations": [
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0],
+        [2, 0.00012, 16090, 0.00233, 0, 0],
+        [0, 0, 0, 0, 0]
+      ],
+      "sorted_transcript_consequences": [],
+      "sorted_motif_feature_consequences": [],
+      "sorted_regulatory_feature_consequences": []
+    }
+}, {
+    "model": "clickhouse_search.annotationssnvindel",
+    "pk": 6,
+    "fields": {
+      "key": 6,
+      "xpos": 1000094818,
+      "chrom": "1",
+      "pos": 94818,
+      "ref": "T",
+      "alt": "C",
+      "variant_id": "1-94818-T-C",
+      "rsid": null,
+      "caid": null,
+      "lifted_over_chrom": "1",
+      "lifted_over_pos": 94818,
+      "hgmd": [null, null],
+      "screen_region_type": null,
+      "predictions": [1.92299, 2.24799, null, null, null, null, null, null, null, null, null, null, null, null],
+      "populations": [
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0],
+        [4, 0.000044254640670260414, 90386, 0.00011118523252662271, 0, 0],
+        [13, 0.00004911409996566363, 264690, 13, 0]
+      ],
+      "sorted_transcript_consequences": [],
+      "sorted_motif_feature_consequences": [],
+      "sorted_regulatory_feature_consequences": []
+    }
+}, {
+    "model": "clickhouse_search.clinvar",
+    "pk": 1,
+    "fields": {
+      "key": 1,
+      "allele_id": 19473,
+      "conflicting_pathogenicities": [],
+      "gold_stars": null,
+      "submitters": [],
+      "conditions": [],
+      "assertions": [],
+      "pathogenicity": "Likely_pathogenic"
+    }
+}, {
+    "model": "clickhouse_search.clinvar",
+    "pk": 2,
+    "fields": {
+      "key": 2,
+      "allele_id": 18560,
+      "conflicting_pathogenicities": [
+        [1, "Likely_pathogenic"],
+        [1, "Uncertain_significance"],
+        [1, "Likely_benign"],
+        [5, "Benign"]
+      ],
+      "gold_stars": 1,
+      "submitters": [
+        "Broad Center for Mendelian Genomics, Broad Institute of MIT and Harvard",
+        "Illumina Laboratory Services, Illumina",
+        "Blueprint Genetics",
+        "GenomeConnect, ClinGen"
+      ],
+      "conditions": [
+        "ABCA4-Related Disorders",
+        "Severe early-childhood-onset retinal dystrophy",
+        "not specified",
+        "not provided"
+      ],
+      "assertions": [
+        "other"
+      ],
+      "pathogenicity": "Conflicting_classifications_of_pathogenicity"
+    }
+}, {
+    "model": "clickhouse_search.entriessnvindel",
+    "pk": 1,
+    "fields": {
+      "key": 1,
+      "project_guid": "R0001_1kg",
+      "family_guid": "F000002_2",
+      "sample_type": "WES",
+      "xpos": 1000010439,
+      "is_gnomad_gt_5_percent": false,
+      "filters": [],
+      "sign": 1,
+      "calls": [
+        ["HG00733", 0, 20, 0, 60],
+        ["HG00732", 0, 0, 0, 24],
+        ["HG00731", 1, 99, 0.5, 10]
+      ]
+    }
+}, {
+    "model": "clickhouse_search.entriessnvindel",
+    "pk": 2,
+    "fields": {
+      "key": 2,
+      "project_guid": "R0001_1kg",
+      "family_guid": "F000002_2",
+      "sample_type": "WES",
+      "xpos": 1038724419,
+      "is_gnomad_gt_5_percent": false,
+      "filters": [],
+      "sign": 1,
+      "calls": [
+        ["HG00733", 0, 40, 0, 33],
+        ["HG00732", 1, 99, 0.625, 32],
+        ["HG00731", 2, 99, 1, 36]
+      ]
+    }
+}, {
+    "model": "clickhouse_search.entriessnvindel",
+    "pk": 3,
+    "fields": {
+      "key": 3,
+      "project_guid": "R0001_1kg",
+      "family_guid": "F000002_2",
+      "sample_type": "WES",
+      "xpos": 1091502721,
+      "is_gnomad_gt_5_percent": true,
+      "filters": [],
+      "sign": 1,
+      "calls": [
+        ["HG00733", 1, 99, 0.40741, 27],
+        ["HG00732", 0, 99, 0.45946, 37],
+        ["HG00731", 1, 99, 1, 40]
+      ]
+    }
+}, {
+    "model": "clickhouse_search.entriessnvindel",
+    "pk": 4,
+    "fields": {
+      "key": 4,
+      "project_guid": "R0001_1kg",
+      "family_guid": "F000002_2",
+      "sample_type": "WES",
+      "xpos": 1091511686,
+      "is_gnomad_gt_5_percent": false,
+      "filters": [
+        "VQSRTrancheSNP99.95to100.00"
+      ],
+      "sign": 1,
+      "calls": [
+        ["HG00733", 0, 0, 0, 45],
+        ["HG00732", 0, 0, 0, 24],
+        ["HG00731", 1, 58, 0.17241, 29]
+      ]
+    }
+}, {
+    "model": "clickhouse_search.entriessnvindel",
+    "pk": 5,
+    "fields": {
+      "key": 3,
+      "project_guid": "R0001_1kg",
+      "family_guid": "F000003_3",
+      "sample_type": "WES",
+      "xpos": 1091502721,
+      "is_gnomad_gt_5_percent": true,
+      "filters": [],
+      "sign": 1,
+      "calls": [
+        ["NA20872", 1, 99, 0.34285714285714286, 35],
+        ["NA20870", 1, 99, 0.6785714285714286, 28]
+      ]
+    }
+}, {
+    "model": "clickhouse_search.entriessnvindel",
+    "pk": 6,
+    "fields": {
+      "key": 1,
+      "project_guid": "R0003_test",
+      "family_guid": "F000011_11",
+      "sample_type": "WES",
+      "xpos": 1000010439,
+      "is_gnomad_gt_5_percent": false,
+      "filters": [],
+      "sign": 1,
+      "calls": [
+        ["NA20885", 2, 16, 1, 6]
+      ]
+    }
+}, {
+    "model": "clickhouse_search.entriessnvindel",
+    "pk": 7,
+    "fields": {
+      "key": 2,
+      "project_guid": "R0003_test",
+      "family_guid": "F000011_11",
+      "sample_type": "WES",
+      "xpos": 1038724419,
+      "is_gnomad_gt_5_percent": false,
+      "filters": [],
+      "sign": 1,
+      "calls": [
+        ["NA20885", 1, 99, 0.5, 28]
+      ]
+    }
+}, {
+    "model": "clickhouse_search.entriessnvindel",
+    "pk": 8,
+    "fields": {
+      "key": 5,
+      "project_guid": "R0003_test",
+      "family_guid": "F000011_11",
+      "sample_type": "WES",
+      "xpos": 1000010146,
+      "is_gnomad_gt_5_percent": false,
+      "filters": [],
+      "sign": 1,
+      "calls": [
+        ["NA20885", 1, 14, 0.875, 8]
+      ]
+    }
+}, {
+    "model": "clickhouse_search.entriessnvindel",
+    "pk": 9,
+    "fields": {
+      "key": 1,
+      "project_guid": "R0003_test",
+      "family_guid": "F000011_11",
+      "sample_type": "WGS",
+      "xpos": 1000010439,
+      "is_gnomad_gt_5_percent": false,
+      "filters": [],
+      "sign": 1,
+      "calls": [
+        ["NA20885", 2, 16, 1, 6]
+      ]
+    }
+}, {
+    "model": "clickhouse_search.entriessnvindel",
+    "pk": 10,
+    "fields": {
+      "key": 2,
+      "project_guid": "R0003_test",
+      "family_guid": "F000011_11",
+      "sample_type": "WGS",
+      "xpos": 1038724419,
+      "is_gnomad_gt_5_percent": false,
+      "filters": [],
+      "sign": 1,
+      "calls": [
+        ["NA20885", 1, 99, 0.5, 28]
+      ]
+    }
+}, {
+    "model": "clickhouse_search.entriessnvindel",
+    "pk": 11,
+    "fields": {
+      "key": 5,
+      "project_guid": "R0003_test",
+      "family_guid": "F000011_11",
+      "sample_type": "WGS",
+      "xpos": 1000010146,
+      "is_gnomad_gt_5_percent": false,
+      "filters": [],
+      "sign": 1,
+      "calls": [
+        ["NA20885", 1, 14, 0.875, 8]
+      ]
+    }
+}
+]

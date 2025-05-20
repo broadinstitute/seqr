@@ -52,7 +52,7 @@
     "fields": {
         "guid": "R0003_test",
         "created_date": "2017-03-12T19:27:08.156Z",
-        "created_by": 10,
+        "created_by": 11,
         "last_modified_date": "2017-03-13T09:07:49.582Z",
         "name": "Test Reprocessed Project",
         "description": "",
@@ -2830,13 +2830,20 @@
         "patient_id": "NA19675"
     }
 }, {
+    "model": "contenttypes.contenttype",
+    "pk": 1,
+    "fields": {
+      "app_label": "seqr",
+      "model": "project-notification"
+    }
+}, {
     "model": "notifications.notification",
     "pk": 1,
     "fields": {
         "level": "info",
         "recipient": 11,
         "unread": true,
-        "actor_content_type": 40,
+        "actor_content_type": 1,
         "actor_object_id": "1",
         "verb": "Loaded 2 new WES SV samples",
         "description": null,
@@ -2857,7 +2864,7 @@
         "level": "info",
         "recipient": 11,
         "unread": false,
-        "actor_content_type": 10,
+        "actor_content_type": 1,
         "actor_object_id": "1",
         "verb": "Loaded 8 new WES samples",
         "description": null,
@@ -2878,7 +2885,7 @@
         "level": "info",
         "recipient": 12,
         "unread": true,
-        "actor_content_type": 10,
+        "actor_content_type": 1,
         "actor_object_id": "1",
         "verb": "Loaded 8 new WES samples",
         "description": null,

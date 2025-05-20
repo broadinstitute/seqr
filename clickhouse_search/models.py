@@ -1,9 +1,11 @@
 from clickhouse_backend import models
 from django.db.migrations import state
-from django.db.models import options, ForeignKey, OneToOneField, Func, CASCADE, PROTECT
+from django.db.models import options, ForeignKey, OneToOneField, Func, Manager, CASCADE, PROTECT
 
 from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocksDB, Join
 from clickhouse_search.backend.fields import NestedField, UInt64FieldDeltaCodecField, NamedTupleField
+from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFECTED, UNAFFECTED, MALE_SEXES, \
+    X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF
 from seqr.utils.xpos_utils import CHROMOSOMES
 from settings import CLICKHOUSE_IN_MEMORY_DIR, CLICKHOUSE_DATA_DIR
 
@@ -63,6 +65,77 @@ class Projection(Func):
         self.order_by = order_by
 
 
+class EntriesManager(Manager):
+    GENOTYPE_LOOKUP = {
+        REF_REF: (0,),
+        REF_ALT: (1,),
+        ALT_ALT: (2,),
+        HAS_ALT: (0, '{field} > {value}'),
+        HAS_REF: (2, '{field} < {value}'),
+    }
+
+    INHERITANCE_FILTERS = {
+        **INHERITANCE_FILTERS,
+        ANY_AFFECTED: {AFFECTED: HAS_ALT},
+    }
+
+    QUALITY_FILTERS = [('gq', 1), ('ab', 100, 'x.gt != 1')]
+
+    def search(self, sample_data, inheritance_mode=None, inheritance_filter=None, qualityFilter=None, **kwargs):
+       if len(sample_data) > 1:
+           raise NotImplementedError('Clickhouse search not implemented for multiple families or sample types')
+
+       entries = self.filter(
+           project_guid=sample_data[0]['project_guid'],
+           family_guid=sample_data[0]['family_guid'],
+       )
+
+       quality_filter = qualityFilter or {}
+       if quality_filter.get('vcf_filter'):
+           entries = entries.filter(filters__len=0)
+
+       individual_genotype_filter = (inheritance_filter or {}).get('genotype')
+       custom_affected = (inheritance_filter or {}).get('affected') or {}
+       if not (inheritance_mode or individual_genotype_filter or quality_filter):
+           return entries
+
+       for sample in sample_data[0]['samples']:
+           affected = custom_affected.get(sample['individual_guid']) or sample['affected']
+           sample_filter = {}
+           self._sample_genotype_filter(sample_filter, sample, affected, inheritance_mode, individual_genotype_filter)
+           self._sample_quality_filter(sample_filter, affected, quality_filter)
+           if sample_filter:
+               entries = entries.filter(calls__array_exists={
+                   'sampleId': (f"'{sample['sample_id']}'",),
+                   **sample_filter,
+               })
+
+       return entries
+
+    @classmethod
+    def _sample_genotype_filter(cls, sample_filter, sample, affected, inheritance_mode, individual_genotype_filter):
+        genotype = None
+        if individual_genotype_filter:
+            genotype = individual_genotype_filter.get(sample['individual_guid'])
+        elif inheritance_mode:
+            genotype = cls.INHERITANCE_FILTERS[inheritance_mode].get(affected)
+            if (inheritance_mode == X_LINKED_RECESSIVE and affected == UNAFFECTED and sample['sex'] in MALE_SEXES):
+                genotype = REF_REF
+        if genotype:
+            sample_filter['gt'] = cls.GENOTYPE_LOOKUP[genotype]
+
+    @classmethod
+    def _sample_quality_filter(cls, sample_filter, affected, quality_filter):
+        if quality_filter.get('affected_only') and affected != AFFECTED:
+            return
+
+        for field, scale, *filters in cls.QUALITY_FILTERS:
+            value = quality_filter.get(f'min_{field}')
+            if value:
+                or_filters = ['isNull({field})', '{field} >= {value}'] + filters
+                sample_filter[field] = (value / scale, f'or({", ".join(or_filters)})')
+
+
 class EntriesSnvIndel(models.ClickhouseModel):
     CALL_FIELDS = [
         ('sampleId', models.StringField()),
@@ -72,6 +145,8 @@ class EntriesSnvIndel(models.ClickhouseModel):
         ('dp', models.UInt16Field(null=True, blank=True)),
     ]
 
+    objects = EntriesManager()
+
     # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
     key = ForeignKey('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
     project_guid = models.StringField(low_cardinality=True)
@@ -80,7 +155,7 @@ class EntriesSnvIndel(models.ClickhouseModel):
     xpos = UInt64FieldDeltaCodecField()
     is_gnomad_gt_5_percent = models.BoolField()
     filters = models.ArrayField(models.StringField(low_cardinality=True))
-    calls = models.ArrayField(models.TupleField(CALL_FIELDS))
+    calls = models.ArrayField(NamedTupleField(CALL_FIELDS))
     sign = models.Int8Field()
 
     class Meta:
@@ -94,41 +169,24 @@ class EntriesSnvIndel(models.ClickhouseModel):
         )
         projection = Projection('xpos_projection', order_by='xpos, is_gnomad_gt_5_percent')
 
+    def _save_table(
+        self,
+        raw=False,
+        cls=None,
+        force_insert=False,
+        force_update=False,
+        using=None,
+        update_fields=None,
+    ):
+        # loaddata attempts to run an ALTER TABLE to update existing rows, but since primary keys can not be altered
+        # this command fails so need to use the force_insert flag to run an INSERT instead
+        return super()._save_table(
+            raw=raw, cls=cls, force_insert=True, force_update=force_update, using=using, update_fields=update_fields,
+        )
+
 
 class BaseAnnotationsSnvIndel(models.ClickhouseModel):
-    key = models.UInt32Field(primary_key=True)
-    xpos = models.UInt64Field()
-    chrom = models.Enum8Field(return_int=False, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES[:-1])])
-    pos = models.UInt32Field()
-    ref = models.StringField()
-    alt = models.StringField()
-    variant_id = models.StringField(db_column='variantId')
-    rsid = models.StringField(null=True, blank=True)
-    caid = models.StringField(db_column='CAID', null=True, blank=True)
-    lifted_over_chrom = models.StringField(db_column='liftedOverChrom', low_cardinality=True, null=True, blank=True)
-    lifted_over_pos = models.StringField(db_column='liftedOverPos', null=True, blank=True)
-    hgmd = NamedTupleField([
-        ('accession', models.StringField(null=True, blank=True)),
-        ('class_', models.Enum8Field(null=True, blank=True, return_int=False, choices=[(0, 'DM'), (1, 'DM?'), (2, 'DP'), (3, 'DFP'), (4, 'FP'), (5, 'R')])),
-    ])
-    screen_region_type = models.Enum8Field(db_column='screenRegionType', null=True, blank=True, return_int=False, choices=[(0, 'CTCF-bound'), (1, 'CTCF-only'), (2, 'DNase-H3K4me3'), (3, 'PLS'), (4, 'dELS'), (5, 'pELS'), (6, 'DNase-only'), (7, 'low-DNase')])
-    predictions = NamedTupleField([
-        ('cadd', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        ('eigen', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        ('fathmm', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        ('gnomad_noncoding', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        ('mpc', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        ('mut_pred', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        ('mut_taster', models.Enum8Field(null=True, blank=True, return_int=False, choices=[(0, 'D'), (1, 'A'), (2, 'N'), (3, 'P')])),
-        ('polyphen', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        ('primate_ai', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        ('revel', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        ('sift', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        ('splice_ai', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        ('splice_ai_consequence', models.Enum8Field(null=True, blank=True, return_int=False, choices=[(0, 'Acceptor gain'), (1, 'Acceptor loss'), (2, 'Donor gain'), (3, 'Donor loss'), (4, 'No consequence')])),
-        ('vest', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-    ])
-    populations = NamedTupleField([
+    POPULATION_FIELDS = [
         ('exac', NamedTupleField([
             ('ac', models.UInt32Field()),
             ('af', models.DecimalField(max_digits=9, decimal_places=5)),
@@ -161,24 +219,58 @@ class BaseAnnotationsSnvIndel(models.ClickhouseModel):
             ('het', models.UInt32Field()),
             ('hom', models.UInt32Field()),
         ])),
+    ]
+
+    key = models.UInt32Field(primary_key=True)
+    xpos = models.UInt64Field()
+    chrom = models.Enum8Field(return_int=False, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES[:-1])])
+    pos = models.UInt32Field()
+    ref = models.StringField()
+    alt = models.StringField()
+    variant_id = models.StringField(db_column='variantId')
+    rsid = models.StringField(null=True, blank=True)
+    caid = models.StringField(db_column='CAID', null=True, blank=True)
+    lifted_over_chrom = models.StringField(db_column='liftedOverChrom', low_cardinality=True, null=True, blank=True)
+    lifted_over_pos = models.UInt32Field(db_column='liftedOverPos', null=True, blank=True)
+    hgmd = NamedTupleField([
+        ('accession', models.StringField(null=True, blank=True)),
+        ('class_', models.Enum8Field(null=True, blank=True, return_int=False, choices=[(0, 'DM'), (1, 'DM?'), (2, 'DP'), (3, 'DFP'), (4, 'FP'), (5, 'R')])),
+    ], null_if_empty=True, rename_fields={'class_': 'class'})
+    screen_region_type = models.Enum8Field(db_column='screenRegionType', null=True, blank=True, return_int=False, choices=[(0, 'CTCF-bound'), (1, 'CTCF-only'), (2, 'DNase-H3K4me3'), (3, 'PLS'), (4, 'dELS'), (5, 'pELS'), (6, 'DNase-only'), (7, 'low-DNase')])
+    predictions = NamedTupleField([
+        ('cadd', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('eigen', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('fathmm', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('gnomad_noncoding', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('mpc', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('mut_pred', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('mut_taster', models.Enum8Field(null=True, blank=True, return_int=False, choices=[(0, 'D'), (1, 'A'), (2, 'N'), (3, 'P')])),
+        ('polyphen', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('primate_ai', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('revel', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('sift', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('splice_ai', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('splice_ai_consequence', models.Enum8Field(null=True, blank=True, return_int=False, choices=[(0, 'Acceptor gain'), (1, 'Acceptor loss'), (2, 'Donor gain'), (3, 'Donor loss'), (4, 'No consequence')])),
+        ('vest', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
     ])
+    populations = NamedTupleField(POPULATION_FIELDS)
     sorted_transcript_consequences = NestedField([
         ('alphamissensePathogenicity', models.DecimalField(null=True, blank=True, max_digits=9, decimal_places=5)),
         ('canonical', models.UInt8Field(null=True, blank=True)),
-        ('consequenceTerms', models.ArrayField(models.Enum8Field(null=True, blank=True, choices=[(1, 'transcript_ablation'), (2, 'splice_acceptor_variant'), (3, 'splice_donor_variant'), (4, 'stop_gained'), (5, 'frameshift_variant'), (6, 'stop_lost'), (7, 'start_lost'), (8, 'inframe_insertion'), (9, 'inframe_deletion'), (10, 'missense_variant'), (11, 'protein_altering_variant'), (12, 'splice_donor_5th_base_variant'), (13, 'splice_region_variant'), (14, 'splice_donor_region_variant'), (15, 'splice_polypyrimidine_tract_variant'), (16, 'incomplete_terminal_codon_variant'), (17, 'start_retained_variant'), (18, 'stop_retained_variant'), (19, 'synonymous_variant'), (20, 'coding_sequence_variant'), (21, 'mature_miRNA_variant'), (22, '5_prime_UTR_variant'), (23, '3_prime_UTR_variant'), (24, 'non_coding_transcript_exon_variant'), (25, 'intron_variant'), (26, 'NMD_transcript_variant'), (27, 'non_coding_transcript_variant'), (28, 'coding_transcript_variant'), (29, 'upstream_gene_variant'), (30, 'downstream_gene_variant'), (31, 'intergenic_variant'), (32, 'sequence_variant')]))),
+        ('consequenceTerms', models.ArrayField(models.Enum8Field(null=True, blank=True, return_int=False, choices=[(1, 'transcript_ablation'), (2, 'splice_acceptor_variant'), (3, 'splice_donor_variant'), (4, 'stop_gained'), (5, 'frameshift_variant'), (6, 'stop_lost'), (7, 'start_lost'), (8, 'inframe_insertion'), (9, 'inframe_deletion'), (10, 'missense_variant'), (11, 'protein_altering_variant'), (12, 'splice_donor_5th_base_variant'), (13, 'splice_region_variant'), (14, 'splice_donor_region_variant'), (15, 'splice_polypyrimidine_tract_variant'), (16, 'incomplete_terminal_codon_variant'), (17, 'start_retained_variant'), (18, 'stop_retained_variant'), (19, 'synonymous_variant'), (20, 'coding_sequence_variant'), (21, 'mature_miRNA_variant'), (22, '5_prime_UTR_variant'), (23, '3_prime_UTR_variant'), (24, 'non_coding_transcript_exon_variant'), (25, 'intron_variant'), (26, 'NMD_transcript_variant'), (27, 'non_coding_transcript_variant'), (28, 'coding_transcript_variant'), (29, 'upstream_gene_variant'), (30, 'downstream_gene_variant'), (31, 'intergenic_variant'), (32, 'sequence_variant')]))),
         ('extendedIntronicSpliceRegionVariant', models.BoolField(null=True, blank=True)),
-        ('fiveutrConsequence', models.Enum8Field(null=True, blank=True, choices=[(1, '5_prime_UTR_premature_start_codon_gain_variant'), (2, '5_prime_UTR_premature_start_codon_loss_variant'), (3, '5_prime_UTR_stop_codon_gain_variant'), (4, '5_prime_UTR_stop_codon_loss_variant'), (5, '5_prime_UTR_uORF_frameshift_variant')])),
+        ('fiveutrConsequence', models.Enum8Field(null=True, blank=True, return_int=False, choices=[(1, '5_prime_UTR_premature_start_codon_gain_variant'), (2, '5_prime_UTR_premature_start_codon_loss_variant'), (3, '5_prime_UTR_stop_codon_gain_variant'), (4, '5_prime_UTR_stop_codon_loss_variant'), (5, '5_prime_UTR_uORF_frameshift_variant')])),
         ('geneId', models.StringField(null=True, blank=True)),
     ], db_column='sortedTranscriptConsequences')
     sorted_motif_feature_consequences = NestedField([
-        ('consequenceTerms', models.ArrayField(models.Enum8Field(null=True, blank=True, choices=[(0, 'TFBS_ablation'), (1, 'TFBS_amplification'), (2, 'TF_binding_site_variant'), (3, 'TFBS_fusion'), (4, 'TFBS_translocation')]))),
+        ('consequenceTerms', models.ArrayField(models.Enum8Field(null=True, blank=True, return_int=False, choices=[(0, 'TFBS_ablation'), (1, 'TFBS_amplification'), (2, 'TF_binding_site_variant'), (3, 'TFBS_fusion'), (4, 'TFBS_translocation')]))),
         ('motifFeatureId', models.StringField(null=True, blank=True)),
-    ], db_column='sortedMotifFeatureConsequences')
+    ], db_column='sortedMotifFeatureConsequences', null_when_empty=True)
     sorted_regulatory_feature_consequences = NestedField([
-        ('biotype', models.Enum8Field(null=True, blank=True, choices=[(0, 'enhancer'), (1, 'promoter'), (2, 'CTCF_binding_site'), (3, 'TF_binding_site'), (4, 'open_chromatin_region')])),
-        ('consequenceTerms', models.ArrayField(models.Enum8Field(null=True, blank=True, choices=[(0, 'regulatory_region_ablation'), (1, 'regulatory_region_amplification'), (2, 'regulatory_region_variant'), (3, 'regulatory_region_fusion')]))),
+        ('biotype', models.Enum8Field(null=True, blank=True, return_int=False, choices=[(0, 'enhancer'), (1, 'promoter'), (2, 'CTCF_binding_site'), (3, 'TF_binding_site'), (4, 'open_chromatin_region')])),
+        ('consequenceTerms', models.ArrayField(models.Enum8Field(null=True, blank=True, return_int=False, choices=[(0, 'regulatory_region_ablation'), (1, 'regulatory_region_amplification'), (2, 'regulatory_region_variant'), (3, 'regulatory_region_fusion')]))),
         ('regulatoryFeatureId', models.StringField(null=True, blank=True)),
-    ], db_column='sortedRegulatoryFeatureConsequences')
+    ], db_column='sortedRegulatoryFeatureConsequences', null_when_empty=True)
 
     class Meta:
         abstract = True
@@ -187,79 +279,80 @@ class AnnotationsSnvIndel(BaseAnnotationsSnvIndel):
 
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/annotations_memory'
-        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_IN_MEMORY_DIR}/GRCh38/SNV_INDEL/annotations', primary_key='key')
-
+        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_IN_MEMORY_DIR}/GRCh38/SNV_INDEL/annotations', primary_key='key', flatten_nested=0)
 
 # Future work: create an alias and manager to switch between disk/in-memory annotations
 class AnnotationsDiskSnvIndel(BaseAnnotationsSnvIndel):
 
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/annotations_disk'
-        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SNV_INDEL/annotations', primary_key='key')
+        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SNV_INDEL/annotations', primary_key='key', flatten_nested=0)
 
 class TranscriptsSnvIndel(models.ClickhouseModel):
     key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
-    transcripts = models.MapField(models.StringField(), models.ArrayField(models.TupleField([
-        ('alphamissense', models.TupleField([
+    transcripts = NestedField([
+        ('alphamissense', NamedTupleField([
             ('pathogenicity', models.DecimalField(null=True, blank=True, max_digits=9, decimal_places=5)),
         ])),
         ('aminoAcids', models.StringField(null=True, blank=True)),
         ('biotype', models.StringField(null=True, blank=True)),
         ('canonical', models.UInt8Field(null=True, blank=True)),
         ('codons', models.StringField(null=True, blank=True)),
-        ('consequenceTerms', models.ArrayField(models.StringField(null=True, blank=True))),
-        ('exon', models.TupleField([
+        ('consequenceTerms', models.ArrayField(models.StringField())),
+        ('exon', NamedTupleField([
             ('index', models.Int32Field(null=True, blank=True)),
             ('total', models.Int32Field(null=True, blank=True)),
-        ])),
+        ], null_if_empty=True)),
         ('geneId', models.StringField(null=True, blank=True)),
         ('hgvsc', models.StringField(null=True, blank=True)),
         ('hgvsp', models.StringField(null=True, blank=True)),
-        ('intron', models.TupleField([
+        ('intron', NamedTupleField([
             ('index', models.Int32Field(null=True, blank=True)),
             ('total', models.Int32Field(null=True, blank=True)),
-        ])),
-        ('loftee', models.TupleField([
+        ], null_if_empty=True)),
+        ('loftee', NamedTupleField([
             ('isLofNagnag', models.BoolField(null=True, blank=True)),
             ('lofFilters', models.ArrayField(models.StringField(null=True, blank=True))),
-        ])),
+        ], null_empty_arrays=True)),
+        ('majorConsequence', models.StringField(null=True, blank=True)),
         ('manePlusClinical', models.StringField(null=True, blank=True)),
         ('maneSelect', models.StringField(null=True, blank=True)),
         ('refseqTranscriptId', models.StringField(null=True, blank=True)),
-        ('spliceregion', models.TupleField([
+        ('spliceregion', NamedTupleField([
             ('extended_intronic_splice_region_variant', models.BoolField(null=True, blank=True)),
         ])),
-        ('transcriptId', models.StringField(null=True, blank=True)),
-        ('utrannotator', models.TupleField([
+        ('transcriptId', models.StringField()),
+        ('transcriptRank', models.UInt8Field()),
+        ('utrannotator', NamedTupleField([
             ('existingInframeOorfs', models.Int32Field(null=True, blank=True)),
             ('existingOutofframeOorfs', models.Int32Field(null=True, blank=True)),
             ('existingUorfs', models.Int32Field(null=True, blank=True)),
-            ('fiveutrAnnotation', models.TupleField([
-                ('type', models.StringField(null=True, blank=True)),
-                ('KozakContext', models.StringField(null=True, blank=True)),
-                ('KozakStrength', models.StringField(null=True, blank=True)),
-                ('DistanceToCDS', models.Int32Field(null=True, blank=True)),
-                ('CapDistanceToStart', models.Int32Field(null=True, blank=True)),
-                ('DistanceToStop', models.Int32Field(null=True, blank=True)),
-                ('Evidence', models.BoolField(null=True, blank=True)),
+            ('fiveutrAnnotation', NamedTupleField([
                 ('AltStop', models.StringField(null=True, blank=True)),
                 ('AltStopDistanceToCDS', models.Int32Field(null=True, blank=True)),
+                ('CapDistanceToStart', models.Int32Field(null=True, blank=True)),
+                ('DistanceToCDS', models.Int32Field(null=True, blank=True)),
+                ('DistanceToStop', models.Int32Field(null=True, blank=True)),
+                ('Evidence', models.BoolField(null=True, blank=True)),
                 ('FrameWithCDS', models.StringField(null=True, blank=True)),
+                ('KozakContext', models.StringField(null=True, blank=True)),
+                ('KozakStrength', models.StringField(null=True, blank=True)),
                 ('StartDistanceToCDS', models.Int32Field(null=True, blank=True)),
-                ('newSTOPDistanceToCDS', models.Int32Field(null=True, blank=True)),
                 ('alt_type', models.StringField(null=True, blank=True)),
                 ('alt_type_length', models.Int32Field(null=True, blank=True)),
+                ('newSTOPDistanceToCDS', models.Int32Field(null=True, blank=True)),
                 ('ref_StartDistanceToCDS', models.Int32Field(null=True, blank=True)),
                 ('ref_type', models.StringField(null=True, blank=True)),
                 ('ref_type_length', models.Int32Field(null=True, blank=True)),
-            ])),
+                ('type', models.StringField(null=True, blank=True)),
+            ], null_if_empty=True)),
             ('fiveutrConsequence', models.StringField(null=True, blank=True)),
         ])),
-    ])))
+    ], group_by_key='geneId')
 
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/transcripts'
-        engine = EmbeddedRocksDB(primary_key='key')
+        engine = EmbeddedRocksDB(primary_key='key', flatten_nested=0)
 
 
 class Clinvar(models.ClickhouseModel):
@@ -276,14 +369,29 @@ class Clinvar(models.ClickhouseModel):
     allele_id = models.UInt32Field(db_column='alleleId', null=True, blank=True)
     conflicting_pathogenicities = NestedField([
         ('count', models.UInt16Field()),
-        ('pathogenicity', models.Enum8Field(choices=PATHOGENICITY_CHOICES)),
-    ], db_column='conflictingPathogenicities')
+        ('pathogenicity', models.Enum8Field(choices=PATHOGENICITY_CHOICES, return_int=False)),
+    ], db_column='conflictingPathogenicities', null_when_empty=True)
     gold_stars = models.UInt8Field(db_column='goldStars', null=True, blank=True)
     submitters = models.ArrayField(models.StringField())
     conditions = models.ArrayField(models.StringField())
-    assertions = models.ArrayField(models.Enum8Field(choices=[(0, 'Affects'), (1, 'association'), (2, 'association_not_found'), (3, 'confers_sensitivity'), (4, 'drug_response'), (5, 'low_penetrance'), (6, 'not_provided'), (7, 'other'), (8, 'protective'), (9, 'risk_factor'), (10, 'no_classification_for_the_single_variant'), (11, 'no_classifications_from_unflagged_records')]))
-    pathogenicity = models.Enum8Field(choices=PATHOGENICITY_CHOICES)
+    assertions = models.ArrayField(models.Enum8Field(choices=[(0, 'Affects'), (1, 'association'), (2, 'association_not_found'), (3, 'confers_sensitivity'), (4, 'drug_response'), (5, 'low_penetrance'), (6, 'not_provided'), (7, 'other'), (8, 'protective'), (9, 'risk_factor'), (10, 'no_classification_for_the_single_variant'), (11, 'no_classifications_from_unflagged_records')], return_int=False))
+    pathogenicity = models.Enum8Field(choices=PATHOGENICITY_CHOICES, return_int=False)
 
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/clinvar'
-        engine = Join('ALL', 'LEFT', 'key')
+        engine = Join('ALL', 'LEFT', 'key', join_use_nulls=1, flatten_nested=0)
+
+    def _save_table(
+        self,
+        raw=False,
+        cls=None,
+        force_insert=False,
+        force_update=False,
+        using=None,
+        update_fields=None,
+    ):
+        # loaddata attempts to run an ALTER TABLE to update existing rows, but since JOIN tables can not be altered
+        # this command fails so need to use the force_insert flag to run an INSERT instead
+        return super()._save_table(
+            raw=raw, cls=cls, force_insert=True, force_update=force_update, using=using, update_fields=update_fields,
+        )

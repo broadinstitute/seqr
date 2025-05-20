@@ -1,9 +1,9 @@
 from django.db.models import Min
 
 from reference_data.models import Omim, GeneConstraint
-from seqr.models import Individual, Sample, PhenotypePrioritization
-from seqr.utils.search.constants import COMPOUND_HET, RECESSIVE, XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, \
-    PATHOGENICTY_HGMD_SORT_KEY, PRIORITIZED_GENE_SORT, X_LINKED_RECESSIVE
+from seqr.models import Sample, PhenotypePrioritization
+from seqr.utils.search.constants import XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF, \
+    PATHOGENICTY_HGMD_SORT_KEY, PRIORITIZED_GENE_SORT
 
 
 MAX_COMPOUND_HET_GENES = 1000
@@ -12,15 +12,6 @@ MAX_SEARCH_CLAUSES = 1024
 MAX_INDEX_SEARCHES = 75
 PREFILTER_SEARCH_SIZE = 200
 
-
-AFFECTED = Individual.AFFECTED_STATUS_AFFECTED
-UNAFFECTED = Individual.AFFECTED_STATUS_UNAFFECTED
-
-ALT_ALT = 'alt_alt'
-REF_REF = 'ref_ref'
-REF_ALT = 'ref_alt'
-HAS_ALT = 'has_alt'
-HAS_REF = 'has_ref'
 GENOTYPE_QUERY_MAP = {
     REF_REF: {'not_allowed_num_alt': ['samples_no_call', 'samples_num_alt_1', 'samples_num_alt_2', 'samples']},
     REF_ALT: {'allowed_num_alt': ['samples_num_alt_1', 'samples']},
@@ -28,26 +19,6 @@ GENOTYPE_QUERY_MAP = {
     HAS_ALT: {'allowed_num_alt': ['samples_num_alt_1', 'samples_num_alt_2', 'samples']},
     HAS_REF: {
         'not_allowed_num_alt': ['samples_no_call', 'samples_num_alt_2', 'samples_cn_0', 'samples_cn_gte_4'],
-    },
-}
-
-HOMOZYGOUS_RECESSIVE = 'homozygous_recessive'
-ANY_AFFECTED = 'any_affected'
-RECESSIVE_FILTER = {
-    AFFECTED: ALT_ALT,
-    UNAFFECTED: HAS_REF,
-}
-INHERITANCE_FILTERS = {
-    RECESSIVE: RECESSIVE_FILTER,
-    X_LINKED_RECESSIVE: RECESSIVE_FILTER,
-    HOMOZYGOUS_RECESSIVE: RECESSIVE_FILTER,
-    COMPOUND_HET: {
-        AFFECTED: REF_ALT,
-        UNAFFECTED: HAS_REF,
-    },
-    'de_novo': {
-        AFFECTED: HAS_ALT,
-        UNAFFECTED: REF_REF,
     },
 }
 

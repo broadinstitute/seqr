@@ -287,7 +287,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         response = self.client.post(url, content_type='application/json', data=json.dumps({**VALIDATE_VCF_BODY, 'genomeVersion': '37'}))
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], [
-            'Project "Empty Project" is awaiting loading. Please wait for loading to complete before requesting additional data loading'
+            'Project "Test Reprocessed Project" is awaiting loading. Please wait for loading to complete before requesting additional data loading'
         ])
 
         # Test bad data path

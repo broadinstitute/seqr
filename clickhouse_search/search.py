@@ -4,9 +4,9 @@ from django.contrib.postgres.aggregates import ArrayAgg
 from django.db.models import F, Value
 from django.db.models.functions import JSONObject
 
-from clickhouse_search.backend.fields import NestedField
-from clickhouse_search.backend.functions import Array, ArrayMap
-from clickhouse_search.models import EntriesSnvIndel, AnnotationsSnvIndel
+from clickhouse_search.backend.fields import NestedField, NamedTupleField
+from clickhouse_search.backend.functions import Array, ArrayMap, GtStatsDictGet, Tuple, TupleConcat
+from clickhouse_search.models import EntriesSnvIndel, AnnotationsSnvIndel, TranscriptsSnvIndel, Clinvar
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample
 from seqr.utils.logging_utils import SeqrLogger
@@ -16,13 +16,33 @@ from settings import CLICKHOUSE_SERVICE_HOSTNAME
 logger = SeqrLogger(__name__)
 
 CORE_ENTRIES_FIELDS = ['key', 'xpos']
+
+GT_STATS_DICT_FIELDS = OrderedDict({
+    'ac': models.UInt32Field(),
+    'an': models.UInt32Field(),
+    'hom': models.UInt32Field(),
+})
+GT_STATS_DICT_ATTRS = [f"'{field}'" for field in GT_STATS_DICT_FIELDS.keys()]
+SEQR_POPULATION_KEY = 'seqrPop'
+
 ANNOTATION_VALUES = {
     field.db_column or field.name: F(f'key__{field.name}') for field in AnnotationsSnvIndel._meta.local_fields
     if field.name not in CORE_ENTRIES_FIELDS
 }
+ANNOTATION_VALUES['populations'] = TupleConcat(
+    ANNOTATION_VALUES['populations'], Tuple(SEQR_POPULATION_KEY),
+    output_field=NamedTupleField([
+        *AnnotationsSnvIndel.POPULATION_FIELDS,
+        ('seqr', NamedTupleField(list(GT_STATS_DICT_FIELDS.items()))),
+    ]),
+)
+
+CLINVAR_FIELDS = OrderedDict({
+    f'key__clinvar__{field.name}': (field.db_column or field.name, field)
+    for field in Clinvar._meta.local_fields if field.name not in CORE_ENTRIES_FIELDS
+})
 
 GENOTYPE_FIELDS = OrderedDict({
-    'project_guid': ('projectGuid', models.StringField()),
     'family_guid': ('familyGuid', models.StringField()),
     'sample_type': ('sampleType', models.StringField()),
     'filters': ('filters', models.ArrayField(models.StringField())),
@@ -41,15 +61,18 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
     sample_data = _get_sample_data(samples)
     logger.info(f'Loading {Sample.DATASET_TYPE_VARIANT_CALLS} data for {len(sample_data)} families', user)
 
-    entries = _get_filtered_entries(sample_data, **search)
-    results = entries.values(
+    entries = EntriesSnvIndel.objects.search(sample_data, **search)
+    results = entries.annotate(**{
+        SEQR_POPULATION_KEY: GtStatsDictGet('key', dict_attrs=f"({', '.join(GT_STATS_DICT_ATTRS)})")
+    }).values(
         *CORE_ENTRIES_FIELDS,
         familyGuids=Array('family_guid'),
         genotypes=ArrayMap(
             'calls',
             mapped_expression=f"tuple({_get_sample_map_expression(sample_data)}[x.sampleId], {', '.join(GENOTYPE_FIELDS.keys())})",
-            output_field=NestedField([('individualGuid', models.StringField()), *GENOTYPE_FIELDS.values()], group_by_key='individualGuid')
+            output_field=NestedField([('individualGuid', models.StringField()), *GENOTYPE_FIELDS.values()], group_by_key='individualGuid', flatten_groups=True)
         ),
+        clinvar=Tuple(*CLINVAR_FIELDS.keys(), output_field=NamedTupleField(list(CLINVAR_FIELDS.values()), null_if_empty=True, null_empty_arrays=True)),
         genomeVersion=Value(genome_version),
         liftedOverGenomeVersion=Value(_liftover_genome_version(genome_version)),
         **ANNOTATION_VALUES,
@@ -62,7 +85,34 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
 
     logger.info(f'Total results: {total_results}', user)
 
-    return sorted_results[(page-1)*num_results:page*num_results]
+    return format_clickhouse_results(sorted_results[(page-1)*num_results:page*num_results])
+
+
+def format_clickhouse_results(results, **kwargs):
+    keys_with_transcripts = [variant['key'] for variant in results if variant['sortedTranscriptConsequences']]
+    transcripts_by_key = dict(
+        TranscriptsSnvIndel.objects.filter(key__in=keys_with_transcripts).values_list('key', 'transcripts')
+    )
+
+    formatted_results = []
+    for variant in results:
+        transcripts = transcripts_by_key.get(variant['key'], {})
+        formatted_variant = {
+            **variant,
+            'transcripts': transcripts,
+            'selectedMainTranscriptId': None,
+        }
+        # pop sortedTranscriptConsequences from the formatted result and not the original result to ensure the full value is cached properly
+        sorted_minimal_transcripts = formatted_variant.pop('sortedTranscriptConsequences')
+        main_transcript_id = None
+        if sorted_minimal_transcripts:
+            main_transcript_id = next(
+                t['transcriptId'] for t in transcripts[sorted_minimal_transcripts[0]['geneId']]
+                if t['transcriptRank'] == 0
+            )
+        formatted_results.append({**formatted_variant, 'mainTranscriptId': main_transcript_id})
+
+    return formatted_results
 
 
 def _get_sample_data(samples):
@@ -72,7 +122,7 @@ def _get_sample_data(samples):
 
     return samples.values(
         'sample_type', family_guid=F('individual__family__guid'), project_guid=F('individual__family__project__guid'),
-    ).annotate(samples=ArrayAgg(JSONObject(affected='individual__affected', sample_id='sample_id', individual_guid=F('individual__guid'))))
+    ).annotate(samples=ArrayAgg(JSONObject(affected='individual__affected', sex='individual__sex', sample_id='sample_id', individual_guid=F('individual__guid'))))
 
 
 def _get_sample_map_expression(sample_data):
@@ -81,16 +131,6 @@ def _get_sample_map_expression(sample_data):
         for data in sample_data for s in data['samples']
     ]
     return f"map({', '.join(sample_map)})"
-
-
-def _get_filtered_entries(sample_data, **kwargs):
-    if len(sample_data) > 1:
-        raise NotImplementedError('Clickhouse search not implemented for multiple families or sample types')
-
-    return EntriesSnvIndel.objects.filter(
-        project_guid=sample_data[0]['project_guid'],
-        family_guid=sample_data[0]['family_guid'],
-    )
 
 
 def _liftover_genome_version(genome_version):
