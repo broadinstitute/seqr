@@ -1312,7 +1312,7 @@ class DataManagerAPITest(AirtableTest):
         self.assertDictEqual(response.json(), {'vcfSamples': vcf_samples})
 
         self._add_file_iter(vcf_file_rows, is_gz=True)
-        body = {**self.REQUEST_BODY, 'filePath': f'{self.CALLSET_DIR}/callset.vcf.gz'}        
+        body = {**self.REQUEST_BODY, 'filePath': f'{self.CALLSET_DIR}/callset.vcf.gz'}
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'vcfSamples': vcf_samples})
