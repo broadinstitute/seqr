@@ -142,3 +142,8 @@ CACHED_VARIANTS_BY_KEY[4]['sortedTranscriptConsequences'] = [{
     'fiveutrConsequence': None,
     'geneId': 'ENSG00000097046',
 }]
+
+VARIANT_IDS =  ['1-10439-AC-A', '1-91511686-TCA-G']
+VARIANT_ID_SEARCH = {
+    'locus': {'rawVariantItems': '\n'.join(VARIANT_IDS)}
+}

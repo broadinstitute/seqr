@@ -4,7 +4,8 @@ import json
 import mock
 import os
 
-from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4, CACHED_VARIANTS_BY_KEY
+from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4, CACHED_VARIANTS_BY_KEY, \
+    VARIANT_ID_SEARCH, VARIANT_IDS
 from seqr.models import Project
 from seqr.utils.search.search_utils_tests import SearchTestHelper
 from seqr.utils.search.utils import query_variants
@@ -491,21 +492,23 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #         self.assertListEqual(BaseHailTableQuery.cluster_intervals(intervals, max_intervals=3), [
 #             ['1', 11785723, 91525764], ['2', 1234, 67890], ['7', 1, 20202020],
 #         ])
-#
-#
-#     def test_variant_id_search(self):
-#         self._assert_expected_search([VARIANT2], omit_data_type='SV_WES', **RSID_SEARCH)
-#
-#         self._assert_expected_search([VARIANT1], omit_data_type='SV_WES', **VARIANT_ID_SEARCH)
-#
-#         self._assert_expected_search(
-#             [VARIANT1], omit_data_type='SV_WES', variant_ids=VARIANT_ID_SEARCH['variant_ids'][:1],
-#         )
-#
-#         self._assert_expected_search(
-#             [], omit_data_type='SV_WES', variant_ids=VARIANT_ID_SEARCH['variant_ids'][1:],
-#         )
-#
+
+
+    def test_variant_id_search(self):
+        self.results_model.families.set(self.families.filter(guid='F000002_2'))
+
+        self._assert_expected_search([VARIANT2], locus={'rawVariantItems': 'rs1801131'})
+
+        self._assert_expected_search([VARIANT1], **VARIANT_ID_SEARCH)
+
+        self._assert_expected_search(
+            [VARIANT1], locus={'rawVariantItems': VARIANT_IDS[0]},
+        )
+
+        self._assert_expected_search(
+            [],locus={'rawVariantItems': VARIANT_IDS[1]},
+        )
+
 #         variant_keys = ['suffix_95340_DUP', 'suffix_140608_DUP']
 #         self._assert_expected_search([GCNV_VARIANT1, GCNV_VARIANT4], omit_data_type='SNV_INDEL', variant_keys=variant_keys)
 #
