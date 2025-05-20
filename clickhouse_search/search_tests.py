@@ -41,8 +41,12 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         super().set_up()
         Project.objects.update(genome_version='38')
 
-    def _assert_expected_search(self, expected_results, gene_counts=None, **search_kwargs):
+    def _assert_expected_search(self, expected_results, gene_counts=None, inheritance_mode=None, inheritance_filter=None, quality_filter=None, **search_kwargs):
         self.search_model.search.update(search_kwargs or {})
+        self.search_model.search['qualityFilter'] = quality_filter
+        self.search_model.search['inheritance']['mode'] = inheritance_mode
+        if inheritance_filter:
+            self.search_model.search['inheritance']['filter'] = inheritance_filter
 
         variants, total = query_variants(self.results_model, user=self.user)
         encoded_variants = json.loads(json.dumps(variants, cls=DjangoJSONEncoderWithSets))
@@ -82,7 +86,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #         self._assert_expected_search(
 #             [GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4], omit_data_type='SNV_INDEL', gene_counts=GCNV_GENE_COUNTS,
 #         )
-#
+#∂
 #         self._assert_expected_search(
 #             [SV_VARIANT1, SV_VARIANT2, SV_VARIANT3, SV_VARIANT4], sample_data=SV_WGS_SAMPLE_DATA, gene_counts=SV_GENE_COUNTS,
 #         )
@@ -93,7 +97,10 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #                 'SV_WES': EXPECTED_SAMPLE_DATA['SV_WES'], **FAMILY_2_ALL_SAMPLE_DATA, **SV_WGS_SAMPLE_DATA,
 #             }, gene_counts={**variant_gene_counts, **mito_gene_counts, **GCNV_GENE_COUNTS, **SV_GENE_COUNTS, 'ENSG00000277258': {'total': 2, 'families': {'F000002_2': 2}}},
 #         )
-#
+
+        Project.objects.update(genome_version='37')
+        with self.assertRaises(NotImplementedError):
+            query_variants(self.results_model, user=self.user)
 #         self._assert_expected_search(
 #             [GRCH37_VARIANT], genome_version='GRCh37', sample_data=FAMILY_2_VARIANT_SAMPLE_DATA)
 #
@@ -174,53 +181,71 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #             sample_data=FAMILY_2_BOTH_SAMPLE_TYPE_SAMPLE_DATA_MISSING_PARENTAL_WGS, inheritance_mode=inheritance_mode,
 #         )
 #
-#     def test_inheritance_filter(self):
-#         inheritance_mode = 'any_affected'
-#         self._assert_expected_search(
-#             [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
-#             inheritance_mode=inheritance_mode,
-#         )
-#
-#         self._assert_expected_search(
-#             [SV_VARIANT1, SV_VARIANT2, SV_VARIANT3, SV_VARIANT4], inheritance_mode=inheritance_mode, sample_data=SV_WGS_SAMPLE_DATA,
-#         )
-#
-#         self._assert_expected_search(
-#             [GCNV_VARIANT3], inheritance_mode=inheritance_mode, annotations=NEW_SV_FILTER, omit_data_type='SNV_INDEL',
-#         )
-#
-#         self._assert_expected_search(
-#             [SV_VARIANT2], inheritance_mode=inheritance_mode, annotations=NEW_SV_FILTER, sample_data=SV_WGS_SAMPLE_DATA,
-#         )
-#
-#         inheritance_mode = 'de_novo'
-#         self._assert_expected_search(
-#             [VARIANT1, FAMILY_3_VARIANT, VARIANT4, GCNV_VARIANT1], inheritance_mode=inheritance_mode,
-#         )
-#
-#         self._assert_expected_search(
-#             [SV_VARIANT1], inheritance_mode=inheritance_mode,  sample_data=SV_WGS_SAMPLE_DATA,
-#         )
-#
-#         inheritance_mode = 'x_linked_recessive'
-#         self._assert_expected_search([], inheritance_mode=inheritance_mode, sample_data=EXPECTED_SAMPLE_DATA_WITH_SEX)
-#         self._assert_expected_search([], inheritance_mode=inheritance_mode, sample_data=SV_WGS_SAMPLE_DATA_WITH_SEX)
-#
-#         inheritance_mode = 'homozygous_recessive'
-#         self._assert_expected_search([VARIANT2, GCNV_VARIANT3], inheritance_mode=inheritance_mode)
-#
-#         self._assert_expected_search(
-#             [PROJECT_2_VARIANT1, VARIANT2], inheritance_mode=inheritance_mode, sample_data=MULTI_PROJECT_SAMPLE_DATA,
-#         )
-#
-#         self._assert_expected_search(
-#             [SV_VARIANT4], inheritance_mode=inheritance_mode, sample_data=SV_WGS_SAMPLE_DATA,
-#         )
-#
-#         gt_inheritance_filter = {'genotype': {'I000006_hg00733': 'ref_ref', 'I000005_hg00732': 'has_alt'}}
-#         self._assert_expected_search(
-#             [VARIANT2], inheritance_filter=gt_inheritance_filter, sample_data=FAMILY_2_VARIANT_SAMPLE_DATA)
-#
+    def test_inheritance_filter(self):
+        self.results_model.families.set(self.families.filter(guid='F000002_2'))
+
+        inheritance_mode = 'any_affected'
+        self._assert_expected_search(
+            # [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
+            [VARIANT1, VARIANT2, VARIANT3, VARIANT4],
+            inheritance_mode=inheritance_mode,
+        )
+
+        # self._assert_expected_search(
+        #     [SV_VARIANT1, SV_VARIANT2, SV_VARIANT3, SV_VARIANT4], inheritance_mode=inheritance_mode, sample_data=SV_WGS_SAMPLE_DATA,
+        # )
+        #
+        # self._assert_expected_search(
+        #     [GCNV_VARIANT3], inheritance_mode=inheritance_mode, annotations=NEW_SV_FILTER, omit_data_type='SNV_INDEL',
+        # )
+        #
+        # self._assert_expected_search(
+        #     [SV_VARIANT2], inheritance_mode=inheritance_mode, annotations=NEW_SV_FILTER, sample_data=SV_WGS_SAMPLE_DATA,
+        # )
+
+        inheritance_mode = 'de_novo'
+        self._assert_expected_search(
+            # [VARIANT1, FAMILY_3_VARIANT, VARIANT4, GCNV_VARIANT1],
+            [VARIANT1, VARIANT4],
+            inheritance_mode=inheritance_mode,
+        )
+
+        # self._assert_expected_search(
+        #     [SV_VARIANT1], inheritance_mode=inheritance_mode,  sample_data=SV_WGS_SAMPLE_DATA,
+        # )
+
+        inheritance_mode = 'x_linked_recessive'
+        self._assert_expected_search([], inheritance_mode=inheritance_mode)
+        # self._assert_expected_search([], inheritance_mode=inheritance_mode, sample_data=SV_WGS_SAMPLE_DATA_WITH_SEX)
+
+        inheritance_mode = 'homozygous_recessive'
+        self._assert_expected_search(
+            # [VARIANT2, GCNV_VARIANT3],
+            [VARIANT2],
+            inheritance_mode=inheritance_mode,
+        )
+
+        self._assert_expected_search(
+            [VARIANT2],
+            # [PROJECT_2_VARIANT1, VARIANT2],
+            # sample_data=MULTI_PROJECT_SAMPLE_DATA,
+            inheritance_mode=inheritance_mode,
+        )
+
+        # self._assert_expected_search(
+        #     [SV_VARIANT4], inheritance_mode=inheritance_mode, sample_data=SV_WGS_SAMPLE_DATA,
+        # )
+
+        gt_inheritance_filter = {'genotype': {'I000006_hg00733': 'ref_ref', 'I000005_hg00732': 'has_alt'}}
+        self.results_model.families.set(self.families.filter(guid='F000002_2'))
+        self._assert_expected_search([VARIANT2], inheritance_filter=gt_inheritance_filter)
+
+        self._assert_expected_search(
+            [VARIANT2], inheritance_mode='any_affected', inheritance_filter={'affected': {
+                'I000004_hg00731': 'N', 'I000005_hg00732': 'A', 'I000006_hg00733': 'U',
+            }},
+        )
+
 #         inheritance_mode = 'compound_het'
 #         self._assert_expected_search(
 #             [[VARIANT3, VARIANT4]], inheritance_mode=inheritance_mode, sample_data=MULTI_PROJECT_SAMPLE_DATA, gene_counts={
@@ -297,79 +322,86 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #                 'ENSG00000184986': {'total': 1, 'families': {'F000011_11': 1}},
 #             }
 #         )
-#
-#     def test_quality_filter(self):
-#         quality_filter = {'vcf_filter': 'pass'}
-#         self._assert_expected_search(
-#             [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
-#             quality_filter=quality_filter
-#         )
-#
-#         self._assert_expected_search(
-#             [SV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2], quality_filter=quality_filter,
-#             sample_data={**SV_WGS_SAMPLE_DATA, **FAMILY_2_MITO_SAMPLE_DATA}
-#         )
-#
-#         self._assert_expected_search(
-#             [MITO_VARIANT1, MITO_VARIANT3], quality_filter={'min_gq': 60, 'min_hl': 5}, sample_data=FAMILY_2_MITO_SAMPLE_DATA,
-#         )
-#
-#         gcnv_quality_filter = {'min_gq': 40, 'min_qs': 20}
-#         self._assert_expected_search(
-#             [VARIANT2, MULTI_FAMILY_VARIANT, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT4], quality_filter=gcnv_quality_filter,
-#         )
-#
-#         self._assert_expected_search(
-#             [], annotations=NEW_SV_FILTER, quality_filter=gcnv_quality_filter, omit_data_type='SNV_INDEL',
-#         )
-#
-#         sv_quality_filter = {'min_gq_sv': 40}
-#         self._assert_expected_search(
-#             [SV_VARIANT3, SV_VARIANT4], quality_filter=sv_quality_filter, sample_data=SV_WGS_SAMPLE_DATA,
-#         )
-#
-#         self._assert_expected_search(
-#             [], annotations=NEW_SV_FILTER, quality_filter=sv_quality_filter, sample_data=SV_WGS_SAMPLE_DATA,
-#         )
-#
-#         self._assert_expected_search(
-#             [VARIANT2, MULTI_FAMILY_VARIANT], quality_filter={'min_gq': 40, 'vcf_filter': 'pass'}, omit_data_type='SV_WES',
-#         )
-#
-#         self._assert_expected_search(
-#             [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
-#             quality_filter={'min_gq': 60, 'min_qs': 10, 'affected_only': True},
-#         )
-#
-#         self._assert_expected_search(
-#             [SV_VARIANT3, SV_VARIANT4], quality_filter={'min_gq_sv': 60, 'affected_only': True}, sample_data=SV_WGS_SAMPLE_DATA,
-#         )
-#
-#         self._assert_expected_search(
-#             [VARIANT1, VARIANT2, FAMILY_3_VARIANT], quality_filter={'min_ab': 50}, omit_data_type='SV_WES',
-#         )
-#
-#         self._assert_expected_search(
-#             [VARIANT2, VARIANT3], quality_filter={'min_ab': 70, 'affected_only': True},
-#             omit_data_type='SV_WES',
-#         )
-#
-#         quality_filter.update({'min_gq': 40, 'min_ab': 50})
-#         self._assert_expected_search(
-#             [VARIANT2, FAMILY_3_VARIANT], quality_filter=quality_filter, omit_data_type='SV_WES',
-#         )
-#
-#         annotations = {'splice_ai': '0.0'}  # Ensures no variants are filtered out by annotation/path filters
-#         self._assert_expected_search(
-#             [VARIANT1, VARIANT2, FAMILY_3_VARIANT, MITO_VARIANT1, MITO_VARIANT3], quality_filter=quality_filter, omit_data_type='SV_WES',
-#             annotations=annotations, pathogenicity={'clinvar': ['likely_pathogenic', 'vus_or_conflicting']},
-#             sample_data={**EXPECTED_SAMPLE_DATA, **FAMILY_2_MITO_SAMPLE_DATA},
-#         )
-#
-#         self._assert_expected_search(
-#             [VARIANT2, FAMILY_3_VARIANT], quality_filter=quality_filter, omit_data_type='SV_WES',
-#             annotations=annotations, pathogenicity={'clinvar': ['pathogenic']},
-#         )
+
+    def test_quality_filter(self):
+        self.results_model.families.set(self.families.filter(guid='F000002_2'))
+
+        quality_filter = {'vcf_filter': 'pass'}
+        self._assert_expected_search(
+            [VARIANT1, VARIANT2,VARIANT3],
+            # [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
+            quality_filter=quality_filter
+        )
+
+        # self._assert_expected_search(
+        #     [SV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2], quality_filter=quality_filter,
+        #     sample_data={**SV_WGS_SAMPLE_DATA, **FAMILY_2_MITO_SAMPLE_DATA}
+        # )
+        #
+        # self._assert_expected_search(
+        #     [MITO_VARIANT1, MITO_VARIANT3], quality_filter={'min_gq': 60, 'min_hl': 5}, sample_data=FAMILY_2_MITO_SAMPLE_DATA,
+        # )
+        #
+        # gcnv_quality_filter = {'min_gq': 40, 'min_qs': 20}
+        # self._assert_expected_search(
+        #     [VARIANT2, MULTI_FAMILY_VARIANT, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT4], quality_filter=gcnv_quality_filter,
+        # )
+        #
+        # self._assert_expected_search(
+        #     [], annotations=NEW_SV_FILTER, quality_filter=gcnv_quality_filter, omit_data_type='SNV_INDEL',
+        # )
+        #
+        # sv_quality_filter = {'min_gq_sv': 40}
+        # self._assert_expected_search(
+        #     [SV_VARIANT3, SV_VARIANT4], quality_filter=sv_quality_filter, sample_data=SV_WGS_SAMPLE_DATA,
+        # )
+        #
+        # self._assert_expected_search(
+        #     [], annotations=NEW_SV_FILTER, quality_filter=sv_quality_filter, sample_data=SV_WGS_SAMPLE_DATA,
+        # )
+
+        self._assert_expected_search(
+            [VARIANT2, VARIANT3], quality_filter={'min_gq': 40, 'vcf_filter': 'pass'},
+            # [VARIANT2, MULTI_FAMILY_VARIANT], omit_data_type='SV_WES',
+        )
+
+        self._assert_expected_search(
+            # [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
+            [VARIANT1, VARIANT2, VARIANT3],
+            quality_filter={'min_gq': 60, 'min_qs': 10, 'affected_only': True},
+        )
+
+        # self._assert_expected_search(
+        #     [SV_VARIANT3, SV_VARIANT4], quality_filter={'min_gq_sv': 60, 'affected_only': True}, sample_data=SV_WGS_SAMPLE_DATA,
+        # )
+
+        self._assert_expected_search(
+            [VARIANT1, VARIANT2], quality_filter={'min_ab': 50},
+            # [VARIANT1, VARIANT2, FAMILY_3_VARIANT], omit_data_type='SV_WES',
+        )
+
+        self._assert_expected_search(
+            [VARIANT2, VARIANT3], quality_filter={'min_ab': 70, 'affected_only': True},
+            # omit_data_type='SV_WES',
+        )
+
+        quality_filter.update({'min_gq': 40, 'min_ab': 50})
+        self._assert_expected_search(
+            [VARIANT2], quality_filter=quality_filter,
+            # [VARIANT2, FAMILY_3_VARIANT], omit_data_type='SV_WES',
+        )
+
+        # annotations = {'splice_ai': '0.0'}  # Ensures no variants are filtered out by annotation/path filters
+        # self._assert_expected_search(
+        #     [VARIANT1, VARIANT2, FAMILY_3_VARIANT, MITO_VARIANT1, MITO_VARIANT3], quality_filter=quality_filter, omit_data_type='SV_WES',
+        #     annotations=annotations, pathogenicity={'clinvar': ['likely_pathogenic', 'vus_or_conflicting']},
+        #     sample_data={**EXPECTED_SAMPLE_DATA, **FAMILY_2_MITO_SAMPLE_DATA},
+        # )
+        #
+        # self._assert_expected_search(
+        #     [VARIANT2, FAMILY_3_VARIANT], quality_filter=quality_filter, omit_data_type='SV_WES',
+        #     annotations=annotations, pathogenicity={'clinvar': ['pathogenic']},
+        # )
 #
 #     def test_location_search(self):
 #         self._assert_expected_search(

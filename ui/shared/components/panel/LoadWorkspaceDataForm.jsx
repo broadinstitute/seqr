@@ -1,6 +1,6 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import { Header, Segment, Message } from 'semantic-ui-react'
+import { Header, Segment, Message, List } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 
 import {
@@ -122,6 +122,42 @@ const AGREE_CHECKBOX = {
   validate: validators.required,
 }
 
+const ACCEPT_POLICIES_CHECKBOX = {
+  name: 'agreeSeqrPolicies',
+  component: BooleanCheckbox,
+  label: (
+    <label>
+      By proceeding with seqr loading, I agree that:
+      <br />
+      <List bulleted relaxed>
+        <List.Item>
+          I have read and agree to seqr’s policies documented in the &nbsp;
+          <a href="/faq" target="_blank" rel="noreferrer">FAQ</a>
+          , &nbsp;
+          <a href="/terms_of_service" target="_blank" rel="noreferrer">Terms of Service</a>
+          , &nbsp;
+          and &nbsp;
+          <a href="/privacy_policy" target="_blank" rel="noreferrer">Privacy Policy</a>
+        </List.Item>
+        <List.Item>
+          The data I will load does not contain duplicate samples (i.e., the sample has not been previously loaded into
+          a different project in seqr), except in cases where the previously loaded sample was an exome and this is now
+          a genome, or vice versa
+        </List.Item>
+        <List.Item>The data I will load does not contain unrelated control samples</List.Item>
+        <List.Item>
+          The information I will provide such as pedigree details and HPO terms is accurate to the best of my knowledge
+        </List.Item>
+        <List.Item>
+          Nonadherence to the stated policies or to guidance provided by the seqr team may result in permanent
+          suspension of access to the platform
+        </List.Item>
+      </List>
+    </label>
+  ),
+  validate: validators.required,
+}
+
 const SAMPLE_TYPE_FIELD = {
   name: 'sampleType',
   label: 'Sample Type',
@@ -157,7 +193,7 @@ const onAddDataFromWorkspace = responseJson => (dispatch) => {
 }
 
 const GRANT_ACCESS_PAGE = {
-  fields: [AGREE_CHECKBOX], formatSubmitUrl: formatWorkspaceUrl('grant_access'),
+  fields: [AGREE_CHECKBOX, ACCEPT_POLICIES_CHECKBOX], formatSubmitUrl: formatWorkspaceUrl('grant_access'),
 }
 const VALIDATE_VCF_PAGE = {
   fields: [DATA_BUCK_FIELD, SAMPLE_TYPE_FIELD, REQUIRED_GENOME_FIELD],
