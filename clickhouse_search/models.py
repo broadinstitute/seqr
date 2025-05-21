@@ -313,7 +313,7 @@ class BaseAnnotationsSnvIndel(models.ClickhouseModel):
 class AnnotationsSnvIndel(BaseAnnotationsSnvIndel):
 
     class Meta:
-        db_table = 'GRCh38/SNV_INDEL/annotations_memory'
+        db_table = 'GRCh38/SNV_INDEL/annotations_disk'
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_IN_MEMORY_DIR}/GRCh38/SNV_INDEL/annotations', primary_key='key', flatten_nested=0)
 
 # Future work: create an alias and manager to switch between disk/in-memory annotations

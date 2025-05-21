@@ -1,7 +1,5 @@
 from copy import deepcopy
 
-from sqlalchemy.dialects.oracle import INTERVAL
-
 from hail_search.test_utils import (
     VARIANT1 as HAIL_VARIANT1,
     VARIANT2 as HAIL_VARIANT2,
