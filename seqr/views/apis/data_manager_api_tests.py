@@ -1270,6 +1270,9 @@ class DataManagerAPITest(AirtableTest):
         response = self.client.get(url, content_type='application/json')
         self.assertEqual(response.status_code, 200)
 
+    def _assert_expected_read_vcf_header_subprocess_calls(self, body):
+        return True
+
     def test_validate_callset(self):
         url = reverse(validate_callset)
         self.check_pm_login(url)
@@ -1307,6 +1310,13 @@ class DataManagerAPITest(AirtableTest):
 
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'vcfSamples': vcf_samples})
+
+        self._add_file_iter(vcf_file_rows, is_gz=True)
+        body = {**self.REQUEST_BODY, 'filePath': f'{self.CALLSET_DIR}/callset.vcf.gz'}
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'vcfSamples': vcf_samples})
+        self._assert_expected_read_vcf_header_subprocess_calls(body)
 
         self._set_file_not_found(list_files=True)
         body = {**self.REQUEST_BODY, 'filePath': f'{self.CALLSET_DIR}/sharded_vcf/part0*.vcf'}
@@ -1552,7 +1562,6 @@ class DataManagerAPITest(AirtableTest):
     def _test_dag_trigger_errors(self, url, body):
         pass
 
-
 class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
     fixtures = ['users', '1kg_project', 'reference_data']
 
@@ -1579,11 +1588,16 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
         self.mock_open = patcher.start()
         self.mock_file_iter = self.mock_open.return_value.__enter__.return_value.__iter__
         self.mock_file_iter.return_value = []
+        self.mock_file_iter.stdout = []
         self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.utils.file_utils.open')
         self.mock_unzipped_open = patcher.start()
         self.mock_unzipped_file_iter = self.mock_unzipped_open.return_value.__enter__.return_value.__iter__
         self.mock_unzipped_file_iter.return_value = []
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.utils.file_utils.subprocess.Popen')
+        self.mock_subprocess = patcher.start()
+        self.mock_subprocess.side_effect = [self.mock_file_iter]
         self.addCleanup(patcher.stop)
         super().setUp()
 
@@ -1596,6 +1610,7 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
         self.mock_does_file_exist.return_value = True
         file_iter = self.mock_file_iter if is_gz else self.mock_unzipped_file_iter
         file_iter.return_value += stdout
+        file_iter.stdout += stdout
 
     def _add_file_list_iter(self, file_list, stdout):
         self.mock_does_file_exist.return_value = True
@@ -1660,6 +1675,11 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
         self.assertDictEqual(response.json(), response_body or {'error': error})
         self.assert_json_logs(self.data_manager_user, [
             (error, {'severity': 'WARNING', 'requestBody': body, 'httpRequest': mock.ANY, 'traceback': mock.ANY}),
+        ])
+
+    def _assert_expected_read_vcf_header_subprocess_calls(self, body):
+        self.mock_subprocess.assert_has_calls([
+            mock.call(f'dd skip=0 count=65537 bs=1 if={self.TRIGGER_CALLSET_DIR}{body["filePath"]} status="none" | gunzip -c - ', stdout=-1, stderr=-2, shell=True) # nosec
         ])
 
     def _test_load_single_project(self, *args, **kwargs):
@@ -1832,7 +1852,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
     def _assert_success_notification(self, dag_json):
         dag_json['sample_source'] = 'Broad_Internal'
 
-        message = f"""*test_data_manager@broadinstitute.org* triggered loading internal WES SNV_INDEL data for 2 projects
+        message = f"""*test_data_manager@broadinstitute.org* triggered loading internal WES SNV_INDEL data for 12 samples in 2 projects (1kg project nåme with uniçøde: 10; Non-Analyst Project: 2)
 
         Pedigree files have been uploaded to gs://seqr-loading-temp/v3.1/GRCh38/SNV_INDEL/pedigrees/WES
 
@@ -1944,6 +1964,14 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
 
     def _test_expected_vcf_responses(self, response, url):
         self.assertEqual(response.status_code, 403)
+
+    def _assert_expected_read_vcf_header_subprocess_calls(self, body):
+        self.mock_subprocess.assert_has_calls([
+            mock.call(command, stdout=-1, stderr=-2, shell=True) # nosec
+            for command in [
+                f'gsutil cat -r 0-65536 {body["filePath"]} | gunzip -c -q - ',
+            ]
+        ])
 
     def _test_validate_dataset_type(self, url):
         body = {'filePath': f'{self.CALLSET_DIR}/mito_callset.mt', 'datasetType': 'MITO', 'genomeVersion': 'GRCh38'}

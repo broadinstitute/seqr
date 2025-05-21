@@ -1,5 +1,6 @@
 import json
 import mock
+import responses
 from copy import deepcopy
 
 from django.db import transaction
@@ -10,7 +11,7 @@ from hail_search.test_utils import HAIL_BACKEND_SINGLE_FAMILY_VARIANTS, VARIANT_
 from seqr.models import VariantSearchResults, LocusList, Project, VariantSearch
 from seqr.utils.search.utils import InvalidSearchException
 from seqr.utils.search.elasticsearch.es_utils import InvalidIndexException
-from seqr.views.apis.variant_search_api import query_variants_handler, query_single_variant_handler, \
+from seqr.views.apis.variant_search_api import query_variants_handler, query_single_variant_handler, vlm_lookup_handler, \
     export_variants_handler, search_context_handler, get_saved_search_handler, create_saved_search_handler, \
     update_saved_search_handler, delete_saved_search_handler, get_variant_gene_breakdown, variant_lookup_handler
 from seqr.views.utils.test_utils import AuthenticationTestCase, VARIANTS, AnvilAuthenticationTestCase,\
@@ -146,6 +147,57 @@ EXPECTED_SEARCH_FAMILY_CONTEXT = {
     'igvSamplesByGuid': mock.ANY,
     'locusListsByGuid': {LOCUS_LIST_GUID: mock.ANY},
     'familyNotesByGuid': mock.ANY,
+}
+
+MOCK_TOKEN = 'mock_token' # nosec
+MOCK_CLIENT_ID = 'mock_client_id'
+VLM_CLIENTS_RESPONSE = [
+    {'client_id': MOCK_CLIENT_ID, 'name': 'Self', 'client_metadata': {'match_url': 'https://self.com'}},
+    {'client_id': 'client1', 'name': 'Node 1', 'client_metadata': {'match_url': 'https://node1.com'}},
+    {'client_id': 'client2', 'name': 'Node 2', 'client_metadata': {'match_url': 'https://node2.com'}},
+    {'client_id': 'client1', 'name': 'Node 3', 'client_metadata': {'other_url': 'https://node3.com'}},
+    {'client_id': 'client1', 'name': 'Node 4'},
+]
+VLM_MATCH_URL = 'https://node1.com/variant_lookup/1-10439-AC-A'
+VLM_MATCH_RESPONSE = {
+    'beaconHandovers': {'handovers': [
+        {
+            'handoverType': {'id': 'Test Node', 'label': 'Test Node browser'},
+            'url': VLM_MATCH_URL,
+        }
+    ]},
+    'meta': {
+        'apiVersion': 'v1.0',
+        'beaconId': 'com.gnx.beacon.v2',
+        'returnedSchemas': [
+            {
+                'entityType': 'genomicVariant',
+                'schema': 'ga4gh-beacon-variant-v2.0.0',
+            }
+        ]
+    },
+    'responseSummary': {
+        'exists': True,
+        'total': 30,
+    },
+    'response': {
+        'resultSets': [
+            {
+                'exists': True,
+                'id': 'Test Node Homozygous',
+                'results': [],
+                'resultsCount': 7,
+                'setType': 'genomicVariant'
+            },
+            {
+                'exists': True,
+                'id': 'Test Node Heterozygous',
+                'results': [],
+                'resultsCount': 23,
+                'setType': 'genomicVariant'
+            },
+        ],
+    }
 }
 
 def _get_es_variants(results_model, **kwargs):
@@ -943,6 +995,82 @@ class VariantSearchAPITest(object):
             'F000001_1', 'F000002_2', 'F000003_3', 'F000004_4', 'F000005_5', 'F000006_6', 'F000007_7', 'F000008_8',
             'F000009_9', 'F000010_10', 'F000013_13',
         }, {f.guid for f in mock_variant_lookup.call_args.args[2]})
+
+    @mock.patch('seqr.views.utils.vlm_utils.VLM_CLIENT_SECRET', 'abc123')
+    @mock.patch('seqr.views.utils.vlm_utils.VLM_CLIENT_ID', MOCK_CLIENT_ID)
+    @mock.patch('seqr.utils.redis_utils.redis.StrictRedis')
+    @responses.activate
+    def test_vlm_lookup(self, mock_redis):
+        mock_cache = {}
+        mock_redis.return_value.get.side_effect = mock_cache.get
+        mock_redis.return_value.set.side_effect = lambda key, val, **kwargs: mock_cache.update({key: val})
+        responses.add(
+            responses.POST, 'https://vlm-auth.us.auth0.com/oauth/token', json={'access_token': MOCK_TOKEN},
+        )
+        responses.add(
+            responses.GET, 'https://vlm-auth.us.auth0.com/api/v2/clients?fields=client_id,name,client_metadata&is_global=false',
+            json=VLM_CLIENTS_RESPONSE,
+        )
+        match_url_template = 'https://{}.com/?assemblyId=GRCh38&referenceName=1&start=10439&referenceBases=AC&alternateBases=A'
+        node_1_url = match_url_template.format('node1')
+        responses.add(responses.GET, node_1_url, json=VLM_MATCH_RESPONSE)
+        node_2_url = match_url_template.format('node2')
+        responses.add(responses.GET, node_2_url, status=400)
+
+        base_url = reverse(vlm_lookup_handler)
+        url = f'{base_url}?variantId=1-10439-AC-A&genomeVersion=38'
+        self.check_require_login(url)
+
+        response = self.client.get(f'{base_url}?variantId=phase2_DEL_chr14_464')
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'error': 'VLM lookup is not supported for SVs'})
+
+        self.reset_logs()
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        expected_body = {'vlmMatches': {
+            'Node 1': {'Test Node': {'url': VLM_MATCH_URL, 'counts': {'Heterozygous': 23, 'Homozygous': 7}}}
+        }}
+        self.assertDictEqual(response.json(), expected_body)
+
+        self.assertEqual(len(responses.calls), 4)
+        self.assertFalse('Authorization' in responses.calls[0].request.headers, {})
+        self.assertSetEqual({call.request.headers['Authorization'] for call in responses.calls[1:]}, {'Bearer mock_token'})
+
+        expected_params = {
+            'assemblyId': 'GRCh38',
+            'alternateBases': 'A',
+            'referenceBases': 'AC',
+            'referenceName': '1',
+            'start': 10439,
+        }
+        expected_logs = [
+            ('VLM match request to Node 1', {'detail': expected_params}),
+            ('VLM match request to Node 2', {'detail': expected_params}),
+            (f'VLM match error for Node 2: 400 Client Error: Bad Request for url: {node_2_url}', {
+                'severity': 'ERROR',
+                '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent',
+                'detail': expected_params,
+            }),
+        ]
+        self.assert_json_logs(self.no_access_user, expected_logs)
+
+        # test with cached token and clients
+        self.reset_logs()
+        responses.calls.reset()
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), expected_body)
+        self.assertEqual(len(responses.calls), 2)
+        self.assertListEqual([call.request.url for call in responses.calls], [node_1_url, node_2_url])
+        self.assertSetEqual({call.request.headers['Authorization'] for call in responses.calls}, {'Bearer mock_token'})
+        self.maxDiff = None
+        self.assert_json_logs(None, [
+            ('Loaded VLM_TOKEN from redis', None),
+            ('Loaded VLM_CLIENTS from redis', None),
+        ])
+        self.assert_json_logs(self.no_access_user, expected_logs, offset=2)
+
 
     def test_saved_search(self):
         get_saved_search_url = reverse(get_saved_search_handler)

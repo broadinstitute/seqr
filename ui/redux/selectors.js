@@ -39,6 +39,7 @@ export const getVersion = state => state.meta.version
 export const getOauthLoginEnabled = state => !!state.meta.oauthLoginProvider
 export const getOauthLoginProvider = state => state.meta.oauthLoginProvider
 export const getElasticsearchEnabled = state => state.meta.elasticsearchEnabled
+export const getVlmEnabled = state => state.meta.vlmEnabled
 export const getHijakEnabled = state => state.meta.hijakEnabled
 export const getWarningMessages = state => state.meta.warningMessages
 export const getAnvilLoadingDelayDate = state => state.meta.anvilLoadingDelayDate
