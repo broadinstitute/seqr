@@ -5,7 +5,7 @@ import mock
 import os
 
 from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4, CACHED_VARIANTS_BY_KEY, \
-    VARIANT_ID_SEARCH, VARIANT_IDS
+    VARIANT_ID_SEARCH, VARIANT_IDS, LOCATION_SEARCH
 from seqr.models import Project
 from seqr.utils.search.search_utils_tests import SearchTestHelper
 from seqr.utils.search.utils import query_variants
@@ -404,17 +404,14 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         #     annotations=annotations, pathogenicity={'clinvar': ['pathogenic']},
         # )
 #
-#     def test_location_search(self):
-#         self._assert_expected_search(
-#             [MULTI_FAMILY_VARIANT, VARIANT4], omit_data_type='SV_WES', **LOCATION_SEARCH,
-#         )
-#
-#         # Test "large" gene list search
-#         self._assert_expected_search(
-#             [VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4], omit_data_type='SV_WES', intervals=LOCATION_SEARCH['intervals'],
-#             gene_ids=LOCATION_SEARCH['gene_ids'] + ['ENSG00000277258', 'ENSG00000275023'],
-#         )
-#
+    def test_location_search(self):
+        self.results_model.families.set(self.families.filter(guid='F000002_2'))
+
+        self._assert_expected_search(
+            [VARIANT3, VARIANT4], **LOCATION_SEARCH,
+            # [MULTI_FAMILY_VARIANT, VARIANT4], omit_data_type='SV_WES', **LOCATION_SEARCH,
+        )
+
 #         self._assert_expected_search(
 #             [GRCH37_VARIANT], intervals=[['7', 143268894, 143271480]], genome_version='GRCh37', sample_data=FAMILY_2_VARIANT_SAMPLE_DATA)
 #
@@ -432,9 +429,9 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #             sample_data={'SV_WES': EXPECTED_SAMPLE_DATA['SV_WES'] + SECOND_PROJECT_SV_WES_SAMPLE_DATA, **SV_WGS_SAMPLE_DATA},
 #         )
 #
-#         self._assert_expected_search(
-#             [VARIANT1, VARIANT2], omit_data_type='SV_WES', **EXCLUDE_LOCATION_SEARCH,
-#         )
+        self._assert_expected_search(
+            [VARIANT1, VARIANT2], exclude=LOCATION_SEARCH['locus'], locus=None,
+        )
 #
 #         self._assert_expected_search(
 #             [GCNV_VARIANT1, GCNV_VARIANT2], intervals=sv_intervals, exclude_intervals=True, omit_data_type='SNV_INDEL',
@@ -474,25 +471,6 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #             gene_ids=['ENSG00000171621'],
 #         )
 #
-#     def test_cluster_intervals(self):
-#         intervals = [
-#             ['1', 11785723, 11806455], ['1', 91500851, 91525764], ['2', 1234, 5678], ['2', 12345, 67890],
-#             ['7', 1, 11100], ['7', 202020, 20202020],
-#         ]
-#
-#         self.assertListEqual(BaseHailTableQuery.cluster_intervals(intervals, max_intervals=5), [
-#             ['1', 11785723, 11806455], ['1', 91500851, 91525764], ['2', 1234, 67890],
-#             ['7', 1, 11100], ['7', 202020, 20202020],
-#         ])
-#
-#         self.assertListEqual(BaseHailTableQuery.cluster_intervals(intervals, max_intervals=4), [
-#             ['1', 11785723, 11806455], ['1', 91500851, 91525764], ['2', 1234, 67890], ['7', 1, 20202020],
-#         ])
-#
-#         self.assertListEqual(BaseHailTableQuery.cluster_intervals(intervals, max_intervals=3), [
-#             ['1', 11785723, 91525764], ['2', 1234, 67890], ['7', 1, 20202020],
-#         ])
-
 
     def test_variant_id_search(self):
         self.results_model.families.set(self.families.filter(guid='F000002_2'))

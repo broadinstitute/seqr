@@ -1,5 +1,7 @@
 from copy import deepcopy
 
+from sqlalchemy.dialects.oracle import INTERVAL
+
 from hail_search.test_utils import (
     VARIANT1 as HAIL_VARIANT1,
     VARIANT2 as HAIL_VARIANT2,
@@ -146,4 +148,10 @@ CACHED_VARIANTS_BY_KEY[4]['sortedTranscriptConsequences'] = [{
 VARIANT_IDS =  ['1-10439-AC-A', '1-91511686-TCA-G']
 VARIANT_ID_SEARCH = {
     'locus': {'rawVariantItems': '\n'.join(VARIANT_IDS)}
+}
+
+GENE_IDS = ['ENSG00000097046', 'ENSG00000177000']
+INTERVALS = ['chr2:1234-5678', 'chr7:1-11100']
+LOCATION_SEARCH = {
+    'locus': {'rawItems': '\n'.join(GENE_IDS+INTERVALS)},
 }
