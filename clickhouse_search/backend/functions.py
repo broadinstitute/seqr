@@ -1,6 +1,8 @@
 from clickhouse_backend.models.fields.array import ArrayField, ArrayLookup
 from django.db.models import Func
 
+from clickhouse_search.backend.fields import NestedField
+
 class Array(Func):
     function = 'array'
 
@@ -10,6 +12,7 @@ class ArrayMap(Func):
     template = "%(function)s(x -> %(mapped_expression)s, %(expressions)s)"
 
 
+@NestedField.register_lookup
 @ArrayField.register_lookup
 class ArrayExists(ArrayLookup):
     lookup_name = "array_exists"

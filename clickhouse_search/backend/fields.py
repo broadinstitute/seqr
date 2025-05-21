@@ -45,6 +45,8 @@ class NestedField(models.TupleField):
         return [self.call_base_fields("to_python", item) for item in value]
 
     def get_db_prep_value(self, value, connection, prepared=False):
+        if isinstance(value, (str, bytes)):
+            return super(NestedField, self).get_db_prep_value(value, connection, prepared)
         return [super(NestedField, self).get_db_prep_value(item, connection, prepared) for item in value]
 
     def get_db_prep_save(self, value, connection):

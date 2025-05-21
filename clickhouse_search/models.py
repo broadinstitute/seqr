@@ -158,7 +158,9 @@ class EntriesManager(Manager):
             entries = filter_func(interval_q)
 
         if gene_ids:
-            entries = entries.filter(key__sorted_transcript_consequences__geneId__in=gene_ids)
+            entries = entries.filter(key__sorted_transcript_consequences__array_exists={
+                'geneId': (gene_ids, 'has({value}, {field})'),
+            })
 
         if rs_ids:
             entries = entries.filter(key__rsid__in=rs_ids)
