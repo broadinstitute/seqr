@@ -286,7 +286,13 @@ class EntriesManager(Manager):
 
     @classmethod
     def _filter_frequency(cls, entries, freqs=None, **kwargs):
-        for population, pop_filter in (freqs or {}).items():
+        frequencies =  freqs or {}
+
+        gnomad_filter = frequencies.get('gnomad_genomes') or {}
+        if gnomad_filter.get('af', 1) <= 0.05 or any(gnomad_filter.get(field) is not None for field in ['ac', 'hh']):
+            entries = entries.filter(is_gnomad_gt_5_percent=False)
+
+        for population, pop_filter in frequencies.items():
             pop_subfields = cls.POPULATIONS.get(population)
             if not pop_subfields:
                 continue
@@ -306,8 +312,8 @@ class EntriesManager(Manager):
                     for subfield in ['hom', 'hemi'] if subfield in pop_subfields
                 })
 
-        if (freqs or {}).get('callset'):
-            entries = cls._filter_seqr_frequency(entries, **freqs['callset'])
+        if frequencies.get('callset'):
+            entries = cls._filter_seqr_frequency(entries, **frequencies['callset'])
 
         return entries
 
