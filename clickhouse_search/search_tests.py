@@ -625,7 +625,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         )
 
         self._assert_expected_search(
-            [VARIANT1, VARIANT2, VARIANT3, VARIANT4], frequencies={'seqr': {}, 'gnomad_genomes': {'af': None}},
+            [VARIANT1, VARIANT2, VARIANT3, VARIANT4], freqs={'seqr': {}, 'gnomad_genomes': {'af': None}},
             # [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4], frequencies={'seqr': {}, 'gnomad_genomes': {'af': None}},
         )
 
