@@ -289,7 +289,7 @@ class EntriesManager(Manager):
         frequencies =  freqs or {}
 
         gnomad_filter = frequencies.get('gnomad_genomes') or {}
-        if gnomad_filter.get('af', 1) <= 0.05 or any(gnomad_filter.get(field) is not None for field in ['ac', 'hh']):
+        if (gnomad_filter.get('af') or 1) <= 0.05 or any(gnomad_filter.get(field) is not None for field in ['ac', 'hh']):
             entries = entries.filter(is_gnomad_gt_5_percent=False)
 
         for population, pop_filter in frequencies.items():
