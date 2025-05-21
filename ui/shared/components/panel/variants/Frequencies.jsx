@@ -190,9 +190,9 @@ const BaseGlobalAcPopup = ({ totalSampleCounts }) => (
   Object.keys(totalSampleCounts).length > 0 && (
     <Popup.Content>
       <i>
-        The seqr AC and Hom counts reflect all observed occurrences of this variant in seqr.
-        While not all variants are called in all loaded callsets, an upper bound for the total AN can be estimated
-        from the total number of loaded samples in seqr:
+        The seqr allele count (AC) and homozygote count (Hom) reflect all observed occurrences of a variant in seqr.
+        While not all sites may be captured in the loaded callsets, an upper bound for the total allele number (AN)
+        can be estimated based on the total number of samples loaded in seqr:
       </i>
       {Object.entries(totalSampleCounts).map(([sampleType, { count }]) => (
         <div key={sampleType}>{`${sampleType}: ${count}`}</div>
