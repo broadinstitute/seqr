@@ -471,12 +471,12 @@ class VariantSearchAPITest(object):
             ['12', '48367227', 'TC', 'T', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
              '', '2', 'AIP (None)|Known gene for phenotype (None)|Excluded (None)', 'a later note (None)|test n\xf8te (None)', '', '', '', '', '', '',
              '', '', '', '', '', '', '', '',  '', '', '', ''],
-            ['1', '38724419', 'T', 'G', 'ENSG00000177000', 'missense_variant', '0.31111112236976624', '0.29499998688697815', '0',
+            ['1', '38724419', 'T', 'G', 'ENSG00000177000', 'missense_variant', '28', '0.29499998688697815', '0',
              '0.28899794816970825', '0.24615199863910675', '20.899999618530273', '0.19699999690055847',
              '2.000999927520752', '0.0', '0.1', '0.05', '', '', 'rs1801131', 'ENST00000383791.8:c.156A>C',
              'ENSP00000373301.3:p.Leu52Phe', 'Conflicting_classifications_of_pathogenicity', '1', '2', '', '', '', '', '', 'HG00731', '2', '', '99', '1.0',
              'HG00732', '1', '', '99', '0.625', 'HG00733', '0', '', '40', '0.0'],
-            ['1', '91502721', 'G', 'A', 'ENSG00000097046', 'intron_variant', '0.6666666865348816', '0.0', '0.38041073083877563', '0.0',
+            ['1', '91502721', 'G', 'A', 'ENSG00000097046', 'intron_variant', '4', '0.0', '0.38041073083877563', '0.0',
              '0.36268100142478943', '2.753999948501587', '', '1.378000020980835', '0.009999999776482582', '', '', '',
              '', 'rs13447464', 'ENST00000234626.11:c.-63-251G>A', '', '', '', '2', '', '', '', '', '', 'HG00731',
              '1', '', '99', '1.0', 'HG00732', '0', '', '99', '0.4594594594594595', 'HG00733', '1', '', '99', '0.4074074074074074'],
@@ -505,12 +505,12 @@ class VariantSearchAPITest(object):
                 ['12', '48367227', 'TC', 'T', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
                  '2', 'AIP (None)|Known gene for phenotype (None)|Excluded (None)', 'a later note (None)|test n\xf8te (None)',
                  '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',],
-                ['1', '38724419', 'T', 'G', 'ENSG00000177000', 'missense_variant', '0.31111112236976624', '0.29499998688697815', '0',
+                ['1', '38724419', 'T', 'G', 'ENSG00000177000', 'missense_variant', '28', '0.29499998688697815', '0',
                  '0.28899794816970825', '0.24615199863910675', '20.899999618530273', '0.19699999690055847',
                  '2.000999927520752', '0.0', '0.1', '0.05', '', '', 'rs1801131', 'ENST00000383791.8:c.156A>C',
                  'ENSP00000373301.3:p.Leu52Phe', 'Conflicting_classifications_of_pathogenicity', '1', '2', '', '', 'HG00731', '2', '', '99', '1.0',
                  'HG00732', '1', '', '99', '0.625', 'HG00733', '0', '', '40', '0.0'],
-                ['1', '91502721', 'G', 'A', 'ENSG00000097046', 'intron_variant', '0.6666666865348816', '0.0', '0.38041073083877563', '0.0',
+                ['1', '91502721', 'G', 'A', 'ENSG00000097046', 'intron_variant', '4', '0.0', '0.38041073083877563', '0.0',
                  '0.36268100142478943', '2.753999948501587', '', '1.378000020980835', '0.009999999776482582', '', '',
                  '', '', 'rs13447464', 'ENST00000234626.11:c.-63-251G>A', '', '', '', '2', '', '', 'HG00731',
                  '1', '', '99', '1.0', 'HG00732', '0', '', '99', '0.4594594594594595', 'HG00733', '1', '', '99',
@@ -544,7 +544,7 @@ class VariantSearchAPITest(object):
         }))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        expected_search_response = deepcopy(EXPECTED_SEARCH_RESPONSE)
+        expected_search_response = deepcopy(self.EXPECTED_SEARCH_RESPONSE)
         expected_search_response.update({
             'searchedVariants': COMP_HET_VARAINTS,
             'savedVariantsByGuid': {'SV0000002_1248367227_r0390_100': EXPECTED_SAVED_VARIANT},
@@ -560,6 +560,7 @@ class VariantSearchAPITest(object):
         })
         expected_search_response['search']['totalResults'] = 1
         del expected_search_response['familiesByGuid']
+        expected_search_response.pop('transcriptsById', None)
         self.assertSetEqual(set(response_json.keys()), set(expected_search_response.keys()))
         self.assertDictEqual(response_json, expected_search_response)
         self._assert_expected_results_context(response_json, has_pa_detail=False, rnaseq=False)
@@ -811,7 +812,7 @@ class VariantSearchAPITest(object):
     def _assert_expected_single_variant_results_context(self, response_json, omit_fields=None, no_metadata=False, **expected_response):
         omit_fields = {'search', *(omit_fields or [])}
 
-        expected_search_response = deepcopy({**EXPECTED_SEARCH_RESPONSE, **EXPECTED_SEARCH_FAMILY_CONTEXT})
+        expected_search_response = deepcopy({**self.EXPECTED_SEARCH_RESPONSE, **EXPECTED_SEARCH_FAMILY_CONTEXT})
         expected_search_response.update(expected_response)
         expected_search_response.update({
             k: EXPECTED_SEARCH_CONTEXT_RESPONSE[k] for k in ['projectsByGuid', 'familiesByGuid', 'locusListsByGuid']
@@ -823,14 +824,13 @@ class VariantSearchAPITest(object):
                 'savedVariantsByGuid', 'variantTagsByGuid', 'variantFunctionalDataByGuid', 'genesById',
                 'rnaSeqData', 'phenotypeGeneScores', 'mmeSubmissionsByGuid'
             }})
+            expected_search_response.pop('transcriptsById', None)
         else:
             expected_search_response['savedVariantsByGuid'].pop('SV0000002_1248367227_r0390_100')
             expected_search_response['variantTagsByGuid'] = {
                 k: EXPECTED_SEARCH_RESPONSE['variantTagsByGuid'][k]
                 for k in {'VT1708633_2103343353_r0390_100', 'VT1726961_2103343353_r0390_100'}
             }
-            if 'transcriptsById' in self.EXPECTED_SEARCH_RESPONSE:
-                expected_search_response['transcriptsById'] = self.EXPECTED_SEARCH_RESPONSE['transcriptsById']
         expected_search_response['variantNotesByGuid'] = {}
         expected_search_response['genesById'] = {
             k: v for k, v in expected_search_response['genesById'].items() if k in {'ENSG00000227232', 'ENSG00000268903'}
@@ -900,6 +900,8 @@ class VariantSearchAPITest(object):
             },
             'variants': [expected_variant],
         }
+        if 'totalSampleCounts' in self.EXPECTED_SEARCH_RESPONSE:
+            expected_body['totalSampleCounts'] = self.EXPECTED_SEARCH_RESPONSE['totalSampleCounts']
         self.assertDictEqual(response.json(), expected_body)
         mock_variant_lookup.assert_called_with(self.no_access_user,  ('1', 10439, 'AC', 'A'), genome_version='38')
 
@@ -1210,7 +1212,10 @@ def assert_workspace_calls(self, group_call_count, user=None):
 class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, VariantSearchAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data', 'variant_searches']
 
-    EXPECTED_SEARCH_RESPONSE = EXPECTED_SEARCH_RESPONSE
+    EXPECTED_SEARCH_RESPONSE = {
+        **EXPECTED_SEARCH_RESPONSE,
+        'totalSampleCounts': {'WES': {'count': 7}},
+    }
 
     def test_query_variants(self, *args):
         super(AnvilVariantSearchAPITest, self).test_query_variants(*args)
