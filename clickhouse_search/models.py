@@ -198,9 +198,9 @@ class EntriesManager(Manager):
     def search(self, sample_data, parsed_locus=None, **kwargs):
         entries = self._search_call_data(sample_data, **kwargs)
         entries = self._filter_location(entries, **(parsed_locus or {}))
-        entries, clinvar_path_filters = self._filter_annotations(entries, **kwargs)
-        entries = self._filter_frequency(entries, clinvar_path_filters, **kwargs)
+        entries = self._filter_frequency(entries, **kwargs)
         entries = self._filter_in_silico(entries, **kwargs)
+        entries = self._filter_annotations(entries, **kwargs)
         return entries
 
     def _search_call_data(self, sample_data, inheritance_mode=None, inheritance_filter=None, qualityFilter=None, **kwargs):
@@ -289,13 +289,16 @@ class EntriesManager(Manager):
         return Q(xpos__range=(get_xpos(chrom, start), get_xpos(chrom, end)))
 
     @classmethod
-    def _filter_frequency(cls, entries, clinvar_path_filters, freqs=None, **kwargs):
+    def _filter_frequency(cls, entries, freqs=None, pathogenicity=None, **kwargs):
         frequencies =  freqs or {}
 
         gnomad_filter = frequencies.get('gnomad_genomes') or {}
         if (gnomad_filter.get('af') or 1) <= 0.05 or any(gnomad_filter.get(field) is not None for field in ['ac', 'hh']):
             entries = entries.filter(is_gnomad_gt_5_percent=False)
 
+        clinvar_path_filters = [
+            f for f in (pathogenicity or {}).get(CLINVAR_KEY) or [] if f in CLINVAR_PATH_SIGNIFICANCES
+        ]
         clinvar_override_q = cls._clinvar_filter_q(clinvar_path_filters) if clinvar_path_filters else None
 
         for population, pop_filter in frequencies.items():
@@ -413,7 +416,6 @@ class EntriesManager(Manager):
                 filter_qs.append(Q(key__hgmd__class___range=(min, max)))
 
         clinvar = (pathogenicity or {}).get(CLINVAR_KEY)
-        clinvar_path_filters = [f for f in clinvar or [] if clinvar in CLINVAR_PATH_SIGNIFICANCES]
         if clinvar:
             filter_qs.append(cls._clinvar_filter_q(clinvar))
 
@@ -427,7 +429,7 @@ class EntriesManager(Manager):
                 filter_q |= q
             entries = entries.filter(filter_q)
 
-        return entries, clinvar_path_filters
+        return entries
 
     @staticmethod
     def _clinvar_filter_q(clinvar_filters):
