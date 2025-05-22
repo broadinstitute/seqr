@@ -21,11 +21,15 @@ class ArrayExists(ArrayLookup):
     prepare_rhs = False
 
     def get_prep_lookup(self):
-        conditions = [
+        conditions = [[
             (template[0] if template else '{field} = {value}').format(field=f'x.{field}', value=value)
-            for field, (value, *template) in self.rhs.items() # pylint: disable=access-member-before-definition
+            for field, (value, *template) in condition_set.items()
+        ] for condition_set in self.rhs]  # pylint: disable=access-member-before-definition
+        conditions = [
+            f'and({", ".join(condition_set)})' if len(condition_set) > 1 else condition_set[0]
+            for condition_set in conditions
         ]
-        condition = f'and({", ".join(conditions)})' if len(conditions) > 1 else conditions[0]
+        condition = f'or({", ".join(conditions)})' if len(conditions) > 1 else conditions[0]
         self.rhs = f'x -> {condition}'
         return super().get_prep_lookup()
 

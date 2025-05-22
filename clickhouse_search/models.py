@@ -226,10 +226,10 @@ class EntriesManager(Manager):
            self._sample_genotype_filter(sample_filter, sample, affected, inheritance_mode, individual_genotype_filter)
            self._sample_quality_filter(sample_filter, affected, quality_filter)
            if sample_filter:
-               entries = entries.filter(calls__array_exists={
+               entries = entries.filter(calls__array_exists=[{
                    'sampleId': (f"'{sample['sample_id']}'",),
                    **sample_filter,
-               })
+               }])
 
        return entries
 
@@ -287,10 +287,10 @@ class EntriesManager(Manager):
 
     @staticmethod
     def _consequence_filter_q(value, filter_field='consequenceTerms', consequence_field='transcript', **kwargs):
-        return Q(**{f'key__sorted_{consequence_field}_consequences__array_exists': {
+        return Q(**{f'key__sorted_{consequence_field}_consequences__array_exists': [{
             filter_field: (value, 'hasAny({value}, {field})'),
             **kwargs,
-        }})
+        }]})
 
     @classmethod
     def _filter_frequency(cls, entries, freqs=None, **kwargs):
@@ -372,9 +372,9 @@ class EntriesManager(Manager):
                 filter_qs.append(cls._consequence_filter_q(value, filter_field='fiveutrConsequence'))
             elif field == EXTENDED_SPLICE_KEY:
                 if EXTENDED_SPLICE_REGION_CONSEQUENCE in value:
-                    filter_qs.append(Q(key__sorted_transcript_consequences__array_exists={
+                    filter_qs.append(Q(key__sorted_transcript_consequences__array_exists=[{
                         'extendedIntronicSpliceRegionVariant': (1,),
-                    }))
+                    }]))
             elif field == SCREEN_KEY:
                 filter_qs.append(Q(key__screen_region_type__in=value))
             elif field not in SV_ANNOTATION_TYPES:
