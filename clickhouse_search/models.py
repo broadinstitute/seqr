@@ -374,12 +374,7 @@ class EntriesManager(Manager):
 
         hgmd = (pathogenicity or {}).get(HGMD_KEY)
         if hgmd:
-            min_class = next(class_name for value, class_name in HGMD_CLASS_FILTERS if value in hgmd)
-            max_class = next(class_name for value, class_name in reversed(HGMD_CLASS_FILTERS) if value in hgmd)
-            if min_class == max_class:
-                filter_qs.append(Q(key__hgmd__class_=min_class))
-            else:
-                filter_qs.append(Q(key__hgmd__class___range=(min_class, max_class)))
+            filter_qs.append(cls._hgmd_filter_q(hgmd))
 
         clinvar = (pathogenicity or {}).get(CLINVAR_KEY)
         if clinvar:
@@ -436,6 +431,19 @@ class EntriesManager(Manager):
             } for transcript_filter in transcript_filters]))
 
         return filter_qs
+
+    @staticmethod
+    def _hgmd_filter_q(hgmd):
+        min_class = next((class_name for value, class_name in HGMD_CLASS_FILTERS if value in hgmd), None)
+        max_class = next((class_name for value, class_name in reversed(HGMD_CLASS_FILTERS) if value in hgmd), None)
+        if 'hgmd_other' in hgmd:
+            min_class = min_class or 'DP'
+            max_class = None
+        if min_class == max_class:
+            return Q(key__hgmd__class_=min_class)
+        elif min_class and max_class:
+            return Q(key__hgmd__class___range=(min_class, max_class))
+        return Q(key__hgmd__class___gt=min_class)
 
     @staticmethod
     def _clinvar_filter_q(clinvar_filters):

@@ -74,5 +74,4 @@ HGMD_KEY = 'hgmd'
 HGMD_CLASS_FILTERS = [
     ('disease_causing', 'DM'),
     ('likely_disease_causing', 'DM?'),
-    ('hgmd_other', 'DP'),
 ]
