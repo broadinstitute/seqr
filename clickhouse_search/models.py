@@ -7,7 +7,8 @@ from clickhouse_search.backend.fields import NestedField, UInt64FieldDeltaCodecF
 from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFECTED, UNAFFECTED, MALE_SEXES, \
     X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, SCREEN_KEY, UTR_ANNOTATOR_KEY, \
     EXTENDED_SPLICE_KEY, MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY, CLINVAR_KEY, HGMD_KEY, SV_ANNOTATION_TYPES, \
-    EXTENDED_SPLICE_REGION_CONSEQUENCE
+    EXTENDED_SPLICE_REGION_CONSEQUENCE, CLINVAR_PATH_RANGES, CLINVAR_PATH_SIGNIFICANCES, PATH_FREQ_OVERRIDE_CUTOFF, \
+    HGMD_CLASS_FILTERS
 from seqr.utils.xpos_utils import get_xpos, CHROMOSOMES
 from settings import CLICKHOUSE_IN_MEMORY_DIR, CLICKHOUSE_DATA_DIR
 
@@ -188,12 +189,6 @@ class EntriesManager(Manager):
 
     QUALITY_FILTERS = [('gq', 1), ('ab', 100, 'x.gt != 1')]
 
-    HGMD_CLASS_FILTERS = [
-        ('disease_causing', 'DM'),
-        ('likely_disease_causing', 'DM?'),
-        ('hgmd_other', 'DP'),
-    ]
-
     POPULATIONS = {
         population: {subfield for subfield, _ in field.base_fields}
         for population, field in AnnotationsSnvIndel.POPULATION_FIELDS
@@ -203,9 +198,9 @@ class EntriesManager(Manager):
     def search(self, sample_data, parsed_locus=None, **kwargs):
         entries = self._search_call_data(sample_data, **kwargs)
         entries = self._filter_location(entries, **(parsed_locus or {}))
-        entries = self._filter_frequency(entries, **kwargs)
+        entries, clinvar_path_filters = self._filter_annotations(entries, **kwargs)
+        entries = self._filter_frequency(entries, clinvar_path_filters, **kwargs)
         entries = self._filter_in_silico(entries, **kwargs)
-        entries = self._filter_annotations(entries, **kwargs)
         return entries
 
     def _search_call_data(self, sample_data, inheritance_mode=None, inheritance_filter=None, qualityFilter=None, **kwargs):
@@ -294,12 +289,14 @@ class EntriesManager(Manager):
         return Q(xpos__range=(get_xpos(chrom, start), get_xpos(chrom, end)))
 
     @classmethod
-    def _filter_frequency(cls, entries, freqs=None, **kwargs):
+    def _filter_frequency(cls, entries, clinvar_path_filters, freqs=None, **kwargs):
         frequencies =  freqs or {}
 
         gnomad_filter = frequencies.get('gnomad_genomes') or {}
         if (gnomad_filter.get('af') or 1) <= 0.05 or any(gnomad_filter.get(field) is not None for field in ['ac', 'hh']):
             entries = entries.filter(is_gnomad_gt_5_percent=False)
+
+        clinvar_override_q = cls._clinvar_filter_q(clinvar_path_filters) if clinvar_path_filters else None
 
         for population, pop_filter in frequencies.items():
             pop_subfields = cls.POPULATIONS.get(population)
@@ -309,17 +306,25 @@ class EntriesManager(Manager):
             if pop_filter.get('af') is not None and pop_filter['af'] < 1:
                 af_field = next(field for field in ['filter_af', 'af'] if field in pop_subfields)
                 if af_field:
-                    entries = entries.filter(**{
+                    af_q = Q(**{
                         f'key__populations__{population}__{af_field}__lte': pop_filter['af'],
                     })
+                    if clinvar_path_filters and pop_filter['af'] < PATH_FREQ_OVERRIDE_CUTOFF:
+                        af_q |= clinvar_override_q
+                    entries = entries.filter(af_q)
             elif pop_filter.get('ac') is not None:
                 entries = entries.filter(**{f'key__populations__{population}__ac__lte': pop_filter['ac']})
 
             if pop_filter.get('hh') is not None:
-                entries = entries.filter(**{
-                    f'key__populations__{population}__{subfield}__lte': pop_filter['hh']
-                    for subfield in ['hom', 'hemi'] if subfield in pop_subfields
-                })
+                for subfield in ['hom', 'hemi']:
+                    if subfield not in pop_subfields:
+                        continue
+                    hh_q = Q(**{
+                        f'key__populations__{population}__{subfield}__lte': pop_filter['hh'],
+                    })
+                    if clinvar_path_filters:
+                        hh_q |= clinvar_override_q
+                    entries = entries.filter(hh_q)
 
         if frequencies.get('callset'):
             entries = cls._filter_seqr_frequency(entries, **frequencies['callset'])
@@ -400,14 +405,15 @@ class EntriesManager(Manager):
 
         hgmd = (pathogenicity or {}).get(HGMD_KEY)
         if hgmd:
-            min = next(class_name for value, class_name in cls.HGMD_CLASS_FILTERS if value in hgmd)
-            max = next(class_name for value, class_name in reversed(cls.HGMD_CLASS_FILTERS) if value in hgmd)
+            min = next(class_name for value, class_name in HGMD_CLASS_FILTERS if value in hgmd)
+            max = next(class_name for value, class_name in reversed(HGMD_CLASS_FILTERS) if value in hgmd)
             if min == max:
                 filter_qs.append(Q(key__hgmd__class_=min))
             else:
                 filter_qs.append(Q(key__hgmd__class___range=(min, max)))
 
         clinvar = (pathogenicity or {}).get(CLINVAR_KEY)
+        clinvar_path_filters = [f for f in clinvar or [] if clinvar in CLINVAR_PATH_SIGNIFICANCES]
         if clinvar:
             filter_qs.append(cls._clinvar_filter_q(clinvar))
 
@@ -415,13 +421,13 @@ class EntriesManager(Manager):
         if exclude_clinvar:
             entries = entries.exclude(cls._clinvar_filter_q(exclude_clinvar))
 
-        if not filter_qs:
-            return entries
+        if filter_qs:
+            filter_q = filter_qs[0]
+            for q in filter_qs[1:]:
+                filter_q |= q
+            entries = entries.filter(filter_q)
 
-        filter_q = filter_qs[0]
-        for q in filter_qs[1:]:
-            filter_q |= q
-        return entries.filter(filter_q)
+        return entries, clinvar_path_filters
 
     @staticmethod
     def _clinvar_filter_q(clinvar_filters):
