@@ -130,7 +130,7 @@ VARIANT1 = {
     'hgmd': None,
     'screenRegionType': None,
     'populations': {
-        'seqr': {'af': 0.10000000149011612, 'ac': 9, 'an': 90, 'hom': 2},
+        'seqr': {'ac': 9, 'hom': 2},
         'topmed': {'af': 0.0784199982881546, 'ac': 20757, 'an': 264690, 'hom': 0, 'het': 20757},
         'exac': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'hemi': 0, 'het': 0, 'filter_af': 0.0},
         'gnomad_exomes': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'hemi': 0, 'filter_af': 0.0},
@@ -238,7 +238,7 @@ VARIANT2 = {
     'hgmd': {'accession': 'CM981315', 'class': 'DFP'},
     'screenRegionType': None,
     'populations': {
-       'seqr': {'af': 0.31111112236976624, 'ac': 28, 'an': 90, 'hom': 4},
+       'seqr': {'ac': 28, 'hom': 4},
        'topmed': {'af': 0.24615199863910675, 'ac': 65154, 'an': 264690, 'hom': 8775, 'het': 47604},
        'exac': {'af': 0.29499998688697815, 'ac': 35805, 'an': 121372, 'hom': 5872, 'hemi': 0, 'het': 24061, 'filter_af': 0.4153035283088684},
        'gnomad_exomes': {'af': 0.28899794816970825, 'ac': 72672, 'an': 251462, 'hom': 11567, 'hemi': 0, 'filter_af': 0.4116474986076355},
@@ -340,7 +340,7 @@ VARIANT3 = {
     'hgmd': None,
     'screenRegionType': None,
     'populations': {
-        'seqr': {'af': 0.6666666865348816, 'ac': 4, 'an': 6, 'hom': 1},
+        'seqr': {'ac': 4, 'hom': 1},
         'topmed': {'af': 0.36268100142478943, 'ac': 95998, 'an': 264690, 'hom': 19369, 'het': 57260},
         'exac': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'hemi': 0, 'het': 0, 'filter_af': 0.0},
         'gnomad_exomes': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'hemi': 0, 'filter_af': 0.0},
@@ -433,7 +433,7 @@ VARIANT4 = {
     'hgmd': None,
     'screenRegionType': 'CTCF-only',
     'populations': {
-        'seqr': {'af': 0.02222222276031971, 'ac': 2, 'an': 90, 'hom': 0},
+        'seqr': {'ac': 2, 'hom': 0},
         'topmed': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'het': 0},
         'exac': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'hemi': 0, 'het': 0, 'filter_af': 0.0},
         'gnomad_exomes': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'hemi': 0, 'filter_af': 0.0},

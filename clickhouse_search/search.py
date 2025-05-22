@@ -19,7 +19,6 @@ CORE_ENTRIES_FIELDS = ['key', 'xpos']
 
 GT_STATS_DICT_FIELDS = OrderedDict({
     'ac': models.UInt32Field(),
-    'an': models.UInt32Field(),
     'hom': models.UInt32Field(),
 })
 GT_STATS_DICT_ATTRS = [f"'{field}'" for field in GT_STATS_DICT_FIELDS.keys()]

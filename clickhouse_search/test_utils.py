@@ -19,15 +19,14 @@ for variant in [VARIANT1, VARIANT2, VARIANT3, VARIANT4]:
         if isinstance(pred_val, float):
             variant['predictions'][pred] = round(pred_val, 5)
     for pop in variant['populations'].values():
-        pop['af'] = round(pop['af'], 5)
+        if 'af' in pop:
+            pop['af'] = round(pop['af'], 5)
         if 'filter_af' in pop:
             pop['filter_af'] = round(pop['filter_af'], 5)
     for transcripts in variant['transcripts'].values():
         for transcript in transcripts:
             if transcript['alphamissense']['pathogenicity']:
                 transcript['alphamissense']['pathogenicity'] = round(transcript['alphamissense']['pathogenicity'], 5)
-    # global seqr AF is no longer supported
-    del variant['populations']['seqr']['af']
     # sort is not computed/annotated at query time
     del variant['_sort']
 
