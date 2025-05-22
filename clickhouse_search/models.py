@@ -203,7 +203,7 @@ class EntriesManager(Manager):
         entries = self._filter_annotations(entries, **kwargs)
         return entries
 
-    def _search_call_data(self, sample_data, inheritance_mode=None, inheritance_filter=None, qualityFilter=None, **kwargs):
+    def _search_call_data(self, sample_data, inheritance_mode=None, inheritance_filter=None, qualityFilter=None, pathogenicity=None, **kwargs):
        if len(sample_data) > 1:
            raise NotImplementedError('Clickhouse search not implemented for multiple families or sample types')
 
@@ -221,21 +221,26 @@ class EntriesManager(Manager):
        if not (inheritance_mode or individual_genotype_filter or quality_filter):
            return entries
 
+       clinvar_override_q = self._clinvar_path_q(pathogenicity)
+
        for sample in sample_data[0]['samples']:
            affected = custom_affected.get(sample['individual_guid']) or sample['affected']
-           sample_filter = {}
-           self._sample_genotype_filter(sample_filter, sample, affected, inheritance_mode, individual_genotype_filter)
-           self._sample_quality_filter(sample_filter, affected, quality_filter)
-           if sample_filter:
-               entries = entries.filter(calls__array_exists={
-                   'sampleId': (f"'{sample['sample_id']}'",),
-                   **sample_filter,
-               })
+           sample_inheritance_filter = self._sample_genotype_filter(sample, affected, inheritance_mode, individual_genotype_filter)
+           sample_quality_filter = self._sample_quality_filter(affected, quality_filter)
+           if not sample_inheritance_filter or sample_quality_filter:
+               continue
+           sample_inheritance_filter['sampleId'] = (f"'{sample['sample_id']}'",),
+           sample_q = Q(calls__array_exists={**sample_inheritance_filter, **sample_quality_filter})
+           if clinvar_override_q and sample_quality_filter:
+               sample_q |= clinvar_override_q & Q(calls__array_exists=sample_inheritance_filter)
+
+           entries = entries.filter(sample_q)
 
        return entries
 
     @classmethod
-    def _sample_genotype_filter(cls, sample_filter, sample, affected, inheritance_mode, individual_genotype_filter):
+    def _sample_genotype_filter(cls, sample, affected, inheritance_mode, individual_genotype_filter):
+        sample_filter = {}
         genotype = None
         if individual_genotype_filter:
             genotype = individual_genotype_filter.get(sample['individual_guid'])
@@ -245,17 +250,21 @@ class EntriesManager(Manager):
                 genotype = REF_REF
         if genotype:
             sample_filter['gt'] = cls.GENOTYPE_LOOKUP[genotype]
+        return sample_filter
 
     @classmethod
-    def _sample_quality_filter(cls, sample_filter, affected, quality_filter):
+    def _sample_quality_filter(cls, affected, quality_filter):
+        sample_filter = {}
         if quality_filter.get('affected_only') and affected != AFFECTED:
-            return
+            return sample_filter
 
         for field, scale, *filters in cls.QUALITY_FILTERS:
             value = quality_filter.get(f'min_{field}')
             if value:
                 or_filters = ['isNull({field})', '{field} >= {value}'] + filters
                 sample_filter[field] = (value / scale, f'or({", ".join(or_filters)})')
+
+        return sample_filter
 
     @classmethod
     def _filter_location(cls, entries, exclude_intervals=False, intervals=None, gene_ids=None, variant_ids=None, rs_ids=None):
@@ -296,10 +305,7 @@ class EntriesManager(Manager):
         if (gnomad_filter.get('af') or 1) <= 0.05 or any(gnomad_filter.get(field) is not None for field in ['ac', 'hh']):
             entries = entries.filter(is_gnomad_gt_5_percent=False)
 
-        clinvar_path_filters = [
-            f for f in (pathogenicity or {}).get(CLINVAR_KEY) or [] if f in CLINVAR_PATH_SIGNIFICANCES
-        ]
-        clinvar_override_q = cls._clinvar_filter_q(clinvar_path_filters) if clinvar_path_filters else None
+        clinvar_override_q = cls._clinvar_path_q(pathogenicity)
 
         for population, pop_filter in frequencies.items():
             pop_subfields = cls.POPULATIONS.get(population)
@@ -312,7 +318,7 @@ class EntriesManager(Manager):
                     af_q = Q(**{
                         f'key__populations__{population}__{af_field}__lte': pop_filter['af'],
                     })
-                    if clinvar_path_filters and pop_filter['af'] < PATH_FREQ_OVERRIDE_CUTOFF:
+                    if clinvar_override_q and pop_filter['af'] < PATH_FREQ_OVERRIDE_CUTOFF:
                         af_q |= clinvar_override_q
                     entries = entries.filter(af_q)
             elif pop_filter.get('ac') is not None:
@@ -325,7 +331,7 @@ class EntriesManager(Manager):
                     hh_q = Q(**{
                         f'key__populations__{population}__{subfield}__lte': pop_filter['hh'],
                     })
-                    if clinvar_path_filters:
+                    if clinvar_override_q:
                         hh_q |= clinvar_override_q
                     entries = entries.filter(hh_q)
 
@@ -461,6 +467,13 @@ class EntriesManager(Manager):
         for path_range in ranges[1:]:
             clinvar_q |= Q(key__clinvar__pathogenicity__range=path_range)
         return clinvar_q
+
+    @classmethod
+    def _clinvar_path_q(cls, pathogenicity):
+        clinvar_path_filters = [
+            f for f in (pathogenicity or {}).get(CLINVAR_KEY) or [] if f in CLINVAR_PATH_SIGNIFICANCES
+        ]
+        return cls._clinvar_filter_q(clinvar_path_filters) if clinvar_path_filters else None
 
 
 class EntriesSnvIndel(models.ClickhouseModel):
