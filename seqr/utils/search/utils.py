@@ -15,7 +15,7 @@ from seqr.utils.search.elasticsearch.es_utils import ping_elasticsearch, delete_
 from seqr.utils.search.hail_search_utils import get_hail_variants, get_hail_variants_for_variant_ids, ping_hail_backend, \
     hail_variant_lookup, hail_sv_variant_lookup, validate_hail_backend_no_location_search
 from seqr.utils.gene_utils import parse_locus_list_items
-from seqr.utils.xpos_utils import get_xpos, format_chrom
+from seqr.utils.xpos_utils import get_xpos, format_chrom, MIN_POS, MAX_POS
 
 
 class InvalidSearchException(Exception):
@@ -283,10 +283,10 @@ def _query_variants(search_model, user, previous_search_results, sort=None, num_
             raise InvalidSearchException(f'ClinVar pathogenicity {", ".join(sorted(duplicates))} is both included and excluded')
 
     parsed_search = {
-        'parsedLocus': {
-            'genes': genes, 'intervals': intervals, 'rs_ids': rs_ids, 'variant_ids': variant_ids,
-            'parsed_variant_ids': parsed_variant_ids, 'exclude_locations': exclude_locations,
-        },
+        'parsed_locus': backend_specific_call(
+            lambda genome_version, **kwargs: kwargs, _parse_locus_intervals, _parse_locus_intervals,
+        )(genome_version, genes=genes, intervals=intervals, rs_ids=rs_ids, variant_ids=variant_ids,
+          parsed_variant_ids=parsed_variant_ids, exclude_locations=exclude_locations),
     }
     parsed_search.update(search)
     for annotation_key in ['annotations', 'annotations_secondary']:
@@ -407,35 +407,46 @@ def _validate_sort(sort, families):
 
 
 def _search_dataset_type(search):
-    if search['parsedLocus']['parsed_variant_ids']:
-        return Sample.DATASET_TYPE_VARIANT_CALLS, None, _variant_ids_dataset_type(search['parsedLocus']['parsed_variant_ids'])
+    locus = search['parsed_locus']
+    parsed_variant_ids = locus.get('parsed_variant_ids', locus['variant_ids'])
+    if parsed_variant_ids:
+        return Sample.DATASET_TYPE_VARIANT_CALLS, None, _variant_ids_dataset_type(parsed_variant_ids)
 
-    dataset_type = _annotation_dataset_type(search.get('annotations'), pathogenicity=search.get('pathogenicity'))
-    secondary_dataset_type = _annotation_dataset_type(search.get('annotations_secondary'))
+    intervals = locus['intervals'] if 'exclude_intervals' in locus and not locus['exclude_intervals'] else None
+    dataset_type = _annotation_dataset_type(search.get('annotations'), intervals, pathogenicity=search.get('pathogenicity'))
+    secondary_dataset_type = _annotation_dataset_type(search['annotations_secondary'], intervals) if search.get('annotations_secondary') else None
+
     return dataset_type, secondary_dataset_type, None
 
 
 def _variant_ids_dataset_type(all_variant_ids):
     variant_ids = [v for v in all_variant_ids if v]
     any_sv = len(variant_ids) < len(all_variant_ids)
-    has_mito = [chrom for chrom, _, _, _ in variant_ids if chrom.replace('chr', '').startswith('M')]
     if len(variant_ids) == 0:
         return Sample.DATASET_TYPE_SV_CALLS
-    elif len(has_mito) == len(all_variant_ids):
+    return  _chromosome_filter_dataset_type(variant_ids, any_sv)
+
+def _chromosome_filter_dataset_type(loci, any_sv):
+    has_mito = [locus[0] for locus in loci if locus[0].replace('chr', '').startswith('M')]
+    if len(has_mito) == len(loci):
         return Sample.DATASET_TYPE_MITO_CALLS
     elif not has_mito:
         return DATASET_TYPE_NO_MITO if any_sv else DATASET_TYPE_SNP_INDEL_ONLY
     return ALL_DATA_TYPES if any_sv else Sample.DATASET_TYPE_VARIANT_CALLS
 
 
-def _annotation_dataset_type(annotations, pathogenicity=None):
-    if not annotations:
+def _annotation_dataset_type(annotations, intervals, pathogenicity=None):
+    if not (annotations or intervals):
         return Sample.DATASET_TYPE_VARIANT_CALLS if pathogenicity else None
 
-    annotation_types = set(annotations.keys())
-    if annotation_types.issubset(SV_ANNOTATION_TYPES):
+    annotation_types = set((annotations or {}).keys())
+    if annotations and annotation_types.issubset(SV_ANNOTATION_TYPES):
         return Sample.DATASET_TYPE_SV_CALLS
-    elif annotation_types.isdisjoint(SV_ANNOTATION_TYPES):
+
+    no_svs = (annotations and annotation_types.isdisjoint(SV_ANNOTATION_TYPES))
+    if intervals:
+        return _chromosome_filter_dataset_type(intervals, any_sv=not no_svs)
+    elif no_svs:
         return Sample.DATASET_TYPE_VARIANT_CALLS
     return ALL_DATA_TYPES
 
@@ -469,7 +480,7 @@ def _parse_inheritance(search, samples):
 
 def _validate_search(search, samples, previous_search_results):
     has_comp_het_search = search.get('inheritance_mode') in {RECESSIVE, COMPOUND_HET} and not previous_search_results.get('grouped_results')
-    has_location_filter = any(search['parsedLocus'][field] for field in ['genes', 'intervals', 'parsed_variant_ids'])
+    has_location_filter = any(search['parsed_locus'].get(field) for field in ['genes', 'gene_ids', 'intervals', 'variant_ids'])
     if has_comp_het_search:
         if not search.get('annotations'):
             raise InvalidSearchException('Annotations must be specified to search for compound heterozygous variants')
@@ -517,3 +528,25 @@ def _filter_inheritance_family_samples(samples, inheritance_filter):
     return [
         s for s in samples if getattr(s, sample_group_field) not in family_groups[s.individual.family_id]
     ]
+
+def _parse_locus_intervals(genome_version, genes=None, intervals=None, rs_ids=None, parsed_variant_ids=None, exclude_locations=False, **kwargs):
+    parsed_intervals = [_format_interval(**interval) for interval in intervals or []] + sorted([
+        [gene[f'{field}Grch{genome_version}'] for field in ['chrom', 'start', 'end']] for gene in (genes or {}).values()
+    ]) if genes or intervals else None
+
+    return {
+        'intervals': parsed_intervals,
+        'exclude_intervals': exclude_locations,
+        'gene_ids': None if (exclude_locations or not genes) else sorted(genes.keys()),
+        'variant_ids': parsed_variant_ids,
+        'rs_ids': rs_ids,
+    }
+
+
+def _format_interval(chrom=None, start=None, end=None, offset=None, **kwargs):
+    if offset:
+        offset_pos = int((end - start) * offset)
+        start = max(start - offset_pos, MIN_POS)
+        end = min(end + offset_pos, MAX_POS)
+    return [chrom, start, end]
+

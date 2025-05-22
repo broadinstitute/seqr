@@ -62,8 +62,6 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
             'sort_metadata': sort_metadata,
             'inheritance_mode': inheritance_mode,
             'inheritance_filter': inheritance_filter or {},
-            'dataset_type': dataset_type,
-            'secondary_dataset_type': secondary_dataset_type,
             'frequencies': frequencies,
             'quality_filter': quality_filter,
             'intervals': intervals,
