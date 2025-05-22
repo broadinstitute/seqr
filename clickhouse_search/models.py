@@ -408,12 +408,12 @@ class EntriesManager(Manager):
 
         hgmd = (pathogenicity or {}).get(HGMD_KEY)
         if hgmd:
-            min = next(class_name for value, class_name in HGMD_CLASS_FILTERS if value in hgmd)
-            max = next(class_name for value, class_name in reversed(HGMD_CLASS_FILTERS) if value in hgmd)
-            if min == max:
-                filter_qs.append(Q(key__hgmd__class_=min))
+            min_class = next(class_name for value, class_name in HGMD_CLASS_FILTERS if value in hgmd)
+            max_class = next(class_name for value, class_name in reversed(HGMD_CLASS_FILTERS) if value in hgmd)
+            if min_class == max_class:
+                filter_qs.append(Q(key__hgmd__class_=min_class))
             else:
-                filter_qs.append(Q(key__hgmd__class___range=(min, max)))
+                filter_qs.append(Q(key__hgmd__class___range=(min_class, max_class)))
 
         clinvar = (pathogenicity or {}).get(CLINVAR_KEY)
         if clinvar:
@@ -444,8 +444,8 @@ class EntriesManager(Manager):
         ranges = [r for r in ranges if r[0] is not None]
 
         clinvar_q = Q(key__clinvar__pathogenicity__range=ranges[0])
-        for range in ranges[1:]:
-            clinvar_q |= Q(key__clinvar__pathogenicity__range=range)
+        for path_range in ranges[1:]:
+            clinvar_q |= Q(key__clinvar__pathogenicity__range=path_range)
         return clinvar_q
 
 
