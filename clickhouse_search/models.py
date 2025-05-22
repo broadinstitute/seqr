@@ -133,8 +133,8 @@ class BaseAnnotationsSnvIndel(models.ClickhouseModel):
     lifted_over_pos = models.UInt32Field(db_column='liftedOverPos', null=True, blank=True)
     hgmd = NamedTupleField([
         ('accession', models.StringField(null=True, blank=True)),
-        ('hgmd_class', models.Enum8Field(null=True, blank=True, return_int=False, choices=[(0, 'DM'), (1, 'DM?'), (2, 'DP'), (3, 'DFP'), (4, 'FP'), (5, 'R')])),
-    ], null_if_empty=True, rename_fields={'hgmd_class': 'class'})
+        ('classification', models.Enum8Field(null=True, blank=True, return_int=False, choices=[(0, 'DM'), (1, 'DM?'), (2, 'DP'), (3, 'DFP'), (4, 'FP'), (5, 'R')])),
+    ], null_if_empty=True, rename_fields={'classification': 'class'})
     screen_region_type = models.Enum8Field(db_column='screenRegionType', null=True, blank=True, return_int=False, choices=[(0, 'CTCF-bound'), (1, 'CTCF-only'), (2, 'DNase-H3K4me3'), (3, 'PLS'), (4, 'dELS'), (5, 'pELS'), (6, 'DNase-only'), (7, 'low-DNase')])
     predictions = NamedTupleField(PREDICTION_FIELDS)
     populations = NamedTupleField(POPULATION_FIELDS)
@@ -446,10 +446,10 @@ class EntriesManager(Manager):
             min_class = min_class or 'DP'
             max_class = None
         if min_class == max_class:
-            return Q(key__hgmd__class_=min_class)
+            return Q(key__hgmd__classification=min_class)
         elif min_class and max_class:
-            return Q(key__hgmd__class___range=(min_class, max_class))
-        return Q(key__hgmd__class___gt=min_class)
+            return Q(key__hgmd__classification__range=(min_class, max_class))
+        return Q(key__hgmd__classification__gt=min_class)
 
     @staticmethod
     def _clinvar_filter_q(clinvar_filters):
