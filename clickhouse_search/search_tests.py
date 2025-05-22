@@ -573,7 +573,8 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #             for variant in results
 #         ]})
 #
-#     def test_frequency_filter(self):
+    def test_frequency_filter(self):
+        self.results_model.families.set(self.families.filter(guid='F000002_2'))
 #         sv_callset_filter = {'sv_callset': {'af': 0.05}}
 #         # seqr af filter is ignored for SNV_INDEL
 #         await self._assert_expected_search(
@@ -606,14 +607,14 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #             [SV_VARIANT1], frequencies=sv_callset_filter, sample_data=SV_WGS_SAMPLE_DATA,
 #         )
 #
-#         self._assert_expected_search(
-#             [VARIANT1, VARIANT2, VARIANT4], frequencies={'gnomad_genomes': {'af': 0.05}}, omit_data_type='SV_WES',
-#         )
-#
-#         self._assert_expected_search(
-#             [VARIANT2, VARIANT4], frequencies={'gnomad_genomes': {'af': 0.05, 'hh': 1}}, omit_data_type='SV_WES',
-#         )
-#
+        self._assert_expected_search(
+            [VARIANT1, VARIANT2, VARIANT4], freqs={'gnomad_genomes': {'af': 0.05}},
+        )
+
+        self._assert_expected_search(
+            [VARIANT2, VARIANT4], freqs={'gnomad_genomes': {'af': 0.05, 'hh': 1}},
+        )
+
 #         self._assert_expected_search(
 #             [VARIANT2, VARIANT4, MITO_VARIANT1, MITO_VARIANT2], sample_data=FAMILY_2_ALL_SAMPLE_DATA,
 #             frequencies={'gnomad_genomes': {'af': 0.005}, 'gnomad_mito': {'af': 0.05}},
@@ -622,17 +623,17 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #         self._assert_expected_search(
 #             [SV_VARIANT1, SV_VARIANT3, SV_VARIANT4], frequencies={'gnomad_svs': {'af': 0.001}}, sample_data=SV_WGS_SAMPLE_DATA,
 #         )
-#
-#         self._assert_expected_search(
-#             [VARIANT4], frequencies={'seqr': {'ac': 10}, 'gnomad_genomes': {'ac': 50}},
-#             omit_data_type='SV_WES',
-#         )
-#
-#         self._assert_expected_search(
-#             [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4], frequencies={'seqr': {}, 'gnomad_genomes': {'af': None}},
-#             omit_data_type='SV_WES',
-#         )
-#
+
+        self._assert_expected_search(
+            [VARIANT2, VARIANT4], freqs={'gnomad_genomes': {'ac': 50}},
+            # [VARIANT4], frequencies={'seqr': {'ac': 10}, 'gnomad_genomes': {'ac': 50}},
+        )
+
+        self._assert_expected_search(
+            [VARIANT1, VARIANT2, VARIANT3, VARIANT4], freqs={'seqr': {}, 'gnomad_genomes': {'af': None}},
+            # [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4], frequencies={'seqr': {}, 'gnomad_genomes': {'af': None}},
+        )
+
 #         annotations = {'splice_ai': '0.0'}  # Ensures no variants are filtered out by annotation/path filters
 #         self._assert_expected_search(
 #             [VARIANT1, VARIANT2, VARIANT4], frequencies={'gnomad_genomes': {'af': 0.01, 'hh': 10}}, omit_data_type='SV_WES',
@@ -887,24 +888,26 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #             inheritance_mode='recessive', omit_data_type='SV_WES',
 #         )
 #
-#     def test_in_silico_filter(self):
-#         in_silico = {'eigen': '3.5', 'mut_taster': 'N', 'vest': 0.5}
-#         self._assert_expected_search(
-#             [VARIANT1, VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], in_silico=in_silico,
-#             sample_data=FAMILY_2_ALL_SAMPLE_DATA,
-#         )
-#
+    def test_in_silico_filter(self):
+        self.results_model.families.set(self.families.filter(guid='F000002_2'))
+        in_silico = {'eigen': '3.5', 'mut_taster': 'N', 'vest': 0.5}
+        self._assert_expected_search(
+            [VARIANT1, VARIANT4], in_silico=in_silico,
+#            [VARIANT1, VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], in_silico=in_silico,
+        )
+
 #         self._assert_expected_search(
 #             [GRCH37_VARIANT], genome_version='GRCh37', in_silico=in_silico,
 #             sample_data=FAMILY_2_VARIANT_SAMPLE_DATA,
 #         )
-#
-#         in_silico['requireScore'] = True
-#         in_silico.pop('eigen')
-#         self._assert_expected_search(
-#             [VARIANT4, MITO_VARIANT2], in_silico=in_silico, sample_data=FAMILY_2_ALL_SAMPLE_DATA,
-#         )
-#
+
+        in_silico['requireScore'] = True
+        in_silico.pop('eigen')
+        self._assert_expected_search(
+            [VARIANT4], in_silico=in_silico,
+#            [VARIANT4, MITO_VARIANT2], in_silico=in_silico, sample_data=FAMILY_2_ALL_SAMPLE_DATA,
+        )
+
 #         sv_in_silico = {'strvctvre': 0.1, 'requireScore': True}
 #         self._assert_expected_search(
 #             [GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4], omit_data_type='SNV_INDEL', in_silico=sv_in_silico,
