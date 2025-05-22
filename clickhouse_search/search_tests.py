@@ -5,7 +5,8 @@ import mock
 import os
 
 from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4, CACHED_VARIANTS_BY_KEY, \
-    VARIANT_ID_SEARCH, VARIANT_IDS, LOCATION_SEARCH
+    VARIANT_ID_SEARCH, VARIANT_IDS, LOCATION_SEARCH, GENE_IDS
+from hail_search.test_search import SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3
 from seqr.models import Project
 from seqr.utils.search.search_utils_tests import SearchTestHelper
 from seqr.utils.search.utils import query_variants
@@ -392,17 +393,18 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             # [VARIANT2, FAMILY_3_VARIANT], omit_data_type='SV_WES',
         )
 
-        # annotations = {'splice_ai': '0.0'}  # Ensures no variants are filtered out by annotation/path filters
-        # self._assert_expected_search(
-        #     [VARIANT1, VARIANT2, FAMILY_3_VARIANT, MITO_VARIANT1, MITO_VARIANT3], quality_filter=quality_filter, omit_data_type='SV_WES',
-        #     annotations=annotations, pathogenicity={'clinvar': ['likely_pathogenic', 'vus_or_conflicting']},
-        #     sample_data={**EXPECTED_SAMPLE_DATA, **FAMILY_2_MITO_SAMPLE_DATA},
-        # )
-        #
-        # self._assert_expected_search(
-        #     [VARIANT2, FAMILY_3_VARIANT], quality_filter=quality_filter, omit_data_type='SV_WES',
-        #     annotations=annotations, pathogenicity={'clinvar': ['pathogenic']},
-        # )
+        annotations = {'splice_ai': '0.0'}  # Ensures no variants are filtered out by annotation/path filters
+        self._assert_expected_search(
+            [VARIANT1, VARIANT2], quality_filter=quality_filter,
+            # [VARIANT1, VARIANT2, FAMILY_3_VARIANT, MITO_VARIANT1, MITO_VARIANT3], quality_filter=quality_filter, omit_data_type='SV_WES',
+            annotations=annotations, pathogenicity={'clinvar': ['likely_pathogenic', 'vus_or_conflicting']},
+        )
+
+        self._assert_expected_search(
+            [VARIANT2], quality_filter=quality_filter,
+            # [VARIANT2, FAMILY_3_VARIANT], quality_filter=quality_filter, omit_data_type='SV_WES',
+            annotations=annotations, pathogenicity={'clinvar': ['pathogenic']},
+        )
 #
     def test_location_search(self):
         self.results_model.families.set(self.families.filter(guid='F000002_2'))
@@ -629,103 +631,118 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             # [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4], frequencies={'seqr': {}, 'gnomad_genomes': {'af': None}},
         )
 
-#         annotations = {'splice_ai': '0.0'}  # Ensures no variants are filtered out by annotation/path filters
-#         self._assert_expected_search(
-#             [VARIANT1, VARIANT2, VARIANT4], frequencies={'gnomad_genomes': {'af': 0.01, 'hh': 10}}, omit_data_type='SV_WES',
-#             annotations=annotations, pathogenicity={'clinvar': ['pathogenic', 'likely_pathogenic', 'vus_or_conflicting']},
-#         )
-#
-#         self._assert_expected_search(
-#             [VARIANT2, VARIANT4], frequencies={'gnomad_genomes': {'af': 0.01}}, omit_data_type='SV_WES',
-#             annotations=annotations, pathogenicity={'clinvar': ['pathogenic', 'vus_or_conflicting']},
-#         )
-#
-#     def test_annotations_filter(self):
-#         self._assert_expected_search([VARIANT2], pathogenicity={'hgmd': ['hgmd_other']}, omit_data_type='SV_WES')
-#
-#         pathogenicity = {'clinvar': ['likely_pathogenic', 'vus_or_conflicting', 'benign']}
-#         self._assert_expected_search(
-#             [VARIANT1, VARIANT2, MITO_VARIANT1, MITO_VARIANT3], pathogenicity=pathogenicity, sample_data=FAMILY_2_ALL_SAMPLE_DATA,
-#         )
-#
-#         exclude = {'clinvar': pathogenicity['clinvar'][1:]}
-#         pathogenicity['clinvar'] = pathogenicity['clinvar'][:1]
-#         annotations = {'SCREEN': ['CTCF-only', 'DNase-only'], 'UTRAnnotator': ['5_prime_UTR_stop_codon_loss_variant']}
-#         selected_transcript_variant_2 = {**VARIANT2, 'selectedMainTranscriptId': 'ENST00000408919'}
-#         self._assert_expected_search(
-#             [VARIANT1, selected_transcript_variant_2, VARIANT4, MITO_VARIANT3], pathogenicity=pathogenicity, annotations=annotations,
-#             sample_data=FAMILY_2_ALL_SAMPLE_DATA,
-#         )
-#
-#         self._assert_expected_search(
-#             [VARIANT1, VARIANT4, MITO_VARIANT3], exclude=exclude, pathogenicity=pathogenicity,
-#             annotations=annotations, sample_data=FAMILY_2_ALL_SAMPLE_DATA,
-#         )
-#
+        annotations = {'splice_ai': '0.0'}  # Ensures no variants are filtered out by annotation/path filters
+        self._assert_expected_search(
+            [VARIANT1, VARIANT2, VARIANT4], freqs={'gnomad_genomes': {'af': 0.01, 'hh': 10}},
+            annotations=annotations, pathogenicity={'clinvar': ['pathogenic', 'likely_pathogenic', 'vus_or_conflicting']},
+        )
+
+        self._assert_expected_search(
+            [VARIANT2, VARIANT4], freqs={'gnomad_genomes': {'af': 0.01}},
+            annotations=annotations, pathogenicity={'clinvar': ['pathogenic', 'vus_or_conflicting']},
+        )
+
+    def test_annotations_filter(self):
+        self.results_model.families.set(self.families.filter(guid='F000002_2'))
+
+        self._assert_expected_search([VARIANT2], pathogenicity={'hgmd': ['hgmd_other']})
+
+        pathogenicity = {'clinvar': ['likely_pathogenic', 'vus_or_conflicting', 'benign']}
+        self._assert_expected_search(
+            [VARIANT1, VARIANT2], pathogenicity=pathogenicity,
+            # [VARIANT1, VARIANT2, MITO_VARIANT1, MITO_VARIANT3], pathogenicity=pathogenicity, sample_data=FAMILY_2_ALL_SAMPLE_DATA,
+        )
+
+        exclude = {'clinvar': pathogenicity['clinvar'][1:]}
+        pathogenicity['clinvar'] = pathogenicity['clinvar'][:1]
+        annotations = {'SCREEN': ['CTCF-only', 'DNase-only'], 'UTRAnnotator': ['5_prime_UTR_stop_codon_loss_variant']}
+        # selected_transcript_variant_2 = {**VARIANT2, 'selectedMainTranscriptId': 'ENST00000408919'}
+        selected_transcript_variant_2 = VARIANT2
+        self._assert_expected_search(
+            [VARIANT1, selected_transcript_variant_2, VARIANT4], pathogenicity=pathogenicity, annotations=annotations,
+            # [VARIANT1, selected_transcript_variant_2, VARIANT4, MITO_VARIANT3], pathogenicity=pathogenicity, annotations=annotations,
+        )
+
+        self._assert_expected_search(
+            [VARIANT1, VARIANT4], exclude=exclude, pathogenicity=pathogenicity,
+            # [VARIANT1, VARIANT4, MITO_VARIANT3], exclude=exclude, pathogenicity=pathogenicity,
+            annotations=annotations,
+        )
+
 #         self._assert_expected_search(
 #             [], pathogenicity=pathogenicity, annotations=annotations, sample_data=FAMILY_2_VARIANT_SAMPLE_DATA,
 #             genome_version='GRCh37',
 #         )
-#
-#         annotations = {
-#             'missense': ['missense_variant'], 'in_frame': ['inframe_insertion', 'inframe_deletion'], 'frameshift': None,
-#             'structural_consequence': ['INTRONIC', 'LOF'],
-#         }
-#         self._assert_expected_search(
-#             [VARIANT1, VARIANT2, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4, MITO_VARIANT2, MITO_VARIANT3], pathogenicity=pathogenicity,
-#             annotations=annotations, sample_data=FAMILY_2_ALL_SAMPLE_DATA,
-#         )
-#
-#         self._assert_expected_search(
-#             [VARIANT2, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4, GCNV_VARIANT3, GCNV_VARIANT4], annotations=annotations,
-#         )
-#
+
+        SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4 = VARIANT4
+        annotations = {
+            'missense': ['missense_variant'], 'in_frame': ['inframe_insertion', 'inframe_deletion'], 'frameshift': None,
+            'structural_consequence': ['INTRONIC', 'LOF'],
+        }
+        self._assert_expected_search(
+            [VARIANT1, VARIANT2, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4], pathogenicity=pathogenicity,
+            # [VARIANT1, VARIANT2, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4, MITO_VARIANT2, MITO_VARIANT3], pathogenicity=pathogenicity,
+            annotations=annotations, exclude=None,
+        )
+
+        self._assert_expected_search(
+            [VARIANT2, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4], annotations=annotations, pathogenicity=None,
+            # [VARIANT2, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4, GCNV_VARIANT3, GCNV_VARIANT4], annotations=annotations,
+        )
+
 #         self._assert_expected_search([SV_VARIANT1], annotations=annotations, sample_data=SV_WGS_SAMPLE_DATA)
-#
-#         annotations['splice_ai'] = '0.005'
-#         annotations['structural'] = ['gCNV_DUP', 'DEL']
-#         self._assert_expected_search(
-#             [VARIANT2, MULTI_FAMILY_VARIANT, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
-#             annotations=annotations,
-#         )
-#
+
+        annotations['splice_ai'] = '0.005'
+        annotations['structural'] = ['gCNV_DUP', 'DEL']
+        self._assert_expected_search(
+            [VARIANT2, VARIANT3, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4],
+            # [VARIANT2, MULTI_FAMILY_VARIANT, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
+            annotations=annotations,
+        )
+
 #         self._assert_expected_search([SV_VARIANT1, SV_VARIANT4], annotations=annotations, sample_data=SV_WGS_SAMPLE_DATA)
-#
-#         annotations = {'other': ['non_coding_transcript_exon_variant__canonical', 'non_coding_transcript_exon_variant']}
-#         self._assert_expected_search(
-#             [VARIANT1, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3, MITO_VARIANT1, MITO_VARIANT3],
-#             pathogenicity=pathogenicity, annotations=annotations, sample_data=FAMILY_2_ALL_SAMPLE_DATA,
-#         )
-#
-#         self._assert_expected_search(
-#             [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2],
-#             gene_ids=LOCATION_SEARCH['gene_ids'][1:], annotations=annotations, omit_data_type='SV_WES',
-#         )
-#
-#         annotations['other'].append('intron_variant')
-#         self._assert_expected_search(
-#             [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT],
-#             gene_ids=LOCATION_SEARCH['gene_ids'][1:], annotations=annotations, omit_data_type='SV_WES',
-#         )
-#
-#         annotations['other'] = annotations['other'][:1]
-#         annotations['splice_ai'] = '0.005'
-#         self._assert_expected_search(
-#             [VARIANT1, VARIANT3, MITO_VARIANT1, MITO_VARIANT3],
-#             pathogenicity=pathogenicity, annotations=annotations, sample_data=FAMILY_2_ALL_SAMPLE_DATA,
-#         )
-#
-#         annotations['extended_splice_site'] = ['extended_intronic_splice_region_variant']
-#         self._assert_expected_search(
-#             [VARIANT1, VARIANT3, VARIANT4, MITO_VARIANT1, MITO_VARIANT3],
-#             pathogenicity=pathogenicity, annotations=annotations, sample_data=FAMILY_2_ALL_SAMPLE_DATA,
-#         )
-#
-#         annotations = {'motif_feature': ['TF_binding_site_variant'], 'regulatory_feature': ['regulatory_region_variant']}
-#         self._assert_expected_search(
-#             [VARIANT3, VARIANT4], annotations=annotations, sample_data=FAMILY_2_VARIANT_SAMPLE_DATA,
-#         )
-#
+
+        SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2 = VARIANT2
+        SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3 = VARIANT3
+        annotations = {'other': ['non_coding_transcript_exon_variant__canonical', 'non_coding_transcript_exon_variant']}
+        self._assert_expected_search(
+            [VARIANT1, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3],
+            # [VARIANT1, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3, MITO_VARIANT1, MITO_VARIANT3],
+            pathogenicity=pathogenicity, annotations=annotations,
+        )
+
+        self._assert_expected_search(
+            [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2],
+            locus={'rawItems': GENE_IDS[1]}, pathogenicity=None, annotations=annotations,
+        )
+
+        annotations['other'].append('intron_variant')
+        SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT = VARIANT3
+        self._assert_expected_search(
+            [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT],
+            locus={'rawItems': GENE_IDS[1]}, annotations=annotations,
+        )
+
+        annotations['other'] = annotations['other'][:1]
+        annotations['splice_ai'] = '0.005'
+        self._assert_expected_search(
+            [VARIANT1, VARIANT3],
+            # [VARIANT1, VARIANT3, MITO_VARIANT1, MITO_VARIANT3],
+            pathogenicity=pathogenicity, annotations=annotations, locus=None,
+        )
+
+        annotations['extended_splice_site'] = ['extended_intronic_splice_region_variant']
+        self._assert_expected_search(
+            [VARIANT1, VARIANT3, VARIANT4],
+            # [VARIANT1, VARIANT3, VARIANT4, MITO_VARIANT1, MITO_VARIANT3],
+            pathogenicity=pathogenicity, annotations=annotations,
+        )
+
+        annotations = {'motif_feature': ['TF_binding_site_variant'], 'regulatory_feature': ['regulatory_region_variant']}
+        self._assert_expected_search(
+            [VARIANT3, VARIANT4], annotations=annotations, pathogenicity=None,
+        )
+
 #     def test_secondary_annotations_filter(self):
 #         annotations_1 = {'missense': ['missense_variant']}
 #         annotations_2 = {'other': ['intron_variant']}
