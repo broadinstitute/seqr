@@ -370,10 +370,39 @@ class EntriesManager(Manager):
 
     @classmethod
     def _filter_annotations(cls, entries, annotations=None, pathogenicity=None, exclude=None, **kwargs):
+        filter_qs = cls._parse_annotation_filters(annotations) if annotations else []
+
+        hgmd = (pathogenicity or {}).get(HGMD_KEY)
+        if hgmd:
+            min_class = next(class_name for value, class_name in HGMD_CLASS_FILTERS if value in hgmd)
+            max_class = next(class_name for value, class_name in reversed(HGMD_CLASS_FILTERS) if value in hgmd)
+            if min_class == max_class:
+                filter_qs.append(Q(key__hgmd__class_=min_class))
+            else:
+                filter_qs.append(Q(key__hgmd__class___range=(min_class, max_class)))
+
+        clinvar = (pathogenicity or {}).get(CLINVAR_KEY)
+        if clinvar:
+            filter_qs.append(cls._clinvar_filter_q(clinvar))
+
+        exclude_clinvar = (exclude or {}).get('clinvar')
+        if exclude_clinvar:
+            entries = entries.exclude(cls._clinvar_filter_q(exclude_clinvar))
+
+        if not filter_qs:
+            return entries
+
+        filter_q = filter_qs[0]
+        for q in filter_qs[1:]:
+            filter_q |= q
+        return entries.filter(filter_q)
+
+    @classmethod
+    def _parse_annotation_filters(cls, annotations):
         filter_qs = []
         allowed_consequences = []
         transcript_filters = []
-        for field, value in (annotations or {}).items():
+        for field, value in annotations.items():
             if field == UTR_ANNOTATOR_KEY:
                 transcript_filters.append({'fiveutrConsequence': value})
             elif field == EXTENDED_SPLICE_KEY:
@@ -406,30 +435,7 @@ class EntriesManager(Manager):
                 for field, value in transcript_filter.items()
             } for transcript_filter in transcript_filters]))
 
-        hgmd = (pathogenicity or {}).get(HGMD_KEY)
-        if hgmd:
-            min_class = next(class_name for value, class_name in HGMD_CLASS_FILTERS if value in hgmd)
-            max_class = next(class_name for value, class_name in reversed(HGMD_CLASS_FILTERS) if value in hgmd)
-            if min_class == max_class:
-                filter_qs.append(Q(key__hgmd__class_=min_class))
-            else:
-                filter_qs.append(Q(key__hgmd__class___range=(min_class, max_class)))
-
-        clinvar = (pathogenicity or {}).get(CLINVAR_KEY)
-        if clinvar:
-            filter_qs.append(cls._clinvar_filter_q(clinvar))
-
-        exclude_clinvar = (exclude or {}).get('clinvar')
-        if exclude_clinvar:
-            entries = entries.exclude(cls._clinvar_filter_q(exclude_clinvar))
-
-        if filter_qs:
-            filter_q = filter_qs[0]
-            for q in filter_qs[1:]:
-                filter_q |= q
-            entries = entries.filter(filter_q)
-
-        return entries
+        return filter_qs
 
     @staticmethod
     def _clinvar_filter_q(clinvar_filters):
