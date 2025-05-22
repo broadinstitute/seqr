@@ -12,7 +12,7 @@ import {
 } from 'redux/selectors'
 import DeleteButton from 'shared/components/buttons/DeleteButton'
 import UpdateButton from 'shared/components/buttons/UpdateButton'
-import SendEmailButton from 'shared/components/buttons/SendEmailButton'
+// import SendEmailButton from 'shared/components/buttons/SendEmailButton'
 import { BooleanCheckbox, BaseSemanticInput } from 'shared/components/form/Inputs'
 import { SubmissionGeneVariants, Phenotypes } from 'shared/components/panel/MatchmakerPanel'
 import BaseFieldView from 'shared/components/panel/view-fields/BaseFieldView'
@@ -33,7 +33,7 @@ import {
   getMmeMatches,
   updateMmeSubmission,
   updateMmeSubmissionStatus,
-  sendMmeContactEmail,
+  // sendMmeContactEmail,
   updateMmeContactNotes,
 } from '../reducers'
 import {
@@ -41,10 +41,10 @@ import {
   getIndividualTaggedVariants,
   getDefaultMmeSubmission,
   getMmeResultsBySubmission,
-  getMmeDefaultContactEmail,
+  // getMmeDefaultContactEmail,
   getMatchmakerContactNotes,
   getVariantGeneId,
-  getCurrentProject,
+  // getCurrentProject,
 } from '../selectors'
 import SelectSavedVariantsTable from './SelectSavedVariantsTable'
 
@@ -151,6 +151,7 @@ const SUBMISSION_EDIT_FIELDS = [
   },
 ]
 
+/*
 const mapContactButtonStateToProps = (state, ownProps) => ({
   defaultEmail: getMmeDefaultContactEmail(state, ownProps),
   draftOnly: !getCurrentProject(state).isAnalystProject,
@@ -159,12 +160,15 @@ const mapContactButtonStateToProps = (state, ownProps) => ({
   idField: 'patientId',
   modalTitleDetail: patientId => ` for Patient ${patientId}`,
 })
+*/
 
+/*
 const mapContactDispatchToProps = {
   onSubmit: sendMmeContactEmail,
 }
+*/
 
-const ContactHostButton = connect(mapContactButtonStateToProps, mapContactDispatchToProps)(SendEmailButton)
+// const ContactHostButton = connect(mapContactButtonStateToProps, mapContactDispatchToProps)(SendEmailButton)
 
 const contactedLabel = (val) => {
   if (val.hostContacted) {
@@ -179,7 +183,7 @@ const displayMatchStatus = val => (
     {val.flagForAnalysis && <Label horizontal content="Flag for Analysis" color="purple" />}
     {val.deemedIrrelevant && <Label horizontal content="Deemed Irrelevant" color="red" />}
     <p>{val.comments}</p>
-    <ContactHostButton matchmakerResultGuid={val.matchmakerResultGuid} />
+    {/* <ContactHostButton matchmakerResultGuid={val.matchmakerResultGuid} /> */}
   </div>
 )
 
