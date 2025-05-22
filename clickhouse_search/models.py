@@ -274,9 +274,7 @@ class EntriesManager(Manager):
             entries = filter_func(interval_q)
 
         if gene_ids:
-            entries = entries.filter(key__sorted_transcript_consequences__array_exists={
-                'geneId': (gene_ids, 'has({value}, {field})'),
-            })
+            entries = entries.filter(cls._consequence_filter_q(gene_ids, filter_field= 'geneId'))
 
         if rs_ids:
             entries = entries.filter(key__rsid__in=rs_ids)
@@ -286,6 +284,13 @@ class EntriesManager(Manager):
     @staticmethod
     def _interval_query(chrom, start, end):
         return Q(xpos__range=(get_xpos(chrom, start), get_xpos(chrom, end)))
+
+    @staticmethod
+    def _consequence_filter_q(value, filter_field='consequenceTerms', consequence_field='transcript', **kwargs):
+        return Q(**{f'key__sorted_{consequence_field}_consequences__array_exists': {
+            filter_field: (value, 'hasAny({value}, {field})'),
+            **kwargs,
+        }})
 
     @classmethod
     def _filter_frequency(cls, entries, freqs=None, **kwargs):
@@ -361,10 +366,10 @@ class EntriesManager(Manager):
         for field, value in (annotations or {}).items():
             if field == SPLICE_AI_FIELD:
                 filter_qs.append(cls._get_in_silico_score_q(SPLICE_AI_FIELD, value))
+            elif field in [MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY]:
+                filter_qs.append(cls._consequence_filter_q(value, consequence_field=field))
             elif field == UTR_ANNOTATOR_KEY:
-                filter_qs.append(Q(key__sorted_transcript_consequences__array_exists={
-                    'fiveutrConsequence': (value, 'hasAny({value}, {field})'),
-                }))
+                filter_qs.append(cls._consequence_filter_q(value, filter_field='fiveutrConsequence'))
             elif field == EXTENDED_SPLICE_KEY:
                 if EXTENDED_SPLICE_REGION_CONSEQUENCE in value:
                     filter_qs.append(Q(key__sorted_transcript_consequences__array_exists={
@@ -372,27 +377,18 @@ class EntriesManager(Manager):
                     }))
             elif field == SCREEN_KEY:
                 filter_qs.append(Q(key__screen_region_type__in=value))
-            elif field in [MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY]:
-                filter_qs.append(Q(**{f'key__sorted_{field}_consequences__array_exists': {
-                    'consequenceTerms': (value, 'hasAny({value}, {field})'),
-                }}))
             elif field not in SV_ANNOTATION_TYPES:
                 allowed_consequences += value
 
         non_canonical_consequences = {c for c in allowed_consequences if not c.endswith('__canonical')}
         if non_canonical_consequences:
-            filter_qs.append(Q(key__sorted_transcript_consequences__array_exists={
-                'consequenceTerms': (non_canonical_consequences, 'hasAny({value}, {field})'),
-            }))
+            filter_qs.append(cls._consequence_filter_q(non_canonical_consequences))
 
         canonical_consequences = {
             c.replace('__canonical', '') for c in allowed_consequences if c.endswith('__canonical')
         }
         if canonical_consequences:
-            filter_qs.append(Q(key__sorted_transcript_consequences__array_exists={
-                'consequenceTerms': (canonical_consequences, 'hasAny({value}, {field})'),
-                'canonical__gt': 0,
-            }))
+            filter_qs.append(cls._consequence_filter_q(non_canonical_consequences, canonical__gt=0))
 
         for key in [CLINVAR_KEY, HGMD_KEY]:
             path_terms = (pathogenicity or {}).get(key)
