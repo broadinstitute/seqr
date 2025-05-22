@@ -274,7 +274,9 @@ class EntriesManager(Manager):
             entries = filter_func(interval_q)
 
         if gene_ids:
-            entries = entries.filter(cls._consequence_filter_q(gene_ids, filter_field= 'geneId'))
+            entries = entries.filter(key__sorted_transcript_consequences__array_exists={
+                'geneId': (gene_ids, 'has({value}, {field})'),
+            })
 
         if rs_ids:
             entries = entries.filter(key__rsid__in=rs_ids)
@@ -284,13 +286,6 @@ class EntriesManager(Manager):
     @staticmethod
     def _interval_query(chrom, start, end):
         return Q(xpos__range=(get_xpos(chrom, start), get_xpos(chrom, end)))
-
-    @staticmethod
-    def _consequence_filter_q(value, filter_field='consequenceTerms', consequence_field='transcript', **kwargs):
-        return Q(**{f'key__sorted_{consequence_field}_consequences__array_exists': [{
-            filter_field: (value, 'hasAny({value}, {field})'),
-            **kwargs,
-        }]})
 
     @classmethod
     def _filter_frequency(cls, entries, freqs=None, **kwargs):
@@ -363,18 +358,19 @@ class EntriesManager(Manager):
     def _filter_annotations(cls, entries, annotations=None, pathogenicity=None, **kwargs):
         filter_qs = []
         allowed_consequences = []
+        transcript_filters = []
         for field, value in (annotations or {}).items():
-            if field == SPLICE_AI_FIELD:
-                filter_qs.append(cls._get_in_silico_score_q(SPLICE_AI_FIELD, value))
-            elif field in [MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY]:
-                filter_qs.append(cls._consequence_filter_q(value, consequence_field=field))
-            elif field == UTR_ANNOTATOR_KEY:
-                filter_qs.append(cls._consequence_filter_q(value, filter_field='fiveutrConsequence'))
+            if field == UTR_ANNOTATOR_KEY:
+                transcript_filters.append({'fiveutrConsequence': value})
             elif field == EXTENDED_SPLICE_KEY:
                 if EXTENDED_SPLICE_REGION_CONSEQUENCE in value:
-                    filter_qs.append(Q(key__sorted_transcript_consequences__array_exists=[{
-                        'extendedIntronicSpliceRegionVariant': (1,),
-                    }]))
+                    transcript_filters.append({'extendedIntronicSpliceRegionVariant': 1})
+            elif field in [MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY]:
+                filter_qs.append(Q(**{f'key__sorted_{field}_consequences__array_exists': [{
+                    'consequenceTerms': (value, 'hasAny({value}, {field})'),
+                }]}))
+            elif field == SPLICE_AI_FIELD:
+                filter_qs.append(cls._get_in_silico_score_q(SPLICE_AI_FIELD, value))
             elif field == SCREEN_KEY:
                 filter_qs.append(Q(key__screen_region_type__in=value))
             elif field not in SV_ANNOTATION_TYPES:
@@ -382,13 +378,19 @@ class EntriesManager(Manager):
 
         non_canonical_consequences = {c for c in allowed_consequences if not c.endswith('__canonical')}
         if non_canonical_consequences:
-            filter_qs.append(cls._consequence_filter_q(non_canonical_consequences))
+            transcript_filters.append({'consequenceTerms': non_canonical_consequences})
 
         canonical_consequences = {
             c.replace('__canonical', '') for c in allowed_consequences if c.endswith('__canonical')
         }
         if canonical_consequences:
-            filter_qs.append(cls._consequence_filter_q(non_canonical_consequences, canonical__gt=0))
+            transcript_filters.append({'consequenceTerms': canonical_consequences, 'canonical__gt': 0})
+
+        if transcript_filters:
+            filter_qs.append(Q(key__sorted_transcript_consequences__array_exists=[{
+                field: (value, 'hasAny({value}, {field})' if isinstance(value, list) else '{field} = {value}')
+                for field, value in transcript_filter.items()
+            } for transcript_filter in transcript_filters]))
 
         for key in [CLINVAR_KEY, HGMD_KEY]:
             path_terms = (pathogenicity or {}).get(key)
