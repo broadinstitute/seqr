@@ -574,7 +574,8 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #             for variant in results
 #         ]})
 #
-#     def test_frequency_filter(self):
+    def test_frequency_filter(self):
+        self.results_model.families.set(self.families.filter(guid='F000002_2'))
 #         sv_callset_filter = {'sv_callset': {'af': 0.05}}
 #         self._assert_expected_search(
 #             [VARIANT1, VARIANT4, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
@@ -601,14 +602,14 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #             [SV_VARIANT1], frequencies=sv_callset_filter, sample_data=SV_WGS_SAMPLE_DATA,
 #         )
 #
-#         self._assert_expected_search(
-#             [VARIANT1, VARIANT2, VARIANT4], frequencies={'gnomad_genomes': {'af': 0.05}}, omit_data_type='SV_WES',
-#         )
-#
-#         self._assert_expected_search(
-#             [VARIANT2, VARIANT4], frequencies={'gnomad_genomes': {'af': 0.05, 'hh': 1}}, omit_data_type='SV_WES',
-#         )
-#
+        self._assert_expected_search(
+            [VARIANT1, VARIANT2, VARIANT4], freqs={'gnomad_genomes': {'af': 0.05}},
+        )
+
+        self._assert_expected_search(
+            [VARIANT2, VARIANT4], freqs={'gnomad_genomes': {'af': 0.05, 'hh': 1}},
+        )
+
 #         self._assert_expected_search(
 #             [VARIANT2, VARIANT4, MITO_VARIANT1, MITO_VARIANT2], sample_data=FAMILY_2_ALL_SAMPLE_DATA,
 #             frequencies={'gnomad_genomes': {'af': 0.005}, 'gnomad_mito': {'af': 0.05}},
@@ -617,17 +618,17 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #         self._assert_expected_search(
 #             [SV_VARIANT1, SV_VARIANT3, SV_VARIANT4], frequencies={'gnomad_svs': {'af': 0.001}}, sample_data=SV_WGS_SAMPLE_DATA,
 #         )
-#
-#         self._assert_expected_search(
-#             [VARIANT4], frequencies={'seqr': {'af': 0.2}, 'gnomad_genomes': {'ac': 50}},
-#             omit_data_type='SV_WES',
-#         )
-#
-#         self._assert_expected_search(
-#             [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4], frequencies={'seqr': {}, 'gnomad_genomes': {'af': None}},
-#             omit_data_type='SV_WES',
-#         )
-#
+
+        self._assert_expected_search(
+            [VARIANT2, VARIANT4], freqs={'gnomad_genomes': {'ac': 50}},
+            # [VARIANT4], frequencies={'seqr': {'af': 0.2}, 'gnomad_genomes': {'ac': 50}},
+        )
+
+        self._assert_expected_search(
+            [VARIANT1, VARIANT2, VARIANT3, VARIANT4], freqs={'seqr': {}, 'gnomad_genomes': {'af': None}},
+            # [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4], frequencies={'seqr': {}, 'gnomad_genomes': {'af': None}},
+        )
+
 #         annotations = {'splice_ai': '0.0'}  # Ensures no variants are filtered out by annotation/path filters
 #         self._assert_expected_search(
 #             [VARIANT1, VARIANT2, VARIANT4], frequencies={'gnomad_genomes': {'af': 0.01, 'hh': 10}}, omit_data_type='SV_WES',

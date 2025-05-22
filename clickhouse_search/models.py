@@ -186,11 +186,16 @@ class EntriesManager(Manager):
 
     QUALITY_FILTERS = [('gq', 1), ('ab', 100, 'x.gt != 1')]
 
+    POPULATIONS = {
+        population: {subfield for subfield, _ in field.base_fields}
+        for population, field in AnnotationsSnvIndel.POPULATION_FIELDS
+    }
     IN_SILICO_SCORES = {score for score, _ in AnnotationsSnvIndel.PREDICTION_FIELDS}
 
     def search(self, sample_data, parsed_locus=None, **kwargs):
         entries = self._search_call_data(sample_data, **kwargs)
         entries = self._filter_location(entries, **(parsed_locus or {}))
+        entries = self._filter_frequency(entries, **kwargs)
         entries = self._filter_in_silico(entries, **kwargs)
         return entries
 
@@ -278,6 +283,44 @@ class EntriesManager(Manager):
     @staticmethod
     def _interval_query(chrom, start, end):
         return Q(xpos__range=(get_xpos(chrom, start), get_xpos(chrom, end)))
+
+    @classmethod
+    def _filter_frequency(cls, entries, freqs=None, **kwargs):
+        frequencies =  freqs or {}
+
+        gnomad_filter = frequencies.get('gnomad_genomes') or {}
+        if (gnomad_filter.get('af') or 1) <= 0.05 or any(gnomad_filter.get(field) is not None for field in ['ac', 'hh']):
+            entries = entries.filter(is_gnomad_gt_5_percent=False)
+
+        for population, pop_filter in frequencies.items():
+            pop_subfields = cls.POPULATIONS.get(population)
+            if not pop_subfields:
+                continue
+
+            if pop_filter.get('af') is not None and pop_filter['af'] < 1:
+                af_field = next(field for field in ['filter_af', 'af'] if field in pop_subfields)
+                if af_field:
+                    entries = entries.filter(**{
+                        f'key__populations__{population}__{af_field}__lte': pop_filter['af'],
+                    })
+            elif pop_filter.get('ac') is not None:
+                entries = entries.filter(**{f'key__populations__{population}__ac__lte': pop_filter['ac']})
+
+            if pop_filter.get('hh') is not None:
+                entries = entries.filter(**{
+                    f'key__populations__{population}__{subfield}__lte': pop_filter['hh']
+                    for subfield in ['hom', 'hemi'] if subfield in pop_subfields
+                })
+
+        if frequencies.get('callset'):
+            entries = cls._filter_seqr_frequency(entries, **frequencies['callset'])
+
+        return entries
+
+    @classmethod
+    def _filter_seqr_frequency(cls, entries, ac=None, hh=None, **kwargs):
+        # TODO implement seqr frequency filter
+        return entries
 
     @classmethod
     def _filter_in_silico(cls, entries, in_silico=None, **kwargs):
