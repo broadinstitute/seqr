@@ -52,9 +52,20 @@ EXTENDED_SPLICE_KEY = 'extended_splice_site'
 EXTENDED_SPLICE_REGION_CONSEQUENCE = 'extended_intronic_splice_region_variant'
 MOTIF_FEATURES_KEY = 'motif_feature'
 REGULATORY_FEATURES_KEY = 'regulatory_feature'
-CLINVAR_KEY = 'clinvar'
-HGMD_KEY = 'hgmd'
 
 NEW_SV_FIELD = 'new_structural_variants'
 SV_ANNOTATION_TYPES = {'structural_consequence', 'structural', NEW_SV_FIELD}
 ALL_DATA_TYPES = 'ALL'
+
+HGMD_KEY = 'hgmd'
+CLINVAR_KEY = 'clinvar'
+CLINVAR_PATH_FILTER = 'pathogenic'
+CLINVAR_LIKELY_PATH_FILTER = 'likely_pathogenic'
+CLINVAR_PATH_SIGNIFICANCES = {CLINVAR_PATH_FILTER, CLINVAR_LIKELY_PATH_FILTER}
+CLINVAR_PATH_RANGES = [
+    (CLINVAR_PATH_FILTER, 'Pathogenic', 'Pathogenic/Likely_risk_allele'),
+    (CLINVAR_LIKELY_PATH_FILTER, 'Pathogenic/Likely_pathogenic', 'Likely_risk_allele'),
+    ('vus_or_conflicting', 'Conflicting_classifications_of_pathogenicity', 'No_pathogenic_assertion'),
+    ('likely_benign', 'Likely_benign', 'Benign/Likely_benign'),
+    ('benign', 'Benign/Likely_benign', 'Benign'),
+]

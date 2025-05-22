@@ -188,6 +188,12 @@ class EntriesManager(Manager):
 
     QUALITY_FILTERS = [('gq', 1), ('ab', 100, 'x.gt != 1')]
 
+    HGMD_CLASS_FILTERS = [
+        ('disease_causing', 'DM'),
+        ('likely_disease_causing', 'DM?'),
+        ('hgmd_other', 'DP'),
+    ]
+
     POPULATIONS = {
         population: {subfield for subfield, _ in field.base_fields}
         for population, field in AnnotationsSnvIndel.POPULATION_FIELDS
@@ -355,7 +361,7 @@ class EntriesManager(Manager):
             return Q(**{score_column: value})
 
     @classmethod
-    def _filter_annotations(cls, entries, annotations=None, pathogenicity=None, **kwargs):
+    def _filter_annotations(cls, entries, annotations=None, pathogenicity=None, exclude=None, **kwargs):
         filter_qs = []
         allowed_consequences = []
         transcript_filters = []
@@ -392,9 +398,22 @@ class EntriesManager(Manager):
                 for field, value in transcript_filter.items()
             } for transcript_filter in transcript_filters]))
 
-        for key in [CLINVAR_KEY, HGMD_KEY]:
-            path_terms = (pathogenicity or {}).get(key)
-            # TODO
+        hgmd = (pathogenicity or {}).get(HGMD_KEY)
+        if hgmd:
+            min = next(class_name for value, class_name in cls.HGMD_CLASS_FILTERS if value in hgmd)
+            max = next(class_name for value, class_name in reversed(cls.HGMD_CLASS_FILTERS) if value in hgmd)
+            if min == max:
+                filter_qs.append(Q(key__hgmd__class_=min))
+            else:
+                filter_qs.append(Q(key__hgmd__class___range=(min, max)))
+
+        clinvar = (pathogenicity or {}).get(CLINVAR_KEY)
+        if clinvar:
+            filter_qs.append(cls._clinvar_filter_q(clinvar))
+
+        exclude_clinvar = (exclude or {}).get('clinvar')
+        if exclude_clinvar:
+            entries = entries.exclude(cls._clinvar_filter_q(exclude_clinvar))
 
         if not filter_qs:
             return entries
@@ -403,6 +422,23 @@ class EntriesManager(Manager):
         for q in filter_qs[1:]:
             filter_q |= q
         return entries.filter(filter_q)
+
+    @staticmethod
+    def _clinvar_filter_q(clinvar_filters):
+        ranges = [[None, None]]
+        for path_filter, start, end in CLINVAR_PATH_RANGES:
+            if path_filter in clinvar_filters:
+                ranges[-1][1] = end
+                if ranges[-1][0] is None:
+                    ranges[-1][0] = start
+            elif ranges[-1] != [None, None]:
+                ranges.append([None, None])
+        ranges = [r for r in ranges if r[0] is not None]
+
+        clinvar_q = Q(key__clinvar__pathogenicity__range=ranges[0])
+        for range in ranges[1:]:
+            clinvar_q |= Q(key__clinvar__pathogenicity__range=range)
+        return clinvar_q
 
 
 class EntriesSnvIndel(models.ClickhouseModel):
