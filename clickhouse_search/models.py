@@ -5,7 +5,9 @@ from django.db.models import options, ForeignKey, OneToOneField, Func, Manager, 
 from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocksDB, Join
 from clickhouse_search.backend.fields import NestedField, UInt64FieldDeltaCodecField, NamedTupleField
 from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFECTED, UNAFFECTED, MALE_SEXES, \
-    X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF
+    X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, SCREEN_KEY, UTR_ANNOTATOR_KEY, \
+    EXTENDED_SPLICE_KEY, MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY, CLINVAR_KEY, HGMD_KEY, SV_ANNOTATION_TYPES, \
+    EXTENDED_SPLICE_REGION_CONSEQUENCE
 from seqr.utils.xpos_utils import get_xpos, CHROMOSOMES
 from settings import CLICKHOUSE_IN_MEMORY_DIR, CLICKHOUSE_DATA_DIR
 
@@ -112,7 +114,7 @@ class BaseAnnotationsSnvIndel(models.ClickhouseModel):
         ('primate_ai', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
         ('revel', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
         ('sift', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        ('splice_ai', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        (SPLICE_AI_FIELD, models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
         ('splice_ai_consequence', models.Enum8Field(null=True, blank=True, return_int=False, choices=[(0, 'Acceptor gain'), (1, 'Acceptor loss'), (2, 'Donor gain'), (3, 'Donor loss'), (4, 'No consequence')])),
         ('vest', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
     ]
@@ -197,6 +199,7 @@ class EntriesManager(Manager):
         entries = self._filter_location(entries, **(parsed_locus or {}))
         entries = self._filter_frequency(entries, **kwargs)
         entries = self._filter_in_silico(entries, **kwargs)
+        entries = self._filter_annotations(entries, **kwargs)
         return entries
 
     def _search_call_data(self, sample_data, inheritance_mode=None, inheritance_filter=None, qualityFilter=None, **kwargs):
@@ -332,11 +335,7 @@ class EntriesManager(Manager):
 
         in_silico_q = None
         for score, value in in_silico_filters.items():
-            score_column = f'key__predictions__{score}'
-            try:
-                score_q = Q(**{f'{score_column}__gte': float(value)})
-            except ValueError:
-                score_q = Q(**{score_column: value})
+            score_q = cls._get_in_silico_score_q(score, value)
             if in_silico_q is None:
                 in_silico_q = score_q
             else:
@@ -346,6 +345,66 @@ class EntriesManager(Manager):
             in_silico_q |= Q(**{f'key__predictions__{score}__isnull': True for score in in_silico_filters.keys()})
 
         return entries.filter(in_silico_q)
+
+    @staticmethod
+    def _get_in_silico_score_q(score, value):
+        score_column = f'key__predictions__{score}'
+        try:
+            return Q(**{f'{score_column}__gte': float(value)})
+        except ValueError:
+            return Q(**{score_column: value})
+
+    @classmethod
+    def _filter_annotations(cls, entries, annotations=None, pathogenicity=None, **kwargs):
+        filter_qs = []
+        allowed_consequences = []
+        for field, value in (annotations or {}).items():
+            if field == SPLICE_AI_FIELD:
+                filter_qs.append(cls._get_in_silico_score_q(SPLICE_AI_FIELD, value))
+            elif field == UTR_ANNOTATOR_KEY:
+                filter_qs.append(Q(key__sorted_transcript_consequences__array_exists={
+                    'fiveutrConsequence': (value, 'hasAny({value}, {field})'),
+                }))
+            elif field == EXTENDED_SPLICE_KEY:
+                if EXTENDED_SPLICE_REGION_CONSEQUENCE in value:
+                    filter_qs.append(Q(key__sorted_transcript_consequences__array_exists={
+                        'extendedIntronicSpliceRegionVariant': (1,),
+                    }))
+            elif field == SCREEN_KEY:
+                filter_qs.append(Q(key__screen_region_type__in=value))
+            elif field in [MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY]:
+                filter_qs.append(Q(**{f'key__sorted_{field}_consequences__array_exists': {
+                    'consequenceTerms': (value, 'hasAny({value}, {field})'),
+                }}))
+            elif field not in SV_ANNOTATION_TYPES:
+                allowed_consequences += value
+
+        non_canonical_consequences = {c for c in allowed_consequences if not c.endswith('__canonical')}
+        if non_canonical_consequences:
+            filter_qs.append(Q(key__sorted_transcript_consequences__array_exists={
+                'consequenceTerms': (non_canonical_consequences, 'hasAny({value}, {field})'),
+            }))
+
+        canonical_consequences = {
+            c.replace('__canonical', '') for c in allowed_consequences if c.endswith('__canonical')
+        }
+        if canonical_consequences:
+            filter_qs.append(Q(key__sorted_transcript_consequences__array_exists={
+                'consequenceTerms': (canonical_consequences, 'hasAny({value}, {field})'),
+                'canonical__gt': 0,
+            }))
+
+        for key in [CLINVAR_KEY, HGMD_KEY]:
+            path_terms = (pathogenicity or {}).get(key)
+            # TODO
+
+        if not filter_qs:
+            return entries
+
+        filter_q = filter_qs[0]
+        for q in filter_qs[1:]:
+            filter_q |= q
+        return entries.filter(filter_q)
 
 
 class EntriesSnvIndel(models.ClickhouseModel):

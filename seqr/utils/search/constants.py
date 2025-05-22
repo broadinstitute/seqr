@@ -45,6 +45,16 @@ INHERITANCE_FILTERS = {
     },
 }
 
+SPLICE_AI_FIELD = 'splice_ai'
+SCREEN_KEY = 'SCREEN'  # uses all caps to match filter provided by the seqr UI
+UTR_ANNOTATOR_KEY = 'UTRAnnotator'
+EXTENDED_SPLICE_KEY = 'extended_splice_site'
+EXTENDED_SPLICE_REGION_CONSEQUENCE = 'extended_intronic_splice_region_variant'
+MOTIF_FEATURES_KEY = 'motif_feature'
+REGULATORY_FEATURES_KEY = 'regulatory_feature'
+CLINVAR_KEY = 'clinvar'
+HGMD_KEY = 'hgmd'
+
 NEW_SV_FIELD = 'new_structural_variants'
 SV_ANNOTATION_TYPES = {'structural_consequence', 'structural', NEW_SV_FIELD}
 ALL_DATA_TYPES = 'ALL'
