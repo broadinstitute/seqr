@@ -227,10 +227,10 @@ class EntriesManager(Manager):
            self._sample_genotype_filter(sample_filter, sample, affected, inheritance_mode, individual_genotype_filter)
            self._sample_quality_filter(sample_filter, affected, quality_filter)
            if sample_filter:
-               entries = entries.filter(calls__array_exists=[{
+               entries = entries.filter(calls__array_exists={
                    'sampleId': (f"'{sample['sample_id']}'",),
                    **sample_filter,
-               }])
+               })
 
        return entries
 
@@ -404,9 +404,9 @@ class EntriesManager(Manager):
                 if EXTENDED_SPLICE_REGION_CONSEQUENCE in value:
                     transcript_filters.append({'extendedIntronicSpliceRegionVariant': 1})
             elif field in [MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY]:
-                filter_qs.append(Q(**{f'key__sorted_{field}_consequences__array_exists': [{
+                filter_qs.append(Q(**{f'key__sorted_{field}_consequences__array_exists': {
                     'consequenceTerms': (value, 'hasAny({value}, {field})'),
-                }]}))
+                }}))
             elif field == SPLICE_AI_FIELD:
                 filter_qs.append(cls._get_in_silico_score_q(SPLICE_AI_FIELD, value))
             elif field == SCREEN_KEY:
@@ -425,10 +425,10 @@ class EntriesManager(Manager):
             transcript_filters.append({'consequenceTerms': canonical_consequences, 'canonical__gt': 0})
 
         if transcript_filters:
-            filter_qs.append(Q(key__sorted_transcript_consequences__array_exists=[{
+            filter_qs.append(Q(key__sorted_transcript_consequences__array_exists={'OR': [{
                 field: (value, 'hasAny({value}, {field})' if isinstance(value, list) else '{field} = {value}')
                 for field, value in transcript_filter.items()
-            } for transcript_filter in transcript_filters]))
+            } for transcript_filter in transcript_filters]}))
 
         return filter_qs
 
