@@ -20,12 +20,18 @@ class ArrayExists(ArrayLookup):
     swap_args = True
     prepare_rhs = False
 
-    def get_prep_lookup(self):
+    @staticmethod
+    def _format_condition(filters):
         conditions = [
             (template[0] if template else '{field} = {value}').format(field=f'x.{field}', value=value)
-            for field, (value, *template) in self.rhs.items() # pylint: disable=access-member-before-definition
+            for field, (value, *template) in filters.items()  # pylint: disable=access-member-before-definition
         ]
-        condition = f'and({", ".join(conditions)})' if len(conditions) > 1 else conditions[0]
+        return f'and({", ".join(conditions)})' if len(conditions) > 1 else conditions[0]
+
+    def get_prep_lookup(self):
+        or_filters = self.rhs.get('OR', [self.rhs]) # pylint: disable=access-member-before-definition
+        conditions = [self._format_condition(f) for f in or_filters]
+        condition = f'or({", ".join(conditions)})' if len(conditions) > 1 else conditions[0]
         self.rhs = f'x -> {condition}'
         return super().get_prep_lookup()
 
