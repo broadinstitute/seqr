@@ -230,7 +230,7 @@ class EntriesManager(Manager):
            if not (sample_inheritance_filter or sample_quality_filter):
                continue
            sample_inheritance_filter['sampleId'] = (f"'{sample['sample_id']}'",)
-           sample_q = Q(calls__arcray_exists={**sample_inheritance_filter, **sample_quality_filter})
+           sample_q = Q(calls__array_exists={**sample_inheritance_filter, **sample_quality_filter})
            if clinvar_override_q and sample_quality_filter:
                sample_q |= clinvar_override_q & Q(calls__array_exists=sample_inheritance_filter)
 
