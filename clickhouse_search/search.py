@@ -70,6 +70,7 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
         )
     }).values(
         *CORE_ENTRIES_FIELDS,
+        'filtered_transcript_consequences',
         familyGuids=Array('family_guid'),
         genotypes=ArrayMap(
             'calls',

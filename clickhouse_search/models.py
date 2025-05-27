@@ -1,9 +1,10 @@
 from clickhouse_backend import models
 from django.db.migrations import state
-from django.db.models import options, ForeignKey, OneToOneField, Func, Manager, Q, CASCADE, PROTECT
+from django.db.models import options, ForeignKey, OneToOneField, Func, Manager, F, Q, CASCADE, PROTECT
 
 from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocksDB, Join
 from clickhouse_search.backend.fields import NestedField, UInt64FieldDeltaCodecField, NamedTupleField
+from clickhouse_search.backend.functions import ArrayFilter
 from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFECTED, UNAFFECTED, MALE_SEXES, \
     X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, SCREEN_KEY, UTR_ANNOTATOR_KEY, \
     EXTENDED_SPLICE_KEY, MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY, CLINVAR_KEY, HGMD_KEY, SV_ANNOTATION_TYPES, \
@@ -268,7 +269,7 @@ class EntriesManager(Manager):
         return sample_filter
 
     @classmethod
-    def _filter_location(cls, entries, exclude_intervals=False, intervals=None, gene_ids=None, variant_ids=None, rs_ids=None):
+    def _filter_location(cls, entries, exclude_intervals=False, intervals=None, variant_ids=None, rs_ids=None, **kwargs):
         if variant_ids:
             entries = entries.filter(
                 key__variant_id__in=[f'{chrom}-{pos}-{ref}-{alt}' for chrom, pos, ref, alt in variant_ids]
@@ -283,11 +284,6 @@ class EntriesManager(Manager):
                 interval_q |= cls._interval_query(*interval)
             filter_func = entries.exclude if exclude_intervals else entries.filter
             entries = filter_func(interval_q)
-
-        if gene_ids:
-            entries = entries.filter(key__sorted_transcript_consequences__array_exists={
-                'geneId': (gene_ids, 'has({value}, {field})'),
-            })
 
         if rs_ids:
             entries = entries.filter(key__rsid__in=rs_ids)
@@ -377,7 +373,20 @@ class EntriesManager(Manager):
 
     @classmethod
     def _filter_annotations(cls, entries, annotations=None, pathogenicity=None, exclude=None, gene_ids=None, **kwargs):
-        filter_qs = cls._parse_annotation_filters(annotations, gene_ids) if annotations else []
+        entries = entries.annotate(filtered_transcript_consequences=F('key__sorted_transcript_consequences'))
+        if gene_ids:
+            entries = entries.annotate(
+                filtered_transcript_consequences=ArrayFilter('filtered_transcript_consequences', conditions=[{
+                'geneId': (gene_ids, 'has({value}, {field})'),
+            }]))
+            entries = entries.filter(filtered_transcript_consequences__not_empty=True)
+
+        filter_qs, transcript_filters = cls._parse_annotation_filters(annotations) if annotations else []
+        if transcript_filters:
+            entries = entries.annotate(
+                filtered_transcript_consequences=ArrayFilter('filtered_transcript_consequences', conditions=transcript_filters),
+            )
+            filter_qs.append(Q(filtered_transcript_consequences__not_empty=True))
 
         hgmd = (pathogenicity or {}).get(HGMD_KEY)
         if hgmd:
@@ -410,7 +419,7 @@ class EntriesManager(Manager):
         return entries
 
     @classmethod
-    def _parse_annotation_filters(cls, annotations, gene_ids):
+    def _parse_annotation_filters(cls, annotations):
         filter_qs = []
         allowed_consequences = []
         transcript_filters = []
@@ -433,27 +442,21 @@ class EntriesManager(Manager):
 
         non_canonical_consequences = [c for c in allowed_consequences if not c.endswith('__canonical')]
         if non_canonical_consequences:
-            transcript_filters.append(cls._consequence_term_filter(non_canonical_consequences, gene_ids))
+            transcript_filters.append(cls._consequence_term_filter(non_canonical_consequences))
 
         canonical_consequences = [
             c.replace('__canonical', '') for c in allowed_consequences if c.endswith('__canonical')
         ]
         if canonical_consequences:
             transcript_filters.append(
-                cls._consequence_term_filter(canonical_consequences, gene_ids, canonical=(0, '{field} > {value}')),
+                cls._consequence_term_filter(canonical_consequences, canonical=(0, '{field} > {value}')),
             )
 
-        if transcript_filters:
-            filter_qs.append(Q(key__sorted_transcript_consequences__array_exists={'OR': transcript_filters}))
-
-        return filter_qs
+        return filter_qs, transcript_filters
 
     @staticmethod
-    def _consequence_term_filter(consequences, gene_ids, **kwargs):
-        filter_expr = {'consequenceTerms': (consequences, 'hasAny({value}, {field})'), **kwargs}
-        if gene_ids:
-            filter_expr['geneId'] = (gene_ids, 'has({value}, {field})')
-        return filter_expr
+    def _consequence_term_filter(consequences, **kwargs):
+        return {'consequenceTerms': (consequences, 'hasAny({value}, {field})'), **kwargs}
 
     @staticmethod
     def _hgmd_filter_q(hgmd):
