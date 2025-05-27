@@ -41,8 +41,8 @@ class ArrayExists(ArrayLookup):
 
 
 class GtStatsDictGet(Func):
-    function = 'dictGet'
-    template = '%(function)s("GRCh38/SNV_INDEL/gt_stats_dict", %(dict_attrs)s, %(expressions)s)'
+    function = 'tuplePlus'
+    template = '%(function)s(dictGet("GRCh38/SNV_INDEL/gt_stats_dict", %(dict_attrs_1)s, %(expressions)s), dictGet("GRCh38/SNV_INDEL/gt_stats_dict", %(dict_attrs_2)s, %(expressions)s))'
 
 
 class Tuple(Func):

@@ -21,7 +21,8 @@ GT_STATS_DICT_FIELDS = OrderedDict({
     'ac': models.UInt32Field(),
     'hom': models.UInt32Field(),
 })
-GT_STATS_DICT_ATTRS = [f"'{field}'" for field in GT_STATS_DICT_FIELDS.keys()]
+GT_STATS_DICT_ATTRS_WES = [f"'{field}_wes'" for field in GT_STATS_DICT_FIELDS.keys()]
+GT_STATS_DICT_ATTRS_WGS = [f"'{field}_wgs'" for field in GT_STATS_DICT_FIELDS.keys()]
 SEQR_POPULATION_KEY = 'seqrPop'
 
 ANNOTATION_VALUES = {
@@ -62,7 +63,11 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
 
     entries = EntriesSnvIndel.objects.search(sample_data, **search)
     results = entries.annotate(**{
-        SEQR_POPULATION_KEY: GtStatsDictGet('key', dict_attrs=f"({', '.join(GT_STATS_DICT_ATTRS)})")
+        SEQR_POPULATION_KEY: GtStatsDictGet(
+            'key',
+            dict_attrs_1=f"({', '.join(GT_STATS_DICT_ATTRS_WES)})",
+            dict_attrs_2=f"({', '.join(GT_STATS_DICT_ATTRS_WGS)})",
+        )
     }).values(
         *CORE_ENTRIES_FIELDS,
         familyGuids=Array('family_guid'),

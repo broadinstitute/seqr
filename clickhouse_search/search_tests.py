@@ -24,14 +24,16 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             CREATE DICTIONARY IF NOT EXISTS "GRCh38/SNV_INDEL/gt_stats_dict"
             (
                 key UInt32,
-                ac UInt32,
-                hom UInt32,
+                ac_wes UInt32,
+                ac_wgs UInt32,
+                hom_wes UInt32,
+                hom_wgs UInt32,
             )
             PRIMARY KEY key
             SOURCE(CLICKHOUSE(
                 USER %s
                 PASSWORD %s
-                QUERY "SELECT * FROM VALUES ((1, 9, 2), (2, 28, 4), (3, 4, 1), (4, 2, 0))"
+                QUERY "SELECT * FROM VALUES ((1, 4, 5, 2, 0), (2, 12, 16, 3, 1), (3, 4, 0, 1, 0), (4, 0, 2, 0, 0))"
             ))
             LIFETIME(0)
             LAYOUT(FLAT(MAX_ARRAY_SIZE 500000000))
