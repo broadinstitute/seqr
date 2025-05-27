@@ -5,7 +5,9 @@ import mock
 import os
 
 from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4, CACHED_VARIANTS_BY_KEY, \
-    VARIANT_ID_SEARCH, VARIANT_IDS, LOCATION_SEARCH, GENE_IDS
+    VARIANT_ID_SEARCH, VARIANT_IDS, LOCATION_SEARCH, GENE_IDS, SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT, \
+    SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3, \
+    SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2
 from seqr.models import Project
 from seqr.utils.search.search_utils_tests import SearchTestHelper
 from seqr.utils.search.utils import query_variants
@@ -443,11 +445,11 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #             [SV_VARIANT3, SV_VARIANT4], sample_data=SV_WGS_SAMPLE_DATA, intervals=sv_intervals, exclude_intervals=True,
 #         )
 #
-#         self._assert_expected_search(
-#             [SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT],  omit_data_type='SV_WES',
-#             intervals=LOCATION_SEARCH['intervals'][-1:], gene_ids=LOCATION_SEARCH['gene_ids'][1:]
-#         )
-#
+        self._assert_expected_search(
+            [SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT],  omit_data_type='SV_WES',
+            intervals=LOCATION_SEARCH['intervals'][-1:], gene_ids=LOCATION_SEARCH['gene_ids'][1:]
+        )
+
 #         self._assert_expected_search(
 #             [GCNV_VARIANT4], padded_interval={'chrom': '17', 'start': 38720781, 'end': 38738703, 'padding': 0.2},
 #             omit_data_type='SNV_INDEL',
@@ -662,8 +664,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         exclude = {'clinvar': pathogenicity['clinvar'][1:]}
         pathogenicity['clinvar'] = pathogenicity['clinvar'][:1]
         annotations = {'SCREEN': ['CTCF-only', 'DNase-only'], 'UTRAnnotator': ['5_prime_UTR_stop_codon_loss_variant']}
-        # selected_transcript_variant_2 = {**VARIANT2, 'selectedMainTranscriptId': 'ENST00000408919'}
-        selected_transcript_variant_2 = VARIANT2
+        selected_transcript_variant_2 = {**VARIANT2, 'selectedMainTranscriptId': 'ENST00000408919'}
         self._assert_expected_search(
             [VARIANT1, selected_transcript_variant_2, VARIANT4], pathogenicity=pathogenicity, annotations=annotations,
             # [VARIANT1, selected_transcript_variant_2, VARIANT4, MITO_VARIANT3], pathogenicity=pathogenicity, annotations=annotations,
@@ -680,7 +681,6 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #             genome_version='GRCh37',
 #         )
 
-        SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4 = VARIANT4
         annotations = {
             'missense': ['missense_variant'], 'in_frame': ['inframe_insertion', 'inframe_deletion'], 'frameshift': None,
             'structural_consequence': ['INTRONIC', 'LOF'],
@@ -708,8 +708,6 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 
 #         self._assert_expected_search([SV_VARIANT1, SV_VARIANT4], annotations=annotations, sample_data=SV_WGS_SAMPLE_DATA)
 
-        SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2 = VARIANT2
-        SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3 = VARIANT3
         annotations = {'other': ['non_coding_transcript_exon_variant__canonical', 'non_coding_transcript_exon_variant']}
         self._assert_expected_search(
             [VARIANT1, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3],
@@ -723,7 +721,6 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         )
 
         annotations['other'].append('intron_variant')
-        SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT = VARIANT3
         self._assert_expected_search(
             [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT],
             annotations=annotations,
