@@ -62,18 +62,12 @@ def query_variants_handler(request, search_hash):
     _check_results_permission(results_model, request.user)
     skip_genotype_filter = bool(_all_project_family_search_genome(search_context))
 
-    try:
-        variants, total_results = query_variants(results_model, sort=sort, page=page, num_results=per_page,
-                                                 skip_genotype_filter=skip_genotype_filter, user=request.user)
+    variants, total_results = query_variants(results_model, sort=sort, page=page, num_results=per_page,
+                                             skip_genotype_filter=skip_genotype_filter, user=request.user)
 
-        response = _process_variants(variants or [], results_model.families.all(), request)
-        response['search'] = _get_search_context(results_model)
-        response['search']['totalResults'] = total_results
-    except Exception:
-        pass
-
-    from seqr.views.react_app import render_app_html
-    return render_app_html(request)
+    response = _process_variants(variants or [], results_model.families.all(), request)
+    response['search'] = _get_search_context(results_model)
+    response['search']['totalResults'] = total_results
 
     return create_json_response(response)
 
