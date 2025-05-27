@@ -719,14 +719,14 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 
         self._assert_expected_search(
             [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2],
-            locus={'rawItems': GENE_IDS[1]}, pathogenicity=None, annotations=annotations,
+            locus={'rawItems': f'{GENE_IDS[1]}\n1:11785723-91525764'}, pathogenicity=None, annotations=annotations,
         )
 
         annotations['other'].append('intron_variant')
         SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT = VARIANT3
         self._assert_expected_search(
             [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT],
-            locus={'rawItems': GENE_IDS[1]}, annotations=annotations,
+            annotations=annotations,
         )
 
         annotations['other'] = annotations['other'][:1]

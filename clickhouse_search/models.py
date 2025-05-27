@@ -196,11 +196,12 @@ class EntriesManager(Manager):
     IN_SILICO_SCORES = {score for score, _ in AnnotationsSnvIndel.PREDICTION_FIELDS}
 
     def search(self, sample_data, parsed_locus=None, **kwargs):
+        parsed_locus = parsed_locus or {}
         entries = self._search_call_data(sample_data, **kwargs)
-        entries = self._filter_location(entries, **(parsed_locus or {}))
+        entries = self._filter_location(entries, **parsed_locus)
         entries = self._filter_frequency(entries, **kwargs)
         entries = self._filter_in_silico(entries, **kwargs)
-        entries = self._filter_annotations(entries, **kwargs)
+        entries = self._filter_annotations(entries, **parsed_locus, **kwargs)
         return entries
 
     def _search_call_data(self, sample_data, inheritance_mode=None, inheritance_filter=None, qualityFilter=None, pathogenicity=None, **kwargs):
@@ -375,8 +376,8 @@ class EntriesManager(Manager):
             return Q(**{score_column: value})
 
     @classmethod
-    def _filter_annotations(cls, entries, annotations=None, pathogenicity=None, exclude=None, **kwargs):
-        filter_qs = cls._parse_annotation_filters(annotations) if annotations else []
+    def _filter_annotations(cls, entries, annotations=None, pathogenicity=None, exclude=None, gene_ids=None, **kwargs):
+        filter_qs = cls._parse_annotation_filters(annotations, gene_ids) if annotations else []
 
         hgmd = (pathogenicity or {}).get(HGMD_KEY)
         if hgmd:
@@ -409,7 +410,7 @@ class EntriesManager(Manager):
         return entries
 
     @classmethod
-    def _parse_annotation_filters(cls, annotations):
+    def _parse_annotation_filters(cls, annotations, gene_ids):
         filter_qs = []
         allowed_consequences = []
         transcript_filters = []
@@ -432,21 +433,27 @@ class EntriesManager(Manager):
 
         non_canonical_consequences = [c for c in allowed_consequences if not c.endswith('__canonical')]
         if non_canonical_consequences:
-            transcript_filters.append({'consequenceTerms': (non_canonical_consequences, 'hasAny({value}, {field})')})
+            transcript_filters.append(cls._consequence_term_filter(non_canonical_consequences, gene_ids))
 
         canonical_consequences = [
             c.replace('__canonical', '') for c in allowed_consequences if c.endswith('__canonical')
         ]
         if canonical_consequences:
-            transcript_filters.append({
-                'consequenceTerms': (canonical_consequences, 'hasAny({value}, {field})'),
-                'canonical': (0, '{field} > {value}'),
-            })
+            transcript_filters.append(
+                cls._consequence_term_filter(canonical_consequences, gene_ids, canonical=(0, '{field} > {value}')),
+            )
 
         if transcript_filters:
             filter_qs.append(Q(key__sorted_transcript_consequences__array_exists={'OR': transcript_filters}))
 
         return filter_qs
+
+    @staticmethod
+    def _consequence_term_filter(consequences, gene_ids, **kwargs):
+        filter_expr = {'consequenceTerms': (consequences, 'hasAny({value}, {field})'), **kwargs}
+        if gene_ids:
+            filter_expr['geneId'] = (gene_ids, 'has({value}, {field})')
+        return filter_expr
 
     @staticmethod
     def _hgmd_filter_q(hgmd):
