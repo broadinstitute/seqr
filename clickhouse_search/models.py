@@ -382,8 +382,10 @@ class EntriesManager(Manager):
         if hgmd:
             filter_qs.append(cls._hgmd_filter_q(hgmd))
 
+        has_clinvar_inner_join = False
         clinvar = (pathogenicity or {}).get(CLINVAR_KEY)
         if clinvar:
+            has_clinvar_inner_join = not filter_qs
             filter_qs.append(cls._clinvar_filter_q(clinvar))
 
         exclude_clinvar = (exclude or {}).get('clinvar')
@@ -396,7 +398,15 @@ class EntriesManager(Manager):
         filter_q = filter_qs[0]
         for q in filter_qs[1:]:
             filter_q |= q
-        return entries.filter(filter_q)
+        entries = entries.filter(filter_q)
+
+        if has_clinvar_inner_join:
+            # If clinvar is filtered on with no OR clauses, django optimizes the query to use an INNER JOIN.
+            # However, the clickhouse Join Table can only be used with a LEFT OUTER JOIN, so we explicitly "promote" the
+            # join type to an outer join. The filters remain unchanged, so no other query updates are needed
+            entries.query.promote_joins([Clinvar._meta.db_table])
+
+        return entries
 
     @classmethod
     def _parse_annotation_filters(cls, annotations):
