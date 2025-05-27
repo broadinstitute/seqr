@@ -62,6 +62,7 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
     logger.info(f'Loading {Sample.DATASET_TYPE_VARIANT_CALLS} data for {len(sample_data)} families', user)
 
     entries = EntriesSnvIndel.objects.search(sample_data, **search)
+    consequence_fields = [field for field in ['gene_consequences', 'filtered_transcript_consequences'] if hasattr(entries, field)]
     results = entries.annotate(**{
         SEQR_POPULATION_KEY: GtStatsDictGet(
             'key',
@@ -69,8 +70,7 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
             dict_attrs_2=f"({', '.join(GT_STATS_DICT_ATTRS_WGS)})",
         )
     }).values(
-        *CORE_ENTRIES_FIELDS,
-        'filtered_transcript_consequences',
+        *CORE_ENTRIES_FIELDS, *consequence_fields,
         familyGuids=Array('family_guid'),
         genotypes=ArrayMap(
             'calls',
@@ -105,19 +105,39 @@ def format_clickhouse_results(results, **kwargs):
         formatted_variant = {
             **variant,
             'transcripts': transcripts,
-            'selectedMainTranscriptId': None,
         }
         # pop sortedTranscriptConsequences from the formatted result and not the original result to ensure the full value is cached properly
         sorted_minimal_transcripts = formatted_variant.pop('sortedTranscriptConsequences')
+        gene_consequences = formatted_variant.pop('gene_consequences', None)
+        filtered_transcript_consequences = formatted_variant.pop('filtered_transcript_consequences', None)
         main_transcript_id = None
+        selected_main_transcript_id = None
         if sorted_minimal_transcripts:
             main_transcript_id = next(
                 t['transcriptId'] for t in transcripts[sorted_minimal_transcripts[0]['geneId']]
                 if t['transcriptRank'] == 0
             )
-        formatted_results.append({**formatted_variant, 'mainTranscriptId': main_transcript_id})
+        if filtered_transcript_consequences:
+            selected_main_transcript_id = next(
+                t['transcriptId'] for t in transcripts[filtered_transcript_consequences[0]['geneId']]
+                if _is_matched_minimal_transcript(t, filtered_transcript_consequences[0])
+            )
+        elif gene_consequences:
+            selected_main_transcript_id = transcripts[gene_consequences[0]['geneId']][0]['transcriptId']
+        formatted_results.append({
+            **formatted_variant,
+            'mainTranscriptId': main_transcript_id,
+            'selectedMainTranscriptId': None if selected_main_transcript_id == main_transcript_id else selected_main_transcript_id,
+        })
 
     return formatted_results
+
+
+def _is_matched_minimal_transcript(transcript, minimal_transcript):
+    (all(transcript[field] == minimal_transcript[field] for field in ['canonical','consequenceTerms'])
+     and transcript['utrannotator'].get('fiveutrConsequence') == minimal_transcript['fiveutrConsequence']
+     and transcript['spliceregion'].get('extended_intronic_splice_region_variant') == minimal_transcript['extendedIntronicSpliceRegionVariant'])
+
 
 
 def _get_sample_data(samples):

@@ -373,18 +373,17 @@ class EntriesManager(Manager):
 
     @classmethod
     def _filter_annotations(cls, entries, annotations=None, pathogenicity=None, exclude=None, gene_ids=None, **kwargs):
-        entries = entries.annotate(filtered_transcript_consequences=F('key__sorted_transcript_consequences'))
         if gene_ids:
-            entries = entries.annotate(
-                filtered_transcript_consequences=ArrayFilter('filtered_transcript_consequences', conditions=[{
+            entries = entries.annotate(gene_consequences=ArrayFilter('gene_consequences', conditions=[{
                 'geneId': (gene_ids, 'has({value}, {field})'),
             }]))
-            entries = entries.filter(filtered_transcript_consequences__not_empty=True)
+            entries = entries.filter(gene_consequences__not_empty=True)
 
-        filter_qs, transcript_filters = cls._parse_annotation_filters(annotations) if annotations else []
+        filter_qs, transcript_filters = cls._parse_annotation_filters(annotations) if annotations else ([], [])
         if transcript_filters:
+            consequence_field = 'gene_consequences' if gene_ids else 'key__sorted_transcript_consequences'
             entries = entries.annotate(
-                filtered_transcript_consequences=ArrayFilter('filtered_transcript_consequences', conditions=transcript_filters),
+                filtered_transcript_consequences=ArrayFilter(consequence_field, conditions=transcript_filters),
             )
             filter_qs.append(Q(filtered_transcript_consequences__not_empty=True))
 
