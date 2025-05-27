@@ -415,7 +415,7 @@ class EntriesManager(Manager):
         transcript_filters = []
         for field, value in annotations.items():
             if field == UTR_ANNOTATOR_KEY:
-                transcript_filters.append({'fiveutrConsequence': (value, 'has({value}, {field})')})
+                transcript_filters.append({'fiveutrConsequence': (value, 'hasAny({value}, [{field}])')})
             elif field == EXTENDED_SPLICE_KEY:
                 if EXTENDED_SPLICE_REGION_CONSEQUENCE in value:
                     transcript_filters.append({'extendedIntronicSpliceRegionVariant': (1, '{field} = {value}')})
