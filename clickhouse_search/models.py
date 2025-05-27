@@ -430,13 +430,13 @@ class EntriesManager(Manager):
             elif field not in SV_ANNOTATION_TYPES:
                 allowed_consequences += value
 
-        non_canonical_consequences = {c for c in allowed_consequences if not c.endswith('__canonical')}
+        non_canonical_consequences = [c for c in allowed_consequences if not c.endswith('__canonical')]
         if non_canonical_consequences:
             transcript_filters.append({'consequenceTerms': (non_canonical_consequences, 'hasAny({value}, {field})')})
 
-        canonical_consequences = {
+        canonical_consequences = [
             c.replace('__canonical', '') for c in allowed_consequences if c.endswith('__canonical')
-        }
+        ]
         if canonical_consequences:
             transcript_filters.append({
                 'consequenceTerms': (canonical_consequences, 'hasAny({value}, {field})'),
