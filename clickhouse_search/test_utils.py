@@ -30,7 +30,6 @@ for variant in [VARIANT1, VARIANT2, VARIANT3, VARIANT4]:
     # sort is not computed/annotated at query time
     del variant['_sort']
 
-# TODO add clinvar version to clickhouse
 del VARIANT1['clinvar']['version']
 del VARIANT2['clinvar']['version']
 
