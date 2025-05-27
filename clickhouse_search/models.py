@@ -415,10 +415,10 @@ class EntriesManager(Manager):
         transcript_filters = []
         for field, value in annotations.items():
             if field == UTR_ANNOTATOR_KEY:
-                transcript_filters.append({'fiveutrConsequence': value})
+                transcript_filters.append({'fiveutrConsequence': (value, 'has({value}, {field})')})
             elif field == EXTENDED_SPLICE_KEY:
                 if EXTENDED_SPLICE_REGION_CONSEQUENCE in value:
-                    transcript_filters.append({'extendedIntronicSpliceRegionVariant': 1})
+                    transcript_filters.append({'extendedIntronicSpliceRegionVariant': (1, '{field} = {value}')})
             elif field in [MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY]:
                 filter_qs.append(Q(**{f'key__sorted_{field}_consequences__array_exists': {
                     'consequenceTerms': (value, 'hasAny({value}, {field})'),
@@ -432,19 +432,19 @@ class EntriesManager(Manager):
 
         non_canonical_consequences = {c for c in allowed_consequences if not c.endswith('__canonical')}
         if non_canonical_consequences:
-            transcript_filters.append({'consequenceTerms': non_canonical_consequences})
+            transcript_filters.append({'consequenceTerms': (non_canonical_consequences, 'hasAny({value}, {field})')})
 
         canonical_consequences = {
             c.replace('__canonical', '') for c in allowed_consequences if c.endswith('__canonical')
         }
         if canonical_consequences:
-            transcript_filters.append({'consequenceTerms': canonical_consequences, 'canonical__gt': 0})
+            transcript_filters.append({
+                'consequenceTerms': (canonical_consequences, 'hasAny({value}, {field})'),
+                'canonical': (0, '{field} > {value}'),
+            })
 
         if transcript_filters:
-            filter_qs.append(Q(key__sorted_transcript_consequences__array_exists={'OR': [{
-                field: (value, 'hasAny({value}, {field})' if isinstance(value, list) else '{field} = {value}')
-                for field, value in transcript_filter.items()
-            } for transcript_filter in transcript_filters]}))
+            filter_qs.append(Q(key__sorted_transcript_consequences__array_exists={'OR': transcript_filters}))
 
         return filter_qs
 
