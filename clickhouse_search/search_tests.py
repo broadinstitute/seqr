@@ -451,7 +451,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #         )
 #
         self._assert_expected_search(
-            [SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT],  omit_data_type='SV_WES',
+            [SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT],
             locus={'rawItems': f'{GENE_IDS[1]}\n1:91500851-91525764'}, exclude=None, cached_variant_fields=[
                 {'selectedGeneId': 'ENSG00000177000'},
             ],
