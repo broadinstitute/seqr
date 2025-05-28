@@ -4,6 +4,7 @@ from django.db.models import options, ForeignKey, OneToOneField, Func, Manager, 
 
 from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocksDB, Join
 from clickhouse_search.backend.fields import NestedField, UInt64FieldDeltaCodecField, NamedTupleField
+from clickhouse_search.backend.functions import GtStatsDictGet
 from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFECTED, UNAFFECTED, MALE_SEXES, \
     X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF
 from seqr.utils.xpos_utils import get_xpos, CHROMOSOMES
@@ -195,6 +196,7 @@ class EntriesManager(Manager):
     def search(self, sample_data, parsed_locus=None, **kwargs):
         entries = self._search_call_data(sample_data, **kwargs)
         entries = self._filter_location(entries, **(parsed_locus or {}))
+        entries = entries.annotate(seqrPop=GtStatsDictGet('key'))
         entries = self._filter_frequency(entries, **kwargs)
         entries = self._filter_in_silico(entries, **kwargs)
         return entries
@@ -319,7 +321,10 @@ class EntriesManager(Manager):
 
     @classmethod
     def _filter_seqr_frequency(cls, entries, ac=None, hh=None, **kwargs):
-        # TODO implement seqr frequency filter
+        if ac is not None:
+            entries = entries.filter(seqrPop__0__lte=ac)
+        if hh is not None:
+            entries = entries.filter(seqrPop__1__lte=hh)
         return entries
 
     @classmethod

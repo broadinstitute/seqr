@@ -1,7 +1,8 @@
 from clickhouse_backend.models.fields.array import ArrayField, ArrayLookup
+from clickhouse_backend.models import UInt32Field
 from django.db.models import Func
 
-from clickhouse_search.backend.fields import NestedField
+from clickhouse_search.backend.fields import NamedTupleField, NestedField
 
 class Array(Func):
     function = 'array'
@@ -36,7 +37,8 @@ class ArrayExists(ArrayLookup):
 
 class GtStatsDictGet(Func):
     function = 'tuplePlus'
-    template = '%(function)s(dictGet("GRCh38/SNV_INDEL/gt_stats_dict", %(dict_attrs_1)s, %(expressions)s), dictGet("GRCh38/SNV_INDEL/gt_stats_dict", %(dict_attrs_2)s, %(expressions)s))'
+    template = '%(function)s(dictGet("GRCh38/SNV_INDEL/gt_stats_dict", (\'ac_wes\', \'hom_wes\'), %(expressions)s), dictGet("GRCh38/SNV_INDEL/gt_stats_dict", (\'ac_wgs\', \'hom_wgs\'), %(expressions)s))'
+    output_field = NamedTupleField([('ac', UInt32Field()), ('hom', UInt32Field())])
 
 
 class Tuple(Func):

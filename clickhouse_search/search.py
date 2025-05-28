@@ -17,12 +17,6 @@ logger = SeqrLogger(__name__)
 
 CORE_ENTRIES_FIELDS = ['key', 'xpos']
 
-GT_STATS_DICT_FIELDS = OrderedDict({
-    'ac': models.UInt32Field(),
-    'hom': models.UInt32Field(),
-})
-GT_STATS_DICT_ATTRS_WES = [f"'{field}_wes'" for field in GT_STATS_DICT_FIELDS.keys()]
-GT_STATS_DICT_ATTRS_WGS = [f"'{field}_wgs'" for field in GT_STATS_DICT_FIELDS.keys()]
 SEQR_POPULATION_KEY = 'seqrPop'
 
 ANNOTATION_VALUES = {
@@ -33,7 +27,7 @@ ANNOTATION_VALUES['populations'] = TupleConcat(
     ANNOTATION_VALUES['populations'], Tuple(SEQR_POPULATION_KEY),
     output_field=NamedTupleField([
         *AnnotationsSnvIndel.POPULATION_FIELDS,
-        ('seqr', NamedTupleField(list(GT_STATS_DICT_FIELDS.items()))),
+        ('seqr', GtStatsDictGet.output_field),
     ]),
 )
 
@@ -62,13 +56,7 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
     logger.info(f'Loading {Sample.DATASET_TYPE_VARIANT_CALLS} data for {len(sample_data)} families', user)
 
     entries = EntriesSnvIndel.objects.search(sample_data, **search)
-    results = entries.annotate(**{
-        SEQR_POPULATION_KEY: GtStatsDictGet(
-            'key',
-            dict_attrs_1=f"({', '.join(GT_STATS_DICT_ATTRS_WES)})",
-            dict_attrs_2=f"({', '.join(GT_STATS_DICT_ATTRS_WGS)})",
-        )
-    }).values(
+    results = entries.values(
         *CORE_ENTRIES_FIELDS,
         familyGuids=Array('family_guid'),
         genotypes=ArrayMap(
