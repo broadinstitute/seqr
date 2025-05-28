@@ -4,8 +4,12 @@ from django.db.models import options, ForeignKey, OneToOneField, Func, Manager, 
 
 from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocksDB, Join
 from clickhouse_search.backend.fields import NestedField, UInt64FieldDeltaCodecField, NamedTupleField
+from clickhouse_search.backend.functions import ArrayFilter
 from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFECTED, UNAFFECTED, MALE_SEXES, \
-    X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF
+    X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, SCREEN_KEY, UTR_ANNOTATOR_KEY, \
+    EXTENDED_SPLICE_KEY, MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY, CLINVAR_KEY, HGMD_KEY, SV_ANNOTATION_TYPES, \
+    EXTENDED_SPLICE_REGION_CONSEQUENCE, CLINVAR_PATH_RANGES, CLINVAR_PATH_SIGNIFICANCES, PATH_FREQ_OVERRIDE_CUTOFF, \
+    HGMD_CLASS_FILTERS
 from seqr.utils.xpos_utils import get_xpos, CHROMOSOMES
 from settings import CLICKHOUSE_IN_MEMORY_DIR, CLICKHOUSE_DATA_DIR
 
@@ -112,7 +116,7 @@ class BaseAnnotationsSnvIndel(models.ClickhouseModel):
         ('primate_ai', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
         ('revel', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
         ('sift', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        ('splice_ai', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        (SPLICE_AI_FIELD, models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
         ('splice_ai_consequence', models.Enum8Field(null=True, blank=True, return_int=False, choices=[(0, 'Acceptor gain'), (1, 'Acceptor loss'), (2, 'Donor gain'), (3, 'Donor loss'), (4, 'No consequence')])),
         ('vest', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
     ]
@@ -131,8 +135,8 @@ class BaseAnnotationsSnvIndel(models.ClickhouseModel):
     lifted_over_pos = models.UInt32Field(db_column='liftedOverPos', null=True, blank=True)
     hgmd = NamedTupleField([
         ('accession', models.StringField(null=True, blank=True)),
-        ('class_', models.Enum8Field(null=True, blank=True, return_int=False, choices=HGMD_CLASSES)),
-    ], null_if_empty=True, rename_fields={'class_': 'class'})
+        ('classification', models.Enum8Field(null=True, blank=True, return_int=False, choices=HGMD_CLASSES)),
+    ], null_if_empty=True, rename_fields={'classification': 'class'})
     screen_region_type = models.Enum8Field(db_column='screenRegionType', null=True, blank=True, return_int=False, choices=[(0, 'CTCF-bound'), (1, 'CTCF-only'), (2, 'DNase-H3K4me3'), (3, 'PLS'), (4, 'dELS'), (5, 'pELS'), (6, 'DNase-only'), (7, 'low-DNase')])
     predictions = NamedTupleField(PREDICTION_FIELDS)
     populations = NamedTupleField(POPULATION_FIELDS)
@@ -194,13 +198,15 @@ class EntriesManager(Manager):
     IN_SILICO_SCORES = {score for score, _ in AnnotationsSnvIndel.PREDICTION_FIELDS}
 
     def search(self, sample_data, parsed_locus=None, **kwargs):
+        parsed_locus = parsed_locus or {}
         entries = self._search_call_data(sample_data, **kwargs)
-        entries = self._filter_location(entries, **(parsed_locus or {}))
+        entries = self._filter_location(entries, **parsed_locus)
         entries = self._filter_frequency(entries, **kwargs)
         entries = self._filter_in_silico(entries, **kwargs)
+        entries = self._filter_annotations(entries, **parsed_locus, **kwargs)
         return entries
 
-    def _search_call_data(self, sample_data, inheritance_mode=None, inheritance_filter=None, qualityFilter=None, **kwargs):
+    def _search_call_data(self, sample_data, inheritance_mode=None, inheritance_filter=None, qualityFilter=None, pathogenicity=None, **kwargs):
        if len(sample_data) > 1:
            raise NotImplementedError('Clickhouse search not implemented for multiple families or sample types')
 
@@ -218,21 +224,26 @@ class EntriesManager(Manager):
        if not (inheritance_mode or individual_genotype_filter or quality_filter):
            return entries
 
+       clinvar_override_q = self._clinvar_path_q(pathogenicity)
+
        for sample in sample_data[0]['samples']:
            affected = custom_affected.get(sample['individual_guid']) or sample['affected']
-           sample_filter = {}
-           self._sample_genotype_filter(sample_filter, sample, affected, inheritance_mode, individual_genotype_filter)
-           self._sample_quality_filter(sample_filter, affected, quality_filter)
-           if sample_filter:
-               entries = entries.filter(calls__array_exists={
-                   'sampleId': (f"'{sample['sample_id']}'",),
-                   **sample_filter,
-               })
+           sample_inheritance_filter = self._sample_genotype_filter(sample, affected, inheritance_mode, individual_genotype_filter)
+           sample_quality_filter = self._sample_quality_filter(affected, quality_filter)
+           if not (sample_inheritance_filter or sample_quality_filter):
+               continue
+           sample_inheritance_filter['sampleId'] = (f"'{sample['sample_id']}'",)
+           sample_q = Q(calls__array_exists={**sample_inheritance_filter, **sample_quality_filter})
+           if clinvar_override_q and sample_quality_filter:
+               sample_q |= clinvar_override_q & Q(calls__array_exists=sample_inheritance_filter)
+
+           entries = entries.filter(sample_q)
 
        return entries
 
     @classmethod
-    def _sample_genotype_filter(cls, sample_filter, sample, affected, inheritance_mode, individual_genotype_filter):
+    def _sample_genotype_filter(cls, sample, affected, inheritance_mode, individual_genotype_filter):
+        sample_filter = {}
         genotype = None
         if individual_genotype_filter:
             genotype = individual_genotype_filter.get(sample['individual_guid'])
@@ -242,11 +253,13 @@ class EntriesManager(Manager):
                 genotype = REF_REF
         if genotype:
             sample_filter['gt'] = cls.GENOTYPE_LOOKUP[genotype]
+        return sample_filter
 
     @classmethod
-    def _sample_quality_filter(cls, sample_filter, affected, quality_filter):
+    def _sample_quality_filter(cls, affected, quality_filter):
+        sample_filter = {}
         if quality_filter.get('affected_only') and affected != AFFECTED:
-            return
+            return sample_filter
 
         for field, scale, *filters in cls.QUALITY_FILTERS:
             value = quality_filter.get(f'min_{field}')
@@ -254,8 +267,10 @@ class EntriesManager(Manager):
                 or_filters = ['isNull({field})', '{field} >= {value}'] + filters
                 sample_filter[field] = (value / scale, f'or({", ".join(or_filters)})')
 
+        return sample_filter
+
     @classmethod
-    def _filter_location(cls, entries, exclude_intervals=False, intervals=None, gene_ids=None, variant_ids=None, rs_ids=None):
+    def _filter_location(cls, entries, exclude_intervals=False, intervals=None, variant_ids=None, rs_ids=None, **kwargs):
         if variant_ids:
             entries = entries.filter(
                 key__variant_id__in=[f'{chrom}-{pos}-{ref}-{alt}' for chrom, pos, ref, alt in variant_ids]
@@ -271,11 +286,6 @@ class EntriesManager(Manager):
             filter_func = entries.exclude if exclude_intervals else entries.filter
             entries = filter_func(interval_q)
 
-        if gene_ids:
-            entries = entries.filter(key__sorted_transcript_consequences__array_exists={
-                'geneId': (gene_ids, 'has({value}, {field})'),
-            })
-
         if rs_ids:
             entries = entries.filter(key__rsid__in=rs_ids)
 
@@ -286,12 +296,14 @@ class EntriesManager(Manager):
         return Q(xpos__range=(get_xpos(chrom, start), get_xpos(chrom, end)))
 
     @classmethod
-    def _filter_frequency(cls, entries, freqs=None, **kwargs):
+    def _filter_frequency(cls, entries, freqs=None, pathogenicity=None, **kwargs):
         frequencies =  freqs or {}
 
         gnomad_filter = frequencies.get('gnomad_genomes') or {}
         if (gnomad_filter.get('af') or 1) <= 0.05 or any(gnomad_filter.get(field) is not None for field in ['ac', 'hh']):
             entries = entries.filter(is_gnomad_gt_5_percent=False)
+
+        clinvar_override_q = cls._clinvar_path_q(pathogenicity)
 
         for population, pop_filter in frequencies.items():
             pop_subfields = cls.POPULATIONS.get(population)
@@ -301,17 +313,25 @@ class EntriesManager(Manager):
             if pop_filter.get('af') is not None and pop_filter['af'] < 1:
                 af_field = next(field for field in ['filter_af', 'af'] if field in pop_subfields)
                 if af_field:
-                    entries = entries.filter(**{
+                    af_q = Q(**{
                         f'key__populations__{population}__{af_field}__lte': pop_filter['af'],
                     })
+                    if clinvar_override_q and pop_filter['af'] < PATH_FREQ_OVERRIDE_CUTOFF:
+                        af_q |= clinvar_override_q
+                    entries = entries.filter(af_q)
             elif pop_filter.get('ac') is not None:
                 entries = entries.filter(**{f'key__populations__{population}__ac__lte': pop_filter['ac']})
 
             if pop_filter.get('hh') is not None:
-                entries = entries.filter(**{
-                    f'key__populations__{population}__{subfield}__lte': pop_filter['hh']
-                    for subfield in ['hom', 'hemi'] if subfield in pop_subfields
-                })
+                for subfield in ['hom', 'hemi']:
+                    if subfield not in pop_subfields:
+                        continue
+                    hh_q = Q(**{
+                        f'key__populations__{population}__{subfield}__lte': pop_filter['hh'],
+                    })
+                    if clinvar_override_q:
+                        hh_q |= clinvar_override_q
+                    entries = entries.filter(hh_q)
 
         if frequencies.get('callset'):
             entries = cls._filter_seqr_frequency(entries, **frequencies['callset'])
@@ -333,11 +353,7 @@ class EntriesManager(Manager):
 
         in_silico_q = None
         for score, value in in_silico_filters.items():
-            score_column = f'key__predictions__{score}'
-            try:
-                score_q = Q(**{f'{score_column}__gte': float(value)})
-            except ValueError:
-                score_q = Q(**{score_column: value})
+            score_q = cls._get_in_silico_score_q(score, value)
             if in_silico_q is None:
                 in_silico_q = score_q
             else:
@@ -347,6 +363,137 @@ class EntriesManager(Manager):
             in_silico_q |= Q(**{f'key__predictions__{score}__isnull': True for score in in_silico_filters.keys()})
 
         return entries.filter(in_silico_q)
+
+    @staticmethod
+    def _get_in_silico_score_q(score, value):
+        score_column = f'key__predictions__{score}'
+        try:
+            return Q(**{f'{score_column}__gte': float(value)})
+        except ValueError:
+            return Q(**{score_column: value})
+
+    @classmethod
+    def _filter_annotations(cls, entries, annotations=None, pathogenicity=None, exclude=None, gene_ids=None, **kwargs):
+        if gene_ids:
+            entries = entries.annotate(gene_consequences=ArrayFilter('key__sorted_transcript_consequences', conditions=[{
+                'geneId': (gene_ids, 'has({value}, {field})'),
+            }]))
+            entries = entries.filter(gene_consequences__not_empty=True)
+
+        filter_qs, transcript_filters = cls._parse_annotation_filters(annotations) if annotations else ([], [])
+        if transcript_filters:
+            consequence_field = 'gene_consequences' if gene_ids else 'key__sorted_transcript_consequences'
+            entries = entries.annotate(
+                filtered_transcript_consequences=ArrayFilter(consequence_field, conditions=transcript_filters),
+            )
+            filter_qs.append(Q(filtered_transcript_consequences__not_empty=True))
+
+        hgmd = (pathogenicity or {}).get(HGMD_KEY)
+        if hgmd:
+            filter_qs.append(cls._hgmd_filter_q(hgmd))
+
+        has_clinvar_inner_join = False
+        clinvar = (pathogenicity or {}).get(CLINVAR_KEY)
+        if clinvar:
+            has_clinvar_inner_join = not filter_qs
+            filter_qs.append(cls._clinvar_filter_q(clinvar))
+
+        exclude_clinvar = (exclude or {}).get('clinvar')
+        if exclude_clinvar:
+            entries = entries.exclude(cls._clinvar_filter_q(exclude_clinvar))
+
+        if not filter_qs:
+            return entries
+
+        filter_q = filter_qs[0]
+        for q in filter_qs[1:]:
+            filter_q |= q
+        entries = entries.filter(filter_q)
+
+        if has_clinvar_inner_join:
+            # If clinvar is filtered on with no OR clauses, django optimizes the query to use an INNER JOIN.
+            # However, the clickhouse Join Table can only be used with a LEFT OUTER JOIN, so we explicitly "promote" the
+            # join type to an outer join. The filters remain unchanged, so no other query updates are needed
+            entries.query.promote_joins([Clinvar._meta.db_table])
+
+        return entries
+
+    @classmethod
+    def _parse_annotation_filters(cls, annotations):
+        filter_qs = []
+        allowed_consequences = []
+        transcript_filters = []
+        for field, value in annotations.items():
+            if field == UTR_ANNOTATOR_KEY:
+                transcript_filters.append({'fiveutrConsequence': (value, 'hasAny({value}, [{field}])')})
+            elif field == EXTENDED_SPLICE_KEY:
+                if EXTENDED_SPLICE_REGION_CONSEQUENCE in value:
+                    transcript_filters.append({'extendedIntronicSpliceRegionVariant': (1, '{field} = {value}')})
+            elif field in [MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY]:
+                filter_qs.append(Q(**{f'key__sorted_{field}_consequences__array_exists': {
+                    'consequenceTerms': (value, 'hasAny({value}, {field})'),
+                }}))
+            elif field == SPLICE_AI_FIELD:
+                filter_qs.append(cls._get_in_silico_score_q(SPLICE_AI_FIELD, value))
+            elif field == SCREEN_KEY:
+                filter_qs.append(Q(key__screen_region_type__in=value))
+            elif field not in SV_ANNOTATION_TYPES:
+                allowed_consequences += value
+
+        non_canonical_consequences = [c for c in allowed_consequences if not c.endswith('__canonical')]
+        if non_canonical_consequences:
+            transcript_filters.append(cls._consequence_term_filter(non_canonical_consequences))
+
+        canonical_consequences = [
+            c.replace('__canonical', '') for c in allowed_consequences if c.endswith('__canonical')
+        ]
+        if canonical_consequences:
+            transcript_filters.append(
+                cls._consequence_term_filter(canonical_consequences, canonical=(0, '{field} > {value}')),
+            )
+
+        return filter_qs, transcript_filters
+
+    @staticmethod
+    def _consequence_term_filter(consequences, **kwargs):
+        return {'consequenceTerms': (consequences, 'hasAny({value}, {field})'), **kwargs}
+
+    @staticmethod
+    def _hgmd_filter_q(hgmd):
+        min_class = next((class_name for value, class_name in HGMD_CLASS_FILTERS if value in hgmd), None)
+        max_class = next((class_name for value, class_name in reversed(HGMD_CLASS_FILTERS) if value in hgmd), None)
+        if 'hgmd_other' in hgmd:
+            min_class = min_class or 'DP'
+            max_class = None
+        if min_class == max_class:
+            return Q(key__hgmd__classification=min_class)
+        elif min_class and max_class:
+            return Q(key__hgmd__classification__range=(min_class, max_class))
+        return Q(key__hgmd__classification__gt=min_class)
+
+    @staticmethod
+    def _clinvar_filter_q(clinvar_filters):
+        ranges = [[None, None]]
+        for path_filter, start, end in CLINVAR_PATH_RANGES:
+            if path_filter in clinvar_filters:
+                ranges[-1][1] = end
+                if ranges[-1][0] is None:
+                    ranges[-1][0] = start
+            elif ranges[-1] != [None, None]:
+                ranges.append([None, None])
+        ranges = [r for r in ranges if r[0] is not None]
+
+        clinvar_q = Q(key__clinvar__pathogenicity__range=ranges[0])
+        for path_range in ranges[1:]:
+            clinvar_q |= Q(key__clinvar__pathogenicity__range=path_range)
+        return clinvar_q
+
+    @classmethod
+    def _clinvar_path_q(cls, pathogenicity):
+        clinvar_path_filters = [
+            f for f in (pathogenicity or {}).get(CLINVAR_KEY) or [] if f in CLINVAR_PATH_SIGNIFICANCES
+        ]
+        return cls._clinvar_filter_q(clinvar_path_filters) if clinvar_path_filters else None
 
 
 class EntriesSnvIndel(models.ClickhouseModel):

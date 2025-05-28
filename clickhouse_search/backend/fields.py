@@ -1,4 +1,6 @@
 from clickhouse_backend import models
+from clickhouse_backend.models.fields.tuple import IndexTransformFactory as TupleIndexTransform
+from clickhouse_backend.models.fields.array import IndexTransformFactory as ArrayIndexTransform
 from collections import defaultdict
 
 class NestedField(models.TupleField):
@@ -51,6 +53,12 @@ class NestedField(models.TupleField):
 
     def get_db_prep_save(self, value, connection):
         return [super(NestedField, self).get_db_prep_save(item, connection) for item in value]
+
+    def get_transform(self, name):
+        transform = super().get_transform(name)
+        if isinstance(transform, TupleIndexTransform):
+            transform = ArrayIndexTransform(index=transform.index, base_field=NamedTupleField(self.base_fields, null_if_empty=True))
+        return transform
 
 
 class UInt64FieldDeltaCodecField(models.UInt64Field):
