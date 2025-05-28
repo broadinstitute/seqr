@@ -50,6 +50,13 @@ GENOTYPE_FIELDS = OrderedDict({
     **{f'x.{column[0]}': column for column in EntriesSnvIndel.CALL_FIELDS if column[0] != 'gt'}
 })
 
+SELECTED_GENE_FIELD = 'selectedGeneId'
+SELECTED_TRANSCRIPT_FIELD = 'selectedTranscript'
+SELECTED_CONSEQUENCE_VALUES = {
+    'gene_consequences': {SELECTED_GENE_FIELD: F('gene_consequences__0__geneId')},
+    'filtered_transcript_consequences': {SELECTED_TRANSCRIPT_FIELD: F('filtered_transcript_consequences__0')},
+}
+
 def clickhouse_backend_enabled():
     return bool(CLICKHOUSE_SERVICE_HOSTNAME)
 
@@ -62,7 +69,12 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
     logger.info(f'Loading {Sample.DATASET_TYPE_VARIANT_CALLS} data for {len(sample_data)} families', user)
 
     entries = EntriesSnvIndel.objects.search(sample_data, **search)
-    consequence_fields = [field for field in ['gene_consequences', 'filtered_transcript_consequences'] if hasattr(entries, field)]
+
+    consequence_values = {}
+    for field, value in SELECTED_CONSEQUENCE_VALUES.items():
+        if field in entries.query.annotations:
+            consequence_values.update(value)
+
     results = entries.annotate(**{
         SEQR_POPULATION_KEY: GtStatsDictGet(
             'key',
@@ -70,7 +82,7 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
             dict_attrs_2=f"({', '.join(GT_STATS_DICT_ATTRS_WGS)})",
         )
     }).values(
-        *CORE_ENTRIES_FIELDS, *consequence_fields,
+        *CORE_ENTRIES_FIELDS,
         familyGuids=Array('family_guid'),
         genotypes=ArrayMap(
             'calls',
@@ -81,6 +93,7 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
         genomeVersion=Value(genome_version),
         liftedOverGenomeVersion=Value(_liftover_genome_version(genome_version)),
         **ANNOTATION_VALUES,
+        **consequence_values,
     )
     results = results[:MAX_VARIANTS+1]
 
@@ -108,8 +121,8 @@ def format_clickhouse_results(results, **kwargs):
         }
         # pop sortedTranscriptConsequences from the formatted result and not the original result to ensure the full value is cached properly
         sorted_minimal_transcripts = formatted_variant.pop('sortedTranscriptConsequences')
-        gene_consequences = formatted_variant.pop('gene_consequences', None)
-        filtered_transcript_consequences = formatted_variant.pop('filtered_transcript_consequences', None)
+        selected_gene_id = formatted_variant.pop(SELECTED_GENE_FIELD, None)
+        selected_transcript = formatted_variant.pop(SELECTED_TRANSCRIPT_FIELD, None)
         main_transcript_id = None
         selected_main_transcript_id = None
         if sorted_minimal_transcripts:
@@ -117,13 +130,13 @@ def format_clickhouse_results(results, **kwargs):
                 t['transcriptId'] for t in transcripts[sorted_minimal_transcripts[0]['geneId']]
                 if t['transcriptRank'] == 0
             )
-        if filtered_transcript_consequences:
+        if selected_transcript:
             selected_main_transcript_id = next(
-                t['transcriptId'] for t in transcripts[filtered_transcript_consequences[0]['geneId']]
-                if _is_matched_minimal_transcript(t, filtered_transcript_consequences[0])
+                t['transcriptId'] for t in transcripts[selected_transcript['geneId']]
+                if _is_matched_minimal_transcript(t, selected_transcript)
             )
-        elif gene_consequences:
-            selected_main_transcript_id = transcripts[gene_consequences[0]['geneId']][0]['transcriptId']
+        elif selected_gene_id:
+            selected_main_transcript_id = transcripts[selected_gene_id][0]['transcriptId']
         formatted_results.append({
             **formatted_variant,
             'mainTranscriptId': main_transcript_id,
@@ -134,7 +147,7 @@ def format_clickhouse_results(results, **kwargs):
 
 
 def _is_matched_minimal_transcript(transcript, minimal_transcript):
-    (all(transcript[field] == minimal_transcript[field] for field in ['canonical','consequenceTerms'])
+    return (all(transcript[field] == minimal_transcript[field] for field in ['canonical','consequenceTerms'])
      and transcript['utrannotator'].get('fiveutrConsequence') == minimal_transcript['fiveutrConsequence']
      and transcript['spliceregion'].get('extended_intronic_splice_region_variant') == minimal_transcript['extendedIntronicSpliceRegionVariant'])
 

@@ -51,7 +51,7 @@ class ArrayFilter(lookups.Transform):
 
     def as_sql(self, compiler, connection):
         lhs, params = compiler.compile(self.lhs)
-        return "arrayFilter(x -> %s, {})".format(lhs), [self.conditions] + params
+        return f'arrayFilter(x -> {self.conditions}, {lhs})', params
 
 
 @NestedField.register_lookup
