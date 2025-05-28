@@ -116,6 +116,7 @@ class BaseAnnotationsSnvIndel(models.ClickhouseModel):
         ('splice_ai_consequence', models.Enum8Field(null=True, blank=True, return_int=False, choices=[(0, 'Acceptor gain'), (1, 'Acceptor loss'), (2, 'Donor gain'), (3, 'Donor loss'), (4, 'No consequence')])),
         ('vest', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
     ]
+    HGMD_CLASSES = [(0, 'DM'), (1, 'DM?'), (2, 'DP'), (3, 'DFP'), (4, 'FP'), (5, 'R')]
 
     key = models.UInt32Field(primary_key=True)
     xpos = models.UInt64Field()
@@ -130,7 +131,7 @@ class BaseAnnotationsSnvIndel(models.ClickhouseModel):
     lifted_over_pos = models.UInt32Field(db_column='liftedOverPos', null=True, blank=True)
     hgmd = NamedTupleField([
         ('accession', models.StringField(null=True, blank=True)),
-        ('class_', models.Enum8Field(null=True, blank=True, return_int=False, choices=[(0, 'DM'), (1, 'DM?'), (2, 'DP'), (3, 'DFP'), (4, 'FP'), (5, 'R')])),
+        ('class_', models.Enum8Field(null=True, blank=True, return_int=False, choices=HGMD_CLASSES)),
     ], null_if_empty=True, rename_fields={'class_': 'class'})
     screen_region_type = models.Enum8Field(db_column='screenRegionType', null=True, blank=True, return_int=False, choices=[(0, 'CTCF-bound'), (1, 'CTCF-only'), (2, 'DNase-H3K4me3'), (3, 'PLS'), (4, 'dELS'), (5, 'pELS'), (6, 'DNase-only'), (7, 'low-DNase')])
     predictions = NamedTupleField(PREDICTION_FIELDS)

@@ -940,7 +940,8 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #             reason = resp.reason
 #         self.assertEqual(reason, 'Invalid intervals: 1:1-999999999')
 #
-#     def test_sort(self):
+    def test_sort(self):
+        self.results_model.families.set(self.families.filter(guid='F000002_2'))
 #         self._assert_expected_search(
 #             [_sorted(VARIANT4, [2, 2]), _sorted(MITO_VARIANT2, [11, 11]), _sorted(VARIANT2, [12, 12]),
 #              _sorted(MITO_VARIANT3, [17, 17]),  _sorted(MITO_VARIANT1, [22, 22]), _sorted(VARIANT3, [26, 27]),
@@ -969,19 +970,21 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #             omit_data_type='SV_WES', sort='protein_consequence',
 #             annotations={'other': ['non_coding_transcript_exon_variant'], 'splice_ai': '0'},
 #         )
-#
-#         self._assert_expected_search(
-#             [_sorted(VARIANT1, [4]), _sorted(VARIANT2, [8]), _sorted(MULTI_FAMILY_VARIANT, [12.5]),
-#              _sorted(VARIANT4, [12.5]), GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4], sort='pathogenicity',
-#         )
-#
-#         self._assert_expected_search(
-#             [ _sorted(MITO_VARIANT3, [4]), _sorted(VARIANT1, [4, None]), _sorted(VARIANT2, [8, 3]),
-#              _sorted(MITO_VARIANT1, [11]), _sorted(MITO_VARIANT2, [12.5]), _sorted(VARIANT3, [12.5, None]),
-#               _sorted(VARIANT4, [12.5, None])],
-#             sort='pathogenicity_hgmd', sample_data=FAMILY_2_ALL_SAMPLE_DATA,
-#         )
-#
+
+        self._assert_expected_search(
+            [VARIANT1, VARIANT2, VARIANT3, VARIANT4], sort='pathogenicity',
+            # [_sorted(VARIANT1, [4]), _sorted(VARIANT2, [8]), _sorted(MULTI_FAMILY_VARIANT, [12.5]),
+            #  _sorted(VARIANT4, [12.5]), GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4], sort='pathogenicity',
+        )
+
+        self._assert_expected_search(
+            [VARIANT1, VARIANT2, VARIANT3, VARIANT4],
+            # [ _sorted(MITO_VARIANT3, [4]), _sorted(VARIANT1, [4, None]), _sorted(VARIANT2, [8, 3]),
+            #  _sorted(MITO_VARIANT1, [11]), _sorted(MITO_VARIANT2, [12.5]), _sorted(VARIANT3, [12.5, None]),
+            #   _sorted(VARIANT4, [12.5, None])],
+            sort='pathogenicity_hgmd', # sample_data=FAMILY_2_ALL_SAMPLE_DATA,
+        )
+
 #         self._assert_expected_search(
 #             [_sorted(VARIANT2, [0]), _sorted(MITO_VARIANT1, [0]), _sorted(MITO_VARIANT2, [0]),
 #              _sorted(VARIANT4, [0.00026519427774474025]), _sorted(VARIANT1, [0.034449315071105957]),

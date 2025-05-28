@@ -10,7 +10,8 @@ from clickhouse_search.models import EntriesSnvIndel, AnnotationsSnvIndel, Trans
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample
 from seqr.utils.logging_utils import SeqrLogger
-from seqr.utils.search.constants import MAX_VARIANTS, XPOS_SORT_KEY
+from seqr.utils.search.constants import MAX_VARIANTS, XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, \
+    PRIORITIZED_GENE_SORT
 from settings import CLICKHOUSE_SERVICE_HOSTNAME
 
 logger = SeqrLogger(__name__)
@@ -141,9 +142,40 @@ def _liftover_genome_version(genome_version):
     return GENOME_VERSION_GRCh37 if genome_version == GENOME_VERSION_GRCh38 else GENOME_VERSION_GRCh38
 
 
-def _get_sort_key(sort):
-    sort_fields = [XPOS_SORT_KEY]
-    if sort and sort != XPOS_SORT_KEY:
-        sort_fields.insert(0, sort)
+CLINVAR_RANK_LOOKUP = {path: rank for rank, path in Clinvar.PATHOGENICITY_CHOICES}
+HGMD_RANK_LOOKUP = {class_: rank for rank, class_ in AnnotationsSnvIndel.HGMD_CLASSES}
+ABSENT_CLINVAR_SORT_OFFSET = 12.5
+SORT_EXPRESSIONS = {
+    'alphamissense': [],
+    'family_guid': [],
+    PATHOGENICTY_SORT_KEY: [
+        lambda x: CLINVAR_RANK_LOOKUP.get((x.get('clinvar') or {}).get('pathogenicity'), ABSENT_CLINVAR_SORT_OFFSET)
+    ],
+    'protein_consequence': [],
+}
+SORT_EXPRESSIONS[PATHOGENICTY_HGMD_SORT_KEY] = SORT_EXPRESSIONS[PATHOGENICTY_SORT_KEY] + [
+    lambda x: HGMD_RANK_LOOKUP.get((x.get('hgmd') or {}).get('class'))
+]
 
-    return lambda x: tuple(x[field] for field in sort_fields)
+
+def _get_sort_key(sort):
+    sort_expressions = SORT_EXPRESSIONS.get(sort, [])
+    sort_expressions.append(lambda x: x[XPOS_SORT_KEY])
+
+    # if sort in self.PREDICTION_FIELDS_CONFIG:
+    #     prediction_path = self.PREDICTION_FIELDS_CONFIG[sort]
+    #     return [self._format_prediction_sort_value(ht[prediction_path.source][prediction_path.field])]
+    #
+    # if sort == OMIM_SORT:
+    #     return self._omim_sort(ht, hl.set(set(self._sort_metadata)))
+    #
+    # if self._sort_metadata:
+    #     return self._gene_rank_sort(ht, hl.dict(self._sort_metadata))
+    #
+    # sort_field, sort_subfield = next(
+    #     ((field, config.get('sort_subfield', 'af')) for field, config in self.POPULATIONS.items() if
+    #      config.get('sort') == sort),
+    #     (None, None),
+    # )
+
+    return lambda x: tuple(expr(x) for expr in sort_expressions)
