@@ -45,7 +45,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         super().set_up()
         Project.objects.update(genome_version='38')
 
-    def _assert_expected_search(self, expected_results, gene_counts=None, inheritance_mode=None, inheritance_filter=None, quality_filter=None, **search_kwargs):
+    def _assert_expected_search(self, expected_results, gene_counts=None, inheritance_mode=None, inheritance_filter=None, quality_filter=None, cached_variant_fields=None,  **search_kwargs):
         self.search_model.search.update(search_kwargs or {})
         self.search_model.search['qualityFilter'] = quality_filter
         self.search_model.search['inheritance']['mode'] = inheritance_mode
@@ -57,10 +57,12 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 
         self.assertListEqual(encoded_variants, expected_results)
         self.assertEqual(total, len(expected_results))
-        self._assert_expected_search_cache(encoded_variants, total)
+        self._assert_expected_search_cache(encoded_variants, total, cached_variant_fields)
 
-    def _assert_expected_search_cache(self, variants, total):
+    def _assert_expected_search_cache(self, variants, total, cached_variant_fields):
         cached_variants = [CACHED_VARIANTS_BY_KEY[variant['key']] for variant in variants]
+        for i, fields in enumerate(cached_variant_fields or []):
+            cached_variants[i].update(fields)
         results_cache = {'all_results': cached_variants, 'total_results': total}
         self.assert_cached_results(results_cache)
 
@@ -667,6 +669,11 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         selected_transcript_variant_2 = {**VARIANT2, 'selectedMainTranscriptId': 'ENST00000408919'}
         self._assert_expected_search(
             [VARIANT1, selected_transcript_variant_2, VARIANT4], pathogenicity=pathogenicity, annotations=annotations,
+            cached_variant_fields=[
+                {'selectedTranscript': None},
+                {'selectedTranscript': CACHED_VARIANTS_BY_KEY[2]['sortedTranscriptConsequences'][1]},
+                {'selectedTranscript': None},
+            ]
             # [VARIANT1, selected_transcript_variant_2, VARIANT4, MITO_VARIANT3], pathogenicity=pathogenicity, annotations=annotations,
         )
 
@@ -688,7 +695,11 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         self._assert_expected_search(
             [VARIANT1, VARIANT2, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4], pathogenicity=pathogenicity,
             # [VARIANT1, VARIANT2, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4, MITO_VARIANT2, MITO_VARIANT3], pathogenicity=pathogenicity,
-            annotations=annotations, exclude=None,
+            annotations=annotations, exclude=None, cached_variant_fields=[
+                {'selectedTranscript': None},
+                {'selectedTranscript': CACHED_VARIANTS_BY_KEY[2]['sortedTranscriptConsequences'][0]},
+                {'selectedTranscript': CACHED_VARIANTS_BY_KEY[4]['sortedTranscriptConsequences'][1]},
+            ]
         )
 
         self._assert_expected_search(
@@ -703,7 +714,11 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         self._assert_expected_search(
             [VARIANT2, VARIANT3, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4],
             # [VARIANT2, MULTI_FAMILY_VARIANT, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
-            annotations=annotations,
+            annotations=annotations, cached_variant_fields=[
+                {'selectedTranscript': CACHED_VARIANTS_BY_KEY[2]['sortedTranscriptConsequences'][0]},
+                {'selectedTranscript': None},
+                {'selectedTranscript': CACHED_VARIANTS_BY_KEY[4]['sortedTranscriptConsequences'][1]},
+            ]
         )
 
 #         self._assert_expected_search([SV_VARIANT1, SV_VARIANT4], annotations=annotations, sample_data=SV_WGS_SAMPLE_DATA)
@@ -712,18 +727,26 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         self._assert_expected_search(
             [VARIANT1, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3],
             # [VARIANT1, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3, MITO_VARIANT1, MITO_VARIANT3],
-            pathogenicity=pathogenicity, annotations=annotations,
+            pathogenicity=pathogenicity, annotations=annotations, cached_variant_fields=[
+                {'selectedTranscript': None},
+                {'selectedTranscript': CACHED_VARIANTS_BY_KEY[2]['sortedTranscriptConsequences'][5]},
+                {'selectedTranscript': CACHED_VARIANTS_BY_KEY[3]['sortedTranscriptConsequences'][3]},
+            ],
         )
 
         self._assert_expected_search(
             [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2],
             locus={'rawItems': f'{GENE_IDS[1]}\n1:11785723-91525764'}, pathogenicity=None, annotations=annotations,
+            cached_variant_fields=[{'selectedTranscript': CACHED_VARIANTS_BY_KEY[2]['sortedTranscriptConsequences'][4]}],
         )
 
         annotations['other'].append('intron_variant')
         self._assert_expected_search(
             [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT],
-            annotations=annotations,
+            annotations=annotations,  cached_variant_fields=[
+                {'selectedTranscript': CACHED_VARIANTS_BY_KEY[2]['sortedTranscriptConsequences'][4]},
+                {'selectedTranscript': CACHED_VARIANTS_BY_KEY[3]['sortedTranscriptConsequences'][3]},
+            ],
         )
 
         annotations['other'] = annotations['other'][:1]
