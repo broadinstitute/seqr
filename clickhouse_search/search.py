@@ -179,13 +179,17 @@ def _liftover_genome_version(genome_version):
 CLINVAR_RANK_LOOKUP = {path: rank for rank, path in Clinvar.PATHOGENICITY_CHOICES}
 HGMD_RANK_LOOKUP = {class_: rank for rank, class_ in AnnotationsSnvIndel.HGMD_CLASSES}
 ABSENT_CLINVAR_SORT_OFFSET = 12.5
+CONSEQUENCE_RANK_LOOKUP = {csq: rank for rank, csq in AnnotationsSnvIndel.CONSEQUENCE_TERMS}
 SORT_EXPRESSIONS = {
     'alphamissense': [],
     'family_guid': [],
     PATHOGENICTY_SORT_KEY: [
         lambda x: CLINVAR_RANK_LOOKUP.get((x.get('clinvar') or {}).get('pathogenicity'), ABSENT_CLINVAR_SORT_OFFSET)
     ],
-    'protein_consequence': [],
+    'protein_consequence': [
+        lambda x: CONSEQUENCE_RANK_LOOKUP[x['sortedTranscriptConsequences'][0]['consequenceTerms'][0]] if x['sortedTranscriptConsequences'] else 100,
+        lambda x: CONSEQUENCE_RANK_LOOKUP[x[SELECTED_TRANSCRIPT_FIELD]['consequenceTerms'][0]] if x.get(SELECTED_TRANSCRIPT_FIELD) else 100,
+    ],
 }
 SORT_EXPRESSIONS[PATHOGENICTY_HGMD_SORT_KEY] = SORT_EXPRESSIONS[PATHOGENICTY_SORT_KEY] + [
     lambda x: HGMD_RANK_LOOKUP.get((x.get('hgmd') or {}).get('class'))

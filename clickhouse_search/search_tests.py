@@ -7,7 +7,7 @@ import os
 from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4, CACHED_VARIANTS_BY_KEY, \
     VARIANT_ID_SEARCH, VARIANT_IDS, LOCATION_SEARCH, GENE_IDS, SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT, \
     SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3, \
-    SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2
+    SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, SELECTED_ANNOTATION_TRANSCRIPT_MULTI_FAMILY_VARIANT
 from seqr.models import Project
 from seqr.utils.search.search_utils_tests import SearchTestHelper
 from seqr.utils.search.utils import query_variants
@@ -45,27 +45,27 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         super().set_up()
         Project.objects.update(genome_version='38')
 
-    def _assert_expected_search(self, expected_results, gene_counts=None, inheritance_mode=None, inheritance_filter=None, quality_filter=None, cached_variant_fields=None,  **search_kwargs):
+    def _assert_expected_search(self, expected_results, gene_counts=None, inheritance_mode=None, inheritance_filter=None, quality_filter=None, cached_variant_fields=None, sort='xpos', **search_kwargs):
         self.search_model.search.update(search_kwargs or {})
         self.search_model.search['qualityFilter'] = quality_filter
         self.search_model.search['inheritance']['mode'] = inheritance_mode
         if inheritance_filter:
             self.search_model.search['inheritance']['filter'] = inheritance_filter
 
-        variants, total = query_variants(self.results_model, user=self.user)
+        variants, total = query_variants(self.results_model, user=self.user, sort=sort)
         encoded_variants = json.loads(json.dumps(variants, cls=DjangoJSONEncoderWithSets))
 
         self.assertListEqual(encoded_variants, expected_results)
         self.assertEqual(total, len(expected_results))
-        self._assert_expected_search_cache(encoded_variants, total, cached_variant_fields)
+        self._assert_expected_search_cache(encoded_variants, total, cached_variant_fields, sort)
 
-    def _assert_expected_search_cache(self, variants, total, cached_variant_fields):
+    def _assert_expected_search_cache(self, variants, total, cached_variant_fields, sort):
         cached_variants = [
             {**CACHED_VARIANTS_BY_KEY[variant['key']], **(cached_variant_fields[i] if cached_variant_fields else {})}
             for i, variant in enumerate(variants)
         ]
         results_cache = {'all_results': cached_variants, 'total_results': total}
-        self.assert_cached_results(results_cache)
+        self.assert_cached_results(results_cache, sort=sort)
 
     def test_single_family_search(self):
         with self.assertRaises(NotImplementedError):
@@ -998,37 +998,46 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #
     def test_sort(self):
         self.results_model.families.set(self.families.filter(guid='F000002_2'))
-#         self._assert_expected_search(
-#             [_sorted(VARIANT4, [2, 2]), _sorted(MITO_VARIANT2, [11, 11]), _sorted(VARIANT2, [12, 12]),
-#              _sorted(MITO_VARIANT3, [17, 17]),  _sorted(MITO_VARIANT1, [22, 22]), _sorted(VARIANT3, [26, 27]),
-#              _sorted(VARIANT1, [None, None])], sample_data=FAMILY_2_ALL_SAMPLE_DATA, sort='protein_consequence',
-#         )
-#
+
+        self._assert_expected_search(
+            [VARIANT4, VARIANT2, VARIANT3, VARIANT1],
+            # [_sorted(VARIANT4, [2, 2]), _sorted(MITO_VARIANT2, [11, 11]), _sorted(VARIANT2, [12, 12]),
+            #  _sorted(MITO_VARIANT3, [17, 17]),  _sorted(MITO_VARIANT1, [22, 22]), _sorted(VARIANT3, [26, 27]),
+            #  _sorted(VARIANT1, [None, None])], sample_data=FAMILY_2_ALL_SAMPLE_DATA,
+            sort='protein_consequence',
+        )
+
 #         self._assert_expected_search(
 #             [_sorted(GCNV_VARIANT2, [0]), _sorted(GCNV_VARIANT3, [0]), _sorted(GCNV_VARIANT4, [0]),
 #              _sorted(GCNV_VARIANT1, [3])], omit_data_type='SNV_INDEL', sort='protein_consequence',
 #         )
-#
-#         self._assert_expected_search(
-#             [_sorted(VARIANT4, [2, 2]), _sorted(GCNV_VARIANT2, [4.5, 0]), _sorted(GCNV_VARIANT3, [4.5, 0]), _sorted(GCNV_VARIANT4, [4.5, 0]),
-#              _sorted(GCNV_VARIANT1, [4.5, 3]), _sorted(VARIANT2, [12, 12]),
-#              _sorted(MULTI_FAMILY_VARIANT, [26, 27]), _sorted(VARIANT1, [None, None])], sort='protein_consequence',
-#         )
-#
+
+        self._assert_expected_search(
+            [VARIANT4, VARIANT2, VARIANT3, VARIANT1], sort='protein_consequence',
+            # [_sorted(VARIANT4, [2, 2]), _sorted(GCNV_VARIANT2, [4.5, 0]), _sorted(GCNV_VARIANT3, [4.5, 0]), _sorted(GCNV_VARIANT4, [4.5, 0]),
+            #  _sorted(GCNV_VARIANT1, [4.5, 3]), _sorted(VARIANT2, [12, 12]),
+            #  _sorted(MULTI_FAMILY_VARIANT, [26, 27]), _sorted(VARIANT1, [None, None])], sort='protein_consequence',
+        )
+
 #         self._assert_expected_search(
 #             [_sorted(SV_VARIANT1, [11]), _sorted(SV_VARIANT2, [12]), _sorted(SV_VARIANT3, [12]), _sorted(SV_VARIANT4, [12])],
 #              sample_data=SV_WGS_SAMPLE_DATA, sort='protein_consequence',
 #         )
-#
-#         self._assert_expected_search(
-#             [_sorted(VARIANT4, [2, 2]), _sorted(SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, [12, 26]),
-#              _sorted(SELECTED_ANNOTATION_TRANSCRIPT_MULTI_FAMILY_VARIANT, [26, 26])],
-#             omit_data_type='SV_WES', sort='protein_consequence',
-#             annotations={'other': ['non_coding_transcript_exon_variant'], 'splice_ai': '0'},
-#         )
 
         self._assert_expected_search(
-            [VARIANT1, VARIANT2, VARIANT3, VARIANT4], sort='pathogenicity',
+            [VARIANT4, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, SELECTED_ANNOTATION_TRANSCRIPT_MULTI_FAMILY_VARIANT],
+            # [_sorted(VARIANT4, [2, 2]), _sorted(SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, [12, 26]),
+            #  _sorted(SELECTED_ANNOTATION_TRANSCRIPT_MULTI_FAMILY_VARIANT, [26, 26])],
+            sort='protein_consequence',
+            annotations={'other': ['non_coding_transcript_exon_variant'], 'splice_ai': '0'}, cached_variant_fields=[
+                {'selectedTranscript': None},
+                {'selectedTranscript': CACHED_VARIANTS_BY_KEY[2]['sortedTranscriptConsequences'][5]},
+                {'selectedTranscript': CACHED_VARIANTS_BY_KEY[3]['sortedTranscriptConsequences'][3]},
+            ],
+        )
+
+        self._assert_expected_search(
+            [VARIANT1, VARIANT2, VARIANT3, VARIANT4], sort='pathogenicity', annotations=None,
             # [_sorted(VARIANT1, [4]), _sorted(VARIANT2, [8]), _sorted(MULTI_FAMILY_VARIANT, [12.5]),
             #  _sorted(VARIANT4, [12.5]), GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4], sort='pathogenicity',
         )
