@@ -374,7 +374,7 @@ class EntriesManager(Manager):
     @classmethod
     def _filter_annotations(cls, entries, annotations=None, pathogenicity=None, exclude=None, gene_ids=None, **kwargs):
         if gene_ids:
-            entries = entries.annotate(gene_consequences=ArrayFilter('gene_consequences', conditions=[{
+            entries = entries.annotate(gene_consequences=ArrayFilter('key__sorted_transcript_consequences', conditions=[{
                 'geneId': (gene_ids, 'has({value}, {field})'),
             }]))
             entries = entries.filter(gene_consequences__not_empty=True)

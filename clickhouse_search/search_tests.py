@@ -60,9 +60,10 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         self._assert_expected_search_cache(encoded_variants, total, cached_variant_fields)
 
     def _assert_expected_search_cache(self, variants, total, cached_variant_fields):
-        cached_variants = [CACHED_VARIANTS_BY_KEY[variant['key']] for variant in variants]
-        for i, fields in enumerate(cached_variant_fields or []):
-            cached_variants[i].update(fields)
+        cached_variants = [
+            {**CACHED_VARIANTS_BY_KEY[variant['key']], **(cached_variant_fields[i] if cached_variant_fields else {})}
+            for i, variant in enumerate(variants)
+        ]
         results_cache = {'all_results': cached_variants, 'total_results': total}
         self.assert_cached_results(results_cache)
 
@@ -680,7 +681,9 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         self._assert_expected_search(
             [VARIANT1, VARIANT4], exclude=exclude, pathogenicity=pathogenicity,
             # [VARIANT1, VARIANT4, MITO_VARIANT3], exclude=exclude, pathogenicity=pathogenicity,
-            annotations=annotations,
+            annotations=annotations, cached_variant_fields=[
+                {'selectedTranscript': None}, {'selectedTranscript': None},
+            ]
         )
 
 #         self._assert_expected_search(
@@ -704,6 +707,10 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 
         self._assert_expected_search(
             [VARIANT2, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4], annotations=annotations, pathogenicity=None,
+            cached_variant_fields = [
+                {'selectedTranscript': CACHED_VARIANTS_BY_KEY[2]['sortedTranscriptConsequences'][0]},
+                {'selectedTranscript': CACHED_VARIANTS_BY_KEY[4]['sortedTranscriptConsequences'][1]},
+            ],
             # [VARIANT2, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4, GCNV_VARIANT3, GCNV_VARIANT4], annotations=annotations,
         )
 
@@ -737,15 +744,18 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         self._assert_expected_search(
             [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2],
             locus={'rawItems': f'{GENE_IDS[1]}\n1:11785723-91525764'}, pathogenicity=None, annotations=annotations,
-            cached_variant_fields=[{'selectedTranscript': CACHED_VARIANTS_BY_KEY[2]['sortedTranscriptConsequences'][4]}],
+            cached_variant_fields=[{
+                'selectedGeneId': 'ENSG00000177000',
+                'selectedTranscript': CACHED_VARIANTS_BY_KEY[2]['sortedTranscriptConsequences'][5],
+            }],
         )
 
         annotations['other'].append('intron_variant')
         self._assert_expected_search(
             [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT],
             annotations=annotations,  cached_variant_fields=[
-                {'selectedTranscript': CACHED_VARIANTS_BY_KEY[2]['sortedTranscriptConsequences'][4]},
-                {'selectedTranscript': CACHED_VARIANTS_BY_KEY[3]['sortedTranscriptConsequences'][3]},
+                {'selectedGeneId': 'ENSG00000177000', 'selectedTranscript': CACHED_VARIANTS_BY_KEY[2]['sortedTranscriptConsequences'][5]},
+                {'selectedGeneId': 'ENSG00000177000', 'selectedTranscript': CACHED_VARIANTS_BY_KEY[3]['sortedTranscriptConsequences'][1]},
             ],
         )
 
@@ -754,14 +764,20 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         self._assert_expected_search(
             [VARIANT1, VARIANT3],
             # [VARIANT1, VARIANT3, MITO_VARIANT1, MITO_VARIANT3],
-            pathogenicity=pathogenicity, annotations=annotations, locus=None,
+            pathogenicity=pathogenicity, annotations=annotations, locus=None, cached_variant_fields=[
+                {'selectedTranscript': None}, {'selectedTranscript': None},
+            ],
         )
 
         annotations['extended_splice_site'] = ['extended_intronic_splice_region_variant']
         self._assert_expected_search(
             [VARIANT1, VARIANT3, VARIANT4],
             # [VARIANT1, VARIANT3, VARIANT4, MITO_VARIANT1, MITO_VARIANT3],
-            pathogenicity=pathogenicity, annotations=annotations,
+            pathogenicity=pathogenicity, annotations=annotations, cached_variant_fields=[
+                {'selectedTranscript': None},
+                {'selectedTranscript': None},
+                {'selectedTranscript': CACHED_VARIANTS_BY_KEY[4]['sortedTranscriptConsequences'][0]},
+            ],
         )
 
         annotations = {'motif_feature': ['TF_binding_site_variant'], 'regulatory_feature': ['regulatory_region_variant']}
