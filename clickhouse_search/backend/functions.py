@@ -49,7 +49,7 @@ class ArrayFilter(lookups.Transform):
         super().__init__(*args, **kwargs)
         self.conditions = _format_conditions(conditions)
 
-    def as_sql(self, compiler, connection):
+    def as_sql(self, compiler, connection, *args, **kwargs):
         lhs, params = compiler.compile(self.lhs)
         return f'arrayFilter(x -> {self.conditions}, {lhs})', params
 
