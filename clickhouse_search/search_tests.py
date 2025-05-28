@@ -415,7 +415,9 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         self.results_model.families.set(self.families.filter(guid='F000002_2'))
 
         self._assert_expected_search(
-            [VARIANT3, VARIANT4], **LOCATION_SEARCH,
+            [VARIANT3, VARIANT4], **LOCATION_SEARCH, cached_variant_fields=[
+                {'selectedGeneId': 'ENSG00000097046'}, {'selectedGeneId': 'ENSG00000097046'}
+            ],
             # [MULTI_FAMILY_VARIANT, VARIANT4], omit_data_type='SV_WES', **LOCATION_SEARCH,
         )
 
@@ -450,7 +452,9 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #
         self._assert_expected_search(
             [SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT],  omit_data_type='SV_WES',
-            intervals=LOCATION_SEARCH['intervals'][-1:], gene_ids=LOCATION_SEARCH['gene_ids'][1:]
+            locus={'rawItems': f'{GENE_IDS[1]}\n1:91500851-91525764'}, exclude=None, cached_variant_fields=[
+                {'selectedGeneId': 'ENSG00000177000'},
+            ],
         )
 
 #         self._assert_expected_search(
