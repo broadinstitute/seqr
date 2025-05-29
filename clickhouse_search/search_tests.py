@@ -997,16 +997,6 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #             reason = resp.reason
 #         self.assertEqual(reason, 'Invalid intervals: 1:1-999999999')
 
-    # TODO replace with fixture
-    @staticmethod
-    def _add_gene_metadata(metadata_cls, gene_id, **updates):
-        model = metadata_cls.objects.get(pk=1)
-        model.pk = None
-        model.gene_id = gene_id
-        for field, value in updates.items():
-            setattr(model, field, value)
-        model.save()
-
     def test_sort(self):
         self.results_model.families.set(self.families.filter(guid='F000002_2'))
 
@@ -1122,14 +1112,6 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         )
 
         sort = 'in_omim'
-        self._add_gene_metadata(Omim, gene_id=60, mim_number=123345)
-        self._assert_expected_search(
-            [VARIANT2, VARIANT3, VARIANT1, VARIANT4],
-            # [_sorted(VARIANT2, [0, -1]), _sorted(MULTI_FAMILY_VARIANT, [1, -1]), _sorted(VARIANT1, [1, 0]), _sorted(VARIANT4, [1, 0])],
-            sort=sort,
-        )
-
-        self._add_gene_metadata(Omim, gene_id=61, mim_number=1233456)
         self._assert_expected_search(
             [VARIANT3, VARIANT2, VARIANT4, VARIANT1],
             # [_sorted(MULTI_FAMILY_VARIANT, [0, -2]), _sorted(VARIANT2, [0, -1]), _sorted(VARIANT4, [0, -1]), _sorted(VARIANT1, [1, 0])],
@@ -1147,8 +1129,13 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #              _sorted(GCNV_VARIANT2, [0, 0]),  _sorted(VARIANT1, [1, 0])], sort=sort, sort_metadata=OMIM_SORT_METADATA,
 #         )
 
-        self._add_gene_metadata(GeneConstraint, gene_id=60, mis_z_rank=1, pLI_rank=1)
-        self._add_gene_metadata(GeneConstraint, gene_id=61, mis_z_rank=3, pLI_rank=1)
+        Omim.objects.filter(gene_id=61).delete()
+        self._assert_expected_search(
+            [VARIANT2, VARIANT3, VARIANT1, VARIANT4],
+            # [_sorted(VARIANT2, [0, -1]), _sorted(MULTI_FAMILY_VARIANT, [1, -1]), _sorted(VARIANT1, [1, 0]), _sorted(VARIANT4, [1, 0])],
+            sort=sort,
+        )
+
         sort = 'constraint'
         self._assert_expected_search(
             [VARIANT2, VARIANT3, VARIANT4, VARIANT1],
@@ -1169,8 +1156,6 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #             sort=sort, sort_metadata=constraint_sort_metadata,
 #         )
 
-        self._add_gene_metadata(PhenotypePrioritization, gene_id=60, individual_id=4, rank=5)
-        self._add_gene_metadata(PhenotypePrioritization, gene_id=60, individual_id=5, rank=3)
         self._assert_expected_search([VARIANT2, VARIANT3, VARIANT1, VARIANT4], sort='prioritized_gene')
 
         self._assert_expected_search(
