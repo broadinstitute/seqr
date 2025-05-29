@@ -500,7 +500,7 @@
     "model": "seqr.phenotypeprioritization",
     "pk": 101,
     "fields": {
-        "guid": "PP000100_NA19675_1ENSG00000268",
+        "guid": "PP000101_NA19675_1ENSG00000268",
         "created_date": "2024-05-02T06:42:55.397Z",
         "created_by": null,
         "individual": 5,
