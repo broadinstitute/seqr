@@ -192,24 +192,23 @@ HGMD_RANK_LOOKUP = {class_: rank for rank, class_ in AnnotationsSnvIndel.HGMD_CL
 ABSENT_CLINVAR_SORT_OFFSET = 12.5
 CONSEQUENCE_RANK_LOOKUP = {csq: rank for rank, csq in AnnotationsSnvIndel.CONSEQUENCE_TERMS}
 PREDICTION_SORTS = {'cadd', 'revel', 'splice_ai', 'eigen', 'mpc', 'primate_ai'}
+CLINVAR_SORT =  _subfield_sort(
+    'clinvar', 'pathogenicity', rank_lookup=CLINVAR_RANK_LOOKUP, default=ABSENT_CLINVAR_SORT_OFFSET,
+)
 SORT_EXPRESSIONS = {
     'alphamissense': [],
     'callset_af': _subfield_sort('populations', 'seqr', 'ac'),
     'family_guid': [],
     'gnomad': _subfield_sort('populations', 'gnomad_genomes', 'af'),
     'gnomad_exomes': _subfield_sort('populations', 'gnomad_exomes', 'af'),
-    PATHOGENICTY_SORT_KEY: _subfield_sort(
-        'clinvar', 'pathogenicity', rank_lookup=CLINVAR_RANK_LOOKUP, default=ABSENT_CLINVAR_SORT_OFFSET,
-    ),
+    PATHOGENICTY_SORT_KEY: CLINVAR_SORT,
+    PATHOGENICTY_HGMD_SORT_KEY: CLINVAR_SORT + _subfield_sort('hgmd', 'class', rank_lookup=HGMD_RANK_LOOKUP),
     'protein_consequence': [
         lambda x: CONSEQUENCE_RANK_LOOKUP[x['sortedTranscriptConsequences'][0]['consequenceTerms'][0]] if x['sortedTranscriptConsequences'] else 1000,
         lambda x: CONSEQUENCE_RANK_LOOKUP[x[SELECTED_TRANSCRIPT_FIELD]['consequenceTerms'][0]] if x.get(SELECTED_TRANSCRIPT_FIELD) else 1000,
     ],
     **{sort: _subfield_sort('predictions', sort, reverse=True, default=-1) for sort in PREDICTION_SORTS},
 }
-SORT_EXPRESSIONS[PATHOGENICTY_HGMD_SORT_KEY] = SORT_EXPRESSIONS[PATHOGENICTY_SORT_KEY] + _subfield_sort(
-    'hgmd', 'class', rank_lookup=HGMD_RANK_LOOKUP,
-)
 
 GENE_SORTS = [PRIORITIZED_GENE_SORT, 'in_omim', 'constraint']
 
