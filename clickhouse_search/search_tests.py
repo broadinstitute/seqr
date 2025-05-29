@@ -8,7 +8,7 @@ from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4,
     VARIANT_ID_SEARCH, VARIANT_IDS, LOCATION_SEARCH, GENE_IDS, SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT, \
     SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3, \
     SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, SELECTED_ANNOTATION_TRANSCRIPT_MULTI_FAMILY_VARIANT
-from reference_data.models import Omim
+from reference_data.models import Omim, GeneConstraint
 from seqr.models import Project
 from seqr.utils.search.search_utils_tests import SearchTestHelper
 from seqr.utils.search.utils import query_variants
@@ -996,7 +996,16 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #             self.assertEqual(resp.status, 400)
 #             reason = resp.reason
 #         self.assertEqual(reason, 'Invalid intervals: 1:1-999999999')
-#
+
+    @staticmethod
+    def _add_gene_metadata(metadata_cls, gene_id, **updates):
+        model = metadata_cls.objects.get(pk=1)
+        model.pk = None
+        model.gene_id = gene_id
+        for field, value in updates.items():
+            setattr(model, field, value)
+        model.save()
+
     def test_sort(self):
         self.results_model.families.set(self.families.filter(guid='F000002_2'))
 
@@ -1112,21 +1121,14 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         )
 
         sort = 'in_omim'
-        omim_model = Omim.objects.get(pk=1)
-        omim_model.pk = None
-        omim_model.mim_number += 1
-        omim_model.gene_id = 60
-        omim_model.save()
+        self._add_gene_metadata(Omim, gene_id=60, mim_number=123345)
         self._assert_expected_search(
             [VARIANT2, VARIANT3, VARIANT1, VARIANT4],
             # [_sorted(VARIANT2, [0, -1]), _sorted(MULTI_FAMILY_VARIANT, [1, -1]), _sorted(VARIANT1, [1, 0]), _sorted(VARIANT4, [1, 0])],
             sort=sort,
         )
 
-        omim_model.pk = None
-        omim_model.mim_number += 1
-        omim_model.gene_id = 61
-        omim_model.save()
+        self._add_gene_metadata(Omim, gene_id=61, mim_number=1233456)
         self._assert_expected_search(
             [VARIANT3, VARIANT2, VARIANT4, VARIANT1],
             # [_sorted(MULTI_FAMILY_VARIANT, [0, -2]), _sorted(VARIANT2, [0, -1]), _sorted(VARIANT4, [0, -1]), _sorted(VARIANT1, [1, 0])],
@@ -1143,14 +1145,17 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #              _sorted(GCNV_VARIANT3, [0, -1]), _sorted(GCNV_VARIANT4, [0, -1]), _sorted(GCNV_VARIANT1, [0, 0]),
 #              _sorted(GCNV_VARIANT2, [0, 0]),  _sorted(VARIANT1, [1, 0])], sort=sort, sort_metadata=OMIM_SORT_METADATA,
 #         )
-#
-#         constraint_sort_metadata = {'ENSG00000177000': 2, 'ENSG00000275023': 3, 'ENSG00000097046': 4}
-#         sort = 'constraint'
-#         self._assert_expected_search(
-#             [_sorted(VARIANT2, [2, 2]), _sorted(MULTI_FAMILY_VARIANT, [4, 2]), _sorted(VARIANT4, [4, 4]),
-#              _sorted(VARIANT1, [None, None])], omit_data_type='SV_WES', sort=sort, sort_metadata=constraint_sort_metadata,
-#         )
-#
+
+        self._add_gene_metadata(GeneConstraint, gene_id=60, mis_z_rank=1, pLI_rank=1)
+        self._add_gene_metadata(GeneConstraint, gene_id=61, mis_z_rank=3, pLI_rank=1)
+        sort = 'constraint'
+        self._assert_expected_search(
+            [VARIANT2, VARIANT3, VARIANT4, VARIANT1],
+            # [_sorted(VARIANT2, [2, 2]), _sorted(MULTI_FAMILY_VARIANT, [4, 2]), _sorted(VARIANT4, [4, 4]),
+            #  _sorted(VARIANT1, [None, None])], omit_data_type='SV_WES',
+            sort=sort,
+        )
+
 #         self._assert_expected_search(
 #             [_sorted(GCNV_VARIANT3, [3]), _sorted(GCNV_VARIANT4, [3]), _sorted(GCNV_VARIANT1, [None]),
 #              _sorted(GCNV_VARIANT2, [None])], omit_data_type='SNV_INDEL', sort=sort, sort_metadata=constraint_sort_metadata,
