@@ -1050,33 +1050,37 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             sort='pathogenicity_hgmd', # sample_data=FAMILY_2_ALL_SAMPLE_DATA,
         )
 
-#         self._assert_expected_search(
-#             [_sorted(VARIANT2, [0]), _sorted(MITO_VARIANT1, [0]), _sorted(MITO_VARIANT2, [0]),
-#              _sorted(VARIANT4, [0.00026519427774474025]), _sorted(VARIANT1, [0.034449315071105957]),
-#              _sorted(MITO_VARIANT3, [0.05534649267792702]), _sorted(VARIANT3, [0.38041073083877563])],
-#             sort='gnomad', sample_data=FAMILY_2_ALL_SAMPLE_DATA,
-#         )
-#
-#         self._assert_expected_search(
-#             [_sorted(VARIANT1, [0]), _sorted(MULTI_FAMILY_VARIANT, [0]), _sorted(VARIANT4, [0]),
-#              _sorted(VARIANT2, [0.28899794816970825]), GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
-#             sort='gnomad_exomes',
-#         )
-#
-#         await self._assert_expected_search(
-#             [_sorted(VARIANT4, [2]),_sorted(MULTI_FAMILY_VARIANT, [4]), _sorted(VARIANT1, [9]),
-#              _sorted(VARIANT2, [28]), _sorted(GCNV_VARIANT3, [35]), _sorted(GCNV_VARIANT4, [115]),
-#              _sorted(GCNV_VARIANT2, [284]), _sorted(GCNV_VARIANT1, [1763])],
-#             sort='callset_af',
-#         )
-#
-#        await self._assert_expected_search(
-#             [_sorted(MITO_VARIANT1, [0]), _sorted(MITO_VARIANT2, [0]), _sorted(VARIANT4, [2]),
-#              _sorted(MITO_VARIANT3, [3]), _sorted(VARIANT3, [4]), _sorted(VARIANT1, [9]),
-#              _sorted(VARIANT2, [28])],
-#             sort='callset_af', sample_data=FAMILY_2_ALL_SAMPLE_DATA,
-#         )
-#
+        self._assert_expected_search(
+            [VARIANT2, VARIANT4, VARIANT1, VARIANT3],
+            # [_sorted(VARIANT2, [0]), _sorted(MITO_VARIANT1, [0]), _sorted(MITO_VARIANT2, [0]),
+            #  _sorted(VARIANT4, [0.00026519427774474025]), _sorted(VARIANT1, [0.034449315071105957]),
+            #  _sorted(MITO_VARIANT3, [0.05534649267792702]), _sorted(VARIANT3, [0.38041073083877563])],
+            sort='gnomad',
+        )
+
+        self._assert_expected_search(
+            [VARIANT1, VARIANT3, VARIANT4, VARIANT2],
+            # [_sorted(VARIANT1, [0]), _sorted(MULTI_FAMILY_VARIANT, [0]), _sorted(VARIANT4, [0]),
+            #  _sorted(VARIANT2, [0.28899794816970825]), GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
+            sort='gnomad_exomes',
+        )
+
+        self._assert_expected_search(
+            [VARIANT4, VARIANT3, VARIANT1, VARIANT2],
+            # [_sorted(VARIANT4, [2]),_sorted(MULTI_FAMILY_VARIANT, [4]), _sorted(VARIANT1, [9]),
+            #  _sorted(VARIANT2, [28]), _sorted(GCNV_VARIANT3, [35]), _sorted(GCNV_VARIANT4, [115]),
+            #  _sorted(GCNV_VARIANT2, [284]), _sorted(GCNV_VARIANT1, [1763])],
+            sort='callset_af',
+        )
+
+        self._assert_expected_search(
+            [VARIANT4, VARIANT3, VARIANT1, VARIANT2],
+            # [_sorted(MITO_VARIANT1, [0]), _sorted(MITO_VARIANT2, [0]), _sorted(VARIANT4, [2]),
+            #  _sorted(MITO_VARIANT3, [3]), _sorted(VARIANT3, [4]), _sorted(VARIANT1, [9]),
+            #  _sorted(VARIANT2, [28])],
+            sort='callset_af', # sample_data=FAMILY_2_ALL_SAMPLE_DATA,
+        )
+
 #         self._assert_expected_search(
 #             [_sorted(VARIANT4, [-29.899999618530273]), _sorted(VARIANT2, [-20.899999618530273]),
 #              _sorted(VARIANT1, [-4.668000221252441]), _sorted(MULTI_FAMILY_VARIANT, [-2.753999948501587]),

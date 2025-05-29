@@ -176,29 +176,44 @@ def _liftover_genome_version(genome_version):
     return GENOME_VERSION_GRCh37 if genome_version == GENOME_VERSION_GRCh38 else GENOME_VERSION_GRCh38
 
 
+def _subfield_sort(*fields, rank_lookup=None, default=1000):
+    def _sort(item):
+        for field in fields:
+            item = (item or {}).get(field)
+        if rank_lookup:
+            item = rank_lookup.get(item)
+        return default if item is None else item
+    return [_sort]
+
+
 CLINVAR_RANK_LOOKUP = {path: rank for rank, path in Clinvar.PATHOGENICITY_CHOICES}
 HGMD_RANK_LOOKUP = {class_: rank for rank, class_ in AnnotationsSnvIndel.HGMD_CLASSES}
 ABSENT_CLINVAR_SORT_OFFSET = 12.5
 CONSEQUENCE_RANK_LOOKUP = {csq: rank for rank, csq in AnnotationsSnvIndel.CONSEQUENCE_TERMS}
+PREDICTION_SORTS = {'cadd', 'revel', 'splice_ai', 'eigen', 'mpc', 'primate_ai'}
 SORT_EXPRESSIONS = {
     'alphamissense': [],
+    'callset_af': _subfield_sort('populations', 'seqr', 'ac'),
     'family_guid': [],
-    PATHOGENICTY_SORT_KEY: [
-        lambda x: CLINVAR_RANK_LOOKUP.get((x.get('clinvar') or {}).get('pathogenicity'), ABSENT_CLINVAR_SORT_OFFSET)
-    ],
+    'gnomad': _subfield_sort('populations', 'gnomad_genomes', 'af'),
+    'gnomad_exomes': _subfield_sort('populations', 'gnomad_exomes', 'af'),
+    PATHOGENICTY_SORT_KEY: _subfield_sort(
+        'clinvar', 'pathogenicity', rank_lookup=CLINVAR_RANK_LOOKUP, default=ABSENT_CLINVAR_SORT_OFFSET,
+    ),
     'protein_consequence': [
-        lambda x: CONSEQUENCE_RANK_LOOKUP[x['sortedTranscriptConsequences'][0]['consequenceTerms'][0]] if x['sortedTranscriptConsequences'] else 100,
-        lambda x: CONSEQUENCE_RANK_LOOKUP[x[SELECTED_TRANSCRIPT_FIELD]['consequenceTerms'][0]] if x.get(SELECTED_TRANSCRIPT_FIELD) else 100,
+        lambda x: CONSEQUENCE_RANK_LOOKUP[x['sortedTranscriptConsequences'][0]['consequenceTerms'][0]] if x['sortedTranscriptConsequences'] else 1000,
+        lambda x: CONSEQUENCE_RANK_LOOKUP[x[SELECTED_TRANSCRIPT_FIELD]['consequenceTerms'][0]] if x.get(SELECTED_TRANSCRIPT_FIELD) else 1000,
     ],
 }
-SORT_EXPRESSIONS[PATHOGENICTY_HGMD_SORT_KEY] = SORT_EXPRESSIONS[PATHOGENICTY_SORT_KEY] + [
-    lambda x: HGMD_RANK_LOOKUP.get((x.get('hgmd') or {}).get('class'))
-]
+SORT_EXPRESSIONS[PATHOGENICTY_HGMD_SORT_KEY] = SORT_EXPRESSIONS[PATHOGENICTY_SORT_KEY] + _subfield_sort(
+    'hgmd', 'class', rank_lookup=HGMD_RANK_LOOKUP,
+)
+
+GENE_SORTS = [PRIORITIZED_GENE_SORT, 'in_omim', 'constraint']
 
 
 def _get_sort_key(sort):
     sort_expressions = SORT_EXPRESSIONS.get(sort, [])
-    sort_expressions.append(lambda x: x[XPOS_SORT_KEY])
 
     # if sort in self.PREDICTION_FIELDS_CONFIG:
     #     prediction_path = self.PREDICTION_FIELDS_CONFIG[sort]
@@ -216,4 +231,4 @@ def _get_sort_key(sort):
     #     (None, None),
     # )
 
-    return lambda x: tuple(expr(x) for expr in sort_expressions)
+    return lambda x: tuple(expr(x) for expr in [*sort_expressions, lambda x: x[XPOS_SORT_KEY]])
