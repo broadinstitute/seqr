@@ -1104,10 +1104,12 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             sort='splice_ai',
         )
 
-#         self._assert_expected_search(
-#             [_sorted(VARIANT2, [-0.9977999925613403, -0.9977999925613403]), _sorted(VARIANT1, [0, 0]),
-#              _sorted(MULTI_FAMILY_VARIANT, [0, 0]), _sorted(VARIANT4, [0, 0])], omit_data_type='SV_WES', sort='alphamissense',
-#         )
+        self._assert_expected_search(
+            [VARIANT2, VARIANT1, VARIANT3, VARIANT4],
+            # [_sorted(VARIANT2, [-0.9977999925613403, -0.9977999925613403]), _sorted(VARIANT1, [0, 0]),
+            #  _sorted(MULTI_FAMILY_VARIANT, [0, 0]), _sorted(VARIANT4, [0, 0])],
+            sort='alphamissense',
+        )
 
         sort = 'in_omim'
         omim_model = Omim.objects.get(pk=1)

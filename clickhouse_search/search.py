@@ -225,7 +225,9 @@ CLINVAR_SORT =  _subfield_sort(
     'clinvar', 'pathogenicity', rank_lookup=CLINVAR_RANK_LOOKUP, default=ABSENT_CLINVAR_SORT_OFFSET,
 )
 SORT_EXPRESSIONS = {
-    'alphamissense': [],
+    'alphamissense': [
+        lambda x: -max(t.get('alphamissensePathogenicity') or 0 for t in x[TRANSCRIPT_CONSEQUENCES_FIELD]) if x[TRANSCRIPT_CONSEQUENCES_FIELD] else 0,
+    ] + _subfield_sort(SELECTED_TRANSCRIPT_FIELD, 'alphamissensePathogenicity', reverse=True, default=0),
     'callset_af': _subfield_sort('populations', 'seqr', 'ac'),
     'family_guid': [],
     'gnomad': _subfield_sort('populations', 'gnomad_genomes', 'af'),
