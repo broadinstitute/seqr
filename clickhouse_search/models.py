@@ -4,7 +4,7 @@ from django.db.models import options, ForeignKey, OneToOneField, Func, Manager, 
 
 from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocksDB, Join
 from clickhouse_search.backend.fields import NestedField, UInt64FieldDeltaCodecField, NamedTupleField
-from clickhouse_search.backend.functions import ArrayFilter
+from clickhouse_search.backend.functions import ArrayFilter, GtStatsDictGet
 from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFECTED, UNAFFECTED, MALE_SEXES, \
     X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, SCREEN_KEY, UTR_ANNOTATOR_KEY, \
     EXTENDED_SPLICE_KEY, MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY, CLINVAR_KEY, HGMD_KEY, SV_ANNOTATION_TYPES, \
@@ -200,6 +200,7 @@ class EntriesManager(Manager):
         parsed_locus = parsed_locus or {}
         entries = self._search_call_data(sample_data, **kwargs)
         entries = self._filter_location(entries, **parsed_locus)
+        entries = entries.annotate(seqrPop=GtStatsDictGet('key'))
         entries = self._filter_frequency(entries, **kwargs)
         entries = self._filter_in_silico(entries, **kwargs)
         entries = self._filter_annotations(entries, **parsed_locus, **kwargs)
@@ -339,7 +340,10 @@ class EntriesManager(Manager):
 
     @classmethod
     def _filter_seqr_frequency(cls, entries, ac=None, hh=None, **kwargs):
-        # TODO implement seqr frequency filter
+        if ac is not None:
+            entries = entries.filter(seqrPop__0__lte=ac)
+        if hh is not None:
+            entries = entries.filter(seqrPop__1__lte=hh)
         return entries
 
     @classmethod
