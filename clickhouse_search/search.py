@@ -230,7 +230,7 @@ SORT_EXPRESSIONS = {
         lambda x: -max(t.get('alphamissensePathogenicity') or 0 for t in x[TRANSCRIPT_CONSEQUENCES_FIELD]) if x[TRANSCRIPT_CONSEQUENCES_FIELD] else 0,
     ] + _subfield_sort(SELECTED_TRANSCRIPT_FIELD, 'alphamissensePathogenicity', reverse=True, default=0),
     'callset_af': _subfield_sort('populations', 'seqr', 'ac'),
-    'family_guid': [],
+    'family_guid': [lambda x: sorted(x['familyGuids'])[0]],
     'gnomad': _subfield_sort('populations', 'gnomad_genomes', 'af'),
     'gnomad_exomes': _subfield_sort('populations', 'gnomad_exomes', 'af'),
     PATHOGENICTY_SORT_KEY: CLINVAR_SORT,
