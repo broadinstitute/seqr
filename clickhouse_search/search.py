@@ -7,8 +7,8 @@ from django.db.models.functions import JSONObject
 from clickhouse_search.backend.fields import NestedField, NamedTupleField
 from clickhouse_search.backend.functions import Array, ArrayMap, GtStatsDictGet, Tuple, TupleConcat
 from clickhouse_search.models import EntriesSnvIndel, AnnotationsSnvIndel, TranscriptsSnvIndel, Clinvar
-from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
-from seqr.models import Sample
+from reference_data.models import GeneConstraint, Omim, GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
+from seqr.models import PhenotypePrioritization, Sample
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.search.constants import MAX_VARIANTS, XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, \
     PRIORITIZED_GENE_SORT
@@ -51,12 +51,14 @@ GENOTYPE_FIELDS = OrderedDict({
     **{f'x.{column[0]}': column for column in EntriesSnvIndel.CALL_FIELDS if column[0] != 'gt'}
 })
 
+TRANSCRIPT_CONSEQUENCES_FIELD = 'sortedTranscriptConsequences'
 SELECTED_GENE_FIELD = 'selectedGeneId'
 SELECTED_TRANSCRIPT_FIELD = 'selectedTranscript'
 SELECTED_CONSEQUENCE_VALUES = {
     'gene_consequences': {SELECTED_GENE_FIELD: F('gene_consequences__0__geneId')},
     'filtered_transcript_consequences': {SELECTED_TRANSCRIPT_FIELD: F('filtered_transcript_consequences__0')},
 }
+
 
 def clickhouse_backend_enabled():
     return bool(CLICKHOUSE_SERVICE_HOSTNAME)
@@ -98,7 +100,7 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
     )
     results = results[:MAX_VARIANTS+1]
 
-    sorted_results = sorted(results, key=_get_sort_key(sort))
+    sorted_results = sorted(results, key=_get_sort_key(sort, _get_sort_gene_metadata(sort, results)))
     total_results = len(sorted_results)
     previous_search_results.update({'all_results': sorted_results, 'total_results': total_results})
 
@@ -108,7 +110,7 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
 
 
 def format_clickhouse_results(results, **kwargs):
-    keys_with_transcripts = [variant['key'] for variant in results if variant['sortedTranscriptConsequences']]
+    keys_with_transcripts = [variant['key'] for variant in results if variant[TRANSCRIPT_CONSEQUENCES_FIELD]]
     transcripts_by_key = dict(
         TranscriptsSnvIndel.objects.filter(key__in=keys_with_transcripts).values_list('key', 'transcripts')
     )
@@ -121,7 +123,7 @@ def format_clickhouse_results(results, **kwargs):
             'transcripts': transcripts,
         }
         # pop sortedTranscriptConsequences from the formatted result and not the original result to ensure the full value is cached properly
-        sorted_minimal_transcripts = formatted_variant.pop('sortedTranscriptConsequences')
+        sorted_minimal_transcripts = formatted_variant.pop(TRANSCRIPT_CONSEQUENCES_FIELD)
         selected_gene_id = formatted_variant.pop(SELECTED_GENE_FIELD, None)
         selected_transcript = formatted_variant.pop(SELECTED_TRANSCRIPT_FIELD, None)
         main_transcript_id = None
@@ -176,6 +178,33 @@ def _liftover_genome_version(genome_version):
     return GENOME_VERSION_GRCh37 if genome_version == GENOME_VERSION_GRCh38 else GENOME_VERSION_GRCh38
 
 
+OMIM_SORT = 'in_omim'
+GENE_SORTS = {
+    'constraint': lambda gene_ids: {
+        agg['gene__gene_id']: agg['mis_z_rank'] + agg['pLI_rank'] for agg in
+        GeneConstraint.objects.filter(gene__gene_id__in=gene_ids).values('gene__gene_id', 'mis_z_rank', 'pLI_rank')
+    },
+    OMIM_SORT: lambda gene_ids: set(Omim.objects.filter(
+        gene__gene_id__in=gene_ids, phenotype_mim_number__isnull=False,
+    ).values_list('gene__gene_id', flat=True)),
+    # PRIORITIZED_GENE_SORT: lambda gene_ids: {
+    #     agg['gene_id']: agg['min_rank'] for agg in PhenotypePrioritization.objects.filter(
+    #         gene__gene_id__in=gene_ids, individual__family_id=samples[0].individual.family_id, rank__lte=100,
+    #     ).values('gene_id').annotate(min_rank=Min('rank'))
+    # },
+}
+
+def _get_sort_gene_metadata(sort, results):
+    get_metadata = GENE_SORTS.get(sort)
+    if not get_metadata:
+        return None
+
+    gene_ids = set()
+    for result in results:
+        gene_ids.update([t['geneId'] for t in result.get(TRANSCRIPT_CONSEQUENCES_FIELD, [])])
+    return get_metadata(gene_ids)
+
+
 def _subfield_sort(*fields, rank_lookup=None, default=1000, reverse=False):
     def _sort(item):
         for field in fields:
@@ -204,21 +233,21 @@ SORT_EXPRESSIONS = {
     PATHOGENICTY_SORT_KEY: CLINVAR_SORT,
     PATHOGENICTY_HGMD_SORT_KEY: CLINVAR_SORT + _subfield_sort('hgmd', 'class', rank_lookup=HGMD_RANK_LOOKUP),
     'protein_consequence': [
-        lambda x: CONSEQUENCE_RANK_LOOKUP[x['sortedTranscriptConsequences'][0]['consequenceTerms'][0]] if x['sortedTranscriptConsequences'] else 1000,
+        lambda x: CONSEQUENCE_RANK_LOOKUP[x[TRANSCRIPT_CONSEQUENCES_FIELD][0]['consequenceTerms'][0]] if x[TRANSCRIPT_CONSEQUENCES_FIELD] else 1000,
         lambda x: CONSEQUENCE_RANK_LOOKUP[x[SELECTED_TRANSCRIPT_FIELD]['consequenceTerms'][0]] if x.get(SELECTED_TRANSCRIPT_FIELD) else 1000,
     ],
     **{sort: _subfield_sort('predictions', sort, reverse=True, default=-1) for sort in PREDICTION_SORTS},
 }
 
-GENE_SORTS = [PRIORITIZED_GENE_SORT, 'in_omim', 'constraint']
-
-
-def _get_sort_key(sort):
+def _get_sort_key(sort, gene_metadata):
     sort_expressions = SORT_EXPRESSIONS.get(sort, [])
 
-    # if sort == OMIM_SORT:
-    #     return self._omim_sort(ht, hl.set(set(self._sort_metadata)))
-    #
+    if sort == OMIM_SORT:
+        sort_expressions = [
+            lambda x: 0 if ((x.get(SELECTED_TRANSCRIPT_FIELD) or {}).get('geneId') or x.get(SELECTED_GENE_FIELD)) in gene_metadata else 1,
+            lambda x: -len(set(t['geneId'] for t in x.get(TRANSCRIPT_CONSEQUENCES_FIELD, []) if t['geneId'] in gene_metadata)),
+        ]
+
     # if self._sort_metadata:
     #     return self._gene_rank_sort(ht, hl.dict(self._sort_metadata))
 

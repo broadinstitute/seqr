@@ -8,6 +8,7 @@ from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4,
     VARIANT_ID_SEARCH, VARIANT_IDS, LOCATION_SEARCH, GENE_IDS, SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT, \
     SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3, \
     SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, SELECTED_ANNOTATION_TRANSCRIPT_MULTI_FAMILY_VARIANT
+from reference_data.models import Omim
 from seqr.models import Project
 from seqr.utils.search.search_utils_tests import SearchTestHelper
 from seqr.utils.search.utils import query_variants
@@ -1107,14 +1108,30 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #             [_sorted(VARIANT2, [-0.9977999925613403, -0.9977999925613403]), _sorted(VARIANT1, [0, 0]),
 #              _sorted(MULTI_FAMILY_VARIANT, [0, 0]), _sorted(VARIANT4, [0, 0])], omit_data_type='SV_WES', sort='alphamissense',
 #         )
-#
-#         sort = 'in_omim'
-#         self._assert_expected_search(
-#             [_sorted(MULTI_FAMILY_VARIANT, [0, -2]), _sorted(VARIANT2, [0, -1]), _sorted(VARIANT4, [0, -1]), _sorted(VARIANT1, [1, 0])],
-#             omit_data_type='SV_WES', sort=sort, sort_metadata=OMIM_SORT_METADATA,
-#         )
-#
-#         self._assert_expected_search(
+
+        sort = 'in_omim'
+        omim_model = Omim.objects.get(pk=1)
+        omim_model.pk = None
+        omim_model.mim_number += 1
+        omim_model.gene_id = 60
+        omim_model.save()
+        self._assert_expected_search(
+            [VARIANT2, VARIANT3, VARIANT1, VARIANT4],
+            # [_sorted(VARIANT2, [0, -1]), _sorted(MULTI_FAMILY_VARIANT, [1, -1]), _sorted(VARIANT1, [1, 0]), _sorted(VARIANT4, [1, 0])],
+            sort=sort,
+        )
+
+        omim_model.pk = None
+        omim_model.mim_number += 1
+        omim_model.gene_id = 61
+        omim_model.save()
+        self._assert_expected_search(
+            [VARIANT3, VARIANT2, VARIANT4, VARIANT1],
+            # [_sorted(MULTI_FAMILY_VARIANT, [0, -2]), _sorted(VARIANT2, [0, -1]), _sorted(VARIANT4, [0, -1]), _sorted(VARIANT1, [1, 0])],
+            sort=sort
+        )
+
+#        self._assert_expected_search(
 #             [_sorted(GCNV_VARIANT3, [-1]), _sorted(GCNV_VARIANT4, [-1]), _sorted(GCNV_VARIANT1, [0]), _sorted(GCNV_VARIANT2, [0])],
 #             omit_data_type='SNV_INDEL', sort=sort, sort_metadata=OMIM_SORT_METADATA,
 #         )
@@ -1123,11 +1140,6 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #             [_sorted(MULTI_FAMILY_VARIANT, [0, -2]), _sorted(VARIANT2, [0, -1]), _sorted(VARIANT4, [0, -1]),
 #              _sorted(GCNV_VARIANT3, [0, -1]), _sorted(GCNV_VARIANT4, [0, -1]), _sorted(GCNV_VARIANT1, [0, 0]),
 #              _sorted(GCNV_VARIANT2, [0, 0]),  _sorted(VARIANT1, [1, 0])], sort=sort, sort_metadata=OMIM_SORT_METADATA,
-#         )
-#
-#         self._assert_expected_search(
-#             [_sorted(VARIANT2, [0, -1]), _sorted(MULTI_FAMILY_VARIANT, [1, -1]), _sorted(VARIANT1, [1, 0]), _sorted(VARIANT4, [1, 0])],
-#             omit_data_type='SV_WES', sort=sort, sort_metadata=['ENSG00000177000'],
 #         )
 #
 #         constraint_sort_metadata = {'ENSG00000177000': 2, 'ENSG00000275023': 3, 'ENSG00000097046': 4}
