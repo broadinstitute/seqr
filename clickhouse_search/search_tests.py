@@ -1081,22 +1081,28 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             sort='callset_af', # sample_data=FAMILY_2_ALL_SAMPLE_DATA,
         )
 
-#         self._assert_expected_search(
-#             [_sorted(VARIANT4, [-29.899999618530273]), _sorted(VARIANT2, [-20.899999618530273]),
-#              _sorted(VARIANT1, [-4.668000221252441]), _sorted(MULTI_FAMILY_VARIANT, [-2.753999948501587]),
-#              GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4], sort='cadd',
-#         )
-#
-#         self._assert_expected_search(
-#             [_sorted(VARIANT4, [-0.5260000228881836]), _sorted(VARIANT2, [-0.19699999690055847]),
-#              _sorted(VARIANT1, [0]), _sorted(MULTI_FAMILY_VARIANT, [0])], omit_data_type='SV_WES', sort='revel',
-#         )
-#
-#         self._assert_expected_search(
-#             [_sorted(MULTI_FAMILY_VARIANT, [-0.009999999776482582]), _sorted(VARIANT2, [0]), _sorted(VARIANT4, [0]),
-#              _sorted(VARIANT1, [0])], omit_data_type='SV_WES', sort='splice_ai',
-#         )
-#
+        self._assert_expected_search(
+            [VARIANT4, VARIANT2, VARIANT1, VARIANT3],
+            # [_sorted(VARIANT4, [-29.899999618530273]), _sorted(VARIANT2, [-20.899999618530273]),
+            #  _sorted(VARIANT1, [-4.668000221252441]), _sorted(MULTI_FAMILY_VARIANT, [-2.753999948501587]),
+            #  GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
+            sort='cadd',
+        )
+
+        self._assert_expected_search(
+            [VARIANT4, VARIANT2, VARIANT1, VARIANT3],
+            # [_sorted(VARIANT4, [-0.5260000228881836]), _sorted(VARIANT2, [-0.19699999690055847]),
+            #  _sorted(VARIANT1, [0]), _sorted(MULTI_FAMILY_VARIANT, [0])], omit_data_type='SV_WES',
+            sort='revel',
+        )
+
+        self._assert_expected_search(
+            [VARIANT3, VARIANT2, VARIANT4, VARIANT1],
+            # [_sorted(MULTI_FAMILY_VARIANT, [-0.009999999776482582]), _sorted(VARIANT2, [0]), _sorted(VARIANT4, [0]),
+            #  _sorted(VARIANT1, [0])], omit_data_type='SV_WES',
+            sort='splice_ai',
+        )
+
 #         self._assert_expected_search(
 #             [_sorted(VARIANT2, [-0.9977999925613403, -0.9977999925613403]), _sorted(VARIANT1, [0, 0]),
 #              _sorted(MULTI_FAMILY_VARIANT, [0, 0]), _sorted(VARIANT4, [0, 0])], omit_data_type='SV_WES', sort='alphamissense',

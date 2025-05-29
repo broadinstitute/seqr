@@ -176,13 +176,14 @@ def _liftover_genome_version(genome_version):
     return GENOME_VERSION_GRCh37 if genome_version == GENOME_VERSION_GRCh38 else GENOME_VERSION_GRCh38
 
 
-def _subfield_sort(*fields, rank_lookup=None, default=1000):
+def _subfield_sort(*fields, rank_lookup=None, default=1000, reverse=False):
     def _sort(item):
         for field in fields:
             item = (item or {}).get(field)
         if rank_lookup:
             item = rank_lookup.get(item)
-        return default if item is None else item
+        value = default if item is None else item
+        return value if not reverse else -value
     return [_sort]
 
 
@@ -204,6 +205,7 @@ SORT_EXPRESSIONS = {
         lambda x: CONSEQUENCE_RANK_LOOKUP[x['sortedTranscriptConsequences'][0]['consequenceTerms'][0]] if x['sortedTranscriptConsequences'] else 1000,
         lambda x: CONSEQUENCE_RANK_LOOKUP[x[SELECTED_TRANSCRIPT_FIELD]['consequenceTerms'][0]] if x.get(SELECTED_TRANSCRIPT_FIELD) else 1000,
     ],
+    **{sort: _subfield_sort('predictions', sort, reverse=True, default=-1) for sort in PREDICTION_SORTS},
 }
 SORT_EXPRESSIONS[PATHOGENICTY_HGMD_SORT_KEY] = SORT_EXPRESSIONS[PATHOGENICTY_SORT_KEY] + _subfield_sort(
     'hgmd', 'class', rank_lookup=HGMD_RANK_LOOKUP,
@@ -215,20 +217,10 @@ GENE_SORTS = [PRIORITIZED_GENE_SORT, 'in_omim', 'constraint']
 def _get_sort_key(sort):
     sort_expressions = SORT_EXPRESSIONS.get(sort, [])
 
-    # if sort in self.PREDICTION_FIELDS_CONFIG:
-    #     prediction_path = self.PREDICTION_FIELDS_CONFIG[sort]
-    #     return [self._format_prediction_sort_value(ht[prediction_path.source][prediction_path.field])]
-    #
     # if sort == OMIM_SORT:
     #     return self._omim_sort(ht, hl.set(set(self._sort_metadata)))
     #
     # if self._sort_metadata:
     #     return self._gene_rank_sort(ht, hl.dict(self._sort_metadata))
-    #
-    # sort_field, sort_subfield = next(
-    #     ((field, config.get('sort_subfield', 'af')) for field, config in self.POPULATIONS.items() if
-    #      config.get('sort') == sort),
-    #     (None, None),
-    # )
 
     return lambda x: tuple(expr(x) for expr in [*sort_expressions, lambda x: x[XPOS_SORT_KEY]])
