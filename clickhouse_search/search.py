@@ -178,7 +178,7 @@ GENE_SORTS = {
     ).values_list('gene__gene_id', flat=True)),
     PRIORITIZED_GENE_SORT: lambda gene_ids, family_guid: {
         agg['gene_id']: agg['min_rank'] for agg in PhenotypePrioritization.objects.filter(
-            gene__gene_id__in=gene_ids, individual__family__guid=family_guid, rank__lte=100,
+            gene_id__in=gene_ids, individual__family__guid=family_guid, rank__lte=100,
         ).values('gene_id').annotate(min_rank=Min('rank'))
     },
 }
