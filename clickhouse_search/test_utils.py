@@ -30,9 +30,27 @@ for variant in [VARIANT1, VARIANT2, VARIANT3, VARIANT4]:
     # sort is not computed/annotated at query time
     del variant['_sort']
 
-# TODO add clinvar version to clickhouse
 del VARIANT1['clinvar']['version']
 del VARIANT2['clinvar']['version']
+
+FAMILY_3_VARIANT = deepcopy(VARIANT3)
+FAMILY_3_VARIANT['familyGuids'] = ['F000003_3']
+FAMILY_3_VARIANT['genotypes'] = {
+    'I000007_na20870': {
+        'sampleId': 'NA20870', 'sampleType': 'WES', 'individualGuid': 'I000007_na20870', 'familyGuid': 'F000003_3',
+        'numAlt': 1, 'dp': 28, 'gq': 99, 'ab': 0.6785714285714286, 'filters': [],
+    },
+}
+
+MULTI_FAMILY_VARIANT = deepcopy(VARIANT3)
+MULTI_FAMILY_VARIANT['familyGuids'] += FAMILY_3_VARIANT['familyGuids']
+MULTI_FAMILY_VARIANT['genotypes'].update(FAMILY_3_VARIANT['genotypes'])
+
+#SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT = {**MULTI_FAMILY_VARIANT, 'selectedMainTranscriptId': 'ENST00000426137'}
+SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT = {**VARIANT3, 'selectedMainTranscriptId': 'ENST00000426137'}
+SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4 = {**VARIANT4, 'selectedMainTranscriptId': 'ENST00000350997'}
+SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3 = {**VARIANT3, 'selectedMainTranscriptId': 'ENST00000497611'}
+SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2 = {**VARIANT2, 'selectedMainTranscriptId': 'ENST00000459627'}
 
 CACHED_VARIANTS_BY_KEY = {
     variant['key']: {
