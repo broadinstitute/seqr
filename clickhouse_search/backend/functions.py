@@ -1,5 +1,5 @@
 from clickhouse_backend.models.fields.array import ArrayField, ArrayLookup
-from django.db.models import Func
+from django.db.models import Func, lookups, BooleanField
 
 from clickhouse_search.backend.fields import NestedField
 
@@ -12,6 +12,19 @@ class ArrayMap(Func):
     template = "%(function)s(x -> %(mapped_expression)s, %(expressions)s)"
 
 
+def _format_condition(filters):
+    conditions = [
+        (template[0] if template else '{field} = {value}').format(field=f'x.{field}', value=value)
+        for field, (value, *template) in filters.items()  # pylint: disable=access-member-before-definition
+    ]
+    return f'and({", ".join(conditions)})' if len(conditions) > 1 else conditions[0]
+
+
+def _format_conditions(conditions):
+     conditions = [_format_condition(f) for f in conditions]
+     return f'or({", ".join(conditions)})' if len(conditions) > 1 else conditions[0]
+
+
 @NestedField.register_lookup
 @ArrayField.register_lookup
 class ArrayExists(ArrayLookup):
@@ -20,24 +33,32 @@ class ArrayExists(ArrayLookup):
     swap_args = True
     prepare_rhs = False
 
-    @staticmethod
-    def _format_condition(filters):
-        conditions = [
-            (template[0] if template else '{field} = {value}').format(field=f'x.{field}', value=value)
-            for field, (value, *template) in filters.items()  # pylint: disable=access-member-before-definition
-        ]
-        return f'and({", ".join(conditions)})' if len(conditions) > 1 else conditions[0]
-
     def get_prep_lookup(self):
         or_filters = self.rhs.get('OR', [self.rhs]) # pylint: disable=access-member-before-definition
-        conditions = [self._format_condition(f) for f in or_filters]
-        condition = f'or({", ".join(conditions)})' if len(conditions) > 1 else conditions[0]
+        condition = _format_conditions(or_filters)
         self.rhs = f'x -> {condition}'
         return super().get_prep_lookup()
 
     def process_rhs(self, compiler, connection):
         _, rhs_params = super().process_rhs(compiler, connection)
         return rhs_params[0], []
+
+
+class ArrayFilter(lookups.Transform):
+    def __init__(self, *args, conditions=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.conditions = _format_conditions(conditions)
+
+    def as_sql(self, compiler, connection, *args, **kwargs):
+        lhs, params = compiler.compile(self.lhs)
+        return f'arrayFilter(x -> {self.conditions}, {lhs})', params
+
+
+@NestedField.register_lookup
+class ArrayNotEmptyTransform(lookups.Transform):
+    lookup_name = "not_empty"
+    function = "notEmpty"
+    output_field = BooleanField()
 
 
 class GtStatsDictGet(Func):
