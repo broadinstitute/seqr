@@ -1,7 +1,7 @@
 from clickhouse_backend import models
 from collections import OrderedDict
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.db.models import F, Value
+from django.db.models import F, Min, Value
 from django.db.models.functions import JSONObject
 
 from clickhouse_search.backend.fields import NestedField, NamedTupleField
@@ -100,7 +100,8 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
     )
     results = results[:MAX_VARIANTS+1]
 
-    sorted_results = sorted(results, key=_get_sort_key(sort, _get_sort_gene_metadata(sort, results)))
+    sort_metadata = _get_sort_gene_metadata(sort, results, sample_data[0]['family_guid'])
+    sorted_results = sorted(results, key=_get_sort_key(sort, sort_metadata))
     total_results = len(sorted_results)
     previous_search_results.update({'all_results': sorted_results, 'total_results': total_results})
 
@@ -180,21 +181,21 @@ def _liftover_genome_version(genome_version):
 
 OMIM_SORT = 'in_omim'
 GENE_SORTS = {
-    'constraint': lambda gene_ids: {
+    'constraint': lambda gene_ids, _: {
         agg['gene__gene_id']: agg['mis_z_rank'] + agg['pLI_rank'] for agg in
         GeneConstraint.objects.filter(gene__gene_id__in=gene_ids).values('gene__gene_id', 'mis_z_rank', 'pLI_rank')
     },
-    OMIM_SORT: lambda gene_ids: set(Omim.objects.filter(
+    OMIM_SORT: lambda gene_ids, _: set(Omim.objects.filter(
         gene__gene_id__in=gene_ids, phenotype_mim_number__isnull=False,
     ).values_list('gene__gene_id', flat=True)),
-    # PRIORITIZED_GENE_SORT: lambda gene_ids: {
-    #     agg['gene_id']: agg['min_rank'] for agg in PhenotypePrioritization.objects.filter(
-    #         gene__gene_id__in=gene_ids, individual__family_id=samples[0].individual.family_id, rank__lte=100,
-    #     ).values('gene_id').annotate(min_rank=Min('rank'))
-    # },
+    PRIORITIZED_GENE_SORT: lambda gene_ids, family_guid: {
+        agg['gene_id']: agg['min_rank'] for agg in PhenotypePrioritization.objects.filter(
+            gene__gene_id__in=gene_ids, individual__family__guid=family_guid, rank__lte=100,
+        ).values('gene_id').annotate(min_rank=Min('rank'))
+    },
 }
 
-def _get_sort_gene_metadata(sort, results):
+def _get_sort_gene_metadata(sort, results, family_guid):
     get_metadata = GENE_SORTS.get(sort)
     if not get_metadata:
         return None
@@ -202,7 +203,7 @@ def _get_sort_gene_metadata(sort, results):
     gene_ids = set()
     for result in results:
         gene_ids.update([t['geneId'] for t in result.get(TRANSCRIPT_CONSEQUENCES_FIELD, [])])
-    return get_metadata(gene_ids)
+    return get_metadata(gene_ids, family_guid)
 
 
 def _subfield_sort(*fields, rank_lookup=None, default=1000, reverse=False):

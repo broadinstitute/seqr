@@ -9,7 +9,7 @@ from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4,
     SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3, \
     SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, SELECTED_ANNOTATION_TRANSCRIPT_MULTI_FAMILY_VARIANT
 from reference_data.models import Omim, GeneConstraint
-from seqr.models import Project
+from seqr.models import Project, PhenotypePrioritization
 from seqr.utils.search.search_utils_tests import SearchTestHelper
 from seqr.utils.search.utils import query_variants
 from seqr.views.utils.json_utils import DjangoJSONEncoderWithSets
@@ -997,6 +997,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #             reason = resp.reason
 #         self.assertEqual(reason, 'Invalid intervals: 1:1-999999999')
 
+    # TODO replace with fixture
     @staticmethod
     def _add_gene_metadata(metadata_cls, gene_id, **updates):
         model = metadata_cls.objects.get(pk=1)
@@ -1167,13 +1168,11 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #              _sorted(GCNV_VARIANT1, [None, None]), _sorted(GCNV_VARIANT2, [None, None])],
 #             sort=sort, sort_metadata=constraint_sort_metadata,
 #         )
-#
-#         self._assert_expected_search(
-#             [_sorted(VARIANT2, [3, 3]), _sorted(MULTI_FAMILY_VARIANT, [None, 3]), _sorted(VARIANT1, [None, None]),
-#              _sorted(VARIANT4, [None, None])], omit_data_type='SV_WES', sort='prioritized_gene',
-#             sort_metadata={'ENSG00000177000': 3},
-#         )
-#
+
+        self._add_gene_metadata(PhenotypePrioritization, gene_id=60, individual_id=4, rank=5)
+        self._add_gene_metadata(PhenotypePrioritization, gene_id=60, individual_id=5, rank=3)
+        self._assert_expected_search([VARIANT2, VARIANT3, VARIANT1, VARIANT4], sort='prioritized_gene')
+
 #         self._assert_expected_search(
 #             [_sorted(MULTI_PROJECT_VARIANT1, [2]), _sorted(MULTI_PROJECT_VARIANT2, [2]),
 #              _sorted(VARIANT3, [2]), _sorted(VARIANT4, [2]), _sorted(PROJECT_2_VARIANT, [11])],
