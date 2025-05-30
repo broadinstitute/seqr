@@ -203,7 +203,7 @@ def _process_clickhouse_unsorted_cached_results(cache_key, sort, family_guid):
     unsorted_results = safe_redis_get_wildcard_json(cache_key.replace(sort, '*'))
     if not unsorted_results:
         return None
-    results = get_clickhouse_cache_results(unsorted_results, sort, family_guid)
+    results = get_clickhouse_cache_results(unsorted_results['all_results'], sort, family_guid)
     safe_redis_set_json(cache_key, results, expire=timedelta(weeks=2))
     return results
 
