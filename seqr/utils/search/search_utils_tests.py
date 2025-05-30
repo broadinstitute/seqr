@@ -684,6 +684,7 @@ class ClickhouseSearchUtilsTests(TestCase, SearchUtilsTests):
         self.mock_redis.keys.return_value = [f'{cache_key_prefix}__xpos', f'{cache_key_prefix}__gnomad']
 
         variants, total = query_variants(self.results_model, user=self.user, sort='cadd')
+        self.assertEqual(total, 4)
         self.assertListEqual(
             json.loads(json.dumps(variants, cls=DjangoJSONEncoderWithSets)),
             [VARIANT4, VARIANT2, VARIANT1, VARIANT3]

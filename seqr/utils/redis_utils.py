@@ -34,7 +34,7 @@ def _redis_get_wildcard(redis_client, cache_key):
 
 
 def safe_redis_get_wildcard_json(cache_key):
-    safe_redis_get_json(cache_key, redis_get=_redis_get_wildcard)
+    return safe_redis_get_json(cache_key, redis_get=_redis_get_wildcard)
 
 
 def safe_redis_set_json(cache_key, value, expire=None):
