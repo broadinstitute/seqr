@@ -693,7 +693,9 @@ class ClickhouseSearchUtilsTests(TestCase, SearchUtilsTests):
             mock.call(f'{cache_key_prefix}__xpos'),
         ])
         self.mock_redis.keys.assert_called_with(pattern=f'{cache_key_prefix}__*')
-        self.assert_cached_results({'all_results': variants, 'total_results': 4})
+        self.assert_cached_results(
+            {'all_results': [CACHED_VARIANTS_BY_KEY[key] for key in [4, 2, 1, 3]], 'total_results': 4}
+        )
 
 
     @mock.patch('seqr.utils.search.utils.get_clickhouse_variants')
