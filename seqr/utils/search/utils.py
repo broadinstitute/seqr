@@ -2,10 +2,11 @@ from collections import defaultdict
 from copy import deepcopy
 from datetime import timedelta
 
-from clickhouse_search.search import clickhouse_backend_enabled, get_clickhouse_variants, format_clickhouse_results
+from clickhouse_search.search import clickhouse_backend_enabled, get_clickhouse_variants, format_clickhouse_results, \
+    get_clickhouse_cache_results
 from reference_data.models import GENOME_VERSION_LOOKUP, GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample, Individual, Project
-from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
+from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_get_wildcard_json, safe_redis_set_json
 from seqr.utils.search.constants import XPOS_SORT_KEY, PRIORITIZED_GENE_SORT, RECESSIVE, COMPOUND_HET, \
     MAX_NO_LOCATION_COMP_HET_FAMILIES, SV_ANNOTATION_TYPES, ALL_DATA_TYPES, MAX_EXPORT_VARIANTS, X_LINKED_RECESSIVE, \
     MAX_VARIANTS
@@ -198,8 +199,23 @@ def _get_search_cache_key(search_model, sort=None):
     return 'search_results__{}__{}'.format(search_model.guid, sort or XPOS_SORT_KEY)
 
 
-def _get_cached_search_results(search_model, sort=None):
-    return safe_redis_get_json(_get_search_cache_key(search_model, sort=sort)) or {}
+def _process_clickhouse_unsorted_cached_results(cache_key, sort, family_guid):
+    unsorted_results = safe_redis_get_wildcard_json(cache_key.replace(sort, '*'))
+    if not unsorted_results:
+        return None
+    results = get_clickhouse_cache_results(unsorted_results, sort, family_guid)
+    safe_redis_set_json(cache_key, results, expire=timedelta(weeks=2))
+    return results
+
+
+def _get_cached_search_results(search_model, sort=None, family_guid=None):
+    cache_key = _get_search_cache_key(search_model, sort=sort)
+    results = safe_redis_get_json(cache_key)
+    if not results:
+        results = backend_specific_call(
+            lambda *args: None, lambda *args: None, _process_clickhouse_unsorted_cached_results,
+        )(cache_key, sort, family_guid)
+    return results or {}
 
 
 def _validate_export_variant_count(total_variants):
@@ -208,7 +224,7 @@ def _validate_export_variant_count(total_variants):
 
 
 def query_variants(search_model, sort=XPOS_SORT_KEY, skip_genotype_filter=False, load_all=False, user=None, page=1, num_results=100):
-    previous_search_results = _get_cached_search_results(search_model, sort=sort)
+    previous_search_results = _get_cached_search_results(search_model, sort=sort, family_guid=search_model.families.first().guid)
     total_results = previous_search_results.get('total_results')
 
     if load_all:
