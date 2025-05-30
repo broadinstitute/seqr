@@ -676,6 +676,26 @@ class ClickhouseSearchUtilsTests(TestCase, SearchUtilsTests):
     def test_query_variants(self, mock_call):
         super().test_query_variants(mock_call)
 
+    def test_cached_query_variants(self):
+        super().test_cached_query_variants()
+
+        cache_key_prefix = f'search_results__{self.results_model.guid}'
+        self.mock_redis.get.side_effect = [None, {'total_results': 4, 'all_results': self.CACHED_VARIANTS}]
+        self.mock_redis.keys.return_value = [f'{cache_key_prefix}__xpos', f'{cache_key_prefix}__gnomad']
+
+        variants, total = query_variants(self.results_model, user=self.user, sort='cadd')
+        self.assertListEqual(
+            json.loads(json.dumps(variants, cls=DjangoJSONEncoderWithSets)),
+            [VARIANT4, VARIANT2, VARIANT1, VARIANT3]
+        )
+        self.mock_redis.get.assert_has_calls([
+            mock.call(f'{cache_key_prefix}__cadd'),
+            mock.call(f'{cache_key_prefix}__xpos'),
+        ])
+        self.mock_redis.keys.assert_called_with(pattern=f'{cache_key_prefix}__*')
+        self.assert_cached_results({'all_results': variants, 'total_results': 4})
+
+
     @mock.patch('seqr.utils.search.utils.get_clickhouse_variants')
     def test_get_variant_query_gene_counts(self, mock_call):
         super().test_get_variant_query_gene_counts(mock_call)
