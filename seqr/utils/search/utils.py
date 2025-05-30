@@ -200,7 +200,7 @@ def _get_search_cache_key(search_model, sort=None):
 
 
 def _process_clickhouse_unsorted_cached_results(cache_key, sort, family_guid):
-    unsorted_results = safe_redis_get_wildcard_json(cache_key.replace(sort, '*'))
+    unsorted_results = safe_redis_get_wildcard_json(cache_key.replace(sort or 'xpos', '*'))
     if not unsorted_results:
         return None
     results = get_clickhouse_cache_results(unsorted_results['all_results'], sort, family_guid)
