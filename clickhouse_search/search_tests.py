@@ -7,7 +7,8 @@ import os
 from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4, CACHED_VARIANTS_BY_KEY, \
     VARIANT_ID_SEARCH, VARIANT_IDS, LOCATION_SEARCH, GENE_IDS, SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT, \
     SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3, \
-    SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2
+    SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, SELECTED_ANNOTATION_TRANSCRIPT_MULTI_FAMILY_VARIANT, MULTI_FAMILY_VARIANT
+from reference_data.models import Omim
 from seqr.models import Project
 from seqr.utils.search.search_utils_tests import SearchTestHelper
 from seqr.utils.search.utils import query_variants
@@ -45,27 +46,27 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         super().set_up()
         Project.objects.update(genome_version='38')
 
-    def _assert_expected_search(self, expected_results, gene_counts=None, inheritance_mode=None, inheritance_filter=None, quality_filter=None, cached_variant_fields=None,  **search_kwargs):
+    def _assert_expected_search(self, expected_results, gene_counts=None, inheritance_mode=None, inheritance_filter=None, quality_filter=None, cached_variant_fields=None, sort='xpos', **search_kwargs):
         self.search_model.search.update(search_kwargs or {})
         self.search_model.search['qualityFilter'] = quality_filter
         self.search_model.search['inheritance']['mode'] = inheritance_mode
         if inheritance_filter:
             self.search_model.search['inheritance']['filter'] = inheritance_filter
 
-        variants, total = query_variants(self.results_model, user=self.user)
+        variants, total = query_variants(self.results_model, user=self.user, sort=sort)
         encoded_variants = json.loads(json.dumps(variants, cls=DjangoJSONEncoderWithSets))
 
         self.assertListEqual(encoded_variants, expected_results)
         self.assertEqual(total, len(expected_results))
-        self._assert_expected_search_cache(encoded_variants, total, cached_variant_fields)
+        self._assert_expected_search_cache(encoded_variants, total, cached_variant_fields, sort)
 
-    def _assert_expected_search_cache(self, variants, total, cached_variant_fields):
+    def _assert_expected_search_cache(self, variants, total, cached_variant_fields, sort):
         cached_variants = [
             {**CACHED_VARIANTS_BY_KEY[variant['key']], **(cached_variant_fields[i] if cached_variant_fields else {})}
             for i, variant in enumerate(variants)
         ]
         results_cache = {'all_results': cached_variants, 'total_results': total}
-        self.assert_cached_results(results_cache)
+        self.assert_cached_results(results_cache, sort=sort)
 
     def test_single_family_search(self):
         with self.assertRaises(NotImplementedError):
@@ -194,7 +195,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         inheritance_mode = 'any_affected'
         self._assert_expected_search(
             # [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
-            [VARIANT1, VARIANT2, VARIANT3, VARIANT4],
+            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4],
             inheritance_mode=inheritance_mode,
         )
 
@@ -335,7 +336,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 
         quality_filter = {'vcf_filter': 'pass'}
         self._assert_expected_search(
-            [VARIANT1, VARIANT2,VARIANT3],
+            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT],
             # [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
             quality_filter=quality_filter
         )
@@ -368,13 +369,12 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         # )
 
         self._assert_expected_search(
-            [VARIANT2, VARIANT3], quality_filter={'min_gq': 40, 'vcf_filter': 'pass'},
-            # [VARIANT2, MULTI_FAMILY_VARIANT], omit_data_type='SV_WES',
+            [VARIANT2, MULTI_FAMILY_VARIANT], quality_filter={'min_gq': 40, 'vcf_filter': 'pass'},
         )
 
         self._assert_expected_search(
             # [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
-            [VARIANT1, VARIANT2, VARIANT3],
+            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT],
             quality_filter={'min_gq': 60, 'min_qs': 10, 'affected_only': True},
         )
 
@@ -415,10 +415,9 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         self.results_model.families.set(self.families.filter(guid='F000002_2'))
 
         self._assert_expected_search(
-            [VARIANT3, VARIANT4], **LOCATION_SEARCH, cached_variant_fields=[
+            [MULTI_FAMILY_VARIANT, VARIANT4], **LOCATION_SEARCH, cached_variant_fields=[
                 {'selectedGeneId': 'ENSG00000097046'}, {'selectedGeneId': 'ENSG00000097046'}
             ],
-            # [MULTI_FAMILY_VARIANT, VARIANT4], omit_data_type='SV_WES', **LOCATION_SEARCH,
         )
 
 #         self._assert_expected_search(
@@ -590,25 +589,23 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         sv_callset_filter = {'sv_callset': {'af': 0.05}}
         # seqr af filter is ignored for SNV_INDEL
         self._assert_expected_search(
-            [VARIANT1, VARIANT2, VARIANT3, VARIANT4],
+            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4],
             # [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
             freqs={'callset': {'af': 0.2},  **sv_callset_filter},
         )
 
         self._assert_expected_search(
-            [VARIANT3, VARIANT4],
+            [MULTI_FAMILY_VARIANT, VARIANT4],
             # [MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
             freqs={'callset': {'ac': 5}, **sv_callset_filter},
         )
 
         self._assert_expected_search(
-            [VARIANT3, VARIANT4], freqs={'callset': {'ac': 4}},
-            # [MULTI_FAMILY_VARIANT, VARIANT4], frequencies={'seqr': {'ac': 4}}, omit_data_type='SV_WES',
+            [MULTI_FAMILY_VARIANT, VARIANT4], freqs={'callset': {'ac': 4}},
         )
 
         self._assert_expected_search(
-            [VARIANT3, VARIANT4], freqs={'callset': {'hh': 1}},
-            # [MULTI_FAMILY_VARIANT, VARIANT4], frequencies={'seqr': {'hh': 1}}, omit_data_type='SV_WES',
+            [MULTI_FAMILY_VARIANT, VARIANT4], freqs={'callset': {'hh': 1}},
         )
 
         self._assert_expected_search(
@@ -645,8 +642,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         )
 
         self._assert_expected_search(
-            [VARIANT1, VARIANT2, VARIANT3, VARIANT4], freqs={'callset': {}, 'gnomad_genomes': {'af': None}},
-            # [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4], frequencies={'seqr': {}, 'gnomad_genomes': {'af': None}},
+            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4], freqs={'callset': {}, 'gnomad_genomes': {'af': None}},
         )
 
         annotations = {'splice_ai': '0.0'}  # Ensures no variants are filtered out by annotation/path filters
@@ -726,7 +722,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         annotations['splice_ai'] = '0.005'
         annotations['structural'] = ['gCNV_DUP', 'DEL']
         self._assert_expected_search(
-            [VARIANT2, VARIANT3, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4],
+            [VARIANT2, MULTI_FAMILY_VARIANT, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4],
             # [VARIANT2, MULTI_FAMILY_VARIANT, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
             annotations=annotations, cached_variant_fields=[
                 {'selectedTranscript': CACHED_VARIANTS_BY_KEY[2]['sortedTranscriptConsequences'][0]},
@@ -998,104 +994,118 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #             self.assertEqual(resp.status, 400)
 #             reason = resp.reason
 #         self.assertEqual(reason, 'Invalid intervals: 1:1-999999999')
-#
-#     def test_sort(self):
-#         self._assert_expected_search(
-#             [_sorted(VARIANT4, [2, 2]), _sorted(MITO_VARIANT2, [11, 11]), _sorted(VARIANT2, [12, 12]),
-#              _sorted(MITO_VARIANT3, [17, 17]),  _sorted(MITO_VARIANT1, [22, 22]), _sorted(VARIANT3, [26, 27]),
-#              _sorted(VARIANT1, [None, None])], sample_data=FAMILY_2_ALL_SAMPLE_DATA, sort='protein_consequence',
-#         )
-#
+
+    def test_sort(self):
+        self.results_model.families.set(self.families.filter(guid='F000002_2'))
+
+        self._assert_expected_search(
+            [VARIANT4, VARIANT2, VARIANT3, VARIANT1],
+            # [_sorted(VARIANT4, [2, 2]), _sorted(MITO_VARIANT2, [11, 11]), _sorted(VARIANT2, [12, 12]),
+            #  _sorted(MITO_VARIANT3, [17, 17]),  _sorted(MITO_VARIANT1, [22, 22]), _sorted(VARIANT3, [26, 27]),
+            #  _sorted(VARIANT1, [None, None])], sample_data=FAMILY_2_ALL_SAMPLE_DATA,
+            sort='protein_consequence',
+        )
+
 #         self._assert_expected_search(
 #             [_sorted(GCNV_VARIANT2, [0]), _sorted(GCNV_VARIANT3, [0]), _sorted(GCNV_VARIANT4, [0]),
 #              _sorted(GCNV_VARIANT1, [3])], omit_data_type='SNV_INDEL', sort='protein_consequence',
 #         )
-#
-#         self._assert_expected_search(
-#             [_sorted(VARIANT4, [2, 2]), _sorted(GCNV_VARIANT2, [4.5, 0]), _sorted(GCNV_VARIANT3, [4.5, 0]), _sorted(GCNV_VARIANT4, [4.5, 0]),
-#              _sorted(GCNV_VARIANT1, [4.5, 3]), _sorted(VARIANT2, [12, 12]),
-#              _sorted(MULTI_FAMILY_VARIANT, [26, 27]), _sorted(VARIANT1, [None, None])], sort='protein_consequence',
-#         )
-#
+
+        self._assert_expected_search(
+            [VARIANT4, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT1], sort='protein_consequence',
+            # [_sorted(VARIANT4, [2, 2]), _sorted(GCNV_VARIANT2, [4.5, 0]), _sorted(GCNV_VARIANT3, [4.5, 0]), _sorted(GCNV_VARIANT4, [4.5, 0]),
+            #  _sorted(GCNV_VARIANT1, [4.5, 3]), _sorted(VARIANT2, [12, 12]),
+            #  _sorted(MULTI_FAMILY_VARIANT, [26, 27]), _sorted(VARIANT1, [None, None])], sort='protein_consequence',
+        )
+
 #         self._assert_expected_search(
 #             [_sorted(SV_VARIANT1, [11]), _sorted(SV_VARIANT2, [12]), _sorted(SV_VARIANT3, [12]), _sorted(SV_VARIANT4, [12])],
 #              sample_data=SV_WGS_SAMPLE_DATA, sort='protein_consequence',
 #         )
-#
-#         self._assert_expected_search(
-#             [_sorted(VARIANT4, [2, 2]), _sorted(SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, [12, 26]),
-#              _sorted(SELECTED_ANNOTATION_TRANSCRIPT_MULTI_FAMILY_VARIANT, [26, 26])],
-#             omit_data_type='SV_WES', sort='protein_consequence',
-#             annotations={'other': ['non_coding_transcript_exon_variant'], 'splice_ai': '0'},
-#         )
-#
-#         self._assert_expected_search(
-#             [_sorted(VARIANT1, [4]), _sorted(VARIANT2, [8]), _sorted(MULTI_FAMILY_VARIANT, [12.5]),
-#              _sorted(VARIANT4, [12.5]), GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4], sort='pathogenicity',
-#         )
-#
-#         self._assert_expected_search(
-#             [ _sorted(MITO_VARIANT3, [4]), _sorted(VARIANT1, [4, None]), _sorted(VARIANT2, [8, 3]),
-#              _sorted(MITO_VARIANT1, [11]), _sorted(MITO_VARIANT2, [12.5]), _sorted(VARIANT3, [12.5, None]),
-#               _sorted(VARIANT4, [12.5, None])],
-#             sort='pathogenicity_hgmd', sample_data=FAMILY_2_ALL_SAMPLE_DATA,
-#         )
-#
-#         self._assert_expected_search(
-#             [_sorted(VARIANT2, [0]), _sorted(MITO_VARIANT1, [0]), _sorted(MITO_VARIANT2, [0]),
-#              _sorted(VARIANT4, [0.00026519427774474025]), _sorted(VARIANT1, [0.034449315071105957]),
-#              _sorted(MITO_VARIANT3, [0.05534649267792702]), _sorted(VARIANT3, [0.38041073083877563])],
-#             sort='gnomad', sample_data=FAMILY_2_ALL_SAMPLE_DATA,
-#         )
-#
-#         self._assert_expected_search(
-#             [_sorted(VARIANT1, [0]), _sorted(MULTI_FAMILY_VARIANT, [0]), _sorted(VARIANT4, [0]),
-#              _sorted(VARIANT2, [0.28899794816970825]), GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
-#             sort='gnomad_exomes',
-#         )
-#
-#         await self._assert_expected_search(
-#             [_sorted(VARIANT4, [2]),_sorted(MULTI_FAMILY_VARIANT, [4]), _sorted(VARIANT1, [9]),
-#              _sorted(VARIANT2, [28]), _sorted(GCNV_VARIANT3, [35]), _sorted(GCNV_VARIANT4, [115]),
-#              _sorted(GCNV_VARIANT2, [284]), _sorted(GCNV_VARIANT1, [1763])],
-#             sort='callset_af',
-#         )
-#
-#        await self._assert_expected_search(
-#             [_sorted(MITO_VARIANT1, [0]), _sorted(MITO_VARIANT2, [0]), _sorted(VARIANT4, [2]),
-#              _sorted(MITO_VARIANT3, [3]), _sorted(VARIANT3, [4]), _sorted(VARIANT1, [9]),
-#              _sorted(VARIANT2, [28])],
-#             sort='callset_af', sample_data=FAMILY_2_ALL_SAMPLE_DATA,
-#         )
-#
-#         self._assert_expected_search(
-#             [_sorted(VARIANT4, [-29.899999618530273]), _sorted(VARIANT2, [-20.899999618530273]),
-#              _sorted(VARIANT1, [-4.668000221252441]), _sorted(MULTI_FAMILY_VARIANT, [-2.753999948501587]),
-#              GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4], sort='cadd',
-#         )
-#
-#         self._assert_expected_search(
-#             [_sorted(VARIANT4, [-0.5260000228881836]), _sorted(VARIANT2, [-0.19699999690055847]),
-#              _sorted(VARIANT1, [0]), _sorted(MULTI_FAMILY_VARIANT, [0])], omit_data_type='SV_WES', sort='revel',
-#         )
-#
-#         self._assert_expected_search(
-#             [_sorted(MULTI_FAMILY_VARIANT, [-0.009999999776482582]), _sorted(VARIANT2, [0]), _sorted(VARIANT4, [0]),
-#              _sorted(VARIANT1, [0])], omit_data_type='SV_WES', sort='splice_ai',
-#         )
-#
-#         self._assert_expected_search(
-#             [_sorted(VARIANT2, [-0.9977999925613403, -0.9977999925613403]), _sorted(VARIANT1, [0, 0]),
-#              _sorted(MULTI_FAMILY_VARIANT, [0, 0]), _sorted(VARIANT4, [0, 0])], omit_data_type='SV_WES', sort='alphamissense',
-#         )
-#
-#         sort = 'in_omim'
-#         self._assert_expected_search(
-#             [_sorted(MULTI_FAMILY_VARIANT, [0, -2]), _sorted(VARIANT2, [0, -1]), _sorted(VARIANT4, [0, -1]), _sorted(VARIANT1, [1, 0])],
-#             omit_data_type='SV_WES', sort=sort, sort_metadata=OMIM_SORT_METADATA,
-#         )
-#
-#         self._assert_expected_search(
+
+        self._assert_expected_search(
+            [VARIANT4, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, SELECTED_ANNOTATION_TRANSCRIPT_MULTI_FAMILY_VARIANT],
+            # [_sorted(VARIANT4, [2, 2]), _sorted(SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, [12, 26]),
+            #  _sorted(SELECTED_ANNOTATION_TRANSCRIPT_MULTI_FAMILY_VARIANT, [26, 26])],
+            sort='protein_consequence',
+            annotations={'other': ['non_coding_transcript_exon_variant'], 'splice_ai': '0'}, cached_variant_fields=[
+                {'selectedTranscript': None},
+                {'selectedTranscript': CACHED_VARIANTS_BY_KEY[2]['sortedTranscriptConsequences'][5]},
+                {'selectedTranscript': CACHED_VARIANTS_BY_KEY[3]['sortedTranscriptConsequences'][3]},
+            ],
+        )
+
+        self._assert_expected_search(
+            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4], sort='pathogenicity', annotations=None,
+            # [_sorted(VARIANT1, [4]), _sorted(VARIANT2, [8]), _sorted(MULTI_FAMILY_VARIANT, [12.5]),
+            #  _sorted(VARIANT4, [12.5]), GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4], sort='pathogenicity',
+        )
+
+        self._assert_expected_search(
+            [VARIANT1, VARIANT2, VARIANT3, VARIANT4],
+            # [ _sorted(MITO_VARIANT3, [4]), _sorted(VARIANT1, [4, None]), _sorted(VARIANT2, [8, 3]),
+            #  _sorted(MITO_VARIANT1, [11]), _sorted(MITO_VARIANT2, [12.5]), _sorted(VARIANT3, [12.5, None]),
+            #   _sorted(VARIANT4, [12.5, None])],
+            sort='pathogenicity_hgmd', # sample_data=FAMILY_2_ALL_SAMPLE_DATA,
+        )
+
+        self._assert_expected_search(
+            [VARIANT2, VARIANT4, VARIANT1, VARIANT3],
+            # [_sorted(VARIANT2, [0]), _sorted(MITO_VARIANT1, [0]), _sorted(MITO_VARIANT2, [0]),
+            #  _sorted(VARIANT4, [0.00026519427774474025]), _sorted(VARIANT1, [0.034449315071105957]),
+            #  _sorted(MITO_VARIANT3, [0.05534649267792702]), _sorted(VARIANT3, [0.38041073083877563])],
+            sort='gnomad',
+        )
+
+        self._assert_expected_search(
+            [VARIANT1, MULTI_FAMILY_VARIANT, VARIANT4, VARIANT2],
+            # [_sorted(VARIANT1, [0]), _sorted(MULTI_FAMILY_VARIANT, [0]), _sorted(VARIANT4, [0]),
+            #  _sorted(VARIANT2, [0.28899794816970825]), GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
+            sort='gnomad_exomes',
+        )
+
+        self._assert_expected_search(
+            [VARIANT4, MULTI_FAMILY_VARIANT, VARIANT1, VARIANT2],
+            # [_sorted(VARIANT4, [2]),_sorted(MULTI_FAMILY_VARIANT, [4]), _sorted(VARIANT1, [9]),
+            #  _sorted(VARIANT2, [28]), _sorted(GCNV_VARIANT3, [35]), _sorted(GCNV_VARIANT4, [115]),
+            #  _sorted(GCNV_VARIANT2, [284]), _sorted(GCNV_VARIANT1, [1763])],
+            sort='callset_af',
+        )
+
+        self._assert_expected_search(
+            [VARIANT4, VARIANT3, VARIANT1, VARIANT2],
+            # [_sorted(MITO_VARIANT1, [0]), _sorted(MITO_VARIANT2, [0]), _sorted(VARIANT4, [2]),
+            #  _sorted(MITO_VARIANT3, [3]), _sorted(VARIANT3, [4]), _sorted(VARIANT1, [9]),
+            #  _sorted(VARIANT2, [28])],
+            sort='callset_af', # sample_data=FAMILY_2_ALL_SAMPLE_DATA,
+        )
+
+        self._assert_expected_search(
+            [VARIANT4, VARIANT2, VARIANT1, MULTI_FAMILY_VARIANT],
+            # [_sorted(VARIANT4, [-29.899999618530273]), _sorted(VARIANT2, [-20.899999618530273]),
+            #  _sorted(VARIANT1, [-4.668000221252441]), _sorted(MULTI_FAMILY_VARIANT, [-2.753999948501587]),
+            #  GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
+            sort='cadd',
+        )
+
+        self._assert_expected_search(
+            [VARIANT4, VARIANT2, VARIANT1, MULTI_FAMILY_VARIANT], sort='revel',
+        )
+
+        self._assert_expected_search(
+            [MULTI_FAMILY_VARIANT, VARIANT2, VARIANT4, VARIANT1], sort='splice_ai',
+        )
+
+        self._assert_expected_search(
+            [VARIANT2, VARIANT1, MULTI_FAMILY_VARIANT, VARIANT4], sort='alphamissense',
+        )
+
+        sort = 'in_omim'
+        self._assert_expected_search(
+            [MULTI_FAMILY_VARIANT, VARIANT2, VARIANT4, VARIANT1], sort=sort
+        )
+
+#        self._assert_expected_search(
 #             [_sorted(GCNV_VARIANT3, [-1]), _sorted(GCNV_VARIANT4, [-1]), _sorted(GCNV_VARIANT1, [0]), _sorted(GCNV_VARIANT2, [0])],
 #             omit_data_type='SNV_INDEL', sort=sort, sort_metadata=OMIM_SORT_METADATA,
 #         )
@@ -1105,19 +1115,17 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #              _sorted(GCNV_VARIANT3, [0, -1]), _sorted(GCNV_VARIANT4, [0, -1]), _sorted(GCNV_VARIANT1, [0, 0]),
 #              _sorted(GCNV_VARIANT2, [0, 0]),  _sorted(VARIANT1, [1, 0])], sort=sort, sort_metadata=OMIM_SORT_METADATA,
 #         )
-#
-#         self._assert_expected_search(
-#             [_sorted(VARIANT2, [0, -1]), _sorted(MULTI_FAMILY_VARIANT, [1, -1]), _sorted(VARIANT1, [1, 0]), _sorted(VARIANT4, [1, 0])],
-#             omit_data_type='SV_WES', sort=sort, sort_metadata=['ENSG00000177000'],
-#         )
-#
-#         constraint_sort_metadata = {'ENSG00000177000': 2, 'ENSG00000275023': 3, 'ENSG00000097046': 4}
-#         sort = 'constraint'
-#         self._assert_expected_search(
-#             [_sorted(VARIANT2, [2, 2]), _sorted(MULTI_FAMILY_VARIANT, [4, 2]), _sorted(VARIANT4, [4, 4]),
-#              _sorted(VARIANT1, [None, None])], omit_data_type='SV_WES', sort=sort, sort_metadata=constraint_sort_metadata,
-#         )
-#
+
+        Omim.objects.filter(gene_id=61).delete()
+        self._assert_expected_search(
+            [VARIANT2, MULTI_FAMILY_VARIANT, VARIANT1, VARIANT4], sort=sort,
+        )
+
+        sort = 'constraint'
+        self._assert_expected_search(
+            [VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, VARIANT1], sort=sort,
+        )
+
 #         self._assert_expected_search(
 #             [_sorted(GCNV_VARIANT3, [3]), _sorted(GCNV_VARIANT4, [3]), _sorted(GCNV_VARIANT1, [None]),
 #              _sorted(GCNV_VARIANT2, [None])], omit_data_type='SNV_INDEL', sort=sort, sort_metadata=constraint_sort_metadata,
@@ -1129,19 +1137,16 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #              _sorted(GCNV_VARIANT1, [None, None]), _sorted(GCNV_VARIANT2, [None, None])],
 #             sort=sort, sort_metadata=constraint_sort_metadata,
 #         )
-#
-#         self._assert_expected_search(
-#             [_sorted(VARIANT2, [3, 3]), _sorted(MULTI_FAMILY_VARIANT, [None, 3]), _sorted(VARIANT1, [None, None]),
-#              _sorted(VARIANT4, [None, None])], omit_data_type='SV_WES', sort='prioritized_gene',
-#             sort_metadata={'ENSG00000177000': 3},
-#         )
-#
-#         self._assert_expected_search(
-#             [_sorted(MULTI_PROJECT_VARIANT1, [2]), _sorted(MULTI_PROJECT_VARIANT2, [2]),
-#              _sorted(VARIANT3, [2]), _sorted(VARIANT4, [2]), _sorted(PROJECT_2_VARIANT, [11])],
-#             sort='family_guid', sample_data=MULTI_PROJECT_SAMPLE_DATA,
-#         )
-#
+
+        self._assert_expected_search([VARIANT2, VARIANT3, VARIANT1, VARIANT4], sort='prioritized_gene')
+
+        self._assert_expected_search(
+            [VARIANT1, VARIANT2, VARIANT3, VARIANT4],
+            # [_sorted(MULTI_PROJECT_VARIANT1, [2]), _sorted(MULTI_PROJECT_VARIANT2, [2]),
+            #  _sorted(VARIANT3, [2]), _sorted(VARIANT4, [2]), _sorted(PROJECT_2_VARIANT, [11])],
+            sort='family_guid', #sample_data=MULTI_PROJECT_SAMPLE_DATA,
+        )
+
 #         # size sort only applies to SVs, so has no impact on other variant
 #         self._assert_expected_search(
 #             [_sorted(GCNV_VARIANT1, [-171766]), _sorted(GCNV_VARIANT2, [-17768]), _sorted(GCNV_VARIANT4, [-14487]),
