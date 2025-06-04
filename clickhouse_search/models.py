@@ -612,7 +612,7 @@ class TranscriptsSnvIndel(models.ClickhouseModel):
 
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/transcripts'
-        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_IN_MEMORY_DIR}/GRCh38/SNV_INDEL/transcripts', primary_key='key', flatten_nested=0)
+        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SNV_INDEL/transcripts', primary_key='key', flatten_nested=0)
 
 
 class Clinvar(models.ClickhouseModel):
