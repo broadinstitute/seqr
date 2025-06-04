@@ -28,6 +28,24 @@ MISSING_REQUIRED_SAMPLE_DATA = [["21", "HG00736", "", "", "", "", "", "", "", ""
 
 LOAD_SAMPLE_DATA_NO_AFFECTED = LOAD_SAMPLE_DATA + [["22", "HG00736", "", "", "", "Unknown", "Unknown", "", "", ""]]
 
+LOAD_SAMPLE_DATA_ALL_PENDING = LOAD_SAMPLE_DATA + [
+    ["2", "HG00731", "", "HG00732", "HG00733", "Female", "Affected", "HP:0001508", "", ""],
+    ["2", "HG00732", "", "", "", "Male", "Unaffected", "", "", ""],
+    ["2", "HG00733", "", "", "", "Female", "Unaffected", "", "", ""],
+    ["3", "NA20870", "", "", "", "Male", "Affected", "HP:0001508", "", ""],
+    ["4", "NA20872", "", "", "", "Male", "Affected", "HP:0001508", "", ""],
+    ["5", "NA20874", "", "", "", "Male", "Affected", "HP:0001508", "", ""],
+    ["6", "NA20875", "", "", "", "Male", "Affected", "HP:0001508", "", ""],
+    ["8", "NA20888", "", "", "", "Female", "Affected", "HP:0001508", "", ""],
+    ["9", "NA20878", "", "", "", "Male", "Affected", "HP:0001508", "", ""],
+    ["no_individuals", "HG00736", "", "", "", "Male", "Affected", "HP:0001508", "", ""],
+]
+
+LOAD_SAMPLE_DATA_ALL_PENDING_PROJECT_2 = LOAD_SAMPLE_DATA + [
+    ["11", "NA20885", "", "", "", "Male", "Affected", "HP:0001508", "", ""],
+    ["12", "NA20888", "", "", "", "Male", "Affected", "HP:0001508", "", ""],
+]
+
 FILE_DATA = [
     '##fileformat=VCFv4.2\n',
     '#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	NA19675_1	NA19679	HG00735\n',
@@ -67,9 +85,12 @@ TEMP_PATH = '/temp_path/temp_filename'
 
 MOCK_AIRTABLE_URL = 'http://testairtable'
 
-PROJECT1_SAMPLES = ['HG00735', 'NA19678', 'NA19679', 'NA20870', 'HG00732', 'NA19675_1', 'NA20874', 'HG00733', 'HG00731']
-PROJECT2_SAMPLES = ['NA20885', 'NA19675_1', 'NA19679', 'HG00735']
+PROJECT1_SAMPLES = ['HG00735', 'NA19678', 'NA19679', 'NA20870', 'HG00732', 'NA19675_1', 'NA20874', 'HG00733', 'HG00731',
+                    'HG00736', 'NA20872', 'NA20875', 'NA20888', 'NA20878']
+PROJECT2_SAMPLES = ['NA20885', 'NA19675_1', 'NA19679', 'HG00735', 'NA20888']
 PROJECT2_SAMPLE_DATA = [
+    {'Project_GUID': 'R0003_test', 'Family_GUID': 'F000011_11', 'Family_ID': '11', 'Individual_ID': 'NA20885', 'Paternal_ID': None, 'Maternal_ID': None, 'Sex': 'M'},
+    {'Project_GUID': 'R0003_test', 'Family_GUID': 'F000012_12', 'Family_ID': '12', 'Individual_ID': 'NA20888', 'Paternal_ID': None, 'Maternal_ID': None, 'Sex': 'M'},
     {'Project_GUID': 'R0003_test', 'Family_GUID': 'F000016_1', 'Family_ID': '1', 'Individual_ID': 'NA19675_1', 'Paternal_ID': None, 'Maternal_ID': 'NA19679', 'Sex': 'F'},
     {'Project_GUID': 'R0003_test', 'Family_GUID': 'F000016_1', 'Family_ID': '1', 'Individual_ID': 'NA19679', 'Paternal_ID': None, 'Maternal_ID': None, 'Sex': 'F'},
     {'Project_GUID': 'R0003_test', 'Family_GUID': 'F000017_21', 'Family_ID': '21', 'Individual_ID': 'HG00735', 'Paternal_ID': None, 'Maternal_ID': None, 'Sex': 'U'},
@@ -653,19 +674,36 @@ class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
             'HG00731 already has loaded data and cannot be moved to a different family',
         ])
 
-        # Test a valid operation
+        # Test project still has pending loading
         self.mock_load_file.return_value = LOAD_SAMPLE_DATA
-        mock_compute_indiv_guid.return_value = 'I0000020_hg00735'
+        response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_ADD_DATA))
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(response.json()['errors'], [
+            'The following families in this project are awaiting loading from a previous loading request: 2, 3, 4, 5, 6, 8, 9, no_individuals. '
+            'Please wait for loading to complete before requesting additional data loading'
+        ])
+
+        # Test a valid operation
+        self.mock_load_file.return_value = LOAD_SAMPLE_DATA_ALL_PENDING
+        mock_compute_indiv_guid.side_effect = ['I0000020_hg00735', 'I0000021_hg00736']
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_ADD_DATA))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {'familiesByGuid', 'familyNotesByGuid', 'individualsByGuid'})
-        self.assertSetEqual(set(response_json['individualsByGuid'].keys()), {'I0000020_hg00735', 'I000001_na19675', 'I000003_na19679'})
-        self.assertSetEqual(set(response_json['familiesByGuid'].keys()), {'F000001_1', 'F000015_21'})
+        self.assertSetEqual(set(response_json['individualsByGuid'].keys()), {
+            'I0000020_hg00735', 'I000001_na19675', 'I000003_na19679', 'I0000021_hg00736', 'I000007_na20870',
+            'I000009_na20874', 'I000004_hg00731', 'I000010_na20875', 'I000008_na20872', 'I000005_hg00732',
+            'I000006_hg00733', 'I000013_na20878', 'I000012_na20877',
+        })
+        self.assertSetEqual(set(response_json['familiesByGuid'].keys()), {
+            'F000001_1', 'F000015_21', 'F000006_6', 'F000013_13', 'F000005_5', 'F000009_9', 'F000008_8', 'F000004_4',
+            'F000002_2', 'F000003_3',
+        })
         self.assertEqual(list(response_json['familyNotesByGuid'].keys()), ['FAN000004_21_c_a_new_family'])
 
         self._assert_valid_operation(Project.objects.get(guid=PROJECT1_GUID))
 
+        self.mock_load_file.return_value = LOAD_SAMPLE_DATA_ALL_PENDING_PROJECT_2
         mock_compute_indiv_guid.side_effect = ['I0000021_na19675_1', 'I0000022_na19678', 'I0000023_hg00735']
         url = reverse(add_workspace_data, args=[PROJECT2_GUID])
         self._test_mv_file_and_triggering_dag_exception(
@@ -736,6 +774,16 @@ class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
                 ['R0001_1kg', 'F000001_1', '1', 'NA19675_1', '', 'NA19679', 'F'],
                 ['R0001_1kg', 'F000001_1', '1', 'NA19678', '', '', 'M'],
                 ['R0001_1kg', 'F000001_1', '1', 'NA19679', '', '', 'F'],
+                ['R0001_1kg', 'F000002_2', '2', 'HG00731', 'HG00732', 'HG00733', 'F'],
+                ['R0001_1kg', 'F000002_2', '2', 'HG00732', '', '', 'M'],
+                ['R0001_1kg', 'F000002_2', '2', 'HG00733', '', '', 'F'],
+                ['R0001_1kg', 'F000003_3', '3', 'NA20870', '', '', 'M'],
+                ['R0001_1kg', 'F000004_4', '4', 'NA20872', '', '', 'M'],
+                ['R0001_1kg', 'F000005_5', '5', 'NA20874', '', '', 'M'],
+                ['R0001_1kg', 'F000006_6', '6', 'NA20875', '', '', 'M'],
+                ['R0001_1kg', 'F000008_8', '8', 'NA20888', '', '', 'F'],
+                ['R0001_1kg', 'F000009_9', '9', 'NA20878', '', '', 'M'],
+                ['R0001_1kg', 'F000013_13', 'no_individuals', 'HG00736', '', '', 'M'],
                 ['R0001_1kg', 'F000015_21', '21', 'HG00735', '', '', 'U']
             ]
         else:
@@ -761,7 +809,7 @@ class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
             'Requester Email': 'test_user_manager@test.com',
             'AnVIL Project URL': f'http://testserver/project/{project.guid}/project_page',
             'Initial Request Date': '2021-03-01',
-            'Number of Samples': 4 if test_add_data else 3,
+            'Number of Samples': 14 if test_add_data else 3,
             'Status': 'Loading',
         }}]})
         self.assert_expected_airtable_headers(-1)
@@ -774,9 +822,7 @@ class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
             'sample_type': 'WES',
             'sample_source': 'AnVIL',
         }
-        sample_summary = '3 new'
-        if test_add_data:
-            sample_summary += ' and 2 re-loaded'
+        sample_summary = '13 new and 7 re-loaded' if test_add_data else '3 new'
         slack_message = """
         *test_user_manager@test.com* requested to load {sample_summary} WES samples ({version}) from AnVIL workspace *my-seqr-billing/{workspace_name}* at 
         gs://test_bucket/test_path.vcf to seqr project <http://testserver/project/{guid}/project_page|*{project_name}*> (guid: {guid})
@@ -807,7 +853,7 @@ class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
             'family__family_id', 'individual_id', 'mother__individual_id', 'father__individual_id', 'sex', 'affected', 'notes',
             'features',
         ))
-        self.assertEqual(len(individual_model_data), 15 if test_add_data else 3)
+        self.assertEqual(len(individual_model_data), 16 if test_add_data else 3)
         self.assertIn({
             'family__family_id': '21', 'individual_id': 'HG00735', 'mother__individual_id': None,
             'father__individual_id': None, 'sex': 'U', 'affected': 'A', 'notes': None, 'features': [{'id': 'HP:0001508'}],
@@ -903,8 +949,10 @@ class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
 
         # make sure the task id including the newly created project to avoid infinitely pulling the tasks
         self._add_dag_tasks_response(['R0003_test', 'R0004_test'])
+        self.mock_load_file.return_value = LOAD_SAMPLE_DATA_ALL_PENDING
         self._test_not_yet_email_date(url, REQUEST_BODY_ADD_DATA)
 
+        self.mock_load_file.return_value = LOAD_SAMPLE_DATA_ALL_PENDING_PROJECT_2
         url = reverse(add_workspace_data, args=[PROJECT2_GUID])
         self._test_after_email_date(url, REQUEST_BODY_ADD_DATA2)
 
