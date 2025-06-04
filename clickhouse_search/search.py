@@ -194,7 +194,8 @@ def _get_sort_gene_metadata(sort, results, family_guid):
     return get_metadata(gene_ids, family_guid)
 
 
-def _subfield_sort(*fields, rank_lookup=None, default=1000, reverse=False):
+MAX_SORT_RANK = 1e10
+def _subfield_sort(*fields, rank_lookup=None, default=MAX_SORT_RANK, reverse=False):
     def _sort(item):
         for field in fields:
             item = (item or {}).get(field)
@@ -205,6 +206,8 @@ def _subfield_sort(*fields, rank_lookup=None, default=1000, reverse=False):
     return [_sort]
 
 
+MIN_SORT_RANK = 0
+MIN_PRED_SORT_RANK = -1
 CLINVAR_RANK_LOOKUP = {path: rank for rank, path in Clinvar.PATHOGENICITY_CHOICES}
 HGMD_RANK_LOOKUP = {class_: rank for rank, class_ in AnnotationsSnvIndel.HGMD_CLASSES}
 ABSENT_CLINVAR_SORT_OFFSET = 12.5
@@ -215,8 +218,8 @@ CLINVAR_SORT =  _subfield_sort(
 )
 SORT_EXPRESSIONS = {
     'alphamissense': [
-        lambda x: -max(t.get('alphamissensePathogenicity') or 0 for t in x[TRANSCRIPT_CONSEQUENCES_FIELD]) if x[TRANSCRIPT_CONSEQUENCES_FIELD] else 0,
-    ] + _subfield_sort(SELECTED_TRANSCRIPT_FIELD, 'alphamissensePathogenicity', reverse=True, default=0),
+        lambda x: -max(t.get('alphamissensePathogenicity') or MIN_SORT_RANK for t in x[TRANSCRIPT_CONSEQUENCES_FIELD]) if x[TRANSCRIPT_CONSEQUENCES_FIELD] else MIN_SORT_RANK,
+    ] + _subfield_sort(SELECTED_TRANSCRIPT_FIELD, 'alphamissensePathogenicity', reverse=True, default=MIN_SORT_RANK),
     'callset_af': _subfield_sort('populations', 'seqr', 'ac'),
     'family_guid': [lambda x: sorted(x['familyGuids'])[0]],
     'gnomad': _subfield_sort('populations', 'gnomad_genomes', 'af'),
@@ -224,10 +227,10 @@ SORT_EXPRESSIONS = {
     PATHOGENICTY_SORT_KEY: CLINVAR_SORT,
     PATHOGENICTY_HGMD_SORT_KEY: CLINVAR_SORT + _subfield_sort('hgmd', 'class', rank_lookup=HGMD_RANK_LOOKUP),
     'protein_consequence': [
-        lambda x: CONSEQUENCE_RANK_LOOKUP[x[TRANSCRIPT_CONSEQUENCES_FIELD][0]['consequenceTerms'][0]] if x[TRANSCRIPT_CONSEQUENCES_FIELD] else 1000,
-        lambda x: CONSEQUENCE_RANK_LOOKUP[x[SELECTED_TRANSCRIPT_FIELD]['consequenceTerms'][0]] if x.get(SELECTED_TRANSCRIPT_FIELD) else 1000,
+        lambda x: CONSEQUENCE_RANK_LOOKUP[x[TRANSCRIPT_CONSEQUENCES_FIELD][0]['consequenceTerms'][0]] if x[TRANSCRIPT_CONSEQUENCES_FIELD] else MAX_SORT_RANK,
+        lambda x: CONSEQUENCE_RANK_LOOKUP[x[SELECTED_TRANSCRIPT_FIELD]['consequenceTerms'][0]] if x.get(SELECTED_TRANSCRIPT_FIELD) else MAX_SORT_RANK,
     ],
-    **{sort: _subfield_sort('predictions', sort, reverse=True, default=-1) for sort in PREDICTION_SORTS},
+    **{sort: _subfield_sort('predictions', sort, reverse=True, default=MIN_PRED_SORT_RANK) for sort in PREDICTION_SORTS},
 }
 
 def _get_sort_key(sort, gene_metadata):
@@ -240,8 +243,8 @@ def _get_sort_key(sort, gene_metadata):
         ]
     elif gene_metadata:
         sort_expressions = [
-            lambda x: gene_metadata.get((x.get(SELECTED_TRANSCRIPT_FIELD) or {}).get('geneId') or x.get(SELECTED_GENE_FIELD), 1000),
-            lambda x: min([gene_metadata[t['geneId']] for t in x.get(TRANSCRIPT_CONSEQUENCES_FIELD, []) if t['geneId'] in gene_metadata] or [1e10]),
+            lambda x: gene_metadata.get((x.get(SELECTED_TRANSCRIPT_FIELD) or {}).get('geneId') or x.get(SELECTED_GENE_FIELD), MAX_SORT_RANK),
+            lambda x: min([gene_metadata[t['geneId']] for t in x.get(TRANSCRIPT_CONSEQUENCES_FIELD, []) if t['geneId'] in gene_metadata] or [MAX_SORT_RANK]),
         ]
 
     return lambda x: tuple(expr(x) for expr in [*sort_expressions, lambda x: x[XPOS_SORT_KEY]])
