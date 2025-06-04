@@ -7,7 +7,7 @@ import os
 from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4, CACHED_VARIANTS_BY_KEY, \
     VARIANT_ID_SEARCH, VARIANT_IDS, LOCATION_SEARCH, GENE_IDS, SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT, \
     SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3, \
-    SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, SELECTED_ANNOTATION_TRANSCRIPT_MULTI_FAMILY_VARIANT
+    SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, SELECTED_ANNOTATION_TRANSCRIPT_MULTI_FAMILY_VARIANT, MULTI_FAMILY_VARIANT
 from reference_data.models import Omim
 from seqr.models import Project
 from seqr.utils.search.search_utils_tests import SearchTestHelper
@@ -195,7 +195,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         inheritance_mode = 'any_affected'
         self._assert_expected_search(
             # [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
-            [VARIANT1, VARIANT2, VARIANT3, VARIANT4],
+            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4],
             inheritance_mode=inheritance_mode,
         )
 
@@ -336,7 +336,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 
         quality_filter = {'vcf_filter': 'pass'}
         self._assert_expected_search(
-            [VARIANT1, VARIANT2,VARIANT3],
+            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT],
             # [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
             quality_filter=quality_filter
         )
@@ -369,13 +369,12 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         # )
 
         self._assert_expected_search(
-            [VARIANT2, VARIANT3], quality_filter={'min_gq': 40, 'vcf_filter': 'pass'},
-            # [VARIANT2, MULTI_FAMILY_VARIANT], omit_data_type='SV_WES',
+            [VARIANT2, MULTI_FAMILY_VARIANT], quality_filter={'min_gq': 40, 'vcf_filter': 'pass'},
         )
 
         self._assert_expected_search(
             # [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
-            [VARIANT1, VARIANT2, VARIANT3],
+            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT],
             quality_filter={'min_gq': 60, 'min_qs': 10, 'affected_only': True},
         )
 
@@ -416,10 +415,9 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         self.results_model.families.set(self.families.filter(guid='F000002_2'))
 
         self._assert_expected_search(
-            [VARIANT3, VARIANT4], **LOCATION_SEARCH, cached_variant_fields=[
+            [MULTI_FAMILY_VARIANT, VARIANT4], **LOCATION_SEARCH, cached_variant_fields=[
                 {'selectedGeneId': 'ENSG00000097046'}, {'selectedGeneId': 'ENSG00000097046'}
             ],
-            # [MULTI_FAMILY_VARIANT, VARIANT4], omit_data_type='SV_WES', **LOCATION_SEARCH,
         )
 
 #         self._assert_expected_search(
@@ -591,25 +589,23 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         sv_callset_filter = {'sv_callset': {'af': 0.05}}
         # seqr af filter is ignored for SNV_INDEL
         self._assert_expected_search(
-            [VARIANT1, VARIANT2, VARIANT3, VARIANT4],
+            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4],
             # [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
             freqs={'callset': {'af': 0.2},  **sv_callset_filter},
         )
 
         self._assert_expected_search(
-            [VARIANT3, VARIANT4],
+            [MULTI_FAMILY_VARIANT, VARIANT4],
             # [MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
             freqs={'callset': {'ac': 5}, **sv_callset_filter},
         )
 
         self._assert_expected_search(
-            [VARIANT3, VARIANT4], freqs={'callset': {'ac': 4}},
-            # [MULTI_FAMILY_VARIANT, VARIANT4], frequencies={'seqr': {'ac': 4}}, omit_data_type='SV_WES',
+            [MULTI_FAMILY_VARIANT, VARIANT4], freqs={'callset': {'ac': 4}},
         )
 
         self._assert_expected_search(
-            [VARIANT3, VARIANT4], freqs={'callset': {'hh': 1}},
-            # [MULTI_FAMILY_VARIANT, VARIANT4], frequencies={'seqr': {'hh': 1}}, omit_data_type='SV_WES',
+            [MULTI_FAMILY_VARIANT, VARIANT4], freqs={'callset': {'hh': 1}},
         )
 
         self._assert_expected_search(
@@ -646,8 +642,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         )
 
         self._assert_expected_search(
-            [VARIANT1, VARIANT2, VARIANT3, VARIANT4], freqs={'callset': {}, 'gnomad_genomes': {'af': None}},
-            # [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4], frequencies={'seqr': {}, 'gnomad_genomes': {'af': None}},
+            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4], freqs={'callset': {}, 'gnomad_genomes': {'af': None}},
         )
 
         annotations = {'splice_ai': '0.0'}  # Ensures no variants are filtered out by annotation/path filters
@@ -727,7 +722,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         annotations['splice_ai'] = '0.005'
         annotations['structural'] = ['gCNV_DUP', 'DEL']
         self._assert_expected_search(
-            [VARIANT2, VARIANT3, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4],
+            [VARIANT2, MULTI_FAMILY_VARIANT, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4],
             # [VARIANT2, MULTI_FAMILY_VARIANT, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
             annotations=annotations, cached_variant_fields=[
                 {'selectedTranscript': CACHED_VARIANTS_BY_KEY[2]['sortedTranscriptConsequences'][0]},
@@ -1017,7 +1012,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #         )
 
         self._assert_expected_search(
-            [VARIANT4, VARIANT2, VARIANT3, VARIANT1], sort='protein_consequence',
+            [VARIANT4, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT1], sort='protein_consequence',
             # [_sorted(VARIANT4, [2, 2]), _sorted(GCNV_VARIANT2, [4.5, 0]), _sorted(GCNV_VARIANT3, [4.5, 0]), _sorted(GCNV_VARIANT4, [4.5, 0]),
             #  _sorted(GCNV_VARIANT1, [4.5, 3]), _sorted(VARIANT2, [12, 12]),
             #  _sorted(MULTI_FAMILY_VARIANT, [26, 27]), _sorted(VARIANT1, [None, None])], sort='protein_consequence',
@@ -1041,7 +1036,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         )
 
         self._assert_expected_search(
-            [VARIANT1, VARIANT2, VARIANT3, VARIANT4], sort='pathogenicity', annotations=None,
+            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4], sort='pathogenicity', annotations=None,
             # [_sorted(VARIANT1, [4]), _sorted(VARIANT2, [8]), _sorted(MULTI_FAMILY_VARIANT, [12.5]),
             #  _sorted(VARIANT4, [12.5]), GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4], sort='pathogenicity',
         )
@@ -1063,14 +1058,14 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         )
 
         self._assert_expected_search(
-            [VARIANT1, VARIANT3, VARIANT4, VARIANT2],
+            [VARIANT1, MULTI_FAMILY_VARIANT, VARIANT4, VARIANT2],
             # [_sorted(VARIANT1, [0]), _sorted(MULTI_FAMILY_VARIANT, [0]), _sorted(VARIANT4, [0]),
             #  _sorted(VARIANT2, [0.28899794816970825]), GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
             sort='gnomad_exomes',
         )
 
         self._assert_expected_search(
-            [VARIANT4, VARIANT3, VARIANT1, VARIANT2],
+            [VARIANT4, MULTI_FAMILY_VARIANT, VARIANT1, VARIANT2],
             # [_sorted(VARIANT4, [2]),_sorted(MULTI_FAMILY_VARIANT, [4]), _sorted(VARIANT1, [9]),
             #  _sorted(VARIANT2, [28]), _sorted(GCNV_VARIANT3, [35]), _sorted(GCNV_VARIANT4, [115]),
             #  _sorted(GCNV_VARIANT2, [284]), _sorted(GCNV_VARIANT1, [1763])],
@@ -1086,7 +1081,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         )
 
         self._assert_expected_search(
-            [VARIANT4, VARIANT2, VARIANT1, VARIANT3],
+            [VARIANT4, VARIANT2, VARIANT1, MULTI_FAMILY_VARIANT],
             # [_sorted(VARIANT4, [-29.899999618530273]), _sorted(VARIANT2, [-20.899999618530273]),
             #  _sorted(VARIANT1, [-4.668000221252441]), _sorted(MULTI_FAMILY_VARIANT, [-2.753999948501587]),
             #  GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
@@ -1094,31 +1089,20 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         )
 
         self._assert_expected_search(
-            [VARIANT4, VARIANT2, VARIANT1, VARIANT3],
-            # [_sorted(VARIANT4, [-0.5260000228881836]), _sorted(VARIANT2, [-0.19699999690055847]),
-            #  _sorted(VARIANT1, [0]), _sorted(MULTI_FAMILY_VARIANT, [0])], omit_data_type='SV_WES',
-            sort='revel',
+            [VARIANT4, VARIANT2, VARIANT1, MULTI_FAMILY_VARIANT], sort='revel',
         )
 
         self._assert_expected_search(
-            [VARIANT3, VARIANT2, VARIANT4, VARIANT1],
-            # [_sorted(MULTI_FAMILY_VARIANT, [-0.009999999776482582]), _sorted(VARIANT2, [0]), _sorted(VARIANT4, [0]),
-            #  _sorted(VARIANT1, [0])], omit_data_type='SV_WES',
-            sort='splice_ai',
+            [MULTI_FAMILY_VARIANT, VARIANT2, VARIANT4, VARIANT1], sort='splice_ai',
         )
 
         self._assert_expected_search(
-            [VARIANT2, VARIANT1, VARIANT3, VARIANT4],
-            # [_sorted(VARIANT2, [-0.9977999925613403, -0.9977999925613403]), _sorted(VARIANT1, [0, 0]),
-            #  _sorted(MULTI_FAMILY_VARIANT, [0, 0]), _sorted(VARIANT4, [0, 0])],
-            sort='alphamissense',
+            [VARIANT2, VARIANT1, MULTI_FAMILY_VARIANT, VARIANT4], sort='alphamissense',
         )
 
         sort = 'in_omim'
         self._assert_expected_search(
-            [VARIANT3, VARIANT2, VARIANT4, VARIANT1],
-            # [_sorted(MULTI_FAMILY_VARIANT, [0, -2]), _sorted(VARIANT2, [0, -1]), _sorted(VARIANT4, [0, -1]), _sorted(VARIANT1, [1, 0])],
-            sort=sort
+            [MULTI_FAMILY_VARIANT, VARIANT2, VARIANT4, VARIANT1], sort=sort
         )
 
 #        self._assert_expected_search(
@@ -1134,17 +1118,12 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 
         Omim.objects.filter(gene_id=61).delete()
         self._assert_expected_search(
-            [VARIANT2, VARIANT3, VARIANT1, VARIANT4],
-            # [_sorted(VARIANT2, [0, -1]), _sorted(MULTI_FAMILY_VARIANT, [1, -1]), _sorted(VARIANT1, [1, 0]), _sorted(VARIANT4, [1, 0])],
-            sort=sort,
+            [VARIANT2, MULTI_FAMILY_VARIANT, VARIANT1, VARIANT4], sort=sort,
         )
 
         sort = 'constraint'
         self._assert_expected_search(
-            [VARIANT2, VARIANT3, VARIANT4, VARIANT1],
-            # [_sorted(VARIANT2, [2, 2]), _sorted(MULTI_FAMILY_VARIANT, [4, 2]), _sorted(VARIANT4, [4, 4]),
-            #  _sorted(VARIANT1, [None, None])], omit_data_type='SV_WES',
-            sort=sort,
+            [VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, VARIANT1], sort=sort,
         )
 
 #         self._assert_expected_search(
