@@ -680,7 +680,7 @@ class ClickhouseSearchUtilsTests(TestCase, SearchUtilsTests):
         super().test_cached_query_variants()
 
         cache_key_prefix = f'search_results__{self.results_model.guid}'
-        self.mock_redis.get.side_effect = [None, {'total_results': 4, 'all_results': self.CACHED_VARIANTS}]
+        self.mock_redis.get.side_effect = [None, json.dumps({'total_results': 4, 'all_results': self.CACHED_VARIANTS})]
         self.mock_redis.keys.return_value = [f'{cache_key_prefix}__xpos', f'{cache_key_prefix}__gnomad']
 
         variants, total = query_variants(self.results_model, user=self.user, sort='cadd')
