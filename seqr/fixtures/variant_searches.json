@@ -265,11 +265,6 @@
                     "TFBS_amplification",
                     "TF_binding_site_variant"
                 ],
-                "regulatory_feature": [
-                    "regulatory_region_variant",
-                    "regulatory_region_ablation",
-                    "regulatory_region_amplification"
-                ],
                 "in_frame": [
                     "inframe_insertion",
                     "inframe_deletion"

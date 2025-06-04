@@ -143,7 +143,7 @@ def validate_anvil_vcf(request, namespace, name, workspace_meta):
     pending_project = Project.objects.filter(
         created_by=request.user, genome_version=body['genomeVersion'],
         family__analysis_status=Family.ANALYSIS_STATUS_WAITING_FOR_DATA
-    ).first()
+    ).exclude(workspace_namespace=namespace, workspace_name=name).first()
     if pending_project:
         raise ErrorsWarningsException([
             f'Project "{pending_project.name}" is awaiting loading. Please wait for loading to complete before requesting additional data loading'
@@ -226,6 +226,15 @@ def add_workspace_data(request, project_guid):
         return create_json_response({'error': error}, status=400, reason=error)
 
     pedigree_records, loaded_individual_ids, sample_type = _parse_uploaded_pedigree(request_json, project=project, search_dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
+
+    loading_families = {record[JsonConstants.FAMILY_ID_COLUMN] for record in pedigree_records}
+    pending_families = Family.objects.filter(
+        project=project, analysis_status=Family.ANALYSIS_STATUS_WAITING_FOR_DATA,
+    ).exclude(family_id__in=loading_families).order_by('family_id').values_list('family_id', flat=True)
+    if pending_families:
+        raise ErrorsWarningsException([
+            f'The following families in this project are awaiting loading from a previous loading request: {", ".join(pending_families)}. Please wait for loading to complete before requesting additional data loading'
+        ])
 
     pedigree_json = _trigger_add_workspace_data(
         project, pedigree_records, request.user, request_json['fullDataPath'], sample_type,
