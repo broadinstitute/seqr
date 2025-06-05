@@ -49,7 +49,7 @@ jobs:
         ports:
           - 9000:9000   # Native client interface
         volumes:
-          - /var/tmp:/bitnami/clickhouse
+          - /var/tmp:/var/seqr/clickhouse-data
           - /tmp:/in-memory-dir
         options: >-
           --health-cmd "clickhouse-client --query 'SELECT 1'" 
