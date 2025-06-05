@@ -1,5 +1,3 @@
-import pdb
-
 from clickhouse_backend import models
 from collections import OrderedDict
 from django.contrib.postgres.aggregates import ArrayAgg
@@ -18,25 +16,26 @@ from settings import CLICKHOUSE_SERVICE_HOSTNAME
 
 logger = SeqrLogger(__name__)
 
-CORE_ENTRIES_FIELDS = ['key', 'xpos']
-
 SEQR_POPULATION_KEY = 'seqrPop'
 
 ANNOTATION_VALUES = {
-    field.db_column or field.name: F(f'key__{field.name}') for field in AnnotationsSnvIndel._meta.local_fields
-    if field.name not in CORE_ENTRIES_FIELDS
+    field.db_column: F(field.name) for field in AnnotationsSnvIndel._meta.local_fields if field.db_column and field.name != field.db_column
 }
-ANNOTATION_VALUES['populations'] = TupleConcat(
-    ANNOTATION_VALUES['populations'], Tuple(SEQR_POPULATION_KEY),
+ANNOTATION_VALUES['populations_copy'] = TupleConcat(  # TODO fix name conflict
+    F('populations'), Tuple(SEQR_POPULATION_KEY),
     output_field=NamedTupleField([
         *AnnotationsSnvIndel.POPULATION_FIELDS,
         ('seqr', GtStatsDictGet.output_field),
     ]),
 )
+ANNOTATION_FIELDS = [
+    field.name for field in AnnotationsSnvIndel._meta.local_fields
+    if (field.db_column or field.name) not in ANNOTATION_VALUES
+]
 
 CLINVAR_FIELDS = OrderedDict({
-    f'key__clinvar__{field.name}': (field.db_column or field.name, field)
-    for field in Clinvar._meta.local_fields if field.name not in CORE_ENTRIES_FIELDS
+    f'clinvar__{field.name}': (field.db_column or field.name, field)
+    for field in Clinvar._meta.local_fields if field.name != 'key'
 })
 
 GENOTYPE_FIELDS = OrderedDict({
@@ -67,37 +66,33 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
     sample_data = _get_sample_data(samples)
     logger.info(f'Loading {Sample.DATASET_TYPE_VARIANT_CALLS} data for {len(sample_data)} families', user)
 
-    entries = EntriesSnvIndel.objects.filter(
-        project_guid=sample_data[0]['project_guid'],
-        family_guid=sample_data[0]['family_guid'],
-        is_gnomad_gt_5_percent=False,
-    ).values('key', 'filters', familyGuids=Array('family_guid'))
+    entries = EntriesSnvIndel.objects.search(sample_data, **search).values(
+        SEQR_POPULATION_KEY,
+        familyGuids=Array('family_guid'),
+        genotypes=ArrayMap(
+            'calls',
+            mapped_expression=f"tuple({_get_sample_map_expression(sample_data)}[x.sampleId], {', '.join(GENOTYPE_FIELDS.keys())})",
+            output_field=NestedField([('individualGuid', models.StringField()), *GENOTYPE_FIELDS.values()], group_by_key='individualGuid', flatten_groups=True)
+        ),
+    )
 
-    results = AnnotationsSnvIndel.objects.subquery_join(entries).filter(
-        populations__gnomad_genomes__af__lte=0.01
-    ).values('key', 'filters', 'familyGuids', 'populations')
+    results = AnnotationsSnvIndel.objects.subquery_join(entries).search(**search)
 
-    # entries = EntriesSnvIndel.objects.search(sample_data, **search)
-    #
-    # consequence_values = {}
-    # for field, value in SELECTED_CONSEQUENCE_VALUES.items():
-    #     if field in entries.query.annotations:
-    #         consequence_values.update(value)
-    #
-    # results = entries.values(
-    #     *CORE_ENTRIES_FIELDS,
-    #     familyGuids=Array('family_guid'),
-    #     genotypes=ArrayMap(
-    #         'calls',
-    #         mapped_expression=f"tuple({_get_sample_map_expression(sample_data)}[x.sampleId], {', '.join(GENOTYPE_FIELDS.keys())})",
-    #         output_field=NestedField([('individualGuid', models.StringField()), *GENOTYPE_FIELDS.values()], group_by_key='individualGuid', flatten_groups=True)
-    #     ),
-    #     clinvar=Tuple(*CLINVAR_FIELDS.keys(), output_field=NamedTupleField(list(CLINVAR_FIELDS.values()), null_if_empty=True, null_empty_arrays=True)),
-    #     genomeVersion=Value(genome_version),
-    #     liftedOverGenomeVersion=Value(_liftover_genome_version(genome_version)),
-    #     **ANNOTATION_VALUES,
-    #     **consequence_values,
-    # )
+    consequence_values = {}
+    for field, value in SELECTED_CONSEQUENCE_VALUES.items():
+        if field in results.query.annotations:
+            consequence_values.update(value)
+
+    results = results.values(
+        *ANNOTATION_FIELDS,
+        'familyGuids',
+        'genotypes',
+        clinvar_copy=Tuple(*CLINVAR_FIELDS.keys(), output_field=NamedTupleField(list(CLINVAR_FIELDS.values()), null_if_empty=True, null_empty_arrays=True)), # TODO fix name conflict
+        genomeVersion=Value(genome_version),
+        liftedOverGenomeVersion=Value(_liftover_genome_version(genome_version)),
+        **ANNOTATION_VALUES,
+        **consequence_values,
+    )
     results = results[:MAX_VARIANTS+1]
 
     sort_metadata = _get_sort_gene_metadata(sort, results, sample_data[0]['family_guid'])
