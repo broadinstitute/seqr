@@ -1,10 +1,11 @@
 from clickhouse_backend import models
 from django.db.migrations import state
 from django.db.models import options, ForeignKey, OneToOneField, Func, Manager, Q, CASCADE, PROTECT
+from django.db.models.expressions import Col
 
 from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocksDB, Join
 from clickhouse_search.backend.fields import NestedField, UInt64FieldDeltaCodecField, NamedTupleField
-from clickhouse_search.backend.functions import ArrayFilter, GtStatsDictGet
+from clickhouse_search.backend.functions import ArrayFilter, GtStatsDictGet, SubqueryJoin
 from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFECTED, UNAFFECTED, MALE_SEXES, \
     X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, SCREEN_KEY, UTR_ANNOTATOR_KEY, \
     EXTENDED_SPLICE_KEY, MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY, CLINVAR_KEY, HGMD_KEY, SV_ANNOTATION_TYPES, \
@@ -69,6 +70,29 @@ class Projection(Func):
         self.order_by = order_by
 
 
+class AnnotationsManager(Manager):
+
+    def subquery_join(self, subquery, join_key='key'):
+        qs = self.get_queryset()
+        conn = SubqueryJoin(
+            subquery,
+            parent_alias=qs.query.get_initial_alias(),
+            join_key=join_key,
+        )
+        qs.query.join(conn)
+
+        qs = qs.annotate(**{
+            col.target.name: Col(conn.subquery_alias, col.target) for col in subquery.query.select
+            if col.target.name != join_key
+        })
+        for name, field in subquery.query.annotation_select.items():
+            target = field.field.clone()
+            target.column = name
+            qs = qs.annotate(**{name: Col(conn.subquery_alias, target, output_field=field.output_field)})
+
+        return qs
+
+
 class BaseAnnotationsSnvIndel(models.ClickhouseModel):
     POPULATION_FIELDS = [
         ('exac', NamedTupleField([
@@ -122,6 +146,8 @@ class BaseAnnotationsSnvIndel(models.ClickhouseModel):
     ]
     HGMD_CLASSES = [(0, 'DM'), (1, 'DM?'), (2, 'DP'), (3, 'DFP'), (4, 'FP'), (5, 'R')]
     CONSEQUENCE_TERMS = [(1, 'transcript_ablation'), (2, 'splice_acceptor_variant'), (3, 'splice_donor_variant'), (4, 'stop_gained'), (5, 'frameshift_variant'), (6, 'stop_lost'), (7, 'start_lost'), (8, 'inframe_insertion'), (9, 'inframe_deletion'), (10, 'missense_variant'), (11, 'protein_altering_variant'), (12, 'splice_donor_5th_base_variant'), (13, 'splice_region_variant'), (14, 'splice_donor_region_variant'), (15, 'splice_polypyrimidine_tract_variant'), (16, 'incomplete_terminal_codon_variant'), (17, 'start_retained_variant'), (18, 'stop_retained_variant'), (19, 'synonymous_variant'), (20, 'coding_sequence_variant'), (21, 'mature_miRNA_variant'), (22, '5_prime_UTR_variant'), (23, '3_prime_UTR_variant'), (24, 'non_coding_transcript_exon_variant'), (25, 'intron_variant'), (26, 'NMD_transcript_variant'), (27, 'non_coding_transcript_variant'), (28, 'coding_transcript_variant'), (29, 'upstream_gene_variant'), (30, 'downstream_gene_variant'), (31, 'intergenic_variant'), (32, 'sequence_variant')]
+
+    objects = AnnotationsManager()
 
     key = models.UInt32Field(primary_key=True)
     xpos = models.UInt64Field()
