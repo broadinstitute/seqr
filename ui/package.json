@@ -64,7 +64,7 @@
     "typescript": "^5.2.2",
     "webpack": "^5.94.0",
     "webpack-bundle-analyzer": "^4.5.0",
-    "webpack-dev-server": "^4.7.3",
+    "webpack-dev-server": "^5.2.1",
     "webpack-manifest-plugin": "^4.0.2",
     "whatwg-fetch": "2.0.3"
   },
