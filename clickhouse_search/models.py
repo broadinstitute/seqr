@@ -1,11 +1,12 @@
 from clickhouse_backend import models
+from collections import OrderedDict
 from django.db.migrations import state
 from django.db.models import options, ForeignKey, OneToOneField, Func, Manager, QuerySet, Q, CASCADE, PROTECT
 from django.db.models.expressions import Col
 
 from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocksDB, Join
 from clickhouse_search.backend.fields import NestedField, UInt64FieldDeltaCodecField, NamedTupleField
-from clickhouse_search.backend.functions import ArrayFilter, GtStatsDictGet, SubqueryJoin
+from clickhouse_search.backend.functions import ArrayFilter, GtStatsDictGet, SubqueryJoin, Tuple
 from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFECTED, UNAFFECTED, MALE_SEXES, \
     X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, SCREEN_KEY, UTR_ANNOTATOR_KEY, \
     EXTENDED_SPLICE_KEY, MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY, CLINVAR_KEY, HGMD_KEY, SV_ANNOTATION_TYPES, \
@@ -202,10 +203,8 @@ class AnnotationsQuerySet(QuerySet):
         if hgmd:
             filter_qs.append(cls._hgmd_filter_q(hgmd))
 
-        has_clinvar_inner_join = False
         clinvar = (pathogenicity or {}).get(CLINVAR_KEY)
         if clinvar:
-            has_clinvar_inner_join = not filter_qs
             filter_qs.append(cls._clinvar_filter_q(clinvar))
 
         exclude_clinvar = (exclude or {}).get('clinvar')
@@ -219,12 +218,6 @@ class AnnotationsQuerySet(QuerySet):
         for q in filter_qs[1:]:
             filter_q |= q
         results = results.filter(filter_q)
-
-        if has_clinvar_inner_join:
-            # If clinvar is filtered on with no OR clauses, django optimizes the query to use an INNER JOIN.
-            # However, the clickhouse Join Table can only be used with a LEFT OUTER JOIN, so we explicitly "promote" the
-            # join type to an outer join. The filters remain unchanged, so no other query updates are needed
-            results.query.promote_joins([Clinvar._meta.db_table])
 
         return results
 
@@ -282,7 +275,7 @@ class AnnotationsQuerySet(QuerySet):
         return Q(hgmd__classification__gt=min_class)
 
     @staticmethod
-    def _clinvar_filter_q(clinvar_filters):
+    def _clinvar_filter_q(clinvar_filters, path_field='clinvar__0'):
         ranges = [[None, None]]
         for path_filter, start, end in CLINVAR_PATH_RANGES:
             if path_filter in clinvar_filters:
@@ -293,17 +286,17 @@ class AnnotationsQuerySet(QuerySet):
                 ranges.append([None, None])
         ranges = [r for r in ranges if r[0] is not None]
 
-        clinvar_q = Q(clinvar__pathogenicity__range=ranges[0])
+        clinvar_q = Q(**{f'{path_field}__range': ranges[0]})
         for path_range in ranges[1:]:
-            clinvar_q |= Q(clinvar__pathogenicity__range=path_range)
+            clinvar_q |= Q(**{f'{path_field}__range': path_range})
         return clinvar_q
 
     @classmethod
-    def _clinvar_path_q(cls, pathogenicity):
+    def _clinvar_path_q(cls, pathogenicity, path_field='clinvar__0'):
         clinvar_path_filters = [
             f for f in (pathogenicity or {}).get(CLINVAR_KEY) or [] if f in CLINVAR_PATH_SIGNIFICANCES
         ]
-        return cls._clinvar_filter_q(clinvar_path_filters) if clinvar_path_filters else None
+        return cls._clinvar_filter_q(clinvar_path_filters, path_field=path_field) if clinvar_path_filters else None
 
 
 class BaseAnnotationsSnvIndel(models.ClickhouseModel):
@@ -415,6 +408,48 @@ class AnnotationsDiskSnvIndel(BaseAnnotationsSnvIndel):
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SNV_INDEL/annotations', primary_key='key', flatten_nested=0)
 
 
+class Clinvar(models.ClickhouseModel):
+
+    PATHOGENICITY_CHOICES = list(enumerate([
+        'Pathogenic', 'Pathogenic/Likely_pathogenic', 'Pathogenic/Likely_pathogenic/Established_risk_allele',
+        'Pathogenic/Likely_pathogenic/Likely_risk_allele', 'Pathogenic/Likely_risk_allele', 'Likely_pathogenic', 'Likely_pathogenic/Likely_risk_allele',
+        'Established_risk_allele', 'Likely_risk_allele', 'Conflicting_classifications_of_pathogenicity',
+        'Uncertain_risk_allele', 'Uncertain_significance/Uncertain_risk_allele', 'Uncertain_significance',
+        'No_pathogenic_assertion', 'Likely_benign', 'Benign/Likely_benign', 'Benign'
+    ]))
+
+    key = ForeignKey('EntriesSnvIndel', db_column='key', related_name='clinvar_join', primary_key=True, on_delete=PROTECT)
+    allele_id = models.UInt32Field(db_column='alleleId', null=True, blank=True)
+    conflicting_pathogenicities = NestedField([
+        ('count', models.UInt16Field()),
+        ('pathogenicity', models.Enum8Field(choices=PATHOGENICITY_CHOICES, return_int=False)),
+    ], db_column='conflictingPathogenicities', null_when_empty=True)
+    gold_stars = models.UInt8Field(db_column='goldStars', null=True, blank=True)
+    submitters = models.ArrayField(models.StringField())
+    conditions = models.ArrayField(models.StringField())
+    assertions = models.ArrayField(models.Enum8Field(choices=[(0, 'Affects'), (1, 'association'), (2, 'association_not_found'), (3, 'confers_sensitivity'), (4, 'drug_response'), (5, 'low_penetrance'), (6, 'not_provided'), (7, 'other'), (8, 'protective'), (9, 'risk_factor'), (10, 'no_classification_for_the_single_variant'), (11, 'no_classifications_from_unflagged_records')], return_int=False))
+    pathogenicity = models.Enum8Field(choices=PATHOGENICITY_CHOICES, return_int=False)
+
+    class Meta:
+        db_table = 'GRCh38/SNV_INDEL/clinvar'
+        engine = Join('ALL', 'LEFT', 'key', join_use_nulls=1, flatten_nested=0)
+
+    def _save_table(
+        self,
+        raw=False,
+        cls=None,
+        force_insert=False,
+        force_update=False,
+        using=None,
+        update_fields=None,
+    ):
+        # loaddata attempts to run an ALTER TABLE to update existing rows, but since JOIN tables can not be altered
+        # this command fails so need to use the force_insert flag to run an INSERT instead
+        return super()._save_table(
+            raw=raw, cls=cls, force_insert=True, force_update=force_update, using=using, update_fields=update_fields,
+        )
+
+
 class EntriesManager(Manager):
     GENOTYPE_LOOKUP = {
         REF_REF: (0,),
@@ -430,6 +465,11 @@ class EntriesManager(Manager):
     }
 
     QUALITY_FILTERS = [('gq', 1), ('ab', 100, 'x.gt != 1')]
+
+    CLINVAR_FIELDS = OrderedDict({
+        f'clinvar_join__{field.name}': (field.db_column or field.name, field)
+        for field in reversed(Clinvar._meta.local_fields) if field.name != 'key'
+    })
 
     def search(self, sample_data, parsed_locus=None, freqs=None,  **kwargs):
         entries = self._search_call_data(sample_data, **kwargs)
@@ -458,13 +498,16 @@ class EntriesManager(Manager):
        if quality_filter.get('vcf_filter'):
            entries = entries.filter(filters__len=0)
 
+       entries = entries.annotate(
+           clinvar=Tuple(*self.CLINVAR_FIELDS.keys(), output_field=NamedTupleField(list(self.CLINVAR_FIELDS.values()), null_if_empty=True, null_empty_arrays=True))
+       )
+
        individual_genotype_filter = (inheritance_filter or {}).get('genotype')
        custom_affected = (inheritance_filter or {}).get('affected') or {}
        if not (inheritance_mode or individual_genotype_filter or quality_filter):
            return entries
 
-       # clinvar_override_q = self._clinvar_path_q(pathogenicity)
-       clinvar_override_q = None  # TODO
+       clinvar_override_q = AnnotationsQuerySet._clinvar_path_q(pathogenicity, path_field='clinvar_join__pathogenicity')
 
        for sample in sample_data[0]['samples']:
            affected = custom_affected.get(sample['individual_guid']) or sample['affected']
@@ -652,45 +695,3 @@ class TranscriptsSnvIndel(models.ClickhouseModel):
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/transcripts'
         engine = EmbeddedRocksDB(primary_key='key', flatten_nested=0)
-
-
-class Clinvar(models.ClickhouseModel):
-
-    PATHOGENICITY_CHOICES = list(enumerate([
-        'Pathogenic', 'Pathogenic/Likely_pathogenic', 'Pathogenic/Likely_pathogenic/Established_risk_allele',
-        'Pathogenic/Likely_pathogenic/Likely_risk_allele', 'Pathogenic/Likely_risk_allele', 'Likely_pathogenic', 'Likely_pathogenic/Likely_risk_allele',
-        'Established_risk_allele', 'Likely_risk_allele', 'Conflicting_classifications_of_pathogenicity',
-        'Uncertain_risk_allele', 'Uncertain_significance/Uncertain_risk_allele', 'Uncertain_significance',
-        'No_pathogenic_assertion', 'Likely_benign', 'Benign/Likely_benign', 'Benign'
-    ]))
-
-    key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=PROTECT)
-    allele_id = models.UInt32Field(db_column='alleleId', null=True, blank=True)
-    conflicting_pathogenicities = NestedField([
-        ('count', models.UInt16Field()),
-        ('pathogenicity', models.Enum8Field(choices=PATHOGENICITY_CHOICES, return_int=False)),
-    ], db_column='conflictingPathogenicities', null_when_empty=True)
-    gold_stars = models.UInt8Field(db_column='goldStars', null=True, blank=True)
-    submitters = models.ArrayField(models.StringField())
-    conditions = models.ArrayField(models.StringField())
-    assertions = models.ArrayField(models.Enum8Field(choices=[(0, 'Affects'), (1, 'association'), (2, 'association_not_found'), (3, 'confers_sensitivity'), (4, 'drug_response'), (5, 'low_penetrance'), (6, 'not_provided'), (7, 'other'), (8, 'protective'), (9, 'risk_factor'), (10, 'no_classification_for_the_single_variant'), (11, 'no_classifications_from_unflagged_records')], return_int=False))
-    pathogenicity = models.Enum8Field(choices=PATHOGENICITY_CHOICES, return_int=False)
-
-    class Meta:
-        db_table = 'GRCh38/SNV_INDEL/clinvar'
-        engine = Join('ALL', 'LEFT', 'key', join_use_nulls=1, flatten_nested=0)
-
-    def _save_table(
-        self,
-        raw=False,
-        cls=None,
-        force_insert=False,
-        force_update=False,
-        using=None,
-        update_fields=None,
-    ):
-        # loaddata attempts to run an ALTER TABLE to update existing rows, but since JOIN tables can not be altered
-        # this command fails so need to use the force_insert flag to run an INSERT instead
-        return super()._save_table(
-            raw=raw, cls=cls, force_insert=True, force_update=force_update, using=using, update_fields=update_fields,
-        )

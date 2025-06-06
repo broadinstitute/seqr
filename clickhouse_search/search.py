@@ -33,11 +33,6 @@ ANNOTATION_FIELDS = [
     if (field.db_column or field.name) not in ANNOTATION_VALUES
 ]
 
-CLINVAR_FIELDS = OrderedDict({
-    f'clinvar__{field.name}': (field.db_column or field.name, field)
-    for field in Clinvar._meta.local_fields if field.name != 'key'
-})
-
 GENOTYPE_FIELDS = OrderedDict({
     'family_guid': ('familyGuid', models.StringField()),
     'sample_type': ('sampleType', models.StringField()),
@@ -66,8 +61,10 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
     sample_data = _get_sample_data(samples)
     logger.info(f'Loading {Sample.DATASET_TYPE_VARIANT_CALLS} data for {len(sample_data)} families', user)
 
+    # TODO share field names for values select
     entries = EntriesSnvIndel.objects.search(sample_data, **search).values(
         SEQR_POPULATION_KEY,
+        'clinvar',
         familyGuids=Array('family_guid'),
         genotypes=ArrayMap(
             'calls',
@@ -87,7 +84,7 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
         *ANNOTATION_FIELDS,
         'familyGuids',
         'genotypes',
-        clinvar_copy=Tuple(*CLINVAR_FIELDS.keys(), output_field=NamedTupleField(list(CLINVAR_FIELDS.values()), null_if_empty=True, null_empty_arrays=True)), # TODO fix name conflict
+        'clinvar',
         genomeVersion=Value(genome_version),
         liftedOverGenomeVersion=Value(_liftover_genome_version(genome_version)),
         **ANNOTATION_VALUES,
