@@ -243,7 +243,7 @@ DATABASES = {
 DATABASE_ROUTERS = ['reference_data.models.ReferenceDataRouter', 'clickhouse_search.models.ClickHouseRouter']
 
 CLICKHOUSE_IN_MEMORY_DIR = os.environ.get('CLICKHOUSE_IN_MEMORY_DIR', '/in-memory-dir')
-CLICKHOUSE_DATA_DIR = os.getenv('CLICKHOUSE_DATA_DIR', '/bitnami/clickhouse')
+CLICKHOUSE_DATA_DIR = os.getenv('CLICKHOUSE_DATA_DIR', '/var/seqr/clickhouse-data')
 CLICKHOUSE_SERVICE_HOSTNAME =  os.environ.get('CLICKHOUSE_SERVICE_HOSTNAME')
 if CLICKHOUSE_SERVICE_HOSTNAME:
     DATABASES['clickhouse'] = {
