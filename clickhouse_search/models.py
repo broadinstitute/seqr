@@ -99,7 +99,7 @@ class AnnotationsQuerySet(QuerySet):
         for name, field in subquery.query.annotation_select.items():
             target = field.field.clone()
             target.column = name
-            qs = qs.annotate(**{name: Col(table.table_alias, target, output_field=field.output_field)})
+            qs = qs.annotate(**{name: Col(table.table_alias, target)})
 
         return qs
 
