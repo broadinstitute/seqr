@@ -1,7 +1,7 @@
 from clickhouse_backend import models
 from collections import OrderedDict
 from django.db.migrations import state
-from django.db.models import options, ForeignKey, OneToOneField, Func, Manager, QuerySet, Q, CASCADE, PROTECT
+from django.db.models import options, ForeignKey, OneToOneField, F, Func, Manager, QuerySet, Q, CASCADE, PROTECT
 from django.db.models.expressions import Col
 from django.db.models.sql.constants import INNER
 
@@ -285,8 +285,8 @@ class AnnotationsQuerySet(QuerySet):
             return Q(hgmd__classification__range=(min_class, max_class))
         return Q(hgmd__classification__gt=min_class)
 
-    @staticmethod
-    def _clinvar_filter_q(clinvar_filters, path_field='clinvar__0'):
+    @classmethod
+    def _clinvar_filter_q(cls, clinvar_filters, _get_range_q=None):
         ranges = [[None, None]]
         for path_filter, start, end in CLINVAR_PATH_RANGES:
             if path_filter in clinvar_filters:
@@ -297,17 +297,22 @@ class AnnotationsQuerySet(QuerySet):
                 ranges.append([None, None])
         ranges = [r for r in ranges if r[0] is not None]
 
-        clinvar_q = Q(**{f'{path_field}__range': ranges[0]})
-        for path_range in ranges[1:]:
-            clinvar_q |= Q(**{f'{path_field}__range': path_range})
+        clinvar_qs = [(_get_range_q or cls._clinvar_range_q)(path_range) for path_range in ranges]
+        clinvar_q = clinvar_qs[0]
+        for q in clinvar_qs[1:]:
+            clinvar_q |= q
         return clinvar_q
 
     @classmethod
-    def _clinvar_path_q(cls, pathogenicity, path_field='clinvar__0'):
+    def _clinvar_range_q(cls, path_range):
+        return Q(clinvar__0__range=path_range, clinvar_key__isnull=False)
+
+    @classmethod
+    def _clinvar_path_q(cls, pathogenicity, _get_range_q=None):
         clinvar_path_filters = [
             f for f in (pathogenicity or {}).get(CLINVAR_KEY) or [] if f in CLINVAR_PATH_SIGNIFICANCES
         ]
-        return cls._clinvar_filter_q(clinvar_path_filters, path_field=path_field) if clinvar_path_filters else None
+        return cls._clinvar_filter_q(clinvar_path_filters, _get_range_q=_get_range_q) if clinvar_path_filters else None
 
 
 class BaseAnnotationsSnvIndel(models.ClickhouseModel):
@@ -510,6 +515,7 @@ class EntriesManager(Manager):
            entries = entries.filter(filters__len=0)
 
        entries = entries.annotate(
+           clinvar_key=F('clinvar_join__key'),
            clinvar=Tuple(*self.CLINVAR_FIELDS.keys(), output_field=NamedTupleField(list(self.CLINVAR_FIELDS.values()), null_if_empty=True, null_empty_arrays=True))
        )
 
@@ -518,7 +524,9 @@ class EntriesManager(Manager):
        if not (inheritance_mode or individual_genotype_filter or quality_filter):
            return entries
 
-       clinvar_override_q = AnnotationsQuerySet._clinvar_path_q(pathogenicity, path_field='clinvar_join__pathogenicity')
+       clinvar_override_q = AnnotationsQuerySet._clinvar_path_q(
+           pathogenicity, _get_range_q=lambda path_range: Q(clinvar_join__pathogenicity=path_range),
+       )
 
        for sample in sample_data[0]['samples']:
            affected = custom_affected.get(sample['individual_guid']) or sample['affected']

@@ -39,6 +39,7 @@ ENTRY_VALUES = {
     'familyGuids': Array('family_guid'),
 }
 ENTRY_FIELDS = ['clinvar']
+ENTRY_INTERMEDIATE_FIELDS = [SEQR_POPULATION_KEY, 'clinvar_key'] + ENTRY_FIELDS
 
 GENOTYPE_FIELDS = OrderedDict({
     'family_guid': ('familyGuid', models.StringField()),
@@ -78,7 +79,7 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
     }
 
     entries = EntriesSnvIndel.objects.search(sample_data, **search).values(
-        SEQR_POPULATION_KEY, *ENTRY_FIELDS, **entry_values,
+        *ENTRY_INTERMEDIATE_FIELDS, **entry_values,
     )
     results = AnnotationsSnvIndel.objects.subquery_join(entries).search(**search)
 
