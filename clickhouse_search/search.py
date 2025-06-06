@@ -99,14 +99,19 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
     ).annotate(**ADDITIONAL_ANNOTATION_VALUES)
     results = results[:MAX_VARIANTS+1]
 
-    sort_metadata = _get_sort_gene_metadata(sort, results, sample_data[0]['family_guid'])
+    cache_results = get_clickhouse_cache_results(results, sort, sample_data[0]['family_guid'])
+    previous_search_results.update(cache_results)
+
+    logger.info(f'Total results: {cache_results["total_results"]}', user)
+
+    return format_clickhouse_results(cache_results['all_results'][(page-1)*num_results:page*num_results])
+
+
+def get_clickhouse_cache_results(results, sort, family_guid):
+    sort_metadata = _get_sort_gene_metadata(sort, results, family_guid)
     sorted_results = sorted(results, key=_get_sort_key(sort, sort_metadata))
     total_results = len(sorted_results)
-    previous_search_results.update({'all_results': sorted_results, 'total_results': total_results})
-
-    logger.info(f'Total results: {total_results}', user)
-
-    return format_clickhouse_results(sorted_results[(page-1)*num_results:page*num_results])
+    return {'all_results': sorted_results, 'total_results': total_results}
 
 
 def format_clickhouse_results(results, **kwargs):
