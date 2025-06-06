@@ -1,9 +1,7 @@
 from clickhouse_backend.models.fields.array import ArrayField, ArrayLookup
 from clickhouse_backend.models import UInt32Field
 from django.db.models import Func, Subquery, lookups, BooleanField
-from django.db.models.expressions import Col
-from django.db.models.sql.datastructures import Join
-from django.db.models.sql.constants import INNER
+from django.db.models.sql.datastructures import BaseTable, Join
 
 
 from clickhouse_search.backend.fields import NamedTupleField, NestedField
@@ -80,38 +78,28 @@ class TupleConcat(Func):
     function = 'tupleConcat'
 
 
-class SubqueryJoin(Join):
-
-    def __init__(self, subquery, parent_alias, join_key, join_type=INNER):
-        join_field = next(field for field in subquery.model._meta.fields if field.name == join_key)
-        table_name = subquery.model._meta.db_table
-        self.subquery_alias, _ = subquery.query.table_alias(table_name, create=True)
-
-        if join_key not in subquery.query.values_select:
-            subquery.query.values_select = tuple([join_key, *subquery.query.values_select])
-            subquery.query.select = tuple([Col(table_name, join_field), *subquery.query.select])
-
+class SubqueryTable(BaseTable):
+    def __init__(self, subquery):
         self.subquery = Subquery(subquery)
+        table_name = subquery.model._meta.db_table
+        alias, _ = subquery.query.table_alias(table_name, create=True)
+        super().__init__(table_name, alias)
 
-        super().__init__(
-            table_name=table_name,
-            parent_alias=parent_alias,
-            table_alias=None,
-            join_type=join_type,
-            join_field=join_field,
-            nullable=False,
-        )
+    def as_sql(self, compiler, connection):
+        subquery_sql, params = self.subquery.as_sql(compiler, connection)
+        return f'{subquery_sql} AS {self.table_alias}', params
+
+
+class SubqueryJoin(Join):
 
     def as_sql(self, compiler, connection):
         qn = compiler.quote_name_unless_alias
         qn2 = connection.ops.quote_name
 
-        subquery_sql, params = self.subquery.as_sql(compiler, connection)
-
         on_clause_sql = ' AND '.join([
-            f'{qn(self.parent_alias)}.{lhs_col} = {qn(self.subquery_alias)}.{qn2(rhs_col)}'
+            f'{qn(self.parent_alias)}.{lhs_col} = {qn(self.table_name)}.{qn2(rhs_col)}'
             for lhs_col, rhs_col in self.join_cols
         ])
 
-        sql = f'{self.join_type} {subquery_sql} AS {self.subquery_alias} ON ({on_clause_sql})'
-        return sql, params
+        sql = f'{self.join_type} {qn(self.parent_alias)} ON ({on_clause_sql})'
+        return sql, []

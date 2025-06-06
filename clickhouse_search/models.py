@@ -3,10 +3,11 @@ from collections import OrderedDict
 from django.db.migrations import state
 from django.db.models import options, ForeignKey, OneToOneField, Func, Manager, QuerySet, Q, CASCADE, PROTECT
 from django.db.models.expressions import Col
+from django.db.models.sql.constants import INNER
 
 from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocksDB, Join
 from clickhouse_search.backend.fields import NestedField, UInt64FieldDeltaCodecField, NamedTupleField
-from clickhouse_search.backend.functions import ArrayFilter, GtStatsDictGet, SubqueryJoin, Tuple
+from clickhouse_search.backend.functions import ArrayFilter, GtStatsDictGet, SubqueryJoin, SubqueryTable, Tuple
 from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFECTED, UNAFFECTED, MALE_SEXES, \
     X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, SCREEN_KEY, UTR_ANNOTATOR_KEY, \
     EXTENDED_SPLICE_KEY, MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY, CLINVAR_KEY, HGMD_KEY, SV_ANNOTATION_TYPES, \
@@ -74,21 +75,31 @@ class Projection(Func):
 class AnnotationsQuerySet(QuerySet):
 
     def subquery_join(self, subquery, join_key='key'):
-        conn = SubqueryJoin(
-            subquery,
+
+        join_field = next(field for field in subquery.model._meta.fields if field.name == join_key)
+        if join_key not in subquery.query.values_select:
+            subquery.query.values_select = tuple([join_key, *subquery.query.values_select])
+            subquery.query.select = tuple([Col(subquery.model._meta.db_table, join_field), *subquery.query.select])
+
+        table = SubqueryTable(subquery)
+        self.query.join(SubqueryJoin(
+            table_name=table.table_alias,
             parent_alias=self.query.get_initial_alias(),
-            join_key=join_key,
-        )
-        self.query.join(conn)
+            table_alias=None,
+            join_type=INNER,
+            join_field=join_field,
+            nullable=False,
+        ))
+        self.query.alias_map[self.query.get_initial_alias()] = table
 
         qs = self.annotate(**{
-            col.target.name: Col(conn.subquery_alias, col.target) for col in subquery.query.select
+            col.target.name: Col(table.table_alias, col.target) for col in subquery.query.select
             if col.target.name != join_key
         })
         for name, field in subquery.query.annotation_select.items():
             target = field.field.clone()
             target.column = name
-            qs = qs.annotate(**{name: Col(conn.subquery_alias, target, output_field=field.output_field)})
+            qs = qs.annotate(**{name: Col(table.table_alias, target, output_field=field.output_field)})
 
         return qs
 
