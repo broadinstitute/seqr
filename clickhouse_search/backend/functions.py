@@ -83,8 +83,6 @@ class TupleConcat(Func):
 class SubqueryJoin(Join):
 
     def __init__(self, subquery, parent_alias, join_key, join_type=INNER):
-        self.subquery = Subquery(subquery)
-
         join_field = next(field for field in subquery.model._meta.fields if field.name == join_key)
         table_name = subquery.model._meta.db_table
         self.subquery_alias, _ = subquery.query.table_alias(table_name, create=True)
@@ -92,6 +90,8 @@ class SubqueryJoin(Join):
         if join_key not in subquery.query.values_select:
             subquery.query.values_select = tuple([join_key, *subquery.query.values_select])
             subquery.query.select = tuple([Col(table_name, join_field), *subquery.query.select])
+
+        self.subquery = Subquery(subquery)
 
         super().__init__(
             table_name=table_name,
@@ -113,5 +113,5 @@ class SubqueryJoin(Join):
             for lhs_col, rhs_col in self.join_cols
         ])
 
-        sql = f'{self.join_type} {subquery_sql} {self.subquery_alias} ON ({on_clause_sql})'
+        sql = f'{self.join_type} {subquery_sql} AS {self.subquery_alias} ON ({on_clause_sql})'
         return sql, params
