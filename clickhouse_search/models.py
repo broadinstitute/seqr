@@ -75,23 +75,26 @@ class Projection(Func):
 class AnnotationsQuerySet(QuerySet):
 
     def subquery_join(self, subquery, join_key='key'):
-
+        #  Add key to intermediate select if not already present
         join_field = next(field for field in subquery.model._meta.fields if field.name == join_key)
         if join_key not in subquery.query.values_select:
             subquery.query.values_select = tuple([join_key, *subquery.query.values_select])
             subquery.query.select = tuple([Col(subquery.model._meta.db_table, join_field), *subquery.query.select])
 
+        # Add the join operation to the query
         table = SubqueryTable(subquery)
+        parent_alias = self.query.get_initial_alias()
         self.query.join(SubqueryJoin(
             table_name=table.table_alias,
-            parent_alias=self.query.get_initial_alias(),
+            parent_alias=parent_alias,
             table_alias=None,
             join_type=INNER,
             join_field=join_field,
             nullable=False,
         ))
-        self.query.alias_map[self.query.get_initial_alias()] = table
+        self.query.alias_map[parent_alias] = table
 
+        #  Update the queryset annotations to include the columns from the subquery
         qs = self.annotate(**{
             col.target.name: Col(table.table_alias, col.target) for col in subquery.query.select
             if col.target.name != join_key
