@@ -97,7 +97,7 @@ class AnnotationsQuerySet(QuerySet):
             if col.target.name != join_key
         })
         for name, field in subquery.query.annotation_select.items():
-            target = field.field.clone()
+            target = field.output_field.clone()
             target.column = name
             qs = qs.annotate(**{name: Col(table.table_alias, target)})
 
