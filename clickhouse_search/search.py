@@ -21,17 +21,24 @@ SEQR_POPULATION_KEY = 'seqrPop'
 ANNOTATION_VALUES = {
     field.db_column: F(field.name) for field in AnnotationsSnvIndel._meta.local_fields if field.db_column and field.name != field.db_column
 }
-ANNOTATION_VALUES['populations_copy'] = TupleConcat(  # TODO fix name conflict
-    F('populations'), Tuple(SEQR_POPULATION_KEY),
-    output_field=NamedTupleField([
-        *AnnotationsSnvIndel.POPULATION_FIELDS,
-        ('seqr', GtStatsDictGet.output_field),
-    ]),
-)
+ADDITIONAL_ANNOTATION_VALUES = {
+    'populations': TupleConcat(
+        F('populations'), Tuple(SEQR_POPULATION_KEY),
+        output_field=NamedTupleField([
+            *AnnotationsSnvIndel.POPULATION_FIELDS,
+            ('seqr', GtStatsDictGet.output_field),
+        ]),
+    ),
+}
 ANNOTATION_FIELDS = [
     field.name for field in AnnotationsSnvIndel._meta.local_fields
-    if (field.db_column or field.name) not in ANNOTATION_VALUES
+    if ((field.db_column or field.name) not in ANNOTATION_VALUES) and field.name not in ADDITIONAL_ANNOTATION_VALUES
 ]
+
+ENTRY_VALUES = {
+    'familyGuids': Array('family_guid'),
+}
+ENTRY_FIELDS = ['clinvar']
 
 GENOTYPE_FIELDS = OrderedDict({
     'family_guid': ('familyGuid', models.StringField()),
@@ -61,18 +68,18 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
     sample_data = _get_sample_data(samples)
     logger.info(f'Loading {Sample.DATASET_TYPE_VARIANT_CALLS} data for {len(sample_data)} families', user)
 
-    # TODO share field names for values select
-    entries = EntriesSnvIndel.objects.search(sample_data, **search).values(
-        SEQR_POPULATION_KEY,
-        'clinvar',
-        familyGuids=Array('family_guid'),
-        genotypes=ArrayMap(
+    entry_values = {
+        **ENTRY_VALUES,
+        'genotypes': ArrayMap(
             'calls',
             mapped_expression=f"tuple({_get_sample_map_expression(sample_data)}[x.sampleId], {', '.join(GENOTYPE_FIELDS.keys())})",
             output_field=NestedField([('individualGuid', models.StringField()), *GENOTYPE_FIELDS.values()], group_by_key='individualGuid', flatten_groups=True)
         ),
-    )
+    }
 
+    entries = EntriesSnvIndel.objects.search(sample_data, **search).values(
+        SEQR_POPULATION_KEY, *ENTRY_FIELDS, **entry_values,
+    )
     results = AnnotationsSnvIndel.objects.subquery_join(entries).search(**search)
 
     consequence_values = {}
@@ -82,14 +89,13 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
 
     results = results.values(
         *ANNOTATION_FIELDS,
-        'familyGuids',
-        'genotypes',
-        'clinvar',
+        *ENTRY_FIELDS,
+        *entry_values.keys(),
         genomeVersion=Value(genome_version),
         liftedOverGenomeVersion=Value(_liftover_genome_version(genome_version)),
         **ANNOTATION_VALUES,
         **consequence_values,
-    )
+    ).annotate(**ADDITIONAL_ANNOTATION_VALUES)
     results = results[:MAX_VARIANTS+1]
 
     sort_metadata = _get_sort_gene_metadata(sort, results, sample_data[0]['family_guid'])
