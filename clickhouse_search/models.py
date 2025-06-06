@@ -525,7 +525,7 @@ class EntriesManager(Manager):
            return entries
 
        clinvar_override_q = AnnotationsQuerySet._clinvar_path_q(
-           pathogenicity, _get_range_q=lambda path_range: Q(clinvar_join__pathogenicity=path_range),
+           pathogenicity, _get_range_q=lambda path_range: Q(clinvar_join__pathogenicity__range=path_range),
        )
 
        for sample in sample_data[0]['samples']:
