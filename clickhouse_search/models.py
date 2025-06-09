@@ -355,7 +355,7 @@ class AnnotationsQuerySet(QuerySet):
         return results
 
     def filter_compound_hets(self):
-        results = self.exclude(
+        results = self.filter(
             primary__selectedGeneId=F('secondary__selectedGeneId')
         ).exclude(primary__variantId=F('secondary__variantId'))
         # TODO filter genotype phasing
