@@ -90,8 +90,12 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
         results += list(results_q[:MAX_VARIANTS+1])
     if inheritance_mode in {RECESSIVE, COMPOUND_HET}:
         compound_het_search = {**search, 'inheritance_mode': COMPOUND_HET}
-        # TODO actual cross join and filter
-        results_q = _get_search_results_queryset(sample_data, entry_values, annotation_values, compound_het_search)
+        primary_q = _get_search_results_queryset(sample_data, entry_values, annotation_values, compound_het_search)
+        annotations_secondary = search.get('annotations_secondary')
+        secondary_q = primary_q.clone() if not annotations_secondary else _get_search_results_queryset(
+            sample_data, entry_values, annotation_values, {**compound_het_search, 'annotations': annotations_secondary}
+        )
+        results_q = primary_q.cross_join(secondary_q).filter_compound_het()
         results += list(results_q[:MAX_VARIANTS+1])
 
     cache_results = get_clickhouse_cache_results(results, sort, sample_data[0]['family_guid'])

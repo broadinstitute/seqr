@@ -236,7 +236,7 @@ class AnnotationsQuerySet(QuerySet):
         return results
 
     @classmethod
-    def _parse_annotation_filters(cls, annotations):
+    def _parse_annotation_filters(cls, annotations, annotations_secondary):
         filter_qs = []
         allowed_consequences = []
         transcript_filters = []
