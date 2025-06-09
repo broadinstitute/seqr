@@ -7,7 +7,7 @@ from django.db.models.sql.constants import INNER
 
 from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocksDB, Join
 from clickhouse_search.backend.fields import NestedField, UInt64FieldDeltaCodecField, NamedTupleField
-from clickhouse_search.backend.functions import ArrayFilter, GtStatsDictGet, SubqueryJoin, SubqueryTable, Tuple
+from clickhouse_search.backend.functions import ArrayFilter, CrossJoin, GtStatsDictGet, SubqueryJoin, SubqueryTable, Tuple
 from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFECTED, UNAFFECTED, MALE_SEXES, \
     X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, SCREEN_KEY, UTR_ANNOTATOR_KEY, \
     EXTENDED_SPLICE_KEY, MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY, CLINVAR_KEY, HGMD_KEY, SV_ANNOTATION_TYPES, \
@@ -94,17 +94,27 @@ class AnnotationsQuerySet(QuerySet):
         ))
         self.query.alias_map[parent_alias] = table
 
-        #  Update the queryset annotations to include the columns from the subquery
-        qs = self.annotate(**{
-            col.target.name: Col(table.table_alias, col.target) for col in subquery.query.select
+        return self._add_subquery_annotations(subquery, table.table_alias, join_key=join_key)
+
+    def _add_subquery_annotations(self, subquery, alias, include_alias_prefix=False, join_key=None):
+        annotations = {
+            col.target.name: Col(alias, col.target) for col in subquery.query.select
             if col.target.name != join_key
-        })
+        }
         for name, field in subquery.query.annotation_select.items():
             target = field.output_field.clone()
             target.column = name
-            qs = qs.annotate(**{name: Col(table.table_alias, target)})
+            annotations[name] = Col(alias, target)
 
-        return qs
+        if include_alias_prefix:
+            annotations = {f'{alias}__{name}': val for name, val in annotations.items()}
+
+        return self.annotate(**annotations)
+
+    def cross_join(self, join_query, alias):
+        self.query.join(CrossJoin(join_query, alias))
+        self.query.alias_map[self.query.get_initial_alias()] = SubqueryTable(self)
+        return self._add_subquery_annotations(join_query, alias, include_alias_prefix=True)
 
     def search(self, parsed_locus=None, **kwargs):
         parsed_locus = parsed_locus or {}

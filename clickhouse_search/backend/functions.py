@@ -79,10 +79,11 @@ class TupleConcat(Func):
 
 
 class SubqueryTable(BaseTable):
-    def __init__(self, subquery):
+    def __init__(self, subquery, alias=None):
         self.subquery = Subquery(subquery)
         table_name = subquery.model._meta.db_table
-        alias, _ = subquery.query.table_alias(table_name, create=True)
+        if not alias:
+            alias, _ = subquery.query.table_alias(table_name, create=True)
         super().__init__(table_name, alias)
 
     def as_sql(self, compiler, connection):
@@ -103,3 +104,22 @@ class SubqueryJoin(Join):
 
         sql = f'{self.join_type} {qn(self.parent_alias)} ON ({on_clause_sql})'
         return sql, []
+
+
+class CrossJoin(Join):
+
+    join_type = 'CROSS JOIN'
+    parent_alias = None
+    table_alias = None
+    join_field = None
+    join_cols = []
+    nullable = False
+    filtered_relation = None
+
+    def __init_(self, subquery, alias):
+        self.join_table = SubqueryTable(subquery, alias)
+        self.table_name = alias
+
+    def as_sql(self, compiler, connection):
+        subquery_sql, params = self.join_table.as_sql(compiler, connection)
+        return f'{self.join_type} {subquery_sql}', params
