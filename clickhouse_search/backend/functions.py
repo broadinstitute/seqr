@@ -23,6 +23,10 @@ class ArrayMap(Func):
     template = "%(function)s(x -> %(mapped_expression)s, %(expressions)s)"
 
 
+class ArraySort(Func):
+    function = 'arraySort'
+
+
 def _format_condition(filters):
     conditions = [
         (template[0] if template else '{field} = {value}').format(field=f'x.{field}', value=value)

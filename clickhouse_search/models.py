@@ -359,8 +359,6 @@ class AnnotationsQuerySet(QuerySet):
             primary__selectedGeneId=F('secondary__selectedGeneId')
         ).exclude(primary__variantId=F('secondary__variantId'))
         # TODO filter genotype phasing
-        # TODO deduplicate pairs
-        # return results.distinct('primary__variantId', 'secondary__variantId')
         return results
 
 

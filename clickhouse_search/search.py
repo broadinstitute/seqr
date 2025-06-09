@@ -5,7 +5,7 @@ from django.db.models import F, Min, Value
 from django.db.models.functions import JSONObject
 
 from clickhouse_search.backend.fields import NestedField, NamedTupleField
-from clickhouse_search.backend.functions import Array, ArrayMap, GtStatsDictGet, Tuple, TupleConcat
+from clickhouse_search.backend.functions import Array, ArrayMap, ArraySort, GtStatsDictGet, Tuple, TupleConcat
 from clickhouse_search.models import EntriesSnvIndel, AnnotationsSnvIndel, TranscriptsSnvIndel, Clinvar
 from reference_data.models import GeneConstraint, Omim, GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import PhenotypePrioritization, Sample
@@ -83,17 +83,14 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
         **ANNOTATION_VALUES,
     }
 
-    inheritance_mode = search.get('inheritance_mode')
-    get_results = []
-    if inheritance_mode != COMPOUND_HET:
-        get_results.append(_get_search_results_queryset)
-    if inheritance_mode in {RECESSIVE, COMPOUND_HET}:
-        get_results.append(_get_comp_het_results_queryset)
-
     results = []
-    for get_results_func in get_results:
-        result_q = get_results_func(search, sample_data, entry_values, annotation_values)
-        results += list(result_q[:MAX_VARIANTS+1])
+    inheritance_mode = search.get('inheritance_mode')
+    if inheritance_mode != COMPOUND_HET:
+        result_q = _get_search_results_queryset(search, sample_data, entry_values, annotation_values)
+        results += list(result_q[:MAX_VARIANTS + 1])
+    if inheritance_mode in {RECESSIVE, COMPOUND_HET}:
+        result_q = _get_comp_het_results_queryset(search, sample_data, entry_values, annotation_values)
+        results += [result[1:] for result in result_q[:MAX_VARIANTS + 1]]
 
     cache_results = get_clickhouse_cache_results(results, sort, sample_data[0]['family_guid'])
     previous_search_results.update(cache_results)
@@ -148,9 +145,13 @@ def _get_comp_het_results_queryset(search, sample_data, entry_values, annotation
 
     results = AnnotationsSnvIndel.objects.cross_join(
         query=primary_q,  alias='primary', join_query=secondary_q, join_alias='secondary',
+    )
+    results = results.annotate(
+        pair_key=ArraySort(Array('primary__key', 'secondary__key')),
     ).filter_compound_hets()
 
-    return results.values_list(
+    return results.distinct('pair_key').values_list(
+        'pair_key',
         _result_as_tuple(results, 'primary'),
         _result_as_tuple(results, 'secondary'),
     )
