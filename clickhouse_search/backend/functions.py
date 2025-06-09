@@ -10,9 +10,21 @@ class Array(Func):
     function = 'array'
 
 
+class ArrayDistinct(Func):
+    function = 'arrayDistinct'
+
+
+class ArrayJoin(Func):
+    function = 'arrayJoin'
+
+
 class ArrayMap(Func):
     function = 'arrayMap'
     template = "%(function)s(x -> %(mapped_expression)s, %(expressions)s)"
+
+
+class ArraySort(Func):
+    function = 'arraySort'
 
 
 def _format_condition(filters):

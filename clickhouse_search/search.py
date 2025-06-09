@@ -103,38 +103,52 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
     return format_clickhouse_results(cache_results['all_results'][(page-1)*num_results:page*num_results])
 
 
-def _get_search_results_queryset(search, sample_data, entry_values, annotation_values):
-    entries = EntriesSnvIndel.objects.search(sample_data, **search).values(
-        *ENTRY_INTERMEDIATE_FIELDS, **entry_values,
-    )
-    results = AnnotationsSnvIndel.objects.subquery_join(entries).search(**search)
-
-    consequence_values = {}
-    for field, value in SELECTED_CONSEQUENCE_VALUES.items():
-        if field in results.query.annotations:
-            consequence_values.update(value)
-
+def _format_results_queryset(results, entry_values, annotation_values):
     return results.values(
         *ANNOTATION_FIELDS,
         *ENTRY_FIELDS,
         *entry_values.keys(),
         **annotation_values,
-        **consequence_values,
     ).annotate(**ADDITIONAL_ANNOTATION_VALUES)
 
 
-def _get_comp_het_results_queryset(search, *args, **kwargs):
+def _get_search_results_queryset(search, sample_data, entry_values, annotation_values, format_results=_format_results_queryset):
+    entries = EntriesSnvIndel.objects.search(sample_data, **search).values(
+        *ENTRY_INTERMEDIATE_FIELDS, **entry_values,
+    )
+    results = AnnotationsSnvIndel.objects.subquery_join(entries).search(**search)
+
+    consequence_values = {**annotation_values}
+    for field, value in SELECTED_CONSEQUENCE_VALUES.items():
+        if field in results.query.annotations:
+            consequence_values.update(value)
+
+    return format_results(results, entry_values, consequence_values)
+
+
+def _format_comp_het_results_queryset(results, entry_values, annotation_values):
+    results = results.explode_gene_id()
+    annotation_values[SELECTED_GENE_FIELD] = F('gene_id')
+    if 'filtered_transcript_consequences' in results.query.annotations:
+        annotation_values.update(SELECTED_CONSEQUENCE_VALUES['filtered_transcript_consequences'])
+    return _format_results_queryset(results, entry_values, annotation_values)
+
+
+def _get_comp_het_results_queryset(search, sample_data, entry_values, annotation_values):
     compound_het_search = {**search, 'inheritance_mode': COMPOUND_HET}
     annotations_secondary = search.get('annotations_secondary')
 
-    primary_q = _get_search_results_queryset(compound_het_search, *args, **kwargs)
+    primary_q = _get_search_results_queryset(
+        compound_het_search, sample_data, entry_values, annotation_values, format_results=_format_comp_het_results_queryset,
+    )
     secondary_q = primary_q.clone() if not annotations_secondary else _get_search_results_queryset(
-        {**compound_het_search, 'annotations': annotations_secondary}, *args, **kwargs,
+        {**compound_het_search, 'annotations': annotations_secondary}, sample_data,
+        entry_values, annotation_values, format_results=_format_comp_het_results_queryset,
     )
 
     results = primary_q.cross_join(secondary_q, alias='primary', join_alias='secondary')
 
-    return results.filter_compound_het().values_list(
+    return results.filter_compound_hets().values_list(
         Tuple('primary__*'), Tuple('secondary__*'),
     )
 

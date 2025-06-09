@@ -7,7 +7,8 @@ from django.db.models.sql.constants import INNER
 
 from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocksDB, Join
 from clickhouse_search.backend.fields import NestedField, UInt64FieldDeltaCodecField, NamedTupleField
-from clickhouse_search.backend.functions import ArrayFilter, CrossJoin, GtStatsDictGet, SubqueryJoin, SubqueryTable, Tuple
+from clickhouse_search.backend.functions import Array, ArrayFilter, ArrayDistinct, ArrayJoin, ArrayMap, ArraySort, \
+    CrossJoin, GtStatsDictGet, SubqueryJoin, SubqueryTable, Tuple
 from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFECTED, UNAFFECTED, MALE_SEXES, \
     X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, SCREEN_KEY, UTR_ANNOTATOR_KEY, \
     EXTENDED_SPLICE_KEY, MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY, CLINVAR_KEY, HGMD_KEY, SV_ANNOTATION_TYPES, \
@@ -221,12 +222,6 @@ class AnnotationsQuerySet(QuerySet):
             results = results.filter(gene_consequences__not_empty=True)
 
         filter_qs, transcript_filters = cls._parse_annotation_filters(annotations) if annotations else ([], [])
-        if transcript_filters:
-            consequence_field = 'gene_consequences' if gene_ids else 'sorted_transcript_consequences'
-            results = results.annotate(
-                filtered_transcript_consequences=ArrayFilter(consequence_field, conditions=transcript_filters),
-            )
-            filter_qs.append(Q(filtered_transcript_consequences__not_empty=True))
 
         hgmd = (pathogenicity or {}).get(HGMD_KEY)
         if hgmd:
@@ -240,15 +235,28 @@ class AnnotationsQuerySet(QuerySet):
         if exclude_clinvar:
             results = results.exclude(cls._clinvar_filter_q(exclude_clinvar))
 
-        if not filter_qs:
+        if not (filter_qs or transcript_filters):
             return results
 
-        filter_q = filter_qs[0]
+        filter_q = filter_qs[0] if filter_qs else None
         for q in filter_qs[1:]:
             filter_q |= q
-        results = results.filter(filter_q)
+        if filter_q:
+            results.annotate(passes_annotation=filter_q)
+            filter_q = Q(passes_annotation=True)
 
-        return results
+        if transcript_filters:
+            consequence_field = 'gene_consequences' if gene_ids else 'sorted_transcript_consequences'
+            results = results.annotate(
+                filtered_transcript_consequences=ArrayFilter(consequence_field, conditions=transcript_filters),
+            )
+            transcript_q = Q(filtered_transcript_consequences__not_empty=True)
+            if filter_q:
+                filter_q |= transcript_q
+            else:
+                filter_q = transcript_q
+
+        return results.filter(filter_q)
 
     @classmethod
     def _parse_annotation_filters(cls, annotations):
@@ -331,6 +339,29 @@ class AnnotationsQuerySet(QuerySet):
             f for f in (pathogenicity or {}).get(CLINVAR_KEY) or [] if f in CLINVAR_PATH_SIGNIFICANCES
         ]
         return cls._clinvar_filter_q(clinvar_path_filters, _get_range_q=_get_range_q) if clinvar_path_filters else None
+
+    def explode_gene_id(self):
+        #  TODO magic constants
+        consequence_field = 'gene_consequences' if 'gene_consequences' in self.query.annotations else 'sorted_transcript_consequences'
+        results = self.annotate(
+            gene_id=ArrayJoin(ArrayDistinct(ArrayMap(consequence_field, mapped_expression='x.geneId')))
+        )
+        if 'filtered_transcript_consequences' in results.query.annotations:
+            results = results.annotate(filtered_transcript_consequences=ArrayFilter(
+                'filtered_transcript_consequences', conditions=[{'geneId': (F('gene_id'), '{field} = {value}')}],
+            ))
+            filter_q = Q(filtered_transcript_consequences__not_empty=True)
+            if 'passes_annotation' in results.query.annotations:
+                filter_q |= Q(passes_annotation=True)
+            results = results.filter(filter_q)
+        return results
+
+    def filter_compound_hets(self):
+        results = self.exclude(
+            primary__selectedGeneId=F('secondary__selectedGeneId')
+        ).exclude(primary__variantId=F('secondary__variantId'))
+        # TODO filter genotype phasing
+        return results.distinct(ArraySort(Array('primary__variantId', 'secondary__variantId')))
 
 
 class BaseAnnotationsSnvIndel(models.ClickhouseModel):
