@@ -146,7 +146,9 @@ def _get_comp_het_results_queryset(search, sample_data, entry_values, annotation
         entry_values, annotation_values, format_results=_format_comp_het_results_queryset,
     )
 
-    results = primary_q.cross_join(secondary_q, alias='primary', join_alias='secondary')
+    results = AnnotationsSnvIndel.objects.cross_join(
+        query=primary_q,  alias='primary', join_query=secondary_q, join_alias='secondary',
+    )
 
     return results.filter_compound_hets().values_list(
         Tuple('primary__variantId'), Tuple('secondary__variantId'),

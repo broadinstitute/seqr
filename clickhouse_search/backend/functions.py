@@ -124,10 +124,12 @@ class CrossJoin(Join):
     nullable = False
     filtered_relation = None
 
-    def __init__(self, subquery, alias):
-        self.join_table = SubqueryTable(subquery, alias)
+    def __init__(self, query, alias, join_query, join_alias):
+        self.main_table = SubqueryTable(query, alias)
+        self.join_table = SubqueryTable(join_query, join_alias)
         self.table_name = alias
 
     def as_sql(self, compiler, connection):
-        subquery_sql, params = self.join_table.as_sql(compiler, connection)
-        return f'CROSS JOIN {subquery_sql}', params
+        subquery_sql, params = self.main_table.as_sql(compiler, connection)
+        join_subquery_sql, join_params = self.join_table.as_sql(compiler, connection)
+        return f'{subquery_sql} CROSS JOIN {join_subquery_sql}', params + join_params

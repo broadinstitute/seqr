@@ -112,11 +112,10 @@ class AnnotationsQuerySet(QuerySet):
 
         return annotations
 
-    def cross_join(self, join_query, alias, join_alias):
-        self.query.join(CrossJoin(join_query, join_alias))
-        self.query.alias_map[self.query.get_initial_alias()] = SubqueryTable(self, alias=alias)
+    def cross_join(self, query, alias, join_query, join_alias):
+        self.query.join(CrossJoin(query, alias, join_query, join_alias))
 
-        annotations = self._get_subquery_annotations(self, alias, include_alias_prefix=True)
+        annotations = self._get_subquery_annotations(query, alias, include_alias_prefix=True)
         annotations.update(self._get_subquery_annotations(join_query, join_alias, include_alias_prefix=True))
 
         return self.annotate(**annotations)
@@ -343,11 +342,11 @@ class AnnotationsQuerySet(QuerySet):
         #  TODO magic constants
         consequence_field = 'gene_consequences' if 'gene_consequences' in self.query.annotations else 'sorted_transcript_consequences'
         results = self.annotate(
-            gene_id=ArrayJoin(ArrayDistinct(ArrayMap(consequence_field, mapped_expression='x.geneId')))
+            gene_id=ArrayJoin(ArrayDistinct(ArrayMap(consequence_field, mapped_expression='x.geneId')), output_field=models.StringField())
         )
         if 'filtered_transcript_consequences' in results.query.annotations:
             results = results.annotate(filtered_transcript_consequences=ArrayFilter(
-                'filtered_transcript_consequences', conditions=[{'geneId': ('gene_id', '{field} = {value}')}],
+                'filtered_transcript_consequences', conditions=[{'geneId': ('selectedGeneId', '{field} = {value}')}],
             ))
             filter_q = Q(filtered_transcript_consequences__not_empty=True)
             if 'passes_annotation' in results.query.annotations:
