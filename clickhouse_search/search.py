@@ -83,20 +83,17 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
         **ANNOTATION_VALUES,
     }
 
-    results = []
     inheritance_mode = search.get('inheritance_mode')
+    get_results = []
     if inheritance_mode != COMPOUND_HET:
-        results_q = _get_search_results_queryset(sample_data, entry_values, annotation_values, search)
-        results += list(results_q[:MAX_VARIANTS+1])
+        get_results.append(_get_search_results_queryset)
     if inheritance_mode in {RECESSIVE, COMPOUND_HET}:
-        compound_het_search = {**search, 'inheritance_mode': COMPOUND_HET}
-        primary_q = _get_search_results_queryset(sample_data, entry_values, annotation_values, compound_het_search)
-        annotations_secondary = search.get('annotations_secondary')
-        secondary_q = primary_q.clone() if not annotations_secondary else _get_search_results_queryset(
-            sample_data, entry_values, annotation_values, {**compound_het_search, 'annotations': annotations_secondary}
-        )
-        results_q = primary_q.cross_join(secondary_q).filter_compound_het()
-        results += list(results_q[:MAX_VARIANTS+1])
+        get_results.append(_get_comp_het_results_queryset)
+
+    results = []
+    for get_results_func in get_results:
+        result_q = get_results_func(search, sample_data, entry_values, annotation_values)
+        results += list(result_q[:MAX_VARIANTS+1])
 
     cache_results = get_clickhouse_cache_results(results, sort, sample_data[0]['family_guid'])
     previous_search_results.update(cache_results)
@@ -106,7 +103,7 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
     return format_clickhouse_results(cache_results['all_results'][(page-1)*num_results:page*num_results])
 
 
-def _get_search_results_queryset(sample_data, entry_values, annotation_values, search):
+def _get_search_results_queryset(search, sample_data, entry_values, annotation_values):
     entries = EntriesSnvIndel.objects.search(sample_data, **search).values(
         *ENTRY_INTERMEDIATE_FIELDS, **entry_values,
     )
@@ -124,6 +121,18 @@ def _get_search_results_queryset(sample_data, entry_values, annotation_values, s
         **annotation_values,
         **consequence_values,
     ).annotate(**ADDITIONAL_ANNOTATION_VALUES)
+
+
+def _get_comp_het_results_queryset(search, *args, **kwargs):
+    compound_het_search = {**search, 'inheritance_mode': COMPOUND_HET}
+    annotations_secondary = search.get('annotations_secondary')
+
+    primary_q = _get_search_results_queryset(compound_het_search, *args, **kwargs)
+    secondary_q = primary_q.clone() if not annotations_secondary else _get_search_results_queryset(
+        {**compound_het_search, 'annotations': annotations_secondary}, *args, **kwargs,
+    )
+
+    return primary_q.cross_join(secondary_q).filter_compound_het()
 
 
 def get_clickhouse_cache_results(results, sort, family_guid):
