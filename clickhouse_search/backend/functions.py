@@ -116,7 +116,7 @@ class CrossJoin(Join):
     nullable = False
     filtered_relation = None
 
-    def __init_(self, subquery, alias):
+    def __init__(self, subquery, alias):
         self.join_table = SubqueryTable(subquery, alias)
         self.table_name = alias
 

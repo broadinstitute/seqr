@@ -132,7 +132,11 @@ def _get_comp_het_results_queryset(search, *args, **kwargs):
         {**compound_het_search, 'annotations': annotations_secondary}, *args, **kwargs,
     )
 
-    return primary_q.cross_join(secondary_q).filter_compound_het()
+    results = primary_q.cross_join(secondary_q, alias='primary', join_alias='secondary')
+
+    return results.filter_compound_het().values_list(
+        Tuple('primary__*'), Tuple('secondary__*'),
+    )
 
 
 def get_clickhouse_cache_results(results, sort, family_guid):

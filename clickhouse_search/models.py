@@ -94,9 +94,9 @@ class AnnotationsQuerySet(QuerySet):
         ))
         self.query.alias_map[parent_alias] = table
 
-        return self._add_subquery_annotations(subquery, table.table_alias, join_key=join_key)
+        return self.annotate(**self._get_subquery_annotations(subquery, table.table_alias, join_key=join_key))
 
-    def _add_subquery_annotations(self, subquery, alias, include_alias_prefix=False, join_key=None):
+    def _get_subquery_annotations(self, subquery, alias, include_alias_prefix=False, join_key=None):
         annotations = {
             col.target.name: Col(alias, col.target) for col in subquery.query.select
             if col.target.name != join_key
@@ -109,12 +109,17 @@ class AnnotationsQuerySet(QuerySet):
         if include_alias_prefix:
             annotations = {f'{alias}__{name}': val for name, val in annotations.items()}
 
-        return self.annotate(**annotations)
+        return annotations
 
-    def cross_join(self, join_query, alias):
-        self.query.join(CrossJoin(join_query, alias))
-        self.query.alias_map[self.query.get_initial_alias()] = SubqueryTable(self)
-        return self._add_subquery_annotations(join_query, alias, include_alias_prefix=True)
+    def cross_join(self, join_query, alias, join_alias):
+        self.query.join(CrossJoin(join_query, join_alias))
+        self.query.alias_map[self.query.get_initial_alias()] = SubqueryTable(self, alias=alias)
+
+        annotations = {f'{q_alias}__*': Col(q_alias, '*') for q_alias in [alias, join_alias]}
+        annotations.update(self._get_subquery_annotations(self, alias, include_alias_prefix=True))
+        annotations.update(self._get_subquery_annotations(join_query, join_alias, include_alias_prefix=True))
+
+        return self.annotate(**annotations)
 
     def search(self, parsed_locus=None, **kwargs):
         parsed_locus = parsed_locus or {}
