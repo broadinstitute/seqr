@@ -148,13 +148,17 @@ def _get_comp_het_results_queryset(search, sample_data, entry_values, annotation
 
     results = AnnotationsSnvIndel.objects.cross_join(
         query=primary_q,  alias='primary', join_query=secondary_q, join_alias='secondary',
+    ).filter_compound_hets()
+
+    return results.values_list(
+        _result_as_tuple(results, 'primary'),
+        _result_as_tuple(results, 'secondary'),
     )
 
-    return results.filter_compound_hets().values_list(
-        Tuple('primary__variantId'), Tuple('secondary__variantId'),
-        # TODO actual results
-        # Tuple(*[f'primary__{field}' for field in fields]), Tuple(*[f'secondary__{field}'for field in fields]),
-    )
+
+def _result_as_tuple(results, field_prefix):
+    fields = {name: (name, col.target) for name, col in results.query.annotations.items() if name.startswith(field_prefix)}
+    return Tuple(*fields.keys(), output_field=NamedTupleField(list(fields.values())))
 
 
 def get_clickhouse_cache_results(results, sort, family_guid):
