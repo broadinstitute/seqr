@@ -7,8 +7,8 @@ from django.db.models.sql.constants import INNER
 
 from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocksDB, Join
 from clickhouse_search.backend.fields import NestedField, UInt64FieldDeltaCodecField, NamedTupleField
-from clickhouse_search.backend.functions import Array, ArrayFilter, ArrayDistinct, ArrayJoin, ArrayMap, ArraySort, \
-    CrossJoin, GtStatsDictGet, SubqueryJoin, SubqueryTable, Tuple
+from clickhouse_search.backend.functions import ArrayFilter, ArrayDistinct, ArrayJoin, ArrayMap, CrossJoin, \
+    GtStatsDictGet, SubqueryJoin, SubqueryTable, Tuple
 from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFECTED, UNAFFECTED, MALE_SEXES, \
     X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, SCREEN_KEY, UTR_ANNOTATOR_KEY, \
     EXTENDED_SPLICE_KEY, MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY, CLINVAR_KEY, HGMD_KEY, SV_ANNOTATION_TYPES, \
@@ -116,8 +116,7 @@ class AnnotationsQuerySet(QuerySet):
         self.query.join(CrossJoin(join_query, join_alias))
         self.query.alias_map[self.query.get_initial_alias()] = SubqueryTable(self, alias=alias)
 
-        annotations = {f'{q_alias}__*': Col(q_alias, '*') for q_alias in [alias, join_alias]}
-        annotations.update(self._get_subquery_annotations(self, alias, include_alias_prefix=True))
+        annotations = self._get_subquery_annotations(self, alias, include_alias_prefix=True)
         annotations.update(self._get_subquery_annotations(join_query, join_alias, include_alias_prefix=True))
 
         return self.annotate(**annotations)
@@ -242,7 +241,7 @@ class AnnotationsQuerySet(QuerySet):
         for q in filter_qs[1:]:
             filter_q |= q
         if filter_q:
-            results.annotate(passes_annotation=filter_q)
+            results = results.annotate(passes_annotation=filter_q)
             filter_q = Q(passes_annotation=True)
 
         if transcript_filters:
@@ -348,7 +347,7 @@ class AnnotationsQuerySet(QuerySet):
         )
         if 'filtered_transcript_consequences' in results.query.annotations:
             results = results.annotate(filtered_transcript_consequences=ArrayFilter(
-                'filtered_transcript_consequences', conditions=[{'geneId': (F('gene_id'), '{field} = {value}')}],
+                'filtered_transcript_consequences', conditions=[{'geneId': ('gene_id', '{field} = {value}')}],
             ))
             filter_q = Q(filtered_transcript_consequences__not_empty=True)
             if 'passes_annotation' in results.query.annotations:
@@ -361,7 +360,9 @@ class AnnotationsQuerySet(QuerySet):
             primary__selectedGeneId=F('secondary__selectedGeneId')
         ).exclude(primary__variantId=F('secondary__variantId'))
         # TODO filter genotype phasing
-        return results.distinct(ArraySort(Array('primary__variantId', 'secondary__variantId')))
+        # TODO deduplicate pairs
+        # return results.distinct('primary__variantId', 'secondary__variantId')
+        return results
 
 
 class BaseAnnotationsSnvIndel(models.ClickhouseModel):

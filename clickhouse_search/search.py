@@ -149,7 +149,9 @@ def _get_comp_het_results_queryset(search, sample_data, entry_values, annotation
     results = primary_q.cross_join(secondary_q, alias='primary', join_alias='secondary')
 
     return results.filter_compound_hets().values_list(
-        Tuple('primary__*'), Tuple('secondary__*'),
+        Tuple('primary__variantId'), Tuple('secondary__variantId'),
+        # TODO actual results
+        # Tuple(*[f'primary__{field}' for field in fields]), Tuple(*[f'secondary__{field}'for field in fields]),
     )
 
 

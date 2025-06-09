@@ -23,10 +23,6 @@ class ArrayMap(Func):
     template = "%(function)s(x -> %(mapped_expression)s, %(expressions)s)"
 
 
-class ArraySort(Func):
-    function = 'arraySort'
-
-
 def _format_condition(filters):
     conditions = [
         (template[0] if template else '{field} = {value}').format(field=f'x.{field}', value=value)
@@ -120,7 +116,7 @@ class SubqueryJoin(Join):
 
 class CrossJoin(Join):
 
-    join_type = 'CROSS JOIN'
+    join_type = None
     parent_alias = None
     table_alias = None
     join_field = None
@@ -134,4 +130,4 @@ class CrossJoin(Join):
 
     def as_sql(self, compiler, connection):
         subquery_sql, params = self.join_table.as_sql(compiler, connection)
-        return f'{self.join_type} {subquery_sql}', params
+        return f'CROSS JOIN {subquery_sql}', params
