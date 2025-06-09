@@ -1,8 +1,10 @@
 import React from 'react'
 import PropTypes from 'prop-types'
+import { connect } from 'react-redux'
 import styled from 'styled-components'
 import { Popup, Divider } from 'semantic-ui-react'
 
+import { getTotalSampleCounts } from 'redux/selectors'
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
 import { GNOMAD_SV_CRITERIA_MESSAGE, SV_CALLSET_CRITERIA_MESSAGE, TOPMED_FREQUENCY, GENOME_VERSION_37, GENOME_VERSION_38, getVariantMainGeneId } from '../../../utils/constants'
 
@@ -55,21 +57,46 @@ const getFreqLinkPath = ({ chrom, pos, variant, value }) => {
   return `${isRegion ? 'region' : 'variant'}/${coords}`
 }
 
-const FreqSummary = React.memo((props) => {
-  const { field, fieldTitle, variant, urls, conditionalQueryParams, acDisplay, titleContainer, precision = 2 } = props
-  const { populations = {}, chrom } = variant
-  const population = populations[field] || {}
-  if (population.af === null || population.af === undefined) {
-    return null
-  }
+const AfDisplay = ({ population, variant, urls, queryParams, conditionalQueryParams, populations, precision = 2 }) => {
   const afValue = population.af > 0 ? population.af.toPrecision(precision) : '0.0'
   // gnomad v4 SVs use "v3" in their ID construction, but we are in fact on v4
   const value = population.id ? population.id.replace('gnomAD-SV_v3_', '') : afValue
   const displayValue = population.filter_af > 0 ? population.filter_af.toPrecision(precision) : afValue
 
-  let { queryParams } = props
-  if (conditionalQueryParams) {
-    queryParams = conditionalQueryParams(populations)
+  return urls ? (
+    <FreqLink
+      urls={urls}
+      queryParams={conditionalQueryParams ? conditionalQueryParams(populations) : queryParams}
+      value={value}
+      displayValue={displayValue}
+      variant={variant}
+      getPath={getFreqLinkPath}
+    />
+  ) : displayValue
+}
+
+AfDisplay.propTypes = {
+  population: PropTypes.object.isRequired,
+  variant: PropTypes.object.isRequired,
+  precision: PropTypes.number,
+  urls: PropTypes.object,
+  queryParams: PropTypes.object,
+  conditionalQueryParams: PropTypes.object,
+  populations: PropTypes.object,
+}
+
+const FreqSummary = React.memo((props) => {
+  const { field, fieldTitle, variant, acDisplay, titleContainer, ...afProps } = props
+  const { populations, chrom } = variant
+  const population = (populations || {})[field] || {}
+  const noAf = population.af === null || population.af === undefined
+  if (noAf && (population.ac === null || population.ac === undefined)) {
+    return null
+  }
+
+  let acDisplayValue = acDisplay && population.ac !== null && population.ac !== undefined && `${acDisplay}=${population.ac}`
+  if (acDisplayValue && population.an !== null && population.an !== undefined) {
+    acDisplayValue = `${acDisplayValue} out of ${population.an}`
   }
 
   return (
@@ -77,18 +104,16 @@ const FreqSummary = React.memo((props) => {
       {titleContainer ? titleContainer(props) : fieldTitle}
       <HorizontalSpacer width={5} />
       <FreqValue>
-        <b>
-          {urls ? (
-            <FreqLink
-              urls={urls}
-              queryParams={queryParams}
-              value={value}
-              displayValue={displayValue}
+        {!noAf && (
+          <b>
+            <AfDisplay
+              population={population}
               variant={variant}
-              getPath={getFreqLinkPath}
+              populations={populations}
+              {...afProps}
             />
-          ) : displayValue}
-        </b>
+          </b>
+        )}
         {population.hom !== null && population.hom !== undefined && (
           <span>
             <HorizontalSpacer width={5} />
@@ -107,10 +132,10 @@ const FreqSummary = React.memo((props) => {
             {`Hemi=${population.hemi}`}
           </span>
         )}
-        {acDisplay && population.ac !== null && population.ac !== undefined && (
+        {acDisplayValue && (
           <span>
             <HorizontalSpacer width={5} />
-            {`${acDisplay}=${population.ac} out of ${population.an}`}
+            {acDisplayValue}
           </span>
         )}
       </FreqValue>
@@ -160,6 +185,31 @@ const sectionTitle = ({ fieldTitle, section }) => (
     {section.toLowerCase()}
   </span>
 )
+
+const BaseGlobalAcPopup = ({ totalSampleCounts }) => (
+  Object.keys(totalSampleCounts).length > 0 && (
+    <Popup.Content>
+      <i>
+        The seqr allele count (AC) and homozygote count (Hom) reflect all observed occurrences of a variant in seqr.
+        While not all sites may be captured in the loaded callsets, an upper bound for the total allele number (AN)
+        can be estimated based on the total number of samples loaded in seqr:
+      </i>
+      {Object.entries(totalSampleCounts).map(([sampleType, { count }]) => (
+        <div key={sampleType}>{`${sampleType}: ${count}`}</div>
+      ))}
+    </Popup.Content>
+  )
+)
+
+BaseGlobalAcPopup.propTypes = {
+  totalSampleCounts: PropTypes.object,
+}
+
+const mapStateToProps = state => ({
+  totalSampleCounts: getTotalSampleCounts(state),
+})
+
+const GlobalAcPopup = connect(mapStateToProps)(BaseGlobalAcPopup)
 
 const HOM_SECTION = 'Homoplasmy'
 const HET_SECTION = 'Heteroplasmy'
@@ -276,7 +326,7 @@ const DETAIL_SECTIONS = [
   },
   {
     name: 'Allele Counts',
-    hasDetail: pop => pop && pop.ac,
+    hasDetail: pop => pop && pop.ac && pop.an,
     display: () => [{ valueField: 'ac' }],
   },
 ]
@@ -305,7 +355,11 @@ const Frequencies = React.memo(({ variant }) => {
   const callsetHetPop = populations.callset_heteroplasmy || populations.seqr_heteroplasmy
   const isMito = callsetHetPop && callsetHetPop.af !== null && callsetHetPop.af !== undefined
   const popConfigs = isMito ? MITO_POPULATIONS : POPULATIONS
-  const sections = (isMito ? MITO_DETAIL_SECTIONS : DETAIL_SECTIONS).reduce(
+  const seqrAcSection = {
+    name: 'seqr Global ACs',
+    details: (!isMito && populations[SEQR_POP.field]) ? [<GlobalAcPopup />].filter(s => s) : [],
+  }
+  const sections = [seqrAcSection, ...(isMito ? MITO_DETAIL_SECTIONS : DETAIL_SECTIONS).reduce(
     (acc, section) => ([
       ...acc,
       {
@@ -321,7 +375,7 @@ const Frequencies = React.memo(({ variant }) => {
         )).filter(d => d).reduce((displayAcc, d) => ([...displayAcc, ...d]), []),
       },
     ]), [],
-  ).filter(section => section.details.length)
+  )].filter(section => section.details.length)
 
   const freqContent = (<div>{popConfigs.map(pop => <FreqSummary key={pop.field} variant={variant} {...pop} />)}</div>)
 

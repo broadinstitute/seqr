@@ -35,7 +35,7 @@ class SvHailTableQuery(BaseHailTableQuery):
     }
 
     POPULATIONS = {
-        'sv_callset': {'hemi': None, 'sort': 'callset_af'},
+        'sv_callset': {'hemi': None, 'sort': 'callset_af', 'sort_subfield': 'ac'},
         'gnomad_svs': {'id': 'ID', 'ac': None, 'an': None, 'hom': 'N_HOM', 'hemi': None, 'het': 'N_HET', 'sort': 'gnomad'},
     }
     POPULATION_FIELDS = {'sv_callset': 'gt_stats'}

@@ -19,21 +19,39 @@ for variant in [VARIANT1, VARIANT2, VARIANT3, VARIANT4]:
         if isinstance(pred_val, float):
             variant['predictions'][pred] = round(pred_val, 5)
     for pop in variant['populations'].values():
-        pop['af'] = round(pop['af'], 5)
+        if 'af' in pop:
+            pop['af'] = round(pop['af'], 5)
         if 'filter_af' in pop:
             pop['filter_af'] = round(pop['filter_af'], 5)
     for transcripts in variant['transcripts'].values():
         for transcript in transcripts:
             if transcript['alphamissense']['pathogenicity']:
                 transcript['alphamissense']['pathogenicity'] = round(transcript['alphamissense']['pathogenicity'], 5)
-    # global seqr AF is no longer supported
-    del variant['populations']['seqr']['af']
     # sort is not computed/annotated at query time
     del variant['_sort']
 
-# TODO add clinvar version to clickhouse
 del VARIANT1['clinvar']['version']
 del VARIANT2['clinvar']['version']
+
+FAMILY_3_VARIANT = deepcopy(VARIANT3)
+FAMILY_3_VARIANT['familyGuids'] = ['F000003_3']
+FAMILY_3_VARIANT['genotypes'] = {
+    'I000007_na20870': {
+        'sampleId': 'NA20870', 'sampleType': 'WES', 'individualGuid': 'I000007_na20870', 'familyGuid': 'F000003_3',
+        'numAlt': 1, 'dp': 28, 'gq': 99, 'ab': 0.6785714285714286, 'filters': [],
+    },
+}
+
+MULTI_FAMILY_VARIANT = deepcopy(VARIANT3)
+MULTI_FAMILY_VARIANT['familyGuids'] += FAMILY_3_VARIANT['familyGuids']
+MULTI_FAMILY_VARIANT['genotypes'].update(FAMILY_3_VARIANT['genotypes'])
+MULTI_FAMILY_VARIANT = VARIANT3
+
+SELECTED_ANNOTATION_TRANSCRIPT_MULTI_FAMILY_VARIANT = {**MULTI_FAMILY_VARIANT, 'selectedMainTranscriptId': 'ENST00000497611'}
+SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT = {**MULTI_FAMILY_VARIANT, 'selectedMainTranscriptId': 'ENST00000426137'}
+SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4 = {**VARIANT4, 'selectedMainTranscriptId': 'ENST00000350997'}
+SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3 = {**VARIANT3, 'selectedMainTranscriptId': 'ENST00000497611'}
+SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2 = {**VARIANT2, 'selectedMainTranscriptId': 'ENST00000459627'}
 
 CACHED_VARIANTS_BY_KEY = {
     variant['key']: {
@@ -142,3 +160,14 @@ CACHED_VARIANTS_BY_KEY[4]['sortedTranscriptConsequences'] = [{
     'fiveutrConsequence': None,
     'geneId': 'ENSG00000097046',
 }]
+
+VARIANT_IDS =  ['1-10439-AC-A', '1-91511686-TCA-G']
+VARIANT_ID_SEARCH = {
+    'locus': {'rawVariantItems': '\n'.join(VARIANT_IDS)}
+}
+
+GENE_IDS = ['ENSG00000097046', 'ENSG00000177000']
+INTERVALS = ['chr2:1234-5678', 'chr7:1-11100']
+LOCATION_SEARCH = {
+    'locus': {'rawItems': '\n'.join(GENE_IDS+INTERVALS)},
+}

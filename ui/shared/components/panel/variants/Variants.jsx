@@ -82,6 +82,7 @@ const VariantLayout = (
   },
 ) => {
   const coreVariant = Array.isArray(variant) ? variant[0] : variant
+  const geneModalId = Array.isArray(variant) ? variant.map(({ variantId }) => variantId).join('_') : variant.variantId
   return (
     <StyledVariantRow {...rowProps}>
       <Grid.Column width={16}>
@@ -101,9 +102,14 @@ const VariantLayout = (
       {!isCompoundHet && (
         <Grid.Column width={4}>
           {!mainGeneId && coreVariant.svName && <Header size="medium" content={coreVariant.svName} />}
-          {mainGeneId ?
-            <VariantGene geneId={mainGeneId} variant={coreVariant} compoundHetToggle={compoundHetToggle} /> :
-            <VariantGenes variant={variant} />}
+          {mainGeneId ? (
+            <VariantGene
+              geneId={mainGeneId}
+              geneModalId={geneModalId}
+              variant={coreVariant}
+              compoundHetToggle={compoundHetToggle}
+            />
+          ) : <VariantGenes variant={variant} />}
         </Grid.Column>
       )}
       <Grid.Column width={isCompoundHet ? 16 : 12}>

@@ -40,7 +40,7 @@ const FIELDS = [
 
 const VlmDisplay = ({ vlmMatches }) => (
   <Table basic collapsing definition>
-    {Object.entries(vlmMatches).map(
+    {Object.entries(vlmMatches || {}).map(
       ([nodeId, nodeResults]) => Object.entries(nodeResults).map(([id, { url, counts }], i) => (
         <Table.Row key={id}>
           <Table.Cell content={i === 0 ? nodeId : null} />

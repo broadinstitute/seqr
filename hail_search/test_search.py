@@ -43,7 +43,7 @@ PROJECT_2_VARIANT = {
     'hgmd': None,
     'screenRegionType': None,
     'populations': {
-        'seqr': {'af': 0.0, 'ac': 0, 'an': 90, 'hom': 0},
+        'seqr': {'ac': 0, 'hom': 0},
         'topmed': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'het': 0},
         'exac': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'hemi': 0, 'het': 0, 'filter_af': 0.0},
         'gnomad_exomes': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'hemi': 0, 'filter_af': 0.0},
@@ -100,7 +100,7 @@ GRCH37_VARIANT = {
         },
     },
     'populations': {
-        'seqr': {'af': 0.5912399888038635, 'ac': 4711, 'an': 7968, 'hom': 1508},
+        'seqr': {'ac': 4711, 'hom': 1508},
         'topmed': {'af': 0.5213189721107483, 'ac': 65461, 'an': 125568, 'hom': 16156, 'het': 33149},
         'exac': {'af': 0.6299999952316284, 'ac': 66593, 'an': 104352, 'hom': 22162, 'hemi': 0, 'het': 22269, 'filter_af': 0.8198773860931396},
         'gnomad_exomes': {'af': 0.6354219317436218, 'ac': 137532, 'an': 216442, 'hom': 45869, 'hemi': 0, 'filter_af': 0.8226116299629211},
@@ -809,9 +809,15 @@ class HailSearchTestCase(AioHTTPTestCase):
 
     async def test_frequency_filter(self):
         sv_callset_filter = {'sv_callset': {'af': 0.05}}
+        # seqr af filter is ignored for SNV_INDEL
         await self._assert_expected_search(
-            [VARIANT1, VARIANT4, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
-            frequencies={'seqr': {'af': 0.2}, **sv_callset_filter},
+            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
+            frequencies={'seqr': {'af': 0.2},  **sv_callset_filter},
+        )
+
+        await self._assert_expected_search(
+            [MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
+            frequencies={'seqr': {'ac': 5}, **sv_callset_filter},
         )
 
         await self._assert_expected_search(
@@ -852,7 +858,7 @@ class HailSearchTestCase(AioHTTPTestCase):
         )
 
         await self._assert_expected_search(
-            [VARIANT4], frequencies={'seqr': {'af': 0.2}, 'gnomad_genomes': {'ac': 50}},
+            [VARIANT4], frequencies={'seqr': {'ac': 10}, 'gnomad_genomes': {'ac': 50}},
             omit_data_type='SV_WES',
         )
 
@@ -1219,17 +1225,16 @@ class HailSearchTestCase(AioHTTPTestCase):
         )
 
         await self._assert_expected_search(
-            [_sorted(GCNV_VARIANT3, [0.0015185698866844177]), _sorted(GCNV_VARIANT4, [0.004989586770534515]),
-             _sorted(GCNV_VARIANT2, [0.012322110123932362]), _sorted(VARIANT4, [0.02222222276031971]),
-             _sorted(GCNV_VARIANT1, [0.076492540538311]), _sorted(VARIANT1, [0.10000000149011612]),
-             _sorted(VARIANT2, [0.31111112236976624]), _sorted(MULTI_FAMILY_VARIANT, [0.6666666865348816])],
+            [_sorted(VARIANT4, [2]),_sorted(MULTI_FAMILY_VARIANT, [4]), _sorted(VARIANT1, [9]),
+             _sorted(VARIANT2, [28]), _sorted(GCNV_VARIANT3, [35]), _sorted(GCNV_VARIANT4, [115]),
+             _sorted(GCNV_VARIANT2, [284]), _sorted(GCNV_VARIANT1, [1763])],
             sort='callset_af',
         )
 
         await self._assert_expected_search(
-            [_sorted(MITO_VARIANT1, [0]), _sorted(MITO_VARIANT2, [0]), _sorted(MITO_VARIANT3, [0.019480518996715546]),
-             _sorted(VARIANT4, [0.02222222276031971]), _sorted(VARIANT1, [0.10000000149011612]),
-             _sorted(VARIANT2, [0.31111112236976624]), _sorted(VARIANT3, [0.6666666865348816])],
+            [_sorted(MITO_VARIANT1, [0]), _sorted(MITO_VARIANT2, [0]), _sorted(VARIANT4, [2]),
+             _sorted(MITO_VARIANT3, [3]), _sorted(VARIANT3, [4]), _sorted(VARIANT1, [9]),
+             _sorted(VARIANT2, [28])],
             sort='callset_af', sample_data=FAMILY_2_ALL_SAMPLE_DATA,
         )
 
@@ -1375,9 +1380,9 @@ class HailSearchTestCase(AioHTTPTestCase):
         )
 
         await self._assert_expected_search(
-            [[_sorted(GCNV_VARIANT3, [0.0015185698866844177]), _sorted(GCNV_VARIANT4, [0.004989586770534515])],
-             [_sorted(GCNV_VARIANT4, [0.004989586770534515]), _sorted(MULTI_DATA_TYPE_COMP_HET_VARIANT2, [0.31111112236976624])],
-             [_sorted(VARIANT4, [0.02222222276031971]), _sorted(VARIANT3, [0.6666666865348816])]],
+            [[_sorted(VARIANT4, [2]), _sorted(VARIANT3, [4])],
+             [_sorted(MULTI_DATA_TYPE_COMP_HET_VARIANT2, [28]), _sorted(GCNV_VARIANT4, [115])],
+             [_sorted(GCNV_VARIANT3, [35]), _sorted(GCNV_VARIANT4, [115])]],
             sort='callset_af', inheritance_mode='compound_het', **COMP_HET_ALL_PASS_FILTERS,
         )
 
