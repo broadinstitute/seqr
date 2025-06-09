@@ -11,7 +11,7 @@ from reference_data.models import GeneConstraint, Omim, GENOME_VERSION_GRCh38, G
 from seqr.models import PhenotypePrioritization, Sample
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.search.constants import MAX_VARIANTS, XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, \
-    PRIORITIZED_GENE_SORT
+    PRIORITIZED_GENE_SORT, COMPOUND_HET, RECESSIVE
 from settings import CLICKHOUSE_SERVICE_HOSTNAME
 
 logger = SeqrLogger(__name__)
@@ -77,7 +77,32 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
             output_field=NestedField([('individualGuid', models.StringField()), *GENOTYPE_FIELDS.values()], group_by_key='individualGuid', flatten_groups=True)
         ),
     }
+    annotation_values = {
+        'genomeVersion': Value(genome_version),
+        'liftedOverGenomeVersion': Value(_liftover_genome_version(genome_version)),
+        **ANNOTATION_VALUES,
+    }
 
+    results = []
+    inheritance_mode = search.get('inheritance_mode')
+    if inheritance_mode != COMPOUND_HET:
+        results_q = _get_search_results_queryset(sample_data, entry_values, annotation_values, search)
+        results += list(results_q[:MAX_VARIANTS+1])
+    if inheritance_mode in {RECESSIVE, COMPOUND_HET}:
+        compound_het_search = {**search, 'inheritance_mode': COMPOUND_HET}
+        # TODO actual cross join and filter
+        results_q = _get_search_results_queryset(sample_data, entry_values, annotation_values, compound_het_search)
+        results += list(results_q[:MAX_VARIANTS+1])
+
+    cache_results = get_clickhouse_cache_results(results, sort, sample_data[0]['family_guid'])
+    previous_search_results.update(cache_results)
+
+    logger.info(f'Total results: {cache_results["total_results"]}', user)
+
+    return format_clickhouse_results(cache_results['all_results'][(page-1)*num_results:page*num_results])
+
+
+def _get_search_results_queryset(sample_data, entry_values, annotation_values, search):
     entries = EntriesSnvIndel.objects.search(sample_data, **search).values(
         *ENTRY_INTERMEDIATE_FIELDS, **entry_values,
     )
@@ -88,28 +113,21 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
         if field in results.query.annotations:
             consequence_values.update(value)
 
-    results = results.values(
+    return results.values(
         *ANNOTATION_FIELDS,
         *ENTRY_FIELDS,
         *entry_values.keys(),
-        genomeVersion=Value(genome_version),
-        liftedOverGenomeVersion=Value(_liftover_genome_version(genome_version)),
-        **ANNOTATION_VALUES,
+        **annotation_values,
         **consequence_values,
     ).annotate(**ADDITIONAL_ANNOTATION_VALUES)
-    results = results[:MAX_VARIANTS+1]
-
-    cache_results = get_clickhouse_cache_results(results, sort, sample_data[0]['family_guid'])
-    previous_search_results.update(cache_results)
-
-    logger.info(f'Total results: {cache_results["total_results"]}', user)
-
-    return format_clickhouse_results(cache_results['all_results'][(page-1)*num_results:page*num_results])
 
 
 def get_clickhouse_cache_results(results, sort, family_guid):
     sort_metadata = _get_sort_gene_metadata(sort, results, family_guid)
-    sorted_results = sorted(results, key=_get_sort_key(sort, sort_metadata))
+    sort_key = _get_sort_key(sort, sort_metadata)
+    sorted_results = sorted([
+        sorted(result, key=sort_key) if isinstance(result, list) else result for result in results
+    ], key=sort_key)
     total_results = len(sorted_results)
     return {'all_results': sorted_results, 'total_results': total_results}
 
