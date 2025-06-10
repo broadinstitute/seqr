@@ -101,7 +101,7 @@ class AnnotationsQuerySet(QuerySet):
 
         return self.annotate(**self._get_subquery_annotations(subquery, table.table_alias, join_key=join_key))
 
-    def _get_subquery_annotations(self, subquery, alias, include_alias_prefix=False, join_key=None):
+    def _get_subquery_annotations(self, subquery, alias, join_key=None):
         annotations = {
             col.target.name: Col(alias, col.target) for col in subquery.query.select
             if col.target.name != join_key
@@ -111,16 +111,22 @@ class AnnotationsQuerySet(QuerySet):
             target.column = name
             annotations[name] = Col(alias, target)
 
-        if include_alias_prefix:
-            annotations = {f'{alias}__{name}': val for name, val in annotations.items()}
-
         return annotations
 
-    def cross_join(self, query, alias, join_query, join_alias):
+    def cross_join(self, query, alias, join_query, join_alias, select_fields=None, select_values=None):
+        query = query.values(
+            **{f'{alias}_{field}': F(field) for field in select_fields or []},
+            **{f'{alias}_{field}': value for field, value in (select_values or {}).items()},
+        )
+        join_query = join_query.values(
+            **{f'{join_alias}_{field}': F(field) for field in select_fields or []},
+            **{f'{join_alias}_{field}': value for field, value in (select_values or {}).items()},
+        )
+
         self.query.join(CrossJoin(query, alias, join_query, join_alias))
 
-        annotations = self._get_subquery_annotations(query, alias, include_alias_prefix=True)
-        annotations.update(self._get_subquery_annotations(join_query, join_alias, include_alias_prefix=True))
+        annotations = self._get_subquery_annotations(query, alias)
+        annotations.update(self._get_subquery_annotations(join_query, join_alias))
 
         return self.annotate(**annotations)
 
@@ -344,14 +350,14 @@ class AnnotationsQuerySet(QuerySet):
         ]
         return cls._clinvar_filter_q(clinvar_path_filters, _get_range_q=_get_range_q) if clinvar_path_filters else None
 
-    def explode_gene_id(self):
+    def explode_gene_id(self, gene_id_key):
         consequence_field = self.GENE_CONSEQUENCE_FIELD if self.GENE_CONSEQUENCE_FIELD in self.query.annotations else self.TRANSCRIPT_CONSEQUENCE_FIELD
         results = self.annotate(
             gene_id=ArrayJoin(ArrayDistinct(ArrayMap(consequence_field, mapped_expression='x.geneId')), output_field=models.StringField())
         )
         if self.FILTERED_CONSEQUENCE_FIELD in results.query.annotations:
             results = results.annotate(**{self.FILTERED_CONSEQUENCE_FIELD: ArrayFilter(
-                self.FILTERED_CONSEQUENCE_FIELD, conditions=[{'geneId': ('selectedGeneId', '{field} = {value}')}],
+                self.FILTERED_CONSEQUENCE_FIELD, conditions=[{'geneId': (gene_id_key, '{field} = {value}')}],
             )})
             filter_q = Q(filtered_transcript_consequences__not_empty=True)
             if 'passes_annotation' in results.query.annotations:
@@ -361,8 +367,8 @@ class AnnotationsQuerySet(QuerySet):
 
     def filter_compound_hets(self):
         results = self.filter(
-            primary__selectedGeneId=F('secondary__selectedGeneId')
-        ).exclude(primary__variantId=F('secondary__variantId'))
+            primary_selectedGeneId=F('secondary_selectedGeneId')
+        ).exclude(primary_variantId=F('secondary_variantId'))
         # TODO filter genotype phasing
         return results
 
