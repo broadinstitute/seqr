@@ -75,6 +75,10 @@ class Projection(Func):
 
 class AnnotationsQuerySet(QuerySet):
 
+    TRANSCRIPT_CONSEQUENCE_FIELD = 'sorted_transcript_consequences'
+    GENE_CONSEQUENCE_FIELD = 'gene_consequences'
+    FILTERED_CONSEQUENCE_FIELD = 'filtered_transcript_consequences'
+
     def subquery_join(self, subquery, join_key='key'):
         #  Add key to intermediate select if not already present
         join_field = next(field for field in subquery.model._meta.fields if field.name == join_key)
@@ -214,9 +218,11 @@ class AnnotationsQuerySet(QuerySet):
     @classmethod
     def _filter_annotations(cls, results, annotations=None, pathogenicity=None, exclude=None, gene_ids=None, **kwargs):
         if gene_ids:
-            results = results.annotate(gene_consequences=ArrayFilter('sorted_transcript_consequences', conditions=[{
-                'geneId': (gene_ids, 'has({value}, {field})'),
-            }]))
+            results = results.annotate(**{
+                cls.GENE_CONSEQUENCE_FIELD: ArrayFilter(cls.TRANSCRIPT_CONSEQUENCE_FIELD, conditions=[{
+                    'geneId': (gene_ids, 'has({value}, {field})'),
+                }]),
+            })
             results = results.filter(gene_consequences__not_empty=True)
 
         filter_qs, transcript_filters = cls._parse_annotation_filters(annotations) if annotations else ([], [])
@@ -244,10 +250,10 @@ class AnnotationsQuerySet(QuerySet):
             filter_q = Q(passes_annotation=True)
 
         if transcript_filters:
-            consequence_field = 'gene_consequences' if gene_ids else 'sorted_transcript_consequences'
-            results = results.annotate(
-                filtered_transcript_consequences=ArrayFilter(consequence_field, conditions=transcript_filters),
-            )
+            consequence_field = cls.GENE_CONSEQUENCE_FIELD if gene_ids else cls.TRANSCRIPT_CONSEQUENCE_FIELD
+            results = results.annotate(**{
+                cls.FILTERED_CONSEQUENCE_FIELD: ArrayFilter(consequence_field, conditions=transcript_filters),
+            })
             transcript_q = Q(filtered_transcript_consequences__not_empty=True)
             if filter_q:
                 filter_q |= transcript_q
@@ -339,15 +345,14 @@ class AnnotationsQuerySet(QuerySet):
         return cls._clinvar_filter_q(clinvar_path_filters, _get_range_q=_get_range_q) if clinvar_path_filters else None
 
     def explode_gene_id(self):
-        #  TODO magic constants
-        consequence_field = 'gene_consequences' if 'gene_consequences' in self.query.annotations else 'sorted_transcript_consequences'
+        consequence_field = self.GENE_CONSEQUENCE_FIELD if self.GENE_CONSEQUENCE_FIELD in self.query.annotations else self.TRANSCRIPT_CONSEQUENCE_FIELD
         results = self.annotate(
             gene_id=ArrayJoin(ArrayDistinct(ArrayMap(consequence_field, mapped_expression='x.geneId')), output_field=models.StringField())
         )
-        if 'filtered_transcript_consequences' in results.query.annotations:
-            results = results.annotate(filtered_transcript_consequences=ArrayFilter(
-                'filtered_transcript_consequences', conditions=[{'geneId': ('selectedGeneId', '{field} = {value}')}],
-            ))
+        if self.FILTERED_CONSEQUENCE_FIELD in results.query.annotations:
+            results = results.annotate(**{self.FILTERED_CONSEQUENCE_FIELD: ArrayFilter(
+                self.FILTERED_CONSEQUENCE_FIELD, conditions=[{'geneId': ('selectedGeneId', '{field} = {value}')}],
+            )})
             filter_q = Q(filtered_transcript_consequences__not_empty=True)
             if 'passes_annotation' in results.query.annotations:
                 filter_q |= Q(passes_annotation=True)
