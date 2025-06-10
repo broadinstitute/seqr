@@ -6,7 +6,7 @@ from django.db.models.expressions import Col
 from django.db.models.sql.constants import INNER
 
 from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocksDB, Join
-from clickhouse_search.backend.fields import NestedField, UInt64FieldDeltaCodecField, NamedTupleField
+from clickhouse_search.backend.fields import Enum8Field, NestedField, UInt64FieldDeltaCodecField, NamedTupleField
 from clickhouse_search.backend.functions import ArrayFilter, ArrayDistinct, ArrayJoin, ArrayMap, CrossJoin, \
     GtStatsDictGet, SubqueryJoin, SubqueryTable, Tuple
 from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFECTED, UNAFFECTED, MALE_SEXES, \
@@ -431,7 +431,7 @@ class BaseAnnotationsSnvIndel(models.ClickhouseModel):
 
     key = models.UInt32Field(primary_key=True)
     xpos = models.UInt64Field()
-    chrom = models.Enum8Field(return_int=False, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES[:-1])])
+    chrom = Enum8Field(return_int=False, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES[:-1])])
     pos = models.UInt32Field()
     ref = models.StringField()
     alt = models.StringField()
@@ -444,7 +444,7 @@ class BaseAnnotationsSnvIndel(models.ClickhouseModel):
         ('accession', models.StringField(null=True, blank=True)),
         ('classification', models.Enum8Field(null=True, blank=True, return_int=False, choices=HGMD_CLASSES)),
     ], null_if_empty=True, rename_fields={'classification': 'class'})
-    screen_region_type = models.Enum8Field(db_column='screenRegionType', null=True, blank=True, return_int=False, choices=[(0, 'CTCF-bound'), (1, 'CTCF-only'), (2, 'DNase-H3K4me3'), (3, 'PLS'), (4, 'dELS'), (5, 'pELS'), (6, 'DNase-only'), (7, 'low-DNase')])
+    screen_region_type = Enum8Field(db_column='screenRegionType', null=True, blank=True, return_int=False, choices=[(0, 'CTCF-bound'), (1, 'CTCF-only'), (2, 'DNase-H3K4me3'), (3, 'PLS'), (4, 'dELS'), (5, 'pELS'), (6, 'DNase-only'), (7, 'low-DNase')])
     predictions = NamedTupleField(PREDICTION_FIELDS)
     populations = NamedTupleField(POPULATION_FIELDS)
     sorted_transcript_consequences = NestedField([
