@@ -90,7 +90,7 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
         results += list(result_q[:MAX_VARIANTS + 1])
     if inheritance_mode in {RECESSIVE, COMPOUND_HET}:
         result_q = _get_comp_het_results_queryset(search, sample_data, entry_values, annotation_values)
-        results += [result[1:] for result in result_q[:MAX_VARIANTS + 1]]
+        results += [list(result[1:]) for result in result_q[:MAX_VARIANTS + 1]]
 
     cache_results = get_clickhouse_cache_results(results, sort, sample_data[0]['family_guid'])
     previous_search_results.update(cache_results)
@@ -146,13 +146,16 @@ def _get_comp_het_results_queryset(search, sample_data, entry_values, annotation
 
     return results.distinct('pair_key').values_list(
         'pair_key',
-        _result_as_tuple(results, 'primary'),
-        _result_as_tuple(results, 'secondary'),
+        _result_as_tuple(results, 'primary_'),
+        _result_as_tuple(results, 'secondary_'),
     )
 
 
 def _result_as_tuple(results, field_prefix):
-    fields = {name: (name, col.target) for name, col in results.query.annotations.items() if name.startswith(field_prefix)}
+    fields = {
+        name: (name.replace(field_prefix, ''), col.target) for name, col in results.query.annotations.items()
+        if name.startswith(field_prefix)
+    }
     return Tuple(*fields.keys(), output_field=NamedTupleField(list(fields.values())))
 
 
@@ -167,43 +170,53 @@ def get_clickhouse_cache_results(results, sort, family_guid):
 
 
 def format_clickhouse_results(results, **kwargs):
-    keys_with_transcripts = [variant['key'] for variant in results if variant[TRANSCRIPT_CONSEQUENCES_FIELD]]
+    keys_with_transcripts = {
+        variant['key'] for result in results for variant in (result if isinstance(result, list) else [result])
+    }
     transcripts_by_key = dict(
         TranscriptsSnvIndel.objects.filter(key__in=keys_with_transcripts).values_list('key', 'transcripts')
     )
 
     formatted_results = []
     for variant in results:
-        transcripts = transcripts_by_key.get(variant['key'], {})
-        formatted_variant = {
-            **variant,
-            'transcripts': transcripts,
-        }
-        # pop sortedTranscriptConsequences from the formatted result and not the original result to ensure the full value is cached properly
-        sorted_minimal_transcripts = formatted_variant.pop(TRANSCRIPT_CONSEQUENCES_FIELD)
-        selected_gene_id = formatted_variant.pop(SELECTED_GENE_FIELD, None)
-        selected_transcript = formatted_variant.pop(SELECTED_TRANSCRIPT_FIELD, None)
-        main_transcript_id = None
-        selected_main_transcript_id = None
-        if sorted_minimal_transcripts:
-            main_transcript_id = next(
-                t['transcriptId'] for t in transcripts[sorted_minimal_transcripts[0]['geneId']]
-                if t['transcriptRank'] == 0
-            )
-        if selected_transcript:
-            selected_main_transcript_id = next(
-                t['transcriptId'] for t in transcripts[selected_transcript['geneId']]
-                if _is_matched_minimal_transcript(t, selected_transcript)
-            )
-        elif selected_gene_id:
-            selected_main_transcript_id = transcripts[selected_gene_id][0]['transcriptId']
-        formatted_results.append({
-            **formatted_variant,
-            'mainTranscriptId': main_transcript_id,
-            'selectedMainTranscriptId': None if selected_main_transcript_id == main_transcript_id else selected_main_transcript_id,
-        })
+        if isinstance(variant, list):
+            formatted_result = [_format_variant(v, transcripts_by_key) for v in variant]
+        else:
+            formatted_result = _format_variant(variant, transcripts_by_key)
+        formatted_results.append(formatted_result)
 
     return formatted_results
+
+
+def _format_variant(variant, transcripts_by_key):
+    transcripts = transcripts_by_key.get(variant['key'], {})
+    formatted_variant = {
+        **variant,
+        'transcripts': transcripts,
+    }
+    # pop sortedTranscriptConsequences from the formatted result and not the original result to ensure the full value is cached properly
+    sorted_minimal_transcripts = formatted_variant.pop(TRANSCRIPT_CONSEQUENCES_FIELD)
+    selected_gene_id = formatted_variant.pop(SELECTED_GENE_FIELD, None)
+    selected_transcript = formatted_variant.pop(SELECTED_TRANSCRIPT_FIELD, None)
+    main_transcript_id = None
+    selected_main_transcript_id = None
+    if sorted_minimal_transcripts:
+        main_transcript_id = next(
+            t['transcriptId'] for t in transcripts[sorted_minimal_transcripts[0]['geneId']]
+            if t['transcriptRank'] == 0
+        )
+    if selected_transcript:
+        selected_main_transcript_id = next(
+            t['transcriptId'] for t in transcripts[selected_transcript['geneId']]
+            if _is_matched_minimal_transcript(t, selected_transcript)
+        )
+    elif selected_gene_id:
+        selected_main_transcript_id = transcripts[selected_gene_id][0]['transcriptId']
+    return {
+        **formatted_variant,
+        'mainTranscriptId': main_transcript_id,
+        'selectedMainTranscriptId': None if selected_main_transcript_id == main_transcript_id else selected_main_transcript_id,
+    }
 
 
 def _is_matched_minimal_transcript(transcript, minimal_transcript):
