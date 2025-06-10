@@ -106,7 +106,7 @@ def _get_search_results_queryset(search, sample_data, entry_values, annotation_v
     )
     results = AnnotationsSnvIndel.objects.subquery_join(entries).search(**search)
 
-    consequence_values = {**annotation_values}
+    consequence_values = {}
     for field, value in SELECTED_CONSEQUENCE_VALUES.items():
         if field in results.query.annotations:
             consequence_values.update(value)
@@ -116,6 +116,7 @@ def _get_search_results_queryset(search, sample_data, entry_values, annotation_v
         *ENTRY_FIELDS,
         *entry_values.keys(),
         **annotation_values,
+        **consequence_values,
     ).annotate(**ADDITIONAL_ANNOTATION_VALUES)
 
 
@@ -130,15 +131,13 @@ def _get_comp_het_results_queryset(search, sample_data, entry_values, annotation
     secondary_q = AnnotationsSnvIndel.objects.subquery_join(entries).search(
         **secondary_search).explode_gene_id(f'secondary_{SELECTED_GENE_FIELD}')
 
-    annotation_values[SELECTED_GENE_FIELD] = F('gene_id')
-    if 'filtered_transcript_consequences' in primary_q.query.annotations:
-        annotation_values.update(SELECTED_CONSEQUENCE_VALUES['filtered_transcript_consequences'])
-
     results = AnnotationsSnvIndel.objects.cross_join(
         query=primary_q,  alias='primary', join_query=secondary_q, join_alias='secondary',
-        select_fields=[*ANNOTATION_FIELDS, *ENTRY_FIELDS, *entry_values.keys()], select_values={
+        select_fields=[*ANNOTATION_FIELDS, *ENTRY_FIELDS, *entry_values.keys(), SELECTED_GENE_FIELD], select_values={
             **annotation_values,
             **ADDITIONAL_ANNOTATION_VALUES,
+            **(SELECTED_CONSEQUENCE_VALUES['filtered_transcript_consequences']
+               if 'filtered_transcript_consequences' in primary_q.query.annotations else {}),
         }
     )
     results = results.annotate(

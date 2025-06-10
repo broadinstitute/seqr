@@ -353,7 +353,7 @@ class AnnotationsQuerySet(QuerySet):
     def explode_gene_id(self, gene_id_key):
         consequence_field = self.GENE_CONSEQUENCE_FIELD if self.GENE_CONSEQUENCE_FIELD in self.query.annotations else self.TRANSCRIPT_CONSEQUENCE_FIELD
         results = self.annotate(
-            gene_id=ArrayJoin(ArrayDistinct(ArrayMap(consequence_field, mapped_expression='x.geneId')), output_field=models.StringField())
+            selectedGeneId=ArrayJoin(ArrayDistinct(ArrayMap(consequence_field, mapped_expression='x.geneId')), output_field=models.StringField())
         )
         if self.FILTERED_CONSEQUENCE_FIELD in results.query.annotations:
             results = results.annotate(**{self.FILTERED_CONSEQUENCE_FIELD: ArrayFilter(
