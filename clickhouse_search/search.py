@@ -123,10 +123,6 @@ def _get_search_results_queryset(search, sample_data, entry_values, annotation_v
 
 
 def _get_comp_het_results_queryset(search, sample_data, entry_values, annotation_values):
-    compound_het_search = {**search, 'inheritance_mode': COMPOUND_HET}
-    annotations_secondary = search.get('annotations_secondary')
-    secondary_search = {**compound_het_search, 'annotations': annotations_secondary} if annotations_secondary else compound_het_search
-
     carriers = [f"'{s['sample_id']}'" for s in sample_data[0]['samples'] if s['affected'] == UNAFFECTED]
     if carriers:
         entry_values['carriers'] = ArrayMap(
@@ -137,9 +133,15 @@ def _get_comp_het_results_queryset(search, sample_data, entry_values, annotation
             mapped_expression='x.sampleId',
         )
 
-    entries = EntriesSnvIndel.objects.search(sample_data, **search).values(*ENTRY_INTERMEDIATE_FIELDS, **entry_values)
+    entries = EntriesSnvIndel.objects.search(
+        sample_data, **{**search, 'inheritance_mode': COMPOUND_HET},
+    ).values(*ENTRY_INTERMEDIATE_FIELDS, **entry_values)
+
     primary_q = AnnotationsSnvIndel.objects.subquery_join(entries).search(
         **search).explode_gene_id(f'primary_{SELECTED_GENE_FIELD}')
+
+    annotations_secondary = search.get('annotations_secondary')
+    secondary_search = {**search, 'annotations': annotations_secondary} if annotations_secondary else search
     secondary_q = AnnotationsSnvIndel.objects.subquery_join(entries).search(
         **secondary_search).explode_gene_id(f'secondary_{SELECTED_GENE_FIELD}')
 
