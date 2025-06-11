@@ -79,7 +79,7 @@ class AnnotationsQuerySet(QuerySet):
     GENE_CONSEQUENCE_FIELD = 'gene_consequences'
     FILTERED_CONSEQUENCE_FIELD = 'filtered_transcript_consequences'
 
-    def subquery_join(self, subquery, join_key='key'):
+    def subquery_join(self, subquery, join_key='key', alias=None):
         #  Add key to intermediate select if not already present
         join_field = next(field for field in subquery.model._meta.fields if field.name == join_key)
         if join_key not in subquery.query.values_select:
@@ -87,7 +87,7 @@ class AnnotationsQuerySet(QuerySet):
             subquery.query.select = tuple([Col(subquery.model._meta.db_table, join_field), *subquery.query.select])
 
         # Add the join operation to the query
-        table = SubqueryTable(subquery)
+        table = SubqueryTable(subquery, alias=alias)
         parent_alias = self.query.get_initial_alias()
         self.query.join(SubqueryJoin(
             table_name=table.table_alias,
