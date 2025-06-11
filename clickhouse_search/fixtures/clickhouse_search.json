@@ -1,6 +1,6 @@
 [
 {
-    "model": "clickhouse_search.annotationssnvindel",
+    "model": "clickhouse_search.annotationsgrch38snvindel",
     "pk": 1,
     "fields": {
       "key": 1,
@@ -28,7 +28,7 @@
       "sorted_regulatory_feature_consequences": []
     }
 }, {
-    "model": "clickhouse_search.annotationssnvindel",
+    "model": "clickhouse_search.annotationsgrch38snvindel",
     "pk": 2,
     "fields": {
       "key": 2,
@@ -64,7 +64,7 @@
       "sorted_regulatory_feature_consequences": []
     }
 }, {
-    "model": "clickhouse_search.annotationssnvindel",
+    "model": "clickhouse_search.annotationsgrch38snvindel",
     "pk": 3,
     "fields": {
       "key": 3,
@@ -99,7 +99,7 @@
       ]
     }
 }, {
-    "model": "clickhouse_search.annotationssnvindel",
+    "model": "clickhouse_search.annotationsgrch38snvindel",
     "pk": 4,
     "fields": {
       "key": 4,
@@ -136,7 +136,7 @@
       ]
     }
 }, {
-    "model": "clickhouse_search.annotationssnvindel",
+    "model": "clickhouse_search.annotationsgrch38snvindel",
     "pk": 5,
     "fields": {
       "key": 5,
@@ -164,7 +164,7 @@
       "sorted_regulatory_feature_consequences": []
     }
 }, {
-    "model": "clickhouse_search.annotationssnvindel",
+    "model": "clickhouse_search.annotationsgrch38snvindel",
     "pk": 6,
     "fields": {
       "key": 6,
@@ -192,7 +192,7 @@
       "sorted_regulatory_feature_consequences": []
     }
 }, {
-    "model": "clickhouse_search.clinvar",
+    "model": "clickhouse_search.clinvargrch38snvindel",
     "pk": 1,
     "fields": {
       "key": 1,
@@ -205,7 +205,7 @@
       "pathogenicity": "Likely_pathogenic"
     }
 }, {
-    "model": "clickhouse_search.clinvar",
+    "model": "clickhouse_search.clinvargrch38snvindel",
     "pk": 2,
     "fields": {
       "key": 2,
@@ -235,7 +235,7 @@
       "pathogenicity": "Conflicting_classifications_of_pathogenicity"
     }
 }, {
-    "model": "clickhouse_search.entriessnvindel",
+    "model": "clickhouse_search.entriesgrch38snvindel",
     "pk": 1,
     "fields": {
       "key": 1,
@@ -253,7 +253,7 @@
       ]
     }
 }, {
-    "model": "clickhouse_search.entriessnvindel",
+    "model": "clickhouse_search.entriesgrch38snvindel",
     "pk": 2,
     "fields": {
       "key": 2,
@@ -271,7 +271,7 @@
       ]
     }
 }, {
-    "model": "clickhouse_search.entriessnvindel",
+    "model": "clickhouse_search.entriesgrch38snvindel",
     "pk": 3,
     "fields": {
       "key": 3,
@@ -289,7 +289,7 @@
       ]
     }
 }, {
-    "model": "clickhouse_search.entriessnvindel",
+    "model": "clickhouse_search.entriesgrch38snvindel",
     "pk": 4,
     "fields": {
       "key": 4,
@@ -309,7 +309,7 @@
       ]
     }
 }, {
-    "model": "clickhouse_search.entriessnvindel",
+    "model": "clickhouse_search.entriesgrch38snvindel",
     "pk": 5,
     "fields": {
       "key": 3,
@@ -326,7 +326,7 @@
       ]
     }
 }, {
-    "model": "clickhouse_search.entriessnvindel",
+    "model": "clickhouse_search.entriesgrch38snvindel",
     "pk": 6,
     "fields": {
       "key": 1,
@@ -342,7 +342,7 @@
       ]
     }
 }, {
-    "model": "clickhouse_search.entriessnvindel",
+    "model": "clickhouse_search.entriesgrch38snvindel",
     "pk": 7,
     "fields": {
       "key": 2,
@@ -358,7 +358,7 @@
       ]
     }
 }, {
-    "model": "clickhouse_search.entriessnvindel",
+    "model": "clickhouse_search.entriesgrch38snvindel",
     "pk": 8,
     "fields": {
       "key": 5,
@@ -374,7 +374,7 @@
       ]
     }
 }, {
-    "model": "clickhouse_search.entriessnvindel",
+    "model": "clickhouse_search.entriesgrch38snvindel",
     "pk": 9,
     "fields": {
       "key": 1,
@@ -390,7 +390,7 @@
       ]
     }
 }, {
-    "model": "clickhouse_search.entriessnvindel",
+    "model": "clickhouse_search.entriesgrch38snvindel",
     "pk": 10,
     "fields": {
       "key": 2,
@@ -406,7 +406,7 @@
       ]
     }
 }, {
-    "model": "clickhouse_search.entriessnvindel",
+    "model": "clickhouse_search.entriesgrch38snvindel",
     "pk": 11,
     "fields": {
       "key": 5,
