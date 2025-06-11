@@ -113,22 +113,25 @@ class AnnotationsQuerySet(QuerySet):
 
         return annotations
 
-    def cross_join(self, query, alias, join_query, join_alias, select_fields=None, select_values=None):
-        query = query.values(
-            **{f'{alias}_{field}': F(field) for field in select_fields or []},
-            **{f'{alias}_{field}': value for field, value in (select_values or {}).items()},
-        )
-        join_query = join_query.values(
-            **{f'{join_alias}_{field}': F(field) for field in select_fields or []},
-            **{f'{join_alias}_{field}': value for field, value in (select_values or {}).items()},
-        )
-
+    def cross_join(self, query, alias, join_query, join_alias, select_fields=None, select_values=None, conditional_selects=None):
+        query = self._get_join_query_values(query, alias, select_fields, select_values, conditional_selects)
+        join_query = self._get_join_query_values(join_query, join_alias, select_fields, select_values, conditional_selects)
         self.query.join(CrossJoin(query, alias, join_query, join_alias))
 
         annotations = self._get_subquery_annotations(query, alias)
         annotations.update(self._get_subquery_annotations(join_query, join_alias))
 
         return self.annotate(**annotations)
+
+    def _get_join_query_values(self, query, alias, select_fields, select_values, conditional_selects):
+        query_select = {**(select_values or {})}
+        for field, selects in (conditional_selects or {}).items():
+            if query.has_annotation(field):
+                query_select.update(selects)
+        return query.values(
+            **{f'{alias}_{field}': F(field) for field in select_fields or []},
+            **{f'{alias}_{field}': value for field, value in query_select.items()},
+        )
 
     def search(self, parsed_locus=None, **kwargs):
         parsed_locus = parsed_locus or {}

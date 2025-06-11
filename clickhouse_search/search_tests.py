@@ -958,26 +958,30 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         self._assert_expected_search(
             [[VARIANT3, VARIANT4]], inheritance_mode='recessive',
             annotations=screen_annotations, annotations_secondary=annotations_2, cached_variant_fields=[
-                [{'selectedGeneId':  'ENSG00000097046'}, {'selectedGeneId':  'ENSG00000097046'}],
+                [{'selectedGeneId':  'ENSG00000097046', 'selectedTranscript': CACHED_VARIANTS_BY_KEY[3]['sortedTranscriptConsequences'][0]}, {'selectedGeneId':  'ENSG00000097046'}],
             ],
         )
 
-        #  TODO failing variant 3 no selected transcript
         self._assert_expected_search(
             [VARIANT2, [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3, VARIANT4]], inheritance_mode='recessive',
             annotations=screen_annotations, annotations_secondary=selected_transcript_annotations,
             pathogenicity=pathogenicity, cached_variant_fields=[
-                {'selectedTranscript': None},
-                [{'selectedGeneId':  'ENSG00000097046', 'selectedTranscript': CACHED_VARIANTS_BY_KEY[3]['sortedTranscriptConsequences'][3]}, {'selectedGeneId':  'ENSG00000097046'}],
+                {}, [
+                    {'selectedGeneId':  'ENSG00000097046', 'selectedTranscript': CACHED_VARIANTS_BY_KEY[3]['sortedTranscriptConsequences'][3]},
+                    {'selectedGeneId':  'ENSG00000097046'},
+                ],
             ],
         )
 
+        self.maxDiff = None
         self._assert_expected_search(
             [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, [VARIANT3, VARIANT4]],
             annotations={**selected_transcript_annotations, **screen_annotations}, annotations_secondary=annotations_2,
             inheritance_mode='recessive', cached_variant_fields=[
-                {'selectedTranscript': CACHED_VARIANTS_BY_KEY[2]['sortedTranscriptConsequences'][5]},
-                [{'selectedGeneId': 'ENSG00000097046'}, {'selectedGeneId': 'ENSG00000097046'}],
+                {'selectedTranscript': CACHED_VARIANTS_BY_KEY[2]['sortedTranscriptConsequences'][5]}, [
+                    {'selectedGeneId': 'ENSG00000097046', 'selectedTranscript': CACHED_VARIANTS_BY_KEY[3]['sortedTranscriptConsequences'][0]},
+                    {'selectedGeneId': 'ENSG00000097046', 'selectedTranscript': None},
+                ],
             ],
         )
 

@@ -150,9 +150,9 @@ def _get_comp_het_results_queryset(search, sample_data, entry_values, annotation
         select_fields=[*ANNOTATION_FIELDS, *ENTRY_FIELDS, *entry_values.keys(), SELECTED_GENE_FIELD], select_values={
             **annotation_values,
             **ADDITIONAL_ANNOTATION_VALUES,
-            **(SELECTED_CONSEQUENCE_VALUES['filtered_transcript_consequences']
-               if primary_q.has_annotation('filtered_transcript_consequences') else {}),
-        }
+        }, conditional_selects={
+            'filtered_transcript_consequences': SELECTED_CONSEQUENCE_VALUES['filtered_transcript_consequences'],
+        },
     )
     results = results.filter(
         primary_selectedGeneId=F('secondary_selectedGeneId')
