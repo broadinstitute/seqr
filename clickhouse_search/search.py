@@ -44,10 +44,10 @@ ENTRY_FIELDS = ['clinvar']
 ENTRY_INTERMEDIATE_FIELDS = [SEQR_POPULATION_KEY, 'clinvar_key'] + ENTRY_FIELDS
 
 GENOTYPE_FIELDS = OrderedDict({
-    'x.gt::Nullable(Int8)': ('numAlt', models.Int8Field(null=True, blank=True)),
     'family_guid': ('familyGuid', models.StringField()),
     'sample_type': ('sampleType', models.StringField()),
     'filters': ('filters', models.ArrayField(models.StringField())),
+    'x.gt::Nullable(Int8)': ('numAlt', models.Int8Field(null=True, blank=True)),
     **{f'x.{column[0]}': column for column in EntriesSnvIndel.CALL_FIELDS if column[0] != 'gt'}
 })
 

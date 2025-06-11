@@ -14,11 +14,6 @@ class ArrayDistinct(Func):
     function = 'arrayDistinct'
 
 
-class ArrayFilter(Func):
-    function = 'arrayFilter'
-    template = "%(function)s(x -> %(filter_expression)s, %(expressions)s)"
-
-
 class ArrayIntersect(Func):
     function = 'arrayIntersect'
 

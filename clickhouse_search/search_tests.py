@@ -1212,7 +1212,6 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
                 [{'selectedGeneId':  'ENSG00000097046'}, {'selectedGeneId':  'ENSG00000097046'}], {},
             ],
         )
-#          TODO test_sort
 
 #     def test_multi_data_type_comp_het_sort(self):
 #         self._assert_expected_search(
