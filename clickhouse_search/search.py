@@ -110,7 +110,7 @@ def _get_search_results_queryset(search, sample_data, entry_values, annotation_v
 
     consequence_values = {}
     for field, value in SELECTED_CONSEQUENCE_VALUES.items():
-        if field in results.query.annotations:
+        if results.has_annotation(field):
             consequence_values.update(value)
 
     return results.values(
@@ -149,7 +149,7 @@ def _get_comp_het_results_queryset(search, sample_data, entry_values, annotation
             **annotation_values,
             **ADDITIONAL_ANNOTATION_VALUES,
             **(SELECTED_CONSEQUENCE_VALUES['filtered_transcript_consequences']
-               if 'filtered_transcript_consequences' in primary_q.query.annotations else {}),
+               if primary_q.has_annotation('filtered_transcript_consequences') else {}),
         }
     )
     results = results.filter(
@@ -174,7 +174,7 @@ def _result_as_tuple(results, field_prefix):
         name: (name.replace(field_prefix, ''), col.target) for name, col in results.query.annotations.items()
         if name.startswith(field_prefix) and not name.endswith('carriers')
     }
-    return Tuple(*fields.keys(), output_field=NamedTupleField(list(fields.values())))  # TODO Tuple func includes output field construction
+    return Tuple(*fields.keys(), output_field=NamedTupleField(list(fields.values())))
 
 
 def get_clickhouse_cache_results(results, sort, family_guid):

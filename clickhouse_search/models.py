@@ -351,19 +351,22 @@ class AnnotationsQuerySet(QuerySet):
         return cls._clinvar_filter_q(clinvar_path_filters, _get_range_q=_get_range_q) if clinvar_path_filters else None
 
     def explode_gene_id(self, gene_id_key):
-        consequence_field = self.GENE_CONSEQUENCE_FIELD if self.GENE_CONSEQUENCE_FIELD in self.query.annotations else self.TRANSCRIPT_CONSEQUENCE_FIELD
+        consequence_field = self.GENE_CONSEQUENCE_FIELD if self.has_annotation(self.GENE_CONSEQUENCE_FIELD) else self.TRANSCRIPT_CONSEQUENCE_FIELD
         results = self.annotate(
             selectedGeneId=ArrayJoin(ArrayDistinct(ArrayMap(consequence_field, mapped_expression='x.geneId')), output_field=models.StringField())
         )
-        if self.FILTERED_CONSEQUENCE_FIELD in results.query.annotations:
+        if self.has_annotation(self.FILTERED_CONSEQUENCE_FIELD):
             results = results.annotate(**{self.FILTERED_CONSEQUENCE_FIELD: ArrayFilter(
                 self.FILTERED_CONSEQUENCE_FIELD, conditions=[{'geneId': (gene_id_key, '{field} = {value}')}],
             )})
             filter_q = Q(filtered_transcript_consequences__not_empty=True)
-            if 'passes_annotation' in results.query.annotations:  # TODO queryset helper
+            if self.has_annotation('passes_annotation'):
                 filter_q |= Q(passes_annotation=True)
             results = results.filter(filter_q)
         return results
+
+    def has_annotation(self, field):
+        return field in self.query.annotations
 
 
 class BaseAnnotationsSnvIndel(models.ClickhouseModel):
