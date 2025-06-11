@@ -137,7 +137,7 @@ pytz==2022.7.1
     #   django-notifications-hq
 redis==4.5.4
     # via -r requirements.in
-requests==2.32.2
+requests==2.32.4
     # via
     #   -r requirements.in
     #   django-anymail
