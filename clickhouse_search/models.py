@@ -330,7 +330,7 @@ class BaseAnnotations(models.ClickhouseModel):
     class Meta:
         abstract = True
 
-class BaseAnnotationsSnvIndel(BaseAnnotations):
+class BaseAnnotationsGRCh37SnvIndel(BaseAnnotations):
     POPULATION_FIELDS = [
         ('exac', NamedTupleField([
             ('ac', models.UInt32Field()),
@@ -404,16 +404,28 @@ class BaseAnnotationsSnvIndel(BaseAnnotations):
         abstract = True
 
 
-class BaseAnnotationsGRCh38SnvIndel(BaseAnnotationsSnvIndel):
+class AnnotationsGRCh37SnvIndel(BaseAnnotationsGRCh37SnvIndel):
+
+    class Meta:
+        db_table = 'GRCh37/SNV_INDEL/annotations_memory'
+        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_IN_MEMORY_DIR}/GRCh37/SNV_INDEL/annotations', primary_key='key', flatten_nested=0)
+
+class AnnotationsDiskGRCh37SnvIndel(BaseAnnotationsGRCh37SnvIndel):
+
+    class Meta:
+        db_table = 'GRCh37/SNV_INDEL/annotations_disk'
+        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh37/SNV_INDEL/annotations', primary_key='key', flatten_nested=0)
+
+class BaseAnnotationsSnvIndel(BaseAnnotationsGRCh37SnvIndel):
     PREDICTION_FIELDS = sorted([
         ('gnomad_noncoding', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        *BaseAnnotationsSnvIndel.PREDICTION_FIELDS,
+        *BaseAnnotationsGRCh37SnvIndel.PREDICTION_FIELDS,
     ])
     SORTED_TRANSCRIPT_CONSQUENCES_FIELDS = sorted([
         ('alphamissensePathogenicity', models.DecimalField(null=True, blank=True, max_digits=9, decimal_places=5)),
         ('extendedIntronicSpliceRegionVariant', models.BoolField(null=True, blank=True)),
         ('fiveutrConsequence', models.Enum8Field(null=True, blank=True, return_int=False, choices=[(1, '5_prime_UTR_premature_start_codon_gain_variant'), (2, '5_prime_UTR_premature_start_codon_loss_variant'), (3, '5_prime_UTR_stop_codon_gain_variant'), (4, '5_prime_UTR_stop_codon_loss_variant'), (5, '5_prime_UTR_uORF_frameshift_variant')])),
-        *BaseAnnotationsSnvIndel.SORTED_TRANSCRIPT_CONSQUENCES_FIELDS,
+        *BaseAnnotationsGRCh37SnvIndel.SORTED_TRANSCRIPT_CONSQUENCES_FIELDS,
     ])
 
     objects = AnnotationsQuerySet.as_manager()
@@ -434,25 +446,13 @@ class BaseAnnotationsGRCh38SnvIndel(BaseAnnotationsSnvIndel):
     class Meta:
         abstract = True
 
-class AnnotationsGRCh37SnvIndel(BaseAnnotationsSnvIndel):
-
-    class Meta:
-        db_table = 'GRCh37/SNV_INDEL/annotations_memory'
-        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_IN_MEMORY_DIR}/GRCh37/SNV_INDEL/annotations', primary_key='key', flatten_nested=0)
-
-class AnnotationsDiskGRCh37SnvIndel(BaseAnnotationsSnvIndel):
-
-    class Meta:
-        db_table = 'GRCh37/SNV_INDEL/annotations_disk'
-        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh37/SNV_INDEL/annotations', primary_key='key', flatten_nested=0)
-
-class AnnotationsGRCh38SnvIndel(BaseAnnotationsGRCh38SnvIndel):
+class AnnotationsSnvIndel(BaseAnnotationsSnvIndel):
 
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/annotations_memory'
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_IN_MEMORY_DIR}/GRCh38/SNV_INDEL/annotations', primary_key='key', flatten_nested=0)
 
-class AnnotationsDiskGRCh38SnvIndel(BaseAnnotationsGRCh38SnvIndel):
+class AnnotationsDiskSnvIndel(BaseAnnotationsSnvIndel):
 
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/annotations_disk'
@@ -503,8 +503,8 @@ class ClinvarGRCh37SnvIndel(BaseClinvar):
     class Meta(BaseClinvar.Meta):
         db_table = 'GRCh37/SNV_INDEL/clinvar'
 
-class ClinvarGRCh38SnvIndel(BaseClinvar):
-    key = ForeignKey('EntriesGRCh38SnvIndel', db_column='key', related_name='clinvar_join', primary_key=True, on_delete=PROTECT)
+class ClinvarSnvIndel(BaseClinvar):
+    key = ForeignKey('EntriesSnvIndel', db_column='key', related_name='clinvar_join', primary_key=True, on_delete=PROTECT)
     class Meta(BaseClinvar.Meta):
         db_table = 'GRCh38/SNV_INDEL/clinvar'
 
@@ -527,7 +527,7 @@ class EntriesManager(Manager):
 
     CLINVAR_FIELDS = OrderedDict({
         f'clinvar_join__{field.name}': (field.db_column or field.name, field)
-        for field in reversed(ClinvarGRCh38SnvIndel._meta.local_fields) if field.name != 'key'
+        for field in reversed(ClinvarSnvIndel._meta.local_fields) if field.name != 'key'
     })
 
     def search(self, sample_data, parsed_locus=None, freqs=None,  **kwargs):
@@ -702,11 +702,11 @@ class EntriesGRCh37SnvIndel(BaseEntriesSnvIndel):
     class Meta(BaseEntriesSnvIndel.Meta):
         db_table = 'GRCh37/SNV_INDEL/entries'
 
-class EntriesGRCh38SnvIndel(BaseEntriesSnvIndel):
+class EntriesSnvIndel(BaseEntriesSnvIndel):
     objects = EntriesManager()
 
     # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
-    key = ForeignKey('AnnotationsGRCh38SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = ForeignKey('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
 
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/entries'
@@ -755,8 +755,8 @@ class TranscriptsGRCh37SnvIndel(BaseTranscriptsSnvIndel):
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh37/SNV_INDEL/transcripts', primary_key='key', flatten_nested=0)
 
 
-class TranscriptsGRCh38SnvIndel(BaseTranscriptsSnvIndel):
-    key = OneToOneField('AnnotationsGRCh38SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+class TranscriptsSnvIndel(BaseTranscriptsSnvIndel):
+    key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
     transcripts = NestedField(sorted([
         ('alphamissense', NamedTupleField([
             ('pathogenicity', models.DecimalField(null=True, blank=True, max_digits=9, decimal_places=5)),

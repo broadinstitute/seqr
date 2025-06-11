@@ -1,13 +1,13 @@
 [
 {
-    "model": "clickhouse_search.transcriptsgrch38snvindel",
+    "model": "clickhouse_search.transcriptssnvindel",
     "pk": 1,
     "fields": {
       "key": 1,
       "transcripts": []
     }
 }, {
-    "model": "clickhouse_search.transcriptsgrch38snvindel",
+    "model": "clickhouse_search.transcriptssnvindel",
     "pk": 2,
     "fields": {
       "key": 2,
@@ -64,7 +64,7 @@
       ]
     }
 }, {
-    "model": "clickhouse_search.transcriptsgrch38snvindel",
+    "model": "clickhouse_search.transcriptssnvindel",
     "pk": 3,
     "fields": {
       "key": 3,
@@ -100,7 +100,7 @@
       ]
     }
 }, {
-    "model": "clickhouse_search.transcriptsgrch38snvindel",
+    "model": "clickhouse_search.transcriptssnvindel",
     "pk": 4,
     "fields": {
       "key": 4,
@@ -129,14 +129,14 @@
       ]
     }
 }, {
-    "model": "clickhouse_search.transcriptsgrch38snvindel",
+    "model": "clickhouse_search.transcriptssnvindel",
     "pk": 5,
     "fields": {
       "key": 5,
       "transcripts": []
     }
 }, {
-    "model": "clickhouse_search.transcriptsgrch38snvindel",
+    "model": "clickhouse_search.transcriptssnvindel",
     "pk": 6,
     "fields": {
       "key": 6,
