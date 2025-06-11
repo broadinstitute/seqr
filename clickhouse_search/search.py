@@ -16,26 +16,30 @@ from settings import CLICKHOUSE_SERVICE_HOSTNAME
 
 logger = SeqrLogger(__name__)
 
-CORE_ENTRIES_FIELDS = ['key', 'xpos']
-
 SEQR_POPULATION_KEY = 'seqrPop'
 
 ANNOTATION_VALUES = {
-    field.db_column or field.name: F(f'key__{field.name}') for field in AnnotationsSnvIndel._meta.local_fields
-    if field.name not in CORE_ENTRIES_FIELDS
+    field.db_column: F(field.name) for field in AnnotationsSnvIndel._meta.local_fields if field.db_column and field.name != field.db_column
 }
-ANNOTATION_VALUES['populations'] = TupleConcat(
-    ANNOTATION_VALUES['populations'], Tuple(SEQR_POPULATION_KEY),
-    output_field=NamedTupleField([
-        *AnnotationsSnvIndel.POPULATION_FIELDS,
-        ('seqr', GtStatsDictGet.output_field),
-    ]),
-)
+ADDITIONAL_ANNOTATION_VALUES = {
+    'populations': TupleConcat(
+        F('populations'), Tuple(SEQR_POPULATION_KEY),
+        output_field=NamedTupleField([
+            *AnnotationsSnvIndel.POPULATION_FIELDS,
+            ('seqr', GtStatsDictGet.output_field),
+        ]),
+    ),
+}
+ANNOTATION_FIELDS = [
+    field.name for field in AnnotationsSnvIndel._meta.local_fields
+    if ((field.db_column or field.name) not in ANNOTATION_VALUES) and field.name not in ADDITIONAL_ANNOTATION_VALUES
+]
 
-CLINVAR_FIELDS = OrderedDict({
-    f'key__clinvar__{field.name}': (field.db_column or field.name, field)
-    for field in Clinvar._meta.local_fields if field.name not in CORE_ENTRIES_FIELDS
-})
+ENTRY_VALUES = {
+    'familyGuids': Array('family_guid'),
+}
+ENTRY_FIELDS = ['clinvar']
+ENTRY_INTERMEDIATE_FIELDS = [SEQR_POPULATION_KEY, 'clinvar_key'] + ENTRY_FIELDS
 
 GENOTYPE_FIELDS = OrderedDict({
     'family_guid': ('familyGuid', models.StringField()),
@@ -65,27 +69,34 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
     sample_data = _get_sample_data(samples)
     logger.info(f'Loading {Sample.DATASET_TYPE_VARIANT_CALLS} data for {len(sample_data)} families', user)
 
-    entries = EntriesSnvIndel.objects.search(sample_data, **search)
-
-    consequence_values = {}
-    for field, value in SELECTED_CONSEQUENCE_VALUES.items():
-        if field in entries.query.annotations:
-            consequence_values.update(value)
-
-    results = entries.values(
-        *CORE_ENTRIES_FIELDS,
-        familyGuids=Array('family_guid'),
-        genotypes=ArrayMap(
+    entry_values = {
+        **ENTRY_VALUES,
+        'genotypes': ArrayMap(
             'calls',
             mapped_expression=f"tuple({_get_sample_map_expression(sample_data)}[x.sampleId], {', '.join(GENOTYPE_FIELDS.keys())})",
             output_field=NestedField([('individualGuid', models.StringField()), *GENOTYPE_FIELDS.values()], group_by_key='individualGuid', flatten_groups=True)
         ),
-        clinvar=Tuple(*CLINVAR_FIELDS.keys(), output_field=NamedTupleField(list(CLINVAR_FIELDS.values()), null_if_empty=True, null_empty_arrays=True)),
+    }
+
+    entries = EntriesSnvIndel.objects.search(sample_data, **search).values(
+        *ENTRY_INTERMEDIATE_FIELDS, **entry_values,
+    )
+    results = AnnotationsSnvIndel.objects.subquery_join(entries).search(**search)
+
+    consequence_values = {}
+    for field, value in SELECTED_CONSEQUENCE_VALUES.items():
+        if field in results.query.annotations:
+            consequence_values.update(value)
+
+    results = results.values(
+        *ANNOTATION_FIELDS,
+        *ENTRY_FIELDS,
+        *entry_values.keys(),
         genomeVersion=Value(genome_version),
         liftedOverGenomeVersion=Value(_liftover_genome_version(genome_version)),
         **ANNOTATION_VALUES,
         **consequence_values,
-    )
+    ).annotate(**ADDITIONAL_ANNOTATION_VALUES)
     results = results[:MAX_VARIANTS+1]
 
     cache_results = get_clickhouse_cache_results(results, sort, sample_data[0]['family_guid'])
