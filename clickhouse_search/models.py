@@ -744,7 +744,7 @@ class BaseTranscriptsSnvIndel(BaseTranscripts):
 class TranscriptsGRCh37SnvIndel(BaseTranscriptsSnvIndel):
     key = OneToOneField('AnnotationsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
     transcripts = NestedField(
-        sorted([    
+        sorted([
         ('isLofNagnag', models.BoolField(null=True, blank=True)),
         ('lofFilters', models.ArrayField(models.StringField(null=True, blank=True))),
         *BaseTranscriptsSnvIndel.TRANSCRIPTS_FIELDS,
