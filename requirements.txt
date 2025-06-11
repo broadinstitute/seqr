@@ -28,7 +28,7 @@ defusedxml==0.7.1
     # via
     #   python3-openid
     #   social-auth-core
-django==4.2.21
+django==4.2.22
     # via
     #   -r requirements.in
     #   django-anymail
@@ -137,7 +137,7 @@ pytz==2022.7.1
     #   django-notifications-hq
 redis==4.5.4
     # via -r requirements.in
-requests==2.32.2
+requests==2.32.4
     # via
     #   -r requirements.in
     #   django-anymail
