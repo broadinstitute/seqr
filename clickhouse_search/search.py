@@ -140,7 +140,7 @@ def _get_comp_het_results_queryset(search, sample_data, entry_values, annotation
     entries = EntriesSnvIndel.objects.search(sample_data, **search).values(*ENTRY_INTERMEDIATE_FIELDS, **entry_values)
     primary_q = AnnotationsSnvIndel.objects.subquery_join(entries).search(
         **search).explode_gene_id(f'primary_{SELECTED_GENE_FIELD}')
-    secondary_q = AnnotationsSnvIndel.objects.subquery_join(entries, alias='secondary_entries').search(
+    secondary_q = AnnotationsSnvIndel.objects.subquery_join(entries).search(
         **secondary_search).explode_gene_id(f'secondary_{SELECTED_GENE_FIELD}')
 
     results = AnnotationsSnvIndel.objects.cross_join(
