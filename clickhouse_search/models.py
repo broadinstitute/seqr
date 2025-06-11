@@ -360,16 +360,9 @@ class AnnotationsQuerySet(QuerySet):
                 self.FILTERED_CONSEQUENCE_FIELD, conditions=[{'geneId': (gene_id_key, '{field} = {value}')}],
             )})
             filter_q = Q(filtered_transcript_consequences__not_empty=True)
-            if 'passes_annotation' in results.query.annotations:
+            if 'passes_annotation' in results.query.annotations:  # TODO queryset helper
                 filter_q |= Q(passes_annotation=True)
             results = results.filter(filter_q)
-        return results
-
-    def filter_compound_hets(self):
-        results = self.filter(
-            primary_selectedGeneId=F('secondary_selectedGeneId')
-        ).exclude(primary_variantId=F('secondary_variantId'))
-        # TODO filter genotype phasing
         return results
 
 

@@ -5,10 +5,12 @@ from django.db.models import F, Min, Value
 from django.db.models.functions import JSONObject
 
 from clickhouse_search.backend.fields import NestedField, NamedTupleField
-from clickhouse_search.backend.functions import Array, ArrayMap, ArraySort, GtStatsDictGet, Tuple, TupleConcat
+from clickhouse_search.backend.functions import Array, ArrayMap, ArrayFilter, ArrayIntersect, ArraySort, \
+    GtStatsDictGet, Tuple, TupleConcat
 from clickhouse_search.models import EntriesSnvIndel, AnnotationsSnvIndel, TranscriptsSnvIndel, Clinvar
 from reference_data.models import GeneConstraint, Omim, GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import PhenotypePrioritization, Sample
+from seqr.utils.search.constants import UNAFFECTED
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.search.constants import MAX_VARIANTS, XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, \
     PRIORITIZED_GENE_SORT, COMPOUND_HET, RECESSIVE
@@ -42,10 +44,10 @@ ENTRY_FIELDS = ['clinvar']
 ENTRY_INTERMEDIATE_FIELDS = [SEQR_POPULATION_KEY, 'clinvar_key'] + ENTRY_FIELDS
 
 GENOTYPE_FIELDS = OrderedDict({
+    'x.gt::Nullable(Int8)': ('numAlt', models.Int8Field(null=True, blank=True)),
     'family_guid': ('familyGuid', models.StringField()),
     'sample_type': ('sampleType', models.StringField()),
     'filters': ('filters', models.ArrayField(models.StringField())),
-    'x.gt::Nullable(Int8)': ('numAlt', models.Int8Field(null=True, blank=True)),
     **{f'x.{column[0]}': column for column in EntriesSnvIndel.CALL_FIELDS if column[0] != 'gt'}
 })
 
@@ -125,6 +127,16 @@ def _get_comp_het_results_queryset(search, sample_data, entry_values, annotation
     annotations_secondary = search.get('annotations_secondary')
     secondary_search = {**compound_het_search, 'annotations': annotations_secondary} if annotations_secondary else compound_het_search
 
+    carriers = [f"'{s['sample_id']}'" for s in sample_data[0]['samples'] if s['affected'] == UNAFFECTED]
+    if carriers:
+        entry_values['carriers'] = ArrayMap(
+            ArrayFilter('calls', conditions=[{
+                'sampleId': (", ".join(carriers), 'has([{value}], {field})'),
+                'gt': (0, '{field} > {value}'),
+            }]),
+            mapped_expression='x.sampleId',
+        )
+
     entries = EntriesSnvIndel.objects.search(sample_data, **search).values(*ENTRY_INTERMEDIATE_FIELDS, **entry_values)
     primary_q = AnnotationsSnvIndel.objects.subquery_join(entries).search(
         **search).explode_gene_id(f'primary_{SELECTED_GENE_FIELD}')
@@ -140,11 +152,17 @@ def _get_comp_het_results_queryset(search, sample_data, entry_values, annotation
                if 'filtered_transcript_consequences' in primary_q.query.annotations else {}),
         }
     )
-    results = results.annotate(
-        pair_key=ArraySort(Array('primary_key', 'secondary_key')),
-    ).filter_compound_hets()
+    results = results.filter(
+        primary_selectedGeneId=F('secondary_selectedGeneId')
+    ).exclude(primary_variantId=F('secondary_variantId'))
+    if carriers:
+        results = results.annotate(
+            unphased_carriers=ArrayIntersect('primary_carriers', 'secondary_carriers')
+        ).filter(unphased_carriers__not_empty=False)
 
-    return results.distinct('pair_key').values_list(
+    return results.annotate(
+        pair_key=ArraySort(Array('primary_key', 'secondary_key')),
+    ).distinct('pair_key').values_list(
         'pair_key',
         _result_as_tuple(results, 'primary_'),
         _result_as_tuple(results, 'secondary_'),
@@ -154,9 +172,9 @@ def _get_comp_het_results_queryset(search, sample_data, entry_values, annotation
 def _result_as_tuple(results, field_prefix):
     fields = {
         name: (name.replace(field_prefix, ''), col.target) for name, col in results.query.annotations.items()
-        if name.startswith(field_prefix)
+        if name.startswith(field_prefix) and not name.endswith('carriers')
     }
-    return Tuple(*fields.keys(), output_field=NamedTupleField(list(fields.values())))
+    return Tuple(*fields.keys(), output_field=NamedTupleField(list(fields.values())))  # TODO Tuple func includes output field construction
 
 
 def get_clickhouse_cache_results(results, sort, family_guid):

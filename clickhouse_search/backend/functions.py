@@ -14,6 +14,15 @@ class ArrayDistinct(Func):
     function = 'arrayDistinct'
 
 
+class ArrayFilter(Func):
+    function = 'arrayFilter'
+    template = "%(function)s(x -> %(filter_expression)s, %(expressions)s)"
+
+
+class ArrayIntersect(Func):
+    function = 'arrayIntersect'
+
+
 class ArrayJoin(Func):
     function = 'arrayJoin'
 
@@ -69,6 +78,7 @@ class ArrayFilter(lookups.Transform):
         return f'arrayFilter(x -> {self.conditions}, {lhs})', params
 
 
+@ArrayField.register_lookup
 @NestedField.register_lookup
 class ArrayNotEmptyTransform(lookups.Transform):
     lookup_name = "not_empty"
