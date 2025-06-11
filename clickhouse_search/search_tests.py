@@ -6,7 +6,7 @@ import os
 
 from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4, CACHED_VARIANTS_BY_KEY, \
     VARIANT_ID_SEARCH, VARIANT_IDS, LOCATION_SEARCH, GENE_IDS, SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT, \
-    SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3, \
+    SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3, COMP_HET_ALL_PASS_FILTERS, \
     SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, SELECTED_ANNOTATION_TRANSCRIPT_MULTI_FAMILY_VARIANT, MULTI_FAMILY_VARIANT
 from reference_data.models import Omim
 from seqr.models import Project
@@ -50,7 +50,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         self.search_model.search.update(search_kwargs or {})
         self.search_model.search['qualityFilter'] = quality_filter
         self.search_model.search['inheritance']['mode'] = inheritance_mode
-        if inheritance_filter:
+        if inheritance_filter is not None:
             self.search_model.search['inheritance']['filter'] = inheritance_filter
 
         variants, total = query_variants(self.results_model, user=self.user, sort=sort)
@@ -62,11 +62,20 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 
     def _assert_expected_search_cache(self, variants, total, cached_variant_fields, sort):
         cached_variants = [
-            {**CACHED_VARIANTS_BY_KEY[variant['key']], **(cached_variant_fields[i] if cached_variant_fields else {})}
+            self._get_cached_variant(variant, (cached_variant_fields[i] if cached_variant_fields else None))
             for i, variant in enumerate(variants)
         ]
         results_cache = {'all_results': cached_variants, 'total_results': total}
         self.assert_cached_results(results_cache, sort=sort)
+
+    @classmethod
+    def _get_cached_variant(cls, variant, cached_variant_fields):
+        if isinstance(variant, list):
+            return [
+                cls._get_cached_variant(v, cached_variant_fields[i] if cached_variant_fields else None)
+                for i, v in enumerate(variant)
+            ]
+        return {**CACHED_VARIANTS_BY_KEY[variant['key']], **(cached_variant_fields or {})}
 
     def test_single_family_search(self):
         with self.assertRaises(NotImplementedError):
@@ -254,14 +263,16 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             }},
         )
 
-#         inheritance_mode = 'compound_het'
-#         self._assert_expected_search(
-#             [[VARIANT3, VARIANT4]], inheritance_mode=inheritance_mode, sample_data=MULTI_PROJECT_SAMPLE_DATA, gene_counts={
-#                 'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
-#                 'ENSG00000177000': {'total': 1, 'families': {'F000002_2': 1}},
-#             }, **COMP_HET_ALL_PASS_FILTERS,
-#         )
-#
+        inheritance_mode = 'compound_het'
+        self._assert_expected_search(
+            [[VARIANT3, VARIANT4]], inheritance_mode=inheritance_mode, inheritance_filter={}, gene_counts={
+                'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
+                'ENSG00000177000': {'total': 1, 'families': {'F000002_2': 1}},
+            }, **COMP_HET_ALL_PASS_FILTERS, cached_variant_fields=[
+                [{'selectedGeneId':  'ENSG00000097046'}, {'selectedGeneId':  'ENSG00000097046'}],
+            ],
+        )
+
 #         self._assert_expected_search(
 #             [[GCNV_VARIANT3, GCNV_VARIANT4]], inheritance_mode=inheritance_mode, omit_data_type='SNV_INDEL', gene_counts={
 #                 'ENSG00000275023': {'total': 2, 'families': {'F000002_2': 2}},
@@ -294,16 +305,20 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #                 'ENSG00000177000': {'total': 1, 'families': {'F000002_2': 1}},
 #             },
 #         )
-#
-#         inheritance_mode = 'recessive'
-#         self._assert_expected_search(
-#             [PROJECT_2_VARIANT1, VARIANT2, [VARIANT3, VARIANT4]], inheritance_mode=inheritance_mode, gene_counts={
-#                 'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
-#                 'ENSG00000177000': {'total': 2, 'families': {'F000002_2': 2}},
-#                 'ENSG00000277258': {'total': 1, 'families': {'F000002_2': 1}},
-#             }, sample_data=MULTI_PROJECT_SAMPLE_DATA, **COMP_HET_ALL_PASS_FILTERS,
-#         )
-#
+
+        inheritance_mode = 'recessive'
+        self._assert_expected_search(
+            [VARIANT2, [VARIANT3, VARIANT4]], inheritance_mode=inheritance_mode, gene_counts={
+                # [PROJECT_2_VARIANT1, VARIANT2, [VARIANT3, VARIANT4]], inheritance_mode=inheritance_mode, gene_counts={
+                'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
+                'ENSG00000177000': {'total': 2, 'families': {'F000002_2': 2}},
+                'ENSG00000277258': {'total': 1, 'families': {'F000002_2': 1}},
+            }, cached_variant_fields=[
+                {},
+                [{'selectedGeneId':  'ENSG00000097046'}, {'selectedGeneId':  'ENSG00000097046'}],
+            ],
+        )
+
 #         self._assert_expected_search(
 #             [GCNV_VARIANT3, [GCNV_VARIANT3, GCNV_VARIANT4]], inheritance_mode=inheritance_mode, omit_data_type='SNV_INDEL', gene_counts={
 #                 'ENSG00000275023': {'total': 3, 'families': {'F000002_2': 3}},
@@ -788,25 +803,34 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             [VARIANT3, VARIANT4], annotations=annotations, pathogenicity=None,
         )
 
-#     def test_secondary_annotations_filter(self):
-#         annotations_1 = {'missense': ['missense_variant']}
-#         annotations_2 = {'other': ['intron_variant']}
-#
-#         self._assert_expected_search(
-#             [[VARIANT3, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4]], inheritance_mode='compound_het', omit_data_type='SV_WES',
-#             annotations=annotations_1, annotations_secondary=annotations_2,
-#         )
-#
-#         self._assert_expected_search(
-#             [VARIANT2, [VARIANT3, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4]], inheritance_mode='recessive', omit_data_type='SV_WES',
-#             annotations=annotations_1, annotations_secondary=annotations_2,
-#         )
-#
-#         self._assert_expected_search(
-#             [[VARIANT3, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4]], inheritance_mode='recessive', omit_data_type='SV_WES',
-#             annotations=annotations_2, annotations_secondary=annotations_1,
-#         )
-#
+    def test_secondary_annotations_filter(self):
+        self.results_model.families.set(self.families.filter(guid='F000002_2'))
+
+        annotations_1 = {'missense': ['missense_variant']}
+        annotations_2 = {'other': ['intron_variant']}
+
+        comp_het_cached_fields = [
+            {'selectedGeneId':  'ENSG00000097046', 'selectedTranscript': CACHED_VARIANTS_BY_KEY[3]['sortedTranscriptConsequences'][0]},
+            {'selectedGeneId':  'ENSG00000097046', 'selectedTranscript': CACHED_VARIANTS_BY_KEY[4]['sortedTranscriptConsequences'][1]},
+        ]
+
+        self._assert_expected_search(
+            [[VARIANT3, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4]], inheritance_mode='compound_het',
+            annotations=annotations_1, annotations_secondary=annotations_2, cached_variant_fields=[comp_het_cached_fields],
+        )
+
+        self._assert_expected_search(
+            [VARIANT2, [VARIANT3, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4]], inheritance_mode='recessive',
+            annotations=annotations_1, annotations_secondary=annotations_2, cached_variant_fields=[
+                {'selectedTranscript': CACHED_VARIANTS_BY_KEY[2]['sortedTranscriptConsequences'][0]}, comp_het_cached_fields
+            ],
+        )
+
+        self._assert_expected_search(
+            [[VARIANT3, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4]], inheritance_mode='recessive',
+            annotations=annotations_2, annotations_secondary=annotations_1, cached_variant_fields=[comp_het_cached_fields],
+        )
+
 #         gcnv_annotations_1 = {'structural': ['gCNV_DUP']}
 #         gcnv_annotations_2 = {'structural_consequence': ['LOF'], 'structural': []}
 #
@@ -878,13 +902,16 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #             [[SV_VARIANT1, SV_VARIANT2], SV_VARIANT4], sample_data=SV_WGS_SAMPLE_DATA, inheritance_mode='recessive',
 #             annotations=sv_annotations_2, annotations_secondary=sv_annotations_1,
 #         )
-#
-#         pathogenicity = {'clinvar': ['likely_pathogenic', 'vus_or_conflicting']}
-#         self._assert_expected_search(
-#             [VARIANT2, [VARIANT3, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4]], inheritance_mode='recessive', omit_data_type='SV_WES',
-#             annotations=annotations_2, annotations_secondary=annotations_1, pathogenicity=pathogenicity,
-#         )
-#
+
+        pathogenicity = {'clinvar': ['likely_pathogenic', 'vus_or_conflicting']}
+        self._assert_expected_search(
+            [VARIANT2, [VARIANT3, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4]], inheritance_mode='recessive',
+            annotations=annotations_2, annotations_secondary=annotations_1, pathogenicity=pathogenicity, cached_variant_fields=[
+                {'selectedTranscript': None},
+                comp_het_cached_fields,
+            ],
+        )
+
 #         self._assert_expected_search(
 #             [[MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], [GCNV_VARIANT3, GCNV_VARIANT4]],
 #             inheritance_mode='compound_het', pathogenicity=pathogenicity,
@@ -897,7 +924,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #             annotations=gcnv_annotations_2, annotations_secondary=gcnv_annotations_1,
 #         )
 #
-#         selected_transcript_annotations = {'other': ['non_coding_transcript_exon_variant']}
+        selected_transcript_annotations = {'other': ['non_coding_transcript_exon_variant']}
 #         self._assert_expected_search(
 #             [VARIANT2, [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], GCNV_VARIANT3],
 #             inheritance_mode='recessive', pathogenicity=pathogenicity,
@@ -921,30 +948,39 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #             [GCNV_VARIANT3], inheritance_mode='recessive',
 #             annotations=gcnv_annotations_2, annotations_secondary=selected_transcript_annotations,
 #         )
-#
-#         screen_annotations = {'SCREEN': ['CTCF-only']}
-#         self._assert_expected_search(
-#             [], inheritance_mode='recessive', omit_data_type='SV_WES',
-#             annotations=screen_annotations, annotations_secondary=annotations_1,
-#         )
-#
-#         self._assert_expected_search(
-#             [[VARIANT3, VARIANT4]], inheritance_mode='recessive', omit_data_type='SV_WES',
-#             annotations=screen_annotations, annotations_secondary=annotations_2,
-#         )
-#
-#         self._assert_expected_search(
-#             [VARIANT2, [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3, VARIANT4]], inheritance_mode='recessive',
-#             annotations=screen_annotations, annotations_secondary=selected_transcript_annotations,
-#             pathogenicity=pathogenicity, omit_data_type='SV_WES',
-#         )
-#
-#         self._assert_expected_search(
-#             [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, [VARIANT3, VARIANT4]],
-#             annotations={**selected_transcript_annotations, **screen_annotations}, annotations_secondary=annotations_2,
-#             inheritance_mode='recessive', omit_data_type='SV_WES',
-#         )
-#
+
+        screen_annotations = {'SCREEN': ['CTCF-only']}
+        self._assert_expected_search(
+            [], inheritance_mode='recessive',
+            annotations=screen_annotations, annotations_secondary=annotations_1, pathogenicity=None,
+        )
+
+        self._assert_expected_search(
+            [[VARIANT3, VARIANT4]], inheritance_mode='recessive',
+            annotations=screen_annotations, annotations_secondary=annotations_2, cached_variant_fields=[
+                [{'selectedGeneId':  'ENSG00000097046'}, {'selectedGeneId':  'ENSG00000097046'}],
+            ],
+        )
+
+        #  TODO failing variant 3 no selected transcript
+        self._assert_expected_search(
+            [VARIANT2, [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3, VARIANT4]], inheritance_mode='recessive',
+            annotations=screen_annotations, annotations_secondary=selected_transcript_annotations,
+            pathogenicity=pathogenicity, cached_variant_fields=[
+                {'selectedTranscript': None},
+                [{'selectedGeneId':  'ENSG00000097046', 'selectedTranscript': CACHED_VARIANTS_BY_KEY[3]['sortedTranscriptConsequences'][3]}, {'selectedGeneId':  'ENSG00000097046'}],
+            ],
+        )
+
+        self._assert_expected_search(
+            [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, [VARIANT3, VARIANT4]],
+            annotations={**selected_transcript_annotations, **screen_annotations}, annotations_secondary=annotations_2,
+            inheritance_mode='recessive', cached_variant_fields=[
+                {'selectedTranscript': CACHED_VARIANTS_BY_KEY[2]['sortedTranscriptConsequences'][5]},
+                [{'selectedGeneId': 'ENSG00000097046'}, {'selectedGeneId': 'ENSG00000097046'}],
+            ],
+        )
+
     def test_in_silico_filter(self):
         self.results_model.families.set(self.families.filter(guid='F000002_2'))
         in_silico = {'eigen': '3.5', 'mut_taster': 'N', 'vest': 0.5}
@@ -1158,18 +1194,22 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #              _sorted(SV_VARIANT3, [-50])], sample_data=SV_WGS_SAMPLE_DATA, sort='size',
 #         )
 #
-#         # sort applies to compound hets
-#         self._assert_expected_search(
-#             [[_sorted(VARIANT4, [-0.5260000228881836]), _sorted(VARIANT3, [0])],
-#              _sorted(VARIANT2, [-0.19699999690055847])],
-#             sort='revel', inheritance_mode='recessive', omit_data_type='SV_WES', **COMP_HET_ALL_PASS_FILTERS,
-#         )
-#
-#         self._assert_expected_search(
-#             [[_sorted(VARIANT3, [-0.009999999776482582]),  _sorted(VARIANT4, [0])], _sorted(VARIANT2, [0])],
-#             sort='splice_ai', inheritance_mode='recessive', omit_data_type='SV_WES', **COMP_HET_ALL_PASS_FILTERS,
-#         )
-#
+        # sort applies to compound hets
+        self._assert_expected_search(
+            [[VARIANT4, VARIANT3], VARIANT2],
+            sort='revel', inheritance_mode='recessive', **COMP_HET_ALL_PASS_FILTERS, cached_variant_fields=[
+                [{'selectedGeneId':  'ENSG00000097046'}, {'selectedGeneId':  'ENSG00000097046'}], {},
+            ],
+        )
+
+        self._assert_expected_search(
+            [[VARIANT3, VARIANT4], VARIANT2],
+            sort='splice_ai', inheritance_mode='recessive', **COMP_HET_ALL_PASS_FILTERS, cached_variant_fields=[
+                [{'selectedGeneId':  'ENSG00000097046'}, {'selectedGeneId':  'ENSG00000097046'}], {},
+            ],
+        )
+#          TODO test_sort
+
 #     def test_multi_data_type_comp_het_sort(self):
 #         self._assert_expected_search(
 #             [[_sorted(VARIANT4, [2, 2]), _sorted(VARIANT3, [26, 27])],
