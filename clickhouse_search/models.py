@@ -713,49 +713,37 @@ class EntriesSnvIndel(BaseEntriesSnvIndel):
 
 class BaseTranscripts(models.ClickhouseModel):
     TRANSCRIPTS_FIELDS = [
+        ('aminoAcids', models.StringField(null=True, blank=True)),
+        ('biotype', models.StringField(null=True, blank=True)),
+        ('canonical', models.UInt8Field(null=True, blank=True)),
+        ('codons', models.StringField(null=True, blank=True)),
+        ('consequenceTerms', models.ArrayField(models.StringField())),
         ('geneId', models.StringField(null=True, blank=True)),
+        ('hgvsc', models.StringField(null=True, blank=True)),
+        ('hgvsp', models.StringField(null=True, blank=True)),
+        ('loftee', NamedTupleField([
+            ('isLofNagnag', models.BoolField(null=True, blank=True)),
+            ('lofFilters', models.ArrayField(models.StringField(null=True, blank=True))),
+        ], null_empty_arrays=True)),
         ('majorConsequence', models.StringField(null=True, blank=True)),
+        ('transcriptId', models.StringField()),
+        ('transcriptRank', models.UInt8Field()),
     ]
-
     transcripts = NestedField(TRANSCRIPTS_FIELDS, group_by_key='geneId')
 
     class Meta:
         abstract = True
 
 
-class BaseTranscriptsSnvIndel(BaseTranscripts):
-    TRANSCRIPTS_FIELDS = sorted([
-        ('aminoAcids', models.StringField(null=True, blank=True)),
-        ('biotype', models.StringField(null=True, blank=True)),
-        ('canonical', models.UInt8Field(null=True, blank=True)),
-        ('codons', models.StringField(null=True, blank=True)),
-        ('consequenceTerms', models.ArrayField(models.StringField())),
-        ('hgvsc', models.StringField(null=True, blank=True)),
-        ('hgvsp', models.StringField(null=True, blank=True)),
-        ('transcriptId', models.StringField()),
-        ('transcriptRank', models.UInt8Field()),
-        *BaseTranscripts.TRANSCRIPTS_FIELDS,
-    ])
-
-    class Meta:
-        abstract = True
-
-
-class TranscriptsGRCh37SnvIndel(BaseTranscriptsSnvIndel):
+class TranscriptsGRCh37SnvIndel(BaseTranscripts):
     key = OneToOneField('AnnotationsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
-    transcripts = NestedField(
-        sorted([
-        ('isLofNagnag', models.BoolField(null=True, blank=True)),
-        ('lofFilters', models.ArrayField(models.StringField(null=True, blank=True))),
-        *BaseTranscriptsSnvIndel.TRANSCRIPTS_FIELDS,
-    ]), group_by_key='geneId')
 
     class Meta:
         db_table = 'GRCh37/SNV_INDEL/transcripts'
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh37/SNV_INDEL/transcripts', primary_key='key', flatten_nested=0)
 
 
-class TranscriptsSnvIndel(BaseTranscriptsSnvIndel):
+class TranscriptsSnvIndel(BaseTranscripts):
     key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
     transcripts = NestedField(sorted([
         ('alphamissense', NamedTupleField([
@@ -769,10 +757,6 @@ class TranscriptsSnvIndel(BaseTranscriptsSnvIndel):
             ('index', models.Int32Field(null=True, blank=True)),
             ('total', models.Int32Field(null=True, blank=True)),
         ], null_if_empty=True)),
-        ('loftee', NamedTupleField([
-            ('isLofNagnag', models.BoolField(null=True, blank=True)),
-            ('lofFilters', models.ArrayField(models.StringField(null=True, blank=True))),
-        ], null_empty_arrays=True)),
         ('manePlusClinical', models.StringField(null=True, blank=True)),
         ('maneSelect', models.StringField(null=True, blank=True)),
         ('refseqTranscriptId', models.StringField(null=True, blank=True)),
@@ -804,7 +788,7 @@ class TranscriptsSnvIndel(BaseTranscriptsSnvIndel):
             ], null_if_empty=True)),
             ('fiveutrConsequence', models.StringField(null=True, blank=True)),
         ])),
-        *BaseTranscriptsSnvIndel.TRANSCRIPTS_FIELDS,
+        *BaseTranscripts.TRANSCRIPTS_FIELDS,
     ]), group_by_key='geneId')
 
     class Meta:
