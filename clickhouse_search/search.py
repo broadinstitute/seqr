@@ -6,7 +6,7 @@ from django.db.models.functions import JSONObject
 
 from clickhouse_search.backend.fields import NestedField, NamedTupleField
 from clickhouse_search.backend.functions import Array, ArrayMap, GtStatsDictGet, Tuple, TupleConcat
-from clickhouse_search.models import EntriesSnvIndel, AnnotationsSnvIndel, TranscriptsSnvIndel, Clinvar
+from clickhouse_search.models import EntriesGRCh38SnvIndel, AnnotationsGRCh38SnvIndel, TranscriptsGRCh38SnvIndel, ClinvarGRCh38SnvIndel
 from reference_data.models import GeneConstraint, Omim, GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import PhenotypePrioritization, Sample
 from seqr.utils.logging_utils import SeqrLogger
@@ -21,20 +21,20 @@ CORE_ENTRIES_FIELDS = ['key', 'xpos']
 SEQR_POPULATION_KEY = 'seqrPop'
 
 ANNOTATION_VALUES = {
-    field.db_column or field.name: F(f'key__{field.name}') for field in AnnotationsSnvIndel._meta.local_fields
+    field.db_column or field.name: F(f'key__{field.name}') for field in AnnotationsGRCh38SnvIndel._meta.local_fields
     if field.name not in CORE_ENTRIES_FIELDS
 }
 ANNOTATION_VALUES['populations'] = TupleConcat(
     ANNOTATION_VALUES['populations'], Tuple(SEQR_POPULATION_KEY),
     output_field=NamedTupleField([
-        *AnnotationsSnvIndel.POPULATION_FIELDS,
+        *AnnotationsGRCh38SnvIndel.POPULATION_FIELDS,
         ('seqr', GtStatsDictGet.output_field),
     ]),
 )
 
 CLINVAR_FIELDS = OrderedDict({
     f'key__clinvar__{field.name}': (field.db_column or field.name, field)
-    for field in Clinvar._meta.local_fields if field.name not in CORE_ENTRIES_FIELDS
+    for field in ClinvarGRCh38SnvIndel._meta.local_fields if field.name not in CORE_ENTRIES_FIELDS
 })
 
 GENOTYPE_FIELDS = OrderedDict({
@@ -42,7 +42,7 @@ GENOTYPE_FIELDS = OrderedDict({
     'sample_type': ('sampleType', models.StringField()),
     'filters': ('filters', models.ArrayField(models.StringField())),
     'x.gt::Nullable(Int8)': ('numAlt', models.Int8Field(null=True, blank=True)),
-    **{f'x.{column[0]}': column for column in EntriesSnvIndel.CALL_FIELDS if column[0] != 'gt'}
+    **{f'x.{column[0]}': column for column in EntriesGRCh38SnvIndel.CALL_FIELDS if column[0] != 'gt'}
 })
 
 TRANSCRIPT_CONSEQUENCES_FIELD = 'sortedTranscriptConsequences'
@@ -65,7 +65,7 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
     sample_data = _get_sample_data(samples)
     logger.info(f'Loading {Sample.DATASET_TYPE_VARIANT_CALLS} data for {len(sample_data)} families', user)
 
-    entries = EntriesSnvIndel.objects.search(sample_data, **search)
+    entries = EntriesGRCh38SnvIndel.objects.search(sample_data, **search)
 
     consequence_values = {}
     for field, value in SELECTED_CONSEQUENCE_VALUES.items():
@@ -106,7 +106,7 @@ def get_clickhouse_cache_results(results, sort, family_guid):
 def format_clickhouse_results(results, **kwargs):
     keys_with_transcripts = [variant['key'] for variant in results if variant[TRANSCRIPT_CONSEQUENCES_FIELD]]
     transcripts_by_key = dict(
-        TranscriptsSnvIndel.objects.filter(key__in=keys_with_transcripts).values_list('key', 'transcripts')
+        TranscriptsGRCh38SnvIndel.objects.filter(key__in=keys_with_transcripts).values_list('key', 'transcripts')
     )
 
     formatted_results = []
@@ -213,10 +213,10 @@ def _subfield_sort(*fields, rank_lookup=None, default=MAX_SORT_RANK, reverse=Fal
 
 MIN_SORT_RANK = 0
 MIN_PRED_SORT_RANK = -1
-CLINVAR_RANK_LOOKUP = {path: rank for rank, path in Clinvar.PATHOGENICITY_CHOICES}
-HGMD_RANK_LOOKUP = {class_: rank for rank, class_ in AnnotationsSnvIndel.HGMD_CLASSES}
+CLINVAR_RANK_LOOKUP = {path: rank for rank, path in ClinvarGRCh38SnvIndel.PATHOGENICITY_CHOICES}
+HGMD_RANK_LOOKUP = {class_: rank for rank, class_ in AnnotationsGRCh38SnvIndel.HGMD_CLASSES}
 ABSENT_CLINVAR_SORT_OFFSET = 12.5
-CONSEQUENCE_RANK_LOOKUP = {csq: rank for rank, csq in AnnotationsSnvIndel.CONSEQUENCE_TERMS}
+CONSEQUENCE_RANK_LOOKUP = {csq: rank for rank, csq in AnnotationsGRCh38SnvIndel.CONSEQUENCE_TERMS}
 PREDICTION_SORTS = {'cadd', 'revel', 'splice_ai', 'eigen', 'mpc', 'primate_ai'}
 CLINVAR_SORT =  _subfield_sort(
     'clinvar', 'pathogenicity', rank_lookup=CLINVAR_RANK_LOOKUP, default=ABSENT_CLINVAR_SORT_OFFSET,
