@@ -318,7 +318,7 @@ class AnnotationsQuerySet(QuerySet):
         return cls._clinvar_filter_q(clinvar_path_filters, _get_range_q=_get_range_q) if clinvar_path_filters else None
 
 
-class BaseAnnotationsSnvIndel(models.ClickhouseModel):
+class BaseAnnotationsGRCh38SnvIndel(models.ClickhouseModel):
     POPULATION_FIELDS = [
         ('exac', NamedTupleField([
             ('ac', models.UInt32Field()),
@@ -413,21 +413,21 @@ class BaseAnnotationsSnvIndel(models.ClickhouseModel):
     class Meta:
         abstract = True
 
-class AnnotationsSnvIndel(BaseAnnotationsSnvIndel):
+class AnnotationsGRCh38SnvIndel(BaseAnnotationsGRCh38SnvIndel):
 
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/annotations_memory'
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_IN_MEMORY_DIR}/GRCh38/SNV_INDEL/annotations', primary_key='key', flatten_nested=0)
 
 # Future work: create an alias and manager to switch between disk/in-memory annotations
-class AnnotationsDiskSnvIndel(BaseAnnotationsSnvIndel):
+class AnnotationsDiskGRCh38SnvIndel(BaseAnnotationsGRCh38SnvIndel):
 
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/annotations_disk'
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SNV_INDEL/annotations', primary_key='key', flatten_nested=0)
 
 
-class Clinvar(models.ClickhouseModel):
+class ClinvarGRCh38SnvIndel(models.ClickhouseModel):
 
     PATHOGENICITY_CHOICES = list(enumerate([
         'Pathogenic', 'Pathogenic/Likely_pathogenic', 'Pathogenic/Likely_pathogenic/Established_risk_allele',
@@ -437,7 +437,7 @@ class Clinvar(models.ClickhouseModel):
         'No_pathogenic_assertion', 'Likely_benign', 'Benign/Likely_benign', 'Benign'
     ]))
 
-    key = ForeignKey('EntriesSnvIndel', db_column='key', related_name='clinvar_join', primary_key=True, on_delete=PROTECT)
+    key = ForeignKey('EntriesGRCh38SnvIndel', db_column='key', related_name='clinvar_join', primary_key=True, on_delete=PROTECT)
     allele_id = models.UInt32Field(db_column='alleleId', null=True, blank=True)
     conflicting_pathogenicities = NestedField([
         ('count', models.UInt16Field()),
@@ -487,7 +487,7 @@ class EntriesManager(Manager):
 
     CLINVAR_FIELDS = OrderedDict({
         f'clinvar_join__{field.name}': (field.db_column or field.name, field)
-        for field in reversed(Clinvar._meta.local_fields) if field.name != 'key'
+        for field in reversed(ClinvarGRCh38SnvIndel._meta.local_fields) if field.name != 'key'
     })
 
     def search(self, sample_data, parsed_locus=None, freqs=None,  **kwargs):
@@ -603,7 +603,7 @@ class EntriesManager(Manager):
         return entries
 
 
-class EntriesSnvIndel(models.ClickhouseModel):
+class EntriesGRCh38SnvIndel(models.ClickhouseModel):
     CALL_FIELDS = [
         ('sampleId', models.StringField()),
         ('gt', models.Enum8Field(null=True, blank=True, choices=[(0, 'REF'), (1, 'HET'), (2, 'HOM')])),
@@ -615,7 +615,7 @@ class EntriesSnvIndel(models.ClickhouseModel):
     objects = EntriesManager()
 
     # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
-    key = ForeignKey('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = ForeignKey('AnnotationsGRCh38SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
     project_guid = models.StringField(low_cardinality=True)
     family_guid = models.StringField()
     sample_type = models.Enum8Field(choices=[(1, 'WES'), (2, 'WGS')])
@@ -652,8 +652,8 @@ class EntriesSnvIndel(models.ClickhouseModel):
         )
 
 
-class TranscriptsSnvIndel(models.ClickhouseModel):
-    key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+class TranscriptsGRCh38SnvIndel(models.ClickhouseModel):
+    key = OneToOneField('AnnotationsGRCh38SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
     transcripts = NestedField([
         ('alphamissense', NamedTupleField([
             ('pathogenicity', models.DecimalField(null=True, blank=True, max_digits=9, decimal_places=5)),
