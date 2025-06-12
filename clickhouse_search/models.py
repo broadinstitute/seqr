@@ -662,7 +662,7 @@ class EntriesManager(Manager):
         if len(sample_data) > 1:
             # For multi-family search, group results
             entries = entries.values(*fields).annotate(
-                familyGuids=GroupArray('family_guid'),
+                familyGuids=ArrayDistinct(GroupArray('family_guid')),
                 genotypes=GroupArrayArray(self._genotype_expression(sample_data)),
             )
             if carriers_expression:
