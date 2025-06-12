@@ -535,13 +535,13 @@ class AnnotationsMito(BaseAnnotationsMito):
 
     class Meta:
         db_table = 'GRCh38/MITO/annotations_memory'
-        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_IN_MEMORY_DIR}/GRCh38/SNV_INDEL/annotations', primary_key='key', flatten_nested=0)
+        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_IN_MEMORY_DIR}/GRCh38/MITO/annotations', primary_key='key', flatten_nested=0)
 
 class AnnotationsDiskMito(BaseAnnotationsMito):
 
     class Meta:
         db_table = 'GRCh38/MITO/annotations_disk'
-        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SNV_INDEL/annotations', primary_key='key', flatten_nested=0)
+        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/MITO/annotations', primary_key='key', flatten_nested=0)
 
 class BaseClinvar(models.ClickhouseModel):
 
