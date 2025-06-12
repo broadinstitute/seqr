@@ -654,38 +654,24 @@ class EntriesManager(Manager):
         return sample_filter
 
     def _annotate_calls(self, entries, sample_data, annotate_carriers):
-        family_carriers = {
-            family_sample_data['family_guid']: [
-                f"'{s['sample_id']}'" for s in family_sample_data['samples'] if s['affected'] == UNAFFECTED
-            ] for family_sample_data in sample_data
-        } if annotate_carriers else {}
-        carrier_map = [
-            f"'{family_guid}', [{', '.join(samples)}]"  for family_guid, samples in family_carriers.items()
-        ] if any(family_carriers.values()) else []
-        if carrier_map:
-            entries.annotate(carriers=ArrayMap(
-                ArrayFilter('calls', conditions=[{
-                    'sampleId': (", ".join(carrier_map), 'has(map({value})[family_guid], {field})'),
-                    'gt': (0, '{field} > {value}'),
-                }]),
-                mapped_expression='x.sampleId',
-            ))
+        carriers_expression = self._carriers_expression(sample_data) if annotate_carriers else None
+        if carriers_expression:
+            entries.annotate(carriers=carriers_expression)
 
         fields = ['key', 'clinvar', 'clinvar_key', 'seqrPop']
         if len(sample_data) > 1:
-            # For multi-family search, GROUP results
+            # For multi-family search, group results
             entries = entries.values(*fields).annotate(
                 familyGuids=GroupArray('family_guid'),
                 genotypes=self._genotype_expression(GroupArrayArray('calls'), sample_data),
             )
-            if carrier_map:
+            if carriers_expression:
                 entries = entries.annotate(family_carriers=Cast(
                     Tuple('familyGuids', GroupArray('carriers')),
                     models.MapField(models.StringField(), models.ArrayField(models.StringField())),
                 ))
         else:
-            # For single families search skip GROUP BY
-            if carrier_map:
+            if carriers_expression:
                 fields.append('carriers')
             entries = entries.values(
                 *fields,
@@ -703,6 +689,26 @@ class EntriesManager(Manager):
             calls_expression,
             mapped_expression=f"tuple(map({', '.join(sample_map)})[(family_guid, x.sampleId)], {', '.join(self.genotype_fields.keys())})",
             output_field=NestedField([('individualGuid', models.StringField()), *self.genotype_fields.values()], group_by_key='individualGuid', flatten_groups=True)
+        )
+
+    def _carriers_expression(self, sample_data):
+        family_carriers = {
+            family_sample_data['family_guid']: [
+                f"'{s['sample_id']}'" for s in family_sample_data['samples'] if s['affected'] == UNAFFECTED
+            ] for family_sample_data in sample_data
+        }
+        if not any(family_carriers.values()):
+            return None
+
+        carrier_map = [
+            f"'{family_guid}', [{', '.join(samples)}]" for family_guid, samples in family_carriers.items()
+        ]
+        return ArrayMap(
+            ArrayFilter('calls', conditions=[{
+                'sampleId': (", ".join(carrier_map), 'has(map({value})[family_guid], {field})'),
+                'gt': (0, '{field} > {value}'),
+            }]),
+            mapped_expression='x.sampleId',
         )
 
     @classmethod
