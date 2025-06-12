@@ -369,7 +369,7 @@ class BaseAnnotationsSvGcnv(BaseAnnotations):
         ('majorConsequence', models.Enum8Field(null=True, blank=True, return_int=False, choices=SV_CONSEQUENCE_RANKS)),
     ]
 
-    end = models.UInt64Field()
+    end = models.UInt32Field()
     rg37_locus_end = NamedTupleField([
         ('contig', models.Enum8Field(return_int=False, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES[:-1])])),
         ('position', models.UInt32Field()),
@@ -566,6 +566,47 @@ class AnnotationsDiskMito(BaseAnnotationsMito):
     class Meta:
         db_table = 'GRCh38/MITO/annotations_disk'
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/MITO/annotations', primary_key='key', flatten_nested=0)
+
+class BaseAnnotationsSv(BaseAnnotationsSvGcnv):
+    POPULATION_FIELDS = [
+        ('gnomad_svs', NamedTupleField([
+            ('af', models.DecimalField(max_digits=9, decimal_places=5)),
+            ('het', models.UInt32Field()),
+            ('hom', models.UInt32Field()),
+            ('id', models.StringField()),
+        ])),
+    ]
+    SV_TYPE_DETAILS = [(1, 'INS_iDEL'),(2, 'INVdel'),(3, 'INVdup'),(4, 'ME'),(5, 'ME:ALU'),(6, 'ME:LINE1'),(7, 'ME:SVA'),(8, 'dDUP'),(9, 'dDUP_iDEL'),(10, 'delINV'),(11, 'delINVdel'),(12, 'delINVdup'),(13, 'dupINV'),(14, 'dupINVdel'),(15, 'dupINVdup')]
+
+    algorithms = models.StringField(low_cardinality=True)
+    bothsides_support = models.BoolField(db_column='bothsidesSupport')
+    cpx_intervals = NestedField([
+        ('chrom', models.Enum8Field(return_int=False, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES[:-1])])),
+        ('start', models.UInt32Field()),
+        ('end', models.UInt32Field()),
+        ('type', models.Enum8Field(return_int=False, choices=BaseAnnotationsSvGcnv.SV_TYPES)),
+    ], db_column='cpxIntervals', null_when_empty=True)
+    end_chrom = models.Enum8Field(db_column='endChrom', return_int=False, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES[:-1])])
+    sv_source_detail = NestedField(
+        [('chrom', models.Enum8Field(return_int=False, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES[:-1])]))],
+    db_column='svSourceDetail', null_when_empty=True)
+    sv_type_detail = models.Enum8Field(db_column='svTypeDetail', return_int=False, choices=SV_TYPE_DETAILS)
+    populations = NamedTupleField(POPULATION_FIELDS)
+
+    class Meta:
+        abstract = True
+
+class AnnotationsSv(BaseAnnotationsSv):
+
+    class Meta:
+        db_table = 'GRCh38/SV/annotations_memory'
+        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_IN_MEMORY_DIR}/GRCh38/SV/annotations', primary_key='key', flatten_nested=0)
+
+class AnnotationsDiskSv(BaseAnnotationsSv):
+
+    class Meta:
+        db_table = 'GRCh38/SV/annotations_disk'
+        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SV/annotations', primary_key='key', flatten_nested=0)
 
 class BaseClinvar(models.ClickhouseModel):
 
@@ -813,7 +854,6 @@ class BaseEntriesSnvIndel(BaseEntries):
         projection = Projection('xpos_projection', order_by='xpos, is_gnomad_gt_5_percent')
 
 class EntriesGRCh37SnvIndel(BaseEntriesSnvIndel):
-
     objects = EntriesManager()
 
     # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
@@ -849,6 +889,26 @@ class EntriesMito(BaseEntries):
 
     class Meta:
         db_table = 'GRCh38/MITO/entries'
+
+class EntriesSv(BaseEntries):
+    CALL_FIELDS = [
+        ('sampleId', models.StringField()),
+        ('gt', models.Enum8Field(null=True, blank=True, choices=[(0, 'REF'), (1, 'HET'), (2, 'HOM')])),
+        ('cn', models.UInt8Field(null=True, blank=True)),
+        ('gq', models.UInt8Field(null=True, blank=True)),
+        ('newCall', models.BoolField()),
+        ('prevCall', models.BoolField()),
+        ('prevNumAlt', models.Enum8Field(null=True, blank=True, choices=[(0, 'REF'), (1, 'HET'), (2, 'HOM')])),
+    ]
+
+    objects = EntriesManager()
+
+    # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
+    key = ForeignKey('AnnotationsSv', db_column='key', primary_key=True, on_delete=CASCADE)
+    calls = models.ArrayField(NamedTupleField(CALL_FIELDS))
+
+    class Meta:
+        db_table = 'GRCh38/SV/entries'
 
 
 class TranscriptsGRCh37SnvIndel(models.ClickhouseModel):
