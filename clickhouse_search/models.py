@@ -358,6 +358,30 @@ class BaseAnnotationsMitoSnvIndel(BaseAnnotations):
     class Meta:
         abstract = True
 
+class BaseAnnotationsSvGcnv(BaseAnnotations):
+    SV_CONSEQUENCE_RANKS = [(1,'LOF'), (2,'INTRAGENIC_EXON_DUP'), (3,'PARTIAL_EXON_DUP'), (4,'COPY_GAIN'), (5,'DUP_PARTIAL'), (6,'MSV_EXON_OVERLAP'), (7,'INV_SPAN'), (8,'UTR'), (9,'PROMOTER'), (10,'TSS_DUP'), (11,'BREAKEND_EXONIC'), (12,'INTRONIC'), (13,'NEAREST_TSS'),]
+    SV_TYPES =  [(1,'gCNV_DEL'), (2,'gCNV_DUP'), (3,'BND'), (4,'CPX'), (5,'CTX'), (6,'DEL'), (7,'DUP'), (8,'INS'), (9,'INV'), (10,'CNV')]
+    PREDICTION_FIELDS = [
+        ('strvctvre', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+    ]
+    SORTED_GENE_CONSQUENCES_FIELDS = [
+        ('geneId', models.StringField(null=True, blank=True)),
+        ('majorConsequence', models.Enum8Field(null=True, blank=True, return_int=False, choices=SV_CONSEQUENCE_RANKS)),
+    ]
+
+    end = models.UInt64Field()
+    rg37_locus_end = NamedTupleField([
+        ('contig', models.Enum8Field(return_int=False, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES[:-1])])),
+        ('position', models.UInt32Field()),
+    ], db_column='rg37LocusEnd', null_if_empty=True)
+    sv_type = models.Enum8Field(db_column='svType', return_int=False, choices=SV_TYPES)
+    predictions = NamedTupleField(PREDICTION_FIELDS)
+    sorted_gene_consequences = NestedField(SORTED_GENE_CONSQUENCES_FIELDS, db_column='sortedTranscriptConsequences')
+
+    class Meta:
+        abstract = True
+
+
 class BaseAnnotationsGRCh37SnvIndel(BaseAnnotationsMitoSnvIndel):
     POPULATION_FIELDS = [
         ('exac', NamedTupleField([
