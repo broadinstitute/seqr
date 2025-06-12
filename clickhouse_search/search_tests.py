@@ -78,11 +78,17 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             ]
         return {**CACHED_VARIANTS_BY_KEY[variant['key']], **(cached_variant_fields or {})}
 
-    def test_single_family_search(self):
-        with self.assertRaises(NotImplementedError):
-            query_variants(self.results_model, user=self.user)
+    def _set_multi_project_search(self):
+        self.results_model.families.set(Family.objects.filter(guid__in=['F000002_2', 'F000011_11']))
 
+    def _set_single_family_search(self):
         self.results_model.families.set(self.families.filter(guid='F000002_2'))
+
+    def _reset_search_families(self):
+        self.results_model.families.set(self.families)
+
+    def test_single_family_search(self):
+        self._set_single_family_search()
         variant_gene_counts = {
             'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
             'ENSG00000177000': {'total': 2, 'families': {'F000002_2': 2}},
@@ -154,7 +160,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #         )
 
     def test_multi_project_search(self):
-        self.results_model.families.set(Family.objects.filter(guid__in=['F000002_2', 'F000011_11']))
+        self._set_multi_project_search()
         self._assert_expected_search(
             [PROJECT_2_VARIANT, MULTI_PROJECT_VARIANT1, MULTI_PROJECT_VARIANT2, VARIANT3, VARIANT4],
             gene_counts=GENE_COUNTS,
@@ -242,7 +248,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             inheritance_mode=inheritance_mode,
         )
 
-        self.results_model.families.set(Family.objects.filter(guid__in=['F000002_2', 'F000011_11']))
+        self._set_multi_project_search()
         self._assert_expected_search(
             [PROJECT_2_VARIANT1, VARIANT2],
             inheritance_mode=inheritance_mode,
@@ -253,9 +259,9 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         # )
 
         gt_inheritance_filter = {'genotype': {'I000006_hg00733': 'ref_ref', 'I000005_hg00732': 'has_alt'}}
-        self.results_model.families.set(self.families.filter(guid='F000002_2'))
+        self._set_single_family_search()
         self._assert_expected_search([VARIANT2], inheritance_filter=gt_inheritance_filter)
-        self.results_model.families.set(self.families)
+        self._reset_search_families()
 
         self._assert_expected_search(
             [VARIANT2], inheritance_mode='any_affected', inheritance_filter={'affected': {
@@ -307,16 +313,26 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #         )
 
         inheritance_mode = 'recessive'
+        self._set_multi_project_search()
         self._assert_expected_search(
                 [PROJECT_2_VARIANT1, VARIANT2, [VARIANT3, VARIANT4]], inheritance_mode=inheritance_mode, gene_counts={
                 'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
                 'ENSG00000177000': {'total': 2, 'families': {'F000002_2': 2}},
                 'ENSG00000277258': {'total': 1, 'families': {'F000002_2': 1}},
             }, cached_variant_fields=[
-                {},
+                {}, {},
                 [{'selectedGeneId':  'ENSG00000097046'}, {'selectedGeneId':  'ENSG00000097046'}],
             ],
         )
+
+        self._set_single_family_search()
+        self._assert_expected_search(
+            [VARIANT2, [VARIANT3, VARIANT4]], inheritance_mode=inheritance_mode, cached_variant_fields=[
+                {},
+                [{'selectedGeneId': 'ENSG00000097046'}, {'selectedGeneId': 'ENSG00000097046'}],
+            ],
+        )
+        self._reset_search_families()
 
 #         self._assert_expected_search(
 #             [GCNV_VARIANT3, [GCNV_VARIANT3, GCNV_VARIANT4]], inheritance_mode=inheritance_mode, omit_data_type='SNV_INDEL', gene_counts={
@@ -1161,12 +1177,12 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 
         self._assert_expected_search([VARIANT2, VARIANT3, VARIANT1, VARIANT4], sort='prioritized_gene')
 
-        self.results_model.families.set(Family.objects.filter(guid__in=['F000002_2', 'F000011_11']))
+        self._set_multi_project_search()
         self._assert_expected_search(
             [MULTI_PROJECT_VARIANT1, MULTI_PROJECT_VARIANT2, VARIANT3, VARIANT4, PROJECT_2_VARIANT],
             sort='family_guid',
         )
-        self.results_model.families.set(self.families)
+        self._reset_search_families()
 
 #         # size sort only applies to SVs, so has no impact on other variant
 #         self._assert_expected_search(
