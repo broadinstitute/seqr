@@ -686,10 +686,13 @@ class EntriesManager(Manager):
         for data in sample_data:
             family_samples = [f"'{s['sample_id']}', '{s['individual_guid']}'" for s in data['samples']]
             sample_map.append(f"'{data['family_guid']}', map({', '.join(family_samples)})")
-        return ArrayMap(
-            'calls',
-            mapped_expression=f"tuple(map({', '.join(sample_map)})[family_guid][x.sampleId], {', '.join(self.genotype_fields.keys())})",
-            output_field=NestedField([('individualGuid', models.StringField()), *self.genotype_fields.values()], group_by_key='individualGuid', flatten_groups=True)
+        return ArrayFilter(
+            ArrayMap(
+                'calls',
+                mapped_expression=f"tuple(map({', '.join(sample_map)})[family_guid][x.sampleId], {', '.join(self.genotype_fields.keys())})",
+                output_field=NestedField([('individualGuid', models.StringField()), *self.genotype_fields.values()], group_by_key='individualGuid', flatten_groups=True)
+            ),
+            conditions=[{1: (None, 'notEmpty({field})')}]
         )
 
     def _carriers_expression(self, sample_data):

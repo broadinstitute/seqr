@@ -136,6 +136,9 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         }
         self._assert_expected_search(
             [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4], gene_counts=variant_gene_counts,
+            cached_variant_fields=[
+                {}, {}, {field: MULTI_FAMILY_VARIANT[field] for field in ['familyGuids', 'genotypes']}, {},
+            ],
         )
 
 #         self._assert_expected_search(
