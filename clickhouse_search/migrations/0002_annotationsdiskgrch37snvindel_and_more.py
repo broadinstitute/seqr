@@ -10,6 +10,7 @@ import django.db.models.manager
 
 from settings import CLICKHOUSE_IN_MEMORY_DIR, CLICKHOUSE_DATA_DIR
 
+
 class Migration(migrations.Migration):
 
     dependencies = [
