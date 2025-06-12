@@ -656,7 +656,7 @@ class EntriesManager(Manager):
     def _annotate_calls(self, entries, sample_data, annotate_carriers):
         carriers_expression = self._carriers_expression(sample_data) if annotate_carriers else None
         if carriers_expression:
-            entries.annotate(carriers=carriers_expression)
+            entries = entries.annotate(carriers=carriers_expression)
 
         fields = ['key', 'clinvar', 'clinvar_key', 'seqrPop']
         if len(sample_data) > 1:
@@ -681,13 +681,13 @@ class EntriesManager(Manager):
         return entries
 
     def _genotype_expression(self, calls_expression, sample_data):
-        sample_map = [
-            f"('{s['family_guid']}', '{s['sample_id']}'), '{s['individual_guid']}'"
-            for data in sample_data for s in data['samples']
-        ]
+        sample_map = []
+        for data in sample_data:
+            family_samples = [f"'{s['sample_id']}', '{s['individual_guid']}'" for s in data['samples']]
+            sample_map.append(f"'{data['family_guid']}', map({', '.join(family_samples)})")
         return ArrayMap(
             calls_expression,
-            mapped_expression=f"tuple(map({', '.join(sample_map)})[(family_guid, x.sampleId)], {', '.join(self.genotype_fields.keys())})",
+            mapped_expression=f"tuple(map({', '.join(sample_map)})[family_guid][x.sampleId], {', '.join(self.genotype_fields.keys())})",
             output_field=NestedField([('individualGuid', models.StringField()), *self.genotype_fields.values()], group_by_key='individualGuid', flatten_groups=True)
         )
 
