@@ -3,12 +3,13 @@ from collections import OrderedDict
 from django.db.migrations import state
 from django.db.models import options, ForeignKey, OneToOneField, F, Func, Manager, QuerySet, Q, CASCADE, PROTECT
 from django.db.models.expressions import Col
+from django.db.models.functions import Cast
 from django.db.models.sql.constants import INNER
 
 from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocksDB, Join
 from clickhouse_search.backend.fields import Enum8Field, NestedField, UInt64FieldDeltaCodecField, NamedTupleField
-from clickhouse_search.backend.functions import ArrayFilter, ArrayDistinct, ArrayJoin, ArrayMap, CrossJoin, \
-    GtStatsDictGet, SubqueryJoin, SubqueryTable, Tuple
+from clickhouse_search.backend.functions import Array, ArrayFilter, ArrayDistinct, ArrayJoin, ArrayMap, CrossJoin, \
+    GroupArray, GroupArrayArray, GtStatsDictGet, SubqueryJoin, SubqueryTable, Tuple
 from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFECTED, UNAFFECTED, MALE_SEXES, \
     X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, SCREEN_KEY, UTR_ANNOTATOR_KEY, \
     EXTENDED_SPLICE_KEY, MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY, CLINVAR_KEY, HGMD_KEY, SV_ANNOTATION_TYPES, \
@@ -544,11 +545,20 @@ class EntriesManager(Manager):
         for field in reversed(Clinvar._meta.local_fields) if field.name != 'key'
     })
 
+    @property
+    def genotype_fields(self):
+        return OrderedDict({
+            'family_guid': ('familyGuid', models.StringField()),
+            'sample_type': ('sampleType', models.StringField()),
+            'filters': ('filters', models.ArrayField(models.StringField())),
+            'x.gt::Nullable(Int8)': ('numAlt', models.Int8Field(null=True, blank=True)),
+            **{f'x.{column[0]}': column for column in self.model.CALL_FIELDS if column[0] != 'gt'}
+        })
+
     def search(self, sample_data, parsed_locus=None, freqs=None,  **kwargs):
-        entries = self._search_call_data(sample_data, **kwargs)
+        entries = self.annotate(seqrPop=GtStatsDictGet('key'))
         entries = self._filter_intervals(entries, **(parsed_locus or {}))
 
-        entries = entries.annotate(seqrPop=GtStatsDictGet('key'))
         if (freqs or {}).get('callset'):
             entries = self._filter_seqr_frequency(entries, **freqs['callset'])
 
@@ -556,16 +566,14 @@ class EntriesManager(Manager):
         if (gnomad_filter.get('af') or 1) <= 0.05 or any(gnomad_filter.get(field) is not None for field in ['ac', 'hh']):
             entries = entries.filter(is_gnomad_gt_5_percent=False)
 
-        return entries
+        return self._search_call_data(entries, sample_data, **kwargs)
 
-    def _search_call_data(self, sample_data, inheritance_mode=None, inheritance_filter=None, qualityFilter=None, pathogenicity=None, **kwargs):
-       if len(sample_data) > 1:
-           raise NotImplementedError('Clickhouse search not implemented for multiple families or sample types')
-
-       entries = self.filter(
-           project_guid=sample_data[0]['project_guid'],
-           family_guid=sample_data[0]['family_guid'],
-       )
+    def _search_call_data(self, entries, sample_data, inheritance_mode=None, inheritance_filter=None, qualityFilter=None, pathogenicity=None, annotate_carriers=False, **kwargs):
+       project_guids = {s['project_guid'] for s in sample_data}
+       project_filter = Q(project_guid__in=project_guids) if len(project_guids) > 1 else Q(project_guid=sample_data[0]['project_guid'])
+       entries = entries.filter(project_filter)
+       family_filter = Q(family_guid__in=[s['family_guid'] for s in sample_data]) if len(sample_data) > 1 else Q(family_guid=sample_data[0]['family_guid'])
+       entries = entries.filter(family_filter)
 
        quality_filter = qualityFilter or {}
        if quality_filter.get('vcf_filter'):
@@ -578,27 +586,44 @@ class EntriesManager(Manager):
 
        individual_genotype_filter = (inheritance_filter or {}).get('genotype')
        custom_affected = (inheritance_filter or {}).get('affected') or {}
-       if not (inheritance_mode or individual_genotype_filter or quality_filter):
-           return entries
+       if inheritance_mode or individual_genotype_filter or quality_filter:
+            clinvar_override_q = AnnotationsQuerySet._clinvar_path_q(
+               pathogenicity, _get_range_q=lambda path_range: Q(clinvar_join__pathogenicity__range=path_range),
+            )
+            call_q = None
+            for s in sample_data:
+                q = self._family_calls_q(s, inheritance_mode, individual_genotype_filter, quality_filter, custom_affected, clinvar_override_q)
+                if call_q is None:
+                    call_q = q
+                else:
+                    call_q |= q
+            entries = entries.filter(call_q)
 
-       clinvar_override_q = AnnotationsQuerySet._clinvar_path_q(
-           pathogenicity, _get_range_q=lambda path_range: Q(clinvar_join__pathogenicity__range=path_range),
-       )
+       return self._annotate_calls(entries, sample_data, annotate_carriers)
 
-       for sample in sample_data[0]['samples']:
+    @classmethod
+    def _family_calls_q(cls, family_sample_data, inheritance_mode, individual_genotype_filter, quality_filter, custom_affected, clinvar_override_q):
+       family_sample_q = None
+       for sample in family_sample_data['samples']:
            affected = custom_affected.get(sample['individual_guid']) or sample['affected']
-           sample_inheritance_filter = self._sample_genotype_filter(sample, affected, inheritance_mode, individual_genotype_filter)
-           sample_quality_filter = self._sample_quality_filter(affected, quality_filter)
+           sample_inheritance_filter = cls._sample_genotype_filter(sample, affected, inheritance_mode, individual_genotype_filter)
+           sample_quality_filter = cls._sample_quality_filter(affected, quality_filter)
            if not (sample_inheritance_filter or sample_quality_filter):
                continue
            sample_inheritance_filter['sampleId'] = (f"'{sample['sample_id']}'",)
-           sample_q = Q(calls__array_exists={**sample_inheritance_filter, **sample_quality_filter})
+           sample_q = Q(
+               calls__array_exists={**sample_inheritance_filter, **sample_quality_filter},
+               family_guid=family_sample_data['family_guid'],
+           )
            if clinvar_override_q and sample_quality_filter:
                sample_q |= clinvar_override_q & Q(calls__array_exists=sample_inheritance_filter)
 
-           entries = entries.filter(sample_q)
+           if family_sample_q is None:
+               family_sample_q = sample_q
+           else:
+               family_sample_q &= sample_q
 
-       return entries
+       return family_sample_q
 
     @classmethod
     def _sample_genotype_filter(cls, sample, affected, inheritance_mode, individual_genotype_filter):
@@ -627,6 +652,58 @@ class EntriesManager(Manager):
                 sample_filter[field] = (value / scale, f'or({", ".join(or_filters)})')
 
         return sample_filter
+
+    def _annotate_calls(self, entries, sample_data, annotate_carriers):
+        family_carriers = {
+            family_sample_data['family_guid']: [
+                f"'{s['sample_id']}'" for s in family_sample_data['samples'] if s['affected'] == UNAFFECTED
+            ] for family_sample_data in sample_data
+        } if annotate_carriers else {}
+        carrier_map = [
+            f"'{family_guid}', [{', '.join(samples)}]"  for family_guid, samples in family_carriers.items()
+        ] if any(family_carriers.values()) else []
+        if carrier_map:
+            entries.annotate(carriers=ArrayMap(
+                ArrayFilter('calls', conditions=[{
+                    'sampleId': (", ".join(carrier_map), 'has(map({value})[family_guid], {field})'),
+                    'gt': (0, '{field} > {value}'),
+                }]),
+                mapped_expression='x.sampleId',
+            ))
+
+        fields = ['key', 'clinvar', 'clinvar_key', 'seqrPop']
+        if len(sample_data) > 1:
+            # For multi-family search, GROUP results
+            entries = entries.values(*fields).annotate(
+                familyGuids=GroupArray('family_guid'),
+                genotypes=self._genotype_expression(GroupArrayArray('calls'), sample_data),
+            )
+            if carrier_map:
+                entries = entries.annotate(family_carriers=Cast(
+                    Tuple('familyGuids', GroupArray('carriers')),
+                    models.MapField(models.StringField(), models.ArrayField(models.StringField())),
+                ))
+        else:
+            # For single families search skip GROUP BY
+            if carrier_map:
+                fields.append('carriers')
+            entries = entries.values(
+                *fields,
+                familyGuids=Array('family_guid'),
+                genotypes=self._genotype_expression('calls', sample_data),
+            )
+        return entries
+
+    def _genotype_expression(self, calls_expression, sample_data):
+        sample_map = [
+            f"('{s['family_guid']}', '{s['sample_id']}'), '{s['individual_guid']}'"
+            for data in sample_data for s in data['samples']
+        ]
+        return ArrayMap(
+            calls_expression,
+            mapped_expression=f"tuple(map({', '.join(sample_map)})[(family_guid, x.sampleId)], {', '.join(self.genotype_fields.keys())})",
+            output_field=NestedField([('individualGuid', models.StringField()), *self.genotype_fields.values()], group_by_key='individualGuid', flatten_groups=True)
+        )
 
     @classmethod
     def _filter_intervals(cls, entries, exclude_intervals=False, intervals=None, variant_ids=None,  **kwargs):

@@ -31,6 +31,12 @@ class ArraySort(Func):
     function = 'arraySort'
 
 
+class GroupArray(Func):
+    function = 'groupArray'
+
+class GroupArrayArray(Func):
+    function = 'groupArrayArray'
+
 def _format_condition(filters):
     conditions = [
         (template[0] if template else '{field} = {value}').format(field=f'x.{field}', value=value)
