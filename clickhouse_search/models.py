@@ -594,17 +594,14 @@ class EntriesManager(Manager):
             )
             call_q = None
             for s in sample_data:
-                q = self._family_calls_q(s, inheritance_mode, individual_genotype_filter, quality_filter, custom_affected, clinvar_override_q)
-                if call_q is None:
-                    call_q = q
-                else:
-                    call_q |= q
-            entries = entries.filter(call_q)
+                call_q = self._family_calls_q(call_q, s, inheritance_mode, individual_genotype_filter, quality_filter, custom_affected, clinvar_override_q)
+            if call_q:
+                entries = entries.filter(call_q)
 
        return self._annotate_calls(entries, sample_data, annotate_carriers)
 
     @classmethod
-    def _family_calls_q(cls, family_sample_data, inheritance_mode, individual_genotype_filter, quality_filter, custom_affected, clinvar_override_q):
+    def _family_calls_q(cls, call_q, family_sample_data, inheritance_mode, individual_genotype_filter, quality_filter, custom_affected, clinvar_override_q):
        family_sample_q = None
        for sample in family_sample_data['samples']:
            affected = custom_affected.get(sample['individual_guid']) or sample['affected']
@@ -626,7 +623,9 @@ class EntriesManager(Manager):
            else:
                family_sample_q &= sample_q
 
-       return family_sample_q
+       if family_sample_q and call_q:
+           call_q |= family_sample_q
+       return call_q or family_sample_q
 
     @classmethod
     def _sample_genotype_filter(cls, sample, affected, inheritance_mode, individual_genotype_filter):
