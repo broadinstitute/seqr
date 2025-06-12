@@ -4,7 +4,7 @@ from django.test import TestCase
 import json
 import mock
 
-from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4, CACHED_VARIANTS_BY_KEY
+from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4, format_cached_variant
 from hail_search.test_utils import GENE_COUNTS, VARIANT_LOOKUP_VARIANT, SV_VARIANT4, SV_VARIANT1
 from seqr.models import Family, Sample, VariantSearch, VariantSearchResults
 from seqr.views.utils.json_utils import DjangoJSONEncoderWithSets
@@ -650,8 +650,8 @@ class ClickhouseSearchUtilsTests(TestCase, SearchUtilsTests):
     databases = '__all__'
     fixtures = ['users', '1kg_project', 'reference_data', 'clickhouse_transcripts']
 
-    CACHED_VARIANTS = [CACHED_VARIANTS_BY_KEY[key] for key in [1, 2, 3, 4]]
     PARSED_CACHED_VARIANTS = [VARIANT1, VARIANT2, VARIANT3, VARIANT4]
+    CACHED_VARIANTS = [format_cached_variant(v) for v in PARSED_CACHED_VARIANTS]
 
     def setUp(self):
         self.set_up()

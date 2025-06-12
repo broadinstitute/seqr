@@ -76,13 +76,7 @@ SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4 = {**VARIANT4, 'selectedMainTranscriptI
 SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3 = {**VARIANT3, 'selectedMainTranscriptId': 'ENST00000497611'}
 SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2 = {**VARIANT2, 'selectedMainTranscriptId': 'ENST00000459627'}
 
-CACHED_VARIANTS_BY_KEY = {
-    variant['key']: {
-        'sortedTranscriptConsequences': [],
-        **{k: v for k, v in variant.items() if k not in ['mainTranscriptId', 'selectedMainTranscriptId', 'transcripts']},
-    } for variant in [VARIANT1, VARIANT2, VARIANT3, VARIANT4, PROJECT_2_VARIANT]
-}
-CACHED_VARIANTS_BY_KEY[2]['sortedTranscriptConsequences'] = [{
+CACHED_CONSEQUENCES_BY_KEY = {2: [{
     'alphamissensePathogenicity': 0.99779,
     'canonical': 1,
     'consequenceTerms': ['missense_variant'],
@@ -131,8 +125,8 @@ CACHED_VARIANTS_BY_KEY[2]['sortedTranscriptConsequences'] = [{
     'extendedIntronicSpliceRegionVariant': False,
     'fiveutrConsequence': None,
     'geneId': 'ENSG00000177000',
-}]
-CACHED_VARIANTS_BY_KEY[3]['sortedTranscriptConsequences'] = [{
+}],
+3: [{
     'alphamissensePathogenicity': None,
     'canonical': 1,
     'consequenceTerms': ['intron_variant'],
@@ -160,8 +154,8 @@ CACHED_VARIANTS_BY_KEY[3]['sortedTranscriptConsequences'] = [{
     'extendedIntronicSpliceRegionVariant': False,
     'fiveutrConsequence': None,
     'geneId': 'ENSG00000097046',
-}]
-CACHED_VARIANTS_BY_KEY[4]['sortedTranscriptConsequences'] = [{
+}],
+4: [{
     'alphamissensePathogenicity': None,
     'canonical': None,
     'consequenceTerms': ['splice_donor_variant'],
@@ -182,7 +176,13 @@ CACHED_VARIANTS_BY_KEY[4]['sortedTranscriptConsequences'] = [{
     'extendedIntronicSpliceRegionVariant': False,
     'fiveutrConsequence': None,
     'geneId': 'ENSG00000097046',
-}]
+}]}
+
+def format_cached_variant(variant):
+    return {
+        **{k: v for k, v in variant.items() if k not in ['mainTranscriptId', 'selectedMainTranscriptId', 'transcripts']},
+        'sortedTranscriptConsequences': CACHED_CONSEQUENCES_BY_KEY.get(variant['key'], []),
+    }
 
 GENE_COUNTS = {
     'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},

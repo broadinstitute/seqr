@@ -4,11 +4,12 @@ import json
 import mock
 import os
 
-from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4, CACHED_VARIANTS_BY_KEY, \
+from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4, CACHED_CONSEQUENCES_BY_KEY, \
     VARIANT_ID_SEARCH, VARIANT_IDS, LOCATION_SEARCH, GENE_IDS, SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT, \
     SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3, COMP_HET_ALL_PASS_FILTERS, \
     SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, SELECTED_ANNOTATION_TRANSCRIPT_MULTI_FAMILY_VARIANT, MULTI_FAMILY_VARIANT, \
-    FAMILY_3_VARIANT, PROJECT_2_VARIANT, PROJECT_2_VARIANT1, MULTI_PROJECT_VARIANT1, MULTI_PROJECT_VARIANT2, GENE_COUNTS
+    FAMILY_3_VARIANT, PROJECT_2_VARIANT, PROJECT_2_VARIANT1, MULTI_PROJECT_VARIANT1, MULTI_PROJECT_VARIANT2, GENE_COUNTS, \
+    format_cached_variant
 from reference_data.models import Omim
 from seqr.models import Project, Family
 from seqr.utils.search.search_utils_tests import SearchTestHelper
@@ -76,7 +77,10 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
                 cls._get_cached_variant(v, cached_variant_fields[i] if cached_variant_fields else None)
                 for i, v in enumerate(variant)
             ]
-        return {**CACHED_VARIANTS_BY_KEY[variant['key']], **(cached_variant_fields or {})}
+        return {
+            **format_cached_variant(variant),
+            **(cached_variant_fields or {}),
+        }
 
     def _set_multi_project_search(self):
         self.results_model.families.set(Family.objects.filter(guid__in=['F000002_2', 'F000011_11']))
@@ -136,9 +140,6 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         }
         self._assert_expected_search(
             [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4], gene_counts=variant_gene_counts,
-            cached_variant_fields=[
-                {}, {}, {field: MULTI_FAMILY_VARIANT[field] for field in ['familyGuids', 'genotypes']}, {},
-            ],
         )
 
 #         self._assert_expected_search(
@@ -166,12 +167,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         self._set_multi_project_search()
         self._assert_expected_search(
             [PROJECT_2_VARIANT, MULTI_PROJECT_VARIANT1, MULTI_PROJECT_VARIANT2, VARIANT3, VARIANT4],
-            gene_counts=GENE_COUNTS, cached_variant_fields=[
-                {},
-                {field: MULTI_PROJECT_VARIANT1[field] for field in ['familyGuids', 'genotypes']},
-                {field: MULTI_PROJECT_VARIANT2[field] for field in ['familyGuids', 'genotypes']},
-                {}, {},
-            ],
+            gene_counts=GENE_COUNTS,
         )
 
 #         self._assert_expected_search(
@@ -701,7 +697,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             [VARIANT1, selected_transcript_variant_2, VARIANT4], pathogenicity=pathogenicity, annotations=annotations,
             cached_variant_fields=[
                 {'selectedTranscript': None},
-                {'selectedTranscript': CACHED_VARIANTS_BY_KEY[2]['sortedTranscriptConsequences'][1]},
+                {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][1]},
                 {'selectedTranscript': None},
             ]
             # [VARIANT1, selected_transcript_variant_2, VARIANT4, MITO_VARIANT3], pathogenicity=pathogenicity, annotations=annotations,
@@ -729,16 +725,16 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             # [VARIANT1, VARIANT2, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4, MITO_VARIANT2, MITO_VARIANT3], pathogenicity=pathogenicity,
             annotations=annotations, exclude=None, cached_variant_fields=[
                 {'selectedTranscript': None},
-                {'selectedTranscript': CACHED_VARIANTS_BY_KEY[2]['sortedTranscriptConsequences'][0]},
-                {'selectedTranscript': CACHED_VARIANTS_BY_KEY[4]['sortedTranscriptConsequences'][1]},
+                {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][0]},
+                {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[4][1]},
             ]
         )
 
         self._assert_expected_search(
             [VARIANT2, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4], annotations=annotations, pathogenicity=None,
             cached_variant_fields = [
-                {'selectedTranscript': CACHED_VARIANTS_BY_KEY[2]['sortedTranscriptConsequences'][0]},
-                {'selectedTranscript': CACHED_VARIANTS_BY_KEY[4]['sortedTranscriptConsequences'][1]},
+                {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][0]},
+                {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[4][1]},
             ],
             # [VARIANT2, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4, GCNV_VARIANT3, GCNV_VARIANT4], annotations=annotations,
         )
@@ -751,9 +747,9 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             [VARIANT2, MULTI_FAMILY_VARIANT, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4],
             # [VARIANT2, MULTI_FAMILY_VARIANT, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
             annotations=annotations, cached_variant_fields=[
-                {'selectedTranscript': CACHED_VARIANTS_BY_KEY[2]['sortedTranscriptConsequences'][0]},
+                {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][0]},
                 {'selectedTranscript': None},
-                {'selectedTranscript': CACHED_VARIANTS_BY_KEY[4]['sortedTranscriptConsequences'][1]},
+                {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[4][1]},
             ]
         )
 
@@ -765,8 +761,8 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             # [VARIANT1, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3, MITO_VARIANT1, MITO_VARIANT3],
             pathogenicity=pathogenicity, annotations=annotations, cached_variant_fields=[
                 {'selectedTranscript': None},
-                {'selectedTranscript': CACHED_VARIANTS_BY_KEY[2]['sortedTranscriptConsequences'][5]},
-                {'selectedTranscript': CACHED_VARIANTS_BY_KEY[3]['sortedTranscriptConsequences'][3]},
+                {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][5]},
+                {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[3][3]},
             ],
         )
 
@@ -775,7 +771,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             locus={'rawItems': f'{GENE_IDS[1]}\n1:11785723-91525764'}, pathogenicity=None, annotations=annotations,
             cached_variant_fields=[{
                 'selectedGeneId': 'ENSG00000177000',
-                'selectedTranscript': CACHED_VARIANTS_BY_KEY[2]['sortedTranscriptConsequences'][5],
+                'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][5],
             }],
         )
 
@@ -783,8 +779,8 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         self._assert_expected_search(
             [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT],
             annotations=annotations,  cached_variant_fields=[
-                {'selectedGeneId': 'ENSG00000177000', 'selectedTranscript': CACHED_VARIANTS_BY_KEY[2]['sortedTranscriptConsequences'][5]},
-                {'selectedGeneId': 'ENSG00000177000', 'selectedTranscript': CACHED_VARIANTS_BY_KEY[3]['sortedTranscriptConsequences'][1]},
+                {'selectedGeneId': 'ENSG00000177000', 'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][5]},
+                {'selectedGeneId': 'ENSG00000177000', 'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[3][1]},
             ],
         )
 
@@ -805,7 +801,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             pathogenicity=pathogenicity, annotations=annotations, cached_variant_fields=[
                 {'selectedTranscript': None},
                 {'selectedTranscript': None},
-                {'selectedTranscript': CACHED_VARIANTS_BY_KEY[4]['sortedTranscriptConsequences'][0]},
+                {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[4][0]},
             ],
         )
 
@@ -819,8 +815,8 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         annotations_2 = {'other': ['intron_variant']}
 
         comp_het_cached_fields = [
-            {'selectedGeneId':  'ENSG00000097046', 'selectedTranscript': CACHED_VARIANTS_BY_KEY[3]['sortedTranscriptConsequences'][0]},
-            {'selectedGeneId':  'ENSG00000097046', 'selectedTranscript': CACHED_VARIANTS_BY_KEY[4]['sortedTranscriptConsequences'][1]},
+            {'selectedGeneId':  'ENSG00000097046', 'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[3][0]},
+            {'selectedGeneId':  'ENSG00000097046', 'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[4][1]},
         ]
 
         self._assert_expected_search(
@@ -831,7 +827,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         self._assert_expected_search(
             [VARIANT2, [VARIANT3, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4]], inheritance_mode='recessive',
             annotations=annotations_1, annotations_secondary=annotations_2, cached_variant_fields=[
-                {'selectedTranscript': CACHED_VARIANTS_BY_KEY[2]['sortedTranscriptConsequences'][0]}, comp_het_cached_fields
+                {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][0]}, comp_het_cached_fields
             ],
         )
 
@@ -967,7 +963,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         self._assert_expected_search(
             [[VARIANT3, VARIANT4]], inheritance_mode='recessive',
             annotations=screen_annotations, annotations_secondary=annotations_2, cached_variant_fields=[
-                [{'selectedGeneId':  'ENSG00000097046', 'selectedTranscript': CACHED_VARIANTS_BY_KEY[3]['sortedTranscriptConsequences'][0]}, {'selectedGeneId':  'ENSG00000097046'}],
+                [{'selectedGeneId':  'ENSG00000097046', 'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[3][0]}, {'selectedGeneId':  'ENSG00000097046'}],
             ],
         )
 
@@ -976,7 +972,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             annotations=screen_annotations, annotations_secondary=selected_transcript_annotations,
             pathogenicity=pathogenicity, cached_variant_fields=[
                 {}, [
-                    {'selectedGeneId':  'ENSG00000097046', 'selectedTranscript': CACHED_VARIANTS_BY_KEY[3]['sortedTranscriptConsequences'][3]},
+                    {'selectedGeneId':  'ENSG00000097046', 'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[3][3]},
                     {'selectedGeneId':  'ENSG00000097046'},
                 ],
             ],
@@ -986,8 +982,8 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, [VARIANT3, VARIANT4]],
             annotations={**selected_transcript_annotations, **screen_annotations}, annotations_secondary=annotations_2,
             inheritance_mode='recessive', cached_variant_fields=[
-                {'selectedTranscript': CACHED_VARIANTS_BY_KEY[2]['sortedTranscriptConsequences'][5]}, [
-                    {'selectedGeneId': 'ENSG00000097046', 'selectedTranscript': CACHED_VARIANTS_BY_KEY[3]['sortedTranscriptConsequences'][0]},
+                {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][5]}, [
+                    {'selectedGeneId': 'ENSG00000097046', 'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[3][0]},
                     {'selectedGeneId': 'ENSG00000097046', 'selectedTranscript': None},
                 ],
             ],
@@ -1075,8 +1071,8 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             sort='protein_consequence',
             annotations={'other': ['non_coding_transcript_exon_variant'], 'splice_ai': '0'}, cached_variant_fields=[
                 {'selectedTranscript': None},
-                {'selectedTranscript': CACHED_VARIANTS_BY_KEY[2]['sortedTranscriptConsequences'][5]},
-                {'selectedTranscript': CACHED_VARIANTS_BY_KEY[3]['sortedTranscriptConsequences'][3]},
+                {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][5]},
+                {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[3][3]},
             ],
         )
 
