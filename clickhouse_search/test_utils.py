@@ -5,8 +5,8 @@ from hail_search.test_utils import (
     VARIANT2 as HAIL_VARIANT2,
     VARIANT3 as HAIL_VARIANT3,
     VARIANT4 as HAIL_VARIANT4,
+    PROJECT_2_VARIANT as HAIL_PROJECT_2_VARIANT,
 )
-from hail_search.test_search import PROJECT_2_VARIANT as HAIL_PROJECT_2_VARIANT
 
 VARIANT1 = {**deepcopy(HAIL_VARIANT1), 'key': 1}
 VARIANT2 = {**deepcopy(HAIL_VARIANT2), 'key': 2}
