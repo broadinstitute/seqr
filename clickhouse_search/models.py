@@ -23,8 +23,6 @@ options.DEFAULT_NAMES = (
 state.DEFAULT_NAMES = options.DEFAULT_NAMES
 
 
-
-
 class ClickHouseRouter:
     """
     Adapted from https://github.com/jayvynl/django-clickhouse-backend/blob/v1.3.2/README.md#configuration
@@ -720,10 +718,6 @@ class BaseTranscripts(models.ClickhouseModel):
         ('canonical', models.UInt8Field(null=True, blank=True)),
         ('codons', models.StringField(null=True, blank=True)),
         ('consequenceTerms', models.ArrayField(models.Enum8Field(null=True, blank=True, return_int=False, choices=BaseAnnotationsSnvIndel.CONSEQUENCE_TERMS))),
-        ('exon', NamedTupleField([
-            ('index', models.Int32Field(null=True, blank=True)),
-            ('total', models.Int32Field(null=True, blank=True)),
-        ], null_if_empty=True)),
         ('geneId', models.StringField(null=True, blank=True)),
         ('hgvsc', models.StringField(null=True, blank=True)),
         ('hgvsp', models.StringField(null=True, blank=True)),
@@ -763,9 +757,6 @@ class TranscriptsSnvIndel(BaseTranscripts):
             ('index', models.Int32Field(null=True, blank=True)),
             ('total', models.Int32Field(null=True, blank=True)),
         ], null_if_empty=True)),
-=======
-        ('majorConsequence', models.Enum8Field(null=True, blank=True, return_int=False, choices=BaseAnnotationsSnvIndel.CONSEQUENCE_TERMS)),
->>>>>>> 7c4b90efab9d1e8b87f44407c6cca89a9cfe60b4
         ('manePlusClinical', models.StringField(null=True, blank=True)),
         ('maneSelect', models.StringField(null=True, blank=True)),
         ('refseqTranscriptId', models.StringField(null=True, blank=True)),
