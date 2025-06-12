@@ -401,7 +401,7 @@ class BaseAnnotationsGRCh37SnvIndel(BaseAnnotationsMitoSnvIndel):
         ('fathmm', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
         ('mpc', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
         ('mut_pred', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        ('mut_taster', models.Enum8Field(null=True, blank=True, return_int=False, choices=BaseAnnotationsGRCh37SnvIndel.MUTATION_TASTER_PREDICTIONS)),
+        ('mut_taster', models.Enum8Field(null=True, blank=True, return_int=False, choices=BaseAnnotationsMitoSnvIndel.MUTATION_TASTER_PREDICTIONS)),
         ('polyphen', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
         ('primate_ai', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
         ('revel', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
