@@ -6,12 +6,14 @@ from hail_search.test_utils import (
     VARIANT3 as HAIL_VARIANT3,
     VARIANT4 as HAIL_VARIANT4,
 )
+from hail_search.test_search import PROJECT_2_VARIANT as HAIL_PROJECT_2_VARIANT
 
 VARIANT1 = {**deepcopy(HAIL_VARIANT1), 'key': 1}
 VARIANT2 = {**deepcopy(HAIL_VARIANT2), 'key': 2}
 VARIANT3 = {**deepcopy(HAIL_VARIANT3), 'key': 3}
 VARIANT4 = {**deepcopy(HAIL_VARIANT4), 'key': 4}
-for variant in [VARIANT1, VARIANT2, VARIANT3, VARIANT4]:
+PROJECT_2_VARIANT = {**deepcopy(HAIL_PROJECT_2_VARIANT), 'key': 5}
+for variant in [VARIANT1, VARIANT2, VARIANT3, VARIANT4, PROJECT_2_VARIANT]:
     # clickhouse uses fixed length decimals so values are rounded relative to hail backend
     for genotype in variant['genotypes'].values():
         genotype['ab'] = round(genotype['ab'], 5)
@@ -29,9 +31,8 @@ for variant in [VARIANT1, VARIANT2, VARIANT3, VARIANT4]:
                 transcript['alphamissense']['pathogenicity'] = round(transcript['alphamissense']['pathogenicity'], 5)
     # sort is not computed/annotated at query time
     del variant['_sort']
-
-del VARIANT1['clinvar']['version']
-del VARIANT2['clinvar']['version']
+    if variant['clinvar']:
+        del variant['clinvar']['version']
 
 FAMILY_3_VARIANT = deepcopy(VARIANT3)
 FAMILY_3_VARIANT['familyGuids'] = ['F000003_3']
@@ -45,7 +46,24 @@ FAMILY_3_VARIANT['genotypes'] = {
 MULTI_FAMILY_VARIANT = deepcopy(VARIANT3)
 MULTI_FAMILY_VARIANT['familyGuids'] += FAMILY_3_VARIANT['familyGuids']
 MULTI_FAMILY_VARIANT['genotypes'].update(FAMILY_3_VARIANT['genotypes'])
-MULTI_FAMILY_VARIANT = VARIANT3
+
+PROJECT_2_VARIANT1 = deepcopy(VARIANT1)
+PROJECT_2_VARIANT1['familyGuids'] = ['F000011_11']
+PROJECT_2_VARIANT1['genotypes'] = {
+    'I000015_na20885': {
+        'sampleId': 'NA20885', 'sampleType': 'WES', 'individualGuid': 'I000015_na20885', 'familyGuid': 'F000011_11',
+        'numAlt': 2, 'dp': 6, 'gq': 16, 'ab': 1.0, 'filters': [],
+    },
+}
+MULTI_PROJECT_VARIANT1 = deepcopy(VARIANT1)
+MULTI_PROJECT_VARIANT1['familyGuids'] += PROJECT_2_VARIANT1['familyGuids']
+MULTI_PROJECT_VARIANT1['genotypes'].update(PROJECT_2_VARIANT1['genotypes'])
+MULTI_PROJECT_VARIANT2 = deepcopy(VARIANT2)
+MULTI_PROJECT_VARIANT2['familyGuids'].append('F000011_11')
+MULTI_PROJECT_VARIANT2['genotypes']['I000015_na20885'] = {
+    'sampleId': 'NA20885', 'sampleType': 'WES', 'individualGuid': 'I000015_na20885', 'familyGuid': 'F000011_11',
+    'numAlt': 1, 'dp': 28, 'gq': 99, 'ab': 0.5, 'filters': [],
+}
 
 SELECTED_ANNOTATION_TRANSCRIPT_MULTI_FAMILY_VARIANT = {**MULTI_FAMILY_VARIANT, 'selectedMainTranscriptId': 'ENST00000497611'}
 SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT = {**MULTI_FAMILY_VARIANT, 'selectedMainTranscriptId': 'ENST00000426137'}
@@ -160,6 +178,12 @@ CACHED_VARIANTS_BY_KEY[4]['sortedTranscriptConsequences'] = [{
     'fiveutrConsequence': None,
     'geneId': 'ENSG00000097046',
 }]
+
+GENE_COUNTS = {
+    'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
+    'ENSG00000177000': {'total': 3, 'families': {'F000002_2': 2, 'F000011_11': 1}},
+    'ENSG00000277258': {'total': 2, 'families': {'F000002_2': 1, 'F000011_11': 1}},
+}
 
 VARIANT_IDS =  ['1-10439-AC-A', '1-91511686-TCA-G']
 VARIANT_ID_SEARCH = {
