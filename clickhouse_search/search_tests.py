@@ -163,7 +163,12 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         self._set_multi_project_search()
         self._assert_expected_search(
             [PROJECT_2_VARIANT, MULTI_PROJECT_VARIANT1, MULTI_PROJECT_VARIANT2, VARIANT3, VARIANT4],
-            gene_counts=GENE_COUNTS,
+            gene_counts=GENE_COUNTS, cached_variant_fields=[
+                {},
+                {field: MULTI_PROJECT_VARIANT1[field] for field in ['familyGuids', 'genotypes']},
+                {field: MULTI_PROJECT_VARIANT2[field] for field in ['familyGuids', 'genotypes']},
+                {}, {},
+            ],
         )
 
 #         self._assert_expected_search(

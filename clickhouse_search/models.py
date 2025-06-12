@@ -8,8 +8,8 @@ from django.db.models.sql.constants import INNER
 
 from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocksDB, Join
 from clickhouse_search.backend.fields import Enum8Field, NestedField, UInt64FieldDeltaCodecField, NamedTupleField
-from clickhouse_search.backend.functions import Array, ArrayFilter, ArrayDistinct, ArrayJoin, ArrayMap, CrossJoin, \
-    GroupArray, GroupArrayArray, GtStatsDictGet, SubqueryJoin, SubqueryTable, Tuple
+from clickhouse_search.backend.functions import Array, ArrayFilter, ArrayDistinct, ArrayJoin, ArrayMap, ArraySort, \
+    CrossJoin, GroupArray, GroupArrayArray, GtStatsDictGet, SubqueryJoin, SubqueryTable, Tuple
 from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFECTED, UNAFFECTED, MALE_SEXES, \
     X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, SCREEN_KEY, UTR_ANNOTATOR_KEY, \
     EXTENDED_SPLICE_KEY, MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY, CLINVAR_KEY, HGMD_KEY, SV_ANNOTATION_TYPES, \
@@ -614,6 +614,7 @@ class EntriesManager(Manager):
            sample_q = Q(
                calls__array_exists={**sample_inheritance_filter, **sample_quality_filter},
                family_guid=family_sample_data['family_guid'],
+               sample_type=family_sample_data['sample_type'],
            )
            if clinvar_override_q and sample_quality_filter:
                sample_q |= clinvar_override_q & Q(calls__array_exists=sample_inheritance_filter)
@@ -662,7 +663,7 @@ class EntriesManager(Manager):
         if len(sample_data) > 1:
             # For multi-family search, group results
             entries = entries.values(*fields).annotate(
-                familyGuids=ArrayDistinct(GroupArray('family_guid')),
+                familyGuids=ArraySort(ArrayDistinct(GroupArray('family_guid'))),
                 genotypes=GroupArrayArray(self._genotype_expression(sample_data)),
             )
             if carriers_expression:

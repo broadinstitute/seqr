@@ -47,21 +47,26 @@ MULTI_FAMILY_VARIANT = deepcopy(VARIANT3)
 MULTI_FAMILY_VARIANT['familyGuids'] += FAMILY_3_VARIANT['familyGuids']
 MULTI_FAMILY_VARIANT['genotypes'].update(FAMILY_3_VARIANT['genotypes'])
 
+# main fixture data has WGS sample_type for this project
+PROJECT_2_VARIANT['genotypes']['I000015_na20885']['sampleType'] = 'WGS'
+PROJECT_2_VARIANT['populations']['gnomad_genomes']['filter_af'] = 0.00233
+PROJECT_2_VARIANT['predictions']['cadd'] = 4.65299
+
 PROJECT_2_VARIANT1 = deepcopy(VARIANT1)
 PROJECT_2_VARIANT1['familyGuids'] = ['F000011_11']
 PROJECT_2_VARIANT1['genotypes'] = {
     'I000015_na20885': {
-        'sampleId': 'NA20885', 'sampleType': 'WES', 'individualGuid': 'I000015_na20885', 'familyGuid': 'F000011_11',
+        'sampleId': 'NA20885', 'sampleType': 'WGS', 'individualGuid': 'I000015_na20885', 'familyGuid': 'F000011_11',
         'numAlt': 2, 'dp': 6, 'gq': 16, 'ab': 1.0, 'filters': [],
     },
 }
 MULTI_PROJECT_VARIANT1 = deepcopy(VARIANT1)
 MULTI_PROJECT_VARIANT1['familyGuids'] += PROJECT_2_VARIANT1['familyGuids']
-MULTI_PROJECT_VARIANT1['genotypes'].update(PROJECT_2_VARIANT1['genotypes'])
+MULTI_PROJECT_VARIANT1['genotypes'].update(deepcopy(PROJECT_2_VARIANT1['genotypes']))
 MULTI_PROJECT_VARIANT2 = deepcopy(VARIANT2)
 MULTI_PROJECT_VARIANT2['familyGuids'].append('F000011_11')
 MULTI_PROJECT_VARIANT2['genotypes']['I000015_na20885'] = {
-    'sampleId': 'NA20885', 'sampleType': 'WES', 'individualGuid': 'I000015_na20885', 'familyGuid': 'F000011_11',
+    'sampleId': 'NA20885', 'sampleType': 'WGS', 'individualGuid': 'I000015_na20885', 'familyGuid': 'F000011_11',
     'numAlt': 1, 'dp': 28, 'gq': 99, 'ab': 0.5, 'filters': [],
 }
 
@@ -75,7 +80,7 @@ CACHED_VARIANTS_BY_KEY = {
     variant['key']: {
         'sortedTranscriptConsequences': [],
         **{k: v for k, v in variant.items() if k not in ['mainTranscriptId', 'selectedMainTranscriptId', 'transcripts']},
-    } for variant in [VARIANT1, VARIANT2, VARIANT3, VARIANT4]
+    } for variant in [VARIANT1, VARIANT2, VARIANT3, VARIANT4, PROJECT_2_VARIANT]
 }
 CACHED_VARIANTS_BY_KEY[2]['sortedTranscriptConsequences'] = [{
     'alphamissensePathogenicity': 0.99779,
