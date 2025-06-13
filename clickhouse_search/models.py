@@ -629,56 +629,69 @@ class EntriesManager(Manager):
 
        individual_genotype_filter = (inheritance_filter or {}).get('genotype')
        custom_affected = (inheritance_filter or {}).get('affected') or {}
+       multi_sample_type_filter_families = None
        if inheritance_mode or individual_genotype_filter or quality_filter:
             clinvar_override_q = AnnotationsQuerySet._clinvar_path_q(
                pathogenicity, _get_range_q=lambda path_range: Q(clinvar_join__pathogenicity__range=path_range),
             )
-            multi_family_sample_types = {}
-            if len(family_guids) != len(sample_data):
-                family_sample_types = defaultdict(list)
-                for s in sample_data:
-                    family_sample_types[s['family_guid']].append(s['sample_type'])
-                multi_family_sample_types = {
-                    family: sample_types for family, sample_types in family_sample_types.items() if len(sample_types) > 1
-                }
-            family_sample_type_filters = defaultdict(dict)
-            call_q = None
-            for s in sample_data:
-                if s['family_guid'] in multi_family_sample_types:
-                    sample_filters = self._family_sample_filters(s, inheritance_mode, individual_genotype_filter, quality_filter, custom_affected)
-                    if sample_filters:
-                        family_sample_type_filters[s['family_guid']][s['sample_type']] = sample_filters
-                else:
-                    call_q = self._family_calls_q(call_q, clinvar_override_q, s, inheritance_mode, individual_genotype_filter, quality_filter, custom_affected)
-
-            if family_sample_type_filters:
-                multi_sample_type_filter_families = {}
-                for family_guid, sample_type_filters in family_sample_type_filters.items():
-                    overlap_samples = None
-                    if len(sample_type_filters) > 1:
-                        sample_type_ids = [set(sample_filter.keys()) for sample_filter in sample_type_filters.values()]
-                        overlap_samples = sample_type_ids[0].intersection(*sample_type_ids[1:])
-                    if overlap_samples:
-                        multi_sample_type_filter_families[family_guid] = sample_type_filters
-                    else:
-                        #  If only one filterable sample type available for family, use that
-                        for sample_type, sample_filters in sample_type_filters.items():
-                            call_q = self._family_calls_q(
-                                call_q, clinvar_override_q,
-                                {'family_guid': family_guid, 'sample_type': sample_type}, sample_filters=sample_filters,
-                            )
-                #  With families with multiple sample types, can only filter rows after aggregating
-                if multi_sample_type_filter_families:
-                    multi_type_q = Q(family_guid__in=multi_sample_type_filter_families.keys())
-                    if call_q:
-                        call_q |= multi_type_q
-                    else:
-                        call_q = multi_type_q
-
+            call_q, multi_sample_type_filter_families = self._get_family_calls_filter(
+                sample_data, family_guids, clinvar_override_q, inheritance_mode, individual_genotype_filter,
+                quality_filter, custom_affected,
+            )
             if call_q:
                 entries = entries.filter(call_q)
 
        return self._annotate_calls(entries, sample_data, annotate_carriers, multi_sample_type_filter_families)
+
+    @classmethod
+    def _get_family_calls_filter(cls, sample_data, family_guids, clinvar_override_q, *args):
+        multi_family_sample_types = {}
+        if len(family_guids) != len(sample_data):
+            family_sample_types = defaultdict(list)
+            for s in sample_data:
+                family_sample_types[s['family_guid']].append(s['sample_type'])
+            multi_family_sample_types = {
+                family: sample_types for family, sample_types in family_sample_types.items() if len(sample_types) > 1
+            }
+
+        family_sample_type_filters = defaultdict(dict)
+        call_q = None
+        for s in sample_data:
+            if s['family_guid'] in multi_family_sample_types:
+                sample_filters = cls._family_sample_filters(s, *args)
+                if sample_filters:
+                    family_sample_type_filters[s['family_guid']][s['sample_type']] = sample_filters
+            else:
+                call_q = cls._family_calls_q(call_q, clinvar_override_q, s, *args)
+
+        if not family_sample_type_filters:
+            return call_q, None
+
+        multi_sample_type_filter_families = {}
+        for family_guid, sample_type_filters in family_sample_type_filters.items():
+            overlap_samples = None
+            if len(sample_type_filters) > 1:
+                sample_type_ids = [set(sample_filter.keys()) for sample_filter in sample_type_filters.values()]
+                overlap_samples = sample_type_ids[0].intersection(*sample_type_ids[1:])
+            if overlap_samples:
+                multi_sample_type_filter_families[family_guid] = sample_type_filters
+            else:
+                #  If only one filterable sample type available for family, use that
+                for sample_type, sample_filters in sample_type_filters.items():
+                    call_q = cls._family_calls_q(
+                        call_q, clinvar_override_q,
+                        {'family_guid': family_guid, 'sample_type': sample_type}, sample_filters=sample_filters,
+                    )
+
+        #  With families with multiple sample types, can only filter rows after aggregating
+        if multi_sample_type_filter_families:
+            multi_type_q = Q(family_guid__in=multi_sample_type_filter_families.keys())
+            if call_q:
+                call_q |= multi_type_q
+            else:
+                call_q = multi_type_q
+
+        return call_q, multi_sample_type_filter_families
 
     @classmethod
     def _family_sample_filters(cls, family_sample_data, inheritance_mode, individual_genotype_filter, quality_filter, custom_affected):
