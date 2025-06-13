@@ -323,7 +323,7 @@ OPENED_RUN_JSON_FILES = [{
     'callsets': ['gcnv.bed.gz'],
     'sample_type': 'WES',
     'family_samples': {'F000002_2': ['HG00731', 'HG00732', 'HG00733'], 'F000012_12': ['NA20889']},
-}, 
+},
 {
     'migration_type': 'PROJECT_ENTRIES',
     'callsets': [],
