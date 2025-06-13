@@ -10,9 +10,25 @@ class Array(Func):
     function = 'array'
 
 
+class ArrayDistinct(Func):
+    function = 'arrayDistinct'
+
+
+class ArrayIntersect(Func):
+    function = 'arrayIntersect'
+
+
+class ArrayJoin(Func):
+    function = 'arrayJoin'
+
+
 class ArrayMap(Func):
     function = 'arrayMap'
     template = "%(function)s(x -> %(mapped_expression)s, %(expressions)s)"
+
+
+class ArraySort(Func):
+    function = 'arraySort'
 
 
 def _format_condition(filters):
@@ -57,6 +73,7 @@ class ArrayFilter(lookups.Transform):
         return f'arrayFilter(x -> {self.conditions}, {lhs})', params
 
 
+@ArrayField.register_lookup
 @NestedField.register_lookup
 class ArrayNotEmptyTransform(lookups.Transform):
     lookup_name = "not_empty"
@@ -79,10 +96,11 @@ class TupleConcat(Func):
 
 
 class SubqueryTable(BaseTable):
-    def __init__(self, subquery):
+    def __init__(self, subquery, alias=None):
         self.subquery = Subquery(subquery)
         table_name = subquery.model._meta.db_table
-        alias, _ = subquery.query.table_alias(table_name, create=True)
+        if not alias:
+            alias, _ = subquery.query.table_alias(table_name, create=True)
         super().__init__(table_name, alias)
 
     def as_sql(self, compiler, connection):
@@ -103,3 +121,24 @@ class SubqueryJoin(Join):
 
         sql = f'{self.join_type} {qn(self.parent_alias)} ON ({on_clause_sql})'
         return sql, []
+
+
+class CrossJoin(Join):
+
+    join_type = None
+    parent_alias = None
+    table_alias = None
+    join_field = None
+    join_cols = []
+    nullable = False
+    filtered_relation = None
+
+    def __init__(self, query, alias, join_query, join_alias):
+        self.main_table = SubqueryTable(query, alias)
+        self.join_table = SubqueryTable(join_query, join_alias)
+        self.table_name = alias
+
+    def as_sql(self, compiler, connection):
+        subquery_sql, params = self.main_table.as_sql(compiler, connection)
+        join_subquery_sql, join_params = self.join_table.as_sql(compiler, connection)
+        return f'{subquery_sql} CROSS JOIN {join_subquery_sql}', params + join_params

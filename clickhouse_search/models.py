@@ -6,8 +6,9 @@ from django.db.models.expressions import Col
 from django.db.models.sql.constants import INNER
 
 from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocksDB, Join
-from clickhouse_search.backend.fields import NestedField, UInt64FieldDeltaCodecField, NamedTupleField
-from clickhouse_search.backend.functions import ArrayFilter, GtStatsDictGet, SubqueryJoin, SubqueryTable, Tuple
+from clickhouse_search.backend.fields import Enum8Field, NestedField, UInt64FieldDeltaCodecField, NamedTupleField
+from clickhouse_search.backend.functions import ArrayFilter, ArrayDistinct, ArrayJoin, ArrayMap, CrossJoin, \
+    GtStatsDictGet, SubqueryJoin, SubqueryTable, Tuple
 from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFECTED, UNAFFECTED, MALE_SEXES, \
     X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, SCREEN_KEY, UTR_ANNOTATOR_KEY, \
     EXTENDED_SPLICE_KEY, MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY, CLINVAR_KEY, HGMD_KEY, SV_ANNOTATION_TYPES, \
@@ -76,6 +77,10 @@ class Projection(Func):
 
 class AnnotationsQuerySet(QuerySet):
 
+    TRANSCRIPT_CONSEQUENCE_FIELD = 'sorted_transcript_consequences'
+    GENE_CONSEQUENCE_FIELD = 'gene_consequences'
+    FILTERED_CONSEQUENCE_FIELD = 'filtered_transcript_consequences'
+
     def subquery_join(self, subquery, join_key='key'):
         #  Add key to intermediate select if not already present
         join_field = next(field for field in subquery.model._meta.fields if field.name == join_key)
@@ -96,17 +101,39 @@ class AnnotationsQuerySet(QuerySet):
         ))
         self.query.alias_map[parent_alias] = table
 
-        #  Update the queryset annotations to include the columns from the subquery
-        qs = self.annotate(**{
-            col.target.name: Col(table.table_alias, col.target) for col in subquery.query.select
+        return self.annotate(**self._get_subquery_annotations(subquery, table.table_alias, join_key=join_key))
+
+    def _get_subquery_annotations(self, subquery, alias, join_key=None):
+        annotations = {
+            col.target.name: Col(alias, col.target) for col in subquery.query.select
             if col.target.name != join_key
-        })
+        }
         for name, field in subquery.query.annotation_select.items():
             target = field.output_field.clone()
             target.column = name
-            qs = qs.annotate(**{name: Col(table.table_alias, target)})
+            annotations[name] = Col(alias, target)
 
-        return qs
+        return annotations
+
+    def cross_join(self, query, alias, join_query, join_alias, select_fields=None, select_values=None, conditional_selects=None):
+        query = self._get_join_query_values(query, alias, select_fields, select_values, conditional_selects)
+        join_query = self._get_join_query_values(join_query, join_alias, select_fields, select_values, conditional_selects)
+        self.query.join(CrossJoin(query, alias, join_query, join_alias))
+
+        annotations = self._get_subquery_annotations(query, alias)
+        annotations.update(self._get_subquery_annotations(join_query, join_alias))
+
+        return self.annotate(**annotations)
+
+    def _get_join_query_values(self, query, alias, select_fields, select_values, conditional_selects):
+        query_select = {**(select_values or {})}
+        for field, selects in (conditional_selects or {}).items():
+            if query.has_annotation(field):
+                query_select.update(selects)
+        return query.values(
+            **{f'{alias}_{field}': F(field) for field in select_fields or []},
+            **{f'{alias}_{field}': value for field, value in query_select.items()},
+        )
 
     def search(self, parsed_locus=None, **kwargs):
         parsed_locus = parsed_locus or {}
@@ -202,18 +229,14 @@ class AnnotationsQuerySet(QuerySet):
     @classmethod
     def _filter_annotations(cls, results, annotations=None, pathogenicity=None, exclude=None, gene_ids=None, **kwargs):
         if gene_ids:
-            results = results.annotate(gene_consequences=ArrayFilter('sorted_transcript_consequences', conditions=[{
-                'geneId': (gene_ids, 'has({value}, {field})'),
-            }]))
+            results = results.annotate(**{
+                cls.GENE_CONSEQUENCE_FIELD: ArrayFilter(cls.TRANSCRIPT_CONSEQUENCE_FIELD, conditions=[{
+                    'geneId': (gene_ids, 'has({value}, {field})'),
+                }]),
+            })
             results = results.filter(gene_consequences__not_empty=True)
 
         filter_qs, transcript_filters = cls._parse_annotation_filters(annotations) if annotations else ([], [])
-        if transcript_filters:
-            consequence_field = 'gene_consequences' if gene_ids else 'sorted_transcript_consequences'
-            results = results.annotate(
-                filtered_transcript_consequences=ArrayFilter(consequence_field, conditions=transcript_filters),
-            )
-            filter_qs.append(Q(filtered_transcript_consequences__not_empty=True))
 
         hgmd = (pathogenicity or {}).get(HGMD_KEY)
         if hgmd:
@@ -227,15 +250,28 @@ class AnnotationsQuerySet(QuerySet):
         if exclude_clinvar:
             results = results.exclude(cls._clinvar_filter_q(exclude_clinvar))
 
-        if not filter_qs:
+        if not (filter_qs or transcript_filters):
             return results
 
-        filter_q = filter_qs[0]
+        filter_q = filter_qs[0] if filter_qs else None
         for q in filter_qs[1:]:
             filter_q |= q
-        results = results.filter(filter_q)
+        if filter_q:
+            results = results.annotate(passes_annotation=filter_q)
+            filter_q = Q(passes_annotation=True)
 
-        return results
+        if transcript_filters:
+            consequence_field = cls.GENE_CONSEQUENCE_FIELD if gene_ids else cls.TRANSCRIPT_CONSEQUENCE_FIELD
+            results = results.annotate(**{
+                cls.FILTERED_CONSEQUENCE_FIELD: ArrayFilter(consequence_field, conditions=transcript_filters),
+            })
+            transcript_q = Q(filtered_transcript_consequences__not_empty=True)
+            if filter_q:
+                filter_q |= transcript_q
+            else:
+                filter_q = transcript_q
+
+        return results.filter(filter_q)
 
     @classmethod
     def _parse_annotation_filters(cls, annotations):
@@ -318,6 +354,24 @@ class AnnotationsQuerySet(QuerySet):
             f for f in (pathogenicity or {}).get(CLINVAR_KEY) or [] if f in CLINVAR_PATH_SIGNIFICANCES
         ]
         return cls._clinvar_filter_q(clinvar_path_filters, _get_range_q=_get_range_q) if clinvar_path_filters else None
+
+    def explode_gene_id(self, gene_id_key):
+        consequence_field = self.GENE_CONSEQUENCE_FIELD if self.has_annotation(self.GENE_CONSEQUENCE_FIELD) else self.TRANSCRIPT_CONSEQUENCE_FIELD
+        results = self.annotate(
+            selectedGeneId=ArrayJoin(ArrayDistinct(ArrayMap(consequence_field, mapped_expression='x.geneId')), output_field=models.StringField())
+        )
+        if self.has_annotation(self.FILTERED_CONSEQUENCE_FIELD):
+            results = results.annotate(**{self.FILTERED_CONSEQUENCE_FIELD: ArrayFilter(
+                self.FILTERED_CONSEQUENCE_FIELD, conditions=[{'geneId': (gene_id_key, '{field} = {value}')}],
+            )})
+            filter_q = Q(filtered_transcript_consequences__not_empty=True)
+            if self.has_annotation('passes_annotation'):
+                filter_q |= Q(passes_annotation=True)
+            results = results.filter(filter_q)
+        return results
+
+    def has_annotation(self, field):
+        return field in self.query.annotations
 
 
 class BaseAnnotations(models.ClickhouseModel):
@@ -705,6 +759,7 @@ class EntriesGRCh37SnvIndel(BaseEntriesSnvIndel):
         db_table = 'GRCh37/SNV_INDEL/entries'
 
 class EntriesSnvIndel(BaseEntriesSnvIndel):
+    
     objects = EntriesManager()
 
     # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
