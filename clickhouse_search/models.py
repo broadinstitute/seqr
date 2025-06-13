@@ -898,8 +898,8 @@ class EntriesSv(BaseEntries):
         ('gt', models.Enum8Field(null=True, blank=True, choices=[(0, 'REF'), (1, 'HET'), (2, 'HOM')])),
         ('cn', models.UInt8Field(null=True, blank=True)),
         ('gq', models.UInt8Field(null=True, blank=True)),
-        ('newCall', models.BoolField()),
-        ('prevCall', models.BoolField()),
+        ('newCall', models.BoolField(null=True, blank=True)),
+        ('prevCall', models.BoolField(null=True, blank=True)),
         ('prevNumAlt', models.Enum8Field(null=True, blank=True, choices=[(0, 'REF'), (1, 'HET'), (2, 'HOM')])),
     ]
 
