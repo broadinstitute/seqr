@@ -794,6 +794,8 @@ class BaseEntries(models.ClickhouseModel):
     filters = models.ArrayField(models.StringField(low_cardinality=True))
     sign = models.Int8Field()
 
+    objects = EntriesManager()
+
     def _save_table(
         self,
         raw=False,
@@ -828,8 +830,6 @@ class BaseEntriesSnvIndel(BaseEntries):
         ('ab', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
         ('dp', models.UInt16Field(null=True, blank=True)),
     ]
-
-    objects = EntriesManager()
 
     is_gnomad_gt_5_percent = models.BoolField()
     calls = models.ArrayField(NamedTupleField(CALL_FIELDS))
@@ -870,8 +870,6 @@ class EntriesMito(BaseEntries):
         ('mitoCn', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
         ('contamination', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
     ]
-
-    objects = EntriesManager()
 
     # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
     key = ForeignKey('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
