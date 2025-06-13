@@ -373,7 +373,7 @@ class BaseAnnotationsSvGcnv(BaseAnnotations):
 
     end = models.UInt32Field()
     rg37_locus_end = NamedTupleField([
-        ('contig', models.Enum8Field(return_int=False, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES[:-1])])),
+        ('contig', models.Enum8Field(return_int=False, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES)])),
         ('position', models.UInt32Field()),
     ], db_column='rg37LocusEnd', null_if_empty=True)
     sv_type = models.Enum8Field(db_column='svType', return_int=False, choices=SV_TYPES)
@@ -583,14 +583,14 @@ class BaseAnnotationsSv(BaseAnnotationsSvGcnv):
     algorithms = models.StringField(low_cardinality=True)
     bothsides_support = models.BoolField(db_column='bothsidesSupport')
     cpx_intervals = NestedField([
-        ('chrom', models.Enum8Field(return_int=False, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES[:-1])])),
+        ('chrom', models.Enum8Field(return_int=False, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES)])),
         ('start', models.UInt32Field()),
         ('end', models.UInt32Field()),
         ('type', models.Enum8Field(return_int=False, choices=BaseAnnotationsSvGcnv.SV_TYPES)),
     ], db_column='cpxIntervals', null_when_empty=True)
-    end_chrom = models.Enum8Field(db_column='endChrom', return_int=False, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES[:-1])])
+    end_chrom = models.Enum8Field(db_column='endChrom', return_int=False, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES)])
     sv_source_detail = NestedField(
-        [('chrom', models.Enum8Field(return_int=False, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES[:-1])]))],
+        [('chrom', models.Enum8Field(return_int=False, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES)]))],
     db_column='svSourceDetail', null_when_empty=True)
     sv_type_detail = models.Enum8Field(db_column='svTypeDetail', return_int=False, choices=SV_TYPE_DETAILS)
     populations = NamedTupleField(POPULATION_FIELDS)
