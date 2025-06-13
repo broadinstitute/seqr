@@ -471,6 +471,8 @@ class BaseAnnotationsGRCh37SnvIndel(BaseAnnotationsMitoSnvIndel):
         ('geneId', models.StringField(null=True, blank=True))
     ]
 
+    objects = AnnotationsQuerySet.as_manager()
+
     caid = models.StringField(db_column='CAID', null=True, blank=True)
     hgmd = NamedTupleField([
         ('accession', models.StringField(null=True, blank=True)),
@@ -506,8 +508,6 @@ class BaseAnnotationsSnvIndel(BaseAnnotationsGRCh37SnvIndel):
         ('fiveutrConsequence', models.Enum8Field(null=True, blank=True, return_int=False, choices=[(1, '5_prime_UTR_premature_start_codon_gain_variant'), (2, '5_prime_UTR_premature_start_codon_loss_variant'), (3, '5_prime_UTR_stop_codon_gain_variant'), (4, '5_prime_UTR_stop_codon_loss_variant'), (5, '5_prime_UTR_uORF_frameshift_variant')])),
         *BaseAnnotationsGRCh37SnvIndel.SORTED_TRANSCRIPT_CONSQUENCES_FIELDS,
     ])
-
-    objects = AnnotationsQuerySet.as_manager()
 
     screen_region_type = Enum8Field(db_column='screenRegionType', null=True, blank=True, return_int=False, choices=[(0, 'CTCF-bound'), (1, 'CTCF-only'), (2, 'DNase-H3K4me3'), (3, 'PLS'), (4, 'dELS'), (5, 'pELS'), (6, 'DNase-only'), (7, 'low-DNase')])
     predictions = NamedTupleField(PREDICTION_FIELDS)
@@ -830,6 +830,9 @@ class BaseEntriesSnvIndel(BaseEntries):
         ('ab', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
         ('dp', models.UInt16Field(null=True, blank=True)),
     ]
+
+    objects = EntriesManager()
+
     is_gnomad_gt_5_percent = models.BoolField()
     calls = models.ArrayField(NamedTupleField(CALL_FIELDS))
 
@@ -846,8 +849,6 @@ class BaseEntriesSnvIndel(BaseEntries):
 
 class EntriesGRCh37SnvIndel(BaseEntriesSnvIndel):
 
-    objects = EntriesManager()
-
     # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
     key = ForeignKey('AnnotationsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
 
@@ -855,8 +856,6 @@ class EntriesGRCh37SnvIndel(BaseEntriesSnvIndel):
         db_table = 'GRCh37/SNV_INDEL/entries'
 
 class EntriesSnvIndel(BaseEntriesSnvIndel):
-
-    objects = EntriesManager()
 
     # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
     key = ForeignKey('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
