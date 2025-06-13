@@ -674,8 +674,8 @@ class BaseAnnotationsGcnv(BaseAnnotationsSvGcnv):
             ('hom', models.UInt32Field()),
         ])),
     ]
-    
-    num_exon = models.UInt8Field(db_column='numExon') 
+
+    num_exon = models.UInt8Field(db_column='numExon')
     populations = NamedTupleField(POPULATION_FIELDS)
 
     class Meta:
