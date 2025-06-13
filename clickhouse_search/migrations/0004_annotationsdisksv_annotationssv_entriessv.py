@@ -7,6 +7,8 @@ from django.db import migrations, models
 import django.db.models.deletion
 import django.db.models.manager
 
+from settings import CLICKHOUSE_IN_MEMORY_DIR, CLICKHOUSE_DATA_DIR
+
 
 class Migration(migrations.Migration):
 
@@ -20,12 +22,12 @@ class Migration(migrations.Migration):
             fields=[
                 ('key', clickhouse_backend.models.UInt32Field(primary_key=True, serialize=False)),
                 ('xpos', clickhouse_backend.models.UInt64Field()),
-                ('chrom', clickhouse_backend.models.Enum8Field(choices=[(1, '1'), (2, '2'), (3, '3'), (4, '4'), (5, '5'), (6, '6'), (7, '7'), (8, '8'), (9, '9'), (10, '10'), (11, '11'), (12, '12'), (13, '13'), (14, '14'), (15, '15'), (16, '16'), (17, '17'), (18, '18'), (19, '19'), (20, '20'), (21, '21'), (22, '22'), (23, 'X'), (24, 'Y'), (25, 'M')])),
+                ('chrom', clickhouse_search.backend.fields.Enum8Field(choices=[(1, '1'), (2, '2'), (3, '3'), (4, '4'), (5, '5'), (6, '6'), (7, '7'), (8, '8'), (9, '9'), (10, '10'), (11, '11'), (12, '12'), (13, '13'), (14, '14'), (15, '15'), (16, '16'), (17, '17'), (18, '18'), (19, '19'), (20, '20'), (21, '21'), (22, '22'), (23, 'X'), (24, 'Y'), (25, 'M')])),
                 ('pos', clickhouse_backend.models.UInt32Field()),
                 ('end', clickhouse_backend.models.UInt32Field()),
                 ('rg37_locus_end', clickhouse_search.backend.fields.NamedTupleField(base_fields=[('contig', clickhouse_backend.models.Enum8Field(choices=[(1, '1'), (2, '2'), (3, '3'), (4, '4'), (5, '5'), (6, '6'), (7, '7'), (8, '8'), (9, '9'), (10, '10'), (11, '11'), (12, '12'), (13, '13'), (14, '14'), (15, '15'), (16, '16'), (17, '17'), (18, '18'), (19, '19'), (20, '20'), (21, '21'), (22, '22'), (23, 'X'), (24, 'Y'), (25, 'M')])), ('position', clickhouse_backend.models.UInt32Field())], db_column='rg37LocusEnd')),
                 ('variant_id', clickhouse_backend.models.StringField(db_column='variantId')),
-                ('lifted_over_chrom', clickhouse_backend.models.Enum8Field(blank=True, choices=[(1, '1'), (2, '2'), (3, '3'), (4, '4'), (5, '5'), (6, '6'), (7, '7'), (8, '8'), (9, '9'), (10, '10'), (11, '11'), (12, '12'), (13, '13'), (14, '14'), (15, '15'), (16, '16'), (17, '17'), (18, '18'), (19, '19'), (20, '20'), (21, '21'), (22, '22'), (23, 'X'), (24, 'Y'), (25, 'M')], db_column='liftedOverChrom', null=True)),
+                ('lifted_over_chrom', clickhouse_search.backend.fields.Enum8Field(blank=True, choices=[(1, '1'), (2, '2'), (3, '3'), (4, '4'), (5, '5'), (6, '6'), (7, '7'), (8, '8'), (9, '9'), (10, '10'), (11, '11'), (12, '12'), (13, '13'), (14, '14'), (15, '15'), (16, '16'), (17, '17'), (18, '18'), (19, '19'), (20, '20'), (21, '21'), (22, '22'), (23, 'X'), (24, 'Y'), (25, 'M')], db_column='liftedOverChrom', null=True)),
                 ('lifted_over_pos', clickhouse_backend.models.UInt32Field(blank=True, db_column='liftedOverPos', null=True)),
                 ('algorithms', clickhouse_backend.models.StringField(low_cardinality=True)),
                 ('bothsides_support', clickhouse_backend.models.BoolField(db_column='bothsidesSupport')),
@@ -40,7 +42,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'GRCh38/SV/annotations_disk',
-                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, '/var/seqr/clickhouse-data/GRCh38/SV/annotations', flatten_nested=0, primary_key='key'),
+                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SV/annotations', flatten_nested=0, primary_key='key'),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
@@ -52,12 +54,12 @@ class Migration(migrations.Migration):
             fields=[
                 ('key', clickhouse_backend.models.UInt32Field(primary_key=True, serialize=False)),
                 ('xpos', clickhouse_backend.models.UInt64Field()),
-                ('chrom', clickhouse_backend.models.Enum8Field(choices=[(1, '1'), (2, '2'), (3, '3'), (4, '4'), (5, '5'), (6, '6'), (7, '7'), (8, '8'), (9, '9'), (10, '10'), (11, '11'), (12, '12'), (13, '13'), (14, '14'), (15, '15'), (16, '16'), (17, '17'), (18, '18'), (19, '19'), (20, '20'), (21, '21'), (22, '22'), (23, 'X'), (24, 'Y'), (25, 'M')])),
+                ('chrom', clickhouse_search.backend.fields.Enum8Field(choices=[(1, '1'), (2, '2'), (3, '3'), (4, '4'), (5, '5'), (6, '6'), (7, '7'), (8, '8'), (9, '9'), (10, '10'), (11, '11'), (12, '12'), (13, '13'), (14, '14'), (15, '15'), (16, '16'), (17, '17'), (18, '18'), (19, '19'), (20, '20'), (21, '21'), (22, '22'), (23, 'X'), (24, 'Y'), (25, 'M')])),
                 ('pos', clickhouse_backend.models.UInt32Field()),
                 ('end', clickhouse_backend.models.UInt32Field()),
                 ('rg37_locus_end', clickhouse_search.backend.fields.NamedTupleField(base_fields=[('contig', clickhouse_backend.models.Enum8Field(choices=[(1, '1'), (2, '2'), (3, '3'), (4, '4'), (5, '5'), (6, '6'), (7, '7'), (8, '8'), (9, '9'), (10, '10'), (11, '11'), (12, '12'), (13, '13'), (14, '14'), (15, '15'), (16, '16'), (17, '17'), (18, '18'), (19, '19'), (20, '20'), (21, '21'), (22, '22'), (23, 'X'), (24, 'Y'), (25, 'M')])), ('position', clickhouse_backend.models.UInt32Field())], db_column='rg37LocusEnd')),
                 ('variant_id', clickhouse_backend.models.StringField(db_column='variantId')),
-                ('lifted_over_chrom', clickhouse_backend.models.Enum8Field(blank=True, choices=[(1, '1'), (2, '2'), (3, '3'), (4, '4'), (5, '5'), (6, '6'), (7, '7'), (8, '8'), (9, '9'), (10, '10'), (11, '11'), (12, '12'), (13, '13'), (14, '14'), (15, '15'), (16, '16'), (17, '17'), (18, '18'), (19, '19'), (20, '20'), (21, '21'), (22, '22'), (23, 'X'), (24, 'Y'), (25, 'M')], db_column='liftedOverChrom', null=True)),
+                ('lifted_over_chrom', clickhouse_search.backend.fields.Enum8Field(blank=True, choices=[(1, '1'), (2, '2'), (3, '3'), (4, '4'), (5, '5'), (6, '6'), (7, '7'), (8, '8'), (9, '9'), (10, '10'), (11, '11'), (12, '12'), (13, '13'), (14, '14'), (15, '15'), (16, '16'), (17, '17'), (18, '18'), (19, '19'), (20, '20'), (21, '21'), (22, '22'), (23, 'X'), (24, 'Y'), (25, 'M')], db_column='liftedOverChrom', null=True)),
                 ('lifted_over_pos', clickhouse_backend.models.UInt32Field(blank=True, db_column='liftedOverPos', null=True)),
                 ('algorithms', clickhouse_backend.models.StringField(low_cardinality=True)),
                 ('bothsides_support', clickhouse_backend.models.BoolField(db_column='bothsidesSupport')),
@@ -72,7 +74,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'GRCh38/SV/annotations_memory',
-                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, '/in-memory-dir/GRCh38/SV/annotations', flatten_nested=0, primary_key='key'),
+                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, f'{CLICKHOUSE_IN_MEMORY_DIR}/GRCh38/SV/annotations', flatten_nested=0, primary_key='key'),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
