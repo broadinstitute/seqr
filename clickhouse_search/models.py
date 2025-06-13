@@ -570,7 +570,7 @@ class BaseAnnotationsMito(BaseAnnotationsMitoSnvIndel):
     ]
     PREDICTION_FIELDS = [
         ('apogee', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        ('haplogroup_defining', models.BoolField(null=True, blank=True)),
+        ('haplogroup_defining', models.Enum8Field(null=True, blank=True, return_int=False, choices=[(0, 'Y')])),
         ('hmtvar', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
         ('mitotip', models.Enum8Field(null=True, blank=True, return_int=False, choices=MITOTIP_PATHOGENICITIES)),
         ('mut_taster', models.Enum8Field(null=True, blank=True, return_int=False, choices=BaseAnnotationsMitoSnvIndel.MUTATION_TASTER_PREDICTIONS)),
