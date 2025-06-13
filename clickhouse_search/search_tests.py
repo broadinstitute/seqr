@@ -199,7 +199,6 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #         )
 #
     def test_inheritance_filter(self):
-        self.maxDiff = None
         self.results_model.families.set(self.families.filter(guid='F000002_2'))
 
         inheritance_mode = 'any_affected'

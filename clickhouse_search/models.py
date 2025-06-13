@@ -377,10 +377,10 @@ class AnnotationsQuerySet(QuerySet):
 class BaseAnnotations(models.ClickhouseModel):
     key = models.UInt32Field(primary_key=True)
     xpos = models.UInt64Field()
-    chrom = models.Enum8Field(return_int=False, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES)])
+    chrom = Enum8Field(return_int=False, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES)])
     pos = models.UInt32Field()
     variant_id = models.StringField(db_column='variantId')
-    lifted_over_chrom = models.Enum8Field(db_column='liftedOverChrom', return_int=False, null=True, blank=True, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES)])
+    lifted_over_chrom = Enum8Field(db_column='liftedOverChrom', return_int=False, null=True, blank=True, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES)])
     lifted_over_pos = models.UInt32Field(db_column='liftedOverPos', null=True, blank=True)
 
     class Meta:
@@ -486,7 +486,7 @@ class BaseAnnotationsSnvIndel(BaseAnnotationsGRCh37SnvIndel):
 
     objects = AnnotationsQuerySet.as_manager()
 
-    screen_region_type = models.Enum8Field(db_column='screenRegionType', null=True, blank=True, return_int=False, choices=[(0, 'CTCF-bound'), (1, 'CTCF-only'), (2, 'DNase-H3K4me3'), (3, 'PLS'), (4, 'dELS'), (5, 'pELS'), (6, 'DNase-only'), (7, 'low-DNase')])
+    screen_region_type = Enum8Field(db_column='screenRegionType', null=True, blank=True, return_int=False, choices=[(0, 'CTCF-bound'), (1, 'CTCF-only'), (2, 'DNase-H3K4me3'), (3, 'PLS'), (4, 'dELS'), (5, 'pELS'), (6, 'DNase-only'), (7, 'low-DNase')])
     predictions = NamedTupleField(PREDICTION_FIELDS)
     sorted_transcript_consequences = NestedField(SORTED_TRANSCRIPT_CONSQUENCES_FIELDS, db_column='sortedTranscriptConsequences')
     sorted_motif_feature_consequences = NestedField([
