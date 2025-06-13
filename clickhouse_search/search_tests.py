@@ -265,7 +265,6 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         gt_inheritance_filter = {'genotype': {'I000006_hg00733': 'ref_ref', 'I000005_hg00732': 'has_alt'}}
         self._set_single_family_search()
         self._assert_expected_search([VARIANT2], inheritance_filter=gt_inheritance_filter)
-        self._reset_search_families()
 
         self._assert_expected_search(
             [VARIANT2], inheritance_mode='any_affected', inheritance_filter={'affected': {
@@ -274,6 +273,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         )
 
         inheritance_mode = 'compound_het'
+        self._reset_search_families()
         self._assert_expected_search(
             [[VARIANT3, VARIANT4]], inheritance_mode=inheritance_mode, inheritance_filter={}, gene_counts={
                 'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
@@ -756,6 +756,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #         self._assert_expected_search([SV_VARIANT1, SV_VARIANT4], annotations=annotations, sample_data=SV_WGS_SAMPLE_DATA)
 
         annotations = {'other': ['non_coding_transcript_exon_variant__canonical', 'non_coding_transcript_exon_variant']}
+        self._set_single_family_search()
         self._assert_expected_search(
             [VARIANT1, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3],
             # [VARIANT1, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3, MITO_VARIANT1, MITO_VARIANT3],
@@ -765,6 +766,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
                 {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[3][3]},
             ],
         )
+        self._reset_search_families()
 
         self._assert_expected_search(
             [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2],
@@ -786,6 +788,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 
         annotations['other'] = annotations['other'][:1]
         annotations['splice_ai'] = '0.005'
+        self._set_single_family_search()
         self._assert_expected_search(
             [VARIANT1, VARIANT3],
             # [VARIANT1, VARIANT3, MITO_VARIANT1, MITO_VARIANT3],
@@ -1039,6 +1042,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #         self.assertEqual(reason, 'Invalid intervals: 1:1-999999999')
 
     def test_sort(self):
+        self._set_single_family_search()
         self._assert_expected_search(
             [VARIANT4, VARIANT2, VARIANT3, VARIANT1],
             # [_sorted(VARIANT4, [2, 2]), _sorted(MITO_VARIANT2, [11, 11]), _sorted(VARIANT2, [12, 12]),
@@ -1046,6 +1050,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             #  _sorted(VARIANT1, [None, None])], sample_data=FAMILY_2_ALL_SAMPLE_DATA,
             sort='protein_consequence',
         )
+        self._reset_search_families()
 
 #         self._assert_expected_search(
 #             [_sorted(GCNV_VARIANT2, [0]), _sorted(GCNV_VARIANT3, [0]), _sorted(GCNV_VARIANT4, [0]),
@@ -1082,6 +1087,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             #  _sorted(VARIANT4, [12.5]), GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4], sort='pathogenicity',
         )
 
+        self._set_single_family_search()
         self._assert_expected_search(
             [VARIANT1, VARIANT2, VARIANT3, VARIANT4],
             # [ _sorted(MITO_VARIANT3, [4]), _sorted(VARIANT1, [4, None]), _sorted(VARIANT2, [8, 3]),
@@ -1098,6 +1104,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             sort='gnomad',
         )
 
+        self._reset_search_families()
         self._assert_expected_search(
             [VARIANT1, MULTI_FAMILY_VARIANT, VARIANT4, VARIANT2],
             # [_sorted(VARIANT1, [0]), _sorted(MULTI_FAMILY_VARIANT, [0]), _sorted(VARIANT4, [0]),
@@ -1114,7 +1121,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         )
 
         self._assert_expected_search(
-            [VARIANT4, VARIANT3, VARIANT1, VARIANT2],
+            [VARIANT4, MULTI_FAMILY_VARIANT, VARIANT1, VARIANT2],
             # [_sorted(MITO_VARIANT1, [0]), _sorted(MITO_VARIANT2, [0]), _sorted(VARIANT4, [2]),
             #  _sorted(MITO_VARIANT3, [3]), _sorted(VARIANT3, [4]), _sorted(VARIANT1, [9]),
             #  _sorted(VARIANT2, [28])],
@@ -1179,6 +1186,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #             sort=sort, sort_metadata=constraint_sort_metadata,
 #         )
 
+        self._set_single_family_search()
         self._assert_expected_search([VARIANT2, VARIANT3, VARIANT1, VARIANT4], sort='prioritized_gene')
 
         self._set_multi_project_search()
@@ -1186,7 +1194,6 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             [MULTI_PROJECT_VARIANT1, MULTI_PROJECT_VARIANT2, VARIANT3, VARIANT4, PROJECT_2_VARIANT],
             sort='family_guid',
         )
-        self._reset_search_families()
 
 #         # size sort only applies to SVs, so has no impact on other variant
 #         self._assert_expected_search(
@@ -1200,6 +1207,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #         )
 #
         # sort applies to compound hets
+        self._set_single_family_search()
         self._assert_expected_search(
             [[VARIANT4, VARIANT3], VARIANT2],
             sort='revel', inheritance_mode='recessive', **COMP_HET_ALL_PASS_FILTERS, cached_variant_fields=[
