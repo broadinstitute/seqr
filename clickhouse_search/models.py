@@ -383,6 +383,8 @@ class BaseAnnotations(models.ClickhouseModel):
     lifted_over_chrom = Enum8Field(db_column='liftedOverChrom', return_int=False, null=True, blank=True, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES)])
     lifted_over_pos = models.UInt32Field(db_column='liftedOverPos', null=True, blank=True)
 
+    objects = AnnotationsQuerySet.as_manager()
+
     class Meta:
         abstract = True
 
@@ -470,8 +472,6 @@ class BaseAnnotationsGRCh37SnvIndel(BaseAnnotationsMitoSnvIndel):
         ('consequenceTerms', models.ArrayField(models.Enum8Field(null=True, blank=True, return_int=False, choices=BaseAnnotationsMitoSnvIndel.CONSEQUENCE_TERMS))),
         ('geneId', models.StringField(null=True, blank=True))
     ]
-
-    objects = AnnotationsQuerySet.as_manager()
 
     caid = models.StringField(db_column='CAID', null=True, blank=True)
     hgmd = NamedTupleField([
