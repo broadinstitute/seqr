@@ -695,7 +695,7 @@ class ClickhouseSearchUtilsTests(TestCase, SearchUtilsTests):
         ])
         self.mock_redis.keys.assert_called_with(pattern=f'{cache_key_prefix}__*')
         self.assert_cached_results(
-            {'all_results': [CACHED_VARIANTS_BY_KEY[key] for key in [4, 2, 1, 3]], 'total_results': 4},
+            {'all_results': [format_cached_variant(v) for v in [VARIANT4, VARIANT2, VARIANT1, VARIANT3]], 'total_results': 4},
             sort='cadd',
         )
 
