@@ -92,7 +92,11 @@ class Command(BaseCommand):
         for run_dir, run_details in new_runs.items():
             try:
                 metadata_path = os.path.join(run_dir, 'metadata.json')
-                data_type, updated_families, updated_variants_by_id = self._load_new_samples(metadata_path, **run_details)
+                metadata = json.loads(next(line for line in file_iter(metadata_path)))
+                if metadata.get('migration_type'):
+                    logging.info(f'Skipping ClickHouse migration {run_details["genome_version"]}/{run_details["dataset_type"]}: {run_details["run_version"]}')
+                    continue
+                data_type, updated_families, updated_variants_by_id = self._load_new_samples(metadata, **run_details)
                 data_type_key = (data_type, run_details['genome_version'])
                 updated_families_by_data_type[data_type_key].update(updated_families)
                 updated_variants_by_data_type[data_type_key].update(updated_variants_by_id)
@@ -195,12 +199,11 @@ class Command(BaseCommand):
         })
 
     @classmethod
-    def _load_new_samples(cls, metadata_path, genome_version, dataset_type, run_version, **kwargs):
+    def _load_new_samples(cls, metadata, genome_version, dataset_type, run_version, **kwargs):
         dataset_type = DATASET_TYPE_MAP.get(dataset_type, dataset_type)
 
         logger.info(f'Loading new samples from {genome_version}/{dataset_type}: {run_version}')
 
-        metadata = json.loads(next(line for line in file_iter(metadata_path)))
         run_family_guids = set(metadata['family_samples'].keys())
         families = Family.objects.filter(guid__in=run_family_guids)
         if len(families) < len(run_family_guids):

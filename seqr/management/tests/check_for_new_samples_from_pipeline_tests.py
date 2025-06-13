@@ -166,6 +166,7 @@ LOCAL_RUN_PATHS = [
     '/seqr/seqr-hail-search-data/GRCh38/MITO/runs/auto__2024-08-12/_SUCCESS',
     '/seqr/seqr-hail-search-data/GRCh38/GCNV/runs/auto__2024-09-14/_SUCCESS',
     '/seqr/seqr-hail-search-data/GRCh38/SNV_INDEL/runs/manual__2025-01-24/validation_errors.json',
+    '/seqr/seqr-hail-search-data/GRCh38/SNV_INDEL/runs/hail_search_to_clickhouse_PROJECT_ENTRIES_WGS_R0877_neptune/_SUCCESS',
 ]
 RUN_PATHS = [
     b'gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-13/',
@@ -184,6 +185,7 @@ RUN_PATHS = [
     b'gs://seqr-hail-search-data/v3.1/GRCh38/GCNV/runs/auto__2024-09-14/README.txt',
     b'gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-24/',
     b'gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-24/validation_errors.json',
+    b'gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/hail_search_to_clickhouse_PROJECT_ENTRIES_WGS_R0877_neptune/_SUCCESS',
 ]
 OPENED_RUN_JSON_FILES = [{
     'callsets': ['1kg.vcf.gz', 'new_samples.vcf.gz'],
@@ -321,7 +323,13 @@ OPENED_RUN_JSON_FILES = [{
     'callsets': ['gcnv.bed.gz'],
     'sample_type': 'WES',
     'family_samples': {'F000002_2': ['HG00731', 'HG00732', 'HG00733'], 'F000012_12': ['NA20889']},
-}, {
+},
+{
+    'migration_type': 'PROJECT_ENTRIES',
+    'callsets': [],
+    'run_id': 'hail_search_to_clickhouse_PROJECT_ENTRIES_WGS_R0877_neptune',
+},
+{
     'project_guids': ['R0002_empty'],
     'error_messages': ['Missing the following expected contigs:chr17'],
 }, {
@@ -366,28 +374,27 @@ class CheckNewSamplesTest(object):
         self.addCleanup(patcher.stop)
         Sample.objects.filter(guid=OLD_DATA_SAMPLE_GUID).update(sample_type='WES')
 
-    def _test_call(self, error_logs=None, reload_annotations_logs=None, run_loading_logs=None, reload_calls=None, num_runs=4):
+    def _test_call(self, error_logs=None, reload_annotations_logs=None, run_loading_logs=None, reload_calls=None, num_runs=5):
         self._set_loading_files()
         self.reset_logs()
         responses.calls.reset()
 
         call_command('check_for_new_samples_from_pipeline')
 
-        single_call = num_runs < 4
+        single_call = num_runs < 5
         self._assert_expected_loading_file_calls(single_call=single_call)
 
         logs = self.LIST_FILE_LOGS[:1] + [(f'Loading new samples from {num_runs} run(s)', None)]
         runs = [
             ('GRCh38/SNV_INDEL', 'auto__2023-08-09'), ('GRCh37/SNV_INDEL', 'manual__2023-11-02'),
             ('GRCh38/MITO', 'auto__2024-08-12'), ('GRCh38/SV', 'auto__2024-09-14'),
+            ('GRCh38/SNV_INDEL', 'hail_search_to_clickhouse_PROJECT_ENTRIES_WGS_R0877_neptune'),
         ]
         if single_call:
             runs = runs[:1]
         for data_type, version in runs:
-            logs.append((f'Loading new samples from {data_type}: {version}', None))
             logs += self._additional_loading_logs(data_type, version)
-            if (run_loading_logs or {}).get(data_type):
-                logs += run_loading_logs[data_type]
+            logs += (run_loading_logs or {}).get(version, [(f'Loading new samples from {data_type}: {version}', None)])
             if (error_logs or {}).get(version):
                 logs.append((
                     f'Error loading {version}: {error_logs[version]}',
@@ -477,7 +484,11 @@ class CheckNewSamplesTest(object):
             'auto__2024-09-14': 'Data has genome version GRCh38 but the following projects have conflicting versions: R0001_1kg (GRCh37), R0003_test (GRCh37)',
         }
         mock_temp_dir.return_value.__enter__.return_value = '/mock/tmp'
-        self._test_call(error_logs=error_logs)
+        self._test_call(error_logs=error_logs, run_loading_logs={
+            'hail_search_to_clickhouse_PROJECT_ENTRIES_WGS_R0877_neptune': [
+                ('Skipping ClickHouse migration GRCh38/SNV_INDEL: hail_search_to_clickhouse_PROJECT_ENTRIES_WGS_R0877_neptune', None),
+            ]
+        })
         self.assertEqual(Sample.objects.filter(guid__in=SAMPLE_GUIDS + GCNV_SAMPLE_GUIDS).count(), 0)
 
         # Update fixture data to allow testing edge cases
@@ -512,6 +523,7 @@ class CheckNewSamplesTest(object):
             }),
         ]
         create_snv_indel_samples_logs = [
+            ('Loading new samples from GRCh38/SNV_INDEL: auto__2023-08-09', None),
             ('Loading 4 WES SNV_INDEL samples in 2 projects', None),
             ('create 4 Samples', {'dbUpdate': mock.ANY}),
             ('update 4 Samples', {'dbUpdate': mock.ANY}),
@@ -555,14 +567,18 @@ class CheckNewSamplesTest(object):
             ('Reloading shared annotations for 1 SV_WES GRCh38 saved variants (1 unique)', None),
             ('Fetched 1 additional variants', None),
         ], run_loading_logs={
-            'GRCh38/SNV_INDEL': create_snv_indel_samples_logs + [
+            'auto__2023-08-09': create_snv_indel_samples_logs + [
                 ('update 1 Samples', {'dbUpdate': mock.ANY}),
                 ('update 2 Familys', {'dbUpdate': mock.ANY}),
             ] + self.AIRTABLE_LOGS + [
                 ('update 3 Familys', {'dbUpdate': mock.ANY}),
             ] + update_sample_qc_logs + reload_project_variants_logs,
-            'GRCh38/MITO': [('Loading 2 WGS MITO samples in 1 projects', None)],
-            'GRCh38/SV': [
+            'auto__2024-08-12': [
+                ('Loading new samples from GRCh38/MITO: auto__2024-08-12', None),
+                ('Loading 2 WGS MITO samples in 1 projects', None)
+            ],
+            'auto__2024-09-14': [
+                ('Loading new samples from GRCh38/SV: auto__2024-09-14', None),
                 ('Loading 4 WES SV samples in 2 projects', None),
                 ('create 4 Samples', {'dbUpdate': mock.ANY}),
                 ('update 4 Samples', {'dbUpdate': mock.ANY}),
@@ -576,6 +592,9 @@ class CheckNewSamplesTest(object):
                 ('1 failed projects', None),
                 ('  Test Reprocessed Project: Bad Request', None),
             ],
+            'hail_search_to_clickhouse_PROJECT_ENTRIES_WGS_R0877_neptune': [
+                ('Skipping ClickHouse migration GRCh38/SNV_INDEL: hail_search_to_clickhouse_PROJECT_ENTRIES_WGS_R0877_neptune', None),
+            ]
         }, error_logs={
             'manual__2023-11-02': 'Invalid families in run metadata GRCh37/SNV_INDEL: manual__2023-11-02 - F0000123_ABC',
             'auto__2024-08-12': 'Matches not found for sample ids: NA20885, NA22882',
@@ -785,7 +804,7 @@ The following 1 families failed sex check:
         self._test_call(num_runs=2, reload_annotations_logs=reload_fetched_annotations_logs + [
            ('Skipped reloading all 2 saved variant annotations for SNV_INDEL GRCh38', None),
        ], reload_calls=reload_snv_indel_calls, run_loading_logs={
-            'GRCh38/SNV_INDEL': create_snv_indel_samples_logs + airtable_logs + update_sample_qc_logs + reload_project_variants_logs,
+            'auto__2023-08-09': create_snv_indel_samples_logs + airtable_logs + update_sample_qc_logs + reload_project_variants_logs,
         })
 
 class LocalCheckNewSamplesTest(AuthenticationTestCase, CheckNewSamplesTest):
@@ -999,6 +1018,7 @@ The following users have been notified: test_user_manager@test.com""")
                 ('gsutil cat gs://seqr-hail-search-data/v3.1/GRCh37/SNV_INDEL/runs/manual__2023-11-02/metadata.json', -2),
                 ('gsutil cat gs://seqr-hail-search-data/v3.1/GRCh38/MITO/runs/auto__2024-08-12/metadata.json', -2),
                 ('gsutil cat gs://seqr-hail-search-data/v3.1/GRCh38/GCNV/runs/auto__2024-09-14/metadata.json', -2),
+                ('gsutil cat gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/hail_search_to_clickhouse_PROJECT_ENTRIES_WGS_R0877_neptune/metadata.json', -2),
                 ('gsutil cat gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-14/validation_errors.json', -2),
                 ('gsutil mv /mock/tmp/* gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-14/', -2),
                 ('gsutil cat gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-24/validation_errors.json', -2),
