@@ -786,7 +786,6 @@ class EntriesManager(Manager):
             entries = entries.filter(seqrPop__1__lte=hh)
         return entries
 
-
 class BaseEntries(models.ClickhouseModel):
     project_guid = models.StringField(low_cardinality=True)
     family_guid = models.StringField()
@@ -820,7 +819,6 @@ class BaseEntries(models.ClickhouseModel):
             index_granularity=8192,
         )
         projection = Projection('xpos_projection', order_by='xpos')
-
 
 class BaseEntriesSnvIndel(BaseEntries):
     CALL_FIELDS = [
@@ -879,7 +877,7 @@ class EntriesMito(BaseEntries):
     key = ForeignKey('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
     calls = models.ArrayField(NamedTupleField(CALL_FIELDS))
 
-    class Meta:
+    class Meta(BaseEntries.Meta):
         db_table = 'GRCh38/MITO/entries'
 
 class TranscriptsGRCh37SnvIndel(models.ClickhouseModel):
