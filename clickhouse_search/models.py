@@ -348,7 +348,7 @@ class BaseAnnotationsMitoSnvIndel(BaseAnnotations):
             ('isLofNagnag', models.BoolField(null=True, blank=True)),
             ('lofFilters', models.ArrayField(models.StringField(null=True, blank=True))),
         ], null_empty_arrays=True)),
-        ('majorConsequence', models.StringField(null=True, blank=True)),
+        ('majorConsequence', models.Enum8Field(null=True, blank=True, return_int=False, choices=CONSEQUENCE_TERMS)),
         ('transcriptId', models.StringField()),
         ('transcriptRank', models.UInt8Field()),
     ]
