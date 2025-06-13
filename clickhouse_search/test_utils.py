@@ -171,3 +171,8 @@ INTERVALS = ['chr2:1234-5678', 'chr7:1-11100']
 LOCATION_SEARCH = {
     'locus': {'rawItems': '\n'.join(GENE_IDS+INTERVALS)},
 }
+
+COMP_HET_ALL_PASS_FILTERS = {
+    'annotations': {'splice_ai': '0.0', 'structural': ['DEL', 'CPX', 'INS', 'gCNV_DEL', 'gCNV_DUP']},
+    'pathogenicity': {'clinvar': ['likely_pathogenic']},
+}
