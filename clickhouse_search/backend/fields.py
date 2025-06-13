@@ -68,6 +68,14 @@ class NestedField(models.TupleField):
         return transform
 
 
+class Enum8Field(models.Enum8Field):
+
+    def clone(self):
+        clone = super().clone()
+        clone.return_int = self.return_int
+        return clone
+
+
 class UInt64FieldDeltaCodecField(models.UInt64Field):
 
     def db_type(self, connection):
