@@ -882,7 +882,6 @@ class EntriesMito(BaseEntries):
     class Meta:
         db_table = 'GRCh38/MITO/entries'
 
-
 class TranscriptsGRCh37SnvIndel(models.ClickhouseModel):
     key = OneToOneField('AnnotationsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
     transcripts = NestedField(BaseAnnotationsMitoSnvIndel.TRANSCRIPTS_FIELDS, group_by_key='geneId')
@@ -890,7 +889,6 @@ class TranscriptsGRCh37SnvIndel(models.ClickhouseModel):
     class Meta:
         db_table = 'GRCh37/SNV_INDEL/transcripts'
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh37/SNV_INDEL/transcripts', primary_key='key', flatten_nested=0)
-
 
 class TranscriptsSnvIndel(models.ClickhouseModel):
     key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
