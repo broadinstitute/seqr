@@ -375,7 +375,19 @@ class AnnotationsQuerySet(QuerySet):
         return field in self.query.annotations
 
 
-class BaseAnnotationsSnvIndel(models.ClickhouseModel):
+class BaseAnnotations(models.ClickhouseModel):
+    key = models.UInt32Field(primary_key=True)
+    xpos = models.UInt64Field()
+    chrom = Enum8Field(return_int=False, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES)])
+    pos = models.UInt32Field()
+    variant_id = models.StringField(db_column='variantId')
+    lifted_over_chrom = Enum8Field(db_column='liftedOverChrom', return_int=False, null=True, blank=True, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES)])
+    lifted_over_pos = models.UInt32Field(db_column='liftedOverPos', null=True, blank=True)
+
+    class Meta:
+        abstract = True
+
+class BaseAnnotationsGRCh37SnvIndel(BaseAnnotations):
     POPULATION_FIELDS = [
         ('exac', NamedTupleField([
             ('ac', models.UInt32Field()),
@@ -414,7 +426,6 @@ class BaseAnnotationsSnvIndel(models.ClickhouseModel):
         ('cadd', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
         ('eigen', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
         ('fathmm', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        ('gnomad_noncoding', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
         ('mpc', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
         ('mut_pred', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
         ('mut_taster', models.Enum8Field(null=True, blank=True, return_int=False, choices=[(0, 'D'), (1, 'A'), (2, 'N'), (3, 'P')])),
@@ -428,35 +439,57 @@ class BaseAnnotationsSnvIndel(models.ClickhouseModel):
     ]
     HGMD_CLASSES = [(0, 'DM'), (1, 'DM?'), (2, 'DP'), (3, 'DFP'), (4, 'FP'), (5, 'R')]
     CONSEQUENCE_TERMS = [(1, 'transcript_ablation'), (2, 'splice_acceptor_variant'), (3, 'splice_donor_variant'), (4, 'stop_gained'), (5, 'frameshift_variant'), (6, 'stop_lost'), (7, 'start_lost'), (8, 'inframe_insertion'), (9, 'inframe_deletion'), (10, 'missense_variant'), (11, 'protein_altering_variant'), (12, 'splice_donor_5th_base_variant'), (13, 'splice_region_variant'), (14, 'splice_donor_region_variant'), (15, 'splice_polypyrimidine_tract_variant'), (16, 'incomplete_terminal_codon_variant'), (17, 'start_retained_variant'), (18, 'stop_retained_variant'), (19, 'synonymous_variant'), (20, 'coding_sequence_variant'), (21, 'mature_miRNA_variant'), (22, '5_prime_UTR_variant'), (23, '3_prime_UTR_variant'), (24, 'non_coding_transcript_exon_variant'), (25, 'intron_variant'), (26, 'NMD_transcript_variant'), (27, 'non_coding_transcript_variant'), (28, 'coding_transcript_variant'), (29, 'upstream_gene_variant'), (30, 'downstream_gene_variant'), (31, 'intergenic_variant'), (32, 'sequence_variant')]
+    SORTED_TRANSCRIPT_CONSQUENCES_FIELDS = [
+        ('canonical', models.UInt8Field(null=True, blank=True)),
+        ('consequenceTerms', models.ArrayField(models.Enum8Field(null=True, blank=True, return_int=False, choices=CONSEQUENCE_TERMS))),
+        ('geneId', models.StringField(null=True, blank=True))
+    ]
 
     objects = AnnotationsQuerySet.as_manager()
 
-    key = models.UInt32Field(primary_key=True)
-    xpos = models.UInt64Field()
-    chrom = Enum8Field(return_int=False, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES[:-1])])
-    pos = models.UInt32Field()
     ref = models.StringField()
     alt = models.StringField()
-    variant_id = models.StringField(db_column='variantId')
     rsid = models.StringField(null=True, blank=True)
     caid = models.StringField(db_column='CAID', null=True, blank=True)
-    lifted_over_chrom = models.StringField(db_column='liftedOverChrom', low_cardinality=True, null=True, blank=True)
-    lifted_over_pos = models.UInt32Field(db_column='liftedOverPos', null=True, blank=True)
     hgmd = NamedTupleField([
         ('accession', models.StringField(null=True, blank=True)),
         ('classification', models.Enum8Field(null=True, blank=True, return_int=False, choices=HGMD_CLASSES)),
     ], null_if_empty=True, rename_fields={'classification': 'class'})
-    screen_region_type = Enum8Field(db_column='screenRegionType', null=True, blank=True, return_int=False, choices=[(0, 'CTCF-bound'), (1, 'CTCF-only'), (2, 'DNase-H3K4me3'), (3, 'PLS'), (4, 'dELS'), (5, 'pELS'), (6, 'DNase-only'), (7, 'low-DNase')])
     predictions = NamedTupleField(PREDICTION_FIELDS)
     populations = NamedTupleField(POPULATION_FIELDS)
-    sorted_transcript_consequences = NestedField([
+    sorted_transcript_consequences = NestedField(SORTED_TRANSCRIPT_CONSQUENCES_FIELDS, db_column='sortedTranscriptConsequences')
+
+    class Meta:
+        abstract = True
+
+
+class AnnotationsGRCh37SnvIndel(BaseAnnotationsGRCh37SnvIndel):
+
+    class Meta:
+        db_table = 'GRCh37/SNV_INDEL/annotations_memory'
+        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_IN_MEMORY_DIR}/GRCh37/SNV_INDEL/annotations', primary_key='key', flatten_nested=0)
+
+class AnnotationsDiskGRCh37SnvIndel(BaseAnnotationsGRCh37SnvIndel):
+
+    class Meta:
+        db_table = 'GRCh37/SNV_INDEL/annotations_disk'
+        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh37/SNV_INDEL/annotations', primary_key='key', flatten_nested=0)
+
+class BaseAnnotationsSnvIndel(BaseAnnotationsGRCh37SnvIndel):
+    PREDICTION_FIELDS = sorted([
+        ('gnomad_noncoding', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        *BaseAnnotationsGRCh37SnvIndel.PREDICTION_FIELDS,
+    ])
+    SORTED_TRANSCRIPT_CONSQUENCES_FIELDS = sorted([
         ('alphamissensePathogenicity', models.DecimalField(null=True, blank=True, max_digits=9, decimal_places=5)),
-        ('canonical', models.UInt8Field(null=True, blank=True)),
-        ('consequenceTerms', models.ArrayField(models.Enum8Field(null=True, blank=True, return_int=False, choices=CONSEQUENCE_TERMS))),
         ('extendedIntronicSpliceRegionVariant', models.BoolField(null=True, blank=True)),
         ('fiveutrConsequence', models.Enum8Field(null=True, blank=True, return_int=False, choices=[(1, '5_prime_UTR_premature_start_codon_gain_variant'), (2, '5_prime_UTR_premature_start_codon_loss_variant'), (3, '5_prime_UTR_stop_codon_gain_variant'), (4, '5_prime_UTR_stop_codon_loss_variant'), (5, '5_prime_UTR_uORF_frameshift_variant')])),
-        ('geneId', models.StringField(null=True, blank=True)),
-    ], db_column='sortedTranscriptConsequences')
+        *BaseAnnotationsGRCh37SnvIndel.SORTED_TRANSCRIPT_CONSQUENCES_FIELDS,
+    ])
+
+    screen_region_type = Enum8Field(db_column='screenRegionType', null=True, blank=True, return_int=False, choices=[(0, 'CTCF-bound'), (1, 'CTCF-only'), (2, 'DNase-H3K4me3'), (3, 'PLS'), (4, 'dELS'), (5, 'pELS'), (6, 'DNase-only'), (7, 'low-DNase')])
+    predictions = NamedTupleField(PREDICTION_FIELDS)
+    sorted_transcript_consequences = NestedField(SORTED_TRANSCRIPT_CONSQUENCES_FIELDS, db_column='sortedTranscriptConsequences')
     sorted_motif_feature_consequences = NestedField([
         ('consequenceTerms', models.ArrayField(models.Enum8Field(null=True, blank=True, return_int=False, choices=[(0, 'TFBS_ablation'), (1, 'TFBS_amplification'), (2, 'TF_binding_site_variant'), (3, 'TFBS_fusion'), (4, 'TFBS_translocation')]))),
         ('motifFeatureId', models.StringField(null=True, blank=True)),
@@ -476,7 +509,6 @@ class AnnotationsSnvIndel(BaseAnnotationsSnvIndel):
         db_table = 'GRCh38/SNV_INDEL/annotations_memory'
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_IN_MEMORY_DIR}/GRCh38/SNV_INDEL/annotations', primary_key='key', flatten_nested=0)
 
-# Future work: create an alias and manager to switch between disk/in-memory annotations
 class AnnotationsDiskSnvIndel(BaseAnnotationsSnvIndel):
 
     class Meta:
@@ -484,7 +516,7 @@ class AnnotationsDiskSnvIndel(BaseAnnotationsSnvIndel):
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SNV_INDEL/annotations', primary_key='key', flatten_nested=0)
 
 
-class Clinvar(models.ClickhouseModel):
+class BaseClinvar(models.ClickhouseModel):
 
     PATHOGENICITY_CHOICES = list(enumerate([
         'Pathogenic', 'Pathogenic/Likely_pathogenic', 'Pathogenic/Likely_pathogenic/Established_risk_allele',
@@ -493,8 +525,6 @@ class Clinvar(models.ClickhouseModel):
         'Uncertain_risk_allele', 'Uncertain_significance/Uncertain_risk_allele', 'Uncertain_significance',
         'No_pathogenic_assertion', 'Likely_benign', 'Benign/Likely_benign', 'Benign'
     ]))
-
-    key = ForeignKey('EntriesSnvIndel', db_column='key', related_name='clinvar_join', primary_key=True, on_delete=PROTECT)
     allele_id = models.UInt32Field(db_column='alleleId', null=True, blank=True)
     conflicting_pathogenicities = NestedField([
         ('count', models.UInt16Field()),
@@ -505,10 +535,6 @@ class Clinvar(models.ClickhouseModel):
     conditions = models.ArrayField(models.StringField())
     assertions = models.ArrayField(models.Enum8Field(choices=[(0, 'Affects'), (1, 'association'), (2, 'association_not_found'), (3, 'confers_sensitivity'), (4, 'drug_response'), (5, 'low_penetrance'), (6, 'not_provided'), (7, 'other'), (8, 'protective'), (9, 'risk_factor'), (10, 'no_classification_for_the_single_variant'), (11, 'no_classifications_from_unflagged_records')], return_int=False))
     pathogenicity = models.Enum8Field(choices=PATHOGENICITY_CHOICES, return_int=False)
-
-    class Meta:
-        db_table = 'GRCh38/SNV_INDEL/clinvar'
-        engine = Join('ALL', 'LEFT', 'key', join_use_nulls=1, flatten_nested=0)
 
     def _save_table(
         self,
@@ -524,6 +550,20 @@ class Clinvar(models.ClickhouseModel):
         return super()._save_table(
             raw=raw, cls=cls, force_insert=True, force_update=force_update, using=using, update_fields=update_fields,
         )
+
+    class Meta:
+        abstract = True
+        engine = Join('ALL', 'LEFT', 'key', join_use_nulls=1, flatten_nested=0)
+
+class ClinvarGRCh37SnvIndel(BaseClinvar):
+    key = ForeignKey('EntriesGRCh37SnvIndel', db_column='key', related_name='clinvar_join', primary_key=True, on_delete=PROTECT)
+    class Meta(BaseClinvar.Meta):
+        db_table = 'GRCh37/SNV_INDEL/clinvar'
+
+class ClinvarSnvIndel(BaseClinvar):
+    key = ForeignKey('EntriesSnvIndel', db_column='key', related_name='clinvar_join', primary_key=True, on_delete=PROTECT)
+    class Meta(BaseClinvar.Meta):
+        db_table = 'GRCh38/SNV_INDEL/clinvar'
 
 
 class EntriesManager(Manager):
@@ -544,7 +584,7 @@ class EntriesManager(Manager):
 
     CLINVAR_FIELDS = OrderedDict({
         f'clinvar_join__{field.name}': (field.db_column or field.name, field)
-        for field in reversed(Clinvar._meta.local_fields) if field.name != 'key'
+        for field in reversed(ClinvarSnvIndel._meta.local_fields) if field.name != 'key'
     })
 
     @property
@@ -745,38 +785,13 @@ class EntriesManager(Manager):
         return entries
 
 
-class EntriesSnvIndel(models.ClickhouseModel):
-    CALL_FIELDS = [
-        ('sampleId', models.StringField()),
-        ('gt', models.Enum8Field(null=True, blank=True, choices=[(0, 'REF'), (1, 'HET'), (2, 'HOM')])),
-        ('gq', models.UInt8Field(null=True, blank=True)),
-        ('ab', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        ('dp', models.UInt16Field(null=True, blank=True)),
-    ]
-
-    objects = EntriesManager()
-
-    # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
-    key = ForeignKey('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+class BaseEntries(models.ClickhouseModel):
     project_guid = models.StringField(low_cardinality=True)
     family_guid = models.StringField()
     sample_type = models.Enum8Field(choices=[(1, 'WES'), (2, 'WGS')])
     xpos = UInt64FieldDeltaCodecField()
-    is_gnomad_gt_5_percent = models.BoolField()
     filters = models.ArrayField(models.StringField(low_cardinality=True))
-    calls = models.ArrayField(NamedTupleField(CALL_FIELDS))
     sign = models.Int8Field()
-
-    class Meta:
-        db_table = 'GRCh38/SNV_INDEL/entries'
-        engine = CollapsingMergeTree(
-            'sign',
-            order_by=('project_guid', 'family_guid', 'is_gnomad_gt_5_percent', 'key'),
-            partition_by='project_guid',
-            deduplicate_merge_projection_mode='rebuild',
-            index_granularity=8192,
-        )
-        projection = Projection('xpos_projection', order_by='xpos, is_gnomad_gt_5_percent')
 
     def _save_table(
         self,
@@ -793,42 +808,103 @@ class EntriesSnvIndel(models.ClickhouseModel):
             raw=raw, cls=cls, force_insert=True, force_update=force_update, using=using, update_fields=update_fields,
         )
 
+    class Meta:
+        abstract = True
 
-class TranscriptsSnvIndel(models.ClickhouseModel):
-    key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
-    transcripts = NestedField([
-        ('alphamissense', NamedTupleField([
-            ('pathogenicity', models.DecimalField(null=True, blank=True, max_digits=9, decimal_places=5)),
-        ])),
+
+class BaseEntriesSnvIndel(BaseEntries):
+    CALL_FIELDS = [
+        ('sampleId', models.StringField()),
+        ('gt', models.Enum8Field(null=True, blank=True, choices=[(0, 'REF'), (1, 'HET'), (2, 'HOM')])),
+        ('gq', models.UInt8Field(null=True, blank=True)),
+        ('ab', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('dp', models.UInt16Field(null=True, blank=True)),
+    ]
+
+    objects = EntriesManager()
+
+    is_gnomad_gt_5_percent = models.BoolField()
+    calls = models.ArrayField(NamedTupleField(CALL_FIELDS))
+
+    class Meta:
+        abstract = True
+        engine = CollapsingMergeTree(
+            'sign',
+            order_by=('project_guid', 'family_guid', 'is_gnomad_gt_5_percent', 'key'),
+            partition_by='project_guid',
+            deduplicate_merge_projection_mode='rebuild',
+            index_granularity=8192,
+        )
+        projection = Projection('xpos_projection', order_by='xpos, is_gnomad_gt_5_percent')
+
+class EntriesGRCh37SnvIndel(BaseEntriesSnvIndel):
+
+    # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
+    key = ForeignKey('AnnotationsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+
+    class Meta(BaseEntriesSnvIndel.Meta):
+        db_table = 'GRCh37/SNV_INDEL/entries'
+
+class EntriesSnvIndel(BaseEntriesSnvIndel):
+
+    # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
+    key = ForeignKey('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+
+    class Meta:
+        db_table = 'GRCh38/SNV_INDEL/entries'
+
+class BaseTranscripts(models.ClickhouseModel):
+    TRANSCRIPTS_FIELDS = [
         ('aminoAcids', models.StringField(null=True, blank=True)),
         ('biotype', models.StringField(null=True, blank=True)),
         ('canonical', models.UInt8Field(null=True, blank=True)),
         ('codons', models.StringField(null=True, blank=True)),
         ('consequenceTerms', models.ArrayField(models.Enum8Field(null=True, blank=True, return_int=False, choices=BaseAnnotationsSnvIndel.CONSEQUENCE_TERMS))),
-        ('exon', NamedTupleField([
-            ('index', models.Int32Field(null=True, blank=True)),
-            ('total', models.Int32Field(null=True, blank=True)),
-        ], null_if_empty=True)),
         ('geneId', models.StringField(null=True, blank=True)),
         ('hgvsc', models.StringField(null=True, blank=True)),
         ('hgvsp', models.StringField(null=True, blank=True)),
-        ('intron', NamedTupleField([
-            ('index', models.Int32Field(null=True, blank=True)),
-            ('total', models.Int32Field(null=True, blank=True)),
-        ], null_if_empty=True)),
         ('loftee', NamedTupleField([
             ('isLofNagnag', models.BoolField(null=True, blank=True)),
             ('lofFilters', models.ArrayField(models.StringField(null=True, blank=True))),
         ], null_empty_arrays=True)),
         ('majorConsequence', models.Enum8Field(null=True, blank=True, return_int=False, choices=BaseAnnotationsSnvIndel.CONSEQUENCE_TERMS)),
+        ('transcriptId', models.StringField()),
+        ('transcriptRank', models.UInt8Field()),
+    ]
+    transcripts = NestedField(TRANSCRIPTS_FIELDS, group_by_key='geneId')
+
+    class Meta:
+        abstract = True
+
+
+class TranscriptsGRCh37SnvIndel(BaseTranscripts):
+    key = OneToOneField('AnnotationsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+
+    class Meta:
+        db_table = 'GRCh37/SNV_INDEL/transcripts'
+        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh37/SNV_INDEL/transcripts', primary_key='key', flatten_nested=0)
+
+
+class TranscriptsSnvIndel(BaseTranscripts):
+    key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+    transcripts = NestedField(sorted([
+        ('alphamissense', NamedTupleField([
+            ('pathogenicity', models.DecimalField(null=True, blank=True, max_digits=9, decimal_places=5)),
+        ])),
+        ('exon', NamedTupleField([
+            ('index', models.Int32Field(null=True, blank=True)),
+            ('total', models.Int32Field(null=True, blank=True)),
+        ], null_if_empty=True)),
+        ('intron', NamedTupleField([
+            ('index', models.Int32Field(null=True, blank=True)),
+            ('total', models.Int32Field(null=True, blank=True)),
+        ], null_if_empty=True)),
         ('manePlusClinical', models.StringField(null=True, blank=True)),
         ('maneSelect', models.StringField(null=True, blank=True)),
         ('refseqTranscriptId', models.StringField(null=True, blank=True)),
         ('spliceregion', NamedTupleField([
             ('extended_intronic_splice_region_variant', models.BoolField(null=True, blank=True)),
         ])),
-        ('transcriptId', models.StringField()),
-        ('transcriptRank', models.UInt8Field()),
         ('utrannotator', NamedTupleField([
             ('existingInframeOorfs', models.Int32Field(null=True, blank=True)),
             ('existingOutofframeOorfs', models.Int32Field(null=True, blank=True)),
@@ -854,7 +930,8 @@ class TranscriptsSnvIndel(models.ClickhouseModel):
             ], null_if_empty=True)),
             ('fiveutrConsequence', models.StringField(null=True, blank=True)),
         ])),
-    ], group_by_key='geneId')
+        *BaseTranscripts.TRANSCRIPTS_FIELDS,
+    ]), group_by_key='geneId')
 
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/transcripts'
