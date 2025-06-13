@@ -9,9 +9,12 @@ from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4,
     SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3, COMP_HET_ALL_PASS_FILTERS, \
     SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, SELECTED_ANNOTATION_TRANSCRIPT_MULTI_FAMILY_VARIANT, MULTI_FAMILY_VARIANT, \
     FAMILY_3_VARIANT, PROJECT_2_VARIANT, PROJECT_2_VARIANT1, MULTI_PROJECT_VARIANT1, MULTI_PROJECT_VARIANT2, GENE_COUNTS, \
+    MULTI_PROJECT_BOTH_SAMPLE_TYPE_VARIANTS, VARIANT1_BOTH_SAMPLE_TYPES, VARIANT1_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY, \
+    VARIANT2_BOTH_SAMPLE_TYPES, VARIANT2_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY, VARIANT3_BOTH_SAMPLE_TYPES, \
+    VARIANT3_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY, VARIANT4_BOTH_SAMPLE_TYPES, VARIANT4_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY, \
     format_cached_variant
 from reference_data.models import Omim
-from seqr.models import Project, Family
+from seqr.models import Project, Family, Sample
 from seqr.utils.search.search_utils_tests import SearchTestHelper
 from seqr.utils.search.utils import query_variants
 from seqr.views.utils.json_utils import DjangoJSONEncoderWithSets
@@ -85,8 +88,8 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
     def _set_multi_project_search(self):
         self.results_model.families.set(Family.objects.filter(guid__in=['F000002_2', 'F000011_11']))
 
-    def _set_single_family_search(self):
-        self.results_model.families.set(self.families.filter(guid='F000002_2'))
+    def _set_single_family_search(self, guid='F000002_2'):
+        self.results_model.families.set(self.families.filter(guid=guid))
 
     def _reset_search_families(self):
         self.results_model.families.set(self.families)
@@ -176,40 +179,45 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #             sample_data={**MULTI_PROJECT_SAMPLE_DATA, **SV_WGS_SAMPLE_DATA},
 #         )
 #
-#     def test_both_sample_types_search(self):
-#         # One family (F000011_11) in a multi-project search has identical exome and genome data.
-#         self._assert_expected_search(
-#             MULTI_PROJECT_BOTH_SAMPLE_TYPE_VARIANTS, gene_counts=GENE_COUNTS, sample_data=MULTI_PROJECT_SAMPLE_TYPES_SAMPLE_DATA,
-#         )
-#
-#         # Variant 1 is de novo in exome but inherited and homozygous in genome.
-#         # Variant 2 is inherited and homozygous in exome and de novo and homozygous in genome.
-#         # Variant 3 is inherited in both sample types.
-#         # Variant 4 is de novo in exome, but inherited in genome in the same parent that has variant 3.
-#         inheritance_mode = 'recessive'
-#         self._assert_expected_search(
-#             [VARIANT1_BOTH_SAMPLE_TYPES, VARIANT2_BOTH_SAMPLE_TYPES, [VARIANT3_BOTH_SAMPLE_TYPES, VARIANT4_BOTH_SAMPLE_TYPES]],
-#             sample_data=FAMILY_2_BOTH_SAMPLE_TYPE_SAMPLE_DATA, inheritance_mode=inheritance_mode,
-#             **COMP_HET_ALL_PASS_FILTERS
-#         )
-#         self._assert_expected_search(
-#             [VARIANT1_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY, VARIANT2_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY,
-#              [VARIANT3_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY, VARIANT4_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY]],
-#             sample_data=FAMILY_2_BOTH_SAMPLE_TYPE_SAMPLE_DATA_MISSING_PARENTAL_WGS, inheritance_mode=inheritance_mode,
-#             **COMP_HET_ALL_PASS_FILTERS
-#         )
-#
-#         inheritance_mode = 'de_novo'
-#         self._assert_expected_search(
-#             [VARIANT1_BOTH_SAMPLE_TYPES, VARIANT2_BOTH_SAMPLE_TYPES, VARIANT4_BOTH_SAMPLE_TYPES],
-#             sample_data=FAMILY_2_BOTH_SAMPLE_TYPE_SAMPLE_DATA, inheritance_mode=inheritance_mode,
-#         )
-#         # Variant 2 fails inheritance when parental data is missing in genome
-#         self._assert_expected_search(
-#             [VARIANT1_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY, VARIANT4_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY],
-#             sample_data=FAMILY_2_BOTH_SAMPLE_TYPE_SAMPLE_DATA_MISSING_PARENTAL_WGS, inheritance_mode=inheritance_mode,
-#         )
-#
+    def test_both_sample_types_search(self):
+        # One family (F000011_11) in a multi-project search has identical exome and genome data.
+        self._set_single_family_search('F000011_11')
+        for sample in Sample.objects.filter(individual__family__guid='F000011_11'):
+            sample.pk = None
+            sample.sample_type = 'WES'
+            sample.save()
+
+        self._assert_expected_search(
+            MULTI_PROJECT_BOTH_SAMPLE_TYPE_VARIANTS, gene_counts=GENE_COUNTS,
+        )
+
+        # Variant 1 is de novo in exome but inherited and homozygous in genome.
+        # Variant 2 is inherited and homozygous in exome and de novo and homozygous in genome, so it fails de-novo inheritance when parental data is missing in genome.
+        # Variant 3 is inherited in both sample types.
+        # Variant 4 is de novo in exome, but inherited in genome in the same parent that has variant 3.
+        self._set_single_family_search()
+
+        self._assert_expected_search(
+            [VARIANT1_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY, VARIANT4_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY],
+            inheritance_mode='de_novo',
+        )
+
+        self._assert_expected_search(
+            [VARIANT1_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY, VARIANT2_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY,
+             [VARIANT3_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY, VARIANT4_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY]],
+            nheritance_mode='recessive', **COMP_HET_ALL_PASS_FILTERS
+        )
+
+        self._assert_expected_search(
+            [VARIANT1_BOTH_SAMPLE_TYPES, VARIANT2_BOTH_SAMPLE_TYPES, VARIANT4_BOTH_SAMPLE_TYPES],
+            inheritance_mode='de_novo', annotations=None, pathogenicity=None,
+        )
+
+        self._assert_expected_search(
+            [VARIANT1_BOTH_SAMPLE_TYPES, VARIANT2_BOTH_SAMPLE_TYPES, [VARIANT3_BOTH_SAMPLE_TYPES, VARIANT4_BOTH_SAMPLE_TYPES]],
+            inheritance_mode='recessive', **COMP_HET_ALL_PASS_FILTERS
+        )
+
     def test_inheritance_filter(self):
         inheritance_mode = 'any_affected'
         self._assert_expected_search(

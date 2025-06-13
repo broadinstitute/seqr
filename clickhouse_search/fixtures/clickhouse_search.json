@@ -422,6 +422,80 @@
       ]
     }
 }, {
+    "model": "clickhouse_search.entriessnvindel",
+    "pk": 12,
+    "fields": {
+      "key": 1,
+      "project_guid": "R0001_1kg",
+      "family_guid": "F000002_2",
+      "sample_type": "WGS",
+      "xpos": 1000010439,
+      "is_gnomad_gt_5_percent": false,
+      "filters": [],
+      "sign": 1,
+      "calls": [
+        ["HG00733", 0, 20, 0, 60],
+        ["HG00732", 1, 99, 0, 24],
+        ["HG00731", 2, 99, 0.5, 10]
+      ]
+    }
+}, {
+    "model": "clickhouse_search.entriessnvindel",
+    "pk": 13,
+    "fields": {
+      "key": 2,
+      "project_guid": "R0001_1kg",
+      "family_guid": "F000002_2",
+      "sample_type": "WGS",
+      "xpos": 1038724419,
+      "is_gnomad_gt_5_percent": false,
+      "filters": [],
+      "sign": 1,
+      "calls": [
+        ["HG00733", 0, 40, 0, 33],
+        ["HG00732", 1, 99, 0.625, 32],
+        ["HG00731", 2, 99, 1, 36]
+      ]
+    }
+}, {
+    "model": "clickhouse_search.entriessnvindel",
+    "pk": 14,
+    "fields": {
+      "key": 3,
+      "project_guid": "R0001_1kg",
+      "family_guid": "F000002_2",
+      "sample_type": "WGS",
+      "xpos": 1091502721,
+      "is_gnomad_gt_5_percent": true,
+      "filters": [],
+      "sign": 1,
+      "calls": [
+        ["HG00733", 1, 99, 0.40741, 27],
+        ["HG00732", 0, 99, 0.45946, 37],
+        ["HG00731", 1, 99, 1, 40]
+      ]
+    }
+}, {
+    "model": "clickhouse_search.entriessnvindel",
+    "pk": 15,
+    "fields": {
+      "key": 4,
+      "project_guid": "R0001_1kg",
+      "family_guid": "F000002_2",
+      "sample_type": "WGS",
+      "xpos": 1091511686,
+      "is_gnomad_gt_5_percent": false,
+      "filters": [
+        "VQSRTrancheSNP99.95to100.00"
+      ],
+      "sign": 1,
+      "calls": [
+        ["HG00733", 2, 0, 0, 45],
+        ["HG00732", 0, 0, 0, 24],
+        ["HG00731", 1, 58, 0.17241, 29]
+      ]
+    }
+}, {
   "model": "reference_data.omim",
   "pk": 100,
   "fields": {
