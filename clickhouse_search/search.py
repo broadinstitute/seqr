@@ -1,3 +1,4 @@
+from clickhouse_backend.models import ArrayField, StringField
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.db.models import F, Min, Value
 from django.db.models.functions import JSONObject
@@ -138,9 +139,18 @@ def _get_comp_het_results_queryset(search, sample_data, annotation_values):
 
     if len(sample_data) > 1:
         results = results.annotate(
-            primary_familyGuids=ArrayIntersect('primary_familyGuids', 'secondary_familyGuids'),
-            secondary_familyGuids=ArrayIntersect('primary_familyGuids', 'secondary_familyGuids'),
-        ).filter(primary_familyGuids__not_empty=True)
+            primary_familyGuids=ArrayIntersect(
+                'primary_familyGuids', 'secondary_familyGuids', output_field=ArrayField(StringField()),
+            ),
+        ).filter(primary_familyGuids__not_empty=True).annotate(
+            secondary_familyGuids=F('primary_familyGuids'),
+            primary_genotypes= ArrayFilter('primary_genotypes', conditions=[
+                {2: ('arrayIntersect(primary_familyGuids, secondary_familyGuids)', 'has({value}, {field})')},
+            ]),
+            secondary_genotypes=ArrayFilter('secondary_genotypes', conditions=[
+                {2: ('arrayIntersect(primary_familyGuids, secondary_familyGuids)', 'has({value}, {field})')},
+            ]),
+        )
 
     return results.annotate(
         pair_key=ArraySort(Array('primary_key', 'secondary_key')),
@@ -153,7 +163,7 @@ def _get_comp_het_results_queryset(search, sample_data, annotation_values):
 
 def _result_as_tuple(results, field_prefix):
     fields = {
-        name: (name.replace(field_prefix, ''), col.target) for name, col in results.query.annotations.items()
+        name: (name.replace(field_prefix, ''), getattr(col, 'target', col.output_field)) for name, col in results.query.annotations.items()
         if name.startswith(field_prefix) and not name.endswith('carriers')
     }
     return Tuple(*fields.keys(), output_field=NamedTupleField(list(fields.values())))
