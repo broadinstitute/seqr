@@ -82,7 +82,7 @@ class Migration(migrations.Migration):
                 ('calls', clickhouse_backend.models.ArrayField(base_field=clickhouse_search.backend.fields.NamedTupleField(base_fields=[('sampleId', clickhouse_backend.models.StringField()), ('gt', clickhouse_backend.models.Enum8Field(blank=True, choices=[(0, 'REF'), (1, 'HET'), (2, 'HOM')], null=True)), ('cn', clickhouse_backend.models.UInt8Field(blank=True, null=True)), ('qs', clickhouse_backend.models.UInt16Field(blank=True, null=True)), ('defragged', clickhouse_backend.models.BoolField(blank=True, null=True)), ('start', clickhouse_backend.models.UInt32Field(blank=True, null=True)), ('end', clickhouse_backend.models.UInt32Field(blank=True, null=True)), ('numExon', clickhouse_backend.models.UInt8Field(blank=True, null=True)), ('geneIds', clickhouse_backend.models.ArrayField(base_field=clickhouse_backend.models.StringField(blank=True, null=True))), ('newCall', clickhouse_backend.models.BoolField(blank=True, null=True)), ('prevCall', clickhouse_backend.models.BoolField(blank=True, null=True)), ('prevOverlap', clickhouse_backend.models.BoolField(blank=True, null=True))]))),
             ],
             options={
-                'db_table': 'GRCh38/SV/entries',
+                'db_table': 'GRCh38/GCNV/entries',
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
