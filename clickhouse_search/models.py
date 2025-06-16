@@ -643,7 +643,7 @@ class EntriesManager(Manager):
             if multi_sample_type_filter_families and clinvar_override_q:
                 entries = entries.annotate(passes_quality=clinvar_override_q)
 
-       return self._annotate_calls(entries, sample_data, annotate_carriers, multi_sample_type_filter_families)
+       return self._annotate_calls(entries, sample_data, annotate_carriers, multi_sample_type_filter_families, len(family_guids))
 
     @classmethod
     def _get_family_calls_filter(cls, sample_data, family_guids, clinvar_override_q, *args):
@@ -754,7 +754,7 @@ class EntriesManager(Manager):
 
         return sample_filter
 
-    def _annotate_calls(self, entries, sample_data, annotate_carriers, multi_sample_type_filter_families):
+    def _annotate_calls(self, entries, sample_data, annotate_carriers, multi_sample_type_filter_families, num_families):
         carriers_expression = self._carriers_expression(sample_data) if annotate_carriers else None
         if carriers_expression:
             #  TODO handle multi sample?
@@ -764,8 +764,7 @@ class EntriesManager(Manager):
         if multi_sample_type_filter_families:
             entries = self._multi_sample_type_filtered_entries(entries, fields, multi_sample_type_filter_families)
 
-        # TODO handle when only single family with muti type
-        if len(sample_data) > 1:
+        if num_families > 1:
             entries = entries.values(*fields).annotate(
                 familyGuids=ArraySort(ArrayDistinct(GroupArray('family_guid'))),
                 genotypes=GroupArrayArray(self._genotype_expression(sample_data)),
