@@ -377,10 +377,8 @@ class AnnotationsQuerySet(QuerySet):
 class BaseAnnotations(models.ClickhouseModel):
     key = models.UInt32Field(primary_key=True)
     xpos = models.UInt64Field()
-    chrom = Enum8Field(return_int=False, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES)])
     pos = models.UInt32Field()
     variant_id = models.StringField(db_column='variantId')
-    lifted_over_chrom = Enum8Field(db_column='liftedOverChrom', return_int=False, null=True, blank=True, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES)])
     lifted_over_pos = models.UInt32Field(db_column='liftedOverPos', null=True, blank=True)
 
     objects = AnnotationsQuerySet.as_manager()
@@ -473,6 +471,8 @@ class BaseAnnotationsGRCh37SnvIndel(BaseAnnotationsMitoSnvIndel):
         ('geneId', models.StringField(null=True, blank=True))
     ]
 
+    chrom = Enum8Field(return_int=False, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES)])
+    lifted_over_chrom = Enum8Field(db_column='liftedOverChrom', return_int=False, null=True, blank=True, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES)])
     caid = models.StringField(db_column='CAID', null=True, blank=True)
     hgmd = NamedTupleField([
         ('accession', models.StringField(null=True, blank=True)),
@@ -570,7 +570,7 @@ class BaseAnnotationsMito(BaseAnnotationsMitoSnvIndel):
     ]
     PREDICTION_FIELDS = [
         ('apogee', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        ('haplogroup_defining', models.Enum8Field(null=True, blank=True, return_int=False, choices=[(0, 'Y')])),
+        ('haplogroup_defining', models.BoolField(null=True, blank=True)),
         ('hmtvar', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
         ('mitotip', models.Enum8Field(null=True, blank=True, return_int=False, choices=MITOTIP_PATHOGENICITIES)),
         ('mut_taster', models.Enum8Field(null=True, blank=True, return_int=False, choices=BaseAnnotationsMitoSnvIndel.MUTATION_TASTER_PREDICTIONS)),
