@@ -5,10 +5,10 @@ from django.db.models import options, ForeignKey, OneToOneField, F, Func, Manage
 from django.db.models.expressions import Col
 from django.db.models.functions import Cast
 from django.db.models.sql.constants import INNER
-from googleapiclient.mimeparse import quality
 
+from clickhouse_search.backend.composite_field import CompositePrimaryKey
 from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocksDB, Join
-from clickhouse_search.backend.fields import Enum8Field, NestedField, UInt64FieldDeltaCodecField, NamedTupleField
+from clickhouse_search.backend.fields import Enum8Field, NestedField, UInt64FieldDeltaCodecField, NamedTupleField, ForeignKeyNoUnique
 from clickhouse_search.backend.functions import Array, ArrayFilter, ArrayDistinct, ArrayJoin, ArrayMap, ArraySort, \
     CrossJoin, GroupArray, GroupArrayArray, GtStatsDictGet, SubqueryJoin, SubqueryTable, Tuple, GroupArrayIntersect
 from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFECTED, UNAFFECTED, MALE_SEXES, \
@@ -557,12 +557,12 @@ class BaseClinvar(models.ClickhouseModel):
         engine = Join('ALL', 'LEFT', 'key', join_use_nulls=1, flatten_nested=0)
 
 class ClinvarGRCh37SnvIndel(BaseClinvar):
-    key = ForeignKey('EntriesGRCh37SnvIndel', db_column='key', related_name='clinvar_join', primary_key=True, on_delete=PROTECT)
+    key = ForeignKeyNoUnique('EntriesGRCh37SnvIndel', db_column='key', to_field='key', related_name='clinvar_join', primary_key=True, on_delete=PROTECT)
     class Meta(BaseClinvar.Meta):
         db_table = 'GRCh37/SNV_INDEL/clinvar'
 
 class ClinvarSnvIndel(BaseClinvar):
-    key = ForeignKey('EntriesSnvIndel', db_column='key', related_name='clinvar_join', primary_key=True, on_delete=PROTECT)
+    key = ForeignKeyNoUnique('EntriesSnvIndel', db_column='key', to_field='key',related_name='clinvar_join', primary_key=True, on_delete=PROTECT)
     class Meta(BaseClinvar.Meta):
         db_table = 'GRCh38/SNV_INDEL/clinvar'
 
@@ -637,6 +637,7 @@ class EntriesManager(Manager):
             call_q, multi_sample_type_filter_families = self._get_family_calls_filter(
                 sample_data, clinvar_override_q, inheritance_mode, individual_genotype_filter,  quality_filter, custom_affected,
             )
+            import pdb; pdb.set_trace()
             if call_q:
                 entries = entries.filter(call_q)
             if multi_sample_type_filter_families and clinvar_override_q:
@@ -869,6 +870,7 @@ class EntriesManager(Manager):
 
 
 class BaseEntries(models.ClickhouseModel):
+    pk = CompositePrimaryKey('key', 'family_guid', 'sample_type')
     project_guid = models.StringField(low_cardinality=True)
     family_guid = models.StringField()
     sample_type = models.Enum8Field(choices=[(1, 'WES'), (2, 'WGS')])
@@ -922,16 +924,14 @@ class BaseEntriesSnvIndel(BaseEntries):
 
 class EntriesGRCh37SnvIndel(BaseEntriesSnvIndel):
 
-    # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
-    key = ForeignKey('AnnotationsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = ForeignKey('AnnotationsGRCh37SnvIndel', db_column='key', on_delete=CASCADE)
 
     class Meta(BaseEntriesSnvIndel.Meta):
         db_table = 'GRCh37/SNV_INDEL/entries'
 
 class EntriesSnvIndel(BaseEntriesSnvIndel):
 
-    # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
-    key = ForeignKey('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = ForeignKey('AnnotationsSnvIndel', db_column='key', on_delete=CASCADE)
 
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/entries'

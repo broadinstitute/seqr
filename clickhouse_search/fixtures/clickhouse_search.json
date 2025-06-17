@@ -236,7 +236,6 @@
     }
 }, {
     "model": "clickhouse_search.entriessnvindel",
-    "pk": 1,
     "fields": {
       "key": 1,
       "project_guid": "R0001_1kg",
@@ -254,7 +253,6 @@
     }
 }, {
     "model": "clickhouse_search.entriessnvindel",
-    "pk": 2,
     "fields": {
       "key": 2,
       "project_guid": "R0001_1kg",
@@ -272,7 +270,6 @@
     }
 }, {
     "model": "clickhouse_search.entriessnvindel",
-    "pk": 3,
     "fields": {
       "key": 3,
       "project_guid": "R0001_1kg",
@@ -290,7 +287,6 @@
     }
 }, {
     "model": "clickhouse_search.entriessnvindel",
-    "pk": 4,
     "fields": {
       "key": 4,
       "project_guid": "R0001_1kg",
@@ -310,7 +306,6 @@
     }
 }, {
     "model": "clickhouse_search.entriessnvindel",
-    "pk": 5,
     "fields": {
       "key": 3,
       "project_guid": "R0001_1kg",
@@ -327,7 +322,6 @@
     }
 }, {
     "model": "clickhouse_search.entriessnvindel",
-    "pk": 6,
     "fields": {
       "key": 1,
       "project_guid": "R0003_test",
@@ -343,7 +337,6 @@
     }
 }, {
     "model": "clickhouse_search.entriessnvindel",
-    "pk": 7,
     "fields": {
       "key": 2,
       "project_guid": "R0003_test",
@@ -359,7 +352,6 @@
     }
 }, {
     "model": "clickhouse_search.entriessnvindel",
-    "pk": 8,
     "fields": {
       "key": 5,
       "project_guid": "R0003_test",
@@ -375,7 +367,6 @@
     }
 }, {
     "model": "clickhouse_search.entriessnvindel",
-    "pk": 9,
     "fields": {
       "key": 1,
       "project_guid": "R0003_test",
@@ -391,7 +382,6 @@
     }
 }, {
     "model": "clickhouse_search.entriessnvindel",
-    "pk": 10,
     "fields": {
       "key": 2,
       "project_guid": "R0003_test",
@@ -407,7 +397,6 @@
     }
 }, {
     "model": "clickhouse_search.entriessnvindel",
-    "pk": 11,
     "fields": {
       "key": 5,
       "project_guid": "R0003_test",
@@ -423,7 +412,6 @@
     }
 }, {
     "model": "clickhouse_search.entriessnvindel",
-    "pk": 12,
     "fields": {
       "key": 1,
       "project_guid": "R0001_1kg",
@@ -441,7 +429,6 @@
     }
 }, {
     "model": "clickhouse_search.entriessnvindel",
-    "pk": 13,
     "fields": {
       "key": 2,
       "project_guid": "R0001_1kg",
@@ -459,7 +446,6 @@
     }
 }, {
     "model": "clickhouse_search.entriessnvindel",
-    "pk": 14,
     "fields": {
       "key": 3,
       "project_guid": "R0001_1kg",
@@ -477,7 +463,6 @@
     }
 }, {
     "model": "clickhouse_search.entriessnvindel",
-    "pk": 15,
     "fields": {
       "key": 4,
       "project_guid": "R0001_1kg",

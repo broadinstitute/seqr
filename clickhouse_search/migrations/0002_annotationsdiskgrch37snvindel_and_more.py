@@ -76,7 +76,8 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='EntriesGRCh37SnvIndel',
             fields=[
-                ('key', models.ForeignKey(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='clickhouse_search.annotationsgrch37snvindel')),
+                ('pk', clickhouse_search.backend.composite_field.CompositePrimaryKey('key', 'family_guid', 'sample_type', blank=True, editable=False, primary_key=True, serialize=False)),
+                ('key', models.ForeignKey(db_column='key', on_delete=django.db.models.deletion.CASCADE, to='clickhouse_search.annotationsgrch37snvindel')),
                 ('project_guid', clickhouse_backend.models.StringField(low_cardinality=True)),
                 ('family_guid', clickhouse_backend.models.StringField()),
                 ('sample_type', clickhouse_backend.models.Enum8Field(choices=[(1, 'WES'), (2, 'WGS')])),
@@ -115,7 +116,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='ClinvarGRCh37SnvIndel',
             fields=[
-                ('key', models.ForeignKey(db_column='key', on_delete=django.db.models.deletion.PROTECT, primary_key=True, related_name='clinvar_join', serialize=False, to='clickhouse_search.entriesgrch37snvindel')),
+                ('key', clickhouse_search.backend.fields.ForeignKeyNoUnique(db_column='key', on_delete=django.db.models.deletion.PROTECT, primary_key=True, related_name='clinvar_join', serialize=False, to='clickhouse_search.entriesgrch37snvindel', to_field='key')),
                 ('allele_id', clickhouse_backend.models.UInt32Field(blank=True, db_column='alleleId', null=True)),
                 ('conflicting_pathogenicities', clickhouse_search.backend.fields.NestedField(base_fields=[('count', clickhouse_backend.models.UInt16Field()), ('pathogenicity', clickhouse_backend.models.Enum8Field(choices=[(0, 'Pathogenic'), (1, 'Pathogenic/Likely_pathogenic'), (2, 'Pathogenic/Likely_pathogenic/Established_risk_allele'), (3, 'Pathogenic/Likely_pathogenic/Likely_risk_allele'), (4, 'Pathogenic/Likely_risk_allele'), (5, 'Likely_pathogenic'), (6, 'Likely_pathogenic/Likely_risk_allele'), (7, 'Established_risk_allele'), (8, 'Likely_risk_allele'), (9, 'Conflicting_classifications_of_pathogenicity'), (10, 'Uncertain_risk_allele'), (11, 'Uncertain_significance/Uncertain_risk_allele'), (12, 'Uncertain_significance'), (13, 'No_pathogenic_assertion'), (14, 'Likely_benign'), (15, 'Benign/Likely_benign'), (16, 'Benign')]))], db_column='conflictingPathogenicities')),
                 ('gold_stars', clickhouse_backend.models.UInt8Field(blank=True, db_column='goldStars', null=True)),
