@@ -5,6 +5,7 @@ from django.db.models import options, ForeignKey, OneToOneField, F, Func, Manage
 from django.db.models.expressions import Col
 from django.db.models.functions import Cast
 from django.db.models.sql.constants import INNER
+from googleapiclient.mimeparse import quality
 
 from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocksDB, Join
 from clickhouse_search.backend.fields import Enum8Field, NestedField, UInt64FieldDeltaCodecField, NamedTupleField
@@ -614,8 +615,7 @@ class EntriesManager(Manager):
        project_guids = {s['project_guid'] for s in sample_data}
        project_filter = Q(project_guid__in=project_guids) if len(project_guids) > 1 else Q(project_guid=sample_data[0]['project_guid'])
        entries = entries.filter(project_filter)
-       family_guids = {s['family_guid'] for s in sample_data}
-       family_filter = Q(family_guid__in=family_guids) if len(sample_data) > 1 else Q(family_guid=sample_data[0]['family_guid'])
+       family_filter = Q(family_guid__in=[s['family_guid'] for s in sample_data]) if len(sample_data) > 1 else Q(family_guid=sample_data[0]['family_guid'])
        entries = entries.filter(family_filter)
 
        quality_filter = qualityFilter or {}
@@ -635,53 +635,32 @@ class EntriesManager(Manager):
                pathogenicity, _get_range_q=lambda path_range: Q(clinvar_join__pathogenicity__range=path_range),
             )
             call_q, multi_sample_type_filter_families = self._get_family_calls_filter(
-                sample_data, family_guids, clinvar_override_q, inheritance_mode, individual_genotype_filter,
-                quality_filter, custom_affected,
+                sample_data, clinvar_override_q, inheritance_mode, individual_genotype_filter,  quality_filter, custom_affected,
             )
             if call_q:
                 entries = entries.filter(call_q)
             if multi_sample_type_filter_families and clinvar_override_q:
                 entries = entries.annotate(passes_quality=clinvar_override_q)
 
-       return self._annotate_calls(entries, sample_data, annotate_carriers, multi_sample_type_filter_families, len(family_guids))
+       return self._annotate_calls(entries, sample_data, annotate_carriers, multi_sample_type_filter_families)
 
     @classmethod
-    def _get_family_calls_filter(cls, sample_data, family_guids, clinvar_override_q, *args):
-        multi_family_sample_types = {}
-        if len(family_guids) != len(sample_data):
-            family_sample_types = defaultdict(list)
-            for s in sample_data:
-                family_sample_types[s['family_guid']].append(s['sample_type'])
-            multi_family_sample_types = {
-                family: sample_types for family, sample_types in family_sample_types.items() if len(sample_types) > 1
-            }
-
-        family_sample_type_filters = defaultdict(dict)
+    def _get_family_calls_filter(cls, sample_data, clinvar_override_q, *args):
+        multi_sample_type_filter_families = {}
         call_q = None
         for s in sample_data:
             sample_filters = cls._family_sample_filters(s, *args)
             if not sample_filters:
                 continue
-            if s['family_guid'] in multi_family_sample_types:
-                family_sample_type_filters[s['family_guid']][s['sample_type']] = sample_filters
+            sample_types =  set()
+            for sample_ids_by_type, _, _ in sample_filters:
+                sample_types.update(sample_ids_by_type.keys())
+            if len(sample_types) > 1:
+                multi_sample_type_filter_families[s['family_guid']] = sample_filters
             else:
-                call_q = cls._family_calls_q(call_q, clinvar_override_q, s, sample_filters)
-
-        multi_sample_type_filter_families = {}
-        for family_guid, sample_type_filters in family_sample_type_filters.items():
-            overlap_samples = None
-            if len(sample_type_filters) > 1:
-                sample_type_ids = [set(sample_filter.keys()) for sample_filter in sample_type_filters.values()]
-                overlap_samples = sample_type_ids[0].intersection(*sample_type_ids[1:])
-            if overlap_samples:
-                multi_sample_type_filter_families[family_guid] = sample_type_filters
-            else:
-                #  If only one filterable sample type available for family, use that
-                for sample_type, sample_filters in sample_type_filters.items():
-                    call_q = cls._family_calls_q(
-                        call_q, clinvar_override_q,
-                        {'family_guid': family_guid, 'sample_type': sample_type}, sample_filters,
-                    )
+                call_q = cls._family_calls_q(
+                    call_q, s['family_guid'], sample_filters, sample_type=list(sample_types)[0], clinvar_override_q=clinvar_override_q
+                )
 
         #  With families with multiple sample types, can only filter rows after aggregating
         if multi_sample_type_filter_families:
@@ -695,25 +674,27 @@ class EntriesManager(Manager):
 
     @classmethod
     def _family_sample_filters(cls, family_sample_data, inheritance_mode, individual_genotype_filter, quality_filter, custom_affected):
-        sample_filters = {}
+        sample_filters = []
         for sample in family_sample_data['samples']:
             affected = custom_affected.get(sample['individual_guid']) or sample['affected']
             sample_inheritance_filter = cls._sample_genotype_filter(sample, affected, inheritance_mode, individual_genotype_filter)
             sample_quality_filter = cls._sample_quality_filter(affected, quality_filter)
             if sample_inheritance_filter or sample_quality_filter:
-                sample_filters[sample['sample_id']] = (sample_inheritance_filter, sample_quality_filter)
+                sample_filters.append((sample['sample_ids_by_type'], sample_inheritance_filter, sample_quality_filter))
         return sample_filters
 
     @classmethod
-    def _family_calls_q(cls, call_q, clinvar_override_q, family_sample_data, sample_filters):
+    def _family_calls_q(cls, call_q, family_guid, sample_filters, sample_type=None, clinvar_override_q=None):
        family_sample_q = None
-       for sample_id, (sample_inheritance_filter, sample_quality_filter) in sample_filters.items():
-           sample_inheritance_filter['sampleId'] = (f"'{sample_id}'",)
+       for sample_ids_by_type, sample_inheritance_filter, sample_quality_filter in sample_filters:
+           if 'sampleId' not in sample_inheritance_filter:
+               sample_inheritance_filter['sampleId'] = (f"'{sample_ids_by_type[sample_type]}'",)
            sample_q = Q(
                calls__array_exists={**sample_inheritance_filter, **sample_quality_filter},
-               family_guid=family_sample_data['family_guid'],
-               sample_type=family_sample_data['sample_type'],
+               family_guid=family_guid,
            )
+           if sample_type:
+               sample_q &= Q(sample_type=sample_type)
            if clinvar_override_q and sample_quality_filter:
                sample_q |= clinvar_override_q & Q(calls__array_exists=sample_inheritance_filter)
 
@@ -754,7 +735,7 @@ class EntriesManager(Manager):
 
         return sample_filter
 
-    def _annotate_calls(self, entries, sample_data, annotate_carriers, multi_sample_type_filter_families, num_families):
+    def _annotate_calls(self, entries, sample_data, annotate_carriers, multi_sample_type_filter_families):
         carriers_expression = self._carriers_expression(sample_data) if annotate_carriers else None
         if carriers_expression:
             #  TODO handle multi sample?
@@ -764,7 +745,7 @@ class EntriesManager(Manager):
         if multi_sample_type_filter_families:
             entries = self._multi_sample_type_filtered_entries(entries, fields, multi_sample_type_filter_families)
 
-        if num_families > 1:
+        if len(sample_data) > 1:
             entries = entries.values(*fields).annotate(
                 familyGuids=ArraySort(ArrayDistinct(GroupArray('family_guid'))),
                 genotypes=GroupArrayArray(self._genotype_expression(sample_data)),
@@ -787,7 +768,11 @@ class EntriesManager(Manager):
     def _genotype_expression(self, sample_data):
         sample_map = []
         for data in sample_data:
-            family_samples = [f"'{s['sample_id']}', '{s['individual_guid']}'" for s in data['samples']]
+            family_samples = []
+            for s in data['samples']:
+                family_samples += [
+                    f"'{sample_id}', '{s['individual_guid']}'" for sample_id in set(s['sample_ids_by_type'].values())
+                ]
             sample_map.append(f"'{data['family_guid']}', map({', '.join(family_samples)})")
         return ArrayFilter(
             ArrayMap(
@@ -799,11 +784,12 @@ class EntriesManager(Manager):
         )
 
     def _carriers_expression(self, sample_data):
-        family_carriers = {
-            family_sample_data['family_guid']: [
-                f"'{s['sample_id']}'" for s in family_sample_data['samples'] if s['affected'] == UNAFFECTED
-            ] for family_sample_data in sample_data
-        }
+        family_carriers = {}
+        for family_sample_data in sample_data:
+            family_carriers[family_sample_data['family_guid']] = set()
+            for s in family_sample_data['samples']:
+                if s['affected'] == UNAFFECTED:
+                    family_carriers[family_sample_data['family_guid']].update(s['sample_ids_by_type'].values())
         if not any(family_carriers.values()):
             return None
 
@@ -820,47 +806,38 @@ class EntriesManager(Manager):
 
     @classmethod
     def _multi_sample_type_filtered_entries(cls, entries, fields, multi_sample_type_filter_families):
-        quality_q = F('passes_quality') if 'passes_quality' in entries.query.annotations else None
-        family_inheritance_conditions = []
-        for family_guid, sample_type_filters in multi_sample_type_filter_families.items():
-            for sample_type, sample_filters in sample_type_filters.items():
-                family_quality_filters = {}
-                for sample_id, (sample_inheritance_filter, sample_quality_filter) in sample_filters.items():
-                    family_quality_filters[sample_id] = ({}, sample_quality_filter)
-                    family_inheritance_conditions.append({
-                        'sampleId': (f"'{sample_id}'",),
-                        'family_guid': (family_guid, "family_guid = '{value}'"),
-                        'sample_type': (sample_type, "sample_type = '{value}'"),
-                        **sample_inheritance_filter,
-                    })
-
-                quality_q = cls._family_calls_q(
-                    quality_q,
-                    clinvar_override_q=None,
-                    family_sample_data={'family_guid': family_guid, 'sample_type': sample_type},
-                    sample_filters=family_quality_filters,
-                )
-
-        entries = entries.annotate(
-            passes_quality=quality_q if quality_q else Value(True),
-            failed_inheritance_samples=ArrayMap(
-                ArrayFilter('calls', negate=True, conditions=family_inheritance_conditions),
-                mapped_expression='x.sampleId',
-            ),
-        )
+        has_quality_override = 'passes_quality' in entries.query.annotations
 
         # Group results by family
-        entries = entries.values(*fields, 'family_guid').annotate(
-            failed_inheritance_samples=GroupArrayIntersect('failed_inheritance_samples'),
-            passes_quailty=GroupArray('passes_quality'),
-        )
+        entries = entries.values(*fields, 'family_guid').annotate(calls=GroupArrayArray('calls'))
 
-        entries = entries.exclude(
-            Q(family_guid__in=multi_sample_type_filter_families.keys()) &
-            (Q(failed_inheritance_samples__not_empty=True) | ~Q(passes_quailty__any=True))
-        )
+        inheritance_q = None
+        quality_q = None
+        if has_quality_override:
+            entries = entries.annotate(passes_quailty=GroupArray('passes_quality'))
+            quality_q = Q(passes_quality__any=True)
 
-        return entries.annotate(calls=GroupArrayArray('calls'))
+        for family_guid, sample_filters in multi_sample_type_filter_families.items():
+            family_inheritance_filters = []
+            family_quality_filters = []
+            for sample_ids_by_type, sample_inheritance_filter, sample_quality_filter in sample_filters.items():
+                sample_ids = set(sample_ids_by_type.values())
+                if len(sample_ids) == 1:
+                    sample_id_filter = (f"'{sample_ids[0]}'",)
+                else:
+                    sample_type_filters = [
+                        f"and({{field}} = '{sample_id}', sample_type = '{sample_type}')"
+                        for sample_id, sample_type in sample_ids_by_type.items()
+                    ]
+                    sample_id_filter = (None, f"or({', '.join(sample_type_filters)})")
+                family_inheritance_filters.append(({}, {'sampleId': sample_id_filter, **sample_inheritance_filter}, {}))
+                family_quality_filters.append(({}, {'sampleId': sample_id_filter}, sample_quality_filter))
+            inheritance_q = cls._family_calls_q(inheritance_q, family_guid, family_inheritance_filters)
+            quality_q = cls._family_calls_q(quality_q, family_guid, family_quality_filters)
+
+        return entries.filter(
+            ~Q(family_guid__in=multi_sample_type_filter_families.keys()) | (inheritance_q & quality_q)
+        )
 
     @classmethod
     def _filter_intervals(cls, entries, exclude_intervals=False, intervals=None, variant_ids=None,  **kwargs):
