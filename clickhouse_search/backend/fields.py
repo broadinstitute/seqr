@@ -3,8 +3,6 @@ from clickhouse_backend.models.fields.tuple import IndexTransformFactory as Tupl
 from clickhouse_backend.models.fields.array import IndexTransformFactory as ArrayIndexTransform
 from collections import defaultdict
 
-from django.db.models import options, ForeignKey
-
 class NestedField(models.TupleField):
 
     def __init__(self, *args, null_when_empty=False, flatten_groups=False, group_by_key=None, **kwargs):
@@ -114,12 +112,3 @@ class NamedTupleField(models.TupleField):
 
     def to_python(self, value):
         return self.call_base_fields("to_python", value)
-
-
-class ForeignKeyNoUnique(ForeignKey):
-
-    def _check_unique(self, **kwargs):
-        return []
-
-    def _check_unique_target(self, **kwargs):
-        return []
