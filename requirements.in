@@ -1,4 +1,4 @@
-Django>=4.2,<4.3                  # core server-side framework
+Django>=5.2,<5.3                  # core server-side framework
 django-anymail                    # for sending emails using cloud-based mail service providers
 django-clickhouse-backend
 django-csp                        # for setting CSP headers

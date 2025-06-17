@@ -4,7 +4,7 @@
 #
 #    pip-compile requirements.in
 #
-asgiref==3.6.0
+asgiref==3.8.1
     # via django
 async-timeout==4.0.2
     # via redis
@@ -28,7 +28,7 @@ defusedxml==0.7.1
     # via
     #   python3-openid
     #   social-auth-core
-django==4.2.22
+django==5.2.3
     # via
     #   -r requirements.in
     #   django-anymail
@@ -182,7 +182,9 @@ tenacity==8.3.0
 tqdm==4.66.3
     # via -r requirements.in
 typing-extensions==4.12.2
-    # via psycopg
+    # via
+    #   asgiref
+    #   psycopg
 tzlocal==5.3.1
     # via clickhouse-driver
 urllib3==1.26.19
