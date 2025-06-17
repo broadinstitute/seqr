@@ -377,11 +377,11 @@ class AnnotationsQuerySet(QuerySet):
 class BaseAnnotations(models.ClickhouseModel):
     key = models.UInt32Field(primary_key=True)
     xpos = models.UInt64Field()
-    chrom = Enum8Field(return_int=False, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES)])
     pos = models.UInt32Field()
     variant_id = models.StringField(db_column='variantId')
-    lifted_over_chrom = Enum8Field(db_column='liftedOverChrom', return_int=False, null=True, blank=True, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES)])
     lifted_over_pos = models.UInt32Field(db_column='liftedOverPos', null=True, blank=True)
+
+    objects = AnnotationsQuerySet.as_manager()
 
     class Meta:
         abstract = True
@@ -425,11 +425,13 @@ class BaseAnnotationsSvGcnv(BaseAnnotations):
         ('majorConsequence', models.Enum8Field(null=True, blank=True, return_int=False, choices=SV_CONSEQUENCE_RANKS)),
     ]
 
+    chrom = Enum8Field(return_int=False, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES)])
     end = models.UInt32Field()
     rg37_locus_end = NamedTupleField([
         ('contig', models.Enum8Field(return_int=False, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES)])),
         ('position', models.UInt32Field()),
     ], db_column='rg37LocusEnd', null_if_empty=True)
+    lifted_over_chrom = Enum8Field(db_column='liftedOverChrom', return_int=False, null=True, blank=True, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES)])
     sv_type = models.Enum8Field(db_column='svType', return_int=False, choices=SV_TYPES)
     predictions = NamedTupleField(PREDICTION_FIELDS)
     sorted_gene_consequences = NestedField(SORTED_GENE_CONSQUENCES_FIELDS, db_column='sortedTranscriptConsequences')
@@ -495,8 +497,8 @@ class BaseAnnotationsGRCh37SnvIndel(BaseAnnotationsMitoSnvIndel):
         ('geneId', models.StringField(null=True, blank=True))
     ]
 
-    objects = AnnotationsQuerySet.as_manager()
-
+    chrom = Enum8Field(return_int=False, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES)])
+    lifted_over_chrom = Enum8Field(db_column='liftedOverChrom', return_int=False, null=True, blank=True, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES)])
     caid = models.StringField(db_column='CAID', null=True, blank=True)
     hgmd = NamedTupleField([
         ('accession', models.StringField(null=True, blank=True)),
@@ -594,7 +596,7 @@ class BaseAnnotationsMito(BaseAnnotationsMitoSnvIndel):
     ]
     PREDICTION_FIELDS = [
         ('apogee', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        ('haplogroup_defining', models.Enum8Field(null=True, blank=True, return_int=False, choices=[(0, 'Y')])),
+        ('haplogroup_defining', models.BoolField(null=True, blank=True)),
         ('hmtvar', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
         ('mitotip', models.Enum8Field(null=True, blank=True, return_int=False, choices=MITOTIP_PATHOGENICITIES)),
         ('mut_taster', models.Enum8Field(null=True, blank=True, return_int=False, choices=BaseAnnotationsMitoSnvIndel.MUTATION_TASTER_PREDICTIONS)),
@@ -851,14 +853,14 @@ class EntriesManager(Manager):
             entries = entries.filter(seqrPop__1__lte=hh)
         return entries
 
-
 class BaseEntries(models.ClickhouseModel):
     project_guid = models.StringField(low_cardinality=True)
     family_guid = models.StringField()
-    sample_type = models.Enum8Field(choices=[(1, 'WES'), (2, 'WGS')])
     xpos = UInt64FieldDeltaCodecField()
     filters = models.ArrayField(models.StringField(low_cardinality=True))
     sign = models.Int8Field()
+
+    objects = EntriesManager()
 
     def _save_table(
         self,
@@ -886,7 +888,6 @@ class BaseEntries(models.ClickhouseModel):
         )
         projection = Projection('xpos_projection', order_by='xpos')
 
-
 class BaseEntriesSnvIndel(BaseEntries):
     CALL_FIELDS = [
         ('sampleId', models.StringField()),
@@ -896,8 +897,7 @@ class BaseEntriesSnvIndel(BaseEntries):
         ('dp', models.UInt16Field(null=True, blank=True)),
     ]
 
-    objects = EntriesManager()
-
+    sample_type = models.Enum8Field(choices=[(1, 'WES'), (2, 'WGS')])
     is_gnomad_gt_5_percent = models.BoolField()
     calls = models.ArrayField(NamedTupleField(CALL_FIELDS))
 
@@ -938,13 +938,12 @@ class EntriesMito(BaseEntries):
         ('contamination', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
     ]
 
-    objects = EntriesManager()
-
     # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
     key = ForeignKey('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
+    sample_type = models.Enum8Field(choices=[(1, 'WES'), (2, 'WGS')])
     calls = models.ArrayField(NamedTupleField(CALL_FIELDS))
 
-    class Meta:
+    class Meta(BaseEntries.Meta):
         db_table = 'GRCh38/MITO/entries'
 
 class EntriesSv(BaseEntries):
@@ -975,7 +974,6 @@ class TranscriptsGRCh37SnvIndel(models.ClickhouseModel):
     class Meta:
         db_table = 'GRCh37/SNV_INDEL/transcripts'
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh37/SNV_INDEL/transcripts', primary_key='key', flatten_nested=0)
-
 
 class TranscriptsSnvIndel(models.ClickhouseModel):
     key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
