@@ -37,9 +37,6 @@ class GroupArray(Aggregate):
 class GroupArrayArray(Aggregate):
     function = 'groupArrayArray'
 
-class GroupArrayIntersect(Aggregate):
-    function = 'groupArrayIntersect'
-
 def _format_condition(filters):
     conditions = [
         (template[0] if template else '{field} = {value}').format(field=f'x.{field}', value=value)
