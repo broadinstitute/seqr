@@ -2,7 +2,6 @@ from clickhouse_backend.models import ArrayField, StringField
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.db.models import F, Min, Value
 from django.db.models.functions import JSONObject
-from sqlalchemy import distinct
 
 from clickhouse_search.backend.fields import NamedTupleField
 from clickhouse_search.backend.functions import Array, ArrayFilter, ArrayIntersect, ArraySort, GtStatsDictGet, Tuple, TupleConcat

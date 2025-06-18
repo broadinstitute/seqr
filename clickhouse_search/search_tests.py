@@ -88,8 +88,8 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
     def _set_multi_project_search(self):
         self.results_model.families.set(Family.objects.filter(guid__in=['F000002_2', 'F000011_11']))
 
-    def _set_single_family_search(self, guid='F000002_2'):
-        self.results_model.families.set(self.families.filter(guid=guid))
+    def _set_single_family_search(self):
+        self.results_model.families.set(self.families.filter(guid='F000002_2'))
 
     def _reset_search_families(self):
         self.results_model.families.set(self.families)
@@ -181,7 +181,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #
     def test_both_sample_types_search(self):
         # One family (F000011_11) in a multi-project search has identical exome and genome data.
-        self._set_single_family_search('F000011_11')
+        self.results_model.families.set(Family.objects.filter(guid='F000011_11'))
         for sample in Sample.objects.filter(individual__family__guid='F000011_11'):
             sample.pk = None
             sample.sample_type = 'WES'
@@ -191,12 +191,16 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             MULTI_PROJECT_BOTH_SAMPLE_TYPE_VARIANTS, gene_counts=GENE_COUNTS,
         )
 
+        self._set_single_family_search()
+        sample = Sample.objects.get(guid='S000132_hg00731')
+        sample.pk = None
+        sample.sample_type = 'WGS'
+        sample.save()
+
         # Variant 1 is de novo in exome but inherited and homozygous in genome.
         # Variant 2 is inherited and homozygous in exome and de novo and homozygous in genome, so it fails de-novo inheritance when parental data is missing in genome.
         # Variant 3 is inherited in both sample types.
         # Variant 4 is de novo in exome, but inherited in genome in the same parent that has variant 3.
-        self._set_single_family_search()
-
         self._assert_expected_search(
             [VARIANT1_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY, VARIANT4_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY],
             inheritance_mode='de_novo',

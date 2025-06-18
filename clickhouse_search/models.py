@@ -616,9 +616,16 @@ class EntriesManager(Manager):
        entries = entries.filter(project_filter)
 
        sample_type_families, multi_sample_type_families = self._get_family_sample_types(sample_data)
-       family_q = Q(sample_type=sample_type_families[0][0], family_guid__in=sample_type_families[0][1])
-       for sample_type, families in sample_type_families[1:]:
-           family_q |= Q(sample_type=sample_type, family_guid__in=families)
+       family_q = None
+       if multi_sample_type_families:
+           family_q = Q(family_guid__in=multi_sample_type_families)
+       for sample_type, families in sample_type_families.items():
+           sample_family_q = Q(sample_type=sample_type, family_guid__in=families)
+           if family_q:
+               family_q |= sample_family_q
+           else:
+               family_q = sample_family_q
+
        entries = entries.filter(family_q)
 
        quality_filter = qualityFilter or {}
@@ -656,7 +663,7 @@ class EntriesManager(Manager):
                 sample_type_families[s['sample_types'][0]].append(s['family_guid'])
             else:
                 multi_sample_type_families.add(s['family_guid'])
-        return list(sample_type_families.items()), multi_sample_type_families
+        return sample_type_families, multi_sample_type_families
 
     @classmethod
     def _get_family_calls_filter(cls, sample_data, multi_sample_type_families, clinvar_override_q, *args):
