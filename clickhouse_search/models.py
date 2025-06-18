@@ -649,7 +649,7 @@ class BaseAnnotationsSv(BaseAnnotationsSvGcnv):
     end_chrom = models.Enum8Field(db_column='endChrom', return_int=False, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES)])
     sv_source_detail = NestedField(
         [('chrom', models.Enum8Field(return_int=False, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES)]))],
-        db_column='svSourceDetail', 
+        db_column='svSourceDetail',
         null_when_empty=True
     )
     sv_type_detail = models.Enum8Field(db_column='svTypeDetail', return_int=False, choices=SV_TYPE_DETAILS)
