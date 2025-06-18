@@ -912,7 +912,7 @@ class BaseEntriesSnvIndel(BaseEntries):
         abstract = True
         engine = CollapsingMergeTree(
             'sign',
-            order_by=('project_guid', 'family_guid', 'is_gnomad_gt_5_percent', 'key'),
+            order_by=('project_guid', 'family_guid', 'is_gnomad_gt_5_percent', 'sample_type', 'key'),
             partition_by='project_guid',
             deduplicate_merge_projection_mode='rebuild',
             index_granularity=8192,
