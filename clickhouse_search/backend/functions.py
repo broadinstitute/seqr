@@ -1,6 +1,6 @@
 from clickhouse_backend.models.fields.array import ArrayField, ArrayLookup
 from clickhouse_backend.models import UInt32Field
-from django.db.models import Func, Subquery, lookups, BooleanField
+from django.db.models import Func, Subquery, lookups, BooleanField, Aggregate
 from django.db.models.sql.datastructures import BaseTable, Join
 
 
@@ -30,6 +30,12 @@ class ArrayMap(Func):
 class ArraySort(Func):
     function = 'arraySort'
 
+
+class GroupArray(Aggregate):
+    function = 'groupArray'
+
+class GroupArrayArray(Aggregate):
+    function = 'groupArrayArray'
 
 def _format_condition(filters):
     conditions = [
