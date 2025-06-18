@@ -788,7 +788,9 @@ class EntriesManager(Manager):
             family_carriers[family_sample_data['family_guid']] = set()
             for s in family_sample_data['samples']:
                 if s['affected'] == UNAFFECTED:
-                    family_carriers[family_sample_data['family_guid']].update(s['sample_ids_by_type'].values())
+                    family_carriers[family_sample_data['family_guid']].update([
+                        f"'{sample_id}'" for sample_id in s['sample_ids_by_type'].values()
+                    ])
         if not any(family_carriers.values()):
             return None
 
