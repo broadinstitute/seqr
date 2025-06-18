@@ -2,6 +2,7 @@ from clickhouse_backend.models import ArrayField, StringField
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.db.models import F, Min, Value
 from django.db.models.functions import JSONObject
+from sqlalchemy import distinct
 
 from clickhouse_search.backend.fields import NamedTupleField
 from clickhouse_search.backend.functions import Array, ArrayFilter, ArrayIntersect, ArraySort, GtStatsDictGet, Tuple, TupleConcat
@@ -243,7 +244,10 @@ def _get_sample_data(samples):
 
     sample_data = samples.values(
         family_guid=F('individual__family__guid'), project_guid=F('individual__family__project__guid'),
-    ).annotate(samples=ArrayAgg(JSONObject(affected='individual__affected', sex='individual__sex', sample_id='sample_id', sample_type='sample_type', individual_guid=F('individual__guid'))))
+    ).annotate(
+        samples=ArrayAgg(JSONObject(affected='individual__affected', sex='individual__sex', sample_id='sample_id', sample_type='sample_type', individual_guid=F('individual__guid'))),
+        sample_types=ArrayAgg('sample_type', distinct=True),
+    )
     return [{**data, 'samples': _group_by_sample_type(data['samples'])} for data in sample_data]
 
 

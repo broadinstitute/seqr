@@ -1,5 +1,5 @@
 from clickhouse_backend import models
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 from django.db.migrations import state
 from django.db.models import options, ForeignKey, OneToOneField, F, Func, Manager, QuerySet, Q, CASCADE, PROTECT
 from django.db.models.expressions import Col
@@ -614,8 +614,12 @@ class EntriesManager(Manager):
        project_guids = {s['project_guid'] for s in sample_data}
        project_filter = Q(project_guid__in=project_guids) if len(project_guids) > 1 else Q(project_guid=sample_data[0]['project_guid'])
        entries = entries.filter(project_filter)
-       family_filter = Q(family_guid__in=[s['family_guid'] for s in sample_data]) if len(sample_data) > 1 else Q(family_guid=sample_data[0]['family_guid'])
-       entries = entries.filter(family_filter)
+
+       sample_type_families, multi_sample_type_families = self._get_family_sample_types(sample_data)
+       family_q = Q(sample_type=sample_type_families[0][0], family_guid__in=sample_type_families[0][1])
+       for sample_type, families in sample_type_families[1:]:
+           family_q |= Q(sample_type=sample_type, family_guid__in=families)
+       entries = entries.filter(family_q)
 
        quality_filter = qualityFilter or {}
        if quality_filter.get('vcf_filter'):
@@ -634,7 +638,7 @@ class EntriesManager(Manager):
                pathogenicity, _get_range_q=lambda path_range: Q(clinvar_join__pathogenicity__range=path_range),
             )
             call_q, multi_sample_type_filter_families = self._get_family_calls_filter(
-                sample_data, clinvar_override_q, inheritance_mode, individual_genotype_filter,  quality_filter, custom_affected,
+                sample_data, multi_sample_type_families, clinvar_override_q, inheritance_mode, individual_genotype_filter,  quality_filter, custom_affected,
             )
             if call_q:
                 entries = entries.filter(call_q)
@@ -643,22 +647,30 @@ class EntriesManager(Manager):
 
        return self._annotate_calls(entries, sample_data, annotate_carriers, multi_sample_type_filter_families)
 
+    @staticmethod
+    def _get_family_sample_types(sample_data):
+        sample_type_families = defaultdict(list)
+        multi_sample_type_families = set()
+        for s in sample_data:
+            if len(s['sample_types']) == 1:
+                sample_type_families[s['sample_types'][0]].append(s['family_guid'])
+            else:
+                multi_sample_type_families.add(s['family_guid'])
+        return list(sample_type_families.items()), multi_sample_type_families
+
     @classmethod
-    def _get_family_calls_filter(cls, sample_data, clinvar_override_q, *args):
+    def _get_family_calls_filter(cls, sample_data, multi_sample_type_families, clinvar_override_q, *args):
         multi_sample_type_filter_families = {}
         call_q = None
         for s in sample_data:
             sample_filters = cls._family_sample_filters(s, *args)
             if not sample_filters:
                 continue
-            sample_types =  set()
-            for sample_ids_by_type, _, _ in sample_filters:
-                sample_types.update(sample_ids_by_type.keys())
-            if len(sample_types) > 1:
+            if s['family_guid'] in multi_sample_type_families:
                 multi_sample_type_filter_families[s['family_guid']] = sample_filters
             else:
                 call_q = cls._family_calls_q(
-                    call_q, s['family_guid'], sample_filters, sample_type=list(sample_types)[0], clinvar_override_q=clinvar_override_q
+                    call_q, s['family_guid'], sample_filters, sample_type=s['sample_types'][0], clinvar_override_q=clinvar_override_q
                 )
 
         #  With families with multiple sample types, can only filter rows after aggregating
