@@ -1175,6 +1175,13 @@ class EntriesMito(BaseEntries):
 
     class Meta(BaseEntries.Meta):
         db_table = 'GRCh38/MITO/entries'
+        engine = CollapsingMergeTree(
+            'sign',
+            order_by=('project_guid', 'family_guid', 'sample_type', 'key'),
+            partition_by='project_guid',
+            deduplicate_merge_projection_mode='rebuild',
+            index_granularity=8192,
+        )
 
 class EntriesSv(BaseEntries):
     CALL_FIELDS = [
