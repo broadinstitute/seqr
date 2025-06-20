@@ -698,6 +698,7 @@ class EntriesManager(Manager):
                 call_q |= multi_type_q
             else:
                 call_q = multi_type_q
+            # TODO need to filter on sample specifically fails in both types, not overall inheritance pass
             entries = entries.annotate(
                 passes_inheritance=~multi_type_q | (multi_sample_type_inheritance_q or Value(True)),
                 passes_quality=~multi_type_q | (multi_sample_type_quality_q or Value(True)),
