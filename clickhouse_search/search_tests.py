@@ -181,7 +181,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #
     def test_both_sample_types_search(self):
         # One family (F000011_11) in a multi-project search has identical exome and genome data.
-        self.results_model.families.set(Family.objects.filter(guid='F000011_11'))
+        self._set_multi_project_search()
         for sample in Sample.objects.filter(individual__family__guid='F000011_11'):
             sample.pk = None
             sample.sample_type = 'WES'

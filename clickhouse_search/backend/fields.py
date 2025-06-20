@@ -41,13 +41,14 @@ class NestedField(models.TupleField):
             (format_item(item) if format_item else super(NestedField, self)._from_db_value(item, expression, connection))._asdict()
             for item in value
         ]
-        if self.flatten_groups:
-            value = {item[self.group_by_key]: item for item in value}
-        elif self.group_by_key:
+        if self.group_by_key:
             group_value = defaultdict(list)
             for item in value:
                 group_value[item[self.group_by_key]].append(item)
-            value = dict(group_value)
+            if self.flatten_groups:
+                value = {k: v[0] if len(v) == 1 else v for k, v in group_value.items()}
+            else:
+                value = dict(group_value)
         return value
 
     def to_python(self, value):

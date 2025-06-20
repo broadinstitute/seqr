@@ -74,11 +74,11 @@ MULTI_PROJECT_BOTH_SAMPLE_TYPE_VARIANTS = [
     deepcopy(v) for v in
     [PROJECT_2_VARIANT, MULTI_PROJECT_VARIANT1, MULTI_PROJECT_VARIANT2, VARIANT3, VARIANT4]
 ]
-for v in MULTI_PROJECT_BOTH_SAMPLE_TYPE_VARIANTS:
-    for indiv_id, gts in v['genotypes'].items():
-        v['genotypes'][indiv_id] = [gts]
 for v in MULTI_PROJECT_BOTH_SAMPLE_TYPE_VARIANTS[:-2]:
-    v['genotypes']['I000015_na20885'].append({**v['genotypes']['I000015_na20885'][0], 'sampleType': 'WES'})
+    v['genotypes']['I000015_na20885'] = [
+        {**v['genotypes']['I000015_na20885'], 'sampleType': 'WES'},
+        v['genotypes']['I000015_na20885'],
+    ]
 
 VARIANT1_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY = deepcopy(VARIANT1)
 genotypes = VARIANT1_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY['genotypes']
