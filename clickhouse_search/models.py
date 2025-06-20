@@ -26,7 +26,6 @@ state.DEFAULT_NAMES = options.DEFAULT_NAMES
 
 
 
-
 class ClickHouseRouter:
     """
     Adapted from https://github.com/jayvynl/django-clickhouse-backend/blob/v1.3.2/README.md#configuration
@@ -376,6 +375,7 @@ class AnnotationsQuerySet(QuerySet):
 
 
 class BaseAnnotations(models.ClickhouseModel):
+    CHROMOSOME_CHOICES = [(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES)]
     key = models.UInt32Field(primary_key=True)
     xpos = models.UInt64Field()
     pos = models.UInt32Field()
@@ -426,13 +426,13 @@ class BaseAnnotationsSvGcnv(BaseAnnotations):
         ('majorConsequence', models.Enum8Field(null=True, blank=True, return_int=False, choices=SV_CONSEQUENCE_RANKS)),
     ]
 
-    chrom = Enum8Field(return_int=False, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES)])
+    chrom = Enum8Field(return_int=False, choices=BaseAnnotations.CHROMOSOME_CHOICES)
     end = models.UInt32Field()
     rg37_locus_end = NamedTupleField([
-        ('contig', models.Enum8Field(return_int=False, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES)])),
+        ('contig', models.Enum8Field(return_int=False, choices=BaseAnnotations.CHROMOSOME_CHOICES)),
         ('position', models.UInt32Field()),
     ], db_column='rg37LocusEnd', null_if_empty=True)
-    lifted_over_chrom = Enum8Field(db_column='liftedOverChrom', return_int=False, null=True, blank=True, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES)])
+    lifted_over_chrom = Enum8Field(db_column='liftedOverChrom', return_int=False, null=True, blank=True, choices=BaseAnnotations.CHROMOSOME_CHOICES)
     sv_type = models.Enum8Field(db_column='svType', return_int=False, choices=SV_TYPES)
     predictions = NamedTupleField(PREDICTION_FIELDS)
     sorted_gene_consequences = NestedField(SORTED_GENE_CONSQUENCES_FIELDS, db_column='sortedTranscriptConsequences')
@@ -498,8 +498,8 @@ class BaseAnnotationsGRCh37SnvIndel(BaseAnnotationsMitoSnvIndel):
         ('geneId', models.StringField(null=True, blank=True))
     ]
 
-    chrom = Enum8Field(return_int=False, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES)])
-    lifted_over_chrom = Enum8Field(db_column='liftedOverChrom', return_int=False, null=True, blank=True, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES)])
+    chrom = Enum8Field(return_int=False, choices=BaseAnnotations.CHROMOSOME_CHOICES)
+    lifted_over_chrom = Enum8Field(db_column='liftedOverChrom', return_int=False, null=True, blank=True, choices=BaseAnnotations.CHROMOSOME_CHOICES)
     caid = models.StringField(db_column='CAID', null=True, blank=True)
     hgmd = NamedTupleField([
         ('accession', models.StringField(null=True, blank=True)),
@@ -641,14 +641,14 @@ class BaseAnnotationsSv(BaseAnnotationsSvGcnv):
     algorithms = models.StringField(low_cardinality=True)
     bothsides_support = models.BoolField(db_column='bothsidesSupport')
     cpx_intervals = NestedField([
-        ('chrom', models.Enum8Field(return_int=False, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES)])),
+        ('chrom', models.Enum8Field(return_int=False, choices=BaseAnnotations.CHROMOSOME_CHOICES)),
         ('start', models.UInt32Field()),
         ('end', models.UInt32Field()),
         ('type', models.Enum8Field(return_int=False, choices=BaseAnnotationsSvGcnv.SV_TYPES)),
     ], db_column='cpxIntervals', null_when_empty=True)
-    end_chrom = models.Enum8Field(db_column='endChrom', return_int=False, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES)])
+    end_chrom = models.Enum8Field(db_column='endChrom', return_int=False, choices=BaseAnnotations.CHROMOSOME_CHOICES)
     sv_source_detail = NestedField(
-        [('chrom', models.Enum8Field(return_int=False, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES)]))],
+        [('chrom', models.Enum8Field(return_int=False, choices=BaseAnnotations.CHROMOSOME_CHOICES))],
         db_column='svSourceDetail',
         null_when_empty=True
     )
@@ -1046,8 +1046,6 @@ class EntriesSv(BaseEntries):
         ('prevCall', models.BoolField(null=True, blank=True)),
         ('prevNumAlt', models.Enum8Field(null=True, blank=True, choices=[(0, 'REF'), (1, 'HET'), (2, 'HOM')])),
     ]
-
-    objects = EntriesManager()
 
     # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
     key = ForeignKey('AnnotationsSv', db_column='key', primary_key=True, on_delete=CASCADE)
