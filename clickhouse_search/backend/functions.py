@@ -27,10 +27,6 @@ class ArrayMap(Func):
     template = "%(function)s(x -> %(mapped_expression)s, %(expressions)s)"
 
 
-class ArrayIntersect(Func):
-    function = 'arrayIntersect'
-
-
 class ArraySort(Func):
     function = 'arraySort'
 
