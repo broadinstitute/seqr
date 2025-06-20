@@ -1083,7 +1083,6 @@ class EntriesSv(BaseEntries):
     class Meta(BaseEntries.Meta):
         db_table = 'GRCh38/SV/entries'
 
-
 class EntriesGcnv(BaseEntries):
     CALL_FIELDS = [
         ('sampleId', models.StringField()),
@@ -1100,15 +1099,12 @@ class EntriesGcnv(BaseEntries):
         ('prevOverlap', models.BoolField(null=True, blank=True)),
     ]
 
-    objects = EntriesManager()
-
     # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
     key = ForeignKey('AnnotationsGcnv', db_column='key', primary_key=True, on_delete=CASCADE)
     calls = models.ArrayField(NamedTupleField(CALL_FIELDS))
 
     class Meta:
         db_table = 'GRCh38/GCNV/entries'
-
 
 class TranscriptsGRCh37SnvIndel(models.ClickhouseModel):
     key = OneToOneField('AnnotationsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
