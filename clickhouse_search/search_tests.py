@@ -9,10 +9,8 @@ from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4,
     SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3, COMP_HET_ALL_PASS_FILTERS, \
     SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, SELECTED_ANNOTATION_TRANSCRIPT_MULTI_FAMILY_VARIANT, MULTI_FAMILY_VARIANT, \
     FAMILY_3_VARIANT, PROJECT_2_VARIANT, PROJECT_2_VARIANT1, MULTI_PROJECT_VARIANT1, MULTI_PROJECT_VARIANT2, GENE_COUNTS, \
-    MULTI_PROJECT_BOTH_SAMPLE_TYPE_VARIANTS, VARIANT1_BOTH_SAMPLE_TYPES, VARIANT1_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY, \
-    VARIANT2_BOTH_SAMPLE_TYPES, VARIANT2_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY, VARIANT3_BOTH_SAMPLE_TYPES, \
-    VARIANT3_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY, VARIANT4_BOTH_SAMPLE_TYPES, VARIANT4_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY, \
-    format_cached_variant
+    MULTI_PROJECT_BOTH_SAMPLE_TYPE_VARIANTS, VARIANT1_BOTH_SAMPLE_TYPES, VARIANT2_BOTH_SAMPLE_TYPES, \
+    VARIANT3_BOTH_SAMPLE_TYPES, VARIANT4_BOTH_SAMPLE_TYPES, format_cached_variant
 from reference_data.models import Omim
 from seqr.models import Project, Family, Sample
 from seqr.utils.search.search_utils_tests import SearchTestHelper
@@ -182,49 +180,41 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
     def test_both_sample_types_search(self):
         # One family (F000011_11) in a multi-project search has identical exome and genome data.
         self._set_multi_project_search()
-        for sample in Sample.objects.filter(individual__family__guid='F000011_11'):
-            sample.pk = None
-            sample.sample_type = 'WES'
-            sample.save()
+        self._add_sample_type_samples('WES', individual__family__guid='F000011_11')
 
         self._assert_expected_search(
             MULTI_PROJECT_BOTH_SAMPLE_TYPE_VARIANTS, gene_counts=GENE_COUNTS,
         )
 
         self._set_single_family_search()
-        sample = Sample.objects.get(guid='S000132_hg00731')
-        sample.pk = None
-        sample.sample_type = 'WGS'
-        sample.save()
+        self._add_sample_type_samples('WGS', guid__in=['S000132_hg00731'])
 
         # Variant 1 is de novo in exome but inherited and homozygous in genome.
         # Variant 2 is inherited and homozygous in exome and de novo and homozygous in genome, so it fails de-novo inheritance when parental data is missing in genome.
         # Variant 3 is inherited in both sample types.
         # Variant 4 is de novo in exome, but inherited in genome in the same parent that has variant 3.
-        self.maxDiff = None
         self._assert_expected_search(
             [VARIANT1_BOTH_SAMPLE_TYPES, VARIANT4_BOTH_SAMPLE_TYPES],
             inheritance_mode='de_novo',
         )
 
-        sample = Sample.objects.get(guid='S000133_hg00732')
-        sample.pk = None
-        sample.sample_type = 'WGS'
-        sample.save()
-        sample = Sample.objects.get(guid='S000134_hg00733')
-        sample.pk = None
-        sample.sample_type = 'WGS'
-        sample.save()
-
+        self._add_sample_type_samples('WGS', guid__in=['S000133_hg00732', 'S000134_hg00733'])
         self._assert_expected_search(
             [VARIANT1_BOTH_SAMPLE_TYPES, VARIANT2_BOTH_SAMPLE_TYPES, VARIANT4_BOTH_SAMPLE_TYPES],
-            inheritance_mode='de_novo', annotations=None, pathogenicity=None,
+            inheritance_mode='de_novo',
         )
 
         self._assert_expected_search(
             [VARIANT1_BOTH_SAMPLE_TYPES, VARIANT2_BOTH_SAMPLE_TYPES, [VARIANT3_BOTH_SAMPLE_TYPES, VARIANT4_BOTH_SAMPLE_TYPES]],
             inheritance_mode='recessive', **COMP_HET_ALL_PASS_FILTERS
         )
+
+    @staticmethod
+    def _add_sample_type_samples(sample_type, **sample_filter):
+        for sample in Sample.objects.filter(**sample_filter):
+            sample.pk = None
+            sample.sample_type = sample_type
+            sample.save()
 
     def test_inheritance_filter(self):
         inheritance_mode = 'any_affected'

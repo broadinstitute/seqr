@@ -80,93 +80,34 @@ for v in MULTI_PROJECT_BOTH_SAMPLE_TYPE_VARIANTS[:-2]:
         v['genotypes']['I000015_na20885'],
     ]
 
-VARIANT1_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY = deepcopy(VARIANT1)
-genotypes = VARIANT1_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY['genotypes']
-VARIANT1_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY['genotypes'] = {
-    'I000004_hg00731': [
-        genotypes['I000004_hg00731'],
-        {**genotypes['I000004_hg00731'], 'numAlt': 2, 'sampleType': 'WGS'}
-    ],
-    'I000005_hg00732': [genotypes['I000005_hg00732']],
-    'I000006_hg00733': [genotypes['I000006_hg00733']],
+VARIANT1_BOTH_SAMPLE_TYPES = deepcopy(VARIANT1)
+VARIANT1_BOTH_SAMPLE_TYPES['genotypes'] = {
+    individual_guid: [genotypes, {**genotypes, 'sampleType': 'WGS'}]
+    for individual_guid, genotypes in VARIANT1['genotypes'].items()
 }
-
-VARIANT1_BOTH_SAMPLE_TYPES = deepcopy(VARIANT1_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY)
 genotypes = VARIANT1_BOTH_SAMPLE_TYPES['genotypes']
-VARIANT1_BOTH_SAMPLE_TYPES['genotypes']['I000005_hg00732'] = [
-    *genotypes['I000005_hg00732'],
-    {**genotypes['I000005_hg00732'][0], 'gq': 99, 'numAlt': 1, 'sampleType': 'WGS'}
-]
-VARIANT1_BOTH_SAMPLE_TYPES['genotypes']['I000006_hg00733'] = [
-    *genotypes['I000006_hg00733'],
-    {**genotypes['I000006_hg00733'][0], 'sampleType': 'WGS'}
-]
+VARIANT1_BOTH_SAMPLE_TYPES['genotypes']['I000004_hg00731'][1]['numAlt'] = 2
+VARIANT1_BOTH_SAMPLE_TYPES['genotypes']['I000005_hg00732'][1].update({'gq': 99, 'numAlt': 1})
 
-VARIANT2_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY = deepcopy(VARIANT2)
-genotypes = VARIANT2_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY['genotypes']
-VARIANT2_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY['genotypes'] = {
-    'I000004_hg00731': [
-        genotypes['I000004_hg00731'],
-        {**genotypes['I000004_hg00731'], 'sampleType': 'WES'}
-    ],
-    'I000005_hg00732': [genotypes['I000005_hg00732']],
-    'I000006_hg00733': [genotypes['I000006_hg00733']],
+VARIANT2_BOTH_SAMPLE_TYPES = deepcopy(VARIANT2)
+VARIANT2_BOTH_SAMPLE_TYPES['genotypes'] = {
+    individual_guid: [genotypes, {**genotypes, 'sampleType': 'WGS'}]
+    for individual_guid, genotypes in VARIANT2['genotypes'].items()
+}
+VARIANT2_BOTH_SAMPLE_TYPES['genotypes']['I000005_hg00732'][1]['numAlt'] = 0
+
+VARIANT3_BOTH_SAMPLE_TYPES = deepcopy(VARIANT3)
+VARIANT3_BOTH_SAMPLE_TYPES['genotypes'] = {
+    individual_guid: [genotypes, {**genotypes, 'sampleType': 'WGS'}]
+    for individual_guid, genotypes in VARIANT3['genotypes'].items()
 }
 
-VARIANT2_BOTH_SAMPLE_TYPES = deepcopy(VARIANT2_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY)
-genotypes = VARIANT2_BOTH_SAMPLE_TYPES['genotypes']
-VARIANT2_BOTH_SAMPLE_TYPES['genotypes']['I000005_hg00732'] = [
-    *genotypes['I000005_hg00732'],
-    {**genotypes['I000005_hg00732'][0], 'numAlt': 0, 'sampleType': 'WES'}
-]
-VARIANT2_BOTH_SAMPLE_TYPES['genotypes']['I000006_hg00733'] = [
-    *genotypes['I000006_hg00733'],
-    {**genotypes['I000006_hg00733'][0], 'sampleType': 'WES'}
-]
-
-VARIANT3_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY = deepcopy(VARIANT3)
-genotypes = VARIANT3_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY['genotypes']
-VARIANT3_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY['genotypes'] = {
-    'I000004_hg00731': [
-        genotypes['I000004_hg00731'],
-        {**genotypes['I000004_hg00731'], 'sampleType': 'WGS'}
-    ],
-    'I000005_hg00732': [genotypes['I000005_hg00732']],
-    'I000006_hg00733': [genotypes['I000006_hg00733']],
+VARIANT4_BOTH_SAMPLE_TYPES = deepcopy(VARIANT4)
+VARIANT4_BOTH_SAMPLE_TYPES['genotypes'] = {
+    individual_guid: [genotypes, {**genotypes, 'sampleType': 'WGS'}]
+    for individual_guid, genotypes in VARIANT4['genotypes'].items()
 }
-
-VARIANT3_BOTH_SAMPLE_TYPES = deepcopy(VARIANT3_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY)
-genotypes = VARIANT3_BOTH_SAMPLE_TYPES['genotypes']
-VARIANT3_BOTH_SAMPLE_TYPES['genotypes']['I000005_hg00732'] = [
-    *genotypes['I000005_hg00732'],
-    {**genotypes['I000005_hg00732'][0], 'sampleType': 'WGS'}
-]
-VARIANT3_BOTH_SAMPLE_TYPES['genotypes']['I000006_hg00733'] = [
-    *genotypes['I000006_hg00733'],
-    {**genotypes['I000006_hg00733'][0], 'sampleType': 'WGS'}
-]
-
-VARIANT4_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY = deepcopy(VARIANT4)
-genotypes = VARIANT4_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY['genotypes']
-VARIANT4_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY['genotypes'] = {
-    'I000004_hg00731': [
-        genotypes['I000004_hg00731'],
-        {**genotypes['I000004_hg00731'], 'sampleType': 'WGS'}
-    ],
-    'I000005_hg00732': [genotypes['I000005_hg00732']],
-    'I000006_hg00733': [genotypes['I000006_hg00733']],
-}
-
-VARIANT4_BOTH_SAMPLE_TYPES = deepcopy(VARIANT4_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY)
-genotypes = VARIANT4_BOTH_SAMPLE_TYPES['genotypes']
-VARIANT4_BOTH_SAMPLE_TYPES['genotypes']['I000005_hg00732'] = [
-    *genotypes['I000005_hg00732'],
-    {**genotypes['I000005_hg00732'][0], 'sampleType': 'WGS'}
-]
-VARIANT4_BOTH_SAMPLE_TYPES['genotypes']['I000006_hg00733'] = [
-    *genotypes['I000006_hg00733'],
-    {**genotypes['I000006_hg00733'][0], 'numAlt': 2, 'sampleType': 'WGS'}
-]
+VARIANT4_BOTH_SAMPLE_TYPES['genotypes']['I000006_hg00733'][1]['numAlt'] = 2
 
 SELECTED_ANNOTATION_TRANSCRIPT_MULTI_FAMILY_VARIANT = {**MULTI_FAMILY_VARIANT, 'selectedMainTranscriptId': 'ENST00000497611'}
 SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT = {**MULTI_FAMILY_VARIANT, 'selectedMainTranscriptId': 'ENST00000426137'}
