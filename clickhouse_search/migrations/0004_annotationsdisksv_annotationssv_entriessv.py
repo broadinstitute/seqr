@@ -87,7 +87,6 @@ class Migration(migrations.Migration):
                 ('key', models.ForeignKey(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='clickhouse_search.annotationssv')),
                 ('project_guid', clickhouse_backend.models.StringField(low_cardinality=True)),
                 ('family_guid', clickhouse_backend.models.StringField()),
-                ('sample_type', clickhouse_backend.models.Enum8Field(choices=[(1, 'WES'), (2, 'WGS')])),
                 ('xpos', clickhouse_search.backend.fields.UInt64FieldDeltaCodecField()),
                 ('filters', clickhouse_backend.models.ArrayField(base_field=clickhouse_backend.models.StringField(low_cardinality=True))),
                 ('calls', clickhouse_backend.models.ArrayField(base_field=clickhouse_search.backend.fields.NamedTupleField(base_fields=[('sampleId', clickhouse_backend.models.StringField()), ('gt', clickhouse_backend.models.Enum8Field(blank=True, choices=[(0, 'REF'), (1, 'HET'), (2, 'HOM')], null=True)), ('cn', clickhouse_backend.models.UInt8Field(blank=True, null=True)), ('gq', clickhouse_backend.models.UInt8Field(blank=True, null=True)), ('newCall', clickhouse_backend.models.BoolField(blank=True, null=True)), ('prevCall', clickhouse_backend.models.BoolField(blank=True, null=True)), ('prevNumAlt', clickhouse_backend.models.Enum8Field(blank=True, choices=[(0, 'REF'), (1, 'HET'), (2, 'HOM')], null=True))]))),
@@ -95,6 +94,9 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'GRCh38/SV/entries',
+                'abstract': False,
+                'engine': clickhouse_search.backend.engines.CollapsingMergeTree('sign', deduplicate_merge_projection_mode='rebuild', index_granularity=8192, order_by=('project_guid', 'family_guid', 'key'), partition_by='project_guid'),
+                'projection': clickhouse_search.models.Projection('xpos_projection', order_by='xpos'),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),

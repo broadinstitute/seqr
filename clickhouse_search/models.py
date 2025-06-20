@@ -3,12 +3,13 @@ from collections import OrderedDict
 from django.db.migrations import state
 from django.db.models import options, ForeignKey, OneToOneField, F, Func, Manager, QuerySet, Q, CASCADE, PROTECT
 from django.db.models.expressions import Col
+from django.db.models.functions import Cast
 from django.db.models.sql.constants import INNER
 
 from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocksDB, Join
 from clickhouse_search.backend.fields import Enum8Field, NestedField, UInt64FieldDeltaCodecField, NamedTupleField
-from clickhouse_search.backend.functions import ArrayFilter, ArrayDistinct, ArrayJoin, ArrayMap, CrossJoin, \
-    GtStatsDictGet, SubqueryJoin, SubqueryTable, Tuple
+from clickhouse_search.backend.functions import Array, ArrayFilter, ArrayDistinct, ArrayJoin, ArrayMap, ArraySort, \
+    CrossJoin, GroupArray, GroupArrayArray, GtStatsDictGet, SubqueryJoin, SubqueryTable, Tuple
 from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFECTED, UNAFFECTED, MALE_SEXES, \
     X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, SCREEN_KEY, UTR_ANNOTATOR_KEY, \
     EXTENDED_SPLICE_KEY, MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY, CLINVAR_KEY, HGMD_KEY, SV_ANNOTATION_TYPES, \
@@ -22,7 +23,6 @@ options.DEFAULT_NAMES = (
     'projection',
 )
 state.DEFAULT_NAMES = options.DEFAULT_NAMES
-
 
 
 
@@ -375,13 +375,14 @@ class AnnotationsQuerySet(QuerySet):
 
 
 class BaseAnnotations(models.ClickhouseModel):
+    CHROMOSOME_CHOICES = [(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES)]
     key = models.UInt32Field(primary_key=True)
     xpos = models.UInt64Field()
-    chrom = Enum8Field(return_int=False, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES)])
     pos = models.UInt32Field()
     variant_id = models.StringField(db_column='variantId')
-    lifted_over_chrom = Enum8Field(db_column='liftedOverChrom', return_int=False, null=True, blank=True, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES)])
     lifted_over_pos = models.UInt32Field(db_column='liftedOverPos', null=True, blank=True)
+
+    objects = AnnotationsQuerySet.as_manager()
 
     class Meta:
         abstract = True
@@ -425,11 +426,13 @@ class BaseAnnotationsSvGcnv(BaseAnnotations):
         ('majorConsequence', models.Enum8Field(null=True, blank=True, return_int=False, choices=SV_CONSEQUENCE_RANKS)),
     ]
 
+    chrom = Enum8Field(return_int=False, choices=BaseAnnotations.CHROMOSOME_CHOICES)
     end = models.UInt32Field()
     rg37_locus_end = NamedTupleField([
-        ('contig', models.Enum8Field(return_int=False, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES)])),
+        ('contig', models.Enum8Field(return_int=False, choices=BaseAnnotations.CHROMOSOME_CHOICES)),
         ('position', models.UInt32Field()),
     ], db_column='rg37LocusEnd', null_if_empty=True)
+    lifted_over_chrom = Enum8Field(db_column='liftedOverChrom', return_int=False, null=True, blank=True, choices=BaseAnnotations.CHROMOSOME_CHOICES)
     sv_type = models.Enum8Field(db_column='svType', return_int=False, choices=SV_TYPES)
     predictions = NamedTupleField(PREDICTION_FIELDS)
     sorted_gene_consequences = NestedField(SORTED_GENE_CONSQUENCES_FIELDS, db_column='sortedTranscriptConsequences')
@@ -495,8 +498,8 @@ class BaseAnnotationsGRCh37SnvIndel(BaseAnnotationsMitoSnvIndel):
         ('geneId', models.StringField(null=True, blank=True))
     ]
 
-    objects = AnnotationsQuerySet.as_manager()
-
+    chrom = Enum8Field(return_int=False, choices=BaseAnnotations.CHROMOSOME_CHOICES)
+    lifted_over_chrom = Enum8Field(db_column='liftedOverChrom', return_int=False, null=True, blank=True, choices=BaseAnnotations.CHROMOSOME_CHOICES)
     caid = models.StringField(db_column='CAID', null=True, blank=True)
     hgmd = NamedTupleField([
         ('accession', models.StringField(null=True, blank=True)),
@@ -594,7 +597,7 @@ class BaseAnnotationsMito(BaseAnnotationsMitoSnvIndel):
     ]
     PREDICTION_FIELDS = [
         ('apogee', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        ('haplogroup_defining', models.Enum8Field(null=True, blank=True, return_int=False, choices=[(0, 'Y')])),
+        ('haplogroup_defining', models.BoolField(null=True, blank=True)),
         ('hmtvar', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
         ('mitotip', models.Enum8Field(null=True, blank=True, return_int=False, choices=MITOTIP_PATHOGENICITIES)),
         ('mut_taster', models.Enum8Field(null=True, blank=True, return_int=False, choices=BaseAnnotationsMitoSnvIndel.MUTATION_TASTER_PREDICTIONS)),
@@ -623,6 +626,7 @@ class AnnotationsDiskMito(BaseAnnotationsMito):
         db_table = 'GRCh38/MITO/annotations_disk'
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/MITO/annotations', primary_key='key', flatten_nested=0)
 
+
 class BaseAnnotationsSv(BaseAnnotationsSvGcnv):
     POPULATION_FIELDS = [
         ('gnomad_svs', NamedTupleField([
@@ -637,15 +641,17 @@ class BaseAnnotationsSv(BaseAnnotationsSvGcnv):
     algorithms = models.StringField(low_cardinality=True)
     bothsides_support = models.BoolField(db_column='bothsidesSupport')
     cpx_intervals = NestedField([
-        ('chrom', models.Enum8Field(return_int=False, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES)])),
+        ('chrom', models.Enum8Field(return_int=False, choices=BaseAnnotations.CHROMOSOME_CHOICES)),
         ('start', models.UInt32Field()),
         ('end', models.UInt32Field()),
         ('type', models.Enum8Field(return_int=False, choices=BaseAnnotationsSvGcnv.SV_TYPES)),
     ], db_column='cpxIntervals', null_when_empty=True)
-    end_chrom = models.Enum8Field(db_column='endChrom', return_int=False, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES)])
+    end_chrom = models.Enum8Field(db_column='endChrom', return_int=False, choices=BaseAnnotations.CHROMOSOME_CHOICES)
     sv_source_detail = NestedField(
-        [('chrom', models.Enum8Field(return_int=False, choices=[(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES)]))],
-    db_column='svSourceDetail', null_when_empty=True)
+        [('chrom', models.Enum8Field(return_int=False, choices=BaseAnnotations.CHROMOSOME_CHOICES))],
+        db_column='svSourceDetail',
+        null_when_empty=True
+    )
     sv_type_detail = models.Enum8Field(db_column='svTypeDetail', return_int=False, choices=SV_TYPE_DETAILS)
     populations = NamedTupleField(POPULATION_FIELDS)
 
@@ -692,6 +698,7 @@ class AnnotationsDiskGcnv(BaseAnnotationsGcnv):
     class Meta:
         db_table = 'GRCh38/GCNV/annotations_disk'
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/GCNV/annotations', primary_key='key', flatten_nested=0)
+
 
 class BaseClinvar(models.ClickhouseModel):
 
@@ -768,11 +775,20 @@ class EntriesManager(Manager):
         for field in reversed(ClinvarSnvIndel._meta.local_fields) if field.name != 'key'
     })
 
+    @property
+    def genotype_fields(self):
+        return OrderedDict({
+            'family_guid': ('familyGuid', models.StringField()),
+            'sample_type': ('sampleType', models.StringField()),
+            'filters': ('filters', models.ArrayField(models.StringField())),
+            'x.gt::Nullable(Int8)': ('numAlt', models.Int8Field(null=True, blank=True)),
+            **{f'x.{column[0]}': column for column in self.model.CALL_FIELDS if column[0] != 'gt'}
+        })
+
     def search(self, sample_data, parsed_locus=None, freqs=None,  **kwargs):
-        entries = self._search_call_data(sample_data, **kwargs)
+        entries = self.annotate(seqrPop=GtStatsDictGet('key'))
         entries = self._filter_intervals(entries, **(parsed_locus or {}))
 
-        entries = entries.annotate(seqrPop=GtStatsDictGet('key'))
         if (freqs or {}).get('callset'):
             entries = self._filter_seqr_frequency(entries, **freqs['callset'])
 
@@ -780,16 +796,14 @@ class EntriesManager(Manager):
         if (gnomad_filter.get('af') or 1) <= 0.05 or any(gnomad_filter.get(field) is not None for field in ['ac', 'hh']):
             entries = entries.filter(is_gnomad_gt_5_percent=False)
 
-        return entries
+        return self._search_call_data(entries, sample_data, **kwargs)
 
-    def _search_call_data(self, sample_data, inheritance_mode=None, inheritance_filter=None, qualityFilter=None, pathogenicity=None, **kwargs):
-       if len(sample_data) > 1:
-           raise NotImplementedError('Clickhouse search not implemented for multiple families or sample types')
-
-       entries = self.filter(
-           project_guid=sample_data[0]['project_guid'],
-           family_guid=sample_data[0]['family_guid'],
-       )
+    def _search_call_data(self, entries, sample_data, inheritance_mode=None, inheritance_filter=None, qualityFilter=None, pathogenicity=None, annotate_carriers=False, **kwargs):
+       project_guids = {s['project_guid'] for s in sample_data}
+       project_filter = Q(project_guid__in=project_guids) if len(project_guids) > 1 else Q(project_guid=sample_data[0]['project_guid'])
+       entries = entries.filter(project_filter)
+       family_filter = Q(family_guid__in=[s['family_guid'] for s in sample_data]) if len(sample_data) > 1 else Q(family_guid=sample_data[0]['family_guid'])
+       entries = entries.filter(family_filter)
 
        quality_filter = qualityFilter or {}
        if quality_filter.get('vcf_filter'):
@@ -802,27 +816,44 @@ class EntriesManager(Manager):
 
        individual_genotype_filter = (inheritance_filter or {}).get('genotype')
        custom_affected = (inheritance_filter or {}).get('affected') or {}
-       if not (inheritance_mode or individual_genotype_filter or quality_filter):
-           return entries
+       if inheritance_mode or individual_genotype_filter or quality_filter:
+            clinvar_override_q = AnnotationsQuerySet._clinvar_path_q(
+               pathogenicity, _get_range_q=lambda path_range: Q(clinvar_join__pathogenicity__range=path_range),
+            )
+            call_q = None
+            for s in sample_data:
+                call_q = self._family_calls_q(call_q, s, inheritance_mode, individual_genotype_filter, quality_filter, custom_affected, clinvar_override_q)
+            if call_q:
+                entries = entries.filter(call_q)
 
-       clinvar_override_q = AnnotationsQuerySet._clinvar_path_q(
-           pathogenicity, _get_range_q=lambda path_range: Q(clinvar_join__pathogenicity__range=path_range),
-       )
+       return self._annotate_calls(entries, sample_data, annotate_carriers)
 
-       for sample in sample_data[0]['samples']:
+    @classmethod
+    def _family_calls_q(cls, call_q, family_sample_data, inheritance_mode, individual_genotype_filter, quality_filter, custom_affected, clinvar_override_q):
+       family_sample_q = None
+       for sample in family_sample_data['samples']:
            affected = custom_affected.get(sample['individual_guid']) or sample['affected']
-           sample_inheritance_filter = self._sample_genotype_filter(sample, affected, inheritance_mode, individual_genotype_filter)
-           sample_quality_filter = self._sample_quality_filter(affected, quality_filter)
+           sample_inheritance_filter = cls._sample_genotype_filter(sample, affected, inheritance_mode, individual_genotype_filter)
+           sample_quality_filter = cls._sample_quality_filter(affected, quality_filter)
            if not (sample_inheritance_filter or sample_quality_filter):
                continue
            sample_inheritance_filter['sampleId'] = (f"'{sample['sample_id']}'",)
-           sample_q = Q(calls__array_exists={**sample_inheritance_filter, **sample_quality_filter})
+           sample_q = Q(
+               calls__array_exists={**sample_inheritance_filter, **sample_quality_filter},
+               family_guid=family_sample_data['family_guid'],
+               sample_type=family_sample_data['sample_type'],
+           )
            if clinvar_override_q and sample_quality_filter:
                sample_q |= clinvar_override_q & Q(calls__array_exists=sample_inheritance_filter)
 
-           entries = entries.filter(sample_q)
+           if family_sample_q is None:
+               family_sample_q = sample_q
+           else:
+               family_sample_q &= sample_q
 
-       return entries
+       if family_sample_q and call_q:
+           call_q |= family_sample_q
+       return call_q or family_sample_q
 
     @classmethod
     def _sample_genotype_filter(cls, sample, affected, inheritance_mode, individual_genotype_filter):
@@ -852,6 +883,67 @@ class EntriesManager(Manager):
 
         return sample_filter
 
+    def _annotate_calls(self, entries, sample_data, annotate_carriers):
+        carriers_expression = self._carriers_expression(sample_data) if annotate_carriers else None
+        if carriers_expression:
+            entries = entries.annotate(carriers=carriers_expression)
+
+        fields = ['key', 'clinvar', 'clinvar_key', 'seqrPop']
+        if len(sample_data) > 1:
+            # For multi-family search, group results
+            entries = entries.values(*fields).annotate(
+                familyGuids=ArraySort(ArrayDistinct(GroupArray('family_guid'))),
+                genotypes=GroupArrayArray(self._genotype_expression(sample_data)),
+            )
+            if carriers_expression:
+                entries = entries.annotate(family_carriers=Cast(
+                    Tuple('familyGuids', GroupArray('carriers')),
+                    models.MapField(models.StringField(), models.ArrayField(models.StringField())),
+                ))
+        else:
+            if carriers_expression:
+                fields.append('carriers')
+            entries = entries.values(
+                *fields,
+                familyGuids=Array('family_guid'),
+                genotypes=self._genotype_expression(sample_data),
+            )
+        return entries
+
+    def _genotype_expression(self, sample_data):
+        sample_map = []
+        for data in sample_data:
+            family_samples = [f"'{s['sample_id']}', '{s['individual_guid']}'" for s in data['samples']]
+            sample_map.append(f"'{data['family_guid']}', map({', '.join(family_samples)})")
+        return ArrayFilter(
+            ArrayMap(
+                'calls',
+                mapped_expression=f"tuple(map({', '.join(sample_map)})[family_guid][x.sampleId], {', '.join(self.genotype_fields.keys())})",
+                output_field=NestedField([('individualGuid', models.StringField()), *self.genotype_fields.values()], group_by_key='individualGuid', flatten_groups=True)
+            ),
+            conditions=[{1: (None, 'notEmpty({field})')}]
+        )
+
+    def _carriers_expression(self, sample_data):
+        family_carriers = {
+            family_sample_data['family_guid']: [
+                f"'{s['sample_id']}'" for s in family_sample_data['samples'] if s['affected'] == UNAFFECTED
+            ] for family_sample_data in sample_data
+        }
+        if not any(family_carriers.values()):
+            return None
+
+        carrier_map = [
+            f"'{family_guid}', [{', '.join(samples)}]" for family_guid, samples in family_carriers.items()
+        ]
+        return ArrayMap(
+            ArrayFilter('calls', conditions=[{
+                'sampleId': (", ".join(carrier_map), 'has(map({value})[family_guid], {field})'),
+                'gt': (0, '{field} > {value}'),
+            }]),
+            mapped_expression='x.sampleId',
+        )
+
     @classmethod
     def _filter_intervals(cls, entries, exclude_intervals=False, intervals=None, variant_ids=None,  **kwargs):
         if variant_ids:
@@ -880,14 +972,14 @@ class EntriesManager(Manager):
             entries = entries.filter(seqrPop__1__lte=hh)
         return entries
 
-
 class BaseEntries(models.ClickhouseModel):
     project_guid = models.StringField(low_cardinality=True)
     family_guid = models.StringField()
-    sample_type = models.Enum8Field(choices=[(1, 'WES'), (2, 'WGS')])
     xpos = UInt64FieldDeltaCodecField()
     filters = models.ArrayField(models.StringField(low_cardinality=True))
     sign = models.Int8Field()
+
+    objects = EntriesManager()
 
     def _save_table(
         self,
@@ -915,7 +1007,6 @@ class BaseEntries(models.ClickhouseModel):
         )
         projection = Projection('xpos_projection', order_by='xpos')
 
-
 class BaseEntriesSnvIndel(BaseEntries):
     CALL_FIELDS = [
         ('sampleId', models.StringField()),
@@ -925,8 +1016,7 @@ class BaseEntriesSnvIndel(BaseEntries):
         ('dp', models.UInt16Field(null=True, blank=True)),
     ]
 
-    objects = EntriesManager()
-
+    sample_type = models.Enum8Field(choices=[(1, 'WES'), (2, 'WGS')])
     is_gnomad_gt_5_percent = models.BoolField()
     calls = models.ArrayField(NamedTupleField(CALL_FIELDS))
 
@@ -967,13 +1057,12 @@ class EntriesMito(BaseEntries):
         ('contamination', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
     ]
 
-    objects = EntriesManager()
-
     # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
     key = ForeignKey('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
+    sample_type = models.Enum8Field(choices=[(1, 'WES'), (2, 'WGS')])
     calls = models.ArrayField(NamedTupleField(CALL_FIELDS))
 
-    class Meta:
+    class Meta(BaseEntries.Meta):
         db_table = 'GRCh38/MITO/entries'
 
 class EntriesSv(BaseEntries):
@@ -987,13 +1076,11 @@ class EntriesSv(BaseEntries):
         ('prevNumAlt', models.Enum8Field(null=True, blank=True, choices=[(0, 'REF'), (1, 'HET'), (2, 'HOM')])),
     ]
 
-    objects = EntriesManager()
-
     # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
     key = ForeignKey('AnnotationsSv', db_column='key', primary_key=True, on_delete=CASCADE)
     calls = models.ArrayField(NamedTupleField(CALL_FIELDS))
 
-    class Meta:
+    class Meta(BaseEntries.Meta):
         db_table = 'GRCh38/SV/entries'
 
 
@@ -1022,6 +1109,7 @@ class EntriesGcnv(BaseEntries):
     class Meta:
         db_table = 'GRCh38/GCNV/entries'
 
+
 class TranscriptsGRCh37SnvIndel(models.ClickhouseModel):
     key = OneToOneField('AnnotationsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
     transcripts = NestedField(BaseAnnotationsMitoSnvIndel.TRANSCRIPTS_FIELDS, group_by_key='geneId')
@@ -1029,7 +1117,6 @@ class TranscriptsGRCh37SnvIndel(models.ClickhouseModel):
     class Meta:
         db_table = 'GRCh37/SNV_INDEL/transcripts'
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh37/SNV_INDEL/transcripts', primary_key='key', flatten_nested=0)
-
 
 class TranscriptsSnvIndel(models.ClickhouseModel):
     key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
