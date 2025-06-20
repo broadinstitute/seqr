@@ -31,11 +31,18 @@ class ArraySort(Func):
     function = 'arraySort'
 
 
+class ArraySymmetricDifference(Func):
+    function = 'arraySymmetricDifference'
+
+
 class GroupArray(Aggregate):
     function = 'groupArray'
 
 class GroupArrayArray(Aggregate):
     function = 'groupArrayArray'
+
+class GroupArrayIntersect(Aggregate):
+    function = 'groupArrayIntersect'
 
 def _format_condition(filters):
     conditions = [
@@ -92,6 +99,10 @@ class GtStatsDictGet(Func):
     function = 'tuplePlus'
     template = '%(function)s(dictGet("GRCh38/SNV_INDEL/gt_stats_dict", (\'ac_wes\', \'hom_wes\'), %(expressions)s), dictGet("GRCh38/SNV_INDEL/gt_stats_dict", (\'ac_wgs\', \'hom_wgs\'), %(expressions)s))'
     output_field = NamedTupleField([('ac', UInt32Field()), ('hom', UInt32Field())])
+
+
+class If(Func):
+    function = 'if'
 
 
 class Tuple(Func):
