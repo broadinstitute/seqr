@@ -201,16 +201,20 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         # Variant 2 is inherited and homozygous in exome and de novo and homozygous in genome, so it fails de-novo inheritance when parental data is missing in genome.
         # Variant 3 is inherited in both sample types.
         # Variant 4 is de novo in exome, but inherited in genome in the same parent that has variant 3.
+        self.maxDiff = None
         self._assert_expected_search(
-            [VARIANT1_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY, VARIANT4_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY],
+            [VARIANT1_BOTH_SAMPLE_TYPES, VARIANT4_BOTH_SAMPLE_TYPES],
             inheritance_mode='de_novo',
         )
 
-        self._assert_expected_search(
-            [VARIANT1_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY, VARIANT2_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY,
-             [VARIANT3_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY, VARIANT4_BOTH_SAMPLE_TYPES_PROBAND_WGS_ONLY]],
-            nheritance_mode='recessive', **COMP_HET_ALL_PASS_FILTERS
-        )
+        sample = Sample.objects.get(guid='S000133_hg00732')
+        sample.pk = None
+        sample.sample_type = 'WGS'
+        sample.save()
+        sample = Sample.objects.get(guid='S000134_hg00733')
+        sample.pk = None
+        sample.sample_type = 'WGS'
+        sample.save()
 
         self._assert_expected_search(
             [VARIANT1_BOTH_SAMPLE_TYPES, VARIANT2_BOTH_SAMPLE_TYPES, VARIANT4_BOTH_SAMPLE_TYPES],
