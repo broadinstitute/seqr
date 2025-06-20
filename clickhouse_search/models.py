@@ -670,6 +670,35 @@ class AnnotationsDiskSv(BaseAnnotationsSv):
         db_table = 'GRCh38/SV/annotations_disk'
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SV/annotations', primary_key='key', flatten_nested=0)
 
+class BaseAnnotationsGcnv(BaseAnnotationsSvGcnv):
+    POPULATION_FIELDS = [
+        ('seqrPop', NamedTupleField([
+            ('ac', models.UInt32Field()),
+            ('af', models.DecimalField(max_digits=9, decimal_places=5)),
+            ('an', models.UInt32Field()),
+            ('het', models.UInt32Field()),
+            ('hom', models.UInt32Field()),
+        ])),
+    ]
+
+    num_exon = models.UInt8Field(db_column='numExon')
+    populations = NamedTupleField(POPULATION_FIELDS)
+
+    class Meta:
+        abstract = True
+
+class AnnotationsGcnv(BaseAnnotationsGcnv):
+
+    class Meta:
+        db_table = 'GRCh38/GCNV/annotations_memory'
+        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_IN_MEMORY_DIR}/GRCh38/GCNV/annotations', primary_key='key', flatten_nested=0)
+
+class AnnotationsDiskGcnv(BaseAnnotationsGcnv):
+
+    class Meta:
+        db_table = 'GRCh38/GCNV/annotations_disk'
+        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/GCNV/annotations', primary_key='key', flatten_nested=0)
+
 
 class BaseClinvar(models.ClickhouseModel):
 
@@ -1053,6 +1082,29 @@ class EntriesSv(BaseEntries):
 
     class Meta(BaseEntries.Meta):
         db_table = 'GRCh38/SV/entries'
+
+class EntriesGcnv(BaseEntries):
+    CALL_FIELDS = [
+        ('sampleId', models.StringField()),
+        ('gt', models.Enum8Field(null=True, blank=True, choices=[(0, 'REF'), (1, 'HET'), (2, 'HOM')])),
+        ('cn', models.UInt8Field(null=True, blank=True)),
+        ('qs', models.UInt16Field(null=True, blank=True)),
+        ('defragged', models.BoolField(null=True, blank=True)),
+        ('start', models.UInt32Field(null=True, blank=True)),
+        ('end', models.UInt32Field(null=True, blank=True)),
+        ('numExon', models.UInt8Field(null=True, blank=True)),
+        ('geneIds',  models.ArrayField(models.StringField(null=True, blank=True))),
+        ('newCall', models.BoolField(null=True, blank=True)),
+        ('prevCall', models.BoolField(null=True, blank=True)),
+        ('prevOverlap', models.BoolField(null=True, blank=True)),
+    ]
+
+    # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
+    key = ForeignKey('AnnotationsGcnv', db_column='key', primary_key=True, on_delete=CASCADE)
+    calls = models.ArrayField(NamedTupleField(CALL_FIELDS))
+
+    class Meta:
+        db_table = 'GRCh38/GCNV/entries'
 
 class TranscriptsGRCh37SnvIndel(models.ClickhouseModel):
     key = OneToOneField('AnnotationsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
