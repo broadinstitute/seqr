@@ -388,8 +388,13 @@ class CheckNewSamplesTest(object):
         if single_call:
             runs = runs[:1]
         for data_type, version in runs:
+            if 'hail_search_to_clickhouse_migration' in version:
+                logs.append((f'Skipping ClickHouse migration {data_type}: {version}', None))
+                continue
+            logs.append((f'Loading new samples from {data_type}: {version}', None))
             logs += self._additional_loading_logs(data_type, version)
-            logs += (run_loading_logs or {}).get(version, [(f'Loading new samples from {data_type}: {version}', None)])
+            if (run_loading_logs or {}).get(version):
+                logs += run_loading_logs[version]
             if (error_logs or {}).get(version):
                 logs.append((
                     f'Error loading {version}: {error_logs[version]}',
@@ -479,11 +484,7 @@ class CheckNewSamplesTest(object):
             'auto__2024-09-14': 'Data has genome version GRCh38 but the following projects have conflicting versions: R0001_1kg (GRCh37), R0003_test (GRCh37)',
         }
         mock_temp_dir.return_value.__enter__.return_value = '/mock/tmp'
-        self._test_call(error_logs=error_logs, run_loading_logs={
-            'hail_search_to_clickhouse_migration_WGS_R0877_neptune': [
-                ('Skipping ClickHouse migration GRCh38/SNV_INDEL: hail_search_to_clickhouse_migration_WGS_R0877_neptune', None),
-            ]
-        })
+        self._test_call(error_logs=error_logs)
         self.assertEqual(Sample.objects.filter(guid__in=SAMPLE_GUIDS + GCNV_SAMPLE_GUIDS).count(), 0)
 
         # Update fixture data to allow testing edge cases
@@ -518,7 +519,6 @@ class CheckNewSamplesTest(object):
             }),
         ]
         create_snv_indel_samples_logs = [
-            ('Loading new samples from GRCh38/SNV_INDEL: auto__2023-08-09', None),
             ('Loading 4 WES SNV_INDEL samples in 2 projects', None),
             ('create 4 Samples', {'dbUpdate': mock.ANY}),
             ('update 4 Samples', {'dbUpdate': mock.ANY}),
@@ -569,11 +569,9 @@ class CheckNewSamplesTest(object):
                 ('update 3 Familys', {'dbUpdate': mock.ANY}),
             ] + update_sample_qc_logs + reload_project_variants_logs,
             'auto__2024-08-12': [
-                ('Loading new samples from GRCh38/MITO: auto__2024-08-12', None),
                 ('Loading 2 WGS MITO samples in 1 projects', None)
             ],
             'auto__2024-09-14': [
-                ('Loading new samples from GRCh38/SV: auto__2024-09-14', None),
                 ('Loading 4 WES SV samples in 2 projects', None),
                 ('create 4 Samples', {'dbUpdate': mock.ANY}),
                 ('update 4 Samples', {'dbUpdate': mock.ANY}),
@@ -587,9 +585,6 @@ class CheckNewSamplesTest(object):
                 ('1 failed projects', None),
                 ('  Test Reprocessed Project: Bad Request', None),
             ],
-            'hail_search_to_clickhouse_migration_WGS_R0877_neptune': [
-                ('Skipping ClickHouse migration GRCh38/SNV_INDEL: hail_search_to_clickhouse_migration_WGS_R0877_neptune', None),
-            ]
         }, error_logs={
             'manual__2023-11-02': 'Invalid families in run metadata GRCh37/SNV_INDEL: manual__2023-11-02 - F0000123_ABC',
             'auto__2024-08-12': 'Matches not found for sample ids: NA20885, NA22882',
