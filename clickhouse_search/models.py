@@ -11,8 +11,9 @@ from django.db.models.sql.constants import INNER
 from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocksDB, Join
 from clickhouse_search.backend.fields import Enum8Field, NestedField, UInt64FieldDeltaCodecField, NamedTupleField
 from clickhouse_search.backend.functions import Array, ArrayFilter, ArrayDistinct, ArrayJoin, ArrayMap, ArraySort, \
-    ArrayIntersect, ArraySymmetricDifference, CrossJoin, GroupArray, GroupArrayArray, GroupArrayIntersect, GtStatsDictGet, \
-    If, SubqueryJoin, SubqueryTable, Tuple
+    ArrayConcat, ArrayIntersect, ArraySymmetricDifference, CrossJoin, GroupArray, GroupArrayArray, GroupArrayIntersect, \
+    GtStatsDictGet, If, MapLookup, SubqueryJoin, SubqueryTable, Tuple
+from seqr.models import Sample
 from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFECTED, UNAFFECTED, MALE_SEXES, \
     X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, SCREEN_KEY, UTR_ANNOTATOR_KEY, \
     EXTENDED_SPLICE_KEY, MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY, CLINVAR_KEY, HGMD_KEY, SV_ANNOTATION_TYPES, \
@@ -971,25 +972,39 @@ class EntriesManager(Manager):
 
     @classmethod
     def _annotate_failed_family_samples(cls, entries, family_sample_gt_filters):
-        entries = entries.annotate(failed_family_samples=Array(Tuple('family_guid', 'sample_type')))
-        # TODO if a sample is only in 1 sample type, failed_family_samples can be empty because sample is absent, but then if actually failed in other type should fail
-        # need to correctly check if passed or absent :(
+        gt_map = []
+        missing_sample_map = []
         for family_guid, sample_filters in family_sample_gt_filters.items():
             sample_type_filters = defaultdict(list)
+            missing_type_samples = defaultdict(list)
             for sample_ids_by_type, gt_filter in sample_filters:
                 for sample_type, sample_id in sample_ids_by_type.items():
                     sample_type_filters[sample_type].append(f"'{sample_id}', {cls.INVALID_NUM_ALT_LOOKUP[gt_filter]}")
-            for sample_type, type_filters in sample_type_filters.items():
-                entries = entries.annotate(failed_family_samples=If(
-                    Q(family_guid=family_guid, sample_type=sample_type),
-                    ArrayMap(
-                        ArrayFilter('calls', conditions=[{
-                            'gt': (', '.join(type_filters), 'has(map({value})[x.sampleId], {field})'),
-                        }]),
-                        mapped_expression='tuple(family_guid, x.sampleId)',
-                    ),
-                    F('failed_family_samples'),
-                ))
+                    if len(sample_ids_by_type) == 1:
+                        missing_type = Sample.SAMPLE_TYPE_WES if sample_type == Sample.SAMPLE_TYPE_WGS else Sample.SAMPLE_TYPE_WGS
+                        missing_type_samples[missing_type].append(sample_id)
+            sample_type_map = [
+                f"'{sample_type}', map({', '.join(type_filters)})"
+                for sample_type, type_filters in sample_type_filters.items()
+            ]
+            gt_map.append(f"'{family_guid}', map({', '.join(sample_type_map)})")
+            if missing_type_samples:
+                missing_type_map = [f"'{sample_type}', {samples}" for sample_type, samples in missing_type_samples.items()]
+                missing_sample_map.append(f"'{family_guid}', map({', '.join(missing_type_map)})")
+
+        entries = entries.annotate(failed_family_samples= ArrayMap(
+            ArrayFilter('calls', conditions=[{
+                'gt': (', '.join(gt_map), 'has(map({value})[family_guid][sample_type::String][x.sampleId], {field})'),
+            }]),
+            mapped_expression='tuple(family_guid, x.sampleId)',
+        ))
+        if missing_sample_map:
+            entries = entries.annotate(
+                missing_family_samples=ArrayMap(
+                    MapLookup('family_guid', Cast('sample_type', models.StringField()), map_values=', '.join(missing_sample_map)),
+                    mapped_expression='tuple(family_guid, x)',
+                )
+            )
         return entries
 
     def _annotate_calls(self, entries, sample_data, annotate_carriers, multi_sample_type_families):
@@ -1064,10 +1079,20 @@ class EntriesManager(Manager):
 
     @staticmethod
     def _multi_sample_type_filtered_entries(entries):
+        failed_samples_expression = GroupArrayIntersect('failed_family_samples')
+        if 'missing_family_samples' in entries.query.annotations:
+            # If variant is present in all sample types, it must pass inheritance for all samples in at least one type
+            # If variant is present in only one sample type, it only needs to pass for samples present in that type
+            failed_samples_expression = If(
+                failed_samples_expression,
+                GroupArrayIntersect(ArrayConcat('failed_family_samples', 'missing_family_samples')),
+                condition='count() = 1',
+            )
+
         entries = entries.annotate(
             pass_inheritance_families=ArraySymmetricDifference(
                 'familyGuids',
-                ArrayMap(GroupArrayIntersect('failed_family_samples'), mapped_expression='x.1'),
+                ArrayMap(failed_samples_expression, mapped_expression='x.1'),
                 output_field=ArrayField(StringField()),
             ),
             pass_quality_families=ArrayMap(

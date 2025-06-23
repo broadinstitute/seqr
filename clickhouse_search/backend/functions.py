@@ -10,6 +10,10 @@ class Array(Func):
     function = 'array'
 
 
+class ArrayConcat(Func):
+    function = 'arrayConcat'
+
+
 class ArrayDistinct(Func):
     function = 'arrayDistinct'
 
@@ -103,6 +107,13 @@ class GtStatsDictGet(Func):
 
 class If(Func):
     function = 'if'
+    template = '%(function)s(%(condition)s, %(expressions)s)'
+
+
+class MapLookup(Func):
+    function = 'map'
+    template = "%(function)s(%(map_values)s)[%(expressions)s]"
+    arg_joiner = "]["
 
 
 class Tuple(Func):
