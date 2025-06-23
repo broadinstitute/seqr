@@ -1210,3 +1210,52 @@ class KeyLookupGcnv(KeyLookup):
         db_table = 'GRCh38/GCNV/key_lookup'
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/GCNV/key_lookup', primary_key='variant_id', flatten_nested=0)
 
+
+class BaseProjectGtStats(models.ClickhouseModel):
+    project_guid = models.StringField(low_cardinality=True)
+    ref_samples = models.UInt32Field()
+    het_samples = models.UInt32Field()
+    hom_samples = models.UInt32Field()
+
+    class Meta:
+        abstract = True
+        engine = models.SummingMergeTree(
+            order_by=('project_guid', 'key'),
+            partition_by='project_guid',
+            index_granularity=8192,
+        )
+
+class BaseProjectGtStatsMitoSnvIndel(BaseProjectGtStats):
+    sample_type = models.Enum8Field(choices=[(1, 'WES'), (2, 'WGS')])
+
+    class Meta:
+        abstract = True
+        engine = models.SummingMergeTree(
+            order_by=('project_guid', 'key', 'sample_type'),
+            partition_by='project_guid',
+            index_granularity=8192,
+        )
+
+class ProjectGtStatsGRCh37SnvIndel(BaseProjectGtStatsMitoSnvIndel):
+    key = OneToOneField('AnnotationsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+
+    class Meta(BaseProjectGtStatsMitoSnvIndel.Meta):
+        db_table = 'GRCh37/SNV_INDEL/project_gt_stats'
+
+class ProjectGtStatsSnvIndel(BaseProjectGtStatsMitoSnvIndel):
+    key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+
+    class Meta(BaseProjectGtStatsMitoSnvIndel.Meta):
+        db_table = 'GRCh38/SNV_INDEL/project_gt_stats'
+
+class ProjectGtStatsMito(BaseProjectGtStatsMitoSnvIndel):
+    key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
+
+    class Meta(BaseProjectGtStatsMitoSnvIndel.Meta):
+        db_table = 'GRCh38/MITO/project_gt_stats'
+
+class ProjectGtStatsSv(BaseProjectGtStats):
+    key = OneToOneField('AnnotationsSv', db_column='key', primary_key=True, on_delete=CASCADE)
+
+    class Meta(BaseProjectGtStats.Meta):
+        db_table = 'GRCh38/SV/project_gt_stats'
