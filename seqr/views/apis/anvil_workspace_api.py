@@ -146,7 +146,7 @@ def validate_anvil_vcf(request, namespace, name, workspace_meta):
     ).exclude(workspace_namespace=namespace, workspace_name=name).first()
     if pending_project:
         raise ErrorsWarningsException([
-            f'Project "{pending_project.name}" is awaiting loading. Please wait for loading to complete before requesting additional data loading'
+            f'Project "{pending_project.name}" is awaiting loading. Please wait for loading to complete and/or delete any families that will not be receiving data before requesting additional data loading'
         ])
 
     # Validate the data path
