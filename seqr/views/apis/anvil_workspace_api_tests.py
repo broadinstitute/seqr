@@ -308,7 +308,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         response = self.client.post(url, content_type='application/json', data=json.dumps({**VALIDATE_VCF_BODY, 'genomeVersion': '37'}))
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], [
-            'Project "Test Reprocessed Project" is awaiting loading. Please wait for loading to complete before requesting additional data loading'
+            'Project "Test Reprocessed Project" is awaiting loading. Please wait for loading to complete and/or delete any families that will not be receiving data before requesting additional data loading'
         ])
 
         # Test bad data path
@@ -680,7 +680,7 @@ class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], [
             'The following families in this project are awaiting loading from a previous loading request: 2, 3, 4, 5, 6, 8, 9, no_individuals. '
-            'Please wait for loading to complete before requesting additional data loading'
+            'Please wait for loading to complete and/or delete any families that will not be receiving data before requesting additional data loading'
         ])
 
         # Test a valid operation

@@ -245,13 +245,16 @@ class Family extends React.PureComponent {
 
     let leftContent = null
     if (!hidePedigree) {
+      const isCoreEditable = isEditable && !!project.workspaceName && !project.isAnalystProject
       const familyHeader = (
         <BaseFieldView
           field="familyId"
           idField="familyGuid"
           initialValues={family}
           fieldDisplay={this.familyHeader}
-          isEditable={isEditable && !!project.workspaceName && !project.isAnalystProject}
+          isEditable={isCoreEditable}
+          isDeletable={isCoreEditable}
+          deleteConfirm={`Are you sure you want to delete ${family.displayName}? This action can not be undone`}
           formFieldProps={FAMILY_NAME_FIELD_PROPS}
           modalTitle={`Edit Family ${family.displayName}`}
           onSubmit={dispatchUpdateFamily}
