@@ -341,11 +341,6 @@ class EntriesManager(Manager):
 
     QUALITY_FILTERS = [('gq', 1), ('ab', 100, 'x.gt != 1')]
 
-    CLINVAR_FIELDS = OrderedDict({
-        f'clinvar_join__{field.name}': (field.db_column or field.name, field)
-        for field in reversed(ClinvarSnvIndel._meta.local_fields) if field.name != 'key'
-    })
-
     @property
     def genotype_fields(self):
         return OrderedDict({
@@ -354,6 +349,14 @@ class EntriesManager(Manager):
             'filters': ('filters', models.ArrayField(models.StringField())),
             'x.gt::Nullable(Int8)': ('numAlt', models.Int8Field(null=True, blank=True)),
             **{f'x.{column[0]}': column for column in self.model.CALL_FIELDS if column[0] != 'gt'}
+        })
+
+    @property
+    def clinvar_fields(self):
+        clinvar_model = self.model.clinvar_join.rel.related_model
+        return OrderedDict({
+            f'clinvar_join__{field.name}': (field.db_column or field.name, field)
+            for field in reversed(clinvar_model._meta.local_fields) if field.name != 'key'
         })
 
     def search(self, sample_data, parsed_locus=None, freqs=None,  **kwargs):
@@ -393,7 +396,7 @@ class EntriesManager(Manager):
 
        entries = entries.annotate(
            clinvar_key=F('clinvar_join__key'),
-           clinvar=Tuple(*self.CLINVAR_FIELDS.keys(), output_field=NamedTupleField(list(self.CLINVAR_FIELDS.values()), null_if_empty=True, null_empty_arrays=True))
+           clinvar=Tuple(*self.clinvar_fields.keys(), output_field=NamedTupleField(list(self.clinvar_fields.values()), null_if_empty=True, null_empty_arrays=True))
        )
 
        individual_genotype_filter = (inheritance_filter or {}).get('genotype')
