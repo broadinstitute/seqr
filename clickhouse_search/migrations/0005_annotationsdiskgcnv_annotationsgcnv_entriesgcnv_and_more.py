@@ -73,14 +73,13 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='EntriesGcnv',
             fields=[
+                ('key', models.ForeignKey(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='clickhouse_search.annotationsgcnv')),
                 ('project_guid', clickhouse_backend.models.StringField(low_cardinality=True)),
                 ('family_guid', clickhouse_backend.models.StringField()),
-                ('sample_type', clickhouse_backend.models.Enum8Field(choices=[(1, 'WES'), (2, 'WGS')])),
                 ('xpos', clickhouse_search.backend.fields.UInt64FieldDeltaCodecField()),
                 ('filters', clickhouse_backend.models.ArrayField(base_field=clickhouse_backend.models.StringField(low_cardinality=True))),
-                ('sign', clickhouse_backend.models.Int8Field()),
-                ('key', models.ForeignKey(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='clickhouse_search.annotationssv')),
                 ('calls', clickhouse_backend.models.ArrayField(base_field=clickhouse_search.backend.fields.NamedTupleField(base_fields=[('sampleId', clickhouse_backend.models.StringField()), ('gt', clickhouse_backend.models.Enum8Field(blank=True, choices=[(0, 'REF'), (1, 'HET'), (2, 'HOM')], null=True)), ('cn', clickhouse_backend.models.UInt8Field(blank=True, null=True)), ('qs', clickhouse_backend.models.UInt16Field(blank=True, null=True)), ('defragged', clickhouse_backend.models.BoolField(blank=True, null=True)), ('start', clickhouse_backend.models.UInt32Field(blank=True, null=True)), ('end', clickhouse_backend.models.UInt32Field(blank=True, null=True)), ('numExon', clickhouse_backend.models.UInt8Field(blank=True, null=True)), ('geneIds', clickhouse_backend.models.ArrayField(base_field=clickhouse_backend.models.StringField(blank=True, null=True))), ('newCall', clickhouse_backend.models.BoolField(blank=True, null=True)), ('prevCall', clickhouse_backend.models.BoolField(blank=True, null=True)), ('prevOverlap', clickhouse_backend.models.BoolField(blank=True, null=True))]))),
+                ('sign', clickhouse_backend.models.Int8Field()),
             ],
             options={
                 'db_table': 'GRCh38/GCNV/entries',
