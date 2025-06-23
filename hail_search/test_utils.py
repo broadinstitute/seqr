@@ -532,6 +532,115 @@ MULTI_FAMILY_VARIANT['genotypes'].update(FAMILY_3_VARIANT['genotypes'])
 HAIL_BACKEND_VARIANTS = [VARIANT2, MULTI_FAMILY_VARIANT]
 HAIL_BACKEND_SINGLE_FAMILY_VARIANTS = [VARIANT2, VARIANT3]
 
+PROJECT_2_VARIANT = {
+    'variantId': '1-10146-ACC-A',
+    'chrom': '1',
+    'pos': 10146,
+    'ref': 'ACC',
+    'alt': 'A',
+    'genomeVersion': '38',
+    'liftedOverGenomeVersion': '37',
+    'liftedOverChrom': '1',
+    'liftedOverPos': 10146,
+    'xpos': 1000010146,
+    'rsid': 'rs375931351',
+    'familyGuids': ['F000011_11'],
+    'genotypes': {
+        'I000015_na20885': {
+            'sampleId': 'NA20885', 'sampleType': 'WES', 'individualGuid': 'I000015_na20885', 'familyGuid': 'F000011_11',
+            'numAlt': 1, 'dp': 8, 'gq': 14, 'ab': 0.875, 'filters': [],
+        }
+    },
+    'clinvar': None,
+    'hgmd': None,
+    'screenRegionType': None,
+    'populations': {
+        'seqr': {'ac': 0, 'hom': 0},
+        'topmed': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'het': 0},
+        'exac': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'hemi': 0, 'het': 0, 'filter_af': 0.0},
+        'gnomad_exomes': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'hemi': 0, 'filter_af': 0.0},
+        'gnomad_genomes': {'af': 0.00012430080096237361, 'ac': 2, 'an': 16090, 'hom': 0, 'hemi': 0, 'filter_af': 0.002336448524147272},
+    },
+    'predictions': {
+        'cadd': 4.6529998779296875,
+        'eigen': None,
+        'fathmm': None,
+        'gnomad_noncoding': None,
+        'mpc': None,
+        'mut_pred': None,
+        'primate_ai': None,
+        'splice_ai': None,
+        'splice_ai_consequence': None,
+        'vest': None,
+        'mut_taster': None,
+        'polyphen': None,
+        'revel': None,
+        'sift': None,
+    },
+    'transcripts': {},
+    'mainTranscriptId': None,
+    'selectedMainTranscriptId': None,
+    'sortedMotifFeatureConsequences': None,
+    'sortedRegulatoryFeatureConsequences': None,
+    '_sort': [1000010146],
+    'CAID': 'CA520798130',
+}
+
+GRCH37_VARIANT = {
+    'variantId': '7-143270172-A-G',
+    'xpos': 7143270172,
+    'chrom': '7',
+    'pos': 143270172,
+    'ref': 'A',
+    'alt': 'G',
+    'genomeVersion': '37',
+    'rsid': 'rs72611576',
+    'familyGuids': ['F000002_2'],
+    'genotypes': {
+        'I000004_hg00731': {
+            'sampleId': 'HG00731', 'sampleType': 'WGS', 'individualGuid': 'I000004_hg00731',
+            'familyGuid': 'F000002_2', 'numAlt': 2, 'dp': 16, 'gq': 48, 'ab': 1, 'filters': ['VQSRTrancheSNP99.90to99.95'],
+        }, 'I000006_hg00733': {
+            'sampleId': 'HG00733', 'sampleType': 'WGS', 'individualGuid': 'I000006_hg00733',
+            'familyGuid': 'F000002_2', 'numAlt': 1, 'dp': 49, 'gq': 99, 'ab': 0.6530612111091614,
+            'filters': ['VQSRTrancheSNP99.90to99.95'],
+        },
+    },
+    'populations': {
+        'seqr': {'ac': 4711, 'hom': 1508},
+        'topmed': {'af': 0.5213189721107483, 'ac': 65461, 'an': 125568, 'hom': 16156, 'het': 33149},
+        'exac': {'af': 0.6299999952316284, 'ac': 66593, 'an': 104352, 'hom': 22162, 'hemi': 0, 'het': 22269, 'filter_af': 0.8198773860931396},
+        'gnomad_exomes': {'af': 0.6354219317436218, 'ac': 137532, 'an': 216442, 'hom': 45869, 'hemi': 0, 'filter_af': 0.8226116299629211},
+        'gnomad_genomes': {'af': 0.6136477589607239, 'ac': 14649, 'an': 23872, 'hom': 4584, 'hemi': 0, 'filter_af': 0.828438937664032},
+    },
+    'predictions': {
+        'cadd': 13.020000457763672, 'eigen': 3.9509999752044678, 'primate_ai': 0.4906357526779175,
+        'splice_ai': 0, 'splice_ai_consequence': 'No consequence',
+        'mpc': None, 'mut_taster': None, 'polyphen': None, 'revel': None, 'sift': None,
+    },
+    'clinvar': None,
+    'hgmd': None,
+    'transcripts': {
+        'ENSG00000271079': [
+            {'aminoAcids': 'E/G', 'canonical': 1, 'codons': 'gAa/gGa', 'geneId': 'ENSG00000271079',
+             'hgvsc': 'ENST00000420911.2:c.1262A>G', 'hgvsp': 'ENSP00000474204.1:p.Glu421Gly',
+             'transcriptId': 'ENST00000420911', 'isLofNagnag': None, 'transcriptRank': 0, 'consequenceTerms': ['missense_variant'],
+             'biotype': 'protein_coding', 'lofFilters': None, 'majorConsequence': 'missense_variant'},
+        ],
+        'ENSG00000176227': [
+            {'aminoAcids': None, 'canonical': 1, 'codons': None, 'geneId': 'ENSG00000176227',
+             'hgvsc': 'ENST00000447022.1:n.1354A>G', 'hgvsp': None,
+             'transcriptId': 'ENST00000447022', 'isLofNagnag': None, 'transcriptRank': 0,
+             'biotype': 'processed_pseudogene', 'lofFilters': None, 'majorConsequence': 'non_coding_transcript_exon_variant',
+             'consequenceTerms': ['non_coding_transcript_exon_variant', 'non_coding_transcript_variant']},
+        ],
+    },
+    'mainTranscriptId': 'ENST00000420911',
+    'selectedMainTranscriptId': None,
+    '_sort': [7143270172],
+    'CAID': 'CA4540310',
+}
+
 SV_VARIANT1 = {
     'variantId': 'phase2_DEL_chr1_625',
     'chrom': '1',

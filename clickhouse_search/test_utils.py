@@ -5,13 +5,15 @@ from hail_search.test_utils import (
     VARIANT2 as HAIL_VARIANT2,
     VARIANT3 as HAIL_VARIANT3,
     VARIANT4 as HAIL_VARIANT4,
+    PROJECT_2_VARIANT as HAIL_PROJECT_2_VARIANT,
 )
 
 VARIANT1 = {**deepcopy(HAIL_VARIANT1), 'key': 1}
 VARIANT2 = {**deepcopy(HAIL_VARIANT2), 'key': 2}
 VARIANT3 = {**deepcopy(HAIL_VARIANT3), 'key': 3}
 VARIANT4 = {**deepcopy(HAIL_VARIANT4), 'key': 4}
-for variant in [VARIANT1, VARIANT2, VARIANT3, VARIANT4]:
+PROJECT_2_VARIANT = {**deepcopy(HAIL_PROJECT_2_VARIANT), 'key': 5}
+for variant in [VARIANT1, VARIANT2, VARIANT3, VARIANT4, PROJECT_2_VARIANT]:
     # clickhouse uses fixed length decimals so values are rounded relative to hail backend
     for genotype in variant['genotypes'].values():
         genotype['ab'] = round(genotype['ab'], 5)
@@ -29,23 +31,44 @@ for variant in [VARIANT1, VARIANT2, VARIANT3, VARIANT4]:
                 transcript['alphamissense']['pathogenicity'] = round(transcript['alphamissense']['pathogenicity'], 5)
     # sort is not computed/annotated at query time
     del variant['_sort']
-
-del VARIANT1['clinvar']['version']
-del VARIANT2['clinvar']['version']
+    if variant['clinvar']:
+        del variant['clinvar']['version']
 
 FAMILY_3_VARIANT = deepcopy(VARIANT3)
 FAMILY_3_VARIANT['familyGuids'] = ['F000003_3']
 FAMILY_3_VARIANT['genotypes'] = {
     'I000007_na20870': {
         'sampleId': 'NA20870', 'sampleType': 'WES', 'individualGuid': 'I000007_na20870', 'familyGuid': 'F000003_3',
-        'numAlt': 1, 'dp': 28, 'gq': 99, 'ab': 0.6785714285714286, 'filters': [],
+        'numAlt': 1, 'dp': 28, 'gq': 99, 'ab': 0.67857, 'filters': [],
     },
 }
 
 MULTI_FAMILY_VARIANT = deepcopy(VARIANT3)
 MULTI_FAMILY_VARIANT['familyGuids'] += FAMILY_3_VARIANT['familyGuids']
 MULTI_FAMILY_VARIANT['genotypes'].update(FAMILY_3_VARIANT['genotypes'])
-MULTI_FAMILY_VARIANT = VARIANT3
+
+# main fixture data has WGS sample_type for this project
+PROJECT_2_VARIANT['genotypes']['I000015_na20885']['sampleType'] = 'WGS'
+PROJECT_2_VARIANT['populations']['gnomad_genomes']['filter_af'] = 0.00233
+PROJECT_2_VARIANT['predictions']['cadd'] = 4.65299
+
+PROJECT_2_VARIANT1 = deepcopy(VARIANT1)
+PROJECT_2_VARIANT1['familyGuids'] = ['F000011_11']
+PROJECT_2_VARIANT1['genotypes'] = {
+    'I000015_na20885': {
+        'sampleId': 'NA20885', 'sampleType': 'WGS', 'individualGuid': 'I000015_na20885', 'familyGuid': 'F000011_11',
+        'numAlt': 2, 'dp': 6, 'gq': 16, 'ab': 1.0, 'filters': [],
+    },
+}
+MULTI_PROJECT_VARIANT1 = deepcopy(VARIANT1)
+MULTI_PROJECT_VARIANT1['familyGuids'] += PROJECT_2_VARIANT1['familyGuids']
+MULTI_PROJECT_VARIANT1['genotypes'].update(deepcopy(PROJECT_2_VARIANT1['genotypes']))
+MULTI_PROJECT_VARIANT2 = deepcopy(VARIANT2)
+MULTI_PROJECT_VARIANT2['familyGuids'].append('F000011_11')
+MULTI_PROJECT_VARIANT2['genotypes']['I000015_na20885'] = {
+    'sampleId': 'NA20885', 'sampleType': 'WGS', 'individualGuid': 'I000015_na20885', 'familyGuid': 'F000011_11',
+    'numAlt': 1, 'dp': 28, 'gq': 99, 'ab': 0.5, 'filters': [],
+}
 
 SELECTED_ANNOTATION_TRANSCRIPT_MULTI_FAMILY_VARIANT = {**MULTI_FAMILY_VARIANT, 'selectedMainTranscriptId': 'ENST00000497611'}
 SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT = {**MULTI_FAMILY_VARIANT, 'selectedMainTranscriptId': 'ENST00000426137'}
@@ -53,13 +76,7 @@ SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4 = {**VARIANT4, 'selectedMainTranscriptI
 SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3 = {**VARIANT3, 'selectedMainTranscriptId': 'ENST00000497611'}
 SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2 = {**VARIANT2, 'selectedMainTranscriptId': 'ENST00000459627'}
 
-CACHED_VARIANTS_BY_KEY = {
-    variant['key']: {
-        'sortedTranscriptConsequences': [],
-        **{k: v for k, v in variant.items() if k not in ['mainTranscriptId', 'selectedMainTranscriptId', 'transcripts']},
-    } for variant in [VARIANT1, VARIANT2, VARIANT3, VARIANT4]
-}
-CACHED_VARIANTS_BY_KEY[2]['sortedTranscriptConsequences'] = [{
+CACHED_CONSEQUENCES_BY_KEY = {2: [{
     'alphamissensePathogenicity': 0.99779,
     'canonical': 1,
     'consequenceTerms': ['missense_variant'],
@@ -108,8 +125,8 @@ CACHED_VARIANTS_BY_KEY[2]['sortedTranscriptConsequences'] = [{
     'extendedIntronicSpliceRegionVariant': False,
     'fiveutrConsequence': None,
     'geneId': 'ENSG00000177000',
-}]
-CACHED_VARIANTS_BY_KEY[3]['sortedTranscriptConsequences'] = [{
+}],
+3: [{
     'alphamissensePathogenicity': None,
     'canonical': 1,
     'consequenceTerms': ['intron_variant'],
@@ -137,8 +154,8 @@ CACHED_VARIANTS_BY_KEY[3]['sortedTranscriptConsequences'] = [{
     'extendedIntronicSpliceRegionVariant': False,
     'fiveutrConsequence': None,
     'geneId': 'ENSG00000097046',
-}]
-CACHED_VARIANTS_BY_KEY[4]['sortedTranscriptConsequences'] = [{
+}],
+4: [{
     'alphamissensePathogenicity': None,
     'canonical': None,
     'consequenceTerms': ['splice_donor_variant'],
@@ -159,7 +176,19 @@ CACHED_VARIANTS_BY_KEY[4]['sortedTranscriptConsequences'] = [{
     'extendedIntronicSpliceRegionVariant': False,
     'fiveutrConsequence': None,
     'geneId': 'ENSG00000097046',
-}]
+}]}
+
+def format_cached_variant(variant):
+    return {
+        **{k: v for k, v in variant.items() if k not in ['mainTranscriptId', 'selectedMainTranscriptId', 'transcripts']},
+        'sortedTranscriptConsequences': CACHED_CONSEQUENCES_BY_KEY.get(variant['key'], []),
+    }
+
+GENE_COUNTS = {
+    'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
+    'ENSG00000177000': {'total': 3, 'families': {'F000002_2': 2, 'F000011_11': 1}},
+    'ENSG00000277258': {'total': 2, 'families': {'F000002_2': 1, 'F000011_11': 1}},
+}
 
 VARIANT_IDS =  ['1-10439-AC-A', '1-91511686-TCA-G']
 VARIANT_ID_SEARCH = {
@@ -170,4 +199,9 @@ GENE_IDS = ['ENSG00000097046', 'ENSG00000177000']
 INTERVALS = ['chr2:1234-5678', 'chr7:1-11100']
 LOCATION_SEARCH = {
     'locus': {'rawItems': '\n'.join(GENE_IDS+INTERVALS)},
+}
+
+COMP_HET_ALL_PASS_FILTERS = {
+    'annotations': {'splice_ai': '0.0', 'structural': ['DEL', 'CPX', 'INS', 'gCNV_DEL', 'gCNV_DUP']},
+    'pathogenicity': {'clinvar': ['likely_pathogenic']},
 }
