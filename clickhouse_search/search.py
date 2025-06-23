@@ -5,7 +5,7 @@ from django.db.models.functions import JSONObject
 
 from clickhouse_search.backend.fields import NamedTupleField
 from clickhouse_search.backend.functions import Array, ArrayFilter, ArrayIntersect, ArraySort, Tuple
-from clickhouse_search.models import EntriesSnvIndel, AnnotationsSnvIndel, TranscriptsSnvIndel, ClinvarSnvIndel
+from clickhouse_search.models import EntriesSnvIndel, AnnotationsSnvIndel, TranscriptsSnvIndel, BaseClinvar
 from reference_data.models import GeneConstraint, Omim, GENOME_VERSION_GRCh38
 from seqr.models import PhenotypePrioritization, Sample
 from seqr.utils.logging_utils import SeqrLogger
@@ -243,10 +243,9 @@ def _subfield_sort(*fields, rank_lookup=None, default=MAX_SORT_RANK, reverse=Fal
     return [_sort]
 
 
-# TODO
 MIN_SORT_RANK = 0
 MIN_PRED_SORT_RANK = -1
-CLINVAR_RANK_LOOKUP = {path: rank for rank, path in ClinvarSnvIndel.PATHOGENICITY_CHOICES}
+CLINVAR_RANK_LOOKUP = {path: rank for rank, path in BaseClinvar.PATHOGENICITY_CHOICES}
 HGMD_RANK_LOOKUP = {class_: rank for rank, class_ in AnnotationsSnvIndel.HGMD_CLASSES}
 ABSENT_CLINVAR_SORT_OFFSET = 12.5
 CONSEQUENCE_RANK_LOOKUP = {csq: rank for rank, csq in AnnotationsSnvIndel.CONSEQUENCE_TERMS}
