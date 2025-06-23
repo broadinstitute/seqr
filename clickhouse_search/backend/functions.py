@@ -86,14 +86,13 @@ class ArrayExists(ArrayLookup):
 
 
 class ArrayFilter(lookups.Transform):
-    def __init__(self, *args, conditions=None, negate=False, **kwargs):
+    def __init__(self, *args, conditions=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.conditions = _format_conditions(conditions)
-        self.negate = negate
 
     def as_sql(self, compiler, connection, *args, **kwargs):
         lhs, params = compiler.compile(self.lhs)
-        return f'arrayFilter(x -> {"NOT " if self.negate else ""}{self.conditions}, {lhs})', params
+        return f'arrayFilter(x -> {self.conditions}, {lhs})', params
 
 
 @ArrayField.register_lookup
