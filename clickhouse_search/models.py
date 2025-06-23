@@ -1177,14 +1177,14 @@ class KeyLookupGRCh37SnvIndel(KeyLookup):
 
     class Meta:
         db_table = 'GRCh37/SNV_INDEL/key_lookup'
-        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh37/SNV_INDEL/key_lookup', primary_key='variantId', flatten_nested=0)
+        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh37/SNV_INDEL/key_lookup', primary_key='variant_id', flatten_nested=0)
 
 class KeyLookupSnvIndel(KeyLookup):
     key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
 
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/key_lookup'
-        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SNV_INDEL/key_lookup', primary_key='variantId', flatten_nested=0)
+        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SNV_INDEL/key_lookup', primary_key='variant_id', flatten_nested=0)
 
 
 class KeyLookupMito(KeyLookup):
@@ -1192,7 +1192,7 @@ class KeyLookupMito(KeyLookup):
 
     class Meta:
         db_table = 'GRCh38/MITO/key_lookup'
-        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/MITO/key_lookup', primary_key='variantId', flatten_nested=0)
+        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/MITO/key_lookup', primary_key='variant_id', flatten_nested=0)
 
 
 class KeyLookupSv(KeyLookup):
@@ -1200,7 +1200,7 @@ class KeyLookupSv(KeyLookup):
 
     class Meta:
         db_table = 'GRCh38/SV/key_lookup'
-        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SV/key_lookup', primary_key='variantId', flatten_nested=0)
+        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SV/key_lookup', primary_key='variant_id', flatten_nested=0)
 
 
 class KeyLookupGcnv(KeyLookup):
@@ -1208,5 +1208,5 @@ class KeyLookupGcnv(KeyLookup):
 
     class Meta:
         db_table = 'GRCh38/GCNV/key_lookup'
-        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/GCNV/key_lookup', primary_key='variantId', flatten_nested=0)
+        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/GCNV/key_lookup', primary_key='variant_id', flatten_nested=0)
 
