@@ -166,7 +166,7 @@ LOCAL_RUN_PATHS = [
     '/seqr/seqr-hail-search-data/GRCh38/MITO/runs/auto__2024-08-12/_SUCCESS',
     '/seqr/seqr-hail-search-data/GRCh38/GCNV/runs/auto__2024-09-14/_SUCCESS',
     '/seqr/seqr-hail-search-data/GRCh38/SNV_INDEL/runs/manual__2025-01-24/validation_errors.json',
-    '/seqr/seqr-hail-search-data/GRCh38/SNV_INDEL/runs/hail_search_to_clickhouse_PROJECT_ENTRIES_WGS_R0877_neptune/_SUCCESS',
+    '/seqr/seqr-hail-search-data/GRCh38/SNV_INDEL/runs/hail_search_to_clickhouse_migration_WGS_R0877_neptune/_SUCCESS',
 ]
 RUN_PATHS = [
     b'gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-13/',
@@ -185,7 +185,7 @@ RUN_PATHS = [
     b'gs://seqr-hail-search-data/v3.1/GRCh38/GCNV/runs/auto__2024-09-14/README.txt',
     b'gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-24/',
     b'gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-24/validation_errors.json',
-    b'gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/hail_search_to_clickhouse_PROJECT_ENTRIES_WGS_R0877_neptune/_SUCCESS',
+    b'gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/hail_search_to_clickhouse_migration_WGS_R0877_neptune/_SUCCESS',
 ]
 OPENED_RUN_JSON_FILES = [{
     'callsets': ['1kg.vcf.gz', 'new_samples.vcf.gz'],
@@ -325,11 +325,6 @@ OPENED_RUN_JSON_FILES = [{
     'family_samples': {'F000002_2': ['HG00731', 'HG00732', 'HG00733'], 'F000012_12': ['NA20889']},
 },
 {
-    'migration_type': 'PROJECT_ENTRIES',
-    'callsets': [],
-    'run_id': 'hail_search_to_clickhouse_PROJECT_ENTRIES_WGS_R0877_neptune',
-},
-{
     'project_guids': ['R0002_empty'],
     'error_messages': ['Missing the following expected contigs:chr17'],
 }, {
@@ -388,7 +383,7 @@ class CheckNewSamplesTest(object):
         runs = [
             ('GRCh38/SNV_INDEL', 'auto__2023-08-09'), ('GRCh37/SNV_INDEL', 'manual__2023-11-02'),
             ('GRCh38/MITO', 'auto__2024-08-12'), ('GRCh38/SV', 'auto__2024-09-14'),
-            ('GRCh38/SNV_INDEL', 'hail_search_to_clickhouse_PROJECT_ENTRIES_WGS_R0877_neptune'),
+            ('GRCh38/SNV_INDEL', 'hail_search_to_clickhouse_migration_WGS_R0877_neptune'),
         ]
         if single_call:
             runs = runs[:1]
@@ -485,8 +480,8 @@ class CheckNewSamplesTest(object):
         }
         mock_temp_dir.return_value.__enter__.return_value = '/mock/tmp'
         self._test_call(error_logs=error_logs, run_loading_logs={
-            'hail_search_to_clickhouse_PROJECT_ENTRIES_WGS_R0877_neptune': [
-                ('Skipping ClickHouse migration GRCh38/SNV_INDEL: hail_search_to_clickhouse_PROJECT_ENTRIES_WGS_R0877_neptune', None),
+            'hail_search_to_clickhouse_migration_WGS_R0877_neptune': [
+                ('Skipping ClickHouse migration GRCh38/SNV_INDEL: hail_search_to_clickhouse_migration_WGS_R0877_neptune', None),
             ]
         })
         self.assertEqual(Sample.objects.filter(guid__in=SAMPLE_GUIDS + GCNV_SAMPLE_GUIDS).count(), 0)
@@ -592,8 +587,8 @@ class CheckNewSamplesTest(object):
                 ('1 failed projects', None),
                 ('  Test Reprocessed Project: Bad Request', None),
             ],
-            'hail_search_to_clickhouse_PROJECT_ENTRIES_WGS_R0877_neptune': [
-                ('Skipping ClickHouse migration GRCh38/SNV_INDEL: hail_search_to_clickhouse_PROJECT_ENTRIES_WGS_R0877_neptune', None),
+            'hail_search_to_clickhouse_migration_WGS_R0877_neptune': [
+                ('Skipping ClickHouse migration GRCh38/SNV_INDEL: hail_search_to_clickhouse_migration_WGS_R0877_neptune', None),
             ]
         }, error_logs={
             'manual__2023-11-02': 'Invalid families in run metadata GRCh37/SNV_INDEL: manual__2023-11-02 - F0000123_ABC',
@@ -860,7 +855,7 @@ class LocalCheckNewSamplesTest(AuthenticationTestCase, CheckNewSamplesTest):
         if not self.mock_glob.return_value:
             self.mock_glob.return_value = LOCAL_RUN_PATHS
         self.mock_open.return_value.__enter__.return_value.__iter__.side_effect = [
-            iter([json.dumps(OPENED_RUN_JSON_FILES[i])]) for i in range(len(LOCAL_RUN_PATHS[2:]))
+            iter([json.dumps(OPENED_RUN_JSON_FILES[i])]) for i in range(len(LOCAL_RUN_PATHS[2:-1]))
         ]
         self.mock_mkdir.reset_mock()
 
@@ -868,7 +863,7 @@ class LocalCheckNewSamplesTest(AuthenticationTestCase, CheckNewSamplesTest):
         self.mock_glob.assert_called_with('/seqr/seqr-hail-search-data/*/*/runs/*/*', recursive=False)
         self.mock_open.assert_has_calls([
             mock.call(LOCAL_RUN_PATHS[2], 'r'),
-            *[mock.call(path.replace('_SUCCESS', 'metadata.json'), 'r') for path in LOCAL_RUN_PATHS[3:]]
+            *[mock.call(path.replace('_SUCCESS', 'metadata.json'), 'r') for path in LOCAL_RUN_PATHS[3:-1]]
         ], any_order=True)
         self.assertEqual(self.mock_mkdir.call_count, 0 if single_call else 2)
         self.assertEqual(list(self.mock_written_files.keys()), [
@@ -1018,7 +1013,6 @@ The following users have been notified: test_user_manager@test.com""")
                 ('gsutil cat gs://seqr-hail-search-data/v3.1/GRCh37/SNV_INDEL/runs/manual__2023-11-02/metadata.json', -2),
                 ('gsutil cat gs://seqr-hail-search-data/v3.1/GRCh38/MITO/runs/auto__2024-08-12/metadata.json', -2),
                 ('gsutil cat gs://seqr-hail-search-data/v3.1/GRCh38/GCNV/runs/auto__2024-09-14/metadata.json', -2),
-                ('gsutil cat gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/hail_search_to_clickhouse_PROJECT_ENTRIES_WGS_R0877_neptune/metadata.json', -2),
                 ('gsutil cat gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-14/validation_errors.json', -2),
                 ('gsutil mv /mock/tmp/* gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-14/', -2),
                 ('gsutil cat gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-24/validation_errors.json', -2),
