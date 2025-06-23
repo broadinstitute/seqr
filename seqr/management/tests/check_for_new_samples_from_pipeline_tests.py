@@ -393,8 +393,8 @@ class CheckNewSamplesTest(object):
                 continue
             logs.append((f'Loading new samples from {data_type}: {version}', None))
             logs += self._additional_loading_logs(data_type, version)
-            if (run_loading_logs or {}).get(version):
-                logs += run_loading_logs[version]
+            if (run_loading_logs or {}).get(data_type):
+                logs += run_loading_logs[data_type]
             if (error_logs or {}).get(version):
                 logs.append((
                     f'Error loading {version}: {error_logs[version]}',
@@ -562,16 +562,16 @@ class CheckNewSamplesTest(object):
             ('Reloading shared annotations for 1 SV_WES GRCh38 saved variants (1 unique)', None),
             ('Fetched 1 additional variants', None),
         ], run_loading_logs={
-            'auto__2023-08-09': create_snv_indel_samples_logs + [
+            'GRCh38/SNV_INDEL': create_snv_indel_samples_logs + [
                 ('update 1 Samples', {'dbUpdate': mock.ANY}),
                 ('update 2 Familys', {'dbUpdate': mock.ANY}),
             ] + self.AIRTABLE_LOGS + [
                 ('update 3 Familys', {'dbUpdate': mock.ANY}),
             ] + update_sample_qc_logs + reload_project_variants_logs,
-            'auto__2024-08-12': [
+            'GRCh38/MITO': [
                 ('Loading 2 WGS MITO samples in 1 projects', None)
             ],
-            'auto__2024-09-14': [
+            'GRCh38/SV': [
                 ('Loading 4 WES SV samples in 2 projects', None),
                 ('create 4 Samples', {'dbUpdate': mock.ANY}),
                 ('update 4 Samples', {'dbUpdate': mock.ANY}),
@@ -794,7 +794,7 @@ The following 1 families failed sex check:
         self._test_call(num_runs=2, reload_annotations_logs=reload_fetched_annotations_logs + [
            ('Skipped reloading all 2 saved variant annotations for SNV_INDEL GRCh38', None),
        ], reload_calls=reload_snv_indel_calls, run_loading_logs={
-            'auto__2023-08-09': create_snv_indel_samples_logs + airtable_logs + update_sample_qc_logs + reload_project_variants_logs,
+            'GRCh38/SNV_INDEL': create_snv_indel_samples_logs + airtable_logs + update_sample_qc_logs + reload_project_variants_logs,
         })
 
 class LocalCheckNewSamplesTest(AuthenticationTestCase, CheckNewSamplesTest):
