@@ -1,12 +1,12 @@
 from clickhouse_backend.models import ArrayField, StringField
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.db.models import F, Min, Value
+from django.db.models import F, Min
 from django.db.models.functions import JSONObject
 
 from clickhouse_search.backend.fields import NamedTupleField
-from clickhouse_search.backend.functions import Array, ArrayFilter, ArrayIntersect, ArraySort, GtStatsDictGet, Tuple, TupleConcat
+from clickhouse_search.backend.functions import Array, ArrayFilter, ArrayIntersect, ArraySort, Tuple
 from clickhouse_search.models import EntriesSnvIndel, AnnotationsSnvIndel, TranscriptsSnvIndel, ClinvarSnvIndel
-from reference_data.models import GeneConstraint, Omim, GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
+from reference_data.models import GeneConstraint, Omim, GENOME_VERSION_GRCh38
 from seqr.models import PhenotypePrioritization, Sample
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.search.constants import MAX_VARIANTS, XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, \
@@ -15,34 +15,10 @@ from settings import CLICKHOUSE_SERVICE_HOSTNAME
 
 logger = SeqrLogger(__name__)
 
-SEQR_POPULATION_KEY = 'seqrPop'
-
-ANNOTATION_VALUES = {
-    field.db_column: F(field.name) for field in AnnotationsSnvIndel._meta.local_fields if field.db_column and field.name != field.db_column
-}
-ADDITIONAL_ANNOTATION_VALUES = {
-    'populations': TupleConcat(
-        F('populations'), Tuple(SEQR_POPULATION_KEY),
-        output_field=NamedTupleField([
-            *AnnotationsSnvIndel.POPULATION_FIELDS,
-            ('seqr', GtStatsDictGet.output_field),
-        ]),
-    ),
-}
-ANNOTATION_FIELDS = [
-    field.name for field in AnnotationsSnvIndel._meta.local_fields
-    if ((field.db_column or field.name) not in ANNOTATION_VALUES) and field.name not in ADDITIONAL_ANNOTATION_VALUES
-]
-
-ENTRY_FIELDS = ['familyGuids', 'genotypes', 'clinvar']
 
 TRANSCRIPT_CONSEQUENCES_FIELD = 'sortedTranscriptConsequences'
 SELECTED_GENE_FIELD = 'selectedGeneId'
 SELECTED_TRANSCRIPT_FIELD = 'selectedTranscript'
-SELECTED_CONSEQUENCE_VALUES = {
-    'gene_consequences': {SELECTED_GENE_FIELD: F('gene_consequences__0__geneId')},
-    'filtered_transcript_consequences': {SELECTED_TRANSCRIPT_FIELD: F('filtered_transcript_consequences__0')},
-}
 
 
 def clickhouse_backend_enabled():
@@ -56,19 +32,13 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
     sample_data = _get_sample_data(samples)
     logger.info(f'Loading {Sample.DATASET_TYPE_VARIANT_CALLS} data for {len(sample_data)} families', user)
 
-    annotation_values = {
-        'genomeVersion': Value(genome_version),
-        'liftedOverGenomeVersion': Value(_liftover_genome_version(genome_version)),
-        **ANNOTATION_VALUES,
-    }
-
     results = []
     inheritance_mode = search.get('inheritance_mode')
     if inheritance_mode != COMPOUND_HET:
-        result_q = _get_search_results_queryset(search, sample_data, annotation_values)
+        result_q = _get_search_results_queryset(search, sample_data)
         results += list(result_q[:MAX_VARIANTS + 1])
     if inheritance_mode in {RECESSIVE, COMPOUND_HET}:
-        result_q = _get_comp_het_results_queryset(search, sample_data, annotation_values)
+        result_q = _get_comp_het_results_queryset(search, sample_data)
         results += [list(result[1:]) for result in result_q[:MAX_VARIANTS + 1]]
 
     cache_results = get_clickhouse_cache_results(results, sort, sample_data[0]['family_guid'])
@@ -85,36 +55,20 @@ def _get_search_results_queryset(search, sample_data):
     return results.result_values()
 
 
-def _get_comp_het_results_queryset(search, sample_data, annotation_values):
+def _get_comp_het_results_queryset(search, sample_data):
     entries = EntriesSnvIndel.objects.search(
         sample_data, **{**search, 'inheritance_mode': COMPOUND_HET}, annotate_carriers=True,
     )
 
-    primary_q = AnnotationsSnvIndel.objects.subquery_join(entries).search(
-        **search).explode_gene_id(f'primary_{SELECTED_GENE_FIELD}')
+    primary_q = AnnotationsSnvIndel.objects.subquery_join(entries).search(**search)
 
     annotations_secondary = search.get('annotations_secondary')
     secondary_search = {**search, 'annotations': annotations_secondary} if annotations_secondary else search
-    secondary_q = AnnotationsSnvIndel.objects.subquery_join(entries).search(
-        **secondary_search).explode_gene_id(f'secondary_{SELECTED_GENE_FIELD}')
+    secondary_q = AnnotationsSnvIndel.objects.subquery_join(entries).search(**secondary_search)
 
-    # TODO
-    select_fields = [*ANNOTATION_FIELDS, *ENTRY_FIELDS, SELECTED_GENE_FIELD]
     carrier_field = next((field for field in ['family_carriers', 'carriers'] if field in entries.query.annotations), None)
-    if carrier_field:
-        select_fields.append(carrier_field)
-    results = AnnotationsSnvIndel.objects.cross_join(
-        query=primary_q,  alias='primary', join_query=secondary_q, join_alias='secondary',
-        select_fields=select_fields, select_values={
-            **annotation_values,
-            **ADDITIONAL_ANNOTATION_VALUES,
-        }, conditional_selects={
-            'filtered_transcript_consequences': SELECTED_CONSEQUENCE_VALUES['filtered_transcript_consequences'],
-        },
-    )
-    results = results.filter(
-        primary_selectedGeneId=F('secondary_selectedGeneId')
-    ).exclude(primary_variantId=F('secondary_variantId'))
+
+    results = AnnotationsSnvIndel.objects.search_compound_hets(primary_q, secondary_q, carrier_field)
 
     if carrier_field == 'carriers':
         results = results.annotate(
@@ -134,7 +88,7 @@ def _get_comp_het_results_queryset(search, sample_data, annotation_values):
             ),
         ).filter(primary_familyGuids__not_empty=True).annotate(
             secondary_familyGuids=F('primary_familyGuids'),
-            primary_genotypes= ArrayFilter('primary_genotypes', conditions=[
+            primary_genotypes=ArrayFilter('primary_genotypes', conditions=[
                 {2: ('arrayIntersect(primary_familyGuids, secondary_familyGuids)', 'has({value}, {field})')},
             ]),
             secondary_genotypes=ArrayFilter('secondary_genotypes', conditions=[
@@ -149,7 +103,6 @@ def _get_comp_het_results_queryset(search, sample_data, annotation_values):
         _result_as_tuple(results, 'primary_'),
         _result_as_tuple(results, 'secondary_'),
     )
-
 
 def _result_as_tuple(results, field_prefix):
     fields = {
@@ -251,10 +204,6 @@ def _group_by_sample_type(samples):
     return list(samples_by_individual_type.values())
 
 
-def _liftover_genome_version(genome_version):
-    return GENOME_VERSION_GRCh37 if genome_version == GENOME_VERSION_GRCh38 else GENOME_VERSION_GRCh38
-
-
 OMIM_SORT = 'in_omim'
 GENE_SORTS = {
     'constraint': lambda gene_ids, _: {
@@ -294,6 +243,7 @@ def _subfield_sort(*fields, rank_lookup=None, default=MAX_SORT_RANK, reverse=Fal
     return [_sort]
 
 
+# TODO
 MIN_SORT_RANK = 0
 MIN_PRED_SORT_RANK = -1
 CLINVAR_RANK_LOOKUP = {path: rank for rank, path in ClinvarSnvIndel.PATHOGENICITY_CHOICES}
