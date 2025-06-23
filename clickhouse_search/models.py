@@ -855,18 +855,18 @@ class EntriesManager(Manager):
                     sample_type = s['sample_types'][0]
                     call_q = self._family_calls_q(call_q, s, sample_filters, sample_type, clinvar_override_q)
 
-                #  With families with multiple sample types, can only filter rows after aggregating
-                filtered_multi_sample_type_families = {
-                    family_guid: filters for family_guid, filters in multi_sample_type_families.items() if filters
-                }
-                if filtered_multi_sample_type_families:
-                    multi_type_q = Q(family_guid__in=filtered_multi_sample_type_families.keys())
-                    call_q = (call_q | multi_type_q) if call_q else multi_type_q
-                    entries = entries.annotate(passes_quality=~multi_type_q | (multi_sample_type_quality_q or Value(True)))
-                    entries = self._annotate_failed_family_samples(entries, filtered_multi_sample_type_families)
+            #  With families with multiple sample types, can only filter rows after aggregating
+            filtered_multi_sample_type_families = {
+                family_guid: filters for family_guid, filters in multi_sample_type_families.items() if filters
+            }
+            if filtered_multi_sample_type_families:
+                multi_type_q = Q(family_guid__in=filtered_multi_sample_type_families.keys())
+                call_q = (call_q | multi_type_q) if call_q else multi_type_q
+                entries = entries.annotate(passes_quality=~multi_type_q | (multi_sample_type_quality_q or Value(True)))
+                entries = self._annotate_failed_family_samples(entries, filtered_multi_sample_type_families)
 
-                if call_q:
-                    entries = entries.filter(call_q)
+            if call_q:
+                entries = entries.filter(call_q)
 
        return self._annotate_calls(entries, sample_data, annotate_carriers, multi_sample_type_families)
 
