@@ -1166,20 +1166,20 @@ class TranscriptsSnvIndel(models.ClickhouseModel):
         db_table = 'GRCh38/SNV_INDEL/transcripts'
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SNV_INDEL/transcripts', primary_key='key', flatten_nested=0)
 
-class KeyLookup(models.ClickhouseModel):
+class BaseKeyLookup(models.ClickhouseModel):
     variant_id = models.StringField(db_column='variantId')
 
     class Meta:
         abstract = True
 
-class KeyLookupGRCh37SnvIndel(KeyLookup):
+class KeyLookupGRCh37SnvIndel(BaseKeyLookup):
     key = OneToOneField('AnnotationsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
 
     class Meta:
         db_table = 'GRCh37/SNV_INDEL/key_lookup'
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh37/SNV_INDEL/key_lookup', primary_key='variant_id', flatten_nested=0)
 
-class KeyLookupSnvIndel(KeyLookup):
+class KeyLookupSnvIndel(BaseKeyLookup):
     key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
 
     class Meta:
@@ -1187,7 +1187,7 @@ class KeyLookupSnvIndel(KeyLookup):
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SNV_INDEL/key_lookup', primary_key='variant_id', flatten_nested=0)
 
 
-class KeyLookupMito(KeyLookup):
+class KeyLookupMito(BaseKeyLookup):
     key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
 
     class Meta:
@@ -1195,7 +1195,7 @@ class KeyLookupMito(KeyLookup):
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/MITO/key_lookup', primary_key='variant_id', flatten_nested=0)
 
 
-class KeyLookupSv(KeyLookup):
+class KeyLookupSv(BaseKeyLookup):
     key = OneToOneField('AnnotationsSv', db_column='key', primary_key=True, on_delete=CASCADE)
 
     class Meta:
@@ -1203,7 +1203,7 @@ class KeyLookupSv(KeyLookup):
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SV/key_lookup', primary_key='variant_id', flatten_nested=0)
 
 
-class KeyLookupGcnv(KeyLookup):
+class KeyLookupGcnv(BaseKeyLookup):
     key = OneToOneField('AnnotationsGcnv', db_column='key', primary_key=True, on_delete=CASCADE)
 
     class Meta:
