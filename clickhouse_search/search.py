@@ -79,21 +79,10 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
     return format_clickhouse_results(cache_results['all_results'][(page-1)*num_results:page*num_results])
 
 
-def _get_search_results_queryset(search, sample_data, annotation_values):
+def _get_search_results_queryset(search, sample_data):
     entries = EntriesSnvIndel.objects.search(sample_data, **search)
     results = AnnotationsSnvIndel.objects.subquery_join(entries).search(**search)
-
-    consequence_values = {}
-    for field, value in SELECTED_CONSEQUENCE_VALUES.items():
-        if results.has_annotation(field):
-            consequence_values.update(value)
-
-    return results.values(
-        *ANNOTATION_FIELDS,
-        *ENTRY_FIELDS,
-        **annotation_values,
-        **consequence_values,
-    ).annotate(**ADDITIONAL_ANNOTATION_VALUES)
+    return results.result_values()
 
 
 def _get_comp_het_results_queryset(search, sample_data, annotation_values):
@@ -109,6 +98,7 @@ def _get_comp_het_results_queryset(search, sample_data, annotation_values):
     secondary_q = AnnotationsSnvIndel.objects.subquery_join(entries).search(
         **secondary_search).explode_gene_id(f'secondary_{SELECTED_GENE_FIELD}')
 
+    # TODO
     select_fields = [*ANNOTATION_FIELDS, *ENTRY_FIELDS, SELECTED_GENE_FIELD]
     carrier_field = next((field for field in ['family_carriers', 'carriers'] if field in entries.query.annotations), None)
     if carrier_field:
