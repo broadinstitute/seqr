@@ -26,6 +26,11 @@ class ArrayJoin(Func):
     function = 'arrayJoin'
 
 
+class ArrayFold(Func):
+    function = 'arrayFold'
+    template = "%(function)s(acc, x -> %(fold_function)s, %(expressions)s, %(acc)s)"
+
+
 class ArrayMap(Func):
     function = 'arrayMap'
     template = "%(function)s(x -> %(mapped_expression)s, %(expressions)s)"

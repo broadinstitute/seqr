@@ -11,8 +11,8 @@ from django.db.models.sql.constants import INNER
 from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocksDB, Join
 from clickhouse_search.backend.fields import Enum8Field, NestedField, UInt64FieldDeltaCodecField, NamedTupleField
 from clickhouse_search.backend.functions import Array, ArrayFilter, ArrayDistinct, ArrayJoin, ArrayMap, ArraySort, \
-    ArrayConcat, ArrayIntersect, ArraySymmetricDifference, CrossJoin, GroupArray, GroupArrayArray, GroupArrayIntersect, \
-    GtStatsDictGet, If, MapLookup, SubqueryJoin, SubqueryTable, Tuple
+    ArrayConcat, ArrayFold, ArrayIntersect, ArraySymmetricDifference, CrossJoin, GroupArray, GroupArrayArray, \
+    GroupArrayIntersect, GtStatsDictGet, If, MapLookup, SubqueryJoin, SubqueryTable, Tuple
 from seqr.models import Sample
 from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFECTED, UNAFFECTED, MALE_SEXES, \
     X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, SCREEN_KEY, UTR_ANNOTATOR_KEY, \
@@ -1018,14 +1018,20 @@ class EntriesManager(Manager):
                 familyGuids=ArraySort(ArrayDistinct(GroupArray('family_guid'))),
                 genotypes=GroupArrayArray(self._genotype_expression(sample_data)),
             )
+            if carriers_expression:
+                map_field = models.MapField(models.StringField(), models.ArrayField(models.StringField()))
+                if multi_sample_type_families:
+                    family_carriers = ArrayFold(
+                        GroupArray(Tuple('family_guid', 'carriers')),
+                        fold_function='mapUpdate(acc, map(x.1, arrayIntersect(acc[x.1], x.2)))',
+                        acc='map()::Map(String, Array(String))',
+                        output_field=map_field,
+                    )
+                else:
+                    family_carriers = Cast(Tuple('familyGuids', GroupArray('carriers')), map_field)
+                entries = entries.annotate(family_carriers=family_carriers)
             if any(multi_sample_type_families.values()):
                 entries = self._multi_sample_type_filtered_entries(entries)
-            # TODO multi sample comp hets?
-            if carriers_expression:
-                entries = entries.annotate(family_carriers=Cast(
-                    Tuple('familyGuids', GroupArray('carriers')),
-                    models.MapField(models.StringField(), models.ArrayField(models.StringField())),
-                ))
         else:
             if carriers_expression:
                 fields.append('carriers')

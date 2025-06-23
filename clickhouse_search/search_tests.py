@@ -206,7 +206,9 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 
         self._assert_expected_search(
             [VARIANT1_BOTH_SAMPLE_TYPES, VARIANT2_BOTH_SAMPLE_TYPES, [VARIANT3_BOTH_SAMPLE_TYPES, VARIANT4_BOTH_SAMPLE_TYPES]],
-            inheritance_mode='recessive', **COMP_HET_ALL_PASS_FILTERS
+            inheritance_mode='recessive', **COMP_HET_ALL_PASS_FILTERS, cached_variant_fields=[
+                {}, {}, [{'selectedGeneId':  'ENSG00000097046'}, {'selectedGeneId':  'ENSG00000097046'}],
+            ]
         )
 
     @staticmethod
