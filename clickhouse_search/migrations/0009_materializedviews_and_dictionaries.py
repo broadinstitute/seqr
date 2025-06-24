@@ -12,13 +12,13 @@ CLICKHOUSE_USER = os.environ.get('CLICKHOUSE_USER', 'clickhouse')
 CLICKHOUSE_PASSWORD = os.environ.get('CLICKHOUSE_PASSWORD', 'clickhouse_test')
 
 ENTRIES_TO_PROJECT_GT_STATS = Template("""
-CREATE MATERIALIZED VIEW `$reference_genome/$dataset_type/entries_to_project_gt_stats_mv`
-TO `$reference_genome/$dataset_type/project_gt_stats`
+CREATE MATERIALIZED VIEW "$reference_genome/$dataset_type/entries_to_project_gt_stats_mv"
+TO "$reference_genome/$dataset_type/project_gt_stats"
 AS SELECT
     project_guid,
     key,
     $columns
-FROM `$reference_genome/$dataset_type/entries`
+FROM "$reference_genome/$dataset_type/entries"
 GROUP BY project_guid, key, sample_type
 """)
 
@@ -62,7 +62,7 @@ class Migration(migrations.Migration):
                 reference_genome='GRCh37', 
                 dataset_type='SNV_INDEL',
                 columns="\n    ".join([
-                    "sample_type,"
+                    'sample_type,',
                     "sum(toInt32(arrayCount(s -> (s.gt = 'REF'), calls) * sign)) AS ref_samples,",
                     "sum(toInt32(arrayCount(s -> (s.gt = 'HET'), calls) * sign)) AS het_samples,",
                     "sum(toInt32(arrayCount(s -> (s.gt = 'HOM'), calls) * sign)) AS hom_samples",
@@ -88,10 +88,10 @@ class Migration(migrations.Migration):
                 reference_genome='GRCh37',
                 dataset_type='SNV_INDEL',
                 columns= "\n    ".join([
-                    "`ac_wes` UInt32,",
-                    "`ac_wgs` UInt32,",
-                    "`hom_wes` UInt32,",
-                    "`hom_wgs` UInt32"
+                    "ac_wes UInt32,",
+                    "ac_wgs UInt32,",
+                    "hom_wes UInt32,",
+                    "hom_wgs UInt32"
                 ]),
                 size=int(2e8),
             ),
@@ -102,7 +102,7 @@ class Migration(migrations.Migration):
                 reference_genome='GRCh38',
                 dataset_type='SNV_INDEL',
                 columns="\n    ".join([
-                    "sample_type,"
+                    'sample_type,',
                     "sum(toInt32(arrayCount(s -> (s.gt = 'REF'), calls) * sign)) AS ref_samples,",
                     "sum(toInt32(arrayCount(s -> (s.gt = 'HET'), calls) * sign)) AS het_samples,",
                     "sum(toInt32(arrayCount(s -> (s.gt = 'HOM'), calls) * sign)) AS hom_samples",
@@ -128,10 +128,10 @@ class Migration(migrations.Migration):
                 reference_genome='GRCh38',
                 dataset_type='SNV_INDEL',
                 columns= "\n    ".join([
-                    "`ac_wes` UInt32,",
-                    "`ac_wgs` UInt32,",
-                    "`hom_wes` UInt32,",
-                    "`hom_wgs` UInt32"
+                    "ac_wes UInt32,",
+                    "ac_wgs UInt32,",
+                    "hom_wes  UInt32,",
+                    "hom_wgs  UInt32"
                 ]),
                 size=int(1e9),
             ),
@@ -142,7 +142,7 @@ class Migration(migrations.Migration):
                 reference_genome='GRCh38',
                 dataset_type='MITO',
                 columns="\n    ".join([
-                    "sample_type,"
+                    'sample_type,',
                     "sum(toInt32(arrayCount(s -> (s.hl == '0'), calls) * sign)) AS ref_samples,",
                     "sum(toInt32(arrayCount(s -> (s.hl > '0' AND s.hl < '0.95'), calls) * sign)) AS het_samples,",
                     "sum(toInt32(arrayCount(s -> (s.hl >= '0.95'), calls) * sign)) AS hom_samples",
@@ -168,10 +168,10 @@ class Migration(migrations.Migration):
                 reference_genome='GRCh38',
                 dataset_type='MITO',
                 columns= "\n    ".join([
-                    "`het_wes` UInt32,",
-                    "`het_wgs` UInt32,",
-                    "`hom_wes` UInt32,",
-                    "`hom_wgs` UInt32"
+                    "het_wes UInt32,",
+                    "het_wgs UInt32,",
+                    "hom_wes UInt32,",
+                    "hom_wgs UInt32"
                 ]),
                 size=int(1e6),
             ),
@@ -205,8 +205,8 @@ class Migration(migrations.Migration):
                 reference_genome='GRCh38',
                 dataset_type='SV',
                 columns= "\n    ".join([
-                    "`ac_wgs` UInt32",
-                    "`hom_wgs` UInt32"
+                    "ac_wgs UInt32",
+                    "hom_wgs UInt32"
                 ]),
                 size=int(5e6),
             ),
