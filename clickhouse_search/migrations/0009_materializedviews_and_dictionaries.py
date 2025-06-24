@@ -65,7 +65,8 @@ class Migration(migrations.Migration):
                     "sum(toInt32(arrayCount(s -> (s.gt = 'HET'), calls) * sign)) AS het_samples,",
                     "sum(toInt32(arrayCount(s -> (s.gt = 'HOM'), calls) * sign)) AS hom_samples",
                 ]),
-            )
+            ),
+            hints={'clickhouse': True},
         ),
         migrations.RunSQL(
             PROJECT_GT_STATS_TO_GT_STATS.substitute(
@@ -77,7 +78,8 @@ class Migration(migrations.Migration):
                     "sumIf(hom_samples, sample_type = 'WES') AS hom_wes,",
                     "sumIf(hom_samples, sample_type = 'WGS') AS hom_wgs",
                 ])
-            )
+            ),
+            hints={'clickhouse': True},
         ),
         migrations.RunSQL(
             GT_STATS_DICT.substitute(
@@ -90,7 +92,8 @@ class Migration(migrations.Migration):
                     "`hom_wgs` UInt32"
                 ]),
                 size=int(2e8),
-            )
+            ),
+            hints={'clickhouse': True},
         ),
         migrations.RunSQL(
             ENTRIES_TO_PROJECT_GT_STATS.substitute(
@@ -102,6 +105,7 @@ class Migration(migrations.Migration):
                     "sum(toInt32(arrayCount(s -> (s.gt = 'HOM'), calls) * sign)) AS hom_samples",
                 ]),
             ),
+            hints={'clickhouse': True},
         ),
         migrations.RunSQL(
             PROJECT_GT_STATS_TO_GT_STATS.substitute(
@@ -114,6 +118,7 @@ class Migration(migrations.Migration):
                     "sumIf(hom_samples, sample_type = 'WGS') AS hom_wgs",
                 ])
             ),
+            hints={'clickhouse': True},
         ),
         migrations.RunSQL(
             GT_STATS_DICT.substitute(
@@ -126,7 +131,8 @@ class Migration(migrations.Migration):
                     "`hom_wgs` UInt32"
                 ]),
                 size=int(1e9),
-            )
+            ),
+            hints={'clickhouse': True},
         ),
         migrations.RunSQL(
             ENTRIES_TO_PROJECT_GT_STATS.substitute(
@@ -137,7 +143,8 @@ class Migration(migrations.Migration):
                     "sum(toInt32(arrayCount(s -> (s.hl > '0' AND s.hl < '0.95'), calls) * sign)) AS het_samples,",
                     "sum(toInt32(arrayCount(s -> (s.hl >= '0.95'), calls) * sign)) AS hom_samples",
                 ]),
-            )
+            ),
+            hints={'clickhouse': True},
         ),
         migrations.RunSQL(
             PROJECT_GT_STATS_TO_GT_STATS.substitute(
@@ -150,6 +157,7 @@ class Migration(migrations.Migration):
                     "sumIf(hom_samples, sample_type = 'WGS') AS hom_wgs",
                 ])
             ),
+            hints={'clickhouse': True},
         ),
         migrations.RunSQL(
             GT_STATS_DICT.substitute(
@@ -162,7 +170,8 @@ class Migration(migrations.Migration):
                     "`hom_wgs` UInt32"
                 ]),
                 size=int(1e6),
-            )
+            ),
+            hints={'clickhouse': True},
         ),
         migrations.RunSQL(
             ENTRIES_TO_PROJECT_GT_STATS.substitute(
@@ -174,6 +183,7 @@ class Migration(migrations.Migration):
                     "sum(toInt32(arrayCount(s -> (s.gt = 'HOM'), calls) * sign)) AS hom_samples",
                 ]),
             ),
+            hints={'clickhouse': True},
         ),
         migrations.RunSQL(
             PROJECT_GT_STATS_TO_GT_STATS.substitute(
@@ -184,6 +194,7 @@ class Migration(migrations.Migration):
                     "sumIf(hom_samples, sample_type = 'WGS') AS hom_wgs",
                 ]),
             ),
+            hints={'clickhouse': True},
         ),
         migrations.RunSQL(
             GT_STATS_DICT.substitute(
@@ -194,7 +205,8 @@ class Migration(migrations.Migration):
                     "`hom_wgs` UInt32"
                 ]),
                 size=int(5e6),
-            )
+            ),
+            hints={'clickhouse': True},
         ),
     ] 
 
