@@ -88,10 +88,10 @@ class Migration(migrations.Migration):
                 reference_genome='GRCh37',
                 dataset_type='SNV_INDEL',
                 columns= ",\n    ".join([
-                    "ac_wes UInt32",
-                    "ac_wgs UInt32",
-                    "hom_wes UInt32",
-                    "hom_wgs UInt32"
+                    'ac_wes UInt32',
+                    'ac_wgs UInt32',
+                    'hom_wes UInt32',
+                    'hom_wgs UInt32',
                 ]),
                 size=int(2e8),
             ),
@@ -129,10 +129,10 @@ class Migration(migrations.Migration):
                 reference_genome='GRCh38',
                 dataset_type='SNV_INDEL',
                 columns= ",\n    ".join([
-                    "ac_wes UInt32",
-                    "ac_wgs UInt32",
-                    "hom_wes  UInt32",
-                    "hom_wgs  UInt32"
+                    'ac_wes UInt32',
+                    'ac_wgs UInt32',
+                    'hom_wes  UInt32',
+                    'hom_wgs  UInt32',
                 ]),
                 size=int(1e9),
             ),
@@ -170,10 +170,10 @@ class Migration(migrations.Migration):
                 reference_genome='GRCh38',
                 dataset_type='MITO',
                 columns= ",\n    ".join([
-                    "het_wes UInt32",
-                    "het_wgs UInt32",
-                    "hom_wes UInt32",
-                    "hom_wgs UInt32"
+                    'het_wes UInt32',
+                    'het_wgs UInt32',
+                    'hom_wes UInt32',
+                    'hom_wgs UInt32',
                 ]),
                 size=int(1e6),
             ),
@@ -197,8 +197,8 @@ class Migration(migrations.Migration):
                 reference_genome='GRCh38',
                 dataset_type='SV',
                 columns = ",\n    ".join([
-                    "sum((het_samples * 1) + (hom_samples * 2)) AS ac_wgs",
-                    "sum(hom_samples) AS hom_wgs",
+                    'sum((het_samples * 1) + (hom_samples * 2)) AS ac_wgs',
+                    'sum(hom_samples) AS hom_wgs',
                 ]),
             ),
             hints={'clickhouse': True},
@@ -208,8 +208,8 @@ class Migration(migrations.Migration):
                 reference_genome='GRCh38',
                 dataset_type='SV',
                 columns= ",\n    ".join([
-                    "ac_wgs UInt32",
-                    "hom_wgs UInt32"
+                    'ac_wgs UInt32',
+                    'hom_wgs UInt32'
                 ]),
                 size=int(5e6),
             ),
