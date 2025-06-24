@@ -142,5 +142,22 @@
       "key": 6,
       "transcripts": []
     }
+}, {
+    "model": "clickhouse_search.transcriptsgrch37snvindel",
+    "pk": 10,
+    "fields": {
+      "key": 1,
+      "transcripts": [
+        [
+          "E/G", "protein_coding", 1, "gAa/gGa", ["missense_variant"], "ENSG00000271079", "ENST00000420911.2:c.1262A>G",
+          "ENSP00000474204.1:p.Glu421Gl", [null, []], "missense_variant", "ENST00000466716", 0
+        ],
+        [
+          null, "processed_pseudogene", 1, null, ["non_coding_transcript_exon_variant", "non_coding_transcript_variant"],
+          "ENSG00000176227", "ENST00000447022.1:n.1354A>G", null, [null, []], "non_coding_transcript_exon_variant",
+          "ENST00000447022", 0
+        ]
+      ]
+    }
 }
 ]

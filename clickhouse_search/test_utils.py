@@ -6,6 +6,7 @@ from hail_search.test_utils import (
     VARIANT3 as HAIL_VARIANT3,
     VARIANT4 as HAIL_VARIANT4,
     PROJECT_2_VARIANT as HAIL_PROJECT_2_VARIANT,
+    GRCH37_VARIANT as HAIL_GRCH37_VARIANT,
 )
 
 VARIANT1 = {**deepcopy(HAIL_VARIANT1), 'key': 1}
@@ -13,7 +14,17 @@ VARIANT2 = {**deepcopy(HAIL_VARIANT2), 'key': 2}
 VARIANT3 = {**deepcopy(HAIL_VARIANT3), 'key': 3}
 VARIANT4 = {**deepcopy(HAIL_VARIANT4), 'key': 4}
 PROJECT_2_VARIANT = {**deepcopy(HAIL_PROJECT_2_VARIANT), 'key': 5}
-for variant in [VARIANT1, VARIANT2, VARIANT3, VARIANT4, PROJECT_2_VARIANT]:
+GRCH37_VARIANT = {
+    **deepcopy(HAIL_GRCH37_VARIANT),
+    'key': 1,
+    'liftedOverGenomeVersion': '38',
+    'liftedOverChrom': '7',
+    'liftedOverPos': 143271368,
+}
+for genotype in GRCH37_VARIANT['genotypes'].values():
+    genotype['sampleType'] = 'WES'
+
+for variant in [VARIANT1, VARIANT2, VARIANT3, VARIANT4, PROJECT_2_VARIANT, GRCH37_VARIANT]:
     # clickhouse uses fixed length decimals so values are rounded relative to hail backend
     for genotype in variant['genotypes'].values():
         genotype['ab'] = round(genotype['ab'], 5)
@@ -27,12 +38,13 @@ for variant in [VARIANT1, VARIANT2, VARIANT3, VARIANT4, PROJECT_2_VARIANT]:
             pop['filter_af'] = round(pop['filter_af'], 5)
     for transcripts in variant['transcripts'].values():
         for transcript in transcripts:
-            if transcript['alphamissense']['pathogenicity']:
+            if transcript.get('alphamissense', {}).get('pathogenicity'):
                 transcript['alphamissense']['pathogenicity'] = round(transcript['alphamissense']['pathogenicity'], 5)
     # sort is not computed/annotated at query time
     del variant['_sort']
     if variant['clinvar']:
         del variant['clinvar']['version']
+
 
 FAMILY_3_VARIANT = deepcopy(VARIANT3)
 FAMILY_3_VARIANT['familyGuids'] = ['F000003_3']

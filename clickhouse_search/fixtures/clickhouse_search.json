@@ -496,6 +496,53 @@
       ]
     }
 }, {
+    "model": "clickhouse_search.annotationsgrch37snvindel",
+    "pk": 10,
+    "fields": {
+      "key": 1,
+      "xpos": 7143270172,
+      "chrom": "7",
+      "pos": 143270172,
+      "ref": "A",
+      "alt": "G",
+      "variant_id": "7-143270172-A-G",
+      "rsid": "rs72611576",
+      "caid": "CA4540310",
+      "lifted_over_chrom": "7",
+      "lifted_over_pos": 143271368,
+      "hgmd": [null, null],
+      "predictions": [13.020000457763672, 3.9509999752044678, null, null, null, null, 0.4906357526779175, null, null, 0, 4, null, null],
+      "populations": [
+        [66593, 0.6299999952316284, 104352, 0.8198773860931396, 0, 22269, 22162],
+        [137532, 0.6354219317436218, 216442, 0.8226116299629211, 0, 45869],
+        [14649, 0.6136477589607239, 23872, 0.04028, 0, 4584],
+        [65461, 0.5213189721107483, 125568, 33149, 16156]
+      ],
+      "sorted_transcript_consequences": [
+        [1, ["missense_variant"], "ENSG00000271079"],
+        [1, ["non_coding_transcript_exon_variant", "non_coding_transcript_variant"], "ENSG00000176227"]
+      ]
+    }
+}, {
+    "model": "clickhouse_search.entriesgrch37snvindel",
+    "pk": 20,
+    "fields": {
+      "key": 1,
+      "project_guid": "R0001_1kg",
+      "family_guid": "F000002_2",
+      "sample_type": "WES",
+      "xpos": 7143270172,
+      "is_gnomad_gt_5_percent": true,
+      "filters": [
+        "VQSRTrancheSNP99.90to99.95"
+      ],
+      "sign": 1,
+      "calls": [
+        ["HG00733", 1, 99, 0.6530612111091614, 49],
+        ["HG00731", 2, 48, 1, 16]
+      ]
+    }
+},{
   "model": "reference_data.omim",
   "pk": 100,
   "fields": {

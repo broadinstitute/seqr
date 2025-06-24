@@ -10,7 +10,7 @@ from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4,
     SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, SELECTED_ANNOTATION_TRANSCRIPT_MULTI_FAMILY_VARIANT, MULTI_FAMILY_VARIANT, \
     FAMILY_3_VARIANT, PROJECT_2_VARIANT, PROJECT_2_VARIANT1, MULTI_PROJECT_VARIANT1, MULTI_PROJECT_VARIANT2, GENE_COUNTS, \
     MULTI_PROJECT_BOTH_SAMPLE_TYPE_VARIANTS, VARIANT1_BOTH_SAMPLE_TYPES, VARIANT2_BOTH_SAMPLE_TYPES, \
-    VARIANT3_BOTH_SAMPLE_TYPES, VARIANT4_BOTH_SAMPLE_TYPES, format_cached_variant
+    VARIANT3_BOTH_SAMPLE_TYPES, VARIANT4_BOTH_SAMPLE_TYPES, GRCH37_VARIANT, format_cached_variant
 from reference_data.models import Omim
 from seqr.models import Project, Family, Sample
 from seqr.utils.search.search_utils_tests import SearchTestHelper
@@ -92,6 +92,11 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
     def _reset_search_families(self):
         self.results_model.families.set(self.families)
 
+    def _set_grch37_search(self):
+        Project.objects.filter(id=1).update(genome_version='37')
+        Sample.objects.filter(sample_id='HG00732').update(is_active=False)
+        self._set_single_family_search()
+
     def test_single_family_search(self):
         self._set_single_family_search()
         variant_gene_counts = {
@@ -127,11 +132,8 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #             }, gene_counts={**variant_gene_counts, **mito_gene_counts, **GCNV_GENE_COUNTS, **SV_GENE_COUNTS, 'ENSG00000277258': {'total': 2, 'families': {'F000002_2': 2}}},
 #         )
 
-        Project.objects.update(genome_version='37')
-        with self.assertRaises(NotImplementedError):
-            query_variants(self.results_model, user=self.user)
-#         self._assert_expected_search(
-#             [GRCH37_VARIANT], genome_version='GRCh37', sample_data=FAMILY_2_VARIANT_SAMPLE_DATA)
+        self._set_grch37_search()
+        self._assert_expected_search([GRCH37_VARIANT])
 
     def test_single_project_search(self):
         variant_gene_counts = {
@@ -454,9 +456,6 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
                 {'selectedGeneId': 'ENSG00000097046'}, {'selectedGeneId': 'ENSG00000097046'}
             ],
         )
-
-#         self._assert_expected_search(
-#             [GRCH37_VARIANT], intervals=[['7', 143268894, 143271480]], genome_version='GRCh37', sample_data=FAMILY_2_VARIANT_SAMPLE_DATA)
 #
 #         sv_intervals = [['1', 9310023, 9380264], ['17', 38717636, 38724781]]
 #         self._assert_expected_search(
@@ -515,7 +514,9 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #             [SV_VARIANT1, SV_VARIANT2], sample_data=SV_WGS_SAMPLE_DATA, intervals=nearest_tss_gene_intervals,
 #             gene_ids=['ENSG00000171621'],
 #         )
-#
+
+        self._set_grch37_search()
+        self._assert_expected_search([GRCH37_VARIANT], locus={'rawItems': '7:143268894-143271480'})
 
     def test_variant_id_search(self):
         self._assert_expected_search([VARIANT2], locus={'rawVariantItems': 'rs1801131'})
@@ -699,10 +700,10 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 
         exclude = {'clinvar': pathogenicity['clinvar'][1:]}
         pathogenicity['clinvar'] = pathogenicity['clinvar'][:1]
-        annotations = {'SCREEN': ['CTCF-only', 'DNase-only'], 'UTRAnnotator': ['5_prime_UTR_stop_codon_loss_variant']}
+        snv_38_only_annotations = {'SCREEN': ['CTCF-only', 'DNase-only'], 'UTRAnnotator': ['5_prime_UTR_stop_codon_loss_variant']}
         selected_transcript_variant_2 = {**VARIANT2, 'selectedMainTranscriptId': 'ENST00000408919'}
         self._assert_expected_search(
-            [VARIANT1, selected_transcript_variant_2, VARIANT4], pathogenicity=pathogenicity, annotations=annotations,
+            [VARIANT1, selected_transcript_variant_2, VARIANT4], pathogenicity=pathogenicity, annotations=snv_38_only_annotations,
             cached_variant_fields=[
                 {'selectedTranscript': None},
                 {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][1]},
@@ -714,15 +715,10 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         self._assert_expected_search(
             [VARIANT1, VARIANT4], exclude=exclude, pathogenicity=pathogenicity,
             # [VARIANT1, VARIANT4, MITO_VARIANT3], exclude=exclude, pathogenicity=pathogenicity,
-            annotations=annotations, cached_variant_fields=[
+            annotations=snv_38_only_annotations, cached_variant_fields=[
                 {'selectedTranscript': None}, {'selectedTranscript': None},
             ]
         )
-
-#         self._assert_expected_search(
-#             [], pathogenicity=pathogenicity, annotations=annotations, sample_data=FAMILY_2_VARIANT_SAMPLE_DATA,
-#             genome_version='GRCh37',
-#         )
 
         annotations = {
             'missense': ['missense_variant'], 'in_frame': ['inframe_insertion', 'inframe_deletion'], 'frameshift': None,
@@ -820,6 +816,10 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         self._assert_expected_search(
             [VARIANT3, VARIANT4], annotations=annotations, pathogenicity=None,
         )
+
+        self._set_grch37_search()
+        self._assert_expected_search([], pathogenicity=pathogenicity, annotations=snv_38_only_annotations)
+        self._assert_expected_search([GRCH37_VARIANT], pathogenicity=None, annotations={'missense': ['missense_variant']})
 
     def test_secondary_annotations_filter(self):
         annotations_1 = {'missense': ['missense_variant']}
@@ -1001,18 +1001,13 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         )
 
     def test_in_silico_filter(self):
-        in_silico = {'eigen': '3.5', 'mut_taster': 'N', 'vest': 0.5}
+        main_in_silico = {'eigen': '3.5', 'mut_taster': 'N', 'vest': 0.5}
         self._assert_expected_search(
-            [VARIANT1, VARIANT4], in_silico=in_silico,
+            [VARIANT1, VARIANT4], in_silico=main_in_silico,
 #            [VARIANT1, VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], in_silico=in_silico,
         )
 
-#         self._assert_expected_search(
-#             [GRCH37_VARIANT], genome_version='GRCh37', in_silico=in_silico,
-#             sample_data=FAMILY_2_VARIANT_SAMPLE_DATA,
-#         )
-
-        in_silico['requireScore'] = True
+        in_silico = {**main_in_silico, 'requireScore': True}
         in_silico.pop('eigen')
         self._assert_expected_search(
             [VARIANT4], in_silico=in_silico,
@@ -1027,7 +1022,10 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #         self._assert_expected_search(
 #             [SV_VARIANT4], sample_data=SV_WGS_SAMPLE_DATA, in_silico=sv_in_silico,
 #         )
-#
+
+        self._set_grch37_search()
+        self._assert_expected_search([GRCH37_VARIANT], in_silico=main_in_silico)
+
 #     def test_search_errors(self):
 #         search_body = get_hail_search_body(sample_data=FAMILY_2_MISSING_SAMPLE_DATA)
 #         async with self.client.request('POST', '/search', json=search_body) as resp:
