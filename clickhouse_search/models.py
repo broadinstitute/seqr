@@ -1298,7 +1298,7 @@ class GtStatsMito(models.ClickhouseModel):
 
 class GtStatsSv(models.ClickhouseModel):
     key = OneToOneField('AnnotationsSv', db_column='key', primary_key=True, on_delete=CASCADE)
-    het_wgs = models.UInt32Field()
+    ac_wgs = models.UInt32Field()
     hom_wgs = models.UInt32Field()
 
     class Meta(BaseGtStats.Meta):
