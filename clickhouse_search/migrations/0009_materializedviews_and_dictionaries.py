@@ -17,7 +17,6 @@ TO `$reference_genome/$dataset_type/project_gt_stats`
 AS SELECT
     project_guid,
     key,
-    sample_type,
     $columns
 FROM `$reference_genome/$dataset_type/entries`
 GROUP BY project_guid, key, sample_type
@@ -63,6 +62,7 @@ class Migration(migrations.Migration):
                 reference_genome='GRCh37', 
                 dataset_type='SNV_INDEL',
                 columns="\n    ".join([
+                    "sample_type,"
                     "sum(toInt32(arrayCount(s -> (s.gt = 'REF'), calls) * sign)) AS ref_samples,",
                     "sum(toInt32(arrayCount(s -> (s.gt = 'HET'), calls) * sign)) AS het_samples,",
                     "sum(toInt32(arrayCount(s -> (s.gt = 'HOM'), calls) * sign)) AS hom_samples",
@@ -102,6 +102,7 @@ class Migration(migrations.Migration):
                 reference_genome='GRCh38',
                 dataset_type='SNV_INDEL',
                 columns="\n    ".join([
+                    "sample_type,"
                     "sum(toInt32(arrayCount(s -> (s.gt = 'REF'), calls) * sign)) AS ref_samples,",
                     "sum(toInt32(arrayCount(s -> (s.gt = 'HET'), calls) * sign)) AS het_samples,",
                     "sum(toInt32(arrayCount(s -> (s.gt = 'HOM'), calls) * sign)) AS hom_samples",
@@ -141,6 +142,7 @@ class Migration(migrations.Migration):
                 reference_genome='GRCh38',
                 dataset_type='MITO',
                 columns="\n    ".join([
+                    "sample_type,"
                     "sum(toInt32(arrayCount(s -> (s.hl == '0'), calls) * sign)) AS ref_samples,",
                     "sum(toInt32(arrayCount(s -> (s.hl > '0' AND s.hl < '0.95'), calls) * sign)) AS het_samples,",
                     "sum(toInt32(arrayCount(s -> (s.hl >= '0.95'), calls) * sign)) AS hom_samples",
