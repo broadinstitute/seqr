@@ -98,6 +98,11 @@ const FreqSummary = React.memo((props) => {
   if (acDisplayValue && population.an !== null && population.an !== undefined) {
     acDisplayValue = `${acDisplayValue} out of ${population.an}`
   }
+  const het = (!acDisplay &&
+    (population.het === null || population.het === undefined) &&
+    population.ac !== null && population.ac !== undefined &&
+    population.hom !== null && population.hom !== undefined
+  ) ? (population.ac - (2 * population.hom)) : population.het
 
   return (
     <div>
@@ -120,10 +125,10 @@ const FreqSummary = React.memo((props) => {
             {`Hom=${population.hom}`}
           </span>
         )}
-        {population.het !== null && population.het !== undefined && (
+        {het !== null && het !== undefined && (
           <span>
             <HorizontalSpacer width={5} />
-            {`Het=${population.het}`}
+            {`Het=${het}`}
           </span>
         )}
         {chrom.endsWith('X') && population.hemi !== null && population.hemi !== undefined && (
