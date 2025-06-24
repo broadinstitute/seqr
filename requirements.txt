@@ -185,7 +185,7 @@ typing-extensions==4.12.2
     # via psycopg
 tzlocal==5.3.1
     # via clickhouse-driver
-urllib3==1.26.19
+urllib3==2.5.0
     # via
     #   elasticsearch
     #   requests
