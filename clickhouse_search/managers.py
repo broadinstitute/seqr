@@ -231,29 +231,28 @@ class AnnotationsQuerySet(QuerySet):
         except ValueError:
             return Q(**{score_column: value})
 
-    @classmethod
-    def _filter_annotations(cls, results, annotations=None, pathogenicity=None, exclude=None, gene_ids=None, **kwargs):
+    def _filter_annotations(self, results, annotations=None, pathogenicity=None, exclude=None, gene_ids=None, **kwargs):
         if gene_ids:
             results = results.annotate(**{
-                cls.GENE_CONSEQUENCE_FIELD: ArrayFilter(cls.TRANSCRIPT_CONSEQUENCE_FIELD, conditions=[{
+                self.GENE_CONSEQUENCE_FIELD: ArrayFilter(self.TRANSCRIPT_CONSEQUENCE_FIELD, conditions=[{
                     'geneId': (gene_ids, 'has({value}, {field})'),
                 }]),
             })
             results = results.filter(gene_consequences__not_empty=True)
 
-        filter_qs, transcript_filters = cls._parse_annotation_filters(annotations) if annotations else ([], [])
+        filter_qs, transcript_filters = self._parse_annotation_filters(annotations) if annotations else ([], [])
 
         hgmd = (pathogenicity or {}).get(HGMD_KEY)
         if hgmd:
-            filter_qs.append(cls._hgmd_filter_q(hgmd))
+            filter_qs.append(self._hgmd_filter_q(hgmd))
 
         clinvar = (pathogenicity or {}).get(CLINVAR_KEY)
         if clinvar:
-            filter_qs.append(cls._clinvar_filter_q(clinvar))
+            filter_qs.append(self._clinvar_filter_q(clinvar))
 
         exclude_clinvar = (exclude or {}).get('clinvar')
         if exclude_clinvar:
-            results = results.exclude(cls._clinvar_filter_q(exclude_clinvar))
+            results = results.exclude(self._clinvar_filter_q(exclude_clinvar))
 
         if not (filter_qs or transcript_filters):
             return results
@@ -266,9 +265,9 @@ class AnnotationsQuerySet(QuerySet):
             filter_q = Q(passes_annotation=True)
 
         if transcript_filters:
-            consequence_field = cls.GENE_CONSEQUENCE_FIELD if gene_ids else cls.TRANSCRIPT_CONSEQUENCE_FIELD
+            consequence_field = self.GENE_CONSEQUENCE_FIELD if gene_ids else self.TRANSCRIPT_CONSEQUENCE_FIELD
             results = results.annotate(**{
-                cls.FILTERED_CONSEQUENCE_FIELD: ArrayFilter(consequence_field, conditions=transcript_filters),
+                self.FILTERED_CONSEQUENCE_FIELD: ArrayFilter(consequence_field, conditions=transcript_filters),
             })
             transcript_q = Q(filtered_transcript_consequences__not_empty=True)
             if filter_q:
@@ -278,38 +277,46 @@ class AnnotationsQuerySet(QuerySet):
 
         return results.filter(filter_q)
 
-    @classmethod
-    def _parse_annotation_filters(cls, annotations):
+    @property
+    def transcript_fields(self):
+        return set(dict(self.model.SORTED_TRANSCRIPT_CONSQUENCES_FIELDS).keys())
+
+    def _parse_annotation_filters(self, annotations):
         filter_qs = []
         allowed_consequences = []
         transcript_filters = []
+        # TODO clean up
         for field, value in annotations.items():
             if field == UTR_ANNOTATOR_KEY:
-                transcript_filters.append({'fiveutrConsequence': (value, 'hasAny({value}, [{field}])')})
+                if 'fiveutrConsequence' in self.transcript_fields:
+                    transcript_filters.append({'fiveutrConsequence': (value, 'hasAny({value}, [{field}])')})
             elif field == EXTENDED_SPLICE_KEY:
-                if EXTENDED_SPLICE_REGION_CONSEQUENCE in value:
+                if EXTENDED_SPLICE_REGION_CONSEQUENCE in value and 'extendedIntronicSpliceRegionVariant' in self.transcript_fields:
                     transcript_filters.append({'extendedIntronicSpliceRegionVariant': (1, '{field} = {value}')})
             elif field in [MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY]:
-                filter_qs.append(Q(**{f'sorted_{field}_consequences__array_exists': {
-                    'consequenceTerms': (value, 'hasAny({value}, {field})'),
-                }}))
+                consequence_field = f'sorted_{field}_consequences'
+                if hasattr(self.model, consequence_field):
+                    filter_qs.append(Q(**{f'sorted_{field}_consequences__array_exists': {
+                        'consequenceTerms': (value, 'hasAny({value}, {field})'),
+                    }}))
             elif field == SPLICE_AI_FIELD:
-                filter_qs.append(cls._get_in_silico_score_q(SPLICE_AI_FIELD, value))
+                filter_qs.append(self._get_in_silico_score_q(SPLICE_AI_FIELD, value))
             elif field == SCREEN_KEY:
-                filter_qs.append(Q(screen_region_type__in=value))
+                if hasattr(self.model, 'screen_region_type'):
+                    filter_qs.append(Q(screen_region_type__in=value))
             elif field not in SV_ANNOTATION_TYPES:
                 allowed_consequences += value
 
         non_canonical_consequences = [c for c in allowed_consequences if not c.endswith('__canonical')]
         if non_canonical_consequences:
-            transcript_filters.append(cls._consequence_term_filter(non_canonical_consequences))
+            transcript_filters.append(self._consequence_term_filter(non_canonical_consequences))
 
         canonical_consequences = [
             c.replace('__canonical', '') for c in allowed_consequences if c.endswith('__canonical')
         ]
         if canonical_consequences:
             transcript_filters.append(
-                cls._consequence_term_filter(canonical_consequences, canonical=(0, '{field} > {value}')),
+                self._consequence_term_filter(canonical_consequences, canonical=(0, '{field} > {value}')),
             )
 
         return filter_qs, transcript_filters

@@ -837,7 +837,11 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 
         self._set_grch37_search()
         self._assert_expected_search([], pathogenicity=pathogenicity, annotations=snv_38_only_annotations)
-        self._assert_expected_search([GRCH37_VARIANT], pathogenicity=None, annotations={'missense': ['missense_variant']})
+        annotations['missense'] = ['missense_variant']
+        self._assert_expected_search(
+            [GRCH37_VARIANT], pathogenicity=None, annotations=annotations,
+            cached_variant_fields=[{'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[11][0]}],
+        )
 
     def test_secondary_annotations_filter(self):
         annotations_1 = {'missense': ['missense_variant']}

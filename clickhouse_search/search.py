@@ -175,8 +175,8 @@ def _format_variant(variant, transcripts_by_key):
 
 def _is_matched_minimal_transcript(transcript, minimal_transcript):
     return (all(transcript[field] == minimal_transcript[field] for field in ['canonical','consequenceTerms'])
-     and transcript['utrannotator'].get('fiveutrConsequence') == minimal_transcript['fiveutrConsequence']
-     and transcript['spliceregion'].get('extended_intronic_splice_region_variant') == minimal_transcript['extendedIntronicSpliceRegionVariant'])
+     and transcript.get('utrannotator', {}).get('fiveutrConsequence') == minimal_transcript.get('fiveutrConsequence')
+     and transcript.get('spliceregion', {}).get('extended_intronic_splice_region_variant') == minimal_transcript.get('extendedIntronicSpliceRegionVariant'))
 
 
 
