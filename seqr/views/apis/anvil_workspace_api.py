@@ -146,7 +146,7 @@ def validate_anvil_vcf(request, namespace, name, workspace_meta):
     ).exclude(workspace_namespace=namespace, workspace_name=name).first()
     if pending_project:
         raise ErrorsWarningsException([
-            f'Project "{pending_project.name}" is awaiting loading. Please wait for loading to complete before requesting additional data loading'
+            f'Project "{pending_project.name}" is awaiting loading. Please wait for loading to complete and/or delete any families that will not be receiving data before requesting additional data loading'
         ])
 
     # Validate the data path
@@ -233,7 +233,7 @@ def add_workspace_data(request, project_guid):
     ).exclude(family_id__in=loading_families).order_by('family_id').values_list('family_id', flat=True)
     if pending_families:
         raise ErrorsWarningsException([
-            f'The following families in this project are awaiting loading from a previous loading request: {", ".join(pending_families)}. Please wait for loading to complete before requesting additional data loading'
+            f'The following families in this project are awaiting loading from a previous loading request: {", ".join(pending_families)}. Please wait for loading to complete and/or delete any families that will not be receiving data before requesting additional data loading'
         ])
 
     pedigree_json = _trigger_add_workspace_data(
