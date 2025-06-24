@@ -70,6 +70,45 @@ MULTI_PROJECT_VARIANT2['genotypes']['I000015_na20885'] = {
     'numAlt': 1, 'dp': 28, 'gq': 99, 'ab': 0.5, 'filters': [],
 }
 
+MULTI_PROJECT_BOTH_SAMPLE_TYPE_VARIANTS = [
+    deepcopy(v) for v in
+    [PROJECT_2_VARIANT, MULTI_PROJECT_VARIANT1, MULTI_PROJECT_VARIANT2, VARIANT3, VARIANT4]
+]
+for v in MULTI_PROJECT_BOTH_SAMPLE_TYPE_VARIANTS[:-2]:
+    v['genotypes']['I000015_na20885'] = [
+        {**v['genotypes']['I000015_na20885'], 'sampleType': 'WES'},
+        v['genotypes']['I000015_na20885'],
+    ]
+
+VARIANT1_BOTH_SAMPLE_TYPES = deepcopy(VARIANT1)
+VARIANT1_BOTH_SAMPLE_TYPES['genotypes'] = {
+    individual_guid: [genotypes, {**genotypes, 'sampleType': 'WGS'}]
+    for individual_guid, genotypes in VARIANT1['genotypes'].items()
+}
+genotypes = VARIANT1_BOTH_SAMPLE_TYPES['genotypes']
+VARIANT1_BOTH_SAMPLE_TYPES['genotypes']['I000004_hg00731'][1]['numAlt'] = 2
+VARIANT1_BOTH_SAMPLE_TYPES['genotypes']['I000005_hg00732'][1].update({'gq': 99, 'numAlt': 1})
+
+VARIANT2_BOTH_SAMPLE_TYPES = deepcopy(VARIANT2)
+VARIANT2_BOTH_SAMPLE_TYPES['genotypes'] = {
+    individual_guid: [genotypes, {**genotypes, 'sampleType': 'WGS'}]
+    for individual_guid, genotypes in VARIANT2['genotypes'].items()
+}
+VARIANT2_BOTH_SAMPLE_TYPES['genotypes']['I000005_hg00732'][1]['numAlt'] = 0
+
+VARIANT3_BOTH_SAMPLE_TYPES = deepcopy(VARIANT3)
+VARIANT3_BOTH_SAMPLE_TYPES['genotypes'] = {
+    individual_guid: [genotypes, {**genotypes, 'sampleType': 'WGS'}]
+    for individual_guid, genotypes in VARIANT3['genotypes'].items()
+}
+
+VARIANT4_BOTH_SAMPLE_TYPES = deepcopy(VARIANT4)
+VARIANT4_BOTH_SAMPLE_TYPES['genotypes'] = {
+    individual_guid: [genotypes, {**genotypes, 'sampleType': 'WGS'}]
+    for individual_guid, genotypes in VARIANT4['genotypes'].items()
+}
+VARIANT4_BOTH_SAMPLE_TYPES['genotypes']['I000006_hg00733'][1]['numAlt'] = 2
+
 SELECTED_ANNOTATION_TRANSCRIPT_MULTI_FAMILY_VARIANT = {**MULTI_FAMILY_VARIANT, 'selectedMainTranscriptId': 'ENST00000497611'}
 SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT = {**MULTI_FAMILY_VARIANT, 'selectedMainTranscriptId': 'ENST00000426137'}
 SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4 = {**VARIANT4, 'selectedMainTranscriptId': 'ENST00000350997'}

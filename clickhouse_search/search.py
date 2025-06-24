@@ -241,9 +241,24 @@ def _get_sample_data(samples):
     if not samples:
         raise NotImplementedError('Clickhouse search not implemented for other data types')
 
-    return samples.values(
-        'sample_type', family_guid=F('individual__family__guid'), project_guid=F('individual__family__project__guid'),
-    ).annotate(samples=ArrayAgg(JSONObject(affected='individual__affected', sex='individual__sex', sample_id='sample_id', individual_guid=F('individual__guid'))))
+    sample_data = samples.values(
+        family_guid=F('individual__family__guid'), project_guid=F('individual__family__project__guid'),
+    ).annotate(
+        samples=ArrayAgg(JSONObject(affected='individual__affected', sex='individual__sex', sample_id='sample_id', sample_type='sample_type', individual_guid=F('individual__guid'))),
+        sample_types=ArrayAgg('sample_type', distinct=True),
+    )
+    return [{**data, 'samples': _group_by_sample_type(data['samples'])} for data in sample_data]
+
+
+def _group_by_sample_type(samples):
+    samples_by_individual_type = {}
+    for sample in samples:
+        sample_type = sample.pop('sample_type')
+        sample_id = sample.pop('sample_id')
+        if sample['individual_guid'] not in samples_by_individual_type:
+            samples_by_individual_type[sample['individual_guid']] = {'sample_ids_by_type': {}, **sample}
+        samples_by_individual_type[sample['individual_guid']]['sample_ids_by_type'][sample_type] = sample_id
+    return list(samples_by_individual_type.values())
 
 
 def _liftover_genome_version(genome_version):
