@@ -26,6 +26,7 @@ from settings import SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, HAIL_SEARCH_DATA_D
 
 logger = logging.getLogger(__name__)
 
+CLICKHOUSE_MIGRATION_SENTINEL = 'hail_search_to_clickhouse_migration'
 RUN_FILE_PATH_TEMPLATE = '{data_dir}/{genome_version}/{dataset_type}/runs/{run_version}/{file_name}'
 SUCCESS_FILE_NAME = '_SUCCESS'
 VALIDATION_ERRORS_FILE_NAME = 'validation_errors.json'
@@ -91,6 +92,9 @@ class Command(BaseCommand):
         updated_variants_by_data_type = defaultdict(dict)
         for run_dir, run_details in new_runs.items():
             try:
+                if CLICKHOUSE_MIGRATION_SENTINEL in run_details["run_version"]:
+                    logging.info(f'Skipping ClickHouse migration {run_details["genome_version"]}/{run_details["dataset_type"]}: {run_details["run_version"]}')
+                    continue
                 metadata_path = os.path.join(run_dir, 'metadata.json')
                 data_type, updated_families, updated_variants_by_id = self._load_new_samples(metadata_path, **run_details)
                 data_type_key = (data_type, run_details['genome_version'])
