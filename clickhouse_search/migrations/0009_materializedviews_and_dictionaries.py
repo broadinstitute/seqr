@@ -194,8 +194,8 @@ class Migration(migrations.Migration):
                 reference_genome='GRCh38',
                 dataset_type='SV',
                 columns = "\n    ".join([
-                    "sumIf((het_samples * 1) + (hom_samples * 2), sample_type = 'WGS') AS ac_wgs,",
-                    "sumIf(hom_samples, sample_type = 'WGS') AS hom_wgs",
+                    "sum((het_samples * 1) + (hom_samples * 2)) AS ac_wgs,",
+                    "sum(hom_samples) AS hom_wgs",
                 ]),
             ),
             hints={'clickhouse': True},
