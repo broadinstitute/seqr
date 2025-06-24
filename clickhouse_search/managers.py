@@ -9,7 +9,7 @@ from django.db.models.sql.constants import INNER
 from clickhouse_search.backend.fields import NestedField, NamedTupleField
 from clickhouse_search.backend.functions import Array, ArrayConcat, ArrayDistinct, ArrayFilter, ArrayFold, \
     ArrayIntersect, ArrayJoin, ArrayMap, ArraySort, ArraySymmetricDifference, CrossJoin, GroupArray, GroupArrayArray, \
-    GroupArrayIntersect, GtStatsDictGet, If, MapLookup, SubqueryJoin, SubqueryTable, Tuple
+    GroupArrayIntersect, GtStatsDictGet, If, MapLookup, SubqueryJoin, SubqueryTable, Tuple, TupleConcat
 from seqr.models import Sample
 from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFECTED, UNAFFECTED, MALE_SEXES, \
     X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, SCREEN_KEY, UTR_ANNOTATOR_KEY, \
@@ -24,6 +24,35 @@ class AnnotationsQuerySet(QuerySet):
     TRANSCRIPT_CONSEQUENCE_FIELD = 'sorted_transcript_consequences'
     GENE_CONSEQUENCE_FIELD = 'gene_consequences'
     FILTERED_CONSEQUENCE_FIELD = 'filtered_transcript_consequences'
+
+    ENTRY_FIELDS = ['familyGuids', 'genotypes', 'clinvar']
+
+    SELECTED_GENE_FIELD = 'selectedGeneId'
+    SELECTED_TRANSCRIPT_FIELD = 'selectedTranscript'
+    SELECTED_CONSEQUENCE_VALUES = {
+        GENE_CONSEQUENCE_FIELD: {SELECTED_GENE_FIELD: F(f'{GENE_CONSEQUENCE_FIELD}__0__geneId')},
+        FILTERED_CONSEQUENCE_FIELD: {SELECTED_TRANSCRIPT_FIELD: F(f'{FILTERED_CONSEQUENCE_FIELD}__0')},
+    }
+
+    @property
+    def annotation_values(self):
+        return {
+            'genomeVersion': Value(self.model.GENOME_VERSION),
+            'liftedOverGenomeVersion': Value(self.model.LIFTED_OVER_GENOME_VERSION),
+            **{field.db_column: F(field.name) for field in self.model._meta.local_fields if field.db_column and field.name != field.db_column},
+            'populations': TupleConcat(
+                F('populations'), Tuple('seqrPop'),
+                output_field=NamedTupleField([*self.model.POPULATION_FIELDS, ('seqr', GtStatsDictGet.output_field)]),
+            ),
+        }
+
+    @property
+    def annotation_fields(self):
+        return [
+            field.name for field in self.model._meta.local_fields
+            if (field.db_column or field.name) not in self.annotation_values
+        ] + self.ENTRY_FIELDS
+
 
     def subquery_join(self, subquery, join_key='key'):
         #  Add key to intermediate select if not already present
@@ -87,6 +116,38 @@ class AnnotationsQuerySet(QuerySet):
         results = self._filter_in_silico(results, **kwargs)
         results = self._filter_annotations(results, **parsed_locus, **kwargs)
         return results
+
+    def result_values(self):
+        values = {k: v for k, v in self.annotation_values.items() if k != 'populations'}
+        for field, value in self.SELECTED_CONSEQUENCE_VALUES.items():
+            if self.has_annotation(field):
+                values.update(value)
+
+        return self.values(*self.annotation_fields, **values).annotate(
+            populations=self.annotation_values['populations']
+        )
+
+    def search_compound_hets(self, primary_q, secondary_q, carrier_field):
+        primary_gene_field = f'primary_{self.SELECTED_GENE_FIELD}'
+        secondary_gene_field = f'secondary_{self.SELECTED_GENE_FIELD}'
+        primary_q = primary_q.explode_gene_id(primary_gene_field)
+        secondary_q = secondary_q.explode_gene_id(secondary_gene_field)
+
+        select_fields = [*self.annotation_fields, self.SELECTED_GENE_FIELD]
+        if carrier_field:
+            select_fields.append(carrier_field)
+
+        results = self.cross_join(
+            query=primary_q, alias='primary', join_query=secondary_q, join_alias='secondary',
+            select_fields=select_fields, select_values={
+                **self.annotation_values,
+            }, conditional_selects={
+                self.FILTERED_CONSEQUENCE_FIELD: self.SELECTED_CONSEQUENCE_VALUES[self.FILTERED_CONSEQUENCE_FIELD],
+            },
+        )
+        return results.filter(
+            **{primary_gene_field: F(secondary_gene_field)}
+        ).exclude(primary_variantId=F('secondary_variantId'))
 
     @classmethod
     def _filter_variant_ids(cls, results, variant_ids=None, rs_ids=None, **kwargs):

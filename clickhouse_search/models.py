@@ -6,6 +6,7 @@ from django.db.models import options, ForeignKey, OneToOneField, Func, CASCADE, 
 from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocksDB, Join
 from clickhouse_search.backend.fields import Enum8Field, NestedField, UInt64FieldDeltaCodecField, NamedTupleField
 from clickhouse_search.managers import EntriesManager, AnnotationsQuerySet
+from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.utils.search.constants import SPLICE_AI_FIELD
 from seqr.utils.xpos_utils import CHROMOSOMES
 from settings import CLICKHOUSE_IN_MEMORY_DIR, CLICKHOUSE_DATA_DIR
@@ -67,7 +68,11 @@ class Projection(Func):
 
 
 class BaseAnnotations(models.ClickhouseModel):
+
+    GENOME_VERSION = GENOME_VERSION_GRCh38
+    LIFTED_OVER_GENOME_VERSION = GENOME_VERSION_GRCh37
     CHROMOSOME_CHOICES = [(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES)]
+
     key = models.UInt32Field(primary_key=True)
     xpos = models.UInt64Field()
     pos = models.UInt32Field()
@@ -134,6 +139,8 @@ class BaseAnnotationsSvGcnv(BaseAnnotations):
 
 
 class BaseAnnotationsGRCh37SnvIndel(BaseAnnotationsMitoSnvIndel):
+    GENOME_VERSION = GENOME_VERSION_GRCh37
+    LIFTED_OVER_GENOME_VERSION = GENOME_VERSION_GRCh38
     POPULATION_FIELDS = [
         ('exac', NamedTupleField([
             ('ac', models.UInt32Field()),
@@ -217,6 +224,8 @@ class AnnotationsDiskGRCh37SnvIndel(BaseAnnotationsGRCh37SnvIndel):
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh37/SNV_INDEL/annotations', primary_key='key', flatten_nested=0)
 
 class BaseAnnotationsSnvIndel(BaseAnnotationsGRCh37SnvIndel):
+    GENOME_VERSION = GENOME_VERSION_GRCh38
+    LIFTED_OVER_GENOME_VERSION = GENOME_VERSION_GRCh37
     PREDICTION_FIELDS = sorted([
         ('gnomad_noncoding', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
         *BaseAnnotationsGRCh37SnvIndel.PREDICTION_FIELDS,
