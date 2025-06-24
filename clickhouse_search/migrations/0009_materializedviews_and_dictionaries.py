@@ -61,10 +61,10 @@ class Migration(migrations.Migration):
             ENTRIES_TO_PROJECT_GT_STATS.substitute(
                 reference_genome='GRCh37', 
                 dataset_type='SNV_INDEL',
-                columns="\n    ".join([
-                    'sample_type,',
-                    "sum(toInt32(arrayCount(s -> (s.gt = 'REF'), calls) * sign)) AS ref_samples,",
-                    "sum(toInt32(arrayCount(s -> (s.gt = 'HET'), calls) * sign)) AS het_samples,",
+                columns=",\n    ".join([
+                    'sample_type',
+                    "sum(toInt32(arrayCount(s -> (s.gt = 'REF'), calls) * sign)) AS ref_samples",
+                    "sum(toInt32(arrayCount(s -> (s.gt = 'HET'), calls) * sign)) AS het_samples",
                     "sum(toInt32(arrayCount(s -> (s.gt = 'HOM'), calls) * sign)) AS hom_samples",
                 ]),
                 groupby_columns='project_guid, key, sample_type',
@@ -75,10 +75,10 @@ class Migration(migrations.Migration):
             PROJECT_GT_STATS_TO_GT_STATS.substitute(
                 reference_genome='GRCh37',
                 dataset_type='SNV_INDEL',
-                columns="\n    ".join([
-                    "sumIf((het_samples * 1) + (hom_samples * 2), sample_type = 'WES') AS ac_wes,",
-                    "sumIf((het_samples * 1) + (hom_samples * 2), sample_type = 'WGS') AS ac_wgs,",
-                    "sumIf(hom_samples, sample_type = 'WES') AS hom_wes,",
+                columns=",\n    ".join([
+                    "sumIf((het_samples * 1) + (hom_samples * 2), sample_type = 'WES') AS ac_wes",
+                    "sumIf((het_samples * 1) + (hom_samples * 2), sample_type = 'WGS') AS ac_wgs",
+                    "sumIf(hom_samples, sample_type = 'WES') AS hom_wes",
                     "sumIf(hom_samples, sample_type = 'WGS') AS hom_wgs",
                 ])
             ),
@@ -88,10 +88,10 @@ class Migration(migrations.Migration):
             GT_STATS_DICT.substitute(
                 reference_genome='GRCh37',
                 dataset_type='SNV_INDEL',
-                columns= "\n    ".join([
-                    "ac_wes UInt32,",
-                    "ac_wgs UInt32,",
-                    "hom_wes UInt32,",
+                columns= ",\n    ".join([
+                    "ac_wes UInt32",
+                    "ac_wgs UInt32",
+                    "hom_wes UInt32",
                     "hom_wgs UInt32"
                 ]),
                 size=int(2e8),
@@ -102,10 +102,10 @@ class Migration(migrations.Migration):
             ENTRIES_TO_PROJECT_GT_STATS.substitute(
                 reference_genome='GRCh38',
                 dataset_type='SNV_INDEL',
-                columns="\n    ".join([
-                    'sample_type,',
-                    "sum(toInt32(arrayCount(s -> (s.gt = 'REF'), calls) * sign)) AS ref_samples,",
-                    "sum(toInt32(arrayCount(s -> (s.gt = 'HET'), calls) * sign)) AS het_samples,",
+                columns=",\n    ".join([
+                    'sample_type',
+                    "sum(toInt32(arrayCount(s -> (s.gt = 'REF'), calls) * sign)) AS ref_samples",
+                    "sum(toInt32(arrayCount(s -> (s.gt = 'HET'), calls) * sign)) AS het_samples",
                     "sum(toInt32(arrayCount(s -> (s.gt = 'HOM'), calls) * sign)) AS hom_samples",
                 ]),
                 groupby_columns='project_guid, key, sample_type',
@@ -116,10 +116,10 @@ class Migration(migrations.Migration):
             PROJECT_GT_STATS_TO_GT_STATS.substitute(
                 reference_genome='GRCh38',
                 dataset_type='SNV_INDEL',
-                columns="\n    ".join([
-                    "sumIf((het_samples * 1) + (hom_samples * 2), sample_type = 'WES') AS ac_wes,",
-                    "sumIf((het_samples * 1) + (hom_samples * 2), sample_type = 'WGS') AS ac_wgs,",
-                    "sumIf(hom_samples, sample_type = 'WES') AS hom_wes,",
+                columns=",\n    ".join([
+                    "sumIf((het_samples * 1) + (hom_samples * 2), sample_type = 'WES') AS ac_wes",
+                    "sumIf((het_samples * 1) + (hom_samples * 2), sample_type = 'WGS') AS ac_wgs",
+                    "sumIf(hom_samples, sample_type = 'WES') AS hom_wes",
                     "sumIf(hom_samples, sample_type = 'WGS') AS hom_wgs",
                 ])
             ),
@@ -129,10 +129,10 @@ class Migration(migrations.Migration):
             GT_STATS_DICT.substitute(
                 reference_genome='GRCh38',
                 dataset_type='SNV_INDEL',
-                columns= "\n    ".join([
-                    "ac_wes UInt32,",
-                    "ac_wgs UInt32,",
-                    "hom_wes  UInt32,",
+                columns= ",\n    ".join([
+                    "ac_wes UInt32",
+                    "ac_wgs UInt32",
+                    "hom_wes  UInt32",
                     "hom_wgs  UInt32"
                 ]),
                 size=int(1e9),
@@ -143,10 +143,10 @@ class Migration(migrations.Migration):
             ENTRIES_TO_PROJECT_GT_STATS.substitute(
                 reference_genome='GRCh38',
                 dataset_type='MITO',
-                columns="\n    ".join([
-                    'sample_type,',
-                    "sum(toInt32(arrayCount(s -> (s.hl == '0'), calls) * sign)) AS ref_samples,",
-                    "sum(toInt32(arrayCount(s -> (s.hl > '0' AND s.hl < '0.95'), calls) * sign)) AS het_samples,",
+                columns=",\n    ".join([
+                    'sample_type',
+                    "sum(toInt32(arrayCount(s -> (s.hl == '0'), calls) * sign)) AS ref_samples",
+                    "sum(toInt32(arrayCount(s -> (s.hl > '0' AND s.hl < '0.95'), calls) * sign)) AS het_samples",
                     "sum(toInt32(arrayCount(s -> (s.hl >= '0.95'), calls) * sign)) AS hom_samples",
                 ]),
                 groupby_columns='project_guid, key, sample_type',
@@ -157,10 +157,10 @@ class Migration(migrations.Migration):
             PROJECT_GT_STATS_TO_GT_STATS.substitute(
                 reference_genome='GRCh38',
                 dataset_type='MITO',
-                columns="\n    ".join([
-                    "sumIf(het_samples, sample_type = 'WES') AS het_wes,",
-                    "sumIf(het_samples, sample_type = 'WGS') AS het_wgs,",
-                    "sumIf(hom_samples, sample_type = 'WES') AS hom_wes,",
+                columns=",\n    ".join([
+                    "sumIf(het_samples, sample_type = 'WES') AS het_wes",
+                    "sumIf(het_samples, sample_type = 'WGS') AS het_wgs",
+                    "sumIf(hom_samples, sample_type = 'WES') AS hom_wes",
                     "sumIf(hom_samples, sample_type = 'WGS') AS hom_wgs",
                 ])
             ),
@@ -170,10 +170,10 @@ class Migration(migrations.Migration):
             GT_STATS_DICT.substitute(
                 reference_genome='GRCh38',
                 dataset_type='MITO',
-                columns= "\n    ".join([
-                    "het_wes UInt32,",
-                    "het_wgs UInt32,",
-                    "hom_wes UInt32,",
+                columns= ",\n    ".join([
+                    "het_wes UInt32",
+                    "het_wgs UInt32",
+                    "hom_wes UInt32",
                     "hom_wgs UInt32"
                 ]),
                 size=int(1e6),
@@ -184,9 +184,9 @@ class Migration(migrations.Migration):
             ENTRIES_TO_PROJECT_GT_STATS.substitute(
                 reference_genome='GRCh38',
                 dataset_type='SV',
-                columns="\n    ".join([
-                    "sum(toInt32(arrayCount(s -> (s.gt = 'REF'), calls) * sign)) AS ref_samples,",
-                    "sum(toInt32(arrayCount(s -> (s.gt = 'HET'), calls) * sign)) AS het_samples,",
+                columns=",\n    ".join([
+                    "sum(toInt32(arrayCount(s -> (s.gt = 'REF'), calls) * sign)) AS ref_samples",
+                    "sum(toInt32(arrayCount(s -> (s.gt = 'HET'), calls) * sign)) AS het_samples",
                     "sum(toInt32(arrayCount(s -> (s.gt = 'HOM'), calls) * sign)) AS hom_samples",
                 ]),
                 groupby_columns='project_guid, key',
@@ -197,8 +197,8 @@ class Migration(migrations.Migration):
             PROJECT_GT_STATS_TO_GT_STATS.substitute(
                 reference_genome='GRCh38',
                 dataset_type='SV',
-                columns = "\n    ".join([
-                    "sum((het_samples * 1) + (hom_samples * 2)) AS ac_wgs,",
+                columns = ",\n    ".join([
+                    "sum((het_samples * 1) + (hom_samples * 2)) AS ac_wgs",
                     "sum(hom_samples) AS hom_wgs",
                 ]),
             ),
@@ -208,8 +208,8 @@ class Migration(migrations.Migration):
             GT_STATS_DICT.substitute(
                 reference_genome='GRCh38',
                 dataset_type='SV',
-                columns= "\n    ".join([
-                    "ac_wgs UInt32,",
+                columns= ",\n    ".join([
+                    "ac_wgs UInt32",
                     "hom_wgs UInt32"
                 ]),
                 size=int(5e6),
