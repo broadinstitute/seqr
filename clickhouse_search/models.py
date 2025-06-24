@@ -224,6 +224,8 @@ class AnnotationsDiskGRCh37SnvIndel(BaseAnnotationsGRCh37SnvIndel):
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh37/SNV_INDEL/annotations', primary_key='key', flatten_nested=0)
 
 class BaseAnnotationsSnvIndel(BaseAnnotationsGRCh37SnvIndel):
+    GENOME_VERSION = GENOME_VERSION_GRCh38
+    LIFTED_OVER_GENOME_VERSION = GENOME_VERSION_GRCh37
     PREDICTION_FIELDS = sorted([
         ('gnomad_noncoding', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
         *BaseAnnotationsGRCh37SnvIndel.PREDICTION_FIELDS,
