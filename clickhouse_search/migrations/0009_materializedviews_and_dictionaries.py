@@ -12,28 +12,28 @@ CLICKHOUSE_USER = os.environ.get('CLICKHOUSE_USER', 'clickhouse')
 CLICKHOUSE_PASSWORD = os.environ.get('CLICKHOUSE_PASSWORD', 'clickhouse_test')
 
 ENTRIES_TO_PROJECT_GT_STATS = Template("""
-CREATE MATERIALIZED VIEW seqr.`$reference_genome/$dataset_type/entries_to_project_gt_stats_mv` TO seqr.`$reference_genome/$dataset_type/project_gt_stats`
+CREATE MATERIALIZED VIEW `$reference_genome/$dataset_type/entries_to_project_gt_stats_mv` TO `$reference_genome/$dataset_type/project_gt_stats`
 AS SELECT
     project_guid,
     key,
     sample_type,
     $columns
-FROM seqr.`$reference_genome/$dataset_type/entries`
+FROM `$reference_genome/$dataset_type/entries`
 GROUP BY project_guid, key, sample_type
 """)
 
 PROJECT_GT_STATS_TO_GT_STATS = Template("""
-CREATE MATERIALIZED VIEW seqr.`$reference_genome/$dataset_type/project_gt_stats_to_gt_stats_mv`
-REFRESH EVERY 10 YEAR TO seqr.`$reference_genome/$dataset_type/gt_stats`
+CREATE MATERIALIZED VIEW `$reference_genome/$dataset_type/project_gt_stats_to_gt_stats_mv`
+REFRESH EVERY 10 YEAR TO `$reference_genome/$dataset_type/gt_stats`
 AS SELECT
     key,
     $columns,
-FROM seqr.`$reference_genome/$dataset_type/project_gt_stats`
+FROM `$reference_genome/$dataset_type/project_gt_stats`
 GROUP BY key
 """)
 
 GT_STATS_DICT = Template(Template("""
-CREATE DICTIONARY seqr.`$reference_genome/$dataset_type/gt_stats_dict`
+CREATE DICTIONARY `$reference_genome/$dataset_type/gt_stats_dict`
 (
     `key` UInt32,
     $columns
