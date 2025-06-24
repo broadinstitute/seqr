@@ -16,13 +16,17 @@ VARIANT4 = {**deepcopy(HAIL_VARIANT4), 'key': 4}
 PROJECT_2_VARIANT = {**deepcopy(HAIL_PROJECT_2_VARIANT), 'key': 5}
 GRCH37_VARIANT = {
     **deepcopy(HAIL_GRCH37_VARIANT),
-    'key': 1,
+    'key': 11,
     'liftedOverGenomeVersion': '38',
     'liftedOverChrom': '7',
     'liftedOverPos': 143271368,
 }
 for genotype in GRCH37_VARIANT['genotypes'].values():
     genotype['sampleType'] = 'WES'
+GRCH37_VARIANT['predictions'].update({'fathmm': None, 'mut_pred': None, 'vest': None})
+for transcripts in GRCH37_VARIANT['transcripts'].values():
+    for transcript in transcripts:
+        transcript['loftee'] = {field: transcript.pop(field) for field in ['isLofNagnag', 'lofFilters']}
 
 for variant in [VARIANT1, VARIANT2, VARIANT3, VARIANT4, PROJECT_2_VARIANT, GRCH37_VARIANT]:
     # clickhouse uses fixed length decimals so values are rounded relative to hail backend
@@ -227,7 +231,17 @@ CACHED_CONSEQUENCES_BY_KEY = {2: [{
     'extendedIntronicSpliceRegionVariant': False,
     'fiveutrConsequence': None,
     'geneId': 'ENSG00000097046',
-}]}
+}],
+11: [{
+    'canonical': 1,
+    'consequenceTerms': ['missense_variant'],
+    'geneId': 'ENSG00000271079',
+}, {
+    'canonical': 1,
+    'consequenceTerms': ['non_coding_transcript_exon_variant', 'non_coding_transcript_variant'],
+    'geneId': 'ENSG00000176227',
+}],
+}
 
 def format_cached_variant(variant):
     return {
