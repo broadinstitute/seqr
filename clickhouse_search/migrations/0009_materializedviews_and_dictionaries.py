@@ -150,7 +150,7 @@ class Migration(migrations.Migration):
                     "sumIf(hom_samples, sample_type = 'WGS') AS hom_wgs",
                 ])
             ),
-        )
+        ),
         migrations.RunSQL(
             GT_STATS_DICT.substitute(
                 reference_genome='GRCh38',
