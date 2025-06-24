@@ -19,7 +19,7 @@ AS SELECT
     key,
     $columns
 FROM `$reference_genome/$dataset_type/entries`
-GROUP BY project_guid, key, sample_type
+GROUP BY $groupby_columns
 """)
 
 PROJECT_GT_STATS_TO_GT_STATS = Template("""
@@ -67,6 +67,7 @@ class Migration(migrations.Migration):
                     "sum(toInt32(arrayCount(s -> (s.gt = 'HET'), calls) * sign)) AS het_samples,",
                     "sum(toInt32(arrayCount(s -> (s.gt = 'HOM'), calls) * sign)) AS hom_samples",
                 ]),
+                groupby_columns='project_guid, key, sample_type',
             ),
             hints={'clickhouse': True},
         ),
@@ -107,6 +108,7 @@ class Migration(migrations.Migration):
                     "sum(toInt32(arrayCount(s -> (s.gt = 'HET'), calls) * sign)) AS het_samples,",
                     "sum(toInt32(arrayCount(s -> (s.gt = 'HOM'), calls) * sign)) AS hom_samples",
                 ]),
+                groupby_columns='project_guid, key, sample_type',
             ),
             hints={'clickhouse': True},
         ),
@@ -147,6 +149,7 @@ class Migration(migrations.Migration):
                     "sum(toInt32(arrayCount(s -> (s.hl > '0' AND s.hl < '0.95'), calls) * sign)) AS het_samples,",
                     "sum(toInt32(arrayCount(s -> (s.hl >= '0.95'), calls) * sign)) AS hom_samples",
                 ]),
+                groupby_columns='project_guid, key, sample_type',
             ),
             hints={'clickhouse': True},
         ),
@@ -186,6 +189,7 @@ class Migration(migrations.Migration):
                     "sum(toInt32(arrayCount(s -> (s.gt = 'HET'), calls) * sign)) AS het_samples,",
                     "sum(toInt32(arrayCount(s -> (s.gt = 'HOM'), calls) * sign)) AS hom_samples",
                 ]),
+                groupby_columns='project_guid, key',
             ),
             hints={'clickhouse': True},
         ),
