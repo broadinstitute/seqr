@@ -421,7 +421,7 @@ class EntriesManager(Manager):
         })
 
     def search(self, sample_data, parsed_locus=None, freqs=None,  **kwargs):
-        entries = self.annotate(seqrPop=GtStatsDictGet('key'))
+        entries = self.annotate(seqrPop=GtStatsDictGet('key', table_base=self.model._meta.db_table.rsplit('/', 1)[0]))
         entries = self._filter_intervals(entries, **(parsed_locus or {}))
 
         if (freqs or {}).get('callset'):

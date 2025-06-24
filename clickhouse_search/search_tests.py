@@ -44,6 +44,24 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             LIFETIME(0)
             LAYOUT(FLAT(MAX_ARRAY_SIZE 500000000))
             """, [os.environ.get('CLICKHOUSE_USER', 'clickhouse'), os.environ.get('CLICKHOUSE_PASSWORD', 'clickhouse_test')])
+            cursor.execute("""
+            CREATE DICTIONARY IF NOT EXISTS "GRCh37/SNV_INDEL/gt_stats_dict"
+            (
+                key UInt32,
+                ac_wes UInt32,
+                ac_wgs UInt32,
+                hom_wes UInt32,
+                hom_wgs UInt32,
+            )
+            PRIMARY KEY key
+            SOURCE(CLICKHOUSE(
+                USER %s
+                PASSWORD %s
+                QUERY "SELECT * FROM VALUES ((11, 4711, 0, 1508, 0))"
+            ))
+            LIFETIME(0)
+            LAYOUT(FLAT(MAX_ARRAY_SIZE 500000000))
+            """, [os.environ.get('CLICKHOUSE_USER', 'clickhouse'), os.environ.get('CLICKHOUSE_PASSWORD', 'clickhouse_test')])
 
     def setUp(self):
         super().set_up()
