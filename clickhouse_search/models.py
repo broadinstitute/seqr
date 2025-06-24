@@ -656,3 +656,16 @@ class TranscriptsSnvIndel(models.ClickhouseModel):
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/transcripts'
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SNV_INDEL/transcripts', primary_key='key', flatten_nested=0)
+
+ENTRY_CLASS_MAP = {
+    GENOME_VERSION_GRCh37: EntriesGRCh37SnvIndel,
+    GENOME_VERSION_GRCh38: EntriesSnvIndel,
+}
+ANNOTATIONS_CLASS_MAP = {
+    GENOME_VERSION_GRCh37: AnnotationsGRCh37SnvIndel,
+    GENOME_VERSION_GRCh38: AnnotationsSnvIndel,
+}
+TRANSCRIPTS_CLASS_MAP = {
+    GENOME_VERSION_GRCh37: TranscriptsGRCh37SnvIndel,
+    GENOME_VERSION_GRCh38: TranscriptsSnvIndel,
+}

@@ -5,7 +5,7 @@ from django.db.models.functions import JSONObject
 
 from clickhouse_search.backend.fields import NamedTupleField
 from clickhouse_search.backend.functions import Array, ArrayFilter, ArrayIntersect, ArraySort, Tuple
-from clickhouse_search.models import EntriesSnvIndel, AnnotationsSnvIndel, TranscriptsSnvIndel, BaseClinvar, \
+from clickhouse_search.models import ENTRY_CLASS_MAP, ANNOTATIONS_CLASS_MAP, TRANSCRIPTS_CLASS_MAP, BaseClinvar, \
     BaseAnnotationsMitoSnvIndel, BaseAnnotationsGRCh37SnvIndel
 from reference_data.models import GeneConstraint, Omim, GENOME_VERSION_GRCh38
 from seqr.models import PhenotypePrioritization, Sample
@@ -27,8 +27,8 @@ def clickhouse_backend_enabled():
 
 
 def get_clickhouse_variants(samples, search, user, previous_search_results, genome_version,page=1, num_results=100, sort=None, **kwargs):
-    if genome_version != GENOME_VERSION_GRCh38:
-        raise NotImplementedError('Clickhouse search not implemented for genome version other than GRCh38')
+    entry_cls = ENTRY_CLASS_MAP[genome_version]
+    annotations_cls = ANNOTATIONS_CLASS_MAP[genome_version]
 
     sample_data = _get_sample_data(samples)
     logger.info(f'Loading {Sample.DATASET_TYPE_VARIANT_CALLS} data for {len(sample_data)} families', user)
@@ -36,10 +36,10 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
     results = []
     inheritance_mode = search.get('inheritance_mode')
     if inheritance_mode != COMPOUND_HET:
-        result_q = _get_search_results_queryset(search, sample_data)
+        result_q = _get_search_results_queryset(entry_cls, annotations_cls, search, sample_data)
         results += list(result_q[:MAX_VARIANTS + 1])
     if inheritance_mode in {RECESSIVE, COMPOUND_HET}:
-        result_q = _get_comp_het_results_queryset(search, sample_data)
+        result_q = _get_comp_het_results_queryset(entry_cls, annotations_cls, search, sample_data)
         results += [list(result[1:]) for result in result_q[:MAX_VARIANTS + 1]]
 
     cache_results = get_clickhouse_cache_results(results, sort, sample_data[0]['family_guid'])
@@ -47,29 +47,29 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
 
     logger.info(f'Total results: {cache_results["total_results"]}', user)
 
-    return format_clickhouse_results(cache_results['all_results'][(page-1)*num_results:page*num_results])
+    return format_clickhouse_results(cache_results['all_results'][(page-1)*num_results:page*num_results], genome_version)
 
 
-def _get_search_results_queryset(search, sample_data):
-    entries = EntriesSnvIndel.objects.search(sample_data, **search)
-    results = AnnotationsSnvIndel.objects.subquery_join(entries).search(**search)
+def _get_search_results_queryset(entry_cls, annotations_cls, search, sample_data):
+    entries = entry_cls.objects.search(sample_data, **search)
+    results = annotations_cls.objects.subquery_join(entries).search(**search)
     return results.result_values()
 
 
-def _get_comp_het_results_queryset(search, sample_data):
-    entries = EntriesSnvIndel.objects.search(
+def _get_comp_het_results_queryset(entry_cls, annotations_cls, search, sample_data):
+    entries = entry_cls.objects.search(
         sample_data, **{**search, 'inheritance_mode': COMPOUND_HET}, annotate_carriers=True,
     )
 
-    primary_q = AnnotationsSnvIndel.objects.subquery_join(entries).search(**search)
+    primary_q = annotations_cls.objects.subquery_join(entries).search(**search)
 
     annotations_secondary = search.get('annotations_secondary')
     secondary_search = {**search, 'annotations': annotations_secondary} if annotations_secondary else search
-    secondary_q = AnnotationsSnvIndel.objects.subquery_join(entries).search(**secondary_search)
+    secondary_q = annotations_cls.objects.subquery_join(entries).search(**secondary_search)
 
     carrier_field = next((field for field in ['family_carriers', 'carriers'] if field in entries.query.annotations), None)
 
-    results = AnnotationsSnvIndel.objects.search_compound_hets(primary_q, secondary_q, carrier_field)
+    results = annotations_cls.objects.search_compound_hets(primary_q, secondary_q, carrier_field)
 
     if carrier_field == 'carriers':
         results = results.annotate(
@@ -123,12 +123,12 @@ def get_clickhouse_cache_results(results, sort, family_guid):
     return {'all_results': sorted_results, 'total_results': total_results}
 
 
-def format_clickhouse_results(results, **kwargs):
+def format_clickhouse_results(results, genome_version, **kwargs):
     keys_with_transcripts = {
         variant['key'] for result in results for variant in (result if isinstance(result, list) else [result])
     }
     transcripts_by_key = dict(
-        TranscriptsSnvIndel.objects.filter(key__in=keys_with_transcripts).values_list('key', 'transcripts')
+        TRANSCRIPTS_CLASS_MAP[genome_version].objects.filter(key__in=keys_with_transcripts).values_list('key', 'transcripts')
     )
 
     formatted_results = []
