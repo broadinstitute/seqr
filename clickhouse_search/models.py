@@ -657,6 +657,144 @@ class TranscriptsSnvIndel(models.ClickhouseModel):
         db_table = 'GRCh38/SNV_INDEL/transcripts'
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SNV_INDEL/transcripts', primary_key='key', flatten_nested=0)
 
+class BaseKeyLookup(models.ClickhouseModel):
+    variant_id = models.StringField(db_column='variantId')
+
+    class Meta:
+        abstract = True
+
+class KeyLookupGRCh37SnvIndel(BaseKeyLookup):
+    key = OneToOneField('AnnotationsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+
+    class Meta:
+        db_table = 'GRCh37/SNV_INDEL/key_lookup'
+        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh37/SNV_INDEL/key_lookup', primary_key='variant_id', flatten_nested=0)
+
+class KeyLookupSnvIndel(BaseKeyLookup):
+    key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+
+    class Meta:
+        db_table = 'GRCh38/SNV_INDEL/key_lookup'
+        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SNV_INDEL/key_lookup', primary_key='variant_id', flatten_nested=0)
+
+
+class KeyLookupMito(BaseKeyLookup):
+    key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
+
+    class Meta:
+        db_table = 'GRCh38/MITO/key_lookup'
+        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/MITO/key_lookup', primary_key='variant_id', flatten_nested=0)
+
+
+class KeyLookupSv(BaseKeyLookup):
+    key = OneToOneField('AnnotationsSv', db_column='key', primary_key=True, on_delete=CASCADE)
+
+    class Meta:
+        db_table = 'GRCh38/SV/key_lookup'
+        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SV/key_lookup', primary_key='variant_id', flatten_nested=0)
+
+
+class KeyLookupGcnv(BaseKeyLookup):
+    key = OneToOneField('AnnotationsGcnv', db_column='key', primary_key=True, on_delete=CASCADE)
+
+    class Meta:
+        db_table = 'GRCh38/GCNV/key_lookup'
+        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/GCNV/key_lookup', primary_key='variant_id', flatten_nested=0)
+
+
+class BaseProjectGtStats(models.ClickhouseModel):
+    project_guid = models.StringField(low_cardinality=True)
+    ref_samples = models.UInt32Field()
+    het_samples = models.UInt32Field()
+    hom_samples = models.UInt32Field()
+
+    class Meta:
+        abstract = True
+        engine = models.SummingMergeTree(
+            order_by=('project_guid', 'key'),
+            partition_by='project_guid',
+            index_granularity=8192,
+        )
+
+class BaseProjectGtStatsMitoSnvIndel(BaseProjectGtStats):
+    sample_type = models.Enum8Field(choices=[(1, 'WES'), (2, 'WGS')])
+
+    class Meta:
+        abstract = True
+        engine = models.SummingMergeTree(
+            order_by=('project_guid', 'key', 'sample_type'),
+            partition_by='project_guid',
+            index_granularity=8192,
+        )
+
+class ProjectGtStatsGRCh37SnvIndel(BaseProjectGtStatsMitoSnvIndel):
+    key = OneToOneField('AnnotationsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+
+    class Meta(BaseProjectGtStatsMitoSnvIndel.Meta):
+        db_table = 'GRCh37/SNV_INDEL/project_gt_stats'
+
+class ProjectGtStatsSnvIndel(BaseProjectGtStatsMitoSnvIndel):
+    key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+
+    class Meta(BaseProjectGtStatsMitoSnvIndel.Meta):
+        db_table = 'GRCh38/SNV_INDEL/project_gt_stats'
+
+class ProjectGtStatsMito(BaseProjectGtStatsMitoSnvIndel):
+    key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
+
+    class Meta(BaseProjectGtStatsMitoSnvIndel.Meta):
+        db_table = 'GRCh38/MITO/project_gt_stats'
+
+class ProjectGtStatsSv(BaseProjectGtStats):
+    key = OneToOneField('AnnotationsSv', db_column='key', primary_key=True, on_delete=CASCADE)
+
+    class Meta(BaseProjectGtStats.Meta):
+        db_table = 'GRCh38/SV/project_gt_stats'
+
+class BaseGtStats(models.ClickhouseModel):
+    ac_wes = models.UInt32Field()
+    ac_wgs = models.UInt32Field()
+    hom_wes = models.UInt32Field()
+    hom_wgs = models.UInt32Field()
+
+    class Meta:
+        abstract = True
+        engine = models.SummingMergeTree(
+            order_by='key',
+            index_granularity=8192,
+        )
+
+class GtStatsGRCh37SnvIndel(BaseGtStats):
+    key = OneToOneField('AnnotationsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+
+    class Meta(BaseGtStats.Meta):
+        db_table = 'GRCh37/SNV_INDEL/gt_stats'
+
+class GtStatsSnvIndel(BaseGtStats):
+    key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+
+    class Meta(BaseGtStats.Meta):
+        db_table = 'GRCh38/SNV_INDEL/gt_stats'
+
+class GtStatsMito(models.ClickhouseModel):
+    key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
+    het_wes = models.UInt32Field()
+    het_wgs = models.UInt32Field()
+    hom_wes = models.UInt32Field()
+    hom_wgs = models.UInt32Field()
+
+    class Meta(BaseGtStats.Meta):
+        db_table = 'GRCh38/MITO/gt_stats'
+
+class GtStatsSv(models.ClickhouseModel):
+    key = OneToOneField('AnnotationsSv', db_column='key', primary_key=True, on_delete=CASCADE)
+    het_wgs = models.UInt32Field()
+    hom_wgs = models.UInt32Field()
+
+    class Meta(BaseGtStats.Meta):
+        db_table = 'GRCh38/SV/gt_stats'
+
+
 ENTRY_CLASS_MAP = {
     GENOME_VERSION_GRCh37: EntriesGRCh37SnvIndel,
     GENOME_VERSION_GRCh38: EntriesSnvIndel,
