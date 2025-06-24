@@ -58,7 +58,7 @@ class Migration(migrations.Migration):
     operations = [
         migrations.RunSQL(
             ENTRIES_TO_PROJECT_GT_STATS.substitute(
-                reference_genome='GRCh37', 
+                reference_genome='GRCh37',
                 dataset_type='SNV_INDEL',
                 columns=",\n    ".join([
                     'sample_type',
@@ -215,5 +215,5 @@ class Migration(migrations.Migration):
             ),
             hints={'clickhouse': True},
         ),
-    ] 
+    ]
 
