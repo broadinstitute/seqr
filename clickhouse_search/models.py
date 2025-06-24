@@ -1260,7 +1260,6 @@ class ProjectGtStatsSv(BaseProjectGtStats):
     class Meta(BaseProjectGtStats.Meta):
         db_table = 'GRCh38/SV/project_gt_stats'
 
-
 class BaseGtStats(models.ClickhouseModel):
     ac_wes = models.UInt32Field()
     ac_wgs = models.UInt32Field()
