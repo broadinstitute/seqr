@@ -779,10 +779,10 @@ class GtStatsSnvIndel(BaseGtStats):
 
 class GtStatsMito(models.ClickhouseModel):
     key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
-    het_wes = models.UInt32Field()
-    het_wgs = models.UInt32Field()
-    hom_wes = models.UInt32Field()
-    hom_wgs = models.UInt32Field()
+    ac_het_wes = models.UInt32Field()
+    ac_het_wgs = models.UInt32Field()
+    ac_hom_wes = models.UInt32Field()
+    ac_hom_wgs = models.UInt32Field()
 
     class Meta(BaseGtStats.Meta):
         db_table = 'GRCh38/MITO/gt_stats'
