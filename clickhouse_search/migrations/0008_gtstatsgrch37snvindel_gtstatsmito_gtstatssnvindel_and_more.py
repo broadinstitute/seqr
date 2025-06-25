@@ -36,10 +36,10 @@ class Migration(migrations.Migration):
             name='GtStatsMito',
             fields=[
                 ('key', models.OneToOneField(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='clickhouse_search.annotationsmito')),
-                ('het_wes', clickhouse_backend.models.UInt32Field()),
-                ('het_wgs', clickhouse_backend.models.UInt32Field()),
-                ('hom_wes', clickhouse_backend.models.UInt32Field()),
-                ('hom_wgs', clickhouse_backend.models.UInt32Field()),
+                ('ac_het_wes', clickhouse_backend.models.UInt32Field()),
+                ('ac_het_wgs', clickhouse_backend.models.UInt32Field()),
+                ('ac_hom_wes', clickhouse_backend.models.UInt32Field()),
+                ('ac_hom_wgs', clickhouse_backend.models.UInt32Field()),
             ],
             options={
                 'db_table': 'GRCh38/MITO/gt_stats',
@@ -74,7 +74,7 @@ class Migration(migrations.Migration):
             name='GtStatsSv',
             fields=[
                 ('key', models.OneToOneField(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='clickhouse_search.annotationssv')),
-                ('het_wgs', clickhouse_backend.models.UInt32Field()),
+                ('ac_wgs', clickhouse_backend.models.UInt32Field()),
                 ('hom_wgs', clickhouse_backend.models.UInt32Field()),
             ],
             options={
