@@ -37,8 +37,7 @@ class AnnotationsQuerySet(QuerySet):
     @property
     def annotation_values(self):
         annotations = {
-            'genomeVersion': Value(self.model.GENOME_VERSION),
-            'liftedOverGenomeVersion': Value(self.model.LIFTED_OVER_GENOME_VERSION),
+            **{key: Value(value) for key, value in self.model.ANNOTATION_CONSTANTS.items()},
             **{field.db_column: F(field.name) for field in self.model._meta.local_fields if field.db_column and field.name != field.db_column},
             'populations': TupleConcat(
                 F('populations'),
