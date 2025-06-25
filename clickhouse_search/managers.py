@@ -42,10 +42,10 @@ class AnnotationsQuerySet(QuerySet):
             **{field.db_column: F(field.name) for field in self.model._meta.local_fields if field.db_column and field.name != field.db_column},
             'populations': TupleConcat(
                 F('populations'),
-                *[Tuple(TuplePlus(
+                Tuple(*[TuplePlus(
                     Tuple(*[f'seqrPop__{j}' for j in range(i, len(sub_fields)+i)]),
                     Tuple(*[f'seqrPop__{j}' for j in range(len(sub_fields)+i, len(sub_fields)*2+i)]),
-                )) for i, (_, sub_fields) in enumerate(self.model.SEQR_POPULATIONS)],
+                ) for i, (_, sub_fields) in enumerate(self.model.SEQR_POPULATIONS)]),
                 output_field=NamedTupleField([*self.model.POPULATION_FIELDS, *[
                     (name, NamedTupleField([(field, models.UInt32Field()) for field, _ in sub_fields]))
                     for name, sub_fields in self.model.SEQR_POPULATIONS
