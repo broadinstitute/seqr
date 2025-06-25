@@ -147,29 +147,29 @@ def format_clickhouse_results(results, genome_version, **kwargs):
 
 
 def _format_variant(variant, transcripts_by_key):
-    transcripts = transcripts_by_key.get(variant['key'], {})
-    formatted_variant = {
-        **variant,
-        'transcripts': transcripts,
-    }
+    formatted_variant = {**variant}
+    if 'transcripts' not in variant:
+        transcripts = transcripts_by_key.get(variant['key'], {})
+        formatted_variant['transcripts'] = transcripts
     # pop sortedTranscriptConsequences from the formatted result and not the original result to ensure the full value is cached properly
-    sorted_minimal_transcripts = formatted_variant.pop(TRANSCRIPT_CONSEQUENCES_FIELD)
+    sorted_minimal_transcripts = formatted_variant.pop(TRANSCRIPT_CONSEQUENCES_FIELD, None)
     selected_gene_id = formatted_variant.pop(SELECTED_GENE_FIELD, None)
     selected_transcript = formatted_variant.pop(SELECTED_TRANSCRIPT_FIELD, None)
     main_transcript_id = None
     selected_main_transcript_id = None
-    if sorted_minimal_transcripts:
+    if formatted_variant['transcripts']:
+        gene_id = sorted_minimal_transcripts[0]['geneId'] if sorted_minimal_transcripts else next(iter(formatted_variant['transcripts'].keys()))
         main_transcript_id = next(
-            t['transcriptId'] for t in transcripts[sorted_minimal_transcripts[0]['geneId']]
+            t['transcriptId'] for t in formatted_variant['transcripts'][gene_id]
             if t['transcriptRank'] == 0
         )
     if selected_transcript:
         selected_main_transcript_id = next(
-            t['transcriptId'] for t in transcripts[selected_transcript['geneId']]
+            t['transcriptId'] for t in formatted_variant['transcripts'][selected_transcript['geneId']]
             if _is_matched_minimal_transcript(t, selected_transcript)
         )
     elif selected_gene_id:
-        selected_main_transcript_id = transcripts[selected_gene_id][0]['transcriptId']
+        selected_main_transcript_id = formatted_variant['transcripts'][selected_gene_id][0]['transcriptId']
     return {
         **formatted_variant,
         'mainTranscriptId': main_transcript_id,

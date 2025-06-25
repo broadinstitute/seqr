@@ -36,7 +36,7 @@ class AnnotationsQuerySet(QuerySet):
 
     @property
     def annotation_values(self):
-        return {
+        annotations = {
             'genomeVersion': Value(self.model.GENOME_VERSION),
             'liftedOverGenomeVersion': Value(self.model.LIFTED_OVER_GENOME_VERSION),
             **{field.db_column: F(field.name) for field in self.model._meta.local_fields if field.db_column and field.name != field.db_column},
@@ -52,12 +52,15 @@ class AnnotationsQuerySet(QuerySet):
                 ]]),
             ),
         }
+        if self.model.sorted_transcript_consequences.field.group_by_key:
+            annotations['transcripts'] = annotations.pop('sortedTranscriptConsequences')
+        return annotations
 
     @property
     def annotation_fields(self):
         return [
             field.name for field in self.model._meta.local_fields
-            if (field.db_column or field.name) not in self.annotation_values
+            if (field.db_column or field.name) not in self.annotation_values and field.name != self.TRANSCRIPT_CONSEQUENCE_FIELD
         ] + self.ENTRY_FIELDS
 
     @property
