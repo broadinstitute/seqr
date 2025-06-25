@@ -26,6 +26,14 @@ for variant in [MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3]:
             **variant['genotypes']['I000006_hg00733'], 'sampleId': 'HG00731', 'sampleType': 'WES', 'individualGuid': 'I000004_hg00731',
         }
     }
+    if variant['clinvar']:
+        variant['clinvar'].update({'assertions': None, 'conditions': None, 'submitters': None})
+    #  TODO handle UI change for seqr af/an removed
+    variant['populations'].update({
+        'seqr': {'ac': variant['populations']['seqr']['ac']},
+        'seqr_heteroplasmy': {'ac': variant['populations']['seqr_heteroplasmy']['ac']},
+    })
+MITO_VARIANT3['predictions']['haplogroup_defining'] = True # TODO update UI (previously was 'Y')
 GRCH37_VARIANT = {
     **deepcopy(HAIL_GRCH37_VARIANT),
     'key': 11,
@@ -36,9 +44,10 @@ GRCH37_VARIANT = {
 for genotype in GRCH37_VARIANT['genotypes'].values():
     genotype['sampleType'] = 'WES'
 GRCH37_VARIANT['predictions'].update({'fathmm': None, 'mut_pred': None, 'vest': None})
-for transcripts in GRCH37_VARIANT['transcripts'].values():
-    for transcript in transcripts:
-        transcript['loftee'] = {field: transcript.pop(field) for field in ['isLofNagnag', 'lofFilters']}
+for variant in [GRCH37_VARIANT, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3]:
+    for transcripts in variant['transcripts'].values():
+        for transcript in transcripts:
+            transcript['loftee'] = {field: transcript.pop(field) for field in ['isLofNagnag', 'lofFilters']}
 
 for variant in [VARIANT1, VARIANT2, VARIANT3, VARIANT4, PROJECT_2_VARIANT, GRCH37_VARIANT, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3]:
     # clickhouse uses fixed length decimals so values are rounded relative to hail backend
@@ -53,6 +62,8 @@ for variant in [VARIANT1, VARIANT2, VARIANT3, VARIANT4, PROJECT_2_VARIANT, GRCH3
             pop['af'] = round(pop['af'], 5)
         if 'filter_af' in pop:
             pop['filter_af'] = round(pop['filter_af'], 5)
+        if 'max_hl' in pop:
+            pop['max_hl'] = round(pop['max_hl'], 5)
     for transcripts in variant['transcripts'].values():
         for transcript in transcripts:
             if transcript.get('alphamissense', {}).get('pathogenicity'):

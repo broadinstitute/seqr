@@ -129,7 +129,7 @@ def get_clickhouse_cache_results(results, sort, family_guid):
 
 def format_clickhouse_results(results, genome_version, **kwargs):
     keys_with_transcripts = {
-        variant['key'] for result in results for variant in (result if isinstance(result, list) else [result])
+        variant['key'] for result in results for variant in (result if isinstance(result, list) else [result]) if not 'transcripts' in variant
     }
     transcripts_by_key = dict(
         TRANSCRIPTS_CLASS_MAP[genome_version].objects.filter(key__in=keys_with_transcripts).values_list('key', 'transcripts')

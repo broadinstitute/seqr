@@ -561,7 +561,7 @@
         [0, 0, 56419],
         [0, 0, 56419, 0],
         [0, 0, 195983],
-        [3, 0.000015, 195983, 0.20635]
+        [3, 0.00002, 195983, 0.20635]
       ],
       "sorted_transcript_consequences": [
         [
@@ -584,7 +584,7 @@
       "lifted_over_pos": 11597,
       "common_low_heteroplasmy": false,
       "mitomap_pathogenic": null,
-      "predictions": [0.578, null, 0.75, null, "N", 0, null],
+      "predictions": [0.58, null, 0.75, null, "N", 0, null],
       "populations": [
         [0, 0, 0],
         [0, 0, 0, 0],
@@ -608,7 +608,7 @@
       "ref": "T",
       "alt": "C",
       "variant_id": "M-14783-T-C",
-      "rsid": null,
+      "rsid": "rs193302982",
       "lifted_over_pos": 14783,
       "common_low_heteroplasmy": true,
       "mitomap_pathogenic": true,
@@ -616,7 +616,7 @@
       "populations": [
         [3118, 0.05535, 56336],
         [3, 0.00005, 56336, 1],
-        [9573, 0.048846, 195983],
+        [9573, 0.04885, 195983],
         [18, 0.00009, 195983, 0.96269]
       ],
       "sorted_transcript_consequences": [
