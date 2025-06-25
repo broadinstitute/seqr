@@ -28,7 +28,7 @@ defusedxml==0.7.1
     # via
     #   python3-openid
     #   social-auth-core
-django==4.2.22
+django==5.0.14
     # via
     #   -r requirements.in
     #   django-anymail
@@ -97,7 +97,7 @@ jmespath==1.0.1
     # via -r requirements.in
 jsonfield==3.1.0
     # via django-notifications-hq
-markdownify==0.11.6
+markdownify==0.14.1
     # via -r requirements.in
 oauthlib==3.2.2
     # via
@@ -109,7 +109,7 @@ packaging==24.0
     # via gunicorn
 pillow==10.3.0
     # via -r requirements.in
-protobuf==3.20.2
+protobuf==4.25.8
     # via
     #   google-api-core
     #   googleapis-common-protos
@@ -137,7 +137,7 @@ pytz==2022.7.1
     #   django-notifications-hq
 redis==4.5.4
     # via -r requirements.in
-requests==2.32.2
+requests==2.32.4
     # via
     #   -r requirements.in
     #   django-anymail
@@ -185,7 +185,7 @@ typing-extensions==4.12.2
     # via psycopg
 tzlocal==5.3.1
     # via clickhouse-driver
-urllib3==1.26.19
+urllib3==2.5.0
     # via
     #   elasticsearch
     #   requests
