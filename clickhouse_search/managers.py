@@ -36,21 +36,26 @@ class AnnotationsQuerySet(QuerySet):
 
     @property
     def annotation_values(self):
+        seqr_pops = []
+        offset = 0
+        for _, sub_fields in self.model.SEQR_POPULATIONS:
+            seqr_pops.append(TuplePlus(
+                Tuple(*[f'seqrPop__{j}' for j in range(offset, offset+len(sub_fields))]),
+                Tuple(*[f'seqrPop__{j}' for j in range(offset+len(sub_fields), offset+(len(sub_fields)*2))]),
+            ))
+            offset += len(sub_fields)*2
+
         annotations = {
             **{key: Value(value) for key, value in self.model.ANNOTATION_CONSTANTS.items()},
             **{field.db_column: F(field.name) for field in self.model._meta.local_fields if field.db_column and field.name != field.db_column},
-            'populations': TupleConcat(
-                F('populations'),
-                Tuple(*[TuplePlus(
-                    Tuple(*[f'seqrPop__{j}' for j in range(i, len(sub_fields)+i)]),
-                    Tuple(*[f'seqrPop__{j}' for j in range(len(sub_fields)+i, len(sub_fields)*2+i)]),
-                ) for i, (_, sub_fields) in enumerate(self.model.SEQR_POPULATIONS)]),
-                output_field=NamedTupleField([*self.model.POPULATION_FIELDS, *[
+            'populations': TupleConcat(F('populations'), Tuple(*seqr_pops), output_field=NamedTupleField([
+                *self.model.POPULATION_FIELDS, *[
                     (name, NamedTupleField([(field, models.UInt32Field()) for field, _ in sub_fields]))
                     for name, sub_fields in self.model.SEQR_POPULATIONS
-                ]]),
-            ),
+                ],
+            ])),
         }
+
         if self.model.sorted_transcript_consequences.field.group_by_key:
             annotations['transcripts'] = annotations.pop('sortedTranscriptConsequences')
         return annotations

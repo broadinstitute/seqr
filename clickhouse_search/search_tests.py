@@ -46,7 +46,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             LAYOUT(FLAT(MAX_ARRAY_SIZE 500000000))
             """, [os.environ.get('CLICKHOUSE_USER', 'clickhouse'), os.environ.get('CLICKHOUSE_PASSWORD', 'clickhouse_test')])
             cursor.execute("""
-            CREATE DICTIONARY IF NOT EXISTS "GRCh37/SNV_INDEL/gt_stats_dict"
+            CREATE OR REPLACE DICTIONARY "GRCh37/SNV_INDEL/gt_stats_dict"
             (
                 key UInt32,
                 ac_wes UInt32,
@@ -64,7 +64,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             LAYOUT(FLAT(MAX_ARRAY_SIZE 500000000))
             """, [os.environ.get('CLICKHOUSE_USER', 'clickhouse'), os.environ.get('CLICKHOUSE_PASSWORD', 'clickhouse_test')])
             cursor.execute("""
-            CREATE DICTIONARY IF NOT EXISTS "GRCh38/MITO/gt_stats_dict"
+            CREATE OR REPLACE DICTIONARY "GRCh38/MITO/gt_stats_dict"
             (
                 key UInt32,
                 ac_het_wes UInt32,
@@ -76,7 +76,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             SOURCE(CLICKHOUSE(
                 USER %s
                 PASSWORD %s
-                QUERY "SELECT * FROM VALUES ((6, 0, 0, 1, 0), (7, 0, 0, 1, 0), (8, 2, 1, 0, 1))"
+                QUERY "SELECT * FROM VALUES ((6, 0, 1, 0, 0), (7, 1, 0, 0, 0), (8, 0, 1, 2, 1))"
             ))
             LIFETIME(0)
             LAYOUT(FLAT(MAX_ARRAY_SIZE 500000000))
