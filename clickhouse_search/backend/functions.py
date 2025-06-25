@@ -10,6 +10,10 @@ class Array(Func):
     function = 'array'
 
 
+class ArrayConcat(Func):
+    function = 'arrayConcat'
+
+
 class ArrayDistinct(Func):
     function = 'arrayDistinct'
 
@@ -22,6 +26,11 @@ class ArrayJoin(Func):
     function = 'arrayJoin'
 
 
+class ArrayFold(Func):
+    function = 'arrayFold'
+    template = "%(function)s(acc, x -> %(fold_function)s, %(expressions)s, %(acc)s)"
+
+
 class ArrayMap(Func):
     function = 'arrayMap'
     template = "%(function)s(x -> %(mapped_expression)s, %(expressions)s)"
@@ -31,11 +40,18 @@ class ArraySort(Func):
     function = 'arraySort'
 
 
+class ArraySymmetricDifference(Func):
+    function = 'arraySymmetricDifference'
+
+
 class GroupArray(Aggregate):
     function = 'groupArray'
 
 class GroupArrayArray(Aggregate):
     function = 'groupArrayArray'
+
+class GroupArrayIntersect(Aggregate):
+    function = 'groupArrayIntersect'
 
 def _format_condition(filters):
     conditions = [
@@ -91,6 +107,17 @@ class GtStatsDictGet(Func):
     function = 'tuplePlus'
     template = '%(function)s(dictGet("GRCh38/SNV_INDEL/gt_stats_dict", (\'ac_wes\', \'hom_wes\'), %(expressions)s), dictGet("GRCh38/SNV_INDEL/gt_stats_dict", (\'ac_wgs\', \'hom_wgs\'), %(expressions)s))'
     output_field = NamedTupleField([('ac', UInt32Field()), ('hom', UInt32Field())])
+
+
+class If(Func):
+    function = 'if'
+    template = '%(function)s(%(condition)s, %(expressions)s)'
+
+
+class MapLookup(Func):
+    function = 'map'
+    template = "%(function)s(%(map_values)s)[%(expressions)s]"
+    arg_joiner = "]["
 
 
 class Tuple(Func):
