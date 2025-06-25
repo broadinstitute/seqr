@@ -239,7 +239,7 @@ def query_variants(search_model, sort=XPOS_SORT_KEY, skip_genotype_filter=False,
     loaded_results = previous_search_results.get('all_results') or []
     if len(loaded_results) >= end_index:
         results_page = backend_specific_call(
-            lambda results, genome_version: results, lambda results: results, format_clickhouse_results,
+            lambda results, genome_version: results, lambda results, genome_version: results, format_clickhouse_results,
         )(loaded_results[start_index:end_index], genome_version)
         return results_page, total_results
 
@@ -255,8 +255,8 @@ def query_variants(search_model, sort=XPOS_SORT_KEY, skip_genotype_filter=False,
         raise InvalidSearchException(f'Unable to load more than {MAX_VARIANTS} variants ({end_index} requested)')
 
     variants, total_results = _query_variants(
-        search_model, user, previous_search_results, sort=sort, page=page, num_results=num_results,
-        skip_genotype_filter=skip_genotype_filter, genome_version=genome_version)
+        search_model, user, previous_search_results, genome_version, sort=sort, page=page, num_results=num_results,
+        skip_genotype_filter=skip_genotype_filter)
 
     if load_all:
         _validate_export_variant_count(total_results)
@@ -264,12 +264,10 @@ def query_variants(search_model, sort=XPOS_SORT_KEY, skip_genotype_filter=False,
     return variants, total_results
 
 
-def _query_variants(search_model, user, previous_search_results, sort=None, num_results=100, genome_version=None, **kwargs):
+def _query_variants(search_model, user, previous_search_results, genome_version, sort=None, num_results=100, **kwargs):
     search = deepcopy(search_model.variant_search.search)
 
     families = search_model.families.all()
-    if not genome_version:
-        genome_version = _get_search_genome_version(families)
     _validate_sort(sort, families)
 
     locus = search.pop('locus', None) or {}
@@ -353,7 +351,8 @@ def get_variant_query_gene_counts(search_model, user):
     if previously_loaded_results is not None:
         return previously_loaded_results
 
-    gene_counts, _ = _query_variants(search_model, user, previous_search_results, gene_agg=True)
+    genome_version = _get_search_genome_version(search_model.families.all())
+    gene_counts, _ = _query_variants(search_model, user, previous_search_results, genome_version, gene_agg=True)
     return gene_counts
 
 
