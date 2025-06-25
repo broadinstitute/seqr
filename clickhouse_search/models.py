@@ -73,6 +73,9 @@ class BaseAnnotations(models.ClickhouseModel):
     GENOME_VERSION = GENOME_VERSION_GRCh38
     LIFTED_OVER_GENOME_VERSION = GENOME_VERSION_GRCh37
     CHROMOSOME_CHOICES = [(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES)]
+    SEQR_POPULATIONS = [
+        ('seqr', [('ac', 'ac'), ('hom', 'hom')]),
+    ]
 
     key = models.UInt32Field(primary_key=True)
     xpos = models.UInt64Field()
@@ -305,6 +308,10 @@ class BaseAnnotationsMito(BaseAnnotationsMitoSnvIndel):
         ('mut_taster', models.Enum8Field(null=True, blank=True, return_int=False, choices=BaseAnnotationsMitoSnvIndel.MUTATION_TASTER_PREDICTIONS)),
         ('sift', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
         ('mlc', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+    ]
+    SEQR_POPULATIONS = [
+        ('seqr', [('ac', 'ac_hom')]),
+        ('seqr_heteroplasmy', [('ac', 'ac_het')]),
     ]
 
     common_low_heteroplasmy = models.BoolField(db_column='commonLowHeteroplasmy', null=True, blank=True)

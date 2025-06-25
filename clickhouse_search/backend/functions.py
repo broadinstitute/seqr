@@ -1,10 +1,9 @@
 from clickhouse_backend.models.fields.array import ArrayField, ArrayLookup
-from clickhouse_backend.models import UInt32Field
 from django.db.models import Func, Subquery, lookups, BooleanField, Aggregate
 from django.db.models.sql.datastructures import BaseTable, Join
 
 
-from clickhouse_search.backend.fields import NamedTupleField, NestedField
+from clickhouse_search.backend.fields import NestedField
 
 class Array(Func):
     function = 'array'
@@ -103,10 +102,9 @@ class ArrayNotEmptyTransform(lookups.Transform):
     output_field = BooleanField()
 
 
-class GtStatsDictGet(Func):
-    function = 'tuplePlus'
-    template = '%(function)s(dictGet("%(table_base)s/gt_stats_dict", (\'ac_wes\', \'hom_wes\'), %(expressions)s), dictGet("GRCh38/SNV_INDEL/gt_stats_dict", (\'ac_wgs\', \'hom_wgs\'), %(expressions)s))'
-    output_field = NamedTupleField([('ac', UInt32Field()), ('hom', UInt32Field())])
+class DictGet(Func):
+    function = 'dictGet'
+    template = '%(function)s("%(dict_name)s", (%(fields)s), %(expressions)s)'
 
 
 class If(Func):
@@ -126,6 +124,10 @@ class Tuple(Func):
 
 class TupleConcat(Func):
     function = 'tupleConcat'
+
+
+class TuplePlus(Func):
+    function = 'tuplePlus'
 
 
 class SubqueryTable(BaseTable):

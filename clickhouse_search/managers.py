@@ -9,7 +9,7 @@ from django.db.models.sql.constants import INNER
 from clickhouse_search.backend.fields import NestedField, NamedTupleField
 from clickhouse_search.backend.functions import Array, ArrayConcat, ArrayDistinct, ArrayFilter, ArrayFold, \
     ArrayIntersect, ArrayJoin, ArrayMap, ArraySort, ArraySymmetricDifference, CrossJoin, GroupArray, GroupArrayArray, \
-    GroupArrayIntersect, GtStatsDictGet, If, MapLookup, SubqueryJoin, SubqueryTable, Tuple, TupleConcat
+    GroupArrayIntersect, DictGet, If, MapLookup, SubqueryJoin, SubqueryTable, Tuple, TupleConcat, TuplePlus
 from seqr.models import Sample
 from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFECTED, UNAFFECTED, MALE_SEXES, \
     X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, SCREEN_KEY, UTR_ANNOTATOR_KEY, \
@@ -41,8 +41,15 @@ class AnnotationsQuerySet(QuerySet):
             'liftedOverGenomeVersion': Value(self.model.LIFTED_OVER_GENOME_VERSION),
             **{field.db_column: F(field.name) for field in self.model._meta.local_fields if field.db_column and field.name != field.db_column},
             'populations': TupleConcat(
-                F('populations'), Tuple('seqrPop'),
-                output_field=NamedTupleField([*self.model.POPULATION_FIELDS, ('seqr', GtStatsDictGet.output_field)]),
+                F('populations'),
+                *[Tuple(TuplePlus(
+                    Tuple(*[f'seqrPop__{j}' for j in range(i, len(sub_fields)+i)]),
+                    Tuple(*[f'seqrPop__{j}' for j in range(len(sub_fields)+i, len(sub_fields)*2+i)]),
+                )) for i, (_, sub_fields) in enumerate(self.model.SEQR_POPULATIONS)],
+                output_field=NamedTupleField([*self.model.POPULATION_FIELDS, *[
+                    (name, NamedTupleField([(field, models.UInt32Field()) for field, _ in sub_fields]))
+                    for name, sub_fields in self.model.SEQR_POPULATIONS
+                ]]),
             ),
         }
 
@@ -435,7 +442,7 @@ class EntriesManager(Manager):
         })
 
     def search(self, sample_data, parsed_locus=None, freqs=None,  **kwargs):
-        entries = self.annotate(seqrPop=GtStatsDictGet('key', table_base=self.model._meta.db_table.rsplit('/', 1)[0]))
+        entries = self.annotate(seqrPop=self._seqr_pop_expression())
         entries = self._filter_intervals(entries, **(parsed_locus or {}))
 
         if (freqs or {}).get('callset'):
@@ -446,6 +453,18 @@ class EntriesManager(Manager):
             entries = entries.filter(is_gnomad_gt_5_percent=False)
 
         return self._search_call_data(entries, sample_data, **kwargs)
+
+    def _seqr_pop_expression(self):
+        seqr_pop_fields = []
+        for _, sub_fields in self.model.key.field.related_model.SEQR_POPULATIONS:
+            seqr_pop_fields += [f"'{field}_wes'" for _, field in sub_fields]
+            seqr_pop_fields += [f"'{field}_wgs'" for _, field in sub_fields]
+        return DictGet(
+            'key',
+            dict_name=f"{self.model._meta.db_table.rsplit('/', 1)[0]}/gt_stats_dict",
+            fields=', '.join(seqr_pop_fields),
+            output_field=models.TupleField([models.UInt32Field() for _ in seqr_pop_fields])
+        )
 
     def _search_call_data(self, entries, sample_data, inheritance_mode=None, inheritance_filter=None, qualityFilter=None, pathogenicity=None, annotate_carriers=False, **kwargs):
        project_guids = {s['project_guid'] for s in sample_data}
