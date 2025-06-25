@@ -133,6 +133,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
     def _set_grch37_search(self):
         Project.objects.filter(id=1).update(genome_version='37')
         Sample.objects.filter(sample_id='HG00732').update(is_active=False)
+        Sample.objects.filter(dataset_type=Sample.DATASET_TYPE_MITO_CALLS).update(is_active=False)
         self._set_single_family_search()
 
     def test_single_family_search(self):

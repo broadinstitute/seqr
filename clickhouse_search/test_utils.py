@@ -155,7 +155,7 @@ SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4 = {**VARIANT4, 'selectedMainTranscriptI
 SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3 = {**VARIANT3, 'selectedMainTranscriptId': 'ENST00000497611'}
 SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2 = {**VARIANT2, 'selectedMainTranscriptId': 'ENST00000459627'}
 
-CACHED_CONSEQUENCES_BY_KEY = {2: [{
+CACHED_CONSEQUENCES_BY_KEY = {1: [], 2: [{
     'alphamissensePathogenicity': 0.99779,
     'canonical': 1,
     'consequenceTerms': ['missense_variant'],
@@ -256,6 +256,7 @@ CACHED_CONSEQUENCES_BY_KEY = {2: [{
     'fiveutrConsequence': None,
     'geneId': 'ENSG00000097046',
 }],
+5: [],
 11: [{
     'canonical': 1,
     'consequenceTerms': ['missense_variant'],
@@ -268,10 +269,11 @@ CACHED_CONSEQUENCES_BY_KEY = {2: [{
 }
 
 def format_cached_variant(variant):
-    return {
-        **{k: v for k, v in variant.items() if k not in ['mainTranscriptId', 'selectedMainTranscriptId', 'transcripts']},
-        'sortedTranscriptConsequences': CACHED_CONSEQUENCES_BY_KEY.get(variant['key'], []),
-    }
+    formatted_variant = {k: v for k, v in variant.items() if k not in ['mainTranscriptId', 'selectedMainTranscriptId']}
+    if variant['key'] in CACHED_CONSEQUENCES_BY_KEY:
+        formatted_variant['sortedTranscriptConsequences'] = CACHED_CONSEQUENCES_BY_KEY[variant['key']]
+        formatted_variant.pop('transcripts')
+    return formatted_variant
 
 GENE_COUNTS = {
     'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
