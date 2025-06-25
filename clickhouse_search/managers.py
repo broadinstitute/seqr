@@ -53,6 +53,14 @@ class AnnotationsQuerySet(QuerySet):
             if (field.db_column or field.name) not in self.annotation_values
         ] + self.ENTRY_FIELDS
 
+    @property
+    def prediction_fields(self):
+        return set(dict(self.model.PREDICTION_FIELDS).keys())
+
+    @property
+    def transcript_fields(self):
+        return set(dict(self.model.SORTED_TRANSCRIPT_CONSQUENCES_FIELDS).keys())
+
 
     def subquery_join(self, subquery, join_key='key'):
         #  Add key to intermediate select if not already present
@@ -203,28 +211,25 @@ class AnnotationsQuerySet(QuerySet):
         return results
 
     def _filter_in_silico(self, results, in_silico=None, **kwargs):
-        allowed_scores = {score for score, _ in self.model.PREDICTION_FIELDS}
-        in_silico_filters = {
-            score: value for score, value in (in_silico or {}).items() if score in allowed_scores and value
-        }
-        if not in_silico_filters:
-            return results
-
         in_silico_q = None
-        for score, value in in_silico_filters.items():
+        for score, value in (in_silico or {}).items():
             score_q = self._get_in_silico_score_q(score, value)
             if in_silico_q is None:
                 in_silico_q = score_q
-            else:
+            elif score_q:
                 in_silico_q |= score_q
 
-        if not in_silico.get('requireScore', False):
-            in_silico_q |= Q(**{f'predictions__{score}__isnull': True for score in in_silico_filters.keys()})
+        if in_silico_q and not in_silico.get('requireScore', False):
+            in_silico_q |= Q(**{f'predictions__{score}__isnull': True for score in in_silico.keys() if score in self.prediction_fields})
 
-        return results.filter(in_silico_q)
+        if in_silico_q:
+            results = results.filter(in_silico_q)
 
-    @staticmethod
-    def _get_in_silico_score_q(score, value):
+        return results
+
+    def _get_in_silico_score_q(self, score, value):
+        if not (score in self.prediction_fields and value):
+            return None
         score_column = f'predictions__{score}'
         try:
             return Q(**{f'{score_column}__gte': float(value)})
@@ -277,35 +282,37 @@ class AnnotationsQuerySet(QuerySet):
 
         return results.filter(filter_q)
 
-    @property
-    def transcript_fields(self):
-        return set(dict(self.model.SORTED_TRANSCRIPT_CONSQUENCES_FIELDS).keys())
-
     def _parse_annotation_filters(self, annotations):
         filter_qs = []
+        filters_by_field = {}
         allowed_consequences = []
-        transcript_filters = []
-        # TODO clean up
+        transcript_field_filters = {}
         for field, value in annotations.items():
             if field == UTR_ANNOTATOR_KEY:
-                if 'fiveutrConsequence' in self.transcript_fields:
-                    transcript_filters.append({'fiveutrConsequence': (value, 'hasAny({value}, [{field}])')})
+                transcript_field_filters['fiveutrConsequence'] = (value, 'hasAny({value}, [{field}])')
             elif field == EXTENDED_SPLICE_KEY:
-                if EXTENDED_SPLICE_REGION_CONSEQUENCE in value and 'extendedIntronicSpliceRegionVariant' in self.transcript_fields:
-                    transcript_filters.append({'extendedIntronicSpliceRegionVariant': (1, '{field} = {value}')})
+                if EXTENDED_SPLICE_REGION_CONSEQUENCE in value:
+                    transcript_field_filters['extendedIntronicSpliceRegionVariant'] = (1, '{field} = {value}')
             elif field in [MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY]:
-                consequence_field = f'sorted_{field}_consequences'
-                if hasattr(self.model, consequence_field):
-                    filter_qs.append(Q(**{f'sorted_{field}_consequences__array_exists': {
-                        'consequenceTerms': (value, 'hasAny({value}, {field})'),
-                    }}))
+                filters_by_field[f'sorted_{field}_consequences'] = ('{field}__array_exists', {
+                    'consequenceTerms': (value, 'hasAny({value}, {field})'),
+                })
             elif field == SPLICE_AI_FIELD:
-                filter_qs.append(self._get_in_silico_score_q(SPLICE_AI_FIELD, value))
+                splice_ai_q = self._get_in_silico_score_q(SPLICE_AI_FIELD, value)
+                if splice_ai_q:
+                    filter_qs.append(splice_ai_q)
             elif field == SCREEN_KEY:
-                if hasattr(self.model, 'screen_region_type'):
-                    filter_qs.append(Q(screen_region_type__in=value))
+                filters_by_field['screen_region_type'] = ('{field}__in', value)
             elif field not in SV_ANNOTATION_TYPES:
                 allowed_consequences += value
+
+        filter_qs += [
+            Q(**{lookup_template.format(field=field): value})
+            for field, (lookup_template, value) in filters_by_field.items() if hasattr(self.model, field)
+        ]
+        transcript_filters = [
+            {field: value} for field, value in transcript_field_filters.items() if field in self.transcript_fields
+        ]
 
         non_canonical_consequences = [c for c in allowed_consequences if not c.endswith('__canonical')]
         if non_canonical_consequences:
@@ -314,7 +321,7 @@ class AnnotationsQuerySet(QuerySet):
         canonical_consequences = [
             c.replace('__canonical', '') for c in allowed_consequences if c.endswith('__canonical')
         ]
-        if canonical_consequences:
+        if canonical_consequences and 'canonical' in self.transcript_fields:
             transcript_filters.append(
                 self._consequence_term_filter(canonical_consequences, canonical=(0, '{field} > {value}')),
             )
