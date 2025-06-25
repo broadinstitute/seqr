@@ -542,7 +542,162 @@
         ["HG00731", 2, 48, 1, 16]
       ]
     }
-},{
+}, {
+    "model": "clickhouse_search.annotationsmito",
+    "pk": 6,
+    "fields": {
+      "key": 6,
+      "xpos": 25000004429,
+      "pos": 4429,
+      "ref": "G",
+      "alt": "A",
+      "variant_id": "M-4429-G-A",
+      "rsid": "rs1603219456",
+      "lifted_over_pos": 4429,
+      "common_low_heteroplasmy": false,
+      "mitomap_pathogenic": null,
+      "predictions": [null, null, 0.05, "likely_pathogenic", null, null, 3.38874],
+      "populations": [
+        [0, 0, 56419],
+        [0, 0, 56419, 0],
+        [0, 0, 195983],
+        [3, 0.000015, 195983, 0.20635]
+      ],
+      "sorted_transcript_consequences": [
+        [
+          null, "Mt_tRNA", 1, null, ["non_coding_transcript_exon_variant"], "ENSG00000210112", "ENST00000387377.1:n.28G>A",
+          null, [null, []], "non_coding_transcript_exon_variant", "ENST00000387377", 0
+        ]
+      ]
+    }
+}, {
+    "model": "clickhouse_search.annotationsmito",
+    "pk": 7,
+    "fields": {
+      "key": 7,
+      "xpos": 25000011597,
+      "pos": 11597,
+      "ref": "A",
+      "alt": "G",
+      "variant_id": "M-11597-A-G",
+      "rsid": null,
+      "lifted_over_pos": 11597,
+      "common_low_heteroplasmy": false,
+      "mitomap_pathogenic": null,
+      "predictions": [0.578, null, 0.75, null, "N", 0, null],
+      "populations": [
+        [0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0],
+        [0, 0, 0, 0]
+      ],
+      "sorted_transcript_consequences": [
+        [
+          "T/A", "protein_coding", 1, "Aca/Gca", ["missense_variant"], "ENSG00000198886", "ENST00000361381.2:c.838A>G",
+          "ENSP00000354961.2:p.Thr280Ala", [null, []], "missense_variant", "ENST00000361381", 0
+        ]
+      ]
+    }
+}, {
+    "model": "clickhouse_search.annotationsmito",
+    "pk": 8,
+    "fields": {
+      "key": 8,
+      "xpos": 25000014783,
+      "pos": 14783,
+      "ref": "T",
+      "alt": "C",
+      "variant_id": "M-14783-T-C",
+      "rsid": null,
+      "lifted_over_pos": 14783,
+      "common_low_heteroplasmy": true,
+      "mitomap_pathogenic": true,
+      "predictions": [null, true, null, null, null, null, 0.7514],
+      "populations": [
+        [3118, 0.05535, 56336],
+        [3, 0.00005, 56336, 1],
+        [9573, 0.048846, 195983],
+        [18, 0.00009, 195983, 0.96269]
+      ],
+      "sorted_transcript_consequences": [
+        [
+          "L", "protein_coding", 1, "Tta/Cta", ["synonymous_variant"], "ENSG00000198727", "ENST00000361789.2:c.37T>C",
+          "ENSP00000354554.2:p.Leu13=", [null, []], "synonymous_variant", "ENST00000361789", 0
+        ]
+      ]
+    }
+}, {
+    "model": "clickhouse_search.clinvarmito",
+    "pk": 6,
+    "fields": {
+      "key": 6,
+      "allele_id": 677748,
+      "conflicting_pathogenicities": [],
+      "gold_stars": 1,
+      "submitters": [],
+      "conditions": [],
+      "assertions": [],
+      "pathogenicity": "Uncertain_significance"
+    }
+}, {
+    "model": "clickhouse_search.clinvarmito",
+    "pk": 8,
+    "fields": {
+      "key": 8,
+      "allele_id": 150280,
+      "conflicting_pathogenicities": [],
+      "gold_stars": 0,
+      "submitters": [],
+      "conditions": [],
+      "assertions": [],
+      "pathogenicity": "Likely_pathogenic"
+    }
+}, {
+    "model": "clickhouse_search.entriesmito",
+    "pk": 21,
+    "fields": {
+      "key": 6,
+      "project_guid": "R0001_1kg",
+      "family_guid": "F000002_2",
+      "sample_type": "WES",
+      "xpos": 25000004429,
+      "filters": [],
+      "sign": 1,
+      "calls": [
+        ["HG00731", 1, 3955, 0.083, 230, 0]
+      ]
+    }
+}, {
+    "model": "clickhouse_search.entriesmito",
+    "pk": 22,
+    "fields": {
+      "key": 7,
+      "project_guid": "R0001_1kg",
+      "family_guid": "F000002_2",
+      "sample_type": "WES",
+      "xpos": 25000011597,
+      "filters": [],
+      "sign": 1,
+      "calls": [
+        ["HG00731", 1, 3845, 0.029, 247, 0.015]
+      ]
+    }
+}, {
+    "model": "clickhouse_search.entriesmito",
+    "pk": 23,
+    "fields": {
+      "key": 8,
+      "project_guid": "R0001_1kg",
+      "family_guid": "F000002_2",
+      "sample_type": "WES",
+      "xpos": 25000014783,
+      "filters": ["artifact_prone_site"],
+      "sign": 1,
+      "calls": [
+        ["HG00731", 2, 3943, 1, 214, 0]
+      ]
+    }
+}, {
   "model": "reference_data.omim",
   "pk": 100,
   "fields": {

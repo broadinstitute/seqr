@@ -7,6 +7,9 @@ from hail_search.test_utils import (
     VARIANT4 as HAIL_VARIANT4,
     PROJECT_2_VARIANT as HAIL_PROJECT_2_VARIANT,
     GRCH37_VARIANT as HAIL_GRCH37_VARIANT,
+    MITO_VARIANT1 as HAIL_MITO_VARIANT1,
+    MITO_VARIANT2 as HAIL_MITO_VARIANT2,
+    MITO_VARIANT3 as HAIL_MITO_VARIANT3,
 )
 
 VARIANT1 = {**deepcopy(HAIL_VARIANT1), 'key': 1}
@@ -14,6 +17,15 @@ VARIANT2 = {**deepcopy(HAIL_VARIANT2), 'key': 2}
 VARIANT3 = {**deepcopy(HAIL_VARIANT3), 'key': 3}
 VARIANT4 = {**deepcopy(HAIL_VARIANT4), 'key': 4}
 PROJECT_2_VARIANT = {**deepcopy(HAIL_PROJECT_2_VARIANT), 'key': 5}
+MITO_VARIANT1 = {**deepcopy(HAIL_MITO_VARIANT1), 'key': 6}
+MITO_VARIANT2 = {**deepcopy(HAIL_MITO_VARIANT2), 'key': 7}
+MITO_VARIANT3 = {**deepcopy(HAIL_MITO_VARIANT3), 'key': 8}
+for variant in [MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3]:
+    variant['genotypes'] = {
+        'I000004_hg00731': {
+            **variant['genotypes']['I000006_hg00733'], 'sampleId': 'HG00731', 'sampleType': 'WES', 'individualGuid': 'I000004_hg00731',
+        }
+    }
 GRCH37_VARIANT = {
     **deepcopy(HAIL_GRCH37_VARIANT),
     'key': 11,
@@ -28,10 +40,11 @@ for transcripts in GRCH37_VARIANT['transcripts'].values():
     for transcript in transcripts:
         transcript['loftee'] = {field: transcript.pop(field) for field in ['isLofNagnag', 'lofFilters']}
 
-for variant in [VARIANT1, VARIANT2, VARIANT3, VARIANT4, PROJECT_2_VARIANT, GRCH37_VARIANT]:
+for variant in [VARIANT1, VARIANT2, VARIANT3, VARIANT4, PROJECT_2_VARIANT, GRCH37_VARIANT, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3]:
     # clickhouse uses fixed length decimals so values are rounded relative to hail backend
     for genotype in variant['genotypes'].values():
-        genotype['ab'] = round(genotype['ab'], 5)
+        if 'ab' in genotype:
+            genotype['ab'] = round(genotype['ab'], 5)
     for pred, pred_val in variant['predictions'].items():
         if isinstance(pred_val, float):
             variant['predictions'][pred] = round(pred_val, 5)
