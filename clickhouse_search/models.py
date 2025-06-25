@@ -7,6 +7,7 @@ from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocks
 from clickhouse_search.backend.fields import Enum8Field, NestedField, UInt64FieldDeltaCodecField, NamedTupleField
 from clickhouse_search.managers import EntriesManager, AnnotationsQuerySet
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
+from seqr.models import Sample
 from seqr.utils.search.constants import SPLICE_AI_FIELD
 from seqr.utils.xpos_utils import CHROMOSOMES
 from settings import CLICKHOUSE_IN_MEMORY_DIR, CLICKHOUSE_DATA_DIR
@@ -796,12 +797,18 @@ class GtStatsSv(models.ClickhouseModel):
 
 
 ENTRY_CLASS_MAP = {
-    GENOME_VERSION_GRCh37: EntriesGRCh37SnvIndel,
-    GENOME_VERSION_GRCh38: EntriesSnvIndel,
+    GENOME_VERSION_GRCh37: {Sample.DATASET_TYPE_VARIANT_CALLS: EntriesGRCh37SnvIndel},
+    GENOME_VERSION_GRCh38: {
+        Sample.DATASET_TYPE_VARIANT_CALLS: EntriesSnvIndel,
+        Sample.DATASET_TYPE_MITO_CALLS: EntriesMito,
+    },
 }
 ANNOTATIONS_CLASS_MAP = {
-    GENOME_VERSION_GRCh37: AnnotationsGRCh37SnvIndel,
-    GENOME_VERSION_GRCh38: AnnotationsSnvIndel,
+    GENOME_VERSION_GRCh37: {Sample.DATASET_TYPE_VARIANT_CALLS: AnnotationsGRCh37SnvIndel},
+    GENOME_VERSION_GRCh38: {
+        Sample.DATASET_TYPE_VARIANT_CALLS: AnnotationsSnvIndel,
+        Sample.DATASET_TYPE_MITO_CALLS: AnnotationsMito,
+    },
 }
 TRANSCRIPTS_CLASS_MAP = {
     GENOME_VERSION_GRCh37: TranscriptsGRCh37SnvIndel,

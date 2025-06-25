@@ -1,4 +1,5 @@
 from clickhouse_backend.models import ArrayField, StringField
+from collections import defaultdict
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.db.models import F, Min
 from django.db.models.functions import JSONObject
@@ -7,8 +8,8 @@ from clickhouse_search.backend.fields import NamedTupleField
 from clickhouse_search.backend.functions import Array, ArrayFilter, ArrayIntersect, ArraySort, Tuple
 from clickhouse_search.models import ENTRY_CLASS_MAP, ANNOTATIONS_CLASS_MAP, TRANSCRIPTS_CLASS_MAP, BaseClinvar, \
     BaseAnnotationsMitoSnvIndel, BaseAnnotationsGRCh37SnvIndel
-from reference_data.models import GeneConstraint, Omim, GENOME_VERSION_GRCh38
-from seqr.models import PhenotypePrioritization, Sample
+from reference_data.models import GeneConstraint, Omim
+from seqr.models import PhenotypePrioritization
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.search.constants import MAX_VARIANTS, XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, \
     PRIORITIZED_GENE_SORT, COMPOUND_HET, RECESSIVE
@@ -27,22 +28,25 @@ def clickhouse_backend_enabled():
 
 
 def get_clickhouse_variants(samples, search, user, previous_search_results, genome_version,page=1, num_results=100, sort=None, **kwargs):
-    entry_cls = ENTRY_CLASS_MAP[genome_version]
-    annotations_cls = ANNOTATIONS_CLASS_MAP[genome_version]
-
-    sample_data = _get_sample_data(samples)
-    logger.info(f'Loading {Sample.DATASET_TYPE_VARIANT_CALLS} data for {len(sample_data)} families', user)
-
+    sample_data_by_dataset_type = _get_sample_data(samples)
     results = []
+    family_guid = None
     inheritance_mode = search.get('inheritance_mode')
-    if inheritance_mode != COMPOUND_HET:
-        result_q = _get_search_results_queryset(entry_cls, annotations_cls, search, sample_data)
-        results += list(result_q[:MAX_VARIANTS + 1])
-    if inheritance_mode in {RECESSIVE, COMPOUND_HET}:
-        result_q = _get_comp_het_results_queryset(entry_cls, annotations_cls, search, sample_data)
-        results += [list(result[1:]) for result in result_q[:MAX_VARIANTS + 1]]
+    for dataset_type, sample_data in sample_data_by_dataset_type.items():
+        logger.info(f'Loading {dataset_type} data for {len(sample_data)} families', user)
 
-    cache_results = get_clickhouse_cache_results(results, sort, sample_data[0]['family_guid'])
+        entry_cls = ENTRY_CLASS_MAP[genome_version][dataset_type]
+        annotations_cls = ANNOTATIONS_CLASS_MAP[genome_version][dataset_type]
+        family_guid = sample_data[0]['family_guid']
+
+        if inheritance_mode != COMPOUND_HET:
+            result_q = _get_search_results_queryset(entry_cls, annotations_cls, search, sample_data)
+            results += list(result_q[:MAX_VARIANTS + 1])
+        if inheritance_mode in {RECESSIVE, COMPOUND_HET}:
+            result_q = _get_comp_het_results_queryset(entry_cls, annotations_cls, search, sample_data)
+            results += [list(result[1:]) for result in result_q[:MAX_VARIANTS + 1]]
+
+    cache_results = get_clickhouse_cache_results(results, sort, family_guid)
     previous_search_results.update(cache_results)
 
     logger.info(f'Total results: {cache_results["total_results"]}', user)
@@ -181,17 +185,16 @@ def _is_matched_minimal_transcript(transcript, minimal_transcript):
 
 
 def _get_sample_data(samples):
-    samples = samples.filter(dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
-    if not samples:
-        raise NotImplementedError('Clickhouse search not implemented for other data types')
-
     sample_data = samples.values(
-        family_guid=F('individual__family__guid'), project_guid=F('individual__family__project__guid'),
+        'dataset_type', family_guid=F('individual__family__guid'), project_guid=F('individual__family__project__guid'),
     ).annotate(
         samples=ArrayAgg(JSONObject(affected='individual__affected', sex='individual__sex', sample_id='sample_id', sample_type='sample_type', individual_guid=F('individual__guid'))),
         sample_types=ArrayAgg('sample_type', distinct=True),
     )
-    return [{**data, 'samples': _group_by_sample_type(data['samples'])} for data in sample_data]
+    samples_by_dataset_type = defaultdict(list)
+    for data in sample_data:
+        samples_by_dataset_type[data['dataset_type']].append({**data, 'samples': _group_by_sample_type(data['samples'])})
+    return samples_by_dataset_type
 
 
 def _group_by_sample_type(samples):
