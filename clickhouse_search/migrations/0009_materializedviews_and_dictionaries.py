@@ -95,7 +95,7 @@ class Migration(migrations.Migration):
                     "sumIf(hom_samples, sample_type = 'WGS') AS hom_wgs",
                 ])
             ),
-            params={'excluded_project_guids', EXCLUDED_PROJECT_GUIDS},
+            params={'excluded_project_guids': EXCLUDED_PROJECT_GUIDS},
             hints={'clickhouse': True},
         ),
         migrations.RunSQL(
@@ -137,7 +137,7 @@ class Migration(migrations.Migration):
                     "sumIf(hom_samples, sample_type = 'WGS') AS hom_wgs",
                 ])
             ),
-            params={'excluded_project_guids', EXCLUDED_PROJECT_GUIDS},
+            params={'excluded_project_guids': EXCLUDED_PROJECT_GUIDS},
             hints={'clickhouse': True},
         ),
         migrations.RunSQL(
@@ -179,7 +179,7 @@ class Migration(migrations.Migration):
                     "sumIf(hom_samples, sample_type = 'WGS') AS ac_hom_wgs",
                 ])
             ),
-            params={'excluded_project_guids', EXCLUDED_PROJECT_GUIDS},
+            params={'excluded_project_guids': EXCLUDED_PROJECT_GUIDS},
             hints={'clickhouse': True},
         ),
         migrations.RunSQL(
@@ -218,7 +218,7 @@ class Migration(migrations.Migration):
                     'sum(hom_samples) AS hom_wgs',
                 ]),
             ),
-            params={'excluded_project_guids', EXCLUDED_PROJECT_GUIDS},
+            params={'excluded_project_guids': EXCLUDED_PROJECT_GUIDS},
             hints={'clickhouse': True},
         ),
         migrations.RunSQL(
