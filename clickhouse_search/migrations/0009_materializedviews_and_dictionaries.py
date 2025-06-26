@@ -9,6 +9,19 @@ from settings import DATABASES
 CLICKHOUSE_USER = os.environ.get('CLICKHOUSE_USER', 'clickhouse')
 CLICKHOUSE_PASSWORD = os.environ.get('CLICKHOUSE_PASSWORD', 'clickhouse_test')
 
+EXCLUDED_PROJECT_GUIDS = [
+    'R0555_seqr_demo',
+    'R0607_gregor_training_project_',
+    'R0608_gregor_training_project_',
+    'R0801_gregor_training_project_',
+    'R0811_gregor_training_project_',
+    'R0812_gregor_training_project_',
+    'R0813_gregor_training_project_',
+    'R0814_gregor_training_project_',
+    'R0815_gregor_training_project_',
+    'R0816_gregor_training_project_',
+]
+
 ENTRIES_TO_PROJECT_GT_STATS = Template("""
 CREATE MATERIALIZED VIEW `$reference_genome/$dataset_type/entries_to_project_gt_stats_mv`
 TO `$reference_genome/$dataset_type/project_gt_stats`
@@ -28,6 +41,7 @@ AS SELECT
     key,
     $columns
 FROM `$reference_genome/$dataset_type/project_gt_stats`
+WHERE project_guid NOT IN %(excluded_project_guids)s
 GROUP BY key
 """)
 
@@ -81,6 +95,7 @@ class Migration(migrations.Migration):
                     "sumIf(hom_samples, sample_type = 'WGS') AS hom_wgs",
                 ])
             ),
+            params={'excluded_project_guids', EXCLUDED_PROJECT_GUIDS},
             hints={'clickhouse': True},
         ),
         migrations.RunSQL(
@@ -122,6 +137,7 @@ class Migration(migrations.Migration):
                     "sumIf(hom_samples, sample_type = 'WGS') AS hom_wgs",
                 ])
             ),
+            params={'excluded_project_guids', EXCLUDED_PROJECT_GUIDS},
             hints={'clickhouse': True},
         ),
         migrations.RunSQL(
@@ -163,6 +179,7 @@ class Migration(migrations.Migration):
                     "sumIf(hom_samples, sample_type = 'WGS') AS ac_hom_wgs",
                 ])
             ),
+            params={'excluded_project_guids', EXCLUDED_PROJECT_GUIDS},
             hints={'clickhouse': True},
         ),
         migrations.RunSQL(
@@ -201,6 +218,7 @@ class Migration(migrations.Migration):
                     'sum(hom_samples) AS hom_wgs',
                 ]),
             ),
+            params={'excluded_project_guids', EXCLUDED_PROJECT_GUIDS},
             hints={'clickhouse': True},
         ),
         migrations.RunSQL(
