@@ -250,6 +250,9 @@ class AnnotationsQuerySet(QuerySet):
 
         if in_silico_q:
             results = results.filter(in_silico_q)
+        elif any(val for val in (in_silico or {}).values()) and in_silico.get('requireScore'):
+            #  In silico filters restrict search to other dataset types
+            results = results.none()
 
         return results
 

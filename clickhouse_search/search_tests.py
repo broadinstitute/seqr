@@ -1061,6 +1061,10 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
            [VARIANT4, MITO_VARIANT2], in_silico=in_silico,
         )
 
+        self._assert_expected_search(
+            [VARIANT2, MULTI_FAMILY_VARIANT], in_silico={'gnomad_noncoding': 0.5, 'requireScore': True},
+        )
+
 #         sv_in_silico = {'strvctvre': 0.1, 'requireScore': True}
 #         self._assert_expected_search(
 #             [GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4], omit_data_type='SNV_INDEL', in_silico=sv_in_silico,
