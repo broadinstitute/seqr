@@ -392,9 +392,7 @@ const Frequencies = React.memo(({ variant }) => {
   datasetType = svType ? DATASET_TYPE_SV_CALLS : datasetType
   const seqrAcSection = {
     name: 'seqr Global ACs',
-    details: (!isMito && populations[SEQR_POP.field]) ? [
-      <GlobalAcPopup datasetType={datasetType} />,
-    ].filter(s => s) : [],
+    details: populations[SEQR_POP.field] ? [<GlobalAcPopup datasetType={datasetType} />].filter(s => s) : [],
   }
   const sections = [seqrAcSection, ...(isMito ? MITO_DETAIL_SECTIONS : DETAIL_SECTIONS).reduce(
     (acc, section) => ([
