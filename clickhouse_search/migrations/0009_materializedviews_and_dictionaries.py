@@ -9,7 +9,7 @@ from settings import DATABASES
 CLICKHOUSE_USER = os.environ.get('CLICKHOUSE_USER', 'clickhouse')
 CLICKHOUSE_PASSWORD = os.environ.get('CLICKHOUSE_PASSWORD', 'clickhouse_test')
 
-EXCLUDED_PROJECT_GUIDS = [
+EXCLUDED_PROJECT_GUIDS = (
     'R0555_seqr_demo',
     'R0607_gregor_training_project_',
     'R0608_gregor_training_project_',
@@ -20,7 +20,7 @@ EXCLUDED_PROJECT_GUIDS = [
     'R0814_gregor_training_project_',
     'R0815_gregor_training_project_',
     'R0816_gregor_training_project_',
-]
+)
 
 ENTRIES_TO_PROJECT_GT_STATS = Template("""
 CREATE MATERIALIZED VIEW `$reference_genome/$dataset_type/entries_to_project_gt_stats_mv`
