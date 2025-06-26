@@ -787,12 +787,13 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         annotations['splice_ai'] = '0.005'
         annotations['structural'] = ['gCNV_DUP', 'DEL']
         self._assert_expected_search(
-            [VARIANT2, MULTI_FAMILY_VARIANT, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4],
+            [VARIANT2, MULTI_FAMILY_VARIANT, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4, MITO_VARIANT2],
             # [VARIANT2, MULTI_FAMILY_VARIANT, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
             annotations=annotations, cached_variant_fields=[
                 {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][0]},
                 {'selectedTranscript': None},
                 {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[4][1]},
+                {},
             ]
         )
 
@@ -815,7 +816,6 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2],
             locus={'rawItems': f'{GENE_IDS[1]}\n1:11785723-91525764'}, pathogenicity=None, annotations=annotations,
             cached_variant_fields=[{
-                'selectedGeneId': 'ENSG00000177000',
                 'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][5],
             }],
         )
@@ -824,8 +824,8 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         self._assert_expected_search(
             [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT],
             annotations=annotations,  cached_variant_fields=[
-                {'selectedGeneId': 'ENSG00000177000', 'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][5]},
-                {'selectedGeneId': 'ENSG00000177000', 'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[3][1]},
+                {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][5]},
+                {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[3][1]},
             ],
         )
 
