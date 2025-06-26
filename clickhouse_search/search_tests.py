@@ -28,7 +28,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
     def setUpTestData(cls):
         with connections['clickhouse'].cursor() as cursor:
             cursor.execute("""
-            CREATE DICTIONARY IF NOT EXISTS "GRCh38/SNV_INDEL/gt_stats_dict"
+            CREATE OR REPLACE DICTIONARY "GRCh38/SNV_INDEL/gt_stats_dict"
             (
                 key UInt32,
                 ac_wes UInt32,
