@@ -118,6 +118,10 @@ class MapLookup(Func):
     arg_joiner = "]["
 
 
+class NullIf(Func):
+    function = 'nullIf'
+
+
 class Plus(Func):
     function = 'plus'
 

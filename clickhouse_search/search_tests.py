@@ -773,10 +773,11 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         )
 
         self._assert_expected_search(
-            [VARIANT2, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4], annotations=annotations, pathogenicity=None,
+            [VARIANT2, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4, MITO_VARIANT2], annotations=annotations, pathogenicity=None,
             cached_variant_fields = [
                 {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][0]},
                 {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[4][1]},
+                {},
             ],
             # [VARIANT2, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4, GCNV_VARIANT3, GCNV_VARIANT4], annotations=annotations,
         )

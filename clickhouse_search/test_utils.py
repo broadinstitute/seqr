@@ -269,11 +269,12 @@ CACHED_CONSEQUENCES_BY_KEY = {1: [], 2: [{
 }
 
 def format_cached_variant(variant):
-    formatted_variant = {k: v for k, v in variant.items() if k not in ['mainTranscriptId', 'selectedMainTranscriptId']}
-    if variant['key'] in CACHED_CONSEQUENCES_BY_KEY:
-        formatted_variant['sortedTranscriptConsequences'] = CACHED_CONSEQUENCES_BY_KEY[variant['key']]
-        formatted_variant.pop('transcripts')
-    return formatted_variant
+    if variant['key'] not in CACHED_CONSEQUENCES_BY_KEY:
+        return variant
+    return {
+        **{k: v for k, v in variant.items() if k not in ['mainTranscriptId', 'selectedMainTranscriptId', 'transcripts']},
+        'sortedTranscriptConsequences': CACHED_CONSEQUENCES_BY_KEY[variant['key']],
+    }
 
 GENE_COUNTS = {
     'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},

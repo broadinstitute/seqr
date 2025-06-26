@@ -9,7 +9,7 @@ from django.db.models.sql.constants import INNER
 from clickhouse_search.backend.fields import NestedField, NamedTupleField
 from clickhouse_search.backend.functions import Array, ArrayConcat, ArrayDistinct, ArrayFilter, ArrayFold, \
     ArrayIntersect, ArrayJoin, ArrayMap, ArraySort, ArraySymmetricDifference, CrossJoin, GroupArray, GroupArrayArray, \
-    GroupArrayIntersect, DictGet, If, MapLookup, Plus, SubqueryJoin, SubqueryTable, Tuple, TupleConcat
+    GroupArrayIntersect, DictGet, If, MapLookup, NullIf, Plus, SubqueryJoin, SubqueryTable, Tuple, TupleConcat
 from seqr.models import Sample
 from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFECTED, UNAFFECTED, MALE_SEXES, \
     X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, SCREEN_KEY, UTR_ANNOTATOR_KEY, \
@@ -28,11 +28,6 @@ class AnnotationsQuerySet(QuerySet):
     ENTRY_FIELDS = ['familyGuids', 'genotypes', 'clinvar']
 
     SELECTED_GENE_FIELD = 'selectedGeneId'
-    SELECTED_TRANSCRIPT_FIELD = 'selectedTranscript'
-    SELECTED_CONSEQUENCE_VALUES = {
-        GENE_CONSEQUENCE_FIELD: {SELECTED_GENE_FIELD: F(f'{GENE_CONSEQUENCE_FIELD}__0__geneId')},
-        FILTERED_CONSEQUENCE_FIELD: {SELECTED_TRANSCRIPT_FIELD: F(f'{FILTERED_CONSEQUENCE_FIELD}__0')},
-    }
 
     @property
     def annotation_values(self):
@@ -54,7 +49,12 @@ class AnnotationsQuerySet(QuerySet):
         }
 
         if self.model.sorted_transcript_consequences.field.group_by_key:
-            annotations['transcripts'] = annotations.pop('sortedTranscriptConsequences')
+            annotations.update({
+                'mainTranscriptId': F('sorted_transcript_consequences__0__transcriptId'),
+                'selectedMainTranscriptId': Value(None, output_field=models.StringField(null=True)),
+                'transcripts': annotations.pop('sortedTranscriptConsequences'),
+            })
+
         return annotations
 
     @property
@@ -120,9 +120,8 @@ class AnnotationsQuerySet(QuerySet):
 
     def _get_join_query_values(self, query, alias, select_fields, select_values, conditional_selects):
         query_select = {**(select_values or {})}
-        for field, selects in (conditional_selects or {}).items():
-            if query.has_annotation(field):
-                query_select.update(selects)
+        for select_func in (conditional_selects or []):
+            query_select.update(select_func(query))
         return query.values(
             **{f'{alias}_{field}': F(field) for field in select_fields or []},
             **{f'{alias}_{field}': value for field, value in query_select.items()},
@@ -139,13 +138,28 @@ class AnnotationsQuerySet(QuerySet):
 
     def result_values(self):
         values = {k: v for k, v in self.annotation_values.items() if k != 'populations'}
-        for field, value in self.SELECTED_CONSEQUENCE_VALUES.items():
-            if self.has_annotation(field):
-                values.update(value)
+
+        values.update(self._conditional_selected_transcript_values(self))
 
         return self.values(*self.annotation_fields, **values).annotate(
             populations=self.annotation_values['populations']
         )
+
+
+    def _conditional_selected_transcript_values(self, query):
+        consequence_field = next((
+            field for field in [self.FILTERED_CONSEQUENCE_FIELD, self.GENE_CONSEQUENCE_FIELD] if query.has_annotation(field)
+        ), None)
+        if not consequence_field:
+            return {}
+        if not hasattr(self.model, 'SORTED_TRANSCRIPT_CONSQUENCES_FIELDS'):
+            return {'selectedMainTranscriptId': NullIf(
+                NullIf(F(f'{consequence_field}__0__transcriptId'), Value('')), 'mainTranscriptId',
+                output_field=models.StringField(null=True),
+            )}
+        if consequence_field == self.FILTERED_CONSEQUENCE_FIELD:
+            return {'selectedTranscript':  F(f'{self.FILTERED_CONSEQUENCE_FIELD}__0')}
+        return {self.SELECTED_GENE_FIELD: F(f'{self.GENE_CONSEQUENCE_FIELD}__0__geneId')}
 
     def search_compound_hets(self, primary_q, secondary_q, carrier_field):
         primary_gene_field = f'primary_{self.SELECTED_GENE_FIELD}'
@@ -161,9 +175,7 @@ class AnnotationsQuerySet(QuerySet):
             query=primary_q, alias='primary', join_query=secondary_q, join_alias='secondary',
             select_fields=select_fields, select_values={
                 **self.annotation_values,
-            }, conditional_selects={
-                self.FILTERED_CONSEQUENCE_FIELD: self.SELECTED_CONSEQUENCE_VALUES[self.FILTERED_CONSEQUENCE_FIELD],
-            },
+            }, conditional_selects=[self._conditional_selected_transcript_values],
         )
         return results.filter(
             **{primary_gene_field: F(secondary_gene_field)}
