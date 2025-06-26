@@ -28,7 +28,6 @@ for variant in [MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3]:
     }
     if variant['clinvar']:
         variant['clinvar'].update({'assertions': None, 'conditions': None, 'submitters': None})
-    #  TODO handle UI change for seqr af/an removed
     variant['populations'].update({
         'seqr': {'ac': variant['populations']['seqr']['ac']},
         'seqr_heteroplasmy': {'ac': variant['populations']['seqr_heteroplasmy']['ac']},
