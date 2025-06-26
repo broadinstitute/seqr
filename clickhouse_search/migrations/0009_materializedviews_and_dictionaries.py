@@ -96,7 +96,7 @@ class Migration(migrations.Migration):
                         "sumIf(hom_samples, sample_type = 'WGS') AS hom_wgs",
                     ])
                 ),
-                EXCLUDED_PROJECT_GUIDS,
+                (EXCLUDED_PROJECT_GUIDS,),
             )],
             hints={'clickhouse': True},
         ),
@@ -140,7 +140,7 @@ class Migration(migrations.Migration):
                         "sumIf(hom_samples, sample_type = 'WGS') AS hom_wgs",
                     ])
                 ),
-                EXCLUDED_PROJECT_GUIDS,
+                (EXCLUDED_PROJECT_GUIDS,),
             )],
             hints={'clickhouse': True},
         ),
@@ -184,7 +184,7 @@ class Migration(migrations.Migration):
                         "sumIf(hom_samples, sample_type = 'WGS') AS ac_hom_wgs",
                     ])
                 ),
-                EXCLUDED_PROJECT_GUIDS,
+                (EXCLUDED_PROJECT_GUIDS,),
             )],
             hints={'clickhouse': True},
         ),
@@ -225,7 +225,7 @@ class Migration(migrations.Migration):
                         'sum(hom_samples) AS hom_wgs',
                     ]),
                 ),
-                EXCLUDED_PROJECT_GUIDS,
+                (EXCLUDED_PROJECT_GUIDS,),
             )],
             hints={'clickhouse': True},
         ),
