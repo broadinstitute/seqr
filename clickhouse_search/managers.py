@@ -70,7 +70,8 @@ class AnnotationsQuerySet(QuerySet):
 
     @property
     def transcript_fields(self):
-        return set(dict(self.model.SORTED_TRANSCRIPT_CONSQUENCES_FIELDS).keys())
+        transcript_field_configs = getattr(self.model, 'SORTED_TRANSCRIPT_CONSQUENCES_FIELDS', self.model.TRANSCRIPTS_FIELDS)
+        return set(dict(transcript_field_configs).keys())
 
 
     def subquery_join(self, subquery, join_key='key'):
@@ -261,7 +262,7 @@ class AnnotationsQuerySet(QuerySet):
         filter_qs, transcript_filters = self._parse_annotation_filters(annotations) if annotations else ([], [])
 
         hgmd = (pathogenicity or {}).get(HGMD_KEY)
-        if hgmd:
+        if hgmd and hasattr(self.model, 'hgmd'):
             filter_qs.append(self._hgmd_filter_q(hgmd))
 
         clinvar = (pathogenicity or {}).get(CLINVAR_KEY)
@@ -273,6 +274,9 @@ class AnnotationsQuerySet(QuerySet):
             results = results.exclude(self._clinvar_filter_q(exclude_clinvar))
 
         if not (filter_qs or transcript_filters):
+            if any(val for val in (annotations or {}).values()) or any(val for val in (pathogenicity or {}).values()):
+                #  Annotation filters restrict search to other dataset types
+                results = results.none()
             return results
 
         filter_q = filter_qs[0] if filter_qs else None

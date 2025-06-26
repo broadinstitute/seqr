@@ -734,8 +734,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 
         pathogenicity = {'clinvar': ['likely_pathogenic', 'vus_or_conflicting', 'benign']}
         self._assert_expected_search(
-            [VARIANT1, VARIANT2], pathogenicity=pathogenicity,
-            # [VARIANT1, VARIANT2, MITO_VARIANT1, MITO_VARIANT3], pathogenicity=pathogenicity, sample_data=FAMILY_2_ALL_SAMPLE_DATA,
+            [VARIANT1, VARIANT2, MITO_VARIANT1, MITO_VARIANT3], pathogenicity=pathogenicity,
         )
 
         exclude = {'clinvar': pathogenicity['clinvar'][1:]}
@@ -743,20 +742,19 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         snv_38_only_annotations = {'SCREEN': ['CTCF-only', 'DNase-only'], 'UTRAnnotator': ['5_prime_UTR_stop_codon_loss_variant']}
         selected_transcript_variant_2 = {**VARIANT2, 'selectedMainTranscriptId': 'ENST00000408919'}
         self._assert_expected_search(
-            [VARIANT1, selected_transcript_variant_2, VARIANT4], pathogenicity=pathogenicity, annotations=snv_38_only_annotations,
+            [VARIANT1, selected_transcript_variant_2, VARIANT4, MITO_VARIANT3], pathogenicity=pathogenicity, annotations=snv_38_only_annotations,
             cached_variant_fields=[
                 {'selectedTranscript': None},
                 {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][1]},
                 {'selectedTranscript': None},
+                {},
             ]
-            # [VARIANT1, selected_transcript_variant_2, VARIANT4, MITO_VARIANT3], pathogenicity=pathogenicity, annotations=annotations,
         )
 
         self._assert_expected_search(
-            [VARIANT1, VARIANT4], exclude=exclude, pathogenicity=pathogenicity,
-            # [VARIANT1, VARIANT4, MITO_VARIANT3], exclude=exclude, pathogenicity=pathogenicity,
+            [VARIANT1, VARIANT4, MITO_VARIANT3], exclude=exclude, pathogenicity=pathogenicity,
             annotations=snv_38_only_annotations, cached_variant_fields=[
-                {'selectedTranscript': None}, {'selectedTranscript': None},
+                {'selectedTranscript': None}, {'selectedTranscript': None}, {},
             ]
         )
 
@@ -765,12 +763,12 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             'structural_consequence': ['INTRONIC', 'LOF'],
         }
         self._assert_expected_search(
-            [VARIANT1, VARIANT2, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4], pathogenicity=pathogenicity,
-            # [VARIANT1, VARIANT2, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4, MITO_VARIANT2, MITO_VARIANT3], pathogenicity=pathogenicity,
+            [VARIANT1, VARIANT2, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4, MITO_VARIANT2, MITO_VARIANT3], pathogenicity=pathogenicity,
             annotations=annotations, exclude=None, cached_variant_fields=[
                 {'selectedTranscript': None},
                 {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][0]},
                 {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[4][1]},
+                {}, {},
             ]
         )
 
@@ -802,12 +800,12 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         annotations = {'other': ['non_coding_transcript_exon_variant__canonical', 'non_coding_transcript_exon_variant']}
         self._set_single_family_search()
         self._assert_expected_search(
-            [VARIANT1, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3],
-            # [VARIANT1, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3, MITO_VARIANT1, MITO_VARIANT3],
+            [VARIANT1, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3, MITO_VARIANT1, MITO_VARIANT3],
             pathogenicity=pathogenicity, annotations=annotations, cached_variant_fields=[
                 {'selectedTranscript': None},
                 {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][5]},
                 {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[3][3]},
+                {}, {},
             ],
         )
         self._reset_search_families()
@@ -834,21 +832,20 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         annotations['splice_ai'] = '0.005'
         self._set_single_family_search()
         self._assert_expected_search(
-            [VARIANT1, VARIANT3],
-            # [VARIANT1, VARIANT3, MITO_VARIANT1, MITO_VARIANT3],
+            [VARIANT1, VARIANT3, MITO_VARIANT1, MITO_VARIANT3],
             pathogenicity=pathogenicity, annotations=annotations, locus=None, cached_variant_fields=[
-                {'selectedTranscript': None}, {'selectedTranscript': None},
+                {'selectedTranscript': None}, {'selectedTranscript': None}, {}, {},
             ],
         )
 
         annotations['extended_splice_site'] = ['extended_intronic_splice_region_variant']
         self._assert_expected_search(
-            [VARIANT1, VARIANT3, VARIANT4],
-            # [VARIANT1, VARIANT3, VARIANT4, MITO_VARIANT1, MITO_VARIANT3],
+            [VARIANT1, VARIANT3, VARIANT4, MITO_VARIANT1, MITO_VARIANT3],
             pathogenicity=pathogenicity, annotations=annotations, cached_variant_fields=[
                 {'selectedTranscript': None},
                 {'selectedTranscript': None},
                 {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[4][0]},
+                {}, {},
             ],
         )
 
