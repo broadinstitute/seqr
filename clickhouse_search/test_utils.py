@@ -33,7 +33,7 @@ for variant in [MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3]:
         'seqr': {'ac': variant['populations']['seqr']['ac']},
         'seqr_heteroplasmy': {'ac': variant['populations']['seqr_heteroplasmy']['ac']},
     })
-MITO_VARIANT3['predictions']['haplogroup_defining'] = True # TODO update UI (previously was 'Y')
+MITO_VARIANT3['predictions']['haplogroup_defining'] = True
 GRCH37_VARIANT = {
     **deepcopy(HAIL_GRCH37_VARIANT),
     'key': 11,

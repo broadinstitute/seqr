@@ -1537,7 +1537,7 @@ export const ORDERED_PREDICTOR_FIELDS = [
     thresholds: [undefined, undefined, 2.18, 4, undefined],
     requiresCitation: true,
   },
-  { field: 'haplogroup_defining', indicatorMap: { Y: { color: 'green', value: '' } } },
+  { field: 'haplogroup_defining', indicatorMap: { Y: { color: 'green', value: '' }, true: { color: 'green', value: '' } } },
   { field: 'mitotip', indicatorMap: MITOTIP_MAP, fieldTitle: 'MitoTIP' },
   { field: 'hmtvar', thresholds: [undefined, undefined, 0.35, 0.35, undefined], fieldTitle: 'HmtVar' },
   { field: 'mlc', thresholds: [undefined, 0.5, 0.5, 0.75, undefined], fieldTitle: 'MLC' },
