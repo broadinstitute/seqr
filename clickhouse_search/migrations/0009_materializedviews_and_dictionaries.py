@@ -85,7 +85,7 @@ class Migration(migrations.Migration):
             hints={'clickhouse': True},
         ),
         migrations.RunSQL(
-            (
+            [(
                 PROJECT_GT_STATS_TO_GT_STATS.substitute(
                     reference_genome='GRCh37',
                     dataset_type='SNV_INDEL',
@@ -97,7 +97,7 @@ class Migration(migrations.Migration):
                     ])
                 ),
                 EXCLUDED_PROJECT_GUIDS,
-            ),
+            )],
             hints={'clickhouse': True},
         ),
         migrations.RunSQL(
@@ -129,7 +129,7 @@ class Migration(migrations.Migration):
             hints={'clickhouse': True},
         ),
         migrations.RunSQL(
-            (
+            [(
                 PROJECT_GT_STATS_TO_GT_STATS.substitute(
                     reference_genome='GRCh38',
                     dataset_type='SNV_INDEL',
@@ -141,7 +141,7 @@ class Migration(migrations.Migration):
                     ])
                 ),
                 EXCLUDED_PROJECT_GUIDS,
-            ),
+            )],
             hints={'clickhouse': True},
         ),
         migrations.RunSQL(
@@ -173,7 +173,7 @@ class Migration(migrations.Migration):
             hints={'clickhouse': True},
         ),
         migrations.RunSQL(
-            (
+            [(
                 PROJECT_GT_STATS_TO_GT_STATS.substitute(
                     reference_genome='GRCh38',
                     dataset_type='MITO',
@@ -185,7 +185,7 @@ class Migration(migrations.Migration):
                     ])
                 ),
                 EXCLUDED_PROJECT_GUIDS,
-            ),
+            )],
             hints={'clickhouse': True},
         ),
         migrations.RunSQL(
@@ -216,7 +216,7 @@ class Migration(migrations.Migration):
             hints={'clickhouse': True},
         ),
         migrations.RunSQL(
-            (
+            [(
                 PROJECT_GT_STATS_TO_GT_STATS.substitute(
                     reference_genome='GRCh38',
                     dataset_type='SV',
@@ -226,7 +226,7 @@ class Migration(migrations.Migration):
                     ]),
                 ),
                 EXCLUDED_PROJECT_GUIDS,
-            ),
+            )],
             hints={'clickhouse': True},
         ),
         migrations.RunSQL(
