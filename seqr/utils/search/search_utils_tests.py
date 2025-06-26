@@ -6,7 +6,7 @@ import mock
 
 from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4, format_cached_variant
 from hail_search.test_utils import GENE_COUNTS, VARIANT_LOOKUP_VARIANT, SV_VARIANT4, SV_VARIANT1
-from seqr.models import Family, Sample, VariantSearch, VariantSearchResults
+from seqr.models import Project, Family, Sample, VariantSearch, VariantSearchResults
 from seqr.views.utils.json_utils import DjangoJSONEncoderWithSets
 from seqr.utils.search.utils import get_single_variant, get_variants_for_variant_ids, get_variant_query_gene_counts, \
     query_variants, variant_lookup, sv_variant_lookup, InvalidSearchException
@@ -677,6 +677,7 @@ class ClickhouseSearchUtilsTests(TestCase, SearchUtilsTests):
         super().test_query_variants(mock_call)
 
     def test_cached_query_variants(self):
+        Project.objects.filter(id=1).update(genome_version='38')
         super().test_cached_query_variants()
 
         cache_key_prefix = f'search_results__{self.results_model.guid}'

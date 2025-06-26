@@ -795,3 +795,16 @@ class GtStatsSv(models.ClickhouseModel):
     class Meta(BaseGtStats.Meta):
         db_table = 'GRCh38/SV/gt_stats'
 
+
+ENTRY_CLASS_MAP = {
+    GENOME_VERSION_GRCh37: EntriesGRCh37SnvIndel,
+    GENOME_VERSION_GRCh38: EntriesSnvIndel,
+}
+ANNOTATIONS_CLASS_MAP = {
+    GENOME_VERSION_GRCh37: AnnotationsGRCh37SnvIndel,
+    GENOME_VERSION_GRCh38: AnnotationsSnvIndel,
+}
+TRANSCRIPTS_CLASS_MAP = {
+    GENOME_VERSION_GRCh37: TranscriptsGRCh37SnvIndel,
+    GENOME_VERSION_GRCh38: TranscriptsSnvIndel,
+}
