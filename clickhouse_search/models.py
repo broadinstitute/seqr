@@ -72,7 +72,7 @@ class BaseAnnotations(models.ClickhouseModel):
 
     CHROMOSOME_CHOICES = [(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES)]
     SEQR_POPULATIONS = [
-        ('seqr', [('ac', 'ac'), ('hom', 'hom')]),
+        ('seqr', {'ac': 'ac', 'hom': 'hom'}),
     ]
     ANNOTATION_CONSTANTS = {
         'genomeVersion': GENOME_VERSION_GRCh38,
@@ -318,8 +318,8 @@ class BaseAnnotationsMito(BaseAnnotationsMitoSnvIndel):
         ('mlc', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
     ]
     SEQR_POPULATIONS = [
-        ('seqr', [('ac', 'ac_hom')]),
-        ('seqr_heteroplasmy', [('ac', 'ac_het')]),
+        ('seqr', {'ac': 'ac_hom'}),
+        ('seqr_heteroplasmy', {'ac': 'ac_het'}),
     ]
 
     common_low_heteroplasmy = models.BoolField(db_column='commonLowHeteroplasmy', null=True, blank=True)

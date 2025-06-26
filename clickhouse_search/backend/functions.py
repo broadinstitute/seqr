@@ -118,16 +118,16 @@ class MapLookup(Func):
     arg_joiner = "]["
 
 
+class Plus(Func):
+    function = 'plus'
+
+
 class Tuple(Func):
     function = 'tuple'
 
 
 class TupleConcat(Func):
     function = 'tupleConcat'
-
-
-class TuplePlus(Func):
-    function = 'tuplePlus'
 
 
 class SubqueryTable(BaseTable):

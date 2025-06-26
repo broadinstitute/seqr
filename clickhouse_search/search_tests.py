@@ -667,70 +667,65 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         sv_callset_filter = {'sv_callset': {'af': 0.05}}
         # seqr af filter is ignored for SNV_INDEL
         self._assert_expected_search(
-            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4],
+            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
             # [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
             freqs={'callset': {'af': 0.2},  **sv_callset_filter},
         )
 
         self._assert_expected_search(
-            [MULTI_FAMILY_VARIANT, VARIANT4],
+            [VARIANT4, MITO_VARIANT1, MITO_VARIANT2],
             # [MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
-            freqs={'callset': {'ac': 5}, **sv_callset_filter},
+            freqs={'callset': {'ac': 2}, **sv_callset_filter},
         )
 
         self._assert_expected_search(
-            [MULTI_FAMILY_VARIANT, VARIANT4], freqs={'callset': {'ac': 4}},
+            [MULTI_FAMILY_VARIANT, VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], freqs={'callset': {'ac': 4}},
         )
 
         self._assert_expected_search(
-            [MULTI_FAMILY_VARIANT, VARIANT4], freqs={'callset': {'hh': 1}},
+            [MULTI_FAMILY_VARIANT, VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], freqs={'callset': {'hh': 1}},
         )
 
         self._assert_expected_search(
-            [VARIANT4], freqs={'callset': {'ac': 4, 'hh': 0}},
+            [VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], freqs={'callset': {'ac': 4, 'hh': 0}},
         )
 
-#         self._assert_expected_search(
-#             [MITO_VARIANT1, MITO_VARIANT2], frequencies={'seqr': {'af': 0.01}}, sample_data=FAMILY_2_MITO_SAMPLE_DATA,
-#         )
-#
 #         self._assert_expected_search(
 #             [SV_VARIANT1], frequencies=sv_callset_filter, sample_data=SV_WGS_SAMPLE_DATA,
 #         )
 #
         self._assert_expected_search(
-            [VARIANT1, VARIANT2, VARIANT4], freqs={'gnomad_genomes': {'af': 0.05}},
+            [VARIANT1, VARIANT2, VARIANT4, MITO_VARIANT1, MITO_VARIANT2], freqs={'gnomad_genomes': {'af': 0.05}, 'gnomad_mito': {'af': 0.05}},
         )
 
         self._assert_expected_search(
-            [VARIANT2, VARIANT4], freqs={'gnomad_genomes': {'af': 0.05, 'hh': 1}},
+            [VARIANT2, VARIANT4, MITO_VARIANT1, MITO_VARIANT2], freqs={'gnomad_genomes': {'af': 0.05, 'hh': 1}, 'gnomad_mito': {'af': 0.05}},
         )
 
-#         self._assert_expected_search(
-#             [VARIANT2, VARIANT4, MITO_VARIANT1, MITO_VARIANT2], sample_data=FAMILY_2_ALL_SAMPLE_DATA,
-#             frequencies={'gnomad_genomes': {'af': 0.005}, 'gnomad_mito': {'af': 0.05}},
-#         )
 #
 #         self._assert_expected_search(
 #             [SV_VARIANT1, SV_VARIANT3, SV_VARIANT4], frequencies={'gnomad_svs': {'af': 0.001}}, sample_data=SV_WGS_SAMPLE_DATA,
 #         )
 
         self._assert_expected_search(
-            [VARIANT4], freqs={'callset': {'ac': 10}, 'gnomad_genomes': {'ac': 50}},
+            [VARIANT4, MITO_VARIANT1, MITO_VARIANT2],
+            freqs={'callset': {'ac': 10}, 'gnomad_genomes': {'ac': 50}, 'gnomad_mito': {'ac': 10}},
         )
 
         self._assert_expected_search(
-            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4], freqs={'callset': {}, 'gnomad_genomes': {'af': None}},
+            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
+            freqs={'callset': {}, 'gnomad_genomes': {'af': None}},
         )
 
         annotations = {'splice_ai': '0.0'}  # Ensures no variants are filtered out by annotation/path filters
         self._assert_expected_search(
-            [VARIANT1, VARIANT2, VARIANT4], freqs={'gnomad_genomes': {'af': 0.01, 'hh': 10}},
+            [VARIANT1, VARIANT2, VARIANT4, MITO_VARIANT1, MITO_VARIANT3],
+            freqs={'gnomad_genomes': {'af': 0.01, 'hh': 10}, 'gnomad_mito': {'af': 0.01}},
             annotations=annotations, pathogenicity={'clinvar': ['pathogenic', 'likely_pathogenic', 'vus_or_conflicting']},
         )
 
         self._assert_expected_search(
-            [VARIANT2, VARIANT4], freqs={'gnomad_genomes': {'af': 0.01}},
+            [VARIANT2, VARIANT4, MITO_VARIANT1], freqs={'gnomad_genomes': {'af': 0.01}, 'gnomad_mito': {'af': 0.01}},
             annotations=annotations, pathogenicity={'clinvar': ['pathogenic', 'vus_or_conflicting']},
         )
 

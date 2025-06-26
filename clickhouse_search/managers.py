@@ -9,7 +9,7 @@ from django.db.models.sql.constants import INNER
 from clickhouse_search.backend.fields import NestedField, NamedTupleField
 from clickhouse_search.backend.functions import Array, ArrayConcat, ArrayDistinct, ArrayFilter, ArrayFold, \
     ArrayIntersect, ArrayJoin, ArrayMap, ArraySort, ArraySymmetricDifference, CrossJoin, GroupArray, GroupArrayArray, \
-    GroupArrayIntersect, DictGet, If, MapLookup, SubqueryJoin, SubqueryTable, Tuple, TupleConcat, TuplePlus
+    GroupArrayIntersect, DictGet, If, MapLookup, Plus, SubqueryJoin, SubqueryTable, Tuple, TupleConcat
 from seqr.models import Sample
 from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFECTED, UNAFFECTED, MALE_SEXES, \
     X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, SCREEN_KEY, UTR_ANNOTATOR_KEY, \
@@ -37,23 +37,20 @@ class AnnotationsQuerySet(QuerySet):
     @property
     def annotation_values(self):
         seqr_pops = []
-        offset = 0
-        for _, sub_fields in self.model.SEQR_POPULATIONS:
-            seqr_pops.append(TuplePlus(
-                Tuple(*[f'seqrPop__{j}' for j in range(offset, offset+len(sub_fields))]),
-                Tuple(*[f'seqrPop__{j}' for j in range(offset+len(sub_fields), offset+(len(sub_fields)*2))]),
-            ))
-            offset += len(sub_fields)*2
+        population_fields = [*self.model.POPULATION_FIELDS]
+        for i, (name, subfields) in enumerate(self.model.SEQR_POPULATIONS):
+            exprs = [Plus(f'seqrPop__{i*2}', f'seqrPop__{i*2+1}')]
+            sub_output_fields = [('ac', models.UInt32Field())]
+            if 'hom' in subfields:
+                exprs.append(Plus(f'seqrPop__{i*2+2}', f'seqrPop__{i*2+3}'))
+                sub_output_fields.append(('hom', models.UInt32Field()))
+            seqr_pops.append(Tuple(*exprs))
+            population_fields.append((name, NamedTupleField(sub_output_fields)))
 
         annotations = {
             **{key: Value(value) for key, value in self.model.ANNOTATION_CONSTANTS.items()},
             **{field.db_column: F(field.name) for field in self.model._meta.local_fields if field.db_column and field.name != field.db_column},
-            'populations': TupleConcat(F('populations'), Tuple(*seqr_pops), output_field=NamedTupleField([
-                *self.model.POPULATION_FIELDS, *[
-                    (name, NamedTupleField([(field, models.UInt32Field()) for field, _ in sub_fields]))
-                    for name, sub_fields in self.model.SEQR_POPULATIONS
-                ],
-            ])),
+            'populations': TupleConcat(F('populations'), Tuple(*seqr_pops), output_field=NamedTupleField(population_fields)),
         }
 
         if self.model.sorted_transcript_consequences.field.group_by_key:
@@ -459,7 +456,7 @@ class EntriesManager(Manager):
             entries = self._filter_seqr_frequency(entries, **freqs['callset'])
 
         gnomad_filter = (freqs or {}).get('gnomad_genomes') or {}
-        if (gnomad_filter.get('af') or 1) <= 0.05 or any(gnomad_filter.get(field) is not None for field in ['ac', 'hh']):
+        if hasattr(self.model, 'is_gnomad_gt_5_percent') and ((gnomad_filter.get('af') or 1) <= 0.05 or any(gnomad_filter.get(field) is not None for field in ['ac', 'hh'])):
             entries = entries.filter(is_gnomad_gt_5_percent=False)
 
         return self._search_call_data(entries, sample_data, **kwargs)
@@ -467,8 +464,9 @@ class EntriesManager(Manager):
     def _seqr_pop_expression(self):
         seqr_pop_fields = []
         for _, sub_fields in self.model.key.field.related_model.SEQR_POPULATIONS:
-            seqr_pop_fields += [f"'{field}_wes'" for _, field in sub_fields]
-            seqr_pop_fields += [f"'{field}_wgs'" for _, field in sub_fields]
+            seqr_pop_fields += [f"'{sub_fields['ac']}_wes'", f"'{sub_fields['ac']}_wgs'"]
+            if sub_fields.get('hom'):
+                seqr_pop_fields += [f"'{sub_fields['hom']}_wes'", f"'{sub_fields['hom']}_wgs'"]
         return DictGet(
             'key',
             dict_name=f"{self.model._meta.db_table.rsplit('/', 1)[0]}/gt_stats_dict",
@@ -792,10 +790,11 @@ class EntriesManager(Manager):
     def _interval_query(chrom, start, end):
         return Q(xpos__range=(get_xpos(chrom, start), get_xpos(chrom, end)))
 
-    @classmethod
-    def _filter_seqr_frequency(cls, entries, ac=None, hh=None, **kwargs):
+    def _filter_seqr_frequency(self, entries, ac=None, hh=None, **kwargs):
         if ac is not None:
-            entries = entries.filter(seqrPop__0__lte=ac)
-        if hh is not None:
-            entries = entries.filter(seqrPop__1__lte=hh)
+            entries = entries.annotate(ac=Plus('seqrPop__0', 'seqrPop__1'))
+            entries = entries.filter(ac__lte=ac)
+        if hh is not None and 'hom' in self.model.key.field.related_model.SEQR_POPULATIONS[0][1]:
+            entries = entries.annotate(hom=Plus('seqrPop__2', 'seqrPop__3'))
+            entries = entries.filter(hom__lte=hh)
         return entries
