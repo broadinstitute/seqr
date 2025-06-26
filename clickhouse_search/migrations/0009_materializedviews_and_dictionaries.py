@@ -41,7 +41,7 @@ AS SELECT
     key,
     $columns
 FROM `$reference_genome/$dataset_type/project_gt_stats`
-WHERE project_guid NOT IN %(excluded_project_guids)s
+WHERE project_guid NOT IN %s
 GROUP BY key
 """)
 
@@ -96,7 +96,7 @@ class Migration(migrations.Migration):
                         "sumIf(hom_samples, sample_type = 'WGS') AS hom_wgs",
                     ])
                 ),
-                {'excluded_project_guids': EXCLUDED_PROJECT_GUIDS},
+                EXCLUDED_PROJECT_GUIDS,
             ),
             hints={'clickhouse': True},
         ),
@@ -140,7 +140,7 @@ class Migration(migrations.Migration):
                         "sumIf(hom_samples, sample_type = 'WGS') AS hom_wgs",
                     ])
                 ),
-                {'excluded_project_guids': EXCLUDED_PROJECT_GUIDS},
+                EXCLUDED_PROJECT_GUIDS,
             ),
             hints={'clickhouse': True},
         ),
@@ -184,7 +184,7 @@ class Migration(migrations.Migration):
                         "sumIf(hom_samples, sample_type = 'WGS') AS ac_hom_wgs",
                     ])
                 ),
-                {'excluded_project_guids': EXCLUDED_PROJECT_GUIDS},
+                EXCLUDED_PROJECT_GUIDS,
             ),
             hints={'clickhouse': True},
         ),
@@ -225,7 +225,7 @@ class Migration(migrations.Migration):
                         'sum(hom_samples) AS hom_wgs',
                     ]),
                 ),
-                {'excluded_project_guids': EXCLUDED_PROJECT_GUIDS},
+                EXCLUDED_PROJECT_GUIDS,
             ),
             hints={'clickhouse': True},
         ),
