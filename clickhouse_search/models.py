@@ -126,8 +126,8 @@ class BaseAnnotationsSvGcnv(BaseAnnotations):
     chrom = Enum8Field(return_int=False, choices=BaseAnnotations.CHROMOSOME_CHOICES)
     end = models.UInt32Field()
     rg37_locus_end = NamedTupleField([
-        ('contig', models.Enum8Field(return_int=False, choices=BaseAnnotations.CHROMOSOME_CHOICES)),
-        ('position', models.UInt32Field()),
+        ('contig', models.Enum8Field(return_int=False, choices=BaseAnnotations.CHROMOSOME_CHOICES, null=True, blank=True)),
+        ('position', models.UInt32Field(null=True, blank=True)),
     ], db_column='rg37LocusEnd', null_if_empty=True)
     lifted_over_chrom = Enum8Field(db_column='liftedOverChrom', return_int=False, null=True, blank=True, choices=BaseAnnotations.CHROMOSOME_CHOICES)
     sv_type = models.Enum8Field(db_column='svType', return_int=False, choices=SV_TYPES)
@@ -347,13 +347,13 @@ class BaseAnnotationsSv(BaseAnnotationsSvGcnv):
         ('end', models.UInt32Field()),
         ('type', models.Enum8Field(return_int=False, choices=BaseAnnotationsSvGcnv.SV_TYPES)),
     ], db_column='cpxIntervals', null_when_empty=True)
-    end_chrom = models.Enum8Field(db_column='endChrom', return_int=False, choices=BaseAnnotations.CHROMOSOME_CHOICES)
+    end_chrom = models.Enum8Field(db_column='endChrom', return_int=False, choices=BaseAnnotations.CHROMOSOME_CHOICES, null=True, blank=True)
     sv_source_detail = NestedField(
-        [('chrom', models.Enum8Field(return_int=False, choices=BaseAnnotations.CHROMOSOME_CHOICES))],
+        [('chrom', models.Enum8Field(return_int=False, choices=BaseAnnotations.CHROMOSOME_CHOICES, null=True, blank=True))],
         db_column='svSourceDetail',
         null_when_empty=True
     )
-    sv_type_detail = models.Enum8Field(db_column='svTypeDetail', return_int=False, choices=SV_TYPE_DETAILS)
+    sv_type_detail = models.Enum8Field(db_column='svTypeDetail', return_int=False, choices=SV_TYPE_DETAILS, null=True, blank=True)
     populations = NamedTupleField(POPULATION_FIELDS)
 
     class Meta:
