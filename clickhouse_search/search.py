@@ -242,6 +242,8 @@ MAX_SORT_RANK = 1e10
 def _subfield_sort(*fields, rank_lookup=None, default=MAX_SORT_RANK, reverse=False):
     def _sort(item):
         for field in fields:
+            if isinstance(field, tuple):
+                field = next((f for f in field if f in item), None)
             item = (item or {}).get(field)
         if rank_lookup:
             item = rank_lookup.get(item)
@@ -249,6 +251,24 @@ def _subfield_sort(*fields, rank_lookup=None, default=MAX_SORT_RANK, reverse=Fal
         return value if not reverse else -value
     return [_sort]
 
+
+def _get_matched_transcript(x, field):
+    if field not in x:
+        return None
+    for transcripts in x['transcripts'].values():
+        transcript = next((t for t in transcripts if t['transcriptId'] == x[field]), None)
+        if transcript:
+            return transcript
+    return None
+
+
+def _main_transcript_consequence(x):
+    transcript = x[TRANSCRIPT_CONSEQUENCES_FIELD][0] if x.get(TRANSCRIPT_CONSEQUENCES_FIELD) else _get_matched_transcript(x, 'mainTranscriptId')
+    return CONSEQUENCE_RANK_LOOKUP[transcript['consequenceTerms'][0]] if transcript else MAX_SORT_RANK
+
+def _selected_transcript_consequence(x):
+    transcript = x.get(SELECTED_TRANSCRIPT_FIELD) or _get_matched_transcript(x, 'selectedMainTranscriptId')
+    return CONSEQUENCE_RANK_LOOKUP[transcript['consequenceTerms'][0]] if transcript else MAX_SORT_RANK
 
 MIN_SORT_RANK = 0
 MIN_PRED_SORT_RANK = -1
@@ -262,18 +282,15 @@ CLINVAR_SORT =  _subfield_sort(
 )
 SORT_EXPRESSIONS = {
     'alphamissense': [
-        lambda x: -max(t.get('alphamissensePathogenicity') or MIN_SORT_RANK for t in x[TRANSCRIPT_CONSEQUENCES_FIELD]) if x[TRANSCRIPT_CONSEQUENCES_FIELD] else MIN_SORT_RANK,
+        lambda x: -max(t.get('alphamissensePathogenicity') or MIN_SORT_RANK for t in x[TRANSCRIPT_CONSEQUENCES_FIELD]) if x.get(TRANSCRIPT_CONSEQUENCES_FIELD) else MIN_SORT_RANK,
     ] + _subfield_sort(SELECTED_TRANSCRIPT_FIELD, 'alphamissensePathogenicity', reverse=True, default=MIN_SORT_RANK),
     'callset_af': _subfield_sort('populations', 'seqr', 'ac'),
     'family_guid': [lambda x: sorted(x['familyGuids'])[0]],
-    'gnomad': _subfield_sort('populations', 'gnomad_genomes', 'af'),
+    'gnomad': _subfield_sort('populations', ('gnomad_genomes', 'gnomad_mito'), 'af'),
     'gnomad_exomes': _subfield_sort('populations', 'gnomad_exomes', 'af'),
     PATHOGENICTY_SORT_KEY: CLINVAR_SORT,
     PATHOGENICTY_HGMD_SORT_KEY: CLINVAR_SORT + _subfield_sort('hgmd', 'class', rank_lookup=HGMD_RANK_LOOKUP),
-    'protein_consequence': [
-        lambda x: CONSEQUENCE_RANK_LOOKUP[x[TRANSCRIPT_CONSEQUENCES_FIELD][0]['consequenceTerms'][0]] if x[TRANSCRIPT_CONSEQUENCES_FIELD] else MAX_SORT_RANK,
-        lambda x: CONSEQUENCE_RANK_LOOKUP[x[SELECTED_TRANSCRIPT_FIELD]['consequenceTerms'][0]] if x.get(SELECTED_TRANSCRIPT_FIELD) else MAX_SORT_RANK,
-    ],
+    'protein_consequence': [_main_transcript_consequence, _selected_transcript_consequence],
     **{sort: _subfield_sort('predictions', sort, reverse=True, default=MIN_PRED_SORT_RANK) for sort in PREDICTION_SORTS},
 }
 
