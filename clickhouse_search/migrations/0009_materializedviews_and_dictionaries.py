@@ -85,17 +85,19 @@ class Migration(migrations.Migration):
             hints={'clickhouse': True},
         ),
         migrations.RunSQL(
-            PROJECT_GT_STATS_TO_GT_STATS.substitute(
-                reference_genome='GRCh37',
-                dataset_type='SNV_INDEL',
-                columns=",\n    ".join([
-                    "sumIf((het_samples * 1) + (hom_samples * 2), sample_type = 'WES') AS ac_wes",
-                    "sumIf((het_samples * 1) + (hom_samples * 2), sample_type = 'WGS') AS ac_wgs",
-                    "sumIf(hom_samples, sample_type = 'WES') AS hom_wes",
-                    "sumIf(hom_samples, sample_type = 'WGS') AS hom_wgs",
-                ])
+            (
+                PROJECT_GT_STATS_TO_GT_STATS.substitute(
+                    reference_genome='GRCh37',
+                    dataset_type='SNV_INDEL',
+                    columns=",\n    ".join([
+                        "sumIf((het_samples * 1) + (hom_samples * 2), sample_type = 'WES') AS ac_wes",
+                        "sumIf((het_samples * 1) + (hom_samples * 2), sample_type = 'WGS') AS ac_wgs",
+                        "sumIf(hom_samples, sample_type = 'WES') AS hom_wes",
+                        "sumIf(hom_samples, sample_type = 'WGS') AS hom_wgs",
+                    ])
+                ),
+                {'excluded_project_guids': EXCLUDED_PROJECT_GUIDS},
             ),
-            params={'excluded_project_guids': EXCLUDED_PROJECT_GUIDS},
             hints={'clickhouse': True},
         ),
         migrations.RunSQL(
@@ -127,17 +129,19 @@ class Migration(migrations.Migration):
             hints={'clickhouse': True},
         ),
         migrations.RunSQL(
-            PROJECT_GT_STATS_TO_GT_STATS.substitute(
-                reference_genome='GRCh38',
-                dataset_type='SNV_INDEL',
-                columns=",\n    ".join([
-                    "sumIf((het_samples * 1) + (hom_samples * 2), sample_type = 'WES') AS ac_wes",
-                    "sumIf((het_samples * 1) + (hom_samples * 2), sample_type = 'WGS') AS ac_wgs",
-                    "sumIf(hom_samples, sample_type = 'WES') AS hom_wes",
-                    "sumIf(hom_samples, sample_type = 'WGS') AS hom_wgs",
-                ])
+            (
+                PROJECT_GT_STATS_TO_GT_STATS.substitute(
+                    reference_genome='GRCh38',
+                    dataset_type='SNV_INDEL',
+                    columns=",\n    ".join([
+                        "sumIf((het_samples * 1) + (hom_samples * 2), sample_type = 'WES') AS ac_wes",
+                        "sumIf((het_samples * 1) + (hom_samples * 2), sample_type = 'WGS') AS ac_wgs",
+                        "sumIf(hom_samples, sample_type = 'WES') AS hom_wes",
+                        "sumIf(hom_samples, sample_type = 'WGS') AS hom_wgs",
+                    ])
+                ),
+                {'excluded_project_guids': EXCLUDED_PROJECT_GUIDS},
             ),
-            params={'excluded_project_guids': EXCLUDED_PROJECT_GUIDS},
             hints={'clickhouse': True},
         ),
         migrations.RunSQL(
@@ -169,17 +173,19 @@ class Migration(migrations.Migration):
             hints={'clickhouse': True},
         ),
         migrations.RunSQL(
-            PROJECT_GT_STATS_TO_GT_STATS.substitute(
-                reference_genome='GRCh38',
-                dataset_type='MITO',
-                columns=",\n    ".join([
-                    "sumIf(het_samples, sample_type = 'WES') AS ac_het_wes",
-                    "sumIf(het_samples, sample_type = 'WGS') AS ac_het_wgs",
-                    "sumIf(hom_samples, sample_type = 'WES') AS ac_hom_wes",
-                    "sumIf(hom_samples, sample_type = 'WGS') AS ac_hom_wgs",
-                ])
+            (
+                PROJECT_GT_STATS_TO_GT_STATS.substitute(
+                    reference_genome='GRCh38',
+                    dataset_type='MITO',
+                    columns=",\n    ".join([
+                        "sumIf(het_samples, sample_type = 'WES') AS ac_het_wes",
+                        "sumIf(het_samples, sample_type = 'WGS') AS ac_het_wgs",
+                        "sumIf(hom_samples, sample_type = 'WES') AS ac_hom_wes",
+                        "sumIf(hom_samples, sample_type = 'WGS') AS ac_hom_wgs",
+                    ])
+                ),
+                {'excluded_project_guids': EXCLUDED_PROJECT_GUIDS},
             ),
-            params={'excluded_project_guids': EXCLUDED_PROJECT_GUIDS},
             hints={'clickhouse': True},
         ),
         migrations.RunSQL(
@@ -210,15 +216,17 @@ class Migration(migrations.Migration):
             hints={'clickhouse': True},
         ),
         migrations.RunSQL(
-            PROJECT_GT_STATS_TO_GT_STATS.substitute(
-                reference_genome='GRCh38',
-                dataset_type='SV',
-                columns = ",\n    ".join([
-                    'sum((het_samples * 1) + (hom_samples * 2)) AS ac_wgs',
-                    'sum(hom_samples) AS hom_wgs',
-                ]),
+            (
+                PROJECT_GT_STATS_TO_GT_STATS.substitute(
+                    reference_genome='GRCh38',
+                    dataset_type='SV',
+                    columns = ",\n    ".join([
+                        'sum((het_samples * 1) + (hom_samples * 2)) AS ac_wgs',
+                        'sum(hom_samples) AS hom_wgs',
+                    ]),
+                ),
+                {'excluded_project_guids': EXCLUDED_PROJECT_GUIDS},
             ),
-            params={'excluded_project_guids': EXCLUDED_PROJECT_GUIDS},
             hints={'clickhouse': True},
         ),
         migrations.RunSQL(
