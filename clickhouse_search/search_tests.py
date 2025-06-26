@@ -179,9 +179,12 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             'ENSG00000097046': {'total': 3, 'families': {'F000002_2': 2, 'F000003_3': 1}},
             'ENSG00000177000': {'total': 3, 'families': {'F000002_2': 2, 'F000003_3': 1}},
             'ENSG00000277258': {'total': 1, 'families': {'F000002_2': 1}},
+            'ENSG00000210112': {'total': 1, 'families': {'F000002_2': 1}},
+            'ENSG00000198886': {'total': 1, 'families': {'F000002_2': 1}},
+            'ENSG00000198727': {'total': 1, 'families': {'F000002_2': 1}},
         }
         self._assert_expected_search(
-            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4], gene_counts=variant_gene_counts,
+            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], gene_counts=variant_gene_counts,
         )
 
 #         self._assert_expected_search(
@@ -208,7 +211,8 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
     def test_multi_project_search(self):
         self._set_multi_project_search()
         self._assert_expected_search(
-            [PROJECT_2_VARIANT, MULTI_PROJECT_VARIANT1, MULTI_PROJECT_VARIANT2, VARIANT3, VARIANT4],
+            [PROJECT_2_VARIANT, MULTI_PROJECT_VARIANT1, MULTI_PROJECT_VARIANT2, VARIANT3, VARIANT4,
+             MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
             gene_counts=GENE_COUNTS,
         )
 
@@ -219,6 +223,8 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #         )
 #
     def test_both_sample_types_search(self):
+        Sample.objects.filter(dataset_type='MITO').update(is_active=False)
+
         # One family (F000011_11) in a multi-project search has identical exome and genome data.
         self._set_multi_project_search()
         self._add_sample_type_samples('WES', individual__family__guid='F000011_11')
@@ -263,7 +269,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         inheritance_mode = 'any_affected'
         self._assert_expected_search(
             # [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
-            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4],
+            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
             inheritance_mode=inheritance_mode,
         )
 
@@ -282,7 +288,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         inheritance_mode = 'de_novo'
         self._assert_expected_search(
             # [VARIANT1, FAMILY_3_VARIANT, VARIANT4, GCNV_VARIANT1],
-            [VARIANT1, FAMILY_3_VARIANT, VARIANT4],
+            [VARIANT1, FAMILY_3_VARIANT, VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
             inheritance_mode=inheritance_mode,
         )
 
@@ -297,13 +303,13 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         inheritance_mode = 'homozygous_recessive'
         self._assert_expected_search(
             # [VARIANT2, GCNV_VARIANT3],
-            [VARIANT2],
+            [VARIANT2, MITO_VARIANT3],
             inheritance_mode=inheritance_mode,
         )
 
         self._set_multi_project_search()
         self._assert_expected_search(
-            [PROJECT_2_VARIANT1, VARIANT2],
+            [PROJECT_2_VARIANT1, VARIANT2, MITO_VARIANT3],
             inheritance_mode=inheritance_mode,
         )
 
@@ -368,21 +374,21 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         inheritance_mode = 'recessive'
         self._set_multi_project_search()
         self._assert_expected_search(
-                [PROJECT_2_VARIANT1, VARIANT2, [VARIANT3, VARIANT4]], inheritance_mode=inheritance_mode, gene_counts={
+                [PROJECT_2_VARIANT1, VARIANT2, [VARIANT3, VARIANT4], MITO_VARIANT3], inheritance_mode=inheritance_mode, gene_counts={
                 'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
                 'ENSG00000177000': {'total': 2, 'families': {'F000002_2': 2}},
                 'ENSG00000277258': {'total': 1, 'families': {'F000002_2': 1}},
             }, cached_variant_fields=[
                 {}, {},
-                [{'selectedGeneId':  'ENSG00000097046'}, {'selectedGeneId':  'ENSG00000097046'}],
+                [{'selectedGeneId':  'ENSG00000097046'}, {'selectedGeneId':  'ENSG00000097046'}], {},
             ],
         )
 
         self._set_single_family_search()
         self._assert_expected_search(
-            [VARIANT2, [VARIANT3, VARIANT4]], inheritance_mode=inheritance_mode, cached_variant_fields=[
+            [VARIANT2, [VARIANT3, VARIANT4], MITO_VARIANT3], inheritance_mode=inheritance_mode, cached_variant_fields=[
                 {},
-                [{'selectedGeneId': 'ENSG00000097046'}, {'selectedGeneId': 'ENSG00000097046'}],
+                [{'selectedGeneId': 'ENSG00000097046'}, {'selectedGeneId': 'ENSG00000097046'}], {},
             ],
         )
         self._reset_search_families()
@@ -481,8 +487,8 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             {'selectedTranscript': None},
             {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][0]},
             {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[3][3]},
-            {'selectedTranscript': MITO_VARIANT1['transcripts']['ENSG00000210112'][0]},
-            {'selectedTranscript': MITO_VARIANT3['transcripts']['ENSG00000198727'][0]},
+            {},
+            {},
         ]
 
         self._assert_expected_search(
@@ -517,7 +523,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #         )
 #
         self._assert_expected_search(
-            [VARIANT1, VARIANT2], exclude=LOCATION_SEARCH['locus'], locus=None,
+            [VARIANT1, VARIANT2, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], exclude=LOCATION_SEARCH['locus'], locus=None,
         )
 #
 #         self._assert_expected_search(
