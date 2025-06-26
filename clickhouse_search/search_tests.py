@@ -963,10 +963,11 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 
         pathogenicity = {'clinvar': ['likely_pathogenic', 'vus_or_conflicting']}
         self._assert_expected_search(
-            [VARIANT2, [VARIANT3, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4]], inheritance_mode='recessive',
+            [VARIANT2, [VARIANT3, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4], MITO_VARIANT3], inheritance_mode='recessive',
             annotations=annotations_2, annotations_secondary=annotations_1, pathogenicity=pathogenicity, cached_variant_fields=[
                 {'selectedTranscript': None},
                 comp_het_cached_fields,
+                {},
             ],
         )
 
@@ -1021,24 +1022,24 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         )
 
         self._assert_expected_search(
-            [VARIANT2, [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3, VARIANT4]], inheritance_mode='recessive',
+            [VARIANT2, [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3, VARIANT4], MITO_VARIANT3], inheritance_mode='recessive',
             annotations=screen_annotations, annotations_secondary=selected_transcript_annotations,
             pathogenicity=pathogenicity, cached_variant_fields=[
                 {}, [
                     {'selectedGeneId':  'ENSG00000097046', 'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[3][3]},
                     {'selectedGeneId':  'ENSG00000097046'},
-                ],
+                ], {},
             ],
         )
 
         self._assert_expected_search(
-            [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, [VARIANT3, VARIANT4]],
+            [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, [VARIANT3, VARIANT4], MITO_VARIANT3],
             annotations={**selected_transcript_annotations, **screen_annotations}, annotations_secondary=annotations_2,
             inheritance_mode='recessive', cached_variant_fields=[
                 {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][5]}, [
                     {'selectedGeneId': 'ENSG00000097046', 'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[3][0]},
                     {'selectedGeneId': 'ENSG00000097046', 'selectedTranscript': None},
-                ],
+                ], {},
             ],
         )
 

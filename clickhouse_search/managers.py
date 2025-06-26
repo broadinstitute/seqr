@@ -121,7 +121,7 @@ class AnnotationsQuerySet(QuerySet):
     def _get_join_query_values(self, query, alias, select_fields, select_values, conditional_selects):
         query_select = {**(select_values or {})}
         for select_func in (conditional_selects or []):
-            query_select.update(select_func(query))
+            query_select.update(select_func(query, prefix=f'{alias}_'))
         return query.values(
             **{f'{alias}_{field}': F(field) for field in select_fields or []},
             **{f'{alias}_{field}': value for field, value in query_select.items()},
@@ -146,7 +146,7 @@ class AnnotationsQuerySet(QuerySet):
         )
 
 
-    def _conditional_selected_transcript_values(self, query):
+    def _conditional_selected_transcript_values(self, query, prefix=''):
         consequence_field = next((
             field for field in [self.FILTERED_CONSEQUENCE_FIELD, self.GENE_CONSEQUENCE_FIELD] if query.has_annotation(field)
         ), None)
@@ -154,7 +154,7 @@ class AnnotationsQuerySet(QuerySet):
             return {}
         if not hasattr(self.model, 'SORTED_TRANSCRIPT_CONSQUENCES_FIELDS'):
             return {'selectedMainTranscriptId': NullIf(
-                NullIf(F(f'{consequence_field}__0__transcriptId'), Value('')), 'mainTranscriptId',
+                NullIf(F(f'{consequence_field}__0__transcriptId'), Value('')), f'{prefix}mainTranscriptId',
                 output_field=models.StringField(null=True),
             )}
         if consequence_field == self.FILTERED_CONSEQUENCE_FIELD:
