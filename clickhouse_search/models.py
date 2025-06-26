@@ -382,7 +382,7 @@ class BaseAnnotationsGcnv(BaseAnnotationsSvGcnv):
         ])),
     ]
 
-    num_exon = models.UInt8Field(db_column='numExon')
+    num_exon = models.UInt16Field(db_column='numExon')
     populations = NamedTupleField(POPULATION_FIELDS)
 
     class Meta:
@@ -583,7 +583,7 @@ class EntriesGcnv(BaseEntries):
         ('defragged', models.BoolField(null=True, blank=True)),
         ('start', models.UInt32Field(null=True, blank=True)),
         ('end', models.UInt32Field(null=True, blank=True)),
-        ('numExon', models.UInt8Field(null=True, blank=True)),
+        ('numExon', models.UInt16Field(null=True, blank=True)),
         ('geneIds',  models.ArrayField(models.StringField(null=True, blank=True))),
         ('newCall', models.BoolField(null=True, blank=True)),
         ('prevCall', models.BoolField(null=True, blank=True)),
