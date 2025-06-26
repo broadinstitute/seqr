@@ -126,8 +126,8 @@ class BaseAnnotationsSvGcnv(BaseAnnotations):
     chrom = Enum8Field(return_int=False, choices=BaseAnnotations.CHROMOSOME_CHOICES)
     end = models.UInt32Field()
     rg37_locus_end = NamedTupleField([
-        ('contig', models.Enum8Field(return_int=False, choices=BaseAnnotations.CHROMOSOME_CHOICES)),
-        ('position', models.UInt32Field()),
+        ('contig', models.Enum8Field(return_int=False, choices=BaseAnnotations.CHROMOSOME_CHOICES, null=True, blank=True)),
+        ('position', models.UInt32Field(null=True, blank=True)),
     ], db_column='rg37LocusEnd', null_if_empty=True)
     lifted_over_chrom = Enum8Field(db_column='liftedOverChrom', return_int=False, null=True, blank=True, choices=BaseAnnotations.CHROMOSOME_CHOICES)
     sv_type = models.Enum8Field(db_column='svType', return_int=False, choices=SV_TYPES)
@@ -347,13 +347,13 @@ class BaseAnnotationsSv(BaseAnnotationsSvGcnv):
         ('end', models.UInt32Field()),
         ('type', models.Enum8Field(return_int=False, choices=BaseAnnotationsSvGcnv.SV_TYPES)),
     ], db_column='cpxIntervals', null_when_empty=True)
-    end_chrom = models.Enum8Field(db_column='endChrom', return_int=False, choices=BaseAnnotations.CHROMOSOME_CHOICES)
+    end_chrom = models.Enum8Field(db_column='endChrom', return_int=False, choices=BaseAnnotations.CHROMOSOME_CHOICES, null=True, blank=True)
     sv_source_detail = NestedField(
-        [('chrom', models.Enum8Field(return_int=False, choices=BaseAnnotations.CHROMOSOME_CHOICES))],
+        [('chrom', models.Enum8Field(return_int=False, choices=BaseAnnotations.CHROMOSOME_CHOICES, null=True, blank=True))],
         db_column='svSourceDetail',
         null_when_empty=True
     )
-    sv_type_detail = models.Enum8Field(db_column='svTypeDetail', return_int=False, choices=SV_TYPE_DETAILS)
+    sv_type_detail = models.Enum8Field(db_column='svTypeDetail', return_int=False, choices=SV_TYPE_DETAILS, null=True, blank=True)
     populations = NamedTupleField(POPULATION_FIELDS)
 
     class Meta:
@@ -382,7 +382,7 @@ class BaseAnnotationsGcnv(BaseAnnotationsSvGcnv):
         ])),
     ]
 
-    num_exon = models.UInt8Field(db_column='numExon')
+    num_exon = models.UInt16Field(db_column='numExon')
     populations = NamedTupleField(POPULATION_FIELDS)
 
     class Meta:
@@ -583,7 +583,7 @@ class EntriesGcnv(BaseEntries):
         ('defragged', models.BoolField(null=True, blank=True)),
         ('start', models.UInt32Field(null=True, blank=True)),
         ('end', models.UInt32Field(null=True, blank=True)),
-        ('numExon', models.UInt8Field(null=True, blank=True)),
+        ('numExon', models.UInt16Field(null=True, blank=True)),
         ('geneIds',  models.ArrayField(models.StringField(null=True, blank=True))),
         ('newCall', models.BoolField(null=True, blank=True)),
         ('prevCall', models.BoolField(null=True, blank=True)),
@@ -795,3 +795,16 @@ class GtStatsSv(models.ClickhouseModel):
     class Meta(BaseGtStats.Meta):
         db_table = 'GRCh38/SV/gt_stats'
 
+
+ENTRY_CLASS_MAP = {
+    GENOME_VERSION_GRCh37: EntriesGRCh37SnvIndel,
+    GENOME_VERSION_GRCh38: EntriesSnvIndel,
+}
+ANNOTATIONS_CLASS_MAP = {
+    GENOME_VERSION_GRCh37: AnnotationsGRCh37SnvIndel,
+    GENOME_VERSION_GRCh38: AnnotationsSnvIndel,
+}
+TRANSCRIPTS_CLASS_MAP = {
+    GENOME_VERSION_GRCh37: TranscriptsGRCh37SnvIndel,
+    GENOME_VERSION_GRCh38: TranscriptsSnvIndel,
+}

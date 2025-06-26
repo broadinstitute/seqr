@@ -53,6 +53,14 @@ class AnnotationsQuerySet(QuerySet):
             if (field.db_column or field.name) not in self.annotation_values
         ] + self.ENTRY_FIELDS
 
+    @property
+    def prediction_fields(self):
+        return set(dict(self.model.PREDICTION_FIELDS).keys())
+
+    @property
+    def transcript_fields(self):
+        return set(dict(self.model.SORTED_TRANSCRIPT_CONSQUENCES_FIELDS).keys())
+
 
     def subquery_join(self, subquery, join_key='key'):
         #  Add key to intermediate select if not already present
@@ -203,57 +211,53 @@ class AnnotationsQuerySet(QuerySet):
         return results
 
     def _filter_in_silico(self, results, in_silico=None, **kwargs):
-        allowed_scores = {score for score, _ in self.model.PREDICTION_FIELDS}
-        in_silico_filters = {
-            score: value for score, value in (in_silico or {}).items() if score in allowed_scores and value
-        }
-        if not in_silico_filters:
-            return results
-
         in_silico_q = None
-        for score, value in in_silico_filters.items():
+        for score, value in (in_silico or {}).items():
             score_q = self._get_in_silico_score_q(score, value)
             if in_silico_q is None:
                 in_silico_q = score_q
-            else:
+            elif score_q:
                 in_silico_q |= score_q
 
-        if not in_silico.get('requireScore', False):
-            in_silico_q |= Q(**{f'predictions__{score}__isnull': True for score in in_silico_filters.keys()})
+        if in_silico_q and not in_silico.get('requireScore', False):
+            in_silico_q |= Q(**{f'predictions__{score}__isnull': True for score in in_silico.keys() if score in self.prediction_fields})
 
-        return results.filter(in_silico_q)
+        if in_silico_q:
+            results = results.filter(in_silico_q)
 
-    @staticmethod
-    def _get_in_silico_score_q(score, value):
+        return results
+
+    def _get_in_silico_score_q(self, score, value):
+        if not (score in self.prediction_fields and value):
+            return None
         score_column = f'predictions__{score}'
         try:
             return Q(**{f'{score_column}__gte': float(value)})
         except ValueError:
             return Q(**{score_column: value})
 
-    @classmethod
-    def _filter_annotations(cls, results, annotations=None, pathogenicity=None, exclude=None, gene_ids=None, **kwargs):
+    def _filter_annotations(self, results, annotations=None, pathogenicity=None, exclude=None, gene_ids=None, **kwargs):
         if gene_ids:
             results = results.annotate(**{
-                cls.GENE_CONSEQUENCE_FIELD: ArrayFilter(cls.TRANSCRIPT_CONSEQUENCE_FIELD, conditions=[{
+                self.GENE_CONSEQUENCE_FIELD: ArrayFilter(self.TRANSCRIPT_CONSEQUENCE_FIELD, conditions=[{
                     'geneId': (gene_ids, 'has({value}, {field})'),
                 }]),
             })
             results = results.filter(gene_consequences__not_empty=True)
 
-        filter_qs, transcript_filters = cls._parse_annotation_filters(annotations) if annotations else ([], [])
+        filter_qs, transcript_filters = self._parse_annotation_filters(annotations) if annotations else ([], [])
 
         hgmd = (pathogenicity or {}).get(HGMD_KEY)
         if hgmd:
-            filter_qs.append(cls._hgmd_filter_q(hgmd))
+            filter_qs.append(self._hgmd_filter_q(hgmd))
 
         clinvar = (pathogenicity or {}).get(CLINVAR_KEY)
         if clinvar:
-            filter_qs.append(cls._clinvar_filter_q(clinvar))
+            filter_qs.append(self._clinvar_filter_q(clinvar))
 
         exclude_clinvar = (exclude or {}).get('clinvar')
         if exclude_clinvar:
-            results = results.exclude(cls._clinvar_filter_q(exclude_clinvar))
+            results = results.exclude(self._clinvar_filter_q(exclude_clinvar))
 
         if not (filter_qs or transcript_filters):
             return results
@@ -266,9 +270,9 @@ class AnnotationsQuerySet(QuerySet):
             filter_q = Q(passes_annotation=True)
 
         if transcript_filters:
-            consequence_field = cls.GENE_CONSEQUENCE_FIELD if gene_ids else cls.TRANSCRIPT_CONSEQUENCE_FIELD
+            consequence_field = self.GENE_CONSEQUENCE_FIELD if gene_ids else self.TRANSCRIPT_CONSEQUENCE_FIELD
             results = results.annotate(**{
-                cls.FILTERED_CONSEQUENCE_FIELD: ArrayFilter(consequence_field, conditions=transcript_filters),
+                self.FILTERED_CONSEQUENCE_FIELD: ArrayFilter(consequence_field, conditions=transcript_filters),
             })
             transcript_q = Q(filtered_transcript_consequences__not_empty=True)
             if filter_q:
@@ -278,38 +282,48 @@ class AnnotationsQuerySet(QuerySet):
 
         return results.filter(filter_q)
 
-    @classmethod
-    def _parse_annotation_filters(cls, annotations):
+    def _parse_annotation_filters(self, annotations):
         filter_qs = []
+        filters_by_field = {}
         allowed_consequences = []
-        transcript_filters = []
+        transcript_field_filters = {}
         for field, value in annotations.items():
             if field == UTR_ANNOTATOR_KEY:
-                transcript_filters.append({'fiveutrConsequence': (value, 'hasAny({value}, [{field}])')})
+                transcript_field_filters['fiveutrConsequence'] = (value, 'hasAny({value}, [{field}])')
             elif field == EXTENDED_SPLICE_KEY:
                 if EXTENDED_SPLICE_REGION_CONSEQUENCE in value:
-                    transcript_filters.append({'extendedIntronicSpliceRegionVariant': (1, '{field} = {value}')})
+                    transcript_field_filters['extendedIntronicSpliceRegionVariant'] = (1, '{field} = {value}')
             elif field in [MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY]:
-                filter_qs.append(Q(**{f'sorted_{field}_consequences__array_exists': {
+                filters_by_field[f'sorted_{field}_consequences'] = ('{field}__array_exists', {
                     'consequenceTerms': (value, 'hasAny({value}, {field})'),
-                }}))
+                })
             elif field == SPLICE_AI_FIELD:
-                filter_qs.append(cls._get_in_silico_score_q(SPLICE_AI_FIELD, value))
+                splice_ai_q = self._get_in_silico_score_q(SPLICE_AI_FIELD, value)
+                if splice_ai_q:
+                    filter_qs.append(splice_ai_q)
             elif field == SCREEN_KEY:
-                filter_qs.append(Q(screen_region_type__in=value))
+                filters_by_field['screen_region_type'] = ('{field}__in', value)
             elif field not in SV_ANNOTATION_TYPES:
                 allowed_consequences += value
 
+        filter_qs += [
+            Q(**{lookup_template.format(field=field): value})
+            for field, (lookup_template, value) in filters_by_field.items() if hasattr(self.model, field)
+        ]
+        transcript_filters = [
+            {field: value} for field, value in transcript_field_filters.items() if field in self.transcript_fields
+        ]
+
         non_canonical_consequences = [c for c in allowed_consequences if not c.endswith('__canonical')]
         if non_canonical_consequences:
-            transcript_filters.append(cls._consequence_term_filter(non_canonical_consequences))
+            transcript_filters.append(self._consequence_term_filter(non_canonical_consequences))
 
         canonical_consequences = [
             c.replace('__canonical', '') for c in allowed_consequences if c.endswith('__canonical')
         ]
-        if canonical_consequences:
+        if canonical_consequences and 'canonical' in self.transcript_fields:
             transcript_filters.append(
-                cls._consequence_term_filter(canonical_consequences, canonical=(0, '{field} > {value}')),
+                self._consequence_term_filter(canonical_consequences, canonical=(0, '{field} > {value}')),
             )
 
         return filter_qs, transcript_filters
@@ -421,7 +435,7 @@ class EntriesManager(Manager):
         })
 
     def search(self, sample_data, parsed_locus=None, freqs=None,  **kwargs):
-        entries = self.annotate(seqrPop=GtStatsDictGet('key'))
+        entries = self.annotate(seqrPop=GtStatsDictGet('key', table_base=self.model._meta.db_table.rsplit('/', 1)[0]))
         entries = self._filter_intervals(entries, **(parsed_locus or {}))
 
         if (freqs or {}).get('callset'):

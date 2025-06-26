@@ -105,7 +105,7 @@ class ArrayNotEmptyTransform(lookups.Transform):
 
 class GtStatsDictGet(Func):
     function = 'tuplePlus'
-    template = '%(function)s(dictGet("GRCh38/SNV_INDEL/gt_stats_dict", (\'ac_wes\', \'hom_wes\'), %(expressions)s), dictGet("GRCh38/SNV_INDEL/gt_stats_dict", (\'ac_wgs\', \'hom_wgs\'), %(expressions)s))'
+    template = '%(function)s(dictGet("%(table_base)s/gt_stats_dict", (\'ac_wes\', \'hom_wes\'), %(expressions)s), dictGet("GRCh38/SNV_INDEL/gt_stats_dict", (\'ac_wgs\', \'hom_wgs\'), %(expressions)s))'
     output_field = NamedTupleField([('ac', UInt32Field()), ('hom', UInt32Field())])
 
 
