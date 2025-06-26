@@ -1046,15 +1046,13 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
     def test_in_silico_filter(self):
         main_in_silico = {'eigen': '3.5', 'mut_taster': 'N', 'vest': 0.5}
         self._assert_expected_search(
-            [VARIANT1, VARIANT4], in_silico=main_in_silico,
-#            [VARIANT1, VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], in_silico=in_silico,
+           [VARIANT1, VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], in_silico=main_in_silico,
         )
 
         in_silico = {**main_in_silico, 'requireScore': True}
         in_silico.pop('eigen')
         self._assert_expected_search(
-            [VARIANT4], in_silico=in_silico,
-#            [VARIANT4, MITO_VARIANT2], in_silico=in_silico, sample_data=FAMILY_2_ALL_SAMPLE_DATA,
+           [VARIANT4, MITO_VARIANT2], in_silico=in_silico,
         )
 
 #         sv_in_silico = {'strvctvre': 0.1, 'requireScore': True}
