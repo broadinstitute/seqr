@@ -203,7 +203,9 @@ class AnnotationsQuerySet(QuerySet):
                         f'populations__{population}__{af_field}__lte': pop_filter['af'],
                     })
                     if clinvar_override_q and pop_filter['af'] < PATH_FREQ_OVERRIDE_CUTOFF:
-                        af_q |= clinvar_override_q
+                        af_q |= (clinvar_override_q & Q(**{
+                            f'populations__{population}__{af_field}__lte': PATH_FREQ_OVERRIDE_CUTOFF,
+                        }))
                     results = results.filter(af_q)
             elif pop_filter.get('ac') is not None:
                 results = results.filter(**{f'populations__{population}__ac__lte': pop_filter['ac']})

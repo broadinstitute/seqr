@@ -719,7 +719,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 
         annotations = {'splice_ai': '0.0'}  # Ensures no variants are filtered out by annotation/path filters
         self._assert_expected_search(
-            [VARIANT1, VARIANT2, VARIANT4, MITO_VARIANT1, MITO_VARIANT3],
+            [VARIANT1, VARIANT2, VARIANT4, MITO_VARIANT1],
             freqs={'gnomad_genomes': {'af': 0.01, 'hh': 10}, 'gnomad_mito': {'af': 0.01}},
             annotations=annotations, pathogenicity={'clinvar': ['pathogenic', 'likely_pathogenic', 'vus_or_conflicting']},
         )
