@@ -428,7 +428,10 @@ class EntriesManager(Manager):
         ANY_AFFECTED: {AFFECTED: HAS_ALT},
     }
 
-    QUALITY_FILTERS = [('gq', 1), ('ab', 100, 'x.gt != 1')]
+    @property
+    def quality_filters(self):
+        call_fields = {field[0] for field in self.model.CALL_FIELDS}
+        return [config for config in [('gq', 1), ('ab', 100, 'x.gt != 1'), ('hl', 100)] if config[0] in call_fields]
 
     @property
     def genotype_fields(self):
@@ -491,15 +494,12 @@ class EntriesManager(Manager):
 
        entries = entries.filter(family_q)
 
-       quality_filter = qualityFilter or {}
-       if quality_filter.get('vcf_filter'):
-           entries = entries.filter(filters__len=0)
-
        entries = entries.annotate(
            clinvar_key=F('clinvar_join__key'),
            clinvar=Tuple(*self.clinvar_fields.keys(), output_field=NamedTupleField(list(self.clinvar_fields.values()), null_if_empty=True, null_empty_arrays=True))
        )
 
+       quality_filter = qualityFilter or {}
        individual_genotype_filter = (inheritance_filter or {}).get('genotype')
        custom_affected = (inheritance_filter or {}).get('affected') or {}
        if inheritance_mode or individual_genotype_filter or quality_filter:
@@ -533,6 +533,12 @@ class EntriesManager(Manager):
             if call_q:
                 entries = entries.filter(call_q)
 
+            if quality_filter.get('vcf_filter'):
+                q = Q(filters__len=0)
+                if clinvar_override_q:
+                    q |= clinvar_override_q
+                entries = entries.filter(q)
+
        return self._annotate_calls(entries, sample_data, annotate_carriers, multi_sample_type_families)
 
     @staticmethod
@@ -546,13 +552,12 @@ class EntriesManager(Manager):
                 multi_sample_type_families[s['family_guid']] = []
         return sample_type_families, multi_sample_type_families
 
-    @classmethod
-    def _family_sample_filters(cls, family_sample_data, inheritance_mode, individual_genotype_filter, quality_filter, custom_affected):
+    def _family_sample_filters(self, family_sample_data, inheritance_mode, individual_genotype_filter, quality_filter, custom_affected):
         sample_filters = []
         for sample in family_sample_data['samples']:
             affected = custom_affected.get(sample['individual_guid']) or sample['affected']
-            sample_inheritance_filter = cls._sample_genotype_filter(sample, affected, inheritance_mode, individual_genotype_filter)
-            sample_quality_filter = cls._sample_quality_filter(affected, quality_filter)
+            sample_inheritance_filter = self._sample_genotype_filter(sample, affected, inheritance_mode, individual_genotype_filter)
+            sample_quality_filter = self._sample_quality_filter(affected, quality_filter)
             if sample_inheritance_filter or sample_quality_filter:
                 sample_filters.append((sample['sample_ids_by_type'], sample_inheritance_filter, sample_quality_filter))
         return sample_filters
@@ -610,13 +615,12 @@ class EntriesManager(Manager):
             sample_filter['gt'] = cls.GENOTYPE_LOOKUP[genotype]
         return sample_filter
 
-    @classmethod
-    def _sample_quality_filter(cls, affected, quality_filter):
+    def _sample_quality_filter(self, affected, quality_filter):
         sample_filter = {}
         if quality_filter.get('affected_only') and affected != AFFECTED:
             return sample_filter
 
-        for field, scale, *filters in cls.QUALITY_FILTERS:
+        for field, scale, *filters in self.quality_filters:
             value = quality_filter.get(f'min_{field}')
             if value:
                 or_filters = ['isNull({field})', '{field} >= {value}'] + filters

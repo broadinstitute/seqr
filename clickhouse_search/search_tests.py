@@ -417,25 +417,22 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
     def test_quality_filter(self):
         quality_filter = {'vcf_filter': 'pass'}
         self._assert_expected_search(
-            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT],
+            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, MITO_VARIANT1, MITO_VARIANT2],
             # [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
             quality_filter=quality_filter
         )
 
         # self._assert_expected_search(
-        #     [SV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2], quality_filter=quality_filter,
+        #     [SV_VARIANT4], quality_filter=quality_filter,
         #     sample_data={**SV_WGS_SAMPLE_DATA, **FAMILY_2_MITO_SAMPLE_DATA}
         # )
-        #
-        # self._assert_expected_search(
-        #     [MITO_VARIANT1, MITO_VARIANT3], quality_filter={'min_gq': 60, 'min_hl': 5}, sample_data=FAMILY_2_MITO_SAMPLE_DATA,
-        # )
-        #
-        # gcnv_quality_filter = {'min_gq': 40, 'min_qs': 20}
-        # self._assert_expected_search(
-        #     [VARIANT2, MULTI_FAMILY_VARIANT, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT4], quality_filter=gcnv_quality_filter,
-        # )
-        #
+
+        gcnv_quality_filter = {'min_gq': 40, 'min_qs': 20, 'min_hl': 5}
+        self._assert_expected_search(
+            [VARIANT2, MULTI_FAMILY_VARIANT, MITO_VARIANT1, MITO_VARIANT3], quality_filter=gcnv_quality_filter,
+            # [VARIANT2, MULTI_FAMILY_VARIANT, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT4], quality_filter=gcnv_quality_filter,
+        )
+
         # self._assert_expected_search(
         #     [], annotations=NEW_SV_FILTER, quality_filter=gcnv_quality_filter, omit_data_type='SNV_INDEL',
         # )
@@ -450,12 +447,12 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         # )
 
         self._assert_expected_search(
-            [VARIANT2, MULTI_FAMILY_VARIANT], quality_filter={'min_gq': 40, 'vcf_filter': 'pass'},
+            [VARIANT2, MULTI_FAMILY_VARIANT, MITO_VARIANT1, MITO_VARIANT2], quality_filter={'min_gq': 40, 'vcf_filter': 'pass'},
         )
 
         self._assert_expected_search(
             # [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
-            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT],
+            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
             quality_filter={'min_gq': 60, 'min_qs': 10, 'affected_only': True},
         )
 
@@ -464,29 +461,38 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         # )
 
         self._assert_expected_search(
-            [VARIANT1, VARIANT2, FAMILY_3_VARIANT], quality_filter={'min_ab': 50},
+            [VARIANT1, VARIANT2, FAMILY_3_VARIANT, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], quality_filter={'min_ab': 50},
         )
 
         self._assert_expected_search(
-            [VARIANT2, VARIANT3], quality_filter={'min_ab': 70, 'affected_only': True},
+            [VARIANT2, VARIANT3, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], quality_filter={'min_ab': 70, 'affected_only': True},
             # omit_data_type='SV_WES',
         )
 
-        quality_filter.update({'min_gq': 40, 'min_ab': 50})
+        quality_filter.update({'min_gq': 40, 'min_ab': 50, 'min_hl': 5})
         self._assert_expected_search(
-            [VARIANT2, FAMILY_3_VARIANT], quality_filter=quality_filter,
+            [VARIANT2, FAMILY_3_VARIANT, MITO_VARIANT1], quality_filter=quality_filter,
         )
 
-        annotations = {'splice_ai': '0.0'}  # Ensures no variants are filtered out by annotation/path filters
+        # Ensure no variants are filtered out by annotation/path filters
+        annotations = {'splice_ai': '0.0', 'consequences': ['non_coding_transcript_exon_variant', 'missense_variant', 'synonymous_variant']}
+        selected_family_3_variant = {**FAMILY_3_VARIANT, 'selectedMainTranscriptId': 'ENST00000497611'}
+        cached_variant_fields = [
+            {'selectedTranscript': None},
+            {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][0]},
+            {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[3][3]},
+            {'selectedTranscript': MITO_VARIANT1['transcripts']['ENSG00000210112'][0]},
+            {'selectedTranscript': MITO_VARIANT3['transcripts']['ENSG00000198727'][0]},
+        ]
+
         self._assert_expected_search(
-            [VARIANT1, VARIANT2, FAMILY_3_VARIANT], quality_filter=quality_filter,
-            # [VARIANT1, VARIANT2, FAMILY_3_VARIANT, MITO_VARIANT1, MITO_VARIANT3], quality_filter=quality_filter, omit_data_type='SV_WES',
-            annotations=annotations, pathogenicity={'clinvar': ['likely_pathogenic', 'vus_or_conflicting']},
+            [VARIANT1, VARIANT2, selected_family_3_variant, MITO_VARIANT1, MITO_VARIANT3], quality_filter=quality_filter,
+            annotations=annotations, pathogenicity={'clinvar': ['likely_pathogenic', 'vus_or_conflicting']}, cached_variant_fields=cached_variant_fields,
         )
 
         self._assert_expected_search(
-            [VARIANT2, FAMILY_3_VARIANT], quality_filter=quality_filter,
-            annotations=annotations, pathogenicity={'clinvar': ['pathogenic']},
+            [VARIANT2, selected_family_3_variant, MITO_VARIANT1], quality_filter=quality_filter,
+            annotations=annotations, pathogenicity={'clinvar': ['pathogenic']}, cached_variant_fields=cached_variant_fields[1:],
         )
 #
     def test_location_search(self):
