@@ -573,6 +573,7 @@ class EntriesMito(BaseEntries):
         )
 
 class EntriesSv(BaseEntries):
+    SAMPLE_TYPE = Sample.SAMPLE_TYPE_WGS
     CALL_FIELDS = [
         ('sampleId', models.StringField()),
         ('gt', models.Enum8Field(null=True, blank=True, choices=[(0, 'REF'), (1, 'HET'), (2, 'HOM')])),
@@ -591,6 +592,7 @@ class EntriesSv(BaseEntries):
         db_table = 'GRCh38/SV/entries'
 
 class EntriesGcnv(BaseEntries):
+    SAMPLE_TYPE = Sample.SAMPLE_TYPE_WES
     CALL_FIELDS = [
         ('sampleId', models.StringField()),
         ('gt', models.Enum8Field(null=True, blank=True, choices=[(0, 'REF'), (1, 'HET'), (2, 'HOM')])),
@@ -817,6 +819,7 @@ ENTRY_CLASS_MAP = {
     GENOME_VERSION_GRCh38: {
         Sample.DATASET_TYPE_VARIANT_CALLS: EntriesSnvIndel,
         Sample.DATASET_TYPE_MITO_CALLS: EntriesMito,
+        Sample.DATASET_TYPE_SV_CALLS: EntriesSv,
     },
 }
 ANNOTATIONS_CLASS_MAP = {
@@ -824,6 +827,7 @@ ANNOTATIONS_CLASS_MAP = {
     GENOME_VERSION_GRCh38: {
         Sample.DATASET_TYPE_VARIANT_CALLS: AnnotationsSnvIndel,
         Sample.DATASET_TYPE_MITO_CALLS: AnnotationsMito,
+        Sample.DATASET_TYPE_SV_CALLS: AnnotationsSv,
     },
 }
 TRANSCRIPTS_CLASS_MAP = {

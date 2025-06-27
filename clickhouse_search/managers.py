@@ -10,6 +10,7 @@ from clickhouse_search.backend.fields import NestedField, NamedTupleField
 from clickhouse_search.backend.functions import Array, ArrayConcat, ArrayDistinct, ArrayFilter, ArrayFold, \
     ArrayIntersect, ArrayJoin, ArrayMap, ArraySort, ArraySymmetricDifference, CrossJoin, GroupArray, GroupArrayArray, \
     GroupArrayIntersect, DictGet, If, MapLookup, NullIf, Plus, SubqueryJoin, SubqueryTable, Tuple, TupleConcat
+from clickhouse_search.test_utils import transcript
 from seqr.models import Sample
 from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFECTED, UNAFFECTED, MALE_SEXES, \
     X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, SCREEN_KEY, UTR_ANNOTATOR_KEY, \
@@ -24,8 +25,9 @@ class AnnotationsQuerySet(QuerySet):
     TRANSCRIPT_CONSEQUENCE_FIELD = 'sorted_transcript_consequences'
     GENE_CONSEQUENCE_FIELD = 'gene_consequences'
     FILTERED_CONSEQUENCE_FIELD = 'filtered_transcript_consequences'
+    TRANSCRIPT_FIELDS = [TRANSCRIPT_CONSEQUENCE_FIELD, 'sorted_gene_consequences']
 
-    ENTRY_FIELDS = ['familyGuids', 'genotypes', 'clinvar']
+    ENTRY_FIELDS = ['familyGuids', 'genotypes']
 
     SELECTED_GENE_FIELD = 'selectedGeneId'
 
@@ -33,11 +35,12 @@ class AnnotationsQuerySet(QuerySet):
     def annotation_values(self):
         seqr_pops = []
         population_fields = [*self.model.POPULATION_FIELDS]
+        single_sample_type = hasattr(self.model, 'SV_TYPES')
         for i, (name, subfields) in enumerate(self.model.SEQR_POPULATIONS):
-            exprs = [Plus(f'seqrPop__{i*2}', f'seqrPop__{i*2+1}')]
+            exprs = [F(f'seqrPop__{i*2}') if single_sample_type else Plus(f'seqrPop__{i*2}', f'seqrPop__{i*2+1}')]
             sub_output_fields = [('ac', models.UInt32Field())]
             if 'hom' in subfields:
-                exprs.append(Plus(f'seqrPop__{i*2+2}', f'seqrPop__{i*2+3}'))
+                exprs.append(F(f'seqrPop__{i*2+1}') if single_sample_type else Plus(f'seqrPop__{i*2+2}', f'seqrPop__{i*2+3}'))
                 sub_output_fields.append(('hom', models.UInt32Field()))
             seqr_pops.append(Tuple(*exprs))
             population_fields.append((name, NamedTupleField(sub_output_fields)))
@@ -48,12 +51,14 @@ class AnnotationsQuerySet(QuerySet):
             'populations': TupleConcat(F('populations'), Tuple(*seqr_pops), output_field=NamedTupleField(population_fields)),
         }
 
-        if self.model.sorted_transcript_consequences.field.group_by_key:
-            annotations.update({
-                'mainTranscriptId': F('sorted_transcript_consequences__0__transcriptId'),
-                'selectedMainTranscriptId': Value(None, output_field=models.StringField(null=True)),
-                'transcripts': annotations.pop('sortedTranscriptConsequences'),
-            })
+        if not hasattr(self.model, 'SORTED_TRANSCRIPT_CONSQUENCES_FIELDS'):
+            transcript_field = next(field for field in self.TRANSCRIPT_FIELDS if hasattr(self.model, field))
+            annotations['transcripts'] = annotations.pop(getattr(self.model, transcript_field).field.db_column)
+            if transcript_field == self.TRANSCRIPT_CONSEQUENCE_FIELD:
+                annotations.update({
+                    'mainTranscriptId': F('sorted_transcript_consequences__0__transcriptId'),
+                    'selectedMainTranscriptId': Value(None, output_field=models.StringField(null=True)),
+                })
 
         return annotations
 
@@ -61,7 +66,7 @@ class AnnotationsQuerySet(QuerySet):
     def annotation_fields(self):
         return [
             field.name for field in self.model._meta.local_fields
-            if (field.db_column or field.name) not in self.annotation_values and field.name != self.TRANSCRIPT_CONSEQUENCE_FIELD
+            if (field.db_column or field.name) not in self.annotation_values and field.name not in self.TRANSCRIPT_FIELDS
         ] + self.ENTRY_FIELDS
 
     @property
@@ -123,7 +128,7 @@ class AnnotationsQuerySet(QuerySet):
         for select_func in (conditional_selects or []):
             query_select.update(select_func(query, prefix=f'{alias}_'))
         return query.values(
-            **{f'{alias}_{field}': F(field) for field in select_fields or []},
+            **{f'{alias}_{field}': F(field) for field in select_fields or [] if query.has_annotation(field)},
             **{f'{alias}_{field}': value for field, value in query_select.items()},
         )
 
@@ -137,11 +142,14 @@ class AnnotationsQuerySet(QuerySet):
         return results
 
     def result_values(self):
-        values = {k: v for k, v in self.annotation_values.items() if k != 'populations'}
+        fields = [*self.annotation_fields]
+        if self.has_annotation('clinvar'):
+            fields.append('clinvar')
 
+        values = {k: v for k, v in self.annotation_values.items() if k != 'populations'}
         values.update(self._conditional_selected_transcript_values(self))
 
-        return self.values(*self.annotation_fields, **values).annotate(
+        return self.values(*fields, **values).annotate(
             populations=self.annotation_values['populations']
         )
 
@@ -167,7 +175,7 @@ class AnnotationsQuerySet(QuerySet):
         primary_q = primary_q.explode_gene_id(primary_gene_field)
         secondary_q = secondary_q.explode_gene_id(secondary_gene_field)
 
-        select_fields = [*self.annotation_fields, self.SELECTED_GENE_FIELD]
+        select_fields = [*self.annotation_fields, 'clinvar', self.SELECTED_GENE_FIELD]
         if carrier_field:
             select_fields.append(carrier_field)
 
@@ -483,11 +491,12 @@ class EntriesManager(Manager):
         return self._search_call_data(entries, sample_data, **kwargs)
 
     def _seqr_pop_expression(self):
+        sample_types = [self.model.SAMPLE_TYPE.lower()] if hasattr(self.model, 'SAMPLE_TYPE') else ['wes', 'wgs']
         seqr_pop_fields = []
         for _, sub_fields in self.model.key.field.related_model.SEQR_POPULATIONS:
-            seqr_pop_fields += [f"'{sub_fields['ac']}_wes'", f"'{sub_fields['ac']}_wgs'"]
+            seqr_pop_fields += [f"'{sub_fields['ac']}_{sample_type}'" for sample_type in sample_types]
             if sub_fields.get('hom'):
-                seqr_pop_fields += [f"'{sub_fields['hom']}_wes'", f"'{sub_fields['hom']}_wgs'"]
+                seqr_pop_fields += [f"'{sub_fields['hom']}_{sample_type}'" for sample_type in sample_types]
         return DictGet(
             'key',
             dict_name=f"{self.model._meta.db_table.rsplit('/', 1)[0]}/gt_stats_dict",
@@ -495,11 +504,17 @@ class EntriesManager(Manager):
             output_field=models.TupleField([models.UInt32Field() for _ in seqr_pop_fields])
         )
 
+    def _has_clinvar(self):
+        return hasattr(self.model, 'clinvar_join')
+
     def _search_call_data(self, entries, sample_data, inheritance_mode=None, inheritance_filter=None, qualityFilter=None, pathogenicity=None, annotate_carriers=False, **kwargs):
        project_guids = {s['project_guid'] for s in sample_data}
        project_filter = Q(project_guid__in=project_guids) if len(project_guids) > 1 else Q(project_guid=sample_data[0]['project_guid'])
        entries = entries.filter(project_filter)
 
+       class_sample_type = getattr(self.model, 'SAMPLE_TYPE', None)
+       if class_sample_type:
+           entries = entries.annotate(sample_type=Value(class_sample_type))
        sample_type_families, multi_sample_type_families = self._get_family_sample_types(sample_data)
        family_q = None
        if multi_sample_type_families:
@@ -513,10 +528,11 @@ class EntriesManager(Manager):
 
        entries = entries.filter(family_q)
 
-       entries = entries.annotate(
-           clinvar_key=F('clinvar_join__key'),
-           clinvar=Tuple(*self.clinvar_fields.keys(), output_field=NamedTupleField(list(self.clinvar_fields.values()), null_if_empty=True, null_empty_arrays=True))
-       )
+       if self._has_clinvar():
+           entries = entries.annotate(
+               clinvar_key=F('clinvar_join__key'),
+               clinvar=Tuple(*self.clinvar_fields.keys(), output_field=NamedTupleField(list(self.clinvar_fields.values()), null_if_empty=True, null_empty_arrays=True))
+           )
 
        quality_filter = qualityFilter or {}
        individual_genotype_filter = (inheritance_filter or {}).get('genotype')
@@ -689,7 +705,9 @@ class EntriesManager(Manager):
         if carriers_expression:
             entries = entries.annotate(carriers=carriers_expression)
 
-        fields = ['key', 'clinvar', 'clinvar_key', 'seqrPop']
+        fields = ['key', 'seqrPop']
+        if self._has_clinvar():
+             fields += ['clinvar', 'clinvar_key']
         if multi_sample_type_families or len(sample_data) > 1:
             entries = entries.values(*fields).annotate(
                 familyGuids=ArraySort(ArrayDistinct(GroupArray('family_guid'))),
@@ -812,10 +830,11 @@ class EntriesManager(Manager):
         return Q(xpos__range=(get_xpos(chrom, start), get_xpos(chrom, end)))
 
     def _filter_seqr_frequency(self, entries, ac=None, hh=None, **kwargs):
+        single_sample_type = hasattr(self.model, 'SAMPLE_TYPE')
         if ac is not None:
-            entries = entries.annotate(ac=Plus('seqrPop__0', 'seqrPop__1'))
+            entries = entries.annotate(ac=F('seqrPop__0') if single_sample_type else Plus('seqrPop__0', 'seqrPop__1'))
             entries = entries.filter(ac__lte=ac)
         if hh is not None and 'hom' in self.model.key.field.related_model.SEQR_POPULATIONS[0][1]:
-            entries = entries.annotate(hom=Plus('seqrPop__2', 'seqrPop__3'))
+            entries = entries.annotate(hom=F('seqrPop__1') if single_sample_type else Plus('seqrPop__2', 'seqrPop__3'))
             entries = entries.filter(hom__lte=hh)
         return entries
