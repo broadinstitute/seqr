@@ -1895,17 +1895,26 @@ class EsUtilsTest(TestCase):
         variants, _ = query_variants(results_model, num_results=2)
         self.assertListEqual(variants, [PARSED_SV_WGS_VARIANT])
 
+        self.maxDiff = None
         self.assertExecutedSearch(filters=[
             {'terms': {'rsid': ['rs9876']}},
             {'terms': {'transcriptConsequenceTerms': ['CPX', 'DUP']}},
             {'bool': {
-                'must': [{'term': {'samples': 'NA21234'}},
+                'must': [{'bool': {'must': [{'term': {'samples': 'NA21234'}}, {'term': {'samples': 'NA21987'}}]}},
                     {'bool': {
                         'must_not': [
                             {'term': {'samples_gq_sv_0_to_5': 'NA21234'}},
                             {'term': {'samples_gq_sv_5_to_10': 'NA21234'}},
                             {'term': {'samples_gq_sv_10_to_15': 'NA21234'}},
                             {'term': {'samples_gq_sv_15_to_20': 'NA21234'}},
+                            {'term': {'samples_gq_sv_0_to_5': 'NA21654'}},
+                            {'term': {'samples_gq_sv_5_to_10': 'NA21654'}},
+                            {'term': {'samples_gq_sv_10_to_15': 'NA21654'}},
+                            {'term': {'samples_gq_sv_15_to_20': 'NA21654'}},
+                            {'term': {'samples_gq_sv_0_to_5': 'NA21987'}},
+                            {'term': {'samples_gq_sv_5_to_10': 'NA21987'}},
+                            {'term': {'samples_gq_sv_10_to_15': 'NA21987'}},
+                            {'term': {'samples_gq_sv_15_to_20': 'NA21987'}},
                         ],
                     }}
                 ],
