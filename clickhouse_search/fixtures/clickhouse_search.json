@@ -698,6 +698,182 @@
       ]
     }
 }, {
+    "model": "clickhouse_search.annotationssv",
+    "pk": 12,
+    "fields": {
+      "key": 12,
+      "xpos": 1009310023,
+      "chrom": "1",
+      "end_chrom": null,
+      "pos": 9310023,
+      "end": 9310127,
+      "variant_id": "phase2_DEL_chr1_625",
+      "lifted_over_chrom": "1",
+      "lifted_over_pos": 9370082,
+      "rg37_locus_end": ["1", 9370186],
+      "bothsides_support": false,
+      "algorithms": "manta",
+      "predictions": [null],
+      "populations": [
+        [0, 0, 0, ""]
+      ],
+      "sorted_gene_consequences": [
+        ["ENSG00000171621", "INTRONIC"]
+      ],
+      "sv_type": "DEL",
+      "sv_type_detail": null,
+      "cpx_intervals": [],
+      "sv_source_detail": [null]
+    }
+}, {
+    "model": "clickhouse_search.annotationssv",
+    "pk": 13,
+    "fields": {
+      "key": 13,
+      "xpos": 1009380254,
+      "chrom": "1",
+      "end_chrom": null,
+      "pos": 9380254,
+      "end": 9380286,
+      "variant_id": "cohort_2911.chr1.final_cleanup_INS_chr1_160",
+      "lifted_over_chrom": "1",
+      "lifted_over_pos": 9440313,
+      "rg37_locus_end": ["4", 9382012],
+      "bothsides_support": true,
+      "algorithms": "manta",
+      "predictions": [null],
+      "populations": [
+        [0.005423, 35634, 10359, "gnomAD-SV_v3_INS_1_299"]
+      ],
+      "sorted_gene_consequences": [
+        ["ENSG00000171621", "NEAREST_TSS"]
+      ],
+      "sv_type": "INS",
+      "sv_type_detail": null,
+      "cpx_intervals": [],
+      "sv_source_detail": [null]
+    }
+}, {
+    "model": "clickhouse_search.annotationssv",
+    "pk": 14,
+    "fields": {
+      "key": 14,
+      "xpos": 13063036002,
+      "chrom": "13",
+      "end_chrom": "17",
+      "pos": 63036002,
+      "end": 63036041,
+      "variant_id": "phase2_CPX_chr13_35",
+      "lifted_over_chrom": "13",
+      "lifted_over_pos": 63610135,
+      "rg37_locus_end": ["17", 61113402],
+      "bothsides_support": false,
+      "algorithms": "manta",
+      "predictions": [null],
+      "populations": [
+        [0, 0, 0, ""]
+      ],
+      "sorted_gene_consequences": [
+        ["ENSG00000083544", "INTRONIC"]
+      ],
+      "sv_type": "CPX",
+      "sv_type_detail": "dDUP",
+      "cpx_intervals": [["17", 22150735, 22151179, "DUP"]],
+      "sv_source_detail": [null]
+    }
+}, {
+    "model": "clickhouse_search.annotationssv",
+    "pk": 15,
+    "fields": {
+      "key": 15,
+      "xpos": 14106694244,
+      "chrom": "14",
+      "end_chrom": null,
+      "pos": 106694244,
+      "end": 106740587,
+      "variant_id": "phase2_DEL_chr14_4640",
+      "lifted_over_chrom": "14",
+      "lifted_over_pos": 107150261,
+      "rg37_locus_end": [null, null],
+      "bothsides_support": false,
+      "algorithms": "depth,manta",
+      "predictions": [0.161],
+      "populations": [
+        [0, 0, 0, ""]
+      ],
+      "sorted_gene_consequences": [
+        ["ENSG00000184986", "NEAREST_TSS"]
+      ],
+      "sv_type": "DEL",
+      "sv_type_detail": null,
+      "cpx_intervals": [],
+      "sv_source_detail": [null]
+    }
+}, {
+    "model": "clickhouse_search.entriessv",
+    "pk": 24,
+    "fields": {
+      "key": 12,
+      "project_guid": "R0004_non_analyst_project",
+      "family_guid": "F000014_14",
+      "xpos": 1009310023,
+      "filters": ["HIGH_SR_BACKGROUND"],
+      "sign": 1,
+      "calls": [
+        ["NA21234", 1, 2, 0, false, true, null],
+        ["NA21987", 0, 2, 6, false, true, null],
+        ["NA21654", 0, 2, 99, false, true, null]
+      ]
+    }
+}, {
+    "model": "clickhouse_search.entriessv",
+    "pk": 25,
+    "fields": {
+      "key": 13,
+      "project_guid": "R0004_non_analyst_project",
+      "family_guid": "F000014_14",
+      "xpos": 1009380254,
+      "filters": ["HIGH_SR_BACKGROUND"],
+      "sign": 1,
+      "calls": [
+        ["NA21234", 1, null, 0, true, false, null],
+        ["NA21987", 0, null, 99, true, false, null],
+        ["NA21654", 1, null, 0, true, false, null]
+      ]
+    }
+}, {
+    "model": "clickhouse_search.entriessv",
+    "pk": 26,
+    "fields": {
+      "key": 14,
+      "project_guid": "R0004_non_analyst_project",
+      "family_guid": "F000014_14",
+      "xpos": 13063036002,
+      "filters": ["HIGH_SR_BACKGROUND"],
+      "sign": 1,
+      "calls": [
+        ["NA21234", 1, null, 62, false, true, null],
+        ["NA21987", 2, null, 42, false, true, null],
+        ["NA21654", 1, null, 79, false, true, null]
+      ]
+    }
+}, {
+    "model": "clickhouse_search.entriessv",
+    "pk": 27,
+    "fields": {
+      "key": 15,
+      "project_guid": "R0004_non_analyst_project",
+      "family_guid": "F000014_14",
+      "xpos": 14106694244,
+      "filters": [],
+      "sign": 1,
+      "calls": [
+        ["NA21234", 2, 0, 99, false, true, null],
+        ["NA21987", 1, 1, 99, false, false, 2],
+        ["NA21654", 1, 1, 99, false, false, 2]
+      ]
+    }
+}, {
   "model": "reference_data.omim",
   "pk": 100,
   "fields": {
