@@ -460,10 +460,15 @@ class EntriesManager(Manager):
         return [config for config in [('gq', 1), ('ab', 100, 'x.gt != 1'), ('hl', 100)] if config[0] in call_fields]
 
     @property
+    def single_sample_type(self):
+        return getattr(self.model, 'SAMPLE_TYPE', None)
+
+    @property
     def genotype_fields(self):
+        sample_type = f"'{self.single_sample_type}'" if self.single_sample_type else 'sample_type'
         return OrderedDict({
             'family_guid': ('familyGuid', models.StringField()),
-            'sample_type': ('sampleType', models.StringField()),
+            sample_type: ('sampleType', models.StringField()),
             'filters': ('filters', models.ArrayField(models.StringField())),
             'x.gt::Nullable(Int8)': ('numAlt', models.Int8Field(null=True, blank=True)),
             **{f'x.{column[0]}': column for column in self.model.CALL_FIELDS if column[0] != 'gt'}
@@ -491,7 +496,7 @@ class EntriesManager(Manager):
         return self._search_call_data(entries, sample_data, **kwargs)
 
     def _seqr_pop_expression(self):
-        sample_types = [self.model.SAMPLE_TYPE.lower()] if hasattr(self.model, 'SAMPLE_TYPE') else ['wes', 'wgs']
+        sample_types = [self.single_sample_type.lower()] if self.single_sample_type else ['wes', 'wgs']
         seqr_pop_fields = []
         for _, sub_fields in self.model.key.field.related_model.SEQR_POPULATIONS:
             seqr_pop_fields += [f"'{sub_fields['ac']}_{sample_type}'" for sample_type in sample_types]
@@ -512,15 +517,14 @@ class EntriesManager(Manager):
        project_filter = Q(project_guid__in=project_guids) if len(project_guids) > 1 else Q(project_guid=sample_data[0]['project_guid'])
        entries = entries.filter(project_filter)
 
-       class_sample_type = getattr(self.model, 'SAMPLE_TYPE', None)
-       if class_sample_type:
-           entries = entries.annotate(sample_type=Value(class_sample_type))
        sample_type_families, multi_sample_type_families = self._get_family_sample_types(sample_data)
        family_q = None
        if multi_sample_type_families:
            family_q = Q(family_guid__in=multi_sample_type_families.keys())
        for sample_type, families in sample_type_families.items():
-           sample_family_q = Q(sample_type=sample_type, family_guid__in=families)
+           sample_family_q = Q(family_guid__in=families)
+           if not self.single_sample_type:
+               sample_family_q &= Q(sample_type=sample_type)
            if family_q:
                family_q |= sample_family_q
            else:
@@ -552,7 +556,7 @@ class EntriesManager(Manager):
                         multi_sample_type_quality_q, s, sample_filters, clinvar_override_q, multi_sample_type_families
                     )
                 else:
-                    sample_type = s['sample_types'][0]
+                    sample_type = None if self.single_sample_type else s['sample_types'][0]
                     call_q = self._family_calls_q(call_q, s, sample_filters, sample_type, clinvar_override_q)
 
             #  With families with multiple sample types, can only filter rows after aggregating
@@ -605,8 +609,9 @@ class EntriesManager(Manager):
            sample_q = Q(
                calls__array_exists={**sample_inheritance_filter, **sample_quality_filter},
                family_guid=family_sample_data['family_guid'],
-               sample_type=sample_type,
            )
+           if sample_type:
+               sample_q &= Q(sample_type=sample_type)
            if clinvar_override_q and sample_quality_filter:
                sample_q |= clinvar_override_q & Q(calls__array_exists=sample_inheritance_filter)
 
@@ -830,11 +835,10 @@ class EntriesManager(Manager):
         return Q(xpos__range=(get_xpos(chrom, start), get_xpos(chrom, end)))
 
     def _filter_seqr_frequency(self, entries, ac=None, hh=None, **kwargs):
-        single_sample_type = hasattr(self.model, 'SAMPLE_TYPE')
         if ac is not None:
-            entries = entries.annotate(ac=F('seqrPop__0') if single_sample_type else Plus('seqrPop__0', 'seqrPop__1'))
+            entries = entries.annotate(ac=F('seqrPop__0') if self.single_sample_type else Plus('seqrPop__0', 'seqrPop__1'))
             entries = entries.filter(ac__lte=ac)
         if hh is not None and 'hom' in self.model.key.field.related_model.SEQR_POPULATIONS[0][1]:
-            entries = entries.annotate(hom=F('seqrPop__1') if single_sample_type else Plus('seqrPop__2', 'seqrPop__3'))
+            entries = entries.annotate(hom=F('seqrPop__1') if self.single_sample_type else Plus('seqrPop__2', 'seqrPop__3'))
             entries = entries.filter(hom__lte=hh)
         return entries
