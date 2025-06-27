@@ -364,10 +364,10 @@ class BaseAnnotationsSv(BaseAnnotationsSvGcnv):
         ('type', models.Enum8Field(return_int=False, choices=BaseAnnotationsSvGcnv.SV_TYPES)),
     ], db_column='cpxIntervals', null_when_empty=True)
     end_chrom = models.Enum8Field(db_column='endChrom', return_int=False, choices=BaseAnnotations.CHROMOSOME_CHOICES, null=True, blank=True)
-    sv_source_detail = NestedField(
+    sv_source_detail = NamedTupleField(
         [('chrom', models.Enum8Field(return_int=False, choices=BaseAnnotations.CHROMOSOME_CHOICES, null=True, blank=True))],
         db_column='svSourceDetail',
-        null_when_empty=True
+        null_if_empty=True
     )
     sv_type_detail = models.Enum8Field(db_column='svTypeDetail', return_int=False, choices=SV_TYPE_DETAILS, null=True, blank=True)
     populations = NamedTupleField(POPULATION_FIELDS)
