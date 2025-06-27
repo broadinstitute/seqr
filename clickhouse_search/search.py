@@ -1,4 +1,5 @@
 from clickhouse_backend.models import ArrayField, StringField
+from collections import defaultdict
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.db.models import F, Min
 from django.db.models.functions import JSONObject
@@ -7,8 +8,8 @@ from clickhouse_search.backend.fields import NamedTupleField
 from clickhouse_search.backend.functions import Array, ArrayFilter, ArrayIntersect, ArraySort, Tuple
 from clickhouse_search.models import ENTRY_CLASS_MAP, ANNOTATIONS_CLASS_MAP, TRANSCRIPTS_CLASS_MAP, BaseClinvar, \
     BaseAnnotationsMitoSnvIndel, BaseAnnotationsGRCh37SnvIndel
-from reference_data.models import GeneConstraint, Omim, GENOME_VERSION_GRCh38
-from seqr.models import PhenotypePrioritization, Sample
+from reference_data.models import GeneConstraint, Omim
+from seqr.models import PhenotypePrioritization
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.search.constants import MAX_VARIANTS, XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, \
     PRIORITIZED_GENE_SORT, COMPOUND_HET, RECESSIVE
@@ -27,22 +28,25 @@ def clickhouse_backend_enabled():
 
 
 def get_clickhouse_variants(samples, search, user, previous_search_results, genome_version,page=1, num_results=100, sort=None, **kwargs):
-    entry_cls = ENTRY_CLASS_MAP[genome_version]
-    annotations_cls = ANNOTATIONS_CLASS_MAP[genome_version]
-
-    sample_data = _get_sample_data(samples)
-    logger.info(f'Loading {Sample.DATASET_TYPE_VARIANT_CALLS} data for {len(sample_data)} families', user)
-
+    sample_data_by_dataset_type = _get_sample_data(samples)
     results = []
+    family_guid = None
     inheritance_mode = search.get('inheritance_mode')
-    if inheritance_mode != COMPOUND_HET:
-        result_q = _get_search_results_queryset(entry_cls, annotations_cls, search, sample_data)
-        results += list(result_q[:MAX_VARIANTS + 1])
-    if inheritance_mode in {RECESSIVE, COMPOUND_HET}:
-        result_q = _get_comp_het_results_queryset(entry_cls, annotations_cls, search, sample_data)
-        results += [list(result[1:]) for result in result_q[:MAX_VARIANTS + 1]]
+    for dataset_type, sample_data in sample_data_by_dataset_type.items():
+        logger.info(f'Loading {dataset_type} data for {len(sample_data)} families', user)
 
-    cache_results = get_clickhouse_cache_results(results, sort, sample_data[0]['family_guid'])
+        entry_cls = ENTRY_CLASS_MAP[genome_version][dataset_type]
+        annotations_cls = ANNOTATIONS_CLASS_MAP[genome_version][dataset_type]
+        family_guid = sample_data[0]['family_guid']
+
+        if inheritance_mode != COMPOUND_HET:
+            result_q = _get_search_results_queryset(entry_cls, annotations_cls, search, sample_data)
+            results += list(result_q[:MAX_VARIANTS + 1])
+        if inheritance_mode in {RECESSIVE, COMPOUND_HET}:
+            result_q = _get_comp_het_results_queryset(entry_cls, annotations_cls, search, sample_data)
+            results += [list(result[1:]) for result in result_q[:MAX_VARIANTS + 1]]
+
+    cache_results = get_clickhouse_cache_results(results, sort, family_guid)
     previous_search_results.update(cache_results)
 
     logger.info(f'Total results: {cache_results["total_results"]}', user)
@@ -125,7 +129,7 @@ def get_clickhouse_cache_results(results, sort, family_guid):
 
 def format_clickhouse_results(results, genome_version, **kwargs):
     keys_with_transcripts = {
-        variant['key'] for result in results for variant in (result if isinstance(result, list) else [result])
+        variant['key'] for result in results for variant in (result if isinstance(result, list) else [result]) if not 'transcripts' in variant
     }
     transcripts_by_key = dict(
         TRANSCRIPTS_CLASS_MAP[genome_version].objects.filter(key__in=keys_with_transcripts).values_list('key', 'transcripts')
@@ -143,6 +147,9 @@ def format_clickhouse_results(results, genome_version, **kwargs):
 
 
 def _format_variant(variant, transcripts_by_key):
+    if 'transcripts' in variant:
+        return variant
+
     transcripts = transcripts_by_key.get(variant['key'], {})
     formatted_variant = {
         **variant,
@@ -181,17 +188,16 @@ def _is_matched_minimal_transcript(transcript, minimal_transcript):
 
 
 def _get_sample_data(samples):
-    samples = samples.filter(dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
-    if not samples:
-        raise NotImplementedError('Clickhouse search not implemented for other data types')
-
     sample_data = samples.values(
-        family_guid=F('individual__family__guid'), project_guid=F('individual__family__project__guid'),
+        'dataset_type', family_guid=F('individual__family__guid'), project_guid=F('individual__family__project__guid'),
     ).annotate(
         samples=ArrayAgg(JSONObject(affected='individual__affected', sex='individual__sex', sample_id='sample_id', sample_type='sample_type', individual_guid=F('individual__guid'))),
         sample_types=ArrayAgg('sample_type', distinct=True),
     )
-    return [{**data, 'samples': _group_by_sample_type(data['samples'])} for data in sample_data]
+    samples_by_dataset_type = defaultdict(list)
+    for data in sample_data:
+        samples_by_dataset_type[data['dataset_type']].append({**data, 'samples': _group_by_sample_type(data['samples'])})
+    return samples_by_dataset_type
 
 
 def _group_by_sample_type(samples):
@@ -236,6 +242,8 @@ MAX_SORT_RANK = 1e10
 def _subfield_sort(*fields, rank_lookup=None, default=MAX_SORT_RANK, reverse=False):
     def _sort(item):
         for field in fields:
+            if isinstance(field, tuple):
+                field = next((f for f in field if f in item), None)
             item = (item or {}).get(field)
         if rank_lookup:
             item = rank_lookup.get(item)
@@ -243,6 +251,24 @@ def _subfield_sort(*fields, rank_lookup=None, default=MAX_SORT_RANK, reverse=Fal
         return value if not reverse else -value
     return [_sort]
 
+
+def _get_matched_transcript(x, field):
+    if field not in x:
+        return None
+    for transcripts in x['transcripts'].values():
+        transcript = next((t for t in transcripts if t['transcriptId'] == x[field]), None)
+        if transcript:
+            return transcript
+    return None
+
+
+def _main_transcript_consequence(x):
+    transcript = x[TRANSCRIPT_CONSEQUENCES_FIELD][0] if x.get(TRANSCRIPT_CONSEQUENCES_FIELD) else _get_matched_transcript(x, 'mainTranscriptId')
+    return CONSEQUENCE_RANK_LOOKUP[transcript['consequenceTerms'][0]] if transcript else MAX_SORT_RANK
+
+def _selected_transcript_consequence(x):
+    transcript = x.get(SELECTED_TRANSCRIPT_FIELD) or _get_matched_transcript(x, 'selectedMainTranscriptId')
+    return CONSEQUENCE_RANK_LOOKUP[transcript['consequenceTerms'][0]] if transcript else MAX_SORT_RANK
 
 MIN_SORT_RANK = 0
 MIN_PRED_SORT_RANK = -1
@@ -256,18 +282,15 @@ CLINVAR_SORT =  _subfield_sort(
 )
 SORT_EXPRESSIONS = {
     'alphamissense': [
-        lambda x: -max(t.get('alphamissensePathogenicity') or MIN_SORT_RANK for t in x[TRANSCRIPT_CONSEQUENCES_FIELD]) if x[TRANSCRIPT_CONSEQUENCES_FIELD] else MIN_SORT_RANK,
+        lambda x: -max(t.get('alphamissensePathogenicity') or MIN_SORT_RANK for t in x[TRANSCRIPT_CONSEQUENCES_FIELD]) if x.get(TRANSCRIPT_CONSEQUENCES_FIELD) else MIN_SORT_RANK,
     ] + _subfield_sort(SELECTED_TRANSCRIPT_FIELD, 'alphamissensePathogenicity', reverse=True, default=MIN_SORT_RANK),
     'callset_af': _subfield_sort('populations', 'seqr', 'ac'),
     'family_guid': [lambda x: sorted(x['familyGuids'])[0]],
-    'gnomad': _subfield_sort('populations', 'gnomad_genomes', 'af'),
+    'gnomad': _subfield_sort('populations', ('gnomad_genomes', 'gnomad_mito'), 'af'),
     'gnomad_exomes': _subfield_sort('populations', 'gnomad_exomes', 'af'),
     PATHOGENICTY_SORT_KEY: CLINVAR_SORT,
     PATHOGENICTY_HGMD_SORT_KEY: CLINVAR_SORT + _subfield_sort('hgmd', 'class', rank_lookup=HGMD_RANK_LOOKUP),
-    'protein_consequence': [
-        lambda x: CONSEQUENCE_RANK_LOOKUP[x[TRANSCRIPT_CONSEQUENCES_FIELD][0]['consequenceTerms'][0]] if x[TRANSCRIPT_CONSEQUENCES_FIELD] else MAX_SORT_RANK,
-        lambda x: CONSEQUENCE_RANK_LOOKUP[x[SELECTED_TRANSCRIPT_FIELD]['consequenceTerms'][0]] if x.get(SELECTED_TRANSCRIPT_FIELD) else MAX_SORT_RANK,
-    ],
+    'protein_consequence': [_main_transcript_consequence, _selected_transcript_consequence],
     **{sort: _subfield_sort('predictions', sort, reverse=True, default=MIN_PRED_SORT_RANK) for sort in PREDICTION_SORTS},
 }
 

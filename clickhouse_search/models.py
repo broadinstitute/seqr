@@ -7,6 +7,7 @@ from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocks
 from clickhouse_search.backend.fields import Enum8Field, NestedField, UInt64FieldDeltaCodecField, NamedTupleField
 from clickhouse_search.managers import EntriesManager, AnnotationsQuerySet
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
+from seqr.models import Sample
 from seqr.utils.search.constants import SPLICE_AI_FIELD
 from seqr.utils.xpos_utils import CHROMOSOMES
 from settings import CLICKHOUSE_IN_MEMORY_DIR, CLICKHOUSE_DATA_DIR
@@ -69,9 +70,14 @@ class Projection(Func):
 
 class BaseAnnotations(models.ClickhouseModel):
 
-    GENOME_VERSION = GENOME_VERSION_GRCh38
-    LIFTED_OVER_GENOME_VERSION = GENOME_VERSION_GRCh37
     CHROMOSOME_CHOICES = [(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES)]
+    SEQR_POPULATIONS = [
+        ('seqr', {'ac': 'ac', 'hom': 'hom'}),
+    ]
+    ANNOTATION_CONSTANTS = {
+        'genomeVersion': GENOME_VERSION_GRCh38,
+        'liftedOverGenomeVersion': GENOME_VERSION_GRCh37,
+    }
 
     key = models.UInt32Field(primary_key=True)
     xpos = models.UInt64Field()
@@ -139,8 +145,10 @@ class BaseAnnotationsSvGcnv(BaseAnnotations):
 
 
 class BaseAnnotationsGRCh37SnvIndel(BaseAnnotationsMitoSnvIndel):
-    GENOME_VERSION = GENOME_VERSION_GRCh37
-    LIFTED_OVER_GENOME_VERSION = GENOME_VERSION_GRCh38
+    ANNOTATION_CONSTANTS = {
+        'genomeVersion': GENOME_VERSION_GRCh37,
+        'liftedOverGenomeVersion': GENOME_VERSION_GRCh38,
+    }
     POPULATION_FIELDS = [
         ('exac', NamedTupleField([
             ('ac', models.UInt32Field()),
@@ -224,8 +232,7 @@ class AnnotationsDiskGRCh37SnvIndel(BaseAnnotationsGRCh37SnvIndel):
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh37/SNV_INDEL/annotations', primary_key='key', flatten_nested=0)
 
 class BaseAnnotationsSnvIndel(BaseAnnotationsGRCh37SnvIndel):
-    GENOME_VERSION = GENOME_VERSION_GRCh38
-    LIFTED_OVER_GENOME_VERSION = GENOME_VERSION_GRCh37
+    ANNOTATION_CONSTANTS = BaseAnnotations.ANNOTATION_CONSTANTS
     PREDICTION_FIELDS = sorted([
         ('gnomad_noncoding', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
         *BaseAnnotationsGRCh37SnvIndel.PREDICTION_FIELDS,
@@ -266,6 +273,11 @@ class AnnotationsDiskSnvIndel(BaseAnnotationsSnvIndel):
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SNV_INDEL/annotations', primary_key='key', flatten_nested=0)
 
 class BaseAnnotationsMito(BaseAnnotationsMitoSnvIndel):
+    ANNOTATION_CONSTANTS = {
+        'chrom': 'M',
+        'liftedOverChrom': 'MT',
+        **BaseAnnotations.ANNOTATION_CONSTANTS,
+    }
     MITOTIP_PATHOGENICITIES = [
         (0, 'likely_pathogenic'),
         (1, 'possibly_pathogenic'),
@@ -305,12 +317,16 @@ class BaseAnnotationsMito(BaseAnnotationsMitoSnvIndel):
         ('sift', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
         ('mlc', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
     ]
+    SEQR_POPULATIONS = [
+        ('seqr', {'ac': 'ac_hom'}),
+        ('seqr_heteroplasmy', {'ac': 'ac_het'}),
+    ]
 
     common_low_heteroplasmy = models.BoolField(db_column='commonLowHeteroplasmy', null=True, blank=True)
     mitomap_pathogenic  = models.BoolField(db_column='mitomapPathogenic', null=True, blank=True)
     predictions = NamedTupleField(PREDICTION_FIELDS)
     populations = NamedTupleField(POPULATION_FIELDS)
-    sorted_transcript_consequences = NestedField(BaseAnnotationsMitoSnvIndel.TRANSCRIPTS_FIELDS, db_column='sortedTranscriptConsequences')
+    sorted_transcript_consequences = NestedField(BaseAnnotationsMitoSnvIndel.TRANSCRIPTS_FIELDS, db_column='sortedTranscriptConsequences', group_by_key='geneId')
 
     class Meta:
         abstract = True
@@ -797,12 +813,18 @@ class GtStatsSv(models.ClickhouseModel):
 
 
 ENTRY_CLASS_MAP = {
-    GENOME_VERSION_GRCh37: EntriesGRCh37SnvIndel,
-    GENOME_VERSION_GRCh38: EntriesSnvIndel,
+    GENOME_VERSION_GRCh37: {Sample.DATASET_TYPE_VARIANT_CALLS: EntriesGRCh37SnvIndel},
+    GENOME_VERSION_GRCh38: {
+        Sample.DATASET_TYPE_VARIANT_CALLS: EntriesSnvIndel,
+        Sample.DATASET_TYPE_MITO_CALLS: EntriesMito,
+    },
 }
 ANNOTATIONS_CLASS_MAP = {
-    GENOME_VERSION_GRCh37: AnnotationsGRCh37SnvIndel,
-    GENOME_VERSION_GRCh38: AnnotationsSnvIndel,
+    GENOME_VERSION_GRCh37: {Sample.DATASET_TYPE_VARIANT_CALLS: AnnotationsGRCh37SnvIndel},
+    GENOME_VERSION_GRCh38: {
+        Sample.DATASET_TYPE_VARIANT_CALLS: AnnotationsSnvIndel,
+        Sample.DATASET_TYPE_MITO_CALLS: AnnotationsMito,
+    },
 }
 TRANSCRIPTS_CLASS_MAP = {
     GENOME_VERSION_GRCh37: TranscriptsGRCh37SnvIndel,

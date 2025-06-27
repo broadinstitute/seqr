@@ -6,7 +6,17 @@ import { Popup, Divider, Label } from 'semantic-ui-react'
 
 import { getTotalSampleCounts } from 'redux/selectors'
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
-import { GNOMAD_SV_CRITERIA_MESSAGE, SV_CALLSET_CRITERIA_MESSAGE, TOPMED_FREQUENCY, GENOME_VERSION_37, GENOME_VERSION_38, getVariantMainGeneId } from '../../../utils/constants'
+import {
+  GNOMAD_SV_CRITERIA_MESSAGE,
+  SV_CALLSET_CRITERIA_MESSAGE,
+  TOPMED_FREQUENCY,
+  GENOME_VERSION_37,
+  GENOME_VERSION_38,
+  DATASET_TYPE_SNV_INDEL_CALLS,
+  DATASET_TYPE_SV_CALLS,
+  DATASET_TYPE_MITO_CALLS,
+  getVariantMainGeneId,
+} from '../../../utils/constants'
 
 const FreqValue = styled.span`
   color: black;
@@ -204,7 +214,7 @@ const sectionTitle = ({ fieldTitle, section }) => (
   </span>
 )
 
-const BaseGlobalAcPopup = ({ totalSampleCounts }) => (
+const BaseGlobalAcPopup = ({ totalSampleCounts, datasetType }) => (
   Object.keys(totalSampleCounts).length > 0 && (
     <Popup.Content>
       <i>
@@ -212,7 +222,7 @@ const BaseGlobalAcPopup = ({ totalSampleCounts }) => (
         While not all sites may be captured in the loaded callsets, an upper bound for the total allele number (AN)
         can be estimated based on the total number of samples loaded in seqr:
       </i>
-      {Object.entries(totalSampleCounts).map(([sampleType, { count }]) => (
+      {Object.entries(totalSampleCounts[datasetType]).map(([sampleType, count]) => (
         <div key={sampleType}>{`${sampleType}: ${count}`}</div>
       ))}
     </Popup.Content>
@@ -221,6 +231,7 @@ const BaseGlobalAcPopup = ({ totalSampleCounts }) => (
 
 BaseGlobalAcPopup.propTypes = {
   totalSampleCounts: PropTypes.object,
+  datasetType: PropTypes.string,
 }
 
 const mapStateToProps = state => ({
@@ -373,13 +384,15 @@ const getValueDisplay = (pop, valueField, precision) => (valueField === 'ac' ?
   `${pop.ac} out of ${pop.an}` : `${pop[valueField].toPrecision(precision || 2)}`)
 
 const Frequencies = React.memo(({ variant }) => {
-  const { populations = {} } = variant
+  const { populations = {}, svType } = variant
   const callsetHetPop = populations.callset_heteroplasmy || populations.seqr_heteroplasmy
   const isMito = callsetHetPop && callsetHetPop.af !== null && callsetHetPop.af !== undefined
   const popConfigs = isMito ? MITO_POPULATIONS : POPULATIONS
+  let datasetType = isMito ? DATASET_TYPE_MITO_CALLS : DATASET_TYPE_SNV_INDEL_CALLS
+  datasetType = svType ? DATASET_TYPE_SV_CALLS : datasetType
   const seqrAcSection = {
     name: 'seqr Global ACs',
-    details: (!isMito && populations[SEQR_POP.field]) ? [<GlobalAcPopup />].filter(s => s) : [],
+    details: populations[SEQR_POP.field] ? [<GlobalAcPopup datasetType={datasetType} />].filter(s => s) : [],
   }
   const sections = [seqrAcSection, ...(isMito ? MITO_DETAIL_SECTIONS : DETAIL_SECTIONS).reduce(
     (acc, section) => ([
