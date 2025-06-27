@@ -1,5 +1,4 @@
 # Generated manually by the seqr team.
-import json
 import os
 from string import Template
 
@@ -7,10 +6,10 @@ from django.db import migrations
 
 from settings import DATABASES
 
-CLICKHOUSE_AC_EXCLUDED_PROJECT_GUIDS  = json.loads(os.environ.get(
+CLICKHOUSE_AC_EXCLUDED_PROJECT_GUIDS  = os.environ.get(
     'CLICKHOUSE_AC_EXCLUDED_PROJECT_GUIDS',
-    '[]'
-))
+    ''
+).split(',')
 CLICKHOUSE_USER = os.environ.get('CLICKHOUSE_USER', 'clickhouse')
 CLICKHOUSE_PASSWORD = os.environ.get('CLICKHOUSE_PASSWORD', 'clickhouse_test')
 
