@@ -45,7 +45,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             LAYOUT(FLAT(MAX_ARRAY_SIZE 500000000))
             """, [os.environ.get('CLICKHOUSE_USER', 'clickhouse'), os.environ.get('CLICKHOUSE_PASSWORD', 'clickhouse_test')])
             cursor.execute("""
-            CREATE DICTIONARY IF NOT EXISTS "GRCh37/SNV_INDEL/gt_stats_dict"
+            CREATE OR REPLACE DICTIONARY "GRCh37/SNV_INDEL/gt_stats_dict"
             (
                 key UInt32,
                 ac_wes UInt32,

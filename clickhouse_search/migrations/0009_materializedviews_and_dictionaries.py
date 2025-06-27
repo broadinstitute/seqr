@@ -6,6 +6,10 @@ from django.db import migrations
 
 from settings import DATABASES
 
+CLICKHOUSE_AC_EXCLUDED_PROJECT_GUIDS  = os.environ.get(
+    'CLICKHOUSE_AC_EXCLUDED_PROJECT_GUIDS',
+    ''
+).split(',')
 CLICKHOUSE_USER = os.environ.get('CLICKHOUSE_USER', 'clickhouse')
 CLICKHOUSE_PASSWORD = os.environ.get('CLICKHOUSE_PASSWORD', 'clickhouse_test')
 
@@ -20,7 +24,7 @@ FROM `$reference_genome/$dataset_type/entries`
 GROUP BY $groupby_columns
 """)
 
-PROJECT_GT_STATS_TO_GT_STATS = Template("""
+PROJECT_GT_STATS_TO_GT_STATS = Template(Template("""
 CREATE MATERIALIZED VIEW `$reference_genome/$dataset_type/project_gt_stats_to_gt_stats_mv`
 REFRESH EVERY 10 YEAR
 TO `$reference_genome/$dataset_type/gt_stats`
@@ -28,8 +32,11 @@ AS SELECT
     key,
     $columns
 FROM `$reference_genome/$dataset_type/project_gt_stats`
+WHERE project_guid NOT IN $clickhouse_ac_excluded_project_guids
 GROUP BY key
-""")
+""").safe_substitute(
+    clickhouse_ac_excluded_project_guids=CLICKHOUSE_AC_EXCLUDED_PROJECT_GUIDS
+))
 
 GT_STATS_DICT = Template(Template("""
 CREATE DICTIONARY `$reference_genome/$dataset_type/gt_stats_dict`
