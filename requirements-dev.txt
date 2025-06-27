@@ -70,7 +70,7 @@ tomli==2.0.1
     #   pyproject-hooks
 types-toml==0.10.8.5
     # via responses
-urllib3==1.26.19
+urllib3==2.5.0
     # via
     #   -c requirements.txt
     #   requests
