@@ -53,7 +53,7 @@ LAYOUT(FLAT(MAX_ARRAY_SIZE $size))
     # double substitution these shared values
     clickhouse_user=CLICKHOUSE_USER,
     clickhouse_password=CLICKHOUSE_PASSWORD,
-    clickhouse_database=DATABASES['clickhouse']['NAME'],
+    clickhouse_database=DATABASES.get('clickhouse', {}).get('NAME'),
 ))
 
 class Migration(migrations.Migration):
