@@ -311,3 +311,10 @@ COMP_HET_ALL_PASS_FILTERS = {
     'annotations': {'splice_ai': '0.0', 'structural': ['DEL', 'CPX', 'INS', 'gCNV_DEL', 'gCNV_DUP']},
     'pathogenicity': {'clinvar': ['likely_pathogenic']},
 }
+
+SV_GENE_COUNTS = {
+    'ENSG00000171621': {'total': 2, 'families': {'F000011_11': 2}},
+    'ENSG00000083544': {'total': 1, 'families': {'F000011_11': 1}},
+    'ENSG00000184986': {'total': 1, 'families': {'F000011_11': 1}},
+    'null': {'total': 1, 'families': {'F000011_11': 1}},
+}

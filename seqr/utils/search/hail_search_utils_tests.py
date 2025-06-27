@@ -26,7 +26,7 @@ SV_WGS_SAMPLE_DATA = [{
     'affected': 'A', 'sample_id': 'NA21987', 'sample_type': 'WGS',
 }, {
     'individual_guid': 'I000021_na21654', 'family_guid': 'F000014_14', 'project_guid': 'R0004_non_analyst_project',
-    'affected': 'U', 'sample_id': 'NA21654', 'sample_type': 'WGS',
+    'affected': 'N', 'sample_id': 'NA21654', 'sample_type': 'WGS',
 }]
 SV_WES_SAMPLE_DATA = FAMILY_2_VARIANT_SAMPLE_DATA['SNV_INDEL']
 

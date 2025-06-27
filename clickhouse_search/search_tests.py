@@ -11,7 +11,7 @@ from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4,
     FAMILY_3_VARIANT, PROJECT_2_VARIANT, PROJECT_2_VARIANT1, MULTI_PROJECT_VARIANT1, MULTI_PROJECT_VARIANT2, GENE_COUNTS, \
     MULTI_PROJECT_BOTH_SAMPLE_TYPE_VARIANTS, VARIANT1_BOTH_SAMPLE_TYPES, VARIANT2_BOTH_SAMPLE_TYPES, \
     VARIANT3_BOTH_SAMPLE_TYPES, VARIANT4_BOTH_SAMPLE_TYPES, GRCH37_VARIANT, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3, \
-    format_cached_variant
+    SV_VARIANT1, SV_VARIANT2, SV_VARIANT3, SV_VARIANT4, SV_GENE_COUNTS, format_cached_variant
 from reference_data.models import Omim
 from seqr.models import Project, Family, Sample
 from seqr.utils.search.search_utils_tests import SearchTestHelper
@@ -85,7 +85,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
     def setUp(self):
         super().set_up()
         Project.objects.update(genome_version='38')
-        Sample.objects.filter(dataset_type=Sample.DATASET_TYPE_SV_CALLS).update(is_active=False)
+        Sample.objects.filter(dataset_type=Sample.DATASET_TYPE_SV_CALLS, sample_type='WES').update(is_active=False)
 
     def _assert_expected_search(self, expected_results, gene_counts=None, inheritance_mode=None, inheritance_filter=None, quality_filter=None, cached_variant_fields=None, sort='xpos', **search_kwargs):
         self.search_model.search.update(search_kwargs or {})
@@ -127,6 +127,9 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
     def _set_single_family_search(self):
         self.results_model.families.set(self.families.filter(guid='F000002_2'))
 
+    def _set_sv_family_search(self):
+        self.results_model.families.set(Family.objects.filter(guid__in=['F000014_14']))
+
     def _reset_search_families(self):
         self.results_model.families.set(self.families)
 
@@ -159,13 +162,15 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #         self._assert_expected_search(
 #             [GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4], omit_data_type='SNV_INDEL', gene_counts=GCNV_GENE_COUNTS,
 #         )
-#
-#         self._assert_expected_search(
-#             [SV_VARIANT1, SV_VARIANT2, SV_VARIANT3, SV_VARIANT4], sample_data=SV_WGS_SAMPLE_DATA, gene_counts=SV_GENE_COUNTS,
-#         )
-#
+
+        self._set_sv_family_search()
         self._assert_expected_search(
-            [VARIANT1, VARIANT2, VARIANT3, VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], locus=None,
+            [SV_VARIANT1, SV_VARIANT2, SV_VARIANT3, SV_VARIANT4], gene_counts=SV_GENE_COUNTS, locus=None,
+        )
+
+        self.results_model.families.set(Family.objects.filter(guid__in=['F000002_2', 'F000014_14']))
+        self._assert_expected_search(
+            [VARIANT1, SV_VARIANT1, SV_VARIANT2,  VARIANT2, VARIANT3, VARIANT4, SV_VARIANT3, SV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
             # [VARIANT1, SV_VARIANT1, SV_VARIANT2, VARIANT2, VARIANT3, VARIANT4, SV_VARIANT3, GCNV_VARIANT1, SV_VARIANT4,
             #              GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
             # gene_counts={**variant_gene_counts, **mito_gene_counts, **GCNV_GENE_COUNTS, **SV_GENE_COUNTS, 'ENSG00000277258': {'total': 2, 'families': {'F000002_2': 2}}},

@@ -1895,12 +1895,12 @@ class EsUtilsTest(TestCase):
         variants, _ = query_variants(results_model, num_results=2)
         self.assertListEqual(variants, [PARSED_SV_WGS_VARIANT])
 
-        self.maxDiff = None
         self.assertExecutedSearch(filters=[
             {'terms': {'rsid': ['rs9876']}},
             {'terms': {'transcriptConsequenceTerms': ['CPX', 'DUP']}},
             {'bool': {
-                'must': [{'bool': {'must': [{'term': {'samples': 'NA21234'}}, {'term': {'samples': 'NA21987'}}]}},
+                'must': [{'bool': {'must': [{'term': {'samples': 'NA21234'}}, {'term': {'samples': 'NA21987'}}],
+                                   'must_not': [{'term': {'samples': 'NA21654'}}]}},
                     {'bool': {
                         'must_not': [
                             {'term': {'samples_gq_sv_0_to_5': 'NA21234'}},
