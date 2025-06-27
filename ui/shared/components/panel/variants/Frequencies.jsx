@@ -2,11 +2,21 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import styled from 'styled-components'
-import { Popup, Divider } from 'semantic-ui-react'
+import { Popup, Divider, Label } from 'semantic-ui-react'
 
 import { getTotalSampleCounts } from 'redux/selectors'
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
-import { GNOMAD_SV_CRITERIA_MESSAGE, SV_CALLSET_CRITERIA_MESSAGE, TOPMED_FREQUENCY, GENOME_VERSION_37, GENOME_VERSION_38, getVariantMainGeneId } from '../../../utils/constants'
+import {
+  GNOMAD_SV_CRITERIA_MESSAGE,
+  SV_CALLSET_CRITERIA_MESSAGE,
+  TOPMED_FREQUENCY,
+  GENOME_VERSION_37,
+  GENOME_VERSION_38,
+  DATASET_TYPE_SNV_INDEL_CALLS,
+  DATASET_TYPE_SV_CALLS,
+  DATASET_TYPE_MITO_CALLS,
+  getVariantMainGeneId,
+} from '../../../utils/constants'
 
 const FreqValue = styled.span`
   color: black;
@@ -86,7 +96,7 @@ AfDisplay.propTypes = {
 }
 
 const FreqSummary = React.memo((props) => {
-  const { field, fieldTitle, variant, acDisplay, titleContainer, ...afProps } = props
+  const { field, fieldTitle, variant, acDisplay, titleContainer, warningContainer, ...afProps } = props
   const { populations, chrom } = variant
   const population = (populations || {})[field] || {}
   const noAf = population.af === null || population.af === undefined
@@ -98,6 +108,11 @@ const FreqSummary = React.memo((props) => {
   if (acDisplayValue && population.an !== null && population.an !== undefined) {
     acDisplayValue = `${acDisplayValue} out of ${population.an}`
   }
+  const het = (!acDisplay &&
+    (population.het === null || population.het === undefined) &&
+    population.ac !== null && population.ac !== undefined &&
+    population.hom !== null && population.hom !== undefined
+  ) ? (population.ac - (2 * population.hom)) : population.het
 
   return (
     <div>
@@ -120,10 +135,10 @@ const FreqSummary = React.memo((props) => {
             {`Hom=${population.hom}`}
           </span>
         )}
-        {population.het !== null && population.het !== undefined && (
+        {het !== null && het !== undefined && (
           <span>
             <HorizontalSpacer width={5} />
-            {`Het=${population.het}`}
+            {`Het=${het}`}
           </span>
         )}
         {chrom.endsWith('X') && population.hemi !== null && population.hemi !== undefined && (
@@ -139,6 +154,8 @@ const FreqSummary = React.memo((props) => {
           </span>
         )}
       </FreqValue>
+      &nbsp;
+      {warningContainer && warningContainer(population, props)}
     </div>
   )
 })
@@ -149,6 +166,7 @@ FreqSummary.propTypes = {
   precision: PropTypes.number,
   fieldTitle: PropTypes.string,
   titleContainer: PropTypes.func,
+  warningContainer: PropTypes.func,
   urls: PropTypes.object,
   queryParams: PropTypes.object,
   conditionalQueryParams: PropTypes.object,
@@ -173,6 +191,16 @@ gnomadLink.propTypes = {
   fieldTitle: PropTypes.string,
 }
 
+const gnomadAnWarning = ({ ac, an }, { fieldTitle, maxAN, variant }) => {
+  const isEs = !(variant || {}).populations?.seqr
+  return (!isEs && ac && an < (maxAN / 2)) ? (
+    <Popup
+      trigger={<Label color="orange" content="low cov." size="mini" horizontal />}
+      content={`This variant is covered in fewer than 50% of individuals in ${fieldTitle}. This may indicate a low-quality site.`}
+    />
+  ) : null
+}
+
 const GNOMAD_URL_INFO = {
   urls: { [GENOME_VERSION_37]: 'gnomad.broadinstitute.org', [GENOME_VERSION_38]: 'gnomad.broadinstitute.org' },
   queryParams: { [GENOME_VERSION_38]: 'dataset=gnomad_r4', [GENOME_VERSION_37]: 'dataset=gnomad_r2_1' },
@@ -186,7 +214,7 @@ const sectionTitle = ({ fieldTitle, section }) => (
   </span>
 )
 
-const BaseGlobalAcPopup = ({ totalSampleCounts }) => (
+const BaseGlobalAcPopup = ({ totalSampleCounts, datasetType }) => (
   Object.keys(totalSampleCounts).length > 0 && (
     <Popup.Content>
       <i>
@@ -194,7 +222,7 @@ const BaseGlobalAcPopup = ({ totalSampleCounts }) => (
         While not all sites may be captured in the loaded callsets, an upper bound for the total allele number (AN)
         can be estimated based on the total number of samples loaded in seqr:
       </i>
-      {Object.entries(totalSampleCounts).map(([sampleType, { count }]) => (
+      {Object.entries(totalSampleCounts[datasetType]).map(([sampleType, count]) => (
         <div key={sampleType}>{`${sampleType}: ${count}`}</div>
       ))}
     </Popup.Content>
@@ -203,6 +231,7 @@ const BaseGlobalAcPopup = ({ totalSampleCounts }) => (
 
 BaseGlobalAcPopup.propTypes = {
   totalSampleCounts: PropTypes.object,
+  datasetType: PropTypes.string,
 }
 
 const mapStateToProps = state => ({
@@ -233,6 +262,8 @@ const POPULATIONS = [
     field: 'gnomad_exomes',
     fieldTitle: 'gnomAD exomes',
     titleContainer: gnomadLink,
+    warningContainer: gnomadAnWarning,
+    maxAN: 730947 * 2, // From https://gnomad.broadinstitute.org/stats
     esVersion: 'v2',
     conditionalQueryParams: populations => (populations.seqr ? GNOMAD_URL_INFO.queryParams : { [GENOME_VERSION_37]: 'dataset=gnomad_r2_1' }),
     ...GNOMAD_URL_INFO,
@@ -241,6 +272,8 @@ const POPULATIONS = [
     field: 'gnomad_genomes',
     fieldTitle: 'gnomAD genomes',
     titleContainer: gnomadLink,
+    warningContainer: gnomadAnWarning,
+    maxAN: 76215 * 2, // From https://gnomad.broadinstitute.org/stats
     esVersion: 'v3',
     conditionalQueryParams: populations => (populations.seqr ? GNOMAD_URL_INFO.queryParams : { [GENOME_VERSION_38]: 'dataset=gnomad_r3' }),
     precision: 3,
@@ -351,13 +384,15 @@ const getValueDisplay = (pop, valueField, precision) => (valueField === 'ac' ?
   `${pop.ac} out of ${pop.an}` : `${pop[valueField].toPrecision(precision || 2)}`)
 
 const Frequencies = React.memo(({ variant }) => {
-  const { populations = {} } = variant
+  const { populations = {}, svType } = variant
   const callsetHetPop = populations.callset_heteroplasmy || populations.seqr_heteroplasmy
   const isMito = callsetHetPop && callsetHetPop.af !== null && callsetHetPop.af !== undefined
   const popConfigs = isMito ? MITO_POPULATIONS : POPULATIONS
+  let datasetType = isMito ? DATASET_TYPE_MITO_CALLS : DATASET_TYPE_SNV_INDEL_CALLS
+  datasetType = svType ? DATASET_TYPE_SV_CALLS : datasetType
   const seqrAcSection = {
     name: 'seqr Global ACs',
-    details: (!isMito && populations[SEQR_POP.field]) ? [<GlobalAcPopup />].filter(s => s) : [],
+    details: populations[SEQR_POP.field] ? [<GlobalAcPopup datasetType={datasetType} />].filter(s => s) : [],
   }
   const sections = [seqrAcSection, ...(isMito ? MITO_DETAIL_SECTIONS : DETAIL_SECTIONS).reduce(
     (acc, section) => ([

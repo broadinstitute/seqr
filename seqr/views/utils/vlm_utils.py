@@ -42,10 +42,12 @@ def vlm_lookup(user, chrom, pos, ref, alt, genome_version=None, **kwargs):
             response_json = response.json()
             results[client_name] = {
                 meta['handoverType']['id']: {'url': meta['url'], 'counts': {}}
-                for meta in response_json['beaconHandovers']['handovers']
+                for meta in response_json['beaconHandovers']
             }
             for result in response_json['response']['resultSets']:
-                result_id, count_type = result['id'].rsplit(' ', 1)
+                parsed_id = result['id'].rsplit(' ', 1)
+                count_type = parsed_id[-1]
+                result_id =  parsed_id[0] if len(parsed_id) == 2 else next(iter(results[client_name].keys()))
                 results[client_name][result_id]['counts'][count_type] = result['resultsCount']
         except Exception as e:
             logger.error(f'VLM match error for {client_name}: {e}', user, detail=params)

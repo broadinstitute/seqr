@@ -4,9 +4,9 @@ from django.test import TestCase
 import json
 import mock
 
-from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4, CACHED_VARIANTS_BY_KEY
+from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4, format_cached_variant
 from hail_search.test_utils import GENE_COUNTS, VARIANT_LOOKUP_VARIANT, SV_VARIANT4, SV_VARIANT1
-from seqr.models import Family, Sample, VariantSearch, VariantSearchResults
+from seqr.models import Project, Family, Sample, VariantSearch, VariantSearchResults
 from seqr.views.utils.json_utils import DjangoJSONEncoderWithSets
 from seqr.utils.search.utils import get_single_variant, get_variants_for_variant_ids, get_variant_query_gene_counts, \
     query_variants, variant_lookup, sv_variant_lookup, InvalidSearchException
@@ -650,8 +650,8 @@ class ClickhouseSearchUtilsTests(TestCase, SearchUtilsTests):
     databases = '__all__'
     fixtures = ['users', '1kg_project', 'reference_data', 'clickhouse_transcripts']
 
-    CACHED_VARIANTS = [CACHED_VARIANTS_BY_KEY[key] for key in [1, 2, 3, 4]]
     PARSED_CACHED_VARIANTS = [VARIANT1, VARIANT2, VARIANT3, VARIANT4]
+    CACHED_VARIANTS = [format_cached_variant(v) for v in PARSED_CACHED_VARIANTS]
 
     def setUp(self):
         self.set_up()
@@ -677,6 +677,7 @@ class ClickhouseSearchUtilsTests(TestCase, SearchUtilsTests):
         super().test_query_variants(mock_call)
 
     def test_cached_query_variants(self):
+        Project.objects.filter(id=1).update(genome_version='38')
         super().test_cached_query_variants()
 
         cache_key_prefix = f'search_results__{self.results_model.guid}'
@@ -695,7 +696,7 @@ class ClickhouseSearchUtilsTests(TestCase, SearchUtilsTests):
         ])
         self.mock_redis.keys.assert_called_with(pattern=f'{cache_key_prefix}__*')
         self.assert_cached_results(
-            {'all_results': [CACHED_VARIANTS_BY_KEY[key] for key in [4, 2, 1, 3]], 'total_results': 4},
+            {'all_results': [format_cached_variant(v) for v in [VARIANT4, VARIANT2, VARIANT1, VARIANT3]], 'total_results': 4},
             sort='cadd',
         )
 

@@ -166,6 +166,7 @@ LOCAL_RUN_PATHS = [
     '/seqr/seqr-hail-search-data/GRCh38/MITO/runs/auto__2024-08-12/_SUCCESS',
     '/seqr/seqr-hail-search-data/GRCh38/GCNV/runs/auto__2024-09-14/_SUCCESS',
     '/seqr/seqr-hail-search-data/GRCh38/SNV_INDEL/runs/manual__2025-01-24/validation_errors.json',
+    '/seqr/seqr-hail-search-data/GRCh38/SNV_INDEL/runs/hail_search_to_clickhouse_migration_WGS_R0877_neptune/_SUCCESS',
 ]
 RUN_PATHS = [
     b'gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-13/',
@@ -184,6 +185,7 @@ RUN_PATHS = [
     b'gs://seqr-hail-search-data/v3.1/GRCh38/GCNV/runs/auto__2024-09-14/README.txt',
     b'gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-24/',
     b'gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-24/validation_errors.json',
+    b'gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/hail_search_to_clickhouse_migration_WGS_R0877_neptune/_SUCCESS',
 ]
 OPENED_RUN_JSON_FILES = [{
     'callsets': ['1kg.vcf.gz', 'new_samples.vcf.gz'],
@@ -321,7 +323,8 @@ OPENED_RUN_JSON_FILES = [{
     'callsets': ['gcnv.bed.gz'],
     'sample_type': 'WES',
     'family_samples': {'F000002_2': ['HG00731', 'HG00732', 'HG00733'], 'F000012_12': ['NA20889']},
-}, {
+},
+{
     'project_guids': ['R0002_empty'],
     'error_messages': ['Missing the following expected contigs:chr17'],
 }, {
@@ -366,24 +369,28 @@ class CheckNewSamplesTest(object):
         self.addCleanup(patcher.stop)
         Sample.objects.filter(guid=OLD_DATA_SAMPLE_GUID).update(sample_type='WES')
 
-    def _test_call(self, error_logs=None, reload_annotations_logs=None, run_loading_logs=None, reload_calls=None, num_runs=4):
+    def _test_call(self, error_logs=None, reload_annotations_logs=None, run_loading_logs=None, reload_calls=None, num_runs=5):
         self._set_loading_files()
         self.reset_logs()
         responses.calls.reset()
 
         call_command('check_for_new_samples_from_pipeline')
 
-        single_call = num_runs < 4
+        single_call = num_runs < 5
         self._assert_expected_loading_file_calls(single_call=single_call)
 
         logs = self.LIST_FILE_LOGS[:1] + [(f'Loading new samples from {num_runs} run(s)', None)]
         runs = [
             ('GRCh38/SNV_INDEL', 'auto__2023-08-09'), ('GRCh37/SNV_INDEL', 'manual__2023-11-02'),
             ('GRCh38/MITO', 'auto__2024-08-12'), ('GRCh38/SV', 'auto__2024-09-14'),
+            ('GRCh38/SNV_INDEL', 'hail_search_to_clickhouse_migration_WGS_R0877_neptune'),
         ]
         if single_call:
             runs = runs[:1]
         for data_type, version in runs:
+            if 'hail_search_to_clickhouse_migration' in version:
+                logs.append((f'Skipping ClickHouse migration {data_type}: {version}', None))
+                continue
             logs.append((f'Loading new samples from {data_type}: {version}', None))
             logs += self._additional_loading_logs(data_type, version)
             if (run_loading_logs or {}).get(data_type):
@@ -561,7 +568,9 @@ class CheckNewSamplesTest(object):
             ] + self.AIRTABLE_LOGS + [
                 ('update 3 Familys', {'dbUpdate': mock.ANY}),
             ] + update_sample_qc_logs + reload_project_variants_logs,
-            'GRCh38/MITO': [('Loading 2 WGS MITO samples in 1 projects', None)],
+            'GRCh38/MITO': [
+                ('Loading 2 WGS MITO samples in 1 projects', None)
+            ],
             'GRCh38/SV': [
                 ('Loading 4 WES SV samples in 2 projects', None),
                 ('create 4 Samples', {'dbUpdate': mock.ANY}),
@@ -841,7 +850,7 @@ class LocalCheckNewSamplesTest(AuthenticationTestCase, CheckNewSamplesTest):
         if not self.mock_glob.return_value:
             self.mock_glob.return_value = LOCAL_RUN_PATHS
         self.mock_open.return_value.__enter__.return_value.__iter__.side_effect = [
-            iter([json.dumps(OPENED_RUN_JSON_FILES[i])]) for i in range(len(LOCAL_RUN_PATHS[2:]))
+            iter([json.dumps(OPENED_RUN_JSON_FILES[i])]) for i in range(len(LOCAL_RUN_PATHS[2:-1]))
         ]
         self.mock_mkdir.reset_mock()
 
@@ -849,7 +858,7 @@ class LocalCheckNewSamplesTest(AuthenticationTestCase, CheckNewSamplesTest):
         self.mock_glob.assert_called_with('/seqr/seqr-hail-search-data/*/*/runs/*/*', recursive=False)
         self.mock_open.assert_has_calls([
             mock.call(LOCAL_RUN_PATHS[2], 'r'),
-            *[mock.call(path.replace('_SUCCESS', 'metadata.json'), 'r') for path in LOCAL_RUN_PATHS[3:]]
+            *[mock.call(path.replace('_SUCCESS', 'metadata.json'), 'r') for path in LOCAL_RUN_PATHS[3:-1]]
         ], any_order=True)
         self.assertEqual(self.mock_mkdir.call_count, 0 if single_call else 2)
         self.assertEqual(list(self.mock_written_files.keys()), [

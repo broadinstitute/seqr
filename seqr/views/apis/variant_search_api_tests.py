@@ -160,12 +160,16 @@ VLM_CLIENTS_RESPONSE = [
 ]
 VLM_MATCH_URL = 'https://node1.com/variant_lookup/1-10439-AC-A'
 VLM_MATCH_RESPONSE = {
-    'beaconHandovers': {'handovers': [
+    'beaconHandovers': [
         {
             'handoverType': {'id': 'Test Node', 'label': 'Test Node browser'},
             'url': VLM_MATCH_URL,
+        },
+        {
+            'handoverType': {'id': 'Test SecondaryDB', 'label': 'Test secondary database'},
+            'url': f'{VLM_MATCH_URL}/secondarydb',
         }
-    ]},
+    ],
     'meta': {
         'apiVersion': 'v1.0',
         'beaconId': 'com.gnx.beacon.v2',
@@ -194,6 +198,60 @@ VLM_MATCH_RESPONSE = {
                 'id': 'Test Node Heterozygous',
                 'results': [],
                 'resultsCount': 23,
+                'setType': 'genomicVariant'
+            },
+            {
+                'exists': False,
+                'id': 'Test SecondaryDB Homozygous',
+                'results': [],
+                'resultsCount': 0,
+                'setType': 'genomicVariant'
+            },
+            {
+                'exists': True,
+                'id': 'Test SecondaryDB Heterozygous',
+                'results': [],
+                'resultsCount': 2,
+                'setType': 'genomicVariant'
+            },
+        ],
+    }
+}
+VLM_MATCH_RESPONSE_2 = {
+    'beaconHandovers': [
+        {
+            'handoverType': {'id': 'Node2', 'label': ''},
+            'url': VLM_MATCH_URL,
+        }
+    ],
+    'meta': {
+        'apiVersion': 'v1.0',
+        'beaconId': 'com.gnx.beacon.v2',
+        'returnedSchemas': [
+            {
+                'entityType': 'genomicVariant',
+                'schema': 'ga4gh-beacon-variant-v2.0.0',
+            }
+        ]
+    },
+    'responseSummary': {
+        'exists': True,
+        'total': 30,
+    },
+    'response': {
+        'resultSets': [
+            {
+                'exists': True,
+                'id': 'Homozygous',
+                'results': [],
+                'resultsCount': 1,
+                'setType': 'genomicVariant'
+            },
+            {
+                'exists': False,
+                'id': 'Heterozygous',
+                'results': [],
+                'resultsCount': 0,
                 'setType': 'genomicVariant'
             },
         ],
@@ -970,6 +1028,7 @@ class VariantSearchAPITest(object):
         for k in ['VT1708633_2103343353_r0390_100', 'VT1726961_2103343353_r0390_100']:
             del expected_body['variantTagsByGuid'][k]
 
+        self.maxDiff = None
         self.assertDictEqual(response.json(), expected_body)
         mock_variant_lookup.assert_called_with(
             self.manager_user, ('1', 10439, 'AC', 'A'), genome_version='37',
@@ -1029,7 +1088,10 @@ class VariantSearchAPITest(object):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         expected_body = {'vlmMatches': {
-            'Node 1': {'Test Node': {'url': VLM_MATCH_URL, 'counts': {'Heterozygous': 23, 'Homozygous': 7}}}
+            'Node 1': {
+                'Test Node': {'url': VLM_MATCH_URL, 'counts': {'Heterozygous': 23, 'Homozygous': 7}},
+                'Test SecondaryDB': {'url': f'{VLM_MATCH_URL}/secondarydb', 'counts': {'Heterozygous': 2, 'Homozygous': 0}},
+            }
         }}
         self.assertDictEqual(response.json(), expected_body)
 
@@ -1058,18 +1120,21 @@ class VariantSearchAPITest(object):
         # test with cached token and clients
         self.reset_logs()
         responses.calls.reset()
+        responses.add(responses.GET, node_2_url, json=VLM_MATCH_RESPONSE_2)
+        expected_body['vlmMatches']['Node 2'] = {
+            'Node2': {'url': VLM_MATCH_URL, 'counts': {'Heterozygous': 0, 'Homozygous': 1}}
+        }
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), expected_body)
         self.assertEqual(len(responses.calls), 2)
         self.assertListEqual([call.request.url for call in responses.calls], [node_1_url, node_2_url])
         self.assertSetEqual({call.request.headers['Authorization'] for call in responses.calls}, {'Bearer mock_token'})
-        self.maxDiff = None
         self.assert_json_logs(None, [
             ('Loaded VLM_TOKEN from redis', None),
             ('Loaded VLM_CLIENTS from redis', None),
         ])
-        self.assert_json_logs(self.no_access_user, expected_logs, offset=2)
+        self.assert_json_logs(self.no_access_user, expected_logs[:2], offset=2)
 
 
     def test_saved_search(self):
@@ -1214,7 +1279,7 @@ class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, VariantSearchAPITes
 
     EXPECTED_SEARCH_RESPONSE = {
         **EXPECTED_SEARCH_RESPONSE,
-        'totalSampleCounts': {'WES': {'count': 7}},
+        'totalSampleCounts': {'MITO': {'WES': 1}, 'SNV_INDEL': {'WES': 7}, 'SV': {'WES': 3, 'WGS': 1}},
     }
 
     def test_query_variants(self, *args):

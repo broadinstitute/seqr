@@ -1519,6 +1519,7 @@ export const ORDERED_PREDICTOR_FIELDS = [
     getHref: ({ chrom, pos, ref, alt, genomeVersion }) => (
       `https://spliceailookup.broadinstitute.org/#variant=${chrom}-${pos}-${ref}-${alt}&hg=${genomeVersion}&distance=1000&mask=0`
     ),
+    defaultValue: '?',
   },
   { field: 'primate_ai', group: MISSENSE_IN_SILICO_GROUP, thresholds: [undefined, 0.484, 0.79, 0.867, undefined], fieldTitle: 'PrimateAI', requiresCitation: true },
   { field: 'eigen', group: CODING_IN_SILICO_GROUP, thresholds: [undefined, undefined, 1, 2, undefined], max: 99 },
@@ -1536,7 +1537,7 @@ export const ORDERED_PREDICTOR_FIELDS = [
     thresholds: [undefined, undefined, 2.18, 4, undefined],
     requiresCitation: true,
   },
-  { field: 'haplogroup_defining', indicatorMap: { Y: { color: 'green', value: '' } } },
+  { field: 'haplogroup_defining', indicatorMap: { Y: { color: 'green', value: '' }, true: { color: 'green', value: '' } } },
   { field: 'mitotip', indicatorMap: MITOTIP_MAP, fieldTitle: 'MitoTIP' },
   { field: 'hmtvar', thresholds: [undefined, undefined, 0.35, 0.35, undefined], fieldTitle: 'HmtVar' },
   { field: 'mlc', thresholds: [undefined, 0.5, 0.5, 0.75, undefined], fieldTitle: 'MLC' },
@@ -1544,11 +1545,11 @@ export const ORDERED_PREDICTOR_FIELDS = [
 
 export const coloredIcon = color => React.createElement(color.startsWith('#') ? ColoredIcon : Icon, { name: 'circle', size: 'small', color })
 export const predictionFieldValue = (
-  predictions, { field, fieldValue, thresholds, reverseThresholds, indicatorMap, infoField, infoTitle },
+  predictions, { field, fieldValue, thresholds, reverseThresholds, indicatorMap, infoField, infoTitle, defaultValue },
 ) => {
   let value = fieldValue || predictions[field]
   if (value === null || value === undefined) {
-    return { value }
+    return { value: defaultValue || value, color: 'grey' }
   }
 
   const infoValue = predictions[infoField]

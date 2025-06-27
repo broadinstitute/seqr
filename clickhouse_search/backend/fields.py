@@ -11,6 +11,13 @@ class NestedField(models.TupleField):
         self.group_by_key = group_by_key
         super().__init__(*args, **kwargs)
 
+    def clone(self):
+        clone = super().clone()
+        clone.null_when_empty = self.null_when_empty
+        clone.flatten_groups = self.flatten_groups
+        clone.group_by_key = self.group_by_key
+        return clone
+
     def get_internal_type(self):
         return "NestedField"
 
@@ -34,13 +41,14 @@ class NestedField(models.TupleField):
             (format_item(item) if format_item else super(NestedField, self)._from_db_value(item, expression, connection))._asdict()
             for item in value
         ]
-        if self.flatten_groups:
-            value = {item[self.group_by_key]: item for item in value}
-        elif self.group_by_key:
+        if self.group_by_key:
             group_value = defaultdict(list)
             for item in value:
                 group_value[item[self.group_by_key]].append(item)
-            value = dict(group_value)
+            if self.flatten_groups:
+                value = {k: v[0] if len(v) == 1 else v for k, v in group_value.items()}
+            else:
+                value = dict(group_value)
         return value
 
     def to_python(self, value):
@@ -61,6 +69,14 @@ class NestedField(models.TupleField):
         return transform
 
 
+class Enum8Field(models.Enum8Field):
+
+    def clone(self):
+        clone = super().clone()
+        clone.return_int = self.return_int
+        return clone
+
+
 class UInt64FieldDeltaCodecField(models.UInt64Field):
 
     def db_type(self, connection):
@@ -74,6 +90,13 @@ class NamedTupleField(models.TupleField):
         self.null_empty_arrays = null_empty_arrays
         self.rename_fields = rename_fields or {}
         super().__init__(*args, **kwargs)
+
+    def clone(self):
+        clone = super().clone()
+        clone.null_if_empty = self.null_if_empty
+        clone.null_empty_arrays = self.null_empty_arrays
+        clone.rename_fields = self.rename_fields
+        return clone
 
     def _convert_type(self, value):
         value = super()._convert_type(value)
