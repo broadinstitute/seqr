@@ -610,7 +610,7 @@ class EntriesGcnv(BaseEntries):
     key = ForeignKey('AnnotationsGcnv', db_column='key', primary_key=True, on_delete=CASCADE)
     calls = models.ArrayField(NamedTupleField(CALL_FIELDS))
 
-    class Meta:
+    class Meta(BaseEntries.Meta):
         db_table = 'GRCh38/GCNV/entries'
 
 class TranscriptsGRCh37SnvIndel(models.ClickhouseModel):
