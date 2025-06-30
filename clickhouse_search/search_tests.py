@@ -2,7 +2,6 @@ from django.db import connections
 from django.test import TestCase
 import json
 import mock
-import os
 
 from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4, CACHED_CONSEQUENCES_BY_KEY, \
     VARIANT_ID_SEARCH, VARIANT_IDS, LOCATION_SEARCH, GENE_IDS, SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT, \
@@ -11,7 +10,7 @@ from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4,
     FAMILY_3_VARIANT, PROJECT_2_VARIANT, PROJECT_2_VARIANT1, MULTI_PROJECT_VARIANT1, MULTI_PROJECT_VARIANT2, GENE_COUNTS, \
     MULTI_PROJECT_BOTH_SAMPLE_TYPE_VARIANTS, VARIANT1_BOTH_SAMPLE_TYPES, VARIANT2_BOTH_SAMPLE_TYPES, \
     VARIANT3_BOTH_SAMPLE_TYPES, VARIANT4_BOTH_SAMPLE_TYPES, GRCH37_VARIANT, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3, \
-    SV_VARIANT1, SV_VARIANT2, SV_VARIANT3, SV_VARIANT4, SV_GENE_COUNTS, format_cached_variant
+    SV_VARIANT1, SV_VARIANT2, SV_VARIANT3, SV_VARIANT4, SV_GENE_COUNTS, NEW_SV_FILTER, format_cached_variant
 from reference_data.models import Omim
 from seqr.models import Project, Family, Sample
 from seqr.utils.search.search_utils_tests import SearchTestHelper
@@ -223,30 +222,34 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             inheritance_mode=inheritance_mode,
         )
 
-        # self._assert_expected_search(
-        #     [SV_VARIANT1, SV_VARIANT2, SV_VARIANT3, SV_VARIANT4], inheritance_mode=inheritance_mode, sample_data=SV_WGS_SAMPLE_DATA,
-        # )
-        #
+        self._set_sv_family_search()
+        self._assert_expected_search(
+            [SV_VARIANT1, SV_VARIANT2, SV_VARIANT3, SV_VARIANT4], inheritance_mode=inheritance_mode,
+        )
+
         # self._assert_expected_search(
         #     [GCNV_VARIANT3], inheritance_mode=inheritance_mode, annotations=NEW_SV_FILTER, omit_data_type='SNV_INDEL',
         # )
-        #
-        # self._assert_expected_search(
-        #     [SV_VARIANT2], inheritance_mode=inheritance_mode, annotations=NEW_SV_FILTER, sample_data=SV_WGS_SAMPLE_DATA,
-        # )
+
+        self._assert_expected_search(
+            [SV_VARIANT2], inheritance_mode=inheritance_mode, annotations=NEW_SV_FILTER,
+        )
 
         inheritance_mode = 'de_novo'
+        self._reset_search_families()
         self._assert_expected_search(
             # [VARIANT1, FAMILY_3_VARIANT, VARIANT4, GCNV_VARIANT1],
             [VARIANT1, FAMILY_3_VARIANT, VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
             inheritance_mode=inheritance_mode,
         )
 
-        # self._assert_expected_search(
-        #     [SV_VARIANT1], inheritance_mode=inheritance_mode,  sample_data=SV_WGS_SAMPLE_DATA,
-        # )
+        self._set_sv_family_search()
+        self._assert_expected_search(
+            [SV_VARIANT1], inheritance_mode=inheritance_mode,
+        )
 
         inheritance_mode = 'x_linked_recessive'
+        self._reset_search_families()
         self._assert_expected_search([], inheritance_mode=inheritance_mode)
         # self._assert_expected_search([], inheritance_mode=inheritance_mode, sample_data=SV_WGS_SAMPLE_DATA_WITH_SEX)
 
@@ -263,9 +266,10 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             inheritance_mode=inheritance_mode,
         )
 
-        # self._assert_expected_search(
-        #     [SV_VARIANT4], inheritance_mode=inheritance_mode, sample_data=SV_WGS_SAMPLE_DATA,
-        # )
+        self._set_sv_family_search()
+        self._assert_expected_search(
+            [SV_VARIANT4], inheritance_mode=inheritance_mode,
+        )
 
         gt_inheritance_filter = {'genotype': {'I000006_hg00733': 'ref_ref', 'I000005_hg00732': 'has_alt'}}
         self._set_single_family_search()
@@ -306,20 +310,22 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #                 'ENSG00000277972': {'total': 2, 'families': {'F000002_2': 2}},
 #             }, **COMP_HET_ALL_PASS_FILTERS,
 #         )
-#
-#         self._assert_expected_search(
-#             [[SV_VARIANT1, SV_VARIANT2]], inheritance_mode=inheritance_mode, sample_data=SV_WGS_SAMPLE_DATA,
-#             **COMP_HET_ALL_PASS_FILTERS, gene_counts={'ENSG00000171621': {'total': 2, 'families': {'F000011_11': 2}}},
-#         )
-#
-#         self._assert_expected_search(
-#             [[SV_VARIANT1, SV_VARIANT2], [VARIANT3, VARIANT4]], inheritance_mode=inheritance_mode,
-#             sample_data={**SV_WGS_SAMPLE_DATA, **FAMILY_2_VARIANT_SAMPLE_DATA}, **COMP_HET_ALL_PASS_FILTERS, gene_counts={
-#                 'ENSG00000171621': {'total': 2, 'families': {'F000011_11': 2}},
-#                 'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
-#                 'ENSG00000177000': {'total': 1, 'families': {'F000002_2': 1}},
-#             },
-#         )
+
+        self._set_sv_family_search()
+        self._assert_expected_search(
+            [[SV_VARIANT1, SV_VARIANT2]], inheritance_mode=inheritance_mode,
+            **COMP_HET_ALL_PASS_FILTERS, gene_counts={'ENSG00000171621': {'total': 2, 'families': {'F000014_14': 2}}},
+        )
+
+        self.results_model.families.set(Family.objects.filter(guid__in=['F000002_2', 'F000014_14']))
+        self._assert_expected_search(
+            [[SV_VARIANT1, SV_VARIANT2], [VARIANT3, VARIANT4]], inheritance_mode=inheritance_mode,
+            **COMP_HET_ALL_PASS_FILTERS, gene_counts={
+                'ENSG00000171621': {'total': 2, 'families': {'F000014_14': 2}},
+                'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
+                'ENSG00000177000': {'total': 1, 'families': {'F000002_2': 1}},
+            },
+        )
 
         inheritance_mode = 'recessive'
         self._set_multi_project_search()
@@ -361,14 +367,15 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #                 'ENSG00000277972': {'total': 2, 'families': {'F000002_2': 2}},
 #             }, **COMP_HET_ALL_PASS_FILTERS,
 #         )
-#
-#         self._assert_expected_search(
-#             [[SV_VARIANT1, SV_VARIANT2], SV_VARIANT4], inheritance_mode=inheritance_mode, sample_data=SV_WGS_SAMPLE_DATA,
-#             **COMP_HET_ALL_PASS_FILTERS, gene_counts={
-#                 'ENSG00000171621': {'total': 2, 'families': {'F000011_11': 2}},
-#                 'ENSG00000184986': {'total': 1, 'families': {'F000011_11': 1}},
-#             }
-#         )
+
+        self._set_sv_family_search()
+        self._assert_expected_search(
+            [[SV_VARIANT1, SV_VARIANT2], SV_VARIANT4], inheritance_mode=inheritance_mode,
+            **COMP_HET_ALL_PASS_FILTERS, gene_counts={
+                'ENSG00000171621': {'total': 2, 'families': {'F000011_11': 2}},
+                'ENSG00000184986': {'total': 1, 'families': {'F000011_11': 1}},
+            }
+        )
 
     def test_quality_filter(self):
         quality_filter = {'vcf_filter': 'pass'}

@@ -315,6 +315,8 @@ COMP_HET_ALL_PASS_FILTERS = {
     'pathogenicity': {'clinvar': ['likely_pathogenic']},
 }
 
+NEW_SV_FILTER = {'new_structural_variants': ['NEW']}
+
 SV_GENE_COUNTS = {
     'ENSG00000171621': {'total': 2, 'families': {'F000011_11': 2}},
     'ENSG00000083544': {'total': 1, 'families': {'F000011_11': 1}},

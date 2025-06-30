@@ -10,7 +10,6 @@ from clickhouse_search.backend.fields import NestedField, NamedTupleField
 from clickhouse_search.backend.functions import Array, ArrayConcat, ArrayDistinct, ArrayFilter, ArrayFold, \
     ArrayIntersect, ArrayJoin, ArrayMap, ArraySort, ArraySymmetricDifference, CrossJoin, GroupArray, GroupArrayArray, \
     GroupArrayIntersect, DictGet, If, MapLookup, NullIf, Plus, SubqueryJoin, SubqueryTable, Tuple, TupleConcat
-from clickhouse_search.test_utils import transcript
 from seqr.models import Sample
 from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFECTED, UNAFFECTED, MALE_SEXES, \
     X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, SCREEN_KEY, UTR_ANNOTATOR_KEY, \
@@ -556,8 +555,8 @@ class EntriesManager(Manager):
                         multi_sample_type_quality_q, s, sample_filters, clinvar_override_q, multi_sample_type_families
                     )
                 else:
-                    sample_type = None if self.single_sample_type else s['sample_types'][0]
-                    call_q = self._family_calls_q(call_q, s, sample_filters, sample_type, clinvar_override_q)
+                    call_q = self._family_calls_q(call_q, s, sample_filters, s['sample_types'][0], clinvar_override_q,
+                                                  filter_sample_type=not self.single_sample_type)
 
             #  With families with multiple sample types, can only filter rows after aggregating
             filtered_multi_sample_type_families = {
@@ -602,7 +601,7 @@ class EntriesManager(Manager):
         return sample_filters
 
     @classmethod
-    def _family_calls_q(cls, call_q, family_sample_data, sample_filters, sample_type, clinvar_override_q):
+    def _family_calls_q(cls, call_q, family_sample_data, sample_filters, sample_type, clinvar_override_q, filter_sample_type=True):
        family_sample_q = None
        for sample_ids_by_type, sample_inheritance_filter, sample_quality_filter in sample_filters:
            sample_inheritance_filter['sampleId'] = (f"'{sample_ids_by_type[sample_type]}'",)
@@ -610,7 +609,7 @@ class EntriesManager(Manager):
                calls__array_exists={**sample_inheritance_filter, **sample_quality_filter},
                family_guid=family_sample_data['family_guid'],
            )
-           if sample_type:
+           if filter_sample_type:
                sample_q &= Q(sample_type=sample_type)
            if clinvar_override_q and sample_quality_filter:
                sample_q |= clinvar_override_q & Q(calls__array_exists=sample_inheritance_filter)
