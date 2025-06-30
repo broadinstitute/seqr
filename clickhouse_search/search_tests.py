@@ -624,13 +624,9 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         )
 
         self._assert_expected_search(
-            [VARIANT4, MITO_VARIANT1, MITO_VARIANT2],
+            [MULTI_FAMILY_VARIANT, VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
             # [MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
-            freqs={'callset': {'ac': 2}, **sv_callset_filter},
-        )
-
-        self._assert_expected_search(
-            [MULTI_FAMILY_VARIANT, VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], freqs={'callset': {'ac': 4}},
+            freqs={'callset': {'ac': 6}, **sv_callset_filter},
         )
 
         self._assert_expected_search(
@@ -638,7 +634,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         )
 
         self._assert_expected_search(
-            [VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], freqs={'callset': {'ac': 4, 'hh': 0}},
+            [MULTI_FAMILY_VARIANT, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], freqs={'callset': {'ac': 6, 'hh': 0}},
         )
 
 #         self._assert_expected_search(
@@ -660,7 +656,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 
         self._assert_expected_search(
             [VARIANT4, MITO_VARIANT1, MITO_VARIANT2],
-            freqs={'callset': {'ac': 10}, 'gnomad_genomes': {'ac': 50}, 'gnomad_mito': {'ac': 10}},
+            freqs={'callset': {'ac': 6}, 'gnomad_genomes': {'ac': 50}, 'gnomad_mito': {'ac': 10}},
         )
 
         self._assert_expected_search(
@@ -1113,7 +1109,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         # )
 
         self._assert_expected_search(
-            [MITO_VARIANT1, MITO_VARIANT2, VARIANT4, MITO_VARIANT3, MULTI_FAMILY_VARIANT, VARIANT1, VARIANT2],
+            [MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3, VARIANT4, MULTI_FAMILY_VARIANT, VARIANT2, VARIANT1],
             sort='callset_af',
         )
 
@@ -1212,9 +1208,9 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         )
 
         self._assert_expected_search(
-            [[VARIANT4, VARIANT3], MITO_VARIANT3, VARIANT2],
+            [MITO_VARIANT3, [VARIANT4, VARIANT3], VARIANT2],
             sort='callset_af', inheritance_mode='recessive', **COMP_HET_ALL_PASS_FILTERS, cached_variant_fields=[
-                [{'selectedGeneId': 'ENSG00000097046'}, {'selectedGeneId': 'ENSG00000097046'}], {}, {},
+                {}, [{'selectedGeneId': 'ENSG00000097046'}, {'selectedGeneId': 'ENSG00000097046'}], {},
             ],
         )
 
