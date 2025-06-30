@@ -454,7 +454,7 @@ class BaseClinvar(models.ClickhouseModel):
 
     class Meta:
         abstract = True
-        engine = Join('ANY', 'LEFT', 'key', join_use_nulls=1, flatten_nested=0)
+        engine = Join('ALL', 'LEFT', 'key', join_use_nulls=1, flatten_nested=0)
 
 class ClinvarGRCh37SnvIndel(BaseClinvar):
     key = ForeignKey('EntriesGRCh37SnvIndel', db_column='key', related_name='clinvar_join', primary_key=True, on_delete=PROTECT)
