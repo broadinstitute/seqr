@@ -13,9 +13,9 @@ from clickhouse_search.backend.functions import Array, ArrayConcat, ArrayDistinc
 from seqr.models import Sample
 from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFECTED, UNAFFECTED, MALE_SEXES, \
     X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, SCREEN_KEY, UTR_ANNOTATOR_KEY, \
-    EXTENDED_SPLICE_KEY, MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY, CLINVAR_KEY, HGMD_KEY, SV_ANNOTATION_TYPES, \
+    EXTENDED_SPLICE_KEY, MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY, CLINVAR_KEY, HGMD_KEY, NEW_SV_FIELD, \
     EXTENDED_SPLICE_REGION_CONSEQUENCE, CLINVAR_PATH_RANGES, CLINVAR_PATH_SIGNIFICANCES, PATH_FREQ_OVERRIDE_CUTOFF, \
-    HGMD_CLASS_FILTERS
+    HGMD_CLASS_FILTERS, SV_TYPE_FILTER_FIELD, SV_CONSEQUENCES_FIELD
 from seqr.utils.xpos_utils import get_xpos
 
 
@@ -296,7 +296,7 @@ class AnnotationsQuerySet(QuerySet):
             results = results.exclude(self._clinvar_filter_q(exclude_clinvar))
 
         if not (filter_qs or transcript_filters):
-            if any(val for val in (annotations or {}).values()) or any(val for val in (pathogenicity or {}).values()):
+            if any(val for key, val in (annotations or {}).items() if key != NEW_SV_FIELD) or any(val for val in (pathogenicity or {}).values()):
                 #  Annotation filters restrict search to other dataset types
                 results = results.none()
             return results
@@ -342,7 +342,11 @@ class AnnotationsQuerySet(QuerySet):
                     filter_qs.append(splice_ai_q)
             elif field == SCREEN_KEY:
                 filters_by_field['screen_region_type'] = ('{field}__in', value)
-            elif field not in SV_ANNOTATION_TYPES:
+            elif field == SV_TYPE_FILTER_FIELD:
+                pass # TODO
+            elif field == SV_CONSEQUENCES_FIELD:
+                pass # TODO
+            elif field != NEW_SV_FIELD:
                 allowed_consequences += value
 
         filter_qs += [
@@ -451,9 +455,12 @@ class EntriesManager(Manager):
     INHERITANCE_FILTERS = INHERITANCE_FILTERS
 
     @property
+    def call_fields(self):
+        return {field[0] for field in self.model.CALL_FIELDS}
+
+    @property
     def quality_filters(self):
-        call_fields = {field[0] for field in self.model.CALL_FIELDS}
-        return [config for config in [('gq', 1), ('ab', 100, 'x.gt != 1'), ('hl', 100)] if config[0] in call_fields]
+        return [config for config in [('gq', 1), ('ab', 100, 'x.gt != 1'), ('hl', 100)] if config[0] in self.call_fields]
 
     @property
     def single_sample_type(self):
@@ -478,7 +485,7 @@ class EntriesManager(Manager):
             for field in reversed(clinvar_model._meta.local_fields) if field.name != 'key'
         })
 
-    def search(self, sample_data, parsed_locus=None, freqs=None,  **kwargs):
+    def search(self, sample_data, parsed_locus=None, freqs=None, annotations=None, **kwargs):
         entries = self.annotate(seqrPop=self._seqr_pop_expression())
         entries = self._filter_intervals(entries, **(parsed_locus or {}))
 
@@ -488,6 +495,9 @@ class EntriesManager(Manager):
         gnomad_filter = (freqs or {}).get('gnomad_genomes') or {}
         if hasattr(self.model, 'is_gnomad_gt_5_percent') and ((gnomad_filter.get('af') or 1) <= 0.05 or any(gnomad_filter.get(field) is not None for field in ['ac', 'hh'])):
             entries = entries.filter(is_gnomad_gt_5_percent=False)
+
+        if (annotations or {}).get(NEW_SV_FIELD) and 'newCall' in self.call_fields:
+            entries = entries.filter(calls__array_exists={'newCall': (None, '{field}')})
 
         return self._search_call_data(entries, sample_data, **kwargs)
 

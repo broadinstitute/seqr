@@ -240,7 +240,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         self._assert_expected_search(
             # [VARIANT1, FAMILY_3_VARIANT, VARIANT4, GCNV_VARIANT1],
             [VARIANT1, FAMILY_3_VARIANT, VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
-            inheritance_mode=inheritance_mode,
+            inheritance_mode=inheritance_mode, annotations=None,
         )
 
         self._set_sv_family_search()
