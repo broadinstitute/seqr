@@ -24,66 +24,11 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
     databases = '__all__'
     fixtures = ['users', '1kg_project', 'reference_data', 'clickhouse_search', 'clickhouse_transcripts']
 
-    @classmethod
-    def setUpTestData(cls):
-        with connections['clickhouse'].cursor() as cursor:
-            cursor.execute("""
-            CREATE OR REPLACE DICTIONARY "GRCh38/SNV_INDEL/gt_stats_dict"
-            (
-                key UInt32,
-                ac_wes UInt32,
-                ac_wgs UInt32,
-                hom_wes UInt32,
-                hom_wgs UInt32,
-            )
-            PRIMARY KEY key
-            SOURCE(CLICKHOUSE(
-                USER %s
-                PASSWORD %s
-                QUERY "SELECT * FROM VALUES ((1, 4, 5, 2, 0), (2, 12, 16, 3, 1), (3, 4, 0, 1, 0), (4, 0, 2, 0, 0))"
-            ))
-            LIFETIME(0)
-            LAYOUT(FLAT(MAX_ARRAY_SIZE 500000000))
-            """, [os.environ.get('CLICKHOUSE_USER', 'clickhouse'), os.environ.get('CLICKHOUSE_PASSWORD', 'clickhouse_test')])
-            cursor.execute("""
-            CREATE OR REPLACE DICTIONARY "GRCh37/SNV_INDEL/gt_stats_dict"
-            (
-                key UInt32,
-                ac_wes UInt32,
-                ac_wgs UInt32,
-                hom_wes UInt32,
-                hom_wgs UInt32,
-            )
-            PRIMARY KEY key
-            SOURCE(CLICKHOUSE(
-                USER %s
-                PASSWORD %s
-                QUERY "SELECT * FROM VALUES ((11, 4711, 0, 1508, 0))"
-            ))
-            LIFETIME(0)
-            LAYOUT(FLAT(MAX_ARRAY_SIZE 500000000))
-            """, [os.environ.get('CLICKHOUSE_USER', 'clickhouse'), os.environ.get('CLICKHOUSE_PASSWORD', 'clickhouse_test')])
-            cursor.execute("""
-            CREATE OR REPLACE DICTIONARY "GRCh38/MITO/gt_stats_dict"
-            (
-                key UInt32,
-                ac_het_wes UInt32,
-                ac_het_wgs UInt32,
-                ac_hom_wes UInt32,
-                ac_hom_wgs UInt32,
-            )
-            PRIMARY KEY key
-            SOURCE(CLICKHOUSE(
-                USER %s
-                PASSWORD %s
-                QUERY "SELECT * FROM VALUES ((6, 0, 1, 0, 0), (7, 1, 0, 0, 0), (8, 0, 1, 2, 1))"
-            ))
-            LIFETIME(0)
-            LAYOUT(FLAT(MAX_ARRAY_SIZE 500000000))
-            """, [os.environ.get('CLICKHOUSE_USER', 'clickhouse'), os.environ.get('CLICKHOUSE_PASSWORD', 'clickhouse_test')])
-
     def setUp(self):
         super().set_up()
+        with connections['clickhouse'].cursor() as cursor:
+            for table_base in ['GRCh38/SNV_INDEL', 'GRCh38/MITO', 'GRCh38/SV', 'GRCh37/SNV_INDEL']:
+                cursor.execute(f'SYSTEM REFRESH VIEW "{table_base}/project_gt_stats_to_gt_stats_mv"')
         Project.objects.update(genome_version='38')
         Sample.objects.filter(dataset_type=Sample.DATASET_TYPE_SV_CALLS).update(is_active=False)
 

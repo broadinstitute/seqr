@@ -45,7 +45,7 @@ CREATE DICTIONARY `$reference_genome/$dataset_type/gt_stats_dict`
     $columns
 )
 PRIMARY KEY key
-SOURCE(CLICKHOUSE(USER $clickhouse_user PASSWORD $clickhouse_password DB $clickhouse_database TABLE `$reference_genome/$dataset_type/gt_stats`))
+SOURCE(CLICKHOUSE(USER $clickhouse_user PASSWORD $clickhouse_password TABLE `$reference_genome/$dataset_type/gt_stats`))
 LIFETIME(MIN 0 MAX 0)
 LAYOUT(FLAT(MAX_ARRAY_SIZE $size))
 """).safe_substitute(
@@ -53,7 +53,6 @@ LAYOUT(FLAT(MAX_ARRAY_SIZE $size))
     # double substitution these shared values
     clickhouse_user=CLICKHOUSE_USER,
     clickhouse_password=CLICKHOUSE_PASSWORD,
-    clickhouse_database=DATABASES.get('clickhouse', {}).get('NAME'),
 ))
 
 class Migration(migrations.Migration):
