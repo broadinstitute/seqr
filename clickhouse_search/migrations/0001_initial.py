@@ -117,7 +117,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'GRCh38/SNV_INDEL/clinvar',
-                'engine': clickhouse_search.backend.engines.Join('ALL', 'LEFT', 'key', join_use_nulls=1, flatten_nested=0),
+                'engine': clickhouse_search.backend.engines.Join('ANY', 'LEFT', 'key', join_use_nulls=1, flatten_nested=0),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
