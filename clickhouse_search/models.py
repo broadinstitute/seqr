@@ -138,7 +138,7 @@ class BaseAnnotationsSvGcnv(BaseAnnotations):
     lifted_over_chrom = Enum8Field(db_column='liftedOverChrom', return_int=False, null=True, blank=True, choices=BaseAnnotations.CHROMOSOME_CHOICES)
     sv_type = models.Enum8Field(db_column='svType', return_int=False, choices=SV_TYPES)
     predictions = NamedTupleField(PREDICTION_FIELDS)
-    sorted_gene_consequences = NestedField(SORTED_GENE_CONSQUENCES_FIELDS, db_column='sortedTranscriptConsequences')
+    sorted_gene_consequences = NestedField(SORTED_GENE_CONSQUENCES_FIELDS, db_column='sortedGeneConsequences')
 
     class Meta:
         abstract = True
@@ -364,10 +364,10 @@ class BaseAnnotationsSv(BaseAnnotationsSvGcnv):
         ('type', models.Enum8Field(return_int=False, choices=BaseAnnotationsSvGcnv.SV_TYPES)),
     ], db_column='cpxIntervals', null_when_empty=True)
     end_chrom = models.Enum8Field(db_column='endChrom', return_int=False, choices=BaseAnnotations.CHROMOSOME_CHOICES, null=True, blank=True)
-    sv_source_detail = NestedField(
+    sv_source_detail = NamedTupleField(
         [('chrom', models.Enum8Field(return_int=False, choices=BaseAnnotations.CHROMOSOME_CHOICES, null=True, blank=True))],
         db_column='svSourceDetail',
-        null_when_empty=True
+        null_if_empty=True
     )
     sv_type_detail = models.Enum8Field(db_column='svTypeDetail', return_int=False, choices=SV_TYPE_DETAILS, null=True, blank=True)
     populations = NamedTupleField(POPULATION_FIELDS)
@@ -610,7 +610,7 @@ class EntriesGcnv(BaseEntries):
     key = ForeignKey('AnnotationsGcnv', db_column='key', primary_key=True, on_delete=CASCADE)
     calls = models.ArrayField(NamedTupleField(CALL_FIELDS))
 
-    class Meta:
+    class Meta(BaseEntries.Meta):
         db_table = 'GRCh38/GCNV/entries'
 
 class TranscriptsGRCh37SnvIndel(models.ClickhouseModel):
