@@ -751,7 +751,7 @@
       "sv_type": "INS",
       "sv_type_detail": null,
       "cpx_intervals": [],
-      "sv_source_detail": [null]
+      "sv_source_detail": [4]
     }
 }, {
     "model": "clickhouse_search.annotationssv",
@@ -774,7 +774,8 @@
         [0, 0, 0, ""]
       ],
       "sorted_gene_consequences": [
-        ["ENSG00000083544", "INTRONIC"]
+        ["ENSG00000083544", "NEAREST_TSS"],
+        [null, "NEAREST_TSS"]
       ],
       "sv_type": "CPX",
       "sv_type_detail": "dDUP",
