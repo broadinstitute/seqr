@@ -546,7 +546,7 @@ class EntriesManager(Manager):
             multi_sample_type_any_affected_q = None
             for s in sample_data:
                 sample_filters, any_affected_samples = self._family_sample_filters(s, inheritance_mode, individual_genotype_filter, quality_filter, custom_affected)
-                if not sample_filters:
+                if not (sample_filters or any_affected_samples):
                     continue
                 if s['family_guid'] in multi_sample_type_families:
                     multi_sample_type_quality_q, multi_sample_type_any_affected_q = self._multi_sample_type_family_calls_q(
