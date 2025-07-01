@@ -822,7 +822,8 @@ ENTRY_CLASS_MAP = {
     GENOME_VERSION_GRCh38: {
         Sample.DATASET_TYPE_VARIANT_CALLS: EntriesSnvIndel,
         Sample.DATASET_TYPE_MITO_CALLS: EntriesMito,
-        Sample.DATASET_TYPE_SV_CALLS: EntriesSv,
+        f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WGS}': EntriesSv,
+        f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WES}': EntriesGcnv,
     },
 }
 ANNOTATIONS_CLASS_MAP = {
@@ -830,7 +831,8 @@ ANNOTATIONS_CLASS_MAP = {
     GENOME_VERSION_GRCh38: {
         Sample.DATASET_TYPE_VARIANT_CALLS: AnnotationsSnvIndel,
         Sample.DATASET_TYPE_MITO_CALLS: AnnotationsMito,
-        Sample.DATASET_TYPE_SV_CALLS: AnnotationsSv,
+        f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WGS}': AnnotationsSv,
+        f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WES}': AnnotationsGcnv,
     },
 }
 TRANSCRIPTS_CLASS_MAP = {

@@ -9,7 +9,7 @@ from clickhouse_search.backend.functions import Array, ArrayFilter, ArrayInterse
 from clickhouse_search.models import ENTRY_CLASS_MAP, ANNOTATIONS_CLASS_MAP, TRANSCRIPTS_CLASS_MAP, BaseClinvar, \
     BaseAnnotationsMitoSnvIndel, BaseAnnotationsGRCh37SnvIndel
 from reference_data.models import GeneConstraint, Omim
-from seqr.models import PhenotypePrioritization
+from seqr.models import Sample, PhenotypePrioritization
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.search.constants import MAX_VARIANTS, XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, \
     PRIORITIZED_GENE_SORT, COMPOUND_HET, RECESSIVE
@@ -194,7 +194,17 @@ def _get_sample_data(samples):
     )
     samples_by_dataset_type = defaultdict(list)
     for data in sample_data:
-        samples_by_dataset_type[data['dataset_type']].append({**data, 'samples': _group_by_sample_type(data['samples'])})
+        samples = _group_by_sample_type(data['samples'])
+        if data['dataset_type'] == Sample.DATASET_TYPE_SV_CALLS:
+            samples_by_type = defaultdict(list)
+            for sample in samples:
+                for sample_type in sample['sample_ids_by_type']:
+                    samples_by_type[sample_type].append(
+                        {**sample, 'sample_ids_by_type': {sample_type: sample['sample_ids_by_type'][sample_type]}}
+                    )
+            for sample_type, type_samples in samples_by_type.items():
+                samples_by_dataset_type[f"{data['dataset_type']}_{sample_type}"].append({**data, 'samples': type_samples})
+        samples_by_dataset_type[data['dataset_type']].append({**data, 'samples': samples})
     return samples_by_dataset_type
 
 

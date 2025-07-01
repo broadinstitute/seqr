@@ -29,7 +29,6 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             for table_base in ['GRCh38/SNV_INDEL', 'GRCh38/MITO', 'GRCh38/SV', 'GRCh37/SNV_INDEL']:
                 cursor.execute(f'SYSTEM REFRESH VIEW "{table_base}/project_gt_stats_to_gt_stats_mv"')
         Project.objects.update(genome_version='38')
-        Sample.objects.filter(dataset_type=Sample.DATASET_TYPE_SV_CALLS, sample_type='WES').update(is_active=False)
 
     def _assert_expected_search(self, expected_results, gene_counts=None, inheritance_mode=None, inheritance_filter=None, quality_filter=None, cached_variant_fields=None, sort='xpos', **search_kwargs):
         self.search_model.search.update(search_kwargs or {})
