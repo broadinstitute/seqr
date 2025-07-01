@@ -576,8 +576,9 @@ class EntriesManager(Manager):
                         clinvar_override_q, multi_sample_type_families,
                     )
                 else:
+                    sample_type = s['sample_types'][0]
                     call_q = self._family_calls_q(
-                        call_q, s, sample_filters, s['sample_types'][0], clinvar_override_q,
+                        call_q, s, sample_filters, sample_type, clinvar_override_q,
                         any_affected_samples=any_affected_samples, filter_sample_type=not self.single_sample_type
                     )
 
