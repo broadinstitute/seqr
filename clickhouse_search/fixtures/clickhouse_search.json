@@ -968,5 +968,33 @@
             "variant_score": 1
         }
     }
+}, {
+    "model": "reference_data.geneinfo",
+    "pk": 70,
+    "fields": {
+        "gene_id": "ENSG00000275023",
+        "gene_symbol": "CDC9",
+        "chrom_grch38": "17",
+        "start_grch38": 38717636,
+        "end_grch38": 38724781,
+        "strand_grch38": "+",
+        "coding_region_size_grch38": 0,
+        "gencode_gene_type": "protein_coding",
+        "gencode_release": 27
+    }
+}, {
+    "model": "reference_data.geneinfo",
+    "pk": 71,
+    "fields": {
+        "gene_id": "ENSG00000171621",
+        "gene_symbol": "CDC10",
+        "chrom_grch38": "1",
+        "start_grch38": 9292894,
+        "end_grch38": 9369532,
+        "strand_grch38": "+",
+        "coding_region_size_grch38": 0,
+        "gencode_gene_type": "protein_coding",
+        "gencode_release": 27
+    }
 }
 ]

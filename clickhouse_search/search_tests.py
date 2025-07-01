@@ -479,21 +479,27 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
                 {'selectedGeneId': 'ENSG00000097046'}, {'selectedGeneId': 'ENSG00000097046'}
             ],
         )
-#
-#         sv_intervals = [['1', 9310023, 9380264], ['17', 38717636, 38724781]]
+
+        sv_locus = {'rawItems': 'ENSG00000275023, ENSG00000171621'}
 #         self._assert_expected_search(
 #             [GCNV_VARIANT3, GCNV_VARIANT4], intervals=sv_intervals, gene_ids=['ENSG00000275023'], omit_data_type='SNV_INDEL',
 #         )
-#
-#         self._assert_expected_search(
-#             [SV_VARIANT1, SV_VARIANT2], sample_data=SV_WGS_SAMPLE_DATA, intervals=sv_intervals, gene_ids=['ENSG00000171621'],
-#         )
-#
+
+        self._set_sv_family_search()
+        # For gene search, return SVs annotated in gene even if they fall outside the gene interval
+        self._assert_expected_search(
+            [SV_VARIANT1, SV_VARIANT2], locus=sv_locus,
+        )
+        self._assert_expected_search(
+            [SV_VARIANT1], locus={'rawItems': 'chr1:9292894-9369532'}
+        )
+
 #         self._assert_expected_search(
 #             [SV_VARIANT1, SV_VARIANT2, MULTI_PROJECT_GCNV_VARIANT3, GCNV_VARIANT4], intervals=sv_intervals,
 #             sample_data={'SV_WES': EXPECTED_SAMPLE_DATA['SV_WES'] + SECOND_PROJECT_SV_WES_SAMPLE_DATA, **SV_WGS_SAMPLE_DATA},
 #         )
 #
+        self._reset_search_families()
         self._assert_expected_search(
             [VARIANT1, VARIANT2, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], exclude=LOCATION_SEARCH['locus'], locus=None,
         )
@@ -501,11 +507,13 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #         self._assert_expected_search(
 #             [GCNV_VARIANT1, GCNV_VARIANT2], intervals=sv_intervals, exclude_intervals=True, omit_data_type='SNV_INDEL',
 #         )
-#
-#         self._assert_expected_search(
-#             [SV_VARIANT3, SV_VARIANT4], sample_data=SV_WGS_SAMPLE_DATA, intervals=sv_intervals, exclude_intervals=True,
-#         )
-#
+
+        self._set_sv_family_search()
+        self._assert_expected_search(
+            [SV_VARIANT3, SV_VARIANT4], exclude=sv_locus,
+        )
+
+        self._reset_search_families()
         self._assert_expected_search(
             [SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT],
             locus={'rawItems': f'{GENE_IDS[1]}\n1:91500851-91525764'}, exclude=None, cached_variant_fields=[
@@ -526,16 +534,6 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #         self._assert_expected_search(
 #             [SV_VARIANT4], padded_interval={'chrom': '14', 'start': 106692244, 'end': 106742587, 'padding': 0.1},
 #             sample_data=SV_WGS_SAMPLE_DATA,
-#         )
-#
-#         # For gene search, return SVs annotated in gene even if they fall outside the gene interval
-#         nearest_tss_gene_intervals = [['1', 9292894, 9369532]]
-#         self._assert_expected_search(
-#             [SV_VARIANT1], sample_data=SV_WGS_SAMPLE_DATA, intervals=nearest_tss_gene_intervals,
-#         )
-#         self._assert_expected_search(
-#             [SV_VARIANT1, SV_VARIANT2], sample_data=SV_WGS_SAMPLE_DATA, intervals=nearest_tss_gene_intervals,
-#             gene_ids=['ENSG00000171621'],
 #         )
 
         self._set_grch37_search()

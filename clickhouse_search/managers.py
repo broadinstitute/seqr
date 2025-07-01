@@ -16,7 +16,7 @@ from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFEC
     EXTENDED_SPLICE_KEY, MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY, CLINVAR_KEY, HGMD_KEY, NEW_SV_FIELD, \
     EXTENDED_SPLICE_REGION_CONSEQUENCE, CLINVAR_PATH_RANGES, CLINVAR_PATH_SIGNIFICANCES, PATH_FREQ_OVERRIDE_CUTOFF, \
     HGMD_CLASS_FILTERS, SV_TYPE_FILTER_FIELD, SV_CONSEQUENCES_FIELD
-from seqr.utils.xpos_utils import get_xpos
+from seqr.utils.xpos_utils import get_xpos, MIN_POS, MAX_POS
 
 
 class AnnotationsQuerySet(QuerySet):
@@ -866,17 +866,23 @@ class EntriesManager(Manager):
             mapped_expression='x.1', output_field=models.ArrayField(models.StringField()),
         )
 
-    @classmethod
-    def _filter_intervals(cls, entries, exclude_intervals=False, intervals=None, variant_ids=None,  **kwargs):
+    def _filter_intervals(self, entries, exclude_intervals=False, intervals=None, gene_intervals=None, variant_ids=None,  **kwargs):
         if variant_ids:
             # although technically redundant, the interval query is applied to the entries table before join and reduces the join size,
             # while the full variant_id filter is applied to the annotation table after the join
             intervals = [(chrom, pos, pos) for chrom, pos, _, _ in variant_ids]
 
+        if gene_intervals:
+            if 'cn' in self.call_fields:
+                # Return SVs annotated in a gene even if they fall outside the gene interval
+                gene_chromosomes = {chrom for chrom, _, _ in gene_intervals}
+                gene_intervals = [(chrom, MIN_POS, MAX_POS) for chrom in gene_chromosomes]
+            intervals = (intervals or []) + gene_intervals
+
         if intervals:
-            interval_q = cls._interval_query(*intervals[0])
+            interval_q = self._interval_query(*intervals[0])
             for interval in intervals[1:]:
-                interval_q |= cls._interval_query(*interval)
+                interval_q |= self._interval_query(*interval)
             filter_func = entries.exclude if exclude_intervals else entries.filter
             entries = filter_func(interval_q)
 
