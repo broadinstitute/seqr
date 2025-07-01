@@ -394,12 +394,13 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             quality_filter=quality_filter
         )
 
-        # self._assert_expected_search(
-        #     [SV_VARIANT4], quality_filter=quality_filter,
-        #     sample_data={**SV_WGS_SAMPLE_DATA, **FAMILY_2_MITO_SAMPLE_DATA}
-        # )
+        self._set_sv_family_search()
+        self._assert_expected_search(
+            [SV_VARIANT4], quality_filter=quality_filter,
+        )
 
         gcnv_quality_filter = {'min_gq': 40, 'min_qs': 20, 'min_hl': 5}
+        self._reset_search_families()
         self._assert_expected_search(
             [VARIANT2, MULTI_FAMILY_VARIANT, MITO_VARIANT1, MITO_VARIANT3], quality_filter=gcnv_quality_filter,
             # [VARIANT2, MULTI_FAMILY_VARIANT, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT4], quality_filter=gcnv_quality_filter,
@@ -408,18 +409,21 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         # self._assert_expected_search(
         #     [], annotations=NEW_SV_FILTER, quality_filter=gcnv_quality_filter, omit_data_type='SNV_INDEL',
         # )
-        #
-        # sv_quality_filter = {'min_gq_sv': 40}
-        # self._assert_expected_search(
-        #     [SV_VARIANT3, SV_VARIANT4], quality_filter=sv_quality_filter, sample_data=SV_WGS_SAMPLE_DATA,
-        # )
-        #
-        # self._assert_expected_search(
-        #     [], annotations=NEW_SV_FILTER, quality_filter=sv_quality_filter, sample_data=SV_WGS_SAMPLE_DATA,
-        # )
+
+        sv_quality_filter = {'min_gq_sv': 40}
+        self._set_sv_family_search()
+        self._assert_expected_search(
+            [SV_VARIANT3, SV_VARIANT4], quality_filter=sv_quality_filter,
+        )
 
         self._assert_expected_search(
+            [], annotations=NEW_SV_FILTER, quality_filter=sv_quality_filter,
+        )
+
+        self._reset_search_families()
+        self._assert_expected_search(
             [VARIANT2, MULTI_FAMILY_VARIANT, MITO_VARIANT1, MITO_VARIANT2], quality_filter={'min_gq': 40, 'vcf_filter': 'pass'},
+            annotations=None,
         )
 
         self._assert_expected_search(
@@ -428,10 +432,12 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             quality_filter={'min_gq': 60, 'min_qs': 10, 'affected_only': True},
         )
 
-        # self._assert_expected_search(
-        #     [SV_VARIANT3, SV_VARIANT4], quality_filter={'min_gq_sv': 60, 'affected_only': True}, sample_data=SV_WGS_SAMPLE_DATA,
-        # )
+        self._set_sv_family_search()
+        self._assert_expected_search(
+            [SV_VARIANT4], quality_filter={'min_gq_sv': 60, 'affected_only': True},
+        )
 
+        self._reset_search_families()
         self._assert_expected_search(
             [VARIANT1, VARIANT2, FAMILY_3_VARIANT, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], quality_filter={'min_ab': 50},
         )

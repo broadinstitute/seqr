@@ -702,7 +702,10 @@ class EntriesManager(Manager):
             return sample_filter
 
         for field, scale, *filters in self.quality_filters:
-            value = quality_filter.get(f'min_{field}')
+            filter_key = f'min_{field}'
+            if field == 'gq' and 'cn' in self.call_fields:
+                filter_key += '_sv'
+            value = quality_filter.get(filter_key)
             if value:
                 or_filters = ['isNull({field})', '{field} >= {value}'] + filters
                 sample_filter[field] = (value / scale, f'or({", ".join(or_filters)})')
