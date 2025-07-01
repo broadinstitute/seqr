@@ -510,7 +510,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 
         self._set_sv_family_search()
         self._assert_expected_search(
-            [SV_VARIANT3, SV_VARIANT4], exclude=sv_locus,
+            [SV_VARIANT2, SV_VARIANT3, SV_VARIANT4], exclude=sv_locus,
         )
 
         self._reset_search_families()
