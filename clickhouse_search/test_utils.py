@@ -331,3 +331,12 @@ SV_GENE_COUNTS = {
     'ENSG00000184986': {'total': 1, 'families': {'F000011_11': 1}},
     'null': {'total': 1, 'families': {'F000011_11': 1}},
 }
+
+GCNV_GENE_COUNTS = {
+    'ENSG00000103495': {'total': 1, 'families': {'F000002_2': 1}},
+    'ENSG00000167371': {'total': 1, 'families': {'F000002_2': 1}},
+    'ENSG00000280893': {'total': 1, 'families': {'F000002_2': 1}},
+    'ENSG00000275023': {'total': 2, 'families': {'F000002_2': 2}},
+    'ENSG00000277258': {'total': 1, 'families': {'F000002_2': 1}},
+    'ENSG00000277972': {'total': 1, 'families': {'F000002_2': 1}},
+}

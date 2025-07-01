@@ -885,7 +885,7 @@
       "end": 22469796,
       "variant_id": "suffix_95340_DUP",
       "lifted_over_chrom": "14",
-      "lifted_over_pos": 107150261,
+      "lifted_over_pos": 22886546,
       "rg37_locus_end": [14, 23058228],
       "num_exon": 0,
       "predictions": [0.181],
@@ -911,7 +911,7 @@
       "num_exon": 8,
       "predictions": [0.548],
       "populations": [
-        [35, 0.00152, 23048, 0, 0]
+        [284, 0.01232, 23047, 0, 0]
       ],
       "sorted_gene_consequences": [
         ["ENSG00000103495", "COPY_GAIN"],
@@ -959,7 +959,7 @@
       "num_exon": 7,
       "predictions": [0.71],
       "populations": [
-        [115, 0.005, 23048, 0, 0]
+        [115, 0.00499, 23048, 0, 0]
       ],
       "sorted_gene_consequences": [
         ["ENSG00000275023", "LOF"],

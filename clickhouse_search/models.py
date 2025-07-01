@@ -392,7 +392,7 @@ class AnnotationsDiskSv(BaseAnnotationsSv):
 
 class BaseAnnotationsGcnv(BaseAnnotationsSvGcnv):
     POPULATION_FIELDS = [
-        ('seqrPop', NamedTupleField([
+        ('sv_callset', NamedTupleField([
             ('ac', models.UInt32Field()),
             ('af', models.DecimalField(max_digits=9, decimal_places=5)),
             ('an', models.UInt32Field()),
