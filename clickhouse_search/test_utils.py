@@ -14,6 +14,10 @@ from hail_search.test_utils import (
     SV_VARIANT2 as HAIL_SV_VARIANT2,
     SV_VARIANT3 as HAIL_SV_VARIANT3,
     SV_VARIANT4 as HAIL_SV_VARIANT4,
+    GCNV_VARIANT1 as HAIL_GCNV_VARIANT1,
+    GCNV_VARIANT2 as HAIL_GCNV_VARIANT2,
+    GCNV_VARIANT3 as HAIL_GCNV_VARIANT3,
+    GCNV_VARIANT4 as HAIL_GCNV_VARIANT4,
 )
 
 VARIANT1 = {**deepcopy(HAIL_VARIANT1), 'key': 1, 'populations': {**deepcopy(HAIL_VARIANT1)['populations'], 'seqr': {'ac': 8, 'hom': 3}}}
@@ -64,9 +68,13 @@ for variant in [SV_VARIANT1, SV_VARIANT2, SV_VARIANT3, SV_VARIANT4]:
         'I000021_na21654': {**variant['genotypes']['I000035_na20883'], 'sampleId': 'NA21654', 'individualGuid': 'I000021_na21654', 'familyGuid': 'F000014_14'},
     }
 SV_VARIANT3['cpxIntervals'][0]['chrom'] = SV_VARIANT3['cpxIntervals'][0]['chrom'].replace('chr', '')
+GCNV_VARIANT1 = {**deepcopy(HAIL_GCNV_VARIANT1), 'key': 16}
+GCNV_VARIANT2 = {**deepcopy(HAIL_GCNV_VARIANT2), 'key': 17}
+GCNV_VARIANT3 = {**deepcopy(HAIL_GCNV_VARIANT3), 'key': 18}
+GCNV_VARIANT4 = {**deepcopy(HAIL_GCNV_VARIANT4), 'key': 19}
 
 for variant in [VARIANT1, VARIANT2, VARIANT3, VARIANT4, PROJECT_2_VARIANT, GRCH37_VARIANT, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3,
-                SV_VARIANT1, SV_VARIANT2, SV_VARIANT3, SV_VARIANT4]:
+                SV_VARIANT1, SV_VARIANT2, SV_VARIANT3, SV_VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4]:
     # clickhouse uses fixed length decimals so values are rounded relative to hail backend
     for genotype in variant['genotypes'].values():
         if 'ab' in genotype:
