@@ -1045,14 +1045,15 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             [VARIANT2, MULTI_FAMILY_VARIANT], in_silico={'gnomad_noncoding': 0.5, 'requireScore': True},
         )
 
-#         sv_in_silico = {'strvctvre': 0.1, 'requireScore': True}
+        sv_in_silico = {'strvctvre': 0.1, 'requireScore': True}
 #         self._assert_expected_search(
 #             [GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4], omit_data_type='SNV_INDEL', in_silico=sv_in_silico,
 #         )
-#
-#         self._assert_expected_search(
-#             [SV_VARIANT4], sample_data=SV_WGS_SAMPLE_DATA, in_silico=sv_in_silico,
-#         )
+
+        self._set_sv_family_search()
+        self._assert_expected_search(
+            [SV_VARIANT4], in_silico=sv_in_silico,
+        )
 
         self._set_grch37_search()
         self._assert_expected_search([GRCH37_VARIANT], in_silico=main_in_silico)
@@ -1097,11 +1098,13 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         #      _sorted(MULTI_FAMILY_VARIANT, [26, 27]), _sorted(VARIANT1, [None, None])], sort='protein_consequence',
         # )
 
-#         self._assert_expected_search(
-#             [_sorted(SV_VARIANT1, [11]), _sorted(SV_VARIANT2, [12]), _sorted(SV_VARIANT3, [12]), _sorted(SV_VARIANT4, [12])],
-#              sample_data=SV_WGS_SAMPLE_DATA, sort='protein_consequence',
-#         )
+        self._set_sv_family_search()
+        self._assert_expected_search(
+            [SV_VARIANT1, SV_VARIANT2, SV_VARIANT3, SV_VARIANT4],
+             sort='protein_consequence',
+        )
 
+        self._reset_search_families()
         self._assert_expected_search(
             [VARIANT4, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, MITO_VARIANT1, SELECTED_ANNOTATION_TRANSCRIPT_MULTI_FAMILY_VARIANT],
             # [_sorted(VARIANT4, [2, 2]), _sorted(SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, [12, 26]),
@@ -1224,12 +1227,12 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #             [_sorted(GCNV_VARIANT1, [-171766]), _sorted(GCNV_VARIANT2, [-17768]), _sorted(GCNV_VARIANT4, [-14487]),
 #              _sorted(GCNV_VARIANT3, [-2666]), VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4], sort='size',
 #         )
-#
-#         self._assert_expected_search(
-#             [_sorted(SV_VARIANT4, [-46343]), _sorted(SV_VARIANT1, [-104]), _sorted(SV_VARIANT2, [-50]),
-#              _sorted(SV_VARIANT3, [-50])], sample_data=SV_WGS_SAMPLE_DATA, sort='size',
-#         )
-#
+
+        self._set_sv_family_search()
+        self._assert_expected_search(
+            [SV_VARIANT4, SV_VARIANT1, SV_VARIANT3, SV_VARIANT2], sort='size',
+        )
+
         # sort applies to compound hets
         self._set_single_family_search()
         self._assert_expected_search(

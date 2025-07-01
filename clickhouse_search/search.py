@@ -268,6 +268,14 @@ def _selected_transcript_consequence(x):
     transcript = x.get(SELECTED_TRANSCRIPT_FIELD) or _get_matched_transcript(x, 'selectedMainTranscriptId')
     return CONSEQUENCE_RANK_LOOKUP[transcript['consequenceTerms'][0]] if transcript else MAX_SORT_RANK
 
+def _sv_size(x):
+    if not x.get('end'):
+        return -1
+    if x['endChrom']:
+        # Sort position for chromosome spanning SVs
+        return -50
+    return x['pos'] - x['end']
+
 MIN_SORT_RANK = 0
 MIN_PRED_SORT_RANK = -1
 CLINVAR_RANK_LOOKUP = {path: rank for rank, path in BaseClinvar.PATHOGENICITY_CHOICES}
@@ -290,6 +298,7 @@ SORT_EXPRESSIONS = {
     PATHOGENICTY_HGMD_SORT_KEY: CLINVAR_SORT + _subfield_sort('hgmd', 'class', rank_lookup=HGMD_RANK_LOOKUP),
     'protein_consequence': [_main_transcript_consequence, _selected_transcript_consequence],
     **{sort: _subfield_sort('predictions', sort, reverse=True, default=MIN_PRED_SORT_RANK) for sort in PREDICTION_SORTS},
+    'size': [_sv_size],
 }
 
 def _get_sort_key(sort, gene_metadata):
