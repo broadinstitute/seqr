@@ -105,7 +105,6 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             annotations=None, pathogenicity=None,
         )
 
-        self.maxDiff = None
         self._assert_expected_search(
             [GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4], gene_counts=GCNV_GENE_COUNTS,
             locus=None, annotations={'structural': ['DEL', 'DUP']}

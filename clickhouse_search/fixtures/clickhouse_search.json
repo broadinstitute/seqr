@@ -881,18 +881,20 @@
       "key": 16,
       "xpos": 14022417556,
       "chrom": "14",
-      "pos": 22438910,
-      "end": 22469796,
+      "pos": 22417556,
+      "end": 22589322,
       "variant_id": "suffix_95340_DUP",
       "lifted_over_chrom": "14",
       "lifted_over_pos": 22886546,
       "rg37_locus_end": [14, 23058228],
-      "num_exon": 0,
+      "num_exon": 4,
       "predictions": [0.181],
       "populations": [
         [284, 0.012322, 23047, 0, 0]
       ],
-      "sorted_gene_consequences": [],
+      "sorted_gene_consequences": [
+        ["ENSG00000129562", "COPY_GAIN"]
+      ],
       "sv_type": "DUP"
     }
 }, {
@@ -902,21 +904,25 @@
       "key": 17,
       "xpos": 16029802672,
       "chrom": "16",
-      "pos": 29809156,
+      "pos": 29820440,
       "end": 29815990,
       "variant_id": "suffix_124520_DUP",
       "lifted_over_chrom": "16",
       "lifted_over_pos": 29813993,
       "rg37_locus_end": [16, 29831761],
-      "num_exon": 8,
+      "num_exon": 26,
       "predictions": [0.548],
       "populations": [
         [284, 0.01232, 23047, 0, 0]
       ],
       "sorted_gene_consequences": [
+        ["ENSG00000013364", "LOF"],
+        ["ENSG00000079616", "LOF"],
         ["ENSG00000103495", "COPY_GAIN"],
         ["ENSG00000167371", "COPY_GAIN"],
-        ["ENSG00000280893", "COPY_GAIN"]
+        ["ENSG00000280789", "LOF"],
+        ["ENSG00000280893", "COPY_GAIN"],
+        ["ENSG00000281348", "LOF"]
       ],
       "sv_type": "DUP"
     }
@@ -928,7 +934,7 @@
       "xpos": 17038717327,
       "chrom": "17",
       "pos": 38717327,
-      "end": 38719636,
+      "end": 38719993,
       "variant_id": "suffix_140593_DUP",
       "lifted_over_chrom": "17",
       "lifted_over_pos": 36873580,
@@ -951,12 +957,12 @@
       "xpos": 17038721781,
       "chrom": "17",
       "pos": 38721781,
-      "end": 38735703,
+      "end": 38736268,
       "variant_id": "suffix_140608_DUP",
       "lifted_over_chrom": "17",
       "lifted_over_pos": 36878034,
       "rg37_locus_end": [17, 36892521],
-      "num_exon": 7,
+      "num_exon": 8,
       "predictions": [0.71],
       "populations": [
         [115, 0.00499, 23048, 0, 0]
@@ -979,9 +985,7 @@
       "filters": [],
       "sign": 1,
       "calls": [
-        ["HG00731", 1, 3, 38, false, 22438910, 22469796, 0, [], false, true, false],
-        ["HG00732", 0, null, null, null, null, null, null, [], null, null, null],
-        ["HG00733", 0, null, null, null, null, null, null, [], null, null, null]
+        ["HG00731", 1, 3, 38, false, 22438910, 22469796, 0, [], false, true, false]
       ]
     }
 },  {
@@ -1011,9 +1015,8 @@
       "filters": [],
       "sign": 1,
       "calls": [
-        ["HG00731", 2, 4, 13, true, 38717327, 38719636, null, [], true, false, false],
-        ["HG00732", 1, 3, 7, false, 38717327, 38719636, null, [], false, false, true],
-        ["HG00733", 0, null, null, null, null, null, null, [], null, null, null]
+        ["HG00731", 2, 4, 13, true, 38717327, 38719636, null, ["ENSG00000275023"], true, false, false],
+        ["HG00732", 1, 3, 7, false, 38717327, 38719636, null, ["ENSG00000275023"], false, false, true]
       ]
     }
 },  {
@@ -1027,9 +1030,8 @@
       "filters": [],
       "sign": 1,
       "calls": [
-        ["HG00731", 1, 3, 28, false, 38721781, 38735703, 7, [], false, true, false],
-        ["HG00732", 0, null, null, null, null, null, null, [], null, null, null],
-        ["HG00733", 1, 3, 29, false, 38721781, 38734440, 7, [], false, true, false]
+        ["HG00731", 1, 3, 28, false, 38721781, 38735703, 7, ["ENSG00000275023", "ENSG00000277258", "ENSG00000277972"], false, true, false],
+        ["HG00733", 1, 3, 29, false, 38721781, 38734440, 7, ["ENSG00000275023", "ENSG00000277258", "ENSG00000277972"], false, true, false]
       ]
     }
 }, {
