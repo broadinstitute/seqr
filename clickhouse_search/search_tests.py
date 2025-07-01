@@ -743,10 +743,12 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             # [VARIANT2, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4, GCNV_VARIANT3, GCNV_VARIANT4], annotations=annotations,
         )
 
-#         self._assert_expected_search([SV_VARIANT1], annotations=annotations, sample_data=SV_WGS_SAMPLE_DATA)
+        self._set_sv_family_search()
+        self._assert_expected_search([SV_VARIANT1], annotations=annotations)
 
         annotations['splice_ai'] = '0.005'
         annotations['structural'] = ['gCNV_DUP', 'DEL']
+        self._reset_search_families()
         self._assert_expected_search(
             [VARIANT2, MULTI_FAMILY_VARIANT, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4, MITO_VARIANT2],
             # [VARIANT2, MULTI_FAMILY_VARIANT, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
@@ -758,7 +760,8 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             ]
         )
 
-#         self._assert_expected_search([SV_VARIANT1, SV_VARIANT4], annotations=annotations, sample_data=SV_WGS_SAMPLE_DATA)
+        self._set_sv_family_search()
+        self._assert_expected_search([SV_VARIANT1, SV_VARIANT4], annotations=annotations)
 
         annotations = {'other': ['non_coding_transcript_exon_variant__canonical', 'non_coding_transcript_exon_variant']}
         self._set_single_family_search()
@@ -908,21 +911,23 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #             annotations_secondary=gcnv_annotations_2,
 #             gene_ids=['ENSG00000277258', 'ENSG00000275023'], intervals=[['1', 38717636, 38724781], ['17', 38717636, 38724781]],
 #         )
-#
-#         sv_annotations_1 = {'structural': ['INS', 'LOF']}
-#         sv_annotations_2 = {'structural': ['DEL', 'gCNV_DUP'], 'structural_consequence': ['INTRONIC']}
-#
-#         self._assert_expected_search(
-#             [[SV_VARIANT1, SV_VARIANT2]], sample_data=SV_WGS_SAMPLE_DATA, inheritance_mode='compound_het',
-#             annotations=sv_annotations_1, annotations_secondary=sv_annotations_2,
-#         )
-#
-#         self._assert_expected_search(
-#             [[SV_VARIANT1, SV_VARIANT2], SV_VARIANT4], sample_data=SV_WGS_SAMPLE_DATA, inheritance_mode='recessive',
-#             annotations=sv_annotations_2, annotations_secondary=sv_annotations_1,
-#         )
+
+        sv_annotations_1 = {'structural': ['INS', 'LOF']}
+        sv_annotations_2 = {'structural': ['DEL', 'gCNV_DUP'], 'structural_consequence': ['INTRONIC']}
+
+        self._set_sv_family_search()
+        self._assert_expected_search(
+            [[SV_VARIANT1, SV_VARIANT2]], inheritance_mode='compound_het',
+            annotations=sv_annotations_1, annotations_secondary=sv_annotations_2,
+        )
+
+        self._assert_expected_search(
+            [[SV_VARIANT1, SV_VARIANT2], SV_VARIANT4], inheritance_mode='recessive',
+            annotations=sv_annotations_2, annotations_secondary=sv_annotations_1,
+        )
 
         pathogenicity = {'clinvar': ['likely_pathogenic', 'vus_or_conflicting']}
+        self._reset_search_families()
         self._assert_expected_search(
             [VARIANT2, [VARIANT3, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4], MITO_VARIANT3], inheritance_mode='recessive',
             annotations=annotations_2, annotations_secondary=annotations_1, pathogenicity=pathogenicity, cached_variant_fields=[

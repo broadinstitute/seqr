@@ -77,7 +77,9 @@ class AnnotationsQuerySet(QuerySet):
 
     @property
     def transcript_fields(self):
-        transcript_field_configs = getattr(self.model, 'SORTED_TRANSCRIPT_CONSQUENCES_FIELDS', self.model.TRANSCRIPTS_FIELDS)
+        transcript_field_configs = next(getattr(self.model, field) for field in [
+            'SORTED_TRANSCRIPT_CONSQUENCES_FIELDS', 'TRANSCRIPTS_FIELDS', 'SORTED_GENE_CONSQUENCES_FIELDS',
+        ] if hasattr(self.model, field))
         return set(dict(transcript_field_configs).keys())
 
 
@@ -157,6 +159,8 @@ class AnnotationsQuerySet(QuerySet):
 
 
     def _conditional_selected_transcript_values(self, query, prefix=''):
+        if not hasattr(self.model, self.TRANSCRIPT_CONSEQUENCE_FIELD):
+            return {}
         consequence_field = next((
             field for field in [self.FILTERED_CONSEQUENCE_FIELD, self.GENE_CONSEQUENCE_FIELD] if query.has_annotation(field)
         ), None)
@@ -288,8 +292,8 @@ class AnnotationsQuerySet(QuerySet):
 
         filter_qs, transcript_filters = self._parse_annotation_filters(annotations, pathogenicity) if (annotations or pathogenicity) else ([], [])
 
-        exclude_clinvar = (exclude or {}).get('clinvar')
-        if exclude_clinvar and hasattr(self.model, 'clinvar'):
+        exclude_clinvar = (exclude or {}).get(CLINVAR_KEY)
+        if exclude_clinvar and self.has_annotation(CLINVAR_KEY):
             results = results.exclude(self._clinvar_filter_q(exclude_clinvar))
 
         if not (filter_qs or transcript_filters):
@@ -340,9 +344,9 @@ class AnnotationsQuerySet(QuerySet):
             elif field == SCREEN_KEY:
                 filters_by_field['screen_region_type'] = ('{field}__in', value)
             elif field == SV_TYPE_FILTER_FIELD:
-                pass # TODO
+                filters_by_field['sv_type'] = ('{field}__in', value)
             elif field == SV_CONSEQUENCES_FIELD:
-                pass # TODO
+                transcript_field_filters['majorConsequence'] = (value, 'hasAny({value}, [{field}])')
             elif field != NEW_SV_FIELD:
                 allowed_consequences += value
 
@@ -351,7 +355,7 @@ class AnnotationsQuerySet(QuerySet):
                 continue
             elif field == HGMD_KEY:
                 filters_by_field[HGMD_KEY] = self._hgmd_filter(value)
-            elif field == CLINVAR_KEY and hasattr(self.model, CLINVAR_KEY):
+            elif field == CLINVAR_KEY and self.has_annotation(CLINVAR_KEY):
                 filter_qs.append(self._clinvar_filter_q(value))
 
         filter_qs += [
@@ -362,17 +366,18 @@ class AnnotationsQuerySet(QuerySet):
             {field: value} for field, value in transcript_field_filters.items() if field in self.transcript_fields
         ]
 
-        non_canonical_consequences = [c for c in allowed_consequences if not c.endswith('__canonical')]
-        if non_canonical_consequences:
-            transcript_filters.append(self._consequence_term_filter(non_canonical_consequences))
+        if allowed_consequences and 'consequenceTerms' in self.transcript_fields:
+            non_canonical_consequences = [c for c in allowed_consequences if not c.endswith('__canonical')]
+            if non_canonical_consequences:
+                transcript_filters.append(self._consequence_term_filter(non_canonical_consequences))
 
-        canonical_consequences = [
-            c.replace('__canonical', '') for c in allowed_consequences if c.endswith('__canonical')
-        ]
-        if canonical_consequences and 'canonical' in self.transcript_fields:
-            transcript_filters.append(
-                self._consequence_term_filter(canonical_consequences, canonical=(0, '{field} > {value}')),
-            )
+            canonical_consequences = [
+                c.replace('__canonical', '') for c in allowed_consequences if c.endswith('__canonical')
+            ]
+            if canonical_consequences and 'canonical' in self.transcript_fields:
+                transcript_filters.append(
+                    self._consequence_term_filter(canonical_consequences, canonical=(0, '{field} > {value}')),
+                )
 
         return filter_qs, transcript_filters
 
