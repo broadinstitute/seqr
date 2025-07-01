@@ -16,14 +16,14 @@ from hail_search.test_utils import (
     SV_VARIANT4 as HAIL_SV_VARIANT4,
 )
 
-VARIANT1 = {**deepcopy(HAIL_VARIANT1), 'key': 1, 'populations': {**HAIL_VARIANT1['populations'], 'seqr': {'ac': 8, 'hom': 3}}}
-VARIANT2 = {**deepcopy(HAIL_VARIANT2), 'key': 2, 'populations': {**HAIL_VARIANT2['populations'], 'seqr': {'ac': 7, 'hom': 2}}}
-VARIANT3 = {**deepcopy(HAIL_VARIANT3), 'key': 3, 'populations': {**HAIL_VARIANT3['populations'], 'seqr': {'ac': 6, 'hom': 0}}}
-VARIANT4 = {**deepcopy(HAIL_VARIANT4), 'key': 4, 'populations': {**HAIL_VARIANT4['populations'], 'seqr': {'ac': 4, 'hom': 1}}}
-PROJECT_2_VARIANT = {**deepcopy(HAIL_PROJECT_2_VARIANT), 'key': 5, 'populations': {**HAIL_PROJECT_2_VARIANT['populations'], 'seqr': {'ac': 2, 'hom': 0}}}
-MITO_VARIANT1 = {**deepcopy(HAIL_MITO_VARIANT1), 'key': 6, 'populations': {**HAIL_MITO_VARIANT1['populations'], 'seqr': {'ac': 0}, 'seqr_heteroplasmy': {'ac': 1}}}
-MITO_VARIANT2 = {**deepcopy(HAIL_MITO_VARIANT2), 'key': 7, 'populations': {**HAIL_MITO_VARIANT2['populations'], 'seqr': {'ac': 0}, 'seqr_heteroplasmy': {'ac': 1}}}
-MITO_VARIANT3 = {**deepcopy(HAIL_MITO_VARIANT3), 'key': 8, 'populations': {**HAIL_MITO_VARIANT3['populations'], 'seqr': {'ac': 1}, 'seqr_heteroplasmy': {'ac': 0}}}
+VARIANT1 = {**deepcopy(HAIL_VARIANT1), 'key': 1, 'populations': {**deepcopy(HAIL_VARIANT1)['populations'], 'seqr': {'ac': 8, 'hom': 3}}}
+VARIANT2 = {**deepcopy(HAIL_VARIANT2), 'key': 2, 'populations': {**deepcopy(HAIL_VARIANT2)['populations'], 'seqr': {'ac': 7, 'hom': 2}}}
+VARIANT3 = {**deepcopy(HAIL_VARIANT3), 'key': 3, 'populations': {**deepcopy(HAIL_VARIANT3)['populations'], 'seqr': {'ac': 6, 'hom': 0}}}
+VARIANT4 = {**deepcopy(HAIL_VARIANT4), 'key': 4, 'populations': {**deepcopy(HAIL_VARIANT4)['populations'], 'seqr': {'ac': 4, 'hom': 1}}}
+PROJECT_2_VARIANT = {**deepcopy(HAIL_PROJECT_2_VARIANT), 'key': 5, 'populations': {**deepcopy(HAIL_PROJECT_2_VARIANT)['populations'], 'seqr': {'ac': 2, 'hom': 0}}}
+MITO_VARIANT1 = {**deepcopy(HAIL_MITO_VARIANT1), 'key': 6, 'populations': {**deepcopy(HAIL_MITO_VARIANT1)['populations'], 'seqr': {'ac': 0}, 'seqr_heteroplasmy': {'ac': 1}}}
+MITO_VARIANT2 = {**deepcopy(HAIL_MITO_VARIANT2), 'key': 7, 'populations': {**deepcopy(HAIL_MITO_VARIANT2)['populations'], 'seqr': {'ac': 0}, 'seqr_heteroplasmy': {'ac': 1}}}
+MITO_VARIANT3 = {**deepcopy(HAIL_MITO_VARIANT3), 'key': 8, 'populations': {**deepcopy(HAIL_MITO_VARIANT3)['populations'], 'seqr': {'ac': 1}, 'seqr_heteroplasmy': {'ac': 0}}}
 for variant in [MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3]:
     variant['genotypes'] = {
         'I000004_hg00731': {
@@ -43,7 +43,7 @@ GRCH37_VARIANT = {
     'liftedOverGenomeVersion': '38',
     'liftedOverChrom': '7',
     'liftedOverPos': 143271368,
-    'populations': {**HAIL_GRCH37_VARIANT['populations'], 'seqr': {'ac': 3, 'hom': 1}},
+    'populations': {**deepcopy(HAIL_GRCH37_VARIANT)['populations'], 'seqr': {'ac': 3, 'hom': 1}},
 }
 for genotype in GRCH37_VARIANT['genotypes'].values():
     genotype['sampleType'] = 'WES'
