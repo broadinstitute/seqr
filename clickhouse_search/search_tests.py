@@ -244,10 +244,9 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         )
 
         self._set_sv_family_search()
+        sv_affected = {'affected': {'I000019_na21987': 'N'}}
         self._assert_expected_search(
-            [SV_VARIANT1], inheritance_mode=inheritance_mode, inheritance_filter={'affected': {
-                'I000019_na21987': 'N',
-            }}
+            [SV_VARIANT1], inheritance_mode=inheritance_mode, inheritance_filter=sv_affected,
         )
 
         inheritance_mode = 'x_linked_recessive'
@@ -317,6 +316,9 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         self._assert_expected_search(
             [[SV_VARIANT1, SV_VARIANT2]], inheritance_mode=inheritance_mode,
             **COMP_HET_ALL_PASS_FILTERS, gene_counts={'ENSG00000171621': {'total': 2, 'families': {'F000014_14': 2}}},
+            inheritance_filter=sv_affected, cached_variant_fields=[
+                [{'selectedGeneId': 'ENSG00000171621'}, {'selectedGeneId': 'ENSG00000171621'}],
+            ],
         )
 
         self.results_model.families.set(Family.objects.filter(guid__in=['F000002_2', 'F000014_14']))
@@ -326,7 +328,10 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
                 'ENSG00000171621': {'total': 2, 'families': {'F000014_14': 2}},
                 'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
                 'ENSG00000177000': {'total': 1, 'families': {'F000002_2': 1}},
-            },
+            }, cached_variant_fields=[
+                [{'selectedGeneId': 'ENSG00000171621'}, {'selectedGeneId': 'ENSG00000171621'}],
+                [{'selectedGeneId': 'ENSG00000097046'}, {'selectedGeneId': 'ENSG00000097046'}],
+            ],
         )
 
         inheritance_mode = 'recessive'
@@ -376,7 +381,9 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             **COMP_HET_ALL_PASS_FILTERS, gene_counts={
                 'ENSG00000171621': {'total': 2, 'families': {'F000011_11': 2}},
                 'ENSG00000184986': {'total': 1, 'families': {'F000011_11': 1}},
-            }
+            }, cached_variant_fields=[
+                [{'selectedGeneId': 'ENSG00000171621'}, {'selectedGeneId': 'ENSG00000171621'}], {},
+            ],
         )
 
     def test_quality_filter(self):
@@ -918,12 +925,18 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         self._set_sv_family_search()
         self._assert_expected_search(
             [[SV_VARIANT1, SV_VARIANT2]], inheritance_mode='compound_het',
-            annotations=sv_annotations_1, annotations_secondary=sv_annotations_2,
+            annotations=sv_annotations_1, annotations_secondary=sv_annotations_2, inheritance_filter={'affected': {
+                'I000019_na21987': 'N',
+            }}, cached_variant_fields=[
+                [{'selectedGeneId': 'ENSG00000171621'}, {'selectedGeneId': 'ENSG00000171621'}],
+            ],
         )
 
         self._assert_expected_search(
             [[SV_VARIANT1, SV_VARIANT2], SV_VARIANT4], inheritance_mode='recessive',
-            annotations=sv_annotations_2, annotations_secondary=sv_annotations_1,
+            annotations=sv_annotations_2, annotations_secondary=sv_annotations_1, cached_variant_fields=[
+                [{'selectedGeneId': 'ENSG00000171621'}, {'selectedGeneId': 'ENSG00000171621'}], {},
+            ],
         )
 
         pathogenicity = {'clinvar': ['likely_pathogenic', 'vus_or_conflicting']}

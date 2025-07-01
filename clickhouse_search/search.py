@@ -147,17 +147,15 @@ def format_clickhouse_results(results, genome_version, **kwargs):
 
 
 def _format_variant(variant, transcripts_by_key):
+    formatted_variant = {**variant}
+    selected_gene_id = formatted_variant.pop(SELECTED_GENE_FIELD, None)
     if 'transcripts' in variant:
-        return variant
+        return formatted_variant
 
     transcripts = transcripts_by_key.get(variant['key'], {})
-    formatted_variant = {
-        **variant,
-        'transcripts': transcripts,
-    }
+    formatted_variant['transcripts'] = transcripts
     # pop sortedTranscriptConsequences from the formatted result and not the original result to ensure the full value is cached properly
     sorted_minimal_transcripts = formatted_variant.pop(TRANSCRIPT_CONSEQUENCES_FIELD)
-    selected_gene_id = formatted_variant.pop(SELECTED_GENE_FIELD, None)
     selected_transcript = formatted_variant.pop(SELECTED_TRANSCRIPT_FIELD, None)
     main_transcript_id = None
     selected_main_transcript_id = None
