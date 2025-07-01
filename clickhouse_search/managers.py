@@ -499,8 +499,10 @@ class EntriesManager(Manager):
         entries = self.annotate(seqrPop=self._seqr_pop_expression())
         entries = self._filter_intervals(entries, **(parsed_locus or {}))
 
-        if (freqs or {}).get('callset'):
-            entries = self._filter_seqr_frequency(entries, **freqs['callset'])
+        is_sv_class = 'cn' in self.call_fields
+        callset_filter_field = 'sv_callset' if is_sv_class else 'callset'
+        if (freqs or {}).get(callset_filter_field):
+            entries = self._filter_seqr_frequency(entries, **freqs[callset_filter_field])
 
         gnomad_filter = (freqs or {}).get('gnomad_genomes') or {}
         if hasattr(self.model, 'is_gnomad_gt_5_percent') and ((gnomad_filter.get('af') or 1) <= 0.05 or any(gnomad_filter.get(field) is not None for field in ['ac', 'hh'])):
