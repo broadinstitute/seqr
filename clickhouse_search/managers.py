@@ -31,6 +31,10 @@ class AnnotationsQuerySet(QuerySet):
     SELECTED_GENE_FIELD = 'selectedGeneId'
 
     @property
+    def transcript_field(self):
+        return next(field for field in self.TRANSCRIPT_FIELDS if hasattr(self.model, field))
+
+    @property
     def annotation_values(self):
         seqr_pops = []
         population_fields = [*self.model.POPULATION_FIELDS]
@@ -51,9 +55,8 @@ class AnnotationsQuerySet(QuerySet):
         }
 
         if not hasattr(self.model, 'SORTED_TRANSCRIPT_CONSQUENCES_FIELDS'):
-            transcript_field = next(field for field in self.TRANSCRIPT_FIELDS if hasattr(self.model, field))
-            annotations['transcripts'] = annotations.pop(getattr(self.model, transcript_field).field.db_column)
-            if transcript_field == self.TRANSCRIPT_CONSEQUENCE_FIELD:
+            annotations['transcripts'] = annotations.pop(getattr(self.model, self.transcript_field).field.db_column)
+            if self.transcript_field == self.TRANSCRIPT_CONSEQUENCE_FIELD:
                 annotations.update({
                     'mainTranscriptId': F('sorted_transcript_consequences__0__transcriptId'),
                     'selectedMainTranscriptId': Value(None, output_field=models.StringField(null=True)),
@@ -127,7 +130,7 @@ class AnnotationsQuerySet(QuerySet):
         for select_func in (conditional_selects or []):
             query_select.update(select_func(query, prefix=f'{alias}_'))
         return query.values(
-            **{f'{alias}_{field}': F(field) for field in select_fields or [] if query.has_annotation(field)},
+            **{f'{alias}_{field}': F(field) for field in select_fields or []},
             **{f'{alias}_{field}': value for field, value in query_select.items()},
         )
 
@@ -174,7 +177,9 @@ class AnnotationsQuerySet(QuerySet):
         primary_q = primary_q.explode_gene_id(primary_gene_field)
         secondary_q = secondary_q.explode_gene_id(secondary_gene_field)
 
-        select_fields = [*self.annotation_fields, 'clinvar', self.SELECTED_GENE_FIELD]
+        select_fields = [*self.annotation_fields, self.SELECTED_GENE_FIELD]
+        if primary_q.has_annotation('clinvar'):
+            select_fields.append('clinvar')
         if carrier_field:
             select_fields.append(carrier_field)
 
@@ -275,24 +280,16 @@ class AnnotationsQuerySet(QuerySet):
     def _filter_annotations(self, results, annotations=None, pathogenicity=None, exclude=None, gene_ids=None, **kwargs):
         if gene_ids:
             results = results.annotate(**{
-                self.GENE_CONSEQUENCE_FIELD: ArrayFilter(self.TRANSCRIPT_CONSEQUENCE_FIELD, conditions=[{
+                self.GENE_CONSEQUENCE_FIELD: ArrayFilter(self.transcript_field, conditions=[{
                     'geneId': (gene_ids, 'has({value}, {field})'),
                 }]),
             })
             results = results.filter(gene_consequences__not_empty=True)
 
-        filter_qs, transcript_filters = self._parse_annotation_filters(annotations) if annotations else ([], [])
-
-        hgmd = (pathogenicity or {}).get(HGMD_KEY)
-        if hgmd and hasattr(self.model, 'hgmd'):
-            filter_qs.append(self._hgmd_filter_q(hgmd))
-
-        clinvar = (pathogenicity or {}).get(CLINVAR_KEY)
-        if clinvar:
-            filter_qs.append(self._clinvar_filter_q(clinvar))
+        filter_qs, transcript_filters = self._parse_annotation_filters(annotations, pathogenicity) if (annotations or pathogenicity) else ([], [])
 
         exclude_clinvar = (exclude or {}).get('clinvar')
-        if exclude_clinvar:
+        if exclude_clinvar and hasattr(self.model, 'clinvar'):
             results = results.exclude(self._clinvar_filter_q(exclude_clinvar))
 
         if not (filter_qs or transcript_filters):
@@ -309,7 +306,7 @@ class AnnotationsQuerySet(QuerySet):
             filter_q = Q(passes_annotation=True)
 
         if transcript_filters:
-            consequence_field = self.GENE_CONSEQUENCE_FIELD if gene_ids else self.TRANSCRIPT_CONSEQUENCE_FIELD
+            consequence_field = self.GENE_CONSEQUENCE_FIELD if gene_ids else self.transcript_field
             results = results.annotate(**{
                 self.FILTERED_CONSEQUENCE_FIELD: ArrayFilter(consequence_field, conditions=transcript_filters),
             })
@@ -321,12 +318,12 @@ class AnnotationsQuerySet(QuerySet):
 
         return results.filter(filter_q)
 
-    def _parse_annotation_filters(self, annotations):
+    def _parse_annotation_filters(self, annotations, pathogenicity):
         filter_qs = []
         filters_by_field = {}
         allowed_consequences = []
         transcript_field_filters = {}
-        for field, value in annotations.items():
+        for field, value in (annotations or {}).items():
             if field == UTR_ANNOTATOR_KEY:
                 transcript_field_filters['fiveutrConsequence'] = (value, 'hasAny({value}, [{field}])')
             elif field == EXTENDED_SPLICE_KEY:
@@ -348,6 +345,14 @@ class AnnotationsQuerySet(QuerySet):
                 pass # TODO
             elif field != NEW_SV_FIELD:
                 allowed_consequences += value
+
+        for field, value in (pathogenicity or {}).items():
+            if not value:
+                continue
+            elif field == HGMD_KEY:
+                filters_by_field[HGMD_KEY] = self._hgmd_filter(value)
+            elif field == CLINVAR_KEY and hasattr(self.model, CLINVAR_KEY):
+                filter_qs.append(self._clinvar_filter_q(value))
 
         filter_qs += [
             Q(**{lookup_template.format(field=field): value})
@@ -376,17 +381,17 @@ class AnnotationsQuerySet(QuerySet):
         return {'consequenceTerms': (consequences, 'hasAny({value}, {field})'), **kwargs}
 
     @staticmethod
-    def _hgmd_filter_q(hgmd):
+    def _hgmd_filter(hgmd):
         min_class = next((class_name for value, class_name in HGMD_CLASS_FILTERS if value in hgmd), None)
         max_class = next((class_name for value, class_name in reversed(HGMD_CLASS_FILTERS) if value in hgmd), None)
         if 'hgmd_other' in hgmd:
             min_class = min_class or 'DP'
             max_class = None
         if min_class == max_class:
-            return Q(hgmd__classification=min_class)
+            return ('{field}__classification', min_class)
         elif min_class and max_class:
-            return Q(hgmd__classification__range=(min_class, max_class))
-        return Q(hgmd__classification__gt=min_class)
+            return ('{field}__classification__range', (min_class, max_class))
+        return ('{field}__classification__gt', min_class)
 
     @classmethod
     def _clinvar_filter_q(cls, clinvar_filters, _get_range_q=None):
@@ -418,7 +423,7 @@ class AnnotationsQuerySet(QuerySet):
         return cls._clinvar_filter_q(clinvar_path_filters, _get_range_q=_get_range_q) if clinvar_path_filters else None
 
     def explode_gene_id(self, gene_id_key):
-        consequence_field = self.GENE_CONSEQUENCE_FIELD if self.has_annotation(self.GENE_CONSEQUENCE_FIELD) else self.TRANSCRIPT_CONSEQUENCE_FIELD
+        consequence_field = self.GENE_CONSEQUENCE_FIELD if self.has_annotation(self.GENE_CONSEQUENCE_FIELD) else self.transcript_field
         results = self.annotate(
             selectedGeneId=ArrayJoin(ArrayDistinct(ArrayMap(consequence_field, mapped_expression='x.geneId')), output_field=models.StringField())
         )

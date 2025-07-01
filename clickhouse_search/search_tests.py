@@ -245,7 +245,9 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 
         self._set_sv_family_search()
         self._assert_expected_search(
-            [SV_VARIANT1], inheritance_mode=inheritance_mode,
+            [SV_VARIANT1], inheritance_mode=inheritance_mode, inheritance_filter={'affected': {
+                'I000019_na21987': 'N',
+            }}
         )
 
         inheritance_mode = 'x_linked_recessive'
