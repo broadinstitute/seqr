@@ -509,8 +509,11 @@ class EntriesManager(Manager):
         })
 
     def search(self, sample_data, parsed_locus=None, freqs=None, annotations=None, **kwargs):
-        entries = self.annotate(seqrPop=self._seqr_pop_expression())
-        entries = self._filter_intervals(entries, **(parsed_locus or {}))
+        entries = self._filter_intervals(self, **(parsed_locus or {}))
+
+        seqr_popualtions = self.model.key.field.related_model.SEQR_POPULATIONS
+        if seqr_popualtions:
+            entries = entries.annotate(seqrPop=self._seqr_pop_expression(seqr_popualtions))
 
         is_sv_class = 'cn' in self.call_fields
         callset_filter_field = 'sv_callset' if is_sv_class else 'callset'
@@ -526,10 +529,10 @@ class EntriesManager(Manager):
 
         return self._search_call_data(entries, sample_data, **kwargs)
 
-    def _seqr_pop_expression(self):
+    def _seqr_pop_expression(self, seqr_popualtions):
         sample_types = [self.single_sample_type.lower()] if self.single_sample_type else ['wes', 'wgs']
         seqr_pop_fields = []
-        for _, sub_fields in self.model.key.field.related_model.SEQR_POPULATIONS:
+        for _, sub_fields in seqr_popualtions:
             seqr_pop_fields += [f"'{sub_fields['ac']}_{sample_type}'" for sample_type in sample_types]
             if sub_fields.get('hom'):
                 seqr_pop_fields += [f"'{sub_fields['hom']}_{sample_type}'" for sample_type in sample_types]
@@ -770,7 +773,9 @@ class EntriesManager(Manager):
         if carriers_expression:
             entries = entries.annotate(carriers=carriers_expression)
 
-        fields = ['key', 'seqrPop']
+        fields = ['key']
+        if 'seqrPop' in entries.query.annotations:
+            fields.append('seqrPop')
         if self._has_clinvar():
              fields += ['clinvar', 'clinvar_key']
         if multi_sample_type_families or len(sample_data) > 1:

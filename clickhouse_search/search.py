@@ -204,7 +204,8 @@ def _get_sample_data(samples):
                     )
             for sample_type, type_samples in samples_by_type.items():
                 samples_by_dataset_type[f"{data['dataset_type']}_{sample_type}"].append({**data, 'samples': type_samples})
-        samples_by_dataset_type[data['dataset_type']].append({**data, 'samples': samples})
+        else:
+            samples_by_dataset_type[data['dataset_type']].append({**data, 'samples': samples})
     return samples_by_dataset_type
 
 
