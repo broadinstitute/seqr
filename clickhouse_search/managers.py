@@ -9,7 +9,8 @@ from django.db.models.sql.constants import INNER
 from clickhouse_search.backend.fields import NestedField, NamedTupleField
 from clickhouse_search.backend.functions import Array, ArrayConcat, ArrayDistinct, ArrayFilter, ArrayFold, \
     ArrayIntersect, ArrayJoin, ArrayMap, ArraySort, ArraySymmetricDifference, CrossJoin, GroupArray, GroupArrayArray, \
-    GroupArrayIntersect, DictGet, If, MapLookup, NullIf, Plus, SubqueryJoin, SubqueryTable, Tuple, TupleConcat, Coalesce
+    GroupArrayIntersect, DictGet, If, MapLookup, NullIf, Plus, SubqueryJoin, SubqueryTable, Tuple, TupleConcat, Coalesce, \
+    ArrayFlatten
 from seqr.models import Sample
 from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFECTED, UNAFFECTED, MALE_SEXES, \
     X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, SCREEN_KEY, UTR_ANNOTATOR_KEY, \
@@ -819,8 +820,10 @@ class EntriesManager(Manager):
             entries = entries.annotate(carriers=carriers_expression)
 
         genotype_override_annotations = {
-            f'sample_{col}': ArrayMap('calls', mapped_expression=f'x.{field}')
-            for col, (field, _) in self.annotations_model.GENOTYPE_OVERRIDE_FIELDS.items()
+            f'sample_{col}': ArrayMap(
+                ArrayFilter('calls', conditions=[{'cn': (None, 'isNotNull({field})')}]),
+                mapped_expression=f'x.{field}',
+            ) for col, (field, _) in self.annotations_model.GENOTYPE_OVERRIDE_FIELDS.items()
         }
         if genotype_override_annotations:
             entries = entries.annotate(**genotype_override_annotations)
@@ -834,7 +837,8 @@ class EntriesManager(Manager):
             entries = entries.values(*fields).annotate(
                 familyGuids=ArraySort(ArrayDistinct(GroupArray('family_guid'))),
                 genotypes=GroupArrayArray(self._genotype_expression(sample_data)),
-                **{col: GroupArrayArray(col) for col in genotype_override_annotations}
+                # Use ArrayFlatten->GroupArray instead of GroupArrayArray to prevent filtering out null values
+                **{col: ArrayFlatten(GroupArray(col)) for col in genotype_override_annotations}
             )
             if carriers_expression:
                 map_field = models.MapField(models.StringField(), models.ArrayField(models.StringField()))
