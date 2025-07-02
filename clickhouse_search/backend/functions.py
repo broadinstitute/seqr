@@ -17,6 +17,10 @@ class ArrayDistinct(Func):
     function = 'arrayDistinct'
 
 
+class ArrayFlatten(Func):
+    function = 'arrayFlatten'
+
+
 class ArrayIntersect(Func):
     function = 'arrayIntersect'
 

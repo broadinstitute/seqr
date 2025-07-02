@@ -5,7 +5,7 @@ from django.db.models import options, ForeignKey, OneToOneField, Func, CASCADE, 
 
 from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocksDB, Join
 from clickhouse_search.backend.fields import Enum8Field, NestedField, UInt64FieldDeltaCodecField, NamedTupleField
-from clickhouse_search.backend.functions import ArrayMax, ArrayMin
+from clickhouse_search.backend.functions import ArrayDistinct, ArrayFlatten, ArraySort, ArrayMax, ArrayMin
 from clickhouse_search.managers import EntriesManager, AnnotationsQuerySet
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample
@@ -407,7 +407,7 @@ class BaseAnnotationsGcnv(BaseAnnotationsSvGcnv):
         'pos': ('start', ArrayMin),
         'end': ('end', ArrayMax),
         'numExon': ('numExon', ArrayMax),
-        #'geneIds': 'geneIds',
+        'geneIds': ('geneIds', lambda value, **kwargs: ArrayDistinct(ArrayFlatten(value), **kwargs)),
     }
 
     num_exon = models.UInt16Field(db_column='numExon')

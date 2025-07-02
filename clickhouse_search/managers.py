@@ -22,9 +22,11 @@ from seqr.utils.xpos_utils import get_xpos, MIN_POS, MAX_POS
 class AnnotationsQuerySet(QuerySet):
 
     TRANSCRIPT_CONSEQUENCE_FIELD = 'sorted_transcript_consequences'
+    SORTED_GENE_CONSEQUENCE_FIELD = 'sorted_gene_consequences'
+    GENOTYPE_GENE_CONSEQUENCE_FIELD = 'genotype_gene_consequences'
     GENE_CONSEQUENCE_FIELD = 'gene_consequences'
     FILTERED_CONSEQUENCE_FIELD = 'filtered_transcript_consequences'
-    TRANSCRIPT_FIELDS = [TRANSCRIPT_CONSEQUENCE_FIELD, 'sorted_gene_consequences']
+    TRANSCRIPT_FIELDS = [TRANSCRIPT_CONSEQUENCE_FIELD, SORTED_GENE_CONSEQUENCE_FIELD]
 
     ENTRY_FIELDS = ['familyGuids', 'genotypes']
 
@@ -54,7 +56,20 @@ class AnnotationsQuerySet(QuerySet):
             'populations': TupleConcat(F('populations'), Tuple(*seqr_pops), output_field=NamedTupleField(population_fields)),
         }
 
-        if not hasattr(self.model, 'SORTED_TRANSCRIPT_CONSQUENCES_FIELDS'):
+        if self.model.GENOTYPE_OVERRIDE_FIELDS:
+            annotations.update({
+                col: F(f'sample_{col}') for col in self.model.GENOTYPE_OVERRIDE_FIELDS
+            })
+            override_field_map = {field: col for col, (field, _) in self.model.GENOTYPE_OVERRIDE_FIELDS.items()}
+            genotype_fields = [
+                self._genotype_override_expression(i+1, override_field_map[field]) if field in override_field_map else f'x.{i+1}'
+                for i, (field, _) in enumerate(self.query.annotations['genotypes'].output_field.base_fields)
+            ]
+            annotations['genotypes'] = ArrayMap('genotypes', mapped_expression=f"tuple({', '.join(genotype_fields)})")
+            annotations['transcripts'] = F(self.GENOTYPE_GENE_CONSEQUENCE_FIELD)
+            del annotations[getattr(self.model, self.transcript_field).field.db_column]
+            del annotations['geneIds']
+        elif not hasattr(self.model, 'SORTED_TRANSCRIPT_CONSQUENCES_FIELDS'):
             annotations['transcripts'] = annotations.pop(getattr(self.model, self.transcript_field).field.db_column)
             if self.transcript_field == self.TRANSCRIPT_CONSEQUENCE_FIELD:
                 annotations.update({
@@ -62,18 +77,14 @@ class AnnotationsQuerySet(QuerySet):
                     'selectedMainTranscriptId': Value(None, output_field=models.StringField(null=True)),
                 })
 
-        if self.model.GENOTYPE_OVERRIDE_FIELDS:
-            annotations.update({
-                col: F(f'sample_{col}') for col in self.model.GENOTYPE_OVERRIDE_FIELDS
-            })
-            override_field_map = {field: col for col, (field, _) in self.model.GENOTYPE_OVERRIDE_FIELDS.items()}
-            genotype_fields = [
-                f'nullIf(x.{i+1}, sample_{override_field_map[field]})' if field in override_field_map else f'x.{i+1}'
-                for i, (field, _) in enumerate(self.query.annotations['genotypes'].output_field.base_fields)
-            ]
-            annotations['genotypes'] = ArrayMap('genotypes', mapped_expression=f"tuple({', '.join(genotype_fields)})")
-
         return annotations
+
+    @staticmethod
+    def _genotype_override_expression(index, col):
+        expressions = [f'x.{index}', f'sample_{col}']
+        if col == 'geneIds':
+            expressions = [f'arraySort({expr})::String' for expr in expressions]
+        return f'nullIf({", ".join(expressions)})'
 
     @property
     def annotation_fields(self):
@@ -294,9 +305,17 @@ class AnnotationsQuerySet(QuerySet):
             return Q(**{score_column: value})
 
     def _filter_annotations(self, results, annotations=None, pathogenicity=None, exclude=None, gene_ids=None, **kwargs):
+        transcript_field = self.transcript_field
+        if self.model.GENOTYPE_OVERRIDE_FIELDS:
+            results = results.annotate(**{
+                self.GENOTYPE_GENE_CONSEQUENCE_FIELD: ArrayFilter(self.SORTED_GENE_CONSEQUENCE_FIELD, conditions=[{
+                    'geneId': (None, 'has(sample_geneIds, {field})'),
+                }]),
+            })
+            transcript_field = self.GENOTYPE_GENE_CONSEQUENCE_FIELD
         if gene_ids:
             results = results.annotate(**{
-                self.GENE_CONSEQUENCE_FIELD: ArrayFilter(self.transcript_field, conditions=[{
+                self.GENE_CONSEQUENCE_FIELD: ArrayFilter(transcript_field, conditions=[{
                     'geneId': (gene_ids, 'has({value}, {field})'),
                 }]),
             })
@@ -322,7 +341,7 @@ class AnnotationsQuerySet(QuerySet):
             filter_q = Q(passes_annotation=True)
 
         if transcript_filters:
-            consequence_field = self.GENE_CONSEQUENCE_FIELD if gene_ids else self.transcript_field
+            consequence_field = self.GENE_CONSEQUENCE_FIELD if gene_ids else transcript_field
             results = results.annotate(**{
                 self.FILTERED_CONSEQUENCE_FIELD: ArrayFilter(consequence_field, conditions=transcript_filters),
             })
