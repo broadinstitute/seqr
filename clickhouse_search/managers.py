@@ -62,6 +62,11 @@ class AnnotationsQuerySet(QuerySet):
                     'selectedMainTranscriptId': Value(None, output_field=models.StringField(null=True)),
                 })
 
+        if self.model.GENOTYPE_OVERRIDE_FIELDS:
+            annotations.update({
+                col: F(f'sample_{col}') for col in self.model.GENOTYPE_OVERRIDE_FIELDS
+            })
+
         return annotations
 
     @property
@@ -150,11 +155,12 @@ class AnnotationsQuerySet(QuerySet):
         if self.has_annotation('clinvar'):
             fields.append('clinvar')
 
-        values = {k: v for k, v in self.annotation_values.items() if k != 'populations'}
+        override_model_annotations = {'populations', 'pos', 'end'}
+        values = {k: v for k, v in self.annotation_values.items() if k not in override_model_annotations}
         values.update(self._conditional_selected_transcript_values(self))
 
         return self.values(*fields, **values).annotate(
-            populations=self.annotation_values['populations']
+            **{k: self.annotation_values[k] for k in override_model_annotations if k in self.annotation_values},
         )
 
 
@@ -478,8 +484,12 @@ class EntriesManager(Manager):
     INHERITANCE_FILTERS = INHERITANCE_FILTERS
 
     @property
+    def annotations_model(self):
+        return self.model.key.field.related_model
+
+    @property
     def call_fields(self):
-        return {field[0] for field in self.model.CALL_FIELDS}
+        return dict(self.model.CALL_FIELDS)
 
     @property
     def quality_filters(self):
@@ -497,7 +507,7 @@ class EntriesManager(Manager):
             sample_type: ('sampleType', models.StringField()),
             'filters': ('filters', models.ArrayField(models.StringField())),
             'x.gt::Nullable(Int8)': ('numAlt', models.Int8Field(null=True, blank=True)),
-            **{f'x.{column[0]}': column for column in self.model.CALL_FIELDS if column[0] != 'gt'}
+            **{f'x.{name}': (name, output_field) for name, output_field in self.call_fields.items() if name != 'gt'}
         })
 
     @property
@@ -511,7 +521,7 @@ class EntriesManager(Manager):
     def search(self, sample_data, parsed_locus=None, freqs=None, annotations=None, **kwargs):
         entries = self._filter_intervals(self, **(parsed_locus or {}))
 
-        seqr_popualtions = self.model.key.field.related_model.SEQR_POPULATIONS
+        seqr_popualtions = self.annotations_model.SEQR_POPULATIONS
         if seqr_popualtions:
             entries = entries.annotate(seqrPop=self._seqr_pop_expression(seqr_popualtions))
 
@@ -773,6 +783,13 @@ class EntriesManager(Manager):
         if carriers_expression:
             entries = entries.annotate(carriers=carriers_expression)
 
+        genotype_override_annotations = {
+            f'sample_{col}': ArrayMap('calls', mapped_expression=f'x.{field}')
+            for col, (field, _) in self.annotations_model.GENOTYPE_OVERRIDE_FIELDS.items()
+        }
+        if genotype_override_annotations:
+            entries = entries.annotate(**genotype_override_annotations)
+
         fields = ['key']
         if 'seqrPop' in entries.query.annotations:
             fields.append('seqrPop')
@@ -782,6 +799,7 @@ class EntriesManager(Manager):
             entries = entries.values(*fields).annotate(
                 familyGuids=ArraySort(ArrayDistinct(GroupArray('family_guid'))),
                 genotypes=GroupArrayArray(self._genotype_expression(sample_data)),
+                **{col: GroupArrayArray(col) for col in genotype_override_annotations}
             )
             if carriers_expression:
                 map_field = models.MapField(models.StringField(), models.ArrayField(models.StringField()))
@@ -805,6 +823,13 @@ class EntriesManager(Manager):
                 familyGuids=Array('family_guid'),
                 genotypes=self._genotype_expression(sample_data),
             )
+
+        if genotype_override_annotations:
+            entries = entries.annotate(**{
+                f'sample_{col}': agg(f'sample_{col}', output_field=self.call_fields[field])
+                for col, (field, agg) in self.annotations_model.GENOTYPE_OVERRIDE_FIELDS.items()
+            })
+
         return entries
 
     def _genotype_expression(self, sample_data):
@@ -917,7 +942,7 @@ class EntriesManager(Manager):
         if ac is not None:
             entries = entries.annotate(ac=F('seqrPop__0') if self.single_sample_type else Plus('seqrPop__0', 'seqrPop__1'))
             entries = entries.filter(ac__lte=ac)
-        if hh is not None and 'hom' in self.model.key.field.related_model.SEQR_POPULATIONS[0][1]:
+        if hh is not None and 'hom' in self.annotations_model.SEQR_POPULATIONS[0][1]:
             entries = entries.annotate(hom=F('seqrPop__1') if self.single_sample_type else Plus('seqrPop__2', 'seqrPop__3'))
             entries = entries.filter(hom__lte=hh)
         return entries

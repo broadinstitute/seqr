@@ -35,6 +35,14 @@ class ArrayMap(Func):
     template = "%(function)s(x -> %(mapped_expression)s, %(expressions)s)"
 
 
+class ArrayMax(Func):
+    function = 'arrayMax'
+
+
+class ArrayMin(Func):
+    function = 'arrayMin'
+
+
 class ArraySort(Func):
     function = 'arraySort'
 

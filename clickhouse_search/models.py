@@ -5,6 +5,7 @@ from django.db.models import options, ForeignKey, OneToOneField, Func, CASCADE, 
 
 from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocksDB, Join
 from clickhouse_search.backend.fields import Enum8Field, NestedField, UInt64FieldDeltaCodecField, NamedTupleField
+from clickhouse_search.backend.functions import ArrayMax, ArrayMin
 from clickhouse_search.managers import EntriesManager, AnnotationsQuerySet
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample
@@ -78,6 +79,7 @@ class BaseAnnotations(models.ClickhouseModel):
         'genomeVersion': GENOME_VERSION_GRCh38,
         'liftedOverGenomeVersion': GENOME_VERSION_GRCh37,
     }
+    GENOTYPE_OVERRIDE_FIELDS = {}
 
     key = models.UInt32Field(primary_key=True)
     xpos = models.UInt64Field()
@@ -401,6 +403,12 @@ class BaseAnnotationsGcnv(BaseAnnotationsSvGcnv):
         ])),
     ]
     SEQR_POPULATIONS = []
+    GENOTYPE_OVERRIDE_FIELDS = {
+        'pos': ('start', ArrayMin),
+        'end': ('end', ArrayMax),
+        'numExon': ('numExon', ArrayMax),
+        #'geneIds': 'geneIds',
+    }
 
     num_exon = models.UInt16Field(db_column='numExon')
     populations = NamedTupleField(POPULATION_FIELDS)
