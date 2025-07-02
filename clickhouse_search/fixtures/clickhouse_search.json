@@ -985,7 +985,9 @@
       "filters": [],
       "sign": 1,
       "calls": [
-        ["HG00731", 1, 3, 38, false, 22438910, 22469796, 0, [], false, true, false]
+        ["HG00731", 1, 3, 38, false, 22438910, 22469796, 0, [], false, true, false],
+        ["HG00732", 0, null, null, null, null, null, null, [], null, null, null],
+        ["HG00733", 0, null, null, null, null, null, null, [], null, null, null]
       ]
     }
 },  {
@@ -1016,7 +1018,8 @@
       "sign": 1,
       "calls": [
         ["HG00731", 2, 4, 13, true, 38717327, 38719636, null, ["ENSG00000275023"], true, false, false],
-        ["HG00732", 1, 3, 7, false, 38717327, 38719636, null, ["ENSG00000275023"], false, false, true]
+        ["HG00732", 1, 3, 7, false, 38717327, 38719636, null, ["ENSG00000275023"], false, false, true],
+        ["HG00733", 0, null, null, null, null, null, null, [], null, null, null]
       ]
     }
 },  {
@@ -1031,6 +1034,7 @@
       "sign": 1,
       "calls": [
         ["HG00731", 1, 3, 28, false, 38721781, 38735703, 7, ["ENSG00000275023", "ENSG00000277258", "ENSG00000277972"], false, true, false],
+        ["HG00732", 0, null, null, null, null, null, null, [], null, null, null],
         ["HG00733", 1, 3, 29, false, 38721781, 38734440, 7, ["ENSG00000275023", "ENSG00000277258", "ENSG00000277972"], false, true, false]
       ]
     }

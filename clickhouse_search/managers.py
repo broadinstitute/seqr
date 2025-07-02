@@ -57,18 +57,22 @@ class AnnotationsQuerySet(QuerySet):
         }
 
         if self.model.GENOTYPE_OVERRIDE_FIELDS:
-            annotations.update({
-                col: F(f'sample_{col}') for col in self.model.GENOTYPE_OVERRIDE_FIELDS
-            })
+            index_map = {
+                field: i+1 for i, (field, _) in enumerate(self.query.annotations['genotypes'].output_field.base_fields)
+            }
             override_field_map = {field: col for col, (field, _) in self.model.GENOTYPE_OVERRIDE_FIELDS.items()}
             genotype_fields = [
-                self._genotype_override_expression(i+1, override_field_map[field]) if field in override_field_map else f'x.{i+1}'
-                for i, (field, _) in enumerate(self.query.annotations['genotypes'].output_field.base_fields)
+                self._genotype_override_expression(index_map[field], override_field_map[field], index_map['cn'])
+                if field in override_field_map else f'x.{index_map[field]}'
+                for (field, _) in self.query.annotations['genotypes'].output_field.base_fields
             ]
-            annotations['genotypes'] = ArrayMap('genotypes', mapped_expression=f"tuple({', '.join(genotype_fields)})")
-            annotations['transcripts'] = F(self.GENOTYPE_GENE_CONSEQUENCE_FIELD)
+
             del annotations[getattr(self.model, self.transcript_field).field.db_column]
-            del annotations['geneIds']
+            annotations.update({
+                'genotypes': ArrayMap('genotypes', mapped_expression=f"tuple({', '.join(genotype_fields)})"),
+                'transcripts': F(self.GENOTYPE_GENE_CONSEQUENCE_FIELD),
+                **{col: F(f'sample_{col}') for col in self.model.GENOTYPE_OVERRIDE_FIELDS if col != 'geneIds'},
+            })
         elif not hasattr(self.model, 'SORTED_TRANSCRIPT_CONSQUENCES_FIELDS'):
             annotations['transcripts'] = annotations.pop(getattr(self.model, self.transcript_field).field.db_column)
             if self.transcript_field == self.TRANSCRIPT_CONSEQUENCE_FIELD:
@@ -80,11 +84,16 @@ class AnnotationsQuerySet(QuerySet):
         return annotations
 
     @staticmethod
-    def _genotype_override_expression(index, col):
+    def _genotype_override_expression(index, col, cn_index):
         expressions = [f'x.{index}', f'sample_{col}']
-        if col == 'geneIds':
+        is_gene_ids = col == 'geneIds'
+        if is_gene_ids:
             expressions = [f'arraySort({expr})::String' for expr in expressions]
-        return f'nullIf({", ".join(expressions)})'
+        expression = f'nullIf({", ".join(expressions)})'
+        if is_gene_ids:
+            # If entire genotype is missing, geneIds should be null instead of empty
+            expression = f'if(isNull(x.{cn_index}), null, {expression})'
+        return expression
 
     @property
     def annotation_fields(self):
