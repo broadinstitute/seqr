@@ -990,7 +990,7 @@
         ["HG00733", 0, null, null, null, null, null, null, [], null, null, null]
       ]
     }
-},  {
+}, {
     "model": "clickhouse_search.entriesgcnv",
     "pk": 29,
     "fields": {
@@ -1006,7 +1006,7 @@
         ["HG00733", 1, 3, 37, false, 29809156, 29815990, 8, ["ENSG00000103495", "ENSG00000167371", "ENSG00000280893"], false, true, false]
       ]
     }
-},  {
+}, {
     "model": "clickhouse_search.entriesgcnv",
     "pk": 30,
     "fields": {
@@ -1036,6 +1036,34 @@
         ["HG00731", 1, 3, 28, false, 38721781, 38735703, 7, ["ENSG00000275023", "ENSG00000277258", "ENSG00000277972"], false, true, false],
         ["HG00732", 0, null, null, null, null, null, null, [], null, null, null],
         ["HG00733", 1, 3, 29, false, 38721781, 38734440, 7, ["ENSG00000275023", "ENSG00000277258", "ENSG00000277972"], false, true, false]
+      ]
+    }
+}, {
+    "model": "clickhouse_search.entriesgcnv",
+    "pk": 32,
+    "fields": {
+      "key": 16,
+      "project_guid": "R0001_1kg",
+      "family_guid": "F000003_3",
+      "xpos": 14022417556,
+      "filters": [],
+      "sign": 1,
+      "calls": [
+        ["NA20870", 1, 3, 164, false, 22418039, 22507821, 0, ["ENSG00000129562"], false, true, false]
+      ]
+    }
+}, {
+    "model": "clickhouse_search.entriesgcnv",
+    "pk": 33,
+    "fields": {
+      "key": 17,
+      "project_guid": "R0001_1kg",
+      "family_guid": "F000003_3",
+      "xpos": 16029802672,
+      "filters": [],
+      "sign": 1,
+      "calls": [
+        ["NA20870", 1, 3, 40, false, 29809156, 29815990, null, [], false, true, false]
       ]
     }
 }, {

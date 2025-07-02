@@ -180,6 +180,40 @@ SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4 = {**VARIANT4, 'selectedMainTranscriptI
 SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3 = {**VARIANT3, 'selectedMainTranscriptId': 'ENST00000497611'}
 SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2 = {**VARIANT2, 'selectedMainTranscriptId': 'ENST00000459627'}
 
+
+GCNV_MULTI_FAMILY_VARIANT1 = deepcopy(GCNV_VARIANT1)
+GCNV_MULTI_FAMILY_VARIANT1.update({
+    'pos': 22418039,
+    'end': 22507821,
+    'transcripts': {
+        'ENSG00000129562': [{'geneId': 'ENSG00000129562', 'majorConsequence': 'COPY_GAIN'}],
+    },
+})
+GCNV_MULTI_FAMILY_VARIANT1['familyGuids'].append('F000003_3')
+GCNV_MULTI_FAMILY_VARIANT1['genotypes'].update({'I000007_na20870': {
+    'sampleId': 'NA20870', 'sampleType': 'WES', 'individualGuid': 'I000007_na20870', 'familyGuid': 'F000003_3',
+    'numAlt': 1, 'cn': 3, 'qs': 164, 'defragged': False, 'start': None, 'end': None, 'numExon': None,
+    'geneIds': None, 'newCall': False, 'prevCall': True, 'prevOverlap': False, 'filters': [],
+}})
+GCNV_MULTI_FAMILY_VARIANT1['genotypes']['I000004_hg00731'].update({'start': 22438910, 'end': 22469796, 'geneIds': []})
+
+GCNV_MULTI_FAMILY_VARIANT2 = deepcopy(GCNV_VARIANT2)
+GCNV_MULTI_FAMILY_VARIANT2['numExon'] = 26
+GCNV_MULTI_FAMILY_VARIANT2['familyGuids'].append('F000003_3')
+for genotype in GCNV_MULTI_FAMILY_VARIANT2['genotypes'].values():
+    genotype.update({'numExon': 8, 'geneIds': ['ENSG00000103495', 'ENSG00000167371', 'ENSG00000280893']})
+GCNV_MULTI_FAMILY_VARIANT2['genotypes'].update({'I000007_na20870': {
+    'sampleId': 'NA20870', 'sampleType': 'WES', 'individualGuid': 'I000007_na20870', 'familyGuid': 'F000003_3',
+    'numAlt': 1, 'cn': 3, 'qs': 40, 'defragged': False, 'start': None, 'end': None, 'numExon': None,
+    'geneIds': None, 'newCall': False, 'prevCall': True, 'prevOverlap': False, 'filters': [],
+}})
+GCNV_MULTI_FAMILY_VARIANT2['transcripts'].update({
+    'ENSG00000013364': [{'geneId': 'ENSG00000013364', 'majorConsequence': 'LOF'}],
+    'ENSG00000079616': [{'geneId': 'ENSG00000079616', 'majorConsequence': 'LOF'}],
+    'ENSG00000281348': [{'geneId': 'ENSG00000281348', 'majorConsequence': 'LOF'}],
+    'ENSG00000280789': [{'geneId': 'ENSG00000280789', 'majorConsequence': 'LOF'}],
+})
+
 CACHED_CONSEQUENCES_BY_KEY = {1: [], 2: [{
     'alphamissensePathogenicity': 0.99779,
     'canonical': 1,

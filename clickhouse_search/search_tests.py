@@ -11,7 +11,8 @@ from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4,
     MULTI_PROJECT_BOTH_SAMPLE_TYPE_VARIANTS, VARIANT1_BOTH_SAMPLE_TYPES, VARIANT2_BOTH_SAMPLE_TYPES, \
     VARIANT3_BOTH_SAMPLE_TYPES, VARIANT4_BOTH_SAMPLE_TYPES, GRCH37_VARIANT, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3, \
     SV_VARIANT1, SV_VARIANT2, SV_VARIANT3, SV_VARIANT4, SV_GENE_COUNTS, NEW_SV_FILTER, GCNV_VARIANT1, GCNV_VARIANT2, \
-    GCNV_VARIANT3, GCNV_VARIANT4, GCNV_GENE_COUNTS, format_cached_variant
+    GCNV_VARIANT3, GCNV_VARIANT4, GCNV_MULTI_FAMILY_VARIANT1, GCNV_MULTI_FAMILY_VARIANT2, GCNV_GENE_COUNTS, \
+    format_cached_variant
 from reference_data.models import Omim
 from seqr.models import Project, Family, Sample
 from seqr.utils.search.search_utils_tests import SearchTestHelper
@@ -135,29 +136,27 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             'ENSG00000198727': {'total': 1, 'families': {'F000002_2': 1}},
         }
         self._assert_expected_search(
-            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], gene_counts=variant_gene_counts,
+            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3,
+             GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
+            gene_counts={**variant_gene_counts, **GCNV_GENE_COUNTS, 'ENSG00000277258': {'total': 2, 'families': {'F000002_2': 2}}}
         )
 
-#         self._assert_expected_search(
-#             [GCNV_MULTI_FAMILY_VARIANT1, GCNV_MULTI_FAMILY_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4], sample_data=SV_WES_SAMPLE_DATA, gene_counts={
-#                 'ENSG00000129562': {'total': 2, 'families': {'F000002_2': 1, 'F000003_3': 1}},
-#                 'ENSG00000013364': {'total': 2, 'families': {'F000002_2': 1, 'F000003_3': 1}},
-#                 'ENSG00000079616': {'total': 2, 'families': {'F000002_2': 1, 'F000003_3': 1}},
-#                 'ENSG00000103495': {'total': 2, 'families': {'F000002_2': 1, 'F000003_3': 1}},
-#                 'ENSG00000167371': {'total': 2, 'families': {'F000002_2': 1, 'F000003_3': 1}},
-#                 'ENSG00000280789': {'total': 2, 'families': {'F000002_2': 1, 'F000003_3': 1}},
-#                 'ENSG00000280893': {'total': 2, 'families': {'F000002_2': 1, 'F000003_3': 1}},
-#                 'ENSG00000281348': {'total': 2, 'families': {'F000002_2': 1, 'F000003_3': 1}},
-#                 'ENSG00000275023': {'total': 2, 'families': {'F000002_2': 2}},
-#                 'ENSG00000277258': {'total': 1, 'families': {'F000002_2': 1}},
-#                 'ENSG00000277972': {'total': 1, 'families': {'F000002_2': 1}},
-#             }
-#         )
-#
-#         self._assert_expected_search(
-#             [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
-#             gene_counts={**variant_gene_counts, **GCNV_GENE_COUNTS, 'ENSG00000277258': {'total': 2, 'families': {'F000002_2': 2}}}
-#         )
+        self._add_sample_type_samples('WES', dataset_type='SV', guid__in=['S000135_na20870'])
+        self._assert_expected_search(
+            [GCNV_MULTI_FAMILY_VARIANT1, GCNV_MULTI_FAMILY_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4], gene_counts={
+                'ENSG00000129562': {'total': 2, 'families': {'F000002_2': 1, 'F000003_3': 1}},
+                'ENSG00000013364': {'total': 2, 'families': {'F000002_2': 1, 'F000003_3': 1}},
+                'ENSG00000079616': {'total': 2, 'families': {'F000002_2': 1, 'F000003_3': 1}},
+                'ENSG00000103495': {'total': 2, 'families': {'F000002_2': 1, 'F000003_3': 1}},
+                'ENSG00000167371': {'total': 2, 'families': {'F000002_2': 1, 'F000003_3': 1}},
+                'ENSG00000280789': {'total': 2, 'families': {'F000002_2': 1, 'F000003_3': 1}},
+                'ENSG00000280893': {'total': 2, 'families': {'F000002_2': 1, 'F000003_3': 1}},
+                'ENSG00000281348': {'total': 2, 'families': {'F000002_2': 1, 'F000003_3': 1}},
+                'ENSG00000275023': {'total': 2, 'families': {'F000002_2': 2}},
+                'ENSG00000277258': {'total': 1, 'families': {'F000002_2': 1}},
+                'ENSG00000277972': {'total': 1, 'families': {'F000002_2': 1}},
+            }, annotations={'structural': ['DEL', 'DUP']}
+        )
 
     def test_multi_project_search(self):
         self._set_multi_project_search()
@@ -210,10 +209,12 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         )
 
     @staticmethod
-    def _add_sample_type_samples(sample_type, **sample_filter):
+    def _add_sample_type_samples(sample_type, dataset_type=None, **sample_filter):
         for sample in Sample.objects.filter(**sample_filter):
             sample.pk = None
             sample.sample_type = sample_type
+            if dataset_type:
+                sample.dataset_type = dataset_type
             sample.save()
 
     def test_inheritance_filter(self):
