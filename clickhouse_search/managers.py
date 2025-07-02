@@ -9,7 +9,7 @@ from django.db.models.sql.constants import INNER
 from clickhouse_search.backend.fields import NestedField, NamedTupleField
 from clickhouse_search.backend.functions import Array, ArrayConcat, ArrayDistinct, ArrayFilter, ArrayFold, \
     ArrayIntersect, ArrayJoin, ArrayMap, ArraySort, ArraySymmetricDifference, CrossJoin, GroupArray, GroupArrayArray, \
-    GroupArrayIntersect, DictGet, If, MapLookup, NullIf, Plus, SubqueryJoin, SubqueryTable, Tuple, TupleConcat
+    GroupArrayIntersect, DictGet, If, MapLookup, NullIf, Plus, SubqueryJoin, SubqueryTable, Tuple, TupleConcat, Coalesce
 from seqr.models import Sample
 from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFECTED, UNAFFECTED, MALE_SEXES, \
     X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, SCREEN_KEY, UTR_ANNOTATOR_KEY, \
@@ -71,7 +71,8 @@ class AnnotationsQuerySet(QuerySet):
             annotations.update({
                 'genotypes': ArrayMap('genotypes', mapped_expression=f"tuple({', '.join(genotype_fields)})"),
                 'transcripts': F(self.GENOTYPE_GENE_CONSEQUENCE_FIELD),
-                **{col: F(f'sample_{col}') for col in self.model.GENOTYPE_OVERRIDE_FIELDS if col != 'geneIds'},
+                **{col: Coalesce(f'sample_{col}', annotations.get(col, col))
+                   for col in self.model.GENOTYPE_OVERRIDE_FIELDS if col != 'geneIds'},
             })
         elif not hasattr(self.model, 'SORTED_TRANSCRIPT_CONSQUENCES_FIELDS'):
             annotations['transcripts'] = annotations.pop(getattr(self.model, self.transcript_field).field.db_column)

@@ -2,7 +2,6 @@ from clickhouse_backend.models.fields.array import ArrayField, ArrayLookup
 from django.db.models import Func, Subquery, lookups, BooleanField, Aggregate
 from django.db.models.sql.datastructures import BaseTable, Join
 
-
 from clickhouse_search.backend.fields import NestedField
 
 class Array(Func):
@@ -112,6 +111,10 @@ class ArrayNotEmptyTransform(lookups.Transform):
     lookup_name = "not_empty"
     function = "notEmpty"
     output_field = BooleanField()
+
+
+class Coalesce(Func):
+    function = 'coalesce'
 
 
 class DictGet(Func):

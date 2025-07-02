@@ -890,7 +890,7 @@
       "num_exon": 4,
       "predictions": [0.181],
       "populations": [
-        [284, 0.012322, 23047, 0, 0]
+        [1763, 0.07649, 23048, 0, 0]
       ],
       "sorted_gene_consequences": [
         ["ENSG00000129562", "COPY_GAIN"]
