@@ -66,6 +66,12 @@ class AnnotationsQuerySet(QuerySet):
             annotations.update({
                 col: F(f'sample_{col}') for col in self.model.GENOTYPE_OVERRIDE_FIELDS
             })
+            override_field_map = {field: col for col, (field, _) in self.model.GENOTYPE_OVERRIDE_FIELDS.items()}
+            genotype_fields = [
+                f'nullIf(x.{i+1}, sample_{override_field_map[field]})' if field in override_field_map else f'x.{i+1}'
+                for i, (field, _) in enumerate(self.query.annotations['genotypes'].output_field.base_fields)
+            ]
+            annotations['genotypes'] = ArrayMap('genotypes', mapped_expression=f"tuple({', '.join(genotype_fields)})")
 
         return annotations
 
@@ -74,7 +80,7 @@ class AnnotationsQuerySet(QuerySet):
         return [
             field.name for field in self.model._meta.local_fields
             if (field.db_column or field.name) not in self.annotation_values and field.name not in self.TRANSCRIPT_FIELDS
-        ] + self.ENTRY_FIELDS
+        ] + [field for field in self.ENTRY_FIELDS if field not in self.annotation_values]
 
     @property
     def prediction_fields(self):
