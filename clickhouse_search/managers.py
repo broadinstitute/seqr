@@ -194,26 +194,27 @@ class AnnotationsQuerySet(QuerySet):
         return {self.SELECTED_GENE_FIELD: F(f'{self.GENE_CONSEQUENCE_FIELD}__0__geneId')}
 
     def _genotype_override_values(self, query, prefix=''):
-        if not self.model.GENOTYPE_OVERRIDE_FIELDS:
+        genotype_override_fields = query.model.GENOTYPE_OVERRIDE_FIELDS
+        if not genotype_override_fields:
             return {}
 
         index_map = {
             field: i+1 for i, (field, _) in enumerate(query.query.annotations['genotypes'].output_field.base_fields)
         }
-        override_field_map = {field: col for col, (field, _) in self.model.GENOTYPE_OVERRIDE_FIELDS.items()}
+        override_field_map = {field: col for col, (field, _) in genotype_override_fields.items()}
         genotype_fields = [
             self._genotype_override_expression(index_map[field], override_field_map[field], index_map['cn'])
             if field in override_field_map else (f'ifNull(x.{index_map[field]}, 0)' if field == 'numAlt' else f'x.{index_map[field]}')
             for (field, _) in query.query.annotations['genotypes'].output_field.base_fields
         ]
         genotype_override_expressions = [
-            (field.db_column or field.name, F(field.name)) for field in self.model._meta.local_fields
-            if (field.db_column or field.name) in self.model.GENOTYPE_OVERRIDE_FIELDS
+            (field.db_column or field.name, F(field.name)) for field in query.model._meta.local_fields
+            if (field.db_column or field.name) in genotype_override_fields
         ]
 
         return {
             'genotypes': ArrayMap('genotypes', mapped_expression=f"tuple({', '.join(genotype_fields)})"),
-            'transcripts': F(self.GENOTYPE_GENE_CONSEQUENCE_FIELD),
+            'transcripts': F(query.GENOTYPE_GENE_CONSEQUENCE_FIELD),
             **{col: Coalesce(f'sample_{col}', expr) for col, expr in genotype_override_expressions},
         }
 
