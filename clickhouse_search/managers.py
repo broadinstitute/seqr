@@ -57,25 +57,7 @@ class AnnotationsQuerySet(QuerySet):
             'populations': TupleConcat(F('populations'), Tuple(*seqr_pops), output_field=NamedTupleField(population_fields)),
         }
 
-        if self.model.GENOTYPE_OVERRIDE_FIELDS:
-            index_map = {
-                field: i+1 for i, (field, _) in enumerate(self.query.annotations['genotypes'].output_field.base_fields)
-            }
-            override_field_map = {field: col for col, (field, _) in self.model.GENOTYPE_OVERRIDE_FIELDS.items()}
-            genotype_fields = [
-                self._genotype_override_expression(index_map[field], override_field_map[field], index_map['cn'])
-                if field in override_field_map else f'x.{index_map[field]}'
-                for (field, _) in self.query.annotations['genotypes'].output_field.base_fields
-            ]
-
-            del annotations[getattr(self.model, self.transcript_field).field.db_column]
-            annotations.update({
-                'genotypes': ArrayMap('genotypes', mapped_expression=f"tuple({', '.join(genotype_fields)})"),
-                'transcripts': F(self.GENOTYPE_GENE_CONSEQUENCE_FIELD),
-                **{col: Coalesce(f'sample_{col}', annotations.get(col, col))
-                   for col in self.model.GENOTYPE_OVERRIDE_FIELDS if col != 'geneIds'},
-            })
-        elif not hasattr(self.model, 'SORTED_TRANSCRIPT_CONSQUENCES_FIELDS'):
+        if not hasattr(self.model, 'SORTED_TRANSCRIPT_CONSQUENCES_FIELDS'):
             annotations['transcripts'] = annotations.pop(getattr(self.model, self.transcript_field).field.db_column)
             if self.transcript_field == self.TRANSCRIPT_CONSEQUENCE_FIELD:
                 annotations.update({
@@ -102,7 +84,7 @@ class AnnotationsQuerySet(QuerySet):
         return [
             field.name for field in self.model._meta.local_fields
             if (field.db_column or field.name) not in self.annotation_values and field.name not in self.TRANSCRIPT_FIELDS
-        ] + [field for field in self.ENTRY_FIELDS if field not in self.annotation_values]
+        ] + self.ENTRY_FIELDS
 
     @property
     def prediction_fields(self):
@@ -165,7 +147,7 @@ class AnnotationsQuerySet(QuerySet):
         for select_func in (conditional_selects or []):
             query_select.update(select_func(query, prefix=f'{alias}_'))
         return query.values(
-            **{f'{alias}_{field}': F(field) for field in select_fields or []},
+            **{f'{alias}_{field}': F(field) for field in select_fields or [] if field not in query_select},
             **{f'{alias}_{field}': value for field, value in query_select.items()},
         )
 
@@ -179,16 +161,18 @@ class AnnotationsQuerySet(QuerySet):
         return results
 
     def result_values(self):
-        fields = [*self.annotation_fields]
+        override_model_annotations = {'populations', 'pos', 'end'}
+        values = {**self.annotation_values}
+        values.update(self._conditional_selected_transcript_values(self))
+        values.update(self._genotype_override_values(self))
+        initial_values = {k: v for k, v in  values.items() if k not in override_model_annotations}
+
+        fields = [field for field in self.annotation_fields if field not in values]
         if self.has_annotation('clinvar'):
             fields.append('clinvar')
 
-        override_model_annotations = {'populations', 'pos', 'end'}
-        values = {k: v for k, v in self.annotation_values.items() if k not in override_model_annotations}
-        values.update(self._conditional_selected_transcript_values(self))
-
-        return self.values(*fields, **values).annotate(
-            **{k: self.annotation_values[k] for k in override_model_annotations if k in self.annotation_values},
+        return self.values(*fields, **initial_values).annotate(
+            **{k: values[k] for k in override_model_annotations if k in values},
         )
 
 
@@ -209,6 +193,30 @@ class AnnotationsQuerySet(QuerySet):
             return {'selectedTranscript':  F(f'{self.FILTERED_CONSEQUENCE_FIELD}__0')}
         return {self.SELECTED_GENE_FIELD: F(f'{self.GENE_CONSEQUENCE_FIELD}__0__geneId')}
 
+    def _genotype_override_values(self, query, prefix=''):
+        if not self.model.GENOTYPE_OVERRIDE_FIELDS:
+            return {}
+
+        index_map = {
+            field: i+1 for i, (field, _) in enumerate(query.query.annotations['genotypes'].output_field.base_fields)
+        }
+        override_field_map = {field: col for col, (field, _) in self.model.GENOTYPE_OVERRIDE_FIELDS.items()}
+        genotype_fields = [
+            self._genotype_override_expression(index_map[field], override_field_map[field], index_map['cn'])
+            if field in override_field_map else f'x.{index_map[field]}'
+            for (field, _) in query.query.annotations['genotypes'].output_field.base_fields
+        ]
+        genotype_override_expressions = [
+            (field.db_column or field.name, F(field.name)) for field in self.model._meta.local_fields
+            if (field.db_column or field.name) in self.model.GENOTYPE_OVERRIDE_FIELDS
+        ]
+
+        return {
+            'genotypes': ArrayMap('genotypes', mapped_expression=f"tuple({', '.join(genotype_fields)})"),
+            'transcripts': F(self.GENOTYPE_GENE_CONSEQUENCE_FIELD),
+            **{col: Coalesce(f'sample_{col}', expr) for col, expr in genotype_override_expressions},
+        }
+
     def search_compound_hets(self, primary_q, secondary_q, carrier_field):
         primary_gene_field = f'primary_{self.SELECTED_GENE_FIELD}'
         secondary_gene_field = f'secondary_{self.SELECTED_GENE_FIELD}'
@@ -225,7 +233,7 @@ class AnnotationsQuerySet(QuerySet):
             query=primary_q, alias='primary', join_query=secondary_q, join_alias='secondary',
             select_fields=select_fields, select_values={
                 **self.annotation_values,
-            }, conditional_selects=[self._conditional_selected_transcript_values],
+            }, conditional_selects=[self._conditional_selected_transcript_values, self._genotype_override_values],
         )
         return results.filter(
             **{primary_gene_field: F(secondary_gene_field)}
@@ -372,8 +380,11 @@ class AnnotationsQuerySet(QuerySet):
     }
     ANNOTATION_FIELD_FILTERS = {
         SCREEN_KEY: ('screen_region_type',),
-        SV_TYPE_FILTER_FIELD: ('sv_type',),
-        **{field: (f'sorted_{field}_consequences', lambda value: ('{field}__array_exists', {
+        SV_TYPE_FILTER_FIELD: ('sv_type', lambda value, model: ('{field}__in', [
+            sv_type.replace(model.SV_TYPE_FILTER_PREFIX, '') for sv_type in value
+            if sv_type.startswith(model.SV_TYPE_FILTER_PREFIX)
+        ])),
+        **{field: (f'sorted_{field}_consequences', lambda value, _: ('{field}__array_exists', {
             'consequenceTerms': (value, 'hasAny({value}, {field})'),
         })) for field in [MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY]},
     }
@@ -392,7 +403,7 @@ class AnnotationsQuerySet(QuerySet):
                     transcript_field_filters[filter_field] = (value, template)
             elif field in self.ANNOTATION_FIELD_FILTERS:
                 filter_field, *format_filter = self.ANNOTATION_FIELD_FILTERS[field]
-                filters_by_field[filter_field] = format_filter[0](value) if format_filter else ('{field}__in', value)
+                filters_by_field[filter_field] = format_filter[0](value, self.model) if format_filter else ('{field}__in', value)
             elif field == SPLICE_AI_FIELD:
                 splice_ai_q = self._get_in_silico_score_q(SPLICE_AI_FIELD, value)
                 if splice_ai_q:

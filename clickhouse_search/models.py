@@ -79,6 +79,7 @@ class BaseAnnotations(models.ClickhouseModel):
         'genomeVersion': GENOME_VERSION_GRCh38,
         'liftedOverGenomeVersion': GENOME_VERSION_GRCh37,
     }
+    SV_TYPE_FILTER_PREFIX = ''
     GENOTYPE_OVERRIDE_FIELDS = {}
 
     key = models.UInt32Field(primary_key=True)
@@ -403,6 +404,7 @@ class BaseAnnotationsGcnv(BaseAnnotationsSvGcnv):
         ])),
     ]
     SEQR_POPULATIONS = []
+    SV_TYPE_FILTER_PREFIX = 'gCNV_'
     GENOTYPE_OVERRIDE_FIELDS = {
         'pos': ('start', NullableArrayMin),
         'end': ('end', NullableArrayMax),

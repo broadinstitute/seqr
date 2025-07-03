@@ -179,7 +179,7 @@ SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT = {**MULTI_FAMILY_VARIANT, 'selectedMai
 SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4 = {**VARIANT4, 'selectedMainTranscriptId': 'ENST00000350997'}
 SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3 = {**VARIANT3, 'selectedMainTranscriptId': 'ENST00000497611'}
 SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2 = {**VARIANT2, 'selectedMainTranscriptId': 'ENST00000459627'}
-
+MULTI_DATA_TYPE_COMP_HET_VARIANT2 = {**VARIANT2, 'selectedMainTranscriptId': 'ENST00000450625'}
 
 GCNV_MULTI_FAMILY_VARIANT1 = deepcopy(GCNV_VARIANT1)
 GCNV_MULTI_FAMILY_VARIANT1.update({
@@ -352,9 +352,13 @@ LOCATION_SEARCH = {
     'locus': {'rawItems': '\n'.join(GENE_IDS+INTERVALS)},
 }
 
-COMP_HET_ALL_PASS_FILTERS = {
-    'annotations': {'splice_ai': '0.0', 'structural': ['DEL', 'CPX', 'INS', 'gCNV_DEL', 'gCNV_DUP']},
+ALL_SNV_INDEL_PASS_FILTERS = {
+    'annotations': {'splice_ai': '0.0'},
     'pathogenicity': {'clinvar': ['likely_pathogenic']},
+}
+COMP_HET_ALL_PASS_FILTERS = {
+    **ALL_SNV_INDEL_PASS_FILTERS,
+    'annotations': {**ALL_SNV_INDEL_PASS_FILTERS['annotations'], 'structural': ['DEL', 'CPX', 'INS', 'gCNV_DEL', 'gCNV_DUP']},
 }
 
 NEW_SV_FILTER = {'new_structural_variants': ['NEW']}

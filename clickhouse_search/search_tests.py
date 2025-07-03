@@ -12,7 +12,7 @@ from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4,
     VARIANT3_BOTH_SAMPLE_TYPES, VARIANT4_BOTH_SAMPLE_TYPES, GRCH37_VARIANT, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3, \
     SV_VARIANT1, SV_VARIANT2, SV_VARIANT3, SV_VARIANT4, SV_GENE_COUNTS, NEW_SV_FILTER, GCNV_VARIANT1, GCNV_VARIANT2, \
     GCNV_VARIANT3, GCNV_VARIANT4, GCNV_MULTI_FAMILY_VARIANT1, GCNV_MULTI_FAMILY_VARIANT2, GCNV_GENE_COUNTS, \
-    format_cached_variant
+    MULTI_DATA_TYPE_COMP_HET_VARIANT2, ALL_SNV_INDEL_PASS_FILTERS, format_cached_variant
 from reference_data.models import Omim
 from seqr.models import Project, Family, Sample
 from seqr.utils.search.search_utils_tests import SearchTestHelper
@@ -93,7 +93,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         }
         self._assert_expected_search(
             [VARIANT1, VARIANT2, VARIANT3, VARIANT4], gene_counts=variant_gene_counts, locus={'rawItems': '1:1-100000000'},
-            annotations={'splice_ai': '0.0'}, pathogenicity={'clinvar': ['likely_pathogenic']},
+            **ALL_SNV_INDEL_PASS_FILTERS,
         )
 
         mito_gene_counts = {
@@ -108,7 +108,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 
         self._assert_expected_search(
             [GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4], gene_counts=GCNV_GENE_COUNTS,
-            locus=None, annotations={'structural': ['DEL', 'DUP']}
+            locus=None, annotations={'structural': COMP_HET_ALL_PASS_FILTERS['annotations']['structural']},
         )
 
         self._set_sv_family_search()
@@ -141,7 +141,6 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             gene_counts={**variant_gene_counts, **GCNV_GENE_COUNTS, 'ENSG00000277258': {'total': 2, 'families': {'F000002_2': 2}}}
         )
 
-        self.maxDiff = None
         self._add_sample_type_samples('WES', dataset_type='SV', guid__in=['S000135_na20870'])
         self._assert_expected_search(
             [GCNV_MULTI_FAMILY_VARIANT1, GCNV_MULTI_FAMILY_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4], gene_counts={
@@ -156,7 +155,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
                 'ENSG00000275023': {'total': 2, 'families': {'F000002_2': 2}},
                 'ENSG00000277258': {'total': 1, 'families': {'F000002_2': 1}},
                 'ENSG00000277972': {'total': 1, 'families': {'F000002_2': 1}},
-            }, annotations={'structural': ['DEL', 'DUP']}
+            }, annotations={'structural': COMP_HET_ALL_PASS_FILTERS['annotations']['structural']},
         )
 
     def test_multi_project_search(self):
@@ -221,8 +220,8 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
     def test_inheritance_filter(self):
         inheritance_mode = 'any_affected'
         self._assert_expected_search(
-            # [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
-            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
+            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3,
+             GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
             inheritance_mode=inheritance_mode,
         )
 
@@ -231,19 +230,18 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             [SV_VARIANT1, SV_VARIANT2, SV_VARIANT3, SV_VARIANT4], inheritance_mode=inheritance_mode,
         )
 
-        # self._assert_expected_search(
-        #     [GCNV_VARIANT3], inheritance_mode=inheritance_mode, annotations=NEW_SV_FILTER, omit_data_type='SNV_INDEL',
-        # )
-
         self._assert_expected_search(
             [SV_VARIANT2], inheritance_mode=inheritance_mode, annotations=NEW_SV_FILTER,
         )
 
-        inheritance_mode = 'de_novo'
         self._reset_search_families()
         self._assert_expected_search(
-            # [VARIANT1, FAMILY_3_VARIANT, VARIANT4, GCNV_VARIANT1],
-            [VARIANT1, FAMILY_3_VARIANT, VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
+            [GCNV_VARIANT3], inheritance_mode=inheritance_mode, annotations=NEW_SV_FILTER,
+        )
+
+        inheritance_mode = 'de_novo'
+        self._assert_expected_search(
+            [VARIANT1, FAMILY_3_VARIANT, VARIANT4, GCNV_VARIANT1, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
             inheritance_mode=inheritance_mode, annotations=None,
         )
 
@@ -260,14 +258,13 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 
         inheritance_mode = 'homozygous_recessive'
         self._assert_expected_search(
-            # [VARIANT2, GCNV_VARIANT3],
-            [VARIANT2, MITO_VARIANT3],
+            [VARIANT2, GCNV_VARIANT3, MITO_VARIANT3],
             inheritance_mode=inheritance_mode,
         )
 
         self._set_multi_project_search()
         self._assert_expected_search(
-            [PROJECT_2_VARIANT1, VARIANT2, MITO_VARIANT3],
+            [PROJECT_2_VARIANT1, VARIANT2, GCNV_VARIANT3, MITO_VARIANT3],
             inheritance_mode=inheritance_mode,
         )
 
@@ -278,10 +275,10 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 
         gt_inheritance_filter = {'genotype': {'I000006_hg00733': 'ref_ref', 'I000005_hg00732': 'has_alt'}}
         self._set_single_family_search()
-        self._assert_expected_search([VARIANT2], inheritance_filter=gt_inheritance_filter)
+        self._assert_expected_search([VARIANT2, GCNV_VARIANT3], inheritance_filter=gt_inheritance_filter)
 
         self._assert_expected_search(
-            [VARIANT2], inheritance_mode='any_affected', inheritance_filter={'affected': {
+            [VARIANT2, GCNV_VARIANT2, GCNV_VARIANT3], inheritance_mode='any_affected', inheritance_filter={'affected': {
                 'I000004_hg00731': 'N', 'I000005_hg00732': 'A', 'I000006_hg00733': 'U',
             }},
         )
@@ -292,29 +289,29 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             [[VARIANT3, VARIANT4]], inheritance_mode=inheritance_mode, inheritance_filter={}, gene_counts={
                 'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
                 'ENSG00000177000': {'total': 1, 'families': {'F000002_2': 1}},
-            }, **COMP_HET_ALL_PASS_FILTERS, cached_variant_fields=[
+            }, **ALL_SNV_INDEL_PASS_FILTERS, cached_variant_fields=[
                 [{'selectedGeneId':  'ENSG00000097046'}, {'selectedGeneId':  'ENSG00000097046'}],
             ],
         )
 
-#         self._assert_expected_search(
-#             [[GCNV_VARIANT3, GCNV_VARIANT4]], inheritance_mode=inheritance_mode, omit_data_type='SNV_INDEL', gene_counts={
-#                 'ENSG00000275023': {'total': 2, 'families': {'F000002_2': 2}},
-#                 'ENSG00000277258': {'total': 1, 'families': {'F000002_2': 1}},
-#                 'ENSG00000277972': {'total': 1, 'families': {'F000002_2': 1}},
-#             }, **COMP_HET_ALL_PASS_FILTERS,
-#         )
-#
-#         self._assert_expected_search(
-#             [[MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], [VARIANT3, VARIANT4], [GCNV_VARIANT3, GCNV_VARIANT4]],
-#             inheritance_mode=inheritance_mode, gene_counts={
-#                 'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
-#                 'ENSG00000177000': {'total': 2, 'families': {'F000002_2': 2}},
-#                 'ENSG00000275023': {'total': 3, 'families': {'F000002_2': 3}},
-#                 'ENSG00000277258': {'total': 3, 'families': {'F000002_2': 3}},
-#                 'ENSG00000277972': {'total': 2, 'families': {'F000002_2': 2}},
-#             }, **COMP_HET_ALL_PASS_FILTERS,
-#         )
+        self._assert_expected_search(
+            [[GCNV_VARIANT3, GCNV_VARIANT4]], inheritance_mode=inheritance_mode, gene_counts={
+                'ENSG00000275023': {'total': 2, 'families': {'F000002_2': 2}},
+                'ENSG00000277258': {'total': 1, 'families': {'F000002_2': 1}},
+                'ENSG00000277972': {'total': 1, 'families': {'F000002_2': 1}},
+            }, annotations={'structural': COMP_HET_ALL_PASS_FILTERS['annotations']['structural']}, pathogenicity=None,
+        )
+
+        self._assert_expected_search(
+            [[MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], [VARIANT3, VARIANT4], [GCNV_VARIANT3, GCNV_VARIANT4]],
+            inheritance_mode=inheritance_mode, gene_counts={
+                'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
+                'ENSG00000177000': {'total': 2, 'families': {'F000002_2': 2}},
+                'ENSG00000275023': {'total': 3, 'families': {'F000002_2': 3}},
+                'ENSG00000277258': {'total': 3, 'families': {'F000002_2': 3}},
+                'ENSG00000277972': {'total': 2, 'families': {'F000002_2': 2}},
+            }, **COMP_HET_ALL_PASS_FILTERS,
+        )
 
         self._set_sv_family_search()
         self._assert_expected_search(
@@ -348,7 +345,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             }, cached_variant_fields=[
                 {}, {},
                 [{'selectedGeneId':  'ENSG00000097046'}, {'selectedGeneId':  'ENSG00000097046'}], {},
-            ],
+            ], **ALL_SNV_INDEL_PASS_FILTERS,
         )
 
         self._set_single_family_search()
@@ -360,24 +357,24 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         )
         self._reset_search_families()
 
-#         self._assert_expected_search(
-#             [GCNV_VARIANT3, [GCNV_VARIANT3, GCNV_VARIANT4]], inheritance_mode=inheritance_mode, omit_data_type='SNV_INDEL', gene_counts={
-#                 'ENSG00000275023': {'total': 3, 'families': {'F000002_2': 3}},
-#                 'ENSG00000277258': {'total': 1, 'families': {'F000002_2': 1}},
-#                 'ENSG00000277972': {'total': 1, 'families': {'F000002_2': 1}},
-#             }, **COMP_HET_ALL_PASS_FILTERS,
-#         )
-#
-#         self._assert_expected_search(
-#             [VARIANT2, [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], [VARIANT3, VARIANT4], GCNV_VARIANT3, [GCNV_VARIANT3, GCNV_VARIANT4]],
-#             inheritance_mode=inheritance_mode, gene_counts={
-#                 'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
-#                 'ENSG00000177000': {'total': 3, 'families': {'F000002_2': 3}},
-#                 'ENSG00000275023': {'total': 4, 'families': {'F000002_2': 4}},
-#                 'ENSG00000277258': {'total': 4, 'families': {'F000002_2': 4}},
-#                 'ENSG00000277972': {'total': 2, 'families': {'F000002_2': 2}},
-#             }, **COMP_HET_ALL_PASS_FILTERS,
-#         )
+        self._assert_expected_search(
+            [GCNV_VARIANT3, [GCNV_VARIANT3, GCNV_VARIANT4]], inheritance_mode=inheritance_mode, gene_counts={
+                'ENSG00000275023': {'total': 3, 'families': {'F000002_2': 3}},
+                'ENSG00000277258': {'total': 1, 'families': {'F000002_2': 1}},
+                'ENSG00000277972': {'total': 1, 'families': {'F000002_2': 1}},
+            }, annotations={'structural': COMP_HET_ALL_PASS_FILTERS['structural']}, pathogenicity=None,
+        )
+
+        self._assert_expected_search(
+            [VARIANT2, [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], [VARIANT3, VARIANT4], GCNV_VARIANT3, [GCNV_VARIANT3, GCNV_VARIANT4]],
+            inheritance_mode=inheritance_mode, gene_counts={
+                'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
+                'ENSG00000177000': {'total': 3, 'families': {'F000002_2': 3}},
+                'ENSG00000275023': {'total': 4, 'families': {'F000002_2': 4}},
+                'ENSG00000277258': {'total': 4, 'families': {'F000002_2': 4}},
+                'ENSG00000277972': {'total': 2, 'families': {'F000002_2': 2}},
+            }, **COMP_HET_ALL_PASS_FILTERS,
+        )
 
         self._set_sv_family_search()
         self._assert_expected_search(
