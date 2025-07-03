@@ -16,7 +16,7 @@ from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFEC
     X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, SCREEN_KEY, UTR_ANNOTATOR_KEY, \
     EXTENDED_SPLICE_KEY, MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY, CLINVAR_KEY, HGMD_KEY, NEW_SV_FIELD, \
     EXTENDED_SPLICE_REGION_CONSEQUENCE, CLINVAR_PATH_RANGES, CLINVAR_PATH_SIGNIFICANCES, PATH_FREQ_OVERRIDE_CUTOFF, \
-    HGMD_CLASS_FILTERS, SV_TYPE_FILTER_FIELD, SV_CONSEQUENCES_FIELD
+    HGMD_CLASS_FILTERS, SV_TYPE_FILTER_FIELD, SV_CONSEQUENCES_FIELD, COMPOUND_HET
 from seqr.utils.xpos_utils import get_xpos, MIN_POS, MAX_POS
 
 
@@ -203,7 +203,7 @@ class AnnotationsQuerySet(QuerySet):
         override_field_map = {field: col for col, (field, _) in self.model.GENOTYPE_OVERRIDE_FIELDS.items()}
         genotype_fields = [
             self._genotype_override_expression(index_map[field], override_field_map[field], index_map['cn'])
-            if field in override_field_map else f'x.{index_map[field]}'
+            if field in override_field_map else (f'ifNull(x.{index_map[field]}, 0)' if field == 'numAlt' else f'x.{index_map[field]}')
             for (field, _) in query.query.annotations['genotypes'].output_field.base_fields
         ]
         genotype_override_expressions = [
@@ -520,6 +520,15 @@ class EntriesManager(Manager):
         HAS_ALT: (0, '{field} > {value}'),
         HAS_REF: (2, '{field} < {value}'),
     }
+    COMP_HET_ALT = 'COMP_HET_ALT'
+    GENOTYPE_LOOKUP[COMP_HET_ALT] = GENOTYPE_LOOKUP[REF_ALT]
+    NULLABLE_GENOTYPE_LOOKUP = {
+        **GENOTYPE_LOOKUP,
+        REF_REF: (0, 'or(isNull({field}), {field} = {value})'),
+        HAS_REF: (2, 'or(isNull({field}), {field} < {value})'),
+        HAS_ALT: (0, 'and(isNotNull({field}), {field} > {value})'),
+    }
+    NULLABLE_GENOTYPE_LOOKUP[COMP_HET_ALT] = NULLABLE_GENOTYPE_LOOKUP[HAS_ALT]
     INVALID_NUM_ALT_LOOKUP = {
         (0,): [1, 2],
         (1,): [0, 2],
@@ -528,7 +537,10 @@ class EntriesManager(Manager):
         (2, '{field} < {value}'): [2],
     }
 
-    INHERITANCE_FILTERS = INHERITANCE_FILTERS
+    INHERITANCE_FILTERS = {
+        **INHERITANCE_FILTERS,
+        COMPOUND_HET: {**INHERITANCE_FILTERS[COMPOUND_HET], AFFECTED: COMP_HET_ALT}
+    }
 
     @property
     def annotations_model(self):
@@ -537,6 +549,11 @@ class EntriesManager(Manager):
     @property
     def call_fields(self):
         return dict(self.model.CALL_FIELDS)
+
+
+    @property
+    def genotype_lookup(self):
+        return self.NULLABLE_GENOTYPE_LOOKUP if self.annotations_model.GENOTYPE_OVERRIDE_FIELDS else self.GENOTYPE_LOOKUP
 
     @property
     def quality_filters(self):
@@ -703,13 +720,12 @@ class EntriesManager(Manager):
                 any_affected_samples.append(sample['sample_ids_by_type'])
         return sample_filters, any_affected_samples
 
-    @classmethod
-    def _family_calls_q(cls, call_q, family_sample_data, sample_filters, sample_type, clinvar_override_q, any_affected_samples=None, filter_sample_type=True):
+    def _family_calls_q(self, call_q, family_sample_data, sample_filters, sample_type, clinvar_override_q, any_affected_samples=None, filter_sample_type=True):
        family_sample_q = None
        if any_affected_samples:
            affected_sample_ids = [f"'{sample_ids_by_type[sample_type]}'" for sample_ids_by_type in any_affected_samples]
            family_sample_q = Q(calls__array_exists={
-               'gt': cls.GENOTYPE_LOOKUP[HAS_ALT],
+               'gt': self.genotype_lookup[HAS_ALT],
                'sampleId': (', '.join(affected_sample_ids), 'has([{value}], {field})'),
            })
 
@@ -733,8 +749,7 @@ class EntriesManager(Manager):
            call_q |= family_sample_q
        return call_q or family_sample_q
 
-    @classmethod
-    def _multi_sample_type_family_calls_q(cls, call_q, any_affected_q, family_sample_data, sample_filters, any_affected_samples, clinvar_override_q, multi_sample_type_families):
+    def _multi_sample_type_family_calls_q(self, call_q, any_affected_q, family_sample_data, sample_filters, any_affected_samples, clinvar_override_q, multi_sample_type_families):
         sample_quality_filters = []
         for sample_ids_by_type, sample_inheritance_filter, sample_quality_filter in sample_filters:
             if sample_inheritance_filter.get('gt'):
@@ -745,31 +760,30 @@ class EntriesManager(Manager):
                 sample_quality_filters.append((sample_ids_by_type, {}, sample_quality_filter))
         if sample_quality_filters:
             for sample_type in family_sample_data['sample_types']:
-                call_q = cls._family_calls_q(
+                call_q = self._family_calls_q(
                     call_q, family_sample_data, sample_quality_filters, sample_type, clinvar_override_q,
                 )
         if any_affected_samples:
             multi_sample_type_families[family_sample_data['family_guid']] = True
             for sample_type in family_sample_data['sample_types']:
-                any_affected_q = cls._family_calls_q(
+                any_affected_q = self._family_calls_q(
                     any_affected_q, family_sample_data, [], sample_type, clinvar_override_q,
                     any_affected_samples= any_affected_samples
                 )
 
         return call_q, any_affected_q
 
-    @classmethod
-    def _sample_genotype_filter(cls, sample, affected, inheritance_mode, individual_genotype_filter):
+    def _sample_genotype_filter(self, sample, affected, inheritance_mode, individual_genotype_filter):
         sample_filter = {}
         genotype = None
         if individual_genotype_filter:
             genotype = individual_genotype_filter.get(sample['individual_guid'])
         elif inheritance_mode:
-            genotype = cls.INHERITANCE_FILTERS.get(inheritance_mode, {}).get(affected)
+            genotype = self.INHERITANCE_FILTERS.get(inheritance_mode, {}).get(affected)
             if (inheritance_mode == X_LINKED_RECESSIVE and affected == UNAFFECTED and sample['sex'] in MALE_SEXES):
                 genotype = REF_REF
         if genotype:
-            sample_filter['gt'] = cls.GENOTYPE_LOOKUP[genotype]
+            sample_filter['gt'] = self.genotype_lookup[genotype]
         return sample_filter
 
     def _sample_quality_filter(self, affected, quality_filter):

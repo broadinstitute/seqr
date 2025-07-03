@@ -299,7 +299,9 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
                 'ENSG00000275023': {'total': 2, 'families': {'F000002_2': 2}},
                 'ENSG00000277258': {'total': 1, 'families': {'F000002_2': 1}},
                 'ENSG00000277972': {'total': 1, 'families': {'F000002_2': 1}},
-            }, annotations={'structural': COMP_HET_ALL_PASS_FILTERS['annotations']['structural']}, pathogenicity=None,
+            }, cached_variant_fields=[
+                [{'selectedGeneId':  'ENSG00000275023'}, {'selectedGeneId':  'ENSG00000275023'}],
+            ], annotations={'structural': COMP_HET_ALL_PASS_FILTERS['annotations']['structural']}, pathogenicity=None,
         )
 
         self._assert_expected_search(
