@@ -32,6 +32,7 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
     results = []
     family_guid = None
     inheritance_mode = search.get('inheritance_mode')
+    has_comp_het = inheritance_mode in {RECESSIVE, COMPOUND_HET}
     for dataset_type, sample_data in sample_data_by_dataset_type.items():
         logger.info(f'Loading {dataset_type} data for {len(sample_data)} families', user)
 
@@ -42,9 +43,12 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
         if inheritance_mode != COMPOUND_HET:
             result_q = _get_search_results_queryset(entry_cls, annotations_cls, search, sample_data)
             results += list(result_q[:MAX_VARIANTS + 1])
-        if inheritance_mode in {RECESSIVE, COMPOUND_HET}:
-            result_q = _get_comp_het_results_queryset(entry_cls, annotations_cls, search, sample_data)
+        if has_comp_het:
+            result_q = _get_data_type_comp_het_results_queryset(entry_cls, annotations_cls, search, sample_data)
             results += [list(result[1:]) for result in result_q[:MAX_VARIANTS + 1]]
+
+    if has_comp_het and Sample.DATASET_TYPE_VARIANT_CALLS in sample_data_by_dataset_type:
+        results += _get_multi_data_type_comp_het_results_queryset(genome_version, sample_data_by_dataset_type, search)
 
     cache_results = get_clickhouse_cache_results(results, sort, family_guid)
     previous_search_results.update(cache_results)
@@ -60,7 +64,45 @@ def _get_search_results_queryset(entry_cls, annotations_cls, search, sample_data
     return results.result_values()
 
 
-def _get_comp_het_results_queryset(entry_cls, annotations_cls, search, sample_data):
+def _get_multi_data_type_comp_het_results_queryset(genome_version, sample_data_by_dataset_type, search):
+    comp_het_search = {**search, 'inheritance_mode': COMPOUND_HET}
+    annotations_secondary = search.get('annotations_secondary')
+    if annotations_secondary:
+        annotations = search['annotations']
+        comp_het_search['annotations'] = {
+            **annotations
+            **{k: v + annotations[k] if k in annotations else v for k, v in annotations_secondary.items()},
+        }
+
+    entry_cls = ENTRY_CLASS_MAP[genome_version][Sample.DATASET_TYPE_VARIANT_CALLS]
+    annotations_cls = ANNOTATIONS_CLASS_MAP[genome_version][Sample.DATASET_TYPE_VARIANT_CALLS]
+    snv_indel_families = {s['family_guid'] for s in sample_data_by_dataset_type[Sample.DATASET_TYPE_VARIANT_CALLS]}
+
+    results = []
+    for sample_type in [Sample.SAMPLE_TYPE_WES, Sample.SAMPLE_TYPE_WGS]:
+        sv_dataset_type = f'{Sample.DATASET_TYPE_SV_CALLS}_{sample_type}'
+        sv_families = {s['family_guid'] for s in sample_data_by_dataset_type.get(sv_dataset_type, [])}
+        families = snv_indel_families.intersection(sv_families)
+        if not families:
+            continue
+        entries = entry_cls.objects.search([
+            s for s in sample_data_by_dataset_type[Sample.DATASET_TYPE_VARIANT_CALLS] if ['family_guid'] in families
+        ], comp_het_search, annotate_carriers=True)
+        snv_indel_q = annotations_cls.objects.subquery_join(entries).search(**comp_het_search)
+
+        sv_entries = ENTRY_CLASS_MAP[genome_version][sv_dataset_type].objects.search([
+            s for s in sample_data_by_dataset_type[sv_dataset_type] if ['family_guid'] in families
+        ], comp_het_search, annotate_carriers=True)
+        sv_annotations_cls = ANNOTATIONS_CLASS_MAP[genome_version][sv_dataset_type]
+        sv_q = sv_annotations_cls.objects.subquery_join(sv_entries).search(**comp_het_search)
+
+        result_q = _get_comp_het_results_queryset(annotations_cls, snv_indel_q, sv_q, len(families))
+        results += [list(result[1:]) for result in result_q[:MAX_VARIANTS + 1]]
+
+    return results
+
+
+def _get_data_type_comp_het_results_queryset(entry_cls, annotations_cls, search, sample_data):
     entries = entry_cls.objects.search(
         sample_data, **{**search, 'inheritance_mode': COMPOUND_HET}, annotate_carriers=True,
     )
@@ -71,22 +113,22 @@ def _get_comp_het_results_queryset(entry_cls, annotations_cls, search, sample_da
     secondary_search = {**search, 'annotations': annotations_secondary} if annotations_secondary else search
     secondary_q = annotations_cls.objects.subquery_join(entries).search(**secondary_search)
 
-    carrier_field = next((field for field in ['family_carriers', 'carriers'] if field in entries.query.annotations), None)
+    return _get_comp_het_results_queryset(annotations_cls, primary_q, secondary_q, len(sample_data))
 
-    results = annotations_cls.objects.search_compound_hets(primary_q, secondary_q, carrier_field)
 
-    if carrier_field == 'carriers':
+def _get_comp_het_results_queryset(annotations_cls, primary_q, secondary_q, num_families):
+    results = annotations_cls.objects.search_compound_hets(primary_q, secondary_q)
+
+    if num_families == 1:
         results = results.annotate(
             unphased_carriers=ArrayIntersect('primary_carriers', 'secondary_carriers')
         ).filter(unphased_carriers__not_empty=False)
-    elif carrier_field == 'family_carriers':
+    else:
         results = results.annotate(
             primary_familyGuids=ArrayFilter('primary_familyGuids', conditions=[
                 {None: (None, 'empty(arrayIntersect(primary_family_carriers[x], secondary_family_carriers[x]))')},
             ]),
         )
-
-    if len(sample_data) > 1:
         results = results.annotate(
             primary_familyGuids=ArrayIntersect(
                 'primary_familyGuids', 'secondary_familyGuids', output_field=ArrayField(StringField()),

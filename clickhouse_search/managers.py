@@ -147,7 +147,7 @@ class AnnotationsQuerySet(QuerySet):
         for select_func in (conditional_selects or []):
             query_select.update(select_func(query, prefix=f'{alias}_'))
         return query.values(
-            **{f'{alias}_{field}': F(field) for field in select_fields or [] if field not in query_select},
+            **{f'{alias}_{field}': F(field) for field in select_fields or [] if (field not in query_select) and (field in query.query.annotations)},
             **{f'{alias}_{field}': value for field, value in query_select.items()},
         )
 
@@ -217,18 +217,13 @@ class AnnotationsQuerySet(QuerySet):
             **{col: Coalesce(f'sample_{col}', expr) for col, expr in genotype_override_expressions},
         }
 
-    def search_compound_hets(self, primary_q, secondary_q, carrier_field):
+    def search_compound_hets(self, primary_q, secondary_q):
         primary_gene_field = f'primary_{self.SELECTED_GENE_FIELD}'
         secondary_gene_field = f'secondary_{self.SELECTED_GENE_FIELD}'
         primary_q = primary_q.explode_gene_id(primary_gene_field)
         secondary_q = secondary_q.explode_gene_id(secondary_gene_field)
 
-        select_fields = [*self.annotation_fields, self.SELECTED_GENE_FIELD]
-        if primary_q.has_annotation('clinvar'):
-            select_fields.append('clinvar')
-        if carrier_field:
-            select_fields.append(carrier_field)
-
+        select_fields = [*self.annotation_fields, self.SELECTED_GENE_FIELD, 'clinvar', 'family_carriers', 'carriers']
         results = self.cross_join(
             query=primary_q, alias='primary', join_query=secondary_q, join_alias='secondary',
             select_fields=select_fields, select_values={
