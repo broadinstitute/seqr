@@ -557,7 +557,7 @@ class EntriesManager(Manager):
 
     @property
     def quality_filters(self):
-        return [config for config in [('gq', 1), ('ab', 100, 'x.gt != 1'), ('hl', 100)] if config[0] in self.call_fields]
+        return [config for config in [('gq', 1), ('ab', 100, 'x.gt != 1'), ('qs', 1), ('hl', 100)] if config[0] in self.call_fields]
 
     @property
     def single_sample_type(self):

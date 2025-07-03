@@ -408,8 +408,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
     def test_quality_filter(self):
         quality_filter = {'vcf_filter': 'pass'}
         self._assert_expected_search(
-            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, MITO_VARIANT1, MITO_VARIANT2],
-            # [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
+            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2],
             quality_filter=quality_filter
         )
 
@@ -421,18 +420,17 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         gcnv_quality_filter = {'min_gq': 40, 'min_qs': 20, 'min_hl': 5}
         self._reset_search_families()
         self._assert_expected_search(
-            [VARIANT2, MULTI_FAMILY_VARIANT, MITO_VARIANT1, MITO_VARIANT3], quality_filter=gcnv_quality_filter,
-            # [VARIANT2, MULTI_FAMILY_VARIANT, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT4], quality_filter=gcnv_quality_filter,
+            [VARIANT2, MULTI_FAMILY_VARIANT, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT3], quality_filter=gcnv_quality_filter,
         )
 
-        # self._assert_expected_search(
-        #     [], annotations=NEW_SV_FILTER, quality_filter=gcnv_quality_filter, omit_data_type='SNV_INDEL',
-        # )
+        self._assert_expected_search(
+            [], annotations=NEW_SV_FILTER, quality_filter=gcnv_quality_filter, omit_data_type='SNV_INDEL',
+        )
 
         sv_quality_filter = {'min_gq_sv': 40}
         self._set_sv_family_search()
         self._assert_expected_search(
-            [SV_VARIANT3, SV_VARIANT4], quality_filter=sv_quality_filter,
+            [SV_VARIANT3, SV_VARIANT4], quality_filter=sv_quality_filter, annotations=None,
         )
 
         self._assert_expected_search(
@@ -441,13 +439,12 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 
         self._reset_search_families()
         self._assert_expected_search(
-            [VARIANT2, MULTI_FAMILY_VARIANT, MITO_VARIANT1, MITO_VARIANT2], quality_filter={'min_gq': 40, 'vcf_filter': 'pass'},
+            [VARIANT2, MULTI_FAMILY_VARIANT, GCNV_VARIANT1, MITO_VARIANT1, MITO_VARIANT2], quality_filter={'min_gq': 40, 'min_qs': 30, 'vcf_filter': 'pass'},
             annotations=None,
         )
 
         self._assert_expected_search(
-            # [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
-            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
+            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
             quality_filter={'min_gq': 60, 'min_qs': 10, 'affected_only': True},
         )
 
@@ -458,17 +455,16 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 
         self._reset_search_families()
         self._assert_expected_search(
-            [VARIANT1, VARIANT2, FAMILY_3_VARIANT, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], quality_filter={'min_ab': 50},
+            [VARIANT1, VARIANT2, FAMILY_3_VARIANT, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4,MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], quality_filter={'min_ab': 50},
         )
 
         self._assert_expected_search(
-            [VARIANT2, VARIANT3, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], quality_filter={'min_ab': 70, 'affected_only': True},
-            # omit_data_type='SV_WES',
+            [VARIANT2, VARIANT3, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], quality_filter={'min_ab': 70, 'affected_only': True},
         )
 
         quality_filter.update({'min_gq': 40, 'min_ab': 50, 'min_hl': 5})
         self._assert_expected_search(
-            [VARIANT2, FAMILY_3_VARIANT, MITO_VARIANT1], quality_filter=quality_filter,
+            [VARIANT2, FAMILY_3_VARIANT, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT1], quality_filter=quality_filter,
         )
 
         # Ensure no variants are filtered out by annotation/path filters
