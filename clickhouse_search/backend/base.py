@@ -30,7 +30,7 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
 
     def _create_index_sql( self,
         model,
-        *args,
+        args,
         fields=None,
         name=None,
         sql=None,
@@ -42,7 +42,7 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
         inline=False,
         **kwargs,
    ):
-        return super()._create_index_sql(model, *args, fields, name, sql, suffix, col_suffixes, type, granularity, expressions, inline)
+        return super()._create_index_sql(model, args, fields=fields, name=name, sql=sql, suffix=suffix, col_suffixes=col_suffixes, type=type, granularity=granularity, expressions=expressions, inline=inline)
 
 class DatabaseWrapper(BaseDatabaseWrapper):
     SchemaEditorClass = DatabaseSchemaEditor
