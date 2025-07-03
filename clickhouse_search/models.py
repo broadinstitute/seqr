@@ -48,14 +48,17 @@ class ClickHouseRouter:
         return None
 
     def db_for_write(self, model, **hints):
+        # When using Clickhouse models, the default connection routing used for writes will attempt to use read-only
+        # credentials and fail. This is by design to prevent accidental writes. To write to Clickhouse, explicitly
+        # set my_queryset.using('clickhouse_write') before executing a write operation
         if model._meta.label_lower in self.route_model_names or hints.get('clickhouse'):
             return 'clickhouse'
         return None
 
     def allow_migrate(self, db, app_label, model_name=None, **hints):
         if f'{app_label}.{model_name}' in self.route_model_names  or hints.get('clickhouse'):
-            return db == 'clickhouse'
-        elif db == 'clickhouse':
+            return db == 'clickhouse_write'
+        elif db == 'clickhouse_write':
             return False
         return None
 

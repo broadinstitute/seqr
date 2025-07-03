@@ -254,6 +254,11 @@ if CLICKHOUSE_SERVICE_HOSTNAME:
         'USER': os.environ.get('CLICKHOUSE_USER', 'clickhouse'),
         'PASSWORD': os.environ.get('CLICKHOUSE_PASSWORD', 'clickhouse_test'),
     }
+    DATABASES['clickhouse_write'] = {
+        **DATABASES['clickhouse'],
+        'USER': os.environ.get('CLICKHOUSE_ADMIN_USER', 'clickhouse'),
+        'PASSWORD': os.environ.get('CLICKHOUSE_ADMIN_PASSWORD', 'clickhouse_test'),
+    }
 
 WSGI_APPLICATION = 'wsgi.application'
 
