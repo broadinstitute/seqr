@@ -45,11 +45,7 @@ python -u manage.py migrate --database=reference_data
 python -u manage.py loaddata variant_searches
 python -u manage.py loaddata variant_tag_types
 if [ "$CLICKHOUSE_SERVICE_HOSTNAME" ]; then
-    export CLICKHOUSE_USER="$CLICKHOUSE_ADMIN_USER"
-    export CLICKHOUSE_PASSWORD="$CLICKHOUSE_ADMIN_PASSWORD"
     python -u manage.py migrate --database=clickhouse
-    export CLICKHOUSE_USER="$CLICKHOUSE_READ_ONLY_USER"
-    export CLICKHOUSE_PASSWORD="$CLICKHOUSE_READ_ONLY_PASSWORD"
 fi
 
 python -u manage.py check
