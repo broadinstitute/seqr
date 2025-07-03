@@ -736,7 +736,6 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 
         annotations = {
             'missense': ['missense_variant'], 'in_frame': ['inframe_insertion', 'inframe_deletion'], 'frameshift': None,
-            'structural_consequence': ['INTRONIC', 'LOF'],
         }
         self._assert_expected_search(
             [VARIANT1, VARIANT2, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4, MITO_VARIANT2, MITO_VARIANT3], pathogenicity=pathogenicity,
@@ -748,14 +747,14 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             ]
         )
 
+        annotations['structural_consequence'] = ['INTRONIC', 'LOF']
         self._assert_expected_search(
-            [VARIANT2, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4, MITO_VARIANT2], annotations=annotations, pathogenicity=None,
+            [VARIANT2, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4, GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT2], annotations=annotations, pathogenicity=None,
             cached_variant_fields = [
                 {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][0]},
                 {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[4][1]},
-                {},
+                {}, {}, {},
             ],
-            # [VARIANT2, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4, GCNV_VARIANT3, GCNV_VARIANT4], annotations=annotations,
         )
 
         self._set_sv_family_search()
@@ -765,13 +764,12 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         annotations['structural'] = ['gCNV_DUP', 'DEL']
         self._reset_search_families()
         self._assert_expected_search(
-            [VARIANT2, MULTI_FAMILY_VARIANT, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4, MITO_VARIANT2],
-            # [VARIANT2, MULTI_FAMILY_VARIANT, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
+            [VARIANT2, MULTI_FAMILY_VARIANT, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT2],
             annotations=annotations, cached_variant_fields=[
                 {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][0]},
                 {'selectedTranscript': None},
                 {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[4][1]},
-                {},
+                {}, {}, {}, {}, {},
             ]
         )
 
