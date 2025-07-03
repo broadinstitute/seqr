@@ -28,5 +28,8 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
     def no_quote_value(self, value):
         return value
 
+    def _create_index_sql(self, *args, using='', **kwargs):
+        return super()._create_index_sql(*args, **kwargs)
+
 class DatabaseWrapper(BaseDatabaseWrapper):
     SchemaEditorClass = DatabaseSchemaEditor
