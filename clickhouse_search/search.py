@@ -86,12 +86,12 @@ def _get_multi_data_type_comp_het_results_queryset(genome_version, sample_data_b
         if not families:
             continue
         entries = entry_cls.objects.search([
-            s for s in sample_data_by_dataset_type[Sample.DATASET_TYPE_VARIANT_CALLS] if ['family_guid'] in families
+            s for s in sample_data_by_dataset_type[Sample.DATASET_TYPE_VARIANT_CALLS] if s['family_guid'] in families
         ], comp_het_search, annotate_carriers=True)
         snv_indel_q = annotations_cls.objects.subquery_join(entries).search(**comp_het_search)
 
         sv_entries = ENTRY_CLASS_MAP[genome_version][sv_dataset_type].objects.search([
-            s for s in sample_data_by_dataset_type[sv_dataset_type] if ['family_guid'] in families
+            s for s in sample_data_by_dataset_type[sv_dataset_type] if s['family_guid'] in families
         ], comp_het_search, annotate_carriers=True)
         sv_annotations_cls = ANNOTATIONS_CLASS_MAP[genome_version][sv_dataset_type]
         sv_q = sv_annotations_cls.objects.subquery_join(sv_entries).search(**comp_het_search)
@@ -119,16 +119,18 @@ def _get_data_type_comp_het_results_queryset(entry_cls, annotations_cls, search,
 def _get_comp_het_results_queryset(annotations_cls, primary_q, secondary_q, num_families):
     results = annotations_cls.objects.search_compound_hets(primary_q, secondary_q)
 
-    if num_families == 1:
+    if results.has_annotation('primary_carriers') and results.has_annotation('secondary_carriers'):
         results = results.annotate(
             unphased_carriers=ArrayIntersect('primary_carriers', 'secondary_carriers')
         ).filter(unphased_carriers__not_empty=False)
-    else:
+    elif results.has_annotation('primary_family_carriers') and results.has_annotation('secondary_family_carriers'):
         results = results.annotate(
             primary_familyGuids=ArrayFilter('primary_familyGuids', conditions=[
                 {None: (None, 'empty(arrayIntersect(primary_family_carriers[x], secondary_family_carriers[x]))')},
             ]),
         )
+
+    if num_families > 1:
         results = results.annotate(
             primary_familyGuids=ArrayIntersect(
                 'primary_familyGuids', 'secondary_familyGuids', output_field=ArrayField(StringField()),

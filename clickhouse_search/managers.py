@@ -132,9 +132,9 @@ class AnnotationsQuerySet(QuerySet):
 
         return annotations
 
-    def cross_join(self, query, alias, join_query, join_alias, select_fields=None, select_values=None, conditional_selects=None):
-        query = self._get_join_query_values(query, alias, select_fields, select_values, conditional_selects)
-        join_query = self._get_join_query_values(join_query, join_alias, select_fields, select_values, conditional_selects)
+    def cross_join(self, query, alias, join_query, join_alias, conditional_selects=None):
+        query = self._get_join_query_values(query, alias, conditional_selects)
+        join_query = self._get_join_query_values(join_query, join_alias, conditional_selects)
         self.query.join(CrossJoin(query, alias, join_query, join_alias))
 
         annotations = self._get_subquery_annotations(query, alias)
@@ -142,12 +142,12 @@ class AnnotationsQuerySet(QuerySet):
 
         return self.annotate(**annotations)
 
-    def _get_join_query_values(self, query, alias, select_fields, select_values, conditional_selects):
-        query_select = {**(select_values or {})}
+    def _get_join_query_values(self, query, alias, conditional_selects):
+        query_select = query.annotation_values
         for select_func in (conditional_selects or []):
             query_select.update(select_func(query, prefix=f'{alias}_'))
         return query.values(
-            **{f'{alias}_{field}': F(field) for field in select_fields or [] if (field not in query_select) and (field in query.query.annotations)},
+            **{f'{alias}_{field}': F(field) for field in query.annotation_fields if field not in query_select},
             **{f'{alias}_{field}': value for field, value in query_select.items()},
         )
 
@@ -223,12 +223,16 @@ class AnnotationsQuerySet(QuerySet):
         primary_q = primary_q.explode_gene_id(primary_gene_field)
         secondary_q = secondary_q.explode_gene_id(secondary_gene_field)
 
-        select_fields = [*self.annotation_fields, self.SELECTED_GENE_FIELD, 'clinvar', 'family_carriers', 'carriers']
+        conditional_fields = lambda query, **kwargs: {
+            field: F(field) for field in [self.SELECTED_GENE_FIELD, 'clinvar', 'family_carriers', 'carriers']
+            if field in query.query.annotations
+        }
+
         results = self.cross_join(
             query=primary_q, alias='primary', join_query=secondary_q, join_alias='secondary',
-            select_fields=select_fields, select_values={
-                **self.annotation_values,
-            }, conditional_selects=[self._conditional_selected_transcript_values, self._genotype_override_values],
+            conditional_selects=[
+                self._conditional_selected_transcript_values, self._genotype_override_values, conditional_fields,
+            ],
         )
         return results.filter(
             **{primary_gene_field: F(secondary_gene_field)}
