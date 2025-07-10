@@ -5,7 +5,7 @@ from django.db.models import options, ForeignKey, OneToOneField, Func, CASCADE, 
 
 from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocksDB, Join
 from clickhouse_search.backend.fields import Enum8Field, NestedField, UInt64FieldDeltaCodecField, NamedTupleField
-from clickhouse_search.backend.functions import ArrayDistinct, ArrayFlatten, NullableArrayMin, NullableArrayMax
+from clickhouse_search.backend.functions import ArrayDistinct, ArrayFlatten, ArrayMin, ArrayMax
 from clickhouse_search.managers import EntriesManager, AnnotationsQuerySet
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample
@@ -406,9 +406,9 @@ class BaseAnnotationsGcnv(BaseAnnotationsSvGcnv):
     SEQR_POPULATIONS = []
     SV_TYPE_FILTER_PREFIX = 'gCNV_'
     GENOTYPE_OVERRIDE_FIELDS = {
-        'pos': ('start', NullableArrayMin),
-        'end': ('end', NullableArrayMax),
-        'numExon': ('numExon', NullableArrayMax),
+        'pos': ('start', ArrayMin),
+        'end': ('end', ArrayMax),
+        'numExon': ('numExon', ArrayMax),
         'geneIds': ('geneIds', lambda value, **kwargs: ArrayDistinct(ArrayFlatten(value), **kwargs)),
     }
 

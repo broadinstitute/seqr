@@ -38,24 +38,20 @@ class ArrayMap(Func):
     template = "%(function)s(x -> %(mapped_expression)s, %(expressions)s)"
 
 
+class ArrayMax(Func):
+    function = 'arrayMax'
+
+
+class ArrayMin(Func):
+    function = 'arrayMin'
+
+
 class ArraySort(Func):
     function = 'arraySort'
 
 
 class ArraySymmetricDifference(Func):
     function = 'arraySymmetricDifference'
-
-
-class NullableArrayAgg(Func):
-    template = 'if(arrayExists(x -> isNull(x), %(expressions)s), null, %(function)s(%(expressions)s))'
-
-
-class NullableArrayMax(NullableArrayAgg):
-    function = 'arrayMax'
-
-
-class NullableArrayMin(NullableArrayAgg):
-    function = 'arrayMin'
 
 
 class GroupArray(Aggregate):
@@ -115,10 +111,6 @@ class ArrayNotEmptyTransform(lookups.Transform):
     lookup_name = "not_empty"
     function = "notEmpty"
     output_field = BooleanField()
-
-
-class Coalesce(Func):
-    function = 'coalesce'
 
 
 class DictGet(Func):

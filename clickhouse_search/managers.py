@@ -9,8 +9,7 @@ from django.db.models.sql.constants import INNER
 from clickhouse_search.backend.fields import NestedField, NamedTupleField
 from clickhouse_search.backend.functions import Array, ArrayConcat, ArrayDistinct, ArrayFilter, ArrayFold, \
     ArrayIntersect, ArrayJoin, ArrayMap, ArraySort, ArraySymmetricDifference, CrossJoin, GroupArray, GroupArrayArray, \
-    GroupArrayIntersect, DictGet, If, MapLookup, NullIf, Plus, SubqueryJoin, SubqueryTable, Tuple, TupleConcat, Coalesce, \
-    ArrayFlatten
+    GroupArrayIntersect, DictGet, If, MapLookup, NullIf, Plus, SubqueryJoin, SubqueryTable, Tuple, TupleConcat
 from seqr.models import Sample
 from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFECTED, UNAFFECTED, MALE_SEXES, \
     X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, SCREEN_KEY, UTR_ANNOTATOR_KEY, \
@@ -207,15 +206,11 @@ class AnnotationsQuerySet(QuerySet):
             if field in override_field_map else (f'ifNull(x.{index_map[field]}, 0)' if field == 'numAlt' else f'x.{index_map[field]}')
             for (field, _) in query.query.annotations['genotypes'].output_field.base_fields
         ]
-        genotype_override_expressions = [
-            (field.db_column or field.name, F(field.name)) for field in query.model._meta.local_fields
-            if (field.db_column or field.name) in genotype_override_fields
-        ]
 
         return {
             'genotypes': ArrayMap('genotypes', mapped_expression=f"tuple({', '.join(genotype_fields)})"),
             'transcripts': F(query.GENOTYPE_GENE_CONSEQUENCE_FIELD),
-            **{col: Coalesce(f'sample_{col}', expr) for col, expr in genotype_override_expressions},
+            **{col: F(f'sample_{col}') for col in genotype_override_fields if col != 'geneIds'},
         }
 
     def search_compound_hets(self, primary_q, secondary_q):
@@ -862,8 +857,7 @@ class EntriesManager(Manager):
             entries = entries.values(*fields).annotate(
                 familyGuids=ArraySort(ArrayDistinct(GroupArray('family_guid'))),
                 genotypes=GroupArrayArray(self._genotype_expression(sample_data)),
-                # Use ArrayFlatten->GroupArray instead of GroupArrayArray to prevent filtering out null values
-                **{col: ArrayFlatten(GroupArray(col)) for col in genotype_override_annotations}
+                **{col: GroupArrayArray(col) for col in genotype_override_annotations}
             )
             if carriers_expression:
                 map_field = models.MapField(models.StringField(), models.ArrayField(models.StringField()))
