@@ -657,23 +657,21 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         sv_callset_filter = {'sv_callset': {'af': 0.05}}
         # seqr af filter is ignored for SNV_INDEL
         self._assert_expected_search(
-            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
-            # [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
+            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
             freqs={'callset': {'af': 0.2},  **sv_callset_filter},
         )
 
         self._assert_expected_search(
-            [MULTI_FAMILY_VARIANT, VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
-            # [MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
+            [MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
             freqs={'callset': {'ac': 6}, **sv_callset_filter},
         )
 
         self._assert_expected_search(
-            [MULTI_FAMILY_VARIANT, VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], freqs={'callset': {'hh': 1}},
+            [MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], freqs={'callset': {'hh': 1}},
         )
 
         self._assert_expected_search(
-            [MULTI_FAMILY_VARIANT, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], freqs={'callset': {'ac': 6, 'hh': 0}},
+            [MULTI_FAMILY_VARIANT, GCNV_VARIANT3, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], freqs={'callset': {'ac': 6, 'hh': 0}, 'sv_callset': {'ac': 50}},
         )
 
         self._set_sv_family_search()
@@ -683,11 +681,11 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 
         self._reset_search_families()
         self._assert_expected_search(
-            [VARIANT1, VARIANT2, VARIANT4, MITO_VARIANT1, MITO_VARIANT2], freqs={'gnomad_genomes': {'af': 0.05}, 'gnomad_mito': {'af': 0.05}},
+            [VARIANT1, VARIANT2, VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2], freqs={'gnomad_genomes': {'af': 0.05}, 'gnomad_mito': {'af': 0.05}},
         )
 
         self._assert_expected_search(
-            [VARIANT2, VARIANT4, MITO_VARIANT1, MITO_VARIANT2], freqs={'gnomad_genomes': {'af': 0.05, 'hh': 1}, 'gnomad_mito': {'af': 0.05}},
+            [VARIANT2, VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2], freqs={'gnomad_genomes': {'af': 0.05, 'hh': 1}, 'gnomad_mito': {'af': 0.05}},
         )
 
         self._set_sv_family_search()
@@ -697,12 +695,12 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 
         self._reset_search_families()
         self._assert_expected_search(
-            [VARIANT4, MITO_VARIANT1, MITO_VARIANT2],
+            [VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2],
             freqs={'callset': {'ac': 6}, 'gnomad_genomes': {'ac': 50}, 'gnomad_mito': {'ac': 10}},
         )
 
         self._assert_expected_search(
-            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
+            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
             freqs={'callset': {}, 'gnomad_genomes': {'af': None}},
         )
 

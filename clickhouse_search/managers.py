@@ -586,7 +586,7 @@ class EntriesManager(Manager):
 
         is_sv_class = 'cn' in self.call_fields
         callset_filter_field = 'sv_callset' if is_sv_class else 'callset'
-        if (freqs or {}).get(callset_filter_field):
+        if (freqs or {}).get(callset_filter_field) and self.annotations_model.SEQR_POPULATIONS:
             entries = self._filter_seqr_frequency(entries, **freqs[callset_filter_field])
 
         gnomad_filter = (freqs or {}).get('gnomad_genomes') or {}
