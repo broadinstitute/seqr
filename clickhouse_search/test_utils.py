@@ -213,6 +213,28 @@ GCNV_MULTI_FAMILY_VARIANT2['transcripts'].update({
     'ENSG00000281348': [{'geneId': 'ENSG00000281348', 'majorConsequence': 'LOF'}],
     'ENSG00000280789': [{'geneId': 'ENSG00000280789', 'majorConsequence': 'LOF'}],
 })
+MULTI_PROJECT_GCNV_VARIANT3 = {
+    **GCNV_VARIANT3,
+    'familyGuids': GCNV_VARIANT3['familyGuids'] + ['F000014_14'],
+    'genotypes': {
+        **GCNV_VARIANT3['genotypes'],
+        'I000018_na21234': {
+            'sampleId': 'NA21234', 'sampleType': 'WES', 'individualGuid': 'I000018_na21234', 'familyGuid': 'F000014_14',
+            'numAlt': 2, 'cn': 4, 'qs': 27, 'defragged': True, 'start': None, 'end': None, 'numExon': None,
+            'geneIds': None, 'newCall': True, 'prevCall': False, 'prevOverlap': False, 'filters': [],
+        },
+        'I000019_na21987': {
+            'sampleId': 'NA21987', 'sampleType': 'WES', 'individualGuid': 'I000019_na21987', 'familyGuid': 'F000014_14',
+            'numAlt': 1, 'cn': 3, 'qs': 51, 'defragged': False, 'start': None, 'end': None, 'numExon': None,
+            'geneIds': None, 'newCall': False, 'prevCall': False, 'prevOverlap': True, 'filters': [],
+        },
+        'I000021_na21654': {
+            'sampleId': 'NA21654', 'sampleType': 'WES', 'individualGuid': 'I000021_na21654', 'familyGuid': 'F000014_14', 'numAlt': 0,
+            'cn': None, 'qs': None, 'defragged': None, 'start': None, 'end': None, 'numExon': None, 'geneIds': None,
+            'newCall': None, 'prevCall': None, 'prevOverlap': None, 'filters': [],
+        },
+    },
+}
 
 CACHED_CONSEQUENCES_BY_KEY = {1: [], 2: [{
     'alphamissensePathogenicity': 0.99779,
