@@ -1054,11 +1054,14 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         self._add_sample_type_samples('WES', individual__family__guid='F000014_14')
         self.results_model.families.set(Family.objects.filter(guid__in=['F000002_2', 'F000014_14']))
         self._assert_expected_search(
-            [VARIANT2, [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], MULTI_PROJECT_GCNV_VARIANT3, [GCNV_VARIANT3, GCNV_VARIANT4]],
+            [MULTI_DATA_TYPE_COMP_HET_VARIANT2, [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], MULTI_PROJECT_GCNV_VARIANT3, [GCNV_VARIANT3, GCNV_VARIANT4]],
             inheritance_mode='recessive',
             annotations={**annotations_1, **gcnv_annotations_1}, annotations_secondary={**annotations_2, **gcnv_annotations_2},
-            locus={'rawItems': 'ENSG00000277258,ENSG00000275023'},
-            # intervals=[['1', 38717636, 38724781], ['17', 38717636, 38724781]],
+            locus={'rawItems': 'ENSG00000277258,ENSG00000275023'}, cached_variant_fields=[
+                {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][3]}, [
+                {'selectedGeneId': 'ENSG00000277258', 'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][3]},
+                {'selectedGeneId': 'ENSG00000277258', 'selectedTranscript': {'geneId': 'ENSG00000277258', 'majorConsequence': 'LOF'}},
+            ], {}, [{'selectedGeneId': 'ENSG00000275023'}, {'selectedGeneId': 'ENSG00000275023'}]],
         )
 
         # Search works with a different number of samples within the family
@@ -1069,8 +1072,11 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         Sample.objects.filter(guid='S000146_hg00732').update(is_active=False)
         self._assert_expected_search(
             [[MULTI_DATA_TYPE_COMP_HET_VARIANT2, missing_gt_gcnv_variant]],
-            inheritance_mode='compound_het', pathogenicity=pathogenicity,
-            annotations=gcnv_annotations_2, annotations_secondary=selected_transcript_annotations,
+            inheritance_mode='compound_het', pathogenicity=pathogenicity, locus=None,
+            annotations=gcnv_annotations_2, annotations_secondary=selected_transcript_annotations, cached_variant_fields=[[
+                {'selectedGeneId': 'ENSG00000277258', 'selectedTranscript': None},
+                {'selectedGeneId': 'ENSG00000277258', 'selectedTranscript': {'geneId': 'ENSG00000277258', 'majorConsequence': 'LOF'}},
+            ]],
         )
 
     def test_in_silico_filter(self):
