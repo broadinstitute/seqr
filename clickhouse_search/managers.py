@@ -318,7 +318,7 @@ class AnnotationsQuerySet(QuerySet):
         except ValueError:
             return Q(**{score_column: value})
 
-    def _filter_annotations(self, results, annotations=None, pathogenicity=None, exclude=None, gene_ids=None, **kwargs):
+    def _filter_annotations(self, results, annotations=None, pathogenicity=None, exclude=None, gene_ids=None, intervals=None, exclude_intervals=False, **kwargs):
         transcript_field = self.transcript_field
         if self.model.GENOTYPE_OVERRIDE_FIELDS:
             results = results.annotate(**{
@@ -327,13 +327,23 @@ class AnnotationsQuerySet(QuerySet):
                 }]),
             })
             transcript_field = self.GENOTYPE_GENE_CONSEQUENCE_FIELD
+        interval_qs = [self._interval_query(*interval) for interval in intervals or []]
         if gene_ids:
             results = results.annotate(**{
                 self.GENE_CONSEQUENCE_FIELD: ArrayFilter(transcript_field, conditions=[{
                     'geneId': (gene_ids, 'has({value}, {field})'),
                 }]),
             })
-            results = results.filter(gene_consequences__not_empty=True)
+            gene_q = Q(gene_consequences__not_empty=True)
+            for interval_q in interval_qs:
+                gene_q |= interval_q
+            results = results.filter(gene_q)
+        elif interval_qs and hasattr(self.model, 'end'):
+            interval_q = interval_qs[0]
+            for q in interval_qs[1:]:
+                interval_q |= q
+            filter_func = results.exclude if exclude_intervals else results.filter
+            results = filter_func(interval_q)
 
         filter_qs, transcript_filters = self._parse_annotation_filters(annotations, pathogenicity) if (annotations or pathogenicity) else ([], [])
 
@@ -367,6 +377,15 @@ class AnnotationsQuerySet(QuerySet):
 
         return results.filter(filter_q)
 
+    def _interval_query(self, chrom, start, end):
+        q = Q(xpos__range=(get_xpos(chrom, start), get_xpos(chrom, end)))
+        if hasattr(self.model, 'endChrom'):
+            q |= Q(endChrom__isnull=True, chrom=chrom, end__range=(start, end))
+            q |= Q(endChrom=chrom, end__range=(start, end))
+        elif hasattr(self.model, 'end'):
+            q |= Q(chrom=chrom, end__range=(start, end))
+            q |= Q(chrom=chrom, pos__lte=start, end__gte=end)
+        return q
 
     TRANSCRIPT_FIELD_FILTERS = {
         UTR_ANNOTATOR_KEY: ('fiveutrConsequence', 'hasAny({value}, [{field}])'),
@@ -976,11 +995,17 @@ class EntriesManager(Manager):
             # while the full variant_id filter is applied to the annotation table after the join
             intervals = [(chrom, pos, pos) for chrom, pos, _, _ in variant_ids]
 
-        if gene_intervals:
-            if 'cn' in self.call_fields:
-                # Return SVs annotated in a gene even if they fall outside the gene interval
-                gene_chromosomes = {chrom for chrom, _, _ in gene_intervals}
-                gene_intervals = [(chrom, MIN_POS, MAX_POS) for chrom in gene_chromosomes]
+        if not (gene_intervals or intervals):
+            return entries
+
+        if 'cn' in self.call_fields:
+            # SV interval filtering occurs after joining on annotations to correctly incorporate end position
+            if exclude_intervals:
+                intervals = None
+            else:
+                chromosomes = {chrom for chrom, _, _ in (gene_intervals or []) + (intervals or [])}
+                intervals = [(chrom, MIN_POS, MAX_POS) for chrom in chromosomes]
+        elif gene_intervals:
             intervals = (intervals or []) + gene_intervals
 
         if intervals:

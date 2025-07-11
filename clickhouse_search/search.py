@@ -70,7 +70,7 @@ def _get_multi_data_type_comp_het_results_queryset(genome_version, sample_data_b
     if annotations_secondary:
         annotations = search['annotations']
         comp_het_search['annotations'] = {
-            **annotations
+            **annotations,
             **{k: v + annotations[k] if k in annotations else v for k, v in annotations_secondary.items()},
         }
 
@@ -193,6 +193,7 @@ def format_clickhouse_results(results, genome_version, **kwargs):
 def _format_variant(variant, transcripts_by_key):
     formatted_variant = {**variant}
     selected_gene_id = formatted_variant.pop(SELECTED_GENE_FIELD, None)
+    selected_transcript = formatted_variant.pop(SELECTED_TRANSCRIPT_FIELD, None)
     if 'transcripts' in variant:
         return formatted_variant
 
@@ -200,7 +201,6 @@ def _format_variant(variant, transcripts_by_key):
     formatted_variant['transcripts'] = transcripts
     # pop sortedTranscriptConsequences from the formatted result and not the original result to ensure the full value is cached properly
     sorted_minimal_transcripts = formatted_variant.pop(TRANSCRIPT_CONSEQUENCES_FIELD)
-    selected_transcript = formatted_variant.pop(SELECTED_TRANSCRIPT_FIELD, None)
     main_transcript_id = None
     selected_main_transcript_id = None
     if sorted_minimal_transcripts:

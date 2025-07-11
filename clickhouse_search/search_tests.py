@@ -511,7 +511,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 
         self._reset_search_families()
         self._assert_expected_search(
-            [VARIANT1, VARIANT2, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], exclude={
+            [VARIANT1, VARIANT2, GCNV_VARIANT1, GCNV_VARIANT2, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], exclude={
                 'rawItems': ','.join([LOCATION_SEARCH['locus']['rawItems'], sv_locus['rawItems']])
             }, locus=None,
         )
@@ -523,9 +523,9 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 
         self._reset_search_families()
         self._assert_expected_search(
-            [SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT],
+            [SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT, VARIANT4],
             locus={'rawItems': f'{GENE_IDS[1]}\n1:91500851-91525764'}, exclude=None, cached_variant_fields=[
-                {'selectedGeneId': 'ENSG00000177000'},
+                {'selectedGeneId': 'ENSG00000177000'}, {'selectedGeneId': None},
             ],
         )
 
@@ -877,64 +877,73 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             annotations=annotations_2, annotations_secondary=annotations_1, cached_variant_fields=[comp_het_cached_fields],
         )
 
-#         gcnv_annotations_1 = {'structural': ['gCNV_DUP']}
-#         gcnv_annotations_2 = {'structural_consequence': ['LOF'], 'structural': []}
-#
-#         self._assert_expected_search(
-#             [[GCNV_VARIANT3, GCNV_VARIANT4]], omit_data_type='SNV_INDEL', inheritance_mode='compound_het',
-#             annotations=gcnv_annotations_1, annotations_secondary=gcnv_annotations_2,
-#         )
-#
-#         self._assert_expected_search(
-#             [GCNV_VARIANT3, [GCNV_VARIANT3, GCNV_VARIANT4]], omit_data_type='SNV_INDEL', inheritance_mode='recessive',
-#             annotations=gcnv_annotations_2, annotations_secondary=gcnv_annotations_1,
-#         )
-#
-#         # Do not return pairs where annotations match in a non-paired gene
-#         gcnv_annotations_no_pair = {'structural_consequence': ['COPY_GAIN']}
-#         self._assert_expected_search(
-#             [], omit_data_type='SNV_INDEL', inheritance_mode='compound_het',
-#             annotations=gcnv_annotations_1, annotations_secondary=gcnv_annotations_no_pair,
-#         )
-#
-#         self._assert_expected_search(
-#             [], omit_data_type='SNV_INDEL', inheritance_mode='compound_het',
-#             annotations={**gcnv_annotations_1, **gcnv_annotations_no_pair},
-#         )
-#
-#         self._assert_expected_search(
-#             [[MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4]], inheritance_mode='compound_het',
-#             annotations=annotations_1, annotations_secondary=gcnv_annotations_2,
-#         )
-#
-#         self._assert_expected_search(
-#             [VARIANT2, [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], [VARIANT3, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4], GCNV_VARIANT3, [GCNV_VARIANT3, GCNV_VARIANT4]],
-#             inheritance_mode='recessive',
-#             annotations={**annotations_1, **gcnv_annotations_1}, annotations_secondary={**annotations_2, **gcnv_annotations_2},
-#         )
-#
-#         self._assert_expected_search(
-#             [VARIANT2, [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], MULTI_PROJECT_GCNV_VARIANT3, [GCNV_VARIANT3, GCNV_VARIANT4]],
-#             inheritance_mode='recessive',
-#             annotations={**annotations_1, **gcnv_annotations_1}, annotations_secondary={**annotations_2, **gcnv_annotations_2},
-#             intervals=[['1', 38717636, 38724781], ['17', 38717636, 38724781]],
-#             sample_data={**EXPECTED_SAMPLE_DATA, 'SV_WES': EXPECTED_SAMPLE_DATA['SV_WES'] + SECOND_PROJECT_SV_WES_SAMPLE_DATA},
-#         )
-#
-#         self._assert_expected_search(
-#             [MULTI_DATA_TYPE_COMP_HET_VARIANT2, [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], [GCNV_VARIANT3, GCNV_VARIANT4]],
-#             inheritance_mode='recessive',
-#             annotations={**annotations_1, 'structural': ['gCNV_DEL'], 'structural_consequence': ['INTRONIC']},
-#             annotations_secondary={**annotations_2, **gcnv_annotations_1},
-#             gene_ids=['ENSG00000277258', 'ENSG00000275023'], intervals=[['1', 38717636, 38724781], ['17', 38717636, 38724781]],
-#         )
-#
-#         self._assert_expected_search(
-#             [MULTI_DATA_TYPE_COMP_HET_VARIANT2, [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4]],
-#             inheritance_mode='recessive', annotations={**annotations_1, 'structural': [], 'structural_consequence': []},
-#             annotations_secondary=gcnv_annotations_2,
-#             gene_ids=['ENSG00000277258', 'ENSG00000275023'], intervals=[['1', 38717636, 38724781], ['17', 38717636, 38724781]],
-#         )
+        gcnv_annotations_1 = {'structural': ['gCNV_DUP']}
+        gcnv_annotations_2 = {'structural_consequence': ['LOF'], 'structural': []}
+
+        self._assert_expected_search(
+            [[GCNV_VARIANT3, GCNV_VARIANT4]], omit_data_type='SNV_INDEL', inheritance_mode='compound_het',
+            annotations=gcnv_annotations_1, annotations_secondary=gcnv_annotations_2,
+            cached_variant_fields=[
+                [{'selectedGeneId': 'ENSG00000275023'}, {'selectedGeneId': 'ENSG00000275023'}],
+            ],
+        )
+
+        self._assert_expected_search(
+            [GCNV_VARIANT3, [GCNV_VARIANT3, GCNV_VARIANT4]], omit_data_type='SNV_INDEL', inheritance_mode='recessive',
+            annotations=gcnv_annotations_2, annotations_secondary=gcnv_annotations_1,
+            cached_variant_fields=[
+                {}, [{'selectedGeneId': 'ENSG00000275023'}, {'selectedGeneId': 'ENSG00000275023'}],
+            ],
+        )
+
+        # Do not return pairs where annotations match in a non-paired gene
+        gcnv_annotations_no_pair = {'structural_consequence': ['COPY_GAIN']}
+        self._assert_expected_search(
+            [], omit_data_type='SNV_INDEL', inheritance_mode='compound_het',
+            annotations=gcnv_annotations_1, annotations_secondary=gcnv_annotations_no_pair,
+        )
+
+        self._assert_expected_search(
+            [], omit_data_type='SNV_INDEL', inheritance_mode='compound_het',
+            annotations={**gcnv_annotations_1, **gcnv_annotations_no_pair},
+        )
+
+        self._assert_expected_search(
+            [[MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4]], inheritance_mode='compound_het',
+            annotations=annotations_1, annotations_secondary=gcnv_annotations_2, cached_variant_fields=[[
+                {'selectedGeneId': 'ENSG00000277258', 'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][3]},
+                {'selectedGeneId': 'ENSG00000277258', 'selectedTranscript': {'geneId': 'ENSG00000277258', 'majorConsequence': 'LOF'}},
+            ]],
+        )
+
+        self._assert_expected_search(
+            [VARIANT2, [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], [VARIANT3, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4], GCNV_VARIANT3, [GCNV_VARIANT3, GCNV_VARIANT4]],
+            inheritance_mode='recessive',
+            annotations={**annotations_1, **gcnv_annotations_1}, annotations_secondary={**annotations_2, **gcnv_annotations_2}, cached_variant_fields=[
+                {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][0]}, [
+                {'selectedGeneId': 'ENSG00000277258', 'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][3]},
+                {'selectedGeneId': 'ENSG00000277258', 'selectedTranscript': {'geneId': 'ENSG00000277258', 'majorConsequence': 'LOF'}},
+            ], [
+                {'selectedGeneId':  'ENSG00000097046', 'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[3][0]},
+                {'selectedGeneId':  'ENSG00000097046', 'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[4][1]},
+            ], {}, [{'selectedGeneId': 'ENSG00000275023'}, {'selectedGeneId': 'ENSG00000275023'}]],
+        )
+
+        self._assert_expected_search(
+            [VARIANT2, [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], [GCNV_VARIANT3, GCNV_VARIANT4]],
+            inheritance_mode='recessive',
+            annotations={**annotations_1, 'structural': ['gCNV_DEL'], 'structural_consequence': ['INTRONIC']},
+            annotations_secondary={**annotations_2, **gcnv_annotations_1},
+            locus={'rawItems': 'ENSG00000275023, 1:38717636-38724781'},
+            # gene_ids=['ENSG00000277258', 'ENSG00000275023'], intervals=[['1', 38717636, 38724781], ['17', 38717636, 38724781]],
+        )
+
+        self._assert_expected_search(
+            [MULTI_DATA_TYPE_COMP_HET_VARIANT2, [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4]],
+            inheritance_mode='recessive', annotations={**annotations_1, 'structural': [], 'structural_consequence': []},
+            annotations_secondary=gcnv_annotations_2,
+            gene_ids=['ENSG00000277258', 'ENSG00000275023'], intervals=[['1', 38717636, 38724781], ['17', 38717636, 38724781]],
+        )
 
         sv_annotations_1 = {'structural': ['INS', 'LOF']}
         sv_annotations_2 = {'structural': ['DEL', 'gCNV_DUP'], 'structural_consequence': ['INTRONIC']}
@@ -967,42 +976,30 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             ],
         )
 
-#         self._assert_expected_search(
-#             [[MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], [GCNV_VARIANT3, GCNV_VARIANT4]],
-#             inheritance_mode='compound_het', pathogenicity=pathogenicity,
-#             annotations=gcnv_annotations_2, annotations_secondary=gcnv_annotations_1,
-#         )
-#
-#         self._assert_expected_search(
-#             [VARIANT2, [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], GCNV_VARIANT3, [GCNV_VARIANT3, GCNV_VARIANT4]],
-#             inheritance_mode='recessive', pathogenicity=pathogenicity,
-#             annotations=gcnv_annotations_2, annotations_secondary=gcnv_annotations_1,
-#         )
-#
+        self._assert_expected_search(
+            [[MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], [GCNV_VARIANT3, GCNV_VARIANT4]],
+            inheritance_mode='compound_het', pathogenicity=pathogenicity,
+            annotations=gcnv_annotations_2, annotations_secondary=gcnv_annotations_1,
+        )
+
+        self._assert_expected_search(
+            [VARIANT2, [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], GCNV_VARIANT3, [GCNV_VARIANT3, GCNV_VARIANT4]],
+            inheritance_mode='recessive', pathogenicity=pathogenicity,
+            annotations=gcnv_annotations_2, annotations_secondary=gcnv_annotations_1,
+        )
+
         selected_transcript_annotations = {'other': ['non_coding_transcript_exon_variant']}
-#         self._assert_expected_search(
-#             [VARIANT2, [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], GCNV_VARIANT3],
-#             inheritance_mode='recessive', pathogenicity=pathogenicity,
-#             annotations=gcnv_annotations_2, annotations_secondary=selected_transcript_annotations,
-#         )
-#
-#         # Search works with a different number of samples within the family
-#         missing_gt_gcnv_variant = {
-#             **GCNV_VARIANT4, 'genotypes': {k: v for k, v in GCNV_VARIANT4['genotypes'].items() if k != 'I000005_hg00732'}
-#         }
-#         self._assert_expected_search(
-#             [[MULTI_DATA_TYPE_COMP_HET_VARIANT2, missing_gt_gcnv_variant]],
-#             inheritance_mode='compound_het', pathogenicity=pathogenicity,
-#             annotations=gcnv_annotations_2, annotations_secondary=selected_transcript_annotations,
-#             sample_data={**EXPECTED_SAMPLE_DATA, 'SV_WES': SV_WES_SAMPLE_DATA['SV_WES'][:1] + SV_WES_SAMPLE_DATA['SV_WES'][2:]}
-#
-#         )
-#
-#         # Do not return pairs where annotations match in a non-paired gene
-#         self._assert_expected_search(
-#             [GCNV_VARIANT3], inheritance_mode='recessive',
-#             annotations=gcnv_annotations_2, annotations_secondary=selected_transcript_annotations,
-#         )
+        self._assert_expected_search(
+            [VARIANT2, [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], GCNV_VARIANT3],
+            inheritance_mode='recessive', pathogenicity=pathogenicity,
+            annotations=gcnv_annotations_2, annotations_secondary=selected_transcript_annotations,
+        )
+
+        # Do not return pairs where annotations match in a non-paired gene
+        self._assert_expected_search(
+            [GCNV_VARIANT3], inheritance_mode='recessive',
+            annotations=gcnv_annotations_2, annotations_secondary=selected_transcript_annotations,
+        )
 
         screen_annotations = {'SCREEN': ['CTCF-only']}
         self._assert_expected_search(
@@ -1037,6 +1034,27 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
                     {'selectedGeneId': 'ENSG00000097046', 'selectedTranscript': None},
                 ], {},
             ],
+        )
+
+        self._add_sample_type_samples('WES', individual__family__guid='F000014_14')
+        self.results_model.families.set(Family.objects.filter(guid__in=['F000002_2', 'F000014_14']))
+        self._assert_expected_search(
+            [VARIANT2, [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], MULTI_PROJECT_GCNV_VARIANT3, [GCNV_VARIANT3, GCNV_VARIANT4]],
+            inheritance_mode='recessive',
+            annotations={**annotations_1, **gcnv_annotations_1}, annotations_secondary={**annotations_2, **gcnv_annotations_2},
+            intervals=[['1', 38717636, 38724781], ['17', 38717636, 38724781]],
+        )
+
+        # Search works with a different number of samples within the family
+        self._reset_search_families()
+        missing_gt_gcnv_variant = {
+            **GCNV_VARIANT4, 'genotypes': {k: v for k, v in GCNV_VARIANT4['genotypes'].items() if k != 'I000005_hg00732'}
+        }
+        Sample.objects.filter(guid='S000146_hg00732').update(is_active=False)
+        self._assert_expected_search(
+            [[MULTI_DATA_TYPE_COMP_HET_VARIANT2, missing_gt_gcnv_variant]],
+            inheritance_mode='compound_het', pathogenicity=pathogenicity,
+            annotations=gcnv_annotations_2, annotations_secondary=selected_transcript_annotations,
         )
 
     def test_in_silico_filter(self):
