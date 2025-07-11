@@ -47,7 +47,9 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
             result_q = _get_data_type_comp_het_results_queryset(entry_cls, annotations_cls, search, sample_data)
             results += [list(result[1:]) for result in result_q[:MAX_VARIANTS + 1]]
 
-    if has_comp_het and Sample.DATASET_TYPE_VARIANT_CALLS in sample_data_by_dataset_type:
+    if has_comp_het and Sample.DATASET_TYPE_VARIANT_CALLS in sample_data_by_dataset_type and any(
+        dataset_type.startswith(Sample.DATASET_TYPE_SV_CALLS) for dataset_type in sample_data_by_dataset_type
+    ):
         results += _get_multi_data_type_comp_het_results_queryset(genome_version, sample_data_by_dataset_type, search)
 
     cache_results = get_clickhouse_cache_results(results, sort, family_guid)

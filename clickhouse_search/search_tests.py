@@ -881,7 +881,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         gcnv_annotations_2 = {'structural_consequence': ['LOF'], 'structural': []}
 
         self._assert_expected_search(
-            [[GCNV_VARIANT3, GCNV_VARIANT4]], omit_data_type='SNV_INDEL', inheritance_mode='compound_het',
+            [[GCNV_VARIANT3, GCNV_VARIANT4]], inheritance_mode='compound_het',
             annotations=gcnv_annotations_1, annotations_secondary=gcnv_annotations_2,
             cached_variant_fields=[
                 [{'selectedGeneId': 'ENSG00000275023'}, {'selectedGeneId': 'ENSG00000275023'}],
@@ -889,7 +889,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         )
 
         self._assert_expected_search(
-            [GCNV_VARIANT3, [GCNV_VARIANT3, GCNV_VARIANT4]], omit_data_type='SNV_INDEL', inheritance_mode='recessive',
+            [GCNV_VARIANT3, [GCNV_VARIANT3, GCNV_VARIANT4]], inheritance_mode='recessive',
             annotations=gcnv_annotations_2, annotations_secondary=gcnv_annotations_1,
             cached_variant_fields=[
                 {}, [{'selectedGeneId': 'ENSG00000275023'}, {'selectedGeneId': 'ENSG00000275023'}],
@@ -899,12 +899,12 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         # Do not return pairs where annotations match in a non-paired gene
         gcnv_annotations_no_pair = {'structural_consequence': ['COPY_GAIN']}
         self._assert_expected_search(
-            [], omit_data_type='SNV_INDEL', inheritance_mode='compound_het',
+            [], inheritance_mode='compound_het',
             annotations=gcnv_annotations_1, annotations_secondary=gcnv_annotations_no_pair,
         )
 
         self._assert_expected_search(
-            [], omit_data_type='SNV_INDEL', inheritance_mode='compound_het',
+            [], inheritance_mode='compound_het',
             annotations={**gcnv_annotations_1, **gcnv_annotations_no_pair},
         )
 
@@ -930,19 +930,25 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         )
 
         self._assert_expected_search(
-            [VARIANT2, [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], [GCNV_VARIANT3, GCNV_VARIANT4]],
+            [MULTI_DATA_TYPE_COMP_HET_VARIANT2, [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], [GCNV_VARIANT3, GCNV_VARIANT4]],
             inheritance_mode='recessive',
             annotations={**annotations_1, 'structural': ['gCNV_DEL'], 'structural_consequence': ['INTRONIC']},
             annotations_secondary={**annotations_2, **gcnv_annotations_1},
-            locus={'rawItems': 'ENSG00000275023, 1:38717636-38724781'},
-            # gene_ids=['ENSG00000277258', 'ENSG00000275023'], intervals=[['1', 38717636, 38724781], ['17', 38717636, 38724781]],
+            locus={'rawItems': 'ENSG00000277258,ENSG00000275023'}, cached_variant_fields=[
+                {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][3]}, [
+                {'selectedGeneId': 'ENSG00000277258', 'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][3]},
+                {'selectedGeneId': 'ENSG00000277258', 'selectedTranscript': None},
+            ], [{'selectedGeneId': 'ENSG00000275023'}, {'selectedGeneId': 'ENSG00000275023'}]],
         )
 
         self._assert_expected_search(
             [MULTI_DATA_TYPE_COMP_HET_VARIANT2, [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4]],
             inheritance_mode='recessive', annotations={**annotations_1, 'structural': [], 'structural_consequence': []},
-            annotations_secondary=gcnv_annotations_2,
-            gene_ids=['ENSG00000277258', 'ENSG00000275023'], intervals=[['1', 38717636, 38724781], ['17', 38717636, 38724781]],
+            annotations_secondary=gcnv_annotations_2, cached_variant_fields=[
+                {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][3]}, [
+                {'selectedGeneId': 'ENSG00000277258', 'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][3]},
+                {'selectedGeneId': 'ENSG00000277258', 'selectedTranscript': {'geneId': 'ENSG00000277258', 'majorConsequence': 'LOF'}},
+            ]],
         )
 
         sv_annotations_1 = {'structural': ['INS', 'LOF']}
@@ -950,7 +956,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 
         self._set_sv_family_search()
         self._assert_expected_search(
-            [[SV_VARIANT1, SV_VARIANT2]], inheritance_mode='compound_het',
+            [[SV_VARIANT1, SV_VARIANT2]], inheritance_mode='compound_het', locus=None,
             annotations=sv_annotations_1, annotations_secondary=sv_annotations_2, inheritance_filter={'affected': {
                 'I000019_na21987': 'N',
             }}, cached_variant_fields=[
