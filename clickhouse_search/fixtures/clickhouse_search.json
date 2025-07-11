@@ -1115,6 +1115,22 @@
       "phenotype_map_method": "3"
   }
 }, {
+  "model": "reference_data.omim",
+  "pk": 102,
+  "fields": {
+      "gene": 70,
+      "mim_number": 147574,
+      "gene_description": "ISG15 ubiquitin-like modifier",
+      "comments": "",
+      "phenotype_inheritance": "Autosomal recessive",
+      "phenotype_mim_number": 616127,
+      "phenotype_description": "Immunodeficiency 38",
+      "chrom": "1",
+      "start": 11869,
+      "end": 14409,
+      "phenotype_map_method": "3"
+  }
+}, {
     "model": "reference_data.geneconstraint",
     "pk": 100,
     "fields": {
@@ -1133,6 +1149,18 @@
         "gene": 61,
         "mis_z": -0.7773,
         "mis_z_rank": 3,
+        "louef": 1.606,
+        "louef_rank": 0,
+        "pLI": 0.00090576,
+        "pLI_rank": 1
+    }
+}, {
+    "model": "reference_data.geneconstraint",
+    "pk": 102,
+    "fields": {
+        "gene": 70,
+        "mis_z": -0.7773,
+        "mis_z_rank": 2,
         "louef": 1.606,
         "louef_rank": 0,
         "pLI": 0.00090576,

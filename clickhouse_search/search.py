@@ -7,7 +7,7 @@ from django.db.models.functions import JSONObject
 from clickhouse_search.backend.fields import NamedTupleField
 from clickhouse_search.backend.functions import Array, ArrayFilter, ArrayIntersect, ArraySort, Tuple
 from clickhouse_search.models import ENTRY_CLASS_MAP, ANNOTATIONS_CLASS_MAP, TRANSCRIPTS_CLASS_MAP, BaseClinvar, \
-    BaseAnnotationsMitoSnvIndel, BaseAnnotationsGRCh37SnvIndel
+    BaseAnnotationsMitoSnvIndel, BaseAnnotationsGRCh37SnvIndel, BaseAnnotationsSvGcnv
 from reference_data.models import GeneConstraint, Omim
 from seqr.models import Sample, PhenotypePrioritization
 from seqr.utils.logging_utils import SeqrLogger
@@ -289,7 +289,13 @@ def _get_sort_gene_metadata(sort, results, family_guid):
 
     gene_ids = set()
     for result in results:
-        gene_ids.update([t['geneId'] for t in result.get(TRANSCRIPT_CONSEQUENCES_FIELD, [])])
+        if not isinstance(result, list):
+            result = [result]
+        for variant in result:
+            if variant.get(TRANSCRIPT_CONSEQUENCES_FIELD):
+                gene_ids.update([t['geneId'] for t in variant[TRANSCRIPT_CONSEQUENCES_FIELD]])
+            else:
+                gene_ids.update(variant.get('transcripts', {}).keys())
     return get_metadata(gene_ids, family_guid)
 
 
@@ -317,18 +323,18 @@ def _get_matched_transcript(x, field):
     return None
 
 
-def _main_transcript_consequence(x):
-    transcript = x[TRANSCRIPT_CONSEQUENCES_FIELD][0] if x.get(TRANSCRIPT_CONSEQUENCES_FIELD) else _get_matched_transcript(x, 'mainTranscriptId')
-    return CONSEQUENCE_RANK_LOOKUP[transcript['consequenceTerms'][0]] if transcript else MAX_SORT_RANK
-
-def _selected_transcript_consequence(x):
-    transcript = x.get(SELECTED_TRANSCRIPT_FIELD) or _get_matched_transcript(x, 'selectedMainTranscriptId')
-    return CONSEQUENCE_RANK_LOOKUP[transcript['consequenceTerms'][0]] if transcript else MAX_SORT_RANK
+def _consequence_sort(get_transcript, transcript_field, get_sv_rank):
+    def wrapped_sort(x):
+        if x.get('svType'):
+            return get_sv_rank(x)
+        transcript = get_transcript(x) or _get_matched_transcript(x, transcript_field)
+        return CONSEQUENCE_RANK_LOOKUP[transcript['consequenceTerms'][0]] if transcript else MAX_SORT_RANK
+    return wrapped_sort
 
 def _sv_size(x):
     if not x.get('end'):
         return -1
-    if x['endChrom']:
+    if x.get('endChrom'):
         # Sort position for chromosome spanning SVs
         return -50
     return x['pos'] - x['end']
@@ -339,6 +345,7 @@ CLINVAR_RANK_LOOKUP = {path: rank for rank, path in BaseClinvar.PATHOGENICITY_CH
 HGMD_RANK_LOOKUP = {class_: rank for rank, class_ in BaseAnnotationsGRCh37SnvIndel.HGMD_CLASSES}
 ABSENT_CLINVAR_SORT_OFFSET = 12.5
 CONSEQUENCE_RANK_LOOKUP = {csq: rank for rank, csq in BaseAnnotationsMitoSnvIndel.CONSEQUENCE_TERMS}
+SV_CONSEQUENCE_LOOKUP = {csq: rank for rank, csq in BaseAnnotationsSvGcnv.SV_CONSEQUENCE_RANKS}
 PREDICTION_SORTS = {'cadd', 'revel', 'splice_ai', 'eigen', 'mpc', 'primate_ai'}
 CLINVAR_SORT =  _subfield_sort(
     'clinvar', 'pathogenicity', rank_lookup=CLINVAR_RANK_LOOKUP, default=ABSENT_CLINVAR_SORT_OFFSET,
@@ -347,13 +354,24 @@ SORT_EXPRESSIONS = {
     'alphamissense': [
         lambda x: -max(t.get('alphamissensePathogenicity') or MIN_SORT_RANK for t in x[TRANSCRIPT_CONSEQUENCES_FIELD]) if x.get(TRANSCRIPT_CONSEQUENCES_FIELD) else MIN_SORT_RANK,
     ] + _subfield_sort(SELECTED_TRANSCRIPT_FIELD, 'alphamissensePathogenicity', reverse=True, default=MIN_SORT_RANK),
-    'callset_af': _subfield_sort('populations', 'seqr', 'ac'),
+    'callset_af': _subfield_sort('populations', ('seqr', 'sv_callset'), 'ac'),
     'family_guid': [lambda x: sorted(x['familyGuids'])[0]],
-    'gnomad': _subfield_sort('populations', ('gnomad_genomes', 'gnomad_mito'), 'af'),
+    'gnomad': _subfield_sort('populations', ('gnomad_genomes', 'gnomad_mito', 'gnomad_svs'), 'af'),
     'gnomad_exomes': _subfield_sort('populations', 'gnomad_exomes', 'af'),
     PATHOGENICTY_SORT_KEY: CLINVAR_SORT,
     PATHOGENICTY_HGMD_SORT_KEY: CLINVAR_SORT + _subfield_sort('hgmd', 'class', rank_lookup=HGMD_RANK_LOOKUP),
-    'protein_consequence': [_main_transcript_consequence, _selected_transcript_consequence],
+    'protein_consequence': [
+        _consequence_sort(
+            lambda x: (x.get(TRANSCRIPT_CONSEQUENCES_FIELD) or [None])[0],
+            'mainTranscriptId',
+            lambda x: 4.5,
+        ),
+        _consequence_sort(
+            lambda x: x.get(SELECTED_TRANSCRIPT_FIELD),
+            'selectedMainTranscriptId',
+            lambda x: min([SV_CONSEQUENCE_LOOKUP[csqs[0]['majorConsequence']] for csqs in x['transcripts'].values()] or [MAX_SORT_RANK]),
+        ),
+    ],
     **{sort: _subfield_sort('predictions', sort, reverse=True, default=MIN_PRED_SORT_RANK) for sort in PREDICTION_SORTS},
     'size': [_sv_size],
 }
@@ -364,12 +382,19 @@ def _get_sort_key(sort, gene_metadata):
     if sort == OMIM_SORT:
         sort_expressions = [
             lambda x: 0 if ((x.get(SELECTED_TRANSCRIPT_FIELD) or {}).get('geneId') or x.get(SELECTED_GENE_FIELD)) in gene_metadata else 1,
-            lambda x: -len(set(t['geneId'] for t in x.get(TRANSCRIPT_CONSEQUENCES_FIELD, []) if t['geneId'] in gene_metadata)),
+            lambda x: -len(
+                set(t['geneId'] for t in x[TRANSCRIPT_CONSEQUENCES_FIELD] if t['geneId'] in gene_metadata)
+                if x.get(TRANSCRIPT_CONSEQUENCES_FIELD) else set(x.get('transcripts', {}).keys()).intersection(gene_metadata)
+            ),
         ]
     elif gene_metadata:
         sort_expressions = [
             lambda x: gene_metadata.get((x.get(SELECTED_TRANSCRIPT_FIELD) or {}).get('geneId') or x.get(SELECTED_GENE_FIELD), MAX_SORT_RANK),
-            lambda x: min([gene_metadata[t['geneId']] for t in x.get(TRANSCRIPT_CONSEQUENCES_FIELD, []) if t['geneId'] in gene_metadata] or [MAX_SORT_RANK]),
+            lambda x: min(
+                ([gene_metadata.get(t['geneId'], MAX_SORT_RANK)for t in x[TRANSCRIPT_CONSEQUENCES_FIELD] if t['geneId'] in gene_metadata]
+                if x.get(TRANSCRIPT_CONSEQUENCES_FIELD) else [gene_metadata.get(gene_id, MAX_SORT_RANK) for gene_id in x.get('transcripts', {}).keys()])
+                or [MAX_SORT_RANK]
+            ),
         ]
 
     return lambda x: tuple(expr(x[0] if isinstance(x, list) else x) for expr in [*sort_expressions, lambda x: x[XPOS_SORT_KEY]])
