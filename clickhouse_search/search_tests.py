@@ -985,25 +985,34 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         self._assert_expected_search(
             [[MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], [GCNV_VARIANT3, GCNV_VARIANT4]],
             inheritance_mode='compound_het', pathogenicity=pathogenicity,
-            annotations=gcnv_annotations_2, annotations_secondary=gcnv_annotations_1,
+            annotations=gcnv_annotations_2, annotations_secondary=gcnv_annotations_1, cached_variant_fields=[[
+                {'selectedGeneId': 'ENSG00000277258'},
+                {'selectedGeneId': 'ENSG00000277258', 'selectedTranscript': {'geneId': 'ENSG00000277258', 'majorConsequence': 'LOF'}},
+            ], [{'selectedGeneId': 'ENSG00000275023'}, {'selectedGeneId': 'ENSG00000275023'}]],
         )
 
         self._assert_expected_search(
-            [VARIANT2, [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], GCNV_VARIANT3, [GCNV_VARIANT3, GCNV_VARIANT4]],
+            [VARIANT2, [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], GCNV_VARIANT3, [GCNV_VARIANT3, GCNV_VARIANT4], MITO_VARIANT3],
             inheritance_mode='recessive', pathogenicity=pathogenicity,
-            annotations=gcnv_annotations_2, annotations_secondary=gcnv_annotations_1,
+            annotations=gcnv_annotations_2, annotations_secondary=gcnv_annotations_1, cached_variant_fields=[{}, [
+                {'selectedGeneId': 'ENSG00000277258'},
+                {'selectedGeneId': 'ENSG00000277258', 'selectedTranscript': {'geneId': 'ENSG00000277258', 'majorConsequence': 'LOF'}},
+            ], {}, [{'selectedGeneId': 'ENSG00000275023'}, {'selectedGeneId': 'ENSG00000275023'}], {}],
         )
 
         selected_transcript_annotations = {'other': ['non_coding_transcript_exon_variant']}
         self._assert_expected_search(
-            [VARIANT2, [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], GCNV_VARIANT3],
+            [VARIANT2, [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], GCNV_VARIANT3, MITO_VARIANT3],
             inheritance_mode='recessive', pathogenicity=pathogenicity,
-            annotations=gcnv_annotations_2, annotations_secondary=selected_transcript_annotations,
+            annotations=gcnv_annotations_2, annotations_secondary=selected_transcript_annotations, cached_variant_fields=[{}, [
+                {'selectedGeneId': 'ENSG00000277258', 'selectedTranscript': None},
+                {'selectedGeneId': 'ENSG00000277258', 'selectedTranscript': {'geneId': 'ENSG00000277258', 'majorConsequence': 'LOF'}},
+            ], {}, {}],
         )
 
         # Do not return pairs where annotations match in a non-paired gene
         self._assert_expected_search(
-            [GCNV_VARIANT3], inheritance_mode='recessive',
+            [GCNV_VARIANT3], inheritance_mode='recessive', pathogenicity=None,
             annotations=gcnv_annotations_2, annotations_secondary=selected_transcript_annotations,
         )
 
@@ -1048,7 +1057,8 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             [VARIANT2, [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], MULTI_PROJECT_GCNV_VARIANT3, [GCNV_VARIANT3, GCNV_VARIANT4]],
             inheritance_mode='recessive',
             annotations={**annotations_1, **gcnv_annotations_1}, annotations_secondary={**annotations_2, **gcnv_annotations_2},
-            intervals=[['1', 38717636, 38724781], ['17', 38717636, 38724781]],
+            locus={'rawItems': 'ENSG00000277258,ENSG00000275023'},
+            # intervals=[['1', 38717636, 38724781], ['17', 38717636, 38724781]],
         )
 
         # Search works with a different number of samples within the family

@@ -219,6 +219,7 @@ class SearchUtilsTests(SearchTestHelper):
 
         self.results_model.families.set([family for family in self.families if family.guid == 'F000003_3'])
         self.search_model.search['annotations'] = {'structural': ['DEL']}
+        self.search_model.search['pathogenicity'] = {}
         with self.assertRaises(InvalidSearchException) as cm:
             query_variants(self.results_model)
         self.assertEqual(str(cm.exception), 'Unable to search against dataset type "SV"')

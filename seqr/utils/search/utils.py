@@ -457,7 +457,7 @@ def _annotation_dataset_type(annotations, intervals, pathogenicity=None):
         return Sample.DATASET_TYPE_VARIANT_CALLS if pathogenicity else None
 
     annotation_types = set((annotations or {}).keys())
-    if annotations and annotation_types.issubset(SV_ANNOTATION_TYPES):
+    if annotations and annotation_types.issubset(SV_ANNOTATION_TYPES) and not pathogenicity:
         return Sample.DATASET_TYPE_SV_CALLS
 
     no_svs = (annotations and annotation_types.isdisjoint(SV_ANNOTATION_TYPES))
