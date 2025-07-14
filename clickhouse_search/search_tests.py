@@ -173,7 +173,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         )
 
     def test_both_sample_types_search(self):
-        Sample.objects.filter(dataset_type='MITO').update(is_active=False)
+        Sample.objects.exclude(dataset_type='SNV_INDEL').update(is_active=False)
 
         # One family (F000011_11) in a multi-project search has identical exome and genome data.
         self._set_multi_project_search()
