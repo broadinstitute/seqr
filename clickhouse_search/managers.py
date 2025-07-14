@@ -158,7 +158,7 @@ class AnnotationsQuerySet(QuerySet):
         results = self._filter_annotations(results, **parsed_locus, **kwargs)
         return results
 
-    def result_values(self, no_sample_data=False):
+    def result_values(self):
         override_model_annotations = {'populations', 'pos', 'end'}
         values = {**self.annotation_values}
         values.update(self._conditional_selected_transcript_values(self))
@@ -169,13 +169,9 @@ class AnnotationsQuerySet(QuerySet):
         if self.has_annotation('clinvar'):
             fields.append('clinvar')
 
-        if no_sample_data:
-            gt_value = self.query.annotations['genotypes']
-            output_field = gt_value.output_field
-            output_field.group_by_key = 'familyGuid'
-            output_field.flatten_groups = False
-            initial_values['familyGenotypes'] = Col(gt_value.alias, gt_value.target, output_field=output_field)
+        if self.has_annotation('familyGenotypes'):
             fields = [field for field in fields if field not in self.ENTRY_FIELDS]
+            fields.append('familyGenotypes')
 
         return self.values(*fields, **initial_values).annotate(
             **{k: values[k] for k in override_model_annotations if k in values},
@@ -894,7 +890,7 @@ class EntriesManager(Manager):
         if multi_sample_type_families or sample_data is None or len(sample_data) > 1:
             entries = entries.values(*fields).annotate(
                 familyGuids=ArraySort(ArrayDistinct(GroupArray('family_guid'))),
-                genotypes=GroupArrayArray(self._genotype_expression(sample_data)),
+                **{'genotypes' if sample_data else 'familyGenotypes': GroupArrayArray(self._genotype_expression(sample_data))},
                 **{col: GroupArrayArray(col) for col in genotype_override_annotations}
             )
             if carriers_expression:
@@ -939,14 +935,16 @@ class EntriesManager(Manager):
             sample_map.append(f"'{data['family_guid']}', map({', '.join(family_samples)})")
         genotype_expressions = list(self.genotype_fields.keys())
         output_base_fields = list(self.genotype_fields.values())
+        output_field_kwargs = {'group_by_key': 'familyGuid'}
         if sample_data:
             genotype_expressions.insert(0, f"map({', '.join(sample_map)})[family_guid][x.sampleId]")
             output_base_fields.insert(0, ('individualGuid', models.StringField()))
+            output_field_kwargs = {'group_by_key': 'individualGuid', 'flatten_groups': True}
         return ArrayFilter(
             ArrayMap(
                 'calls',
                 mapped_expression=f"tuple({', '.join(genotype_expressions)})",
-                output_field=NestedField(output_base_fields, group_by_key='individualGuid', flatten_groups=True)
+                output_field=NestedField(output_base_fields, **output_field_kwargs)
             ),
             conditions=[{1: (None, 'notEmpty({field})')}]
         )

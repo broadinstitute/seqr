@@ -410,7 +410,10 @@ def clickhouse_variant_lookup(user, variant_id, data_type, genome_version=None, 
     entries = entry_cls.objects.lookup(variant_id, sample_data=sample_data)
     results = annotations_cls.objects.subquery_join(entries).filter_variant_ids(variant_ids=[variant_id])
 
-    variants = results.result_values(no_sample_data=samples is None)[:1]
+    variants = results.result_values()[:1]
     if not variants:
         raise ObjectDoesNotExist('Variant not present in seqr')
-    return format_clickhouse_results(variants, genome_version)[0]
+
+    variant = format_clickhouse_results(variants, genome_version)[0]
+
+    return variant
