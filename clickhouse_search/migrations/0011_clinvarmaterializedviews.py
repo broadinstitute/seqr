@@ -1,5 +1,4 @@
 # Generated manually by the seqr team.
-import os
 from string import Template
 
 from django.db import migrations
