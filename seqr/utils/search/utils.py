@@ -300,7 +300,7 @@ def _query_variants(search_model, user, previous_search_results, genome_version,
 
     parsed_search = {
         'parsed_locus': backend_specific_call(
-            lambda genome_version, **kwargs: kwargs, _parse_locus_intervals, _parse_locus_intervals,
+            lambda genome_version, **kwargs: kwargs, _parse_locus_intervals, _parse_locus_gene_intervals,
         )(genome_version, genes=genes, intervals=intervals, rs_ids=rs_ids, variant_ids=variant_ids,
           parsed_variant_ids=parsed_variant_ids, exclude_locations=exclude_locations),
     }
@@ -546,18 +546,36 @@ def _filter_inheritance_family_samples(samples, inheritance_filter):
         s for s in samples if getattr(s, sample_group_field) not in family_groups[s.individual.family_id]
     ]
 
-def _parse_locus_intervals(genome_version, genes=None, intervals=None, rs_ids=None, parsed_variant_ids=None, exclude_locations=False, **kwargs):
-    parsed_intervals = [_format_interval(**interval) for interval in intervals or []] + sorted([
-        [gene[f'{field}Grch{genome_version}'] for field in ['chrom', 'start', 'end']] for gene in (genes or {}).values()
-    ]) if genes or intervals else None
+
+def _parse_locus_gene_intervals(genome_version, genes=None, intervals=None, rs_ids=None, parsed_variant_ids=None, exclude_locations=False, **kwargs):
+    intervals = [_format_interval(**interval) for interval in intervals or []]
+    gene_intervals = gene_ids = None
+    if genes:
+        gene_intervals = sorted([
+            [gene[f'{field}Grch{genome_version}'] for field in ['chrom', 'start', 'end']] for gene in genes.values()
+        ])
+        if exclude_locations:
+            intervals += gene_intervals
+            gene_intervals = None
+        else:
+            gene_ids = sorted(genes.keys())
 
     return {
-        'intervals': parsed_intervals,
+        'intervals': intervals or None,
+        'gene_intervals': gene_intervals,
         'exclude_intervals': exclude_locations,
-        'gene_ids': None if (exclude_locations or not genes) else sorted(genes.keys()),
+        'gene_ids': gene_ids,
         'variant_ids': parsed_variant_ids,
         'rs_ids': rs_ids,
     }
+
+
+def _parse_locus_intervals(*args, **kwargs):
+    parsed_locus = _parse_locus_gene_intervals(*args, **kwargs)
+    gene_intervals = parsed_locus.pop('gene_intervals')
+    if gene_intervals:
+        parsed_locus['intervals'] = (parsed_locus['intervals'] or []) + gene_intervals
+    return parsed_locus
 
 
 def _format_interval(chrom=None, start=None, end=None, offset=None, **kwargs):

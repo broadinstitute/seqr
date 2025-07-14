@@ -128,6 +128,9 @@ class BaseAnnotationsSvGcnv(BaseAnnotations):
         ('geneId', models.StringField(null=True, blank=True)),
         ('majorConsequence', models.Enum8Field(null=True, blank=True, return_int=False, choices=SV_CONSEQUENCE_RANKS)),
     ]
+    SEQR_POPULATIONS = [
+        ('sv_callset', {'ac': 'ac', 'hom': 'hom'}),
+    ]
 
     chrom = Enum8Field(return_int=False, choices=BaseAnnotations.CHROMOSOME_CHOICES)
     end = models.UInt32Field()
@@ -136,9 +139,9 @@ class BaseAnnotationsSvGcnv(BaseAnnotations):
         ('position', models.UInt32Field(null=True, blank=True)),
     ], db_column='rg37LocusEnd', null_if_empty=True)
     lifted_over_chrom = Enum8Field(db_column='liftedOverChrom', return_int=False, null=True, blank=True, choices=BaseAnnotations.CHROMOSOME_CHOICES)
-    sv_type = models.Enum8Field(db_column='svType', return_int=False, choices=SV_TYPES)
+    sv_type = Enum8Field(db_column='svType', return_int=False, choices=SV_TYPES)
     predictions = NamedTupleField(PREDICTION_FIELDS)
-    sorted_gene_consequences = NestedField(SORTED_GENE_CONSQUENCES_FIELDS, db_column='sortedGeneConsequences')
+    sorted_gene_consequences = NestedField(SORTED_GENE_CONSQUENCES_FIELDS, db_column='sortedGeneConsequences', group_by_key='geneId')
 
     class Meta:
         abstract = True
@@ -573,6 +576,7 @@ class EntriesMito(BaseEntries):
         )
 
 class EntriesSv(BaseEntries):
+    SAMPLE_TYPE = Sample.SAMPLE_TYPE_WGS
     CALL_FIELDS = [
         ('sampleId', models.StringField()),
         ('gt', models.Enum8Field(null=True, blank=True, choices=[(0, 'REF'), (1, 'HET'), (2, 'HOM')])),
@@ -591,6 +595,7 @@ class EntriesSv(BaseEntries):
         db_table = 'GRCh38/SV/entries'
 
 class EntriesGcnv(BaseEntries):
+    SAMPLE_TYPE = Sample.SAMPLE_TYPE_WES
     CALL_FIELDS = [
         ('sampleId', models.StringField()),
         ('gt', models.Enum8Field(null=True, blank=True, choices=[(0, 'REF'), (1, 'HET'), (2, 'HOM')])),
@@ -817,6 +822,7 @@ ENTRY_CLASS_MAP = {
     GENOME_VERSION_GRCh38: {
         Sample.DATASET_TYPE_VARIANT_CALLS: EntriesSnvIndel,
         Sample.DATASET_TYPE_MITO_CALLS: EntriesMito,
+        Sample.DATASET_TYPE_SV_CALLS: EntriesSv,
     },
 }
 ANNOTATIONS_CLASS_MAP = {
@@ -824,6 +830,7 @@ ANNOTATIONS_CLASS_MAP = {
     GENOME_VERSION_GRCh38: {
         Sample.DATASET_TYPE_VARIANT_CALLS: AnnotationsSnvIndel,
         Sample.DATASET_TYPE_MITO_CALLS: AnnotationsMito,
+        Sample.DATASET_TYPE_SV_CALLS: AnnotationsSv,
     },
 }
 TRANSCRIPTS_CLASS_MAP = {

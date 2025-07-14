@@ -1384,6 +1384,16 @@ PARSED_SV_WGS_VARIANT = {
             'cn': -1, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None, 'sampleType': 'WGS',
             'prevCall': None, 'prevOverlap': None, 'newCall': None, 'prevNumAlt': 2,
         },
+        'I000019_na21987': {
+            'gq': None, 'sampleId': 'NA21987', 'numAlt': -1, 'isRef': True, 'geneIds': None,
+            'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None, 'sampleType': None,
+            'prevCall': None, 'prevOverlap': None, 'newCall': None, 'prevNumAlt': None,
+        },
+         'I000021_na21654': {
+            'gq': None, 'sampleId': 'NA21654', 'numAlt': -1, 'isRef': True, 'geneIds': None,
+            'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None, 'sampleType': None,
+            'prevCall': None, 'prevOverlap': None, 'newCall': None, 'prevNumAlt': None,
+        },
     },
     'clinvar': {'clinicalSignificance': None, 'alleleId': None, 'variationId': None, 'goldStars': None, 'version': None},
     'hgmd': {'accession': None, 'class': None},

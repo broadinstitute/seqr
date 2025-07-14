@@ -351,7 +351,7 @@ class SummaryDataAPITest(AirtableTest):
             {'projectGuid', 'name', 'variantTagTypes', 'variantFunctionalTagTypes'},
         )
         if 'totalSampleCounts' in response_json:
-            self.assertDictEqual(response_json['totalSampleCounts'], {'MITO': {'WES': 1}, 'SNV_INDEL': {'WES': 7}, 'SV': {'WES': 3, 'WGS': 1}})
+            self.assertDictEqual(response_json['totalSampleCounts'], {'MITO': {'WES': 1}, 'SNV_INDEL': {'WES': 7}, 'SV': {'WES': 3, 'WGS': 3}})
 
         # Test analyst behavior
         self.login_analyst_user()
@@ -627,7 +627,7 @@ class SummaryDataAPITest(AirtableTest):
         response = self.client.get(no_analyst_project_url)
         self.assertEqual(response.status_code, 200)
         rows = response.json()['rows']
-        self.assertEqual(len(rows), 2)
+        self.assertEqual(len(rows), 3)
         test_row = next(r for r in rows if r['participant_id'] == 'NA21234')
         self.assertDictEqual(test_row, EXPECTED_NO_GENE_SAMPLE_METADATA_ROW)
 
@@ -770,7 +770,7 @@ class SummaryDataAPITest(AirtableTest):
 class LocalSummaryDataAPITest(AuthenticationTestCase, SummaryDataAPITest):
     fixtures = ['users', '1kg_project', 'reference_data', 'report_variants']
     NUM_MANAGER_SUBMISSIONS = 4
-    ADDITIONAL_SAMPLES = ['NA21234', 'NA21987']
+    ADDITIONAL_SAMPLES = ['NA21234', 'NA21987', 'NA21654']
     HAS_AIRTABLE = False
     SAVED_VARIANT_RESPONSE_KEYS = SAVED_VARIANT_RESPONSE_KEYS
 

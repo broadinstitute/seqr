@@ -1506,13 +1506,13 @@ class LocalReportAPITest(AuthenticationTestCase, ReportAPITest):
     STATS_DATA = {
         'projectsCount': {'non_demo': 3, 'demo': 1},
         'familiesCount': {'non_demo': 12, 'demo': 2},
-        'individualsCount': {'non_demo': 16, 'demo': 4},
+        'individualsCount': {'non_demo': 17, 'demo': 4},
         'sampleCountsByType': {
             'WES__SNV_INDEL': {'non_demo': 7},
             'WGS__SNV_INDEL': {'demo': 1},
             'WES__MITO': {'non_demo': 1},
             'WES__SV': {'non_demo': 3},
-            'WGS__SV': {'non_demo': 1},
+            'WGS__SV': {'non_demo': 3},
             'RNA__S': {'non_demo': 3},
             'RNA__T': {'non_demo': 2},
             'RNA__E': {'non_demo': 1},
@@ -1533,13 +1533,13 @@ class AnvilReportAPITest(AnvilAuthenticationTestCase, ReportAPITest):
     STATS_DATA = {
         'projectsCount': {'internal': 1, 'external': 1, 'no_anvil': 1, 'demo': 1},
         'familiesCount': {'internal': 11, 'external': 1, 'no_anvil': 0, 'demo': 2},
-        'individualsCount': {'internal': 14, 'external': 2, 'no_anvil': 0, 'demo': 4},
+        'individualsCount': {'internal': 14, 'external': 3, 'no_anvil': 0, 'demo': 4},
         'sampleCountsByType': {
             'WES__SNV_INDEL': {'internal': 7},
             'WGS__SNV_INDEL': {'demo': 1},
             'WES__MITO': {'internal': 1},
             'WES__SV': {'internal': 3},
-            'WGS__SV': {'external': 1},
+            'WGS__SV': {'external': 3},
             'RNA__S': {'internal': 3},
             'RNA__T': {'internal': 2},
             'RNA__E': {'internal': 1},
