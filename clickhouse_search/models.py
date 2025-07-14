@@ -451,15 +451,15 @@ class BaseClinvarAllVariants(BaseClinvar):
         )
 
 class ClinvarAllVariantsGRCh37SnvIndel(BaseClinvarAllVariants):
-    class Meta:
+    class Meta(BaseClinvarAllVariants.Meta):
         db_table = 'GRCh37/SNV_INDEL/clinvar_all_variants'
 
 class ClinvarAllVariantsRawSnvIndel(BaseClinvarAllVariants):
-    class Meta:
+    class Meta(BaseClinvarAllVariants.Meta):
         db_table = 'GRCh38/SNV_INDEL/clinvar_all_variants'
 
 class ClinvarAllVariantsRawMito(BaseClinvarAllVariants):
-    class Meta:
+    class Meta(BaseClinvarAllVariants.Meta):
         db_table = 'GRCh38/MITO/clinvar_all_variants'
 
 class BaseClinvarJoin(BaseClinvar):

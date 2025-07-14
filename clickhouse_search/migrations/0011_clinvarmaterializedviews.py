@@ -10,7 +10,7 @@ CREATE MATERIALIZED VIEW `$reference_genome/$dataset_type/clinvar_all_variants_t
 REFRESH EVERY 10 YEAR
 TO `$reference_genome/$dataset_type/clinvar`
 AS SELECT 
-kl.key, COLUMNS('c.*') EXCEPT(variantId)
+kl.key, COLUMNS('.*') EXCEPT(variantId)
 FROM `$reference_genome/$dataset_type/clinvar_all_variants` c
 INNER JOIN `$reference_genome/$dataset_type/key_lookup` kl
 ON c.variantId = kl.variantId
@@ -20,7 +20,7 @@ ON c.variantId = kl.variantId
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('clickhouse_search', '0010_clinvarrawgrch37snvindel_clinvarrawmito_and_more'),
+        ('clickhouse_search', '0010_clinvarallvariantsgrch37snvindel_and_more'),
     ]
 
     operations = [
