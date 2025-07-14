@@ -1,6 +1,7 @@
 from clickhouse_backend.models import ArrayField, StringField
 from collections import defaultdict
 from django.contrib.postgres.aggregates import ArrayAgg
+from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import F, Min
 from django.db.models.functions import JSONObject
 
@@ -409,4 +410,7 @@ def clickhouse_variant_lookup(user, variant_id, data_type, genome_version=None, 
     entries = entry_cls.objects.lookup(variant_id, sample_data=sample_data)
     results = annotations_cls.objects.subquery_join(entries).filter_variant_ids(variant_ids=[variant_id])
 
-    return results.result_values()[:1]
+    variants = results.result_values(no_sample_data=samples is None)[:1]
+    if not variants:
+        raise ObjectDoesNotExist('Variant not present in seqr')
+    return format_clickhouse_results(variants, genome_version)[0]

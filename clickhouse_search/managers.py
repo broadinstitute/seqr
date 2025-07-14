@@ -158,7 +158,7 @@ class AnnotationsQuerySet(QuerySet):
         results = self._filter_annotations(results, **parsed_locus, **kwargs)
         return results
 
-    def result_values(self):
+    def result_values(self, no_sample_data=False):
         override_model_annotations = {'populations', 'pos', 'end'}
         values = {**self.annotation_values}
         values.update(self._conditional_selected_transcript_values(self))
@@ -168,6 +168,14 @@ class AnnotationsQuerySet(QuerySet):
         fields = [field for field in self.annotation_fields if field not in values]
         if self.has_annotation('clinvar'):
             fields.append('clinvar')
+
+        if no_sample_data:
+            gt_value = self.query.annotations['genotypes']
+            output_field = gt_value.output_field
+            output_field.group_by_key = 'familyGuid'
+            output_field.flatten_groups = False
+            initial_values['familyGenotypes'] = Col(gt_value.alias, gt_value.target, output_field=output_field)
+            fields = [field for field in fields if field not in self.ENTRY_FIELDS]
 
         return self.values(*fields, **initial_values).annotate(
             **{k: values[k] for k in override_model_annotations if k in values},
@@ -598,9 +606,7 @@ class EntriesManager(Manager):
     def search(self, sample_data, parsed_locus=None, freqs=None, annotations=None, **kwargs):
         entries = self._filter_intervals(self, **(parsed_locus or {}))
 
-        seqr_popualtions = self.annotations_model.SEQR_POPULATIONS
-        if seqr_popualtions:
-            entries = entries.annotate(seqrPop=self._seqr_pop_expression(seqr_popualtions))
+        entries = self._join_annotations(entries)
 
         is_sv_class = 'cn' in self.call_fields
         callset_filter_field = 'sv_callset' if is_sv_class else 'callset'
@@ -616,8 +622,22 @@ class EntriesManager(Manager):
 
         return self._search_call_data(entries, sample_data, **kwargs)
 
+    def _join_annotations(self, entries):
+        if self._has_clinvar():
+           entries = entries.annotate(
+               clinvar_key=F('clinvar_join__key'),
+               clinvar=Tuple(*self.clinvar_fields.keys(), output_field=NamedTupleField(list(self.clinvar_fields.values()), null_if_empty=True, null_empty_arrays=True))
+           )
+
+        seqr_popualtions = self.annotations_model.SEQR_POPULATIONS
+        if seqr_popualtions:
+            entries = entries.annotate(seqrPop=self._seqr_pop_expression(seqr_popualtions))
+
+        return entries
+
     def lookup(self, variant_id, sample_data=None):
         entries = self._filter_intervals(self, variant_ids=[variant_id])
+        entries = self._join_annotations(entries)
         if sample_data:
             return self._search_call_data(entries, sample_data)
         return self._annotate_calls(entries)
@@ -658,12 +678,6 @@ class EntriesManager(Manager):
                family_q = sample_family_q
 
        entries = entries.filter(family_q)
-
-       if self._has_clinvar():
-           entries = entries.annotate(
-               clinvar_key=F('clinvar_join__key'),
-               clinvar=Tuple(*self.clinvar_fields.keys(), output_field=NamedTupleField(list(self.clinvar_fields.values()), null_if_empty=True, null_empty_arrays=True))
-           )
 
        quality_filter = qualityFilter or {}
        individual_genotype_filter = (inheritance_filter or {}).get('genotype')
@@ -925,16 +939,14 @@ class EntriesManager(Manager):
             sample_map.append(f"'{data['family_guid']}', map({', '.join(family_samples)})")
         genotype_expressions = list(self.genotype_fields.keys())
         output_base_fields = list(self.genotype_fields.values())
-        group_by_key = None
         if sample_data:
             genotype_expressions.insert(0, f"map({', '.join(sample_map)})[family_guid][x.sampleId]")
             output_base_fields.insert(0, ('individualGuid', models.StringField()))
-            group_by_key = 'individualGuid'
         return ArrayFilter(
             ArrayMap(
                 'calls',
                 mapped_expression=f"tuple({', '.join(genotype_expressions)})",
-                output_field=NestedField(output_base_fields, group_by_key=group_by_key, flatten_groups=True)
+                output_field=NestedField(output_base_fields, group_by_key='individualGuid', flatten_groups=True)
             ),
             conditions=[{1: (None, 'notEmpty({field})')}]
         )
