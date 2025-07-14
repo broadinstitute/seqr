@@ -3,7 +3,7 @@ from copy import deepcopy
 from datetime import timedelta
 
 from clickhouse_search.search import clickhouse_backend_enabled, get_clickhouse_variants, format_clickhouse_results, \
-    get_clickhouse_cache_results, clickhouse_variant_lookup
+    get_clickhouse_cache_results, clickhouse_variant_lookup, clickhouse_sv_lookup
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample, Individual, Project
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_get_wildcard_json, safe_redis_set_json
@@ -203,7 +203,7 @@ def _sv_variant_lookup(user, variant_id, dataset_type, samples, genome_version=N
     data_type = f'{dataset_type}_{sample_type}'
 
     lookup_samples = samples.filter(sample_type=sample_type)
-    lookup_func = backend_specific_call(_raise_search_error('Lookup is disabled'), hail_variant_lookup, clickhouse_variant_lookup)
+    lookup_func = backend_specific_call(_raise_search_error('Lookup is disabled'), hail_variant_lookup, clickhouse_sv_lookup)
     variant = lookup_func(user, variant_id, data_type, samples=lookup_samples, genome_version=genome_version, **kwargs)
     variants = [variant]
 

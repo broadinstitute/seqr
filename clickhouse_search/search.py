@@ -400,24 +400,49 @@ def _get_sort_key(sort, gene_metadata):
 
     return lambda x: tuple(expr(x[0] if isinstance(x, list) else x) for expr in [*sort_expressions, lambda x: x[XPOS_SORT_KEY]])
 
-def clickhouse_variant_lookup(user, variant_id, data_type, genome_version=None, samples=None, **kwargs):
+
+def _variant_lookup(get_entries, user, variant_id, data_type, genome_version=None, filter_results=None, **kwargs):
     logger.info(f'Looking up variant {variant_id} with data type {data_type}', user)
 
     entry_cls = ENTRY_CLASS_MAP[genome_version][data_type]
     annotations_cls = ANNOTATIONS_CLASS_MAP[genome_version][data_type]
 
-    sample_data = _get_sample_data(samples)[data_type] if samples else None
-    entries = entry_cls.objects.lookup(variant_id, sample_data=sample_data)
-    results = annotations_cls.objects.subquery_join(entries).filter_variant_ids(variant_ids=[variant_id])
+    entries = get_entries(entry_cls, variant_id, data_type=data_type,genome_version=genome_version, **kwargs)
+    results = annotations_cls.objects.subquery_join(entries)
+    if filter_results:
+        results = filter_results(results, variant_id)
 
     variants = results.result_values()[:1]
     if not variants:
         raise ObjectDoesNotExist('Variant not present in seqr')
 
-    variant = format_clickhouse_results(variants, genome_version)[0]
+    return format_clickhouse_results(variants, genome_version)[0]
+
+
+def clickhouse_variant_lookup(user, variant_id, data_type, **kwargs):
+    variant = _variant_lookup(
+        _get_lookup_entries, user, variant_id, data_type, filter_results=_filter_lookup_results, **kwargs,
+    )
     _add_liftover_genotypes(variant, data_type, variant_id)
 
     return variant
+
+
+def _get_lookup_entries(entry_cls, variant_id, **kwargs):
+    return entry_cls.objects.lookup(variant_id)
+
+def _filter_lookup_results(results, variant_id):
+    return results.filter_variant_ids(variant_ids=[variant_id])
+
+
+def clickhouse_sv_lookup(*args, **kwargs):
+    return _variant_lookup(_get_sv_entries, *args, **kwargs)
+
+def _get_sv_entries(entry_cls, variant_id, samples=None, genome_version=None, data_type=None, **kwargs):
+    sample_data = _get_sample_data(samples)[data_type]
+    # Since there is no efficient way to prefilter SV entries based on the variant id, explicitly look up the keys
+    keys = KEY_LOOKUP_CLASS_MAP[genome_version][data_type].objects.filter(variant_id=variant_id).values_list('key', flat=True)
+    return entry_cls.objects.filter(key__in=keys).results_for_samples(sample_data)
 
 
 def _add_liftover_genotypes(variant, data_type, variant_id):

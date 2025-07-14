@@ -631,12 +631,14 @@ class EntriesManager(Manager):
 
         return entries
 
-    def lookup(self, variant_id, sample_data=None):
+    def lookup(self, variant_id):
         entries = self.filter_intervals(variant_ids=[variant_id])
         entries = self._join_annotations(entries)
-        if sample_data:
-            return self._search_call_data(entries, sample_data)
         return self._annotate_calls(entries)
+
+    def results_for_samples(self, sample_data):
+        entries = self._join_annotations(self)
+        return self._search_call_data(entries, sample_data)
 
     def _seqr_pop_expression(self, seqr_popualtions):
         sample_types = [self.single_sample_type.lower()] if self.single_sample_type else ['wes', 'wgs']

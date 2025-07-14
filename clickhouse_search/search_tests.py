@@ -542,21 +542,6 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             [SV_VARIANT1, SV_VARIANT2, MULTI_PROJECT_GCNV_VARIANT3, GCNV_VARIANT4], locus=sv_locus,
         )
 
-#         self._assert_expected_search(
-#             [GCNV_VARIANT4], padded_interval={'chrom': '17', 'start': 38720781, 'end': 38738703, 'padding': 0.2},
-#             omit_data_type='SNV_INDEL',
-#         )
-#
-#         self._assert_expected_search(
-#             [], padded_interval={'chrom': '17', 'start': 38720781, 'end': 38738703, 'padding': 0.1},
-#             omit_data_type='SNV_INDEL',
-#         )
-#
-#         self._assert_expected_search(
-#             [SV_VARIANT4], padded_interval={'chrom': '14', 'start': 106692244, 'end': 106742587, 'padding': 0.1},
-#             sample_data=SV_WGS_SAMPLE_DATA,
-#         )
-
         self._set_grch37_search()
         self._assert_expected_search([GRCH37_VARIANT], locus={'rawItems': '7:143268894-143271480'})
 
@@ -572,15 +557,6 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         self._assert_expected_search(
             [],locus={'rawVariantItems': VARIANT_IDS[1]},
         )
-
-#         variant_keys = ['suffix_95340_DUP', 'suffix_140608_DUP']
-#         self._assert_expected_search([GCNV_VARIANT1, GCNV_VARIANT4], omit_data_type='SNV_INDEL', variant_keys=variant_keys)
-#
-#         self._assert_expected_search([VARIANT1, GCNV_VARIANT1, GCNV_VARIANT4], variant_keys=variant_keys, **VARIANT_ID_SEARCH)
-#
-#         self._assert_expected_search([SV_VARIANT2, SV_VARIANT4], sample_data=SV_WGS_SAMPLE_DATA, variant_keys=[
-#             'cohort_2911.chr1.final_cleanup_INS_chr1_160', 'phase2_DEL_chr14_4640',
-#         ])
 
     def test_variant_lookup(self):
         variant = variant_lookup(self.user, ('1', 10439, 'AC', 'A'))
@@ -606,11 +582,8 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             ]},
         }])
 
-#         body.update({'variant_id': 'phase2_DEL_chr14_4640', 'data_type': 'SV_WGS', 'sample_data': SV_WGS_SAMPLE_DATA['SV_WGS']})
-#         async with self.client.request('POST', '/lookup', json=body) as resp:
-#             self.assertEqual(resp.status, 200)
-#             resp_json = resp.json()
-#         self.assertDictEqual(resp_json, SV_VARIANT4)
+        variant = sv_variant_lookup(self.user, 'phase2_DEL_chr14_4640', self.families, sample_type='WGS')
+        self._assert_expected_variants([variant], [SV_VARIANT4])
 #
 #         body.update({'variant_id': 'suffix_140608_DUP', 'data_type': 'SV_WES', 'sample_data': EXPECTED_SAMPLE_DATA['SV_WES']})
 #         async with self.client.request('POST', '/lookup', json=body) as resp:
@@ -626,7 +599,22 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #         body['variant_id'] = 'suffix_140608_DEL'
 #         async with self.client.request('POST', '/lookup', json=body) as resp:
 #             self.assertEqual(resp.status, 404)
-#
+
+    #         self._assert_expected_search(
+    #             [GCNV_VARIANT4], padded_interval={'chrom': '17', 'start': 38720781, 'end': 38738703, 'padding': 0.2},
+    #             omit_data_type='SNV_INDEL',
+    #         )
+    #
+    #         self._assert_expected_search(
+    #             [], padded_interval={'chrom': '17', 'start': 38720781, 'end': 38738703, 'padding': 0.1},
+    #             omit_data_type='SNV_INDEL',
+    #         )
+    #
+    #         self._assert_expected_search(
+    #             [SV_VARIANT4], padded_interval={'chrom': '14', 'start': 106692244, 'end': 106742587, 'padding': 0.1},
+    #             sample_data=SV_WGS_SAMPLE_DATA,
+    #         )
+
 #     def test_multi_variant_lookup(self):
 #         self._test_multi_lookup(VARIANT_ID_SEARCH['variant_ids'], 'SNV_INDEL', [VARIANT1])
 #
