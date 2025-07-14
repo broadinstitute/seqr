@@ -169,7 +169,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         self.results_model.families.set(Family.objects.filter(guid__in=['F000002_2', 'F000011_11', 'F000014_14']))
         self._assert_expected_search(
             [PROJECT_2_VARIANT, MULTI_PROJECT_VARIANT1, SV_VARIANT1, SV_VARIANT2, MULTI_PROJECT_VARIANT2, VARIANT3,
-             VARIANT4, SV_VARIANT3, SV_VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT1,
+             VARIANT4, SV_VARIANT3, GCNV_VARIANT1, SV_VARIANT4, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT1,
              MITO_VARIANT2, MITO_VARIANT3], gene_counts={**GENE_COUNTS, **SV_GENE_COUNTS},
         )
 
