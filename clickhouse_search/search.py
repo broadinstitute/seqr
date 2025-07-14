@@ -398,3 +398,15 @@ def _get_sort_key(sort, gene_metadata):
         ]
 
     return lambda x: tuple(expr(x[0] if isinstance(x, list) else x) for expr in [*sort_expressions, lambda x: x[XPOS_SORT_KEY]])
+
+def clickhouse_variant_lookup(user, variant_id, data_type, genome_version=None, samples=None, **kwargs):
+    logger.info(f'Looking up variant {variant_id} with data type {data_type}', user)
+
+    entry_cls = ENTRY_CLASS_MAP[genome_version][data_type]
+    annotations_cls = ANNOTATIONS_CLASS_MAP[genome_version][data_type]
+
+    sample_data = _get_sample_data(samples)[data_type] if samples else None
+    entries = entry_cls.objects.lookup(variant_id, sample_data=sample_data)
+    results = annotations_cls.objects.subquery_join(entries).filter_variant_ids(variant_ids=[variant_id])
+
+    return results.result_values()[:1]

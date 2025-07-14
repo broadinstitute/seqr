@@ -152,8 +152,7 @@ class AnnotationsQuerySet(QuerySet):
 
     def search(self, parsed_locus=None, **kwargs):
         parsed_locus = parsed_locus or {}
-        results = self
-        results = self._filter_variant_ids(results, **parsed_locus)
+        results = self.filter_variant_ids(**parsed_locus)
         results = self._filter_frequency(results, **kwargs)
         results = self._filter_in_silico(results, **kwargs)
         results = self._filter_annotations(results, **parsed_locus, **kwargs)
@@ -234,8 +233,8 @@ class AnnotationsQuerySet(QuerySet):
             **{primary_gene_field: F(secondary_gene_field)}
         ).exclude(primary_variantId=F('secondary_variantId'))
 
-    @classmethod
-    def _filter_variant_ids(cls, results, variant_ids=None, rs_ids=None, **kwargs):
+    def filter_variant_ids(self, variant_ids=None, rs_ids=None, **kwargs):
+        results = self
         if variant_ids:
             results = results.filter(
                 variant_id__in=[f'{chrom}-{pos}-{ref}-{alt}' for chrom, pos, ref, alt in variant_ids]
@@ -617,6 +616,12 @@ class EntriesManager(Manager):
 
         return self._search_call_data(entries, sample_data, **kwargs)
 
+    def lookup(self, variant_id, sample_data=None):
+        entries = self._filter_intervals(self, variant_ids=[variant_id])
+        if sample_data:
+            return self._search_call_data(entries, sample_data)
+        return self._annotate_calls(entries)
+
     def _seqr_pop_expression(self, seqr_popualtions):
         sample_types = [self.single_sample_type.lower()] if self.single_sample_type else ['wes', 'wgs']
         seqr_pop_fields = []
@@ -853,7 +858,7 @@ class EntriesManager(Manager):
             )
         return entries
 
-    def _annotate_calls(self, entries, sample_data, annotate_carriers, multi_sample_type_families):
+    def _annotate_calls(self, entries, sample_data=None, annotate_carriers=False, multi_sample_type_families=None):
         carriers_expression = self._carriers_expression(sample_data) if annotate_carriers else None
         if carriers_expression:
             entries = entries.annotate(carriers=carriers_expression)
@@ -872,7 +877,7 @@ class EntriesManager(Manager):
             fields.append('seqrPop')
         if self._has_clinvar():
              fields += ['clinvar', 'clinvar_key']
-        if multi_sample_type_families or len(sample_data) > 1:
+        if multi_sample_type_families or sample_data is None or len(sample_data) > 1:
             entries = entries.values(*fields).annotate(
                 familyGuids=ArraySort(ArrayDistinct(GroupArray('family_guid'))),
                 genotypes=GroupArrayArray(self._genotype_expression(sample_data)),
@@ -890,7 +895,7 @@ class EntriesManager(Manager):
                 else:
                     family_carriers = Cast(Tuple('familyGuids', GroupArray('carriers')), map_field)
                 entries = entries.annotate(family_carriers=family_carriers)
-            if any(multi_sample_type_families.values()):
+            if any((multi_sample_type_families or {}).values()):
                 entries = self._multi_sample_type_filtered_entries(entries)
         else:
             if carriers_expression:
@@ -911,18 +916,25 @@ class EntriesManager(Manager):
 
     def _genotype_expression(self, sample_data):
         sample_map = []
-        for data in sample_data:
+        for data in sample_data or []:
             family_samples = []
             for s in data['samples']:
                 family_samples += [
                     f"'{sample_id}', '{s['individual_guid']}'" for sample_id in set(s['sample_ids_by_type'].values())
                 ]
             sample_map.append(f"'{data['family_guid']}', map({', '.join(family_samples)})")
+        genotype_expressions = list(self.genotype_fields.keys())
+        output_base_fields = list(self.genotype_fields.values())
+        group_by_key = None
+        if sample_data:
+            genotype_expressions.insert(0, f"map({', '.join(sample_map)})[family_guid][x.sampleId]")
+            output_base_fields.insert(0, ('individualGuid', models.StringField()))
+            group_by_key = 'individualGuid'
         return ArrayFilter(
             ArrayMap(
                 'calls',
-                mapped_expression=f"tuple(map({', '.join(sample_map)})[family_guid][x.sampleId], {', '.join(self.genotype_fields.keys())})",
-                output_field=NestedField([('individualGuid', models.StringField()), *self.genotype_fields.values()], group_by_key='individualGuid', flatten_groups=True)
+                mapped_expression=f"tuple({', '.join(genotype_expressions)})",
+                output_field=NestedField(output_base_fields, group_by_key=group_by_key, flatten_groups=True)
             ),
             conditions=[{1: (None, 'notEmpty({field})')}]
         )
