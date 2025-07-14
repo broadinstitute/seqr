@@ -543,6 +543,29 @@
       ]
     }
 }, {
+    "model": "clickhouse_search.entriesgrch37snvindel",
+    "pk": 21,
+    "fields": {
+      "key": 21,
+      "project_guid": "R0004_non_analyst_project",
+      "family_guid": "F000014_14",
+      "sample_type": "WGS",
+      "xpos": 1000010439,
+      "is_gnomad_gt_5_percent": true,
+      "filters": [],
+      "sign": 1,
+      "calls": [
+        ["NA21234", 1, 87, 0.531, 27]
+      ]
+    }
+}, {
+    "model": "clickhouse_search.keylookupgrch37snvindel",
+    "pk": 1,
+    "fields": {
+      "key": 21,
+      "variant_id": "1-10439-AC-A"
+    }
+}, {
     "model": "clickhouse_search.annotationsmito",
     "pk": 6,
     "fields": {

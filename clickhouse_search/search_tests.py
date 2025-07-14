@@ -583,7 +583,6 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 #         ])
 
     def test_variant_lookup(self):
-        self.maxDiff = None
         variant = variant_lookup(self.user, ('1', 10439, 'AC', 'A'))
         self._assert_expected_variants([variant], [VARIANT_LOOKUP_VARIANT])
 
@@ -594,9 +593,9 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         variant = variant_lookup(self.user, ('7', 143270172, 'A', 'G'), genome_version='37')
         self._assert_expected_variants([variant], [{
             **{k: v for k, v in GRCH37_VARIANT.items() if k not in {'familyGuids', 'genotypes'}},
-            'familyGenotypes': {GRCH37_VARIANT['familyGuids'][0]: [
+            'familyGenotypes': {GRCH37_VARIANT['familyGuids'][0]: sorted([
                 {k: v for k, v in g.items() if k != 'individualGuid'} for g in GRCH37_VARIANT['genotypes'].values()
-            ]},
+            ], key=lambda x: x['sampleId'], reverse=True)},
         }])
 
         variant = variant_lookup(self.user, ('M', 4429, 'G', 'A'), genome_version='38')

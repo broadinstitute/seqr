@@ -600,7 +600,7 @@ class EntriesManager(Manager):
         })
 
     def search(self, sample_data, parsed_locus=None, freqs=None, annotations=None, **kwargs):
-        entries = self._filter_intervals(self, **(parsed_locus or {}))
+        entries = self.filter_intervals(**(parsed_locus or {}))
 
         entries = self._join_annotations(entries)
 
@@ -632,7 +632,7 @@ class EntriesManager(Manager):
         return entries
 
     def lookup(self, variant_id, sample_data=None):
-        entries = self._filter_intervals(self, variant_ids=[variant_id])
+        entries = self.filter_intervals(variant_ids=[variant_id])
         entries = self._join_annotations(entries)
         if sample_data:
             return self._search_call_data(entries, sample_data)
@@ -890,7 +890,7 @@ class EntriesManager(Manager):
         if multi_sample_type_families or sample_data is None or len(sample_data) > 1:
             entries = entries.values(*fields).annotate(
                 familyGuids=ArraySort(ArrayDistinct(GroupArray('family_guid'))),
-                **{'genotypes' if sample_data else 'familyGenotypes': GroupArrayArray(self._genotype_expression(sample_data))},
+                **{'genotypes' if sample_data else 'familyGenotypes': GroupArrayArray(self.genotype_expression(sample_data))},
                 **{col: GroupArrayArray(col) for col in genotype_override_annotations}
             )
             if carriers_expression:
@@ -913,7 +913,7 @@ class EntriesManager(Manager):
             entries = entries.values(
                 *fields,
                 familyGuids=Array('family_guid'),
-                genotypes=self._genotype_expression(sample_data),
+                genotypes=self.genotype_expression(sample_data),
             )
 
         if genotype_override_annotations:
@@ -924,7 +924,7 @@ class EntriesManager(Manager):
 
         return entries
 
-    def _genotype_expression(self, sample_data):
+    def genotype_expression(self, sample_data=None):
         sample_map = []
         for data in sample_data or []:
             family_samples = []
@@ -1011,7 +1011,8 @@ class EntriesManager(Manager):
             mapped_expression='x.1', output_field=models.ArrayField(models.StringField()),
         )
 
-    def _filter_intervals(self, entries, exclude_intervals=False, intervals=None, gene_intervals=None, variant_ids=None,  **kwargs):
+    def filter_intervals(self, exclude_intervals=False, intervals=None, gene_intervals=None, variant_ids=None,  **kwargs):
+        entries = self
         if variant_ids:
             # although technically redundant, the interval query is applied to the entries table before join and reduces the join size,
             # while the full variant_id filter is applied to the annotation table after the join

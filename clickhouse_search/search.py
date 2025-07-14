@@ -6,9 +6,9 @@ from django.db.models import F, Min
 from django.db.models.functions import JSONObject
 
 from clickhouse_search.backend.fields import NamedTupleField
-from clickhouse_search.backend.functions import Array, ArrayFilter, ArrayIntersect, ArraySort, Tuple
-from clickhouse_search.models import ENTRY_CLASS_MAP, ANNOTATIONS_CLASS_MAP, TRANSCRIPTS_CLASS_MAP, BaseClinvar, \
-    BaseAnnotationsMitoSnvIndel, BaseAnnotationsGRCh37SnvIndel, BaseAnnotationsSvGcnv
+from clickhouse_search.backend.functions import Array, ArrayFilter, ArrayIntersect, ArraySort, GroupArrayArray, Tuple
+from clickhouse_search.models import ENTRY_CLASS_MAP, ANNOTATIONS_CLASS_MAP, TRANSCRIPTS_CLASS_MAP, KEY_LOOKUP_CLASS_MAP, \
+    BaseClinvar, BaseAnnotationsMitoSnvIndel, BaseAnnotationsGRCh37SnvIndel, BaseAnnotationsSvGcnv
 from reference_data.models import GeneConstraint, Omim
 from seqr.models import Sample, PhenotypePrioritization
 from seqr.utils.logging_utils import SeqrLogger
@@ -415,5 +415,25 @@ def clickhouse_variant_lookup(user, variant_id, data_type, genome_version=None, 
         raise ObjectDoesNotExist('Variant not present in seqr')
 
     variant = format_clickhouse_results(variants, genome_version)[0]
+    _add_liftover_genotypes(variant, data_type, variant_id)
 
     return variant
+
+
+def _add_liftover_genotypes(variant, data_type, variant_id):
+    lifted_entry_cls = ENTRY_CLASS_MAP.get(variant.get('liftedOverGenomeVersion'), {}).get(data_type)
+    if not lifted_entry_cls:
+        return
+    lifted_id = (variant['liftedOverChrom'], str(variant['liftedOverPos']), *variant_id[2:])
+    keys = KEY_LOOKUP_CLASS_MAP[variant['liftedOverGenomeVersion']][data_type].objects.filter(
+        variant_id='-'.join(lifted_id),
+    ).values_list('key', flat=True)
+    if not keys:
+        return
+    lifted_entries = lifted_entry_cls.objects.filter_intervals(variant_ids=[variant_id]).filter(key=keys[0])
+    lifted_entry_data = lifted_entries.values('key').annotate(
+        familyGenotypes=GroupArrayArray(lifted_entry_cls.objects.genotype_expression())
+    )
+    if lifted_entry_data:
+        variant['familyGenotypes'].update(lifted_entry_data[0]['familyGenotypes'])
+        variant['liftedFamilyGuids'] = sorted(lifted_entry_data[0]['familyGenotypes'].keys())

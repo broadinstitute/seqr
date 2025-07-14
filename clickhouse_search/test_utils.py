@@ -245,10 +245,10 @@ VARIANT_LOOKUP_VARIANT = {
             {k: v for k, v in g.items() if k != 'individualGuid'} for gs in VARIANT1_BOTH_SAMPLE_TYPES['genotypes'].values() for g in gs
         ], key=lambda x: (x['sampleType'] == 'WES', x['sampleId']), reverse=True),
         'F000011_11': [{**LOOKUP_GENOTYPE, 'sampleType': 'WES'}, LOOKUP_GENOTYPE],
-        # 'F000014_14': [{
-        #     'sampleId': 'NA21234', 'sampleType': 'WGS', 'familyGuid': 'F000014_14',
-        #     'numAlt': 1, 'dp': 27, 'gq': 87, 'ab': 0.531000018119812, 'filters': None,
-        # }],
+        'F000014_14': [{
+            'sampleId': 'NA21234', 'sampleType': 'WGS', 'familyGuid': 'F000014_14',
+            'numAlt': 1, 'dp': 27, 'gq': 87, 'ab': 0.531, 'filters': [],
+        }],
     }
 }
 for k in {'familyGuids', 'genotypes'}:
