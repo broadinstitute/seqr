@@ -437,6 +437,33 @@ class BaseClinvar(models.ClickhouseModel):
     assertions = models.ArrayField(models.Enum8Field(choices=[(0, 'Affects'), (1, 'association'), (2, 'association_not_found'), (3, 'confers_sensitivity'), (4, 'drug_response'), (5, 'low_penetrance'), (6, 'not_provided'), (7, 'other'), (8, 'protective'), (9, 'risk_factor'), (10, 'no_classification_for_the_single_variant'), (11, 'no_classifications_from_unflagged_records')], return_int=False))
     pathogenicity = models.Enum8Field(choices=PATHOGENICITY_CHOICES, return_int=False)
 
+    class Meta:
+        abstract = True
+
+class BaseClinvarAllVariants(BaseClinvar):
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
+
+    class Meta:
+        abstract = True
+        engine = models.MergeTree(
+            primary_key='variant_id',
+            order_by=('variant_id')
+        )
+
+class ClinvarAllVariantsGRCh37SnvIndel(BaseClinvarAllVariants):
+    class Meta:
+        db_table = 'GRCh37/SNV_INDEL/clinvar_all_variants'
+
+class ClinvarAllVariantsRawSnvIndel(BaseClinvarAllVariants):
+    class Meta:
+        db_table = 'GRCh38/SNV_INDEL/clinvar_all_variants'
+
+class ClinvarAllVariantsRawMito(BaseClinvarAllVariants):
+    class Meta:
+        db_table = 'GRCh38/MITO/clinvar_all_variants'
+
+class BaseClinvarJoin(BaseClinvar):
+
     def _save_table(
         self,
         raw=False,
@@ -456,19 +483,20 @@ class BaseClinvar(models.ClickhouseModel):
         abstract = True
         engine = Join('ALL', 'LEFT', 'key', join_use_nulls=1, flatten_nested=0)
 
-class ClinvarGRCh37SnvIndel(BaseClinvar):
+
+class ClinvarGRCh37SnvIndel(BaseClinvarJoin):
     key = ForeignKey('EntriesGRCh37SnvIndel', db_column='key', related_name='clinvar_join', primary_key=True, on_delete=PROTECT)
-    class Meta(BaseClinvar.Meta):
+    class Meta(BaseClinvarJoin.Meta):
         db_table = 'GRCh37/SNV_INDEL/clinvar'
 
-class ClinvarSnvIndel(BaseClinvar):
+class ClinvarSnvIndel(BaseClinvarJoin):
     key = ForeignKey('EntriesSnvIndel', db_column='key', related_name='clinvar_join', primary_key=True, on_delete=PROTECT)
-    class Meta(BaseClinvar.Meta):
+    class Meta(BaseClinvarJoin.Meta):
         db_table = 'GRCh38/SNV_INDEL/clinvar'
 
-class ClinvarMito(BaseClinvar):
+class ClinvarMito(BaseClinvarJoin):
     key = ForeignKey('EntriesMito', db_column='key', related_name='clinvar_join', primary_key=True, on_delete=PROTECT)
-    class Meta(BaseClinvar.Meta):
+    class Meta(BaseClinvarJoin.Meta):
         db_table = 'GRCh38/MITO/clinvar'
 
 
