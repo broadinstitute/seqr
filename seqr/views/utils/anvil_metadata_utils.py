@@ -341,7 +341,7 @@ def _get_parsed_saved_discovery_variants_by_family(
     for variant in project_saved_variants:
         chrom, pos = get_chrom_pos(variant.xpos)
 
-        variant_json = variant.saved_variant_json
+        variant_json = variant.saved_variant_json  # TODO
         main_transcript = _get_variant_main_transcript(variant)
         gene_id = main_transcript.get('geneId')
         gene_ids.add(gene_id)
@@ -395,7 +395,7 @@ def _get_parsed_saved_discovery_variants_by_family(
 
 
 def _get_variant_main_transcript(variant_model):
-    variant = variant_model.saved_variant_json
+    variant = variant_model.saved_variant_json  # TODO
     main_transcript_id = variant_model.selected_main_transcript_id or variant.get('mainTranscriptId')
     if main_transcript_id:
         for gene_id, transcripts in variant.get('transcripts', {}).items():

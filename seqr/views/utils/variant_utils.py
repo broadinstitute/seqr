@@ -32,6 +32,7 @@ OMIM_GENOME_VERSION = GENOME_VERSION_GRCh38
 
 
 def update_projects_saved_variant_json(projects, user_email, **kwargs):
+    # TODO backend specific disable
     success = {}
     skipped = {}
     error = {}
@@ -68,6 +69,7 @@ def update_projects_saved_variant_json(projects, user_email, **kwargs):
 
 
 def get_saved_variants(genome_version, project_id=None, family_guids=None, dataset_type=None):
+    # TODO stop suppoprting other genome build variants?
     saved_variants = SavedVariant.objects.filter(
         Q(saved_variant_json__genomeVersion__isnull=True) |
         Q(saved_variant_json__genomeVersion=genome_version.replace('GRCh', ''))
@@ -82,6 +84,7 @@ def get_saved_variants(genome_version, project_id=None, family_guids=None, datas
 
 
 def update_project_saved_variant_json(project_id, genome_version, family_guids=None, dataset_type=None, user=None, user_email=None):
+    # TODO backend specific disable
     saved_variants = get_saved_variants(genome_version, project_id, family_guids, dataset_type).select_related('family')
 
     if not saved_variants:
@@ -131,7 +134,7 @@ def parse_saved_variant_json(variant_json, family_id, variant_id=None,):
     ref = variant_json.get('ref')
     alt = variant_json.get('alt')
     var_length = variant_json['end'] - variant_json['pos'] if variant_json.get('end') is not None else len(ref) - 1
-    update_json = {'saved_variant_json': variant_json}
+    update_json = {'saved_variant_json': variant_json}  # TODO backend specific/ shared functionality
     return {
         'xpos': xpos,
         'xpos_end': xpos + var_length,
@@ -207,6 +210,7 @@ def _set_updated_tags(key: tuple[int, str], metadata: dict[str, dict], support_v
             VariantTag, {'variant_tag_type': tag_type, 'metadata': json.dumps(metadata)}, user)
         tag.saved_variants.add(variant)
 
+    # TODO
     variant_genes = set(variant.saved_variant_json['transcripts'].keys())
     support_vars = []
     for support_id in support_var_ids:

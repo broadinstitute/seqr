@@ -421,7 +421,7 @@ def get_json_for_saved_variants(saved_variants, add_details=False, additional_mo
     additional_fields = []
     additional_fields += additional_model_fields or []
     if add_details:
-        additional_fields.append('saved_variant_json')
+        additional_fields.append('saved_variant_json')  # TODO
 
     results = get_json_for_queryset(
         saved_variants, guid_key='variantGuid', additional_values=sv_additional_values,

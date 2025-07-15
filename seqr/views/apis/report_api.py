@@ -1016,7 +1016,7 @@ def variant_metadata(request, project_guid):
         add_row=_add_row,
         variant_json_fields=['clinvar', 'variantId'],
         variant_attr_fields=['tags'],
-        mme_value=ArrayAgg('matchmakersubmissiongenes__saved_variant__saved_variant_json__variantId'),
+        mme_value=ArrayAgg('matchmakersubmissiongenes__saved_variant__variant_id'),
         include_family_name_display=True,
         include_mondo=True,
         omit_airtable=True,

@@ -406,6 +406,7 @@ class Command(BaseCommand):
 
     @classmethod
     def _reload_shared_variant_annotations(cls, data_type, genome_version, updated_variants_by_id=None, exclude_families=None, chromosomes=None):
+        # TODO
         dataset_type = data_type.split('_')[0]
         is_sv = dataset_type.startswith(Sample.DATASET_TYPE_SV_CALLS)
         dataset_type = data_type.split('_')[0] if is_sv else data_type
