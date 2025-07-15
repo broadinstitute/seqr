@@ -7,8 +7,7 @@ import json
 import logging
 import re
 
-from zmq.backend import backend
-
+from clickhouse_search.search import get_clickhouse_genotypes
 from reference_data.models import GENOME_VERSION_LOOKUP, GENOME_VERSION_GRCh38
 from seqr.models import Family, Sample, SavedVariant, Project, Individual
 from seqr.utils.communication_utils import safe_post_to_slack, send_project_email
@@ -421,10 +420,14 @@ class Command(BaseCommand):
             if not variant_models_by_key:
                 continue
             variants = []
-            for key, genotypes in get_clickhouse_genotypes(project_guid, family_guid, genome_version, dataset_type, variant_models_by_key.keys()):
+            genotypes_by_key = get_clickhouse_genotypes(
+                project_guid, family_guid, genome_version, dataset_type, variant_models_by_key.keys(), family_samples[family_guid],
+            )
+            for key, genotypes in genotypes_by_key:
                 variant = variant_models_by_key[key]
                 variant.genotypes = genotypes
                 variants.append(variant)
+            logger.info(f'Reloading genotypes for {len(variants)} {dataset_type} variants in family {family_guid}')
             SavedVariant.bulk_update_models(None, variants, ['genotypes'])
 
     @classmethod

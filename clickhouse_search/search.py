@@ -451,3 +451,11 @@ def _add_liftover_genotypes(variant, data_type, variant_id):
     if lifted_entry_data:
         variant['familyGenotypes'].update(lifted_entry_data[0]['familyGenotypes'])
         variant['liftedFamilyGuids'] = sorted(lifted_entry_data[0]['familyGenotypes'].keys())
+
+
+def get_clickhouse_genotypes(project_guid, family_guid, genome_version, dataset_type, keys, samples):
+    sample_data = _get_sample_data(samples)[dataset_type]
+    entries = ENTRY_CLASS_MAP[genome_version][dataset_type].filter(
+        project_guid=project_guid, family_guid=family_guid, key__in=keys,
+    )
+    return entries.annotate(genotypes=entries.genotype_expression(sample_data)).values_list('key', 'genotypes')
