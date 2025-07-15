@@ -1,0 +1,268 @@
+import gzip
+import logging
+import requests
+import xml
+import xml.etree.ElementTree as ET
+from django.core.management.base import BaseCommand, CommandError
+from typing import Optional
+
+from clickhouse_backend import models
+from clickhouse_search.models import ClinvarAllVariantsGRCh37SnvIndel, ClinvarAllVariantsSnvIndel, ClinvarAllVariantsMito
+
+logger = logging.getLogger(__name__)
+
+BATCH_SIZE = 1000
+CLINVAR_ASSERTIONS = [
+   'Affects',
+   'association',
+   'association not found',
+   'confers sensitivity',
+   'drug response',
+   'low penetrance',
+   'not provided',
+   'other',
+   'protective',
+   'risk factor',
+   'no classifications from unflagged records',
+   'no classification for the single variant',
+]
+CLINVAR_CONFLICTING_CLASSICATIONS_OF_PATHOGENICITY = 'Conflicting classifications of pathogenicity'
+CLINVAR_DEFAULT_PATHOGENICITY = 'No pathogenic assertion'
+CLINVAR_PATHOGENICITIES = [
+   'Pathogenic',
+   'Pathogenic/Likely pathogenic',
+   'Pathogenic/Likely pathogenic/Established risk allele',
+   'Pathogenic/Likely pathogenic/Likely risk allele',
+   'Pathogenic/Likely risk allele',
+   'Likely pathogenic',
+   'Likely pathogenic/Likely risk allele',
+   'Established risk allele',
+   'Likely risk allele',
+   CLINVAR_CONFLICTING_CLASSICATIONS_OF_PATHOGENICITY,
+   'conflicting data from submitters', # NOTE THIS IS NEW
+   'Uncertain risk allele',
+   'Uncertain significance/Uncertain risk allele',
+   'Uncertain significance',
+    CLINVAR_DEFAULT_PATHOGENICITY,
+   'Likely benign',
+   'Benign/Likely benign',
+   'Benign',
+]
+CLINVAR_GOLD_STARS_LOOKUP = {
+    'no classification for the single variant': 0,
+    'no classification provided': 0,
+    'no assertion criteria provided': 0,
+    'no classifications from unflagged records': 0,
+    'criteria provided, single submitter': 1,
+    'criteria provided, conflicting classifications': 1,
+    'criteria provided, multiple submitters, no conflicts': 2,
+    'reviewed by expert panel': 3,
+    'practice guideline': 4,
+}
+WEEKLY_XML_RELEASE = (
+    'https://ftp.ncbi.nlm.nih.gov/pub/clinvar/xml/ClinVarVCVRelease_00-latest.xml.gz'
+)
+
+def parse_and_merge_classification_counts(text):
+    # 
+    # Pathogenic(18); Likely pathogenic(9); Pathogenic, low penetrance(1); Established risk allele(1); Likely risk allele(1); Uncertain significance(1)
+    #
+    counts = {}
+    for part in text.split(";"):
+        part = part.strip()
+        if not part:
+            continue
+        label, count = part.rsplit("(", 1)
+        label = label.strip()
+        count = int(count.strip(")"))
+
+        # Normalize away low penetrance
+        label.replace(', low penetrance', '')
+
+        counts[label] = counts.get(label, 0) + count
+    return sorted(counts.items(), key=lambda x: x[1], reverse=True)
+
+def parse_allele_id(classified_record_node: xml.etree.ElementTree.Element) -> Optional[int]:
+    allele_node = classified_record_node.find('SimpleAllele')
+    if allele_node is None:
+        return None
+    allele_id_str = allele_node.attrib.get('AlleleID')
+    if allele_id_str is None:
+        raise None
+    try:
+        allele_id = int(allele_id_str)
+    except ValueError:
+        return None
+    return allele_id
+
+def parse_positions(classified_record_node: xml.etree.ElementTree.Element) -> dict[dict]:
+    positions = {}
+    location_nodes = classified_record_node.findall('SimpleAllele/Location')
+    if not location_nodes:
+        # This does, occasionally happen.
+        return positions
+    for loc in location_nodes:
+        for seq_loc in loc.findall('SequenceLocation'):
+            if (
+                seq_loc.get('referenceAlleleVCF')
+                # Deletions will be filtered here.
+                and seq_loc.get('alternateAlleleVCF')
+                and seq_loc.get('start')
+                and seq_loc.get('start').isdigit()
+            ):
+                positions[seq_loc.attrib['Assembly']] = {
+                    'chrom': seq_loc.attrib['Chr'],
+                    'pos': int(seq_loc.attrib['start']),
+                    'ref': seq_loc.attrib['referenceAlleleVCF'],
+                    'alt': seq_loc.attrib['alternateAlleleVCF'],
+                }
+    return positions
+
+def parse_pathogenicity_and_assertions(classified_record_node: xml.etree.ElementTree.Element) -> [str, list[str]]:
+    pathogenicity_node = classified_record_node.find(
+        'Classifications/GermlineClassification/Description',
+    )
+    if pathogenicity_node is None:
+        return CLINVAR_DEFAULT_PATHOGENICITY, []
+
+    pathogenicity_string = pathogenicity_node.text.replace(
+         '/Pathogenic, low penetrance',
+        '; low penetrance',
+    ).replace(
+        '/Pathogenic, low penetrance/Established risk allele',
+        '/Established risk allele; low penetrance',
+    ).replace(
+        ', low penetrance',
+        '; low penetrance'
+    )
+
+    pathogenicity = pathogenicity_string.split(';')[0].strip()
+    if pathogenicity in set(CLINVAR_PATHOGENICITIES):
+        assertions = [a.strip() for a in pathogenicity_string.split(';')[1:]]
+    else:
+        pathogenicity = CLINVAR_DEFAULT_PATHOGENICITY
+        assertions = [a.strip() for a in pathogenicity_string.split(';')]
+
+    enumerated_assertions = set(CLINVAR_ASSERTIONS)
+    for assertion in assertions:
+        if assertion not in enumerated_assertions:
+            raise CommandError(f'Found an un-enumerated clinvar assertion: {assertion}')
+
+    return pathogenicity, assertions
+
+def parse_conflicting_pathogenicities(
+    classified_record_node: xml.etree.ElementTree.Element,
+    pathogenicity: str,
+) -> list[[str, int]]:
+    if pathogenicity != CLINVAR_CONFLICTING_CLASSICATIONS_OF_PATHOGENICITY:
+        return []
+    conflicting_pathogenicities_node = classified_record_node.find(
+        'Classifications/GermlineClassification/Explanation'
+    )
+    if conflicting_pathogenicities_node is None:
+        return []
+    return parse_and_merge_classification_counts(
+        conflicting_pathogenicities_node.text
+    )
+
+def parse_gold_stars(classified_record_node: xml) -> Optional[int]:
+    review_status_node = classified_record_node.find(
+        'Classifications/GermlineClassification/ReviewStatus',
+    )
+    if review_status_node is None:
+        return None
+    if review_status_node.text not in CLINVAR_GOLD_STARS_LOOKUP:
+        raise CommandError(f'Found unexpected review status {review_status_node.text}')
+    return CLINVAR_GOLD_STARS_LOOKUP[review_status_node.text]
+
+def parse_submitters_and_conditions(classified_record_node: xml) -> [list[str], list[str]]:
+    submitters = list({
+        s.attrib['SubmitterName']
+        for s in classified_record_node.findall(
+            'ClinicalAssertionList/ClinicalAssertion/ClinVarAccession',
+        )
+    })
+    conditions = list({
+        c.attrib['Name']
+        for c in classified_record_node.findall('TraitMappingList/TraitMapping/MedGen')
+    })
+    return submitters, conditions
+
+def extract_variant_info(elem: xml.etree.ElementTree.Element, version: str) -> tuple[models.ClickhouseModel, models.ClickhouseModel, models.ClickhouseModel]:
+    # Cannot use regular bool-falseyness here, as:
+    # "An element with no child elements (even if it exists and has text) will be falsey."
+    classified_record_node = elem.find('ClassifiedRecord')
+    if classified_record_node is None:
+        return None, None, None
+    allele_id = parse_allele_id(classified_record_node)
+    if not allele_id:
+        return None, None, None
+    positions = parse_positions(classified_record_node)
+    if not positions:
+        return None, None, None
+
+    pathogenicity, assertions = parse_pathogenicity_and_assertions(classified_record_node)
+    conflicting_pathogenicities = parse_conflicting_pathogenicities(classified_record_node, pathogenicity)
+    gold_stars = parse_gold_stars(classified_record_node)
+    submitters, conditions = parse_submitters_and_conditions(classified_record_node)
+    props = {
+        'version': version,
+        'allele_id': allele_id,
+        'pathogenicity': pathogenicity,
+        'assertions': assertions,
+        'conflicting_pathogenicities': conflicting_pathogenicities,
+        'gold_stars': gold_stars,
+        'submitters': submitters,
+        'conditions': conditions,
+    }
+    grch37 = positions.get('GRCh37')
+    grch38 = positions.get('GRCh38')
+    return (
+        ClinvarAllVariantsGRCh37SnvIndel(
+            variant_id=f"{grch37['chrom']}-{grch37['pos']}-{grch37['ref']}-{grch37['alt']}",
+            **props,
+        ) if grch37 and grch37['chrom'] != 'MT' else None,
+        ClinvarAllVariantsSnvIndel(
+            variant_id=f"{grch38['chrom']}-{grch38['pos']}-{grch38['ref']}-{grch38['alt']}",
+            **props,
+        ) if grch38 and grch38['chrom'] != 'MT'else None,
+        ClinvarAllVariantsMito(
+            variant_id=f"M-{grch38['pos']}-{grch38['ref']}-{grch38['alt']}",
+            **props,
+        ) if grch38 and grch38['chrom'] == 'MT' else None,
+    )
+
+class Command(BaseCommand):
+    help = 'Reload all clinvar variants from weekly NCBI xml release'
+
+    def handle(self, *args, **options):
+        GRCh37SnvIndel_batch, SnvIndel_batch, Mito_batch = [], [], []
+        version = None
+        with requests.get(WEEKLY_XML_RELEASE, stream=True, timeout=10) as r:
+            r.raise_for_status()
+            for event, elem in ET.iterparse(gzip.GzipFile(fileobj=r.raw), events=('start', 'end',)):
+                if event == 'start' and elem.tag == 'ClinVarVariationRelease':
+                    version = elem.attrib['ReleaseDate']
+                    logger.info(f'Updating ClinvarAllVariants tables to {version}')
+                
+                if elem.tag == 'VariationArchive' and version:
+                    GRCh37SnvIndel, SnvIndel, Mito = extract_variant_info(elem, version)
+                    for obj, batch, model in zip(
+                        (GRCh37SnvIndel, SnvIndel, Mito),
+                        (GRCh37SnvIndel_batch, SnvIndel_batch, Mito_batch),
+                        (ClinvarAllVariantsGRCh37SnvIndel, ClinvarAllVariantsSnvIndel, ClinvarAllVariantsMito)
+                    ):
+                        if obj:
+                            batch.append(obj)
+                        if len(batch) >= BATCH_SIZE:
+                            model.objects.bulk_create(batch)
+                            batch.clear()
+
+                elem.clear()
+
+        for batch, model in zip(
+            (GRCh37SnvIndel_batch, SnvIndel_batch, Mito_batch),
+            (ClinvarAllVariantsGRCh37SnvIndel, ClinvarAllVariantsSnvIndel, ClinvarAllVariantsMito)
+        ):
+            if batch:
+                model.objects.bulk_create(batch)

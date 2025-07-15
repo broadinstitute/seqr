@@ -50,7 +50,7 @@ LAYOUT(FLAT(MAX_ARRAY_SIZE $size))
     # Note the nested Template-ing that allows
     # double substitution these shared values
     clickhouse_user=CLICKHOUSE_USER,
-    clickhouse_password=CLICKHOUSE_PASSWORD,
+    clickhouse_password=CLICKHOUSE_PASSWORD if CLICKHOUSE_PASSWORD else "''",
 ))
 
 class Migration(migrations.Migration):

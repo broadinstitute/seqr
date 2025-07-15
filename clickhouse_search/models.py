@@ -15,6 +15,7 @@ from settings import CLICKHOUSE_IN_MEMORY_DIR, CLICKHOUSE_DATA_DIR
 options.DEFAULT_NAMES = (
     *options.DEFAULT_NAMES,
     'projection',
+    'ttl',
 )
 state.DEFAULT_NAMES = options.DEFAULT_NAMES
 
@@ -66,6 +67,11 @@ class Projection(Func):
         self.name = name
         self.select = select
         self.order_by = order_by
+
+class TTL(Func):
+    def __init__(self, column, interval):
+        self.column = column
+        self.interval = interval
 
 
 class BaseAnnotations(models.ClickhouseModel):
@@ -428,8 +434,8 @@ class BaseClinvar(models.ClickhouseModel):
     ]))
     allele_id = models.UInt32Field(db_column='alleleId', null=True, blank=True)
     conflicting_pathogenicities = NestedField([
-        ('count', models.UInt16Field()),
         ('pathogenicity', models.Enum8Field(choices=PATHOGENICITY_CHOICES, return_int=False)),
+        ('count', models.UInt16Field()),
     ], db_column='conflictingPathogenicities', null_when_empty=True)
     gold_stars = models.UInt8Field(db_column='goldStars', null=True, blank=True)
     submitters = models.ArrayField(models.StringField())
@@ -441,24 +447,30 @@ class BaseClinvar(models.ClickhouseModel):
         abstract = True
 
 class BaseClinvarAllVariants(BaseClinvar):
+    version = models.DateField()
     variant_id = models.StringField(db_column='variantId', primary_key=True)
 
     class Meta:
         abstract = True
         engine = models.MergeTree(
-            primary_key='variant_id',
-            order_by=('variant_id')
+            primary_key=('version', 'variant_id'),
+            order_by=('version', 'variant_id'),
+            partition_by='version',
+        )
+        ttl = TTL(
+            column='version',
+            interval='6 WEEK',
         )
 
 class ClinvarAllVariantsGRCh37SnvIndel(BaseClinvarAllVariants):
     class Meta(BaseClinvarAllVariants.Meta):
         db_table = 'GRCh37/SNV_INDEL/clinvar_all_variants'
 
-class ClinvarAllVariantsRawSnvIndel(BaseClinvarAllVariants):
+class ClinvarAllVariantsSnvIndel(BaseClinvarAllVariants):
     class Meta(BaseClinvarAllVariants.Meta):
         db_table = 'GRCh38/SNV_INDEL/clinvar_all_variants'
 
-class ClinvarAllVariantsRawMito(BaseClinvarAllVariants):
+class ClinvarAllVariantsMito(BaseClinvarAllVariants):
     class Meta(BaseClinvarAllVariants.Meta):
         db_table = 'GRCh38/MITO/clinvar_all_variants'
 
