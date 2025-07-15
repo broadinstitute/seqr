@@ -28,21 +28,6 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
     def no_quote_value(self, value):
         return value
 
-    def _create_index_sql( self,
-        model,
-        *,
-        fields=None,
-        name=None,
-        sql=None,
-        suffix="",
-        col_suffixes=None,
-        type=None,
-        granularity=None,
-        expressions=None,
-        inline=False,
-        **kwargs,
-   ):
-        return super()._create_index_sql(model, *, fields=fields, name=name, sql=sql, suffix=suffix, col_suffixes=col_suffixes, type=type, granularity=granularity, expressions=expressions, inline=inline)
 
 class DatabaseWrapper(BaseDatabaseWrapper):
     SchemaEditorClass = DatabaseSchemaEditor
