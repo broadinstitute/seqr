@@ -542,7 +542,7 @@ class ElasticsearchSearchUtilsTests(TestCase, SearchUtilsTests):
 
     def test_sv_variant_lookup(self, *args, **kwargs):
         with self.assertRaises(InvalidSearchException) as cm:
-            super().test_sv_variant_lookup(mock.MagicMock())
+            super().test_sv_variant_lookup(mock.MagicMock(), mock.MagicMock())
         self.assertEqual(str(cm.exception), 'Lookup is disabled')
 
     @mock.patch('seqr.utils.search.utils.get_es_variants_for_variant_ids')
@@ -727,17 +727,15 @@ class ClickhouseSearchUtilsTests(TestCase, SearchUtilsTests):
             sort='cadd',
         )
 
-
     @mock.patch('seqr.utils.search.utils.get_clickhouse_variants')
     def test_get_variant_query_gene_counts(self, mock_call):
         super().test_get_variant_query_gene_counts(mock_call)
 
-    @mock.patch('seqr.utils.search.utils.get_clickhouse_variants')
+    @mock.patch('seqr.utils.search.utils.clickhouse_variant_lookup')
     def test_variant_lookup(self, mock_call):
-        with self.assertRaises(NotImplementedError):
-            super().test_variant_lookup(mock_call)
+        super().test_variant_lookup(mock_call)
 
     @mock.patch('seqr.utils.search.utils.get_clickhouse_variants')
-    def test_sv_variant_lookup(self, mock_call):
-        with self.assertRaises(NotImplementedError):
-            super().test_sv_variant_lookup(mock_call)
+    @mock.patch('seqr.utils.search.utils.clickhouse_variant_lookup')
+    def test_sv_variant_lookup(self, mock_sv_variant_lookup, mock_get_variants):
+        super().test_sv_variant_lookup(mock_sv_variant_lookup, mock_get_variants)
