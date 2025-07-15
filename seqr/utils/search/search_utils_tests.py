@@ -81,9 +81,9 @@ class SearchUtilsTests(SearchTestHelper):
         mock_sv_variant_lookup.assert_called_with(
             self.user, 'phase2_DEL_chr14_4640', 'SV_WGS', genome_version='38', samples=mock.ANY)
         mock_get_variants.assert_called_with(mock.ANY, {
-            'padded_interval': {'chrom': '14', 'start': 106694244, 'end': 106740587, 'padding': 0.2},
-            'annotations': {'structural': ['DEL', 'gCNV_DEL']}, 'parsed_locus': {},
-        }, self.user, previous_search_results=mock.ANY, genome_version='38')
+            'parsed_locus': {'padded_interval': {'chrom': '14', 'start': 106694244, 'end': 106740587, 'padding': 0.2}},
+            'annotations': {'structural': ['DEL', 'gCNV_DEL']},
+        }, self.user, mock.ANY, '38')
         cache_key = 'variant_lookup_results__phase2_DEL_chr14_4640__38__test_user'
         self.assert_cached_results(variants, cache_key=cache_key)
         expected_samples = {s for s in self.search_samples if s.guid in SV_SAMPLES}

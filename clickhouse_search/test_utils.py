@@ -59,7 +59,16 @@ for variant in [GRCH37_VARIANT, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3]:
 SV_VARIANT1 = {**deepcopy(HAIL_SV_VARIANT1), 'key': 12, 'populations': {**HAIL_SV_VARIANT1['populations'], 'sv_callset': {'ac': 1, 'hom': 0}}}
 SV_VARIANT2 = {**deepcopy(HAIL_SV_VARIANT2), 'key': 13, 'populations': {**HAIL_SV_VARIANT2['populations'], 'sv_callset': {'ac': 2, 'hom': 0}}}
 SV_VARIANT3 = {**deepcopy(HAIL_SV_VARIANT3), 'key': 14, 'populations': {**HAIL_SV_VARIANT3['populations'], 'sv_callset': {'ac': 4, 'hom': 1}}}
-SV_VARIANT4 = {**deepcopy(HAIL_SV_VARIANT4), 'key': 15, 'populations': {**HAIL_SV_VARIANT4['populations'], 'sv_callset': {'ac': 4, 'hom': 1}}}
+SV_VARIANT4 = {
+    **deepcopy(HAIL_SV_VARIANT4), 
+    'key': 15, 
+    'populations': {**HAIL_SV_VARIANT4['populations'], 'sv_callset': {'ac': 4, 'hom': 1}},
+    'xpos': 17038719997,
+    'chrom': '17',
+    'liftedOverChrom': '17',
+    'pos': 38719997,
+    'end': 38737237,
+}
 for variant in [SV_VARIANT1, SV_VARIANT2, SV_VARIANT3, SV_VARIANT4]:
     variant['familyGuids'] = ['F000014_14']
     variant['genotypes'] = {

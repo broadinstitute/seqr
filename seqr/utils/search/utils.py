@@ -210,9 +210,10 @@ def _sv_variant_lookup(user, variant_id, dataset_type, samples, genome_version=N
     if variant['svType'] in {'DEL', 'DUP'}:
         samples = samples.exclude(sample_type=sample_type)
         search = {
-            'padded_interval': {'chrom': variant['chrom'], 'start': variant['pos'], 'end': variant['end'], 'padding': 0.2},
+            'parsed_locus': {
+                'padded_interval': {'chrom': variant['chrom'], 'start': variant['pos'], 'end': variant['end'], 'padding': 0.2},
+            },
             'annotations': {'structural': [variant['svType'], f"gCNV_{variant['svType']}"]},
-            'parsed_locus': {},
             **kwargs,
         }
         results = {}

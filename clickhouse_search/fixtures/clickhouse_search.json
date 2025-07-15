@@ -810,13 +810,13 @@
     "pk": 15,
     "fields": {
       "key": 15,
-      "xpos": 14106694244,
-      "chrom": "14",
+      "xpos": 17038719997,
+      "chrom": "17",
       "end_chrom": null,
-      "pos": 106694244,
-      "end": 106740587,
+      "pos": 38719997,
+      "end": 38737237,
       "variant_id": "phase2_DEL_chr14_4640",
-      "lifted_over_chrom": "14",
+      "lifted_over_chrom": "17",
       "lifted_over_pos": 107150261,
       "rg37_locus_end": [null, null],
       "bothsides_support": false,
@@ -1115,6 +1115,13 @@
 }, {
     "model": "clickhouse_search.keylookupgcnv",
     "pk": 1,
+    "fields": {
+      "key": 18,
+      "variant_id": "suffix_140593_DUP"
+    }
+}, {
+    "model": "clickhouse_search.keylookupgcnv",
+    "pk": 2,
     "fields": {
       "key": 19,
       "variant_id": "suffix_140608_DUP"

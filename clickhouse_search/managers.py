@@ -321,7 +321,7 @@ class AnnotationsQuerySet(QuerySet):
         except ValueError:
             return Q(**{score_column: value})
 
-    def _filter_annotations(self, results, annotations=None, pathogenicity=None, exclude=None, gene_ids=None, intervals=None, exclude_intervals=False, **kwargs):
+    def _filter_annotations(self, results, annotations=None, pathogenicity=None, exclude=None, gene_ids=None, intervals=None, exclude_intervals=False, padded_interval=None,  **kwargs):
         transcript_field = self.transcript_field
         if self.model.GENOTYPE_OVERRIDE_FIELDS:
             results = results.annotate(**{
@@ -341,7 +341,10 @@ class AnnotationsQuerySet(QuerySet):
             for interval_q in interval_qs:
                 gene_q |= interval_q
             results = results.filter(gene_q)
-        elif interval_qs and hasattr(self.model, 'end'):
+        elif (interval_qs or padded_interval) and hasattr(self.model, 'end'):
+            if padded_interval:
+                padding = int((padded_interval['end'] - padded_interval['start']) * padded_interval['padding'])
+                interval_qs = [Q(end__range=(padded_interval['end'] - padding, padded_interval['end'] + padding))]
             interval_q = interval_qs[0]
             for q in interval_qs[1:]:
                 interval_q |= q
@@ -1010,7 +1013,7 @@ class EntriesManager(QuerySet):
             mapped_expression='x.1', output_field=models.ArrayField(models.StringField()),
         )
 
-    def filter_intervals(self, exclude_intervals=False, intervals=None, gene_intervals=None, variant_ids=None,  **kwargs):
+    def filter_intervals(self, exclude_intervals=False, intervals=None, gene_intervals=None, variant_ids=None, padded_interval=None, **kwargs):
         entries = self
         if variant_ids:
             # although technically redundant, the interval query is applied to the entries table before join and reduces the join size,
@@ -1020,7 +1023,11 @@ class EntriesManager(QuerySet):
         if not (gene_intervals or intervals):
             return entries
 
-        if 'cn' in self.call_fields:
+        if padded_interval:
+            pos = padded_interval['start']
+            padding = int((padded_interval['end'] - pos) * padded_interval['padding'])
+            intervals = [(padded_interval['chrom'], max(pos - padding, MIN_POS), min(pos + padding, MAX_POS))]
+        elif 'cn' in self.call_fields:
             # SV interval filtering occurs after joining on annotations to correctly incorporate end position
             if exclude_intervals:
                 intervals = None

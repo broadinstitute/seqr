@@ -124,8 +124,8 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 
         self.results_model.families.set(Family.objects.filter(guid__in=['F000002_2', 'F000014_14']))
         self._assert_expected_search(
-            [VARIANT1, SV_VARIANT1, SV_VARIANT2, VARIANT2, VARIANT3, VARIANT4, SV_VARIANT3, GCNV_VARIANT1, SV_VARIANT4,
-                         GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
+            [VARIANT1, SV_VARIANT1, SV_VARIANT2, VARIANT2, VARIANT3, VARIANT4, SV_VARIANT3, GCNV_VARIANT1,
+                         GCNV_VARIANT2, GCNV_VARIANT3, SV_VARIANT4, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
             gene_counts={**variant_gene_counts, **mito_gene_counts, **GCNV_GENE_COUNTS, **SV_GENE_COUNTS, 'ENSG00000277258': {'total': 2, 'families': {'F000002_2': 2}}},
         )
 
@@ -175,7 +175,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         self.results_model.families.set(Family.objects.filter(guid__in=['F000002_2', 'F000011_11', 'F000014_14']))
         self._assert_expected_search(
             [PROJECT_2_VARIANT, MULTI_PROJECT_VARIANT1, SV_VARIANT1, SV_VARIANT2, MULTI_PROJECT_VARIANT2, VARIANT3,
-             VARIANT4, SV_VARIANT3, GCNV_VARIANT1, SV_VARIANT4, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT1,
+             VARIANT4, SV_VARIANT3, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, SV_VARIANT4, GCNV_VARIANT4, MITO_VARIANT1,
              MITO_VARIANT2, MITO_VARIANT3], gene_counts={**GENE_COUNTS, **SV_GENE_COUNTS},
         )
 
@@ -525,7 +525,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 
         self._set_sv_family_search()
         self._assert_expected_search(
-            [SV_VARIANT2, SV_VARIANT3, SV_VARIANT4], exclude=sv_locus,
+            [SV_VARIANT2, SV_VARIANT3], exclude=sv_locus,
         )
 
         self._reset_search_families()
@@ -582,43 +582,19 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             ]},
         }])
 
-        variants = sv_variant_lookup(self.user, 'phase2_DEL_chr14_4640', self.families, sample_type='WGS')
-        self._assert_expected_variants(variants, [{
-            **{k: v for k, v in SV_VARIANT4.items() if k not in {'familyGuids', 'genotypes'}},
-            'familyGenotypes': {SV_VARIANT4['familyGuids'][0]: [
-                {k: v for k, v in g.items() if k != 'individualGuid'} for g in SV_VARIANT4['genotypes'].values()
-            ]},
-        }])
-#
-#         body.update({'variant_id': 'suffix_140608_DUP', 'data_type': 'SV_WES', 'sample_data': EXPECTED_SAMPLE_DATA['SV_WES']})
-#         async with self.client.request('POST', '/lookup', json=body) as resp:
-#             self.assertEqual(resp.status, 200)
-#             resp_json = resp.json()
-#         self.assertDictEqual(resp_json, {
-#             **NO_GENOTYPE_GCNV_VARIANT, 'genotypes': {
-#                 individual: {k: v for k, v in genotype.items() if k not in {'start', 'end', 'numExon', 'geneIds'}}
-#                 for individual, genotype in GCNV_VARIANT4['genotypes'].items()
-#             }
-#         })
-#
-#         body['variant_id'] = 'suffix_140608_DEL'
-#         async with self.client.request('POST', '/lookup', json=body) as resp:
-#             self.assertEqual(resp.status, 404)
+        families = Family.objects.all()
+        variants = sv_variant_lookup(self.user, 'phase2_DEL_chr14_4640', families, sample_type='WGS')
+        self._assert_expected_variants(variants, [SV_VARIANT4, GCNV_VARIANT4])
 
-    #         self._assert_expected_search(
-    #             [GCNV_VARIANT4], padded_interval={'chrom': '17', 'start': 38720781, 'end': 38738703, 'padding': 0.2},
-    #             omit_data_type='SNV_INDEL',
-    #         )
-    #
-    #         self._assert_expected_search(
-    #             [], padded_interval={'chrom': '17', 'start': 38720781, 'end': 38738703, 'padding': 0.1},
-    #             omit_data_type='SNV_INDEL',
-    #         )
-    #
-    #         self._assert_expected_search(
-    #             [SV_VARIANT4], padded_interval={'chrom': '14', 'start': 106692244, 'end': 106742587, 'padding': 0.1},
-    #             sample_data=SV_WGS_SAMPLE_DATA,
-    #         )
+        variants = sv_variant_lookup(self.user, 'suffix_140608_DUP', families, sample_type='WES')
+        self._assert_expected_variants(variants, [GCNV_VARIANT4, SV_VARIANT4])
+
+        variants = sv_variant_lookup(self.user, 'suffix_140593_DUP', families, sample_type='WES')
+        self._assert_expected_variants(variants, [GCNV_VARIANT3])
+
+        with self.assertRaises(ObjectDoesNotExist) as cm:
+            variant_lookup(self.user, 'suffix_140608_DEL')
+        self.assertEqual(str(cm.exception), 'Variant not present in seqr')
 
 #     def test_multi_variant_lookup(self):
 #         self._test_multi_lookup(VARIANT_ID_SEARCH['variant_ids'], 'SNV_INDEL', [VARIANT1])
