@@ -60,6 +60,8 @@ jobs:
         env:
           CLICKHOUSE_USER: clickhouse_test
           CLICKHOUSE_PASSWORD: clickhouse_test
+          CLICKHOUSE_ADMIN_USER: clickhouse_admin_test
+          CLICKHOUSE_ADMIN_PASSWORD: clickhouse_admin_test
           ALLOW_EMPTY_PASSWORD: no
 
     steps:
@@ -91,7 +93,8 @@ jobs:
       - name: Run coverage tests
         run: |
           export CLICKHOUSE_USER=clickhouse_test
-          export CLICKHOUSE_ADMIN_USER=clickhouse_test
+          export CLICKHOUSE_ADMIN_USER=clickhouse_admin_test
+          export CLICKHOUSE_ADMIN_PASSWORD=clickhouse_admin_test
           export CLICKHOUSE_SERVICE_HOSTNAME=localhost
           coverage run --source="./matchmaker","./seqr","./reference_data","./panelapp","./clickhouse_search" --omit="*/migrations/*","*/apps.py","*/admin.py" manage.py test -p '*_tests.py' -v 2 reference_data seqr matchmaker panelapp clickhouse_search
           coverage report -m --fail-under=99
