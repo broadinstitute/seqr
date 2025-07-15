@@ -1,7 +1,7 @@
 from clickhouse_backend import models
 from collections import OrderedDict, defaultdict
 
-from django.db.models import F, Manager, QuerySet, Q, Value
+from django.db.models import F, QuerySet, Q, Value
 from django.db.models.expressions import Col
 from django.db.models.functions import Cast
 from django.db.models.sql.constants import INNER
@@ -529,7 +529,7 @@ class AnnotationsQuerySet(QuerySet):
         return field in self.query.annotations
 
 
-class EntriesManager(Manager):
+class EntriesManager(QuerySet):
     GENOTYPE_LOOKUP = {
         REF_REF: (0,),
         REF_ALT: (1,),
@@ -631,14 +631,11 @@ class EntriesManager(Manager):
 
         return entries
 
-    def lookup(self, variant_id):
-        entries = self.filter_intervals(variant_ids=[variant_id])
-        entries = self._join_annotations(entries)
-        return self._annotate_calls(entries)
-
-    def results_for_samples(self, sample_data):
+    def result_values(self, sample_data):
         entries = self._join_annotations(self)
-        return self._search_call_data(entries, sample_data)
+        if sample_data:
+            return self._search_call_data(entries, sample_data)
+        return self._annotate_calls(entries)
 
     def _seqr_pop_expression(self, seqr_popualtions):
         sample_types = [self.single_sample_type.lower()] if self.single_sample_type else ['wes', 'wgs']

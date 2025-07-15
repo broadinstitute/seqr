@@ -582,8 +582,13 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             ]},
         }])
 
-        variant = sv_variant_lookup(self.user, 'phase2_DEL_chr14_4640', self.families, sample_type='WGS')
-        self._assert_expected_variants([variant], [SV_VARIANT4])
+        variants = sv_variant_lookup(self.user, 'phase2_DEL_chr14_4640', self.families, sample_type='WGS')
+        self._assert_expected_variants(variants, [{
+            **{k: v for k, v in SV_VARIANT4.items() if k not in {'familyGuids', 'genotypes'}},
+            'familyGenotypes': {SV_VARIANT4['familyGuids'][0]: [
+                {k: v for k, v in g.items() if k != 'individualGuid'} for g in SV_VARIANT4['genotypes'].values()
+            ]},
+        }])
 #
 #         body.update({'variant_id': 'suffix_140608_DUP', 'data_type': 'SV_WES', 'sample_data': EXPECTED_SAMPLE_DATA['SV_WES']})
 #         async with self.client.request('POST', '/lookup', json=body) as resp:

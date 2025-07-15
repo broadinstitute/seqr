@@ -493,7 +493,7 @@ class BaseEntries(models.ClickhouseModel):
     filters = models.ArrayField(models.StringField(low_cardinality=True))
     sign = models.Int8Field()
 
-    objects = EntriesManager()
+    objects = EntriesManager.as_manager()
 
     def _save_table(
         self,

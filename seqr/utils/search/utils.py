@@ -3,7 +3,7 @@ from copy import deepcopy
 from datetime import timedelta
 
 from clickhouse_search.search import clickhouse_backend_enabled, get_clickhouse_variants, format_clickhouse_results, \
-    get_clickhouse_cache_results, clickhouse_variant_lookup, clickhouse_sv_lookup
+    get_clickhouse_cache_results, clickhouse_variant_lookup
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample, Individual, Project
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_get_wildcard_json, safe_redis_set_json
@@ -203,7 +203,7 @@ def _sv_variant_lookup(user, variant_id, dataset_type, samples, genome_version=N
     data_type = f'{dataset_type}_{sample_type}'
 
     lookup_samples = samples.filter(sample_type=sample_type)
-    lookup_func = backend_specific_call(_raise_search_error('Lookup is disabled'), hail_variant_lookup, clickhouse_sv_lookup)
+    lookup_func = backend_specific_call(_raise_search_error('Lookup is disabled'), hail_variant_lookup, clickhouse_variant_lookup)
     variant = lookup_func(user, variant_id, data_type, samples=lookup_samples, genome_version=genome_version, **kwargs)
     variants = [variant]
 
@@ -216,8 +216,7 @@ def _sv_variant_lookup(user, variant_id, dataset_type, samples, genome_version=N
             **kwargs,
         }
         results = {}
-        search_func = backend_specific_call(_raise_search_error('Hail backend is disabled'), get_hail_variants)
-        search_func(samples, search, user, previous_search_results=results, genome_version=genome_version)
+        _execute_search(samples, search, user, previous_search_results=results, genome_version=genome_version)
         variants += results['all_results']
 
     return variants
@@ -352,7 +351,7 @@ def _query_variants(search_model, user, previous_search_results, genome_version,
 
     _validate_search(parsed_search, samples, previous_search_results)
 
-    variant_results = backend_specific_call(get_es_variants, get_hail_variants, get_clickhouse_variants)(
+    variant_results = _execute_search(
         samples, parsed_search, user, previous_search_results, genome_version,
         sort=sort, num_results=num_results, **kwargs,
     )
@@ -361,6 +360,12 @@ def _query_variants(search_model, user, previous_search_results, genome_version,
     safe_redis_set_json(cache_key, previous_search_results, expire=timedelta(weeks=2))
 
     return variant_results, previous_search_results.get('total_results')
+
+
+def _execute_search(samples, parsed_search, user, previous_search_results, genome_version, **kwargs):
+    return backend_specific_call(get_es_variants, get_hail_variants, get_clickhouse_variants)(
+        samples, parsed_search, user, previous_search_results, genome_version, **kwargs,
+    )
 
 
 def get_variant_query_gene_counts(search_model, user):
