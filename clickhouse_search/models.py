@@ -425,13 +425,46 @@ class AnnotationsDiskGcnv(BaseAnnotationsGcnv):
 
 class BaseClinvar(models.ClickhouseModel):
 
-    PATHOGENICITY_CHOICES = list(enumerate([
-        'Pathogenic', 'Pathogenic/Likely_pathogenic', 'Pathogenic/Likely_pathogenic/Established_risk_allele',
-        'Pathogenic/Likely_pathogenic/Likely_risk_allele', 'Pathogenic/Likely_risk_allele', 'Likely_pathogenic', 'Likely_pathogenic/Likely_risk_allele',
-        'Established_risk_allele', 'Likely_risk_allele', 'Conflicting_classifications_of_pathogenicity',
-        'Uncertain_risk_allele', 'Uncertain_significance/Uncertain_risk_allele', 'Uncertain_significance',
-        'No_pathogenic_assertion', 'Likely_benign', 'Benign/Likely_benign', 'Benign'
-    ]))
+    CLINVAR_ASSERTIONS = [
+        'Affects',
+        'association',
+        'association_not_found',
+        'confers_sensitivity',
+        'drug_response',
+        'low_penetrance',
+        'not_provided',
+        'other',
+        'protective',
+        'risk_factor',
+        'no_classifications_from_unflagged_records',
+        'no_classification_for_the_single_variant',
+        'conflicting_data_from_submitters',  # NOTE THIS IS NEW
+    ]
+    CLINVAR_CONFLICTING_CLASSICATIONS_OF_PATHOGENICITY = 'Conflicting_classifications_of_pathogenicity'
+    CLINVAR_DEFAULT_PATHOGENICITY = 'No_pathogenic_assertion'
+    CLINVAR_PATHOGENICITIES = [
+        'Pathogenic',
+        'Pathogenic/Likely_pathogenic',
+        'Pathogenic/Likely_pathogenic/Established_risk_allele',
+        'Pathogenic/Likely_pathogenic/Likely_risk_allele',
+        'Pathogenic/Likely_risk_allele',
+        'Likely_pathogenic',
+        'Likely_pathogenic/Likely_risk_allele',
+        'Established_risk_allele',
+        'Likely_risk_allele',
+        CLINVAR_CONFLICTING_CLASSICATIONS_OF_PATHOGENICITY,
+        'Uncertain_risk_allele',
+        'Uncertain_significance/Uncertain_risk_allele',
+        'Uncertain_significance',
+        CLINVAR_DEFAULT_PATHOGENICITY,
+        'Likely_benign',
+        'Benign/Likely_benign',
+        'Benign',
+    ]
+
+    ASSERTIONS_CHOICES = list(enumerate(CLINVAR_ASSERTIONS))
+    PATHOGENICITY_CHOICES = list(enumerate(CLINVAR_PATHOGENICITIES))
+
     allele_id = models.UInt32Field(db_column='alleleId', null=True, blank=True)
     conflicting_pathogenicities = NestedField([
         ('pathogenicity', models.Enum8Field(choices=PATHOGENICITY_CHOICES, return_int=False)),
@@ -440,7 +473,7 @@ class BaseClinvar(models.ClickhouseModel):
     gold_stars = models.UInt8Field(db_column='goldStars', null=True, blank=True)
     submitters = models.ArrayField(models.StringField())
     conditions = models.ArrayField(models.StringField())
-    assertions = models.ArrayField(models.Enum8Field(choices=[(0, 'Affects'), (1, 'association'), (2, 'association_not_found'), (3, 'confers_sensitivity'), (4, 'drug_response'), (5, 'low_penetrance'), (6, 'not_provided'), (7, 'other'), (8, 'protective'), (9, 'risk_factor'), (10, 'no_classification_for_the_single_variant'), (11, 'no_classifications_from_unflagged_records')], return_int=False))
+    assertions = models.ArrayField(models.Enum8Field(choices=ASSERTIONS_CHOICES, return_int=False))
     pathogenicity = models.Enum8Field(choices=PATHOGENICITY_CHOICES, return_int=False)
 
     class Meta:
@@ -459,7 +492,7 @@ class BaseClinvarAllVariants(BaseClinvar):
         )
         ttl = TTL(
             column='version',
-            interval='6 WEEK',
+            interval='3 WEEK',
         )
 
 class ClinvarAllVariantsGRCh37SnvIndel(BaseClinvarAllVariants):

@@ -3,51 +3,39 @@ import logging
 import requests
 import xml
 import xml.etree.ElementTree as ET
+from django.db import connections
 from django.core.management.base import BaseCommand, CommandError
-from typing import Optional
+from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL
+from typing import Optional, Union
 
 from clickhouse_backend import models
 from clickhouse_search.models import ClinvarAllVariantsGRCh37SnvIndel, ClinvarAllVariantsSnvIndel, ClinvarAllVariantsMito
+from reference_data.models import DataVersions
+from seqr.utils.communication_utils import safe_post_to_slack
 
 logger = logging.getLogger(__name__)
 
+def replace_underscores_with_spaces(value: Union[str, list[str]]) -> Union[str, list[str]]:
+    if isinstance(value, str):
+        return value.replace('_', ' ')
+    elif isinstance(value, list):
+        return [s.replace('_', ' ') for s in value]
+    raise TypeError("Expected str or list[str]")
+
+def replace_spaces_with_underscores(value: Union[str, list[str], list[tuple[str, int]]]) -> Union[str, list[str]]:
+    if isinstance(value, str):
+        return value.replace(' ', '_')
+    elif isinstance(value, list):
+        if len(value) > 0 and isinstance(value[0], tuple):
+            return [(t[0].replace(' ', '_'), t[1]) for t in value]
+        return [s.replace(' ', '_') for s in value]
+    raise TypeError("Expected str or list[str]")
+
 BATCH_SIZE = 1000
-CLINVAR_ASSERTIONS = [
-   'Affects',
-   'association',
-   'association not found',
-   'confers sensitivity',
-   'drug response',
-   'low penetrance',
-   'not provided',
-   'other',
-   'protective',
-   'risk factor',
-   'no classifications from unflagged records',
-   'no classification for the single variant',
-]
-CLINVAR_CONFLICTING_CLASSICATIONS_OF_PATHOGENICITY = 'Conflicting classifications of pathogenicity'
-CLINVAR_DEFAULT_PATHOGENICITY = 'No pathogenic assertion'
-CLINVAR_PATHOGENICITIES = [
-   'Pathogenic',
-   'Pathogenic/Likely pathogenic',
-   'Pathogenic/Likely pathogenic/Established risk allele',
-   'Pathogenic/Likely pathogenic/Likely risk allele',
-   'Pathogenic/Likely risk allele',
-   'Likely pathogenic',
-   'Likely pathogenic/Likely risk allele',
-   'Established risk allele',
-   'Likely risk allele',
-   CLINVAR_CONFLICTING_CLASSICATIONS_OF_PATHOGENICITY,
-   'conflicting data from submitters', # NOTE THIS IS NEW
-   'Uncertain risk allele',
-   'Uncertain significance/Uncertain risk allele',
-   'Uncertain significance',
-    CLINVAR_DEFAULT_PATHOGENICITY,
-   'Likely benign',
-   'Benign/Likely benign',
-   'Benign',
-]
+CLINVAR_ASSERTIONS = replace_underscores_with_spaces(ClinvarAllVariantsSnvIndel.CLINVAR_ASSERTIONS)
+CLINVAR_CONFLICTING_CLASSICATIONS_OF_PATHOGENICITY = replace_underscores_with_spaces(ClinvarAllVariantsSnvIndel.CLINVAR_CONFLICTING_CLASSICATIONS_OF_PATHOGENICITY)
+CLINVAR_DEFAULT_PATHOGENICITY = replace_underscores_with_spaces(ClinvarAllVariantsSnvIndel.CLINVAR_DEFAULT_PATHOGENICITY)
+CLINVAR_PATHOGENICITIES = replace_underscores_with_spaces(ClinvarAllVariantsSnvIndel.CLINVAR_PATHOGENICITIES)
 CLINVAR_GOLD_STARS_LOOKUP = {
     'no classification for the single variant': 0,
     'no classification provided': 0,
@@ -63,6 +51,7 @@ WEEKLY_XML_RELEASE = (
     'https://ftp.ncbi.nlm.nih.gov/pub/clinvar/xml/ClinVarVCVRelease_00-latest.xml.gz'
 )
 
+
 def parse_and_merge_classification_counts(text):
     # 
     # Pathogenic(18); Likely pathogenic(9); Pathogenic, low penetrance(1); Established risk allele(1); Likely risk allele(1); Uncertain significance(1)
@@ -77,7 +66,7 @@ def parse_and_merge_classification_counts(text):
         count = int(count.strip(")"))
 
         # Normalize away low penetrance
-        label.replace(', low penetrance', '')
+        label = label.replace(', low penetrance', '')
 
         counts[label] = counts.get(label, 0) + count
     return sorted(counts.items(), key=lambda x: x[1], reverse=True)
@@ -107,12 +96,12 @@ def parse_positions(classified_record_node: xml.etree.ElementTree.Element) -> di
                 seq_loc.get('referenceAlleleVCF')
                 # Deletions will be filtered here.
                 and seq_loc.get('alternateAlleleVCF')
-                and seq_loc.get('start')
-                and seq_loc.get('start').isdigit()
+                and seq_loc.get('positionVCF')
+                and seq_loc.get('positionVCF').isdigit()
             ):
                 positions[seq_loc.attrib['Assembly']] = {
                     'chrom': seq_loc.attrib['Chr'],
-                    'pos': int(seq_loc.attrib['start']),
+                    'pos': int(seq_loc.attrib['positionVCF']),
                     'ref': seq_loc.attrib['referenceAlleleVCF'],
                     'alt': seq_loc.attrib['alternateAlleleVCF'],
                 }
@@ -161,9 +150,14 @@ def parse_conflicting_pathogenicities(
     )
     if conflicting_pathogenicities_node is None:
         return []
-    return parse_and_merge_classification_counts(
+    conflicting_pathogenicities = parse_and_merge_classification_counts(
         conflicting_pathogenicities_node.text
     )
+    enumerated_pathogenicities = set(CLINVAR_PATHOGENICITIES)
+    for (pathogenicity, count) in conflicting_pathogenicities:
+        if pathogenicity not in enumerated_pathogenicities:
+            raise CommandError(f'Found an un-enumerated conflicting clinvar pathogenicity: {pathogenicity}')
+    return conflicting_pathogenicities
 
 def parse_gold_stars(classified_record_node: xml) -> Optional[int]:
     review_status_node = classified_record_node.find(
@@ -176,15 +170,15 @@ def parse_gold_stars(classified_record_node: xml) -> Optional[int]:
     return CLINVAR_GOLD_STARS_LOOKUP[review_status_node.text]
 
 def parse_submitters_and_conditions(classified_record_node: xml) -> [list[str], list[str]]:
-    submitters = list({
+    submitters = sorted({
         s.attrib['SubmitterName']
         for s in classified_record_node.findall(
             'ClinicalAssertionList/ClinicalAssertion/ClinVarAccession',
         )
     })
-    conditions = list({
+    conditions = sorted({
         c.attrib['Name']
-        for c in classified_record_node.findall('TraitMappingList/TraitMapping/MedGen')
+        for c in classified_record_node.findall('ClinicalAssertionList/TraitMappingList/TraitMapping/MedGen')
     })
     return submitters, conditions
 
@@ -208,9 +202,9 @@ def extract_variant_info(elem: xml.etree.ElementTree.Element, version: str) -> t
     props = {
         'version': version,
         'allele_id': allele_id,
-        'pathogenicity': pathogenicity,
-        'assertions': assertions,
-        'conflicting_pathogenicities': conflicting_pathogenicities,
+        'pathogenicity': replace_spaces_with_underscores(pathogenicity),
+        'assertions': replace_spaces_with_underscores(assertions),
+        'conflicting_pathogenicities': replace_spaces_with_underscores(conflicting_pathogenicities),
         'gold_stars': gold_stars,
         'submitters': submitters,
         'conditions': conditions,
@@ -243,9 +237,9 @@ class Command(BaseCommand):
             for event, elem in ET.iterparse(gzip.GzipFile(fileobj=r.raw), events=('start', 'end',)):
                 if event == 'start' and elem.tag == 'ClinVarVariationRelease':
                     version = elem.attrib['ReleaseDate']
-                    logger.info(f'Updating ClinvarAllVariants tables to {version}')
+                    logger.info(f'Updating Clinvar ClickHouse tables to {version}')
                 
-                if elem.tag == 'VariationArchive' and version:
+                if event == 'end' and elem.tag == 'VariationArchive' and version:
                     GRCh37SnvIndel, SnvIndel, Mito = extract_variant_info(elem, version)
                     for obj, batch, model in zip(
                         (GRCh37SnvIndel, SnvIndel, Mito),
@@ -254,11 +248,10 @@ class Command(BaseCommand):
                     ):
                         if obj:
                             batch.append(obj)
-                        if len(batch) >= BATCH_SIZE:
+                        if len(batch) == BATCH_SIZE:
                             model.objects.bulk_create(batch)
                             batch.clear()
-
-                elem.clear()
+                    elem.clear()
 
         for batch, model in zip(
             (GRCh37SnvIndel_batch, SnvIndel_batch, Mito_batch),
@@ -266,3 +259,17 @@ class Command(BaseCommand):
         ):
             if batch:
                 model.objects.bulk_create(batch)
+
+        with connections['clickhouse'].cursor() as cursor:
+            for table_base in [
+                'GRCh37/SNV_INDEL',
+                'GRCh38/SNV_INDEL',
+                'GRCh38/MITO',
+            ]:
+                cursor.execute(f'SYSTEM REFRESH VIEW "{table_base}/clinvar_all_variants_to_clinvar"')
+                cursor.execute(f'SYSTEM WAIT VIEW "{table_base}/clinvar_all_variants_to_clinvar"')
+
+        # Save the live version in Postgres.
+        DataVersions('Clinvar', version).save()
+        slack_message = f'Successfully updated Clinvar ClickHouse tables to {version}'
+        safe_post_to_slack(SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, slack_message)
