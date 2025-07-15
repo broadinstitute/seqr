@@ -155,7 +155,7 @@ class AnnotationsQuerySet(QuerySet):
         results = self.filter_variant_ids(**parsed_locus)
         results = self._filter_frequency(results, **kwargs)
         results = self._filter_in_silico(results, **kwargs)
-        results = self._filter_annotations(results, **parsed_locus, **kwargs)
+        results = self.filter_annotations(results, **parsed_locus, **kwargs)
         return results
 
     def result_values(self):
@@ -321,7 +321,7 @@ class AnnotationsQuerySet(QuerySet):
         except ValueError:
             return Q(**{score_column: value})
 
-    def _filter_annotations(self, results, annotations=None, pathogenicity=None, exclude=None, gene_ids=None, intervals=None, exclude_intervals=False, padded_interval=None,  **kwargs):
+    def filter_annotations(self, results, annotations=None, pathogenicity=None, exclude=None, gene_ids=None, intervals=None, exclude_intervals=False, padded_interval=None,  **kwargs):
         transcript_field = self.transcript_field
         if self.model.GENOTYPE_OVERRIDE_FIELDS:
             results = results.annotate(**{

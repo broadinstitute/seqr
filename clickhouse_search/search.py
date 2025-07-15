@@ -418,7 +418,10 @@ def clickhouse_variant_lookup(user, variant_id, data_type, genome_version=None, 
 
     entries = entries.result_values(sample_data)
     results = annotations_cls.objects.subquery_join(entries)
-    if not isinstance(variant_id, str):
+    if isinstance(variant_id, str):
+        # Handles annotation for genotype overrides
+        results = results.filter_annotations(results)
+    else:
         results = results.filter_variant_ids(variant_ids=[variant_id])
 
     variants = results.result_values()[:1]
