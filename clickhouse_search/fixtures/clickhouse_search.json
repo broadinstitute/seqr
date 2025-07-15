@@ -211,10 +211,10 @@
       "key": 2,
       "allele_id": 18560,
       "conflicting_pathogenicities": [
-        [1, "Likely_pathogenic"],
-        [1, "Uncertain_significance"],
-        [1, "Likely_benign"],
-        [5, "Benign"]
+        ["Likely_pathogenic", 1],
+        ["Uncertain_significance", 1],
+        ["Likely_benign", 1],
+        ["Benign", 5]
       ],
       "gold_stars": 1,
       "submitters": [
