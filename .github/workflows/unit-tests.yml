@@ -88,9 +88,13 @@ jobs:
           python -m pip install --upgrade pip wheel
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
+      - name: Clickhouse setup
+        run: |
+          clickhouse-client --query "CREATE USER clickhouse_read_only IDENTIFIED WITH plaintext_password BY 'clickhouse_test'"
+          clickhouse-client --query "GRANT SELECT, SYSTEM VIEWS, dictGet ON *.* TO clickhouse_read_only"
       - name: Run coverage tests
         run: |
-          export CLICKHOUSE_USER=clickhouse_test
+          export CLICKHOUSE_USER=clickhouse_read_only
           export CLICKHOUSE_ADMIN_USER=clickhouse_test
           export CLICKHOUSE_SERVICE_HOSTNAME=localhost
           coverage run --source="./matchmaker","./seqr","./reference_data","./panelapp","./clickhouse_search" --omit="*/migrations/*","*/apps.py","*/admin.py" manage.py test -p '*_tests.py' -v 2 reference_data seqr matchmaker panelapp clickhouse_search
