@@ -189,6 +189,7 @@ def parse_submitters_and_conditions(classified_record_node: xml) -> [list[str], 
     conditions = sorted({
         c.attrib['Name']
         for c in classified_record_node.findall('ClinicalAssertionList/TraitMappingList/TraitMapping/MedGen')
+        if c.attrib['Name'] != 'not provided'
     })
     return submitters, conditions
 
@@ -252,10 +253,10 @@ class Command(BaseCommand):
                     existing_version = (obj := DataVersions.objects.filter(data_model_name='Clinvar').first()) and obj.version
                     if new_version == existing_version:
                         logger.info(f'Clinvar ClickHouse tables already successfully updated to {new_version}, gracefully exiting.')
-                        sys.exit(0)
+                        return
                     logger.info(f'Updating Clinvar ClickHouse tables to {new_version} from {existing_version}.')
                     clinvar_run_sql(
-                        Template(f'ALTER TABLE `$reference_genome/$dataset_type/clinvar_all_variants` DROP PARTITION {new_version}')
+                        Template(f"ALTER TABLE `$reference_genome/$dataset_type/clinvar_all_variants` DROP PARTITION '{new_version}';")
                     )
 
                 # Handle parsing variants
@@ -281,9 +282,10 @@ class Command(BaseCommand):
                 model.objects.bulk_create(batch)
 
         # Delete previous version & refresh the view.
-        clinvar_run_sql(Template(f'ALTER TABLE `$reference_genome/$dataset_type/clinvar_all_variants` DROP PARTITION {existing_version}'))
-        clinvar_run_sql(Template(f'SYSTEM REFRESH VIEW `$reference_genome/$dataset_type/clinvar_all_variants_to_clinvar`'))
-        clinvar_run_sql(Template(f'SYSTEM WAIT VIEW `$reference_genome/$dataset_type/clinvar_all_variants_to_clinvar`'))
+        if existing_version:
+            clinvar_run_sql(Template(f"ALTER TABLE `$reference_genome/$dataset_type/clinvar_all_variants` DROP PARTITION '{existing_version}';"))
+        clinvar_run_sql(Template(f'SYSTEM REFRESH VIEW `$reference_genome/$dataset_type/clinvar_all_variants_to_clinvar`;'))
+        clinvar_run_sql(Template(f'SYSTEM WAIT VIEW `$reference_genome/$dataset_type/clinvar_all_variants_to_clinvar`;'))
 
         # Save the live version in Postgres
         DataVersions('Clinvar', new_version).save()
