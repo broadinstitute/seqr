@@ -353,6 +353,9 @@ def get_variant_query_gene_counts(search_model, user):
 
     genome_version = _get_search_genome_version(search_model.families.all())
     gene_counts, _ = _query_variants(search_model, user, previous_search_results, genome_version, gene_agg=True)
+    gene_counts = backend_specific_call(
+        lambda *args: None, lambda *args: None, _get_gene_aggs_for_cached_variants,
+    )(previous_search_results) or gene_counts
     return gene_counts
 
 
