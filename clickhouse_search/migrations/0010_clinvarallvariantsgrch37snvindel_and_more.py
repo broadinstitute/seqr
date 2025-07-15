@@ -31,7 +31,6 @@ class Migration(migrations.Migration):
                 'db_table': 'GRCh37/SNV_INDEL/clinvar_all_variants',
                 'abstract': False,
                 'engine': clickhouse_backend.models.MergeTree(order_by=('version', 'variant_id'), partition_by='version', primary_key=('version', 'variant_id')),
-                'ttl': clickhouse_search.models.TTL(column='version', interval='3 WEEK'),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
@@ -55,7 +54,6 @@ class Migration(migrations.Migration):
                 'db_table': 'GRCh38/MITO/clinvar_all_variants',
                 'abstract': False,
                 'engine': clickhouse_backend.models.MergeTree(order_by=('version', 'variant_id'), partition_by='version', primary_key=('version', 'variant_id')),
-                'ttl': clickhouse_search.models.TTL(column='version', interval='3 WEEK'),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
@@ -79,7 +77,6 @@ class Migration(migrations.Migration):
                 'db_table': 'GRCh38/SNV_INDEL/clinvar_all_variants',
                 'abstract': False,
                 'engine': clickhouse_backend.models.MergeTree(order_by=('version', 'variant_id'), partition_by='version', primary_key=('version', 'variant_id')),
-                'ttl': clickhouse_search.models.TTL(column='version', interval='3 WEEK'),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),

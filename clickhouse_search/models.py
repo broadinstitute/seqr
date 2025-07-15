@@ -15,7 +15,6 @@ from settings import CLICKHOUSE_IN_MEMORY_DIR, CLICKHOUSE_DATA_DIR
 options.DEFAULT_NAMES = (
     *options.DEFAULT_NAMES,
     'projection',
-    'ttl',
 )
 state.DEFAULT_NAMES = options.DEFAULT_NAMES
 
@@ -489,10 +488,6 @@ class BaseClinvarAllVariants(BaseClinvar):
             primary_key=('version', 'variant_id'),
             order_by=('version', 'variant_id'),
             partition_by='version',
-        )
-        ttl = TTL(
-            column='version',
-            interval='3 WEEK',
         )
 
 class ClinvarAllVariantsGRCh37SnvIndel(BaseClinvarAllVariants):

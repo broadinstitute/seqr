@@ -15,9 +15,6 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
                 ') ENGINE',
                 f', PROJECTION {projection.name} (SELECT {projection.select} ORDER BY {projection.order_by})) ENGINE',
             )
-        ttl = getattr(model._meta, 'ttl', None)
-        if ttl:
-            sql += f' TTL {ttl.column} + INTERVAL {ttl.interval}'
         return sql, params
 
     def _get_engine_expression(self, model, engine):

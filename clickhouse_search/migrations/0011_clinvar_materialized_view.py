@@ -9,10 +9,8 @@ CREATE MATERIALIZED VIEW `$reference_genome/$dataset_type/clinvar_all_variants_t
 REFRESH EVERY 10 YEAR
 TO `$reference_genome/$dataset_type/clinvar`
 AS 
-WITH (
-    SELECT max(version) FROM `$reference_genome/$dataset_type/clinvar_all_variants` 
-) AS live_version
-SELECT 
+SELECT
+    DISTINCT ON (key)
     kl.key as key, 
     alleleId,
     conflictingPathogenicities,
@@ -24,7 +22,6 @@ SELECT
 FROM `$reference_genome/$dataset_type/clinvar_all_variants` c
 INNER JOIN `$reference_genome/$dataset_type/key_lookup` kl
 ON c.variantId = kl.variantId
-WHERE version = live_version
 """)
 
 class Migration(migrations.Migration):
