@@ -730,11 +730,12 @@ class ClickhouseSearchUtilsTests(TestCase, SearchUtilsTests):
     def test_cached_get_variant_query_gene_counts(self):
         super().test_cached_get_variant_query_gene_counts()
 
-        self.set_cache({'all_results': [self.CACHED_VARIANTS] + [SV_VARIANT1], 'total_results': 5})
+        self.set_cache({'all_results': self.CACHED_VARIANTS + [SV_VARIANT1], 'total_results': 5})
         gene_counts = get_variant_query_gene_counts(self.results_model, self.user)
         self.assertDictEqual(gene_counts, {
-            'ENSG00000135953': {'total': 2, 'families': {'F000003_3': 2, 'F000011_11': 2}},
-            'ENSG00000228198': {'total': 2, 'families': {'F000003_3': 2, 'F000011_11': 2}},
+            'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
+            'ENSG00000177000': {'total': 2, 'families': {'F000002_2': 2}},
+            'ENSG00000277258': {'total': 1, 'families': {'F000002_2': 1}},
             'ENSG00000171621': {'total': 1, 'families': {'F000011_11': 1}},
         })
 
