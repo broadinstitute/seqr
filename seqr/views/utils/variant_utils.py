@@ -31,17 +31,16 @@ DISCOVERY_CATEGORY = 'CMG Discovery Tags'
 OMIM_GENOME_VERSION = GENOME_VERSION_GRCh38
 
 
-def update_projects_saved_variant_json(projects, user_email, **kwargs):
-    # TODO backend specific disable
+def update_projects_saved_variant_json(projects, user_email, update_function=None, **kwargs):
     success = {}
     skipped = {}
     error = {}
     updated_variants_by_id = {}
     logger.info(f'Reloading saved variants in {len(projects)} projects')
-    for project_id, project_name, genome_version, family_guids in tqdm(projects, unit=' project'):
+    for project_id, project_guid, project_name, genome_version, family_guids in tqdm(projects, unit=' project'):
         try:
-            updated_saved_variants = update_project_saved_variant_json(
-                project_id, genome_version, user_email=user_email, family_guids=family_guids, **kwargs)
+            updated_saved_variants = (update_function or update_project_saved_variant_json)(
+                project_id, genome_version, user_email=user_email, family_guids=family_guids, project_guid=project_guid, **kwargs)
             if updated_saved_variants is None:
                 skipped[project_name] = True
             else:
@@ -83,8 +82,7 @@ def get_saved_variants(genome_version, project_id=None, family_guids=None, datas
     return saved_variants
 
 
-def update_project_saved_variant_json(project_id, genome_version, family_guids=None, dataset_type=None, user=None, user_email=None):
-    # TODO backend specific disable
+def update_project_saved_variant_json(project_id, genome_version, family_guids=None, dataset_type=None, user=None, user_email=None, **kwargs):
     saved_variants = get_saved_variants(genome_version, project_id, family_guids, dataset_type).select_related('family')
 
     if not saved_variants:

@@ -7,12 +7,14 @@ import json
 import logging
 import re
 
+from zmq.backend import backend
+
 from reference_data.models import GENOME_VERSION_LOOKUP, GENOME_VERSION_GRCh38
 from seqr.models import Family, Sample, SavedVariant, Project, Individual
 from seqr.utils.communication_utils import safe_post_to_slack, send_project_email
 from seqr.utils.file_utils import file_iter, list_files, is_google_bucket_file_path
 from seqr.utils.search.add_data_utils import notify_search_data_loaded, update_airtable_loading_tracking_status
-from seqr.utils.search.utils import parse_valid_variant_id
+from seqr.utils.search.utils import parse_valid_variant_id, backend_specific_call
 from seqr.utils.search.hail_search_utils import hail_variant_multi_lookup, search_data_type
 from seqr.utils.xpos_utils import get_xpos, CHROMOSOMES, MIN_POS, MAX_POS
 from seqr.views.utils.airtable_utils import AirtableSession, LOADABLE_PDO_STATUSES, AVAILABLE_PDO_STATUS
@@ -106,9 +108,15 @@ class Command(BaseCommand):
         # Reset cached results for all projects, as seqr AFs will have changed for all projects when new data is added
         reset_cached_search_results(project=None)
 
+        backend_specific_call(
+            lambda *args: None, self._reload_dataset_type_shared_variant_annotations, lambda *args: None,
+        )(updated_families_by_data_type, updated_variants_by_data_type)
+
+    @classmethod
+    def _reload_dataset_type_shared_variant_annotations(cls, updated_families_by_data_type, updated_variants_by_data_type):
         for data_type_key, updated_families in updated_families_by_data_type.items():
             try:
-                self._reload_shared_variant_annotations(
+                cls._reload_shared_variant_annotations(
                     *data_type_key, updated_variants_by_data_type[data_type_key], exclude_families=updated_families,
                 )
             except Exception as e:
@@ -265,9 +273,10 @@ class Command(BaseCommand):
                 logger.error(f'Error updating individuals sample qc {run_version}: {e}')
 
         # Reload saved variant JSON
+        update_function = backend_specific_call(None, None, cls._update_project_saved_variant_genotypes)
         updated_variants_by_id = update_projects_saved_variant_json([
-            (project.id, project.name, project.genome_version, families) for project, families in families_by_project.items()
-        ], user_email=USER_EMAIL, dataset_type=dataset_type)
+            (project.id, project.guid, project.name, project.genome_version, families) for project, families in families_by_project.items()
+        ], user_email=USER_EMAIL, dataset_type=dataset_type, update_function=update_function)
 
         return search_data_type(dataset_type, sample_type), set(family_project_map.keys()), updated_variants_by_id
 
@@ -403,10 +412,23 @@ class Command(BaseCommand):
                 fields=['filter_flags', 'pop_platform_filters', 'population'],
             )
 
+    @classmethod
+    def _update_project_saved_variant_genotypes(cls, project_id, genome_version, user_email, family_guids, project_guid, dataset_type=None):
+        for family_guid in family_guids:
+            variant_models_by_key = {
+                v.key: v for v in get_saved_variants(genome_version, project_id, [family_guid], dataset_type)
+            }
+            if not variant_models_by_key:
+                continue
+            variants = []
+            for key, genotypes in get_clickhouse_genotypes(project_guid, family_guid, genome_version, dataset_type, variant_models_by_key.keys()):
+                variant = variant_models_by_key[key]
+                variant.genotypes = genotypes
+                variants.append(variant)
+            SavedVariant.bulk_update_models(None, variants, ['genotypes'])
 
     @classmethod
     def _reload_shared_variant_annotations(cls, data_type, genome_version, updated_variants_by_id=None, exclude_families=None, chromosomes=None):
-        # TODO
         dataset_type = data_type.split('_')[0]
         is_sv = dataset_type.startswith(Sample.DATASET_TYPE_SV_CALLS)
         dataset_type = data_type.split('_')[0] if is_sv else data_type
