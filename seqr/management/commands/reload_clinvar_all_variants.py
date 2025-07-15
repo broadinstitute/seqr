@@ -6,6 +6,7 @@ import xml.etree.ElementTree as ET
 from django.db import connections
 from django.core.management.base import BaseCommand, CommandError
 from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL
+from string import Template
 from typing import Optional, Union
 
 from clickhouse_backend import models
@@ -50,6 +51,15 @@ CLINVAR_GOLD_STARS_LOOKUP = {
 WEEKLY_XML_RELEASE = (
     'https://ftp.ncbi.nlm.nih.gov/pub/clinvar/xml/ClinVarVCVRelease_00-latest.xml.gz'
 )
+
+def clinvar_run_sql(sql: str):
+    with connections['clickhouse'].cursor() as cursor:
+        for reference_genome, dataset_type in [
+            ('GRCh37', 'SNV_INDEL'),
+            ('GRCh38', 'SNV_INDEL'),
+            ('GRCh38', 'MITO'),
+        ]:
+            cursor.execute(sql.substitute(reference_genome=reference_genome, dataset_type=dataset_type))
 
 
 def parse_and_merge_classification_counts(text):
@@ -235,10 +245,20 @@ class Command(BaseCommand):
         with requests.get(WEEKLY_XML_RELEASE, stream=True, timeout=10) as r:
             r.raise_for_status()
             for event, elem in ET.iterparse(gzip.GzipFile(fileobj=r.raw), events=('start', 'end',)):
-                if event == 'start' and elem.tag == 'ClinVarVariationRelease':
-                    version = elem.attrib['ReleaseDate']
-                    logger.info(f'Updating Clinvar ClickHouse tables to {version}')
                 
+                # Handle parsing the current date.
+                if event == 'start' and elem.tag == 'ClinVarVariationRelease':
+                    new_version = elem.attrib['ReleaseDate']
+                    existing_version = (obj := DataVersions.objects.filter(data_model_name='Clinvar').first()) and obj.version
+                    if new_version == existing_version:
+                        logger.info(f'Clinvar ClickHouse tables already successfully updated to {new_version}, gracefully exiting.')
+                        sys.exit(0)
+                    logger.info(f'Updating Clinvar ClickHouse tables to {new_version} from {existing_version}.')
+                    clinvar_run_sql(
+                        Template(f'ALTER TABLE `$reference_genome/$dataset_type/clinvar_all_variants` DROP PARTITION {new_version}')
+                    )
+
+                # Handle parsing variants
                 if event == 'end' and elem.tag == 'VariationArchive' and version:
                     GRCh37SnvIndel, SnvIndel, Mito = extract_variant_info(elem, version)
                     for obj, batch, model in zip(
@@ -260,16 +280,12 @@ class Command(BaseCommand):
             if batch:
                 model.objects.bulk_create(batch)
 
-        with connections['clickhouse'].cursor() as cursor:
-            for table_base in [
-                'GRCh37/SNV_INDEL',
-                'GRCh38/SNV_INDEL',
-                'GRCh38/MITO',
-            ]:
-                cursor.execute(f'SYSTEM REFRESH VIEW "{table_base}/clinvar_all_variants_to_clinvar"')
-                cursor.execute(f'SYSTEM WAIT VIEW "{table_base}/clinvar_all_variants_to_clinvar"')
+        # Delete previous version & refresh the view.
+        clinvar_run_sql(Template(f'ALTER TABLE `$reference_genome/$dataset_type/clinvar_all_variants` DROP PARTITION {existing_version}'))
+        clinvar_run_sql(Template(f'SYSTEM REFRESH VIEW `$reference_genome/$dataset_type/clinvar_all_variants_to_clinvar`'))
+        clinvar_run_sql(Template(f'SYSTEM WAIT VIEW `$reference_genome/$dataset_type/clinvar_all_variants_to_clinvar`'))
 
-        # Save the live version in Postgres.
-        DataVersions('Clinvar', version).save()
-        slack_message = f'Successfully updated Clinvar ClickHouse tables to {version}'
+        # Save the live version in Postgres
+        DataVersions('Clinvar', new_version).save()
+        slack_message = f'Successfully updated Clinvar ClickHouse tables to {new_version}.'
         safe_post_to_slack(SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, slack_message)

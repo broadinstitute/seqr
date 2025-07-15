@@ -67,11 +67,6 @@ class Projection(Func):
         self.select = select
         self.order_by = order_by
 
-class TTL(Func):
-    def __init__(self, column, interval):
-        self.column = column
-        self.interval = interval
-
 
 class BaseAnnotations(models.ClickhouseModel):
 
