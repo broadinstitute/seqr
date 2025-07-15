@@ -829,9 +829,11 @@ class SavedVariant(ModelWithGUID):
     ref = models.TextField(null=True)
     alt = models.TextField(null=True)
     variant_id = models.TextField(db_index=True)
+    key = models.PositiveBigIntegerField(null=True, blank=True)
 
     selected_main_transcript_id = models.CharField(max_length=20, null=True)
     saved_variant_json = JSONField(default=dict)
+    genotypes = JSONField(default=dict)
 
     acmg_classification = JSONField(null=True) # ACMG based classification
 
