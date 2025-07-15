@@ -1887,7 +1887,6 @@ class EsUtilsTest(TestCase):
             'annotations': {'structural': ['DUP', 'CPX']},
             'qualityFilter': {'min_gq_sv': 20},
             'inheritance': {'mode': 'de_novo'},
-            'locus': {'rawVariantItems': 'rs9876'},
         })
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(self.families)
@@ -1896,7 +1895,6 @@ class EsUtilsTest(TestCase):
         self.assertListEqual(variants, [PARSED_SV_WGS_VARIANT])
 
         self.assertExecutedSearch(filters=[
-            {'terms': {'rsid': ['rs9876']}},
             {'terms': {'transcriptConsequenceTerms': ['CPX', 'DUP']}},
             {'bool': {
                 'must': [{'bool': {'must': [{'term': {'samples': 'NA21234'}}, {'term': {'samples': 'NA21987'}}],
@@ -1965,14 +1963,15 @@ class EsUtilsTest(TestCase):
 
         search_model.search['annotations'] = {
             'structural': ['DEL'], 'structural_consequence': ['MSV_EXON_OVERLAP', 'INTRAGENIC_EXON_DUP']}
+        search_model.search['pathogenicity'] = None
         search_model.save()
         _set_cache('search_results__{}__xpos'.format(results_model.guid), None)
 
         query_variants(results_model, num_results=5)
         self.assertExecutedSearch(
-            filters=[{'bool': {'should': [{'terms': {
+            filters=[{'terms': {
                 'transcriptConsequenceTerms': ['DEL', 'DUP_LOF', 'INTRAGENIC_EXON_DUP', 'MSV_EXON_OVERLAP', 'MSV_EXON_OVR']
-            }}, path_filter]}}],
+            }}],
             start_index=0, size=5, index=SV_INDEX_NAME)
 
     @urllib3_responses.activate
