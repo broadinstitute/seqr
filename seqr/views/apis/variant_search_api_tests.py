@@ -1017,7 +1017,7 @@ class VariantSearchAPITest(object):
             },
             'individualsByGuid': {
                 i[0]: {k: mock.ANY for k in [*INDIVIDUAL_FIELDS, 'igvSampleGuids']}
-                for i in individual_guid_map + [('I000019_na21987',)]
+                for i in individual_guid_map + [('I000019_na21987',), (('I000021_na21654',))]
             },
         })
         expected_body['genesById']['ENSG00000227232'] = expected_pa_gene
@@ -1279,7 +1279,7 @@ class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, VariantSearchAPITes
 
     EXPECTED_SEARCH_RESPONSE = {
         **EXPECTED_SEARCH_RESPONSE,
-        'totalSampleCounts': {'MITO': {'WES': 1}, 'SNV_INDEL': {'WES': 7}, 'SV': {'WES': 3, 'WGS': 1}},
+        'totalSampleCounts': {'MITO': {'WES': 1}, 'SNV_INDEL': {'WES': 7}, 'SV': {'WES': 3, 'WGS': 3}},
     }
 
     def test_query_variants(self, *args):

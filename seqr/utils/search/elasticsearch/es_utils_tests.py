@@ -1899,13 +1899,22 @@ class EsUtilsTest(TestCase):
             {'terms': {'rsid': ['rs9876']}},
             {'terms': {'transcriptConsequenceTerms': ['CPX', 'DUP']}},
             {'bool': {
-                'must': [{'term': {'samples': 'NA21234'}},
+                'must': [{'bool': {'must': [{'term': {'samples': 'NA21234'}}, {'term': {'samples': 'NA21987'}}],
+                                   'must_not': [{'term': {'samples': 'NA21654'}}]}},
                     {'bool': {
                         'must_not': [
                             {'term': {'samples_gq_sv_0_to_5': 'NA21234'}},
                             {'term': {'samples_gq_sv_5_to_10': 'NA21234'}},
                             {'term': {'samples_gq_sv_10_to_15': 'NA21234'}},
                             {'term': {'samples_gq_sv_15_to_20': 'NA21234'}},
+                            {'term': {'samples_gq_sv_0_to_5': 'NA21654'}},
+                            {'term': {'samples_gq_sv_5_to_10': 'NA21654'}},
+                            {'term': {'samples_gq_sv_10_to_15': 'NA21654'}},
+                            {'term': {'samples_gq_sv_15_to_20': 'NA21654'}},
+                            {'term': {'samples_gq_sv_0_to_5': 'NA21987'}},
+                            {'term': {'samples_gq_sv_5_to_10': 'NA21987'}},
+                            {'term': {'samples_gq_sv_10_to_15': 'NA21987'}},
+                            {'term': {'samples_gq_sv_15_to_20': 'NA21987'}},
                         ],
                     }}
                 ],

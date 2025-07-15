@@ -10,6 +10,10 @@ from hail_search.test_utils import (
     MITO_VARIANT1 as HAIL_MITO_VARIANT1,
     MITO_VARIANT2 as HAIL_MITO_VARIANT2,
     MITO_VARIANT3 as HAIL_MITO_VARIANT3,
+    SV_VARIANT1 as HAIL_SV_VARIANT1,
+    SV_VARIANT2 as HAIL_SV_VARIANT2,
+    SV_VARIANT3 as HAIL_SV_VARIANT3,
+    SV_VARIANT4 as HAIL_SV_VARIANT4,
 )
 
 VARIANT1 = {**deepcopy(HAIL_VARIANT1), 'key': 1, 'populations': {**deepcopy(HAIL_VARIANT1)['populations'], 'seqr': {'ac': 8, 'hom': 3}}}
@@ -48,8 +52,21 @@ for variant in [GRCH37_VARIANT, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3]:
     for transcripts in variant['transcripts'].values():
         for transcript in transcripts:
             transcript['loftee'] = {field: transcript.pop(field) for field in ['isLofNagnag', 'lofFilters']}
+SV_VARIANT1 = {**deepcopy(HAIL_SV_VARIANT1), 'key': 12, 'populations': {**HAIL_SV_VARIANT1['populations'], 'sv_callset': {'ac': 1, 'hom': 0}}}
+SV_VARIANT2 = {**deepcopy(HAIL_SV_VARIANT2), 'key': 13, 'populations': {**HAIL_SV_VARIANT2['populations'], 'sv_callset': {'ac': 2, 'hom': 0}}}
+SV_VARIANT3 = {**deepcopy(HAIL_SV_VARIANT3), 'key': 14, 'populations': {**HAIL_SV_VARIANT3['populations'], 'sv_callset': {'ac': 4, 'hom': 1}}}
+SV_VARIANT4 = {**deepcopy(HAIL_SV_VARIANT4), 'key': 15, 'populations': {**HAIL_SV_VARIANT4['populations'], 'sv_callset': {'ac': 4, 'hom': 1}}}
+for variant in [SV_VARIANT1, SV_VARIANT2, SV_VARIANT3, SV_VARIANT4]:
+    variant['familyGuids'] = ['F000014_14']
+    variant['genotypes'] = {
+        'I000018_na21234': {**variant['genotypes']['I000015_na20885'], 'sampleId': 'NA21234', 'individualGuid': 'I000018_na21234', 'familyGuid': 'F000014_14'},
+        'I000019_na21987': {**variant['genotypes']['I000025_na20884'], 'sampleId': 'NA21987', 'individualGuid': 'I000019_na21987', 'familyGuid': 'F000014_14'},
+        'I000021_na21654': {**variant['genotypes']['I000035_na20883'], 'sampleId': 'NA21654', 'individualGuid': 'I000021_na21654', 'familyGuid': 'F000014_14'},
+    }
+SV_VARIANT3['cpxIntervals'][0]['chrom'] = SV_VARIANT3['cpxIntervals'][0]['chrom'].replace('chr', '')
 
-for variant in [VARIANT1, VARIANT2, VARIANT3, VARIANT4, PROJECT_2_VARIANT, GRCH37_VARIANT, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3]:
+for variant in [VARIANT1, VARIANT2, VARIANT3, VARIANT4, PROJECT_2_VARIANT, GRCH37_VARIANT, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3,
+                SV_VARIANT1, SV_VARIANT2, SV_VARIANT3, SV_VARIANT4]:
     # clickhouse uses fixed length decimals so values are rounded relative to hail backend
     for genotype in variant['genotypes'].values():
         if 'ab' in genotype:
@@ -70,7 +87,7 @@ for variant in [VARIANT1, VARIANT2, VARIANT3, VARIANT4, PROJECT_2_VARIANT, GRCH3
                 transcript['alphamissense']['pathogenicity'] = round(transcript['alphamissense']['pathogenicity'], 5)
     # sort is not computed/annotated at query time
     del variant['_sort']
-    if variant['clinvar']:
+    if variant.get('clinvar'):
         del variant['clinvar']['version']
 
 
@@ -296,4 +313,13 @@ LOCATION_SEARCH = {
 COMP_HET_ALL_PASS_FILTERS = {
     'annotations': {'splice_ai': '0.0', 'structural': ['DEL', 'CPX', 'INS', 'gCNV_DEL', 'gCNV_DUP']},
     'pathogenicity': {'clinvar': ['likely_pathogenic']},
+}
+
+NEW_SV_FILTER = {'new_structural_variants': ['NEW']}
+
+SV_GENE_COUNTS = {
+    'ENSG00000171621': {'total': 2, 'families': {'F000011_11': 2}},
+    'ENSG00000083544': {'total': 1, 'families': {'F000011_11': 1}},
+    'ENSG00000184986': {'total': 1, 'families': {'F000011_11': 1}},
+    'null': {'total': 1, 'families': {'F000011_11': 1}},
 }

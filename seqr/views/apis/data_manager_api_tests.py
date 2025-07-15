@@ -1911,7 +1911,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
             'warnings': None,
             'errors': [
                 'The following samples are included in airtable but are missing from the VCF: NA21987',
-                'The following families have previously loaded samples absent from airtable\nFamily 14: NA21234',
+                'The following families have previously loaded samples absent from airtable\nFamily 14: NA21234, NA21654',
             ],
         })
         self.assertEqual(len(responses.calls), 2)
