@@ -63,7 +63,7 @@ def clinvar_run_sql(sql: str):
 
 
 def parse_and_merge_classification_counts(text):
-    # 
+    #
     # Pathogenic(18); Likely pathogenic(9); Pathogenic, low penetrance(1); Established risk allele(1); Likely risk allele(1); Uncertain significance(1)
     #
     counts = {}
@@ -87,7 +87,7 @@ def parse_allele_id(classified_record_node: xml.etree.ElementTree.Element) -> Op
         return None
     allele_id_str = allele_node.attrib.get('AlleleID')
     if allele_id_str is None:
-        raise None
+        return None
     try:
         allele_id = int(allele_id_str)
     except ValueError:
@@ -164,7 +164,7 @@ def parse_conflicting_pathogenicities(
         conflicting_pathogenicities_node.text
     )
     enumerated_pathogenicities = set(CLINVAR_PATHOGENICITIES)
-    for (pathogenicity, count) in conflicting_pathogenicities:
+    for (pathogenicity, _) in conflicting_pathogenicities:
         if pathogenicity not in enumerated_pathogenicities:
             raise CommandError(f'Found an un-enumerated conflicting clinvar pathogenicity: {pathogenicity}')
     return conflicting_pathogenicities
@@ -246,7 +246,7 @@ class Command(BaseCommand):
         new_version = None
         with requests.get(WEEKLY_XML_RELEASE, stream=True, timeout=10) as r:
             r.raise_for_status()
-            for event, elem in ET.iterparse(gzip.GzipFile(fileobj=r.raw), events=('start', 'end',)):                
+            for event, elem in ET.iterparse(gzip.GzipFile(fileobj=r.raw), events=('start', 'end',)):
                 # Handle parsing the current date.
                 if event == 'start' and elem.tag == 'ClinVarVariationRelease':
                     new_version = elem.attrib['ReleaseDate']
@@ -284,8 +284,8 @@ class Command(BaseCommand):
         # Delete previous version & refresh the view.
         if existing_version:
             clinvar_run_sql(Template(f"ALTER TABLE `$reference_genome/$dataset_type/clinvar_all_variants` DROP PARTITION '{existing_version}';"))
-        clinvar_run_sql(Template(f'SYSTEM REFRESH VIEW `$reference_genome/$dataset_type/clinvar_all_variants_to_clinvar`;'))
-        clinvar_run_sql(Template(f'SYSTEM WAIT VIEW `$reference_genome/$dataset_type/clinvar_all_variants_to_clinvar`;'))
+        clinvar_run_sql(Template('SYSTEM REFRESH VIEW `$reference_genome/$dataset_type/clinvar_all_variants_to_clinvar`;'))
+        clinvar_run_sql(Template('SYSTEM WAIT VIEW `$reference_genome/$dataset_type/clinvar_all_variants_to_clinvar`;'))
 
         # Save the new version in Postgres
         DataVersions('Clinvar', new_version).save()

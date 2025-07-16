@@ -27,7 +27,7 @@ WEEKLY_XML_RELEASE_DATA = '''<?xml version="1.0" encoding="UTF-8" standalone="ye
                 </Location>
             </SimpleAllele>
             <Classifications>
-                <GermlineClassification DateLastEvaluated="2025-04-01" NumberOfSubmissions="38" NumberOfSubmitters="36" DateCreated="2016-03-20" MostRecentSubmission="2025-06-29">
+                <GermlineClassification>
                     <ReviewStatus>criteria provided, conflicting classifications</ReviewStatus>
                     <Description>Conflicting classifications of pathogenicity; association; risk factor</Description>
                     <Explanation DataSource="ClinVar" Type="public">Pathogenic(18); Likely pathogenic(9); Pathogenic, low penetrance(1); Established risk allele(1); Likely risk allele(1); Uncertain significance(1)</Explanation>
@@ -192,7 +192,7 @@ class ReloadClinvarAllVariantsTest(TestCase):
                         </Location>
                     </SimpleAllele>
                     <Classifications>
-                        <GermlineClassification DateLastEvaluated="2025-04-01" NumberOfSubmissions="38" NumberOfSubmitters="36" DateCreated="2016-03-20" MostRecentSubmission="2025-06-29">
+                        <GermlineClassification>
                             <Description>Pathogenic</Description>
                         </GermlineClassification>
                     </Classifications>
@@ -204,4 +204,27 @@ class ReloadClinvarAllVariantsTest(TestCase):
         call_command('reload_clinvar_all_variants')
         mock_logger.assert_called_with('Updating Clinvar ClickHouse tables to 2025-06-30 from None.')
         self.assertEqual(ClinvarAllVariantsSnvIndel.objects.all().count(), BATCH_SIZE * 2 + 10)
+
+    @responses.activate
+    def test_unenumerated_clinvar_assertion(self, mock_logger, mock_safe_post_to_slack):
+        data = '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?><ClinVarVariationRelease xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://ftp.ncbi.nlm.nih.gov/pub/clinvar/xsd_public/ClinVar_VCV_2.4.xsd" ReleaseDate="2025-06-30">
+        <VariationArchive VariationID="5603" VariationName="NM_007194.4(CHEK2):c.1283C>T (p.Ser428Phe)" VariationType="single nucleotide variant" Accession="VCV000005603" Version="104" RecordType="classified" NumberOfSubmissions="38" NumberOfSubmitters="36" DateLastUpdated="2025-06-29" DateCreated="2016-03-20" MostRecentSubmission="2025-06-29">
+            <ClassifiedRecord>
+                <SimpleAllele AlleleID="1" VariationID="5603">
+                    <Location>
+                        <SequenceLocation Assembly="GRCh38" Chr="1" variantLength="1" positionVCF="1" referenceAlleleVCF="G" alternateAlleleVCF="A"/>
+                    </Location>
+                </SimpleAllele>
+                <Classifications>
+                    <GermlineClassification>
+                        <Description>Pathogenic; but unknown assertion</Description>
+                    </GermlineClassification>
+                </Classifications>
+            </ClassifiedRecord>
+        </VariationArchive>
+        '''
+        responses.add(responses.GET, WEEKLY_XML_RELEASE, status=200, body=gzip.compress(data.encode()), stream=True)
+        with self.assertRaises(CommandError):
+            call_command('reload_clinvar_all_variants')
+
 
