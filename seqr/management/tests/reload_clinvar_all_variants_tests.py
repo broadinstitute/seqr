@@ -235,7 +235,6 @@ class ReloadClinvarAllVariantsTest(TestCase):
                     </ClassifiedRecord>
                 </VariationArchive>
             </ClinVarVariationRelease>'''
-
             responses.add(
                 responses.GET,
                 WEEKLY_XML_RELEASE,
@@ -277,6 +276,13 @@ class ReloadClinvarAllVariantsTest(TestCase):
                     </ClassifiedRecord>
                 </VariationArchive>
             </ClinVarVariationRelease>'''
+            responses.add(
+                responses.GET,
+                WEEKLY_XML_RELEASE,
+                status=200,
+                body=gzip.compress(data.encode()),
+                stream=True,
+            )
             call_command('reload_clinvar_all_variants')
 
 
