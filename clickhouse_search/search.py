@@ -479,6 +479,13 @@ def get_clickhouse_genes(genome_version, dataset_type, keys):
     )['gene_ids']
 
 
+def get_clickhouse_keys_for_gene(gene_id, genome_version, dataset_type, keys):
+    results = _get_annotations_queryset(genome_version, dataset_type, keys)
+    return results.filter(
+        **{f'{results.transcript_field}__array_exists': {'geneId': (gene_id,)}},
+    ).values_list('key', flat=True)
+
+
 def get_clickhouse_key_lookup(genome_version, dataset_type, variants_ids):
     key_lookup_class = KEY_LOOKUP_CLASS_MAP[genome_version][dataset_type]
     return dict(
