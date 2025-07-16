@@ -132,7 +132,9 @@ def parse_saved_variant_json(variant_json, family_id, variant_id=None,):
     ref = variant_json.get('ref')
     alt = variant_json.get('alt')
     var_length = variant_json['end'] - variant_json['pos'] if variant_json.get('end') is not None else len(ref) - 1
-    update_json = {'saved_variant_json': variant_json}  # TODO backend specific/ shared functionality
+    update_json = backend_specific_call(
+        lambda o: o, lambda o: o, lambda o: {'genotypes': o['saved_variant_json'].get('genotypes', {})},
+    )({'saved_variant_json': variant_json})
     return {
         'xpos': xpos,
         'xpos_end': xpos + var_length,
