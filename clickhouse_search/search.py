@@ -459,3 +459,9 @@ def get_clickhouse_genotypes(project_guid, family_guid, genome_version, dataset_
         project_guid=project_guid, family_guid=family_guid, key__in=keys,
     )
     return entries.annotate(genotypes=entries.genotype_expression(sample_data)).values_list('key', 'genotypes')
+
+
+def get_clickhouse_annotations(genome_version, dataset_type, keys):
+    annotations_cls = ANNOTATIONS_CLASS_MAP[genome_version][dataset_type]
+    results = annotations_cls.objects.filter(key__in=keys).result_values(skip_entry_fields=True)
+    return format_clickhouse_results(results, genome_version)

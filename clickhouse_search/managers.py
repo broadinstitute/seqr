@@ -83,7 +83,7 @@ class AnnotationsQuerySet(QuerySet):
         return [
             field.name for field in self.model._meta.local_fields
             if (field.db_column or field.name) not in self.annotation_values and field.name not in self.TRANSCRIPT_FIELDS
-        ] + self.ENTRY_FIELDS
+        ]
 
     @property
     def prediction_fields(self):
@@ -145,8 +145,9 @@ class AnnotationsQuerySet(QuerySet):
         query_select = query.annotation_values
         for select_func in (conditional_selects or []):
             query_select.update(select_func(query, prefix=f'{alias}_'))
+        annotation_fields = query.annotation_fields + self.ENTRY_FIELDS
         return query.values(
-            **{f'{alias}_{field}': F(field) for field in query.annotation_fields if field not in query_select},
+            **{f'{alias}_{field}': F(field) for field in annotation_fields if field not in query_select},
             **{f'{alias}_{field}': value for field, value in query_select.items()},
         )
 
@@ -158,21 +159,23 @@ class AnnotationsQuerySet(QuerySet):
         results = self.filter_annotations(results, **parsed_locus, **kwargs)
         return results
 
-    def result_values(self):
+    def result_values(self, skip_entry_fields=False):
         override_model_annotations = {'populations', 'pos', 'end'}
         values = {**self.annotation_values}
         values.update(self._conditional_selected_transcript_values(self))
         values.update(self._genotype_override_values(self))
         initial_values = {k: v for k, v in  values.items() if k not in override_model_annotations}
 
-        fields = [field for field in self.annotation_fields if field not in values]
+        fields = [*self.annotation_fields]
+        if self.has_annotation('familyGenotypes'):
+            fields.append('familyGenotypes')
+        elif not skip_entry_fields:
+            fields += self.ENTRY_FIELDS
+
         if self.has_annotation('clinvar'):
             fields.append('clinvar')
 
-        if self.has_annotation('familyGenotypes'):
-            fields = [field for field in fields if field not in self.ENTRY_FIELDS]
-            fields.append('familyGenotypes')
-
+        fields = [field for field in fields if field not in values]
         return self.values(*fields, **initial_values).annotate(
             **{k: values[k] for k in override_model_annotations if k in values},
         )

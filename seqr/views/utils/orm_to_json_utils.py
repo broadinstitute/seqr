@@ -10,6 +10,7 @@ from django.contrib.auth.models import User
 from guardian.shortcuts import get_users_with_perms, get_groups_with_perms
 import json
 
+from clickhouse_search.search import get_clickhouse_annotations
 from panelapp.models import PaLocusList
 from reference_data.models import HumanPhenotypeOntology
 from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant, Family, CAN_VIEW, CAN_EDIT, \
@@ -446,8 +447,20 @@ def _add_saved_variant_json(results, *args, **kwargs):
 
 
 def _add_clickhouse_annotations(results, genome_version):
-    keys = {result['key'] for result in results}
-    # TODO PR: actually get annotations from db
+    results_by_genome_version_dataset_type = defaultdict(lambda: defaultdict(list))
+    for result in results:
+        gv = genome_version or result.pop('family__project__genome_version')
+        results_by_genome_version_dataset_type[gv][result.pop('dataset_type')].append(result)
+
+    for gv, grouped_results in results_by_genome_version_dataset_type.items():
+        for dataset_type, gv_results in grouped_results.items():
+            keys = {result['key'] for result in gv_results}
+            annotations_by_key = {
+                annotations['key']: {k: v for k, v in annotations.items() if k not in gv_results[0]}
+                for annotations in get_clickhouse_annotations(genome_version, dataset_type, keys)
+            }
+            for result in gv_results:
+                result.update(annotations_by_key[result['key']])
 
 
 def _format_functional_tags(tags):
