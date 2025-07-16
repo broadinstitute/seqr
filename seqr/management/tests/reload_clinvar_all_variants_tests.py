@@ -211,7 +211,8 @@ class ReloadClinvarAllVariantsTest(TestCase):
             ("Pathogenic-ey", None, None),  # Unhandled Pathogenicity
             ("Pathogenic; but unknown assertion", None, None),  # Unhandled Assertion
             ("Pathogenic", "unhandled", None),  # Unhandled Review Status
-            ("Conflicting classifications of pathogenicity", None, "Pathogenic(18); unhandled")
+            ("Conflicting classifications of pathogenicity", None, "Pathogenic;"),
+            ("Conflicting classifications of pathogenicity", None, "Pathogenic(18); unhandled(1)")
         ]:
             data = f'''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
             <ClinVarVariationRelease xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -250,16 +251,23 @@ class ReloadClinvarAllVariantsTest(TestCase):
 
         # Variants with missing alleles and positions are skipped
         for simple_allele_attrs, sequence_location_attrs in [
-            # Case 1: Missing VariationID in <SimpleAllele>
+            # Case 1: Missing AlleleId in <SimpleAllele>
             ("", 'Assembly="GRCh38" Chr="1" variantLength="1" positionVCF="1" referenceAlleleVCF="G" alternateAlleleVCF="A"'),
 
             # Case 2: Missing alternateAlleleVCF in <SequenceLocation>
-            ('VariationID="5603"', 'Assembly="GRCh38" Chr="1" variantLength="1" positionVCF="1" referenceAlleleVCF="G"'),
+            ('AlleleID="5603"', 'Assembly="GRCh38" Chr="1" variantLength="1" positionVCF="1" referenceAlleleVCF="G"'),
         ]:
             data = f'''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
             <ClinVarVariationRelease xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                                      xsi:noNamespaceSchemaLocation="http://ftp.ncbi.nlm.nih.gov/pub/clinvar/xsd_public/ClinVar_VCV_2.4.xsd"
                                      ReleaseDate="2025-06-30">
+                <VariationArchive></VariationArchive>
+                <VariationArchive>
+                    <ClassifiedRecord>
+                        <SimpleAllele {simple_allele_attrs}>
+                        </SimpleAllele>
+                    </ClassifiedRecord>
+                </VariationArchive>
                 <VariationArchive>
                     <ClassifiedRecord>
                         <SimpleAllele {simple_allele_attrs}>

@@ -80,24 +80,14 @@ def parse_and_merge_classification_counts(text):
     return sorted(counts.items(), key=lambda x: x[1], reverse=True)
 
 def parse_allele_id(classified_record_node: xml.etree.ElementTree.Element) -> Optional[int]:
-    allele_node = classified_record_node.find('SimpleAllele')
-    if allele_node is None:
-        return None
-    allele_id_str = allele_node.attrib.get('AlleleID')
+    allele_id_str = (allele_node := classified_record_node.find('SimpleAllele')) is not None and allele_node.attrib.get('AlleleID')
     if allele_id_str is None:
         return None
-    try:
-        allele_id = int(allele_id_str)
-    except ValueError:
-        return None
-    return allele_id
+    return int(allele_id_str)
 
 def parse_positions(classified_record_node: xml.etree.ElementTree.Element) -> dict[dict]:
     positions = {}
     location_nodes = classified_record_node.findall('SimpleAllele/Location')
-    if not location_nodes:
-        # This does, occasionally happen.
-        return positions
     for loc in location_nodes:
         for seq_loc in loc.findall('SequenceLocation'):
             if (
@@ -122,7 +112,7 @@ def parse_pathogenicity_and_assertions(classified_record_node: xml.etree.Element
     if pathogenicity_node is None:
         return CLINVAR_DEFAULT_PATHOGENICITY, []
 
-    pathogenicity_string = pathogenicity_node.text.replace(
+    pathogenicity_string = pathogenicity_node.text.replace( # pragma: no cover
         '/Pathogenic, low penetrance/Established risk allele',
         '/Established risk allele; low penetrance',
     ).replace(
