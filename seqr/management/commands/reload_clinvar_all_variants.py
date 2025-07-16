@@ -2,7 +2,7 @@ import gzip
 import logging
 import requests
 import xml
-import xml.etree.ElementTree as ET
+import defusedxml.ElementTree as ET
 from django.db import connections
 from django.core.management.base import BaseCommand, CommandError
 from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL

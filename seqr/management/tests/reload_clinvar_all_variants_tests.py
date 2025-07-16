@@ -155,7 +155,7 @@ class ReloadClinvarAllVariantsTest(TestCase):
         self.assertEqual(clinvar_all_variants_grch37_snv_indel_models.count(), 1)
         clinvar_all_variants_mito_models = ClinvarAllVariantsMito.objects.all()
         self.assertEqual(
-            model_to_dict(clinvar_all_variants_mito_models.first()), 
+            model_to_dict(clinvar_all_variants_mito_models.first()),
             {
                 'allele_id': 20642,
                 'assertions': ['low_penetrance'],
