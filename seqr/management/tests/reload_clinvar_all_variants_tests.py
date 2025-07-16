@@ -95,15 +95,15 @@ class ReloadClinvarAllVariantsTest(TestCase):
 
     @responses.activate
     def test_parse_variants_all_types(self, mock_logger, mock_safe_post_to_slack):
-        KeyLookupSnvIndel.objects.create(
+        KeyLookupSnvIndel.objects.using('clickhouse_write').create(
             variant_id='22-28695219-G-A',
             key_id=12,
         )
-        KeyLookupMito.objects.create(
+        KeyLookupMito.objects.using('clickhouse_write').create(
             variant_id='M-123-GA',
             key_id=8,
         )
-        ClinvarAllVariantsSnvIndel.objects.create(
+        ClinvarAllVariantsSnvIndel.objects.using('clickhouse_write').create(
             version='2025-06-23',
             variant_id='22-28695219-G-A',
             allele_id=20642,
