@@ -12,7 +12,7 @@ from matchmaker.models import MatchmakerSubmissionGenes, MatchmakerSubmission
 from reference_data.models import TranscriptInfo, Omim, GENOME_VERSION_GRCh38
 from seqr.models import SavedVariant, VariantSearchResults, Family, LocusList, LocusListInterval, LocusListGene, \
     RnaSeqTpm, PhenotypePrioritization, Project, Sample, RnaSample, VariantTag, VariantTagType
-from seqr.utils.search.utils import get_variants_for_variant_ids, backend_specific_call
+from seqr.utils.search.utils import get_variants_for_variant_ids, backend_specific_call, parse_variant_id
 from seqr.utils.gene_utils import get_genes_for_variants
 from seqr.utils.xpos_utils import get_xpos
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, create_model_from_json
@@ -132,17 +132,28 @@ def parse_saved_variant_json(variant_json, family_id, variant_id=None,):
     ref = variant_json.get('ref')
     alt = variant_json.get('alt')
     var_length = variant_json['end'] - variant_json['pos'] if variant_json.get('end') is not None else len(ref) - 1
+    variant_id = variant_json.get('variantId', variant_id)
     update_json = backend_specific_call(
-        lambda o: o, lambda o: o, lambda o: {'genotypes': o['saved_variant_json'].get('genotypes', {})},
-    )({'saved_variant_json': variant_json})
+        {'saved_variant_json': variant_json},
+        {'saved_variant_json': variant_json},
+        {'genotypes': variant_json.get('genotypes', {}), 'dataset_type': _dataset_type(variant_id, variant_json)},
+    )
     return {
         'xpos': xpos,
         'xpos_end': xpos + var_length,
         'ref': ref,
         'alt': alt,
         'family_id': family_id,
-        'variant_id': variant_json.get('variantId', variant_id),
+        'variant_id': variant_id,
     }, update_json
+
+
+def _dataset_type(variant_id, variant):
+    if not parse_variant_id(variant_id):
+        sample_type = Sample.SAMPLE_TYPE_WGS if 'endChrom' in variant else Sample.SAMPLE_TYPE_WES
+        return f'{Sample.DATASET_TYPE_SV_CALLS}_{sample_type}'
+    return Sample.DATASET_TYPE_MITO_CALLS if 'mitomapPathogenic' in variant else Sample.DATASET_TYPE_VARIANT_CALLS
+
 
 
 def bulk_create_tagged_variants(family_variant_data, tag_name, get_metadata, user, project=None, load_new_variant_data=None):

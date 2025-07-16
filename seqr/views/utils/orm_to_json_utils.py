@@ -447,7 +447,7 @@ def _add_saved_variant_json(results, *args, **kwargs):
 
 def _add_clickhouse_annotations(results, genome_version):
     keys = {result['key'] for result in results}
-    # TODO PR: add dataset type to model, actually get annotations from db
+    # TODO PR: actually get annotations from db
 
 
 def _format_functional_tags(tags):

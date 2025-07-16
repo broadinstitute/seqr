@@ -62,7 +62,8 @@ class Command(BaseCommand):
         )
         for variant in saved_variants:
             variant.key = variant_key_map[variant.variant_id]
-        num_updated = SavedVariant.objects.bulk_update(saved_variants, ['key'])
+            variant.dataset_type = dataset_type
+        num_updated = SavedVariant.objects.bulk_update(saved_variants, ['key', 'dataset_type'])
         logger.info(f'Updated keys for {num_updated} {dataset_type} (GRCh{genome_version}) variants')
 
         no_key = set(variants_ids) - set(variant_key_map.keys())
