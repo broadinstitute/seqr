@@ -465,3 +465,10 @@ def get_clickhouse_annotations(genome_version, dataset_type, keys):
     annotations_cls = ANNOTATIONS_CLASS_MAP[genome_version][dataset_type]
     results = annotations_cls.objects.filter(key__in=keys).result_values(skip_entry_fields=True)
     return format_clickhouse_results(results, genome_version)
+
+
+def get_clickhouse_key_lookup(genome_version, dataset_type, variants_ids):
+    key_lookup_class = KEY_LOOKUP_CLASS_MAP[genome_version][dataset_type]
+    return dict(
+        key_lookup_class.objects.filter(variant_id__in=variants_ids).values_list('variant_id', 'key')
+    )

@@ -8,6 +8,7 @@ import redis
 from tqdm import tqdm
 import traceback
 
+from clickhouse_search.search import get_clickhouse_key_lookup
 from matchmaker.models import MatchmakerSubmissionGenes, MatchmakerSubmission
 from reference_data.models import TranscriptInfo, Omim, GENOME_VERSION_GRCh38
 from seqr.models import SavedVariant, VariantSearchResults, Family, LocusList, LocusListInterval, LocusListGene, \
@@ -173,6 +174,8 @@ def bulk_create_tagged_variants(family_variant_data, tag_name, get_metadata, use
         new_variant_models = []
         for (family_id, variant_id), variant in new_variant_data.items():
             create_json, update_json = parse_saved_variant_json(variant, family_id, variant_id=variant_id)
+            # Set saved_variant_json regardless of backend, as data for these tags is synthetic and not linked to real variants
+            update_json['saved_variant_json'] = variant
             new_variant_models.append(SavedVariant(**create_json, **update_json))
 
         saved_variant_map.update({
@@ -198,6 +201,9 @@ def bulk_create_tagged_variants(family_variant_data, tag_name, get_metadata, use
             num_new += 1
 
     VariantTag.bulk_update_models(user, update_tags, ['metadata'])
+
+    backend_specific_call(lambda *args: None, lambda *args: None, _set_clickhouse_keys)(new_variant_keys, saved_variant_map, user)
+
     return num_new, len(update_tags)
 
 
@@ -221,7 +227,6 @@ def _set_updated_tags(key: tuple[int, str], metadata: dict[str, dict], support_v
             VariantTag, {'variant_tag_type': tag_type, 'metadata': json.dumps(metadata)}, user)
         tag.saved_variants.add(variant)
 
-    # TODO PR
     variant_genes = set(variant.saved_variant_json['transcripts'].keys())
     support_vars = []
     for support_id in support_var_ids:
@@ -237,6 +242,21 @@ def _set_updated_tags(key: tuple[int, str], metadata: dict[str, dict], support_v
             existing_tags[variant_id_key] = True
 
     return updated_tag
+
+
+def _set_clickhouse_keys(new_variant_keys, saved_variant_map, user):
+    variants_ids = {key[1] for key in new_variant_keys}
+    variant_key_map = get_clickhouse_key_lookup(GENOME_VERSION_GRCh38, Sample.DATASET_TYPE_VARIANT_CALLS, variants_ids)
+    updated_variants = []
+    for key in new_variant_keys:
+        if key[1] not in variant_key_map:
+            continue
+        variant = saved_variant_map[key]
+        variant.key = variant_key_map[key[1]]
+        variant.saved_variant_json = {}
+        updated_variants.append(variant)
+    if updated_variants:
+        SavedVariant.bulk_update_models(user, updated_variants, ['key', 'saved_variant_json'])
 
 
 def reset_cached_search_results(project, reset_index_metadata=False):

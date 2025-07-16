@@ -2,7 +2,7 @@ from django.core.management.base import BaseCommand
 from django.db.models import F
 import logging
 
-from clickhouse_search.models import KEY_LOOKUP_CLASS_MAP
+from clickhouse_search.search import get_clickhouse_key_lookup
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import SavedVariant, Sample
 from seqr.utils.search.utils import parse_variant_id
@@ -53,10 +53,7 @@ class Command(BaseCommand):
 
     @staticmethod
     def _set_variant_keys(variants_ids, dataset_type, genome_version=GENOME_VERSION_GRCh38):
-        key_lookup_class = KEY_LOOKUP_CLASS_MAP[genome_version][dataset_type]
-        variant_key_map = dict(
-            key_lookup_class.objects.filter(variant_id__in=variants_ids).values_list('variant_id', 'key')
-        )
+        variant_key_map = get_clickhouse_key_lookup(genome_version, dataset_type, variants_ids)
         saved_variants = SavedVariant.objects.filter(
             family__project__genome_version=genome_version, variant_id__in=variant_key_map,
         )
