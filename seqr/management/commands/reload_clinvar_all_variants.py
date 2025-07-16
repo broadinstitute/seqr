@@ -165,7 +165,7 @@ def parse_conflicting_pathogenicities(
             conflicting_pathogenicities_node.text
         )
     except Exception:
-        raise CommandError(f'Found unexpected conflicting pathogenicity format: {conflicting_pathogenicities_node.text}')        
+        raise CommandError(f'Found unexpected conflicting pathogenicity format: {conflicting_pathogenicities_node.text}')
     enumerated_pathogenicities = set(CLINVAR_PATHOGENICITIES)
     for (pathogenicity, _) in conflicting_pathogenicities:
         if pathogenicity not in enumerated_pathogenicities:
