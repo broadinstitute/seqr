@@ -20,6 +20,7 @@ from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.search.utils import get_variants_for_variant_ids
 from seqr.views.utils.json_utils import create_json_response
 from seqr.utils.logging_utils import SeqrLogger
+from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.utils.orm_to_json_utils import get_json_for_matchmaker_submissions, get_json_for_saved_variants,\
     add_individual_hpo_details, INDIVIDUAL_DISPLAY_NAME_EXPR, AIP_TAG_TYPE
 from seqr.views.utils.permissions_utils import analyst_required, user_is_analyst, get_project_guids_user_can_view, \
@@ -57,13 +58,13 @@ def mme_details(request):
 
     saved_variants = get_json_for_saved_variants(
         SavedVariant.objects.filter(matchmakersubmissiongenes__matchmaker_submission__guid__in=submissions_by_guid),
-        add_details=True,
+        additional_values={'genomeVersion': F('family__project__genome_version')},
     )
 
     response = {
         'submissions': list(submissions_by_guid.values()),
         'genesById': genes_by_id,
-        'savedVariantsByGuid': {s['variantGuid']: s for s in saved_variants},
+        'savedVariantsByGuid': {s['variantGuid']: {**s, 'chrom': get_chrom_pos(s['xpos'])[0] , 'pos': get_chrom_pos(s['xpos'])[1]} for s in saved_variants},
     }
     if user_is_analyst(request.user):
         response['metrics'] = get_mme_metrics()

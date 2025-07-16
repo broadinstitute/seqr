@@ -6,7 +6,7 @@ from seqr.models import Individual, IgvSample, AnalysisGroup, DynamicAnalysisGro
 from seqr.utils.gene_utils import get_genes
 from seqr.views.utils.orm_to_json_utils import _get_json_for_families, _get_json_for_individuals, get_json_for_queryset, \
     get_json_for_analysis_groups, get_json_for_samples, get_json_for_locus_lists, \
-    get_json_for_family_notes, get_json_for_saved_variants
+    get_json_for_family_notes
 
 
 def get_projects_child_entities(projects, project_guid, user):
@@ -114,15 +114,14 @@ def families_discovery_tags(families, project=None):
     families_by_guid = {f['familyGuid']: dict(discoveryTags=[], **f) for f in families}
 
     family_filter = {'family__project': project} if project else {'family__guid__in': families_by_guid.keys()}
-    discovery_tags = get_json_for_saved_variants(SavedVariant.objects.filter(
+    discovery_tags = SavedVariant.objects.filter(
         varianttag__variant_tag_type__category='CMG Discovery Tags', **family_filter,
-    ), add_details=True)
+    ).values('family_guid', 'saved_variant_json__transcripts') # TODO PR
 
     gene_ids = set()
     for tag in discovery_tags:
         gene_ids.update(list(tag.get('transcripts', {}).keys()))
-        for family_guid in tag['familyGuids']:
-            families_by_guid[family_guid]['discoveryTags'].append(tag)
+        families_by_guid[tag['family_guid']]['discoveryTags'].append(tag)
 
     return {
         'familiesByGuid': families_by_guid,

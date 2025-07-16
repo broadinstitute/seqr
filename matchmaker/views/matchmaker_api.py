@@ -42,12 +42,12 @@ def get_individual_mme_matches(request, submission_guid):
         Status code and results
     """
     submission = MatchmakerSubmission.objects.get(guid=submission_guid)
-    check_mme_permissions(submission, request.user)
+    project = check_mme_permissions(submission, request.user)
 
     results = MatchmakerResult.objects.filter(submission=submission)
 
     response_json = get_json_for_saved_variants_with_tags(
-        SavedVariant.objects.filter(family=submission.individual.family), add_details=True)
+        SavedVariant.objects.filter(family=submission.individual.family), add_details=True, genome_version=project.genome_version)
 
     gene_ids = set()
     for variant in response_json['savedVariantsByGuid'].values():

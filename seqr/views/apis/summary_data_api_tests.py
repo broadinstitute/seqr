@@ -285,6 +285,10 @@ class SummaryDataAPITest(AirtableTest):
         self.assertSetEqual(set(response_json['genesById'].keys()),
                             {'ENSG00000240361', 'ENSG00000223972', 'ENSG00000135953'})
         self.assertEqual(len(response_json['submissions']), self.NUM_MANAGER_SUBMISSIONS)
+        self.assertSetEqual(set(next(iter(response_json['savedVariantsByGuid'].values())).keys()), {
+            'xpos', 'chrom', 'pos', 'ref', 'alt', 'variantId', 'variantGuid', 'genomeVersion', 'familyGuids',
+            'selectedMainTranscriptId', 'acmgClassification',
+        })
 
         # Test analyst behavior
         self.login_analyst_user()

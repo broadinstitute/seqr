@@ -38,7 +38,7 @@ def saved_variant_data(request, project_guid, variant_guids=None):
         variant_query = variant_query.filter(varianttag__isnull=get_note_only).distinct()
 
     add_locus_list_detail = request.GET.get(INCLUDE_LOCUS_LISTS_PARAM) == 'true'
-    response = get_variants_response(request, variant_query, add_locus_list_detail=add_locus_list_detail)
+    response = get_variants_response(request, variant_query, add_locus_list_detail=add_locus_list_detail, genome_version= project.genome_version)
     if 'individualsByGuid' in response and not family_guids:
         if 'projectsByGuid' not in response:
             response['projectsByGuid'] = {project_guid: {}}
@@ -77,7 +77,7 @@ def create_saved_variant_handler(request):
     elif variant_json.get('tags'):
         _update_tags(saved_variants, variant_json, request.user)
 
-    response.update(get_json_for_saved_variants_with_tags(saved_variants, add_details=True))
+    response.update(get_json_for_saved_variants_with_tags(saved_variants, add_details=True, genome_version=family.project.genome_version))
     return create_json_response(response)
 
 
