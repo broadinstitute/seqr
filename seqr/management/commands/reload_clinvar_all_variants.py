@@ -160,9 +160,12 @@ def parse_conflicting_pathogenicities(
     )
     if conflicting_pathogenicities_node is None:
         return []
-    conflicting_pathogenicities = parse_and_merge_classification_counts(
-        conflicting_pathogenicities_node.text
-    )
+    try:
+        conflicting_pathogenicities = parse_and_merge_classification_counts(
+            conflicting_pathogenicities_node.text
+        )
+    except Exception:
+        raise CommandError(f'Found unexpected conflicting pathogenicity format: {conflicting_pathogenicities_node.text}')        
     enumerated_pathogenicities = set(CLINVAR_PATHOGENICITIES)
     for (pathogenicity, _) in conflicting_pathogenicities:
         if pathogenicity not in enumerated_pathogenicities:
