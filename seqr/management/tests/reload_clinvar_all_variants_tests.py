@@ -18,7 +18,7 @@ from seqr.management.commands.reload_clinvar_all_variants import BATCH_SIZE, WEE
 WEEKLY_XML_RELEASE_DATA = '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <ClinVarVariationRelease
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://ftp.ncbi.nlm.nih.gov/pub/clinvar/xsd_public/ClinVar_VCV_2.4.xsd" ReleaseDate="2025-06-30">
-    <VariationArchive VariationID="5603" VariationName="NM_007194.4(CHEK2):c.1283C>T (p.Ser428Phe)" VariationType="single nucleotide variant" Accession="VCV000005603" Version="104" RecordType="classified" NumberOfSubmissions="38" NumberOfSubmitters="36" DateLastUpdated="2025-06-29" DateCreated="2016-03-20" MostRecentSubmission="2025-06-29">
+    <VariationArchive>
         <ClassifiedRecord>
             <SimpleAllele AlleleID="20642" VariationID="5603">
                 <Location>
@@ -35,13 +35,13 @@ WEEKLY_XML_RELEASE_DATA = '''<?xml version="1.0" encoding="UTF-8" standalone="ye
             </Classifications>
             <ClinicalAssertionList>
                 <ClinicalAssertion ID="498361" SubmissionDate="2016-03-03" ContributesToAggregateClassification="true" DateLastUpdated="2016-03-20" DateCreated="2016-03-20">
-                    <ClinVarAccession Accession="SCV000266068" DateUpdated="2016-03-20" DateCreated="2016-03-20" Type="SCV" Version="1" SubmitterName="University of Washington Department of Laboratory Medicine, University of Washington" OrgID="506834" OrganizationCategory="laboratory"/>
+                    <ClinVarAccession SubmitterName="University of Washington Department of Laboratory Medicine, University of Washington" OrgID="506834" OrganizationCategory="laboratory"/>
                 </ClinicalAssertion>
                 <ClinicalAssertion ID="1193578" SubmissionDate="2017-05-23" ContributesToAggregateClassification="true" DateLastUpdated="2017-11-11" DateCreated="2017-11-11">
-                    <ClinVarAccession Accession="SCV000611259" DateUpdated="2017-11-11" DateCreated="2017-11-11" Type="SCV" Version="1" SubmitterName="Fulgent Genetics, Fulgent Genetics" OrgID="500105" OrganizationCategory="laboratory"/>
+                    <ClinVarAccession SubmitterName="Fulgent Genetics, Fulgent Genetics" OrgID="500105" OrganizationCategory="laboratory"/>
                 </ClinicalAssertion>
                 <ClinicalAssertion ID="3962971" SubmissionDate="2023-03-01" ContributesToAggregateClassification="true" DateLastUpdated="2023-03-11" DateCreated="2021-11-29">
-                    <ClinVarAccession Accession="SCV002019286" DateUpdated="2023-03-11" DateCreated="2021-11-29" Type="SCV" Version="2" SubmitterName="Revvity Omics, Revvity" OrgID="167595" OrganizationCategory="laboratory"/>
+                    <ClinVarAccession SubmitterName="Revvity Omics, Revvity" OrgID="167595" OrganizationCategory="laboratory"/>
                 </ClinicalAssertion>
                 <TraitMappingList>
                     <TraitMapping ClinicalAssertionID="7894954" TraitType="Disease" MappingType="Name" MappingValue="Not provided" MappingRef="Preferred">
@@ -206,25 +206,79 @@ class ReloadClinvarAllVariantsTest(TestCase):
         self.assertEqual(ClinvarAllVariantsSnvIndel.objects.all().count(), BATCH_SIZE * 2 + 10)
 
     @responses.activate
-    def test_unenumerated_clinvar_assertion(self, mock_logger, mock_safe_post_to_slack):
-        data = '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?><ClinVarVariationRelease xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://ftp.ncbi.nlm.nih.gov/pub/clinvar/xsd_public/ClinVar_VCV_2.4.xsd" ReleaseDate="2025-06-30">
-        <VariationArchive VariationID="5603" VariationName="NM_007194.4(CHEK2):c.1283C>T (p.Ser428Phe)" VariationType="single nucleotide variant" Accession="VCV000005603" Version="104" RecordType="classified" NumberOfSubmissions="38" NumberOfSubmitters="36" DateLastUpdated="2025-06-29" DateCreated="2016-03-20" MostRecentSubmission="2025-06-29">
-            <ClassifiedRecord>
-                <SimpleAllele AlleleID="1" VariationID="5603">
-                    <Location>
-                        <SequenceLocation Assembly="GRCh38" Chr="1" variantLength="1" positionVCF="1" referenceAlleleVCF="G" alternateAlleleVCF="A"/>
-                    </Location>
-                </SimpleAllele>
-                <Classifications>
-                    <GermlineClassification>
-                        <Description>Pathogenic; but unknown assertion</Description>
-                    </GermlineClassification>
-                </Classifications>
-            </ClassifiedRecord>
-        </VariationArchive>
-        '''
-        responses.add(responses.GET, WEEKLY_XML_RELEASE, status=200, body=gzip.compress(data.encode()), stream=True)
-        with self.assertRaises(CommandError):
+    def test_malformed_variants(self, mock_logger, mock_safe_post_to_slack):
+        for description, review_status, conflicting_pathogenicities in [
+            ("Pathogenic-ey", None, None),  # Unhandled Pathogenicity
+            ("Pathogenic; but unknown assertion", None, None),  # Unhandled Assertion
+            ("Pathogenic", "unhandled", None),  # Unhandled Review Status
+            ("Conflicting classifications of pathogenicity", None, "Pathogenic(18); unhandled")
+        ]:
+            data = f'''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+            <ClinVarVariationRelease xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                                     xsi:noNamespaceSchemaLocation="http://ftp.ncbi.nlm.nih.gov/pub/clinvar/xsd_public/ClinVar_VCV_2.4.xsd"
+                                     ReleaseDate="2025-06-30">
+                <VariationArchive>
+                    <ClassifiedRecord>
+                        <SimpleAllele AlleleID="1" VariationID="5603">
+                            <Location>
+                                <SequenceLocation Assembly="GRCh38" Chr="1" variantLength="1"
+                                                  positionVCF="1" referenceAlleleVCF="G" alternateAlleleVCF="A"/>
+                            </Location>
+                        </SimpleAllele>
+                        <Classifications>
+                            <GermlineClassification>
+                                <Description>{description}</Description>
+                                {f"<ReviewStatus>{review_status}</ReviewStatus>" if review_status else ""}
+                                {f"<Explanation>{conflicting_pathogenicities}</Explanation>" if conflicting_pathogenicities else ""}
+                            </GermlineClassification>
+                        </Classifications>
+                    </ClassifiedRecord>
+                </VariationArchive>
+            </ClinVarVariationRelease>'''
+
+            responses.add(
+                responses.GET,
+                WEEKLY_XML_RELEASE,
+                status=200,
+                body=gzip.compress(data.encode()),
+                stream=True,
+            )
+
+            with self.assertRaises(CommandError):
+                call_command('reload_clinvar_all_variants')
+
+
+
+        # Variants with missing alleles and positions are skipped
+        for simple_allele_attrs, sequence_location_attrs in [
+            # Case 1: Missing VariationID in <SimpleAllele>
+            ("", 'Assembly="GRCh38" Chr="1" variantLength="1" positionVCF="1" referenceAlleleVCF="G" alternateAlleleVCF="A"'),
+
+            # Case 2: Missing alternateAlleleVCF in <SequenceLocation>
+            ('VariationID="5603"', 'Assembly="GRCh38" Chr="1" variantLength="1" positionVCF="1" referenceAlleleVCF="G"'),
+        ]:
+            data = f'''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+            <ClinVarVariationRelease xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                                     xsi:noNamespaceSchemaLocation="http://ftp.ncbi.nlm.nih.gov/pub/clinvar/xsd_public/ClinVar_VCV_2.4.xsd"
+                                     ReleaseDate="2025-06-30">
+                <VariationArchive>
+                    <ClassifiedRecord>
+                        <SimpleAllele {simple_allele_attrs}>
+                            <Location>
+                                <SequenceLocation {sequence_location_attrs}/>
+                            </Location>
+                        </SimpleAllele>
+                        <Classifications>
+                            <GermlineClassification>
+                                <Description>Pathogenic</Description>
+                                <ReviewStatus>criteria provided, conflicting classifications</ReviewStatus>
+                            </GermlineClassification>
+                        </Classifications>
+                    </ClassifiedRecord>
+                </VariationArchive>
+            </ClinVarVariationRelease>'''
             call_command('reload_clinvar_all_variants')
+
+
 
 
