@@ -21,7 +21,7 @@ def replace_underscores_with_spaces(value: Union[str, list[str]]) -> Union[str, 
         return value.replace('_', ' ')
     elif isinstance(value, list):
         return [s.replace('_', ' ') for s in value]
-    raise TypeError("Expected str or list[str]")
+    raise TypeError("Expected str or list[str]") # pragma: no cover
 
 def replace_spaces_with_underscores(value: Union[str, list[str], list[tuple[str, int]]]) -> Union[str, list[str]]:
     if isinstance(value, str):
@@ -30,7 +30,7 @@ def replace_spaces_with_underscores(value: Union[str, list[str], list[tuple[str,
         if len(value) > 0 and isinstance(value[0], tuple):
             return [(t[0].replace(' ', '_'), t[1]) for t in value]
         return [s.replace(' ', '_') for s in value]
-    raise TypeError("Expected str or list[str]")
+    raise TypeError("Expected str or list[str]") # pragma: no cover
 
 BATCH_SIZE = 1000
 CLINVAR_ASSERTIONS = replace_underscores_with_spaces(ClinvarAllVariantsSnvIndel.CLINVAR_ASSERTIONS)
@@ -69,8 +69,6 @@ def parse_and_merge_classification_counts(text):
     counts = {}
     for part in text.split(";"):
         part = part.strip()
-        if not part:
-            continue
         label, count = part.rsplit("(", 1)
         label = label.strip()
         count = int(count.strip(")"))
