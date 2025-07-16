@@ -1,7 +1,10 @@
 import logging
 import json
-from django.db.models import Q
+from django.db.models import Q, F
 
+from clickhouse_search.backend.functions import ArrayFilter, ArrayMap
+from clickhouse_search.models import TRANSCRIPTS_CLASS_MAP
+from clickhouse_search.search import get_annotations_queryset
 from seqr.models import SavedVariant, VariantTagType, VariantTag, VariantNote, VariantFunctionalData,\
     Family, GeneNote, Project
 from seqr.utils.search.utils import backend_specific_call
@@ -73,7 +76,7 @@ def create_saved_variant_handler(request):
 
     response = {}
     if variant_json.get('note'):
-        _, response = _create_variant_note(saved_variants, variant_json, request.user)
+        _, response = _create_variant_note(saved_variants, variant_json, request.user, family.project.genome_version)
     elif variant_json.get('tags'):
         _update_tags(saved_variants, variant_json, request.user)
 
@@ -100,7 +103,7 @@ def create_variant_note_handler(request, variant_guids):
         return create_json_response({'error': 'Note is required'}, status=400)
 
     # update saved_variants
-    note, response = _create_variant_note(saved_variants, request_json, request.user)
+    note, response = _create_variant_note(saved_variants, request_json, request.user, family.project.genome_version)
     note_json = get_json_for_variant_note(note)
     note_json['variantGuids'] = all_variant_guids
     response.update({
@@ -113,7 +116,7 @@ def create_variant_note_handler(request, variant_guids):
     return create_json_response(response)
 
 
-def _create_variant_note(saved_variants, note_json, user):
+def _create_variant_note(saved_variants, note_json, user, genome_version):
     note = create_model_from_json(VariantNote, {
         'note': note_json.get('note'),
         'report': note_json.get('report') or False,
@@ -123,20 +126,34 @@ def _create_variant_note(saved_variants, note_json, user):
 
     response = {}
     if note_json.get('saveAsGeneNote'):
-        # TODO PR
-        main_transcript_id = saved_variants[0].selected_main_transcript_id or saved_variants[0].saved_variant_json.get('mainTranscriptId')
-        if main_transcript_id:
-            gene_id = next(
-                gene_id for gene_id, transcripts in saved_variants[0].saved_variant_json['transcripts'].items()
-                if any(t['transcriptId'] == main_transcript_id for t in transcripts))
-        else:
-            gene_id = next(gene_id for gene_id in sorted(saved_variants[0].saved_variant_json['transcripts']))
+        gene_id = backend_specific_call(_variant_gene_id, _variant_gene_id, _clickhouse_variant_gene_id)(saved_variants[0], genome_version)
         create_model_from_json(GeneNote, {'note': note_json.get('note'), 'gene_id': gene_id}, user)
         response['genesById'] = {gene_id: {
             'notes': get_json_for_gene_notes_by_gene_id([gene_id], user)[gene_id],
         }}
 
     return note, response
+
+
+def _variant_gene_id(variant, genome_version):
+    main_transcript_id = variant.selected_main_transcript_id or variant.saved_variant_json.get('mainTranscriptId')
+    if main_transcript_id:
+        return next(
+            gene_id for gene_id, transcripts in variant.saved_variant_json['transcripts'].items()
+            if any(t['transcriptId'] == main_transcript_id for t in transcripts))
+    return next(gene_id for gene_id in sorted(variant.saved_variant_json['transcripts']))
+
+
+def _clickhouse_variant_gene_id(variant, genome_version):
+    if variant.selected_main_transcript_id:
+        qs = TRANSCRIPTS_CLASS_MAP[genome_version].filter(key=variant.key).annotate(gene_ids=ArrayMap(
+            ArrayFilter('transcripts', [{'transcriptId': (variant.selected_main_transcript_id, '{field} = {value}')}]),
+            mapped_expression='x.geneId',
+        )).annotate(gene_id=F('gene_ids__0'))
+    else:
+        annotations = get_annotations_queryset(genome_version, variant.dataset_type, [variant.key])
+        qs = annotations.annotate(gene_id=F(f'{annotations.transcript_field}__0__geneId'))
+    return qs.values_list('gene_id', flat=True)[0]
 
 
 @login_and_policies_required

@@ -462,25 +462,25 @@ def get_clickhouse_genotypes(project_guid, family_guid, genome_version, dataset_
     return entries.annotate(genotypes=entries.genotype_expression(sample_data)).values_list('key', 'genotypes')
 
 
-def _get_annotations_queryset(genome_version, dataset_type, keys):
+def get_annotations_queryset(genome_version, dataset_type, keys):
     annotations_cls = ANNOTATIONS_CLASS_MAP[genome_version][dataset_type]
     return annotations_cls.objects.filter(key__in=keys)
 
 
 def get_clickhouse_annotations(genome_version, dataset_type, keys):
-    results = _get_annotations_queryset(genome_version, dataset_type, keys).result_values(skip_entry_fields=True)
+    results = get_annotations_queryset(genome_version, dataset_type, keys).result_values(skip_entry_fields=True)
     return format_clickhouse_results(results, genome_version)
 
 
 def get_clickhouse_genes(genome_version, dataset_type, keys):
-    results = _get_annotations_queryset(genome_version, dataset_type, keys)
+    results = get_annotations_queryset(genome_version, dataset_type, keys)
     return results.aggregate(
         gene_ids=ArrayDistinct(GroupArrayArray(ArrayMap(results.transcript_field, mapped_expression='x.geneId'))),
     )['gene_ids']
 
 
 def get_clickhouse_keys_for_gene(gene_id, genome_version, dataset_type, keys):
-    results = _get_annotations_queryset(genome_version, dataset_type, keys)
+    results = get_annotations_queryset(genome_version, dataset_type, keys)
     return results.filter(
         **{f'{results.transcript_field}__array_exists': {'geneId': (gene_id,)}},
     ).values_list('key', flat=True)
