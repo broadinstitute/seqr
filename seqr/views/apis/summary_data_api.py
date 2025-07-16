@@ -111,7 +111,7 @@ def saved_variants_page(request, tag):
     saved_variant_models = saved_variant_models.filter(family__project__guid__in=get_project_guids_user_can_view(request.user))
 
     if gene:
-        saved_variant_models = saved_variant_models.filter(saved_variant_json__transcripts__has_key=gene)  # TODO
+        saved_variant_models = saved_variant_models.filter(saved_variant_json__transcripts__has_key=gene)  # TODO PR
     elif saved_variant_models.count() > MAX_SAVED_VARIANTS:
         return create_json_response({'error': 'Select a gene to filter variants'}, status=400)
 

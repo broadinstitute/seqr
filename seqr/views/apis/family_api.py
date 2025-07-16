@@ -52,7 +52,7 @@ def family_page_data(request, family_guid):
     family_response = response['familiesByGuid'][family_guid]
 
     discovery_variants = family.savedvariant_set.filter(varianttag__variant_tag_type__category=DISCOVERY_CATEGORY).values(
-        'saved_variant_json__transcripts', 'saved_variant_json__svType', 'xpos', 'xpos_end',  # TODO
+        'saved_variant_json__transcripts', 'saved_variant_json__svType', 'xpos', 'xpos_end',  # TODO PR
     )
     gene_ids = {
         gene_id for variant in discovery_variants

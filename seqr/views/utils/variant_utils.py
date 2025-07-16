@@ -68,7 +68,7 @@ def update_projects_saved_variant_json(projects, user_email, update_function=Non
 
 
 def get_saved_variants(genome_version, project_id=None, family_guids=None, dataset_type=None):
-    # TODO stop suppoprting other genome build variants?
+    # TODO PR: stop supporting other genome build variants?
     saved_variants = SavedVariant.objects.filter(
         Q(saved_variant_json__genomeVersion__isnull=True) |
         Q(saved_variant_json__genomeVersion=genome_version.replace('GRCh', ''))
@@ -210,7 +210,7 @@ def _set_updated_tags(key: tuple[int, str], metadata: dict[str, dict], support_v
             VariantTag, {'variant_tag_type': tag_type, 'metadata': json.dumps(metadata)}, user)
         tag.saved_variants.add(variant)
 
-    # TODO
+    # TODO PR
     variant_genes = set(variant.saved_variant_json['transcripts'].keys())
     support_vars = []
     for support_id in support_var_ids:

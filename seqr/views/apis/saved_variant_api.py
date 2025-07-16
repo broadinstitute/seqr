@@ -123,7 +123,7 @@ def _create_variant_note(saved_variants, note_json, user):
 
     response = {}
     if note_json.get('saveAsGeneNote'):
-        # TODO
+        # TODO PR
         main_transcript_id = saved_variants[0].selected_main_transcript_id or saved_variants[0].saved_variant_json.get('mainTranscriptId')
         if main_transcript_id:
             gene_id = next(
