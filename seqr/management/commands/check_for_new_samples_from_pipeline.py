@@ -242,7 +242,7 @@ class Command(BaseCommand):
 
         sample_type = metadata['sample_type']
         logger.info(f'Loading {len(sample_project_tuples)} {sample_type} {dataset_type} samples in {len(samples_by_project)} projects')
-        new_samples, *args = match_and_update_search_samples(
+        new_samples, updated_samples, *args = match_and_update_search_samples(
             projects=samples_by_project.keys(),
             sample_project_tuples=sample_project_tuples,
             sample_data={'data_source': run_version, 'elasticsearch_index': ';'.join(metadata['callsets'])},
@@ -275,7 +275,7 @@ class Command(BaseCommand):
         update_function = backend_specific_call(None, None, cls._update_project_saved_variant_genotypes)
         updated_variants_by_id = update_projects_saved_variant_json([
             (project.id, project.guid, project.name, project.genome_version, families) for project, families in families_by_project.items()
-        ], user_email=USER_EMAIL, dataset_type=dataset_type, update_function=update_function)
+        ], user_email=USER_EMAIL, dataset_type=dataset_type, update_function=update_function, samples=updated_samples)
 
         return search_data_type(dataset_type, sample_type), set(family_project_map.keys()), updated_variants_by_id
 
@@ -412,7 +412,7 @@ class Command(BaseCommand):
             )
 
     @classmethod
-    def _update_project_saved_variant_genotypes(cls, project_id, genome_version, user_email, family_guids, project_guid, dataset_type=None):
+    def _update_project_saved_variant_genotypes(cls, project_id, genome_version, user_email, family_guids, project_guid, dataset_type=None, samples=None):
         for family_guid in family_guids:
             variant_models_by_key = {
                 v.key: v for v in get_saved_variants(genome_version, project_id, [family_guid], dataset_type)
@@ -420,8 +420,9 @@ class Command(BaseCommand):
             if not variant_models_by_key:
                 continue
             variants = []
+            family_samples = samples.filter(individual__family__guid=family_guid)
             genotypes_by_key = get_clickhouse_genotypes(
-                project_guid, family_guid, genome_version, dataset_type, variant_models_by_key.keys(), family_samples[family_guid],
+                project_guid, family_guid, genome_version, dataset_type, variant_models_by_key.keys(), family_samples,
             )
             for key, genotypes in genotypes_by_key:
                 variant = variant_models_by_key[key]
