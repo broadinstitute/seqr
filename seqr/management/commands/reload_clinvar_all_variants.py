@@ -146,8 +146,6 @@ def parse_conflicting_pathogenicities(
     conflicting_pathogenicities_node = classified_record_node.find(
         'Classifications/GermlineClassification/Explanation'
     )
-    if conflicting_pathogenicities_node is None:
-        return []
     try:
         conflicting_pathogenicities = parse_and_merge_classification_counts(
             conflicting_pathogenicities_node.text

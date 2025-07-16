@@ -283,6 +283,21 @@ class ReloadClinvarAllVariantsTest(TestCase):
                         </Classifications>
                     </ClassifiedRecord>
                 </VariationArchive>
+                <VariationArchive>
+                    <ClassifiedRecord>
+                        <SimpleAllele {simple_allele_attrs}>
+                            <Location>
+                                <SequenceLocation {sequence_location_attrs}/>
+                            </Location>
+                        </SimpleAllele>
+                        <Classifications>
+                            <GermlineClassification>
+                                <!-- No Description -->
+                                <ReviewStatus>criteria provided, conflicting classifications</ReviewStatus>
+                            </GermlineClassification>
+                        </Classifications>
+                    </ClassifiedRecord>
+                </VariationArchive>
             </ClinVarVariationRelease>'''
             responses.add(
                 responses.GET,
@@ -292,7 +307,4 @@ class ReloadClinvarAllVariantsTest(TestCase):
                 stream=True,
             )
             call_command('reload_clinvar_all_variants')
-
-
-
 
