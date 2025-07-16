@@ -125,11 +125,11 @@ def parse_pathogenicity_and_assertions(classified_record_node: xml.etree.Element
         return CLINVAR_DEFAULT_PATHOGENICITY, []
 
     pathogenicity_string = pathogenicity_node.text.replace(
-         '/Pathogenic, low penetrance',
-        '; low penetrance',
-    ).replace(
         '/Pathogenic, low penetrance/Established risk allele',
         '/Established risk allele; low penetrance',
+    ).replace(
+        '/Pathogenic, low penetrance',
+        '; low penetrance',
     ).replace(
         ', low penetrance',
         '; low penetrance'
@@ -173,6 +173,7 @@ def parse_gold_stars(classified_record_node: xml) -> Optional[int]:
     review_status_node = classified_record_node.find(
         'Classifications/GermlineClassification/ReviewStatus',
     )
+    # NB: these are allowed for SomaticClassifcations.
     if review_status_node is None:
         return None
     if review_status_node.text not in CLINVAR_GOLD_STARS_LOOKUP:
@@ -193,14 +194,14 @@ def parse_submitters_and_conditions(classified_record_node: xml) -> [list[str], 
     })
     return submitters, conditions
 
-def extract_variant_info(elem: xml.etree.ElementTree.Element, version: str) -> tuple[models.ClickhouseModel, models.ClickhouseModel, models.ClickhouseModel]:
+def extract_variant_info(elem: xml.etree.ElementTree.Element, new_version: str) -> tuple[models.ClickhouseModel, models.ClickhouseModel, models.ClickhouseModel]:
     # Cannot use regular bool-falseyness here, as:
     # "An element with no child elements (even if it exists and has text) will be falsey."
     classified_record_node = elem.find('ClassifiedRecord')
     if classified_record_node is None:
         return None, None, None
     allele_id = parse_allele_id(classified_record_node)
-    if not allele_id:
+    if allele_id is None: # Don't skip allele id of 0!
         return None, None, None
     positions = parse_positions(classified_record_node)
     if not positions:
@@ -211,7 +212,7 @@ def extract_variant_info(elem: xml.etree.ElementTree.Element, version: str) -> t
     gold_stars = parse_gold_stars(classified_record_node)
     submitters, conditions = parse_submitters_and_conditions(classified_record_node)
     props = {
-        'version': version,
+        'version': new_version,
         'allele_id': allele_id,
         'pathogenicity': replace_spaces_with_underscores(pathogenicity),
         'assertions': replace_spaces_with_underscores(assertions),
@@ -242,11 +243,10 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         GRCh37SnvIndel_batch, SnvIndel_batch, Mito_batch = [], [], []
-        version = None
+        new_version = None
         with requests.get(WEEKLY_XML_RELEASE, stream=True, timeout=10) as r:
             r.raise_for_status()
-            for event, elem in ET.iterparse(gzip.GzipFile(fileobj=r.raw), events=('start', 'end',)):
-                
+            for event, elem in ET.iterparse(gzip.GzipFile(fileobj=r.raw), events=('start', 'end',)):                
                 # Handle parsing the current date.
                 if event == 'start' and elem.tag == 'ClinVarVariationRelease':
                     new_version = elem.attrib['ReleaseDate']
@@ -260,8 +260,8 @@ class Command(BaseCommand):
                     )
 
                 # Handle parsing variants
-                if event == 'end' and elem.tag == 'VariationArchive' and version:
-                    GRCh37SnvIndel, SnvIndel, Mito = extract_variant_info(elem, version)
+                if event == 'end' and elem.tag == 'VariationArchive' and new_version:
+                    GRCh37SnvIndel, SnvIndel, Mito = extract_variant_info(elem, new_version)
                     for obj, batch, model in zip(
                         (GRCh37SnvIndel, SnvIndel, Mito),
                         (GRCh37SnvIndel_batch, SnvIndel_batch, Mito_batch),
@@ -287,7 +287,7 @@ class Command(BaseCommand):
         clinvar_run_sql(Template(f'SYSTEM REFRESH VIEW `$reference_genome/$dataset_type/clinvar_all_variants_to_clinvar`;'))
         clinvar_run_sql(Template(f'SYSTEM WAIT VIEW `$reference_genome/$dataset_type/clinvar_all_variants_to_clinvar`;'))
 
-        # Save the live version in Postgres
+        # Save the new version in Postgres
         DataVersions('Clinvar', new_version).save()
         slack_message = f'Successfully updated Clinvar ClickHouse tables to {new_version}.'
         safe_post_to_slack(SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, slack_message)

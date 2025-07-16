@@ -1,3 +1,4 @@
+import datetime
 import gzip
 import mock
 import responses
@@ -7,9 +8,12 @@ from django.forms.models import model_to_dict
 from django.test import TestCase
 from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL
 
-from clickhouse_search.models import ClinvarSnvIndel, ClinvarGRCh37SnvIndel, ClinvarAllVariantsGRCh37SnvIndel, KeyLookupSnvIndel
+from clickhouse_search.models import (
+    ClinvarSnvIndel, ClinvarGRCh37SnvIndel, ClinvarAllVariantsSnvIndel,
+    ClinvarAllVariantsGRCh37SnvIndel, ClinvarAllVariantsMito, KeyLookupSnvIndel, KeyLookupMito,
+)
 from reference_data.models import DataVersions
-from seqr.management.commands.reload_clinvar_all_variants import WEEKLY_XML_RELEASE
+from seqr.management.commands.reload_clinvar_all_variants import BATCH_SIZE, WEEKLY_XML_RELEASE
 
 WEEKLY_XML_RELEASE_DATA = '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <ClinVarVariationRelease
@@ -59,34 +63,61 @@ WEEKLY_XML_RELEASE_DATA = '''<?xml version="1.0" encoding="UTF-8" standalone="ye
             </ClinicalAssertionList>
         </ClassifiedRecord>
     </VariationArchive>
+    <VariationArchive VariationID="5603" VariationName="NM_007194.4(CHEK2):c.1283C>T (p.Ser428Phe)" VariationType="single nucleotide variant" Accession="VCV000005603" Version="104" RecordType="classified" NumberOfSubmissions="38" NumberOfSubmitters="36" DateLastUpdated="2025-06-29" DateCreated="2016-03-20" MostRecentSubmission="2025-06-29">
+        <ClassifiedRecord>
+            <SimpleAllele AlleleID="20642" VariationID="5603">
+                <Location>
+                    <SequenceLocation Assembly="GRCh38" Chr="MT" Accession="NC_000022.11" start="123" stop="123" display_start="123" display_stop="28695219" variantLength="1" positionVCF="123" referenceAlleleVCF="G" alternateAlleleVCF="A"/>
+                </Location>
+            </SimpleAllele>
+            <Classifications>
+                <GermlineClassification DateLastEvaluated="2025-04-01" NumberOfSubmissions="38" NumberOfSubmitters="36" DateCreated="2016-03-20" MostRecentSubmission="2025-06-29">
+                    <Description>Pathogenic/Likely pathogenic/Pathogenic, low penetrance/Established risk allele</Description>
+                </GermlineClassification>
+            </Classifications>
+        </ClassifiedRecord>
+    </VariationArchive>
 </ClinVarVariationRelease>
 '''
 
+
+@mock.patch('seqr.management.commands.reload_clinvar_all_variants.safe_post_to_slack')
+@mock.patch('seqr.management.commands.reload_clinvar_all_variants.logger.info')
 class ReloadClinvarAllVariantsTest(TestCase):
     databases = '__all__'
 
-
     @responses.activate
-    @mock.patch('seqr.management.commands.reload_clinvar_all_variants.safe_post_to_slack')
-    @mock.patch('seqr.management.commands.reload_clinvar_all_variants.logger.info')
     def test_new_version_already_exists(self, mock_logger, mock_safe_post_to_slack):
         DataVersions('Clinvar', '2025-06-30').save()
         responses.add(responses.GET, WEEKLY_XML_RELEASE, status=200, body=gzip.compress(WEEKLY_XML_RELEASE_DATA.encode()), stream=True)
         call_command('reload_clinvar_all_variants')
         mock_logger.assert_called_with('Clinvar ClickHouse tables already successfully updated to 2025-06-30, gracefully exiting.')
-  
 
     @responses.activate
-    @mock.patch('seqr.management.commands.reload_clinvar_all_variants.safe_post_to_slack')
-    @mock.patch('seqr.management.commands.reload_clinvar_all_variants.logger.info')
-    def test_normal_command(self, mock_logger, mock_safe_post_to_slack):
+    def test_parse_variants_all_types(self, mock_logger, mock_safe_post_to_slack):
         KeyLookupSnvIndel.objects.create(
             variant_id='22-28695219-G-A',
             key_id=12,
         )
+        KeyLookupMito.objects.create(
+            variant_id='M-123-GA',
+            key_id=8,
+        )
+        ClinvarAllVariantsSnvIndel.objects.create(
+            version='2025-06-23',
+            variant_id='22-28695219-G-A',
+            allele_id=20642,
+            pathogenicity='Likely_pathogenic',
+            assertions=[],
+            conflicting_pathogenicities=[],
+            gold_stars=2,
+            submitters=[],
+            conditions=[]
+        )
+        DataVersions('Clinvar', '2025-06-23').save()
         responses.add(responses.GET, WEEKLY_XML_RELEASE, status=200, body=gzip.compress(WEEKLY_XML_RELEASE_DATA.encode()), stream=True)
         call_command('reload_clinvar_all_variants')
-        mock_logger.assert_called_with('Updating Clinvar ClickHouse tables to 2025-06-30 from None.')
+        mock_logger.assert_called_with('Updating Clinvar ClickHouse tables to 2025-06-30 from 2025-06-23.')
         seqr_clinvar_snv_indel_models = ClinvarSnvIndel.objects.all()
         self.assertEqual(seqr_clinvar_snv_indel_models.count(), 1)
         self.assertDictEqual(
@@ -113,16 +144,30 @@ class ReloadClinvarAllVariantsTest(TestCase):
                 'submitters': [
                     'Fulgent Genetics, Fulgent Genetics',
                     'Revvity Omics, Revvity',
-                    'University of Washington Department of Laboratory Medicine, '
+                    'University of Washington Department of Laboratory Medicine, University of Washington'
                 ]
             },
         )
 
-        # Variant is added successfully to the Clinvar all variants table but not the Join table.
         seqr_clinvar_grch37_snv_indel_models = ClinvarGRCh37SnvIndel.objects.all()
         self.assertEqual(seqr_clinvar_grch37_snv_indel_models.count(), 0)
-        seqr_clinvar_all_variants_grch37_snv_indel_models = ClinvarAllVariantsGRCh37SnvIndel.objects.all()
-        self.assertEqual(seqr_clinvar_all_variants_grch37_snv_indel_models.count(), 1)
+        clinvar_all_variants_grch37_snv_indel_models = ClinvarAllVariantsGRCh37SnvIndel.objects.all()
+        self.assertEqual(clinvar_all_variants_grch37_snv_indel_models.count(), 1)
+        clinvar_all_variants_mito_models = ClinvarAllVariantsMito.objects.all()
+        self.assertEqual(
+            model_to_dict(clinvar_all_variants_mito_models.first()), 
+            {
+                'allele_id': 20642,
+                'assertions': ['low_penetrance'],
+                'conditions': [],
+                'conflicting_pathogenicities': None,
+                'gold_stars': None,
+                'pathogenicity': 'Pathogenic/Likely_pathogenic/Established_risk_allele',
+                'submitters': [],
+                'variant_id': 'M-123-G-A',
+                'version': datetime.date(2025, 6, 30)
+            }
+        )
 
         # Version in Postgres.
         dv = DataVersions.objects.get(data_model_name='Clinvar')
@@ -131,4 +176,32 @@ class ReloadClinvarAllVariantsTest(TestCase):
             SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL,
             'Successfully updated Clinvar ClickHouse tables to 2025-06-30.',
         )
+
+
+    @responses.activate
+    def test_batching(self, mock_logger, mock_safe_post_to_slack):
+        # Dynamically build many variants
+        data = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><ClinVarVariationRelease xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://ftp.ncbi.nlm.nih.gov/pub/clinvar/xsd_public/ClinVar_VCV_2.4.xsd" ReleaseDate="2025-06-30">'
+        for i in range(BATCH_SIZE * 2 + 10):
+            data += f'''
+            <VariationArchive VariationID="5603" VariationName="NM_007194.4(CHEK2):c.1283C>T (p.Ser428Phe)" VariationType="single nucleotide variant" Accession="VCV000005603" Version="104" RecordType="classified" NumberOfSubmissions="38" NumberOfSubmitters="36" DateLastUpdated="2025-06-29" DateCreated="2016-03-20" MostRecentSubmission="2025-06-29">
+                <ClassifiedRecord>
+                    <SimpleAllele AlleleID="{i}" VariationID="5603">
+                        <Location>
+                            <SequenceLocation Assembly="GRCh38" Chr="1" variantLength="1" positionVCF="{i}" referenceAlleleVCF="G" alternateAlleleVCF="A"/>
+                        </Location>
+                    </SimpleAllele>
+                    <Classifications>
+                        <GermlineClassification DateLastEvaluated="2025-04-01" NumberOfSubmissions="38" NumberOfSubmitters="36" DateCreated="2016-03-20" MostRecentSubmission="2025-06-29">
+                            <Description>Pathogenic</Description>
+                        </GermlineClassification>
+                    </Classifications>
+                </ClassifiedRecord>
+            </VariationArchive>
+            '''
+        data += '</ClinVarVariationRelease>'
+        responses.add(responses.GET, WEEKLY_XML_RELEASE, status=200, body=gzip.compress(data.encode()), stream=True)
+        call_command('reload_clinvar_all_variants')
+        mock_logger.assert_called_with('Updating Clinvar ClickHouse tables to 2025-06-30 from None.')
+        self.assertEqual(ClinvarAllVariantsSnvIndel.objects.all().count(), BATCH_SIZE * 2 + 10)
 
