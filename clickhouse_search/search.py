@@ -6,7 +6,8 @@ from django.db.models import F, Min
 from django.db.models.functions import JSONObject
 
 from clickhouse_search.backend.fields import NamedTupleField
-from clickhouse_search.backend.functions import Array, ArrayFilter, ArrayIntersect, ArraySort, GroupArrayArray, Tuple
+from clickhouse_search.backend.functions import Array, ArrayFilter, ArrayIntersect, ArraySort, GroupArrayArray, Tuple, \
+    ArrayDistinct, ArrayMap
 from clickhouse_search.models import ENTRY_CLASS_MAP, ANNOTATIONS_CLASS_MAP, TRANSCRIPTS_CLASS_MAP, KEY_LOOKUP_CLASS_MAP, \
     BaseClinvar, BaseAnnotationsMitoSnvIndel, BaseAnnotationsGRCh37SnvIndel, BaseAnnotationsSvGcnv
 from reference_data.models import GeneConstraint, Omim
@@ -461,10 +462,21 @@ def get_clickhouse_genotypes(project_guid, family_guid, genome_version, dataset_
     return entries.annotate(genotypes=entries.genotype_expression(sample_data)).values_list('key', 'genotypes')
 
 
-def get_clickhouse_annotations(genome_version, dataset_type, keys):
+def _get_annotations_queryset(genome_version, dataset_type, keys):
     annotations_cls = ANNOTATIONS_CLASS_MAP[genome_version][dataset_type]
-    results = annotations_cls.objects.filter(key__in=keys).result_values(skip_entry_fields=True)
+    return annotations_cls.objects.filter(key__in=keys)
+
+
+def get_clickhouse_annotations(genome_version, dataset_type, keys):
+    results = _get_annotations_queryset(genome_version, dataset_type, keys).result_values(skip_entry_fields=True)
     return format_clickhouse_results(results, genome_version)
+
+
+def get_clickhouse_genes(genome_version, dataset_type, keys):
+    results = _get_annotations_queryset(genome_version, dataset_type, keys)
+    return results.aggregate(
+        gene_ids=ArrayDistinct(GroupArrayArray(ArrayMap(results.transcript_field, mapped_expression='x.geneId'))),
+    )['gene_ids']
 
 
 def get_clickhouse_key_lookup(genome_version, dataset_type, variants_ids):
