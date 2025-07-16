@@ -53,7 +53,7 @@ WEEKLY_XML_RELEASE = (
 )
 
 def clinvar_run_sql(sql: str):
-    with connections['clickhouse'].cursor() as cursor:
+    with connections['clickhouse_write'].cursor() as cursor:
         for reference_genome, dataset_type in [
             ('GRCh37', 'SNV_INDEL'),
             ('GRCh38', 'SNV_INDEL'),
@@ -270,7 +270,7 @@ class Command(BaseCommand):
                         if obj:
                             batch.append(obj)
                         if len(batch) == BATCH_SIZE:
-                            model.objects.bulk_create(batch)
+                            model.objects.using('clickhouse_write').bulk_create(batch)
                             batch.clear()
                     elem.clear()
 
@@ -279,7 +279,7 @@ class Command(BaseCommand):
             (ClinvarAllVariantsGRCh37SnvIndel, ClinvarAllVariantsSnvIndel, ClinvarAllVariantsMito)
         ):
             if batch:
-                model.objects.bulk_create(batch)
+                model.objects.using('clickhouse_write').bulk_create(batch)
 
         # Delete previous version & refresh the view.
         if existing_version:
