@@ -5,6 +5,7 @@ from django.db.models import options, ForeignKey, OneToOneField, Func, CASCADE, 
 
 from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocksDB, Join
 from clickhouse_search.backend.fields import Enum8Field, NestedField, UInt64FieldDeltaCodecField, NamedTupleField
+from clickhouse_search.backend.functions import ArrayDistinct, ArrayFlatten, ArrayMin, ArrayMax
 from clickhouse_search.managers import EntriesManager, AnnotationsQuerySet
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample
@@ -81,6 +82,8 @@ class BaseAnnotations(models.ClickhouseModel):
         'genomeVersion': GENOME_VERSION_GRCh38,
         'liftedOverGenomeVersion': GENOME_VERSION_GRCh37,
     }
+    SV_TYPE_FILTER_PREFIX = ''
+    GENOTYPE_OVERRIDE_FIELDS = {}
 
     key = models.UInt32Field(primary_key=True)
     xpos = models.UInt64Field()
@@ -395,7 +398,7 @@ class AnnotationsDiskSv(BaseAnnotationsSv):
 
 class BaseAnnotationsGcnv(BaseAnnotationsSvGcnv):
     POPULATION_FIELDS = [
-        ('seqrPop', NamedTupleField([
+        ('sv_callset', NamedTupleField([
             ('ac', models.UInt32Field()),
             ('af', models.DecimalField(max_digits=9, decimal_places=5)),
             ('an', models.UInt32Field()),
@@ -403,6 +406,14 @@ class BaseAnnotationsGcnv(BaseAnnotationsSvGcnv):
             ('hom', models.UInt32Field()),
         ])),
     ]
+    SEQR_POPULATIONS = []
+    SV_TYPE_FILTER_PREFIX = 'gCNV_'
+    GENOTYPE_OVERRIDE_FIELDS = {
+        'pos': ('start', ArrayMin),
+        'end': ('end', ArrayMax),
+        'numExon': ('numExon', ArrayMax),
+        'geneIds': ('geneIds', lambda value, **kwargs: ArrayDistinct(ArrayFlatten(value), **kwargs)),
+    }
 
     num_exon = models.UInt16Field(db_column='numExon')
     populations = NamedTupleField(POPULATION_FIELDS)
@@ -825,7 +836,8 @@ ENTRY_CLASS_MAP = {
     GENOME_VERSION_GRCh38: {
         Sample.DATASET_TYPE_VARIANT_CALLS: EntriesSnvIndel,
         Sample.DATASET_TYPE_MITO_CALLS: EntriesMito,
-        Sample.DATASET_TYPE_SV_CALLS: EntriesSv,
+        f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WGS}': EntriesSv,
+        f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WES}': EntriesGcnv,
     },
 }
 ANNOTATIONS_CLASS_MAP = {
@@ -833,7 +845,8 @@ ANNOTATIONS_CLASS_MAP = {
     GENOME_VERSION_GRCh38: {
         Sample.DATASET_TYPE_VARIANT_CALLS: AnnotationsSnvIndel,
         Sample.DATASET_TYPE_MITO_CALLS: AnnotationsMito,
-        Sample.DATASET_TYPE_SV_CALLS: AnnotationsSv,
+        f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WGS}': AnnotationsSv,
+        f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WES}': AnnotationsGcnv,
     },
 }
 TRANSCRIPTS_CLASS_MAP = {

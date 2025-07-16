@@ -2,7 +2,6 @@ from clickhouse_backend.models.fields.array import ArrayField, ArrayLookup
 from django.db.models import Func, Subquery, lookups, BooleanField, Aggregate
 from django.db.models.sql.datastructures import BaseTable, Join
 
-
 from clickhouse_search.backend.fields import NestedField
 
 class Array(Func):
@@ -15,6 +14,10 @@ class ArrayConcat(Func):
 
 class ArrayDistinct(Func):
     function = 'arrayDistinct'
+
+
+class ArrayFlatten(Func):
+    function = 'arrayFlatten'
 
 
 class ArrayIntersect(Func):
@@ -33,6 +36,14 @@ class ArrayFold(Func):
 class ArrayMap(Func):
     function = 'arrayMap'
     template = "%(function)s(x -> %(mapped_expression)s, %(expressions)s)"
+
+
+class ArrayMax(Func):
+    function = 'arrayMax'
+
+
+class ArrayMin(Func):
+    function = 'arrayMin'
 
 
 class ArraySort(Func):

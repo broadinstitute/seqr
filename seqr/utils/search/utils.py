@@ -426,8 +426,10 @@ def _validate_sort(sort, families):
 def _search_dataset_type(search):
     locus = search['parsed_locus']
     parsed_variant_ids = locus.get('parsed_variant_ids', locus['variant_ids'])
-    if parsed_variant_ids:
-        return Sample.DATASET_TYPE_VARIANT_CALLS, None, _variant_ids_dataset_type(parsed_variant_ids)
+    rsids = locus.get('rs_ids')
+    if parsed_variant_ids or rsids:
+        lookup_dataset_type = Sample.DATASET_TYPE_VARIANT_CALLS if rsids else _variant_ids_dataset_type(parsed_variant_ids)
+        return Sample.DATASET_TYPE_VARIANT_CALLS, None, lookup_dataset_type
 
     intervals = locus['intervals'] if 'exclude_intervals' in locus and not locus['exclude_intervals'] else None
     dataset_type = _annotation_dataset_type(search.get('annotations'), intervals, pathogenicity=search.get('pathogenicity'))
@@ -457,7 +459,7 @@ def _annotation_dataset_type(annotations, intervals, pathogenicity=None):
         return Sample.DATASET_TYPE_VARIANT_CALLS if pathogenicity else None
 
     annotation_types = set((annotations or {}).keys())
-    if annotations and annotation_types.issubset(SV_ANNOTATION_TYPES):
+    if annotations and annotation_types.issubset(SV_ANNOTATION_TYPES) and not pathogenicity:
         return Sample.DATASET_TYPE_SV_CALLS
 
     no_svs = (annotations and annotation_types.isdisjoint(SV_ANNOTATION_TYPES))

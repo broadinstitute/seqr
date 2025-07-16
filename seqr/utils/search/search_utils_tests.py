@@ -219,6 +219,7 @@ class SearchUtilsTests(SearchTestHelper):
 
         self.results_model.families.set([family for family in self.families if family.guid == 'F000003_3'])
         self.search_model.search['annotations'] = {'structural': ['DEL']}
+        self.search_model.search['pathogenicity'] = {}
         with self.assertRaises(InvalidSearchException) as cm:
             query_variants(self.results_model)
         self.assertEqual(str(cm.exception), 'Unable to search against dataset type "SV"')
@@ -388,7 +389,7 @@ class SearchUtilsTests(SearchTestHelper):
         query_variants(self.results_model, user=self.user)
         self._test_expected_search_call(
             mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
-            rs_ids=['rs9876'], variant_ids=[], parsed_variant_ids=[],
+            rs_ids=['rs9876'], variant_ids=[], parsed_variant_ids=[], omitted_sample_guids=SV_SAMPLES, dataset_type='SNV_INDEL',
         )
 
         self.search_model.search['locus']['rawItems'] = 'WASH7P, chr2:1234-5678, chr7:100-10100%10, ENSG00000186092'

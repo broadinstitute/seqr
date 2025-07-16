@@ -1,6 +1,6 @@
 from clickhouse_backend import models
 from clickhouse_backend.models.fields.tuple import IndexTransformFactory as TupleIndexTransform
-from clickhouse_backend.models.fields.array import IndexTransformFactory as ArrayIndexTransform
+from clickhouse_backend.models.fields.array import ArrayField, IndexTransformFactory as ArrayIndexTransform
 from collections import defaultdict
 
 class NestedField(models.TupleField):
@@ -33,6 +33,12 @@ class NestedField(models.TupleField):
 
     def from_db_value(self, *args, **kwargs):
         return self._from_db_value(*args, format_item=self._convert_type, **kwargs)
+
+    def _convert_type(self, value):
+        array_indices = [i for i, field in enumerate(self._base_fields) if isinstance(field, ArrayField)]
+        if array_indices and isinstance(value, tuple) and not (hasattr(self, 'container_class') and isinstance(value, self.container_class)):
+            value = (eval(item) if i in array_indices and isinstance(item, str) else item for i, item in enumerate(value))  # nosec
+        return super()._convert_type(value)
 
     def _from_db_value(self, value, expression, connection, format_item=None):
         if self.null_when_empty and not value:
