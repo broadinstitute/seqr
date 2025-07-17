@@ -10,7 +10,7 @@ from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL
 
 from clickhouse_search.models import (
     ClinvarSnvIndel, ClinvarGRCh37SnvIndel, ClinvarAllVariantsSnvIndel,
-    ClinvarAllVariantsGRCh37SnvIndel, ClinvarAllVariantsMito, KeyLookupSnvIndel, KeyLookupMito,
+    ClinvarAllVariantsGRCh37SnvIndel, ClinvarAllVariantsMito,
 )
 from reference_data.models import DataVersions
 from seqr.management.commands.reload_clinvar_all_variants import BATCH_SIZE, WEEKLY_XML_RELEASE
@@ -86,7 +86,6 @@ WEEKLY_XML_RELEASE_DATA = '''<?xml version="1.0" encoding="UTF-8" standalone="ye
 class ReloadClinvarAllVariantsTest(TestCase):
     databases = '__all__'
     fixtures = ['clinvar_all_variants']
-    
 
     @responses.activate
     def test_new_version_already_exists(self, mock_logger, mock_safe_post_to_slack):

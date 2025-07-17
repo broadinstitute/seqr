@@ -66,7 +66,7 @@ def clinvar_run_sql(sql: str):
 
 def parse_and_merge_classification_counts(text: str) -> list[tuple[str, int]]:
     #
-    # Example text: 
+    # Example text:
     # 'Pathogenic(18); Likely pathogenic(9); Pathogenic, low penetrance(1); Established risk allele(1); Likely risk allele(1); Uncertain significance(1)'
     #
     counts = defaultdict(int)
@@ -279,7 +279,7 @@ class Command(BaseCommand):
             existing_version_obj.save()
         else:
             DataVersions.objects.create(
-                data_model_name='Clinvar', 
+                data_model_name='Clinvar',
                 version=new_version
             )
         slack_message = f'Successfully updated Clinvar ClickHouse tables to {new_version}.'
