@@ -239,10 +239,11 @@ class Command(BaseCommand):
                 if event == 'start' and elem.tag == 'ClinVarVariationRelease':
                     new_version = elem.attrib['ReleaseDate']
                     existing_version_obj = DataVersions.objects.filter(data_model_name='Clinvar').first()
-                    if existing_version_obj and existing_version_obj.version == new_version:
-                        logger.info(f'Clinvar ClickHouse tables already successfully updated to {new_version}, gracefully exiting.')
-                        return
-                    logger.info(f'Updating Clinvar ClickHouse tables to {new_version} from {existing_version_obj.version}.')
+                    if existing_version_obj:
+                        if existing_version_obj.version == new_version:
+                            logger.info(f'Clinvar ClickHouse tables already successfully updated to {new_version}, gracefully exiting.')
+                            return
+                        logger.info(f'Updating Clinvar ClickHouse tables to {new_version} from {existing_version_obj.version}.')
                     # Drop any currently existing variants in the table that may exist due to a
                     # previously failed partial run.
                     clinvar_run_sql(
