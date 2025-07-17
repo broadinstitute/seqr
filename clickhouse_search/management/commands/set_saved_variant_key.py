@@ -33,16 +33,16 @@ class Command(BaseCommand):
                 dataset_type = Sample.DATASET_TYPE_SV_CALLS
             ids_by_dataset_type[dataset_type].append(variant_id)
 
-        no_key_ids = self._set_variant_keys(ids_by_dataset_type[Sample.DATASET_TYPE_MITO_CALLS], Sample.DATASET_TYPE_MITO_CALLS)
+        no_key_mito = self._set_variant_keys(ids_by_dataset_type[Sample.DATASET_TYPE_MITO_CALLS], Sample.DATASET_TYPE_MITO_CALLS)
 
         self._set_variant_keys(
-            ids_by_dataset_type[Sample.DATASET_TYPE_VARIANT_CALLS] + list(no_key_ids), Sample.DATASET_TYPE_VARIANT_CALLS,
+            ids_by_dataset_type[Sample.DATASET_TYPE_VARIANT_CALLS] + list(no_key_mito), Sample.DATASET_TYPE_VARIANT_CALLS,
         )
 
         no_keys_svs = self._set_variant_keys(
             ids_by_dataset_type[Sample.DATASET_TYPE_SV_CALLS], f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WGS}',
         )
-        self._set_variant_keys(no_keys_svs, f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WES}')
+        self._set_variant_keys(list(no_keys_svs), f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WES}')
 
         variant_ids_37 = SavedVariant.objects.filter(
             key__isnull=True, family__project__genome_version=GENOME_VERSION_GRCh37,
@@ -53,14 +53,19 @@ class Command(BaseCommand):
 
     @staticmethod
     def _set_variant_keys(variants_ids, dataset_type, genome_version=GENOME_VERSION_GRCh38):
+        logger.info(f'Finding keys for {len(variants_ids)} {dataset_type} (GRCh{genome_version}) variant ids')
         variant_key_map = get_clickhouse_key_lookup(genome_version, dataset_type, variants_ids)
+        logger.info(f'Found {len(variant_key_map)} keys')
+        if not variant_key_map:
+            return set(variants_ids)
+
         saved_variants = SavedVariant.objects.filter(
             family__project__genome_version=genome_version, variant_id__in=variant_key_map,
         )
         for variant in saved_variants:
             variant.key = variant_key_map[variant.variant_id]
             variant.dataset_type = dataset_type
-        num_updated = SavedVariant.objects.bulk_update(saved_variants, ['key', 'dataset_type'])
+        num_updated = SavedVariant.objects.bulk_update(saved_variants, ['key', 'dataset_type'], batch_size=10000)
         logger.info(f'Updated keys for {num_updated} {dataset_type} (GRCh{genome_version}) variants')
 
         no_key = set(variants_ids) - set(variant_key_map.keys())

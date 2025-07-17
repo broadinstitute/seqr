@@ -488,6 +488,9 @@ def get_clickhouse_keys_for_gene(gene_id, genome_version, dataset_type, keys):
 
 def get_clickhouse_key_lookup(genome_version, dataset_type, variants_ids):
     key_lookup_class = KEY_LOOKUP_CLASS_MAP[genome_version][dataset_type]
-    return dict(
-        key_lookup_class.objects.filter(variant_id__in=variants_ids).values_list('variant_id', 'key')
-    )
+    lookup = {}
+    for i in range(0, len(variants_ids), 10000):
+        lookup.update(dict(
+            key_lookup_class.objects.filter(variant_id__in= variants_ids[i:i + 10000]).values_list('variant_id', 'key')
+        ))
+    return lookup

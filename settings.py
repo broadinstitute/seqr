@@ -253,6 +253,11 @@ if CLICKHOUSE_SERVICE_HOSTNAME:
         'PORT': int(os.environ.get('CLICKHOUSE_SERVICE_PORT', '9000')),
         'USER': os.environ.get('CLICKHOUSE_ADMIN_USER', 'clickhouse'),
         'PASSWORD': os.environ.get('CLICKHOUSE_ADMIN_PASSWORD', 'clickhouse_test'),
+        'OPTIONS': {
+            'settings': {
+                'use_client_time_zone': False,
+            }
+        }
     }
     DATABASES['clickhouse'] = {
         **DATABASES['clickhouse_write'],
