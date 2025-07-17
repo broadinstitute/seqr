@@ -154,7 +154,7 @@ class ReloadClinvarAllVariantsTest(TestCase):
         clinvar_all_variants_grch37_snv_indel_models = ClinvarAllVariantsGRCh37SnvIndel.objects.all()
         self.assertEqual(clinvar_all_variants_grch37_snv_indel_models.count(), 1)
         clinvar_all_variants_mito_models = ClinvarAllVariantsMito.objects.all()
-        self.assertEqual(
+        self.assertDictEqual(
             model_to_dict(clinvar_all_variants_mito_models.first()),
             {
                 'allele_id': 20642,
