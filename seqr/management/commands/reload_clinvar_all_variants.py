@@ -23,7 +23,7 @@ def replace_underscores_with_spaces(value: Union[str, list[str]]) -> Union[str, 
         return value.replace('_', ' ')
     elif isinstance(value, list):
         return [s.replace('_', ' ') for s in value]
-    raise TypeError("Expected str or list[str]") # pragma: no cover
+    raise TypeError("Expected str or list[str]")
 
 def replace_spaces_with_underscores(value: Union[str, list[str], list[tuple[str, int]]]) -> Union[str, list[str]]:
     if isinstance(value, str):
@@ -32,7 +32,7 @@ def replace_spaces_with_underscores(value: Union[str, list[str], list[tuple[str,
         if len(value) > 0 and isinstance(value[0], tuple):
             return [(t[0].replace(' ', '_'), t[1]) for t in value]
         return [s.replace(' ', '_') for s in value]
-    raise TypeError("Expected str or list[str]") # pragma: no cover
+    raise TypeError("Expected str or list[str]")
 
 BATCH_SIZE = 1000
 CLINVAR_ASSERTIONS = replace_underscores_with_spaces(ClinvarAllVariantsSnvIndel.CLINVAR_ASSERTIONS)
@@ -70,9 +70,11 @@ def parse_and_merge_classification_counts(text: str) -> list[tuple[str, int]]:
     # 'Pathogenic(18); Likely pathogenic(9); Pathogenic, low penetrance(1); Established risk allele(1); Likely risk allele(1); Uncertain significance(1)'
     #
     counts = defaultdict(int)
-    for label, count in re.findall(r'([\w\s,]+)\((\d+)\);', text):
+    for label, count in re.findall(r'([\w\s,]+)\((\d+)\);?', text):
         label = label.strip().replace(', low penetrance', '')
         counts[label] += int(count)
+    if not counts:
+        raise CommandError(f'Failed to correctly parse conflicting pathogenicity counts: {text}')
     return sorted(counts.items(), key=lambda x: x[1], reverse=True)
 
 def parse_allele_id(classified_record_node: xml.etree.ElementTree.Element) -> Optional[int]:
@@ -108,7 +110,7 @@ def parse_pathogenicity_and_assertions(classified_record_node: xml.etree.Element
     if pathogenicity_node is None:
         return CLINVAR_DEFAULT_PATHOGENICITY, []
 
-    pathogenicity_string = pathogenicity_node.text.replace( # pragma: no cover
+    pathogenicity_string = pathogenicity_node.text.replace(
         '/Pathogenic, low penetrance/Established risk allele',
         '/Established risk allele; low penetrance',
     ).replace(
@@ -142,16 +144,13 @@ def parse_conflicting_pathogenicities(
     conflicting_pathogenicities_node = classified_record_node.find(
         'Classifications/GermlineClassification/Explanation'
     )
-    try:
-        conflicting_pathogenicities = parse_and_merge_classification_counts(
-            conflicting_pathogenicities_node.text
-        )
-    except Exception as e:
-        raise CommandError(f'Found unexpected conflicting pathogenicity format: {conflicting_pathogenicities_node.text}') from e
+    conflicting_pathogenicities = parse_and_merge_classification_counts(
+        conflicting_pathogenicities_node.text
+    )
     enumerated_pathogenicities = set(CLINVAR_PATHOGENICITIES)
     for (pathogenicity, _) in conflicting_pathogenicities:
         if pathogenicity not in enumerated_pathogenicities:
-            raise CommandError(f'Found an un-enumerated conflicting clinvar pathogenicity: {pathogenicity}')
+            raise CommandError(f'Found an un-enumerated conflicting pathogenicity: {pathogenicity}')
     return conflicting_pathogenicities
 
 def parse_gold_stars(classified_record_node: xml) -> Optional[int]:

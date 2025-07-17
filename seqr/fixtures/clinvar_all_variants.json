@@ -1,23 +1,23 @@
 [
   {
     "model": "clickhouse_search.keylookupsnvindel",
+    "pk": "22-28695219-G-A",
     "fields": {
-      "variant_id": "22-28695219-G-A",
-      "key_id": 12
+      "key": 12
     }
   },
   {
     "model": "clickhouse_search.keylookupmito",
+    "pk": "M-123-GA",
     "fields": {
-      "variant_id": "M-123-GA",
-      "key_id": 8
+      "key": 8
     }
   },
   {
     "model": "clickhouse_search.clinvarallvariantssnvindel",
+    "pk": "22-28695219-G-A",
     "fields": {
       "version": "2025-06-23",
-      "variant_id": "22-28695219-G-A",
       "allele_id": 20642,
       "pathogenicity": "Likely_pathogenic",
       "assertions": [],
@@ -28,9 +28,9 @@
     }
   },
   {
-    "model": "clickhouse_search.dataversions",
+    "model": "reference_data.dataversions",
+    "pk": "Clinvar",
     "fields": {
-      "data_model_name": "Clinvar",
       "version": "2025-06-23"
     }
   }

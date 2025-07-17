@@ -84,8 +84,18 @@ WEEKLY_XML_RELEASE_DATA = '''<?xml version="1.0" encoding="UTF-8" standalone="ye
 @mock.patch('seqr.management.commands.reload_clinvar_all_variants.safe_post_to_slack')
 @mock.patch('seqr.management.commands.reload_clinvar_all_variants.logger.info')
 class ReloadClinvarAllVariantsTest(TestCase):
+    maxDiff = None
     databases = '__all__'
     fixtures = ['clinvar_all_variants']
+
+    @responses.activate
+    def test_update_with_no_previous_version(self, mock_logger, mock_safe_post_to_slack):
+        DataVersions.objects.all().delete()
+        ClinvarAllVariantsSnvIndel.objects.all().delete()
+        responses.add(responses.GET, WEEKLY_XML_RELEASE, status=200, body=gzip.compress(WEEKLY_XML_RELEASE_DATA.encode()), stream=True)
+        call_command('reload_clinvar_all_variants')
+        mock_logger.assert_called_with('Updating Clinvar ClickHouse tables to 2025-06-30 from None.')
+        self.assertEqual(ClinvarAllVariantsSnvIndel.objects.count(), 1)
 
     @responses.activate
     def test_new_version_already_exists(self, mock_logger, mock_safe_post_to_slack):
@@ -176,7 +186,7 @@ class ReloadClinvarAllVariantsTest(TestCase):
                     </SimpleAllele>
                     <Classifications>
                         <GermlineClassification>
-                            <Description>Pathogenic</Description>
+                            <!-- Note no Description here -->
                         </GermlineClassification>
                     </Classifications>
                 </ClassifiedRecord>
@@ -185,17 +195,18 @@ class ReloadClinvarAllVariantsTest(TestCase):
         data += '</ClinVarVariationRelease>'
         responses.add(responses.GET, WEEKLY_XML_RELEASE, status=200, body=gzip.compress(data.encode()), stream=True)
         call_command('reload_clinvar_all_variants')
-        mock_logger.assert_called_with('Updating Clinvar ClickHouse tables to 2025-06-30 from None.')
+        mock_logger.assert_called_with('Updating Clinvar ClickHouse tables to 2025-06-30 from 2025-06-23.')
         self.assertEqual(ClinvarAllVariantsSnvIndel.objects.all().count(), BATCH_SIZE * 2 + 10)
+        self.assertEqual(ClinvarAllVariantsSnvIndel.objects.first().pathogenicity, ClinvarAllVariantsSnvIndel.CLINVAR_DEFAULT_PATHOGENICITY)
 
     @responses.activate
     def test_malformed_variants(self, mock_logger, mock_safe_post_to_slack):
-        for description, review_status, conflicting_pathogenicities in [
-            ("Pathogenic-ey", None, None),  # Unhandled Pathogenicity
-            ("Pathogenic; but unknown assertion", None, None),  # Unhandled Assertion
-            ("Pathogenic", "unhandled", None),  # Unhandled Review Status
-            ("Conflicting classifications of pathogenicity", None, "Pathogenic;"),
-            ("Conflicting classifications of pathogenicity", None, "Pathogenic(18); unhandled(1)")
+        for description, review_status, conflicting_pathogenicities, error_message in [
+            ("Pathogenic-ey", None, None, 'Found an un-enumerated clinvar assertion: Pathogenic-ey'),
+            ("Pathogenic; but unknown assertion", None, None, 'Found an un-enumerated clinvar assertion: but unknown assertion'),
+            ("Pathogenic", "unhandled", None, 'Found unexpected review status unhandled'),
+            ("Conflicting classifications of pathogenicity", None, "Pathogenic;", 'Failed to correctly parse conflicting pathogenicity counts: Pathogenic;'),
+            ("Conflicting classifications of pathogenicity", None, "Pathogenic(18); unhandled(1)", 'Found an un-enumerated conflicting pathogenicity: unhandled')
         ]:
             data = f'''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
             <ClinVarVariationRelease xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -226,19 +237,16 @@ class ReloadClinvarAllVariantsTest(TestCase):
                 body=gzip.compress(data.encode()),
                 stream=True,
             )
-
-            with self.assertRaises(CommandError):
+            with self.assertRaisesMessage(CommandError, error_message) as cm:
                 call_command('reload_clinvar_all_variants')
-
-
 
         # Variants with missing alleles and positions are skipped
         for simple_allele_attrs, sequence_location_attrs in [
             # Case 1: Missing AlleleId in <SimpleAllele>
-            ("", 'Assembly="GRCh38" Chr="1" variantLength="1" positionVCF="1" referenceAlleleVCF="G" alternateAlleleVCF="A"'),
+            ("", 'Assembly="GRCh38" Chr="1" positionVCF="1" referenceAlleleVCF="G" alternateAlleleVCF="A"'),
 
             # Case 2: Missing alternateAlleleVCF in <SequenceLocation>
-            ('AlleleID="5603"', 'Assembly="GRCh38" Chr="1" variantLength="1" positionVCF="1" referenceAlleleVCF="G"'),
+            ('AlleleID="5603"', 'Assembly="GRCh38" Chr="1" positionVCF="1" referenceAlleleVCF="G"'),
         ]:
             data = f'''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
             <ClinVarVariationRelease xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -266,21 +274,6 @@ class ReloadClinvarAllVariantsTest(TestCase):
                         </Classifications>
                     </ClassifiedRecord>
                 </VariationArchive>
-                <VariationArchive>
-                    <ClassifiedRecord>
-                        <SimpleAllele {simple_allele_attrs}>
-                            <Location>
-                                <SequenceLocation {sequence_location_attrs}/>
-                            </Location>
-                        </SimpleAllele>
-                        <Classifications>
-                            <GermlineClassification>
-                                <!-- No Description -->
-                                <ReviewStatus>criteria provided, conflicting classifications</ReviewStatus>
-                            </GermlineClassification>
-                        </Classifications>
-                    </ClassifiedRecord>
-                </VariationArchive>
             </ClinVarVariationRelease>'''
             responses.add(
                 responses.GET,
@@ -290,4 +283,5 @@ class ReloadClinvarAllVariantsTest(TestCase):
                 stream=True,
             )
             call_command('reload_clinvar_all_variants')
-
+            self.assertEqual(ClinvarAllVariantsSnvIndel.objects.count(), 0)
+            self.assertEqual(ClinvarAllVariantsGRCh37SnvIndel.objects.count(), 0)

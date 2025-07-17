@@ -483,6 +483,21 @@ class BaseClinvarAllVariants(BaseClinvar):
     version = models.DateField()
     variant_id = models.StringField(db_column='variantId', primary_key=True)
 
+    def _save_table(
+        self,
+        raw=False,
+        cls=None,
+        force_insert=False,
+        force_update=False,
+        using=None,
+        update_fields=None,
+    ):
+        # loaddata attempts to run an ALTER TABLE to update existing rows, but since JOIN tables can not be altered
+        # this command fails so need to use the force_insert flag to run an INSERT instead
+        return super()._save_table(
+            raw=raw, cls=cls, force_insert=True, force_update=force_update, using=using, update_fields=update_fields,
+        )
+
     class Meta:
         abstract = True
         engine = models.MergeTree(
@@ -745,20 +760,20 @@ class TranscriptsSnvIndel(models.ClickhouseModel):
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SNV_INDEL/transcripts', primary_key='key', flatten_nested=0)
 
 class BaseKeyLookup(models.ClickhouseModel):
-    variant_id = models.StringField(db_column='variantId')
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
 
     class Meta:
         abstract = True
 
 class KeyLookupGRCh37SnvIndel(BaseKeyLookup):
-    key = OneToOneField('AnnotationsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = OneToOneField('AnnotationsGRCh37SnvIndel', db_column='key', on_delete=CASCADE)
 
     class Meta:
         db_table = 'GRCh37/SNV_INDEL/key_lookup'
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh37/SNV_INDEL/key_lookup', primary_key='variant_id', flatten_nested=0)
 
 class KeyLookupSnvIndel(BaseKeyLookup):
-    key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = OneToOneField('AnnotationsSnvIndel', db_column='key', on_delete=CASCADE)
 
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/key_lookup'
@@ -766,7 +781,7 @@ class KeyLookupSnvIndel(BaseKeyLookup):
 
 
 class KeyLookupMito(BaseKeyLookup):
-    key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = OneToOneField('AnnotationsMito', db_column='key', on_delete=CASCADE)
 
     class Meta:
         db_table = 'GRCh38/MITO/key_lookup'
@@ -774,7 +789,7 @@ class KeyLookupMito(BaseKeyLookup):
 
 
 class KeyLookupSv(BaseKeyLookup):
-    key = OneToOneField('AnnotationsSv', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = OneToOneField('AnnotationsSv', db_column='key', on_delete=CASCADE)
 
     class Meta:
         db_table = 'GRCh38/SV/key_lookup'
@@ -782,7 +797,7 @@ class KeyLookupSv(BaseKeyLookup):
 
 
 class KeyLookupGcnv(BaseKeyLookup):
-    key = OneToOneField('AnnotationsGcnv', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = OneToOneField('AnnotationsGcnv', db_column='key', on_delete=CASCADE)
 
     class Meta:
         db_table = 'GRCh38/GCNV/key_lookup'
