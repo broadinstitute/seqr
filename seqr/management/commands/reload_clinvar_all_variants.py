@@ -62,21 +62,15 @@ def clinvar_run_sql(sql: str):
             cursor.execute(sql.substitute(reference_genome=reference_genome, dataset_type=dataset_type))
 
 
-def parse_and_merge_classification_counts(text):
+def parse_and_merge_classification_counts(text: str) -> list[tuple[str, int]]:
     #
-    # Pathogenic(18); Likely pathogenic(9); Pathogenic, low penetrance(1); Established risk allele(1); Likely risk allele(1); Uncertain significance(1)
+    # Example test: 
+    # 'Pathogenic(18); Likely pathogenic(9); Pathogenic, low penetrance(1); Established risk allele(1); Likely risk allele(1); Uncertain significance(1)'
     #
-    counts = {}
-    for part in text.split(";"):
-        part = part.strip()
-        label, count = part.rsplit("(", 1)
-        label = label.strip()
-        count = int(count.strip(")"))
-
-        # Normalize away low penetrance
-        label = label.replace(', low penetrance', '')
-
-        counts[label] = counts.get(label, 0) + count
+    counts = defaultdict(int)
+    for label, count in re.findall(r'([\w\s,]+)\((\d+)\);', text):
+        label = label.strip().replace(', low penetrance', '')
+        counts[label] += int(count)
     return sorted(counts.items(), key=lambda x: x[1], reverse=True)
 
 def parse_allele_id(classified_record_node: xml.etree.ElementTree.Element) -> Optional[int]:
@@ -239,11 +233,11 @@ class Command(BaseCommand):
                 # Handle parsing the current date.
                 if event == 'start' and elem.tag == 'ClinVarVariationRelease':
                     new_version = elem.attrib['ReleaseDate']
-                    existing_version = (obj := DataVersions.objects.filter(data_model_name='Clinvar').first()) and obj.version
-                    if new_version == existing_version:
+                    existing_version_obj = DataVersions.objects.filter(data_model_name='Clinvar').first()
+                    if existing_version_obj and existing_version_obj.version == new_version:
                         logger.info(f'Clinvar ClickHouse tables already successfully updated to {new_version}, gracefully exiting.')
                         return
-                    logger.info(f'Updating Clinvar ClickHouse tables to {new_version} from {existing_version}.')
+                    logger.info(f'Updating Clinvar ClickHouse tables to {new_version} from {existing_version_obj.version}.')
                     clinvar_run_sql(
                         Template(f"ALTER TABLE `$reference_genome/$dataset_type/clinvar_all_variants` DROP PARTITION '{new_version}';")
                     )
@@ -271,12 +265,19 @@ class Command(BaseCommand):
                 model.objects.using('clickhouse_write').bulk_create(batch)
 
         # Delete previous version & refresh the view.
-        if existing_version:
-            clinvar_run_sql(Template(f"ALTER TABLE `$reference_genome/$dataset_type/clinvar_all_variants` DROP PARTITION '{existing_version}';"))
+        if existing_version_obj:
+            clinvar_run_sql(Template(f"ALTER TABLE `$reference_genome/$dataset_type/clinvar_all_variants` DROP PARTITION '{existing_version_obj.version}';"))
         clinvar_run_sql(Template('SYSTEM REFRESH VIEW `$reference_genome/$dataset_type/clinvar_all_variants_to_clinvar`;'))
         clinvar_run_sql(Template('SYSTEM WAIT VIEW `$reference_genome/$dataset_type/clinvar_all_variants_to_clinvar`;'))
 
         # Save the new version in Postgres
-        DataVersions('Clinvar', new_version).save()
+        if existing_version_obj:
+            existing_version_obj.version = new_version
+            existing_version_obj.save()
+        else:
+            DataVersions.objects.create(
+                data_model_name='Clinvar', 
+                version=new_version
+            )
         slack_message = f'Successfully updated Clinvar ClickHouse tables to {new_version}.'
         safe_post_to_slack(SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, slack_message)
