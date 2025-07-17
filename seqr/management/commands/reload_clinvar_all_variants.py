@@ -261,7 +261,7 @@ class Command(BaseCommand):
                                     batch.clear()
                     elem.clear()
 
-        for model, batch in model_to_batch.items()
+        for model, batch in model_to_batch.items():
             if batch:
                 model.objects.using('clickhouse_write').bulk_create(batch)
 
