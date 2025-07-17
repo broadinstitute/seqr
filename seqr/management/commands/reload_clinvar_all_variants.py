@@ -64,7 +64,7 @@ def clinvar_run_sql(sql: str):
 
 def parse_and_merge_classification_counts(text: str) -> list[tuple[str, int]]:
     #
-    # Example test: 
+    # Example text: 
     # 'Pathogenic(18); Likely pathogenic(9); Pathogenic, low penetrance(1); Established risk allele(1); Likely risk allele(1); Uncertain significance(1)'
     #
     counts = defaultdict(int)
@@ -206,26 +206,31 @@ def extract_variant_info(elem: xml.etree.ElementTree.Element, new_version: str) 
     }
     grch37 = positions.get('GRCh37')
     grch38 = positions.get('GRCh38')
-    return (
-        ClinvarAllVariantsGRCh37SnvIndel(
-            variant_id=f"{grch37['chrom']}-{grch37['pos']}-{grch37['ref']}-{grch37['alt']}",
-            **props,
-        ) if grch37 and grch37['chrom'] != 'MT' else None,
-        ClinvarAllVariantsSnvIndel(
-            variant_id=f"{grch38['chrom']}-{grch38['pos']}-{grch38['ref']}-{grch38['alt']}",
-            **props,
-        ) if grch38 and grch38['chrom'] != 'MT'else None,
-        ClinvarAllVariantsMito(
+    if grch38 and grch38['chrom'] == 'MT':
+        yield ClinvarAllVariantsMito(
             variant_id=f"M-{grch38['pos']}-{grch38['ref']}-{grch38['alt']}",
             **props,
-        ) if grch38 and grch38['chrom'] == 'MT' else None,
-    )
+        )
+    if grch37 and grch37['chrom'] != 'MT':
+        yield ClinvarAllVariantsGRCh37SnvIndel(
+            variant_id=f"{grch37['chrom']}-{grch37['pos']}-{grch37['ref']}-{grch37['alt']}",
+            **props,
+        )
+    if grch38 and grch38['chrom'] != 'MT':
+        yield ClinvarAllVariantsSnvIndel(
+            variant_id=f"{grch38['chrom']}-{grch38['pos']}-{grch38['ref']}-{grch38['alt']}",
+            **props,
+        )
 
 class Command(BaseCommand):
     help = 'Reload all clinvar variants from weekly NCBI xml release'
 
     def handle(self, *args, **options):
-        GRCh37SnvIndel_batch, SnvIndel_batch, Mito_batch = [], [], []
+        model_to_batch = {
+            ClinvarAllVariantsGRCh37SnvIndel: [],
+            ClinvarAllVariantsSnvIndel: [],
+            ClinvarAllVariantsMito: [],
+        }
         new_version = None
         with requests.get(WEEKLY_XML_RELEASE, stream=True, timeout=10) as r:
             r.raise_for_status()
@@ -238,29 +243,24 @@ class Command(BaseCommand):
                         logger.info(f'Clinvar ClickHouse tables already successfully updated to {new_version}, gracefully exiting.')
                         return
                     logger.info(f'Updating Clinvar ClickHouse tables to {new_version} from {existing_version_obj.version}.')
+                    # Drop any currently existing variants in the table that may exist due to a
+                    # previously failed partial run.
                     clinvar_run_sql(
                         Template(f"ALTER TABLE `$reference_genome/$dataset_type/clinvar_all_variants` DROP PARTITION '{new_version}';")
                     )
 
                 # Handle parsing variants
                 if event == 'end' and elem.tag == 'VariationArchive' and new_version:
-                    GRCh37SnvIndel, SnvIndel, Mito = extract_variant_info(elem, new_version)
-                    for obj, batch, model in zip(
-                        (GRCh37SnvIndel, SnvIndel, Mito),
-                        (GRCh37SnvIndel_batch, SnvIndel_batch, Mito_batch),
-                        (ClinvarAllVariantsGRCh37SnvIndel, ClinvarAllVariantsSnvIndel, ClinvarAllVariantsMito)
-                    ):
-                        if obj:
-                            batch.append(obj)
-                        if len(batch) == BATCH_SIZE:
-                            model.objects.using('clickhouse_write').bulk_create(batch)
-                            batch.clear()
+                    for obj in extract_variant_info(elem, new_version):
+                        for model, batch in model_to_batch.items():
+                            if isinstance(obj, model):
+                                batch.append(obj)
+                                if len(batch) == BATCH_SIZE:
+                                    model.objects.using('clickhouse_write').bulk_create(batch)
+                                    batch.clear()
                     elem.clear()
 
-        for batch, model in zip(
-            (GRCh37SnvIndel_batch, SnvIndel_batch, Mito_batch),
-            (ClinvarAllVariantsGRCh37SnvIndel, ClinvarAllVariantsSnvIndel, ClinvarAllVariantsMito)
-        ):
+        for model, batch in model_to_batch.items()
             if batch:
                 model.objects.using('clickhouse_write').bulk_create(batch)
 
