@@ -34,29 +34,29 @@ WEEKLY_XML_RELEASE_DATA = '''<?xml version="1.0" encoding="UTF-8" standalone="ye
                 </GermlineClassification>
             </Classifications>
             <ClinicalAssertionList>
-                <ClinicalAssertion ID="498361" SubmissionDate="2016-03-03" ContributesToAggregateClassification="true" DateLastUpdated="2016-03-20" DateCreated="2016-03-20">
+                <ClinicalAssertion>
                     <ClinVarAccession SubmitterName="University of Washington Department of Laboratory Medicine, University of Washington" OrgID="506834" OrganizationCategory="laboratory"/>
                 </ClinicalAssertion>
-                <ClinicalAssertion ID="1193578" SubmissionDate="2017-05-23" ContributesToAggregateClassification="true" DateLastUpdated="2017-11-11" DateCreated="2017-11-11">
+                <ClinicalAssertion>
                     <ClinVarAccession SubmitterName="Fulgent Genetics, Fulgent Genetics" OrgID="500105" OrganizationCategory="laboratory"/>
                 </ClinicalAssertion>
-                <ClinicalAssertion ID="3962971" SubmissionDate="2023-03-01" ContributesToAggregateClassification="true" DateLastUpdated="2023-03-11" DateCreated="2021-11-29">
+                <ClinicalAssertion>
                     <ClinVarAccession SubmitterName="Revvity Omics, Revvity" OrgID="167595" OrganizationCategory="laboratory"/>
                 </ClinicalAssertion>
                 <TraitMappingList>
-                    <TraitMapping ClinicalAssertionID="7894954" TraitType="Disease" MappingType="Name" MappingValue="Not provided" MappingRef="Preferred">
+                    <TraitMapping>
                         <MedGen CUI="C3661900" Name="not provided"/>
                     </TraitMapping>
-                    <TraitMapping ClinicalAssertionID="3442426" TraitType="Finding" MappingType="XRef" MappingValue="HP:0003002" MappingRef="HP">
+                    <TraitMapping>
                         <MedGen CUI="C0678222" Name="Breast carcinoma"/>
                     </TraitMapping>
-                    <TraitMapping ClinicalAssertionID="8838596" TraitType="Disease" MappingType="Name" MappingValue="CHEK2-related condition" MappingRef="Preferred">
+                    <TraitMapping>
                         <MedGen CUI="None" Name="CHEK2-related disorder"/>
                     </TraitMapping>
-                    <TraitMapping ClinicalAssertionID="1790057" TraitType="Disease" MappingType="Name" MappingValue="CHEK2-Related Cancer Susceptibility" MappingRef="Preferred">
+                    <TraitMapping>
                         <MedGen CUI="C5882668" Name="CHEK2-related cancer predisposition"/>
                     </TraitMapping>
-                    <TraitMapping ClinicalAssertionID="4961845" TraitType="Disease" MappingType="XRef" MappingValue="C0027672" MappingRef="MedGen">
+                    <TraitMapping>
                         <MedGen CUI="C0027672" Name="Hereditary cancer-predisposing syndrome"/>
                     </TraitMapping>
                 </TraitMappingList>
@@ -71,7 +71,7 @@ WEEKLY_XML_RELEASE_DATA = '''<?xml version="1.0" encoding="UTF-8" standalone="ye
                 </Location>
             </SimpleAllele>
             <Classifications>
-                <GermlineClassification DateLastEvaluated="2025-04-01" NumberOfSubmissions="38" NumberOfSubmitters="36" DateCreated="2016-03-20" MostRecentSubmission="2025-06-29">
+                <GermlineClassification>
                     <Description>Pathogenic/Likely pathogenic/Pathogenic, low penetrance/Established risk allele</Description>
                 </GermlineClassification>
             </Classifications>
@@ -85,36 +85,20 @@ WEEKLY_XML_RELEASE_DATA = '''<?xml version="1.0" encoding="UTF-8" standalone="ye
 @mock.patch('seqr.management.commands.reload_clinvar_all_variants.logger.info')
 class ReloadClinvarAllVariantsTest(TestCase):
     databases = '__all__'
+    fixtures = ['clinvar_all_variants']
+    
 
     @responses.activate
     def test_new_version_already_exists(self, mock_logger, mock_safe_post_to_slack):
-        DataVersions('Clinvar', '2025-06-30').save()
+        version_obj = DataVersions.objects.filter(data_model_name='Clinvar').first()
+        version_obj.version = '2025-06-30'
+        version_obj.save()
         responses.add(responses.GET, WEEKLY_XML_RELEASE, status=200, body=gzip.compress(WEEKLY_XML_RELEASE_DATA.encode()), stream=True)
         call_command('reload_clinvar_all_variants')
         mock_logger.assert_called_with('Clinvar ClickHouse tables already successfully updated to 2025-06-30, gracefully exiting.')
 
     @responses.activate
     def test_parse_variants_all_types(self, mock_logger, mock_safe_post_to_slack):
-        KeyLookupSnvIndel.objects.using('clickhouse_write').create(
-            variant_id='22-28695219-G-A',
-            key_id=12,
-        )
-        KeyLookupMito.objects.using('clickhouse_write').create(
-            variant_id='M-123-GA',
-            key_id=8,
-        )
-        ClinvarAllVariantsSnvIndel.objects.using('clickhouse_write').create(
-            version='2025-06-23',
-            variant_id='22-28695219-G-A',
-            allele_id=20642,
-            pathogenicity='Likely_pathogenic',
-            assertions=[],
-            conflicting_pathogenicities=[],
-            gold_stars=2,
-            submitters=[],
-            conditions=[]
-        )
-        DataVersions('Clinvar', '2025-06-23').save()
         responses.add(responses.GET, WEEKLY_XML_RELEASE, status=200, body=gzip.compress(WEEKLY_XML_RELEASE_DATA.encode()), stream=True)
         call_command('reload_clinvar_all_variants')
         mock_logger.assert_called_with('Updating Clinvar ClickHouse tables to 2025-06-30 from 2025-06-23.')

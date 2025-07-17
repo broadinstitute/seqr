@@ -1,0 +1,37 @@
+[
+  {
+    "model": "seqr.keylookupsnvindel",
+    "fields": {
+      "variant_id": "22-28695219-G-A",
+      "key_id": 12
+    }
+  },
+  {
+    "model": "seqr.keylookupmito",
+    "fields": {
+      "variant_id": "M-123-GA",
+      "key_id": 8
+    }
+  },
+  {
+    "model": "seqr.clinvarallvariantssnvindel",
+    "fields": {
+      "version": "2025-06-23",
+      "variant_id": "22-28695219-G-A",
+      "allele_id": 20642,
+      "pathogenicity": "Likely_pathogenic",
+      "assertions": [],
+      "conflicting_pathogenicities": [],
+      "gold_stars": 2,
+      "submitters": [],
+      "conditions": []
+    }
+  },
+  {
+    "model": "seqr.dataversions",
+    "fields": {
+      "data_model_name": "Clinvar",
+      "version": "2025-06-23"
+    }
+  }
+]

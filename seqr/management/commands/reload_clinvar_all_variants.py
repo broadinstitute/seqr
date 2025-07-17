@@ -5,7 +5,9 @@ import xml
 import defusedxml.ElementTree as ET
 from django.db import connections
 from django.core.management.base import BaseCommand, CommandError
+from collections import defaultdict
 from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL
+import re
 from string import Template
 from typing import Optional, Union
 
