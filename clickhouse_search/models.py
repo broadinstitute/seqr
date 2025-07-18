@@ -449,7 +449,6 @@ class BaseClinvar(models.ClickhouseModel):
         'risk_factor',
         'no_classifications_from_unflagged_records',
         'no_classification_for_the_single_variant',
-        'conflicting_data_from_submitters',
     ]
     CLINVAR_CONFLICTING_CLASSICATIONS_OF_PATHOGENICITY = 'Conflicting_classifications_of_pathogenicity'
     CLINVAR_DEFAULT_PATHOGENICITY = 'No_pathogenic_assertion'
