@@ -167,7 +167,7 @@ class ReloadClinvarAllVariantsTest(TestCase):
             SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL,
             'Successfully updated Clinvar ClickHouse tables to 2025-06-30.',
         )
-    
+
     
     @responses.activate
     def test_batching(self, mock_logger, mock_safe_post_to_slack):
