@@ -83,7 +83,6 @@ WEEKLY_XML_RELEASE_DATA = WEEKLY_XML_RELEASE_HEADER + '''
 @mock.patch('seqr.management.commands.reload_clinvar_all_variants.safe_post_to_slack')
 @mock.patch('seqr.management.commands.reload_clinvar_all_variants.logger.info')
 class ReloadClinvarAllVariantsTest(TestCase):
-    maxDiff = None
     databases = '__all__'
     fixtures = ['clinvar_all_variants']
 
