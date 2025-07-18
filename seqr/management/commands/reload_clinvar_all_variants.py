@@ -37,6 +37,7 @@ def replace_spaces_with_underscores(value: Union[str, list[str], list[tuple[str,
 BATCH_SIZE = 1000
 CLINVAR_ASSERTIONS = replace_underscores_with_spaces(ClinvarAllVariantsSnvIndel.CLINVAR_ASSERTIONS)
 CLINVAR_CONFLICTING_CLASSICATIONS_OF_PATHOGENICITY = replace_underscores_with_spaces(ClinvarAllVariantsSnvIndel.CLINVAR_CONFLICTING_CLASSICATIONS_OF_PATHOGENICITY)
+CLINVAR_CONFLICTING_DATA_FROM_SUBMITTERS = 'conflicting data from submitters'
 CLINVAR_DEFAULT_PATHOGENICITY = replace_underscores_with_spaces(ClinvarAllVariantsSnvIndel.CLINVAR_DEFAULT_PATHOGENICITY)
 CLINVAR_PATHOGENICITIES = replace_underscores_with_spaces(ClinvarAllVariantsSnvIndel.CLINVAR_PATHOGENICITIES)
 CLINVAR_GOLD_STARS_LOOKUP = {
@@ -66,11 +67,11 @@ def clinvar_run_sql(sql: str):
 
 def parse_and_merge_classification_counts(text: str) -> list[tuple[str, int]]:
     #
-    # Example text:
+    # Example texts:
     # 'Pathogenic(18); Likely pathogenic(9); Pathogenic, low penetrance(1); Established risk allele(1); Likely risk allele(1); Uncertain significance(1)'
-    #
+    # 'Uncertain significance(1), Likely benign (1)'
     counts = defaultdict(int)
-    for label, count in re.findall(r'([\w\s,]+)\((\d+)\);?', text):
+    for label, count in re.findall(r'([\w\s,]+?)\s?\((\d+)\)[;,]?\s?', text):
         label = label.strip().replace(', low penetrance', '')
         counts[label] += int(count)
     if not counts:
@@ -122,7 +123,8 @@ def parse_pathogenicity_and_assertions(classified_record_node: xml.etree.Element
     )
 
     pathogenicity = pathogenicity_string.split(';')[0].strip()
-    if pathogenicity in set(CLINVAR_PATHOGENICITIES):
+
+    if pathogenicity in set(CLINVAR_PATHOGENICITIES) or pathogenicity == CLINVAR_CONFLICTING_DATA_FROM_SUBMITTERS:
         assertions = [a.strip() for a in pathogenicity_string.split(';')[1:]]
     else:
         pathogenicity = CLINVAR_DEFAULT_PATHOGENICITY
@@ -139,11 +141,18 @@ def parse_conflicting_pathogenicities(
     classified_record_node: xml.etree.ElementTree.Element,
     pathogenicity: str,
 ) -> list[[str, int]]:
-    if pathogenicity != CLINVAR_CONFLICTING_CLASSICATIONS_OF_PATHOGENICITY:
+    if pathogenicity == CLINVAR_CONFLICTING_CLASSICATIONS_OF_PATHOGENICITY:
+        conflicting_pathogenicities_node = classified_record_node.find(
+            'Classifications/GermlineClassification/Explanation'
+        )
+    elif pathogenicity == CLINVAR_CONFLICTING_DATA_FROM_SUBMITTERS:
+        conflicting_pathogenicities_node = classified_record_node.find(
+            'ClinicalAssertionList/ClinicalAssertion/Classification/Comment'
+        )
+    else:
         return []
-    conflicting_pathogenicities_node = classified_record_node.find(
-        'Classifications/GermlineClassification/Explanation'
-    )
+    if conflicting_pathogenicities_node is None:
+        raise CommandError('Failed to find the conflicting pathogenicities node')
     conflicting_pathogenicities = parse_and_merge_classification_counts(
         conflicting_pathogenicities_node.text
     )
@@ -195,6 +204,10 @@ def extract_variant_info(elem: xml.etree.ElementTree.Element, new_version: str) 
     conflicting_pathogenicities = parse_conflicting_pathogenicities(classified_record_node, pathogenicity)
     gold_stars = parse_gold_stars(classified_record_node)
     submitters, conditions = parse_submitters_and_conditions(classified_record_node)
+    # Note: this manipulation to an enumerated pathogenicty happens after we parse conflicting pathogenicities.
+    # We need the original string to conditionally parse from a different XML location.
+    if pathogenicity == CLINVAR_CONFLICTING_DATA_FROM_SUBMITTERS:
+        pathogenicity = CLINVAR_CONFLICTING_CLASSICATIONS_OF_PATHOGENICITY
     props = {
         'version': new_version,
         'allele_id': allele_id,
