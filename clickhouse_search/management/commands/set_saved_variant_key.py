@@ -8,7 +8,6 @@ from clickhouse_search.search import get_clickhouse_key_lookup
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import SavedVariant, Sample
 from seqr.utils.file_utils import file_iter
-from seqr.views.utils.file_utils import parse_file
 from seqr.utils.search.utils import parse_variant_id
 
 logger = logging.getLogger(__name__)
@@ -29,6 +28,9 @@ SV_ID_UPDATE_MAP = {
     'WES': {
         'R4_variant_7334_DUP_08162023': 'R4_variant_7334_DUP',
     },
+}
+SV_DROPPED_IDS = {
+    'cluster_6_last_call_cnv_17479_DUP', 'cluster_1_last_call_cnv_30127_DEL', 'cluster_19_COHORT_cnv_23176_DEL',
 }
 
 
@@ -143,14 +145,15 @@ class Command(BaseCommand):
 
     @classmethod
     def _resolve_reloaded_svs(cls, variant_ids):
+        num_known_dropped = len(SV_DROPPED_IDS.intersection(variant_ids))
         missing_with_search_data, num_missing = cls._query_missing_variants(
-            variant_ids, ['family__individual__sample__sample_type', 'family__project__guid'],
+            list(set(variant_ids) - SV_DROPPED_IDS), ['family__individual__sample__sample_type', 'family__project__guid'],
         )
         num_data = len(missing_with_search_data)
         # The CMG_gCNV project was an old project created before SV data was widely available, and keeping it up to date is less crucial
         valid_project_data = [variant for variant in missing_with_search_data if variant[4] != 'R0486_cmg_gcnv']
         logger.info(
-            f'{num_missing} variants have no key, {num_missing - num_data} of which have no search data, {num_data - len(valid_project_data)} of which are in a skippable project.'
+            f'{num_missing + num_known_dropped} variants have no key, {num_known_dropped} of which are known to have dropped out of the callset, {num_missing - num_data} of which have no search data, {num_data - len(valid_project_data)} of which are in a skippable project.'
         )
         if not valid_project_data:
             return
