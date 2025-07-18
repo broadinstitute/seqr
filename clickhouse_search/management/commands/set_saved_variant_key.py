@@ -1,8 +1,8 @@
+from collections import defaultdict
 from django.core.management.base import BaseCommand
 from django.db.models import F
 import logging
-
-from pysam.libcvcf import defaultdict
+import re
 
 from clickhouse_search.search import get_clickhouse_key_lookup
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
@@ -24,9 +24,58 @@ SV_ID_UPDATE_MAP = {
         'cohort_2911.chr1.final_cleanup_BND_chr1_2837': 'phase4_all_batches.chr1.final_cleanup_BND_chr1_3326',
         'cohort_2911.chr1.final_cleanup_DEL_chr1_12237': 'phase2_DEL_chr1_9347',
         'cohort_2911.chr1.final_cleanup_DEL_chr1_2953': 'phase2_DEL_chr1_2503',
+        'cohort_2911.chrX.final_cleanup_CPX_chrX_20': 'cohort_2911.chrX.final_cleanup_CPX_chrX_19',
     },
     'WES': {
         'R4_variant_7334_DUP_08162023': 'R4_variant_7334_DUP',
+        'prefix_112949_DEL': 'suffix_210553_DEL',
+        'prefix_131670_DUP': 'suffix_251025_DUP',
+        'suffix_19443_DEL_2': 'suffix_20030_DEL',
+        'prefix_184342_DEL': 'suffix_194439_DEL',
+        'prefix_255018_DEL': 'suffix_155939_DEL',
+        'prefix_188042_DUP': 'suffix_107531_DUP',
+        'suffix_104367_DUP_2': 'suffix_107531_DUP',
+        'prefix_59865_DEL': 'suffix_124465_DEL',
+        'suffix_120814_DEL_2': 'suffix_124465_DEL',
+        'prefix_152595_DEL': 'suffix_286581_DEL',
+        'suffix_277504_DEL_2': 'suffix_286581_DEL',
+        'prefix_185630_DEL': 'suffix_217490_DEL',
+        'suffix_210888_DEL_2': 'suffix_217490_DEL',
+        'prefix_126071_DUP': 'suffix_48694_DUP',
+        'suffix_47226_DUP_2': 'suffix_48694_DUP',
+        'prefix_177696_DUP': 'suffix_23_DUP',
+        'prefix_33049_DEL': 'suffix_123373_DEL',
+        'suffix_119753_DEL_2': 'suffix_123373_DEL',
+        'prefix_6968_DUP': 'suffix_8158_DUP',
+        'prefix_111128_DEL': 'suffix_124250_DEL',
+        'prefix_265455_DEL': 'suffix_124250_DEL',
+        'prefix_133233_DEL': 'suffix_149757_DEL',
+        'suffix_145373_DEL_2': 'suffix_149757_DEL',
+        'prefix_104962_DEL': 'suffix_262703_DEL',
+        'prefix_230669_DUP': 'suffix_37212_DUP',
+        'prefix_195634_DUP': 'suffix_337680_DUP',
+        'suffix_326904_DUP_2': 'suffix_337680_DUP',
+        'prefix_252896_DUP': 'suffix_154760_DUP',
+        'prefix_252895_DUP': 'suffix_150484_DUP',
+        'prefix_192808_DUP': 'suffix_182662_DUP',
+        'prefix_31312_DUP': 'suffix_343278_DUP',
+        'suffix_332369_DUP_2': 'suffix_343278_DUP',
+        'prefix_201559_DEL': 'suffix_228780_DEL',
+        'prefix_173086_DEL': 'suffix_195404_DEL',
+        'prefix_230567_DEL': 'suffix_261336_DEL',
+        'prefix_25206_DEL': 'suffix_27995_DEL',
+        'prefix_72517_DEL': 'suffix_27995_DEL',
+        'prefix_194936_DUP': 'suffix_220746_DUP',
+        'prefix_117065_DEL': 'suffix_131048_DEL',
+        'suffix_127235_DEL_2': 'suffix_131048_DEL',
+        'prefix_168621_DEL': 'suffix_336993_DEL',
+        'prefix_297236_DEL': 'suffix_336993_DEL',
+        'prefix_198998_DUP': 'F030256_bon_b17_97',
+        'prefix_239300_DUP': 'suffix_271302_DUP',
+        'prefix_236836_DEL': 'suffix_268435_DEL',
+        'prefix_31131_DUP': 'suffix_34872_DUP',
+        'prefix_238314_DEL': 'suffix_336979_DEL',
+        'prefix_75798_DUP': 'suffix_84697_DUP',
     },
 }
 SV_DROPPED_IDS = {
@@ -173,6 +222,8 @@ class Command(BaseCommand):
                         update_id = f'{base_id}{suffix}'
             if update_id:
                 update_variants_by_sample_type[sample_type][variant_id] = update_id
+            elif re.match(r'.*_(DEL|DUP)_\d+', variant_id):
+                update_variants_by_sample_type[sample_type][variant_id] = variant_id.rsplit('_', 1)[0]
             else:
                 missing_by_sample_type[sample_type].append(variant[:3])
 
@@ -183,7 +234,7 @@ class Command(BaseCommand):
                 genome_version=GENOME_VERSION_GRCh38, variant_id_updates=variant_id_updates,
             )
             if failed_mapping:
-                logger.info(f'{len(failed_mapping)} variants failed ID mapping: {failed_mapping[:10]}...')
+                logger.info(f'{len(failed_mapping)} variants failed ID mapping: {list(failed_mapping)[:10]}...')
 
         for sample_type, variants in missing_by_sample_type.items():
             logger.info(f'{len(variants)} remaining SV {sample_type} variants: {variants[:10]}...')
