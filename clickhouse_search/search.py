@@ -1,13 +1,14 @@
 from clickhouse_backend.models import ArrayField, StringField
 from collections import defaultdict
 from django.contrib.postgres.aggregates import ArrayAgg
+from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import F, Min
 from django.db.models.functions import JSONObject
 
 from clickhouse_search.backend.fields import NamedTupleField
-from clickhouse_search.backend.functions import Array, ArrayFilter, ArrayIntersect, ArraySort, Tuple
-from clickhouse_search.models import ENTRY_CLASS_MAP, ANNOTATIONS_CLASS_MAP, TRANSCRIPTS_CLASS_MAP, BaseClinvar, \
-    BaseAnnotationsMitoSnvIndel, BaseAnnotationsGRCh37SnvIndel, BaseAnnotationsSvGcnv
+from clickhouse_search.backend.functions import Array, ArrayFilter, ArrayIntersect, ArraySort, GroupArrayArray, Tuple
+from clickhouse_search.models import ENTRY_CLASS_MAP, ANNOTATIONS_CLASS_MAP, TRANSCRIPTS_CLASS_MAP, KEY_LOOKUP_CLASS_MAP, \
+    BaseClinvar, BaseAnnotationsMitoSnvIndel, BaseAnnotationsGRCh37SnvIndel, BaseAnnotationsSvGcnv
 from reference_data.models import GeneConstraint, Omim
 from seqr.models import Sample, PhenotypePrioritization
 from seqr.utils.logging_utils import SeqrLogger
@@ -398,3 +399,55 @@ def _get_sort_key(sort, gene_metadata):
         ]
 
     return lambda x: tuple(expr(x[0] if isinstance(x, list) else x) for expr in [*sort_expressions, lambda x: x[XPOS_SORT_KEY]])
+
+
+def clickhouse_variant_lookup(user, variant_id, data_type, genome_version=None, samples=None, **kwargs):
+    logger.info(f'Looking up variant {variant_id} with data type {data_type}', user)
+
+    entry_cls = ENTRY_CLASS_MAP[genome_version][data_type]
+    annotations_cls = ANNOTATIONS_CLASS_MAP[genome_version][data_type]
+
+    sample_data = _get_sample_data(samples)[data_type] if samples else None
+
+    if isinstance(variant_id, str):
+        # Since there is no efficient way to prefilter SV entries based on the variant id, explicitly look up the keys
+        keys = KEY_LOOKUP_CLASS_MAP[genome_version][data_type].objects.filter(variant_id=variant_id).values_list('key', flat=True)
+        entries = entry_cls.objects.filter(key__in=keys)
+    else:
+        entries = entry_cls.objects.filter_intervals(variant_ids=[variant_id])
+
+    entries = entries.result_values(sample_data)
+    results = annotations_cls.objects.subquery_join(entries)
+    if isinstance(variant_id, str):
+        # Handles annotation for genotype overrides
+        results = results.filter_annotations(results)
+    else:
+        results = results.filter_variant_ids(variant_ids=[variant_id])
+
+    variants = results.result_values()[:1]
+    if not variants:
+        raise ObjectDoesNotExist('Variant not present in seqr')
+
+    variant = format_clickhouse_results(variants, genome_version)[0]
+    _add_liftover_genotypes(variant, data_type, variant_id)
+
+    return variant
+
+
+def _add_liftover_genotypes(variant, data_type, variant_id):
+    lifted_entry_cls = ENTRY_CLASS_MAP.get(variant.get('liftedOverGenomeVersion'), {}).get(data_type)
+    if not lifted_entry_cls:
+        return
+    lifted_id = (variant['liftedOverChrom'], str(variant['liftedOverPos']), *variant_id[2:])
+    keys = KEY_LOOKUP_CLASS_MAP[variant['liftedOverGenomeVersion']][data_type].objects.filter(
+        variant_id='-'.join(lifted_id),
+    ).values_list('key', flat=True)
+    if not keys:
+        return
+    lifted_entries = lifted_entry_cls.objects.filter_intervals(variant_ids=[variant_id]).filter(key=keys[0])
+    lifted_entry_data = lifted_entries.values('key').annotate(
+        familyGenotypes=GroupArrayArray(lifted_entry_cls.objects.genotype_expression())
+    )
+    if lifted_entry_data:
+        variant['familyGenotypes'].update(lifted_entry_data[0]['familyGenotypes'])
+        variant['liftedFamilyGuids'] = sorted(lifted_entry_data[0]['familyGenotypes'].keys())

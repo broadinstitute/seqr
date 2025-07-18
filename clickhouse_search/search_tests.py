@@ -1,3 +1,4 @@
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import connections
 from django.test import TestCase
 import json
@@ -12,11 +13,12 @@ from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4,
     VARIANT3_BOTH_SAMPLE_TYPES, VARIANT4_BOTH_SAMPLE_TYPES, GRCH37_VARIANT, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3, \
     SV_VARIANT1, SV_VARIANT2, SV_VARIANT3, SV_VARIANT4, SV_GENE_COUNTS, NEW_SV_FILTER, GCNV_VARIANT1, GCNV_VARIANT2, \
     GCNV_VARIANT3, GCNV_VARIANT4, GCNV_MULTI_FAMILY_VARIANT1, GCNV_MULTI_FAMILY_VARIANT2, GCNV_GENE_COUNTS, \
-    MULTI_DATA_TYPE_COMP_HET_VARIANT2, ALL_SNV_INDEL_PASS_FILTERS, MULTI_PROJECT_GCNV_VARIANT3, format_cached_variant
+    MULTI_DATA_TYPE_COMP_HET_VARIANT2, ALL_SNV_INDEL_PASS_FILTERS, MULTI_PROJECT_GCNV_VARIANT3, VARIANT_LOOKUP_VARIANT, \
+    format_cached_variant
 from reference_data.models import Omim
 from seqr.models import Project, Family, Sample
 from seqr.utils.search.search_utils_tests import SearchTestHelper
-from seqr.utils.search.utils import query_variants
+from seqr.utils.search.utils import query_variants, variant_lookup, sv_variant_lookup
 from seqr.views.utils.json_utils import DjangoJSONEncoderWithSets
 
 
@@ -40,11 +42,15 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             self.search_model.search['inheritance']['filter'] = inheritance_filter
 
         variants, total = query_variants(self.results_model, user=self.user, sort=sort)
-        encoded_variants = json.loads(json.dumps(variants, cls=DjangoJSONEncoderWithSets))
+        encoded_variants = self._assert_expected_variants(variants, expected_results)
 
-        self.assertListEqual(encoded_variants, expected_results)
         self.assertEqual(total, len(expected_results))
         self._assert_expected_search_cache(encoded_variants, total, cached_variant_fields, sort)
+
+    def _assert_expected_variants(self, variants, expected_results):
+        encoded_variants = json.loads(json.dumps(variants, cls=DjangoJSONEncoderWithSets))
+        self.assertListEqual(encoded_variants, expected_results)
+        return encoded_variants
 
     def _assert_expected_search_cache(self, variants, total, cached_variant_fields, sort):
         cached_variants = [
@@ -118,8 +124,8 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 
         self.results_model.families.set(Family.objects.filter(guid__in=['F000002_2', 'F000014_14']))
         self._assert_expected_search(
-            [VARIANT1, SV_VARIANT1, SV_VARIANT2, VARIANT2, VARIANT3, VARIANT4, SV_VARIANT3, GCNV_VARIANT1, SV_VARIANT4,
-                         GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
+            [VARIANT1, SV_VARIANT1, SV_VARIANT2, VARIANT2, VARIANT3, VARIANT4, SV_VARIANT3, GCNV_VARIANT1,
+                         GCNV_VARIANT2, GCNV_VARIANT3, SV_VARIANT4, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
             gene_counts={**variant_gene_counts, **mito_gene_counts, **GCNV_GENE_COUNTS, **SV_GENE_COUNTS, 'ENSG00000277258': {'total': 2, 'families': {'F000002_2': 2}}},
         )
 
@@ -169,7 +175,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         self.results_model.families.set(Family.objects.filter(guid__in=['F000002_2', 'F000011_11', 'F000014_14']))
         self._assert_expected_search(
             [PROJECT_2_VARIANT, MULTI_PROJECT_VARIANT1, SV_VARIANT1, SV_VARIANT2, MULTI_PROJECT_VARIANT2, VARIANT3,
-             VARIANT4, SV_VARIANT3, GCNV_VARIANT1, SV_VARIANT4, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT1,
+             VARIANT4, SV_VARIANT3, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, SV_VARIANT4, GCNV_VARIANT4, MITO_VARIANT1,
              MITO_VARIANT2, MITO_VARIANT3], gene_counts={**GENE_COUNTS, **SV_GENE_COUNTS},
         )
 
@@ -519,7 +525,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 
         self._set_sv_family_search()
         self._assert_expected_search(
-            [SV_VARIANT2, SV_VARIANT3, SV_VARIANT4], exclude=sv_locus,
+            [SV_VARIANT2, SV_VARIANT3], exclude=sv_locus,
         )
 
         self._reset_search_families()
@@ -535,21 +541,6 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         self._assert_expected_search(
             [SV_VARIANT1, SV_VARIANT2, MULTI_PROJECT_GCNV_VARIANT3, GCNV_VARIANT4], locus=sv_locus,
         )
-
-#         self._assert_expected_search(
-#             [GCNV_VARIANT4], padded_interval={'chrom': '17', 'start': 38720781, 'end': 38738703, 'padding': 0.2},
-#             omit_data_type='SNV_INDEL',
-#         )
-#
-#         self._assert_expected_search(
-#             [], padded_interval={'chrom': '17', 'start': 38720781, 'end': 38738703, 'padding': 0.1},
-#             omit_data_type='SNV_INDEL',
-#         )
-#
-#         self._assert_expected_search(
-#             [SV_VARIANT4], padded_interval={'chrom': '14', 'start': 106692244, 'end': 106742587, 'padding': 0.1},
-#             sample_data=SV_WGS_SAMPLE_DATA,
-#         )
 
         self._set_grch37_search()
         self._assert_expected_search([GRCH37_VARIANT], locus={'rawItems': '7:143268894-143271480'})
@@ -567,69 +558,44 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             [],locus={'rawVariantItems': VARIANT_IDS[1]},
         )
 
-#         variant_keys = ['suffix_95340_DUP', 'suffix_140608_DUP']
-#         self._assert_expected_search([GCNV_VARIANT1, GCNV_VARIANT4], omit_data_type='SNV_INDEL', variant_keys=variant_keys)
-#
-#         self._assert_expected_search([VARIANT1, GCNV_VARIANT1, GCNV_VARIANT4], variant_keys=variant_keys, **VARIANT_ID_SEARCH)
-#
-#         self._assert_expected_search([SV_VARIANT2, SV_VARIANT4], sample_data=SV_WGS_SAMPLE_DATA, variant_keys=[
-#             'cohort_2911.chr1.final_cleanup_INS_chr1_160', 'phase2_DEL_chr14_4640',
-#         ])
-#
-#     def test_variant_lookup(self):
-#         body = {'genome_version': 'GRCh38', 'variant_id': VARIANT_ID_SEARCH['variant_ids'][0]}
-#         async with self.client.request('POST', '/lookup', json=body) as resp:
-#             self.assertEqual(resp.status, 200)
-#             resp_json = resp.json()
-#         self.assertDictEqual(resp_json, VARIANT_LOOKUP_VARIANT)
-#
-#         body['variant_id'] = VARIANT_ID_SEARCH['variant_ids'][1]
-#         async with self.client.request('POST', '/lookup', json=body) as resp:
-#             self.assertEqual(resp.status, 404)
-#
-#         body.update({'genome_version': 'GRCh37', 'variant_id': ['7', 143270172, 'A', 'G']})
-#         async with self.client.request('POST', '/lookup', json=body) as resp:
-#             self.assertEqual(resp.status, 200)
-#             resp_json = resp.json()
-#         self.assertDictEqual(resp_json, {
-#             **{k: v for k, v in GRCH37_VARIANT.items() if k not in {'familyGuids', 'genotypes'}},
-#             'familyGenotypes': {GRCH37_VARIANT['familyGuids'][0]: [
-#                 {k: v for k, v in g.items() if k != 'individualGuid'} for g in GRCH37_VARIANT['genotypes'].values()
-#             ]},
-#         })
-#
-#         body.update({'variant_id': ['M', 4429, 'G', 'A'], 'data_type': 'MITO', 'genome_version': 'GRCh38'})
-#         async with self.client.request('POST', '/lookup', json=body) as resp:
-#             self.assertEqual(resp.status, 200)
-#             resp_json = resp.json()
-#         self.assertDictEqual(resp_json, {
-#             **{k: v for k, v in MITO_VARIANT1.items() if k not in {'familyGuids', 'genotypes'}},
-#             'familyGenotypes': {MITO_VARIANT1['familyGuids'][0]: [
-#                 {k: v for k, v in g.items() if k != 'individualGuid'} for g in MITO_VARIANT1['genotypes'].values()
-#             ]},
-#         })
-#
-#         body.update({'variant_id': 'phase2_DEL_chr14_4640', 'data_type': 'SV_WGS', 'sample_data': SV_WGS_SAMPLE_DATA['SV_WGS']})
-#         async with self.client.request('POST', '/lookup', json=body) as resp:
-#             self.assertEqual(resp.status, 200)
-#             resp_json = resp.json()
-#         self.assertDictEqual(resp_json, SV_VARIANT4)
-#
-#         body.update({'variant_id': 'suffix_140608_DUP', 'data_type': 'SV_WES', 'sample_data': EXPECTED_SAMPLE_DATA['SV_WES']})
-#         async with self.client.request('POST', '/lookup', json=body) as resp:
-#             self.assertEqual(resp.status, 200)
-#             resp_json = resp.json()
-#         self.assertDictEqual(resp_json, {
-#             **NO_GENOTYPE_GCNV_VARIANT, 'genotypes': {
-#                 individual: {k: v for k, v in genotype.items() if k not in {'start', 'end', 'numExon', 'geneIds'}}
-#                 for individual, genotype in GCNV_VARIANT4['genotypes'].items()
-#             }
-#         })
-#
-#         body['variant_id'] = 'suffix_140608_DEL'
-#         async with self.client.request('POST', '/lookup', json=body) as resp:
-#             self.assertEqual(resp.status, 404)
-#
+    def test_variant_lookup(self):
+        variant = variant_lookup(self.user, ('1', 10439, 'AC', 'A'))
+        self._assert_expected_variants([variant], [VARIANT_LOOKUP_VARIANT])
+
+        with self.assertRaises(ObjectDoesNotExist) as cm:
+            variant_lookup(self.user, ('1', 91511686, 'TCA', 'G'))
+        self.assertEqual(str(cm.exception), 'Variant not present in seqr')
+
+        variant = variant_lookup(self.user, ('7', 143270172, 'A', 'G'), genome_version='37')
+        self._assert_expected_variants([variant], [{
+            **{k: v for k, v in GRCH37_VARIANT.items() if k not in {'familyGuids', 'genotypes'}},
+            'familyGenotypes': {GRCH37_VARIANT['familyGuids'][0]: sorted([
+                {k: v for k, v in g.items() if k != 'individualGuid'} for g in GRCH37_VARIANT['genotypes'].values()
+            ], key=lambda x: x['sampleId'], reverse=True)},
+        }])
+
+        variant = variant_lookup(self.user, ('M', 4429, 'G', 'A'), genome_version='38')
+        self._assert_expected_variants([variant], [{
+            **{k: v for k, v in MITO_VARIANT1.items() if k not in {'familyGuids', 'genotypes'}},
+            'familyGenotypes': {MITO_VARIANT1['familyGuids'][0]: [
+                {k: v for k, v in g.items() if k != 'individualGuid'} for g in MITO_VARIANT1['genotypes'].values()
+            ]},
+        }])
+
+        families = Family.objects.all()
+        variants = sv_variant_lookup(self.user, 'phase2_DEL_chr14_4640', families, sample_type='WGS')
+        self._assert_expected_variants(variants, [SV_VARIANT4, GCNV_VARIANT4])
+
+        variants = sv_variant_lookup(self.user, 'suffix_140608_DUP', families, sample_type='WES')
+        self._assert_expected_variants(variants, [GCNV_VARIANT4, SV_VARIANT4])
+
+        variants = sv_variant_lookup(self.user, 'suffix_140593_DUP', families, sample_type='WES')
+        self._assert_expected_variants(variants, [GCNV_VARIANT3])
+
+        with self.assertRaises(ObjectDoesNotExist) as cm:
+            variant_lookup(self.user, 'suffix_140608_DEL')
+        self.assertEqual(str(cm.exception), 'Variant not present in seqr')
+
 #     def test_multi_variant_lookup(self):
 #         self._test_multi_lookup(VARIANT_ID_SEARCH['variant_ids'], 'SNV_INDEL', [VARIANT1])
 #

@@ -496,7 +496,7 @@ class BaseEntries(models.ClickhouseModel):
     filters = models.ArrayField(models.StringField(low_cardinality=True))
     sign = models.Int8Field()
 
-    objects = EntriesManager()
+    objects = EntriesManager.as_manager()
 
     def _save_table(
         self,
@@ -698,6 +698,21 @@ class BaseKeyLookup(models.ClickhouseModel):
     class Meta:
         abstract = True
 
+    def _save_table(
+        self,
+        raw=False,
+        cls=None,
+        force_insert=False,
+        force_update=False,
+        using=None,
+        update_fields=None,
+    ):
+        # loaddata attempts to run an ALTER TABLE to update existing rows, but since primary keys can not be altered
+        # this command fails so need to use the force_insert flag to run an INSERT instead
+        return super()._save_table(
+            raw=raw, cls=cls, force_insert=True, force_update=force_update, using=using, update_fields=update_fields,
+        )
+
 class KeyLookupGRCh37SnvIndel(BaseKeyLookup):
     key = OneToOneField('AnnotationsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
 
@@ -852,4 +867,13 @@ ANNOTATIONS_CLASS_MAP = {
 TRANSCRIPTS_CLASS_MAP = {
     GENOME_VERSION_GRCh37: TranscriptsGRCh37SnvIndel,
     GENOME_VERSION_GRCh38: TranscriptsSnvIndel,
+}
+KEY_LOOKUP_CLASS_MAP = {
+    GENOME_VERSION_GRCh37: {Sample.DATASET_TYPE_VARIANT_CALLS: KeyLookupGRCh37SnvIndel},
+    GENOME_VERSION_GRCh38: {
+        Sample.DATASET_TYPE_VARIANT_CALLS: KeyLookupSnvIndel,
+        Sample.DATASET_TYPE_MITO_CALLS: KeyLookupMito,
+        f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WGS}': KeyLookupSv,
+        f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WES}': KeyLookupGcnv,
+    },
 }
