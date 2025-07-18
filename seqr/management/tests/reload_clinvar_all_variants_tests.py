@@ -96,7 +96,7 @@ class ReloadClinvarAllVariantsTest(TestCase):
         call_command('reload_clinvar_all_variants')
         mock_logger.assert_called_with('Updating Clinvar ClickHouse tables to 2025-06-30 from None.')
         self.assertEqual(ClinvarAllVariantsSnvIndel.objects.count(), 1)
-
+    
     @responses.activate
     def test_new_version_already_exists(self, mock_logger, mock_safe_post_to_slack):
         version_obj = DataVersions.objects.filter(data_model_name='Clinvar').first()
@@ -105,7 +105,7 @@ class ReloadClinvarAllVariantsTest(TestCase):
         responses.add(responses.GET, WEEKLY_XML_RELEASE, status=200, body=gzip.compress(WEEKLY_XML_RELEASE_DATA.encode()), stream=True)
         call_command('reload_clinvar_all_variants')
         mock_logger.assert_called_with('Clinvar ClickHouse tables already successfully updated to 2025-06-30, gracefully exiting.')
-
+    
     @responses.activate
     def test_parse_variants_all_types(self, mock_logger, mock_safe_post_to_slack):
         responses.add(responses.GET, WEEKLY_XML_RELEASE, status=200, body=gzip.compress(WEEKLY_XML_RELEASE_DATA.encode()), stream=True)
@@ -141,7 +141,7 @@ class ReloadClinvarAllVariantsTest(TestCase):
                 ]
             },
         )
-
+    
         seqr_clinvar_grch37_snv_indel_models = ClinvarGRCh37SnvIndel.objects.all()
         self.assertEqual(seqr_clinvar_grch37_snv_indel_models.count(), 0)
         clinvar_all_variants_grch37_snv_indel_models = ClinvarAllVariantsGRCh37SnvIndel.objects.all()
@@ -161,7 +161,7 @@ class ReloadClinvarAllVariantsTest(TestCase):
                 'version': datetime.date(2025, 6, 30)
             }
         )
-
+    
         # Version in Postgres.
         dv = DataVersions.objects.get(data_model_name='Clinvar')
         self.assertEqual(dv.version, '2025-06-30')
@@ -169,8 +169,8 @@ class ReloadClinvarAllVariantsTest(TestCase):
             SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL,
             'Successfully updated Clinvar ClickHouse tables to 2025-06-30.',
         )
-
-
+    
+    
     @responses.activate
     def test_batching(self, mock_logger, mock_safe_post_to_slack):
         # Dynamically build many variants
@@ -186,7 +186,7 @@ class ReloadClinvarAllVariantsTest(TestCase):
                     </SimpleAllele>
                     <Classifications>
                         <GermlineClassification>
-                            <!-- Note no Description here -->
+                            <!-- Note no description & no review status here -->
                         </GermlineClassification>
                     </Classifications>
                 </ClassifiedRecord>
@@ -198,6 +198,7 @@ class ReloadClinvarAllVariantsTest(TestCase):
         mock_logger.assert_called_with('Updating Clinvar ClickHouse tables to 2025-06-30 from 2025-06-23.')
         self.assertEqual(ClinvarAllVariantsSnvIndel.objects.all().count(), BATCH_SIZE * 2 + 10)
         self.assertEqual(ClinvarAllVariantsSnvIndel.objects.first().pathogenicity, ClinvarAllVariantsSnvIndel.CLINVAR_DEFAULT_PATHOGENICITY)
+        self.assertIsNone(ClinvarAllVariantsSnvIndel.objects.first().gold_stars)
 
     @responses.activate
     def test_malformed_variants(self, mock_logger, mock_safe_post_to_slack):
@@ -216,8 +217,7 @@ class ReloadClinvarAllVariantsTest(TestCase):
                     <ClassifiedRecord>
                         <SimpleAllele AlleleID="1" VariationID="5603">
                             <Location>
-                                <SequenceLocation Assembly="GRCh38" Chr="1" variantLength="1"
-                                                  positionVCF="1" referenceAlleleVCF="G" alternateAlleleVCF="A"/>
+                                <SequenceLocation Assembly="GRCh38" Chr="1" positionVCF="1" referenceAlleleVCF="G" alternateAlleleVCF="A"/>
                             </Location>
                         </SimpleAllele>
                         <Classifications>
@@ -241,6 +241,7 @@ class ReloadClinvarAllVariantsTest(TestCase):
                 call_command('reload_clinvar_all_variants')
 
         # Variants with missing alleles and positions are skipped
+        responses.reset()
         for simple_allele_attrs, sequence_location_attrs in [
             # Case 1: Missing AlleleId in <SimpleAllele>
             ("", 'Assembly="GRCh38" Chr="1" positionVCF="1" referenceAlleleVCF="G" alternateAlleleVCF="A"'),
