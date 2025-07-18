@@ -90,12 +90,12 @@ class ReloadClinvarAllVariantsTest(TestCase):
     @responses.activate
     def test_update_with_no_previous_version(self, mock_logger, mock_safe_post_to_slack):
         DataVersions.objects.all().delete()
-        ClinvarAllVariantsSnvIndel.objects.all().delete()
+        ClinvarAllVariantsSnvIndel.objects.using('clickhouse_write').all().delete()
         responses.add(responses.GET, WEEKLY_XML_RELEASE, status=200, body=gzip.compress(WEEKLY_XML_RELEASE_DATA.encode()), stream=True)
         call_command('reload_clinvar_all_variants')
         mock_logger.assert_called_with('Updating Clinvar ClickHouse tables to 2025-06-30 from None.')
         self.assertEqual(ClinvarAllVariantsSnvIndel.objects.count(), 1)
-    
+
     @responses.activate
     def test_new_version_already_exists(self, mock_logger, mock_safe_post_to_slack):
         version_obj = DataVersions.objects.filter(data_model_name='Clinvar').first()
@@ -237,7 +237,7 @@ class ReloadClinvarAllVariantsTest(TestCase):
                 body=gzip.compress(data.encode()),
                 stream=True,
             )
-            with self.assertRaisesMessage(CommandError, error_message) as cm:
+            with self.assertRaisesMessage(CommandError, error_message):
                 call_command('reload_clinvar_all_variants')
 
         # Variants with missing alleles and positions are skipped
@@ -283,7 +283,7 @@ class ReloadClinvarAllVariantsTest(TestCase):
                 stream=True,
             )
             DataVersions.objects.all().delete()
-            ClinvarAllVariantsSnvIndel.objects.all().delete()
+            ClinvarAllVariantsSnvIndel.objects.using('clickhouse_write').all().delete()
             call_command('reload_clinvar_all_variants')
             self.assertEqual(ClinvarAllVariantsSnvIndel.objects.count(), 0)
             self.assertEqual(ClinvarAllVariantsGRCh37SnvIndel.objects.count(), 0)
@@ -318,7 +318,7 @@ class ReloadClinvarAllVariantsTest(TestCase):
             body=gzip.compress(missing_conflicting_pathogenicities.encode()),
             stream=True,
         )
-        with self.assertRaisesMessage(CommandError, 'Failed to find the conflicting pathogenicities node') as cm:
+        with self.assertRaisesMessage(CommandError, 'Failed to find the conflicting pathogenicities node'):
             call_command('reload_clinvar_all_variants')
 
         conflicting_pathogenicities = WEEKLY_XML_RELEASE_HEADER + '''
