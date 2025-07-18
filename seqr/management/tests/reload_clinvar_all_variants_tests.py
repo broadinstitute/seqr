@@ -241,7 +241,6 @@ class ReloadClinvarAllVariantsTest(TestCase):
                 call_command('reload_clinvar_all_variants')
 
         # Variants with missing alleles and positions are skipped
-        responses.reset()
         for simple_allele_attrs, sequence_location_attrs in [
             # Case 1: Missing AlleleId in <SimpleAllele>
             ("", 'Assembly="GRCh38" Chr="1" positionVCF="1" referenceAlleleVCF="G" alternateAlleleVCF="A"'),
@@ -283,6 +282,12 @@ class ReloadClinvarAllVariantsTest(TestCase):
                 body=gzip.compress(data.encode()),
                 stream=True,
             )
+            DataVersions.objects.all().delete()
+            ClinvarAllVariantsSnvIndel.objects.all().delete()
             call_command('reload_clinvar_all_variants')
             self.assertEqual(ClinvarAllVariantsSnvIndel.objects.count(), 0)
             self.assertEqual(ClinvarAllVariantsGRCh37SnvIndel.objects.count(), 0)
+            mock_safe_post_to_slack.assert_called_with(
+                SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL,
+                'Successfully updated Clinvar ClickHouse tables to 2025-06-30.',
+            )
