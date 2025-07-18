@@ -139,7 +139,7 @@ class ReloadClinvarAllVariantsTest(TestCase):
                 ]
             },
         )
-    
+
         seqr_clinvar_grch37_snv_indel_models = ClinvarGRCh37SnvIndel.objects.all()
         self.assertEqual(seqr_clinvar_grch37_snv_indel_models.count(), 0)
         clinvar_all_variants_grch37_snv_indel_models = ClinvarAllVariantsGRCh37SnvIndel.objects.all()
