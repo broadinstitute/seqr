@@ -7,16 +7,24 @@ from pysam.libcvcf import defaultdict
 from clickhouse_search.search import get_clickhouse_key_lookup
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import SavedVariant, Sample
+from seqr.utils.file_utils import file_iter
+from seqr.views.utils.file_utils import parse_file
 from seqr.utils.search.utils import parse_variant_id
 
 logger = logging.getLogger(__name__)
 
+GCNV_CALLSET_PATH = 'gs://seqr-datasets-gcnv/GRCh38/RDG_WES_Broad_Internal/v4/CMG_gCNV_2022_annotated.ensembl.round2_3.strvctvre.tsv.gz'
 
 SV_ID_UPDATE_MAP = {
     'WGS': {
         'CMG.phase1_CMG_DEL_chr10_2038': 'phase2_DEL_chr10_4611',
         'CMG.phase1_CMG_DEL_chr11_2963': 'phase2_DEL_chr11_5789',
         'CMG.phase1_CMG_DEL_chr13_153': 'phase2_DEL_chr13_378',
+        'cohort_2911.chr1.final_cleanup_BND_chr1_1167': 'phase4_all_batches.chr1.final_cleanup_BND_chr1_1376',
+        'cohort_2911.chr1.final_cleanup_BND_chr1_1017': 'phase4_all_batches.chr1.final_cleanup_BND_chr1_1208',
+        'cohort_2911.chr1.final_cleanup_BND_chr1_2837': 'phase4_all_batches.chr1.final_cleanup_BND_chr1_3326',
+        'cohort_2911.chr1.final_cleanup_DEL_chr1_12237': 'phase2_DEL_chr1_9347',
+        'cohort_2911.chr1.final_cleanup_DEL_chr1_2953': 'phase2_DEL_chr1_2503',
     },
     'WES': {
         'R4_variant_7334_DUP_08162023': 'R4_variant_7334_DUP',
@@ -136,19 +144,34 @@ class Command(BaseCommand):
     @classmethod
     def _resolve_reloaded_svs(cls, variant_ids):
         missing_with_search_data, num_missing = cls._query_missing_variants(
-            variant_ids, ['family__individual__sample__sample_type'],
+            variant_ids, ['family__individual__sample__sample_type', 'family__project__guid'],
         )
+        num_data = len(missing_with_search_data)
+        # The CMG_gCNV project was an old project created before SV data was widely available, and keeping it up to date is less crucial
+        valid_project_data = [variant for variant in missing_with_search_data if variant[4] != 'R0486_cmg_gcnv']
         logger.info(
-            f'{num_missing} variants have no key, {num_missing - len(missing_with_search_data)} of which have no search data'
+            f'{num_missing} variants have no key, {num_missing - num_data} of which have no search data, {num_data - len(valid_project_data)} of which are in a skippable project.'
         )
+        if not valid_project_data:
+            return
+
+        gcnv_id_map = cls._load_gcnv_id_map()
         missing_by_sample_type = defaultdict(list)
         update_variants_by_sample_type = defaultdict(dict)
-        for variant in missing_with_search_data:
+        for variant in valid_project_data:
+            variant_id = variant[0]
             sample_type = variant[3]
-            if variant[0] in SV_ID_UPDATE_MAP[sample_type]:
-                update_variants_by_sample_type[sample_type][variant[0]] = SV_ID_UPDATE_MAP[sample_type][variant[0]]
+            update_id = SV_ID_UPDATE_MAP[sample_type].get(variant_id)
+            if not update_id and sample_type == 'WES' :
+                suffix = next((suff for suff in ['_DEL', '_DUP'] if variant_id.endswith(suff)), None)
+                if suffix:
+                    base_id = gcnv_id_map.get(variant_id.rsplit(suffix)[0])
+                    if base_id:
+                        update_id = f'{base_id}{suffix}'
+            if update_id:
+                update_variants_by_sample_type[sample_type][variant_id] = update_id
             else:
-                missing_by_sample_type[variant[3]].append(variant[:3])
+                missing_by_sample_type[sample_type].append(variant[:3])
 
         for sample_type, variant_id_updates in update_variants_by_sample_type.items():
             logger.info(f'Mapping reloaded SV_{sample_type} IDs to latest version')
@@ -161,3 +184,16 @@ class Command(BaseCommand):
 
         for sample_type, variants in missing_by_sample_type.items():
             logger.info(f'{len(variants)} remaining SV {sample_type} variants: {variants[:10]}...')
+
+    @staticmethod
+    def _load_gcnv_id_map():
+        file_content = file_iter(GCNV_CALLSET_PATH)
+        header = next(file_content).split('\t')
+        variant_name_idx = header.index('variant_name')
+        old_id_idx = header.index('any_ovl')
+        id_map = {}
+        for raw_row in file_content:
+            row = raw_row.split('\t')
+            for old_id in row[old_id_idx].split(';'):
+                id_map[old_id.strip()] = row[variant_name_idx].strip()
+        return id_map
