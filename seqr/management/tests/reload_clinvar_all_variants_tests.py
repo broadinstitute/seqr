@@ -168,7 +168,7 @@ class ReloadClinvarAllVariantsTest(TestCase):
             'Successfully updated Clinvar ClickHouse tables to 2025-06-30.',
         )
 
-    
+
     @responses.activate
     def test_batching(self, mock_logger, mock_safe_post_to_slack):
         # Dynamically build many variants
