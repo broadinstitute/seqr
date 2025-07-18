@@ -112,6 +112,7 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         query_variants(self.results_model, user=self.user, sort='constraint')
         self._test_expected_search_call(
             sort='constraint', sort_metadata={'ENSG00000223972': 2}, **RSID_SEARCH,
+            sample_data={'SNV_INDEL': EXPECTED_SAMPLE_DATA['SNV_INDEL'], **EXPECTED_MITO_SAMPLE_DATA},
         )
 
         raw_locus = 'CDC7, chr2:1234-5678, chr7:100-10100%10, ENSG00000177000'

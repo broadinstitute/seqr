@@ -14,6 +14,10 @@ from hail_search.test_utils import (
     SV_VARIANT2 as HAIL_SV_VARIANT2,
     SV_VARIANT3 as HAIL_SV_VARIANT3,
     SV_VARIANT4 as HAIL_SV_VARIANT4,
+    GCNV_VARIANT1 as HAIL_GCNV_VARIANT1,
+    GCNV_VARIANT2 as HAIL_GCNV_VARIANT2,
+    GCNV_VARIANT3 as HAIL_GCNV_VARIANT3,
+    GCNV_VARIANT4 as HAIL_GCNV_VARIANT4,
 )
 
 VARIANT1 = {**deepcopy(HAIL_VARIANT1), 'key': 1, 'populations': {**deepcopy(HAIL_VARIANT1)['populations'], 'seqr': {'ac': 8, 'hom': 3}}}
@@ -64,9 +68,13 @@ for variant in [SV_VARIANT1, SV_VARIANT2, SV_VARIANT3, SV_VARIANT4]:
         'I000021_na21654': {**variant['genotypes']['I000035_na20883'], 'sampleId': 'NA21654', 'individualGuid': 'I000021_na21654', 'familyGuid': 'F000014_14'},
     }
 SV_VARIANT3['cpxIntervals'][0]['chrom'] = SV_VARIANT3['cpxIntervals'][0]['chrom'].replace('chr', '')
+GCNV_VARIANT1 = {**deepcopy(HAIL_GCNV_VARIANT1), 'key': 16}
+GCNV_VARIANT2 = {**deepcopy(HAIL_GCNV_VARIANT2), 'key': 17}
+GCNV_VARIANT3 = {**deepcopy(HAIL_GCNV_VARIANT3), 'key': 18}
+GCNV_VARIANT4 = {**deepcopy(HAIL_GCNV_VARIANT4), 'key': 19}
 
 for variant in [VARIANT1, VARIANT2, VARIANT3, VARIANT4, PROJECT_2_VARIANT, GRCH37_VARIANT, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3,
-                SV_VARIANT1, SV_VARIANT2, SV_VARIANT3, SV_VARIANT4]:
+                SV_VARIANT1, SV_VARIANT2, SV_VARIANT3, SV_VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4]:
     # clickhouse uses fixed length decimals so values are rounded relative to hail backend
     for genotype in variant['genotypes'].values():
         if 'ab' in genotype:
@@ -171,6 +179,62 @@ SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT = {**MULTI_FAMILY_VARIANT, 'selectedMai
 SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4 = {**VARIANT4, 'selectedMainTranscriptId': 'ENST00000350997'}
 SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3 = {**VARIANT3, 'selectedMainTranscriptId': 'ENST00000497611'}
 SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2 = {**VARIANT2, 'selectedMainTranscriptId': 'ENST00000459627'}
+MULTI_DATA_TYPE_COMP_HET_VARIANT2 = {**VARIANT2, 'selectedMainTranscriptId': 'ENST00000450625'}
+
+GCNV_MULTI_FAMILY_VARIANT1 = deepcopy(GCNV_VARIANT1)
+GCNV_MULTI_FAMILY_VARIANT1.update({
+    'pos': 22418039,
+    'end': 22507821,
+    'transcripts': {
+        'ENSG00000129562': [{'geneId': 'ENSG00000129562', 'majorConsequence': 'COPY_GAIN'}],
+    },
+})
+GCNV_MULTI_FAMILY_VARIANT1['familyGuids'].append('F000003_3')
+GCNV_MULTI_FAMILY_VARIANT1['genotypes'].update({'I000007_na20870': {
+    'sampleId': 'NA20870', 'sampleType': 'WES', 'individualGuid': 'I000007_na20870', 'familyGuid': 'F000003_3',
+    'numAlt': 1, 'cn': 3, 'qs': 164, 'defragged': False, 'start': None, 'end': None, 'numExon': None,
+    'geneIds': None, 'newCall': False, 'prevCall': True, 'prevOverlap': False, 'filters': [],
+}})
+GCNV_MULTI_FAMILY_VARIANT1['genotypes']['I000004_hg00731'].update({'start': 22438910, 'end': 22469796, 'geneIds': []})
+
+GCNV_MULTI_FAMILY_VARIANT2 = deepcopy(GCNV_VARIANT2)
+GCNV_MULTI_FAMILY_VARIANT2['numExon'] = 26
+GCNV_MULTI_FAMILY_VARIANT2['familyGuids'].append('F000003_3')
+for genotype in GCNV_MULTI_FAMILY_VARIANT2['genotypes'].values():
+    genotype.update({'numExon': 8, 'geneIds': ['ENSG00000103495', 'ENSG00000167371', 'ENSG00000280893']})
+GCNV_MULTI_FAMILY_VARIANT2['genotypes'].update({'I000007_na20870': {
+    'sampleId': 'NA20870', 'sampleType': 'WES', 'individualGuid': 'I000007_na20870', 'familyGuid': 'F000003_3',
+    'numAlt': 1, 'cn': 3, 'qs': 40, 'defragged': False, 'start': None, 'end': None, 'numExon': None,
+    'geneIds': None, 'newCall': False, 'prevCall': True, 'prevOverlap': False, 'filters': [],
+}})
+GCNV_MULTI_FAMILY_VARIANT2['transcripts'].update({
+    'ENSG00000013364': [{'geneId': 'ENSG00000013364', 'majorConsequence': 'LOF'}],
+    'ENSG00000079616': [{'geneId': 'ENSG00000079616', 'majorConsequence': 'LOF'}],
+    'ENSG00000281348': [{'geneId': 'ENSG00000281348', 'majorConsequence': 'LOF'}],
+    'ENSG00000280789': [{'geneId': 'ENSG00000280789', 'majorConsequence': 'LOF'}],
+})
+MULTI_PROJECT_GCNV_VARIANT3 = {
+    **GCNV_VARIANT3,
+    'familyGuids': GCNV_VARIANT3['familyGuids'] + ['F000014_14'],
+    'genotypes': {
+        **GCNV_VARIANT3['genotypes'],
+        'I000018_na21234': {
+            'sampleId': 'NA21234', 'sampleType': 'WES', 'individualGuid': 'I000018_na21234', 'familyGuid': 'F000014_14',
+            'numAlt': 2, 'cn': 4, 'qs': 27, 'defragged': True, 'start': None, 'end': None, 'numExon': None,
+            'geneIds': None, 'newCall': True, 'prevCall': False, 'prevOverlap': False, 'filters': [],
+        },
+        'I000019_na21987': {
+            'sampleId': 'NA21987', 'sampleType': 'WES', 'individualGuid': 'I000019_na21987', 'familyGuid': 'F000014_14',
+            'numAlt': 1, 'cn': 3, 'qs': 51, 'defragged': False, 'start': None, 'end': None, 'numExon': None,
+            'geneIds': None, 'newCall': False, 'prevCall': False, 'prevOverlap': True, 'filters': [],
+        },
+        'I000021_na21654': {
+            'sampleId': 'NA21654', 'sampleType': 'WES', 'individualGuid': 'I000021_na21654', 'familyGuid': 'F000014_14', 'numAlt': 0,
+            'cn': None, 'qs': None, 'defragged': None, 'start': None, 'end': None, 'numExon': None, 'geneIds': None,
+            'newCall': None, 'prevCall': None, 'prevOverlap': None, 'filters': [],
+        },
+    },
+}
 
 CACHED_CONSEQUENCES_BY_KEY = {1: [], 2: [{
     'alphamissensePathogenicity': 0.99779,
@@ -310,9 +374,13 @@ LOCATION_SEARCH = {
     'locus': {'rawItems': '\n'.join(GENE_IDS+INTERVALS)},
 }
 
-COMP_HET_ALL_PASS_FILTERS = {
-    'annotations': {'splice_ai': '0.0', 'structural': ['DEL', 'CPX', 'INS', 'gCNV_DEL', 'gCNV_DUP']},
+ALL_SNV_INDEL_PASS_FILTERS = {
+    'annotations': {'splice_ai': '0.0'},
     'pathogenicity': {'clinvar': ['likely_pathogenic']},
+}
+COMP_HET_ALL_PASS_FILTERS = {
+    **ALL_SNV_INDEL_PASS_FILTERS,
+    'annotations': {**ALL_SNV_INDEL_PASS_FILTERS['annotations'], 'structural': ['DEL', 'CPX', 'INS', 'gCNV_DEL', 'gCNV_DUP']},
 }
 
 NEW_SV_FILTER = {'new_structural_variants': ['NEW']}
@@ -322,4 +390,13 @@ SV_GENE_COUNTS = {
     'ENSG00000083544': {'total': 1, 'families': {'F000011_11': 1}},
     'ENSG00000184986': {'total': 1, 'families': {'F000011_11': 1}},
     'null': {'total': 1, 'families': {'F000011_11': 1}},
+}
+
+GCNV_GENE_COUNTS = {
+    'ENSG00000103495': {'total': 1, 'families': {'F000002_2': 1}},
+    'ENSG00000167371': {'total': 1, 'families': {'F000002_2': 1}},
+    'ENSG00000280893': {'total': 1, 'families': {'F000002_2': 1}},
+    'ENSG00000275023': {'total': 2, 'families': {'F000002_2': 2}},
+    'ENSG00000277258': {'total': 1, 'families': {'F000002_2': 1}},
+    'ENSG00000277972': {'total': 1, 'families': {'F000002_2': 1}},
 }
