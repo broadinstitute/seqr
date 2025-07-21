@@ -1,0 +1,37 @@
+[
+  {
+    "model": "clickhouse_search.keylookupsnvindel",
+    "pk": "22-28695219-G-A",
+    "fields": {
+      "key": 12
+    }
+  },
+  {
+    "model": "clickhouse_search.keylookupmito",
+    "pk": "M-123-GA",
+    "fields": {
+      "key": 8
+    }
+  },
+  {
+    "model": "clickhouse_search.clinvarallvariantssnvindel",
+    "pk": "22-28695219-G-A",
+    "fields": {
+      "version": "2025-06-23",
+      "allele_id": 20642,
+      "pathogenicity": "Likely_pathogenic",
+      "assertions": [],
+      "conflicting_pathogenicities": [],
+      "gold_stars": 2,
+      "submitters": [],
+      "conditions": []
+    }
+  },
+  {
+    "model": "reference_data.dataversions",
+    "pk": "Clinvar",
+    "fields": {
+      "version": "2025-06-23"
+    }
+  }
+]
