@@ -101,40 +101,16 @@ def get_hail_variants_for_variant_ids(samples, genome_version, parsed_variant_id
     return response_json['results']
 
 
-def _execute_lookup(user, variant_id, data_type, **kwargs):
+def hail_variant_lookup(user, variant_id, data_type, genome_version=None, samples=None, **kwargs):
     body = {
         'variant_id': variant_id,
         'data_type': data_type,
+        'genome_version': GENOME_VERSION_LOOKUP[genome_version],
         **kwargs,
     }
-    return _execute_search(body, user, path='lookup', exception_map={404: 'Variant not present in seqr'}), body
-
-
-def hail_variant_lookup(user, variant_id, dataset_type, **kwargs):
-    variant, _ = _execute_lookup(user, variant_id, data_type=dataset_type, **kwargs)
-    return variant
-
-
-def hail_sv_variant_lookup(user, variant_id, dataset_type, samples, sample_type=None, **kwargs):
-    if not sample_type:
-        from seqr.utils.search.utils import InvalidSearchException
-        raise InvalidSearchException('Sample type must be specified to look up a structural variant')
-    data_type = f'{dataset_type}_{sample_type}'
-
-    sample_data = _get_sample_data(samples)
-    variant, body = _execute_lookup(user, variant_id, data_type, sample_data=sample_data.pop(data_type), **kwargs)
-    variants = [variant]
-
-    if variant['svType'] in {'DEL', 'DUP'}:
-        del body['variant_id']
-        body.update({
-            'sample_data': sample_data,
-            'padded_interval': {'chrom': variant['chrom'], 'start': variant['pos'], 'end': variant['end'], 'padding': 0.2},
-            'annotations': {'structural': [variant['svType'], f"gCNV_{variant['svType']}"]}
-        })
-        variants += _execute_search(body, user)['results']
-
-    return variants
+    if samples:
+        body['sample_data'] = _get_sample_data(samples).pop(data_type)
+    return _execute_search(body, user, path='lookup', exception_map={404: 'Variant not present in seqr'})
 
 
 def hail_variant_multi_lookup(user_email, variant_ids, data_type, genome_version):

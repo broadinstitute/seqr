@@ -1,7 +1,7 @@
 from clickhouse_backend import models
 from collections import OrderedDict, defaultdict
 
-from django.db.models import F, Manager, QuerySet, Q, Value
+from django.db.models import F, QuerySet, Q, Value
 from django.db.models.expressions import Col
 from django.db.models.functions import Cast
 from django.db.models.sql.constants import INNER
@@ -152,11 +152,10 @@ class AnnotationsQuerySet(QuerySet):
 
     def search(self, parsed_locus=None, **kwargs):
         parsed_locus = parsed_locus or {}
-        results = self
-        results = self._filter_variant_ids(results, **parsed_locus)
+        results = self.filter_variant_ids(**parsed_locus)
         results = self._filter_frequency(results, **kwargs)
         results = self._filter_in_silico(results, **kwargs)
-        results = self._filter_annotations(results, **parsed_locus, **kwargs)
+        results = self.filter_annotations(results, **parsed_locus, **kwargs)
         return results
 
     def result_values(self):
@@ -169,6 +168,10 @@ class AnnotationsQuerySet(QuerySet):
         fields = [field for field in self.annotation_fields if field not in values]
         if self.has_annotation('clinvar'):
             fields.append('clinvar')
+
+        if self.has_annotation('familyGenotypes'):
+            fields = [field for field in fields if field not in self.ENTRY_FIELDS]
+            fields.append('familyGenotypes')
 
         return self.values(*fields, **initial_values).annotate(
             **{k: values[k] for k in override_model_annotations if k in values},
@@ -234,8 +237,8 @@ class AnnotationsQuerySet(QuerySet):
             **{primary_gene_field: F(secondary_gene_field)}
         ).exclude(primary_variantId=F('secondary_variantId'))
 
-    @classmethod
-    def _filter_variant_ids(cls, results, variant_ids=None, rs_ids=None, **kwargs):
+    def filter_variant_ids(self, variant_ids=None, rs_ids=None, **kwargs):
+        results = self
         if variant_ids:
             results = results.filter(
                 variant_id__in=[f'{chrom}-{pos}-{ref}-{alt}' for chrom, pos, ref, alt in variant_ids]
@@ -318,7 +321,7 @@ class AnnotationsQuerySet(QuerySet):
         except ValueError:
             return Q(**{score_column: value})
 
-    def _filter_annotations(self, results, annotations=None, pathogenicity=None, exclude=None, gene_ids=None, intervals=None, exclude_intervals=False, **kwargs):
+    def filter_annotations(self, results, annotations=None, pathogenicity=None, exclude=None, gene_ids=None, intervals=None, exclude_intervals=False, padded_interval=None,  **kwargs):
         transcript_field = self.transcript_field
         if self.model.GENOTYPE_OVERRIDE_FIELDS:
             results = results.annotate(**{
@@ -338,7 +341,10 @@ class AnnotationsQuerySet(QuerySet):
             for interval_q in interval_qs:
                 gene_q |= interval_q
             results = results.filter(gene_q)
-        elif interval_qs and hasattr(self.model, 'end'):
+        elif (interval_qs or padded_interval) and hasattr(self.model, 'end'):
+            if padded_interval:
+                padding = int((padded_interval['end'] - padded_interval['start']) * padded_interval['padding'])
+                interval_qs = [Q(end__range=(padded_interval['end'] - padding, padded_interval['end'] + padding))]
             interval_q = interval_qs[0]
             for q in interval_qs[1:]:
                 interval_q |= q
@@ -526,7 +532,7 @@ class AnnotationsQuerySet(QuerySet):
         return field in self.query.annotations
 
 
-class EntriesManager(Manager):
+class EntriesManager(QuerySet):
     GENOTYPE_LOOKUP = {
         REF_REF: (0,),
         REF_ALT: (1,),
@@ -597,11 +603,9 @@ class EntriesManager(Manager):
         })
 
     def search(self, sample_data, parsed_locus=None, freqs=None, annotations=None, **kwargs):
-        entries = self._filter_intervals(self, **(parsed_locus or {}))
+        entries = self.filter_intervals(**(parsed_locus or {}))
 
-        seqr_popualtions = self.annotations_model.SEQR_POPULATIONS
-        if seqr_popualtions:
-            entries = entries.annotate(seqrPop=self._seqr_pop_expression(seqr_popualtions))
+        entries = self._join_annotations(entries)
 
         is_sv_class = 'cn' in self.call_fields
         callset_filter_field = 'sv_callset' if is_sv_class else 'callset'
@@ -616,6 +620,25 @@ class EntriesManager(Manager):
             entries = entries.filter(calls__array_exists={'newCall': (None, '{field}')})
 
         return self._search_call_data(entries, sample_data, **kwargs)
+
+    def _join_annotations(self, entries):
+        if self._has_clinvar():
+           entries = entries.annotate(
+               clinvar_key=F('clinvar_join__key'),
+               clinvar=Tuple(*self.clinvar_fields.keys(), output_field=NamedTupleField(list(self.clinvar_fields.values()), null_if_empty=True, null_empty_arrays=True))
+           )
+
+        seqr_popualtions = self.annotations_model.SEQR_POPULATIONS
+        if seqr_popualtions:
+            entries = entries.annotate(seqrPop=self._seqr_pop_expression(seqr_popualtions))
+
+        return entries
+
+    def result_values(self, sample_data):
+        entries = self._join_annotations(self)
+        if sample_data:
+            return self._search_call_data(entries, sample_data)
+        return self._annotate_calls(entries)
 
     def _seqr_pop_expression(self, seqr_popualtions):
         sample_types = [self.single_sample_type.lower()] if self.single_sample_type else ['wes', 'wgs']
@@ -653,12 +676,6 @@ class EntriesManager(Manager):
                family_q = sample_family_q
 
        entries = entries.filter(family_q)
-
-       if self._has_clinvar():
-           entries = entries.annotate(
-               clinvar_key=F('clinvar_join__key'),
-               clinvar=Tuple(*self.clinvar_fields.keys(), output_field=NamedTupleField(list(self.clinvar_fields.values()), null_if_empty=True, null_empty_arrays=True))
-           )
 
        quality_filter = qualityFilter or {}
        individual_genotype_filter = (inheritance_filter or {}).get('genotype')
@@ -853,7 +870,7 @@ class EntriesManager(Manager):
             )
         return entries
 
-    def _annotate_calls(self, entries, sample_data, annotate_carriers, multi_sample_type_families):
+    def _annotate_calls(self, entries, sample_data=None, annotate_carriers=False, multi_sample_type_families=None):
         carriers_expression = self._carriers_expression(sample_data) if annotate_carriers else None
         if carriers_expression:
             entries = entries.annotate(carriers=carriers_expression)
@@ -872,10 +889,10 @@ class EntriesManager(Manager):
             fields.append('seqrPop')
         if self._has_clinvar():
              fields += ['clinvar', 'clinvar_key']
-        if multi_sample_type_families or len(sample_data) > 1:
+        if multi_sample_type_families or sample_data is None or len(sample_data) > 1:
             entries = entries.values(*fields).annotate(
                 familyGuids=ArraySort(ArrayDistinct(GroupArray('family_guid'))),
-                genotypes=GroupArrayArray(self._genotype_expression(sample_data)),
+                **{'genotypes' if sample_data else 'familyGenotypes': GroupArrayArray(self.genotype_expression(sample_data))},
                 **{col: GroupArrayArray(col) for col in genotype_override_annotations}
             )
             if carriers_expression:
@@ -890,7 +907,7 @@ class EntriesManager(Manager):
                 else:
                     family_carriers = Cast(Tuple('familyGuids', GroupArray('carriers')), map_field)
                 entries = entries.annotate(family_carriers=family_carriers)
-            if any(multi_sample_type_families.values()):
+            if any((multi_sample_type_families or {}).values()):
                 entries = self._multi_sample_type_filtered_entries(entries)
         else:
             if carriers_expression:
@@ -898,7 +915,7 @@ class EntriesManager(Manager):
             entries = entries.values(
                 *fields,
                 familyGuids=Array('family_guid'),
-                genotypes=self._genotype_expression(sample_data),
+                genotypes=self.genotype_expression(sample_data),
             )
 
         if genotype_override_annotations:
@@ -909,20 +926,27 @@ class EntriesManager(Manager):
 
         return entries
 
-    def _genotype_expression(self, sample_data):
+    def genotype_expression(self, sample_data=None):
         sample_map = []
-        for data in sample_data:
+        for data in sample_data or []:
             family_samples = []
             for s in data['samples']:
                 family_samples += [
                     f"'{sample_id}', '{s['individual_guid']}'" for sample_id in set(s['sample_ids_by_type'].values())
                 ]
             sample_map.append(f"'{data['family_guid']}', map({', '.join(family_samples)})")
+        genotype_expressions = list(self.genotype_fields.keys())
+        output_base_fields = list(self.genotype_fields.values())
+        output_field_kwargs = {'group_by_key': 'familyGuid'}
+        if sample_data:
+            genotype_expressions.insert(0, f"map({', '.join(sample_map)})[family_guid][x.sampleId]")
+            output_base_fields.insert(0, ('individualGuid', models.StringField()))
+            output_field_kwargs = {'group_by_key': 'individualGuid', 'flatten_groups': True}
         return ArrayFilter(
             ArrayMap(
                 'calls',
-                mapped_expression=f"tuple(map({', '.join(sample_map)})[family_guid][x.sampleId], {', '.join(self.genotype_fields.keys())})",
-                output_field=NestedField([('individualGuid', models.StringField()), *self.genotype_fields.values()], group_by_key='individualGuid', flatten_groups=True)
+                mapped_expression=f"tuple({', '.join(genotype_expressions)})",
+                output_field=NestedField(output_base_fields, **output_field_kwargs)
             ),
             conditions=[{1: (None, 'notEmpty({field})')}]
         )
@@ -989,7 +1013,8 @@ class EntriesManager(Manager):
             mapped_expression='x.1', output_field=models.ArrayField(models.StringField()),
         )
 
-    def _filter_intervals(self, entries, exclude_intervals=False, intervals=None, gene_intervals=None, variant_ids=None,  **kwargs):
+    def filter_intervals(self, exclude_intervals=False, intervals=None, gene_intervals=None, variant_ids=None, padded_interval=None, **kwargs):
+        entries = self
         if variant_ids:
             # although technically redundant, the interval query is applied to the entries table before join and reduces the join size,
             # while the full variant_id filter is applied to the annotation table after the join
@@ -998,7 +1023,11 @@ class EntriesManager(Manager):
         if not (gene_intervals or intervals):
             return entries
 
-        if 'cn' in self.call_fields:
+        if padded_interval:
+            pos = padded_interval['start']
+            padding = int((padded_interval['end'] - pos) * padded_interval['padding'])
+            intervals = [(padded_interval['chrom'], max(pos - padding, MIN_POS), min(pos + padding, MAX_POS))]
+        elif 'cn' in self.call_fields:
             # SV interval filtering occurs after joining on annotations to correctly incorporate end position
             if exclude_intervals:
                 intervals = None

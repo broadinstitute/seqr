@@ -3,8 +3,8 @@ from copy import deepcopy
 from datetime import timedelta
 
 from clickhouse_search.search import clickhouse_backend_enabled, get_clickhouse_variants, format_clickhouse_results, \
-    get_clickhouse_cache_results
-from reference_data.models import GENOME_VERSION_LOOKUP, GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
+    get_clickhouse_cache_results, clickhouse_variant_lookup
+from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample, Individual, Project
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_get_wildcard_json, safe_redis_set_json
 from seqr.utils.search.constants import XPOS_SORT_KEY, PRIORITIZED_GENE_SORT, RECESSIVE, COMPOUND_HET, \
@@ -14,7 +14,7 @@ from seqr.utils.search.elasticsearch.es_utils import ping_elasticsearch, delete_
     get_es_variants, get_es_variants_for_variant_ids, process_es_previously_loaded_results, process_es_previously_loaded_gene_aggs, \
     es_backend_enabled, ping_kibana, ES_EXCEPTION_ERROR_MAP, ES_EXCEPTION_MESSAGE_MAP, ES_ERROR_LOG_EXCEPTIONS
 from seqr.utils.search.hail_search_utils import get_hail_variants, get_hail_variants_for_variant_ids, ping_hail_backend, \
-    hail_variant_lookup, hail_sv_variant_lookup, validate_hail_backend_no_location_search
+    hail_variant_lookup, validate_hail_backend_no_location_search
 from seqr.utils.gene_utils import parse_locus_list_items
 from seqr.utils.xpos_utils import get_xpos, format_chrom, MIN_POS, MAX_POS
 
@@ -170,8 +170,7 @@ def _variant_lookup(lookup_func, user, variant_id, dataset_type, genome_version=
     if variant:
         return variant
 
-    lookup_func = backend_specific_call(_raise_search_error('Hail backend is disabled'), lookup_func)
-    variant = lookup_func(user, variant_id, dataset_type, genome_version=GENOME_VERSION_LOOKUP[genome_version], **kwargs)
+    variant = lookup_func(user, variant_id, dataset_type, genome_version=genome_version, **kwargs)
     safe_redis_set_json(cache_key, variant, expire=timedelta(weeks=2))
     return variant
 
@@ -183,16 +182,45 @@ def _validate_dataset_type_genome_version(dataset_type, genome_version):
 
 def variant_lookup(user, parsed_variant_id, **kwargs):
     dataset_type = DATASET_TYPES_LOOKUP[_variant_ids_dataset_type([parsed_variant_id])][0]
-    return _variant_lookup(hail_variant_lookup, user, parsed_variant_id, **kwargs, dataset_type=dataset_type)
+    lookup_func = backend_specific_call(_raise_search_error('Lookup is disabled'), hail_variant_lookup, clickhouse_variant_lookup)
+    return _variant_lookup(lookup_func, user, parsed_variant_id, **kwargs, dataset_type=dataset_type)
 
 
 def sv_variant_lookup(user, variant_id, families, **kwargs):
     _get_search_genome_version(families)
     samples = _get_families_search_data(families, dataset_type=Sample.DATASET_TYPE_SV_CALLS)
+
     return _variant_lookup(
-        hail_sv_variant_lookup, user, variant_id, **kwargs, samples=samples, cache_key_suffix=user,
+        _sv_variant_lookup, user, variant_id, **kwargs, samples=samples, cache_key_suffix=user,
         dataset_type=Sample.DATASET_TYPE_SV_CALLS,
     )
+
+
+def _sv_variant_lookup(user, variant_id, dataset_type, samples, genome_version=None, sample_type=None, **kwargs):
+    if not sample_type:
+        raise InvalidSearchException('Sample type must be specified to look up a structural variant')
+
+    data_type = f'{dataset_type}_{sample_type}'
+
+    lookup_samples = samples.filter(sample_type=sample_type)
+    lookup_func = backend_specific_call(_raise_search_error('Lookup is disabled'), hail_variant_lookup, clickhouse_variant_lookup)
+    variant = lookup_func(user, variant_id, data_type, samples=lookup_samples, genome_version=genome_version, **kwargs)
+    variants = [variant]
+
+    if variant['svType'] in {'DEL', 'DUP'}:
+        samples = samples.exclude(sample_type=sample_type)
+        search = {
+            'parsed_locus': {
+                'padded_interval': {'chrom': variant['chrom'], 'start': variant['pos'], 'end': variant['end'], 'padding': 0.2},
+            },
+            'annotations': {'structural': [variant['svType'], f"gCNV_{variant['svType']}"]},
+            **kwargs,
+        }
+        results = {}
+        _execute_search(samples, search, user, previous_search_results=results, genome_version=genome_version)
+        variants += results['all_results']
+
+    return variants
 
 
 def _get_search_cache_key(search_model, sort=None):
@@ -324,7 +352,7 @@ def _query_variants(search_model, user, previous_search_results, genome_version,
 
     _validate_search(parsed_search, samples, previous_search_results)
 
-    variant_results = backend_specific_call(get_es_variants, get_hail_variants, get_clickhouse_variants)(
+    variant_results = _execute_search(
         samples, parsed_search, user, previous_search_results, genome_version,
         sort=sort, num_results=num_results, **kwargs,
     )
@@ -333,6 +361,12 @@ def _query_variants(search_model, user, previous_search_results, genome_version,
     safe_redis_set_json(cache_key, previous_search_results, expire=timedelta(weeks=2))
 
     return variant_results, previous_search_results.get('total_results')
+
+
+def _execute_search(samples, parsed_search, user, previous_search_results, genome_version, **kwargs):
+    return backend_specific_call(get_es_variants, get_hail_variants, get_clickhouse_variants)(
+        samples, parsed_search, user, previous_search_results, genome_version, **kwargs,
+    )
 
 
 def get_variant_query_gene_counts(search_model, user):
@@ -353,6 +387,9 @@ def get_variant_query_gene_counts(search_model, user):
 
     genome_version = _get_search_genome_version(search_model.families.all())
     gene_counts, _ = _query_variants(search_model, user, previous_search_results, genome_version, gene_agg=True)
+    gene_counts = backend_specific_call(
+        lambda *args: None, lambda *args: None, _get_gene_aggs_for_cached_variants,
+    )(previous_search_results) or gene_counts
     return gene_counts
 
 
@@ -362,16 +399,18 @@ def _get_gene_aggs_for_cached_variants(previous_search_results):
     flattened_variants = backend_specific_call(
         lambda results: results,
         lambda results: [v for variants in results for v in (variants if isinstance(variants, list) else [variants])],
+        lambda results: [v for variants in results for v in (variants if isinstance(variants, list) else [variants])],
     )(previous_search_results['all_results'])
     for var in flattened_variants:
         # ES only reports breakdown for main transcript gene only, hail backend reports for all genes
         gene_ids = backend_specific_call(
-            lambda variant_transcripts: next((
-                [gene_id] for gene_id, transcripts in variant_transcripts.items()
+            lambda variant: next((
+                [gene_id] for gene_id, transcripts in variant['transcripts'].items()
                 if any(t['transcriptId'] == var['mainTranscriptId'] for t in transcripts)
             ), []) if var['mainTranscriptId'] else [],
-            lambda variant_transcripts: variant_transcripts.keys(),
-        )(var['transcripts'])
+            lambda variant: variant['transcripts'].keys(),
+            lambda variant: variant['transcripts'].keys() if 'transcripts' in variant else {t['geneId'] for t in variant['sortedTranscriptConsequences']},
+        )(var)
         for gene_id in gene_ids:
             gene_aggs[gene_id]['total'] += 1
             for family_guid in var['familyGuids']:
