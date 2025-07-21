@@ -1,15 +1,16 @@
 from clickhouse_backend.models import ArrayField, StringField
 from collections import defaultdict
 from django.contrib.postgres.aggregates import ArrayAgg
+from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import F, Min
 from django.db.models.functions import JSONObject
 
 from clickhouse_search.backend.fields import NamedTupleField
-from clickhouse_search.backend.functions import Array, ArrayFilter, ArrayIntersect, ArraySort, Tuple
-from clickhouse_search.models import ENTRY_CLASS_MAP, ANNOTATIONS_CLASS_MAP, TRANSCRIPTS_CLASS_MAP, BaseClinvar, \
-    BaseAnnotationsMitoSnvIndel, BaseAnnotationsGRCh37SnvIndel
+from clickhouse_search.backend.functions import Array, ArrayFilter, ArrayIntersect, ArraySort, GroupArrayArray, Tuple
+from clickhouse_search.models import ENTRY_CLASS_MAP, ANNOTATIONS_CLASS_MAP, TRANSCRIPTS_CLASS_MAP, KEY_LOOKUP_CLASS_MAP, \
+    BaseClinvar, BaseAnnotationsMitoSnvIndel, BaseAnnotationsGRCh37SnvIndel, BaseAnnotationsSvGcnv
 from reference_data.models import GeneConstraint, Omim
-from seqr.models import PhenotypePrioritization
+from seqr.models import Sample, PhenotypePrioritization
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.search.constants import MAX_VARIANTS, XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, \
     PRIORITIZED_GENE_SORT, COMPOUND_HET, RECESSIVE
@@ -32,6 +33,7 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
     results = []
     family_guid = None
     inheritance_mode = search.get('inheritance_mode')
+    has_comp_het = inheritance_mode in {RECESSIVE, COMPOUND_HET}
     for dataset_type, sample_data in sample_data_by_dataset_type.items():
         logger.info(f'Loading {dataset_type} data for {len(sample_data)} families', user)
 
@@ -42,9 +44,14 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
         if inheritance_mode != COMPOUND_HET:
             result_q = _get_search_results_queryset(entry_cls, annotations_cls, search, sample_data)
             results += list(result_q[:MAX_VARIANTS + 1])
-        if inheritance_mode in {RECESSIVE, COMPOUND_HET}:
-            result_q = _get_comp_het_results_queryset(entry_cls, annotations_cls, search, sample_data)
+        if has_comp_het:
+            result_q = _get_data_type_comp_het_results_queryset(entry_cls, annotations_cls, search, sample_data)
             results += [list(result[1:]) for result in result_q[:MAX_VARIANTS + 1]]
+
+    if has_comp_het and Sample.DATASET_TYPE_VARIANT_CALLS in sample_data_by_dataset_type and any(
+        dataset_type.startswith(Sample.DATASET_TYPE_SV_CALLS) for dataset_type in sample_data_by_dataset_type
+    ):
+        results += _get_multi_data_type_comp_het_results_queryset(genome_version, sample_data_by_dataset_type, search)
 
     cache_results = get_clickhouse_cache_results(results, sort, family_guid)
     previous_search_results.update(cache_results)
@@ -60,7 +67,45 @@ def _get_search_results_queryset(entry_cls, annotations_cls, search, sample_data
     return results.result_values()
 
 
-def _get_comp_het_results_queryset(entry_cls, annotations_cls, search, sample_data):
+def _get_multi_data_type_comp_het_results_queryset(genome_version, sample_data_by_dataset_type, search):
+    comp_het_search = {**search, 'inheritance_mode': COMPOUND_HET}
+    annotations_secondary = search.get('annotations_secondary')
+    if annotations_secondary:
+        annotations = search['annotations']
+        comp_het_search['annotations'] = {
+            **annotations,
+            **{k: v + annotations[k] if k in annotations else v for k, v in annotations_secondary.items()},
+        }
+
+    entry_cls = ENTRY_CLASS_MAP[genome_version][Sample.DATASET_TYPE_VARIANT_CALLS]
+    annotations_cls = ANNOTATIONS_CLASS_MAP[genome_version][Sample.DATASET_TYPE_VARIANT_CALLS]
+    snv_indel_families = {s['family_guid'] for s in sample_data_by_dataset_type[Sample.DATASET_TYPE_VARIANT_CALLS]}
+
+    results = []
+    for sample_type in [Sample.SAMPLE_TYPE_WES, Sample.SAMPLE_TYPE_WGS]:
+        sv_dataset_type = f'{Sample.DATASET_TYPE_SV_CALLS}_{sample_type}'
+        sv_families = {s['family_guid'] for s in sample_data_by_dataset_type.get(sv_dataset_type, [])}
+        families = snv_indel_families.intersection(sv_families)
+        if not families:
+            continue
+        entries = entry_cls.objects.search([
+            s for s in sample_data_by_dataset_type[Sample.DATASET_TYPE_VARIANT_CALLS] if s['family_guid'] in families
+        ], comp_het_search, annotate_carriers=True)
+        snv_indel_q = annotations_cls.objects.subquery_join(entries).search(**comp_het_search)
+
+        sv_entries = ENTRY_CLASS_MAP[genome_version][sv_dataset_type].objects.search([
+            s for s in sample_data_by_dataset_type[sv_dataset_type] if s['family_guid'] in families
+        ], comp_het_search, annotate_carriers=True)
+        sv_annotations_cls = ANNOTATIONS_CLASS_MAP[genome_version][sv_dataset_type]
+        sv_q = sv_annotations_cls.objects.subquery_join(sv_entries).search(**comp_het_search)
+
+        result_q = _get_comp_het_results_queryset(annotations_cls, snv_indel_q, sv_q, len(families))
+        results += [list(result[1:]) for result in result_q[:MAX_VARIANTS + 1]]
+
+    return results
+
+
+def _get_data_type_comp_het_results_queryset(entry_cls, annotations_cls, search, sample_data):
     entries = entry_cls.objects.search(
         sample_data, **{**search, 'inheritance_mode': COMPOUND_HET}, annotate_carriers=True,
     )
@@ -71,22 +116,24 @@ def _get_comp_het_results_queryset(entry_cls, annotations_cls, search, sample_da
     secondary_search = {**search, 'annotations': annotations_secondary} if annotations_secondary else search
     secondary_q = annotations_cls.objects.subquery_join(entries).search(**secondary_search)
 
-    carrier_field = next((field for field in ['family_carriers', 'carriers'] if field in entries.query.annotations), None)
+    return _get_comp_het_results_queryset(annotations_cls, primary_q, secondary_q, len(sample_data))
 
-    results = annotations_cls.objects.search_compound_hets(primary_q, secondary_q, carrier_field)
 
-    if carrier_field == 'carriers':
+def _get_comp_het_results_queryset(annotations_cls, primary_q, secondary_q, num_families):
+    results = annotations_cls.objects.search_compound_hets(primary_q, secondary_q)
+
+    if results.has_annotation('primary_carriers') and results.has_annotation('secondary_carriers'):
         results = results.annotate(
             unphased_carriers=ArrayIntersect('primary_carriers', 'secondary_carriers')
         ).filter(unphased_carriers__not_empty=False)
-    elif carrier_field == 'family_carriers':
+    elif results.has_annotation('primary_family_carriers') and results.has_annotation('secondary_family_carriers'):
         results = results.annotate(
             primary_familyGuids=ArrayFilter('primary_familyGuids', conditions=[
                 {None: (None, 'empty(arrayIntersect(primary_family_carriers[x], secondary_family_carriers[x]))')},
             ]),
         )
 
-    if len(sample_data) > 1:
+    if num_families > 1:
         results = results.annotate(
             primary_familyGuids=ArrayIntersect(
                 'primary_familyGuids', 'secondary_familyGuids', output_field=ArrayField(StringField()),
@@ -149,6 +196,7 @@ def format_clickhouse_results(results, genome_version, **kwargs):
 def _format_variant(variant, transcripts_by_key):
     formatted_variant = {**variant}
     selected_gene_id = formatted_variant.pop(SELECTED_GENE_FIELD, None)
+    selected_transcript = formatted_variant.pop(SELECTED_TRANSCRIPT_FIELD, None)
     if 'transcripts' in variant:
         return formatted_variant
 
@@ -156,7 +204,6 @@ def _format_variant(variant, transcripts_by_key):
     formatted_variant['transcripts'] = transcripts
     # pop sortedTranscriptConsequences from the formatted result and not the original result to ensure the full value is cached properly
     sorted_minimal_transcripts = formatted_variant.pop(TRANSCRIPT_CONSEQUENCES_FIELD)
-    selected_transcript = formatted_variant.pop(SELECTED_TRANSCRIPT_FIELD, None)
     main_transcript_id = None
     selected_main_transcript_id = None
     if sorted_minimal_transcripts:
@@ -194,7 +241,18 @@ def _get_sample_data(samples):
     )
     samples_by_dataset_type = defaultdict(list)
     for data in sample_data:
-        samples_by_dataset_type[data['dataset_type']].append({**data, 'samples': _group_by_sample_type(data['samples'])})
+        samples = _group_by_sample_type(data['samples'])
+        if data['dataset_type'] == Sample.DATASET_TYPE_SV_CALLS:
+            samples_by_type = defaultdict(list)
+            for sample in samples:
+                for sample_type in sample['sample_ids_by_type']:
+                    samples_by_type[sample_type].append(
+                        {**sample, 'sample_ids_by_type': {sample_type: sample['sample_ids_by_type'][sample_type]}}
+                    )
+            for sample_type, type_samples in samples_by_type.items():
+                samples_by_dataset_type[f"{data['dataset_type']}_{sample_type}"].append({**data, 'samples': type_samples, 'sample_types': [sample_type]})
+        else:
+            samples_by_dataset_type[data['dataset_type']].append({**data, 'samples': samples})
     return samples_by_dataset_type
 
 
@@ -232,7 +290,13 @@ def _get_sort_gene_metadata(sort, results, family_guid):
 
     gene_ids = set()
     for result in results:
-        gene_ids.update([t['geneId'] for t in result.get(TRANSCRIPT_CONSEQUENCES_FIELD, [])])
+        if not isinstance(result, list):
+            result = [result]
+        for variant in result:
+            if variant.get(TRANSCRIPT_CONSEQUENCES_FIELD):
+                gene_ids.update([t['geneId'] for t in variant[TRANSCRIPT_CONSEQUENCES_FIELD]])
+            else:
+                gene_ids.update(variant.get('transcripts', {}).keys())
     return get_metadata(gene_ids, family_guid)
 
 
@@ -260,18 +324,18 @@ def _get_matched_transcript(x, field):
     return None
 
 
-def _main_transcript_consequence(x):
-    transcript = x[TRANSCRIPT_CONSEQUENCES_FIELD][0] if x.get(TRANSCRIPT_CONSEQUENCES_FIELD) else _get_matched_transcript(x, 'mainTranscriptId')
-    return CONSEQUENCE_RANK_LOOKUP[transcript['consequenceTerms'][0]] if transcript else MAX_SORT_RANK
-
-def _selected_transcript_consequence(x):
-    transcript = x.get(SELECTED_TRANSCRIPT_FIELD) or _get_matched_transcript(x, 'selectedMainTranscriptId')
-    return CONSEQUENCE_RANK_LOOKUP[transcript['consequenceTerms'][0]] if transcript else MAX_SORT_RANK
+def _consequence_sort(get_transcript, transcript_field, get_sv_rank):
+    def wrapped_sort(x):
+        if x.get('svType'):
+            return get_sv_rank(x)
+        transcript = get_transcript(x) or _get_matched_transcript(x, transcript_field)
+        return CONSEQUENCE_RANK_LOOKUP[transcript['consequenceTerms'][0]] if transcript else MAX_SORT_RANK
+    return wrapped_sort
 
 def _sv_size(x):
     if not x.get('end'):
         return -1
-    if x['endChrom']:
+    if x.get('endChrom'):
         # Sort position for chromosome spanning SVs
         return -50
     return x['pos'] - x['end']
@@ -282,6 +346,7 @@ CLINVAR_RANK_LOOKUP = {path: rank for rank, path in BaseClinvar.PATHOGENICITY_CH
 HGMD_RANK_LOOKUP = {class_: rank for rank, class_ in BaseAnnotationsGRCh37SnvIndel.HGMD_CLASSES}
 ABSENT_CLINVAR_SORT_OFFSET = 12.5
 CONSEQUENCE_RANK_LOOKUP = {csq: rank for rank, csq in BaseAnnotationsMitoSnvIndel.CONSEQUENCE_TERMS}
+SV_CONSEQUENCE_LOOKUP = {csq: rank for rank, csq in BaseAnnotationsSvGcnv.SV_CONSEQUENCE_RANKS}
 PREDICTION_SORTS = {'cadd', 'revel', 'splice_ai', 'eigen', 'mpc', 'primate_ai'}
 CLINVAR_SORT =  _subfield_sort(
     'clinvar', 'pathogenicity', rank_lookup=CLINVAR_RANK_LOOKUP, default=ABSENT_CLINVAR_SORT_OFFSET,
@@ -290,13 +355,24 @@ SORT_EXPRESSIONS = {
     'alphamissense': [
         lambda x: -max(t.get('alphamissensePathogenicity') or MIN_SORT_RANK for t in x[TRANSCRIPT_CONSEQUENCES_FIELD]) if x.get(TRANSCRIPT_CONSEQUENCES_FIELD) else MIN_SORT_RANK,
     ] + _subfield_sort(SELECTED_TRANSCRIPT_FIELD, 'alphamissensePathogenicity', reverse=True, default=MIN_SORT_RANK),
-    'callset_af': _subfield_sort('populations', 'seqr', 'ac'),
+    'callset_af': _subfield_sort('populations', ('seqr', 'sv_callset'), 'ac'),
     'family_guid': [lambda x: sorted(x['familyGuids'])[0]],
-    'gnomad': _subfield_sort('populations', ('gnomad_genomes', 'gnomad_mito'), 'af'),
+    'gnomad': _subfield_sort('populations', ('gnomad_genomes', 'gnomad_mito', 'gnomad_svs'), 'af'),
     'gnomad_exomes': _subfield_sort('populations', 'gnomad_exomes', 'af'),
     PATHOGENICTY_SORT_KEY: CLINVAR_SORT,
     PATHOGENICTY_HGMD_SORT_KEY: CLINVAR_SORT + _subfield_sort('hgmd', 'class', rank_lookup=HGMD_RANK_LOOKUP),
-    'protein_consequence': [_main_transcript_consequence, _selected_transcript_consequence],
+    'protein_consequence': [
+        _consequence_sort(
+            lambda x: (x.get(TRANSCRIPT_CONSEQUENCES_FIELD) or [None])[0],
+            'mainTranscriptId',
+            lambda x: 4.5,
+        ),
+        _consequence_sort(
+            lambda x: x.get(SELECTED_TRANSCRIPT_FIELD),
+            'selectedMainTranscriptId',
+            lambda x: min([SV_CONSEQUENCE_LOOKUP[csqs[0]['majorConsequence']] for csqs in x['transcripts'].values()] or [MAX_SORT_RANK]),
+        ),
+    ],
     **{sort: _subfield_sort('predictions', sort, reverse=True, default=MIN_PRED_SORT_RANK) for sort in PREDICTION_SORTS},
     'size': [_sv_size],
 }
@@ -307,12 +383,71 @@ def _get_sort_key(sort, gene_metadata):
     if sort == OMIM_SORT:
         sort_expressions = [
             lambda x: 0 if ((x.get(SELECTED_TRANSCRIPT_FIELD) or {}).get('geneId') or x.get(SELECTED_GENE_FIELD)) in gene_metadata else 1,
-            lambda x: -len(set(t['geneId'] for t in x.get(TRANSCRIPT_CONSEQUENCES_FIELD, []) if t['geneId'] in gene_metadata)),
+            lambda x: -len(
+                set(t['geneId'] for t in x[TRANSCRIPT_CONSEQUENCES_FIELD] if t['geneId'] in gene_metadata)
+                if x.get(TRANSCRIPT_CONSEQUENCES_FIELD) else set(x.get('transcripts', {}).keys()).intersection(gene_metadata)
+            ),
         ]
     elif gene_metadata:
         sort_expressions = [
             lambda x: gene_metadata.get((x.get(SELECTED_TRANSCRIPT_FIELD) or {}).get('geneId') or x.get(SELECTED_GENE_FIELD), MAX_SORT_RANK),
-            lambda x: min([gene_metadata[t['geneId']] for t in x.get(TRANSCRIPT_CONSEQUENCES_FIELD, []) if t['geneId'] in gene_metadata] or [MAX_SORT_RANK]),
+            lambda x: min(
+                ([gene_metadata.get(t['geneId'], MAX_SORT_RANK)for t in x[TRANSCRIPT_CONSEQUENCES_FIELD] if t['geneId'] in gene_metadata]
+                if x.get(TRANSCRIPT_CONSEQUENCES_FIELD) else [gene_metadata.get(gene_id, MAX_SORT_RANK) for gene_id in x.get('transcripts', {}).keys()])
+                or [MAX_SORT_RANK]
+            ),
         ]
 
     return lambda x: tuple(expr(x[0] if isinstance(x, list) else x) for expr in [*sort_expressions, lambda x: x[XPOS_SORT_KEY]])
+
+
+def clickhouse_variant_lookup(user, variant_id, data_type, genome_version=None, samples=None, **kwargs):
+    logger.info(f'Looking up variant {variant_id} with data type {data_type}', user)
+
+    entry_cls = ENTRY_CLASS_MAP[genome_version][data_type]
+    annotations_cls = ANNOTATIONS_CLASS_MAP[genome_version][data_type]
+
+    sample_data = _get_sample_data(samples)[data_type] if samples else None
+
+    if isinstance(variant_id, str):
+        # Since there is no efficient way to prefilter SV entries based on the variant id, explicitly look up the keys
+        keys = KEY_LOOKUP_CLASS_MAP[genome_version][data_type].objects.filter(variant_id=variant_id).values_list('key', flat=True)
+        entries = entry_cls.objects.filter(key__in=keys)
+    else:
+        entries = entry_cls.objects.filter_intervals(variant_ids=[variant_id])
+
+    entries = entries.result_values(sample_data)
+    results = annotations_cls.objects.subquery_join(entries)
+    if isinstance(variant_id, str):
+        # Handles annotation for genotype overrides
+        results = results.filter_annotations(results)
+    else:
+        results = results.filter_variant_ids(variant_ids=[variant_id])
+
+    variants = results.result_values()[:1]
+    if not variants:
+        raise ObjectDoesNotExist('Variant not present in seqr')
+
+    variant = format_clickhouse_results(variants, genome_version)[0]
+    _add_liftover_genotypes(variant, data_type, variant_id)
+
+    return variant
+
+
+def _add_liftover_genotypes(variant, data_type, variant_id):
+    lifted_entry_cls = ENTRY_CLASS_MAP.get(variant.get('liftedOverGenomeVersion'), {}).get(data_type)
+    if not lifted_entry_cls:
+        return
+    lifted_id = (variant['liftedOverChrom'], str(variant['liftedOverPos']), *variant_id[2:])
+    keys = KEY_LOOKUP_CLASS_MAP[variant['liftedOverGenomeVersion']][data_type].objects.filter(
+        variant_id='-'.join(lifted_id),
+    ).values_list('key', flat=True)
+    if not keys:
+        return
+    lifted_entries = lifted_entry_cls.objects.filter_intervals(variant_ids=[variant_id]).filter(key=keys[0])
+    lifted_entry_data = lifted_entries.values('key').annotate(
+        familyGenotypes=GroupArrayArray(lifted_entry_cls.objects.genotype_expression())
+    )
+    if lifted_entry_data:
+        variant['familyGenotypes'].update(lifted_entry_data[0]['familyGenotypes'])
+        variant['liftedFamilyGuids'] = sorted(lifted_entry_data[0]['familyGenotypes'].keys())

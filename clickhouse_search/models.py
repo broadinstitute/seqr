@@ -5,6 +5,7 @@ from django.db.models import options, ForeignKey, OneToOneField, Func, CASCADE, 
 
 from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocksDB, Join
 from clickhouse_search.backend.fields import Enum8Field, NestedField, UInt64FieldDeltaCodecField, NamedTupleField
+from clickhouse_search.backend.functions import ArrayDistinct, ArrayFlatten, ArrayMin, ArrayMax
 from clickhouse_search.managers import EntriesManager, AnnotationsQuerySet
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample
@@ -48,14 +49,17 @@ class ClickHouseRouter:
         return None
 
     def db_for_write(self, model, **hints):
+        # When using Clickhouse models, the default connection routing used for writes will attempt to use read-only
+        # credentials and fail. This is by design to prevent accidental writes. To write to Clickhouse, explicitly
+        # set my_queryset.using('clickhouse_write') before executing a write operation
         if model._meta.label_lower in self.route_model_names or hints.get('clickhouse'):
             return 'clickhouse'
         return None
 
     def allow_migrate(self, db, app_label, model_name=None, **hints):
         if f'{app_label}.{model_name}' in self.route_model_names  or hints.get('clickhouse'):
-            return db == 'clickhouse'
-        elif db == 'clickhouse':
+            return db == 'clickhouse_write'
+        elif db in {'clickhouse', 'clickhouse_write'}:
             return False
         return None
 
@@ -78,6 +82,8 @@ class BaseAnnotations(models.ClickhouseModel):
         'genomeVersion': GENOME_VERSION_GRCh38,
         'liftedOverGenomeVersion': GENOME_VERSION_GRCh37,
     }
+    SV_TYPE_FILTER_PREFIX = ''
+    GENOTYPE_OVERRIDE_FIELDS = {}
 
     key = models.UInt32Field(primary_key=True)
     xpos = models.UInt64Field()
@@ -392,7 +398,7 @@ class AnnotationsDiskSv(BaseAnnotationsSv):
 
 class BaseAnnotationsGcnv(BaseAnnotationsSvGcnv):
     POPULATION_FIELDS = [
-        ('seqrPop', NamedTupleField([
+        ('sv_callset', NamedTupleField([
             ('ac', models.UInt32Field()),
             ('af', models.DecimalField(max_digits=9, decimal_places=5)),
             ('an', models.UInt32Field()),
@@ -400,6 +406,14 @@ class BaseAnnotationsGcnv(BaseAnnotationsSvGcnv):
             ('hom', models.UInt32Field()),
         ])),
     ]
+    SEQR_POPULATIONS = []
+    SV_TYPE_FILTER_PREFIX = 'gCNV_'
+    GENOTYPE_OVERRIDE_FIELDS = {
+        'pos': ('start', ArrayMin),
+        'end': ('end', ArrayMax),
+        'numExon': ('numExon', ArrayMax),
+        'geneIds': ('geneIds', lambda value, **kwargs: ArrayDistinct(ArrayFlatten(value), **kwargs)),
+    }
 
     num_exon = models.UInt16Field(db_column='numExon')
     populations = NamedTupleField(POPULATION_FIELDS)
@@ -482,7 +496,7 @@ class BaseEntries(models.ClickhouseModel):
     filters = models.ArrayField(models.StringField(low_cardinality=True))
     sign = models.Int8Field()
 
-    objects = EntriesManager()
+    objects = EntriesManager.as_manager()
 
     def _save_table(
         self,
@@ -684,6 +698,21 @@ class BaseKeyLookup(models.ClickhouseModel):
     class Meta:
         abstract = True
 
+    def _save_table(
+        self,
+        raw=False,
+        cls=None,
+        force_insert=False,
+        force_update=False,
+        using=None,
+        update_fields=None,
+    ):
+        # loaddata attempts to run an ALTER TABLE to update existing rows, but since primary keys can not be altered
+        # this command fails so need to use the force_insert flag to run an INSERT instead
+        return super()._save_table(
+            raw=raw, cls=cls, force_insert=True, force_update=force_update, using=using, update_fields=update_fields,
+        )
+
 class KeyLookupGRCh37SnvIndel(BaseKeyLookup):
     key = OneToOneField('AnnotationsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
 
@@ -822,7 +851,8 @@ ENTRY_CLASS_MAP = {
     GENOME_VERSION_GRCh38: {
         Sample.DATASET_TYPE_VARIANT_CALLS: EntriesSnvIndel,
         Sample.DATASET_TYPE_MITO_CALLS: EntriesMito,
-        Sample.DATASET_TYPE_SV_CALLS: EntriesSv,
+        f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WGS}': EntriesSv,
+        f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WES}': EntriesGcnv,
     },
 }
 ANNOTATIONS_CLASS_MAP = {
@@ -830,10 +860,20 @@ ANNOTATIONS_CLASS_MAP = {
     GENOME_VERSION_GRCh38: {
         Sample.DATASET_TYPE_VARIANT_CALLS: AnnotationsSnvIndel,
         Sample.DATASET_TYPE_MITO_CALLS: AnnotationsMito,
-        Sample.DATASET_TYPE_SV_CALLS: AnnotationsSv,
+        f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WGS}': AnnotationsSv,
+        f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WES}': AnnotationsGcnv,
     },
 }
 TRANSCRIPTS_CLASS_MAP = {
     GENOME_VERSION_GRCh37: TranscriptsGRCh37SnvIndel,
     GENOME_VERSION_GRCh38: TranscriptsSnvIndel,
+}
+KEY_LOOKUP_CLASS_MAP = {
+    GENOME_VERSION_GRCh37: {Sample.DATASET_TYPE_VARIANT_CALLS: KeyLookupGRCh37SnvIndel},
+    GENOME_VERSION_GRCh38: {
+        Sample.DATASET_TYPE_VARIANT_CALLS: KeyLookupSnvIndel,
+        Sample.DATASET_TYPE_MITO_CALLS: KeyLookupMito,
+        f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WGS}': KeyLookupSv,
+        f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WES}': KeyLookupGcnv,
+    },
 }

@@ -112,6 +112,7 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         query_variants(self.results_model, user=self.user, sort='constraint')
         self._test_expected_search_call(
             sort='constraint', sort_metadata={'ENSG00000223972': 2}, **RSID_SEARCH,
+            sample_data={'SNV_INDEL': EXPECTED_SAMPLE_DATA['SNV_INDEL'], **EXPECTED_MITO_SAMPLE_DATA},
         )
 
         raw_locus = 'CDC7, chr2:1234-5678, chr7:100-10100%10, ENSG00000177000'
@@ -311,9 +312,10 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
             'sample_data': ALL_AFFECTED_SAMPLE_DATA['SV_WES']
         })
         self._test_minimal_search_call(expected_search_body={
-            'genome_version': 'GRCh38', 'data_type': 'SV_WES', 'annotations': {'structural': ['DEL', 'gCNV_DEL']},
+            'genome_version': 'GRCh38', 'annotations': {'structural': ['DEL', 'gCNV_DEL']},
             'padded_interval': {'chrom': '17', 'start': 38721781, 'end': 38735703, 'padding': 0.2},
-            'sample_data': {'SV_WGS': SV_WGS_SAMPLE_DATA},
+            'sample_data': {'SV_WGS': SV_WGS_SAMPLE_DATA}, 'frequencies': None, 'quality_filter': None,
+            'sort': None,  'sort_metadata': None, 'num_results': 100,
         })
 
         # No second lookup call is made for non DELs/DUPs

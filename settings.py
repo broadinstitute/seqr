@@ -246,11 +246,16 @@ CLICKHOUSE_IN_MEMORY_DIR = os.environ.get('CLICKHOUSE_IN_MEMORY_DIR', '/in-memor
 CLICKHOUSE_DATA_DIR = os.getenv('CLICKHOUSE_DATA_DIR', '/var/seqr/clickhouse-data')
 CLICKHOUSE_SERVICE_HOSTNAME =  os.environ.get('CLICKHOUSE_SERVICE_HOSTNAME')
 if CLICKHOUSE_SERVICE_HOSTNAME:
-    DATABASES['clickhouse'] = {
+    DATABASES['clickhouse_write'] = {
         'ENGINE': 'clickhouse_search.backend',
         'NAME': 'seqr',
         'HOST': CLICKHOUSE_SERVICE_HOSTNAME,
         'PORT': int(os.environ.get('CLICKHOUSE_SERVICE_PORT', '9000')),
+        'USER': os.environ.get('CLICKHOUSE_ADMIN_USER', 'clickhouse'),
+        'PASSWORD': os.environ.get('CLICKHOUSE_ADMIN_PASSWORD', 'clickhouse_test'),
+    }
+    DATABASES['clickhouse'] = {
+        **DATABASES['clickhouse_write'],
         'USER': os.environ.get('CLICKHOUSE_USER', 'clickhouse'),
         'PASSWORD': os.environ.get('CLICKHOUSE_PASSWORD', 'clickhouse_test'),
     }
