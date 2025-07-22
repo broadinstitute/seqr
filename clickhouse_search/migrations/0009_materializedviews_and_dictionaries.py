@@ -4,8 +4,6 @@ from string import Template
 
 from django.db import migrations
 
-from settings import DATABASES
-
 CLICKHOUSE_AC_EXCLUDED_PROJECT_GUIDS  = os.environ.get(
     'CLICKHOUSE_AC_EXCLUDED_PROJECT_GUIDS',
     ''

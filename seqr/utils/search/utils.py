@@ -387,6 +387,9 @@ def get_variant_query_gene_counts(search_model, user):
 
     genome_version = _get_search_genome_version(search_model.families.all())
     gene_counts, _ = _query_variants(search_model, user, previous_search_results, genome_version, gene_agg=True)
+    gene_counts = backend_specific_call(
+        lambda *args: None, lambda *args: None, _get_gene_aggs_for_cached_variants,
+    )(previous_search_results) or gene_counts
     return gene_counts
 
 
@@ -396,16 +399,18 @@ def _get_gene_aggs_for_cached_variants(previous_search_results):
     flattened_variants = backend_specific_call(
         lambda results: results,
         lambda results: [v for variants in results for v in (variants if isinstance(variants, list) else [variants])],
+        lambda results: [v for variants in results for v in (variants if isinstance(variants, list) else [variants])],
     )(previous_search_results['all_results'])
     for var in flattened_variants:
         # ES only reports breakdown for main transcript gene only, hail backend reports for all genes
         gene_ids = backend_specific_call(
-            lambda variant_transcripts: next((
-                [gene_id] for gene_id, transcripts in variant_transcripts.items()
+            lambda variant: next((
+                [gene_id] for gene_id, transcripts in variant['transcripts'].items()
                 if any(t['transcriptId'] == var['mainTranscriptId'] for t in transcripts)
             ), []) if var['mainTranscriptId'] else [],
-            lambda variant_transcripts: variant_transcripts.keys(),
-        )(var['transcripts'])
+            lambda variant: variant['transcripts'].keys(),
+            lambda variant: variant['transcripts'].keys() if 'transcripts' in variant else {t['geneId'] for t in variant['sortedTranscriptConsequences']},
+        )(var)
         for gene_id in gene_ids:
             gene_aggs[gene_id]['total'] += 1
             for family_guid in var['familyGuids']:
