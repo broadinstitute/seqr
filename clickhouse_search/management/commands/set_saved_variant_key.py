@@ -234,6 +234,18 @@ SV_ID_UPDATE_MAP = {
         'suffix_210547_DUP_2': 'suffix_217142_DUP',
         'suffix_101293_DUP_2': 'suffix_104364_DUP',
         'prefix_240446_DUP': 'suffix_104364_DUP',
+        'suffix_326211_DEL_2': 'suffix_336972_DEL',
+        'suffix_214414_DUP_2': 'suffix_221162_DUP',
+        'suffix_264403_DUP_2': 'suffix_273062_DUP',
+        'suffix_92903_DEL_2': 'suffix_95683_DEL',
+        'suffix_326915_DEL_2': 'suffix_337695_DEL',
+        'suffix_432_DEL_2': 'suffix_442_DEL',
+        'suffix_96995_DEL_2': 'suffix_99914_DEL',
+        'suffix_16343_DEL_2': 'suffix_16857_DEL',
+        'suffix_239134_DUP_2': 'suffix_246928_DUP',
+        'suffix_239928_DUP_2': 'suffix_247737_DUP',
+        'suffix_299627_DUP_2': 'suffix_309488_DUP',
+        'suffix_300851_DUP_2': 'suffix_310746_DUP',
     },
 }
 SV_DROPPED_IDS = {
