@@ -1,4 +1,6 @@
 from collections import defaultdict
+
+from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.management.base import BaseCommand
 from django.db.models import F
 import logging
@@ -25,6 +27,20 @@ SV_ID_UPDATE_MAP = {
         'cohort_2911.chr1.final_cleanup_DEL_chr1_12237': 'phase2_DEL_chr1_9347',
         'cohort_2911.chr1.final_cleanup_DEL_chr1_2953': 'phase2_DEL_chr1_2503',
         'cohort_2911.chrX.final_cleanup_CPX_chrX_20': 'cohort_2911.chrX.final_cleanup_CPX_chrX_19',
+        'phase2_DUP_chr1_1164': 'phase4_all_batches.chr1.final_cleanup_DUP_chr1_1666',
+        'phase2_CPX_chr1_73': 'phase4_all_batches.chr1.final_cleanup_CPX_chr1_85',
+        'cohort_2911.chr1.final_cleanup_DEL_chr1_3844': 'phase2_DEL_chr1_3148',
+        'cohort_2911.chr1.final_cleanup_DEL_chr1_4181': 'phase2_DEL_chr1_3389',
+        'cohort_2911.chr1.final_cleanup_DEL_chr1_6414': 'phase2_DEL_chr1_5030',
+        'cohort_2911.chr10.final_cleanup_DEL_chr10_6275': 'phase2_DEL_chr10_4600',
+        'cohort_2911.chr10.final_cleanup_DEL_chr10_7793': 'phase2_DEL_chr10_5695',
+        'cohort_2911.chr10.final_cleanup_DUP_chr10_1491': 'phase2_DUP_chr10_1234',
+        'cohort_2911.chr10.final_cleanup_DUP_chr10_3659': 'phase2_DUP_chr10_3132',
+        'cohort_2911.chr11.final_cleanup_DUP_chr11_3003': 'phase2_DUP_chr11_2757',
+        'cohort_2911.chr12.final_cleanup_DEL_chr12_244': 'phase2_DEL_chr12_207',
+        'cohort_2911.chr12.final_cleanup_DEL_chr12_5405': 'phase2_DEL_chr12_4072',
+        'cohort_2911.chr12.final_cleanup_INS_chr12_42': 'phase4_all_batches.chr12.final_cleanup_INS_chr12_61',
+        ' cohort_2911.chr14.final_cleanup_DEL_chr14_1513': 'phase2_DEL_chr14_1140',
     },
     'WES': {
         'R4_variant_7334_DUP_08162023': 'R4_variant_7334_DUP',
@@ -246,11 +262,19 @@ SV_ID_UPDATE_MAP = {
         'suffix_239928_DUP_2': 'suffix_247737_DUP',
         'suffix_299627_DUP_2': 'suffix_309488_DUP',
         'suffix_300851_DUP_2': 'suffix_310746_DUP',
+        'prefix_100003_DEL': 'suffix_183787_DEL',
+        'prefix_101443_DEL': 'suffix_308476_DEL',
+        'prefix_10035_DEL': 'suffix_191074_DEL',
     },
 }
 SV_DROPPED_IDS = {
     'cluster_6_last_call_cnv_17479_DUP', 'cluster_1_last_call_cnv_30127_DEL', 'cluster_19_COHORT_cnv_23176_DEL',
-    'phase2_DEL_chrX_1149', 'prefix_121357_DUP', 'prefix_73945_DEL',
+    'phase2_DEL_chrX_1149', 'prefix_121357_DUP', 'prefix_73945_DEL', 'phase2_DUP_chr9_1663', 'phase2_CPX_chr20_4',
+    'phase2_INV_chr19_1', 'cohort_2911.chr2.final_cleanup_BND_chr2_3805', 'prefix_136453_DEL', 'prefix_283065_DEL',
+    'phase2_CPX_chr1_27', 'cohort_2911.chr1.final_cleanup_BND_chr1_3716', 'cohort_2911.chr1.final_cleanup_DEL_chr1_8598',
+    'cohort_2911.chr10.final_cleanup_BND_chr10_174', 'cohort_2911.chr10.final_cleanup_DUP_chr10_3475','prefix_100035_DEL',
+    'cohort_2911.chr11.final_cleanup_DEL_chr11_885', 'cohort_2911.chr11.final_cleanup_DUP_chr11_2292',
+    'cohort_2911.chr12.final_cleanup_DEL_chr12_4527', 'cohort_2911.chr13.final_cleanup_DEL_chr13_2215', 'prefix_100069_DEL',
 }
 
 
@@ -340,14 +364,18 @@ class Command(BaseCommand):
         return no_key
 
     @classmethod
-    def _query_missing_variants(cls, variant_ids, variant_fields, genome_version=GENOME_VERSION_GRCh38):
+    def _query_missing_variants(cls, variant_ids, variant_fields, genome_version=GENOME_VERSION_GRCh38, exclude_project=None):
         missing_variants = SavedVariant.objects.filter(
             variant_id__in=variant_ids, family__project__genome_version=genome_version,
         )
         num_missing = missing_variants.count()
-        missing_with_search_data = missing_variants.filter(family__individual__sample__is_active=True).values_list(
-            'variant_id', 'family__family_id', 'guid', *variant_fields,
-        ).distinct().order_by('variant_id')
+        missing_with_data_qs = missing_variants.filter(family__individual__sample__is_active=True).distinct()
+        if exclude_project:
+            num_missing = (num_missing, missing_with_data_qs.count())
+            missing_with_data_qs = missing_with_data_qs.exclude(family__project__guid=exclude_project)
+        missing_with_search_data = missing_with_data_qs.values(
+            'variant_id', *variant_fields,
+        ).annotate(family_ids=ArrayAgg('family__family_id', distinct=True)).order_by('variant_id')
         return missing_with_search_data, num_missing
 
     @classmethod
@@ -356,7 +384,10 @@ class Command(BaseCommand):
             variant_ids, ['saved_variant_json__populations__seqr__ac'], genome_version,
         )
         num_data= len(missing_with_search_data)
-        in_backend = [' - '.join(var[:3]) for var in missing_with_search_data if var[3]]
+        in_backend = [
+            f"{var['variant_id']} - {'; '.join(var['family_ids'])}"
+            for var in missing_with_search_data if var['saved_variant_json__populations__seqr__ac']
+        ]
         logger.info(
             f'{num_missing} variants have no key, {num_missing - num_data} of which have no search data, {num_data - len(in_backend)} of which are absent from the hail backend.'
         )
@@ -366,12 +397,10 @@ class Command(BaseCommand):
     @classmethod
     def _resolve_reloaded_svs(cls, variant_ids):
         num_known_dropped = len(SV_DROPPED_IDS.intersection(variant_ids))
-        missing_with_search_data, num_missing = cls._query_missing_variants(
-            list(set(variant_ids) - SV_DROPPED_IDS), ['family__individual__sample__sample_type', 'family__project__guid'],
-        )
-        num_data = len(missing_with_search_data)
         # The CMG_gCNV project was an old project created before SV data was widely available, and keeping it up to date is less crucial
-        valid_project_data = [variant for variant in missing_with_search_data if variant[4] != 'R0486_cmg_gcnv']
+        valid_project_data, (num_missing, num_data) = cls._query_missing_variants(
+            list(set(variant_ids) - SV_DROPPED_IDS), ['family__individual__sample__sample_type'], exclude_project='R0486_cmg_gcnv',
+        )
         logger.info(
             f'{num_missing + num_known_dropped} variants have no key, {num_known_dropped} of which are known to have dropped out of the callset, {num_missing - num_data} of which have no search data, {num_data - len(valid_project_data)} of which are in a skippable project.'
         )
@@ -382,8 +411,8 @@ class Command(BaseCommand):
         missing_by_sample_type = defaultdict(list)
         update_variants_by_sample_type = defaultdict(dict)
         for variant in valid_project_data:
-            variant_id = variant[0]
-            sample_type = variant[3]
+            variant_id = variant['variant_id']
+            sample_type = variant['family__individual__sample__sample_type']
             update_id = SV_ID_UPDATE_MAP[sample_type].get(variant_id)
             if not update_id and sample_type == 'WES' :
                 suffix = next((suff for suff in ['_DEL', '_DUP'] if variant_id.endswith(suff)), None)
@@ -396,7 +425,7 @@ class Command(BaseCommand):
             elif re.match(r'.*_(DEL|DUP)_\d+', variant_id):
                 update_variants_by_sample_type[sample_type][variant_id] = variant_id.rsplit('_', 1)[0]
             else:
-                missing_by_sample_type[sample_type].append(variant[:3])
+                missing_by_sample_type[sample_type].append(f"{variant_id} - {'; '.join(variant['family_ids'])}" )
 
         for sample_type, variant_id_updates in update_variants_by_sample_type.items():
             logger.info(f'Mapping reloaded SV_{sample_type} IDs to latest version')
@@ -408,7 +437,7 @@ class Command(BaseCommand):
                 logger.info(f'{len(failed_mapping)} variants failed ID mapping: {list(failed_mapping)[:10]}...')
 
         for sample_type, variants in missing_by_sample_type.items():
-            logger.info(f'{len(variants)} remaining SV {sample_type} variants: {variants[:10]}...')
+            logger.info(f'{len(variants)} remaining SV {sample_type} variants: {", ".join(variants[:10])}...')
 
     @staticmethod
     def _load_gcnv_id_map():
