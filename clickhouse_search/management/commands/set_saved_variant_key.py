@@ -41,6 +41,13 @@ SV_ID_UPDATE_MAP = {
         'cohort_2911.chr12.final_cleanup_DEL_chr12_5405': 'phase2_DEL_chr12_4072',
         'cohort_2911.chr12.final_cleanup_INS_chr12_42': 'phase4_all_batches.chr12.final_cleanup_INS_chr12_61',
         ' cohort_2911.chr14.final_cleanup_DEL_chr14_1513': 'phase2_DEL_chr14_1140',
+        'cohort_2911.chr14.final_cleanup_DEL_chr14_1513': 'phase2_DEL_chr14_1140',
+        'cohort_2911.chr14.final_cleanup_DEL_chr14_2595': 'phase2_DEL_chr14_1998',
+        'cohort_2911.chr15.final_cleanup_DEL_chr15_3281': 'phase2_DEL_chr15_2486',
+        'cohort_2911.chr16.final_cleanup_DEL_chr16_5308': 'phase2_DEL_chr16_4074',
+        'cohort_2911.chr17.final_cleanup_BND_chr17_209': 'phase4_all_batches.chr17.final_cleanup_BND_chr17_250',
+        'cohort_2911.chr16.final_cleanup_BND_chr16_635': 'phase4_all_batches.chr16.final_cleanup_BND_chr16_744',
+        'cohort_2911.chr17.final_cleanup_CPX_chr17_79': 'phase2_CPX_chr17_46',
     },
     'WES': {
         'R4_variant_7334_DUP_08162023': 'R4_variant_7334_DUP',
@@ -275,6 +282,8 @@ SV_DROPPED_IDS = {
     'cohort_2911.chr10.final_cleanup_BND_chr10_174', 'cohort_2911.chr10.final_cleanup_DUP_chr10_3475','prefix_100035_DEL',
     'cohort_2911.chr11.final_cleanup_DEL_chr11_885', 'cohort_2911.chr11.final_cleanup_DUP_chr11_2292',
     'cohort_2911.chr12.final_cleanup_DEL_chr12_4527', 'cohort_2911.chr13.final_cleanup_DEL_chr13_2215', 'prefix_100069_DEL',
+    'cohort_2911.chr11.final_cleanup_DEL_chr11_8856', 'cohort_2911.chr14.final_cleanup_DEL_chr14_5833',
+    'cohort_2911.chr16.final_cleanup_DEL_chr16_3',
 }
 
 
