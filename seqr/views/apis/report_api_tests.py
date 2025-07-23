@@ -623,7 +623,7 @@ GENETIC_FINDINGS_TABLE = [
         '248367227', 'TC', 'T', 'CA1501729', 'RP11', '', '', '', 'Homozygous', '', 'paternal', '', '', 'Known', '',
         'MONDO:0044970', '', 'Uncertain', '', 'Broad_HG00732', 'SR-ES', '', '', '', '', '', '', '',
     ], [
-        'Broad_HG00731_19_1912632', 'Broad_HG00731', 'Broad_exome_VCGS_FAM203_621_D2', 'SNV', 'GRCh38', '19',
+        'Broad_HG00731_19_1912632', 'Broad_HG00731', 'Broad_exome_VCGS_FAM203_621_D2', 'SNV', 'GRCh37', '19',
         '1912632', 'G', 'C', '', 'OR4G11P', 'ENST00000371839', 'c.586_587delinsTT', 'p.Ala196Leu', 'Heterozygous', '', 'unknown',
         'Broad_HG00731_19_1912634', '', 'Known', '', 'MONDO:0044970', '', 'Full', '', '', 'SR-ES',
         'The following variants are part of the multinucleotide variant 19-1912632-G-C (c.586_587delinsTT, p.Ala196Leu): 19-1912633-G-T, 19-1912634-C-T',
@@ -1393,7 +1393,7 @@ class ReportAPITest(AirtableTest):
             'tags': ['Known gene for phenotype'],
             'transcript': 'ENST00000371839',
             'variant_inheritance': 'unknown',
-            'variant_reference_assembly': 'GRCh38',
+            'variant_reference_assembly': 'GRCh37',
             'variant_type': 'SNV',
             'zygosity': 'Heterozygous',
         }
