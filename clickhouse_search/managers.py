@@ -598,11 +598,14 @@ class EntriesManager(QuerySet):
         })
 
     @property
+    def clinvar_model(self):
+        return self.model.clinvar_join.rel.related_model
+
+    @property
     def clinvar_fields(self):
-        clinvar_model = self.model.clinvar_join.rel.related_model
         return OrderedDict({
             f'clinvar_join__{field.name}': (field.db_column or field.name, field)
-            for field in reversed(clinvar_model._meta.local_fields) if field.name != 'key'
+            for field in reversed(self.clinvar_model._meta.local_fields) if field.name != 'key'
         })
 
     def search(self, sample_data, parsed_locus=None, freqs=None, annotations=None, **kwargs):

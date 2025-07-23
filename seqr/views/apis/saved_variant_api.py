@@ -3,8 +3,7 @@ import json
 from django.db.models import Q, F
 
 from clickhouse_search.backend.functions import ArrayFilter, ArrayMap
-from clickhouse_search.models import TRANSCRIPTS_CLASS_MAP
-from clickhouse_search.search import get_annotations_queryset
+from clickhouse_search.search import get_annotations_queryset, get_transcripts_queryset
 from seqr.models import SavedVariant, VariantTagType, VariantTag, VariantNote, VariantFunctionalData,\
     Family, GeneNote, Project
 from seqr.utils.search.utils import backend_specific_call
@@ -146,7 +145,7 @@ def _variant_gene_id(variant, genome_version):
 
 def _clickhouse_variant_gene_id(variant, genome_version):
     if variant.selected_main_transcript_id:
-        qs = TRANSCRIPTS_CLASS_MAP[genome_version].filter(key=variant.key).annotate(gene_ids=ArrayMap(
+        qs = get_transcripts_queryset(genome_version, [variant.key]).annotate(gene_ids=ArrayMap(
             ArrayFilter('transcripts', [{'transcriptId': (variant.selected_main_transcript_id, '{field} = {value}')}]),
             mapped_expression='x.geneId',
         )).annotate(gene_id=F('gene_ids__0'))

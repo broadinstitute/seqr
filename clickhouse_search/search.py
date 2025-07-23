@@ -175,12 +175,16 @@ def get_clickhouse_cache_results(results, sort, family_guid):
     return {'all_results': sorted_results, 'total_results': total_results}
 
 
+def get_transcripts_queryset(genome_version, keys):
+    return TRANSCRIPTS_CLASS_MAP[genome_version].objects.filter(key__in=keys)
+
+
 def format_clickhouse_results(results, genome_version, **kwargs):
     keys_with_transcripts = {
         variant['key'] for result in results for variant in (result if isinstance(result, list) else [result]) if not 'transcripts' in variant
     }
     transcripts_by_key = dict(
-        TRANSCRIPTS_CLASS_MAP[genome_version].objects.filter(key__in=keys_with_transcripts).values_list('key', 'transcripts')
+        get_transcripts_queryset(genome_version, keys_with_transcripts).values_list('key', 'transcripts')
     )
 
     formatted_results = []
@@ -484,6 +488,18 @@ def get_clickhouse_keys_for_gene(gene_id, genome_version, dataset_type, keys):
     return results.filter(
         **{f'{results.transcript_field}__array_exists': {'geneId': (gene_id,)}},
     ).values_list('key', flat=True)
+
+
+def get_clickhouse_clinvar(genome_version, dataset_type, keys):
+    clinvar_cls = ENTRY_CLASS_MAP[genome_version][dataset_type].objects.clinvar_model
+    fields = []
+    values = {}
+    for field in clinvar_cls._meta.local_fields:
+        if field.db_column:
+            values[field.name] = F(field.db_column)
+        else:
+            fields.append(field.name)
+    return clinvar_cls.objects.filter(key__in=keys).values(*fields, **values)
 
 
 def get_clickhouse_key_lookup(genome_version, dataset_type, variants_ids):
