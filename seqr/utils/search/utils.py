@@ -54,11 +54,7 @@ def _raise_search_error(error):
     return _wrapped
 
 
-def _raise_clickhouse_not_implemented(*args, **kwargs):
-    raise NotImplementedError('Clickhouse backend is not implemented for this function.')
-
-
-def backend_specific_call(es_func, hail_backend_func, clickhouse_func=_raise_clickhouse_not_implemented):
+def backend_specific_call(es_func, hail_backend_func, clickhouse_func):
     if es_backend_enabled():
         return es_func
     elif clickhouse_backend_enabled():
@@ -68,11 +64,11 @@ def backend_specific_call(es_func, hail_backend_func, clickhouse_func=_raise_cli
 
 
 def ping_search_backend():
-    backend_specific_call(ping_elasticsearch, ping_hail_backend)()
+    backend_specific_call(ping_elasticsearch, ping_hail_backend, ping_clickhouse_backend)() # TODO
 
 
 def ping_search_backend_admin():
-    backend_specific_call(ping_kibana, lambda: True)()
+    backend_specific_call(ping_kibana, lambda: True, lambda: True)()
 
 
 def get_search_backend_status():
@@ -157,7 +153,7 @@ def _get_variants_for_variant_ids(families, variant_ids, user, user_email=None, 
         }
     dataset_type = _variant_ids_dataset_type(parsed_variant_ids.values())
 
-    return backend_specific_call(get_es_variants_for_variant_ids, get_hail_variants_for_variant_ids)(
+    return backend_specific_call(get_es_variants_for_variant_ids, get_hail_variants_for_variant_ids, get_clickhouse_variants_for_variant_ids)(  # TODO
         _get_families_search_data(families, dataset_type=dataset_type), _get_search_genome_version(families),
         parsed_variant_ids, user, user_email=user_email, **kwargs
     )
