@@ -239,13 +239,16 @@ class ReloadClinvarAllVariantsTest(TestCase):
             with self.assertRaisesMessage(CommandError, error_message):
                 call_command('reload_clinvar_all_variants')
 
-        # Variants with missing alleles and positions are skipped
+        # Variants with missing/equivalent alleles and positions are skipped
         for simple_allele_attrs, sequence_location_attrs in [
             # Case 1: Missing AlleleId in <SimpleAllele>
             ("", 'Assembly="GRCh38" Chr="1" positionVCF="1" referenceAlleleVCF="G" alternateAlleleVCF="A"'),
 
             # Case 2: Missing alternateAlleleVCF in <SequenceLocation>
             ('AlleleID="5603"', 'Assembly="GRCh38" Chr="1" positionVCF="1" referenceAlleleVCF="G"'),
+
+            # Case 3: ref/alt are equal
+            ('AlleleID="5603"', 'Assembly="GRCh38" Chr="1" positionVCF="1" referenceAlleleVCF="G" alternateAlleleVCF="G"'),
         ]:
             data = f'''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
             <ClinVarVariationRelease xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"

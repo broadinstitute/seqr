@@ -95,6 +95,7 @@ def parse_positions(classified_record_node: xml.etree.ElementTree.Element) -> di
                 and seq_loc.get('alternateAlleleVCF')
                 and seq_loc.get('positionVCF')
                 and seq_loc.get('positionVCF').isdigit()
+                and seq_loc.get('referenceAlleleVCF') != seq_loc.get('alternateAlleleVCF')
             ):
                 positions[seq_loc.attrib['Assembly']] = {
                     'chrom': seq_loc.attrib['Chr'],
