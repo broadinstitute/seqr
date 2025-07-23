@@ -231,6 +231,7 @@ def _load_aip_data(data: dict, user: User):
 
 FamilyVariantKey = tuple[int, str]
 
+
 # TODO handle clickhouse
 def _search_new_saved_variants(family_variant_ids: list[FamilyVariantKey], user: User):
     family_ids = set()

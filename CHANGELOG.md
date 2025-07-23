@@ -1,6 +1,7 @@
 # _seqr_ Changes
 
 ## dev
+* Deprecate support for lifting existing projects from GRCH37 to GRCh38
 
 ## 4/4/25
 * Refactor manage commands to update reference data. May require changes to custom cron jobs. (REQUIRES DB MIGRATION)
