@@ -76,7 +76,7 @@ def ping_search_backend_admin():
 
 
 def get_search_backend_status():
-    return backend_specific_call(get_elasticsearch_status, _raise_search_error('Elasticsearch is disabled'))()
+    return backend_specific_call(get_elasticsearch_status, _raise_search_error('Elasticsearch is disabled'), _raise_search_error('Elasticsearch is disabled'))()
 
 
 def _get_filtered_search_samples(search_filter, active_only=True):
@@ -126,7 +126,8 @@ def delete_search_backend_data(data_id):
         raise InvalidSearchException(f'"{data_id}" is still used by: {", ".join(projects)}')
 
     return backend_specific_call(
-        delete_es_index, _raise_search_error('Deleting indices is disabled for the hail backend'),
+        delete_es_index, _raise_search_error('Deleting indices is disabled without the elasticsearch backend'),
+        _raise_search_error('Deleting indices is disabled without the elasticsearch backend'),
     )(data_id)
 
 

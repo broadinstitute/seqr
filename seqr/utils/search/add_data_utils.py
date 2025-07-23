@@ -19,8 +19,8 @@ from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, BASE_URL, ANVI
 logger = SeqrLogger(__name__)
 
 
-def _hail_backend_error(*args, **kwargs):
-    raise ValueError('Adding samples is disabled for the hail backend')
+def _no_es_backend_error(*args, **kwargs):
+    raise ValueError('Adding samples is disabled without the elasticsearch backend')
 
 
 def add_new_es_search_samples(request_json, project, user, notify=False, expected_families=None):
@@ -30,7 +30,8 @@ def add_new_es_search_samples(request_json, project, user, notify=False, expecte
 
     sample_ids, sample_type, sample_data = backend_specific_call(
         validate_es_index_metadata_and_get_samples,
-        _hail_backend_error,
+        _no_es_backend_error,
+        _no_es_backend_error,
     )(request_json, project)
     if not sample_ids:
         raise ValueError('No samples found. Make sure the specified caller type is correct')

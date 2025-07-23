@@ -519,6 +519,7 @@ def get_group_members_side_effect(user, group, use_sa_credentials=False):
 class AnvilAuthenticationTestCase(AuthenticationTestCase):
 
     ES_HOSTNAME = ''
+    CLICKHOUSE_HOSTNAME = 'testhost'
     MOCK_AIRTABLE_KEY = 'airflow_access'
 
     # mock the terra apis
