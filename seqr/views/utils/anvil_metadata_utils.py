@@ -328,7 +328,7 @@ def _get_parsed_saved_discovery_variants_by_family(
     tag_types = VariantTagType.objects.filter(project__isnull=True, category=DISCOVERY_CATEGORY)
 
     annotations = dict(
-        genome_version= F('family__project__genome_version'),
+        genome_version=F('family__project__genome_version'),
         tags=ArrayAgg('varianttag__variant_tag_type__name', distinct=True),
         notes=ArrayAgg('variantnote__note', distinct=True, filter=Q(variantnote__report=True)),
         partial_hpo_terms=ArrayAgg('variantfunctionaldata__metadata', distinct=True, filter=Q(variantfunctionaldata__functional_data_tag='Partial Phenotype Contribution')),
@@ -364,7 +364,7 @@ def _get_parsed_saved_discovery_variants_by_family(
         parsed_variant = {
             'chrom': 'MT' if chrom == 'M' else chrom,
             'pos': pos,
-            'variant_reference_assembly': variant.genome_version,
+            'variant_reference_assembly': GENOME_VERSION_LOOKUP[variant.genome_version],
             'gene_id': variant_json['gene_id'],
             'gene_ids': variant_json['gene_ids'],
             'gene_known_for_phenotype': 'Known' if 'Known gene for phenotype' in variant.tags else 'Candidate',
@@ -406,7 +406,7 @@ def _get_variant_json_by_guid(saved_variants, *args, **kwargs):
     for v in saved_variants:
         main_transcript = _get_variant_main_transcript(v)
         gene_id = main_transcript.get('geneId')
-        gene_ids = [gene_id] if gene_id else v.saved_variant_json.get('transcripts', {}).keys(),
+        gene_ids = [gene_id] if gene_id else v.saved_variant_json.get('transcripts', {}).keys()
         variant_json_by_guid[v.guid] = {
             **v.saved_variant_json, 'main_transcript': main_transcript, 'gene_id': gene_id, 'gene_ids': gene_ids,
         }
