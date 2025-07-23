@@ -131,6 +131,7 @@ def query_single_variant_handler(request, variant_id):
     families = Family.objects.filter(guid=request.GET.get('familyGuid'))
     check_project_permissions(families.first().project, request.user)
 
+    # TODO support for clickhouse, note can be just a single family
     variant = get_single_variant(families, variant_id, user=request.user)
 
     response = _process_variants([variant], families, request, add_all_context=True, add_locus_list_detail=True)
