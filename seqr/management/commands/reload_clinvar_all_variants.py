@@ -183,7 +183,7 @@ def parse_submitters_and_conditions(classified_record_node: xml) -> [list[str], 
     })
     conditions = sorted({
         c.attrib['Name']
-        for c in classified_record_node.findall('ClinicalAssertionList/TraitMappingList/TraitMapping/MedGen')
+        for c in classified_record_node.findall('TraitMappingList/TraitMapping/MedGen')
         if c.attrib['Name'] != 'not provided'
     })
     return submitters, conditions

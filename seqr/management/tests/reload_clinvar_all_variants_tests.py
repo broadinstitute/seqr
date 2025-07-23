@@ -42,24 +42,24 @@ WEEKLY_XML_RELEASE_DATA = WEEKLY_XML_RELEASE_HEADER + '''
                 <ClinicalAssertion>
                     <ClinVarAccession SubmitterName="Revvity Omics, Revvity" OrgID="167595" OrganizationCategory="laboratory"/>
                 </ClinicalAssertion>
-                <TraitMappingList>
-                    <TraitMapping>
-                        <MedGen CUI="C3661900" Name="not provided"/>
-                    </TraitMapping>
-                    <TraitMapping>
-                        <MedGen CUI="C0678222" Name="Breast carcinoma"/>
-                    </TraitMapping>
-                    <TraitMapping>
-                        <MedGen CUI="None" Name="CHEK2-related disorder"/>
-                    </TraitMapping>
-                    <TraitMapping>
-                        <MedGen CUI="C5882668" Name="CHEK2-related cancer predisposition"/>
-                    </TraitMapping>
-                    <TraitMapping>
-                        <MedGen CUI="C0027672" Name="Hereditary cancer-predisposing syndrome"/>
-                    </TraitMapping>
-                </TraitMappingList>
             </ClinicalAssertionList>
+            <TraitMappingList>
+                <TraitMapping>
+                    <MedGen CUI="C3661900" Name="not provided"/>
+                </TraitMapping>
+                <TraitMapping>
+                    <MedGen CUI="C0678222" Name="Breast carcinoma"/>
+                </TraitMapping>
+                <TraitMapping>
+                    <MedGen CUI="None" Name="CHEK2-related disorder"/>
+                </TraitMapping>
+                <TraitMapping>
+                    <MedGen CUI="C5882668" Name="CHEK2-related cancer predisposition"/>
+                </TraitMapping>
+                <TraitMapping>
+                    <MedGen CUI="C0027672" Name="Hereditary cancer-predisposing syndrome"/>
+                </TraitMapping>
+            </TraitMappingList>
         </ClassifiedRecord>
     </VariationArchive>
     <VariationArchive VariationID="5603" RecordType="classified" NumberOfSubmissions="38" NumberOfSubmitters="36" DateLastUpdated="2025-06-29" DateCreated="2016-03-20" MostRecentSubmission="2025-06-29">
