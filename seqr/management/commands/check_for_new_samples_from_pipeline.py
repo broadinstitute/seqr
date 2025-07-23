@@ -35,6 +35,10 @@ ERRORS_REPORTED_FILE_NAME = '_ERRORS_REPORTED'
 RUN_PATH_FIELDS = ['genome_version', 'dataset_type', 'run_version', 'file_name']
 
 DATASET_TYPE_MAP = {'GCNV': Sample.DATASET_TYPE_SV_CALLS}
+CLICKHOUSE_DATASET_TYPE_MAP = {
+    'GCNV': f'{Sample.DATASET_TYPE_SV_CALLS}_WES',
+    Sample.DATASET_TYPE_SV_CALLS: f'{Sample.DATASET_TYPE_SV_CALLS}_WGS',
+}
 USER_EMAIL = 'manage_command'
 MAX_LOOKUP_VARIANTS = 1000
 MAX_RELOAD_VARIANTS = 100000
@@ -207,6 +211,7 @@ class Command(BaseCommand):
 
     @classmethod
     def _load_new_samples(cls, metadata_path, genome_version, dataset_type, run_version, **kwargs):
+        clickhouse_dataset_type = CLICKHOUSE_DATASET_TYPE_MAP.get(dataset_type, dataset_type)
         dataset_type = DATASET_TYPE_MAP.get(dataset_type, dataset_type)
 
         logger.info(f'Loading new samples from {genome_version}/{dataset_type}: {run_version}')
@@ -275,7 +280,7 @@ class Command(BaseCommand):
         update_function = backend_specific_call(None, None, cls._update_project_saved_variant_genotypes)
         updated_variants_by_id = update_projects_saved_variant_json([
             (project.id, project.guid, project.name, project.genome_version, families) for project, families in families_by_project.items()
-        ], user_email=USER_EMAIL, dataset_type=dataset_type, update_function=update_function, samples=updated_samples)
+        ], user_email=USER_EMAIL, dataset_type=dataset_type, update_function=update_function, samples=updated_samples, clickhouse_dataset_type=clickhouse_dataset_type)
 
         return search_data_type(dataset_type, sample_type), set(family_project_map.keys()), updated_variants_by_id
 
@@ -412,23 +417,23 @@ class Command(BaseCommand):
             )
 
     @classmethod
-    def _update_project_saved_variant_genotypes(cls, project_id, genome_version, user_email, family_guids, project_guid, dataset_type=None, samples=None):
+    def _update_project_saved_variant_genotypes(cls, project_id, genome_version, user_email, family_guids, project_guid, samples=None, clickhouse_dataset_type=None, **kwargs):
         for family_guid in family_guids:
             variant_models_by_key = {
-                v.key: v for v in get_saved_variants(genome_version, project_id, [family_guid], dataset_type)
+                v.key: v for v in get_saved_variants(genome_version, project_id, [family_guid], clickhouse_dataset_type=clickhouse_dataset_type)
             }
             if not variant_models_by_key:
                 continue
             variants = []
             family_samples = samples.filter(individual__family__guid=family_guid)
             genotypes_by_key = get_clickhouse_genotypes(
-                project_guid, family_guid, genome_version, dataset_type, variant_models_by_key.keys(), family_samples,
+                project_guid, family_guid, genome_version, clickhouse_dataset_type, variant_models_by_key.keys(), family_samples,
             )
             for key, genotypes in genotypes_by_key:
                 variant = variant_models_by_key[key]
                 variant.genotypes = genotypes
                 variants.append(variant)
-            logger.info(f'Reloading genotypes for {len(variants)} {dataset_type} variants in family {family_guid}')
+            logger.info(f'Reloading genotypes for {len(variants)} {clickhouse_dataset_type} variants in family {family_guid}')
             SavedVariant.bulk_update_models(None, variants, ['genotypes'])
 
     @classmethod

@@ -68,8 +68,7 @@ def update_projects_saved_variant_json(projects, user_email, update_function=Non
     return updated_variants_by_id
 
 
-def get_saved_variants(genome_version, project_id=None, family_guids=None, dataset_type=None):
-    # TODO PR: stop supporting other genome build variants?
+def get_saved_variants(genome_version, project_id=None, family_guids=None, dataset_type=None, clickhouse_dataset_type=None):
     saved_variants = SavedVariant.objects.filter(
         Q(saved_variant_json__genomeVersion__isnull=True) |
         Q(saved_variant_json__genomeVersion=genome_version.replace('GRCh', ''))
@@ -80,6 +79,8 @@ def get_saved_variants(genome_version, project_id=None, family_guids=None, datas
         saved_variants = saved_variants.filter(family__guid__in=family_guids)
     if dataset_type:
         saved_variants = saved_variants.filter(**saved_variants_dataset_type_filter(dataset_type))
+    elif clickhouse_dataset_type:
+        saved_variants = saved_variants.filter(dataset_type=clickhouse_dataset_type)
     return saved_variants
 
 
@@ -137,7 +138,7 @@ def parse_saved_variant_json(variant_json, family_id, variant_id=None,):
     update_json = backend_specific_call(
         {'saved_variant_json': variant_json},
         {'saved_variant_json': variant_json},
-        {'genotypes': variant_json.get('genotypes', {}), 'dataset_type': _dataset_type(variant_id, variant_json)},
+        {'key': variant_json.get('key'), 'genotypes': variant_json.get('genotypes', {}), 'dataset_type': _dataset_type(variant_id, variant_json)},
     )
     return {
         'xpos': xpos,
