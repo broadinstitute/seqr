@@ -464,7 +464,7 @@ class AnvilDatasetAPITest(AnvilAuthenticationTestCase, DatasetAPITest):
     def _assert_expected_add_dataset_errors(self, url):
         response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()['errors'][0], 'Adding samples is disabled for the hail backend')
+        self.assertEqual(response.json()['errors'][0], 'Adding samples is disabled without the elasticsearch backend')
 
     def test_add_variants_dataset(self, *args):
         # Adding dataset is always disabled when ES is disabled, which is tested in test_add_variants_dataset_errors

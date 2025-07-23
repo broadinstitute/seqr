@@ -127,6 +127,7 @@ def delete_search_backend_data(data_id):
 
     return backend_specific_call(
         delete_es_index, _raise_search_error('Deleting indices is disabled without the elasticsearch backend'),
+        _raise_search_error('Deleting indices is disabled without the elasticsearch backend'),
     )(data_id)
 
 
