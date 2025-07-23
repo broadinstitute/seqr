@@ -4,6 +4,7 @@ from datetime import timedelta
 
 from clickhouse_search.search import clickhouse_backend_enabled, get_clickhouse_variants, format_clickhouse_results, \
     get_clickhouse_cache_results, clickhouse_variant_lookup
+from hail_search.web_app import search
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample, Individual, Project
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_get_wildcard_json, safe_redis_set_json
@@ -87,8 +88,8 @@ def get_search_samples(projects, active_only=True):
     return _get_filtered_search_samples({'individual__family__project__in': projects}, active_only=active_only)
 
 
-def _get_families_search_data(families, dataset_type):
-    samples = _get_filtered_search_samples({'individual__family__in': families})
+def _get_families_search_data(families, dataset_type, sample_filter=None):
+    samples = _get_filtered_search_samples(sample_filter or {'individual__family__in': families})
     if len(samples) < 1:
         raise InvalidSearchException('No search data found for families {}'.format(
             ', '.join([f.family_id for f in families])))
@@ -128,20 +129,28 @@ def delete_search_backend_data(data_id):
     )(data_id)
 
 
-def get_single_variant(families, variant_id, return_all_queried_families=False, user=None):
-    variants = _get_variants_for_variant_ids(
-        families, [variant_id], user, return_all_queried_families=return_all_queried_families,
-    )
-    if not variants:
+def get_single_variant(family, variant_id, user=None):
+    parsed_variant_id = parse_variant_id(variant_id)
+    dataset_type = _variant_ids_dataset_type([parsed_variant_id])
+    samples = _get_families_search_data([family], dataset_type, sample_filter={'individual__family_id': family.id})
+    variant = backend_specific_call(
+        _process_ids_search(get_es_variants_for_variant_ids),
+        _process_ids_search(get_hail_variants_for_variant_ids),
+        get_clickhouse_variant_by_id, # TODO
+    )(parsed_variant_id, samples, family.project.genome_version, user)
+    if not variant:
         raise InvalidSearchException('Variant {} not found'.format(variant_id))
-    return variants[0]
+    return variant
+
+
+def _process_ids_search(search_func):
+    def _search(parsed_variant_id, samples, genome_version, user):
+        variants = search_func(samples, genome_version, [parsed_variant_id], user)
+        return variants[0] if variants else None
+    return _search
 
 
 def get_variants_for_variant_ids(families, variant_ids, dataset_type=None, user=None, user_email=None):
-    return _get_variants_for_variant_ids(families, variant_ids, user, user_email, dataset_type=dataset_type)
-
-
-def _get_variants_for_variant_ids(families, variant_ids, user, user_email=None, dataset_type=None, **kwargs):
     parsed_variant_ids = {}
     for variant_id in variant_ids:
         parsed_variant_ids[variant_id] = parse_variant_id(variant_id)
@@ -154,9 +163,9 @@ def _get_variants_for_variant_ids(families, variant_ids, user, user_email=None, 
         }
     dataset_type = _variant_ids_dataset_type(parsed_variant_ids.values())
 
-    return backend_specific_call(get_es_variants_for_variant_ids, get_hail_variants_for_variant_ids, get_clickhouse_variants_for_variant_ids)(  # TODO
+    return backend_specific_call(get_es_variants_for_variant_ids, get_hail_variants_for_variant_ids, get_clickhouse_variants_for_variant_ids)(  # TODO assure never used and raise?
         _get_families_search_data(families, dataset_type=dataset_type), _get_search_genome_version(families),
-        parsed_variant_ids, user, user_email=user_email, **kwargs
+        parsed_variant_ids, user, user_email=user_email,
     )
 
 

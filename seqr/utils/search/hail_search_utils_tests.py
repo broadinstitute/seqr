@@ -335,30 +335,25 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
 
     @responses.activate
     def test_get_single_variant(self):
-        variant = get_single_variant(self.families, '2-103343353-GAGA-G', user=self.user)
+        family = self.families.filter(guid='F000002_2').first()
+        variant = get_single_variant(family, '2-103343353-GAGA-G', user=self.user)
         self.assertDictEqual(variant, HAIL_BACKEND_VARIANTS[0])
         self._test_minimal_search_call(
             variant_ids=[['2', 103343353, 'GAGA', 'G']], variant_keys=[],
             num_results=1, sample_data={'SNV_INDEL': ALL_AFFECTED_SAMPLE_DATA['SNV_INDEL']})
 
-        get_single_variant(self.families, 'prefix_19107_DEL', user=self.user)
+        get_single_variant(family, 'prefix_19107_DEL', user=self.user)
         self._test_minimal_search_call(
             variant_ids=[], variant_keys=['prefix_19107_DEL'],
             num_results=1, sample_data=EXPECTED_SAMPLE_DATA, omit_data_type='SNV_INDEL')
 
-        get_single_variant(self.families, 'M-10195-C-A', user=self.user)
+        get_single_variant(family, 'M-10195-C-A', user=self.user)
         self._test_minimal_search_call(
             variant_ids=[['M', 10195, 'C', 'A']], variant_keys=[],
             num_results=1, sample_data=EXPECTED_MITO_SAMPLE_DATA)
 
-        with self.assertRaises(InvalidSearchException) as cm:
-            get_single_variant(self.families, '1-91502721-G-A', user=self.user, return_all_queried_families=True)
-        self.assertEqual(
-            str(cm.exception),
-            'Unable to return all families for the following variants: 1-38724419-T-G (F000003_3; F000005_5), 1-91502721-G-A (F000005_5)',
-        )
 
-        get_single_variant(self.families.filter(guid='F000002_2'), '2-103343353-GAGA-G', user=self.user, return_all_queried_families=True)
+        get_single_variant(family, '2-103343353-GAGA-G', user=self.user)
         self._test_minimal_search_call(
             variant_ids=[['2', 103343353, 'GAGA', 'G']], variant_keys=[],
             num_results=1, sample_data=FAMILY_2_VARIANT_SAMPLE_DATA)

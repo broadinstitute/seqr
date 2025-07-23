@@ -15,6 +15,7 @@ from seqr.views.utils.test_utils import PARSED_VARIANTS, PARSED_COMPOUND_HET_VAR
 SV_SAMPLES = ['S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733']
 MITO_SAMPLES = ['S000149_hg00733']
 NON_SNP_INDEL_SAMPLES = SV_SAMPLES + MITO_SAMPLES
+FAMILY_3_SAMPLE = 'S000135_na20870'
 
 class SearchTestHelper(object):
 
@@ -51,7 +52,7 @@ class SearchUtilsTests(SearchTestHelper):
              'S000137_na20874',
         ])
         self.affected_search_samples = Sample.objects.filter(guid__in=[
-            'S000132_hg00731', 'S000133_hg00732', 'S000134_hg00733', 'S000135_na20870',
+            'S000132_hg00731', 'S000133_hg00732', 'S000134_hg00733', FAMILY_3_SAMPLE,
             'S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733', 'S000149_hg00733',
         ])
         self.search_samples = list(self.affected_search_samples) + list(self.non_affected_search_samples)
@@ -98,26 +99,21 @@ class SearchUtilsTests(SearchTestHelper):
         self.mock_redis.get.assert_called_with(cache_key)
 
     def test_get_single_variant(self, mock_get_variants_for_ids):
+        # TODO better mocking
         mock_get_variants_for_ids.return_value = [PARSED_VARIANTS[0]]
-        variant = get_single_variant(self.families, '2-103343353-GAGA-G', user=self.user)
+        family = self.families.filter(guid='F000002_2').first()
+        variant = get_single_variant(family, '2-103343353-GAGA-G', user=self.user)
         self.assertDictEqual(variant, PARSED_VARIANTS[0])
         mock_get_variants_for_ids.assert_called_with(
-            mock.ANY, '37', {'2-103343353-GAGA-G': ('2', 103343353, 'GAGA', 'G')}, self.user, return_all_queried_families=False,
+            mock.ANY, '37', {'2-103343353-GAGA-G': ('2', 103343353, 'GAGA', 'G')}, self.user,
             user_email=None,
         )
-        expected_samples = {s for s in self.search_samples if s.guid not in NON_SNP_INDEL_SAMPLES}
+        expected_samples = {s for s in self.search_samples if s.guid not in NON_SNP_INDEL_SAMPLES and s.guid != FAMILY_3_SAMPLE}
         self.assertSetEqual(set(mock_get_variants_for_ids.call_args.args[0]), expected_samples)
 
-        get_single_variant(self.families, '2-103343353-GAGA-G', user=self.user, return_all_queried_families=True)
+        get_single_variant(family, 'prefix_19107_DEL', user=self.user)
         mock_get_variants_for_ids.assert_called_with(
-            mock.ANY, '37', {'2-103343353-GAGA-G': ('2', 103343353, 'GAGA', 'G')}, self.user, return_all_queried_families=True,
-            user_email=None,
-        )
-        self.assertSetEqual(set(mock_get_variants_for_ids.call_args.args[0]), expected_samples)
-
-        get_single_variant(self.families, 'prefix_19107_DEL', user=self.user)
-        mock_get_variants_for_ids.assert_called_with(
-            mock.ANY, '37', {'prefix_19107_DEL': None}, self.user, return_all_queried_families=False, user_email=None,
+            mock.ANY, '37', {'prefix_19107_DEL': None}, self.user, user_email=None,
         )
         expected_samples = {
             s for s in self.search_samples if s.guid in ['S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733']
@@ -126,7 +122,7 @@ class SearchUtilsTests(SearchTestHelper):
 
         mock_get_variants_for_ids.return_value = []
         with self.assertRaises(InvalidSearchException) as cm:
-            get_single_variant(self.families, '10-10334333-A-G')
+            get_single_variant(family, '10-10334333-A-G')
         self.assertEqual(str(cm.exception), 'Variant 10-10334333-A-G not found')
 
     def test_get_variants_for_variant_ids(self, mock_get_variants_for_ids):
