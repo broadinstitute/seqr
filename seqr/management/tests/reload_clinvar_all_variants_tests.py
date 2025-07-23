@@ -42,24 +42,24 @@ WEEKLY_XML_RELEASE_DATA = WEEKLY_XML_RELEASE_HEADER + '''
                 <ClinicalAssertion>
                     <ClinVarAccession SubmitterName="Revvity Omics, Revvity" OrgID="167595" OrganizationCategory="laboratory"/>
                 </ClinicalAssertion>
-                <TraitMappingList>
-                    <TraitMapping>
-                        <MedGen CUI="C3661900" Name="not provided"/>
-                    </TraitMapping>
-                    <TraitMapping>
-                        <MedGen CUI="C0678222" Name="Breast carcinoma"/>
-                    </TraitMapping>
-                    <TraitMapping>
-                        <MedGen CUI="None" Name="CHEK2-related disorder"/>
-                    </TraitMapping>
-                    <TraitMapping>
-                        <MedGen CUI="C5882668" Name="CHEK2-related cancer predisposition"/>
-                    </TraitMapping>
-                    <TraitMapping>
-                        <MedGen CUI="C0027672" Name="Hereditary cancer-predisposing syndrome"/>
-                    </TraitMapping>
-                </TraitMappingList>
             </ClinicalAssertionList>
+            <TraitMappingList>
+                <TraitMapping>
+                    <MedGen CUI="C3661900" Name="not provided"/>
+                </TraitMapping>
+                <TraitMapping>
+                    <MedGen CUI="C0678222" Name="Breast carcinoma"/>
+                </TraitMapping>
+                <TraitMapping>
+                    <MedGen CUI="None" Name="CHEK2-related disorder"/>
+                </TraitMapping>
+                <TraitMapping>
+                    <MedGen CUI="C5882668" Name="CHEK2-related cancer predisposition"/>
+                </TraitMapping>
+                <TraitMapping>
+                    <MedGen CUI="C0027672" Name="Hereditary cancer-predisposing syndrome"/>
+                </TraitMapping>
+            </TraitMappingList>
         </ClassifiedRecord>
     </VariationArchive>
     <VariationArchive VariationID="5603" RecordType="classified" NumberOfSubmissions="38" NumberOfSubmitters="36" DateLastUpdated="2025-06-29" DateCreated="2016-03-20" MostRecentSubmission="2025-06-29">
@@ -239,13 +239,16 @@ class ReloadClinvarAllVariantsTest(TestCase):
             with self.assertRaisesMessage(CommandError, error_message):
                 call_command('reload_clinvar_all_variants')
 
-        # Variants with missing alleles and positions are skipped
+        # Variants with missing/equivalent alleles and positions are skipped
         for simple_allele_attrs, sequence_location_attrs in [
             # Case 1: Missing AlleleId in <SimpleAllele>
             ("", 'Assembly="GRCh38" Chr="1" positionVCF="1" referenceAlleleVCF="G" alternateAlleleVCF="A"'),
 
             # Case 2: Missing alternateAlleleVCF in <SequenceLocation>
             ('AlleleID="5603"', 'Assembly="GRCh38" Chr="1" positionVCF="1" referenceAlleleVCF="G"'),
+
+            # Case 3: ref/alt are equal
+            ('AlleleID="5603"', 'Assembly="GRCh38" Chr="1" positionVCF="1" referenceAlleleVCF="G" alternateAlleleVCF="G"'),
         ]:
             data = f'''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
             <ClinVarVariationRelease xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
