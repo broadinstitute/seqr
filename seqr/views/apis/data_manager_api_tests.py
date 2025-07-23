@@ -1777,7 +1777,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
 
     def _assert_expected_delete_index_response(self, response):
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()['error'], 'Deleting indices is disabled for the hail backend')
+        self.assertEqual(response.json()['error'], 'Deleting indices is disabled without the elasticsearch backend')
 
     def _assert_expected_get_projects_requests(self):
         pdo_filter = "OR(SEARCH('Methods (Loading)',ARRAYJOIN(PDOStatus,';')),SEARCH('On hold for phenotips, but ready to load',ARRAYJOIN(PDOStatus,';')))"

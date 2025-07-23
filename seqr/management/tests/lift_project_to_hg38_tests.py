@@ -166,7 +166,7 @@ class LiftProjectToHg38Test(TestCase):
             with self.assertRaises(Exception) as ce:
                 call_command('lift_project_to_hg38', '--project={}'.format(PROJECT_NAME),
                              '--es-index={}'.format(ELASTICSEARCH_INDEX))
-        self.assertEqual(str(ce.exception), 'Adding samples is disabled for the hail backend')
+        self.assertEqual(str(ce.exception), 'Adding samples is disabled without the elasticsearch backend')
 
         # Test discontinue on a failed lift
         mock_liftover_to_38 = mock_liftover.return_value
