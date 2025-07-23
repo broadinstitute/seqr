@@ -299,7 +299,7 @@ def _update_tags(saved_variants, tags_json, user, tag_key='tags', model_cls=Vari
 
 @login_and_policies_required
 def update_saved_variant_json(request, project_guid):
-    backend_specific_call(lambda: True, _hail_backend_error)()
+    backend_specific_call(lambda: True, _no_es_backend_error)()
     project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
     reset_cached_search_results(project)
     try:
@@ -311,8 +311,8 @@ def update_saved_variant_json(request, project_guid):
     return create_json_response({variant_guid: None for variant_guid in updated_saved_variant_guids or []})
 
 
-def _hail_backend_error(*args, **kwargs):
-    raise ValueError('Endpoint is disabled for the hail backend')
+def _no_es_backend_error(*args, **kwargs):
+    raise ValueError('Endpoint is disabled without the elasticsearch backend')
 
 
 @login_and_policies_required
