@@ -121,6 +121,7 @@ SV_ID_UPDATE_MAP = {
         'phase2_CPX_chr1_28': 'cohort_2911.chr1.final_cleanup_CPX_chr1_49',
         'phase2_DEL_chr18_2435': 'cohort_2911.chr18.final_cleanup_DEL_chr18_3308',
         'phase2_DUP_chr8_4806': 'phase2_DUP_chr8_4807',
+        'cohort_2911.chr2.final_cleanup_BND_chr2_3079': 'phase4_all_batches.chr2.final_cleanup_BND_chr2_3571',
     },
     'WES': {
         'R4_variant_7334_DUP_08162023': 'R4_variant_7334_DUP',
@@ -1766,6 +1767,8 @@ SV_ID_UPDATE_MAP = {
         'suffix_26153_DUP_2': 'suffix_26929_DUP',
         'suffix_28933_DEL_2': 'suffix_29823_DEL',
         'suffix_83854_DUP_2': 'suffix_86319_DUP',
+        'prefix_113219_DUP': 'suffix_345434_DUP',
+        'prefix_173077_DEL': 'suffix_195402_DEL',
     },
 }
 SV_DROPPED_IDS = {
@@ -1780,6 +1783,10 @@ SV_DROPPED_IDS = {
     'cohort_2911.chr16.final_cleanup_DEL_chr16_3', 'cohort_2911.chr2.final_cleanup_BND_chr2_197',
     'cohort_2911.chr2.final_cleanup_BND_chr2_88', 'cohort_2911.chr4.final_cleanup_BND_chr4_1988', 'phase2_BND_chr4_1503',
     'prefix_187707_DUP',
+
+    'phase2_DEL_chrX_1156', 'phase2_DEL_chrX_1149', 'phase2_INV_chr13_1', 'prefix_104037_DUP', 'prefix_107442_DEL',
+    'prefix_110663_DUP', 'prefix_116075_DEL', 'prefix_116353_DEL', 'prefix_131840_DEL', 'prefix_158993_DUP',
+    'prefix_15755_DEL',
 }
 
 
