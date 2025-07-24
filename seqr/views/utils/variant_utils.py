@@ -135,11 +135,14 @@ def parse_saved_variant_json(variant_json, family_id, variant_id=None,):
     alt = variant_json.get('alt')
     var_length = variant_json['end'] - variant_json['pos'] if variant_json.get('end') is not None else len(ref) - 1
     variant_id = variant_json.get('variantId', variant_id)
-    update_json = backend_specific_call(
-        {'saved_variant_json': variant_json},
-        {'saved_variant_json': variant_json},
-        {'key': variant_json.get('key'), 'genotypes': variant_json.get('genotypes', {}), 'dataset_type': _dataset_type(variant_id, variant_json)},
-    )
+    if variant_json.get('key'):
+        update_json = {
+            'key': variant_json['key'],
+            'genotypes': variant_json.get('genotypes', {}),
+            'dataset_type': _dataset_type(variant_id, variant_json),
+        }
+    else:
+        update_json = {'saved_variant_json': variant_json}
     return {
         'xpos': xpos,
         'xpos_end': xpos + var_length,
@@ -175,8 +178,6 @@ def bulk_create_tagged_variants(family_variant_data, tag_name, get_metadata, use
         new_variant_models = []
         for (family_id, variant_id), variant in new_variant_data.items():
             create_json, update_json = parse_saved_variant_json(variant, family_id, variant_id=variant_id)
-            # Set saved_variant_json regardless of backend, as data for these tags is synthetic and not linked to real variants
-            update_json['saved_variant_json'] = variant
             new_variant_models.append(SavedVariant(**create_json, **update_json))
 
         saved_variant_map.update({
