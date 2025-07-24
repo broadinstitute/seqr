@@ -95,6 +95,7 @@ def parse_positions(classified_record_node: xml.etree.ElementTree.Element) -> di
                 and seq_loc.get('alternateAlleleVCF')
                 and seq_loc.get('positionVCF')
                 and seq_loc.get('positionVCF').isdigit()
+                and seq_loc.get('referenceAlleleVCF') != seq_loc.get('alternateAlleleVCF')
             ):
                 positions[seq_loc.attrib['Assembly']] = {
                     'chrom': seq_loc.attrib['Chr'],
@@ -182,7 +183,7 @@ def parse_submitters_and_conditions(classified_record_node: xml) -> [list[str], 
     })
     conditions = sorted({
         c.attrib['Name']
-        for c in classified_record_node.findall('ClinicalAssertionList/TraitMappingList/TraitMapping/MedGen')
+        for c in classified_record_node.findall('TraitMappingList/TraitMapping/MedGen')
         if c.attrib['Name'] != 'not provided'
     })
     return submitters, conditions
