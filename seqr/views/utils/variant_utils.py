@@ -1,14 +1,15 @@
 from collections import defaultdict
 from django.contrib.auth.models import User
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.db.models import F, Q, Count
+from django.db.models import F, Q, Count, prefetch_related_objects
 import json
 import logging
 import redis
 from tqdm import tqdm
 import traceback
 
-from clickhouse_search.search import get_clickhouse_key_lookup
+from clickhouse_search.backend.functions import ArrayDistinct, ArrayMap
+from clickhouse_search.search import get_clickhouse_key_lookup, get_annotations_queryset
 from matchmaker.models import MatchmakerSubmissionGenes, MatchmakerSubmission
 from reference_data.models import TranscriptInfo, Omim, GENOME_VERSION_GRCh38
 from seqr.models import SavedVariant, VariantSearchResults, Family, LocusList, LocusListInterval, LocusListGene, \
@@ -160,7 +161,6 @@ def _dataset_type(variant_id, variant):
     return Sample.DATASET_TYPE_MITO_CALLS if 'mitomapPathogenic' in variant else Sample.DATASET_TYPE_VARIANT_CALLS
 
 
-
 def bulk_create_tagged_variants(family_variant_data, tag_name, get_metadata, user, project=None, load_new_variant_data=None):
     all_family_ids = {family_id for family_id, _ in family_variant_data.keys()}
     all_variant_ids = {variant_id for _, variant_id in family_variant_data.keys()}
@@ -191,11 +191,15 @@ def bulk_create_tagged_variants(family_variant_data, tag_name, get_metadata, use
         ).annotate(saved_variant_ids=ArrayAgg('saved_variants__id', ordering='id'))
     }
 
+    variant_genes_by_id = backend_specific_call(
+        _get_saved_variant_genes, _get_saved_variant_genes, _get_clickhouse_saved_variant_genes,
+    )(saved_variant_map.values(), project and project.genome_version)
+
     update_tags = []
     num_new = 0
     for key, variant in family_variant_data.items():
         updated_tag = _set_updated_tags(
-            key, get_metadata(variant), variant['support_vars'], saved_variant_map, existing_tags, tag_type, user,
+            key, get_metadata(variant), variant['support_vars'], saved_variant_map, existing_tags, tag_type, user, variant_genes_by_id,
         )
         if updated_tag:
             update_tags.append(updated_tag)
@@ -204,6 +208,7 @@ def bulk_create_tagged_variants(family_variant_data, tag_name, get_metadata, use
 
     VariantTag.bulk_update_models(user, update_tags, ['metadata'])
 
+    # TODO move this up before creation
     backend_specific_call(lambda *args: None, lambda *args: None, _set_clickhouse_keys)(new_variant_keys, saved_variant_map, user)
 
     return num_new, len(update_tags)
@@ -211,7 +216,7 @@ def bulk_create_tagged_variants(family_variant_data, tag_name, get_metadata, use
 
 def _set_updated_tags(key: tuple[int, str], metadata: dict[str, dict], support_var_ids: list[str],
                       saved_variant_map: dict[tuple[int, str], SavedVariant], existing_tags: dict[tuple[int, ...], VariantTag],
-                      tag_type: VariantTagType, user: User):
+                      tag_type: VariantTagType, user: User, variant_genes_by_id: dict[str, list[str]]):
     variant = saved_variant_map[key]
     existing_tag = existing_tags.get(tuple([variant.id]))
     updated_tag = None
@@ -229,11 +234,11 @@ def _set_updated_tags(key: tuple[int, str], metadata: dict[str, dict], support_v
             VariantTag, {'variant_tag_type': tag_type, 'metadata': json.dumps(metadata)}, user)
         tag.saved_variants.add(variant)
 
-    variant_genes = set(variant.saved_variant_json['transcripts'].keys())
+    variant_genes = variant_genes_by_id[key[1]]
     support_vars = []
     for support_id in support_var_ids:
         support_v = saved_variant_map[(key[0], support_id)]
-        if variant_genes.intersection(set(support_v.saved_variant_json['transcripts'].keys())):
+        if variant_genes.intersection(variant_genes_by_id[support_id]):
             support_vars.append(support_v)
     if support_vars:
         variants = [variant] + support_vars
@@ -244,6 +249,32 @@ def _set_updated_tags(key: tuple[int, str], metadata: dict[str, dict], support_v
             existing_tags[variant_id_key] = True
 
     return updated_tag
+
+
+def _get_saved_variant_genes(variant_models, *args, **kwargs):
+    return {v.variant_id: set(v.saved_variant_json['transcripts'].keys()) for v in variant_models}
+
+
+def _get_clickhouse_saved_variant_genes(variant_models, genome_version):
+    if not genome_version:
+        prefetch_related_objects(variant_models, 'family__project')
+    variant_genes_by_id = {}
+    key_id_map = {}
+    keys_by_search_type = defaultdict(lambda: defaultdict(list))
+    for v in variant_models:
+        if v.key:
+            key_id_map[v.key] = v.variant_id
+            keys_by_search_type[genome_version or v.family.project.genome_version][v.dataset_type].append(v.key)
+        else:
+            variant_genes_by_id[v.variant_id] = v.saved_variant_json['transcripts'].keys()
+    for gv, keys_by_dataset_type in keys_by_search_type.items():
+        for dataset_type, keys in keys_by_dataset_type.items():
+            qs = get_annotations_queryset(gv, dataset_type, keys)
+            variant_genes_by_id.update({
+                key_id_map[key]: set(gene_ids) for key, gene_ids in qs.values_list(
+                    'key', ArrayDistinct(ArrayMap(qs.transcript_field, mapped_expression='x.geneId')),
+                )
+            })
 
 
 def _set_clickhouse_keys(new_variant_keys, saved_variant_map, user):
