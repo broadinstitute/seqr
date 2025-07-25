@@ -19,7 +19,7 @@ from seqr.views.utils.file_utils import load_uploaded_file
 from seqr.utils.communication_utils import safe_post_to_slack, set_email_message_stream
 from seqr.utils.gene_utils import get_genes
 from seqr.utils.middleware import ErrorsWarningsException
-from seqr.utils.search.utils import get_variants_for_variant_ids, backend_specific_call
+from seqr.utils.search.utils import backend_specific_call
 from seqr.views.utils.json_utils import create_json_response
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.xpos_utils import get_chrom_pos
@@ -239,7 +239,7 @@ def _load_aip_data(data: dict, user: User):
 
     today = datetime.now().strftime('%Y-%m-%d')
     num_new, num_updated = bulk_create_tagged_variants(
-        family_variant_data, tag_name=AIP_TAG_TYPE, user=user, load_new_variant_data=_search_new_saved_variants,
+        family_variant_data, tag_name=AIP_TAG_TYPE, user=user, load_new_variant_data=True,
         get_metadata=lambda pred:  {category: {'name': category_map[category], 'date': today} for category in pred['categories']},
     )
 
@@ -252,43 +252,6 @@ def _load_aip_data(data: dict, user: User):
     return create_json_response({
         'info': [summary_message],
     })
-
-
-FamilyVariantKey = tuple[int, str]
-
-
-def _search_new_saved_variants(family_variant_ids: list[FamilyVariantKey], user: User):
-    family_ids = set()
-    variant_families = defaultdict(list)
-    for family_id, variant_id in family_variant_ids:
-        family_ids.add(family_id)
-        variant_families[variant_id].append(family_id)
-    families_by_id = {f.id: f for f in Family.objects.filter(id__in=family_ids)}
-
-    search_variants_by_id = {
-        v['variantId']: v for v in get_variants_for_variant_ids(
-            families=families_by_id.values(), variant_ids=variant_families.keys(), user=user,
-        )
-    }
-
-    new_variants = {}
-    missing = defaultdict(list)
-    for variant_id, family_ids in variant_families.items():
-        variant = search_variants_by_id.get(variant_id) or {'familyGuids': []}
-        for family_id in family_ids:
-            family = families_by_id[family_id]
-            if family.guid in variant['familyGuids']:
-                new_variants[(family_id, variant_id)] = variant
-            else:
-                missing[family.family_id].append(variant_id)
-
-    if missing:
-        missing_summary = [f'{family} ({", ".join(sorted(variant_ids))})' for family, variant_ids in missing.items()]
-        raise ErrorsWarningsException([
-            f"Unable to find the following family's AIP variants in the search backend: {', '.join(missing_summary)}",
-        ])
-
-    return new_variants
 
 
 ALL_PROJECTS = 'all'

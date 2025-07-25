@@ -425,9 +425,8 @@ class Command(BaseCommand):
             if not variant_models_by_key:
                 continue
             variants = []
-            family_samples = samples.filter(individual__family__guid=family_guid)
             genotypes_by_key = get_clickhouse_genotypes(
-                project_guid, family_guid, genome_version, clickhouse_dataset_type, variant_models_by_key.keys(), family_samples,
+                project_guid, [family_guid], genome_version, clickhouse_dataset_type, variant_models_by_key.keys(), samples,
             )
             for key, genotypes in genotypes_by_key:
                 variant = variant_models_by_key[key]

@@ -9,13 +9,15 @@ from tqdm import tqdm
 import traceback
 
 from clickhouse_search.backend.functions import ArrayDistinct, ArrayMap
-from clickhouse_search.search import get_clickhouse_key_lookup, get_annotations_queryset
+from clickhouse_search.search import get_clickhouse_key_lookup, get_annotations_queryset, get_clickhouse_genotypes
+from hail_search.test_utils import samples
 from matchmaker.models import MatchmakerSubmissionGenes, MatchmakerSubmission
 from reference_data.models import TranscriptInfo, Omim, GENOME_VERSION_GRCh38
 from seqr.models import SavedVariant, VariantSearchResults, Family, LocusList, LocusListInterval, LocusListGene, \
     RnaSeqTpm, PhenotypePrioritization, Project, Sample, RnaSample, VariantTag, VariantTagType
 from seqr.utils.search.utils import get_variants_for_variant_ids, backend_specific_call, parse_variant_id
 from seqr.utils.gene_utils import get_genes_for_variants
+from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.xpos_utils import get_xpos
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, create_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_discovery_tags, get_json_for_locus_lists, \
@@ -161,7 +163,7 @@ def _dataset_type(variant_id, variant):
     return Sample.DATASET_TYPE_MITO_CALLS if 'mitomapPathogenic' in variant else Sample.DATASET_TYPE_VARIANT_CALLS
 
 
-def bulk_create_tagged_variants(family_variant_data, tag_name, get_metadata, user, project=None, load_new_variant_data=None):
+def bulk_create_tagged_variants(family_variant_data, tag_name, get_metadata, user, project=None, load_new_variant_data=False):
     all_family_ids = {family_id for family_id, _ in family_variant_data.keys()}
     all_variant_ids = {variant_id for _, variant_id in family_variant_data.keys()}
 
@@ -172,9 +174,9 @@ def bulk_create_tagged_variants(family_variant_data, tag_name, get_metadata, use
 
     new_variant_keys = set(family_variant_data.keys()) - set(saved_variant_map.keys())
     if new_variant_keys:
-        new_variant_data = load_new_variant_data(new_variant_keys, user) if load_new_variant_data else {
-            k: v for k, v in family_variant_data.items() if k in new_variant_keys
-        }
+        new_variant_data = _search_new_saved_variants(new_variant_keys, user) if load_new_variant_data else backend_specific_call(
+            lambda o, _: o, lambda o, _: o, _get_clickhouse_variant_keys,
+        )({k: v for k, v in family_variant_data.items() if k in new_variant_keys}, user)
         new_variant_models = []
         for (family_id, variant_id), variant in new_variant_data.items():
             create_json, update_json = parse_saved_variant_json(variant, family_id, variant_id=variant_id)
@@ -193,7 +195,7 @@ def bulk_create_tagged_variants(family_variant_data, tag_name, get_metadata, use
 
     variant_genes_by_id = backend_specific_call(
         _get_saved_variant_genes, _get_saved_variant_genes, _get_clickhouse_saved_variant_genes,
-    )(saved_variant_map.values(), project and project.genome_version)
+    )(saved_variant_map.values())
 
     update_tags = []
     num_new = 0
@@ -207,9 +209,6 @@ def bulk_create_tagged_variants(family_variant_data, tag_name, get_metadata, use
             num_new += 1
 
     VariantTag.bulk_update_models(user, update_tags, ['metadata'])
-
-    # TODO move this up before creation
-    backend_specific_call(lambda *args: None, lambda *args: None, _set_clickhouse_keys)(new_variant_keys, saved_variant_map, user)
 
     return num_new, len(update_tags)
 
@@ -255,41 +254,82 @@ def _get_saved_variant_genes(variant_models, *args, **kwargs):
     return {v.variant_id: set(v.saved_variant_json['transcripts'].keys()) for v in variant_models}
 
 
-def _get_clickhouse_saved_variant_genes(variant_models, genome_version):
-    if not genome_version:
-        prefetch_related_objects(variant_models, 'family__project')
+def _get_clickhouse_saved_variant_genes(variant_models):
     variant_genes_by_id = {}
     key_id_map = {}
-    keys_by_search_type = defaultdict(lambda: defaultdict(list))
     for v in variant_models:
         if v.key:
             key_id_map[v.key] = v.variant_id
-            keys_by_search_type[genome_version or v.family.project.genome_version][v.dataset_type].append(v.key)
         else:
             variant_genes_by_id[v.variant_id] = v.saved_variant_json['transcripts'].keys()
-    for gv, keys_by_dataset_type in keys_by_search_type.items():
-        for dataset_type, keys in keys_by_dataset_type.items():
-            qs = get_annotations_queryset(gv, dataset_type, keys)
-            variant_genes_by_id.update({
-                key_id_map[key]: set(gene_ids) for key, gene_ids in qs.values_list(
-                    'key', ArrayDistinct(ArrayMap(qs.transcript_field, mapped_expression='x.geneId')),
-                )
-            })
+    qs = get_annotations_queryset(GENOME_VERSION_GRCh38, Sample.DATASET_TYPE_VARIANT_CALLS, key_id_map.keys())
+    variant_genes_by_id.update({
+        key_id_map[key]: set(gene_ids) for key, gene_ids in qs.values_list(
+            'key', ArrayDistinct(ArrayMap(qs.transcript_field, mapped_expression='x.geneId')),
+        )
+    })
+    return variant_genes_by_id
 
 
-def _set_clickhouse_keys(new_variant_keys, saved_variant_map, user):
-    variants_ids = {key[1] for key in new_variant_keys}
-    variant_key_map = get_clickhouse_key_lookup(GENOME_VERSION_GRCh38, Sample.DATASET_TYPE_VARIANT_CALLS, variants_ids)
-    updated_variants = []
-    for key in new_variant_keys:
-        if key[1] not in variant_key_map:
-            continue
-        variant = saved_variant_map[key]
-        variant.key = variant_key_map[key[1]]
-        variant.saved_variant_json = {}
-        updated_variants.append(variant)
-    if updated_variants:
-        SavedVariant.bulk_update_models(user, updated_variants, ['key', 'saved_variant_json'])
+def _search_new_saved_variants(family_variant_ids: set[tuple[int, str]], user: User) -> dict[tuple[int, str], dict]:
+    family_ids = set()
+    variant_families = defaultdict(list)
+    for family_id, variant_id in family_variant_ids:
+        family_ids.add(family_id)
+        variant_families[variant_id].append(family_id)
+    families_by_id = {f.id: f for f in Family.objects.filter(id__in=family_ids)}
+
+    search_variants_by_id = {
+        v['variantId']: v for v in backend_specific_call(
+            get_variants_for_variant_ids, get_variants_for_variant_ids, _get_clickhouse_variants,
+        )(families=families_by_id.values(), variant_ids=variant_families.keys(), user=user)
+    }
+
+    new_variants = {}
+    missing = defaultdict(list)
+    for variant_id, family_ids in variant_families.items():
+        variant = search_variants_by_id.get(variant_id) or {'familyGuids': []}
+        for family_id in family_ids:
+            family = families_by_id[family_id]
+            if family.guid in variant['familyGuids']:
+                new_variants[(family_id, variant_id)] = variant
+            else:
+                missing[family.family_id].append(variant_id)
+
+    if missing:
+        missing_summary = [f'{family} ({", ".join(sorted(variant_ids))})' for family, variant_ids in missing.items()]
+        raise ErrorsWarningsException([
+            f"Unable to find the following family's variants in the search backend: {', '.join(missing_summary)}",
+        ])
+
+    return new_variants
+
+
+def _get_clickhouse_variants(families: list[Family], variant_ids: list[str], **kwargs) -> list[dict]:
+    variant_key_map = get_clickhouse_key_lookup(GENOME_VERSION_GRCh38, Sample.DATASET_TYPE_VARIANT_CALLS, variant_ids, reverse=True)
+    prefetch_related_objects(families, 'project')
+    families_by_project = defaultdict(list)
+    for family in families:
+        families_by_project[family.project.guid].append(family.guid)
+    variants = []
+    samples = Sample.objects.filter(is_active=True, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
+    for project_guid, family_guids in families_by_project.items():
+        genotype_keys = get_clickhouse_genotypes(
+            project_guid, family_guids, GENOME_VERSION_GRCh38, Sample.DATASET_TYPE_VARIANT_CALLS, variant_key_map.keys(), samples,
+        )
+        variants += [{
+            'variantId': variant_key_map[key], 'genotypes': genotypes, 'familyGuids': sorted({g['familyGuid'] for g in genotypes}),
+        } for key, genotypes in genotype_keys]
+    return variants
+
+
+def _get_clickhouse_variant_keys(variant_data: dict[tuple[int, str], dict], user: User) -> dict[tuple[int, str], dict]:
+    variant_ids = {key[1] for key in variant_data}
+    variant_key_map = get_clickhouse_key_lookup(GENOME_VERSION_GRCh38, Sample.DATASET_TYPE_VARIANT_CALLS, variant_ids)
+    for (_, variant_id), variant in variant_data.items():
+        if variant_id in variant_key_map:
+            variant['key'] = variant_key_map[variant_id]
+    return variant_data
 
 
 def reset_cached_search_results(project, reset_index_metadata=False):

@@ -458,10 +458,10 @@ def _add_liftover_genotypes(variant, data_type, variant_id):
         variant['liftedFamilyGuids'] = sorted(lifted_entry_data[0]['familyGenotypes'].keys())
 
 
-def get_clickhouse_genotypes(project_guid, family_guid, genome_version, dataset_type, keys, samples):
-    sample_data = _get_sample_data(samples)[dataset_type]
+def get_clickhouse_genotypes(project_guid, family_guids, genome_version, dataset_type, keys, samples):
+    sample_data = _get_sample_data(samples.filter(individual__family__guid__in=family_guids))[dataset_type]
     entries = ENTRY_CLASS_MAP[genome_version][dataset_type].filter(
-        project_guid=project_guid, family_guid=family_guid, key__in=keys,
+        project_guid=project_guid, family_guid__in=family_guids, key__in=keys,
     )
     return entries.annotate(genotypes=entries.genotype_expression(sample_data)).values_list('key', 'genotypes')
 
@@ -502,11 +502,14 @@ def get_clickhouse_clinvar(genome_version, dataset_type, keys):
     return clinvar_cls.objects.filter(key__in=keys).values(*fields, **values)
 
 
-def get_clickhouse_key_lookup(genome_version, dataset_type, variants_ids):
+def get_clickhouse_key_lookup(genome_version, dataset_type, variants_ids, reverse=False):
     key_lookup_class = KEY_LOOKUP_CLASS_MAP[genome_version][dataset_type]
     lookup = {}
+    fields = ['variant_id', 'key']
+    if reverse:
+        fields.reverse()
     for i in range(0, len(variants_ids), 10000):
         lookup.update(dict(
-            key_lookup_class.objects.filter(variant_id__in= variants_ids[i:i + 10000]).values_list('variant_id', 'key')
+            key_lookup_class.objects.filter(variant_id__in= variants_ids[i:i + 10000]).values_list(*fields)
         ))
     return lookup
