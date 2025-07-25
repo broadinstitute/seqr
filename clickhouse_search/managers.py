@@ -34,19 +34,14 @@ class SearchQuerySet(QuerySet):
             output_field=NamedTupleField(list(self.clinvar_fields.values()), null_if_empty=True, null_empty_arrays=True),
         )
 
-    def _seqr_pop_expression(self, seqr_popualtions):
+    def _seqr_pop_fields(self, seqr_popualtions):
         sample_types = [self.single_sample_type.lower()] if self.single_sample_type else ['wes', 'wgs']
         seqr_pop_fields = []
         for _, sub_fields in seqr_popualtions:
             seqr_pop_fields += [f"'{sub_fields['ac']}_{sample_type}'" for sample_type in sample_types]
             if sub_fields.get('hom'):
                 seqr_pop_fields += [f"'{sub_fields['hom']}_{sample_type}'" for sample_type in sample_types]
-        return DictGet(
-            'key',
-            dict_name=f"{self.model._meta.db_table.rsplit('/', 1)[0]}/gt_stats_dict",
-            fields=', '.join(seqr_pop_fields),
-            output_field=models.TupleField([models.UInt32Field() for _ in seqr_pop_fields])
-        )
+        return seqr_pop_fields
 
 
 class AnnotationsQuerySet(SearchQuerySet):
@@ -163,6 +158,7 @@ class AnnotationsQuerySet(SearchQuerySet):
         self.query.alias_map[parent_alias] = table
         if promote:
             self.query.alias_map[table.table_alias] = self.query.alias_map[table.table_alias].promote()
+            self.query.alias_map[table.table_alias].join_type = 'RIGHT OUTER JOIN'
 
         return self.annotate(**self._get_subquery_annotations(subquery, table.table_alias, join_key=join_key))
 
@@ -231,7 +227,16 @@ class AnnotationsQuerySet(SearchQuerySet):
         results = self
         seqr_popualtions = self.model.SEQR_POPULATIONS
         if seqr_popualtions:
-            results = results.annotate(seqrPop=self._seqr_pop_expression(seqr_popualtions))
+            seqr_pop_fields = self._seqr_pop_fields(seqr_popualtions)
+            results = results.annotate(seqrPop=Tuple(
+                *[
+                    DictGet(
+                        'key',
+                        dict_name=f"{self.model._meta.db_table.rsplit('/', 1)[0]}/gt_stats_dict",
+                        fields=seqr_pop_field,
+                    ) for seqr_pop_field in seqr_pop_fields],
+                output_field=models.TupleField([models.UInt32Field() for _ in seqr_pop_fields])
+            ))
 
         if self.clinvar_model:
             clinvar_qs = self.clinvar_model.objects.filter(key__in=keys).values(clinvar=self._clinvar_tuple())
@@ -692,7 +697,13 @@ class EntriesManager(SearchQuerySet):
 
         seqr_popualtions = self.annotations_model.SEQR_POPULATIONS
         if seqr_popualtions:
-            entries = entries.annotate(seqrPop=self._seqr_pop_expression(seqr_popualtions))
+            seqr_pop_fields = self._seqr_pop_fields(seqr_popualtions)
+            entries = entries.annotate(seqrPop=DictGet(
+                'key',
+                dict_name=f"{self.model._meta.db_table.rsplit('/', 1)[0]}/gt_stats_dict",
+                fields=', '.join(seqr_pop_fields),
+                output_field=models.TupleField([models.UInt32Field() for _ in seqr_pop_fields])
+            ))
 
         return entries
 
