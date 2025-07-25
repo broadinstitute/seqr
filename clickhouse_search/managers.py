@@ -19,7 +19,37 @@ from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFEC
 from seqr.utils.xpos_utils import get_xpos, MIN_POS, MAX_POS
 
 
-class AnnotationsQuerySet(QuerySet):
+class SearchQuerySet(QuerySet):
+
+    @property
+    def clinvar_fields(self):
+        return OrderedDict({
+            field.name: (field.db_column or field.name, field)
+            for field in reversed(self.clinvar_model._meta.local_fields) if field.name != 'key'
+        })
+
+    def _clinvar_tuple(self):
+        return Tuple(
+            *self.clinvar_fields.keys(),
+            output_field=NamedTupleField(list(self.clinvar_fields.values()), null_if_empty=True, null_empty_arrays=True),
+        )
+
+    def _seqr_pop_expression(self, seqr_popualtions):
+        sample_types = [self.single_sample_type.lower()] if self.single_sample_type else ['wes', 'wgs']
+        seqr_pop_fields = []
+        for _, sub_fields in seqr_popualtions:
+            seqr_pop_fields += [f"'{sub_fields['ac']}_{sample_type}'" for sample_type in sample_types]
+            if sub_fields.get('hom'):
+                seqr_pop_fields += [f"'{sub_fields['hom']}_{sample_type}'" for sample_type in sample_types]
+        return DictGet(
+            'key',
+            dict_name=f"{self.model._meta.db_table.rsplit('/', 1)[0]}/gt_stats_dict",
+            fields=', '.join(seqr_pop_fields),
+            output_field=models.TupleField([models.UInt32Field() for _ in seqr_pop_fields])
+        )
+
+
+class AnnotationsQuerySet(SearchQuerySet):
 
     TRANSCRIPT_CONSEQUENCE_FIELD = 'sorted_transcript_consequences'
     SORTED_GENE_CONSEQUENCE_FIELD = 'sorted_gene_consequences'
@@ -96,8 +126,23 @@ class AnnotationsQuerySet(QuerySet):
         ] if hasattr(self.model, field))
         return set(dict(transcript_field_configs).keys())
 
+    @property
+    def single_sample_type(self):
+        return getattr(self.model, 'SV_TYPES', None)
 
-    def subquery_join(self, subquery, join_key='key'):
+    @property
+    def entry_model(self):
+         entry_field = next(obj.name for obj in self.model._meta.related_objects if obj.name.startswith('entries'))
+         return getattr(self.model, f'{entry_field}_set').rel.related_model
+
+    @property
+    def clinvar_model(self):
+        if not hasattr(self.entry_model, 'clinvar_join'):
+            return None
+        return self.entry_model.clinvar_join.rel.related_model
+
+
+    def subquery_join(self, subquery, join_key='key', promote=False):
         #  Add key to intermediate select if not already present
         join_field = next(field for field in subquery.model._meta.fields if field.name == join_key)
         if join_key not in subquery.query.values_select:
@@ -116,6 +161,8 @@ class AnnotationsQuerySet(QuerySet):
             nullable=False,
         ))
         self.query.alias_map[parent_alias] = table
+        if promote:
+            self.query.alias_map[table.table_alias] = self.query.alias_map[table.table_alias].promote()
 
         return self.annotate(**self._get_subquery_annotations(subquery, table.table_alias, join_key=join_key))
 
@@ -179,6 +226,18 @@ class AnnotationsQuerySet(QuerySet):
         return self.values(*fields, **initial_values).annotate(
             **{k: values[k] for k in override_model_annotations if k in values},
         )
+
+    def join_annotations(self, keys):
+        results = self
+        seqr_popualtions = self.model.SEQR_POPULATIONS
+        if seqr_popualtions:
+            results = results.annotate(seqrPop=self._seqr_pop_expression(seqr_popualtions))
+
+        if self.clinvar_model:
+            clinvar_qs = self.clinvar_model.objects.filter(key__in=keys).values(clinvar=self._clinvar_tuple())
+            results = results.subquery_join(clinvar_qs, promote=True)
+
+        return results
 
 
     def _conditional_selected_transcript_values(self, query, prefix=''):
@@ -535,7 +594,7 @@ class AnnotationsQuerySet(QuerySet):
         return field in self.query.annotations
 
 
-class EntriesManager(QuerySet):
+class EntriesManager(SearchQuerySet):
     GENOTYPE_LOOKUP = {
         REF_REF: (0,),
         REF_ALT: (1,),
@@ -603,10 +662,7 @@ class EntriesManager(QuerySet):
 
     @property
     def clinvar_fields(self):
-        return OrderedDict({
-            f'clinvar_join__{field.name}': (field.db_column or field.name, field)
-            for field in reversed(self.clinvar_model._meta.local_fields) if field.name != 'key'
-        })
+        return {f'clinvar_join__{k}': v for k, v in super().clinvar_fields.items()}
 
     def search(self, sample_data, parsed_locus=None, freqs=None, annotations=None, **kwargs):
         entries = self.filter_intervals(**(parsed_locus or {}))
@@ -631,7 +687,7 @@ class EntriesManager(QuerySet):
         if self._has_clinvar():
            entries = entries.annotate(
                clinvar_key=F('clinvar_join__key'),
-               clinvar=Tuple(*self.clinvar_fields.keys(), output_field=NamedTupleField(list(self.clinvar_fields.values()), null_if_empty=True, null_empty_arrays=True))
+               clinvar=self._clinvar_tuple(),
            )
 
         seqr_popualtions = self.annotations_model.SEQR_POPULATIONS
@@ -645,20 +701,6 @@ class EntriesManager(QuerySet):
         if sample_data:
             return self._search_call_data(entries, sample_data)
         return self._annotate_calls(entries)
-
-    def _seqr_pop_expression(self, seqr_popualtions):
-        sample_types = [self.single_sample_type.lower()] if self.single_sample_type else ['wes', 'wgs']
-        seqr_pop_fields = []
-        for _, sub_fields in seqr_popualtions:
-            seqr_pop_fields += [f"'{sub_fields['ac']}_{sample_type}'" for sample_type in sample_types]
-            if sub_fields.get('hom'):
-                seqr_pop_fields += [f"'{sub_fields['hom']}_{sample_type}'" for sample_type in sample_types]
-        return DictGet(
-            'key',
-            dict_name=f"{self.model._meta.db_table.rsplit('/', 1)[0]}/gt_stats_dict",
-            fields=', '.join(seqr_pop_fields),
-            output_field=models.TupleField([models.UInt32Field() for _ in seqr_pop_fields])
-        )
 
     def _has_clinvar(self):
         return hasattr(self.model, 'clinvar_join')

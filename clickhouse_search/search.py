@@ -472,7 +472,8 @@ def get_annotations_queryset(genome_version, dataset_type, keys):
 
 
 def get_clickhouse_annotations(genome_version, dataset_type, keys):
-    results = get_annotations_queryset(genome_version, dataset_type, keys).result_values(skip_entry_fields=True)
+    qs = get_annotations_queryset(genome_version, dataset_type, keys)
+    results = qs.join_annotations(keys).result_values(skip_entry_fields=True)
     return format_clickhouse_results(results, genome_version)
 
 
@@ -485,9 +486,9 @@ def get_clickhouse_genes(genome_version, dataset_type, keys):
 
 def get_clickhouse_keys_for_gene(gene_id, genome_version, dataset_type, keys):
     results = get_annotations_queryset(genome_version, dataset_type, keys)
-    return results.filter(
+    return list(results.filter(
         **{f'{results.transcript_field}__array_exists': {'geneId': (f"'{gene_id}'",)}},
-    ).values_list('key', flat=True)
+    ).values_list('key', flat=True))
 
 
 def get_clickhouse_clinvar(genome_version, dataset_type, keys):

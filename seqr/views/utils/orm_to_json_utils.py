@@ -456,7 +456,7 @@ def _add_clickhouse_annotations(results, genome_version):
             keys = {result['key'] for result in gv_results}
             annotations_by_key = {
                 annotations['key']: {k: v for k, v in annotations.items() if k not in gv_results[0]}
-                for annotations in get_clickhouse_annotations(genome_version, dataset_type, keys)
+                for annotations in get_clickhouse_annotations(gv, dataset_type, keys)
             }
             for result in gv_results:
                 if result['key']:
