@@ -14,7 +14,7 @@ import requests
 import responses
 from urllib.parse import quote_plus, urlparse
 
-from seqr.models import Project, CAN_VIEW, CAN_EDIT
+from seqr.models import Project, SavedVariant, CAN_VIEW, CAN_EDIT
 
 WINDOW_REGEX_TEMPLATE = 'window\.{key}=(?P<value>[^)<]+)'
 
@@ -563,6 +563,7 @@ class AnvilAuthenticationTestCase(AuthenticationTestCase):
         self.mock_get_group_members.side_effect = get_group_members_side_effect
         self.addCleanup(patcher.stop)
         super(AnvilAuthenticationTestCase, self).setUp()
+        SavedVariant.objects.filter(key__isnull=False).update(saved_variant_json={})
 
     @classmethod
     def add_additional_user_groups(cls):

@@ -1887,6 +1887,16 @@
         "ref": "TC",
         "alt": "T",
         "variant_id": "1-248367227-TC-T",
+        "key": 100,
+        "dataset_type": "SNV_INDEL",
+        "genotypes": {
+            "I000004_hg00731": {
+                "numAlt": 2
+            },
+            "I000005_hg00732": {
+                "numAlt": 1
+            }
+        },
         "saved_variant_json": {
             "clinvar": {
                 "clinicalSignificance": "",
@@ -2123,6 +2133,12 @@
         "ref": "TC",
         "alt": "T",
         "variant_id": "1-248367227-TC-T",
+        "key": 100,
+        "dataset_type": "SNV_INDEL",
+        "genotypes": {
+            "I000002_na19675": {"sampleId": "NA19675", "ab": 0.5555556, "ad": null, "gq": 99, "dp": 9, "pl": null, "numAlt": 1},
+            "I000017_na20889": {"sampleId": "NA20885", "ab": 0.0, "ad": "71,0", "gq": 99.0, "dp": "71", "pl": "0,213,1918", "numAlt": 1}
+        },
         "saved_variant_json": {
             "clinvar": {"clinicalSignificance": "", "alleleId": null, "variationId": null, "goldStars": null},
             "liftedOverGenomeVersion": "38",  "liftedOverPos": "", "genotypeFilters": "pass",
@@ -2206,6 +2222,11 @@
         "ref": "TC",
         "alt": "T",
         "variant_id": "1-248367227-TC-T",
+        "key": 100,
+        "dataset_type": "SNV_INDEL",
+        "genotypes": {
+            "I000018_na21234": {"sampleId": "NA20885", "ab": 0.0, "gq": 99.0, "numAlt": 1}
+        },
         "saved_variant_json": {
             "liftedOverGenomeVersion": "37",  "liftedOverPos": "", "genomeVersion": "38", "pos": 248367227,
             "transcripts": {}, "chrom": "1", "genotypes": {

@@ -1127,6 +1127,73 @@
       "variant_id": "suffix_140608_DUP"
     }
 }, {
+    "model": "clickhouse_search.keylookupgrch37snvindel",
+    "pk": 100,
+    "fields": {
+      "key": 100,
+      "variant_id": "1-248367227-TC-T"
+    }
+}, {
+    "model": "clickhouse_search.annotationsgrch37snvindel",
+    "pk": 100,
+    "fields": {
+      "key": 100,
+      "xpos": 1248367227,
+      "chrom": "1",
+      "pos": 248367227,
+      "ref": "TC",
+      "alt": "T",
+      "variant_id": "1-248367227-TC-T",
+      "rsid": null,
+      "caid": "CA1501729",
+      "lifted_over_chrom": null,
+      "lifted_over_pos": null,
+      "hgmd": [null, null],
+      "predictions": [27.2, null, null, null, null, null, null, null, null, null, null, null, null],
+      "populations": [
+        [66593, 0.63, 104352, 0.81988, 0, 22269, 22162],
+        [137532, 0.63542, 216442, 0.82261, 0, 45869],
+        [14649, 0.61365, 23872, 0.82844, 0, 4584],
+        [65461, 0.52132, 125568, 33149, 16156]
+      ],
+      "sorted_transcript_consequences": []
+    }
+}, {
+    "model": "clickhouse_search.keylookupsnvindel",
+    "pk": 100,
+    "fields": {
+      "key": 100,
+      "variant_id": "1-248367227-TC-T"
+    }
+}, {
+    "model": "clickhouse_search.annotationssnvindel",
+    "pk": 101,
+    "fields": {
+      "key": 100,
+      "xpos": 1248367227,
+      "chrom": "1",
+      "pos": 248367227,
+      "ref": "TC",
+      "alt": "T",
+      "variant_id": "1-248367227-TC-T",
+      "rsid": null,
+      "caid": "CA1501729",
+      "lifted_over_chrom": "1",
+      "lifted_over_pos": null,
+      "hgmd": [null, null],
+      "screen_region_type": null,
+      "predictions": [null, null, null, null, null, null, null, null, null, null, null, null, null, null],
+      "populations": [
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0],
+        [4, 0.000044254640670260414, 90386, 0.00011118523252662271, 0, 0],
+        [13, 0.00004911409996566363, 264690, 13, 0]
+      ],
+      "sorted_transcript_consequences": [],
+      "sorted_motif_feature_consequences": [],
+      "sorted_regulatory_feature_consequences": []
+    }
+}, {
   "model": "reference_data.omim",
   "pk": 100,
   "fields": {
