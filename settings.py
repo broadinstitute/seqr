@@ -251,8 +251,8 @@ if CLICKHOUSE_SERVICE_HOSTNAME:
         'NAME': 'seqr',
         'HOST': CLICKHOUSE_SERVICE_HOSTNAME,
         'PORT': int(os.environ.get('CLICKHOUSE_SERVICE_PORT', '9000')),
-        'USER': os.environ.get('CLICKHOUSE_ADMIN_USER', 'clickhouse'),
-        'PASSWORD': os.environ.get('CLICKHOUSE_ADMIN_PASSWORD', 'clickhouse_test'),
+        'USER': os.environ.get('CLICKHOUSE_WRITER_USER', 'clickhouse'),
+        'PASSWORD': os.environ.get('CLICKHOUSE_WRITER_PASSWORD', 'clickhouse_test'),
         'OPTIONS': {
             'settings': {
                 'use_client_time_zone': False,
@@ -261,8 +261,8 @@ if CLICKHOUSE_SERVICE_HOSTNAME:
     }
     DATABASES['clickhouse'] = {
         **DATABASES['clickhouse_write'],
-        'USER': os.environ.get('CLICKHOUSE_USER', 'clickhouse'),
-        'PASSWORD': os.environ.get('CLICKHOUSE_PASSWORD', 'clickhouse_test'),
+        'USER': os.environ.get('CLICKHOUSE_READER_USER', 'clickhouse'),
+        'PASSWORD': os.environ.get('CLICKHOUSE_READER_PASSWORD', 'clickhouse_test'),
     }
 
 WSGI_APPLICATION = 'wsgi.application'
