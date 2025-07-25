@@ -491,6 +491,7 @@ def get_clickhouse_keys_for_gene(gene_id, genome_version, dataset_type, keys):
     ).values_list('key', flat=True))
 
 
+# TODO: deprecate in favor of abstracting logic from `join_annotations`
 def get_clickhouse_clinvar(genome_version, dataset_type, keys):
     clinvar_cls = ENTRY_CLASS_MAP[genome_version][dataset_type].objects.clinvar_model
     fields = []

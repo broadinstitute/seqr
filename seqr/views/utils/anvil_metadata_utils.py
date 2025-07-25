@@ -456,6 +456,7 @@ def _set_clickhouse_snv_indel_json(variant_json_by_guid, genome_version, dataset
     else:
         transcripts_by_key.update(dict(get_transcripts_queryset.values_list('key', 'transcripts')))
 
+    # TODO: deprecate in favor of abstracting logic from `join_annotations`
     clinvar_by_key = {
         c.pop('key'): c for c in get_clickhouse_clinvar(genome_version, dataset_type, key_map.keys())
     } if include_clinvar else None
