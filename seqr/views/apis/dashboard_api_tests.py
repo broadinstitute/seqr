@@ -135,7 +135,7 @@ def assert_has_anvil_calls(self):
 
 # Test for permissions from AnVIL only
 class AnvilDashboardPageTest(AnvilAuthenticationTestCase, DashboardPageTest):
-    fixtures = ['users', 'social_auth', '1kg_project']
+    fixtures = ['users', 'social_auth', '1kg_project', 'clickhouse_search']
     NUM_COLLABORATOR_PROJECTS = 2
 
     def test_dashboard_page_data(self, *args):

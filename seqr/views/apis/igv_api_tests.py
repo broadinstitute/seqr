@@ -17,7 +17,7 @@ PROJECT_GUID = 'R0001_1kg'
 @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
 @mock.patch('seqr.utils.file_utils.subprocess.Popen')
 class IgvAPITest(AnvilAuthenticationTestCase):
-    fixtures = ['users', 'social_auth', '1kg_project']
+    fixtures = ['users', 'social_auth', '1kg_project', 'clickhouse_search']
 
     @responses.activate
     @mock.patch('seqr.utils.file_utils.logger')

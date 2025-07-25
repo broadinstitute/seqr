@@ -459,7 +459,7 @@ def assert_no_anvil_calls(self):
 
 # Test for permissions from AnVIL only
 class AnvilDatasetAPITest(AnvilAuthenticationTestCase, DatasetAPITest):
-    fixtures = ['users', 'social_auth', '1kg_project']
+    fixtures = ['users', 'social_auth', '1kg_project', 'clickhouse_search']
 
     def _assert_expected_add_dataset_errors(self, url):
         response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)

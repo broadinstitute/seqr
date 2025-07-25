@@ -1357,7 +1357,7 @@ class LocalIndividualAPITest(AuthenticationTestCase, IndividualAPITest):
 
 
 class AnvilIndividualAPITest(AnvilAuthenticationTestCase, IndividualAPITest):
-    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
+    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data', 'clickhouse_search']
     HAS_EXTERNAL_PROJECT_ACCESS = True
 
     def setUp(self):

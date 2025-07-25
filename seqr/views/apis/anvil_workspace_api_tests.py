@@ -161,7 +161,7 @@ DATA_LINES = [
 
 @mock.patch('seqr.views.utils.permissions_utils.logger')
 class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
-    fixtures = ['users', 'social_auth', '1kg_project']
+    fixtures = ['users', 'social_auth', '1kg_project', 'clickhouse_search']
 
     @mock.patch('seqr.views.apis.anvil_workspace_api.logger')
     def test_anvil_workspace_page(self, mock_api_logger, mock_logger):
