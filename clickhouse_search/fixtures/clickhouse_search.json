@@ -1156,7 +1156,9 @@
         [14649, 0.61365, 23872, 0.82844, 0, 4584],
         [65461, 0.52132, 125568, 33149, 16156]
       ],
-      "sorted_transcript_consequences": []
+      "sorted_transcript_consequences": [
+        [1, [], "ENSG00000135953"]
+      ]
     }
 }, {
     "model": "clickhouse_search.keylookupsnvindel",

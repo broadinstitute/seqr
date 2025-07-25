@@ -446,8 +446,10 @@ def get_json_for_saved_variants(saved_variants, add_details=False, additional_mo
 def _add_clickhouse_annotations(results, genome_version):
     results_by_genome_version_dataset_type = defaultdict(lambda: defaultdict(list))
     for result in results:
-        gv = genome_version or result.pop('family__project__genome_version')
-        results_by_genome_version_dataset_type[gv][result.pop('dataset_type')].append(result)
+        if not result['key']:
+            continue
+        gv = genome_version or result.pop('familyProjectGenomeVersion')
+        results_by_genome_version_dataset_type[gv][result.pop('datasetType')].append(result)
 
     for gv, grouped_results in results_by_genome_version_dataset_type.items():
         for dataset_type, gv_results in grouped_results.items():

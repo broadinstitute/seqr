@@ -114,11 +114,12 @@ def saved_variants_page(request, tag):
     saved_variant_models = saved_variant_models.filter(family__project__guid__in=get_project_guids_user_can_view(request.user))
 
     if gene:
-        saved_variant_models = backend_specific_call(
-            lambda qs, gene_id: qs.filter(saved_variant_json__transcripts__has_key=gene_id),
-            lambda qs, gene_id: qs.filter(saved_variant_json__transcripts__has_key=gene_id),
-            _saved_variants_with_clickhouse_gene,
+        gene_filter = Q(saved_variant_json__transcripts__has_key=gene) | backend_specific_call(
+            lambda *args: Q(),
+            lambda *args: Q(),
+            _saved_variant_with_clickhouse_gene_q,
         )(saved_variant_models, gene)
+        saved_variant_models = saved_variant_models.filter(gene_filter)
     elif saved_variant_models.count() > MAX_SAVED_VARIANTS:
         return create_json_response({'error': 'Select a gene to filter variants'}, status=400)
 
@@ -130,8 +131,8 @@ def saved_variants_page(request, tag):
     return create_json_response(response_json)
 
 
-def _saved_variants_with_clickhouse_gene(saved_variant_models, gene_id):
-    search_type_keys = saved_variant_models.values(
+def _saved_variant_with_clickhouse_gene_q(saved_variant_models, gene_id):
+    search_type_keys = saved_variant_models.filter(key__isnull=False).values(
         'dataset_type', genome_version=F('family__project__genome_version'),
     ).annotate(keys=ArrayAgg('key', distinct=True))
     has_key_q = None
@@ -143,9 +144,7 @@ def _saved_variants_with_clickhouse_gene(saved_variant_models, gene_id):
                 has_key_q |= q
             else:
                 has_key_q = q
-    if not has_key_q:
-        return saved_variant_models.none()
-    return saved_variant_models.filter(has_key_q)
+    return has_key_q or Q()
 
 
 @login_and_policies_required
