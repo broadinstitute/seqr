@@ -1161,6 +1161,17 @@
       ]
     }
 }, {
+    "model": "clickhouse_search.transcriptsgrch37snvindel",
+    "pk": 100,
+    "fields": {
+      "key": 100,
+      "transcripts": [
+        [
+          null, "protein_coding", 1, null, [], "ENSG00000135953", null, null, [null, []], null, "ENST00000505820", 0
+        ]
+      ]
+    }
+}, {
     "model": "clickhouse_search.entriesgrch37snvindel",
     "pk": 100,
     "fields": {
