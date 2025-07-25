@@ -10,7 +10,6 @@ import traceback
 
 from clickhouse_search.backend.functions import ArrayDistinct, ArrayMap
 from clickhouse_search.search import get_clickhouse_key_lookup, get_annotations_queryset, get_clickhouse_genotypes
-from hail_search.test_utils import samples
 from matchmaker.models import MatchmakerSubmissionGenes, MatchmakerSubmission
 from reference_data.models import TranscriptInfo, Omim, GENOME_VERSION_GRCh38
 from seqr.models import SavedVariant, VariantSearchResults, Family, LocusList, LocusListInterval, LocusListGene, \
