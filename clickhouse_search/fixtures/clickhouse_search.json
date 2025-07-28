@@ -1196,6 +1196,13 @@
       "variant_id": "1-248367227-TC-T"
     }
 }, {
+    "model": "clickhouse_search.keylookupsnvindel",
+    "pk": 101,
+    "fields": {
+      "key": 101,
+      "variant_id": "2-103343353-GAGA-G"
+    }
+}, {
     "model": "clickhouse_search.annotationssnvindel",
     "pk": 101,
     "fields": {
@@ -1237,6 +1244,24 @@
       "sign": 1,
       "calls": [
         ["NA20885", 1, 99, 0, 49]
+      ]
+    }
+}, {
+    "model": "clickhouse_search.entriessnvindel",
+    "pk": 101,
+    "fields": {
+      "key": 101,
+      "project_guid": "R0001_1kg",
+      "family_guid": "F000002_2",
+      "sample_type": "WES",
+      "xpos": 2103343353,
+      "is_gnomad_gt_5_percent": false,
+      "filters": [],
+      "sign": 1,
+      "calls": [
+        ["HG00731", 2, 99, 0, 67],
+        ["HG00732", 1, 96, 0, 42],
+        ["HG00733", 0, 96, 0, 42]
       ]
     }
 }, {

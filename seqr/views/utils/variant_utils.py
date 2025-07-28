@@ -18,6 +18,7 @@ from seqr.utils.search.utils import get_variants_for_variant_ids, backend_specif
 from seqr.utils.gene_utils import get_genes_for_variants
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.xpos_utils import get_xpos
+from seqr.views.utils.json_utils import DjangoJSONEncoderWithSets
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, create_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_discovery_tags, get_json_for_locus_lists, \
     get_json_for_queryset, get_json_for_rna_seq_outliers, get_json_for_saved_variants_with_tags, \
@@ -232,11 +233,11 @@ def _set_updated_tags(key: tuple[int, str], metadata: dict[str, dict], support_v
             VariantTag, {'variant_tag_type': tag_type, 'metadata': json.dumps(metadata)}, user)
         tag.saved_variants.add(variant)
 
-    variant_genes = variant_genes_by_id[key[1]]
+    variant_genes = variant_genes_by_id.get(key[1], set())
     support_vars = []
     for support_id in support_var_ids:
         support_v = saved_variant_map[(key[0], support_id)]
-        if variant_genes.intersection(variant_genes_by_id[support_id]):
+        if variant_genes.intersection(variant_genes_by_id.get(support_id, set())):
             support_vars.append(support_v)
     if support_vars:
         variants = [variant] + support_vars
@@ -316,9 +317,14 @@ def _get_clickhouse_variants(families: list[Family], variant_ids: list[str], **k
         genotype_keys = get_clickhouse_genotypes(
             project_guid, family_guids, GENOME_VERSION_GRCh38, Sample.DATASET_TYPE_VARIANT_CALLS, variant_key_map.keys(), samples,
         )
-        variants += [{
-            'variantId': variant_key_map[key], 'genotypes': genotypes, 'familyGuids': sorted({g['familyGuid'] for g in genotypes}),
-        } for key, genotypes in genotype_keys]
+        for key, genotypes in genotype_keys:
+            variant_id = variant_key_map[key]
+            chrom, pos, ref, alt = variant_id.split('-')
+            variants.append({
+                'key': key, 'variantId': variant_id, 'chrom': chrom, 'pos': int(pos), 'ref': ref, 'alt': alt,
+                'genotypes': json.dumps(genotypes, cls=DjangoJSONEncoderWithSets),
+                'familyGuids': sorted({g['familyGuid'] for g in genotypes.values()}),
+            })
     return variants
 
 
