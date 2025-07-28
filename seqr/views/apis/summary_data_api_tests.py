@@ -451,7 +451,7 @@ class SummaryDataAPITest(AirtableTest):
 
     @mock.patch('seqr.views.apis.summary_data_api.datetime')
     @mock.patch('seqr.views.apis.summary_data_api.load_uploaded_file')
-    def test_bulk_update_family_external_analysis(self, mock_load_uploaded_file, mock_datetime):
+    def test_bulk_update_family_external_analysis(self, mock_load_uploaded_file, mock_datetime, *args, **kwargs):
         mock_created_time = datetime(2023, 12, 5, 20, 16, 1)
         mock_datetime.now.return_value = mock_created_time
 
