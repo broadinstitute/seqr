@@ -1196,13 +1196,6 @@
       "variant_id": "1-248367227-TC-T"
     }
 }, {
-    "model": "clickhouse_search.keylookupsnvindel",
-    "pk": 101,
-    "fields": {
-      "key": 101,
-      "variant_id": "2-103343353-GAGA-G"
-    }
-}, {
     "model": "clickhouse_search.annotationssnvindel",
     "pk": 101,
     "fields": {
@@ -1245,6 +1238,44 @@
       "calls": [
         ["NA20885", 1, 99, 0, 49]
       ]
+    }
+}, {
+    "model": "clickhouse_search.keylookupsnvindel",
+    "pk": 101,
+    "fields": {
+      "key": 101,
+      "variant_id": "2-103343353-GAGA-G"
+    }
+}, {
+    "model": "clickhouse_search.annotationssnvindel",
+    "pk": 101,
+    "fields": {
+      "key": 101,
+      "xpos": 2103343353,
+      "chrom": "2",
+      "pos": 103343353,
+      "ref": "GAGA",
+      "alt": "G",
+      "variant_id": "2-103343353-GAGA-G",
+      "rsid": null,
+      "caid": null,
+      "lifted_over_chrom": null,
+      "lifted_over_pos": null,
+      "hgmd": [null, null],
+      "screen_region_type": null,
+      "predictions": [null, null, null, 1, null, null, null, null, null, null, null, null, null, null],
+      "populations": [
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0],
+        [4, 0.000044254640670260414, 90386, 0.00011118523252662271, 0, 0],
+        [13, 0.00004911409996566363, 264690, 13, 0]
+      ],
+      "sorted_transcript_consequences": [
+        [null, 1, ["inframe_deletion"], false, null, "ENSG00000135953"],
+        [null, 1, ["frameshift_variant"], false, null, "ENSG00000228198"]
+      ],
+      "sorted_motif_feature_consequences": [],
+      "sorted_regulatory_feature_consequences": []
     }
 }, {
     "model": "clickhouse_search.entriessnvindel",

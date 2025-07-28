@@ -1,4 +1,5 @@
 from collections import defaultdict
+from clickhouse_backend.models import ArrayField, StringField
 from django.contrib.auth.models import User
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.db.models import F, Q, Count, prefetch_related_objects
@@ -265,7 +266,7 @@ def _get_clickhouse_saved_variant_genes(variant_models):
     qs = get_annotations_queryset(GENOME_VERSION_GRCh38, Sample.DATASET_TYPE_VARIANT_CALLS, key_id_map.keys())
     variant_genes_by_id.update({
         key_id_map[key]: set(gene_ids) for key, gene_ids in qs.values_list(
-            'key', ArrayDistinct(ArrayMap(qs.transcript_field, mapped_expression='x.geneId')),
+            'key', ArrayDistinct(ArrayMap(qs.transcript_field, mapped_expression='x.geneId'), output_field=ArrayField(StringField())),
         )
     })
     return variant_genes_by_id
@@ -322,7 +323,7 @@ def _get_clickhouse_variants(families: list[Family], variant_ids: list[str], **k
             chrom, pos, ref, alt = variant_id.split('-')
             variants.append({
                 'key': key, 'variantId': variant_id, 'chrom': chrom, 'pos': int(pos), 'ref': ref, 'alt': alt,
-                'genotypes': json.dumps(genotypes, cls=DjangoJSONEncoderWithSets),
+                'genotypes': json.loads(json.dumps(genotypes, cls=DjangoJSONEncoderWithSets)),
                 'familyGuids': sorted({g['familyGuid'] for g in genotypes.values()}),
             })
     return variants

@@ -536,7 +536,7 @@ class SummaryDataAPITest(AirtableTest):
         self.assertDictEqual(response.json(), {'info': ['Loaded 2 new and 1 updated AIP tags for 2 families']})
 
         new_saved_variant = SavedVariant.objects.get(variant_id='2-103343353-GAGA-G')
-        self.assertDictEqual(new_saved_variant.saved_variant_json, PARSED_VARIANTS[1])
+        self._assert_expected_new_saved_variant(new_saved_variant)
 
         aip_tags = VariantTag.objects.filter(variant_tag_type__name='AIP').order_by('id').values(
             'metadata', saved_variant_ids=ArrayAgg('saved_variants__id'))
@@ -572,6 +572,12 @@ class SummaryDataAPITest(AirtableTest):
         )
 
         self.check_no_analyst_no_access(url)
+
+    def _assert_expected_new_saved_variant(self, new_saved_variant):
+        self.assertEqual(new_saved_variant.xpos, 2103343353)
+        self.assertEqual(new_saved_variant.family_id, 2)
+        self.assertEqual(new_saved_variant.ref, 'GAGA')
+        self.assertEqual(new_saved_variant.alt, 'G')
 
     def _has_expected_metadata_response(self, response, expected_individuals, has_airtable=False, has_duplicate=False):
         self.assertEqual(response.status_code, 200)
@@ -787,6 +793,10 @@ class LocalSummaryDataAPITest(AuthenticationTestCase, SummaryDataAPITest):
         mock_get_variants_for_variant_ids.return_value = PARSED_VARIANTS
         super().test_bulk_update_family_external_analysis(*args, **kwargs)
 
+    def _assert_expected_new_saved_variant(self, new_saved_variant):
+        super()._assert_expected_new_saved_variant(new_saved_variant)
+        self.assertDictEqual(new_saved_variant.saved_variant_json, PARSED_VARIANTS[1])
+
 
 def assert_has_expected_calls(self, users, skip_group_call_idxs=None):
     calls = [mock.call(user) for user in users]
@@ -817,3 +827,22 @@ class AnvilSummaryDataAPITest(AnvilAuthenticationTestCase, SummaryDataAPITest):
         ], skip_group_call_idxs=[2])
         self.mock_get_ws_access_level.assert_called_with(
             self.analyst_user, 'my-seqr-billing', 'anvil-1kg project nåme with uniçøde')
+
+    def _assert_expected_new_saved_variant(self, new_saved_variant):
+        super()._assert_expected_new_saved_variant(new_saved_variant)
+        self.assertEqual(new_saved_variant.key, 101)
+        self.assertEqual(new_saved_variant.dataset_type, 'SNV_INDEL')
+        self.assertDictEqual(new_saved_variant.genotypes, {
+            'I000004_hg00731': {
+                'ab': 0, 'gq': 99, 'sampleId': 'HG00731', 'numAlt': 2, 'dp': 67, 'filters': [],
+                'familyGuid': 'F000002_2', 'individualGuid': 'I000004_hg00731', 'sampleType': 'WES',
+            },
+            'I000005_hg00732': {
+                'ab': 0, 'gq': 96, 'sampleId': 'HG00732', 'numAlt': 1, 'dp': 42, 'filters': [],
+                'familyGuid': 'F000002_2', 'individualGuid': 'I000005_hg00732', 'sampleType': 'WES',
+            },
+            'I000006_hg00733': {
+                'ab': 0, 'gq': 96, 'sampleId': 'HG00733', 'numAlt': 0, 'dp': 42, 'filters': [],
+                'familyGuid': 'F000002_2', 'individualGuid': 'I000006_hg00733', 'sampleType': 'WES',
+            },
+        })
