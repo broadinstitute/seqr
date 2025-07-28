@@ -140,7 +140,7 @@ def get_single_variant(families, variant_id, return_all_queried_families=False, 
     return variants[0]
 
 
-def get_variants_for_variant_ids(families, variant_ids, dataset_type=None, user=None, user_email=None):
+def get_variants_for_variant_ids(families, variant_ids, dataset_type=None, user=None, user_email=None, **kwargs):
     return _get_variants_for_variant_ids(families, variant_ids, user, user_email, dataset_type=dataset_type)
 
 
