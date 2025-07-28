@@ -450,9 +450,8 @@ class SummaryDataAPITest(AirtableTest):
         ])
 
     @mock.patch('seqr.views.apis.summary_data_api.datetime')
-    @mock.patch('seqr.views.apis.summary_data_api.get_variants_for_variant_ids')
     @mock.patch('seqr.views.apis.summary_data_api.load_uploaded_file')
-    def test_bulk_update_family_external_analysis(self, mock_load_uploaded_file, mock_get_variants_for_variant_ids, mock_datetime):
+    def test_bulk_update_family_external_analysis(self, mock_load_uploaded_file, mock_datetime):
         mock_created_time = datetime(2023, 12, 5, 20, 16, 1)
         mock_datetime.now.return_value = mock_created_time
 
@@ -509,7 +508,6 @@ class SummaryDataAPITest(AirtableTest):
             }
         }
         mock_load_uploaded_file.return_value = aip_upload
-        mock_get_variants_for_variant_ids.return_value = PARSED_VARIANTS
         body['dataType'] = 'AIP'
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
@@ -529,7 +527,7 @@ class SummaryDataAPITest(AirtableTest):
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['errors'], [
-            "Unable to find the following family's AIP variants in the search backend: 2 (12-48367227-TC-T)",
+            "Unable to find the following family's variants in the search backend: 2 (12-48367227-TC-T)",
         ])
 
         aip_upload['results']['HG00731']['2-103343353-GAGA-G'] = aip_upload['results']['HG00731'].pop('12-48367227-TC-T')
@@ -783,6 +781,11 @@ class LocalSummaryDataAPITest(AuthenticationTestCase, SummaryDataAPITest):
         response = self.client.get(include_airtable_url)
         self.assertEqual(response.status_code, 200)
         self._has_expected_metadata_response(response, expected_individuals)
+
+    @mock.patch('seqr.views.utils.variant_utils.get_variants_for_variant_ids')
+    def test_bulk_update_family_external_analysis(self, mock_get_variants_for_variant_ids, *args, **kwargs):
+        mock_get_variants_for_variant_ids.return_value = PARSED_VARIANTS
+        super().test_bulk_update_family_external_analysis(*args, **kwargs)
 
 
 def assert_has_expected_calls(self, users, skip_group_call_idxs=None):
