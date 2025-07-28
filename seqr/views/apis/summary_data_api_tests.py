@@ -629,6 +629,7 @@ class SummaryDataAPITest(AirtableTest):
         self.login_manager()
         no_analyst_project_url = reverse(individual_metadata, args=['R0004_non_analyst_project'])
         response = self.client.get(no_analyst_project_url)
+        import pdb; pdb.set_trace()
         self.assertEqual(response.status_code, 200)
         rows = response.json()['rows']
         self.assertEqual(len(rows), 3)
