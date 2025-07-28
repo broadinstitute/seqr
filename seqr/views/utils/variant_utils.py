@@ -281,7 +281,7 @@ def _search_new_saved_variants(family_variant_ids: set[tuple[int, str]], user: U
     search_variants_by_id = {
         v['variantId']: v for v in backend_specific_call(
             get_variants_for_variant_ids, get_variants_for_variant_ids, _get_clickhouse_variants,
-        )(families=families_by_id.values(), variant_ids=variant_families.keys(), user=user)
+        )(families=list(families_by_id.values()), variant_ids=list(variant_families.keys()), user=user)
     }
 
     new_variants = {}
