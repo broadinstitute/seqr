@@ -144,6 +144,8 @@ def _variant_gene_id(variant, genome_version):
 
 
 def _clickhouse_variant_gene_id(variant, genome_version):
+    if not variant.key:
+        return _variant_gene_id(variant, genome_version)
     if variant.selected_main_transcript_id:
         qs = get_transcripts_queryset(genome_version, [variant.key]).annotate(gene_ids=ArrayMap(
             ArrayFilter('transcripts', [{'transcriptId': (variant.selected_main_transcript_id, '{field} = {value}')}]),

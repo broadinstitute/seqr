@@ -114,6 +114,31 @@
       ]
     }
 }, {
+    "model": "clickhouse_search.annotationsgrch37snvindel",
+    "pk": 123,
+    "fields": {
+      "key": 123,
+      "xpos": 261413835,
+      "chrom": "2",
+      "pos": 61413835,
+      "ref": "AAAG",
+      "alt": "A",
+      "variant_id": "2-61413835-AAAG-A",
+      "rsid": null,
+      "caid": null,
+      "lifted_over_chrom": null,
+      "lifted_over_pos": null,
+      "hgmd": [null, null],
+      "predictions": [21.9, null, null, null, null, null, null, null, null, null, null, null, null],
+      "populations": [
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0]
+      ],
+      "sorted_transcript_consequences": []
+    }
+}, {
     "model": "clickhouse_search.keylookupsnvindel",
     "pk": 100,
     "fields": {
