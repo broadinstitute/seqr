@@ -470,7 +470,7 @@ def _set_clickhouse_snv_indel_json(variant_json_by_guid, genome_version, dataset
     annotations = annotations_qs.values(*fields, **annotation_values)
     for anns in annotations:
         for guid, selected_main_transcript_id in key_map[anns['key']]:
-            all_transcripts = anns.pop('all_transcripts', transcripts_by_key.get(anns['key']))
+            all_transcripts = anns.pop('all_transcripts', transcripts_by_key.get(anns['key'])) or []
             is_main = (lambda t: t['transcriptId'] == selected_main_transcript_id) if selected_main_transcript_id else (
                 lambda t: t['transcriptRank'] == 0
             )
