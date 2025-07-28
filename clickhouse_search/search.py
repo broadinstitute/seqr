@@ -473,7 +473,7 @@ def get_annotations_queryset(genome_version, dataset_type, keys):
 
 def get_clickhouse_annotations(genome_version, dataset_type, keys):
     qs = get_annotations_queryset(genome_version, dataset_type, keys)
-    results = qs.join_annotations(keys).result_values(skip_entry_fields=True)
+    results = qs.join_seqr_pop().join_clinvar(keys).result_values(skip_entry_fields=True)
     return format_clickhouse_results(results, genome_version)
 
 
@@ -489,19 +489,6 @@ def get_clickhouse_keys_for_gene(gene_id, genome_version, dataset_type, keys):
     return list(results.filter(
         **{f'{results.transcript_field}__array_exists': {'geneId': (f"'{gene_id}'",)}},
     ).values_list('key', flat=True))
-
-
-# TODO: deprecate in favor of abstracting logic from `join_annotations`
-def get_clickhouse_clinvar(genome_version, dataset_type, keys):
-    clinvar_cls = ENTRY_CLASS_MAP[genome_version][dataset_type].objects.clinvar_model
-    fields = []
-    values = {}
-    for field in clinvar_cls._meta.local_fields:
-        if field.db_column:
-            values[field.name] = F(field.db_column)
-        else:
-            fields.append(field.name)
-    return clinvar_cls.objects.filter(key__in=keys).values(*fields, **values)
 
 
 def get_clickhouse_key_lookup(genome_version, dataset_type, variants_ids, reverse=False):

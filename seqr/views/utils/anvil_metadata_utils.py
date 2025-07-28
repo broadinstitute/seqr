@@ -7,8 +7,8 @@ from django.contrib.postgres.aggregates import ArrayAgg
 import requests
 from typing import Callable, Iterable
 
-from clickhouse_search.backend.functions import ArrayMap
-from clickhouse_search.search import get_annotations_queryset, get_transcripts_queryset, get_clickhouse_clinvar
+from clickhouse_search.backend.functions import ArrayMap, ArrayFilter
+from clickhouse_search.search import get_annotations_queryset, get_transcripts_queryset
 from matchmaker.models import MatchmakerSubmission
 from reference_data.models import HumanPhenotypeOntology, Omim, GENOME_VERSION_LOOKUP
 from seqr.models import Project, Family, Individual, Sample, SavedVariant, VariantTagType
@@ -425,7 +425,7 @@ def _get_clickhouse_variant_json_by_guid(saved_variants, include_clinvar):
             variant_keys_by_search_type[v.genome_version][v.dataset_type][v.key] = (v.guid, v.selected_main_transcript_id)
         else:
             no_key_variants.append(v)
-    variant_json_by_guid = _get_variant_json_by_guid(no_key_variants)
+    variant_json_by_guid.update(_get_variant_json_by_guid(no_key_variants))
 
     for genome_version, keys_by_dataset_type in variant_keys_by_search_type.items():
         for dataset_type, key_map in keys_by_dataset_type.items():
@@ -448,20 +448,26 @@ def _set_clickhouse_sv_json(variant_json_by_guid, genome_version, dataset_type, 
 
 
 def _set_clickhouse_snv_indel_json(variant_json_by_guid, genome_version, dataset_type, key_map, include_clinvar):
-    annotation_values = {'CAID': F('caid'), 'svType': Value(None)}
-    annotation_values['CAID'] = F('caid')
+    selected_transcripts = {st for _, st in key_map.values() if st}
+    annotations_qs = get_annotations_queryset(genome_version, dataset_type, key_map.keys())
+    annotation_values = {'CAID': F('caid'), 'svType': Value(None, output_field=CharField())}
     transcripts_by_key = {}
     if dataset_type == Sample.DATASET_TYPE_MITO_CALLS:
-        annotation_values['all_transcripts'] = F('sorted_transcript_consequences')
+        annotation_values['all_transcripts'] = _get_main_transcripts_expression(
+            'sorted_transcript_consequences', annotations_qs, selected_transcripts,
+        )
     else:
-        transcripts_by_key.update(dict(get_transcripts_queryset.values_list('key', 'transcripts')))
+        transcripts_qs = get_transcripts_queryset(genome_version, key_map.keys())
+        transcripts_by_key.update(dict(transcripts_qs.values_list(
+            'key', _get_main_transcripts_expression('transcripts', transcripts_qs, selected_transcripts),
+        )))
 
-    # TODO: deprecate in favor of abstracting logic from `join_annotations`
-    clinvar_by_key = {
-        c.pop('key'): c for c in get_clickhouse_clinvar(genome_version, dataset_type, key_map.keys())
-    } if include_clinvar else None
+    fields = ['key']
+    if include_clinvar:
+        fields.append('clinvar')
+        annotations_qs = annotations_qs.join_clinvar(key_map.keys())
 
-    annotations = get_annotations_queryset(genome_version, dataset_type, key_map.keys()).values('key', **annotation_values)
+    annotations = annotations_qs.values(*fields, **annotation_values)
     for anns in annotations:
         guid, selected_main_transcript_id = key_map[anns['key']]
         all_transcripts = anns.pop('all_transcripts', transcripts_by_key.get(anns['key']))
@@ -470,14 +476,21 @@ def _set_clickhouse_snv_indel_json(variant_json_by_guid, genome_version, dataset
         )
         main_transcript = next((t for t in all_transcripts if is_main(t)), {})
         gene_id = main_transcript.get('geneId')
-        updates = {
+        variant_json_by_guid[guid].update({
+            **anns,
             'main_transcript': main_transcript,
             'gene_id': gene_id,
             'gene_ids': [gene_id] if gene_id else [transcript['geneId'] for transcript in all_transcripts],
-        }
-        if include_clinvar:
-            updates['clinvar'] = clinvar_by_key.get(anns['key'])
-        variant_json_by_guid[guid].update({**anns, **updates})
+        })
+
+
+def _get_main_transcripts_expression(field_name, qs, selected_transcripts):
+    output_field = getattr(qs.model, field_name).field.clone()
+    output_field.group_by_key = None
+    return ArrayFilter(field_name, conditions=[
+        {'transcriptId': (list(selected_transcripts), 'has({value}, {field})')},
+        {'transcriptRank': (0, '{value} = {field}')},
+    ], output_field=output_field)
 
 
 def _get_variant_main_transcript(variant_model):

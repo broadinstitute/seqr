@@ -223,7 +223,7 @@ class AnnotationsQuerySet(SearchQuerySet):
             **{k: values[k] for k in override_model_annotations if k in values},
         )
 
-    def join_annotations(self, keys):
+    def join_seqr_pop(self):
         results = self
         seqr_popualtions = self.model.SEQR_POPULATIONS
         if seqr_popualtions:
@@ -238,12 +238,14 @@ class AnnotationsQuerySet(SearchQuerySet):
                 output_field=models.TupleField([models.UInt32Field() for _ in seqr_pop_fields])
             ))
 
+        return results
+
+    def join_clinvar(self, keys):
+        results = self
         if self.clinvar_model:
             clinvar_qs = self.clinvar_model.objects.filter(key__in=keys).values(clinvar=self._clinvar_tuple())
             results = results.subquery_join(clinvar_qs, promote=True)
-
         return results
-
 
     def _conditional_selected_transcript_values(self, query, prefix=''):
         if not hasattr(self.model, self.TRANSCRIPT_CONSEQUENCE_FIELD):
