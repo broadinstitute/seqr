@@ -416,13 +416,13 @@ def _get_variant_json_by_guid(saved_variants, *args, **kwargs):
 
 def _get_clickhouse_variant_json_by_guid(saved_variants, include_clinvar):
     variant_json_by_guid = {}
-    variant_keys_by_search_type = defaultdict(lambda: defaultdict(dict))
+    variant_keys_by_search_type = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
     no_key_variants = []
     for v in saved_variants:
         if v.key:
             end_chrom, end = get_chrom_pos(v.xpos_end)
             variant_json_by_guid[v.guid] = {'genotypes': v.genotypes, 'endChrom': end_chrom, 'end': end}
-            variant_keys_by_search_type[v.genome_version][v.dataset_type][v.key] = (v.guid, v.selected_main_transcript_id)
+            variant_keys_by_search_type[v.genome_version][v.dataset_type][v.key].append((v.guid, v.selected_main_transcript_id))
         else:
             no_key_variants.append(v)
     variant_json_by_guid.update(_get_variant_json_by_guid(no_key_variants))
@@ -443,12 +443,12 @@ def _set_clickhouse_sv_json(variant_json_by_guid, genome_version, dataset_type, 
     if include_clinvar:
         defaults['clinvar'] = None
     for anns in annotations:
-        guid, _ = key_map[anns['key']]
-        variant_json_by_guid[guid].update({**anns, **defaults})
+        for guid, _ in key_map[anns['key']]:
+            variant_json_by_guid[guid].update({**anns, **defaults})
 
 
 def _set_clickhouse_snv_indel_json(variant_json_by_guid, genome_version, dataset_type, key_map, include_clinvar):
-    selected_transcripts = {st for _, st in key_map.values() if st}
+    selected_transcripts = {st for group in key_map.values() for _, st in group if st}
     annotations_qs = get_annotations_queryset(genome_version, dataset_type, key_map.keys())
     annotation_values = {'CAID': F('caid'), 'svType': Value(None, output_field=CharField())}
     transcripts_by_key = {}
@@ -469,19 +469,19 @@ def _set_clickhouse_snv_indel_json(variant_json_by_guid, genome_version, dataset
 
     annotations = annotations_qs.values(*fields, **annotation_values)
     for anns in annotations:
-        guid, selected_main_transcript_id = key_map[anns['key']]
-        all_transcripts = anns.pop('all_transcripts', transcripts_by_key.get(anns['key']))
-        is_main = (lambda t: t['transcriptId'] == selected_main_transcript_id) if selected_main_transcript_id else (
-            lambda t: t['transcriptRank'] == 0
-        )
-        main_transcript = next((t for t in all_transcripts if is_main(t)), {})
-        gene_id = main_transcript.get('geneId')
-        variant_json_by_guid[guid].update({
-            **anns,
-            'main_transcript': main_transcript,
-            'gene_id': gene_id,
-            'gene_ids': [gene_id] if gene_id else [transcript['geneId'] for transcript in all_transcripts],
-        })
+        for guid, selected_main_transcript_id in key_map[anns['key']]:
+            all_transcripts = anns.pop('all_transcripts', transcripts_by_key.get(anns['key']))
+            is_main = (lambda t: t['transcriptId'] == selected_main_transcript_id) if selected_main_transcript_id else (
+                lambda t: t['transcriptRank'] == 0
+            )
+            main_transcript = next((t for t in all_transcripts if is_main(t)), {})
+            gene_id = main_transcript.get('geneId')
+            variant_json_by_guid[guid].update({
+                **anns,
+                'main_transcript': main_transcript,
+                'gene_id': gene_id,
+                'gene_ids': [gene_id] if gene_id else [transcript['geneId'] for transcript in all_transcripts],
+            })
 
 
 def _get_main_transcripts_expression(field_name, qs, selected_transcripts):
