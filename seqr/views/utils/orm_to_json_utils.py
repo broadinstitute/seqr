@@ -435,10 +435,10 @@ def get_json_for_saved_variants(saved_variants, add_details=False, additional_mo
     )
 
     if add_details:
-        for result in results:
-            result.update({k: v for k, v in result.pop('savedVariantJson').items() if k not in result})
         from seqr.utils.search.utils import backend_specific_call
         backend_specific_call(lambda *args: None, lambda *args: None, _add_clickhouse_annotations)(results, genome_version)
+        for result in results:
+            result.update({k: v for k, v in result.pop('savedVariantJson').items() if k not in result})
 
     return results
 
@@ -446,10 +446,12 @@ def get_json_for_saved_variants(saved_variants, add_details=False, additional_mo
 def _add_clickhouse_annotations(results, genome_version):
     results_by_genome_version_dataset_type = defaultdict(lambda: defaultdict(list))
     for result in results:
-        if not result['key']:
-            continue
+        dataset_type = result.pop('datasetType')
         gv = genome_version or result.pop('familyProjectGenomeVersion')
-        results_by_genome_version_dataset_type[gv][result.pop('datasetType')].append(result)
+        if result['key']:
+            results_by_genome_version_dataset_type[gv][dataset_type].append(result)
+        else:
+            result.pop('genotypes')
 
     for gv, grouped_results in results_by_genome_version_dataset_type.items():
         for dataset_type, gv_results in grouped_results.items():

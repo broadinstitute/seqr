@@ -848,8 +848,8 @@ IGV_SAMPLE_FIELDS = {
 SAVED_VARIANT_FIELDS = {'variantGuid', 'variantId', 'familyGuids', 'xpos', 'ref', 'alt', 'selectedMainTranscriptId', 'acmgClassification'}
 SAVED_VARIANT_DETAIL_FIELDS = {
     'chrom', 'pos', 'genomeVersion', 'liftedOverGenomeVersion', 'liftedOverChrom', 'liftedOverPos', 'tagGuids',
-    'functionalDataGuids', 'noteGuids', 'originalAltAlleles', 'genotypes', 'hgmd', 'CAID',
-    'transcripts', 'populations', 'predictions', 'rsid', 'genotypeFilters', 'clinvar', 'acmgClassification'
+    'functionalDataGuids', 'noteGuids', 'genotypes', 'hgmd', 'CAID',
+    'transcripts', 'populations', 'predictions', 'rsid', 'clinvar', 'acmgClassification'
 }
 SAVED_VARIANT_DETAIL_FIELDS.update(SAVED_VARIANT_FIELDS)
 

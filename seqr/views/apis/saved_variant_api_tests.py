@@ -138,9 +138,9 @@ class SavedVariantAPITest(object):
         self.assertSetEqual(set(variants.keys()), {'SV0000002_1248367227_r0390_100', VARIANT_GUID})
 
         variant = variants[VARIANT_GUID]
-        self.assertSetEqual(set(variants['SV0000002_1248367227_r0390_100'].keys()), SAVED_VARIANT_DETAIL_FIELDS)
+        self.assertSetEqual(set(variants['SV0000002_1248367227_r0390_100'].keys()), self.SAVED_VARIANT_DETAIL_FIELDS)
         fields = {'mainTranscriptId', 'mmeSubmissions'}
-        fields.update(SAVED_VARIANT_DETAIL_FIELDS)
+        fields.update(self.SAVED_VARIANT_DETAIL_FIELDS)
         self.assertSetEqual(set(variant.keys()), fields)
         self.assertListEqual(variant['familyGuids'], ['F000001_1'])
         self.assertSetEqual(set(variant['genotypes'].keys()), {'I000003_na19679', 'I000001_na19675', 'I000002_na19678'})
@@ -165,7 +165,7 @@ class SavedVariantAPITest(object):
 
         gene_fields = {'locusListGuids'}
         gene_fields.update(GENE_VARIANT_FIELDS)
-        self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953'})
+        self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953', 'ENSG00000240361'})
         self.assertSetEqual(set(response_json['genesById']['ENSG00000135953'].keys()), gene_fields)
 
         self.assertDictEqual(
@@ -995,6 +995,7 @@ class LocalSavedVariantAPITest(AuthenticationTestCase, SavedVariantAPITest):
     fixtures = ['users', '1kg_project', 'reference_data']
 
     SAVED_VARIANT_RESPONSE_KEYS = SAVED_VARIANT_RESPONSE_KEYS
+    SAVED_VARIANT_DETAIL_FIELDS = SAVED_VARIANT_DETAIL_FIELDS
 
 
 def assert_no_list_ws_has_al(self, acl_call_count):
@@ -1010,6 +1011,7 @@ class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, SavedVariantAPITest)
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data', 'clickhouse_saved_variants']
 
     SAVED_VARIANT_RESPONSE_KEYS = {*SAVED_VARIANT_RESPONSE_KEYS, 'totalSampleCounts'}
+    SAVED_VARIANT_DETAIL_FIELDS = {*SAVED_VARIANT_DETAIL_FIELDS, 'key', 'mainTranscriptId'}
 
     def test_saved_variant_data(self, *args):
         super(AnvilSavedVariantAPITest, self).test_saved_variant_data(*args)
