@@ -1969,7 +1969,6 @@
             },
             "rsid": null,
             "liftedOverChrom": "",
-            "mainTranscriptId": "ENST00000371839",
             "transcripts": {
                 "ENSG00000135953": [
                     {"transcriptId": "ENST00000371839", "biotype": "protein_coding", "geneId": "ENSG00000135953"}
@@ -1987,6 +1986,7 @@
             },
             "CAID": "CA1501729"
         },
+        "selected_main_transcript_id": "ENST00000371839",
         "family": 2
     }
 },
