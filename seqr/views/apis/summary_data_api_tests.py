@@ -7,7 +7,7 @@ import responses
 
 from seqr.views.apis.summary_data_api import mme_details, success_story, saved_variants_page, hpo_summary_data, \
     bulk_update_family_external_analysis, individual_metadata, send_vlm_email
-from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, AirtableTest, PARSED_VARIANTS
+from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, AirtableTest, PARSED_VARIANTS, SAVED_VARIANT_FIELDS
 from seqr.models import FamilyAnalysedBy, SavedVariant, VariantTag
 from settings import AIRTABLE_URL
 
@@ -286,8 +286,7 @@ class SummaryDataAPITest(AirtableTest):
                             {'ENSG00000240361', 'ENSG00000223972', 'ENSG00000135953'})
         self.assertEqual(len(response_json['submissions']), self.NUM_MANAGER_SUBMISSIONS)
         self.assertSetEqual(set(next(iter(response_json['savedVariantsByGuid'].values())).keys()), {
-            'xpos', 'chrom', 'pos', 'ref', 'alt', 'variantId', 'variantGuid', 'genomeVersion', 'familyGuids',
-            'selectedMainTranscriptId', 'acmgClassification',
+            'chrom', 'pos',  'genomeVersion', *SAVED_VARIANT_FIELDS,
         })
 
         # Test analyst behavior
