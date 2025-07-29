@@ -1364,10 +1364,12 @@ class ReportAPITest(AirtableTest):
             'projectGuid': 'R0001_1kg',
             'ref': 'TC',
             'tags': ['Known gene for phenotype'],
+            'transcript': 'ENST00000371839',
             'variant_inheritance': 'paternal',
             'variant_reference_assembly': 'GRCh37',
             'zygosity': 'Homozygous',
         }
+        self.maxDiff = None
         self.assertDictEqual(response_json['rows'][1], expected_row)
         expected_mnv = {
             **BASE_VARIANT_METADATA_ROW,

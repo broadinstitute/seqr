@@ -36,11 +36,8 @@
             "liftedOverChrom": "19",
             "variantId": "19-1912634-C-T",
             "chrom": "19",
-            "mainTranscriptId": "ENST00000371839",
             "transcripts": {
-                "ENSG00000135953": [
-                    {"transcriptId": "ENST00000371839", "biotype": "protein_coding", "geneId": "ENSG00000240361"}
-                ]
+                "ENSG00000240361": []
             },
             "CAID": "CA403171634"
         },

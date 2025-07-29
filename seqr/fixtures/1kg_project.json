@@ -1969,8 +1969,12 @@
             },
             "rsid": null,
             "liftedOverChrom": "",
+            "mainTranscriptId": "ENST00000371839",
             "transcripts": {
-                "ENSG00000135953": [], "ENSG00000240361": []
+                "ENSG00000135953": [
+                    {"transcriptId": "ENST00000371839", "biotype": "protein_coding", "geneId": "ENSG00000135953"}
+                ],
+                "ENSG00000240361": []
             },
             "chrom": "1",
             "genotypes": {
