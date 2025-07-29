@@ -218,7 +218,8 @@ class AnnotationsQuerySet(SearchQuerySet):
         override_model_annotations = {'populations', 'pos', 'end'}
         values = {**self.annotation_values}
         values.update(self._conditional_selected_transcript_values(self))
-        values.update(self._genotype_override_values(self))
+        if not skip_entry_fields:
+            values.update(self._genotype_override_values(self))
         initial_values = {k: v for k, v in  values.items() if k not in override_model_annotations}
 
         fields = [*self.annotation_fields]

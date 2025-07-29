@@ -189,5 +189,28 @@
         ["NA20885", 1, 99, 0, 49]
       ]
     }
+}, {
+    "model": "clickhouse_search.annotationsgcnv",
+    "pk": 123,
+    "fields": {
+      "key": 123,
+      "xpos": 2061413835,
+      "chrom": "2",
+      "pos": 61413835,
+      "end": 61414175,
+      "variant_id": "batch_123_DUP",
+      "lifted_over_chrom": "2",
+      "lifted_over_pos": 61413835,
+      "rg37_locus_end": [2, 61414175],
+      "num_exon": 0,
+      "predictions": [21.9],
+      "populations": [
+        [2, 0.063, 32, 0, 0]
+      ],
+      "sorted_gene_consequences": [
+        ["ENSG00000240361", "LOF"]
+      ],
+      "sv_type": "DUP"
+    }
 }
 ]

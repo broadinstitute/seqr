@@ -4,7 +4,7 @@ import mock
 
 from django.urls.base import reverse
 
-from seqr.models import SavedVariant, VariantNote, VariantTag, VariantFunctionalData, Family
+from seqr.models import SavedVariant, VariantNote, VariantTag, VariantFunctionalData, Family, Project
 from seqr.views.apis.saved_variant_api import saved_variant_data, create_variant_note_handler, create_saved_variant_handler, \
     update_variant_note_handler, delete_variant_note_handler, update_variant_tags_handler, update_saved_variant_json, \
     update_variant_main_transcript, update_variant_functional_data_handler, update_variant_acmg_classification_handler
@@ -358,13 +358,14 @@ class SavedVariantAPITest(object):
         create_saved_variant_url = reverse(create_saved_variant_handler)
         self.check_collaborator_login(create_saved_variant_url, request_data={'familyGuid': 'F000001_1'})
 
+        create_variant_json = self._create_variant(CREATE_VARIANT_JSON)
         create_variant_request_body = {
             'searchHash': 'd380ed0fd28c3127d07a64ea2ba907d7',
             'familyGuid': 'F000001_1',
             'tags': [{'name': 'Review', 'metadata': 'a note'}],
             'note': '',
             'functionalData': [],
-            'variant': self.CREATE_VARIANT_JSON,
+            'variant': create_variant_json,
         }
 
         invalide_create_variant_request_body = deepcopy(create_variant_request_body)
@@ -383,7 +384,7 @@ class SavedVariantAPITest(object):
 
         saved_variant = SavedVariant.objects.get(guid=variant_guid, family__guid='F000001_1')
         variant_json = {'xpos': 2061413835}
-        variant_json.update(self.CREATE_VARIANT_JSON)
+        variant_json.update(create_variant_json)
         self._assert_created_variant(saved_variant, variant_json)
 
         variant_json.update({
@@ -411,30 +412,39 @@ class SavedVariantAPITest(object):
         self.assertEqual(response.status_code, 200)
         self.assertListEqual(list(response.json()['savedVariantsByGuid'].keys()), [variant_guid])
 
+    def _create_variant(self, variant_json):
+        return variant_json
+
     def _assert_created_variant(self, saved_variant, variant_json):
         for field in ['xpos', 'ref', 'alt']:
-            self.assertEqual(variant_json[field], getattr(saved_variant, field))
+            self.assertEqual(variant_json.get(field), getattr(saved_variant, field, None))
 
     def test_create_saved_sv_variant(self):
+        # SVs are only supported on build 38
+        Project.objects.filter(id=1).update(genome_version='38')
+
         create_saved_variant_url = reverse(create_saved_variant_handler)
         self.check_collaborator_login(create_saved_variant_url, request_data={'familyGuid': 'F000001_1'})
 
-        variant_json = {
+        variant_json = self._create_variant({
             'chrom': '2',
             'genotypes': {},
-            'genomeVersion': '37',
-            'mainTranscriptId': None,
-            'populations': {'sv_callset': {'ac': 2, 'af': 0.063, 'an': 32}},
+            'genomeVersion': '38',
+            'populations': {'sv_callset': {'ac': 2, 'af': 0.063, 'an': 32, 'het': 0, 'hom': 0}},
             'pos': 61413835,
             'end': 61414175,
+            'liftedOverChrom': '2',
+            'liftedOverGenomeVersion': '37',
+            'liftedOverPos': 61413835,
+            'rg37LocusEnd': {'contig': '2', 'position': 61414175},
+            'numExon': 0,
             'predictions': {'strvctvre': 21.9},
-            'transcripts': {'ENSG00000240361': []},
-            'projectGuid': 'R0001_1kg',
+            'transcripts': {'ENSG00000240361': [{'geneId': 'ENSG00000240361', 'majorConsequence': 'LOF'}]},
             'familyGuids': ['F000001_1', 'F000002_2'],
             'svType': 'DUP',
             'variantId': 'batch_123_DUP',
             'acmgClassification': None,
-        }
+        })
 
         request_body = {
             'familyGuid': 'F000001_1',
@@ -455,7 +465,7 @@ class SavedVariantAPITest(object):
 
         saved_variant = SavedVariant.objects.get(guid=variant_guid, family__guid='F000001_1')
         variant_json.update({'xpos': 2061413835})
-        self.assertDictEqual(variant_json, saved_variant.saved_variant_json)
+        self._assert_created_variant(saved_variant, variant_json, dataset_type='SV_WES')
         self.assertEqual(saved_variant.xpos_end, 2061414175)
 
         variant_json.update({
@@ -1021,9 +1031,8 @@ class LocalSavedVariantAPITest(AuthenticationTestCase, SavedVariantAPITest):
 
     SAVED_VARIANT_RESPONSE_KEYS = SAVED_VARIANT_RESPONSE_KEYS
     SAVED_VARIANT_DETAIL_FIELDS = SAVED_VARIANT_DETAIL_FIELDS
-    CREATE_VARIANT_JSON = CREATE_VARIANT_JSON
 
-    def _assert_created_variant(self, saved_variant, variant_json):
+    def _assert_created_variant(self, saved_variant, variant_json, **kwargs):
         super()._assert_created_variant(saved_variant, variant_json)
         self.assertDictEqual(variant_json, saved_variant.saved_variant_json)
 
@@ -1042,7 +1051,6 @@ class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, SavedVariantAPITest)
 
     SAVED_VARIANT_RESPONSE_KEYS = {*SAVED_VARIANT_RESPONSE_KEYS, 'totalSampleCounts'}
     SAVED_VARIANT_DETAIL_FIELDS = {*SAVED_VARIANT_DETAIL_FIELDS, 'key', 'mainTranscriptId'}
-    CREATE_VARIANT_JSON = {**CREATE_VARIANT_JSON, 'key': 123}
 
     def test_saved_variant_data(self, *args):
         super(AnvilSavedVariantAPITest, self).test_saved_variant_data(*args)
@@ -1109,9 +1117,12 @@ class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, SavedVariantAPITest)
         super(AnvilSavedVariantAPITest, self).test_update_variant_acmg_classification()
         assert_no_list_ws_has_al(self, 2)
 
-    def _assert_created_variant(self, saved_variant, variant_json):
+    def _create_variant(self, variant_json):
+        return {**variant_json, 'key': 123}
+
+    def _assert_created_variant(self, saved_variant, variant_json, dataset_type='SNV_INDEL'):
         super()._assert_created_variant(saved_variant, variant_json)
         self.assertEqual(variant_json['key'], saved_variant.key)
-        self.assertEqual('SNV_INDEL', saved_variant.dataset_type)
+        self.assertEqual(dataset_type, saved_variant.dataset_type)
         self.assertDictEqual(variant_json['genotypes'], saved_variant.genotypes)
         self.assertDictEqual({}, saved_variant.saved_variant_json)
