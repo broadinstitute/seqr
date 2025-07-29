@@ -1,5 +1,6 @@
 from datetime import timedelta
 from django.contrib.auth.models import User
+from django.db import connections, transaction
 from django.test import TestCase
 import json
 import mock
@@ -676,6 +677,18 @@ class ClickhouseSearchUtilsTests(TestCase, SearchUtilsTests):
 
     def setUp(self):
         self.set_up()
+
+    @classmethod
+    def _databases_support_transactions(cls):
+        return True
+
+    @classmethod
+    def _rollback_atomics(cls, atomics):
+        """Django testcases asssume either all database support transactions or none do. This properly cleans up transaction blocks on a per-db basis"""
+        for db_name in reversed(cls._databases_names()):
+            if connections[db_name].features.supports_transactions:
+                transaction.set_rollback(True, using=db_name)
+                atomics[db_name].__exit__(None, None, None)
 
     def _assert_expected_cached_variants(self, variants, num_results):
         self.assertListEqual(
