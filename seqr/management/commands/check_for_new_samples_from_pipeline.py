@@ -30,6 +30,7 @@ logger = logging.getLogger(__name__)
 CLICKHOUSE_MIGRATION_SENTINEL = 'hail_search_to_clickhouse_migration'
 RUN_FILE_PATH_TEMPLATE = '{data_dir}/{genome_version}/{dataset_type}/runs/{run_version}/{file_name}'
 SUCCESS_FILE_NAME = '_SUCCESS'
+CLICKHOUSE_SUCCESS_FILE_NAME = '_CLICKHOUSE_LOAD_SUCCESS'
 VALIDATION_ERRORS_FILE_NAME = 'validation_errors.json'
 ERRORS_REPORTED_FILE_NAME = '_ERRORS_REPORTED'
 RUN_PATH_FIELDS = ['genome_version', 'dataset_type', 'run_version', 'file_name']
@@ -68,7 +69,8 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         runs = self._get_runs(**options)
 
-        success_run_dirs = [run_dir for run_dir, run_details in runs.items() if SUCCESS_FILE_NAME in run_details['files']]
+        success_file_name = backend_specific_call(None, SUCCESS_FILE_NAME, CLICKHOUSE_SUCCESS_FILE_NAME)
+        success_run_dirs = [run_dir for run_dir, run_details in runs.items() if success_file_name in run_details['files']]
         if success_run_dirs:
             self._load_success_runs(runs, success_run_dirs)
         if not success_run_dirs:
