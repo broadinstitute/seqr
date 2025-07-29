@@ -29,8 +29,7 @@
         [65461, 0.52132, 125568, 33149, 16156]
       ],
       "sorted_transcript_consequences": [
-        [1, [], "ENSG00000240361"],
-        [1, [], "ENSG00000135953"]
+        [1, ["intron_variant"], "ENSG00000135953"]
       ]
     }
 }, {
@@ -39,8 +38,7 @@
     "fields": {
       "key": 100,
       "transcripts": [
-        [null, "protein_coding", 1, "Gtg/Atg", ["intron_variant"], "ENSG00000240361", "ENST00000262738.3:c.3955G>A", "ENST00000505820.2:c.1586-17C>G", [null, []], "intron_variant", "ENST00000505820", 0],
-        [null, "protein_coding", 1, null, [], "ENSG00000135953", null, null, [null, []], null, "ENST00000505820", 1]
+        [null, "protein_coding", 1, "Gtg/Atg", ["intron_variant"], "ENSG00000135953", "ENST00000262738.3:c.3955G>A", "ENST00000505820.2:c.1586-17C>G", [null, []], "intron_variant", "ENST00000505820", 0]
       ]
     }
 }, {

@@ -1970,7 +1970,7 @@
             "rsid": null,
             "liftedOverChrom": "",
             "transcripts": {
-                "ENSG00000135953": [], "ENSG00000240361": []
+                "ENSG00000135953": []
             },
             "chrom": "1",
             "genotypes": {
@@ -2144,13 +2144,10 @@
             "hgmd": {"accession": null, "class": null}, "rsid": null, "liftedOverChrom": "",
              "mainTranscriptId": "ENST00000505820", "transcripts": {
                 "ENSG00000135953": [
-                    {"transcriptId": "ENST00000371839", "biotype": "protein_coding", "geneId": "ENSG00000228198"}
-                ],
-                "ENSG00000240361": [
                     {"transcriptId": "ENST00000505820", "lofFilter": "", "biotype": "protein_coding",
                         "geneSymbol": "MIB2", "majorConsequence": "intron_variant", "canonical": 1,
                         "hgvsp": "ENST00000505820.2:c.1586-17C>G", "lof": "", "lofFlags": "", "codons": "Gtg/Atg",
-                        "hgvsc": "ENST00000262738.3:c.3955G>A", "transcriptRank": 0, "geneId": "ENSG00000240361",
+                        "hgvsc": "ENST00000262738.3:c.3955G>A", "transcriptRank": 0, "geneId": "ENSG00000135953",
                         "aminoAcids": "V/M", "cdnaPosition": "3955"}
                 ]
             }, "chrom": "1", "genotypes": {

@@ -175,7 +175,7 @@ class SavedVariantAPITest(object):
 
         gene_fields = {'locusListGuids'}
         gene_fields.update(GENE_VARIANT_FIELDS)
-        self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953', 'ENSG00000240361'})
+        self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953'})
         self.assertSetEqual(set(response_json['genesById']['ENSG00000135953'].keys()), gene_fields)
 
         self.assertDictEqual(
