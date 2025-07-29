@@ -22,9 +22,17 @@ from seqr.utils.xpos_utils import get_xpos, MIN_POS, MAX_POS
 class SearchQuerySet(QuerySet):
 
     @property
+    def table_basename(self):
+        return self.model._meta.db_table.rsplit('/', 1)[0]
+
+    @property
+    def clinvar_field_prefix(self):
+        return 'clinvar_join'
+
+    @property
     def clinvar_fields(self):
         return OrderedDict({
-            field.name: (field.db_column or field.name, field)
+            f'{self.clinvar_field_prefix}__{field.name}': (field.db_column or field.name, field)
             for field in reversed(self.clinvar_model._meta.local_fields) if field.name != 'key'
         })
 
@@ -126,9 +134,12 @@ class AnnotationsQuerySet(SearchQuerySet):
         return getattr(self.model, 'SV_TYPES', None)
 
     @property
+    def entry_field(self):
+        return next(obj.name for obj in self.model._meta.related_objects if obj.name.startswith('entries'))
+
+    @property
     def entry_model(self):
-         entry_field = next(obj.name for obj in self.model._meta.related_objects if obj.name.startswith('entries'))
-         return getattr(self.model, f'{entry_field}_set').rel.related_model
+         return getattr(self.model, f'{self.entry_field}_set').rel.related_model
 
     @property
     def clinvar_model(self):
@@ -136,8 +147,12 @@ class AnnotationsQuerySet(SearchQuerySet):
             return None
         return self.entry_model.clinvar_join.rel.related_model
 
+    @property
+    def clinvar_field_prefix(self):
+        return f'{self.entry_field}__clinvar_join'
 
-    def subquery_join(self, subquery, join_key='key', promote=False):
+
+    def subquery_join(self, subquery, join_key='key'):
         #  Add key to intermediate select if not already present
         join_field = next(field for field in subquery.model._meta.fields if field.name == join_key)
         if join_key not in subquery.query.values_select:
@@ -156,9 +171,6 @@ class AnnotationsQuerySet(SearchQuerySet):
             nullable=False,
         ))
         self.query.alias_map[parent_alias] = table
-        if promote:
-            self.query.alias_map[table.table_alias] = self.query.alias_map[table.table_alias].promote()
-            self.query.alias_map[table.table_alias].join_type = 'RIGHT OUTER JOIN'
 
         return self.annotate(**self._get_subquery_annotations(subquery, table.table_alias, join_key=join_key))
 
@@ -232,7 +244,7 @@ class AnnotationsQuerySet(SearchQuerySet):
                 *[
                     DictGet(
                         'key',
-                        dict_name=f"{self.model._meta.db_table.rsplit('/', 1)[0]}/gt_stats_dict",
+                        dict_name=f"{self.table_basename}/gt_stats_dict",
                         fields=seqr_pop_field,
                     ) for seqr_pop_field in seqr_pop_fields],
                 output_field=models.TupleField([models.UInt32Field() for _ in seqr_pop_fields])
@@ -243,8 +255,12 @@ class AnnotationsQuerySet(SearchQuerySet):
     def join_clinvar(self, keys):
         results = self
         if self.clinvar_model:
-            clinvar_qs = self.clinvar_model.objects.filter(key__in=keys).values(clinvar=self._clinvar_tuple())
-            results = results.subquery_join(clinvar_qs, promote=True)
+            results = results.annotate(clinvar=self._clinvar_tuple())
+            # Due to django modeling, adding a clinvar annotation will add a join to the entries table and then to clinvar
+            # Manipulating the underlying join removes the entry join entirely
+            entry_table = f'{self.table_basename}/entries'
+            results.query.alias_map[f'{self.table_basename}/clinvar'].parent_alias = results.query.alias_map[entry_table].parent_alias
+            results.query.alias_refcount[entry_table] = 0
         return results
 
     def _conditional_selected_transcript_values(self, query, prefix=''):
@@ -667,10 +683,6 @@ class EntriesManager(SearchQuerySet):
     def clinvar_model(self):
         return self.model.clinvar_join.rel.related_model
 
-    @property
-    def clinvar_fields(self):
-        return {f'clinvar_join__{k}': v for k, v in super().clinvar_fields.items()}
-
     def search(self, sample_data, parsed_locus=None, freqs=None, annotations=None, **kwargs):
         entries = self.filter_intervals(**(parsed_locus or {}))
 
@@ -702,7 +714,7 @@ class EntriesManager(SearchQuerySet):
             seqr_pop_fields = self._seqr_pop_fields(seqr_popualtions)
             entries = entries.annotate(seqrPop=DictGet(
                 'key',
-                dict_name=f"{self.model._meta.db_table.rsplit('/', 1)[0]}/gt_stats_dict",
+                dict_name=f"{self.table_basename}/gt_stats_dict",
                 fields=', '.join(seqr_pop_fields),
                 output_field=models.TupleField([models.UInt32Field() for _ in seqr_pop_fields])
             ))
