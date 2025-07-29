@@ -358,7 +358,7 @@ class SavedVariantAPITest(object):
         create_saved_variant_url = reverse(create_saved_variant_handler)
         self.check_collaborator_login(create_saved_variant_url, request_data={'familyGuid': 'F000001_1'})
 
-        create_variant_json = self._create_variant(CREATE_VARIANT_JSON)
+        create_variant_json = self._format_create_variant(CREATE_VARIANT_JSON)
         create_variant_request_body = {
             'searchHash': 'd380ed0fd28c3127d07a64ea2ba907d7',
             'familyGuid': 'F000001_1',
@@ -412,7 +412,7 @@ class SavedVariantAPITest(object):
         self.assertEqual(response.status_code, 200)
         self.assertListEqual(list(response.json()['savedVariantsByGuid'].keys()), [variant_guid])
 
-    def _create_variant(self, variant_json):
+    def _format_create_variant(self, variant_json, **kwargs):
         return variant_json
 
     def _assert_created_variant(self, saved_variant, variant_json):
@@ -426,7 +426,7 @@ class SavedVariantAPITest(object):
         create_saved_variant_url = reverse(create_saved_variant_handler)
         self.check_collaborator_login(create_saved_variant_url, request_data={'familyGuid': 'F000001_1'})
 
-        variant_json = self._create_variant({
+        variant_json = self._format_create_variant({
             'chrom': '2',
             'genotypes': {},
             'genomeVersion': '38',
@@ -518,14 +518,14 @@ class SavedVariantAPITest(object):
             'noteGuids': [],
             'functionalDataGuids': [],
         }
-        expected_compound_het_3_json.update(COMPOUND_HET_3_JSON)
+        expected_compound_het_3_json.update(self._format_create_variant(COMPOUND_HET_3_JSON, key=None))
         expected_compound_het_4_json = {
             'variantGuid': new_compound_het_4_guid,
             'selectedMainTranscriptId': None,
             'noteGuids': [],
             'functionalDataGuids': [],
         }
-        expected_compound_het_4_json.update(COMPOUND_HET_4_JSON)
+        expected_compound_het_4_json.update(self._format_create_variant(COMPOUND_HET_4_JSON, key=None))
         response_json = response.json()
         response_compound_het_3_json = response_json['savedVariantsByGuid'][new_compound_het_3_guid]
         response_compound_het_4_json = response_json['savedVariantsByGuid'][new_compound_het_4_guid]
@@ -658,7 +658,7 @@ class SavedVariantAPITest(object):
             'tagGuids': [],
             'functionalDataGuids': [],
         }
-        expected_compound_het_5_json.update(COMPOUND_HET_5_JSON)
+        expected_compound_het_5_json.update(self._format_create_variant(COMPOUND_HET_5_JSON, key=None))
         response_json = response.json()
         response_compound_het_5_json = response_json['savedVariantsByGuid'][compound_het_5_guid]
         note_guids = response_compound_het_5_json.pop('noteGuids')
@@ -1117,8 +1117,8 @@ class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, SavedVariantAPITest)
         super(AnvilSavedVariantAPITest, self).test_update_variant_acmg_classification()
         assert_no_list_ws_has_al(self, 2)
 
-    def _create_variant(self, variant_json):
-        return {**variant_json, 'key': 123}
+    def _format_create_variant(self, variant_json, key=123):
+        return {**variant_json, 'key': key}
 
     def _assert_created_variant(self, saved_variant, variant_json, dataset_type='SNV_INDEL'):
         super()._assert_created_variant(saved_variant, variant_json)
