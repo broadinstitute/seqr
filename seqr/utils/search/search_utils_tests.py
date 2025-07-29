@@ -44,10 +44,6 @@ class SearchUtilsTests(SearchTestHelper):
 
     CACHED_VARIANTS = PARSED_VARIANTS + PARSED_VARIANTS
 
-    @classmethod
-    def _databases_support_transactions(cls):
-        return True
-
     def set_up(self):
         super(SearchUtilsTests, self).set_up()
 
@@ -511,7 +507,7 @@ class SearchUtilsTests(SearchTestHelper):
 @mock.patch('clickhouse_search.search.CLICKHOUSE_SERVICE_HOSTNAME', '')
 @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', 'testhost')
 class ElasticsearchSearchUtilsTests(TestCase, SearchUtilsTests):
-    databases = '__all__'
+    databases = ['default', 'reference_data']
     fixtures = ['users', '1kg_project', 'reference_data']
 
     def setUp(self):
@@ -620,7 +616,7 @@ class ElasticsearchSearchUtilsTests(TestCase, SearchUtilsTests):
 
 @mock.patch('clickhouse_search.search.CLICKHOUSE_SERVICE_HOSTNAME', '')
 class HailSearchUtilsTests(TestCase, SearchUtilsTests):
-    databases = '__all__'
+    databases = ['default', 'reference_data']
     fixtures = ['users', '1kg_project', 'reference_data']
 
     def setUp(self):

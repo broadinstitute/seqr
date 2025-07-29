@@ -21,7 +21,7 @@ WINDOW_REGEX_TEMPLATE = 'window\.{key}=(?P<value>[^)<]+)'
 
 
 class AuthenticationTestCase(TestCase):
-    databases = '__all__'
+    databases = ['default', 'reference_data']
     SUPERUSER = 'superuser'
     ANALYST = 'analyst'
     PM = 'project_manager'
@@ -70,10 +70,6 @@ class AuthenticationTestCase(TestCase):
 
         self._log_stream = StringIO()
         logging.getLogger().handlers[0].stream = self._log_stream
-
-    @classmethod
-    def _databases_support_transactions(cls):
-        return True
 
     @classmethod
     def setUpTestData(cls):
@@ -519,6 +515,7 @@ def get_group_members_side_effect(user, group, use_sa_credentials=False):
 
 class AnvilAuthenticationTestCase(AuthenticationTestCase):
 
+    databases = '__all__'
     ES_HOSTNAME = ''
     CLICKHOUSE_HOSTNAME = 'testhost'
     MOCK_AIRTABLE_KEY = 'airflow_access'
@@ -565,6 +562,10 @@ class AnvilAuthenticationTestCase(AuthenticationTestCase):
         self.addCleanup(patcher.stop)
         super(AnvilAuthenticationTestCase, self).setUp()
         SavedVariant.objects.filter(key__isnull=False).update(saved_variant_json={})
+
+    @classmethod
+    def _databases_support_transactions(cls):
+        return True
 
     @classmethod
     def _rollback_atomics(cls, atomics):

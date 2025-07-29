@@ -11,7 +11,7 @@ from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticat
     TAG_FIELDS, VARIANT_NOTE_FIELDS
 
 class JSONUtilsTest(object):
-    databases = '__all__'
+    databases = ['default']
 
     def test_json_for_user(self):
         users = User.objects.all()
