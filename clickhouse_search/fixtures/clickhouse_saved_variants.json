@@ -83,7 +83,7 @@
       "lifted_over_chrom": null,
       "lifted_over_pos": null,
       "hgmd": [null, null],
-      "predictions": [null, null, null, null, 1, null, null, null, null, null, null, null, null],
+      "predictions": [null, null, null, null, null, null, null, null, null, null, null, null, null],
       "populations": [
         [0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0],

@@ -3,6 +3,7 @@ from collections import defaultdict
 from copy import deepcopy
 from datetime import datetime
 from django.contrib.auth.models import User, Group
+from django.db import connections, transaction
 from django.test import TestCase
 from guardian.shortcuts import assign_perm
 from io import StringIO
@@ -564,6 +565,14 @@ class AnvilAuthenticationTestCase(AuthenticationTestCase):
         self.addCleanup(patcher.stop)
         super(AnvilAuthenticationTestCase, self).setUp()
         SavedVariant.objects.filter(key__isnull=False).update(saved_variant_json={})
+
+    @classmethod
+    def _rollback_atomics(cls, atomics):
+        """Django testcases asssume either all database support transactions or none do. This properly cleans up transaction blocks on a per-db basis"""
+        for db_name in reversed(cls._databases_names()):
+            if connections[db_name].features.supports_transactions:
+                transaction.set_rollback(True, using=db_name)
+                atomics[db_name].__exit__(None, None, None)
 
     @classmethod
     def add_additional_user_groups(cls):
