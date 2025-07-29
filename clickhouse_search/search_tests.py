@@ -1,5 +1,4 @@
 from django.core.exceptions import ObjectDoesNotExist
-from django.db import connections, transaction
 from django.test import TestCase
 import json
 import mock
@@ -20,10 +19,11 @@ from seqr.models import Project, Family, Sample
 from seqr.utils.search.search_utils_tests import SearchTestHelper
 from seqr.utils.search.utils import query_variants, variant_lookup, sv_variant_lookup
 from seqr.views.utils.json_utils import DjangoJSONEncoderWithSets
+from seqr.views.utils.test_utils import DifferentDbTransactionSupportMixin
 
 
 @mock.patch('clickhouse_search.search.CLICKHOUSE_SERVICE_HOSTNAME', 'localhost')
-class ClickhouseSearchTests(SearchTestHelper, TestCase):
+class ClickhouseSearchTests(DifferentDbTransactionSupportMixin, SearchTestHelper, TestCase):
     databases = '__all__'
     fixtures = ['users', '1kg_project', 'reference_data', 'clickhouse_search', 'clickhouse_transcripts']
 
@@ -33,18 +33,6 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             for table_base in ['GRCh38/SNV_INDEL', 'GRCh38/MITO', 'GRCh38/SV', 'GRCh37/SNV_INDEL']:
                 cursor.execute(f'SYSTEM REFRESH VIEW "{table_base}/project_gt_stats_to_gt_stats_mv"')
         Project.objects.update(genome_version='38')
-
-    @classmethod
-    def _databases_support_transactions(cls):
-        return True
-
-    @classmethod
-    def _rollback_atomics(cls, atomics):
-        """Django testcases asssume either all database support transactions or none do. This properly cleans up transaction blocks on a per-db basis"""
-        for db_name in reversed(cls._databases_names()):
-            if connections[db_name].features.supports_transactions:
-                transaction.set_rollback(True, using=db_name)
-                atomics[db_name].__exit__(None, None, None)
 
     def _assert_expected_search(self, expected_results, gene_counts=None, inheritance_mode=None, inheritance_filter=None, quality_filter=None, cached_variant_fields=None, sort='xpos', **search_kwargs):
         self.search_model.search.update(search_kwargs or {})

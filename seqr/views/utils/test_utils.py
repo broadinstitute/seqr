@@ -513,7 +513,22 @@ def get_group_members_side_effect(user, group, use_sa_credentials=False):
     return {}
 
 
-class AnvilAuthenticationTestCase(AuthenticationTestCase):
+class DifferentDbTransactionSupportMixin(object):
+
+    @classmethod
+    def _databases_support_transactions(cls):
+        return True
+
+    @classmethod
+    def _rollback_atomics(cls, atomics):
+        """Django testcases asssume either all database support transactions or none do. This properly cleans up transaction blocks on a per-db basis"""
+        for db_name in reversed(cls._databases_names()):
+            if connections[db_name].features.supports_transactions:
+                transaction.set_rollback(True, using=db_name)
+                atomics[db_name].__exit__(None, None, None)
+
+
+class AnvilAuthenticationTestCase(DifferentDbTransactionSupportMixin, AuthenticationTestCase):
 
     databases = '__all__'
     ES_HOSTNAME = ''
@@ -562,18 +577,6 @@ class AnvilAuthenticationTestCase(AuthenticationTestCase):
         self.addCleanup(patcher.stop)
         super(AnvilAuthenticationTestCase, self).setUp()
         SavedVariant.objects.filter(key__isnull=False).update(saved_variant_json={})
-
-    @classmethod
-    def _databases_support_transactions(cls):
-        return True
-
-    @classmethod
-    def _rollback_atomics(cls, atomics):
-        """Django testcases asssume either all database support transactions or none do. This properly cleans up transaction blocks on a per-db basis"""
-        for db_name in reversed(cls._databases_names()):
-            if connections[db_name].features.supports_transactions:
-                transaction.set_rollback(True, using=db_name)
-                atomics[db_name].__exit__(None, None, None)
 
     @classmethod
     def add_additional_user_groups(cls):

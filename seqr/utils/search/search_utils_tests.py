@@ -1,6 +1,5 @@
 from datetime import timedelta
 from django.contrib.auth.models import User
-from django.db import connections, transaction
 from django.test import TestCase
 import json
 import mock
@@ -11,7 +10,8 @@ from seqr.models import Project, Family, Sample, VariantSearch, VariantSearchRes
 from seqr.views.utils.json_utils import DjangoJSONEncoderWithSets
 from seqr.utils.search.utils import get_single_variant, get_variants_for_variant_ids, get_variant_query_gene_counts, \
     query_variants, variant_lookup, sv_variant_lookup, InvalidSearchException
-from seqr.views.utils.test_utils import PARSED_VARIANTS, PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT, GENE_FIELDS
+from seqr.views.utils.test_utils import DifferentDbTransactionSupportMixin, PARSED_VARIANTS, PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT, GENE_FIELDS
+
 
 SV_SAMPLES = ['S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733']
 MITO_SAMPLES = ['S000149_hg00733']
@@ -667,7 +667,7 @@ class HailSearchUtilsTests(TestCase, SearchUtilsTests):
 
 
 @mock.patch('clickhouse_search.search.CLICKHOUSE_SERVICE_HOSTNAME', 'testhost')
-class ClickhouseSearchUtilsTests(TestCase, SearchUtilsTests):
+class ClickhouseSearchUtilsTests(DifferentDbTransactionSupportMixin, TestCase, SearchUtilsTests):
     databases = '__all__'
     fixtures = ['users', '1kg_project', 'reference_data', 'clickhouse_transcripts']
 
@@ -677,18 +677,6 @@ class ClickhouseSearchUtilsTests(TestCase, SearchUtilsTests):
 
     def setUp(self):
         self.set_up()
-
-    @classmethod
-    def _databases_support_transactions(cls):
-        return True
-
-    @classmethod
-    def _rollback_atomics(cls, atomics):
-        """Django testcases asssume either all database support transactions or none do. This properly cleans up transaction blocks on a per-db basis"""
-        for db_name in reversed(cls._databases_names()):
-            if connections[db_name].features.supports_transactions:
-                transaction.set_rollback(True, using=db_name)
-                atomics[db_name].__exit__(None, None, None)
 
     def _assert_expected_cached_variants(self, variants, num_results):
         self.assertListEqual(

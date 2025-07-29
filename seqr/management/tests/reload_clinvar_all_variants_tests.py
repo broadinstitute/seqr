@@ -4,7 +4,6 @@ import mock
 import responses
 from django.core.management import call_command
 from django.core.management.base import CommandError
-from django.db import connections, transaction
 from django.forms.models import model_to_dict
 from django.test import TestCase
 from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL
@@ -15,6 +14,7 @@ from clickhouse_search.models import (
 )
 from reference_data.models import DataVersions
 from seqr.management.commands.reload_clinvar_all_variants import BATCH_SIZE, WEEKLY_XML_RELEASE
+from seqr.views.utils.test_utils import DifferentDbTransactionSupportMixin
 
 WEEKLY_XML_RELEASE_HEADER = '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?><ClinVarVariationRelease xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://ftp.ncbi.nlm.nih.gov/pub/clinvar/xsd_public/ClinVar_VCV_2.4.xsd" ReleaseDate="2025-06-30">'''
 WEEKLY_XML_RELEASE_DATA = WEEKLY_XML_RELEASE_HEADER + '''
@@ -83,21 +83,9 @@ WEEKLY_XML_RELEASE_DATA = WEEKLY_XML_RELEASE_HEADER + '''
 
 @mock.patch('seqr.management.commands.reload_clinvar_all_variants.safe_post_to_slack')
 @mock.patch('seqr.management.commands.reload_clinvar_all_variants.logger.info')
-class ReloadClinvarAllVariantsTest(TestCase):
+class ReloadClinvarAllVariantsTest(DifferentDbTransactionSupportMixin, TestCase):
     databases = '__all__'
     fixtures = ['clinvar_all_variants']
-
-    @classmethod
-    def _databases_support_transactions(cls):
-        return True
-
-    @classmethod
-    def _rollback_atomics(cls, atomics):
-        """Django testcases asssume either all database support transactions or none do. This properly cleans up transaction blocks on a per-db basis"""
-        for db_name in reversed(cls._databases_names()):
-            if connections[db_name].features.supports_transactions:
-                transaction.set_rollback(True, using=db_name)
-                atomics[db_name].__exit__(None, None, None)
 
     @responses.activate
     def test_update_with_no_previous_version(self, mock_logger, mock_safe_post_to_slack):
