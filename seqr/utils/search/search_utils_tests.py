@@ -44,6 +44,10 @@ class SearchUtilsTests(SearchTestHelper):
 
     CACHED_VARIANTS = PARSED_VARIANTS + PARSED_VARIANTS
 
+    @classmethod
+    def _databases_support_transactions(cls):
+        return True
+
     def set_up(self):
         super(SearchUtilsTests, self).set_up()
 
