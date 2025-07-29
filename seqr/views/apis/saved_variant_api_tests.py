@@ -415,7 +415,7 @@ class SavedVariantAPITest(object):
     def _format_create_variant(self, variant_json, **kwargs):
         return variant_json
 
-    def _assert_created_variant(self, saved_variant, variant_json):
+    def _assert_created_variant(self, saved_variant, variant_json, **kwargs):
         for field in ['xpos', 'ref', 'alt']:
             self.assertEqual(variant_json.get(field), getattr(saved_variant, field, None))
 
@@ -1117,10 +1117,10 @@ class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, SavedVariantAPITest)
         super(AnvilSavedVariantAPITest, self).test_update_variant_acmg_classification()
         assert_no_list_ws_has_al(self, 2)
 
-    def _format_create_variant(self, variant_json, key=123):
+    def _format_create_variant(self, variant_json, key=123, **kwargs):
         return {**variant_json, 'key': key}
 
-    def _assert_created_variant(self, saved_variant, variant_json, dataset_type='SNV_INDEL'):
+    def _assert_created_variant(self, saved_variant, variant_json, dataset_type='SNV_INDEL', **kwargs):
         super()._assert_created_variant(saved_variant, variant_json)
         self.assertEqual(variant_json['key'], saved_variant.key)
         self.assertEqual(dataset_type, saved_variant.dataset_type)

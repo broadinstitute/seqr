@@ -451,7 +451,7 @@ class SummaryDataAPITest(AirtableTest):
 
     @mock.patch('seqr.views.apis.summary_data_api.datetime')
     @mock.patch('seqr.views.apis.summary_data_api.load_uploaded_file')
-    def test_bulk_update_family_external_analysis(self, mock_load_uploaded_file, mock_datetime, *args, **kwargs):
+    def test_bulk_update_family_external_analysis(self, mock_load_uploaded_file, mock_datetime):
         mock_created_time = datetime(2023, 12, 5, 20, 16, 1)
         mock_datetime.now.return_value = mock_created_time
 
@@ -788,9 +788,8 @@ class LocalSummaryDataAPITest(AuthenticationTestCase, SummaryDataAPITest):
         self.assertEqual(response.status_code, 200)
         self._has_expected_metadata_response(response, expected_individuals)
 
-    @mock.patch('seqr.views.utils.variant_utils.get_variants_for_variant_ids')
-    def test_bulk_update_family_external_analysis(self, mock_get_variants_for_variant_ids, *args, **kwargs):
-        mock_get_variants_for_variant_ids.return_value = PARSED_VARIANTS
+    @mock.patch('seqr.views.utils.variant_utils.get_variants_for_variant_ids', lambda *args, **kwargs: PARSED_VARIANTS)
+    def test_bulk_update_family_external_analysis(self, *args, **kwargs):
         super().test_bulk_update_family_external_analysis(*args, **kwargs)
 
     def _assert_expected_new_saved_variant(self, new_saved_variant):
