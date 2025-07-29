@@ -4,7 +4,7 @@ from django.db.migrations import state
 from django.db.models import options, ForeignKey, OneToOneField, Func, CASCADE, PROTECT
 
 from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocksDB, Join
-from clickhouse_search.backend.fields import Enum8Field, NestedField, UInt64FieldDeltaCodecField, NamedTupleField
+from clickhouse_search.backend.fields import Enum8Field, NestedField, UInt32FieldDeltaCodecField, UInt64FieldDeltaCodecField, NamedTupleField
 from clickhouse_search.backend.functions import ArrayDistinct, ArrayFlatten, ArrayMin, ArrayMax
 from clickhouse_search.managers import EntriesManager, AnnotationsQuerySet
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
@@ -85,7 +85,7 @@ class BaseAnnotations(models.ClickhouseModel):
     SV_TYPE_FILTER_PREFIX = ''
     GENOTYPE_OVERRIDE_FIELDS = {}
 
-    key = models.UInt32Field(primary_key=True)
+    key = UInt32FieldDeltaCodecField(primary_key=True)
     xpos = models.UInt64Field()
     pos = models.UInt32Field()
     variant_id = models.StringField(db_column='variantId')

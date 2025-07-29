@@ -20,7 +20,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='AnnotationsDiskSv',
             fields=[
-                ('key', clickhouse_backend.models.UInt32Field(primary_key=True, serialize=False)),
+                ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
                 ('xpos', clickhouse_backend.models.UInt64Field()),
                 ('chrom', clickhouse_search.backend.fields.Enum8Field(choices=[(1, '1'), (2, '2'), (3, '3'), (4, '4'), (5, '5'), (6, '6'), (7, '7'), (8, '8'), (9, '9'), (10, '10'), (11, '11'), (12, '12'), (13, '13'), (14, '14'), (15, '15'), (16, '16'), (17, '17'), (18, '18'), (19, '19'), (20, '20'), (21, '21'), (22, '22'), (23, 'X'), (24, 'Y'), (25, 'M')])),
                 ('pos', clickhouse_backend.models.UInt32Field()),
@@ -52,7 +52,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='AnnotationsSv',
             fields=[
-                ('key', clickhouse_backend.models.UInt32Field(primary_key=True, serialize=False)),
+                ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
                 ('xpos', clickhouse_backend.models.UInt64Field()),
                 ('chrom', clickhouse_search.backend.fields.Enum8Field(choices=[(1, '1'), (2, '2'), (3, '3'), (4, '4'), (5, '5'), (6, '6'), (7, '7'), (8, '8'), (9, '9'), (10, '10'), (11, '11'), (12, '12'), (13, '13'), (14, '14'), (15, '15'), (16, '16'), (17, '17'), (18, '18'), (19, '19'), (20, '20'), (21, '21'), (22, '22'), (23, 'X'), (24, 'Y'), (25, 'M')])),
                 ('pos', clickhouse_backend.models.UInt32Field()),
