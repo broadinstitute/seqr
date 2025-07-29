@@ -620,7 +620,7 @@ GENETIC_FINDINGS_TABLE = [
         'Full', '', '', 'SR-ES', 'This individual is published in PMID34415322', '', '', '', '', '', '',
     ], [
         'Broad_HG00731_1_248367227', 'Broad_HG00731', 'Broad_exome_VCGS_FAM203_621_D2', 'INDEL', 'GRCh37', '1',
-        '248367227', 'TC', 'T', 'CA1501729', 'RP11', '', '', '', 'Homozygous', '', 'paternal', '', '', 'Known', '',
+        '248367227', 'TC', 'T', 'CA1501729', 'RP11', 'ENST00000371839', '', '', 'Homozygous', '', 'paternal', '', '', 'Known', '',
         'MONDO:0044970', '', 'Uncertain', '', 'Broad_HG00732', 'SR-ES', '', '', '', '', '', '', '',
     ], [
         'Broad_HG00731_19_1912632', 'Broad_HG00731', 'Broad_exome_VCGS_FAM203_621_D2', 'SNV', 'GRCh37', '19',
@@ -761,7 +761,7 @@ class ReportAPITest(AirtableTest):
             '17-significance', '18-discovery_notes'])
         self.assertIn([
             '1_248367227_HG00731', 'HG00731', 'HG00731', 'RP11', 'Known', 'paternal',
-            'Homozygous', 'GRCh37', '1', '248367227', 'TC', 'T', '-', '-', '-', '-', '-', '-', '-'], discovery_file)
+            'Homozygous', 'GRCh37', '1', '248367227', 'TC', 'T', '-', '-', 'ENST00000371839', '-', '-', '-', '-'], discovery_file)
         self.assertIn([
             '21_3343353_NA19675_1', 'NA19675_1', 'NA19675', 'RP11', 'Candidate', 'de novo',
             'Heterozygous', 'GRCh37', '21', '3343353', 'GAGA', 'G', 'c.375_377delTCT', 'p.Leu126del', 'ENST00000258436.5',
@@ -774,7 +774,7 @@ class ReportAPITest(AirtableTest):
             discovery_file)
         self.assertIn([
             '19_1912634_HG00731', 'HG00731', 'HG00731', 'OR4G11P', 'Known', 'unknown', 'Heterozygous', 'GRCh37', '19',
-            '1912634', 'C', 'T', '-', '-', 'ENST00000371839', '-', '-', '-',
+            '1912634', 'C', 'T', '-', '-', '-', '-', '-', '-',
             'The following variants are part of the multinucleotide variant 19-1912632-G-C (c.586_587delinsTT, '
             'p.Ala196Leu): 19-1912633-G-T, 19-1912634-C-T'],
             discovery_file)
@@ -936,7 +936,7 @@ class ReportAPITest(AirtableTest):
             '', '', '', '', '', '',
         ], [
             'Broad_HG00731_1_248367227', 'Broad_HG00731', 'Broad_exome_VCGS_FAM203_621_D2', 'INDEL', 'GRCh37', '1',
-            '248367227', 'TC', 'T', 'CA1501729', 'RP11', '', '', '', 'Homozygous', '', 'paternal', '', '', 'Known', '',
+            '248367227', 'TC', 'T', 'CA1501729', 'RP11', 'ENST00000371839', '', '', 'Homozygous', '', 'paternal', '', '', 'Known', '',
             'MONDO:0044970', '', 'Uncertain', '', 'Broad_HG00732', 'SR-ES', '', '', '', '', '', '', '',
         ]], additional_calls=1)
 
