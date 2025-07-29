@@ -20,7 +20,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='AnnotationsDiskMito',
             fields=[
-                ('key', clickhouse_backend.models.UInt32Field(primary_key=True, serialize=False)),
+                ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
                 ('xpos', clickhouse_backend.models.UInt64Field()),
                 ('pos', clickhouse_backend.models.UInt32Field()),
                 ('ref', clickhouse_backend.models.StringField()),
@@ -46,7 +46,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='AnnotationsMito',
             fields=[
-                ('key', clickhouse_backend.models.UInt32Field(primary_key=True, serialize=False)),
+                ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
                 ('xpos', clickhouse_backend.models.UInt64Field()),
                 ('pos', clickhouse_backend.models.UInt32Field()),
                 ('ref', clickhouse_backend.models.StringField()),

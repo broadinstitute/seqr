@@ -19,8 +19,8 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='KeyLookupGcnv',
             fields=[
-                ('variant_id', clickhouse_backend.models.StringField(db_column='variantId', primary_key=True)),
-                ('key', models.OneToOneField(db_column='key', on_delete=django.db.models.deletion.CASCADE, serialize=False, to='clickhouse_search.annotationsgcnv')),
+                ('variant_id', clickhouse_backend.models.StringField(db_column='variantId', primary_key=True, serialize=False)),
+                ('key', models.OneToOneField(db_column='key', on_delete=django.db.models.deletion.CASCADE, to='clickhouse_search.annotationsgcnv')),
             ],
             options={
                 'db_table': 'GRCh38/GCNV/key_lookup',
@@ -34,8 +34,8 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='KeyLookupGRCh37SnvIndel',
             fields=[
-                ('variant_id', clickhouse_backend.models.StringField(db_column='variantId', primary_key=True)),
-                ('key', models.OneToOneField(db_column='key', on_delete=django.db.models.deletion.CASCADE, serialize=False, to='clickhouse_search.annotationsgrch37snvindel')),
+                ('variant_id', clickhouse_backend.models.StringField(db_column='variantId', primary_key=True, serialize=False)),
+                ('key', models.OneToOneField(db_column='key', on_delete=django.db.models.deletion.CASCADE, to='clickhouse_search.annotationsgrch37snvindel')),
             ],
             options={
                 'db_table': 'GRCh37/SNV_INDEL/key_lookup',
@@ -49,8 +49,8 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='KeyLookupMito',
             fields=[
-                ('variant_id', clickhouse_backend.models.StringField(db_column='variantId', primary_key=True)),
-                ('key', models.OneToOneField(db_column='key', on_delete=django.db.models.deletion.CASCADE, serialize=False, to='clickhouse_search.annotationsmito')),
+                ('variant_id', clickhouse_backend.models.StringField(db_column='variantId', primary_key=True, serialize=False)),
+                ('key', models.OneToOneField(db_column='key', on_delete=django.db.models.deletion.CASCADE, to='clickhouse_search.annotationsmito')),
             ],
             options={
                 'db_table': 'GRCh38/MITO/key_lookup',
@@ -64,8 +64,8 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='KeyLookupSnvIndel',
             fields=[
-                ('variant_id', clickhouse_backend.models.StringField(db_column='variantId', primary_key=True)),
-                ('key', models.OneToOneField(db_column='key', on_delete=django.db.models.deletion.CASCADE, serialize=False, to='clickhouse_search.annotationssnvindel')),
+                ('variant_id', clickhouse_backend.models.StringField(db_column='variantId', primary_key=True, serialize=False)),
+                ('key', models.OneToOneField(db_column='key', on_delete=django.db.models.deletion.CASCADE, to='clickhouse_search.annotationssnvindel')),
             ],
             options={
                 'db_table': 'GRCh38/SNV_INDEL/key_lookup',
@@ -79,8 +79,8 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='KeyLookupSv',
             fields=[
-                ('variant_id', clickhouse_backend.models.StringField(db_column='variantId', primary_key=True)),
-                ('key', models.OneToOneField(db_column='key', on_delete=django.db.models.deletion.CASCADE, serialize=False, to='clickhouse_search.annotationssv')),
+                ('variant_id', clickhouse_backend.models.StringField(db_column='variantId', primary_key=True, serialize=False)),
+                ('key', models.OneToOneField(db_column='key', on_delete=django.db.models.deletion.CASCADE, to='clickhouse_search.annotationssv')),
             ],
             options={
                 'db_table': 'GRCh38/SV/key_lookup',
