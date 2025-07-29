@@ -44,6 +44,19 @@
       ]
     }
 }, {
+    "model": "clickhouse_search.clinvargrch37snvindel",
+    "pk": 100,
+    "fields": {
+      "key": 100,
+      "allele_id": 12345,
+      "conflicting_pathogenicities": [],
+      "gold_stars": null,
+      "submitters": [],
+      "conditions": [],
+      "assertions": [],
+      "pathogenicity": "Uncertain_significance"
+    }
+}, {
     "model": "clickhouse_search.entriesgrch37snvindel",
     "pk": 100,
     "fields": {

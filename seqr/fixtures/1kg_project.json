@@ -1897,9 +1897,12 @@
         },
         "saved_variant_json": {
             "clinvar": {
-                "clinicalSignificance": "",
-                "alleleId": null,
-                "variationId": null,
+                "pathogenicity": "Uncertain_significance",
+                "alleleId": 12345,
+                "assertions": null,
+                "conditions": null,
+                "conflictingPathogenicities": null,
+                "submitters": null,
                 "goldStars": null
             },
             "liftedOverGenomeVersion": "38",
@@ -2134,7 +2137,15 @@
             "I000017_na20889": {"sampleId": "NA20885", "ab": 0.0, "ad": "71,0", "gq": 99.0, "dp": "71", "pl": "0,213,1918", "numAlt": 1}
         },
         "saved_variant_json": {
-            "clinvar": {"clinicalSignificance": "", "alleleId": null, "variationId": null, "goldStars": null},
+            "clinvar": {
+                "pathogenicity": "Uncertain_significance",
+                "alleleId": 12345,
+                "assertions": null,
+                "conditions": null,
+                "conflictingPathogenicities": null,
+                "submitters": null,
+                "goldStars": null
+            },
             "liftedOverGenomeVersion": "38",  "liftedOverPos": "",
             "populations": {"callset": {"ac": null, "an": null, "af": null}, "g1k": {"ac": null, "an": null, "af": 0.0},
                 "gnomad_genomes": {"hemi": null, "ac": null, "an": null, "hom": null, "af": 0.00012925741614425127},
