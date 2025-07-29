@@ -667,7 +667,7 @@ class HailSearchUtilsTests(TestCase, SearchUtilsTests):
 
 
 @mock.patch('clickhouse_search.search.CLICKHOUSE_SERVICE_HOSTNAME', 'testhost')
-class ClickhouseSearchUtilsTests(DifferentDbTransactionSupportMixin, TestCase, SearchUtilsTests):
+class ClickhouseSearchUtilsTests(TestCase, SearchUtilsTests, DifferentDbTransactionSupportMixin):
     databases = '__all__'
     fixtures = ['users', '1kg_project', 'reference_data', 'clickhouse_transcripts']
 
