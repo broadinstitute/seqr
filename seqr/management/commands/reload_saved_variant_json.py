@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 def _clickhouse_error():
+    # TODO test
     raise CommandError('Reloading variants is not supported in clickhouse')
 
 

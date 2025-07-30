@@ -435,6 +435,7 @@ def _get_clickhouse_variant_json_by_guid(saved_variants, include_clinvar):
     return variant_json_by_guid
 
 
+# TODO test
 def _set_clickhouse_sv_json(variant_json_by_guid, genome_version, dataset_type, key_map, include_clinvar):
     annotations = get_annotations_queryset(genome_version, dataset_type, key_map.keys()).values(
         'key', svType=F('sv_type'), gene_ids=ArrayMap('sorted_gene_consequences', mapped_expression='x.geneId'),
@@ -453,6 +454,7 @@ def _set_clickhouse_snv_indel_json(variant_json_by_guid, genome_version, dataset
     annotation_values = {'CAID': F('caid'), 'svType': Value(None, output_field=CharField())}
     transcripts_by_key = {}
     if dataset_type == Sample.DATASET_TYPE_MITO_CALLS:
+        # TODO test
         annotation_values['all_transcripts'] = _get_main_transcripts_expression(
             'sorted_transcript_consequences', annotations_qs, selected_transcripts,
         )
