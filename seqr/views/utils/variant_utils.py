@@ -263,7 +263,7 @@ def _get_clickhouse_saved_variant_genes(variant_models, genome_version):
         if v.key:
             key_id_map[v.key] = v.variant_id
         else:
-            variant_genes_by_id[v.variant_id] = v.saved_variant_json['transcripts'].keys()
+            variant_genes_by_id[v.variant_id] = set(v.saved_variant_json['transcripts'].keys())
     qs = get_annotations_queryset(genome_version, Sample.DATASET_TYPE_VARIANT_CALLS, key_id_map.keys())
     variant_genes_by_id.update({
         key_id_map[key]: set(gene_ids) for key, gene_ids in qs.values_list(
@@ -331,7 +331,7 @@ def _get_clickhouse_variants(families: list[Family], variant_ids: list[str], gen
 
 def _get_clickhouse_variant_keys(variant_data: dict[tuple[int, str], dict], genome_version: str) -> dict[tuple[int, str], dict]:
     variant_ids = {key[1] for key in variant_data}
-    variant_key_map = get_clickhouse_key_lookup(genome_version, Sample.DATASET_TYPE_VARIANT_CALLS, variant_ids)
+    variant_key_map = get_clickhouse_key_lookup(genome_version, Sample.DATASET_TYPE_VARIANT_CALLS, list(variant_ids))
     for (_, variant_id), variant in variant_data.items():
         if variant_id in variant_key_map:
             variant['key'] = variant_key_map[variant_id]
