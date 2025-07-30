@@ -630,7 +630,7 @@ def _get_genetic_findings_rows(rows: list[dict], individual: Individual, family_
     for row in parsed_rows:
         del row['genotypes']
 
-        gene_variants = variants_by_gene[row[GENE_COLUMN]]
+        gene_variants = variants_by_gene[row[GENE_COLUMN]] if row[GENE_COLUMN] else []
         notes = row['notes'] or []
         if len(gene_variants) > 2:
             discovery_notes = _get_discovery_notes(row, gene_variants, omit_parent_mnvs)

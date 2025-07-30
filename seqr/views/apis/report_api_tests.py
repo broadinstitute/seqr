@@ -1502,7 +1502,7 @@ class LocalReportAPITest(AuthenticationTestCase, ReportAPITest):
 
     fixtures = ['users', '1kg_project', 'reference_data', 'report_variants']
     ADDITIONAL_FAMILIES = ['F000014_14']
-    ADDITIONAL_FINDINGS = ['NA21234_1_248367227', 'NA21234_MT_14783']
+    ADDITIONAL_FINDINGS = ['NA21234_1_248367227', 'NA21234_MT_14783', 'NA21234_1_249045487_DEL']
     HAS_PM_OVERRIDE = True
     STATS_DATA = {
         'projectsCount': {'non_demo': 3, 'demo': 1},

@@ -130,7 +130,7 @@ def anvil_export(request, project_guid):
                 if not (discovery_row.get(GENE_COLUMN) or discovery_row.get('sv_type'))]
             if missing_gene_rows:
                 raise ErrorsWarningsException(
-                    [f'Discovery variant(s) {", ".join(missing_gene_rows)} in family {family_id} have no associated gene'])
+                    [f'Discovery variant(s) {", ".join(sorted(missing_gene_rows))} in family {family_id} have no associated gene'])
             parsed_rows[row_type] += [{
                 'entity:discovery_id': f'{discovery_row["chrom"]}_{discovery_row["pos"]}_{discovery_row["participant_id"]}',
                 **{k: str(discovery_row.get(k.lower()) or '') for k in ['Zygosity', 'Chrom', 'Pos', 'Ref', 'Alt', 'Transcript']},

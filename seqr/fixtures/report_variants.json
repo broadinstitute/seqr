@@ -173,10 +173,10 @@
         "ref": null,
         "alt": null,
         "variant_id": "suffix_19107_DEL_013746",
-        "key": 111,
+        "key": 101,
         "dataset_type": "SV_WGS",
         "genotypes": {
-            "I000017_na20889": { "cn": 1, "sampleId": "NA20885", "numAlt": -1,  "defragged": false, "qs": 33, "numExon": 2}
+            "I000018_na21234": { "cn": 1, "sampleId": "NA20885", "numAlt": -1,  "defragged": false, "qs": 33, "numExon": 2}
         },
         "saved_variant_json": {
             "liftedOverGenomeVersion": null,
@@ -189,13 +189,14 @@
             "genotypeFilters": [],
             "ref": null,
             "genotypes": {
-                "I000017_na20889": { "cn": 1, "sampleId": "NA20885", "numAlt": -1,  "defragged": false, "qs": 33, "numExon": 2}
+                "I000018_na21234": { "cn": 1, "sampleId": "NA20885", "numAlt": -1,  "defragged": false, "qs": 33, "numExon": 2}
             },
             "liftedOverPos": null,
             "liftedOverChrom": null,
             "svType": "DEL",
             "variantId": "suffix_19107_DEL",
             "chrom": "1",
+            "endChrom": "1",
             "genomeVersion": "37",
             "populations": {"sv_callset":  {}},
             "transcripts": {"ENSG00000240361": [], "ENSG00000135953": [], "ENSG00000223972":  []}

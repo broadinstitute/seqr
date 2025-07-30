@@ -211,16 +211,16 @@
     }
 }, {
     "model": "clickhouse_search.annotationssv",
-    "pk": 111,
+    "pk": 101,
     "fields": {
-      "key": 111,
+      "key": 101,
       "xpos": 1249045487,
       "chrom": "1",
       "end_chrom": null,
       "pos": 249045487,
       "end": 249045898,
       "variant_id": "suffix_19107_DEL",
-      "lifted_over_chrom": "2",
+      "lifted_over_chrom": null,
       "lifted_over_pos": null,
       "rg37_locus_end": [null, null],
       "bothsides_support": false,
