@@ -1009,9 +1009,9 @@ The following users have been notified: test_user_manager@test.com""")
         })))
         super().test_command(*args, **kwargs)
 
-    def _test_call(self, reload_annotations_logs=None, reload_calls=None, **kwargs):
+    def _test_call(self, *args, reload_annotations_logs=None, reload_calls=None, **kwargs):
         # No reloading for clickhouse
-        super()._test_call(has_reload_calls=bool(reload_calls), **kwargs)
+        super()._test_call(*args, has_reload_calls=bool(reload_calls), **kwargs)
 
     def _set_empty_loading_files(self):
         self.mock_subprocess.return_value.communicate.return_value = b'', b'One or more URLs matched no objects'
