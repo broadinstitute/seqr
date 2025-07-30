@@ -189,6 +189,8 @@ RUN_PATHS = [
     b'gs://seqr-hail-search-data/v3.1/GRCh38/GCNV/runs/auto__2024-09-14/README.txt',
     b'gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-24/',
     b'gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-24/validation_errors.json',
+    b'gs://seqr-hail-search-data/v3.1/GRCh38/GCNV/runs/auto__2025-03-14/',
+    b'gs://seqr-hail-search-data/v3.1/GRCh38/GCNV/runs/auto__2025-03-14/_SUCCESS',
     b'gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/hail_search_to_clickhouse_migration_WGS_R0877_neptune/_SUCCESS',
     b'gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/hail_search_to_clickhouse_migration_WGS_R0877_neptune/_CLICKHOUSE_LOAD_SUCCESS',
 ]
@@ -648,26 +650,7 @@ class CheckNewSamplesTest(object):
         )
         self.assertEqual(Family.objects.get(guid='F000014_14').analysis_status, 'Rncc')
 
-        # Test SavedVariant model updated
-        updated_variants = SavedVariant.objects.filter(saved_variant_json__updated_field='updated_value')
-        self.assertEqual(len(updated_variants), 2)
-        self.assertSetEqual(
-            {v.guid for v in updated_variants},
-            {'SV0000006_1248367227_r0004_non', 'SV0000002_1248367227_r0390_100'}
-        )
-        reloaded_variant = next(v for v in updated_variants if v.guid == 'SV0000006_1248367227_r0004_non')
-        annotation_updated_variant = next(v for v in updated_variants if v.guid == 'SV0000002_1248367227_r0390_100')
-        self.assertEqual(len(reloaded_variant.saved_variant_json), 3)
-        self.assertListEqual(reloaded_variant.saved_variant_json['familyGuids'], ['F000014_14'])
-        self.assertEqual(len(annotation_updated_variant.saved_variant_json), 17)
-        self.assertListEqual(annotation_updated_variant.saved_variant_json['familyGuids'], ['F000001_1'])
-
-        annotation_updated_json = SavedVariant.objects.get(guid='SV0059956_11560662_f019313_1').saved_variant_json
-        self.assertEqual(len(annotation_updated_json), 16)
-        self.assertEqual(annotation_updated_json['updated_new_field'], 'updated_value')
-        self.assertEqual(annotation_updated_json['rsid'], 'rs123')
-        self.assertEqual(annotation_updated_json['mainTranscriptId'], 'ENST00000505820')
-        self.assertEqual(len(annotation_updated_json['genotypes']), 3)
+        self._assert_saved_variant_models_updated()
 
         # Test notifications
         self.assertEqual(self.mock_send_slack.call_count, 7 + len(self.ADDITIONAL_SLACK_CALLS))
@@ -878,6 +861,28 @@ class LocalCheckNewSamplesTest(AuthenticationTestCase, CheckNewSamplesTest):
     def _assert_expected_airtable_calls(self, *args, **kwargs):
         return 0, 0
 
+    def _assert_saved_variant_models_updated(self):
+        updated_variants = SavedVariant.objects.filter(saved_variant_json__updated_field='updated_value')
+        self.assertEqual(len(updated_variants), 2)
+        self.assertSetEqual(
+            {v.guid for v in updated_variants},
+            {'SV0000006_1248367227_r0004_non', 'SV0000002_1248367227_r0390_100'}
+        )
+        reloaded_variant = next(v for v in updated_variants if v.guid == 'SV0000006_1248367227_r0004_non')
+        annotation_updated_variant = next(v for v in updated_variants if v.guid == 'SV0000002_1248367227_r0390_100')
+        self.assertEqual(len(reloaded_variant.saved_variant_json), 3)
+        self.assertListEqual(reloaded_variant.saved_variant_json['familyGuids'], ['F000014_14'])
+        self.assertEqual(len(annotation_updated_variant.saved_variant_json), 17)
+        self.assertListEqual(annotation_updated_variant.saved_variant_json['familyGuids'], ['F000001_1'])
+
+        annotation_updated_json = SavedVariant.objects.get(guid='SV0059956_11560662_f019313_1').saved_variant_json
+        self.assertEqual(len(annotation_updated_json), 16)
+        self.assertEqual(annotation_updated_json['updated_new_field'], 'updated_value')
+        self.assertEqual(annotation_updated_json['rsid'], 'rs123')
+        self.assertEqual(annotation_updated_json['mainTranscriptId'], 'ENST00000505820')
+        self.assertEqual(len(annotation_updated_json['genotypes']), 3)
+
+
 class AirtableCheckNewSamplesTest(AnvilAuthenticationTestCase, CheckNewSamplesTest):
     fixtures = ['users', '1kg_project']
 
@@ -924,8 +929,8 @@ class AirtableCheckNewSamplesTest(AnvilAuthenticationTestCase, CheckNewSamplesTe
         ('Reloading saved variants in 2 projects', None),
         ('Reloading genotypes for 0 SNV_INDEL variants in family F000012_12', None),
         ('Updated 0 variants in 2 families for project Test Reprocessed Project', None),
-        ('Reloading genotypes for 2 SNV_INDEL variants in family F000014_14', None),
-        ('update 2 SavedVariants', {'dbUpdate': mock.ANY}),
+        ('Reloading genotypes for 1 SNV_INDEL variants in family F000014_14', None),
+        ('update 1 SavedVariants', {'dbUpdate': mock.ANY}),
         ('Updated 1 variants in 1 families for project Non-Analyst Project', None),
         ('Reload Summary: ', None),
         ('  Non-Analyst Project: Updated 1 variants', None),
@@ -1007,7 +1012,6 @@ The following users have been notified: test_user_manager@test.com""")
     def _test_call(self, reload_annotations_logs=None, reload_calls=None, **kwargs):
         # No reloading for clickhouse
         super()._test_call(has_reload_calls=bool(reload_calls), **kwargs)
-        #     TODO test _update_project_saved_variant_genotypes
 
     def _set_empty_loading_files(self):
         self.mock_subprocess.return_value.communicate.return_value = b'', b'One or more URLs matched no objects'
@@ -1018,7 +1022,7 @@ The following users have been notified: test_user_manager@test.com""")
         )
 
     def _set_reloading_loading_files(self):
-        self.mock_ls_process.communicate.return_value = b'\n'.join([RUN_PATHS[6], RUN_PATHS[12]]), b''
+        self.mock_ls_process.communicate.return_value = b'\n'.join(RUN_PATHS[6:8] + RUN_PATHS[15:17]), b''
         self.mock_subprocess.side_effect = [self.mock_ls_process]
 
     def _set_loading_files(self):
@@ -1052,12 +1056,10 @@ The following users have been notified: test_user_manager@test.com""")
     def _assert_expected_airtable_calls(self, has_reload_calls, single_call):
         # Test request tracking updates for validation errors
         if single_call:
-            index = -3
             fields = {'Status': 'Available in Seqr'}
         else:
-            index = -1
             fields = {'Status': 'Loading request canceled', 'Notes': 'Callset validation failed'}
-        update_loading_tracking_request = responses.calls[index].request
+        update_loading_tracking_request = responses.calls[-1].request
         self.assertEqual(update_loading_tracking_request.url, self.airtable_loading_tracking_url)
         self.assertEqual(update_loading_tracking_request.method, 'PATCH')
         self.assertDictEqual(json.loads(update_loading_tracking_request.body), {'records': [
@@ -1100,3 +1102,7 @@ The following users have been notified: test_user_manager@test.com""")
         if single_call:
             return 8, 0
         return 7, 2
+
+    def _assert_saved_variant_models_updated(self):
+        #     TODO test _update_project_saved_variant_genotypes
+        pass
