@@ -176,16 +176,21 @@ RUN_PATHS = [
     b'gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-14/validation_errors.json',
     b'gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/auto__2023-08-09/',
     b'gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/auto__2023-08-09/_SUCCESS',
+    b'gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/auto__2023-08-09/_CLICKHOUSE_LOAD_SUCCESS',
     b'gs://seqr-hail-search-data/v3.1/GRCh37/SNV_INDEL/runs/manual__2023-11-02/',
     b'gs://seqr-hail-search-data/v3.1/GRCh37/SNV_INDEL/runs/manual__2023-11-02/_SUCCESS',
+    b'gs://seqr-hail-search-data/v3.1/GRCh37/SNV_INDEL/runs/manual__2023-11-02/_CLICKHOUSE_LOAD_SUCCESS',
     b'gs://seqr-hail-search-data/v3.1/GRCh38/MITO/runs/auto__2024-08-12/',
     b'gs://seqr-hail-search-data/v3.1/GRCh38/MITO/runs/auto__2024-08-12/_SUCCESS',
+    b'gs://seqr-hail-search-data/v3.1/GRCh38/MITO/runs/auto__2024-08-12/_CLICKHOUSE_LOAD_SUCCESS',
     b'gs://seqr-hail-search-data/v3.1/GRCh38/GCNV/runs/auto__2024-09-14/',
     b'gs://seqr-hail-search-data/v3.1/GRCh38/GCNV/runs/auto__2024-09-14/_SUCCESS',
+    b'gs://seqr-hail-search-data/v3.1/GRCh38/GCNV/runs/auto__2024-09-14/_CLICKHOUSE_LOAD_SUCCESS',
     b'gs://seqr-hail-search-data/v3.1/GRCh38/GCNV/runs/auto__2024-09-14/README.txt',
     b'gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-24/',
     b'gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-24/validation_errors.json',
     b'gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/hail_search_to_clickhouse_migration_WGS_R0877_neptune/_SUCCESS',
+    b'gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/hail_search_to_clickhouse_migration_WGS_R0877_neptune/_CLICKHOUSE_LOAD_SUCCESS',
 ]
 OPENED_RUN_JSON_FILES = [{
     'callsets': ['1kg.vcf.gz', 'new_samples.vcf.gz'],
@@ -338,7 +343,6 @@ def mock_opened_file(index):
 
 
 @mock.patch('seqr.utils.file_utils.os.path.isfile', lambda *args: True)
-@mock.patch('seqr.utils.search.hail_search_utils.HAIL_BACKEND_SERVICE_HOSTNAME', MOCK_HAIL_HOST)
 @mock.patch('seqr.views.utils.airtable_utils.AIRTABLE_URL', 'http://testairtable')
 @mock.patch('seqr.utils.communication_utils.BASE_URL', SEQR_URL)
 @mock.patch('seqr.utils.search.add_data_utils.BASE_URL', SEQR_URL)
@@ -445,24 +449,6 @@ class CheckNewSamplesTest(object):
     @responses.activate
     def test_command(self, mock_email, mock_temp_dir, mock_max_reload_variants):
         mock_max_reload_variants.__lt__.return_value = False
-
-        responses.add(responses.POST, f'{MOCK_HAIL_ORIGIN}:5000/search', status=200, json={
-            'results': [{'variantId': '1-248367227-TC-T', 'familyGuids': ['F000014_14'], 'updated_field': 'updated_value'}],
-            'total': 1,
-        })
-        responses.add(responses.POST, f'{MOCK_HAIL_ORIGIN}:5000/multi_lookup', status=400)
-        responses.add(responses.POST, f'{MOCK_HAIL_ORIGIN}:5000/multi_lookup', status=200, json={
-            'results': [{'variantId': '1-46859832-G-A', 'updated_new_field': 'updated_value', 'rsid': 'rs123'}],
-        })
-        responses.add(responses.POST, f'{MOCK_HAIL_ORIGIN}:5000/search', status=200, json={
-            'results': [{'variantId': '1-248367227-TC-T', 'familyGuids': ['F000014_14'], 'updated_field': 'updated_value'}],
-            'total': 1,
-        })
-        responses.add(responses.POST, f'{MOCK_HAIL_ORIGIN}:5000/search', status=400)
-        responses.add(responses.POST, f'{MOCK_HAIL_ORIGIN}:5000/search', status=200, json={
-            'results': [{'variantId': '1-248367227-TC-T', 'familyGuids': ['F000014_14'], 'updated_field': 'updated_value'}],
-            'total': 1,
-        })
 
         # Test errors
         self._set_empty_loading_files()
@@ -687,11 +673,11 @@ class CheckNewSamplesTest(object):
         annotation_updated_variant = next(v for v in updated_variants if v.guid == 'SV0000002_1248367227_r0390_100')
         self.assertEqual(len(reloaded_variant.saved_variant_json), 3)
         self.assertListEqual(reloaded_variant.saved_variant_json['familyGuids'], ['F000014_14'])
-        self.assertEqual(len(annotation_updated_variant.saved_variant_json), 19)
+        self.assertEqual(len(annotation_updated_variant.saved_variant_json), 17)
         self.assertListEqual(annotation_updated_variant.saved_variant_json['familyGuids'], ['F000001_1'])
 
         annotation_updated_json = SavedVariant.objects.get(guid='SV0059956_11560662_f019313_1').saved_variant_json
-        self.assertEqual(len(annotation_updated_json), 18)
+        self.assertEqual(len(annotation_updated_json), 16)
         self.assertEqual(annotation_updated_json['updated_new_field'], 'updated_value')
         self.assertEqual(annotation_updated_json['rsid'], 'rs123')
         self.assertEqual(annotation_updated_json['mainTranscriptId'], 'ENST00000505820')
@@ -797,6 +783,7 @@ The following 1 families failed sex check:
             'GRCh38/SNV_INDEL': create_snv_indel_samples_logs + airtable_logs + update_sample_qc_logs + reload_project_variants_logs,
         })
 
+@mock.patch('seqr.utils.search.hail_search_utils.HAIL_BACKEND_SERVICE_HOSTNAME', MOCK_HAIL_HOST)
 class LocalCheckNewSamplesTest(AuthenticationTestCase, CheckNewSamplesTest):
     fixtures = ['users', '1kg_project']
 
@@ -837,6 +824,26 @@ class LocalCheckNewSamplesTest(AuthenticationTestCase, CheckNewSamplesTest):
         self.set_up()
         super().setUp()
 
+    def test_command(self, *args, **kwargs):
+        responses.add(responses.POST, f'{MOCK_HAIL_ORIGIN}:5000/search', status=200, json={
+            'results': [{'variantId': '1-248367227-TC-T', 'familyGuids': ['F000014_14'], 'updated_field': 'updated_value'}],
+            'total': 1,
+        })
+        responses.add(responses.POST, f'{MOCK_HAIL_ORIGIN}:5000/multi_lookup', status=400)
+        responses.add(responses.POST, f'{MOCK_HAIL_ORIGIN}:5000/multi_lookup', status=200, json={
+            'results': [{'variantId': '1-46859832-G-A', 'updated_new_field': 'updated_value', 'rsid': 'rs123'}],
+        })
+        responses.add(responses.POST, f'{MOCK_HAIL_ORIGIN}:5000/search', status=200, json={
+            'results': [{'variantId': '1-248367227-TC-T', 'familyGuids': ['F000014_14'], 'updated_field': 'updated_value'}],
+            'total': 1,
+        })
+        responses.add(responses.POST, f'{MOCK_HAIL_ORIGIN}:5000/search', status=400)
+        responses.add(responses.POST, f'{MOCK_HAIL_ORIGIN}:5000/search', status=200, json={
+            'results': [{'variantId': '1-248367227-TC-T', 'familyGuids': ['F000014_14'], 'updated_field': 'updated_value'}],
+            'total': 1,
+        })
+        super().test_command(*args, **kwargs)
+
     def _set_empty_loading_files(self):
         self.mock_glob.return_value = []
 
@@ -876,8 +883,6 @@ class AirtableCheckNewSamplesTest(AnvilAuthenticationTestCase, CheckNewSamplesTe
     airtable_pdo_url = 'http://testairtable/app3Y97xtbbaOopVR/PDO'
     airtable_loading_tracking_url = "http://testairtable/appUelDNM3BnWaR7M/AnVIL%20Seqr%20Loading%20Requests%20Tracking"
     AIRTABLE_LOADING_QUERY_TEMPLATE = "?fields[]=Status&pageSize=2&filterByFormula=AND({{AnVIL Project URL}}='https://seqr.broadinstitute.org/project/{}/project_page',OR(Status='Loading',Status='Loading Requested'))"
-
-    CLICKHOUSE_HOSTNAME = ''
 
     MOCK_DATA_DIR = 'gs://seqr-hail-search-data/v3.1'
     PROJECT_EMAIL_TEXT = ANVIL_TEXT_EMAIL
@@ -981,6 +986,11 @@ The following users have been notified: test_user_manager@test.com""")
             'records': [{'id': f'rec{i}ABC123', **r} for i, r in enumerate(json.loads(request.body)['records'])]
         })))
         super().test_command(*args, **kwargs)
+
+    def _test_call(self, reload_annotations_logs=None, reload_calls=None, **kwargs):
+        # No reloading for clickhouse
+        super()._test_call(**kwargs)
+        #     TODO test _update_project_saved_variant_genotypes
 
     def _set_empty_loading_files(self):
         self.mock_subprocess.return_value.communicate.return_value = b'', b'One or more URLs matched no objects'
