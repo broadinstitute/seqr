@@ -1,4 +1,5 @@
 from django.core.exceptions import ObjectDoesNotExist
+from django.db import connections
 from django.test import TestCase
 import json
 import mock
