@@ -3,6 +3,7 @@ from collections import defaultdict
 from copy import deepcopy
 from datetime import datetime
 from django.contrib.auth.models import User, Group
+from django.core.management import call_command
 from django.db import connections, transaction
 from django.test import TestCase
 from guardian.shortcuts import assign_perm
@@ -526,6 +527,21 @@ class DifferentDbTransactionSupportMixin(object):
             if connections[db_name].features.supports_transactions:
                 transaction.set_rollback(True, using=db_name)
             atomics[db_name].__exit__(None, None, None)
+
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        for db_name in cls._databases_names():
+            if not connections[db_name].features.supports_transactions:
+                call_command(
+                    "flush",
+                    verbosity=0,
+                    interactive=False,
+                    database=db_name,
+                    reset_sequences=False,
+                    allow_cascade=False,
+                    inhibit_post_migrate=False,
+                )
 
 
 class AnvilAuthenticationTestCase(DifferentDbTransactionSupportMixin, AuthenticationTestCase):
