@@ -2209,6 +2209,7 @@
             "variantId": "prefix_19107_DEL",
             "chrom": "1",
             "genomeVersion": "37",
+            "populations": {"sv_callset":  {}},
             "transcripts": {"ENSG00000240361": [], "ENSG00000135953": [], "ENSG00000223972":  []}
         },
         "family": 12

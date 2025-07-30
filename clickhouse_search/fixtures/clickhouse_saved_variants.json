@@ -203,6 +203,45 @@
       ]
     }
 }, {
+    "model": "clickhouse_search.keylookupsv",
+    "pk": 111,
+    "fields": {
+      "key": 111,
+      "variant_id": "suffix_19107_DEL"
+    }
+}, {
+    "model": "clickhouse_search.keylookupgcnv",
+    "pk": 111,
+    "fields": {
+      "key": 111,
+      "variant_id": "prefix_19107_DEL"
+    }
+}, {
+    "model": "clickhouse_search.annotationsgcnv",
+    "pk": 111,
+    "fields": {
+      "key": 111,
+      "xpos": 1249045487,
+      "chrom": "1",
+      "pos": 249045487,
+      "end": 249045898,
+      "variant_id": "prefix_19107_DEL",
+      "lifted_over_chrom": "2",
+      "lifted_over_pos": null,
+      "rg37_locus_end": [null, null],
+      "num_exon": 2,
+      "predictions": [0.374],
+      "populations": [
+        [2, 0.063, 32, 0, 0]
+      ],
+      "sorted_gene_consequences": [
+        ["ENSG00000240361", "LOF"],
+        ["ENSG00000135953", "LOF"],
+        ["ENSG00000223972", "LOF"]
+      ],
+      "sv_type": "DUP"
+    }
+}, {
     "model": "clickhouse_search.annotationsgcnv",
     "pk": 123,
     "fields": {
@@ -224,6 +263,41 @@
         ["ENSG00000240361", "LOF"]
       ],
       "sv_type": "DUP"
+    }
+}, {
+    "model": "clickhouse_search.keylookupmito",
+    "pk": 100,
+    "fields": {
+      "key": 100,
+      "variant_id": "M-14783-T-C"
+    }
+}, {
+    "model": "clickhouse_search.annotationsmito",
+    "pk": 100,
+    "fields": {
+      "key": 100,
+      "xpos": 25000014783,
+      "pos": 14783,
+      "ref": "T",
+      "alt": "C",
+      "variant_id": "M-14783-T-C",
+      "rsid": "rs193302982",
+      "lifted_over_pos": 14783,
+      "common_low_heteroplasmy": true,
+      "mitomap_pathogenic": true,
+      "predictions": [null, true, null, null, null, null, 0.7514],
+      "populations": [
+        [3118, 0.05535, 56336],
+        [3, 0.00005, 56336, 1],
+        [9573, 0.04885, 195983],
+        [18, 0.00009, 195983, 0.96269]
+      ],
+      "sorted_transcript_consequences": [
+        [
+          "L", "protein_coding", 1, "Tta/Cta", ["synonymous_variant"], "ENSG00000198727", "ENST00000361789.2:c.37T>C",
+          "ENSP00000354554.2:p.Leu13=", [null, []], "synonymous_variant", "ENST00000361789", 0
+        ]
+      ]
     }
 }
 ]

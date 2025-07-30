@@ -550,6 +550,7 @@ class AnvilAuthenticationTestCase(DifferentDbTransactionSupportMixin, Authentica
     ES_HOSTNAME = ''
     CLICKHOUSE_HOSTNAME = 'testhost'
     MOCK_AIRTABLE_KEY = 'airflow_access'
+    SKIP_RESET_VARIANT_JSON = False
 
     # mock the terra apis
     def setUp(self):
@@ -592,7 +593,7 @@ class AnvilAuthenticationTestCase(DifferentDbTransactionSupportMixin, Authentica
         self.mock_get_group_members.side_effect = get_group_members_side_effect
         self.addCleanup(patcher.stop)
         super(AnvilAuthenticationTestCase, self).setUp()
-        if self.CLICKHOUSE_HOSTNAME:
+        if self.CLICKHOUSE_HOSTNAME and not self.SKIP_RESET_VARIANT_JSON:
             SavedVariant.objects.filter(key__isnull=False).update(saved_variant_json={})
 
     @classmethod

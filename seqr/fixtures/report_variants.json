@@ -128,6 +128,77 @@
     }
 },
 {
+    "model": "seqr.savedvariant",
+    "pk": 12,
+    "fields": {
+        "guid": "SV0000009_25000014783_r0004_no",
+        "created_date": "2018-05-15T14:51:56.943Z",
+        "created_by": null,
+        "last_modified_date": "2018-05-31T16:36:02.805Z",
+        "xpos": 25000014783,
+        "xpos_end": 25000014784,
+        "ref": "T",
+        "alt": "C",
+        "variant_id": "M-14783-T-C",
+        "key": 100,
+        "dataset_type": "MITO",
+        "genotypes": {
+            "I000018_na21234": {"sampleId": "NA20885", "numAlt": 2, "dp": 3943, "hl": 1.0, "mitoCn": 214, "contamination": 0.0, "filters": ["artifact_prone_site"]}
+        },
+        "saved_variant_json": {
+            "variantId": "M-14783-T-C", "chrom": "M", "pos": 14783, "ref": "T", "alt": "C", "xpos": 25000014783,
+            "genomeVersion": "38", "liftedOverGenomeVersion": "37", "liftedOverChrom": "MT", "liftedOverPos": 14783,
+            "rsid": "rs193302982", "familyGuids": ["F000002_2"], "genotypes": {
+                "I000018_na21234": {"sampleId": "NA20885", "numAlt": 2, "dp": 3943, "hl": 1.0, "mitoCn": 214, "contamination": 0.0, "filters": ["artifact_prone_site"]}
+            }, "populations": {"seqr": {"af": 0.019480518996715546, "ac": 3, "an": 154}, "seqr_heteroplasmy": {"af": 0.006493506487458944, "ac": 1, "an": 154},
+                "gnomad_mito": {"af": 0.05534649267792702, "ac": 3118, "an": 56336}, "gnomad_mito_heteroplasmy": {"af": 5.3251918870955706e-05, "ac": 3, "an": 56336, "max_hl": 1.0},
+                "helix": {"af": 0.04884607344865799, "ac": 9573, "an": 195983}, "helix_heteroplasmy": {"af": 9.184470400214195e-05, "ac": 18, "an": 195983, "max_hl": 0.962689995765686}},
+            "predictions": {"apogee": null, "haplogroup_defining": "Y", "hmtvar": null, "mitotip": null, "mut_taster": null, "sift": null, "mlc": 0.7514},
+            "commonLowHeteroplasmy": true, "mitomapPathogenic": true, "clinvar": null, "transcripts": {
+                "ENSG00000198727": [{"aminoAcids": "L", "canonical": 1, "codons": "Tta/Cta", "geneId": "ENSG00000198727", "hgvsc": "ENST00000361789.2:c.37T>C", "hgvsp": "ENSP00000354554.2:p.Leu13=", "transcriptId": "ENST00000361789", "isLofNagnag": null, "transcriptRank": 0, "biotype": "protein_coding", "lofFilters": null, "majorConsequence": "synonymous_variant", "consequenceTerms": ["synonymous_variant"]}]},
+            "mainTranscriptId": "ENST00000361789", "selectedMainTranscriptId": null
+        },
+        "family": 14
+    }
+}, {
+    "model": "seqr.savedvariant",
+    "pk": 13,
+    "fields": {
+        "guid": "SV0000013_prefix_19107_DEL_r00",
+        "created_date": "2018-06-15T14:51:56.943Z",
+        "created_by": null,
+        "last_modified_date": "2018-05-31T16:36:02.805Z",
+        "xpos": 1249045487,
+        "xpos_end": 1249045898,
+        "ref": null,
+        "alt": null,
+        "variant_id": "suffix_19107_DEL_013746",
+        "saved_variant_json": {
+            "liftedOverGenomeVersion": null,
+            "pos": 249045487,
+            "end": 249045898,
+            "xpos": 1249045487,
+            "predictions": {"strvctvre": 0.374},
+            "alt": null,
+            "numExon": 2,
+            "genotypeFilters": [],
+            "ref": null,
+            "genotypes": {
+                "I000017_na20889": { "cn": 1, "sampleId": "NA20885", "numAlt": -1,  "defragged": false, "qs": 33, "numExon": 2}
+            },
+            "liftedOverPos": null,
+            "liftedOverChrom": null,
+            "svType": "DEL",
+            "variantId": "suffix_19107_DEL",
+            "chrom": "1",
+            "genomeVersion": "37",
+            "populations": {"sv_callset":  {}},
+            "transcripts": {"ENSG00000240361": [], "ENSG00000135953": [], "ENSG00000223972":  []}
+        },
+        "family": 14
+    }
+},
+{
     "model": "seqr.varianttag",
     "pk": 1726974,
     "fields": {
