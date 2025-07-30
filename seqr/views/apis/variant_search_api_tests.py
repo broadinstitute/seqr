@@ -605,7 +605,7 @@ class VariantSearchAPITest(object):
         expected_search_response = deepcopy(self.EXPECTED_SEARCH_RESPONSE)
         expected_search_response.update({
             'searchedVariants': COMP_HET_VARAINTS,
-            'savedVariantsByGuid': {'SV0000002_1248367227_r0390_100': EXPECTED_SAVED_VARIANT},
+            'savedVariantsByGuid': {k: v for k, v in self.EXPECTED_SEARCH_RESPONSE['savedVariantsByGuid'].items() if k in ['SV0000002_1248367227_r0390_100']},
             'genesById': {'ENSG00000233653': EXPECTED_GENE},
             'variantTagsByGuid': {
                 'VT1726970_2103343353_r0004_tes': EXPECTED_TAG, 'VT1726945_2103343353_r0390_100': EXPECTED_TAG,
@@ -924,8 +924,8 @@ class VariantSearchAPITest(object):
         }
         del expected_variant['familyGenotypes']
         expected_body = {
-            **{k: {} for k in EXPECTED_SEARCH_RESPONSE if k not in {
-                'searchedVariants', 'search', 'variantNotesByGuid', 'variantTagsByGuid', 'variantFunctionalDataByGuid',
+            **{k: {} for k in self.EXPECTED_SEARCH_RESPONSE if k not in {
+                'searchedVariants', 'search', 'variantNotesByGuid', 'variantTagsByGuid', 'variantFunctionalDataByGuid', 'transcriptsById',
             }},
             **{k: {} for k in EXPECTED_SEARCH_FAMILY_CONTEXT},
             'projectsByGuid': {},
@@ -1004,7 +1004,7 @@ class VariantSearchAPITest(object):
             }},
             **EXPECTED_TRANSCRIPTS_RESPONSE,
             'omimIntervals': {},
-            'savedVariantsByGuid': {'SV0000002_1248367227_r0390_100': EXPECTED_SAVED_VARIANT},
+            'savedVariantsByGuid': {k: v for k, v in self.EXPECTED_SEARCH_RESPONSE['savedVariantsByGuid'].items() if k in ['SV0000002_1248367227_r0390_100']},
             'variantFunctionalDataByGuid': {},
             'locusListsByGuid': EXPECTED_SEARCH_CONTEXT_RESPONSE['locusListsByGuid'],
             'projectsByGuid': {
@@ -1028,7 +1028,6 @@ class VariantSearchAPITest(object):
         for k in ['VT1708633_2103343353_r0390_100', 'VT1726961_2103343353_r0390_100']:
             del expected_body['variantTagsByGuid'][k]
 
-        self.maxDiff = None
         self.assertDictEqual(response.json(), expected_body)
         mock_variant_lookup.assert_called_with(
             self.manager_user, ('1', 10439, 'AC', 'A'), genome_version='37',
@@ -1280,6 +1279,9 @@ class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, VariantSearchAPITes
     EXPECTED_SEARCH_RESPONSE = {
         **EXPECTED_SEARCH_RESPONSE,
         'totalSampleCounts': {'MITO': {'WES': 1}, 'SNV_INDEL': {'WES': 7}, 'SV': {'WES': 3, 'WGS': 3}},
+    }
+    EXPECTED_SEARCH_RESPONSE['savedVariantsByGuid'] = {
+        k: {**v, 'key': mock.ANY, 'mainTranscriptId': mock.ANY} for k, v in EXPECTED_SEARCH_RESPONSE['savedVariantsByGuid'].items()
     }
 
     def test_query_variants(self, *args):
