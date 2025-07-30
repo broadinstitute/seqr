@@ -784,7 +784,7 @@ class ReportAPITest(AirtableTest):
         response = self.client.get(no_analyst_project_url)
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['errors'],
-                         ['Discovery variant(s) 1-248367227-TC-T in family 14 have no associated gene'])
+                         ['Discovery variant(s) 1-248367227-TC-T, MT-14783-T-C in family 14 have no associated gene'])
 
     @mock.patch('seqr.views.apis.report_api.GREGOR_DATA_MODEL_URL', MOCK_DATA_MODEL_URL)
     @mock.patch('seqr.views.apis.report_api.datetime')
@@ -1502,7 +1502,7 @@ class LocalReportAPITest(AuthenticationTestCase, ReportAPITest):
 
     fixtures = ['users', '1kg_project', 'reference_data', 'report_variants']
     ADDITIONAL_FAMILIES = ['F000014_14']
-    ADDITIONAL_FINDINGS = ['NA21234_1_248367227']
+    ADDITIONAL_FINDINGS = ['NA21234_1_248367227', 'NA21234_MT_14783']
     HAS_PM_OVERRIDE = True
     STATS_DATA = {
         'projectsCount': {'non_demo': 3, 'demo': 1},

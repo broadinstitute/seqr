@@ -148,7 +148,7 @@ EXPECTED_NO_GENE_SAMPLE_METADATA_ROW = {
     'MME': 'Yes',
     'family_history': 'Yes',
     'genetic_findings_id-1': 'NA21234_1_248367227',
-    'num_saved_variants': 1,
+    'num_saved_variants': 2,
     'paternal_guid': '',
     'paternal_id': '',
     'phenotype_description': None,
@@ -181,6 +181,31 @@ EXPECTED_NO_GENE_SAMPLE_METADATA_ROW = {
     'transcript-1': None,
     'analysis_groups': '',
     'ClinGen_allele_ID-1': 'CA1501729',
+    'alt-2': 'C',
+    'chrom-2': 'MT',
+    'gene_known_for_phenotype-2': 'Candidate',
+    'phenotype_contribution-2': 'Full',
+    'partial_contribution_explained-2': '',
+    'pos-2': 14783,
+    'chrom_end-2': None,
+    'pos_end-2': None,
+    'ref-2': 'T',
+    'copy_number-2': None,
+    'zygosity-2': 'Homoplasmy',
+    'variant_reference_assembly-2': 'GRCh38',
+    'gene_of_interest-2': None,
+    'gene_id-2': 'ENSG00000198727',
+    'genetic_findings_id-2': 'NA21234_MT_14783',
+    'hgvsc-2': 'c.37T>C',
+    'hgvsp-2': 'p.Leu13=',
+    'notes-2': '',
+    'seqr_chosen_consequence-2': 'synonymous_variant',
+    'sv_type-2': None,
+    'sv_name-2': None,
+    'validated_name-2': None,
+    'variant_inheritance-2': 'unknown',
+    'transcript-2': 'ENST00000361789.2',
+    'ClinGen_allele_ID-2': None,
 }
 
 AIRTABLE_SAMPLE_RECORDS = {
@@ -636,6 +661,7 @@ class SummaryDataAPITest(AirtableTest):
         rows = response.json()['rows']
         self.assertEqual(len(rows), 3)
         test_row = next(r for r in rows if r['participant_id'] == 'NA21234')
+        self.maxDiff = None
         self.assertDictEqual(test_row, EXPECTED_NO_GENE_SAMPLE_METADATA_ROW)
 
         # Test analyst access

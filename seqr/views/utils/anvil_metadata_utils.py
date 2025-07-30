@@ -1,5 +1,7 @@
 from collections import defaultdict
 from datetime import datetime
+
+from clickhouse_backend.models import ArrayField, StringField
 from django.db.models import F, Q, Value, CharField, Aggregate
 from django.db.models.functions import Replace
 from django.contrib.auth.models import User
@@ -437,7 +439,7 @@ def _get_clickhouse_variant_json_by_guid(saved_variants, include_clinvar):
 
 def _set_clickhouse_sv_json(variant_json_by_guid, genome_version, dataset_type, key_map, include_clinvar):
     annotations = get_annotations_queryset(genome_version, dataset_type, key_map.keys()).values(
-        'key', svType=F('sv_type'), gene_ids=ArrayMap('sorted_gene_consequences', mapped_expression='x.geneId'),
+        'key', svType=F('sv_type'), gene_ids=ArrayMap('sorted_gene_consequences', mapped_expression='x.geneId', output_field=ArrayField(StringField())),
     )
     defaults = {'CAID': None, 'gene_id': None, 'main_transcript': {}}
     if include_clinvar:
@@ -450,13 +452,14 @@ def _set_clickhouse_sv_json(variant_json_by_guid, genome_version, dataset_type, 
 def _set_clickhouse_snv_indel_json(variant_json_by_guid, genome_version, dataset_type, key_map, include_clinvar):
     selected_transcripts = {st for group in key_map.values() for _, st in group if st}
     annotations_qs = get_annotations_queryset(genome_version, dataset_type, key_map.keys())
-    annotation_values = {'CAID': F('caid'), 'svType': Value(None, output_field=CharField())}
+    annotation_values = {field: Value(None, output_field=CharField()) for field in ['CAID', 'svType']}
     transcripts_by_key = {}
     if dataset_type == Sample.DATASET_TYPE_MITO_CALLS:
         annotation_values['all_transcripts'] = _get_main_transcripts_expression(
             'sorted_transcript_consequences', annotations_qs, selected_transcripts,
         )
     else:
+        annotation_values['CAID'] = F('caid')
         transcripts_qs = get_transcripts_queryset(genome_version, key_map.keys())
         transcripts_by_key.update(dict(transcripts_qs.values_list(
             'key', _get_main_transcripts_expression('transcripts', transcripts_qs, selected_transcripts),

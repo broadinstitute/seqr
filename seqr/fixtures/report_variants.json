@@ -173,6 +173,11 @@
         "ref": null,
         "alt": null,
         "variant_id": "suffix_19107_DEL_013746",
+        "key": 111,
+        "dataset_type": "SV_WGS",
+        "genotypes": {
+            "I000017_na20889": { "cn": 1, "sampleId": "NA20885", "numAlt": -1,  "defragged": false, "qs": 33, "numExon": 2}
+        },
         "saved_variant_json": {
             "liftedOverGenomeVersion": null,
             "pos": 249045487,
@@ -207,6 +212,30 @@
         "created_by": null,
         "last_modified_date": "2018-05-29T16:32:51.449Z",
         "saved_variants": [9, 10, 11],
+        "variant_tag_type": 4,
+        "search_hash": null
+    }
+}, {
+    "model": "seqr.varianttag",
+    "pk": 1926974,
+    "fields": {
+        "guid": "VT1926974_2103343353_r0006_tes",
+        "created_date": "2018-05-29T16:32:51.449Z",
+        "created_by": null,
+        "last_modified_date": "2018-05-29T16:32:51.449Z",
+        "saved_variants": [12],
+        "variant_tag_type": 1,
+        "search_hash": null
+    }
+}, {
+    "model": "seqr.varianttag",
+    "pk": 1926975,
+    "fields": {
+        "guid": "VT1926975_2103343353_r0006_tes",
+        "created_date": "2018-05-29T16:32:51.449Z",
+        "created_by": null,
+        "last_modified_date": "2018-05-29T16:32:51.449Z",
+        "saved_variants": [13],
         "variant_tag_type": 4,
         "search_hash": null
     }

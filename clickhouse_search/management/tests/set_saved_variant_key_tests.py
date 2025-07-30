@@ -21,7 +21,7 @@ class SetSavedVariantKeyTest(AnvilAuthenticationTestCase):
 
         call_command('set_saved_variant_key')
         self.assert_json_logs(user=None, expected=[
-            ('Updated genotypes for 8 variants', None),
+            ('Updated genotypes for 7 variants', None),
             ('Finding keys for 1 MITO (GRCh38) variant ids', None),
             ('Found 1 keys', None),
             ('Updated keys for 1 MITO (GRCh38) variants', None),
