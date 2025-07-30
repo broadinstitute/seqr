@@ -1,5 +1,7 @@
 import logging
 import json
+
+from clickhouse_backend.models import ArrayField, StringField
 from django.db.models import Q, F
 
 from clickhouse_search.backend.functions import ArrayFilter, ArrayMap
@@ -147,10 +149,9 @@ def _clickhouse_variant_gene_id(variant, genome_version):
     if not variant.key:
         return _variant_gene_id(variant, genome_version)
     if variant.selected_main_transcript_id:
-        # TODO test
         qs = get_transcripts_queryset(genome_version, [variant.key]).annotate(gene_ids=ArrayMap(
-            ArrayFilter('transcripts', [{'transcriptId': (variant.selected_main_transcript_id, '{field} = {value}')}]),
-            mapped_expression='x.geneId',
+            ArrayFilter('transcripts', conditions=[{'transcriptId': (variant.selected_main_transcript_id, "{field} = '{value}'")}]),
+            mapped_expression='x.geneId', output_field=ArrayField(StringField()),
         )).annotate(gene_id=F('gene_ids__0'))
     else:
         annotations = get_annotations_queryset(genome_version, variant.dataset_type, [variant.key])

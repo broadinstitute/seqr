@@ -580,7 +580,7 @@ class SavedVariantAPITest(object):
         self.assertEqual(new_gene_note_response['note'], 'new_variant_note_as_gene_note')
 
         # save variant_note as gene_note for user selected main gene
-        create_variant_note_seetced_gene_url = reverse(create_variant_note_handler, args=[VARIANT_GUID])
+        create_variant_note_seetced_gene_url = reverse(create_variant_note_handler, args=[VARIANT_GUID_2])
         response = self.client.post(create_variant_note_seetced_gene_url, content_type='application/json', data=json.dumps(
             {'note': 'new user-selected gene note', 'saveAsGeneNote': True, 'familyGuid': 'F000001_1'}
         ))
