@@ -576,7 +576,8 @@ class AnvilAuthenticationTestCase(DifferentDbTransactionSupportMixin, Authentica
         self.mock_get_group_members.side_effect = get_group_members_side_effect
         self.addCleanup(patcher.stop)
         super(AnvilAuthenticationTestCase, self).setUp()
-        SavedVariant.objects.filter(key__isnull=False).update(saved_variant_json={})
+        if self.CLICKHOUSE_HOSTNAME:
+            SavedVariant.objects.filter(key__isnull=False).update(saved_variant_json={})
 
     @classmethod
     def add_additional_user_groups(cls):

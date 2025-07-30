@@ -23,5 +23,5 @@ class Command(BaseCommand):
         parser.add_argument('chromosomes', nargs='*', help='Chromosome(s) to reload. If not specified, defaults to all chromosomes.')
 
     def handle(self, *args, **options):
-        backend_specific_call(lambda: True, lambda: True, lambda: _clickhouse_error)()
+        backend_specific_call(lambda: True, lambda: True, _clickhouse_error)()
         reload_shared_variant_annotations(options['data_type'], options['genome_version'], chromosomes=options['chromosomes'])
