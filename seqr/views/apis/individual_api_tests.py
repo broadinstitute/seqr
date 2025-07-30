@@ -1458,5 +1458,5 @@ class AnvilIndividualAPITest(AnvilAuthenticationTestCase, IndividualAPITest):
 
     def _assert_expected_no_gene_variant(self, saved_variant, new_family_genotypes):
         self.assertEqual(saved_variant.key, 100)
-        self.assertDictEqual(saved_variant.genotyoes, new_family_genotypes)
+        self.assertDictEqual(saved_variant.genotypes, new_family_genotypes)
         self.assertDictEqual(saved_variant.saved_variant_json, {})
