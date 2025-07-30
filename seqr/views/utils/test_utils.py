@@ -525,7 +525,7 @@ class DifferentDbTransactionSupportMixin(object):
         for db_name in reversed(cls._databases_names()):
             if connections[db_name].features.supports_transactions:
                 transaction.set_rollback(True, using=db_name)
-                atomics[db_name].__exit__(None, None, None)
+            atomics[db_name].__exit__(None, None, None)
 
 
 class AnvilAuthenticationTestCase(DifferentDbTransactionSupportMixin, AuthenticationTestCase):
