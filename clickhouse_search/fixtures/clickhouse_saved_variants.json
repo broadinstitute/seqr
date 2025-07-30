@@ -204,9 +204,9 @@
     }
 }, {
     "model": "clickhouse_search.keylookupsv",
-    "pk": 111,
+    "pk": 101,
     "fields": {
-      "key": 111,
+      "key": 101,
       "variant_id": "suffix_19107_DEL"
     }
 }, {

@@ -57,7 +57,7 @@ class SetSavedVariantKeyTest(AnvilAuthenticationTestCase):
             {'guid': 'SV0000006_1248367227_r0004_non', 'key': 100, 'dataset_type': 'SNV_INDEL', 'genotypes': {'I000018_na21234': {'sampleId': 'NA20885', 'ab': 0.0, 'gq': 99.0, 'numAlt': 1}}, 'saved_variant_json': {}},
             {'guid': 'SV0000007_prefix_19107_DEL_r00', 'key': 111, 'dataset_type': 'SV_WES', 'genotypes': {'I000017_na20889': { 'cn': 1, 'sampleId': 'NA20885', 'numAlt': -1,  'defragged': False, 'qs': 33, 'numExon': 2}}, 'saved_variant_json': {}},
             {'guid': 'SV0000009_25000014783_r0004_no', 'key': 100, 'dataset_type': 'MITO', 'genotypes': {'I000018_na21234': mock.ANY}, 'saved_variant_json': {}},
-            {'guid': 'SV0000013_prefix_19107_DEL_r00', 'key': 111, 'dataset_type': 'SV_WGS', 'genotypes': {'I000017_na20889': mock.ANY}, 'saved_variant_json': {}},
+            {'guid': 'SV0000013_prefix_19107_DEL_r00', 'key': 101, 'dataset_type': 'SV_WGS', 'genotypes': {'I000018_na21234': mock.ANY}, 'saved_variant_json': {}},
             {'guid': 'SV0027166_191912634_r0384_rare', 'key': None, 'dataset_type': None, 'genotypes': mock.ANY, 'saved_variant_json': mock.ANY},
             {'guid': 'SV0027167_191912633_r0384_rare', 'key': None, 'dataset_type': None, 'genotypes': mock.ANY, 'saved_variant_json': mock.ANY},
             {'guid': 'SV0027168_191912632_r0384_rare', 'key': None, 'dataset_type': None, 'genotypes': mock.ANY, 'saved_variant_json': mock.ANY},
