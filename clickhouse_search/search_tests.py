@@ -30,9 +30,13 @@ class ClickhouseSearchTests(DifferentDbTransactionSupportMixin, SearchTestHelper
 
     def setUp(self):
         super().set_up()
-        with connections['clickhouse'].cursor() as cursor:
+
+    @classmethod
+    def setUpTestData(cls):
+        with connections['clickhouse_write'].cursor() as cursor:
             for table_base in ['GRCh38/SNV_INDEL', 'GRCh38/MITO', 'GRCh38/SV', 'GRCh37/SNV_INDEL']:
                 cursor.execute(f'SYSTEM REFRESH VIEW "{table_base}/project_gt_stats_to_gt_stats_mv"')
+                cursor.execute(f'SYSTEM RELOAD DICTIONARY "{table_base}/gt_stats_dict"')
         Project.objects.update(genome_version='38')
 
     def _assert_expected_search(self, expected_results, gene_counts=None, inheritance_mode=None, inheritance_filter=None, quality_filter=None, cached_variant_fields=None, sort='xpos', **search_kwargs):
