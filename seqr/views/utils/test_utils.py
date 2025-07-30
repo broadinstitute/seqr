@@ -977,7 +977,8 @@ VARIANTS = [
                 'gq': 46.0,
                 'numAlt': 1,
                 'dp': '50',
-                'ad': '14,33'
+                'ad': '14,33',
+                'filters': ['VQSRTrancheSNP99.95to100.00'],
             },
             'NA19679': {
                 'sampleId': 'NA19679',
@@ -985,7 +986,8 @@ VARIANTS = [
                 'gq': 99.0,
                 'numAlt': 0,
                 'dp': '45',
-                'ad': '45,0'
+                'ad': '45,0',
+                'filters': ['VQSRTrancheSNP99.95to100.00'],
             }
         }
     },

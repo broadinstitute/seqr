@@ -368,7 +368,7 @@ class SummaryDataAPITest(AirtableTest):
         response = self.client.get('{}?gene=ENSG00000135953'.format(all_tag_url))
         self.assertEqual(response.status_code, 200)
         expected_variant_guids.add('SV0000002_1248367227_r0390_100')
-        report_variants = {'SV0027168_191912632_r0384_rare', 'SV0027167_191912633_r0384_rare', 'SV0027166_191912634_r0384_rare'}
+        report_variants = {'SV0027168_191912632_r0384_rare', 'SV0027167_191912633_r0384_rare'}
         self.assertSetEqual(set(response.json()['savedVariantsByGuid'].keys()), {*report_variants, *expected_variant_guids})
 
         multi_tag_url = reverse(saved_variants_page, args=['Review;Tier 1 - Novel gene and phenotype'])
