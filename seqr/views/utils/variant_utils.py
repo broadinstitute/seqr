@@ -19,7 +19,6 @@ from seqr.utils.search.utils import get_variants_for_variant_ids, backend_specif
 from seqr.utils.gene_utils import get_genes_for_variants
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.xpos_utils import get_xpos
-from seqr.views.utils.json_utils import DjangoJSONEncoderWithSets
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, create_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_discovery_tags, get_json_for_locus_lists, \
     get_json_for_queryset, get_json_for_rna_seq_outliers, get_json_for_saved_variants_with_tags, \
@@ -320,13 +319,12 @@ def _get_clickhouse_variants(families: list[Family], variant_ids: list[str], gen
         genotype_keys = get_clickhouse_genotypes(
             project_guid, family_guids, genome_version, Sample.DATASET_TYPE_VARIANT_CALLS, variant_key_map.keys(), samples,
         )
-        for key, genotypes in genotype_keys:
+        for key, genotypes in genotype_keys.items():
             variant_id = variant_key_map[key]
             chrom, pos, ref, alt = variant_id.split('-')
             variants.append({
                 'key': key, 'variantId': variant_id, 'chrom': chrom, 'pos': int(pos), 'ref': ref, 'alt': alt,
-                'genotypes': json.loads(json.dumps(genotypes, cls=DjangoJSONEncoderWithSets)),
-                'familyGuids': sorted({g['familyGuid'] for g in genotypes.values()}),
+                'genotypes': genotypes, 'familyGuids': sorted({g['familyGuid'] for g in genotypes.values()}),
             })
     return variants
 

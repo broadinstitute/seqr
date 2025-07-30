@@ -4,6 +4,7 @@ from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import F, Min
 from django.db.models.functions import JSONObject
+import json
 
 from clickhouse_search.backend.fields import NamedTupleField
 from clickhouse_search.backend.functions import Array, ArrayFilter, ArrayIntersect, ArraySort, GroupArrayArray, Tuple, \
@@ -15,6 +16,7 @@ from seqr.models import Sample, PhenotypePrioritization
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.search.constants import MAX_VARIANTS, XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, \
     PRIORITIZED_GENE_SORT, COMPOUND_HET, RECESSIVE
+from seqr.views.utils.json_utils import DjangoJSONEncoderWithSets
 from settings import CLICKHOUSE_SERVICE_HOSTNAME
 
 logger = SeqrLogger(__name__)
@@ -463,7 +465,10 @@ def get_clickhouse_genotypes(project_guid, family_guids, genome_version, dataset
     entries = ENTRY_CLASS_MAP[genome_version][dataset_type].objects.filter(
         project_guid=project_guid, family_guid__in=family_guids, key__in=keys,
     )
-    return entries.annotate(genotypes=entries.genotype_expression(sample_data)).values_list('key', 'genotypes')
+    return {
+        key: json.loads(json.dumps(genotypes, cls=DjangoJSONEncoderWithSets)) for key, genotypes in
+        entries.annotate(genotypes=entries.genotype_expression(sample_data)).values_list('key', 'genotypes')
+    }
 
 
 def get_annotations_queryset(genome_version, dataset_type, keys):

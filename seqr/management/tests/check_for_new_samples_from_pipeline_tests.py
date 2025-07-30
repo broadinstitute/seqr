@@ -884,7 +884,7 @@ class LocalCheckNewSamplesTest(AuthenticationTestCase, CheckNewSamplesTest):
 
 
 class AirtableCheckNewSamplesTest(AnvilAuthenticationTestCase, CheckNewSamplesTest):
-    fixtures = ['users', '1kg_project']
+    fixtures = ['users', '1kg_project', 'clickhouse_saved_variants']
 
     airtable_samples_url = 'http://testairtable/app3Y97xtbbaOopVR/Samples'
     airtable_pdo_url = 'http://testairtable/app3Y97xtbbaOopVR/PDO'
@@ -1104,5 +1104,9 @@ The following users have been notified: test_user_manager@test.com""")
         return 7, 2
 
     def _assert_saved_variant_models_updated(self):
-        #     TODO test _update_project_saved_variant_genotypes
-        pass
+        saved_variant = SavedVariant.objects.get(key=100, family_id=14)
+        self.assertDictEqual(saved_variant.genotypes, {'I000018_na21234': {
+            'ab': 0.0, 'dp': 49, 'gq': 99, 'numAlt': 2, 'filters': [],
+            'sampleId': 'NA21234', 'familyGuid': 'F000014_14', 'sampleType': 'WGS', 'individualGuid': 'I000018_na21234',
+        }})
+        self.assertDictEqual(saved_variant.saved_variant_json, {})
