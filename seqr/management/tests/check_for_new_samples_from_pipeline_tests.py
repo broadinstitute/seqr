@@ -373,7 +373,7 @@ class CheckNewSamplesTest(object):
         self.addCleanup(patcher.stop)
         Sample.objects.filter(guid=OLD_DATA_SAMPLE_GUID).update(sample_type='WES')
 
-    def _test_call(self, error_logs=None, reload_annotations_logs=None, run_loading_logs=None, reload_calls=None, num_runs=5):
+    def _test_call(self, error_logs=None, reload_annotations_logs=None, run_loading_logs=None, reload_calls=None, num_runs=5, has_reload_calls=False):
         self._set_loading_files()
         self.reset_logs()
         responses.calls.reset()
@@ -413,9 +413,9 @@ class CheckNewSamplesTest(object):
         self.mock_redis.return_value.delete.assert_called_with('search_results__*', 'variant_lookup_results__*')
 
         # Test reload saved variants
-        num_airtable_loading_calls, num_airtable_validation_calls = self._assert_expected_airtable_calls(bool(reload_calls), single_call)
+        num_airtable_loading_calls, num_airtable_validation_calls = self._assert_expected_airtable_calls(has_reload_calls, single_call)
         if not reload_calls:
-            self.assertEqual(len(responses.calls), num_airtable_validation_calls)
+            self.assertEqual(len(responses.calls), num_airtable_loading_calls + num_airtable_validation_calls)
             return
 
         reload_annotation_calls = [] if single_call else [
@@ -1006,7 +1006,7 @@ The following users have been notified: test_user_manager@test.com""")
 
     def _test_call(self, reload_annotations_logs=None, reload_calls=None, **kwargs):
         # No reloading for clickhouse
-        super()._test_call(**kwargs)
+        super()._test_call(has_reload_calls=bool(reload_calls), **kwargs)
         #     TODO test _update_project_saved_variant_genotypes
 
     def _set_empty_loading_files(self):
