@@ -420,6 +420,7 @@ class Command(BaseCommand):
 
     @classmethod
     def _update_project_saved_variant_genotypes(cls, project_id, genome_version, user_email, family_guids, project_guid, samples=None, clickhouse_dataset_type=None, **kwargs):
+        updates = {}
         for family_guid in family_guids:
             variant_models_by_key = {
                 v.key: v for v in get_saved_variants(genome_version, project_id, [family_guid], clickhouse_dataset_type=clickhouse_dataset_type)
@@ -436,6 +437,8 @@ class Command(BaseCommand):
                 variants.append(variant)
             logger.info(f'Reloading genotypes for {len(variants)} {clickhouse_dataset_type} variants in family {family_guid}')
             SavedVariant.bulk_update_models(None, variants, ['genotypes'])
+            updates.update({v.id: v for v in variants})
+        return updates
 
     @classmethod
     def _reload_shared_variant_annotations(cls, data_type, genome_version, updated_variants_by_id=None, exclude_families=None, chromosomes=None):

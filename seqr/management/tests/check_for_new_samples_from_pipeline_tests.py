@@ -509,14 +509,6 @@ class CheckNewSamplesTest(object):
             ('create 4 Samples', {'dbUpdate': mock.ANY}),
             ('update 4 Samples', {'dbUpdate': mock.ANY}),
         ]
-        reload_project_variants_logs = [
-            ('Reloading saved variants in 2 projects', None),
-            ('Updated 0 variants in 2 families for project Test Reprocessed Project', None),
-            ('update 1 SavedVariants', {'dbUpdate': mock.ANY}),
-            ('Updated 1 variants in 1 families for project Non-Analyst Project', None),
-            ('Reload Summary: ', None),
-            ('  Non-Analyst Project: Updated 1 variants', None),
-        ]
         update_sample_qc_logs = [
             ('update 2 Individuals', {'dbUpdate': {
                 'dbEntity': 'Individual', 'entityIds': ['I000001_na19675', 'I000015_na20885'],
@@ -553,7 +545,7 @@ class CheckNewSamplesTest(object):
                 ('update 2 Familys', {'dbUpdate': mock.ANY}),
             ] + self.AIRTABLE_LOGS + [
                 ('update 3 Familys', {'dbUpdate': mock.ANY}),
-            ] + update_sample_qc_logs + reload_project_variants_logs,
+            ] + update_sample_qc_logs + self.RELOAD_PROJECT_VARIANT_LOGS,
             'GRCh38/MITO': [
                 ('Loading 2 WGS MITO samples in 1 projects', None)
             ],
@@ -564,13 +556,7 @@ class CheckNewSamplesTest(object):
                 ('update 3 Samples', {'dbUpdate': mock.ANY}),
                 ('update 1 Familys', {'dbUpdate': mock.ANY}),
                 ('Reloading saved variants in 2 projects', None),
-                (mock.ANY, {'severity': 'ERROR', '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent'}),
-                ('Error reloading variants in Test Reprocessed Project: Bad Request', {'severity': 'ERROR', '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent'}),
-                ('Reload Summary: ', None),
-                ('Skipped the following 1 project with no saved variants: 1kg project nåme with uniçøde', None),
-                ('1 failed projects', None),
-                ('  Test Reprocessed Project: Bad Request', None),
-            ],
+            ] + self.RELOAD_SV_VARIANT_LOGS,
         }, error_logs={
             'manual__2023-11-02': 'Invalid families in run metadata GRCh37/SNV_INDEL: manual__2023-11-02 - F0000123_ABC',
             'auto__2024-08-12': 'Matches not found for sample ids: NA20885, NA22882',
@@ -780,7 +766,7 @@ The following 1 families failed sex check:
         self._test_call(num_runs=2, reload_annotations_logs=reload_fetched_annotations_logs + [
            ('Skipped reloading all 2 saved variant annotations for SNV_INDEL GRCh38', None),
        ], reload_calls=reload_snv_indel_calls, run_loading_logs={
-            'GRCh38/SNV_INDEL': create_snv_indel_samples_logs + airtable_logs + update_sample_qc_logs + reload_project_variants_logs,
+            'GRCh38/SNV_INDEL': create_snv_indel_samples_logs + airtable_logs + update_sample_qc_logs + self.RELOAD_PROJECT_VARIANT_LOGS,
         })
 
 @mock.patch('seqr.utils.search.hail_search_utils.HAIL_BACKEND_SERVICE_HOSTNAME', MOCK_HAIL_HOST)
@@ -797,6 +783,22 @@ class LocalCheckNewSamplesTest(AuthenticationTestCase, CheckNewSamplesTest):
     LIST_FILE_LOGS = []
     AIRTABLE_LOGS = []
     VALIDATION_LOGS = []
+    RELOAD_PROJECT_VARIANT_LOGS = [
+        ('Reloading saved variants in 2 projects', None),
+        ('Updated 0 variants in 2 families for project Test Reprocessed Project', None),
+        ('update 1 SavedVariants', {'dbUpdate': mock.ANY}),
+        ('Updated 1 variants in 1 families for project Non-Analyst Project', None),
+        ('Reload Summary: ', None),
+        ('  Non-Analyst Project: Updated 1 variants', None),
+    ]
+    RELOAD_SV_VARIANT_LOGS = [
+        (mock.ANY, {'severity': 'ERROR', '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent'}),
+        ('Error reloading variants in Test Reprocessed Project: Bad Request', {'severity': 'ERROR','@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent'}),
+        ('Reload Summary: ', None),
+        ('Skipped the following 1 project with no saved variants: 1kg project nåme with uniçøde', None),
+        ('1 failed projects', None),
+        ('  Test Reprocessed Project: Bad Request', None),
+    ]
     ADDITIONAL_SLACK_CALLS = [
         mock.call(
             'seqr-data-loading',
@@ -917,6 +919,21 @@ class AirtableCheckNewSamplesTest(AnvilAuthenticationTestCase, CheckNewSamplesTe
         '==> gsutil mv /mock/tmp/* gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-14/',
         '==> gsutil cat gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-24/validation_errors.json',
         '==> gsutil mv /mock/tmp/* gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-24/',
+    ]
+    RELOAD_PROJECT_VARIANT_LOGS = [
+        ('Reloading saved variants in 2 projects', None),
+        ('Reloading genotypes for 0 SNV_INDEL variants in family F000012_12', None),
+        ('Updated 0 variants in 2 families for project Test Reprocessed Project', None),
+        ('Reloading genotypes for 2 SNV_INDEL variants in family F000014_14', None),
+        ('update 2 SavedVariants', {'dbUpdate': mock.ANY}),
+        ('Updated 1 variants in 1 families for project Non-Analyst Project', None),
+        ('Reload Summary: ', None),
+        ('  Non-Analyst Project: Updated 1 variants', None),
+    ]
+    RELOAD_SV_VARIANT_LOGS = [
+        ('Updated 0 variants in 1 families for project 1kg project nåme with uniçøde', None),
+        ('Updated 0 variants in 1 families for project Test Reprocessed Project', None),
+        ('Reload Summary: ', None),
     ]
     ADDITIONAL_SLACK_CALLS = [
         mock.call(
