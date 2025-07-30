@@ -1146,49 +1146,11 @@ class IndividualAPITest(object):
         ).order_by('family_id', 'variant_id').distinct().values(
             'guid', 'variant_id', 'xpos', 'family__guid', 'saved_variant_json__genomeVersion',
             'saved_variant_json__transcripts', 'saved_variant_json__genotypes', 'saved_variant_json__mainTranscriptId',
-            'saved_variant_json__hgvsc',
+            'saved_variant_json__hgvsc', 'key', 'dataset_type', 'genotypes'
         )
         self.assertEqual(len(saved_variants), 4)
-        self.assertDictEqual(saved_variants[0], {
-            'guid': 'SV0000006_1248367227_r0003_tes',
-            'variant_id': '1-248367227-TC-T',
-            'xpos': 1248367227,
-            'family__guid': 'F000012_12',
-            'saved_variant_json__genomeVersion': '37',
-            'saved_variant_json__transcripts': mock.ANY,
-            'saved_variant_json__genotypes': mock.ANY,
-            'saved_variant_json__mainTranscriptId': 'ENST00000505820',
-            'saved_variant_json__hgvsc': None,
-        })
-        self.assertEqual(len(saved_variants[0]['saved_variant_json__transcripts']), 2)
-        self.assertEqual(len(saved_variants[0]['saved_variant_json__genotypes']), 2)
-        self.assertDictEqual(saved_variants[1], {
-            'guid': mock.ANY,
-            'variant_id': '1-249045487-A-G',
-            'xpos': 1249045487,
-            'family__guid': 'F000012_12',
-            'saved_variant_json__genomeVersion': '37',
-            'saved_variant_json__transcripts': {
-                'ENSG00000240361': [{'hgvsc': None, 'hgvsp': None, 'transcriptId': None}],
-            },
-            'saved_variant_json__genotypes': {created_individual_guid: {'numAlt': 1}},
-            'saved_variant_json__mainTranscriptId': None,
-            'saved_variant_json__hgvsc': None,
-        })
         new_family_genotypes = {new_family_individual_guid: {'numAlt': 2}}
-        self.assertDictEqual(saved_variants[2], {
-            'guid': mock.ANY,
-            'variant_id': '1-248367227-TC-T',
-            'xpos': 1248367227,
-            'family__guid': new_family_guid,
-            'saved_variant_json__genomeVersion': '37',
-            'saved_variant_json__transcripts': {
-                'ENSG00000135953': [{'hgvsc': 'c.3955G>A', 'hgvsp': 'c.1586-17C>G', 'transcriptId': 'ENST00000505820'}]
-            },
-            'saved_variant_json__genotypes': new_family_genotypes,
-            'saved_variant_json__mainTranscriptId': 'ENST00000505820',
-            'saved_variant_json__hgvsc': None,
-        })
+        self._assert_expected_finding_variants(saved_variants, created_individual_guid, new_family_guid, new_family_genotypes)
 
         variant_tags = VariantTag.objects.filter(variant_tag_type__name='GREGoR Finding')
         existing_variant_tags = variant_tags.filter(saved_variants__guid='SV0000006_1248367227_r0003_tes')
@@ -1247,11 +1209,9 @@ class IndividualAPITest(object):
         }})
         self.assertDictEqual(response_json['individualsByGuid'], {})
 
-        no_gene_saved_variant_json = SavedVariant.objects.get(family__guid=new_family_guid, variant_id='1-248367227-TC-T').saved_variant_json
-        self.assertDictEqual(no_gene_saved_variant_json['transcripts'], {})
-        self.assertDictEqual(no_gene_saved_variant_json['genotypes'], new_family_genotypes)
-        self.assertNotIn('mainTranscriptId', no_gene_saved_variant_json)
-        self.assertNotIn('hgvsc', no_gene_saved_variant_json)
+        self._assert_expected_no_gene_variant(
+            SavedVariant.objects.get(family__guid=new_family_guid, variant_id='1-248367227-TC-T'), new_family_genotypes,
+        )
 
     def test_get_hpo_terms(self):
         url = reverse(get_hpo_terms, args=['HP:0011458'])
@@ -1355,6 +1315,63 @@ class LocalIndividualAPITest(AuthenticationTestCase, IndividualAPITest):
         # Importing gregor metadata does not work in local environment
         pass
 
+    def _assert_expected_finding_variants(self, saved_variants, created_individual_guid, new_family_guid, new_family_genotypes):
+        self.assertDictEqual(saved_variants[0], {
+            'guid': 'SV0000006_1248367227_r0003_tes',
+            'variant_id': '1-248367227-TC-T',
+            'xpos': 1248367227,
+            'family__guid': 'F000012_12',
+            'saved_variant_json__genomeVersion': '37',
+            'saved_variant_json__transcripts': mock.ANY,
+            'saved_variant_json__genotypes': mock.ANY,
+            'saved_variant_json__mainTranscriptId': 'ENST00000505820',
+            'saved_variant_json__hgvsc': None,
+            'key': None,
+            'dataset_type': None,
+            'genotypes': None,
+        })
+        self.assertEqual(len(saved_variants[0]['saved_variant_json__transcripts']), 2)
+        self.assertEqual(len(saved_variants[0]['saved_variant_json__genotypes']), 2)
+        self.assertDictEqual(saved_variants[1], {
+            'guid': mock.ANY,
+            'variant_id': '1-249045487-A-G',
+            'xpos': 1249045487,
+            'family__guid': 'F000012_12',
+            'saved_variant_json__genomeVersion': '37',
+            'saved_variant_json__transcripts': {
+                'ENSG00000240361': [{'hgvsc': None, 'hgvsp': None, 'transcriptId': None}],
+            },
+            'saved_variant_json__genotypes': {created_individual_guid: {'numAlt': 1}},
+            'saved_variant_json__mainTranscriptId': None,
+            'saved_variant_json__hgvsc': None,
+            'key': None,
+            'dataset_type': None,
+            'genotypes': None,
+        })
+        self.assertDictEqual(saved_variants[2], {
+            'guid': mock.ANY,
+            'variant_id': '1-248367227-TC-T',
+            'xpos': 1248367227,
+            'family__guid': new_family_guid,
+            'saved_variant_json__genomeVersion': '37',
+            'saved_variant_json__transcripts': {
+                'ENSG00000135953': [{'hgvsc': 'c.3955G>A', 'hgvsp': 'c.1586-17C>G', 'transcriptId': 'ENST00000505820'}]
+            },
+            'saved_variant_json__genotypes': new_family_genotypes,
+            'saved_variant_json__mainTranscriptId': 'ENST00000505820',
+            'saved_variant_json__hgvsc': None,
+            'key': None,
+            'dataset_type': None,
+            'genotypes': None,
+        })
+
+    def _assert_expected_no_gene_variant(self, saved_variant, new_family_genotypes):
+        no_gene_saved_variant_json = saved_variant.saved_variant_json
+        self.assertDictEqual(no_gene_saved_variant_json['transcripts'], {})
+        self.assertDictEqual(no_gene_saved_variant_json['genotypes'], new_family_genotypes)
+        self.assertNotIn('mainTranscriptId', no_gene_saved_variant_json)
+        self.assertNotIn('hgvsc', no_gene_saved_variant_json)
+
 
 class AnvilIndividualAPITest(AnvilAuthenticationTestCase, IndividualAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data', 'clickhouse_saved_variants']
@@ -1390,3 +1407,56 @@ class AnvilIndividualAPITest(AnvilAuthenticationTestCase, IndividualAPITest):
     def _assert_expected_delete_individuals(self, response, mock_pm_group):
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], ['Unable to delete individuals with active search sample: NA19678'])
+
+    def _assert_expected_finding_variants(self, saved_variants, created_individual_guid, new_family_guid, new_family_genotypes):
+        self.maxDiff = None
+        self.assertDictEqual(saved_variants[0], {
+            'guid': 'SV0000006_1248367227_r0003_tes',
+            'variant_id': '1-248367227-TC-T',
+            'xpos': 1248367227,
+            'family__guid': 'F000012_12',
+            'saved_variant_json__genomeVersion': None,
+            'saved_variant_json__transcripts': None,
+            'saved_variant_json__genotypes': None,
+            'saved_variant_json__mainTranscriptId': None,
+            'saved_variant_json__hgvsc': None,
+            'key': 100,
+            'dataset_type': 'SNV_INDEL',
+            'genotypes': mock.ANY,
+        })
+        self.assertEqual(len(saved_variants[0]['genotypes']), 2)
+        self.assertDictEqual(saved_variants[1], {
+            'guid': mock.ANY,
+            'variant_id': '1-249045487-A-G',
+            'xpos': 1249045487,
+            'family__guid': 'F000012_12',
+            'saved_variant_json__genomeVersion': '37',
+            'saved_variant_json__transcripts': {
+                'ENSG00000240361': [{'hgvsc': None, 'hgvsp': None, 'transcriptId': None}],
+            },
+            'saved_variant_json__genotypes': {created_individual_guid: {'numAlt': 1}},
+            'saved_variant_json__mainTranscriptId': None,
+            'saved_variant_json__hgvsc': None,
+            'key': None,
+            'dataset_type': None,
+            'genotypes': {},
+        })
+        self.assertDictEqual(saved_variants[2], {
+            'guid': mock.ANY,
+            'variant_id': '1-248367227-TC-T',
+            'xpos': 1248367227,
+            'family__guid': new_family_guid,
+            'saved_variant_json__genomeVersion': None,
+            'saved_variant_json__transcripts': None,
+            'saved_variant_json__genotypes': None,
+            'saved_variant_json__mainTranscriptId': None,
+            'saved_variant_json__hgvsc': None,
+            'key': 100,
+            'dataset_type': 'SNV_INDEL',
+            'genotypes': new_family_genotypes,
+        })
+
+    def _assert_expected_no_gene_variant(self, saved_variant, new_family_genotypes):
+        self.assertEqual(saved_variant.key, 100)
+        self.assertDictEqual(saved_variant.genotyoes, new_family_genotypes)
+        self.assertDictEqual(saved_variant.saved_variant_json, {})
