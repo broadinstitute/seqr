@@ -405,7 +405,7 @@ def _saved_variant_genes_transcripts(variants):
 
 
 def get_omim_intervals_query(variants):
-    chroms = {v['chrom'] for v in variants if v.get('svType')}
+    chroms = {v['chrom'] for v in variants if v.get('svType') or v.get('hasSvType')}
     return Q(phenotype_mim_number__isnull=False, gene__isnull=True, chrom__in=chroms)
 
 

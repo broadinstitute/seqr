@@ -485,7 +485,7 @@ def get_clickhouse_annotations(genome_version, dataset_type, keys):
 def get_clickhouse_genes(genome_version, dataset_type, keys):
     results = get_annotations_queryset(genome_version, dataset_type, keys)
     return results.aggregate(
-        gene_ids=ArrayDistinct(GroupArrayArray(ArrayMap(results.transcript_field, mapped_expression='x.geneId'))),
+        gene_ids=ArrayDistinct(GroupArrayArray(ArrayMap(results.transcript_field, mapped_expression='x.geneId')), output_field=ArrayField(StringField())),
     )['gene_ids']
 
 

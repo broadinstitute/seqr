@@ -53,20 +53,17 @@ def family_page_data(request, family_guid):
     add_families_context(response, families, project.guid, request.user, is_analyst, has_case_review_perm)
     family_response = response['familiesByGuid'][family_guid]
 
-    value_expressions = backend_specific_call(
-        {'svType': F('saved_variant_json__svType'), 'transcripts': F('saved_variant_json__transcripts')},
-        {'svType': F('saved_variant_json__svType'), 'transcripts': F('saved_variant_json__transcripts')},
-        {'svType': F('dataset_type__startswith') == Sample.DATASET_TYPE_SV_CALLS, 'clickhouseKey': F('key'), 'datasetType': F('dataset_type')},
-    )
+    additional_fields = backend_specific_call([],[],['key', 'dataset_type'])
     discovery_variants = family.savedvariant_set.filter(varianttag__variant_tag_type__category=DISCOVERY_CATEGORY).values(
-        'xpos', 'xpos_end', **value_expressions,
+        'xpos', 'xpos_end', *additional_fields,
+        svType=F('saved_variant_json__svType'), transcripts=F('saved_variant_json__transcripts'),
     )
     gene_ids = backend_specific_call(
         _variants_gene_ids, _variants_gene_ids, _clickhouse_variants_gene_ids,
     )(discovery_variants, project.genome_version)
     discovery_variant_intervals = [dict(zip(
-        ['chrom', 'start', 'end_chrom', 'end', 'svType'],
-        [*get_chrom_pos(v['xpos']), *get_chrom_pos(v['xpos_end']), v['svType']]
+        ['chrom', 'start', 'end_chrom', 'end', 'svType', 'hasSvType'],
+        [*get_chrom_pos(v['xpos']), *get_chrom_pos(v['xpos_end']), v['svType'], (v.get('dataset_type') or '').startswith(Sample.DATASET_TYPE_SV_CALLS)]
     )) for v in discovery_variants]
     omims = Omim.objects.filter(
         get_omim_intervals_query(discovery_variant_intervals) | Q(gene__gene_id__in=gene_ids)
@@ -112,11 +109,16 @@ def _variants_gene_ids(variants, *args, **kwargs):
 
 def _clickhouse_variants_gene_ids(variants, genome_version):
     keys_by_dataset_type = defaultdict(set)
+    no_key_variants = []
     for v in variants:
-        keys_by_dataset_type[v['datasetType']].add(v['clickhouseKey'])
-    gene_ids = set()
+        if v['key']:
+            keys_by_dataset_type[v['dataset_type']].add(v['key'])
+        else:
+            no_key_variants.append(v)
+    gene_ids = _variants_gene_ids(no_key_variants)
     for dataset_type, keys in keys_by_dataset_type.items():
         gene_ids.update(get_clickhouse_genes(genome_version, dataset_type, keys))
+    return  gene_ids
 
 
 def _intervals_overlap(interval1, interval2):
