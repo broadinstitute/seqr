@@ -464,8 +464,18 @@ def _add_liftover_genotypes(variant, data_type, variant_id):
 
 
 def get_clickhouse_variant_by_id(variant_id, samples, genome_version, dataset_type):
-    variant = _clickhouse_variant_lookup(variant_id, genome_version, dataset_type, samples)
-    return format_clickhouse_results([variant], genome_version)[0] if variant else None
+    if dataset_type == Sample.DATASET_TYPE_SV_CALLS:
+        data_types  = [
+            f'{Sample.DATASET_TYPE_SV_CALLS}_{sample_type}'
+            for sample_type in samples.values_list('sample_type', flat=True).distinct()
+        ]
+    else:
+        data_types = [dataset_type]
+    for data_type in data_types:
+        variant = _clickhouse_variant_lookup(variant_id, genome_version, data_type, samples)
+        if variant:
+            return format_clickhouse_results([variant], genome_version)[0]
+    return None
 
 
 def get_clickhouse_genotypes(project_guid, family_guids, genome_version, dataset_type, keys, samples):
