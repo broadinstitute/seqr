@@ -244,7 +244,7 @@
     "pk": 111,
     "fields": {
       "key": 111,
-      "variant_id": "prefix_19107_DEL"
+      "variant_id": "prefix_70191_DEL"
     }
 }, {
     "model": "clickhouse_search.annotationsgcnv",
@@ -255,7 +255,7 @@
       "chrom": "1",
       "pos": 249045487,
       "end": 249045898,
-      "variant_id": "prefix_19107_DEL",
+      "variant_id": "prefix_70191_DEL",
       "lifted_over_chrom": "2",
       "lifted_over_pos": null,
       "rg37_locus_end": [null, null],

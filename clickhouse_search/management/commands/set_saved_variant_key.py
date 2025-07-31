@@ -2340,7 +2340,7 @@ class Command(BaseCommand):
             else:
                 missing_by_sample_type[sample_type].append(f"{variant_id} - {'; '.join(variant['family_ids'])}" )
 
-        for sample_type, variant_id_updates in update_variants_by_sample_type.items():
+        for sample_type, variant_id_updates in sorted(update_variants_by_sample_type.items()):
             logger.info(f'Mapping reloaded SV_{sample_type} IDs to latest version')
             failed_mapping = cls._set_variant_keys(
                 list(variant_id_updates.values()), f'{Sample.DATASET_TYPE_SV_CALLS}_{sample_type}',
