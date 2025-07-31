@@ -4,7 +4,6 @@ from datetime import timedelta
 
 from clickhouse_search.search import clickhouse_backend_enabled, get_clickhouse_variants, format_clickhouse_results, \
     get_clickhouse_cache_results, clickhouse_variant_lookup
-from hail_search.web_app import search
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample, Individual, Project
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_get_wildcard_json, safe_redis_set_json
@@ -55,7 +54,6 @@ def _raise_search_error(error):
     return _wrapped
 
 
-#  TODO use?
 def _raise_clickhouse_not_implemented(*args, **kwargs):
     raise NotImplementedError('Clickhouse backend is not implemented for this function.')
 
@@ -168,7 +166,7 @@ def get_variants_for_variant_ids(families, variant_ids, dataset_type=None, user=
         }
     dataset_type = _variant_ids_dataset_type(parsed_variant_ids.values())
 
-    return backend_specific_call(get_es_variants_for_variant_ids, get_hail_variants_for_variant_ids, get_clickhouse_variants_for_variant_ids)(  # TODO assure never used and raise?
+    return backend_specific_call(get_es_variants_for_variant_ids, get_hail_variants_for_variant_ids, _raise_clickhouse_not_implemented)(
         _get_families_search_data(families, dataset_type=dataset_type), _get_search_genome_version(families),
         parsed_variant_ids, user, user_email=user_email,
     )
