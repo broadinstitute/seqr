@@ -7,7 +7,7 @@ import responses
 
 from seqr.views.apis.summary_data_api import mme_details, success_story, saved_variants_page, hpo_summary_data, \
     bulk_update_family_external_analysis, individual_metadata, send_vlm_email
-from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, AirtableTest, PARSED_VARIANTS
+from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, AirtableTest, PARSED_VARIANTS, SAVED_VARIANT_FIELDS
 from seqr.models import FamilyAnalysedBy, SavedVariant, VariantTag
 from settings import AIRTABLE_URL
 
@@ -148,7 +148,7 @@ EXPECTED_NO_GENE_SAMPLE_METADATA_ROW = {
     'MME': 'Yes',
     'family_history': 'Yes',
     'genetic_findings_id-1': 'NA21234_1_248367227',
-    'num_saved_variants': 1,
+    'num_saved_variants': 3,
     'paternal_guid': '',
     'paternal_id': '',
     'phenotype_description': None,
@@ -181,6 +181,56 @@ EXPECTED_NO_GENE_SAMPLE_METADATA_ROW = {
     'transcript-1': None,
     'analysis_groups': '',
     'ClinGen_allele_ID-1': 'CA1501729',
+    'alt-3': None,
+    'chrom-3': '1',
+    'gene_known_for_phenotype-3': 'Known',
+    'phenotype_contribution-3': 'Full',
+    'partial_contribution_explained-3': '',
+    'pos-3': 249045487,
+    'chrom_end-3': '1',
+    'pos_end-3': 249045898,
+    'ref-3': None,
+    'copy_number-3': 1,
+    'zygosity-3': 'Heterozygous',
+    'variant_reference_assembly-3': 'GRCh38',
+    'gene_of_interest-3': None,
+    'gene_id-3': None,
+    'genetic_findings_id-3': 'NA21234_1_249045487_DEL',
+    'hgvsc-3': '',
+    'hgvsp-3': '',
+    'notes-3': '',
+    'seqr_chosen_consequence-3': None,
+    'sv_type-3': 'DEL',
+    'sv_name-3': 'DEL:chr1:249045487-249045898',
+    'validated_name-3': None,
+    'variant_inheritance-3': 'unknown',
+    'transcript-3': None,
+    'ClinGen_allele_ID-3': None,
+    'alt-2': 'C',
+    'chrom-2': 'MT',
+    'gene_known_for_phenotype-2': 'Candidate',
+    'phenotype_contribution-2': 'Full',
+    'partial_contribution_explained-2': '',
+    'pos-2': 14783,
+    'chrom_end-2': None,
+    'pos_end-2': None,
+    'ref-2': 'T',
+    'copy_number-2': None,
+    'zygosity-2': 'Homoplasmy',
+    'variant_reference_assembly-2': 'GRCh38',
+    'gene_of_interest-2': None,
+    'gene_id-2': 'ENSG00000198727',
+    'genetic_findings_id-2': 'NA21234_MT_14783',
+    'hgvsc-2': 'c.37T>C',
+    'hgvsp-2': 'p.Leu13=',
+    'notes-2': '',
+    'seqr_chosen_consequence-2': 'synonymous_variant',
+    'sv_type-2': None,
+    'sv_name-2': None,
+    'validated_name-2': None,
+    'variant_inheritance-2': 'unknown',
+    'transcript-2': 'ENST00000361789.2',
+    'ClinGen_allele_ID-2': None,
 }
 
 AIRTABLE_SAMPLE_RECORDS = {
@@ -285,6 +335,9 @@ class SummaryDataAPITest(AirtableTest):
         self.assertSetEqual(set(response_json['genesById'].keys()),
                             {'ENSG00000240361', 'ENSG00000223972', 'ENSG00000135953'})
         self.assertEqual(len(response_json['submissions']), self.NUM_MANAGER_SUBMISSIONS)
+        self.assertSetEqual(set(next(iter(response_json['savedVariantsByGuid'].values())).keys()), {
+            'chrom', 'pos',  'genomeVersion', *SAVED_VARIANT_FIELDS,
+        })
 
         # Test analyst behavior
         self.login_analyst_user()
@@ -365,7 +418,7 @@ class SummaryDataAPITest(AirtableTest):
         response = self.client.get('{}?gene=ENSG00000135953'.format(all_tag_url))
         self.assertEqual(response.status_code, 200)
         expected_variant_guids.add('SV0000002_1248367227_r0390_100')
-        report_variants = {'SV0027168_191912632_r0384_rare', 'SV0027167_191912633_r0384_rare', 'SV0027166_191912634_r0384_rare'}
+        report_variants = {'SV0027168_191912632_r0384_rare', 'SV0027167_191912633_r0384_rare'}
         self.assertSetEqual(set(response.json()['savedVariantsByGuid'].keys()), {*report_variants, *expected_variant_guids})
 
         multi_tag_url = reverse(saved_variants_page, args=['Review;Tier 1 - Novel gene and phenotype'])
@@ -446,9 +499,8 @@ class SummaryDataAPITest(AirtableTest):
         ])
 
     @mock.patch('seqr.views.apis.summary_data_api.datetime')
-    @mock.patch('seqr.views.apis.summary_data_api.get_variants_for_variant_ids')
     @mock.patch('seqr.views.apis.summary_data_api.load_uploaded_file')
-    def test_bulk_update_family_external_analysis(self, mock_load_uploaded_file, mock_get_variants_for_variant_ids, mock_datetime):
+    def test_bulk_update_family_external_analysis(self, mock_load_uploaded_file, mock_datetime):
         mock_created_time = datetime(2023, 12, 5, 20, 16, 1)
         mock_datetime.now.return_value = mock_created_time
 
@@ -505,7 +557,6 @@ class SummaryDataAPITest(AirtableTest):
             }
         }
         mock_load_uploaded_file.return_value = aip_upload
-        mock_get_variants_for_variant_ids.return_value = PARSED_VARIANTS
         body['dataType'] = 'AIP'
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
@@ -525,7 +576,7 @@ class SummaryDataAPITest(AirtableTest):
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['errors'], [
-            "Unable to find the following family's AIP variants in the search backend: 2 (12-48367227-TC-T)",
+            "Unable to find the following family's variants in the search backend: 2 (12-48367227-TC-T)",
         ])
 
         aip_upload['results']['HG00731']['2-103343353-GAGA-G'] = aip_upload['results']['HG00731'].pop('12-48367227-TC-T')
@@ -534,7 +585,7 @@ class SummaryDataAPITest(AirtableTest):
         self.assertDictEqual(response.json(), {'info': ['Loaded 2 new and 1 updated AIP tags for 2 families']})
 
         new_saved_variant = SavedVariant.objects.get(variant_id='2-103343353-GAGA-G')
-        self.assertDictEqual(new_saved_variant.saved_variant_json, PARSED_VARIANTS[1])
+        self._assert_expected_new_saved_variant(new_saved_variant)
 
         aip_tags = VariantTag.objects.filter(variant_tag_type__name='AIP').order_by('id').values(
             'metadata', saved_variant_ids=ArrayAgg('saved_variants__id'))
@@ -570,6 +621,12 @@ class SummaryDataAPITest(AirtableTest):
         )
 
         self.check_no_analyst_no_access(url)
+
+    def _assert_expected_new_saved_variant(self, new_saved_variant):
+        self.assertEqual(new_saved_variant.xpos, 2103343353)
+        self.assertEqual(new_saved_variant.family_id, 2)
+        self.assertEqual(new_saved_variant.ref, 'GAGA')
+        self.assertEqual(new_saved_variant.alt, 'G')
 
     def _has_expected_metadata_response(self, response, expected_individuals, has_airtable=False, has_duplicate=False):
         self.assertEqual(response.status_code, 200)
@@ -629,6 +686,7 @@ class SummaryDataAPITest(AirtableTest):
         rows = response.json()['rows']
         self.assertEqual(len(rows), 3)
         test_row = next(r for r in rows if r['participant_id'] == 'NA21234')
+        self.maxDiff = None
         self.assertDictEqual(test_row, EXPECTED_NO_GENE_SAMPLE_METADATA_ROW)
 
         # Test analyst access
@@ -780,6 +838,14 @@ class LocalSummaryDataAPITest(AuthenticationTestCase, SummaryDataAPITest):
         self.assertEqual(response.status_code, 200)
         self._has_expected_metadata_response(response, expected_individuals)
 
+    @mock.patch('seqr.views.utils.variant_utils.get_variants_for_variant_ids', lambda *args, **kwargs: PARSED_VARIANTS)
+    def test_bulk_update_family_external_analysis(self, *args, **kwargs):
+        super().test_bulk_update_family_external_analysis(*args, **kwargs)
+
+    def _assert_expected_new_saved_variant(self, new_saved_variant):
+        super()._assert_expected_new_saved_variant(new_saved_variant)
+        self.assertDictEqual(new_saved_variant.saved_variant_json, PARSED_VARIANTS[1])
+
 
 def assert_has_expected_calls(self, users, skip_group_call_idxs=None):
     calls = [mock.call(user) for user in users]
@@ -792,7 +858,7 @@ def assert_has_expected_calls(self, users, skip_group_call_idxs=None):
 
 # Test for permissions from AnVIL only
 class AnvilSummaryDataAPITest(AnvilAuthenticationTestCase, SummaryDataAPITest):
-    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data', 'report_variants']
+    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data', 'report_variants', 'clickhouse_saved_variants']
     NUM_MANAGER_SUBMISSIONS = 4
     ADDITIONAL_SAMPLES = []
     HAS_AIRTABLE = True
@@ -810,3 +876,22 @@ class AnvilSummaryDataAPITest(AnvilAuthenticationTestCase, SummaryDataAPITest):
         ], skip_group_call_idxs=[2])
         self.mock_get_ws_access_level.assert_called_with(
             self.analyst_user, 'my-seqr-billing', 'anvil-1kg project nåme with uniçøde')
+
+    def _assert_expected_new_saved_variant(self, new_saved_variant):
+        super()._assert_expected_new_saved_variant(new_saved_variant)
+        self.assertEqual(new_saved_variant.key, 101)
+        self.assertEqual(new_saved_variant.dataset_type, 'SNV_INDEL')
+        self.assertDictEqual(new_saved_variant.genotypes, {
+            'I000004_hg00731': {
+                'ab': 0, 'gq': 99, 'sampleId': 'HG00731', 'numAlt': 2, 'dp': 67, 'filters': [],
+                'familyGuid': 'F000002_2', 'individualGuid': 'I000004_hg00731', 'sampleType': 'WES',
+            },
+            'I000005_hg00732': {
+                'ab': 0, 'gq': 96, 'sampleId': 'HG00732', 'numAlt': 1, 'dp': 42, 'filters': [],
+                'familyGuid': 'F000002_2', 'individualGuid': 'I000005_hg00732', 'sampleType': 'WES',
+            },
+            'I000006_hg00733': {
+                'ab': 0, 'gq': 96, 'sampleId': 'HG00733', 'numAlt': 0, 'dp': 42, 'filters': [],
+                'familyGuid': 'F000002_2', 'individualGuid': 'I000006_hg00733', 'sampleType': 'WES',
+            },
+        })

@@ -3,6 +3,7 @@ from django.db import connections
 from django.test import TestCase
 import json
 import mock
+from time import sleep
 
 from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4, CACHED_CONSEQUENCES_BY_KEY, \
     VARIANT_ID_SEARCH, VARIANT_IDS, LOCATION_SEARCH, GENE_IDS, SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT, \
@@ -20,18 +21,25 @@ from seqr.models import Project, Family, Sample
 from seqr.utils.search.search_utils_tests import SearchTestHelper
 from seqr.utils.search.utils import query_variants, variant_lookup, sv_variant_lookup
 from seqr.views.utils.json_utils import DjangoJSONEncoderWithSets
+from seqr.views.utils.test_utils import DifferentDbTransactionSupportMixin
 
 
 @mock.patch('clickhouse_search.search.CLICKHOUSE_SERVICE_HOSTNAME', 'localhost')
-class ClickhouseSearchTests(SearchTestHelper, TestCase):
+class ClickhouseSearchTests(DifferentDbTransactionSupportMixin, SearchTestHelper, TestCase):
     databases = '__all__'
     fixtures = ['users', '1kg_project', 'reference_data', 'clickhouse_search', 'clickhouse_transcripts']
 
     def setUp(self):
         super().set_up()
-        with connections['clickhouse'].cursor() as cursor:
+
+    @classmethod
+    def setUpTestData(cls):
+        with connections['clickhouse_write'].cursor() as cursor:
             for table_base in ['GRCh38/SNV_INDEL', 'GRCh38/MITO', 'GRCh38/SV', 'GRCh37/SNV_INDEL']:
                 cursor.execute(f'SYSTEM REFRESH VIEW "{table_base}/project_gt_stats_to_gt_stats_mv"')
+                # Need to wait for refresh to succeed before reloading the dictionary
+                sleep(1)
+                cursor.execute(f'SYSTEM RELOAD DICTIONARY "{table_base}/gt_stats_dict"')
         Project.objects.update(genome_version='38')
 
     def _assert_expected_search(self, expected_results, gene_counts=None, inheritance_mode=None, inheritance_filter=None, quality_filter=None, cached_variant_fields=None, sort='xpos', **search_kwargs):

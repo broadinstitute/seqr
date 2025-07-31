@@ -55,6 +55,11 @@ def _raise_search_error(error):
     return _wrapped
 
 
+#  TODO use?
+def _raise_clickhouse_not_implemented(*args, **kwargs):
+    raise NotImplementedError('Clickhouse backend is not implemented for this function.')
+
+
 def backend_specific_call(es_func, hail_backend_func, clickhouse_func):
     if es_backend_enabled():
         return es_func
@@ -150,7 +155,7 @@ def _process_ids_search(search_func):
     return _search
 
 
-def get_variants_for_variant_ids(families, variant_ids, dataset_type=None, user=None, user_email=None):
+def get_variants_for_variant_ids(families, variant_ids, dataset_type=None, user=None, user_email=None, **kwargs):
     parsed_variant_ids = {}
     for variant_id in variant_ids:
         parsed_variant_ids[variant_id] = parse_variant_id(variant_id)

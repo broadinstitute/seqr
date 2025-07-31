@@ -148,7 +148,7 @@ def _process_variants(variants, families, request, add_all_context=False, add_lo
 
     response_json = get_variants_response(
         request, saved_variants, response_variants=flat_variants, add_all_context=add_all_context,
-        add_locus_list_detail=add_locus_list_detail)
+        add_locus_list_detail=add_locus_list_detail, genome_version=families[0].project.genome_version)
     response_json['searchedVariants'] = variants
 
     for saved_variant in response_json['savedVariantsByGuid'].values():
@@ -275,7 +275,7 @@ def export_variants_handler(request, search_hash):
     variants = _flatten_variants(variants)
 
     saved_variants, variants_by_id = _get_saved_variant_models(variants, families)
-    json_saved_variants = get_json_for_saved_variants_with_tags(saved_variants, add_details=True)
+    json_saved_variants = get_json_for_saved_variants_with_tags(saved_variants, add_details=True, genome_version=families[0].project.genome_version)
 
     saved_variants_by_variant_family = {}
     for saved_variant in json_saved_variants['savedVariantsByGuid'].values():
@@ -554,9 +554,10 @@ def _parse_lookup_request(request):
 def variant_lookup_handler(request):
     parsed_variant_id, variant_id, kwargs = _parse_lookup_request(request)
     is_sv = not parsed_variant_id
+    genome_version = kwargs.get('genome_version', GENOME_VERSION_GRCh38)
     if is_sv:
         families = _all_genome_version_families(
-            kwargs.get('genome_version', GENOME_VERSION_GRCh38), request.user,
+            genome_version, request.user,
         )
         if not families:
             raise PermissionDenied()
@@ -573,7 +574,7 @@ def variant_lookup_handler(request):
     saved_variants, _ = _get_saved_variant_models(variants, None) if families else (None, None)
     response = get_variants_response(
         request, saved_variants=saved_variants, response_variants=variants,
-        add_all_context=True, add_locus_list_detail=True,
+        add_all_context=True, add_locus_list_detail=True, genome_version=genome_version,
     )
     response['variants'] = variants
 

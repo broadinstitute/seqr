@@ -250,7 +250,7 @@ def project_families(request, project_guid):
             **{key: family_id in data_families for key, data_families in has_data_families.items()},
         })
 
-    response = families_discovery_tags(families, project=project)
+    response = families_discovery_tags(families, genome_version=project.genome_version, project=project)
     return create_json_response(response)
 
 

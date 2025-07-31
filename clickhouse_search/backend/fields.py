@@ -82,6 +82,10 @@ class Enum8Field(models.Enum8Field):
         clone.return_int = self.return_int
         return clone
 
+class UInt32FieldDeltaCodecField(models.UInt32Field):
+
+    def db_type(self, connection):
+        return f'{super().db_type(connection)} CODEC(Delta(8), ZSTD(1))'
 
 class UInt64FieldDeltaCodecField(models.UInt64Field):
 

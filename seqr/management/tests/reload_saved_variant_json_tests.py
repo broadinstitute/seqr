@@ -1,7 +1,7 @@
 #-*- coding: utf-8 -*-
 import mock
 
-from django.core.management import call_command
+from django.core.management import call_command, CommandError
 from django.test import TestCase
 from seqr.models import Family
 
@@ -10,6 +10,7 @@ PROJECT_GUID = 'R0001_1kg'
 FAMILY_GUID = 'F000001_1'
 
 
+@mock.patch('clickhouse_search.search.CLICKHOUSE_SERVICE_HOSTNAME', '')
 class ReloadSavedVariantJsonTest(TestCase):
     fixtures = ['users', '1kg_project']
 
@@ -82,3 +83,16 @@ class ReloadSavedVariantJsonTest(TestCase):
         mock_logger.info.assert_has_calls(logger_info_calls)
 
         mock_logger.error.assert_called_with('Error reloading variants in 1kg project n\xe5me with uni\xe7\xf8de: Database error.')
+
+
+@mock.patch('clickhouse_search.search.CLICKHOUSE_SERVICE_HOSTNAME', 'testhost')
+class ClickhouseReloadSavedVariantJsonTest(TestCase):
+
+    fixtures = ['users', '1kg_project']
+
+    def test_command(self):
+        with self.assertRaises(CommandError) as ce:
+            call_command('reload_saved_variant_json', PROJECT_NAME)
+        self.assertEqual(str(ce.exception), 'Reloading variants is not supported in clickhouse')
+
+

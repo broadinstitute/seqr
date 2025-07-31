@@ -19,7 +19,40 @@ from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFEC
 from seqr.utils.xpos_utils import get_xpos, MIN_POS, MAX_POS
 
 
-class AnnotationsQuerySet(QuerySet):
+class SearchQuerySet(QuerySet):
+
+    @property
+    def table_basename(self):
+        return self.model._meta.db_table.rsplit('/', 1)[0]
+
+    @property
+    def clinvar_field_prefix(self):
+        return 'clinvar_join'
+
+    @property
+    def clinvar_fields(self):
+        return OrderedDict({
+            f'{self.clinvar_field_prefix}__{field.name}': (field.db_column or field.name, field)
+            for field in reversed(self.clinvar_model._meta.local_fields) if field.name != 'key'
+        })
+
+    def _clinvar_tuple(self):
+        return Tuple(
+            *self.clinvar_fields.keys(),
+            output_field=NamedTupleField(list(self.clinvar_fields.values()), null_if_empty=True, null_empty_arrays=True),
+        )
+
+    def _seqr_pop_fields(self, seqr_popualtions):
+        sample_types = [self.single_sample_type.lower()] if self.single_sample_type else ['wes', 'wgs']
+        seqr_pop_fields = []
+        for _, sub_fields in seqr_popualtions:
+            seqr_pop_fields += [f"'{sub_fields['ac']}_{sample_type}'" for sample_type in sample_types]
+            if sub_fields.get('hom'):
+                seqr_pop_fields += [f"'{sub_fields['hom']}_{sample_type}'" for sample_type in sample_types]
+        return seqr_pop_fields
+
+
+class AnnotationsQuerySet(SearchQuerySet):
 
     TRANSCRIPT_CONSEQUENCE_FIELD = 'sorted_transcript_consequences'
     SORTED_GENE_CONSEQUENCE_FIELD = 'sorted_gene_consequences'
@@ -83,7 +116,7 @@ class AnnotationsQuerySet(QuerySet):
         return [
             field.name for field in self.model._meta.local_fields
             if (field.db_column or field.name) not in self.annotation_values and field.name not in self.TRANSCRIPT_FIELDS
-        ] + self.ENTRY_FIELDS
+        ]
 
     @property
     def prediction_fields(self):
@@ -95,6 +128,28 @@ class AnnotationsQuerySet(QuerySet):
             'SORTED_TRANSCRIPT_CONSQUENCES_FIELDS', 'TRANSCRIPTS_FIELDS', 'SORTED_GENE_CONSQUENCES_FIELDS',
         ] if hasattr(self.model, field))
         return set(dict(transcript_field_configs).keys())
+
+    @property
+    def single_sample_type(self):
+        return getattr(self.model, 'SV_TYPES', None)
+
+    @property
+    def entry_field(self):
+        return next(obj.name for obj in self.model._meta.related_objects if obj.name.startswith('entries'))
+
+    @property
+    def entry_model(self):
+         return getattr(self.model, f'{self.entry_field}_set').rel.related_model
+
+    @property
+    def clinvar_model(self):
+        if not hasattr(self.entry_model, 'clinvar_join'):
+            return None
+        return self.entry_model.clinvar_join.rel.related_model
+
+    @property
+    def clinvar_field_prefix(self):
+        return f'{self.entry_field}__clinvar_join'
 
 
     def subquery_join(self, subquery, join_key='key'):
@@ -145,8 +200,9 @@ class AnnotationsQuerySet(QuerySet):
         query_select = query.annotation_values
         for select_func in (conditional_selects or []):
             query_select.update(select_func(query, prefix=f'{alias}_'))
+        annotation_fields = query.annotation_fields + self.ENTRY_FIELDS
         return query.values(
-            **{f'{alias}_{field}': F(field) for field in query.annotation_fields if field not in query_select},
+            **{f'{alias}_{field}': F(field) for field in annotation_fields if field not in query_select},
             **{f'{alias}_{field}': value for field, value in query_select.items()},
         )
 
@@ -158,25 +214,55 @@ class AnnotationsQuerySet(QuerySet):
         results = self.filter_annotations(results, **parsed_locus, **kwargs)
         return results
 
-    def result_values(self):
+    def result_values(self, skip_entry_fields=False):
         override_model_annotations = {'populations', 'pos', 'end'}
         values = {**self.annotation_values}
         values.update(self._conditional_selected_transcript_values(self))
-        values.update(self._genotype_override_values(self))
+        if not skip_entry_fields:
+            values.update(self._genotype_override_values(self))
         initial_values = {k: v for k, v in  values.items() if k not in override_model_annotations}
 
-        fields = [field for field in self.annotation_fields if field not in values]
+        fields = [*self.annotation_fields]
+        if self.has_annotation('familyGenotypes'):
+            fields.append('familyGenotypes')
+        elif not skip_entry_fields:
+            fields += self.ENTRY_FIELDS
+
         if self.has_annotation('clinvar'):
             fields.append('clinvar')
 
-        if self.has_annotation('familyGenotypes'):
-            fields = [field for field in fields if field not in self.ENTRY_FIELDS]
-            fields.append('familyGenotypes')
-
+        fields = [field for field in fields if field not in values]
         return self.values(*fields, **initial_values).annotate(
             **{k: values[k] for k in override_model_annotations if k in values},
         )
 
+    def join_seqr_pop(self):
+        results = self
+        seqr_popualtions = self.model.SEQR_POPULATIONS
+        if seqr_popualtions:
+            seqr_pop_fields = self._seqr_pop_fields(seqr_popualtions)
+            results = results.annotate(seqrPop=Tuple(
+                *[
+                    DictGet(
+                        'key',
+                        dict_name=f"{self.table_basename}/gt_stats_dict",
+                        fields=seqr_pop_field,
+                    ) for seqr_pop_field in seqr_pop_fields],
+                output_field=models.TupleField([models.UInt32Field() for _ in seqr_pop_fields])
+            ))
+
+        return results
+
+    def join_clinvar(self, keys):
+        results = self
+        if self.clinvar_model:
+            results = results.annotate(clinvar=self._clinvar_tuple())
+            # Due to django modeling, adding a clinvar annotation will add a join to the entries table and then to clinvar
+            # Manipulating the underlying join removes the entry join entirely
+            entry_table = f'{self.table_basename}/entries'
+            results.query.alias_map[f'{self.table_basename}/clinvar'].parent_alias = results.query.alias_map[entry_table].parent_alias
+            results.query.alias_refcount[entry_table] = 0
+        return results
 
     def _conditional_selected_transcript_values(self, query, prefix=''):
         if not hasattr(self.model, self.TRANSCRIPT_CONSEQUENCE_FIELD):
@@ -532,7 +618,7 @@ class AnnotationsQuerySet(QuerySet):
         return field in self.query.annotations
 
 
-class EntriesManager(QuerySet):
+class EntriesManager(SearchQuerySet):
     GENOTYPE_LOOKUP = {
         REF_REF: (0,),
         REF_ALT: (1,),
@@ -595,12 +681,8 @@ class EntriesManager(QuerySet):
         })
 
     @property
-    def clinvar_fields(self):
-        clinvar_model = self.model.clinvar_join.rel.related_model
-        return OrderedDict({
-            f'clinvar_join__{field.name}': (field.db_column or field.name, field)
-            for field in reversed(clinvar_model._meta.local_fields) if field.name != 'key'
-        })
+    def clinvar_model(self):
+        return self.model.clinvar_join.rel.related_model
 
     def search(self, sample_data, parsed_locus=None, freqs=None, annotations=None, **kwargs):
         entries = self.filter_intervals(**(parsed_locus or {}))
@@ -625,12 +707,18 @@ class EntriesManager(QuerySet):
         if self._has_clinvar():
            entries = entries.annotate(
                clinvar_key=F('clinvar_join__key'),
-               clinvar=Tuple(*self.clinvar_fields.keys(), output_field=NamedTupleField(list(self.clinvar_fields.values()), null_if_empty=True, null_empty_arrays=True))
+               clinvar=self._clinvar_tuple(),
            )
 
         seqr_popualtions = self.annotations_model.SEQR_POPULATIONS
         if seqr_popualtions:
-            entries = entries.annotate(seqrPop=self._seqr_pop_expression(seqr_popualtions))
+            seqr_pop_fields = self._seqr_pop_fields(seqr_popualtions)
+            entries = entries.annotate(seqrPop=DictGet(
+                'key',
+                dict_name=f"{self.table_basename}/gt_stats_dict",
+                fields=', '.join(seqr_pop_fields),
+                output_field=models.TupleField([models.UInt32Field() for _ in seqr_pop_fields])
+            ))
 
         return entries
 
@@ -639,20 +727,6 @@ class EntriesManager(QuerySet):
         if sample_data:
             return self._search_call_data(entries, sample_data)
         return self._annotate_calls(entries)
-
-    def _seqr_pop_expression(self, seqr_popualtions):
-        sample_types = [self.single_sample_type.lower()] if self.single_sample_type else ['wes', 'wgs']
-        seqr_pop_fields = []
-        for _, sub_fields in seqr_popualtions:
-            seqr_pop_fields += [f"'{sub_fields['ac']}_{sample_type}'" for sample_type in sample_types]
-            if sub_fields.get('hom'):
-                seqr_pop_fields += [f"'{sub_fields['hom']}_{sample_type}'" for sample_type in sample_types]
-        return DictGet(
-            'key',
-            dict_name=f"{self.model._meta.db_table.rsplit('/', 1)[0]}/gt_stats_dict",
-            fields=', '.join(seqr_pop_fields),
-            output_field=models.TupleField([models.UInt32Field() for _ in seqr_pop_fields])
-        )
 
     def _has_clinvar(self):
         return hasattr(self.model, 'clinvar_join')

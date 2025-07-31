@@ -173,7 +173,6 @@ class EmailException(Exception):
 
 
 class MatchmakerAPITest(AuthenticationTestCase):
-    databases = '__all__'
     fixtures = ['users', '1kg_project', 'reference_data']
 
     def test_get_individual_mme_matches(self):

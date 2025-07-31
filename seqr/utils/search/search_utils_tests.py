@@ -10,7 +10,8 @@ from seqr.models import Project, Family, Sample, VariantSearch, VariantSearchRes
 from seqr.views.utils.json_utils import DjangoJSONEncoderWithSets
 from seqr.utils.search.utils import get_single_variant, get_variants_for_variant_ids, get_variant_query_gene_counts, \
     query_variants, variant_lookup, sv_variant_lookup, InvalidSearchException
-from seqr.views.utils.test_utils import PARSED_VARIANTS, PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT, GENE_FIELDS
+from seqr.views.utils.test_utils import DifferentDbTransactionSupportMixin, PARSED_VARIANTS, PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT, GENE_FIELDS
+
 
 SV_SAMPLES = ['S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733']
 MITO_SAMPLES = ['S000149_hg00733']
@@ -503,7 +504,7 @@ class SearchUtilsTests(SearchTestHelper):
 @mock.patch('clickhouse_search.search.CLICKHOUSE_SERVICE_HOSTNAME', '')
 @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', 'testhost')
 class ElasticsearchSearchUtilsTests(TestCase, SearchUtilsTests):
-    databases = '__all__'
+    databases = ['default', 'reference_data']
     fixtures = ['users', '1kg_project', 'reference_data']
 
     def setUp(self):
@@ -612,7 +613,7 @@ class ElasticsearchSearchUtilsTests(TestCase, SearchUtilsTests):
 
 @mock.patch('clickhouse_search.search.CLICKHOUSE_SERVICE_HOSTNAME', '')
 class HailSearchUtilsTests(TestCase, SearchUtilsTests):
-    databases = '__all__'
+    databases = ['default', 'reference_data']
     fixtures = ['users', '1kg_project', 'reference_data']
 
     def setUp(self):
@@ -662,7 +663,7 @@ class HailSearchUtilsTests(TestCase, SearchUtilsTests):
 
 
 @mock.patch('clickhouse_search.search.CLICKHOUSE_SERVICE_HOSTNAME', 'testhost')
-class ClickhouseSearchUtilsTests(TestCase, SearchUtilsTests):
+class ClickhouseSearchUtilsTests(DifferentDbTransactionSupportMixin, TestCase, SearchUtilsTests):
     databases = '__all__'
     fixtures = ['users', '1kg_project', 'reference_data', 'clickhouse_transcripts']
 
