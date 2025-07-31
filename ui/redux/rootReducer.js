@@ -82,16 +82,16 @@ export const loadFamilyDetails = familyGuid => loadFamilyData(
 )
 
 export const updateFamily = (values) => {
+  const urlBase = `/api/family/${values.familyGuid}`
+  if (values.nestedField) {
+    return updateEntity(values, RECEIVE_DATA, `${urlBase}/${values.nestedField}`, `${values.nestedField}Guid`)
+  }
+
   if (values.delete) {
     return dispatch => new HttpRequestHelper(`/api/project/${values.projectGuid}/delete_families`,
       (responseJson) => {
         dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
       }).post({ families: [values] })
-  }
-
-  const urlBase = `/api/family/${values.familyGuid}`
-  if (values.nestedField) {
-    return updateEntity(values, RECEIVE_DATA, `${urlBase}/${values.nestedField}`, `${values.nestedField}Guid`)
   }
 
   const familyField = values.familyField ? `_${values.familyField}` : ''
