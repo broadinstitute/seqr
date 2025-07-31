@@ -20,7 +20,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='AnnotationsDiskGRCh37SnvIndel',
             fields=[
-                ('key', clickhouse_backend.models.UInt32Field(primary_key=True, serialize=False)),
+                ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
                 ('xpos', clickhouse_backend.models.UInt64Field()),
                 ('chrom', clickhouse_search.backend.fields.Enum8Field(return_int=False, choices=[(1, '1'), (2, '2'), (3, '3'), (4, '4'), (5, '5'), (6, '6'), (7, '7'), (8, '8'), (9, '9'), (10, '10'), (11, '11'), (12, '12'), (13, '13'), (14, '14'), (15, '15'), (16, '16'), (17, '17'), (18, '18'), (19, '19'), (20, '20'), (21, '21'), (22, '22'), (23, 'X'), (24, 'Y'), (25, 'M')])),
                 ('pos', clickhouse_backend.models.UInt32Field()),
@@ -48,7 +48,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='AnnotationsGRCh37SnvIndel',
             fields=[
-                ('key', clickhouse_backend.models.UInt32Field(primary_key=True, serialize=False)),
+                ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
                 ('xpos', clickhouse_backend.models.UInt64Field()),
                 ('chrom', clickhouse_search.backend.fields.Enum8Field(choices=[(1, '1'), (2, '2'), (3, '3'), (4, '4'), (5, '5'), (6, '6'), (7, '7'), (8, '8'), (9, '9'), (10, '10'), (11, '11'), (12, '12'), (13, '13'), (14, '14'), (15, '15'), (16, '16'), (17, '17'), (18, '18'), (19, '19'), (20, '20'), (21, '21'), (22, '22'), (23, 'X'), (24, 'Y'), (25, 'M')])),
                 ('pos', clickhouse_backend.models.UInt32Field()),
@@ -117,11 +117,11 @@ class Migration(migrations.Migration):
             fields=[
                 ('key', models.ForeignKey(db_column='key', on_delete=django.db.models.deletion.PROTECT, primary_key=True, related_name='clinvar_join', serialize=False, to='clickhouse_search.entriesgrch37snvindel')),
                 ('allele_id', clickhouse_backend.models.UInt32Field(blank=True, db_column='alleleId', null=True)),
-                ('conflicting_pathogenicities', clickhouse_search.backend.fields.NestedField(base_fields=[('count', clickhouse_backend.models.UInt16Field()), ('pathogenicity', clickhouse_backend.models.Enum8Field(choices=[(0, 'Pathogenic'), (1, 'Pathogenic/Likely_pathogenic'), (2, 'Pathogenic/Likely_pathogenic/Established_risk_allele'), (3, 'Pathogenic/Likely_pathogenic/Likely_risk_allele'), (4, 'Pathogenic/Likely_risk_allele'), (5, 'Likely_pathogenic'), (6, 'Likely_pathogenic/Likely_risk_allele'), (7, 'Established_risk_allele'), (8, 'Likely_risk_allele'), (9, 'Conflicting_classifications_of_pathogenicity'), (10, 'Uncertain_risk_allele'), (11, 'Uncertain_significance/Uncertain_risk_allele'), (12, 'Uncertain_significance'), (13, 'No_pathogenic_assertion'), (14, 'Likely_benign'), (15, 'Benign/Likely_benign'), (16, 'Benign')]))], db_column='conflictingPathogenicities')),
+                ('conflicting_pathogenicities', clickhouse_search.backend.fields.NestedField(base_fields=[('pathogenicity', clickhouse_backend.models.Enum8Field(choices=[(0, 'Pathogenic'), (1, 'Pathogenic/Likely_pathogenic'), (2, 'Pathogenic/Likely_pathogenic/Established_risk_allele'), (3, 'Pathogenic/Likely_pathogenic/Likely_risk_allele'), (4, 'Pathogenic/Likely_risk_allele'), (5, 'Likely_pathogenic'), (6, 'Likely_pathogenic/Likely_risk_allele'), (7, 'Established_risk_allele'), (8, 'Likely_risk_allele'), (9, 'Conflicting_classifications_of_pathogenicity'), (10, 'Uncertain_risk_allele'), (11, 'Uncertain_significance/Uncertain_risk_allele'), (12, 'Uncertain_significance'), (13, 'No_pathogenic_assertion'), (14, 'Likely_benign'), (15, 'Benign/Likely_benign'), (16, 'Benign')])), ('count', clickhouse_backend.models.UInt16Field())], db_column='conflictingPathogenicities', null_when_empty=True)),
                 ('gold_stars', clickhouse_backend.models.UInt8Field(blank=True, db_column='goldStars', null=True)),
                 ('submitters', clickhouse_backend.models.ArrayField(base_field=clickhouse_backend.models.StringField())),
                 ('conditions', clickhouse_backend.models.ArrayField(base_field=clickhouse_backend.models.StringField())),
-                ('assertions', clickhouse_backend.models.ArrayField(base_field=clickhouse_backend.models.Enum8Field(choices=[(0, 'Affects'), (1, 'association'), (2, 'association_not_found'), (3, 'confers_sensitivity'), (4, 'drug_response'), (5, 'low_penetrance'), (6, 'not_provided'), (7, 'other'), (8, 'protective'), (9, 'risk_factor'), (10, 'no_classification_for_the_single_variant'), (11, 'no_classifications_from_unflagged_records')]))),
+                ('assertions', clickhouse_backend.models.ArrayField(base_field=clickhouse_backend.models.Enum8Field(choices=[(0, 'Affects'), (1, 'association'), (2, 'association_not_found'), (3, 'confers_sensitivity'), (4, 'drug_response'), (5, 'low_penetrance'), (6, 'not_provided'), (7, 'other'), (8, 'protective'), (9, 'risk_factor'), (10, 'no_classification_for_the_single_variant'), (11, 'no_classifications_from_unflagged_records')], return_int=False))),
                 ('pathogenicity', clickhouse_backend.models.Enum8Field(choices=[(0, 'Pathogenic'), (1, 'Pathogenic/Likely_pathogenic'), (2, 'Pathogenic/Likely_pathogenic/Established_risk_allele'), (3, 'Pathogenic/Likely_pathogenic/Likely_risk_allele'), (4, 'Pathogenic/Likely_risk_allele'), (5, 'Likely_pathogenic'), (6, 'Likely_pathogenic/Likely_risk_allele'), (7, 'Established_risk_allele'), (8, 'Likely_risk_allele'), (9, 'Conflicting_classifications_of_pathogenicity'), (10, 'Uncertain_risk_allele'), (11, 'Uncertain_significance/Uncertain_risk_allele'), (12, 'Uncertain_significance'), (13, 'No_pathogenic_assertion'), (14, 'Likely_benign'), (15, 'Benign/Likely_benign'), (16, 'Benign')])),
             ],
             options={

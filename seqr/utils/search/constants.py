@@ -54,7 +54,9 @@ MOTIF_FEATURES_KEY = 'motif_feature'
 REGULATORY_FEATURES_KEY = 'regulatory_feature'
 
 NEW_SV_FIELD = 'new_structural_variants'
-SV_ANNOTATION_TYPES = {'structural_consequence', 'structural', NEW_SV_FIELD}
+SV_CONSEQUENCES_FIELD = 'structural_consequence'
+SV_TYPE_FILTER_FIELD = 'structural'
+SV_ANNOTATION_TYPES = {SV_CONSEQUENCES_FIELD, SV_TYPE_FILTER_FIELD, NEW_SV_FIELD}
 ALL_DATA_TYPES = 'ALL'
 
 CLINVAR_KEY = 'clinvar'

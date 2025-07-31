@@ -66,7 +66,9 @@ jobs:
       - uses: actions/checkout@v2
       - name: Set up Clickhouse Settings
         run: |
-          docker exec clickhouse clickhouse-client --query "CREATE SETTINGS PROFILE clickhouse_settings SETTINGS flatten_nested=0, join_use_nulls=1 TO clickhouse_test"
+          docker exec clickhouse clickhouse-client --query "CREATE USER clickhouse_read_only IDENTIFIED WITH plaintext_password BY 'clickhouse_test'"
+          docker exec clickhouse clickhouse-client --query "CREATE SETTINGS PROFILE clickhouse_settings SETTINGS flatten_nested=0, join_use_nulls=1 TO clickhouse_test, clickhouse_read_only"
+          docker exec clickhouse clickhouse-client --query "GRANT SELECT, SYSTEM VIEWS, dictGet ON *.* TO clickhouse_read_only"
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
@@ -90,7 +92,8 @@ jobs:
           pip install -r requirements-dev.txt
       - name: Run coverage tests
         run: |
-          export CLICKHOUSE_USER=clickhouse_test
+          export CLICKHOUSE_READER_USER=clickhouse_read_only
+          export CLICKHOUSE_WRITER_USER=clickhouse_test
           export CLICKHOUSE_SERVICE_HOSTNAME=localhost
           coverage run --source="./matchmaker","./seqr","./reference_data","./panelapp","./clickhouse_search" --omit="*/migrations/*","*/apps.py","*/admin.py" manage.py test -p '*_tests.py' -v 2 reference_data seqr matchmaker panelapp clickhouse_search
           coverage report -m --fail-under=99

@@ -4,7 +4,8 @@ from django.db.migrations import state
 from django.db.models import options, ForeignKey, OneToOneField, Func, CASCADE, PROTECT
 
 from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocksDB, Join
-from clickhouse_search.backend.fields import Enum8Field, NestedField, UInt64FieldDeltaCodecField, NamedTupleField
+from clickhouse_search.backend.fields import Enum8Field, NestedField, UInt32FieldDeltaCodecField, UInt64FieldDeltaCodecField, NamedTupleField
+from clickhouse_search.backend.functions import ArrayDistinct, ArrayFlatten, ArrayMin, ArrayMax
 from clickhouse_search.managers import EntriesManager, AnnotationsQuerySet
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample
@@ -48,14 +49,17 @@ class ClickHouseRouter:
         return None
 
     def db_for_write(self, model, **hints):
+        # When using Clickhouse models, the default connection routing used for writes will attempt to use read-only
+        # credentials and fail. This is by design to prevent accidental writes. To write to Clickhouse, explicitly
+        # set my_queryset.using('clickhouse_write') before executing a write operation
         if model._meta.label_lower in self.route_model_names or hints.get('clickhouse'):
             return 'clickhouse'
         return None
 
     def allow_migrate(self, db, app_label, model_name=None, **hints):
         if f'{app_label}.{model_name}' in self.route_model_names  or hints.get('clickhouse'):
-            return db == 'clickhouse'
-        elif db == 'clickhouse':
+            return db == 'clickhouse_write'
+        elif db in {'clickhouse', 'clickhouse_write'}:
             return False
         return None
 
@@ -78,8 +82,10 @@ class BaseAnnotations(models.ClickhouseModel):
         'genomeVersion': GENOME_VERSION_GRCh38,
         'liftedOverGenomeVersion': GENOME_VERSION_GRCh37,
     }
+    SV_TYPE_FILTER_PREFIX = ''
+    GENOTYPE_OVERRIDE_FIELDS = {}
 
-    key = models.UInt32Field(primary_key=True)
+    key = UInt32FieldDeltaCodecField(primary_key=True)
     xpos = models.UInt64Field()
     pos = models.UInt32Field()
     variant_id = models.StringField(db_column='variantId')
@@ -128,6 +134,9 @@ class BaseAnnotationsSvGcnv(BaseAnnotations):
         ('geneId', models.StringField(null=True, blank=True)),
         ('majorConsequence', models.Enum8Field(null=True, blank=True, return_int=False, choices=SV_CONSEQUENCE_RANKS)),
     ]
+    SEQR_POPULATIONS = [
+        ('sv_callset', {'ac': 'ac', 'hom': 'hom'}),
+    ]
 
     chrom = Enum8Field(return_int=False, choices=BaseAnnotations.CHROMOSOME_CHOICES)
     end = models.UInt32Field()
@@ -136,9 +145,9 @@ class BaseAnnotationsSvGcnv(BaseAnnotations):
         ('position', models.UInt32Field(null=True, blank=True)),
     ], db_column='rg37LocusEnd', null_if_empty=True)
     lifted_over_chrom = Enum8Field(db_column='liftedOverChrom', return_int=False, null=True, blank=True, choices=BaseAnnotations.CHROMOSOME_CHOICES)
-    sv_type = models.Enum8Field(db_column='svType', return_int=False, choices=SV_TYPES)
+    sv_type = Enum8Field(db_column='svType', return_int=False, choices=SV_TYPES)
     predictions = NamedTupleField(PREDICTION_FIELDS)
-    sorted_gene_consequences = NestedField(SORTED_GENE_CONSQUENCES_FIELDS, db_column='sortedTranscriptConsequences')
+    sorted_gene_consequences = NestedField(SORTED_GENE_CONSQUENCES_FIELDS, db_column='sortedGeneConsequences', group_by_key='geneId')
 
     class Meta:
         abstract = True
@@ -364,10 +373,10 @@ class BaseAnnotationsSv(BaseAnnotationsSvGcnv):
         ('type', models.Enum8Field(return_int=False, choices=BaseAnnotationsSvGcnv.SV_TYPES)),
     ], db_column='cpxIntervals', null_when_empty=True)
     end_chrom = models.Enum8Field(db_column='endChrom', return_int=False, choices=BaseAnnotations.CHROMOSOME_CHOICES, null=True, blank=True)
-    sv_source_detail = NestedField(
+    sv_source_detail = NamedTupleField(
         [('chrom', models.Enum8Field(return_int=False, choices=BaseAnnotations.CHROMOSOME_CHOICES, null=True, blank=True))],
         db_column='svSourceDetail',
-        null_when_empty=True
+        null_if_empty=True
     )
     sv_type_detail = models.Enum8Field(db_column='svTypeDetail', return_int=False, choices=SV_TYPE_DETAILS, null=True, blank=True)
     populations = NamedTupleField(POPULATION_FIELDS)
@@ -389,7 +398,7 @@ class AnnotationsDiskSv(BaseAnnotationsSv):
 
 class BaseAnnotationsGcnv(BaseAnnotationsSvGcnv):
     POPULATION_FIELDS = [
-        ('seqrPop', NamedTupleField([
+        ('sv_callset', NamedTupleField([
             ('ac', models.UInt32Field()),
             ('af', models.DecimalField(max_digits=9, decimal_places=5)),
             ('an', models.UInt32Field()),
@@ -397,6 +406,14 @@ class BaseAnnotationsGcnv(BaseAnnotationsSvGcnv):
             ('hom', models.UInt32Field()),
         ])),
     ]
+    SEQR_POPULATIONS = []
+    SV_TYPE_FILTER_PREFIX = 'gCNV_'
+    GENOTYPE_OVERRIDE_FIELDS = {
+        'pos': ('start', ArrayMin),
+        'end': ('end', ArrayMax),
+        'numExon': ('numExon', ArrayMax),
+        'geneIds': ('geneIds', lambda value, **kwargs: ArrayDistinct(ArrayFlatten(value), **kwargs)),
+    }
 
     num_exon = models.UInt16Field(db_column='numExon')
     populations = NamedTupleField(POPULATION_FIELDS)
@@ -419,23 +436,99 @@ class AnnotationsDiskGcnv(BaseAnnotationsGcnv):
 
 class BaseClinvar(models.ClickhouseModel):
 
-    PATHOGENICITY_CHOICES = list(enumerate([
-        'Pathogenic', 'Pathogenic/Likely_pathogenic', 'Pathogenic/Likely_pathogenic/Established_risk_allele',
-        'Pathogenic/Likely_pathogenic/Likely_risk_allele', 'Pathogenic/Likely_risk_allele', 'Likely_pathogenic', 'Likely_pathogenic/Likely_risk_allele',
-        'Established_risk_allele', 'Likely_risk_allele', 'Conflicting_classifications_of_pathogenicity',
-        'Uncertain_risk_allele', 'Uncertain_significance/Uncertain_risk_allele', 'Uncertain_significance',
-        'No_pathogenic_assertion', 'Likely_benign', 'Benign/Likely_benign', 'Benign'
-    ]))
+    CLINVAR_ASSERTIONS = [
+        'Affects',
+        'association',
+        'association_not_found',
+        'confers_sensitivity',
+        'drug_response',
+        'low_penetrance',
+        'not_provided',
+        'other',
+        'protective',
+        'risk_factor',
+        'no_classification_for_the_single_variant',
+        'no_classifications_from_unflagged_records',
+    ]
+    CLINVAR_CONFLICTING_CLASSICATIONS_OF_PATHOGENICITY = 'Conflicting_classifications_of_pathogenicity'
+    CLINVAR_DEFAULT_PATHOGENICITY = 'No_pathogenic_assertion'
+    CLINVAR_PATHOGENICITIES = [
+        'Pathogenic',
+        'Pathogenic/Likely_pathogenic',
+        'Pathogenic/Likely_pathogenic/Established_risk_allele',
+        'Pathogenic/Likely_pathogenic/Likely_risk_allele',
+        'Pathogenic/Likely_risk_allele',
+        'Likely_pathogenic',
+        'Likely_pathogenic/Likely_risk_allele',
+        'Established_risk_allele',
+        'Likely_risk_allele',
+        CLINVAR_CONFLICTING_CLASSICATIONS_OF_PATHOGENICITY,
+        'Uncertain_risk_allele',
+        'Uncertain_significance/Uncertain_risk_allele',
+        'Uncertain_significance',
+        CLINVAR_DEFAULT_PATHOGENICITY,
+        'Likely_benign',
+        'Benign/Likely_benign',
+        'Benign',
+    ]
+
+    ASSERTIONS_CHOICES = list(enumerate(CLINVAR_ASSERTIONS))
+    PATHOGENICITY_CHOICES = list(enumerate(CLINVAR_PATHOGENICITIES))
+
     allele_id = models.UInt32Field(db_column='alleleId', null=True, blank=True)
     conflicting_pathogenicities = NestedField([
-        ('count', models.UInt16Field()),
         ('pathogenicity', models.Enum8Field(choices=PATHOGENICITY_CHOICES, return_int=False)),
+        ('count', models.UInt16Field()),
     ], db_column='conflictingPathogenicities', null_when_empty=True)
     gold_stars = models.UInt8Field(db_column='goldStars', null=True, blank=True)
     submitters = models.ArrayField(models.StringField())
     conditions = models.ArrayField(models.StringField())
-    assertions = models.ArrayField(models.Enum8Field(choices=[(0, 'Affects'), (1, 'association'), (2, 'association_not_found'), (3, 'confers_sensitivity'), (4, 'drug_response'), (5, 'low_penetrance'), (6, 'not_provided'), (7, 'other'), (8, 'protective'), (9, 'risk_factor'), (10, 'no_classification_for_the_single_variant'), (11, 'no_classifications_from_unflagged_records')], return_int=False))
+    assertions = models.ArrayField(models.Enum8Field(choices=ASSERTIONS_CHOICES, return_int=False))
     pathogenicity = models.Enum8Field(choices=PATHOGENICITY_CHOICES, return_int=False)
+
+    class Meta:
+        abstract = True
+
+class BaseClinvarAllVariants(BaseClinvar):
+    version = models.DateField()
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
+
+    def _save_table(
+        self,
+        raw=False,
+        cls=None,
+        force_insert=False,
+        force_update=False,
+        using=None,
+        update_fields=None,
+    ):
+        # loaddata attempts to run an ALTER TABLE to update existing rows, but since JOIN tables can not be altered
+        # this command fails so need to use the force_insert flag to run an INSERT instead
+        return super()._save_table(
+            raw=raw, cls=cls, force_insert=True, force_update=force_update, using=using, update_fields=update_fields,
+        )
+
+    class Meta:
+        abstract = True
+        engine = models.MergeTree(
+            primary_key=('version', 'variant_id'),
+            order_by=('version', 'variant_id'),
+            partition_by='version',
+        )
+
+class ClinvarAllVariantsGRCh37SnvIndel(BaseClinvarAllVariants):
+    class Meta(BaseClinvarAllVariants.Meta):
+        db_table = 'GRCh37/SNV_INDEL/clinvar_all_variants'
+
+class ClinvarAllVariantsSnvIndel(BaseClinvarAllVariants):
+    class Meta(BaseClinvarAllVariants.Meta):
+        db_table = 'GRCh38/SNV_INDEL/clinvar_all_variants'
+
+class ClinvarAllVariantsMito(BaseClinvarAllVariants):
+    class Meta(BaseClinvarAllVariants.Meta):
+        db_table = 'GRCh38/MITO/clinvar_all_variants'
+
+class BaseClinvarJoin(BaseClinvar):
 
     def _save_table(
         self,
@@ -456,19 +549,20 @@ class BaseClinvar(models.ClickhouseModel):
         abstract = True
         engine = Join('ALL', 'LEFT', 'key', join_use_nulls=1, flatten_nested=0)
 
-class ClinvarGRCh37SnvIndel(BaseClinvar):
+
+class ClinvarGRCh37SnvIndel(BaseClinvarJoin):
     key = ForeignKey('EntriesGRCh37SnvIndel', db_column='key', related_name='clinvar_join', primary_key=True, on_delete=PROTECT)
-    class Meta(BaseClinvar.Meta):
+    class Meta(BaseClinvarJoin.Meta):
         db_table = 'GRCh37/SNV_INDEL/clinvar'
 
-class ClinvarSnvIndel(BaseClinvar):
+class ClinvarSnvIndel(BaseClinvarJoin):
     key = ForeignKey('EntriesSnvIndel', db_column='key', related_name='clinvar_join', primary_key=True, on_delete=PROTECT)
-    class Meta(BaseClinvar.Meta):
+    class Meta(BaseClinvarJoin.Meta):
         db_table = 'GRCh38/SNV_INDEL/clinvar'
 
-class ClinvarMito(BaseClinvar):
+class ClinvarMito(BaseClinvarJoin):
     key = ForeignKey('EntriesMito', db_column='key', related_name='clinvar_join', primary_key=True, on_delete=PROTECT)
-    class Meta(BaseClinvar.Meta):
+    class Meta(BaseClinvarJoin.Meta):
         db_table = 'GRCh38/MITO/clinvar'
 
 
@@ -479,7 +573,7 @@ class BaseEntries(models.ClickhouseModel):
     filters = models.ArrayField(models.StringField(low_cardinality=True))
     sign = models.Int8Field()
 
-    objects = EntriesManager()
+    objects = EntriesManager.as_manager()
 
     def _save_table(
         self,
@@ -573,6 +667,7 @@ class EntriesMito(BaseEntries):
         )
 
 class EntriesSv(BaseEntries):
+    SAMPLE_TYPE = Sample.SAMPLE_TYPE_WGS
     CALL_FIELDS = [
         ('sampleId', models.StringField()),
         ('gt', models.Enum8Field(null=True, blank=True, choices=[(0, 'REF'), (1, 'HET'), (2, 'HOM')])),
@@ -591,6 +686,7 @@ class EntriesSv(BaseEntries):
         db_table = 'GRCh38/SV/entries'
 
 class EntriesGcnv(BaseEntries):
+    SAMPLE_TYPE = Sample.SAMPLE_TYPE_WES
     CALL_FIELDS = [
         ('sampleId', models.StringField()),
         ('gt', models.Enum8Field(null=True, blank=True, choices=[(0, 'REF'), (1, 'HET'), (2, 'HOM')])),
@@ -610,7 +706,7 @@ class EntriesGcnv(BaseEntries):
     key = ForeignKey('AnnotationsGcnv', db_column='key', primary_key=True, on_delete=CASCADE)
     calls = models.ArrayField(NamedTupleField(CALL_FIELDS))
 
-    class Meta:
+    class Meta(BaseEntries.Meta):
         db_table = 'GRCh38/GCNV/entries'
 
 class TranscriptsGRCh37SnvIndel(models.ClickhouseModel):
@@ -674,20 +770,35 @@ class TranscriptsSnvIndel(models.ClickhouseModel):
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SNV_INDEL/transcripts', primary_key='key', flatten_nested=0)
 
 class BaseKeyLookup(models.ClickhouseModel):
-    variant_id = models.StringField(db_column='variantId')
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
 
     class Meta:
         abstract = True
 
+    def _save_table(
+        self,
+        raw=False,
+        cls=None,
+        force_insert=False,
+        force_update=False,
+        using=None,
+        update_fields=None,
+    ):
+        # loaddata attempts to run an ALTER TABLE to update existing rows, but since primary keys can not be altered
+        # this command fails so need to use the force_insert flag to run an INSERT instead
+        return super()._save_table(
+            raw=raw, cls=cls, force_insert=True, force_update=force_update, using=using, update_fields=update_fields,
+        )
+
 class KeyLookupGRCh37SnvIndel(BaseKeyLookup):
-    key = OneToOneField('AnnotationsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = OneToOneField('AnnotationsGRCh37SnvIndel', db_column='key', on_delete=CASCADE)
 
     class Meta:
         db_table = 'GRCh37/SNV_INDEL/key_lookup'
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh37/SNV_INDEL/key_lookup', primary_key='variant_id', flatten_nested=0)
 
 class KeyLookupSnvIndel(BaseKeyLookup):
-    key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = OneToOneField('AnnotationsSnvIndel', db_column='key', on_delete=CASCADE)
 
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/key_lookup'
@@ -695,7 +806,7 @@ class KeyLookupSnvIndel(BaseKeyLookup):
 
 
 class KeyLookupMito(BaseKeyLookup):
-    key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = OneToOneField('AnnotationsMito', db_column='key', on_delete=CASCADE)
 
     class Meta:
         db_table = 'GRCh38/MITO/key_lookup'
@@ -703,7 +814,7 @@ class KeyLookupMito(BaseKeyLookup):
 
 
 class KeyLookupSv(BaseKeyLookup):
-    key = OneToOneField('AnnotationsSv', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = OneToOneField('AnnotationsSv', db_column='key', on_delete=CASCADE)
 
     class Meta:
         db_table = 'GRCh38/SV/key_lookup'
@@ -711,7 +822,7 @@ class KeyLookupSv(BaseKeyLookup):
 
 
 class KeyLookupGcnv(BaseKeyLookup):
-    key = OneToOneField('AnnotationsGcnv', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = OneToOneField('AnnotationsGcnv', db_column='key', on_delete=CASCADE)
 
     class Meta:
         db_table = 'GRCh38/GCNV/key_lookup'
@@ -817,6 +928,8 @@ ENTRY_CLASS_MAP = {
     GENOME_VERSION_GRCh38: {
         Sample.DATASET_TYPE_VARIANT_CALLS: EntriesSnvIndel,
         Sample.DATASET_TYPE_MITO_CALLS: EntriesMito,
+        f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WGS}': EntriesSv,
+        f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WES}': EntriesGcnv,
     },
 }
 ANNOTATIONS_CLASS_MAP = {
@@ -824,9 +937,20 @@ ANNOTATIONS_CLASS_MAP = {
     GENOME_VERSION_GRCh38: {
         Sample.DATASET_TYPE_VARIANT_CALLS: AnnotationsSnvIndel,
         Sample.DATASET_TYPE_MITO_CALLS: AnnotationsMito,
+        f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WGS}': AnnotationsSv,
+        f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WES}': AnnotationsGcnv,
     },
 }
 TRANSCRIPTS_CLASS_MAP = {
     GENOME_VERSION_GRCh37: TranscriptsGRCh37SnvIndel,
     GENOME_VERSION_GRCh38: TranscriptsSnvIndel,
+}
+KEY_LOOKUP_CLASS_MAP = {
+    GENOME_VERSION_GRCh37: {Sample.DATASET_TYPE_VARIANT_CALLS: KeyLookupGRCh37SnvIndel},
+    GENOME_VERSION_GRCh38: {
+        Sample.DATASET_TYPE_VARIANT_CALLS: KeyLookupSnvIndel,
+        Sample.DATASET_TYPE_MITO_CALLS: KeyLookupMito,
+        f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WGS}': KeyLookupSv,
+        f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WES}': KeyLookupGcnv,
+    },
 }

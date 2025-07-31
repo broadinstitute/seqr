@@ -877,6 +877,8 @@ class AirtableCheckNewSamplesTest(AnvilAuthenticationTestCase, CheckNewSamplesTe
     airtable_loading_tracking_url = "http://testairtable/appUelDNM3BnWaR7M/AnVIL%20Seqr%20Loading%20Requests%20Tracking"
     AIRTABLE_LOADING_QUERY_TEMPLATE = "?fields[]=Status&pageSize=2&filterByFormula=AND({{AnVIL Project URL}}='https://seqr.broadinstitute.org/project/{}/project_page',OR(Status='Loading',Status='Loading Requested'))"
 
+    CLICKHOUSE_HOSTNAME = ''
+
     MOCK_DATA_DIR = 'gs://seqr-hail-search-data/v3.1'
     PROJECT_EMAIL_TEXT = ANVIL_TEXT_EMAIL
     PROJECT_EMAIL_HTML = ANVIL_HTML_EMAIL

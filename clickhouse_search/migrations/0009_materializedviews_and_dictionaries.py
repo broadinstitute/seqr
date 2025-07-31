@@ -4,14 +4,13 @@ from string import Template
 
 from django.db import migrations
 
-from settings import DATABASES
-
 CLICKHOUSE_AC_EXCLUDED_PROJECT_GUIDS  = os.environ.get(
     'CLICKHOUSE_AC_EXCLUDED_PROJECT_GUIDS',
     ''
 ).split(',')
-CLICKHOUSE_USER = os.environ.get('CLICKHOUSE_USER', 'clickhouse')
-CLICKHOUSE_PASSWORD = os.environ.get('CLICKHOUSE_PASSWORD', 'clickhouse_test')
+CLICKHOUSE_WRITER_PASSWORD = os.environ.get('CLICKHOUSE_WRITER_PASSWORD', 'clickhouse_test')
+CLICKHOUSE_WRITER_USER = os.environ.get('CLICKHOUSE_WRITER_USER', 'clickhouse')
+
 
 ENTRIES_TO_PROJECT_GT_STATS = Template("""
 CREATE MATERIALIZED VIEW `$reference_genome/$dataset_type/entries_to_project_gt_stats_mv`
@@ -45,15 +44,14 @@ CREATE DICTIONARY `$reference_genome/$dataset_type/gt_stats_dict`
     $columns
 )
 PRIMARY KEY key
-SOURCE(CLICKHOUSE(USER $clickhouse_user PASSWORD $clickhouse_password DB $clickhouse_database TABLE `$reference_genome/$dataset_type/gt_stats`))
+SOURCE(CLICKHOUSE(USER $clickhouse_writer_user PASSWORD $clickhouse_writer_password TABLE `$reference_genome/$dataset_type/gt_stats`))
 LIFETIME(MIN 0 MAX 0)
 LAYOUT(FLAT(MAX_ARRAY_SIZE $size))
 """).safe_substitute(
     # Note the nested Template-ing that allows
     # double substitution these shared values
-    clickhouse_user=CLICKHOUSE_USER,
-    clickhouse_password=CLICKHOUSE_PASSWORD,
-    clickhouse_database=DATABASES.get('clickhouse', {}).get('NAME'),
+    clickhouse_writer_user=CLICKHOUSE_WRITER_USER,
+    clickhouse_writer_password=CLICKHOUSE_WRITER_PASSWORD,
 ))
 
 class Migration(migrations.Migration):

@@ -519,6 +519,7 @@ def get_group_members_side_effect(user, group, use_sa_credentials=False):
 class AnvilAuthenticationTestCase(AuthenticationTestCase):
 
     ES_HOSTNAME = ''
+    CLICKHOUSE_HOSTNAME = 'testhost'
     MOCK_AIRTABLE_KEY = 'airflow_access'
 
     # mock the terra apis
@@ -1383,6 +1384,16 @@ PARSED_SV_WGS_VARIANT = {
             'gq': 33, 'sampleId': 'NA21234', 'numAlt': 1, 'geneIds': None,
             'cn': -1, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None, 'sampleType': 'WGS',
             'prevCall': None, 'prevOverlap': None, 'newCall': None, 'prevNumAlt': 2,
+        },
+        'I000019_na21987': {
+            'gq': None, 'sampleId': 'NA21987', 'numAlt': -1, 'isRef': True, 'geneIds': None,
+            'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None, 'sampleType': None,
+            'prevCall': None, 'prevOverlap': None, 'newCall': None, 'prevNumAlt': None,
+        },
+         'I000021_na21654': {
+            'gq': None, 'sampleId': 'NA21654', 'numAlt': -1, 'isRef': True, 'geneIds': None,
+            'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None, 'sampleType': None,
+            'prevCall': None, 'prevOverlap': None, 'newCall': None, 'prevNumAlt': None,
         },
     },
     'clinvar': {'clinicalSignificance': None, 'alleleId': None, 'variationId': None, 'goldStars': None, 'version': None},
