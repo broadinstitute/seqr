@@ -703,7 +703,7 @@ class ClickhouseSearchUtilsTests(DifferentDbTransactionSupportMixin, TestCase, S
         mock_call.return_value = PARSED_VARIANTS[0]
         super().test_get_single_variant(mock_call)
 
-    def _assert_expected_get_single_variant_call(self, mock_call, variant_id, expected_samples, dataset_type='SNV_INDEL'):
+    def _assert_expected_get_single_variant_call(self, mock_call, variant_id, expected_samples, dataset_type='SNV_INDEL', **kwargs):
         mock_call.assert_called_with(variant_id, mock.ANY, '37', dataset_type)
         self.assertSetEqual(set(mock_call.call_args.args[1]), expected_samples)
 
