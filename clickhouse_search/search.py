@@ -408,9 +408,7 @@ def _get_sort_key(sort, gene_metadata):
     return lambda x: tuple(expr(x[0] if isinstance(x, list) else x) for expr in [*sort_expressions, lambda x: x[XPOS_SORT_KEY]])
 
 
-def clickhouse_variant_lookup(user, variant_id, data_type, genome_version=None, samples=None, **kwargs):
-    logger.info(f'Looking up variant {variant_id} with data type {data_type}', user)
-
+def _clickhouse_variant_lookup(variant_id, genome_version, data_type, samples):
     entry_cls = ENTRY_CLASS_MAP[genome_version][data_type]
     annotations_cls = ANNOTATIONS_CLASS_MAP[genome_version][data_type]
 
@@ -431,11 +429,16 @@ def clickhouse_variant_lookup(user, variant_id, data_type, genome_version=None, 
     else:
         results = results.filter_variant_ids(variant_ids=[variant_id])
 
-    variants = results.result_values()[:1]
-    if not variants:
+    return results.result_values().first()
+
+def clickhouse_variant_lookup(user, variant_id, data_type, genome_version=None, samples=None, **kwargs):
+    logger.info(f'Looking up variant {variant_id} with data type {data_type}', user)
+
+    variant = _clickhouse_variant_lookup(variant_id, genome_version, data_type, samples)
+    if not variant:
         raise ObjectDoesNotExist('Variant not present in seqr')
 
-    variant = format_clickhouse_results(variants, genome_version)[0]
+    variant = format_clickhouse_results([variant], genome_version)[0]
     _add_liftover_genotypes(variant, data_type, variant_id)
 
     return variant
@@ -458,6 +461,11 @@ def _add_liftover_genotypes(variant, data_type, variant_id):
     if lifted_entry_data:
         variant['familyGenotypes'].update(lifted_entry_data[0]['familyGenotypes'])
         variant['liftedFamilyGuids'] = sorted(lifted_entry_data[0]['familyGenotypes'].keys())
+
+
+def get_clickhouse_variant_by_id(variant_id, samples, genome_version, dataset_type, user):
+    variant = _clickhouse_variant_lookup(variant_id, genome_version, dataset_type, samples)
+    return format_clickhouse_results([variant], genome_version)[0] if variant else None
 
 
 def get_clickhouse_genotypes(project_guid, family_guids, genome_version, dataset_type, keys, samples):

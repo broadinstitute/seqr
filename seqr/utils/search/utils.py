@@ -3,7 +3,7 @@ from copy import deepcopy
 from datetime import timedelta
 
 from clickhouse_search.search import clickhouse_backend_enabled, get_clickhouse_variants, format_clickhouse_results, \
-    get_clickhouse_cache_results, clickhouse_variant_lookup
+    get_clickhouse_cache_results, clickhouse_variant_lookup, get_clickhouse_variant_by_id
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample, Individual, Project
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_get_wildcard_json, safe_redis_set_json
@@ -133,21 +133,21 @@ def delete_search_backend_data(data_id):
 
 
 def get_single_variant(family, variant_id, user=None):
-    parsed_variant_id = parse_variant_id(variant_id)
+    parsed_variant_id = parse_variant_id(variant_id) or variant_id
     dataset_type = _variant_ids_dataset_type([parsed_variant_id])
     samples = _get_families_search_data([family], dataset_type, sample_filter={'individual__family_id': family.id})
     variant = backend_specific_call(
         _process_ids_search(get_es_variants_for_variant_ids),
         _process_ids_search(get_hail_variants_for_variant_ids),
-        get_clickhouse_variant_by_id, # TODO
-    )(parsed_variant_id, samples, family.project.genome_version, user)
+        get_clickhouse_variant_by_id,
+    )(parsed_variant_id, samples, family.project.genome_version, dataset_type, user)
     if not variant:
         raise InvalidSearchException('Variant {} not found'.format(variant_id))
     return variant
 
 
 def _process_ids_search(search_func):
-    def _search(parsed_variant_id, samples, genome_version, user):
+    def _search(parsed_variant_id, samples, genome_version, dataset_type, user):
         variants = search_func(samples, genome_version, [parsed_variant_id], user)
         return variants[0] if variants else None
     return _search
