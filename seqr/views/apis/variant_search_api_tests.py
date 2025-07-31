@@ -858,9 +858,8 @@ class VariantSearchAPITest(object):
         self._assert_expected_single_variant_results_context(response.json(), searchedVariants=[SINGLE_FAMILY_VARIANT])
 
         mock_get_variant.assert_called_with(mock.ANY, '21-3343353-GAGA-G', user=self.collaborator_user)
-        searched_families = mock_get_variant.call_args.args[0]
-        self.assertEqual(searched_families.count(), 1)
-        self.assertEqual(searched_families.first().guid, 'F000001_1')
+        searched_family = mock_get_variant.call_args.args[0]
+        self.assertEqual(searched_family.guid, 'F000001_1')
 
         mock_get_variant.side_effect = InvalidSearchException('Variant not found')
         response = self.client.get(url)

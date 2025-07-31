@@ -340,7 +340,7 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         self.assertDictEqual(variant, HAIL_BACKEND_VARIANTS[0])
         self._test_minimal_search_call(
             variant_ids=[['2', 103343353, 'GAGA', 'G']], variant_keys=[],
-            num_results=1, sample_data={'SNV_INDEL': ALL_AFFECTED_SAMPLE_DATA['SNV_INDEL']})
+            num_results=1, sample_data={'SNV_INDEL': FAMILY_2_VARIANT_SAMPLE_DATA['SNV_INDEL']})
 
         get_single_variant(family, 'prefix_19107_DEL', user=self.user)
         self._test_minimal_search_call(
@@ -360,7 +360,7 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
 
         responses.add(responses.POST, f'{MOCK_ORIGIN}:5000/search', status=200, json={'results': [], 'total': 0})
         with self.assertRaises(InvalidSearchException) as cm:
-            get_single_variant(self.families, '10-10334333-A-G', user=self.user)
+            get_single_variant(family, '10-10334333-A-G', user=self.user)
         self.assertEqual(str(cm.exception), 'Variant 10-10334333-A-G not found')
 
     @responses.activate

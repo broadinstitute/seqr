@@ -1404,7 +1404,7 @@ class EsUtilsTest(TestCase):
         setup_responses()
         family = self.families.filter(guid='F000003_3').first()
         variant = get_single_variant(family, '2-103343353-GAGA-G')
-        self.assertDictEqual(variant, PARSED_NO_CONSEQUENCE_FILTER_VARIANTS[1])
+        self.assertDictEqual(variant, {**PARSED_ANY_AFFECTED_VARIANTS[1], 'selectedMainTranscriptId': None})
         self.assertExecutedSearch(
             filters=[{'terms': {'variantId': ['2-103343353-GAGA-G']}}],
             size=1, index=INDEX_NAME
