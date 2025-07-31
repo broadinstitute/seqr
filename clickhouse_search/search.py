@@ -463,7 +463,7 @@ def _add_liftover_genotypes(variant, data_type, variant_id):
         variant['liftedFamilyGuids'] = sorted(lifted_entry_data[0]['familyGenotypes'].keys())
 
 
-def get_clickhouse_variant_by_id(variant_id, samples, genome_version, dataset_type, user):
+def get_clickhouse_variant_by_id(variant_id, samples, genome_version, dataset_type):
     variant = _clickhouse_variant_lookup(variant_id, genome_version, dataset_type, samples)
     return format_clickhouse_results([variant], genome_version)[0] if variant else None
 
