@@ -68,7 +68,8 @@ def backend_specific_call(es_func, hail_backend_func, clickhouse_func=_raise_cli
 
 
 def ping_search_backend():
-    backend_specific_call(ping_elasticsearch, ping_hail_backend)()
+    # Clickhouse backend does not need special uptime testing, will be checked with the other database connection pings
+    backend_specific_call(ping_elasticsearch, ping_hail_backend, lambda: None)()
 
 
 def ping_search_backend_admin():
