@@ -469,8 +469,13 @@ def format_cached_variant(variant):
 
 GENE_COUNTS = {
     'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
-    'ENSG00000177000': {'total': 3, 'families': {'F000002_2': 2, 'F000011_11': 1}},
-    'ENSG00000277258': {'total': 2, 'families': {'F000002_2': 1, 'F000011_11': 1}},
+    'ENSG00000177000': {'total': 2, 'families': {'F000002_2': 2, 'F000011_11': 1}},
+    'ENSG00000277258': {'total': 1, 'families': {'F000002_2': 1, 'F000011_11': 1}},
+}
+MITO_GENE_COUNTS = {
+    'ENSG00000210112': {'total': 1, 'families': {'F000002_2': 1}},
+    'ENSG00000198886': {'total': 1, 'families': {'F000002_2': 1}},
+    'ENSG00000198727': {'total': 1, 'families': {'F000002_2': 1}},
 }
 
 VARIANT_IDS =  ['1-10439-AC-A', '1-91511686-TCA-G']
@@ -496,10 +501,10 @@ COMP_HET_ALL_PASS_FILTERS = {
 NEW_SV_FILTER = {'new_structural_variants': ['NEW']}
 
 SV_GENE_COUNTS = {
-    'ENSG00000171621': {'total': 2, 'families': {'F000011_11': 2}},
-    'ENSG00000083544': {'total': 1, 'families': {'F000011_11': 1}},
-    'ENSG00000184986': {'total': 1, 'families': {'F000011_11': 1}},
-    'null': {'total': 1, 'families': {'F000011_11': 1}},
+    'ENSG00000171621': {'total': 2, 'families': {'F000014_14': 2}},
+    'ENSG00000083544': {'total': 1, 'families': {'F000014_14': 1}},
+    'ENSG00000184986': {'total': 1, 'families': {'F000014_14': 1}},
+    None: {'total': 1, 'families': {'F000014_14': 1}},
 }
 
 GCNV_GENE_COUNTS = {
