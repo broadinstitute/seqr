@@ -223,7 +223,7 @@ class AnnotationsQuerySet(QuerySet):
         secondary_q = secondary_q.explode_gene_id(secondary_gene_field)
 
         conditional_fields = lambda query, **kwargs: {
-            field: F(field) for field in [self.SELECTED_GENE_FIELD, 'clinvar', 'family_carriers', 'carriers']
+            field: F(field) for field in [self.SELECTED_GENE_FIELD, 'clinvar', 'family_carriers', 'carriers', 'has_hom_alt', 'no_hom_alt_families']
             if field in query.query.annotations
         }
 

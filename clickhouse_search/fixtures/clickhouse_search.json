@@ -208,12 +208,12 @@
       "lifted_over_pos": 9310113,
       "hgmd": [null, null],
       "screen_region_type": null,
-      "predictions": [1.92299, 2.24799, null, null, null, null, null, null, null, null, null, null, null, null],
+      "predictions": [1.92299, 2.24799, null, null, null, null, null, null, null, null, null, 0.01, 4, null],
       "populations": [
         [0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0],
-        [4, 0.000044254640670260414, 90386, 0.00011118523252662271, 0, 0],
-        [13, 0.00004911409996566363, 264690, 13, 0]
+        [4, 0.00004, 90386, 0.0001, 0, 0],
+        [13, 0.00004, 264690, 0.0002, 0, 13],
+        [0, 0, 0, 0, 0]
       ],
       "sorted_transcript_consequences": [
         [null, 1, ["missense_variant"], false, null, "ENSG00000171621"]
@@ -538,9 +538,9 @@
       "filters": [],
       "sign": 1,
       "calls": [
-        ["HG00733", 2, 0, 0, 45],
-        ["HG00732", 1, 58, 0.17241, 29],
-        ["HG00731", 0, 0, 0, 24]
+        ["NA21234", 2, 0, 0, 45],
+        ["NA21987", 1, 58, 0.17241, 29],
+        ["NA21654", 0, 0, 0, 24]
       ]
     }
 }, {

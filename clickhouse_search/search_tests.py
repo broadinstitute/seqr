@@ -14,7 +14,7 @@ from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4,
     SV_VARIANT1, SV_VARIANT2, SV_VARIANT3, SV_VARIANT4, SV_GENE_COUNTS, NEW_SV_FILTER, GCNV_VARIANT1, GCNV_VARIANT2, \
     GCNV_VARIANT3, GCNV_VARIANT4, GCNV_MULTI_FAMILY_VARIANT1, GCNV_MULTI_FAMILY_VARIANT2, GCNV_GENE_COUNTS, \
     MULTI_DATA_TYPE_COMP_HET_VARIANT2, ALL_SNV_INDEL_PASS_FILTERS, MULTI_PROJECT_GCNV_VARIANT3, VARIANT_LOOKUP_VARIANT, \
-    format_cached_variant
+    PROJECT_4_COMP_HET_VARIANT, format_cached_variant
 from reference_data.models import Omim
 from seqr.models import Project, Family, Sample
 from seqr.utils.search.search_utils_tests import SearchTestHelper
@@ -409,6 +409,21 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
                 'ENSG00000184986': {'total': 1, 'families': {'F000011_11': 1}},
             }, cached_variant_fields=[
                 [{'selectedGeneId': 'ENSG00000171621'}, {'selectedGeneId': 'ENSG00000171621'}], {},
+            ],
+        )
+
+        # Test deletion in trans with hom alt snp/indel
+        for sample in Sample.objects.filter(individual__family_id=14):
+            sample.pk = None
+            sample.dataset_type = 'SNV_INDEL'
+            sample.save()
+        self._assert_expected_search(
+            [[SV_VARIANT1, SV_VARIANT2], [SV_VARIANT1, PROJECT_4_COMP_HET_VARIANT], PROJECT_4_COMP_HET_VARIANT, SV_VARIANT4],
+            inheritance_mode=inheritance_mode, **COMP_HET_ALL_PASS_FILTERS,
+            cached_variant_fields=[
+                [{'selectedGeneId': 'ENSG00000171621'}, {'selectedGeneId': 'ENSG00000171621'}],
+                [{'selectedGeneId': 'ENSG00000171621'}, {'selectedGeneId': 'ENSG00000171621'}],
+                {}, {},
             ],
         )
 
