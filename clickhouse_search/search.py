@@ -2,18 +2,18 @@ from clickhouse_backend.models import ArrayField, StringField
 from collections import defaultdict
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.exceptions import ObjectDoesNotExist
-from django.db.models import F, Min
+from django.db.models import F, Min, Q
 from django.db.models.functions import JSONObject
 
 from clickhouse_search.backend.fields import NamedTupleField
-from clickhouse_search.backend.functions import Array, ArrayFilter, ArrayIntersect, ArraySort, GroupArrayArray, Tuple
+from clickhouse_search.backend.functions import Array, ArrayFilter, ArrayIntersect, ArraySort, GroupArrayArray, If, Tuple
 from clickhouse_search.models import ENTRY_CLASS_MAP, ANNOTATIONS_CLASS_MAP, TRANSCRIPTS_CLASS_MAP, KEY_LOOKUP_CLASS_MAP, \
     BaseClinvar, BaseAnnotationsMitoSnvIndel, BaseAnnotationsGRCh37SnvIndel, BaseAnnotationsSvGcnv
 from reference_data.models import GeneConstraint, Omim
 from seqr.models import Sample, PhenotypePrioritization
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.search.constants import MAX_VARIANTS, XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, \
-    PRIORITIZED_GENE_SORT, COMPOUND_HET, RECESSIVE
+    PRIORITIZED_GENE_SORT, COMPOUND_HET, COMPOUND_HET_ALLOW_HOM_ALTS, RECESSIVE
 from settings import CLICKHOUSE_SERVICE_HOSTNAME
 
 logger = SeqrLogger(__name__)
@@ -90,7 +90,7 @@ def _get_multi_data_type_comp_het_results_queryset(genome_version, sample_data_b
             continue
         entries = entry_cls.objects.search([
             s for s in sample_data_by_dataset_type[Sample.DATASET_TYPE_VARIANT_CALLS] if s['family_guid'] in families
-        ], comp_het_search, annotate_carriers=True)
+        ], {**comp_het_search, 'inheritance_mode': COMPOUND_HET_ALLOW_HOM_ALTS}, annotate_carriers=True, annotate_hom_alts=True)
         snv_indel_q = annotations_cls.objects.subquery_join(entries).search(**comp_het_search)
 
         sv_entries = ENTRY_CLASS_MAP[genome_version][sv_dataset_type].objects.search([
@@ -133,6 +133,18 @@ def _get_comp_het_results_queryset(annotations_cls, primary_q, secondary_q, num_
             ]),
         )
 
+    if results.has_annotation('primary_has_hom_alt') or results.has_annotation('primary_no_hom_alt_families'):
+        is_overlapped_del = Q(seconary_svType='DEL', primary_pos__gte=F('secondary_pos'),  primary_pos__lte=F('secondary_end'))
+        if results.has_annotation('primary_has_hom_alt'):
+            results = results.filter(is_overlapped_del | Q(primary_has_hom_alt=False))
+        else:
+            results = results.annotate(primary_familyGuids=If(
+                is_overlapped_del,
+                F('primary_familyGuids'),
+                ArrayIntersect('primary_familyGuids', 'primary_no_hom_alt_families'),
+                condition='',
+            ))
+
     if num_families > 1:
         results = results.annotate(
             primary_familyGuids=ArrayIntersect(
@@ -159,7 +171,7 @@ def _get_comp_het_results_queryset(annotations_cls, primary_q, secondary_q, num_
 def _result_as_tuple(results, field_prefix):
     fields = {
         name: (name.replace(field_prefix, ''), getattr(col, 'target', col.output_field)) for name, col in results.query.annotations.items()
-        if name.startswith(field_prefix) and not name.endswith('carriers')
+        if name.startswith(field_prefix) and not name.endswith('carriers') and not 'hom_alt' in name
     }
     return Tuple(*fields.keys(), output_field=NamedTupleField(list(fields.values())))
 

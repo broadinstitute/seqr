@@ -120,7 +120,7 @@ class DictGet(Func):
 
 class If(Func):
     function = 'if'
-    template = '%(function)s(%(condition)s, %(expressions)s)'
+    template = '%(function)s(%(condition)s%(expressions)s)'
 
 
 class MapLookup(Func):
