@@ -225,7 +225,7 @@ def delete_families_handler(request, project_guid):
         project_guid (string): GUID of project that contains these individuals.
     """
 
-    project = get_project_and_check_pm_permissions(project_guid, request.user)
+    project = get_project_and_check_pm_permissions(project_guid, request.user, override_permission_func=external_anvil_project_can_edit)
 
     request_json = json.loads(request.body)
 
