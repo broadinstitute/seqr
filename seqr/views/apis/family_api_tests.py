@@ -666,6 +666,6 @@ class LocalFamilyAPITest(AuthenticationTestCase, FamilyAPITest):
 
 
 class AnvilFamilyAPITest(AnvilAuthenticationTestCase, FamilyAPITest):
-    fixtures = ['users', '1kg_project', 'reference_data']
+    fixtures = ['users', '1kg_project', 'reference_data', 'clickhouse_saved_variants']
 
     EXTERNAL_ANVIL_CAN_DELETE = True

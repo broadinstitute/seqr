@@ -1,10 +1,15 @@
 import logging
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.db.models.query_utils import Q
 from seqr.models import Project
+from seqr.utils.search.utils import backend_specific_call
 from seqr.views.utils.variant_utils import update_projects_saved_variant_json
 
 logger = logging.getLogger(__name__)
+
+
+def _clickhouse_error():
+    raise CommandError('Reloading variants is not supported in clickhouse')
 
 
 class Command(BaseCommand):
@@ -15,7 +20,7 @@ class Command(BaseCommand):
         parser.add_argument('--family-guid', help='optional family to reload variants for')
 
     def handle(self, *args, **options):
-        """transfer project"""
+        backend_specific_call(lambda: True, lambda: True, _clickhouse_error)()
         projects_to_process = options['projects']
         family_guid = options['family_guid']
 
@@ -27,6 +32,6 @@ class Command(BaseCommand):
             logging.info("Processing all %s projects" % len(projects))
 
         family_ids = [family_guid] if family_guid else None
-        project_list = [(*project, family_ids) for project in projects.values_list('id', 'name', 'genome_version')]
+        project_list = [(*project, family_ids) for project in projects.values_list('id', 'guid', 'name', 'genome_version')]
         update_projects_saved_variant_json(project_list, user_email='manage_command')
         logger.info("Done")

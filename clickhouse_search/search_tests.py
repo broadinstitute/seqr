@@ -18,21 +18,27 @@ from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4,
 from reference_data.models import Omim
 from seqr.models import Project, Family, Sample
 from seqr.utils.search.search_utils_tests import SearchTestHelper
-from seqr.utils.search.utils import query_variants, variant_lookup, sv_variant_lookup, get_variant_query_gene_counts
+from seqr.utils.search.utils import query_variants, variant_lookup, sv_variant_lookup, get_variant_query_gene_counts, get_single_variant, InvalidSearchException
 from seqr.views.utils.json_utils import DjangoJSONEncoderWithSets
+from seqr.views.utils.test_utils import DifferentDbTransactionSupportMixin
 
 
 @mock.patch('clickhouse_search.search.CLICKHOUSE_SERVICE_HOSTNAME', 'localhost')
-class ClickhouseSearchTests(SearchTestHelper, TestCase):
+class ClickhouseSearchTests(DifferentDbTransactionSupportMixin, SearchTestHelper, TestCase):
     databases = '__all__'
     fixtures = ['users', '1kg_project', 'reference_data', 'clickhouse_search', 'clickhouse_transcripts']
 
     def setUp(self):
         super().set_up()
         self.mock_redis.get.return_value = None
-        with connections['clickhouse'].cursor() as cursor:
+
+    @classmethod
+    def setUpTestData(cls):
+        with connections['clickhouse_write'].cursor() as cursor:
             for table_base in ['GRCh38/SNV_INDEL', 'GRCh38/MITO', 'GRCh38/SV', 'GRCh37/SNV_INDEL']:
                 cursor.execute(f'SYSTEM REFRESH VIEW "{table_base}/project_gt_stats_to_gt_stats_mv"')
+                cursor.execute(f'SYSTEM WAIT VIEW "{table_base}/project_gt_stats_to_gt_stats_mv"')
+                cursor.execute(f'SYSTEM RELOAD DICTIONARY "{table_base}/gt_stats_dict"')
         Project.objects.update(genome_version='38')
 
     def _assert_expected_search(self, expected_results, gene_counts=None, inheritance_mode=None, inheritance_filter=None, quality_filter=None, cached_variant_fields=None, sort='xpos', **search_kwargs):
@@ -620,30 +626,30 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             variant_lookup(self.user, 'suffix_140608_DEL')
         self.assertEqual(str(cm.exception), 'Variant not present in seqr')
 
-#     def test_multi_variant_lookup(self):
-#         self._test_multi_lookup(VARIANT_ID_SEARCH['variant_ids'], 'SNV_INDEL', [VARIANT1])
-#
-#         self._test_multi_lookup([['7', 143270172, 'A', 'G']], 'SNV_INDEL', [GRCH37_VARIANT], genome_version='GRCh37')
-#
-#         self._test_multi_lookup([['M', 4429, 'G', 'A'], ['M', 14783, 'T', 'C']], 'MITO', [MITO_VARIANT1, MITO_VARIANT3])
-#
-#         self._test_multi_lookup(
-#             ['cohort_2911.chr1.final_cleanup_INS_chr1_160', 'phase2_DEL_chr14_4640'],
-#             'SV_WGS', [SV_VARIANT2, SV_VARIANT4],
-#         )
-#
-#         self._test_multi_lookup(['suffix_140608_DUP'], 'SV_WES', [NO_GENOTYPE_GCNV_VARIANT])
-#
-#     def _test_multi_lookup(self, variant_ids, data_type, results, genome_version='GRCh38'):
-#         body = {'genome_version': genome_version, 'data_type': data_type, 'variant_ids': variant_ids}
-#         async with self.client.request('POST', '/multi_lookup', json=body) as resp:
-#             self.assertEqual(resp.status, 200)
-#             resp_json = resp.json()
-#         self.assertDictEqual(resp_json, {'results': [
-#             {k: v for k, v in variant.items() if k not in {'familyGuids', 'genotypes'}}
-#             for variant in results
-#         ]})
-#
+    def test_get_single_variant(self):
+        self._set_single_family_search()
+        variant = get_single_variant(self.results_model.families.first(), VARIANT_IDS[0])
+        self._assert_expected_variants([variant], [VARIANT1])
+
+        with self.assertRaises(InvalidSearchException) as cm:
+            get_single_variant(self.results_model.families.first(), VARIANT_IDS[1])
+        self.assertEqual(str(cm.exception), 'Variant 1-91511686-TCA-G not found')
+
+        variant = get_single_variant(self.results_model.families.first(), 'M-4429-G-A')
+        self._assert_expected_variants([variant], [MITO_VARIANT1])
+
+        variant = get_single_variant(self.results_model.families.first(), 'suffix_140608_DUP')
+        self._assert_expected_variants([variant], [GCNV_VARIANT4])
+
+        self._set_sv_family_search()
+        variant = get_single_variant(self.results_model.families.first(), 'phase2_DEL_chr14_4640')
+        self._assert_expected_variants([variant], [SV_VARIANT4])
+
+        self._set_grch37_search()
+        variant = get_single_variant(self.results_model.families.first(), '7-143270172-A-G')
+        self._assert_expected_variants([variant], [GRCH37_VARIANT])
+
+
     def test_frequency_filter(self):
         sv_callset_filter = {'sv_callset': {'af': 0.05}}
         # seqr af filter is ignored for SNV_INDEL
@@ -1098,27 +1104,6 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 
         self._set_grch37_search()
         self._assert_expected_search([GRCH37_VARIANT], in_silico=main_in_silico)
-
-#     def test_search_errors(self):
-#         search_body = get_hail_search_body(sample_data=FAMILY_2_MISSING_SAMPLE_DATA)
-#         async with self.client.request('POST', '/search', json=search_body) as resp:
-#             self.assertEqual(resp.status, 400)
-#             reason = resp.reason
-#         self.assertEqual(reason, 'The following samples are available in seqr but missing the loaded data: NA19675_1, NA19678')
-#
-#         search_body = get_hail_search_body(sample_data=MULTI_PROJECT_MISSING_SAMPLE_DATA)
-#         async with self.client.request('POST', '/search', json=search_body) as resp:
-#             self.assertEqual(resp.status, 400)
-#             reason = resp.reason
-#         self.assertEqual(reason, 'The following samples are available in seqr but missing the loaded data: NA19675_1, NA19678')
-#
-#         search_body = get_hail_search_body(
-#             intervals=LOCATION_SEARCH['intervals'] + [['1', 1, 999999999]], omit_data_type='SV_WES',
-#         )
-#         async with self.client.request('POST', '/search', json=search_body) as resp:
-#             self.assertEqual(resp.status, 400)
-#             reason = resp.reason
-#         self.assertEqual(reason, 'Invalid intervals: 1:1-999999999')
 
     def test_sort(self):
         self._set_single_family_search()

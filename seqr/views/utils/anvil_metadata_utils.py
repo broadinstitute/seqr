@@ -1,5 +1,7 @@
 from collections import defaultdict
 from datetime import datetime
+
+from clickhouse_backend.models import ArrayField, StringField
 from django.db.models import F, Q, Value, CharField, Aggregate
 from django.db.models.functions import Replace
 from django.contrib.auth.models import User
@@ -7,13 +9,15 @@ from django.contrib.postgres.aggregates import ArrayAgg
 import requests
 from typing import Callable, Iterable
 
+from clickhouse_search.backend.functions import ArrayMap, ArrayFilter
+from clickhouse_search.search import get_annotations_queryset, get_transcripts_queryset
 from matchmaker.models import MatchmakerSubmission
 from reference_data.models import HumanPhenotypeOntology, Omim, GENOME_VERSION_LOOKUP
 from seqr.models import Project, Family, Individual, Sample, SavedVariant, VariantTagType
 from seqr.views.utils.airtable_utils import AirtableSession
 from seqr.utils.gene_utils import get_genes
 from seqr.utils.middleware import ErrorsWarningsException
-from seqr.utils.search.utils import get_search_samples
+from seqr.utils.search.utils import get_search_samples, backend_specific_call
 from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.utils.variant_utils import DISCOVERY_CATEGORY
 
@@ -163,7 +167,7 @@ def parse_anvil_metadata(
         get_additional_individual_fields: Callable[[Individual, dict], dict] = None,
         individual_samples: dict[Individual, Sample] = None, individual_data_types: dict[str, Iterable[str]] = None,
         airtable_fields: Iterable[str] = None, mme_value: Aggregate = None,
-        variant_json_fields: Iterable[str] = None, variant_attr_fields: Iterable[str] = None, post_process_variant: Callable[[dict, list[dict]], dict] = None,
+        include_variant_id: bool = False, include_clinvar: bool = False, variant_attr_fields: Iterable[str] = None, post_process_variant: Callable[[dict, list[dict]], dict] = None,
         include_no_individual_families: bool = False, omit_airtable: bool = False, include_family_name_display: bool = False, include_family_sample_metadata: bool = False,
         include_discovery_sample_id: bool = False, include_mondo: bool = False, omit_parent_mnvs: bool = False,
         proband_only_variants: bool = False):
@@ -186,7 +190,7 @@ def parse_anvil_metadata(
             sample_ids.add(sample.sample_id)
 
     saved_variants_by_family = _get_parsed_saved_discovery_variants_by_family(
-        list(family_data_by_id.keys()), bool(mme_value), variant_json_fields, variant_attr_fields,
+        list(family_data_by_id.keys()), bool(mme_value), include_variant_id, include_clinvar, variant_attr_fields,
     )
 
     condition_map = _get_condition_map(family_data_by_id.values())
@@ -320,12 +324,13 @@ VARIANT_TYPES = [
 ]
 
 def _get_parsed_saved_discovery_variants_by_family(
-        families: Iterable[Family], include_metadata: bool, variant_json_fields: list[str],
+        families: Iterable[Family], include_metadata: bool, include_variant_id: bool, include_clinvar: bool,
         variant_attr_fields: list[str],
 ):
     tag_types = VariantTagType.objects.filter(project__isnull=True, category=DISCOVERY_CATEGORY)
 
     annotations = dict(
+        genome_version=F('family__project__genome_version'),
         tags=ArrayAgg('varianttag__variant_tag_type__name', distinct=True),
         notes=ArrayAgg('variantnote__note', distinct=True, filter=Q(variantnote__report=True)),
         partial_hpo_terms=ArrayAgg('variantfunctionaldata__metadata', distinct=True, filter=Q(variantfunctionaldata__functional_data_tag='Partial Phenotype Contribution')),
@@ -336,15 +341,20 @@ def _get_parsed_saved_discovery_variants_by_family(
         varianttag__variant_tag_type__in=tag_types, family__id__in=families,
     ).order_by('created_date').distinct().annotate(**annotations)
 
+    variant_json_fields = ['genotypes']
+    if include_clinvar:
+        variant_json_fields.append('clinvar')
     variants = []
     gene_ids = set()
+    variant_json_by_guid = backend_specific_call(
+        _get_variant_json_by_guid, _get_variant_json_by_guid, _get_clickhouse_variant_json_by_guid,
+    )(project_saved_variants, include_clinvar)
     for variant in project_saved_variants:
         chrom, pos = get_chrom_pos(variant.xpos)
 
-        variant_json = variant.saved_variant_json
-        main_transcript = _get_variant_main_transcript(variant)
-        gene_id = main_transcript.get('geneId')
-        gene_ids.add(gene_id)
+        variant_json = variant_json_by_guid[variant.guid]
+        main_transcript = variant_json['main_transcript']
+        gene_ids.add(variant_json['gene_id'])
         sv_type = variant_json.get('svType')
         variant_type = next(
             (variant_type for variant_type, has_type in VARIANT_TYPES if has_type(variant.ref, variant.alt)),
@@ -359,23 +369,25 @@ def _get_parsed_saved_discovery_variants_by_family(
         parsed_variant = {
             'chrom': 'MT' if chrom == 'M' else chrom,
             'pos': pos,
-            'variant_reference_assembly': GENOME_VERSION_LOOKUP[variant_json['genomeVersion']],
-            'gene_id': gene_id,
-            'gene_ids': [gene_id] if gene_id else variant_json.get('transcripts', {}).keys(),
+            'variant_reference_assembly': GENOME_VERSION_LOOKUP[variant.genome_version],
+            'gene_id': variant_json['gene_id'],
+            'gene_ids': variant_json['gene_ids'],
             'gene_known_for_phenotype': 'Known' if 'Known gene for phenotype' in variant.tags else 'Candidate',
             'phenotype_contribution': phenotype_contribution,
             'partial_contribution_explained': partial_hpo_terms.replace(', ', '|'),
             'notes': variant.notes,
             'sv_type': sv_type,
-            'sv_name': (variant_json.get('svName') or '{svType}:chr{chrom}:{pos}-{end}'.format(**variant_json)) if sv_type else None,
+            'sv_name': (variant_json.get('svName') or f'{sv_type}:chr{chrom}:{pos}-{variant_json["end"]}') if sv_type else None,
             'variant_type': variant_type,
             'validated_name': variant.validated_name[0] if variant.validated_name else None,
             **{k: _get_transcript_field(k, config, main_transcript) for k, config in TRANSCRIPT_FIELDS.items()},
-            **{k: variant_json.get(k) for k in ['genotypes'] + (variant_json_fields or [])},
+            **{k: variant_json.get(k) for k in variant_json_fields},
             **{k: variant_json.get(field) if sv_type else None for k, field in [('chrom_end', 'endChrom'), ('pos_end', 'end')]},
             'ClinGen_allele_ID': variant_json.get('CAID'),
             **{k: getattr(variant, k) for k in ['family_id', 'ref', 'alt'] + (variant_attr_fields or [])},
         }
+        if include_variant_id:
+            parsed_variant['variantId'] = variant.variant_id
         if include_metadata:
             parsed_variant.update({
                 'seqr_chosen_consequence': main_transcript.get('majorConsequence'),
@@ -392,6 +404,99 @@ def _get_parsed_saved_discovery_variants_by_family(
         saved_variants_by_family[family_id].append(row)
 
     return saved_variants_by_family
+
+
+def _get_variant_json_by_guid(saved_variants, *args, **kwargs):
+    variant_json_by_guid = {}
+    for v in saved_variants:
+        main_transcript = _get_variant_main_transcript(v)
+        gene_id = main_transcript.get('geneId')
+        gene_ids = [gene_id] if gene_id else v.saved_variant_json.get('transcripts', {}).keys()
+        variant_json_by_guid[v.guid] = {
+            **v.saved_variant_json, 'main_transcript': main_transcript, 'gene_id': gene_id, 'gene_ids': gene_ids,
+        }
+
+    return variant_json_by_guid
+
+
+def _get_clickhouse_variant_json_by_guid(saved_variants, include_clinvar):
+    variant_json_by_guid = {}
+    variant_keys_by_search_type = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+    no_key_variants = []
+    for v in saved_variants:
+        if v.key:
+            end_chrom, end = get_chrom_pos(v.xpos_end)
+            variant_json_by_guid[v.guid] = {'genotypes': v.genotypes, 'endChrom': end_chrom, 'end': end}
+            variant_keys_by_search_type[v.genome_version][v.dataset_type][v.key].append((v.guid, v.selected_main_transcript_id))
+        else:
+            no_key_variants.append(v)
+    variant_json_by_guid.update(_get_variant_json_by_guid(no_key_variants))
+
+    for genome_version, keys_by_dataset_type in variant_keys_by_search_type.items():
+        for dataset_type, key_map in keys_by_dataset_type.items():
+            set_json_func = _set_clickhouse_sv_json if dataset_type.startswith(Sample.DATASET_TYPE_SV_CALLS) else _set_clickhouse_snv_indel_json
+            set_json_func(variant_json_by_guid, genome_version, dataset_type, key_map, include_clinvar)
+
+    return variant_json_by_guid
+
+
+def _set_clickhouse_sv_json(variant_json_by_guid, genome_version, dataset_type, key_map, include_clinvar):
+    annotations = get_annotations_queryset(genome_version, dataset_type, key_map.keys()).values(
+        'key', svType=F('sv_type'), gene_ids=ArrayMap('sorted_gene_consequences', mapped_expression='x.geneId', output_field=ArrayField(StringField())),
+    )
+    defaults = {'CAID': None, 'gene_id': None, 'main_transcript': {}}
+    if include_clinvar:
+        defaults['clinvar'] = None
+    for anns in annotations:
+        for guid, _ in key_map[anns['key']]:
+            variant_json_by_guid[guid].update({**anns, **defaults})
+
+
+def _set_clickhouse_snv_indel_json(variant_json_by_guid, genome_version, dataset_type, key_map, include_clinvar):
+    selected_transcripts = {st for group in key_map.values() for _, st in group if st}
+    annotations_qs = get_annotations_queryset(genome_version, dataset_type, key_map.keys())
+    annotation_values = {field: Value(None, output_field=CharField()) for field in ['CAID', 'svType']}
+    transcripts_by_key = {}
+    if dataset_type == Sample.DATASET_TYPE_MITO_CALLS:
+        annotation_values['all_transcripts'] = _get_main_transcripts_expression(
+            'sorted_transcript_consequences', annotations_qs, selected_transcripts,
+        )
+    else:
+        annotation_values['CAID'] = F('caid')
+        transcripts_qs = get_transcripts_queryset(genome_version, key_map.keys())
+        transcripts_by_key.update(dict(transcripts_qs.values_list(
+            'key', _get_main_transcripts_expression('transcripts', transcripts_qs, selected_transcripts),
+        )))
+
+    fields = ['key']
+    if include_clinvar:
+        fields.append('clinvar')
+        annotations_qs = annotations_qs.join_clinvar(key_map.keys())
+
+    annotations = annotations_qs.values(*fields, **annotation_values)
+    for anns in annotations:
+        for guid, selected_main_transcript_id in key_map[anns['key']]:
+            all_transcripts = anns.pop('all_transcripts', transcripts_by_key.get(anns['key'])) or []
+            is_main = (lambda t: t['transcriptId'] == selected_main_transcript_id) if selected_main_transcript_id else (
+                lambda t: t['transcriptRank'] == 0
+            )
+            main_transcript = next((t for t in all_transcripts if is_main(t)), {})
+            gene_id = main_transcript.get('geneId')
+            variant_json_by_guid[guid].update({
+                **anns,
+                'main_transcript': main_transcript,
+                'gene_id': gene_id,
+                'gene_ids': [gene_id] if gene_id else [transcript['geneId'] for transcript in all_transcripts],
+            })
+
+
+def _get_main_transcripts_expression(field_name, qs, selected_transcripts):
+    output_field = getattr(qs.model, field_name).field.clone()
+    output_field.group_by_key = None
+    return ArrayFilter(field_name, conditions=[
+        {'transcriptId': (list(selected_transcripts), 'has({value}, {field})')},
+        {'transcriptRank': (0, '{value} = {field}')},
+    ], output_field=output_field)
 
 
 def _get_variant_main_transcript(variant_model):
@@ -528,7 +633,7 @@ def _get_genetic_findings_rows(rows: list[dict], individual: Individual, family_
     for row in parsed_rows:
         del row['genotypes']
 
-        gene_variants = variants_by_gene[row[GENE_COLUMN]]
+        gene_variants = variants_by_gene[row[GENE_COLUMN]] if row[GENE_COLUMN] else []
         notes = row['notes'] or []
         if len(gene_variants) > 2:
             discovery_notes = _get_discovery_notes(row, gene_variants, omit_parent_mnvs)

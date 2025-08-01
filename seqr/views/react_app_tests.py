@@ -10,7 +10,7 @@ MOCK_GA_TOKEN = 'mock_ga_token' # nosec
 
 @mock.patch('seqr.views.react_app.DEBUG', False)
 class AppPageTest(object):
-    databases = '__all__'
+    databases = ['default']
     fixtures = ['users']
 
     def _check_page_html(self, response,  user, user_key='user', vlm_enabled=False, user_email=None, user_fields=None, ga_token_id=None, anvil_loading_date=None):

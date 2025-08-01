@@ -4,9 +4,11 @@ from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import F, Min, Q
 from django.db.models.functions import JSONObject
+import json
 
 from clickhouse_search.backend.fields import NamedTupleField
-from clickhouse_search.backend.functions import Array, ArrayFilter, ArrayIntersect, ArraySort, GroupArrayArray, If, Tuple
+from clickhouse_search.backend.functions import Array, ArrayFilter, ArrayIntersect, ArraySort, GroupArrayArray, If, Tuple, \
+    ArrayDistinct, ArrayMap
 from clickhouse_search.models import ENTRY_CLASS_MAP, ANNOTATIONS_CLASS_MAP, TRANSCRIPTS_CLASS_MAP, KEY_LOOKUP_CLASS_MAP, \
     BaseClinvar, BaseAnnotationsMitoSnvIndel, BaseAnnotationsGRCh37SnvIndel, BaseAnnotationsSvGcnv
 from reference_data.models import GeneConstraint, Omim
@@ -14,10 +16,12 @@ from seqr.models import Sample, PhenotypePrioritization
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.search.constants import MAX_VARIANTS, XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, \
     PRIORITIZED_GENE_SORT, COMPOUND_HET, COMPOUND_HET_ALLOW_HOM_ALTS, RECESSIVE
+from seqr.views.utils.json_utils import DjangoJSONEncoderWithSets
 from settings import CLICKHOUSE_SERVICE_HOSTNAME
 
 logger = SeqrLogger(__name__)
 
+BATCH_SIZE = 10000
 
 TRANSCRIPT_CONSEQUENCES_FIELD = 'sortedTranscriptConsequences'
 SELECTED_GENE_FIELD = 'selectedGeneId'
@@ -186,12 +190,16 @@ def get_clickhouse_cache_results(results, sort, family_guid):
     return {'all_results': sorted_results, 'total_results': total_results}
 
 
+def get_transcripts_queryset(genome_version, keys):
+    return TRANSCRIPTS_CLASS_MAP[genome_version].objects.filter(key__in=keys)
+
+
 def format_clickhouse_results(results, genome_version, **kwargs):
     keys_with_transcripts = {
         variant['key'] for result in results for variant in (result if isinstance(result, list) else [result]) if not 'transcripts' in variant
     }
     transcripts_by_key = dict(
-        TRANSCRIPTS_CLASS_MAP[genome_version].objects.filter(key__in=keys_with_transcripts).values_list('key', 'transcripts')
+        get_transcripts_queryset(genome_version, keys_with_transcripts).values_list('key', 'transcripts')
     )
 
     formatted_results = []
@@ -413,9 +421,7 @@ def _get_sort_key(sort, gene_metadata):
     return lambda x: tuple(expr(x[0] if isinstance(x, list) else x) for expr in [*sort_expressions, lambda x: x[XPOS_SORT_KEY]])
 
 
-def clickhouse_variant_lookup(user, variant_id, data_type, genome_version=None, samples=None, **kwargs):
-    logger.info(f'Looking up variant {variant_id} with data type {data_type}', user)
-
+def _clickhouse_variant_lookup(variant_id, genome_version, data_type, samples):
     entry_cls = ENTRY_CLASS_MAP[genome_version][data_type]
     annotations_cls = ANNOTATIONS_CLASS_MAP[genome_version][data_type]
 
@@ -436,11 +442,16 @@ def clickhouse_variant_lookup(user, variant_id, data_type, genome_version=None, 
     else:
         results = results.filter_variant_ids(variant_ids=[variant_id])
 
-    variants = results.result_values()[:1]
-    if not variants:
+    return results.result_values().first()
+
+def clickhouse_variant_lookup(user, variant_id, data_type, genome_version=None, samples=None, **kwargs):
+    logger.info(f'Looking up variant {variant_id} with data type {data_type}', user)
+
+    variant = _clickhouse_variant_lookup(variant_id, genome_version, data_type, samples)
+    if not variant:
         raise ObjectDoesNotExist('Variant not present in seqr')
 
-    variant = format_clickhouse_results(variants, genome_version)[0]
+    variant = format_clickhouse_results([variant], genome_version)[0]
     _add_liftover_genotypes(variant, data_type, variant_id)
 
     return variant
@@ -463,3 +474,64 @@ def _add_liftover_genotypes(variant, data_type, variant_id):
     if lifted_entry_data:
         variant['familyGenotypes'].update(lifted_entry_data[0]['familyGenotypes'])
         variant['liftedFamilyGuids'] = sorted(lifted_entry_data[0]['familyGenotypes'].keys())
+
+
+def get_clickhouse_variant_by_id(variant_id, samples, genome_version, dataset_type):
+    if dataset_type == Sample.DATASET_TYPE_SV_CALLS:
+        data_types  = [
+            f'{Sample.DATASET_TYPE_SV_CALLS}_{sample_type}'
+            for sample_type in samples.values_list('sample_type', flat=True).distinct()
+        ]
+    else:
+        data_types = [dataset_type]
+    for data_type in data_types:
+        variant = _clickhouse_variant_lookup(variant_id, genome_version, data_type, samples)
+        if variant:
+            return format_clickhouse_results([variant], genome_version)[0]
+    return None
+
+
+def get_clickhouse_genotypes(project_guid, family_guids, genome_version, dataset_type, keys, samples):
+    sample_data = _get_sample_data(samples.filter(individual__family__guid__in=family_guids))[dataset_type]
+    entries = ENTRY_CLASS_MAP[genome_version][dataset_type].objects.filter(
+        project_guid=project_guid, family_guid__in=family_guids, key__in=keys,
+    )
+    return {
+        key: json.loads(json.dumps(genotypes, cls=DjangoJSONEncoderWithSets)) for key, genotypes in
+        entries.annotate(genotypes=entries.genotype_expression(sample_data)).values_list('key', 'genotypes')
+    }
+
+
+def get_annotations_queryset(genome_version, dataset_type, keys):
+    annotations_cls = ANNOTATIONS_CLASS_MAP[genome_version][dataset_type]
+    return annotations_cls.objects.filter(key__in=keys)
+
+
+def get_clickhouse_annotations(genome_version, dataset_type, keys):
+    qs = get_annotations_queryset(genome_version, dataset_type, keys)
+    results = qs.join_seqr_pop().join_clinvar(keys).result_values(skip_entry_fields=True)
+    return format_clickhouse_results(results, genome_version)
+
+
+def get_clickhouse_genes(genome_version, dataset_type, keys):
+    results = get_annotations_queryset(genome_version, dataset_type, keys)
+    return results.aggregate(
+        gene_ids=ArrayDistinct(GroupArrayArray(ArrayMap(results.transcript_field, mapped_expression='x.geneId')), output_field=ArrayField(StringField())),
+    )['gene_ids']
+
+
+def get_clickhouse_keys_for_gene(gene_id, genome_version, dataset_type, keys):
+    results = get_annotations_queryset(genome_version, dataset_type, keys)
+    return list(results.filter(
+        **{f'{results.transcript_field}__array_exists': {'geneId': (f"'{gene_id}'",)}},
+    ).values_list('key', flat=True))
+
+
+def get_clickhouse_key_lookup(genome_version, dataset_type, variants_ids, reverse=False):
+    key_lookup_class = KEY_LOOKUP_CLASS_MAP[genome_version][dataset_type]
+    lookup = {}
+    fields = ('variant_id', 'key') if not reverse else ('key', 'variant_id')
+    for i in range(0, len(variants_ids), BATCH_SIZE):
+        batch = variants_ids[i:i + BATCH_SIZE]
+        lookup.update(dict(key_lookup_class.objects.filter(variant_id__in=batch).values_list(*fields)))
+    return lookup

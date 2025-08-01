@@ -1,12 +1,14 @@
 from collections import defaultdict
 from datetime import datetime
+from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.exceptions import PermissionDenied
 from django.core.mail.message import EmailMessage
 from django.contrib.auth.models import User
-from django.db.models import CharField, F, Value
+from django.db.models import CharField, F, Q, Value
 from django.db.models.functions import Coalesce, Concat, JSONObject, NullIf
 import json
 
+from clickhouse_search.search import get_clickhouse_keys_for_gene
 from matchmaker.matchmaker_utils import get_mme_gene_phenotype_ids_for_submissions, parse_mme_features, \
     get_mme_metrics, get_hpo_terms_by_id
 from matchmaker.models import MatchmakerSubmission
@@ -17,9 +19,10 @@ from seqr.views.utils.file_utils import load_uploaded_file
 from seqr.utils.communication_utils import safe_post_to_slack, set_email_message_stream
 from seqr.utils.gene_utils import get_genes
 from seqr.utils.middleware import ErrorsWarningsException
-from seqr.utils.search.utils import get_variants_for_variant_ids
+from seqr.utils.search.utils import backend_specific_call
 from seqr.views.utils.json_utils import create_json_response
 from seqr.utils.logging_utils import SeqrLogger
+from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.utils.orm_to_json_utils import get_json_for_matchmaker_submissions, get_json_for_saved_variants,\
     add_individual_hpo_details, INDIVIDUAL_DISPLAY_NAME_EXPR, AIP_TAG_TYPE
 from seqr.views.utils.permissions_utils import analyst_required, user_is_analyst, get_project_guids_user_can_view, \
@@ -57,13 +60,13 @@ def mme_details(request):
 
     saved_variants = get_json_for_saved_variants(
         SavedVariant.objects.filter(matchmakersubmissiongenes__matchmaker_submission__guid__in=submissions_by_guid),
-        add_details=True,
+        additional_values={'genomeVersion': F('family__project__genome_version')},
     )
 
     response = {
         'submissions': list(submissions_by_guid.values()),
         'genesById': genes_by_id,
-        'savedVariantsByGuid': {s['variantGuid']: s for s in saved_variants},
+        'savedVariantsByGuid': {s['variantGuid']: {**s, 'chrom': get_chrom_pos(s['xpos'])[0] , 'pos': get_chrom_pos(s['xpos'])[1]} for s in saved_variants},
     }
     if user_is_analyst(request.user):
         response['metrics'] = get_mme_metrics()
@@ -111,7 +114,12 @@ def saved_variants_page(request, tag):
     saved_variant_models = saved_variant_models.filter(family__project__guid__in=get_project_guids_user_can_view(request.user))
 
     if gene:
-        saved_variant_models = saved_variant_models.filter(saved_variant_json__transcripts__has_key=gene)
+        gene_filter = Q(saved_variant_json__transcripts__has_key=gene) | backend_specific_call(
+            lambda *args: Q(),
+            lambda *args: Q(),
+            _saved_variant_with_clickhouse_gene_q,
+        )(saved_variant_models, gene)
+        saved_variant_models = saved_variant_models.filter(gene_filter)
     elif saved_variant_models.count() > MAX_SAVED_VARIANTS:
         return create_json_response({'error': 'Select a gene to filter variants'}, status=400)
 
@@ -121,6 +129,22 @@ def saved_variants_page(request, tag):
     )
 
     return create_json_response(response_json)
+
+
+def _saved_variant_with_clickhouse_gene_q(saved_variant_models, gene_id):
+    search_type_keys = saved_variant_models.filter(key__isnull=False).values(
+        'dataset_type', genome_version=F('family__project__genome_version'),
+    ).annotate(keys=ArrayAgg('key', distinct=True))
+    has_key_q = None
+    for agg in search_type_keys:
+        gene_keys = get_clickhouse_keys_for_gene(gene_id, **agg)
+        if gene_keys:
+            q = Q(dataset_type=agg['dataset_type'], family__project__genome_version=agg['genome_version'], key__in=gene_keys)
+            if has_key_q:
+                has_key_q |= q
+            else:
+                has_key_q = q
+    return has_key_q or Q()
 
 
 @login_and_policies_required
@@ -214,7 +238,7 @@ def _load_aip_data(data: dict, user: User):
 
     today = datetime.now().strftime('%Y-%m-%d')
     num_new, num_updated = bulk_create_tagged_variants(
-        family_variant_data, tag_name=AIP_TAG_TYPE, user=user, load_new_variant_data=_search_new_saved_variants,
+        family_variant_data, tag_name=AIP_TAG_TYPE, user=user, load_new_variant_data=True,
         get_metadata=lambda pred:  {category: {'name': category_map[category], 'date': today} for category in pred['categories']},
     )
 
@@ -227,43 +251,6 @@ def _load_aip_data(data: dict, user: User):
     return create_json_response({
         'info': [summary_message],
     })
-
-
-FamilyVariantKey = tuple[int, str]
-
-
-def _search_new_saved_variants(family_variant_ids: list[FamilyVariantKey], user: User):
-    family_ids = set()
-    variant_families = defaultdict(list)
-    for family_id, variant_id in family_variant_ids:
-        family_ids.add(family_id)
-        variant_families[variant_id].append(family_id)
-    families_by_id = {f.id: f for f in Family.objects.filter(id__in=family_ids)}
-
-    search_variants_by_id = {
-        v['variantId']: v for v in get_variants_for_variant_ids(
-            families=families_by_id.values(), variant_ids=variant_families.keys(), user=user,
-        )
-    }
-
-    new_variants = {}
-    missing = defaultdict(list)
-    for variant_id, family_ids in variant_families.items():
-        variant = search_variants_by_id.get(variant_id) or {'familyGuids': []}
-        for family_id in family_ids:
-            family = families_by_id[family_id]
-            if family.guid in variant['familyGuids']:
-                new_variants[(family_id, variant_id)] = variant
-            else:
-                missing[family.family_id].append(variant_id)
-
-    if missing:
-        missing_summary = [f'{family} ({", ".join(sorted(variant_ids))})' for family, variant_ids in missing.items()]
-        raise ErrorsWarningsException([
-            f"Unable to find the following family's AIP variants in the search backend: {', '.join(missing_summary)}",
-        ])
-
-    return new_variants
 
 
 ALL_PROJECTS = 'all'

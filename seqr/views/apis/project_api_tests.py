@@ -427,7 +427,7 @@ class ProjectAPITest(object):
             len(response_json['familiesByGuid'][family_guid]['discoveryTags']) for family_guid in no_discovery_families
         }, {0})
 
-        self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953'})
+        self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953', 'ENSG00000240361'})
 
         # Test empty project
         empty_url = reverse(project_families, args=[EMPTY_PROJECT_GUID])
@@ -700,7 +700,7 @@ class LocalProjectAPITest(AuthenticationTestCase, ProjectAPITest):
 
 # Test for permissions from AnVIL only
 class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
-    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
+    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data', 'clickhouse_saved_variants']
     PROJECT_COLLABORATORS = ANVIL_COLLABORATORS
     PROJECT_COLLABORATOR_GROUPS = None
     HAS_EMPTY_PROJECT = False
