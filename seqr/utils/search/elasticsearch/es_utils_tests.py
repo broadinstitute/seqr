@@ -1402,39 +1402,29 @@ class EsUtilsTest(TestCase):
     @urllib3_responses.activate
     def test_get_single_es_variant(self):
         setup_responses()
-        variant = get_single_variant(self.families, '2-103343353-GAGA-G')
-        self.assertDictEqual(variant, PARSED_NO_CONSEQUENCE_FILTER_VARIANTS[1])
+        family = self.families.filter(guid='F000003_3').first()
+        variant = get_single_variant(family, '2-103343353-GAGA-G')
+        self.assertDictEqual(variant, {**PARSED_ANY_AFFECTED_VARIANTS[1], 'selectedMainTranscriptId': None})
         self.assertExecutedSearch(
             filters=[{'terms': {'variantId': ['2-103343353-GAGA-G']}}],
             size=1, index=INDEX_NAME
         )
 
-        variant = get_single_variant(self.families, 'prefix_19107_DEL')
+        family = self.families.filter(guid='F000002_2').first()
+        variant = get_single_variant(family, 'prefix_19107_DEL')
         self.assertDictEqual(variant, PARSED_SV_VARIANT)
         self.assertExecutedSearch(
             filters=[{'terms': {'variantId': ['prefix_19107_DEL']}}], size=1, index=SV_INDEX_NAME,
         )
 
-        variant = get_single_variant(self.families, 'M-10195-C-A')
+        variant = get_single_variant(family, 'M-10195-C-A')
         self.assertDictEqual(variant, PARSED_MITO_VARIANT)
         self.assertExecutedSearch(
             filters=[{'terms': {'variantId': ['M-10195-C-A']}}], size=1, index=MITO_WGS_INDEX_NAME,
         )
 
-        variant = get_single_variant(self.families, '1-248367227-TC-T', return_all_queried_families=True)
-        all_family_variant = deepcopy(PARSED_NO_CONSEQUENCE_FILTER_VARIANTS[0])
-        all_family_variant['familyGuids'] = ['F000002_2', 'F000003_3', 'F000005_5']
-        all_family_variant['genotypes']['I000004_hg00731'] = {
-            'ab': 0, 'ad': None, 'gq': 99, 'sampleId': 'HG00731', 'numAlt': 0, 'dp': 88, 'pl': None, 'sampleType': 'WES',
-        }
-        self.assertDictEqual(variant, all_family_variant)
-        self.assertExecutedSearch(
-            filters=[{'terms': {'variantId': ['1-248367227-TC-T']}}],
-            size=1, index=INDEX_NAME,
-        )
-
         with self.assertRaises(InvalidSearchException) as cm:
-            get_single_variant(self.families, '10-10334333-A-G')
+            get_single_variant(family, '10-10334333-A-G')
         self.assertEqual(str(cm.exception), 'Variant 10-10334333-A-G not found')
 
     @mock.patch('seqr.utils.search.elasticsearch.es_search.MAX_COMPOUND_HET_GENES', 1)
