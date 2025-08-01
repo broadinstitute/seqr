@@ -822,6 +822,13 @@ class IgvSample(ModelWithGUID):
 
 
 class SavedVariant(ModelWithGUID):
+    DATASET_TYPE_CHOICES = (
+        (Sample.DATASET_TYPE_VARIANT_CALLS, 'Variant Calls'),
+        (Sample.DATASET_TYPE_MITO_CALLS, 'Mitochondria calls'),
+        (f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WGS}', 'SV WGS Calls'),
+        (f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WES}', 'gCNV Calls'),
+    )
+
     family = models.ForeignKey('Family', on_delete=models.CASCADE)
 
     xpos = models.BigIntegerField()
@@ -829,9 +836,12 @@ class SavedVariant(ModelWithGUID):
     ref = models.TextField(null=True)
     alt = models.TextField(null=True)
     variant_id = models.TextField(db_index=True)
+    key = models.PositiveBigIntegerField(null=True, blank=True)
 
     selected_main_transcript_id = models.CharField(max_length=20, null=True)
     saved_variant_json = JSONField(default=dict)
+    genotypes = JSONField(default=dict)
+    dataset_type = models.CharField(max_length=13, choices=DATASET_TYPE_CHOICES, null=True, blank=True)
 
     acmg_classification = JSONField(null=True) # ACMG based classification
 

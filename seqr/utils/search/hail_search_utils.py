@@ -86,17 +86,13 @@ def _execute_multi_sample_types_searches(sv_data_types, search_body, user):
     return {'total': total, 'results': sorted(results, key=lambda x: x[0]['_sort'] if isinstance(x, list) else x['_sort'])[:search_body['num_results']]}
 
 
-def get_hail_variants_for_variant_ids(samples, genome_version, parsed_variant_ids, user, user_email=None, return_all_queried_families=False):
+def get_hail_variants_for_variant_ids(samples, genome_version, parsed_variant_ids, user, user_email=None):
     search = {
         'variant_ids': [parsed_id for parsed_id in parsed_variant_ids.values() if parsed_id],
         'variant_keys': [variant_id for variant_id, parsed_id in parsed_variant_ids.items() if not parsed_id],
     }
     search_body = _format_search_body(samples, genome_version, len(parsed_variant_ids), search)
     response_json = _execute_search(search_body, user, user_email=user_email)
-
-    if return_all_queried_families:
-        expected_family_guids = set(samples.values_list('individual__family__guid', flat=True))
-        _validate_expected_families(response_json['results'], expected_family_guids)
 
     return response_json['results']
 
@@ -177,23 +173,6 @@ def _get_sort_metadata(sort, samples):
             ).values('gene_id').annotate(min_rank=Min('rank'))
         }
     return sort_metadata
-
-
-def _validate_expected_families(results, expected_families):
-    # In the ES backed we could force return variants even if all families are hom ref
-    # This is not possible in the hail backend as those rows are removed at loading, so fail if missing
-    invalid_family_variants = []
-    for result in results:
-        missing_families = expected_families - set(result['familyGuids'])
-        if missing_families:
-            invalid_family_variants.append((result['variantId'], missing_families))
-
-    if invalid_family_variants:
-        from seqr.utils.search.utils import InvalidSearchException
-        missing = ', '.join([
-            f'{variant_id} ({"; ".join(sorted(families))})' for variant_id, families in invalid_family_variants
-        ])
-        raise InvalidSearchException(f'Unable to return all families for the following variants: {missing}')
 
 
 MAX_FAMILY_COUNTS = {Sample.SAMPLE_TYPE_WES: 200, Sample.SAMPLE_TYPE_WGS: 35}

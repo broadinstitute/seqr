@@ -620,10 +620,10 @@ GENETIC_FINDINGS_TABLE = [
         'Full', '', '', 'SR-ES', 'This individual is published in PMID34415322', '', '', '', '', '', '',
     ], [
         'Broad_HG00731_1_248367227', 'Broad_HG00731', 'Broad_exome_VCGS_FAM203_621_D2', 'INDEL', 'GRCh37', '1',
-        '248367227', 'TC', 'T', 'CA1501729', 'RP11', '', '', '', 'Homozygous', '', 'paternal', '', '', 'Known', '',
+        '248367227', 'TC', 'T', 'CA1501729', 'RP11', 'ENST00000371839', '', '', 'Homozygous', '', 'paternal', '', '', 'Known', '',
         'MONDO:0044970', '', 'Uncertain', '', 'Broad_HG00732', 'SR-ES', '', '', '', '', '', '', '',
     ], [
-        'Broad_HG00731_19_1912632', 'Broad_HG00731', 'Broad_exome_VCGS_FAM203_621_D2', 'SNV', 'GRCh38', '19',
+        'Broad_HG00731_19_1912632', 'Broad_HG00731', 'Broad_exome_VCGS_FAM203_621_D2', 'SNV', 'GRCh37', '19',
         '1912632', 'G', 'C', '', 'OR4G11P', 'ENST00000371839', 'c.586_587delinsTT', 'p.Ala196Leu', 'Heterozygous', '', 'unknown',
         'Broad_HG00731_19_1912634', '', 'Known', '', 'MONDO:0044970', '', 'Full', '', '', 'SR-ES',
         'The following variants are part of the multinucleotide variant 19-1912632-G-C (c.586_587delinsTT, p.Ala196Leu): 19-1912633-G-T, 19-1912634-C-T',
@@ -761,20 +761,20 @@ class ReportAPITest(AirtableTest):
             '17-significance', '18-discovery_notes'])
         self.assertIn([
             '1_248367227_HG00731', 'HG00731', 'HG00731', 'RP11', 'Known', 'paternal',
-            'Homozygous', 'GRCh37', '1', '248367227', 'TC', 'T', '-', '-', '-', '-', '-', '-', '-'], discovery_file)
+            'Homozygous', 'GRCh37', '1', '248367227', 'TC', 'T', '-', '-', 'ENST00000371839', '-', '-', '-', '-'], discovery_file)
         self.assertIn([
             '21_3343353_NA19675_1', 'NA19675_1', 'NA19675', 'RP11', 'Candidate', 'de novo',
             'Heterozygous', 'GRCh37', '21', '3343353', 'GAGA', 'G', 'c.375_377delTCT', 'p.Leu126del', 'ENST00000258436.5',
             '-', '-', '-', 'This individual is published in PMID34415322'], discovery_file)
         self.assertIn([
-            '19_1912633_HG00731', 'HG00731', 'HG00731', 'OR4G11P', 'Known', 'unknown', 'Heterozygous', 'GRCh38', '19',
+            '19_1912633_HG00731', 'HG00731', 'HG00731', 'OR4G11P', 'Known', 'unknown', 'Heterozygous', 'GRCh37', '19',
             '1912633', 'G', 'T', '-', '-', 'ENST00000371839', '-', '-', '-',
             'The following variants are part of the multinucleotide variant 19-1912632-G-C '
             '(c.586_587delinsTT, p.Ala196Leu): 19-1912633-G-T, 19-1912634-C-T'],
             discovery_file)
         self.assertIn([
-            '19_1912634_HG00731', 'HG00731', 'HG00731', 'OR4G11P', 'Known', 'unknown', 'Heterozygous', 'GRCh38', '19',
-            '1912634', 'C', 'T', '-', '-', 'ENST00000371839', '-', '-', '-',
+            '19_1912634_HG00731', 'HG00731', 'HG00731', 'OR4G11P', 'Known', 'unknown', 'Heterozygous', 'GRCh37', '19',
+            '1912634', 'C', 'T', '-', '-', '-', '-', '-', '-',
             'The following variants are part of the multinucleotide variant 19-1912632-G-C (c.586_587delinsTT, '
             'p.Ala196Leu): 19-1912633-G-T, 19-1912634-C-T'],
             discovery_file)
@@ -784,7 +784,7 @@ class ReportAPITest(AirtableTest):
         response = self.client.get(no_analyst_project_url)
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['errors'],
-                         ['Discovery variant(s) 1-248367227-TC-T in family 14 have no associated gene'])
+                         ['Discovery variant(s) 1-248367227-TC-T, MT-14783-T-C in family 14 have no associated gene'])
 
     @mock.patch('seqr.views.apis.report_api.GREGOR_DATA_MODEL_URL', MOCK_DATA_MODEL_URL)
     @mock.patch('seqr.views.apis.report_api.datetime')
@@ -936,7 +936,7 @@ class ReportAPITest(AirtableTest):
             '', '', '', '', '', '',
         ], [
             'Broad_HG00731_1_248367227', 'Broad_HG00731', 'Broad_exome_VCGS_FAM203_621_D2', 'INDEL', 'GRCh37', '1',
-            '248367227', 'TC', 'T', 'CA1501729', 'RP11', '', '', '', 'Homozygous', '', 'paternal', '', '', 'Known', '',
+            '248367227', 'TC', 'T', 'CA1501729', 'RP11', 'ENST00000371839', '', '', 'Homozygous', '', 'paternal', '', '', 'Known', '',
             'MONDO:0044970', '', 'Uncertain', '', 'Broad_HG00732', 'SR-ES', '', '', '', '', '', '', '',
         ]], additional_calls=1)
 
@@ -1347,7 +1347,7 @@ class ReportAPITest(AirtableTest):
             'alt': 'T',
             'chrom': '1',
             'ClinGen_allele_ID': 'CA1501729',
-            'clinvar': {'alleleId': None, 'clinicalSignificance': '', 'goldStars': None, 'variationId': None},
+            'clinvar': {'alleleId': 12345, 'pathogenicity': 'Uncertain_significance', 'goldStars': None, 'assertions': None, 'conditions': None, 'conflictingPathogenicities': None, 'submitters': None},
             'condition_id': 'MONDO:0044970',
             'condition_inheritance': 'Unknown',
             'displayName': '2',
@@ -1364,6 +1364,7 @@ class ReportAPITest(AirtableTest):
             'projectGuid': 'R0001_1kg',
             'ref': 'TC',
             'tags': ['Known gene for phenotype'],
+            'transcript': 'ENST00000371839',
             'variant_inheritance': 'paternal',
             'variant_reference_assembly': 'GRCh37',
             'zygosity': 'Homozygous',
@@ -1393,7 +1394,7 @@ class ReportAPITest(AirtableTest):
             'tags': ['Known gene for phenotype'],
             'transcript': 'ENST00000371839',
             'variant_inheritance': 'unknown',
-            'variant_reference_assembly': 'GRCh38',
+            'variant_reference_assembly': 'GRCh37',
             'variant_type': 'SNV',
             'zygosity': 'Heterozygous',
         }
@@ -1415,7 +1416,7 @@ class ReportAPITest(AirtableTest):
             'alt': 'T',
             'chrom': '1',
             'ClinGen_allele_ID': 'CA1501729',
-            'clinvar': {'alleleId': None, 'clinicalSignificance': '', 'goldStars': None, 'variationId': None},
+            'clinvar': {'alleleId': 12345, 'pathogenicity': 'Uncertain_significance', 'goldStars': None, 'assertions': None, 'conditions': None, 'conflictingPathogenicities': None, 'submitters': None},
             'condition_id': 'OMIM:616126',
             'condition_inheritance': 'Autosomal recessive',
             'displayName': '12',
@@ -1501,7 +1502,7 @@ class LocalReportAPITest(AuthenticationTestCase, ReportAPITest):
 
     fixtures = ['users', '1kg_project', 'reference_data', 'report_variants']
     ADDITIONAL_FAMILIES = ['F000014_14']
-    ADDITIONAL_FINDINGS = ['NA21234_1_248367227']
+    ADDITIONAL_FINDINGS = ['NA21234_1_248367227', 'NA21234_MT_14783', 'NA21234_1_249045487_DEL']
     HAS_PM_OVERRIDE = True
     STATS_DATA = {
         'projectsCount': {'non_demo': 3, 'demo': 1},
@@ -1528,7 +1529,7 @@ class LocalReportAPITest(AuthenticationTestCase, ReportAPITest):
 
 
 class AnvilReportAPITest(AnvilAuthenticationTestCase, ReportAPITest):
-    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data', 'report_variants']
+    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data', 'report_variants', 'clickhouse_saved_variants']
     HAS_PM_OVERRIDE = False
     STATS_DATA = {
         'projectsCount': {'internal': 1, 'external': 1, 'no_anvil': 1, 'demo': 1},

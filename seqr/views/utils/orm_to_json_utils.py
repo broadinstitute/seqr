@@ -10,6 +10,7 @@ from django.contrib.auth.models import User
 from guardian.shortcuts import get_users_with_perms, get_groups_with_perms
 import json
 
+from clickhouse_search.search import get_clickhouse_annotations
 from panelapp.models import PaLocusList
 from reference_data.models import HumanPhenotypeOntology
 from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant, Family, CAN_VIEW, CAN_EDIT, \
@@ -411,7 +412,7 @@ def get_json_for_analysis_group(analysis_group, **kwargs):
     return _get_json_for_model(analysis_group, get_json_for_models=get_json_for_analysis_groups, **kwargs)
 
 
-def get_json_for_saved_variants(saved_variants, add_details=False, additional_model_fields=None, additional_values=None):
+def get_json_for_saved_variants(saved_variants, add_details=False, additional_model_fields=None, additional_values=None, genome_version=None):
     sv_additional_values = {
         'familyGuids': ArrayAgg('family__guid', distinct=True),
     }
@@ -421,7 +422,12 @@ def get_json_for_saved_variants(saved_variants, add_details=False, additional_mo
     additional_fields = []
     additional_fields += additional_model_fields or []
     if add_details:
-        additional_fields.append('saved_variant_json')
+        from seqr.utils.search.utils import backend_specific_call
+        additional_fields += ['saved_variant_json'] + backend_specific_call(
+            lambda x: [],
+            lambda x: [],
+            lambda gv: ['key', 'genotypes', 'dataset_type'] + ([] if gv else ['family__project__genome_version']),
+        )(genome_version)
 
     results = get_json_for_queryset(
         saved_variants, guid_key='variantGuid', additional_values=sv_additional_values,
@@ -429,10 +435,34 @@ def get_json_for_saved_variants(saved_variants, add_details=False, additional_mo
     )
 
     if add_details:
+        from seqr.utils.search.utils import backend_specific_call
+        backend_specific_call(lambda *args: None, lambda *args: None, _add_clickhouse_annotations)(results, genome_version)
         for result in results:
             result.update({k: v for k, v in result.pop('savedVariantJson').items() if k not in result})
 
     return results
+
+
+def _add_clickhouse_annotations(results, genome_version):
+    results_by_genome_version_dataset_type = defaultdict(lambda: defaultdict(list))
+    for result in results:
+        dataset_type = result.pop('datasetType')
+        gv = genome_version or result.pop('familyProjectGenomeVersion')
+        if result['key']:
+            results_by_genome_version_dataset_type[gv][dataset_type].append(result)
+        else:
+            result.pop('genotypes')
+
+    for gv, grouped_results in results_by_genome_version_dataset_type.items():
+        for dataset_type, gv_results in grouped_results.items():
+            keys = {result['key'] for result in gv_results}
+            annotations_by_key = {
+                annotations['key']: {k: v for k, v in annotations.items() if k not in gv_results[0]}
+                for annotations in get_clickhouse_annotations(gv, dataset_type, keys)
+            }
+            for result in gv_results:
+                if result['key']:
+                    result.update(annotations_by_key[result['key']])
 
 
 def _format_functional_tags(tags):
