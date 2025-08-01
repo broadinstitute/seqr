@@ -14,11 +14,11 @@ from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4,
     SV_VARIANT1, SV_VARIANT2, SV_VARIANT3, SV_VARIANT4, SV_GENE_COUNTS, NEW_SV_FILTER, GCNV_VARIANT1, GCNV_VARIANT2, \
     GCNV_VARIANT3, GCNV_VARIANT4, GCNV_MULTI_FAMILY_VARIANT1, GCNV_MULTI_FAMILY_VARIANT2, GCNV_GENE_COUNTS, \
     MULTI_DATA_TYPE_COMP_HET_VARIANT2, ALL_SNV_INDEL_PASS_FILTERS, MULTI_PROJECT_GCNV_VARIANT3, VARIANT_LOOKUP_VARIANT, \
-    format_cached_variant
+    MITO_GENE_COUNTS, format_cached_variant
 from reference_data.models import Omim
 from seqr.models import Project, Family, Sample
 from seqr.utils.search.search_utils_tests import SearchTestHelper
-from seqr.utils.search.utils import query_variants, variant_lookup, sv_variant_lookup
+from seqr.utils.search.utils import query_variants, variant_lookup, sv_variant_lookup, get_variant_query_gene_counts
 from seqr.views.utils.json_utils import DjangoJSONEncoderWithSets
 
 
@@ -46,6 +46,10 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 
         self.assertEqual(total, len(expected_results))
         self._assert_expected_search_cache(encoded_variants, total, cached_variant_fields, sort)
+
+        if gene_counts:
+            gene_counts_json = get_variant_query_gene_counts(self.results_model, self.user)
+            self.assertDictEqual(gene_counts_json, gene_counts)
 
     def _assert_expected_variants(self, variants, expected_results):
         encoded_variants = json.loads(json.dumps(variants, cls=DjangoJSONEncoderWithSets))
@@ -102,13 +106,8 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             **ALL_SNV_INDEL_PASS_FILTERS,
         )
 
-        mito_gene_counts = {
-            'ENSG00000210112': {'total': 1, 'families': {'F000002_2': 1}},
-            'ENSG00000198886': {'total': 1, 'families': {'F000002_2': 1}},
-            'ENSG00000198727': {'total': 1, 'families': {'F000002_2': 1}},
-        }
         self._assert_expected_search(
-            [MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], gene_counts=mito_gene_counts, locus={'rawItems': 'M:1-100000000'},
+            [MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], gene_counts=MITO_GENE_COUNTS, locus={'rawItems': 'M:1-100000000'},
             annotations=None, pathogenicity=None,
         )
 
@@ -126,7 +125,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         self._assert_expected_search(
             [VARIANT1, SV_VARIANT1, SV_VARIANT2, VARIANT2, VARIANT3, VARIANT4, SV_VARIANT3, GCNV_VARIANT1,
                          GCNV_VARIANT2, GCNV_VARIANT3, SV_VARIANT4, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
-            gene_counts={**variant_gene_counts, **mito_gene_counts, **GCNV_GENE_COUNTS, **SV_GENE_COUNTS, 'ENSG00000277258': {'total': 2, 'families': {'F000002_2': 2}}},
+            gene_counts={**variant_gene_counts, **MITO_GENE_COUNTS, **GCNV_GENE_COUNTS, **SV_GENE_COUNTS, 'ENSG00000277258': {'total': 2, 'families': {'F000002_2': 2}}},
         )
 
         self._set_grch37_search()
@@ -134,12 +133,10 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 
     def test_single_project_search(self):
         variant_gene_counts = {
-            'ENSG00000097046': {'total': 3, 'families': {'F000002_2': 2, 'F000003_3': 1}},
-            'ENSG00000177000': {'total': 3, 'families': {'F000002_2': 2, 'F000003_3': 1}},
+            'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2, 'F000003_3': 1}},
+            'ENSG00000177000': {'total': 2, 'families': {'F000002_2': 2, 'F000003_3': 1}},
             'ENSG00000277258': {'total': 1, 'families': {'F000002_2': 1}},
-            'ENSG00000210112': {'total': 1, 'families': {'F000002_2': 1}},
-            'ENSG00000198886': {'total': 1, 'families': {'F000002_2': 1}},
-            'ENSG00000198727': {'total': 1, 'families': {'F000002_2': 1}},
+            **MITO_GENE_COUNTS,
         }
         self._assert_expected_search(
             [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2,
@@ -150,14 +147,14 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         self._add_sample_type_samples('WES', dataset_type='SV', guid__in=['S000135_na20870'])
         self._assert_expected_search(
             [GCNV_MULTI_FAMILY_VARIANT1, GCNV_MULTI_FAMILY_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4], gene_counts={
-                'ENSG00000129562': {'total': 2, 'families': {'F000002_2': 1, 'F000003_3': 1}},
-                'ENSG00000013364': {'total': 2, 'families': {'F000002_2': 1, 'F000003_3': 1}},
-                'ENSG00000079616': {'total': 2, 'families': {'F000002_2': 1, 'F000003_3': 1}},
-                'ENSG00000103495': {'total': 2, 'families': {'F000002_2': 1, 'F000003_3': 1}},
-                'ENSG00000167371': {'total': 2, 'families': {'F000002_2': 1, 'F000003_3': 1}},
-                'ENSG00000280789': {'total': 2, 'families': {'F000002_2': 1, 'F000003_3': 1}},
-                'ENSG00000280893': {'total': 2, 'families': {'F000002_2': 1, 'F000003_3': 1}},
-                'ENSG00000281348': {'total': 2, 'families': {'F000002_2': 1, 'F000003_3': 1}},
+                'ENSG00000129562': {'total': 1, 'families': {'F000002_2': 1, 'F000003_3': 1}},
+                'ENSG00000013364': {'total': 1, 'families': {'F000002_2': 1, 'F000003_3': 1}},
+                'ENSG00000079616': {'total': 1, 'families': {'F000002_2': 1, 'F000003_3': 1}},
+                'ENSG00000103495': {'total': 1, 'families': {'F000002_2': 1, 'F000003_3': 1}},
+                'ENSG00000167371': {'total': 1, 'families': {'F000002_2': 1, 'F000003_3': 1}},
+                'ENSG00000280789': {'total': 1, 'families': {'F000002_2': 1, 'F000003_3': 1}},
+                'ENSG00000280893': {'total': 1, 'families': {'F000002_2': 1, 'F000003_3': 1}},
+                'ENSG00000281348': {'total': 1, 'families': {'F000002_2': 1, 'F000003_3': 1}},
                 'ENSG00000275023': {'total': 2, 'families': {'F000002_2': 2}},
                 'ENSG00000277258': {'total': 1, 'families': {'F000002_2': 1}},
                 'ENSG00000277972': {'total': 1, 'families': {'F000002_2': 1}},
@@ -166,17 +163,23 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 
     def test_multi_project_search(self):
         self._set_multi_project_search()
+        gene_counts = {
+            **GENE_COUNTS,
+            **MITO_GENE_COUNTS,
+            **GCNV_GENE_COUNTS,
+            'ENSG00000277258': {'total': 2, 'families': {'F000002_2': 2, 'F000011_11': 1}},
+        }
         self._assert_expected_search(
             [PROJECT_2_VARIANT, MULTI_PROJECT_VARIANT1, MULTI_PROJECT_VARIANT2, VARIANT3, VARIANT4,
              GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
-            gene_counts=GENE_COUNTS,
+            gene_counts=gene_counts,
         )
 
         self.results_model.families.set(Family.objects.filter(guid__in=['F000002_2', 'F000011_11', 'F000014_14']))
         self._assert_expected_search(
             [PROJECT_2_VARIANT, MULTI_PROJECT_VARIANT1, SV_VARIANT1, SV_VARIANT2, MULTI_PROJECT_VARIANT2, VARIANT3,
              VARIANT4, SV_VARIANT3, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, SV_VARIANT4, GCNV_VARIANT4, MITO_VARIANT1,
-             MITO_VARIANT2, MITO_VARIANT3], gene_counts={**GENE_COUNTS, **SV_GENE_COUNTS},
+             MITO_VARIANT2, MITO_VARIANT3], gene_counts={**gene_counts, **SV_GENE_COUNTS},
         )
 
     def test_both_sample_types_search(self):
@@ -341,7 +344,10 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
             **COMP_HET_ALL_PASS_FILTERS, gene_counts={
                 'ENSG00000171621': {'total': 2, 'families': {'F000014_14': 2}},
                 'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
-                'ENSG00000177000': {'total': 1, 'families': {'F000002_2': 1}},
+                'ENSG00000177000': {'total': 2, 'families': {'F000002_2': 2}},
+                'ENSG00000275023': {'total': 3, 'families': {'F000002_2': 3}},
+                'ENSG00000277258': {'total': 3, 'families': {'F000002_2': 3}},
+                'ENSG00000277972': {'total': 2, 'families': {'F000002_2': 2}},
             }, cached_variant_fields=[
                 [{'selectedGeneId': 'ENSG00000171621'}, {'selectedGeneId': 'ENSG00000171621'}],
                 [{'selectedGeneId': 'ENSG00000277258'}, {'selectedGeneId': 'ENSG00000277258'}],
@@ -357,6 +363,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
                 'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
                 'ENSG00000177000': {'total': 2, 'families': {'F000002_2': 2}},
                 'ENSG00000277258': {'total': 1, 'families': {'F000002_2': 1}},
+                'ENSG00000198727': {'total': 1, 'families': {'F000002_2': 1}},
             }, cached_variant_fields=[
                 {}, {},
                 [{'selectedGeneId':  'ENSG00000097046'}, {'selectedGeneId':  'ENSG00000097046'}], {},
@@ -391,6 +398,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
                 'ENSG00000275023': {'total': 4, 'families': {'F000002_2': 4}},
                 'ENSG00000277258': {'total': 4, 'families': {'F000002_2': 4}},
                 'ENSG00000277972': {'total': 2, 'families': {'F000002_2': 2}},
+                'ENSG00000198727': {'total': 1, 'families': {'F000002_2': 1}},
             }, **COMP_HET_ALL_PASS_FILTERS, cached_variant_fields=[
                 {},
                 [{'selectedGeneId':  'ENSG00000277258'}, {'selectedGeneId':  'ENSG00000277258'}],
@@ -405,8 +413,8 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
         self._assert_expected_search(
             [[SV_VARIANT1, SV_VARIANT2], SV_VARIANT4], inheritance_mode=inheritance_mode,
             **COMP_HET_ALL_PASS_FILTERS, gene_counts={
-                'ENSG00000171621': {'total': 2, 'families': {'F000011_11': 2}},
-                'ENSG00000184986': {'total': 1, 'families': {'F000011_11': 1}},
+                'ENSG00000171621': {'total': 2, 'families': {'F000014_14': 2}},
+                'ENSG00000184986': {'total': 1, 'families': {'F000014_14': 1}},
             }, cached_variant_fields=[
                 [{'selectedGeneId': 'ENSG00000171621'}, {'selectedGeneId': 'ENSG00000171621'}], {},
             ],
