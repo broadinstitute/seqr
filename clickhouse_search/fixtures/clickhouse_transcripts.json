@@ -159,5 +159,20 @@
         ]
       ]
     }
+}, {
+    "model": "clickhouse_search.transcriptssnvindel",
+    "pk": 22,
+    "fields": {
+      "key": 22,
+      "transcripts": [
+        [
+          [null], "T/I", "protein_coding", null, "aCc/aTc", ["missense_variant"], [1, 12], "ENSG00000171621",
+          "ENST00000257261.10:c.131C>T", "ENSP00000257261.6:p.Thr44Ile", [null, null], [null, []], "missense_variant",
+          null, null, "NM_001281501.1", [false], "ENST00000257261", 0, [null, null, null, [
+            null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
+          ], null]
+        ]
+      ]
+    }
 }
 ]

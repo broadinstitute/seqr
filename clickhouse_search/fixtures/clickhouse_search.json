@@ -191,6 +191,36 @@
       "sorted_motif_feature_consequences": [],
       "sorted_regulatory_feature_consequences": []
     }
+},  {
+    "model": "clickhouse_search.annotationssnvindel",
+    "pk": 22,
+    "fields": {
+      "key": 22,
+      "xpos": 1009310123,
+      "chrom": "1",
+      "pos": 9310123,
+      "ref": "T",
+      "alt": "C",
+      "variant_id": "1-9310123-T-C",
+      "rsid": null,
+      "caid": null,
+      "lifted_over_chrom": "1",
+      "lifted_over_pos": 9310113,
+      "hgmd": [null, null],
+      "screen_region_type": null,
+      "predictions": [1.92299, 2.24799, null, null, null, null, null, null, null, null, null, null, null, null],
+      "populations": [
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0],
+        [4, 0.000044254640670260414, 90386, 0.00011118523252662271, 0, 0],
+        [13, 0.00004911409996566363, 264690, 13, 0]
+      ],
+      "sorted_transcript_consequences": [
+        [null, 1, ["missense_variant"], false, null, "ENSG00000171621"]
+      ],
+      "sorted_motif_feature_consequences": [],
+      "sorted_regulatory_feature_consequences": []
+    }
 }, {
     "model": "clickhouse_search.clinvarsnvindel",
     "pk": 1,
@@ -493,6 +523,24 @@
         ["HG00733", 2, 0, 0, 45],
         ["HG00732", 0, 0, 0, 24],
         ["HG00731", 1, 58, 0.17241, 29]
+      ]
+    }
+}, {
+    "model": "clickhouse_search.entriessnvindel",
+    "pk": 22,
+    "fields": {
+      "key": 22,
+      "project_guid": "R0004_non_analyst_project",
+      "family_guid": "F000014_14",
+      "sample_type": "WGS",
+      "xpos": 1009310123,
+      "is_gnomad_gt_5_percent": false,
+      "filters": [],
+      "sign": 1,
+      "calls": [
+        ["HG00733", 2, 0, 0, 45],
+        ["HG00732", 1, 58, 0.17241, 29],
+        ["HG00731", 0, 0, 0, 24]
       ]
     }
 }, {
