@@ -43,7 +43,10 @@ class SearchQuerySet(QuerySet):
         )
 
     def _seqr_pop_fields(self, seqr_populations):
-        sample_types = [self.single_sample_type.lower()] if self.single_sample_type else list(Sample.SAMPLE_TYPE_LOOKUP.keys())
+        sample_types = [
+            sample_type.lower() for sample_type in
+            ([self.single_sample_type] if self.single_sample_type else list(Sample.SAMPLE_TYPE_LOOKUP.keys()))
+        ]
         seqr_pop_fields = []
         for _, sub_fields in seqr_populations:
             seqr_pop_fields += [f"'{sub_fields['ac']}_{sample_type}'" for sample_type in sample_types]
