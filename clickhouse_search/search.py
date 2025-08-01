@@ -21,6 +21,7 @@ from settings import CLICKHOUSE_SERVICE_HOSTNAME
 
 logger = SeqrLogger(__name__)
 
+BATCH_SIZE = 10000
 
 TRANSCRIPT_CONSEQUENCES_FIELD = 'sortedTranscriptConsequences'
 SELECTED_GENE_FIELD = 'selectedGeneId'
@@ -499,11 +500,8 @@ def get_clickhouse_keys_for_gene(gene_id, genome_version, dataset_type, keys):
 def get_clickhouse_key_lookup(genome_version, dataset_type, variants_ids, reverse=False):
     key_lookup_class = KEY_LOOKUP_CLASS_MAP[genome_version][dataset_type]
     lookup = {}
-    fields = ['variant_id', 'key']
-    if reverse:
-        fields.reverse()
-    for i in range(0, len(variants_ids), 10000):
-        lookup.update(dict(
-            key_lookup_class.objects.filter(variant_id__in= variants_ids[i:i + 10000]).values_list(*fields)
-        ))
+    fields = ('variant_id', 'key') if not reverse else ('key', 'variant_id')
+    for i in range(0, len(variants_ids), BATCH_SIZE):
+        batch = variants_ids[i:i + BATCH_SIZE]
+        lookup.update(dict(key_lookup_class.objects.filter(variant_id__in=batch).values_list(*fields)))
     return lookup

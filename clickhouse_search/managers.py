@@ -42,10 +42,10 @@ class SearchQuerySet(QuerySet):
             output_field=NamedTupleField(list(self.clinvar_fields.values()), null_if_empty=True, null_empty_arrays=True),
         )
 
-    def _seqr_pop_fields(self, seqr_popualtions):
-        sample_types = [self.single_sample_type.lower()] if self.single_sample_type else ['wes', 'wgs']
+    def _seqr_pop_fields(self, seqr_populations):
+        sample_types = [self.single_sample_type.lower()] if self.single_sample_type else list(Sample.SAMPLE_TYPE_LOOKUP.keys())
         seqr_pop_fields = []
-        for _, sub_fields in seqr_popualtions:
+        for _, sub_fields in seqr_populations:
             seqr_pop_fields += [f"'{sub_fields['ac']}_{sample_type}'" for sample_type in sample_types]
             if sub_fields.get('hom'):
                 seqr_pop_fields += [f"'{sub_fields['hom']}_{sample_type}'" for sample_type in sample_types]
@@ -238,9 +238,9 @@ class AnnotationsQuerySet(SearchQuerySet):
 
     def join_seqr_pop(self):
         results = self
-        seqr_popualtions = self.model.SEQR_POPULATIONS
-        if seqr_popualtions:
-            seqr_pop_fields = self._seqr_pop_fields(seqr_popualtions)
+        seqr_populations = self.model.SEQR_POPULATIONS
+        if seqr_populations:
+            seqr_pop_fields = self._seqr_pop_fields(seqr_populations)
             results = results.annotate(seqrPop=Tuple(
                 *[
                     DictGet(
@@ -710,9 +710,9 @@ class EntriesManager(SearchQuerySet):
                clinvar=self._clinvar_tuple(),
            )
 
-        seqr_popualtions = self.annotations_model.SEQR_POPULATIONS
-        if seqr_popualtions:
-            seqr_pop_fields = self._seqr_pop_fields(seqr_popualtions)
+        seqr_populations = self.annotations_model.SEQR_POPULATIONS
+        if seqr_populations:
+            seqr_pop_fields = self._seqr_pop_fields(seqr_populations)
             entries = entries.annotate(seqrPop=DictGet(
                 'key',
                 dict_name=f"{self.table_basename}/gt_stats_dict",

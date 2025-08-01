@@ -341,6 +341,9 @@ def _get_parsed_saved_discovery_variants_by_family(
         varianttag__variant_tag_type__in=tag_types, family__id__in=families,
     ).order_by('created_date').distinct().annotate(**annotations)
 
+    variant_json_fields = ['genotypes']
+    if include_clinvar:
+        variant_json_fields.append('clinvar')
     variants = []
     gene_ids = set()
     variant_json_by_guid = backend_specific_call(
@@ -378,7 +381,7 @@ def _get_parsed_saved_discovery_variants_by_family(
             'variant_type': variant_type,
             'validated_name': variant.validated_name[0] if variant.validated_name else None,
             **{k: _get_transcript_field(k, config, main_transcript) for k, config in TRANSCRIPT_FIELDS.items()},
-            **{k: variant_json.get(k) for k in ['genotypes'] + (['clinvar'] if include_clinvar else [])},
+            **{k: variant_json.get(k) for k in variant_json_fields},
             **{k: variant_json.get(field) if sv_type else None for k, field in [('chrom_end', 'endChrom'), ('pos_end', 'end')]},
             'ClinGen_allele_ID': variant_json.get('CAID'),
             **{k: getattr(variant, k) for k in ['family_id', 'ref', 'alt'] + (variant_attr_fields or [])},
