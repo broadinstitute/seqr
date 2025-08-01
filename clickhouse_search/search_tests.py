@@ -29,6 +29,7 @@ class ClickhouseSearchTests(SearchTestHelper, TestCase):
 
     def setUp(self):
         super().set_up()
+        self.mock_redis.get.return_value = None
         with connections['clickhouse'].cursor() as cursor:
             for table_base in ['GRCh38/SNV_INDEL', 'GRCh38/MITO', 'GRCh38/SV', 'GRCh37/SNV_INDEL']:
                 cursor.execute(f'SYSTEM REFRESH VIEW "{table_base}/project_gt_stats_to_gt_stats_mv"')
