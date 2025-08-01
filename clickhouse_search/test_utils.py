@@ -300,7 +300,7 @@ PROJECT_4_COMP_HET_VARIANT = {
     'hgmd': None,
     'screenRegionType': None,
     'populations': {
-        'seqr': {'ac': 0, 'hom': 0},
+        'seqr': {'ac': 3, 'hom': 1},
         'topmed': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'het': 0},
         'exac': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'hemi': 0, 'het': 0, 'filter_af': 0.0},
         'gnomad_exomes': {'af': 0.00004, 'ac': 4, 'an': 90386, 'hom': 0, 'hemi': 0, 'filter_af': 0.0001},
