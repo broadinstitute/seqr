@@ -53,7 +53,7 @@ class ClickhouseSearchTests(DifferentDbTransactionSupportMixin, SearchTestHelper
         encoded_variants = self._assert_expected_variants(variants, expected_results)
 
         self.assertEqual(total, len(expected_results))
-        self._assert_expected_search_cache(encoded_variants, total, cached_variant_fields, sort)
+        self._assert_expected_search_cache(encoded_variants, total, cached_variant_fields, sort, results_model)
 
         if gene_counts:
             gene_counts_json = get_variant_query_gene_counts(results_model, self.user)
@@ -64,13 +64,13 @@ class ClickhouseSearchTests(DifferentDbTransactionSupportMixin, SearchTestHelper
         self.assertListEqual(encoded_variants, expected_results)
         return encoded_variants
 
-    def _assert_expected_search_cache(self, variants, total, cached_variant_fields, sort):
+    def _assert_expected_search_cache(self, variants, total, cached_variant_fields, sort, results_model):
         cached_variants = [
             self._get_cached_variant(variant, (cached_variant_fields[i] if cached_variant_fields else None))
             for i, variant in enumerate(variants)
         ]
         results_cache = {'all_results': cached_variants, 'total_results': total}
-        self.assert_cached_results(results_cache, sort=sort)
+        self.assert_cached_results(results_cache, sort=sort, cache_key=f'search_results__{results_model.guid}__{sort}')
 
     @classmethod
     def _get_cached_variant(cls, variant, cached_variant_fields):
@@ -141,16 +141,24 @@ class ClickhouseSearchTests(DifferentDbTransactionSupportMixin, SearchTestHelper
 
     def test_standard_searches(self):
         results_model = self._saved_search_results_model('De Novo/Dominant Restrictive')
-        self._assert_expected_search([], results_model=results_model)
+        self._assert_expected_search(
+            [VARIANT1, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], results_model=results_model, cached_variant_fields=[
+                {'selectedTranscript': None}, {}, {}, {},
+            ],
+        )
 
         results_model = self._saved_search_results_model('De Novo/Dominant Permissive')
-        self._assert_expected_search([], results_model=results_model)
+        self._assert_expected_search(
+            [VARIANT1, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], results_model=results_model, cached_variant_fields=[
+                {'selectedTranscript': None}, {}, {}, {},
+            ],
+        )
 
         results_model = self._saved_search_results_model('Recessive Restrictive')
-        self._assert_expected_search([], results_model=results_model)
+        self._assert_expected_search([MITO_VARIANT3], results_model=results_model)
 
         results_model = self._saved_search_results_model('Recessive Permissive')
-        self._assert_expected_search([], results_model=results_model)
+        self._assert_expected_search([MITO_VARIANT3], results_model=results_model)
 
     def _saved_search_results_model(self, name):
         results_model = VariantSearchResults.objects.create(variant_search=VariantSearch.objects.get(name=name), search_hash=name)
