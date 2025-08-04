@@ -10,6 +10,7 @@ from django.db.models import Q, F, Value
 from django.db.models.functions import JSONObject
 from django.shortcuts import redirect
 from math import ceil
+import re
 
 from reference_data.models import GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38
 from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, ProjectCategory
@@ -634,6 +635,10 @@ def _update_lookup_variant(variant, response):
 @login_and_policies_required
 def vlm_lookup_handler(request):
     parsed_variant_id, _, kwargs = _parse_lookup_request(request)
+    if parsed_variant_id:
+        invalid_alleles = [f'"{allele}"' for allele in parsed_variant_id[2:] if not re.fullmatch(r'[ATCG]+', allele)]
+        if invalid_alleles:
+            raise InvalidSearchException(f'Unable to search VLM for invalid allele(s): {", ".join(invalid_alleles)}')
     if not parsed_variant_id:
         raise InvalidSearchException('VLM lookup is not supported for SVs')
     return create_json_response({'vlmMatches': vlm_lookup(request.user, *parsed_variant_id, **kwargs)})

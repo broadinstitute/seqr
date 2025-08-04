@@ -1082,6 +1082,10 @@ class VariantSearchAPITest(object):
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'error': 'VLM lookup is not supported for SVs'})
 
+        response = self.client.get(f'{base_url}?variantId=8-10439--ATGS')
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'error': 'Unable to search VLM for invalid allele(s): "", "ATGS"'})
+
         self.reset_logs()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
