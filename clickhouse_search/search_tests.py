@@ -16,7 +16,7 @@ from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4,
     MULTI_DATA_TYPE_COMP_HET_VARIANT2, ALL_SNV_INDEL_PASS_FILTERS, MULTI_PROJECT_GCNV_VARIANT3, VARIANT_LOOKUP_VARIANT, \
     MITO_GENE_COUNTS, format_cached_variant
 from reference_data.models import Omim
-from seqr.models import Project, Family, Sample
+from seqr.models import Project, Family, Sample, VariantSearch, VariantSearchResults
 from seqr.utils.search.search_utils_tests import SearchTestHelper
 from seqr.utils.search.utils import query_variants, variant_lookup, sv_variant_lookup, get_variant_query_gene_counts, get_single_variant, InvalidSearchException
 from seqr.views.utils.json_utils import DjangoJSONEncoderWithSets
@@ -26,7 +26,7 @@ from seqr.views.utils.test_utils import DifferentDbTransactionSupportMixin
 @mock.patch('clickhouse_search.search.CLICKHOUSE_SERVICE_HOSTNAME', 'localhost')
 class ClickhouseSearchTests(DifferentDbTransactionSupportMixin, SearchTestHelper, TestCase):
     databases = '__all__'
-    fixtures = ['users', '1kg_project', 'reference_data', 'clickhouse_search', 'clickhouse_transcripts']
+    fixtures = ['users', '1kg_project', 'variant_searches', 'reference_data', 'clickhouse_search', 'clickhouse_transcripts']
 
     def setUp(self):
         super().set_up()
@@ -41,21 +41,22 @@ class ClickhouseSearchTests(DifferentDbTransactionSupportMixin, SearchTestHelper
                 cursor.execute(f'SYSTEM RELOAD DICTIONARY "{table_base}/gt_stats_dict"')
         Project.objects.update(genome_version='38')
 
-    def _assert_expected_search(self, expected_results, gene_counts=None, inheritance_mode=None, inheritance_filter=None, quality_filter=None, cached_variant_fields=None, sort='xpos', **search_kwargs):
+    def _assert_expected_search(self, expected_results, gene_counts=None, inheritance_mode=None, inheritance_filter=None, quality_filter=None, cached_variant_fields=None, sort='xpos', results_model=None, **search_kwargs):
+        results_model = results_model or self.results_model
         self.search_model.search.update(search_kwargs or {})
         self.search_model.search['qualityFilter'] = quality_filter
         self.search_model.search['inheritance']['mode'] = inheritance_mode
         if inheritance_filter is not None:
             self.search_model.search['inheritance']['filter'] = inheritance_filter
 
-        variants, total = query_variants(self.results_model, user=self.user, sort=sort)
+        variants, total = query_variants(results_model, user=self.user, sort=sort)
         encoded_variants = self._assert_expected_variants(variants, expected_results)
 
         self.assertEqual(total, len(expected_results))
-        self._assert_expected_search_cache(encoded_variants, total, cached_variant_fields, sort)
+        self._assert_expected_search_cache(encoded_variants, total, cached_variant_fields, sort, results_model)
 
         if gene_counts:
-            gene_counts_json = get_variant_query_gene_counts(self.results_model, self.user)
+            gene_counts_json = get_variant_query_gene_counts(results_model, self.user)
             self.assertDictEqual(gene_counts_json, gene_counts)
 
     def _assert_expected_variants(self, variants, expected_results):
@@ -63,13 +64,13 @@ class ClickhouseSearchTests(DifferentDbTransactionSupportMixin, SearchTestHelper
         self.assertListEqual(encoded_variants, expected_results)
         return encoded_variants
 
-    def _assert_expected_search_cache(self, variants, total, cached_variant_fields, sort):
+    def _assert_expected_search_cache(self, variants, total, cached_variant_fields, sort, results_model):
         cached_variants = [
             self._get_cached_variant(variant, (cached_variant_fields[i] if cached_variant_fields else None))
             for i, variant in enumerate(variants)
         ]
         results_cache = {'all_results': cached_variants, 'total_results': total}
-        self.assert_cached_results(results_cache, sort=sort)
+        self.assert_cached_results(results_cache, sort=sort, cache_key=f'search_results__{results_model.guid}__{sort}')
 
     @classmethod
     def _get_cached_variant(cls, variant, cached_variant_fields):
@@ -137,6 +138,32 @@ class ClickhouseSearchTests(DifferentDbTransactionSupportMixin, SearchTestHelper
 
         self._set_grch37_search()
         self._assert_expected_search([GRCH37_VARIANT])
+
+    def test_standard_searches(self):
+        results_model = self._saved_search_results_model('De Novo/Dominant Restrictive')
+        self._assert_expected_search(
+            [VARIANT1, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], results_model=results_model, cached_variant_fields=[
+                {'selectedTranscript': None}, {}, {}, {},
+            ],
+        )
+
+        results_model = self._saved_search_results_model('De Novo/Dominant Permissive')
+        self._assert_expected_search(
+            [VARIANT1, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], results_model=results_model, cached_variant_fields=[
+                {'selectedTranscript': None}, {}, {}, {},
+            ],
+        )
+
+        results_model = self._saved_search_results_model('Recessive Restrictive')
+        self._assert_expected_search([MITO_VARIANT3], results_model=results_model)
+
+        results_model = self._saved_search_results_model('Recessive Permissive')
+        self._assert_expected_search([MITO_VARIANT3], results_model=results_model)
+
+    def _saved_search_results_model(self, name):
+        results_model = VariantSearchResults.objects.create(variant_search=VariantSearch.objects.get(name=name), search_hash=name)
+        results_model.families.set(self.families.filter(guid='F000002_2'))
+        return results_model
 
     def test_single_project_search(self):
         variant_gene_counts = {

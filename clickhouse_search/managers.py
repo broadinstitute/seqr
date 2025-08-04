@@ -347,7 +347,7 @@ class AnnotationsQuerySet(SearchQuerySet):
 
     def _filter_frequency(self, results, freqs=None, pathogenicity=None, **kwargs):
         frequencies =  freqs or {}
-        clinvar_override_q = self._clinvar_path_q(pathogenicity)
+        clinvar_override_q = self._clinvar_path_q(pathogenicity) if self.has_annotation(CLINVAR_KEY) else None
 
         for population, pop_filter in frequencies.items():
             pop_subfields = self.populations.get(population)
@@ -760,7 +760,7 @@ class EntriesManager(SearchQuerySet):
        if inheritance_mode or individual_genotype_filter or quality_filter:
             clinvar_override_q = AnnotationsQuerySet._clinvar_path_q(
                pathogenicity, _get_range_q=lambda path_range: Q(clinvar_join__pathogenicity__range=path_range),
-            )
+            ) if self._has_clinvar() else None
             call_q = None
             multi_sample_type_quality_q = None
             multi_sample_type_any_affected_q = None
