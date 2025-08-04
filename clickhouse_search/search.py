@@ -46,16 +46,16 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
         family_guid = sample_data[0]['family_guid']
 
         if inheritance_mode != COMPOUND_HET:
-            result_q = _get_search_results_queryset(entry_cls, annotations_cls, search, sample_data)
+            result_q = _get_search_results_queryset(entry_cls, annotations_cls, sample_data, **search)
             results += list(result_q[:MAX_VARIANTS + 1])
         if has_comp_het:
-            result_q = _get_data_type_comp_het_results_queryset(entry_cls, annotations_cls, search, sample_data)
+            result_q = _get_data_type_comp_het_results_queryset(entry_cls, annotations_cls, sample_data, **search)
             results += [list(result[1:]) for result in result_q[:MAX_VARIANTS + 1]]
 
     if has_comp_het and Sample.DATASET_TYPE_VARIANT_CALLS in sample_data_by_dataset_type and any(
         dataset_type.startswith(Sample.DATASET_TYPE_SV_CALLS) for dataset_type in sample_data_by_dataset_type
     ):
-        results += _get_multi_data_type_comp_het_results_queryset(genome_version, sample_data_by_dataset_type, search)
+        results += _get_multi_data_type_comp_het_results_queryset(genome_version, sample_data_by_dataset_type, **search)
 
     cache_results = get_clickhouse_cache_results(results, sort, family_guid)
     previous_search_results.update(cache_results)
@@ -65,18 +65,15 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
     return format_clickhouse_results(cache_results['all_results'][(page-1)*num_results:page*num_results], genome_version)
 
 
-def _get_search_results_queryset(entry_cls, annotations_cls, search, sample_data):
-    entries = entry_cls.objects.search(sample_data, **search)
-    results = annotations_cls.objects.subquery_join(entries).search(**search)
+def _get_search_results_queryset(entry_cls, annotations_cls, sample_data, **search_kwargs):
+    entries = entry_cls.objects.search(sample_data, **search_kwargs)
+    results = annotations_cls.objects.subquery_join(entries).search(**search_kwargs)
     return results.result_values()
 
 
-def _get_multi_data_type_comp_het_results_queryset(genome_version, sample_data_by_dataset_type, search):
-    comp_het_search = {**search, 'inheritance_mode': COMPOUND_HET}
-    annotations_secondary = search.get('annotations_secondary')
+def _get_multi_data_type_comp_het_results_queryset(genome_version, sample_data_by_dataset_type, annotations=None, annotations_secondary=None, inheritance_mode=None, **search_kwargs):
     if annotations_secondary:
-        annotations = search['annotations']
-        comp_het_search['annotations'] = {
+        annotations = {
             **annotations,
             **{k: v + annotations[k] if k in annotations else v for k, v in annotations_secondary.items()},
         }
@@ -94,14 +91,14 @@ def _get_multi_data_type_comp_het_results_queryset(genome_version, sample_data_b
             continue
         entries = entry_cls.objects.search([
             s for s in sample_data_by_dataset_type[Sample.DATASET_TYPE_VARIANT_CALLS] if s['family_guid'] in families
-        ], {**comp_het_search, 'inheritance_mode': COMPOUND_HET_ALLOW_HOM_ALTS}, annotate_carriers=True, annotate_hom_alts=True)
-        snv_indel_q = annotations_cls.objects.subquery_join(entries).search(**comp_het_search)
+        ], **search_kwargs, annotations=annotations, inheritance_mode=COMPOUND_HET_ALLOW_HOM_ALTS, annotate_carriers=True, annotate_hom_alts=True)
+        snv_indel_q = annotations_cls.objects.subquery_join(entries).search(**search_kwargs, annotations=annotations)
 
         sv_entries = ENTRY_CLASS_MAP[genome_version][sv_dataset_type].objects.search([
             s for s in sample_data_by_dataset_type[sv_dataset_type] if s['family_guid'] in families
-        ], comp_het_search, annotate_carriers=True)
+        ], **search_kwargs, annotations=annotations, inheritance_mode=COMPOUND_HET, annotate_carriers=True)
         sv_annotations_cls = ANNOTATIONS_CLASS_MAP[genome_version][sv_dataset_type]
-        sv_q = sv_annotations_cls.objects.subquery_join(sv_entries).search(**comp_het_search)
+        sv_q = sv_annotations_cls.objects.subquery_join(sv_entries).search(**search_kwargs, annotations=annotations)
 
         result_q = _get_comp_het_results_queryset(annotations_cls, snv_indel_q, sv_q, len(families))
         results += [list(result[1:]) for result in result_q[:MAX_VARIANTS + 1]]
@@ -109,16 +106,15 @@ def _get_multi_data_type_comp_het_results_queryset(genome_version, sample_data_b
     return results
 
 
-def _get_data_type_comp_het_results_queryset(entry_cls, annotations_cls, search, sample_data):
+def _get_data_type_comp_het_results_queryset(entry_cls, annotations_cls, sample_data, annotations=None, annotations_secondary=None, inheritance_mode=None, **search_kwargs):
     entries = entry_cls.objects.search(
-        sample_data, **{**search, 'inheritance_mode': COMPOUND_HET}, annotate_carriers=True,
+        sample_data, **search_kwargs, inheritance_mode=COMPOUND_HET, annotations=annotations, annotate_carriers=True,
     )
 
-    primary_q = annotations_cls.objects.subquery_join(entries).search(**search)
-
-    annotations_secondary = search.get('annotations_secondary')
-    secondary_search = {**search, 'annotations': annotations_secondary} if annotations_secondary else search
-    secondary_q = annotations_cls.objects.subquery_join(entries).search(**secondary_search)
+    primary_q = annotations_cls.objects.subquery_join(entries).search(annotations=annotations, **search_kwargs)
+    secondary_q = annotations_cls.objects.subquery_join(entries).search(
+        annotations=annotations_secondary or annotations, **search_kwargs,
+    )
 
     return _get_comp_het_results_queryset(annotations_cls, primary_q, secondary_q, len(sample_data))
 
