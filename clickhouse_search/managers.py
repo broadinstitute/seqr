@@ -15,7 +15,7 @@ from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFEC
     X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, SCREEN_KEY, UTR_ANNOTATOR_KEY, \
     EXTENDED_SPLICE_KEY, MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY, CLINVAR_KEY, HGMD_KEY, NEW_SV_FIELD, \
     EXTENDED_SPLICE_REGION_CONSEQUENCE, CLINVAR_PATH_RANGES, CLINVAR_PATH_SIGNIFICANCES, PATH_FREQ_OVERRIDE_CUTOFF, \
-    HGMD_CLASS_FILTERS, SV_TYPE_FILTER_FIELD, SV_CONSEQUENCES_FIELD, COMPOUND_HET
+    HGMD_CLASS_FILTERS, SV_TYPE_FILTER_FIELD, SV_CONSEQUENCES_FIELD, COMPOUND_HET, COMPOUND_HET_ALLOW_HOM_ALTS
 from seqr.utils.xpos_utils import get_xpos, MIN_POS, MAX_POS
 
 
@@ -312,7 +312,7 @@ class AnnotationsQuerySet(SearchQuerySet):
         secondary_q = secondary_q.explode_gene_id(secondary_gene_field)
 
         conditional_fields = lambda query, **kwargs: {
-            field: F(field) for field in [self.SELECTED_GENE_FIELD, 'clinvar', 'family_carriers', 'carriers']
+            field: F(field) for field in [self.SELECTED_GENE_FIELD, 'clinvar', 'family_carriers', 'carriers', 'has_hom_alt', 'no_hom_alt_families']
             if field in query.query.annotations
         }
 
@@ -648,7 +648,8 @@ class EntriesManager(SearchQuerySet):
 
     INHERITANCE_FILTERS = {
         **INHERITANCE_FILTERS,
-        COMPOUND_HET: {**INHERITANCE_FILTERS[COMPOUND_HET], AFFECTED: COMP_HET_ALT}
+        COMPOUND_HET: {**INHERITANCE_FILTERS[COMPOUND_HET], AFFECTED: COMP_HET_ALT},
+        COMPOUND_HET_ALLOW_HOM_ALTS: {**INHERITANCE_FILTERS[COMPOUND_HET], AFFECTED: HAS_ALT},
     }
 
     @property
@@ -734,7 +735,7 @@ class EntriesManager(SearchQuerySet):
     def _has_clinvar(self):
         return hasattr(self.model, 'clinvar_join')
 
-    def _search_call_data(self, entries, sample_data, inheritance_mode=None, inheritance_filter=None, qualityFilter=None, pathogenicity=None, annotate_carriers=False, **kwargs):
+    def _search_call_data(self, entries, sample_data, inheritance_mode=None, inheritance_filter=None, qualityFilter=None, pathogenicity=None, annotate_carriers=False, annotate_hom_alts=False, **kwargs):
        project_guids = {s['project_guid'] for s in sample_data}
        project_filter = Q(project_guid__in=project_guids) if len(project_guids) > 1 else Q(project_guid=sample_data[0]['project_guid'])
        entries = entries.filter(project_filter)
@@ -802,7 +803,7 @@ class EntriesManager(SearchQuerySet):
                     q |= clinvar_override_q
                 entries = entries.filter(q)
 
-       return self._annotate_calls(entries, sample_data, annotate_carriers, multi_sample_type_families)
+       return self._annotate_calls(entries, sample_data, annotate_carriers, annotate_hom_alts, multi_sample_type_families)
 
     @staticmethod
     def _get_family_sample_types(sample_data):
@@ -947,10 +948,12 @@ class EntriesManager(SearchQuerySet):
             )
         return entries
 
-    def _annotate_calls(self, entries, sample_data=None, annotate_carriers=False, multi_sample_type_families=None):
+    def _annotate_calls(self, entries, sample_data=None, annotate_carriers=False, annotate_hom_alts=False, multi_sample_type_families=None):
         carriers_expression = self._carriers_expression(sample_data) if annotate_carriers else None
         if carriers_expression:
             entries = entries.annotate(carriers=carriers_expression)
+        if annotate_hom_alts:
+            entries = entries.annotate(has_hom_alt=Q(calls__array_exists={'gt': (2,)}))
 
         genotype_override_annotations = {
             f'sample_{col}': ArrayMap(
@@ -984,11 +987,19 @@ class EntriesManager(SearchQuerySet):
                 else:
                     family_carriers = Cast(Tuple('familyGuids', GroupArray('carriers')), map_field)
                 entries = entries.annotate(family_carriers=family_carriers)
+            if annotate_hom_alts:
+                entries = entries.annotate(no_hom_alt_families=ArrayMap(
+                    ArrayFilter(GroupArray(Tuple('family_guid', 'has_hom_alt')), conditions=[{2: (None, 'NOT {field}')}]),
+                    mapped_expression='x.1',
+                    output_field=models.ArrayField(models.StringField()),
+                ))
             if any((multi_sample_type_families or {}).values()):
                 entries = self._multi_sample_type_filtered_entries(entries)
         else:
             if carriers_expression:
                 fields.append('carriers')
+            if annotate_hom_alts:
+                fields.append('has_hom_alt')
             entries = entries.values(
                 *fields,
                 familyGuids=Array('family_guid'),
@@ -1063,7 +1074,7 @@ class EntriesManager(SearchQuerySet):
                 failed_samples_expression = If(
                     failed_samples_expression,
                     GroupArrayIntersect(ArrayConcat('failed_family_samples', 'missing_family_samples')),
-                    condition='count() = 1',
+                    condition='count() = 1, ',
                 )
             passes_inheritance_expression = ArraySymmetricDifference(
                 'familyGuids',

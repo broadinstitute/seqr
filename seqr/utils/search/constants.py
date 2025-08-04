@@ -22,6 +22,7 @@ HAS_ALT = 'has_alt'
 HAS_REF = 'has_ref'
 
 COMPOUND_HET = 'compound_het'
+COMPOUND_HET_ALLOW_HOM_ALTS = 'compound_het_allow_hom_alts'
 RECESSIVE = 'recessive'
 X_LINKED_RECESSIVE = 'x_linked_recessive'
 HOMOZYGOUS_RECESSIVE = 'homozygous_recessive'
