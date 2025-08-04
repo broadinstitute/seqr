@@ -15,7 +15,7 @@ from reference_data.models import GeneConstraint, Omim
 from seqr.models import Sample, PhenotypePrioritization
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.search.constants import MAX_VARIANTS, XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, \
-    PRIORITIZED_GENE_SORT, COMPOUND_HET, COMPOUND_HET_ALLOW_HOM_ALTS, RECESSIVE
+    PRIORITIZED_GENE_SORT, COMPOUND_HET, COMPOUND_HET_ALLOW_HOM_ALTS, RECESSIVE, SV_ANNOTATION_TYPES
 from seqr.views.utils.json_utils import DjangoJSONEncoderWithSets
 from settings import CLICKHOUSE_SERVICE_HOSTNAME
 
@@ -72,11 +72,7 @@ def _get_search_results_queryset(entry_cls, annotations_cls, sample_data, **sear
 
 
 def _get_multi_data_type_comp_het_results_queryset(genome_version, sample_data_by_dataset_type, annotations=None, annotations_secondary=None, inheritance_mode=None, **search_kwargs):
-    if annotations_secondary:
-        annotations = {
-            **annotations,
-            **{k: v + annotations[k] if k in annotations else v for k, v in annotations_secondary.items()},
-        }
+    annotation_filters = _get_dataset_type_annotation_filters(annotations, annotations_secondary)
 
     entry_cls = ENTRY_CLASS_MAP[genome_version][Sample.DATASET_TYPE_VARIANT_CALLS]
     annotations_cls = ANNOTATIONS_CLASS_MAP[genome_version][Sample.DATASET_TYPE_VARIANT_CALLS]
@@ -89,21 +85,51 @@ def _get_multi_data_type_comp_het_results_queryset(genome_version, sample_data_b
         families = snv_indel_families.intersection(sv_families)
         if not families:
             continue
-        entries = entry_cls.objects.search([
-            s for s in sample_data_by_dataset_type[Sample.DATASET_TYPE_VARIANT_CALLS] if s['family_guid'] in families
-        ], **search_kwargs, annotations=annotations, inheritance_mode=COMPOUND_HET_ALLOW_HOM_ALTS, annotate_carriers=True, annotate_hom_alts=True)
-        snv_indel_q = annotations_cls.objects.subquery_join(entries).search(**search_kwargs, annotations=annotations)
+        for snv_indel_annotations, sv_annotations in annotation_filters:
+            entries = entry_cls.objects.search([
+                s for s in sample_data_by_dataset_type[Sample.DATASET_TYPE_VARIANT_CALLS] if s['family_guid'] in families
+            ], **search_kwargs, annotations=snv_indel_annotations, inheritance_mode=COMPOUND_HET_ALLOW_HOM_ALTS, annotate_carriers=True, annotate_hom_alts=True)
+            snv_indel_q = annotations_cls.objects.subquery_join(entries).search(**search_kwargs, annotations=snv_indel_annotations)
 
-        sv_entries = ENTRY_CLASS_MAP[genome_version][sv_dataset_type].objects.search([
-            s for s in sample_data_by_dataset_type[sv_dataset_type] if s['family_guid'] in families
-        ], **search_kwargs, annotations=annotations, inheritance_mode=COMPOUND_HET, annotate_carriers=True)
-        sv_annotations_cls = ANNOTATIONS_CLASS_MAP[genome_version][sv_dataset_type]
-        sv_q = sv_annotations_cls.objects.subquery_join(sv_entries).search(**search_kwargs, annotations=annotations)
+            sv_entries = ENTRY_CLASS_MAP[genome_version][sv_dataset_type].objects.search([
+                s for s in sample_data_by_dataset_type[sv_dataset_type] if s['family_guid'] in families
+            ], **search_kwargs, annotations=sv_annotations, inheritance_mode=COMPOUND_HET, annotate_carriers=True)
+            sv_annotations_cls = ANNOTATIONS_CLASS_MAP[genome_version][sv_dataset_type]
+            sv_q = sv_annotations_cls.objects.subquery_join(sv_entries).search(**search_kwargs, annotations=sv_annotations)
 
-        result_q = _get_comp_het_results_queryset(annotations_cls, snv_indel_q, sv_q, len(families))
-        results += [list(result[1:]) for result in result_q[:MAX_VARIANTS + 1]]
+            result_q = _get_comp_het_results_queryset(annotations_cls, snv_indel_q, sv_q, len(families))
+            results += [list(result[1:]) for result in result_q[:MAX_VARIANTS + 1]]
 
     return results
+
+
+def _get_dataset_type_annotation_filters(annotations, annotations_secondary):
+    annotation_filters = []
+    snv_indel_annotations = {k: v for k, v in annotations.items() if k not in SV_ANNOTATION_TYPES}
+    sv_annotations = {k: v for k, v in annotations.items() if k in SV_ANNOTATION_TYPES}
+    if annotations_secondary:
+        snv_indel_secondary_annotations = {k: v for k, v in annotations_secondary.items() if k not in SV_ANNOTATION_TYPES}
+        sv_secondary_annotations = {k: v for k, v in annotations_secondary.items() if k in SV_ANNOTATION_TYPES}
+        if snv_indel_annotations == snv_indel_secondary_annotations:
+            annotation_filters.append((snv_indel_annotations, _merged_annotations(sv_annotations, sv_secondary_annotations)))
+        elif sv_annotations == sv_secondary_annotations:
+            annotation_filters.append((_merged_annotations(snv_indel_annotations, snv_indel_secondary_annotations), sv_annotations))
+        else:
+            annotation_filters += [
+                (snv_indel_anns, sv_anns) for snv_indel_anns, sv_anns in [
+                    (snv_indel_annotations, sv_secondary_annotations), (snv_indel_secondary_annotations, sv_annotations),
+                ] if snv_indel_anns and sv_anns
+            ]
+    else:
+        annotation_filters.append((snv_indel_annotations, sv_annotations))
+    return annotation_filters
+
+
+def _merged_annotations(annotations, annotations_secondary):
+    return {
+        **annotations,
+        **{k: v + annotations[k] if k in annotations else v for k, v in annotations_secondary.items()},
+    }
 
 
 def _get_data_type_comp_het_results_queryset(entry_cls, annotations_cls, sample_data, annotations=None, annotations_secondary=None, inheritance_mode=None, **search_kwargs):
