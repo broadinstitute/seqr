@@ -50,7 +50,8 @@ class NestedField(models.TupleField):
         if self.group_by_key:
             group_value = defaultdict(list)
             for item in value:
-                group_value[item[self.group_by_key]].append(item)
+                group_key = item[self.group_by_key]
+                group_value['null' if group_key is None else group_key].append(item)
             if self.flatten_groups:
                 value = {k: v[0] if len(v) == 1 else v for k, v in group_value.items()}
             else:
