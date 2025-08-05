@@ -23,8 +23,7 @@
                     "af": 0.001
                 },
                 "sv_callset": {
-                    "ac": null,
-                    "af": 0.001
+                    "ac": 10
                 },
                 "gnomad_exomes": {
                     "ac": null,
@@ -118,8 +117,7 @@
                     "af": 0.01
                 },
                 "sv_callset": {
-                    "ac": null,
-                    "af": 0.01
+                    "ac": 100
                 },
                 "gnomad_exomes": {
                     "ac": null,
@@ -242,8 +240,7 @@
                     "af": 0.001
                 },
                 "sv_callset": {
-                    "ac": null,
-                    "af": 0.001
+                    "ac": 10
                 },
                 "gnomad_exomes": {
                     "ac": null,
@@ -360,8 +357,7 @@
                     "af": 0.01
                 },
                 "sv_callset": {
-                    "ac": null,
-                    "af": 0.01
+                    "ac": 100
                 },
                 "gnomad_exomes": {
                     "ac": null,

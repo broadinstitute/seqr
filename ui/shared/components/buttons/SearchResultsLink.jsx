@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 
 import { navigateSavedHashedSearch } from 'redux/rootReducer'
-import { VEP_GROUP_SV, ANY_AFFECTED, FREQUENCIES, TOPMED_FREQUENCY, THIS_CALLSET_FREQUENCY } from 'shared/utils/constants'
+import { VEP_GROUP_SV, ANY_AFFECTED, FREQUENCIES, TOPMED_FREQUENCY, THIS_CALLSET_FREQUENCY, SV_CALLSET_FREQUENCY } from 'shared/utils/constants'
 import { ButtonLink } from '../StyledComponents'
 
 const SearchResultsLink = ({
@@ -52,7 +52,8 @@ const INITIAL_GENE_SEARCH = {
     ...FREQUENCIES.filter(({ name }) => name !== TOPMED_FREQUENCY).reduce(
       (acc, { name }) => ({ ...acc, [name]: { af: 0.03 } }), {},
     ),
-    [THIS_CALLSET_FREQUENCY]: { ac: 3000 }, // TODO use migrated value for 0.03 cutoff
+    [THIS_CALLSET_FREQUENCY]: { ac: 3000 },
+    [SV_CALLSET_FREQUENCY]: { ac: 300 },
   },
   qualityFilter: { min_gq: 40, min_ab: 10 },
 }
