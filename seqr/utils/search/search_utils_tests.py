@@ -163,6 +163,7 @@ class SearchUtilsTests(SearchTestHelper):
         expected_samples = {s for s in self.search_samples if s.guid not in skipped_samples}
         self.assertSetEqual(set(mock_get_variants_for_ids.call_args.args[0]), expected_samples)
 
+    @mock.patch('seqr.utils.search.utils.MAX_FAMILY_COUNTS', {'WES': 2, 'WGS': 1})
     @mock.patch('seqr.utils.search.utils.MAX_NO_LOCATION_COMP_HET_FAMILIES', 1)
     def _test_invalid_search_params(self, search_func):
         with self.assertRaises(InvalidSearchException) as cm:
@@ -274,11 +275,25 @@ class SearchUtilsTests(SearchTestHelper):
             'Searching across multiple genome builds is not supported. Remove projects with differing genome builds from search: 37 - 1kg project nåme with uniçøde, Test Reprocessed Project; 38 - Non-Analyst Project',
         )
 
+        self._test_invalid_no_location_search_params()
+
         self.results_model.families.set(Family.objects.filter(guid='F000014_14'))
         self.search_model.search['locus']['rawItems'] = build_specific_genes
         with self.assertRaises(InvalidSearchException) as cm:
             search_func(self.results_model, user=self.user)
         self.assertEqual(str(cm.exception), 'Invalid genes/intervals: OR4F29, ENSG00000256186')
+
+    def _test_invalid_no_location_search_params(self):
+        self.results_model.families.set(self.families)
+        self.search_model.search['inheritance'] = {}
+        with self.assertRaises(InvalidSearchException) as cm:
+            query_variants(self.results_model)
+        self.assertEqual(str(cm.exception), 'Location must be specified to search across multiple families in large projects')
+
+        self.results_model.families.set(Family.objects.filter(id__in=[2, 11]))
+        with self.assertRaises(InvalidSearchException) as cm:
+            query_variants(self.results_model)
+        self.assertEqual(str(cm.exception), 'Location must be specified to search across multiple projects')
 
     def test_invalid_search_query_variants(self):
         with self.assertRaises(InvalidSearchException) as se:
@@ -615,6 +630,10 @@ class ElasticsearchSearchUtilsTests(TestCase, SearchUtilsTests):
             'ENSG00000135953': {'total': 2, 'families': {'F000003_3': 2, 'F000002_2': 1}},
             'ENSG00000228198': {'total': 2, 'families': {'F000003_3': 2, 'F000011_11': 2}}
         })
+
+    def _test_invalid_no_location_search_params(self):
+        # Elasticsearch has no limits on no-location searches
+        pass
 
 
 @mock.patch('clickhouse_search.search.CLICKHOUSE_SERVICE_HOSTNAME', '')

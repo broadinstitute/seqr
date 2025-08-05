@@ -84,7 +84,7 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
 
         self._test_minimal_search_call(**expected_search, **kwargs)
 
-    @mock.patch('seqr.utils.search.hail_search_utils.MAX_FAMILY_COUNTS', {'WES': 2, 'WGS': 1})
+    @mock.patch('seqr.utils.search.utils.MAX_FAMILY_COUNTS', {'WES': 2, 'WGS': 1})
     @responses.activate
     def test_query_variants(self):
         variants, total = query_variants(self.results_model, user=self.user)
