@@ -1,6 +1,7 @@
 from collections import defaultdict
 from copy import deepcopy
 from datetime import timedelta
+from django.db.models import Count
 
 from clickhouse_search.search import clickhouse_backend_enabled, get_clickhouse_variants, format_clickhouse_results, \
     get_clickhouse_cache_results, clickhouse_variant_lookup, get_clickhouse_variant_by_id
@@ -14,7 +15,7 @@ from seqr.utils.search.elasticsearch.es_utils import ping_elasticsearch, delete_
     get_es_variants, get_es_variants_for_variant_ids, process_es_previously_loaded_results, process_es_previously_loaded_gene_aggs, \
     es_backend_enabled, ping_kibana, ES_EXCEPTION_ERROR_MAP, ES_EXCEPTION_MESSAGE_MAP, ES_ERROR_LOG_EXCEPTIONS
 from seqr.utils.search.hail_search_utils import get_hail_variants, get_hail_variants_for_variant_ids, ping_hail_backend, \
-    hail_variant_lookup, validate_hail_backend_no_location_search
+    hail_variant_lookup
 from seqr.utils.gene_utils import parse_locus_list_items
 from seqr.utils.xpos_utils import get_xpos, format_chrom, MIN_POS, MAX_POS
 
@@ -575,7 +576,22 @@ def _validate_search(search, samples, previous_search_results):
                 )
 
     if not has_location_filter:
-        backend_specific_call(lambda *args: None, validate_hail_backend_no_location_search, lambda *args: None)(samples)
+        backend_specific_call(lambda *args: None, _validate_no_location_search, _validate_no_location_search)(samples)
+
+
+MAX_FAMILY_COUNTS = {Sample.SAMPLE_TYPE_WES: 200, Sample.SAMPLE_TYPE_WGS: 35}
+
+
+def _validate_no_location_search(samples):
+    sample_counts = samples.filter(dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS).values('sample_type').annotate(
+        family_count=Count('individual__family_id', distinct=True),
+        project_count=Count('individual__family__project_id', distinct=True),
+    )
+    if sample_counts and (len(sample_counts) > 1 or sample_counts[0]['project_count'] > 1):
+        raise InvalidSearchException('Location must be specified to search across multiple projects')
+    if sample_counts and sample_counts[0]['family_count'] > MAX_FAMILY_COUNTS[sample_counts[0]['sample_type']]:
+        raise InvalidSearchException('Location must be specified to search across multiple families in large projects')
+
 
 
 def _filter_inheritance_family_samples(samples, inheritance_filter):
