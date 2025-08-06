@@ -19,6 +19,12 @@ options.DEFAULT_NAMES = (
 )
 state.DEFAULT_NAMES = options.DEFAULT_NAMES
 
+DELETED_CLICKHOUSE_MODEL_NAMES = {
+    'clickhouse_search.annotationsdiskgcnv',
+    'clickhouse_search.annotationsdisksv',
+    'clickhouse_search.annotationsdiskmito',
+}
+
 
 class ClickHouseRouter:
     """
@@ -27,6 +33,7 @@ class ClickHouseRouter:
 
     def __init__(self):
         self.route_model_names = set()
+        self.route_model_names.update(DELETED_CLICKHOUSE_MODEL_NAMES)
         for model in self._get_subclasses(models.ClickhouseModel):
             if model._meta.abstract:
                 continue
