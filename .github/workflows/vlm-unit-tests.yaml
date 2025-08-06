@@ -38,7 +38,7 @@ jobs:
           export NODE_ID=TestVLM
           export MACHINE_MEM=24
           export JAVA_OPTS_XSS=16M
-          coverage run --source="./vlm" --omit="./vlm/__main__.py" -m pytest vlm/
+          coverage run --source="./vlm" --omit="./vlm/__main__.py","./vlm/clickhouse_utils.py" -m pytest vlm/
           coverage report --fail-under=95
 
   vlm_clickhouse:
@@ -78,6 +78,6 @@ jobs:
           export CLICKHOUSE_USERNAME=vlm_test_user
           export CLICKHOUSE_PASSWORD=vlm_test_password
           export CLICKHOUSE_DATABASE=test_seqr
-          coverage run --source="./vlm" --omit="./vlm/__main__.py" -m pytest vlm/
+          coverage run --source="./vlm" --omit="./vlm/__main__.py","./vlm/hail_backend_utils.py" -m pytest vlm/
           coverage report --fail-under=95
 

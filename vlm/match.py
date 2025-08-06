@@ -1,21 +1,15 @@
 from aiohttp.web import HTTPBadRequest
-import clickhouse_connect
 import hail as hl
 import os
 
-VLM_DATA_DIR = os.environ.get('VLM_DATA_DIR')
+from clickhouse_utils import get_clickhouse_variant_counts
+from hail_backend_utils import get_hail_variant_counts
+
+CLICKHOUSE_ENABLED =  bool(os.environ.get('CLICKHOUSE_SERVICE_HOSTNAME'))
 SEQR_BASE_URL = os.environ.get('SEQR_BASE_URL')
 VLM_DEFAULT_CONTACT_EMAIL = os.environ.get('VLM_DEFAULT_CONTACT_EMAIL')
 NODE_ID = os.environ.get('NODE_ID')
 
-CLICKHOUSE_SERVICE_HOSTNAME =  os.environ.get('CLICKHOUSE_SERVICE_HOSTNAME')
-CLICKHOUSE_CONNECTION_PARAMS = {
-    'host': CLICKHOUSE_SERVICE_HOSTNAME,
-    'port': os.environ.get('CLICKHOUSE_SERVICE_PORT'),
-    'username': os.environ.get('CLICKHOUSE_USERNAME'),
-    'password': os.environ.get('CLICKHOUSE_PASSWORD'),
-    'database': os.environ.get('CLICKHOUSE_DATABASE', 'seqr'),
-}
 
 BEACON_HANDOVER_TYPE = {
     'id': NODE_ID,
@@ -48,7 +42,7 @@ def get_variant_match(query: dict) -> dict:
     chrom, pos, ref, alt, genome_build = _parse_match_query(query)
     locus = hl.locus(chrom, pos, reference_genome=genome_build)
 
-    get_counts_func = _get_clickhouse_variant_counts if CLICKHOUSE_SERVICE_HOSTNAME else _get_hail_variant_counts
+    get_counts_func = get_clickhouse_variant_counts if CLICKHOUSE_ENABLED else get_hail_variant_counts
     ac, hom = get_counts_func(locus, ref, alt, genome_build)
 
     liftover_genome_build = GENOME_VERSION_GRCh38 if genome_build == GENOME_VERSION_GRCh37 else GENOME_VERSION_GRCh37
@@ -97,27 +91,6 @@ def _parse_match_query(query: dict) -> tuple[str, int, str, str, str]:
         raise HTTPBadRequest(reason=f'Invalid start: {start}')
 
     return chrom, start, query['referenceBases'], query['alternateBases'], genome_build
-
-
-def _get_hail_variant_counts(locus: hl.LocusExpression, ref: str, alt: str, genome_build: str) -> hl.Struct:
-    interval = hl.eval(hl.interval(locus, locus, includes_start=True, includes_end=True))
-    ht = hl.read_table(
-        f'{VLM_DATA_DIR}/{genome_build}/SNV_INDEL/annotations.ht', _intervals=[interval], _filter_intervals=True,
-    )
-    ht = ht.filter(ht.alleles == hl.array([ref, alt]))
-
-    counts = ht.aggregate(hl.agg.take(ht.gt_stats, 1))
-    return (counts[0].AC, counts[0].hom) if counts else (0, 0)
-
-
-def _get_clickhouse_variant_counts(locus: hl.LocusExpression, ref: str, alt: str, genome_build: str) -> hl.Struct:
-    locus = hl.eval(locus)
-    client = clickhouse_connect.get_client(**CLICKHOUSE_CONNECTION_PARAMS)
-    results = client.query(
-        f"SELECT dictGet(`{genome_build}/SNV_INDEL/gt_stats_dict`, ('ac_wes', 'ac_wgs', 'hom_wes', 'hom_wgs'), key) FROM `{genome_build}/SNV_INDEL/key_lookup` WHERE variantId=%(variant_id)s",
-        parameters={'variant_id': f'{locus.contig.replace("chr", "")}-{locus.position}-{ref}-{alt}'},
-    ).result_set
-    return (results[0]['ac_wes'] + results[0]['ac_wgs'], results[0]['hom_wes'] + results[0]['hom_wgs']) if results else (0, 0)
 
 
 def _format_results(ac: int, hom: int, url: str) -> dict:
