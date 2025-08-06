@@ -206,7 +206,7 @@ class ClickhouseSearchTests(DifferentDbTransactionSupportMixin, SearchTestHelper
         self._assert_expected_search(
             [PROJECT_2_VARIANT, MULTI_PROJECT_VARIANT1, MULTI_PROJECT_VARIANT2, VARIANT3, VARIANT4,
              GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
-            gene_counts=gene_counts,
+            gene_counts=gene_counts, locus={'rawItems': 'chr1:1-100000000, chr13:1-100000000, chr14:1-100000000, chr16:1-100000000, chr17:1-100000000, M:1-100000000'},
         )
 
         self.results_model.families.set(Family.objects.filter(guid__in=['F000002_2', 'F000011_11', 'F000014_14']))
@@ -224,7 +224,7 @@ class ClickhouseSearchTests(DifferentDbTransactionSupportMixin, SearchTestHelper
         self._add_sample_type_samples('WES', individual__family__guid='F000011_11')
 
         self._assert_expected_search(
-            MULTI_PROJECT_BOTH_SAMPLE_TYPE_VARIANTS, gene_counts=GENE_COUNTS,
+            MULTI_PROJECT_BOTH_SAMPLE_TYPE_VARIANTS, gene_counts=GENE_COUNTS, locus={'rawItems': 'chr1:1-100000000'},
         )
 
         self._set_single_family_search()
@@ -236,7 +236,7 @@ class ClickhouseSearchTests(DifferentDbTransactionSupportMixin, SearchTestHelper
         # Variant 4 is de novo in exome, but inherited in genome in the same parent that has variant 3.
         self._assert_expected_search(
             [VARIANT1_BOTH_SAMPLE_TYPES, VARIANT4_BOTH_SAMPLE_TYPES],
-            inheritance_mode='de_novo',
+            inheritance_mode='de_novo', locus=None,
         )
 
         self._add_sample_type_samples('WGS', guid__in=['S000133_hg00732', 'S000134_hg00733'])
@@ -309,12 +309,12 @@ class ClickhouseSearchTests(DifferentDbTransactionSupportMixin, SearchTestHelper
         self._set_multi_project_search()
         self._assert_expected_search(
             [PROJECT_2_VARIANT1, VARIANT2, GCNV_VARIANT3, MITO_VARIANT3],
-            inheritance_mode=inheritance_mode,
+            inheritance_mode=inheritance_mode, locus={'rawItems': 'chr1:1-100000000, chr14:1-100000000, chr16:1-100000000, chr17:1-100000000, M:1-100000000'},
         )
 
         self._set_sv_family_search()
         self._assert_expected_search(
-            [SV_VARIANT4], inheritance_mode=inheritance_mode,
+            [SV_VARIANT4], inheritance_mode=inheritance_mode, locus=None,
         )
 
         gt_inheritance_filter = {'genotype': {'I000006_hg00733': 'ref_ref', 'I000005_hg00732': 'has_alt'}}
@@ -401,7 +401,7 @@ class ClickhouseSearchTests(DifferentDbTransactionSupportMixin, SearchTestHelper
             }, cached_variant_fields=[
                 {}, {},
                 [{'selectedGeneId':  'ENSG00000097046'}, {'selectedGeneId':  'ENSG00000097046'}], {},
-            ], **ALL_SNV_INDEL_PASS_FILTERS,
+            ], **ALL_SNV_INDEL_PASS_FILTERS, locus={'rawItems': 'chr1:1-100000000, chr14:1-100000000, chr16:1-100000000, chr17:1-100000000, M:1-100000000'},
         )
 
         self._set_single_family_search()
@@ -409,7 +409,7 @@ class ClickhouseSearchTests(DifferentDbTransactionSupportMixin, SearchTestHelper
             [VARIANT2, [VARIANT3, VARIANT4], MITO_VARIANT3], inheritance_mode=inheritance_mode, cached_variant_fields=[
                 {},
                 [{'selectedGeneId': 'ENSG00000097046'}, {'selectedGeneId': 'ENSG00000097046'}], {},
-            ],
+            ], locus=None,
         )
         self._reset_search_families()
 
@@ -1222,13 +1222,13 @@ class ClickhouseSearchTests(DifferentDbTransactionSupportMixin, SearchTestHelper
         self._set_multi_project_search()
         self._assert_expected_search(
             [MULTI_PROJECT_VARIANT1, MULTI_PROJECT_VARIANT2, VARIANT3, VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3, PROJECT_2_VARIANT],
-            sort='family_guid',
+            sort='family_guid', locus={'rawItems': 'chr1:1-100000000, chr14:1-100000000, chr16:1-100000000, chr17:1-100000000, M:1-100000000'},
         )
 
         # size sort only applies to SVs, so has no impact on other variant
         self._reset_search_families()
         self._assert_expected_search(
-            [GCNV_VARIANT1, GCNV_VARIANT4, GCNV_VARIANT2, GCNV_VARIANT3, VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], sort='size',
+            [GCNV_VARIANT1, GCNV_VARIANT4, GCNV_VARIANT2, GCNV_VARIANT3, VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], sort='size', locus=None,
         )
 
         self._set_sv_family_search()
