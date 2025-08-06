@@ -3,7 +3,7 @@
 import clickhouse_backend.models
 import clickhouse_search.backend.fields
 import clickhouse_search.backend.engines
-from django.db import migrations, models
+from django.db import migrations
 import django.db.models.manager
 
 
