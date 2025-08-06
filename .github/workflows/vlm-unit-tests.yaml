@@ -1,4 +1,6 @@
 name: VLM Unit Tests
+permissions:
+  contents: read
 
 # Run the test suite on pushes (incl. merges) to master and dev
 # Run the test suite when a PR is opened, pushed to, or reopened
