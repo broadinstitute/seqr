@@ -70,12 +70,12 @@ jobs:
       - name: Debug clickhouse
         run: curl http://clickhouse:8123
       - name: Set up Clickhouse Settings and Data
-        run: python3 vlm/setup_clickhouse_test_data.py clickhouse_test_user clickhouse_test_password
+        run: python3 vlm/setup_clickhouse_test_data.py clickhouse 8123 clickhouse_test_user clickhouse_test_password
       - name: Run coverage tests
         run: |
           export SEQR_BASE_URL=https://test-seqr.org/
           export NODE_ID=TestVLM
-          export CLICKHOUSE_SERVICE_HOSTNAME=localhost
+          export CLICKHOUSE_SERVICE_HOSTNAME=clickhouse
           export CLICKHOUSE_SERVICE_PORT=9009
           export CLICKHOUSE_USERNAME=vlm_test_user
           export CLICKHOUSE_PASSWORD=vlm_test_password
