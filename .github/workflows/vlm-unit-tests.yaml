@@ -49,6 +49,7 @@ jobs:
       clickhouse:
         image: bitnami/clickhouse:latest
         ports:
+          - 9000:9000   # Native client interface
           - 8123:8123   # HTTP interface
         options: >-
           --health-cmd "clickhouse-client --query 'SELECT 1'" 
@@ -57,8 +58,8 @@ jobs:
           --health-retries 5
           --name clickhouse
         env:
-          CLICKHOUSE_USER: clickhouse_test
-          CLICKHOUSE_PASSWORD: clickhouse_test
+          CLICKHOUSE_USER: clickhouse_test_user
+          CLICKHOUSE_PASSWORD: clickhouse_test_password
           ALLOW_EMPTY_PASSWORD: no
 
     steps:
@@ -68,19 +69,7 @@ jobs:
           python3 -m pip install --upgrade pip wheel
           pip install -r vlm/requirements-test.txt
       - name: Set up Clickhouse Settings and Data
-        run: |
-          docker exec clickhouse clickhouse-client --query "CREATE DATABASE seqr"
-          docker exec clickhouse clickhouse-client --query "CREATE TABLE seqr.`GRCh37/SNV_INDEL/key_lookup` (`variantId` String, `key` UInt32 CODEC(Delta(8), ZSTD(1))) ENGINE = EmbeddedRocksDB(0) PRIMARY KEY variantId"
-          docker exec clickhouse clickhouse-client --query "INSERT INTO seqr.`GRCh37/SNV_INDEL/key_lookup` (*) VALUES ('7-143270172-A-G', 1), ('1-39190091-T-G', 2)"
-          docker exec clickhouse clickhouse-client --query "CREATE DICTIONARY seqr.`GRCh37/SNV_INDEL/gt_stats_dict` (key UInt32, ac_wes UInt32, ac_wgs UInt32, hom_wes UInt32, hom_wgs UInt32) PRIMARY KEY key SOURCE(CLICKHOUSE(USER 'clickhouse_test' PASSWORD 'clickhouse_test' QUERY `SELECT * FROM VALUES ((1, 4104, 607, 1276, 232), (2, 7, 2, 2, 1))`)) LIFETIME(0) LAYOUT(FLAT(MAX_ARRAY_SIZE 500000000))"
-          docker exec clickhouse clickhouse-client --query "CREATE TABLE seqr.`GRCh38/SNV_INDEL/key_lookup` (`variantId` String, `key` UInt32 CODEC(Delta(8), ZSTD(1))) ENGINE = EmbeddedRocksDB(0) PRIMARY KEY variantId"
-          docker exec clickhouse clickhouse-client --query "INSERT INTO seqr.`GRCh38/SNV_INDEL/key_lookup` (*) VALUES ('1-38724419-T-G', 1)"
-          docker exec clickhouse clickhouse-client --query "CREATE DICTIONARY seqr.`GRCh38/SNV_INDEL/gt_stats_dict` (key UInt32, ac_wes UInt32, ac_wgs UInt32, hom_wes UInt32, hom_wgs UInt32) PRIMARY KEY key SOURCE(CLICKHOUSE(USER 'clickhouse_test' PASSWORD 'clickhouse_test' QUERY `SELECT * FROM VALUES ((1, 18, 10, 3, 1))`)) LIFETIME(0) LAYOUT(FLAT(MAX_ARRAY_SIZE 500000000))"
-          docker exec clickhouse clickhouse-client --query "CREATE USER vlm_test_user IDENTIFIED WITH plaintext_password BY 'vlm_test_password'"
-          docker exec clickhouse clickhouse-client --query "GRANT SELECT ON seqr.`GRCh37/SNV_INDEL/key_lookup` TO vlm_test_user"
-          docker exec clickhouse clickhouse-client --query "GRANT SELECT ON seqr.`GRCh38/SNV_INDEL/key_lookup` TO vlm_test_user"
-          docker exec clickhouse clickhouse-client --query "GRANT dictGet ON seqr.`GRCh37/SNV_INDEL/gt_stats_dict` TO vlm_test_user"
-          docker exec clickhouse clickhouse-client --query "GRANT dictGet ON seqr.`GRCh38/SNV_INDEL/gt_stats_dict` TO vlm_test_user"
+        run: python3 vlm/setup_clickhouse_test_data.py clickhouse_test_user clickhouse_test_password
       - name: Run coverage tests
         run: |
           export SEQR_BASE_URL=https://test-seqr.org/
@@ -89,6 +78,7 @@ jobs:
           export CLICKHOUSE_SERVICE_PORT=8123
           export CLICKHOUSE_USERNAME=vlm_test_user
           export CLICKHOUSE_PASSWORD=vlm_test_password
+          export CLICKHOUSE_DATABASE=test_seqr
           coverage run --source="./vlm" --omit="./vlm/__main__.py" -m pytest vlm/
           coverage report --fail-under=95
 
