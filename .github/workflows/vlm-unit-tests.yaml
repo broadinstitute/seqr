@@ -49,7 +49,6 @@ jobs:
       clickhouse:
         image: bitnami/clickhouse:latest
         ports:
-          - 9000:9000   # Native client interface
           - 8123:8123   # HTTP interface
         options: >-
           --health-cmd "clickhouse-client --query 'SELECT 1'" 
