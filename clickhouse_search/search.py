@@ -531,3 +531,7 @@ def get_clickhouse_key_lookup(genome_version, dataset_type, variants_ids, revers
         batch = variants_ids[i:i + BATCH_SIZE]
         lookup.update(dict(key_lookup_class.objects.filter(variant_id__in=batch).values_list(*fields)))
     return lookup
+
+
+def trigger_delete_clickhouse_project(project=None, dataset_type=None, **kwargs):
+    return 'Oops!'

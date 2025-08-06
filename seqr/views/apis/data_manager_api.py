@@ -4,20 +4,19 @@ from datetime import datetime
 import gzip
 import json
 import os
-import re
 import requests
 import urllib3
 
-from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.exceptions import PermissionDenied
 from django.db.models import Max, F, Q
 from django.http.response import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from requests.exceptions import ConnectionError as RequestConnectionError
 
+from clickhouse_search.search import trigger_delete_clickhouse_project
 from seqr.utils.communication_utils import send_project_notification
 from seqr.utils.search.add_data_utils import prepare_data_loading_request, get_loading_samples_validator
-from seqr.utils.search.utils import get_search_backend_status, delete_search_backend_data
+from seqr.utils.search.utils import get_search_backend_status, delete_search_backend_data, backend_specific_call
 from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
@@ -27,7 +26,7 @@ from seqr.views.utils.airflow_utils import trigger_airflow_data_loading, trigger
 from seqr.views.utils.airtable_utils import AirtableSession, LOADABLE_PDO_STATUSES, AVAILABLE_PDO_STATUS
 from seqr.views.utils.dataset_utils import load_rna_seq, load_phenotype_prioritization_data_file, RNA_DATA_TYPE_CONFIGS, \
     post_process_rna_data, convert_django_meta_to_http_headers
-from seqr.views.utils.file_utils import parse_file, get_temp_file_path, load_uploaded_file, persist_temp_file
+from seqr.views.utils.file_utils import get_temp_file_path, load_uploaded_file, persist_temp_file
 from seqr.views.utils.json_utils import create_json_response, _to_snake_case
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.pedigree_info_utils import get_validated_related_individuals, JsonConstants
@@ -426,65 +425,44 @@ def _get_valid_search_individuals(project, airtable_samples, vcf_samples, datase
 
 @data_manager_required
 def trigger_delete_project(request):
-    if not is_airflow_enabled():
-        raise PermissionDenied()
-    request_json = json.loads(request.body)
-    project_guid = request_json.pop('project', None)
-    family_guid = request_json.pop('family', None)
-    kwargs = {_to_snake_case(k): v for k, v in request_json.items()}
-    project = None
-    if project_guid:
-        project = Project.objects.get(guid=project_guid)
-    elif family_guid:
-        project = Project.objects.get(family__guid=family_guid)
-        kwargs['family_guids'] = [family_guid]
-    try:
-        dag_variables = trigger_airflow_dag(dag_id, project, **kwargs)
-    except Exception as e:
-        return create_json_response({'error': str(e)}, status=400)
-    return create_json_response({'info': [f'Triggered DAG {dag_id} with variables: {json.dumps(dag_variables)}']})
+    return _trigger_data_update(request, 'DELETE_PROJECTS', clickhouse_func=trigger_delete_clickhouse_project)
 
 
 @data_manager_required
 def trigger_delete_family(request):
-    if not is_airflow_enabled():
-        raise PermissionDenied()
-    request_json = json.loads(request.body)
-    project_guid = request_json.pop('project', None)
-    family_guid = request_json.pop('family', None)
-    kwargs = {_to_snake_case(k): v for k, v in request_json.items()}
-    project = None
-    if project_guid:
-        project = Project.objects.get(guid=project_guid)
-    elif family_guid:
-        project = Project.objects.get(family__guid=family_guid)
-        kwargs['family_guids'] = [family_guid]
-    try:
-        dag_variables = trigger_airflow_dag(dag_id, project, **kwargs)
-    except Exception as e:
-        return create_json_response({'error': str(e)}, status=400)
-    return create_json_response({'info': [f'Triggered DAG {dag_id} with variables: {json.dumps(dag_variables)}']})
+    return _trigger_data_update(request, 'DELETE_FAMILIES')
 
 
 @data_manager_required
 def trigger_update_search_reference_data(request):
+    return _trigger_data_update(request, 'UPDATE_REFERENCE_DATASETS')
+
+
+def _raise_backend_not_implemented(*args, **kwargs):
+    raise ErrorsWarningsException(['This functionality is not available in the current search backend'])
+
+
+def _trigger_data_update(request, dag_id, clickhouse_func=_raise_backend_not_implemented):
+    request_json = json.loads(request.body)
+    kwargs = {_to_snake_case(k): v for k, v in request_json.items()}
+    info = backend_specific_call(_raise_backend_not_implemented, _trigger_dag, clickhouse_func)(dag_id=dag_id, **kwargs)
+    return create_json_response({'info': [info]})
+
+
+def  _trigger_dag(dag_id, project=None, family=None, **kwargs):
     if not is_airflow_enabled():
         raise PermissionDenied()
-    request_json = json.loads(request.body)
-    project_guid = request_json.pop('project', None)
-    family_guid = request_json.pop('family', None)
-    kwargs = {_to_snake_case(k): v for k, v in request_json.items()}
-    project = None
-    if project_guid:
-        project = Project.objects.get(guid=project_guid)
-    elif family_guid:
-        project = Project.objects.get(family__guid=family_guid)
-        kwargs['family_guids'] = [family_guid]
+    project_model = None
+    if project:
+        project_model = Project.objects.get(guid=project)
+    elif family:
+        project_model = Project.objects.get(family__guid=family)
+        kwargs['family_guids'] = [family]
     try:
-        dag_variables = trigger_airflow_dag(dag_id, project, **kwargs)
+        dag_variables = trigger_airflow_dag(dag_id, project_model, **kwargs)
     except Exception as e:
-        return create_json_response({'error': str(e)}, status=400)
-    return create_json_response({'info': [f'Triggered DAG {dag_id} with variables: {json.dumps(dag_variables)}']})
+        raise ErrorsWarningsException([str(e)])
+    return f'Triggered DAG {dag_id} with variables: {json.dumps(dag_variables)}'
 
 
 # Hop-by-hop HTTP response headers shouldn't be forwarded.
