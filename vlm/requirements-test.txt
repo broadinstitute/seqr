@@ -18,6 +18,8 @@ async-timeout==4.0.2
     # via aiohttp
 attrs==23.1.0
     # via aiohttp
+clickhouse-connect==0.8.18
+    # via -r vlm/requirements-test.in
 coverage==5.1
     # via -r vlm/requirements-test.in
 exceptiongroup==1.1.3
