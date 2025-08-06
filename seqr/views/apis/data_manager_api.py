@@ -425,7 +425,49 @@ def _get_valid_search_individuals(project, airtable_samples, vcf_samples, datase
 
 
 @data_manager_required
-def trigger_dag(request, dag_id):
+def trigger_delete_project(request):
+    if not is_airflow_enabled():
+        raise PermissionDenied()
+    request_json = json.loads(request.body)
+    project_guid = request_json.pop('project', None)
+    family_guid = request_json.pop('family', None)
+    kwargs = {_to_snake_case(k): v for k, v in request_json.items()}
+    project = None
+    if project_guid:
+        project = Project.objects.get(guid=project_guid)
+    elif family_guid:
+        project = Project.objects.get(family__guid=family_guid)
+        kwargs['family_guids'] = [family_guid]
+    try:
+        dag_variables = trigger_airflow_dag(dag_id, project, **kwargs)
+    except Exception as e:
+        return create_json_response({'error': str(e)}, status=400)
+    return create_json_response({'info': [f'Triggered DAG {dag_id} with variables: {json.dumps(dag_variables)}']})
+
+
+@data_manager_required
+def trigger_delete_family(request):
+    if not is_airflow_enabled():
+        raise PermissionDenied()
+    request_json = json.loads(request.body)
+    project_guid = request_json.pop('project', None)
+    family_guid = request_json.pop('family', None)
+    kwargs = {_to_snake_case(k): v for k, v in request_json.items()}
+    project = None
+    if project_guid:
+        project = Project.objects.get(guid=project_guid)
+    elif family_guid:
+        project = Project.objects.get(family__guid=family_guid)
+        kwargs['family_guids'] = [family_guid]
+    try:
+        dag_variables = trigger_airflow_dag(dag_id, project, **kwargs)
+    except Exception as e:
+        return create_json_response({'error': str(e)}, status=400)
+    return create_json_response({'info': [f'Triggered DAG {dag_id} with variables: {json.dumps(dag_variables)}']})
+
+
+@data_manager_required
+def trigger_update_search_reference_data(request):
     if not is_airflow_enabled():
         raise PermissionDenied()
     request_json = json.loads(request.body)

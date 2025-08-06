@@ -54,7 +54,7 @@ const REFERENCE_DATASET_FIELDS = [
 const TriggerSearchDataUpdateForm = ({ path, fields }) => (
   <SubmitFormPage
     header={`Trigger ${snakecaseToTitlecase(path)}`}
-    url={`/api/data_management/trigger_dag/${path}`}
+    url={`/api/data_management/trigger_${path}`}
     fields={fields}
   />
 )
