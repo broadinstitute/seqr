@@ -2,8 +2,8 @@ from aiohttp.web import HTTPBadRequest
 import hail as hl
 import os
 
-from clickhouse_utils import get_clickhouse_variant_counts
-from hail_backend_utils import get_hail_variant_counts
+from vlm.clickhouse_utils import get_clickhouse_variant_counts
+from vlm.hail_backend_utils import get_hail_variant_counts
 
 CLICKHOUSE_ENABLED =  bool(os.environ.get('CLICKHOUSE_SERVICE_HOSTNAME'))
 SEQR_BASE_URL = os.environ.get('SEQR_BASE_URL')
