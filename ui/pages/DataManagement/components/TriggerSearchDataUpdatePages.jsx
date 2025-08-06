@@ -11,6 +11,7 @@ import {
   DATASET_TYPE_MITO_CALLS,
   GENOME_VERSION_FIELD,
 } from 'shared/utils/constants'
+import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 
 const DATASET_TYPE_FIELD = {
   name: 'datasetType',
@@ -50,33 +51,33 @@ const REFERENCE_DATASET_FIELDS = [
   DATASET_TYPE_FIELD,
 ]
 
-const TriggerDagForm = ({ dagName, fields }) => (
+const TriggerSearchDataUpdateForm = ({ path, fields }) => (
   <SubmitFormPage
-    header={`Trigger ${dagName}`}
-    url={`/api/data_management/trigger_dag/${dagName}`}
+    header={`Trigger ${snakecaseToTitlecase(path)}`}
+    url={`/api/data_management/trigger_dag/${path}`}
     fields={fields}
   />
 )
 
-TriggerDagForm.propTypes = {
-  dagName: PropTypes.string,
+TriggerSearchDataUpdateForm.propTypes = {
+  path: PropTypes.string,
   fields: PropTypes.arrayOf(PropTypes.object),
 }
 
-const TriggerDeleteProjectsDag = () => (
-  <TriggerDagForm dagName="DELETE_PROJECTS" fields={PROJECT_FIELDS} />
+const TriggerDeleteProjects = () => (
+  <TriggerSearchDataUpdateForm path="delete_project" fields={PROJECT_FIELDS} />
 )
 
-const TriggerDeleteFamiliesDag = () => (
-  <TriggerDagForm dagName="DELETE_FAMILIES" fields={FAMILY_FIELDS} />
+const TriggerDeleteFamilies = () => (
+  <TriggerSearchDataUpdateForm path="delete_family" fields={FAMILY_FIELDS} />
 )
 
-const TriggerUpdateReferenceDatasetDag = () => (
-  <TriggerDagForm dagName="UPDATE_REFERENCE_DATASETS" fields={REFERENCE_DATASET_FIELDS} />
+const TriggerUpdateReferenceDataset = () => (
+  <TriggerSearchDataUpdateForm path="update_reference_datasets" fields={REFERENCE_DATASET_FIELDS} />
 )
 
 export default [
-  { path: 'delete_search_projects', component: TriggerDeleteProjectsDag },
-  { path: 'delete_search_families', component: TriggerDeleteFamiliesDag },
-  { path: 'update_search_reference_data', component: TriggerUpdateReferenceDatasetDag },
+  { path: 'delete_search_project', component: TriggerDeleteProjects },
+  { path: 'delete_search_family', component: TriggerDeleteFamilies },
+  { path: 'update_search_reference_data', component: TriggerUpdateReferenceDataset },
 ]
