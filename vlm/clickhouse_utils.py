@@ -15,11 +15,11 @@ def get_clickhouse_variant_counts(locus: hl.LocusExpression, ref: str, alt: str,
     locus = hl.eval(locus)
     client = clickhouse_connect.get_client(**CLICKHOUSE_CONNECTION_PARAMS)
     results = client.query(
-         "SELECT dictGet(%(dict_name)s, ('ac_wes', 'ac_wgs', 'hom_wes', 'hom_wgs'), key) FROM %(table_name)s WHERE variantId=%(variant_id)s",
+         "SELECT plus(gt_stats.1, gt_stats.2), plus(gt_stats.3, gt_stats.4) FROM (SELECT dictGet(%(dict_name)s, ('ac_wes', 'ac_wgs', 'hom_wes', 'hom_wgs'), key) AS gt_stats FROM %(table_name)s WHERE variantId=%(variant_id)s)",
         parameters={
             'variant_id': f'{locus.contig.replace("chr", "")}-{locus.position}-{ref}-{alt}',
             'table_name': f'{genome_build}/SNV_INDEL/key_lookup',
             'dict_name': f'{genome_build}/SNV_INDEL/gt_stats_dict',
         },
     ).result_set
-    return (results[0]['ac_wes'] + results[0]['ac_wgs'], results[0]['hom_wes'] + results[0]['hom_wgs']) if results else (0, 0)
+    return results[0] if results else (0, 0)
