@@ -281,7 +281,7 @@ class AnnotationsDiskSnvIndel(BaseAnnotationsSnvIndel):
         db_table = 'GRCh38/SNV_INDEL/annotations_disk'
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SNV_INDEL/annotations', primary_key='key', flatten_nested=0)
 
-class BaseAnnotationsMito(BaseAnnotationsMitoSnvIndel):
+class AnnotationsMito(BaseAnnotationsMitoSnvIndel):
     ANNOTATION_CONSTANTS = {
         'chrom': 'M',
         'liftedOverChrom': 'MT',
@@ -338,15 +338,10 @@ class BaseAnnotationsMito(BaseAnnotationsMitoSnvIndel):
     sorted_transcript_consequences = NestedField(BaseAnnotationsMitoSnvIndel.TRANSCRIPTS_FIELDS, db_column='sortedTranscriptConsequences', group_by_key='geneId')
 
     class Meta:
-        abstract = True
-
-class AnnotationsMito(BaseAnnotationsMito):
-
-    class Meta:
         db_table = 'GRCh38/MITO/annotations_memory'
         engine = Join('ALL', 'INNER', 'key', join_use_nulls=1, flatten_nested=0)
 
-class BaseAnnotationsSv(BaseAnnotationsSvGcnv):
+class AnnotationsSv(BaseAnnotationsSvGcnv):
     POPULATION_FIELDS = [
         ('gnomad_svs', NamedTupleField([
             ('af', models.DecimalField(max_digits=9, decimal_places=5)),
@@ -375,15 +370,10 @@ class BaseAnnotationsSv(BaseAnnotationsSvGcnv):
     populations = NamedTupleField(POPULATION_FIELDS)
 
     class Meta:
-        abstract = True
-
-class AnnotationsSv(BaseAnnotationsSv):
-
-    class Meta:
         db_table = 'GRCh38/SV/annotations_memory'
         engine = Join('ALL', 'INNER', 'key', join_use_nulls=1, flatten_nested=0)
 
-class BaseAnnotationsGcnv(BaseAnnotationsSvGcnv):
+class AnnotationsGcnv(BaseAnnotationsSvGcnv):
     POPULATION_FIELDS = [
         ('sv_callset', NamedTupleField([
             ('ac', models.UInt32Field()),
@@ -404,11 +394,6 @@ class BaseAnnotationsGcnv(BaseAnnotationsSvGcnv):
 
     num_exon = models.UInt16Field(db_column='numExon')
     populations = NamedTupleField(POPULATION_FIELDS)
-
-    class Meta:
-        abstract = True
-
-class AnnotationsGcnv(BaseAnnotationsGcnv):
 
     class Meta:
         db_table = 'GRCh38/GCNV/annotations_memory'
