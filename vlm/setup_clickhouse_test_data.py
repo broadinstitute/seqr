@@ -2,7 +2,7 @@ import clickhouse_connect
 import sys
 
 def setup_clickhouse_test_data(username, password):
-    client = clickhouse_connect.get_client(host='localhost', port=8123, username=username, password=password, secure=True)
+    client = clickhouse_connect.get_client(host='localhost', port=8123, username=username, password=password)
     client.command('CREATE DATABASE test_seqr')
 
     client.command('CREATE TABLE seqr.`GRCh37/SNV_INDEL/key_lookup` (`variantId` String, `key` UInt32 CODEC(Delta(8), ZSTD(1))) ENGINE = EmbeddedRocksDB(0) PRIMARY KEY variantId')
