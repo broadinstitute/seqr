@@ -344,14 +344,7 @@ class AnnotationsMito(BaseAnnotationsMito):
 
     class Meta:
         db_table = 'GRCh38/MITO/annotations_memory'
-        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_IN_MEMORY_DIR}/GRCh38/MITO/annotations', primary_key='key', flatten_nested=0)
-
-class AnnotationsDiskMito(BaseAnnotationsMito):
-
-    class Meta:
-        db_table = 'GRCh38/MITO/annotations_disk'
-        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/MITO/annotations', primary_key='key', flatten_nested=0)
-
+        engine = Join('ALL', 'INNER', 'key', join_use_nulls=1, flatten_nested=0)
 
 class BaseAnnotationsSv(BaseAnnotationsSvGcnv):
     POPULATION_FIELDS = [
@@ -388,13 +381,7 @@ class AnnotationsSv(BaseAnnotationsSv):
 
     class Meta:
         db_table = 'GRCh38/SV/annotations_memory'
-        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_IN_MEMORY_DIR}/GRCh38/SV/annotations', primary_key='key', flatten_nested=0)
-
-class AnnotationsDiskSv(BaseAnnotationsSv):
-
-    class Meta:
-        db_table = 'GRCh38/SV/annotations_disk'
-        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SV/annotations', primary_key='key', flatten_nested=0)
+        engine = Join('ALL', 'INNER', 'key', join_use_nulls=1, flatten_nested=0)
 
 class BaseAnnotationsGcnv(BaseAnnotationsSvGcnv):
     POPULATION_FIELDS = [
@@ -425,14 +412,7 @@ class AnnotationsGcnv(BaseAnnotationsGcnv):
 
     class Meta:
         db_table = 'GRCh38/GCNV/annotations_memory'
-        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_IN_MEMORY_DIR}/GRCh38/GCNV/annotations', primary_key='key', flatten_nested=0)
-
-class AnnotationsDiskGcnv(BaseAnnotationsGcnv):
-
-    class Meta:
-        db_table = 'GRCh38/GCNV/annotations_disk'
-        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/GCNV/annotations', primary_key='key', flatten_nested=0)
-
+        engine = Join('ALL', 'LEFT', 'key', join_use_nulls=1, flatten_nested=0)
 
 class BaseClinvar(models.ClickhouseModel):
 
