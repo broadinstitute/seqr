@@ -52,7 +52,7 @@ const REFERENCE_DATASET_FIELDS = [
 
 const TriggerDagForm = ({ dagName, fields }) => (
   <SubmitFormPage
-    header={`Trigger ${dagName} DAG`}
+    header={`Trigger ${dagName}`}
     url={`/api/data_management/trigger_dag/${dagName}`}
     fields={fields}
   />
