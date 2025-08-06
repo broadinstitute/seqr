@@ -49,7 +49,7 @@ jobs:
       clickhouse:
         image: bitnami/clickhouse:latest
         ports:
-          - 9009:9009   # Inter-server HTTP interface
+          - 8123:8123   # HTTP interface
         options: >-
           --health-cmd "clickhouse-client --query 'SELECT 1'"
           --health-interval 10s 
@@ -68,7 +68,7 @@ jobs:
           python3 -m pip install --upgrade pip wheel
           pip install -r vlm/requirements-test.txt
       - name: Debug clcikhouse
-        run: curl http://localhost:9009
+        run: curl http://localhost:8123
       - name: Set up Clickhouse Settings and Data
         run: python3 vlm/setup_clickhouse_test_data.py clickhouse_test_user clickhouse_test_password
       - name: Run coverage tests
