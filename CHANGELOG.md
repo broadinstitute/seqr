@@ -1,6 +1,8 @@
 # _seqr_ Changes
 
 ## dev
+
+## 8/7/25
 * Deprecate support for lifting existing projects from GRCH37 to GRCh38
 
 ## 4/4/25
