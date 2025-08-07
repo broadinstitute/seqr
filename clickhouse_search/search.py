@@ -537,9 +537,10 @@ def get_clickhouse_key_lookup(genome_version, dataset_type, variants_ids, revers
 def delete_clickhouse_project(project, dataset_type=None, **kwargs):
     table_base = f'{GENOME_VERSION_LOOKUP[project.genome_version]}/{dataset_type}'
     with connections['clickhouse_write'].cursor() as cursor:
-        cursor.execute('ALTER TABLE %s DROP PARTITION %s', [f'{table_base}/entries', project.guid])
+        cursor.execute(f'ALTER TABLE "{table_base}/entries" DROP PARTITION %s', [project.guid])
+        cursor.execute(f'ALTER TABLE "{table_base}/project_gt_stats" DROP PARTITION %s', [project.guid])
         view_name = f'{table_base}/project_gt_stats_to_gt_stats_mv'
-        cursor.execute('SYSTEM REFRESH VIEW %s', [view_name])
-        cursor.execute('SYSTEM WAIT VIEW %s', [view_name])
-        cursor.execute('SYSTEM RELOAD DICTIONARY %s', [f'{table_base}/gt_stats_dict'])
+        cursor.execute(f'SYSTEM REFRESH VIEW "{view_name}"')
+        cursor.execute(f'SYSTEM WAIT VIEW "{view_name}"')
+        cursor.execute(f'SYSTEM RELOAD DICTIONARY "{table_base}/gt_stats_dict"')
     return f'Deleted all {dataset_type} search data for project {project.name}'

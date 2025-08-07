@@ -6,6 +6,7 @@ import mock
 from requests import HTTPError
 import responses
 
+from clickhouse_search.models import EntriesSnvIndel, ProjectGtStatsSnvIndel, AnnotationsSnvIndel
 from seqr.utils.communication_utils import _set_bulk_notification_stream
 from seqr.views.apis.data_manager_api import elasticsearch_status, delete_index, \
     update_rna_seq, load_rna_seq_sample_data, load_phenotype_prioritization_data, validate_callset, loading_vcfs, \
@@ -1560,8 +1561,12 @@ class DataManagerAPITest(AirtableTest):
         })
 
     def _test_trigger_search_data_update(self, url, dag_id, body, dag_variables):
+        self._setup_trigger_search_data_update(url, dag_id, body, dag_variables)
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self._assert_expected_search_data_update(response, dag_id, dag_variables)
+
+    def _setup_trigger_search_data_update(self, *args, **kwargs):
+        return
 
     def _assert_expected_search_data_update(self, response, dag_id, variables):
         self.assertEqual(response.status_code, 400)
@@ -1703,7 +1708,7 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
 
 @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
 class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
-    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
+    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data', 'clickhouse_search']
 
     LOADING_PROJECT_GUID = NON_ANALYST_PROJECT_GUID
     CALLSET_DIR = 'gs://test_bucket'
@@ -2012,12 +2017,33 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
 
         return super()._add_update_check_dag_responses(**kwargs)
 
+    def _setup_trigger_search_data_update(self, *args, **kwargs):
+        Project.objects.filter(guid=PROJECT_GUID).update(genome_version='38')
+
     def _assert_expected_search_data_update(self, response, dag_id, variables):
         if dag_id == 'DELETE_PROJECTS':
-            self.assertEqual(response.status_code, 200)
-            self.assertDictEqual(response.json(), {'info': ['Deleted all SNV_INDEL search data for project 1kg project n\xe5me with uni\xe7\xf8de']})
+            self._assert_expected_delete_project(response)
         else:
             super()._assert_expected_search_data_update(response, dag_id, variables)
+
+    def _assert_expected_delete_project(self, response):
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {
+            'info': ['Deleted all SNV_INDEL search data for project 1kg project n\xe5me with uni\xe7\xf8de'],
+        })
+        self.assertEqual(EntriesSnvIndel.objects.filter(project_guid=PROJECT_GUID).count(), 0)
+        self.assertEqual(ProjectGtStatsSnvIndel.objects.filter(project_guid=PROJECT_GUID).count(), 0)
+
+        updated_seqr_pops_by_key = dict(AnnotationsSnvIndel.objects.all().join_seqr_pop().values_list('key', 'seqrPop'))
+        self.assertDictEqual(updated_seqr_pops_by_key, {
+            1: (2, 2, 1, 1),
+            2: (1, 1, 0, 0),
+            3: (0, 0, 0, 0),
+            4: (0, 0, 0, 0),
+            5: (1, 1, 0, 0),
+            6: (0, 0, 0, 0),
+            22: (0, 3, 0, 1),
+        })
 
     def _assert_expected_airtable_errors(self, url):
         responses.replace(
@@ -2053,10 +2079,11 @@ class HailBackendDataManagerAPITest(AnvilDataManagerAPITest):
 
         self.assert_airflow_calls(variables, 5)
 
-    def _test_trigger_search_data_update(self, url, dag_id, body, dag_variables):
+    def _setup_trigger_search_data_update(self, url, dag_id, body, dag_variables):
         responses.calls.reset()
         self.set_up_one_dag(dag_id, variables=dag_variables)
 
+    def _test_trigger_search_data_update(self, url, dag_id, body, dag_variables):
         super()._test_trigger_search_data_update(url, dag_id, body, dag_variables)
 
         self.set_dag_trigger_error_response()
