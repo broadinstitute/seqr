@@ -75,8 +75,8 @@ jobs:
           export NODE_ID=TestVLM
           export CLICKHOUSE_SERVICE_HOSTNAME=clickhouse
           export CLICKHOUSE_SERVICE_PORT=8123
-          export CLICKHOUSE_USERNAME=vlm_test_user
-          export CLICKHOUSE_PASSWORD=vlm_test_password
+          export CLICKHOUSE_VLM_USERNAME=vlm_test_user
+          export CLICKHOUSE_VLM_PASSWORD=vlm_test_password
           export CLICKHOUSE_DATABASE=test_seqr
           coverage run --source="./vlm" --omit="./vlm/__main__.py","./vlm/setup_clickhouse_test_data.py","./vlm/hail_backend_utils.py" -m pytest vlm/
           coverage report --fail-under=95

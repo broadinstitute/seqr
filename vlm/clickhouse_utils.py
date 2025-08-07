@@ -5,8 +5,8 @@ import os
 CLICKHOUSE_CONNECTION_PARAMS = {
     'host': os.environ.get('CLICKHOUSE_SERVICE_HOSTNAME'),
     'port': os.environ.get('CLICKHOUSE_SERVICE_PORT'),
-    'username': os.environ.get('CLICKHOUSE_USERNAME'),
-    'password': os.environ.get('CLICKHOUSE_PASSWORD'),
+    'username': os.environ.get('CLICKHOUSE_VLM_USERNAME'),
+    'password': os.environ.get('CLICKHOUSE_VLM_PASSWORD'),
     'database': os.environ.get('CLICKHOUSE_DATABASE', 'seqr'),
 }
 
