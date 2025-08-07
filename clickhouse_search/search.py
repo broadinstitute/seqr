@@ -533,5 +533,5 @@ def get_clickhouse_key_lookup(genome_version, dataset_type, variants_ids, revers
     return lookup
 
 
-def trigger_delete_clickhouse_project(project=None, dataset_type=None, **kwargs):
+def trigger_delete_clickhouse_project(project, dataset_type=None, **kwargs):
     return 'Oops!'

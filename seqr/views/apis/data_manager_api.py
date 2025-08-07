@@ -425,41 +425,45 @@ def _get_valid_search_individuals(project, airtable_samples, vcf_samples, datase
 
 @data_manager_required
 def trigger_delete_project(request):
-    return _trigger_data_update(request, 'DELETE_PROJECTS', clickhouse_func=trigger_delete_clickhouse_project)
+    request_json = json.loads(request.body)
+    project_guid = request_json.pop('project')
+    project = Project.objects.get(guid=project_guid)
+    return _trigger_data_update(
+        project, dag_id='DELETE_PROJECTS', clickhouse_func=trigger_delete_clickhouse_project, **request_json,
+    )
 
 
 @data_manager_required
 def trigger_delete_family(request):
-    return _trigger_data_update(request, 'DELETE_FAMILIES')
+    request_json = json.loads(request.body)
+    family_guid = request_json.pop('family')
+    project = Project.objects.get(family__guid=family_guid)
+    return _trigger_data_update(project, family_guid=family_guid, dag_id='DELETE_FAMILIES', **request_json)
 
 
 @data_manager_required
 def trigger_update_search_reference_data(request):
-    return _trigger_data_update(request, 'UPDATE_REFERENCE_DATASETS')
+    request_json = json.loads(request.body)
+    return _trigger_data_update(project=None, dag_id='UPDATE_REFERENCE_DATASETS', **request_json)
 
 
 def _raise_backend_not_implemented(*args, **kwargs):
     raise ErrorsWarningsException(['This functionality is not available in the current search backend'])
 
 
-def _trigger_data_update(request, dag_id, clickhouse_func=_raise_backend_not_implemented):
-    request_json = json.loads(request.body)
-    kwargs = {_to_snake_case(k): v for k, v in request_json.items()}
-    info = backend_specific_call(_raise_backend_not_implemented, _trigger_dag, clickhouse_func)(dag_id=dag_id, **kwargs)
+def _trigger_data_update(project, clickhouse_func=_raise_backend_not_implemented, **kwargs):
+    kwargs = {_to_snake_case(k): v for k, v in kwargs.items()}
+    info = backend_specific_call(_raise_backend_not_implemented, _trigger_dag, clickhouse_func)(project, **kwargs)
     return create_json_response({'info': [info]})
 
 
-def  _trigger_dag(dag_id, project=None, family=None, **kwargs):
+def  _trigger_dag(project, dag_id=None, family_guid=None, **kwargs):
     if not is_airflow_enabled():
         raise PermissionDenied()
-    project_model = None
-    if project:
-        project_model = Project.objects.get(guid=project)
-    elif family:
-        project_model = Project.objects.get(family__guid=family)
-        kwargs['family_guids'] = [family]
+    if family_guid:
+        kwargs['family_guids'] = [family_guid]
     try:
-        dag_variables = trigger_airflow_dag(dag_id, project_model, **kwargs)
+        dag_variables = trigger_airflow_dag(dag_id, project, **kwargs)
     except Exception as e:
         raise ErrorsWarningsException([str(e)])
     return f'Triggered DAG {dag_id} with variables: {json.dumps(dag_variables)}'
