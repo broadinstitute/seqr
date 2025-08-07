@@ -1519,7 +1519,7 @@ class DataManagerAPITest(AirtableTest):
         url = reverse(trigger_delete_project)
         self.check_data_manager_login(url)
 
-        self._test_trigger_single_dag(
+        self._test_trigger_search_data_update(
             url,
             'DELETE_PROJECTS',
             {'project': PROJECT_GUID, 'datasetType': 'SNV_INDEL'},
@@ -1535,7 +1535,7 @@ class DataManagerAPITest(AirtableTest):
         url = reverse(trigger_delete_family)
         self.check_data_manager_login(url)
 
-        self._test_trigger_single_dag(
+        self._test_trigger_search_data_update(
             url,
             'DELETE_FAMILIES',
             {'family': 'F000012_12', 'datasetType': 'MITO'},
@@ -1553,17 +1553,17 @@ class DataManagerAPITest(AirtableTest):
         self.check_data_manager_login(url)
 
         body = {'genomeVersion': '38', 'datasetType': 'SV'}
-        self._test_trigger_single_dag(url, 'UPDATE_REFERENCE_DATASETS', body, {
+        self._test_trigger_search_data_update(url, 'UPDATE_REFERENCE_DATASETS', body, {
             'projects_to_run': None,
             'dataset_type': 'SV',
             'reference_genome': 'GRCh38',
         })
 
-    def _test_trigger_single_dag(self, url, dag_id, body, dag_variables):
+    def _test_trigger_search_data_update(self, url, dag_id, body, dag_variables):
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
-        self._assert_expected_dag_trigger(response, dag_id, dag_variables)
+        self._assert_expected_search_data_update(response, dag_id, dag_variables)
 
-    def _assert_expected_dag_trigger(self, response, dag_id, variables):
+    def _assert_expected_search_data_update(self, response, dag_id, variables):
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['This functionality is not available in the current search backend'], 'warnings': None})
 
@@ -1698,9 +1698,6 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
         self.assertEqual(len(responses.calls), 0)
 
     def _test_validate_dataset_type(self, url):
-        pass
-
-    def set_up_one_dag(self, *args, **kwargs):
         pass
 
 
@@ -2015,12 +2012,12 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
 
         return super()._add_update_check_dag_responses(**kwargs)
 
-    def _assert_expected_dag_trigger(self, response, dag_id, variables):
+    def _assert_expected_search_data_update(self, response, dag_id, variables):
         if dag_id == 'DELETE_PROJECTS':
             self.assertEqual(response.status_code, 200)
             self.assertDictEqual(response.json(), {'info': ['Deleted all SNV_INDEL search data for project 1kg project n\xe5me with uni\xe7\xf8de']})
         else:
-            super()._assert_expected_dag_trigger(response, dag_id, variables)
+            super()._assert_expected_search_data_update(response, dag_id, variables)
 
     def _assert_expected_airtable_errors(self, url):
         responses.replace(
@@ -2050,17 +2047,17 @@ class HailBackendDataManagerAPITest(AnvilDataManagerAPITest):
             self.DAG_NAME = dag_id
         super().set_up_one_dag(**kwargs)
 
-    def _assert_expected_dag_trigger(self, response, dag_id, variables):
+    def _assert_expected_search_data_update(self, response, dag_id, variables):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'info': [f'Triggered DAG {dag_id} with variables: {json.dumps(variables)}']})
 
         self.assert_airflow_calls(variables, 5)
 
-    def _test_trigger_single_dag(self, url, dag_id, body, dag_variables):
+    def _test_trigger_search_data_update(self, url, dag_id, body, dag_variables):
         responses.calls.reset()
         self.set_up_one_dag(dag_id, variables=dag_variables)
 
-        super()._test_trigger_single_dag(url, dag_id, body, dag_variables)
+        super()._test_trigger_search_data_update(url, dag_id, body, dag_variables)
 
         self.set_dag_trigger_error_response()
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
