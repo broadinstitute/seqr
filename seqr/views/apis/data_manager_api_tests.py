@@ -2015,6 +2015,13 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
 
         return super()._add_update_check_dag_responses(**kwargs)
 
+    def _assert_expected_dag_trigger(self, response, dag_id, variables):
+        if dag_id == 'DELETE_PROJECTS':
+            self.assertEqual(response.status_code, 200)
+            self.assertDictEqual(response.json(), {'info': ['Deleted all SNV_INDEL search data for project 1kg project n\xe5me with uni\xe7\xf8de']})
+        else:
+            super()._assert_expected_dag_trigger(response, dag_id, variables)
+
     def _assert_expected_airtable_errors(self, url):
         responses.replace(
             responses.GET, 'https://api.airtable.com/v0/app3Y97xtbbaOopVR/Samples',
