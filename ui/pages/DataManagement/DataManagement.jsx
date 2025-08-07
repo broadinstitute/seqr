@@ -61,7 +61,7 @@ const dataManagementPages = (user, elasticsearchEnabled) => {
   if (elasticsearchEnabled) {
     return ES_DATA_MANAGEMENT_PAGES
   }
-  return !user.isAnvil ? AIRFLOW_HAIL_SEARCH_DATA_MANAGEMENT_PAGES : LOCAL_HAIL_SEARCH_DATA_MANAGEMENT_PAGES
+  return user.isAnvil ? AIRFLOW_HAIL_SEARCH_DATA_MANAGEMENT_PAGES : LOCAL_HAIL_SEARCH_DATA_MANAGEMENT_PAGES
 }
 
 const DataManagement = ({ match, user, pages }) => (
