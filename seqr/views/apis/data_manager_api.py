@@ -13,7 +13,7 @@ from django.http.response import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from requests.exceptions import ConnectionError as RequestConnectionError
 
-from clickhouse_search.search import trigger_delete_clickhouse_project
+from clickhouse_search.search import delete_clickhouse_project
 from seqr.utils.communication_utils import send_project_notification
 from seqr.utils.search.add_data_utils import prepare_data_loading_request, get_loading_samples_validator
 from seqr.utils.search.utils import get_search_backend_status, delete_search_backend_data, backend_specific_call
@@ -429,7 +429,7 @@ def trigger_delete_project(request):
     project_guid = request_json.pop('project')
     project = Project.objects.get(guid=project_guid)
     return _trigger_data_update(
-        project, dag_id='DELETE_PROJECTS', clickhouse_func=trigger_delete_clickhouse_project, **request_json,
+        project, dag_id='DELETE_PROJECTS', clickhouse_func=delete_clickhouse_project, **request_json,
     )
 
 
