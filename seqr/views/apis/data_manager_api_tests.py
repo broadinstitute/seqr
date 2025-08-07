@@ -1561,7 +1561,7 @@ class DataManagerAPITest(AirtableTest):
         })
 
     def _test_trigger_search_data_update(self, url, dag_id, body, dag_variables):
-        self._setup_trigger_search_data_update(url, dag_id, body, dag_variables)
+        self._setup_trigger_search_data_update(dag_id=dag_id, dag_variables=dag_variables)
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self._assert_expected_search_data_update(response, dag_id, dag_variables)
 
@@ -2079,7 +2079,7 @@ class HailBackendDataManagerAPITest(AnvilDataManagerAPITest):
 
         self.assert_airflow_calls(variables, 5)
 
-    def _setup_trigger_search_data_update(self, url, dag_id, body, dag_variables):
+    def _setup_trigger_search_data_update(self, *args, dag_id=None, dag_variables=None, **kwargs):
         responses.calls.reset()
         self.set_up_one_dag(dag_id, variables=dag_variables)
 
