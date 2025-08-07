@@ -1,3 +1,4 @@
 aioresponses
 coverage<5.2
 pytest-aiohttp
+clickhouse-connect==0.8.18

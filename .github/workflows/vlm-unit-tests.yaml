@@ -1,4 +1,6 @@
 name: VLM Unit Tests
+permissions:
+  contents: read
 
 # Run the test suite on pushes (incl. merges) to master and dev
 # Run the test suite when a PR is opened, pushed to, or reopened
@@ -19,7 +21,7 @@ on:
       - 'hail_search/fixtures/*'
 
 jobs:
-  vlm:
+  vlm_hail_backend:
     runs-on: ubuntu-latest
     container: hailgenetics/hail:0.2.128
 
@@ -36,5 +38,46 @@ jobs:
           export NODE_ID=TestVLM
           export MACHINE_MEM=24
           export JAVA_OPTS_XSS=16M
-          coverage run --source="./vlm" --omit="./vlm/__main__.py" -m pytest vlm/
+          coverage run --source="./vlm" --omit="./vlm/__main__.py","./vlm/setup_clickhouse_test_data.py","./vlm/clickhouse_utils.py" -m pytest vlm/
           coverage report --fail-under=95
+
+  vlm_clickhouse:
+    runs-on: ubuntu-latest
+    container: hailgenetics/hail:0.2.128
+
+    services:
+      clickhouse:
+        image: bitnami/clickhouse:latest
+        ports:
+          - 8123:8123   # HTTP interface
+        options: >-
+          --health-cmd "clickhouse-client --query 'SELECT 1'"
+          --health-interval 10s 
+          --health-timeout 5s 
+          --health-retries 5
+          --name clickhouse
+        env:
+          CLICKHOUSE_USER: clickhouse_test_user
+          CLICKHOUSE_PASSWORD: clickhouse_test_password
+          ALLOW_EMPTY_PASSWORD: no
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install dependencies
+        run: |
+          python3 -m pip install --upgrade pip wheel
+          pip install -r vlm/requirements-test.txt
+      - name: Set up Clickhouse Settings and Data
+        run: python3 vlm/setup_clickhouse_test_data.py clickhouse 8123 clickhouse_test_user clickhouse_test_password
+      - name: Run coverage tests
+        run: |
+          export SEQR_BASE_URL=https://test-seqr.org/
+          export NODE_ID=TestVLM
+          export CLICKHOUSE_SERVICE_HOSTNAME=clickhouse
+          export CLICKHOUSE_SERVICE_PORT=8123
+          export CLICKHOUSE_USERNAME=vlm_test_user
+          export CLICKHOUSE_PASSWORD=vlm_test_password
+          export CLICKHOUSE_DATABASE=test_seqr
+          coverage run --source="./vlm" --omit="./vlm/__main__.py","./vlm/setup_clickhouse_test_data.py","./vlm/hail_backend_utils.py" -m pytest vlm/
+          coverage report --fail-under=95
+
