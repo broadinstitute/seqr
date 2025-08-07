@@ -625,8 +625,10 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
         patcher = mock.patch('seqr.views.utils.airflow_utils.AuthorizedSession', mock.Mock(return_value=requests))
         self.mock_authorized_session = patcher.start()
         self.addCleanup(patcher.stop)
-        patcher = mock.patch('seqr.views.utils.airflow_utils.AIRFLOW_WEBSERVER_URL', self.MOCK_AIRFLOW_URL)
-        patcher.start()
+        patcher = mock.patch('seqr.views.utils.airflow_utils.AIRFLOW_WEBSERVER_URL')
+        self.mock_airflow_url = patcher.start()
+        self.mock_airflow_url.__str__.return_value = self.MOCK_AIRFLOW_URL
+        self.mock_airflow_url.__bool__.return_value = True
         self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.utils.airflow_utils.safe_post_to_slack')
         self.mock_slack = patcher.start()
