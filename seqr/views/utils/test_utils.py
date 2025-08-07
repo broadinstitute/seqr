@@ -3,6 +3,8 @@ from collections import defaultdict
 from copy import deepcopy
 from datetime import datetime
 from django.contrib.auth.models import User, Group
+from django.core.management import call_command
+from django.db import connections, transaction
 from django.test import TestCase
 from guardian.shortcuts import assign_perm
 from io import StringIO
@@ -14,13 +16,13 @@ import requests
 import responses
 from urllib.parse import quote_plus, urlparse
 
-from seqr.models import Project, CAN_VIEW, CAN_EDIT
+from seqr.models import Project, SavedVariant, CAN_VIEW, CAN_EDIT
 
 WINDOW_REGEX_TEMPLATE = 'window\.{key}=(?P<value>[^)<]+)'
 
 
 class AuthenticationTestCase(TestCase):
-    databases = '__all__'
+    databases = ['default', 'reference_data']
     SUPERUSER = 'superuser'
     ANALYST = 'analyst'
     PM = 'project_manager'
@@ -69,10 +71,6 @@ class AuthenticationTestCase(TestCase):
 
         self._log_stream = StringIO()
         logging.getLogger().handlers[0].stream = self._log_stream
-
-    @classmethod
-    def _databases_support_transactions(cls):
-        return True
 
     @classmethod
     def setUpTestData(cls):
@@ -516,11 +514,43 @@ def get_group_members_side_effect(user, group, use_sa_credentials=False):
     return {}
 
 
-class AnvilAuthenticationTestCase(AuthenticationTestCase):
+class DifferentDbTransactionSupportMixin(object):
 
+    @classmethod
+    def _databases_support_transactions(cls):
+        return True
+
+    @classmethod
+    def _rollback_atomics(cls, atomics):
+        """Django testcases asssume either all database support transactions or none do. This properly cleans up transaction blocks on a per-db basis"""
+        for db_name in reversed(cls._databases_names()):
+            if connections[db_name].features.supports_transactions:
+                transaction.set_rollback(True, using=db_name)
+            atomics[db_name].__exit__(None, None, None)
+
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        for db_name in cls._databases_names():
+            if not connections[db_name].features.supports_transactions:
+                call_command(
+                    "flush",
+                    verbosity=0,
+                    interactive=False,
+                    database=db_name,
+                    reset_sequences=False,
+                    allow_cascade=False,
+                    inhibit_post_migrate=False,
+                )
+
+
+class AnvilAuthenticationTestCase(DifferentDbTransactionSupportMixin, AuthenticationTestCase):
+
+    databases = '__all__'
     ES_HOSTNAME = ''
     CLICKHOUSE_HOSTNAME = 'testhost'
     MOCK_AIRTABLE_KEY = 'airflow_access'
+    SKIP_RESET_VARIANT_JSON = False
 
     # mock the terra apis
     def setUp(self):
@@ -563,6 +593,8 @@ class AnvilAuthenticationTestCase(AuthenticationTestCase):
         self.mock_get_group_members.side_effect = get_group_members_side_effect
         self.addCleanup(patcher.stop)
         super(AnvilAuthenticationTestCase, self).setUp()
+        if self.CLICKHOUSE_HOSTNAME and not self.SKIP_RESET_VARIANT_JSON:
+            SavedVariant.objects.filter(key__isnull=False).update(saved_variant_json={})
 
     @classmethod
     def add_additional_user_groups(cls):
@@ -847,8 +879,8 @@ IGV_SAMPLE_FIELDS = {
 SAVED_VARIANT_FIELDS = {'variantGuid', 'variantId', 'familyGuids', 'xpos', 'ref', 'alt', 'selectedMainTranscriptId', 'acmgClassification'}
 SAVED_VARIANT_DETAIL_FIELDS = {
     'chrom', 'pos', 'genomeVersion', 'liftedOverGenomeVersion', 'liftedOverChrom', 'liftedOverPos', 'tagGuids',
-    'functionalDataGuids', 'noteGuids', 'originalAltAlleles', 'genotypes', 'hgmd', 'CAID',
-    'transcripts', 'populations', 'predictions', 'rsid', 'genotypeFilters', 'clinvar', 'acmgClassification'
+    'functionalDataGuids', 'noteGuids', 'genotypes', 'hgmd', 'CAID',
+    'transcripts', 'populations', 'predictions', 'rsid', 'clinvar', 'acmgClassification'
 }
 SAVED_VARIANT_DETAIL_FIELDS.update(SAVED_VARIANT_FIELDS)
 
@@ -956,7 +988,6 @@ VARIANTS = [
             'callset': {'af': 0.13, 'ac': 4192, 'an': '32588'},
             'gnomad_genomes': {'af': 0.007},
         },
-        'genotypeFilters': 'VQSRTrancheSNP99.95to100.00',
         'genotypes': {
             'NA19675': {
                 'sampleId': 'NA19675',
@@ -964,7 +995,8 @@ VARIANTS = [
                 'gq': 46.0,
                 'numAlt': 1,
                 'dp': '50',
-                'ad': '14,33'
+                'ad': '14,33',
+                'filters': ['VQSRTrancheSNP99.95to100.00'],
             },
             'NA19679': {
                 'sampleId': 'NA19679',
@@ -972,7 +1004,8 @@ VARIANTS = [
                 'gq': 99.0,
                 'numAlt': 0,
                 'dp': '45',
-                'ad': '45,0'
+                'ad': '45,0',
+                'filters': ['VQSRTrancheSNP99.95to100.00'],
             }
         }
     },
@@ -1010,7 +1043,6 @@ VARIANTS = [
         'variantId': '1-248367227-TC-T',
         'transcripts': {'ENSG00000233653': {}},
         'familyGuids': ['F000002_2'],
-        'genotypeFilters': '',
         'genotypes': {}
     }
 ]

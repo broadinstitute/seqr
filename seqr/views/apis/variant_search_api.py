@@ -10,6 +10,7 @@ from django.db.models import Q, F, Value
 from django.db.models.functions import JSONObject
 from django.shortcuts import redirect
 from math import ceil
+import re
 
 from reference_data.models import GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38
 from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, ProjectCategory
@@ -129,9 +130,10 @@ def query_single_variant_handler(request, variant_id):
     """Search variants.
     """
     families = Family.objects.filter(guid=request.GET.get('familyGuid'))
-    check_project_permissions(families.first().project, request.user)
+    family = families.first()
+    check_project_permissions(family.project, request.user)
 
-    variant = get_single_variant(families, variant_id, user=request.user)
+    variant = get_single_variant(family, variant_id, user=request.user)
 
     response = _process_variants([variant], families, request, add_all_context=True, add_locus_list_detail=True)
 
@@ -147,7 +149,7 @@ def _process_variants(variants, families, request, add_all_context=False, add_lo
 
     response_json = get_variants_response(
         request, saved_variants, response_variants=flat_variants, add_all_context=add_all_context,
-        add_locus_list_detail=add_locus_list_detail)
+        add_locus_list_detail=add_locus_list_detail, genome_version=families[0].project.genome_version)
     response_json['searchedVariants'] = variants
 
     for saved_variant in response_json['savedVariantsByGuid'].values():
@@ -274,7 +276,7 @@ def export_variants_handler(request, search_hash):
     variants = _flatten_variants(variants)
 
     saved_variants, variants_by_id = _get_saved_variant_models(variants, families)
-    json_saved_variants = get_json_for_saved_variants_with_tags(saved_variants, add_details=True)
+    json_saved_variants = get_json_for_saved_variants_with_tags(saved_variants, add_details=True, genome_version=families[0].project.genome_version)
 
     saved_variants_by_variant_family = {}
     for saved_variant in json_saved_variants['savedVariantsByGuid'].values():
@@ -553,9 +555,10 @@ def _parse_lookup_request(request):
 def variant_lookup_handler(request):
     parsed_variant_id, variant_id, kwargs = _parse_lookup_request(request)
     is_sv = not parsed_variant_id
+    genome_version = kwargs.get('genome_version', GENOME_VERSION_GRCh38)
     if is_sv:
         families = _all_genome_version_families(
-            kwargs.get('genome_version', GENOME_VERSION_GRCh38), request.user,
+            genome_version, request.user,
         )
         if not families:
             raise PermissionDenied()
@@ -572,7 +575,7 @@ def variant_lookup_handler(request):
     saved_variants, _ = _get_saved_variant_models(variants, None) if families else (None, None)
     response = get_variants_response(
         request, saved_variants=saved_variants, response_variants=variants,
-        add_all_context=True, add_locus_list_detail=True,
+        add_all_context=True, add_locus_list_detail=True, genome_version=genome_version,
     )
     response['variants'] = variants
 
@@ -632,6 +635,10 @@ def _update_lookup_variant(variant, response):
 @login_and_policies_required
 def vlm_lookup_handler(request):
     parsed_variant_id, _, kwargs = _parse_lookup_request(request)
+    if parsed_variant_id:
+        invalid_alleles = [f'"{allele}"' for allele in parsed_variant_id[2:] if not re.fullmatch(r'[ATCG]+', allele)]
+        if invalid_alleles:
+            raise InvalidSearchException(f'Unable to search VLM for invalid allele(s): {", ".join(invalid_alleles)}')
     if not parsed_variant_id:
         raise InvalidSearchException('VLM lookup is not supported for SVs')
     return create_json_response({'vlmMatches': vlm_lookup(request.user, *parsed_variant_id, **kwargs)})

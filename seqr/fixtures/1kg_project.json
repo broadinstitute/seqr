@@ -1850,7 +1850,6 @@
             "liftedOverGenomeVersion": "",
             "familyGuids": ["F000001_1", "F000002_2"],
             "liftedOverPos": "",
-            "genotypeFilters": "pass",
             "mainTranscriptId": "ENST00000258436",
             "populations": {"callset": {"ac": null, "an": null, "af": null}, "g1k": {"ac": null, "an": null, "af": 0.0}, "gnomad_genomes": {"hemi": null, "ac": null, "an": null, "hom": null, "af": 0.0}, "gnomad_exomes": {"hemi": null, "ac": null, "an": null, "hom": null, "af": 2.4418633044922146e-05}, "exac": {"hemi": null, "ac": null, "an": null, "hom": null, "af": 0.000242306760358614}, "topmed": {"ac": null, "an": null, "af": null}},
             "genomeVersion": "37",
@@ -1860,7 +1859,6 @@
             "rsid": null,
             "selectedMainTranscriptId": null,
             "liftedOverChrom": "",
-            "originalAltAlleles": ["G"],
             "transcripts": {"ENSG00000135953": [
                 {"transcriptId": "ENST00000258436", "lofFilter": "", "biotype": "protein_coding", "geneSymbol": "MFSD9", "majorConsequence": "inframe_deletion", "canonical": "YES", "hgvsp": "ENSP00000258436.5:p.Leu126del", "lof": "", "lofFlags": "", "codons": "ctTCTc/ctc", "hgvsc": "ENST00000258436.5:c.375_377delTCT", "transcriptRank": 0, "geneId": "ENSG00000135953", "aminoAcids": "LL/L", "cdnaPosition": "419-421"},
                 {"transcriptId": "ENST00000411991", "lofFilter": "", "biotype": "nonsense_mediated_decay", "geneSymbol": "MFSD9", "majorConsequence": "3_prime_UTR_variant", "canonical": "", "hgvsp": "", "lof": "", "lofFlags": "", "codons": "", "hgvsc": "ENST00000411991.1:c.*211_*213delTCT", "transcriptRank": 100, "geneId": "ENSG00000135953", "aminoAcids": "", "cdnaPosition": "558-560"},
@@ -1887,11 +1885,24 @@
         "ref": "TC",
         "alt": "T",
         "variant_id": "1-248367227-TC-T",
+        "key": 100,
+        "dataset_type": "SNV_INDEL",
+        "genotypes": {
+            "I000004_hg00731": {
+                "numAlt": 2
+            },
+            "I000005_hg00732": {
+                "numAlt": 1
+            }
+        },
         "saved_variant_json": {
             "clinvar": {
-                "clinicalSignificance": "",
-                "alleleId": null,
-                "variationId": null,
+                "pathogenicity": "Uncertain_significance",
+                "alleleId": 12345,
+                "assertions": null,
+                "conditions": null,
+                "conflictingPathogenicities": null,
+                "submitters": null,
                 "goldStars": null
             },
             "liftedOverGenomeVersion": "38",
@@ -1899,7 +1910,6 @@
                 "F000001_1"
             ],
             "liftedOverPos": "",
-            "genotypeFilters": "pass",
             "populations": {
                 "callset": {
                     "ac": null,
@@ -1962,11 +1972,11 @@
             },
             "rsid": null,
             "liftedOverChrom": "",
-            "originalAltAlleles": [
-                "T"
-            ],
             "transcripts": {
-                "ENSG00000135953": []
+                "ENSG00000135953": [
+                    {"transcriptId": "ENST00000371839", "biotype": "protein_coding", "geneId": "ENSG00000135953"}
+                ],
+                "ENSG00000240361": []
             },
             "chrom": "1",
             "genotypes": {
@@ -1979,6 +1989,7 @@
             },
             "CAID": "CA1501729"
         },
+        "selected_main_transcript_id": "ENST00000371839",
         "family": 2
     }
 },
@@ -2000,7 +2011,6 @@
             "liftedOverGenomeVersion": "38",
             "familyGuids": ["F000001_1"],
             "liftedOverPos": "",
-            "genotypeFilters": "pass",
             "mainTranscriptId": "ENST00000505820",
             "populations": {"callset": {"ac": null, "an": null, "af": null}, "g1k": {"ac": null, "an": null, "af": 0.0}, "gnomad_genomes": {"hemi": null, "ac": null, "an": null, "hom": null, "af": 0.0}, "gnomad_exomes": {"hemi": null, "ac": null, "an": null, "hom": null, "af": 8.142526788913136e-06}, "exac": {"hemi": null, "ac": null, "an": null, "hom": null, "af": 0.0}, "topmed": {"ac": null, "an": null, "af": null}},
             "pos": 1560662,
@@ -2008,7 +2018,6 @@
             "hgmd": {"accession": null, "class": null},
             "rsid": null,
             "liftedOverChrom": "",
-            "originalAltAlleles": ["T"],
             "transcripts": {
                 "ENSG00000197530": [
                     {"transcriptId": "ENST00000505820", "lofFilter": "", "biotype": "protein_coding", "geneSymbol": "CELSR1", "majorConsequence": "splice_region_variant", "canonical": "YES", "hgvs": "ENST00000505820.2:c.1067-4G>A", "lof": "", "lofFlags": "", "codons": "Gtg/Atg", "hgvsc": "ENST00000505820.2:c.1067-4G>A", "transcriptRank": 0, "geneId": "ENSG00000197530", "aminoAcids": "V/M", "cdnaPosition": "3955"}
@@ -2042,7 +2051,6 @@
             "liftedOverGenomeVersion": "38",
             "familyGuids": ["F000001_1"],
             "liftedOverPos": "",
-            "genotypeFilters": "pass",
             "mainTranscriptId": "ENST00000505820",
             "populations": {
                 "callset": {
@@ -2093,7 +2101,6 @@
             "hgmd": {"accession": null, "class": null},
             "rsid": null,
             "liftedOverChrom": "",
-            "originalAltAlleles": ["G"],
             "transcripts": {
                 "ENSG00000197530": [
                     {"transcriptId": "ENST00000505820", "lofFilter": "", "biotype": "protein_coding", "geneSymbol": "MIB2", "majorConsequence": "intron_variant", "canonical": 1, "hgvsp": "ENST00000505820.2:c.1586-17C>G", "lof": "", "lofFlags": "", "codons": "Gtg/Atg", "hgvsc": "ENST00000262738.3:c.3955G>A", "transcriptRank": 0, "geneId": "ENSG00000197530", "aminoAcids": "V/M", "cdnaPosition": "3955"}
@@ -2123,9 +2130,23 @@
         "ref": "TC",
         "alt": "T",
         "variant_id": "1-248367227-TC-T",
+        "key": 100,
+        "dataset_type": "SNV_INDEL",
+        "genotypes": {
+            "I000002_na19675": {"sampleId": "NA19675", "ab": 0.5555556, "ad": null, "gq": 99, "dp": 9, "pl": null, "numAlt": 1},
+            "I000017_na20889": {"sampleId": "NA20885", "ab": 0.0, "ad": "71,0", "gq": 99.0, "dp": "71", "pl": "0,213,1918", "numAlt": 1}
+        },
         "saved_variant_json": {
-            "clinvar": {"clinicalSignificance": "", "alleleId": null, "variationId": null, "goldStars": null},
-            "liftedOverGenomeVersion": "38",  "liftedOverPos": "", "genotypeFilters": "pass",
+            "clinvar": {
+                "pathogenicity": "Uncertain_significance",
+                "alleleId": 12345,
+                "assertions": null,
+                "conditions": null,
+                "conflictingPathogenicities": null,
+                "submitters": null,
+                "goldStars": null
+            },
+            "liftedOverGenomeVersion": "38",  "liftedOverPos": "",
             "populations": {"callset": {"ac": null, "an": null, "af": null}, "g1k": {"ac": null, "an": null, "af": 0.0},
                 "gnomad_genomes": {"hemi": null, "ac": null, "an": null, "hom": null, "af": 0.00012925741614425127},
                 "gnomad_exomes": {"hemi": null, "ac": null, "an": null, "hom": null, "af": 6.505916317651364e-05},
@@ -2135,7 +2156,7 @@
                 "eigen": null, "revel": null, "sift": null, "cadd": "27.2", "metasvm": "", "mpc": null,
                 "splice_ai": null, "phastcons_100_vert": null, "mut_taster": null, "fathmm": null, "polyphen": null,
                 "dann": null, "primate_ai": null, "gerp_rs": null},
-            "hgmd": {"accession": null, "class": null}, "rsid": null, "liftedOverChrom": "", "originalAltAlleles": ["T"],
+            "hgmd": {"accession": null, "class": null}, "rsid": null, "liftedOverChrom": "",
              "mainTranscriptId": "ENST00000505820", "transcripts": {
                 "ENSG00000135953": [
                     {"transcriptId": "ENST00000371839", "biotype": "protein_coding", "geneId": "ENSG00000228198"}
@@ -2188,6 +2209,7 @@
             "variantId": "prefix_19107_DEL",
             "chrom": "1",
             "genomeVersion": "37",
+            "populations": {"sv_callset":  {}},
             "transcripts": {"ENSG00000240361": [], "ENSG00000135953": [], "ENSG00000223972":  []}
         },
         "family": 12
@@ -2206,6 +2228,11 @@
         "ref": "TC",
         "alt": "T",
         "variant_id": "1-248367227-TC-T",
+        "key": 100,
+        "dataset_type": "SNV_INDEL",
+        "genotypes": {
+            "I000018_na21234": {"sampleId": "NA20885", "ab": 0.0, "gq": 99.0, "numAlt": 1}
+        },
         "saved_variant_json": {
             "liftedOverGenomeVersion": "37",  "liftedOverPos": "", "genomeVersion": "38", "pos": 248367227,
             "transcripts": {}, "chrom": "1", "genotypes": {

@@ -39,7 +39,7 @@ ALL_EXPECTED_SAMPLE_DATA = {**EXPECTED_SAMPLE_DATA, **EXPECTED_MITO_SAMPLE_DATA}
 @mock.patch('clickhouse_search.search.CLICKHOUSE_SERVICE_HOSTNAME', '')
 @mock.patch('seqr.utils.search.hail_search_utils.HAIL_BACKEND_SERVICE_HOSTNAME', MOCK_HOST)
 class HailSearchUtilsTests(SearchTestHelper, TestCase):
-    databases = '__all__'
+    databases = ['default', 'reference_data']
     fixtures = ['users', '1kg_project', 'reference_data']
 
     def setUp(self):
@@ -84,7 +84,7 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
 
         self._test_minimal_search_call(**expected_search, **kwargs)
 
-    @mock.patch('seqr.utils.search.hail_search_utils.MAX_FAMILY_COUNTS', {'WES': 2, 'WGS': 1})
+    @mock.patch('seqr.utils.search.utils.MAX_FAMILY_COUNTS', {'WES': 2, 'WGS': 1})
     @responses.activate
     def test_query_variants(self):
         variants, total = query_variants(self.results_model, user=self.user)
@@ -335,37 +335,32 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
 
     @responses.activate
     def test_get_single_variant(self):
-        variant = get_single_variant(self.families, '2-103343353-GAGA-G', user=self.user)
+        family = self.families.filter(guid='F000002_2').first()
+        variant = get_single_variant(family, '2-103343353-GAGA-G', user=self.user)
         self.assertDictEqual(variant, HAIL_BACKEND_VARIANTS[0])
         self._test_minimal_search_call(
             variant_ids=[['2', 103343353, 'GAGA', 'G']], variant_keys=[],
-            num_results=1, sample_data={'SNV_INDEL': ALL_AFFECTED_SAMPLE_DATA['SNV_INDEL']})
+            num_results=1, sample_data={'SNV_INDEL': FAMILY_2_VARIANT_SAMPLE_DATA['SNV_INDEL']})
 
-        get_single_variant(self.families, 'prefix_19107_DEL', user=self.user)
+        get_single_variant(family, 'prefix_19107_DEL', user=self.user)
         self._test_minimal_search_call(
             variant_ids=[], variant_keys=['prefix_19107_DEL'],
             num_results=1, sample_data=EXPECTED_SAMPLE_DATA, omit_data_type='SNV_INDEL')
 
-        get_single_variant(self.families, 'M-10195-C-A', user=self.user)
+        get_single_variant(family, 'M-10195-C-A', user=self.user)
         self._test_minimal_search_call(
             variant_ids=[['M', 10195, 'C', 'A']], variant_keys=[],
             num_results=1, sample_data=EXPECTED_MITO_SAMPLE_DATA)
 
-        with self.assertRaises(InvalidSearchException) as cm:
-            get_single_variant(self.families, '1-91502721-G-A', user=self.user, return_all_queried_families=True)
-        self.assertEqual(
-            str(cm.exception),
-            'Unable to return all families for the following variants: 1-38724419-T-G (F000003_3; F000005_5), 1-91502721-G-A (F000005_5)',
-        )
 
-        get_single_variant(self.families.filter(guid='F000002_2'), '2-103343353-GAGA-G', user=self.user, return_all_queried_families=True)
+        get_single_variant(family, '2-103343353-GAGA-G', user=self.user)
         self._test_minimal_search_call(
             variant_ids=[['2', 103343353, 'GAGA', 'G']], variant_keys=[],
             num_results=1, sample_data=FAMILY_2_VARIANT_SAMPLE_DATA)
 
         responses.add(responses.POST, f'{MOCK_ORIGIN}:5000/search', status=200, json={'results': [], 'total': 0})
         with self.assertRaises(InvalidSearchException) as cm:
-            get_single_variant(self.families, '10-10334333-A-G', user=self.user)
+            get_single_variant(family, '10-10334333-A-G', user=self.user)
         self.assertEqual(str(cm.exception), 'Variant 10-10334333-A-G not found')
 
     @responses.activate

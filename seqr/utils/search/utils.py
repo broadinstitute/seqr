@@ -1,9 +1,10 @@
 from collections import defaultdict
 from copy import deepcopy
 from datetime import timedelta
+from django.db.models import Count
 
 from clickhouse_search.search import clickhouse_backend_enabled, get_clickhouse_variants, format_clickhouse_results, \
-    get_clickhouse_cache_results, clickhouse_variant_lookup
+    get_clickhouse_cache_results, clickhouse_variant_lookup, get_clickhouse_variant_by_id
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample, Individual, Project
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_get_wildcard_json, safe_redis_set_json
@@ -14,7 +15,7 @@ from seqr.utils.search.elasticsearch.es_utils import ping_elasticsearch, delete_
     get_es_variants, get_es_variants_for_variant_ids, process_es_previously_loaded_results, process_es_previously_loaded_gene_aggs, \
     es_backend_enabled, ping_kibana, ES_EXCEPTION_ERROR_MAP, ES_EXCEPTION_MESSAGE_MAP, ES_ERROR_LOG_EXCEPTIONS
 from seqr.utils.search.hail_search_utils import get_hail_variants, get_hail_variants_for_variant_ids, ping_hail_backend, \
-    hail_variant_lookup, validate_hail_backend_no_location_search
+    hail_variant_lookup
 from seqr.utils.gene_utils import parse_locus_list_items
 from seqr.utils.xpos_utils import get_xpos, format_chrom, MIN_POS, MAX_POS
 
@@ -58,7 +59,7 @@ def _raise_clickhouse_not_implemented(*args, **kwargs):
     raise NotImplementedError('Clickhouse backend is not implemented for this function.')
 
 
-def backend_specific_call(es_func, hail_backend_func, clickhouse_func=_raise_clickhouse_not_implemented):
+def backend_specific_call(es_func, hail_backend_func, clickhouse_func):
     if es_backend_enabled():
         return es_func
     elif clickhouse_backend_enabled():
@@ -68,11 +69,12 @@ def backend_specific_call(es_func, hail_backend_func, clickhouse_func=_raise_cli
 
 
 def ping_search_backend():
-    backend_specific_call(ping_elasticsearch, ping_hail_backend)()
+    # Clickhouse backend does not need special uptime testing, will be checked with the other database connection pings
+    backend_specific_call(ping_elasticsearch, ping_hail_backend, lambda: None)()
 
 
 def ping_search_backend_admin():
-    backend_specific_call(ping_kibana, lambda: True)()
+    backend_specific_call(ping_kibana, lambda: True, lambda: True)()
 
 
 def get_search_backend_status():
@@ -90,8 +92,8 @@ def get_search_samples(projects, active_only=True):
     return _get_filtered_search_samples({'individual__family__project__in': projects}, active_only=active_only)
 
 
-def _get_families_search_data(families, dataset_type):
-    samples = _get_filtered_search_samples({'individual__family__in': families})
+def _get_families_search_data(families, dataset_type, sample_filter=None):
+    samples = _get_filtered_search_samples(sample_filter or {'individual__family__in': families})
     if len(samples) < 1:
         raise InvalidSearchException('No search data found for families {}'.format(
             ', '.join([f.family_id for f in families])))
@@ -131,20 +133,34 @@ def delete_search_backend_data(data_id):
     )(data_id)
 
 
-def get_single_variant(families, variant_id, return_all_queried_families=False, user=None):
-    variants = _get_variants_for_variant_ids(
-        families, [variant_id], user, return_all_queried_families=return_all_queried_families,
-    )
-    if not variants:
+def get_single_variant(family, variant_id, user=None):
+    parsed_variant_id = parse_variant_id(variant_id)
+    dataset_type = _variant_ids_dataset_type([parsed_variant_id])
+    samples = _get_families_search_data([family], dataset_type, sample_filter={'individual__family_id': family.id})
+    variant = backend_specific_call(
+        _process_ids_search(get_es_variants_for_variant_ids),
+        _process_ids_search(get_hail_variants_for_variant_ids),
+        _get_clickhouse_variant_by_id,
+    )(parsed_variant_id, variant_id, samples, family.project.genome_version, dataset_type, user)
+    if not variant:
         raise InvalidSearchException('Variant {} not found'.format(variant_id))
-    return variants[0]
+    return variant
 
 
-def get_variants_for_variant_ids(families, variant_ids, dataset_type=None, user=None, user_email=None):
-    return _get_variants_for_variant_ids(families, variant_ids, user, user_email, dataset_type=dataset_type)
+def _process_ids_search(search_func):
+    def _search(parsed_variant_id, variant_id, samples, genome_version, dataset_type, user):
+        variants = search_func(samples, genome_version, {variant_id: parsed_variant_id}, user)
+        return variants[0] if variants else None
+    return _search
 
 
-def _get_variants_for_variant_ids(families, variant_ids, user, user_email=None, dataset_type=None, **kwargs):
+def _get_clickhouse_variant_by_id(parsed_variant_id, variant_id, samples, genome_version, dataset_type, user):
+    return get_clickhouse_variant_by_id(
+        parsed_variant_id or variant_id, samples, genome_version, DATASET_TYPES_LOOKUP[dataset_type][0],
+    )
+
+
+def get_variants_for_variant_ids(families, variant_ids, dataset_type=None, user=None, user_email=None, **kwargs):
     parsed_variant_ids = {}
     for variant_id in variant_ids:
         parsed_variant_ids[variant_id] = parse_variant_id(variant_id)
@@ -157,9 +173,9 @@ def _get_variants_for_variant_ids(families, variant_ids, user, user_email=None, 
         }
     dataset_type = _variant_ids_dataset_type(parsed_variant_ids.values())
 
-    return backend_specific_call(get_es_variants_for_variant_ids, get_hail_variants_for_variant_ids)(
+    return backend_specific_call(get_es_variants_for_variant_ids, get_hail_variants_for_variant_ids, _raise_clickhouse_not_implemented)(
         _get_families_search_data(families, dataset_type=dataset_type), _get_search_genome_version(families),
-        parsed_variant_ids, user, user_email=user_email, **kwargs
+        parsed_variant_ids, user, user_email=user_email,
     )
 
 
@@ -560,7 +576,21 @@ def _validate_search(search, samples, previous_search_results):
                 )
 
     if not has_location_filter:
-        backend_specific_call(lambda *args: None, validate_hail_backend_no_location_search, lambda *args: None)(samples)
+        backend_specific_call(lambda *args: None, _validate_no_location_search, _validate_no_location_search)(samples)
+
+
+MAX_FAMILY_COUNTS = {Sample.SAMPLE_TYPE_WES: 200, Sample.SAMPLE_TYPE_WGS: 35}
+
+
+def _validate_no_location_search(samples):
+    variant_samples = samples.filter(dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
+    if variant_samples.values('individual__family__project_id').distinct().count() > 1:
+        raise InvalidSearchException('Location must be specified to search across multiple projects')
+    sample_counts = samples.filter(dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS).values('sample_type').annotate(
+        family_count=Count('individual__family_id', distinct=True),
+    )
+    if any(sample_count['family_count'] > MAX_FAMILY_COUNTS[sample_count['sample_type']] for sample_count in sample_counts):
+        raise InvalidSearchException('Location must be specified to search across multiple families in large projects')
 
 
 def _filter_inheritance_family_samples(samples, inheritance_filter):

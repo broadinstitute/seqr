@@ -1,7 +1,11 @@
 import logging
 import json
-from django.db.models import Q
 
+from clickhouse_backend.models import ArrayField, StringField
+from django.db.models import Q, F
+
+from clickhouse_search.backend.functions import ArrayFilter, ArrayMap
+from clickhouse_search.search import get_annotations_queryset, get_transcripts_queryset
 from seqr.models import SavedVariant, VariantTagType, VariantTag, VariantNote, VariantFunctionalData,\
     Family, GeneNote, Project
 from seqr.utils.search.utils import backend_specific_call
@@ -38,7 +42,7 @@ def saved_variant_data(request, project_guid, variant_guids=None):
         variant_query = variant_query.filter(varianttag__isnull=get_note_only).distinct()
 
     add_locus_list_detail = request.GET.get(INCLUDE_LOCUS_LISTS_PARAM) == 'true'
-    response = get_variants_response(request, variant_query, add_locus_list_detail=add_locus_list_detail)
+    response = get_variants_response(request, variant_query, add_locus_list_detail=add_locus_list_detail, genome_version= project.genome_version)
     if 'individualsByGuid' in response and not family_guids:
         if 'projectsByGuid' not in response:
             response['projectsByGuid'] = {project_guid: {}}
@@ -73,11 +77,11 @@ def create_saved_variant_handler(request):
 
     response = {}
     if variant_json.get('note'):
-        _, response = _create_variant_note(saved_variants, variant_json, request.user)
+        _, response = _create_variant_note(saved_variants, variant_json, request.user, family.project.genome_version)
     elif variant_json.get('tags'):
         _update_tags(saved_variants, variant_json, request.user)
 
-    response.update(get_json_for_saved_variants_with_tags(saved_variants, add_details=True))
+    response.update(get_json_for_saved_variants_with_tags(saved_variants, add_details=True, genome_version=family.project.genome_version))
     return create_json_response(response)
 
 
@@ -100,7 +104,7 @@ def create_variant_note_handler(request, variant_guids):
         return create_json_response({'error': 'Note is required'}, status=400)
 
     # update saved_variants
-    note, response = _create_variant_note(saved_variants, request_json, request.user)
+    note, response = _create_variant_note(saved_variants, request_json, request.user, family.project.genome_version)
     note_json = get_json_for_variant_note(note)
     note_json['variantGuids'] = all_variant_guids
     response.update({
@@ -113,7 +117,7 @@ def create_variant_note_handler(request, variant_guids):
     return create_json_response(response)
 
 
-def _create_variant_note(saved_variants, note_json, user):
+def _create_variant_note(saved_variants, note_json, user, genome_version):
     note = create_model_from_json(VariantNote, {
         'note': note_json.get('note'),
         'report': note_json.get('report') or False,
@@ -123,19 +127,36 @@ def _create_variant_note(saved_variants, note_json, user):
 
     response = {}
     if note_json.get('saveAsGeneNote'):
-        main_transcript_id = saved_variants[0].selected_main_transcript_id or saved_variants[0].saved_variant_json.get('mainTranscriptId')
-        if main_transcript_id:
-            gene_id = next(
-                gene_id for gene_id, transcripts in saved_variants[0].saved_variant_json['transcripts'].items()
-                if any(t['transcriptId'] == main_transcript_id for t in transcripts))
-        else:
-            gene_id = next(gene_id for gene_id in sorted(saved_variants[0].saved_variant_json['transcripts']))
+        gene_id = backend_specific_call(_variant_gene_id, _variant_gene_id, _clickhouse_variant_gene_id)(saved_variants[0], genome_version)
         create_model_from_json(GeneNote, {'note': note_json.get('note'), 'gene_id': gene_id}, user)
         response['genesById'] = {gene_id: {
             'notes': get_json_for_gene_notes_by_gene_id([gene_id], user)[gene_id],
         }}
 
     return note, response
+
+
+def _variant_gene_id(variant, genome_version):
+    main_transcript_id = variant.selected_main_transcript_id or variant.saved_variant_json.get('mainTranscriptId')
+    if main_transcript_id:
+        return next(
+            gene_id for gene_id, transcripts in variant.saved_variant_json['transcripts'].items()
+            if any(t['transcriptId'] == main_transcript_id for t in transcripts))
+    return next(gene_id for gene_id in sorted(variant.saved_variant_json['transcripts']))
+
+
+def _clickhouse_variant_gene_id(variant, genome_version):
+    if not variant.key:
+        return _variant_gene_id(variant, genome_version)
+    if variant.selected_main_transcript_id:
+        qs = get_transcripts_queryset(genome_version, [variant.key]).annotate(gene_ids=ArrayMap(
+            ArrayFilter('transcripts', conditions=[{'transcriptId': (variant.selected_main_transcript_id, "{field} = '{value}'")}]),
+            mapped_expression='x.geneId', output_field=ArrayField(StringField()),
+        )).annotate(gene_id=F('gene_ids__0'))
+    else:
+        annotations = get_annotations_queryset(genome_version, variant.dataset_type, [variant.key])
+        qs = annotations.annotate(gene_id=F(f'{annotations.transcript_field}__0__geneId'))
+    return qs.values_list('gene_id', flat=True)[0]
 
 
 @login_and_policies_required
@@ -299,7 +320,7 @@ def _update_tags(saved_variants, tags_json, user, tag_key='tags', model_cls=Vari
 
 @login_and_policies_required
 def update_saved_variant_json(request, project_guid):
-    backend_specific_call(lambda: True, _hail_backend_error)()
+    backend_specific_call(lambda: True, _backend_error, _backend_error)()
     project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
     reset_cached_search_results(project)
     try:
@@ -311,8 +332,8 @@ def update_saved_variant_json(request, project_guid):
     return create_json_response({variant_guid: None for variant_guid in updated_saved_variant_guids or []})
 
 
-def _hail_backend_error(*args, **kwargs):
-    raise ValueError('Endpoint is disabled for the hail backend')
+def _backend_error(*args, **kwargs):
+    raise ValueError('Endpoint is disabled for current search backend')
 
 
 @login_and_policies_required

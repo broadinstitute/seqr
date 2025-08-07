@@ -7,12 +7,13 @@ import json
 import logging
 import re
 
+from clickhouse_search.search import get_clickhouse_genotypes
 from reference_data.models import GENOME_VERSION_LOOKUP, GENOME_VERSION_GRCh38
 from seqr.models import Family, Sample, SavedVariant, Project, Individual
 from seqr.utils.communication_utils import safe_post_to_slack, send_project_email
 from seqr.utils.file_utils import file_iter, list_files, is_google_bucket_file_path
 from seqr.utils.search.add_data_utils import notify_search_data_loaded, update_airtable_loading_tracking_status
-from seqr.utils.search.utils import parse_valid_variant_id
+from seqr.utils.search.utils import parse_valid_variant_id, backend_specific_call
 from seqr.utils.search.hail_search_utils import hail_variant_multi_lookup, search_data_type
 from seqr.utils.xpos_utils import get_xpos, CHROMOSOMES, MIN_POS, MAX_POS
 from seqr.views.utils.airtable_utils import AirtableSession, LOADABLE_PDO_STATUSES, AVAILABLE_PDO_STATUS
@@ -29,11 +30,16 @@ logger = logging.getLogger(__name__)
 CLICKHOUSE_MIGRATION_SENTINEL = 'hail_search_to_clickhouse_migration'
 RUN_FILE_PATH_TEMPLATE = '{data_dir}/{genome_version}/{dataset_type}/runs/{run_version}/{file_name}'
 SUCCESS_FILE_NAME = '_SUCCESS'
+CLICKHOUSE_SUCCESS_FILE_NAME = '_CLICKHOUSE_LOAD_SUCCESS'
 VALIDATION_ERRORS_FILE_NAME = 'validation_errors.json'
 ERRORS_REPORTED_FILE_NAME = '_ERRORS_REPORTED'
 RUN_PATH_FIELDS = ['genome_version', 'dataset_type', 'run_version', 'file_name']
 
 DATASET_TYPE_MAP = {'GCNV': Sample.DATASET_TYPE_SV_CALLS}
+CLICKHOUSE_DATASET_TYPE_MAP = {
+    'GCNV': f'{Sample.DATASET_TYPE_SV_CALLS}_WES',
+    Sample.DATASET_TYPE_SV_CALLS: f'{Sample.DATASET_TYPE_SV_CALLS}_WGS',
+}
 USER_EMAIL = 'manage_command'
 MAX_LOOKUP_VARIANTS = 1000
 MAX_RELOAD_VARIANTS = 100000
@@ -63,7 +69,8 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         runs = self._get_runs(**options)
 
-        success_run_dirs = [run_dir for run_dir, run_details in runs.items() if SUCCESS_FILE_NAME in run_details['files']]
+        success_file_name = backend_specific_call(None, SUCCESS_FILE_NAME, CLICKHOUSE_SUCCESS_FILE_NAME)
+        success_run_dirs = [run_dir for run_dir, run_details in runs.items() if success_file_name in run_details['files']]
         if success_run_dirs:
             self._load_success_runs(runs, success_run_dirs)
         if not success_run_dirs:
@@ -106,9 +113,15 @@ class Command(BaseCommand):
         # Reset cached results for all projects, as seqr AFs will have changed for all projects when new data is added
         reset_cached_search_results(project=None)
 
+        backend_specific_call(
+            lambda *args: None, self._reload_dataset_type_shared_variant_annotations, lambda *args: None,
+        )(updated_families_by_data_type, updated_variants_by_data_type)
+
+    @classmethod
+    def _reload_dataset_type_shared_variant_annotations(cls, updated_families_by_data_type, updated_variants_by_data_type):
         for data_type_key, updated_families in updated_families_by_data_type.items():
             try:
-                self._reload_shared_variant_annotations(
+                cls._reload_shared_variant_annotations(
                     *data_type_key, updated_variants_by_data_type[data_type_key], exclude_families=updated_families,
                 )
             except Exception as e:
@@ -200,6 +213,7 @@ class Command(BaseCommand):
 
     @classmethod
     def _load_new_samples(cls, metadata_path, genome_version, dataset_type, run_version, **kwargs):
+        clickhouse_dataset_type = CLICKHOUSE_DATASET_TYPE_MAP.get(dataset_type, dataset_type)
         dataset_type = DATASET_TYPE_MAP.get(dataset_type, dataset_type)
 
         logger.info(f'Loading new samples from {genome_version}/{dataset_type}: {run_version}')
@@ -235,7 +249,7 @@ class Command(BaseCommand):
 
         sample_type = metadata['sample_type']
         logger.info(f'Loading {len(sample_project_tuples)} {sample_type} {dataset_type} samples in {len(samples_by_project)} projects')
-        new_samples, *args = match_and_update_search_samples(
+        new_samples, updated_samples, *args = match_and_update_search_samples(
             projects=samples_by_project.keys(),
             sample_project_tuples=sample_project_tuples,
             sample_data={'data_source': run_version, 'elasticsearch_index': ';'.join(metadata['callsets'])},
@@ -265,9 +279,10 @@ class Command(BaseCommand):
                 logger.error(f'Error updating individuals sample qc {run_version}: {e}')
 
         # Reload saved variant JSON
+        update_function = backend_specific_call(None, None, cls._update_project_saved_variant_genotypes)
         updated_variants_by_id = update_projects_saved_variant_json([
-            (project.id, project.name, project.genome_version, families) for project, families in families_by_project.items()
-        ], user_email=USER_EMAIL, dataset_type=dataset_type)
+            (project.id, project.guid, project.name, project.genome_version, families) for project, families in families_by_project.items()
+        ], user_email=USER_EMAIL, dataset_type=dataset_type, update_function=update_function, samples=updated_samples, clickhouse_dataset_type=clickhouse_dataset_type)
 
         return search_data_type(dataset_type, sample_type), set(family_project_map.keys()), updated_variants_by_id
 
@@ -403,6 +418,27 @@ class Command(BaseCommand):
                 fields=['filter_flags', 'pop_platform_filters', 'population'],
             )
 
+    @classmethod
+    def _update_project_saved_variant_genotypes(cls, project_id, genome_version, user_email, family_guids, project_guid, samples=None, clickhouse_dataset_type=None, **kwargs):
+        updates = {}
+        for family_guid in family_guids:
+            variant_models_by_key = {
+                v.key: v for v in get_saved_variants(genome_version, project_id, [family_guid], clickhouse_dataset_type=clickhouse_dataset_type)
+            }
+            if not variant_models_by_key:
+                continue
+            variants = []
+            genotypes_by_key = get_clickhouse_genotypes(
+                project_guid, [family_guid], genome_version, clickhouse_dataset_type, variant_models_by_key.keys(), samples,
+            )
+            for key, genotypes in genotypes_by_key.items():
+                variant = variant_models_by_key[key]
+                variant.genotypes = genotypes
+                variants.append(variant)
+            logger.info(f'Reloading genotypes for {len(variants)} {clickhouse_dataset_type} variants in family {family_guid}')
+            SavedVariant.bulk_update_models(None, variants, ['genotypes'])
+            updates.update({v.id: v for v in variants})
+        return updates
 
     @classmethod
     def _reload_shared_variant_annotations(cls, data_type, genome_version, updated_variants_by_id=None, exclude_families=None, chromosomes=None):

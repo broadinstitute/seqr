@@ -261,8 +261,11 @@ class FamilyAPITest(object):
         self.assertEqual(response.status_code, 200)
 
     @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', 'testhost')
+    @mock.patch('seqr.views.utils.permissions_utils.INTERNAL_NAMESPACES')
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP')
-    def test_delete_families_handler(self, mock_pm_group):
+    def test_delete_families_handler(self, mock_pm_group, mock_internal_namespaces):
+        internal_namespaces = ['my-seqr-billing']
+        mock_internal_namespaces.__contains__.side_effect = lambda s: s in internal_namespaces
         url = reverse(delete_families_handler, args=[PROJECT_GUID])
         self.check_manager_login(url)
 
@@ -314,6 +317,16 @@ class FamilyAPITest(object):
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'families': [{'familyGuid': 'F000012_12'}]}))
         self.assertEqual(response.status_code, 200)
+
+        self.login_manager()
+        response = self.client.post(url, content_type='application/json', data=json.dumps({
+            'families': [{'familyGuid': 'F000011_11'}]}))
+        self.assertEqual(response.status_code, 403)
+
+        internal_namespaces = []
+        response = self.client.post(url, content_type='application/json', data=json.dumps({
+            'families': [{'familyGuid': 'F000011_11'}]}))
+        self.assertEqual(response.status_code, 200 if self.EXTERNAL_ANVIL_CAN_DELETE else 403)
 
     def test_update_family_analysed_by(self):
         url = reverse(update_family_analysed_by, args=[FAMILY_GUID])
@@ -649,6 +662,10 @@ class FamilyAPITest(object):
 class LocalFamilyAPITest(AuthenticationTestCase, FamilyAPITest):
     fixtures = ['users', '1kg_project', 'reference_data']
 
+    EXTERNAL_ANVIL_CAN_DELETE = False
+
 
 class AnvilFamilyAPITest(AnvilAuthenticationTestCase, FamilyAPITest):
-    fixtures = ['users', '1kg_project', 'reference_data']
+    fixtures = ['users', '1kg_project', 'reference_data', 'clickhouse_saved_variants']
+
+    EXTERNAL_ANVIL_CAN_DELETE = True
