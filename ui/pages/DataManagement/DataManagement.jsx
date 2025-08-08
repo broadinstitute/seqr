@@ -12,7 +12,7 @@ import LoadData from './components/LoadData'
 import RnaSeq from './components/RnaSeq'
 import Users from './components/Users'
 import PhenotypePrioritization from './components/PhenotypePrioritization'
-import TRIGGER_DAG_PAGES from './components/TriggerDagPages'
+import TRIGGER_SEARCH_DATA_UPDATE_PAGES from './components/TriggerSearchDataUpdatePages'
 
 const IFRAME_STYLE = { position: 'fixed', left: '0', top: '95px' }
 
@@ -51,7 +51,7 @@ const LOCAL_HAIL_SEARCH_DATA_MANAGEMENT_PAGES = [
 
 const AIRFLOW_HAIL_SEARCH_DATA_MANAGEMENT_PAGES = [
   ...DATA_MANAGEMENT_PAGES,
-  ...TRIGGER_DAG_PAGES,
+  ...TRIGGER_SEARCH_DATA_UPDATE_PAGES,
 ]
 
 const dataManagementPages = (user, elasticsearchEnabled) => {

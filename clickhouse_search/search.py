@@ -2,6 +2,7 @@ from clickhouse_backend.models import ArrayField, StringField
 from collections import defaultdict
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.exceptions import ObjectDoesNotExist
+from django.db import connections
 from django.db.models import F, Min, Q
 from django.db.models.functions import JSONObject
 import json
@@ -11,7 +12,7 @@ from clickhouse_search.backend.functions import Array, ArrayFilter, ArrayInterse
     ArrayDistinct, ArrayMap
 from clickhouse_search.models import ENTRY_CLASS_MAP, ANNOTATIONS_CLASS_MAP, TRANSCRIPTS_CLASS_MAP, KEY_LOOKUP_CLASS_MAP, \
     BaseClinvar, BaseAnnotationsMitoSnvIndel, BaseAnnotationsGRCh37SnvIndel, BaseAnnotationsSvGcnv
-from reference_data.models import GeneConstraint, Omim
+from reference_data.models import GeneConstraint, Omim, GENOME_VERSION_LOOKUP
 from seqr.models import Sample, PhenotypePrioritization
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.search.constants import MAX_VARIANTS, XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, \
@@ -531,3 +532,15 @@ def get_clickhouse_key_lookup(genome_version, dataset_type, variants_ids, revers
         batch = variants_ids[i:i + BATCH_SIZE]
         lookup.update(dict(key_lookup_class.objects.filter(variant_id__in=batch).values_list(*fields)))
     return lookup
+
+
+def delete_clickhouse_project(project, dataset_type=None, **kwargs):
+    table_base = f'{GENOME_VERSION_LOOKUP[project.genome_version]}/{dataset_type}'
+    with connections['clickhouse_write'].cursor() as cursor:
+        cursor.execute(f'ALTER TABLE "{table_base}/entries" DROP PARTITION %s', [project.guid])
+        cursor.execute(f'ALTER TABLE "{table_base}/project_gt_stats" DROP PARTITION %s', [project.guid])
+        view_name = f'{table_base}/project_gt_stats_to_gt_stats_mv'
+        cursor.execute(f'SYSTEM REFRESH VIEW "{view_name}"')
+        cursor.execute(f'SYSTEM WAIT VIEW "{view_name}"')
+        cursor.execute(f'SYSTEM RELOAD DICTIONARY "{table_base}/gt_stats_dict"')
+    return f'Deleted all {dataset_type} search data for project {project.name}'

@@ -6,10 +6,11 @@ import mock
 from requests import HTTPError
 import responses
 
+from clickhouse_search.models import EntriesSnvIndel, ProjectGtStatsSnvIndel, AnnotationsSnvIndel
 from seqr.utils.communication_utils import _set_bulk_notification_stream
 from seqr.views.apis.data_manager_api import elasticsearch_status, delete_index, \
     update_rna_seq, load_rna_seq_sample_data, load_phenotype_prioritization_data, validate_callset, loading_vcfs, \
-    get_loaded_projects, trigger_dag, load_data
+    get_loaded_projects, load_data, trigger_delete_project, trigger_delete_family, trigger_update_search_reference_data
 from seqr.views.utils.orm_to_json_utils import _get_json_for_models
 from seqr.views.utils.test_utils import AuthenticationTestCase, AirflowTestCase, AirtableTest
 from seqr.utils.search.elasticsearch.es_utils_tests import urllib3_responses
@@ -1515,10 +1516,12 @@ class DataManagerAPITest(AirtableTest):
         Individual.objects.filter(guid='I000009_na20874').update(affected='A')
 
     @responses.activate
-    def test_trigger_dag(self):
-        self.check_data_manager_login(reverse(trigger_dag, args=['some_dag']))
+    def test_trigger_delete_project(self):
+        url = reverse(trigger_delete_project)
+        self.check_data_manager_login(url)
 
-        self._test_trigger_single_dag(
+        self._test_trigger_search_data_update(
+            url,
             'DELETE_PROJECTS',
             {'project': PROJECT_GUID, 'datasetType': 'SNV_INDEL'},
             {
@@ -1527,7 +1530,14 @@ class DataManagerAPITest(AirtableTest):
                 'reference_genome': 'GRCh37',
             }
         )
-        self._test_trigger_single_dag(
+
+    @responses.activate
+    def test_trigger_delete_family(self):
+        url = reverse(trigger_delete_family)
+        self.check_data_manager_login(url)
+
+        self._test_trigger_search_data_update(
+            url,
             'DELETE_FAMILIES',
             {'family': 'F000012_12', 'datasetType': 'MITO'},
             {
@@ -1538,29 +1548,30 @@ class DataManagerAPITest(AirtableTest):
             }
         )
 
+    @responses.activate
+    def test_trigger_update_search_reference_data(self):
+        url = reverse(trigger_update_search_reference_data)
+        self.check_data_manager_login(url)
+
         body = {'genomeVersion': '38', 'datasetType': 'SV'}
-        url = self._test_trigger_single_dag('UPDATE_REFERENCE_DATASETS',body,{
+        self._test_trigger_search_data_update(url, 'UPDATE_REFERENCE_DATASETS', body, {
             'projects_to_run': None,
             'dataset_type': 'SV',
             'reference_genome': 'GRCh38',
         })
 
-        self._test_dag_trigger_errors(url, body)
-
-    def _test_trigger_single_dag(self, dag_id, body, dag_variables):
-        responses.calls.reset()
-        self.set_up_one_dag(dag_id, variables=dag_variables)
-
-        url = reverse(trigger_dag, args=[dag_id])
+    def _test_trigger_search_data_update(self, url, dag_id, body, dag_variables):
+        self._setup_trigger_search_data_update(dag_id=dag_id, dag_variables=dag_variables)
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
-        self._assert_expected_dag_trigger(response, dag_id, dag_variables)
-        return url
+        self._assert_expected_search_data_update(response, dag_id, dag_variables)
 
-    def _assert_expected_dag_trigger(self, response, dag_id, variables):
-        self.assertEqual(response.status_code, 403)
+    def _setup_trigger_search_data_update(self, *args, **kwargs):
+        return
 
-    def _test_dag_trigger_errors(self, url, body):
-        pass
+    def _assert_expected_search_data_update(self, response, dag_id, variables):
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'errors': ['This functionality is not available in the current search backend'], 'warnings': None})
+
 
 class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
     fixtures = ['users', '1kg_project', 'reference_data']
@@ -1694,13 +1705,10 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
     def _test_validate_dataset_type(self, url):
         pass
 
-    def set_up_one_dag(self, *args, **kwargs):
-        pass
-
 
 @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
 class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
-    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
+    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data', 'clickhouse_search']
 
     LOADING_PROJECT_GUID = NON_ANALYST_PROJECT_GUID
     CALLSET_DIR = 'gs://test_bucket'
@@ -2009,28 +2017,33 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
 
         return super()._add_update_check_dag_responses(**kwargs)
 
-    def _assert_update_check_airflow_calls(self, call_count, offset, update_check_path):
-        if self.DAG_NAME != 'LOADING_PIPELINE':
-            update_check_path = f'{self.MOCK_AIRFLOW_URL}/api/v1/variables/{self.DAG_NAME}'
-        super()._assert_update_check_airflow_calls(call_count, offset, update_check_path)
+    def _setup_trigger_search_data_update(self, *args, **kwargs):
+        Project.objects.filter(guid=PROJECT_GUID).update(genome_version='38')
 
-    def set_up_one_dag(self, dag_id=None, **kwargs):
-        if dag_id:
-            self._dag_url = self._dag_url.replace(self.DAG_NAME, dag_id)
-            self.DAG_NAME = dag_id
-        super().set_up_one_dag(**kwargs)
+    def _assert_expected_search_data_update(self, response, dag_id, variables):
+        if dag_id == 'DELETE_PROJECTS':
+            self._assert_expected_delete_project(response)
+        else:
+            super()._assert_expected_search_data_update(response, dag_id, variables)
 
-    def _assert_expected_dag_trigger(self, response, dag_id, variables):
+    def _assert_expected_delete_project(self, response):
         self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {'info': [f'Triggered DAG {dag_id} with variables: {json.dumps(variables)}']})
+        self.assertDictEqual(response.json(), {
+            'info': ['Deleted all SNV_INDEL search data for project 1kg project n\xe5me with uni\xe7\xf8de'],
+        })
+        self.assertEqual(EntriesSnvIndel.objects.filter(project_guid=PROJECT_GUID).count(), 0)
+        self.assertEqual(ProjectGtStatsSnvIndel.objects.filter(project_guid=PROJECT_GUID).count(), 0)
 
-        self.assert_airflow_calls(variables, 5)
-
-    def _test_dag_trigger_errors(self, url, body):
-        self.set_dag_trigger_error_response()
-        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
-        self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'error': 'UPDATE_REFERENCE_DATASETS DAG is running and cannot be triggered again.'})
+        updated_seqr_pops_by_key = dict(AnnotationsSnvIndel.objects.all().join_seqr_pop().values_list('key', 'seqrPop'))
+        self.assertDictEqual(updated_seqr_pops_by_key, {
+            1: (2, 2, 1, 1),
+            2: (1, 1, 0, 0),
+            3: (0, 0, 0, 0),
+            4: (0, 0, 0, 0),
+            5: (1, 1, 0, 0),
+            6: (0, 0, 0, 0),
+            22: (0, 3, 0, 1),
+        })
 
     def _assert_expected_airtable_errors(self, url):
         responses.replace(
@@ -2043,3 +2056,44 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
             'error': 'The following samples are associated with misconfigured PDOs in Airtable: HG00731, NA21234',
         })
 
+@mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
+class HailBackendDataManagerAPITest(AnvilDataManagerAPITest):
+    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
+
+    CLICKHOUSE_HOSTNAME = ''
+
+    def _assert_update_check_airflow_calls(self, call_count, offset, update_check_path):
+        if self.DAG_NAME != 'LOADING_PIPELINE':
+            update_check_path = f'{self.MOCK_AIRFLOW_URL}/api/v1/variables/{self.DAG_NAME}'
+        super()._assert_update_check_airflow_calls(call_count, offset, update_check_path)
+
+    def set_up_one_dag(self, dag_id=None, **kwargs):
+        if dag_id:
+            self._dag_url = self._dag_url.replace(self.DAG_NAME, dag_id)
+            self.DAG_NAME = dag_id
+        super().set_up_one_dag(**kwargs)
+
+    def _assert_expected_search_data_update(self, response, dag_id, variables):
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'info': [f'Triggered DAG {dag_id} with variables: {json.dumps(variables)}']})
+
+        self.assert_airflow_calls(variables, 5)
+
+    def _setup_trigger_search_data_update(self, *args, dag_id=None, dag_variables=None, **kwargs):
+        responses.calls.reset()
+        self.set_up_one_dag(dag_id, variables=dag_variables)
+
+    def _test_trigger_search_data_update(self, url, dag_id, body, dag_variables):
+        super()._test_trigger_search_data_update(url, dag_id, body, dag_variables)
+
+        self.set_dag_trigger_error_response()
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {
+            'errors': [f'{dag_id} DAG is running and cannot be triggered again.'], 'warnings': None,
+        })
+
+        # DAG trigger not attempted when airflow is disabled
+        self.mock_airflow_url.__bool__.return_value = False
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 403)
