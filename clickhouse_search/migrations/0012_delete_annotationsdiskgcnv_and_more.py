@@ -14,24 +14,6 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.DeleteModel(
-            name='AnnotationsDiskGcnv',
-        ),
-        migrations.DeleteModel(
-            name='AnnotationsDiskMito',
-        ),
-        migrations.DeleteModel(
-            name='AnnotationsDiskSv',
-        ),
-        migrations.DeleteModel(
-            name='AnnotationsGcnv',
-        ),
-        migrations.DeleteModel(
-            name='AnnotationsMito',
-        ),
-        migrations.DeleteModel(
-            name='AnnotationsSv',
-        ),
         migrations.CreateModel(
             name='AnnotationsMito',
             fields=[
