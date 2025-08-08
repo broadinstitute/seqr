@@ -57,7 +57,7 @@ class ClickHouseRouter:
         return None
 
     def allow_migrate(self, db, app_label, model_name=None, **hints):
-        if app_label == 'clickhouse_search' or hints.get('clickhouse'):
+        if f'{app_label}.{model_name}' in self.route_model_names  or hints.get('clickhouse'):
             return db == 'clickhouse_write'
         elif db in {'clickhouse', 'clickhouse_write'}:
             return False
@@ -72,28 +72,7 @@ class Projection(Func):
         self.order_by = order_by
 
 
-class FixtureLoadableClickhouseModel(models.ClickhouseModel):
-
-    def _save_table(
-        self,
-        raw=False,
-        cls=None,
-        force_insert=False,
-        force_update=False,
-        using=None,
-        update_fields=None,
-    ):
-        # loaddata attempts to run an ALTER TABLE to update existing rows, but since primary keys can not be altered
-        # and JOIN tables can not be altered this command fails so need to use the force_insert flag to run an INSERT instead
-        return super()._save_table(
-            raw=raw, cls=cls, force_insert=True, force_update=force_update, using=using, update_fields=update_fields,
-        )
-
-    class Meta:
-        abstract = True
-
-
-class BaseAnnotations(FixtureLoadableClickhouseModel):
+class BaseAnnotations(models.ClickhouseModel):
 
     CHROMOSOME_CHOICES = [(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES)]
     SEQR_POPULATIONS = [
@@ -302,7 +281,7 @@ class AnnotationsDiskSnvIndel(BaseAnnotationsSnvIndel):
         db_table = 'GRCh38/SNV_INDEL/annotations_disk'
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SNV_INDEL/annotations', primary_key='key', flatten_nested=0)
 
-class AnnotationsMito(BaseAnnotationsMitoSnvIndel):
+class BaseAnnotationsMito(BaseAnnotationsMitoSnvIndel):
     ANNOTATION_CONSTANTS = {
         'chrom': 'M',
         'liftedOverChrom': 'MT',
@@ -359,10 +338,22 @@ class AnnotationsMito(BaseAnnotationsMitoSnvIndel):
     sorted_transcript_consequences = NestedField(BaseAnnotationsMitoSnvIndel.TRANSCRIPTS_FIELDS, db_column='sortedTranscriptConsequences', group_by_key='geneId')
 
     class Meta:
-        db_table = 'GRCh38/MITO/annotations_memory'
-        engine = Join('ALL', 'INNER', 'key', join_use_nulls=1, flatten_nested=0)
+        abstract = True
 
-class AnnotationsSv(BaseAnnotationsSvGcnv):
+class AnnotationsMito(BaseAnnotationsMito):
+
+    class Meta:
+        db_table = 'GRCh38/MITO/annotations_memory'
+        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_IN_MEMORY_DIR}/GRCh38/MITO/annotations', primary_key='key', flatten_nested=0)
+
+class AnnotationsDiskMito(BaseAnnotationsMito):
+
+    class Meta:
+        db_table = 'GRCh38/MITO/annotations_disk'
+        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/MITO/annotations', primary_key='key', flatten_nested=0)
+
+
+class BaseAnnotationsSv(BaseAnnotationsSvGcnv):
     POPULATION_FIELDS = [
         ('gnomad_svs', NamedTupleField([
             ('af', models.DecimalField(max_digits=9, decimal_places=5)),
@@ -391,10 +382,21 @@ class AnnotationsSv(BaseAnnotationsSvGcnv):
     populations = NamedTupleField(POPULATION_FIELDS)
 
     class Meta:
-        db_table = 'GRCh38/SV/annotations_memory'
-        engine = Join('ALL', 'INNER', 'key', join_use_nulls=1, flatten_nested=0)
+        abstract = True
 
-class AnnotationsGcnv(BaseAnnotationsSvGcnv):
+class AnnotationsSv(BaseAnnotationsSv):
+
+    class Meta:
+        db_table = 'GRCh38/SV/annotations_memory'
+        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_IN_MEMORY_DIR}/GRCh38/SV/annotations', primary_key='key', flatten_nested=0)
+
+class AnnotationsDiskSv(BaseAnnotationsSv):
+
+    class Meta:
+        db_table = 'GRCh38/SV/annotations_disk'
+        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SV/annotations', primary_key='key', flatten_nested=0)
+
+class BaseAnnotationsGcnv(BaseAnnotationsSvGcnv):
     POPULATION_FIELDS = [
         ('sv_callset', NamedTupleField([
             ('ac', models.UInt32Field()),
@@ -417,10 +419,22 @@ class AnnotationsGcnv(BaseAnnotationsSvGcnv):
     populations = NamedTupleField(POPULATION_FIELDS)
 
     class Meta:
-        db_table = 'GRCh38/GCNV/annotations_memory'
-        engine = Join('ALL', 'LEFT', 'key', join_use_nulls=1, flatten_nested=0)
+        abstract = True
 
-class BaseClinvar(FixtureLoadableClickhouseModel):
+class AnnotationsGcnv(BaseAnnotationsGcnv):
+
+    class Meta:
+        db_table = 'GRCh38/GCNV/annotations_memory'
+        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_IN_MEMORY_DIR}/GRCh38/GCNV/annotations', primary_key='key', flatten_nested=0)
+
+class AnnotationsDiskGcnv(BaseAnnotationsGcnv):
+
+    class Meta:
+        db_table = 'GRCh38/GCNV/annotations_disk'
+        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/GCNV/annotations', primary_key='key', flatten_nested=0)
+
+
+class BaseClinvar(models.ClickhouseModel):
 
     CLINVAR_ASSERTIONS = [
         'Affects',
@@ -479,6 +493,21 @@ class BaseClinvarAllVariants(BaseClinvar):
     version = models.DateField()
     variant_id = models.StringField(db_column='variantId', primary_key=True)
 
+    def _save_table(
+        self,
+        raw=False,
+        cls=None,
+        force_insert=False,
+        force_update=False,
+        using=None,
+        update_fields=None,
+    ):
+        # loaddata attempts to run an ALTER TABLE to update existing rows, but since JOIN tables can not be altered
+        # this command fails so need to use the force_insert flag to run an INSERT instead
+        return super()._save_table(
+            raw=raw, cls=cls, force_insert=True, force_update=force_update, using=using, update_fields=update_fields,
+        )
+
     class Meta:
         abstract = True
         engine = models.MergeTree(
@@ -501,6 +530,21 @@ class ClinvarAllVariantsMito(BaseClinvarAllVariants):
 
 class BaseClinvarJoin(BaseClinvar):
 
+    def _save_table(
+        self,
+        raw=False,
+        cls=None,
+        force_insert=False,
+        force_update=False,
+        using=None,
+        update_fields=None,
+    ):
+        # loaddata attempts to run an ALTER TABLE to update existing rows, but since JOIN tables can not be altered
+        # this command fails so need to use the force_insert flag to run an INSERT instead
+        return super()._save_table(
+            raw=raw, cls=cls, force_insert=True, force_update=force_update, using=using, update_fields=update_fields,
+        )
+
     class Meta:
         abstract = True
         engine = Join('ALL', 'LEFT', 'key', join_use_nulls=1, flatten_nested=0)
@@ -522,7 +566,7 @@ class ClinvarMito(BaseClinvarJoin):
         db_table = 'GRCh38/MITO/clinvar'
 
 
-class BaseEntries(FixtureLoadableClickhouseModel):
+class BaseEntries(models.ClickhouseModel):
     project_guid = models.StringField(low_cardinality=True)
     family_guid = models.StringField()
     xpos = UInt64FieldDeltaCodecField()
@@ -530,6 +574,21 @@ class BaseEntries(FixtureLoadableClickhouseModel):
     sign = models.Int8Field()
 
     objects = EntriesManager.as_manager()
+
+    def _save_table(
+        self,
+        raw=False,
+        cls=None,
+        force_insert=False,
+        force_update=False,
+        using=None,
+        update_fields=None,
+    ):
+        # loaddata attempts to run an ALTER TABLE to update existing rows, but since primary keys can not be altered
+        # this command fails so need to use the force_insert flag to run an INSERT instead
+        return super()._save_table(
+            raw=raw, cls=cls, force_insert=True, force_update=force_update, using=using, update_fields=update_fields,
+        )
 
     class Meta:
         abstract = True
@@ -710,11 +769,26 @@ class TranscriptsSnvIndel(models.ClickhouseModel):
         db_table = 'GRCh38/SNV_INDEL/transcripts'
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SNV_INDEL/transcripts', primary_key='key', flatten_nested=0)
 
-class BaseKeyLookup(FixtureLoadableClickhouseModel):
+class BaseKeyLookup(models.ClickhouseModel):
     variant_id = models.StringField(db_column='variantId', primary_key=True)
 
     class Meta:
         abstract = True
+
+    def _save_table(
+        self,
+        raw=False,
+        cls=None,
+        force_insert=False,
+        force_update=False,
+        using=None,
+        update_fields=None,
+    ):
+        # loaddata attempts to run an ALTER TABLE to update existing rows, but since primary keys can not be altered
+        # this command fails so need to use the force_insert flag to run an INSERT instead
+        return super()._save_table(
+            raw=raw, cls=cls, force_insert=True, force_update=force_update, using=using, update_fields=update_fields,
+        )
 
 class KeyLookupGRCh37SnvIndel(BaseKeyLookup):
     key = OneToOneField('AnnotationsGRCh37SnvIndel', db_column='key', on_delete=CASCADE)
