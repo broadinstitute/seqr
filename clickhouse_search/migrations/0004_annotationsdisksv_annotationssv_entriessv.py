@@ -42,7 +42,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'GRCh38/SV/annotations_disk',
-                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SV/annotations', flatten_nested=0, primary_key='key'),
+                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/tmp/GRCh38/SV/annotations', flatten_nested=0, primary_key='key'),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
@@ -74,7 +74,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'GRCh38/SV/annotations_memory',
-                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, f'{CLICKHOUSE_IN_MEMORY_DIR}/GRCh38/SV/annotations', flatten_nested=0, primary_key='key'),
+                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, f'{CLICKHOUSE_IN_MEMORY_DIR}/tmp/GRCh38/SV/annotations', flatten_nested=0, primary_key='key'),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
