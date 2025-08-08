@@ -84,7 +84,7 @@ class FixtureLoadableClickhouseModel(models.ClickhouseModel):
         update_fields=None,
     ):
         # loaddata attempts to run an ALTER TABLE to update existing rows, but since primary keys can not be altered
-        # this command fails so need to use the force_insert flag to run an INSERT instead
+        # and JOIN tables can not be altered this command fails so need to use the force_insert flag to run an INSERT instead
         return super()._save_table(
             raw=raw, cls=cls, force_insert=True, force_update=force_update, using=using, update_fields=update_fields,
         )
