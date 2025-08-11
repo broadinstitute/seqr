@@ -60,7 +60,7 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
     ):
         result_queries += _get_multi_data_type_comp_het_results_queryset(genome_version, sample_data_by_dataset_type, **search)
 
-    results = async_execute_query(*result_queries[0]) if len(result_queries) == 1 else execute_async_queries(result_queries)
+    results = execute_query(*result_queries[0]) if len(result_queries) == 1 else execute_async_queries(result_queries)
     cache_results = get_clickhouse_cache_results(results, sort, family_guid)
     previous_search_results.update(cache_results)
 
