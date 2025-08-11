@@ -487,7 +487,7 @@ def _search_dataset_type(search):
         lookup_dataset_type = Sample.DATASET_TYPE_VARIANT_CALLS if rsids else _variant_ids_dataset_type(parsed_variant_ids)
         return Sample.DATASET_TYPE_VARIANT_CALLS, None, lookup_dataset_type
 
-    intervals = locus['intervals'] if 'exclude_intervals' in locus and not locus['exclude_intervals'] else None
+    intervals = (locus['intervals'] or locus.get('gene_intervals')) if 'exclude_intervals' in locus and not locus['exclude_intervals'] else None
     dataset_type = _annotation_dataset_type(search.get('annotations'), intervals, pathogenicity=search.get('pathogenicity'))
     secondary_dataset_type = _annotation_dataset_type(search['annotations_secondary'], intervals) if search.get('annotations_secondary') else None
 
