@@ -1,3 +1,5 @@
+import asyncio
+from asgiref.sync import sync_to_async, async_to_sync
 from clickhouse_backend.models import ArrayField, StringField
 from collections import defaultdict
 from django.contrib.postgres.aggregates import ArrayAgg
@@ -35,7 +37,7 @@ def clickhouse_backend_enabled():
 
 def get_clickhouse_variants(samples, search, user, previous_search_results, genome_version,page=1, num_results=100, sort=None, **kwargs):
     sample_data_by_dataset_type = _get_sample_data(samples)
-    results = []
+    result_queries = []
     family_guid = None
     inheritance_mode = search.get('inheritance_mode')
     has_comp_het = inheritance_mode in {RECESSIVE, COMPOUND_HET}
@@ -48,22 +50,42 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
 
         if inheritance_mode != COMPOUND_HET:
             result_q = _get_search_results_queryset(entry_cls, annotations_cls, sample_data, **search)
-            results += list(result_q[:MAX_VARIANTS + 1])
+            result_queries.append((result_q, False))
         if has_comp_het:
             result_q = _get_data_type_comp_het_results_queryset(entry_cls, annotations_cls, sample_data, **search)
-            results += [list(result[1:]) for result in result_q[:MAX_VARIANTS + 1]]
+            result_queries.append((result_q, True))
 
     if has_comp_het and Sample.DATASET_TYPE_VARIANT_CALLS in sample_data_by_dataset_type and any(
         dataset_type.startswith(Sample.DATASET_TYPE_SV_CALLS) for dataset_type in sample_data_by_dataset_type
     ):
-        results += _get_multi_data_type_comp_het_results_queryset(genome_version, sample_data_by_dataset_type, **search)
+        result_queries += _get_multi_data_type_comp_het_results_queryset(genome_version, sample_data_by_dataset_type, **search)
 
+    results = execute_async_queries(result_queries)
     cache_results = get_clickhouse_cache_results(results, sort, family_guid)
     previous_search_results.update(cache_results)
 
     logger.info(f'Total results: {cache_results["total_results"]}', user)
 
     return format_clickhouse_results(cache_results['all_results'][(page-1)*num_results:page*num_results], genome_version)
+
+
+def execute_query(queryset, is_com_het):
+    return [list(result[1:]) if is_com_het else result for result in queryset[:MAX_VARIANTS + 1]]
+
+async def async_execute_query(queryset, is_com_het):
+    return await sync_to_async(execute_query, thread_sensitive=True)(queryset, is_com_het)
+
+@async_to_sync
+async def execute_async_queries(queries):
+    tasks = [async_execute_query(*query) for query in queries]
+    if len(tasks) == 1:
+        return await tasks[0]
+
+    async_results = await asyncio.gather(*tasks)
+    all_results = []
+    for results in async_results:
+        all_results += results
+    return all_results
 
 
 def _get_search_results_queryset(entry_cls, annotations_cls, sample_data, **search_kwargs):
@@ -102,7 +124,7 @@ def _get_multi_data_type_comp_het_results_queryset(genome_version, sample_data_b
         sv_q = sv_annotations_cls.objects.subquery_join(sv_entries).search(**search_kwargs, annotations=annotations)
 
         result_q = _get_comp_het_results_queryset(annotations_cls, snv_indel_q, sv_q, len(families))
-        results += [list(result[1:]) for result in result_q[:MAX_VARIANTS + 1]]
+        results.append((result_q, True))
 
     return results
 
