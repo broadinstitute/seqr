@@ -60,7 +60,7 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
     ):
         result_queries += _get_multi_data_type_comp_het_results_queryset(genome_version, sample_data_by_dataset_type, **search)
 
-    results = execute_async_queries(result_queries)
+    results = async_execute_query(*result_queries[0]) if len(result_queries) == 1 else execute_async_queries(result_queries)
     cache_results = get_clickhouse_cache_results(results, sort, family_guid)
     previous_search_results.update(cache_results)
 
@@ -77,11 +77,7 @@ async def async_execute_query(queryset, is_com_het):
 
 @async_to_sync
 async def execute_async_queries(queries):
-    tasks = [async_execute_query(*query) for query in queries]
-    if len(tasks) == 1:
-        return await tasks[0]
-
-    async_results = await asyncio.gather(*tasks)
+    async_results = await asyncio.gather(*[async_execute_query(*query) for query in queries])
     all_results = []
     for results in async_results:
         all_results += results
