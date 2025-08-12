@@ -778,28 +778,33 @@ class EntriesManager(SearchQuerySet):
 
             gt_map = []
             null_gt_map = []
+            affected_sample_map = []
             no_quality_map = []
             quality_filter_conditions = self._sample_quality_filter(AFFECTED, quality_filter) # TODO clean up helper
             for s in sample_data:
                 sample_gt_map = []
                 null_gt_samples = []
+                any_affected_samples = []
                 no_quality_samples = []
                 for sample in s['samples']:
                     affected = custom_affected.get(sample['individual_guid']) or sample['affected']
                     genotype = self._sample_genotype(sample, affected, inheritance_mode,individual_genotype_filter)
+                    sample_id = next(iter(sample['sample_ids_by_type'].values()))
                     if genotype is not None:
-                        sample_id = next(iter(sample['sample_ids_by_type'].values()))
                         sample_gt_map.append(f"'{sample_id}', {self.genotype_lookup[genotype]}")
                         if genotype in self.nullable_genotypes:
                             null_gt_samples.append(sample_id)
+                    elif inheritance_mode == ANY_AFFECTED and affected == AFFECTED:
+                       any_affected_samples.append(sample_id)
                     if quality_filter_conditions and quality_filter.get('affected_only') and affected != AFFECTED:
-                        no_quality_samples += list(sample['sample_ids_by_type'].values())
-                    # TODO any affected
+                        no_quality_samples.append(sample_id)
 
                 if sample_gt_map:
                     gt_map.append(f"'{s['family_guid']}', map({', '.join(sample_gt_map)})")
                 if null_gt_samples:
                     null_gt_map.append(f"'{s['family_guid']}', {null_gt_samples}")
+                if any_affected_samples:
+                    affected_sample_map.append(f"'{s['family_guid']}', {any_affected_samples}")
                 if no_quality_samples:
                     no_quality_map.append(f"'{s['family_guid']}', {no_quality_samples}")
 
@@ -812,6 +817,11 @@ class EntriesManager(SearchQuerySet):
                 if null_gt_map:
                     gt_conditions.append((', '.join(null_gt_map), 'and(isNull({field}), has(map({value})[family_guid], x.sampleId))'))
                 entries = entries.filter(calls__array_all={'OR': [{'gt': condition} for condition in gt_conditions]})
+            elif affected_sample_map:
+                entries = entries.filter(calls__array_exists={
+                    'gt': (self.genotype_lookup[HAS_ALT], 'has({value}, {field})'),
+                    'sampleId': (', '.join(affected_sample_map), 'has(map({value})[family_guid], {field})'),
+                })
 
             if no_quality_map:
                 quality_filter_conditions = {'OR': [
