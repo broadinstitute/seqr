@@ -1,5 +1,3 @@
-from collections import OrderedDict
-import json
 import openpyxl as xl
 import os
 from tempfile import NamedTemporaryFile, TemporaryDirectory

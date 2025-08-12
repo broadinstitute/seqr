@@ -1,7 +1,6 @@
 import responses
 from django.core.management import call_command
 import mock
-import json
 
 from seqr.models import Family, VariantTagType, VariantTag, Sample
 from seqr.views.utils.test_utils import AirflowTestCase, AuthenticationTestCase

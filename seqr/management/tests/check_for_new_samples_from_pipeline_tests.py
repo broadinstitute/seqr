@@ -45,7 +45,7 @@ ANVIL_HTML_EMAIL = f'Dear seqr user,<br /><br />' \
                    f'We are following up on the request to load data from AnVIL on March 12, 2017.<br />' \
                    f'We have loaded 1 new WES samples from the AnVIL workspace {anvil_link} to the corresponding seqr project {seqr_link}.' \
                    f'<br />Let us know if you have any questions.<br /><br />All the best,<br />The seqr team'
-ANVIL_ERROR_TEXT_EMAIL = f"""Dear seqr user,
+ANVIL_ERROR_TEXT_EMAIL = """Dear seqr user,
 
 We are following up on the request to load data from AnVIL workspace ext-data/empty on March 12, 2017. This request could not be loaded due to the following error(s):
 - Missing the following expected contigs:chr17
@@ -1018,7 +1018,7 @@ The following users have been notified: test_user_manager@test.com""")
 
     def _assert_has_expected_empty_list_file_calls(self):
         self.mock_subprocess.assert_called_with(
-            'gsutil ls gs://seqr-hail-search-data/v3.1/GRCh37/MITO/runs/*/*', stdout=-1, stderr=-1, shell=True
+            'gsutil ls gs://seqr-hail-search-data/v3.1/GRCh37/MITO/runs/*/*', stdout=-1, stderr=-1, shell=True # nosec
         )
 
     def _set_reloading_loading_files(self):
@@ -1047,7 +1047,7 @@ The following users have been notified: test_user_manager@test.com""")
                 ('gsutil mv /mock/tmp/* gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-24/', -2),
             ]
         self.mock_subprocess.assert_has_calls(
-            [mock.call(command, stdout=-1, stderr=stderr, shell=True) for (command, stderr) in calls]
+            [mock.call(command, stdout=-1, stderr=stderr, shell=True) for (command, stderr) in calls] # nosec
         )
 
     def _additional_loading_logs(self, data_type, version):
