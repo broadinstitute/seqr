@@ -641,11 +641,12 @@ class EntriesManager(SearchQuerySet):
     GENOTYPE_LOOKUP[COMP_HET_ALT] = GENOTYPE_LOOKUP[REF_ALT]
     NULLABLE_GENOTYPE_LOOKUP = {
         **GENOTYPE_LOOKUP,
-        REF_REF: (0, 'or(isNull({field}), {field} = {value})'),
-        HAS_REF: (2, 'or(isNull({field}), {field} < {value})'),
-        HAS_ALT: (0, 'and(isNotNull({field}), {field} > {value})'),
+        # REF_REF: (0, 'or(isNull({field}), {field} = {value})'),
+        # HAS_REF: (2, 'or(isNull({field}), {field} < {value})'),
+        # HAS_ALT: (0, 'and(isNotNull({field}), {field} > {value})'),
     }
     NULLABLE_GENOTYPE_LOOKUP[COMP_HET_ALT] = NULLABLE_GENOTYPE_LOOKUP[HAS_ALT]
+    NULLABLE_GENOTYPES = {REF_REF, HAS_REF}
     INVALID_NUM_ALT_LOOKUP = {
         (0,): [1, 2],
         (1,): [0, 2],
@@ -672,6 +673,10 @@ class EntriesManager(SearchQuerySet):
     @property
     def genotype_lookup(self):
         return self.NULLABLE_GENOTYPE_LOOKUP if self.annotations_model.GENOTYPE_OVERRIDE_FIELDS else self.GENOTYPE_LOOKUP
+
+    @property
+    def nullable_genotypes(self):
+        return self.NULLABLE_GENOTYPES if self.annotations_model.GENOTYPE_OVERRIDE_FIELDS else []
 
     @property
     def quality_filters(self):
@@ -772,30 +777,41 @@ class EntriesManager(SearchQuerySet):
             ) if self._has_clinvar() else None
 
             gt_map = []
+            null_gt_map = []
             no_quality_map = []
             quality_filter_conditions = self._sample_quality_filter(AFFECTED, quality_filter) # TODO clean up helper
             for s in sample_data:
                 sample_gt_map = []
+                null_gt_samples = []
                 no_quality_samples = []
                 for sample in s['samples']:
                     affected = custom_affected.get(sample['individual_guid']) or sample['affected']
                     genotype = self._sample_genotype(sample, affected, inheritance_mode,individual_genotype_filter)
                     if genotype is not None:
                         sample_id = next(iter(sample['sample_ids_by_type'].values()))
-                        sample_gt_map.append(f"'{sample_id}', {self.GENOTYPE_LOOKUP[genotype]}") # TODO NULLABLE_GENOTYPE_LOOKUP
+                        sample_gt_map.append(f"'{sample_id}', {self.genotype_lookup[genotype]}")
+                        if genotype in self.nullable_genotypes:
+                            null_gt_samples.append(sample_id)
                     if quality_filter_conditions and quality_filter.get('affected_only') and affected != AFFECTED:
                         no_quality_samples += list(sample['sample_ids_by_type'].values())
                     # TODO any affected
 
                 if sample_gt_map:
                     gt_map.append(f"'{s['family_guid']}', map({', '.join(sample_gt_map)})")
+                if null_gt_samples:
+                    null_gt_map.append(f"'{s['family_guid']}', {null_gt_samples}")
                 if no_quality_samples:
                     no_quality_map.append(f"'{s['family_guid']}', {no_quality_samples}")
 
             if gt_map:
-                entries = entries.filter(calls__array_all={
-                    'gt': (', '.join(gt_map), 'or(has(map({value})[family_guid][x.sampleId], {field}), not mapContains(map({value})[family_guid], x.sampleId))'),
-                })
+                gt_map = ', '.join(gt_map)
+                gt_conditions = [
+                    (gt_map, 'has(map({value})[family_guid][x.sampleId], {field})'),
+                    (gt_map, 'not mapContains(map({value})[family_guid], x.sampleId)'),
+                ]
+                if null_gt_map:
+                    gt_conditions.append((', '.join(null_gt_map), 'and(isNull({field}), has(map({value})[family_guid], x.sampleId))'))
+                entries = entries.filter(calls__array_all={'OR': [{'gt': condition} for condition in gt_conditions]})
 
             if no_quality_map:
                 quality_filter_conditions = {'OR': [
