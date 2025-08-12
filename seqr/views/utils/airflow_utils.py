@@ -79,7 +79,7 @@ def _send_load_data_slack_msg(messages: list[str], channel: str, dag: dict):
 def _send_slack_msg_on_failure_trigger(e, dag, error_message):
     message_content = f"""{error_message}: {e}
         
-        DAG {LOADING_PIPELINE_DAG_NAME} should be triggered with following: 
+        DAG {LOADING_PIPELINE_DAG_NAME} should be triggered with following:
         ```{json.dumps(dag, indent=4)}```
         """
     safe_post_to_slack(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, message_content)

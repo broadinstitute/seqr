@@ -1884,7 +1884,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
             'WGS', 'WES').replace('SNV_INDEL', 'GCNV').replace('v01', 'v3.1')
         error_message = f"""ERROR triggering internal WES SV loading: {errors[0]}
         
-        DAG LOADING_PIPELINE should be triggered with following: 
+        DAG LOADING_PIPELINE should be triggered with following:
         ```{dag_json}```
         """
         self.mock_slack.assert_called_once_with(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, error_message)
