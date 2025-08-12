@@ -330,11 +330,11 @@ class AnnotationsQuerySet(SearchQuerySet):
         results = self
         if variant_ids:
             results = results.filter(
-                variant_id__in=[f'{chrom}-{pos}-{ref}-{alt}' for chrom, pos, ref, alt in variant_ids]
+                variant_id__has_in=[f'{chrom}-{pos}-{ref}-{alt}' for chrom, pos, ref, alt in variant_ids]
             )
 
         if rs_ids:
-            results = results.filter(rsid__in=rs_ids)
+            results = results.filter(rsid__has_in=rs_ids)
 
         return results
 
@@ -737,15 +737,15 @@ class EntriesManager(SearchQuerySet):
 
     def _search_call_data(self, entries, sample_data, inheritance_mode=None, inheritance_filter=None, qualityFilter=None, pathogenicity=None, annotate_carriers=False, annotate_hom_alts=False, **kwargs):
        project_guids = {s['project_guid'] for s in sample_data}
-       project_filter = Q(project_guid__in=project_guids) if len(project_guids) > 1 else Q(project_guid=sample_data[0]['project_guid'])
+       project_filter = Q(project_guid__has_in=project_guids)
        entries = entries.filter(project_filter)
 
        sample_type_families, multi_sample_type_families = self._get_family_sample_types(sample_data)
        family_q = None
        if multi_sample_type_families:
-           family_q = Q(family_guid__in=multi_sample_type_families.keys())
+           family_q = Q(family_guid__has_in=multi_sample_type_families.keys())
        for sample_type, families in sample_type_families.items():
-           sample_family_q = Q(family_guid__in=families)
+           sample_family_q = Q(family_guid__has_in=families)
            if not self.single_sample_type:
                sample_family_q &= Q(sample_type=sample_type)
            if family_q:
@@ -786,7 +786,7 @@ class EntriesManager(SearchQuerySet):
                 family_guid: filters for family_guid, filters in multi_sample_type_families.items() if filters
             }
             if filtered_multi_sample_type_families:
-                multi_type_q = Q(family_guid__in=filtered_multi_sample_type_families.keys())
+                multi_type_q = Q(family_guid__has_in=filtered_multi_sample_type_families.keys())
                 call_q = (call_q | multi_type_q) if call_q else multi_type_q
                 entries = entries.annotate(passes_quality=~multi_type_q | (multi_sample_type_quality_q or Value(True)))
                 if multi_sample_type_any_affected_q:

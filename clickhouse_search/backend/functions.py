@@ -1,4 +1,5 @@
 from clickhouse_backend.models.fields.array import ArrayField, ArrayLookup
+from clickhouse_backend.models import StringField
 from django.db.models import Func, Subquery, lookups, BooleanField, Aggregate
 from django.db.models.sql.datastructures import BaseTable, Join
 
@@ -111,6 +112,18 @@ class ArrayNotEmptyTransform(lookups.Transform):
     lookup_name = "not_empty"
     function = "notEmpty"
     output_field = BooleanField()
+
+
+@StringField.register_lookup
+class HasIn(lookups.In):
+    lookup_name = 'has_in'
+
+    def as_sql(self, compiler, connection):
+        lhs_sql, lhs_params = self.process_lhs(compiler, connection)
+        rhs_sql, rhs_params = self.process_rhs(compiler, connection)
+        if len(self.rhs) == 1:
+            return f'{lhs_sql} = {rhs_sql}', [*lhs_params, *rhs_params]
+        return f'has(array{rhs_sql}, {lhs_sql})', [*rhs_params, *lhs_params]
 
 
 class DictGet(Func):
