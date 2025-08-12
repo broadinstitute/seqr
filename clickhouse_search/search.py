@@ -229,7 +229,7 @@ def _set_individual_guids(result, sample_map):
     individual_genotypes =  defaultdict(list)
     for family_guid, genotypes in result.pop('familyGenotypes').items():
         for genotype in genotypes:
-            individual_guid = sample_map[(genotype['familyGuid'], genotype['sampleId'])]
+            individual_guid = sample_map[(family_guid, genotype['sampleId'])]
             individual_genotypes[individual_guid].append({**genotype, 'individualGuid': individual_guid})
     result['genotypes'] = {k: v[0] if len(v) == 1 else v for k, v in individual_genotypes.items()}
 
