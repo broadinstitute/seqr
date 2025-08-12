@@ -811,12 +811,15 @@ class EntriesManager(SearchQuerySet):
             if gt_map:
                 gt_map = ', '.join(gt_map)
                 gt_conditions = [
-                    (gt_map, 'has(map({value})[family_guid][x.sampleId], {field})'),
-                    (gt_map, 'not mapContains(map({value})[family_guid], x.sampleId)'),
+                    {'gt': (gt_map, 'has(map({value})[family_guid][x.sampleId], {field})')},
+                    {'sampleId': (gt_map, 'not mapContains(map({value})[family_guid], {field})')},
                 ]
                 if null_gt_map:
-                    gt_conditions.append((', '.join(null_gt_map), 'and(isNull({field}), has(map({value})[family_guid], x.sampleId))'))
-                entries = entries.filter(calls__array_all={'OR': [{'gt': condition} for condition in gt_conditions]})
+                    gt_conditions.append({
+                        'gt': (None, 'isNull({field})'),
+                        'sampleId': (', '.join(null_gt_map), 'has(map({value})[family_guid], {field})'),
+                    })
+                entries = entries.filter(calls__array_all={'OR': gt_conditions})
             elif affected_sample_map:
                 entries = entries.filter(calls__array_exists={
                     'gt': (self.genotype_lookup[HAS_ALT], 'has({value}, {field})'),
