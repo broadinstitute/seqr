@@ -794,7 +794,7 @@ class EntriesManager(SearchQuerySet):
 
             if gt_map:
                 entries = entries.filter(calls__array_all={
-                    'gt': (', '.join(gt_map), 'has(map({value})[family_guid][x.sampleId], {field})'),
+                    'gt': (', '.join(gt_map), 'or(has(map({value})[family_guid][x.sampleId], {field}), not mapContains(map({value})[family_guid], x.sampleId))'),
                 })
 
             if no_quality_map:
