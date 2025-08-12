@@ -735,7 +735,7 @@ class EntriesManager(SearchQuerySet):
     def _has_clinvar(self):
         return hasattr(self.model, 'clinvar_join')
 
-    def _search_call_data(self, entries, sample_data, inheritance_mode=None, inheritance_filter=None, qualityFilter=None, pathogenicity=None, annotate_carriers=False, annotate_hom_alts=False, **kwargs):
+    def _search_call_data(self, entries, sample_data, inheritance_mode=None, inheritance_filter=None, qualityFilter=None, pathogenicity=None, annotate_carriers=False, annotate_hom_alts=False, skip_individual_guid=False, **kwargs):
        project_guids = {s['project_guid'] for s in sample_data}
        project_filter = Q(project_guid__in=project_guids) if len(project_guids) > 1 else Q(project_guid=sample_data[0]['project_guid'])
        entries = entries.filter(project_filter)
@@ -803,7 +803,7 @@ class EntriesManager(SearchQuerySet):
                     q |= clinvar_override_q
                 entries = entries.filter(q)
 
-       return self._annotate_calls(entries, sample_data, annotate_carriers, annotate_hom_alts, multi_sample_type_families)
+       return self._annotate_calls(entries, sample_data, annotate_carriers, annotate_hom_alts, skip_individual_guid, multi_sample_type_families)
 
     @staticmethod
     def _get_family_sample_types(sample_data):
@@ -948,7 +948,7 @@ class EntriesManager(SearchQuerySet):
             )
         return entries
 
-    def _annotate_calls(self, entries, sample_data=None, annotate_carriers=False, annotate_hom_alts=False, multi_sample_type_families=None):
+    def _annotate_calls(self, entries, sample_data=None, annotate_carriers=False, annotate_hom_alts=False, skip_individual_guid=False, multi_sample_type_families=None):
         carriers_expression = self._carriers_expression(sample_data) if annotate_carriers else None
         if carriers_expression:
             entries = entries.annotate(carriers=carriers_expression)
@@ -970,9 +970,10 @@ class EntriesManager(SearchQuerySet):
         if self._has_clinvar():
              fields += ['clinvar', 'clinvar_key']
         if multi_sample_type_families or sample_data is None or len(sample_data) > 1:
+            genotype_sample_data = None if skip_individual_guid else sample_data
             entries = entries.values(*fields).annotate(
                 familyGuids=ArraySort(ArrayDistinct(GroupArray('family_guid'))),
-                **{'genotypes' if sample_data else 'familyGenotypes': GroupArrayArray(self.genotype_expression(sample_data))},
+                **{'genotypes' if genotype_sample_data else 'familyGenotypes': GroupArrayArray(self.genotype_expression(genotype_sample_data))},
                 **{col: GroupArrayArray(col) for col in genotype_override_annotations}
             )
             if carriers_expression:
