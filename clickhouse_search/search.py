@@ -226,11 +226,12 @@ def _add_individual_guids(results, sample_data, single_data_type=True):
 
 def _set_individual_guids(result, sample_map):
     result['familyGuids'] = sorted(result['familyGenotypes'].keys())
-    result['genotypes'] = {}
+    individual_genotypes =  defaultdict(list)
     for family_guid, genotypes in result.pop('familyGenotypes').items():
         for genotype in genotypes:
             individual_guid = sample_map[(genotype['familyGuid'], genotype['sampleId'])]
-            result['genotypes'][individual_guid] = {**genotype, 'individualGuid': individual_guid}
+            individual_genotypes[individual_guid].append({**genotype, 'individualGuid': individual_guid})
+    result['genotypes'] = {k: v[0] if len(v) == 1 else v for k, v in individual_genotypes.items()}
 
 
 def get_clickhouse_cache_results(results, sort, family_guid):
