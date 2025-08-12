@@ -843,6 +843,7 @@ class EntriesManager(SearchQuerySet):
            sample_q = Q(
                calls__array_exists={**sample_inheritance_filter, **sample_quality_filter},
                family_guid=family_sample_data['family_guid'],
+               project_guid= family_sample_data['project_guid'],
            )
            if filter_sample_type:
                sample_q &= Q(sample_type=sample_type)

@@ -3,7 +3,6 @@ import json
 import time
 from datetime import datetime
 from functools import wraps
-from collections import defaultdict
 
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth.views import redirect_to_login
@@ -271,9 +270,11 @@ def _trigger_add_workspace_data(project, pedigree_records, user, data_path, samp
 
     # use airflow api to trigger AnVIL dags
     reload_summary = f' and {len(previous_loaded_ids)} re-loaded' if previous_loaded_ids else ''
-    success_message = f"""
-        *{user.email}* requested to load {num_updated_individuals} new{reload_summary} {sample_type} samples ({GENOME_VERSION_LOOKUP.get(project.genome_version)}) from AnVIL workspace *{project.workspace_namespace}/{project.workspace_name}* at 
-        {data_path} to seqr project <{_get_seqr_project_url(project)}|*{project.name}*> (guid: {project.guid})"""
+    success_message = (
+        f"*{user.email}* requested to load {num_updated_individuals} new{reload_summary} {sample_type} samples "
+        f"({GENOME_VERSION_LOOKUP.get(project.genome_version)}) from AnVIL workspace *{project.workspace_namespace}/{project.workspace_name}* at "
+        f"{data_path} to seqr project <{_get_seqr_project_url(project)}|*{project.name}*> (guid: {project.guid})"
+    )
     trigger_success = trigger_airflow_data_loading(
         [project], individual_ids, sample_type, Sample.DATASET_TYPE_VARIANT_CALLS, project.genome_version, data_path, user=user, success_message=success_message,
         success_slack_channel=SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, error_message=f'ERROR triggering AnVIL loading for project {project.guid}',
@@ -291,13 +292,12 @@ def _trigger_add_workspace_data(project, pedigree_records, user, data_path, samp
     loading_warning_date = ANVIL_LOADING_DELAY_EMAIL_START_DATE and datetime.strptime(ANVIL_LOADING_DELAY_EMAIL_START_DATE, '%Y-%m-%d')
     if loading_warning_date and loading_warning_date <= datetime.now():
         try:
-            email_body = f"""Hi {user.get_full_name() or user.email},
-            We have received your request to load data to seqr from AnVIL. Currently, the Broad Institute is holding an 
-            internal retreat or closed for the winter break so we may not be able to load data until mid-January 
-            {loading_warning_date.year + 1}. We appreciate your understanding and support of our research team taking 
-            some well-deserved time off and hope you also have a nice break.
-            - The seqr team
-            """
+            email_body = (f"Hi {user.get_full_name() or user.email},\n"
+            "We have received your request to load data to seqr from AnVIL. Currently, the Broad Institute is holding an " 
+            "internal retreat or closed for the winter break so we may not be able to load data until mid-January "
+            f"{loading_warning_date.year + 1}. We appreciate your understanding and support of our research team taking "
+            "some well-deserved time off and hope you also have a nice break.\n"
+            "- The seqr team")
             send_html_email(email_body, subject='Delay in loading AnVIL in seqr', to=[user.email])
         except Exception as e:
             logger.error('AnVIL loading delay email error: {}'.format(e), user)
