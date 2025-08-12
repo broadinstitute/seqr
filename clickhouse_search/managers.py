@@ -622,12 +622,20 @@ class AnnotationsQuerySet(SearchQuerySet):
 
 
 class EntriesManager(SearchQuerySet):
+    # # TODO used for something else?
+    # GENOTYPE_LOOKUP = {
+    #     REF_REF: (0,),
+    #     REF_ALT: (1,),
+    #     ALT_ALT: (2,),
+    #     HAS_ALT: (0, '{field} > {value}'),
+    #     HAS_REF: (2, '{field} < {value}'),
+    # }
     GENOTYPE_LOOKUP = {
-        REF_REF: (0,),
-        REF_ALT: (1,),
-        ALT_ALT: (2,),
-        HAS_ALT: (0, '{field} > {value}'),
-        HAS_REF: (2, '{field} < {value}'),
+        REF_REF: [0],
+        REF_ALT: [1],
+        ALT_ALT: [2],
+        HAS_ALT: [1, 2],
+        HAS_REF: [0, 1],
     }
     COMP_HET_ALT = 'COMP_HET_ALT'
     GENOTYPE_LOOKUP[COMP_HET_ALT] = GENOTYPE_LOOKUP[REF_ALT]
@@ -762,29 +770,68 @@ class EntriesManager(SearchQuerySet):
             clinvar_override_q = AnnotationsQuerySet._clinvar_path_q(
                pathogenicity, _get_range_q=lambda path_range: Q(clinvar_join__pathogenicity__range=path_range),
             ) if self._has_clinvar() else None
-            call_q = None
-            multi_sample_type_quality_q = None
-            multi_sample_type_any_affected_q = None
+
+            gt_map = []
+            no_quality_map = []
+            quality_filter_conditions = self._sample_quality_filter(AFFECTED, quality_filter) # TODO clean up helper
             for s in sample_data:
-                sample_filters, any_affected_samples = self._family_sample_filters(s, inheritance_mode, individual_genotype_filter, quality_filter, custom_affected)
-                if not (sample_filters or any_affected_samples):
-                    continue
-                if s['family_guid'] in multi_sample_type_families:
-                    multi_sample_type_quality_q, multi_sample_type_any_affected_q = self._multi_sample_type_family_calls_q(
-                        multi_sample_type_quality_q, multi_sample_type_any_affected_q, s, sample_filters, any_affected_samples,
-                        clinvar_override_q, multi_sample_type_families,
-                    )
-                else:
-                    sample_type = s['sample_types'][0]
-                    call_q = self._family_calls_q(
-                        call_q, s, sample_filters, sample_type, clinvar_override_q,
-                        any_affected_samples=any_affected_samples, filter_sample_type=not self.single_sample_type
-                    )
+                sample_gt_map = []
+                no_quality_samples = []
+                for sample in s['samples']:
+                    affected = custom_affected.get(sample['individual_guid']) or sample['affected']
+                    genotype = self._sample_genotype(sample, affected, inheritance_mode,individual_genotype_filter)
+                    if genotype is not None:
+                        sample_id = next(iter(sample['sample_ids_by_type'].values()))
+                        sample_gt_map.append(f"'{sample_id}', {self.GENOTYPE_LOOKUP[genotype]}") # TODO NULLABLE_GENOTYPE_LOOKUP
+                    if quality_filter_conditions and quality_filter.get('affected_only') and affected != AFFECTED:
+                        no_quality_samples += list(sample['sample_ids_by_type'].values())
+                    # TODO any affected
+
+                if sample_gt_map:
+                    gt_map.append(f"'{s['family_guid']}', map({', '.join(sample_gt_map)})")
+                if no_quality_samples:
+                    no_quality_map.append(f"'{s['family_guid']}', {no_quality_samples}")
+
+            if gt_map:
+                entries = entries.filter(calls__array_all={
+                    'gt': (', '.join(gt_map), 'has(map({value})[family_guid][x.sampleId], {field})'),
+                })
+
+            if no_quality_map:
+                quality_filter_conditions = {'OR': [
+                    quality_filter_conditions,
+                    {'sampleId': (', '.join(no_quality_map), 'has(map({value})[family_guid], {field})')},
+                ]}
+            if quality_filter_conditions:
+                quality_q = Q(calls__array_all=quality_filter_conditions)
+                if clinvar_override_q:
+                    quality_q |= clinvar_override_q
+                entries = entries.filter(quality_q)
+
+            # call_q = None
+            # multi_sample_type_quality_q = None
+            # multi_sample_type_any_affected_q = None
+            # for s in sample_data:
+            #     sample_filters, any_affected_samples = self._family_sample_filters(s, inheritance_mode, individual_genotype_filter, quality_filter, custom_affected)
+            #     if not (sample_filters or any_affected_samples):
+            #         continue
+            #     if s['family_guid'] in multi_sample_type_families:
+            #         multi_sample_type_quality_q, multi_sample_type_any_affected_q = self._multi_sample_type_family_calls_q(
+            #             multi_sample_type_quality_q, multi_sample_type_any_affected_q, s, sample_filters, any_affected_samples,
+            #             clinvar_override_q, multi_sample_type_families,
+            #         )
+            #     else:
+            #         sample_type = s['sample_types'][0]
+            #         call_q = self._family_calls_q(
+            #             call_q, s, sample_filters, sample_type, clinvar_override_q,
+            #             any_affected_samples=any_affected_samples, filter_sample_type=not self.single_sample_type
+            #         )
 
             #  With families with multiple sample types, can only filter rows after aggregating
             filtered_multi_sample_type_families = {
                 family_guid: filters for family_guid, filters in multi_sample_type_families.items() if filters
             }
+            #  TODO multi sample type
             if filtered_multi_sample_type_families:
                 multi_type_q = Q(family_guid__in=filtered_multi_sample_type_families.keys())
                 call_q = (call_q | multi_type_q) if call_q else multi_type_q
@@ -793,9 +840,6 @@ class EntriesManager(SearchQuerySet):
                     entries = entries.annotate(passes_inheritance=~multi_type_q | multi_sample_type_any_affected_q)
                 else:
                     entries = self._annotate_failed_family_samples(entries, filtered_multi_sample_type_families)
-
-            if call_q:
-                entries = entries.filter(call_q)
 
             if quality_filter.get('vcf_filter'):
                 q = Q(filters__len=0)
@@ -883,8 +927,7 @@ class EntriesManager(SearchQuerySet):
 
         return call_q, any_affected_q
 
-    def _sample_genotype_filter(self, sample, affected, inheritance_mode, individual_genotype_filter):
-        sample_filter = {}
+    def _sample_genotype(self, sample, affected, inheritance_mode, individual_genotype_filter):
         genotype = None
         if individual_genotype_filter:
             genotype = individual_genotype_filter.get(sample['individual_guid'])
@@ -892,6 +935,11 @@ class EntriesManager(SearchQuerySet):
             genotype = self.INHERITANCE_FILTERS.get(inheritance_mode, {}).get(affected)
             if (inheritance_mode == X_LINKED_RECESSIVE and affected == UNAFFECTED and sample['sex'] in MALE_SEXES):
                 genotype = REF_REF
+        return genotype
+
+    def _sample_genotype_filter(self, sample, affected, inheritance_mode, individual_genotype_filter):
+        sample_filter = {}
+        genotype = self._sample_genotype(sample, affected, inheritance_mode, individual_genotype_filter)
         if genotype:
             sample_filter['gt'] = self.genotype_lookup[genotype]
         return sample_filter
