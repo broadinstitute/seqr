@@ -15,7 +15,7 @@ GNOMAD_GENOMES_DICT = Template(Template("""
 CREATE DICTIONARY `$reference_genome/$dataset_type/gnomad_genomes_dict`
 (
     key UInt32,
-    filter_af Decimal(9, 5),
+    filter_af Decimal(9, 5)
 )
 PRIMARY KEY key
 SOURCE(CLICKHOUSE(USER $clickhouse_writer_user PASSWORD $clickhouse_writer_password TABLE `$reference_genome/$dataset_type/gnomad_genomes`))
