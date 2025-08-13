@@ -735,11 +735,11 @@ class EntriesManager(SearchQuerySet):
        project_filter = Q(project_guid__in=project_guids) if len(project_guids) > 1 else Q(project_guid=sample_data[0]['project_guid'])
        entries = entries.filter(project_filter)
 
-       sample_type_families, multi_sample_type_families = self._get_family_sample_types(sample_data) # TODO multi_sample_type_families can be a set
+       sample_type_families, multi_sample_type_families = self._get_family_sample_types(sample_data)
        family_q = None
        multi_sample_type_family_q = None
        if multi_sample_type_families:
-           family_q = Q(family_guid__in=multi_sample_type_families.keys())
+           family_q = Q(family_guid__in=multi_sample_type_families)
            multi_sample_type_family_q = family_q
        for sample_type, families in sample_type_families.items():
            sample_family_q = Q(family_guid__in=families)
@@ -786,20 +786,7 @@ class EntriesManager(SearchQuerySet):
 
             inheritance_q, gt_filter_map = self._inheritance_q(family_sample_gts, family_sample_null_gts, family_affected_samples)
 
-            map_template = 'map({value})[family_guid]'
-            if not self.single_sample_type:
-                map_template += '[sample_type::String]'
-            quality_filter_conditions = self._sample_quality_filter(AFFECTED, quality_filter) # TODO clean up helper
-            if quality_filter_conditions:
-                quality_samples_map = self._get_family_sample_map(family_quality_samples)
-                if quality_samples_map:
-                    quality_filter_conditions = {'OR': [
-                        quality_filter_conditions,
-                        {'sampleId': (quality_samples_map, 'not has(' + map_template + ', {field})')}
-                    ]}
-                quality_q = Q(calls__array_all=quality_filter_conditions)
-                if clinvar_override_q:
-                    quality_q |= clinvar_override_q
+            quality_q = self._quality_q(quality_filter, family_quality_samples, clinvar_override_q)
 
             if quality_filter.get('vcf_filter'):
                 q = Q(filters__len=0)
@@ -833,12 +820,12 @@ class EntriesManager(SearchQuerySet):
     @staticmethod
     def _get_family_sample_types(sample_data):
         sample_type_families = defaultdict(list)
-        multi_sample_type_families = {}
+        multi_sample_type_families = set()
         for s in sample_data:
             if len(s['sample_types']) == 1:
                 sample_type_families[s['sample_types'][0]].append(s['family_guid'])
             else:
-                multi_sample_type_families[s['family_guid']] = []
+                multi_sample_type_families.add(s['family_guid'])
         return sample_type_families, multi_sample_type_families
 
     def _family_sample_filters(self, family_sample_data, inheritance_mode, individual_genotype_filter, quality_filter, custom_affected, is_multi_sample_family):
@@ -896,29 +883,6 @@ class EntriesManager(SearchQuerySet):
 
         return inheritance_q, gt_filter_map
 
-    def _quality_q(self):
-        #  TODO
-        for sample_ids_by_type, sample_inheritance_filter, sample_quality_filter in sample_filters:
-           sample_inheritance_filter['sampleId'] = (f"'{sample_ids_by_type[sample_type]}'",)
-           sample_q = Q(
-               calls__array_exists={**sample_inheritance_filter, **sample_quality_filter},
-               family_guid=family_sample_data['family_guid'],
-               project_guid= family_sample_data['project_guid'],
-           )
-           if filter_sample_type:
-               sample_q &= Q(sample_type=sample_type)
-           if clinvar_override_q and sample_quality_filter:
-               sample_q |= clinvar_override_q & Q(calls__array_exists=sample_inheritance_filter)
-
-           if family_sample_q is None:
-               family_sample_q = sample_q
-           else:
-               family_sample_q &= sample_q
-
-        if family_sample_q and call_q:
-           call_q |= family_sample_q
-        return call_q or family_sample_q
-
     def _sample_genotype(self, sample, affected, inheritance_mode, individual_genotype_filter):
         genotype = None
         if individual_genotype_filter:
@@ -929,10 +893,8 @@ class EntriesManager(SearchQuerySet):
                 genotype = REF_REF
         return genotype
 
-    def _sample_quality_filter(self, affected, quality_filter):
-        sample_filter = {}
-        if quality_filter.get('affected_only') and affected != AFFECTED:
-            return sample_filter
+    def _quality_q(self, quality_filter, quality_samples, clinvar_override_q):
+        quality_filter_conditions = {}
 
         for field, scale, *filters in self.quality_filters:
             filter_key = f'min_{field}'
@@ -941,9 +903,25 @@ class EntriesManager(SearchQuerySet):
             value = quality_filter.get(filter_key)
             if value:
                 or_filters = ['isNull({field})', '{field} >= {value}'] + filters
-                sample_filter[field] = (value / scale, f'or({", ".join(or_filters)})')
+                quality_filter_conditions[field] = (value / scale, f'or({", ".join(or_filters)})')
 
-        return sample_filter
+        if not quality_filter_conditions:
+            return None
+
+        template = 'not has(map({value})[family_guid]'
+        if not self.single_sample_type:
+            template += '[sample_type::String]'
+        quality_samples_map = self._get_family_sample_map(quality_samples)
+        quality_filter_conditions = {'OR': [
+            quality_filter_conditions,
+            {'sampleId': (quality_samples_map, template + ', {field})')}
+        ]}
+
+        quality_q = Q(calls__array_all=quality_filter_conditions)
+        if clinvar_override_q:
+            quality_q |= clinvar_override_q
+
+        return quality_q
 
     def _get_family_sample_map(self, family_samples, is_nested_map=False):
         family_map = []
