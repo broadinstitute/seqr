@@ -782,55 +782,79 @@ class EntriesManager(SearchQuerySet):
             quality_samples_map = []
             quality_filter_conditions = self._sample_quality_filter(AFFECTED, quality_filter) # TODO clean up helper
             for s in sample_data:
-                sample_gt_map = []
-                null_gt_samples = []
-                any_affected_samples = []
-                quality_samples = []
+                sample_gt_map = defaultdict(list)
+                null_gt_samples = defaultdict(list)
+                any_affected_samples = defaultdict(list)
+                quality_samples = defaultdict(list)
                 for sample in s['samples']:
                     affected = custom_affected.get(sample['individual_guid']) or sample['affected']
                     genotype = self._sample_genotype(sample, affected, inheritance_mode,individual_genotype_filter)
-                    sample_id = next(iter(sample['sample_ids_by_type'].values()))
-                    if genotype is not None:
-                        sample_gt_map.append(f"'{sample_id}', {self.genotype_lookup[genotype]}")
-                        if genotype in self.nullable_genotypes:
-                            null_gt_samples.append(sample_id)
-                    elif inheritance_mode == ANY_AFFECTED and affected == AFFECTED:
-                       any_affected_samples.append(sample_id)
-                    if (not quality_filter.get('affected_only')) or affected == AFFECTED:
-                        quality_samples.append(sample_id)
+                    for sample_type, sample_id in sample['sample_ids_by_type'].items():
+                        if genotype is not None:
+                            sample_gt_map[sample_type].append(f"'{sample_id}', {self.genotype_lookup[genotype]}")
+                            if genotype in self.nullable_genotypes:
+                                null_gt_samples[sample_type].append(sample_id)
+                        elif inheritance_mode == ANY_AFFECTED and affected == AFFECTED:
+                           any_affected_samples[sample_type].append(sample_id)
+                        if (not quality_filter.get('affected_only')) or affected == AFFECTED:
+                            quality_samples[sample_type].append(sample_id)
 
                 if sample_gt_map:
+                    if self.single_sample_type:
+                        sample_gt_map = list(next(iter(sample_gt_map.values())))
+                    else:
+                        sample_gt_map = [
+                            f"'{sample_type}', map({', '.join(sample_gts)})" for sample_type, sample_gts in sample_gt_map.items()
+                        ]
                     gt_map.append(f"'{s['family_guid']}', map({', '.join(sample_gt_map)})")
                 if null_gt_samples:
+                    if self.single_sample_type:
+                        null_gt_samples = list(next(iter(null_gt_samples.values())))
+                    else:
+                        sample_map = [f"'{sample_type}', {samples}" for sample_type, samples in null_gt_samples.items()]
+                        null_gt_samples = f"map({', '.join(sample_map)})"
                     null_gt_map.append(f"'{s['family_guid']}', {null_gt_samples}")
                 if any_affected_samples:
+                    if self.single_sample_type:
+                        any_affected_samples = list(next(iter(any_affected_samples.values())))
+                    else:
+                        sample_map = [f"'{sample_type}', {samples}" for sample_type, samples in any_affected_samples.items()]
+                        any_affected_samples = f"map({', '.join(sample_map)})"
                     affected_sample_map.append(f"'{s['family_guid']}', {any_affected_samples}")
                 if quality_samples:
+                    if self.single_sample_type:
+                        quality_samples = list(next(iter(quality_samples.values())))
+                    else:
+                        sample_map = [f"'{sample_type}', {samples}" for sample_type, samples in quality_samples.items()]
+                        quality_samples = f"map({', '.join(sample_map)})"
                     quality_samples_map.append(f"'{s['family_guid']}', {quality_samples}")
 
+            map_template = 'map({value})[family_guid]'
+            if not self.single_sample_type:
+                map_template += '[sample_type::String]'
             if gt_map:
                 gt_map = ', '.join(gt_map)
                 gt_conditions = [
-                    {'gt': (gt_map, 'has(map({value})[family_guid][x.sampleId], {field})')},
-                    {'sampleId': (gt_map, 'not mapContains(map({value})[family_guid], {field})')},
+                    {'gt': (gt_map, 'has(' + map_template + '[x.sampleId], {field})')},
+                    {'sampleId': (gt_map, 'not mapContains(' + map_template + ', {field})')},
                 ]
                 if null_gt_map:
                     gt_conditions.append({
                         'gt': (None, 'isNull({field})'),
-                        'sampleId': (', '.join(null_gt_map), 'has(map({value})[family_guid], {field})'),
+                        'sampleId': (', '.join(null_gt_map), 'has(' + map_template + ', {field})'),
                     })
                 entries = entries.filter(calls__array_all={'OR': gt_conditions})
             elif affected_sample_map:
                 entries = entries.filter(calls__array_exists={
                     'gt': (self.genotype_lookup[HAS_ALT], 'has({value}, {field})'),
-                    'sampleId': (', '.join(affected_sample_map), 'has(map({value})[family_guid], {field})'),
+                    'sampleId': (', '.join(affected_sample_map), 'has(' + map_template + ', {field})'),
                 })
 
             if quality_filter_conditions:
                 if quality_samples_map:
                     quality_filter_conditions = {'OR': [
                         quality_filter_conditions,
-                        {'sampleId': (', '.join(quality_samples_map), 'not has(map({value})[family_guid], {field})')}
+                        {'sampleId': (', '.join(quality_samples_map), 'not has(' + map_template + ', {field})')}
                     ]}
                 quality_q = Q(calls__array_all=quality_filter_conditions)
                 if clinvar_override_q:
