@@ -784,9 +784,9 @@ class EntriesManager(SearchQuerySet):
                 if missing_type_samples:
                     family_missing_type_samples[s['family_guid']] = missing_type_samples
 
-            inheritance_q, gt_filter_map = self._inheritance_q(family_sample_gts, family_sample_null_gts, family_affected_samples)
-
-            quality_q = self._quality_q(quality_filter, family_quality_samples, clinvar_override_q)
+            is_single_family = len(sample_data) == 1
+            inheritance_q, gt_filter_map = self._inheritance_q(family_sample_gts, family_sample_null_gts, family_affected_samples, is_single_family)
+            quality_q = self._quality_q(quality_filter, family_quality_samples, clinvar_override_q, is_single_family)
 
             if quality_filter.get('vcf_filter'):
                 q = Q(filters__len=0)
@@ -853,7 +853,7 @@ class EntriesManager(SearchQuerySet):
 
         return sample_filters, any_affected_samples, nullable_gt_samples, quality_samples, missing_type_samples
 
-    def _inheritance_q(self, sample_filters, sample_null_gts, any_affected_samples):
+    def _inheritance_q(self, sample_filters, sample_null_gts, any_affected_samples, is_single_family):
         map_template = 'map({value})[family_guid]'
         if not self.single_sample_type:
             map_template += '[sample_type::String]'
@@ -861,20 +861,32 @@ class EntriesManager(SearchQuerySet):
         gt_filter_map = None
         inheritance_q = None
         if any_affected_samples:
-            affected_sample_map = self._get_family_sample_map(any_affected_samples)
+            if is_single_family:
+                affected_sample_map = next(iter(next(iter(any_affected_samples.values())).values()))
+                map_template = '{value}'
+            else:
+                affected_sample_map = self._get_family_sample_map(any_affected_samples)
             inheritance_q = Q(calls__array_exists={
                 'gt': (self.genotype_lookup[HAS_ALT], 'has({value}, {field})'),
                 'sampleId': (affected_sample_map, 'has(' + map_template + ', {field})'),
             })
 
         elif sample_filters:
-            gt_filter_map = self._get_family_sample_map(sample_filters, is_nested_map=True)
+            if is_single_family:
+                gt_filter_map = ', '.join(next(iter(next(iter(sample_filters.values())).values())))
+                map_template = 'map({value})'
+            else:
+                gt_filter_map = self._get_family_sample_map(sample_filters, is_nested_map=True)
             gt_conditions = [
                 {'gt': (gt_filter_map, 'has(' + map_template + '[x.sampleId], {field})')},
                 {'sampleId': (gt_filter_map, 'not mapContains(' + map_template + ', {field})')},
             ]
             if sample_null_gts:
-                null_gt_map = self._get_family_sample_map(sample_null_gts)
+                if is_single_family:
+                    null_gt_map = next(iter(next(iter(sample_null_gts.values())).values()))
+                    map_template = '{value}'
+                else:
+                    null_gt_map = self._get_family_sample_map(sample_null_gts)
                 gt_conditions.append({
                     'gt': (None, 'isNull({field})'),
                     'sampleId': (null_gt_map, 'has(' + map_template + ', {field})'),
@@ -893,7 +905,7 @@ class EntriesManager(SearchQuerySet):
                 genotype = REF_REF
         return genotype
 
-    def _quality_q(self, quality_filter, quality_samples, clinvar_override_q):
+    def _quality_q(self, quality_filter, quality_samples, clinvar_override_q, is_single_family):
         quality_filter_conditions = {}
 
         for field, scale, *filters in self.quality_filters:
@@ -908,10 +920,15 @@ class EntriesManager(SearchQuerySet):
         if not quality_filter_conditions:
             return None
 
-        template = 'not has(map({value})[family_guid]'
-        if not self.single_sample_type:
-            template += '[sample_type::String]'
-        quality_samples_map = self._get_family_sample_map(quality_samples)
+        template = 'not has('
+        if is_single_family:
+            quality_samples_map = next(iter(next(iter(quality_samples.values())).values()))
+            template += '{value}'
+        else:
+            quality_samples_map = self._get_family_sample_map(quality_samples)
+            template += 'map({value})[family_guid]'
+            if not self.single_sample_type:
+                template += '[sample_type::String]'
         quality_filter_conditions = {'OR': [
             quality_filter_conditions,
             {'sampleId': (quality_samples_map, template + ', {field})')}
