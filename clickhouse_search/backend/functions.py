@@ -95,6 +95,13 @@ class ArrayExists(ArrayLookup):
         return rhs_params[0], []
 
 
+@NestedField.register_lookup
+@ArrayField.register_lookup
+class ArrayAll(ArrayExists):
+    lookup_name = "array_all"
+    function = "arrayAll"
+
+
 class ArrayFilter(lookups.Transform):
     def __init__(self, *args, conditions=None, **kwargs):
         super().__init__(*args, **kwargs)
