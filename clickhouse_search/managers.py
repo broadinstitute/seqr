@@ -784,7 +784,7 @@ class EntriesManager(SearchQuerySet):
                 if missing_type_samples:
                     family_missing_type_samples[s['family_guid']] = missing_type_samples
 
-            is_single_family = len(sample_data) == 1
+            is_single_family = len(sample_data) == 1 and not multi_sample_type_families
             inheritance_q, gt_filter_map = self._inheritance_q(family_sample_gts, family_sample_null_gts, family_affected_samples, is_single_family)
             quality_q = self._quality_q(quality_filter, family_quality_samples, clinvar_override_q, is_single_family)
 
