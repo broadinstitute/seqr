@@ -808,18 +808,16 @@ class EntriesManager(SearchQuerySet):
     def _get_inheritance_quality_qs(self, sample_data, multi_sample_type_families, inheritance_mode, individual_genotype_filter, quality_filter, clinvar_override_q, custom_affected):
         family_sample_gts = {}
         family_sample_null_gts = {}
-        family_affected_samples = {}
+        family_affected_samples = defaultdict(lambda: defaultdict(list))
         family_quality_samples = {}
         family_missing_type_samples = {}
         for s in sample_data:
-            sample_filters, any_affected_samples, nullable_gt_samples, quality_samples, missing_type_samples = self._family_sample_filters(
-                s, inheritance_mode, individual_genotype_filter, quality_filter, custom_affected,
+            sample_filters, nullable_gt_samples, quality_samples, missing_type_samples = self._family_sample_filters(
+                s, inheritance_mode, individual_genotype_filter, quality_filter, custom_affected, family_affected_samples, s['family_guid'],
                 is_multi_sample_family=s['family_guid'] in multi_sample_type_families,
             )
             if sample_filters:
                 family_sample_gts[s['family_guid']] = sample_filters
-            if any_affected_samples:
-                family_affected_samples[s['family_guid']] = any_affected_samples
             if nullable_gt_samples:
                 family_sample_null_gts[s['family_guid']] = nullable_gt_samples
             if quality_samples:
@@ -846,9 +844,8 @@ class EntriesManager(SearchQuerySet):
                 multi_sample_type_families.add(s['family_guid'])
         return sample_type_families, multi_sample_type_families
 
-    def _family_sample_filters(self, family_sample_data, inheritance_mode, individual_genotype_filter, quality_filter, custom_affected, is_multi_sample_family):
+    def _family_sample_filters(self, family_sample_data, inheritance_mode, individual_genotype_filter, quality_filter, custom_affected, family_affected_samples, family_guid, is_multi_sample_family):
         sample_filters = defaultdict(list)
-        any_affected_samples = defaultdict(list)
         nullable_gt_samples = defaultdict(list)
         quality_samples = defaultdict(list)
         missing_type_samples = defaultdict(list)
@@ -861,15 +858,15 @@ class EntriesManager(SearchQuerySet):
                         f"'{sample_id}', {self.genotype_lookup[genotype]}")
                     if genotype in self.nullable_genotypes:
                         nullable_gt_samples[sample_type].append(sample_id)
-                elif inheritance_mode == ANY_AFFECTED and affected == AFFECTED:
-                    any_affected_samples[sample_type].append(sample_id)
+                elif inheritance_mode == ANY_AFFECTED:
+                    family_affected_samples[sample_id][affected].append((family_guid, sample_type))
                 if (not quality_filter.get('affected_only')) or affected == AFFECTED:
                     quality_samples[sample_type].append(sample_id)
                 if is_multi_sample_family and len(sample['sample_ids_by_type']) == 1:
                     missing_type = Sample.SAMPLE_TYPE_WES if sample_type == Sample.SAMPLE_TYPE_WGS else Sample.SAMPLE_TYPE_WGS
                     missing_type_samples[missing_type].append(sample_id)
 
-        return sample_filters, any_affected_samples, nullable_gt_samples, quality_samples, missing_type_samples
+        return sample_filters, nullable_gt_samples, quality_samples, missing_type_samples
 
     def _inheritance_q(self, sample_filters, sample_null_gts, any_affected_samples, is_single_family):
         map_template = 'map({value})[family_guid]'
@@ -879,15 +876,28 @@ class EntriesManager(SearchQuerySet):
         gt_filter_map = None
         inheritance_q = None
         if any_affected_samples:
-            if is_single_family:
-                affected_sample_map = next(iter(next(iter(any_affected_samples.values())).values()))
-                map_template = '{value}'
-            else:
-                affected_sample_map = self._get_family_sample_map(any_affected_samples)
+            mismatched_affected_samples = defaultdict(lambda: defaultdict(list))
+            affected_samples = []
+            for sample_id, affected_families in any_affected_samples.items():
+                if AFFECTED not in affected_families:
+                    continue
+                if len(affected_families) > 1:
+                    for family_guid, sample_type in affected_families[AFFECTED]:
+                        mismatched_affected_samples[family_guid][sample_type].append(sample_id)
+                else:
+                    affected_samples.append(sample_id)
+
             inheritance_q = Q(calls__array_exists={
                 'gt': (self.genotype_lookup[HAS_ALT], 'has({value}, {field})'),
-                'sampleId': (affected_sample_map, 'has(' + map_template + ', {field})'),
+                'sampleId': (affected_samples, 'has({value}, {field})'),
             })
+            if mismatched_affected_samples:
+                affected_sample_map = self._get_family_sample_map(mismatched_affected_samples)
+                inheritance_q |= Q(calls__array_exists={
+                    'gt': (self.genotype_lookup[HAS_ALT], 'has({value}, {field})'),
+                    'sampleId': (affected_sample_map, 'has(' + map_template + ', {field})'),
+                    'family': (list(mismatched_affected_samples.keys()), 'has({value}, family_guid)'),
+                })
 
         elif sample_filters:
             if is_single_family:
