@@ -9,7 +9,7 @@ from django.db.models.sql.constants import INNER
 from clickhouse_search.backend.fields import NestedField, NamedTupleField
 from clickhouse_search.backend.functions import Array, ArrayConcat, ArrayDistinct, ArrayFilter, ArrayFold, \
     ArrayIntersect, ArrayJoin, ArrayMap, ArraySort, ArraySymmetricDifference, CrossJoin, GroupArray, GroupArrayArray, \
-    GroupArrayIntersect, DictGet, If, MapLookup, NullIf, Plus, SubqueryJoin, SubqueryTable, Tuple, TupleConcat
+    GroupArrayIntersect, DictGet, DictGetOrDefault, If, MapLookup, NullIf, Plus, SubqueryJoin, SubqueryTable, Tuple, TupleConcat
 from seqr.models import Sample
 from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFECTED, UNAFFECTED, MALE_SEXES, \
     X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, SCREEN_KEY, UTR_ANNOTATOR_KEY, \
@@ -683,7 +683,7 @@ class EntriesManager(SearchQuerySet):
     def clinvar_model(self):
         return self.model.clinvar_join.rel.related_model
 
-    def search(self, sample_data, parsed_locus=None, freqs=None, annotations=None, **kwargs):
+    def search(self, sample_data, parsed_locus=None, freqs=None, annotations=None, pathogenicity=None, **kwargs):
         entries = self.filter_intervals(**(parsed_locus or {}))
 
         entries = self._join_annotations(entries)
@@ -693,14 +693,27 @@ class EntriesManager(SearchQuerySet):
         if (freqs or {}).get(callset_filter_field) and self.annotations_model.SEQR_POPULATIONS:
             entries = self._filter_seqr_frequency(entries, **freqs[callset_filter_field])
 
+        clinvar_override_q = AnnotationsQuerySet._clinvar_path_q(
+            pathogenicity, _get_range_q=lambda path_range: Q(clinvar_join__pathogenicity__range=path_range),
+        ) if self._has_clinvar() else None
         gnomad_filter = (freqs or {}).get('gnomad_genomes') or {}
-        if hasattr(self.model, 'is_gnomad_gt_5_percent') and ((gnomad_filter.get('af') or 1) <= 0.05 or any(gnomad_filter.get(field) is not None for field in ['ac', 'hh'])):
-            entries = entries.filter(is_gnomad_gt_5_percent=False)
+        af_cutoff = gnomad_filter.get('af')
+        if af_cutoff is None and any(gnomad_filter.get(field) is not None for field in ['ac', 'hh']):
+            af_cutoff = PATH_FREQ_OVERRIDE_CUTOFF
+        if af_cutoff is not None and any(obj.name.startswith('gnomadgenomes') for obj in self.annotations_model._meta.related_objects):
+            entries = entries.annotate(gnomad_genomes_af=DictGetOrDefault(
+                'key', Value(0), dict_name=f"{self.table_basename}/gnomad_genomes_dict", fields="'filter_af'",
+                output_field=models.DecimalField(),
+            ))
+            af_q = Q(gnomad_genomes_af__lte=af_cutoff)
+            if clinvar_override_q is not None:
+                af_q |= (clinvar_override_q & Q(gnomad_genomes_af__lte=PATH_FREQ_OVERRIDE_CUTOFF))
+            entries = entries.filter(af_q)
 
         if (annotations or {}).get(NEW_SV_FIELD) and 'newCall' in self.call_fields:
             entries = entries.filter(calls__array_exists={'newCall': (None, '{field}')})
 
-        return self._search_call_data(entries, sample_data, **kwargs)
+        return self._search_call_data(entries, sample_data, clinvar_override_q=clinvar_override_q, **kwargs)
 
     def _join_annotations(self, entries):
         if self._has_clinvar():
@@ -730,7 +743,7 @@ class EntriesManager(SearchQuerySet):
     def _has_clinvar(self):
         return hasattr(self.model, 'clinvar_join')
 
-    def _search_call_data(self, entries, sample_data, inheritance_mode=None, inheritance_filter=None, qualityFilter=None, pathogenicity=None, annotate_carriers=False, annotate_hom_alts=False, skip_individual_guid=False, **kwargs):
+    def _search_call_data(self, entries, sample_data, inheritance_mode=None, inheritance_filter=None, qualityFilter=None, clinvar_override_q=None, annotate_carriers=False, annotate_hom_alts=False, skip_individual_guid=False, **kwargs):
        project_guids = {s['project_guid'] for s in sample_data}
        project_filter = Q(project_guid__in=project_guids) if len(project_guids) > 1 else Q(project_guid=sample_data[0]['project_guid'])
        entries = entries.filter(project_filter)
@@ -755,39 +768,14 @@ class EntriesManager(SearchQuerySet):
        inheritance_q = None
        quality_q = None
        gt_filter_map = None
+       family_missing_type_samples = None
        quality_filter = qualityFilter or {}
        individual_genotype_filter = (inheritance_filter or {}).get('genotype')
-       custom_affected = (inheritance_filter or {}).get('affected') or {}
        if inheritance_mode or individual_genotype_filter or quality_filter:
-            clinvar_override_q = AnnotationsQuerySet._clinvar_path_q(
-               pathogenicity, _get_range_q=lambda path_range: Q(clinvar_join__pathogenicity__range=path_range),
-            ) if self._has_clinvar() else None
-
-            family_sample_gts = {}
-            family_sample_null_gts = {}
-            family_affected_samples = {}
-            family_quality_samples = {}
-            family_missing_type_samples = {}
-            for s in sample_data:
-                sample_filters, any_affected_samples, nullable_gt_samples, quality_samples, missing_type_samples = self._family_sample_filters(
-                    s, inheritance_mode, individual_genotype_filter, quality_filter, custom_affected,
-                    is_multi_sample_family=s['family_guid'] in multi_sample_type_families,
-                )
-                if sample_filters:
-                    family_sample_gts[s['family_guid']] = sample_filters
-                if any_affected_samples:
-                    family_affected_samples[s['family_guid']] = any_affected_samples
-                if nullable_gt_samples:
-                    family_sample_null_gts[s['family_guid']] = nullable_gt_samples
-                if quality_samples:
-                    family_quality_samples[s['family_guid']] = quality_samples
-                if missing_type_samples:
-                    family_missing_type_samples[s['family_guid']] = missing_type_samples
-
-            is_single_family = len(sample_data) == 1 and not multi_sample_type_families
-            inheritance_q, gt_filter_map = self._inheritance_q(family_sample_gts, family_sample_null_gts, family_affected_samples, is_single_family)
-            quality_q = self._quality_q(quality_filter, family_quality_samples, clinvar_override_q, is_single_family)
-
+            inheritance_q, quality_q, gt_filter_map, family_missing_type_samples = self._get_inheritance_quality_qs(
+               sample_data, multi_sample_type_families, inheritance_mode, individual_genotype_filter, quality_filter, clinvar_override_q,
+                custom_affected=(inheritance_filter or {}).get('affected') or {},
+            )
             if quality_filter.get('vcf_filter'):
                 q = Q(filters__len=0)
                 if clinvar_override_q:
@@ -816,6 +804,36 @@ class EntriesManager(SearchQuerySet):
            entries = entries.filter(quality_q)
 
        return self._annotate_calls(entries, sample_data, annotate_carriers, annotate_hom_alts, skip_individual_guid, multi_sample_type_families)
+
+    def _get_inheritance_quality_qs(self, sample_data, multi_sample_type_families, inheritance_mode, individual_genotype_filter, quality_filter, clinvar_override_q, custom_affected):
+        family_sample_gts = {}
+        family_sample_null_gts = {}
+        family_affected_samples = {}
+        family_quality_samples = {}
+        family_missing_type_samples = {}
+        for s in sample_data:
+            sample_filters, any_affected_samples, nullable_gt_samples, quality_samples, missing_type_samples = self._family_sample_filters(
+                s, inheritance_mode, individual_genotype_filter, quality_filter, custom_affected,
+                is_multi_sample_family=s['family_guid'] in multi_sample_type_families,
+            )
+            if sample_filters:
+                family_sample_gts[s['family_guid']] = sample_filters
+            if any_affected_samples:
+                family_affected_samples[s['family_guid']] = any_affected_samples
+            if nullable_gt_samples:
+                family_sample_null_gts[s['family_guid']] = nullable_gt_samples
+            if quality_samples:
+                family_quality_samples[s['family_guid']] = quality_samples
+            if missing_type_samples:
+                family_missing_type_samples[s['family_guid']] = missing_type_samples
+
+        is_single_family = len(sample_data) == 1 and not multi_sample_type_families
+        inheritance_q, gt_filter_map = self._inheritance_q(
+            family_sample_gts, family_sample_null_gts, family_affected_samples, is_single_family,
+        )
+        quality_q = self._quality_q(quality_filter, family_quality_samples, clinvar_override_q, is_single_family)
+
+        return inheritance_q, quality_q, gt_filter_map, family_missing_type_samples
 
     @staticmethod
     def _get_family_sample_types(sample_data):

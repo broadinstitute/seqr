@@ -125,6 +125,10 @@ class DictGet(Func):
     template = '%(function)s("%(dict_name)s", (%(fields)s), %(expressions)s)'
 
 
+class DictGetOrDefault(DictGet):
+    function = 'dictGetOrDefault'
+
+
 class If(Func):
     function = 'if'
     template = '%(function)s(%(condition)s%(expressions)s)'

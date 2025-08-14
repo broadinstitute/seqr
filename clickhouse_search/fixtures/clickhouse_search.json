@@ -265,6 +265,48 @@
       "pathogenicity": "Conflicting_classifications_of_pathogenicity"
     }
 }, {
+    "model": "clickhouse_search.gnomadgenomessnvindel",
+    "pk": 1,
+    "fields": {
+      "key": 1,
+      "filter_af": 0.04028
+    }
+}, {
+    "model": "clickhouse_search.gnomadgenomessnvindel",
+    "pk": 3,
+    "fields": {
+      "key": 3,
+      "filter_af": 0.47978
+    }
+}, {
+    "model": "clickhouse_search.gnomadgenomessnvindel",
+    "pk": 4,
+    "fields": {
+      "key": 4,
+      "filter_af": 0.0015
+    }
+}, {
+    "model": "clickhouse_search.gnomadgenomessnvindel",
+    "pk": 5,
+    "fields": {
+      "key": 5,
+      "filter_af": 0.00233
+    }
+}, {
+    "model": "clickhouse_search.gnomadgenomessnvindel",
+    "pk": 6,
+    "fields": {
+      "key": 6,
+      "filter_af": 0.00011
+    }
+}, {
+    "model": "clickhouse_search.gnomadgenomessnvindel",
+    "pk": 7,
+    "fields": {
+      "key": 7,
+      "filter_af": 0.0002
+    }
+}, {
     "model": "clickhouse_search.entriessnvindel",
     "pk": 1,
     "fields": {
@@ -612,6 +654,13 @@
     "fields": {
       "key": 21,
       "variant_id": "1-10439-AC-A"
+    }
+}, {
+    "model": "clickhouse_search.gnomadgenomesgrch37snvindel",
+    "pk": 11,
+    "fields": {
+      "key": 11,
+      "filter_af": 0.82844
     }
 }, {
     "model": "clickhouse_search.annotationsmito",
