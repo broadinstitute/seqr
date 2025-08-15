@@ -15,6 +15,7 @@ from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4,
     GCNV_VARIANT3, GCNV_VARIANT4, GCNV_MULTI_FAMILY_VARIANT1, GCNV_MULTI_FAMILY_VARIANT2, GCNV_GENE_COUNTS, \
     MULTI_DATA_TYPE_COMP_HET_VARIANT2, ALL_SNV_INDEL_PASS_FILTERS, MULTI_PROJECT_GCNV_VARIANT3, VARIANT_LOOKUP_VARIANT, \
     MITO_GENE_COUNTS, PROJECT_4_COMP_HET_VARIANT, format_cached_variant
+from clickhouse_search.models import EntriesGcnv
 from reference_data.models import Omim
 from seqr.models import Project, Family, Sample, VariantSearch, VariantSearchResults
 from seqr.utils.search.search_utils_tests import SearchTestHelper
@@ -1096,6 +1097,9 @@ class ClickhouseSearchTests(DifferentDbTransactionSupportMixin, SearchTestHelper
             **GCNV_VARIANT4, 'genotypes': {k: v for k, v in GCNV_VARIANT4['genotypes'].items() if k != 'I000005_hg00732'}
         }
         Sample.objects.filter(guid='S000146_hg00732').update(is_active=False)
+        for entry in EntriesGcnv.objects.filter(family_guid='F000002_2'):
+            entry.calls = [list(call.values()) for call in [entry.calls[0], entry.calls[2]]]
+            entry.save(using='clickhouse_write')
         self._assert_expected_search(
             [[MULTI_DATA_TYPE_COMP_HET_VARIANT2, missing_gt_gcnv_variant]],
             inheritance_mode='compound_het', pathogenicity=pathogenicity, locus=None,
