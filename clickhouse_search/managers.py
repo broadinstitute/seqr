@@ -695,7 +695,10 @@ class EntriesManager(SearchQuerySet):
 
         gnomad_filter = (freqs or {}).get('gnomad_genomes') or {}
         if hasattr(self.model, 'is_gnomad_gt_5_percent') and ((gnomad_filter.get('af') or 1) <= 0.05 or any(gnomad_filter.get(field) is not None for field in ['ac', 'hh'])):
-            entries = entries.filter(is_gnomad_gt_5_percent=False)
+            # Passing field=Value(False) to the django filter causes the SQL to evaluate to "field = false",
+            # while passing field=False evaluates to "NOT field".
+            # For fields used for pruning the table based on the order_by for the table, the former is needed
+            entries = entries.filter(is_gnomad_gt_5_percent=Value(False))
 
         if (annotations or {}).get(NEW_SV_FIELD) and 'newCall' in self.call_fields:
             entries = entries.filter(calls__array_exists={'newCall': (None, '{field}')})
