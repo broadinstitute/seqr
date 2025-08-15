@@ -895,14 +895,10 @@ class EntriesManager(SearchQuerySet):
                 for gt in self.genotype_lookup[next(iter(genotype_families))]:
                     samples_by_gt[gt].append(sample_id)
 
-        gt_map = [f"{gt}, {samples}" for gt, samples in samples_by_gt.items()]
-        gt_conditions = {'gt': (gt_map, 'has(map({value})[{field}], x.sampleId)')}
-        if self.has_null_ref_genotypes and 0 in samples_by_gt:
-            gt_conditions = {'OR': [gt_conditions, {
-                'gt': (None, 'isNull({field})'),
-                'sampleId': (samples_by_gt[0], 'has({value}, {field})'),
-            }]}
-        inheritance_q = Q(calls__array_all=gt_conditions)
+        if self.has_null_ref_genotypes:
+            samples_by_gt[-1] = samples_by_gt[0]
+        gt_map = ', '.join([f"{gt}, {samples_by_gt[gt]}" for gt in [-1, 0, 1, 2]])
+        inheritance_q = Q(calls__array_all={'gt': (gt_map, 'has(map({value})[ifNull({field}, -1)], x.sampleId)')})
 
         if mismatched_genotype_samples:
             gt_filter_map = self._get_family_sample_map(mismatched_genotype_samples, is_nested_map=True)
