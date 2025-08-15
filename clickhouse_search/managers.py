@@ -628,6 +628,7 @@ class EntriesManager(SearchQuerySet):
         ALT_ALT: [2],
         HAS_ALT: [1, 2],
         HAS_REF: [0, 1],
+        None: [-1, 0, 1, 2],
     }
     COMP_HET_ALT = 'COMP_HET_ALT'
     GENOTYPE_LOOKUP[COMP_HET_ALT] = GENOTYPE_LOOKUP[REF_ALT]
@@ -859,8 +860,7 @@ class EntriesManager(SearchQuerySet):
             affected = custom_affected.get(sample['individual_guid']) or sample['affected']
             genotype = self._sample_genotype(sample, affected, inheritance_mode, individual_genotype_filter)
             for sample_type, sample_id in sample['sample_ids_by_type'].items():
-                #  TODO handle null genotype for known sample (i.e. manual genotype filter, unknown affected)
-                if genotype is not None:
+                if inheritance_mode or individual_genotype_filter:
                     family_sample_genotypes[sample_id][genotype].append((family_guid, sample_type))
                 if inheritance_mode == ANY_AFFECTED or quality_filter.get('affected_only'):
                     family_affected_samples[sample_id][affected].append((family_guid, sample_type))
@@ -896,7 +896,7 @@ class EntriesManager(SearchQuerySet):
                     samples_by_gt[gt].append(sample_id)
 
         if self.has_null_ref_genotypes:
-            samples_by_gt[-1] = samples_by_gt[0]
+            samples_by_gt[-1] += samples_by_gt[0]
         gt_map = ', '.join([f"{gt}, {samples_by_gt[gt]}" for gt in [-1, 0, 1, 2]])
         inheritance_q = Q(calls__array_all={'gt': (gt_map, 'has(map({value})[ifNull({field}, -1)], x.sampleId)')})
 
