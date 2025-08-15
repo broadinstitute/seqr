@@ -697,18 +697,17 @@ class EntriesManager(SearchQuerySet):
             pathogenicity, _get_range_q=lambda path_range: Q(clinvar_join__pathogenicity__range=path_range),
         ) if self._has_clinvar() else None
         gnomad_filter = (freqs or {}).get('gnomad_genomes') or {}
-        af_cutoff = gnomad_filter.get('af')
-        if af_cutoff is None and any(gnomad_filter.get(field) is not None for field in ['ac', 'hh']):
-            af_cutoff = PATH_FREQ_OVERRIDE_CUTOFF
-        if af_cutoff is not None and any(obj.name.startswith('gnomadgenomes') for obj in self.annotations_model._meta.related_objects):
-            entries = entries.annotate(gnomad_genomes_af=DictGetOrDefault(
-                'key', Value(0), dict_name=f"{self.table_basename}/gnomad_genomes_dict", fields="'filter_af'",
-                output_field=models.DecimalField(),
-            ))
-            af_q = Q(gnomad_genomes_af__lte=af_cutoff)
-            if clinvar_override_q is not None:
-                af_q |= (clinvar_override_q & Q(gnomad_genomes_af__lte=PATH_FREQ_OVERRIDE_CUTOFF))
-            entries = entries.filter(af_q)
+        if hasattr(self.model, 'is_gnomad_gt_5_percent') and ((gnomad_filter.get('af') or 1) <= PATH_FREQ_OVERRIDE_CUTOFF or any(gnomad_filter.get(field) is not None for field in ['ac', 'hh'])):
+            entries = entries.filter(is_gnomad_gt_5_percent=False)
+            if (gnomad_filter.get('af') or 1) < PATH_FREQ_OVERRIDE_CUTOFF:
+                entries = entries.annotate(gnomad_genomes_af=DictGetOrDefault(
+                    'key', Value(0), dict_name=f"{self.table_basename}/gnomad_genomes_dict", fields="'filter_af'",
+                    output_field=models.DecimalField(),
+                ))
+                af_q = Q(gnomad_genomes_af__lte=gnomad_filter['af'])
+                if clinvar_override_q is not None:
+                    af_q |= clinvar_override_q
+                entries = entries.filter(af_q)
 
         if (annotations or {}).get(NEW_SV_FIELD) and 'newCall' in self.call_fields:
             entries = entries.filter(calls__array_exists={'newCall': (None, '{field}')})
