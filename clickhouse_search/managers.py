@@ -811,7 +811,7 @@ class EntriesManager(SearchQuerySet):
                 affected = custom_affected.get(sample['individual_guid']) or sample['affected']
                 genotype = self._sample_genotype(sample, affected, inheritance_mode, individual_genotype_filter)
                 sample_ids = list(sample['sample_ids_by_type'].values())
-                if affected == AFFECTED and inheritance_mode == ANY_AFFECTED or quality_filter.get('affected_only'):
+                if affected == AFFECTED and (inheritance_mode == ANY_AFFECTED or quality_filter.get('affected_only')):
                     affected_samples += sample_ids
                 if inheritance_mode or individual_genotype_filter:
                     for gt in self.genotype_lookup[genotype]:
