@@ -635,6 +635,8 @@ class EntriesManager(SearchQuerySet):
     NULLABLE_GENOTYPE_LOOKUP = {
         **GENOTYPE_LOOKUP,
         COMP_HET_ALT: GENOTYPE_LOOKUP[HAS_ALT],
+        REF_REF: [-1] + GENOTYPE_LOOKUP[REF_REF],
+        HAS_REF: [-1] + GENOTYPE_LOOKUP[HAS_REF],
     }
 
     INHERITANCE_FILTERS = {
@@ -652,12 +654,8 @@ class EntriesManager(SearchQuerySet):
         return dict(self.model.CALL_FIELDS)
 
     @property
-    def has_null_ref_genotypes(self):
-        return self.annotations_model.GENOTYPE_OVERRIDE_FIELDS
-
-    @property
     def genotype_lookup(self):
-        return self.NULLABLE_GENOTYPE_LOOKUP if self.has_null_ref_genotypes else self.GENOTYPE_LOOKUP
+        return self.NULLABLE_GENOTYPE_LOOKUP if self.annotations_model.GENOTYPE_OVERRIDE_FIELDS else self.GENOTYPE_LOOKUP
 
     @property
     def quality_filters(self):
@@ -895,8 +893,6 @@ class EntriesManager(SearchQuerySet):
                 for gt in self.genotype_lookup[next(iter(genotype_families))]:
                     samples_by_gt[gt].append(sample_id)
 
-        if self.has_null_ref_genotypes:
-            samples_by_gt[-1] += samples_by_gt[0]
         gt_map = ', '.join([f"{gt}, {samples_by_gt[gt]}" for gt in [-1, 0, 1, 2]])
         inheritance_q = Q(calls__array_all={'gt': (gt_map, 'has(map({value})[ifNull({field}, -1)], x.sampleId)')})
 
