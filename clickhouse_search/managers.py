@@ -759,6 +759,9 @@ class EntriesManager(SearchQuerySet):
        quality_filter = qualityFilter or {}
        individual_genotype_filter = (inheritance_filter or {}).get('genotype')
        if inheritance_mode or individual_genotype_filter or quality_filter:
+            clinvar_override_q = AnnotationsQuerySet._clinvar_path_q(
+               pathogenicity, _get_range_q=lambda path_range: Q(clinvar_join__pathogenicity__range=path_range),
+            ) if self._has_clinvar() else None
             inheritance_q, quality_q, gt_filter_map, family_missing_type_samples = self._get_inheritance_quality_qs(
                sample_data, multi_sample_type_families, inheritance_mode, individual_genotype_filter, quality_filter, clinvar_override_q,
                 custom_affected=(inheritance_filter or {}).get('affected') or {},
