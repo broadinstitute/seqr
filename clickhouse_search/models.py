@@ -883,28 +883,6 @@ class GtStatsSv(models.ClickhouseModel):
     class Meta(BaseGtStats.Meta):
         db_table = 'GRCh38/SV/gt_stats'
 
-class GnomadGenomesGRCh37SnvIndel(models.ClickhouseModel):
-    key = OneToOneField('AnnotationsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
-    filter_af = models.DecimalField(max_digits=9, decimal_places=5)
-
-    class Meta:
-        db_table = 'GRCh37/SNV_INDEL/gnomad_genomes'
-        engine = models.ReplacingMergeTree(
-            primary_key='key',
-            order_by='key'
-        )
-
-class GnomadGenomesSnvIndel(models.ClickhouseModel):
-    key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
-    filter_af = models.DecimalField(max_digits=9, decimal_places=5)
-
-    class Meta:
-        db_table = 'GRCh38/SNV_INDEL/gnomad_genomes'
-        engine = models.ReplacingMergeTree(
-            primary_key='key',
-            order_by='key'
-        )
-
 
 ENTRY_CLASS_MAP = {
     GENOME_VERSION_GRCh37: {Sample.DATASET_TYPE_VARIANT_CALLS: EntriesGRCh37SnvIndel},
