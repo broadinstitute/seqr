@@ -10,7 +10,7 @@ from clickhouse_search.backend.fields import NestedField, NamedTupleField
 from clickhouse_search.backend.functions import Array, ArrayConcat, ArrayDistinct, ArrayFilter, ArrayFold, \
     ArrayIntersect, ArrayJoin, ArrayMap, ArraySort, ArraySymmetricDifference, CrossJoin, GroupArray, GroupArrayArray, \
     GroupArrayIntersect, DictGet, DictGetOrDefault, If, MapLookup, NullIf, Plus, SubqueryJoin, SubqueryTable, Tuple, TupleConcat
-from seqr.models import Sample
+from seqr.models import Sample, Project
 from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFECTED, UNAFFECTED, MALE_SEXES, \
     X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, SCREEN_KEY, UTR_ANNOTATOR_KEY, \
     EXTENDED_SPLICE_KEY, MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY, CLINVAR_KEY, HGMD_KEY, NEW_SV_FIELD, \
@@ -815,29 +815,39 @@ class EntriesManager(SearchQuerySet):
             if missing_type_samples:
                 family_missing_type_samples[s['family_guid']] = missing_type_samples
 
-        mismatched_affected_samples = defaultdict(lambda: defaultdict(list))
-        affected_samples = []
-        for sample_id, affected_families in family_affected_samples.items():
-            if AFFECTED not in affected_families:
-                continue
-            if len(affected_families) > 1:
-                for family_guid, sample_type in affected_families[AFFECTED]:
-                    mismatched_affected_samples[family_guid][sample_type].append(sample_id)
-            else:
-                affected_samples.append(sample_id)
+        mismatched_samples = {
+            sample_id: {project for projects in projects_map.values() for project in projects}
+            for sample_id, projects_map in {**family_affected_samples, **family_sample_genotypes}.items() if len(projects_map) > 1
+        }
+        if mismatched_samples:
+            from seqr.utils.search.utils import InvalidSearchException
+            project_name_map = dict(Project.objects.filter(
+                guid__in={p for projects in mismatched_samples.values() for p in projects}
+            ).values_list('guid', 'name'))
+            sample_summaries = [
+                f'{sample_id} ({"/ ".join([project_name_map[p] for p in projects])})'
+                for sample_id, projects in mismatched_samples.items()
+            ]
+            raise InvalidSearchException(
+                'The following samples are incorrectly configured and have different affected statuses in different projects: ' +
+                ', '.join(sample_summaries),
+            )
 
-        map_template = 'map({value})[family_guid]'
-        if not self.single_sample_type:
-            map_template += '[sample_type::String]'
+        affected_samples = [
+            sample_id for sample_id, affected_families in family_affected_samples.items() if AFFECTED in affected_families
+        ]
 
         inheritance_q = None
         gt_filter_map = None
         if inheritance_mode == ANY_AFFECTED:
-            inheritance_q = self._any_affected_q(affected_samples, mismatched_affected_samples, map_template)
+            inheritance_q = Q(calls__array_exists={
+                'gt': (self.genotype_lookup[HAS_ALT], 'has({value}, {field})'),
+                'sampleId': (affected_samples, 'has({value}, {field})'),
+            })
         elif family_sample_genotypes:
-            inheritance_q, gt_filter_map = self._inheritance_q(family_sample_genotypes, map_template)
+            inheritance_q, gt_filter_map = self._inheritance_q(family_sample_genotypes)
 
-        quality_q = self._quality_q(quality_filter, affected_samples, mismatched_affected_samples, clinvar_override_q, map_template)
+        quality_q = self._quality_q(quality_filter, affected_samples, clinvar_override_q)
 
         return inheritance_q, quality_q, gt_filter_map, family_missing_type_samples
 
@@ -852,57 +862,33 @@ class EntriesManager(SearchQuerySet):
                 multi_sample_type_families.add(s['family_guid'])
         return sample_type_families, multi_sample_type_families
 
-    def _family_sample_filters(self, family_sample_data, inheritance_mode, individual_genotype_filter, quality_filter, custom_affected, family_sample_genotypes, family_affected_samples, family_guid, is_multi_sample_family):
+    def _family_sample_filters(self, family_sample_data, inheritance_mode, individual_genotype_filter, quality_filter, custom_affected, family_sample_genotypes, family_affected_samples, project_guid, is_multi_sample_family):
         missing_type_samples = defaultdict(list)
         for sample in family_sample_data['samples']:
             affected = custom_affected.get(sample['individual_guid']) or sample['affected']
             genotype = self._sample_genotype(sample, affected, inheritance_mode, individual_genotype_filter)
             for sample_type, sample_id in sample['sample_ids_by_type'].items():
                 if inheritance_mode or individual_genotype_filter:
-                    family_sample_genotypes[sample_id][genotype].append((family_guid, sample_type))
+                    family_sample_genotypes[sample_id][genotype].append(project_guid)
                 if inheritance_mode == ANY_AFFECTED or quality_filter.get('affected_only'):
-                    family_affected_samples[sample_id][affected].append((family_guid, sample_type))
+                    family_affected_samples[sample_id][affected].append(project_guid)
                 if is_multi_sample_family and len(sample['sample_ids_by_type']) == 1:
                     missing_type = Sample.SAMPLE_TYPE_WES if sample_type == Sample.SAMPLE_TYPE_WGS else Sample.SAMPLE_TYPE_WGS
                     missing_type_samples[missing_type].append(sample_id)
 
         return missing_type_samples
 
-    def _any_affected_q(self, affected_samples, mismatched_affected_samples, map_template):
-        inheritance_q = Q(calls__array_exists={
-            'gt': (self.genotype_lookup[HAS_ALT], 'has({value}, {field})'),
-            'sampleId': (affected_samples, 'has({value}, {field})'),
-        })
-        if mismatched_affected_samples:
-            affected_sample_map = self._get_family_sample_map(mismatched_affected_samples)
-            inheritance_q |= Q(family_guid___in=list(mismatched_affected_samples.keys()), calls__array_exists={
-                'gt': (self.genotype_lookup[HAS_ALT], 'has({value}, {field})'),
-                'sampleId': (affected_sample_map, 'has(' + map_template + ', {field})'),
-            })
-        return inheritance_q
 
-    def _inheritance_q(self, sample_genotypes, map_template):
-        mismatched_genotype_samples = defaultdict(lambda: defaultdict(list))
+    def _inheritance_q(self, sample_genotypes):
         samples_by_gt = defaultdict(list)
         for sample_id, genotype_families in sample_genotypes.items():
-            if len(genotype_families) > 1:
-                for genotype, family_data in genotype_families.items():
-                    for family_guid, sample_type in family_data:
-                        mismatched_genotype_samples[family_guid][sample_type].append(f"'{sample_id}', {self.genotype_lookup[genotype]}")
-            else:
-                for gt in self.genotype_lookup[next(iter(genotype_families))]:
-                    samples_by_gt[gt].append(sample_id)
+            for gt in self.genotype_lookup[next(iter(genotype_families))]:
+                samples_by_gt[gt].append(sample_id)
 
-        gt_map = ', '.join([f"{gt}, {samples_by_gt[gt]}" for gt in [-1, 0, 1, 2]])
-        inheritance_q = Q(calls__array_all={'gt': (gt_map, 'has(map({value})[ifNull({field}, -1)], x.sampleId)')})
+        gt_filter_map = ', '.join([f"{gt}, {samples_by_gt[gt]}" for gt in [-1, 0, 1, 2]])
+        inheritance_q = Q(calls__array_all={'gt': (gt_filter_map, 'has(map({value})[ifNull({field}, -1)], x.sampleId)')})
 
-        if mismatched_genotype_samples:
-            gt_filter_map = self._get_family_sample_map(mismatched_genotype_samples, is_nested_map=True)
-            inheritance_q |= Q(family_guid___in=list(mismatched_genotype_samples.keys()), calls__array_all={
-                'gt': (gt_filter_map, 'has(' + map_template + '[x.sampleId], {field})'),
-            })
-
-        return inheritance_q, gt_map
+        return inheritance_q, gt_filter_map
 
     def _sample_genotype(self, sample, affected, inheritance_mode, individual_genotype_filter):
         genotype = None
@@ -914,7 +900,7 @@ class EntriesManager(SearchQuerySet):
                 genotype = REF_REF
         return genotype
 
-    def _quality_q(self, quality_filter, affected_samples, mismatched_affected_samples, clinvar_override_q, map_template):
+    def _quality_q(self, quality_filter, affected_samples, clinvar_override_q):
         quality_filter_conditions = {}
 
         for field, scale, *filters in self.quality_filters:
@@ -937,18 +923,6 @@ class EntriesManager(SearchQuerySet):
             ]}
 
         quality_q = Q(calls__array_all=quality_filter_conditions)
-
-        if affected_only and mismatched_affected_samples:
-            affected_sample_map = self._get_family_sample_map(mismatched_affected_samples)
-            mismatch_families = list(mismatched_affected_samples.keys())
-            quality_q = (quality_q & ~Q(family_guid___in=mismatch_families)) | Q(
-                family_guid___in=mismatch_families,
-                calls__array_all={'OR': [
-                    quality_filter_conditions,
-                    {'sampleId': (affected_sample_map, 'not has(' + map_template + ', {field})')}
-                ]},
-            )
-
         if clinvar_override_q:
             quality_q |= clinvar_override_q
 
