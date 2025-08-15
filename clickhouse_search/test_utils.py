@@ -20,10 +20,10 @@ from hail_search.test_utils import (
     GCNV_VARIANT4 as HAIL_GCNV_VARIANT4,
 )
 
-VARIANT1 = {**deepcopy(HAIL_VARIANT1), 'key': 1, 'populations': {**deepcopy(HAIL_VARIANT1)['populations'], 'seqr': {'ac': 8, 'hom': 3}}}
-VARIANT2 = {**deepcopy(HAIL_VARIANT2), 'key': 2, 'populations': {**deepcopy(HAIL_VARIANT2)['populations'], 'seqr': {'ac': 7, 'hom': 2}}}
-VARIANT3 = {**deepcopy(HAIL_VARIANT3), 'key': 3, 'populations': {**deepcopy(HAIL_VARIANT3)['populations'], 'seqr': {'ac': 5, 'hom': 0}}}
-VARIANT4 = {**deepcopy(HAIL_VARIANT4), 'key': 4, 'populations': {**deepcopy(HAIL_VARIANT4)['populations'], 'seqr': {'ac': 4, 'hom': 1}}}
+VARIANT1 = {**deepcopy(HAIL_VARIANT1), 'key': 1, 'populations': {**deepcopy(HAIL_VARIANT1)['populations'], 'seqr': {'ac': 9, 'hom': 3}}}
+VARIANT2 = {**deepcopy(HAIL_VARIANT2), 'key': 2, 'populations': {**deepcopy(HAIL_VARIANT2)['populations'], 'seqr': {'ac': 10, 'hom': 3}}}
+VARIANT3 = {**deepcopy(HAIL_VARIANT3), 'key': 3, 'populations': {**deepcopy(HAIL_VARIANT3)['populations'], 'seqr': {'ac': 7, 'hom': 0}}}
+VARIANT4 = {**deepcopy(HAIL_VARIANT4), 'key': 4, 'populations': {**deepcopy(HAIL_VARIANT4)['populations'], 'seqr': {'ac': 5, 'hom': 1}}}
 PROJECT_2_VARIANT = {**deepcopy(HAIL_PROJECT_2_VARIANT), 'key': 5, 'populations': {**deepcopy(HAIL_PROJECT_2_VARIANT)['populations'], 'seqr': {'ac': 2, 'hom': 0}}}
 MITO_VARIANT1 = {**deepcopy(HAIL_MITO_VARIANT1), 'key': 6, 'populations': {**deepcopy(HAIL_MITO_VARIANT1)['populations'], 'seqr': {'ac': 0}, 'seqr_heteroplasmy': {'ac': 1}}}
 MITO_VARIANT2 = {**deepcopy(HAIL_MITO_VARIANT2), 'key': 7, 'populations': {**deepcopy(HAIL_MITO_VARIANT2)['populations'], 'seqr': {'ac': 0}, 'seqr_heteroplasmy': {'ac': 1}}}
