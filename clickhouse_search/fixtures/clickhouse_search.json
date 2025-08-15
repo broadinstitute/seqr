@@ -382,24 +382,6 @@
     }
 }, {
     "model": "clickhouse_search.entriessnvindel",
-    "pk": 51,
-    "fields": {
-      "key": 1,
-      "project_guid": "R0001_1kg",
-      "family_guid": "F000002_2_x",
-      "sample_type": "WES",
-      "xpos": 1000010439,
-      "is_gnomad_gt_5_percent": false,
-      "filters": [],
-      "sign": 1,
-      "calls": [
-        ["HG00733", 0, 20, 0, 60],
-        ["HG00732", 0, 0, 0, 24],
-        ["HG00731", 1, 99, 0.5, 10]
-      ]
-    }
-}, {
-    "model": "clickhouse_search.entriessnvindel",
     "pk": 52,
     "fields": {
       "key": 2,
