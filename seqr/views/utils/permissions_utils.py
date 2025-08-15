@@ -258,7 +258,7 @@ def get_project_guids_user_can_view(user, limit_data_manager=True):
         return list(Project.objects.values_list('guid', flat=True))
 
     cache_key = 'projects__{}'.format(user)
-    project_guids = None #safe_redis_get_json(cache_key)
+    project_guids = safe_redis_get_json(cache_key)
     if project_guids is not None:
         return project_guids
 
@@ -270,7 +270,6 @@ def get_project_guids_user_can_view(user, limit_data_manager=True):
         ).filter(workspace__in=workspaces)
     else:
         projects = get_objects_for_user(user, CAN_VIEW, Project)
-        projects = projects.filter(workspace_namespace__in=['gregor-consortium','seqr-access'])
 
     projects = projects | Project.objects.filter(all_user_demo=True, is_demo=True)
 
