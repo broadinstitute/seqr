@@ -126,6 +126,7 @@ def _get_multi_data_type_comp_het_results_queryset(genome_version, sample_data_b
         result_q = _get_comp_het_results_queryset(annotations_cls, snv_indel_q, sv_q, len(families))
         dataset_results = [list(result[1:]) for result in result_q[:MAX_VARIANTS + 1]]
         if skip_individual_guid:
+            # TODO
             _add_individual_guids(dataset_results, sv_sample_data, single_data_type=False)
         results += dataset_results
 
@@ -164,6 +165,7 @@ def _get_comp_het_results_queryset(annotations_cls, primary_q, secondary_q, num_
         if results.has_annotation('primary_has_hom_alt'):
             results = results.filter(is_overlapped_del | Q(primary_has_hom_alt=False))
         else:
+            #  TODO
             results = results.annotate(primary_familyGuids=If(
                 is_overlapped_del,
                 F('primary_familyGuids'),
@@ -315,6 +317,7 @@ def _get_sample_data(samples):
         affected=ArrayAgg('individual__affected', distinct=True),
     ).filter(affected__len__gt=1)
     if mismatch_affected_samples:
+        # TODO
         from seqr.utils.search.utils import InvalidSearchException
         raise InvalidSearchException(
             'The following samples are incorrectly configured and have different affected statuses in different projects: ' +
