@@ -235,19 +235,41 @@ class ClickhouseSearchTests(DifferentDbTransactionSupportMixin, SearchTestHelper
         # Variant 3 is inherited in both sample types.
         # Variant 4 is de novo in exome, but inherited in genome in the same parent that has variant 3.
         self._assert_expected_search(
+            [VARIANT1_BOTH_SAMPLE_TYPES, VARIANT2_BOTH_SAMPLE_TYPES, VARIANT3_BOTH_SAMPLE_TYPES, VARIANT4_BOTH_SAMPLE_TYPES,
+             GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
+            inheritance_mode='any_affected', locus=None,
+        )
+
+        self._assert_expected_search(
+            [VARIANT2_BOTH_SAMPLE_TYPES, VARIANT3_BOTH_SAMPLE_TYPES, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT4],
+            inheritance_mode='any_affected', quality_filter={'min_gq': 40, 'min_qs': 20},
+        )
+
+        self._assert_expected_search(
             [VARIANT1_BOTH_SAMPLE_TYPES, VARIANT4_BOTH_SAMPLE_TYPES],
-            inheritance_mode='de_novo', locus=None,
+            inheritance_mode='de_novo', quality_filter=None,
         )
 
         self._add_sample_type_samples('WGS', guid__in=['S000133_hg00732', 'S000134_hg00733'])
+        self._assert_expected_search(
+            [VARIANT1_BOTH_SAMPLE_TYPES, VARIANT2_BOTH_SAMPLE_TYPES, VARIANT3_BOTH_SAMPLE_TYPES,
+             VARIANT4_BOTH_SAMPLE_TYPES, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
+            inheritance_mode='any_affected',
+        )
+
         self._assert_expected_search(
             [VARIANT1_BOTH_SAMPLE_TYPES, VARIANT2_BOTH_SAMPLE_TYPES, VARIANT4_BOTH_SAMPLE_TYPES],
             inheritance_mode='de_novo',
         )
 
         self._assert_expected_search(
+            [VARIANT2_BOTH_SAMPLE_TYPES],
+            inheritance_mode='de_novo', quality_filter={'min_gq': 40}
+        )
+
+        self._assert_expected_search(
             [VARIANT1_BOTH_SAMPLE_TYPES, VARIANT2_BOTH_SAMPLE_TYPES, [VARIANT3_BOTH_SAMPLE_TYPES, VARIANT4_BOTH_SAMPLE_TYPES]],
-            inheritance_mode='recessive', **COMP_HET_ALL_PASS_FILTERS, cached_variant_fields=[
+            inheritance_mode='recessive', **COMP_HET_ALL_PASS_FILTERS, quality_filter=None, cached_variant_fields=[
                 {}, {}, [{'selectedGeneId':  'ENSG00000097046'}, {'selectedGeneId':  'ENSG00000097046'}],
             ]
         )

@@ -779,7 +779,6 @@ class EntriesManager(SearchQuerySet):
                inheritance_q |= multi_sample_type_family_q
                entries = self._annotate_failed_family_samples(entries, gt_filter, family_missing_type_samples)
            elif inheritance_q is not None:
-               # TODO
                entries = entries.annotate(passes_inheritance=inheritance_q)
                inheritance_q = Q(passes_inheritance=True) | multi_sample_type_family_q
            else:
@@ -788,7 +787,6 @@ class EntriesManager(SearchQuerySet):
            if quality_q is None:
                entries = entries.annotate(passes_quality=Value(True))
            else:
-               #  TODO
                entries = entries.annotate(passes_quality=quality_q)
                quality_q = Q(passes_quality=True) | multi_sample_type_family_q
 
