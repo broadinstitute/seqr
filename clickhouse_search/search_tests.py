@@ -275,7 +275,8 @@ class ClickhouseSearchTests(DifferentDbTransactionSupportMixin, SearchTestHelper
              GCNV_VARIANT3, [GCNV_VARIANT3, GCNV_VARIANT4]],
             inheritance_mode='recessive', **COMP_HET_ALL_PASS_FILTERS, quality_filter=None, cached_variant_fields=[
                 {}, {}, [{'selectedGeneId': 'ENSG00000277258'}, {'selectedGeneId': 'ENSG00000277258'}],
-                [{'selectedGeneId':  'ENSG00000097046'}, {'selectedGeneId':  'ENSG00000097046'}], {}, [{}, {}],
+                [{'selectedGeneId':  'ENSG00000097046'}, {'selectedGeneId':  'ENSG00000097046'}], {},
+                [{'selectedGeneId': 'ENSG00000275023'}, {'selectedGeneId': 'ENSG00000275023'}],
             ]
         )
 
