@@ -15,7 +15,7 @@ class TransferFamiliesTest(object):
 
         self.assert_json_logs(user=None, expected=[
             logs[0],
-            ('Skipping 1 families with analysis groups in the project: 5', None),
+            ('Skipping 1 families with analysis groups in the project: 5 (Test Group 1)', None),
             *logs[1:],
             ('Updating "Excluded" tags', None),
             ('Updating families', None),
