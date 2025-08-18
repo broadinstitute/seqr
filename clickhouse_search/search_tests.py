@@ -677,8 +677,9 @@ class ClickhouseSearchTests(DifferentDbTransactionSupportMixin, SearchTestHelper
         variants = sv_variant_lookup(self.user, 'phase2_DEL_chr14_4640', families, sample_type='WGS')
         self._assert_expected_variants(variants, [SV_VARIANT4, GCNV_VARIANT4])
 
+        # reciprocal overlap does not meet the threshold for smaller events
         variants = sv_variant_lookup(self.user, 'suffix_140608_DUP', families, sample_type='WES')
-        self._assert_expected_variants(variants, [GCNV_VARIANT4, SV_VARIANT4])
+        self._assert_expected_variants(variants, [GCNV_VARIANT4])
 
         variants = sv_variant_lookup(self.user, 'suffix_140593_DUP', families, sample_type='WES')
         self._assert_expected_variants(variants, [GCNV_VARIANT3])

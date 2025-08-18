@@ -1045,14 +1045,14 @@ class EntriesManager(SearchQuerySet):
             # while the full variant_id filter is applied to the annotation table after the join
             intervals = [(chrom, pos, pos) for chrom, pos, _, _ in variant_ids]
 
-        if not (gene_intervals or intervals):
-            return entries
-
         if padded_interval:
-            # TODO
             pos = padded_interval['start']
             padding = int((padded_interval['end'] - pos) * padded_interval['padding'])
             intervals = [(padded_interval['chrom'], max(pos - padding, MIN_POS), min(pos + padding, MAX_POS))]
+
+        if not (gene_intervals or intervals):
+            return entries
+
         elif 'cn' in self.call_fields:
             # SV interval filtering occurs after joining on annotations to correctly incorporate end position
             if exclude_intervals:
