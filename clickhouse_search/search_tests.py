@@ -615,6 +615,17 @@ class ClickhouseSearchTests(DifferentDbTransactionSupportMixin, SearchTestHelper
             [],locus={'rawVariantItems': VARIANT_IDS[1]},
         )
 
+    def test_invalid_search(self):
+        Sample.objects.filter(guid='S000143_na20885').update(sample_id='HG00732')
+        self._set_multi_project_search()
+        with self.assertRaises(InvalidSearchException) as cm:
+            self._assert_expected_search([], locus={'rawItems': GENE_IDS[0]})
+        self.assertEqual(
+            str(cm.exception),
+            'The following samples are incorrectly configured and have different affected statuses in different projects: '
+            'HG00732 (1kg project nåme with uniçøde/ Test Reprocessed Project)',
+        )
+
     def test_variant_lookup(self):
         variant = variant_lookup(self.user, ('1', 10439, 'AC', 'A'))
         self._assert_expected_variants([variant], [VARIANT_LOOKUP_VARIANT])

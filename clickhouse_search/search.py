@@ -317,7 +317,6 @@ def _get_sample_data(samples):
         affected=ArrayAgg('individual__affected', distinct=True),
     ).filter(affected__len__gt=1)
     if mismatch_affected_samples:
-        # TODO
         from seqr.utils.search.utils import InvalidSearchException
         raise InvalidSearchException(
             'The following samples are incorrectly configured and have different affected statuses in different projects: ' +
