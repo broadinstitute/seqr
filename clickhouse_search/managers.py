@@ -470,10 +470,9 @@ class AnnotationsQuerySet(SearchQuerySet):
 
     def _interval_query(self, chrom, start, end):
         q = Q(xpos__range=(get_xpos(chrom, start), get_xpos(chrom, end)))
-        if hasattr(self.model, 'endChrom'):
-            # TODO
-            q |= Q(endChrom__isnull=True, chrom=chrom, end__range=(start, end))
-            q |= Q(endChrom=chrom, end__range=(start, end))
+        if hasattr(self.model, 'end_chrom'):
+            q |= Q(end_chrom__isnull=True, chrom=chrom, end__range=(start, end))
+            q |= Q(end_chrom=chrom, end__range=(start, end))
         elif hasattr(self.model, 'end'):
             q |= Q(chrom=chrom, end__range=(start, end))
             q |= Q(chrom=chrom, pos__lte=start, end__gte=end)

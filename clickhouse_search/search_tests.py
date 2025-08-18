@@ -267,6 +267,7 @@ class ClickhouseSearchTests(DifferentDbTransactionSupportMixin, SearchTestHelper
             inheritance_mode='de_novo', quality_filter={'min_gq': 40}
         )
 
+        self.maxDiff = None
         self._assert_expected_search(
             [VARIANT1_BOTH_SAMPLE_TYPES, VARIANT2_BOTH_SAMPLE_TYPES,
              [VARIANT2_BOTH_SAMPLE_TYPES, GCNV_VARIANT3], [VARIANT3_BOTH_SAMPLE_TYPES, VARIANT4_BOTH_SAMPLE_TYPES],
