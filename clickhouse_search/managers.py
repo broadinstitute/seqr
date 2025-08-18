@@ -518,7 +518,6 @@ class AnnotationsQuerySet(SearchQuerySet):
 
         for field, value in (pathogenicity or {}).items():
             if not value:
-                #  TODO
                 continue
             elif field == HGMD_KEY:
                 filters_by_field[HGMD_KEY] = self._hgmd_filter(value)
@@ -567,7 +566,6 @@ class AnnotationsQuerySet(SearchQuerySet):
         if min_class == max_class:
             return ('{field}__classification', min_class)
         elif min_class and max_class:
-            #  TODO
             return ('{field}__classification__range', (min_class, max_class))
         return ('{field}__classification__gt', min_class)
 

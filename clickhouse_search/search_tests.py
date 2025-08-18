@@ -784,8 +784,9 @@ class ClickhouseSearchTests(DifferentDbTransactionSupportMixin, SearchTestHelper
 
     def test_annotations_filter(self):
         self._assert_expected_search([VARIANT2], pathogenicity={'hgmd': ['hgmd_other']})
+        self._assert_expected_search([], pathogenicity={'hgmd': ['disease_causing', 'likely_disease_causing']})
 
-        pathogenicity = {'clinvar': ['likely_pathogenic', 'vus_or_conflicting', 'benign']}
+        pathogenicity = {'clinvar': ['likely_pathogenic', 'vus_or_conflicting', 'benign'], 'hgmd': []}
         self._assert_expected_search(
             [VARIANT1, VARIANT2, MITO_VARIANT1, MITO_VARIANT3], pathogenicity=pathogenicity,
         )
