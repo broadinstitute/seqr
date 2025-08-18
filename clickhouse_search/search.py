@@ -305,8 +305,18 @@ def _is_matched_minimal_transcript(transcript, minimal_transcript):
      and transcript.get('spliceregion', {}).get('extended_intronic_splice_region_variant') == minimal_transcript.get('extendedIntronicSpliceRegionVariant'))
 
 
-
 def _get_sample_data(samples):
+    mismatch_affected_samples = samples.values('sample_id').annotate(
+        projects=ArrayAgg('individual__family__project__name', distinct=True),
+        affected=ArrayAgg('individual__affected', distinct=True),
+    ).filter(affected__len__gt=1)
+    if mismatch_affected_samples:
+        from seqr.utils.search.utils import InvalidSearchException
+        raise InvalidSearchException(
+            'The following samples are incorrectly configured and have different affected statuses in different projects: ' +
+            ', '.join([f'{agg["sample_id"]} ({"/ ".join(agg["projects"])})' for agg in mismatch_affected_samples]),
+        )
+
     sample_data = samples.values(
         'dataset_type', family_guid=F('individual__family__guid'), project_guid=F('individual__family__project__guid'),
     ).annotate(
