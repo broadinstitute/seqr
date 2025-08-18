@@ -156,12 +156,7 @@ class AnnotationsQuerySet(SearchQuerySet):
 
 
     def subquery_join(self, subquery, join_key='key'):
-        #  Add key to intermediate select if not already present
         join_field = next(field for field in subquery.model._meta.fields if field.name == join_key)
-        if join_key not in subquery.query.values_select:
-            # TODO unused
-            subquery.query.values_select = tuple([join_key, *subquery.query.values_select])
-            subquery.query.select = tuple([Col(subquery.model._meta.db_table, join_field), *subquery.query.select])
 
         # Add the join operation to the query
         table = SubqueryTable(subquery)
@@ -876,7 +871,8 @@ class EntriesManager(SearchQuerySet):
 
         return quality_q
 
-    def _annotate_failed_family_samples(self, entries, gt_filter, family_missing_type_samples):
+    @staticmethod
+    def _annotate_failed_family_samples(entries, gt_filter, family_missing_type_samples):
         entries = entries.annotate(failed_family_samples= ArrayMap(
             ArrayFilter('calls', conditions=[{
                 'gt': (gt_filter[0], f'not {gt_filter[1]}'),
