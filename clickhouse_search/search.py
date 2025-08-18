@@ -126,8 +126,7 @@ def _get_multi_data_type_comp_het_results_queryset(genome_version, sample_data_b
         result_q = _get_comp_het_results_queryset(annotations_cls, snv_indel_q, sv_q, len(families))
         dataset_results = [list(result[1:]) for result in result_q[:MAX_VARIANTS + 1]]
         if skip_individual_guid:
-            # TODO
-            _add_individual_guids(dataset_results, sv_sample_data, single_data_type=False)
+            _add_individual_guids(dataset_results, sv_sample_data)
         results += dataset_results
 
     return results
@@ -219,18 +218,19 @@ def _result_as_tuple(results, field_prefix):
     return Tuple(*fields.keys(), output_field=NamedTupleField(list(fields.values())))
 
 
-def _add_individual_guids(results, sample_data, single_data_type=True):
+def _add_individual_guids(results, sample_data):
     sample_map = {(s['family_guid'], s['sample_id']): s['individual_guid'] for s in sample_data['samples']}
     for result in results:
         if isinstance(result, list):
             for variant in result:
-                if single_data_type or 'svType' not in variant:
-                    _set_individual_guids(variant, sample_map)
+                _set_individual_guids(variant, sample_map)
         else:
             _set_individual_guids(result, sample_map)
 
 
 def _set_individual_guids(result, sample_map):
+    if 'familyGenotypes' not in result:
+        return
     result['familyGuids'] = sorted(result['familyGenotypes'].keys())
     individual_genotypes =  defaultdict(list)
     for family_guid, genotypes in result.pop('familyGenotypes').items():
