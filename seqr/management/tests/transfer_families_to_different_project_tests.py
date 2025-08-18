@@ -10,11 +10,13 @@ class TransferFamiliesTest(object):
 
     def _test_command(self, additional_family, logs):
         call_command(
-            'transfer_families_to_different_project', '--from-project=R0001_1kg', '--to-project=R0003_test', additional_family, '2',
+            'transfer_families_to_different_project', '--from-project=R0001_1kg', '--to-project=R0003_test', additional_family, '2', '5',
         )
 
         self.assert_json_logs(user=None, expected=[
-            *logs,
+            logs[0],
+            ('Skipping 1 families with analysis groups in the project: 5', None),
+            *logs[1:],
             ('Updating "Excluded" tags', None),
             ('Updating families', None),
             ('Done.', None),
@@ -43,7 +45,7 @@ class TransferFamiliesLocalTest(TransferFamiliesTest, AuthenticationTestCase):
 
     def test_es_command(self):
         self._test_command(
-            additional_family='12', logs=[('Found 1 out of 2 families. No match for: 12.', None)]
+            additional_family='12', logs=[('Found 2 out of 3 families. No match for: 12.', None)]
         )
 
 
@@ -90,7 +92,7 @@ class TransferFamiliesAirflowTest(TransferFamiliesTest, AirflowTestCase):
     @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', '')
     def test_hail_backend_command(self):
         searchable_family = self._test_command(additional_family='4', logs=[
-            ('Found 2 out of 2 families.', None),
+            ('Found 3 out of 3 families.', None),
             ('Disabled search for 7 samples in the following 1 families: 2', None),
             ('Successfully triggered DELETE_FAMILIES DAG for 1 MITO families', None),
             ('Successfully triggered DELETE_FAMILIES DAG for 1 SNV_INDEL families', None),

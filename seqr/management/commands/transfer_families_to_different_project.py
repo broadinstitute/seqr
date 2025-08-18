@@ -49,8 +49,13 @@ class Command(BaseCommand):
         num_found = len(families)
 
         num_expected = len(set(family_ids))
-        missing_id_message = '' if num_found == num_expected else f' No match for: {", ".join(set(family_ids) - set([f.family_id for f in families]))}.'
+        found_families = set([f.family_id for f in families])
+        missing_id_message = '' if num_found == num_expected else f' No match for: {", ".join(set(family_ids) - found_families)}.'
         logger.info(f'Found {num_found} out of {num_expected} families.{missing_id_message}')
+
+        families = families.filter(analysisgroup__isnull=True)
+        if len(families) < num_found:
+            logger.info(f'Skipping {num_found - len(families)} families with analysis groups in the project: {", ".join(found_families - set([f.family_id for f in families]))}')
 
         backend_specific_call(lambda *args: None, _disable_search, _disable_search)(families, from_project)
 
