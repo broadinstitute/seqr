@@ -933,7 +933,6 @@ class EntriesManager(SearchQuerySet):
                     family_carriers = Cast(Tuple('familyGuids', GroupArray('carriers')), map_field)
                 entries = entries.annotate(family_carriers=family_carriers)
             if annotate_hom_alts:
-                # TODO
                 entries = entries.annotate(no_hom_alt_families=ArrayMap(
                     ArrayFilter(GroupArray(Tuple('family_guid', 'has_hom_alt')), conditions=[{2: (None, 'NOT {field}')}]),
                     mapped_expression='x.1',

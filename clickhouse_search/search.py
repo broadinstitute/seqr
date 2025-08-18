@@ -164,12 +164,11 @@ def _get_comp_het_results_queryset(annotations_cls, primary_q, secondary_q, num_
         if results.has_annotation('primary_has_hom_alt'):
             results = results.filter(is_overlapped_del | Q(primary_has_hom_alt=False))
         else:
-            #  TODO
             results = results.annotate(primary_familyGuids=If(
                 is_overlapped_del,
                 F('primary_familyGuids'),
                 ArrayIntersect('primary_familyGuids', 'primary_no_hom_alt_families'),
-                condition='',
+                condition='', output_field=ArrayField(StringField()),
             ))
 
     if num_families > 1:
