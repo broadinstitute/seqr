@@ -324,8 +324,8 @@ def _get_sample_data(samples):
     sample_data = samples.values(
         'dataset_type', 'sample_type',
     ).annotate(
-        project_guids=ArrayAgg('individual__family__project__name', distinct=True),
-        family_guids=ArrayAgg('individual__family__project__name', distinct=True),
+        project_guids=ArrayAgg('individual__family__project__guid', distinct=True),
+        family_guids=ArrayAgg('individual__family__guid', distinct=True),
         samples=ArrayAgg(JSONObject(affected='individual__affected', sex='individual__sex', sample_id='sample_id', sample_type='sample_type', family_guid=F('individual__family__guid'), individual_guid=F('individual__guid'))),
     )
     samples_by_dataset_type = {}
