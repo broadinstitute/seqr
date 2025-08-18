@@ -748,6 +748,11 @@ class ClickhouseSearchTests(DifferentDbTransactionSupportMixin, SearchTestHelper
             [VARIANT2, VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2], freqs={'gnomad_genomes': {'af': 0.05, 'hh': 1}, 'gnomad_mito': {'af': 0.05}},
         )
 
+        self._assert_expected_search(
+            [VARIANT4, GCNV_VARIANT3, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
+            freqs={'topmed': {'af': 0.05, 'hh': 1}, 'sv_callset': {'ac': 50}},
+        )
+
         self._set_sv_family_search()
         self._assert_expected_search(
             [SV_VARIANT1, SV_VARIANT3, SV_VARIANT4], freqs={'gnomad_svs': {'af': 0.001}},

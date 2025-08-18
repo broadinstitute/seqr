@@ -367,7 +367,6 @@ class AnnotationsQuerySet(SearchQuerySet):
             if pop_filter.get('hh') is not None:
                 for subfield in ['hom', 'hemi']:
                     if subfield not in pop_subfields:
-                        #  TODO
                         continue
                     hh_q = Q(**{
                         f'populations__{population}__{subfield}__lte': pop_filter['hh'],
