@@ -44,8 +44,8 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
 
         entry_cls = ENTRY_CLASS_MAP[genome_version][dataset_type]
         annotations_cls = ANNOTATIONS_CLASS_MAP[genome_version][dataset_type]
-        family_guid = sample_data[0]['family_guid']
-        is_multi_project = any(s['project_guid'] != sample_data[0]['project_guid'] for s in sample_data)
+        family_guid = sample_data['family_guids'][0]
+        is_multi_project = len(sample_data['project_guids']) > 1
         skip_individual_guid = is_multi_project and dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS
 
         dataset_results = []
@@ -88,36 +88,45 @@ def _get_multi_data_type_comp_het_results_queryset(genome_version, sample_data_b
 
     entry_cls = ENTRY_CLASS_MAP[genome_version][Sample.DATASET_TYPE_VARIANT_CALLS]
     annotations_cls = ANNOTATIONS_CLASS_MAP[genome_version][Sample.DATASET_TYPE_VARIANT_CALLS]
-    snv_indel_families = {s['family_guid'] for s in sample_data_by_dataset_type[Sample.DATASET_TYPE_VARIANT_CALLS]}
+    snv_indel_sample_data = sample_data_by_dataset_type[Sample.DATASET_TYPE_VARIANT_CALLS]
+    snv_indel_families = set(snv_indel_sample_data['family_guids'])
+    skip_individual_guid = len(snv_indel_sample_data['project_guids']) > 1
 
     results = []
     for sample_type in [Sample.SAMPLE_TYPE_WES, Sample.SAMPLE_TYPE_WGS]:
         sv_dataset_type = f'{Sample.DATASET_TYPE_SV_CALLS}_{sample_type}'
-        sv_families = {s['family_guid'] for s in sample_data_by_dataset_type.get(sv_dataset_type, [])}
+        sv_sample_data = sample_data_by_dataset_type.get(sv_dataset_type, {})
+        sv_families = set(sv_sample_data.get('family_guids', []))
         families = snv_indel_families.intersection(sv_families)
         if not families:
             continue
 
-        sample_data = [
-            s for s in sample_data_by_dataset_type[Sample.DATASET_TYPE_VARIANT_CALLS] if s['family_guid'] in families
-        ]
-        skip_individual_guid = any(s['project_guid'] != sample_data[0]['project_guid'] for s in sample_data)
+        snv_indel_sample_data = {
+            **snv_indel_sample_data,
+            'family_guids': list(families),
+            'samples': [s for s in snv_indel_sample_data['samples'] if s['family_guid'] in families]
+        }
 
-        entries = entry_cls.objects.search([
-            s for s in sample_data_by_dataset_type[Sample.DATASET_TYPE_VARIANT_CALLS] if s['family_guid'] in families
-        ], skip_individual_guid=skip_individual_guid, **search_kwargs, annotations=annotations, inheritance_mode=COMPOUND_HET_ALLOW_HOM_ALTS, annotate_carriers=True, annotate_hom_alts=True)
+        entries = entry_cls.objects.search(
+            snv_indel_sample_data, skip_individual_guid=skip_individual_guid, **search_kwargs, annotations=annotations, inheritance_mode=COMPOUND_HET_ALLOW_HOM_ALTS, annotate_carriers=True, annotate_hom_alts=True,
+        )
         snv_indel_q = annotations_cls.objects.subquery_join(entries).search(**search_kwargs, annotations=annotations)
 
-        sv_entries = ENTRY_CLASS_MAP[genome_version][sv_dataset_type].objects.search([
-            s for s in sample_data_by_dataset_type[sv_dataset_type] if s['family_guid'] in families
-        ], **search_kwargs, annotations=annotations, inheritance_mode=COMPOUND_HET, annotate_carriers=True)
+        sv_sample_data = {
+            **sv_sample_data,
+            'family_guids': list(families),
+            'samples': [s for s in sv_sample_data['samples'] if s['family_guid'] in families]
+        }
+        sv_entries = ENTRY_CLASS_MAP[genome_version][sv_dataset_type].objects.search(
+            sv_sample_data, **search_kwargs, annotations=annotations, inheritance_mode=COMPOUND_HET, annotate_carriers=True,
+        )
         sv_annotations_cls = ANNOTATIONS_CLASS_MAP[genome_version][sv_dataset_type]
         sv_q = sv_annotations_cls.objects.subquery_join(sv_entries).search(**search_kwargs, annotations=annotations)
 
         result_q = _get_comp_het_results_queryset(annotations_cls, snv_indel_q, sv_q, len(families))
         dataset_results = [list(result[1:]) for result in result_q[:MAX_VARIANTS + 1]]
         if skip_individual_guid:
-            _add_individual_guids(dataset_results, sample_data, single_data_type=False)
+            _add_individual_guids(dataset_results, sv_sample_data, single_data_type=False)
         results += dataset_results
 
     return results
@@ -133,7 +142,7 @@ def _get_data_type_comp_het_results_queryset(entry_cls, annotations_cls, sample_
         annotations=annotations_secondary or annotations, **search_kwargs,
     )
 
-    return _get_comp_het_results_queryset(annotations_cls, primary_q, secondary_q, len(sample_data))
+    return _get_comp_het_results_queryset(annotations_cls, primary_q, secondary_q, len(set(sample_data['family_guids'])))
 
 
 def _get_comp_het_results_queryset(annotations_cls, primary_q, secondary_q, num_families):
@@ -209,12 +218,7 @@ def _result_as_tuple(results, field_prefix):
 
 
 def _add_individual_guids(results, sample_data, single_data_type=True):
-    sample_map = {}
-    for data in sample_data:
-        for s in data['samples']:
-            sample_map.update({
-                (data['family_guid'], sample_id): s['individual_guid'] for sample_id in set(s['sample_ids_by_type'].values())
-            })
+    sample_map = {(s['family_guid'], s['sample_id']): s['individual_guid'] for s in sample_data['samples']}
     for result in results:
         if isinstance(result, list):
             for variant in result:
@@ -318,37 +322,37 @@ def _get_sample_data(samples):
         )
 
     sample_data = samples.values(
-        'dataset_type', family_guid=F('individual__family__guid'), project_guid=F('individual__family__project__guid'),
+        'dataset_type', 'sample_type',
     ).annotate(
-        samples=ArrayAgg(JSONObject(affected='individual__affected', sex='individual__sex', sample_id='sample_id', sample_type='sample_type', individual_guid=F('individual__guid'))),
-        sample_types=ArrayAgg('sample_type', distinct=True),
+        project_guids=ArrayAgg('individual__family__project__name', distinct=True),
+        family_guids=ArrayAgg('individual__family__project__name', distinct=True),
+        samples=ArrayAgg(JSONObject(affected='individual__affected', sex='individual__sex', sample_id='sample_id', sample_type='sample_type', family_guid=F('individual__family__guid'), individual_guid=F('individual__guid'))),
     )
-    samples_by_dataset_type = defaultdict(list)
+    samples_by_dataset_type = {}
     for data in sample_data:
-        samples = _group_by_sample_type(data['samples'])
-        if data['dataset_type'] == Sample.DATASET_TYPE_SV_CALLS:
-            samples_by_type = defaultdict(list)
-            for sample in samples:
-                for sample_type in sample['sample_ids_by_type']:
-                    samples_by_type[sample_type].append(
-                        {**sample, 'sample_ids_by_type': {sample_type: sample['sample_ids_by_type'][sample_type]}}
-                    )
-            for sample_type, type_samples in samples_by_type.items():
-                samples_by_dataset_type[f"{data['dataset_type']}_{sample_type}"].append({**data, 'samples': type_samples, 'sample_types': [sample_type]})
+        dataset_type = data.pop('dataset_type')
+        sample_type = data.pop('sample_type')
+        if dataset_type == Sample.DATASET_TYPE_SV_CALLS:
+            dataset_type = f'{Sample.DATASET_TYPE_SV_CALLS}_{sample_type}'
+
+        if dataset_type in samples_by_dataset_type:
+            other_type_data = samples_by_dataset_type[dataset_type]
+            other_sample_type = next(iter(other_type_data['sample_type_families'].keys()))
+            family_guids = set(data['family_guids'])
+            other_type_family_guids = set(other_type_data['family_guids'])
+            sample_type_families = {
+                other_sample_type: other_type_family_guids - family_guids,
+                sample_type: family_guids - other_type_family_guids,
+                'multi': family_guids.intersection(other_type_family_guids),
+            }
+            data['sample_type_families'] = {k: v for k, v in sample_type_families.items() if v}
+            for key in ['project_guids', 'family_guids', 'samples']:
+                data[key] += other_type_data[key]
         else:
-            samples_by_dataset_type[data['dataset_type']].append({**data, 'samples': samples})
+            data['sample_type_families'] = {sample_type: set(data['family_guids'])}
+
+        samples_by_dataset_type[dataset_type] = data
     return samples_by_dataset_type
-
-
-def _group_by_sample_type(samples):
-    samples_by_individual_type = {}
-    for sample in samples:
-        sample_type = sample.pop('sample_type')
-        sample_id = sample.pop('sample_id')
-        if sample['individual_guid'] not in samples_by_individual_type:
-            samples_by_individual_type[sample['individual_guid']] = {'sample_ids_by_type': {}, **sample}
-        samples_by_individual_type[sample['individual_guid']]['sample_ids_by_type'][sample_type] = sample_id
-    return list(samples_by_individual_type.values())
 
 
 OMIM_SORT = 'in_omim'
