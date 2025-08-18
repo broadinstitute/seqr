@@ -4,7 +4,7 @@ from django.db.migrations import state
 from django.db.models import options, ForeignKey, OneToOneField, Func, CASCADE, PROTECT
 
 from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocksDB, Join
-from clickhouse_search.backend.fields import Enum8Field, NestedField, UInt32FieldDeltaCodecField, UInt64FieldDeltaCodecField, NamedTupleField
+from clickhouse_search.backend.fields import BitmapField, Enum8Field, NestedField, UInt32FieldDeltaCodecField, UInt64FieldDeltaCodecField, NamedTupleField
 from clickhouse_search.backend.functions import ArrayDistinct, ArrayFlatten, ArrayMin, ArrayMax
 from clickhouse_search.managers import EntriesManager, AnnotationsQuerySet
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
@@ -588,18 +588,20 @@ class BaseEntriesSnvIndel(BaseEntries):
 
     sample_type = models.Enum8Field(choices=[(1, 'WES'), (2, 'WGS')])
     is_gnomad_gt_5_percent = models.BoolField()
+    is_annotated_in_any_gene = models.BoolField()
+    geneId_ids = BitmapField(models.UInt32Field(), null_when_empty=True)
     calls = models.ArrayField(NamedTupleField(CALL_FIELDS))
 
     class Meta:
         abstract = True
         engine = CollapsingMergeTree(
             'sign',
-            order_by=('project_guid', 'family_guid', 'is_gnomad_gt_5_percent', 'sample_type', 'key'),
+            order_by=('project_guid', 'family_guid', 'sample_type', 'is_gnomad_gt_5_percent', 'is_annotated_in_any_gene', 'key'),
             partition_by='project_guid',
             deduplicate_merge_projection_mode='rebuild',
             index_granularity=8192,
         )
-        projection = Projection('xpos_projection', order_by='xpos, is_gnomad_gt_5_percent')
+        projection = Projection('xpos_projection', order_by='is_gnomad_gt_5_percent, is_annotated_in_any_gene, xpos')
 
 class EntriesGRCh37SnvIndel(BaseEntriesSnvIndel):
 
