@@ -40,7 +40,7 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
     inheritance_mode = search.get('inheritance_mode')
     has_comp_het = inheritance_mode in {RECESSIVE, COMPOUND_HET}
     for dataset_type, sample_data in sample_data_by_dataset_type.items():
-        logger.info(f'Loading {dataset_type} data for {len(sample_data)} families', user)
+        logger.info(f'Loading {dataset_type} data for {len(set(sample_data['family_guids']))} families', user)
 
         entry_cls = ENTRY_CLASS_MAP[genome_version][dataset_type]
         annotations_cls = ANNOTATIONS_CLASS_MAP[genome_version][dataset_type]
