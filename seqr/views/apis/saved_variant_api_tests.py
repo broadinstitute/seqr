@@ -135,6 +135,9 @@ class SavedVariantAPITest(object):
 
     def test_saved_variant_data(self):
         Project.objects.all().update(genome_version='38')
+        variant = SavedVariant.objects.get(guid='SV0000002_1248367227_r0390_100')
+        variant.saved_variant_json['genomeVersion'] = '38'
+        variant.save()
 
         url = reverse(saved_variant_data, args=[PROJECT_GUID])
         self.check_collaborator_login(url)
@@ -592,6 +595,7 @@ class SavedVariantAPITest(object):
         self.assertEqual(new_gene_note_response['note'], 'new user-selected gene note')
 
         # save variant_note as gene_note for SV
+        Project.objects.filter(id=3).update(genome_version='38')
         create_sv_variant_note_url = reverse(create_variant_note_handler, args=['SV0000007_prefix_19107_DEL_r00'])
         response = self.client.post(create_sv_variant_note_url, content_type='application/json', data=json.dumps(
             {'note': 'SV gene note', 'saveAsGeneNote': True, 'familyGuid': 'F000011_11'}))

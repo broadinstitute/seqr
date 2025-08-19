@@ -250,8 +250,8 @@
         [0, 0, 0, ""]
       ],
       "sorted_gene_consequences": [
-        ["ENSG00000240361", "LOF"],
         ["ENSG00000135953", "LOF"],
+        ["ENSG00000240361", "LOF"],
         ["ENSG00000223972", "LOF"]
       ],
       "sv_type": "DEL",
