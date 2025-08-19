@@ -2190,6 +2190,11 @@
         "ref": null,
         "alt": null,
         "variant_id": "prefix_19107_DEL",
+        "key": 101,
+        "dataset_type": "SV_WGS",
+        "genotypes": {
+            "I000017_na20889": { "cn": 1, "sampleId": "NA20885", "numAlt": -1,  "defragged": false, "qs": 33, "numExon": 2}
+        },
         "saved_variant_json": {
             "liftedOverGenomeVersion": null,
             "pos": 249045487,

@@ -279,6 +279,7 @@ class SavedVariantAPITest(object):
         self.assertEqual(response.status_code, 404)
 
         # Test with discovery SVs
+        Project.objects.filter(guid='R0003_test').update(genome_version='38')
         response = self.client.get(url.replace(PROJECT_GUID, 'R0003_test'))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
