@@ -362,7 +362,13 @@ class AnnotationsQuerySet(SearchQuerySet):
                         }))
                     results = results.filter(af_q)
             elif pop_filter.get('ac') is not None:
-                results = results.filter(**{f'populations__{population}__ac__lte': pop_filter['ac']})
+                if 'ac' in pop_subfields:
+                    ac_field = f'populations__{population}__ac'
+                else:
+                    ac_field =  f'ac_{population}'
+                    results = results.annotate(**{ac_field: F(f'populations__{population}__het') + (F(f'populations__{population}__hom') * 2)})
+
+                results = results.filter(**{f'{ac_field}__lte': pop_filter['ac']})
 
             if pop_filter.get('hh') is not None:
                 for subfield in ['hom', 'hemi']:

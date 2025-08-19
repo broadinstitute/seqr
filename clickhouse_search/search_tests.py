@@ -761,6 +761,9 @@ class ClickhouseSearchTests(DifferentDbTransactionSupportMixin, SearchTestHelper
         self._assert_expected_search(
             [SV_VARIANT1, SV_VARIANT3, SV_VARIANT4], freqs={'gnomad_svs': {'af': 0.001}},
         )
+        self._assert_expected_search(
+            [SV_VARIANT1, SV_VARIANT3, SV_VARIANT4], freqs={'gnomad_svs': {'ac': 4000}},
+        )
 
         self._reset_search_families()
         self._assert_expected_search(
