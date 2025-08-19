@@ -83,7 +83,7 @@ class Migration(migrations.Migration):
                 ('xpos', clickhouse_search.backend.fields.UInt64FieldDeltaCodecField()),
                 ('is_gnomad_gt_5_percent', clickhouse_backend.models.BoolField()),
                 ('is_annotated_in_any_gene', clickhouse_backend.models.BoolField()),
-                ('geneId_ids', clickhouse_search.backend.fields.BitmapField(base_field=clickhouse_backend.models.UInt32Field())),
+                ('geneId_ids', clickhouse_backend.models.ArrayField(base_field=clickhouse_search.backend.fields.UInt32FieldDeltaCodecField())),
                 ('filters', clickhouse_backend.models.ArrayField(base_field=clickhouse_backend.models.StringField(low_cardinality=True))),
                 ('calls', clickhouse_backend.models.ArrayField(base_field=clickhouse_search.backend.fields.NamedTupleField(base_fields=[('sampleId', clickhouse_backend.models.StringField()), ('gt', clickhouse_backend.models.Enum8Field(blank=True, choices=[(0, 'REF'), (1, 'HET'), (2, 'HOM')], null=True)), ('gq', clickhouse_backend.models.UInt8Field(blank=True, null=True)), ('ab', clickhouse_backend.models.DecimalField(blank=True, decimal_places=5, max_digits=9, null=True)), ('dp', clickhouse_backend.models.UInt16Field(blank=True, null=True))]))),
                 ('sign', clickhouse_backend.models.Int8Field()),

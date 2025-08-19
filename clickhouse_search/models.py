@@ -4,7 +4,7 @@ from django.db.migrations import state
 from django.db.models import options, ForeignKey, OneToOneField, Func, CASCADE, PROTECT
 
 from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocksDB, Join
-from clickhouse_search.backend.fields import BitmapField, Enum8Field, NestedField, UInt32FieldDeltaCodecField, UInt64FieldDeltaCodecField, NamedTupleField
+from clickhouse_search.backend.fields import Enum8Field, NestedField, UInt32FieldDeltaCodecField, UInt64FieldDeltaCodecField, NamedTupleField
 from clickhouse_search.backend.functions import ArrayDistinct, ArrayFlatten, ArrayMin, ArrayMax
 from clickhouse_search.managers import EntriesManager, AnnotationsQuerySet
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
@@ -589,7 +589,7 @@ class BaseEntriesSnvIndel(BaseEntries):
     sample_type = models.Enum8Field(choices=[(1, 'WES'), (2, 'WGS')])
     is_gnomad_gt_5_percent = models.BoolField()
     is_annotated_in_any_gene = models.BoolField()
-    geneId_ids = BitmapField(models.UInt32Field(), null_when_empty=True)
+    geneId_ids = models.ArrayField(UInt32FieldDeltaCodecField())
     calls = models.ArrayField(NamedTupleField(CALL_FIELDS))
 
     class Meta:

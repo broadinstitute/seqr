@@ -93,35 +93,6 @@ class UInt64FieldDeltaCodecField(models.UInt64Field):
     def db_type(self, connection):
         return f'{super().db_type(connection)} CODEC(Delta(8), ZSTD(1))'
 
-class BitmapField(models.ArrayField):
-
-    def __init__(self, *args, null_when_empty=False, **kwargs):
-        self.null_when_empty = null_when_empty
-        super().__init__(*args, **kwargs)
-
-    def clone(self):
-        clone = super().clone()
-        clone.null_when_empty = self.null_when_empty
-        return clone
-
-    def get_internal_type(self):
-        return "BitmapField"
-
-    @property
-    def description(self):
-        return "Bitmap of %s" % self.base_field.description
-
-    def db_type(self, connection):
-        return "AggregateFunction(groupBitmap, %s)" % self.base_field.db_type(connection)
-
-    def cast_db_type(self, connection):
-        return "bitmapBuild(%s)" % self.base_field.cast_db_type(connection)
-
-    def from_db_value(self, value, expression, connection):
-        if self.null_when_empty and not value:
-            return None
-        return super().from_db_value(value, expression, connection)
-
 class NamedTupleField(models.TupleField):
 
     def __init__(self, *args, null_if_empty=False, null_empty_arrays=False, rename_fields=None, **kwargs):
