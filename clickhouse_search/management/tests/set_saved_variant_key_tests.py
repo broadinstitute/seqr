@@ -29,7 +29,7 @@ class SetSavedVariantKeyTest(AnvilAuthenticationTestCase):
 
         call_command('set_saved_variant_key')
         self.assert_json_logs(user=None, expected=[
-            ('Updated genotypes for 7 variants', None),
+            ('Updated genotypes for 6 variants', None),
             ('Finding keys for 1 MITO (GRCh38) variant ids', None),
             ('Found 1 keys', None),
             ('Updated batch of 1', None),
@@ -109,7 +109,7 @@ class SetSavedVariantKeyFailedMappingTest(SetSavedVariantKeyTest):
 
         call_command('set_saved_variant_key')
         self.assert_json_logs(user=None, expected=[
-            ('Updated genotypes for 7 variants', None),
+            ('Updated genotypes for 6 variants', None),
             ('Finding keys for 1 MITO (GRCh38) variant ids', None),
             ('Found 0 keys', None),
             ('Finding keys for 2 SNV_INDEL (GRCh38) variant ids', None),
