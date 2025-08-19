@@ -93,6 +93,7 @@ class UInt64FieldDeltaCodecField(models.UInt64Field):
     def db_type(self, connection):
         return f'{super().db_type(connection)} CODEC(Delta(8), ZSTD(1))'
 
+
 class NamedTupleField(models.TupleField):
 
     def __init__(self, *args, null_if_empty=False, null_empty_arrays=False, rename_fields=None, **kwargs):
