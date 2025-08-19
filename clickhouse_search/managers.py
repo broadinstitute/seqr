@@ -134,7 +134,7 @@ class AnnotationsQuerySet(SearchQuerySet):
 
     @property
     def single_sample_type(self):
-        return getattr(self.model, 'SV_TYPES', None)
+        return getattr(self.entry_model, 'SAMPLE_TYPE', None)
 
     @property
     def entry_field(self):
