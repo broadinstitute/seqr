@@ -133,8 +133,9 @@ CREATE_VARIANT_JSON = {
 
 class SavedVariantAPITest(object):
 
-    @mock.patch('seqr.views.utils.variant_utils.OMIM_GENOME_VERSION', '37')
     def test_saved_variant_data(self):
+        Project.objects.all().update(genome_version='38')
+
         url = reverse(saved_variant_data, args=[PROJECT_GUID])
         self.check_collaborator_login(url)
 
@@ -148,7 +149,7 @@ class SavedVariantAPITest(object):
         self.assertSetEqual(set(variants.keys()), {'SV0000002_1248367227_r0390_100', VARIANT_GUID})
 
         variant = variants[VARIANT_GUID]
-        self.assertSetEqual(set(variants['SV0000002_1248367227_r0390_100'].keys()), self.SAVED_VARIANT_DETAIL_FIELDS)
+        self.assertSetEqual(set(variants['SV0000002_1248367227_r0390_100'].keys()), {*self.SAVED_VARIANT_DETAIL_FIELDS, *self.SAVED_VARIANT_38_FIELDS})
         fields = {'mainTranscriptId', 'mmeSubmissions'}
         fields.update(self.SAVED_VARIANT_DETAIL_FIELDS)
         self.assertSetEqual(set(variant.keys()), fields)
@@ -279,7 +280,6 @@ class SavedVariantAPITest(object):
         self.assertEqual(response.status_code, 404)
 
         # Test with discovery SVs
-        Project.objects.filter(guid='R0003_test').update(genome_version='38')
         response = self.client.get(url.replace(PROJECT_GUID, 'R0003_test'))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
@@ -288,7 +288,7 @@ class SavedVariantAPITest(object):
         self.assertSetEqual(
             set(response_json['savedVariantsByGuid'].keys()),
             {'SV0000006_1248367227_r0003_tes', 'SV0000007_prefix_19107_DEL_r00'})
-        self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953', 'ENSG00000240361'})
+        self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953', 'ENSG00000240361', 'ENSG00000223972'})
         self.assertDictEqual(response_json['omimIntervals'], {'3': {
             'chrom': '1',
             'start': 249044482,
@@ -1032,6 +1032,7 @@ class LocalSavedVariantAPITest(AuthenticationTestCase, SavedVariantAPITest):
 
     SAVED_VARIANT_RESPONSE_KEYS = SAVED_VARIANT_RESPONSE_KEYS
     SAVED_VARIANT_DETAIL_FIELDS = SAVED_VARIANT_DETAIL_FIELDS
+    SAVED_VARIANT_38_FIELDS = set()
 
     def _assert_created_variant(self, saved_variant, variant_json, **kwargs):
         super()._assert_created_variant(saved_variant, variant_json)
@@ -1052,6 +1053,7 @@ class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, SavedVariantAPITest)
 
     SAVED_VARIANT_RESPONSE_KEYS = {*SAVED_VARIANT_RESPONSE_KEYS, 'totalSampleCounts'}
     SAVED_VARIANT_DETAIL_FIELDS = {*SAVED_VARIANT_DETAIL_FIELDS, 'key', 'mainTranscriptId'}
+    SAVED_VARIANT_38_FIELDS = {'sortedMotifFeatureConsequences', 'sortedRegulatoryFeatureConsequences', 'screenRegionType'}
 
     def test_saved_variant_data(self, *args):
         super(AnvilSavedVariantAPITest, self).test_saved_variant_data(*args)

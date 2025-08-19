@@ -182,9 +182,29 @@
         [4, 0.000044254640670260414, 90386, 0.00011118523252662271, 0, 0],
         [13, 0.00004911409996566363, 264690, 13, 0]
       ],
-      "sorted_transcript_consequences": [],
+      "sorted_transcript_consequences": [
+        [null, 1, [], null, null, "ENSG00000240361"],
+        [null, 1, [], null, null, "ENSG00000135953"]
+      ],
       "sorted_motif_feature_consequences": [],
       "sorted_regulatory_feature_consequences": []
+    }
+}, {
+    "model": "clickhouse_search.transcriptssnvindel",
+    "pk": 100,
+    "fields": {
+      "key": 100,
+      "transcripts": [
+        [[null], null, "protein_coding", 1, "Gtg/Atg", ["intron_variant"], [null, null], "ENSG00000240361",
+          "ENST00000262738.3:c.3955G>A", "ENST00000505820.2:c.1586-17C>G", [null, null], [null, []], "intron_variant",
+          null, null, null, [false], "ENST00000505820", 0, [null, null, null, [
+            null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
+          ], null]],
+        [[null], null, "protein_coding", 1, null, [], [null, null], "ENSG00000135953", null, null, [null, null], [null, []],
+          null, null, null, null, [false], "ENST00000371839", 1, [null, null, null, [
+            null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
+          ], null]]
+      ]
     }
 }, {
     "model": "clickhouse_search.entriessnvindel",
