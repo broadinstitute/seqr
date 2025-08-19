@@ -687,7 +687,7 @@ class ClickhouseSearchTests(DifferentDbTransactionSupportMixin, SearchTestHelper
 
         self._assert_expected_search(
             [MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
-            freqs={'callset': {'ac': 6}, **sv_callset_filter},
+            freqs={'callset': {'ac': 7}, **sv_callset_filter},
         )
 
         self._assert_expected_search(
@@ -695,7 +695,7 @@ class ClickhouseSearchTests(DifferentDbTransactionSupportMixin, SearchTestHelper
         )
 
         self._assert_expected_search(
-            [MULTI_FAMILY_VARIANT, GCNV_VARIANT3, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], freqs={'callset': {'ac': 6, 'hh': 0}, 'sv_callset': {'ac': 50}},
+            [MULTI_FAMILY_VARIANT, GCNV_VARIANT3, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], freqs={'callset': {'ac': 7, 'hh': 0}, 'sv_callset': {'ac': 50}},
         )
 
         self._set_sv_family_search()
@@ -1091,11 +1091,19 @@ class ClickhouseSearchTests(DifferentDbTransactionSupportMixin, SearchTestHelper
         # Search works with a different number of samples within the family
         self._reset_search_families()
         missing_gt_gcnv_variant = {
-            **GCNV_VARIANT4, 'genotypes': {k: v for k, v in GCNV_VARIANT4['genotypes'].items() if k != 'I000005_hg00732'}
+            **GCNV_VARIANT4,
+            'familyGuids': ['F000002_2_x'],
+            'genotypes': {k: {**v, 'familyGuid': 'F000002_2_x'} for k, v in GCNV_VARIANT4['genotypes'].items() if k != 'I000005_hg00732'}
+        }
+        missing_gt_comp_het_variant = {
+            **MULTI_DATA_TYPE_COMP_HET_VARIANT2,
+            'familyGuids': ['F000002_2_x'],
+            'genotypes': {k: {**v, 'familyGuid': 'F000002_2_x'} for k, v in MULTI_DATA_TYPE_COMP_HET_VARIANT2['genotypes'].items()}
         }
         Sample.objects.filter(guid='S000146_hg00732').update(is_active=False)
+        Family.objects.filter(guid='F000002_2').update(guid='F000002_2_x')
         self._assert_expected_search(
-            [[MULTI_DATA_TYPE_COMP_HET_VARIANT2, missing_gt_gcnv_variant]],
+            [[missing_gt_comp_het_variant, missing_gt_gcnv_variant]],
             inheritance_mode='compound_het', pathogenicity=pathogenicity, locus=None,
             annotations=gcnv_annotations_2, annotations_secondary=selected_transcript_annotations, cached_variant_fields=[[
                 {'selectedGeneId': 'ENSG00000277258', 'selectedTranscript': None},
@@ -1180,7 +1188,7 @@ class ClickhouseSearchTests(DifferentDbTransactionSupportMixin, SearchTestHelper
         )
 
         self._assert_expected_search(
-            [MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3, VARIANT4, MULTI_FAMILY_VARIANT, VARIANT2, VARIANT1, GCNV_VARIANT3, GCNV_VARIANT4, GCNV_VARIANT2, GCNV_VARIANT1],
+            [MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3, VARIANT4, MULTI_FAMILY_VARIANT, VARIANT1, VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, GCNV_VARIANT2, GCNV_VARIANT1],
             sort='callset_af',
         )
 

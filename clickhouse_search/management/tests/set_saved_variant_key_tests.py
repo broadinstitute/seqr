@@ -22,6 +22,7 @@ class SetSavedVariantKeyTest(AnvilAuthenticationTestCase):
         Sample.objects.filter(guid='S000154_na20889').update(dataset_type='SV', is_active=True)
         SavedVariant.objects.update(key=None)
 
+    @mock.patch('clickhouse_search.management.commands.set_saved_variant_key.BATCH_SIZE', 2)
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     def test_command(self, mock_subprocess):
         mock_subprocess.return_value.stdout = self.MOCK_GCNV_DATA
@@ -34,6 +35,7 @@ class SetSavedVariantKeyTest(AnvilAuthenticationTestCase):
             ('Updated keys for 1 MITO (GRCh38) variants', None),
             ('Finding keys for 1 SNV_INDEL (GRCh38) variant ids', None),
             ('Found 1 keys', None),
+            ('Updated batch of 2', None),
             ('Updated keys for 2 SNV_INDEL (GRCh38) variants', None),
             ('Finding keys for 2 SV_WGS (GRCh38) variant ids', None),
             ('Found 0 keys', None),
