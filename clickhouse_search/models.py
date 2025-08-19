@@ -589,7 +589,7 @@ class BaseEntriesSnvIndel(BaseEntries):
     sample_type = models.Enum8Field(choices=[(1, 'WES'), (2, 'WGS')])
     is_gnomad_gt_5_percent = models.BoolField()
     is_annotated_in_any_gene = models.BoolField()
-    geneId_ids = models.ArrayField(UInt32FieldDeltaCodecField())
+    geneId_ids = models.ArrayField(models.UInt32Field())
     calls = models.ArrayField(NamedTupleField(CALL_FIELDS))
 
     class Meta:
