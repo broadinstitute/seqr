@@ -2258,31 +2258,29 @@ class Command(BaseCommand):
         if not variant_key_map:
             return set(variants_ids)
 
-        mapped_variant_ids = variant_key_map.keys()
+        mapped_variant_ids = list(variant_key_map.keys())
         if variant_id_updates:
             reverse_lookup = {v: k for k, v in variant_id_updates.items()}
             mapped_variant_ids = [reverse_lookup[vid] for vid in mapped_variant_ids]
-        saved_variants = SavedVariant.objects.filter(
-            family__project__genome_version=genome_version, variant_id__in=mapped_variant_ids,
-        )
+
         update_fields = ['key', 'dataset_type']
         if variant_id_updates:
             update_fields.append('variant_id')
-        update_variants = []
         total_num_updated = 0
-        for variant in saved_variants:
-            if variant_id_updates:
-                variant.variant_id = variant_id_updates[variant.variant_id]
-            variant.key = variant_key_map[variant.variant_id]
-            variant.dataset_type = dataset_type
-            update_variants.append(variant)
-            if len(update_variants) >= BATCH_SIZE:
-                num_updated = SavedVariant.objects.bulk_update(update_variants, update_fields)
-                logger.info(f'Updated batch of {num_updated}')
-                total_num_updated += num_updated
-                update_variants = []
-        if update_variants:
-            total_num_updated += SavedVariant.objects.bulk_update(update_variants, update_fields)
+        for i in range(0, len(mapped_variant_ids), BATCH_SIZE):
+            batch_ids = mapped_variant_ids[i:i + BATCH_SIZE]
+            saved_variants = SavedVariant.objects.filter(
+                family__project__genome_version=genome_version, variant_id__in=batch_ids,
+            )
+            for variant in saved_variants:
+                if variant_id_updates:
+                    variant.variant_id = variant_id_updates[variant.variant_id]
+                variant.key = variant_key_map[variant.variant_id]
+                variant.dataset_type = dataset_type
+            num_updated = SavedVariant.objects.bulk_update(saved_variants, update_fields)
+            logger.info(f'Updated batch of {num_updated}')
+            total_num_updated += num_updated
+
         logger.info(f'Updated keys for {total_num_updated} {dataset_type} (GRCh{genome_version}) variants')
 
         no_key = set(variants_ids) - set(variant_key_map.keys())
