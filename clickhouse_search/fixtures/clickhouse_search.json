@@ -356,6 +356,8 @@
       "sample_type": "WES",
       "xpos": 1038724419,
       "is_gnomad_gt_5_percent": false,
+      "is_annotated_in_any_gene": true,
+      "geneId_ids": [60, 72],
       "filters": [],
       "sign": 1,
       "calls": [
@@ -374,6 +376,8 @@
       "sample_type": "WES",
       "xpos": 1091502721,
       "is_gnomad_gt_5_percent": true,
+      "is_annotated_in_any_gene": true,
+      "geneId_ids": [61, 60],
       "filters": [],
       "sign": 1,
       "calls": [
@@ -392,6 +396,8 @@
       "sample_type": "WES",
       "xpos": 1091511686,
       "is_gnomad_gt_5_percent": false,
+      "is_annotated_in_any_gene": true,
+      "geneId_ids": [61],
       "filters": [
         "VQSRTrancheSNP99.95to100.00"
       ],
