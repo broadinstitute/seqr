@@ -310,7 +310,7 @@ def _is_matched_minimal_transcript(transcript, minimal_transcript):
 
 
 def _get_sample_data(samples):
-    mismatch_affected_samples = samples.values('sample_id').annotate(
+    mismatch_affected_samples = samples.values('sample_id', 'dataset_type').annotate(
         projects=ArrayAgg('individual__family__project__name', distinct=True),
         affected=ArrayAgg('individual__affected', distinct=True),
     ).filter(affected__len__gt=1)
