@@ -156,11 +156,7 @@ class AnnotationsQuerySet(SearchQuerySet):
 
 
     def subquery_join(self, subquery, join_key='key'):
-        #  Add key to intermediate select if not already present
         join_field = next(field for field in subquery.model._meta.fields if field.name == join_key)
-        if join_key not in subquery.query.values_select:
-            subquery.query.values_select = tuple([join_key, *subquery.query.values_select])
-            subquery.query.select = tuple([Col(subquery.model._meta.db_table, join_field), *subquery.query.select])
 
         # Add the join operation to the query
         table = SubqueryTable(subquery)
@@ -480,9 +476,9 @@ class AnnotationsQuerySet(SearchQuerySet):
 
     def _interval_query(self, chrom, start, end):
         q = Q(xpos__range=(get_xpos(chrom, start), get_xpos(chrom, end)))
-        if hasattr(self.model, 'endChrom'):
-            q |= Q(endChrom__isnull=True, chrom=chrom, end__range=(start, end))
-            q |= Q(endChrom=chrom, end__range=(start, end))
+        if hasattr(self.model, 'end_chrom'):
+            q |= Q(end_chrom__isnull=True, chrom=chrom, end__range=(start, end))
+            q |= Q(end_chrom=chrom, end__range=(start, end))
         elif hasattr(self.model, 'end'):
             q |= Q(chrom=chrom, end__range=(start, end))
             q |= Q(chrom=chrom, pos__lte=start, end__gte=end)
@@ -875,22 +871,8 @@ class EntriesManager(SearchQuerySet):
 
         return quality_q
 
-    def _get_family_sample_map(self, family_samples, is_nested_map=False):
-        family_map = []
-        for family_guid, sample_types in family_samples.items():
-            if self.single_sample_type:
-                samples = list(next(iter(sample_types.values())))
-            else:
-                if is_nested_map:
-                    sample_types = {sample_type: f"map({', '.join(samples)})" for sample_type, samples in sample_types.items()}
-                samples = [f"'{sample_type}', {samples}" for sample_type, samples in sample_types.items()]
-            if is_nested_map or not self.single_sample_type:
-                samples = f"map({', '.join(samples)})"
-            family_map.append(f"'{family_guid}', {samples}")
-
-        return ', '.join(family_map)
-
-    def _annotate_failed_family_samples(self, entries, gt_filter, family_missing_type_samples):
+    @staticmethod
+    def _annotate_failed_family_samples(entries, gt_filter, family_missing_type_samples):
         entries = entries.annotate(failed_family_samples= ArrayMap(
             ArrayFilter('calls', conditions=[{
                 'gt': (gt_filter[0], f'not {gt_filter[1]}'),
@@ -898,10 +880,13 @@ class EntriesManager(SearchQuerySet):
             mapped_expression='tuple(family_guid, x.sampleId)',
         ))
         if family_missing_type_samples:
-            missing_sample_map = self._get_family_sample_map(family_missing_type_samples)
+            missing_sample_map = []
+            for family_guid, sample_types in family_missing_type_samples.items():
+                samples = [f"'{sample_type}', {samples}" for sample_type, samples in sample_types.items()]
+                missing_sample_map.append(f"'{family_guid}', map({', '.join(samples)})")
             entries = entries.annotate(
                 missing_family_samples=ArrayMap(
-                    MapLookup('family_guid', Cast('sample_type', models.StringField()), map_values=missing_sample_map),
+                    MapLookup('family_guid', Cast('sample_type', models.StringField()), map_values=', '.join(missing_sample_map)),
                     mapped_expression='tuple(family_guid, x)',
                 )
             )
@@ -1062,13 +1047,14 @@ class EntriesManager(SearchQuerySet):
             # while the full variant_id filter is applied to the annotation table after the join
             intervals = [(chrom, pos, pos) for chrom, pos, _, _ in variant_ids]
 
-        if not (gene_intervals or intervals):
-            return entries
-
         if padded_interval:
             pos = padded_interval['start']
             padding = int((padded_interval['end'] - pos) * padded_interval['padding'])
             intervals = [(padded_interval['chrom'], max(pos - padding, MIN_POS), min(pos + padding, MAX_POS))]
+
+        if not (gene_intervals or intervals):
+            return entries
+
         elif 'cn' in self.call_fields:
             # SV interval filtering occurs after joining on annotations to correctly incorporate end position
             if exclude_intervals:
