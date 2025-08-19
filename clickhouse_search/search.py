@@ -101,15 +101,11 @@ def _get_multi_data_type_comp_het_results_queryset(genome_version, sample_data_b
         if not families:
             continue
 
-        snv_indel_sample_data = {
+        entries = entry_cls.objects.search({
             **snv_indel_sample_data,
             'family_guids': list(families),
             'samples': [s for s in snv_indel_sample_data['samples'] if s['family_guid'] in families]
-        }
-
-        entries = entry_cls.objects.search(
-            snv_indel_sample_data, skip_individual_guid=skip_individual_guid, **search_kwargs, annotations=annotations, inheritance_mode=COMPOUND_HET_ALLOW_HOM_ALTS, annotate_carriers=True, annotate_hom_alts=True,
-        )
+        }, skip_individual_guid=skip_individual_guid, **search_kwargs, annotations=annotations, inheritance_mode=COMPOUND_HET_ALLOW_HOM_ALTS, annotate_carriers=True, annotate_hom_alts=True)
         snv_indel_q = annotations_cls.objects.subquery_join(entries).search(**search_kwargs, annotations=annotations)
 
         sv_sample_data = {
@@ -178,27 +174,40 @@ def _get_comp_het_results_queryset(annotations_cls, primary_q, secondary_q, num_
         secondary_family_expr = 'secondary_familyGuids' if results.has_annotation('secondary_familyGuids') else ArrayMap(
             'secondary_familyGenotypes', mapped_expression='x.1',
         )
-        genotype_expressions = {
-            'primary_genotypes': ArrayFilter('primary_genotypes', conditions=[
-                {2: ('arrayIntersect(primary_familyGuids, secondary_familyGuids)', 'has({value}, {field})')},
-            ]),
-            'secondary_genotypes': ArrayFilter('secondary_genotypes', conditions=[
-                {2: ('arrayIntersect(primary_familyGuids, secondary_familyGuids)', 'has({value}, {field})')},
-            ]),
-            'primary_familyGenotypes': ArrayFilter('primary_familyGenotypes', conditions=[
-                {1: (None, 'arrayExists(g -> g.1 = {field}, secondary_familyGenotypes)')},
-            ]),
-            'secondary_familyGenotypes': ArrayFilter('secondary_familyGenotypes', conditions=[
-                {1: (None, 'arrayExists(g -> g.1 = {field}, primary_familyGenotypes)')},
-            ]),
-        }
+        if results.has_annotation('primary_genotypes'):
+            genotype_expressions = {
+                'primary_genotypes': ArrayFilter('primary_genotypes', conditions=[
+                    {2: ('arrayIntersect(primary_familyGuids, secondary_familyGuids)', 'has({value}, {field})')},
+                ]),
+                'secondary_genotypes': ArrayFilter('secondary_genotypes', conditions=[
+                    {2: ('arrayIntersect(primary_familyGuids, secondary_familyGuids)', 'has({value}, {field})')},
+                ]),
+            }
+        elif results.has_annotation('secondary_genotypes'):
+            genotype_expressions = {
+                'primary_familyGenotypes': ArrayFilter('primary_familyGenotypes', conditions=[
+                    {1: ('secondary_familyGuids', 'has({value}, {field})')},
+                ]),
+                'secondary_genotypes': ArrayFilter('secondary_genotypes', conditions=[
+                    {2: (None, 'arrayExists(g -> g.1 = {field}, primary_familyGenotypes)')},
+                ]),
+            }
+        else:
+            genotype_expressions = {
+                'primary_familyGenotypes': ArrayFilter('primary_familyGenotypes', conditions=[
+                    {1: (None, 'arrayExists(g -> g.1 = {field}, secondary_familyGenotypes)')},
+                ]),
+                'secondary_familyGenotypes': ArrayFilter('secondary_familyGenotypes', conditions=[
+                    {1: (None, 'arrayExists(g -> g.1 = {field}, primary_familyGenotypes)')},
+                ]),
+            }
         results = results.annotate(
             primary_familyGuids=ArrayIntersect(
                 primary_family_expr, secondary_family_expr, output_field=ArrayField(StringField()),
             ),
         ).filter(primary_familyGuids__not_empty=True).annotate(
             secondary_familyGuids=F('primary_familyGuids'),
-            **{k: v for k, v in genotype_expressions.items() if results.has_annotation(k)},
+            **genotype_expressions,
         )
 
     return results.annotate(
