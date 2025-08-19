@@ -101,15 +101,11 @@ def _get_multi_data_type_comp_het_results_queryset(genome_version, sample_data_b
         if not families:
             continue
 
-        snv_indel_sample_data = {
+        entries = entry_cls.objects.search({
             **snv_indel_sample_data,
             'family_guids': list(families),
             'samples': [s for s in snv_indel_sample_data['samples'] if s['family_guid'] in families]
-        }
-
-        entries = entry_cls.objects.search(
-            snv_indel_sample_data, skip_individual_guid=skip_individual_guid, **search_kwargs, annotations=annotations, inheritance_mode=COMPOUND_HET_ALLOW_HOM_ALTS, annotate_carriers=True, annotate_hom_alts=True,
-        )
+        }, skip_individual_guid=skip_individual_guid, **search_kwargs, annotations=annotations, inheritance_mode=COMPOUND_HET_ALLOW_HOM_ALTS, annotate_carriers=True, annotate_hom_alts=True)
         snv_indel_q = annotations_cls.objects.subquery_join(entries).search(**search_kwargs, annotations=annotations)
 
         sv_sample_data = {
