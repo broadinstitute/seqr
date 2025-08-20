@@ -643,7 +643,12 @@ class ClickhouseSearchTests(DifferentDbTransactionSupportMixin, SearchTestHelper
             [],locus={'rawVariantItems': VARIANT_IDS[1]},
         )
 
+    @mock.patch('clickhouse_search.search.MAX_VARIANTS', 3)
     def test_invalid_search(self):
+        with self.assertRaises(InvalidSearchException) as cm:
+            self._assert_expected_search([])
+        self.assertEqual(str(cm.exception),'This search returned too many results')
+
         Sample.objects.filter(guid='S000143_na20885').update(sample_id='HG00732')
         self._set_multi_project_search()
         with self.assertRaises(InvalidSearchException) as cm:
