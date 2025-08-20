@@ -619,33 +619,34 @@ def _filter_inheritance_family_samples(samples, inheritance_filter):
     ]
 
 
-def _parse_locus_gene_intervals(genome_version, genes=None, intervals=None, rs_ids=None, parsed_variant_ids=None, exclude_locations=False, include_db_ids=True, **kwargs):
+def _parse_locus_gene_intervals(genome_version, genes=None, intervals=None, rs_ids=None, parsed_variant_ids=None, exclude_locations=False, **kwargs):
     intervals = [_format_interval(**interval) for interval in intervals or []]
-    parsed_locus = {
-        'intervals': intervals or None,
-        'gene_intervals': None,
-        'exclude_intervals': exclude_locations,
-        'gene_ids': None,
-        'variant_ids': parsed_variant_ids,
-        'rs_ids': rs_ids,
-    }
+    gene_intervals = gene_ids = gene_id_ids =None
     if genes:
+        gene_id_ids = [gene.pop('id') for gene in genes.values()]
         gene_intervals = sorted([
             [gene[f'{field}Grch{genome_version}'] for field in ['chrom', 'start', 'end']] for gene in genes.values()
         ])
         if exclude_locations:
-            parsed_locus['intervals'] = (parsed_locus['intervals'] or []) + gene_intervals
+            intervals += gene_intervals
+            gene_intervals = None
         else:
-            parsed_locus['gene_ids'] = sorted(genes.keys())
-            parsed_locus['gene_intervals'] = gene_intervals
-        if include_db_ids:
-            parsed_locus['gene_id_ids'] = [gene['id'] for gene in genes.values()]
+            gene_ids = sorted(genes.keys())
 
-    return parsed_locus
+    return {
+        'intervals': intervals or None,
+        'gene_intervals': gene_intervals,
+        'exclude_intervals': exclude_locations,
+        'gene_ids': gene_ids,
+        'gene_id_ids': gene_id_ids,
+        'variant_ids': parsed_variant_ids,
+        'rs_ids': rs_ids,
+    }
 
 
 def _parse_locus_intervals(*args, **kwargs):
-    parsed_locus = _parse_locus_gene_intervals(*args, include_db_ids=False, **kwargs)
+    parsed_locus = _parse_locus_gene_intervals(*args, **kwargs)
+    parsed_locus.pop('gene_id_ids')
     gene_intervals = parsed_locus.pop('gene_intervals')
     if gene_intervals:
         parsed_locus['intervals'] = (parsed_locus['intervals'] or []) + gene_intervals
