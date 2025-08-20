@@ -1068,6 +1068,7 @@ class EntriesManager(SearchQuerySet):
             if exclude_intervals or not hasattr(self.model, 'is_annotated_in_any_gene') or len(gene_intervals) < 100: # TODO real threshhold
                 intervals = (gene_intervals or []) + (intervals or [])
             else:
+                locus_q = Q(geneId_ids__bitmap_has_any=gene_id_ids)
                 if not intervals:
                     entries = entries.filter(is_annotated_in_any_gene=Value(True))
 
