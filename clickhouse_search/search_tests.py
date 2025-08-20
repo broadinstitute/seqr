@@ -217,7 +217,7 @@ class ClickhouseSearchTests(DifferentDbTransactionSupportMixin, SearchTestHelper
         )
 
     def test_both_sample_types_search(self):
-        Sample.objects.exclude(dataset_type='SNV_INDEL').update(is_active=False)
+        Sample.objects.filter(dataset_type='MITO').update(is_active=False)
 
         # One family (F000011_11) in a multi-project search has identical exome and genome data.
         self._set_multi_project_search()
@@ -235,20 +235,48 @@ class ClickhouseSearchTests(DifferentDbTransactionSupportMixin, SearchTestHelper
         # Variant 3 is inherited in both sample types.
         # Variant 4 is de novo in exome, but inherited in genome in the same parent that has variant 3.
         self._assert_expected_search(
-            [VARIANT1_BOTH_SAMPLE_TYPES, VARIANT4_BOTH_SAMPLE_TYPES],
-            inheritance_mode='de_novo', locus=None,
+            [VARIANT1_BOTH_SAMPLE_TYPES, VARIANT2_BOTH_SAMPLE_TYPES, VARIANT3_BOTH_SAMPLE_TYPES, VARIANT4_BOTH_SAMPLE_TYPES,
+             GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
+            inheritance_mode='any_affected', locus=None,
+        )
+
+        self._assert_expected_search(
+            [VARIANT2_BOTH_SAMPLE_TYPES, VARIANT3_BOTH_SAMPLE_TYPES, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT4],
+            inheritance_mode='any_affected', quality_filter={'min_gq': 40, 'min_qs': 20},
+        )
+
+        self._assert_expected_search(
+            [VARIANT1_BOTH_SAMPLE_TYPES, VARIANT4_BOTH_SAMPLE_TYPES, GCNV_VARIANT1],
+            inheritance_mode='de_novo', quality_filter=None,
         )
 
         self._add_sample_type_samples('WGS', guid__in=['S000133_hg00732', 'S000134_hg00733'])
         self._assert_expected_search(
-            [VARIANT1_BOTH_SAMPLE_TYPES, VARIANT2_BOTH_SAMPLE_TYPES, VARIANT4_BOTH_SAMPLE_TYPES],
+            [VARIANT1_BOTH_SAMPLE_TYPES, VARIANT2_BOTH_SAMPLE_TYPES, VARIANT3_BOTH_SAMPLE_TYPES,
+             VARIANT4_BOTH_SAMPLE_TYPES, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
+            inheritance_mode='any_affected',
+        )
+
+        self._assert_expected_search(
+            [VARIANT1_BOTH_SAMPLE_TYPES, VARIANT2_BOTH_SAMPLE_TYPES, VARIANT4_BOTH_SAMPLE_TYPES, GCNV_VARIANT1],
             inheritance_mode='de_novo',
         )
 
         self._assert_expected_search(
-            [VARIANT1_BOTH_SAMPLE_TYPES, VARIANT2_BOTH_SAMPLE_TYPES, [VARIANT3_BOTH_SAMPLE_TYPES, VARIANT4_BOTH_SAMPLE_TYPES]],
-            inheritance_mode='recessive', **COMP_HET_ALL_PASS_FILTERS, cached_variant_fields=[
-                {}, {}, [{'selectedGeneId':  'ENSG00000097046'}, {'selectedGeneId':  'ENSG00000097046'}],
+            [VARIANT2_BOTH_SAMPLE_TYPES, GCNV_VARIANT1],
+            inheritance_mode='de_novo', quality_filter={'min_gq': 40}
+        )
+
+        self.maxDiff = None
+        self._assert_expected_search(
+            [VARIANT1_BOTH_SAMPLE_TYPES, VARIANT2_BOTH_SAMPLE_TYPES,
+             [{**VARIANT2_BOTH_SAMPLE_TYPES, 'selectedMainTranscriptId': 'ENST00000450625'}, GCNV_VARIANT4],
+             [VARIANT3_BOTH_SAMPLE_TYPES, VARIANT4_BOTH_SAMPLE_TYPES],
+             GCNV_VARIANT3, [GCNV_VARIANT3, GCNV_VARIANT4]],
+            inheritance_mode='recessive', **COMP_HET_ALL_PASS_FILTERS, quality_filter=None, cached_variant_fields=[
+                {}, {}, [{'selectedGeneId': 'ENSG00000277258'}, {'selectedGeneId': 'ENSG00000277258'}],
+                [{'selectedGeneId':  'ENSG00000097046'}, {'selectedGeneId':  'ENSG00000097046'}], {},
+                [{'selectedGeneId': 'ENSG00000275023'}, {'selectedGeneId': 'ENSG00000275023'}],
             ]
         )
 
@@ -615,6 +643,17 @@ class ClickhouseSearchTests(DifferentDbTransactionSupportMixin, SearchTestHelper
             [],locus={'rawVariantItems': VARIANT_IDS[1]},
         )
 
+    def test_invalid_search(self):
+        Sample.objects.filter(guid='S000143_na20885').update(sample_id='HG00732')
+        self._set_multi_project_search()
+        with self.assertRaises(InvalidSearchException) as cm:
+            self._assert_expected_search([], locus={'rawItems': GENE_IDS[0]})
+        self.assertEqual(
+            str(cm.exception),
+            'The following samples are incorrectly configured and have different affected statuses in different projects: '
+            'HG00732 (1kg project nåme with uniçøde/ Test Reprocessed Project)',
+        )
+
     def test_variant_lookup(self):
         variant = variant_lookup(self.user, ('1', 10439, 'AC', 'A'))
         self._assert_expected_variants([variant], [VARIANT_LOOKUP_VARIANT])
@@ -643,8 +682,9 @@ class ClickhouseSearchTests(DifferentDbTransactionSupportMixin, SearchTestHelper
         variants = sv_variant_lookup(self.user, 'phase2_DEL_chr14_4640', families, sample_type='WGS')
         self._assert_expected_variants(variants, [SV_VARIANT4, GCNV_VARIANT4])
 
+        # reciprocal overlap does not meet the threshold for smaller events
         variants = sv_variant_lookup(self.user, 'suffix_140608_DUP', families, sample_type='WES')
-        self._assert_expected_variants(variants, [GCNV_VARIANT4, SV_VARIANT4])
+        self._assert_expected_variants(variants, [GCNV_VARIANT4])
 
         variants = sv_variant_lookup(self.user, 'suffix_140593_DUP', families, sample_type='WES')
         self._assert_expected_variants(variants, [GCNV_VARIANT3])
@@ -712,9 +752,17 @@ class ClickhouseSearchTests(DifferentDbTransactionSupportMixin, SearchTestHelper
             [VARIANT2, VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2], freqs={'gnomad_genomes': {'af': 0.05, 'hh': 1}, 'gnomad_mito': {'af': 0.05}},
         )
 
+        self._assert_expected_search(
+            [VARIANT4, GCNV_VARIANT3, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
+            freqs={'topmed': {'af': 0.05, 'hh': 1}, 'sv_callset': {'ac': 50}},
+        )
+
         self._set_sv_family_search()
         self._assert_expected_search(
             [SV_VARIANT1, SV_VARIANT3, SV_VARIANT4], freqs={'gnomad_svs': {'af': 0.001}},
+        )
+        self._assert_expected_search(
+            [SV_VARIANT1, SV_VARIANT3, SV_VARIANT4], freqs={'gnomad_svs': {'ac': 4000}},
         )
 
         self._reset_search_families()
@@ -742,8 +790,9 @@ class ClickhouseSearchTests(DifferentDbTransactionSupportMixin, SearchTestHelper
 
     def test_annotations_filter(self):
         self._assert_expected_search([VARIANT2], pathogenicity={'hgmd': ['hgmd_other']})
+        self._assert_expected_search([], pathogenicity={'hgmd': ['disease_causing', 'likely_disease_causing']})
 
-        pathogenicity = {'clinvar': ['likely_pathogenic', 'vus_or_conflicting', 'benign']}
+        pathogenicity = {'clinvar': ['likely_pathogenic', 'vus_or_conflicting', 'benign'], 'hgmd': []}
         self._assert_expected_search(
             [VARIANT1, VARIANT2, MITO_VARIANT1, MITO_VARIANT3], pathogenicity=pathogenicity,
         )
@@ -1076,7 +1125,7 @@ class ClickhouseSearchTests(DifferentDbTransactionSupportMixin, SearchTestHelper
         )
 
         self._add_sample_type_samples('WES', individual__family__guid='F000014_14')
-        self.results_model.families.set(Family.objects.filter(guid__in=['F000002_2', 'F000014_14']))
+        self.results_model.families.set(Family.objects.filter(guid__in=['F000002_2', 'F000011_11', 'F000014_14']))
         self._assert_expected_search(
             [MULTI_DATA_TYPE_COMP_HET_VARIANT2, [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], MULTI_PROJECT_GCNV_VARIANT3, [GCNV_VARIANT3, GCNV_VARIANT4]],
             inheritance_mode='recessive',

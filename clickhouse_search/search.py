@@ -40,7 +40,7 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
     inheritance_mode = search.get('inheritance_mode')
     has_comp_het = inheritance_mode in {RECESSIVE, COMPOUND_HET}
     for dataset_type, sample_data in sample_data_by_dataset_type.items():
-        logger.info(f'Loading {dataset_type} data for {len(sample_data)} families', user)
+        logger.info(f'Loading {dataset_type} data for {len(set(sample_data["family_guids"]))} families', user)
 
         entry_cls = ENTRY_CLASS_MAP[genome_version][dataset_type]
         annotations_cls = ANNOTATIONS_CLASS_MAP[genome_version][dataset_type]
@@ -101,15 +101,11 @@ def _get_multi_data_type_comp_het_results_queryset(genome_version, sample_data_b
         if not families:
             continue
 
-        snv_indel_sample_data = {
+        entries = entry_cls.objects.search({
             **snv_indel_sample_data,
             'family_guids': list(families),
             'samples': [s for s in snv_indel_sample_data['samples'] if s['family_guid'] in families]
-        }
-
-        entries = entry_cls.objects.search(
-            snv_indel_sample_data, skip_individual_guid=skip_individual_guid, **search_kwargs, annotations=annotations, inheritance_mode=COMPOUND_HET_ALLOW_HOM_ALTS, annotate_carriers=True, annotate_hom_alts=True,
-        )
+        }, skip_individual_guid=skip_individual_guid, **search_kwargs, annotations=annotations, inheritance_mode=COMPOUND_HET_ALLOW_HOM_ALTS, annotate_carriers=True, annotate_hom_alts=True)
         snv_indel_q = annotations_cls.objects.subquery_join(entries).search(**search_kwargs, annotations=annotations)
 
         sv_sample_data = {
@@ -126,7 +122,7 @@ def _get_multi_data_type_comp_het_results_queryset(genome_version, sample_data_b
         result_q = _get_comp_het_results_queryset(annotations_cls, snv_indel_q, sv_q, len(families))
         dataset_results = [list(result[1:]) for result in result_q[:MAX_VARIANTS + 1]]
         if skip_individual_guid:
-            _add_individual_guids(dataset_results, sv_sample_data, single_data_type=False)
+            _add_individual_guids(dataset_results, sv_sample_data)
         results += dataset_results
 
     return results
@@ -168,7 +164,7 @@ def _get_comp_het_results_queryset(annotations_cls, primary_q, secondary_q, num_
                 is_overlapped_del,
                 F('primary_familyGuids'),
                 ArrayIntersect('primary_familyGuids', 'primary_no_hom_alt_families'),
-                condition='',
+                condition='', output_field=ArrayField(StringField()),
             ))
 
     if num_families > 1:
@@ -178,27 +174,40 @@ def _get_comp_het_results_queryset(annotations_cls, primary_q, secondary_q, num_
         secondary_family_expr = 'secondary_familyGuids' if results.has_annotation('secondary_familyGuids') else ArrayMap(
             'secondary_familyGenotypes', mapped_expression='x.1',
         )
-        genotype_expressions = {
-            'primary_genotypes': ArrayFilter('primary_genotypes', conditions=[
-                {2: ('arrayIntersect(primary_familyGuids, secondary_familyGuids)', 'has({value}, {field})')},
-            ]),
-            'secondary_genotypes': ArrayFilter('secondary_genotypes', conditions=[
-                {2: ('arrayIntersect(primary_familyGuids, secondary_familyGuids)', 'has({value}, {field})')},
-            ]),
-            'primary_familyGenotypes': ArrayFilter('primary_familyGenotypes', conditions=[
-                {1: (None, 'arrayExists(g -> g.1 = {field}, secondary_familyGenotypes)')},
-            ]),
-            'secondary_familyGenotypes': ArrayFilter('secondary_familyGenotypes', conditions=[
-                {1: (None, 'arrayExists(g -> g.1 = {field}, primary_familyGenotypes)')},
-            ]),
-        }
+        if results.has_annotation('primary_genotypes'):
+            genotype_expressions = {
+                'primary_genotypes': ArrayFilter('primary_genotypes', conditions=[
+                    {2: ('arrayIntersect(primary_familyGuids, secondary_familyGuids)', 'has({value}, {field})')},
+                ]),
+                'secondary_genotypes': ArrayFilter('secondary_genotypes', conditions=[
+                    {2: ('arrayIntersect(primary_familyGuids, secondary_familyGuids)', 'has({value}, {field})')},
+                ]),
+            }
+        elif results.has_annotation('secondary_genotypes'):
+            genotype_expressions = {
+                'primary_familyGenotypes': ArrayFilter('primary_familyGenotypes', conditions=[
+                    {1: ('secondary_familyGuids', 'has({value}, {field})')},
+                ]),
+                'secondary_genotypes': ArrayFilter('secondary_genotypes', conditions=[
+                    {2: (None, 'arrayExists(g -> g.1 = {field}, primary_familyGenotypes)')},
+                ]),
+            }
+        else:
+            genotype_expressions = {
+                'primary_familyGenotypes': ArrayFilter('primary_familyGenotypes', conditions=[
+                    {1: (None, 'arrayExists(g -> g.1 = {field}, secondary_familyGenotypes)')},
+                ]),
+                'secondary_familyGenotypes': ArrayFilter('secondary_familyGenotypes', conditions=[
+                    {1: (None, 'arrayExists(g -> g.1 = {field}, primary_familyGenotypes)')},
+                ]),
+            }
         results = results.annotate(
             primary_familyGuids=ArrayIntersect(
                 primary_family_expr, secondary_family_expr, output_field=ArrayField(StringField()),
             ),
         ).filter(primary_familyGuids__not_empty=True).annotate(
             secondary_familyGuids=F('primary_familyGuids'),
-            **{k: v for k, v in genotype_expressions.items() if results.has_annotation(k)},
+            **genotype_expressions,
         )
 
     return results.annotate(
@@ -217,18 +226,19 @@ def _result_as_tuple(results, field_prefix):
     return Tuple(*fields.keys(), output_field=NamedTupleField(list(fields.values())))
 
 
-def _add_individual_guids(results, sample_data, single_data_type=True):
+def _add_individual_guids(results, sample_data):
     sample_map = {(s['family_guid'], s['sample_id']): s['individual_guid'] for s in sample_data['samples']}
     for result in results:
         if isinstance(result, list):
             for variant in result:
-                if single_data_type or 'svType' not in variant:
-                    _set_individual_guids(variant, sample_map)
+                _set_individual_guids(variant, sample_map)
         else:
             _set_individual_guids(result, sample_map)
 
 
 def _set_individual_guids(result, sample_map):
+    if 'familyGenotypes' not in result:
+        return
     result['familyGuids'] = sorted(result['familyGenotypes'].keys())
     individual_genotypes =  defaultdict(list)
     for family_guid, genotypes in result.pop('familyGenotypes').items():
@@ -310,7 +320,7 @@ def _is_matched_minimal_transcript(transcript, minimal_transcript):
 
 
 def _get_sample_data(samples):
-    mismatch_affected_samples = samples.values('sample_id').annotate(
+    mismatch_affected_samples = samples.values('sample_id', 'dataset_type').annotate(
         projects=ArrayAgg('individual__family__project__name', distinct=True),
         affected=ArrayAgg('individual__affected', distinct=True),
     ).filter(affected__len__gt=1)
