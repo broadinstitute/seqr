@@ -588,18 +588,20 @@ class BaseEntriesSnvIndel(BaseEntries):
 
     sample_type = models.Enum8Field(choices=[(1, 'WES'), (2, 'WGS')])
     is_gnomad_gt_5_percent = models.BoolField()
+    is_annotated_in_any_gene = models.BoolField()
+    geneId_ids = models.ArrayField(models.UInt32Field())
     calls = models.ArrayField(NamedTupleField(CALL_FIELDS))
 
     class Meta:
         abstract = True
         engine = CollapsingMergeTree(
             'sign',
-            order_by=('project_guid', 'family_guid', 'is_gnomad_gt_5_percent', 'sample_type', 'key'),
+            order_by=('project_guid', 'family_guid', 'sample_type', 'is_gnomad_gt_5_percent', 'is_annotated_in_any_gene', 'key'),
             partition_by='project_guid',
             deduplicate_merge_projection_mode='rebuild',
             index_granularity=8192,
         )
-        projection = Projection('xpos_projection', order_by='xpos, is_gnomad_gt_5_percent')
+        projection = Projection('xpos_projection', order_by='is_gnomad_gt_5_percent, is_annotated_in_any_gene, xpos')
 
 class EntriesGRCh37SnvIndel(BaseEntriesSnvIndel):
 

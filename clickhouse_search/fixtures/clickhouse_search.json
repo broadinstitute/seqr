@@ -274,6 +274,8 @@
       "sample_type": "WES",
       "xpos": 1000010439,
       "is_gnomad_gt_5_percent": false,
+      "is_annotated_in_any_gene": false,
+      "geneId_ids": [],
       "filters": [],
       "sign": 1,
       "calls": [
@@ -292,6 +294,8 @@
       "sample_type": "WES",
       "xpos": 1038724419,
       "is_gnomad_gt_5_percent": false,
+      "is_annotated_in_any_gene": true,
+      "geneId_ids": [60, 72],
       "filters": [],
       "sign": 1,
       "calls": [
@@ -310,6 +314,8 @@
       "sample_type": "WES",
       "xpos": 1091502721,
       "is_gnomad_gt_5_percent": true,
+      "is_annotated_in_any_gene": true,
+      "geneId_ids": [61, 60],
       "filters": [],
       "sign": 1,
       "calls": [
@@ -328,6 +334,8 @@
       "sample_type": "WES",
       "xpos": 1091511686,
       "is_gnomad_gt_5_percent": false,
+      "is_annotated_in_any_gene": true,
+      "geneId_ids": [61],
       "filters": [
         "VQSRTrancheSNP99.95to100.00"
       ],
@@ -348,6 +356,8 @@
       "sample_type": "WES",
       "xpos": 1038724419,
       "is_gnomad_gt_5_percent": false,
+      "is_annotated_in_any_gene": true,
+      "geneId_ids": [60, 72],
       "filters": [],
       "sign": 1,
       "calls": [
@@ -366,6 +376,8 @@
       "sample_type": "WES",
       "xpos": 1091502721,
       "is_gnomad_gt_5_percent": true,
+      "is_annotated_in_any_gene": true,
+      "geneId_ids": [61, 60],
       "filters": [],
       "sign": 1,
       "calls": [
@@ -384,6 +396,8 @@
       "sample_type": "WES",
       "xpos": 1091511686,
       "is_gnomad_gt_5_percent": false,
+      "is_annotated_in_any_gene": true,
+      "geneId_ids": [61],
       "filters": [
         "VQSRTrancheSNP99.95to100.00"
       ],
@@ -404,6 +418,8 @@
       "sample_type": "WES",
       "xpos": 1091502721,
       "is_gnomad_gt_5_percent": true,
+      "is_annotated_in_any_gene": true,
+      "geneId_ids": [61, 60],
       "filters": [],
       "sign": 1,
       "calls": [
@@ -420,6 +436,8 @@
       "sample_type": "WES",
       "xpos": 1000010439,
       "is_gnomad_gt_5_percent": false,
+      "is_annotated_in_any_gene": false,
+      "geneId_ids": [],
       "filters": [],
       "sign": 1,
       "calls": [
@@ -436,6 +454,8 @@
       "sample_type": "WES",
       "xpos": 1038724419,
       "is_gnomad_gt_5_percent": false,
+      "is_annotated_in_any_gene": true,
+      "geneId_ids": [60, 72],
       "filters": [],
       "sign": 1,
       "calls": [
@@ -452,6 +472,8 @@
       "sample_type": "WES",
       "xpos": 1000010146,
       "is_gnomad_gt_5_percent": false,
+      "is_annotated_in_any_gene": false,
+      "geneId_ids": [],
       "filters": [],
       "sign": 1,
       "calls": [
@@ -468,6 +490,8 @@
       "sample_type": "WGS",
       "xpos": 1000010439,
       "is_gnomad_gt_5_percent": false,
+      "is_annotated_in_any_gene": false,
+      "geneId_ids": [],
       "filters": [],
       "sign": 1,
       "calls": [
@@ -484,6 +508,8 @@
       "sample_type": "WGS",
       "xpos": 1038724419,
       "is_gnomad_gt_5_percent": false,
+      "is_annotated_in_any_gene": true,
+      "geneId_ids": [60, 72],
       "filters": [],
       "sign": 1,
       "calls": [
@@ -500,6 +526,8 @@
       "sample_type": "WGS",
       "xpos": 1000010146,
       "is_gnomad_gt_5_percent": false,
+      "is_annotated_in_any_gene": false,
+      "geneId_ids": [],
       "filters": [],
       "sign": 1,
       "calls": [
@@ -516,6 +544,8 @@
       "sample_type": "WGS",
       "xpos": 1000010439,
       "is_gnomad_gt_5_percent": false,
+      "is_annotated_in_any_gene": false,
+      "geneId_ids": [],
       "filters": [],
       "sign": 1,
       "calls": [
@@ -534,6 +564,8 @@
       "sample_type": "WGS",
       "xpos": 1038724419,
       "is_gnomad_gt_5_percent": false,
+      "is_annotated_in_any_gene": true,
+      "geneId_ids": [60, 72],
       "filters": [],
       "sign": 1,
       "calls": [
@@ -552,6 +584,8 @@
       "sample_type": "WGS",
       "xpos": 1091502721,
       "is_gnomad_gt_5_percent": true,
+      "is_annotated_in_any_gene": true,
+      "geneId_ids": [61, 60],
       "filters": [],
       "sign": 1,
       "calls": [
@@ -570,6 +604,8 @@
       "sample_type": "WGS",
       "xpos": 1091511686,
       "is_gnomad_gt_5_percent": false,
+      "is_annotated_in_any_gene": true,
+      "geneId_ids": [61],
       "filters": [
         "VQSRTrancheSNP99.95to100.00"
       ],
@@ -590,6 +626,8 @@
       "sample_type": "WGS",
       "xpos": 1009310123,
       "is_gnomad_gt_5_percent": false,
+      "is_annotated_in_any_gene": true,
+      "geneId_ids": [71],
       "filters": [],
       "sign": 1,
       "calls": [
@@ -636,6 +674,8 @@
       "sample_type": "WES",
       "xpos": 7143270172,
       "is_gnomad_gt_5_percent": true,
+      "is_annotated_in_any_gene": true,
+      "geneId_ids": [73, 74],
       "filters": [
         "VQSRTrancheSNP99.90to99.95"
       ],
@@ -655,6 +695,8 @@
       "sample_type": "WGS",
       "xpos": 1000010439,
       "is_gnomad_gt_5_percent": true,
+      "is_annotated_in_any_gene": false,
+      "geneId_ids": [],
       "filters": [],
       "sign": 1,
       "calls": [
@@ -1449,6 +1491,36 @@
         "chrom_grch38": "1",
         "start_grch38": 38717636,
         "end_grch38": 38724781,
+        "strand_grch38": "+",
+        "coding_region_size_grch38": 0,
+        "gencode_gene_type": "protein_coding",
+        "gencode_release": 27
+    }
+},
+{
+    "model": "reference_data.geneinfo",
+    "pk": 73,
+    "fields": {
+        "gene_id": "ENSG00000271079",
+        "gene_symbol": "CTAGE15",
+        "chrom_grch38": "7",
+        "start_grch38": 143571801,
+        "end_grch38": 143574387,
+        "strand_grch38": "+",
+        "coding_region_size_grch38": 0,
+        "gencode_gene_type": "protein_coding",
+        "gencode_release": 27
+    }
+},
+{
+    "model": "reference_data.geneinfo",
+    "pk": 74,
+    "fields": {
+        "gene_id": "ENSG00000176227",
+        "gene_symbol": "CTAGE6",
+        "chrom_grch38": "7",
+        "start_grch38": 91500851,
+        "end_grch38": 91525764,
         "strand_grch38": "+",
         "coding_region_size_grch38": 0,
         "gencode_gene_type": "protein_coding",
