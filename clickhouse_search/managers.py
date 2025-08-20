@@ -624,6 +624,7 @@ class AnnotationsQuerySet(SearchQuerySet):
 
 
 class EntriesManager(SearchQuerySet):
+    MAX_XPOS_FILTER_INTERVALS = 500
     GENOTYPE_LOOKUP = {
         REF_REF: [0],
         REF_ALT: [1],
@@ -683,7 +684,7 @@ class EntriesManager(SearchQuerySet):
         return self.model.clinvar_join.rel.related_model
 
     def search(self, sample_data, parsed_locus=None, freqs=None, annotations=None, **kwargs):
-        entries = self.filter_intervals(**(parsed_locus or {}))
+        entries = self.filter_locus(**(parsed_locus or {}))
 
         entries = self._join_annotations(entries)
 
@@ -1040,7 +1041,7 @@ class EntriesManager(SearchQuerySet):
             mapped_expression='x.1', output_field=models.ArrayField(models.StringField()),
         )
 
-    def filter_intervals(self, exclude_intervals=False, intervals=None, gene_intervals=None, variant_ids=None, padded_interval=None, **kwargs):
+    def filter_locus(self, exclude_intervals=False, intervals=None, gene_intervals=None, variant_ids=None, padded_interval=None, **kwargs):
         entries = self
         if variant_ids:
             # although technically redundant, the interval query is applied to the entries table before join and reduces the join size,
@@ -1051,28 +1052,39 @@ class EntriesManager(SearchQuerySet):
             pos = padded_interval['start']
             padding = int((padded_interval['end'] - pos) * padded_interval['padding'])
             intervals = [(padded_interval['chrom'], max(pos - padding, MIN_POS), min(pos + padding, MAX_POS))]
-
-        if not (gene_intervals or intervals):
-            return entries
-
         elif 'cn' in self.call_fields:
             # SV interval filtering occurs after joining on annotations to correctly incorporate end position
             if exclude_intervals:
                 intervals = None
             else:
-                chromosomes = {chrom for chrom, _, _ in (gene_intervals or []) + (intervals or [])}
+                chromosomes = {chrom for chrom, _, _ in list((gene_intervals or {}).values()) + (intervals or [])}
                 intervals = [(chrom, MIN_POS, MAX_POS) for chrom in chromosomes]
-        elif gene_intervals:
-            intervals = (intervals or []) + gene_intervals
+            gene_intervals = None
+
+        if not (gene_intervals or intervals):
+            return entries
+
+        locus_q = None
+        if gene_intervals:
+            has_entry_genes = hasattr(self.model, 'is_annotated_in_any_gene')
+            if has_entry_genes and not intervals:
+                entries = entries.filter(is_annotated_in_any_gene=Value(True))
+            if (not has_entry_genes) or exclude_intervals or len(gene_intervals) < self.MAX_XPOS_FILTER_INTERVALS:
+                intervals = list((gene_intervals or {}).values()) + (intervals or [])
+            else:
+                locus_q = Q(geneId_ids__bitmap_has_any=list(gene_intervals.keys()))
 
         if intervals:
             interval_q = self._interval_query(*intervals[0])
             for interval in intervals[1:]:
                 interval_q |= self._interval_query(*interval)
-            filter_func = entries.exclude if exclude_intervals else entries.filter
-            entries = filter_func(interval_q)
+            if locus_q is None:
+                locus_q = interval_q
+            else:
+                locus_q |= interval_q
 
-        return entries
+        filter_func = entries.exclude if exclude_intervals else entries.filter
+        return filter_func(locus_q)
 
     @staticmethod
     def _interval_query(chrom, start, end):

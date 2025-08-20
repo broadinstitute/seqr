@@ -560,7 +560,7 @@ class ElasticsearchSearchUtilsTests(TestCase, SearchUtilsTests):
         if gene_ids:
             parsed_genes = search_body['parsed_locus']['genes']
             for gene in parsed_genes.values():
-                self.assertSetEqual(set(gene.keys()), GENE_FIELDS)
+                self.assertSetEqual(set(gene.keys()), {'id', *GENE_FIELDS})
             self.assertEqual(parsed_genes['ENSG00000227232']['geneSymbol'], 'WASH7P')
             if len(gene_ids) > 1:
                 self.assertEqual(parsed_genes['ENSG00000186092']['geneSymbol'], 'OR4F5')
@@ -722,7 +722,10 @@ class ClickhouseSearchUtilsTests(DifferentDbTransactionSupportMixin, TestCase, S
         gene_ids = None if exclude_locations else gene_ids
         gene_intervals = None
         if gene_ids:
-            gene_intervals = intervals[2:] if len(gene_ids) > 1 else intervals
+            if len(gene_ids) > 1:
+                gene_intervals = {2: intervals[2], 7: intervals[3]}
+            else:
+                gene_intervals = {2: intervals[0]}
             intervals = intervals[:2] if len(gene_ids) > 1 else None
         super()._assert_expected_search_locus(
             *args, gene_ids=gene_ids, gene_intervals=gene_intervals, intervals=intervals,

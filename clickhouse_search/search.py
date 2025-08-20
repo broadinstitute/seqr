@@ -517,7 +517,7 @@ def _clickhouse_variant_lookup(variant_id, genome_version, data_type, samples):
         keys = KEY_LOOKUP_CLASS_MAP[genome_version][data_type].objects.filter(variant_id=variant_id).values_list('key', flat=True)
         entries = entry_cls.objects.filter(key__in=keys)
     else:
-        entries = entry_cls.objects.filter_intervals(variant_ids=[variant_id])
+        entries = entry_cls.objects.filter_locus(variant_ids=[variant_id])
 
     entries = entries.result_values(sample_data)
     results = annotations_cls.objects.subquery_join(entries)
@@ -552,7 +552,7 @@ def _add_liftover_genotypes(variant, data_type, variant_id):
     ).values_list('key', flat=True)
     if not keys:
         return
-    lifted_entries = lifted_entry_cls.objects.filter_intervals(variant_ids=[variant_id]).filter(key=keys[0])
+    lifted_entries = lifted_entry_cls.objects.filter_locus(variant_ids=[variant_id]).filter(key=keys[0])
     lifted_entry_data = lifted_entries.values('key').annotate(
         familyGenotypes=GroupArrayArray(lifted_entry_cls.objects.genotype_expression())
     )

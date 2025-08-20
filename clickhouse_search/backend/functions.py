@@ -120,6 +120,20 @@ class ArrayNotEmptyTransform(lookups.Transform):
     output_field = BooleanField()
 
 
+@ArrayField.register_lookup
+class BitmapHasAny(ArrayLookup):
+    lookup_name = "bitmap_has_any"
+    function = "bitmapHasAny"
+
+    def process_lhs(self, compiler, connection):
+        lhs, lhs_params = super().process_lhs(compiler, connection)
+        return f'bitmapBuild({lhs})', lhs_params
+
+    def process_rhs(self, compiler, connection):
+        rhs, rhs_params = super().process_rhs(compiler, connection)
+        return f'bitmapBuild{rhs.split("::")[0]}', rhs_params
+
+
 class DictGet(Func):
     function = 'dictGet'
     template = '%(function)s("%(dict_name)s", (%(fields)s), %(expressions)s)'
