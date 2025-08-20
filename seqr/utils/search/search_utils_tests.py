@@ -330,20 +330,18 @@ class SearchUtilsTests(SearchTestHelper):
         mock_get_variants.assert_called_with(mock.ANY, expected_search, self.user, results_cache, '37', **kwargs)
         self._assert_expected_search_samples(mock_get_variants, omitted_sample_guids, has_gene_search and not exclude_locations)
 
-        gene_ids = intervals = gene_id_ids= None
+        gene_ids = intervals = None
         has_included_gene_search = has_gene_search and not exclude_locations
         if has_gene_search:
             gene_ids = ['ENSG00000186092', 'ENSG00000227232']
-            gene_id_ids = [2, 7]
             intervals = [['2', 1234, 5678], ['7', 1, 11100], ['1', 14404, 29570], ['1', 65419, 71585]]
         if single_gene_search:
             gene_ids = gene_ids[1:]
-            gene_id_ids = gene_id_ids[:1]
             intervals = intervals[2:3]
         self._assert_expected_search_locus(
             mock_get_variants.call_args.args[1], dataset_type='MITO_missing' if has_included_gene_search else dataset_type,
             gene_ids=gene_ids, intervals=intervals, rs_ids=rs_ids, variant_ids=variant_ids,
-            parsed_variant_ids=parsed_variant_ids, exclude_locations=exclude_locations, gene_id_ids=gene_id_ids,
+            parsed_variant_ids=parsed_variant_ids, exclude_locations=exclude_locations,
         )
 
     def _assert_expected_search_samples(self, mock_get_variants, omitted_sample_guids, has_gene_search):
@@ -720,15 +718,18 @@ class ClickhouseSearchUtilsTests(DifferentDbTransactionSupportMixin, TestCase, S
             self.PARSED_CACHED_VARIANTS[:num_results],
         )
 
-    def _assert_expected_search_locus(self, *args, gene_ids=None, intervals=None, exclude_locations=None, parsed_variant_ids=None, variant_ids=None, gene_id_ids=None, **kwargs):
+    def _assert_expected_search_locus(self, *args, gene_ids=None, intervals=None, exclude_locations=None, parsed_variant_ids=None, variant_ids=None, **kwargs):
         gene_ids = None if exclude_locations else gene_ids
         gene_intervals = None
         if gene_ids:
-            gene_intervals = intervals[2:] if len(gene_ids) > 1 else intervals
+            if len(gene_ids) > 1:
+                gene_intervals = {2: intervals[2], 7: intervals[3]}
+            else:
+                gene_intervals = {2: intervals[0]}
             intervals = intervals[:2] if len(gene_ids) > 1 else None
         super()._assert_expected_search_locus(
             *args, gene_ids=gene_ids, gene_intervals=gene_intervals, intervals=intervals,
-            variant_ids=parsed_variant_ids, exclude_intervals=exclude_locations, gene_id_ids=gene_id_ids, **kwargs,
+            variant_ids=parsed_variant_ids, exclude_intervals=exclude_locations, **kwargs,
         )
 
     @mock.patch('seqr.utils.search.utils.get_clickhouse_variant_by_id')
