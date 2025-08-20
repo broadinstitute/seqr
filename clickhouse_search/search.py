@@ -51,10 +51,10 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
         dataset_results = []
         if inheritance_mode != COMPOUND_HET:
             result_q = _get_search_results_queryset(entry_cls, annotations_cls, sample_data, skip_individual_guid=skip_individual_guid, **search)
-            dataset_results += list(result_q[:MAX_VARIANTS + 1])
+            dataset_results += _evaluate_results(result_q)
         if has_comp_het:
             result_q = _get_data_type_comp_het_results_queryset(entry_cls, annotations_cls, sample_data, skip_individual_guid=skip_individual_guid, **search)
-            dataset_results += [list(result[1:]) for result in result_q[:MAX_VARIANTS + 1]]
+            dataset_results += _evaluate_results(result_q, is_comp_het=True)
 
         if skip_individual_guid:
             _add_individual_guids(dataset_results, sample_data)
@@ -78,6 +78,13 @@ def _get_search_results_queryset(entry_cls, annotations_cls, sample_data, **sear
     results = annotations_cls.objects.subquery_join(entries).search(**search_kwargs)
     return results.result_values()
 
+
+def _evaluate_results(result_q, is_comp_het=False):
+    results = [list(result[1:]) if is_comp_het else result for result in result_q[:MAX_VARIANTS + 1]]
+    if len(results) > MAX_VARIANTS:
+        from seqr.utils.search.utils import InvalidSearchException
+        raise InvalidSearchException('This search returned too many results')
+    return results
 
 def _get_multi_data_type_comp_het_results_queryset(genome_version, sample_data_by_dataset_type, annotations=None, annotations_secondary=None, inheritance_mode=None, **search_kwargs):
     if annotations_secondary:
@@ -120,7 +127,7 @@ def _get_multi_data_type_comp_het_results_queryset(genome_version, sample_data_b
         sv_q = sv_annotations_cls.objects.subquery_join(sv_entries).search(**search_kwargs, annotations=annotations)
 
         result_q = _get_comp_het_results_queryset(annotations_cls, snv_indel_q, sv_q, len(families))
-        dataset_results = [list(result[1:]) for result in result_q[:MAX_VARIANTS + 1]]
+        dataset_results = _evaluate_results(result_q, is_comp_het=True)
         if skip_individual_guid:
             _add_individual_guids(dataset_results, sv_sample_data)
         results += dataset_results
