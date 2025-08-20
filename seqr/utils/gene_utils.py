@@ -16,8 +16,8 @@ def get_gene(gene_id, user):
     return gene_json
 
 
-def get_genes(gene_ids, genome_version=None):
-    return _get_genes(gene_ids, genome_version=genome_version)
+def get_genes(gene_ids, genome_version=None, **kwargs):
+    return _get_genes(gene_ids, genome_version=genome_version, **kwargs)
 
 
 def get_genes_for_variant_display(gene_ids, genome_version):
@@ -32,13 +32,13 @@ def get_genes_with_detail(gene_ids, user):
     return _get_genes(gene_ids, user=user, gene_fields=ALL_GENE_FIELDS)
 
 
-def _get_genes(gene_ids, user=None, gene_fields=None, genome_version=None):
+def _get_genes(gene_ids, user=None, genome_version=None, **kwargs):
     gene_filter = {}
     _add_genome_version_filter(gene_filter, genome_version)
     if gene_ids is not None:
         gene_filter['gene_id__in'] = gene_ids
     genes = GeneInfo.objects.filter(**gene_filter)
-    return {gene['geneId']: gene for gene in _get_json_for_genes(genes, user=user, gene_fields=gene_fields)}
+    return {gene['geneId']: gene for gene in _get_json_for_genes(genes, user=user, **kwargs)}
 
 
 def _add_genome_version_filter(gene_filter, genome_version):
@@ -124,7 +124,7 @@ ALL_GENE_FIELDS = {
 }
 ALL_GENE_FIELDS.update(VARIANT_GENE_FIELDS)
 
-def _get_json_for_genes(genes, user=None, gene_fields=None):
+def _get_json_for_genes(genes, user=None, gene_fields=None, **kwargs):
     if not gene_fields:
         gene_fields = {}
 
@@ -155,10 +155,10 @@ def _get_json_for_genes(genes, user=None, gene_fields=None):
                 '{}_set'.format(model.__name__.lower()),
                 queryset=model.objects.only('gene__gene_id', *model._meta.json_fields)))
 
-    return _get_json_for_models(genes, process_result=_process_result)
+    return _get_json_for_models(genes, process_result=_process_result, **kwargs)
 
 
-def parse_locus_list_items(request_json, genome_version=None):
+def parse_locus_list_items(request_json, genome_version=None, **kwargs):
     raw_items = request_json.get('rawItems')
     if not raw_items:
         return None, None, None
@@ -196,6 +196,6 @@ def parse_locus_list_items(request_json, genome_version=None):
     gene_symbols_to_ids = get_gene_ids_for_gene_symbols(gene_symbols, genome_version=genome_version)
     invalid_items += [symbol for symbol in gene_symbols if not gene_symbols_to_ids.get(symbol)]
     gene_ids.update({gene_ids[0] for gene_ids in gene_symbols_to_ids.values() if len(gene_ids)})
-    genes_by_id = get_genes(list(gene_ids), genome_version=genome_version) if gene_ids else {}
+    genes_by_id = get_genes(list(gene_ids), genome_version=genome_version, **kwargs) if gene_ids else {}
     invalid_items += [gene_id for gene_id in gene_ids if not genes_by_id.get(gene_id)]
     return genes_by_id, intervals, invalid_items

@@ -1065,7 +1065,7 @@ class EntriesManager(SearchQuerySet):
 
         locus_q = None
         if gene_intervals:
-            if exclude_intervals or 'is_annotated_in_any_gene' not in self.query.annotations or len(gene_intervals) < 100: # TODO real threshhold
+            if exclude_intervals or not hasattr(self.model, 'is_annotated_in_any_gene') or len(gene_intervals) < 100: # TODO real threshhold
                 intervals = (gene_intervals or []) + (intervals or [])
             else:
                 if not intervals:
