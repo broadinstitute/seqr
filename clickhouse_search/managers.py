@@ -1056,7 +1056,7 @@ class EntriesManager(SearchQuerySet):
             if exclude_intervals:
                 intervals = None
             else:
-                chromosomes = {chrom for chrom, _, _ in (gene_intervals or []) + (intervals or [])}
+                chromosomes = {chrom for chrom, _, _ in list((gene_intervals or {}).values()) + (intervals or [])}
                 intervals = [(chrom, MIN_POS, MAX_POS) for chrom in chromosomes]
             gene_intervals = None
 
@@ -1066,11 +1066,22 @@ class EntriesManager(SearchQuerySet):
         locus_q = None
         if gene_intervals:
             if exclude_intervals or not hasattr(self.model, 'is_annotated_in_any_gene') or len(gene_intervals) < 100: # TODO real threshhold
-                intervals = (gene_intervals or []) + (intervals or [])
+                intervals = list((gene_intervals or {}).values()) + (intervals or [])
             else:
-                locus_q = Q(geneId_ids__bitmap_has_any=gene_id_ids)
+                locus_q = Q(geneId_ids__bitmap_has_any=list(gene_intervals.keys()))
                 if not intervals:
                     entries = entries.filter(is_annotated_in_any_gene=Value(True))
+                # clustered_intervals = defaultdict(lambda: [MAX_POS, MIN_POS, []])
+                # for gene_id, (chrom, start, end) in gene_intervals.items():
+                #     clustered_intervals[chrom][0] = min(clustered_intervals[chrom][0], start)
+                #     clustered_intervals[chrom][1] = max(clustered_intervals[chrom][1], end)
+                #     clustered_intervals[chrom][2].append(gene_id)
+                # for chrom, (start, end, gene_ids) in clustered_intervals.items():
+                #     chrom_q = self._interval_query(chrom, start, end) & Q(geneId_ids__bitmap_has_any=gene_ids)
+                #     if locus_q is None:
+                #         locus_q = chrom_q
+                #     else:
+                #         locus_q |= chrom_q
 
         if intervals:
             interval_q = self._interval_query(*intervals[0])
