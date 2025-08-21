@@ -679,7 +679,7 @@ The following 2 families failed missing samples:
                 """Encountered the following errors loading Non-Analyst Project:
 
 The following 1 families failed sex check:
-- 14: Sample NA21987 has pedigree sex M but imputed sex F""",
+- fam14: Sample NA21987 has pedigree sex M but imputed sex F""",
             ),
             mock.call(
                 'seqr-data-loading',
