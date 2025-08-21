@@ -87,6 +87,11 @@ class ReloadClinvarAllVariantsTest(DifferentDbTransactionSupportMixin, TestCase)
     databases = '__all__'
     fixtures = ['clinvar_all_variants']
 
+    def tearDown(self):
+        ClinvarAllVariantsSnvIndel.objects.using('clickhouse_write').all().delete()
+        ClinvarAllVariantsGRCh37SnvIndel.objects.using('clickhouse_write').all().delete()
+        ClinvarAllVariantsMito.objects.using('clickhouse_write').all().delete()
+
     @responses.activate
     def test_update_with_no_previous_version(self, mock_logger, mock_safe_post_to_slack):
         DataVersions.objects.all().delete()
