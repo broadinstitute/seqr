@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 
 def _disable_search(families, from_project):
     search_samples = Sample.objects.filter(is_active=True, individual__family__in=families)
+    updated_family_dataset_types = None
     if search_samples:
         updated_families = search_samples.values_list("individual__family__family_id", flat=True).distinct()
         updated_family_dataset_types = list(search_samples.values_list('dataset_type', 'individual__family__guid').distinct())
@@ -20,9 +21,10 @@ def _disable_search(families, from_project):
         logger.info(
             f'Disabled search for {num_updated} samples in the following {len(updated_families)} families: {family_summary}'
         )
-        _trigger_delete_families_dags(from_project, updated_family_dataset_types)
+    return updated_family_dataset_types
 
-def _trigger_delete_families_dags(from_project, updated_family_dataset_types):
+def _disable_search_trigger_delete_families_dags(families, from_project):
+    updated_family_dataset_types = _disable_search(families, from_project)
     updated_families_by_dataset_type = defaultdict(list)
     for dataset_type, family_guid in updated_family_dataset_types:
         updated_families_by_dataset_type[dataset_type].append(family_guid)
