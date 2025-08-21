@@ -13,7 +13,7 @@ from django.http.response import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from requests.exceptions import ConnectionError as RequestConnectionError
 
-from clickhouse_search.search import delete_clickhouse_project
+from clickhouse_search.search import delete_clickhouse_project, delete_clickhouse_family
 from seqr.utils.communication_utils import send_project_notification
 from seqr.utils.search.add_data_utils import prepare_data_loading_request, get_loading_samples_validator
 from seqr.utils.search.utils import get_search_backend_status, delete_search_backend_data, backend_specific_call
@@ -429,7 +429,7 @@ def trigger_delete_project(request):
     project_guid = request_json.pop('project')
     project = Project.objects.get(guid=project_guid)
     return _trigger_data_update(
-        project, dag_id='DELETE_PROJECTS', clickhouse_func=delete_clickhouse_project, **request_json,
+        project, delete_clickhouse_project, **request_json,
     )
 
 
@@ -438,7 +438,7 @@ def trigger_delete_family(request):
     request_json = json.loads(request.body)
     family_guid = request_json.pop('family')
     project = Project.objects.get(family__guid=family_guid)
-    return _trigger_data_update(project, clickhouse_func=_raise_backend_not_implemented, family_guid=family_guid, dag_id='DELETE_FAMILIES', **request_json)
+    return _trigger_data_update(project, delete_clickhouse_family, family_guid=family_guid, **request_json)
 
 
 def _raise_backend_not_implemented(*args, **kwargs):

@@ -629,3 +629,7 @@ def delete_clickhouse_project(project, dataset_type=None, **kwargs):
             cursor.execute(f'SYSTEM WAIT VIEW "{view_name}"')
             cursor.execute(f'SYSTEM RELOAD DICTIONARY "{table_base}/gt_stats_dict"')
     return f'Deleted all {dataset_type} search data for project {project.name}'
+
+
+def delete_clickhouse_family(project, family_guid, dataset_type=None, **kwargs):
+    return f'Clickhouse does not support deleting individual families from project. Manually delete {dataset_type} data for {family_guid} in project {project.guid}'
