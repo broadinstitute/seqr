@@ -69,6 +69,12 @@ const FAQS = [
             across your data but seqr will not provide a quantification of how much variation you should expect to see.
           </List.Item>
           <List.Item>
+            seqr does not support data aligned to any reference genome other than GRCh37 and GRCh38. While both of these
+            builds are available, GRCh38 is recommended whenever possible as it includes the most up-to-date
+            annotations. Additionally, seqr does not support loading data from different builds into the same project,
+            or searching across multiple projects that have different builds.
+          </List.Item>
+          <List.Item>
             seqr is not an annotation pipeline for a VCF. While annotations are added when data is loaded in seqr, you
             cannot output the annotated VCF from seqr.
           </List.Item>
@@ -87,6 +93,12 @@ const FAQS = [
             seqr no está diseñado para análisis de carga génica o de cohortes. Puede buscar variantes en un gen
             candidato a través de sus datos, pero seqr no proporcionará una cuantificación de cuánta variación debe
             esperar ver.
+          </List.Item>
+          <List.Item>
+            seqr no admite datos alineados con ningún genoma de referencia que no sean GRCh37 y GRCh38. Si bien ambas
+            compilaciones están disponibles, se recomienda GRCh38 siempre que sea posible, ya que incluye las
+            anotaciones más actualizadas. Además, seqr no permite cargar datos de diferentes compilaciones en el mismo
+            proyecto ni realizar búsquedas en varios proyectos con compilaciones diferentes.
           </List.Item>
           <List.Item>
             seqr no es un canal de anotación para un VCF. Aunque las anotaciones se agregan cuando los datos se cargan
