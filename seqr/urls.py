@@ -125,7 +125,7 @@ from seqr.views.apis.users_api import \
 from seqr.views.apis.data_manager_api import elasticsearch_status, delete_index, \
     update_rna_seq, load_rna_seq_sample_data, proxy_to_kibana, load_phenotype_prioritization_data, \
     validate_callset, get_loaded_projects, load_data, loading_vcfs, proxy_to_luigi, \
-    trigger_delete_project, trigger_delete_family, trigger_update_search_reference_data
+    trigger_delete_project, trigger_delete_family
 from seqr.views.apis.report_api import \
     anvil_export, \
     family_metadata, \
@@ -342,7 +342,6 @@ api_endpoints = {
     'data_management/add_igv': receive_bulk_igv_table_handler,
     'data_management/trigger_delete_project': trigger_delete_project,
     'data_management/trigger_delete_family': trigger_delete_family,
-    'data_management/trigger_update_search_reference_data': trigger_update_search_reference_data,
 
     'summary_data/saved_variants/(?P<tag>[^/]+)': saved_variants_page,
     'summary_data/hpo/(?P<hpo_id>[^/]+)': hpo_summary_data,

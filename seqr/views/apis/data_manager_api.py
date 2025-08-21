@@ -22,7 +22,7 @@ from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.vcf_utils import validate_vcf_and_get_samples, get_vcf_list
 
-from seqr.views.utils.airflow_utils import trigger_airflow_data_loading, trigger_airflow_dag, is_airflow_enabled
+from seqr.views.utils.airflow_utils import trigger_airflow_data_loading, trigger_airflow_dag, is_airflow_enabled  # TODO still used anywhere?
 from seqr.views.utils.airtable_utils import AirtableSession, LOADABLE_PDO_STATUSES, AVAILABLE_PDO_STATUS
 from seqr.views.utils.dataset_utils import load_rna_seq, load_phenotype_prioritization_data_file, RNA_DATA_TYPE_CONFIGS, \
     post_process_rna_data, convert_django_meta_to_http_headers
@@ -438,36 +438,17 @@ def trigger_delete_family(request):
     request_json = json.loads(request.body)
     family_guid = request_json.pop('family')
     project = Project.objects.get(family__guid=family_guid)
-    return _trigger_data_update(project, family_guid=family_guid, dag_id='DELETE_FAMILIES', **request_json)
-
-
-@data_manager_required
-def trigger_update_search_reference_data(request):
-    request_json = json.loads(request.body)
-    return _trigger_data_update(project=None, dag_id='UPDATE_REFERENCE_DATASETS', **request_json)
+    return _trigger_data_update(project, clickhouse_func=_raise_backend_not_implemented, family_guid=family_guid, dag_id='DELETE_FAMILIES', **request_json)
 
 
 def _raise_backend_not_implemented(*args, **kwargs):
     raise ErrorsWarningsException(['This functionality is not available in the current search backend'])
 
 
-def _trigger_data_update(project, clickhouse_func=_raise_backend_not_implemented, **kwargs):
+def _trigger_data_update(project, clickhouse_func, **kwargs):
     kwargs = {_to_snake_case(k): v for k, v in kwargs.items()}
-    # TODO
-    info = backend_specific_call(_raise_backend_not_implemented, _trigger_dag, clickhouse_func)(project, **kwargs)
+    info = backend_specific_call(_raise_backend_not_implemented, clickhouse_func)(project, **kwargs)
     return create_json_response({'info': [info]})
-
-
-def  _trigger_dag(project, dag_id=None, family_guid=None, **kwargs):
-    if not is_airflow_enabled():
-        raise PermissionDenied()
-    if family_guid:
-        kwargs['family_guids'] = [family_guid]
-    try:
-        dag_variables = trigger_airflow_dag(dag_id, project, **kwargs)
-    except Exception as e:
-        raise ErrorsWarningsException([str(e)])
-    return f'Triggered DAG {dag_id} with variables: {json.dumps(dag_variables)}'
 
 
 # Hop-by-hop HTTP response headers shouldn't be forwarded.

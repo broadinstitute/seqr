@@ -9,7 +9,6 @@ import {
   DATASET_TYPE_SNV_INDEL_CALLS,
   DATASET_TYPE_SV_CALLS,
   DATASET_TYPE_MITO_CALLS,
-  GENOME_VERSION_FIELD,
 } from 'shared/utils/constants'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 
@@ -46,10 +45,6 @@ const FAMILY_FIELDS = [
   },
   DATASET_TYPE_FIELD,
 ]
-const REFERENCE_DATASET_FIELDS = [
-  { ...GENOME_VERSION_FIELD, validate: validators.required },
-  DATASET_TYPE_FIELD,
-]
 
 const TriggerSearchDataUpdateForm = ({ path, fields }) => (
   <SubmitFormPage
@@ -72,12 +67,7 @@ const TriggerDeleteFamilies = () => (
   <TriggerSearchDataUpdateForm path="delete_family" fields={FAMILY_FIELDS} />
 )
 
-const TriggerUpdateReferenceDataset = () => (
-  <TriggerSearchDataUpdateForm path="update_reference_datasets" fields={REFERENCE_DATASET_FIELDS} />
-)
-
 export default [
   { path: 'delete_search_project', component: TriggerDeleteProjects },
   { path: 'delete_search_family', component: TriggerDeleteFamilies },
-  { path: 'update_search_reference_data', component: TriggerUpdateReferenceDataset },
 ]
