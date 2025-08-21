@@ -14,7 +14,6 @@ from clickhouse_search.models import (
 )
 from reference_data.models import DataVersions
 from seqr.management.commands.reload_clinvar_all_variants import BATCH_SIZE, WEEKLY_XML_RELEASE
-from seqr.views.utils.test_utils import DifferentDbTransactionSupportMixin
 
 WEEKLY_XML_RELEASE_HEADER = '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?><ClinVarVariationRelease xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://ftp.ncbi.nlm.nih.gov/pub/clinvar/xsd_public/ClinVar_VCV_2.4.xsd" ReleaseDate="2025-06-30">'''
 WEEKLY_XML_RELEASE_DATA = WEEKLY_XML_RELEASE_HEADER + '''
@@ -83,14 +82,9 @@ WEEKLY_XML_RELEASE_DATA = WEEKLY_XML_RELEASE_HEADER + '''
 
 @mock.patch('seqr.management.commands.reload_clinvar_all_variants.safe_post_to_slack')
 @mock.patch('seqr.management.commands.reload_clinvar_all_variants.logger.info')
-class ReloadClinvarAllVariantsTest(DifferentDbTransactionSupportMixin, TestCase):
+class ReloadClinvarAllVariantsTest(TestCase):
     databases = '__all__'
     fixtures = ['clinvar_all_variants']
-
-    def tearDown(self):
-        ClinvarAllVariantsSnvIndel.objects.using('clickhouse_write').all().delete()
-        ClinvarAllVariantsGRCh37SnvIndel.objects.using('clickhouse_write').all().delete()
-        ClinvarAllVariantsMito.objects.using('clickhouse_write').all().delete()
 
     @responses.activate
     def test_update_with_no_previous_version(self, mock_logger, mock_safe_post_to_slack):
