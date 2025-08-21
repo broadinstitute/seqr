@@ -6,8 +6,8 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.core.management import call_command
 from django.core.management.base import CommandError
 
-from clickhouse_search.models import EntriesSnvIndel, EntriesMito, EntriesSv, ProjectGtStatsSnvIndel, \
-    ProjectGtStatsMito, ProjectGtStatsSv, AnnotationsSnvIndel, AnnotationsMito, AnnotationsSv
+from clickhouse_search.models import EntriesSnvIndel, EntriesMito, EntriesGcnv, ProjectGtStatsSnvIndel, \
+    ProjectGtStatsMito, AnnotationsSnvIndel, AnnotationsMito
 from seqr.models import Sample, Project
 from seqr.views.utils.test_utils import AirflowTestCase, AnvilAuthenticationTestCase, AuthenticationTestCase
 
@@ -70,8 +70,8 @@ class ClickhouseDeactivateProjectSearchTest(AnvilAuthenticationTestCase, Deactiv
 
     DELETE_SUCCESS_LOGS = [
         ('Deleted all MITO search data for project 1kg project nåme with uniçøde', None),
-        ('Deleted all SV search data for project 1kg project nåme with uniçøde', None),
         ('Deleted all SNV_INDEL search data for project 1kg project nåme with uniçøde', None),
+        ('Deleted all GCNV search data for project 1kg project nåme with uniçøde', None),
     ]
 
     def _assert_expected_delete(self):
@@ -79,8 +79,7 @@ class ClickhouseDeactivateProjectSearchTest(AnvilAuthenticationTestCase, Deactiv
         self.assertEqual(ProjectGtStatsSnvIndel.objects.filter(project_guid=PROJECT_GUID).count(), 0)
         self.assertEqual(EntriesMito.objects.filter(project_guid=PROJECT_GUID).count(), 0)
         self.assertEqual(ProjectGtStatsMito.objects.filter(project_guid=PROJECT_GUID).count(), 0)
-        self.assertEqual(EntriesSv.objects.filter(project_guid=PROJECT_GUID).count(), 0)
-        self.assertEqual(ProjectGtStatsSv.objects.filter(project_guid=PROJECT_GUID).count(), 0)
+        self.assertEqual(EntriesGcnv.objects.filter(project_guid=PROJECT_GUID).count(), 0)
 
         updated_seqr_pops_by_key = dict(AnnotationsSnvIndel.objects.all().join_seqr_pop().values_list('key', 'seqrPop'))
         self.assertDictEqual(updated_seqr_pops_by_key, {
@@ -91,6 +90,13 @@ class ClickhouseDeactivateProjectSearchTest(AnvilAuthenticationTestCase, Deactiv
             5: (1, 1, 0, 0),
             6: (0, 0, 0, 0),
             22: (0, 3, 0, 1),
+        })
+
+        updated_mito_pops_by_key = dict(AnnotationsMito.objects.all().join_seqr_pop().values_list('key', 'seqrPop'))
+        self.assertDictEqual(updated_mito_pops_by_key, {
+            6: (0, 0, 0, 0),
+            7: (0, 0, 0, 0),
+            8: (0, 0, 0, 0),
         })
 
 
@@ -107,8 +113,8 @@ class HailBackendDeactivateProjectSearchTest(AirflowTestCase, DeactivateProjectS
 
     DELETE_SUCCESS_LOGS = [
         ('Successfully triggered DELETE_PROJECTS DAG for MITO R0001_1kg', None),
-        ('Successfully triggered DELETE_PROJECTS DAG for SV R0001_1kg', None),
         ('Successfully triggered DELETE_PROJECTS DAG for SNV_INDEL R0001_1kg', None),
+        ('Successfully triggered DELETE_PROJECTS DAG for SV R0001_1kg', None),
     ]
 
     def _assert_expected_delete(self):
