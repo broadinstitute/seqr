@@ -24,6 +24,7 @@ class DagRunningException(Exception):
 
 
 def is_airflow_enabled():
+    # TODO unused
     return bool(AIRFLOW_WEBSERVER_URL)
 
 
@@ -53,6 +54,7 @@ def trigger_airflow_data_loading(*args, user: User, success_message: str, succes
 
 
 def trigger_airflow_dag(dag_id: str, project: Project, dataset_type: str, genome_version: str = None, **kwargs):
+    # TODO unused
     variables = format_loading_pipeline_variables(
         [project] if project else [],
         project.genome_version if project else genome_version,
