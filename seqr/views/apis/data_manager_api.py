@@ -453,6 +453,7 @@ def _raise_backend_not_implemented(*args, **kwargs):
 
 def _trigger_data_update(project, clickhouse_func=_raise_backend_not_implemented, **kwargs):
     kwargs = {_to_snake_case(k): v for k, v in kwargs.items()}
+    # TODO
     info = backend_specific_call(_raise_backend_not_implemented, _trigger_dag, clickhouse_func)(project, **kwargs)
     return create_json_response({'info': [info]})
 

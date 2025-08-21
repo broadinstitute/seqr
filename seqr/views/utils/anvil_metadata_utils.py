@@ -347,7 +347,7 @@ def _get_parsed_saved_discovery_variants_by_family(
     variants = []
     gene_ids = set()
     variant_json_by_guid = backend_specific_call(
-        _get_variant_json_by_guid, _get_variant_json_by_guid, _get_clickhouse_variant_json_by_guid,
+        _get_variant_json_by_guid, _get_clickhouse_variant_json_by_guid,
     )(project_saved_variants, include_clinvar)
     for variant in project_saved_variants:
         chrom, pos = get_chrom_pos(variant.xpos)
