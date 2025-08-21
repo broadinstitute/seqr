@@ -259,12 +259,11 @@ class Command(BaseCommand):
                             logger.info(f'Clinvar ClickHouse tables already successfully updated to {new_version}, gracefully exiting.')
                             return
                     logger.info(f'Updating Clinvar ClickHouse tables to {new_version} from {existing_version_obj and existing_version_obj.version}.')
-                    loaded_clinvar_versions = ClinvarAllVariantsSnvIndel.objects.values_list('version', flat=True).distinct()
                     # Drop any currently existing variants in the table that may exist due to a
                     # previously failed partial run.  Note that we validate that the Postgresql existing version
                     # is present in ClickHouse to account for the situation where Postgresql has an incorrect
                     # version.
-                    if existing_version_obj and existing_version_obj.version in loaded_clinvar_versions:
+                    if existing_version_obj and ClinvarAllVariantsSnvIndel.objects.filter(version=existing_version_obj.version).exists():
                         clinvar_run_sql(
                             Template(f"ALTER TABLE `$reference_genome/$dataset_type/clinvar_all_variants` DROP PARTITION '{new_version}';")
                         )
