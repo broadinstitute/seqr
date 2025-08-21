@@ -4,27 +4,20 @@ import google.auth
 from google.auth.transport.requests import AuthorizedSession
 import json
 
-from seqr.models import Project
 from seqr.utils.communication_utils import safe_post_to_slack
-from seqr.utils.search.add_data_utils import prepare_data_loading_request, format_loading_pipeline_variables
+from seqr.utils.search.add_data_utils import prepare_data_loading_request
 from seqr.utils.logging_utils import SeqrLogger
 from settings import AIRFLOW_WEBSERVER_URL, SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
 
 logger = SeqrLogger(__name__)
 
 LOADING_PIPELINE_DAG_NAME = 'LOADING_PIPELINE'
-DELETE_FAMILIES_DAG_NAME = 'DELETE_FAMILIES'
-DELETE_PROJECTS_DAG_NAME = 'DELETE_PROJECTS'
 AIRFLOW_AUTH_SCOPE = "https://www.googleapis.com/auth/cloud-platform"
 SEQR_V3_PEDIGREE_GS_PATH = 'gs://seqr-loading-temp/v3.1'
 
 
 class DagRunningException(Exception):
     pass
-
-
-def is_airflow_enabled():
-    return bool(AIRFLOW_WEBSERVER_URL)
 
 
 def trigger_airflow_data_loading(*args, user: User, success_message: str, success_slack_channel: str,
@@ -50,20 +43,6 @@ def trigger_airflow_data_loading(*args, user: User, success_message: str, succes
     if success or success_slack_channel != SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL:
         _send_load_data_slack_msg([success_message] + upload_info, success_slack_channel, updated_variables)
     return success
-
-
-def trigger_airflow_dag(dag_id: str, project: Project, dataset_type: str, genome_version: str = None, **kwargs):
-    variables = format_loading_pipeline_variables(
-        [project] if project else [],
-        project.genome_version if project else genome_version,
-        dataset_type,
-        **kwargs
-    )
-    _check_dag_running_state(dag_id)
-    _update_variables(variables, dag_id)
-    _wait_for_dag_variable_update(variables, dag_id)
-    _trigger_dag(dag_id)
-    return variables
 
 
 def _send_load_data_slack_msg(messages: list[str], channel: str, dag: dict):
@@ -98,12 +77,6 @@ def _wait_for_dag_variable_update_via_tasks(projects: list[str], dag_name: str):
     dag_projects = _get_task_ids(dag_name)
     while all(p not in ''.join(dag_projects) for p in projects):
         dag_projects = _get_task_ids(dag_name)
-
-
-def _wait_for_dag_variable_update(variables: dict, dag_name: str):
-    existing_variables = _get_variables(dag_name)
-    while any(existing_variables.get(k) != v for k, v in variables.items()):
-        existing_variables = _get_variables(dag_name)
 
 
 def _update_variables(val: dict, dag_name: str):

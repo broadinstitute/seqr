@@ -103,7 +103,7 @@ def update_airtable_loading_tracking_status(project, status, additional_update=N
         update={'Status': status, **(additional_update or {})},
     )
 
-def format_loading_pipeline_variables(
+def _format_loading_pipeline_variables(
     projects: list[Project], genome_version: str, dataset_type: str, sample_type: str = None, **kwargs
 ):
     variables = {
@@ -119,7 +119,7 @@ def format_loading_pipeline_variables(
 def prepare_data_loading_request(projects: list[Project], individual_ids: list[int], sample_type: str, dataset_type: str, genome_version: str,
                                  data_path: str, user: User, pedigree_dir: str,  raise_pedigree_error: bool = False,
                                  skip_validation: bool = False, skip_check_sex_and_relatedness: bool = False, vcf_sample_id_map=None):
-    variables = format_loading_pipeline_variables(
+    variables = _format_loading_pipeline_variables(
         projects,
         genome_version,
         dataset_type,
