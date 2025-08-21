@@ -1,16 +1,13 @@
-from collections import defaultdict
-
 from django.core.management.base import BaseCommand
 
 from seqr.models import Project, Family, VariantTag, VariantTagType, Sample
 from seqr.utils.search.utils import backend_specific_call
-from seqr.views.utils.airflow_utils import trigger_airflow_dag, DELETE_FAMILIES_DAG_NAME, DagRunningException
 
 import logging
 logger = logging.getLogger(__name__)
 
 
-def _disable_search(families, from_project):
+def _disable_search(families):
     search_samples = Sample.objects.filter(is_active=True, individual__family__in=families)
     updated_family_dataset_types = None
     if search_samples:
@@ -23,19 +20,6 @@ def _disable_search(families, from_project):
         )
     return updated_family_dataset_types
 
-def _disable_search_trigger_delete_families_dags(families, from_project):
-    updated_family_dataset_types = _disable_search(families, from_project)
-    updated_families_by_dataset_type = defaultdict(list)
-    for dataset_type, family_guid in updated_family_dataset_types:
-        updated_families_by_dataset_type[dataset_type].append(family_guid)
-
-    for dataset_type, family_guids in sorted(updated_families_by_dataset_type.items()):
-        try:
-            trigger_airflow_dag(DELETE_FAMILIES_DAG_NAME, from_project, dataset_type, family_guids=sorted(family_guids))
-            logger.info(f'Successfully triggered DELETE_FAMILIES DAG for {len(family_guids)} {dataset_type} families')
-        except Exception as e:
-            logger_call = logger.warning if isinstance(e, DagRunningException) else logger.error
-            logger_call(str(e))
 
 class Command(BaseCommand):
     def add_arguments(self, parser):
@@ -64,7 +48,7 @@ class Command(BaseCommand):
             ]
             logger.info(f'Skipping {num_found - len(families)} families with analysis groups in the project: {", ".join(group_families)}')
 
-        backend_specific_call(lambda *args: None, _disable_search)(families, from_project)
+        backend_specific_call(lambda *args: None, _disable_search)(families)
 
         for variant_tag_type in VariantTagType.objects.filter(project=from_project):
             variant_tags = VariantTag.objects.filter(saved_variants__family__in=families, variant_tag_type=variant_tag_type)
