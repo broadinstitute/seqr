@@ -916,11 +916,23 @@ class VariantSearchAPITest(object):
             'lookupFamilyGuids': ['F0_1-10439-AC-A', 'F1_1-10439-AC-A', 'F2_1-10439-AC-A'],
             'liftedFamilyGuids': ['F2_1-10439-AC-A'],
             'genotypes': {
-                'I0_F0_1-10439-AC-A': {'ab': 0.0, 'dp': 60, 'gq': 20, 'numAlt': 0, 'filters': [], 'sampleType': 'WES'},
-                'I1_F0_1-10439-AC-A': {'ab': 0.0, 'dp': 24, 'gq': 0, 'numAlt': 0, 'filters': [], 'sampleType': 'WES'},
-                'I2_F0_1-10439-AC-A': {'ab': 0.5, 'dp': 10, 'gq': 99, 'numAlt': 1, 'filters': [], 'sampleType': 'WES'},
-                'I0_F1_1-10439-AC-A': {'ab': 1.0, 'dp': 6, 'gq': 16, 'numAlt': 2, 'filters': [], 'sampleType': 'WES'},
-                'I0_F2_1-10439-AC-A': {'ab': 0.531000018119812, 'dp': 27, 'gq': 87, 'numAlt': 1, 'filters': None, 'sampleType': 'WGS'},
+                'I0_F0_1-10439-AC-A': [
+                    {'ab': 0.0, 'dp': 60, 'gq': 20, 'numAlt': 0, 'filters': [], 'sampleType': 'WES'},
+                    {'ab': 0.0, 'dp': 60, 'gq': 20, 'numAlt': 0, 'filters': [], 'sampleType': 'WGS'},
+                ],
+                'I1_F0_1-10439-AC-A': [
+                    {'ab': 0.0, 'dp': 24, 'gq': 0, 'numAlt': 0, 'filters': [], 'sampleType': 'WES'},
+                    {'ab': 0.0, 'dp': 24, 'gq': 99, 'numAlt': 1, 'filters': [], 'sampleType': 'WGS'},
+                ],
+                'I2_F0_1-10439-AC-A': [
+                    {'ab': 0.5, 'dp': 10, 'gq': 99, 'numAlt': 1, 'filters': [], 'sampleType': 'WES'},
+                    {'ab': 0.5, 'dp': 10, 'gq': 99, 'numAlt': 2, 'filters': [], 'sampleType': 'WGS'},
+                ],
+                'I0_F1_1-10439-AC-A': [
+                    {'ab': 1.0, 'dp': 6, 'gq': 16, 'numAlt': 2, 'filters': [], 'sampleType': 'WES'},
+                    {'ab': 1.0, 'dp': 6, 'gq': 16, 'numAlt': 2, 'filters': [], 'sampleType': 'WGS'},
+                ],
+                'I0_F2_1-10439-AC-A': {'ab': 0.531, 'dp': 27, 'gq': 87, 'numAlt': 1, 'filters': [], 'sampleType': 'WGS'},
             },
         }
         del expected_variant['familyGenotypes']
@@ -983,18 +995,33 @@ class VariantSearchAPITest(object):
         self.assertEqual(response.status_code, 200)
 
         individual_guid_map = [
-            ('I000006_hg00733', 'I0_F0_1-10439-AC-A', {'sampleId': 'HG00733', 'familyGuid': 'F000002_2'}),
-            ('I000005_hg00732', 'I1_F0_1-10439-AC-A', {'sampleId': 'HG00732', 'familyGuid': 'F000002_2'}),
-            ('I000004_hg00731', 'I2_F0_1-10439-AC-A', {'sampleId': 'HG00731', 'familyGuid': 'F000002_2'}),
-            ('I000015_na20885', 'I0_F1_1-10439-AC-A', {'sampleId': 'NA20885', 'familyGuid': 'F000011_11'}),
+            ('I000006_hg00733', 'I0_F0_1-10439-AC-A', [
+                {'sampleId': 'HG00733', 'familyGuid': 'F000002_2'},
+                {'sampleId': 'HG00733', 'familyGuid': 'F000002_2'},
+            ],),
+            ('I000005_hg00732', 'I1_F0_1-10439-AC-A', [
+                {'sampleId': 'HG00732', 'familyGuid': 'F000002_2'},
+                {'sampleId': 'HG00732', 'familyGuid': 'F000002_2'},
+            ]),
+            ('I000004_hg00731', 'I2_F0_1-10439-AC-A', [
+                {'sampleId': 'HG00731', 'familyGuid': 'F000002_2'},
+                {'sampleId': 'HG00731', 'familyGuid': 'F000002_2', 'numAlt': 2},
+            ]),
+            ('I000015_na20885', 'I0_F1_1-10439-AC-A', [
+                {'sampleId': 'NA20885', 'familyGuid': 'F000011_11'},
+                {'sampleId': 'NA20885', 'familyGuid': 'F000011_11'},
+            ]),
             ('I000018_na21234', 'I0_F2_1-10439-AC-A', {'sampleId': 'NA21234', 'familyGuid': 'F000014_14'}),
         ]
         expected_variant.update({
             'lookupFamilyGuids': ['F000002_2', 'F000011_11', 'F000014_14'],
             'liftedFamilyGuids': ['F000014_14'],
             'genotypes': {
-                individual_guid: {**expected_variant['genotypes'][anon_individual_guid], **genotype}
-                for individual_guid, anon_individual_guid, genotype in individual_guid_map
+                individual_guid: [
+                    {**sample_genotype, **genotype[i]} for i, sample_genotype in enumerate(expected_variant['genotypes'][anon_individual_guid])
+                ] if isinstance(expected_variant['genotypes'][anon_individual_guid], list) else {
+                    **expected_variant['genotypes'][anon_individual_guid], **genotype,
+                } for individual_guid, anon_individual_guid, genotype in individual_guid_map
             },
             'genomeVersion': '37',
             'variantId': '1-248367227-TC-T',
