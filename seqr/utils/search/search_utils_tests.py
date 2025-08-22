@@ -648,58 +648,6 @@ class ElasticsearchSearchUtilsTests(TestCase, SearchUtilsTests):
         pass
 
 
-@mock.patch('clickhouse_search.search.CLICKHOUSE_SERVICE_HOSTNAME', '')
-class HailSearchUtilsTests(TestCase, SearchUtilsTests):
-    databases = ['default', 'reference_data']
-    fixtures = ['users', '1kg_project', 'reference_data']
-
-    def setUp(self):
-        self.set_up()
-
-    def _assert_expected_search_locus(self, *args, gene_ids=None, exclude_locations=None, parsed_variant_ids=None, variant_ids=None, **kwargs):
-        super()._assert_expected_search_locus(
-            *args, gene_ids=None if exclude_locations else gene_ids, variant_ids=parsed_variant_ids,
-            exclude_intervals=exclude_locations, **kwargs,
-        )
-
-    @mock.patch('seqr.utils.search.utils.hail_variant_lookup')
-    def test_variant_lookup(self, mock_variant_lookup):
-        super(HailSearchUtilsTests, self).test_variant_lookup(mock_variant_lookup)
-
-    @mock.patch('seqr.utils.search.utils.get_hail_variants')
-    @mock.patch('seqr.utils.search.utils.hail_variant_lookup')
-    def test_sv_variant_lookup(self, mock_sv_variant_lookup, mock_get_variants):
-        super(HailSearchUtilsTests, self).test_sv_variant_lookup(mock_sv_variant_lookup, mock_get_variants)
-
-    @mock.patch('seqr.utils.search.utils.get_hail_variants_for_variant_ids')
-    def test_get_single_variant(self, mock_call):
-        mock_call.return_value = [PARSED_VARIANTS[0]]
-        super(HailSearchUtilsTests, self).test_get_single_variant(mock_call)
-
-    @mock.patch('seqr.utils.search.utils.get_hail_variants_for_variant_ids')
-    def test_get_variants_for_variant_ids(self, mock_call):
-        super(HailSearchUtilsTests, self).test_get_variants_for_variant_ids(mock_call)
-
-    @mock.patch('seqr.utils.search.utils.get_hail_variants')
-    def test_query_variants(self, mock_call):
-        super(HailSearchUtilsTests, self).test_query_variants(mock_call)
-
-    @mock.patch('seqr.utils.search.utils.get_hail_variants')
-    def test_get_variant_query_gene_counts(self, mock_call):
-        super(HailSearchUtilsTests, self).test_get_variant_query_gene_counts(mock_call)
-
-    def test_cached_get_variant_query_gene_counts(self):
-        super(HailSearchUtilsTests, self).test_cached_get_variant_query_gene_counts()
-
-        self.set_cache({'all_results': [PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT] + [SV_VARIANT1], 'total_results': 2})
-        gene_counts = get_variant_query_gene_counts(self.results_model, self.user)
-        self.assertDictEqual(gene_counts, {
-            'ENSG00000135953': {'total': 2, 'families': {'F000003_3': 2, 'F000011_11': 2}},
-            'ENSG00000228198': {'total': 2, 'families': {'F000003_3': 2, 'F000011_11': 2}},
-            'ENSG00000171621': {'total': 1, 'families': {'F000011_11': 1}},
-        })
-
-
 @mock.patch('clickhouse_search.search.CLICKHOUSE_SERVICE_HOSTNAME', 'testhost')
 class ClickhouseSearchUtilsTests(DifferentDbTransactionSupportMixin, TestCase, SearchUtilsTests):
     databases = '__all__'
