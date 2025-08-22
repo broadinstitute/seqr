@@ -995,22 +995,10 @@ class VariantSearchAPITest(object):
         self.assertEqual(response.status_code, 200)
 
         individual_guid_map = [
-            ('I000006_hg00733', 'I0_F0_1-10439-AC-A', [
-                {'sampleId': 'HG00733', 'familyGuid': 'F000002_2'},
-                {'sampleId': 'HG00733', 'familyGuid': 'F000002_2'},
-            ],),
-            ('I000005_hg00732', 'I1_F0_1-10439-AC-A', [
-                {'sampleId': 'HG00732', 'familyGuid': 'F000002_2'},
-                {'sampleId': 'HG00732', 'familyGuid': 'F000002_2'},
-            ]),
-            ('I000004_hg00731', 'I2_F0_1-10439-AC-A', [
-                {'sampleId': 'HG00731', 'familyGuid': 'F000002_2'},
-                {'sampleId': 'HG00731', 'familyGuid': 'F000002_2', 'numAlt': 2},
-            ]),
-            ('I000015_na20885', 'I0_F1_1-10439-AC-A', [
-                {'sampleId': 'NA20885', 'familyGuid': 'F000011_11'},
-                {'sampleId': 'NA20885', 'familyGuid': 'F000011_11'},
-            ]),
+            ('I000006_hg00733', 'I0_F0_1-10439-AC-A', {'sampleId': 'HG00733', 'familyGuid': 'F000002_2'}),
+            ('I000005_hg00732', 'I1_F0_1-10439-AC-A', {'sampleId': 'HG00732', 'familyGuid': 'F000002_2'}),
+            ('I000004_hg00731', 'I2_F0_1-10439-AC-A', {'sampleId': 'HG00731', 'familyGuid': 'F000002_2'}),
+            ('I000015_na20885', 'I0_F1_1-10439-AC-A', {'sampleId': 'NA20885', 'familyGuid': 'F000011_11'}),
             ('I000018_na21234', 'I0_F2_1-10439-AC-A', {'sampleId': 'NA21234', 'familyGuid': 'F000014_14'}),
         ]
         expected_variant.update({
@@ -1018,7 +1006,7 @@ class VariantSearchAPITest(object):
             'liftedFamilyGuids': ['F000014_14'],
             'genotypes': {
                 individual_guid: [
-                    {**sample_genotype, **genotype[i]} for i, sample_genotype in enumerate(expected_variant['genotypes'][anon_individual_guid])
+                    {**sample_genotype, **genotype} for sample_genotype in expected_variant['genotypes'][anon_individual_guid]
                 ] if isinstance(expected_variant['genotypes'][anon_individual_guid], list) else {
                     **expected_variant['genotypes'][anon_individual_guid], **genotype,
                 } for individual_guid, anon_individual_guid, genotype in individual_guid_map
