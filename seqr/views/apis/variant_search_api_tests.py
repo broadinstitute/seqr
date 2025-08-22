@@ -7,7 +7,7 @@ from django.db import transaction
 from django.urls.base import reverse
 from elasticsearch.exceptions import ConnectionTimeout, TransportError
 
-from hail_search.test_utils import HAIL_BACKEND_SINGLE_FAMILY_VARIANTS, VARIANT_LOOKUP_VARIANT, GCNV_VARIANT1, SV_VARIANT1
+from clickhouse_search.test_utils import VARIANT2, VARIANT3, VARIANT_LOOKUP_VARIANT, GCNV_VARIANT1, SV_VARIANT1
 from seqr.models import VariantSearchResults, LocusList, Project, VariantSearch
 from seqr.utils.search.utils import InvalidSearchException
 from seqr.utils.search.elasticsearch.es_utils import InvalidIndexException
@@ -25,7 +25,9 @@ SEARCH_HASH = 'd380ed0fd28c3127d07a64ea2ba907d7'
 SEARCH = {'filters': {}, 'inheritance': None}
 PROJECT_FAMILIES = [{'projectGuid': PROJECT_GUID, 'familyGuids': ['F000001_1', 'F000002_2']}]
 
-VARIANTS_WITH_DISCOVERY_TAGS = deepcopy(VARIANTS + HAIL_BACKEND_SINGLE_FAMILY_VARIANTS)
+ALL_VARIANTS = VARIANTS + [VARIANT2, VARIANT3]
+
+VARIANTS_WITH_DISCOVERY_TAGS = deepcopy(ALL_VARIANTS)
 DISCOVERY_TAGS = [{
     'savedVariant': {
         'variantGuid': 'SV0000006_1248367227_r0003_tes',
@@ -87,7 +89,7 @@ EXPECTED_LIRICAL_DATA = [
 ]
 
 EXPECTED_SEARCH_RESPONSE = {
-    'searchedVariants': VARIANTS + HAIL_BACKEND_SINGLE_FAMILY_VARIANTS,
+    'searchedVariants': ALL_VARIANTS,
     'savedVariantsByGuid': {
         'SV0000001_2103343353_r0390_100': expected_detail_saved_variant,
         'SV0000002_1248367227_r0390_100': EXPECTED_SAVED_VARIANT,
@@ -260,7 +262,7 @@ VLM_MATCH_RESPONSE_2 = {
 
 def _get_es_variants(results_model, **kwargs):
     results_model.save()
-    return deepcopy(VARIANTS + HAIL_BACKEND_SINGLE_FAMILY_VARIANTS), len(VARIANTS + HAIL_BACKEND_SINGLE_FAMILY_VARIANTS)
+    return deepcopy(ALL_VARIANTS), len(ALL_VARIANTS)
 
 
 def _get_empty_es_variants(results_model, **kwargs):
@@ -529,15 +531,15 @@ class VariantSearchAPITest(object):
             ['12', '48367227', 'TC', 'T', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
              '', '2', 'AIP (None)|Known gene for phenotype (None)|Excluded (None)', 'a later note (None)|test n\xf8te (None)', '', '', '', '', '', '',
              '', '', '', '', '', '', '', '',  '', '', '', ''],
-            ['1', '38724419', 'T', 'G', 'ENSG00000177000', 'missense_variant', '28', '0.29499998688697815', '0',
-             '0.28899794816970825', '0.24615199863910675', '20.899999618530273', '0.19699999690055847',
-             '2.000999927520752', '0.0', '0.1', '0.05', '', '', 'rs1801131', 'ENST00000383791.8:c.156A>C',
+            ['1', '38724419', 'T', 'G', 'ENSG00000177000', 'missense_variant', '10', '0.295', '0',
+             '0.289', '0.24615', '20.9', '0.197',
+             '2.001', '0.0', '0.1', '0.05', '', '', 'rs1801131', 'ENST00000383791.8:c.156A>C',
              'ENSP00000373301.3:p.Leu52Phe', 'Conflicting_classifications_of_pathogenicity', '1', '2', '', '', '', '', '', 'HG00731', '2', '', '99', '1.0',
              'HG00732', '1', '', '99', '0.625', 'HG00733', '0', '', '40', '0.0'],
-            ['1', '91502721', 'G', 'A', 'ENSG00000097046', 'intron_variant', '4', '0.0', '0.38041073083877563', '0.0',
-             '0.36268100142478943', '2.753999948501587', '', '1.378000020980835', '0.009999999776482582', '', '', '',
+            ['1', '91502721', 'G', 'A', 'ENSG00000097046', 'intron_variant', '7', '0.0', '0.38041', '0.0',
+             '0.36268', '2.754', '', '1.378', '0.01', '', '', '',
              '', 'rs13447464', 'ENST00000234626.11:c.-63-251G>A', '', '', '', '2', '', '', '', '', '', 'HG00731',
-             '1', '', '99', '1.0', 'HG00732', '0', '', '99', '0.4594594594594595', 'HG00733', '1', '', '99', '0.4074074074074074'],
+             '1', '', '99', '1.0', 'HG00732', '0', '', '99', '0.45946', 'HG00733', '1', '', '99', '0.40741'],
         ]
         self.assertListEqual([line.split('\t') for line in response.content.decode().strip().split('\n')], expected_content)
 
@@ -563,16 +565,16 @@ class VariantSearchAPITest(object):
                 ['12', '48367227', 'TC', 'T', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
                  '2', 'AIP (None)|Known gene for phenotype (None)|Excluded (None)', 'a later note (None)|test n\xf8te (None)',
                  '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',],
-                ['1', '38724419', 'T', 'G', 'ENSG00000177000', 'missense_variant', '28', '0.29499998688697815', '0',
-                 '0.28899794816970825', '0.24615199863910675', '20.899999618530273', '0.19699999690055847',
-                 '2.000999927520752', '0.0', '0.1', '0.05', '', '', 'rs1801131', 'ENST00000383791.8:c.156A>C',
+                ['1', '38724419', 'T', 'G', 'ENSG00000177000', 'missense_variant', '10', '0.295', '0',
+                 '0.289', '0.24615', '20.9', '0.197',
+                 '2.001', '0.0', '0.1', '0.05', '', '', 'rs1801131', 'ENST00000383791.8:c.156A>C',
                  'ENSP00000373301.3:p.Leu52Phe', 'Conflicting_classifications_of_pathogenicity', '1', '2', '', '', 'HG00731', '2', '', '99', '1.0',
                  'HG00732', '1', '', '99', '0.625', 'HG00733', '0', '', '40', '0.0'],
-                ['1', '91502721', 'G', 'A', 'ENSG00000097046', 'intron_variant', '4', '0.0', '0.38041073083877563', '0.0',
-                 '0.36268100142478943', '2.753999948501587', '', '1.378000020980835', '0.009999999776482582', '', '',
+                ['1', '91502721', 'G', 'A', 'ENSG00000097046', 'intron_variant', '7', '0.0', '0.38041', '0.0',
+                 '0.36268', '2.754', '', '1.378', '0.01', '', '',
                  '', '', 'rs13447464', 'ENST00000234626.11:c.-63-251G>A', '', '', '', '2', '', '', 'HG00731',
-                 '1', '', '99', '1.0', 'HG00732', '0', '', '99', '0.4594594594594595', 'HG00733', '1', '', '99',
-                 '0.4074074074074074'],
+                 '1', '', '99', '1.0', 'HG00732', '0', '', '99', '0.45946', 'HG00733', '1', '', '99',
+                 '0.40741'],
             ]
             self.assertListEqual([line.split('\t') for line in response.content.decode().strip().split('\n')], expected_content)
 
@@ -668,7 +670,7 @@ class VariantSearchAPITest(object):
             results_model.save()
             self.assertSetEqual(expected_searched_families, {f.guid for f in results_model.families.all()})
             matched_variants = [
-                deepcopy(variant) for variant in VARIANTS + HAIL_BACKEND_SINGLE_FAMILY_VARIANTS
+                deepcopy(variant) for variant in ALL_VARIANTS
                 if any(family_guid in expected_searched_families for family_guid in variant['familyGuids'])
             ]
             return matched_variants, len(matched_variants)
