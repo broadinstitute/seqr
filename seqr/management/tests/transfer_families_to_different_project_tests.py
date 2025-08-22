@@ -1,22 +1,25 @@
 import responses
 from django.core.management import call_command
-import mock
 
 from seqr.models import Family, VariantTagType, VariantTag, Sample
-from seqr.views.utils.test_utils import AirflowTestCase, AuthenticationTestCase
+from seqr.views.utils.test_utils import AirflowTestCase, AuthenticationTestCase, AnvilAuthenticationTestCase
 
 
 class TransferFamiliesTest(object):
 
-    def _test_command(self, additional_family, logs):
+    DEACTIVATE_SEARCH = True
+    LOGS = []
+
+    def test_command(self):
         call_command(
-            'transfer_families_to_different_project', '--from-project=R0001_1kg', '--to-project=R0003_test', additional_family, '2', '5',
+            'transfer_families_to_different_project', '--from-project=R0001_1kg', '--to-project=R0003_test', '2', '4', '5', '12',
         )
 
+        self.maxDiff = None
         self.assert_json_logs(user=None, expected=[
-            logs[0],
+            ('Found 3 out of 4 families. No match for: 12.', None),
             ('Skipping 1 families with analysis groups in the project: 5 (Test Group 1)', None),
-            *logs[1:],
+            *self.LOGS,
             ('Updating "Excluded" tags', None),
             ('Updating families', None),
             ('Done.', None),
@@ -36,23 +39,46 @@ class TransferFamiliesTest(object):
         self.assertEqual(len(new_tags), 1)
         self.assertEqual(new_tags[0].saved_variants.first().family, family)
 
-        return family
+        samples = Sample.objects.filter(individual__family=family)
+        self.assertEqual(samples.count(), 7)
+        self.assertEqual(samples.filter(is_active=True).count(), 0 if self.DEACTIVATE_SEARCH else 7)
+
+        family = Family.objects.get(family_id='4')
+        self.assertEqual(family.project.guid, 'R0003_test')
+        self.assertEqual(family.individual_set.count(), 1)
 
 
 class TransferFamiliesLocalTest(TransferFamiliesTest, AuthenticationTestCase):
     fixtures = ['users', '1kg_project']
 
+    DEACTIVATE_SEARCH = False
 
-    def test_es_command(self):
-        self._test_command(
-            additional_family='12', logs=[('Found 2 out of 3 families. No match for: 12.', None)]
-        )
+
+class TransferFamiliesClickhouseTest(TransferFamiliesTest, AnvilAuthenticationTestCase):
+    fixtures = ['users', '1kg_project']
+
+    ES_HOSTNAME = ''
+    LOGS = [
+        ('Disabled search for 7 samples in the following 1 families: 2', None),
+    ]
 
 
 class TransferFamiliesAirflowTest(TransferFamiliesTest, AirflowTestCase):
     fixtures = ['users', '1kg_project']
     PROJECT_GUID = 'R0001_1kg'  # from-project
     DAG_NAME = 'DELETE_FAMILIES'
+    ES_HOSTNAME = ''
+    CLICKHOUSE_HOSTNAME = ''
+
+    LOGS = [
+        ('Disabled search for 7 samples in the following 1 families: 2', None),
+        ('Successfully triggered DELETE_FAMILIES DAG for 1 MITO families', None),
+        ('Successfully triggered DELETE_FAMILIES DAG for 1 SNV_INDEL families', None),
+        ('400 Client Error: Bad Request for url: http://testairflowserver/api/v1/variables/DELETE_FAMILIES', {
+            'severity': 'ERROR',
+            '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent',
+        })
+    ]
 
     def setUp(self):
         super().setUp()
@@ -89,25 +115,6 @@ class TransferFamiliesAirflowTest(TransferFamiliesTest, AirflowTestCase):
         super()._assert_update_check_airflow_calls(call_count, offset, variables_update_check_path)
 
     @responses.activate
-    @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', '')
-    def test_hail_backend_command(self):
-        searchable_family = self._test_command(additional_family='4', logs=[
-            ('Found 3 out of 3 families.', None),
-            ('Disabled search for 7 samples in the following 1 families: 2', None),
-            ('Successfully triggered DELETE_FAMILIES DAG for 1 MITO families', None),
-            ('Successfully triggered DELETE_FAMILIES DAG for 1 SNV_INDEL families', None),
-            ('400 Client Error: Bad Request for url: http://testairflowserver/api/v1/variables/DELETE_FAMILIES', {
-                'severity': 'ERROR',
-                '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent',
-            })
-        ])
-
-        samples = Sample.objects.filter(individual__family=searchable_family)
-        self.assertEqual(samples.count(), 7)
-        self.assertEqual(samples.filter(is_active=True).count(), 0)
-
-        family = Family.objects.get(family_id='4')
-        self.assertEqual(family.project.guid, 'R0003_test')
-        self.assertEqual(family.individual_set.count(), 1)
-
+    def test_command(self):
+        super().test_command()
         self.assert_airflow_delete_families_calls()
