@@ -115,7 +115,7 @@ class SetSavedVariantKeyFailedMappingTest(SetSavedVariantKeyTest):
             ('Finding keys for 2 SNV_INDEL (GRCh38) variant ids', None),
             ('Found 0 keys', None),
             ('3 variants have no key, 1 of which have no search data, 1 of which are absent from the hail backend.', None),
-            ('1 remaining variants: M-14783-T-C - 14', None),
+            ('1 remaining variants: M-14783-T-C - fam14', None),
             ('Finding keys for 2 SV_WGS (GRCh38) variant ids', None),
             ('Found 0 keys', None),
             ('Finding keys for 2 SV_WES (GRCh38) variant ids', None),

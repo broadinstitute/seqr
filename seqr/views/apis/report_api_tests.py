@@ -784,7 +784,7 @@ class ReportAPITest(AirtableTest):
         response = self.client.get(no_analyst_project_url)
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['errors'],
-                         ['Discovery variant(s) 1-248367227-TC-T, MT-14783-T-C in family 14 have no associated gene'])
+                         ['Discovery variant(s) 1-248367227-TC-T, MT-14783-T-C in family fam14 have no associated gene'])
 
     @mock.patch('seqr.views.apis.report_api.GREGOR_DATA_MODEL_URL', MOCK_DATA_MODEL_URL)
     @mock.patch('seqr.views.apis.report_api.datetime')

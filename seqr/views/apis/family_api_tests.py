@@ -459,7 +459,7 @@ class FamilyAPITest(object):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertEqual(response_json['F000014_14']['description'], 'Updated description')
-        expected_id = 'new_id' if self._anvil_enabled() else '14'
+        expected_id = 'new_id' if self._anvil_enabled() else 'fam14'
         self.assertEqual(response_json['F000014_14'][FAMILY_ID_FIELD], expected_id)
         self.assertEqual(response_json['F000014_14']['displayName'], expected_id)
 

@@ -129,8 +129,8 @@ EXPECTED_SAMPLE_METADATA_ROW.update(EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW)
 EXPECTED_NO_GENE_SAMPLE_METADATA_ROW = {
     'participant_id': 'NA21234',
     'familyGuid': 'F000014_14',
-    'family_id': '14',
-    'displayName': '14',
+    'family_id': 'fam14',
+    'displayName': 'fam14',
     'projectGuid': 'R0004_non_analyst_project',
     'internal_project_id': 'Non-Analyst Project',
     'affected_status': 'Affected',
