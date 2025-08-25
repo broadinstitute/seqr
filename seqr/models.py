@@ -6,7 +6,7 @@ from django.contrib.auth.models import User, Group
 from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import models
-from django.db.models import base, options, ForeignKey, JSONField, prefetch_related_objects
+from django.db.models import base, options, prefetch_related_objects
 from django.utils import timezone
 from django.utils.text import slugify as __slugify
 
@@ -340,7 +340,7 @@ class Family(ModelWithGUID):
     description = models.TextField(null=True, blank=True)
 
     pedigree_image = models.ImageField(null=True, blank=True, upload_to='pedigree_images')
-    pedigree_dataset = JSONField(null=True, blank=True)
+    pedigree_dataset = models.JSONField(null=True, blank=True)
 
     assigned_analyst = models.ForeignKey(User, null=True, on_delete=models.SET_NULL,
                                     related_name='assigned_families')  # type: ForeignKey
@@ -639,19 +639,19 @@ class Individual(ModelWithGUID):
     expected_inheritance = ArrayField(models.CharField(max_length=1, choices=INHERITANCE_CHOICES), null=True)
 
     # features are objects with an id field for HPO id and optional notes and qualifiers fields
-    features = JSONField(null=True)
-    absent_features = JSONField(null=True)
+    features = models.JSONField(null=True)
+    absent_features = models.JSONField(null=True)
     # nonstandard_features are objects with an id field for a free text label and optional
     # notes, qualifiers, and categories fields
-    nonstandard_features = JSONField(null=True)
-    absent_nonstandard_features = JSONField(null=True)
+    nonstandard_features = models.JSONField(null=True)
+    absent_nonstandard_features = models.JSONField(null=True)
 
     # Disorders are a list of MIM IDs
     disorders = ArrayField(models.CharField(max_length=10), null=True)
 
     # genes are objects with required key gene (may be blank) and optional key comments
-    candidate_genes = JSONField(null=True)
-    rejected_genes = JSONField(null=True)
+    candidate_genes = models.JSONField(null=True)
+    rejected_genes = models.JSONField(null=True)
 
     ar_fertility_meds = models.BooleanField(null=True)
     ar_iui = models.BooleanField(null=True)
@@ -661,10 +661,10 @@ class Individual(ModelWithGUID):
     ar_donoregg = models.BooleanField(null=True)
     ar_donorsperm = models.BooleanField(null=True)
 
-    filter_flags = JSONField(null=True)
-    pop_platform_filters = JSONField(null=True)
+    filter_flags = models.JSONField(null=True)
+    pop_platform_filters = models.JSONField(null=True)
     population = models.CharField(max_length=5, null=True)
-    sv_flags = JSONField(null=True)
+    sv_flags = models.JSONField(null=True)
 
     def __unicode__(self):
         return self.individual_id.strip()
@@ -839,11 +839,11 @@ class SavedVariant(ModelWithGUID):
     key = models.PositiveBigIntegerField(null=True, blank=True)
 
     selected_main_transcript_id = models.CharField(max_length=20, null=True)
-    saved_variant_json = JSONField(default=dict)
-    genotypes = JSONField(default=dict)
+    saved_variant_json = models.JSONField(default=dict)
+    genotypes = models.JSONField(default=dict)
     dataset_type = models.CharField(max_length=13, choices=DATASET_TYPE_CHOICES, null=True, blank=True)
 
-    acmg_classification = JSONField(null=True) # ACMG based classification
+    acmg_classification = models.JSONField(null=True) # ACMG based classification
 
     def __unicode__(self):
         chrom, pos = get_chrom_pos(self.xpos)
@@ -1120,7 +1120,7 @@ class AnalysisGroup(ModelWithGUID):
 class DynamicAnalysisGroup(ModelWithGUID):
     project = models.ForeignKey('Project', on_delete=models.CASCADE, null=True, blank=True)
     name = models.TextField()
-    criteria = JSONField()
+    criteria = models.JSONField()
 
     def __unicode__(self):
         return self.name.strip()
@@ -1136,7 +1136,7 @@ class DynamicAnalysisGroup(ModelWithGUID):
 class VariantSearch(ModelWithGUID):
     name = models.CharField(max_length=200, null=True)
     order = models.FloatField(null=True, blank=True)
-    search = JSONField()
+    search = models.JSONField()
 
     def __unicode__(self):
         return self.name or str(self.id)

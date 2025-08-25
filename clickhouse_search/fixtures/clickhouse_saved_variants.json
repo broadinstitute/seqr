@@ -66,6 +66,8 @@
       "sample_type": "WGS",
       "xpos": 1248367227,
       "is_gnomad_gt_5_percent": false,
+      "is_annotated_in_any_gene": true,
+      "geneId_ids": [6, 48],
       "filters": [],
       "sign": 1,
       "calls": [
@@ -118,6 +120,8 @@
       "sample_type": "WES",
       "xpos": 2103343353,
       "is_gnomad_gt_5_percent": false,
+      "is_annotated_in_any_gene": true,
+      "geneId_ids": [48, 45],
       "filters": [],
       "sign": 1,
       "calls": [
@@ -196,6 +200,8 @@
       "sample_type": "WGS",
       "xpos": 1248367227,
       "is_gnomad_gt_5_percent": false,
+      "is_annotated_in_any_gene": false,
+      "geneId_ids": [],
       "filters": [],
       "sign": 1,
       "calls": [

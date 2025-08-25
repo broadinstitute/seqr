@@ -82,6 +82,8 @@ class Migration(migrations.Migration):
                 ('sample_type', clickhouse_backend.models.Enum8Field(choices=[(1, 'WES'), (2, 'WGS')])),
                 ('xpos', clickhouse_search.backend.fields.UInt64FieldDeltaCodecField()),
                 ('is_gnomad_gt_5_percent', clickhouse_backend.models.BoolField()),
+                ('is_annotated_in_any_gene', clickhouse_backend.models.BoolField()),
+                ('geneId_ids', clickhouse_backend.models.ArrayField(base_field=clickhouse_backend.models.UInt32Field())),
                 ('filters', clickhouse_backend.models.ArrayField(base_field=clickhouse_backend.models.StringField(low_cardinality=True))),
                 ('calls', clickhouse_backend.models.ArrayField(base_field=clickhouse_search.backend.fields.NamedTupleField(base_fields=[('sampleId', clickhouse_backend.models.StringField()), ('gt', clickhouse_backend.models.Enum8Field(blank=True, choices=[(0, 'REF'), (1, 'HET'), (2, 'HOM')], null=True)), ('gq', clickhouse_backend.models.UInt8Field(blank=True, null=True)), ('ab', clickhouse_backend.models.DecimalField(blank=True, decimal_places=5, max_digits=9, null=True)), ('dp', clickhouse_backend.models.UInt16Field(blank=True, null=True))]))),
                 ('sign', clickhouse_backend.models.Int8Field()),
@@ -89,8 +91,8 @@ class Migration(migrations.Migration):
             options={
                 'db_table': 'GRCh37/SNV_INDEL/entries',
                 'abstract': False,
-                'engine': clickhouse_search.backend.engines.CollapsingMergeTree('sign', deduplicate_merge_projection_mode='rebuild', index_granularity=8192, order_by=('project_guid', 'family_guid', 'is_gnomad_gt_5_percent', 'sample_type', 'key'), partition_by='project_guid'),
-                'projection': clickhouse_search.models.Projection('xpos_projection', order_by='xpos, is_gnomad_gt_5_percent'),
+                'engine': clickhouse_search.backend.engines.CollapsingMergeTree('sign', deduplicate_merge_projection_mode='rebuild', index_granularity=8192, order_by=('project_guid', 'family_guid', 'sample_type', 'is_gnomad_gt_5_percent', 'is_annotated_in_any_gene', 'key'), partition_by='project_guid'),
+                'projection': clickhouse_search.models.Projection('xpos_projection', order_by='is_gnomad_gt_5_percent, is_annotated_in_any_gene, xpos'),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),

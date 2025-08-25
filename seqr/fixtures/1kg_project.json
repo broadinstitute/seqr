@@ -375,7 +375,7 @@
         "created_by": null,
         "last_modified_date": "2017-03-12T22:37:17.555Z",
         "project": 4,
-        "family_id": "14",
+        "family_id": "fam14",
         "analysis_status": "Rncc",
         "success_story": "Differential treatement",
         "success_story_types": ["A", "D"]

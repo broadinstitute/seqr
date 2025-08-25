@@ -823,9 +823,7 @@ class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
             'sample_source': 'AnVIL',
         }
         sample_summary = '13 new and 7 re-loaded' if test_add_data else '3 new'
-        slack_message = """
-        *test_user_manager@test.com* requested to load {sample_summary} WES samples ({version}) from AnVIL workspace *my-seqr-billing/{workspace_name}* at 
-        gs://test_bucket/test_path.vcf to seqr project <http://testserver/project/{guid}/project_page|*{project_name}*> (guid: {guid})
+        slack_message = """*test_user_manager@test.com* requested to load {sample_summary} WES samples ({version}) from AnVIL workspace *my-seqr-billing/{workspace_name}* at gs://test_bucket/test_path.vcf to seqr project <http://testserver/project/{guid}/project_page|*{project_name}*> (guid: {guid})
 
         Pedigree files have been uploaded to gs://seqr-loading-temp/v3.1/{version}/SNV_INDEL/pedigrees/WES
 
@@ -892,7 +890,7 @@ class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
 
         slack_message_on_failure = """ERROR triggering AnVIL loading for project {guid}: LOADING_PIPELINE DAG is running and cannot be triggered again.
         
-        DAG LOADING_PIPELINE should be triggered with following: 
+        DAG LOADING_PIPELINE should be triggered with following:
         ```{dag}```
         """.format(
             guid=project.guid,
@@ -969,12 +967,8 @@ class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
         response = self.client.post(url, content_type='application/json', data=json.dumps(request_body))
         self.assertEqual(response.status_code, 200)
         self.mock_send_email.assert_called_with("""Hi Test Manager User,
-            We have received your request to load data to seqr from AnVIL. Currently, the Broad Institute is holding an 
-            internal retreat or closed for the winter break so we may not be able to load data until mid-January 
-            2022. We appreciate your understanding and support of our research team taking 
-            some well-deserved time off and hope you also have a nice break.
-            - The seqr team
-            """, subject='Delay in loading AnVIL in seqr', to=['test_user_manager@test.com'])
+We have received your request to load data to seqr from AnVIL. Currently, the Broad Institute is holding an internal retreat or closed for the winter break so we may not be able to load data until mid-January 2022. We appreciate your understanding and support of our research team taking some well-deserved time off and hope you also have a nice break.
+- The seqr team""", subject='Delay in loading AnVIL in seqr', to=['test_user_manager@test.com'])
         self.mock_api_logger.error.assert_called_with(
             'AnVIL loading delay email error: Unable to send email', self.manager_user)
 

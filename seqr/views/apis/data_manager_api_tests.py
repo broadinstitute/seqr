@@ -1495,8 +1495,8 @@ class DataManagerAPITest(AirtableTest):
         self.assertEqual(len(file), 3)
         self.assertListEqual(file, [
             pedigree_header,
-            ['R0004_non_analyst_project', 'F000014_14', '14', 'NA21234', '', '', 'F'] + (['ABC123'] if has_remap else []),
-            ['R0004_non_analyst_project', 'F000014_14', '14', 'NA21987', '', '', 'M'] + ([''] if has_remap else []),
+            ['R0004_non_analyst_project', 'F000014_14', 'fam14', 'NA21234', '', '', 'F'] + (['ABC123'] if has_remap else []),
+            ['R0004_non_analyst_project', 'F000014_14', 'fam14', 'NA21987', '', '', 'M'] + ([''] if has_remap else []),
         ])
 
     def _test_load_single_project(self, mock_open, mock_mkdir, response, *args, **kwargs):
@@ -1884,7 +1884,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
             'WGS', 'WES').replace('SNV_INDEL', 'GCNV').replace('v01', 'v3.1')
         error_message = f"""ERROR triggering internal WES SV loading: {errors[0]}
         
-        DAG LOADING_PIPELINE should be triggered with following: 
+        DAG LOADING_PIPELINE should be triggered with following:
         ```{dag_json}```
         """
         self.mock_slack.assert_called_once_with(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, error_message)
@@ -1919,7 +1919,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
             'warnings': None,
             'errors': [
                 'The following samples are included in airtable but are missing from the VCF: NA21987',
-                'The following families have previously loaded samples absent from airtable\nFamily 14: NA21234, NA21654',
+                'The following families have previously loaded samples absent from airtable\nFamily fam14: NA21234, NA21654',
             ],
         })
         self.assertEqual(len(responses.calls), 2)

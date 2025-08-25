@@ -95,6 +95,13 @@ class ArrayExists(ArrayLookup):
         return rhs_params[0], []
 
 
+@NestedField.register_lookup
+@ArrayField.register_lookup
+class ArrayAll(ArrayExists):
+    lookup_name = "array_all"
+    function = "arrayAll"
+
+
 class ArrayFilter(lookups.Transform):
     def __init__(self, *args, conditions=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -111,6 +118,20 @@ class ArrayNotEmptyTransform(lookups.Transform):
     lookup_name = "not_empty"
     function = "notEmpty"
     output_field = BooleanField()
+
+
+@ArrayField.register_lookup
+class BitmapHasAny(ArrayLookup):
+    lookup_name = "bitmap_has_any"
+    function = "bitmapHasAny"
+
+    def process_lhs(self, compiler, connection):
+        lhs, lhs_params = super().process_lhs(compiler, connection)
+        return f'bitmapBuild({lhs})', lhs_params
+
+    def process_rhs(self, compiler, connection):
+        rhs, rhs_params = super().process_rhs(compiler, connection)
+        return f'bitmapBuild{rhs.split("::")[0]}', rhs_params
 
 
 class DictGet(Func):

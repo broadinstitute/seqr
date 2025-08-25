@@ -129,8 +129,8 @@ EXPECTED_SAMPLE_METADATA_ROW.update(EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW)
 EXPECTED_NO_GENE_SAMPLE_METADATA_ROW = {
     'participant_id': 'NA21234',
     'familyGuid': 'F000014_14',
-    'family_id': '14',
-    'displayName': '14',
+    'family_id': 'fam14',
+    'displayName': 'fam14',
     'projectGuid': 'R0004_non_analyst_project',
     'internal_project_id': 'Non-Analyst Project',
     'affected_status': 'Affected',
@@ -406,6 +406,14 @@ class SummaryDataAPITest(AirtableTest):
         if 'totalSampleCounts' in response_json:
             self.assertDictEqual(response_json['totalSampleCounts'], {'MITO': {'WES': 1}, 'SNV_INDEL': {'WES': 7}, 'SV': {'WES': 3, 'WGS': 3}})
 
+        all_tag_url = reverse(saved_variants_page, args=['ALL'])
+        response = self.client.get('{}?gene=ENSG00000135953'.format(all_tag_url))
+        self.assertEqual(response.status_code, 200)
+        report_variants = {'SV0027168_191912632_r0384_rare', 'SV0027167_191912633_r0384_rare'}
+        self.assertSetEqual(set(response.json()['savedVariantsByGuid'].keys()), {
+            'SV0000002_1248367227_r0390_100', 'SV0000013_prefix_19107_DEL_r00', *report_variants, *expected_variant_guids,
+        })
+
         # Test analyst behavior
         self.login_analyst_user()
         response = self.client.get(gene_url)
@@ -413,13 +421,6 @@ class SummaryDataAPITest(AirtableTest):
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), self.SAVED_VARIANT_RESPONSE_KEYS)
         self.assertSetEqual(set(response_json['savedVariantsByGuid'].keys()), expected_variant_guids)
-
-        all_tag_url = reverse(saved_variants_page, args=['ALL'])
-        response = self.client.get('{}?gene=ENSG00000135953'.format(all_tag_url))
-        self.assertEqual(response.status_code, 200)
-        expected_variant_guids.add('SV0000002_1248367227_r0390_100')
-        report_variants = {'SV0027168_191912632_r0384_rare', 'SV0027167_191912633_r0384_rare'}
-        self.assertSetEqual(set(response.json()['savedVariantsByGuid'].keys()), {*report_variants, *expected_variant_guids})
 
         multi_tag_url = reverse(saved_variants_page, args=['Review;Tier 1 - Novel gene and phenotype'])
         response = self.client.get('{}?gene=ENSG00000135953'.format(multi_tag_url))
@@ -872,7 +873,7 @@ class AnvilSummaryDataAPITest(AnvilAuthenticationTestCase, SummaryDataAPITest):
     def test_saved_variants_page(self):
         super(AnvilSummaryDataAPITest, self).test_saved_variants_page()
         assert_has_expected_calls(self, [
-            self.no_access_user, self.manager_user, self.manager_user, self.analyst_user, self.analyst_user
+            self.no_access_user, self.manager_user, self.manager_user, self.manager_user, self.analyst_user, self.analyst_user
         ], skip_group_call_idxs=[2])
         self.mock_get_ws_access_level.assert_called_with(
             self.analyst_user, 'my-seqr-billing', 'anvil-1kg project nåme with uniçøde')

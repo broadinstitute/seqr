@@ -46,8 +46,8 @@ class CheckBamCramPathsTest(TestCase):
         self.assertListEqual(sorted(igv_file_paths), expected_remaining_files)
 
         mock_subprocess.assert_has_calls([
-            mock.call('gsutil ls gs://readviz/NA20870.cram', stdout=-1, stderr=-2, shell=True),
-            mock.call('gsutil ls gs://datasets-gcnv/NA20870.bed.gz', stdout=-1, stderr=-2, shell=True),
+            mock.call('gsutil ls gs://readviz/NA20870.cram', stdout=-1, stderr=-2, shell=True), # nosec
+            mock.call('gsutil ls gs://datasets-gcnv/NA20870.bed.gz', stdout=-1, stderr=-2, shell=True), # nosec
         ], any_order=True)
 
         calls = [
