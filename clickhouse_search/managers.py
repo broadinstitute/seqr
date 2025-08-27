@@ -625,7 +625,6 @@ class AnnotationsQuerySet(SearchQuerySet):
 
 
 class EntriesManager(SearchQuerySet):
-    MAX_XPOS_FILTER_INTERVALS = 500
     GENOTYPE_LOOKUP = {
         REF_REF: [0],
         REF_ALT: [1],
@@ -1067,7 +1066,7 @@ class EntriesManager(SearchQuerySet):
         if gene_intervals:
             if hasattr(self.model, 'is_annotated_in_any_gene') and not intervals:
                 entries = entries.filter(is_annotated_in_any_gene=Value(True))
-            if (not hasattr(self.model, 'geneId_ids')) or exclude_intervals or len(gene_intervals) < self.MAX_XPOS_FILTER_INTERVALS:
+            if (not hasattr(self.model, 'geneId_ids')) or exclude_intervals or len(gene_intervals) < self.model.MAX_XPOS_FILTER_INTERVALS:
                 intervals = list((gene_intervals or {}).values()) + (intervals or [])
             else:
                 locus_q = Q(geneId_ids__bitmap_has_any=list(gene_intervals.keys()))

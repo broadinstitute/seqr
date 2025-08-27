@@ -558,6 +558,8 @@ class ClinvarMito(BaseClinvarJoin):
 
 
 class BaseEntries(FixtureLoadableClickhouseModel):
+    MAX_XPOS_FILTER_INTERVALS = 500
+
     project_guid = models.StringField(low_cardinality=True)
     family_guid = models.StringField()
     xpos = UInt64FieldDeltaCodecField()
@@ -645,6 +647,7 @@ class EntriesMito(BaseEntries):
         )
 
 class EntriesSv(BaseEntries):
+    MAX_XPOS_FILTER_INTERVALS = 0
     SAMPLE_TYPE = Sample.SAMPLE_TYPE_WGS
     CALL_FIELDS = [
         ('sampleId', models.StringField()),
