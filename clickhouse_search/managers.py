@@ -1050,9 +1050,10 @@ class EntriesManager(SearchQuerySet):
                 intervals = None
             else:
                 if gene_ids and 'geneIds' in self.call_fields:
-                    entries = entries.filter(calls__array_all={
-                        'geneIds': (gene_ids, 'or(isNull({field}), hasAny({value}, {field}))'),
-                    })
+                    entries = entries.filter(calls__array_all={'OR': [
+                        {'geneIds': (gene_ids, 'hasAny({value}, {field})')},
+                        {'gt': (None, 'isNull({field})')},
+                    ]})
                 chromosomes = {chrom for chrom, _, _ in list((gene_intervals or {}).values()) + (intervals or [])}
                 intervals = [(chrom, MIN_POS, MAX_POS) for chrom in chromosomes]
             gene_intervals = None
