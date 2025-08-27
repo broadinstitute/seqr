@@ -1033,7 +1033,7 @@ class EntriesManager(SearchQuerySet):
             mapped_expression='x.1', output_field=models.ArrayField(models.StringField()),
         )
 
-    def filter_locus(self, exclude_intervals=False, intervals=None, gene_intervals=None, variant_ids=None, padded_interval=None, **kwargs):
+    def filter_locus(self, exclude_intervals=False, intervals=None, gene_intervals=None, gene_ids=None, variant_ids=None, padded_interval=None, **kwargs):
         entries = self
         if variant_ids:
             # although technically redundant, the interval query is applied to the entries table before join and reduces the join size,
@@ -1049,6 +1049,10 @@ class EntriesManager(SearchQuerySet):
             if exclude_intervals:
                 intervals = None
             else:
+                if gene_ids and 'geneIds' in self.call_fields:
+                    entries = entries.filter(calls__array_all={
+                        'geneIds': (gene_ids, 'or(isNull({field}), hasAny({value}, {field}))'),
+                    })
                 chromosomes = {chrom for chrom, _, _ in list((gene_intervals or {}).values()) + (intervals or [])}
                 intervals = [(chrom, MIN_POS, MAX_POS) for chrom in chromosomes]
             gene_intervals = None
