@@ -282,7 +282,7 @@ class AnnotationsQuerySet(SearchQuerySet):
 
     def _genotype_override_values(self, query, prefix=''):
         genotype_override_fields = query.model.GENOTYPE_OVERRIDE_FIELDS
-        if not genotype_override_fields:
+        if not (genotype_override_fields and query.query.annotations.get('genotypes')):
             return {}
 
         index_map = {
