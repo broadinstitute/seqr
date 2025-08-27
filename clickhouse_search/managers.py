@@ -282,21 +282,22 @@ class AnnotationsQuerySet(SearchQuerySet):
 
     def _genotype_override_values(self, query, prefix=''):
         genotype_override_fields = query.model.GENOTYPE_OVERRIDE_FIELDS
-        if not (genotype_override_fields and query.query.annotations.get('genotypes')):
+        if not genotype_override_fields:
             return {}
 
+        genotype_field = next(field for field in ['genotypes', 'familyGenotypes'] if field in query.query.annotations)
         index_map = {
-            field: i+1 for i, (field, _) in enumerate(query.query.annotations['genotypes'].output_field.base_fields)
+            field: i+1 for i, (field, _) in enumerate(query.query.annotations[genotype_field].output_field.base_fields)
         }
         override_field_map = {field: col for col, (field, _) in genotype_override_fields.items()}
         genotype_fields = [
             self._genotype_override_expression(index_map[field], override_field_map[field], index_map['cn'])
             if field in override_field_map else (f'ifNull(x.{index_map[field]}, 0)' if field == 'numAlt' else f'x.{index_map[field]}')
-            for (field, _) in query.query.annotations['genotypes'].output_field.base_fields
+            for (field, _) in query.query.annotations[genotype_field].output_field.base_fields
         ]
 
         return {
-            'genotypes': ArrayMap('genotypes', mapped_expression=f"tuple({', '.join(genotype_fields)})"),
+            genotype_field: ArrayMap(genotype_field, mapped_expression=f"tuple({', '.join(genotype_fields)})"),
             'transcripts': F(query.GENOTYPE_GENE_CONSEQUENCE_FIELD),
             **{col: F(f'sample_{col}') for col in genotype_override_fields if col != 'geneIds'},
         }
@@ -1050,9 +1051,10 @@ class EntriesManager(SearchQuerySet):
                 intervals = None
             else:
                 if gene_ids and 'geneIds' in self.call_fields:
-                    entries = entries.filter(calls__array_all={
-                        'geneIds': (gene_ids, 'or(isNull({field}), hasAny({value}, {field}))'),
-                    })
+                    entries = entries.filter(calls__array_all={'OR': [
+                        {'geneIds': (gene_ids, 'hasAny({value}, {field})')},
+                        {'gt': (None, 'isNull({field})')},
+                    ]})
                     intervals = list((gene_intervals or {}).values()) + (intervals or [])
                     gene_intervals = None
                 chromosomes = {chrom for chrom, _, _ in (intervals or [])}
