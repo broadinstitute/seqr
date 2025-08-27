@@ -659,6 +659,7 @@ class EntriesSv(BaseEntries):
     # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
     key = ForeignKey('AnnotationsSv', db_column='key', primary_key=True, on_delete=CASCADE)
     calls = models.ArrayField(NamedTupleField(CALL_FIELDS))
+    geneId_ids = models.ArrayField(models.UInt32Field())
 
     class Meta(BaseEntries.Meta):
         db_table = 'GRCh38/SV/entries'

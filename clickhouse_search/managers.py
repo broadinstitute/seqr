@@ -1053,19 +1053,19 @@ class EntriesManager(SearchQuerySet):
                     entries = entries.filter(calls__array_all={
                         'geneIds': (gene_ids, 'or(isNull({field}), hasAny({value}, {field}))'),
                     })
-                chromosomes = {chrom for chrom, _, _ in list((gene_intervals or {}).values()) + (intervals or [])}
+                    intervals = list((gene_intervals or {}).values()) + (intervals or [])
+                    gene_intervals = None
+                chromosomes = {chrom for chrom, _, _ in (intervals or [])}
                 intervals = [(chrom, MIN_POS, MAX_POS) for chrom in chromosomes]
-            gene_intervals = None
 
         if not (gene_intervals or intervals):
             return entries
 
         locus_q = None
         if gene_intervals:
-            has_entry_genes = hasattr(self.model, 'is_annotated_in_any_gene')
-            if has_entry_genes and not intervals:
+            if hasattr(self.model, 'is_annotated_in_any_gene') and not intervals:
                 entries = entries.filter(is_annotated_in_any_gene=Value(True))
-            if (not has_entry_genes) or exclude_intervals or len(gene_intervals) < self.MAX_XPOS_FILTER_INTERVALS:
+            if (not hasattr(self.model, 'geneId_ids')) or exclude_intervals or len(gene_intervals) < self.MAX_XPOS_FILTER_INTERVALS:
                 intervals = list((gene_intervals or {}).values()) + (intervals or [])
             else:
                 locus_q = Q(geneId_ids__bitmap_has_any=list(gene_intervals.keys()))
