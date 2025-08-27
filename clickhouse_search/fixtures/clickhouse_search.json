@@ -987,6 +987,7 @@
       "family_guid": "F000014_14",
       "xpos": 1009310023,
       "filters": ["HIGH_SR_BACKGROUND"],
+      "geneId_ids": [71],
       "sign": 1,
       "calls": [
         ["NA21234", 1, 2, 0, false, true, null],
@@ -1003,6 +1004,7 @@
       "family_guid": "F000014_14",
       "xpos": 1009380254,
       "filters": ["HIGH_SR_BACKGROUND"],
+      "geneId_ids": [71],
       "sign": 1,
       "calls": [
         ["NA21234", 1, null, 0, true, false, null],
@@ -1019,6 +1021,7 @@
       "family_guid": "F000014_14",
       "xpos": 13063036002,
       "filters": ["HIGH_SR_BACKGROUND"],
+      "geneId_ids": [75],
       "sign": 1,
       "calls": [
         ["NA21234", 1, null, 62, false, true, null],
@@ -1035,6 +1038,7 @@
       "family_guid": "F000014_14",
       "xpos": 14106694244,
       "filters": [],
+      "geneId_ids": [76],
       "sign": 1,
       "calls": [
         ["NA21234", 2, 0, 99, false, true, null],
@@ -1517,6 +1521,36 @@
     "pk": 74,
     "fields": {
         "gene_id": "ENSG00000176227",
+        "gene_symbol": "CTAGE6",
+        "chrom_grch38": "7",
+        "start_grch38": 91500851,
+        "end_grch38": 91525764,
+        "strand_grch38": "+",
+        "coding_region_size_grch38": 0,
+        "gencode_gene_type": "protein_coding",
+        "gencode_release": 27
+    }
+},
+{
+    "model": "reference_data.geneinfo",
+    "pk": 75,
+    "fields": {
+        "gene_id": "ENSG00000083544",
+        "gene_symbol": "CTAGE6",
+        "chrom_grch38": "7",
+        "start_grch38": 91500851,
+        "end_grch38": 91525764,
+        "strand_grch38": "+",
+        "coding_region_size_grch38": 0,
+        "gencode_gene_type": "protein_coding",
+        "gencode_release": 27
+    }
+},
+{
+    "model": "reference_data.geneinfo",
+    "pk": 76,
+    "fields": {
+        "gene_id": "ENSG00000184986",
         "gene_symbol": "CTAGE6",
         "chrom_grch38": "7",
         "start_grch38": 91500851,
