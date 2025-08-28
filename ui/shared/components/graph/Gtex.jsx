@@ -15,8 +15,9 @@ const MARGINS = {
   bottom: 150,
   left: 50,
 }
+const WIDTH = window.innerWidth * 0.8
 const DIMENSIONS = {
-  width: window.innerWidth * 0.8,
+  width: WIDTH,
   height: 400,
 }
 
@@ -50,7 +51,7 @@ const drawViolin = (svg, scale, tooltip) => (entry) => {
   const zMax = max(vertices, d => Math.abs(d[1]))
   scale.z
     .domain([-zMax, zMax])
-    .range([scale.x(entry.label), scale.x(entry.label) + scale.x.bandwidth()])
+    .range([scale.x(entry.tissue), scale.x(entry.tissue) + scale.x.bandwidth()])
 
   // visual rendering
   const violin = area()
@@ -105,7 +106,7 @@ const drawViolin = (svg, scale, tooltip) => (entry) => {
   violinG.on('mouseover', () => {
     vPath.style('opacity', 1)
     tooltip.show(
-      `${entry.label}<br/>Sample size: ${entry.values.length}<br/>Median TPM: ${entry.median.toPrecision(4)}<br/>`,
+      `${entry.tissue}<br/>Sample size: ${entry.values.length}<br/>Median TPM: ${entry.median.toPrecision(4)}<br/>`,
       x + 70,
       medianY < 40 ? 10 : medianY - 40,
     )
@@ -115,31 +116,18 @@ const drawViolin = (svg, scale, tooltip) => (entry) => {
   })
 }
 
-const renderViolinPlot = (violinPlotData, containerElement) => {
-  const xDomain = violinPlotData.map(({ label }) => label)
-  const yDomain = extent(violinPlotData.reduce((acc, { values }) => ([...acc, ...values]), []))
-
-  const scale = {
-    x: scaleBand()
-      .rangeRound([0, DIMENSIONS.width])
-      .domain(xDomain)
-      .paddingInner(0.2),
-    y: scaleLinear()
-      .rangeRound([DIMENSIONS.height, 0])
-      .domain(yDomain),
-    z: scaleLinear(), // the violin width, domain and range are determined later individually for each violin
-  }
-
-  const svg = initializeD3(containerElement, DIMENSIONS, MARGINS, scale, {
-    y: {
-      text: 'TPM',
-      transform: yAxis => yAxis.tickValues(scale.y.ticks(5)),
-    },
-  })
-
-  const tooltip = new Tooltip(containerElement)
-  violinPlotData.forEach(drawViolin(svg, scale, tooltip))
-}
+const getViolinScales = violinPlotData => ({
+  y: scaleLinear()
+    .rangeRound([DIMENSIONS.height, 0])
+    .domain(extent(violinPlotData.reduce((acc, { values }) => ([...acc, ...values]), []))),
+  z: scaleLinear(), // the violin width, domain and range are determined later individually for each violin
+})
+const getViolinAxis = scale => ({
+  y: {
+    text: 'TPM',
+    transform: yAxis => yAxis.tickValues(scale.y.ticks(5)),
+  },
+})
 
 // Code adapted from https://github.com/broadinstitute/gtex-viz/blob/f9d18299b2bcb69e4a919a4afa359c99a33fbc3b/src/TranscriptBrowser.js
 // and https://github.com/broadinstitute/gtex-viz/blob/f9d18299b2bcb69e4a919a4afa359c99a33fbc3b/src/modules/Heatmap.js
@@ -200,22 +188,38 @@ const renderIsoformHeatmap = (isoformData, containerElement) => {
 
 const loadTissueData = onSuccess => queryGtex('dataset/tissueSiteDetail', {}, onSuccess)
 
-const renderGtexViolin = (expressionData, tissueData, containerElement) => {
-  if ((expressionData?.data || []).length < 1) {
+const renderGtex = (
+  responseKey, parseExpressionData, renderDataPoint, getScales, getAxis,
+) => (expressionData, tissueData, containerElement) => {
+  if (((expressionData || {})[responseKey] || []).length < 1) {
     return
   }
   const tissueLookup = tissueData.data.reduce(
     (acc, { tissueSiteDetailId, ...data }) => ({ ...acc, [tissueSiteDetailId]: data }), {},
   )
-  const violinPlotData = expressionData.data.map(({ tissueSiteDetailId, data }) => ({
-    values: data.sort(),
-    median: median(data),
-    label: tissueLookup[tissueSiteDetailId]?.tissueSiteDetail,
-    color: `#${tissueLookup[tissueSiteDetailId]?.colorHex}`,
-  }))
-  violinPlotData.sort(compareObjects('label'))
-  renderViolinPlot(violinPlotData, containerElement)
+  const plotData = expressionData[responseKey].map(
+    ({ tissueSiteDetailId, ...data }) => parseExpressionData(data, tissueLookup[tissueSiteDetailId]),
+  )
+  const xDomain = plotData.map(({ tissue }) => tissue).sort()
+  const scale = {
+    x: scaleBand()
+      .rangeRound([0, WIDTH])
+      .domain(xDomain)
+      .paddingInner(0.2),
+    ...getScales(plotData),
+  }
+  const svg = initializeD3(containerElement, DIMENSIONS, MARGINS, scale, getAxis ? getAxis(scale) : {})
+  const tooltip = new Tooltip(containerElement)
+  plotData.forEach(renderDataPoint(svg, scale, tooltip))
 }
+
+const parseViolinExpressionData = ({ data }, tissue) => ({
+  values: data.sort(),
+  median: median(data),
+  tissue: (tissue || {}).tissueSiteDetail,
+  color: `#${(tissue || {}).colorHex}`,
+})
+const renderGtexViolin = renderGtex('data', parseViolinExpressionData, drawViolin, getViolinScales, getViolinAxis)
 
 const renderGtexIsoform = (expressionData, tissueData, containerElement) => {
   if ((expressionData?.medianTranscriptExpression || []).length < 1) {
