@@ -221,12 +221,15 @@ const MatchmakerLabel = ({ variant, family, mmeSubmissionsByGuid, genesById }) =
   const variantSubmissions = (Array.isArray(variant) ? variant.reduce(
     (acc, { mmeSubmissions = [] }) => ([...acc, ...mmeSubmissions]), [],
   ) : (variant.mmeSubmissions || [])).map(
-    ({ submissionGuid, geneId }) => ({ gene: genesById[geneId], submission: mmeSubmissionsByGuid[submissionGuid] }),
+    ({ submissionGuid, geneId }) => ({
+      gene: genesById[geneId] || { geneId },
+      submission: mmeSubmissionsByGuid[submissionGuid],
+    }),
   ).filter(({ submission }) => family.individualGuids.includes(submission.individualGuid))
   return variantSubmissions.length ? (
     <Popup
       content={[...new Set(variantSubmissions.map(
-        ({ gene, submission }) => `${gene.geneSymbol} submitted ${new Date(submission.lastModifiedDate).toLocaleDateString()}`,
+        ({ gene, submission }) => `${gene.geneSymbol || gene.geneId} submitted ${new Date(submission.lastModifiedDate).toLocaleDateString()}`,
       ))].join('; ')}
       trigger={<Label
         as={NavLink}
