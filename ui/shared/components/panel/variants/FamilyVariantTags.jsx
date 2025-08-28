@@ -221,7 +221,10 @@ const MatchmakerLabel = ({ variant, family, mmeSubmissionsByGuid, genesById }) =
   const variantSubmissions = (Array.isArray(variant) ? variant.reduce(
     (acc, { mmeSubmissions = [] }) => ([...acc, ...mmeSubmissions]), [],
   ) : (variant.mmeSubmissions || [])).map(
-    ({ submissionGuid, geneId }) => ({ gene: genesById[geneId] || { geneId }, submission: mmeSubmissionsByGuid[submissionGuid] }),
+    ({ submissionGuid, geneId }) => ({
+      gene: genesById[geneId] || { geneId },
+      submission: mmeSubmissionsByGuid[submissionGuid],
+    }),
   ).filter(({ submission }) => family.individualGuids.includes(submission.individualGuid))
   return variantSubmissions.length ? (
     <Popup
