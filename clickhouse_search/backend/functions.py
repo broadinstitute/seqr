@@ -131,7 +131,9 @@ class BitmapHasAny(ArrayLookup):
 
     def process_rhs(self, compiler, connection):
         rhs, rhs_params = super().process_rhs(compiler, connection)
-        return f'bitmapBuild{rhs.split("::")[0]}', rhs_params
+        cast_type = self.lhs.output_field.base_field.cast_db_type(connection)
+        rhs = rhs.split("::")[0].replace('%s', f'%s::{cast_type}')
+        return f'bitmapBuild{rhs}', rhs_params
 
 
 class DictGet(Func):
