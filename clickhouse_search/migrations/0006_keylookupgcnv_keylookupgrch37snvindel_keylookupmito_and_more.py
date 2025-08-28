@@ -6,8 +6,6 @@ from django.db import migrations, models
 import django.db.models.deletion
 import django.db.models.manager
 
-from settings import CLICKHOUSE_DATA_DIR
-
 
 class Migration(migrations.Migration):
 
@@ -16,79 +14,4 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.CreateModel(
-            name='KeyLookupGcnv',
-            fields=[
-                ('variant_id', clickhouse_backend.models.StringField(db_column='variantId', primary_key=True, serialize=False)),
-                ('key', models.OneToOneField(db_column='key', on_delete=django.db.models.deletion.CASCADE, to='clickhouse_search.annotationsgcnv')),
-            ],
-            options={
-                'db_table': 'GRCh38/GCNV/key_lookup',
-                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/GCNV/key_lookup', flatten_nested=0, primary_key='variant_id'),
-            },
-            managers=[
-                ('objects', django.db.models.manager.Manager()),
-                ('_overwrite_base_manager', django.db.models.manager.Manager()),
-            ],
-        ),
-        migrations.CreateModel(
-            name='KeyLookupGRCh37SnvIndel',
-            fields=[
-                ('variant_id', clickhouse_backend.models.StringField(db_column='variantId', primary_key=True, serialize=False)),
-                ('key', models.OneToOneField(db_column='key', on_delete=django.db.models.deletion.CASCADE, to='clickhouse_search.annotationsgrch37snvindel')),
-            ],
-            options={
-                'db_table': 'GRCh37/SNV_INDEL/key_lookup',
-                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh37/SNV_INDEL/key_lookup', flatten_nested=0, primary_key='variant_id'),
-            },
-            managers=[
-                ('objects', django.db.models.manager.Manager()),
-                ('_overwrite_base_manager', django.db.models.manager.Manager()),
-            ],
-        ),
-        migrations.CreateModel(
-            name='KeyLookupMito',
-            fields=[
-                ('variant_id', clickhouse_backend.models.StringField(db_column='variantId', primary_key=True, serialize=False)),
-                ('key', models.OneToOneField(db_column='key', on_delete=django.db.models.deletion.CASCADE, to='clickhouse_search.annotationsmito')),
-            ],
-            options={
-                'db_table': 'GRCh38/MITO/key_lookup',
-                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/MITO/key_lookup', flatten_nested=0, primary_key='variant_id'),
-            },
-            managers=[
-                ('objects', django.db.models.manager.Manager()),
-                ('_overwrite_base_manager', django.db.models.manager.Manager()),
-            ],
-        ),
-        migrations.CreateModel(
-            name='KeyLookupSnvIndel',
-            fields=[
-                ('variant_id', clickhouse_backend.models.StringField(db_column='variantId', primary_key=True, serialize=False)),
-                ('key', models.OneToOneField(db_column='key', on_delete=django.db.models.deletion.CASCADE, to='clickhouse_search.annotationssnvindel')),
-            ],
-            options={
-                'db_table': 'GRCh38/SNV_INDEL/key_lookup',
-                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SNV_INDEL/key_lookup', flatten_nested=0, primary_key='variant_id'),
-            },
-            managers=[
-                ('objects', django.db.models.manager.Manager()),
-                ('_overwrite_base_manager', django.db.models.manager.Manager()),
-            ],
-        ),
-        migrations.CreateModel(
-            name='KeyLookupSv',
-            fields=[
-                ('variant_id', clickhouse_backend.models.StringField(db_column='variantId', primary_key=True, serialize=False)),
-                ('key', models.OneToOneField(db_column='key', on_delete=django.db.models.deletion.CASCADE, to='clickhouse_search.annotationssv')),
-            ],
-            options={
-                'db_table': 'GRCh38/SV/key_lookup',
-                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SV/key_lookup', flatten_nested=0, primary_key='variant_id'),
-            },
-            managers=[
-                ('objects', django.db.models.manager.Manager()),
-                ('_overwrite_base_manager', django.db.models.manager.Manager()),
-            ],
-        ),
     ]

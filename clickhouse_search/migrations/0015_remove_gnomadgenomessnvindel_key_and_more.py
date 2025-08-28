@@ -10,18 +10,4 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunSQL(
-            'DROP DICTIONARY `GRCh37/SNV_INDEL/gnomad_genomes_dict`',
-            hints={'clickhouse': True},
-        ),
-        migrations.RunSQL(
-            'DROP DICTIONARY `GRCh38/SNV_INDEL/gnomad_genomes_dict`',
-            hints={'clickhouse': True},
-        ),
-        migrations.DeleteModel(
-            name='GnomadGenomesGRCh37SnvIndel',
-        ),
-        migrations.DeleteModel(
-            name='GnomadGenomesSnvIndel',
-        ),
     ]
