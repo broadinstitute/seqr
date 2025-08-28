@@ -1,11 +1,12 @@
 import React from 'react'
 import { deviation, extent, max, mean,  min, quantile } from 'd3-array'
 import { randomNormal } from 'd3-random'
-import { scaleBand, scaleLinear } from 'd3-scale'
+import { scaleBand, scaleLinear, scaleSequential } from 'd3-scale'
+import { interpolatePurples } from 'd3-scale-chromatic'
 import { area } from 'd3-shape'
 
 import { compareObjects } from 'shared/utils/sortUtils'
-import { initializeD3, Tooltip } from './d3Utils'
+import { initializeD3, log, Tooltip } from './d3Utils'
 import GtexLauncher, { queryGtex } from './GtexLauncher'
 
 const MARGINS = {
@@ -30,7 +31,7 @@ const renderIsoformHeatmap = (isoformData, containerElement) => {
     ...DIMENSIONS,
     height: yDomain.length * 15,
   }
-  
+
   const scale = {
     x: scaleBand()
       .rangeRound([0, dimensions.width])
@@ -40,38 +41,31 @@ const renderIsoformHeatmap = (isoformData, containerElement) => {
       .rangeRound([dimensions.height, 0])
       .domain(yDomain)
       .paddingInner(0.1),
-    z: scaleLinear(), // the violin width, domain and range are determined later individually for each violin
+    color: scaleSequential(interpolatePurples)
+      .domain([0, max(isoformData.map(({ value }) => log(value)))]),
   }
 
   const svg = initializeD3(containerElement, dimensions, MARGINS, scale, {})
 
   const tooltip = new Tooltip(containerElement)
-  //  TODO fix actually render heatmap
   isoformData.forEach(({ x, y, value }) => {
     svg.append('rect')
-      // .attr("row", (d) => `x${this.xList.indexOf(d.x)}`)
-      // .attr("col", (d) => `y${this.yList.indexOf(d.y)}`)
+      .attr('row', `x${xDomain.indexOf(x)}`)
+      .attr('col', `y${yDomain.indexOf(y)}`)
       .attr('x', scale.x(x))
       .attr('y', scale.y(y))
       .attr('rx', 5)
       .attr('ry', 5)
-      // .attr('class', 'exp-map-cell')
       .attr('width', scale.x.bandwidth())
       .attr('height', scale.y.bandwidth())
       .style('fill', '#eeeeee')
       .on('mouseover', () => {
-        tooltip.show(
-          `Tissue: ${x}<br/> Isoform: ${y}<br/> TPM: ${value}`,
-          x,
-          y,
-        )
+        tooltip.show(`Tissue: ${x}<br/> Isoform: ${y}<br/> TPM: ${value}`, scale.x(x), scale.y(y))
       })
       .on('mouseout', () => {
         tooltip.hide()
       })
-      // .style('fill', (d) => {
-      //     return useNullColor&&d.value==0?nullColor:this.useLog?this.colorScale(this._log(d.value)):this.colorScale(d.value)
-      // })
+      .style('fill', value === 0 ? '#DDDDDD' : scale.color(log(value)))
   })
 }
 

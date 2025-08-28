@@ -81,3 +81,5 @@ export class Tooltip {
     hide = () => this.tooltip.style('display', 'none')
 
 }
+
+export const log = x => Math.log(x + 1) / Math.log(10)
