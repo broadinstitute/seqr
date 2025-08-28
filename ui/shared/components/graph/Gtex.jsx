@@ -26,18 +26,24 @@ const renderIsoformHeatmap = (isoformData, containerElement) => {
   const xDomain = [...new Set(isoformData.map(({ x }) => x))].sort(compareObjects('x'))
   const yDomain = [...new Set(isoformData.map(({ y }) => y))].sort(compareObjects('y'))
 
+  const dimensions = {
+    ...DIMENSIONS,
+    height: yDomain.length * 15,
+  }
+  
   const scale = {
     x: scaleBand()
-      .rangeRound([0, DIMENSIONS.width])
+      .rangeRound([0, dimensions.width])
       .domain(xDomain)
       .paddingInner(0.2),
     y: scaleBand()
-      .rangeRound([DIMENSIONS.height, 0])
-      .domain(yDomain),
+      .rangeRound([dimensions.height, 0])
+      .domain(yDomain)
+      .paddingInner(0.1),
     z: scaleLinear(), // the violin width, domain and range are determined later individually for each violin
   }
 
-  const svg = initializeD3(containerElement, DIMENSIONS, MARGINS, scale, {})
+  const svg = initializeD3(containerElement, dimensions, MARGINS, scale, {})
 
   const tooltip = new Tooltip(containerElement)
   //  TODO fix actually render heatmap
