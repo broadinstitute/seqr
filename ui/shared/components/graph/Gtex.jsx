@@ -6,7 +6,7 @@ import { interpolatePurples } from 'd3-scale-chromatic'
 import { area } from 'd3-shape'
 
 import { compareObjects } from 'shared/utils/sortUtils'
-import { initializeD3, log, Tooltip } from './d3Utils'
+import { initializeD3, Tooltip } from './d3Utils'
 import GtexLauncher, { queryGtex } from './GtexLauncher'
 
 const MARGINS = {
@@ -25,7 +25,9 @@ const DIMENSIONS = {
 
 const renderIsoformHeatmap = (isoformData, containerElement) => {
   const xDomain = [...new Set(isoformData.map(({ x }) => x))].sort(compareObjects('x'))
-  const yDomain = [...new Set(isoformData.map(({ y }) => y))].sort(compareObjects('y'))
+  const yDomain = Object.entries(
+    isoformData.reduce((acc, { y, value }) => ({ ...acc, [y]: (acc[y] || 0) + value }), {}),
+  ).sort((a, b) => a[1] - b[1]).map(([y]) => y)
 
   const dimensions = {
     ...DIMENSIONS,
@@ -42,7 +44,7 @@ const renderIsoformHeatmap = (isoformData, containerElement) => {
       .domain(yDomain)
       .paddingInner(0.1),
     color: scaleSequential(interpolatePurples)
-      .domain([0, max(isoformData.map(({ value }) => log(value)))]),
+      .domain([0, max(isoformData.map(({ value }) => Math.log10(value + 1)))]),
   }
 
   const svg = initializeD3(containerElement, dimensions, MARGINS, scale, {})
@@ -65,7 +67,7 @@ const renderIsoformHeatmap = (isoformData, containerElement) => {
       .on('mouseout', () => {
         tooltip.hide()
       })
-      .style('fill', value === 0 ? '#DDDDDD' : scale.color(log(value)))
+      .style('fill', scale.color(Math.log10(value + 1)))
   })
 }
 
