@@ -12,7 +12,7 @@ const MARGINS = {
   top: 10,
   right: 50,
   bottom: 150,
-  left: 50,
+  left: 100,
 }
 const DIMENSIONS = {
   width: window.innerWidth * 0.8,
@@ -23,8 +23,8 @@ const DIMENSIONS = {
 // and https://github.com/broadinstitute/gtex-viz/blob/f9d18299b2bcb69e4a919a4afa359c99a33fbc3b/src/modules/Heatmap.js
 
 const renderIsoformHeatmap = (isoformData, containerElement) => {
-  const xDomain = [...(new Set(...isoformData.map(({ x }) => x)))].sort(compareObjects('x'))
-  const yDomain = [...(new Set(...isoformData.map(({ y }) => y)))].sort(compareObjects('y'))
+  const xDomain = [...new Set(isoformData.map(({ x }) => x))].sort(compareObjects('x'))
+  const yDomain = [...new Set(isoformData.map(({ y }) => y))].sort(compareObjects('y'))
 
   const scale = {
     x: scaleBand()
@@ -37,7 +37,7 @@ const renderIsoformHeatmap = (isoformData, containerElement) => {
     z: scaleLinear(), // the violin width, domain and range are determined later individually for each violin
   }
 
-  const svg = initializeD3(containerElement, DIMENSIONS, MARGINS, scale)
+  const svg = initializeD3(containerElement, DIMENSIONS, MARGINS, scale, {})
 
   const tooltip = new Tooltip(containerElement)
   //  TODO fix actually render heatmap
