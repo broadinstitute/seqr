@@ -803,7 +803,7 @@ class EntriesManager(SearchQuerySet):
        return self._annotate_calls(entries, sample_data, annotate_hom_alts, skip_individual_guid, multi_sample_type_families)
 
     def _get_inheritance_quality_qs(self, sample_data, multi_sample_type_families, inheritance_mode, individual_genotype_filter, quality_filter, clinvar_override_q, annotate_carriers, custom_affected):
-        samples_by_gt = defaultdict(list)
+        samples_by_genotype = defaultdict(list)
         affected_samples = []
         unaffected_samples = []
         family_missing_type_samples = defaultdict(lambda: defaultdict(list))
@@ -815,8 +815,7 @@ class EntriesManager(SearchQuerySet):
             if affected == UNAFFECTED and annotate_carriers:
                 unaffected_samples.append(sample['sample_id'])
             if (inheritance_mode and inheritance_mode != ANY_AFFECTED) or individual_genotype_filter:
-                for gt in self.genotype_lookup[genotype]:
-                    samples_by_gt[gt].append(sample['sample_id'])
+                samples_by_genotype[genotype].append(sample['sample_id'])
                 if sample['family_guid'] in multi_sample_type_families:
                     sample_type = sample['sample_type']
                     missing_type = Sample.SAMPLE_TYPE_WES if sample_type == Sample.SAMPLE_TYPE_WGS else Sample.SAMPLE_TYPE_WGS
@@ -830,9 +829,20 @@ class EntriesManager(SearchQuerySet):
                 'gt': (self.genotype_lookup[HAS_ALT], 'has({value}, {field})'),
                 'sampleId': (affected_samples, 'has({value}, {field})'),
             })
-        elif samples_by_gt:
-            gt_filter_map = ', '.join([f"{gt}, {samples_by_gt[gt]}" for gt in [-1, 0, 1, 2]])
-            gt_filter = (gt_filter_map, 'has(map({value})[ifNull({field}, -1)], x.sampleId)')
+        elif samples_by_genotype:
+            if all(len(self.genotype_lookup[genotype]) == 1 for genotype in samples_by_genotype.keys()):
+                samples_by_gt = {self.genotype_lookup[genotype][0]: samples for genotype, samples in samples_by_genotype.items()}
+                gt_filter_map = ', '.join([f"{gt}, {samples_by_gt.get(gt, [])}" for gt in [-1, 0, 1, 2]])
+                gt_filter = (gt_filter_map, 'has(map({value})[ifNull({field}, -1)], x.sampleId)')
+            else:
+                genotype_sample_map = ', '.join([f"'{genotype or 'any'}', {samples}" for genotype, samples in samples_by_genotype.items()])
+                gt_genotypes = defaultdict(list)
+                for genotype in samples_by_genotype.keys():
+                    for gt in self.genotype_lookup[genotype]:
+                        gt_genotypes[gt].append(genotype or 'any')
+                gt_genotype_map = ', '.join([f"{gt}, {gt_genotypes[gt]}" for gt in [-1, 0, 1, 2]])
+                genotype_maps = f'genotype -> map({genotype_sample_map})[genotype], map({gt_genotype_map})'
+                gt_filter = (genotype_maps, 'has(arrayFlatten(arrayMap({value}[ifNull({field}, -1)])), x.sampleId)')
             inheritance_q = Q(calls__array_all={'gt': gt_filter})
 
         quality_q = self._quality_q(quality_filter, affected_samples, clinvar_override_q)
