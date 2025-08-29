@@ -93,9 +93,9 @@ for variant in [VARIANT1, VARIANT2, VARIANT3, VARIANT4, PROJECT_2_VARIANT, GRCH3
             variant['predictions'][pred] = round(pred_val, 5)
     for pop in variant['populations'].values():
         if 'af' in pop:
-            pop['af'] = round(pop['af'], 5)
+            pop['af'] = round(pop['af'], 8)
         if 'filter_af' in pop:
-            pop['filter_af'] = round(pop['filter_af'], 5)
+            pop['filter_af'] = round(pop['filter_af'], 8)
         if 'max_hl' in pop:
             pop['max_hl'] = round(pop['max_hl'], 5)
     for transcripts in variant['transcripts'].values():
