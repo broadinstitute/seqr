@@ -1507,7 +1507,6 @@ export const ORDERED_PREDICTOR_FIELDS = [
   { field: 'revel', group: MISSENSE_IN_SILICO_GROUP, thresholds: [0.0161, 0.291, 0.644, 0.773, 0.932], fieldTitle: 'REVEL', requiresCitation: true },
   { field: 'alphamissense', fieldTitle: 'AlphaMissense', displayOnly: true },
   { field: 'vest', thresholds: [undefined, 0.45, 0.764, 0.861, 0.965], fieldTitle: 'VEST', requiresCitation: true },
-  { field: 'mut_pred', thresholds: [0.0101, 0.392, 0.737, 0.829, 0.932], fieldTitle: 'MutPred', requiresCitation: true },
   { field: 'mpc', group: MISSENSE_IN_SILICO_GROUP, thresholds: [undefined, undefined, 1.36, 1.828, undefined], max: 5, fieldTitle: 'MPC' },
   {
     field: SPLICE_AI_FIELD,
@@ -1521,6 +1520,7 @@ export const ORDERED_PREDICTOR_FIELDS = [
     ),
     defaultValue: '?',
   },
+  { field: 'mut_pred', thresholds: [0.0101, 0.392, 0.737, 0.829, 0.932], fieldTitle: 'MutPred', requiresCitation: true },
   { field: 'primate_ai', group: MISSENSE_IN_SILICO_GROUP, thresholds: [undefined, 0.484, 0.79, 0.867, undefined], fieldTitle: 'PrimateAI', requiresCitation: true },
   { field: 'eigen', group: CODING_IN_SILICO_GROUP, thresholds: [undefined, undefined, 1, 2, undefined], max: 99 },
   { field: 'dann', displayOnly: true, thresholds: [undefined, undefined, 0.93, 0.96, undefined] },
