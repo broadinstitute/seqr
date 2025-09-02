@@ -4,6 +4,7 @@ import { randomNormal } from 'd3-random'
 import { scaleBand, scaleLinear, scaleSequential } from 'd3-scale'
 import { interpolatePurples } from 'd3-scale-chromatic'
 import { area } from 'd3-shape'
+import { Tab } from 'semantic-ui-react'
 
 import { initializeD3, Tooltip } from './d3Utils'
 import GtexLauncher, { queryGtex } from './GtexLauncher'
@@ -226,4 +227,23 @@ const GtexIsoform = props => (
   />
 )
 
-export default GtexViolin
+const gtexPanes = props => [
+  {
+    menuItem: 'Gene Expression',
+    render: () => (
+      <Tab.Pane>
+        <GtexViolin {...props} />
+      </Tab.Pane>
+    ),
+  },
+  {
+    menuItem: 'Isoform Expression',
+    render: () => (
+      <Tab.Pane>
+        <GtexIsoform {...props} />
+      </Tab.Pane>
+    ),
+  },
+]
+
+export default props => <Tab panes={gtexPanes(props)} />
