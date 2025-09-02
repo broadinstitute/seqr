@@ -18,8 +18,12 @@ def _disable_search(families, from_project):
         logger.info(
             f'Disabled search for {num_updated} samples in the following {len(updated_families)} families: {family_summary}'
         )
-        for dataset_type, family_guid in updated_family_dataset_types:
-            logger.info(delete_clickhouse_family(from_project, family_guid=family_guid, dataset_type=dataset_type))
+        return updated_family_dataset_types
+
+def _disable_search_clickhouse(families, from_project):
+    updated_family_dataset_types = _disable_search(families, from_project)
+    for dataset_type, family_guid in updated_family_dataset_types:
+        logger.info(delete_clickhouse_family(from_project, family_guid=family_guid, dataset_type=dataset_type))
 
 
 class Command(BaseCommand):
@@ -49,7 +53,7 @@ class Command(BaseCommand):
             ]
             logger.info(f'Skipping {num_found - len(families)} families with analysis groups in the project: {", ".join(group_families)}')
 
-        backend_specific_call(lambda *args: None, _disable_search, _disable_search)(families, from_project)
+        backend_specific_call(lambda *args: None, _disable_search, _disable_search_clickhouse)(families, from_project)
 
         for variant_tag_type in VariantTagType.objects.filter(project=from_project):
             variant_tags = VariantTag.objects.filter(saved_variants__family__in=families, variant_tag_type=variant_tag_type)
