@@ -13,6 +13,7 @@ const MARGINS = {
   top: 10,
   right: 50,
   bottom: 150,
+  left: 50,
 }
 const WIDTH = window.innerWidth * 0.8
 const VIOLIN_HEIGHT = 400
@@ -120,7 +121,7 @@ const getViolinScales = violinPlotData => ({
     z: scaleLinear(), // the violin width, domain and range are determined later individually for each violin
   },
   height: VIOLIN_HEIGHT,
-  left: 50,
+  leftOffset: 0,
 })
 const getViolinAxis = scale => ({
   y: {
@@ -151,7 +152,7 @@ const getIsoformScales = (isoformData) => {
     color: scaleSequential(interpolatePurples)
       .domain([0, max(isoformData.map(({ value }) => Math.log10(value + 1)))]),
   }
-  return { scales, height, left: 100 }
+  return { scales, height, leftOffset: 50 }
 }
 
 const drawIsoformCell = (svg, scale, tooltip) => ({ tissue, transcriptId, value }) => {
@@ -190,12 +191,12 @@ const renderGtex = (
     tissue: tissueLookup[tissueSiteDetailId]?.tissueSiteDetail,
   }))
   const xDomain = plotData.map(({ tissue }) => tissue).sort()
-  const { scales, height, left } = getScales(plotData)
+  const { scales, height, leftOffset } = getScales(plotData)
   const dimensions = { width: WIDTH, height }
-  const margins = { ...MARGINS, left }
+  const margins = { ...MARGINS, left: MARGINS.left + leftOffset }
   const scale = {
     x: scaleBand()
-      .rangeRound([0, WIDTH])
+      .rangeRound([0, WIDTH - leftOffset])
       .domain(xDomain)
       .paddingInner(0.2),
     ...scales,
