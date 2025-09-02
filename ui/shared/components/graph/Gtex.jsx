@@ -215,25 +215,12 @@ const renderGtexViolin = renderGtex('data', parseViolinExpressionData, drawVioli
 
 const renderGtexIsoform = renderGtex('medianTranscriptExpression', parseIsoformExpressionData, drawIsoformCell, getIsoformScales)
 
-const GtexViolin = props => (
-  <GtexLauncher renderGtex={renderGtexViolin} fetchAdditionalData={loadTissueData} {...props} />
-)
-
-const GtexIsoform = props => (
-  <GtexLauncher
-    renderGtex={renderGtexIsoform}
-    fetchAdditionalData={loadTissueData}
-    expressionPath="clusteredMedianTranscriptExpression"
-    {...props}
-  />
-)
-
 const gtexPanes = props => [
   {
     menuItem: 'Gene Expression',
     render: () => (
       <Tab.Pane>
-        <GtexViolin {...props} />
+        <GtexLauncher renderGtex={renderGtexViolin} fetchAdditionalData={loadTissueData} {...props} />
       </Tab.Pane>
     ),
   },
@@ -241,7 +228,12 @@ const gtexPanes = props => [
     menuItem: 'Isoform Expression',
     render: () => (
       <Tab.Pane>
-        <GtexIsoform {...props} />
+        <GtexLauncher
+          renderGtex={renderGtexIsoform}
+          fetchAdditionalData={loadTissueData}
+          expressionPath="clusteredMedianTranscriptExpression"
+          {...props}
+        />
       </Tab.Pane>
     ),
   },
