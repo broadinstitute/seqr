@@ -622,7 +622,8 @@ def get_clickhouse_key_lookup(genome_version, dataset_type, variants_ids, revers
     return lookup
 
 
-def delete_clickhouse_project(project, dataset_type=None, **kwargs):
+def delete_clickhouse_project(project, dataset_type, sample_type=None):
+    dataset_type = _clickhouse_dataset_type(dataset_type, sample_type)
     table_base = f'{GENOME_VERSION_LOOKUP[project.genome_version]}/{dataset_type}'
     with connections['clickhouse_write'].cursor() as cursor:
         cursor.execute(f'ALTER TABLE "{table_base}/entries" DROP PARTITION %s', [project.guid])
@@ -633,3 +634,17 @@ def delete_clickhouse_project(project, dataset_type=None, **kwargs):
             cursor.execute(f'SYSTEM WAIT VIEW "{view_name}"')
             cursor.execute(f'SYSTEM RELOAD DICTIONARY "{table_base}/gt_stats_dict"')
     return f'Deleted all {dataset_type} search data for project {project.name}'
+
+
+def delete_clickhouse_family(project, family_guid, dataset_type, sample_type=None):
+    dataset_type = _clickhouse_dataset_type(dataset_type, sample_type)
+    return f'Clickhouse does not support deleting individual families from project. Manually delete {dataset_type} data for {family_guid} in project {project.guid}'
+
+
+def _clickhouse_dataset_type(dataset_type, sample_type):
+    if dataset_type == Sample.DATASET_TYPE_SV_CALLS:
+        if not sample_type:
+            raise ValueError('sample_type is required when dataset_type is SV')
+        if sample_type == Sample.SAMPLE_TYPE_WES:
+            return 'GCNV'
+    return dataset_type
