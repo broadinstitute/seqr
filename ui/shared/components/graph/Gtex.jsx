@@ -1,10 +1,11 @@
 import React from 'react'
 import { deviation, extent, max, mean, median, min, quantile } from 'd3-array'
 import { randomNormal } from 'd3-random'
-import { scaleBand, scaleLinear } from 'd3-scale'
+import { scaleBand, scaleLinear, scaleSequential } from 'd3-scale'
+import { interpolatePurples } from 'd3-scale-chromatic'
 import { area } from 'd3-shape'
+import { Tab } from 'semantic-ui-react'
 
-import { compareObjects } from 'shared/utils/sortUtils'
 import { initializeD3, Tooltip } from './d3Utils'
 import GtexLauncher, { queryGtex } from './GtexLauncher'
 
@@ -14,10 +15,8 @@ const MARGINS = {
   bottom: 150,
   left: 50,
 }
-const DIMENSIONS = {
-  width: window.innerWidth * 0.8,
-  height: 400,
-}
+const WIDTH = window.innerWidth * 0.8
+const VIOLIN_HEIGHT = 400
 
 // Code adapted from https://github.com/broadinstitute/gtex-viz/blob/8d65862fbe7e5ab9b4d5be419568754e0d17bb07/src/GeneExpressionViolinPlot.js
 
@@ -49,7 +48,7 @@ const drawViolin = (svg, scale, tooltip) => (entry) => {
   const zMax = max(vertices, d => Math.abs(d[1]))
   scale.z
     .domain([-zMax, zMax])
-    .range([scale.x(entry.label), scale.x(entry.label) + scale.x.bandwidth()])
+    .range([scale.x(entry.tissue), scale.x(entry.tissue) + scale.x.bandwidth()])
 
   // visual rendering
   const violin = area()
@@ -104,7 +103,7 @@ const drawViolin = (svg, scale, tooltip) => (entry) => {
   violinG.on('mouseover', () => {
     vPath.style('opacity', 1)
     tooltip.show(
-      `${entry.label}<br/>Sample size: ${entry.values.length}<br/>Median TPM: ${entry.median.toPrecision(4)}<br/>`,
+      `${entry.tissue}<br/>Sample size: ${entry.values.length}<br/>Median TPM: ${entry.median.toPrecision(4)}<br/>`,
       x + 70,
       medianY < 40 ? 10 : medianY - 40,
     )
@@ -114,53 +113,138 @@ const drawViolin = (svg, scale, tooltip) => (entry) => {
   })
 }
 
-const renderViolinPlot = (violinPlotData, containerElement) => {
-  const xDomain = violinPlotData.map(({ label }) => label)
-  const yDomain = extent(violinPlotData.reduce((acc, { values }) => ([...acc, ...values]), []))
-
-  const scale = {
-    x: scaleBand()
-      .rangeRound([0, DIMENSIONS.width])
-      .domain(xDomain)
-      .paddingInner(0.2),
+const getViolinScales = violinPlotData => ({
+  scales: {
     y: scaleLinear()
-      .rangeRound([DIMENSIONS.height, 0])
-      .domain(yDomain),
+      .rangeRound([VIOLIN_HEIGHT, 0])
+      .domain(extent(violinPlotData.reduce((acc, { values }) => ([...acc, ...values]), []))),
     z: scaleLinear(), // the violin width, domain and range are determined later individually for each violin
+  },
+  height: VIOLIN_HEIGHT,
+  leftOffset: 0,
+})
+const getViolinAxis = scale => ({
+  y: {
+    text: 'TPM',
+    transform: yAxis => yAxis.tickValues(scale.y.ticks(5)),
+  },
+})
+
+// Code adapted from https://github.com/broadinstitute/gtex-viz/blob/f9d18299b2bcb69e4a919a4afa359c99a33fbc3b/src/TranscriptBrowser.js
+// and https://github.com/broadinstitute/gtex-viz/blob/f9d18299b2bcb69e4a919a4afa359c99a33fbc3b/src/modules/Heatmap.js
+
+const parseIsoformExpressionData = ({ median: medianValue, transcriptId }) => ({
+  value: Number(medianValue), transcriptId,
+})
+
+const getIsoformScales = (isoformData) => {
+  const yDomain = Object.entries(isoformData.reduce(
+    (acc, { transcriptId, value }) => ({ ...acc, [transcriptId]: (acc[transcriptId] || 0) + value }), {},
+  )).sort((a, b) => a[1] - b[1]).map(([transcriptId]) => transcriptId)
+
+  const height = yDomain.length * 15
+
+  const scales = {
+    y: scaleBand()
+      .rangeRound([height, 0])
+      .domain(yDomain)
+      .paddingInner(0.1),
+    color: scaleSequential(interpolatePurples)
+      .domain([0, max(isoformData.map(({ value }) => Math.log10(value + 1)))]),
   }
+  return { scales, height, leftOffset: 50 }
+}
 
-  const svg = initializeD3(containerElement, DIMENSIONS, MARGINS, scale, {
-    y: {
-      text: 'TPM',
-      transform: yAxis => yAxis.tickValues(scale.y.ticks(5)),
-    },
-  })
-
-  const tooltip = new Tooltip(containerElement)
-  violinPlotData.forEach(drawViolin(svg, scale, tooltip))
+const drawIsoformCell = (svg, scale, tooltip) => ({ tissue, transcriptId, value }) => {
+  svg.append('rect')
+    .attr('x', scale.x(tissue))
+    .attr('y', scale.y(transcriptId))
+    .attr('rx', 5)
+    .attr('ry', 5)
+    .attr('width', scale.x.bandwidth())
+    .attr('height', scale.y.bandwidth())
+    .style('fill', '#eeeeee')
+    .on('mouseover', () => {
+      tooltip.show(`Tissue: ${tissue}<br/> Isoform: ${transcriptId}<br/> TPM: ${value}`, scale.x(tissue), scale.y(transcriptId))
+    })
+    .on('mouseout', () => {
+      tooltip.hide()
+    })
+    .style('fill', scale.color(Math.log10(value + 1)))
 }
 
 // seqr-specific code
 
 const loadTissueData = onSuccess => queryGtex('dataset/tissueSiteDetail', {}, onSuccess)
 
-const renderGtex = (expressionData, tissueData, containerElement) => {
-  if ((expressionData?.data || []).length < 1) {
+const renderGtex = (
+  responseKey, parseExpressionData, renderDataPoint, getScales, getAxis,
+) => (expressionData, tissueData, containerElement) => {
+  if (((expressionData || {})[responseKey] || []).length < 1) {
     return
   }
   const tissueLookup = tissueData.data.reduce(
     (acc, { tissueSiteDetailId, ...data }) => ({ ...acc, [tissueSiteDetailId]: data }), {},
   )
-  const violinPlotData = expressionData.data.map(({ tissueSiteDetailId, data }) => ({
-    values: data.sort(),
-    median: median(data),
-    label: tissueLookup[tissueSiteDetailId]?.tissueSiteDetail,
-    color: `#${tissueLookup[tissueSiteDetailId]?.colorHex}`,
+  const plotData = expressionData[responseKey].map(({ tissueSiteDetailId, ...data }) => ({
+    ...parseExpressionData(data, tissueLookup[tissueSiteDetailId]),
+    tissue: tissueLookup[tissueSiteDetailId]?.tissueSiteDetail,
   }))
-  violinPlotData.sort(compareObjects('label'))
-  renderViolinPlot(violinPlotData, containerElement)
+  const xDomain = plotData.map(({ tissue }) => tissue).sort()
+  const { scales, height, leftOffset } = getScales(plotData)
+  const dimensions = { width: WIDTH, height }
+  const margins = { ...MARGINS, left: MARGINS.left + leftOffset }
+  const scale = {
+    x: scaleBand()
+      .rangeRound([0, WIDTH - leftOffset])
+      .domain(xDomain)
+      .paddingInner(0.2),
+    ...scales,
+  }
+  const svg = initializeD3(containerElement, dimensions, margins, scale, getAxis ? getAxis(scale) : {})
+  const tooltip = new Tooltip(containerElement)
+  plotData.forEach(renderDataPoint(svg, scale, tooltip))
 }
 
-export default props => (
-  <GtexLauncher renderGtex={renderGtex} fetchAdditionalData={loadTissueData} {...props} />
+const parseViolinExpressionData = ({ data }, tissue) => ({
+  values: data.sort(),
+  median: median(data),
+  color: `#${(tissue || {}).colorHex}`,
+})
+const renderGtexViolin = renderGtex('data', parseViolinExpressionData, drawViolin, getViolinScales, getViolinAxis)
+
+const renderGtexIsoform = renderGtex('medianTranscriptExpression', parseIsoformExpressionData, drawIsoformCell, getIsoformScales)
+
+const GtexViolin = props => (
+  <GtexLauncher renderGtex={renderGtexViolin} fetchAdditionalData={loadTissueData} {...props} />
 )
+
+const GtexIsoform = props => (
+  <GtexLauncher
+    renderGtex={renderGtexIsoform}
+    fetchAdditionalData={loadTissueData}
+    expressionPath="clusteredMedianTranscriptExpression"
+    {...props}
+  />
+)
+
+const gtexPanes = props => [
+  {
+    menuItem: 'Gene Expression',
+    render: () => (
+      <Tab.Pane>
+        <GtexViolin {...props} />
+      </Tab.Pane>
+    ),
+  },
+  {
+    menuItem: 'Isoform Expression',
+    render: () => (
+      <Tab.Pane>
+        <GtexIsoform {...props} />
+      </Tab.Pane>
+    ),
+  },
+]
+
+export default props => <Tab panes={gtexPanes(props)} />
