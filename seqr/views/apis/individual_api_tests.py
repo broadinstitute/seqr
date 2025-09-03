@@ -1208,6 +1208,7 @@ class IndividualAPITest(object):
             'condition_id': 'OMIM:616126',
             'known_condition_name': 'Immunodeficiency 38',
             'condition_inheritance': 'Autosomal recessive',
+            'GREGoR_variant_classification': 'Curation in progress',
         })
         self.assertDictEqual(json.loads(next(t for t in new_variant_tags if t != comp_het_tag).metadata), {
             'gene_known_for_phenotype': 'Candidate',
@@ -1218,7 +1219,7 @@ class IndividualAPITest(object):
 
         new_family_tag = variant_tags.get(saved_variants__guid=saved_variants[2]['guid'])
         self.assertDictEqual(
-            json.loads(new_family_tag.metadata), {'gene_known_for_phenotype': 'Known', 'condition_id': 'MONDO:0044970'},
+            json.loads(new_family_tag.metadata), {'gene_known_for_phenotype': 'Known', 'condition_id': 'MONDO:0044970', 'GREGoR_variant_classification': 'Curation in progress'},
         )
 
         mock_subprocess.assert_has_calls([
