@@ -10,7 +10,7 @@ from clickhouse_search.models import EntriesSnvIndel, ProjectGtStatsSnvIndel, An
 from seqr.utils.communication_utils import _set_bulk_notification_stream
 from seqr.views.apis.data_manager_api import elasticsearch_status, delete_index, \
     update_rna_seq, load_rna_seq_sample_data, load_phenotype_prioritization_data, validate_callset, loading_vcfs, \
-    get_loaded_projects, load_data, trigger_delete_project, trigger_delete_family, trigger_update_search_reference_data
+    get_loaded_projects, load_data, trigger_delete_project, trigger_delete_family
 from seqr.views.utils.orm_to_json_utils import _get_json_for_models
 from seqr.views.utils.test_utils import AuthenticationTestCase, AirflowTestCase, AirtableTest
 from seqr.utils.search.elasticsearch.es_utils_tests import urllib3_responses
@@ -1520,55 +1520,28 @@ class DataManagerAPITest(AirtableTest):
         url = reverse(trigger_delete_project)
         self.check_data_manager_login(url)
 
-        self._test_trigger_search_data_update(
-            url,
-            'DELETE_PROJECTS',
-            {'project': PROJECT_GUID, 'datasetType': 'SNV_INDEL'},
-            {
-                'projects_to_run': [PROJECT_GUID],
-                'dataset_type': 'SNV_INDEL',
-                'reference_genome': 'GRCh37',
-            }
+        Project.objects.filter(guid=PROJECT_GUID).update(genome_version='38')
+        response = self.client.post(
+            url, content_type='application/json', data=json.dumps({'project': PROJECT_GUID, 'datasetType': 'SNV_INDEL'})
         )
+        self._assert_expected_delete_project(response)
 
     @responses.activate
     def test_trigger_delete_family(self):
         url = reverse(trigger_delete_family)
         self.check_data_manager_login(url)
 
-        self._test_trigger_search_data_update(
-            url,
-            'DELETE_FAMILIES',
-            {'family': 'F000012_12', 'datasetType': 'MITO'},
-            {
-                'projects_to_run': ['R0003_test'],
-                'dataset_type': 'MITO',
-                'reference_genome': 'GRCh37',
-                'family_guids': ['F000012_12'],
-            }
-        )
+        Project.objects.filter(guid=PROJECT_GUID).update(genome_version='38')
+        response = self.client.post(url, content_type='application/json', data=json.dumps({'family': 'F000012_12', 'datasetType': 'MITO'}))
+        self._assert_expected_delete_family(response)
 
-    @responses.activate
-    def test_trigger_update_search_reference_data(self):
-        url = reverse(trigger_update_search_reference_data)
-        self.check_data_manager_login(url)
+    def _assert_expected_delete_project(self, response):
+        self._assert_expected_search_data_update(response)
 
-        body = {'genomeVersion': '38', 'datasetType': 'SV'}
-        self._test_trigger_search_data_update(url, 'UPDATE_REFERENCE_DATASETS', body, {
-            'projects_to_run': None,
-            'dataset_type': 'SV',
-            'reference_genome': 'GRCh38',
-        })
+    def _assert_expected_delete_family(self, response):
+        self._assert_expected_search_data_update(response)
 
-    def _test_trigger_search_data_update(self, url, dag_id, body, dag_variables):
-        self._setup_trigger_search_data_update(dag_id=dag_id, dag_variables=dag_variables)
-        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
-        self._assert_expected_search_data_update(response, dag_id, dag_variables)
-
-    def _setup_trigger_search_data_update(self, *args, **kwargs):
-        return
-
-    def _assert_expected_search_data_update(self, response, dag_id, variables):
+    def _assert_expected_search_data_update(self, response):
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['This functionality is not available in the current search backend'], 'warnings': None})
 
@@ -2011,21 +1984,6 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
 
         self._set_file_not_found()
 
-    def _add_update_check_dag_responses(self, variables=None, **kwargs):
-        if variables:
-            return self._add_check_dag_variable_responses(variables)
-
-        return super()._add_update_check_dag_responses(**kwargs)
-
-    def _setup_trigger_search_data_update(self, *args, **kwargs):
-        Project.objects.filter(guid=PROJECT_GUID).update(genome_version='38')
-
-    def _assert_expected_search_data_update(self, response, dag_id, variables):
-        if dag_id == 'DELETE_PROJECTS':
-            self._assert_expected_delete_project(response)
-        else:
-            super()._assert_expected_search_data_update(response, dag_id, variables)
-
     def _assert_expected_delete_project(self, response):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {
@@ -2045,6 +2003,12 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
             22: (0, 3, 0, 1),
         })
 
+    def _assert_expected_delete_family(self, response):
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {
+            'info': ['Clickhouse does not support deleting individual families from project. Manually delete MITO data for F000012_12 in project R0003_test'],
+        })
+
     def _assert_expected_airtable_errors(self, url):
         responses.replace(
             responses.GET, 'https://api.airtable.com/v0/app3Y97xtbbaOopVR/Samples',
@@ -2057,43 +2021,16 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         })
 
 @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
-class HailBackendDataManagerAPITest(AnvilDataManagerAPITest):
+class HailBackendDataManagerAPITest(LocalDataManagerAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
 
     CLICKHOUSE_HOSTNAME = ''
+    ES_HOSTNAME = ''
 
-    def _assert_update_check_airflow_calls(self, call_count, offset, update_check_path):
-        if self.DAG_NAME != 'LOADING_PIPELINE':
-            update_check_path = f'{self.MOCK_AIRFLOW_URL}/api/v1/variables/{self.DAG_NAME}'
-        super()._assert_update_check_airflow_calls(call_count, offset, update_check_path)
-
-    def set_up_one_dag(self, dag_id=None, **kwargs):
-        if dag_id:
-            self._dag_url = self._dag_url.replace(self.DAG_NAME, dag_id)
-            self.DAG_NAME = dag_id
-        super().set_up_one_dag(**kwargs)
-
-    def _assert_expected_search_data_update(self, response, dag_id, variables):
-        self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {'info': [f'Triggered DAG {dag_id} with variables: {json.dumps(variables)}']})
-
-        self.assert_airflow_calls(variables, 5)
-
-    def _setup_trigger_search_data_update(self, *args, dag_id=None, dag_variables=None, **kwargs):
-        responses.calls.reset()
-        self.set_up_one_dag(dag_id, variables=dag_variables)
-
-    def _test_trigger_search_data_update(self, url, dag_id, body, dag_variables):
-        super()._test_trigger_search_data_update(url, dag_id, body, dag_variables)
-
-        self.set_dag_trigger_error_response()
-        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+    def _assert_expected_es_status(self, response):
         self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {
-            'errors': [f'{dag_id} DAG is running and cannot be triggered again.'], 'warnings': None,
-        })
+        self.assertEqual(response.json()['error'], 'Elasticsearch is disabled')
 
-        # DAG trigger not attempted when airflow is disabled
-        self.mock_airflow_url.__bool__.return_value = False
-        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
-        self.assertEqual(response.status_code, 403)
+    def _assert_expected_delete_index_response(self, response):
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['error'], 'Deleting indices is disabled without the elasticsearch backend')
