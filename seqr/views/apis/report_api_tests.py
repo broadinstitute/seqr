@@ -450,7 +450,8 @@ MOCK_DATA_MODEL = {
                 {'column': 'pos_end', 'data_type': 'integer'},
                 {'column': 'copy_number', 'data_type': 'integer'},
                 {'column': 'hgvs'},
-                {'column': 'gene_disease_validity'},
+                {'column': 'gene_disease_validity', 'required': True},
+                {'column': 'GREGoR_variant_classification', 'required': True},
             ]
         },
     ]
@@ -612,32 +613,35 @@ GENETIC_FINDINGS_TABLE = [
         'allele_balance_or_heteroplasmy_percentage', 'variant_inheritance', 'linked_variant', 'linked_variant_phase',
         'gene_known_for_phenotype', 'known_condition_name', 'condition_id', 'condition_inheritance',
         'phenotype_contribution', 'partial_contribution_explained', 'additional_family_members_with_variant',
-        'method_of_discovery', 'notes', 'sv_type', 'chrom_end', 'pos_end', 'copy_number', 'hgvs', 'gene_disease_validity',
+        'method_of_discovery', 'notes', 'sv_type', 'chrom_end', 'pos_end', 'copy_number', 'hgvs', 'gene_disease_validity', 'GREGoR_variant_classification',
     ], [
         'Broad_NA19675_1_21_3343353', 'Broad_NA19675_1', '', 'INDEL', 'GRCh37', '21', '3343353', 'GAGA', 'G', '',
         'RP11', 'ENST00000258436.5', 'c.375_377delTCT', 'p.Leu126del', 'Heterozygous', '', 'de novo', '', '', 'Candidate',
         'Myasthenic syndrome, congenital, 8, with pre- and postsynaptic defects', 'OMIM:615120', 'Autosomal recessive|X-linked',
-        'Full', '', '', 'SR-ES', 'This individual is published in PMID34415322', '', '', '', '', '', '',
+        'Full', '', '', 'SR-ES', 'This individual is published in PMID34415322', '', '', '', '', '',
+        'Curation in progress', 'Curation in progress',
     ], [
         'Broad_HG00731_1_248367227', 'Broad_HG00731', 'Broad_exome_VCGS_FAM203_621_D2', 'INDEL', 'GRCh37', '1',
         '248367227', 'TC', 'T', 'CA1501729', 'RP11', 'ENST00000371839', '', '', 'Homozygous', '', 'paternal', '', '', 'Known', '',
-        'MONDO:0044970', '', 'Uncertain', '', 'Broad_HG00732', 'SR-ES', '', '', '', '', '', '', '',
+        'MONDO:0044970', '', 'Uncertain', '', 'Broad_HG00732', 'SR-ES', '', '', '', '', '', '',
+        'Curation in progress', 'Curation in progress',
     ], [
         'Broad_HG00731_19_1912632', 'Broad_HG00731', 'Broad_exome_VCGS_FAM203_621_D2', 'SNV', 'GRCh37', '19',
         '1912632', 'G', 'C', '', 'OR4G11P', 'ENST00000371839', 'c.586_587delinsTT', 'p.Ala196Leu', 'Heterozygous', '', 'unknown',
         'Broad_HG00731_19_1912634', '', 'Known', '', 'MONDO:0044970', '', 'Full', '', '', 'SR-ES',
         'The following variants are part of the multinucleotide variant 19-1912632-G-C (c.586_587delinsTT, p.Ala196Leu): 19-1912633-G-T, 19-1912634-C-T',
-        '', '', '', '', '', '',
+        '', '', '', '', '', 'Curation in progress', 'Curation in progress',
     ], [
         'Broad_NA20889_1_248367227', 'Broad_NA20889', '', 'INDEL', 'GRCh37', '1', '248367227', 'TC', 'T',
         'CA1501729', 'OR4G11P', 'ENST00000505820', 'c.3955G>A', 'c.1586-17C>G', 'Heterozygous', '', 'unknown',
         'Broad_NA20889_1_249045487_DEL', '', 'Candidate', 'Immunodeficiency 38', 'OMIM:616126', 'Autosomal recessive',
-        'Partial', 'HP:0000501|HP:0000365', '', 'SR-ES', '', '', '', '', '', '', '',
+        'Partial', 'HP:0000501|HP:0000365', '', 'SR-ES', '', '', '', '', '', '', 'Curation in progress', 'Curation in progress',
     ], [
         'Broad_NA20889_1_249045487_DEL', 'Broad_NA20889', '', 'SV', 'GRCh37', '1', '249045487', '', '', '',
         'OR4G11P', '', '', '', 'Heterozygous', '', 'unknown', 'Broad_NA20889_1_248367227', '', 'Candidate',
         'Immunodeficiency 38', 'OMIM:616126', 'Autosomal recessive', 'Full', '', '', 'SR-ES',
-        'Phasing incorrect in input VCF', 'DEL', '', '249045898', '1', 'DEL:chr1:249045123-249045456', '',
+        'Phasing incorrect in input VCF', 'DEL', '', '249045898', '1', 'DEL:chr1:249045123-249045456',
+        'Curation in progress', 'Curation in progress',
     ],
 ]
 
@@ -933,11 +937,12 @@ class ReportAPITest(AirtableTest):
             'RP11', 'ENST00000258436.5', 'c.375_377delTCT', 'p.Leu126del', 'Heterozygous', '', 'de novo', '', '',
             'Candidate', 'Myasthenic syndrome, congenital, 8, with pre- and postsynaptic defects', 'OMIM:615120',
             'Autosomal recessive|X-linked', 'Full', '', '', 'SR-ES', 'This individual is published in PMID34415322',
-            '', '', '', '', '', '',
+            '', '', '', '', '', 'Curation in progress', 'Curation in progress',
         ], [
             'Broad_HG00731_1_248367227', 'Broad_HG00731', 'Broad_exome_VCGS_FAM203_621_D2', 'INDEL', 'GRCh37', '1',
             '248367227', 'TC', 'T', 'CA1501729', 'RP11', 'ENST00000371839', '', '', 'Homozygous', '', 'paternal', '', '', 'Known', '',
-            'MONDO:0044970', '', 'Uncertain', '', 'Broad_HG00732', 'SR-ES', '', '', '', '', '', '', '',
+            'MONDO:0044970', '', 'Uncertain', '', 'Broad_HG00732', 'SR-ES', '', '', '', '', '', '',
+            'Curation in progress', 'Curation in progress',
         ]], additional_calls=1)
 
         responses.calls.reset()
