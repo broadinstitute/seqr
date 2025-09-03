@@ -592,31 +592,38 @@ def _update_lookup_variant(variant, response):
 
     no_access_families = set(variant['familyGenotypes']) - set(variant['familyGuids'])
     individual_summary_map = {
-        (i.pop('family__guid'), i.pop('individual_id')): i
+        (i.pop('family__guid'), i.pop('individual_id')): (i.pop('guid'), i)
         for i in Individual.objects.filter(family__guid__in=no_access_families).values(
-            'family__guid', 'individual_id', 'affected', 'sex', 'features',
+            'family__guid', 'individual_id', 'affected', 'sex', 'features', 'guid',
             vlmContactEmail=F('family__project__vlm_contact_email'),
         )
     }
-    add_individual_hpo_details(individual_summary_map.values())
+    add_individual_hpo_details([i for _, i in individual_summary_map.values()])
 
     variant['genotypes'] = {}
     variant['lookupFamilyGuids'] = sorted(variant.pop('familyGuids'))
     variant['familyGuids'] = []
     for family_guid in variant['lookupFamilyGuids']:
-        variant['genotypes'].update({
-            individual_guid_map[(family_guid, genotype['sampleId'])]: genotype
-            for genotype in variant['familyGenotypes'].pop(family_guid)
-        })
+        for genotype in variant['familyGenotypes'].pop(family_guid):
+            individual_guid = individual_guid_map[(family_guid, genotype['sampleId'])]
+            if individual_guid in variant['genotypes']:
+                genotype = [variant['genotypes'][individual_guid], genotype]
+            variant['genotypes'][individual_guid] = genotype
 
     for i, (unmapped_family_guid, genotypes) in enumerate(variant.pop('familyGenotypes').items()):
         family_guid = f'F{i}_{variant["variantId"]}'
         variant['lookupFamilyGuids'].append(family_guid)
         if unmapped_family_guid in variant.get('liftedFamilyGuids', []):
             variant['liftedFamilyGuids'][variant['liftedFamilyGuids'].index(unmapped_family_guid)] = family_guid
+        individual_guid_map = {}
         for j, genotype in enumerate(genotypes):
+            unmapped_individual_guid, individual = individual_summary_map[(genotype.pop('familyGuid'), genotype.pop('sampleId'))]
+            if unmapped_individual_guid in individual_guid_map:
+                individual_guid = individual_guid_map[unmapped_individual_guid]
+                variant['genotypes'][individual_guid] = [variant['genotypes'][individual_guid], genotype]
+                continue
             individual_guid = f'I{j}_{family_guid}'
-            individual = individual_summary_map[(genotype.pop('familyGuid'), genotype.pop('sampleId'))]
+            individual_guid_map[unmapped_individual_guid] = individual_guid
             feature_category_count = defaultdict(int)
             for feature in individual['features'] or []:
                 feature_category_count[feature.get('category', 'Other')] += 1

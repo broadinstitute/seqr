@@ -182,32 +182,32 @@ class BaseAnnotationsGRCh37SnvIndel(BaseAnnotationsMitoSnvIndel):
     POPULATION_FIELDS = [
         ('exac', NamedTupleField([
             ('ac', models.UInt32Field()),
-            ('af', models.DecimalField(max_digits=9, decimal_places=5)),
+            ('af', models.DecimalField(max_digits=9, decimal_places=8)),
             ('an', models.UInt32Field()),
-            ('filter_af', models.DecimalField(max_digits=9, decimal_places=5)),
+            ('filter_af', models.DecimalField(max_digits=9, decimal_places=8)),
             ('hemi', models.UInt32Field()),
             ('het', models.UInt32Field()),
             ('hom', models.UInt32Field()),
         ])),
         ('gnomad_exomes', NamedTupleField([
             ('ac', models.UInt32Field()),
-            ('af', models.DecimalField(max_digits=9, decimal_places=5)),
+            ('af', models.DecimalField(max_digits=9, decimal_places=8)),
             ('an', models.UInt32Field()),
-            ('filter_af', models.DecimalField(max_digits=9, decimal_places=5)),
+            ('filter_af', models.DecimalField(max_digits=9, decimal_places=8)),
             ('hemi', models.UInt32Field()),
             ('hom', models.UInt32Field()),
         ])),
         ('gnomad_genomes', NamedTupleField([
             ('ac', models.UInt32Field()),
-            ('af', models.DecimalField(max_digits=9, decimal_places=5)),
+            ('af', models.DecimalField(max_digits=9, decimal_places=8)),
             ('an', models.UInt32Field()),
-            ('filter_af', models.DecimalField(max_digits=9, decimal_places=5)),
+            ('filter_af', models.DecimalField(max_digits=9, decimal_places=8)),
             ('hemi', models.UInt32Field()),
             ('hom', models.UInt32Field()),
         ])),
         ('topmed', NamedTupleField([
             ('ac', models.UInt32Field()),
-            ('af', models.DecimalField(max_digits=9, decimal_places=5)),
+            ('af', models.DecimalField(max_digits=9, decimal_places=8)),
             ('an', models.UInt32Field()),
             ('het', models.UInt32Field()),
             ('hom', models.UInt32Field()),
@@ -317,23 +317,23 @@ class BaseAnnotationsMito(BaseAnnotationsMitoSnvIndel):
     POPULATION_FIELDS = [
         ('gnomad_mito', NamedTupleField([
             ('ac', models.UInt32Field()),
-            ('af', models.DecimalField(max_digits=9, decimal_places=5)),
+            ('af', models.DecimalField(max_digits=9, decimal_places=8)),
             ('an', models.UInt32Field()),
         ])),
         ('gnomad_mito_heteroplasmy', NamedTupleField([
             ('ac', models.UInt32Field()),
-            ('af', models.DecimalField(max_digits=9, decimal_places=5)),
+            ('af', models.DecimalField(max_digits=9, decimal_places=8)),
             ('an', models.UInt32Field()),
             ('max_hl', models.DecimalField(max_digits=9, decimal_places=5)),
         ])),
         ('helix', NamedTupleField([
             ('ac', models.UInt32Field()),
-            ('af', models.DecimalField(max_digits=9, decimal_places=5)),
+            ('af', models.DecimalField(max_digits=9, decimal_places=8)),
             ('an', models.UInt32Field()),
         ])),
         ('helix_heteroplasmy', NamedTupleField([
             ('ac', models.UInt32Field()),
-            ('af', models.DecimalField(max_digits=9, decimal_places=5)),
+            ('af', models.DecimalField(max_digits=9, decimal_places=8)),
             ('an', models.UInt32Field()),
             ('max_hl', models.DecimalField(max_digits=9, decimal_places=5)),
         ])),
@@ -377,7 +377,7 @@ class AnnotationsDiskMito(BaseAnnotationsMito):
 class BaseAnnotationsSv(BaseAnnotationsSvGcnv):
     POPULATION_FIELDS = [
         ('gnomad_svs', NamedTupleField([
-            ('af', models.DecimalField(max_digits=9, decimal_places=5)),
+            ('af', models.DecimalField(max_digits=9, decimal_places=8)),
             ('het', models.UInt32Field()),
             ('hom', models.UInt32Field()),
             ('id', models.StringField()),
@@ -421,7 +421,7 @@ class BaseAnnotationsGcnv(BaseAnnotationsSvGcnv):
     POPULATION_FIELDS = [
         ('sv_callset', NamedTupleField([
             ('ac', models.UInt32Field()),
-            ('af', models.DecimalField(max_digits=9, decimal_places=5)),
+            ('af', models.DecimalField(max_digits=9, decimal_places=8)),
             ('an', models.UInt32Field()),
             ('het', models.UInt32Field()),
             ('hom', models.UInt32Field()),
@@ -558,6 +558,8 @@ class ClinvarMito(BaseClinvarJoin):
 
 
 class BaseEntries(FixtureLoadableClickhouseModel):
+    MAX_XPOS_FILTER_INTERVALS = 500
+
     project_guid = models.StringField(low_cardinality=True)
     family_guid = models.StringField()
     xpos = UInt64FieldDeltaCodecField()
@@ -645,6 +647,7 @@ class EntriesMito(BaseEntries):
         )
 
 class EntriesSv(BaseEntries):
+    MAX_XPOS_FILTER_INTERVALS = 0
     SAMPLE_TYPE = Sample.SAMPLE_TYPE_WGS
     CALL_FIELDS = [
         ('sampleId', models.StringField()),
@@ -659,6 +662,7 @@ class EntriesSv(BaseEntries):
     # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
     key = ForeignKey('AnnotationsSv', db_column='key', primary_key=True, on_delete=CASCADE)
     calls = models.ArrayField(NamedTupleField(CALL_FIELDS))
+    geneId_ids = models.ArrayField(models.UInt32Field())
 
     class Meta(BaseEntries.Meta):
         db_table = 'GRCh38/SV/entries'

@@ -45,8 +45,7 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
         entry_cls = ENTRY_CLASS_MAP[genome_version][dataset_type]
         annotations_cls = ANNOTATIONS_CLASS_MAP[genome_version][dataset_type]
         family_guid = sample_data['family_guids'][0]
-        is_multi_project = len(sample_data['project_guids']) > 1
-        skip_individual_guid = is_multi_project and dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS
+        skip_individual_guid = len(sample_data['project_guids']) > 1
 
         dataset_results = []
         if inheritance_mode != COMPOUND_HET:
@@ -63,7 +62,7 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
     if has_comp_het and Sample.DATASET_TYPE_VARIANT_CALLS in sample_data_by_dataset_type and any(
         dataset_type.startswith(Sample.DATASET_TYPE_SV_CALLS) for dataset_type in sample_data_by_dataset_type
     ):
-        results += _get_multi_data_type_comp_het_results_queryset(genome_version, sample_data_by_dataset_type, **search)
+        results += _get_multi_data_type_comp_het_results_queryset(genome_version, sample_data_by_dataset_type, user, **search)
 
     cache_results = get_clickhouse_cache_results(results, sort, family_guid)
     previous_search_results.update(cache_results)
@@ -86,7 +85,7 @@ def _evaluate_results(result_q, is_comp_het=False):
         raise InvalidSearchException('This search returned too many results')
     return results
 
-def _get_multi_data_type_comp_het_results_queryset(genome_version, sample_data_by_dataset_type, annotations=None, annotations_secondary=None, inheritance_mode=None, **search_kwargs):
+def _get_multi_data_type_comp_het_results_queryset(genome_version, sample_data_by_dataset_type, user, annotations=None, annotations_secondary=None, inheritance_mode=None, **search_kwargs):
     if annotations_secondary:
         annotations = {
             **annotations,
@@ -107,6 +106,7 @@ def _get_multi_data_type_comp_het_results_queryset(genome_version, sample_data_b
         families = snv_indel_families.intersection(sv_families)
         if not families:
             continue
+        logger.info(f'Loading {Sample.DATASET_TYPE_VARIANT_CALLS}/{sv_dataset_type} data for {len(families)} families', user)
 
         entries = entry_cls.objects.search({
             **snv_indel_sample_data,
@@ -626,9 +626,10 @@ def delete_clickhouse_project(project, dataset_type=None, **kwargs):
     table_base = f'{GENOME_VERSION_LOOKUP[project.genome_version]}/{dataset_type}'
     with connections['clickhouse_write'].cursor() as cursor:
         cursor.execute(f'ALTER TABLE "{table_base}/entries" DROP PARTITION %s', [project.guid])
-        cursor.execute(f'ALTER TABLE "{table_base}/project_gt_stats" DROP PARTITION %s', [project.guid])
-        view_name = f'{table_base}/project_gt_stats_to_gt_stats_mv'
-        cursor.execute(f'SYSTEM REFRESH VIEW "{view_name}"')
-        cursor.execute(f'SYSTEM WAIT VIEW "{view_name}"')
-        cursor.execute(f'SYSTEM RELOAD DICTIONARY "{table_base}/gt_stats_dict"')
+        if dataset_type != 'GCNV':
+            cursor.execute(f'ALTER TABLE "{table_base}/project_gt_stats" DROP PARTITION %s', [project.guid])
+            view_name = f'{table_base}/project_gt_stats_to_gt_stats_mv'
+            cursor.execute(f'SYSTEM REFRESH VIEW "{view_name}"')
+            cursor.execute(f'SYSTEM WAIT VIEW "{view_name}"')
+            cursor.execute(f'SYSTEM RELOAD DICTIONARY "{table_base}/gt_stats_dict"')
     return f'Deleted all {dataset_type} search data for project {project.name}'

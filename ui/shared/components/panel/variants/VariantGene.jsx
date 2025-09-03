@@ -725,7 +725,7 @@ class VariantGenes extends React.PureComponent {
   render() {
     const { variant, genesById, mainGeneId, showMainGene, individualGeneData, tpmGenes } = this.props
     const { showAll } = this.state
-    const geneIds = Object.keys(variant.transcripts || {})
+    const geneIds = Object.keys(variant.transcripts || {}).filter(geneId => geneId !== 'null')
     const genes = geneIds.map(geneId => genesById[geneId]).filter(gene => gene)
 
     const geneSearchLink = !mainGeneId && geneIds.length > 0 &&

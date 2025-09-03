@@ -1,6 +1,8 @@
 from django.core.management.base import BaseCommand, CommandError
 
+from clickhouse_search.search import delete_clickhouse_project
 from seqr.models import Project, Sample
+from seqr.utils.search.utils import backend_specific_call
 from seqr.views.utils.airflow_utils import is_airflow_enabled, trigger_airflow_dag, DELETE_PROJECTS_DAG_NAME
 
 import logging
@@ -21,8 +23,22 @@ class Command(BaseCommand):
 
         logger.info(f'Deactivated {len(updated)} samples')
 
-        if updated and is_airflow_enabled():
-            dataset_types = Sample.objects.filter(guid__in=updated).values_list('dataset_type', flat=True).distinct()
-            for dataset_type in dataset_types:
-                trigger_airflow_dag(DELETE_PROJECTS_DAG_NAME, project, 'SNV_INDEL')
-                logger.info(f'Successfully triggered {DELETE_PROJECTS_DAG_NAME} DAG for {dataset_type} {project.guid}')
+        if updated:
+            dataset_types = Sample.objects.filter(guid__in=updated).values_list('dataset_type', 'sample_type').order_by('dataset_type').distinct()
+            for dataset_type, sample_type in dataset_types:
+                backend_specific_call(
+                    lambda *args, **kwargs: True, self._trigger_delete_dag, self._delete_clickhouse_project,
+                )(project, dataset_type, sample_type)
+
+    @staticmethod
+    def _trigger_delete_dag(project, dataset_type, sample_type):
+        if is_airflow_enabled():
+            trigger_airflow_dag(DELETE_PROJECTS_DAG_NAME, project, 'SNV_INDEL')
+            logger.info(f'Successfully triggered {DELETE_PROJECTS_DAG_NAME} DAG for {dataset_type} {project.guid}')
+
+    @staticmethod
+    def _delete_clickhouse_project(project, dataset_type, sample_type):
+        if dataset_type == Sample.DATASET_TYPE_SV_CALLS and sample_type == Sample.SAMPLE_TYPE_WES:
+            dataset_type = 'GCNV'
+        info = delete_clickhouse_project(project, dataset_type)
+        logger.info(info)
