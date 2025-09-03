@@ -428,9 +428,7 @@ def trigger_delete_project(request):
     request_json = json.loads(request.body)
     project_guid = request_json.pop('project')
     project = Project.objects.get(guid=project_guid)
-    return _trigger_data_update(
-        project, delete_clickhouse_project, **request_json,
-    )
+    return _trigger_data_update(delete_clickhouse_project, request_json, project)
 
 
 @data_manager_required
@@ -438,17 +436,24 @@ def trigger_delete_family(request):
     request_json = json.loads(request.body)
     family_guid = request_json.pop('family')
     project = Project.objects.get(family__guid=family_guid)
-    return _trigger_data_update(project, delete_clickhouse_family, family_guid=family_guid, **request_json)
+    return _trigger_data_update(delete_clickhouse_family, request_json, project, family_guid)
 
 
 def _raise_backend_not_implemented(*args, **kwargs):
     raise ErrorsWarningsException(['This functionality is not available in the current search backend'])
 
 
-def _trigger_data_update(project, clickhouse_func, **kwargs):
-    kwargs = {_to_snake_case(k): v for k, v in kwargs.items()}
-    info = backend_specific_call(_raise_backend_not_implemented, _raise_backend_not_implemented, clickhouse_func)(project, **kwargs)
-    return create_json_response({'info': [info]})
+def _trigger_data_update(clickhouse_func, request_json, project, *args):
+    dataset_type = request_json.get('datasetType')
+    sample_types = Sample.objects.filter(
+        individual__family__project=project, dataset_type=dataset_type, is_active=True,
+    ).values_list('sample_type', flat=True).distinct() if dataset_type == Sample.DATASET_TYPE_SV_CALLS else [None]
+    info = []
+    for sample_type in sample_types:
+        info.append(backend_specific_call(
+            _raise_backend_not_implemented, _raise_backend_not_implemented, clickhouse_func,
+        )(project, *args, dataset_type=dataset_type, sample_type=sample_type))
+    return create_json_response({'info': info})
 
 
 # Hop-by-hop HTTP response headers shouldn't be forwarded.

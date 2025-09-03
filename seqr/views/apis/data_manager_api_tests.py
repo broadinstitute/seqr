@@ -1532,7 +1532,7 @@ class DataManagerAPITest(AirtableTest):
         self.check_data_manager_login(url)
 
         Project.objects.filter(guid=PROJECT_GUID).update(genome_version='38')
-        response = self.client.post(url, content_type='application/json', data=json.dumps({'family': 'F000012_12', 'datasetType': 'MITO'}))
+        response = self.client.post(url, content_type='application/json', data=json.dumps({'family': 'F000002_2', 'datasetType': 'SV'}))
         self._assert_expected_delete_family(response)
 
     def _assert_expected_delete_project(self, response):
@@ -2006,7 +2006,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
     def _assert_expected_delete_family(self, response):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {
-            'info': ['Clickhouse does not support deleting individual families from project. Manually delete MITO data for F000012_12 in project R0003_test'],
+            'info': ['Clickhouse does not support deleting individual families from project. Manually delete GCNV data for F000002_2 in project R0001_1kg'],
         })
 
     def _assert_expected_airtable_errors(self, url):

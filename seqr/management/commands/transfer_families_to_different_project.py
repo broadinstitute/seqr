@@ -13,7 +13,7 @@ def _disable_search(families, from_project):
     updated_family_dataset_types = None
     if search_samples:
         updated_families = search_samples.values_list("individual__family__family_id", flat=True).distinct()
-        updated_family_dataset_types = list(search_samples.values_list('dataset_type', 'individual__family__guid').distinct())
+        updated_family_dataset_types = list(search_samples.values_list('individual__family__guid', 'dataset_type', 'sample_type').distinct())
         family_summary = ", ".join(sorted(updated_families))
         num_updated = search_samples.update(is_active=False)
         logger.info(
@@ -23,8 +23,8 @@ def _disable_search(families, from_project):
 
 def _disable_search_clickhouse(families, from_project):
     updated_family_dataset_types = _disable_search(families, from_project)
-    for dataset_type, family_guid in updated_family_dataset_types:
-        logger.info(delete_clickhouse_family(from_project, family_guid=family_guid, dataset_type=dataset_type))
+    for update in updated_family_dataset_types:
+        logger.info(delete_clickhouse_family(from_project, *update))
 
 
 class Command(BaseCommand):

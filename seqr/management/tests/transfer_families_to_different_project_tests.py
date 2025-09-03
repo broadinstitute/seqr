@@ -62,7 +62,7 @@ class TransferFamiliesClickhouseTest(TransferFamiliesTest, AnvilAuthenticationTe
         ('Disabled search for 7 samples in the following 1 families: 2', None),
         ('Clickhouse does not support deleting individual families from project. Manually delete MITO data for F000002_2 in project R0001_1kg', None),
         ('Clickhouse does not support deleting individual families from project. Manually delete SNV_INDEL data for F000002_2 in project R0001_1kg', None),
-        ('Clickhouse does not support deleting individual families from project. Manually delete SV data for F000002_2 in project R0001_1kg', None),
+        ('Clickhouse does not support deleting individual families from project. Manually delete GCNV data for F000002_2 in project R0001_1kg', None),
     ]
 
 
