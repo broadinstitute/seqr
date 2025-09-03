@@ -2,7 +2,7 @@ import responses
 from django.core.management import call_command
 
 from seqr.models import Family, VariantTagType, VariantTag, Sample
-from seqr.views.utils.test_utils import AirflowTestCase, AuthenticationTestCase, AnvilAuthenticationTestCase
+from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase
 
 
 class TransferFamiliesTest(object):
@@ -60,61 +60,18 @@ class TransferFamiliesClickhouseTest(TransferFamiliesTest, AnvilAuthenticationTe
     ES_HOSTNAME = ''
     LOGS = [
         ('Disabled search for 7 samples in the following 1 families: 2', None),
+        ('Clickhouse does not support deleting individual families from project. Manually delete MITO data for F000002_2 in project R0001_1kg', None),
+        ('Clickhouse does not support deleting individual families from project. Manually delete SNV_INDEL data for F000002_2 in project R0001_1kg', None),
+        ('Clickhouse does not support deleting individual families from project. Manually delete SV data for F000002_2 in project R0001_1kg', None),
     ]
 
 
-class TransferFamiliesAirflowTest(TransferFamiliesTest, AirflowTestCase):
+class TransferFamiliesHailBackendTest(TransferFamiliesTest, AuthenticationTestCase):
     fixtures = ['users', '1kg_project']
-    PROJECT_GUID = 'R0001_1kg'  # from-project
-    DAG_NAME = 'DELETE_FAMILIES'
+
     ES_HOSTNAME = ''
     CLICKHOUSE_HOSTNAME = ''
 
     LOGS = [
         ('Disabled search for 7 samples in the following 1 families: 2', None),
-        ('Successfully triggered DELETE_FAMILIES DAG for 1 MITO families', None),
-        ('Successfully triggered DELETE_FAMILIES DAG for 1 SNV_INDEL families', None),
-        ('400 Client Error: Bad Request for url: http://testairflowserver/api/v1/variables/DELETE_FAMILIES', {
-            'severity': 'ERROR',
-            '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent',
-        })
     ]
-
-    def setUp(self):
-        super().setUp()
-        self.set_up_one_dag(dataset_type='SNV_INDEL')
-        self.set_up_one_dag(dataset_type='SV', status=400)
-
-    def set_up_one_dag(self, **kwargs):
-        dataset_type = kwargs.pop('dataset_type', 'MITO')
-        super().set_up_one_dag(dataset_type=dataset_type, **kwargs)
-
-    def _get_dag_variables(self, dataset_type, **kwargs):
-        return {
-            'projects_to_run': [self.PROJECT_GUID],
-            'family_guids': ['F000002_2'],
-            'reference_genome': 'GRCh37',
-            'dataset_type': dataset_type
-        }
-
-    def _add_update_check_dag_responses(self, **kwargs):
-        return self._add_check_dag_variable_responses(self._get_dag_variables(**kwargs), **kwargs)
-
-    def assert_airflow_delete_families_calls(self):
-        self._assert_call_counts(13)
-        call_count_per_dag = 5
-        offset = 0
-        for dataset_type in ['MITO', 'SNV_INDEL']:
-            self.assert_airflow_calls(self._get_dag_variables(dataset_type), call_count_per_dag, offset)
-            offset += call_count_per_dag
-
-        self._assert_update_variables_airflow_calls(self._get_dag_variables('SV'), offset)
-
-    def _assert_update_check_airflow_calls(self, call_count, offset, update_check_path):
-        variables_update_check_path = f'{self.MOCK_AIRFLOW_URL}/api/v1/variables/{self.DAG_NAME}'
-        super()._assert_update_check_airflow_calls(call_count, offset, variables_update_check_path)
-
-    @responses.activate
-    def test_command(self):
-        super().test_command()
-        self.assert_airflow_delete_families_calls()
