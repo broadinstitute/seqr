@@ -369,12 +369,13 @@ def _query_variants(search_model, user, previous_search_results, genome_version,
 
     _validate_search(parsed_search, samples, previous_search_results)
 
+    cache_key = _get_search_cache_key(search_model, sort=sort)
+
     variant_results = _execute_search(
         samples, parsed_search, user, previous_search_results, genome_version,
-        sort=sort, num_results=num_results, **kwargs,
+        sort=sort, num_results=num_results, cache_key=cache_key, **kwargs,
     )
 
-    cache_key = _get_search_cache_key(search_model, sort=sort)
     safe_redis_set_json(cache_key, previous_search_results, expire=timedelta(weeks=2))
 
     return variant_results, previous_search_results.get('total_results')

@@ -15,6 +15,7 @@ from clickhouse_search.models import ENTRY_CLASS_MAP, ANNOTATIONS_CLASS_MAP, TRA
 from reference_data.models import GeneConstraint, Omim, GENOME_VERSION_LOOKUP
 from seqr.models import Sample, PhenotypePrioritization
 from seqr.utils.logging_utils import SeqrLogger
+from seqr.utils.redis_utils import safe_redis_set_json
 from seqr.utils.search.constants import MAX_VARIANTS, XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, \
     PRIORITIZED_GENE_SORT, COMPOUND_HET, COMPOUND_HET_ALLOW_HOM_ALTS, RECESSIVE
 from seqr.views.utils.json_utils import DjangoJSONEncoderWithSets
@@ -33,7 +34,7 @@ def clickhouse_backend_enabled():
     return bool(CLICKHOUSE_SERVICE_HOSTNAME)
 
 
-def get_clickhouse_variants(samples, search, user, previous_search_results, genome_version,page=1, num_results=100, sort=None, **kwargs):
+def get_clickhouse_variants(samples, search, user, previous_search_results, genome_version,page=1, num_results=100, sort=None, cache_key=None, **kwargs):
     sample_data_by_dataset_type = _get_sample_data(samples)
     results = []
     family_guid = None
@@ -41,6 +42,13 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
     has_comp_het = inheritance_mode in {RECESSIVE, COMPOUND_HET}
     for dataset_type, sample_data in sample_data_by_dataset_type.items():
         logger.info(f'Loading {dataset_type} data for {len(set(sample_data["family_guids"]))} families', user)
+
+        if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
+            cache_results = previous_search_results.pop('variant_only_results', None)
+            if cache_results:
+                logger.info('Loaded results from cache', user)
+                results += cache_results
+                continue
 
         entry_cls = ENTRY_CLASS_MAP[genome_version][dataset_type]
         annotations_cls = ANNOTATIONS_CLASS_MAP[genome_version][dataset_type]
@@ -58,6 +66,10 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
         if skip_individual_guid:
             _add_individual_guids(dataset_results, sample_data)
         results += dataset_results
+
+        if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS and len(sample_data_by_dataset_type) > 1 and skip_individual_guid:
+            previous_search_results['variant_only_results'] = dataset_results
+            safe_redis_set_json(cache_key, previous_search_results, expire=60*60*24)
 
     if has_comp_het and Sample.DATASET_TYPE_VARIANT_CALLS in sample_data_by_dataset_type and any(
         dataset_type.startswith(Sample.DATASET_TYPE_SV_CALLS) for dataset_type in sample_data_by_dataset_type
