@@ -340,7 +340,8 @@ class SearchUtilsTests(SearchTestHelper):
         if annotations_secondary is not None:
             expected_search['annotations_secondary'] = annotations_secondary
 
-        mock_get_variants.assert_called_with(mock.ANY, expected_search, self.user, results_cache, '37', **kwargs)
+        cache_key = f'search_results__{self.results_model.guid}__{kwargs.get("sort") or "xpos"}'
+        mock_get_variants.assert_called_with(mock.ANY, expected_search, self.user, results_cache, '37', cache_key=cache_key, **kwargs)
         self._assert_expected_search_samples(mock_get_variants, omitted_sample_guids, has_gene_search and not exclude_locations)
 
         gene_ids = intervals = None

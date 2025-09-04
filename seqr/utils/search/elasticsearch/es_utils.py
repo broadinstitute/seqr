@@ -271,7 +271,7 @@ def get_es_variants_for_variant_ids(samples, genome_version, variants_by_id, use
 
 
 def get_es_variants(samples, search, user, previous_search_results, genome_version, sort=None, page=None, num_results=None,
-                    gene_agg=False, skip_genotype_filter=False):
+                    gene_agg=False, skip_genotype_filter=False, **kwargs):
     es_search_cls = EsGeneAggSearch if gene_agg else EsSearch
 
     es_search = es_search_cls(
