@@ -41,10 +41,17 @@ class SearchTestHelper(object):
     def set_cache(self, cached):
         self.mock_redis.get.return_value = json.dumps(cached)
 
-    def assert_cached_results(self, expected_results, sort='xpos', cache_key=None):
+    def assert_cached_results(self, expected_results, sort='xpos', cache_key=None, initial_cache_offset=None):
         cache_key = cache_key or f'search_results__{self.results_model.guid}__{sort}'
         self.mock_redis.set.assert_called_with(cache_key, mock.ANY)
-        self.assertEqual(json.loads(self.mock_redis.set.call_args.args[1]), expected_results)
+        cache_call_args = self.mock_redis.set.call_args
+        if initial_cache_offset:
+            self.assertEqual(self.mock_redis.set.call_count, 2)
+            self.assertEqual(json.loads(cache_call_args.args[1]), {
+                'variant_only_results': expected_results['all_results'][:initial_cache_offset],
+            })
+            cache_call_args = self.mock_redis.set.call_args_list[1]
+        self.assertEqual(json.loads(cache_call_args.args[1]), expected_results)
         self.mock_redis.expire.assert_called_with(cache_key, timedelta(weeks=2))
 
 

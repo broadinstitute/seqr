@@ -207,6 +207,7 @@ class ClickhouseSearchTests(DifferentDbTransactionSupportMixin, SearchTestHelper
             [PROJECT_2_VARIANT, MULTI_PROJECT_VARIANT1, MULTI_PROJECT_VARIANT2, VARIANT3, VARIANT4,
              GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
             gene_counts=gene_counts, locus={'rawItems': 'chr1:1-100000000, chr13:1-100000000, chr14:1-100000000, chr16:1-100000000, chr17:1-100000000, M:1-100000000'},
+            initial_cache_offset=4,
         )
 
         self.results_model.families.set(Family.objects.filter(guid__in=['F000002_2', 'F000011_11', 'F000014_14']))

@@ -68,8 +68,7 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
         results += dataset_results
 
         if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS and len(sample_data_by_dataset_type) > 1 and skip_individual_guid:
-            previous_search_results['variant_only_results'] = dataset_results
-            safe_redis_set_json(cache_key, previous_search_results, expire=60*60*24)
+            safe_redis_set_json(cache_key, {'variant_only_results': dataset_results}, expire=60*60*24)
 
     if has_comp_het and Sample.DATASET_TYPE_VARIANT_CALLS in sample_data_by_dataset_type and any(
         dataset_type.startswith(Sample.DATASET_TYPE_SV_CALLS) for dataset_type in sample_data_by_dataset_type
