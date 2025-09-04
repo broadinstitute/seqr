@@ -133,9 +133,7 @@ def saved_variants_page(request, tag):
 
 
 def _saved_variant_with_clickhouse_gene_q(saved_variant_models, gene_id, is_all_tags):
-    saved_variant_models = saved_variant_models.filter(key__isnull=False)
     key_qs = []
-
     if is_all_tags:
         gene_model = GeneInfo.objects.get(gene_id=gene_id)
         for genome_version in [GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38]:
@@ -146,7 +144,7 @@ def _saved_variant_with_clickhouse_gene_q(saved_variant_models, gene_id, is_all_
                 )
         saved_variant_models = saved_variant_models.exclude(dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
 
-    search_type_keys = saved_variant_models.values(
+    search_type_keys = saved_variant_models.filter(key__isnull=False).values(
         'dataset_type', genome_version=F('family__project__genome_version'),
     ).annotate(keys=ArrayAgg('key', distinct=True))
     for agg in search_type_keys:
