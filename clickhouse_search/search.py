@@ -612,6 +612,19 @@ def get_clickhouse_keys_for_gene(gene_id, genome_version, dataset_type, keys):
     ).values_list('key', flat=True))
 
 
+def get_all_clickhouse_keys_for_gene(gene_model, genome_version):
+    entry_cls = ENTRY_CLASS_MAP[genome_version][Sample.DATASET_TYPE_VARIANT_CALLS]
+    #  TODO helper function
+    from seqr.utils.xpos_utils import get_xpos
+    chrom = getattr(gene_model, f'chrom_grch{genome_version}')
+    xpos_start = get_xpos(chrom, getattr(gene_model, f'start_grch{genome_version}'))
+    xpos_end = get_xpos(chrom, getattr(gene_model, f'end_grch{genome_version}'))
+    return list(entry_cls.objects.filter(
+        geneId_ids__bitmap_has_any=[gene_model.id],
+        xpos__range=(xpos_start, xpos_end),
+    ).values_list('key', flat=True).distinct())
+
+
 def get_clickhouse_key_lookup(genome_version, dataset_type, variants_ids, reverse=False):
     key_lookup_class = KEY_LOOKUP_CLASS_MAP[genome_version][dataset_type]
     lookup = {}
