@@ -179,14 +179,14 @@ def _write_gene_id_file(load_data_dir, user):
     if does_file_exist(f'{load_data_dir}/{file_name}.csv.gz'):
         return
 
-    gene_data_loaded = (GeneInfo.objects.filter(gencode_release=GeneInfo.ALL_GENCODE_VERSIONS[0]).exists() and
-                        GeneInfo.objects.filter(gencode_release=GeneInfo.ALL_GENCODE_VERSIONS[-1]).exists())
+    gene_data_loaded = (GeneInfo.objects.filter(gencode_release=int(GeneInfo.CURRENT_VERSION)).exists() and
+                        GeneInfo.objects.filter(gencode_release=int(GeneInfo.ALL_GENCODE_VERSIONS[-1])).exists())
     if not gene_data_loaded:
         raise ValueError(
             'Gene reference data is not yet loaded. If this is a new seqr installation, wait for the initial data load '
             'to complete. If this is an existing installation, see the documentation for updating data in seqr.'
         )
-    gene_data = GeneInfo.objects.all().values('gene_id', db_id=F('id'))
+    gene_data = GeneInfo.objects.all().values('gene_id', db_id=F('id')).order_by('id')
     file_config = (file_name, ['db_id', 'gene_id'], gene_data)
     write_multiple_files([file_config], load_data_dir, user, file_format='csv', gzip_file=True)
 
