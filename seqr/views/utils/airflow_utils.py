@@ -24,7 +24,7 @@ def trigger_airflow_data_loading(*args, user: User, success_message: str, succes
                                  error_message: str, is_internal: bool = False, **kwargs):
     success = True
     updated_variables, gs_path = prepare_data_loading_request(
-        *args, user, pedigree_dir=SEQR_V3_PEDIGREE_GS_PATH, **kwargs,
+        *args, user, load_data_dir=SEQR_V3_PEDIGREE_GS_PATH, **kwargs,
     )
     updated_variables['sample_source'] = 'Broad_Internal' if is_internal else 'AnVIL'
     upload_info = [f'Pedigree files have been uploaded to {gs_path}']
