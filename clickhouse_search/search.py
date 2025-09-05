@@ -13,7 +13,7 @@ from clickhouse_search.backend.functions import Array, ArrayFilter, ArrayInterse
 from clickhouse_search.models import ENTRY_CLASS_MAP, ANNOTATIONS_CLASS_MAP, TRANSCRIPTS_CLASS_MAP, KEY_LOOKUP_CLASS_MAP, \
     BaseClinvar, BaseAnnotationsMitoSnvIndel, BaseAnnotationsGRCh37SnvIndel, BaseAnnotationsSvGcnv
 from reference_data.models import GeneConstraint, Omim, GENOME_VERSION_LOOKUP
-from seqr.models import Sample, PhenotypePrioritization
+from seqr.models import Sample, PhenotypePrioritization, Individual
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.search.constants import MAX_VARIANTS, XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, \
     PRIORITIZED_GENE_SORT, COMPOUND_HET, COMPOUND_HET_ALLOW_HOM_ALTS, RECESSIVE
@@ -45,17 +45,20 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
         entry_cls = ENTRY_CLASS_MAP[genome_version][dataset_type]
         annotations_cls = ANNOTATIONS_CLASS_MAP[genome_version][dataset_type]
         family_guid = sample_data['family_guids'][0]
-        skip_individual_guid = len(sample_data['project_guids']) > 1
+        is_multi_project = len(sample_data['project_guids']) > 1
 
         dataset_results = []
         if inheritance_mode != COMPOUND_HET:
-            result_q = _get_search_results_queryset(entry_cls, annotations_cls, sample_data, skip_individual_guid=skip_individual_guid, **search)
+            result_q = _get_search_results_queryset(entry_cls, annotations_cls, sample_data, skip_individual_guid=is_multi_project, **search)
             dataset_results += _evaluate_results(result_q)
         if has_comp_het:
-            result_q = _get_data_type_comp_het_results_queryset(entry_cls, annotations_cls, sample_data, skip_individual_guid=skip_individual_guid, **search)
+            comp_het_sample_data = sample_data
+            if is_multi_project and dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS and _is_x_chrom_only(**search):
+                comp_het_sample_data = _no_affected_male_families(sample_data, user)
+            result_q = _get_data_type_comp_het_results_queryset(entry_cls, annotations_cls, comp_het_sample_data, skip_individual_guid=is_multi_project, **search)
             dataset_results += _evaluate_results(result_q, is_comp_het=True)
 
-        if skip_individual_guid:
+        if is_multi_project:
             _add_individual_guids(dataset_results, sample_data)
         results += dataset_results
 
@@ -370,6 +373,25 @@ def _get_sample_data(samples):
 
         samples_by_dataset_type[dataset_type] = data
     return samples_by_dataset_type
+
+
+def _no_affected_male_families(sample_data, user):
+    valid_families = {
+        s['family_guid'] for s in sample_data['samples']
+        if s['affected'] == Individual.AFFECTED_STATUS_AFFECTED and s['sex'] != Individual.SEX_MALE
+    }
+    logger.info(f'Loading X-chromosome compound het data for {len(valid_families)} families', user)
+    return {
+        **sample_data,
+        'family_guids': list(valid_families),
+        'samples': [s for s in sample_data['samples'] if s['family_guid'] in valid_families],
+    }
+
+
+def _is_x_chrom_only(parsed_locus=None, **kwargs):
+    parsed_locus = parsed_locus or {}
+    all_intervals = list((parsed_locus.get('gene_intervals') or {}).values()) + (parsed_locus.get('intervals') or [])
+    return bool(all_intervals) and all('X' in interval[0] for interval in all_intervals)
 
 
 OMIM_SORT = 'in_omim'
