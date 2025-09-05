@@ -1987,11 +1987,11 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
             f'gsutil mv /mock/tmp/* gs://seqr-loading-temp/v3.1/GRCh38/{dataset_type}/pedigrees/{sample_type}/',
             stdout=-1, stderr=-2, shell=True,  # nosec
         ), mock.call(
-            'gsutil ls gs://seqr-loading-temp/v3.1/db_id_to_gene_id.csv.gz', stdout=-1, stderr=-2, shell=True,
+            'gsutil ls gs://seqr-loading-temp/v3.1/db_id_to_gene_id.csv.gz', stdout=-1, stderr=-2, shell=True, # nosec
         )]
         if not has_gene_id_file:
             expected_calls.append(mock.call(
-                'gsutil mv /mock/tmp/* gs://seqr-loading-temp/v3.1/', stdout=-1, stderr=-2, shell=True,
+                'gsutil mv /mock/tmp/* gs://seqr-loading-temp/v3.1/', stdout=-1, stderr=-2, shell=True, # nosec
             ))
         self.assertEqual(self.mock_subprocess.call_count, len(expected_calls))
         self.mock_subprocess.assert_has_calls(expected_calls)
