@@ -546,13 +546,13 @@ def _add_liftover_genotypes(variant, data_type, variant_id):
     lifted_entry_cls = ENTRY_CLASS_MAP.get(variant.get('liftedOverGenomeVersion'), {}).get(data_type)
     if not lifted_entry_cls:
         return
-    lifted_id = (variant['liftedOverChrom'], str(variant['liftedOverPos']), *variant_id[2:])
+    lifted_id = (variant['liftedOverChrom'], variant['liftedOverPos'], *variant_id[2:])
     keys = KEY_LOOKUP_CLASS_MAP[variant['liftedOverGenomeVersion']][data_type].objects.filter(
-        variant_id='-'.join(lifted_id),
+        variant_id='-'.join([str(o) for o in lifted_id]),
     ).values_list('key', flat=True)
     if not keys:
         return
-    lifted_entries = lifted_entry_cls.objects.filter_locus(variant_ids=[variant_id]).filter(key=keys[0])
+    lifted_entries = lifted_entry_cls.objects.filter_locus(variant_ids=[lifted_id]).filter(key=keys[0])
     lifted_entry_data = lifted_entries.values('key').annotate(
         familyGenotypes=GroupArrayArray(lifted_entry_cls.objects.genotype_expression())
     )
