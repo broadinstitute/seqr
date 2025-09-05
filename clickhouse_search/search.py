@@ -527,17 +527,25 @@ def _clickhouse_variant_lookup(variant_id, genome_version, data_type, samples):
     else:
         results = results.filter_variant_ids(variant_ids=[variant_id])
 
-    return results.result_values().first()
+    variant = results.result_values().first()
+    if variant:
+        variant = format_clickhouse_results([variant], genome_version)[0]
+    return variant
 
 def clickhouse_variant_lookup(user, variant_id, data_type, genome_version=None, samples=None, **kwargs):
     logger.info(f'Looking up variant {variant_id} with data type {data_type}', user)
 
     variant = _clickhouse_variant_lookup(variant_id, genome_version, data_type, samples)
+    if variant:
+        _add_liftover_genotypes(variant, data_type, variant_id)
+    else:
+        lifted_genome_version = next(gv for gv in ENTRY_CLASS_MAP.keys() if gv != genome_version)
+        if ENTRY_CLASS_MAP[lifted_genome_version].get(data_type):
+            lifted_id = _liftover_variant_id(variant_id, lifted_genome_version)
+            variant = _clickhouse_variant_lookup(lifted_id, lifted_genome_version, data_type, samples)
+
     if not variant:
         raise ObjectDoesNotExist('Variant not present in seqr')
-
-    variant = format_clickhouse_results([variant], genome_version)[0]
-    _add_liftover_genotypes(variant, data_type, variant_id)
 
     return variant
 
@@ -572,7 +580,7 @@ def get_clickhouse_variant_by_id(variant_id, samples, genome_version, dataset_ty
     for data_type in data_types:
         variant = _clickhouse_variant_lookup(variant_id, genome_version, data_type, samples)
         if variant:
-            return format_clickhouse_results([variant], genome_version)[0]
+            return variant
     return None
 
 
