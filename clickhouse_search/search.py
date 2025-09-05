@@ -541,8 +541,11 @@ def clickhouse_variant_lookup(user, variant_id, data_type, genome_version=None, 
     else:
         lifted_genome_version = next(gv for gv in ENTRY_CLASS_MAP.keys() if gv != genome_version)
         if ENTRY_CLASS_MAP[lifted_genome_version].get(data_type):
-            lifted_id = _liftover_variant_id(variant_id, lifted_genome_version)
-            variant = _clickhouse_variant_lookup(lifted_id, lifted_genome_version, data_type, samples)
+            from seqr.utils.search.utils import run_liftover
+            liftover_results = run_liftover(lifted_genome_version, variant_id[0], variant_id[1])
+            if liftover_results:
+                lifted_id = (liftover_results[0], liftover_results[1], *variant_id[2:])
+                variant = _clickhouse_variant_lookup(lifted_id, lifted_genome_version, data_type, samples)
 
     if not variant:
         raise ObjectDoesNotExist('Variant not present in seqr')
