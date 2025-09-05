@@ -30,17 +30,24 @@ export const initializeD3 = (containerElement, dimensions, margins, scales, axis
 
   // render y-axis
   let yAxis = axisLeft(scales.y)
-  if (axis.y.transform) {
+  if (axis.y?.transform) {
     yAxis = axis.y.transform(yAxis)
   }
-  svg.append('g')
-    .attr('transform', `translate(-${buffer / 2}, 0)`)
+  const yAxisOffset = axis.y?.text ? `-${buffer / 2}` : buffer
+  const yAxisElement = svg.append('g')
+    .attr('transform', `translate(${yAxisOffset}, 0)`)
     .call(yAxis)
   // y-axis label
-  svg.append('text')
-    .attr('text-anchor', 'middle')
-    .attr('transform', `translate(${buffer - margins.left}, ${dimensions.height / 2}) rotate(-90)`)
-    .text(axis.y.text)
+  if (axis.y?.text) {
+    svg.append('text')
+      .attr('text-anchor', 'middle')
+      .attr('transform', `translate(${buffer - margins.left}, ${dimensions.height / 2}) rotate(-90)`)
+      .text(axis.y.text)
+  } else {
+    yAxisElement.selectAll('text')
+      .attr('text-anchor', 'start')
+      .attr('transform', `translate(${buffer - margins.left}, 0)`)
+  }
 
   return svg
 }

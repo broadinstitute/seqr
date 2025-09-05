@@ -8,12 +8,12 @@ from django.db.models import CharField, F, Q, Value
 from django.db.models.functions import Coalesce, Concat, JSONObject, NullIf
 import json
 
-from clickhouse_search.search import get_clickhouse_keys_for_gene
+from clickhouse_search.search import get_clickhouse_keys_for_gene, get_all_clickhouse_keys_for_gene
 from matchmaker.matchmaker_utils import get_mme_gene_phenotype_ids_for_submissions, parse_mme_features, \
     get_mme_metrics, get_hpo_terms_by_id
 from matchmaker.models import MatchmakerSubmission
-from reference_data.models import HumanPhenotypeOntology
-from seqr.models import Project, Family, Individual, VariantTagType, SavedVariant, FamilyAnalysedBy
+from reference_data.models import HumanPhenotypeOntology, GeneInfo, GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38
+from seqr.models import Project, Family, Individual, VariantTagType, SavedVariant, FamilyAnalysedBy, Sample
 from seqr.views.utils.airtable_utils import AirtableSession
 from seqr.views.utils.file_utils import load_uploaded_file
 from seqr.utils.communication_utils import safe_post_to_slack, set_email_message_stream
@@ -100,7 +100,8 @@ def success_story(request, success_story_types):
 @login_and_policies_required
 def saved_variants_page(request, tag):
     gene = request.GET.get('gene')
-    if tag == 'ALL':
+    is_all_tags = tag == 'ALL'
+    if is_all_tags:
         saved_variant_models = SavedVariant.objects.exclude(varianttag=None)
     else:
         tags = tag.split(';')
@@ -118,7 +119,7 @@ def saved_variants_page(request, tag):
             lambda *args: Q(),
             lambda *args: Q(),
             _saved_variant_with_clickhouse_gene_q,
-        )(saved_variant_models, gene)
+        )(saved_variant_models, gene, is_all_tags)
         saved_variant_models = saved_variant_models.filter(gene_filter)
     elif saved_variant_models.count() > MAX_SAVED_VARIANTS:
         return create_json_response({'error': 'Select a gene to filter variants'}, status=400)
@@ -131,20 +132,33 @@ def saved_variants_page(request, tag):
     return create_json_response(response_json)
 
 
-def _saved_variant_with_clickhouse_gene_q(saved_variant_models, gene_id):
+def _saved_variant_with_clickhouse_gene_q(saved_variant_models, gene_id, is_all_tags):
+    key_qs = []
+    if is_all_tags:
+        gene_model = GeneInfo.objects.get(gene_id=gene_id)
+        for genome_version in [GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38]:
+            gene_keys = get_all_clickhouse_keys_for_gene(gene_model, genome_version)
+            if gene_keys:
+                key_qs.append(
+                    Q(dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS, family__project__genome_version=genome_version, key__in=gene_keys)
+                )
+        saved_variant_models = saved_variant_models.exclude(dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
+
     search_type_keys = saved_variant_models.filter(key__isnull=False).values(
         'dataset_type', genome_version=F('family__project__genome_version'),
     ).annotate(keys=ArrayAgg('key', distinct=True))
-    has_key_q = None
     for agg in search_type_keys:
         gene_keys = get_clickhouse_keys_for_gene(gene_id, **agg)
         if gene_keys:
             q = Q(dataset_type=agg['dataset_type'], family__project__genome_version=agg['genome_version'], key__in=gene_keys)
-            if has_key_q:
-                has_key_q |= q
-            else:
-                has_key_q = q
-    return has_key_q or Q()
+            key_qs.append(q)
+
+    if not key_qs:
+        return Q()
+    has_key_q = key_qs[0]
+    for q in key_qs[1:]:
+        has_key_q |= q
+    return has_key_q
 
 
 @login_and_policies_required

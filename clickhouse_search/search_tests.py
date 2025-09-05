@@ -659,7 +659,11 @@ class ClickhouseSearchTests(DifferentDbTransactionSupportMixin, SearchTestHelper
             'HG00732 (1kg project nåme with uniçøde/ Test Reprocessed Project)',
         )
 
-    def test_variant_lookup(self):
+    @mock.patch('seqr.utils.search.utils.LiftOver')
+    def test_variant_lookup(self, mock_liftover):
+        mock_convert_coordinate = mock_liftover.return_value.convert_coordinate
+        mock_convert_coordinate.side_effect = lambda chrom, pos: [(chrom, pos + 10000)]
+
         variant = variant_lookup(self.user, ('1', 10439, 'AC', 'A'))
         self._assert_expected_variants([variant], [VARIANT_LOOKUP_VARIANT])
 
@@ -668,12 +672,19 @@ class ClickhouseSearchTests(DifferentDbTransactionSupportMixin, SearchTestHelper
         self.assertEqual(str(cm.exception), 'Variant not present in seqr')
 
         variant = variant_lookup(self.user, ('7', 143270172, 'A', 'G'), genome_version='37')
-        self._assert_expected_variants([variant], [{
+        grch37_lookup_variant = {
             **{k: v for k, v in GRCH37_VARIANT.items() if k not in {'familyGuids', 'genotypes'}},
             'familyGenotypes': {GRCH37_VARIANT['familyGuids'][0]: sorted([
                 {k: v for k, v in g.items() if k != 'individualGuid'} for g in GRCH37_VARIANT['genotypes'].values()
             ], key=lambda x: x['sampleId'], reverse=True)},
-        }])
+        }
+        self._assert_expected_variants([variant], [grch37_lookup_variant])
+
+        # Lookup works if variant is only present on a different build
+        variant = variant_lookup(self.user, ('7', 143260172, 'A', 'G'))
+        self._assert_expected_variants([variant], [grch37_lookup_variant])
+        mock_liftover.assert_called_with('hg38', 'hg19')
+        mock_convert_coordinate.assert_called_with('chr7', 143260172)
 
         variant = variant_lookup(self.user, ('M', 4429, 'G', 'A'), genome_version='38')
         self._assert_expected_variants([variant], [{
@@ -695,7 +706,7 @@ class ClickhouseSearchTests(DifferentDbTransactionSupportMixin, SearchTestHelper
         self._assert_expected_variants(variants, [GCNV_VARIANT3])
 
         with self.assertRaises(ObjectDoesNotExist) as cm:
-            variant_lookup(self.user, 'suffix_140608_DEL')
+            variant_lookup(self.user, ('5', 143270172, 'A', 'G'))
         self.assertEqual(str(cm.exception), 'Variant not present in seqr')
 
     def test_get_single_variant(self):

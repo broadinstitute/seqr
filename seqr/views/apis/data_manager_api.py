@@ -13,7 +13,7 @@ from django.http.response import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from requests.exceptions import ConnectionError as RequestConnectionError
 
-from clickhouse_search.search import delete_clickhouse_project
+from clickhouse_search.search import delete_clickhouse_project, delete_clickhouse_family
 from seqr.utils.communication_utils import send_project_notification
 from seqr.utils.search.add_data_utils import prepare_data_loading_request, get_loading_samples_validator
 from seqr.utils.search.utils import get_search_backend_status, delete_search_backend_data, backend_specific_call
@@ -22,7 +22,7 @@ from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.vcf_utils import validate_vcf_and_get_samples, get_vcf_list
 
-from seqr.views.utils.airflow_utils import trigger_airflow_data_loading, trigger_airflow_dag, is_airflow_enabled
+from seqr.views.utils.airflow_utils import trigger_airflow_data_loading
 from seqr.views.utils.airtable_utils import AirtableSession, LOADABLE_PDO_STATUSES, AVAILABLE_PDO_STATUS
 from seqr.views.utils.dataset_utils import load_rna_seq, load_phenotype_prioritization_data_file, RNA_DATA_TYPE_CONFIGS, \
     post_process_rna_data, convert_django_meta_to_http_headers
@@ -428,9 +428,7 @@ def trigger_delete_project(request):
     request_json = json.loads(request.body)
     project_guid = request_json.pop('project')
     project = Project.objects.get(guid=project_guid)
-    return _trigger_data_update(
-        project, dag_id='DELETE_PROJECTS', clickhouse_func=delete_clickhouse_project, **request_json,
-    )
+    return _trigger_data_update(delete_clickhouse_project, request_json, project)
 
 
 @data_manager_required
@@ -438,35 +436,24 @@ def trigger_delete_family(request):
     request_json = json.loads(request.body)
     family_guid = request_json.pop('family')
     project = Project.objects.get(family__guid=family_guid)
-    return _trigger_data_update(project, family_guid=family_guid, dag_id='DELETE_FAMILIES', **request_json)
-
-
-@data_manager_required
-def trigger_update_search_reference_data(request):
-    request_json = json.loads(request.body)
-    return _trigger_data_update(project=None, dag_id='UPDATE_REFERENCE_DATASETS', **request_json)
+    return _trigger_data_update(delete_clickhouse_family, request_json, project, family_guid)
 
 
 def _raise_backend_not_implemented(*args, **kwargs):
     raise ErrorsWarningsException(['This functionality is not available in the current search backend'])
 
 
-def _trigger_data_update(project, clickhouse_func=_raise_backend_not_implemented, **kwargs):
-    kwargs = {_to_snake_case(k): v for k, v in kwargs.items()}
-    info = backend_specific_call(_raise_backend_not_implemented, _trigger_dag, clickhouse_func)(project, **kwargs)
-    return create_json_response({'info': [info]})
-
-
-def  _trigger_dag(project, dag_id=None, family_guid=None, **kwargs):
-    if not is_airflow_enabled():
-        raise PermissionDenied()
-    if family_guid:
-        kwargs['family_guids'] = [family_guid]
-    try:
-        dag_variables = trigger_airflow_dag(dag_id, project, **kwargs)
-    except Exception as e:
-        raise ErrorsWarningsException([str(e)])
-    return f'Triggered DAG {dag_id} with variables: {json.dumps(dag_variables)}'
+def _trigger_data_update(clickhouse_func, request_json, project, *args):
+    dataset_type = request_json.get('datasetType')
+    sample_types = Sample.objects.filter(
+        individual__family__project=project, dataset_type=dataset_type, is_active=True,
+    ).values_list('sample_type', flat=True).distinct() if dataset_type == Sample.DATASET_TYPE_SV_CALLS else [None]
+    info = []
+    for sample_type in sample_types:
+        info.append(backend_specific_call(
+            _raise_backend_not_implemented, _raise_backend_not_implemented, clickhouse_func,
+        )(project, *args, dataset_type=dataset_type, sample_type=sample_type))
+    return create_json_response({'info': info})
 
 
 # Hop-by-hop HTTP response headers shouldn't be forwarded.

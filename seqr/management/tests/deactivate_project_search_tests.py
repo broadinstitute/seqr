@@ -9,7 +9,7 @@ from django.core.management.base import CommandError
 from clickhouse_search.models import EntriesSnvIndel, EntriesMito, EntriesGcnv, ProjectGtStatsSnvIndel, \
     ProjectGtStatsMito, AnnotationsSnvIndel, AnnotationsMito
 from seqr.models import Sample, Project
-from seqr.views.utils.test_utils import AirflowTestCase, AnvilAuthenticationTestCase, AuthenticationTestCase
+from seqr.views.utils.test_utils import AnvilAuthenticationTestCase, AuthenticationTestCase
 
 PROJECT_GUID = 'R0001_1kg'
 VARIANT_ID = '21-3343353-GAGA-G'
@@ -100,31 +100,8 @@ class ClickhouseDeactivateProjectSearchTest(AnvilAuthenticationTestCase, Deactiv
         })
 
 
-class HailBackendDeactivateProjectSearchTest(AirflowTestCase, DeactivateProjectSearchTest):
+class HailBackendDeactivateProjectSearchTest(AuthenticationTestCase, DeactivateProjectSearchTest):
     fixtures = ['users', '1kg_project']
 
     CLICKHOUSE_HOSTNAME = ''
-    DAG_NAME = 'DELETE_PROJECTS'
-    DAG_VARIABLES = {
-        'projects_to_run': [PROJECT_GUID],
-        'dataset_type': 'SNV_INDEL',
-        'reference_genome': 'GRCh38',
-    }
-
-    DELETE_SUCCESS_LOGS = [
-        ('Successfully triggered DELETE_PROJECTS DAG for MITO R0001_1kg', None),
-        ('Successfully triggered DELETE_PROJECTS DAG for SNV_INDEL R0001_1kg', None),
-        ('Successfully triggered DELETE_PROJECTS DAG for SV R0001_1kg', None),
-    ]
-
-    def _assert_expected_delete(self):
-        self.assert_airflow_calls(self.DAG_VARIABLES, 5)
-
-    def _add_update_check_dag_responses(self, **kwargs):
-        return self._add_check_dag_variable_responses(self.DAG_VARIABLES, **kwargs)
-
-    def _assert_update_check_airflow_calls(self, call_count, offset, update_check_path):
-        variables_update_check_path = f'{self.MOCK_AIRFLOW_URL}/api/v1/variables/{self.DAG_NAME}'
-        super()._assert_update_check_airflow_calls(call_count, offset, variables_update_check_path)
-
-
+    ES_HOSTNAME = ''

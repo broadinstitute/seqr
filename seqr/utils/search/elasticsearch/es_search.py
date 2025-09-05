@@ -4,7 +4,6 @@ import elasticsearch
 from elasticsearch_dsl import Search, Q, MultiSearch
 import hashlib
 import json
-from pyliftover.liftover import LiftOver
 from sys import maxsize
 from itertools import combinations
 
@@ -948,16 +947,11 @@ class EsSearch(object):
             lifted_over_chrom = grch37_locus['contig']
             lifted_over_pos = grch37_locus['position']
         else:
-            # TODO once all projects are lifted in pipeline, remove this code (https://github.com/broadinstitute/seqr/issues/1010)
-            liftover_grch38_to_grch37 = _liftover_grch38_to_grch37()
-            if liftover_grch38_to_grch37:
-                grch37_coord = liftover_grch38_to_grch37.convert_coordinate(
-                    'chr{}'.format(hit['contig'].lstrip('chr')), int(hit['start'])
-                )
-                if grch37_coord and grch37_coord[0]:
-                    lifted_over_genome_version = GENOME_VERSION_GRCh37
-                    lifted_over_chrom = grch37_coord[0][0].lstrip('chr')
-                    lifted_over_pos = grch37_coord[0][1]
+            from seqr.utils.search.utils import run_liftover
+            grch37_coords = run_liftover(GENOME_VERSION_GRCh37, hit['contig'], hit['start'])
+            if grch37_coords:
+                lifted_over_genome_version = GENOME_VERSION_GRCh37
+                lifted_over_chrom, lifted_over_pos = grch37_coords
         result.update({
             'liftedOverGenomeVersion': lifted_over_genome_version,
             'liftedOverChrom': lifted_over_chrom,
@@ -1327,18 +1321,6 @@ class EsSearch(object):
                     quality_q |= path_filter
                 quality_filters_by_family[family_guid] = quality_q
         return quality_filters_by_family
-
-
-# TODO  move liftover to hail pipeline once upgraded to 0.2 (https://github.com/broadinstitute/seqr/issues/1010)
-LIFTOVER_GRCH38_TO_GRCH37 = None
-def _liftover_grch38_to_grch37():
-    global LIFTOVER_GRCH38_TO_GRCH37
-    if not LIFTOVER_GRCH38_TO_GRCH37:
-        try:
-            LIFTOVER_GRCH38_TO_GRCH37 = LiftOver('hg38', 'hg19')
-        except Exception as e:
-            logger.error('ERROR: Unable to set up liftover. {}'.format(e), user=None)
-    return LIFTOVER_GRCH38_TO_GRCH37
 
 
 def _get_family_affected_status(samples_by_id, inheritance_filter):

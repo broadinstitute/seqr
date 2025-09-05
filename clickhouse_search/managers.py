@@ -1043,7 +1043,7 @@ class EntriesManager(SearchQuerySet):
             mapped_expression='x.1', output_field=models.ArrayField(models.StringField()),
         )
 
-    def filter_locus(self, exclude_intervals=False, intervals=None, gene_intervals=None, gene_ids=None, variant_ids=None, padded_interval=None, **kwargs):
+    def filter_locus(self, exclude_intervals=False, intervals=None, gene_intervals=None, gene_ids=None, variant_ids=None, padded_interval=None, require_gene_filter=False, **kwargs):
         entries = self
         if variant_ids:
             # although technically redundant, the interval query is applied to the entries table before join and reduces the join size,
@@ -1076,9 +1076,10 @@ class EntriesManager(SearchQuerySet):
         if gene_intervals:
             if hasattr(self.model, 'is_annotated_in_any_gene') and not intervals:
                 entries = entries.filter(is_annotated_in_any_gene=Value(True))
-            if (not hasattr(self.model, 'geneId_ids')) or exclude_intervals or len(gene_intervals) < self.model.MAX_XPOS_FILTER_INTERVALS:
+            should_filter_interval = (not hasattr(self.model, 'geneId_ids')) or exclude_intervals or len(gene_intervals) < self.model.MAX_XPOS_FILTER_INTERVALS
+            if should_filter_interval:
                 intervals = list((gene_intervals or {}).values()) + (intervals or [])
-            else:
+            if require_gene_filter or (not should_filter_interval):
                 locus_q = Q(geneId_ids__bitmap_has_any=list(gene_intervals.keys()))
 
         if intervals:
@@ -1087,6 +1088,8 @@ class EntriesManager(SearchQuerySet):
                 interval_q |= self._interval_query(*interval)
             if locus_q is None:
                 locus_q = interval_q
+            elif require_gene_filter:
+                locus_q &= interval_q
             else:
                 locus_q |= interval_q
 
