@@ -670,7 +670,6 @@ PYLIFTOVER_BUILD_LOOKUP = {
     GENOME_VERSION_GRCh37: ('hg38', 'hg19'),
 }
 def _get_liftover(genome_version):
-    global LIFTOVERS
     if not LIFTOVERS[genome_version]:
         try:
             LIFTOVERS[genome_version] = LiftOver(*PYLIFTOVER_BUILD_LOOKUP[genome_version])
