@@ -634,6 +634,13 @@ def get_clickhouse_keys_for_gene(gene_id, genome_version, dataset_type, keys):
     ).values_list('key', flat=True))
 
 
+def get_all_clickhouse_keys_for_gene(gene_model, genome_version):
+    entry_cls = ENTRY_CLASS_MAP[genome_version][Sample.DATASET_TYPE_VARIANT_CALLS]
+    return list(entry_cls.objects.filter_locus(require_gene_filter=True, gene_intervals={
+        gene_model.id: [getattr(gene_model, f'{field}_grch{genome_version}') for field in ['chrom', 'start', 'end']]
+    }).values_list('key', flat=True).distinct())
+
+
 def get_clickhouse_key_lookup(genome_version, dataset_type, variants_ids, reverse=False):
     key_lookup_class = KEY_LOOKUP_CLASS_MAP[genome_version][dataset_type]
     lookup = {}
