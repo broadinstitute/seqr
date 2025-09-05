@@ -133,7 +133,7 @@ def prepare_data_loading_request(projects: list[Project], individual_ids: list[i
         variables['skip_check_sex_and_relatedness'] = True
     file_path = _get_pedigree_path(load_data_dir, genome_version, sample_type, dataset_type)
     _upload_data_loading_files(individual_ids, vcf_sample_id_map or {}, user, file_path, raise_pedigree_error)
-    backend_specific_call(lambda *args: None, lambda *args: None, _write_gene_id_file)(load_data_dir, user)
+    _write_gene_id_file(load_data_dir, user)
     return variables, file_path
 
 
