@@ -1511,7 +1511,7 @@ class DataManagerAPITest(AirtableTest):
             file = [
                 row.split(',') for row in mock_gzip_open.return_value.__enter__.return_value.write.call_args.args[0].split('\n')
             ]
-            self.assertEqual(len(file), 59)
+            self.assertEqual(len(file), self.NUM_FIXTURE_GENES)
             self.assertListEqual(file[:3], [['db_id', 'gene_id'], ['1', 'ENSG00000223972'], ['2', 'ENSG00000227232']])
 
         num_rows = 7 if self.MOCK_AIRTABLE_KEY else 8
@@ -1580,6 +1580,7 @@ class DataManagerAPITest(AirtableTest):
 class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
     fixtures = ['users', '1kg_project', 'reference_data']
 
+    NUM_FIXTURE_GENES = 52
     TRIGGER_CALLSET_DIR = '/local_datasets'
     LOCAL_WRITE_DIR = TRIGGER_CALLSET_DIR
     CALLSET_DIR = ''
@@ -1617,10 +1618,13 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
         self.addCleanup(patcher.stop)
         super().setUp()
 
-    def _set_file_not_found(self, file_name=None, sample_guid=None, list_files=False):
+    def _set_file_not_found(self, file_name=None, sample_guid=None, list_files=False, has_mv_commands=False):
         self.mock_does_file_exist.return_value = False
         self.mock_file_iter.return_value = []
         return []
+
+    def _set_file_found(self):
+        self.mock_does_file_exist.return_value = True
 
     def _add_file_iter(self, stdout, is_gz=True):
         self.mock_does_file_exist.return_value = True
@@ -1657,9 +1661,13 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
     def _local_pedigree_path(dataset_type, sample_type):
         return f'/local_datasets/GRCh38/{dataset_type}/pedigrees/{sample_type}'
 
-    def _has_expected_ped_files(self, mock_open, mock_gzip_open, mock_mkdir, dataset_type, *args, sample_type='WGS', **kwargs):
-        super()._has_expected_ped_files(mock_open, mock_gzip_open, mock_mkdir, dataset_type,  *args, sample_type, **kwargs)
-        mock_mkdir.assert_called_once_with(self._local_pedigree_path(dataset_type, sample_type), exist_ok=True)
+    def _has_expected_ped_files(self, mock_open, mock_gzip_open, mock_mkdir, dataset_type, *args, sample_type='WGS', has_gene_id_file=False, **kwargs):
+        super()._has_expected_ped_files(mock_open, mock_gzip_open, mock_mkdir, dataset_type,  *args, sample_type, has_gene_id_file=has_gene_id_file, **kwargs)
+        call_paths = [self._local_pedigree_path(dataset_type, sample_type)]
+        if not has_gene_id_file:
+            call_paths.append(self.LOCAL_WRITE_DIR)
+        self.assertEqual(mock_mkdir.call_count, len(call_paths))
+        mock_mkdir.assert_has_calls([mock.call(call_path, exist_ok=True) for call_path in call_paths])
 
     def _assert_success_notification(self, dag_json):
         self.maxDiff = None
@@ -1716,6 +1724,7 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
 class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data', 'clickhouse_search']
 
+    NUM_FIXTURE_GENES = 59
     LOADING_PROJECT_GUID = NON_ANALYST_PROJECT_GUID
     CALLSET_DIR = 'gs://test_bucket'
     TRIGGER_CALLSET_DIR = CALLSET_DIR
