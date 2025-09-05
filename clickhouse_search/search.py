@@ -549,17 +549,28 @@ def _clickhouse_variant_lookup(variant_id, genome_version, data_type, samples):
     else:
         results = results.filter_variant_ids(variant_ids=[variant_id])
 
-    return results.result_values().first()
+    variant = results.result_values().first()
+    if variant:
+        variant = format_clickhouse_results([variant], genome_version)[0]
+    return variant
 
 def clickhouse_variant_lookup(user, variant_id, data_type, genome_version=None, samples=None, **kwargs):
     logger.info(f'Looking up variant {variant_id} with data type {data_type}', user)
 
     variant = _clickhouse_variant_lookup(variant_id, genome_version, data_type, samples)
+    if variant:
+        _add_liftover_genotypes(variant, data_type, variant_id)
+    else:
+        lifted_genome_version = next(gv for gv in ENTRY_CLASS_MAP.keys() if gv != genome_version)
+        if ENTRY_CLASS_MAP[lifted_genome_version].get(data_type):
+            from seqr.utils.search.utils import run_liftover
+            liftover_results = run_liftover(lifted_genome_version, variant_id[0], variant_id[1])
+            if liftover_results:
+                lifted_id = (liftover_results[0], liftover_results[1], *variant_id[2:])
+                variant = _clickhouse_variant_lookup(lifted_id, lifted_genome_version, data_type, samples)
+
     if not variant:
         raise ObjectDoesNotExist('Variant not present in seqr')
-
-    variant = format_clickhouse_results([variant], genome_version)[0]
-    _add_liftover_genotypes(variant, data_type, variant_id)
 
     return variant
 
@@ -568,13 +579,13 @@ def _add_liftover_genotypes(variant, data_type, variant_id):
     lifted_entry_cls = ENTRY_CLASS_MAP.get(variant.get('liftedOverGenomeVersion'), {}).get(data_type)
     if not lifted_entry_cls:
         return
-    lifted_id = (variant['liftedOverChrom'], str(variant['liftedOverPos']), *variant_id[2:])
+    lifted_id = (variant['liftedOverChrom'], variant['liftedOverPos'], *variant_id[2:])
     keys = KEY_LOOKUP_CLASS_MAP[variant['liftedOverGenomeVersion']][data_type].objects.filter(
-        variant_id='-'.join(lifted_id),
+        variant_id='-'.join([str(o) for o in lifted_id]),
     ).values_list('key', flat=True)
     if not keys:
         return
-    lifted_entries = lifted_entry_cls.objects.filter_locus(variant_ids=[variant_id]).filter(key=keys[0])
+    lifted_entries = lifted_entry_cls.objects.filter_locus(variant_ids=[lifted_id]).filter(key=keys[0])
     lifted_entry_data = lifted_entries.values('key').annotate(
         familyGenotypes=GroupArrayArray(lifted_entry_cls.objects.genotype_expression())
     )
@@ -594,7 +605,7 @@ def get_clickhouse_variant_by_id(variant_id, samples, genome_version, dataset_ty
     for data_type in data_types:
         variant = _clickhouse_variant_lookup(variant_id, genome_version, data_type, samples)
         if variant:
-            return format_clickhouse_results([variant], genome_version)[0]
+            return variant
     return None
 
 

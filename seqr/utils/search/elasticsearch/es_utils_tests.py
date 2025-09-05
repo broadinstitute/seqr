@@ -14,8 +14,9 @@ from urllib3_mock import Responses
 from seqr.models import Project, Family, Sample, VariantSearch, VariantSearchResults
 from seqr.utils.search.utils import get_single_variant, query_variants, \
     get_variant_query_gene_counts, get_variants_for_variant_ids, InvalidSearchException
-from seqr.utils.search.elasticsearch.es_search import _get_family_affected_status, _liftover_grch38_to_grch37
+from seqr.utils.search.elasticsearch.es_search import _get_family_affected_status
 from seqr.utils.search.elasticsearch.es_utils import InvalidIndexException
+from seqr.utils.search.utils import _get_liftover
 from seqr.views.utils.test_utils import PARSED_VARIANTS, PARSED_SV_VARIANT, PARSED_SV_WGS_VARIANT,\
     PARSED_MITO_VARIANT, TRANSCRIPT_2, PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT
 
@@ -3067,8 +3068,8 @@ class EsUtilsTest(TestCase):
                 ], start_index=0, size=2, index=INDEX_NAME)
         ])
 
-    @mock.patch('seqr.utils.search.elasticsearch.es_search.LIFTOVER_GRCH38_TO_GRCH37', None)
-    @mock.patch('seqr.utils.search.elasticsearch.es_search.LiftOver')
+    @mock.patch('seqr.utils.search.utils.LIFTOVERS', {'37': None})
+    @mock.patch('seqr.utils.search.utils.LiftOver')
     @urllib3_responses.activate
     def test_get_lifted_grch38_variants(self, mock_liftover):
         setup_responses()
@@ -3091,7 +3092,7 @@ class EsUtilsTest(TestCase):
         variants, _ = query_variants(results_model, num_results=2)
         self.assertEqual(len(variants), 2)
         self.assertListEqual(variants, [PARSED_HG38_VARIANT, expected_no_lift_grch38_variant])
-        self.assertIsNone(_liftover_grch38_to_grch37())
+        self.assertIsNone(_get_liftover('37'))
         mock_liftover.assert_called_with('hg38', 'hg19')
 
         _set_cache('search_results__{}__xpos'.format(results_model.guid), None)
@@ -3100,7 +3101,7 @@ class EsUtilsTest(TestCase):
         variants, _ = query_variants(results_model, num_results=2)
         self.assertEqual(len(variants), 2)
         self.assertListEqual(variants, [PARSED_HG38_VARIANT, PARSED_HG38_VARIANT])
-        self.assertIsNotNone(_liftover_grch38_to_grch37())
+        self.assertIsNotNone(_get_liftover('37'))
         mock_liftover.assert_called_with('hg38', 'hg19')
 
     @mock.patch('seqr.utils.search.elasticsearch.es_search.MAX_INDEX_NAME_LENGTH', 30)
