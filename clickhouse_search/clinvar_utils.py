@@ -232,7 +232,7 @@ def extract_variant_info(elem: xml.etree.ElementTree.Element, new_version: str) 
             **props,
         )
 
-def reload_clinvar_all_variants(existing_version, model_to_batch):
+def reload_clinvar_all_variants(existing_version):
     model_to_batch = {
         ClinvarAllVariantsGRCh37SnvIndel: [],
         ClinvarAllVariantsSnvIndel: [],

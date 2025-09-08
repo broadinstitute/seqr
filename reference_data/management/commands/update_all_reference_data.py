@@ -1,5 +1,6 @@
 import logging
 from collections import OrderedDict
+from datetime import datetime
 from django.core.management.base import BaseCommand, CommandError
 
 from clickhouse_search.models import BaseClinvarAllVariants
@@ -50,7 +51,9 @@ class Command(BaseCommand):
 
         if backend_specific_call(False, False, True):
             current_version = current_versions.get(CLINVAR_NAME)
-            to_update[BaseClinvarAllVariants] = current_version.version if current_version else None
+            version = current_version.version if current_version else None
+            if version != datetime.today().strftime('%Y-%m-%d'):
+                to_update[BaseClinvarAllVariants] = version
 
         if GeneInfo in to_update:
             latest_version = to_update.pop(GeneInfo)
