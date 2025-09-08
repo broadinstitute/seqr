@@ -1,15 +1,8 @@
 If you have alignment files in **.bam** or **.cram** format for the sample(s) in your VCF, seqr allows read data 
-for individual variants to be viewed in the browser using [IGV.js](https://github.com/igvteam/igv.js/wiki).
+for individual variants to be viewed in the browser using [IGV.js](https://github.com/igvteam/igv.js/wiki), 
+which canbe enabled with the following steps:
 
-If your read files are located on the machine that's running the seqr application server, these steps will enable
-viewing this read data through IGV.js:
-
-1) When running seqr using docker-compose (as [described here](https://github.com/broadinstitute/seqr/blob/master/deploy/LOCAL_INSTALL.md)), 
-place the bam/cram and index files in the `./data/readviz/` sub-directory that was created under the directory containing
-the docker-compose.yml file. When you start seqr, docker-compose will mount the `./data/readviz/` directory to a `/readviz`
-top-level directory inside the seqr container.
-
-If running seqr using the [`seqr-helm` charts](https://github.com/broadinstitute/seqr-helm), place the bam/cram and index files inside `/var/seqr/seqr-static-media`.
+1) Place the bam/cram and index files inside the `/var/seqr/seqr-static-media` directory
 
 1) Create a tab-delimited or comma-delimited text file - let's call it `bam_paths.tsv` - with these 2 columns (and no 
 header line):
