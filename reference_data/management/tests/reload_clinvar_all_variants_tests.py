@@ -5,15 +5,16 @@ import responses
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.forms.models import model_to_dict
-from django.test import TestCase
 from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL
 
 from clickhouse_search.models import (
     ClinvarSnvIndel, ClinvarGRCh37SnvIndel, ClinvarAllVariantsSnvIndel,
     ClinvarAllVariantsGRCh37SnvIndel, ClinvarAllVariantsMito,
 )
+from reference_data.management.tests.test_utils import ReferenceDataCommandTestCase
 from reference_data.models import DataVersions
-from seqr.management.commands.reload_clinvar_all_variants import BATCH_SIZE, WEEKLY_XML_RELEASE
+from clickhouse_search.clinvar_utils import CLINVAR_BATCH_SIZE, WEEKLY_XML_RELEASE, CLINVAR_DEFAULT_PATHOGENICITY, \
+    CLINVAR_CONFLICTING_CLASSICATIONS_OF_PATHOGENICITY
 
 WEEKLY_XML_RELEASE_HEADER = '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?><ClinVarVariationRelease xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://ftp.ncbi.nlm.nih.gov/pub/clinvar/xsd_public/ClinVar_VCV_2.4.xsd" ReleaseDate="2025-06-30">'''
 WEEKLY_XML_RELEASE_DATA = WEEKLY_XML_RELEASE_HEADER + '''
@@ -80,35 +81,39 @@ WEEKLY_XML_RELEASE_DATA = WEEKLY_XML_RELEASE_HEADER + '''
 '''
 
 
-@mock.patch('seqr.management.commands.reload_clinvar_all_variants.safe_post_to_slack')
-@mock.patch('seqr.management.commands.reload_clinvar_all_variants.logger.info')
-class ReloadClinvarAllVariantsTest(TestCase):
+@mock.patch('clickhouse_search.search.CLICKHOUSE_SERVICE_HOSTNAME', 'testhost')
+@mock.patch('reference_data.management.commands.update_all_reference_data.safe_post_to_slack')
+class ReloadClinvarAllVariantsTest(ReferenceDataCommandTestCase):
     databases = '__all__'
-    fixtures = ['clinvar_all_variants']
+    fixtures = ['clinvar_all_variants', 'reference_data']
 
     @responses.activate
-    def test_update_with_no_previous_version(self, mock_logger, mock_safe_post_to_slack):
-        DataVersions.objects.all().delete()
+    def test_update_with_no_previous_version(self, mock_safe_post_to_slack):
+        DataVersions.objects.filter(data_model_name='Clinvar').delete()
         ClinvarAllVariantsSnvIndel.objects.using('clickhouse_write').all().delete()
         responses.add(responses.GET, WEEKLY_XML_RELEASE, status=200, body=gzip.compress(WEEKLY_XML_RELEASE_DATA.encode()), stream=True)
-        call_command('reload_clinvar_all_variants')
-        mock_logger.assert_called_with('Updating Clinvar ClickHouse tables to 2025-06-30 from None.')
+        call_command('update_all_reference_data')
+        self.mock_command_logger.info.assert_called_with('Updated: Clinvar')
         self.assertEqual(ClinvarAllVariantsSnvIndel.objects.count(), 1)
+        self.assertEqual(DataVersions.objects.get(data_model_name='Clinvar').version, '2025-06-30')
 
     @responses.activate
-    def test_new_version_already_exists(self, mock_logger, mock_safe_post_to_slack):
+    def test_new_version_already_exists(self, mock_safe_post_to_slack):
         version_obj = DataVersions.objects.filter(data_model_name='Clinvar').first()
         version_obj.version = '2025-06-30'
         version_obj.save()
         responses.add(responses.GET, WEEKLY_XML_RELEASE, status=200, body=gzip.compress(WEEKLY_XML_RELEASE_DATA.encode()), stream=True)
-        call_command('reload_clinvar_all_variants')
-        mock_logger.assert_called_with('Clinvar ClickHouse tables already successfully updated to 2025-06-30, gracefully exiting.')
+        call_command('update_all_reference_data')
+        self.mock_command_logger.info.assert_has_calls([
+            mock.call('No update available for Clinvar'),
+            mock.call('Done'),
+        ])
 
     @responses.activate
-    def test_parse_variants_all_types(self, mock_logger, mock_safe_post_to_slack):
+    def test_parse_variants_all_types(self, mock_safe_post_to_slack):
         responses.add(responses.GET, WEEKLY_XML_RELEASE, status=200, body=gzip.compress(WEEKLY_XML_RELEASE_DATA.encode()), stream=True)
-        call_command('reload_clinvar_all_variants')
-        mock_logger.assert_called_with('Updating Clinvar ClickHouse tables to 2025-06-30 from 2025-06-23.')
+        call_command('update_all_reference_data')
+        self.mock_command_logger.info.assert_called_with('Updated: Clinvar')
         seqr_clinvar_snv_indel_models = ClinvarSnvIndel.objects.all()
         self.assertEqual(seqr_clinvar_snv_indel_models.count(), 1)
         self.assertDictEqual(
@@ -165,15 +170,15 @@ class ReloadClinvarAllVariantsTest(TestCase):
         self.assertEqual(dv.version, '2025-06-30')
         mock_safe_post_to_slack.assert_called_with(
             SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL,
-            'Successfully updated Clinvar ClickHouse tables to 2025-06-30.',
+            'Updated Clinvar reference data from version "2025-06-23" to version "2025-06-30"',
         )
 
 
     @responses.activate
-    def test_batching(self, mock_logger, mock_safe_post_to_slack):
+    def test_batching(self, mock_safe_post_to_slack):
         # Dynamically build many variants
         data = WEEKLY_XML_RELEASE_HEADER
-        for i in range(BATCH_SIZE * 2 + 10):
+        for i in range(CLINVAR_BATCH_SIZE * 2 + 10):
             data += f'''
             <VariationArchive RecordType="classified" NumberOfSubmissions="38" NumberOfSubmitters="36" DateLastUpdated="2025-06-29" DateCreated="2016-03-20" MostRecentSubmission="2025-06-29">
                 <ClassifiedRecord>
@@ -192,14 +197,14 @@ class ReloadClinvarAllVariantsTest(TestCase):
             '''
         data += '</ClinVarVariationRelease>'
         responses.add(responses.GET, WEEKLY_XML_RELEASE, status=200, body=gzip.compress(data.encode()), stream=True)
-        call_command('reload_clinvar_all_variants')
-        mock_logger.assert_called_with('Updating Clinvar ClickHouse tables to 2025-06-30 from 2025-06-23.')
-        self.assertEqual(ClinvarAllVariantsSnvIndel.objects.all().count(), BATCH_SIZE * 2 + 10)
-        self.assertEqual(ClinvarAllVariantsSnvIndel.objects.first().pathogenicity, ClinvarAllVariantsSnvIndel.CLINVAR_DEFAULT_PATHOGENICITY)
+        call_command('update_all_reference_data')
+        self.mock_command_logger.info.assert_called_with('Updated: Clinvar')
+        self.assertEqual(ClinvarAllVariantsSnvIndel.objects.all().count(), CLINVAR_BATCH_SIZE * 2 + 10)
+        self.assertEqual(ClinvarAllVariantsSnvIndel.objects.first().pathogenicity, CLINVAR_DEFAULT_PATHOGENICITY)
         self.assertIsNone(ClinvarAllVariantsSnvIndel.objects.first().gold_stars)
 
     @responses.activate
-    def test_malformed_variants(self, mock_logger, mock_safe_post_to_slack):
+    def test_malformed_variants(self, mock_safe_post_to_slack):
         for description, review_status, conflicting_pathogenicities, error_message in [
             ("Pathogenic-ey", None, None, 'Found an un-enumerated clinvar assertion: Pathogenic-ey'),
             ("Pathogenic; but unknown assertion", None, None, 'Found an un-enumerated clinvar assertion: but unknown assertion'),
@@ -236,8 +241,9 @@ class ReloadClinvarAllVariantsTest(TestCase):
                 body=gzip.compress(data.encode()),
                 stream=True,
             )
-            with self.assertRaisesMessage(CommandError, error_message):
-                call_command('reload_clinvar_all_variants')
+            with self.assertRaisesMessage(CommandError, 'Failed to Update: Clinvar'):
+                call_command('update_all_reference_data')
+            self.mock_command_logger.error.assert_called_with(f'unable to update Clinvar: {error_message}')
 
         # Variants with missing/equivalent alleles and positions are skipped
         for simple_allele_attrs, sequence_location_attrs in [
@@ -286,7 +292,7 @@ class ReloadClinvarAllVariantsTest(TestCase):
             )
             DataVersions.objects.all().delete()
             ClinvarAllVariantsSnvIndel.objects.using('clickhouse_write').all().delete()
-            call_command('reload_clinvar_all_variants')
+            call_command('update_all_reference_data')
             self.assertEqual(ClinvarAllVariantsSnvIndel.objects.count(), 0)
             self.assertEqual(ClinvarAllVariantsGRCh37SnvIndel.objects.count(), 0)
             mock_safe_post_to_slack.assert_called_with(
@@ -295,7 +301,7 @@ class ReloadClinvarAllVariantsTest(TestCase):
             )
 
     @responses.activate
-    def test_conflicting_data_from_submitters(self, mock_logger, mock_safe_post_to_slack):
+    def test_conflicting_data_from_submitters(self, mock_safe_post_to_slack):
         missing_conflicting_pathogenicities = WEEKLY_XML_RELEASE_HEADER + '''
             <VariationArchive >
                 <ClassifiedRecord>
@@ -320,8 +326,9 @@ class ReloadClinvarAllVariantsTest(TestCase):
             body=gzip.compress(missing_conflicting_pathogenicities.encode()),
             stream=True,
         )
-        with self.assertRaisesMessage(CommandError, 'Failed to find the conflicting pathogenicities node'):
-            call_command('reload_clinvar_all_variants')
+        with self.assertRaisesMessage(CommandError, 'Failed to Update: Clinvar'):
+            call_command('update_all_reference_data')
+        self.mock_command_logger.error.assert_called_with('unable to update Clinvar: Failed to find the conflicting pathogenicities node')
 
         conflicting_pathogenicities = WEEKLY_XML_RELEASE_HEADER + '''
             <VariationArchive>
@@ -355,10 +362,10 @@ class ReloadClinvarAllVariantsTest(TestCase):
             body=gzip.compress(conflicting_pathogenicities.encode()),
             stream=True,
         )
-        call_command('reload_clinvar_all_variants')
+        call_command('update_all_reference_data')
         self.assertEqual(ClinvarAllVariantsSnvIndel.objects.count(), 1)
-        self.assertEqual(ClinvarAllVariantsSnvIndel.objects.first().pathogenicity, ClinvarAllVariantsSnvIndel.CLINVAR_CONFLICTING_CLASSICATIONS_OF_PATHOGENICITY)
+        self.assertEqual(ClinvarAllVariantsSnvIndel.objects.first().pathogenicity, CLINVAR_CONFLICTING_CLASSICATIONS_OF_PATHOGENICITY)
         mock_safe_post_to_slack.assert_called_with(
             SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL,
-            'Successfully updated Clinvar ClickHouse tables to 2025-06-30.',
+            'Updated Clinvar reference data from version "2025-06-23" to version "2025-06-30"',
         )
