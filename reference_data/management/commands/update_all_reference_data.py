@@ -27,6 +27,10 @@ REFERENCE_DATA_MODELS = [
     HumanPhenotypeOntology,
 ]
 
+CLINVAR_NAME = 'Clinvar'
+MODEL_NAME_OVERRIDE = {BaseClinvarAllVariants: CLINVAR_NAME}
+
+
 class Command(BaseCommand):
     help = "Loads all reference data"
 
@@ -45,7 +49,7 @@ class Command(BaseCommand):
         update_failed = []
 
         if backend_specific_call(False, False, True):
-            current_version = current_versions.get(BaseClinvarAllVariants.__name__)
+            current_version = current_versions.get(CLINVAR_NAME)
             to_update[BaseClinvarAllVariants] = current_version.version if current_version else None
 
         if GeneInfo in to_update:
@@ -56,7 +60,7 @@ class Command(BaseCommand):
 
         gene_ids_to_gene, gene_symbols_to_gene = get_genes_by_id_and_symbol() if to_update else (None, None)
         for data_cls, latest_version in to_update.items():
-            data_model_name = data_cls.__name__
+            data_model_name = MODEL_NAME_OVERRIDE.get(data_cls, data_cls.__name__)
             try:
                 kwargs = {'gene_ids_to_gene': gene_ids_to_gene, 'gene_symbols_to_gene': gene_symbols_to_gene}
                 if data_cls == Omim and options.get('omim_key'):
@@ -64,6 +68,8 @@ class Command(BaseCommand):
                 update_version = data_cls.update_records(version=latest_version, **kwargs)
                 if update_version:
                     self._track_success_updates(data_model_name, update_version, current_versions, updated)
+                else:
+                    logger.info(f'No update available for {data_model_name}')
             except Exception as e:
                 logger.error("unable to update {}: {}".format(data_model_name, e))
                 update_failed.append(data_model_name)

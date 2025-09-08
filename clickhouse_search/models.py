@@ -6,6 +6,7 @@ from django.db.models import options, ForeignKey, OneToOneField, Func, CASCADE, 
 from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocksDB, Join
 from clickhouse_search.backend.fields import Enum8Field, NestedField, UInt32FieldDeltaCodecField, UInt64FieldDeltaCodecField, NamedTupleField
 from clickhouse_search.backend.functions import ArrayDistinct, ArrayFlatten, ArrayMin, ArrayMax
+from clickhouse_search.clinvar_utils import reload_clinvar_all_variants
 from clickhouse_search.managers import EntriesManager, AnnotationsQuerySet
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample
@@ -524,8 +525,7 @@ class BaseClinvarAllVariants(BaseClinvar):
 
     @classmethod
     def update_records(cls, version=None, **kwargs):
-        # TODO implement
-        return False
+        return reload_clinvar_all_variants(version)
 
 class ClinvarAllVariantsGRCh37SnvIndel(BaseClinvarAllVariants):
     class Meta(BaseClinvarAllVariants.Meta):

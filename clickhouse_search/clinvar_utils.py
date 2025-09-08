@@ -1,22 +1,17 @@
 import gzip
-import logging
 import requests
 import xml
 import defusedxml.ElementTree as ET
 from django.db import connections
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import CommandError
 from collections import defaultdict
-from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL
 import re
 from string import Template
 from typing import Optional, Union
 
 from clickhouse_backend import models
 from clickhouse_search.models import ClinvarAllVariantsGRCh37SnvIndel, ClinvarAllVariantsSnvIndel, ClinvarAllVariantsMito
-from reference_data.models import DataVersions
-from seqr.utils.communication_utils import safe_post_to_slack
 
-logger = logging.getLogger(__name__)
 
 def replace_underscores_with_spaces(value: Union[str, list[str]]) -> Union[str, list[str]]:
     if isinstance(value, str):
@@ -237,66 +232,49 @@ def extract_variant_info(elem: xml.etree.ElementTree.Element, new_version: str) 
             **props,
         )
 
-class Command(BaseCommand):
-    help = 'Reload all clinvar variants from weekly NCBI xml release'
+def reload_clinvar_all_variants(existing_version, model_to_batch):
+    model_to_batch = {
+        ClinvarAllVariantsGRCh37SnvIndel: [],
+        ClinvarAllVariantsSnvIndel: [],
+        ClinvarAllVariantsMito: [],
+    }
+    new_version = None
+    with requests.get(WEEKLY_XML_RELEASE, stream=True, timeout=10) as r:
+        r.raise_for_status()
+        for event, elem in ET.iterparse(gzip.GzipFile(fileobj=r.raw), events=('start', 'end',)):
+            # Handle parsing the current date.
+            if event == 'start' and elem.tag == 'ClinVarVariationRelease':
+                new_version = elem.attrib['ReleaseDate']
+                if existing_version == new_version:
+                    return None
+                # Drop any currently existing variants in the table that may exist due to a
+                # previously failed partial run.  Note that we validate that the Postgresql existing version
+                # is present in ClickHouse to account for the situation where Postgresql has an incorrect
+                # version.
+                if existing_version and ClinvarAllVariantsSnvIndel.objects.filter(version=existing_version).exists():
+                    clinvar_run_sql(
+                        Template(f"ALTER TABLE `$reference_genome/$dataset_type/clinvar_all_variants` DROP PARTITION '{new_version}';")
+                    )
 
-    def handle(self, *args, **options):
-        model_to_batch = {
-            ClinvarAllVariantsGRCh37SnvIndel: [],
-            ClinvarAllVariantsSnvIndel: [],
-            ClinvarAllVariantsMito: [],
-        }
-        new_version = None
-        with requests.get(WEEKLY_XML_RELEASE, stream=True, timeout=10) as r:
-            r.raise_for_status()
-            for event, elem in ET.iterparse(gzip.GzipFile(fileobj=r.raw), events=('start', 'end',)):
-                # Handle parsing the current date.
-                if event == 'start' and elem.tag == 'ClinVarVariationRelease':
-                    new_version = elem.attrib['ReleaseDate']
-                    existing_version_obj = DataVersions.objects.filter(data_model_name='Clinvar').first()
-                    if existing_version_obj:
-                        if existing_version_obj.version == new_version:
-                            logger.info(f'Clinvar ClickHouse tables already successfully updated to {new_version}, gracefully exiting.')
-                            return
-                    logger.info(f'Updating Clinvar ClickHouse tables to {new_version} from {existing_version_obj and existing_version_obj.version}.')
-                    # Drop any currently existing variants in the table that may exist due to a
-                    # previously failed partial run.  Note that we validate that the Postgresql existing version
-                    # is present in ClickHouse to account for the situation where Postgresql has an incorrect
-                    # version.
-                    if existing_version_obj and ClinvarAllVariantsSnvIndel.objects.filter(version=existing_version_obj.version).exists():
-                        clinvar_run_sql(
-                            Template(f"ALTER TABLE `$reference_genome/$dataset_type/clinvar_all_variants` DROP PARTITION '{new_version}';")
-                        )
+            # Handle parsing variants
+            if event == 'end' and elem.tag == 'VariationArchive' and new_version:
+                for obj in extract_variant_info(elem, new_version):
+                    for model, batch in model_to_batch.items():
+                        if isinstance(obj, model):
+                            batch.append(obj)
+                            if len(batch) == BATCH_SIZE:
+                                model.objects.using('clickhouse_write').bulk_create(batch)
+                                batch.clear()
+                elem.clear()
 
-                # Handle parsing variants
-                if event == 'end' and elem.tag == 'VariationArchive' and new_version:
-                    for obj in extract_variant_info(elem, new_version):
-                        for model, batch in model_to_batch.items():
-                            if isinstance(obj, model):
-                                batch.append(obj)
-                                if len(batch) == BATCH_SIZE:
-                                    model.objects.using('clickhouse_write').bulk_create(batch)
-                                    batch.clear()
-                    elem.clear()
+    for model, batch in model_to_batch.items():
+        if batch:
+            model.objects.using('clickhouse_write').bulk_create(batch)
 
-        for model, batch in model_to_batch.items():
-            if batch:
-                model.objects.using('clickhouse_write').bulk_create(batch)
+    # Delete previous version & refresh the view.
+    if existing_version:
+        clinvar_run_sql(Template(f"ALTER TABLE `$reference_genome/$dataset_type/clinvar_all_variants` DROP PARTITION '{existing_version}';"))
+    clinvar_run_sql(Template('SYSTEM REFRESH VIEW `$reference_genome/$dataset_type/clinvar_all_variants_to_clinvar_mv`;'))
+    clinvar_run_sql(Template('SYSTEM WAIT VIEW `$reference_genome/$dataset_type/clinvar_all_variants_to_clinvar_mv`;'))
 
-        # Delete previous version & refresh the view.
-        if existing_version_obj:
-            clinvar_run_sql(Template(f"ALTER TABLE `$reference_genome/$dataset_type/clinvar_all_variants` DROP PARTITION '{existing_version_obj.version}';"))
-        clinvar_run_sql(Template('SYSTEM REFRESH VIEW `$reference_genome/$dataset_type/clinvar_all_variants_to_clinvar_mv`;'))
-        clinvar_run_sql(Template('SYSTEM WAIT VIEW `$reference_genome/$dataset_type/clinvar_all_variants_to_clinvar_mv`;'))
-
-        # Save the new version in Postgres
-        if existing_version_obj:
-            existing_version_obj.version = new_version
-            existing_version_obj.save()
-        else:
-            DataVersions.objects.create(
-                data_model_name='Clinvar',
-                version=new_version
-            )
-        slack_message = f'Successfully updated Clinvar ClickHouse tables to {new_version}.'
-        safe_post_to_slack(SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, slack_message)
+    return new_version
