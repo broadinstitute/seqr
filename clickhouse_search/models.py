@@ -522,6 +522,11 @@ class BaseClinvarAllVariants(BaseClinvar):
             partition_by='version',
         )
 
+    @classmethod
+    def update_records(cls, version=None, **kwargs):
+        # TODO implement
+        return False
+
 class ClinvarAllVariantsGRCh37SnvIndel(BaseClinvarAllVariants):
     class Meta(BaseClinvarAllVariants.Meta):
         db_table = 'GRCh37/SNV_INDEL/clinvar_all_variants'

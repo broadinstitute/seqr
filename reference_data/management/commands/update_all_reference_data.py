@@ -2,9 +2,11 @@ import logging
 from collections import OrderedDict
 from django.core.management.base import BaseCommand, CommandError
 
+from clickhouse_search.models import BaseClinvarAllVariants
 from reference_data.utils.gene_utils import get_genes_by_id_and_symbol
 from reference_data.models import GeneInfo, TranscriptInfo, HumanPhenotypeOntology, RefseqTranscript, GeneConstraint, \
     GeneCopyNumberSensitivity, GeneShet, Omim, dbNSFPGene, PrimateAI, MGI, GenCC, ClinGen, DataVersions
+from seqr.utils.search.utils import backend_specific_call
 from seqr.utils.communication_utils import safe_post_to_slack
 from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL
 
@@ -42,6 +44,10 @@ class Command(BaseCommand):
         updated = []
         update_failed = []
 
+        if backend_specific_call(False, False, True):
+            current_version = current_versions.get(BaseClinvarAllVariants.__name__)
+            to_update[BaseClinvarAllVariants] = current_version.version if current_version else None
+
         if GeneInfo in to_update:
             latest_version = to_update.pop(GeneInfo)
             data_model_name = GeneInfo.__name__
@@ -55,8 +61,9 @@ class Command(BaseCommand):
                 kwargs = {'gene_ids_to_gene': gene_ids_to_gene, 'gene_symbols_to_gene': gene_symbols_to_gene}
                 if data_cls == Omim and options.get('omim_key'):
                     kwargs['omim_key'] = options['omim_key']
-                data_cls.update_records(**kwargs)
-                self._track_success_updates(data_model_name, latest_version, current_versions, updated)
+                update_version = data_cls.update_records(version=latest_version, **kwargs)
+                if update_version:
+                    self._track_success_updates(data_model_name, update_version, current_versions, updated)
             except Exception as e:
                 logger.error("unable to update {}: {}".format(data_model_name, e))
                 update_failed.append(data_model_name)

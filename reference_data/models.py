@@ -125,7 +125,7 @@ class LoadableModel(models.Model):
                 yield dict(zip(header_fields, line if isinstance(line, list) else line.rstrip('\r\n').split('\t')))
 
     @classmethod
-    def update_records(cls, **kwargs):
+    def update_records(cls, version=None, **kwargs):
         missing_mappings = {k for k, v in kwargs.items() if not v}
         if missing_mappings:
             raise ValueError(f'Related data is missing to load {cls.__name__}: {", ".join(sorted(missing_mappings))}')
@@ -149,6 +149,7 @@ class LoadableModel(models.Model):
 
         logger.info('Done')
         logger.info(f'Loaded {cls.objects.count()} {cls.__name__} records')
+        return version
 
 
 class HumanPhenotypeOntology(LoadableModel):
@@ -377,9 +378,10 @@ class GeneMetadataModel(LoadableModel):
     @classmethod
     def update_records(cls, **kwargs):
         skipped_genes = {None: 0}
-        super().update_records(skipped_genes=skipped_genes, **kwargs)
+        update_version = super().update_records(skipped_genes=skipped_genes, **kwargs)
         if skipped_genes[None]:
             logger.info(f'Skipped {skipped_genes[None]} records with unrecognized genes.')
+        return update_version
 
 
 class TranscriptInfo(GeneMetadataModel):
@@ -438,9 +440,10 @@ class RefseqTranscript(LoadableModel):
     def update_records(cls, **kwargs):
         transcript_id_map = dict(TranscriptInfo.objects.values_list('transcript_id', 'id'))
         skipped_transcripts = {None: 0}
-        super().update_records(transcript_id_map=transcript_id_map, skipped_transcripts=skipped_transcripts, **kwargs)
+        update_version = super().update_records(transcript_id_map=transcript_id_map, skipped_transcripts=skipped_transcripts, **kwargs)
         if skipped_transcripts[None]:
             logger.info(f'Skipped {skipped_transcripts[None]} records with unrecognized or duplicated transcripts')
+        return update_version
 
 
 # based on # ftp://ftp.broadinstitute.org/pub/ExAC_release/release0.3.1/functional_gene_constraint/fordist_cleaned_exac_r03_march16_z_pli_rec_null_data.txt
@@ -753,7 +756,7 @@ class MGI(GeneMetadataModel):
     @classmethod
     def update_records(cls, **kwargs):
         entrez_id_to_gene = dict(dbNSFPGene.objects.values_list('entrez_gene_id', 'gene_id'))
-        super().update_records(entrez_id_to_gene=entrez_id_to_gene, **kwargs)
+        return super().update_records(entrez_id_to_gene=entrez_id_to_gene, **kwargs)
 
     @classmethod
     def get_gene_for_record(cls, record, *args, entrez_id_to_gene=None, **kwargs):

@@ -26,12 +26,13 @@ class BaseUpdateAllReferenceDataTest(ReferenceDataCommandTestCase):
         super().setUp()
 
         self.mock_update_calls = []
-        def _mock_handler(_cls, **kwargs):
+        def _mock_handler(_cls, version=None, **kwargs):
             self.mock_update_calls.append((_cls, kwargs))
             if _cls == MGI:
                 mgi_exception()
             elif _cls == PrimateAI:
                 primate_ai_exception()
+            return version
         patcher = mock.patch.object(LoadableModel, 'update_records', new=classmethod(mock.MagicMock(side_effect=_mock_handler)))
         patcher.start()
         self.addCleanup(patcher.stop)
