@@ -109,6 +109,12 @@ class ReloadClinvarAllVariantsTest(ReferenceDataCommandTestCase):
             mock.call('Done'),
         ])
 
+    @mock.patch('reference_data.management.commands.update_all_reference_data.datetime')
+    def test_version_is_today(self, mock_datetime, mock_safe_post_to_slack):
+        mock_datetime.today.return_value = datetime.date(2025, 6, 23)
+        call_command('update_all_reference_data')
+        self.mock_command_logger.info.assert_called_once_with('Done')
+
     @responses.activate
     def test_parse_variants_all_types(self, mock_safe_post_to_slack):
         responses.add(responses.GET, WEEKLY_XML_RELEASE, status=200, body=gzip.compress(WEEKLY_XML_RELEASE_DATA.encode()), stream=True)
