@@ -290,15 +290,17 @@ class ReloadClinvarAllVariantsTest(ReferenceDataCommandTestCase):
                 body=gzip.compress(data.encode()),
                 stream=True,
             )
-            DataVersions.objects.all().delete()
+            DataVersions.objects.filter(data_model_name='Clinvar').update(version='2025-06-23')
             ClinvarAllVariantsSnvIndel.objects.using('clickhouse_write').all().delete()
+            self.mock_command_logger.reset_mock()
             call_command('update_all_reference_data')
             self.assertEqual(ClinvarAllVariantsSnvIndel.objects.count(), 0)
             self.assertEqual(ClinvarAllVariantsGRCh37SnvIndel.objects.count(), 0)
             mock_safe_post_to_slack.assert_called_with(
                 SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL,
-                'Successfully updated Clinvar ClickHouse tables to 2025-06-30.',
+                'Updated Clinvar reference data from version "2025-06-23" to version "2025-06-30"'
             )
+
 
     @responses.activate
     def test_conflicting_data_from_submitters(self, mock_safe_post_to_slack):
