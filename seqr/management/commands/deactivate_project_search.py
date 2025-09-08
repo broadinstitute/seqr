@@ -31,7 +31,5 @@ class Command(BaseCommand):
 
     @staticmethod
     def _delete_clickhouse_project(project, dataset_type, sample_type):
-        if dataset_type == Sample.DATASET_TYPE_SV_CALLS and sample_type == Sample.SAMPLE_TYPE_WES:
-            dataset_type = 'GCNV'
-        info = delete_clickhouse_project(project, dataset_type)
+        info = delete_clickhouse_project(project, dataset_type, sample_type)
         logger.info(info)

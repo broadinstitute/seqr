@@ -12,14 +12,14 @@ def _disable_search(families, from_project):
     search_samples = Sample.objects.filter(is_active=True, individual__family__in=families)
     if search_samples:
         updated_families = search_samples.values_list("individual__family__family_id", flat=True).distinct()
-        updated_family_dataset_types = list(search_samples.values_list('dataset_type', 'individual__family__guid').distinct())
+        updated_family_dataset_types = list(search_samples.values_list('individual__family__guid', 'dataset_type', 'sample_type').distinct())
         family_summary = ", ".join(sorted(updated_families))
         num_updated = search_samples.update(is_active=False)
         logger.info(
             f'Disabled search for {num_updated} samples in the following {len(updated_families)} families: {family_summary}'
         )
-        for dataset_type, family_guid in updated_family_dataset_types:
-            logger.info(delete_clickhouse_family(from_project, family_guid=family_guid, dataset_type=dataset_type))
+        for update in updated_family_dataset_types:
+            logger.info(delete_clickhouse_family(from_project, *update))
 
 
 class Command(BaseCommand):

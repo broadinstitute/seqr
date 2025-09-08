@@ -2,11 +2,13 @@ from collections import defaultdict
 from copy import deepcopy
 from datetime import timedelta
 from django.db.models import Count
+from pyliftover.liftover import LiftOver
 
 from clickhouse_search.search import get_clickhouse_variants, format_clickhouse_results, \
     get_clickhouse_cache_results, clickhouse_variant_lookup, get_clickhouse_variant_by_id
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample, Individual, Project
+from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_get_wildcard_json, safe_redis_set_json
 from seqr.utils.search.constants import XPOS_SORT_KEY, PRIORITIZED_GENE_SORT, RECESSIVE, COMPOUND_HET, \
     MAX_NO_LOCATION_COMP_HET_FAMILIES, SV_ANNOTATION_TYPES, ALL_DATA_TYPES, MAX_EXPORT_VARIANTS, X_LINKED_RECESSIVE, \
@@ -17,6 +19,7 @@ from seqr.utils.search.elasticsearch.es_utils import ping_elasticsearch, delete_
 from seqr.utils.gene_utils import parse_locus_list_items
 from seqr.utils.xpos_utils import get_xpos, format_chrom, MIN_POS, MAX_POS
 
+logger = SeqrLogger(__name__)
 
 class InvalidSearchException(Exception):
     pass
@@ -639,3 +642,31 @@ def _format_interval(chrom=None, start=None, end=None, offset=None, **kwargs):
         end = min(end + offset_pos, MAX_POS)
     return [chrom, start, end]
 
+
+LIFTOVERS = {
+    GENOME_VERSION_GRCh38: None,
+    GENOME_VERSION_GRCh37: None,
+}
+PYLIFTOVER_BUILD_LOOKUP = {
+    GENOME_VERSION_GRCh38: ('hg19', 'hg38'),
+    GENOME_VERSION_GRCh37: ('hg38', 'hg19'),
+}
+def _get_liftover(genome_version):
+    if not LIFTOVERS[genome_version]:
+        try:
+            LIFTOVERS[genome_version] = LiftOver(*PYLIFTOVER_BUILD_LOOKUP[genome_version])
+        except Exception as e:
+            logger.error('ERROR: Unable to set up liftover. {}'.format(e), user=None)
+    return LIFTOVERS[genome_version]
+
+
+def run_liftover(genome_version, chrom, pos):
+    liftover = _get_liftover(genome_version)
+    if not liftover:
+        return None
+    lifted_coord = liftover.convert_coordinate(
+        'chr{}'.format(chrom.lstrip('chr')), int(pos)
+    )
+    if lifted_coord and lifted_coord[0]:
+        return (lifted_coord[0][0].lstrip('chr'), lifted_coord[0][1])
+    return None

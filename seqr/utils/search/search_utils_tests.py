@@ -4,8 +4,8 @@ from django.test import TestCase
 import json
 import mock
 
-from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4, PROJECT_2_VARIANT2, format_cached_variant
-from hail_search.test_utils import GENE_COUNTS, VARIANT_LOOKUP_VARIANT, SV_VARIANT4, SV_VARIANT1
+from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4, PROJECT_2_VARIANT2, format_cached_variant, \
+    GENE_COUNTS, VARIANT_LOOKUP_VARIANT, SV_VARIANT4, SV_VARIANT1
 from seqr.models import Project, Family, Sample, VariantSearch, VariantSearchResults
 from seqr.views.utils.json_utils import DjangoJSONEncoderWithSets
 from seqr.utils.search.utils import get_single_variant, get_variants_for_variant_ids, get_variant_query_gene_counts, \
@@ -17,6 +17,12 @@ SV_SAMPLES = ['S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733']
 MITO_SAMPLES = ['S000149_hg00733']
 NON_SNP_INDEL_SAMPLES = SV_SAMPLES + MITO_SAMPLES
 FAMILY_3_SAMPLE = 'S000135_na20870'
+
+GENE_COUNTS = {
+    **GENE_COUNTS,
+    'ENSG00000177000': {**GENE_COUNTS['ENSG00000177000'], 'total': 3},
+    'ENSG00000277258': {**GENE_COUNTS['ENSG00000277258'], 'total': 2},
+}
 
 class SearchTestHelper(object):
 
@@ -83,7 +89,7 @@ class SearchUtilsTests(SearchTestHelper):
         mock_sv_variant_lookup.assert_called_with(
             self.user, 'phase2_DEL_chr14_4640', 'SV_WGS', genome_version='38', samples=mock.ANY)
         mock_get_variants.assert_called_with(mock.ANY, {
-            'parsed_locus': {'padded_interval': {'chrom': '14', 'start': 106694244, 'end': 106740587, 'padding': 0.2}},
+            'parsed_locus': {'padded_interval': {'chrom': '17', 'start': 38719997, 'end': 38737237, 'padding': 0.2}},
             'annotations': {'structural': ['DEL', 'gCNV_DEL']},
         }, self.user, mock.ANY, '38')
         cache_key = 'variant_lookup_results__phase2_DEL_chr14_4640__38__test_user'
@@ -735,7 +741,7 @@ class ClickhouseSearchUtilsTests(DifferentDbTransactionSupportMixin, TestCase, S
             'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
             'ENSG00000177000': {'total': 2, 'families': {'F000002_2': 2}},
             'ENSG00000277258': {'total': 1, 'families': {'F000002_2': 1}},
-            'ENSG00000171621': {'total': 1, 'families': {'F000011_11': 1}},
+            'ENSG00000171621': {'total': 1, 'families': {'F000014_14': 1}},
         })
 
     @mock.patch('seqr.utils.search.utils.clickhouse_variant_lookup')

@@ -21,16 +21,17 @@ class GtexLauncher extends React.PureComponent {
     fetchAdditionalData: PropTypes.func.isRequired,
     getAdditionalExpressionParams: PropTypes.func,
     renderOnError: PropTypes.bool,
+    expressionPath: PropTypes.string,
   }
 
   state = { loading: false }
 
   loadGeneExpression = (gencodeId, additionalData) => {
-    const { getAdditionalExpressionParams } = this.props
+    const { getAdditionalExpressionParams, expressionPath = 'geneExpression' } = this.props
     const params = getAdditionalExpressionParams ? getAdditionalExpressionParams(additionalData) : {}
     const onComplete = this.onExpressionLoadComplete(additionalData)
     queryGtex(
-      'expression/geneExpression',
+      `expression/${expressionPath}`,
       { gencodeId, ...params },
       onComplete,
       () => onComplete(null),

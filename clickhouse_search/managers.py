@@ -285,18 +285,19 @@ class AnnotationsQuerySet(SearchQuerySet):
         if not genotype_override_fields:
             return {}
 
+        genotype_field = next(field for field in ['genotypes', 'familyGenotypes'] if field in query.query.annotations)
         index_map = {
-            field: i+1 for i, (field, _) in enumerate(query.query.annotations['genotypes'].output_field.base_fields)
+            field: i+1 for i, (field, _) in enumerate(query.query.annotations[genotype_field].output_field.base_fields)
         }
         override_field_map = {field: col for col, (field, _) in genotype_override_fields.items()}
         genotype_fields = [
             self._genotype_override_expression(index_map[field], override_field_map[field], index_map['cn'])
             if field in override_field_map else (f'ifNull(x.{index_map[field]}, 0)' if field == 'numAlt' else f'x.{index_map[field]}')
-            for (field, _) in query.query.annotations['genotypes'].output_field.base_fields
+            for (field, _) in query.query.annotations[genotype_field].output_field.base_fields
         ]
 
         return {
-            'genotypes': ArrayMap('genotypes', mapped_expression=f"tuple({', '.join(genotype_fields)})"),
+            genotype_field: ArrayMap(genotype_field, mapped_expression=f"tuple({', '.join(genotype_fields)})"),
             'transcripts': F(query.GENOTYPE_GENE_CONSEQUENCE_FIELD),
             **{col: F(f'sample_{col}') for col in genotype_override_fields if col != 'geneIds'},
         }
@@ -624,7 +625,6 @@ class AnnotationsQuerySet(SearchQuerySet):
 
 
 class EntriesManager(SearchQuerySet):
-    MAX_XPOS_FILTER_INTERVALS = 500
     GENOTYPE_LOOKUP = {
         REF_REF: [0],
         REF_ALT: [1],
@@ -767,15 +767,17 @@ class EntriesManager(SearchQuerySet):
             clinvar_override_q = AnnotationsQuerySet._clinvar_path_q(
                pathogenicity, _get_range_q=lambda path_range: Q(clinvar_join__pathogenicity__range=path_range),
             ) if self._has_clinvar() else None
-            inheritance_q, quality_q, gt_filter, family_missing_type_samples = self._get_inheritance_quality_qs(
+            inheritance_q, quality_q, gt_filter, family_missing_type_samples, unaffected_samples = self._get_inheritance_quality_qs(
                sample_data, multi_sample_type_families, inheritance_mode, individual_genotype_filter, quality_filter, clinvar_override_q,
-                custom_affected=(inheritance_filter or {}).get('affected') or {},
+                annotate_carriers, custom_affected=(inheritance_filter or {}).get('affected') or {},
             )
             if quality_filter.get('vcf_filter'):
                 q = Q(filters__len=0)
                 if clinvar_override_q:
                     q |= clinvar_override_q
                 entries = entries.filter(q)
+            if unaffected_samples:
+                entries = entries.annotate(carriers=self._carriers_expression(unaffected_samples))
 
        if multi_sample_type_families:
            if gt_filter:
@@ -798,20 +800,22 @@ class EntriesManager(SearchQuerySet):
        if quality_q is not None:
            entries = entries.filter(quality_q)
 
-       return self._annotate_calls(entries, sample_data, annotate_carriers, annotate_hom_alts, skip_individual_guid, multi_sample_type_families)
+       return self._annotate_calls(entries, sample_data, annotate_hom_alts, skip_individual_guid, multi_sample_type_families)
 
-    def _get_inheritance_quality_qs(self, sample_data, multi_sample_type_families, inheritance_mode, individual_genotype_filter, quality_filter, clinvar_override_q, custom_affected):
-        samples_by_gt = defaultdict(list)
+    def _get_inheritance_quality_qs(self, sample_data, multi_sample_type_families, inheritance_mode, individual_genotype_filter, quality_filter, clinvar_override_q, annotate_carriers, custom_affected):
+        samples_by_genotype = defaultdict(list)
         affected_samples = []
+        unaffected_samples = []
         family_missing_type_samples = defaultdict(lambda: defaultdict(list))
         for sample in sample_data['samples']:
             affected = custom_affected.get(sample['individual_guid']) or sample['affected']
             genotype = self._sample_genotype(sample, affected, inheritance_mode, individual_genotype_filter)
             if affected == AFFECTED and (inheritance_mode == ANY_AFFECTED or quality_filter.get('affected_only')):
                 affected_samples.append(sample['sample_id'])
+            if affected == UNAFFECTED and annotate_carriers:
+                unaffected_samples.append(sample['sample_id'])
             if (inheritance_mode and inheritance_mode != ANY_AFFECTED) or individual_genotype_filter:
-                for gt in self.genotype_lookup[genotype]:
-                    samples_by_gt[gt].append(sample['sample_id'])
+                samples_by_genotype[genotype].append(sample['sample_id'])
                 if sample['family_guid'] in multi_sample_type_families:
                     sample_type = sample['sample_type']
                     missing_type = Sample.SAMPLE_TYPE_WES if sample_type == Sample.SAMPLE_TYPE_WGS else Sample.SAMPLE_TYPE_WGS
@@ -825,14 +829,25 @@ class EntriesManager(SearchQuerySet):
                 'gt': (self.genotype_lookup[HAS_ALT], 'has({value}, {field})'),
                 'sampleId': (affected_samples, 'has({value}, {field})'),
             })
-        elif samples_by_gt:
-            gt_filter_map = ', '.join([f"{gt}, {samples_by_gt[gt]}" for gt in [-1, 0, 1, 2]])
-            gt_filter = (gt_filter_map, 'has(map({value})[ifNull({field}, -1)], x.sampleId)')
+        elif samples_by_genotype:
+            if all(len(self.genotype_lookup[genotype]) == 1 for genotype in samples_by_genotype.keys()):
+                samples_by_gt = {self.genotype_lookup[genotype][0]: samples for genotype, samples in samples_by_genotype.items()}
+                gt_filter_map = ', '.join([f"{gt}, {samples_by_gt.get(gt, [])}" for gt in [-1, 0, 1, 2]])
+                gt_filter = (gt_filter_map, 'has(map({value})[ifNull({field}, -1)], x.sampleId)')
+            else:
+                genotype_sample_map = ', '.join([f"'{genotype or 'any'}', {samples}" for genotype, samples in samples_by_genotype.items()])
+                gt_genotypes = defaultdict(list)
+                for genotype in samples_by_genotype.keys():
+                    for gt in self.genotype_lookup[genotype]:
+                        gt_genotypes[gt].append(genotype or 'any')
+                gt_genotype_map = ', '.join([f"{gt}, {gt_genotypes[gt]}" for gt in [-1, 0, 1, 2]])
+                genotype_maps = f'genotype -> map({genotype_sample_map})[genotype], map({gt_genotype_map})'
+                gt_filter = (genotype_maps, 'has(arrayFlatten(arrayMap({value}[ifNull({field}, -1)])), x.sampleId)')
             inheritance_q = Q(calls__array_all={'gt': gt_filter})
 
         quality_q = self._quality_q(quality_filter, affected_samples, clinvar_override_q)
 
-        return inheritance_q, quality_q, gt_filter, family_missing_type_samples
+        return inheritance_q, quality_q, gt_filter, family_missing_type_samples, unaffected_samples
 
     def _sample_genotype(self, sample, affected, inheritance_mode, individual_genotype_filter):
         genotype = None
@@ -893,10 +908,7 @@ class EntriesManager(SearchQuerySet):
             )
         return entries
 
-    def _annotate_calls(self, entries, sample_data=None, annotate_carriers=False, annotate_hom_alts=False, skip_individual_guid=False, multi_sample_type_families=None):
-        carriers_expression = self._carriers_expression(sample_data) if annotate_carriers else None
-        if carriers_expression:
-            entries = entries.annotate(carriers=carriers_expression)
+    def _annotate_calls(self, entries, sample_data=None, annotate_hom_alts=False, skip_individual_guid=False, multi_sample_type_families=None):
         if annotate_hom_alts:
             entries = entries.annotate(has_hom_alt=Q(calls__array_exists={'gt': (2,)}))
 
@@ -921,7 +933,7 @@ class EntriesManager(SearchQuerySet):
                 **{'genotypes' if genotype_sample_data else 'familyGenotypes': GroupArrayArray(self.genotype_expression(genotype_sample_data))},
                 **{col: GroupArrayArray(col) for col in genotype_override_annotations}
             )
-            if carriers_expression:
+            if 'carriers' in entries.query.annotations:
                 map_field = models.MapField(models.StringField(), models.ArrayField(models.StringField()))
                 if multi_sample_type_families:
                     family_carriers = ArrayFold(
@@ -942,7 +954,7 @@ class EntriesManager(SearchQuerySet):
             if multi_sample_type_families:
                 entries = self._multi_sample_type_filtered_entries(entries)
         else:
-            if carriers_expression:
+            if 'carriers' in entries.query.annotations:
                 fields.append('carriers')
             if annotate_hom_alts:
                 fields.append('has_hom_alt')
@@ -983,20 +995,10 @@ class EntriesManager(SearchQuerySet):
             conditions=[{1: (None, 'notEmpty({field})')}]
         )
 
-    def _carriers_expression(self, sample_data):
-        family_carriers = defaultdict(set)
-        for s in sample_data['samples']:
-            if s['affected'] == UNAFFECTED:
-                family_carriers[s['family_guid']].add(f"'{s['sample_id']}'")
-        if not any(family_carriers.values()):
-            return None
-
-        carrier_map = [
-            f"'{family_guid}', [{', '.join(samples)}]" for family_guid, samples in family_carriers.items()
-        ]
+    def _carriers_expression(self, unaffected_samples):
         return ArrayMap(
             ArrayFilter('calls', conditions=[{
-                'sampleId': (", ".join(carrier_map), 'has(map({value})[family_guid], {field})'),
+                'sampleId': (unaffected_samples, 'has({value}, {field})'),
                 'gt': (0, '{field} > {value}'),
             }]),
             mapped_expression='x.sampleId',
@@ -1041,7 +1043,7 @@ class EntriesManager(SearchQuerySet):
             mapped_expression='x.1', output_field=models.ArrayField(models.StringField()),
         )
 
-    def filter_locus(self, exclude_intervals=False, intervals=None, gene_intervals=None, variant_ids=None, padded_interval=None, **kwargs):
+    def filter_locus(self, exclude_intervals=False, intervals=None, gene_intervals=None, gene_ids=None, variant_ids=None, padded_interval=None, require_gene_filter=False, **kwargs):
         entries = self
         if variant_ids:
             # although technically redundant, the interval query is applied to the entries table before join and reduces the join size,
@@ -1057,21 +1059,27 @@ class EntriesManager(SearchQuerySet):
             if exclude_intervals:
                 intervals = None
             else:
-                chromosomes = {chrom for chrom, _, _ in list((gene_intervals or {}).values()) + (intervals or [])}
+                if gene_ids and 'geneIds' in self.call_fields:
+                    entries = entries.filter(calls__array_all={'OR': [
+                        {'geneIds': (gene_ids, 'hasAny({value}, {field})')},
+                        {'gt': (None, 'isNull({field})')},
+                    ]})
+                    intervals = list((gene_intervals or {}).values()) + (intervals or [])
+                    gene_intervals = None
+                chromosomes = {chrom for chrom, _, _ in (intervals or [])}
                 intervals = [(chrom, MIN_POS, MAX_POS) for chrom in chromosomes]
-            gene_intervals = None
 
         if not (gene_intervals or intervals):
             return entries
 
         locus_q = None
         if gene_intervals:
-            has_entry_genes = hasattr(self.model, 'is_annotated_in_any_gene')
-            if has_entry_genes and not intervals:
+            if hasattr(self.model, 'is_annotated_in_any_gene') and not intervals:
                 entries = entries.filter(is_annotated_in_any_gene=Value(True))
-            if (not has_entry_genes) or exclude_intervals or len(gene_intervals) < self.MAX_XPOS_FILTER_INTERVALS:
+            should_filter_interval = (not hasattr(self.model, 'geneId_ids')) or exclude_intervals or len(gene_intervals) < self.model.MAX_XPOS_FILTER_INTERVALS
+            if should_filter_interval:
                 intervals = list((gene_intervals or {}).values()) + (intervals or [])
-            else:
+            if require_gene_filter or (not should_filter_interval):
                 locus_q = Q(geneId_ids__bitmap_has_any=list(gene_intervals.keys()))
 
         if intervals:
@@ -1080,6 +1088,8 @@ class EntriesManager(SearchQuerySet):
                 interval_q |= self._interval_query(*interval)
             if locus_q is None:
                 locus_q = interval_q
+            elif require_gene_filter:
+                locus_q &= interval_q
             else:
                 locus_q |= interval_q
 

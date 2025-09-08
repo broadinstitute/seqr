@@ -3,9 +3,10 @@ from django.contrib.auth.models import User
 from django.db.models import F
 from typing import Callable
 
-from reference_data.models import GENOME_VERSION_LOOKUP
+from reference_data.models import GeneInfo, GENOME_VERSION_LOOKUP
 from seqr.models import Sample, Individual, Project
 from seqr.utils.communication_utils import send_project_notification
+from seqr.utils.file_utils import does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.search.utils import backend_specific_call
 from seqr.utils.search.elasticsearch.es_utils import validate_es_index_metadata_and_get_samples
@@ -116,7 +117,7 @@ def _format_loading_pipeline_variables(
     return variables
 
 def prepare_data_loading_request(projects: list[Project], individual_ids: list[int], sample_type: str, dataset_type: str, genome_version: str,
-                                 data_path: str, user: User, pedigree_dir: str,  raise_pedigree_error: bool = False,
+                                 data_path: str, user: User, load_data_dir: str,  raise_pedigree_error: bool = False,
                                  skip_validation: bool = False, skip_check_sex_and_relatedness: bool = False, vcf_sample_id_map=None):
     variables = _format_loading_pipeline_variables(
         projects,
@@ -129,8 +130,9 @@ def prepare_data_loading_request(projects: list[Project], individual_ids: list[i
         variables['skip_validation'] = True
     if skip_check_sex_and_relatedness:
         variables['skip_check_sex_and_relatedness'] = True
-    file_path = _get_pedigree_path(pedigree_dir, genome_version, sample_type, dataset_type)
+    file_path = _get_pedigree_path(load_data_dir, genome_version, sample_type, dataset_type)
     _upload_data_loading_files(individual_ids, vcf_sample_id_map or {}, user, file_path, raise_pedigree_error)
+    _write_gene_id_file(load_data_dir, user)
     return variables, file_path
 
 
@@ -169,6 +171,23 @@ def _upload_data_loading_files(individual_ids: list[int], vcf_sample_id_map: dic
         })
         if raise_error:
             raise e
+
+
+def _write_gene_id_file(load_data_dir, user):
+    file_name = 'db_id_to_gene_id'
+    if does_file_exist(f'{load_data_dir}/{file_name}.csv.gz'):
+        return
+
+    gene_data_loaded = (GeneInfo.objects.filter(gencode_release=int(GeneInfo.CURRENT_VERSION)).exists() and
+                        GeneInfo.objects.filter(gencode_release=int(GeneInfo.ALL_GENCODE_VERSIONS[-1])).exists())
+    if not gene_data_loaded:
+        raise ValueError(
+            'Gene reference data is not yet loaded. If this is a new seqr installation, wait for the initial data load '
+            'to complete. If this is an existing installation, see the documentation for updating data in seqr.'
+        )
+    gene_data = GeneInfo.objects.all().values('gene_id', db_id=F('id')).order_by('id')
+    file_config = (file_name, ['db_id', 'gene_id'], gene_data)
+    write_multiple_files([file_config], load_data_dir, user, file_format='csv', gzip_file=True)
 
 
 def _get_pedigree_path(pedigree_dir: str, genome_version: str, sample_type: str, dataset_type: str):
