@@ -30,11 +30,46 @@ def replace_spaces_with_underscores(value: Union[str, list[str], list[tuple[str,
     raise TypeError("Expected str or list[str]")
 
 CLINVAR_BATCH_SIZE = 1000
-CLINVAR_ASSERTIONS = replace_underscores_with_spaces(ClinvarAllVariantsSnvIndel.CLINVAR_ASSERTIONS)
-CLINVAR_CONFLICTING_CLASSICATIONS_OF_PATHOGENICITY = replace_underscores_with_spaces(ClinvarAllVariantsSnvIndel.CLINVAR_CONFLICTING_CLASSICATIONS_OF_PATHOGENICITY)
+CLINVAR_ASSERTIONS = [
+    'Affects',
+    'association',
+    'association_not_found',
+    'confers_sensitivity',
+    'drug_response',
+    'low_penetrance',
+    'not_provided',
+    'other',
+    'protective',
+    'risk_factor',
+    'no_classification_for_the_single_variant',
+    'no_classifications_from_unflagged_records',
+]
+CLINVAR_CONFLICTING_CLASSICATIONS_OF_PATHOGENICITY = 'Conflicting_classifications_of_pathogenicity'
+CLINVAR_DEFAULT_PATHOGENICITY = 'No_pathogenic_assertion'
+CLINVAR_PATHOGENICITIES = [
+    'Pathogenic',
+    'Pathogenic/Likely_pathogenic',
+    'Pathogenic/Likely_pathogenic/Established_risk_allele',
+    'Pathogenic/Likely_pathogenic/Likely_risk_allele',
+    'Pathogenic/Likely_risk_allele',
+    'Likely_pathogenic',
+    'Likely_pathogenic/Likely_risk_allele',
+    'Established_risk_allele',
+    'Likely_risk_allele',
+    CLINVAR_CONFLICTING_CLASSICATIONS_OF_PATHOGENICITY,
+    'Uncertain_risk_allele',
+    'Uncertain_significance/Uncertain_risk_allele',
+    'Uncertain_significance',
+    CLINVAR_DEFAULT_PATHOGENICITY,
+    'Likely_benign',
+    'Benign/Likely_benign',
+    'Benign',
+]
+CLINVAR_XML_ASSERTIONS = replace_underscores_with_spaces(CLINVAR_ASSERTIONS)
+CLINVAR_XML_CONFLICTING_CLASSICATIONS_OF_PATHOGENICITY = replace_underscores_with_spaces(CLINVAR_CONFLICTING_CLASSICATIONS_OF_PATHOGENICITY)
 CLINVAR_CONFLICTING_DATA_FROM_SUBMITTERS = 'conflicting data from submitters'
-CLINVAR_DEFAULT_PATHOGENICITY = replace_underscores_with_spaces(ClinvarAllVariantsSnvIndel.CLINVAR_DEFAULT_PATHOGENICITY)
-CLINVAR_PATHOGENICITIES = replace_underscores_with_spaces(ClinvarAllVariantsSnvIndel.CLINVAR_PATHOGENICITIES)
+CLINVAR_XML_DEFAULT_PATHOGENICITY = replace_underscores_with_spaces(CLINVAR_DEFAULT_PATHOGENICITY)
+CLINVAR_XML_PATHOGENICITIES = replace_underscores_with_spaces(CLINVAR_PATHOGENICITIES)
 CLINVAR_GOLD_STARS_LOOKUP = {
     'no classification for the single variant': 0,
     'no classification provided': 0,
@@ -105,7 +140,7 @@ def parse_pathogenicity_and_assertions(classified_record_node: xml.etree.Element
         'Classifications/GermlineClassification/Description',
     )
     if pathogenicity_node is None:
-        return CLINVAR_DEFAULT_PATHOGENICITY, []
+        return CLINVAR_XML_DEFAULT_PATHOGENICITY, []
 
     pathogenicity_string = pathogenicity_node.text.replace(
         '/Pathogenic, low penetrance/Established risk allele',
@@ -120,13 +155,13 @@ def parse_pathogenicity_and_assertions(classified_record_node: xml.etree.Element
 
     pathogenicity = pathogenicity_string.split(';')[0].strip()
 
-    if pathogenicity in set(CLINVAR_PATHOGENICITIES) or pathogenicity == CLINVAR_CONFLICTING_DATA_FROM_SUBMITTERS:
+    if pathogenicity in set(CLINVAR_XML_PATHOGENICITIES) or pathogenicity == CLINVAR_CONFLICTING_DATA_FROM_SUBMITTERS:
         assertions = [a.strip() for a in pathogenicity_string.split(';')[1:]]
     else:
-        pathogenicity = CLINVAR_DEFAULT_PATHOGENICITY
+        pathogenicity = CLINVAR_XML_DEFAULT_PATHOGENICITY
         assertions = [a.strip() for a in pathogenicity_string.split(';')]
 
-    enumerated_assertions = set(CLINVAR_ASSERTIONS)
+    enumerated_assertions = set(CLINVAR_XML_ASSERTIONS)
     for assertion in assertions:
         if assertion not in enumerated_assertions:
             raise CommandError(f'Found an un-enumerated clinvar assertion: {assertion}')
@@ -137,7 +172,7 @@ def parse_conflicting_pathogenicities(
     classified_record_node: xml.etree.ElementTree.Element,
     pathogenicity: str,
 ) -> list[[str, int]]:
-    if pathogenicity == CLINVAR_CONFLICTING_CLASSICATIONS_OF_PATHOGENICITY:
+    if pathogenicity == CLINVAR_XML_CONFLICTING_CLASSICATIONS_OF_PATHOGENICITY:
         conflicting_pathogenicities_node = classified_record_node.find(
             'Classifications/GermlineClassification/Explanation'
         )
@@ -152,7 +187,7 @@ def parse_conflicting_pathogenicities(
     conflicting_pathogenicities = parse_and_merge_classification_counts(
         conflicting_pathogenicities_node.text
     )
-    enumerated_pathogenicities = set(CLINVAR_PATHOGENICITIES)
+    enumerated_pathogenicities = set(CLINVAR_XML_PATHOGENICITIES)
     for (pathogenicity, _) in conflicting_pathogenicities:
         if pathogenicity not in enumerated_pathogenicities:
             raise CommandError(f'Found an un-enumerated conflicting pathogenicity: {pathogenicity}')

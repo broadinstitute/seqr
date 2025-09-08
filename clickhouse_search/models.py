@@ -6,7 +6,7 @@ from django.db.models import options, ForeignKey, OneToOneField, Func, CASCADE, 
 from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocksDB, Join
 from clickhouse_search.backend.fields import Enum8Field, NestedField, UInt32FieldDeltaCodecField, UInt64FieldDeltaCodecField, NamedTupleField
 from clickhouse_search.backend.functions import ArrayDistinct, ArrayFlatten, ArrayMin, ArrayMax
-from clickhouse_search.clinvar_utils import iter_clinvar_xml_data, clinvar_run_sql, CLINVAR_BATCH_SIZE
+from clickhouse_search.clinvar_utils import iter_clinvar_xml_data, clinvar_run_sql, CLINVAR_BATCH_SIZE, CLINVAR_ASSERTIONS, CLINVAR_PATHOGENICITIES
 from clickhouse_search.managers import EntriesManager, AnnotationsQuerySet
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample
@@ -457,42 +457,6 @@ class AnnotationsDiskGcnv(BaseAnnotationsGcnv):
 
 
 class BaseClinvar(FixtureLoadableClickhouseModel):
-
-    CLINVAR_ASSERTIONS = [
-        'Affects',
-        'association',
-        'association_not_found',
-        'confers_sensitivity',
-        'drug_response',
-        'low_penetrance',
-        'not_provided',
-        'other',
-        'protective',
-        'risk_factor',
-        'no_classification_for_the_single_variant',
-        'no_classifications_from_unflagged_records',
-    ]
-    CLINVAR_CONFLICTING_CLASSICATIONS_OF_PATHOGENICITY = 'Conflicting_classifications_of_pathogenicity'
-    CLINVAR_DEFAULT_PATHOGENICITY = 'No_pathogenic_assertion'
-    CLINVAR_PATHOGENICITIES = [
-        'Pathogenic',
-        'Pathogenic/Likely_pathogenic',
-        'Pathogenic/Likely_pathogenic/Established_risk_allele',
-        'Pathogenic/Likely_pathogenic/Likely_risk_allele',
-        'Pathogenic/Likely_risk_allele',
-        'Likely_pathogenic',
-        'Likely_pathogenic/Likely_risk_allele',
-        'Established_risk_allele',
-        'Likely_risk_allele',
-        CLINVAR_CONFLICTING_CLASSICATIONS_OF_PATHOGENICITY,
-        'Uncertain_risk_allele',
-        'Uncertain_significance/Uncertain_risk_allele',
-        'Uncertain_significance',
-        CLINVAR_DEFAULT_PATHOGENICITY,
-        'Likely_benign',
-        'Benign/Likely_benign',
-        'Benign',
-    ]
 
     ASSERTIONS_CHOICES = list(enumerate(CLINVAR_ASSERTIONS))
     PATHOGENICITY_CHOICES = list(enumerate(CLINVAR_PATHOGENICITIES))
