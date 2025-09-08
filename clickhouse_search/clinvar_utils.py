@@ -10,7 +10,7 @@ from string import Template
 from typing import Optional, Union
 
 from clickhouse_backend import models
-from clickhouse_search.models import ClinvarAllVariantsGRCh37SnvIndel, ClinvarAllVariantsSnvIndel, ClinvarAllVariantsMito
+from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 
 
 def replace_underscores_with_spaces(value: Union[str, list[str]]) -> Union[str, list[str]]:
@@ -29,7 +29,7 @@ def replace_spaces_with_underscores(value: Union[str, list[str], list[tuple[str,
         return [s.replace(' ', '_') for s in value]
     raise TypeError("Expected str or list[str]")
 
-BATCH_SIZE = 1000
+CLINVAR_BATCH_SIZE = 1000
 CLINVAR_ASSERTIONS = replace_underscores_with_spaces(ClinvarAllVariantsSnvIndel.CLINVAR_ASSERTIONS)
 CLINVAR_CONFLICTING_CLASSICATIONS_OF_PATHOGENICITY = replace_underscores_with_spaces(ClinvarAllVariantsSnvIndel.CLINVAR_CONFLICTING_CLASSICATIONS_OF_PATHOGENICITY)
 CLINVAR_CONFLICTING_DATA_FROM_SUBMITTERS = 'conflicting data from submitters'
@@ -57,7 +57,7 @@ def clinvar_run_sql(sql: str):
             ('GRCh38', 'SNV_INDEL'),
             ('GRCh38', 'MITO'),
         ]:
-            cursor.execute(sql.substitute(reference_genome=reference_genome, dataset_type=dataset_type))
+            cursor.execute(Template(sql).substitute(reference_genome=reference_genome, dataset_type=dataset_type))
 
 
 def parse_and_merge_classification_counts(text: str) -> list[tuple[str, int]]:
@@ -183,7 +183,7 @@ def parse_submitters_and_conditions(classified_record_node: xml) -> [list[str], 
     })
     return submitters, conditions
 
-def extract_variant_info(elem: xml.etree.ElementTree.Element, new_version: str) -> tuple[models.ClickhouseModel, models.ClickhouseModel, models.ClickhouseModel]:
+def extract_variant_info(elem: xml.etree.ElementTree.Element) -> tuple[models.ClickhouseModel, models.ClickhouseModel, models.ClickhouseModel]:
     # Cannot use regular bool-falseyness here, as:
     # "An element with no child elements (even if it exists and has text) will be falsey."
     classified_record_node = elem.find('ClassifiedRecord')
@@ -205,7 +205,6 @@ def extract_variant_info(elem: xml.etree.ElementTree.Element, new_version: str) 
     if pathogenicity == CLINVAR_CONFLICTING_DATA_FROM_SUBMITTERS:
         pathogenicity = CLINVAR_CONFLICTING_CLASSICATIONS_OF_PATHOGENICITY
     props = {
-        'version': new_version,
         'allele_id': allele_id,
         'pathogenicity': replace_spaces_with_underscores(pathogenicity),
         'assertions': replace_spaces_with_underscores(assertions),
@@ -217,64 +216,32 @@ def extract_variant_info(elem: xml.etree.ElementTree.Element, new_version: str) 
     grch37 = positions.get('GRCh37')
     grch38 = positions.get('GRCh38')
     if grch38 and grch38['chrom'] == 'MT':
-        yield ClinvarAllVariantsMito(
+        yield GENOME_VERSION_GRCh38, True, dict(
             variant_id=f"M-{grch38['pos']}-{grch38['ref']}-{grch38['alt']}",
             **props,
         )
     if grch37 and grch37['chrom'] != 'MT':
-        yield ClinvarAllVariantsGRCh37SnvIndel(
+        yield GENOME_VERSION_GRCh37, False, dict(
             variant_id=f"{grch37['chrom']}-{grch37['pos']}-{grch37['ref']}-{grch37['alt']}",
             **props,
         )
     if grch38 and grch38['chrom'] != 'MT':
-        yield ClinvarAllVariantsSnvIndel(
+        yield GENOME_VERSION_GRCh38, False, dict(
             variant_id=f"{grch38['chrom']}-{grch38['pos']}-{grch38['ref']}-{grch38['alt']}",
             **props,
         )
 
-def reload_clinvar_all_variants(existing_version):
-    model_to_batch = {
-        ClinvarAllVariantsGRCh37SnvIndel: [],
-        ClinvarAllVariantsSnvIndel: [],
-        ClinvarAllVariantsMito: [],
-    }
-    new_version = None
+def iter_clinvar_xml_data():
     with requests.get(WEEKLY_XML_RELEASE, stream=True, timeout=10) as r:
         r.raise_for_status()
         for event, elem in ET.iterparse(gzip.GzipFile(fileobj=r.raw), events=('start', 'end',)):
             # Handle parsing the current date.
             if event == 'start' and elem.tag == 'ClinVarVariationRelease':
                 new_version = elem.attrib['ReleaseDate']
-                if existing_version == new_version:
-                    return None
-                # Drop any currently existing variants in the table that may exist due to a
-                # previously failed partial run.  Note that we validate that the Postgresql existing version
-                # is present in ClickHouse to account for the situation where Postgresql has an incorrect
-                # version.
-                if existing_version and ClinvarAllVariantsSnvIndel.objects.filter(version=existing_version).exists():
-                    clinvar_run_sql(
-                        Template(f"ALTER TABLE `$reference_genome/$dataset_type/clinvar_all_variants` DROP PARTITION '{new_version}';")
-                    )
+                yield new_version
 
             # Handle parsing variants
             if event == 'end' and elem.tag == 'VariationArchive' and new_version:
-                for obj in extract_variant_info(elem, new_version):
-                    for model, batch in model_to_batch.items():
-                        if isinstance(obj, model):
-                            batch.append(obj)
-                            if len(batch) == BATCH_SIZE:
-                                model.objects.using('clickhouse_write').bulk_create(batch)
-                                batch.clear()
+                for obj in extract_variant_info(elem):
+                    yield obj
                 elem.clear()
-
-    for model, batch in model_to_batch.items():
-        if batch:
-            model.objects.using('clickhouse_write').bulk_create(batch)
-
-    # Delete previous version & refresh the view.
-    if existing_version:
-        clinvar_run_sql(Template(f"ALTER TABLE `$reference_genome/$dataset_type/clinvar_all_variants` DROP PARTITION '{existing_version}';"))
-    clinvar_run_sql(Template('SYSTEM REFRESH VIEW `$reference_genome/$dataset_type/clinvar_all_variants_to_clinvar_mv`;'))
-    clinvar_run_sql(Template('SYSTEM WAIT VIEW `$reference_genome/$dataset_type/clinvar_all_variants_to_clinvar_mv`;'))
-
-    return new_version

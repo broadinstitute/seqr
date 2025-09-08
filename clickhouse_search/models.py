@@ -6,7 +6,7 @@ from django.db.models import options, ForeignKey, OneToOneField, Func, CASCADE, 
 from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocksDB, Join
 from clickhouse_search.backend.fields import Enum8Field, NestedField, UInt32FieldDeltaCodecField, UInt64FieldDeltaCodecField, NamedTupleField
 from clickhouse_search.backend.functions import ArrayDistinct, ArrayFlatten, ArrayMin, ArrayMax
-from clickhouse_search.clinvar_utils import reload_clinvar_all_variants
+from clickhouse_search.clinvar_utils import iter_clinvar_xml_data, clinvar_run_sql, CLINVAR_BATCH_SIZE
 from clickhouse_search.managers import EntriesManager, AnnotationsQuerySet
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample
@@ -525,7 +525,51 @@ class BaseClinvarAllVariants(BaseClinvar):
 
     @classmethod
     def update_records(cls, version=None, **kwargs):
-        return reload_clinvar_all_variants(version)
+        clinvar_xml_data = iter_clinvar_xml_data()
+        new_version = next(clinvar_xml_data)
+        if version == new_version:
+            return None
+
+        # Drop any currently existing variants in the table that may exist due to a
+        # previously failed partial run.  Note that we validate that the Postgresql existing version
+        # is present in ClickHouse to account for the situation where Postgresql has an incorrect
+        # version.
+        if version and ClinvarAllVariantsSnvIndel.objects.filter(version=version).exists():
+            clinvar_run_sql(
+                f"ALTER TABLE `$reference_genome/$dataset_type/clinvar_all_variants` DROP PARTITION '{new_version}';"
+            )
+
+        model_to_batch = {
+            ClinvarAllVariantsGRCh37SnvIndel: [],
+            ClinvarAllVariantsSnvIndel: [],
+            ClinvarAllVariantsMito: [],
+        }
+        for genome_version, is_mito, props in clinvar_xml_data:
+            if genome_version == GENOME_VERSION_GRCh37:
+                model = ClinvarAllVariantsGRCh37SnvIndel
+            elif is_mito:
+                model = ClinvarAllVariantsMito
+            else:
+                model = ClinvarAllVariantsSnvIndel
+            batch = model_to_batch[model]
+            batch.append(model(version=new_version, **props))
+            if len(batch) == CLINVAR_BATCH_SIZE:
+                model.objects.using('clickhouse_write').bulk_create(batch)
+                batch.clear()
+
+        for model, batch in model_to_batch.items():
+            if batch:
+                model.objects.using('clickhouse_write').bulk_create(batch)
+
+        # Delete previous version & refresh the view.
+        if version:
+            clinvar_run_sql(
+                f"ALTER TABLE `$reference_genome/$dataset_type/clinvar_all_variants` DROP PARTITION '{version}';")
+        clinvar_run_sql('SYSTEM REFRESH VIEW `$reference_genome/$dataset_type/clinvar_all_variants_to_clinvar_mv`;')
+        clinvar_run_sql('SYSTEM WAIT VIEW `$reference_genome/$dataset_type/clinvar_all_variants_to_clinvar_mv`;')
+
+        return new_version
+
 
 class ClinvarAllVariantsGRCh37SnvIndel(BaseClinvarAllVariants):
     class Meta(BaseClinvarAllVariants.Meta):
