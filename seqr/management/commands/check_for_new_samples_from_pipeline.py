@@ -22,7 +22,7 @@ from seqr.views.utils.export_utils import write_multiple_files
 from seqr.views.utils.permissions_utils import is_internal_anvil_project, project_has_anvil
 from seqr.views.utils.variant_utils import reset_cached_search_results, update_projects_saved_variant_json, \
     get_saved_variants
-from settings import SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, HAIL_SEARCH_DATA_DIR, ANVIL_UI_URL, \
+from settings import SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, PIPELINE_DATA_DIR, ANVIL_UI_URL, \
     SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL
 
 logger = logging.getLogger(__name__)
@@ -146,7 +146,7 @@ class Command(BaseCommand):
     @staticmethod
     def _run_path(get_field_format):
         return RUN_FILE_PATH_TEMPLATE.format(
-            data_dir=HAIL_SEARCH_DATA_DIR,
+            data_dir=PIPELINE_DATA_DIR,
             **{field: get_field_format(field) for field in RUN_PATH_FIELDS}
         )
 
