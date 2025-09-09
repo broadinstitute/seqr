@@ -505,6 +505,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         ])
 
 
+@mock.patch('reference_data.models.GeneInfo.CURRENT_VERSION', '27')
 class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
     fixtures = ['users', 'social_auth', 'reference_data', '1kg_project']
 
@@ -560,6 +561,9 @@ class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
         self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.utils.export_utils.open')
         self.mock_temp_open = patcher.start()
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.export_utils.gzip.open')
+        self.mock_gzip_temp_open = patcher.start()
         self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.apis.anvil_workspace_api.logger')
         self.mock_api_logger = patcher.start()
@@ -796,10 +800,16 @@ class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
             '\n'.join(['\t'.join(row) for row in [header] + rows])
         )
 
+        self.mock_gzip_temp_open.assert_called_with(f'{TEMP_PATH}/db_id_to_gene_id.csv.gz', 'w')
+        gene_file = self.mock_gzip_temp_open.return_value.__enter__.return_value.write.call_args.args[0].split('\n')
+        self.assertEqual(len(gene_file), 52)
+        self.assertListEqual(gene_file[:3], ['db_id,gene_id', '1,ENSG00000223972', '2,ENSG00000227232'])
+
         gs_path = f'gs://seqr-loading-temp/v3.1/{genome_version}/SNV_INDEL/pedigrees/WES/'
-        self.mock_mv_file.assert_called_with(
-            f'{TEMP_PATH}/*', gs_path, self.manager_user
-        )
+        self.mock_mv_file.assert_has_calls([
+            mock.call(f'{TEMP_PATH}/*', gs_path, self.manager_user),
+            mock.call(f'{TEMP_PATH}/*', 'gs://seqr-loading-temp/v3.1/', self.manager_user)
+        ])
 
         self.assert_airflow_loading_calls(additional_tasks_check=test_add_data)
 
@@ -866,11 +876,16 @@ class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
             'father__individual_id': None, 'sex': 'F', 'affected': 'N', 'notes': 'a individual note', 'features': [],
         }, individual_model_data)
 
+    @staticmethod
+    def _raise_move_file_error(from_path, to_path, *args, **kwargs):
+        if 'pedigrees' in to_path:
+            raise Exception('Something wrong while moving the file.')
+
     def _test_mv_file_and_triggering_dag_exception(self, url, workspace, sample_data, genome_version, request_body, num_samples=None, sample_type='WES'):
         # Test saving ID file exception
         responses.calls.reset()
         self.mock_authorized_session.reset_mock()
-        self.mock_mv_file.side_effect = Exception('Something wrong while moving the file.')
+        self.mock_mv_file.side_effect = self._raise_move_file_error
         # Test triggering dag exception
         self.set_dag_trigger_error_response()
 

@@ -354,7 +354,7 @@ def load_data(request):
         )
     else:
         request_json, _ = prepare_data_loading_request(
-            *loading_args, **loading_kwargs, pedigree_dir=LOADING_DATASETS_DIR, raise_pedigree_error=True,
+            *loading_args, **loading_kwargs, load_data_dir=LOADING_DATASETS_DIR, raise_pedigree_error=True,
         )
         response = requests.post(f'{PIPELINE_RUNNER_SERVER}/loading_pipeline_enqueue', json=request_json, timeout=60)
         if response.status_code == 409:

@@ -1376,7 +1376,7 @@ class DataManagerAPITest(AirtableTest):
 
         self._assert_expected_airtable_errors(url)
 
-    def _assert_expected_pm_access(self, get_response):
+    def _assert_expected_pm_access(self, get_response, mock_current_gene_version=None):
         response = get_response()
         self.assertEqual(response.status_code, 200)
         self.login_data_manager_user()
@@ -1387,10 +1387,13 @@ class DataManagerAPITest(AirtableTest):
 
     @responses.activate
     @mock.patch('seqr.views.utils.airtable_utils.BASE_URL', 'https://seqr.broadinstitute.org/')
+    @mock.patch('reference_data.models.GeneInfo.CURRENT_VERSION')
     @mock.patch('seqr.views.utils.export_utils.os.makedirs')
+    @mock.patch('seqr.views.utils.export_utils.gzip.open')
     @mock.patch('seqr.views.utils.export_utils.open')
     @mock.patch('seqr.views.utils.export_utils.TemporaryDirectory')
-    def test_load_data(self, mock_temp_dir, mock_open, mock_mkdir):
+    def test_load_data(self, mock_temp_dir, mock_open, mock_gzip_open, mock_mkdir, mock_current_gene_version):
+        mock_current_gene_version.__int__.return_value = 27
         url = reverse(load_data)
         self.check_pm_login(url)
 
@@ -1409,13 +1412,14 @@ class DataManagerAPITest(AirtableTest):
 
         self.reset_logs()
         responses.calls.reset()
+        self._set_file_not_found(has_mv_commands=True)
         response = self._assert_expected_pm_access(
-            lambda: self.client.post(url, content_type='application/json', data=json.dumps(body))
+            lambda: self.client.post(url, content_type='application/json', data=json.dumps(body)),
         )
         self.assertDictEqual(response.json(), {'success': True})
 
         self._assert_expected_load_data_requests(sample_type='WES', skip_validation=True)
-        self._has_expected_ped_files(mock_open, mock_mkdir, 'SNV_INDEL', sample_type='WES', has_remap=bool(self.MOCK_AIRTABLE_KEY))
+        self._has_expected_ped_files(mock_open, mock_gzip_open, mock_mkdir, 'SNV_INDEL', sample_type='WES', has_remap=bool(self.MOCK_AIRTABLE_KEY))
 
         dag_json = {
             'projects_to_run': [
@@ -1432,7 +1436,9 @@ class DataManagerAPITest(AirtableTest):
 
         # Test loading trigger error
         self._set_loading_trigger_error()
+        self._set_file_not_found(has_mv_commands=True)
         mock_open.reset_mock()
+        mock_gzip_open.reset_mock()
         mock_mkdir.reset_mock()
         responses.calls.reset()
         self.reset_logs()
@@ -1440,18 +1446,21 @@ class DataManagerAPITest(AirtableTest):
         del body['skipValidation']
         del dag_json['skip_validation']
         body.update({'datasetType': 'SV', 'filePath': f'{self.CALLSET_DIR}/sv_callset.vcf'})
-        self._trigger_error(url, body, dag_json, mock_open, mock_mkdir)
+        self._trigger_error(url, body, dag_json, mock_open, mock_gzip_open, mock_mkdir)
 
+        self._set_file_found()
         responses.calls.reset()
         mock_open.reset_mock()
+        mock_gzip_open.reset_mock()
         mock_mkdir.reset_mock()
         body.update({'sampleType': 'WGS', 'projects': [json.dumps(self.PROJECT_OPTION)], 'vcfSamples': VCF_SAMPLES})
         del body['datasetType']
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
-        self._test_load_single_project(mock_open, mock_mkdir, response, url=url, body=body)
+        self._test_load_single_project(mock_open, mock_gzip_open, mock_mkdir, response, url=url, body=body)
 
         # Test write pedigree error
         self.reset_logs()
+        self._set_file_found()
         responses.calls.reset()
         mock_mkdir.reset_mock()
         mock_open.reset_mock()
@@ -1466,13 +1475,25 @@ class DataManagerAPITest(AirtableTest):
             }),
         ])
 
-    def _trigger_error(self, url, body, dag_json, mock_open, mock_mkdir):
+        # Test when gene data is not fully loaded
+        responses.calls.reset()
+        self._set_file_not_found(has_mv_commands=True)
+        mock_open.side_effect = None
+        mock_current_gene_version.__int__.return_value = 39
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 500)
+        self.assertDictEqual(response.json(), {
+            'error': 'Gene reference data is not yet loaded. If this is a new seqr installation, wait for the initial data load to complete. If this is an existing installation, see the documentation for updating data in seqr.',
+        })
+        self.assertEqual(len(responses.calls), 0)
+
+    def _trigger_error(self, url, body, dag_json, mock_open, mock_gzip_open, mock_mkdir):
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self._assert_expected_load_data_requests(trigger_error=True, dataset_type='GCNV', sample_type='WES')
         self._assert_trigger_error(response, body, dag_json)
-        self._has_expected_ped_files(mock_open, mock_mkdir, 'GCNV', sample_type='WES')
+        self._has_expected_ped_files(mock_open, mock_gzip_open, mock_mkdir, 'GCNV', sample_type='WES')
 
-    def _has_expected_ped_files(self, mock_open, mock_mkdir, dataset_type, sample_type='WGS', single_project=False, has_remap=False):
+    def _has_expected_ped_files(self, mock_open, mock_gzip_open, mock_mkdir, dataset_type, sample_type='WGS', single_project=False, has_remap=False, has_gene_id_file=False):
         mock_open.assert_has_calls([
             mock.call(f'{self._local_pedigree_path(dataset_type, sample_type)}/{project}_pedigree.tsv', 'w')
             for project in self.PROJECTS[(1 if single_project else 0):]
@@ -1482,6 +1503,16 @@ class DataManagerAPITest(AirtableTest):
             for write_call in mock_open.return_value.__enter__.return_value.write.call_args_list
         ]
         self.assertEqual(len(files), 1 if single_project else 2)
+
+        if has_gene_id_file:
+            mock_gzip_open.assert_not_called()
+        else:
+            mock_gzip_open.assert_called_once_with(f'{self.LOCAL_WRITE_DIR}/db_id_to_gene_id.csv.gz', 'w')
+            file = [
+                row.split(',') for row in mock_gzip_open.return_value.__enter__.return_value.write.call_args.args[0].split('\n')
+            ]
+            self.assertEqual(len(file), self.NUM_FIXTURE_GENES)
+            self.assertListEqual(file[:3], [['db_id', 'gene_id'], ['1', 'ENSG00000223972'], ['2', 'ENSG00000227232']])
 
         num_rows = 7 if self.MOCK_AIRTABLE_KEY else 8
         pedigree_header = PEDIGREE_HEADER + ['VCF_ID'] if has_remap else PEDIGREE_HEADER
@@ -1499,10 +1530,10 @@ class DataManagerAPITest(AirtableTest):
             ['R0004_non_analyst_project', 'F000014_14', 'fam14', 'NA21987', '', '', 'M'] + ([''] if has_remap else []),
         ])
 
-    def _test_load_single_project(self, mock_open, mock_mkdir, response, *args, **kwargs):
+    def _test_load_single_project(self, mock_open, mock_gzip_open, mock_mkdir, response, *args, **kwargs):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'success': True})
-        self._has_expected_ped_files(mock_open, mock_mkdir, 'SNV_INDEL', single_project=True)
+        self._has_expected_ped_files(mock_open, mock_gzip_open, mock_mkdir, 'SNV_INDEL', single_project=True, has_gene_id_file=True)
         # Only a DAG trigger, no airtable calls as there is no previously loaded WGS SNV_INDEL data for these samples
         self.assertEqual(len(responses.calls), 1)
 
@@ -1549,7 +1580,9 @@ class DataManagerAPITest(AirtableTest):
 class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
     fixtures = ['users', '1kg_project', 'reference_data']
 
+    NUM_FIXTURE_GENES = 52
     TRIGGER_CALLSET_DIR = '/local_datasets'
+    LOCAL_WRITE_DIR = TRIGGER_CALLSET_DIR
     CALLSET_DIR = ''
     PROJECT_OPTION = PROJECT_OPTION
     WGS_PROJECT_OPTIONS = [EMPTY_PROJECT_OPTION]
@@ -1585,10 +1618,13 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
         self.addCleanup(patcher.stop)
         super().setUp()
 
-    def _set_file_not_found(self, file_name=None, sample_guid=None, list_files=False):
+    def _set_file_not_found(self, file_name=None, sample_guid=None, list_files=False, has_mv_commands=False):
         self.mock_does_file_exist.return_value = False
         self.mock_file_iter.return_value = []
         return []
+
+    def _set_file_found(self):
+        self.mock_does_file_exist.return_value = True
 
     def _add_file_iter(self, stdout, is_gz=True):
         self.mock_does_file_exist.return_value = True
@@ -1620,13 +1656,18 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
             body['skip_validation'] = True
         self.assertDictEqual(json.loads(responses.calls[0].request.body), body)
 
+
     @staticmethod
     def _local_pedigree_path(dataset_type, sample_type):
         return f'/local_datasets/GRCh38/{dataset_type}/pedigrees/{sample_type}'
 
-    def _has_expected_ped_files(self, mock_open, mock_mkdir, dataset_type, *args, sample_type='WGS', **kwargs):
-        super()._has_expected_ped_files(mock_open, mock_mkdir, dataset_type,  *args, sample_type, **kwargs)
-        mock_mkdir.assert_called_once_with(self._local_pedigree_path(dataset_type, sample_type), exist_ok=True)
+    def _has_expected_ped_files(self, mock_open, mock_gzip_open, mock_mkdir, dataset_type, *args, sample_type='WGS', has_gene_id_file=False, **kwargs):
+        super()._has_expected_ped_files(mock_open, mock_gzip_open, mock_mkdir, dataset_type,  *args, sample_type, has_gene_id_file=has_gene_id_file, **kwargs)
+        call_paths = [self._local_pedigree_path(dataset_type, sample_type)]
+        if not has_gene_id_file:
+            call_paths.append(self.LOCAL_WRITE_DIR)
+        self.assertEqual(mock_mkdir.call_count, len(call_paths))
+        mock_mkdir.assert_has_calls([mock.call(call_path, exist_ok=True) for call_path in call_paths])
 
     def _assert_success_notification(self, dag_json):
         self.maxDiff = None
@@ -1635,8 +1676,8 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
     def _set_loading_trigger_error(self):
         responses.add(responses.POST, PIPELINE_RUNNER_URL, status=400)
 
-    def _trigger_error(self, url, body, dag_json, mock_open, mock_mkdir):
-        super()._trigger_error(url, body, dag_json, mock_open, mock_mkdir)
+    def _trigger_error(self, url, body, dag_json, mock_open, mock_gzip_open, mock_mkdir):
+        super()._trigger_error(url, body, dag_json, mock_open, mock_gzip_open, mock_mkdir)
 
         responses.add(responses.POST, PIPELINE_RUNNER_URL, status=409)
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
@@ -1683,6 +1724,7 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
 class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data', 'clickhouse_search']
 
+    NUM_FIXTURE_GENES = 59
     LOADING_PROJECT_GUID = NON_ANALYST_PROJECT_GUID
     CALLSET_DIR = 'gs://test_bucket'
     TRIGGER_CALLSET_DIR = CALLSET_DIR
@@ -1711,7 +1753,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         self.addCleanup(patcher.stop)
         super().setUp()
 
-    def _set_file_not_found(self, file_name=None, sample_guid=None, list_files=False):
+    def _set_file_not_found(self, file_name=None, sample_guid=None, list_files=False, has_mv_commands=False):
         self.mock_file_iter.stdout = []
         self.mock_does_file_exist.wait.return_value = 1
         error = b'CommandException: One or more URLs matched no objects'
@@ -1719,10 +1761,21 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
             self.mock_does_file_exist.communicate.return_value = (b'', error)
         else:
             self.mock_does_file_exist.stdout = [error]
-        self.mock_subprocess.side_effect = [self.mock_does_file_exist]
+        subprocess_side_effect = [self.mock_does_file_exist]
+        if has_mv_commands:
+            mock_mv = mock.MagicMock()
+            mock_mv.wait.return_value = 0
+            subprocess_side_effect = [mock_mv, self.mock_does_file_exist, mock_mv]
+        self.mock_subprocess.side_effect = subprocess_side_effect
         return [
             (f'==> gsutil ls gs://seqr-scratch-temp/{file_name}/{sample_guid}.json.gz', None),
             ('CommandException: One or more URLs matched no objects', None),
+        ]
+
+    def _set_file_found(self):
+        self.mock_does_file_exist.wait.return_value = 0
+        self.mock_subprocess.side_effect = [
+            self.mock_does_file_exist, self.mock_does_file_exist, self.mock_does_file_exist, self.mock_does_file_exist,
         ]
 
     def _add_file_iter(self, stdout, is_gz=True):
@@ -1862,9 +1915,9 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         """
         self.mock_slack.assert_called_once_with(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, error_message)
 
-    def _trigger_error(self, url, body, dag_json, mock_open, mock_mkdir):
+    def _trigger_error(self, url, body, dag_json, mock_open, mock_gzip_open, mock_mkdir):
         body['vcfSamples'] = None
-        super()._trigger_error(url, body, dag_json, mock_open, mock_mkdir)
+        super()._trigger_error(url, body, dag_json, mock_open, mock_gzip_open, mock_mkdir)
 
         responses.calls.reset()
         body['vcfSamples'] = ['ABC123', 'NA19675_1']
@@ -1899,20 +1952,21 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         self._assert_expected_airtable_call(required_sample_field='SV_CallsetPath', project_guid='R0004_non_analyst_project')
         self.mock_authorized_session.reset_mock()
 
-    def _test_load_single_project(self, mock_open, mock_mkdir, response, *args, url=None, body=None, **kwargs):
-        super()._test_load_single_project(mock_open, mock_mkdir, response, url, body)
+    def _test_load_single_project(self, mock_open, mock_gzip_open, mock_mkdir, response, *args, url=None, body=None, **kwargs):
+        super()._test_load_single_project(mock_open, mock_gzip_open, mock_mkdir, response, url, body)
         self.ADDITIONAL_REQUEST_COUNT = 0
         self.assert_airflow_loading_calls(offset=0, dataset_type='SNV_INDEL', trigger_error=True)
 
         responses.calls.reset()
         mock_open.reset_mock()
+        mock_gzip_open.reset_mock()
         mock_mkdir.reset_mock()
         body['projects'] = [json.dumps(option) for option in self.PROJECT_OPTIONS]
         body['sampleType'] = 'WES'
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'success': True})
-        self._has_expected_ped_files(mock_open, mock_mkdir, 'SNV_INDEL', sample_type='WES')
+        self._has_expected_ped_files(mock_open, mock_gzip_open, mock_mkdir, 'SNV_INDEL', sample_type='WES', has_gene_id_file=True)
         self.assertEqual(len(responses.calls), 2)
         self.assert_expected_airtable_call(
             call_index=0,
@@ -1925,14 +1979,22 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
     def _local_pedigree_path(*args):
         return '/mock/tmp'
 
-    def _has_expected_ped_files(self, mock_open, mock_mkdir, dataset_type, *args, sample_type='WGS', **kwargs):
-        super()._has_expected_ped_files(mock_open, mock_mkdir, dataset_type, sample_type, **kwargs)
+    def _has_expected_ped_files(self, mock_open, mock_gzip_open, mock_mkdir, dataset_type, *args, sample_type='WGS', has_gene_id_file=False, **kwargs):
+        super()._has_expected_ped_files(mock_open, mock_gzip_open, mock_mkdir, dataset_type, sample_type, has_gene_id_file=has_gene_id_file, **kwargs)
 
         mock_mkdir.assert_not_called()
-        self.mock_subprocess.assert_called_once_with(
+        expected_calls = [mock.call(
             f'gsutil mv /mock/tmp/* gs://seqr-loading-temp/v3.1/GRCh38/{dataset_type}/pedigrees/{sample_type}/',
             stdout=-1, stderr=-2, shell=True,  # nosec
-        )
+        ), mock.call(
+            'gsutil ls gs://seqr-loading-temp/v3.1/db_id_to_gene_id.csv.gz', stdout=-1, stderr=-2, shell=True, # nosec
+        )]
+        if not has_gene_id_file:
+            expected_calls.append(mock.call(
+                'gsutil mv /mock/tmp/* gs://seqr-loading-temp/v3.1/', stdout=-1, stderr=-2, shell=True, # nosec
+            ))
+        self.assertEqual(self.mock_subprocess.call_count, len(expected_calls))
+        self.mock_subprocess.assert_has_calls(expected_calls)
         self.mock_subprocess.reset_mock()
 
     def _assert_write_pedigree_error(self, response):

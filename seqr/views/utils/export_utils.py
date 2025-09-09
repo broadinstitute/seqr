@@ -1,3 +1,4 @@
+import gzip
 import openpyxl as xl
 import os
 from tempfile import NamedTemporaryFile, TemporaryDirectory
@@ -89,14 +90,18 @@ def export_multiple_files(files, zip_filename, **kwargs):
         return response
 
 
-def write_multiple_files(files, file_path, user, **kwargs):
+def write_multiple_files(files, file_path, user, gzip_file=False, **kwargs):
     is_gs_path = is_google_bucket_file_path(file_path)
     if not is_gs_path:
         os.makedirs(file_path, exist_ok=True)
     with TemporaryDirectory() as temp_dir_name:
         dir_name = temp_dir_name if is_gs_path else file_path
+        open_func = gzip.open if gzip_file else open
         for filename, content in _format_files_content(files, **kwargs):
-            with open(f'{dir_name}/{filename}', 'w') as f:
+            current_file = f'{dir_name}/{filename}'
+            if gzip_file:
+                current_file += '.gz'
+            with open_func(current_file, 'w') as f:
                 f.write(content)
         if is_gs_path:
             mv_file_to_gs(f'{temp_dir_name}/*', f'{file_path}/', user)
