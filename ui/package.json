@@ -121,6 +121,7 @@
     "start": "node scripts/start.js",
     "build": "node scripts/build.js",
     "test": "node scripts/test.js --env=jsdom",
+    "lint": "eslint --ext .js,.jsx --ignore-pattern \"**/*.test.js\"  --ignore-pattern \"**/fixtures.js\" --ignore-pattern \"scripts/*\" .",
     "postinstall": "patch-package"
   },
   "jest": {
