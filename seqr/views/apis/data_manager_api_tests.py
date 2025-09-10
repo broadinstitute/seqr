@@ -1507,7 +1507,7 @@ class DataManagerAPITest(AirtableTest):
         if has_gene_id_file:
             mock_gzip_open.assert_not_called()
         else:
-            mock_gzip_open.assert_called_once_with(f'{self.LOCAL_WRITE_DIR}/db_id_to_gene_id.csv.gz', 'w')
+            mock_gzip_open.assert_called_once_with(f'{self.LOCAL_WRITE_DIR}/db_id_to_gene_id.csv.gz', 'wt')
             file = [
                 row.split(',') for row in mock_gzip_open.return_value.__enter__.return_value.write.call_args.args[0].split('\n')
             ]
