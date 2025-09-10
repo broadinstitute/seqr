@@ -74,7 +74,7 @@ class UpdateIndividualsSampleQC(TestCase):
     fixtures = ['users', '1kg_project']
 
     def setUp(self):
-        patcher = mock.patch('seqr.management.commands.check_for_new_samples_from_pipeline.HAIL_SEARCH_DATA_DIR')
+        patcher = mock.patch('seqr.management.commands.check_for_new_samples_from_pipeline.PIPELINE_DATA_DIR')
         mock_data_dir = patcher.start()
         mock_data_dir.__str__.return_value = 'gs://seqr-hail-search-data/v3.1'
         self.addCleanup(patcher.stop)

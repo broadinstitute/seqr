@@ -159,7 +159,7 @@ else:
     MEDIA_URL = '/media/'
 
 LOADING_DATASETS_DIR = os.environ.get('LOADING_DATASETS_DIR')
-HAIL_SEARCH_DATA_DIR = os.environ.get('HAIL_SEARCH_DATA_DIR')
+PIPELINE_DATA_DIR = os.environ.get('PIPELINE_DATA_DIR')
 
 LOGGING = {
     'version': 1,

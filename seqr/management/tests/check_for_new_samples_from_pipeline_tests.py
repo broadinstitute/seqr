@@ -367,7 +367,7 @@ class CheckNewSamplesTest(object):
         mock_rand_int = patcher.start()
         mock_rand_int.side_effect = [GUID_ID, GUID_ID, GUID_ID, GUID_ID, GCNV_GUID_ID, GCNV_GUID_ID, GCNV_GUID_ID, GCNV_GUID_ID, GUID_ID, GUID_ID, GUID_ID, GUID_ID]
         self.addCleanup(patcher.stop)
-        patcher = mock.patch('seqr.management.commands.check_for_new_samples_from_pipeline.HAIL_SEARCH_DATA_DIR')
+        patcher = mock.patch('seqr.management.commands.check_for_new_samples_from_pipeline.PIPELINE_DATA_DIR')
         mock_data_dir = patcher.start()
         mock_data_dir.__str__.return_value = self.MOCK_DATA_DIR
         self.addCleanup(patcher.stop)
