@@ -95,19 +95,20 @@ kubectl exec seqr-POD-ID -c seqr -it -- bash
 gcloud auth list
 ```
 This service account must be permissioned to create and modify dataproc clusters, and read and write to the GCS buckets that will host your data.  We also recommend verifying that the Cloud API access scopes are permissioned for both IAM and Compute Engine access.  
+- [Create GCS service account HMAC key and secret](https://clickhouse.com/docs/integrations/gcs#generate-an-access-key) for your service account.  These keys are used by the built-in Clickhouse integration to Google Cloud Storage.
+- Set those values as secrets within your Kubernetes envirionment:
+```
+kubectl create secret generic clickhouse-hmac-secrets
+--from-literal=pipeline_data_dir_hmac_key='HMAC_KEY'
+--from-literal=pipeline_data_dir_hmac_secret='HMAC_SECRET'
+```
 - Create or add the following environment variables to your existing `helm` [override values file](https://github.com/broadinstitute/seqr-helm?tab=readme-ov-file#valuesenvironment-overrides):
 ```yaml
 pipeline-runner:
   environment:
-    # Stores authoritative copies of your hail search data.
-    # Objects should not expire from this bucket.
-    HAIL_SEARCH_DATA_DIR: 'gs://...'
     # Bucket used as a scratch directory by HAIL during loading.
     # We recommend a <1 week expiration policy for this bucket.
     HAIL_TMP_DIR: 'gs://...'
-    # Bucket used for caching and worker communcation by the pipeline.
-    # We recommend a ~2 week expiration policy for this bucket.
-    LOADING_DATASETS_DIR: 'gs://...'
     # Stores a copy of seqr's reference data hosted in your project's account.
     # Objects should not expire from this bucket.
     REFERENCE_DATASETS_DIR: 'gs://...'
@@ -115,11 +116,15 @@ pipeline-runner:
     GCLOUD_PROJECT: 'your-gcp-project'
     GCLOUD_REGION: 'region-of-dataproc-cluster'
     GCLOUD_ZONE: 'zone-of-dataproc-cluster'
-seqr:
-  environment:
-    # Bucket used for caching and worker communcation by the pipeline.
-    # Must be identical to `LOADING_DATASETS_DIR` stored above.
-    LOADING_DATASETS_DIR: 'gs://...'
+global:
+  seqr:
+    environment:
+      # Stores authoritative copies of newly annotated variants
+      # and sample calls from the pipeline.  Objects should not expire from this bucket.
+      PIPELINE_DATA_DIR: 'gs://...'
+      # Bucket used for caching and worker communication by the pipeline.
+      # We recommend a ~2 week expiration policy for this bucket.
+      LOADING_DATASETS_DIR: 'gs://...'
 ```
 - Install/Upgrade with the override values applied:
 ```
