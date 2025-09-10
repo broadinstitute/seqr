@@ -83,9 +83,14 @@ def validate_vcf_and_get_samples(data_path, user, genome_version, path_name=None
 
     byte_range = None if vcf_filename.endswith('.vcf') else (0, BLOCK_SIZE)
     meta = defaultdict(dict)
-    header_line = next((_get_vcf_header_line(file_iter(vcf_filename, byte_range=byte_range), meta)), None)
-    if not header_line:
+    try:
+        header_line = next(_get_vcf_header_line(file_iter(vcf_filename, byte_range=byte_range), meta))
+    except StopIteration:
         raise ErrorsWarningsException(['No header found in the VCF file.'], [])
+    except UnicodeDecodeError:
+        raise ErrorsWarningsException([
+            'Unable to read the VCF file. This often occurs when a file is improperly gzipped, or when the file extension does not align with the file type (i.e. a .gz file that is not actually gzipped)'
+        ], [])
     header_cols = header_line.rstrip().split('\t')
     format_indices = [index for index, col in enumerate(header_cols) if col == 'FORMAT']
     format_index = format_indices[0] + 1 if format_indices else len(header_cols)
