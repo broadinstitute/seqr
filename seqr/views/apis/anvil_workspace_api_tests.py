@@ -800,7 +800,7 @@ class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
             '\n'.join(['\t'.join(row) for row in [header] + rows])
         )
 
-        self.mock_gzip_temp_open.assert_called_with(f'{TEMP_PATH}/db_id_to_gene_id.csv.gz', 'w')
+        self.mock_gzip_temp_open.assert_called_with(f'{TEMP_PATH}/db_id_to_gene_id.csv.gz', 'wt')
         gene_file = self.mock_gzip_temp_open.return_value.__enter__.return_value.write.call_args.args[0].split('\n')
         self.assertEqual(len(gene_file), 52)
         self.assertListEqual(gene_file[:3], ['db_id,gene_id', '1,ENSG00000223972', '2,ENSG00000227232'])
