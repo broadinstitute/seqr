@@ -369,6 +369,14 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
             mock.call('==> gsutil cat -r 0-65536 gs://test_bucket/test_path.vcf.gz | gunzip -c -q - ', None),
         ])
 
+        # test improperly encoded file
+        mock_subprocess.return_value.stdout = [b'\x80']
+        response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_GZ_DATA_PATH))
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(response.json()['errors'], [
+            'Unable to read the VCF file. This often occurs when a file is improperly gzipped, or when the file extension does not align with the file type (i.e. a .gz file that is not actually gzipped)',
+        ])
+
         # test header errors
         mock_subprocess.return_value.stdout = BASIC_META + BAD_INFO_META + BAD_FORMAT_META + BAD_HEADER_LINE + DATA_LINES
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_GZ_DATA_PATH))
