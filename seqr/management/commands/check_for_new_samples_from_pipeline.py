@@ -63,8 +63,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         runs = self._get_runs(**options)
 
-        success_file_name = CLICKHOUSE_SUCCESS_FILE_NAME
-        success_run_dirs = [run_dir for run_dir, run_details in runs.items() if success_file_name in run_details['files']]
+        success_run_dirs = [run_dir for run_dir, run_details in runs.items() if CLICKHOUSE_SUCCESS_FILE_NAME in run_details['files']]
         if success_run_dirs:
             self._load_success_runs(runs, success_run_dirs)
         if not success_run_dirs:

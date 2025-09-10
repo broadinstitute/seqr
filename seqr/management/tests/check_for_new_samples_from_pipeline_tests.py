@@ -406,12 +406,12 @@ class CheckNewSamplesTest(object):
         logs.append(('Reset 2 cached results', None))
         logs += [] if single_call else [(log, None) for log in self.VALIDATION_LOGS]
         logs.append(('DONE', None))
-        self.maxDiff = None
         self.assert_json_logs(user=None, expected=logs)
 
         self.mock_redis.return_value.delete.assert_called_with('search_results__*', 'variant_lookup_results__*')
 
-        self._assert_expected_airtable_calls(bool(run_loading_logs), single_call)
+        num_calls = self._assert_expected_airtable_calls(bool(run_loading_logs), single_call)
+        self.assertEqual(len(responses.calls), num_calls)
 
     def _additional_loading_logs(self, data_type, version):
         return []
@@ -761,7 +761,7 @@ class LocalCheckNewSamplesTest(DifferentDbTransactionSupportMixin, Authenticatio
         ])
 
     def _assert_expected_airtable_calls(self, *args, **kwargs):
-        pass
+        return 0
 
 
 class AirtableCheckNewSamplesTest(AnvilAuthenticationTestCase, CheckNewSamplesTest):
@@ -930,15 +930,8 @@ The following users have been notified: test_user_manager@test.com""")
             {'id': 'rec12345', 'fields': fields},
         ]})
 
-        num_calls = 2
-        if single_call:
-            num_calls =  8
-        elif has_success_run:
-            num_calls = 9
-        self.assertEqual(len(responses.calls), num_calls)
-
         if not has_success_run:
-            return
+            return 8 if single_call else 2
 
         # Test airtable PDO updates
         update_pdos_request = responses.calls[1].request
@@ -970,3 +963,5 @@ The following users have been notified: test_user_manager@test.com""")
         self.assertDictEqual(json.loads(update_samples_request_2.body), {'records': [
             {'id': 'recfMYDEZpPtzAIeV', 'fields': {'PDOID': ['rec0ABC123']}},
         ]})
+
+        return 8 if single_call else 9
