@@ -11,9 +11,19 @@ from seqr.utils.search.elasticsearch.es_utils_tests import urllib3_responses
 @mock.patch('clickhouse_search.search.CLICKHOUSE_SERVICE_HOSTNAME', '')
 @mock.patch('seqr.views.status.redis.StrictRedis')
 @mock.patch('seqr.views.status.logger')
-class StatusTest(object):
+class ElasticsearchStatusTest(TestCase):
+    databases = '__all__'
 
-    def teardown(self):
+    SEARCH_BACKEND_ERROR = 'No response from elasticsearch ping'
+    HAS_KIBANA = True
+    ES_HOSTNAME = 'testhost'
+
+    def setUp(self):
+        patcher = mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', self.ES_HOSTNAME)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def _post_teardown(self):
         for conn in connections.all():
             conn.connection = None
             conn.ensure_connection()
@@ -27,7 +37,6 @@ class StatusTest(object):
             conn.ensure_connection()
             conn.connection.close()
         mock_redis.return_value.ping.side_effect = HTTPError('Bad connection')
-        urllib3_responses.reset()
         urllib3_responses.add(urllib3_responses.HEAD, '/status', status=400)
 
         url = reverse(status_view)
@@ -75,40 +84,15 @@ class StatusTest(object):
         mock_logger.error.assert_not_called()
         self._assert_expected_requests()
 
-
-class ElasticsearchStatusTest(TestCase, StatusTest):
-    databases = '__all__'
-
-    SEARCH_BACKEND_ERROR = 'No response from elasticsearch ping'
-    HAS_KIBANA = True
-
-    @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', 'testhost')
-    def test_status(self, *args):
-        super(ElasticsearchStatusTest, self).test_status(*args)
-
     def _assert_expected_requests(self):
         self.assertListEqual([call.request.url for call in urllib3_responses.calls], ['/', '/status', '/', '/status'])
 
-    def _post_teardown(self):
-        self.teardown()
-        super()._post_teardown()
 
-
-class HailSearchStatusTest(TestCase, StatusTest):
-    databases = '__all__'
-
+class HailSearchStatusTest(ElasticsearchStatusTest):
     SEARCH_BACKEND_ERROR = '400: Bad Request'
     HAS_KIBANA = False
-
-    @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', '')
-    @mock.patch('seqr.utils.search.hail_search_utils.HAIL_BACKEND_SERVICE_HOSTNAME', 'test-hail')
-    def test_status(self, *args):
-        super(HailSearchStatusTest, self).test_status(*args)
+    ES_HOSTNAME = ''
 
     def _assert_expected_requests(self):
         self.assertEqual(len(urllib3_responses.calls), 1)
         self.assertEqual(urllib3_responses.calls[0].request.url, '/status')
-
-    def _post_teardown(self):
-        self.teardown()
-        super()._post_teardown()
