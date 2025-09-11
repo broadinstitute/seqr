@@ -273,9 +273,7 @@ def get_transcripts_queryset(genome_version, keys):
 
 
 def get_transcripts_by_key(genome_version, keys):
-    return dict(
-        get_transcripts_queryset(genome_version, keys_with_transcripts).values_list('key', 'transcripts')
-    )
+    return dict(get_transcripts_queryset(genome_version, keys).values_list('key', 'transcripts'))
 
 
 def format_clickhouse_results(results, genome_version, **kwargs):
