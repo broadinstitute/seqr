@@ -814,6 +814,7 @@ class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
         gene_ids = super()._assert_expected_project_families(*args, **kwargs)
 
         # Test success when clickhouse is unavailable
+        self.reset_logs()
         connections['clickhouse'].close()
         self.DISCOVERY_TAG = {k: v for k, v in self.DISCOVERY_TAG.items() if k in {
             'acmgClassification', 'alt', 'familyGuids', 'genotypes', 'key', 'ref', 'selectedMainTranscriptId',
@@ -821,6 +822,12 @@ class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
         }}
         no_clickhouse_gene_ids = super()._assert_expected_project_families(*args, **kwargs)
         self.assertSetEqual(no_clickhouse_gene_ids, {'ENSG00000135953'})
+        self.assert_json_logs(None, [
+            ("Error loading saved variant annotations from clickhouse: An error occurred in the current transaction. You can't execute queries until the end of the 'atomic' block.", {
+                'severity': 'ERROR',
+                '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent',
+            }),
+        ])
 
         return gene_ids
 
