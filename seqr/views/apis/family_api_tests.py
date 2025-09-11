@@ -198,7 +198,11 @@ class FamilyAPITest(object):
 
         family = response_json['familiesByGuid'][FAMILY_GUID]
         self.assertSetEqual(set(family.keys()), {'familyGuid', 'discoveryTags'})
-        self.assertSetEqual({tag['variantGuid'] for tag in family['discoveryTags']}, {'SV0000001_2103343353_r0390_100'})
+        self.assertListEqual(family['discoveryTags'], [{
+            'transcripts': {'ENSG00000135953': [mock.ANY, mock.ANY, mock.ANY, mock.ANY, mock.ANY, mock.ANY]},
+            'mainTranscriptId': 'ENST00000258436',
+            'selectedMainTranscriptId': None,
+        }])
 
         project = response_json['projectsByGuid'][PROJECT_GUID]
         self.assertSetEqual(set(project.keys()), {'variantTagTypes', 'variantFunctionalTagTypes'})

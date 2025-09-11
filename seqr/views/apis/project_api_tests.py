@@ -436,7 +436,6 @@ class ProjectAPITest(object):
 
         self.assertListEqual(family_3['discoveryTags'], [])
         self.assertListEqual(empty_family['discoveryTags'], [])
-        self.maxDiff = None
         self.assertListEqual(family_1['discoveryTags'], [{
             'transcripts': {'ENSG00000135953': [mock.ANY, mock.ANY, mock.ANY, mock.ANY, mock.ANY, mock.ANY]},
             'mainTranscriptId': 'ENST00000258436',
