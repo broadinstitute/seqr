@@ -116,7 +116,7 @@ def families_discovery_tags(families, genome_version, project=None):
     family_filter = {'family__project': project} if project else {'family__guid__in': families_by_guid.keys()}
     discovery_tags = get_json_for_saved_variants(SavedVariant.objects.filter(
         varianttag__variant_tag_type__category='CMG Discovery Tags', **family_filter,
-    ), add_details=True, genome_version=genome_version)
+    ), add_details=True, allow_failed_detail=True, genome_version=genome_version)
 
     gene_ids = set()
     for tag in discovery_tags:

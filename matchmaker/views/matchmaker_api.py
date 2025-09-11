@@ -47,7 +47,7 @@ def get_individual_mme_matches(request, submission_guid):
     results = MatchmakerResult.objects.filter(submission=submission)
 
     response_json = get_json_for_saved_variants_with_tags(
-        SavedVariant.objects.filter(family=submission.individual.family), add_details=True, genome_version=project.genome_version)
+        SavedVariant.objects.filter(family=submission.individual.family), add_details=True, allow_failed_detail=True, genome_version=project.genome_version)
 
     gene_ids = set()
     for variant in response_json['savedVariantsByGuid'].values():

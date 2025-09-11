@@ -12,6 +12,7 @@ from clickhouse_search.search import get_clickhouse_genes
 from matchmaker.models import MatchmakerSubmission
 from reference_data.models import Omim
 from seqr.utils.gene_utils import get_genes_for_variant_display
+from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.search.utils import backend_specific_call
 from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
 from seqr.views.utils.individual_utils import delete_individuals
@@ -28,6 +29,8 @@ from seqr.views.utils.permissions_utils import check_project_permissions, get_pr
     login_and_policies_required, user_is_analyst, has_case_review_permissions, external_anvil_project_can_edit
 from seqr.views.utils.variant_utils import get_phenotype_prioritization, get_omim_intervals_query, DISCOVERY_CATEGORY
 from seqr.utils.xpos_utils import get_chrom_pos
+
+logger = SeqrLogger(__name__)
 
 
 FAMILY_ID_FIELD = 'familyId'
@@ -60,7 +63,7 @@ def family_page_data(request, family_guid):
     )
     gene_ids = backend_specific_call(
         _variants_gene_ids, _variants_gene_ids, _clickhouse_variants_gene_ids,
-    )(discovery_variants, project.genome_version)
+    )(discovery_variants, project.genome_version, request.user)
     discovery_variant_intervals = [dict(zip(
         ['chrom', 'start', 'end_chrom', 'end', 'svType', 'hasSvType'],
         [*get_chrom_pos(v['xpos']), *get_chrom_pos(v['xpos_end']), v['svType'], (v.get('dataset_type') or '').startswith(Sample.DATASET_TYPE_SV_CALLS)]
@@ -107,7 +110,7 @@ def _variants_gene_ids(variants, *args, **kwargs):
     return {gene_id for variant in variants for gene_id in (variant['transcripts'] or {}).keys()}
 
 
-def _clickhouse_variants_gene_ids(variants, genome_version):
+def _clickhouse_variants_gene_ids(variants, genome_version, user):
     keys_by_dataset_type = defaultdict(set)
     no_key_variants = []
     for v in variants:
@@ -117,7 +120,10 @@ def _clickhouse_variants_gene_ids(variants, genome_version):
             no_key_variants.append(v)
     gene_ids = _variants_gene_ids(no_key_variants)
     for dataset_type, keys in keys_by_dataset_type.items():
-        gene_ids.update(get_clickhouse_genes(genome_version, dataset_type, keys))
+        try:
+            gene_ids.update(get_clickhouse_genes(genome_version, dataset_type, keys))
+        except Exception as e:
+            logger.error(f'Error loading genes from clickhouse: {e}', user)
     return  gene_ids
 
 
