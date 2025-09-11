@@ -15,15 +15,12 @@ from panelapp.models import PaLocusList
 from reference_data.models import HumanPhenotypeOntology
 from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant, Family, CAN_VIEW, CAN_EDIT, \
     get_audit_field_names, RnaSeqOutlier, RnaSeqSpliceOutlier
-from seqr.utils.logging_utils import SeqrLogger
 from seqr.views.utils.json_utils import _to_camel_case
 from seqr.views.utils.permissions_utils import has_project_permissions, \
     project_has_anvil, get_workspace_collaborator_perms, user_is_analyst, user_is_data_manager, user_is_pm, \
     is_internal_anvil_project, get_project_guids_user_can_view, get_anvil_analyst_user_emails
 from seqr.views.utils.terra_api_utils import is_anvil_authenticated, anvil_enabled
 from settings import ANALYST_USER_GROUP, SERVICE_ACCOUNT_FOR_ANVIL, MEDIA_URL
-
-logger = SeqrLogger(__name__)
 
 
 def _get_model_json_fields(model_class, user, is_analyst, additional_model_fields):
@@ -415,7 +412,7 @@ def get_json_for_analysis_group(analysis_group, **kwargs):
     return _get_json_for_model(analysis_group, get_json_for_models=get_json_for_analysis_groups, **kwargs)
 
 
-def get_json_for_saved_variants(saved_variants, add_details=False, additional_model_fields=None, additional_values=None, genome_version=None, allow_failed_detail=False):
+def get_json_for_saved_variants(saved_variants, add_details=False, additional_model_fields=None, additional_values=None, genome_version=None):
     sv_additional_values = {
         'familyGuids': ArrayAgg('family__guid', distinct=True),
     }
@@ -439,8 +436,7 @@ def get_json_for_saved_variants(saved_variants, add_details=False, additional_mo
 
     if add_details:
         from seqr.utils.search.utils import backend_specific_call
-        clickhouse_func = _safe_add_clickhouse_annotations if allow_failed_detail else _add_clickhouse_annotations
-        backend_specific_call(lambda *args: None, lambda *args: None, clickhouse_func)(results, genome_version)
+        backend_specific_call(lambda *args: None, lambda *args: None, _add_clickhouse_annotations)(results, genome_version)
         for result in results:
             result.update({k: v for k, v in result.pop('savedVariantJson').items() if k not in result})
 
@@ -467,14 +463,6 @@ def _add_clickhouse_annotations(results, genome_version):
             for result in gv_results:
                 if result['key']:
                     result.update(annotations_by_key[result['key']])
-
-
-#  TODO revert?
-def _safe_add_clickhouse_annotations(*args, **kwargs):
-    try:
-        _add_clickhouse_annotations(*args, **kwargs)
-    except Exception as e:
-        logger.error(f'Error loading saved variant annotations from clickhouse: {e}', None)
 
 
 def _format_functional_tags(tags):
