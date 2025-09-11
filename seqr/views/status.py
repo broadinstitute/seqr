@@ -17,7 +17,8 @@ def status_view(request):
     # Test database connection
     for db_connection_key in DATABASES.keys():
         try:
-            connections[db_connection_key].cursor()
+            with connections[db_connection_key].cursor() as cursor:
+                cursor.execute('SELECT 1')
         except Exception as e:
             dependent_services_ok = False
             logger.error('Database "{}" connection error: {}'.format(db_connection_key, e))

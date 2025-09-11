@@ -1,3 +1,4 @@
+from django.db import connections
 from django.test import TestCase
 from django.urls.base import reverse
 import mock
@@ -8,42 +9,49 @@ from seqr.utils.search.elasticsearch.es_utils_tests import urllib3_responses
 
 
 @mock.patch('clickhouse_search.search.CLICKHOUSE_SERVICE_HOSTNAME', '')
+@mock.patch('seqr.views.status.redis.StrictRedis')
+@mock.patch('seqr.views.status.logger')
 class StatusTest(object):
 
-    def _test_status_error(self, url, mock_logger):
+    def teardown(self):
+        for conn in connections.all():
+            conn.connection = None
+            conn.ensure_connection()
+            if hasattr(conn.connection, 'pool'):
+                conn.connection.pool.closed = False
+                conn.connection.is_closed = False
+
+    @urllib3_responses.activate
+    def test_status_error(self, mock_logger, mock_redis):
+        for conn in connections.all():
+            conn.ensure_connection()
+            conn.connection.close()
+        mock_redis.return_value.ping.side_effect = HTTPError('Bad connection')
+        urllib3_responses.reset()
+        urllib3_responses.add(urllib3_responses.HEAD, '/status', status=400)
+
+        url = reverse(status_view)
         response = self.client.get(url)
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(
             response.json(), {'version': 'v1.0', 'dependent_services_ok': False, 'secondary_services_ok': False})
         calls = [
-            mock.call('Database "default" connection error: No connection'),
-            mock.call('Database "reference_data" connection error: No connection'),
-            mock.call('Database "clickhouse_write" connection error: No connection'),
-            mock.call('Database "clickhouse" connection error: No connection'),
+            mock.call('Database "default" connection error: the connection is closed'),
+            mock.call('Database "reference_data" connection error: the connection is closed'),
+            mock.call('Database "clickhouse_write" connection error: connection already closed'),
+            mock.call('Database "clickhouse" connection error: connection already closed'),
             mock.call('Redis connection error: Bad connection'),
             mock.call(f'Search backend connection error: {self.SEARCH_BACKEND_ERROR}'),
         ]
         if self.HAS_KIBANA:
             calls.append(mock.call('Search Admin connection error: Kibana Error 400: Bad Request'))
         mock_logger.error.assert_has_calls(calls)
-        mock_logger.reset_mock()
 
-    @mock.patch('seqr.views.status.redis.StrictRedis')
-    @mock.patch('seqr.views.status.connections')
-    @mock.patch('seqr.views.status.logger')
     @urllib3_responses.activate
-    def test_status(self, mock_logger, mock_db_connections, mock_redis):
+    def test_status(self, mock_logger, mock_redis):
         url = reverse(status_view)
 
-        mock_db_connections.__getitem__.return_value.cursor.side_effect = Exception('No connection')
-        mock_redis.return_value.ping.side_effect = HTTPError('Bad connection')
-        urllib3_responses.add(urllib3_responses.HEAD, '/status', status=400)
-
-        self._test_status_error(url, mock_logger)
-
-        mock_db_connections.__getitem__.return_value.cursor.side_effect = None
         mock_redis.return_value.ping.side_effect = None
-        urllib3_responses.reset()
         urllib3_responses.add(urllib3_responses.HEAD, '/', status=200)
         urllib3_responses.add(urllib3_responses.HEAD, '/status', status=500 if self.HAS_KIBANA else 200)
 
@@ -69,6 +77,7 @@ class StatusTest(object):
 
 
 class ElasticsearchStatusTest(TestCase, StatusTest):
+    databases = '__all__'
 
     SEARCH_BACKEND_ERROR = 'No response from elasticsearch ping'
     HAS_KIBANA = True
@@ -80,8 +89,13 @@ class ElasticsearchStatusTest(TestCase, StatusTest):
     def _assert_expected_requests(self):
         self.assertListEqual([call.request.url for call in urllib3_responses.calls], ['/', '/status', '/', '/status'])
 
+    def _post_teardown(self):
+        self.teardown()
+        super()._post_teardown()
+
 
 class HailSearchStatusTest(TestCase, StatusTest):
+    databases = '__all__'
 
     SEARCH_BACKEND_ERROR = '400: Bad Request'
     HAS_KIBANA = False
@@ -94,3 +108,7 @@ class HailSearchStatusTest(TestCase, StatusTest):
     def _assert_expected_requests(self):
         self.assertEqual(len(urllib3_responses.calls), 1)
         self.assertEqual(urllib3_responses.calls[0].request.url, '/status')
+
+    def _post_teardown(self):
+        self.teardown()
+        super()._post_teardown()
