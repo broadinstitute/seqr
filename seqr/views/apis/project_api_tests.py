@@ -42,31 +42,12 @@ MOCK_RECORDS = {'records': [
 ]}
 
 DISCOVERY_TAG = {
-    'CAID': 'CA1501729',
-    'acmgClassification': None,
-    'alt': 'T',
-    'chrom': '1',
-    'clinvar': {'alleleId': 12345, 'assertions': None, 'conditions': None, 'conflictingPathogenicities': None, 'goldStars': None, 'pathogenicity': 'Uncertain_significance', 'submitters': None},
-    'familyGuids': ['F000002_2'],
-    'genomeVersion': '37',
-    'genotypes': {'I000004_hg00731': {'numAlt': 2}, 'I000005_hg00732': {'numAlt': 1}},
-    'hgmd': mock.ANY,
-    'liftedOverChrom': mock.ANY,
-    'liftedOverGenomeVersion': '38',
-    'liftedOverPos': mock.ANY,
-    'populations': mock.ANY,
-    'pos': 248367227,
-    'predictions': mock.ANY,
-    'ref': 'TC',
-    'rsid': None,
+    'mainTranscriptId': None,
     'selectedMainTranscriptId': 'ENST00000371839',
     'transcripts': {
         'ENSG00000135953': mock.ANY,
         'ENSG00000240361': mock.ANY,
     },
-    'variantGuid': 'SV0000002_1248367227_r0390_100',
-    'variantId': '1-248367227-TC-T',
-    'xpos': 1248367227,
 }
 
 class ProjectAPITest(object):
@@ -455,7 +436,12 @@ class ProjectAPITest(object):
 
         self.assertListEqual(family_3['discoveryTags'], [])
         self.assertListEqual(empty_family['discoveryTags'], [])
-        self.assertSetEqual({tag['variantGuid'] for tag in family_1['discoveryTags']}, {'SV0000001_2103343353_r0390_100'})
+        self.maxDiff = None
+        self.assertListEqual(family_1['discoveryTags'], [{
+            'transcripts': {'ENSG00000135953': [mock.ANY, mock.ANY, mock.ANY, mock.ANY, mock.ANY, mock.ANY]},
+            'mainTranscriptId': 'ENST00000258436',
+            'selectedMainTranscriptId': None,
+        }])
         self.assertListEqual(response_json['familiesByGuid']['F000002_2']['discoveryTags'], [self.DISCOVERY_TAG])
         no_discovery_families = set(response_json['familiesByGuid'].keys()) - {'F000001_1', 'F000002_2'}
         self.assertSetEqual({
@@ -735,7 +721,7 @@ class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
     PROJECT_COLLABORATORS = ANVIL_COLLABORATORS
     PROJECT_COLLABORATOR_GROUPS = None
     HAS_EMPTY_PROJECT = False
-    DISCOVERY_TAG = {**DISCOVERY_TAG, 'key': 100, 'mainTranscriptId': 'ENST00000505820'}
+    DISCOVERY_TAG = {**DISCOVERY_TAG, 'mainTranscriptId': 'ENST00000505820'}
 
     def test_create_and_delete_project(self, *args, **kwargs):
         super(AnvilProjectAPITest, self).test_create_and_delete_project(*args, **kwargs)
@@ -816,14 +802,11 @@ class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
         # Test success when clickhouse is unavailable
         self.reset_logs()
         connections['clickhouse'].close()
-        self.DISCOVERY_TAG = {k: v for k, v in self.DISCOVERY_TAG.items() if k in {
-            'acmgClassification', 'alt', 'familyGuids', 'genotypes', 'key', 'ref', 'selectedMainTranscriptId',
-            'variantGuid', 'variantId', 'xpos',
-        }}
+        self.DISCOVERY_TAG = {**DISCOVERY_TAG, 'transcripts': {}}
         no_clickhouse_gene_ids = super()._assert_expected_project_families(*args, **kwargs)
         self.assertSetEqual(no_clickhouse_gene_ids, {'ENSG00000135953'})
         self.assert_json_logs(None, [
-            ("Error loading saved variant annotations from clickhouse: An error occurred in the current transaction. You can't execute queries until the end of the 'atomic' block.", {
+            ("Error loading discovery genes from clickhouse: An error occurred in the current transaction. You can't execute queries until the end of the 'atomic' block.", {
                 'severity': 'ERROR',
                 '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent',
             }),

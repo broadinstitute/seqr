@@ -469,6 +469,7 @@ def _add_clickhouse_annotations(results, genome_version):
                     result.update(annotations_by_key[result['key']])
 
 
+#  TODO revert?
 def _safe_add_clickhouse_annotations(*args, **kwargs):
     try:
         _add_clickhouse_annotations(*args, **kwargs)

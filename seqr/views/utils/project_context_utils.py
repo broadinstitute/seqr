@@ -5,10 +5,13 @@ from clickhouse_search.search import get_transcripts_queryset
 from seqr.models import Individual, IgvSample, AnalysisGroup, DynamicAnalysisGroup, LocusList, VariantTagType,\
     VariantFunctionalData, FamilyNote, SavedVariant, VariantTag, VariantNote
 from seqr.utils.gene_utils import get_genes
+from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.search.utils import backend_specific_call
 from seqr.views.utils.orm_to_json_utils import _get_json_for_families, _get_json_for_individuals, get_json_for_queryset, \
     get_json_for_analysis_groups, get_json_for_samples, get_json_for_locus_lists, \
     get_json_for_family_notes
+
+logger = SeqrLogger(__name__)
 
 
 def get_projects_child_entities(projects, project_guid, user):
@@ -122,13 +125,15 @@ def families_discovery_tags(families, genome_version, project=None):
         'key', 'family__guid', selectedMainTranscriptId=F('selected_main_transcript_id'),
         transcripts=F('saved_variant_json__transcripts'), mainTranscriptId=F('saved_variant_json__mainTranscriptId'),
     )}
-    backend_specific_call(
-        lambda *args: None, lambda *args: None, _add_clickhouse_transcripts,
-    )(discovery_tags_by_key, genome_version)
+    try:
+        backend_specific_call(lambda *args: None, lambda *args: None, _add_clickhouse_transcripts)(discovery_tags_by_key, genome_version)
+    except Exception as e:
+        logger.error(f'Error loading discovery genes from clickhouse: {e}', None)
 
     gene_ids = set()
     for tag in discovery_tags_by_key.values():
-        gene_ids.update(list(tag.get('transcripts', {}).keys()))
+        tag['transcripts'] = tag.get('transcripts') or {}
+        gene_ids.update(list(tag['transcripts'].keys()))
         families_by_guid[tag.pop('family__guid')]['discoveryTags'].append(tag)
 
     return {
