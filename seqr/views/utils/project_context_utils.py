@@ -1,7 +1,7 @@
 from collections import defaultdict
 from django.db.models import Count, Q, F, prefetch_related_objects
 
-from clickhouse_search.search import get_transcripts_queryset
+from clickhouse_search.search import get_transcripts_by_key
 from seqr.models import Individual, IgvSample, AnalysisGroup, DynamicAnalysisGroup, LocusList, VariantTagType,\
     VariantFunctionalData, FamilyNote, SavedVariant, VariantTag, VariantNote
 from seqr.utils.gene_utils import get_genes
@@ -143,9 +143,7 @@ def families_discovery_tags(families, genome_version, project=None):
 
 
 def _add_clickhouse_transcripts(discovery_tags_by_key, genome_version):
-    transcripts_by_key = dict(
-        get_transcripts_queryset(genome_version, discovery_tags_by_key.keys()).values_list('key', 'transcripts')
-    )
+    transcripts_by_key = get_transcripts_by_key(genome_version, discovery_tags_by_key.keys())
     for key, tag in discovery_tags_by_key.items():
         if key in transcripts_by_key:
             tag['transcripts'] = transcripts_by_key[key]

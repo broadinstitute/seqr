@@ -256,13 +256,9 @@ export const getMmeMatches = submissionGuid => (dispatch, getState) => {
   const state = getState()
   const submission = state.mmeSubmissionsByGuid[submissionGuid]
   if (submission && !submission.geneVariants) {
-    const { familyGuid } = state.individualsByGuid[submission.individualGuid]
     dispatch({ type: REQUEST_MME_MATCHES })
     new HttpRequestHelper(`/api/matchmaker/get_mme_matches/${submissionGuid}`,
       (responseJson) => {
-        dispatch({
-          type: RECEIVE_SAVED_VARIANT_FAMILIES, updates: { [familyGuid]: { loaded: true, noteVariants: true } },
-        })
         dispatch({
           type: RECEIVE_DATA,
           updatesById: responseJson,
