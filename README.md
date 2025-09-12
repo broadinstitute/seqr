@@ -9,30 +9,39 @@ This repository contains code that underlies the [Broad seqr instance](http://se
 
 seqr consists of the following components:
 - postgres - SQL database used by seqr to store project metadata and user-generated content such as variant notes, etc.
-- elasticsearch - NoSQL database used to store variant callsets.
+- clickhouse - High-performance SQL database used to store variant data.
 - redis - in-memory cache used to speed up request handling.
 - seqr - the main client-server application built using react.js, python and django.
-- pipeline-runner - optional container for running hail pipelines to annotate and load new datasets into elasticsearch. If seqr is hosted on google cloud (GKE or GCE), Dataproc spark clusters can be used instead.
-- kibana - optional dashboard and visual interface for elasticsearch.
+- pipeline-runner - server for running hail pipelines to annotate and load new datasets into clickhouse.
 
 ## Install
 
-The seqr production instance runs on Google Kubernetes Engine (GKE) and data is loaded using Google Dataproc Spark clusters. 
+The seqr production instance runs on Google Kubernetes Engine (GKE) and data is loaded using Google Dataproc Spark clusters.
 
-On-prem installs using the elasticsearch backend can be created using docker-compose:
- **[Local installs using docker-compose](deploy/LOCAL_INSTALL.md)**
-
-On-prem installs using the `hail` backend can be created using **[helm](deploy/LOCAL_INSTALL_HELM.md)**
-
-To help you decide which backend is best suited for your needs, please refer to the discussion post [announcing the `hail` backend](https://github.com/broadinstitute/seqr/discussions/4531).
+On-prem installs can be created using **[helm](deploy/LOCAL_INSTALL_HELM.md)**
 
 To set up seqr for local development, see instructions **[here](deploy/LOCAL_DEVELOPMENT_INSTALL.md)**  
 
-## Updating / Migrating an older seqr Instance	
+### Legacy installs
 
-For notes on how to update an older instance, see  	
+Historically, on-prem installs can use docker-compose to run a version of seqr with an elasticsearch backend.
+This backend will be supported through **March 1, 2026**.
+If you are setting up a new installation of seqr, do not use this method. However, if you have an existing installation 
+you can find documentation for this method here:
+ **[Local installs using docker-compose](deploy/LOCAL_INSTALL.md)**
 
-[Update/Migration Instructions](deploy/MIGRATE.md)
+## Updating / Migrating a  seqr Instance	
+
+Instructions for updating an existing seqr instance to the latest version are found 
+**[here](https://github.com/broadinstitute/seqr-helm?tab=readme-ov-file#updating-seqr)**
+
+### Legacy installs
+
+Instructions for migrating application data from a docker-compose installation to a helm installation are found
+**[here](https://github.com/broadinstitute/seqr-helm?tab=readme-ov-file#migrating-application-data-from-docker-composeyaml)**
+
+Instructions for updating a docker-compose installation to the latest version still using docker-compose are found
+**[here](deploy/MIGRATE.md)**
 
 ## Contributing to seqr
 

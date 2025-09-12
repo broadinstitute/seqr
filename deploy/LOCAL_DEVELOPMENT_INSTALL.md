@@ -15,16 +15,14 @@ Before installing, always check first to see if a dependency is already installe
 After installation, run `psql -l` and if there is no user named `postgres`, run the following:
   `$POSTGRES_INSTALL_PATH/bin/createuser -s postgres`
 
+- [clickhouse](https://clickhouse.com/docs/install)
 - [redis](https://redis.io/topics/quickstart)
 
 - [node/npm <14](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm).  Note: more recent versions of `node` may not function are not officially supported.
 
-Optionally, if planning to use elasticsearch from docker-compose, install:
-- [docker](https://docs.docker.com/install/)
-- [docker-compose](https://docs.docker.com/compose/install/)   
+Additionally, you will need to install all the infrastructure components required for the 
+[helm deployment](https://github.com/broadinstitute/seqr-helm?tab=readme-ov-file#instructions-for-initial-deployment)
 
-If installing for the Broad instance/ other kubernetes deployments, install:
-- [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl-macos/)
 
 ## Install seqr
 
@@ -106,17 +104,11 @@ Before running seqr, make sure the following are currently running/ started:
 
 - redis (optional, improves performance but only needed  when actively developing cache-related code)
 
-- elasticsearch (optional, only needed when actively developing search functionality) 
-  - Since seqr accesses ES as read-only, it is safe to tunnel to production data during local development. 
+- clickhouse (optional, only needed when actively developing search or saved variant functionality) 
+  - Since seqr accesses clickhouse as read-only, it is safe to tunnel to production data during local development. 
   This is the easiest approach if you want representative data
     ```bash
-    ./deploy/kubectl_helpers/connect_to.sh prod elasticsearch
-    ```
-    
-  - If you want ES running but do not need production data/ are working with a standalone seqr instance, 
-  use docker-compose
-    ```bash
-    docker compose up elasticsearch
+    ./deploy/kubectl_helpers/connect_to.sh prod clickhouse
     ```
     
 ### Run ui asset server

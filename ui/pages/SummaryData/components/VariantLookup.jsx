@@ -194,10 +194,10 @@ const VariantLookup = ({ queryParams, receiveData, updateQueryParams, vlmEnabled
     </Grid.Row>
     {vlmEnabled && (
       <Grid.Row>
-        <Grid.Column width={4} textAlign="right" verticalAlign="middle">
-          <Header size="large" content="Variant-Level Matching (VLM)" />
+        <Grid.Column width={6} textAlign="right" verticalAlign="middle">
+          <Header size="large" content="External Variant-Level Matching (VLM)" />
         </Grid.Column>
-        <Grid.Column width={12}>
+        <Grid.Column width={10}>
           <StateDataLoader
             url={queryParams.variantId && '/api/vlm_lookup'}
             query={queryParams}
@@ -205,6 +205,14 @@ const VariantLookup = ({ queryParams, receiveData, updateQueryParams, vlmEnabled
             childComponent={VlmDisplay}
           />
         </Grid.Column>
+      </Grid.Row>
+    )}
+    {vlmEnabled && (
+      <Grid.Row>
+        <Grid.Column width={6} textAlign="right" verticalAlign="middle">
+          <Header size="large" content="Internal seqr Variants" />
+        </Grid.Column>
+        <Grid.Column width={10} />
       </Grid.Row>
     )}
     <Grid.Row>

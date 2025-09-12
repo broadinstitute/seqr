@@ -97,11 +97,12 @@ def write_multiple_files(files, file_path, user, gzip_file=False, **kwargs):
     with TemporaryDirectory() as temp_dir_name:
         dir_name = temp_dir_name if is_gs_path else file_path
         open_func = gzip.open if gzip_file else open
+        open_mode = 'wt' if gzip_file else 'w'
         for filename, content in _format_files_content(files, **kwargs):
             current_file = f'{dir_name}/{filename}'
             if gzip_file:
                 current_file += '.gz'
-            with open_func(current_file, 'w') as f:
+            with open_func(current_file, open_mode) as f:
                 f.write(content)
         if is_gs_path:
             mv_file_to_gs(f'{temp_dir_name}/*', f'{file_path}/', user)
