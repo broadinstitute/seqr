@@ -56,10 +56,6 @@ def _raise_search_error(error):
     return _wrapped
 
 
-def _raise_clickhouse_not_implemented(*args, **kwargs):
-    raise NotImplementedError('Clickhouse backend is not implemented for this function.')
-
-
 def backend_specific_call(es_func, clickhouse_func):
     if es_backend_enabled():
         return es_func
