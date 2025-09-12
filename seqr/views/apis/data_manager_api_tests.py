@@ -1570,14 +1570,12 @@ class DataManagerAPITest(AirtableTest):
         self._assert_expected_delete_family(response)
 
     def _assert_expected_delete_project(self, response):
-        self._assert_expected_search_data_update(response)
+        self.assertEqual(response.status_code, 500)
+        self.assertDictEqual(response.json(), {'error': 'trigger_delete_project is disabled without the clickhouse backend'})
 
     def _assert_expected_delete_family(self, response):
-        self._assert_expected_search_data_update(response)
-
-    def _assert_expected_search_data_update(self, response):
-        self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'errors': ['This functionality is not available in the current search backend'], 'warnings': None})
+        self.assertEqual(response.status_code, 500)
+        self.assertDictEqual(response.json(), {'error': 'trigger_delete_family is disabled without the clickhouse backend'})
 
 
 class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):

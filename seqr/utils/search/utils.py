@@ -64,6 +64,14 @@ def es_only(func):
     return _wrapped
 
 
+def clickhouse_only(func):
+    def _wrapped(*args, **kwargs):
+        if es_backend_enabled():
+            raise ValueError(f'{func.__name__} is disabled without the clickhouse backend')
+        return func(*args, **kwargs)
+    return _wrapped
+
+
 def backend_specific_call(es_func, clickhouse_func):
     if es_backend_enabled():
         return es_func
