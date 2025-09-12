@@ -272,13 +272,15 @@ def get_transcripts_queryset(genome_version, keys):
     return TRANSCRIPTS_CLASS_MAP[genome_version].objects.filter(key__in=keys)
 
 
+def get_transcripts_by_key(genome_version, keys):
+    return dict(get_transcripts_queryset(genome_version, keys).values_list('key', 'transcripts'))
+
+
 def format_clickhouse_results(results, genome_version, **kwargs):
     keys_with_transcripts = {
         variant['key'] for result in results for variant in (result if isinstance(result, list) else [result]) if not 'transcripts' in variant
     }
-    transcripts_by_key = dict(
-        get_transcripts_queryset(genome_version, keys_with_transcripts).values_list('key', 'transcripts')
-    )
+    transcripts_by_key = get_transcripts_by_key(genome_version, keys_with_transcripts)
 
     formatted_results = []
     for variant in results:
