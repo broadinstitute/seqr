@@ -4,6 +4,7 @@ import mock
 from copy import deepcopy
 from datetime import datetime
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import connections
 from django.urls.base import reverse
 
 from matchmaker.models import MatchmakerSubmission
@@ -183,6 +184,39 @@ class FamilyAPITest(object):
         response = self.client.get(url.replace(FAMILY_GUID, 'invalid_guid'))
         self.assertEqual(response.status_code, 404)
 
+        # Test family with clickhouse saved variants
+        omim_options = {
+            '615120': {'phenotypeMimNumber': 615120, 'phenotypes': [{
+                'geneSymbol': 'RP11', 'mimNumber': 103320, 'phenotypeMimNumber': 615120,
+                'phenotypeDescription': 'Myasthenic syndrome, congenital, 8, with pre- and postsynaptic defects',
+                'phenotypeInheritance': 'Autosomal recessive, X-linked recessive', 'chrom': '1', 'start': 29554,
+                'end': 31109,
+            }]},
+            '616126': {'phenotypeMimNumber': 616126, 'phenotypes': [{
+                'geneSymbol': 'OR4G11P', 'mimNumber': 147571, 'phenotypeMimNumber': 616126,
+                'phenotypeDescription': 'Immunodeficiency 38',
+                'phenotypeInheritance': 'Autosomal recessive', 'chrom': '1', 'start': 11869,
+                'end': 14409,
+            }]},
+        }
+        self._assert_expected_family2_data(omim_options, url.replace(FAMILY_GUID, FAMILY_GUID2), response_keys, family_fields)
+
+    def _assert_expected_family2_data(self, omim_options, family_2_url, response_keys, family_fields):
+        response = self.client.get(family_2_url)
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertSetEqual(set(response_json.keys()), response_keys)
+        family = response_json['familiesByGuid'][FAMILY_GUID2]
+        self.assertSetEqual(set(family.keys()), family_fields)
+        self.assertDictEqual(family['postDiscoveryOmimOptions'], omim_options)
+        self.assertEqual(family['projectGuid'], PROJECT_GUID)
+        self.assertSetEqual(set(family['individualGuids']), set(response_json['individualsByGuid'].keys()))
+        self.assertEqual(len(response_json['individualsByGuid']), 3)
+        self.assertEqual(len(response_json['samplesByGuid']), 7)
+        self.assertEqual(len(response_json['igvSamplesByGuid']), 0)
+        self.assertEqual(len(response_json['mmeSubmissionsByGuid']), 0)
+        self.assertEqual(len(response_json['familyNotesByGuid']), 0)
+
     def test_family_variant_tag_summary(self):
         url = reverse(family_variant_tag_summary, args=[FAMILY_GUID])
         self.check_collaborator_login(url)
@@ -198,7 +232,11 @@ class FamilyAPITest(object):
 
         family = response_json['familiesByGuid'][FAMILY_GUID]
         self.assertSetEqual(set(family.keys()), {'familyGuid', 'discoveryTags'})
-        self.assertSetEqual({tag['variantGuid'] for tag in family['discoveryTags']}, {'SV0000001_2103343353_r0390_100'})
+        self.assertListEqual(family['discoveryTags'], [{
+            'transcripts': {'ENSG00000135953': [mock.ANY, mock.ANY, mock.ANY, mock.ANY, mock.ANY, mock.ANY]},
+            'mainTranscriptId': 'ENST00000258436',
+            'selectedMainTranscriptId': None,
+        }])
 
         project = response_json['projectsByGuid'][PROJECT_GUID]
         self.assertSetEqual(set(project.keys()), {'variantTagTypes', 'variantFunctionalTagTypes'})
@@ -669,3 +707,17 @@ class AnvilFamilyAPITest(AnvilAuthenticationTestCase, FamilyAPITest):
     fixtures = ['users', '1kg_project', 'reference_data', 'clickhouse_saved_variants']
 
     EXTERNAL_ANVIL_CAN_DELETE = True
+
+    def _assert_expected_family2_data(self, omim_options, *args, **kwargs):
+        super()._assert_expected_family2_data(omim_options, *args, **kwargs)
+
+        # test graceful handling when clickhouse is down
+        self.reset_logs()
+        connections['clickhouse'].close()
+        super()._assert_expected_family2_data({}, *args, **kwargs)
+        self.assert_json_logs(self.analyst_user, [
+            ("Error loading genes from clickhouse: An error occurred in the current transaction. You can't execute queries until the end of the 'atomic' block.", {
+                'severity': 'ERROR',
+                '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent',
+            }),
+        ])
