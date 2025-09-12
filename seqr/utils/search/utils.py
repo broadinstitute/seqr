@@ -13,7 +13,7 @@ from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_get_wildcard_
 from seqr.utils.search.constants import XPOS_SORT_KEY, PRIORITIZED_GENE_SORT, RECESSIVE, COMPOUND_HET, \
     MAX_NO_LOCATION_COMP_HET_FAMILIES, SV_ANNOTATION_TYPES, ALL_DATA_TYPES, MAX_EXPORT_VARIANTS, X_LINKED_RECESSIVE, \
     MAX_VARIANTS
-from seqr.utils.search.elasticsearch.es_utils import ping_elasticsearch, delete_es_index, get_elasticsearch_status, \
+from seqr.utils.search.elasticsearch.es_utils import ping_elasticsearch, \
     get_es_variants, get_es_variants_for_variant_ids, process_es_previously_loaded_results, process_es_previously_loaded_gene_aggs, \
     es_backend_enabled, ping_kibana, ES_EXCEPTION_ERROR_MAP, ES_EXCEPTION_MESSAGE_MAP, ES_ERROR_LOG_EXCEPTIONS
 from seqr.utils.gene_utils import parse_locus_list_items
@@ -56,6 +56,14 @@ def _raise_search_error(error):
     return _wrapped
 
 
+def es_only(func):
+    def _wrapped(*args, **kwargs):
+        if not es_backend_enabled():
+            raise ValueError(f'{func.__name__} is disabled without the elasticsearch backend')
+        return func(*args, **kwargs)
+    return _wrapped
+
+
 def backend_specific_call(es_func, clickhouse_func):
     if es_backend_enabled():
         return es_func
@@ -70,10 +78,6 @@ def ping_search_backend():
 
 def ping_search_backend_admin():
     backend_specific_call(ping_kibana, lambda: True)()
-
-
-def get_search_backend_status():
-    return backend_specific_call(get_elasticsearch_status, _raise_search_error('Elasticsearch is disabled'))()
 
 
 def _get_filtered_search_samples(search_filter, active_only=True):
@@ -114,17 +118,6 @@ def _get_search_genome_version(families):
             f'Searching across multiple genome builds is not supported. Remove projects with differing genome builds from search: {summary}')
 
     return next(iter(project_versions.keys()))
-
-
-def delete_search_backend_data(data_id):
-    active_samples = Sample.objects.filter(is_active=True, elasticsearch_index=data_id)
-    if active_samples:
-        projects = set(active_samples.values_list('individual__family__project__name', flat=True))
-        raise InvalidSearchException(f'"{data_id}" is still used by: {", ".join(projects)}')
-
-    return backend_specific_call(
-        delete_es_index, _raise_search_error('Deleting indices is disabled without the elasticsearch backend'),
-    )(data_id)
 
 
 def get_single_variant(family, variant_id, user=None):

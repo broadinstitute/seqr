@@ -16,7 +16,8 @@ from requests.exceptions import ConnectionError as RequestConnectionError
 from clickhouse_search.search import delete_clickhouse_project, delete_clickhouse_family
 from seqr.utils.communication_utils import send_project_notification
 from seqr.utils.search.add_data_utils import prepare_data_loading_request, get_loading_samples_validator
-from seqr.utils.search.utils import get_search_backend_status, delete_search_backend_data, backend_specific_call
+from seqr.utils.search.elasticsearch.es_utils import get_elasticsearch_status, delete_es_index
+from seqr.utils.search.utils import backend_specific_call, es_only, InvalidSearchException
 from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
@@ -43,14 +44,21 @@ logger = SeqrLogger(__name__)
 
 
 @data_manager_required
+@es_only
 def elasticsearch_status(request):
-    return create_json_response(get_search_backend_status())
+    return create_json_response(get_elasticsearch_status())
 
 
 @data_manager_required
+@es_only
 def delete_index(request):
     index = json.loads(request.body)['index']
-    updated_indices = delete_search_backend_data(index)
+    active_samples = Sample.objects.filter(is_active=True, elasticsearch_index=index)
+    if active_samples:
+        projects = set(active_samples.values_list('individual__family__project__name', flat=True))
+        raise InvalidSearchException(f'"{index}" is still used by: {", ".join(projects)}')
+
+    updated_indices =  delete_es_index(index)
 
     return create_json_response({'indices': updated_indices})
 
