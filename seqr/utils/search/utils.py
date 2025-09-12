@@ -464,12 +464,12 @@ def _parse_variant_items(search_json):
 
 def parse_variant_id(variant_id):
     try:
-        return parse_valid_variant_id(variant_id)
+        return _parse_valid_variant_id(variant_id)
     except (KeyError, ValueError):
         return None
 
 
-def parse_valid_variant_id(variant_id):
+def _parse_valid_variant_id(variant_id):
     chrom, pos, ref, alt = variant_id.split('-')
     chrom = format_chrom(chrom)
     pos = int(pos)

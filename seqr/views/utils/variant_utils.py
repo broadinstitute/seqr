@@ -39,7 +39,6 @@ def update_projects_saved_variant_json(projects, user_email, update_function=Non
     success = {}
     skipped = {}
     error = {}
-    updated_variants_by_id = {}
     logger.info(f'Reloading saved variants in {len(projects)} projects')
     for project_id, project_guid, project_name, genome_version, family_guids in tqdm(projects, unit=' project'):
         try:
@@ -51,7 +50,6 @@ def update_projects_saved_variant_json(projects, user_email, update_function=Non
                 success[project_name] = len(updated_saved_variants)
                 family_summary = f' in {len(family_guids)} families' if family_guids else ''
                 logger.info(f'Updated {len(updated_saved_variants)} variants{family_summary} for project {project_name}')
-                updated_variants_by_id.update({v.variant_id: v.saved_variant_json for v in updated_saved_variants.values()})
         except Exception as e:
             traceback_message = traceback.format_exc()
             logger.error(traceback_message)
@@ -68,7 +66,6 @@ def update_projects_saved_variant_json(projects, user_email, update_function=Non
         logger.info(f'{len(error)} failed projects')
     for k, v in error.items():
         logger.info(f'  {k}: {v}')
-    return updated_variants_by_id
 
 
 def get_saved_variants(genome_version, project_id=None, family_guids=None, dataset_type=None, clickhouse_dataset_type=None):
