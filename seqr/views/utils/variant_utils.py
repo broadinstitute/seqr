@@ -30,19 +30,18 @@ from settings import REDIS_SERVICE_HOSTNAME, REDIS_SERVICE_PORT
 logger = logging.getLogger(__name__)
 
 
-MAX_VARIANTS_FETCH = 1000
 DISCOVERY_CATEGORY = 'CMG Discovery Tags'
 OMIM_GENOME_VERSION = GENOME_VERSION_GRCh38
 
 
-def update_projects_saved_variant_json(projects, user_email, update_function=None, **kwargs):
+def update_projects_saved_variant_json(projects, user_email, update_function, **kwargs):
     success = {}
     skipped = {}
     error = {}
     logger.info(f'Reloading saved variants in {len(projects)} projects')
     for project_id, project_guid, project_name, genome_version, family_guids in tqdm(projects, unit=' project'):
         try:
-            updated_saved_variants = (update_function or update_project_saved_variant_json)(
+            updated_saved_variants = update_function(
                 project_id, genome_version, user_email=user_email, family_guids=family_guids, project_guid=project_guid, **kwargs)
             if updated_saved_variants is None:
                 skipped[project_name] = True
@@ -82,38 +81,6 @@ def get_saved_variants(genome_version, project_id=None, family_guids=None, datas
     elif clickhouse_dataset_type:
         saved_variants = saved_variants.filter(dataset_type=clickhouse_dataset_type)
     return saved_variants
-
-
-def update_project_saved_variant_json(project_id, genome_version, family_guids=None, dataset_type=None, user=None, user_email=None, **kwargs):
-    saved_variants = get_saved_variants(genome_version, project_id, family_guids, dataset_type).select_related('family')
-
-    if not saved_variants:
-        return None
-
-    families = set()
-    variant_ids = set()
-    saved_variants_map = {}
-    for v in saved_variants:
-        families.add(v.family)
-        variant_ids.add(v.variant_id)
-        saved_variants_map[(v.variant_id, v.family.guid)] = v
-
-    variant_ids = sorted(variant_ids)
-    families = sorted(families, key=lambda f: f.guid)
-    variants_json = []
-    for sub_var_ids in [variant_ids[i:i+MAX_VARIANTS_FETCH] for i in range(0, len(variant_ids), MAX_VARIANTS_FETCH)]:
-        variants_json += get_variants_for_variant_ids(families, sub_var_ids, user=user, user_email=user_email)
-
-    updated_saved_variants = {}
-    for var in variants_json:
-        for family_guid in var['familyGuids']:
-            saved_variant = saved_variants_map.get((var['variantId'], family_guid))
-            if saved_variant:
-                saved_variant.saved_variant_json = var
-                updated_saved_variants[saved_variant.guid] = saved_variant
-    SavedVariant.bulk_update_models(user, list(updated_saved_variants.values()), ['saved_variant_json'])
-
-    return updated_saved_variants
 
 
 def saved_variants_dataset_type_filter(dataset_type):
