@@ -21,7 +21,7 @@ on:
 jobs:
   vlm_clickhouse:
     runs-on: ubuntu-latest
-    container: hailgenetics/hail:0.2.128  # TODO different image?
+    container: hailgenetics/hail:0.2.128
 
     services:
       clickhouse:
