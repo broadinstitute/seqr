@@ -266,7 +266,7 @@ def _get_es_indices(client):
 
 
 def get_es_variants_for_variant_ids(samples, genome_version, variant_ids, user):
-    variant_ids = list(set(variant_ids))
+    variant_ids = sorted(set(variant_ids))
     variants = EsSearch(
         samples, genome_version, user=user, sort=XPOS_SORT_KEY,
     ).filter_by_variant_ids(variant_ids)
