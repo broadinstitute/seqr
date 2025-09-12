@@ -39,7 +39,6 @@ def update_projects_saved_variant_json(projects, user_email, update_function=Non
     success = {}
     skipped = {}
     error = {}
-    updated_variants_by_id = {}
     logger.info(f'Reloading saved variants in {len(projects)} projects')
     for project_id, project_guid, project_name, genome_version, family_guids in tqdm(projects, unit=' project'):
         try:
@@ -51,7 +50,6 @@ def update_projects_saved_variant_json(projects, user_email, update_function=Non
                 success[project_name] = len(updated_saved_variants)
                 family_summary = f' in {len(family_guids)} families' if family_guids else ''
                 logger.info(f'Updated {len(updated_saved_variants)} variants{family_summary} for project {project_name}')
-                updated_variants_by_id.update({v.variant_id: v.saved_variant_json for v in updated_saved_variants.values()})
         except Exception as e:
             traceback_message = traceback.format_exc()
             logger.error(traceback_message)
@@ -68,7 +66,6 @@ def update_projects_saved_variant_json(projects, user_email, update_function=Non
         logger.info(f'{len(error)} failed projects')
     for k, v in error.items():
         logger.info(f'  {k}: {v}')
-    return updated_variants_by_id
 
 
 def get_saved_variants(genome_version, project_id=None, family_guids=None, dataset_type=None, clickhouse_dataset_type=None):
@@ -177,7 +174,7 @@ def bulk_create_tagged_variants(family_variant_data, tag_name, get_metadata, use
     new_variant_keys = set(family_variant_data.keys()) - set(saved_variant_map.keys())
     if new_variant_keys:
         new_variant_data = _search_new_saved_variants(new_variant_keys, user, genome_version) if load_new_variant_data else backend_specific_call(
-            lambda o, _: o, lambda o, _: o, _get_clickhouse_variant_keys,
+            lambda o, _: o, _get_clickhouse_variant_keys,
         )({k: v for k, v in family_variant_data.items() if k in new_variant_keys}, genome_version)
         new_variant_models = []
         for (family_id, variant_id), variant in new_variant_data.items():
@@ -196,7 +193,7 @@ def bulk_create_tagged_variants(family_variant_data, tag_name, get_metadata, use
     }
 
     variant_genes_by_id = backend_specific_call(
-        _get_saved_variant_genes, _get_saved_variant_genes, _get_clickhouse_saved_variant_genes,
+        _get_saved_variant_genes, _get_clickhouse_saved_variant_genes,
     )(saved_variant_map.values(), genome_version)
 
     update_tags = []
@@ -283,7 +280,7 @@ def _search_new_saved_variants(family_variant_ids: set[tuple[int, str]], user: U
 
     search_variants_by_id = {
         v['variantId']: v for v in backend_specific_call(
-            get_variants_for_variant_ids, get_variants_for_variant_ids, _get_clickhouse_variants,
+            get_variants_for_variant_ids, _get_clickhouse_variants,
         )(families=list(families_by_id.values()), variant_ids=list(variant_families.keys()), user=user, genome_version=genome_version)
     }
 
@@ -380,7 +377,7 @@ def _saved_variant_genes_transcripts(variants):
         for var in variant:
             for gene_id, transcripts in var.get('transcripts', {}).items():
                 gene_ids.add(gene_id)
-                if backend_specific_call(lambda v: True, _requires_transcript_metadata, _requires_transcript_metadata)(variant):
+                if backend_specific_call(lambda v: True, _requires_transcript_metadata)(variant):
                     transcript_ids.update([t['transcriptId'] for t in transcripts if t.get('transcriptId')])
             for family_guid in var['familyGuids']:
                 family_genes[family_guid].update(var.get('transcripts', {}).keys())
@@ -556,7 +553,7 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
                 response['familiesByGuid'][family_guid] = {}
             response['familiesByGuid'][family_guid].update(data)
 
-    backend_specific_call(lambda response: response, _add_sample_count_stats, _add_sample_count_stats)(response)
+    backend_specific_call(lambda response: response, _add_sample_count_stats)(response)
 
     return response
 

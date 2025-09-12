@@ -206,7 +206,7 @@ def get_elasticsearch_status():
 
     errors = ['{} does not exist and is used by project(s) {}'.format(
         index, ', '.join(['{} ({} samples)'.format(p.name, len(indivs)) for p, indivs in project_individuals.items()])
-    ) for index, project_individuals in seqr_index_projects.items() if project_individuals]
+    ) for index, project_individuals in sorted(seqr_index_projects.items()) if project_individuals]
 
     return {
         'indices': indices,

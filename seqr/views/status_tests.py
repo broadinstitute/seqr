@@ -7,7 +7,6 @@ from seqr.views.status import status_view
 from seqr.utils.search.elasticsearch.es_utils_tests import urllib3_responses
 
 
-@mock.patch('clickhouse_search.search.CLICKHOUSE_SERVICE_HOSTNAME', '')
 class StatusTest(object):
 
     def _test_status_error(self, url, mock_logger):
@@ -21,8 +20,9 @@ class StatusTest(object):
             mock.call('Database "clickhouse_write" connection error: No connection'),
             mock.call('Database "clickhouse" connection error: No connection'),
             mock.call('Redis connection error: Bad connection'),
-            mock.call(f'Search backend connection error: {self.SEARCH_BACKEND_ERROR}'),
         ]
+        if self.SEARCH_BACKEND_ERROR:
+            calls.append(mock.call(f'Search backend connection error: {self.SEARCH_BACKEND_ERROR}'))
         if self.HAS_KIBANA:
             calls.append(mock.call('Search Admin connection error: Kibana Error 400: Bad Request'))
         mock_logger.error.assert_has_calls(calls)
@@ -81,16 +81,14 @@ class ElasticsearchStatusTest(TestCase, StatusTest):
         self.assertListEqual([call.request.url for call in urllib3_responses.calls], ['/', '/status', '/', '/status'])
 
 
-class HailSearchStatusTest(TestCase, StatusTest):
+class ClickhouseStatusTest(TestCase, StatusTest):
 
-    SEARCH_BACKEND_ERROR = '400: Bad Request'
+    SEARCH_BACKEND_ERROR = None
     HAS_KIBANA = False
 
     @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', '')
-    @mock.patch('seqr.utils.search.hail_search_utils.HAIL_BACKEND_SERVICE_HOSTNAME', 'test-hail')
     def test_status(self, *args):
-        super(HailSearchStatusTest, self).test_status(*args)
+        super().test_status(*args)
 
     def _assert_expected_requests(self):
-        self.assertEqual(len(urllib3_responses.calls), 1)
-        self.assertEqual(urllib3_responses.calls[0].request.url, '/status')
+        self.assertEqual(len(urllib3_responses.calls), 0)

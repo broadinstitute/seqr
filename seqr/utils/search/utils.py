@@ -4,7 +4,7 @@ from datetime import timedelta
 from django.db.models import Count
 from pyliftover.liftover import LiftOver
 
-from clickhouse_search.search import clickhouse_backend_enabled, get_clickhouse_variants, format_clickhouse_results, \
+from clickhouse_search.search import get_clickhouse_variants, format_clickhouse_results, \
     get_clickhouse_cache_results, clickhouse_variant_lookup, get_clickhouse_variant_by_id
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample, Individual, Project
@@ -16,8 +16,6 @@ from seqr.utils.search.constants import XPOS_SORT_KEY, PRIORITIZED_GENE_SORT, RE
 from seqr.utils.search.elasticsearch.es_utils import ping_elasticsearch, delete_es_index, get_elasticsearch_status, \
     get_es_variants, get_es_variants_for_variant_ids, process_es_previously_loaded_results, process_es_previously_loaded_gene_aggs, \
     es_backend_enabled, ping_kibana, ES_EXCEPTION_ERROR_MAP, ES_EXCEPTION_MESSAGE_MAP, ES_ERROR_LOG_EXCEPTIONS
-from seqr.utils.search.hail_search_utils import get_hail_variants, get_hail_variants_for_variant_ids, ping_hail_backend, \
-    hail_variant_lookup
 from seqr.utils.gene_utils import parse_locus_list_items
 from seqr.utils.xpos_utils import get_xpos, format_chrom, MIN_POS, MAX_POS
 
@@ -62,26 +60,24 @@ def _raise_clickhouse_not_implemented(*args, **kwargs):
     raise NotImplementedError('Clickhouse backend is not implemented for this function.')
 
 
-def backend_specific_call(es_func, hail_backend_func, clickhouse_func):
+def backend_specific_call(es_func, clickhouse_func):
     if es_backend_enabled():
         return es_func
-    elif clickhouse_backend_enabled():
-        return clickhouse_func
     else:
-        return hail_backend_func
+        return clickhouse_func
 
 
 def ping_search_backend():
     # Clickhouse backend does not need special uptime testing, will be checked with the other database connection pings
-    backend_specific_call(ping_elasticsearch, ping_hail_backend, lambda: None)()
+    backend_specific_call(ping_elasticsearch, lambda: None)()
 
 
 def ping_search_backend_admin():
-    backend_specific_call(ping_kibana, lambda: True, lambda: True)()
+    backend_specific_call(ping_kibana, lambda: True)()
 
 
 def get_search_backend_status():
-    return backend_specific_call(get_elasticsearch_status, _raise_search_error('Elasticsearch is disabled'), _raise_search_error('Elasticsearch is disabled'))()
+    return backend_specific_call(get_elasticsearch_status, _raise_search_error('Elasticsearch is disabled'))()
 
 
 def _get_filtered_search_samples(search_filter, active_only=True):
@@ -132,7 +128,6 @@ def delete_search_backend_data(data_id):
 
     return backend_specific_call(
         delete_es_index, _raise_search_error('Deleting indices is disabled without the elasticsearch backend'),
-        _raise_search_error('Deleting indices is disabled without the elasticsearch backend'),
     )(data_id)
 
 
@@ -142,7 +137,6 @@ def get_single_variant(family, variant_id, user=None):
     samples = _get_families_search_data([family], dataset_type, sample_filter={'individual__family_id': family.id})
     variant = backend_specific_call(
         _process_ids_search(get_es_variants_for_variant_ids),
-        _process_ids_search(get_hail_variants_for_variant_ids),
         _get_clickhouse_variant_by_id,
     )(parsed_variant_id, variant_id, samples, family.project.genome_version, dataset_type, user)
     if not variant:
@@ -176,7 +170,7 @@ def get_variants_for_variant_ids(families, variant_ids, dataset_type=None, user=
         }
     dataset_type = _variant_ids_dataset_type(parsed_variant_ids.values())
 
-    return backend_specific_call(get_es_variants_for_variant_ids, get_hail_variants_for_variant_ids, _raise_clickhouse_not_implemented)(
+    return backend_specific_call(get_es_variants_for_variant_ids, _raise_clickhouse_not_implemented)(
         _get_families_search_data(families, dataset_type=dataset_type), _get_search_genome_version(families),
         parsed_variant_ids, user, user_email=user_email,
     )
@@ -202,7 +196,7 @@ def _validate_dataset_type_genome_version(dataset_type, genome_version):
 
 def variant_lookup(user, parsed_variant_id, **kwargs):
     dataset_type = DATASET_TYPES_LOOKUP[_variant_ids_dataset_type([parsed_variant_id])][0]
-    lookup_func = backend_specific_call(_raise_search_error('Lookup is disabled'), hail_variant_lookup, clickhouse_variant_lookup)
+    lookup_func = backend_specific_call(_raise_search_error('Lookup is disabled'), clickhouse_variant_lookup)
     return _variant_lookup(lookup_func, user, parsed_variant_id, **kwargs, dataset_type=dataset_type)
 
 
@@ -223,7 +217,7 @@ def _sv_variant_lookup(user, variant_id, dataset_type, samples, genome_version=N
     data_type = f'{dataset_type}_{sample_type}'
 
     lookup_samples = samples.filter(sample_type=sample_type)
-    lookup_func = backend_specific_call(_raise_search_error('Lookup is disabled'), hail_variant_lookup, clickhouse_variant_lookup)
+    lookup_func = backend_specific_call(_raise_search_error('Lookup is disabled'), clickhouse_variant_lookup)
     variant = lookup_func(user, variant_id, data_type, samples=lookup_samples, genome_version=genome_version, **kwargs)
     variants = [variant]
 
@@ -261,7 +255,7 @@ def _get_cached_search_results(search_model, sort=None, family_guid=None):
     results = safe_redis_get_json(cache_key)
     if not results:
         results = backend_specific_call(
-            lambda *args: None, lambda *args: None, _process_clickhouse_unsorted_cached_results,
+            lambda *args: None, _process_clickhouse_unsorted_cached_results,
         )(cache_key, sort, family_guid)
     return results or {}
 
@@ -287,14 +281,13 @@ def query_variants(search_model, sort=XPOS_SORT_KEY, skip_genotype_filter=False,
     loaded_results = previous_search_results.get('all_results') or []
     if len(loaded_results) >= end_index:
         results_page = backend_specific_call(
-            lambda results, genome_version: results, lambda results, genome_version: results, format_clickhouse_results,
+            lambda results, genome_version: results, format_clickhouse_results,
         )(loaded_results[start_index:end_index], genome_version)
         return results_page, total_results
 
     previously_loaded_results = backend_specific_call(
         process_es_previously_loaded_results,
         lambda *args: None,  # Other backends need no additional parsing
-        lambda *args: None,
     )(previous_search_results, start_index, end_index)
     if previously_loaded_results is not None:
         return previously_loaded_results, total_results
@@ -348,7 +341,7 @@ def _query_variants(search_model, user, previous_search_results, genome_version,
 
     parsed_search = {
         'parsed_locus': backend_specific_call(
-            lambda genome_version, **kwargs: kwargs, _parse_locus_intervals, _parse_locus_gene_intervals,
+            lambda genome_version, **kwargs: kwargs, _parse_locus_gene_intervals,
         )(genome_version, genes=genes, intervals=intervals, rs_ids=rs_ids, variant_ids=variant_ids,
           parsed_variant_ids=parsed_variant_ids, exclude_locations=exclude_locations),
     }
@@ -384,7 +377,7 @@ def _query_variants(search_model, user, previous_search_results, genome_version,
 
 
 def _execute_search(samples, parsed_search, user, previous_search_results, genome_version, **kwargs):
-    return backend_specific_call(get_es_variants, get_hail_variants, get_clickhouse_variants)(
+    return backend_specific_call(get_es_variants, get_clickhouse_variants)(
         samples, parsed_search, user, previous_search_results, genome_version, **kwargs,
     )
 
@@ -400,7 +393,6 @@ def get_variant_query_gene_counts(search_model, user):
     previously_loaded_results = backend_specific_call(
         process_es_previously_loaded_gene_aggs,
         lambda *args: None,  # Other backends need no additional parsing
-        lambda *args: None,
     )(previous_search_results)
     if previously_loaded_results is not None:
         return previously_loaded_results
@@ -408,27 +400,25 @@ def get_variant_query_gene_counts(search_model, user):
     genome_version = _get_search_genome_version(search_model.families.all())
     gene_counts, _ = _query_variants(search_model, user, previous_search_results, genome_version, gene_agg=True)
     gene_counts = backend_specific_call(
-        lambda *args: None, lambda *args: None, _get_gene_aggs_for_cached_variants,
+        lambda *args: None, _get_gene_aggs_for_cached_variants,
     )(previous_search_results) or gene_counts
     return gene_counts
 
 
 def _get_gene_aggs_for_cached_variants(previous_search_results):
     gene_aggs = defaultdict(lambda: {'total': 0, 'families': defaultdict(int)})
-    # ES caches compound hets separately from main results, hail search caches everything together
+    # ES caches compound hets separately from main results, other backends cache everything together
     flattened_variants = backend_specific_call(
         lambda results: results,
         lambda results: [v for variants in results for v in (variants if isinstance(variants, list) else [variants])],
-        lambda results: [v for variants in results for v in (variants if isinstance(variants, list) else [variants])],
     )(previous_search_results['all_results'])
     for var in flattened_variants:
-        # ES only reports breakdown for main transcript gene only, hail backend reports for all genes
+        # ES only reports breakdown for main transcript gene only, other backends report for all genes
         gene_ids = backend_specific_call(
             lambda variant: next((
                 [gene_id] for gene_id, transcripts in variant['transcripts'].items()
                 if any(t['transcriptId'] == var['mainTranscriptId'] for t in transcripts)
             ), []) if var['mainTranscriptId'] else [],
-            lambda variant: variant['transcripts'].keys(),
             lambda variant: variant['transcripts'].keys() if 'transcripts' in variant else {t['geneId'] for t in variant['sortedTranscriptConsequences']},
         )(var)
         for gene_id in gene_ids:
@@ -464,12 +454,12 @@ def _parse_variant_items(search_json):
 
 def parse_variant_id(variant_id):
     try:
-        return parse_valid_variant_id(variant_id)
+        return _parse_valid_variant_id(variant_id)
     except (KeyError, ValueError):
         return None
 
 
-def parse_valid_variant_id(variant_id):
+def _parse_valid_variant_id(variant_id):
     chrom, pos, ref, alt = variant_id.split('-')
     chrom = format_chrom(chrom)
     pos = int(pos)
@@ -579,7 +569,7 @@ def _validate_search(search, samples, previous_search_results):
                 )
 
     if not has_location_filter:
-        backend_specific_call(lambda *args: None, _validate_no_location_search, _validate_no_location_search)(samples)
+        backend_specific_call(lambda *args: None, _validate_no_location_search)(samples)
 
 
 MAX_FAMILY_COUNTS = {Sample.SAMPLE_TYPE_WES: 200, Sample.SAMPLE_TYPE_WGS: 35}
@@ -598,7 +588,7 @@ def _validate_no_location_search(samples):
 
 def _filter_inheritance_family_samples(samples, inheritance_filter):
     family_groups = defaultdict(set)
-    sample_group_field = backend_specific_call('elasticsearch_index', 'dataset_type', 'dataset_type')
+    sample_group_field = backend_specific_call('elasticsearch_index', 'dataset_type')
     individual_affected_status = inheritance_filter.get('affected') or {}
     genotype_filter = None if inheritance_filter.get(Individual.AFFECTED_STATUS_AFFECTED) else inheritance_filter.get('genotype')
     for sample in samples:
@@ -643,14 +633,6 @@ def _parse_locus_gene_intervals(genome_version, genes=None, intervals=None, rs_i
         'variant_ids': parsed_variant_ids,
         'rs_ids': rs_ids,
     }
-
-
-def _parse_locus_intervals(*args, **kwargs):
-    parsed_locus = _parse_locus_gene_intervals(*args, **kwargs)
-    gene_intervals = parsed_locus.pop('gene_intervals')
-    if gene_intervals:
-        parsed_locus['intervals'] = (parsed_locus['intervals'] or []) + sorted(gene_intervals.values())
-    return parsed_locus
 
 
 def _format_interval(chrom=None, start=None, end=None, offset=None, **kwargs):

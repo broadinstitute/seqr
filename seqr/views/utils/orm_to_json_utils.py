@@ -425,7 +425,6 @@ def get_json_for_saved_variants(saved_variants, add_details=False, additional_mo
         from seqr.utils.search.utils import backend_specific_call
         additional_fields += ['saved_variant_json'] + backend_specific_call(
             lambda x: [],
-            lambda x: [],
             lambda gv: ['key', 'genotypes', 'dataset_type'] + ([] if gv else ['family__project__genome_version']),
         )(genome_version)
 
@@ -436,7 +435,7 @@ def get_json_for_saved_variants(saved_variants, add_details=False, additional_mo
 
     if add_details:
         from seqr.utils.search.utils import backend_specific_call
-        backend_specific_call(lambda *args: None, lambda *args: None, _add_clickhouse_annotations)(results, genome_version)
+        backend_specific_call(lambda *args: None, _add_clickhouse_annotations)(results, genome_version)
         for result in results:
             result.update({k: v for k, v in result.pop('savedVariantJson').items() if k not in result})
 

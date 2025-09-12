@@ -12,35 +12,13 @@ on:
     paths:
       - 'vlm/**'
       - '.github/workflows/*vlm*.yaml'
-      - 'hail_search/fixtures/*'
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
       - 'vlm/**'
       - '.github/workflows/*vlm*.yaml'
-      - 'hail_search/fixtures/*'
 
 jobs:
-  vlm_hail_backend:
-    runs-on: ubuntu-latest
-    container: hailgenetics/hail:0.2.128
-
-    steps:
-      - uses: actions/checkout@v2
-      - name: Install dependencies
-        run: |
-          python3 -m pip install --upgrade pip wheel
-          pip install -r vlm/requirements-test.txt
-      - name: Run coverage tests
-        run: |
-          export VLM_DATA_DIR=./hail_search/fixtures
-          export SEQR_BASE_URL=https://test-seqr.org/
-          export NODE_ID=TestVLM
-          export MACHINE_MEM=24
-          export JAVA_OPTS_XSS=16M
-          coverage run --source="./vlm" --omit="./vlm/__main__.py","./vlm/setup_clickhouse_test_data.py","./vlm/clickhouse_utils.py" -m pytest vlm/
-          coverage report --fail-under=95
-
   vlm_clickhouse:
     runs-on: ubuntu-latest
     container: hailgenetics/hail:0.2.128
@@ -78,6 +56,6 @@ jobs:
           export CLICKHOUSE_VLM_USERNAME=vlm_test_user
           export CLICKHOUSE_VLM_PASSWORD=vlm_test_password
           export CLICKHOUSE_DATABASE=test_seqr
-          coverage run --source="./vlm" --omit="./vlm/__main__.py","./vlm/setup_clickhouse_test_data.py","./vlm/hail_backend_utils.py" -m pytest vlm/
+          coverage run --source="./vlm" --omit="./vlm/__main__.py","./vlm/setup_clickhouse_test_data.py" -m pytest vlm/
           coverage report --fail-under=95
 

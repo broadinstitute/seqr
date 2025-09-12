@@ -29,10 +29,6 @@ SELECTED_GENE_FIELD = 'selectedGeneId'
 SELECTED_TRANSCRIPT_FIELD = 'selectedTranscript'
 
 
-def clickhouse_backend_enabled():
-    return bool(CLICKHOUSE_SERVICE_HOSTNAME)
-
-
 def get_clickhouse_variants(samples, search, user, previous_search_results, genome_version,page=1, num_results=100, sort=None, **kwargs):
     sample_data_by_dataset_type = _get_sample_data(samples)
     results = []

@@ -226,8 +226,8 @@ TEST_INDEX_NO_PROJECT_EXPECTED_DICT = {
 }
 
 EXPECTED_ERRORS = [
+    'test_index_mito_wgs does not exist and is used by project(s) 1kg project n\xe5me with uni\xe7\xf8de (1 samples)',
     'test_index_old does not exist and is used by project(s) 1kg project n\xe5me with uni\xe7\xf8de (1 samples)',
-    'test_index_mito_wgs does not exist and is used by project(s) 1kg project n\xe5me with uni\xe7\xf8de (1 samples)'
 ]
 
 RNA_TPM_MUSCLE_SAMPLE_GUID = 'RS000162_T_na19675_d2'
@@ -2081,18 +2081,3 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         self.assertDictEqual(response.json(), {
             'error': 'The following samples are associated with misconfigured PDOs in Airtable: HG00731, NA21234',
         })
-
-@mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
-class HailBackendDataManagerAPITest(LocalDataManagerAPITest):
-    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
-
-    CLICKHOUSE_HOSTNAME = ''
-    ES_HOSTNAME = ''
-
-    def _assert_expected_es_status(self, response):
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()['error'], 'Elasticsearch is disabled')
-
-    def _assert_expected_delete_index_response(self, response):
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()['error'], 'Deleting indices is disabled without the elasticsearch backend')

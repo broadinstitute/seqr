@@ -1,3 +1,9 @@
+# Deprecated Installation using docker-compose
+
+This method of installing seqr is deprecated and will be supported through **March 1, 2026**.
+If you are setting up a new installation of seqr, do not use this method. 
+Instead, use **[helm](deploy/LOCAL_INSTALL_HELM.md)**
+
 ## Prerequisites
 - *Hardware:*  At least **16 Gb RAM**, **4 CPUs**, **50 Gb disk space**  
 
