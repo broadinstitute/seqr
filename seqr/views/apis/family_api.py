@@ -56,13 +56,13 @@ def family_page_data(request, family_guid):
     add_families_context(response, families, project.guid, request.user, is_analyst, has_case_review_perm)
     family_response = response['familiesByGuid'][family_guid]
 
-    additional_fields = backend_specific_call([],[],['key', 'dataset_type'])
+    additional_fields = backend_specific_call([],['key', 'dataset_type'])
     discovery_variants = family.savedvariant_set.filter(varianttag__variant_tag_type__category=DISCOVERY_CATEGORY).values(
         'xpos', 'xpos_end', *additional_fields,
         svType=F('saved_variant_json__svType'), transcripts=F('saved_variant_json__transcripts'),
     )
     gene_ids = backend_specific_call(
-        _variants_gene_ids, _variants_gene_ids, _clickhouse_variants_gene_ids,
+        _variants_gene_ids, _clickhouse_variants_gene_ids,
     )(discovery_variants, project.genome_version, request.user)
     discovery_variant_intervals = [dict(zip(
         ['chrom', 'start', 'end_chrom', 'end', 'svType', 'hasSvType'],

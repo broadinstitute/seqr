@@ -2081,18 +2081,3 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         self.assertDictEqual(response.json(), {
             'error': 'The following samples are associated with misconfigured PDOs in Airtable: HG00731, NA21234',
         })
-
-@mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
-class HailBackendDataManagerAPITest(LocalDataManagerAPITest):
-    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
-
-    CLICKHOUSE_HOSTNAME = ''
-    ES_HOSTNAME = ''
-
-    def _assert_expected_es_status(self, response):
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()['error'], 'Elasticsearch is disabled')
-
-    def _assert_expected_delete_index_response(self, response):
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()['error'], 'Deleting indices is disabled without the elasticsearch backend')

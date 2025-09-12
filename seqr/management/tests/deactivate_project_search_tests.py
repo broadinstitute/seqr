@@ -98,10 +98,3 @@ class ClickhouseDeactivateProjectSearchTest(AnvilAuthenticationTestCase, Deactiv
             7: (0, 0, 0, 0),
             8: (0, 0, 0, 0),
         })
-
-
-class HailBackendDeactivateProjectSearchTest(AuthenticationTestCase, DeactivateProjectSearchTest):
-    fixtures = ['users', '1kg_project']
-
-    CLICKHOUSE_HOSTNAME = ''
-    ES_HOSTNAME = ''

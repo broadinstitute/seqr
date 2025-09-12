@@ -50,8 +50,9 @@ class ElasticsearchStatusTest(TestCase):
             mock.call('Database "clickhouse_write" connection error: connection already closed'),
             mock.call('Database "clickhouse" connection error: connection already closed'),
             mock.call('Redis connection error: Bad connection'),
-            mock.call(f'Search backend connection error: {self.SEARCH_BACKEND_ERROR}'),
         ]
+        if self.SEARCH_BACKEND_ERROR:
+            calls.append(mock.call(f'Search backend connection error: {self.SEARCH_BACKEND_ERROR}'))
         if self.HAS_KIBANA:
             calls.append(mock.call('Search Admin connection error: Kibana Error 400: Bad Request'))
         mock_logger.error.assert_has_calls(calls)
@@ -88,11 +89,11 @@ class ElasticsearchStatusTest(TestCase):
         self.assertListEqual([call.request.url for call in urllib3_responses.calls], ['/', '/status', '/', '/status'])
 
 
-class HailSearchStatusTest(ElasticsearchStatusTest):
-    SEARCH_BACKEND_ERROR = '400: Bad Request'
+class ClickhouseStatusTest(ElasticsearchStatusTest):
+
+    SEARCH_BACKEND_ERROR = None
     HAS_KIBANA = False
     ES_HOSTNAME = ''
 
     def _assert_expected_requests(self):
-        self.assertEqual(len(urllib3_responses.calls), 1)
-        self.assertEqual(urllib3_responses.calls[0].request.url, '/status')
+        self.assertEqual(len(urllib3_responses.calls), 0)

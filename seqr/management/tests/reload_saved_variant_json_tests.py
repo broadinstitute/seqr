@@ -10,7 +10,7 @@ PROJECT_GUID = 'R0001_1kg'
 FAMILY_GUID = 'F000001_1'
 
 
-@mock.patch('clickhouse_search.search.CLICKHOUSE_SERVICE_HOSTNAME', '')
+@mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', 'testhost')
 class ReloadSavedVariantJsonTest(TestCase):
     fixtures = ['users', '1kg_project']
 

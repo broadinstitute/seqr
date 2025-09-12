@@ -127,7 +127,7 @@ def _create_variant_note(saved_variants, note_json, user, genome_version):
 
     response = {}
     if note_json.get('saveAsGeneNote'):
-        gene_id = backend_specific_call(_variant_gene_id, _variant_gene_id, _clickhouse_variant_gene_id)(saved_variants[0], genome_version)
+        gene_id = backend_specific_call(_variant_gene_id, _clickhouse_variant_gene_id)(saved_variants[0], genome_version)
         create_model_from_json(GeneNote, {'note': note_json.get('note'), 'gene_id': gene_id}, user)
         response['genesById'] = {gene_id: {
             'notes': get_json_for_gene_notes_by_gene_id([gene_id], user)[gene_id],
@@ -320,7 +320,7 @@ def _update_tags(saved_variants, tags_json, user, tag_key='tags', model_cls=Vari
 
 @login_and_policies_required
 def update_saved_variant_json(request, project_guid):
-    backend_specific_call(lambda: True, _backend_error, _backend_error)()
+    backend_specific_call(lambda: True, _backend_error)()
     project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
     reset_cached_search_results(project)
     try:

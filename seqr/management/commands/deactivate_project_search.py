@@ -26,7 +26,7 @@ class Command(BaseCommand):
             dataset_types = Sample.objects.filter(guid__in=updated).values_list('dataset_type', 'sample_type').order_by('dataset_type').distinct()
             for dataset_type, sample_type in dataset_types:
                 backend_specific_call(
-                    lambda *args, **kwargs: True, lambda *args, **kwargs: True, self._delete_clickhouse_project,
+                    lambda *args, **kwargs: True, self._delete_clickhouse_project,
                 )(project, dataset_type, sample_type)
 
     @staticmethod

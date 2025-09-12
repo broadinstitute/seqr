@@ -126,7 +126,7 @@ def families_discovery_tags(families, genome_version, project=None):
         transcripts=F('saved_variant_json__transcripts'), mainTranscriptId=F('saved_variant_json__mainTranscriptId'),
     )}
     try:
-        backend_specific_call(lambda *args: None, lambda *args: None, _add_clickhouse_transcripts)(discovery_tags_by_key, genome_version)
+        backend_specific_call(lambda *args: None, _add_clickhouse_transcripts)(discovery_tags_by_key, genome_version)
     except Exception as e:
         logger.error(f'Error loading discovery genes from clickhouse: {e}', None)
 

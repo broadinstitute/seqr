@@ -451,7 +451,7 @@ def _trigger_data_update(clickhouse_func, request_json, project, *args):
     info = []
     for sample_type in sample_types:
         info.append(backend_specific_call(
-            _raise_backend_not_implemented, _raise_backend_not_implemented, clickhouse_func,
+            _raise_backend_not_implemented, clickhouse_func,
         )(project, *args, dataset_type=dataset_type, sample_type=sample_type))
     return create_json_response({'info': info})
 

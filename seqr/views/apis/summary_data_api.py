@@ -117,7 +117,6 @@ def saved_variants_page(request, tag):
     if gene:
         gene_filter = Q(saved_variant_json__transcripts__has_key=gene) | backend_specific_call(
             lambda *args: Q(),
-            lambda *args: Q(),
             _saved_variant_with_clickhouse_gene_q,
         )(saved_variant_models, gene, is_all_tags)
         saved_variant_models = saved_variant_models.filter(gene_filter)

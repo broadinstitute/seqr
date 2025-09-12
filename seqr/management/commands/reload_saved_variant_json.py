@@ -20,7 +20,7 @@ class Command(BaseCommand):
         parser.add_argument('--family-guid', help='optional family to reload variants for')
 
     def handle(self, *args, **options):
-        backend_specific_call(lambda: True, lambda: True, _clickhouse_error)()
+        backend_specific_call(lambda: True, _clickhouse_error)()
         projects_to_process = options['projects']
         family_guid = options['family_guid']
 

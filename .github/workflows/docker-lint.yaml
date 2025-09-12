@@ -9,7 +9,6 @@ on:
       - master
     paths:
       - deploy/docker/seqr/Dockerfile
-      - hail_search/deploy/Dockerfile
       - vlm/deploy/Dockerfile
       - .hadolint.yaml
       - .docker-compose.yaml
@@ -21,7 +20,6 @@ on:
       - master
     paths:
       - deploy/docker/seqr/Dockerfile
-      - hail_search/deploy/Dockerfile
       - vlm/deploy/Dockerfile
       - .hadolint.yaml
       - .docker-compose.yaml
@@ -37,9 +35,6 @@ jobs:
       - uses: hadolint/hadolint-action@v1.5.0
         with:
           dockerfile: deploy/docker/seqr/Dockerfile
-      - uses: hadolint/hadolint-action@v1.5.0
-        with:
-          dockerfile: hail_search/deploy/Dockerfile
       - uses: hadolint/hadolint-action@v1.5.0
         with:
           dockerfile: vlm/deploy/Dockerfile

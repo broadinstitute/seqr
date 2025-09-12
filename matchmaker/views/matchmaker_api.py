@@ -54,11 +54,11 @@ def get_individual_mme_matches(request, submission_guid):
         SavedVariant.objects.filter(family=submission.individual.family), genome_version=project.genome_version, additional_values={
             'genomeVersion': Coalesce('saved_variant_json__genomeVersion', Value(project.genome_version), output_field=CharField()),
             'transcripts': F('saved_variant_json__transcripts'),
-        }, additional_model_fields=backend_specific_call([], [], ['key', 'genotypes']),
+        }, additional_model_fields=backend_specific_call([], ['key', 'genotypes']),
     )
 
     variants = response_json['savedVariantsByGuid'].values()
-    backend_specific_call(lambda *args: None, lambda *args: None, _add_clickhouse_transcripts)(
+    backend_specific_call(lambda *args: None, _add_clickhouse_transcripts)(
         variants, project.genome_version, request.user,
     )
 

@@ -8,16 +8,12 @@ on:
       - master
       - dev
     paths-ignore:
-      - 'hail_search/**'
       - 'vlm/**'
-      - '.github/workflows/*hail-search*.yaml'
       - '.github/workflows/*vlm*.yaml'
   pull_request:
     types: [opened, synchronize, reopened]
     paths-ignore:
-      - 'hail_search/**'
       - 'vlm/**'
-      - '.github/workflows/*hail-search*.yaml'
       - '.github/workflows/*vlm*.yaml'
 
 jobs:
@@ -73,11 +69,6 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-      - uses: actions/setup-java@v1
-        with:
-          java-version: "8" # The JDK version needed by hail
-          java-package: jdk # (jre, jdk, or jdk+fx) - defaults to jdk
-          architecture: x64 # (x64 or x86) - defaults to x64
       - name: Use pip cache
         uses: actions/cache@v4
         with:
