@@ -15,7 +15,8 @@ from matchmaker.models import MatchmakerSubmissionGenes, MatchmakerSubmission
 from reference_data.models import TranscriptInfo, Omim, GENOME_VERSION_GRCh38
 from seqr.models import SavedVariant, VariantSearchResults, Family, LocusList, LocusListInterval, LocusListGene, \
     RnaSeqTpm, PhenotypePrioritization, Project, Sample, RnaSample, VariantTag, VariantTagType
-from seqr.utils.search.utils import get_variants_for_variant_ids, backend_specific_call, parse_variant_id
+from seqr.utils.search.elasticsearch.es_utils import get_es_variants_for_variant_ids
+from seqr.utils.search.utils import backend_specific_call, parse_variant_id
 from seqr.utils.gene_utils import get_genes_for_variants
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.xpos_utils import get_xpos
@@ -245,10 +246,11 @@ def _search_new_saved_variants(family_variant_ids: set[tuple[int, str]], user: U
         variant_families[variant_id].append(family_id)
     families_by_id = {f.id: f for f in Family.objects.filter(id__in=family_ids)}
 
+    samples = Sample.objects.filter(is_active=True, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
     search_variants_by_id = {
         v['variantId']: v for v in backend_specific_call(
-            get_variants_for_variant_ids, _get_clickhouse_variants,
-        )(families=list(families_by_id.values()), variant_ids=list(variant_families.keys()), user=user, genome_version=genome_version)
+            _get_es_variants, _get_clickhouse_variants,
+        )(samples, families_by_id=families_by_id, variant_ids=list(variant_families.keys()), user=user, genome_version=genome_version)
     }
 
     new_variants = {}
@@ -271,14 +273,18 @@ def _search_new_saved_variants(family_variant_ids: set[tuple[int, str]], user: U
     return new_variants
 
 
-def _get_clickhouse_variants(families: list[Family], variant_ids: list[str], genome_version: str = None, **kwargs) -> list[dict]:
+def _get_es_variants(samples: Sample.objects, families_by_id: dict[int, Family], *args, **kwargs):
+    return get_es_variants_for_variant_ids(samples.filter(individual__family_id__in=families_by_id.keys()), *args, **kwargs)
+
+
+def _get_clickhouse_variants(samples: Sample.objects, families_by_id: dict[int, Family], variant_ids: list[str], genome_version: str = None, **kwargs) -> list[dict]:
     variant_key_map = get_clickhouse_key_lookup(genome_version, Sample.DATASET_TYPE_VARIANT_CALLS, variant_ids, reverse=True)
+    families = list(families_by_id.values())
     prefetch_related_objects(families, 'project')
     families_by_project = defaultdict(list)
     for family in families:
         families_by_project[family.project.guid].append(family.guid)
     variants = []
-    samples = Sample.objects.filter(is_active=True, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
     for project_guid, family_guids in families_by_project.items():
         genotype_keys = get_clickhouse_genotypes(
             project_guid, family_guids, genome_version, Sample.DATASET_TYPE_VARIANT_CALLS, variant_key_map.keys(), samples,

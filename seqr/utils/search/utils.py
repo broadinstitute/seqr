@@ -136,43 +136,22 @@ def get_single_variant(family, variant_id, user=None):
     dataset_type = _variant_ids_dataset_type([parsed_variant_id])
     samples = _get_families_search_data([family], dataset_type, sample_filter={'individual__family_id': family.id})
     variant = backend_specific_call(
-        _process_ids_search(get_es_variants_for_variant_ids),
+        _get_es_variant_by_id,
         _get_clickhouse_variant_by_id,
-    )(parsed_variant_id, variant_id, samples, family.project.genome_version, dataset_type, user)
+    )(parsed_variant_id, variant_id, samples, family.project.genome_version, dataset_type=dataset_type, user=user)
     if not variant:
         raise InvalidSearchException('Variant {} not found'.format(variant_id))
     return variant
 
 
-def _process_ids_search(search_func):
-    def _search(parsed_variant_id, variant_id, samples, genome_version, dataset_type, user):
-        variants = search_func(samples, genome_version, {variant_id: parsed_variant_id}, user)
-        return variants[0] if variants else None
-    return _search
+def _get_es_variant_by_id(parsed_variant_id, variant_id, samples, genome_version, user=None, **kwargs):
+    variants = get_es_variants_for_variant_ids(samples, genome_version, [variant_id], user)
+    return variants[0] if variants else None
 
 
-def _get_clickhouse_variant_by_id(parsed_variant_id, variant_id, samples, genome_version, dataset_type, user):
+def _get_clickhouse_variant_by_id(parsed_variant_id, variant_id, samples, genome_version, dataset_type=None, **kwargs):
     return get_clickhouse_variant_by_id(
         parsed_variant_id or variant_id, samples, genome_version, DATASET_TYPES_LOOKUP[dataset_type][0],
-    )
-
-
-def get_variants_for_variant_ids(families, variant_ids, dataset_type=None, user=None, user_email=None, **kwargs):
-    parsed_variant_ids = {}
-    for variant_id in variant_ids:
-        parsed_variant_ids[variant_id] = parse_variant_id(variant_id)
-
-    if dataset_type:
-        parsed_variant_ids = {
-            k: v for k, v in parsed_variant_ids.items()
-            if (dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS and v) or
-               (dataset_type != Sample.DATASET_TYPE_VARIANT_CALLS and not v)
-        }
-    dataset_type = _variant_ids_dataset_type(parsed_variant_ids.values())
-
-    return backend_specific_call(get_es_variants_for_variant_ids, _raise_clickhouse_not_implemented)(
-        _get_families_search_data(families, dataset_type=dataset_type), _get_search_genome_version(families),
-        parsed_variant_ids, user, user_email=user_email,
     )
 
 

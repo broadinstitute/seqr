@@ -10,7 +10,7 @@ from seqr.utils.search.constants import VCF_FILE_EXTENSIONS, XPOS_SORT_KEY
 from seqr.utils.search.elasticsearch.es_gene_agg_search import EsGeneAggSearch
 from seqr.utils.search.elasticsearch.es_search import EsSearch, get_compound_het_page
 from seqr.views.utils.json_utils import  _to_camel_case
-from seqr.views.utils.variant_utils import get_variants_for_variant_ids, get_saved_variants
+from seqr.views.utils.variant_utils import get_saved_variants
 from settings import ELASTICSEARCH_SERVICE_HOSTNAME, ELASTICSEARCH_SERVICE_PORT, ELASTICSEARCH_CREDENTIALS, \
     ELASTICSEARCH_PROTOCOL, ES_SSL_CONTEXT, KIBANA_SERVER
 
@@ -266,11 +266,12 @@ def _get_es_indices(client):
     return indices, seqr_index_projects
 
 
-def get_es_variants_for_variant_ids(samples, genome_version, variants_by_id, user, return_all_queried_families=False, **kwargs):
+def get_es_variants_for_variant_ids(samples, genome_version, variant_ids, user):
+    variant_ids = list(set(variant_ids))
     variants = EsSearch(
-        samples, genome_version, user=user, return_all_queried_families=return_all_queried_families, sort=XPOS_SORT_KEY,
-    ).filter_by_variant_ids(list(variants_by_id.keys()))
-    return variants.search(num_results=len(variants_by_id))
+        samples, genome_version, user=user, sort=XPOS_SORT_KEY,
+    ).filter_by_variant_ids(variant_ids)
+    return variants.search(num_results=len(variant_ids))
 
 
 def get_es_variants(samples, search, user, previous_search_results, genome_version, sort=None, page=None, num_results=None,
@@ -335,25 +336,25 @@ def process_es_previously_loaded_gene_aggs(previous_search_results):
     return gene_aggs
 
 
-def update_project_saved_variant_json(project_id, genome_version, family_guids=None, dataset_type=None, user=None, user_email=None, **kwargs):
-    saved_variants = get_saved_variants(genome_version, project_id, family_guids, dataset_type).select_related('family')
+def update_project_saved_variant_json(project_id, genome_version, family_guids=None, user=None, **kwargs):
+    saved_variants = get_saved_variants(genome_version, project_id, family_guids).select_related('family')
 
     if not saved_variants:
         return None
 
-    families = set()
+    family_ids = set()
     variant_ids = set()
     saved_variants_map = {}
     for v in saved_variants:
-        families.add(v.family)
+        family_ids.add(v.family_id)
         variant_ids.add(v.variant_id)
         saved_variants_map[(v.variant_id, v.family.guid)] = v
 
     variant_ids = sorted(variant_ids)
-    families = sorted(families, key=lambda f: f.guid)
+    samples = Sample.objects.filter(individual__family_id__in=family_ids, is_active=True)
     variants_json = []
     for sub_var_ids in [variant_ids[i:i+MAX_VARIANTS_FETCH] for i in range(0, len(variant_ids), MAX_VARIANTS_FETCH)]:
-        variants_json += get_variants_for_variant_ids(families, sub_var_ids, user=user, user_email=user_email)
+        variants_json += get_es_variants_for_variant_ids(samples, genome_version, sub_var_ids, user)
 
     updated_saved_variants = {}
     for var in variants_json:
