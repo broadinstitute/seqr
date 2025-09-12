@@ -12,7 +12,7 @@ from matchmaker.views.matchmaker_api import get_individual_mme_matches, search_i
     update_mme_submission, delete_mme_submission, update_mme_result_status, send_mme_contact_email, \
     get_mme_nodes, search_local_individual_mme_matches, finalize_mme_search, \
     update_mme_contact_note, update_mme_project_contact
-from seqr.views.utils.test_utils import AuthenticationTestCase
+from seqr.views.utils.test_utils import AuthenticationTestCase, SAVED_VARIANT_FIELDS
 
 INDIVIDUAL_GUID = 'I000001_na19675'
 SUBMISSION_GUID = 'MS000001_na19675'
@@ -230,6 +230,8 @@ class MatchmakerAPITest(AuthenticationTestCase):
             set(response_json['savedVariantsByGuid'].keys()),
             {'SV0000001_2103343353_r0390_100', 'SV0059957_11562437_f019313_1', 'SV0059956_11560662_f019313_1'}
         )
+        saved_variant_fields = {*SAVED_VARIANT_FIELDS, 'chrom', 'pos', 'transcripts', 'genomeVersion', 'noteGuids', 'functionalDataGuids', 'tagGuids'}
+        self.assertSetEqual(set(response_json['savedVariantsByGuid']['SV0000001_2103343353_r0390_100'].keys()), saved_variant_fields)
         self.assertDictEqual(response_json['mmeContactNotes'], {})
 
         # users should see originating query for results if the have correct project permissions
