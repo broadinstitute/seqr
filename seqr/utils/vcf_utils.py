@@ -82,25 +82,20 @@ def validate_vcf_and_get_samples(data_path, user, genome_version, path_name=None
         return None
 
     byte_range = None if vcf_filename.endswith('.vcf') else (0, BLOCK_SIZE)
-    samples = {}
-    header = []
     meta = defaultdict(dict)
-    for line in file_iter(vcf_filename, byte_range=byte_range):
-        line_str = line.decode() if isinstance(line, bytes) else line
-        if line_str.startswith('#'):
-            if line_str.startswith('#CHROM'):
-                header_cols = line_str.rstrip().split('\t')
-                format_indices = [index for index, col in enumerate(header_cols) if col == 'FORMAT']
-                format_index = format_indices[0] + 1 if format_indices else len(header_cols)
-                header = header_cols[0:format_index]
-                samples = set(header_cols[format_index:])
-                break
-            else:
-                meta_info = _get_vcf_meta_info(line_str)
-                if meta_info:
-                    meta[meta_info['field']].update({meta_info['id']: meta_info['type']})
-        else:
-            raise ErrorsWarningsException(['No header found in the VCF file.'], [])
+    try:
+        header_line = next(_get_vcf_header_line(file_iter(vcf_filename, byte_range=byte_range), meta))
+    except StopIteration:
+        raise ErrorsWarningsException(['No header found in the VCF file.'], [])
+    except UnicodeDecodeError:
+        raise ErrorsWarningsException([
+            'Unable to read the VCF file. This often occurs when a file is improperly gzipped, or when the file extension does not align with the file type (i.e. a .gz file that is not actually gzipped)'
+        ], [])
+    header_cols = header_line.rstrip().split('\t')
+    format_indices = [index for index, col in enumerate(header_cols) if col == 'FORMAT']
+    format_index = format_indices[0] + 1 if format_indices else len(header_cols)
+    header = header_cols[0:format_index]
+    samples = set(header_cols[format_index:])
 
     _validate_vcf_header(header)
     if not samples:
@@ -108,6 +103,18 @@ def validate_vcf_and_get_samples(data_path, user, genome_version, path_name=None
     _validate_vcf_meta(meta, genome_version, dataset_type)
 
     return samples
+
+
+def _get_vcf_header_line(vcf_file, meta):
+    for line in vcf_file:
+        line_str = line.decode() if isinstance(line, bytes) else line
+        if line_str.startswith('#'):
+            if line_str.startswith('#CHROM'):
+                yield line_str
+            else:
+                meta_info = _get_vcf_meta_info(line_str)
+                if meta_info:
+                    meta[meta_info['field']].update({meta_info['id']: meta_info['type']})
 
 
 def _validate_vcf_exists(data_path, user, path_name, allowed_exts):

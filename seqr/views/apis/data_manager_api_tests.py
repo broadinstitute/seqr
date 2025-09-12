@@ -226,8 +226,8 @@ TEST_INDEX_NO_PROJECT_EXPECTED_DICT = {
 }
 
 EXPECTED_ERRORS = [
+    'test_index_mito_wgs does not exist and is used by project(s) 1kg project n\xe5me with uni\xe7\xf8de (1 samples)',
     'test_index_old does not exist and is used by project(s) 1kg project n\xe5me with uni\xe7\xf8de (1 samples)',
-    'test_index_mito_wgs does not exist and is used by project(s) 1kg project n\xe5me with uni\xe7\xf8de (1 samples)'
 ]
 
 RNA_TPM_MUSCLE_SAMPLE_GUID = 'RS000162_T_na19675_d2'
@@ -1507,7 +1507,7 @@ class DataManagerAPITest(AirtableTest):
         if has_gene_id_file:
             mock_gzip_open.assert_not_called()
         else:
-            mock_gzip_open.assert_called_once_with(f'{self.LOCAL_WRITE_DIR}/db_id_to_gene_id.csv.gz', 'w')
+            mock_gzip_open.assert_called_once_with(f'{self.LOCAL_WRITE_DIR}/db_id_to_gene_id.csv.gz', 'wt')
             file = [
                 row.split(',') for row in mock_gzip_open.return_value.__enter__.return_value.write.call_args.args[0].split('\n')
             ]

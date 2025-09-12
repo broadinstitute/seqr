@@ -114,5 +114,7 @@ jobs:
       - run: npm install -g npm@7.24.2
       - run: npm ci
         working-directory: ./ui
+      - run: npm run lint
+        working-directory: ./ui
       - run: npm test
         working-directory: ./ui

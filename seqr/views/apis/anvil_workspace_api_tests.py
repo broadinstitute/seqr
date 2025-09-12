@@ -369,6 +369,14 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
             mock.call('==> gsutil cat -r 0-65536 gs://test_bucket/test_path.vcf.gz | gunzip -c -q - ', None),
         ])
 
+        # test improperly encoded file
+        mock_subprocess.return_value.stdout = [b'\x80']
+        response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_GZ_DATA_PATH))
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(response.json()['errors'], [
+            'Unable to read the VCF file. This often occurs when a file is improperly gzipped, or when the file extension does not align with the file type (i.e. a .gz file that is not actually gzipped)',
+        ])
+
         # test header errors
         mock_subprocess.return_value.stdout = BASIC_META + BAD_INFO_META + BAD_FORMAT_META + BAD_HEADER_LINE + DATA_LINES
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_GZ_DATA_PATH))
@@ -800,7 +808,7 @@ class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
             '\n'.join(['\t'.join(row) for row in [header] + rows])
         )
 
-        self.mock_gzip_temp_open.assert_called_with(f'{TEMP_PATH}/db_id_to_gene_id.csv.gz', 'w')
+        self.mock_gzip_temp_open.assert_called_with(f'{TEMP_PATH}/db_id_to_gene_id.csv.gz', 'wt')
         gene_file = self.mock_gzip_temp_open.return_value.__enter__.return_value.write.call_args.args[0].split('\n')
         self.assertEqual(len(gene_file), 52)
         self.assertListEqual(gene_file[:3], ['db_id,gene_id', '1,ENSG00000223972', '2,ENSG00000227232'])
