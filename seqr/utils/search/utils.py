@@ -13,7 +13,7 @@ from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_get_wildcard_
 from seqr.utils.search.constants import XPOS_SORT_KEY, PRIORITIZED_GENE_SORT, RECESSIVE, COMPOUND_HET, \
     MAX_NO_LOCATION_COMP_HET_FAMILIES, SV_ANNOTATION_TYPES, ALL_DATA_TYPES, MAX_EXPORT_VARIANTS, X_LINKED_RECESSIVE, \
     MAX_VARIANTS
-from seqr.utils.search.elasticsearch.es_utils import ping_elasticsearch, delete_es_index, get_elasticsearch_status, \
+from seqr.utils.search.elasticsearch.es_utils import ping_elasticsearch, \
     get_es_variants, get_es_variants_for_variant_ids, process_es_previously_loaded_results, process_es_previously_loaded_gene_aggs, \
     es_backend_enabled, ping_kibana, ES_EXCEPTION_ERROR_MAP, ES_EXCEPTION_MESSAGE_MAP, ES_ERROR_LOG_EXCEPTIONS
 from seqr.utils.gene_utils import parse_locus_list_items
@@ -56,8 +56,20 @@ def _raise_search_error(error):
     return _wrapped
 
 
-def _raise_clickhouse_not_implemented(*args, **kwargs):
-    raise NotImplementedError('Clickhouse backend is not implemented for this function.')
+def es_only(func):
+    def _wrapped(*args, **kwargs):
+        if not es_backend_enabled():
+            raise ValueError(f'{func.__name__} is disabled without the elasticsearch backend')
+        return func(*args, **kwargs)
+    return _wrapped
+
+
+def clickhouse_only(func):
+    def _wrapped(*args, **kwargs):
+        if es_backend_enabled():
+            raise ValueError(f'{func.__name__} is disabled without the clickhouse backend')
+        return func(*args, **kwargs)
+    return _wrapped
 
 
 def backend_specific_call(es_func, clickhouse_func):
@@ -74,10 +86,6 @@ def ping_search_backend():
 
 def ping_search_backend_admin():
     backend_specific_call(ping_kibana, lambda: True)()
-
-
-def get_search_backend_status():
-    return backend_specific_call(get_elasticsearch_status, _raise_search_error('Elasticsearch is disabled'))()
 
 
 def _get_filtered_search_samples(search_filter, active_only=True):
@@ -120,59 +128,27 @@ def _get_search_genome_version(families):
     return next(iter(project_versions.keys()))
 
 
-def delete_search_backend_data(data_id):
-    active_samples = Sample.objects.filter(is_active=True, elasticsearch_index=data_id)
-    if active_samples:
-        projects = set(active_samples.values_list('individual__family__project__name', flat=True))
-        raise InvalidSearchException(f'"{data_id}" is still used by: {", ".join(projects)}')
-
-    return backend_specific_call(
-        delete_es_index, _raise_search_error('Deleting indices is disabled without the elasticsearch backend'),
-    )(data_id)
-
-
 def get_single_variant(family, variant_id, user=None):
     parsed_variant_id = parse_variant_id(variant_id)
     dataset_type = _variant_ids_dataset_type([parsed_variant_id])
     samples = _get_families_search_data([family], dataset_type, sample_filter={'individual__family_id': family.id})
     variant = backend_specific_call(
-        _process_ids_search(get_es_variants_for_variant_ids),
+        _get_es_variant_by_id,
         _get_clickhouse_variant_by_id,
-    )(parsed_variant_id, variant_id, samples, family.project.genome_version, dataset_type, user)
+    )(parsed_variant_id, variant_id, samples, family.project.genome_version, dataset_type=dataset_type, user=user)
     if not variant:
         raise InvalidSearchException('Variant {} not found'.format(variant_id))
     return variant
 
 
-def _process_ids_search(search_func):
-    def _search(parsed_variant_id, variant_id, samples, genome_version, dataset_type, user):
-        variants = search_func(samples, genome_version, {variant_id: parsed_variant_id}, user)
-        return variants[0] if variants else None
-    return _search
+def _get_es_variant_by_id(parsed_variant_id, variant_id, samples, genome_version, user=None, **kwargs):
+    variants = get_es_variants_for_variant_ids(samples, genome_version, [variant_id], user)
+    return variants[0] if variants else None
 
 
-def _get_clickhouse_variant_by_id(parsed_variant_id, variant_id, samples, genome_version, dataset_type, user):
+def _get_clickhouse_variant_by_id(parsed_variant_id, variant_id, samples, genome_version, dataset_type=None, **kwargs):
     return get_clickhouse_variant_by_id(
         parsed_variant_id or variant_id, samples, genome_version, DATASET_TYPES_LOOKUP[dataset_type][0],
-    )
-
-
-def get_variants_for_variant_ids(families, variant_ids, dataset_type=None, user=None, user_email=None, **kwargs):
-    parsed_variant_ids = {}
-    for variant_id in variant_ids:
-        parsed_variant_ids[variant_id] = parse_variant_id(variant_id)
-
-    if dataset_type:
-        parsed_variant_ids = {
-            k: v for k, v in parsed_variant_ids.items()
-            if (dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS and v) or
-               (dataset_type != Sample.DATASET_TYPE_VARIANT_CALLS and not v)
-        }
-    dataset_type = _variant_ids_dataset_type(parsed_variant_ids.values())
-
-    return backend_specific_call(get_es_variants_for_variant_ids, _raise_clickhouse_not_implemented)(
-        _get_families_search_data(families, dataset_type=dataset_type), _get_search_genome_version(families),
-        parsed_variant_ids, user, user_email=user_email,
     )
 
 

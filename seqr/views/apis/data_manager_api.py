@@ -16,7 +16,8 @@ from requests.exceptions import ConnectionError as RequestConnectionError
 from clickhouse_search.search import delete_clickhouse_project, delete_clickhouse_family
 from seqr.utils.communication_utils import send_project_notification
 from seqr.utils.search.add_data_utils import prepare_data_loading_request, get_loading_samples_validator
-from seqr.utils.search.utils import get_search_backend_status, delete_search_backend_data, backend_specific_call
+from seqr.utils.search.elasticsearch.es_utils import get_elasticsearch_status, delete_es_index
+from seqr.utils.search.utils import clickhouse_only, es_only, InvalidSearchException
 from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
@@ -43,14 +44,21 @@ logger = SeqrLogger(__name__)
 
 
 @data_manager_required
+@es_only
 def elasticsearch_status(request):
-    return create_json_response(get_search_backend_status())
+    return create_json_response(get_elasticsearch_status())
 
 
 @data_manager_required
+@es_only
 def delete_index(request):
     index = json.loads(request.body)['index']
-    updated_indices = delete_search_backend_data(index)
+    active_samples = Sample.objects.filter(is_active=True, elasticsearch_index=index)
+    if active_samples:
+        projects = set(active_samples.values_list('individual__family__project__name', flat=True))
+        raise InvalidSearchException(f'"{index}" is still used by: {", ".join(projects)}')
+
+    updated_indices =  delete_es_index(index)
 
     return create_json_response({'indices': updated_indices})
 
@@ -424,6 +432,7 @@ def _get_valid_search_individuals(project, airtable_samples, vcf_samples, datase
 
 
 @data_manager_required
+@clickhouse_only
 def trigger_delete_project(request):
     request_json = json.loads(request.body)
     project_guid = request_json.pop('project')
@@ -432,15 +441,12 @@ def trigger_delete_project(request):
 
 
 @data_manager_required
+@clickhouse_only
 def trigger_delete_family(request):
     request_json = json.loads(request.body)
     family_guid = request_json.pop('family')
     project = Project.objects.get(family__guid=family_guid)
     return _trigger_data_update(delete_clickhouse_family, request_json, project, family_guid)
-
-
-def _raise_backend_not_implemented(*args, **kwargs):
-    raise ErrorsWarningsException(['This functionality is not available in the current search backend'])
 
 
 def _trigger_data_update(clickhouse_func, request_json, project, *args):
@@ -450,9 +456,7 @@ def _trigger_data_update(clickhouse_func, request_json, project, *args):
     ).values_list('sample_type', flat=True).distinct() if dataset_type == Sample.DATASET_TYPE_SV_CALLS else [None]
     info = []
     for sample_type in sample_types:
-        info.append(backend_specific_call(
-            _raise_backend_not_implemented, clickhouse_func,
-        )(project, *args, dataset_type=dataset_type, sample_type=sample_type))
+        info.append(clickhouse_func(project, *args, dataset_type=dataset_type, sample_type=sample_type))
     return create_json_response({'info': info})
 
 

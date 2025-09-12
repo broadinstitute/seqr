@@ -4,7 +4,7 @@ import mock
 
 from django.urls.base import reverse
 
-from seqr.models import SavedVariant, VariantNote, VariantTag, VariantFunctionalData, Family, Project
+from seqr.models import SavedVariant, VariantNote, VariantTag, VariantFunctionalData, Sample, Project
 from seqr.views.apis.saved_variant_api import saved_variant_data, create_variant_note_handler, create_saved_variant_handler, \
     update_variant_note_handler, delete_variant_note_handler, update_variant_tags_handler, update_saved_variant_json, \
     update_variant_main_transcript, update_variant_functional_data_handler, update_variant_acmg_classification_handler
@@ -953,20 +953,19 @@ class SavedVariantAPITest(object):
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'error': 'Unable to find the following variant(s): not_variant'})
 
-    @mock.patch('seqr.views.utils.variant_utils.MAX_VARIANTS_FETCH', 2)
-    @mock.patch('seqr.utils.search.utils.es_backend_enabled')
+    @mock.patch('seqr.utils.search.elasticsearch.es_utils.MAX_VARIANTS_FETCH', 2)
     @mock.patch('seqr.views.apis.saved_variant_api.logger')
-    @mock.patch('seqr.views.utils.variant_utils.get_variants_for_variant_ids')
-    def test_update_saved_variant_json(self, mock_get_variants, mock_logger, mock_es_enabled):
-        mock_es_enabled.return_value = True
-        mock_get_variants.side_effect = lambda families, variant_ids, **kwargs: \
-            [{'variantId': variant_id, 'familyGuids': [family.guid for family in families]}
+    @mock.patch('seqr.utils.search.elasticsearch.es_utils.get_es_variants_for_variant_ids')
+    def test_update_saved_variant_json(self, mock_get_variants, mock_logger):
+        mock_get_variants.side_effect = lambda samples, genome_version, variant_ids, user: \
+            [{'variantId': variant_id, 'familyGuids': sorted({sample.individual.family.guid for sample in samples})}
              for variant_id in variant_ids]
 
         url = reverse(update_saved_variant_json, args=['R0001_1kg'])
         self.check_manager_login(url)
 
         response = self.client.post(url)
+
         self.assertEqual(response.status_code, 200)
 
         self.assertDictEqual(
@@ -975,11 +974,13 @@ class SavedVariantAPITest(object):
             'SV0059956_11560662_f019313_1': None}
         )
 
-        families = [Family.objects.get(guid='F000001_1'), Family.objects.get(guid='F000002_2')]
         mock_get_variants.assert_has_calls([
-            mock.call(families, ['1-248367227-TC-T', '1-46859832-G-A'], user=self.manager_user, user_email=None),
-            mock.call(families, ['21-3343353-GAGA-G'], user=self.manager_user, user_email=None),
+            mock.call(mock.ANY, '37', ['1-248367227-TC-T', '1-46859832-G-A'], self.manager_user),
+            mock.call(mock.ANY, '37', ['21-3343353-GAGA-G'], self.manager_user),
         ])
+        samples = set(Sample.objects.filter(individual__family_id__in=[1, 2], is_active=True).values_list('id', flat=True))
+        self.assertSetEqual(set(mock_get_variants.call_args_list[0].args[0].values_list('id', flat=True)), samples)
+        self.assertSetEqual(set(mock_get_variants.call_args_list[1].args[0].values_list('id', flat=True)), samples)
         mock_logger.error.assert_not_called()
 
         # Test handles update error
@@ -987,10 +988,6 @@ class SavedVariantAPITest(object):
         response = self.client.post(url)
         self.assertEqual(response.status_code, 200)
         mock_logger.error.assert_called_with('Unable to reset saved variant json for R0001_1kg: Unable to fetch variants')
-
-        mock_es_enabled.return_value = False
-        response = self.client.post(url)
-        self.assertEqual(response.status_code, 500)
 
     def test_update_variant_main_transcript(self):
         transcript_id = 'ENST00000438943'
@@ -1106,8 +1103,11 @@ class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, SavedVariantAPITest)
         assert_no_list_ws_has_al(self, 3)
 
     def test_update_saved_variant_json(self, *args):
-        super(AnvilSavedVariantAPITest, self).test_update_saved_variant_json(*args)
-        assert_no_list_ws_has_al(self, 3)
+        url = reverse(update_saved_variant_json, args=['R0001_1kg'])
+        self.check_require_login(url)
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 500)
+        self.assertDictEqual(response.json(), {'error': 'update_saved_variant_json is disabled without the elasticsearch backend'})
 
     def test_update_variant_main_transcript(self):
         super(AnvilSavedVariantAPITest, self).test_update_variant_main_transcript()

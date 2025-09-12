@@ -4,7 +4,7 @@ from elasticsearch.exceptions import ConnectionError as EsConnectionError, Trans
 import elasticsearch_dsl
 from urllib3.connectionpool import connection_from_url
 
-from seqr.models import Sample
+from seqr.models import Sample, SavedVariant
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.search.constants import VCF_FILE_EXTENSIONS, XPOS_SORT_KEY
 from seqr.utils.search.elasticsearch.es_gene_agg_search import EsGeneAggSearch
@@ -28,6 +28,8 @@ ES_EXCEPTION_MESSAGE_MAP = {
     TransportError: lambda e: '{}: {} - {} - {}'.format(e.__class__.__name__, e.status_code, repr(e.error), _get_transport_error_type(e.info)),
 }
 ES_ERROR_LOG_EXCEPTIONS = {InvalidIndexException}
+
+MAX_VARIANTS_FETCH = 1000
 
 
 def _get_transport_error_type(error):
@@ -263,11 +265,12 @@ def _get_es_indices(client):
     return indices, seqr_index_projects
 
 
-def get_es_variants_for_variant_ids(samples, genome_version, variants_by_id, user, return_all_queried_families=False, **kwargs):
+def get_es_variants_for_variant_ids(samples, genome_version, variant_ids, user):
+    variant_ids = sorted(set(variant_ids))
     variants = EsSearch(
-        samples, genome_version, user=user, return_all_queried_families=return_all_queried_families, sort=XPOS_SORT_KEY,
-    ).filter_by_variant_ids(list(variants_by_id.keys()))
-    return variants.search(num_results=len(variants_by_id))
+        samples, genome_version, user=user, sort=XPOS_SORT_KEY,
+    ).filter_by_variant_ids(variant_ids)
+    return variants.search(num_results=len(variant_ids))
 
 
 def get_es_variants(samples, search, user, previous_search_results, genome_version, sort=None, page=None, num_results=None,
@@ -330,3 +333,36 @@ def process_es_previously_loaded_gene_aggs(previous_search_results):
             for family_guid in variants[0]['familyGuids']:
                 gene_aggs[gene_id]['families'][family_guid] += len(variants)
     return gene_aggs
+
+
+def update_project_saved_variant_json(project_id, genome_version, family_guids=None, user=None, **kwargs):
+    from seqr.views.utils.variant_utils import get_saved_variants
+    saved_variants = get_saved_variants(genome_version, project_id, family_guids).select_related('family')
+
+    if not saved_variants:
+        return None
+
+    family_ids = set()
+    variant_ids = set()
+    saved_variants_map = {}
+    for v in saved_variants:
+        family_ids.add(v.family_id)
+        variant_ids.add(v.variant_id)
+        saved_variants_map[(v.variant_id, v.family.guid)] = v
+
+    variant_ids = sorted(variant_ids)
+    samples = Sample.objects.filter(individual__family_id__in=family_ids, is_active=True)
+    variants_json = []
+    for sub_var_ids in [variant_ids[i:i+MAX_VARIANTS_FETCH] for i in range(0, len(variant_ids), MAX_VARIANTS_FETCH)]:
+        variants_json += get_es_variants_for_variant_ids(samples, genome_version, sub_var_ids, user)
+
+    updated_saved_variants = {}
+    for var in variants_json:
+        for family_guid in var['familyGuids']:
+            saved_variant = saved_variants_map.get((var['variantId'], family_guid))
+            if saved_variant:
+                saved_variant.saved_variant_json = var
+                updated_saved_variants[saved_variant.guid] = saved_variant
+    SavedVariant.bulk_update_models(user, list(updated_saved_variants.values()), ['saved_variant_json'])
+
+    return updated_saved_variants

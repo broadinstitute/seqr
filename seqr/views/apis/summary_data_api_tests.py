@@ -839,7 +839,7 @@ class LocalSummaryDataAPITest(AuthenticationTestCase, SummaryDataAPITest):
         self.assertEqual(response.status_code, 200)
         self._has_expected_metadata_response(response, expected_individuals)
 
-    @mock.patch('seqr.views.utils.variant_utils.get_variants_for_variant_ids', lambda *args, **kwargs: PARSED_VARIANTS)
+    @mock.patch('seqr.views.utils.variant_utils.get_es_variants_for_variant_ids', lambda *args, **kwargs: PARSED_VARIANTS)
     def test_bulk_update_family_external_analysis(self, *args, **kwargs):
         super().test_bulk_update_family_external_analysis(*args, **kwargs)
 

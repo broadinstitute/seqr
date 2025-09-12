@@ -506,10 +506,7 @@ class DataManagerAPITest(AirtableTest):
         self.check_data_manager_login(url)
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({'index': 'test_index'}))
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(
-            response.json()['error'], '"test_index" is still used by: 1kg project n\xe5me with uni\xe7\xf8de')
-        self.assertEqual(len(urllib3_responses.calls), 0)
+        self._assert_expected_delete_active_index_response(response)
 
         urllib3_responses.add_json(
             '/_cat/indices?format=json&h=index,docs.count,store.size,creation.date.string', ES_CAT_INDICES)
@@ -519,6 +516,12 @@ class DataManagerAPITest(AirtableTest):
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({'index': 'unused_index'}))
         self._assert_expected_delete_index_response(response)
+
+    def _assert_expected_delete_active_index_response(self, response):
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.json()['error'], '"test_index" is still used by: 1kg project n\xe5me with uni\xe7\xf8de')
+        self.assertEqual(len(urllib3_responses.calls), 0)
 
     def _assert_expected_delete_index_response(self, response):
         self.assertEqual(response.status_code, 200)
@@ -1567,14 +1570,12 @@ class DataManagerAPITest(AirtableTest):
         self._assert_expected_delete_family(response)
 
     def _assert_expected_delete_project(self, response):
-        self._assert_expected_search_data_update(response)
+        self.assertEqual(response.status_code, 500)
+        self.assertDictEqual(response.json(), {'error': 'trigger_delete_project is disabled without the clickhouse backend'})
 
     def _assert_expected_delete_family(self, response):
-        self._assert_expected_search_data_update(response)
-
-    def _assert_expected_search_data_update(self, response):
-        self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'errors': ['This functionality is not available in the current search backend'], 'warnings': None})
+        self.assertEqual(response.status_code, 500)
+        self.assertDictEqual(response.json(), {'error': 'trigger_delete_family is disabled without the clickhouse backend'})
 
 
 class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
@@ -1806,12 +1807,15 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         return [f'gsutil mv tmp/temp_uploads/{file_path} gs://seqr-scratch-temp/{file_path}']
 
     def _assert_expected_es_status(self, response):
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()['error'], 'Elasticsearch is disabled')
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(response.json()['error'], 'elasticsearch_status is disabled without the elasticsearch backend')
 
     def _assert_expected_delete_index_response(self, response):
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()['error'], 'Deleting indices is disabled without the elasticsearch backend')
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(response.json()['error'], 'delete_index is disabled without the elasticsearch backend')
+
+    def _assert_expected_delete_active_index_response(self, response):
+        self._assert_expected_delete_index_response(response)
 
     def _assert_expected_get_projects_requests(self):
         pdo_filter = "OR(SEARCH('Methods (Loading)',ARRAYJOIN(PDOStatus,';')),SEARCH('On hold for phenotips, but ready to load',ARRAYJOIN(PDOStatus,';')))"

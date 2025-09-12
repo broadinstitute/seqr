@@ -13,7 +13,7 @@ from urllib3_mock import Responses
 
 from seqr.models import Project, Family, Sample, VariantSearch, VariantSearchResults
 from seqr.utils.search.utils import get_single_variant, query_variants, \
-    get_variant_query_gene_counts, get_variants_for_variant_ids, InvalidSearchException
+    get_variant_query_gene_counts, get_es_variants_for_variant_ids, InvalidSearchException
 from seqr.utils.search.elasticsearch.es_search import _get_family_affected_status
 from seqr.utils.search.elasticsearch.es_utils import InvalidIndexException
 from seqr.utils.search.utils import _get_liftover
@@ -1394,9 +1394,10 @@ class EsUtilsTest(TestCase):
     @urllib3_responses.activate
     def test_get_es_variants_for_variant_ids(self):
         setup_responses()
-        get_variants_for_variant_ids(self.families, ['2-103343353-GAGA-G', '1-248367227-TC-T', 'prefix-938_DEL'])
+        samples = Sample.objects.filter(individual__family__in=self.families).exclude(dataset_type='MITO')
+        get_es_variants_for_variant_ids(samples, '37', ['2-103343353-GAGA-G', '1-248367227-TC-T', 'prefix-938_DEL'], None)
         self.assertExecutedSearch(
-            filters=[{'terms': {'variantId': ['2-103343353-GAGA-G', '1-248367227-TC-T', 'prefix-938_DEL']}}],
+            filters=[{'terms': {'variantId': ['1-248367227-TC-T', '2-103343353-GAGA-G', 'prefix-938_DEL']}}],
             size=6, index=','.join([INDEX_NAME, SV_INDEX_NAME]),
         )
 

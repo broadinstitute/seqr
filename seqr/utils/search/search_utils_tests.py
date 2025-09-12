@@ -8,7 +8,7 @@ from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4,
     GENE_COUNTS, VARIANT_LOOKUP_VARIANT, SV_VARIANT4, SV_VARIANT1
 from seqr.models import Project, Family, Sample, VariantSearch, VariantSearchResults
 from seqr.views.utils.json_utils import DjangoJSONEncoderWithSets
-from seqr.utils.search.utils import get_single_variant, get_variants_for_variant_ids, get_variant_query_gene_counts, \
+from seqr.utils.search.utils import get_single_variant, get_variant_query_gene_counts, \
     query_variants, variant_lookup, sv_variant_lookup, InvalidSearchException
 from seqr.views.utils.test_utils import DifferentDbTransactionSupportMixin, PARSED_VARIANTS, PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT, GENE_FIELDS
 
@@ -127,46 +127,12 @@ class SearchUtilsTests(SearchTestHelper):
             get_single_variant(family, '10-10334333-A-G')
         self.assertEqual(str(cm.exception), 'Variant 10-10334333-A-G not found')
 
-    def _assert_expected_get_single_variant_call(self, mock_get_variants_for_ids, parsed_variant_id, expected_samples, **kwargs):
-        if isinstance(parsed_variant_id, str):
-            variants_id_map = {parsed_variant_id: None}
-        else:
-            variants_id_map = {'-'.join([str(v) for v in parsed_variant_id]): parsed_variant_id}
+    def _assert_expected_get_single_variant_call(self, mock_get_variants_for_ids, variant_id, expected_samples, **kwargs):
+        if not isinstance(variant_id, str):
+            variant_id = '-'.join([str(v) for v in variant_id])
         mock_get_variants_for_ids.assert_called_with(
-            mock.ANY, '37', variants_id_map, self.user,
+            mock.ANY, '37', [variant_id], self.user,
         )
-        self.assertSetEqual(set(mock_get_variants_for_ids.call_args.args[0]), expected_samples)
-
-    def test_get_variants_for_variant_ids(self, mock_get_variants_for_ids):
-        variant_ids = ['2-103343353-GAGA-G', '1-248367227-TC-T', 'prefix-938_DEL', 'MT-10195-C-A']
-        get_variants_for_variant_ids(self.families, variant_ids, user=self.user)
-        mock_get_variants_for_ids.assert_called_with(mock.ANY, '37', {
-            '2-103343353-GAGA-G': ('2', 103343353, 'GAGA', 'G'),
-            '1-248367227-TC-T': ('1', 248367227, 'TC', 'T'),
-            'MT-10195-C-A': ('M', 10195, 'C', 'A'),
-            'prefix-938_DEL': None,
-        }, self.user, user_email=None)
-        self.assertSetEqual(set(mock_get_variants_for_ids.call_args.args[0]), set(self.search_samples))
-
-        get_variants_for_variant_ids(
-            self.families, variant_ids, user=self.user, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
-        mock_get_variants_for_ids.assert_called_with(mock.ANY, '37', {
-            '2-103343353-GAGA-G': ('2', 103343353, 'GAGA', 'G'),
-            '1-248367227-TC-T': ('1', 248367227, 'TC', 'T'),
-            'MT-10195-C-A': ('M', 10195, 'C', 'A'),
-        }, self.user, user_email=None)
-        skipped_samples = ['S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733']
-        expected_samples = {s for s in self.search_samples if s.guid not in skipped_samples}
-        self.assertSetEqual(set(mock_get_variants_for_ids.call_args.args[0]), expected_samples)
-
-        get_variants_for_variant_ids(
-            self.families, variant_ids[:3], user=self.user, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
-        mock_get_variants_for_ids.assert_called_with(mock.ANY, '37', {
-            '2-103343353-GAGA-G': ('2', 103343353, 'GAGA', 'G'),
-            '1-248367227-TC-T': ('1', 248367227, 'TC', 'T'),
-        }, self.user, user_email=None)
-        skipped_samples.append('S000149_hg00733')
-        expected_samples = {s for s in self.search_samples if s.guid not in skipped_samples}
         self.assertSetEqual(set(mock_get_variants_for_ids.call_args.args[0]), expected_samples)
 
     @mock.patch('seqr.utils.search.utils.MAX_FAMILY_COUNTS', {'WES': 2, 'WGS': 1})
@@ -589,10 +555,6 @@ class ElasticsearchSearchUtilsTests(TestCase, SearchUtilsTests):
         mock_get_variants_for_ids.return_value = [PARSED_VARIANTS[0]]
         super(ElasticsearchSearchUtilsTests, self).test_get_single_variant(mock_get_variants_for_ids)
 
-    @mock.patch('seqr.utils.search.utils.get_es_variants_for_variant_ids')
-    def test_get_variants_for_variant_ids(self, mock_get_variants_for_ids):
-        super(ElasticsearchSearchUtilsTests, self).test_get_variants_for_variant_ids(mock_get_variants_for_ids)
-
     @mock.patch('seqr.utils.search.utils.get_es_variants')
     def test_query_variants(self, mock_get_variants):
         super(ElasticsearchSearchUtilsTests, self).test_query_variants(mock_get_variants)
@@ -694,11 +656,6 @@ class ClickhouseSearchUtilsTests(DifferentDbTransactionSupportMixin, TestCase, S
     def _assert_expected_get_single_variant_call(self, mock_call, variant_id, expected_samples, dataset_type='SNV_INDEL', **kwargs):
         mock_call.assert_called_with(variant_id, mock.ANY, '37', dataset_type)
         self.assertSetEqual(set(mock_call.call_args.args[1]), expected_samples)
-
-    @mock.patch('seqr.utils.search.utils.get_clickhouse_variants')
-    def test_get_variants_for_variant_ids(self, mock_call):
-        with self.assertRaises(NotImplementedError):
-            super().test_get_variants_for_variant_ids(mock_call)
 
     @mock.patch('seqr.utils.search.utils.get_clickhouse_variants')
     def test_query_variants(self, mock_call):
