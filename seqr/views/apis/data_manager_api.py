@@ -449,10 +449,6 @@ def trigger_delete_family(request):
     return _trigger_data_update(delete_clickhouse_family, request_json, project, family_guid)
 
 
-def _raise_backend_not_implemented(*args, **kwargs):
-    raise ErrorsWarningsException(['This functionality is not available in the current search backend'])
-
-
 def _trigger_data_update(clickhouse_func, request_json, project, *args):
     dataset_type = request_json.get('datasetType')
     sample_types = Sample.objects.filter(
