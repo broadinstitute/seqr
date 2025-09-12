@@ -10,7 +10,6 @@ from seqr.utils.search.constants import VCF_FILE_EXTENSIONS, XPOS_SORT_KEY
 from seqr.utils.search.elasticsearch.es_gene_agg_search import EsGeneAggSearch
 from seqr.utils.search.elasticsearch.es_search import EsSearch, get_compound_het_page
 from seqr.views.utils.json_utils import  _to_camel_case
-from seqr.views.utils.variant_utils import get_saved_variants
 from settings import ELASTICSEARCH_SERVICE_HOSTNAME, ELASTICSEARCH_SERVICE_PORT, ELASTICSEARCH_CREDENTIALS, \
     ELASTICSEARCH_PROTOCOL, ES_SSL_CONTEXT, KIBANA_SERVER
 
@@ -337,6 +336,7 @@ def process_es_previously_loaded_gene_aggs(previous_search_results):
 
 
 def update_project_saved_variant_json(project_id, genome_version, family_guids=None, user=None, **kwargs):
+    from seqr.views.utils.variant_utils import get_saved_variants
     saved_variants = get_saved_variants(genome_version, project_id, family_guids).select_related('family')
 
     if not saved_variants:
