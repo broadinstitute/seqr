@@ -52,7 +52,7 @@ CLINVAR_GOLD_STARS_LOOKUP = {
     'practice guideline': 4,
 }
 WEEKLY_XML_RELEASE = (
-    'https://ftp.ncbi.nlm.nih.gov/pub/clinvar/xml/ClinVarVCVRelease_00-latest.xml.gz'
+    'https://ftp.ncbi.nlm.nih.gov/pub/clinvar/xml/weekly_release/ClinVarVCVRelease_00-latest_weekly.xml.gz'
 )
 
 def clinvar_run_sql(sql: str):
