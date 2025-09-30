@@ -46,7 +46,7 @@ HASH_FILE_NAME = 'temp_upload_87f3489196cd3b81b98f3ffd3bc2653c.json.gz'
 
 def _mock_cell(value):
     mock_cell = mock.MagicMock()
-    mock_cell.value = value.
+    mock_cell.value = value
     try:
         mock_cell.value = int(value)
         mock_cell.data_type = 'n'
