@@ -82,7 +82,7 @@ def file_iter(file_path, byte_range=None, raw_content=False, user=None, **kwargs
 def _google_bucket_file_iter(gs_path, byte_range=None, raw_content=False, user=None, **kwargs):
     """Iterate over lines in the given file"""
     range_arg = ' -r {}-{}'.format(byte_range[0], byte_range[1]) if byte_range else ''
-    process = run_gsutil_with_wait(
+    process = run_gsutil_with_communicate(
         'cat{}'.format(range_arg), gs_path, gunzip=gs_path.endswith("gz") and not raw_content, user=user, **kwargs)
     for line in process.stdout:
         if not raw_content:
@@ -92,7 +92,7 @@ def _google_bucket_file_iter(gs_path, byte_range=None, raw_content=False, user=N
 
 def mv_file_to_gs(local_path, gs_path, user=None):
     command = 'mv {}'.format(local_path)
-    run_gsutil_with_wait(command, gs_path, user)
+    run_gsutil_with_communicate(command, gs_path, user)
 
 
 def _get_gs_file_list(gs_path, user, check_subfolders, allow_missing):
@@ -109,13 +109,18 @@ def _get_gs_file_list(gs_path, user, check_subfolders, allow_missing):
     return [line for line in all_lines if is_google_bucket_file_path(line)]
 
 
-def run_gsutil_with_wait(command, gs_path, user=None, **kwargs):
+def run_gsutil_with_communicate(command, gs_path, user=None, **kwargs):
     process = _run_gsutil_command(command, gs_path, user=user, **kwargs)
-    if process.wait() != 0:
-        errors = [line.decode('utf-8').strip() for line in process.stdout]
-        raise Exception('Run command failed: ' + ' '.join(errors))
-    return process
+    out, err = process.communicate()
+    if process.returncode != 0:
+        errors = []
+        if out:
+            errors.extend(line.strip() for line in out.decode("utf-8").splitlines())
+        if err:
+            errors.extend(line.strip() for line in err.decode("utf-8").splitlines())
+        raise Exception("Run command failed: " + " ".join(errors))
 
+    return process
 
 def _run_gsutil_with_stdout(command, gs_path, user=None, allow_missing=False):
     process = _run_gsutil_command(command, gs_path, user=user, pipe_errors=True)

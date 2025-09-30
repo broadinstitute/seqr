@@ -46,7 +46,7 @@ HASH_FILE_NAME = 'temp_upload_87f3489196cd3b81b98f3ffd3bc2653c.json.gz'
 
 def _mock_cell(value):
     mock_cell = mock.MagicMock()
-    mock_cell.value = value
+    mock_cell.value = value.
     try:
         mock_cell.value = int(value)
         mock_cell.data_type = 'n'
@@ -154,8 +154,8 @@ class AnvilFileUtilsTest(AnvilAuthenticationTestCase, FileUtilsTest):
             mock.call(f'gsutil mv {self._temp_file_path()} {gs_file}', stdout=-1, stderr=-2, shell=True),  # nosec
             mock.call().wait(),
             mock.call(f'gsutil cat {gs_file} | gunzip -c -q - ', stdout=-1, stderr=-2, shell=True),  # nosec
-            mock.call().wait(),
-            mock.call().stdout.__iter__(),
+            mock.call().communicate(),
+            mock.call().returncode,
         ])
 
     @staticmethod

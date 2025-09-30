@@ -25,8 +25,8 @@ class SetSavedVariantKeyTest(AnvilAuthenticationTestCase):
     @mock.patch('clickhouse_search.management.commands.set_saved_variant_key.BATCH_SIZE', 2)
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     def test_command(self, mock_subprocess):
-        mock_subprocess.return_value.stdout = self.MOCK_GCNV_DATA
-        mock_subprocess.return_value.wait.return_value = 0
+        mock_subprocess.return_value.communicate.return_value (self.MOCK_GCNV_DATA, '')
+        mock_subprocess.return_value.returncode = 0
 
         call_command('set_saved_variant_key')
         self.assert_json_logs(user=None, expected=[
@@ -99,8 +99,8 @@ class SetSavedVariantKeyFailedMappingTest(SetSavedVariantKeyTest):
 
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     def test_command(self, mock_subprocess):
-        mock_subprocess.return_value.stdout = self.MOCK_GCNV_DATA
-        mock_subprocess.return_value.wait.return_value = 0
+        mock_subprocess.return_value.communicate.return_value (self.MOCK_GCNV_DATA, '')
+        mock_subprocess.return_value.returncode = 0
 
         call_command('set_saved_variant_key')
         self.assert_json_logs(user=None, expected=[
