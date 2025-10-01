@@ -798,6 +798,7 @@ class KeyLookupGcnv(BaseKeyLookup):
 
 class BaseProjectGtStats(models.ClickhouseModel):
     project_guid = models.StringField(low_cardinality=True)
+    affected = models.Enum8Field(choices=[(1, 'A'), (2, 'N'), (3, 'U')])
     ref_samples = models.UInt32Field()
     het_samples = models.UInt32Field()
     hom_samples = models.UInt32Field()
@@ -849,8 +850,10 @@ class ProjectGtStatsSv(BaseProjectGtStats):
 class BaseGtStats(models.ClickhouseModel):
     ac_wes = models.UInt32Field()
     ac_wgs = models.UInt32Field()
+    ac_affected = models.UInt32Field()
     hom_wes = models.UInt32Field()
     hom_wgs = models.UInt32Field()
+    hom_affected = models.UInt32Field()
 
     class Meta:
         abstract = True
@@ -875,8 +878,10 @@ class GtStatsMito(models.ClickhouseModel):
     key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
     ac_het_wes = models.UInt32Field()
     ac_het_wgs = models.UInt32Field()
+    ac_het_affected = models.UInt32Field()
     ac_hom_wes = models.UInt32Field()
     ac_hom_wgs = models.UInt32Field()
+    ac_hom_affected = models.UInt32Field()
 
     class Meta(BaseGtStats.Meta):
         db_table = 'GRCh38/MITO/gt_stats'
@@ -884,7 +889,9 @@ class GtStatsMito(models.ClickhouseModel):
 class GtStatsSv(models.ClickhouseModel):
     key = OneToOneField('AnnotationsSv', db_column='key', primary_key=True, on_delete=CASCADE)
     ac_wgs = models.UInt32Field()
+    ac_affected = models.UInt32Field()
     hom_wgs = models.UInt32Field()
+    ac_affected = models.UInt32Field()
 
     class Meta(BaseGtStats.Meta):
         db_table = 'GRCh38/SV/gt_stats'

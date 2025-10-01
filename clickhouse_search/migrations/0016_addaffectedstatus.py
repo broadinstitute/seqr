@@ -121,10 +121,6 @@ class Migration(migrations.Migration):
                 size=int(5e6),
             ),
             hints={'clickhouse': True},
-        ),
-        migrations.RunSQL(
-            'DROP DICTIONARY `GRCh38/GCNV/gt_stats_dict`',
-            hints={'clickhouse': True},
         )
     ]
 
