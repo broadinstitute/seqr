@@ -5,10 +5,6 @@ import clickhouse_backend.models
 import clickhouse_search.backend.engines
 import clickhouse_search.backend.fields
 import clickhouse_search.models
-from clickhouse_search.migrations.shared import (
-    CLICKHOUSE_AC_EXCLUDED_PROJECT_GUIDS,
-    GT_STATS_DICT,
-)
 
 from django.db import migrations, models
 import django.db.models.deletion
@@ -18,7 +14,10 @@ from string import Template
 
 from settings import CLICKHOUSE_IN_MEMORY_DIR, CLICKHOUSE_DATA_DIR
 
-
+CLICKHOUSE_AC_EXCLUDED_PROJECT_GUIDS  = os.environ.get(
+    'CLICKHOUSE_AC_EXCLUDED_PROJECT_GUIDS',
+    ''
+).split(',')
 ENTRIES_TO_PROJECT_GT_STATS = Template("""
 CREATE MATERIALIZED VIEW `$reference_genome/$dataset_type/entries_to_project_gt_stats_mv`
 TO `$reference_genome/$dataset_type/project_gt_stats`
@@ -29,7 +28,6 @@ AS SELECT
 FROM `$reference_genome/$dataset_type/entries`
 GROUP BY $groupby_columns
 """)
-
 PROJECT_GT_STATS_TO_GT_STATS = Template(Template("""
 CREATE MATERIALIZED VIEW `$reference_genome/$dataset_type/project_gt_stats_to_gt_stats_mv`
 REFRESH EVERY 10 YEAR
@@ -831,7 +829,7 @@ class Migration(migrations.Migration):
             hints={'clickhouse': True},
         ),
         migrations.RunSQL(
-            GT_STATS_DICT.substitute(
+            clickhouse_search.models.GT_STATS_DICT.substitute(
                 reference_genome='GRCh37',
                 dataset_type='SNV_INDEL',
                 columns= ",\n    ".join([
@@ -872,7 +870,7 @@ class Migration(migrations.Migration):
             hints={'clickhouse': True},
         ),
         migrations.RunSQL(
-            GT_STATS_DICT.substitute(
+            clickhouse_search.models.GT_STATS_DICT.substitute(
                 reference_genome='GRCh38',
                 dataset_type='SNV_INDEL',
                 columns= ",\n    ".join([
@@ -913,7 +911,7 @@ class Migration(migrations.Migration):
             hints={'clickhouse': True},
         ),
         migrations.RunSQL(
-            GT_STATS_DICT.substitute(
+            clickhouse_search.models.GT_STATS_DICT.substitute(
                 reference_genome='GRCh38',
                 dataset_type='MITO',
                 columns= ",\n    ".join([
@@ -951,7 +949,7 @@ class Migration(migrations.Migration):
             hints={'clickhouse': True},
         ),
         migrations.RunSQL(
-            GT_STATS_DICT.substitute(
+            clickhouse_search.models.GT_STATS_DICT.substitute(
                 reference_genome='GRCh38',
                 dataset_type='SV',
                 columns= ",\n    ".join([

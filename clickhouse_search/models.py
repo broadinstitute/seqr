@@ -1,3 +1,5 @@
+import os
+from string import Template
 from clickhouse_backend import models
 
 from django.db.migrations import state
@@ -19,6 +21,24 @@ options.DEFAULT_NAMES = (
 )
 state.DEFAULT_NAMES = options.DEFAULT_NAMES
 
+CLICKHOUSE_WRITER_PASSWORD = os.environ.get('CLICKHOUSE_WRITER_PASSWORD', 'clickhouse_test')
+CLICKHOUSE_WRITER_USER = os.environ.get('CLICKHOUSE_WRITER_USER', 'clickhouse')
+GT_STATS_DICT = Template(Template("""
+CREATE DICTIONARY `$reference_genome/$dataset_type/gt_stats_dict`
+(
+    key UInt32,
+    $columns
+)
+PRIMARY KEY key
+SOURCE(CLICKHOUSE(USER $clickhouse_writer_user PASSWORD $clickhouse_writer_password TABLE `$reference_genome/$dataset_type/gt_stats`))
+LIFETIME(MIN 0 MAX 0)
+LAYOUT(FLAT(MAX_ARRAY_SIZE $size))
+""").safe_substitute(
+    # Note the nested Template-ing that allows
+    # double substitution these shared values
+    clickhouse_writer_user=CLICKHOUSE_WRITER_USER,
+    clickhouse_writer_password=CLICKHOUSE_WRITER_PASSWORD,
+))
 
 class ClickHouseRouter:
     """
@@ -798,7 +818,7 @@ class KeyLookupGcnv(BaseKeyLookup):
 
 class BaseProjectGtStats(models.ClickhouseModel):
     project_guid = models.StringField(low_cardinality=True)
-    affected = models.Enum8Field(choices=[(1, 'A'), (2, 'N'), (3, 'U')])
+    affected = models.Enum8Field(choices=[(1, 'A'), (2, 'N'), (3, 'U')], default='U')
     ref_samples = models.UInt32Field()
     het_samples = models.UInt32Field()
     hom_samples = models.UInt32Field()
@@ -850,10 +870,10 @@ class ProjectGtStatsSv(BaseProjectGtStats):
 class BaseGtStats(models.ClickhouseModel):
     ac_wes = models.UInt32Field()
     ac_wgs = models.UInt32Field()
-    ac_affected = models.UInt32Field()
+    ac_affected = models.UInt32Field(default=0)
     hom_wes = models.UInt32Field()
     hom_wgs = models.UInt32Field()
-    hom_affected = models.UInt32Field()
+    hom_affected = models.UInt32Field(default=0)
 
     class Meta:
         abstract = True
@@ -878,10 +898,10 @@ class GtStatsMito(models.ClickhouseModel):
     key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
     ac_het_wes = models.UInt32Field()
     ac_het_wgs = models.UInt32Field()
-    ac_het_affected = models.UInt32Field()
+    ac_het_affected = models.UInt32Field(default=0)
     ac_hom_wes = models.UInt32Field()
     ac_hom_wgs = models.UInt32Field()
-    ac_hom_affected = models.UInt32Field()
+    ac_hom_affected = models.UInt32Field(default=0)
 
     class Meta(BaseGtStats.Meta):
         db_table = 'GRCh38/MITO/gt_stats'
@@ -889,9 +909,9 @@ class GtStatsMito(models.ClickhouseModel):
 class GtStatsSv(models.ClickhouseModel):
     key = OneToOneField('AnnotationsSv', db_column='key', primary_key=True, on_delete=CASCADE)
     ac_wgs = models.UInt32Field()
-    ac_affected = models.UInt32Field()
+    ac_affected = models.UInt32Field(default=0)
     hom_wgs = models.UInt32Field()
-    ac_affected = models.UInt32Field()
+    ac_affected = models.UInt32Field(default=0)
 
     class Meta(BaseGtStats.Meta):
         db_table = 'GRCh38/SV/gt_stats'
