@@ -16,6 +16,8 @@ import django.db.models.manager
 import os
 from string import Template
 
+from settings import CLICKHOUSE_IN_MEMORY_DIR, CLICKHOUSE_DATA_DIR
+
 
 ENTRIES_TO_PROJECT_GT_STATS = Template("""
 CREATE MATERIALIZED VIEW `$reference_genome/$dataset_type/entries_to_project_gt_stats_mv`
