@@ -5,21 +5,16 @@ import clickhouse_backend.models
 import clickhouse_search.backend.engines
 import clickhouse_search.backend.fields
 import clickhouse_search.models
+from clickhouse_search.migrations.shared import (
+    CLICKHOUSE_AC_EXCLUDED_PROJECT_GUIDS,
+    GT_STATS_DICT,
+)
 
 from django.db import migrations, models
 import django.db.models.deletion
 import django.db.models.manager
 import os
 from string import Template
-
-from settings import CLICKHOUSE_IN_MEMORY_DIR, CLICKHOUSE_DATA_DIR
-
-CLICKHOUSE_AC_EXCLUDED_PROJECT_GUIDS  = os.environ.get(
-    'CLICKHOUSE_AC_EXCLUDED_PROJECT_GUIDS',
-    ''
-).split(',')
-CLICKHOUSE_WRITER_PASSWORD = os.environ.get('CLICKHOUSE_WRITER_PASSWORD', 'clickhouse_test')
-CLICKHOUSE_WRITER_USER = os.environ.get('CLICKHOUSE_WRITER_USER', 'clickhouse')
 
 
 ENTRIES_TO_PROJECT_GT_STATS = Template("""
@@ -45,23 +40,6 @@ WHERE project_guid NOT IN $clickhouse_ac_excluded_project_guids
 GROUP BY key
 """).safe_substitute(
     clickhouse_ac_excluded_project_guids=CLICKHOUSE_AC_EXCLUDED_PROJECT_GUIDS
-))
-
-GT_STATS_DICT = Template(Template("""
-CREATE DICTIONARY `$reference_genome/$dataset_type/gt_stats_dict`
-(
-    key UInt32,
-    $columns
-)
-PRIMARY KEY key
-SOURCE(CLICKHOUSE(USER $clickhouse_writer_user PASSWORD $clickhouse_writer_password TABLE `$reference_genome/$dataset_type/gt_stats`))
-LIFETIME(MIN 0 MAX 0)
-LAYOUT(FLAT(MAX_ARRAY_SIZE $size))
-""").safe_substitute(
-    # Note the nested Template-ing that allows
-    # double substitution these shared values
-    clickhouse_writer_user=CLICKHOUSE_WRITER_USER,
-    clickhouse_writer_password=CLICKHOUSE_WRITER_PASSWORD,
 ))
 
 CLINVAR_ALL_VARIANTS_TO_CLINVAR_MV = Template("""
