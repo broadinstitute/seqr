@@ -87,7 +87,7 @@ class Migration(migrations.Migration):
         migrations.RunSQL(
             'DROP DICTIONARY `GRCh38/MITO/gt_stats_dict`',
             hints={'clickhouse': True},
-        )
+        ),
         migrations.RunSQL(
             GT_STATS_DICT.substitute(
                 reference_genome='GRCh38',
@@ -107,7 +107,7 @@ class Migration(migrations.Migration):
         migrations.RunSQL(
             'DROP DICTIONARY `GRCh38/SV/gt_stats_dict`',
             hints={'clickhouse': True},
-        )
+        ),
         migrations.RunSQL(
             GT_STATS_DICT.substitute(
                 reference_genome='GRCh38',
