@@ -1,0 +1,7 @@
+<clickhouse>
+  <users>
+    <clickhouse_test>
+      <named_collection_control>1</named_collection_control>
+    </clickhouse_test>
+  </users>
+</clickhouse>
