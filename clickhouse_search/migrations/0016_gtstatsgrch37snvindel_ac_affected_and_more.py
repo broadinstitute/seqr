@@ -33,7 +33,7 @@ TO `$reference_genome/$dataset_type/project_gt_stats`
 AS SELECT
     project_guid,
     key,
-    dictGet('seqrdb_affected_status', 'affected', (family_guid, calls.sampleId)) affected,
+    dictGet('seqrdb_affected_status_dict', 'affected', (family_guid, calls.sampleId)) affected,
     $columns
 FROM `$reference_genome/$dataset_type/entries`
 ARRAY JOIN calls
