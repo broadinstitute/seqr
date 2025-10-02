@@ -47,7 +47,7 @@ jobs:
         volumes:
           - /var/tmp:/var/seqr/clickhouse-data
           - /tmp:/in-memory-dir
-          - ${{ github.workspace }}/.github/clickhouse/users.xml:/etc/clickhouse-server/users.xml:ro
+          - ${{ github.workspace }}/.github/clickhouse/users.xml:/custom-users.xml:ro
         options: >-
           --health-cmd "clickhouse-client --query 'SELECT 1'" 
           --health-interval 10s 
@@ -58,6 +58,7 @@ jobs:
           CLICKHOUSE_USER: clickhouse_test
           CLICKHOUSE_PASSWORD: clickhouse_test
           ALLOW_EMPTY_PASSWORD: no
+          CLICKHOUSE_USER_CONFIG_FILE: /custom-users.xml
 
     steps:
       - uses: actions/checkout@v2
