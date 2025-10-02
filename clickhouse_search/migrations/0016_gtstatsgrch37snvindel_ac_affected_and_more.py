@@ -63,53 +63,54 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.RunSQL(
-            "ALTER TABLE "GRCh37/SNV_INDEL/gt_stats" ADD COLUMN "ac_affected" UInt32 DEFAULT 0 AFTER 'ac_wgs';"
-            hints={'clickhouse': True},
-        ),
-         migrations.RunSQL(
-            "ALTER TABLE "GRCh37/SNV_INDEL/gt_stats" ADD COLUMN "hom_affected" UInt32 DEFAULT 0 AFTER 'hom_wgs';"
+            "ALTER TABLE `GRCh37/SNV_INDEL/gt_stats` ADD COLUMN `ac_affected` UInt32 DEFAULT 0 AFTER `ac_wgs`;",
             hints={'clickhouse': True},
         ),
         migrations.RunSQL(
-            "ALTER TABLE "GRCh38/SNV_INDEL/gt_stats" ADD COLUMN "ac_affected" UInt32 DEFAULT 'U' AFTER 'ac_wgs';"
+            "ALTER TABLE `GRCh37/SNV_INDEL/gt_stats` ADD COLUMN `hom_affected` UInt32 DEFAULT 0 AFTER `hom_wgs`;",
             hints={'clickhouse': True},
         ),
         migrations.RunSQL(
-            "ALTER TABLE "GRCh38/SNV_INDEL/gt_stats" ADD COLUMN "hom_affected" UInt32 DEFAULT 'U' AFTER 'hom_wgs';"
+            "ALTER TABLE `GRCh38/SNV_INDEL/gt_stats` ADD COLUMN `ac_affected` UInt32 DEFAULT 0 AFTER `ac_wgs`;",
             hints={'clickhouse': True},
         ),
         migrations.RunSQL(
-            "ALTER TABLE "GRCh38/MITO/gt_stats" ADD COLUMN "ac_het_affected" UInt32 DEFAULT 0 AFTER 'ac_het_wgs';"
+            "ALTER TABLE `GRCh38/SNV_INDEL/gt_stats` ADD COLUMN `hom_affected` UInt32 DEFAULT 0 AFTER `hom_wgs`;",
             hints={'clickhouse': True},
         ),
         migrations.RunSQL(
-            "ALTER TABLE "GRCh38/MITO/gt_stats" ADD COLUMN "ac_hom_affected" UInt32 DEFAULT 0 AFTER 'ac_hom_wgs';"
+            "ALTER TABLE `GRCh38/MITO/gt_stats` ADD COLUMN `ac_het_affected` UInt32 DEFAULT 0 AFTER `ac_het_wgs`;",
             hints={'clickhouse': True},
         ),
         migrations.RunSQL(
-            "ALTER TABLE "GRCh38/SV/gt_stats" ADD COLUMN "ac_affected" UInt32 DEFAULT 0 AFTER 'ac_wgs';"
+            "ALTER TABLE `GRCh38/MITO/gt_stats` ADD COLUMN `ac_hom_affected` UInt32 DEFAULT 0 AFTER `ac_hom_wgs`;",
             hints={'clickhouse': True},
         ),
         migrations.RunSQL(
-            "ALTER TABLE "GRCh38/SV/gt_stats" ADD COLUMN "hom_affected" UInt32 DEFAULT 0 AFTER 'hom_wgs';"
+            "ALTER TABLE `GRCh38/SV/gt_stats` ADD COLUMN `ac_affected` UInt32 DEFAULT 0 AFTER `ac_wgs`;",
             hints={'clickhouse': True},
         ),
         migrations.RunSQL(
-            "ALTER TABLE "GRCh37/SNV_INDEL/project_gt_stats" ADD COLUMN "affected" Enum8('A'=1, 'N'=2, 'U'=3) DEFAULT 'U' AFTER 'sample_type';"
+            "ALTER TABLE `GRCh38/SV/gt_stats` ADD COLUMN `hom_affected` UInt32 DEFAULT 0 AFTER `hom_wgs`;",
             hints={'clickhouse': True},
         ),
         migrations.RunSQL(
-            "ALTER TABLE "GRCh38/SNV_INDEL/project_gt_stats" ADD COLUMN "affected" Enum8('A'=1, 'N'=2, 'U'=3) DEFAULT 'U' AFTER 'sample_type';"
+            "ALTER TABLE `GRCh37/SNV_INDEL/project_gt_stats` ADD COLUMN `affected` Enum8('A'=1, 'N'=2, 'U'=3) DEFAULT 'U' AFTER `sample_type`;",
             hints={'clickhouse': True},
         ),
         migrations.RunSQL(
-            "ALTER TABLE "GRCh38/MITO/project_gt_stats" ADD COLUMN "affected" Enum8('A'=1, 'N'=2, 'U'=3) DEFAULT 'U' AFTER 'sample_type';"
+            "ALTER TABLE `GRCh38/SNV_INDEL/project_gt_stats` ADD COLUMN `affected` Enum8('A'=1, 'N'=2, 'U'=3) DEFAULT 'U' AFTER `sample_type`;",
             hints={'clickhouse': True},
         ),
         migrations.RunSQL(
-            "ALTER TABLE "GRCh38/SV/project_gt_stats" ADD COLUMN "affected" Enum8('A'=1, 'N'=2, 'U'=3) DEFAULT 'U' AFTER 'sample_type';"
+            "ALTER TABLE `GRCh38/MITO/project_gt_stats` ADD COLUMN `affected` Enum8('A'=1, 'N'=2, 'U'=3) DEFAULT 'U' AFTER `sample_type`;",
             hints={'clickhouse': True},
         ),
+        migrations.RunSQL(
+            "ALTER TABLE `GRCh38/SV/project_gt_stats` ADD COLUMN `affected` Enum8('A'=1, 'N'=2, 'U'=3) DEFAULT 'U' AFTER `sample_type`;",
+            hints={'clickhouse': True},
+        ),
+
         migrations.RunSQL(
             SEQRDB_AFFECTED_STATUS_DICT,
             hints={'clickhouse': True},
