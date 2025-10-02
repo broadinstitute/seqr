@@ -61,6 +61,7 @@ jobs:
             -v /var/tmp:/var/seqr/clickhouse-data \
             -v /tmp:/in-memory-dir \
             -p 9000:9000 \
+            -p 5432:5432 \
             -e CLICKHOUSE_USER=clickhouse_test \
             -e CLICKHOUSE_PASSWORD=clickhouse_test \
             -e ALLOW_EMPTY_PASSWORD=no \
