@@ -58,7 +58,7 @@ jobs:
         run: |
           docker run -d --name clickhouse \
             -v ${{ github.workspace }}/test_config.xml:/etc/clickhouse-server/config.d/config.xml \
-            -v /var/tmp:/var/seqr/clickhouse-data
+            -v /var/tmp:/var/seqr/clickhouse-data \
             -v /tmp:/in-memory-dir \
             -p 9000:9000 \
             -e CLICKHOUSE_USER=clickhouse_test \
