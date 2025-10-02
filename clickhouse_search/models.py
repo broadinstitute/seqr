@@ -911,7 +911,7 @@ class GtStatsSv(models.ClickhouseModel):
     ac_wgs = models.UInt32Field()
     ac_affected = models.UInt32Field(default=0)
     hom_wgs = models.UInt32Field()
-    ac_affected = models.UInt32Field(default=0)
+    hom_affected = models.UInt32Field(default=0)
 
     class Meta(BaseGtStats.Meta):
         db_table = 'GRCh38/SV/gt_stats'

@@ -62,60 +62,53 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AddField(
-            model_name='gtstatsgrch37snvindel',
-            name='ac_affected',
-            field=clickhouse_backend.models.UInt32Field(default=0),
+        migrations.RunSQL(
+            "ALTER TABLE "GRCh37/SNV_INDEL/gt_stats" ADD COLUMN "ac_affected" UInt32 DEFAULT 0 AFTER 'ac_wgs';"
+            hints={'clickhouse': True},
         ),
-        migrations.AddField(
-            model_name='gtstatsgrch37snvindel',
-            name='hom_affected',
-            field=clickhouse_backend.models.UInt32Field(default=0),
+         migrations.RunSQL(
+            "ALTER TABLE "GRCh37/SNV_INDEL/gt_stats" ADD COLUMN "hom_affected" UInt32 DEFAULT 0 AFTER 'hom_wgs';"
+            hints={'clickhouse': True},
         ),
-        migrations.AddField(
-            model_name='gtstatsmito',
-            name='ac_het_affected',
-            field=clickhouse_backend.models.UInt32Field(default=0),
+        migrations.RunSQL(
+            "ALTER TABLE "GRCh38/SNV_INDEL/gt_stats" ADD COLUMN "ac_affected" UInt32 DEFAULT 'U' AFTER 'ac_wgs';"
+            hints={'clickhouse': True},
         ),
-        migrations.AddField(
-            model_name='gtstatsmito',
-            name='ac_hom_affected',
-            field=clickhouse_backend.models.UInt32Field(default=0),
+        migrations.RunSQL(
+            "ALTER TABLE "GRCh38/SNV_INDEL/gt_stats" ADD COLUMN "hom_affected" UInt32 DEFAULT 'U' AFTER 'hom_wgs';"
+            hints={'clickhouse': True},
         ),
-        migrations.AddField(
-            model_name='gtstatssnvindel',
-            name='ac_affected',
-            field=clickhouse_backend.models.UInt32Field(default=0),
+        migrations.RunSQL(
+            "ALTER TABLE "GRCh38/MITO/gt_stats" ADD COLUMN "ac_het_affected" UInt32 DEFAULT 0 AFTER 'ac_het_wgs';"
+            hints={'clickhouse': True},
         ),
-        migrations.AddField(
-            model_name='gtstatssnvindel',
-            name='hom_affected',
-            field=clickhouse_backend.models.UInt32Field(default=0),
+        migrations.RunSQL(
+            "ALTER TABLE "GRCh38/MITO/gt_stats" ADD COLUMN "ac_hom_affected" UInt32 DEFAULT 0 AFTER 'ac_hom_wgs';"
+            hints={'clickhouse': True},
         ),
-        migrations.AddField(
-            model_name='gtstatssv',
-            name='ac_affected',
-            field=clickhouse_backend.models.UInt32Field(default=0),
+        migrations.RunSQL(
+            "ALTER TABLE "GRCh38/SV/gt_stats" ADD COLUMN "ac_affected" UInt32 DEFAULT 0 AFTER 'ac_wgs';"
+            hints={'clickhouse': True},
         ),
-        migrations.AddField(
-            model_name='projectgtstatsgrch37snvindel',
-            name='affected',
-            field=clickhouse_backend.models.Enum8Field(choices=[(1, 'A'), (2, 'N'), (3, 'U')], default='U'),
+        migrations.RunSQL(
+            "ALTER TABLE "GRCh38/SV/gt_stats" ADD COLUMN "hom_affected" UInt32 DEFAULT 0 AFTER 'hom_wgs';"
+            hints={'clickhouse': True},
         ),
-        migrations.AddField(
-            model_name='projectgtstatsmito',
-            name='affected',
-            field=clickhouse_backend.models.Enum8Field(choices=[(1, 'A'), (2, 'N'), (3, 'U')], default='U'),
+        migrations.RunSQL(
+            "ALTER TABLE "GRCh37/SNV_INDEL/project_gt_stats" ADD COLUMN "affected" Enum8('A'=1, 'N'=2, 'U'=3) DEFAULT 'U' AFTER 'sample_type';"
+            hints={'clickhouse': True},
         ),
-        migrations.AddField(
-            model_name='projectgtstatssnvindel',
-            name='affected',
-            field=clickhouse_backend.models.Enum8Field(choices=[(1, 'A'), (2, 'N'), (3, 'U')], default='U'),
+        migrations.RunSQL(
+            "ALTER TABLE "GRCh38/SNV_INDEL/project_gt_stats" ADD COLUMN "affected" Enum8('A'=1, 'N'=2, 'U'=3) DEFAULT 'U' AFTER 'sample_type';"
+            hints={'clickhouse': True},
         ),
-        migrations.AddField(
-            model_name='projectgtstatssv',
-            name='affected',
-            field=clickhouse_backend.models.Enum8Field(choices=[(1, 'A'), (2, 'N'), (3, 'U')], default='U'),
+        migrations.RunSQL(
+            "ALTER TABLE "GRCh38/MITO/project_gt_stats" ADD COLUMN "affected" Enum8('A'=1, 'N'=2, 'U'=3) DEFAULT 'U' AFTER 'sample_type';"
+            hints={'clickhouse': True},
+        ),
+        migrations.RunSQL(
+            "ALTER TABLE "GRCh38/SV/project_gt_stats" ADD COLUMN "affected" Enum8('A'=1, 'N'=2, 'U'=3) DEFAULT 'U' AFTER 'sample_type';"
+            hints={'clickhouse': True},
         ),
         migrations.RunSQL(
             SEQRDB_AFFECTED_STATUS_DICT,
