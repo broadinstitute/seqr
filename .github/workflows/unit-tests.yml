@@ -85,7 +85,7 @@ jobs:
             CREATE TABLE test_pg
             ENGINE = Memory
             AS SELECT *
-            FROM postgresql('localhost:5432', 'seqrdb', 'seqr_individual', 'postgres', 'pgtest');
+            FROM postgresql('postgres:5432', 'seqrdb', 'seqr_individual', 'postgres', 'pgtest');
           " || echo "Query executed (or placeholder if table does not exist)"
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
