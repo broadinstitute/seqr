@@ -62,6 +62,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+        with:
+          clean: false
       - name: Set up Clickhouse Settings
         run: |
           docker exec clickhouse clickhouse-client --query "CREATE USER clickhouse_read_only IDENTIFIED WITH plaintext_password BY 'clickhouse_test'"
