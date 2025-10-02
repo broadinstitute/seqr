@@ -77,7 +77,7 @@ jobs:
           docker exec clickhouse clickhouse-client --query "CREATE USER clickhouse_read_only IDENTIFIED WITH plaintext_password BY 'clickhouse_test'"
           docker exec clickhouse clickhouse-client --query "CREATE SETTINGS PROFILE clickhouse_settings SETTINGS flatten_nested=0, join_use_nulls=1 TO clickhouse_test, clickhouse_read_only"
           docker exec clickhouse clickhouse-client --query "GRANT SELECT, SYSTEM VIEWS, dictGet ON *.* TO clickhouse_read_only"
-          docker exec clickhouse clickhouse-client --query "CREATE NAMED COLLECTION seqr_postgres_named_collection AS user='postgres', password='pgtest', host='postgres', port='5432'"
+          docker exec clickhouse clickhouse-client --query "CREATE NAMED COLLECTION seqr_postgres_named_collection AS key='value'"
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
