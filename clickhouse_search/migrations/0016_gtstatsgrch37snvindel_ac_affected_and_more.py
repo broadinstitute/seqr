@@ -14,7 +14,7 @@ CREATE DICTIONARY `seqrdb_affected_status_dict`
     `sampleId` String,
     `affected` String
 )
-PRIMARY KEY key
+PRIMARY KEY family_guid, sampleId
 SOURCE(POSTGRESQL(
     NAME 'seqr_postgres_named_collection' 
     DATABASE 'seqrdb' 
