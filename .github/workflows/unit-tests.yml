@@ -82,9 +82,10 @@ jobs:
           echo "Testing ClickHouse can read from Postgres via localhost"
           # Example using clickhouse-client to connect via the PostgreSQL table function
           docker exec clickhouse clickhouse-client --query "
-            CREATE TABLE test_pg AS
-            SELECT * FROM postgresql('localhost:5432', 'seqrdb', 'atest', 'postgres', 'pgtest') 
-            ENGINE = Memory;
+            CREATE TABLE test_pg
+            ENGINE = Memory
+            AS SELECT *
+            FROM postgresql('localhost:5432', 'seqrdb', 'seqr_individual', 'postgres', 'pgtest');
           " || echo "Query executed (or placeholder if table does not exist)"
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
