@@ -48,9 +48,9 @@ jobs:
           cat <<EOF > test_config.xml
           <clickhouse>
             <users>
-              <clickhouse_test>
+              <default>
                 <named_collection_control>1</named_collection_control>
-              </clickhouse_test>
+              </default>
             </users>
           </clickhouse>
           EOF
