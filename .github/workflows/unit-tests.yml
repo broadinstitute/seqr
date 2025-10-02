@@ -48,7 +48,7 @@ jobs:
         volumes:
           - /var/tmp:/var/seqr/clickhouse-data
           - /tmp:/in-memory-dir
-          - ${{ github.workspace }}/test_config.xml:/etc/clickhouse-server/users.d/users.xml
+          - ${{ github.workspace }}/test_config.xml:/etc/clickhouse-server/users.d/users.xml:ro
         options: >-
           --health-cmd "clickhouse-client --query 'SELECT 1'" 
           --health-interval 10s 
