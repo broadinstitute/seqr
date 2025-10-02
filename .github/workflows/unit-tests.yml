@@ -63,7 +63,7 @@ jobs:
             -p 9000:9000 \
             -e CLICKHOUSE_USER=clickhouse_test \
             -e CLICKHOUSE_PASSWORD=clickhouse_test \
-            -e ALLOW_EMPTY_PASSWORD=no
+            -e ALLOW_EMPTY_PASSWORD=no \
             bitnamilegacy/clickhouse:latest
       - name: Wait for ClickHouse
         run: |
