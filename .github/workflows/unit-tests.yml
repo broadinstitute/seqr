@@ -64,7 +64,7 @@ jobs:
       - name: Set up Clickhouse Settings
         run: |
           docker cp ${{ github.workspace }}/test_config.xml clickhouse:/etc/clickhouse-server/users.d/users.xml
-          docker exec clickhouse clickhouse-client --query--query "SYSTEM RELOAD CONFIG"
+          docker exec clickhouse clickhouse-client --query "SYSTEM RELOAD CONFIG"
           docker exec clickhouse clickhouse-client --query "CREATE USER clickhouse_read_only IDENTIFIED WITH plaintext_password BY 'clickhouse_test'"
           docker exec clickhouse clickhouse-client --query "CREATE SETTINGS PROFILE clickhouse_settings SETTINGS flatten_nested=0, join_use_nulls=1 TO clickhouse_test, clickhouse_read_only"
           docker exec clickhouse clickhouse-client --query "GRANT SELECT, SYSTEM VIEWS, dictGet ON *.* TO clickhouse_read_only"
