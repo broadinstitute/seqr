@@ -107,7 +107,7 @@ class Migration(migrations.Migration):
             hints={'clickhouse': True},
         ),
         migrations.RunSQL(
-            "ALTER TABLE `GRCh38/SV/project_gt_stats` ADD COLUMN `affected` Enum8('A'=1, 'N'=2, 'U'=3) DEFAULT 'U' AFTER `sample_type`;",
+            "ALTER TABLE `GRCh38/SV/project_gt_stats` ADD COLUMN `affected` Enum8('A'=1, 'N'=2, 'U'=3) DEFAULT 'U' AFTER `project_guid`;",
             hints={'clickhouse': True},
         ),
 
