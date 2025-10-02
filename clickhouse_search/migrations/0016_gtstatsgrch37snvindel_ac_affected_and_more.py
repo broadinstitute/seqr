@@ -307,7 +307,7 @@ class Migration(migrations.Migration):
                     "sumIf(sign, calls.gt = 'HET') het_samples",
                     "sumIf(sign, calls.gt = 'HOM') hom_samples",
                 ]),
-                groupby_columns='project_guid, key, sample_type, affected',
+                groupby_columns='project_guid, key, affected',
             ),
             hints={'clickhouse': True},
         ),
