@@ -618,6 +618,16 @@ class EntriesSnvIndel(BaseEntriesSnvIndel):
 
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/entries'
+        engine = CollapsingMergeTree(
+            'sign',
+            order_by=('project_guid', 'family_guid', 'sample_type', 'is_gnomad_gt_5_percent', 'is_annotated_in_any_gene', 'key'),
+            partition_by = (
+                'project_guid',
+                "farmHash64(family_guid) % coalesce(joinGet('seqr.project_partitions', 'n_partitions', project_guid), 1)"
+            ),
+            deduplicate_merge_projection_mode='rebuild',
+            index_granularity=8192,
+        )
 
 class EntriesMito(BaseEntries):
     CALL_FIELDS = [
@@ -893,6 +903,14 @@ class GtStatsSv(models.ClickhouseModel):
 
     class Meta(BaseGtStats.Meta):
         db_table = 'GRCh38/SV/gt_stats'
+
+class ProjectPartitionsSnvIndel(FixtureLoadableClickhouseModel):
+    # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
+    project_guid = ForeignKey('EntriesSnvIndel', db_column='project_guid', primary_key=True, on_delete=CASCADE)
+    n_partitions = models.UInt8Field()
+    class Meta:
+        db_table = 'GRCh38/SNV_INDEL/project_partitions'
+        engine = Join('ALL', 'LEFT', 'project_guid', join_use_nulls=1, flatten_nested=0)
 
 
 ENTRY_CLASS_MAP = {
