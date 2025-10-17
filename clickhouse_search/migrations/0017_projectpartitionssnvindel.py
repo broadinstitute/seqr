@@ -46,7 +46,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='ProjectPartitionsSnvIndel',
             fields=[
-                ('project_guid', models.ForeignKey(db_column='project_guid', on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='clickhouse_search.entriessnvindel')),
+                ('project_guid', clickhouse_backend.models.StringField(primary_key=True, serialize=False)),
                 ('n_partitions', clickhouse_backend.models.UInt8Field()),
             ],
             options={
