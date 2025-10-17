@@ -621,7 +621,7 @@ class EntriesSnvIndel(BaseEntriesSnvIndel):
     )
     n_partitions = MaterializedUInt8Field(
         default=1,
-        expression="dictGetOrDefault(`GRCh38/SNV_INDEL/project_partitions_dict`, 'n_partitions', project_guid, 1)",
+        expression="dictGetOrDefault('GRCh38/SNV_INDEL/project_partitions_dict', 'n_partitions', project_guid, 1)",
     )
 
     class Meta:
