@@ -173,6 +173,7 @@ class Migration(migrations.Migration):
             options={
                 'db_table': 'GRCh38/SNV_INDEL/entries',
                 'engine': clickhouse_search.backend.engines.CollapsingMergeTree('sign', deduplicate_merge_projection_mode='rebuild', index_granularity=8192, order_by=('project_guid', 'family_guid', 'sample_type', 'is_gnomad_gt_5_percent', 'is_annotated_in_any_gene', 'key'), partition_by='project_guid'),
+                'projection': clickhouse_search.models.Projection('xpos_projection', order_by='is_gnomad_gt_5_percent, is_annotated_in_any_gene, xpos'),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),

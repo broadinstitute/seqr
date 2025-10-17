@@ -597,10 +597,7 @@ class BaseEntriesSnvIndel(BaseEntries):
         engine = CollapsingMergeTree(
             'sign',
             order_by=('project_guid', 'family_guid', 'sample_type', 'is_gnomad_gt_5_percent', 'is_annotated_in_any_gene', 'key'),
-            partition_by=(
-                'project_guid',
-                f"farmHash64(family_guid) % coalesce(joinGet('{DATABASES['clickhouse_write']['NAME']}.GRCh38/SNV_INDEL/project_partitions', 'n_partitions', project_guid), 1))",
-            ),
+            partition_by='project_guid',
             deduplicate_merge_projection_mode='rebuild',
             index_granularity=8192,
         )
@@ -624,7 +621,10 @@ class EntriesSnvIndel(BaseEntriesSnvIndel):
         engine = CollapsingMergeTree(
             'sign',
             order_by=('project_guid', 'family_guid', 'sample_type', 'is_gnomad_gt_5_percent', 'is_annotated_in_any_gene', 'key'),
-            partition_by='project_guid',
+            partition_by=(
+                'project_guid',
+                f"farmHash64(family_guid) % coalesce(joinGet('{DATABASES['clickhouse_write']['NAME']}.GRCh38/SNV_INDEL/project_partitions', 'n_partitions', project_guid), 1))",
+            ),
             deduplicate_merge_projection_mode='rebuild',
             index_granularity=8192,
         )
