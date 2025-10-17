@@ -49,7 +49,7 @@ def conditionally_recreate_repartitioned_snv_indel_entries(apps, schema_editor):
             return
         create_table_query = create_table_query.replace(
             'PARTITION BY project_guid',
-            f"PARTITION BY (project_guid, partition_id)",
+            'PARTITION BY (project_guid, partition_id)',
         )
         cursor.execute('DROP TABLE `GRCh38/SNV_INDEL/entries`')
         cursor.execute(create_table_query)
