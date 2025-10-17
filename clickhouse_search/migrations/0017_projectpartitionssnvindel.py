@@ -2,7 +2,7 @@
 
 import clickhouse_backend.models
 import clickhouse_search.backend.engines
-from django.db import migrations, models, connections
+from django.db import migrations, connections
 import django.db.models.deletion
 import django.db.models.manager
 
