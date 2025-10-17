@@ -85,19 +85,19 @@ class Migration(migrations.Migration):
             hints={'clickhouse': True},
         ),
         migrations.RunSQL(
-            "ALTER TABLE 'GRCh38/SNV_INDEL/entries' ADD COLUMN 'n_partitions' UInt8 MATERIALIZED dictGetOrDefault(`GRCh38/SNV_INDEL/project_partitions_dict`, 'n_partitions', project_guid, 1) DEFAULT 1 AFTER `sign`;"
+            "ALTER TABLE 'GRCh38/SNV_INDEL/entries' ADD COLUMN 'n_partitions' UInt8 MATERIALIZED dictGetOrDefault('GRCh38/SNV_INDEL/project_partitions_dict', 'n_partitions', project_guid, 1) DEFAULT 1 AFTER `sign`;",
             hints={'clickhouse': True},
             state_operations=[
                 migrations.AddField(
                     model_name='entriessnvindel',
                     name='n_partitions',
-                    field=clickhouse_search.backend.fields.MaterializedUInt8Field(default=1, expression="dictGetOrDefault(`GRCh38/SNV_INDEL/project_partitions_dict`, 'n_partitions', project_guid, 1)"),
+                    field=clickhouse_search.backend.fields.MaterializedUInt8Field(default=1, expression="dictGetOrDefault('GRCh38/SNV_INDEL/project_partitions_dict', 'n_partitions', project_guid, 1)"),
                 )
             ],
 
         ),
         migrations.RunSQL(
-            "ALTER TABLE 'GRCh38/SNV_INDEL/entries' ADD COLUMN 'partition_id' UInt8 MATERIALIZED farmHash64(family_guid) % n_partitions DEFAULT 0 AFTER `n_partitions`;"
+            "ALTER TABLE 'GRCh38/SNV_INDEL/entries' ADD COLUMN 'partition_id' UInt8 MATERIALIZED farmHash64(family_guid) % n_partitions DEFAULT 0 AFTER `n_partitions`;",
             hints={'clickhouse': True},
             state_operations=[
                 migrations.AddField(
