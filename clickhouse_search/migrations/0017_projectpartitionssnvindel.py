@@ -9,11 +9,11 @@ import django.db.models.manager
 def conditionally_recreate_repartitioned_snv_indel_entries(apps, schema_editor):
     with connections['clickhouse_write'].cursor() as cursor:
         cursor.execute(
-            f'''
-                SELECT create_table_query
-                FROM system.tables
-                WHERE database = currentDatabase() AND name = %(table_name)s;
-            ''', 
+            '''
+            SELECT create_table_query
+            FROM system.tables
+            WHERE database = currentDatabase() AND name = %(table_name)s;
+            ''',
             {'table_name': 'GRCh38/SNV_INDEL/entries'},
         )
         row = cursor.fetchone()
@@ -22,9 +22,9 @@ def conditionally_recreate_repartitioned_snv_indel_entries(apps, schema_editor):
         create_table_query = row[0]
         if 'project_partitions' in create_table_query:
             return
-        cursor.execute(f"SELECT COUNT(*) FROM `GRCh38/SNV_INDEL/entries`;")
+        cursor.execute('SELECT COUNT(*) FROM `GRCh38/SNV_INDEL/entries`;')
         if cursor.fetchone()[0] > 0:
-            return 
+            return
         new_partition_by = "(project_guid, farmHash64(family_guid) % coalesce(joinGet(concat(currentDatabase(), '.project_partitions'), 'n_partitions', project_guid), 1))"
         create_table_query = create_table_query.replace(
             'PARTITION BY project_guid',
