@@ -7,7 +7,6 @@ import django.db.models.deletion
 import django.db.models.manager
 
 def conditionally_recreate_repartitioned_snv_indel_entries(apps, schema_editor):
-    table_name = "`GRCh38/SNV_INDEL/entries`"
     with connections['clickhouse_write'].cursor() as cursor:
         cursor.execute(
             f'''
@@ -15,7 +14,7 @@ def conditionally_recreate_repartitioned_snv_indel_entries(apps, schema_editor):
                 FROM system.tables
                 WHERE database = currentDatabase() AND name = %(table_name)s;
             ''', 
-            {'table_name': table_name},
+            {'table_name': 'GRCh38/SNV_INDEL/entries'},
         )
         row = cursor.fetchone()
         if not row:
@@ -23,7 +22,7 @@ def conditionally_recreate_repartitioned_snv_indel_entries(apps, schema_editor):
         create_table_query = row[0]
         if 'farmHash64' in create_table_query:
             return
-        cursor.execute(f"SELECT COUNT(*) FROM {table_name};")
+        cursor.execute(f"SELECT COUNT(*) FROM `GRCh38/SNV_INDEL/entries`;")
         if cursor.fetchone()[0] > 0:
             return 
         new_partition_by = "(project_guid, farmHash64(family_guid) % coalesce(joinGet('seqr.project_partitions', 'n_partitions', project_guid), 1))"
@@ -31,7 +30,7 @@ def conditionally_recreate_repartitioned_snv_indel_entries(apps, schema_editor):
             'PARTITION BY project_guid',
             f'PARTITION BY {new_partition_by}',
         )
-        cursor.execute(f"DROP TABLE `{table_name}`")
+        cursor.execute(f"DROP TABLE `GRCh38/SNV_INDEL/entries`")
         cursor.execute(create_table_query)
 
 
