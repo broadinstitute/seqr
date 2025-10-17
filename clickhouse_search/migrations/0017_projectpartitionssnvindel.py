@@ -30,8 +30,8 @@ def conditionally_recreate_repartitioned_snv_indel_entries(apps, schema_editor):
             'PARTITION BY project_guid',
             f'PARTITION BY {new_partition_by}',
         )
-        cursor.execute('DROP TABLE `GRCh38/SNV_INDEL/entries`')
-        cursor.execute(create_table_query)
+        #cursor.execute('DROP TABLE `GRCh38/SNV_INDEL/entries`')
+        #cursor.execute(create_table_query)
 
 
 class Migration(migrations.Migration):
