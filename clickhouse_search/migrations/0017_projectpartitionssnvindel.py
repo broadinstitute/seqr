@@ -51,7 +51,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'GRCh38/SNV_INDEL/project_partitions',
-                'engine': clickhouse_search.backend.engines.Join('ALL', 'LEFT', 'project_guid', flatten_nested=0, join_use_nulls=1),
+                'engine': clickhouse_search.backend.engines.Join('ANY', 'LEFT', 'project_guid', flatten_nested=0, join_use_nulls=1),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
