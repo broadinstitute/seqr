@@ -6,6 +6,8 @@ from django.db import migrations, models, connections
 import django.db.models.deletion
 import django.db.models.manager
 
+from settings import DATABASES
+
 def conditionally_recreate_repartitioned_snv_indel_entries(apps, schema_editor):
     with connections['clickhouse_write'].cursor() as cursor:
         cursor.execute(
@@ -25,13 +27,13 @@ def conditionally_recreate_repartitioned_snv_indel_entries(apps, schema_editor):
         cursor.execute('SELECT COUNT(*) FROM `GRCh38/SNV_INDEL/entries`;')
         if cursor.fetchone()[0] > 0:
             return
-        new_partition_by = "(project_guid, farmHash64(family_guid) % coalesce(joinGet(concat(currentDatabase(), '.project_partitions'), 'n_partitions', project_guid), 1))"
+        new_partition_by = f"(project_guid, farmHash64(family_guid) % coalesce(joinGet(concat({DATABASES['default']['NAME']}, '.project_partitions'), 'n_partitions', project_guid), 1))"
         create_table_query = create_table_query.replace(
             'PARTITION BY project_guid',
             f'PARTITION BY {new_partition_by}',
         )
-        #cursor.execute('DROP TABLE `GRCh38/SNV_INDEL/entries`')
-        #cursor.execute(create_table_query)
+        cursor.execute('DROP TABLE `GRCh38/SNV_INDEL/entries`')
+        cursor.execute(create_table_query)
 
 
 class Migration(migrations.Migration):
