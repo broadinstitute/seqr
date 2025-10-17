@@ -93,6 +93,25 @@ class UInt64FieldDeltaCodecField(models.UInt64Field):
     def db_type(self, connection):
         return f'{super().db_type(connection)} CODEC(Delta(8), ZSTD(1))'
 
+class MaterializedUInt8Field(models.UInt8Field):
+
+    def __init__(self, *args, expression=None, **kwargs):
+        self.expression = expression
+        super().__init__(*args, **kwargs)
+
+    def deconstruct(self):
+        name, path, args, kwargs = super().deconstruct()
+        if getattr(self, "expression", False):
+            kwargs["expression"] = self.expression
+        return name, path, args, kwargs
+
+    def clone(self):
+        clone = super().clone()
+        clone.expression =  self.expression
+        return clone
+
+    def db_type(self, connection):
+        return f'{super().db_type(connection)} MATERIALIZED {self.expression}'
 
 class NamedTupleField(models.TupleField):
 
