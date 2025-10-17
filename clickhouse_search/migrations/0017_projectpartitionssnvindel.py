@@ -27,7 +27,7 @@ def conditionally_recreate_repartitioned_snv_indel_entries(apps, schema_editor):
         cursor.execute('SELECT COUNT(*) FROM `GRCh38/SNV_INDEL/entries`;')
         if cursor.fetchone()[0] > 0:
             return
-        new_partition_by = f"(project_guid, farmHash64(family_guid) % coalesce(joinGet('{DATABASES['clickhouse_write']['NAME']}.project_partitions', 'n_partitions', project_guid), 1))"
+        new_partition_by = f"(project_guid, farmHash64(family_guid) % coalesce(joinGet('{DATABASES['clickhouse_write']['NAME']}.`GRCh38/SNV_INDEL/project_partitions`', 'n_partitions', project_guid), 1))"
         create_table_query = create_table_query.replace(
             'PARTITION BY project_guid',
             f'PARTITION BY {new_partition_by}',
