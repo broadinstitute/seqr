@@ -910,7 +910,7 @@ class ProjectPartitionsSnvIndel(FixtureLoadableClickhouseModel):
     n_partitions = models.UInt8Field()
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/project_partitions'
-        engine = Join('ALL', 'LEFT', 'project_guid', join_use_nulls=1, flatten_nested=0)
+        engine = Join('ANY', 'LEFT', 'project_guid', join_use_nulls=1, flatten_nested=0)
 
 
 ENTRY_CLASS_MAP = {
