@@ -2,6 +2,7 @@ from clickhouse_backend.backend.base import (
     DatabaseWrapper as BaseDatabaseWrapper,
     DatabaseSchemaEditor as BaseDatabaseSchemaEditor,
 )
+from clickhouse_backend import models
 
 from clickhouse_search.backend.engines import Join
 
@@ -16,6 +17,17 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
                 f', PROJECTION {projection.name} (SELECT {projection.select} ORDER BY {projection.order_by})) ENGINE',
             )
         return sql, params
+
+    def _model_extra_sql(self, model, engine):
+        # Supports tuple AND hardcoded-string partition by.
+        if (
+            isinstance(engine, models.BaseMergeTree)
+            and engine.partition_by
+            and isinstance(engine.partition_by, tuple)
+        ):
+            yield f"PARTITION BY ({','.join(engine.partition_by)})"
+            engine.partition_by = None
+        yield from super()._model_extra_sql(model, engine)
 
     def _get_engine_expression(self, model, engine):
         prev_quote_value = self.quote_value   # pylint: disable=access-member-before-definition

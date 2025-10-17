@@ -20,11 +20,14 @@ def conditionally_recreate_repartitioned_snv_indel_entries(apps, schema_editor):
         row = cursor.fetchone()
         if not row:
             return
+        create_table_query = row[0]
+        if 'farmHash64' in create_table_query:
+            return
         cursor.execute(f"SELECT COUNT(*) FROM {table_name};")
         if cursor.fetchone()[0] > 0:
             return 
         new_partition_by = "(project_guid, farmHash64(family_guid) % coalesce(joinGet('seqr.project_partitions', 'n_partitions', project_guid), 1))"
-        create_table_query = row[0].replace(
+        create_table_query = create_table_query.replace(
             'PARTITION BY project_guid',
             f'PARTITION BY {new_partition_by}',
         )
