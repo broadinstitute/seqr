@@ -616,11 +616,9 @@ class EntriesSnvIndel(BaseEntriesSnvIndel):
     # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
     key = ForeignKey('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
     partition_id = MaterializedUInt8Field(
-        default=0,
         expression="farmHash64(family_guid) %% n_partitions", # extra paren to escape within Django.
     )
     n_partitions = MaterializedUInt8Field(
-        default=1,
         expression="dictGetOrDefault('GRCh38/SNV_INDEL/project_partitions_dict', 'n_partitions', project_guid, 1)",
     )
 
@@ -632,6 +630,21 @@ class EntriesSnvIndel(BaseEntriesSnvIndel):
             partition_by='project_guid, partition_id',
             deduplicate_merge_projection_mode='rebuild',
             index_granularity=8192,
+        )
+
+    def _save_table(
+        self,
+        *args, **kwargs,
+    ):
+        # Exclude derived fields from fixture insert.
+        # Note that just deleting the attributes is insufficient due
+        # to fields mismatch on db refresh.
+        self._meta.local_concrete_fields = [
+            f for f in self._meta.local_concrete_fields
+            if f.name not in ['partition_id', 'n_partitions']
+        ]
+        return super()._save_table(
+            *args, **kwargs,
         )
 
 class EntriesMito(BaseEntries):
