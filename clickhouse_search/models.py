@@ -10,7 +10,7 @@ from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample
 from seqr.utils.search.constants import SPLICE_AI_FIELD
 from seqr.utils.xpos_utils import CHROMOSOMES
-from settings import CLICKHOUSE_IN_MEMORY_DIR, CLICKHOUSE_DATA_DIR, DATABASES
+from settings import CLICKHOUSE_IN_MEMORY_DIR, CLICKHOUSE_DATA_DIR
 
 options.DEFAULT_NAMES = (
     *options.DEFAULT_NAMES,

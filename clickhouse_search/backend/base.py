@@ -2,7 +2,6 @@ from clickhouse_backend.backend.base import (
     DatabaseWrapper as BaseDatabaseWrapper,
     DatabaseSchemaEditor as BaseDatabaseSchemaEditor,
 )
-from clickhouse_backend import models
 
 from clickhouse_search.backend.engines import Join
 
