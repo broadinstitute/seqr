@@ -90,7 +90,7 @@ class Migration(migrations.Migration):
                 migrations.AddField(
                     model_name='entriessnvindel',
                     name='n_partitions',
-                    field=clickhouse_search.backend.fields.MaterializedUInt8Field(editable=False, expression="dictGetOrDefault('GRCh38/SNV_INDEL/project_partitions_dict', 'n_partitions', project_guid, 1)"),
+                    field=clickhouse_search.backend.fields.MaterializedUInt8Field(expression="dictGetOrDefault('GRCh38/SNV_INDEL/project_partitions_dict', 'n_partitions', project_guid, 1)"),
                 )
             ],
         ),
@@ -101,7 +101,7 @@ class Migration(migrations.Migration):
                 migrations.AddField(
                     model_name='entriessnvindel',
                     name='partition_id',
-                    field=clickhouse_search.backend.fields.MaterializedUInt8Field(editable=False, expression='farmHash64(family_guid) %% n_partitions'),
+                    field=clickhouse_search.backend.fields.MaterializedUInt8Field(expression='farmHash64(family_guid) %% n_partitions'),
                 ),
             ],
         ),
