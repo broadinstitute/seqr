@@ -508,7 +508,7 @@ class BaseClinvar(FixtureLoadableClickhouseModel):
     class Meta:
         abstract = True
 
-class BaseClinvarAllVariants(BaseClinvar):
+class BaseClinvarVariants(BaseClinvar):
     version = models.DateField()
     variant_id = models.StringField(db_column='variantId', primary_key=True)
 
@@ -520,17 +520,29 @@ class BaseClinvarAllVariants(BaseClinvar):
             partition_by='version',
         )
 
-class ClinvarAllVariantsGRCh37SnvIndel(BaseClinvarAllVariants):
-    class Meta(BaseClinvarAllVariants.Meta):
-        db_table = 'GRCh37/SNV_INDEL/clinvar_all_variants'
+class ClinvarAllVariantsGRCh37SnvIndel(BaseClinvarVariants):
+    class Meta(BaseClinvarVariants.Meta):
+        db_table = 'GRCh37/SNV_INDEL/reference_data/clinvar/all'
 
-class ClinvarAllVariantsSnvIndel(BaseClinvarAllVariants):
-    class Meta(BaseClinvarAllVariants.Meta):
-        db_table = 'GRCh38/SNV_INDEL/clinvar_all_variants'
+class ClinvarAllVariantsSnvIndel(BaseClinvarVariants):
+    class Meta(BaseClinvarVariants.Meta):
+        db_table = 'GRCh38/SNV_INDEL/reference_data/clinvar/all'
 
-class ClinvarAllVariantsMito(BaseClinvarAllVariants):
-    class Meta(BaseClinvarAllVariants.Meta):
-        db_table = 'GRCh38/MITO/clinvar_all_variants'
+class ClinvarAllVariantsMito(BaseClinvarVariants):
+    class Meta(BaseClinvarVariants.Meta):
+        db_table = 'GRCh38/MITO/reference_data/clinvar/all'
+
+class ClinvarSeqrVariantsGRCh37SnvIndel(BaseClinvarVariants):
+    class Meta(BaseClinvarVariants.Meta):
+        db_table = 'GRCh37/SNV_INDEL/reference_data/clinvar/seqr'
+
+class ClinvarSeqrVariantsSnvIndel(BaseClinvarVariants):
+    class Meta(BaseClinvarVariants.Meta):
+        db_table = 'GRCh38/SNV_INDEL/reference_data/clinvar/seqr'
+
+class ClinvarSeqrVariantsMito(BaseClinvarVariants):
+    class Meta(BaseClinvarVariants.Meta):
+        db_table = 'GRCh38/MITO/reference_data/clinvar/seqr'
 
 class BaseClinvarJoin(BaseClinvar):
 
@@ -542,17 +554,17 @@ class BaseClinvarJoin(BaseClinvar):
 class ClinvarGRCh37SnvIndel(BaseClinvarJoin):
     key = ForeignKey('EntriesGRCh37SnvIndel', db_column='key', related_name='clinvar_join', primary_key=True, on_delete=PROTECT)
     class Meta(BaseClinvarJoin.Meta):
-        db_table = 'GRCh37/SNV_INDEL/clinvar'
+        db_table = 'GRCh37/SNV_INDEL/reference_data/clinvar/search'
 
 class ClinvarSnvIndel(BaseClinvarJoin):
     key = ForeignKey('EntriesSnvIndel', db_column='key', related_name='clinvar_join', primary_key=True, on_delete=PROTECT)
     class Meta(BaseClinvarJoin.Meta):
-        db_table = 'GRCh38/SNV_INDEL/clinvar'
+        db_table = 'GRCh38/SNV_INDEL/reference_data/clinvar/search'
 
 class ClinvarMito(BaseClinvarJoin):
     key = ForeignKey('EntriesMito', db_column='key', related_name='clinvar_join', primary_key=True, on_delete=PROTECT)
     class Meta(BaseClinvarJoin.Meta):
-        db_table = 'GRCh38/MITO/clinvar'
+        db_table = 'GRCh38/MITO/reference_data/clinvar/search'
 
 
 class BaseEntries(FixtureLoadableClickhouseModel):
