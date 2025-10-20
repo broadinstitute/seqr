@@ -532,15 +532,18 @@ class ClinvarAllVariantsMito(BaseClinvarVariants):
     class Meta(BaseClinvarVariants.Meta):
         db_table = 'GRCh38/MITO/reference_data/clinvar/all'
 
-class ClinvarSeqrVariantsGRCh37SnvIndel(BaseClinvarVariants):
+class ClinvarSeqrVariantsGRCh37SnvIndel(BaseClinvar):
+    key = OneToOneField('AnnotationsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
     class Meta(BaseClinvarVariants.Meta):
         db_table = 'GRCh37/SNV_INDEL/reference_data/clinvar/seqr'
 
-class ClinvarSeqrVariantsSnvIndel(BaseClinvarVariants):
+class ClinvarSeqrVariantsSnvIndel(BaseClinvar):
+    key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
     class Meta(BaseClinvarVariants.Meta):
         db_table = 'GRCh38/SNV_INDEL/reference_data/clinvar/seqr'
 
-class ClinvarSeqrVariantsMito(BaseClinvarVariants):
+class ClinvarSeqrVariantsMito(BaseClinvar):
+    key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
     class Meta(BaseClinvarVariants.Meta):
         db_table = 'GRCh38/MITO/reference_data/clinvar/seqr'
 
