@@ -508,7 +508,7 @@ class BaseClinvar(FixtureLoadableClickhouseModel):
     class Meta:
         abstract = True
 
-class BaseClinvarVariants(BaseClinvar):
+class BaseClinvarAllVariants(BaseClinvar):
     version = models.DateField()
     variant_id = models.StringField(db_column='variantId', primary_key=True)
 
@@ -520,32 +520,44 @@ class BaseClinvarVariants(BaseClinvar):
             partition_by='version',
         )
 
-class ClinvarAllVariantsGRCh37SnvIndel(BaseClinvarVariants):
-    class Meta(BaseClinvarVariants.Meta):
+class ClinvarAllVariantsGRCh37SnvIndel(BaseClinvarAllVariants):
+    class Meta(BaseClinvarAllVariants.Meta):
         db_table = 'GRCh37/SNV_INDEL/reference_data/clinvar/all'
 
-class ClinvarAllVariantsSnvIndel(BaseClinvarVariants):
-    class Meta(BaseClinvarVariants.Meta):
+class ClinvarAllVariantsSnvIndel(BaseClinvarAllVariants):
+    class Meta(BaseClinvarAllVariants.Meta):
         db_table = 'GRCh38/SNV_INDEL/reference_data/clinvar/all'
 
-class ClinvarAllVariantsMito(BaseClinvarVariants):
-    class Meta(BaseClinvarVariants.Meta):
+class ClinvarAllVariantsMito(BaseClinvarAllVariants):
+    class Meta(BaseClinvarAllVariants.Meta):
         db_table = 'GRCh38/MITO/reference_data/clinvar/all'
 
 class ClinvarSeqrVariantsGRCh37SnvIndel(BaseClinvar):
     key = OneToOneField('AnnotationsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
-    class Meta(BaseClinvarVariants.Meta):
+    class Meta(BaseClinvar.Meta):
         db_table = 'GRCh37/SNV_INDEL/reference_data/clinvar/seqr'
+        engine = models.MergeTree(
+            primary_key='key',
+            order_by='key'
+        )
 
 class ClinvarSeqrVariantsSnvIndel(BaseClinvar):
     key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
-    class Meta(BaseClinvarVariants.Meta):
+    class Meta(BaseClinvar.Meta):
         db_table = 'GRCh38/SNV_INDEL/reference_data/clinvar/seqr'
+        engine = models.MergeTree(
+            primary_key='key',
+            order_by='key'
+        )
 
 class ClinvarSeqrVariantsMito(BaseClinvar):
     key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
-    class Meta(BaseClinvarVariants.Meta):
+    class Meta(BaseClinvar.Meta):
         db_table = 'GRCh38/MITO/reference_data/clinvar/seqr'
+        engine = models.MergeTree(
+            primary_key='key',
+            order_by='key'
+        )
 
 class BaseClinvarJoin(BaseClinvar):
 

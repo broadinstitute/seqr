@@ -58,7 +58,9 @@ class Migration(migrations.Migration):
             options={
                 'db_table': 'GRCh37/SNV_INDEL/reference_data/clinvar/seqr',
                 'abstract': False,
-                'engine': clickhouse_backend.models.MergeTree(order_by=('version', 'variant_id'), partition_by='version', primary_key=('version', 'variant_id')),
+                'engine': clickhouse_backend.models.MergeTree(
+                    order_by='key', primary_key='key',
+                )
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
@@ -80,7 +82,9 @@ class Migration(migrations.Migration):
             options={
                 'db_table': 'GRCh38/MITO/reference_data/clinvar/seqr',
                 'abstract': False,
-                'engine': clickhouse_backend.models.MergeTree(order_by=('version', 'variant_id'), partition_by='version', primary_key=('version', 'variant_id')),
+                'engine': clickhouse_backend.models.MergeTree(
+                    order_by='key', primary_key='key',
+                )
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
@@ -102,7 +106,9 @@ class Migration(migrations.Migration):
             options={
                 'db_table': 'GRCh38/SNV_INDEL/reference_data/clinvar/seqr',
                 'abstract': False,
-                'engine': clickhouse_backend.models.MergeTree(order_by=('version', 'variant_id'), partition_by='version', primary_key=('version', 'variant_id')),
+                'engine': clickhouse_backend.models.MergeTree(
+                    order_by='key', primary_key='key',
+                )
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
