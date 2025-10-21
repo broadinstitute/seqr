@@ -298,7 +298,7 @@ class AnnotationsQuerySet(SearchQuerySet):
             # Due to django modeling, adding a clinvar annotation will add a join to the entries table and then to clinvar
             # Manipulating the underlying join removes the entry join entirely
             entry_table = f'{self.table_basename}/entries'
-            results.query.alias_map[f'{self.table_basename}/clinvar'].parent_alias = results.query.alias_map[entry_table].parent_alias
+            results.query.alias_map[f'{self.table_basename}/reference_data/clinvar/search'].parent_alias = results.query.alias_map[entry_table].parent_alias
             results.query.alias_refcount[entry_table] = 0
         return results
 
