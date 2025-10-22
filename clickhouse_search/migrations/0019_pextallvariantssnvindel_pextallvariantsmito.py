@@ -17,7 +17,7 @@ CREATE DICTIONARY `GRCh38/$dataset_type/reference_data/pext/search`
     chrom String,
     start UInt32,
     end UInt32,
-    exp_prop_mean Decimal(9, 5)
+    exp_prop_mean Nullable(Decimal(9, 5))
 )
 PRIMARY KEY chrom
 SOURCE(CLICKHOUSE(
@@ -34,6 +34,20 @@ RANGE(MIN start MAX end)
     clickhouse_writer_user=CLICKHOUSE_WRITER_USER,
     clickhouse_writer_password=CLICKHOUSE_WRITER_PASSWORD,
 ))
+
+PEXT_VIEW = Template("""
+CREATE MATERIAZLIED VIEW `GRCh38/$dataset_type/reference_data/pext/all_mv`
+REFRESH EVERY 10 YEAR
+TO `GRCh38/$dataset_type/reference_data/pext/all`
+SELECT
+    replaceOne(splitByChar(':', assumeNotNull(locus))[1], 'chr', '') AS chrom,
+    toInt64(splitByChar(':', assumeNotNull(locus))[2]) AS start,
+    toInt64(splitByChar(':', assumeNotNull(locus))[2]) AS end,
+    if(exp_prop_mean IN ('NaN', 'nan', ''), NULL, exp_prop_mean) AS exp_prop_mean
+FROM url('https://storage.googleapis.com/gcp-public-data--gnomad/release/4.1/pext/gnomad.pext.gtex_v10.base_level.tsv.gz')
+GROUP BY $groupby_columns
+""")
+
 
 
 class Migration(migrations.Migration):
@@ -85,6 +99,18 @@ class Migration(migrations.Migration):
         ),
         migrations.RunSQL(
             PEXT_SEARCH.substitute(
+                dataset_type='MITO',
+            ),
+            hints={'clickhouse': True},
+        ),
+        migrations.RunSQL(
+            PEXT_VIEW.substitute(
+                dataset_type='SNV_INDEL',
+            ),
+            hints={'clickhouse': True},
+        ),
+        migrations.RunSQL(
+            PEXT_VIEW.substitute(
                 dataset_type='MITO',
             ),
             hints={'clickhouse': True},
