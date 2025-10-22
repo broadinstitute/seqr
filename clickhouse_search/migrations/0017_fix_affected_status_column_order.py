@@ -87,6 +87,7 @@ class Migration(migrations.Migration):
                 reference_genome='GRCh38',
                 dataset_type='SV',
                 columns=",\n    ".join([
+                    "dictGetOrDefault('seqrdb_affected_status_dict', 'affected', (family_guid, calls.sampleId), 'U') affected",
                     "sumIf(sign, calls.gt = 'REF') ref_samples",
                     "sumIf(sign, calls.gt = 'HET') het_samples",
                     "sumIf(sign, calls.gt = 'HOM') hom_samples",
