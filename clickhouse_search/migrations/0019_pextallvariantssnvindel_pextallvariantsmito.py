@@ -45,7 +45,6 @@ SELECT
     toInt64(splitByChar(':', assumeNotNull(locus))[2]) AS end,
     if(exp_prop_mean IN ('NaN', 'nan', ''), NULL, exp_prop_mean) AS exp_prop_mean
 FROM url('https://storage.googleapis.com/gcp-public-data--gnomad/release/4.1/pext/gnomad.pext.gtex_v10.base_level.tsv.gz')
-GROUP BY $groupby_columns
 """)
 
 
