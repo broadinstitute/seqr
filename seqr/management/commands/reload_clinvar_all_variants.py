@@ -8,6 +8,7 @@ from django.core.management.base import BaseCommand, CommandError
 from collections import defaultdict
 from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL
 import re
+import shutil
 from string import Template
 import tempfile
 from typing import Optional, Union
@@ -250,8 +251,7 @@ class Command(BaseCommand):
         new_version = None
         with requests.get(WEEKLY_XML_RELEASE, stream=True, timeout=10) as r, tempfile.NamedTemporaryFile(delete=False) as tmpfile:
             r.raise_for_status()
-            for chunk in r.iter_content(chunk_size=8192):
-                tmpfile.write(chunk)
+            shutil.copyfileobj(r.raw, tmp_file)
         with gzip.open(tmpfile.name, 'rb') as gzipped_file:
             for event, elem in ET.iterparse(gzipped_file, events=('start', 'end')):
                 # Handle parsing the current date.
