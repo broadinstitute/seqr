@@ -253,7 +253,7 @@ class Command(BaseCommand):
             for chunk in r.iter_content(chunk_size=8192):
                 tmpfile.write(chunk)
         with gzip.open(tmpfile.name, 'rb') as gzipped_file:
-            for event, elem in ET.iterparse(gzip.GzipFile(fileobj=r.raw), events=('start', 'end',)):
+            for event, elem in ET.iterparse(gzipped_file, events=('start', 'end')):
                 # Handle parsing the current date.
                 if event == 'start' and elem.tag == 'ClinVarVariationRelease':
                     new_version = elem.attrib['ReleaseDate']
