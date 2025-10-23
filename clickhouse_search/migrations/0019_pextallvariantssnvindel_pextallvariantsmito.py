@@ -39,7 +39,7 @@ PEXT_VIEW = Template("""
 CREATE MATERIAZLIED VIEW `GRCh38/$dataset_type/reference_data/pext/all_mv`
 REFRESH EVERY 10 YEAR
 TO `GRCh38/$dataset_type/reference_data/pext/all`
-SELECT
+AS SELECT
     replaceOne(splitByChar(':', assumeNotNull(locus))[1], 'chr', '') AS chrom,
     toInt64(splitByChar(':', assumeNotNull(locus))[2]) AS start,
     toInt64(splitByChar(':', assumeNotNull(locus))[2]) AS end,
