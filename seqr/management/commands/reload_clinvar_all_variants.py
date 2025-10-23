@@ -251,9 +251,9 @@ class Command(BaseCommand):
         new_version = None
         with tempfile.TemporaryDirectory() as tmpdir:
             with requests.get(WEEKLY_XML_RELEASE, stream=True, timeout=10) as r, \
-                 tempfile.NamedTemporaryFile(dir=tmpdir, delete=False) as tmp:
+                 tempfile.NamedTemporaryFile(dir=tmpdir, delete=False) as tmpfile:
                 r.raise_for_status()
-                shutil.copyfileobj(r.raw, tmp)
+                shutil.copyfileobj(r.raw, tmpfile)
             with gzip.open(tmpfile.name, 'rb') as gzipped_file:
                 for event, elem in ET.iterparse(gzipped_file, events=('start', 'end')):
                     # Handle parsing the current date.
