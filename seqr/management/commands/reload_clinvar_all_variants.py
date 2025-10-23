@@ -249,39 +249,41 @@ class Command(BaseCommand):
             ClinvarAllVariantsMito: [],
         }
         new_version = None
-        with requests.get(WEEKLY_XML_RELEASE, stream=True, timeout=10) as r, tempfile.NamedTemporaryFile(delete=False) as tmpfile:
-            r.raise_for_status()
-            shutil.copyfileobj(r.raw, tmpfile)
-        with gzip.open(tmpfile.name, 'rb') as gzipped_file:
-            for event, elem in ET.iterparse(gzipped_file, events=('start', 'end')):
-                # Handle parsing the current date.
-                if event == 'start' and elem.tag == 'ClinVarVariationRelease':
-                    new_version = elem.attrib['ReleaseDate']
-                    existing_version_obj = DataVersions.objects.filter(data_model_name='Clinvar').first()
-                    if existing_version_obj:
-                        if existing_version_obj.version == new_version:
-                            logger.info(f'Clinvar ClickHouse tables already successfully updated to {new_version}, gracefully exiting.')
-                            return
-                    logger.info(f'Updating Clinvar ClickHouse tables to {new_version} from {existing_version_obj and existing_version_obj.version}.')
-                    # Drop any currently existing variants in the table that may exist due to a
-                    # previously failed partial run.  Note that we validate that the Postgresql existing version
-                    # is present in ClickHouse to account for the situation where Postgresql has an incorrect
-                    # version.
-                    if existing_version_obj and ClinvarAllVariantsSnvIndel.objects.filter(version=existing_version_obj.version).exists():
-                        clinvar_run_sql(
-                            Template(f"ALTER TABLE `$reference_genome/$dataset_type/clinvar_all_variants` DROP PARTITION '{new_version}';")
-                        )
-
-                # Handle parsing variants
-                if event == 'end' and elem.tag == 'VariationArchive' and new_version:
-                    for obj in extract_variant_info(elem, new_version):
-                        for model, batch in model_to_batch.items():
-                            if isinstance(obj, model):
-                                batch.append(obj)
-                                if len(batch) == BATCH_SIZE:
-                                    model.objects.using('clickhouse_write').bulk_create(batch)
-                                    batch.clear()
-                    elem.clear()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with requests.get(WEEKLY_XML_RELEASE, stream=True, timeout=10) as r, \
+                 tempfile.NamedTemporaryFile(dir=tmpdir, delete=False) as tmp:
+                r.raise_for_status()
+                shutil.copyfileobj(r.raw, tmp)
+            with gzip.open(tmpfile.name, 'rb') as gzipped_file:
+                for event, elem in ET.iterparse(gzipped_file, events=('start', 'end')):
+                    # Handle parsing the current date.
+                    if event == 'start' and elem.tag == 'ClinVarVariationRelease':
+                        new_version = elem.attrib['ReleaseDate']
+                        existing_version_obj = DataVersions.objects.filter(data_model_name='Clinvar').first()
+                        if existing_version_obj:
+                            if existing_version_obj.version == new_version:
+                                logger.info(f'Clinvar ClickHouse tables already successfully updated to {new_version}, gracefully exiting.')
+                                return
+                        logger.info(f'Updating Clinvar ClickHouse tables to {new_version} from {existing_version_obj and existing_version_obj.version}.')
+                        # Drop any currently existing variants in the table that may exist due to a
+                        # previously failed partial run.  Note that we validate that the Postgresql existing version
+                        # is present in ClickHouse to account for the situation where Postgresql has an incorrect
+                        # version.
+                        if existing_version_obj and ClinvarAllVariantsSnvIndel.objects.filter(version=existing_version_obj.version).exists():
+                            clinvar_run_sql(
+                                Template(f"ALTER TABLE `$reference_genome/$dataset_type/clinvar_all_variants` DROP PARTITION '{new_version}';")
+                            )
+    
+                    # Handle parsing variants
+                    if event == 'end' and elem.tag == 'VariationArchive' and new_version:
+                        for obj in extract_variant_info(elem, new_version):
+                            for model, batch in model_to_batch.items():
+                                if isinstance(obj, model):
+                                    batch.append(obj)
+                                    if len(batch) == BATCH_SIZE:
+                                        model.objects.using('clickhouse_write').bulk_create(batch)
+                                        batch.clear()
+                        elem.clear()
 
         for model, batch in model_to_batch.items():
             if batch:
