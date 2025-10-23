@@ -41,8 +41,7 @@ REFRESH EVERY 10 YEAR
 TO `GRCh38/$dataset_type/reference_data/pext/all`
 AS SELECT
     replaceOne(splitByChar(':', assumeNotNull(locus))[1], 'chr', '') AS chrom,
-    toInt64(splitByChar(':', assumeNotNull(locus))[2]) AS start,
-    toInt64(splitByChar(':', assumeNotNull(locus))[2]) AS end,
+    toInt64(splitByChar(':', assumeNotNull(locus))[2]) AS pos,
     if(exp_prop_mean IN ('NaN', 'nan', ''), NULL, exp_prop_mean) AS exp_prop_mean
 FROM url('https://storage.googleapis.com/gcp-public-data--gnomad/release/4.1/pext/gnomad.pext.gtex_v10.base_level.tsv.gz')
 """)
