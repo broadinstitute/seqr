@@ -9,6 +9,7 @@ from collections import defaultdict
 from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL
 import re
 from string import Template
+import tempfile
 from typing import Optional, Union
 
 from clickhouse_backend import models
@@ -247,8 +248,11 @@ class Command(BaseCommand):
             ClinvarAllVariantsMito: [],
         }
         new_version = None
-        with requests.get(WEEKLY_XML_RELEASE, stream=True, timeout=10) as r:
+        with requests.get(WEEKLY_XML_RELEASE, stream=True, timeout=10) as r, tempfile.NamedTemporaryFile(delete=False) as tmpfile:
             r.raise_for_status()
+            for chunk in r.iter_content(chunk_size=8192):
+                tmpfile.write(chunk)
+        with gzip.open(tmpfile.name, 'rb') as gzipped_file:
             for event, elem in ET.iterparse(gzip.GzipFile(fileobj=r.raw), events=('start', 'end',)):
                 # Handle parsing the current date.
                 if event == 'start' and elem.tag == 'ClinVarVariationRelease':
