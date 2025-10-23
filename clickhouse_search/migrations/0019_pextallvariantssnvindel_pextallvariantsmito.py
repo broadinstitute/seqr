@@ -36,7 +36,7 @@ RANGE(MIN start MAX end)
 ))
 
 PEXT_VIEW = Template("""
-CREATE MATERIAZLIED VIEW `GRCh38/$dataset_type/reference_data/pext/all_mv`
+CREATE MATERIALIZED VIEW `GRCh38/$dataset_type/reference_data/pext/all_mv`
 REFRESH EVERY 10 YEAR
 TO `GRCh38/$dataset_type/reference_data/pext/all`
 AS SELECT
