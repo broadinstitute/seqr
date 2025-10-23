@@ -273,7 +273,6 @@ class Command(BaseCommand):
                             clinvar_run_sql(
                                 Template(f"ALTER TABLE `$reference_genome/$dataset_type/clinvar_all_variants` DROP PARTITION '{new_version}';")
                             )
-    
                     # Handle parsing variants
                     if event == 'end' and elem.tag == 'VariationArchive' and new_version:
                         for obj in extract_variant_info(elem, new_version):
