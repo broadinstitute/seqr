@@ -13,11 +13,11 @@ TO `$reference_genome/$dataset_type/reference_data/clinvar/seqr_variants`
 AS 
 SELECT
     DISTINCT ON (key)
-    kl.key as key, 
-    c.*
-FROM `$reference_genome/$dataset_type/reference_data/clinvar/all_variants` c
-INNER JOIN `$reference_genome/$dataset_type/key_lookup` kl
-ON c.variantId = kl.variantId
+    dst.key as key, 
+    COLUMNS('src.*') EXCEPT(version, variantId)
+FROM `$reference_genome/$dataset_type/reference_data/clinvar/all_variants` src
+INNER JOIN `$reference_genome/$dataset_type/key_lookup` dst
+ON assumeNotNull(src.variantId) = dst.variantId
 """)
 
 CLINVAR_SEQR_TO_SEARCH_MV = Template("""
