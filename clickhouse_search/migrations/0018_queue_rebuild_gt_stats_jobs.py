@@ -16,9 +16,26 @@ def batch_project_guids(project_guids, max_batches=30, min_batch_size=5):
 
 
 def queue_rebuild_gt_stats_jobs(apps, schema_editor):
-    Project = apps.get_model("seqr", "Project")
+    ProjectGtStatsGRCh37SnvIndel = apps.get_model(
+        "clickhouse_search", "ProjectGtStatsGRCh37SnvIndel"
+    )
+    ProjectGtStatsSnvIndel = apps.get_model(
+        "clickhouse_search", "ProjectGtStatsSnvIndel"
+    )
+    db_alias = schema_editor.connection.alias
     for batch in batch_project_guids(
-        list(Project.objects.using("default").values_list("guid", flat=True))
+        list(
+            set(
+                ProjectGtStatsGRCh37SnvIndel.objects.using(db_alias)
+                .values_list("project_guid", flat=True)
+                .distinct()
+            )
+            | set(
+                ProjectGtStatsSnvIndel.objects.using(db_alias)
+                .values_list("project_guid", flat=True)
+                .distinct()
+            )
+        )
     ):
         response = requests.post(
             f"{PIPELINE_RUNNER_SERVER}/rebuild_gt_stats_enqueue",
