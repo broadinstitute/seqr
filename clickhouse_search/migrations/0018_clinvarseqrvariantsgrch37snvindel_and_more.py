@@ -32,7 +32,7 @@ REFRESH EVERY 10 YEAR
 TO `$reference_genome/$dataset_type/reference_data/clinvar`
 AS 
 SELECT 
-DISTINCT ON (key), *
+DISTINCT ON (key) *
 FROM `$reference_genome/$dataset_type/reference_data/clinvar/seqr_variants`
 """)
 
