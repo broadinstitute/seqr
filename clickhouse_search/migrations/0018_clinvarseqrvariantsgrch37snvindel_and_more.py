@@ -31,7 +31,8 @@ CREATE MATERIALIZED VIEW `$reference_genome/$dataset_type/reference_data/clinvar
 REFRESH EVERY 10 YEAR
 TO `$reference_genome/$dataset_type/reference_data/clinvar/search`
 AS 
-SELECT *
+SELECT 
+DISTINCT ON (key), *
 FROM `$reference_genome/$dataset_type/reference_data/clinvar/seqr`
 """)
 
@@ -56,7 +57,7 @@ class Migration(migrations.Migration):
                 ('pathogenicity', clickhouse_backend.models.Enum8Field(choices=[(0, 'Pathogenic'), (1, 'Pathogenic/Likely_pathogenic'), (2, 'Pathogenic/Likely_pathogenic/Established_risk_allele'), (3, 'Pathogenic/Likely_pathogenic/Likely_risk_allele'), (4, 'Pathogenic/Likely_risk_allele'), (5, 'Likely_pathogenic'), (6, 'Likely_pathogenic/Likely_risk_allele'), (7, 'Established_risk_allele'), (8, 'Likely_risk_allele'), (9, 'Conflicting_classifications_of_pathogenicity'), (10, 'Uncertain_risk_allele'), (11, 'Uncertain_significance/Uncertain_risk_allele'), (12, 'Uncertain_significance'), (13, 'No_pathogenic_assertion'), (14, 'Likely_benign'), (15, 'Benign/Likely_benign'), (16, 'Benign')])),
             ],
             options={
-                'db_table': 'GRCh37/SNV_INDEL/reference_data/clinvar/seqr',
+                'db_table': 'GRCh37/SNV_INDEL/reference_data/clinvar/seqr_variants',
                 'abstract': False,
                 'engine': clickhouse_backend.models.MergeTree(
                     order_by='key', primary_key='key',
@@ -80,7 +81,7 @@ class Migration(migrations.Migration):
                 ('pathogenicity', clickhouse_backend.models.Enum8Field(choices=[(0, 'Pathogenic'), (1, 'Pathogenic/Likely_pathogenic'), (2, 'Pathogenic/Likely_pathogenic/Established_risk_allele'), (3, 'Pathogenic/Likely_pathogenic/Likely_risk_allele'), (4, 'Pathogenic/Likely_risk_allele'), (5, 'Likely_pathogenic'), (6, 'Likely_pathogenic/Likely_risk_allele'), (7, 'Established_risk_allele'), (8, 'Likely_risk_allele'), (9, 'Conflicting_classifications_of_pathogenicity'), (10, 'Uncertain_risk_allele'), (11, 'Uncertain_significance/Uncertain_risk_allele'), (12, 'Uncertain_significance'), (13, 'No_pathogenic_assertion'), (14, 'Likely_benign'), (15, 'Benign/Likely_benign'), (16, 'Benign')])),
             ],
             options={
-                'db_table': 'GRCh38/MITO/reference_data/clinvar/seqr',
+                'db_table': 'GRCh38/MITO/reference_data/clinvar/seqr_variants',
                 'abstract': False,
                 'engine': clickhouse_backend.models.MergeTree(
                     order_by='key', primary_key='key',
@@ -104,7 +105,7 @@ class Migration(migrations.Migration):
                 ('pathogenicity', clickhouse_backend.models.Enum8Field(choices=[(0, 'Pathogenic'), (1, 'Pathogenic/Likely_pathogenic'), (2, 'Pathogenic/Likely_pathogenic/Established_risk_allele'), (3, 'Pathogenic/Likely_pathogenic/Likely_risk_allele'), (4, 'Pathogenic/Likely_risk_allele'), (5, 'Likely_pathogenic'), (6, 'Likely_pathogenic/Likely_risk_allele'), (7, 'Established_risk_allele'), (8, 'Likely_risk_allele'), (9, 'Conflicting_classifications_of_pathogenicity'), (10, 'Uncertain_risk_allele'), (11, 'Uncertain_significance/Uncertain_risk_allele'), (12, 'Uncertain_significance'), (13, 'No_pathogenic_assertion'), (14, 'Likely_benign'), (15, 'Benign/Likely_benign'), (16, 'Benign')])),
             ],
             options={
-                'db_table': 'GRCh38/SNV_INDEL/reference_data/clinvar/seqr',
+                'db_table': 'GRCh38/SNV_INDEL/reference_data/clinvar/seqr_variants',
                 'abstract': False,
                 'engine': clickhouse_backend.models.MergeTree(
                     order_by='key', primary_key='key',
@@ -117,27 +118,15 @@ class Migration(migrations.Migration):
         ),
         migrations.AlterModelTable(
             name='clinvarallvariantsgrch37snvindel',
-            table='GRCh37/SNV_INDEL/reference_data/clinvar/all',
+            table='GRCh37/SNV_INDEL/reference_data/clinvar/all_variants',
         ),
         migrations.AlterModelTable(
             name='clinvarallvariantsmito',
-            table='GRCh38/MITO/reference_data/clinvar/all',
+            table='GRCh38/MITO/reference_data/clinvar/all_variants',
         ),
         migrations.AlterModelTable(
             name='clinvarallvariantssnvindel',
-            table='GRCh38/SNV_INDEL/reference_data/clinvar/all',
-        ),
-        migrations.AlterModelTable(
-            name='clinvargrch37snvindel',
-            table='GRCh37/SNV_INDEL/reference_data/clinvar/search',
-        ),
-        migrations.AlterModelTable(
-            name='clinvarmito',
-            table='GRCh38/MITO/reference_data/clinvar/search',
-        ),
-        migrations.AlterModelTable(
-            name='clinvarsnvindel',
-            table='GRCh38/SNV_INDEL/reference_data/clinvar/search',
+            table='GRCh38/SNV_INDEL/reference_data/clinvar/all_variants',
         ),
         migrations.RunSQL(
             'DROP TABLE `GRCh37/SNV_INDEL/clinvar_all_variants_to_clinvar_mv`',
