@@ -14,13 +14,7 @@ AS
 SELECT
     DISTINCT ON (key)
     kl.key as key, 
-    alleleId,
-    conflictingPathogenicities,
-    goldStars,
-    submitters,
-    conditions,
-    assertions,
-    pathogenicity
+    c.*
 FROM `$reference_genome/$dataset_type/reference_data/clinvar/all_variants` c
 INNER JOIN `$reference_genome/$dataset_type/key_lookup` kl
 ON c.variantId = kl.variantId
