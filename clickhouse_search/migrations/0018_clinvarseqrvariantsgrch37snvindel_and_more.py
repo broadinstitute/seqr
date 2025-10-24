@@ -29,7 +29,7 @@ ON c.variantId = kl.variantId
 CLIVNAR_SEQR_TO_SEARCH_MV = Template("""
 CREATE MATERIALIZED VIEW `$reference_genome/$dataset_type/reference_data/clinvar/seqr_to_search_mv`
 REFRESH EVERY 10 YEAR
-TO `$reference_genome/$dataset_type/reference_data/clinvar/search`
+TO `$reference_genome/$dataset_type/reference_data/clinvar`
 AS 
 SELECT 
 DISTINCT ON (key), *
