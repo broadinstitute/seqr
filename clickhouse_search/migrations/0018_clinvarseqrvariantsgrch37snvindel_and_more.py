@@ -7,9 +7,9 @@ import django.db.models.manager
 from string import Template
 
 CLINVAR_ALL_TO_SEQR_MV = Template("""
-CREATE MATERIALIZED VIEW `$reference_genome/$dataset_type/reference_data/clinvar/all_to_seqr_mv`
+CREATE MATERIALIZED VIEW `$reference_genome/$dataset_type/reference_data/clinvar/all_variants_to_seqr_variants_mv`
 REFRESH EVERY 10 YEAR
-TO `$reference_genome/$dataset_type/reference_data/clinvar/seqr`
+TO `$reference_genome/$dataset_type/reference_data/clinvar/seqr_variants`
 AS 
 SELECT
     DISTINCT ON (key)
@@ -21,19 +21,19 @@ SELECT
     conditions,
     assertions,
     pathogenicity
-FROM `$reference_genome/$dataset_type/reference_data/clinvar/all` c
+FROM `$reference_genome/$dataset_type/reference_data/clinvar/all_variants` c
 INNER JOIN `$reference_genome/$dataset_type/key_lookup` kl
 ON c.variantId = kl.variantId
 """)
 
 CLIVNAR_SEQR_TO_SEARCH_MV = Template("""
-CREATE MATERIALIZED VIEW `$reference_genome/$dataset_type/reference_data/clinvar/seqr_to_search_mv`
+CREATE MATERIALIZED VIEW `$reference_genome/$dataset_type/reference_data/clinvar/seqr_variants_to_search_mv`
 REFRESH EVERY 10 YEAR
 TO `$reference_genome/$dataset_type/reference_data/clinvar`
 AS 
 SELECT 
 DISTINCT ON (key), *
-FROM `$reference_genome/$dataset_type/reference_data/clinvar/seqr`
+FROM `$reference_genome/$dataset_type/reference_data/clinvar/seqr_variants`
 """)
 
 
