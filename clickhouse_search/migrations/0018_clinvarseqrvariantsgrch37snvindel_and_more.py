@@ -26,7 +26,7 @@ INNER JOIN `$reference_genome/$dataset_type/key_lookup` kl
 ON c.variantId = kl.variantId
 """)
 
-CLIVNAR_SEQR_TO_SEARCH_MV = Template("""
+CLINVAR_SEQR_TO_SEARCH_MV = Template("""
 CREATE MATERIALIZED VIEW `$reference_genome/$dataset_type/reference_data/clinvar/seqr_variants_to_search_mv`
 REFRESH EVERY 10 YEAR
 TO `$reference_genome/$dataset_type/reference_data/clinvar`
@@ -117,6 +117,18 @@ class Migration(migrations.Migration):
             ],
         ),
         migrations.AlterModelTable(
+            name='clinvargrch37snvindel',
+            table='GRCh37/SNV_INDEL/reference_data/clinvar',
+        ),
+        migrations.AlterModelTable(
+            name='clinvarmito',
+            table='GRCh38/MITO/reference_data/clinvar',
+        ),
+        migrations.AlterModelTable(
+            name='clinvarsnvindel',
+            table='GRCh38/SNV_INDEL/reference_data/clinvar',
+        ),
+        migrations.AlterModelTable(
             name='clinvarallvariantsgrch37snvindel',
             table='GRCh37/SNV_INDEL/reference_data/clinvar/all_variants',
         ),
@@ -162,21 +174,21 @@ class Migration(migrations.Migration):
             hints={'clickhouse': True},
         ),
         migrations.RunSQL(
-            CLIVNAR_SEQR_TO_SEARCH_MV.substitute(
+            CLINVAR_SEQR_TO_SEARCH_MV.substitute(
                 reference_genome='GRCh37',
                 dataset_type='SNV_INDEL',
             ),
             hints={'clickhouse': True},
         ),
         migrations.RunSQL(
-            CLIVNAR_SEQR_TO_SEARCH_MV.substitute(
+            CLINVAR_SEQR_TO_SEARCH_MV.substitute(
                 reference_genome='GRCh38',
                 dataset_type='SNV_INDEL',
             ),
             hints={'clickhouse': True},
         ),
         migrations.RunSQL(
-            CLIVNAR_SEQR_TO_SEARCH_MV.substitute(
+            CLINVAR_SEQR_TO_SEARCH_MV.substitute(
                 reference_genome='GRCh38',
                 dataset_type='MITO',
             ),
