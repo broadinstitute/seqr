@@ -793,12 +793,12 @@ class DataManagerAPITest(AirtableTest):
     @mock.patch('seqr.views.utils.file_utils.tempfile.gettempdir', lambda: 'tmp/')
     @mock.patch('seqr.utils.communication_utils.send_html_email')
     @mock.patch('seqr.utils.communication_utils.safe_post_to_slack')
-    @mock.patch('seqr.views.apis.data_manager_api.datetime')
-    @mock.patch('seqr.views.apis.data_manager_api.os.mkdir')
-    @mock.patch('seqr.views.apis.data_manager_api.os.rename')
+    @mock.patch('seqr.views.utils.dataset_utils.datetime')
+    @mock.patch('seqr.views.utils.dataset_utils.os.mkdir')
+    @mock.patch('seqr.views.utils.dataset_utils.os.rename')
     @mock.patch('seqr.views.apis.data_manager_api.load_uploaded_file')
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
-    @mock.patch('seqr.views.apis.data_manager_api.gzip.open')
+    @mock.patch('seqr.views.utils.dataset_utils.gzip.open')
     def _test_update_rna_seq(self, data_type, mock_open, mock_subprocess, mock_load_uploaded_file,
                             mock_rename, mock_mkdir, mock_datetime, mock_send_slack, mock_send_email):
         url = reverse(update_rna_seq)
@@ -906,7 +906,7 @@ class DataManagerAPITest(AirtableTest):
                 f'Attempted data loading for {num_loaded_samples} RNA-seq samples in the following {num_projects}'
                 f' projects: {project_names}'
             ]
-            file_name = RNA_FILENAME_TEMPLATE.format(data_type)
+            file_name = RNA_FILENAME_TEMPLATE.format(params['data_type'])
             response_json = response.json()
             self.assertDictEqual(response_json, {'info': info, 'warnings': warnings or [], 'sampleGuids': mock.ANY,
                                                  'fileName': file_name})
@@ -974,7 +974,7 @@ class DataManagerAPITest(AirtableTest):
         self.assertSetEqual(set(response_json['sampleGuids']), {sample_guid, new_sample_guid})
 
         # test correct file interactions
-        file_path = RNA_FILENAME_TEMPLATE.format(data_type)
+        file_path = RNA_FILENAME_TEMPLATE.format(params['data_type'])
         expected_subprocess_calls = [
             f'gsutil ls {RNA_FILE_ID}',
             f'gsutil cat {RNA_FILE_ID} | gunzip -c -q - ',
@@ -1027,7 +1027,7 @@ class DataManagerAPITest(AirtableTest):
         self.assertTrue(second_tissue_sample_guid != new_sample_guid)
         self.assertTrue(second_tissue_sample_guid in response_json['sampleGuids'])
         self._assert_expected_file_open(mock_rename, mock_open, [
-            f'tmp/temp_uploads/{RNA_FILENAME_TEMPLATE.format(data_type)}/{sample_guid}.json.gz'
+            f'tmp/temp_uploads/{RNA_FILENAME_TEMPLATE.format(params["data_type"])}/{sample_guid}.json.gz'
             for sample_guid in response_json['sampleGuids']
         ])
         self.assertSetEqual(

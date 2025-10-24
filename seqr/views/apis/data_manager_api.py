@@ -1,7 +1,6 @@
 import base64
 from collections import defaultdict
 from datetime import datetime
-import gzip
 import json
 import os
 import requests
@@ -26,7 +25,7 @@ from seqr.utils.vcf_utils import validate_vcf_and_get_samples, get_vcf_list
 from seqr.views.utils.airtable_utils import AirtableSession, LOADABLE_PDO_STATUSES, AVAILABLE_PDO_STATUS
 from seqr.views.utils.dataset_utils import load_rna_seq, load_phenotype_prioritization_data_file, RNA_DATA_TYPE_CONFIGS, \
     post_process_rna_data, convert_django_meta_to_http_headers
-from seqr.views.utils.file_utils import get_temp_file_path, load_uploaded_file, persist_temp_file
+from seqr.views.utils.file_utils import get_temp_file_path, load_uploaded_file
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.pedigree_info_utils import get_validated_related_individuals, JsonConstants
@@ -72,36 +71,14 @@ def update_rna_seq(request):
     if uploaded_mapping_file_id:
         mapping_file = load_uploaded_file(uploaded_mapping_file_id)
 
-    file_name_prefix = f'rna_sample_data__{data_type}__{datetime.now().isoformat()}'
-    file_dir = get_temp_file_path(file_name_prefix, is_local=True)
-    os.mkdir(file_dir)
-
-    sample_files = {}
-
-    def _save_sample_data(sample_key, sample_data):
-        if sample_key not in sample_files:
-            file_name = _get_sample_file_path(file_dir, '_'.join(sample_key))
-            sample_files[sample_key] = gzip.open(file_name, 'at')
-        sample_files[sample_key].write(f'{json.dumps(sample_data)}\n')
-
     try:
-        sample_guids_to_keys, info, warnings = load_rna_seq(
-            data_type, file_path, _save_sample_data,
+        sample_guids_to_keys, file_name_prefix, info, warnings = load_rna_seq(
+            data_type, file_path,
             user=request.user, mapping_file=mapping_file, ignore_extra_samples=request_json.get('ignoreExtraSamples'))
     except FileNotFoundError:
         return create_json_response({'error': 'File not found: {}'.format(file_path)}, status=400)
     except ValueError as e:
         return create_json_response({'error': str(e)}, status=400)
-
-    for sample_guid, sample_key in sample_guids_to_keys.items():
-        sample_files[sample_key].close()  # Required to ensure gzipped files are properly terminated
-        os.rename(
-            _get_sample_file_path(file_dir, '_'.join(sample_key)),
-            _get_sample_file_path(file_dir, sample_guid),
-        )
-
-    if sample_guids_to_keys:
-        persist_temp_file(file_name_prefix, request.user)
 
     return create_json_response({
         'info': info,
