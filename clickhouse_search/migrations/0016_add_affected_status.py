@@ -209,7 +209,7 @@ class Migration(migrations.Migration):
             ]
         ),
         migrations.RunSQL(
-            "ALTER TABLE `GRCh38/SV/project_gt_stats` ADD COLUMN `affected` Enum8('A'=1, 'N'=2, 'U'=3) DEFAULT 'U' AFTER `project_guid`;",
+            "ALTER TABLE `GRCh38/SV/project_gt_stats` ADD COLUMN `affected` Enum8('A'=1, 'N'=2, 'U'=3) DEFAULT 'U' AFTER `key`;",
             hints={'clickhouse': True},
             state_operations=[
                 migrations.AddField(
