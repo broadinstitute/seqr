@@ -13,8 +13,8 @@ TO `$reference_genome/$dataset_type/reference_data/clinvar/seqr_variants`
 AS 
 SELECT
     DISTINCT ON (key)
-    dst.key as key, 
-    COLUMNS('src.*') EXCEPT(version, variantId)
+    key,
+    COLUMNS('.*') EXCEPT(version, variantId, key)
 FROM `$reference_genome/$dataset_type/reference_data/clinvar/all_variants` src
 INNER JOIN `$reference_genome/$dataset_type/key_lookup` dst
 ON assumeNotNull(src.variantId) = dst.variantId
