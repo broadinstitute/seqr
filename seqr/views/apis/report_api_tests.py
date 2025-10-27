@@ -1374,6 +1374,7 @@ class ReportAPITest(AirtableTest):
             'variant_reference_assembly': 'GRCh37',
             'zygosity': 'Homozygous',
         }
+        self.maxDiff = None
         self.assertDictEqual(response_json['rows'][1], expected_row)
         expected_mnv = {
             **BASE_VARIANT_METADATA_ROW,
