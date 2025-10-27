@@ -292,8 +292,8 @@ class Command(BaseCommand):
         if existing_version_obj:
             clinvar_run_sql(Template(f"ALTER TABLE `$reference_genome/$dataset_type/reference_data/clinvar/all` DROP PARTITION '{existing_version_obj.version}';"))
         for materialized_view in [
-            'all_to_seqr_mv',
-            'seqr_to_search_mv',
+            'all_variants_to_seqr_variants_mv',
+            'seqr_variants_to_search_mv',
         ]:
             clinvar_run_sql(Template(f'SYSTEM REFRESH VIEW `$reference_genome/$dataset_type/reference_data/clinvar/{materialized_view}`;'))
             clinvar_run_sql(Template(f'SYSTEM WAIT VIEW `$reference_genome/$dataset_type/reference_data/clinvar/{materialized_view}`;'))
