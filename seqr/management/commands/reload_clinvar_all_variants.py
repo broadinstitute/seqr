@@ -271,7 +271,7 @@ class Command(BaseCommand):
                         # version.
                         if existing_version_obj and ClinvarAllVariantsSnvIndel.objects.filter(version=existing_version_obj.version).exists():
                             clinvar_run_sql(
-                                Template(f"ALTER TABLE `$reference_genome/$dataset_type/clinvar_all_variants` DROP PARTITION '{new_version}';")
+                                Template(f"ALTER TABLE `$reference_genome/$dataset_type/reference_data/clinvar/all` DROP PARTITION '{new_version}';")
                             )
                     # Handle parsing variants
                     if event == 'end' and elem.tag == 'VariationArchive' and new_version:
@@ -290,9 +290,13 @@ class Command(BaseCommand):
 
         # Delete previous version & refresh the view.
         if existing_version_obj:
-            clinvar_run_sql(Template(f"ALTER TABLE `$reference_genome/$dataset_type/clinvar_all_variants` DROP PARTITION '{existing_version_obj.version}';"))
-        clinvar_run_sql(Template('SYSTEM REFRESH VIEW `$reference_genome/$dataset_type/clinvar_all_variants_to_clinvar_mv`;'))
-        clinvar_run_sql(Template('SYSTEM WAIT VIEW `$reference_genome/$dataset_type/clinvar_all_variants_to_clinvar_mv`;'))
+            clinvar_run_sql(Template(f"ALTER TABLE `$reference_genome/$dataset_type/reference_data/clinvar/all` DROP PARTITION '{existing_version_obj.version}';"))
+        for materialized_view in [
+            'all_to_seqr_mv',
+            'seqr_to_search_mv',
+        ]:
+            clinvar_run_sql(Template(f'SYSTEM REFRESH VIEW `$reference_genome/$dataset_type/reference_data/clinvar/{materialized_view}`;'))
+            clinvar_run_sql(Template(f'SYSTEM WAIT VIEW `$reference_genome/$dataset_type/reference_data/clinvar/{materialized_view}`;'))
 
         # Save the new version in Postgres
         if existing_version_obj:
