@@ -532,7 +532,7 @@ class ClinvarAllVariantsMito(BaseClinvarAllVariants):
     class Meta(BaseClinvarAllVariants.Meta):
         db_table = 'GRCh38/MITO/reference_data/clinvar/all_variants'
 
-class ClinvarSeqrVariantsGRCh37SnvIndel(BaseClinvar):Add a comment on lines R535 to R544Add diff commentMarkdown input:  edit mode selected.WritePreviewAdd a suggestionHeadingBoldItalicQuoteCodeLinkUnordered listNumbered listTask listMentionReferenceSaved repliesAdd FilesPaste, drop, or click to add filesCancelCommentStart a reviewReturn to code
+class ClinvarSeqrVariantsGRCh37SnvIndel(BaseClinvar):
     key = OneToOneField('AnnotationsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
     class Meta(BaseClinvar.Meta):
         db_table = 'GRCh37/SNV_INDEL/reference_data/clinvar/seqr_variants'
