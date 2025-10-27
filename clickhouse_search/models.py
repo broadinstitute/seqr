@@ -607,6 +607,32 @@ class PextAllVariantsMito(models.ClickhouseModel):
             order_by=('chrom', 'pos'),
         )
 
+class GnomadNonCodingConstraintAllVariantsSnvIndel(models.ClickhouseModel):
+    chrom = Enum8Field(return_int=False, choices=BaseAnnotations.CHROMOSOME_CHOICES, primary_key=True)
+    start = models.UInt32Field()
+    end = models.UInt32Field()
+    region_type = models.DecimalField(max_digits=9, decimal_places=5)
+
+    unique_together = (('chrom', 'start', 'end'),)
+    db_table = 'GRCh38/SNV_INDEL/reference_data/gnomad_non_coding_constraint/all_variants'
+    engine = models.MergeTree(
+        primary_key=('chrom', 'start', 'end'),
+        order_by=('chrom', 'start', 'end'),
+    )
+
+class ScreenAllVariantsSnvIndel(models.ClickhouseModel):
+    chrom = Enum8Field(return_int=False, choices=BaseAnnotations.CHROMOSOME_CHOICES, primary_key=True)
+    start = models.UInt32Field()
+    end = models.UInt32Field()
+    z = models.StringField(db_column='screenRegionType')
+
+    unique_together = (('chrom', 'start', 'end'),)
+    db_table = 'GRCh38/SNV_INDEL/reference_data/screen/all_variants'
+    engine = models.MergeTree(
+        primary_key=('chrom', 'start', 'end'),
+        order_by=('chrom', 'start', 'end'),
+    )
+
 
 class BaseEntries(FixtureLoadableClickhouseModel):
     MAX_XPOS_FILTER_INTERVALS = 500

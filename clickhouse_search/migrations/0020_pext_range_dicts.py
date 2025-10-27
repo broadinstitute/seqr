@@ -41,12 +41,82 @@ REFRESH EVERY 10 YEAR
 TO `GRCh38/$dataset_type/reference_data/pext/all_variants`
 AS SELECT
     replaceOne(splitByChar(':', assumeNotNull(locus))[1], 'chr', '') AS chrom,
-    toInt64(splitByChar(':', assumeNotNull(locus))[2]) AS pos,
+    toUInt32(splitByChar(':', assumeNotNull(locus))[2]) AS pos,
     if(exp_prop_mean IN ('NaN', 'nan', ''), NULL, exp_prop_mean) AS exp_prop_mean
 FROM url('https://storage.googleapis.com/gcp-public-data--gnomad/release/4.1/pext/gnomad.pext.gtex_v10.base_level.tsv.gz')
 """)
 
+GNOMAD_NON_CODING_CONSTRAINT_SEARCH = Template(Template("""
+CREATE DICTIONARY `GRCh38/SNV_INDEL/reference_data/gnomad_non_coding_constraint`
+(
+    chrom String,
+    start UInt32,
+    end UInt32,
+    z Decimal(9, 5)
+)
+PRIMARY KEY chrom
+SOURCE(CLICKHOUSE(
+    USER $clickhouse_writer_user
+    PASSWORD $clickhouse_writer_password
+    TABLE `GRCh38/SNV_INDEL/reference_data/gnomad_non_coding_constraint/all_variants`
+))
+LIFETIME(MIN 0 MAX 0)
+LAYOUT(RANGE_HASHED())
+RANGE(MIN start MAX end)
+""").safe_substitute(
+    # Note the nested Template-ing that allows
+    # double substitution these shared values
+    clickhouse_writer_user=CLICKHOUSE_WRITER_USER,
+    clickhouse_writer_password=CLICKHOUSE_WRITER_PASSWORD,
+))
 
+GNOMAD_NON_CODING_CONSTRAINT_VIEW = Template("""
+CREATE MATERIALIZED VIEW `GRCh38/SNV_INDEL/reference_data/gnomad_non_coding_constraint/all_variants_mv`
+REFRESH EVERY 10 YEAR
+TO `GRCh38/SNV_INDEL/reference_data/gnomad_non_coding_constraint/all_variants`
+AS SELECT
+    replaceOne(chrom, 'chr', ''),
+    toUInt32(assumeNotNull(start))),
+    toUInt32(assumeNotNull(end))),
+    z,
+FROM url('https://storage.googleapis.com/gcp-public-data--gnomad/release/3.1/secondary_analyses/genomic_constraint/constraint_z_genome_1kb.qc.download.txt.gz')
+""")
+
+SCREEN_SEARCH = Template(Template("""
+CREATE DICTIONARY `GRCh38/SNV_INDEL/reference_data/screen`
+(
+    chr String,
+    start UInt32,
+    end UInt32,
+    regionType String,
+)
+PRIMARY KEY chrom
+SOURCE(CLICKHOUSE(
+    USER $clickhouse_writer_user
+    PASSWORD $clickhouse_writer_password
+    TABLE `GRCh38/SNV_INDEL/reference_data/screen/all_variants`
+))
+LIFETIME(MIN 0 MAX 0)
+LAYOUT(RANGE_HASHED())
+RANGE(MIN start MAX end)
+""").safe_substitute(
+    # Note the nested Template-ing that allows
+    # double substitution these shared values
+    clickhouse_writer_user=CLICKHOUSE_WRITER_USER,
+    clickhouse_writer_password=CLICKHOUSE_WRITER_PASSWORD,
+))
+
+SCREEN_VIEW = Template("""
+CREATE MATERIALIZED VIEW `GRCh38/SNV_INDEL/reference_data/screen/all_variants_mv`
+REFRESH EVERY 10 YEAR
+TO `GRCh38/SNV_INDEL/reference_data/screen/all_variants`
+AS SELECT
+    replaceOne(c1, 'chr', ''),
+    toUInt32(assumeNotNull(c2))),
+    toUInt32(assumeNotNull(c3))),
+    splitByChar(',', assumeNotNull(c6))[1],
+FROM url('https://downloads.wenglab.org/V3/GRCh38-cCREs.bed')
+""")
 
 class Migration(migrations.Migration):
 
@@ -89,6 +159,40 @@ class Migration(migrations.Migration):
                 ('_overwrite_base_manager', django.db.models.manager.Manager()),
             ],
         ),
+        migrations.CreateModel(
+            name='GnomadNonCodingConstraintAllVariantsSnvIndel',
+            fields=[
+                ('chrom', clickhouse_search.backend.fields.Enum8Field(choices=[(1, '1'), (2, '2'), (3, '3'), (4, '4'), (5, '5'), (6, '6'), (7, '7'), (8, '8'), (9, '9'), (10, '10'), (11, '11'), (12, '12'), (13, '13'), (14, '14'), (15, '15'), (16, '16'), (17, '17'), (18, '18'), (19, '19'), (20, '20'), (21, '21'), (22, '22'), (23, 'X'), (24, 'Y'), (25, 'M')], primary_key=True, serialize=False)),
+                ('start', clickhouse_backend.models.UInt32Field()),
+                ('end', clickhouse_backend.models.UInt32Field()),
+                ('region_type', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
+            ],
+            options={
+                'abstract': False,
+                'base_manager_name': '_overwrite_base_manager',
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
+        ),
+        migrations.CreateModel(
+            name='ScreenAllVariantsSnvIndel',
+            fields=[
+                ('chrom', clickhouse_search.backend.fields.Enum8Field(choices=[(1, '1'), (2, '2'), (3, '3'), (4, '4'), (5, '5'), (6, '6'), (7, '7'), (8, '8'), (9, '9'), (10, '10'), (11, '11'), (12, '12'), (13, '13'), (14, '14'), (15, '15'), (16, '16'), (17, '17'), (18, '18'), (19, '19'), (20, '20'), (21, '21'), (22, '22'), (23, 'X'), (24, 'Y'), (25, 'M')], primary_key=True, serialize=False)),
+                ('start', clickhouse_backend.models.UInt32Field()),
+                ('end', clickhouse_backend.models.UInt32Field()),
+                ('z', clickhouse_backend.models.StringField(db_column='screenRegionType')),
+            ],
+            options={
+                'abstract': False,
+                'base_manager_name': '_overwrite_base_manager',
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
+        ),
         migrations.RunSQL(
             PEXT_SEARCH.substitute(
                 dataset_type='SNV_INDEL',
@@ -113,4 +217,21 @@ class Migration(migrations.Migration):
             ),
             hints={'clickhouse': True},
         ),
+        migrations.RunSQL(
+            GNOMAD_NON_CODING_CONSTRAINT_SEARCH,
+            hints={'clickhouse': True},
+        )
+        migrations.RunSQL(
+            GNOMAD_NON_CODING_CONSTRAINT_SEARCH,
+            hints={'clickhouse': True},
+        )
+        migrations.RunSQL(
+            SCREEN_SEARCH,
+            hints={'clickhouse': True},
+        )
+        migrations.RunSQL(
+            SCREEN_VIEW,
+            hints={'clickhouse': True},
+        )
+
     ]
