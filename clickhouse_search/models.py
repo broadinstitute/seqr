@@ -581,6 +581,32 @@ class ClinvarMito(BaseClinvarJoin):
     class Meta(BaseClinvarJoin.Meta):
         db_table = 'GRCh38/MITO/reference_data/clinvar'
 
+class PextAllVariantsSnvIndel(models.ClickhouseModel):
+    chrom = Enum8Field(return_int=False, choices=BaseAnnotations.CHROMOSOME_CHOICES, primary_key=True)
+    pos = models.UInt32Field()
+    exp_prop_mean = models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)
+
+    class Meta:
+        unique_together = (('chrom', 'pos'),)
+        db_table = 'GRCh38/SNV_INDEL/reference_data/pext/all_variants'
+        engine = models.MergeTree(
+            primary_key=('chrom', 'pos'),
+            order_by=('chrom', 'pos'),
+        )
+
+class PextAllVariantsMito(models.ClickhouseModel):
+    chrom = Enum8Field(return_int=False, choices=[(1, 'M')], primary_key=True)
+    pos = models.UInt32Field()
+    exp_prop_mean = models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)
+
+    class Meta:
+        unique_together = (('chrom', 'pos'),)
+        db_table = 'GRCh38/MITO/reference_data/pext/all_variants'
+        engine = models.MergeTree(
+            primary_key=('chrom', 'pos'),
+            order_by=('chrom', 'pos'),
+        )
+
 
 class BaseEntries(FixtureLoadableClickhouseModel):
     MAX_XPOS_FILTER_INTERVALS = 500
