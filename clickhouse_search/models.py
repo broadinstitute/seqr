@@ -522,15 +522,42 @@ class BaseClinvarAllVariants(BaseClinvar):
 
 class ClinvarAllVariantsGRCh37SnvIndel(BaseClinvarAllVariants):
     class Meta(BaseClinvarAllVariants.Meta):
-        db_table = 'GRCh37/SNV_INDEL/clinvar_all_variants'
+        db_table = 'GRCh37/SNV_INDEL/reference_data/clinvar/all_variants'
 
 class ClinvarAllVariantsSnvIndel(BaseClinvarAllVariants):
     class Meta(BaseClinvarAllVariants.Meta):
-        db_table = 'GRCh38/SNV_INDEL/clinvar_all_variants'
+        db_table = 'GRCh38/SNV_INDEL/reference_data/clinvar/all_variants'
 
 class ClinvarAllVariantsMito(BaseClinvarAllVariants):
     class Meta(BaseClinvarAllVariants.Meta):
-        db_table = 'GRCh38/MITO/clinvar_all_variants'
+        db_table = 'GRCh38/MITO/reference_data/clinvar/all_variants'
+
+class ClinvarSeqrVariantsGRCh37SnvIndel(BaseClinvar):Add a comment on lines R535 to R544Add diff commentMarkdown input:  edit mode selected.WritePreviewAdd a suggestionHeadingBoldItalicQuoteCodeLinkUnordered listNumbered listTask listMentionReferenceSaved repliesAdd FilesPaste, drop, or click to add filesCancelCommentStart a reviewReturn to code
+    key = OneToOneField('AnnotationsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+    class Meta(BaseClinvar.Meta):
+        db_table = 'GRCh37/SNV_INDEL/reference_data/clinvar/seqr_variants'
+        engine = models.MergeTree(
+            primary_key='key',
+            order_by='key'
+        )
+
+class ClinvarSeqrVariantsSnvIndel(BaseClinvar):
+    key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+    class Meta(BaseClinvar.Meta):
+        db_table = 'GRCh38/SNV_INDEL/reference_data/clinvar/seqr_variants'
+        engine = models.MergeTree(
+            primary_key='key',
+            order_by='key'
+        )
+
+class ClinvarSeqrVariantsMito(BaseClinvar):
+    key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
+    class Meta(BaseClinvar.Meta):
+        db_table = 'GRCh38/MITO/reference_data/clinvar/seqr_variants'
+        engine = models.MergeTree(
+            primary_key='key',
+            order_by='key'
+        )
 
 class BaseClinvarJoin(BaseClinvar):
 
@@ -542,17 +569,17 @@ class BaseClinvarJoin(BaseClinvar):
 class ClinvarGRCh37SnvIndel(BaseClinvarJoin):
     key = ForeignKey('EntriesGRCh37SnvIndel', db_column='key', related_name='clinvar_join', primary_key=True, on_delete=PROTECT)
     class Meta(BaseClinvarJoin.Meta):
-        db_table = 'GRCh37/SNV_INDEL/clinvar'
+        db_table = 'GRCh37/SNV_INDEL/reference_data/clinvar'
 
 class ClinvarSnvIndel(BaseClinvarJoin):
     key = ForeignKey('EntriesSnvIndel', db_column='key', related_name='clinvar_join', primary_key=True, on_delete=PROTECT)
     class Meta(BaseClinvarJoin.Meta):
-        db_table = 'GRCh38/SNV_INDEL/clinvar'
+        db_table = 'GRCh38/SNV_INDEL/reference_data/clinvar'
 
 class ClinvarMito(BaseClinvarJoin):
     key = ForeignKey('EntriesMito', db_column='key', related_name='clinvar_join', primary_key=True, on_delete=PROTECT)
     class Meta(BaseClinvarJoin.Meta):
-        db_table = 'GRCh38/MITO/clinvar'
+        db_table = 'GRCh38/MITO/reference_data/clinvar'
 
 
 class BaseEntries(FixtureLoadableClickhouseModel):
