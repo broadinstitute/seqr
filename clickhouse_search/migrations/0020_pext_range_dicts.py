@@ -17,13 +17,13 @@ CREATE DICTIONARY `GRCh38/$dataset_type/reference_data/pext`
     chrom String,
     start UInt32,
     end UInt32,
-    exp_prop_mean Nullable(Decimal(9, 5))
+    expPropMean Nullable(Decimal(9, 5))
 )
 PRIMARY KEY chrom
 SOURCE(CLICKHOUSE(
     USER $clickhouse_writer_user
     PASSWORD $clickhouse_writer_password
-    QUERY 'SELECT chrom, pos as start, pos as end, exp_prop_mean FROM `GRCh38/$dataset_type/reference_data/pext/all_variants`'
+    QUERY 'SELECT chrom, pos as start, pos as end, expPropMean FROM `GRCh38/$dataset_type/reference_data/pext/all_variants`'
 ))
 LIFETIME(MIN 0 MAX 0)
 LAYOUT(RANGE_HASHED())
@@ -42,7 +42,7 @@ TO `GRCh38/$dataset_type/reference_data/pext/all_variants`
 AS SELECT
     replaceOne(splitByChar(':', assumeNotNull(locus))[1], 'chr', '') AS chrom,
     toUInt32(splitByChar(':', assumeNotNull(locus))[2]) AS pos,
-    if(exp_prop_mean IN ('NaN', 'nan', ''), NULL, exp_prop_mean) AS exp_prop_mean
+    if(exp_prop_mean IN ('NaN', 'nan', ''), NULL, exp_prop_mean) AS expPropMean
 FROM url('https://storage.googleapis.com/gcp-public-data--gnomad/release/4.1/pext/gnomad.pext.gtex_v10.base_level.tsv.gz')
 """)
 
@@ -130,7 +130,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('chrom', clickhouse_search.backend.fields.Enum8Field(choices=[(1, '1'), (2, '2'), (3, '3'), (4, '4'), (5, '5'), (6, '6'), (7, '7'), (8, '8'), (9, '9'), (10, '10'), (11, '11'), (12, '12'), (13, '13'), (14, '14'), (15, '15'), (16, '16'), (17, '17'), (18, '18'), (19, '19'), (20, '20'), (21, '21'), (22, '22'), (23, 'X'), (24, 'Y'), (25, 'M')], primary_key=True, serialize=False)),
                 ('pos', clickhouse_backend.models.UInt32Field()),
-                ('exp_prop_mean', clickhouse_backend.models.DecimalField(blank=True, decimal_places=5, max_digits=9, null=True)),
+                ('exp_prop_mean', clickhouse_backend.models.DecimalField(db_column='expPropMean', blank=True, decimal_places=5, max_digits=9, null=True)),
             ],
             options={
                 'db_table': 'GRCh38/SNV_INDEL/reference_data/pext/all_variants',
@@ -147,7 +147,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('chrom', clickhouse_search.backend.fields.Enum8Field(choices=[(1, 'M')], primary_key=True, serialize=False)),
                 ('pos', clickhouse_backend.models.UInt32Field()),
-                ('exp_prop_mean', clickhouse_backend.models.DecimalField(blank=True, decimal_places=5, max_digits=9, null=True)),
+                ('exp_prop_mean', clickhouse_backend.models.DecimalField(db_column='expPropMean', blank=True, decimal_places=5, max_digits=9, null=True)),
             ],
             options={
                 'db_table': 'GRCh38/MITO/reference_data/pext/all_variants',
@@ -183,7 +183,7 @@ class Migration(migrations.Migration):
                 ('chrom', clickhouse_search.backend.fields.Enum8Field(choices=[(1, '1'), (2, '2'), (3, '3'), (4, '4'), (5, '5'), (6, '6'), (7, '7'), (8, '8'), (9, '9'), (10, '10'), (11, '11'), (12, '12'), (13, '13'), (14, '14'), (15, '15'), (16, '16'), (17, '17'), (18, '18'), (19, '19'), (20, '20'), (21, '21'), (22, '22'), (23, 'X'), (24, 'Y'), (25, 'M')], primary_key=True, serialize=False)),
                 ('start', clickhouse_backend.models.UInt32Field()),
                 ('end', clickhouse_backend.models.UInt32Field()),
-                ('region_type', clickhouse_backend.models.StringField(db_column='screenRegionType')),
+                ('region_type', clickhouse_backend.models.StringField(db_column='regionType')),
             ],
             options={
                 'db_table': 'GRCh38/SNV_INDEL/reference_data/screen/all_variants',
