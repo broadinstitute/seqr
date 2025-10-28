@@ -290,7 +290,7 @@ class Command(BaseCommand):
 
         # Delete previous version & refresh the view.
         if existing_version_obj:
-            clinvar_run_sql(Template(f"ALTER TABLE `$reference_genome/$dataset_type/reference_data/clinvar/all` DROP PARTITION '{existing_version_obj.version}';"))
+            clinvar_run_sql(Template(f"ALTER TABLE `$reference_genome/$dataset_type/reference_data/clinvar/all_variants` DROP PARTITION '{existing_version_obj.version}';"))
         for materialized_view in [
             'all_variants_to_seqr_variants_mv',
             'seqr_variants_to_search_mv',
