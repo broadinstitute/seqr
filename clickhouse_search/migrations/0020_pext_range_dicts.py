@@ -220,18 +220,18 @@ class Migration(migrations.Migration):
         migrations.RunSQL(
             GNOMAD_NON_CODING_CONSTRAINT_SEARCH,
             hints={'clickhouse': True},
-        )
+        ),
         migrations.RunSQL(
             GNOMAD_NON_CODING_CONSTRAINT_SEARCH,
             hints={'clickhouse': True},
-        )
+        ),
         migrations.RunSQL(
             SCREEN_SEARCH,
             hints={'clickhouse': True},
-        )
+        ),
         migrations.RunSQL(
             SCREEN_VIEW,
             hints={'clickhouse': True},
-        )
+        ),
 
     ]
