@@ -15,7 +15,7 @@ from seqr.utils.gene_utils import get_genes, get_gene_ids_for_gene_symbols
 from seqr.views.utils.anvil_metadata_utils import PARTICIPANT_TABLE, PHENOTYPE_TABLE, EXPERIMENT_TABLE, \
     EXPERIMENT_LOOKUP_TABLE, FINDINGS_TABLE, FINDING_METADATA_COLUMNS, TRANSCRIPT_FIELDS, GENE_COLUMN, parse_population
 from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file, parse_file
-from seqr.views.utils.json_to_orm_utils import update_individual_from_json, update_model_from_json
+from seqr.views.utils.json_to_orm_utils import update_individual_from_json
 from seqr.views.utils.json_utils import create_json_response, _to_snake_case, _to_camel_case
 from seqr.views.utils.orm_to_json_utils import _get_json_for_model, _get_json_for_individuals, add_individual_hpo_details, \
     _get_json_for_families, get_json_for_rna_seq_outliers, get_project_collaborators_by_username, INDIVIDUAL_DISPLAY_NAME_EXPR, \
@@ -91,7 +91,7 @@ def update_individual_hpo_terms(request, individual_guid):
         key: _get_parsed_features(request_json[key]) if request_json.get(key) else None
         for key in feature_fields
     }
-    update_model_from_json(individual, update_json, user=request.user)
+    update_individual_from_json(individual, update_json, user=request.user, allow_features_update=True)
 
     individual_json = {k: getattr(individual, _to_snake_case(k)) for k in feature_fields}
     add_individual_hpo_details([individual_json])
@@ -722,8 +722,8 @@ def save_individuals_metadata_table_handler(request, project_guid, upload_file_i
 
     for record in json_records:
         individual = individuals_by_guid[record[INDIVIDUAL_GUID_COL]]
-        update_model_from_json(
-            individual, {k: record[k] for k in INDIVIDUAL_METADATA_FIELDS.keys() if k in record}, user=request.user)
+        update_individual_from_json(
+            individual, {k: record[k] for k in INDIVIDUAL_METADATA_FIELDS.keys() if k in record}, user=request.user, allow_features_update=True)
         if record.get(ASSIGNED_ANALYST_COL):
             family_assigned_analysts[record[ASSIGNED_ANALYST_COL]].append(individual.family.id)
 

@@ -1,7 +1,5 @@
 import base64
 from collections import defaultdict
-from datetime import datetime
-import gzip
 import json
 import os
 import requests
@@ -18,22 +16,19 @@ from seqr.utils.communication_utils import send_project_notification
 from seqr.utils.search.add_data_utils import trigger_data_loading, get_missing_family_samples, get_loaded_individual_ids, trigger_delete_families_search
 from seqr.utils.search.elasticsearch.es_utils import get_elasticsearch_status, delete_es_index
 from seqr.utils.search.utils import clickhouse_only, es_only, InvalidSearchException
-from seqr.utils.file_utils import file_iter
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.vcf_utils import validate_vcf_and_get_samples, get_vcf_list
 
 from seqr.views.utils.airtable_utils import AirtableSession, LOADABLE_PDO_STATUSES, AVAILABLE_PDO_STATUS
-from seqr.views.utils.dataset_utils import load_rna_seq, load_phenotype_prioritization_data_file, RNA_DATA_TYPE_CONFIGS, \
-    post_process_rna_data, convert_django_meta_to_http_headers
-from seqr.views.utils.file_utils import get_temp_file_path, load_uploaded_file, persist_temp_file
+from seqr.views.utils.dataset_utils import load_rna_seq, load_phenotype_prioritization_data_file, convert_django_meta_to_http_headers
+from seqr.views.utils.file_utils import load_uploaded_file
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.pedigree_info_utils import get_validated_related_individuals, JsonConstants
 from seqr.views.utils.permissions_utils import data_manager_required, pm_or_data_manager_required, get_internal_projects
 from seqr.views.utils.terra_api_utils import anvil_enabled
 
-from seqr.models import Sample, RnaSample, Individual, Project, PhenotypePrioritization
+from seqr.models import Sample, Individual, Project, PhenotypePrioritization
 
 from settings import KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD, KIBANA_ELASTICSEARCH_USER, \
     LOADING_DATASETS_DIR, LUIGI_UI_SERVICE_HOSTNAME, LUIGI_UI_SERVICE_PORT
@@ -72,36 +67,14 @@ def update_rna_seq(request):
     if uploaded_mapping_file_id:
         mapping_file = load_uploaded_file(uploaded_mapping_file_id)
 
-    file_name_prefix = f'rna_sample_data__{data_type}__{datetime.now().isoformat()}'
-    file_dir = get_temp_file_path(file_name_prefix, is_local=True)
-    os.mkdir(file_dir)
-
-    sample_files = {}
-
-    def _save_sample_data(sample_key, sample_data):
-        if sample_key not in sample_files:
-            file_name = _get_sample_file_path(file_dir, '_'.join(sample_key))
-            sample_files[sample_key] = gzip.open(file_name, 'at')
-        sample_files[sample_key].write(f'{json.dumps(sample_data)}\n')
-
     try:
-        sample_guids_to_keys, info, warnings = load_rna_seq(
-            data_type, file_path, _save_sample_data,
+        sample_guids_to_keys, file_name_prefix, info, warnings = load_rna_seq(
+            data_type, file_path,
             user=request.user, mapping_file=mapping_file, ignore_extra_samples=request_json.get('ignoreExtraSamples'))
     except FileNotFoundError:
         return create_json_response({'error': 'File not found: {}'.format(file_path)}, status=400)
     except ValueError as e:
         return create_json_response({'error': str(e)}, status=400)
-
-    for sample_guid, sample_key in sample_guids_to_keys.items():
-        sample_files[sample_key].close()  # Required to ensure gzipped files are properly terminated
-        os.rename(
-            _get_sample_file_path(file_dir, '_'.join(sample_key)),
-            _get_sample_file_path(file_dir, sample_guid),
-        )
-
-    if sample_guids_to_keys:
-        persist_temp_file(file_name_prefix, request.user)
 
     return create_json_response({
         'info': info,
@@ -113,33 +86,6 @@ def update_rna_seq(request):
 
 def _get_sample_file_path(file_dir, sample_guid):
     return os.path.join(file_dir, f'{sample_guid}.json.gz')
-
-
-@pm_or_data_manager_required
-def load_rna_seq_sample_data(request, sample_guid):
-    sample = RnaSample.objects.get(guid=sample_guid)
-    logger.info(f'Loading outlier data for {sample.individual.individual_id}', request.user)
-
-    request_json = json.loads(request.body)
-    file_name = request_json['fileName']
-    data_type = request_json['dataType']
-    config = RNA_DATA_TYPE_CONFIGS[data_type]
-
-    file_path = get_temp_file_path(f'{file_name}/{sample_guid}.json.gz')
-    try:
-        data_rows = [json.loads(line) for line in file_iter(file_path, user=request.user)]
-        data_rows, error = post_process_rna_data(sample_guid, data_rows, **config.get('post_process_kwargs', {}))
-    except FileNotFoundError:
-        logger.error(f'No saved temp data found for {sample_guid} with file prefix {file_name}', request.user)
-        error = 'Data for this sample was not properly parsed. Please re-upload the data'
-    if error:
-        return create_json_response({'error': error}, status=400)
-
-    model_cls = config['model_class']
-    model_cls.bulk_create(request.user, [model_cls(sample=sample, **data) for data in data_rows], batch_size=1000)
-    update_model_from_json(sample, {'is_active': True}, user=request.user)
-
-    return create_json_response({'success': True})
 
 
 def _notify_phenotype_prioritization_loaded(project, tool, num_samples):

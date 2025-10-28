@@ -26,16 +26,22 @@ def update_family_from_json(family, json, user, allow_unknown_keys=False, immuta
     )
 
 
-def update_individual_from_json(individual, json, user, allow_unknown_keys=False, allow_features_update=False):
+def update_individual_from_json(individual, json, user, allow_unknown_keys=False, allow_features_update=False, allow_search_field_update=False, allow_case_review_update=False):
     if json.get('displayName') and json['displayName'] == individual.individual_id:
         json['displayName'] = ''
 
-    return update_model_from_json(
-        individual, json, user=user, allow_unknown_keys=allow_unknown_keys,
-        immutable_keys=[
-            'filter_flags', 'pop_platform_filters', 'sv_flags', 'case_review_status', 'case_review_discussion'
-        ] + [] if allow_features_update else ['population', 'features', 'absent_features', 'nonstandard_features', 'absent_nonstandard_features'],
+    immutable_keys = ['filter_flags', 'pop_platform_filters', 'sv_flags']
+    if not allow_search_field_update:
+        immutable_keys += ['individual_id', 'affected', 'sex']
+    if not allow_case_review_update:
+        immutable_keys += ['case_review_status', 'case_review_discussion']
+    if not allow_features_update:
+        immutable_keys += ['population', 'features', 'absent_features', 'nonstandard_features', 'absent_nonstandard_features']
+    updated_fields = set()
+    is_updated = update_model_from_json(
+        individual, json, user=user, allow_unknown_keys=allow_unknown_keys, immutable_keys=immutable_keys, updated_fields=updated_fields,
     )
+    return updated_fields if allow_search_field_update else is_updated
 
 
 def update_individual_parents(individual, json, user):
@@ -44,7 +50,7 @@ def update_individual_parents(individual, json, user):
     _parse_parent_field(update_json, json, individual, 'mother', parent_id_key=None if has_update_model else 'maternalId')
     _parse_parent_field(update_json, json, individual, 'father', parent_id_key=None if has_update_model else 'paternalId')
 
-    return update_model_from_json(individual, update_json, user)
+    return update_individual_from_json(individual, update_json, user)
 
 
 def _parse_parent_field(update_json, all_json, individual, parent_key, parent_id_key):
@@ -65,7 +71,7 @@ def update_model_from_json(model_obj, json, user, allow_unknown_keys=False, immu
     for audit_field in audit_fields:
         immutable_keys += get_audit_field_names(audit_field)
 
-    if not updated_fields:
+    if updated_fields is None:
         updated_fields = set()
     for json_key, value in json.items():
         orm_key = _to_snake_case(json_key)

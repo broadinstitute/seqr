@@ -1230,7 +1230,7 @@ const SORT_BY_TAGGED_DATE = 'TAGGED_DATE'
 const SORT_BY_SIZE = 'SIZE'
 
 export const getPermissionedHgmdClass = (variant, user, familiesByGuid, projectByGuid) => (
-  user.isAnalyst || variant.familyGuids.some(
+  user.isAnalyst || (variant.familyGuids || []).some(
     familyGuid => projectByGuid[familiesByGuid[familyGuid].projectGuid].enableHgmd,
   )) && variant.hgmd && variant.hgmd.class
 
@@ -1743,6 +1743,14 @@ export const SV_FREQUENCIES = [
 ]
 
 export const FREQUENCIES = [...SNP_FREQUENCIES, ...MITO_FREQUENCIES, ...SV_FREQUENCIES]
+
+export const GENE_SEARCH_FREQUENCIES = {
+  ...FREQUENCIES.filter(({ name }) => name !== TOPMED_FREQUENCY).reduce(
+    (acc, { name }) => ({ ...acc, [name]: { af: 0.03 } }), {},
+  ),
+  [THIS_CALLSET_FREQUENCY]: { ac: 3000 },
+  [SV_CALLSET_FREQUENCY]: { ac: 300 },
+}
 
 const VARIANT_ICON_COLORS = {
   red: '#eaa8a8',

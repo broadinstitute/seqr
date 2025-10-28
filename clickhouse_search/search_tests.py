@@ -1,7 +1,8 @@
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.management import call_command
 from django.db import connections
-from django.test import TestCase, TransactionTestCase
+from django.test import TransactionTestCase
+from django.urls.base import reverse
 import json
 import mock
 
@@ -22,20 +23,21 @@ from seqr.models import Project, Family, Sample, VariantSearch, VariantSearchRes
 from seqr.utils.search.search_utils_tests import SearchTestHelper
 from seqr.utils.search.utils import query_variants, variant_lookup, get_variant_query_gene_counts, get_single_variant, InvalidSearchException
 from seqr.views.utils.json_utils import DjangoJSONEncoderWithSets
-from seqr.views.utils.test_utils import DifferentDbTransactionSupportMixin
+from seqr.views.utils.test_utils import AnvilAuthenticationTestMixin
+from seqr.views.apis.variant_search_api import gene_variant_lookup
 
 from settings import DATABASES
 
-
-class ClickhouseSearchTests(SearchTestHelper, TransactionTestCase):
+class ClickhouseSearchTests(SearchTestHelper, AnvilAuthenticationTestMixin, TransactionTestCase):
     databases = '__all__'
     fixtures = ['users', '1kg_project', 'variant_searches', 'reference_data', 'clickhouse_transcripts']
 
     def setUp(self):
         super().set_up()
+        super().set_up_test()
         self.mock_redis.get.return_value = None
 
-    def _fixture_setup(self):
+    def _fixture_setup(self): # pylint: disable=arguments-differ
         # TransactionTestCase does not call setupTestData in the same way as TestCase
         # https://github.com/django/django/blob/stable/4.2.x/django/test/testcases.py#L1466
         # As a warning to a future reader, this method changes from an instance to a class method
@@ -43,7 +45,7 @@ class ClickhouseSearchTests(SearchTestHelper, TransactionTestCase):
         # Django is updated, our pattern here must be re-visited.
         super()._fixture_setup()
         with connections['clickhouse_write'].cursor() as cursor:
-            cursor.execute(f'SYSTEM RELOAD DICTIONARY "seqrdb_affected_status_dict"')
+            cursor.execute('SYSTEM RELOAD DICTIONARY "seqrdb_affected_status_dict"')
         for db in DATABASES.keys():
             call_command("loaddata", 'clickhouse_search', database=db)
         with connections['clickhouse_write'].cursor() as cursor:
@@ -52,7 +54,7 @@ class ClickhouseSearchTests(SearchTestHelper, TransactionTestCase):
                 cursor.execute(f'SYSTEM WAIT VIEW "{table_base}/project_gt_stats_to_gt_stats_mv"')
                 cursor.execute(f'SYSTEM RELOAD DICTIONARY "{table_base}/gt_stats_dict"')
         Project.objects.update(genome_version='38')
-
+        AnvilAuthenticationTestMixin.set_up_users()
 
     def _assert_expected_search(self, expected_results, gene_counts=None, inheritance_mode=None, inheritance_filter=None, quality_filter=None, cached_variant_fields=None, sort='xpos', results_model=None, **search_kwargs):
         results_model = results_model or self.results_model
@@ -624,10 +626,17 @@ class ClickhouseSearchTests(SearchTestHelper, TransactionTestCase):
             cached_variant_fields=cached_variant_fields[:1] + cached_variant_fields[2:],
         )
 
+        pathogenicity = {'clinvar': ['likely_pathogenic', 'conflicting_p_lp', 'vus_or_conflicting']}
         self._assert_expected_search(
             [VARIANT1, VARIANT2, selected_family_3_variant, MITO_VARIANT1, MITO_VARIANT3], quality_filter=quality_filter,
-            annotations=annotations, pathogenicity={'clinvar': ['likely_pathogenic', 'conflicting_p_lp', 'vus_or_conflicting']},
+            annotations=annotations, pathogenicity=pathogenicity,
             cached_variant_fields=cached_variant_fields,
+        )
+
+        self._assert_expected_search(
+            [VARIANT2, selected_family_3_variant, MITO_VARIANT1],  quality_filter=quality_filter,
+            annotations=annotations, pathogenicity={**pathogenicity, 'clinvarMinStars': 1},
+            cached_variant_fields=cached_variant_fields[1:],
         )
 
         self._assert_expected_search(
@@ -853,31 +862,37 @@ class ClickhouseSearchTests(SearchTestHelper, TransactionTestCase):
         self._assert_expected_search(
             [VARIANT1, VARIANT4, MITO_VARIANT1],
             freqs={'gnomad_genomes': {'af': 0.01, 'hh': 10}, 'gnomad_mito': {'af': 0.01}},
-            annotations=annotations, pathogenicity={'clinvar': ['pathogenic', 'likely_pathogenic', 'vus_or_conflicting']},
+            annotations=annotations, pathogenicity={'clinvar': ['pathogenic', 'likely_pathogenic', 'vus']},
         )
 
         self._assert_expected_search(
             [VARIANT2, VARIANT4, MITO_VARIANT1], freqs={'gnomad_genomes': {'af': 0.01}, 'gnomad_mito': {'af': 0.01}},
-            annotations=annotations, pathogenicity={'clinvar': ['pathogenic', 'conflicting_p_lp', 'vus_or_conflicting']},
+            annotations=annotations, pathogenicity={'clinvar': ['pathogenic', 'conflicting_p_lp', 'vus']},
         )
 
     def test_annotations_filter(self):
         self._assert_expected_search([VARIANT2], pathogenicity={'hgmd': ['hgmd_other']})
         self._assert_expected_search([], pathogenicity={'hgmd': ['disease_causing', 'likely_disease_causing']})
 
-        pathogenicity = {'clinvar': ['likely_pathogenic', 'vus_or_conflicting', 'benign'], 'hgmd': []}
+        clinvar_paths = ['likely_pathogenic', 'conflicting_p_lp', 'conflicting_no_p', 'vus', 'benign']
+        pathogenicity = {'clinvar': clinvar_paths, 'hgmd': []}
         self._assert_expected_search(
             [VARIANT1, VARIANT2, MITO_VARIANT1, MITO_VARIANT3], pathogenicity=pathogenicity,
         )
 
-        self._assert_expected_search([VARIANT2], pathogenicity={'clinvar': ['conflicting_p_lp']})
+        self._assert_expected_search(
+            [VARIANT2, MITO_VARIANT1], pathogenicity={**pathogenicity, 'clinvarMinStars': 1},
+        )
 
-        exclude = {'clinvar': pathogenicity['clinvar'][1:]}
-        pathogenicity['clinvar'] = pathogenicity['clinvar'][:1]
+        self._assert_expected_search([VARIANT2], pathogenicity={'clinvar': ['conflicting_p_lp']})
+        self._assert_expected_search([], pathogenicity={'clinvar': ['conflicting_no_p']})
+
+        exclude = {'clinvar': clinvar_paths[2:]}
+        pathogenicity['clinvar'] = clinvar_paths[:2]
         snv_38_only_annotations = {'SCREEN': ['CTCF-only', 'DNase-only'], 'UTRAnnotator': ['5_prime_UTR_stop_codon_loss_variant']}
         selected_transcript_variant_2 = {**VARIANT2, 'selectedMainTranscriptId': 'ENST00000408919'}
         self._assert_expected_search(
-            [VARIANT1, selected_transcript_variant_2, VARIANT4, MITO_VARIANT3], pathogenicity=pathogenicity, annotations=snv_38_only_annotations,
+            [VARIANT1, selected_transcript_variant_2, VARIANT4, MITO_VARIANT3], exclude=exclude, pathogenicity=pathogenicity, annotations=snv_38_only_annotations,
             cached_variant_fields=[
                 {'selectedTranscript': None},
                 {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][1]},
@@ -886,6 +901,8 @@ class ClickhouseSearchTests(SearchTestHelper, TransactionTestCase):
             ]
         )
 
+        exclude['clinvar'] = clinvar_paths[1:]
+        pathogenicity['clinvar'] = clinvar_paths[:1]
         self._assert_expected_search(
             [VARIANT1, VARIANT4, MITO_VARIANT3], exclude=exclude, pathogenicity=pathogenicity,
             annotations=snv_38_only_annotations, cached_variant_fields=[
@@ -983,6 +1000,21 @@ class ClickhouseSearchTests(SearchTestHelper, TransactionTestCase):
                 {'selectedTranscript': None},
                 {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[4][0]},
                 {}, {},
+            ],
+        )
+
+        annotations = {'extended_splice_site': ['5_prime_UTR_variant']}
+        self._assert_expected_search(
+            [selected_transcript_variant_2], pathogenicity=None, annotations=annotations, cached_variant_fields=[
+                {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][1]},
+            ],
+        )
+
+        annotations['extended_splice_site'].append('extended_intronic_splice_region_variant')
+        self._assert_expected_search(
+            [selected_transcript_variant_2, VARIANT4], annotations=annotations, cached_variant_fields=[
+                {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][1]},
+                {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[4][0]},
             ],
         )
 
@@ -1119,7 +1151,7 @@ class ClickhouseSearchTests(SearchTestHelper, TransactionTestCase):
             ],
         )
 
-        pathogenicity = {'clinvar': ['likely_pathogenic', 'vus_or_conflicting']}
+        pathogenicity = {'clinvar': ['likely_pathogenic', 'conflicting_p_lp', 'conflicting_no_p', 'vus']}
         self._reset_search_families()
         self._assert_expected_search(
             [VARIANT2, [VARIANT3, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4], MITO_VARIANT3], inheritance_mode='recessive',
@@ -1477,3 +1509,56 @@ class ClickhouseSearchTests(SearchTestHelper, TransactionTestCase):
                 [{'selectedGeneId': 'ENSG00000277258'}, {'selectedGeneId': 'ENSG00000277258'}],
             ]
         )
+
+    def test_gene_variant_lookup(self):
+        url = reverse(gene_variant_lookup)
+        self.check_require_login(url)
+
+        body = {
+            'genomeVersion': '38',
+            'geneId': 'ENSG00000097046',
+            'annotations': {
+                'missense': ['missense_variant'],
+                'other': ['non_coding_transcript_exon_variant'],
+            },
+            'freqs': {
+                'callset': {'ac': 3000},
+                'gnomad_genomes': {'af': 0.03},
+                'gnomad_exomes': {'af': 0.03},
+            },
+        }
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 200)
+        variant4 = {**VARIANT4, 'selectedMainTranscriptId': 'ENST00000350997'}
+        del variant4['familyGuids']
+        del variant4['genotypes']
+        expected_response = {
+            'searchedVariants': [variant4],
+            'genesById': {'ENSG00000097046': mock.ANY},
+            'omimIntervals': {},
+            'totalSampleCounts': {
+                'MITO': {'WES': 1},
+                'SNV_INDEL': {'WES': 7},
+                'SV': {'WES': 3, 'WGS': 3},
+            },
+        }
+        self.assertDictEqual(response.json(), expected_response)
+
+        body['freqs'] = {}
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 200)
+        variant3 = {**VARIANT3, 'selectedMainTranscriptId': 'ENST00000497611'}
+        del variant3['familyGuids']
+        del variant3['genotypes']
+        expected_response['searchedVariants'].append(variant3)
+        expected_response['genesById']['ENSG00000177000'] = mock.ANY
+        self.assertDictEqual(response.json(), expected_response)
+
+        body['geneId'] = 'ENSG00000229905'
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {
+            **expected_response,
+            'searchedVariants': [],
+            'genesById': {},
+        })

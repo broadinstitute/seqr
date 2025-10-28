@@ -91,7 +91,7 @@ const loadMultipleData = (
 export const uploadRnaSeq = loadMultipleData(
   'update_rna_seq',
   ({ sampleGuids, fileName }, { dataType }) => sampleGuids.map(sampleGuid => ([
-    `/api/data_management/load_rna_seq_sample/${sampleGuid}`, sampleGuid, { fileName, dataType },
+    `/api/load_rna_seq_sample/${sampleGuid}`, sampleGuid, { fileName, dataType },
   ])),
   RECEIVE_RNA_SEQ_UPLOAD_STATS,
   numLoaded => `Successfully loaded data for ${numLoaded} RNA-seq samples`,

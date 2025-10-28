@@ -12,10 +12,12 @@ from django.shortcuts import redirect
 from math import ceil
 import re
 
+from clickhouse_search.search import clickhouse_variant_gene_lookup
 from reference_data.models import GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38
 from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, ProjectCategory, Sample
+from seqr.utils.gene_utils import get_gene
 from seqr.utils.search.utils import query_variants, get_single_variant, get_variant_query_gene_counts, get_search_samples, \
-    variant_lookup, parse_variant_id
+    variant_lookup, parse_variant_id, clickhouse_only
 from seqr.utils.search.constants import XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
 from seqr.utils.search.utils import InvalidSearchException
 from seqr.utils.xpos_utils import get_xpos
@@ -29,7 +31,7 @@ from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_
 from seqr.views.utils.permissions_utils import check_project_permissions, get_project_guids_user_can_view, \
     user_is_analyst, login_and_policies_required, check_user_created_object_permissions, check_projects_view_permission
 from seqr.views.utils.project_context_utils import get_projects_child_entities
-from seqr.views.utils.variant_utils import get_variant_key, get_variants_response
+from seqr.views.utils.variant_utils import get_variant_key, get_variants_response, get_variants_reference_data_response
 from seqr.views.utils.vlm_utils import vlm_lookup
 
 
@@ -549,6 +551,21 @@ def _flatten_variants(variants):
         else:
             flattened_variants.append(variant)
     return flattened_variants
+
+
+@clickhouse_only
+@login_and_policies_required
+def gene_variant_lookup(request):
+    search_json = json.loads(request.body)
+    genome_version = search_json.pop('genomeVersion')
+    gene_id = search_json.pop('geneId')
+    gene = get_gene(gene_id, request.user)
+
+    results = clickhouse_variant_gene_lookup(request.user, gene, genome_version, search_json)
+    response = get_variants_reference_data_response(results, [genome_version])
+    response['searchedVariants'] = results
+
+    return create_json_response(response)
 
 
 @login_and_policies_required

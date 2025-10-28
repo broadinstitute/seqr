@@ -88,7 +88,7 @@ const VariantLayout = (
       <Grid.Column width={16}>
         {topContent}
       </Grid.Column>
-      {coreVariant.familyGuids.map(familyGuid => (
+      {coreVariant.familyGuids?.map(familyGuid => (
         <Grid.Column key={familyGuid} width={16}>
           <FamilyVariantTags
             familyGuid={familyGuid}
@@ -176,7 +176,7 @@ export const Variant = React.memo((
         </Grid.Row>
         <Grid.Row>
           <Grid.Column width={16}>
-            <VariantIndividuals variant={variant} />
+            {variant.familyGuids && <VariantIndividuals variant={variant} />}
             {showReads}
           </Grid.Column>
         </Grid.Row>

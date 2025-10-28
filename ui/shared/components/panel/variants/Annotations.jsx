@@ -17,7 +17,7 @@ import {
 } from 'redux/selectors'
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
 import CopyToClipboardButton from '../../buttons/CopyToClipboardButton'
-import SearchResultsLink from '../../buttons/SearchResultsLink'
+import SearchResultsLink, { PermissiveGeneSearchLink } from '../../buttons/SearchResultsLink'
 import Modal from '../../modal/Modal'
 import { ButtonLink, HelpIcon } from '../../StyledComponents'
 import RnaSeqJunctionOutliersTable from '../../table/RnaSeqJunctionOutliersTable'
@@ -111,6 +111,9 @@ const DividedLink = styled.a.attrs({ target: '_blank', rel: 'noreferrer' })`
 `
 
 const DividedButtonLink = DividedLink.withComponent(ButtonLink)
+
+const BaseDividedGeneSearchLink = DividedLink.withComponent(PermissiveGeneSearchLink)
+const DividedGeneSearchLink = props => <BaseDividedGeneSearchLink {...props} />
 
 const UcscBrowserLink = ({ genomeVersion, chrom, pos, refLength, endOffset, copyPosition }) => {
   const posInt = parseInt(pos, 10)
@@ -366,13 +369,21 @@ const variantSearchLinks = (variant, mainTranscript, genesById, user, elasticsea
     </NavLink>
   )
 
+  const seqrLinks = [{
+    key: 'seqr-search',
+    trigger: seqrSearchLink,
+    content: `Search for this variant across all your seqr projects${svType ? '. Any structural variant with ≥20% reciprocal overlap will be returned.' : ''}`,
+  }]
+  if (!svType) {
+    seqrLinks.push({
+      key: 'codon-search',
+      trigger: <DividedGeneSearchLink buttonText="seqr codon" genomeVersion={genomeVersion} location={`${chrom}:${pos - 2}-${pos + 2}`} excludeSvs />,
+      content: 'Search for variants within 2bp of this variant across all your seqr projects in any affected individual and with AF < 3%',
+    })
+  }
+
   return [
-    <Popup
-      key="seqr-search"
-      trigger={seqrSearchLink}
-      content={`Search for this variant across all your seqr projects${svType ? '. Any structural variant with ≥20% reciprocal overlap will be returned.' : ''}`}
-      size="tiny"
-    />,
+    ...seqrLinks.map(props => <Popup size="tiny" {...props} />),
     ...VARIANT_LINKS.filter(({ shouldShow }) => shouldShow(linkVariant, user)).map(
       ({ name, getHref }) => <DividedLink key={name} href={getHref(linkVariant)}>{name}</DividedLink>,
     ),

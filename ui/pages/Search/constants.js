@@ -136,6 +136,8 @@ const CLINVAR_NAME = 'clinvar'
 const CLIVAR_PATH = 'pathogenic'
 const CLINVAR_LIKELY_PATH = 'likely_pathogenic'
 const CLINVAR_CONFLICTING_P_LP = 'conflicting_p_lp'
+const CLINVAR_CONFLICTING_NO_P = 'conflicting_no_p'
+const CLINVAR_VUS = 'vus'
 const CLINVAR_UNCERTAIN = 'vus_or_conflicting'
 const CLINVAR_OPTIONS = [
   {
@@ -147,14 +149,19 @@ const CLINVAR_OPTIONS = [
     value: CLINVAR_LIKELY_PATH,
   },
   {
-    description: 'Clinvar variant of with conflicting interpretations, at least one of which is Pathogenic (P) or Likely Pathogenic (LP)',
+    description: 'ClinVar variant with conflicting interpretations, at least one of which is Pathogenic (P) or Likely Pathogenic (LP)',
     text: 'Conflicting with P/LP',
     value: CLINVAR_CONFLICTING_P_LP,
   },
   {
-    description: 'Clinvar variant of uncertain significance or variant with conflicting interpretations',
-    text: 'VUS or Conflicting',
-    value: CLINVAR_UNCERTAIN,
+    description: 'ClinVar variant with conflicting interpretations, none of which is Pathogenic (P) or Likely Pathogenic (LP)',
+    text: 'Conflicting with no P/LP',
+    value: CLINVAR_CONFLICTING_NO_P,
+  },
+  {
+    description: 'ClinVar variant of uncertain significance',
+    text: 'VUS',
+    value: CLINVAR_VUS,
   },
   {
     text: 'Likely Benign (LB)',
@@ -165,6 +172,13 @@ const CLINVAR_OPTIONS = [
     value: 'benign',
   },
 ]
+
+const ES_CLINVAR_OPTIONS = [...CLINVAR_OPTIONS]
+ES_CLINVAR_OPTIONS.splice(2, 3, {
+  description: 'ClinVar variant of uncertain significance or variant with conflicting interpretations',
+  text: 'VUS or Conflicting',
+  value: CLINVAR_UNCERTAIN,
+})
 
 const HGMD_NAME = 'hgmd'
 const HGMD_DM = 'disease_causing'
@@ -189,23 +203,21 @@ const HGMD_OPTIONS = [ // see https://portal.biobase-international.com/hgmd/pro/
 export const CLINVAR_FIELD = {
   name: CLINVAR_NAME,
   options: CLINVAR_OPTIONS,
-  groupLabel: 'Clinvar',
+  groupLabel: 'ClinVar',
   width: 1,
 }
 
-export const PATHOGENICITY_FIELDS = [
-  CLINVAR_FIELD,
-]
+export const ES_CLINVAR_FIELD = {
+  ...CLINVAR_FIELD,
+  options: ES_CLINVAR_OPTIONS,
+}
 
-export const HGMD_PATHOGENICITY_FIELDS = [
-  CLINVAR_FIELD,
-  {
-    name: HGMD_NAME,
-    options: HGMD_OPTIONS,
-    groupLabel: 'HGMD',
-    width: 1,
-  },
-]
+export const HGMD_FIELD = {
+  name: HGMD_NAME,
+  options: HGMD_OPTIONS,
+  groupLabel: 'HGMD',
+  width: 1,
+}
 
 export const ANY_PATHOGENICITY_FILTER = {
   text: 'Any',
@@ -227,7 +239,14 @@ export const HGMD_PATHOGENICITY_FILTER_OPTIONS = [
   {
     text: 'Not Benign',
     value: {
-      [CLINVAR_NAME]: [CLIVAR_PATH, CLINVAR_LIKELY_PATH, CLINVAR_CONFLICTING_P_LP, CLINVAR_UNCERTAIN],
+      [CLINVAR_NAME]: [
+        CLIVAR_PATH,
+        CLINVAR_LIKELY_PATH,
+        CLINVAR_CONFLICTING_P_LP,
+        CLINVAR_CONFLICTING_NO_P,
+        CLINVAR_VUS,
+        CLINVAR_UNCERTAIN,
+      ],
       [HGMD_NAME]: HGMD_OPTIONS.map(({ value }) => value),
     },
   },

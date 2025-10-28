@@ -13,7 +13,11 @@ from notifications.models import Notification
 
 from matchmaker.models import MatchmakerSubmission
 from seqr.models import Project, Family, Individual, Sample, RnaSample, FamilyNote, PhenotypePrioritization, CAN_EDIT
+from seqr.utils.file_utils import file_iter
+from seqr.utils.logging_utils import SeqrLogger
 from seqr.views.utils.airtable_utils import AirtableSession, ANVIL_REQUEST_TRACKING_TABLE
+from seqr.views.utils.dataset_utils import post_process_rna_data, RNA_DATA_TYPE_CONFIGS
+from seqr.views.utils.file_utils import get_temp_file_path
 from seqr.views.utils.individual_utils import delete_individuals
 from seqr.views.utils.json_utils import create_json_response, _to_snake_case, _to_camel_case
 from seqr.views.utils.json_to_orm_utils import update_project_from_json, create_model_from_json, update_model_from_json
@@ -23,11 +27,13 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_project, get_json_f
     FAMILY_ADDITIONAL_VALUES
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     check_user_created_object_permissions, pm_required, user_is_pm, login_and_policies_required, \
-    has_workspace_perm, has_case_review_permissions, is_internal_anvil_project
+    has_workspace_perm, has_case_review_permissions, is_internal_anvil_project, pm_or_data_manager_required
 from seqr.views.utils.project_context_utils import families_discovery_tags, \
     add_project_tag_type_counts, get_project_analysis_groups, get_project_locus_lists
 from seqr.views.utils.terra_api_utils import is_anvil_authenticated, anvil_enabled
 from settings import BASE_URL
+
+logger = SeqrLogger(__name__)
 
 
 @pm_required
@@ -456,3 +462,30 @@ def _delete_project(project_guid, user):
             record_and_filters={'AnVIL Project URL': f'{BASE_URL}project/{project_guid}/project_page'},
             update={'Status': 'Project Deleted'},
         )
+
+
+@pm_or_data_manager_required
+def load_rna_seq_sample_data(request, sample_guid):
+    sample = RnaSample.objects.get(guid=sample_guid)
+    logger.info(f'Loading outlier data for {sample.individual.individual_id}', request.user)
+
+    request_json = json.loads(request.body)
+    file_name = request_json['fileName']
+    data_type = request_json['dataType']
+    config = RNA_DATA_TYPE_CONFIGS[data_type]
+
+    file_path = get_temp_file_path(f'{file_name}/{sample_guid}.json.gz')
+    try:
+        data_rows = [json.loads(line) for line in file_iter(file_path, user=request.user)]
+        data_rows, error = post_process_rna_data(sample_guid, data_rows, **config.get('post_process_kwargs', {}))
+    except FileNotFoundError:
+        logger.error(f'No saved temp data found for {sample_guid} with file prefix {file_name}', request.user)
+        error = 'Data for this sample was not properly parsed. Please re-upload the data'
+    if error:
+        return create_json_response({'error': error}, status=400)
+
+    model_cls = config['model_class']
+    model_cls.bulk_create(request.user, [model_cls(sample=sample, **data) for data in data_rows], batch_size=1000)
+    update_model_from_json(sample, {'is_active': True}, user=request.user)
+
+    return create_json_response({'success': True})

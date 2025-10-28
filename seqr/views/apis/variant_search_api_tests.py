@@ -14,7 +14,7 @@ from seqr.utils.search.utils import InvalidSearchException
 from seqr.utils.search.elasticsearch.es_utils import InvalidIndexException
 from seqr.views.apis.variant_search_api import query_variants_handler, query_single_variant_handler, vlm_lookup_handler, \
     export_variants_handler, search_context_handler, get_saved_search_handler, create_saved_search_handler, \
-    update_saved_search_handler, delete_saved_search_handler, get_variant_gene_breakdown, variant_lookup_handler
+    update_saved_search_handler, delete_saved_search_handler, get_variant_gene_breakdown, variant_lookup_handler, gene_variant_lookup
 from seqr.views.utils.test_utils import AuthenticationTestCase, VARIANTS, AnvilAuthenticationTestCase,\
     GENE_VARIANT_FIELDS, GENE_VARIANT_DISPLAY_FIELDS, LOCUS_LIST_FIELDS, FAMILY_FIELDS, \
     PA_LOCUS_LIST_FIELDS, INDIVIDUAL_FIELDS, FUNCTIONAL_FIELDS, IGV_SAMPLE_FIELDS, FAMILY_NOTE_FIELDS, ANALYSIS_GROUP_FIELDS, \
@@ -1362,6 +1362,12 @@ class LocalVariantSearchAPITest(AuthenticationTestCase, VariantSearchAPITest):
         **EXPECTED_SEARCH_RESPONSE,
         **EXPECTED_TRANSCRIPTS_RESPONSE,
     }
+
+    def test_gene_variant_lookup(self, *args, **kwargs):
+        url = reverse(gene_variant_lookup)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 500)
+        self.assertDictEqual(response.json(), {'error': 'gene_variant_lookup is disabled without the clickhouse backend'})
 
 
 def assert_no_list_ws_has_al(self, acl_call_count, group_call_count, workspace_name=None):

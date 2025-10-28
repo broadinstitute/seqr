@@ -46,8 +46,7 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
 
         dataset_results = []
         if inheritance_mode != COMPOUND_HET:
-            result_q = _get_search_results_queryset(entry_cls, annotations_cls, sample_data, skip_individual_guid=is_multi_project, exclude_keys=exclude_keys.get(dataset_type), **search)
-            dataset_results += _evaluate_results(result_q)
+            dataset_results += _get_search_results(entry_cls, annotations_cls, sample_data, skip_individual_guid=is_multi_project, exclude_keys=exclude_keys.get(dataset_type), **search)
         if has_comp_het:
             comp_het_sample_data = sample_data
             if is_multi_project and dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS and _is_x_chrom_only(genome_version, **search):
@@ -72,10 +71,10 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
     return format_clickhouse_results(cache_results['all_results'][(page-1)*num_results:page*num_results], genome_version)
 
 
-def _get_search_results_queryset(entry_cls, annotations_cls, sample_data, **search_kwargs):
-    entries = entry_cls.objects.search(sample_data, **search_kwargs)
+def _get_search_results(entry_cls, annotations_cls, sample_data, skip_entry_fields=False, **search_kwargs):
+    entries = entry_cls.objects.search(sample_data, skip_entry_fields=skip_entry_fields, **search_kwargs)
     results = annotations_cls.objects.subquery_join(entries).search(**search_kwargs)
-    return results.result_values()
+    return _evaluate_results(results.result_values(skip_entry_fields=skip_entry_fields))
 
 
 def _evaluate_results(result_q, is_comp_het=False):
@@ -519,6 +518,16 @@ def _get_sort_key(sort, gene_metadata):
         ]
 
     return lambda x: tuple(expr(x[0] if isinstance(x, list) else x) for expr in [*sort_expressions, lambda x: x[XPOS_SORT_KEY]])
+
+
+def clickhouse_variant_gene_lookup(user, gene, genome_version, search):
+    logger.info(f'Looking up variants in gene {gene["geneId"]}', user)
+    entry_cls = ENTRY_CLASS_MAP[genome_version][Sample.DATASET_TYPE_VARIANT_CALLS]
+    annotations_cls = ANNOTATIONS_CLASS_MAP[genome_version][Sample.DATASET_TYPE_VARIANT_CALLS]
+    results = _get_search_results(
+        entry_cls, annotations_cls, sample_data=None, genes={gene['geneId']: gene}, skip_entry_fields=True, **search,
+    )
+    return format_clickhouse_results(results, genome_version)
 
 
 def _clickhouse_variant_lookup(variant_id, genome_version, data_type, samples=None):

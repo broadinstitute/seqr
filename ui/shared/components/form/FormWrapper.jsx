@@ -92,6 +92,7 @@ class FormWrapper extends React.PureComponent {
 
     /* Whether form should be rendered inline instead of the default block display */
     inline: PropTypes.bool,
+    verticalAlign: PropTypes.string,
 
     /* Whether the form should be rendered as loading */
     loading: PropTypes.bool,
@@ -227,7 +228,7 @@ class FormWrapper extends React.PureComponent {
   render() {
     const {
       children, confirmDialog, size, loading, submitOnChange, inline, onSubmitSucceeded, noModal, initialValues,
-      closeOnSuccess, confirmCloseIfNotSaved, decorators,
+      closeOnSuccess, confirmCloseIfNotSaved, decorators, verticalAlign,
     } = this.props
     const { confirming } = this.state
 
@@ -248,6 +249,7 @@ class FormWrapper extends React.PureComponent {
             loading={loading === undefined ? submitting : loading}
             hasSubmitButton={!submitOnChange}
             inline={inline}
+            verticalAlign={verticalAlign}
           >
             {fieldComponents}
             <FormSpy subscription={SUBMISSION_PANEL_SUBSCRIPTION} render={this.renderSubmissionPanel} />

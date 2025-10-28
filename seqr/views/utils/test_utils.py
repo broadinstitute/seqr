@@ -19,8 +19,7 @@ from seqr.models import Project, SavedVariant, CAN_VIEW, CAN_EDIT
 WINDOW_REGEX_TEMPLATE = 'window\.{key}=(?P<value>[^)<]+)'
 
 
-class AuthenticationTestCase(TestCase):
-    databases = ['default', 'reference_data']
+class AuthenticationTestMixin(object):
     SUPERUSER = 'superuser'
     ANALYST = 'analyst'
     PM = 'project_manager'
@@ -44,7 +43,7 @@ class AuthenticationTestCase(TestCase):
     inactive_user = None
     no_policy_user = None
 
-    def setUp(self):
+    def set_up_test(self):
         patcher = mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', self.ES_HOSTNAME)
         patcher.start()
         self.addCleanup(patcher.stop)
@@ -69,7 +68,7 @@ class AuthenticationTestCase(TestCase):
         logging.getLogger().handlers[0].stream = self._log_stream
 
     @classmethod
-    def setUpTestData(cls):
+    def set_up_users(cls):
         cls.super_user = User.objects.get(username='test_superuser')
         cls.analyst_user = User.objects.get(username='test_user')
         cls.pm_user = User.objects.get(username='test_pm_user')
@@ -271,6 +270,17 @@ class AuthenticationTestCase(TestCase):
 
     def assert_no_logs(self):
         self.assertEqual(self._log_stream.getvalue(), '')
+
+class AuthenticationTestCase(AuthenticationTestMixin, TestCase):
+    databases = ['default', 'reference_data']
+
+    def setUp(self):
+        self.set_up_test()
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        cls.set_up_users()
 
 TEST_WORKSPACE_NAMESPACE = 'my-seqr-billing'
 TEST_WORKSPACE_NAME = 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de'
@@ -540,16 +550,15 @@ class DifferentDbTransactionSupportMixin(object):
                 )
 
 
-class AnvilAuthenticationTestCase(DifferentDbTransactionSupportMixin, AuthenticationTestCase):
+class AnvilAuthenticationTestMixin(AuthenticationTestMixin):
 
-    databases = '__all__'
     ES_HOSTNAME = ''
     CLICKHOUSE_HOSTNAME = 'testhost'
     MOCK_AIRTABLE_KEY = 'airflow_access'
     SKIP_RESET_VARIANT_JSON = False
 
     # mock the terra apis
-    def setUp(self):
+    def set_up_test(self):
         patcher = mock.patch('seqr.views.utils.terra_api_utils.TERRA_API_ROOT_URL', TEST_TERRA_API_ROOT_URL)
         patcher.start()
         self.addCleanup(patcher.stop)
@@ -588,7 +597,7 @@ class AnvilAuthenticationTestCase(DifferentDbTransactionSupportMixin, Authentica
         self.mock_get_group_members = patcher.start()
         self.mock_get_group_members.side_effect = get_group_members_side_effect
         self.addCleanup(patcher.stop)
-        super(AnvilAuthenticationTestCase, self).setUp()
+        super().set_up_test()
         if self.CLICKHOUSE_HOSTNAME and not self.SKIP_RESET_VARIANT_JSON:
             SavedVariant.objects.filter(key__isnull=False).update(saved_variant_json={})
 
@@ -601,6 +610,19 @@ class AnvilAuthenticationTestCase(DifferentDbTransactionSupportMixin, Authentica
         self.mock_get_ws_acl.assert_not_called()
         self.mock_get_groups.assert_not_called()
         self.mock_get_group_members.assert_not_called()
+
+
+class AnvilAuthenticationTestCase(DifferentDbTransactionSupportMixin, AnvilAuthenticationTestMixin, TestCase):
+
+    databases = '__all__'
+
+    def setUp(self):
+        self.set_up_test()
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        cls.set_up_users()
 
 
 @mock.patch('seqr.views.utils.terra_api_utils.SOCIAL_AUTH_PROVIDER', TEST_OAUTH2_PROVIDER)

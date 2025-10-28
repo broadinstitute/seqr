@@ -1,7 +1,11 @@
 from collections import defaultdict
+from datetime import datetime
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.db.models import F, Q
 from django.utils import timezone
+import gzip
+import json
+import os
 from tqdm import tqdm
 
 from seqr.models import Sample, Individual, Family, Project, RnaSample, RnaSeqOutlier, RnaSeqTpm, RnaSeqSpliceOutlier
@@ -10,7 +14,7 @@ from seqr.utils.file_utils import file_iter
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.xpos_utils import format_chrom
-from seqr.views.utils.file_utils import parse_file
+from seqr.views.utils.file_utils import parse_file, get_temp_file_path, persist_temp_file
 from seqr.views.utils.permissions_utils import get_internal_projects
 from seqr.views.utils.json_utils import _to_snake_case, _to_camel_case
 from reference_data.models import GeneInfo
@@ -321,11 +325,6 @@ RNA_DATA_TYPE_CONFIGS = {
 }
 
 
-def load_rna_seq(data_type, *args, **kwargs):
-    config = RNA_DATA_TYPE_CONFIGS[data_type]
-    return _load_rna_seq(config['model_class'], config['data_type'], *args, config['columns'], **config['additional_kwargs'], **kwargs)
-
-
 def _validate_rna_header(header, column_map):
     required_column_map = {
         column_map.get(col, col): col for col in [SAMPLE_ID_COL, PROJECT_COL, GENE_ID_COL, TISSUE_COL]
@@ -339,7 +338,7 @@ def _validate_rna_header(header, column_map):
 
 
 def _load_rna_seq_file(
-        file_path, data_source, user, data_type, model_cls, potential_samples, save_data, individual_data_by_key,
+        file_path, data_source, user, data_type, model_cls, potential_samples, sample_files, file_dir, individual_data_by_key,
         column_map, mapping_file=None, allow_missing_gene=False, ignore_extra_samples=False,
 ):
     sample_id_to_individual_id_mapping = {}
@@ -363,7 +362,7 @@ def _load_rna_seq_file(
         _parse_rna_row(
             dict(zip(header, line)), column_map, required_column_map, missing_required_fields,
             sample_id_to_individual_id_mapping, potential_samples, loaded_samples, gene_ids, sample_guid_keys_to_load,
-            samples_to_create, unmatched_samples, individual_data_by_key, save_data, ignore_extra_samples,
+            samples_to_create, unmatched_samples, individual_data_by_key, sample_files, file_dir, ignore_extra_samples,
         )
 
     errors, warnings = _process_rna_errors(
@@ -383,7 +382,7 @@ def _load_rna_seq_file(
 
 def _parse_rna_row(row, column_map, required_column_map, missing_required_fields, sample_id_to_individual_id_mapping,
                    potential_samples, loaded_samples, gene_ids, sample_guid_keys_to_load, samples_to_create,
-                   unmatched_samples, individual_data_by_key, save_data, ignore_extra_samples):
+                   unmatched_samples, individual_data_by_key, sample_files, file_dir, ignore_extra_samples):
     row_dict = {mapped_key: row[col] for mapped_key, col in column_map.items()}
 
     missing_cols = {col_id for col, col_id in required_column_map.items() if not row.get(col)}
@@ -423,7 +422,14 @@ def _parse_rna_row(row, column_map, required_column_map, missing_required_fields
 
     for gene_id in row_gene_ids:
         row_dict = {**row_dict, GENE_ID_COL: gene_id}
-        save_data(sample_key, row_dict)
+        if sample_key not in sample_files:
+            file_name = _get_sample_file_path(file_dir, '_'.join(sample_key))
+            sample_files[sample_key] = gzip.open(file_name, 'at')
+        sample_files[sample_key].write(f'{json.dumps(row_dict)}\n')
+
+
+def _get_sample_file_path(file_dir, sample_guid):
+    return os.path.join(file_dir, f'{sample_guid}.json.gz')
 
 
 def _process_rna_errors(gene_ids, missing_required_fields, unmatched_samples, ignore_extra_samples, loaded_samples):
@@ -491,7 +497,10 @@ def _match_new_sample(sample_key, samples_to_create, unmatched_samples, individu
         unmatched_samples.add(sample_key)
 
 
-def _load_rna_seq(model_cls, data_type, file_path, save_data, *args, user=None, **kwargs):
+def load_rna_seq(data_type, file_path, user, **kwargs):
+    config = RNA_DATA_TYPE_CONFIGS[data_type]
+    data_type = config['data_type']
+    model_cls = config['model_class']
     projects = get_internal_projects()
     data_source = file_path.split('/')[-1].split('_-_')[-1]
 
@@ -502,8 +511,14 @@ def _load_rna_seq(model_cls, data_type, file_path, save_data, *args, user=None, 
     )
     individual_data_by_key = _get_individuals_by_key(projects)
 
+    sample_files = {}
+    file_name_prefix = f'rna_sample_data__{data_type}__{datetime.now().isoformat()}'
+    file_dir = get_temp_file_path(file_name_prefix, is_local=True)
+    os.mkdir(file_dir)
+
     warnings, not_loaded_count, sample_guid_keys_to_load, prev_loaded_individual_ids = _load_rna_seq_file(
-        file_path, data_source, user, data_type, model_cls, potential_samples, save_data, individual_data_by_key, *args, **kwargs)
+        file_path, data_source, user, data_type, model_cls, potential_samples, sample_files, file_dir, individual_data_by_key,
+        config['columns'], **config['additional_kwargs'], **kwargs)
     message = f'Parsed {len(sample_guid_keys_to_load) + not_loaded_count} RNA-seq samples'
     info = [message]
     logger.info(message, user)
@@ -523,7 +538,17 @@ def _load_rna_seq(model_cls, data_type, file_path, save_data, *args, user=None, 
     for warning in warnings:
         logger.warning(warning, user)
 
-    return sample_guid_keys_to_load, info, warnings
+    for sample_guid, sample_key in sample_guid_keys_to_load.items():
+        sample_files[sample_key].close()  # Required to ensure gzipped files are properly terminated
+        os.rename(
+            _get_sample_file_path(file_dir, '_'.join(sample_key)),
+            _get_sample_file_path(file_dir, sample_guid),
+        )
+
+    if sample_guid_keys_to_load:
+        persist_temp_file(file_name_prefix, user)
+
+    return sample_guid_keys_to_load, file_name_prefix, info, warnings
 
 
 def post_process_rna_data(sample_guid, data, get_unique_key=None, format_fields=None):

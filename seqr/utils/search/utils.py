@@ -464,7 +464,7 @@ def _search_dataset_type(search, genome_version):
     chroms = [gene[f'chromGrch{genome_version}'] for gene in (search.get('genes') or {}).values()] + [
         interval['chrom'] for interval in (search.get('intervals') or [])
     ] if not search.get('exclude_locations') else None
-    dataset_type = _annotation_dataset_type(search.get('annotations'), chroms, pathogenicity=search.get('pathogenicity'))
+    dataset_type = _annotation_dataset_type(search.get('annotations'), chroms, pathogenicity=search.get('pathogenicity'), exclude_svs=search.pop('exclude_svs', False))
     secondary_dataset_type = _annotation_dataset_type(search['annotations_secondary'], chroms) if search.get('annotations_secondary') else None
 
     return dataset_type, secondary_dataset_type, None
@@ -486,15 +486,15 @@ def _chromosome_filter_dataset_type(chroms, any_sv):
     return ALL_DATA_TYPES if any_sv else Sample.DATASET_TYPE_VARIANT_CALLS
 
 
-def _annotation_dataset_type(annotations, chroms, pathogenicity=None):
+def _annotation_dataset_type(annotations, chroms, pathogenicity=None, exclude_svs=False):
     if not (annotations or chroms):
-        return Sample.DATASET_TYPE_VARIANT_CALLS if pathogenicity else None
+        return Sample.DATASET_TYPE_VARIANT_CALLS if (pathogenicity or exclude_svs) else None
 
     annotation_types = set((annotations or {}).keys())
     if annotations and annotation_types.issubset(SV_ANNOTATION_TYPES) and not pathogenicity:
         return Sample.DATASET_TYPE_SV_CALLS
 
-    no_svs = (annotations and annotation_types.isdisjoint(SV_ANNOTATION_TYPES))
+    no_svs = exclude_svs or (annotations and annotation_types.isdisjoint(SV_ANNOTATION_TYPES))
     if chroms:
         return _chromosome_filter_dataset_type(chroms, any_sv=not no_svs)
     elif no_svs:

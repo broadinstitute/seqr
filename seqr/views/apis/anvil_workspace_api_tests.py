@@ -157,8 +157,8 @@ HEADER_LINE = [b'#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tHG00735\
 DATA_LINES = [
     b'chr1\t10333\t.\tCT\tC\t1895\tPASS\tAC=5;AF=0.045;AN=112;DP=22546\tGT:AD:DP:GQ\t./.:63,0:63\t./.:44,0:44\t./.:44,0:44\n'
 ]
-
-PIPELINE_RUNNER_URL = 'http://pipeline-runner:6000/loading_pipeline_enqueue'
+PIPELINE_RUNNER_HOST = 'http://pipeline-runner:6000'
+PIPELINE_RUNNER_URL = f'{PIPELINE_RUNNER_HOST}/loading_pipeline_enqueue'
 
 
 @mock.patch('seqr.views.utils.permissions_utils.logger')
@@ -870,11 +870,16 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase, AirtableTest):
         }, individual_model_data)
 
     def _assert_expected_requests(self, variables, project, num_samples, status):
-        self.assertEqual(len(responses.calls), 2)
-        self.assertDictEqual(json.loads(responses.calls[0].request.body), variables)
+        self.assertEqual(len(responses.calls), 3)
+
+        self.assertEqual(responses.calls[0].request.url, f'{PIPELINE_RUNNER_HOST}/rebuild_gt_stats_enqueue')
+        self.assertDictEqual(json.loads(responses.calls[0].request.body), {'project_guids': [project.guid]})
+
+        self.assertEqual(responses.calls[1].request.url, PIPELINE_RUNNER_URL)
+        self.assertDictEqual(json.loads(responses.calls[1].request.body), variables)
 
         # create airtable record
-        self.assertDictEqual(json.loads(responses.calls[1].request.body), {'records': [{'fields': {
+        self.assertDictEqual(json.loads(responses.calls[2].request.body), {'records': [{'fields': {
             'Requester Name': 'Test Manager User',
             'Requester Email': 'test_user_manager@test.com',
             'AnVIL Project URL': f'http://testserver/project/{project.guid}/project_page',

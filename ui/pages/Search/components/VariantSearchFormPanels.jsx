@@ -23,9 +23,10 @@ import {
   ANNOTATION_SECONDARY_NAME,
   PATHOGENICITY_PANEL_NAME,
   HGMD_HEADER_INPUT_PROPS,
+  PATHOGENICITY_FIELDS,
 } from './VariantSearchFormPanelConfigs'
 import {
-  HGMD_PATHOGENICITY_FIELDS,
+  HGMD_FIELD,
   ALL_RECESSIVE_INHERITANCE_FILTERS,
 } from '../constants'
 import { getDatasetTypes, getHasHgmdPermission } from '../selectors'
@@ -167,6 +168,8 @@ PanelContent.propTypes = {
 }
 
 const hasSecondaryAnnotation = inheritance => ALL_RECESSIVE_INHERITANCE_FILTERS.includes(inheritance?.mode)
+
+const HGMD_PATHOGENICITY_FIELDS = [...PATHOGENICITY_FIELDS, HGMD_FIELD]
 
 class VariantSearchFormPanels extends React.PureComponent {
 

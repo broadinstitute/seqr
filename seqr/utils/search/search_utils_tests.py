@@ -284,7 +284,6 @@ class SearchUtilsTests(SearchTestHelper):
                                    dataset_type=None, secondary_dataset_type=None, exclude_keys=None, exclude_key_pairs=None,
                                    exclude_locations=False, exclude=None, annotations=None, annotations_secondary=None, single_gene_search=False, **kwargs):
         genes = intervals = None
-        has_included_gene_search = has_gene_search and not exclude_locations
         if has_gene_search:
             genes = {'ENSG00000186092': mock.ANY, 'ENSG00000227232': mock.ANY}
             intervals = [{'chrom': '2', 'start': 1234, 'end': 5678, 'offset': None}, {'chrom': '7', 'start': 100, 'end': 10100, 'offset': 0.1}]
@@ -296,7 +295,7 @@ class SearchUtilsTests(SearchTestHelper):
             'inheritance_mode': inheritance_mode,
             'inheritance_filter': {},
             'skipped_samples': mock.ANY,
-            'dataset_type': None if has_included_gene_search else dataset_type,
+            'dataset_type': dataset_type,
             'secondary_dataset_type': secondary_dataset_type,
             'exclude_locations': exclude_locations,
             'genes': genes,
@@ -488,6 +487,22 @@ class SearchUtilsTests(SearchTestHelper):
         self._test_exclude_previous_search(
             mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
             inheritance_mode='any_affected', exclude={'clinvar': ['benign']}, search_fields=['exclude'],
+        )
+
+        del self.search_model.search['exclude']
+        self.search_model.search['exclude_svs'] = True
+        query_variants(self.results_model, user=self.user)
+        self._test_expected_search_call(
+            mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
+            inheritance_mode='any_affected', omitted_sample_guids=SV_SAMPLES, dataset_type='SNV_INDEL',
+        )
+
+        self.search_model.search['locus'] = {'rawItems': 'WASH7P'}
+        query_variants(self.results_model, user=self.user)
+        self._test_expected_search_call(
+            mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
+            inheritance_mode='any_affected', has_gene_search=True, single_gene_search=True,
+            omitted_sample_guids=NON_SNP_INDEL_SAMPLES, dataset_type='SNV_INDEL_only',
         )
 
     def _test_exclude_previous_search(self, mock_get_variants, *args, num_searches=1, **kwargs):

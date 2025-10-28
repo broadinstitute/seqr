@@ -691,8 +691,8 @@ BaseVariantGene.propTypes = {
 }
 
 const getRnaSeqProps = (state, ownProps) => ({
-  tpmGenes: getFamiliesByGuid(state)[ownProps.variant.familyGuids[0]]?.tpmGenes,
-  individualGeneData: getIndividualGeneDataByFamilyGene(state)[ownProps.variant.familyGuids[0]],
+  tpmGenes: getFamiliesByGuid(state)[(ownProps.variant.familyGuids || [])[0]]?.tpmGenes,
+  individualGeneData: getIndividualGeneDataByFamilyGene(state)[(ownProps.variant.familyGuids || [])[0]],
 })
 
 const mapStateToProps = (state, ownProps) => ({

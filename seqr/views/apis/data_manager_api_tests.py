@@ -9,7 +9,7 @@ import responses
 from clickhouse_search.models import EntriesSnvIndel, ProjectGtStatsSnvIndel, AnnotationsSnvIndel
 from seqr.utils.communication_utils import _set_bulk_notification_stream
 from seqr.views.apis.data_manager_api import elasticsearch_status, delete_index, \
-    update_rna_seq, load_rna_seq_sample_data, load_phenotype_prioritization_data, validate_callset, loading_vcfs, \
+    update_rna_seq, load_phenotype_prioritization_data, validate_callset, loading_vcfs, \
     get_loaded_projects, load_data, trigger_delete_project, trigger_delete_family
 from seqr.views.utils.orm_to_json_utils import _get_json_for_models
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, AirtableTest
@@ -646,10 +646,6 @@ class DataManagerAPITest(AirtableTest):
             'num_parsed_samples': 3,
             'initial_model_count': 3,
             'parsed_file_data': RNA_OUTLIER_SAMPLE_DATA,
-            'get_models_json': lambda models: list(models.values_list('gene_id', 'p_adjust', 'p_value', 'z_score')),
-            'expected_models_json': [
-                ('ENSG00000240361', 0.13, 0.01, -3.1), ('ENSG00000233750', 0.0000057, 0.064, 7.8),
-            ],
             'sample_guid': RNA_OUTLIER_MUSCLE_SAMPLE_GUID,
         },
         'tpm': {
@@ -683,10 +679,7 @@ class DataManagerAPITest(AirtableTest):
             'initial_model_count': 4,
             'deleted_count': 3,
             'parsed_file_data': RNA_TPM_SAMPLE_DATA,
-            'get_models_json': lambda models: list(models.values_list('gene_id', 'tpm')),
-            'expected_models_json': [('ENSG00000240361', 7.8), ('ENSG00000233750', 0.0)],
             'sample_guid': RNA_TPM_MUSCLE_SAMPLE_GUID,
-            'mismatch_field': 'tpm',
         },
         'splice_outlier': {
             'model_cls': RnaSeqSpliceOutlier,
@@ -740,16 +733,7 @@ class DataManagerAPITest(AirtableTest):
             'deleted_count': 4,
             'parsed_file_data': RNA_SPLICE_SAMPLE_DATA,
             'allow_missing_gene': True,
-            'get_models_json': lambda models: list(
-                models.values_list('gene_id', 'chrom', 'start', 'end', 'strand', 'type', 'p_value', 'p_adjust', 'delta_intron_jaccard_index',
-                                   'counts', 'rare_disease_samples_with_this_junction', 'rare_disease_samples_total')),
-            'expected_models_json': [
-                ('ENSG00000233750', '2', 167254166, 167258349, '*', 'psi3', 1.56e-25, -4.9, -0.46, 166, 1, 20),
-                ('ENSG00000240361', '2', 167254166, 167258349, '*', 'psi3', 1.56e-25, -4.9, -0.46, 166, 1, 20),
-                ('ENSG00000240361', '7', 132885746, 132975168, '*', 'psi5', 1.08e-56, -6.53, -0.85, 231, 1, 20)
-            ],
             'sample_guid': RNA_SPLICE_SAMPLE_GUID,
-            'row_id': 'ENSG00000233750-2-167254166-167258349-*-psi3',
         },
     }
 
@@ -793,12 +777,12 @@ class DataManagerAPITest(AirtableTest):
     @mock.patch('seqr.views.utils.file_utils.tempfile.gettempdir', lambda: 'tmp/')
     @mock.patch('seqr.utils.communication_utils.send_html_email')
     @mock.patch('seqr.utils.communication_utils.safe_post_to_slack')
-    @mock.patch('seqr.views.apis.data_manager_api.datetime')
-    @mock.patch('seqr.views.apis.data_manager_api.os.mkdir')
-    @mock.patch('seqr.views.apis.data_manager_api.os.rename')
+    @mock.patch('seqr.views.utils.dataset_utils.datetime')
+    @mock.patch('seqr.views.utils.dataset_utils.os.mkdir')
+    @mock.patch('seqr.views.utils.dataset_utils.os.rename')
     @mock.patch('seqr.views.apis.data_manager_api.load_uploaded_file')
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
-    @mock.patch('seqr.views.apis.data_manager_api.gzip.open')
+    @mock.patch('seqr.views.utils.dataset_utils.gzip.open')
     def _test_update_rna_seq(self, data_type, mock_open, mock_subprocess, mock_load_uploaded_file,
                             mock_rename, mock_mkdir, mock_datetime, mock_send_slack, mock_send_email):
         url = reverse(update_rna_seq)
@@ -906,7 +890,7 @@ class DataManagerAPITest(AirtableTest):
                 f'Attempted data loading for {num_loaded_samples} RNA-seq samples in the following {num_projects}'
                 f' projects: {project_names}'
             ]
-            file_name = RNA_FILENAME_TEMPLATE.format(data_type)
+            file_name = RNA_FILENAME_TEMPLATE.format(params['data_type'])
             response_json = response.json()
             self.assertDictEqual(response_json, {'info': info, 'warnings': warnings or [], 'sampleGuids': mock.ANY,
                                                  'fileName': file_name})
@@ -974,7 +958,7 @@ class DataManagerAPITest(AirtableTest):
         self.assertSetEqual(set(response_json['sampleGuids']), {sample_guid, new_sample_guid})
 
         # test correct file interactions
-        file_path = RNA_FILENAME_TEMPLATE.format(data_type)
+        file_path = RNA_FILENAME_TEMPLATE.format(params['data_type'])
         expected_subprocess_calls = [
             f'gsutil ls {RNA_FILE_ID}',
             f'gsutil cat {RNA_FILE_ID} | gunzip -c -q - ',
@@ -1027,7 +1011,7 @@ class DataManagerAPITest(AirtableTest):
         self.assertTrue(second_tissue_sample_guid != new_sample_guid)
         self.assertTrue(second_tissue_sample_guid in response_json['sampleGuids'])
         self._assert_expected_file_open(mock_rename, mock_open, [
-            f'tmp/temp_uploads/{RNA_FILENAME_TEMPLATE.format(data_type)}/{sample_guid}.json.gz'
+            f'tmp/temp_uploads/{RNA_FILENAME_TEMPLATE.format(params["data_type"])}/{sample_guid}.json.gz'
             for sample_guid in response_json['sampleGuids']
         ])
         self.assertSetEqual(
@@ -1039,77 +1023,11 @@ class DataManagerAPITest(AirtableTest):
     def _additional_expected_loading_subprocess_calls(file_path):
         return []
 
-    def _get_expected_read_file_subprocess_calls(self, file_name, sample_guid):
-        return []
-
     def _assert_expected_file_open(self, mock_rename, mock_open, expected_file_names):
         file_rename = {call.args[1]: call.args[0] for call in mock_rename.call_args_list}
         self.assertSetEqual(set(expected_file_names), set(file_rename.keys()))
         mock_open.assert_has_calls([mock.call(file_rename[filename], 'at') for filename in expected_file_names])
         return file_rename
-
-    def test_load_rna_seq_sample_data(self):
-
-        url = reverse(load_rna_seq_sample_data, args=[RNA_TPM_MUSCLE_SAMPLE_GUID])
-        self.check_pm_login(url)
-
-        for data_type, params in self.RNA_DATA_TYPE_PARAMS.items():
-            with self.subTest(data_type):
-                sample_guid = params['sample_guid']
-                url = reverse(load_rna_seq_sample_data, args=[sample_guid])
-                model_cls = params['model_cls']
-                model_cls.objects.all().delete()
-                self.reset_logs()
-                parsed_file_lines = params['parsed_file_data'][sample_guid].strip().split('\n')
-
-                file_name = RNA_FILENAME_TEMPLATE.format(data_type)
-                not_found_logs = self._set_file_not_found(file_name, sample_guid)
-
-                body = {'fileName': file_name, 'dataType': data_type}
-                response = self.client.post(url, content_type='application/json', data=json.dumps(body))
-                self.assertEqual(response.status_code, 400)
-                self.assertDictEqual(response.json(), {'error': 'Data for this sample was not properly parsed. Please re-upload the data'})
-                self.assert_json_logs(self.pm_user, [
-                    ('Loading outlier data for NA19675_1', None),
-                    *not_found_logs,
-                    (f'No saved temp data found for {sample_guid} with file prefix {file_name}', {
-                        'severity': 'ERROR', '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent',
-                    }),
-                ])
-
-                self._add_file_iter([row.encode('utf-8') for row in parsed_file_lines])
-
-                self.reset_logs()
-                response = self.client.post(url, content_type='application/json', data=json.dumps(body))
-                self.assertEqual(response.status_code, 200)
-                self.assertDictEqual(response.json(), {'success': True})
-
-                models = model_cls.objects.all()
-                num_models = len(params['expected_models_json'])
-                self.assertEqual(models.count(), num_models)
-                self.assertSetEqual({model.sample.guid for model in models}, {sample_guid})
-                self.assertTrue(all(model.sample.is_active for model in models))
-
-                subprocess_logs = self._get_expected_read_file_subprocess_calls(file_name, sample_guid)
-
-                self.assert_json_logs(self.pm_user, [
-                    ('Loading outlier data for NA19675_1', None),
-                    *subprocess_logs,
-                    (f'create {model_cls.__name__}s', {'dbUpdate': {
-                        'dbEntity': model_cls.__name__, 'numEntities': num_models, 'parentEntityIds': [sample_guid],
-                        'updateType': 'bulk_create',
-                    }}),
-                ])
-
-                self.assertListEqual(list(params['get_models_json'](models)), params['expected_models_json'])
-
-                mismatch_row = {**json.loads(parsed_file_lines[0]), params.get('mismatch_field', 'p_value'): '0.05'}
-                self._add_file_iter([json.dumps(mismatch_row).encode('utf-8')])
-                response = self.client.post(url, content_type='application/json', data=json.dumps(body))
-                self.assertEqual(response.status_code, 400)
-                self.assertDictEqual(response.json(), {
-                    'error': f'Error in {sample_guid.split("_", 1)[-1].upper()}: mismatched entries for {params.get("row_id", mismatch_row["gene_id"])}'
-                })
 
     @classmethod
     def _join_data(cls, data):
@@ -1225,7 +1143,7 @@ class DataManagerAPITest(AirtableTest):
                 'entityIds': ['PP177442291_na19678ensg0000010', 'PP215071655_na19678ensg0000010'],
             }}),
         ])
-        saved_data = _get_json_for_models(PhenotypePrioritization.objects.filter(tool='lirical'),
+        saved_data = _get_json_for_models(PhenotypePrioritization.objects.filter(tool='lirical').order_by('id'),
                                           nested_fields=[{'fields': ('individual', 'guid'), 'key': 'individualGuid'}])
         self.assertListEqual(saved_data, EXPECTED_UPDATED_LIRICAL_DATA)
         self._assert_expected_notifications(mock_send_email, [
@@ -1813,14 +1731,6 @@ class AnvilDataManagerAPITest(AnvilAuthenticationTestCase, DataManagerAPITest):
         self.mock_file_iter.stdout += [row.encode('utf-8') for row in stdout]
         self.mock_subprocess.side_effect = [
             self.mock_does_file_exist, self.mock_does_file_exist,  self.mock_file_iter, self.mock_does_file_exist, self.mock_does_file_exist, self.mock_file_iter,
-        ]
-
-    def _get_expected_read_file_subprocess_calls(self, file_name, sample_guid):
-        gsutil_cat = f'gsutil cat gs://seqr-scratch-temp/{file_name}/{sample_guid}.json.gz | gunzip -c -q - '
-        self.mock_subprocess.assert_called_with(gsutil_cat, stdout=-1, stderr=-2, shell=True)  # nosec
-        return [
-            (f'==> gsutil ls gs://seqr-scratch-temp/{file_name}/{sample_guid}.json.gz', None),
-            (f'==> {gsutil_cat}', None),
         ]
 
     @staticmethod

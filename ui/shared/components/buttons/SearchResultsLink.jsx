@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 
 import { navigateSavedHashedSearch } from 'redux/rootReducer'
-import { VEP_GROUP_SV, ANY_AFFECTED, FREQUENCIES, TOPMED_FREQUENCY, THIS_CALLSET_FREQUENCY, SV_CALLSET_FREQUENCY } from 'shared/utils/constants'
+import { VEP_GROUP_SV, ANY_AFFECTED, GENE_SEARCH_FREQUENCIES } from 'shared/utils/constants'
 import { ButtonLink } from '../StyledComponents'
 
 const SearchResultsLink = ({
@@ -34,6 +34,9 @@ const mapDispatchToProps = (dispatch, ownProps) => ({
     if (ownProps.svType) {
       search.annotations = { [VEP_GROUP_SV]: [ownProps.svType, `gCNV_${ownProps.svType}`] }
     }
+    if (ownProps.excludeSvs) {
+      search.exclude_svs = ownProps.excludeSvs
+    }
     const familyGuids = ownProps.familyGuid ? [ownProps.familyGuid] : ownProps.familyGuids
     const projectFamilies = familyGuids && [{ familyGuids }]
     dispatch(navigateSavedHashedSearch(
@@ -48,13 +51,7 @@ export default ConnectedSearchResultsLink
 
 const INITIAL_GENE_SEARCH = {
   inheritance: { mode: ANY_AFFECTED, filter: {} },
-  freqs: {
-    ...FREQUENCIES.filter(({ name }) => name !== TOPMED_FREQUENCY).reduce(
-      (acc, { name }) => ({ ...acc, [name]: { af: 0.03 } }), {},
-    ),
-    [THIS_CALLSET_FREQUENCY]: { ac: 3000 },
-    [SV_CALLSET_FREQUENCY]: { ac: 300 },
-  },
+  freqs: GENE_SEARCH_FREQUENCIES,
   qualityFilter: { min_gq: 40, min_ab: 10 },
 }
 

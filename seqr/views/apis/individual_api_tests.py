@@ -4,6 +4,7 @@ import gzip
 import json
 import mock
 import re
+import responses
 
 from copy import deepcopy
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -47,6 +48,7 @@ INDIVIDUAL_UPDATE_DATA = {
     'displayName': 'NA20870',
     'notes': 'A note',
     'birthYear': 2000,
+    'affected': 'U',
     'features': [{
         'id': 'HP:0002011',
         'label': 'nervous system abnormality',
@@ -94,6 +96,8 @@ for row in LOAD_PARTICIPANT_TABLE[4:]:
 LOAD_PARTICIPANT_TABLE[6][15] += '|Asian'
 LOAD_PARTICIPANT_TABLE[6][17] = ''
 
+TRIGGER_RELOAD_URL = 'http://pipeline-runner:6000/rebuild_gt_stats_enqueue'
+
 
 @mock.patch('seqr.utils.middleware.DEBUG', False)
 class IndividualAPITest(object):
@@ -114,6 +118,7 @@ class IndividualAPITest(object):
         self.assertEqual(individual.display_name, '')
         self.assertEqual(response_json[INDIVIDUAL_UPDATE_GUID]['notes'], 'A note')
         self.assertIsNone(response_json[INDIVIDUAL_UPDATE_GUID]['birthYear'])
+        self.assertEqual(response_json[INDIVIDUAL_UPDATE_GUID]['affected'], 'A')
         self.assertFalse('features' in response_json[INDIVIDUAL_UPDATE_GUID])
         self.assertIsNone(individual.features)
 
@@ -124,6 +129,7 @@ class IndividualAPITest(object):
         response_json = response.json()
         self.assertSetEqual(set(response_json[INDIVIDUAL_UPDATE_GUID].keys()), INDIVIDUAL_CORE_FIELDS)
         self.assertEqual(response_json[INDIVIDUAL_UPDATE_GUID]['birthYear'], 2000)
+        self.assertEqual(response_json[INDIVIDUAL_UPDATE_GUID]['affected'], 'A')
 
         update_json = {'analyteType': 'D', 'tissueAffectedStatus': False}
         response = self.client.post(edit_individuals_url, content_type='application/json', data=json.dumps(update_json))
@@ -170,7 +176,9 @@ class IndividualAPITest(object):
         ])
 
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP')
+    @responses.activate
     def test_edit_individuals(self, mock_pm_group):
+        responses.add(responses.POST, TRIGGER_RELOAD_URL, status=400)
         edit_individuals_url = reverse(edit_individuals_handler, args=[PROJECT_GUID])
         self.check_manager_login(edit_individuals_url)
 
@@ -261,6 +269,7 @@ class IndividualAPITest(object):
             'individualsByGuid': {PM_REQUIRED_INDIVIDUAL_GUID: mock.ANY},
             'familiesByGuid': {}
         })
+        self.assertEqual(len(responses.calls), 0)
 
         # Test External AnVIL projects
         ext_anvil_edit_individuals_url = reverse(edit_individuals_handler, args=[EXTERNAL_WORKSPACE_PROJECT_GUID])
@@ -287,6 +296,7 @@ class IndividualAPITest(object):
             'Invalid parental guid I000020_na65432',
         ], 'warnings': []})
 
+        self.reset_logs()
         update_json = deepcopy(EXTERNAL_WORKSPACE_INDIVIDUAL_UPDATE_DATA)
         update_json['maternalGuid'] = update_json.pop('paternalGuid')
         response = self.client.post(ext_anvil_edit_individuals_url, content_type='application/json', data=json.dumps({
@@ -306,6 +316,28 @@ class IndividualAPITest(object):
         self.assertEqual(updated_individual['maternalId'], 'NA21234')
         self.assertIsNone(updated_individual['paternalGuid'])
         self.assertIsNone(updated_individual['paternalGuid'])
+
+        self._assert_expected_reload_calls(EXTERNAL_WORKSPACE_PROJECT_GUID)
+        self.assert_json_logs(self.manager_user, [
+            ('update Individual I000019_na21987',  {'dbUpdate': {
+                'dbEntity': 'Individual',
+                'entityId': 'I000019_na21987',
+                'updateFields': ['affected', 'sex'],
+                'updateType': 'update',
+            }}),
+            ('update Individual I000019_na21987', {'dbUpdate': {
+                'dbEntity': 'Individual',
+                'entityId': 'I000019_na21987',
+                'updateFields': ['mother'],
+                'updateType': 'update',
+            }}),
+            ('Triggering rebuild_gt_stats for R0004_non_analyst_project', None),
+            (f'Error Triggering Rebuild Gt Stats: 400 Client Error: Bad Request for url: {TRIGGER_RELOAD_URL}', {
+                'severity': 'ERROR',
+                '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent',
+                'detail': {'project_guids': ['R0004_non_analyst_project']},
+            }),
+        ])
 
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP')
     def test_delete_individuals(self, mock_pm_group):
@@ -486,7 +518,9 @@ class IndividualAPITest(object):
         ], 'warnings': []})
 
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
+    @responses.activate
     def test_individuals_table_handler(self):
+        responses.add(responses.POST, TRIGGER_RELOAD_URL)
         individuals_url = reverse(receive_individuals_table_handler, args=[PROJECT_GUID])
         self.check_manager_login(individuals_url)
 
@@ -545,6 +579,8 @@ class IndividualAPITest(object):
         self.assertEqual(response_json['individualsByGuid'][new_indiv_guid]['sex'], 'F')
         self.assertEqual(response_json['individualsByGuid']['I000008_na20872']['individualId'], 'NA20872_update')
 
+        self._assert_expected_reload_calls(PROJECT_GUID)
+
         # Test PM permission
         receive_url = reverse(receive_individuals_table_handler, args=[PM_REQUIRED_PROJECT_GUID])
         save_url = reverse(save_individuals_table_handler, args=[PM_REQUIRED_PROJECT_GUID, '123'])
@@ -561,6 +597,9 @@ class IndividualAPITest(object):
             PM_REQUIRED_PROJECT_GUID, response.json()['uploadedFileId']])
         response = self.client.post(save_url)
         self.assertEqual(response.status_code, 200)
+
+    def _assert_expected_reload_calls(self, project_guid):
+        self.assertEqual(len(responses.calls), 0)
 
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
     @mock.patch('seqr.views.utils.pedigree_info_utils.NO_VALIDATE_MANIFEST_PROJECT_CATEGORIES')
@@ -1011,7 +1050,9 @@ class IndividualAPITest(object):
         })
 
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
+    @responses.activate
     def test_import_gregor_metadata(self):
+        responses.add(responses.POST, TRIGGER_RELOAD_URL)
         genetic_findings_table = deepcopy(GENETIC_FINDINGS_TABLE)
         genetic_findings_table[2] = genetic_findings_table[2][:11] + genetic_findings_table[4][11:14] + \
                                     genetic_findings_table[2][14:]
@@ -1240,7 +1281,10 @@ class IndividualAPITest(object):
             json.loads(new_family_tag.metadata), {'gene_known_for_phenotype': 'Known', 'condition_id': 'MONDO:0044970', 'GREGoR_variant_classification': 'Curation in progress'},
         )
 
+        self._assert_expected_reload_calls(PM_REQUIRED_PROJECT_GUID)
+
         # Test behavior on reload
+        responses.calls.reset()
         SavedVariant.objects.get(guid=saved_variants[2]['guid']).delete()
         genetic_findings_table[2][10] = 'PPX123'
         self._set_metadata_file_iter(genetic_findings_table)
@@ -1258,6 +1302,7 @@ class IndividualAPITest(object):
             ],
         }})
         self.assertDictEqual(response_json['individualsByGuid'], {})
+        self.assertEqual(len(responses.calls), 0)
 
         saved_variant = SavedVariant.objects.get(family__guid=new_family_guid, variant_id='1-248367227-TC-T')
         self.assertEqual(saved_variant.key, 100)
@@ -1402,3 +1447,7 @@ class AnvilIndividualAPITest(AnvilAuthenticationTestCase, IndividualAPITest):
     def _assert_expected_delete_individuals(self, response, mock_pm_group):
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], ['Unable to delete individuals with active search sample: NA19678'])
+
+    def _assert_expected_reload_calls(self, project_guid):
+        self.assertEqual(len(responses.calls), 1)
+        self.assertDictEqual(json.loads(responses.calls[0].request.body), {'project_guids': [project_guid]})

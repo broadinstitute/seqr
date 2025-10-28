@@ -81,6 +81,10 @@ def trigger_delete_families_search(project, family_guids, user=None):
     info.append('Triggered delete family data')
     return info
 
+def trigger_rebuild_gt_stats(project, user):
+    logger.info(f'Triggering rebuild_gt_stats for {project.guid}', user)
+    _enqueue_pipeline_request('rebuild_gt_stats', {'project_guids': [project.guid]}, user, raise_error=False)
+
 def trigger_data_loading(projects: list[Project], individual_ids: list[int], sample_type: str, dataset_type: str,
                          genome_version: str, data_path: str, user: User, raise_error: bool = False, skip_expect_tdr_metrics: bool = True,
                          skip_check_sex_and_relatedness: bool = True, vcf_sample_id_map=None,
@@ -101,7 +105,7 @@ def trigger_data_loading(projects: list[Project], individual_ids: list[int], sam
     _upload_data_loading_files(individual_ids, vcf_sample_id_map or {}, user, file_path, raise_error)
     _write_gene_id_file(user)
 
-    error = _enqueue_pipeline_request('loading_pipeline', variables, user, raise_error)
+    error = _enqueue_pipeline_request('loading_pipeline', variables, user, raise_error, log_error=False)
     if error:
         safe_post_to_slack(
             SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL,
@@ -119,21 +123,23 @@ def trigger_data_loading(projects: list[Project], individual_ids: list[int], sam
     return success
 
 
-def _enqueue_pipeline_request(name: str, variables: dict, user: User, raise_error: bool = True):
-    response = requests.post(f'{PIPELINE_RUNNER_SERVER}/{name}_enqueue', json=variables, timeout=60)
+def _enqueue_pipeline_request(name: str, variables: dict, user: User, raise_error: bool = True, log_error: bool = True):
+    response = None
     error = None
     try:
+        response = requests.post(f'{PIPELINE_RUNNER_SERVER}/{name}_enqueue', json=variables, timeout=60)
         response.raise_for_status()
         logger.info(f'Triggered {_to_title_case(name)}', user, detail=variables)
-    except requests.HTTPError as e:
+    except requests.RequestException as e:
         error = str(e)
-        if response.status_code == 409:
+        if response is not None and response.status_code == 409:
             error = 'Loading pipeline is already running. Wait for it to complete and resubmit'
             e = ErrorsWarningsException([error])
         if raise_error:
             raise e
         else:
-            logger.warning(f'Error Triggering {_to_title_case(name)}: {error}', user, detail=variables)
+            log_func = logger.error if log_error else logger.warning
+            log_func(f'Error Triggering {_to_title_case(name)}: {error}', user, detail=variables)
     return error
 
 

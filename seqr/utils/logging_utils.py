@@ -69,7 +69,7 @@ def log_model_update(logger, model, user, update_type, update_fields=None):
         'dbEntity': db_entity, 'entityId': entity_id, 'updateType': update_type,
     }
     if update_fields:
-        db_update['updateFields'] = list(update_fields)
+        db_update['updateFields'] = sorted(update_fields)
     logger.info('{} {} {}'.format(update_type, db_entity, entity_id), user, db_update=db_update)
 
 

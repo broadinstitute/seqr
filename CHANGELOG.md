@@ -2,6 +2,13 @@
 
 ## dev
 
+## 10/27/25
+* Adds affected status to the gt stats views/dicts in Clickhouse (REQUIRES DB MIGRATION)
+  * Note that for users with Clickhouse already enabled, this migration will enqueue tasks in the loading pipeline to 
+    refresh existing data. You may want to monitor the pipeline for any failures and re-trigger them in the event of any
+    failures. seqr will contiunue to function normally if these steps are skipped, but in the long run this may result 
+    in inaccurate search results
+
 ## 9/18/25
 * Store gene ids on SavedVariant model (REQUIRES DB MIGRATION)
 

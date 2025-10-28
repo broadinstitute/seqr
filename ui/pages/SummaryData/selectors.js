@@ -11,6 +11,8 @@ export const getMmeLoadingError = state => state.mmeLoading.errorMessage
 export const getMmeMetrics = state => state.mmeMetrics
 export const getMmeSubmissions = state => state.mmeSubmissions
 export const getExternalAnalysisUploadStats = state => state.externalAnalysisUploadStats
+export const getGeneVariantLookupLoading = state => state.geneVariantLookupLoading.isLoading
+export const getGeneVariantLookupResults = state => state.geneVariantLookupResults
 
 export const getVlmFamiliesByContactEmail = createSelector(
   getSortedIndividualsByFamily,

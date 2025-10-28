@@ -13,6 +13,8 @@ const RECEIVE_MME = 'RECEIVE_MME'
 const RECEIVE_SAVED_VARIANT_TAGS = 'RECEIVE_SAVED_VARIANT_TAGS'
 const UPDATE_ALL_PROJECT_SAVED_VARIANT_TABLE_STATE = 'UPDATE_ALL_PROJECT_VARIANT_STATE'
 const RECEIVE_EXTERNAL_ANALYSIS_UPLOAD_STATS = 'RECEIVE_EXTERNAL_ANALYSIS_UPLOAD_STATS'
+const REQUEST_GENE_VARIANT_LOOKUP = 'REQUEST_GENE_VARIANT_LOOKUP'
+const RECEIVE_GENE_VARIANT_LOOKUP = 'RECEIVE_GENE_VARIANT_LOOKUP'
 
 // Data actions
 
@@ -82,6 +84,19 @@ export const sendVlmContactEmail = values => () => new HttpRequestHelper(
   '/api/summary_data/send_vlm_email',
 ).post(values)
 
+export const loadGeneVariantLookup = values => (dispatch) => {
+  dispatch({ type: REQUEST_GENE_VARIANT_LOOKUP })
+  return new HttpRequestHelper('/api/gene_variant_lookup',
+    (responseJson) => {
+      dispatch({ type: RECEIVE_GENE_VARIANT_LOOKUP, newValue: responseJson.searchedVariants })
+      dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+    },
+    (e) => {
+      dispatch({ type: RECEIVE_GENE_VARIANT_LOOKUP, error: e.message, newValue: null })
+      throw e
+    }).post(values)
+}
+
 export const reducers = {
   successStoryLoading: loadingReducer(REQUEST_SUCCESS_STORY, RECEIVE_SUCCESS_STORY),
   successStoryRows: createSingleValueReducer(RECEIVE_SUCCESS_STORY, []),
@@ -90,6 +105,8 @@ export const reducers = {
   mmeSubmissions: createSingleValueReducer(RECEIVE_MME, [], 'submissions'),
   savedVariantTags: createSingleObjectReducer(RECEIVE_SAVED_VARIANT_TAGS),
   externalAnalysisUploadStats: createSingleValueReducer(RECEIVE_EXTERNAL_ANALYSIS_UPLOAD_STATS, {}),
+  geneVariantLookupLoading: loadingReducer(REQUEST_GENE_VARIANT_LOOKUP, RECEIVE_GENE_VARIANT_LOOKUP),
+  geneVariantLookupResults: createSingleValueReducer(RECEIVE_GENE_VARIANT_LOOKUP, null),
   allProjectSavedVariantTableState: createSingleObjectReducer(UPDATE_ALL_PROJECT_SAVED_VARIANT_TABLE_STATE, {
     sort: SORT_BY_XPOS,
     page: 1,

@@ -103,6 +103,7 @@ from seqr.views.apis.variant_search_api import \
     get_variant_gene_breakdown, \
     create_saved_search_handler,\
     update_saved_search_handler, \
+    gene_variant_lookup, \
     variant_lookup_handler, \
     vlm_lookup_handler, \
     search_results_redirect, \
@@ -123,7 +124,7 @@ from seqr.views.apis.users_api import \
     forgot_password
 
 from seqr.views.apis.data_manager_api import elasticsearch_status, delete_index, \
-    update_rna_seq, load_rna_seq_sample_data, proxy_to_kibana, load_phenotype_prioritization_data, \
+    update_rna_seq, proxy_to_kibana, load_phenotype_prioritization_data, \
     validate_callset, get_loaded_projects, load_data, loading_vcfs, proxy_to_luigi, \
     trigger_delete_project, trigger_delete_family
 from seqr.views.apis.report_api import \
@@ -145,7 +146,7 @@ from seqr.views.apis.analysis_group_api import update_analysis_group_handler, de
 from seqr.views.apis.project_api import create_project_handler, update_project_handler, delete_project_handler, \
     project_page_data, project_families, project_overview, project_mme_submisssions, project_individuals, \
     project_analysis_groups, update_project_workspace, project_family_notes, project_collaborators, project_locus_lists, \
-    project_samples, project_notifications, mark_read_project_notifications, subscribe_project_notifications
+    project_samples, project_notifications, mark_read_project_notifications, subscribe_project_notifications, load_rna_seq_sample_data
 from seqr.views.apis.project_categories_api import update_project_categories_handler
 from seqr.views.apis.anvil_workspace_api import anvil_workspace_page, create_project_from_workspace, \
     grant_workspace_access, validate_anvil_vcf, add_workspace_data, get_anvil_vcf_list, get_anvil_igv_options
@@ -188,6 +189,8 @@ api_endpoints = {
     'individual/(?P<individual_guid>[\w.|-]+)/update_case_review_discussion': update_case_review_discussion,
     'individual/(?P<individual_guid>[\w.|-]+)/update_case_review_status': update_case_review_status,
     'individual/(?P<individual_guid>[\w.|-]+)/rna_seq_data': get_individual_rna_seq_data,
+
+    'load_rna_seq_sample/(?P<sample_guid>[^/]+)': load_rna_seq_sample_data,
 
     'family/(?P<family_guid>[\w.|-]+)/details': family_page_data,
     'family/(?P<family_guid>[\w.|-]+)/variant_tag_summary': family_variant_tag_summary,
@@ -257,6 +260,7 @@ api_endpoints = {
     'search/(?P<search_hash>[^/]+)': query_variants_handler,
     'search/(?P<search_hash>[^/]+)/download': export_variants_handler,
     'search/(?P<search_hash>[^/]+)/gene_breakdown': get_variant_gene_breakdown,
+    'gene_variant_lookup': gene_variant_lookup,
     'variant_lookup': variant_lookup_handler,
     'vlm_lookup': vlm_lookup_handler,
     'search_context': search_context_handler,
@@ -333,7 +337,6 @@ api_endpoints = {
     'data_management/delete_index': delete_index,
     'data_management/get_all_users': get_all_users,
     'data_management/update_rna_seq': update_rna_seq,
-    'data_management/load_rna_seq_sample/(?P<sample_guid>[^/]+)': load_rna_seq_sample_data,
     'data_management/load_phenotype_prioritization_data': load_phenotype_prioritization_data,
     'data_management/loading_vcfs': loading_vcfs,
     'data_management/validate_callset': validate_callset,

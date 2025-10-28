@@ -5,7 +5,7 @@ import json
 
 from django.core.exceptions import PermissionDenied
 
-from seqr.views.utils.json_to_orm_utils import update_model_from_json
+from seqr.views.utils.json_to_orm_utils import update_individual_from_json
 from seqr.views.utils.json_utils import create_json_response, _to_snake_case
 from seqr.views.utils.orm_to_json_utils import _get_json_for_model
 from seqr.views.utils.permissions_utils import has_case_review_permissions, login_and_policies_required
@@ -33,7 +33,7 @@ def _update_case_review(model, project, request, field):
         raise PermissionDenied('User cannot edit case review for this project')
 
     update_json = {field: json.loads(request.body).get(field)}
-    update_model_from_json(model, update_json, user=request.user)
+    update_individual_from_json(model, update_json, user=request.user, allow_case_review_update=True)
 
     return create_json_response({
         model.guid: _get_json_for_model(model, user=request.user, additional_model_fields=[_to_snake_case(field)])
