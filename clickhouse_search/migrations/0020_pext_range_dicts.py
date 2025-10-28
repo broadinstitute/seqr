@@ -40,9 +40,9 @@ CREATE MATERIALIZED VIEW `GRCh38/$dataset_type/reference_data/pext/all_variants_
 REFRESH EVERY 10 YEAR
 TO `GRCh38/$dataset_type/reference_data/pext/all_variants`
 AS SELECT
-    replaceOne(splitByChar(':', assumeNotNull(locus))[1], 'chr', '') AS chrom,
-    toUInt32(splitByChar(':', assumeNotNull(locus))[2]) AS pos,
-    if(exp_prop_mean IN ('NaN', 'nan', ''), NULL, exp_prop_mean) AS exp_prop_mean
+    replaceOne(splitByChar(':', assumeNotNull(locus))[1], 'chr', ''),
+    toUInt32(splitByChar(':', assumeNotNull(locus))[2]),
+    if(exp_prop_mean IN ('NaN', 'nan', ''), NULL, exp_prop_mean)
 FROM url('https://storage.googleapis.com/gcp-public-data--gnomad/release/4.1/pext/gnomad.pext.gtex_v10.base_level.tsv.gz')
 """)
 
@@ -78,7 +78,7 @@ AS SELECT
     replaceOne(chrom, 'chr', ''),
     toUInt32(assumeNotNull(start))),
     toUInt32(assumeNotNull(end))),
-    z,
+    z
 FROM url('https://storage.googleapis.com/gcp-public-data--gnomad/release/3.1/secondary_analyses/genomic_constraint/constraint_z_genome_1kb.qc.download.txt.gz')
 """
 
@@ -114,7 +114,7 @@ AS SELECT
     replaceOne(c1, 'chr', ''),
     toUInt32(assumeNotNull(c2))),
     toUInt32(assumeNotNull(c3))),
-    splitByChar(',', assumeNotNull(c6))[1],
+    splitByChar(',', assumeNotNull(c6))[1]
 FROM url('https://downloads.wenglab.org/V3/GRCh38-cCREs.bed')
 """
 
