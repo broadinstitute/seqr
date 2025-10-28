@@ -76,7 +76,7 @@ REFRESH EVERY 10 YEAR
 TO `GRCh38/SNV_INDEL/reference_data/gnomad_non_coding_constraint/all_variants`
 AS SELECT
     replaceOne(chrom, 'chr', '') as chrom,
-    toUInt32(assumeNotNull(start))) as start,
+    toUInt32(assumeNotNull(start)) as start,
     toUInt32(assumeNotNull(end))) as end,
     z
 FROM url('https://storage.googleapis.com/gcp-public-data--gnomad/release/3.1/secondary_analyses/genomic_constraint/constraint_z_genome_1kb.qc.download.txt.gz')
@@ -112,8 +112,8 @@ REFRESH EVERY 10 YEAR
 TO `GRCh38/SNV_INDEL/reference_data/screen/all_variants`
 AS SELECT
     replaceOne(c1, 'chr', '') as chrom,
-    toUInt32(assumeNotNull(c2))) as start,
-    toUInt32(assumeNotNull(c3))) as end,
+    toUInt32(assumeNotNull(c2)) as start,
+    toUInt32(assumeNotNull(c3)) as end,
     splitByChar(',', assumeNotNull(c6))[1] as regionType
 FROM url('https://downloads.wenglab.org/V3/GRCh38-cCREs.bed')
 """
