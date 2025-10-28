@@ -46,7 +46,7 @@ AS SELECT
 FROM url('https://storage.googleapis.com/gcp-public-data--gnomad/release/4.1/pext/gnomad.pext.gtex_v10.base_level.tsv.gz')
 """)
 
-GNOMAD_NON_CODING_CONSTRAINT_SEARCH = Template(Template("""
+GNOMAD_NON_CODING_CONSTRAINT_SEARCH = Template("""
 CREATE DICTIONARY `GRCh38/SNV_INDEL/reference_data/gnomad_non_coding_constraint`
 (
     chrom String,
@@ -63,14 +63,14 @@ SOURCE(CLICKHOUSE(
 LIFETIME(MIN 0 MAX 0)
 LAYOUT(RANGE_HASHED())
 RANGE(MIN start MAX end)
-""").safe_substitute(
+""").substitute(
     # Note the nested Template-ing that allows
     # double substitution these shared values
     clickhouse_writer_user=CLICKHOUSE_WRITER_USER,
     clickhouse_writer_password=CLICKHOUSE_WRITER_PASSWORD,
-))
+)
 
-GNOMAD_NON_CODING_CONSTRAINT_VIEW = Template("""
+GNOMAD_NON_CODING_CONSTRAINT_VIEW = """
 CREATE MATERIALIZED VIEW `GRCh38/SNV_INDEL/reference_data/gnomad_non_coding_constraint/all_variants_mv`
 REFRESH EVERY 10 YEAR
 TO `GRCh38/SNV_INDEL/reference_data/gnomad_non_coding_constraint/all_variants`
@@ -80,9 +80,9 @@ AS SELECT
     toUInt32(assumeNotNull(end))),
     z,
 FROM url('https://storage.googleapis.com/gcp-public-data--gnomad/release/3.1/secondary_analyses/genomic_constraint/constraint_z_genome_1kb.qc.download.txt.gz')
-""")
+"""
 
-SCREEN_SEARCH = Template(Template("""
+SCREEN_SEARCH = Template("""
 CREATE DICTIONARY `GRCh38/SNV_INDEL/reference_data/screen`
 (
     chr String,
@@ -99,14 +99,14 @@ SOURCE(CLICKHOUSE(
 LIFETIME(MIN 0 MAX 0)
 LAYOUT(RANGE_HASHED())
 RANGE(MIN start MAX end)
-""").safe_substitute(
+""").substitute(
     # Note the nested Template-ing that allows
     # double substitution these shared values
     clickhouse_writer_user=CLICKHOUSE_WRITER_USER,
     clickhouse_writer_password=CLICKHOUSE_WRITER_PASSWORD,
-))
+)
 
-SCREEN_VIEW = Template("""
+SCREEN_VIEW = """
 CREATE MATERIALIZED VIEW `GRCh38/SNV_INDEL/reference_data/screen/all_variants_mv`
 REFRESH EVERY 10 YEAR
 TO `GRCh38/SNV_INDEL/reference_data/screen/all_variants`
@@ -116,7 +116,7 @@ AS SELECT
     toUInt32(assumeNotNull(c3))),
     splitByChar(',', assumeNotNull(c6))[1],
 FROM url('https://downloads.wenglab.org/V3/GRCh38-cCREs.bed')
-""")
+"""
 
 class Migration(migrations.Migration):
 
@@ -222,7 +222,7 @@ class Migration(migrations.Migration):
             hints={'clickhouse': True},
         ),
         migrations.RunSQL(
-            GNOMAD_NON_CODING_CONSTRAINT_SEARCH,
+            GNOMAD_NON_CODING_CONSTRAINT_VIEW,
             hints={'clickhouse': True},
         ),
         migrations.RunSQL(
