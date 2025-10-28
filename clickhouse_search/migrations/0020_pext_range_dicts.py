@@ -40,9 +40,9 @@ CREATE MATERIALIZED VIEW `GRCh38/$dataset_type/reference_data/pext/all_variants_
 REFRESH EVERY 10 YEAR
 TO `GRCh38/$dataset_type/reference_data/pext/all_variants`
 AS SELECT
-    replaceOne(splitByChar(':', assumeNotNull(locus))[1], 'chr', ''),
-    toUInt32(splitByChar(':', assumeNotNull(locus))[2]),
-    if(exp_prop_mean IN ('NaN', 'nan', ''), NULL, exp_prop_mean)
+    replaceOne(splitByChar(':', assumeNotNull(locus))[1], 'chr', '') AS chrom,
+    toUInt32(splitByChar(':', assumeNotNull(locus))[2]) AS pos,
+    if(exp_prop_mean IN ('NaN', 'nan', ''), NULL, exp_prop_mean) AS exp_prop_mean
 FROM url('https://storage.googleapis.com/gcp-public-data--gnomad/release/4.1/pext/gnomad.pext.gtex_v10.base_level.tsv.gz')
 """)
 
@@ -75,9 +75,9 @@ CREATE MATERIALIZED VIEW `GRCh38/SNV_INDEL/reference_data/gnomad_non_coding_cons
 REFRESH EVERY 10 YEAR
 TO `GRCh38/SNV_INDEL/reference_data/gnomad_non_coding_constraint/all_variants`
 AS SELECT
-    replaceOne(chrom, 'chr', ''),
-    toUInt32(assumeNotNull(start))),
-    toUInt32(assumeNotNull(end))),
+    replaceOne(chrom, 'chr', '') as chrom,
+    toUInt32(assumeNotNull(start))) as start,
+    toUInt32(assumeNotNull(end))) as end,
     z
 FROM url('https://storage.googleapis.com/gcp-public-data--gnomad/release/3.1/secondary_analyses/genomic_constraint/constraint_z_genome_1kb.qc.download.txt.gz')
 """
@@ -85,7 +85,7 @@ FROM url('https://storage.googleapis.com/gcp-public-data--gnomad/release/3.1/sec
 SCREEN_SEARCH = Template("""
 CREATE DICTIONARY `GRCh38/SNV_INDEL/reference_data/screen`
 (
-    chr String,
+    chrom String,
     start UInt32,
     end UInt32,
     regionType String,
@@ -111,10 +111,10 @@ CREATE MATERIALIZED VIEW `GRCh38/SNV_INDEL/reference_data/screen/all_variants_mv
 REFRESH EVERY 10 YEAR
 TO `GRCh38/SNV_INDEL/reference_data/screen/all_variants`
 AS SELECT
-    replaceOne(c1, 'chr', ''),
-    toUInt32(assumeNotNull(c2))),
-    toUInt32(assumeNotNull(c3))),
-    splitByChar(',', assumeNotNull(c6))[1]
+    replaceOne(c1, 'chr', '') as chrom,
+    toUInt32(assumeNotNull(c2))) as start,
+    toUInt32(assumeNotNull(c3))) as end,
+    splitByChar(',', assumeNotNull(c6))[1] as regionType
 FROM url('https://downloads.wenglab.org/V3/GRCh38-cCREs.bed')
 """
 
