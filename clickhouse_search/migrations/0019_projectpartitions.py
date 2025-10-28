@@ -57,7 +57,7 @@ def conditionally_recreate_repartitioned_snv_indel_entries(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('clickhouse_search', '0016_add_affected_status'),
+        ('clickhouse_search', '0018_queue_rebuild_gt_stats_jobs'),
     ]
 
     operations = [
