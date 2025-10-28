@@ -611,7 +611,7 @@ class GnomadNonCodingConstraintAllVariantsSnvIndel(models.ClickhouseModel):
     chrom = Enum8Field(return_int=False, choices=BaseAnnotations.CHROMOSOME_CHOICES, primary_key=True)
     start = models.UInt32Field()
     end = models.UInt32Field()
-    region_type = models.DecimalField(max_digits=9, decimal_places=5)
+    z = models.DecimalField(max_digits=9, decimal_places=5)
 
     class Meta:
         unique_together = (('chrom', 'start', 'end'),)
@@ -625,7 +625,7 @@ class ScreenAllVariantsSnvIndel(models.ClickhouseModel):
     chrom = Enum8Field(return_int=False, choices=BaseAnnotations.CHROMOSOME_CHOICES, primary_key=True)
     start = models.UInt32Field()
     end = models.UInt32Field()
-    z = models.StringField(db_column='screenRegionType')
+    region_type = models.StringField(db_column='screenRegionType')
 
     class Meta:
         unique_together = (('chrom', 'start', 'end'),)
