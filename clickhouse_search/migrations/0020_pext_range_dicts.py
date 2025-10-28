@@ -168,8 +168,9 @@ class Migration(migrations.Migration):
                 ('region_type', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
             ],
             options={
-                'abstract': False,
-                'base_manager_name': '_overwrite_base_manager',
+                'db_table': 'GRCh38/SNV_INDEL/reference_data/gnomad_non_coding_constraint/all_variants',
+                'engine': clickhouse_backend.models.MergeTree(order_by=('chrom', 'start', 'end'), primary_key=('chrom', 'start', 'end')),
+                'unique_together': {('chrom', 'start', 'end')},
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
@@ -185,8 +186,9 @@ class Migration(migrations.Migration):
                 ('z', clickhouse_backend.models.StringField(db_column='screenRegionType')),
             ],
             options={
-                'abstract': False,
-                'base_manager_name': '_overwrite_base_manager',
+                'db_table': 'GRCh38/SNV_INDEL/reference_data/screen/all_variants',
+                'engine': clickhouse_backend.models.MergeTree(order_by=('chrom', 'start', 'end'), primary_key=('chrom', 'start', 'end')),
+                'unique_together': {('chrom', 'start', 'end')},
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
