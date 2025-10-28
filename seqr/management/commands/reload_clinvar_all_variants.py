@@ -123,6 +123,9 @@ def parse_pathogenicity_and_assertions(classified_record_node: xml.etree.Element
     ).replace(
         ', low penetrance',
         '; low penetrance'
+    ).replace(
+        'Likely pathogenic/Likely pathogenic',
+        'Likely pathogenic'
     )
 
     pathogenicity = pathogenicity_string.split(';')[0].strip()
