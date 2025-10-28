@@ -5,6 +5,7 @@ from django.db.models import Value
 def _no_validate(value, name):
     return value
 
+
 class CollapsingMergeTree(models.CollapsingMergeTree):
     setting_types = {
         **models.CollapsingMergeTree.setting_types,
