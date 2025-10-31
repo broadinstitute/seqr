@@ -290,7 +290,7 @@ def _trigger_add_workspace_data(project, pedigree_records, user, data_path, samp
     # add families and individuals according to the uploaded individual records
     pedigree_json, individual_ids = add_or_update_individuals_and_families(
         project, individual_records=pedigree_records, user=user, get_update_json=get_pedigree_json, get_updated_individual_db_ids=True,
-        allow_features_update=True,
+        allow_features_update=True, skip_gt_stats_rebuild=True,
     )
     num_updated_individuals = len(individual_ids)
     individual_ids.update(previous_loaded_ids or [])

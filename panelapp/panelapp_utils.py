@@ -4,6 +4,7 @@ import requests
 from django.db import transaction
 from django.utils import timezone
 from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
+from time import sleep
 from urllib3.exceptions import MaxRetryError
 
 from panelapp.models import PaLocusList, PaLocusListGene
@@ -17,6 +18,8 @@ logger = SeqrLogger(__name__)
 
 REQUEST_TIMEOUT_S = 300
 
+class TooManyRequestsError(Exception):
+    pass
 
 def import_all_panels(user, panel_app_api_url, label=None):
     def _extract_ensembl_id_from_json(raw_gene_json):
@@ -118,12 +121,15 @@ def _get_all_panels(panels_url, all_results):
 
 def _get_all_genes(genes_url: str, results_by_panel_id: dict):
     @retry(
-        retry=retry_if_exception_type(MaxRetryError),
+        retry=retry_if_exception_type((MaxRetryError, TooManyRequestsError)),
         wait=wait_exponential(multiplier=1, min=4, max=10),
         stop=stop_after_attempt(5),
     )
     def _get(url):
         resp = requests.get(url, timeout=REQUEST_TIMEOUT_S)
+        if resp.status_code == 429:
+            sleep(10)
+            raise TooManyRequestsError()
         return resp.json()
 
     resp_json = _get(genes_url)
