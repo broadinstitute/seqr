@@ -19,7 +19,7 @@ CREATE DICTIONARY `GRCh38/SNV_INDEL/project_partitions_dict`
     n_partitions UInt8
 )
 PRIMARY KEY project_guid
-SOURCE(CLICKHOUSE(USER $clickhouse_writer_user PASSWORD $clickhouse_writer_password TABLE `GRCh38/SNV_INDEL/project_partitions`))
+SOURCE(CLICKHOUSE(USER '$clickhouse_writer_user' PASSWORD '$clickhouse_writer_password' TABLE `GRCh38/SNV_INDEL/project_partitions`))
 LIFETIME(MIN 0 MAX 300)  -- refresh every 5 minutes
 LAYOUT(HASHED()) -- hashed layout supports string keys
 """).substitute(
