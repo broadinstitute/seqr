@@ -33,7 +33,7 @@ FROM `$reference_genome/$dataset_type/reference_data/clinvar/seqr_variants`
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("clickhouse_search", "0018_queue_rebuild_gt_stats_jobs"),
+        ("clickhouse_search", "0019_projectpartitions"),
     ]
 
     operations = [
