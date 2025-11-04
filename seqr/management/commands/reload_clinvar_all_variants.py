@@ -66,7 +66,6 @@ def clinvar_run_sql(sql: str):
         ]:
             cursor.execute(sql.substitute(reference_genome=reference_genome, dataset_type=dataset_type))
 
-
 def parse_and_merge_classification_counts(text: str) -> list[tuple[str, int]]:
     #
     # Example texts:
@@ -273,9 +272,11 @@ class Command(BaseCommand):
                         # is present in ClickHouse to account for the situation where Postgresql has an incorrect
                         # version.
                         if existing_version_obj and ClinvarAllVariantsSnvIndel.objects.filter(version=existing_version_obj.version).exists():
-                            clinvar_run_sql(
-                                Template(f"ALTER TABLE `$reference_genome/$dataset_type/reference_data/clinvar/all_variants` DROP PARTITION '{new_version}';")
-                            )
+                            for model in model_to_batch.keys():
+                                with connections['clickhouse_write'].cursor() as cursor:
+                                    cursor.execute(
+                                        f"ALTER TABLE `{model._meta.db_table}` DROP PARTITION '{new_version}';"
+                                    )
                     # Handle parsing variants
                     if event == 'end' and elem.tag == 'VariationArchive' and new_version:
                         for obj in extract_variant_info(elem, new_version):
@@ -293,7 +294,11 @@ class Command(BaseCommand):
 
         # Delete previous version & refresh the view.
         if existing_version_obj:
-            clinvar_run_sql(Template(f"ALTER TABLE `$reference_genome/$dataset_type/reference_data/clinvar/all_variants` DROP PARTITION '{existing_version_obj.version}';"))
+            with connections['clickhouse_write'].cursor() as cursor:
+                for model in model_to_batch.keys():
+                    cursor.execute(
+                        f"ALTER TABLE {model._meta.db_table} DROP PARTITION '{existing_version_obj.version}';"
+                    )
         for materialized_view in [
             'all_variants_to_seqr_variants_mv',
             'seqr_variants_to_search_mv',
