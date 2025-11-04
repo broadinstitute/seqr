@@ -23,7 +23,7 @@ def _get_record_individual_id(record):
     return record.get(JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN) or record[JsonConstants.INDIVIDUAL_ID_COLUMN]
 
 
-def add_or_update_individuals_and_families(project, individual_records, user, get_update_json=True, get_updated_individual_db_ids=False, get_created_counts=False, allow_features_update=False):
+def add_or_update_individuals_and_families(project, individual_records, user, get_update_json=True, get_updated_individual_db_ids=False, get_created_counts=False, allow_features_update=False, skip_gt_stats_rebuild=False):
     """
     Add or update individual and family records in the given project.
 
@@ -85,7 +85,7 @@ def add_or_update_individuals_and_families(project, individual_records, user, ge
 
     updated_family_models = Family.objects.filter(id__in=updated_family_ids)
     _remove_pedigree_images(updated_family_models, user)
-    if updated_affected:
+    if updated_affected and not skip_gt_stats_rebuild:
         backend_specific_call(lambda *args: True, trigger_rebuild_gt_stats)(project, user)
 
     pedigree_json = None
@@ -117,7 +117,7 @@ def _update_from_record(record, user, families_by_id, individual_lookup, updated
             individual = next((iter(individual_lookup[individual_id].values())), None)
         if not individual:
             individual = create_model_from_json(
-                Individual, {'family': family, 'individual_id': individual_id, 'case_review_status': 'I'}, user)
+                Individual, {'family': family, 'individual_id': individual_id, 'case_review_status': 'I', 'affected': record['affected']}, user)
             updated_family_ids.add(family.id)
             updated_individuals.add(individual)
             individual_lookup[individual_id][family] = individual
@@ -143,7 +143,7 @@ def _update_from_record(record, user, families_by_id, individual_lookup, updated
             'mother': record.pop('mother', None),
             'father': record.pop('father', None),
         })
-    elif record.get('maternalId') or record.get('paternalId'):
+    elif record.get('maternalId') is not None or record.get('paternalId') is not None:
         parent_updates.append({
             'individual': individual,
             'maternalId': record.pop('maternalId', None),

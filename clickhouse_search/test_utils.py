@@ -40,7 +40,7 @@ VARIANT1 = {
     'hgmd': None,
     'screenRegionType': None,
     'populations': {
-        'seqr': {'ac': 8, 'hom': 3},
+        'seqr': {'ac': 8, 'hom': 3, 'ac_wes': 3, 'ac_wgs': 5, 'hom_wes': 1, 'hom_wgs': 2},
         'topmed': {'af': 0.07842, 'ac': 20757, 'an': 264690, 'hom': 0, 'het': 20757},
         'exac': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'hemi': 0, 'het': 0, 'filter_af': 0.0},
         'gnomad_exomes': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'hemi': 0, 'filter_af': 0.0},
@@ -124,7 +124,7 @@ VARIANT2 = {
     'hgmd': {'accession': 'CM981315', 'class': 'DFP'},
     'screenRegionType': None,
     'populations': {
-       'seqr': {'ac': 10, 'hom': 3},
+       'seqr': {'ac': 10, 'hom': 3, 'ac_wes': 7, 'ac_wgs': 3, 'hom_wes': 2, 'hom_wgs': 1},
        'topmed': {'af': 0.246152, 'ac': 65154, 'an': 264690, 'hom': 8775, 'het': 47604},
        'exac': {'af': 0.29499999, 'ac': 35805, 'an': 121372, 'hom': 5872, 'hemi': 0, 'het': 24061, 'filter_af': 0.41530353},
        'gnomad_exomes': {'af': 0.28899795, 'ac': 72672, 'an': 251462, 'hom': 11567, 'hemi': 0, 'filter_af': 0.4116475},
@@ -203,7 +203,7 @@ VARIANT3 = {
     'hgmd': None,
     'screenRegionType': None,
     'populations': {
-        'seqr': {'ac': 7, 'hom': 0},
+        'seqr': {'ac': 7, 'hom': 0, 'ac_wes': 5, 'ac_wgs': 2, 'hom_wes': 0, 'hom_wgs': 0},
         'topmed': {'af': 0.362681, 'ac': 95998, 'an': 264690, 'hom': 19369, 'het': 57260},
         'exac': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'hemi': 0, 'het': 0, 'filter_af': 0.0},
         'gnomad_exomes': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'hemi': 0, 'filter_af': 0.0},
@@ -273,7 +273,7 @@ VARIANT4 = {
     'hgmd': None,
     'screenRegionType': 'CTCF-only',
     'populations': {
-        'seqr': {'ac': 5, 'hom': 1},
+        'seqr': {'ac': 5, 'hom': 1, 'ac_wes': 2, 'ac_wgs': 3, 'hom_wes': 0, 'hom_wgs': 1},
         'topmed': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'het': 0},
         'exac': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'hemi': 0, 'het': 0, 'filter_af': 0.0},
         'gnomad_exomes': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'hemi': 0, 'filter_af': 0.0},
@@ -338,7 +338,7 @@ PROJECT_2_VARIANT = {
     'hgmd': None,
     'screenRegionType': None,
     'populations': {
-        'seqr': {'ac': 2, 'hom': 0},
+        'seqr': {'ac': 2, 'hom': 0, 'ac_wes': 1, 'ac_wgs': 1, 'hom_wes': 0, 'hom_wgs': 0},
         'topmed': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'het': 0},
         'exac': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'hemi': 0, 'het': 0, 'filter_af': 0.0},
         'gnomad_exomes': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'hemi': 0, 'filter_af': 0.0},
@@ -393,7 +393,7 @@ GRCH37_VARIANT = {
         },
     },
     'populations': {
-        'seqr': {'ac': 2, 'hom': 1},
+        'seqr': {'ac': 2, 'hom': 1, 'ac_wes': 2, 'ac_wgs': 0, 'hom_wes': 1, 'hom_wgs': 0},
         'topmed': {'af': 0.52131897, 'ac': 65461, 'an': 125568, 'hom': 16156, 'het': 33149},
         'exac': {'af': 0.63, 'ac': 66593, 'an': 104352, 'hom': 22162, 'hemi': 0, 'het': 22269, 'filter_af': 0.81987739},
         'gnomad_exomes': {'af': 0.63542193, 'ac': 137532, 'an': 216442, 'hom': 45869, 'hemi': 0, 'filter_af': 0.82261163},
@@ -445,8 +445,8 @@ MITO_VARIANT1 = {
         'numAlt': 1, 'dp': 3955, 'hl': 0.083, 'mitoCn': 230, 'contamination': 0.0, 'filters': [],
     }},
     'populations': {
-        'seqr': {'ac': 0},
-        'seqr_heteroplasmy': {'ac': 1},
+        'seqr': {'ac': 0, 'ac_wes': 0, 'ac_wgs': 0},
+        'seqr_heteroplasmy': {'ac': 1, 'ac_wes': 1, 'ac_wgs': 0},
         'gnomad_mito': {'af': 0.0, 'ac': 0, 'an': 56419},
         'gnomad_mito_heteroplasmy': {'af': 0.0, 'ac': 0, 'an': 56419, 'max_hl': 0.0},
         'helix': {'af': 0.0, 'ac': 0, 'an': 195983},
@@ -499,8 +499,8 @@ MITO_VARIANT2 = {
         'numAlt': 1, 'dp': 3845, 'hl': 0.029, 'mitoCn': 247, 'contamination': 0.015, 'filters': [],
     }},
     'populations': {
-        'seqr': {'ac': 0},
-        'seqr_heteroplasmy': {'ac': 1},
+        'seqr': {'ac': 0, 'ac_wes': 0, 'ac_wgs': 0},
+        'seqr_heteroplasmy': {'ac': 1, 'ac_wes': 1, 'ac_wgs': 0},
         'gnomad_mito': {'af': 0.0, 'ac': 0, 'an': 0},
         'gnomad_mito_heteroplasmy': {'af': 0.0, 'ac': 0, 'an': 0, 'max_hl': 0.0},
         'helix': {'af': 0.0, 'ac': 0, 'an': 0},
@@ -545,8 +545,8 @@ MITO_VARIANT3 = {
         'numAlt': 2, 'dp': 3943, 'hl': 1.0, 'mitoCn': 214, 'contamination': 0.0, 'filters': ['artifact_prone_site'],
     }},
     'populations': {
-        'seqr': {'ac': 1},
-        'seqr_heteroplasmy': {'ac': 0},
+        'seqr': {'ac': 1, 'ac_wes': 1, 'ac_wgs': 0},
+        'seqr_heteroplasmy': {'ac': 0, 'ac_wes': 0, 'ac_wgs': 0},
         'gnomad_mito': {'af': 0.05534649, 'ac': 3118, 'an': 56336},
         'gnomad_mito_heteroplasmy': {'af': 0.00005325, 'ac': 3, 'an': 56336, 'max_hl': 1.0},
         'helix': {'af': 0.04884607, 'ac': 9573, 'an': 195983},
@@ -1125,7 +1125,7 @@ PROJECT_4_COMP_HET_VARIANT = {
     'hgmd': None,
     'screenRegionType': None,
     'populations': {
-        'seqr': {'ac': 3, 'hom': 1},
+        'seqr': {'ac': 3, 'hom': 1, 'ac_wes': 0, 'hom_wes': 0, 'ac_wgs': 3, 'hom_wgs': 1},
         'topmed': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'het': 0},
         'exac': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'hemi': 0, 'het': 0, 'filter_af': 0.0},
         'gnomad_exomes': {'af': 0.00004, 'ac': 4, 'an': 90386, 'hom': 0, 'hemi': 0, 'filter_af': 0.0001},

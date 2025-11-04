@@ -214,31 +214,30 @@ const sectionTitle = ({ fieldTitle, section }) => (
   </span>
 )
 
-const BaseGlobalAcPopup = ({ totalSampleCounts, datasetType }) => (
-  Object.keys(totalSampleCounts).length > 0 && (
-    <Popup.Content>
-      <i>
-        The seqr allele count (AC) and homozygote count (Hom) reflect all observed occurrences of a variant in seqr.
-        While not all sites may be captured in the loaded callsets, an upper bound for the total allele number (AN)
-        can be estimated based on the total number of samples loaded in seqr:
-      </i>
-      {Object.entries(totalSampleCounts[datasetType]).map(([sampleType, count]) => (
-        <div key={sampleType}>{`${sampleType}: ${count}`}</div>
-      ))}
-    </Popup.Content>
-  )
+const GlobalAcDisclaimer = () => (
+  <i>
+    The seqr allele count (AC) and homozygote count (Hom) reflect all observed occurrences of a variant in seqr.
+    While not all sites may be captured in the loaded callsets, an upper bound for the total allele number (AN)
+    can be estimated based on the total number of samples loaded in seqr:
+  </i>
 )
 
-BaseGlobalAcPopup.propTypes = {
-  totalSampleCounts: PropTypes.object,
-  datasetType: PropTypes.string,
+const GlobalAcSampleTypeSummary = ({ seqrPop, sampleType, count }) => (
+  <div>
+    <b>{`${sampleType}: `}</b>
+    {[
+      ['Hom', seqrPop[`hom_${sampleType.toLowerCase()}`]],
+      ['AC', seqrPop[`ac_${sampleType.toLowerCase()}`]],
+      ['Total', count],
+    ].filter(x => x[1] !== undefined).map(([label, ct]) => (`${label}=${ct}`)).join(' ')}
+  </div>
+)
+
+GlobalAcSampleTypeSummary.propTypes = {
+  seqrPop: PropTypes.object,
+  sampleType: PropTypes.string,
+  count: PropTypes.number,
 }
-
-const mapStateToProps = state => ({
-  totalSampleCounts: getTotalSampleCounts(state),
-})
-
-const GlobalAcPopup = connect(mapStateToProps)(BaseGlobalAcPopup)
 
 const HOM_SECTION = 'Homoplasmy'
 const HET_SECTION = 'Heteroplasmy'
@@ -383,16 +382,24 @@ const MITO_DETAIL_SECTIONS = [
 const getValueDisplay = (pop, valueField, precision) => (valueField === 'ac' ?
   `${pop.ac} out of ${pop.an}` : `${pop[valueField].toPrecision(precision || 2)}`)
 
-const Frequencies = React.memo(({ variant }) => {
+const Frequencies = React.memo(({ variant, totalSampleCounts }) => {
   const { populations = {}, svType } = variant
   const callsetHetPop = populations.callset_heteroplasmy || populations.seqr_heteroplasmy
   const isMito = callsetHetPop && callsetHetPop.af !== null && callsetHetPop.af !== undefined
   const popConfigs = isMito ? MITO_POPULATIONS : POPULATIONS
   let datasetType = isMito ? DATASET_TYPE_MITO_CALLS : DATASET_TYPE_SNV_INDEL_CALLS
   datasetType = svType ? DATASET_TYPE_SV_CALLS : datasetType
+  const seqrPop = populations[SEQR_POP.field]
   const seqrAcSection = {
     name: 'seqr Global ACs',
-    details: populations[SEQR_POP.field] ? [<GlobalAcPopup datasetType={datasetType} />].filter(s => s) : [],
+    details: (seqrPop && Object.keys(totalSampleCounts).length > 0) ? [(
+      <Popup.Content>
+        <GlobalAcDisclaimer />
+        {Object.entries(totalSampleCounts[datasetType]).map(([sampleType, count]) => (
+          <GlobalAcSampleTypeSummary key={sampleType} sampleType={sampleType} count={count} seqrPop={seqrPop} />
+        ))}
+      </Popup.Content>
+    )] : [],
   }
   const sections = [seqrAcSection, ...(isMito ? MITO_DETAIL_SECTIONS : DETAIL_SECTIONS).reduce(
     (acc, section) => ([
@@ -443,6 +450,11 @@ const Frequencies = React.memo(({ variant }) => {
 
 Frequencies.propTypes = {
   variant: PropTypes.object,
+  totalSampleCounts: PropTypes.object,
 }
 
-export default Frequencies
+const mapStateToProps = state => ({
+  totalSampleCounts: getTotalSampleCounts(state),
+})
+
+export default connect(mapStateToProps)(Frequencies)

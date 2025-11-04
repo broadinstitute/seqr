@@ -71,6 +71,7 @@ class PaLocusListAPITest(AuthenticationTestCase, BaseLocusListAPITest):
 
         responses.add(responses.GET, au_panels_p1_url, json=au_panels_p1_json, status=200)
         responses.add(responses.GET, au_panels_p2_url, json=au_panels_p2_json, status=200)
+        responses.add(responses.GET, au_genes_url, status=429)
         responses.add(responses.GET, au_genes_url, json=au_genes_json, status=200)
         responses.add(responses.GET, uk_panels_p1_url, json=uk_panels_p1_json, status=200)
         responses.add(responses.GET, uk_genes_url, json=uk_genes_json, status=200)

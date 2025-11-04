@@ -89,16 +89,19 @@ class SearchQuerySet(QuerySet):
 
         return clinvar_q
 
-    def _seqr_pop_fields(self, seqr_populations):
-        sample_types = [
+    @property
+    def sample_types(self):
+        return [
             sample_type.lower() for sample_type in
-            ([self.single_sample_type] if self.single_sample_type else list(Sample.SAMPLE_TYPE_LOOKUP.keys()))
+            ([self.single_sample_type] if self.single_sample_type else sorted(Sample.SAMPLE_TYPE_LOOKUP.keys()))
         ]
+
+    def _seqr_pop_fields(self, seqr_populations):
         seqr_pop_fields = []
         for _, sub_fields in seqr_populations:
-            seqr_pop_fields += [f"'{sub_fields['ac']}_{sample_type}'" for sample_type in sample_types]
+            seqr_pop_fields += [f"'{sub_fields['ac']}_{sample_type}'" for sample_type in self.sample_types]
             if sub_fields.get('hom'):
-                seqr_pop_fields += [f"'{sub_fields['hom']}_{sample_type}'" for sample_type in sample_types]
+                seqr_pop_fields += [f"'{sub_fields['hom']}_{sample_type}'" for sample_type in self.sample_types]
         return seqr_pop_fields
 
     def _format_gene_intervals(self, genes):
@@ -128,15 +131,14 @@ class AnnotationsQuerySet(SearchQuerySet):
     def annotation_values(self):
         seqr_pops = []
         population_fields = [*self.model.POPULATION_FIELDS]
-        single_sample_type = hasattr(self.model, 'SV_TYPES')
         for i, (name, subfields) in enumerate(self.model.SEQR_POPULATIONS):
-            exprs = [F(f'seqrPop__{i*2}') if single_sample_type else Plus(f'seqrPop__{i*2}', f'seqrPop__{i*2+1}')]
-            sub_output_fields = [('ac', models.UInt32Field())]
+            exprs, subfield_names = self._seqr_pop_expressions(i*2, 'ac')
             if 'hom' in subfields:
-                exprs.append(F(f'seqrPop__{i*2+1}') if single_sample_type else Plus(f'seqrPop__{i*2+2}', f'seqrPop__{i*2+3}'))
-                sub_output_fields.append(('hom', models.UInt32Field()))
+                hom_exprs, hom_names = self._seqr_pop_expressions(i*2+1, 'hom', multi_type_offset=1)
+                exprs += hom_exprs
+                subfield_names += hom_names
             seqr_pops.append(Tuple(*exprs))
-            population_fields.append((name, NamedTupleField(sub_output_fields)))
+            population_fields.append((name, NamedTupleField([(name,models.UInt32Field()) for name in subfield_names])))
 
         annotations = {
             **{key: Value(value) for key, value in self.model.ANNOTATION_CONSTANTS.items()},
@@ -153,6 +155,17 @@ class AnnotationsQuerySet(SearchQuerySet):
                 })
 
         return annotations
+
+    def _seqr_pop_expressions(self, index, subfield_name, multi_type_offset=0):
+        has_multiple_sample_types = len(self.sample_types) > 1
+        if multi_type_offset and has_multiple_sample_types:
+            index += multi_type_offset
+        exprs = [F(f'seqrPop__{index}')]
+        subfield_names = [subfield_name]
+        if has_multiple_sample_types:
+            exprs += [F(f'seqrPop__{index+1}'), Plus(f'seqrPop__{index}', f'seqrPop__{index+1}')]
+            subfield_names = [f'{subfield_name}_{sample_type}' for sample_type in self.sample_types] + subfield_names
+        return exprs, subfield_names
 
     @staticmethod
     def _genotype_override_expression(index, col, cn_index):
