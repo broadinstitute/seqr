@@ -4,7 +4,6 @@ import requests
 from django.db import transaction
 from django.utils import timezone
 from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
-from time import sleep
 from urllib3.exceptions import MaxRetryError
 
 from panelapp.models import PaLocusList, PaLocusListGene
@@ -35,8 +34,7 @@ def import_all_panels(user, panel_app_api_url, label=None):
     panels_url = '{}/panels/?page=1'.format(panel_app_api_url)
     all_panels = _get_all_panels(panels_url, [])
 
-    genes_url = '{}/genes/?page=1'.format(panel_app_api_url)
-    genes_by_panel_id = _get_all_genes(genes_url, defaultdict(list))
+    genes_by_panel_id = defaultdict(list)
 
     for panel in all_panels:
         panel_app_id = panel.get('id')
@@ -45,7 +43,14 @@ def import_all_panels(user, panel_app_api_url, label=None):
             with transaction.atomic():
                 panel_genes_url = '{}/panels/{}/genes'.format(panel_app_api_url, panel_app_id)
                 pa_locus_list = _create_or_update_locus_list_from_panel(user, panel_genes_url, panel, label)
-                all_genes_for_panel = genes_by_panel_id.get(panel_app_id, [])
+                if not pa_locus_list:
+                    logger.info('Panel id {} is up to date, skipping import'.format(panel_app_id), user)
+                    continue
+
+                if len(genes_by_panel_id[panel_app_id]) != panel['stats']['number_of_genes']:
+                    _get_all_genes(panel_app_id, panel_genes_url, genes_by_panel_id)
+
+                all_genes_for_panel = genes_by_panel_id[panel_app_id]
                 if not all_genes_for_panel:
                     continue  # Genes in 'super panels' are associated with sub panels
                 panel_genes_by_id = {_extract_ensembl_id_from_json(gene): gene for gene in all_genes_for_panel
@@ -119,7 +124,7 @@ def _get_all_panels(panels_url, all_results):
         return _get_all_panels(next_page, all_results)
 
 
-def _get_all_genes(genes_url: str, results_by_panel_id: dict):
+def _get_all_genes(panel_app_id: int, genes_url: str, results_by_panel_id: dict):
     @retry(
         retry=retry_if_exception_type((MaxRetryError, TooManyRequestsError)),
         wait=wait_exponential(multiplier=1, min=4, max=10),
@@ -128,32 +133,35 @@ def _get_all_genes(genes_url: str, results_by_panel_id: dict):
     def _get(url):
         resp = requests.get(url, timeout=REQUEST_TIMEOUT_S)
         if resp.status_code == 429:
-            sleep(10)
             raise TooManyRequestsError()
         return resp.json()
 
     resp_json = _get(genes_url)
     for result in resp_json.get('results', []):
-        if result.get('panel'):
-            panel_id = result['panel']['id']
+        panel_id = result.get('panel', {}).get('id')
+        if panel_id:
             results_by_panel_id[panel_id].append(result)
+        if panel_app_id != panel_id:
+            results_by_panel_id[panel_app_id].append(result)
 
     next_page = resp_json.get('next', None)
     if next_page is None:
         return results_by_panel_id
     else:
-        return _get_all_genes(next_page, results_by_panel_id)
+        return _get_all_genes(panel_app_id, next_page, results_by_panel_id)
 
 
 def _create_or_update_locus_list_from_panel(user, panelgenes_url, panel_json, label):
     panel_app_id = panel_json.get('id')
     pa_locus_list = _safe_get_locus_list(panelgenes_url)
+    version = panel_json.get('version') or None
+    if pa_locus_list and pa_locus_list.version == version:
+        return None
 
     name = panel_json['name']
     disease_group = panel_json.get('disease_group') or None
     disease_sub_group = panel_json.get('disease_sub_group') or None
     status = panel_json.get('status') or None
-    version = panel_json.get('version') or None
     version_created = panel_json.get('version_created') or None
     description = _create_panel_description(panel_app_id, version, disease_group, disease_sub_group, label)
     new_seqrlocuslist_json = {

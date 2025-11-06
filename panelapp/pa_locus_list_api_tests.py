@@ -59,20 +59,30 @@ class PaLocusListAPITest(AuthenticationTestCase, BaseLocusListAPITest):
         # Given all PanelApp gene lists and associated genes
         au_panels_p1_url = '{}/panels/?page=1'.format(PANEL_APP_API_URL_AU)
         au_panels_p2_url = '{}/panels/?page=2'.format(PANEL_APP_API_URL_AU)
-        au_genes_url = '{}/genes/?page=1'.format(PANEL_APP_API_URL_AU)
+        au_genes_url_260 = '{}/panels/260/genes'.format(PANEL_APP_API_URL_AU)
+        au_genes_url_3069 = '{}/panels/3069/genes'.format(PANEL_APP_API_URL_AU)
         au_panels_p1_json = _get_json_from_file('panelapp/test_resources/au_panelapp_panels_p1.json')
         au_panels_p2_json = _get_json_from_file('panelapp/test_resources/au_panelapp_panels_p2.json')
         au_genes_json = _get_json_from_file('panelapp/test_resources/au_panelapp_genes.json')
+        au_genes_json_260 = {
+            **au_genes_json,
+            'results': au_genes_json['results'][:2]
+        }
+        au_genes_json_3069 = {
+            **au_genes_json,
+            'results': au_genes_json['results'][2:]
+        }
 
         uk_panels_p1_url = '{}/panels/?page=1'.format(PANEL_APP_API_URL_UK)
-        uk_genes_url = '{}/genes/?page=1'.format(PANEL_APP_API_URL_UK)
+        uk_genes_url = '{}/panels/260/genes'.format(PANEL_APP_API_URL_UK)
         uk_panels_p1_json = _get_json_from_file('panelapp/test_resources/uk_panelapp_panels_p1.json')
         uk_genes_json = _get_json_from_file('panelapp/test_resources/uk_panelapp_genes.json')
 
         responses.add(responses.GET, au_panels_p1_url, json=au_panels_p1_json, status=200)
         responses.add(responses.GET, au_panels_p2_url, json=au_panels_p2_json, status=200)
-        responses.add(responses.GET, au_genes_url, status=429)
-        responses.add(responses.GET, au_genes_url, json=au_genes_json, status=200)
+        responses.add(responses.GET, au_genes_url_260, status=429)
+        responses.add(responses.GET, au_genes_url_260, json=au_genes_json_260, status=200)
+        responses.add(responses.GET, au_genes_url_3069, json=au_genes_json_3069, status=200)
         responses.add(responses.GET, uk_panels_p1_url, json=uk_panels_p1_json, status=200)
         responses.add(responses.GET, uk_genes_url, json=uk_genes_json, status=200)
 
@@ -109,10 +119,78 @@ class PaLocusListAPITest(AuthenticationTestCase, BaseLocusListAPITest):
         response_json = response.json()
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000139734'})
 
+        # and has expected logs
+        self.assertEqual(len(responses.calls), 7)
+        self.assert_json_logs(None, [
+            ('Starting import of all gene lists from Panel App [https://test-panelapp.url.au/api]', None),
+            ('Importing panel id 260', None),
+            ('create LocusList LL00005_hereditary_haemorrhagi', {'dbUpdate': {
+                'dbEntity': 'LocusList',
+                'entityId': 'LL00005_hereditary_haemorrhagi',
+                'updateType': 'create',
+                'updateFields': ['description', 'is_public', 'name'],
+            }}),
+            ('update PaLocusList 5', {'dbUpdate': {
+                'dbEntity': 'PaLocusList',
+                'entityId': 5,
+                'updateType': 'update',
+                'updateFields': ['disease_group', 'status', 'url', 'version', 'version_created'],
+            }}),
+            ('Bulk updating genes for list Hereditary Haemorrhagic Telangiectasia', None),
+            ('Importing panel id 3069', None),
+            ('create LocusList LL00006_hereditary_neuropathy_', {'dbUpdate': {
+                'dbEntity': 'LocusList',
+                'entityId': 'LL00006_hereditary_neuropathy_',
+                'updateType': 'create',
+                'updateFields': ['description', 'is_public', 'name'],
+            }}),
+            ('update PaLocusList 6', {'dbUpdate': {
+                'dbEntity': 'PaLocusList',
+                'entityId': 6,
+                'updateType': 'update',
+                'updateFields': ['disease_group', 'status', 'url', 'version', 'version_created'],
+            }}),
+            ("Genes found in panel 3069 but not in reference data, ignoring genes ['ENSG00000104728']", {'severity': 'WARNING'}),
+            ('Bulk updating genes for list Hereditary Neuropathy_CMT - isolated', None),
+            ('---Done---', None),
+            ('Starting import of all gene lists from Panel App [https://test-panelapp.url.uk/api]', None),
+            ('Importing panel id 260', None),
+            ('create LocusList LL00007_auditory_neuropathy_sp', {'dbUpdate': {
+                'dbEntity': 'LocusList',
+                'entityId': 'LL00007_auditory_neuropathy_sp',
+                'updateType': 'create',
+                'updateFields': ['description', 'is_public', 'name'],
+            }}),
+            ('update PaLocusList 7', {'dbUpdate': {
+                'dbEntity': 'PaLocusList',
+                'entityId': 7,
+                'updateType': 'update',
+                'updateFields': ['disease_group', 'disease_sub_group', 'status', 'url', 'version', 'version_created'],
+            }}),
+            ('Bulk updating genes for list Auditory Neuropathy Spectrum Disorde', None),
+            ('---Done---', None),
+        ])
+
         # and import is idempotent
+        self.reset_logs()
+        responses.calls.reset()
         call_command('import_all_panels', PANEL_APP_API_URL_AU)
         call_command('import_all_panels', PANEL_APP_API_URL_UK, '--label', 'UK')
         self._assert_lists_imported()
+
+        self.assertEqual(len(responses.calls), 3)
+        self.assert_json_logs(None, [
+            ('Starting import of all gene lists from Panel App [https://test-panelapp.url.au/api]', None),
+            ('Importing panel id 260', None),
+            ('Panel id 260 is up to date, skipping import', None),
+            ('Importing panel id 3069', None),
+            ('Panel id 3069 is up to date, skipping import', None),
+            ('---Done---', None),
+            ('Starting import of all gene lists from Panel App [https://test-panelapp.url.uk/api]', None),
+            ('Importing panel id 260', None),
+            ('Panel id 260 is up to date, skipping import', None),
+            ('---Done---', None),
+        ])
 
     def _assert_lists_imported(self):
         locuslists_url = reverse(locus_lists)
@@ -175,15 +253,15 @@ class PaLocusListAPITest(AuthenticationTestCase, BaseLocusListAPITest):
 
     @mock.patch("panelapp.panelapp_utils.requests.get")
     def test_get_all_genes_exhausts_retries(self, mock_get_request):
-        url = '{}/genes/?page=1'.format(PANEL_APP_API_URL_UK)
+        url = '{}/panels/123/genes/?page=1'.format(PANEL_APP_API_URL_UK)
         request_error = MaxRetryError(pool=mock.MagicMock(), url=url)
         mock_get_request.side_effect = [request_error] * 5
         with self.assertRaises(tenacity.RetryError):
-            _get_all_genes(url, defaultdict(list))
+            _get_all_genes(123, url, defaultdict(list))
 
     @mock.patch("panelapp.panelapp_utils.requests.get")
     def test_get_all_genes_retries_success(self, mock_get_request):
-        url = '{}/genes/?page=1'.format(PANEL_APP_API_URL_UK)
+        url = '{}/panels/1207/genes/?page=1'.format(PANEL_APP_API_URL_UK)
         request_error = MaxRetryError(pool=mock.MagicMock(), url=url)
         page_1 = Response()
         page_1.status_code = 200
@@ -194,7 +272,7 @@ class PaLocusListAPITest(AuthenticationTestCase, BaseLocusListAPITest):
         page_2._content = b'{"results": [{"panel": {"id": 1141, "name": "Acute rhabdomyolysis"}}]}'
         mock_get_request.side_effect = [request_error] * 4 + [page_1] + [request_error] * 4 + [page_2]
         expected_res = {
-            1207: [{'panel': {'id': 1207, 'name': 'Acute intermittent porphyria'}}],
+            1207: [{'panel': {'id': 1207, 'name': 'Acute intermittent porphyria'}}, {'panel': {'id': 1141, 'name': 'Acute rhabdomyolysis'}}],
             1141: [{'panel': {'id': 1141, 'name': 'Acute rhabdomyolysis'}}],
         }
-        self.assertEqual(_get_all_genes(url, defaultdict(list)), expected_res)
+        self.assertEqual(_get_all_genes(1207, url, defaultdict(list)), expected_res)
