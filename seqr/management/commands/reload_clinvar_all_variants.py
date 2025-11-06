@@ -297,7 +297,7 @@ class Command(BaseCommand):
             with connections['clickhouse_write'].cursor() as cursor:
                 for model in model_to_batch.keys():
                     cursor.execute(
-                        f"ALTER TABLE {model._meta.db_table} DROP PARTITION '{existing_version_obj.version}';"
+                        f"ALTER TABLE `{model._meta.db_table}` DROP PARTITION '{existing_version_obj.version}';"
                     )
         for materialized_view in [
             'all_variants_to_seqr_variants_mv',
