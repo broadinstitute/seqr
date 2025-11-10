@@ -1,6 +1,8 @@
 # _seqr_ Changes
 
 ## dev
+* Changes support for RNA loading to accept unprocessed output from RNA callers, and moves loading to the project page. 
+See [documentation](deploy/LOCAL_INSTALL_HELM.md) for more details.
 
 ## 10/27/25
 * Adds affected status to the gt stats views/dicts in Clickhouse (REQUIRES DB MIGRATION)

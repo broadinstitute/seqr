@@ -7,13 +7,16 @@ from django.db import connections
 from django.urls.base import reverse
 import responses
 
-from seqr.models import Project, RnaSeqTpm, RnaSeqSpliceOutlier, RnaSeqOutlier
+from seqr.models import Project, RnaSeqTpm, RnaSeqSpliceOutlier, RnaSeqOutlier, RnaSample, Family
+from seqr.utils.communication_utils import _set_bulk_notification_stream
 from seqr.views.apis.project_api import create_project_handler, delete_project_handler, update_project_handler, \
     project_page_data, project_families, project_overview, project_mme_submisssions, project_individuals, \
     project_analysis_groups, update_project_workspace, project_family_notes, project_collaborators, project_locus_lists, \
-    project_samples, project_notifications, mark_read_project_notifications, subscribe_project_notifications, load_rna_seq_sample_data
+    project_samples, project_notifications, mark_read_project_notifications, subscribe_project_notifications, \
+    update_project_rna_seq, load_rna_seq_sample_data
 from seqr.views.apis.data_manager_api_tests import RNA_OUTLIER_SAMPLE_DATA, RNA_OUTLIER_MUSCLE_SAMPLE_GUID, RNA_TPM_SAMPLE_DATA, \
-    RNA_TPM_MUSCLE_SAMPLE_GUID, RNA_SPLICE_SAMPLE_DATA, RNA_SPLICE_SAMPLE_GUID
+    RNA_TPM_MUSCLE_SAMPLE_GUID, RNA_SPLICE_SAMPLE_DATA, RNA_SPLICE_SAMPLE_GUID, PLACEHOLDER_GUID, \
+    RNA_SPLICE_OUTLIER_REQUIRED_COLUMNS,RNA_OUTLIER_REQUIRED_COLUMNS, RNA_TPM_REQUIRED_COLUMNS
 from seqr.views.utils.terra_api_utils import TerraAPIException, TerraRefreshTokenFailedException
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, \
     PROJECT_FIELDS, LOCUS_LIST_FIELDS, PA_LOCUS_LIST_FIELDS, NO_INTERNAL_CASE_REVIEW_INDIVIDUAL_FIELDS, \
@@ -42,6 +45,58 @@ MOCK_RECORDS = {'records': [
     {'id': 'recH4SEO1CeoIlOiE', 'fields': {'Status': 'Loading'}},
     {'id': 'recSgwrXNkmlIB5eM', 'fields': {'Status': 'Available in Seqr'}},
 ]}
+
+RNA_DATA_TYPE_PARAMS = {
+    'E': {
+        'model_cls': RnaSeqOutlier,
+        'sample_guid': RNA_OUTLIER_MUSCLE_SAMPLE_GUID,
+        'parsed_file_data': RNA_OUTLIER_SAMPLE_DATA,
+        'required_columns': RNA_OUTLIER_REQUIRED_COLUMNS,
+        'rows': [
+            'sampleID\tgeneID\tFDR set\tpValue\tpadjust\tzScore',
+            'NA19675_1\tENSG00000240361\tdetail1\t0.01\t0.13\t-3.1',
+            'NA19675_1\tENSG00000240361\tdetail2\t0.01\t0.13\t-3.1',
+            'NA19675_1\tENSG00000233750\tdetail1\t0.064\t0.0000057\t7.8',
+            'NA21234\tENSG00000233750\tdetail1\t0.064\t0.0000057\t7.8',
+            'HG00731\tENSG00000240361\t\t0.04\t0.112\t1.9',
+            'NA21234\tNOT_A_GENE_ID1\tdetail1\t0.064\t0.0000057\t7.8',
+            'NA21234\t\tdetail1\t0.064\t0.0000057\t7.8',
+        ],
+        'message_data_type': 'Expression Outlier',
+    },
+    'T': {
+        'model_cls': RnaSeqTpm,
+        'sample_guid': RNA_TPM_MUSCLE_SAMPLE_GUID,
+        'parsed_file_data': RNA_TPM_SAMPLE_DATA,
+        'required_columns': RNA_TPM_REQUIRED_COLUMNS,
+        'mismatch_field': 'tpm',
+        'rows': [
+            'Name\tDescription\tNA19675_1',
+            'ENSG00000240361\tsome gene of interest\t7.8',
+            'ENSG00000233750\t\t0.0',
+            'NOT_A_GENE_ID1\t\t0.064',
+            '\t\t0.064',
+        ],
+        'message_data_type': 'Expression',
+    },
+    'S': {
+        'model_cls': RnaSeqSpliceOutlier,
+        'sample_guid': RNA_SPLICE_SAMPLE_GUID,
+        'parsed_file_data': RNA_SPLICE_SAMPLE_DATA,
+        'required_columns': RNA_SPLICE_OUTLIER_REQUIRED_COLUMNS,
+        'row_id': 'ENSG00000233750-2-167254166-167258349-*-psi3',
+        'rows': [
+            'hgncSymbol\tseqnames\tstart\tend\tstrand\tsampleID\ttype\tpValue\tpadjust\tdeltaPsi\tcounts\tmeanCounts\ttotalCounts\tmeanTotalCounts\tnonsplitCounts',
+            'ENSG00000233750;ENSG00000240361\tchr2\t167254166\t167258349\t*\tNA19675_1\tpsi3\t1.56E-25\t-4.9\t-0.46\t166\t16.6\t1660\t1.66\t1',
+            'ENSG00000240361\tchr7\t132885746\t132975168\t*\tNA19675_1\tpsi5\t1.08E-56\t-6.53\t-0.85\t231\t0.231\t2313\t231.3\t1',
+            'ENSG00000233750\tchr2\t167258096\t167258349\t*\tNA21234\tpsi3\t1.56E-25\t6.33\t0.45\t143\t14.3\t1433\t143.3\t1',
+            '\tchr2\t167258096\t167258349\t*\tHG00731\tpsi3\t1.56E-25\t6.33\t0.45\t143\t14.3\t1433\t143.3\t1',
+            'NOT_A_GENE_ID1\tchr2\t167258096\t167258349\t*\tNA21234\tpsi3\t1.56E-25\t6.33\t0.45\t143\t14.3\t1433\t143.3\t1',
+            '\tchr2\t167258096\t167258349\t*\tNA19675_1\tpsi3\t1.56E-25\t6.33\t0.45\t143\t14.3\t1433\t143.3\t1',
+        ],
+        'message_data_type': 'Splice Outlier',
+    }
+}
 
 
 class ProjectAPITest(object):
@@ -661,10 +716,193 @@ class ProjectAPITest(object):
         self.assertDictEqual(response.json(), {'isSubscriber': True})
         self.assertTrue(self.collaborator_user.groups.filter(name='subscribers').exists())
 
-    def test_load_rna_outlier_sample_data(self, *args, **kwargs):
-        models = self._test_load_rna_seq_sample_data(
-            'outlier', RNA_OUTLIER_MUSCLE_SAMPLE_GUID, RNA_OUTLIER_SAMPLE_DATA, RnaSeqOutlier, *args, **kwargs,
+    def test_update_project_rna_outlier(self):
+        self._test_update_project_rna('E', **RNA_DATA_TYPE_PARAMS['E'])
+
+    def test_update_project_rna_tpm(self):
+        self._test_update_project_rna('T', **RNA_DATA_TYPE_PARAMS['T'], single_sample_file=True)
+
+    def test_update_project_rna_splice_outlier(self):
+        kwargs = {
+            **RNA_DATA_TYPE_PARAMS['S'],
+            'tissue': 'F',
+            'allow_missing_gene': True,
+        }
+        # Parsed data does not include optional internal-only columns
+        internal_cols =  {'rare_disease_samples_total', 'rare_disease_samples_with_this_junction'}
+        kwargs['parsed_file_data'] = {
+            sample_guid: '\n'.join([
+                json.dumps({k: v.replace('e', 'E') for k, v in json.loads(row).items() if k not in internal_cols})
+                for row in data.split('\n') if row]
+            ) + '\n' for sample_guid, data in kwargs['parsed_file_data'].items()
+        }
+
+        self._test_update_project_rna('S', **kwargs)
+
+    @mock.patch('seqr.utils.communication_utils.BASE_URL', 'https://test-seqr.org/')
+    @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
+    @mock.patch('seqr.views.utils.file_utils.tempfile.gettempdir', lambda: 'tmp/')
+    @mock.patch('seqr.views.utils.dataset_utils.datetime')
+    @mock.patch('seqr.utils.communication_utils.send_html_email')
+    @mock.patch('seqr.utils.communication_utils.safe_post_to_slack')
+    @mock.patch('seqr.views.utils.dataset_utils.os')
+    @mock.patch('seqr.utils.file_utils.gzip.open')
+    @mock.patch('seqr.utils.file_utils.os.path.isfile')
+    @mock.patch('seqr.utils.file_utils.subprocess.Popen')
+    def _test_update_project_rna(self, data_type, mock_subprocess, mock_does_file_exist, mock_open, mock_os,
+                                 mock_send_slack, mock_send_email, mock_datetime, sample_guid=None, model_cls=None,
+                                 rows=None, parsed_file_data=None, required_columns=None,  allow_missing_gene=False,
+                                 tissue='M', message_data_type=None, single_sample_file=False, **kwargs):
+        mock_datetime.now.return_value = datetime(2025, 4, 15)
+        mock_os.path.join.side_effect = lambda *args: '/'.join(args)
+        initial_model_count = model_cls.objects.count()
+        initial_sample_model_count = model_cls.objects.filter(sample__guid=sample_guid).count()
+
+        self.check_pm_login(reverse(update_project_rna_seq, args=[DEMO_PROJECT_GUID]))
+        url = reverse(update_project_rna_seq, args=[PROJECT_GUID])
+        self.login_manager()
+
+        # Test errors
+        file = f'{self.TEMP_DIR}/new_samples.tsv.gz'
+        body = {'dataType': data_type, 'file': file, 'tissue': tissue}
+        self._set_file_not_found(file, mock_subprocess, mock_does_file_exist, mock_open)
+        self.reset_logs()
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'error': f'File not found: {file}'})
+
+        self._set_file_iter([], mock_subprocess, mock_does_file_exist, mock_open)
+        invalid_file_ext = file.replace('tsv.gz', 'xlsx')
+        invalid_body = {**body, 'file': invalid_file_ext}
+        response = self.client.post(url, content_type='application/json', data=json.dumps(invalid_body))
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'error': f'Unexpected iterated file type: {invalid_file_ext}'})
+
+        self._set_file_iter([''], mock_subprocess, mock_does_file_exist, mock_open)
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'error': f'Invalid file: missing column(s): {required_columns}'})
+
+        error_rows = [rows[0].replace('NA19675_1', 'NA21234')] + rows[1:] if single_sample_file else rows
+        self._set_file_iter(error_rows, mock_subprocess, mock_does_file_exist, mock_open)
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+        errors = [
+            'Unknown Gene IDs: NOT_A_GENE_ID1',
+            'Unable to find matches for the following samples: NA21234',
+        ]
+        if not allow_missing_gene:
+            errors.insert(0, 'Samples missing required "gene_id": NA21234')
+        self.assertDictEqual(response.json(), {'warnings': None, 'errors': errors})
+
+        # Test loading new data
+        mock_open.reset_mock()
+        mock_subprocess.reset_mock()
+        self.reset_logs()
+        self._set_file_iter(rows[:-2], mock_subprocess, mock_does_file_exist, mock_open)
+        body.update({'ignoreExtraSamples': True, 'file': file})
+
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 200)
+        info = [
+            f'Parsed {1 if single_sample_file else 3} RNA-seq samples',
+            f'Attempted data loading for {1 if single_sample_file else 2} RNA-seq samples',
+        ]
+        warnings = [] if single_sample_file else ['Skipped loading for the following 1 unmatched samples: NA21234']
+        file_path = f'rna_sample_data__{data_type}__2025-04-15T00:00:00'
+        response_json = response.json()
+        self.assertDictEqual(response_json, {
+            'info': info, 'warnings': warnings or [], 'sampleGuids': mock.ANY, 'fileName': file_path,
+        })
+
+        # test database models are correct
+        self.assertEqual(model_cls.objects.count(), initial_model_count - initial_sample_model_count)
+        rna_samples = RnaSample.objects.filter(
+            tissue_type=tissue, data_type=data_type, data_source='new_samples.tsv.gz', is_active=False,
         )
+        self.assertEqual(rna_samples.count(), 1 if single_sample_file else 2)
+        guid_map = {'NA19675_1': rna_samples.get(individual_id=1).guid}
+        if not single_sample_file:
+            guid_map['HG00731'] = rna_samples.get(individual_id=4).guid
+        self.assertSetEqual(set(response_json['sampleGuids']), set(guid_map.values()))
+
+        # test notifications
+        mv_command = f'gsutil mv tmp/temp_uploads/{file_path} gs://seqr-scratch-temp/{file_path}'
+        subprocess_logs = self._get_expected_read_file_subprocess_calls(
+            mock_subprocess, 'new_samples.tsv.gz', additional_command=mv_command,
+        )
+        self.assert_json_logs(self.manager_user, subprocess_logs + [
+            (f'create {1 if single_sample_file else 2} RnaSamples', {'dbUpdate': {
+                'dbEntity': 'RnaSample', 'updateType': 'bulk_create',
+                'entityIds': response_json['sampleGuids'],
+            }}),
+            ('update 1 RnaSamples', {'dbUpdate': {
+                'dbEntity': 'RnaSample', 'entityIds': [sample_guid],
+                'updateType': 'bulk_update', 'updateFields': ['is_active']}}),
+            (f'delete {model_cls.__name__}s', {'dbUpdate': {
+                'dbEntity': model_cls.__name__, 'numEntities': initial_sample_model_count,
+                'parentEntityIds': [sample_guid], 'updateType': 'bulk_delete'}}),
+        ] + [
+            (info_log, None) for info_log in info] + [
+            (warn_log, {'severity': 'WARNING'}) for warn_log in warnings
+        ] )
+
+        self.assertEqual(mock_send_slack.call_count, 1)
+        new_samples = '' if single_sample_file else '\n```HG00731```'
+        mock_send_slack.assert_called_with(
+            'seqr-data-loading',
+            f'{0 if single_sample_file else 1} new RNA {message_data_type} samples are loaded in <https://test-seqr.org/project/R0001_1kg/project_page|1kg project nåme with uniçøde>{new_samples}',
+        )
+
+        self.assertEqual(mock_send_email.call_count, 1)
+        project_link = f'<a href=https://test-seqr.org/project/{PROJECT_GUID}/project_page>1kg project nåme with uniçøde</a>'
+        mock_send_email.assert_called_with(
+            email_body=(
+                f'Dear seqr user,\n\nThis is to notify you that data for {0 if single_sample_file else 1} new RNA '
+                f'{message_data_type} samples has been loaded in seqr project {project_link}\n\nAll the best,\nThe seqr team'
+            ),
+            subject=f'New RNA {message_data_type} data available in seqr',
+            to=['test_user_manager@test.com'],
+            process_message=_set_bulk_notification_stream,
+        )
+
+        # test correct file interactions
+        open_call_count = 1
+        open_calls = [mock.call(f'tmp/temp_uploads/{file_path}/NA19675_1.json.gz', 'at')] + [
+            mock.call().write(row + '\n') for row in parsed_file_data[sample_guid].split('\n') if row
+        ]
+        if not single_sample_file:
+            open_call_count += 1
+            open_calls += [mock.call(f'tmp/temp_uploads/{file_path}/HG00731.json.gz', 'at')] + [
+                mock.call().write(row + '\n') for row in parsed_file_data[PLACEHOLDER_GUID].split('\n') if row
+            ]
+        if mock_subprocess.call_count == 0:
+            open_call_count += 1
+            open_calls = [
+                mock.call(file, 'r'), mock.call().__enter__(), mock.call().__enter__().__iter__()
+            ] + open_calls
+        self.assertEqual(mock_open.call_count, open_call_count)
+        mock_open.assert_has_calls(open_calls)
+        mock_os.rename.assert_has_calls([
+            mock.call(f'tmp/temp_uploads/{file_path}/{sample_id}.json.gz', f'tmp/temp_uploads/{file_path}/{sample_guid}.json.gz')
+            for sample_id, sample_guid in guid_map.items()
+        ], any_order=True)
+
+        # test anvil external project access
+        self._set_file_iter([row.replace('NA19675_1', 'NA21234') for row in rows[:2]], mock_subprocess, mock_does_file_exist, mock_open)
+        external_project_url = url.replace(PROJECT_GUID, 'R0004_non_analyst_project')
+        response = self.client.post(external_project_url, content_type='application/json', data=json.dumps(body))
+        if self.CLICKHOUSE_HOSTNAME:
+            self.assertEqual(response.status_code, 200)
+            mock_send_slack.assert_called_with(
+                'anvil-data-loading',
+                f'1 new RNA {message_data_type} samples are loaded in <https://test-seqr.org/project/R0004_non_analyst_project/project_page|Non-Analyst Project>',
+            )
+        else:
+            self.assertEqual(response.status_code, 403)
+
+    def test_load_rna_outlier_sample_data(self):
+        models = self._test_load_rna_seq_sample_data('E', **RNA_DATA_TYPE_PARAMS['E'])
 
         expected_models = [
             ('ENSG00000240361', 0.13, 0.01, -3.1), ('ENSG00000233750', 0.0000057, 0.064, 7.8),
@@ -672,20 +910,15 @@ class ProjectAPITest(object):
         self.assertEqual(models.count(), len(expected_models))
         self.assertListEqual(list(models.values_list('gene_id', 'p_adjust', 'p_value', 'z_score')), expected_models)
 
-    def test_load_rna_tpm_sample_data(self, *args, **kwargs):
-        models = self._test_load_rna_seq_sample_data(
-            'tpm', RNA_TPM_MUSCLE_SAMPLE_GUID, RNA_TPM_SAMPLE_DATA, RnaSeqTpm, *args, **kwargs, mismatch_field='tpm',
-        )
+    def test_load_rna_tpm_sample_data(self):
+        models = self._test_load_rna_seq_sample_data('T', **RNA_DATA_TYPE_PARAMS['T'])
 
         expected_models = [('ENSG00000240361', 7.8), ('ENSG00000233750', 0.0)]
         self.assertEqual(models.count(), len(expected_models))
         self.assertListEqual(list(models.values_list('gene_id', 'tpm')), expected_models)
 
-    def test_load_rna_splice_outlier_sample_data(self, *args, **kwargs):
-        models = self._test_load_rna_seq_sample_data(
-            'splice_outlier', RNA_SPLICE_SAMPLE_GUID, RNA_SPLICE_SAMPLE_DATA, RnaSeqSpliceOutlier, *args, **kwargs,
-            row_id='ENSG00000233750-2-167254166-167258349-*-psi3',
-        )
+    def test_load_rna_splice_outlier_sample_data(self):
+        models = self._test_load_rna_seq_sample_data('S', **RNA_DATA_TYPE_PARAMS['S'])
 
         expected_models = [
             ('ENSG00000233750', '2', 167254166, 167258349, '*', 'psi3', 1.56e-25, -4.9, -0.46, 166, 1, 20),
@@ -698,13 +931,13 @@ class ProjectAPITest(object):
             'counts', 'rare_disease_samples_with_this_junction', 'rare_disease_samples_total',
         )))
 
-    @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
+    @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP')
     @mock.patch('seqr.utils.file_utils.gzip.open')
     @mock.patch('seqr.utils.file_utils.os.path.isfile')
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
-    def _test_load_rna_seq_sample_data(self, data_type, sample_guid, parsed_file_data, model_cls, mock_subprocess, mock_does_file_exist, mock_open, mismatch_field='p_value', row_id=None):
+    def _test_load_rna_seq_sample_data(self, data_type, mock_subprocess, mock_does_file_exist, mock_open, mock_pm_group, sample_guid=None, parsed_file_data=None, model_cls=None,  mismatch_field='p_value', row_id=None, **kwargs):
         url = reverse(load_rna_seq_sample_data, args=[sample_guid])
-        self.check_pm_login(url)
+        self.check_manager_login(url)
 
         model_cls.objects.all().delete()
         self.reset_logs()
@@ -719,7 +952,7 @@ class ProjectAPITest(object):
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'error': 'Data for this sample was not properly parsed. Please re-upload the data'})
-        self.assert_json_logs(self.pm_user, [
+        self.assert_json_logs(self.manager_user, [
             ('Loading outlier data for NA19675_1', None),
             *not_found_logs,
             (f'No saved temp data found for {sample_guid} with file prefix {file_name}', {
@@ -727,8 +960,7 @@ class ProjectAPITest(object):
             }),
         ])
 
-        file_lines = [row.encode('utf-8') for row in parsed_file_lines]
-        self._set_file_iter(file_lines, mock_subprocess, mock_does_file_exist, mock_open)
+        self._set_file_iter(parsed_file_lines, mock_subprocess, mock_does_file_exist, mock_open)
 
         self.reset_logs()
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
@@ -739,9 +971,9 @@ class ProjectAPITest(object):
         self.assertSetEqual({model.sample.guid for model in models}, {sample_guid})
         self.assertTrue(all(model.sample.is_active for model in models))
 
-        subprocess_logs = self._get_expected_read_file_subprocess_calls(mock_subprocess, file_name, sample_guid)
+        subprocess_logs = self._get_expected_read_file_subprocess_calls(mock_subprocess, f'{file_name}/{sample_guid}.json.gz')
 
-        self.assert_json_logs(self.pm_user, [
+        self.assert_json_logs(self.manager_user, [
             ('Loading outlier data for NA19675_1', None),
             *subprocess_logs,
             (f'create {model_cls.__name__}s', {'dbUpdate': {
@@ -751,12 +983,39 @@ class ProjectAPITest(object):
         ])
 
         mismatch_row = {**json.loads(parsed_file_lines[0]), mismatch_field: '0.05'}
-        self._set_file_iter(file_lines + [json.dumps(mismatch_row).encode('utf-8')], mock_subprocess, mock_does_file_exist, mock_open)
+        self._set_file_iter(parsed_file_lines + [json.dumps(mismatch_row)], mock_subprocess, mock_does_file_exist, mock_open)
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {
             'error': f'Error in {sample_guid.split("_", 1)[-1].upper()}: mismatched entries for {row_id or mismatch_row["gene_id"]}'
         })
+
+        # Test manager access to AnVIL external projects
+        self._set_file_iter([], mock_subprocess, mock_does_file_exist, mock_open)
+        Family.objects.filter(id=1).update(project_id=4)
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 200 if self.CLICKHOUSE_HOSTNAME else 403)
+
+        # Test PM permission
+        Family.objects.filter(id=1).update(project_id=3)
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 403)
+
+        self.login_pm_user()
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 403)
+
+        self._set_file_iter([], mock_subprocess, mock_does_file_exist, mock_open)
+        self.login_data_manager_user()
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 200)
+
+        mock_pm_group.resolve_expression.return_value = 'project-managers'
+        mock_pm_group.__eq__.side_effect = lambda s: s == 'project-managers'
+        self._set_file_iter([], mock_subprocess, mock_does_file_exist, mock_open)
+        self.login_pm_user()
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 200)
 
         return models
 
@@ -773,7 +1032,7 @@ class ProjectAPITest(object):
         file_iter.return_value = stdout
 
     @staticmethod
-    def _get_expected_read_file_subprocess_calls(mock_subprocess, file_name, sample_guid):
+    def _get_expected_read_file_subprocess_calls(mock_subprocess, file_name, additional_command=None):
         mock_subprocess.assert_not_called()
         return []
 
@@ -931,14 +1190,14 @@ class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
         mock_does_file_exist = mock.MagicMock()
         mock_does_file_exist.wait.return_value = 0
         mock_file_iter = mock.MagicMock()
-        mock_file_iter.stdout = stdout
-        mock_subprocess.side_effect = [mock_does_file_exist, mock_file_iter]
+        mock_file_iter.stdout = [row.encode('utf-8') for row in stdout]
+        mock_subprocess.side_effect = [mock_does_file_exist, mock_file_iter, mock_does_file_exist]
 
     @staticmethod
-    def _get_expected_read_file_subprocess_calls(mock_subprocess, file_name, sample_guid):
-        gsutil_cat = f'gsutil cat gs://seqr-scratch-temp/{file_name}/{sample_guid}.json.gz | gunzip -c -q - '
-        mock_subprocess.assert_called_with(gsutil_cat, stdout=-1, stderr=-2, shell=True)  # nosec
-        return [
-            (f'==> gsutil ls gs://seqr-scratch-temp/{file_name}/{sample_guid}.json.gz', None),
-            (f'==> {gsutil_cat}', None),
+    def _get_expected_read_file_subprocess_calls(mock_subprocess, file_name, additional_command=False):
+        commands = [
+            f'gsutil ls gs://seqr-scratch-temp/{file_name}',
+            f'gsutil cat gs://seqr-scratch-temp/{file_name} | gunzip -c -q - ',
         ]
+        mock_subprocess.assert_has_calls([mock.call(cmd, stdout=-1, stderr=-2, shell=True) for cmd in commands])  # nosec
+        return [(f'==> {cmd}', None) for cmd in commands]

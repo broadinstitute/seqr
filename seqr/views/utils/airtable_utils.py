@@ -171,7 +171,7 @@ Desired update:
             records_by_id.update(self._get_samples_for_id_field(missing, 'SeqrCollaboratorSampleID', fields))
         return records_by_id
 
-    def get_samples_for_matched_pdos(self, pdo_statuses, pdo_fields=None, sample_fields=None, additional_sample_filters=None, project_guid=None, required_sample_fields=None):
+    def get_samples_for_matched_pdos(self, pdo_statuses, pdo_fields=None, sample_fields=None, additional_sample_filters=None, project_guid=None, required_sample_fields=None, skip_invalid_pdos=False):
         pdo_fields = pdo_fields or []
         additional_and_filters = [
             f'LEN({{{required_sample_field}}})>0' for required_sample_field in required_sample_fields or []
@@ -215,6 +215,10 @@ Desired update:
 
         if invalid_pdo_samples:
             samples = ', '.join(sorted(invalid_pdo_samples))
-            raise ValueError(f'The following samples are associated with misconfigured PDOs in Airtable: {samples}')
+            error = f'associated with misconfigured PDOs in Airtable: {samples}'
+            if skip_invalid_pdos:
+                logger.warning(f'Skipping samples {error}', self._user)
+            else:
+                raise ValueError(f'The following samples are {error}')
 
-        return {record_id: sample for record_id, sample in sample_records.items() if sample['pdos']}
+        return {record_id: sample for record_id, sample in sample_records.items() if sample.get('pdos')}

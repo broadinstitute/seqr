@@ -642,16 +642,16 @@ The following 1 families failed sex check:
 
         self.assertEqual(mock_email.call_count, 5 if self.ANVIL_EMAIL_CALLS else 4)
         mock_email.assert_has_calls([
-            mock.call(body=TEXT_EMAIL_TEMPLATE.format(2, 'WES', 'Test Reprocessed Project'), subject='New data available in seqr', to=['test_user_manager@test.com']),
+            mock.call(body=TEXT_EMAIL_TEMPLATE.format(2, 'WES', 'Test Reprocessed Project'), subject='New WES data available in seqr', to=['test_user_manager@test.com']),
             mock.call().attach_alternative(HTML_EMAIL_TEMAPLTE.format(2, 'WES', PROJECT_GUID, 'Test Reprocessed Project'), 'text/html'),
             mock.call().send(),
-            mock.call(body=self.PROJECT_EMAIL_TEXT, subject='New data available in seqr', to=['test_user_collaborator@test.com']),
+            mock.call(body=self.PROJECT_EMAIL_TEXT, subject='New WES data available in seqr', to=['test_user_collaborator@test.com']),
             mock.call().attach_alternative(self.PROJECT_EMAIL_HTML, 'text/html'),
             mock.call().send(),
-            mock.call(body=TEXT_EMAIL_TEMPLATE.format(0, 'WES SV', '1kg project nåme with uniçøde'), subject='New data available in seqr', to=['test_user_manager@test.com']),
+            mock.call(body=TEXT_EMAIL_TEMPLATE.format(0, 'WES SV', '1kg project nåme with uniçøde'), subject='New WES SV data available in seqr', to=['test_user_manager@test.com']),
             mock.call().attach_alternative(HTML_EMAIL_TEMAPLTE.format(0, 'WES SV', 'R0001_1kg', '1kg project nåme with uniçøde'), 'text/html'),
             mock.call().send(),
-            mock.call(body=TEXT_EMAIL_TEMPLATE.format(1, 'WES SV', 'Test Reprocessed Project'), subject='New data available in seqr', to=['test_user_manager@test.com']),
+            mock.call(body=TEXT_EMAIL_TEMPLATE.format(1, 'WES SV', 'Test Reprocessed Project'), subject='New WES SV data available in seqr', to=['test_user_manager@test.com']),
             mock.call().attach_alternative(HTML_EMAIL_TEMAPLTE.format(1, 'WES SV', PROJECT_GUID, 'Test Reprocessed Project'), 'text/html'),
             mock.call().send(),
         ] + self.ANVIL_EMAIL_CALLS)

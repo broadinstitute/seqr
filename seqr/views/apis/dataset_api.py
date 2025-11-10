@@ -73,7 +73,7 @@ def _add_new_es_search_samples(request_json, project, user, notify=False, expect
     )
 
     if notify:
-        basic_notify_search_data_loaded(project, dataset_type, sample_type, new_samples.values_list('sample_id'))
+        basic_notify_search_data_loaded(project, dataset_type, sample_type, new_samples.values_list('sample_id', flat=True))
 
     return inactivated_sample_guids, updated_family_guids, updated_samples
 

@@ -130,6 +130,46 @@ export const DATA_TYPE_TPM = 'T'
 export const DATA_TYPE_EXPRESSION_OUTLIER = 'E'
 export const DATA_TYPE_SPLICE_OUTLIER = 'S'
 
+const uploadLabelHelp = (
+  <div>
+    RNA-seq data should be formatted according to&nbsp;
+    <a
+      href="https://github.com/broadinstitute/seqr/blob/master/deploy/LOCAL_INSTALL_HELM.md#loading-rnaseq-datasets"
+      target="_blank"
+      rel="noreferrer"
+    >
+      these guidelines
+    </a>
+    .
+  </div>
+)
+
+export const LOAD_RNA_FIELDS = [
+  {
+    name: 'file',
+    label: 'RNA-seq data',
+    placeholder: 'gs:// Google bucket path for RNA data file',
+    validate: validators.required,
+    labelHelp: uploadLabelHelp,
+  },
+  {
+    name: 'dataType',
+    label: 'Data Type',
+    component: Select,
+    options: [
+      { text: 'Expression Outlier', value: DATA_TYPE_EXPRESSION_OUTLIER, description: 'FRASER2' },
+      { text: 'Splice Outlier', value: DATA_TYPE_SPLICE_OUTLIER, description: 'OUTRIDER' },
+      { text: 'TPM', value: DATA_TYPE_TPM },
+    ],
+    validate: validators.required,
+  },
+  {
+    name: 'ignoreExtraSamples',
+    component: BooleanCheckbox,
+    label: 'Ignore extra samples',
+  },
+]
+
 export const DATASET_TITLE_LOOKUP = {
   [DATASET_TYPE_SV_CALLS]: ' SV',
   [DATASET_TYPE_MITO_CALLS]: ' Mitochondria',

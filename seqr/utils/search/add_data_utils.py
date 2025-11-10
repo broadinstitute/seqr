@@ -20,7 +20,7 @@ from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, BASE_URL, ANVI
 logger = SeqrLogger(__name__)
 
 
-def basic_notify_search_data_loaded(project, dataset_type, sample_type, new_samples, email_template=None, slack_channel=None, include_slack_detail=False):
+def basic_notify_search_data_loaded(project, dataset_type, sample_type, new_samples, email_template=None, is_internal=True):
     msg_dataset_type = '' if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS else f' {dataset_type}'
     num_new_samples = len(new_samples)
     sample_summary = f'{num_new_samples} new {sample_type}{msg_dataset_type} samples'
@@ -29,9 +29,9 @@ def basic_notify_search_data_loaded(project, dataset_type, sample_type, new_samp
         project,
         notification=sample_summary,
         email_template=email_template,
-        subject='New data available in seqr',
-        slack_channel=slack_channel,
-        slack_detail=', '.join(sorted(new_samples)) if include_slack_detail else None,
+        subject=f'New {sample_type}{msg_dataset_type} data available in seqr',
+        slack_channel=SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL if is_internal else SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL,
+        slack_detail=', '.join(sorted(new_samples)) if is_internal else None,
     )
 
 
@@ -49,9 +49,7 @@ def notify_search_data_loaded(project, is_internal, dataset_type, sample_type, n
         ])
 
     basic_notify_search_data_loaded(
-        project, dataset_type, sample_type, new_samples, email_template=email_template,
-        slack_channel=SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL if is_internal else SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL,
-        include_slack_detail=is_internal,
+        project, dataset_type, sample_type, new_samples, email_template=email_template, is_internal=is_internal,
     )
 
     if not is_internal:

@@ -1,7 +1,7 @@
 import { combineReducers } from 'redux'
 
 import { loadingReducer, createSingleValueReducer, createSingleObjectReducer } from 'redux/utils/reducerFactories'
-import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
+import { HttpRequestHelper, loadMultipleData } from 'shared/utils/httpRequestHelper'
 
 // action creators and reducers in one file as suggested by https://github.com/erikras/ducks-modular-redux
 const REQUEST_ELASTICSEARCH_STATUS = 'REQUEST_ELASTICSEARCH_STATUS'
@@ -49,47 +49,8 @@ const submitRequest = (urlPath, receiveDataAction, values) => dispatch => new Ht
 
 export const deleteEsIndex = index => submitRequest('delete_index', RECEIVE_ELASTICSEARCH_STATUS, { index })
 
-const executeMultipleRequests = (requests, onSuccess, warnings) => Promise.all(requests.map(
-  ([entityUrl, entityId, body]) => new HttpRequestHelper(
-    entityUrl,
-    onSuccess,
-    e => warnings.push(`Error loading ${entityId}: ${e.body && e.body.error ? e.body.error : e.message}`),
-  ).post(body),
-))
-
-const loadMultipleData = (
-  path, getUpdateData, dispatchType, formatSuccessMessage, maxConcurrentRequests = 50,
-) => values => (dispatch) => {
-  let successResponseJson = null
-  return new HttpRequestHelper(
-    `/api/data_management/${path}`,
-    (responseJson) => {
-      successResponseJson = responseJson
-    },
-  ).post(values).then(() => {
-    const { info, warnings } = successResponseJson
-    let numLoaded = 0
-    const updateData = getUpdateData(successResponseJson, values)
-    return updateData.reduce((prevPromise, item, index) => {
-      if (index % maxConcurrentRequests === 0) {
-        return prevPromise.then(() => executeMultipleRequests(
-          updateData.slice(index, index + maxConcurrentRequests),
-          () => {
-            numLoaded += 1
-          },
-          warnings,
-        ))
-      }
-      return prevPromise
-    }, Promise.resolve()).then(() => {
-      info.push(formatSuccessMessage(numLoaded))
-      dispatch({ type: dispatchType, newValue: { info, warnings } })
-    })
-  })
-}
-
 export const uploadRnaSeq = loadMultipleData(
-  'update_rna_seq',
+  '/api/data_management/update_rna_seq',
   ({ sampleGuids, fileName }, { dataType }) => sampleGuids.map(sampleGuid => ([
     `/api/load_rna_seq_sample/${sampleGuid}`, sampleGuid, { fileName, dataType },
   ])),
@@ -99,7 +60,7 @@ export const uploadRnaSeq = loadMultipleData(
 )
 
 export const addIgv = loadMultipleData(
-  'add_igv',
+  '/api/data_management/add_igv',
   ({ updates }) => updates.map(({ individualGuid, individualId, ...update }) => ([
     `/api/individual/${individualGuid}/update_igv_sample`, individualId, update,
   ])),

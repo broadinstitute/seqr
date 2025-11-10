@@ -263,7 +263,7 @@ class DatasetAPITest(object):
         self.assert_json_logs(user=None, offset=6, expected=[(
             'Error sending project email for R0004_non_analyst_project: Email server is not configured', {'detail': {
                 'email_body': mock.ANY,
-                'subject': 'New data available in seqr', 'to': ['test_user_collaborator@test.com'],
+                'subject': 'New WES data available in seqr', 'to': ['test_user_collaborator@test.com'],
             },
                 '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent',
                 'severity': 'ERROR',
@@ -277,7 +277,7 @@ class DatasetAPITest(object):
             email_content = f'This is to notify you that data for {count} new {sample_type} samples has been loaded in seqr project <a href={SEQR_URL}/project/{project_guid}/project_page>{project_name}</a>'
         mock_send_email.assert_called_once_with(
             email_body=f'Dear seqr user,\n\n{email_content}\n\nAll the best,\nThe seqr team',
-            subject='New data available in seqr', to=[recipient], process_message=mock.ANY,
+            subject=f'New {sample_type} data available in seqr', to=[recipient], process_message=mock.ANY,
         )
 
     @mock.patch('seqr.utils.file_utils.os.path.isfile', lambda path: True)
