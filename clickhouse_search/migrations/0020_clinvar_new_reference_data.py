@@ -2,7 +2,7 @@
 
 import clickhouse_backend.models
 import clickhouse_search.backend.fields
-from django.db import migrations, models
+from django.db import migrations, models, connections
 import django.db.models.manager
 from string import Template
 
@@ -30,6 +30,14 @@ DISTINCT ON (key) *
 FROM `$reference_genome/$dataset_type/reference_data/clinvar/seqr_variants`
 """)
 
+def build_materialized_view(apps, schema_editor, reference_genome, dataset_type, materialized_view):
+    with connections['clickhouse_write'].cursor() as cursor:
+        cursor.execute(
+            f'SYSTEM REFRESH VIEW `{reference_genome}/{dataset_type}/reference_data/clinvar/{materialized_view}`;'
+        )
+        cursor.execute(
+            f'SYSTEM WAIT VIEW `{reference_genome}/{dataset_type}/reference_data/clinvar/{materialized_view}`;'
+        )
 
 class Migration(migrations.Migration):
     dependencies = [
@@ -503,6 +511,13 @@ class Migration(migrations.Migration):
             ),
             hints={"clickhouse": True},
         ),
+        migrations.RunPython(
+            build_materialized_view,
+            migrations.RunPython.noop,
+            reference_genome="GRCh37",
+            dataset_type="SNV_INDEL",
+            materialized_view="all_variants_to_seqr_variants_mv",
+        ),
         migrations.RunSQL(
             CLINVAR_ALL_TO_SEQR_MV.substitute(
                 reference_genome="GRCh38",
@@ -510,12 +525,26 @@ class Migration(migrations.Migration):
             ),
             hints={"clickhouse": True},
         ),
+        migrations.RunPython(
+            build_materialized_view,
+            migrations.RunPython.noop,
+            reference_genome="GRCh38",
+            dataset_type="SNV_INDEL",
+            materialized_view="all_variants_to_seqr_variants_mv",
+        ),
         migrations.RunSQL(
             CLINVAR_ALL_TO_SEQR_MV.substitute(
                 reference_genome="GRCh38",
                 dataset_type="MITO",
             ),
             hints={"clickhouse": True},
+        ),
+        migrations.RunPython(
+            build_materialized_view,
+            migrations.RunPython.noop,
+            reference_genome="GRCh38",
+            dataset_type="MITO",
+            materialized_view="all_variants_to_seqr_variants_mv",
         ),
         migrations.RunSQL(
             CLINVAR_SEQR_TO_SEARCH_MV.substitute(
@@ -524,6 +553,13 @@ class Migration(migrations.Migration):
             ),
             hints={"clickhouse": True},
         ),
+        migrations.RunPython(
+            build_materialized_view,
+            migrations.RunPython.noop,
+            reference_genome="GRCh37",
+            dataset_type="SNV_INDEL",
+            materialized_view="seqr_variants_to_search_mv",
+        ),
         migrations.RunSQL(
             CLINVAR_SEQR_TO_SEARCH_MV.substitute(
                 reference_genome="GRCh38",
@@ -531,11 +567,25 @@ class Migration(migrations.Migration):
             ),
             hints={"clickhouse": True},
         ),
+        migrations.RunPython(
+            build_materialized_view,
+            migrations.RunPython.noop,
+            reference_genome="GRCh38",
+            dataset_type="SNV_INDEL",
+            materialized_view="seqr_variants_to_search_mv",
+        ),
         migrations.RunSQL(
             CLINVAR_SEQR_TO_SEARCH_MV.substitute(
                 reference_genome="GRCh38",
                 dataset_type="MITO",
             ),
             hints={"clickhouse": True},
+        ),
+        migrations.RunPython(
+            build_materialized_view,
+            migrations.RunPython.noop,
+            reference_genome="GRCh38",
+            dataset_type="MITO",
+            materialized_view="seqr_variants_to_search_mv",
         ),
     ]
