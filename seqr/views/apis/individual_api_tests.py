@@ -245,6 +245,20 @@ class IndividualAPITest(object):
         self.assertEqual(response_json['individualsByGuid'][ID_UPDATE_GUID]['individualId'], UPDATED_ID)
         self.assertEqual(response_json['individualsByGuid'][ID_UPDATE_GUID]['maternalId'], 'NA19679')
 
+        response = self.client.post(edit_individuals_url, content_type='application/json', data=json.dumps({
+            'individuals': [{
+                'individualGuid': INDIVIDUAL_GUID,
+                'familyId': '1',
+                'individualId': 'NA19675_1',
+                'paternalId': '',
+            }]
+        }))
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertSetEqual({INDIVIDUAL_GUID}, set(response_json['individualsByGuid']))
+        self.assertIsNone(response_json['individualsByGuid'][INDIVIDUAL_GUID]['paternalId'])
+        self.assertEqual(response_json['individualsByGuid'][INDIVIDUAL_GUID]['maternalId'], 'NA19679')
+
         # Test PM permission
         pm_required_edit_individuals_url = reverse(edit_individuals_handler, args=[PM_REQUIRED_PROJECT_GUID])
         response = self.client.post(pm_required_edit_individuals_url, content_type='application/json', data=json.dumps({
@@ -526,7 +540,7 @@ class IndividualAPITest(object):
 
         data = 'Family ID	Individual ID	Previous Individual ID	Paternal ID	Maternal ID	Sex	Affected Status	Notes	familyNotes\n\
 "1"	" NA19675_1 "	""	"NA19678 "	"NA19679"	"Female"	"Affected"	"A affected individual, test1-zsf"	""\n\
-"1"	"NA19678"	""	""	""	"XXY"	"Unaffected"	"a individual note"	""\n\
+"1"	"NA19678"	""	""	""	"XXY"	"Affected"	"a individual note"	""\n\
 "4"	"NA20872_update"	"NA20872"	""	""	"Male"	"Affected"	""	""\n\
 "21"	" HG00735"	""	""	""	"Female"	"Affected"	""	"a new family""'
 
@@ -1050,7 +1064,6 @@ class IndividualAPITest(object):
         })
 
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
-    @responses.activate
     def test_import_gregor_metadata(self):
         responses.add(responses.POST, TRIGGER_RELOAD_URL)
         genetic_findings_table = deepcopy(GENETIC_FINDINGS_TABLE)
@@ -1280,8 +1293,6 @@ class IndividualAPITest(object):
         self.assertDictEqual(
             json.loads(new_family_tag.metadata), {'gene_known_for_phenotype': 'Known', 'condition_id': 'MONDO:0044970', 'GREGoR_variant_classification': 'Curation in progress'},
         )
-
-        self._assert_expected_reload_calls(PM_REQUIRED_PROJECT_GUID)
 
         # Test behavior on reload
         responses.calls.reset()

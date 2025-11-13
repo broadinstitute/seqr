@@ -445,7 +445,7 @@ def gregor_export(request):
             f'{", ".join(sorted(missing_airtable))}'
         )
     warnings = [
-        f'The following entries are missing {data_type} airtable data: {", ".join(participants)}'
+        f'The following entries are missing {data_type} airtable data: {", ".join(sorted(participants))}'
         for data_type, participants in sorted(missing_airtable_data_types.items())
     ]
     warnings += [

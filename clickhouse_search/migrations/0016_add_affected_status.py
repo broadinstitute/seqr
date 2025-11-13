@@ -19,7 +19,7 @@ CREATE DICTIONARY `$reference_genome/$dataset_type/gt_stats_dict`
     $columns
 )
 PRIMARY KEY key
-SOURCE(CLICKHOUSE(USER $clickhouse_writer_user PASSWORD $clickhouse_writer_password TABLE `$reference_genome/$dataset_type/gt_stats`))
+SOURCE(CLICKHOUSE(USER '$clickhouse_writer_user' PASSWORD '$clickhouse_writer_password' TABLE `$reference_genome/$dataset_type/gt_stats`))
 LIFETIME(MIN 0 MAX 0)
 LAYOUT(FLAT(MAX_ARRAY_SIZE $size))
 """).safe_substitute(

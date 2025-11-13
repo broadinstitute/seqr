@@ -55,10 +55,14 @@ def update_individual_parents(individual, json, user):
 
 def _parse_parent_field(update_json, all_json, individual, parent_key, parent_id_key):
     updated_parent = all_json.get(parent_id_key) if parent_id_key else all_json.get(parent_key)
+    if updated_parent is None:
+        return
     parent = getattr(individual, parent_key, None)
     if parent_id_key:
         parent = parent.individual_id if parent else None
-    if updated_parent != parent:
+    if parent and not updated_parent:
+        update_json[parent_key] = None
+    elif updated_parent != parent:
         if parent_id_key:
             updated_parent = Individual.objects.get(individual_id=updated_parent, family=individual.family) if updated_parent else None
         update_json[parent_key] = updated_parent

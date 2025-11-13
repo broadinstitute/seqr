@@ -69,42 +69,48 @@ const REQUIRE_SCORE_FIELD = {
   labelHelp: 'Only return variants where at least one filtered predictor is present. By default, variants are returned if a predictor meets the filtered value or is missing entirely',
 }
 
-export const IN_SILICO_FIELDS = [
-  REQUIRE_SCORE_FIELD,
-  ...ORDERED_PREDICTOR_FIELDS.filter(({ displayOnly }) => !displayOnly).map(
-    ({ field, fieldTitle, thresholds, reverseThresholds, indicatorMap, group, min, max, requiresCitation }) => {
-      const label = fieldTitle || snakecaseToTitlecase(field)
-      const filterField = { name: field, label, group }
+const FORMATTED_IN_SILICO_FIELDS = [...ORDERED_PREDICTOR_FIELDS.filter(({ displayOnly }) => !displayOnly).map(
+  ({ field, fieldTitle, thresholds, reverseThresholds, indicatorMap, group, min, max, requiresCitation }) => {
+    const label = fieldTitle || snakecaseToTitlecase(field)
+    const filterField = { name: field, label, group }
 
-      if (indicatorMap) {
-        return {
-          labelHelp: `Select a value for ${label}`,
-          component: Select,
-          options: [
-            { text: '', value: null },
-            ...Object.entries(indicatorMap).map(([val, { value, ...opt }]) => ({ value: val, text: value, ...opt })),
-          ],
-          ...filterField,
-        }
-      }
+    const enumField = (indicatorMap) ? {
+      labelHelp: `Select a value for ${label}`,
+      component: Select,
+      options: [
+        { text: '', value: null },
+        ...Object.entries(indicatorMap).map(([val, { value, ...opt }]) => ({ value: val, text: value, ...opt })),
+      ],
+      ...filterField,
+    } : null
 
-      const labelHelp = (
+    const decimalField = thresholds ? {
+      labelHelp: (
         <div>
           {`Enter a numeric cutoff for ${label}`}
           {thresholds && predictorColorRanges(thresholds, requiresCitation, reverseThresholds)}
         </div>
-      )
-      return {
-        labelHelp,
-        control: Form.Input,
-        type: 'number',
-        min: min || 0,
-        max: max || 1,
-        step: max ? 1 : 0.05,
-        ...filterField,
-      }
-    },
-  )]
+      ),
+      control: Form.Input,
+      type: 'number',
+      min: min || 0,
+      max: max || 1,
+      step: max ? 1 : 0.05,
+      ...filterField,
+    } : null
+    return [enumField, decimalField]
+  },
+)]
+
+const IN_SILICO_FIELDS = [
+  REQUIRE_SCORE_FIELD,
+  ...FORMATTED_IN_SILICO_FIELDS.map(([enumField, decimalField]) => decimalField || enumField),
+]
+
+const ES_ENABLED_IN_SILICO_FIELDS = [
+  REQUIRE_SCORE_FIELD,
+  ...FORMATTED_IN_SILICO_FIELDS.map(([enumField, decimalField]) => enumField || decimalField),
+]
 
 const VARIANT_FIELD_NAME = 'rawVariantItems'
 const SELECTED_MOIS_FIELD_NAME = 'selectedMOIs'
@@ -523,6 +529,7 @@ export const IN_SILICO_PANEL = {
   name: 'in_silico',
   headerProps: { title: 'In Silico Filters' },
   fields: IN_SILICO_FIELDS,
+  esEnabledFields: ES_ENABLED_IN_SILICO_FIELDS,
   fieldLayout: inSilicoFieldLayout,
   fieldLayoutInput: [...NO_SV_IN_SILICO_GROUPS, SV_IN_SILICO_GROUP],
   datasetTypeFieldLayoutInput: {

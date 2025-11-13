@@ -144,3 +144,46 @@ export class HttpRequestHelper {
     })
 
 }
+
+const executeMultipleRequests = (requests: any[], onSuccess: (response: unknown, successArg: unknown) => void | null, warnings: string[]) => Promise.all(requests.map(
+  ([entityUrl, entityId, body]) => new HttpRequestHelper(
+    entityUrl,
+    onSuccess,
+    (e: Record<string, Record<string, any>>) => warnings.push(`Error loading ${entityId}: ${e.body && e.body.error ? e.body.error : e.message}`),
+  ).post(body),
+))
+
+export const loadMultipleData = (
+  url: string,
+  getUpdateData: (successResponseJson: Record<string, (string[] | any)>, values: Record<string, unknown>) => any[],
+  dispatchType: string,
+  formatSuccessMessage: (numLoaded: number) => string,
+  maxConcurrentRequests: number = 50,
+) => (values: Record<string, unknown>) => (dispatch: (args: Record<string, unknown>) => void) => {
+  let successResponseJson: Record<string, unknown> | null = null
+  return new HttpRequestHelper(
+    url,
+    (responseJson: Record<string, unknown>) => {
+      successResponseJson = responseJson
+    },
+  ).post(values).then(() => {
+    const { info, warnings } = successResponseJson as Record<string, string[]>
+    let numLoaded = 0
+    const updateData = getUpdateData(successResponseJson, values)
+    return updateData.reduce((prevPromise, item, index) => {
+      if (index % maxConcurrentRequests === 0) {
+        return prevPromise.then(() => executeMultipleRequests(
+          updateData.slice(index, index + maxConcurrentRequests),
+          () => {
+            numLoaded += 1
+          },
+          warnings,
+        ))
+      }
+      return prevPromise
+    }, Promise.resolve()).then(() => {
+      info.push(formatSuccessMessage(numLoaded))
+      dispatch({ type: dispatchType, newValue: { info, warnings } })
+    })
+  })
+}

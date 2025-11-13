@@ -16,14 +16,22 @@ import TRIGGER_SEARCH_DATA_UPDATE_PAGES from './components/TriggerSearchDataUpda
 
 const IFRAME_STYLE = { position: 'fixed', left: '0', top: '95px' }
 
-const PM_DATA_MANAGEMENT_PAGES = [
+const LOCAL_PM_DATA_MANAGEMENT_PAGES = [
   { path: 'load_data', component: LoadData },
   { path: 'add_igv', component: AddIGV },
+]
+
+const NON_LOCAL_PAGES = [
   { path: 'rna_seq', component: RnaSeq },
 ]
 
+const PM_DATA_MANAGEMENT_PAGES = [
+  ...LOCAL_PM_DATA_MANAGEMENT_PAGES,
+  ...NON_LOCAL_PAGES,
+]
+
 const DATA_MANAGEMENT_PAGES = [
-  ...PM_DATA_MANAGEMENT_PAGES,
+  ...LOCAL_PM_DATA_MANAGEMENT_PAGES,
   { path: 'users', component: Users },
   { path: 'phenotype_prioritization', component: PhenotypePrioritization },
 ]
@@ -44,17 +52,25 @@ const ES_DATA_MANAGEMENT_PAGES = [
   ...DATA_MANAGEMENT_PAGES,
 ]
 
-const CLICKHOUSE_DATA_MANAGEMENT_PAGES = [
+const LOCAL_CLICKHOUSE_DATA_MANAGEMENT_PAGES = [
   ...DATA_MANAGEMENT_PAGES,
   { path: 'pipeline_status', component: () => <IframePage title="Loading UI" src="/luigi_ui/static/visualiser/index.html" /> },
   ...TRIGGER_SEARCH_DATA_UPDATE_PAGES,
 ]
 
+const CLICKHOUSE_DATA_MANAGEMENT_PAGES = [
+  ...LOCAL_CLICKHOUSE_DATA_MANAGEMENT_PAGES,
+  ...NON_LOCAL_PAGES,
+]
+
 const dataManagementPages = (user, elasticsearchEnabled) => {
   if (!user.isDataManager) {
-    return PM_DATA_MANAGEMENT_PAGES
+    return user.isAnvil ? LOCAL_PM_DATA_MANAGEMENT_PAGES : PM_DATA_MANAGEMENT_PAGES
   }
-  return elasticsearchEnabled ? ES_DATA_MANAGEMENT_PAGES : CLICKHOUSE_DATA_MANAGEMENT_PAGES
+  if (elasticsearchEnabled) {
+    return ES_DATA_MANAGEMENT_PAGES
+  }
+  return user.isAnvil ? CLICKHOUSE_DATA_MANAGEMENT_PAGES : LOCAL_CLICKHOUSE_DATA_MANAGEMENT_PAGES
 }
 
 const DataManagement = ({ match, user, pages }) => (

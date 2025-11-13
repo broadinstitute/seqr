@@ -246,29 +246,29 @@ SAMPLE_GENE_TPM_DATA = [
 ]
 SAMPLE_GENE_SPLICE_DATA = [
     {
-        'chrom': 'chr2', 'start': '167254166', 'end': '167258349', 'strand': '*', 'type': 'psi3',
+        'gene_id': 'ENSG00000233750', 'chrom': 'chr2', 'start': '167254166', 'end': '167258349', 'strand': '*', 'type': 'psi3',
         'p_value': '1.56e-25', 'p_adjust': '-4.9', 'delta_intron_jaccard_index': '-0.46', 'counts': '166',
         'mean_counts': '16.6', 'total_counts': '1660', 'mean_total_counts': '1.66',
-        'rare_disease_samples_with_this_junction': '1', 'rare_disease_samples_total': '20', 'gene_id': 'ENSG00000233750',
+        'rare_disease_samples_with_this_junction': '1', 'rare_disease_samples_total': '20',
     },
     {
-        'chrom': 'chr2', 'start': '167254166', 'end': '167258349', 'strand': '*', 'type': 'psi3',
+        'gene_id': 'ENSG00000240361', 'chrom': 'chr2', 'start': '167254166', 'end': '167258349', 'strand': '*', 'type': 'psi3',
         'p_value': '1.56e-25', 'p_adjust': '-4.9', 'delta_intron_jaccard_index': '-0.46', 'counts': '166',
         'mean_counts': '16.6', 'total_counts': '1660', 'mean_total_counts': '1.66',
-        'rare_disease_samples_with_this_junction': '1', 'rare_disease_samples_total': '20', 'gene_id': 'ENSG00000240361',
+        'rare_disease_samples_with_this_junction': '1', 'rare_disease_samples_total': '20',
     },
     {
-        'chrom': 'chr7', 'start': '132885746', 'end': '132975168', 'strand': '*', 'type': 'psi5',
+        'gene_id': 'ENSG00000240361', 'chrom': 'chr7', 'start': '132885746', 'end': '132975168', 'strand': '*', 'type': 'psi5',
         'p_value': '1.08e-56', 'p_adjust': '-6.53', 'delta_intron_jaccard_index': '-0.85', 'counts': '231',
         'mean_counts': '0.231', 'total_counts': '2313', 'mean_total_counts': '231.3',
-        'rare_disease_samples_with_this_junction': '1', 'rare_disease_samples_total': '20', 'gene_id': 'ENSG00000240361',
+        'rare_disease_samples_with_this_junction': '1', 'rare_disease_samples_total': '20',
     },
 ]
 SAMPLE_GENE_SPLICE_DATA2 = {
-        'chrom': 'chr2', 'start': '167258096', 'end': '167258349', 'strand': '*', 'type': 'psi3',
+        'gene_id': '', 'chrom': 'chr2', 'start': '167258096', 'end': '167258349', 'strand': '*', 'type': 'psi3',
         'p_value': '1.56e-25', 'p_adjust': '6.33', 'delta_intron_jaccard_index': '0.45', 'counts': '143',
         'mean_counts': '14.3', 'total_counts': '1433', 'mean_total_counts': '143.3',
-        'rare_disease_samples_with_this_junction': '1', 'rare_disease_samples_total': '20', 'gene_id': '',
+        'rare_disease_samples_with_this_junction': '1', 'rare_disease_samples_total': '20',
     }
 RNA_OUTLIER_SAMPLE_DATA = {
     RNA_OUTLIER_MUSCLE_SAMPLE_GUID: '\n'.join([json.dumps(row) for row in SAMPLE_GENE_OUTLIER_DATA]) + '\n',
@@ -283,6 +283,9 @@ RNA_SPLICE_SAMPLE_DATA = {
     PLACEHOLDER_GUID: json.dumps(SAMPLE_GENE_SPLICE_DATA2) + '\n',
 }
 RNA_FILENAME_TEMPLATE = 'rna_sample_data__{}__2020-04-15T00:00:00'
+RNA_OUTLIER_REQUIRED_COLUMNS = 'geneID, pValue, padjust, sampleID, zScore'
+RNA_TPM_REQUIRED_COLUMNS = 'Name OR gene_id, TPM, sample_id'
+RNA_SPLICE_OUTLIER_REQUIRED_COLUMNS = 'chrom OR seqnames, counts, deltaIntronJaccardIndex OR deltaPsi, end, geneID OR hgncSymbol, meanCounts, meanTotalCounts, pAdjust OR padjust, pValue, sampleID, start, strand, totalCounts, type'
 
 PHENOTYPE_PRIORITIZATION_HEADER = [['tool', 'project', 'sampleId', 'rank', 'geneId', 'diseaseId', 'diseaseName',
                                    'scoreName1', 'score1', 'scoreName2', 'score2', 'scoreName3', 'score3']]
@@ -454,6 +457,52 @@ INVALID_AIRTABLE_SAMPLE_RECORDS = {
     ],
 }
 
+AIRTABLE_RNA_SAMPLE_RECORDS = [
+    {
+        'id': 'recW24C2CJW5lT75K',
+        'fields': {
+            'SeqrCollaboratorSampleID': 'NA19675_1',
+            'CollaboratorSampleID': 'NA19675_D2',
+            'SeqrProject': ['https://seqr.broadinstitute.org/project/R0001_1kg/project_page'],
+            'PDOStatus': ['RNA ready to load'],
+        }
+    },
+    {
+        'id': 'recW56C2CJW5lT6c5',
+        'fields': {
+            'CollaboratorSampleID': 'NA19678',
+            'SeqrProject': [
+                'https://seqr.broadinstitute.org/project/R0001_1kg/project_page',
+                'https://seqr.broadinstitute.org/project/R0003_test/project_page',
+            ],
+            'PDOStatus': ['RNA ready to load', 'Available in seqr'],
+            'TissueOfOrigin': ['Muscle'],
+        }
+    },
+    {
+        'id': 'recW56C2CJW5lT75x',
+        'fields': {
+            'CollaboratorSampleID': 'NA20888',
+            'SeqrProject': ['https://seqr.broadinstitute.org/project/R0003_test/project_page'],
+            'PDOStatus': ['RNA ready to load'],
+            'TissueOfOrigin': ['Muscle'],
+        }
+    },
+    {
+        'id': 'rec2B6OGmVpAkQW3s',
+        'fields': {
+            'CollaboratorSampleID': 'NA12345',
+            'SeqrProject': [
+                'https://seqr.broadinstitute.org/project/R0002_empty/project_page',
+                'https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page',
+            ],
+            'PDOStatus': ['RNA ready to load', 'RNA ready to load'],
+            'TissueOfOrigin': ['Muscle', 'Brain'],
+        }
+    },
+    *INVALID_AIRTABLE_SAMPLE_RECORDS['records'],
+]
+
 VCF_SAMPLES = [
     'ABC123', 'NA19675_1', 'NA19678', 'NA19679', 'HG00731', 'HG00732', 'HG00733', 'NA20874', 'NA21234', 'NA21987',
 ]
@@ -618,116 +667,82 @@ class DataManagerAPITest(AirtableTest):
         self._test_request_proxy('pipeline-runner-ui:8082', url, proxy_path='/api/task_list')
 
     RNA_DATA_TYPE_PARAMS = {
-        'outlier': {
+        'E': {
             'model_cls': RnaSeqOutlier,
-            'data_type': 'E',
             'message_data_type': 'Expression Outlier',
-            'header': ['sampleID', 'project', 'geneID', 'tissue', 'detail', 'pValue', 'padjust', 'zScore'],
-            'optional_headers': ['detail'],
-            'loaded_data_row': ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000240361', 'muscle', 'detail1', 0.01, 0.001, -3.1],
-            'no_existing_data': ['NA19678', '1kg project nåme with uniçøde', 'ENSG00000233750', 'muscle', 'detail1', 0.064, '0.0000057', 7.8],
-            'duplicated_indiv_id_data': [
-                ['NA20870', 'Test Reprocessed Project', 'ENSG00000233750', 'muscle', 'detail1', 0.064, '0.0000057', 7.8],
-                ['NA20870', '1kg project nåme with uniçøde', 'ENSG00000240361', 'fibroblasts', 'detail2', 0.01, 0.13, -3.1],
-            ],
-            'write_data': {
-                '{"gene_id": "ENSG00000233750", "p_value": "0.064", "p_adjust": "0.0000057", "z_score": "7.8"}\n',
-                '{"gene_id": "ENSG00000240361", "p_value": "0.01", "p_adjust": "0.13", "z_score": "-3.1"}\n'
-            },
+            'header': ['sampleID', 'geneID', 'detail', 'pValue', 'padjust', 'zScore'],
+            'required_columns': RNA_OUTLIER_REQUIRED_COLUMNS,
+            'loaded_data_row': ['NA19675_D2', 'ENSG00000240361', 'detail1', 0.01, 0.001, -3.1],
+            'no_existing_data': ['NA19678', 'ENSG00000233750', 'detail1', 0.064, '0.0000057', 7.8],
             'new_data': [
-                ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000240361', 'muscle', 'detail1', 0.01, 0.13, -3.1],
-                ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000240361', 'muscle', 'detail2', 0.01, 0.13, -3.1],
-                ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000233750', 'muscle', 'detail1', 0.064, '0.0000057', 7.8],
-                ['NA19675_D3', 'Test Reprocessed Project', 'ENSG00000233750', 'muscle', 'detail1', 0.064, '0.0000057', 7.8],
-                ['NA20888', 'Test Reprocessed Project', 'ENSG00000240361', 'muscle', '', 0.04, 0.112, 1.9],
+                ['NA19675_D2', 'ENSG00000240361', 'detail1', 0.01, 0.13, -3.1],
+                ['NA19675_D2', 'ENSG00000240361', 'detail2', 0.01, 0.13, -3.1],
+                ['NA19675_D2', 'ENSG00000233750', 'detail1', 0.064, '0.0000057', 7.8],
+                ['NA19675_D3', 'ENSG00000233750', 'detail1', 0.064, '0.0000057', 7.8],
+                ['NA20888', 'ENSG00000240361', '', 0.04, 0.112, 1.9],
             ],
-            'skipped_samples': 'NA19675_D3 (Test Reprocessed Project)',
-            'sample_tissue_type': 'M',
+            'skipped_samples': 'NA19675_D3',
+            'sample_tissue_type': 'Muscle',
             'num_parsed_samples': 3,
             'initial_model_count': 3,
             'parsed_file_data': RNA_OUTLIER_SAMPLE_DATA,
             'sample_guid': RNA_OUTLIER_MUSCLE_SAMPLE_GUID,
         },
-        'tpm': {
+        'T': {
             'model_cls': RnaSeqTpm,
-            'data_type': 'T',
             'message_data_type': 'Expression',
-            'header': ['sample_id', 'project', 'gene_id', 'individual_id', 'tissue', 'TPM'],
-            'optional_headers': ['individual_id'],
-            'loaded_data_row': ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000135953', 'NA19675_D3', 'muscle', 1.34],
-            'no_existing_data': ['NA19678', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19678', 'muscle', 0.064],
-            'duplicated_indiv_id_data': [
-                ['NA20870', 'Test Reprocessed Project', 'ENSG00000240361', 'NA20870', 'muscle', 7.8],
-                ['NA20870', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA20870', 'fibroblasts', 0.0],
-            ],
-            'write_data': {'{"gene_id": "ENSG00000240361", "tpm": "7.8"}\n',
-                           '{"gene_id": "ENSG00000233750", "tpm": "0.0"}\n'},
+            'header': ['sample_id', 'gene_id', 'TPM', 'Description'],
+            'required_columns': RNA_TPM_REQUIRED_COLUMNS,
+            'loaded_data_row': ['NA19675_D2', 'ENSG00000135953', 1.34, ''],
+            'no_existing_data': ['NA19678', 'ENSG00000233750', 0.064, ''],
             'new_data': [
                 # existing sample NA19675_D2
-                ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000240361', 'NA19675_D2', 'muscle', 7.8],
-                ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19675_D2', 'muscle', 0.0],
+                ['NA19675_D2', 'ENSG00000240361', 7.8, 'some gene of interest'],
+                ['NA19675_D2', 'ENSG00000233750', 0.0, ''],
                 # no matched individual NA19675_D3
-                ['NA19675_D3', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19675_D3', 'fibroblasts', 0.064],
+                ['NA19675_D3', 'ENSG00000233750', 0.064, ''],
                 # a different project sample NA20888
-                ['NA20888', 'Test Reprocessed Project', 'ENSG00000240361', 'NA20888', 'muscle', 0.112],
+                ['NA20888', 'ENSG00000240361', 0.112, ''],
                 # a project mismatched sample NA20878
-                ['NA20878', 'Test Reprocessed Project', 'ENSG00000233750', 'NA20878', 'fibroblasts', 0.064],
+                ['NA20878', 'ENSG00000233750', 0.064, ''],
             ],
-            'skipped_samples': 'NA19675_D3 (1kg project nåme with uniçøde), NA20878 (Test Reprocessed Project)',
-            'sample_tissue_type': 'M',
+            'skipped_samples': 'NA19675_D3, NA20878',
+            'sample_tissue_type': 'Muscle',
             'num_parsed_samples': 4,
             'initial_model_count': 4,
             'deleted_count': 3,
             'parsed_file_data': RNA_TPM_SAMPLE_DATA,
             'sample_guid': RNA_TPM_MUSCLE_SAMPLE_GUID,
         },
-        'splice_outlier': {
+        'S': {
             'model_cls': RnaSeqSpliceOutlier,
-            'data_type': 'S',
             'message_data_type': 'Splice Outlier',
-            'header': ['sampleID', 'projectName', 'geneID', 'chrom', 'start', 'end', 'strand', 'type', 'pValue', 'pAdjust',
-                       'deltaIntronJaccardIndex', 'counts', 'meanCounts', 'totalCounts', 'meanTotalCounts', 'tissue', 'rareDiseaseSamplesWithThisJunction',
+            'header': ['sampleID', 'geneID', 'chrom', 'start', 'end', 'strand', 'type', 'pValue', 'pAdjust',
+                       'deltaIntronJaccardIndex', 'counts', 'meanCounts', 'totalCounts', 'meanTotalCounts', 'rareDiseaseSamplesWithThisJunction',
                        'rareDiseaseSamplesTotal'],
-            'optional_headers': [],
-            'loaded_data_row': ['NA19675_1', '1kg project nåme with uniçøde', 'ENSG00000240361', 'chr7', 132885746, 132886973, '*',
-                                'psi5', 1.08E-56, 3.08E-56, 12.34, 1297, 197, 129, 1297, 'fibroblasts', 0.53953638, 1, 20],
-            'no_existing_data': ['NA19678', '1kg project nåme with uniçøde', 'ENSG00000240361', 'chr7', 132885746, 132886973, '*',
-                                'psi5', 1.08E-56, 3.08E-56, 12.34, 1297, 197, 129, 1297, 'fibroblasts', 0.53953638, 1, 20],
-            'duplicated_indiv_id_data': [
-                ['NA20870', 'Test Reprocessed Project', 'ENSG00000233750', 'chr2', 167258096, 167258349, '*',
-                 'psi3', 1.56E-25, 6.33, 0.45, 143, 143, 143, 143, 'fibroblasts', 1, 20],
-                ['NA20870', '1kg project nåme with uniçøde', 'ENSG00000135953', 'chr2', 167258096, 167258349, '*',
-                 'psi3', 1.56E-25, 6.33, 0.45, 143, 143, 143, 143, 'muscle', 1, 20],
-            ],
-            'write_data': {'{"chrom": "chr2", "start": "167258096",'
-                           ' "end": "167258349", "strand": "*", "type": "psi3", "p_value": "1.56e-25", "p_adjust": "6.33",'
-                           ' "delta_intron_jaccard_index": "0.45", "counts": "143",'
-                           ' "mean_counts": "143", "total_counts": "143", "mean_total_counts": "143",'
-                           ' "rare_disease_samples_with_this_junction": "1", "rare_disease_samples_total": "20", "gene_id": "ENSG00000233750"}\n',
-                           '{"chrom": "chr2", "start": "167258096",'
-                           ' "end": "167258349", "strand": "*", "type": "psi3", "p_value": "1.56e-25", "p_adjust": "6.33",'
-                           ' "delta_intron_jaccard_index": "0.45", "counts": "143",'
-                           ' "mean_counts": "143", "total_counts": "143", "mean_total_counts": "143",'
-                           ' "rare_disease_samples_with_this_junction": "1", "rare_disease_samples_total": "20", "gene_id": "ENSG00000135953"}\n',
-            },
+            'required_columns': RNA_SPLICE_OUTLIER_REQUIRED_COLUMNS,
+            'loaded_data_row': ['NA19675_1', 'ENSG00000240361', 'chr7', 132885746, 132886973, '*',
+                                'psi5', 1.08E-56, 3.08E-56, 12.34, 1297, 197, 129, 1297, 0.53953638, 1, 20],
+            'no_existing_data': ['NA19678', 'ENSG00000240361', 'chr7', 132885746, 132886973, '*',
+                                'psi5', 1.08E-56, 3.08E-56, 12.34, 1297, 197, 129, 1297, 0.53953638, 1, 20],
             'new_data': [
                 # existing sample NA19675_1
-                ['NA19675_1', '1kg project nåme with uniçøde', 'ENSG00000233750;ENSG00000240361', 'chr2', 167254166, 167258349, '*', 'psi3',
-                 1.56E-25, -4.9, -0.46, 166, 16.6, 1660, 1.66, 'fibroblasts', 1, 20],
-                ['NA19675_1', '1kg project nåme with uniçøde', 'ENSG00000240361', 'chr7', 132885746, 132975168, '*', 'psi5',
-                 1.08E-56, -6.53, -0.85, 231, 0.231, 2313, 231.3, 'fibroblasts', 1, 20],
+                ['NA19675_1', 'ENSG00000233750;ENSG00000240361', 'chr2', 167254166, 167258349, '*', 'psi3',
+                 1.56E-25, -4.9, -0.46, 166, 16.6, 1660, 1.66, 1, 20],
+                ['NA19675_1', 'ENSG00000240361', 'chr7', 132885746, 132975168, '*', 'psi5',
+                 1.08E-56, -6.53, -0.85, 231, 0.231, 2313, 231.3, 1, 20],
                 # no matched individual NA19675_D3
-                ['NA19675_D3', '1kg project nåme with uniçøde', 'ENSG00000233750', 'chr2', 167258096, 167258349, '*',
-                 'psi3', 1.56E-25, 6.33, 0.45, 143, 14.3, 1433, 143.3, 'muscle', 1, 20],
+                ['NA19675_D3', 'ENSG00000233750', 'chr2', 167258096, 167258349, '*',
+                 'psi3', 1.56E-25, 6.33, 0.45, 143, 14.3, 1433, 143.3, 1, 20],
                 # a new sample NA20888
-                ['NA20888', 'Test Reprocessed Project', '', 'chr2', 167258096, 167258349, '*',
-                 'psi3', 1.56E-25, 6.33, 0.45, 143, 14.3, 1433, 143.3, 'fibroblasts', 1, 20],
+                ['NA20888', '', 'chr2', 167258096, 167258349, '*',
+                 'psi3', 1.56E-25, 6.33, 0.45, 143, 14.3, 1433, 143.3, 1, 20],
                 # a project mismatched sample NA20878
-                ['NA20878', 'Test Reprocessed Project', 'ENSG00000233750', 'chr2', 167258096, 167258349, '*', 'psi3',
-                 1.56E-25, 6.33, 0.45, 143, 14.3, 1433, 143.3, 'fibroblasts', 1, 20],
+                ['NA20878', 'ENSG00000233750', 'chr2', 167258096, 167258349, '*', 'psi3',
+                 1.56E-25, 6.33, 0.45, 143, 14.3, 1433, 143.3, 1, 20],
             ],
-            'skipped_samples': 'NA19675_D3 (1kg project nåme with uniçøde), NA20878 (Test Reprocessed Project)',
-            'sample_tissue_type': 'F',
+            'skipped_samples': 'NA19675_D3, NA20878',
+            'sample_tissue_type': 'Fibroblast',
             'num_parsed_samples': 4,
             'initial_model_count': 7,
             'deleted_count': 4,
@@ -737,13 +752,20 @@ class DataManagerAPITest(AirtableTest):
         },
     }
 
-    def _has_expected_file_loading_logs(self, file, user, info=None, warnings=None, additional_logs=None, additional_logs_offset=None):
+    def _has_expected_file_loading_logs(self, file, user, info=None, warnings=None, additional_logs=None, additional_logs_offset=None, include_airtable_logs=False):
         expected_logs = [
             (f'==> gsutil ls {file}', None),
             (f'==> gsutil cat {file} | gunzip -c -q - ', None),
         ] + [(info_log, None) for info_log in info or []] + [
             (warn_log, {'severity': 'WARNING'}) for warn_log in warnings or []
         ]
+        if include_airtable_logs:
+            expected_logs = [
+                ('Fetching Samples records 0-1 from airtable', None),
+                ('Fetched 6 Samples records from airtable', None),
+                ('Skipping samples associated with misconfigured PDOs in Airtable: HG00731, NA21234', {'severity': 'WARNING'}),
+                ('Skipping samples associated with multiple conflicting PDOs in Airtable: NA12345', {'severity': 'WARNING'}),
+            ] + expected_logs
         if additional_logs:
             if additional_logs_offset:
                 for log in reversed(additional_logs):
@@ -754,6 +776,7 @@ class DataManagerAPITest(AirtableTest):
         self.assert_json_logs(user, expected_logs)
 
     def _check_rna_sample_model(self, individual_id, data_source, data_type, tissue_type, is_active_sample=True):
+        tissue_type = tissue_type[0]
         rna_samples = RnaSample.objects.filter(
             individual_id=individual_id, tissue_type=tissue_type, data_source=data_source, data_type=data_type,
         )
@@ -764,26 +787,27 @@ class DataManagerAPITest(AirtableTest):
         return sample.guid
 
     def test_update_rna_outlier(self, *args, **kwargs):
-        self._test_update_rna_seq('outlier', *args, **kwargs)
+        self._test_update_rna_seq('E', *args, **kwargs)
 
     def test_update_rna_tpm(self, *args, **kwargs):
-        self._test_update_rna_seq('tpm', *args, **kwargs)
+        self._test_update_rna_seq('T', *args, **kwargs)
 
     def test_update_rna_splice_outlier(self, *args, **kwargs):
-        self._test_update_rna_seq('splice_outlier', *args, **kwargs)
+        self._test_update_rna_seq('S', *args, **kwargs)
 
+    @mock.patch('seqr.views.utils.airtable_utils.BASE_URL', 'https://seqr.broadinstitute.org/')
     @mock.patch('seqr.utils.communication_utils.BASE_URL', 'https://test-seqr.org/')
-    @mock.patch('seqr.views.utils.dataset_utils.SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL', 'seqr-data-loading')
+    @mock.patch('seqr.utils.search.add_data_utils.SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL', 'seqr-data-loading')
     @mock.patch('seqr.views.utils.file_utils.tempfile.gettempdir', lambda: 'tmp/')
     @mock.patch('seqr.utils.communication_utils.send_html_email')
     @mock.patch('seqr.utils.communication_utils.safe_post_to_slack')
     @mock.patch('seqr.views.utils.dataset_utils.datetime')
     @mock.patch('seqr.views.utils.dataset_utils.os.mkdir')
     @mock.patch('seqr.views.utils.dataset_utils.os.rename')
-    @mock.patch('seqr.views.apis.data_manager_api.load_uploaded_file')
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     @mock.patch('seqr.views.utils.dataset_utils.gzip.open')
-    def _test_update_rna_seq(self, data_type, mock_open, mock_subprocess, mock_load_uploaded_file,
+    @responses.activate
+    def _test_update_rna_seq(self, data_type, mock_open, mock_subprocess,
                             mock_rename, mock_mkdir, mock_datetime, mock_send_slack, mock_send_email):
         url = reverse(update_rna_seq)
         self.check_pm_login(url)
@@ -792,17 +816,19 @@ class DataManagerAPITest(AirtableTest):
         model_cls = params['model_cls']
         header = params['header']
         loaded_data_row = params['loaded_data_row']
+        samples_url = 'https://api.airtable.com/v0/app3Y97xtbbaOopVR/Samples'
+        responses.add(responses.GET, samples_url, json={'records': []})
 
         # Test errors
         body = {'dataType': data_type, 'file': 'gs://rna_data/muscle_samples.tsv'}
         mock_datetime.now.return_value = datetime(2020, 4, 15)
-        mock_load_uploaded_file.return_value = [['a']]
-        mock_load_uploaded_file.return_value = [['a']]
         mock_does_file_exist = mock.MagicMock()
         mock_does_file_exist.wait.return_value = 1
         mock_subprocess.side_effect = [mock_does_file_exist]
-        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
-        self.assertEqual(response.status_code, 400)
+        self.reset_logs()
+        response = self._assert_expected_pm_access(
+            lambda: self.client.post(url, content_type='application/json', data=json.dumps(body)), status_code=400,
+        )
         self.assertDictEqual(response.json(), {'error': 'File not found: gs://rna_data/muscle_samples.tsv'})
 
         mock_does_file_exist.wait.return_value = 0
@@ -823,33 +849,34 @@ class DataManagerAPITest(AirtableTest):
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {
-            'error': f'Invalid file: missing column(s): '
-                     f'{", ".join(sorted([col for col in header if col not in params["optional_headers"]]))}',
+            'error': f'Invalid file: missing column(s): {params["required_columns"]}',
         })
 
-        mapping_body = {'mappingFile': {'uploadedFileId': 'map.tsv'}}
-        body.update(mapping_body)
-        mock_subprocess.side_effect = [mock_does_file_exist, mock_file_iter]
+        _set_file_iter_stdout([header, loaded_data_row])
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'error': 'Must contain 2 columns: a'})
+        self.assertDictEqual(response.json(), {'errors': [f'Unable to find matches for the following samples: {loaded_data_row[0]}'], 'warnings': None})
 
-        mock_load_uploaded_file.return_value = [['NA19675_D2', 'NA19675_1']]
-        missing_sample_row = ['NA19675_D3'] + loaded_data_row[1:]
-        _set_file_iter_stdout([header, loaded_data_row, missing_sample_row])
-        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
-        self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'errors': ['Unable to find matches for the following samples: NA19675_D3 (1kg project nåme with uniçøde)'], 'warnings': None})
-
-        unknown_gene_id_row1 = loaded_data_row[:2] + ['NOT_A_GENE_ID1'] + loaded_data_row[3:]
-        unknown_gene_id_row2 = loaded_data_row[:2] + ['NOT_A_GENE_ID2'] + loaded_data_row[3:]
+        airtable_sample_records = [
+            {
+                **AIRTABLE_RNA_SAMPLE_RECORDS[0],
+                'fields': {
+                    **AIRTABLE_RNA_SAMPLE_RECORDS[0]['fields'],
+                    'TissueOfOrigin': [params['sample_tissue_type']],
+                }
+            },
+            *AIRTABLE_RNA_SAMPLE_RECORDS[1:],
+        ]
+        responses.replace(responses.GET, samples_url, json={'records': airtable_sample_records})
+        unknown_gene_id_row1 = loaded_data_row[:1] + ['NOT_A_GENE_ID1'] + loaded_data_row[2:]
+        unknown_gene_id_row2 = loaded_data_row[:1] + ['NOT_A_GENE_ID2'] + loaded_data_row[2:]
         _set_file_iter_stdout([header, unknown_gene_id_row1, unknown_gene_id_row2])
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['errors'][0], 'Unknown Gene IDs: NOT_A_GENE_ID1, NOT_A_GENE_ID2')
 
         if not params.get('allow_missing_gene'):
-            _set_file_iter_stdout([header, loaded_data_row[:2] + [''] + loaded_data_row[3:]])
+            _set_file_iter_stdout([header, loaded_data_row[:1] + [''] + loaded_data_row[2:]])
             response = self.client.post(url, content_type='application/json', data=json.dumps(body))
             self.assertEqual(response.status_code, 400)
             self.assertEqual(response.json()['errors'][0], 'Samples missing required "gene_id": NA19675_D2')
@@ -868,7 +895,7 @@ class DataManagerAPITest(AirtableTest):
         ]
         warnings = ['Skipped loading for 1 samples already loaded from this file']
         self.assertDictEqual(response.json(), {'info': info, 'warnings': warnings, 'sampleGuids': [], 'fileName': mock.ANY})
-        self._has_expected_file_loading_logs('gs://rna_data/muscle_samples.tsv.gz', info=info, warnings=warnings, user=self.pm_user)
+        self._has_expected_file_loading_logs('gs://rna_data/muscle_samples.tsv.gz', info=info, warnings=warnings, user=self.data_manager_user, include_airtable_logs=True)
         self.assertEqual(model_cls.objects.count(), params['initial_model_count'])
         mock_send_slack.assert_not_called()
         mock_send_email.assert_not_called()
@@ -881,6 +908,7 @@ class DataManagerAPITest(AirtableTest):
         def _test_basic_data_loading(data, num_parsed_samples, num_loaded_samples, new_sample_individual_id, body,
                                      project_names, num_created_samples=1, warnings=None, additional_logs=None):
             self.reset_logs()
+            responses.calls.reset()
             _set_file_iter_stdout([header] + data)
             response = self.client.post(url, content_type='application/json', data=json.dumps(body))
             self.assertEqual(response.status_code, 200)
@@ -890,13 +918,13 @@ class DataManagerAPITest(AirtableTest):
                 f'Attempted data loading for {num_loaded_samples} RNA-seq samples in the following {num_projects}'
                 f' projects: {project_names}'
             ]
-            file_name = RNA_FILENAME_TEMPLATE.format(params['data_type'])
+            file_name = RNA_FILENAME_TEMPLATE.format(data_type)
             response_json = response.json()
             self.assertDictEqual(response_json, {'info': info, 'warnings': warnings or [], 'sampleGuids': mock.ANY,
                                                  'fileName': file_name})
             new_sample_guid = self._check_rna_sample_model(
-                individual_id=new_sample_individual_id, data_source='new_muscle_samples.tsv.gz', data_type=params['data_type'],
-                tissue_type=params.get('sample_tissue_type'), is_active_sample=False,
+                individual_id=new_sample_individual_id, data_source='new_muscle_samples.tsv.gz', data_type=data_type,
+                tissue_type='M', is_active_sample=False,
             )
             self.assertTrue(new_sample_guid in response_json['sampleGuids'])
             additional_logs = [(f'create {num_created_samples} RnaSamples', {'dbUpdate': {
@@ -904,8 +932,15 @@ class DataManagerAPITest(AirtableTest):
                 'entityIds': response_json['sampleGuids'] if num_created_samples > 1 else [new_sample_guid],
             }})] + (additional_logs or [])
             self._has_expected_file_loading_logs(
-                'gs://rna_data/new_muscle_samples.tsv.gz', info=info, warnings=warnings, user=self.pm_user,
-                additional_logs=additional_logs, additional_logs_offset=2)
+                'gs://rna_data/new_muscle_samples.tsv.gz', info=info, warnings=warnings, user=self.data_manager_user,
+                additional_logs=additional_logs, additional_logs_offset=6, include_airtable_logs=True)
+
+            self.assertEqual(len(responses.calls), 1)
+            self.assert_expected_airtable_call(
+                call_index=0,
+                filter_formula="AND(LEN({PassingCollaboratorSampleIDs})>0,LEN({TissueOfOrigin})>0,OR(SEARCH('RNA ready to load',ARRAYJOIN(PDOStatus,';'))))",
+                fields=['CollaboratorSampleID', 'SeqrCollaboratorSampleID', 'PDOStatus', 'SeqrProject', 'TissueOfOrigin'],
+            )
 
             return response_json, new_sample_guid
 
@@ -915,7 +950,7 @@ class DataManagerAPITest(AirtableTest):
         self.reset_logs()
         mock_files = defaultdict(mock.MagicMock)
         mock_open.side_effect = lambda file_name, *args: mock_files[file_name]
-        body.update({'ignoreExtraSamples': True, 'mappingFile': {'uploadedFileId': 'map.tsv'}, 'file': RNA_FILE_ID})
+        body.update({'ignoreExtraSamples': True, 'file': RNA_FILE_ID})
         warnings = [
             f'Skipped loading for the following {len(params["skipped_samples"].split(","))} '
             f'unmatched samples: {params["skipped_samples"]}']
@@ -936,33 +971,35 @@ class DataManagerAPITest(AirtableTest):
         mock_send_slack.assert_has_calls([
             mock.call(
                 'seqr-data-loading',
-                f'0 new RNA {params["message_data_type"]} sample(s) are loaded in <https://test-seqr.org/project/R0001_1kg/project_page|1kg project nåme with uniçøde>',
+                f'0 new RNA {params["message_data_type"]} samples are loaded in <https://test-seqr.org/project/R0001_1kg/project_page|1kg project nåme with uniçøde>',
             ), mock.call(
                 'seqr-data-loading',
-                f'1 new RNA {params["message_data_type"]} sample(s) are loaded in <https://test-seqr.org/project/R0003_test/project_page|Test Reprocessed Project>\n```NA20888```',
+                f'1 new RNA {params["message_data_type"]} samples are loaded in <https://test-seqr.org/project/R0003_test/project_page|Test Reprocessed Project>\n```NA20888```',
             ),
         ])
         self.assertEqual(mock_send_email.call_count, 2)
         self._assert_expected_notifications(mock_send_email, [
             {'data_type': f'RNA {params["message_data_type"]}', 'user': self.data_manager_user,
-             'email_body': f'data for 0 new RNA {params["message_data_type"]} sample(s)'},
+             'email_body': f'data for 0 new RNA {params["message_data_type"]} samples'},
             {'data_type': f'RNA {params["message_data_type"]}', 'user': self.data_manager_user,
-             'email_body': f'data for 1 new RNA {params["message_data_type"]} sample(s)',
+             'email_body': f'data for 1 new RNA {params["message_data_type"]} samples',
              'project_guid': 'R0003_test', 'project_name': 'Test Reprocessed Project'}
         ])
 
         # test database models are correct
         self.assertEqual(model_cls.objects.count(), params['initial_model_count'] - deleted_count)
-        sample_guid = self._check_rna_sample_model(individual_id=1, data_source='new_muscle_samples.tsv.gz', data_type=params['data_type'],
+        sample_guid = self._check_rna_sample_model(individual_id=1, data_source='new_muscle_samples.tsv.gz', data_type=data_type,
                                                    tissue_type=params.get('sample_tissue_type'), is_active_sample=False)
         self.assertSetEqual(set(response_json['sampleGuids']), {sample_guid, new_sample_guid})
 
         # test correct file interactions
-        file_path = RNA_FILENAME_TEMPLATE.format(params['data_type'])
+        file_path = RNA_FILENAME_TEMPLATE.format(data_type)
         expected_subprocess_calls = [
             f'gsutil ls {RNA_FILE_ID}',
             f'gsutil cat {RNA_FILE_ID} | gunzip -c -q - ',
-        ] + self._additional_expected_loading_subprocess_calls(file_path)
+            f'gsutil mv tmp/temp_uploads/{file_path} gs://seqr-scratch-temp/{file_path}',
+
+        ]
         self.assertEqual(mock_subprocess.call_count, len(expected_subprocess_calls))
         mock_subprocess.assert_has_calls([
             mock.call(command, stdout=-1, stderr=-2, shell=True) for command in expected_subprocess_calls  # nosec
@@ -983,45 +1020,7 @@ class DataManagerAPITest(AirtableTest):
 
         # test loading new data without deleting existing data
         data = [params['no_existing_data']]
-        body.pop('mappingFile')
         _test_basic_data_loading(data, 1, 1, 2, body, '1kg project nåme with uniçøde')
-
-        # Test loading data when where are duplicated individual ids in different projects.
-        data = params['duplicated_indiv_id_data']
-        mock_files = defaultdict(mock.MagicMock)
-        _test_basic_data_loading(data, 2, 2, 20, body, '1kg project nåme with uniçøde, Test Reprocessed Project',
-                                 num_created_samples=2)
-
-        self.assertSetEqual(
-            {''.join([call.args[0] for call in mock_file.write.call_args_list]) for mock_file in mock_files.values()},
-            params['write_data'],
-        )
-
-        # Test loading data when where an individual has multiple tissue types
-        data = [data[1][:2] + data[0][2:], data[1]]
-        mock_files = defaultdict(mock.MagicMock)
-        mock_rename.reset_mock()
-        new_sample_individual_id = 7
-        response_json, new_sample_guid = _test_basic_data_loading(data, 2, 2, new_sample_individual_id, body,
-                                                                  '1kg project nåme with uniçøde')
-        second_tissue_sample_guid = self._check_rna_sample_model(
-            individual_id=new_sample_individual_id, data_source='new_muscle_samples.tsv.gz', data_type=params['data_type'],
-            tissue_type='M' if params.get('sample_tissue_type') == 'F' else 'F', is_active_sample=False,
-        )
-        self.assertTrue(second_tissue_sample_guid != new_sample_guid)
-        self.assertTrue(second_tissue_sample_guid in response_json['sampleGuids'])
-        self._assert_expected_file_open(mock_rename, mock_open, [
-            f'tmp/temp_uploads/{RNA_FILENAME_TEMPLATE.format(params["data_type"])}/{sample_guid}.json.gz'
-            for sample_guid in response_json['sampleGuids']
-        ])
-        self.assertSetEqual(
-            {''.join([call.args[0] for call in mock_file.write.call_args_list]) for mock_file in mock_files.values()},
-            params['write_data'],
-        )
-
-    @staticmethod
-    def _additional_expected_loading_subprocess_calls(file_path):
-        return []
 
     def _assert_expected_file_open(self, mock_rename, mock_open, expected_file_names):
         file_rename = {call.args[1]: call.args[0] for call in mock_rename.call_args_list}
@@ -1297,9 +1296,9 @@ class DataManagerAPITest(AirtableTest):
 
         self._assert_expected_airtable_errors(url)
 
-    def _assert_expected_pm_access(self, get_response):
+    def _assert_expected_pm_access(self, get_response, status_code=200):
         response = get_response()
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, status_code)
         self.login_data_manager_user()
         return response
 
@@ -1649,6 +1648,14 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
     def _test_validate_dataset_type(self, url):
         pass
 
+    def _test_update_rna_seq(self, data_type, *args, **kwargs):
+        url = reverse(update_rna_seq)
+        self.check_pm_login(url)
+        body = {'dataType': data_type, 'file': 'gs://rna_data/muscle_samples.tsv'}
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 500)
+        self.assertDictEqual(response.json(), {'error': 'Airtable is not configured'})
+
 
 @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
 class AnvilDataManagerAPITest(AnvilAuthenticationTestCase, DataManagerAPITest):
@@ -1733,9 +1740,13 @@ class AnvilDataManagerAPITest(AnvilAuthenticationTestCase, DataManagerAPITest):
             self.mock_does_file_exist, self.mock_does_file_exist,  self.mock_file_iter, self.mock_does_file_exist, self.mock_does_file_exist, self.mock_file_iter,
         ]
 
-    @staticmethod
-    def _additional_expected_loading_subprocess_calls(file_path):
-        return [f'gsutil mv tmp/temp_uploads/{file_path} gs://seqr-scratch-temp/{file_path}']
+    def _get_expected_read_file_subprocess_calls(self, file_name, sample_guid):
+        gsutil_cat = f'gsutil cat gs://seqr-scratch-temp/{file_name}/{sample_guid}.json.gz | gunzip -c -q - '
+        self.mock_subprocess.assert_called_with(gsutil_cat, stdout=-1, stderr=-2, shell=True)  # nosec
+        return [
+            (f'==> gsutil ls gs://seqr-scratch-temp/{file_name}/{sample_guid}.json.gz', None),
+            (f'==> {gsutil_cat}', None),
+        ]
 
     def _assert_expected_es_status(self, response):
         self.assertEqual(response.status_code, 500)
@@ -1762,14 +1773,14 @@ class AnvilDataManagerAPITest(AnvilAuthenticationTestCase, DataManagerAPITest):
                 fields=['CollaboratorSampleID', 'SeqrCollaboratorSampleID', 'PDOStatus', 'SeqrProject'],
             )
 
-    def _assert_expected_pm_access(self, get_response):
+    def _assert_expected_pm_access(self, get_response, *args, **kwargs):
         response = get_response()
         self.assertEqual(response.status_code, 403)
         self.assert_json_logs(self.pm_user, [
             ('PermissionDenied: Error: To access RDG airtable user must login with Broad email.', {'severity': 'WARNING'})
         ])
         self.login_data_manager_user()
-        return super()._assert_expected_pm_access(get_response)
+        return super()._assert_expected_pm_access(get_response, *args, **kwargs)
 
     def _assert_expected_load_data_requests(self, *args, dataset_type='SNV_INDEL', skip_project=False, **kwargs):
         num_calls = 1

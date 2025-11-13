@@ -22,13 +22,12 @@ from seqr.utils.vcf_utils import validate_vcf_and_get_samples, get_vcf_list
 
 from seqr.views.utils.airtable_utils import AirtableSession, LOADABLE_PDO_STATUSES, AVAILABLE_PDO_STATUS
 from seqr.views.utils.dataset_utils import load_rna_seq, load_phenotype_prioritization_data_file, convert_django_meta_to_http_headers
-from seqr.views.utils.file_utils import load_uploaded_file
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.pedigree_info_utils import get_validated_related_individuals, JsonConstants
 from seqr.views.utils.permissions_utils import data_manager_required, pm_or_data_manager_required, get_internal_projects
 from seqr.views.utils.terra_api_utils import anvil_enabled
 
-from seqr.models import Sample, Individual, Project, PhenotypePrioritization
+from seqr.models import Sample, RnaSample, Individual, Project, PhenotypePrioritization
 
 from settings import KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD, KIBANA_ELASTICSEARCH_USER, \
     LOADING_DATASETS_DIR, LUIGI_UI_SERVICE_HOSTNAME, LUIGI_UI_SERVICE_PORT
@@ -55,33 +54,41 @@ def delete_index(request):
 
     return create_json_response({'indices': updated_indices})
 
+RNA = 'RNA'
+TISSUE_FIELD = 'TissueOfOrigin'
+AIRTABLE_TISSUE_TYPE_MAP = {
+    'whole_blood': 'Blood',
+    'fibroblasts': 'Fibroblast',
+    'muscle':  'Muscle',
+    'airway_cultured_epithelium': 'Nasal Epithelium',
+    'brain': 'Brain',
+}
+TISSUE_TYPE_MAP = {
+    AIRTABLE_TISSUE_TYPE_MAP[name]: type
+    for type, name in RnaSample.TISSUE_TYPE_CHOICES if name in AIRTABLE_TISSUE_TYPE_MAP
+}
+
 @pm_or_data_manager_required
 def update_rna_seq(request):
     request_json = json.loads(request.body)
 
-    data_type = request_json['dataType']
-    file_path = request_json['file']
+    airtable_samples = _get_dataset_type_samples_for_matched_pdos(
+        ['RNA ready to load'], request.user, RNA, None, sample_fields=[TISSUE_FIELD], skip_invalid_pdos=True,
+    )
+    sample_metadata_mapping = {
+        sample['sample_id']: {
+            'tissue': TISSUE_TYPE_MAP[sample[TISSUE_FIELD][0]],
+            'project_guid': sample['pdos'][0]['project_guid'],
+            'sample_id': sample.get('CollaboratorSampleID') or sample['sample_id'],
+        }
+        for sample in airtable_samples if len(sample[TISSUE_FIELD]) == 1 and len(sample['pdos']) == 1
+    }
+    misconfigured_samples = [s['sample_id'] for s in airtable_samples if s['sample_id'] not in sample_metadata_mapping]
+    if misconfigured_samples:
+        logger.warning(f'Skipping samples associated with multiple conflicting PDOs in Airtable: {", ".join(sorted(misconfigured_samples))}', request.user)
 
-    mapping_file = None
-    uploaded_mapping_file_id = request_json.get('mappingFile', {}).get('uploadedFileId')
-    if uploaded_mapping_file_id:
-        mapping_file = load_uploaded_file(uploaded_mapping_file_id)
-
-    try:
-        sample_guids_to_keys, file_name_prefix, info, warnings = load_rna_seq(
-            data_type, file_path,
-            user=request.user, mapping_file=mapping_file, ignore_extra_samples=request_json.get('ignoreExtraSamples'))
-    except FileNotFoundError:
-        return create_json_response({'error': 'File not found: {}'.format(file_path)}, status=400)
-    except ValueError as e:
-        return create_json_response({'error': str(e)}, status=400)
-
-    return create_json_response({
-        'info': info,
-        'warnings': warnings,
-        'fileName': file_name_prefix,
-        'sampleGuids': sorted(sample_guids_to_keys.keys()),
-    })
+    response_json, status = load_rna_seq(request_json, request.user, sample_metadata_mapping=sample_metadata_mapping)
+    return create_json_response(response_json, status=status)
 
 
 def _get_sample_file_path(file_dir, sample_guid):
@@ -237,10 +244,11 @@ AIRTABLE_CALLSET_FIELDS = {
     (Sample.DATASET_TYPE_MITO_CALLS, Sample.SAMPLE_TYPE_WGS): 'MITO_WGS_CallsetPath',
     (Sample.DATASET_TYPE_SV_CALLS, Sample.SAMPLE_TYPE_WES): 'gCNV_CallsetPath',
     (Sample.DATASET_TYPE_SV_CALLS, Sample.SAMPLE_TYPE_WGS): 'SV_CallsetPath',
+    (RNA, None): TISSUE_FIELD,
 }
 
 
-def _get_dataset_type_samples_for_matched_pdos(pdo_statuses, user, dataset_type, sample_type, **kwargs):
+def _get_dataset_type_samples_for_matched_pdos(pdo_statuses, user, dataset_type, sample_type=None, **kwargs):
     required_sample_fields = ['PassingCollaboratorSampleIDs']
     required_data_type_field = AIRTABLE_CALLSET_FIELDS.get((dataset_type, sample_type))
     if required_data_type_field:
