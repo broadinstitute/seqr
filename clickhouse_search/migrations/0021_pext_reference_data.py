@@ -10,7 +10,6 @@ import django.db.models.manager
 CLICKHOUSE_WRITER_PASSWORD = os.environ.get('CLICKHOUSE_WRITER_PASSWORD', 'clickhouse_test')
 CLICKHOUSE_WRITER_USER = os.environ.get('CLICKHOUSE_WRITER_USER', 'clickhouse')
 
-
 PEXT_SEARCH = Template(Template("""
 CREATE DICTIONARY `GRCh38/$dataset_type/reference_data/pext`
 (

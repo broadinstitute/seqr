@@ -46,7 +46,6 @@ AS SELECT
 FROM url('https://storage.googleapis.com/gcp-public-data--gnomad/release/3.1/secondary_analyses/genomic_constraint/constraint_z_genome_1kb.qc.download.txt.gz')
 """
 
-
 class Migration(migrations.Migration):
 
     dependencies = [
