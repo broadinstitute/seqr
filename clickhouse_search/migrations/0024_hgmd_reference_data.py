@@ -6,7 +6,6 @@ from django.db import migrations, models
 import django.db.models.deletion
 import django.db.models.manager
 
-import os
 from string import Template
 
 
@@ -15,10 +14,6 @@ HGMD_URLS = {
     'GRCh37': 'https://storage.googleapis.com/seqr-reference-data-private/GRCh37/HGMD/HGMD_Pro_2023.1_hg19.vcf.gz',
     'GRCh38': 'https://storage.googleapis.com/seqr-reference-data-private/GRCh38/HGMD/HGMD_Pro_2023.1_hg38.vcf.gz',
 }
-
-CLICKHOUSE_WRITER_PASSWORD = os.environ.get('CLICKHOUSE_WRITER_PASSWORD', 'clickhouse_test')
-CLICKHOUSE_WRITER_USER = os.environ.get('CLICKHOUSE_WRITER_USER', 'clickhouse')
-
 
 HGMD_VIEW = Template(f"""
 CREATE MATERIALIZED VIEW `$reference_genome/SNV_INDEL/reference_data/hgmd/all_variants_mv`
