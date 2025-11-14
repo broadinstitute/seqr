@@ -20,8 +20,8 @@ CREATE DICTIONARY `GRCh38/SNV_INDEL/reference_data/screen`
 )
 PRIMARY KEY chrom
 SOURCE(CLICKHOUSE(
-    USER $clickhouse_writer_user
-    PASSWORD $clickhouse_writer_password
+    USER '$clickhouse_writer_user'
+    PASSWORD '$clickhouse_writer_password'
     TABLE `GRCh38/SNV_INDEL/reference_data/screen/all_variants`
 ))
 LIFETIME(MIN 0 MAX 0)

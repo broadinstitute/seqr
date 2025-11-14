@@ -635,6 +635,61 @@ class ScreenAllVariantsSnvIndel(models.ClickhouseModel):
             order_by=('chrom', 'start', 'end'),
         )
 
+class BaseHgmd(models.ClickhouseModel):
+    HGMD_CLASSES = [(0, 'DM'), (1, 'DM?'), (2, 'DP'), (3, 'DFP'), (4, 'FP'), (5, 'R')]
+    accession = models.StringField(null=True, blank=True)
+    classification = models.Enum8Field(null=True, blank=True, return_int=False, choices=HGMD_CLASSES)
+
+    class Meta:
+        abstract = True
+
+class HgmdAllVariantsGRCh37SnvIndel(BaseHgmd):
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
+    class Meta:
+        db_table = 'GRCh37/SNV_INDEL/reference_data/hgmd/all_variants'
+        engine = models.MergeTree(
+            primary_key=('variant_id'),
+            order_by=('variant_id'),
+        )
+
+class HgmdAllVariantsSnvIndel(BaseHgmd):
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
+    class Meta:
+        db_table = 'GRCh38/SNV_INDEL/reference_data/hgmd/all_variants'
+        engine = models.MergeTree(
+            primary_key=('variant_id'),
+            order_by=('variant_id'),
+        )
+
+class HgmdSeqrVariantsGRCh37SnvIndel(BaseHgmd):
+    key = OneToOneField('AnnotationsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+    class Meta:
+        db_table = 'GRCh37/SNV_INDEL/reference_data/hgmd/all_variants'
+        engine = models.MergeTree(
+            primary_key=('variant_id'),
+            order_by=('variant_id'),
+        )
+
+class HgmdSeqrVariantsSnvIndel(BaseHgmd):
+    key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+    class Meta:
+        db_table = 'GRCh38/SNV_INDEL/reference_data/hgmd/all_variants'
+        engine = models.MergeTree(
+            primary_key=('variant_id'),
+            order_by=('variant_id'),
+        )
+
+class HgmdGRCh37SnvIndel(BaseHgmd):
+    key = ForeignKey('EntriesGRCh37SnvIndel', db_column='key', related_name='hgmd_join', primary_key=True, on_delete=PROTECT)
+    class Meta(BaseClinvarJoin.Meta):
+        db_table = 'GRCh37/SNV_INDEL/reference_data/hgmd'
+        engine = Join('ALL', 'LEFT', 'key', join_use_nulls=1, flatten_nested=0)
+
+class HgmdSnvIndel(BaseHgmd):
+    key = ForeignKey('EntriesSnvIndel', db_column='key', related_name='hgmd_join', primary_key=True, on_delete=PROTECT)
+    class Meta(BaseClinvarJoin.Meta):
+        db_table = 'GRCh38/SNV_INDEL/reference_data/hgmd'
+
 
 class BaseEntries(FixtureLoadableClickhouseModel):
     MAX_XPOS_FILTER_INTERVALS = 500

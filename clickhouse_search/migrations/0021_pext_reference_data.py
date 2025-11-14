@@ -20,8 +20,8 @@ CREATE DICTIONARY `GRCh38/$dataset_type/reference_data/pext`
 )
 PRIMARY KEY chrom
 SOURCE(CLICKHOUSE(
-    USER $clickhouse_writer_user
-    PASSWORD $clickhouse_writer_password
+    USER '$clickhouse_writer_user'
+    PASSWORD '$clickhouse_writer_password'
     QUERY 'SELECT chrom, pos as start, pos as end, expPropMean FROM `GRCh38/$dataset_type/reference_data/pext/all_variants`'
 ))
 LIFETIME(MIN 0 MAX 0)
