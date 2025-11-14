@@ -8,7 +8,7 @@ import django.db.models.manager
 
 from string import Template
 
-ACCESS_PRIVATE_REFERENCE_DATASETS = os.environ.get('ACCESS_PRIVATE_REFERENCE_DATASETS', '0')
+ACCESS_PRIVATE_REFERENCE_DATASETS = os.environ.get('ACCESS_PRIVATE_REFERENCE_DATASETS', '0') == '1'
 
 GCS_NAMED_COLLECTION = 'pipeline_data_access'
 HGMD_INFO_STRUCTURE = 'CHROM String, POS UInt32, ID String, REF String, ALT String, QUAL String, FILTER String, INFO String'
@@ -75,7 +75,7 @@ def build_hgmd_view(reference_genome: str, hgmd_url: str):
                             format='TSV',
                             structure='{HGMD_INFO_STRUCTURE}'
                         )
-                        """,
+                        """
                         if ACCESS_PRIVATE_REFERENCE_DATASETS
                         else f"null('{HGMD_INFO_STRUCTURE}')"
                     )
