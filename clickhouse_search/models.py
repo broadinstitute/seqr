@@ -665,7 +665,7 @@ class HgmdAllVariantsSnvIndel(BaseHgmd):
 
 class HgmdSeqrVariantsGRCh37SnvIndel(BaseHgmd):
     key = OneToOneField('AnnotationsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
-    
+
     class Meta:
         db_table = 'GRCh37/SNV_INDEL/reference_data/hgmd/seqr_variants'
         engine = models.MergeTree(

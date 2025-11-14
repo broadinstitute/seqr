@@ -37,9 +37,9 @@ FROM gcs(
 )
 WHERE ALT != '<DEL>'
 SETTINGS input_format_allow_errors_ratio = 0.01, input_format_allow_errors_num = 25
-""")).safe_substitute(
+""").safe_substitute(
     gcs_named_collection=GCS_NAMED_COLLECTION,
-)
+))
 
 HGMD_ALL_TO_SEQR_MV = Template("""
 CREATE MATERIALIZED VIEW `$reference_genome/SNV_INDEL/reference_data/hgmd/all_variants_to_seqr_variants_mv`
