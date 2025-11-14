@@ -32,9 +32,10 @@ AS SELECT
     extract(INFO, 'CLASS=([^;]+)') as classification
 FROM gcs(
     {GCS_NAMED_COLLECTION},
-    url=$hgmd_url,
+    url='$hgmd_url',
     format='TSV',
-    structure='CHROM String, POS UInt32, ID String, REF String, ALT String, QUAL String, FILTER String, INFO String')
+    structure='CHROM String, POS UInt32, ID String, REF String, ALT String, QUAL String, FILTER String, INFO String'
+)
 WHERE ALT != '<DEL>'
 """)
 
