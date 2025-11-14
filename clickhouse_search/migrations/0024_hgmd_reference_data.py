@@ -120,7 +120,7 @@ class Migration(migrations.Migration):
                 ('classification', clickhouse_backend.models.Enum8Field(blank=True, choices=[(0, 'DM'), (1, 'DM?'), (2, 'DP'), (3, 'DFP'), (4, 'FP'), (5, 'R')], null=True)),
             ],
             options={
-                'db_table': 'GRCh37/SNV_INDEL/reference_data/hgmd/all_variants',
+                'db_table': 'GRCh37/SNV_INDEL/reference_data/hgmd/seqr_variants',
                 'engine': clickhouse_backend.models.MergeTree(order_by='key', primary_key='key'),
             },
             managers=[
@@ -136,7 +136,7 @@ class Migration(migrations.Migration):
                 ('classification', clickhouse_backend.models.Enum8Field(blank=True, choices=[(0, 'DM'), (1, 'DM?'), (2, 'DP'), (3, 'DFP'), (4, 'FP'), (5, 'R')], null=True)),
             ],
             options={
-                'db_table': 'GRCh38/SNV_INDEL/reference_data/hgmd/all_variants',
+                'db_table': 'GRCh38/SNV_INDEL/reference_data/hgmd/seqr_variants',
                 'engine': clickhouse_backend.models.MergeTree(order_by='key', primary_key='key'),
             },
             managers=[
