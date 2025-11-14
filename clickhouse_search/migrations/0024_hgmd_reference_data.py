@@ -18,7 +18,9 @@ HGMD_URLS = {
 HGMD_VIEW = Template(f"""
 CREATE MATERIALIZED VIEW `$reference_genome/SNV_INDEL/reference_data/hgmd/all_variants_mv`
 REFRESH EVERY 10 YEAR
+SETTINGS input_format_allow_errors_ratio = 0.01, input_format_allow_errors_num = 25
 TO `$reference_genome/SNV_INDEL/reference_data/hgmd/all_variants`
+EMPTY
 AS SELECT
     arrayStringConcat([
         replaceOne(replaceOne(CHROM, 'chr', ''), 'MT', 'M'),
@@ -60,6 +62,16 @@ DISTINCT ON (key) *
 FROM `$reference_genome/SNV_INDEL/reference_data/hgmd/seqr_variants`
 """)
 
+def build_hgmd_view(reference_genome: str, hgmd_url: str):
+    def inner(apps, schema_editor):
+        with connections['clickhouse_write'].cursor() as cursor:
+            cursor.execute(
+                HGMD_VIEW.substitute(
+                    reference_genome=reference_genome,
+                    hgmd_url=hgmd_url,
+                )
+            )
+    return inner
 
 class Migration(migrations.Migration):
 
@@ -167,41 +179,39 @@ class Migration(migrations.Migration):
             ],
         ),
         migrations.RunSQL(
-            HGMD_VIEW.substitute(
+            HGMD_ALL_TO_SEQR_MV.substitute(
+                reference_genome="GRCh37",
+            ),
+            hints={"clickhouse": True},
+        ),
+        migrations.RunSQL(
+            HGMD_ALL_TO_SEQR_MV.substitute(
+                reference_genome="GRCh38",
+            ),
+            hints={"clickhouse": True},
+        ),
+        migrations.RunSQL(
+            HGMD_SEQR_TO_SEARCH_MV.substitute(
+                reference_genome="GRCh37",
+            ),
+            hints={"clickhouse": True},
+        ),
+        migrations.RunSQL(
+            HGMD_SEQR_TO_SEARCH_MV.substitute(
+                reference_genome="GRCh38",
+            ),
+            hints={"clickhouse": True},
+        ),
+        migrations.RunPython(
+            build_hgmd_view(
                 reference_genome="GRCh37",
                 hgmd_url=HGMD_URLS["GRCh37"],
             ),
-            hints={"clickhouse": True},
         ),
-        migrations.RunSQL(
-            HGMD_VIEW.substitute(
+        migrations.RunPython(
+            build_hgmd_view(
                 reference_genome="GRCh38",
                 hgmd_url=HGMD_URLS["GRCh38"],
             ),
-            hints={"clickhouse": True},
-        ),
-        migrations.RunSQL(
-            HGMD_ALL_TO_SEQR_MV.substitute(
-                reference_genome="GRCh37",
-            ),
-            hints={"clickhouse": True},
-        ),
-        migrations.RunSQL(
-            HGMD_ALL_TO_SEQR_MV.substitute(
-                reference_genome="GRCh38",
-            ),
-            hints={"clickhouse": True},
-        ),
-        migrations.RunSQL(
-            HGMD_SEQR_TO_SEARCH_MV.substitute(
-                reference_genome="GRCh37",
-            ),
-            hints={"clickhouse": True},
-        ),
-        migrations.RunSQL(
-            HGMD_SEQR_TO_SEARCH_MV.substitute(
-                reference_genome="GRCh38",
-            ),
-            hints={"clickhouse": True},
         ),
     ]
