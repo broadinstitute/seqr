@@ -18,7 +18,6 @@ HGMD_URLS = {
 HGMD_VIEW = Template(f"""
 CREATE MATERIALIZED VIEW `$reference_genome/SNV_INDEL/reference_data/hgmd/all_variants_mv`
 REFRESH EVERY 10 YEAR
-SETTINGS input_format_allow_errors_ratio = 0.01, input_format_allow_errors_num = 25
 TO `$reference_genome/SNV_INDEL/reference_data/hgmd/all_variants`
 EMPTY
 AS SELECT
@@ -37,6 +36,7 @@ FROM gcs(
     structure='CHROM String, POS UInt32, ID String, REF String, ALT String, QUAL String, FILTER String, INFO String'
 )
 WHERE ALT != '<DEL>'
+SETTINGS input_format_allow_errors_ratio = 0.01, input_format_allow_errors_num = 25
 """)
 
 HGMD_ALL_TO_SEQR_MV = Template("""
