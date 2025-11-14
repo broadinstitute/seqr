@@ -8,14 +8,16 @@ import django.db.models.manager
 
 from string import Template
 
+ACCESS_PRIVATE_REFERENCE_DATASETS = os.environ.get('ACCESS_PRIVATE_REFERENCE_DATASETS', '0')
 
 GCS_NAMED_COLLECTION = 'pipeline_data_access'
+HGMD_INFO_STRUCTURE = 'CHROM String, POS UInt32, ID String, REF String, ALT String, QUAL String, FILTER String, INFO String'
 HGMD_URLS = {
     'GRCh37': 'https://storage.googleapis.com/seqr-reference-data-private/GRCh37/HGMD/HGMD_Pro_2023.1_hg19.vcf.gz',
     'GRCh38': 'https://storage.googleapis.com/seqr-reference-data-private/GRCh38/HGMD/HGMD_Pro_2023.1_hg38.vcf.gz',
 }
 
-HGMD_VIEW = Template(Template("""
+HGMD_VIEW = Template("""
 CREATE MATERIALIZED VIEW `$reference_genome/SNV_INDEL/reference_data/hgmd/all_variants_mv`
 REFRESH EVERY 10 YEAR
 TO `$reference_genome/SNV_INDEL/reference_data/hgmd/all_variants`
@@ -29,17 +31,10 @@ AS SELECT
     ], '-') AS variantId,
     ID as accession,
     extract(INFO, 'CLASS=([^;]+)') as classification
-FROM gcs(
-    $gcs_named_collection,
-    url='$hgmd_url',
-    format='TSV',
-    structure='CHROM String, POS UInt32, ID String, REF String, ALT String, QUAL String, FILTER String, INFO String'
-)
+FROM $table_structure
 WHERE ALT != '<DEL>'
 SETTINGS input_format_allow_errors_ratio = 0.01, input_format_allow_errors_num = 25
-""").safe_substitute(
-    gcs_named_collection=GCS_NAMED_COLLECTION,
-))
+""")
 
 HGMD_ALL_TO_SEQR_MV = Template("""
 CREATE MATERIALIZED VIEW `$reference_genome/SNV_INDEL/reference_data/hgmd/all_variants_to_seqr_variants_mv`
@@ -71,7 +66,19 @@ def build_hgmd_view(reference_genome: str, hgmd_url: str):
             cursor.execute(
                 HGMD_VIEW.substitute(
                     reference_genome=reference_genome,
-                    hgmd_url=hgmd_url,
+                    table_structure=
+                    (
+                        f"""
+                        gcs(
+                            {GCS_NAMED_COLLECTION},
+                            url='{hgmd_url}',
+                            format='TSV',
+                            structure='{HGMD_INFO_STRUCTURE}'
+                        )
+                        """,
+                        if ACCESS_PRIVATE_REFERENCE_DATASETS
+                        else f"null('{HGMD_INFO_STRUCTURE}')"
+                    )
                 )
             )
     return inner
