@@ -19,6 +19,28 @@ HGMD_URLS = {
 CLICKHOUSE_WRITER_PASSWORD = os.environ.get('CLICKHOUSE_WRITER_PASSWORD', 'clickhouse_test')
 CLICKHOUSE_WRITER_USER = os.environ.get('CLICKHOUSE_WRITER_USER', 'clickhouse')
 
+
+HGMD_VIEW = Template(f"""
+CREATE MATERIALIZED VIEW `$reference_genome/SNV_INDEL/reference_data/hgmd/all_variants_mv`
+REFRESH EVERY 10 YEAR
+TO `$reference_genome/SNV_INDEL/reference_data/hgmd/all_variants`
+AS SELECT
+    arrayStringConcat([
+        replaceOne(replaceOne(CHROM, 'chr', ''), 'MT', 'M'),
+        toString(POS),
+        REF,
+        ALT
+    ], '-') AS variantId,
+    ID as accession,
+    extract(INFO, 'CLASS=([^;]+)') as classification
+FROM gcs(
+    {GCS_NAMED_COLLECTION},
+    url=$hgmd_url,
+    format='TSV',
+    structure='CHROM String, POS UInt32, ID String, REF String, ALT String, QUAL String, FILTER String, INFO String')
+WHERE ALT != '<DEL>'
+""")
+
 HGMD_ALL_TO_SEQR_MV = Template("""
 CREATE MATERIALIZED VIEW `$reference_genome/SNV_INDEL/reference_data/hgmd/all_variants_to_seqr_variants_mv`
 REFRESH EVERY 10 YEAR
@@ -41,27 +63,6 @@ AS
 SELECT 
 DISTINCT ON (key) *
 FROM `$reference_genome/SNV_INDEL/reference_data/hgmd/seqr_variants`
-""")
-
-HGMD_VIEW = Template(f"""
-CREATE MATERIALIZED VIEW `$reference_genome/SNV_INDEL/reference_data/hgmd/all_variants_mv`
-REFRESH EVERY 10 YEAR
-TO `$reference_genome/SNV_INDEL/reference_data/hgmd/all_variants`
-AS SELECT
-    arrayStringConcat([
-        replaceOne(replaceOne(CHROM, 'chr', ''), 'MT', 'M'),
-        toString(POS),
-        REF,
-        ALT
-    ], '-') AS variantId,
-    ID as accession,
-    extract(INFO, 'CLASS=([^;]+)') as classification
-FROM gcs(
-    {GCS_NAMED_COLLECTION}, 
-    url=$hgmd_url, 
-    format='TSV', 
-    structure='CHROM String, POS UInt32, ID String, REF String, ALT String, QUAL String, FILTER String, INFO String')  
-WHERE ALT != '<DEL>'
 """)
 
 
@@ -173,12 +174,14 @@ class Migration(migrations.Migration):
         migrations.RunSQL(
             HGMD_VIEW.substitute(
                 reference_genome="GRCh37",
+                hgmd_url=HGMD_URLS["GRCh37"],
             ),
             hints={"clickhouse": True},
         ),
         migrations.RunSQL(
             HGMD_VIEW.substitute(
                 reference_genome="GRCh38",
+                hgmd_url=HGMD_URLS["GRCh38"],
             ),
             hints={"clickhouse": True},
         ),
