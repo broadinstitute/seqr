@@ -655,7 +655,7 @@ class HgmdAllVariantsGRCh37SnvIndel(BaseHgmd):
 
 class HgmdAllVariantsSnvIndel(BaseHgmd):
     variant_id = models.StringField(db_column='variantId', primary_key=True)
-    
+
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/reference_data/hgmd/all_variants'
         engine = models.MergeTree(

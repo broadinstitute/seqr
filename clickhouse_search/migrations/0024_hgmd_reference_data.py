@@ -15,7 +15,7 @@ HGMD_URLS = {
     'GRCh38': 'https://storage.googleapis.com/seqr-reference-data-private/GRCh38/HGMD/HGMD_Pro_2023.1_hg38.vcf.gz',
 }
 
-HGMD_VIEW = Template(f"""
+HGMD_VIEW = Template("""
 CREATE MATERIALIZED VIEW `$reference_genome/SNV_INDEL/reference_data/hgmd/all_variants_mv`
 REFRESH EVERY 10 YEAR
 TO `$reference_genome/SNV_INDEL/reference_data/hgmd/all_variants`
