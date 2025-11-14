@@ -121,7 +121,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'GRCh37/SNV_INDEL/reference_data/hgmd/all_variants',
-                'engine': clickhouse_backend.models.MergeTree(order_by='variant_id', primary_key='variant_id'),
+                'engine': clickhouse_backend.models.MergeTree(order_by='key', primary_key='key'),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
@@ -137,7 +137,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'GRCh38/SNV_INDEL/reference_data/hgmd/all_variants',
-                'engine': clickhouse_backend.models.MergeTree(order_by='variant_id', primary_key='variant_id'),
+                'engine': clickhouse_backend.models.MergeTree(order_by='key', primary_key='key'),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),

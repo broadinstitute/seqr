@@ -645,6 +645,7 @@ class BaseHgmd(models.ClickhouseModel):
 
 class HgmdAllVariantsGRCh37SnvIndel(BaseHgmd):
     variant_id = models.StringField(db_column='variantId', primary_key=True)
+    
     class Meta:
         db_table = 'GRCh37/SNV_INDEL/reference_data/hgmd/all_variants'
         engine = models.MergeTree(
@@ -654,6 +655,7 @@ class HgmdAllVariantsGRCh37SnvIndel(BaseHgmd):
 
 class HgmdAllVariantsSnvIndel(BaseHgmd):
     variant_id = models.StringField(db_column='variantId', primary_key=True)
+    
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/reference_data/hgmd/all_variants'
         engine = models.MergeTree(
@@ -663,32 +665,37 @@ class HgmdAllVariantsSnvIndel(BaseHgmd):
 
 class HgmdSeqrVariantsGRCh37SnvIndel(BaseHgmd):
     key = OneToOneField('AnnotationsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+    
     class Meta:
         db_table = 'GRCh37/SNV_INDEL/reference_data/hgmd/all_variants'
         engine = models.MergeTree(
-            primary_key=('variant_id'),
-            order_by=('variant_id'),
+            primary_key=('key'),
+            order_by=('key'),
         )
 
 class HgmdSeqrVariantsSnvIndel(BaseHgmd):
     key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+    
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/reference_data/hgmd/all_variants'
         engine = models.MergeTree(
-            primary_key=('variant_id'),
-            order_by=('variant_id'),
+            primary_key=('key'),
+            order_by=('key'),
         )
 
 class HgmdGRCh37SnvIndel(BaseHgmd):
     key = ForeignKey('EntriesGRCh37SnvIndel', db_column='key', related_name='hgmd_join', primary_key=True, on_delete=PROTECT)
-    class Meta(BaseClinvarJoin.Meta):
+    
+    class Meta():
         db_table = 'GRCh37/SNV_INDEL/reference_data/hgmd'
         engine = Join('ALL', 'LEFT', 'key', join_use_nulls=1, flatten_nested=0)
 
 class HgmdSnvIndel(BaseHgmd):
     key = ForeignKey('EntriesSnvIndel', db_column='key', related_name='hgmd_join', primary_key=True, on_delete=PROTECT)
-    class Meta(BaseClinvarJoin.Meta):
+    
+    class Meta():
         db_table = 'GRCh38/SNV_INDEL/reference_data/hgmd'
+        engine = Join('ALL', 'LEFT', 'key', join_use_nulls=1, flatten_nested=0)
 
 
 class BaseEntries(FixtureLoadableClickhouseModel):
