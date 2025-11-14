@@ -645,7 +645,7 @@ class BaseHgmd(models.ClickhouseModel):
 
 class HgmdAllVariantsGRCh37SnvIndel(BaseHgmd):
     variant_id = models.StringField(db_column='variantId', primary_key=True)
-    
+
     class Meta:
         db_table = 'GRCh37/SNV_INDEL/reference_data/hgmd/all_variants'
         engine = models.MergeTree(
