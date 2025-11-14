@@ -38,6 +38,7 @@ GNOMAD_NON_CODING_CONSTRAINT_VIEW = """
 CREATE MATERIALIZED VIEW `GRCh38/SNV_INDEL/reference_data/gnomad_non_coding_constraint/all_variants_mv`
 REFRESH EVERY 10 YEAR
 TO `GRCh38/SNV_INDEL/reference_data/gnomad_non_coding_constraint/all_variants`
+EMPTY
 AS SELECT
     replaceOne(chrom, 'chr', '') as chrom,
     toUInt32(assumeNotNull(start)) as start,
