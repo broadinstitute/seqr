@@ -38,6 +38,7 @@ SCREEN_VIEW = """
 CREATE MATERIALIZED VIEW `GRCh38/SNV_INDEL/reference_data/screen/all_variants_mv`
 REFRESH EVERY 10 YEAR
 TO `GRCh38/SNV_INDEL/reference_data/screen/all_variants`
+EMPTY
 AS SELECT
     replaceOne(c1, 'chr', '') as chrom,
     toUInt32(assumeNotNull(c2)) as start,
