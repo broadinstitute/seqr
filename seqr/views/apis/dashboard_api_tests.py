@@ -16,7 +16,7 @@ DASHBOARD_PROJECT_FIELDS.remove('canEdit')
 EXPECTED_DASHBOARD_PROJECT = {
     'numIndividuals': 14,
     'numFamilies': 11,
-    'sampleTypeCounts': {'RNA': 2, 'WES': 13},
+    'sampleTypeCounts': {'RNA': 1, 'WES': 13},
     'numVariantTags': 4,
     'analysisStatusCounts': {'ES': 1, 'Q': 9, 'S_ng': 1},
     **{k: mock.ANY for k in PROJECT_FIELDS if k != 'canEdit'},

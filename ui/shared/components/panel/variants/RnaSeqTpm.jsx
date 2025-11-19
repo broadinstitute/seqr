@@ -189,11 +189,14 @@ const renderGtex = (gtexExpressionData, familyExpressionData, containerElement) 
   const gtexByTissue = ((gtexExpressionData || {}).data || []).reduce((acc, { data, tissueSiteDetailId }) => ({
     ...acc, [GTEX_TISSUE_LOOKUP[tissueSiteDetailId]]: data,
   }), {})
-  const boxplotData = Object.entries(familyExpressionData).reduce((acc, [tissue, { rdgData, individualData }]) => ([
+  const boxplotData = Object.entries(familyExpressionData).reduce((
+    acc, [tissue, { rdgData, myData, individualData }],
+  ) => ([
     ...acc,
     ...[
       { data: gtexByTissue[tissue], label: 'GTEx' },
-      { data: rdgData, label: 'RDG' },
+      { data: rdgData, label: 'Broad RDG' },
+      { data: myData, label: 'My Data' },
       ...Object.entries(individualData).map(([individual, tpm]) => ({ data: [tpm], label: individual, medianColor: '#000080' })),
     ].filter(({ data }) => data).map(({ label, ...d }) => ({ label: `${label} - ${TISSUE_DISPLAY[tissue]}`, ...d })),
   ]), [])

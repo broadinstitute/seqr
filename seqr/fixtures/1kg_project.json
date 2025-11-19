@@ -952,7 +952,7 @@
         "created_date": "2017-02-05T06:14:55.397Z",
         "created_by": null,
         "last_modified_date": "2017-03-13T09:07:49.744Z",
-        "individual": 3,
+        "individual": 19,
         "is_active": true,
         "tissue_type": "F",
         "data_source": "fibs_samples.tsv.gz",
@@ -1463,6 +1463,15 @@
         "sample": 162,
         "gene_id": "ENSG00000233653",
         "tpm": 1.03
+    }
+},
+{
+    "model": "seqr.rnaseqtpm",
+    "pk": 7,
+    "fields": {
+        "sample": 153,
+        "gene_id": "ENSG00000135953",
+        "tpm": 2.36
     }
 },
 {

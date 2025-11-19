@@ -709,7 +709,7 @@ class DataManagerAPITest(AirtableTest):
             'skipped_samples': 'NA19675_D3, NA20878',
             'sample_tissue_type': 'Muscle',
             'num_parsed_samples': 4,
-            'initial_model_count': 4,
+            'initial_model_count': 5,
             'deleted_count': 3,
             'parsed_file_data': RNA_TPM_SAMPLE_DATA,
             'sample_guid': RNA_TPM_MUSCLE_SAMPLE_GUID,

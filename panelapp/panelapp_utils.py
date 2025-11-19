@@ -57,7 +57,7 @@ def import_all_panels(user, panel_app_api_url, label=None):
                                      if _extract_ensembl_id_from_json(gene)}
                 raw_ensbl_38_gene_ids_csv = ','.join(panel_genes_by_id.keys())
                 genes_by_id, _, invalid_items = parse_locus_list_items({'rawItems': raw_ensbl_38_gene_ids_csv}, genome_version=GENOME_VERSION_GRCh38)
-                if len(invalid_items) > 0:
+                if len(invalid_items or []) > 0:
                     logger.warning('Genes found in panel {} but not in reference data, ignoring genes {}'
                                    .format(panel_app_id, invalid_items), user)
                 _update_locus_list_genes_bulk(pa_locus_list, genes_by_id, panel_genes_by_id, user)
@@ -127,7 +127,7 @@ def _get_all_panels(panels_url, all_results):
 def _get_all_genes(panel_app_id: int, genes_url: str, results_by_panel_id: dict):
     @retry(
         retry=retry_if_exception_type((MaxRetryError, TooManyRequestsError)),
-        wait=wait_exponential(multiplier=1, min=4, max=10),
+        wait=wait_exponential(multiplier=1, min=4, max=20),
         stop=stop_after_attempt(5),
     )
     def _get(url):

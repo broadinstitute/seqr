@@ -44,11 +44,11 @@
       "lifted_over_pos": 11854476,
       "hgmd": ["CM981315", 3],
       "screen_region_type": null,
-      "predictions": [20.9, 2.001, 0, 5.86851, 0.28205, null, 3, 0.1, 0.46558, 0.197, 0.05, 0, 4, 0.211],
+      "predictions": [25.9, 2.001, 0, 5.86851, 0.28205, null, 3, 0.1, 0.46558, 0.197, 0.05, 0, 4, 0.211],
       "populations": [
         [35805, 0.29499999, 121372, 0.41530353, 0, 24061, 5872],
-        [72672, 0.28899795, 251462, 0.4116475, 0, 11567],
-        [927, 0.03444932, 26912, 0.04027665, 0, 0],
+        [72672, 0.00288997, 251462, 0.0041164, 0, 1],
+        [927, 0.00344493, 26912, 0.00402766, 0, 0],
         [65154, 0.246152, 264690, 47604, 8775]
       ],
       "sorted_transcript_consequences": [
@@ -80,11 +80,11 @@
       "lifted_over_pos": 91968278,
       "hgmd": [null, null],
       "screen_region_type": null,
-      "predictions": [2.754, 1.378, null, 0.73896, null, null, null, null, null, null, null, 0.01, 2, null],
+      "predictions": [28.754, 1.378, null, 0.73896, null, null, null, null, null, null, null, 0.01, 2, null],
       "populations": [
         [0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0],
-        [57757, 0.38041073, 151828, 0.47977865, 0, 12204],
+        [57757, 0.00380411, 151828, 0.00479778, 0, 1],
         [95998, 0.362681, 264690, 57260, 19369]
       ],
       "sorted_transcript_consequences": [
@@ -313,7 +313,7 @@
       "family_guid": "F000002_2",
       "sample_type": "WES",
       "xpos": 1091502721,
-      "is_gnomad_gt_5_percent": true,
+      "is_gnomad_gt_5_percent": false,
       "is_annotated_in_any_gene": true,
       "geneId_ids": [61, 60],
       "filters": [],
@@ -341,9 +341,9 @@
       ],
       "sign": 1,
       "calls": [
-        ["HG00733", 0, 0, 0, 45],
-        ["HG00732", 0, 0, 0, 24],
-        ["HG00731", 1, 58, 0.17241, 29]
+        ["HG00733", 0, 30, 0, 45],
+        ["HG00732", 0, 30, 0, 24],
+        ["HG00731", 1, 58, 0.27241, 29]
       ]
     }
 }, {
@@ -375,7 +375,7 @@
       "family_guid": "F000002_2_x",
       "sample_type": "WES",
       "xpos": 1091502721,
-      "is_gnomad_gt_5_percent": true,
+      "is_gnomad_gt_5_percent": false,
       "is_annotated_in_any_gene": true,
       "geneId_ids": [61, 60],
       "filters": [],
@@ -417,7 +417,7 @@
       "family_guid": "F000003_3",
       "sample_type": "WES",
       "xpos": 1091502721,
-      "is_gnomad_gt_5_percent": true,
+      "is_gnomad_gt_5_percent": false,
       "is_annotated_in_any_gene": true,
       "geneId_ids": [61, 60],
       "filters": [],
@@ -583,7 +583,7 @@
       "family_guid": "F000002_2",
       "sample_type": "WGS",
       "xpos": 1091502721,
-      "is_gnomad_gt_5_percent": true,
+      "is_gnomad_gt_5_percent": false,
       "is_annotated_in_any_gene": true,
       "geneId_ids": [61, 60],
       "filters": [],

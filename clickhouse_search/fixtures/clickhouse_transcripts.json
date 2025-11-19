@@ -36,7 +36,7 @@
         [
           [0.9978], "L/F", "nonsense_mediated_decay", null, "ttA/ttC", ["missense_variant", "NMD_transcript_variant"],
           [2, 5], "ENSG00000277258", "ENST00000450625.1:c.156A>C", "ENSP00000389484.1:p.Leu52Phe", [null, null], [null, []],
-          "missense_variant", null, null, null, [false], "ENST00000450625", 0, [null, null, null, [
+          "missense_variant", null, "NM_004944.5", "NM_004944.5", [false], "ENST00000450625", 0, [null, null, null, [
             null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
           ], null]
         ],
@@ -71,8 +71,8 @@
       "transcripts": [
         [
           [null], null, "protein_coding", 1, null, ["intron_variant"], [null, null], "ENSG00000097046",
-          "ENST00000234626.11:c.-63-251G>A", null, [1, 11], [null, []], "intron_variant", null, "NM_003503.4",
-          "NM_003503.4", [false], "ENST00000234626", 0, [null, null, null, [
+          "ENST00000234626.11:c.-63-251G>A", null, [1, 11], [null, []], "intron_variant", null, null,
+          null, [false], "ENST00000234626", 0, [null, null, null, [
             null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
           ], null]
         ],
@@ -93,7 +93,7 @@
         [
           [null], null, "protein_coding_CDS_not_defined", null, null, ["non_coding_transcript_exon_variant"], [1, 4],
           "ENSG00000097046", "ENST00000497611.1:n.244G>A", null, [null, null], [null, []],
-          "non_coding_transcript_exon_variant", null, null, null, [false], "ENST00000497611", 2, [null, null, null, [
+          "non_coding_transcript_exon_variant", null, "NM_003503.4", "NM_003503.4", [false], "ENST00000497611", 2, [null, null, null, [
             null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
           ], null]
         ]

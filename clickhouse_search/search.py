@@ -71,9 +71,11 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
     return format_clickhouse_results(cache_results['all_results'][(page-1)*num_results:page*num_results], genome_version)
 
 
-def _get_search_results(entry_cls, annotations_cls, sample_data, skip_entry_fields=False, **search_kwargs):
+def _get_search_results(entry_cls, annotations_cls, sample_data, skip_entry_fields=False, order_by=None, **search_kwargs):
     entries = entry_cls.objects.search(sample_data, skip_entry_fields=skip_entry_fields, **search_kwargs)
     results = annotations_cls.objects.subquery_join(entries).search(**search_kwargs)
+    if order_by:
+        results = results.order_by(order_by)
     return _evaluate_results(results.result_values(skip_entry_fields=skip_entry_fields))
 
 
@@ -120,7 +122,7 @@ def _get_multi_data_type_comp_het_results_queryset(genome_version, sample_data_b
             'samples': [s for s in sv_sample_data['samples'] if s['family_guid'] in families]
         }
         sv_entries = ENTRY_CLASS_MAP[genome_version][sv_dataset_type].objects.search(
-            sv_sample_data, **search_kwargs, annotations=annotations, inheritance_mode=COMPOUND_HET, annotate_carriers=True,
+            sv_sample_data, **search_kwargs, annotations=annotations, inheritance_mode=COMPOUND_HET, annotate_carriers=True, skip_individual_guid=skip_individual_guid,
         )
         sv_annotations_cls = ANNOTATIONS_CLASS_MAP[genome_version][sv_dataset_type]
         sv_q = sv_annotations_cls.objects.subquery_join(sv_entries).search(**search_kwargs, annotations=annotations)
@@ -383,7 +385,7 @@ def _no_affected_male_families(sample_data, user):
 def _is_x_chrom_only(genome_version, genes=None, intervals=None, **kwargs):
     if not (genes or intervals):
         return False
-    return bool('X' in gene[f'chromGrch{genome_version}'] for gene in (genes or {}).values()) and all('X' in interval['chrom'] for interval in (intervals or []))
+    return all('X' in gene[f'chromGrch{genome_version}'] for gene in (genes or {}).values()) and all('X' in interval['chrom'] for interval in (intervals or []))
 
 
 OMIM_SORT = 'in_omim'
@@ -525,7 +527,7 @@ def clickhouse_variant_gene_lookup(user, gene, genome_version, search):
     entry_cls = ENTRY_CLASS_MAP[genome_version][Sample.DATASET_TYPE_VARIANT_CALLS]
     annotations_cls = ANNOTATIONS_CLASS_MAP[genome_version][Sample.DATASET_TYPE_VARIANT_CALLS]
     results = _get_search_results(
-        entry_cls, annotations_cls, sample_data=None, genes={gene['geneId']: gene}, skip_entry_fields=True, **search,
+        entry_cls, annotations_cls, sample_data=None, genes={gene['geneId']: gene}, skip_entry_fields=True, order_by='xpos', **search,
     )
     return format_clickhouse_results(results, genome_version)
 
