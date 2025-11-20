@@ -4,7 +4,7 @@ import mock
 import responses
 from settings import AIRTABLE_URL
 
-from seqr.models import Project, SavedVariant
+from seqr.models import Project, SavedVariant, RnaSample
 from seqr.views.apis.report_api import seqr_stats, anvil_export, gregor_export, family_metadata, variant_metadata
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, AirtableTest
 
@@ -803,6 +803,7 @@ class ReportAPITest(AirtableTest):
         self._test_gregor_export(url, *args)
 
     def _test_gregor_export(self, url, mock_subprocess, mock_temp_dir, mock_open, mock_datetime):
+        RnaSample.objects.filter(id=153).update(individual_id=3)
         mock_datetime.now.return_value.year = 2020
         mock_temp_dir.return_value.__enter__.return_value = '/mock/tmp'
         mock_subprocess.return_value.wait.return_value = 1
@@ -1546,7 +1547,7 @@ class AnvilReportAPITest(AnvilAuthenticationTestCase, ReportAPITest):
             'WES__MITO': {'internal': 1},
             'WES__SV': {'internal': 3},
             'WGS__SV': {'external': 3},
-            'RNA__S': {'internal': 3},
+            'RNA__S': {'internal': 2, 'external': 1},
             'RNA__T': {'internal': 2},
             'RNA__E': {'internal': 1},
         },

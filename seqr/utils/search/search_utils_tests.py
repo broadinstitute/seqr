@@ -701,7 +701,7 @@ class ClickhouseSearchUtilsTests(DifferentDbTransactionSupportMixin, TestCase, S
         self.assertEqual(total, 4)
         self.assertListEqual(
             json.loads(json.dumps(variants, cls=DjangoJSONEncoderWithSets)),
-            [VARIANT4, VARIANT2, VARIANT1, VARIANT3]
+            [VARIANT4, VARIANT3, VARIANT2, VARIANT1]
         )
         self.mock_redis.get.assert_has_calls([
             mock.call(f'{cache_key_prefix}__cadd'),
@@ -709,7 +709,7 @@ class ClickhouseSearchUtilsTests(DifferentDbTransactionSupportMixin, TestCase, S
         ])
         self.mock_redis.keys.assert_called_with(pattern=f'{cache_key_prefix}__*')
         self.assert_cached_results(
-            {'all_results': [format_cached_variant(v) for v in [VARIANT4, VARIANT2, VARIANT1, VARIANT3]], 'total_results': 4},
+            {'all_results': [format_cached_variant(v) for v in [VARIANT4, VARIANT3, VARIANT2, VARIANT1]], 'total_results': 4},
             sort='cadd',
         )
 

@@ -372,7 +372,7 @@ class ProjectAPITest(object):
             }],
             'WES__SV': [{'familyCounts': {'F000002_2': 3}, 'loadedDate': '2018-02-05'}],
             'WES__MITO': [{'familyCounts': {'F000002_2': 1}, 'loadedDate': '2022-02-05'}],
-            'RNA__S': [{'familyCounts': {'F000001_1': 3}, 'loadedDate': '2017-02-05'}],
+            'RNA__S': [{'familyCounts': {'F000001_1': 2}, 'loadedDate': '2017-02-05'}],
             'RNA__T': [{'familyCounts': {'F000001_1': 2}, 'loadedDate': '2017-02-05'}],
             'RNA__E': [{'familyCounts': {'F000001_1': 1}, 'loadedDate': '2017-02-05'}],
         })

@@ -34,6 +34,7 @@ RANGE(MIN start MAX end)
     clickhouse_writer_password=CLICKHOUSE_WRITER_PASSWORD,
 )
 
+# Original file sourced from `https://downloads.wenglab.org/V3/GRCh38-cCREs.bed`
 SCREEN_VIEW = """
 CREATE MATERIALIZED VIEW `GRCh38/SNV_INDEL/reference_data/screen/all_variants_mv`
 REFRESH EVERY 10 YEAR
@@ -44,7 +45,7 @@ AS SELECT
     toUInt32(assumeNotNull(c2)) as start,
     toUInt32(assumeNotNull(c3)) as end,
     splitByChar(',', assumeNotNull(c6))[1] as regionType
-FROM url('https://downloads.wenglab.org/V3/GRCh38-cCREs.bed')
+FROM url('https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh38/screen/GRCh38-cCREs.bed')
 """
 
 class Migration(migrations.Migration):

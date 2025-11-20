@@ -88,8 +88,7 @@ class FamilyAPITest(object):
         )
         self.assertListEqual([
             {'loadedDate': '2017-02-05T06:35:55.397Z', 'dataTypes': ['E', 'S', 'T']},
-            None,
-            {'loadedDate': '2017-02-05T06:14:55.397Z', 'dataTypes': ['S']},
+            None, None,
         ],
             [response_json['individualsByGuid'][guid]['rnaSample'] for guid in INDIVIDUAL_GUIDS]
         )
@@ -643,10 +642,20 @@ class FamilyAPITest(object):
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {
-            'F': {'individualData': {'NA19675_1': 1.01}, 'rdgData': [1.01]},
-            'M': {'individualData': {'NA19675_1': 8.38}, 'rdgData': [8.38]}
-        })
+
+        expected_response = {
+            'F': {'individualData': {'NA19675_1': 1.01}, 'myData': [1.01]},
+            'M': {'individualData': {'NA19675_1': 8.38}, 'myData': [8.38]}
+        }
+        if self.INCLUDE_RDG_TPMS:
+            expected_response = {k: {**v, 'rdgData': [*v['myData']]} for k, v in expected_response.items()}
+        self.assertDictEqual(response.json(), expected_response)
+
+        self.login_manager()
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        expected_response['F']['myData'].append(2.36)
+        self.assertDictEqual(response.json(), expected_response)
 
     def test_get_family_phenotype_gene_scores(self):
         url = reverse(get_family_phenotype_gene_scores, args=[FAMILY_GUID])
@@ -695,10 +704,12 @@ class LocalFamilyAPITest(AuthenticationTestCase, FamilyAPITest):
     fixtures = ['users', '1kg_project', 'reference_data']
 
     EXTERNAL_ANVIL_CAN_DELETE = False
+    INCLUDE_RDG_TPMS = False
 
 
 class AnvilFamilyAPITest(AnvilAuthenticationTestCase, FamilyAPITest):
     fixtures = ['users', '1kg_project', 'reference_data', 'clickhouse_saved_variants']
 
     EXTERNAL_ANVIL_CAN_DELETE = True
+    INCLUDE_RDG_TPMS = True
 
