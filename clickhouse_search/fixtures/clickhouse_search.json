@@ -1317,7 +1317,7 @@
       "sign": 1,
       "calls": [
         ["NA21234", 2, 4, 27, true, 38717327, 38719636, 3, ["ENSG00000275023"], true, false, false],
-        ["NA21987", 1, 3, 51, false, 38717327, 38719636, 3, ["ENSG00000275023"], false, false, true],
+        ["NA21987", 2, 3, 51, false, 38717327, 38719636, 3, ["ENSG00000275023"], false, false, true],
         ["NA21654", null, null, null, null, null, null, null, [], null, null, null]
       ]
     }

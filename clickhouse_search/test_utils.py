@@ -1035,7 +1035,7 @@ MULTI_PROJECT_GCNV_VARIANT3 = {
         },
         'I000019_na21987': {
             'sampleId': 'NA21987', 'sampleType': 'WES', 'individualGuid': 'I000019_na21987', 'familyGuid': 'F000014_14',
-            'numAlt': 1, 'cn': 3, 'qs': 51, 'defragged': False, 'start': None, 'end': None, 'numExon': None,
+            'numAlt': 2, 'cn': 3, 'qs': 51, 'defragged': False, 'start': None, 'end': None, 'numExon': None,
             'geneIds': None, 'newCall': False, 'prevCall': False, 'prevOverlap': True, 'filters': [],
         },
         'I000021_na21654': {
