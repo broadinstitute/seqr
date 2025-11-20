@@ -8,14 +8,11 @@ from django.db import migrations, models, connections
 import django.db.models.deletion
 import django.db.models.manager
 
-ACCESS_PRIVATE_REFERENCE_DATASETS = os.environ.get('ACCESS_PRIVATE_REFERENCE_DATASETS', '0') == '1'
+HGMD_GRCH37_URL = os.environ.get('HGMD_GRCH37_URL', None)
+HGMD_GRCH38_URL = os.environ.get('HGMD_GRCH38_URL', None)
 
 GCS_NAMED_COLLECTION = 'pipeline_data_access'
 HGMD_INFO_STRUCTURE = 'CHROM String, POS UInt32, ID String, REF String, ALT String, QUAL String, FILTER String, INFO String'
-HGMD_URLS = {
-    'GRCh37': 'https://storage.googleapis.com/seqr-reference-data-private/GRCh37/HGMD/HGMD_Pro_2023.1_hg19.vcf.gz',
-    'GRCh38': 'https://storage.googleapis.com/seqr-reference-data-private/GRCh38/HGMD/HGMD_Pro_2023.1_hg38.vcf.gz',
-}
 
 HGMD_VIEW = Template("""
 CREATE MATERIALIZED VIEW `$reference_genome/SNV_INDEL/reference_data/hgmd/all_variants_mv`
@@ -76,7 +73,7 @@ def build_hgmd_view(reference_genome: str, hgmd_url: str):
                             structure='{HGMD_INFO_STRUCTURE}'
                         )
                         """
-                        if ACCESS_PRIVATE_REFERENCE_DATASETS
+                        if hgmd_url
                         else f"null('{HGMD_INFO_STRUCTURE}')"
                     )
                 )
@@ -215,13 +212,13 @@ class Migration(migrations.Migration):
         migrations.RunPython(
             build_hgmd_view(
                 reference_genome="GRCh37",
-                hgmd_url=HGMD_URLS["GRCh37"],
+                hgmd_url=HGMD_GRCH37_URL,
             ),
         ),
         migrations.RunPython(
             build_hgmd_view(
                 reference_genome="GRCh38",
-                hgmd_url=HGMD_URLS["GRCh38"],
+                hgmd_url=HGMD_GRCH38_URL,
             ),
         ),
     ]
