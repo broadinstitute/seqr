@@ -50,7 +50,7 @@ FROM url('https://storage.googleapis.com/gcp-public-data--gnomad/release/3.1/sec
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('clickhouse_search', '0022_screen_reference_data'),
+        ('clickhouse_search', '0023_screen_reference_data'),
     ]
 
     operations = [

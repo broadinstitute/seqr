@@ -51,7 +51,7 @@ FROM url('https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh38/s
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('clickhouse_search', '0021_pext_reference_data'),
+        ('clickhouse_search', '0022_pext_reference_data'),
     ]
 
     operations = [

@@ -49,7 +49,7 @@ FROM url('https://storage.googleapis.com/gcp-public-data--gnomad/release/4.1/pex
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('clickhouse_search', '0020_clinvar_new_reference_data'),
+        ('clickhouse_search', '0021_affected_status_orderby'),
     ]
 
     operations = [
