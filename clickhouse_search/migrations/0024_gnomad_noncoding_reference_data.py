@@ -7,6 +7,8 @@ import clickhouse_search.backend.fields
 from django.db import migrations
 import django.db.models.manager
 
+from settings import DATABASES
+
 CLICKHOUSE_WRITER_PASSWORD = os.environ.get('CLICKHOUSE_WRITER_PASSWORD', 'clickhouse_test')
 CLICKHOUSE_WRITER_USER = os.environ.get('CLICKHOUSE_WRITER_USER', 'clickhouse')
 
@@ -47,6 +49,16 @@ AS SELECT
 FROM url('https://storage.googleapis.com/gcp-public-data--gnomad/release/3.1/secondary_analyses/genomic_constraint/constraint_z_genome_1kb.qc.download.txt.gz')
 """
 
+def conditionally_refresh_view(apps, schema_editor):
+    if DATABASES['default']['NAME'].startswith('test_'):
+        return
+    with connections['clickhouse_write'].cursor() as cursor:
+        cursor.execute(
+            f'''
+            SYSTEM REFRESH VIEW 'GRCh38/SNV_INDEL/reference_data/gnomad_non_coding_constraint/all_variants_mv'
+            '''
+        )
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -79,5 +91,8 @@ class Migration(migrations.Migration):
         migrations.RunSQL(
             GNOMAD_NON_CODING_CONSTRAINT_VIEW,
             hints={'clickhouse': True},
+        ),
+        migrations.RunPython(
+            conditionally_refresh_view,
         ),
     ]

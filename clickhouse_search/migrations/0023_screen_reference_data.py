@@ -7,6 +7,8 @@ import clickhouse_search.backend.fields
 from django.db import migrations
 import django.db.models.manager
 
+from settings import DATABASES
+
 CLICKHOUSE_WRITER_PASSWORD = os.environ.get('CLICKHOUSE_WRITER_PASSWORD', 'clickhouse_test')
 CLICKHOUSE_WRITER_USER = os.environ.get('CLICKHOUSE_WRITER_USER', 'clickhouse')
 
@@ -48,6 +50,16 @@ AS SELECT
 FROM url('https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh38/screen/GRCh38-cCREs.bed')
 """
 
+def conditionally_refresh_view(apps, schema_editor):
+    if DATABASES['default']['NAME'].startswith('test_'):
+        return
+    with connections['clickhouse_write'].cursor() as cursor:
+        cursor.execute(
+            f'''
+            SYSTEM REFRESH VIEW 'GRCh38/SNV_INDEL/reference_data/screen/all_variants_mv'
+            '''
+        )
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -81,5 +93,7 @@ class Migration(migrations.Migration):
             SCREEN_VIEW,
             hints={'clickhouse': True},
         ),
-
+        migrations.RunPython(
+            conditionally_refresh_view,
+        ),
     ]

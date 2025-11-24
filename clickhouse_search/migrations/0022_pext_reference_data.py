@@ -7,6 +7,8 @@ import clickhouse_search.backend.fields
 from django.db import migrations
 import django.db.models.manager
 
+from settings import DATABASES
+
 CLICKHOUSE_WRITER_PASSWORD = os.environ.get('CLICKHOUSE_WRITER_PASSWORD', 'clickhouse_test')
 CLICKHOUSE_WRITER_USER = os.environ.get('CLICKHOUSE_WRITER_USER', 'clickhouse')
 
@@ -45,6 +47,18 @@ AS SELECT
     if(exp_prop_mean IN ('NaN', 'nan', ''), NULL, exp_prop_mean) AS expPropMean
 FROM url('https://storage.googleapis.com/gcp-public-data--gnomad/release/4.1/pext/gnomad.pext.gtex_v10.base_level.tsv.gz')
 """)
+
+def conditionally_refresh_view(dataset_type: str):
+    def inner(apps, schema_editor):
+        if DATABASES['default']['NAME'].startswith('test_'):
+            return
+        with connections['clickhouse_write'].cursor() as cursor:
+            cursor.execute(
+                f'''
+                SYSTEM REFRESH VIEW 'GRCh38/{dataset_type}/reference_data/pext/all_variants_mv'
+                '''
+            )
+    return inner
 
 class Migration(migrations.Migration):
 
@@ -110,6 +124,16 @@ class Migration(migrations.Migration):
                 dataset_type='MITO',
             ),
             hints={'clickhouse': True},
+        ),
+        migrations.RunPython(
+            conditionally_refresh_view(
+                dataset_type="SNV_INDEL",
+            ),
+        ),
+        migrations.RunPython(
+            conditionally_refresh_view(
+                dataset_type="MITO",
+            ),
         ),
 
     ]
