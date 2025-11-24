@@ -4,7 +4,7 @@ from string import Template
 
 import clickhouse_backend.models
 import clickhouse_search.backend.fields
-from django.db import migrations
+from django.db import connections, migrations
 import django.db.models.manager
 
 from settings import DATABASES
