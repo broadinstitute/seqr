@@ -83,7 +83,7 @@ def build_hgmd_view(reference_genome: str, hgmd_url: str):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('clickhouse_search', '0023_gnomad_noncoding_reference_data'),
+        ('clickhouse_search', '0024_gnomad_noncoding_reference_data'),
     ]
 
     operations = [
