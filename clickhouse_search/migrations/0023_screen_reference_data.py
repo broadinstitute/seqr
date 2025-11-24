@@ -4,25 +4,27 @@ from string import Template
 
 import clickhouse_backend.models
 import clickhouse_search.backend.fields
-from django.db import migrations
+from django.db import connections, migrations
 import django.db.models.manager
+
+from settings import DATABASES
 
 CLICKHOUSE_WRITER_PASSWORD = os.environ.get('CLICKHOUSE_WRITER_PASSWORD', 'clickhouse_test')
 CLICKHOUSE_WRITER_USER = os.environ.get('CLICKHOUSE_WRITER_USER', 'clickhouse')
 
-GNOMAD_NON_CODING_CONSTRAINT_SEARCH = Template("""
-CREATE DICTIONARY `GRCh38/SNV_INDEL/reference_data/gnomad_non_coding_constraint`
+SCREEN_SEARCH = Template("""
+CREATE DICTIONARY `GRCh38/SNV_INDEL/reference_data/screen`
 (
     chrom String,
     start UInt32,
     end UInt32,
-    z Decimal(9, 5)
+    regionType String,
 )
 PRIMARY KEY chrom
 SOURCE(CLICKHOUSE(
     USER '$clickhouse_writer_user'
     PASSWORD '$clickhouse_writer_password'
-    TABLE `GRCh38/SNV_INDEL/reference_data/gnomad_non_coding_constraint/all_variants`
+    TABLE `GRCh38/SNV_INDEL/reference_data/screen/all_variants`
 ))
 LIFETIME(MIN 0 MAX 0)
 LAYOUT(RANGE_HASHED())
@@ -34,36 +36,47 @@ RANGE(MIN start MAX end)
     clickhouse_writer_password=CLICKHOUSE_WRITER_PASSWORD,
 )
 
-GNOMAD_NON_CODING_CONSTRAINT_VIEW = """
-CREATE MATERIALIZED VIEW `GRCh38/SNV_INDEL/reference_data/gnomad_non_coding_constraint/all_variants_mv`
+# Original file sourced from `https://downloads.wenglab.org/V3/GRCh38-cCREs.bed`
+SCREEN_VIEW = """
+CREATE MATERIALIZED VIEW `GRCh38/SNV_INDEL/reference_data/screen/all_variants_mv`
 REFRESH EVERY 10 YEAR
-TO `GRCh38/SNV_INDEL/reference_data/gnomad_non_coding_constraint/all_variants`
+TO `GRCh38/SNV_INDEL/reference_data/screen/all_variants`
 EMPTY
 AS SELECT
-    replaceOne(chrom, 'chr', '') as chrom,
-    toUInt32(assumeNotNull(start)) as start,
-    toUInt32(assumeNotNull(end)) as end,
-    z
-FROM url('https://storage.googleapis.com/gcp-public-data--gnomad/release/3.1/secondary_analyses/genomic_constraint/constraint_z_genome_1kb.qc.download.txt.gz')
+    replaceOne(c1, 'chr', '') as chrom,
+    toUInt32(assumeNotNull(c2)) as start,
+    toUInt32(assumeNotNull(c3)) as end,
+    splitByChar(',', assumeNotNull(c6))[1] as regionType
+FROM url('https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh38/screen/GRCh38-cCREs.bed')
 """
+
+def conditionally_refresh_view(apps, schema_editor):
+    if DATABASES['default']['NAME'].startswith('test_'):
+        return
+    with connections['clickhouse_write'].cursor() as cursor:
+        cursor.execute(
+            '''
+            SYSTEM REFRESH VIEW 'GRCh38/SNV_INDEL/reference_data/screen/all_variants_mv'
+            '''
+        )
 
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('clickhouse_search', '0022_screen_reference_data'),
+        ('clickhouse_search', '0022_pext_reference_data'),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='GnomadNonCodingConstraintAllVariantsSnvIndel',
+            name='ScreenAllVariantsSnvIndel',
             fields=[
                 ('chrom', clickhouse_search.backend.fields.Enum8Field(choices=[(1, '1'), (2, '2'), (3, '3'), (4, '4'), (5, '5'), (6, '6'), (7, '7'), (8, '8'), (9, '9'), (10, '10'), (11, '11'), (12, '12'), (13, '13'), (14, '14'), (15, '15'), (16, '16'), (17, '17'), (18, '18'), (19, '19'), (20, '20'), (21, '21'), (22, '22'), (23, 'X'), (24, 'Y'), (25, 'M')], primary_key=True, serialize=False)),
                 ('start', clickhouse_backend.models.UInt32Field()),
                 ('end', clickhouse_backend.models.UInt32Field()),
-                ('z', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
+                ('region_type', clickhouse_backend.models.StringField(db_column='regionType')),
             ],
             options={
-                'db_table': 'GRCh38/SNV_INDEL/reference_data/gnomad_non_coding_constraint/all_variants',
+                'db_table': 'GRCh38/SNV_INDEL/reference_data/screen/all_variants',
                 'engine': clickhouse_backend.models.MergeTree(order_by=('chrom', 'start', 'end'), primary_key=('chrom', 'start', 'end')),
                 'unique_together': {('chrom', 'start', 'end')},
             },
@@ -73,11 +86,14 @@ class Migration(migrations.Migration):
             ],
         ),
         migrations.RunSQL(
-            GNOMAD_NON_CODING_CONSTRAINT_SEARCH,
+            SCREEN_SEARCH,
             hints={'clickhouse': True},
         ),
         migrations.RunSQL(
-            GNOMAD_NON_CODING_CONSTRAINT_VIEW,
+            SCREEN_VIEW,
             hints={'clickhouse': True},
+        ),
+        migrations.RunPython(
+            conditionally_refresh_view,
         ),
     ]

@@ -20,8 +20,8 @@ LOCUS_LIST_GUID = 'LL00049_pid_genes_autosomal_do'
 PRIVATE_LOCUS_LIST_GUID = 'LL00005_retina_proteome'
 EXISTING_AU_PA_LOCUS_LIST_GUID = 'LL01705_sarcoma'
 EXISTING_UK_PA_LOCUS_LIST_GUID = 'LL02064_autosomal_recessive_pr'
-NEW_AU_PA_LOCUS_LIST_GUID = 'LL00006_hereditary_neuropathy_'
-NEW_UK_PA_LOCUS_LIST_GUID = 'LL00007_auditory_neuropathy_sp'
+NEW_AU_PA_LOCUS_LIST_GUID = 'LL00008_hereditary_neuropathy_'
+NEW_UK_PA_LOCUS_LIST_GUID = 'LL00009_auditory_neuropathy_sp'
 
 PA_LOCUS_LIST_FIELDS = {'paLocusList'}
 PA_LOCUS_LIST_FIELDS.update(LOCUS_LIST_FIELDS)
@@ -44,7 +44,8 @@ def _get_json_from_file(filepath):
 class PaLocusListAPITest(AuthenticationTestCase, BaseLocusListAPITest):
     fixtures = ['users', '1kg_project', 'panelapp', 'reference_data']
 
-    EXPECTED_LOCUS_LISTS = {LOCUS_LIST_GUID, EXISTING_AU_PA_LOCUS_LIST_GUID, EXISTING_UK_PA_LOCUS_LIST_GUID}
+    EXISTING_LOCUS_LISTS = [EXISTING_AU_PA_LOCUS_LIST_GUID, EXISTING_UK_PA_LOCUS_LIST_GUID, 'LL00005_mendeliome', 'LL00006_incidentalome']
+    EXPECTED_LOCUS_LISTS = {LOCUS_LIST_GUID, *EXISTING_LOCUS_LISTS}
     MAIN_LIST_GUID = EXISTING_AU_PA_LOCUS_LIST_GUID
     DETAIL_FIELDS = PA_LOCUS_LIST_DETAIL_FIELDS
 
@@ -99,21 +100,21 @@ class PaLocusListAPITest(AuthenticationTestCase, BaseLocusListAPITest):
         self._assert_lists_imported()
 
         # and AU list 260 contains expected two genes
-        url_au260 = reverse(locus_list_info, args=['LL00005_hereditary_haemorrhagi'])
+        url_au260 = reverse(locus_list_info, args=['LL00007_hereditary_haemorrhagi'])
         response = self.client.get(url_au260)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000106991', 'ENSG00000139567'})
 
         # and list 3069 contains only one gene because the other one was skipped during import
-        url3069 = reverse(locus_list_info, args=['LL00006_hereditary_neuropathy_'])
+        url3069 = reverse(locus_list_info, args=['LL00008_hereditary_neuropathy_'])
         response = self.client.get(url3069)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000090861'})
 
         # and UK list 260 contains expected one gene
-        url_uk260 = reverse(locus_list_info, args=['LL00007_auditory_neuropathy_sp'])
+        url_uk260 = reverse(locus_list_info, args=['LL00009_auditory_neuropathy_sp'])
         response = self.client.get(url_uk260)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
@@ -124,29 +125,29 @@ class PaLocusListAPITest(AuthenticationTestCase, BaseLocusListAPITest):
         self.assert_json_logs(None, [
             ('Starting import of all gene lists from Panel App [https://test-panelapp.url.au/api]', None),
             ('Importing panel id 260', None),
-            ('create LocusList LL00005_hereditary_haemorrhagi', {'dbUpdate': {
+            ('create LocusList LL00007_hereditary_haemorrhagi', {'dbUpdate': {
                 'dbEntity': 'LocusList',
-                'entityId': 'LL00005_hereditary_haemorrhagi',
+                'entityId': 'LL00007_hereditary_haemorrhagi',
                 'updateType': 'create',
                 'updateFields': ['description', 'is_public', 'name'],
             }}),
-            ('update PaLocusList 5', {'dbUpdate': {
+            ('update PaLocusList 7', {'dbUpdate': {
                 'dbEntity': 'PaLocusList',
-                'entityId': 5,
+                'entityId': 7,
                 'updateType': 'update',
                 'updateFields': ['disease_group', 'status', 'url', 'version', 'version_created'],
             }}),
             ('Bulk updating genes for list Hereditary Haemorrhagic Telangiectasia', None),
             ('Importing panel id 3069', None),
-            ('create LocusList LL00006_hereditary_neuropathy_', {'dbUpdate': {
+            ('create LocusList LL00008_hereditary_neuropathy_', {'dbUpdate': {
                 'dbEntity': 'LocusList',
-                'entityId': 'LL00006_hereditary_neuropathy_',
+                'entityId': 'LL00008_hereditary_neuropathy_',
                 'updateType': 'create',
                 'updateFields': ['description', 'is_public', 'name'],
             }}),
-            ('update PaLocusList 6', {'dbUpdate': {
+            ('update PaLocusList 8', {'dbUpdate': {
                 'dbEntity': 'PaLocusList',
-                'entityId': 6,
+                'entityId': 8,
                 'updateType': 'update',
                 'updateFields': ['disease_group', 'status', 'url', 'version', 'version_created'],
             }}),
@@ -155,15 +156,15 @@ class PaLocusListAPITest(AuthenticationTestCase, BaseLocusListAPITest):
             ('---Done---', None),
             ('Starting import of all gene lists from Panel App [https://test-panelapp.url.uk/api]', None),
             ('Importing panel id 260', None),
-            ('create LocusList LL00007_auditory_neuropathy_sp', {'dbUpdate': {
+            ('create LocusList LL00009_auditory_neuropathy_sp', {'dbUpdate': {
                 'dbEntity': 'LocusList',
-                'entityId': 'LL00007_auditory_neuropathy_sp',
+                'entityId': 'LL00009_auditory_neuropathy_sp',
                 'updateType': 'create',
                 'updateFields': ['description', 'is_public', 'name'],
             }}),
-            ('update PaLocusList 7', {'dbUpdate': {
+            ('update PaLocusList 9', {'dbUpdate': {
                 'dbEntity': 'PaLocusList',
-                'entityId': 7,
+                'entityId': 9,
                 'updateType': 'update',
                 'updateFields': ['disease_group', 'disease_sub_group', 'status', 'url', 'version', 'version_created'],
             }}),
@@ -201,8 +202,8 @@ class PaLocusListAPITest(AuthenticationTestCase, BaseLocusListAPITest):
 
         # both existing and new lists are present
         self.assertSetEqual(set(locus_lists_dict.keys()),
-                            {LOCUS_LIST_GUID, EXISTING_AU_PA_LOCUS_LIST_GUID, EXISTING_UK_PA_LOCUS_LIST_GUID,
-                             'LL00005_hereditary_haemorrhagi', NEW_AU_PA_LOCUS_LIST_GUID, NEW_UK_PA_LOCUS_LIST_GUID})
+                            {LOCUS_LIST_GUID, *self.EXISTING_LOCUS_LISTS,
+                             'LL00007_hereditary_haemorrhagi', NEW_AU_PA_LOCUS_LIST_GUID, NEW_UK_PA_LOCUS_LIST_GUID})
 
         new_au_response = self.client.get(reverse(locus_list_info, args=[NEW_AU_PA_LOCUS_LIST_GUID]))
         self.assertDictEqual(new_au_response.json()['locusListsByGuid'][NEW_AU_PA_LOCUS_LIST_GUID], {

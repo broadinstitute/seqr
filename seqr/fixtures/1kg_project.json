@@ -1841,6 +1841,22 @@
     }
 },
 {
+    "model": "seqr.varianttagtype",
+    "pk": 7,
+    "fields": {
+        "guid": "VTT_seqr",
+        "created_date": "2025-11-03T00:00:00.000Z",
+        "created_by": null,
+        "last_modified_date": null,
+        "project": null,
+        "name": "seqr Prioritized",
+        "category": "Collaboration",
+        "description": "",
+        "color": "#176F8A",
+        "order": 17.3
+    }
+},
+{
     "model": "seqr.savedvariant",
     "pk": 1,
     "fields": {

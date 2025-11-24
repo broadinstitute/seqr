@@ -1309,7 +1309,7 @@ class IndividualAPITest(object):
                 'Created 0 new families, 0 new individuals',
                 'Updated 0 existing families, 0 existing individuals',
                 'Skipped 4 unchanged individuals',
-                'Loaded 1 new and 3 updated findings tags',
+                'Loaded 1 new and 0 updated findings tags (skipped 3 unchanged tags)',
             ],
         }})
         self.assertDictEqual(response_json['individualsByGuid'], {})

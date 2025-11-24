@@ -286,7 +286,7 @@ class AnnotationsQuerySet(SearchQuerySet):
         values = {**self.annotation_values}
         values.update(self._conditional_selected_transcript_values(self))
         if not skip_entry_fields:
-            values.update(self._genotype_override_values(self))
+            values.update(self.genotype_override_values(self))
         initial_values = {k: v for k, v in  values.items() if k not in override_model_annotations}
 
         fields = [*self.annotation_fields]
@@ -348,7 +348,7 @@ class AnnotationsQuerySet(SearchQuerySet):
             return {'selectedTranscript':  F(f'{self.FILTERED_CONSEQUENCE_FIELD}__0')}
         return {self.SELECTED_GENE_FIELD: F(f'{self.GENE_CONSEQUENCE_FIELD}__0__geneId')}
 
-    def _genotype_override_values(self, query, prefix=''):
+    def genotype_override_values(self, query, prefix=''):
         genotype_override_fields = query.model.GENOTYPE_OVERRIDE_FIELDS
         if not genotype_override_fields:
             return {}
@@ -384,7 +384,7 @@ class AnnotationsQuerySet(SearchQuerySet):
         results = self.cross_join(
             query=primary_q, alias='primary', join_query=secondary_q, join_alias='secondary',
             conditional_selects=[
-                conditional_fields, self._conditional_selected_transcript_values, self._genotype_override_values,
+                conditional_fields, self._conditional_selected_transcript_values, self.genotype_override_values,
             ],
         )
         return results.filter(
@@ -1203,7 +1203,7 @@ class EntriesManager(SearchQuerySet):
             mapped_expression='x.1', output_field=models.ArrayField(models.StringField()),
         )
 
-    def filter_locus(self, exclude_locations=False, intervals=None, genes=None, parsed_variant_ids=None, require_gene_filter=False, **kwargs):
+    def filter_locus(self, exclude_locations=False, require_gene_filter=False, require_any_gene=False, intervals=None, genes=None, parsed_variant_ids=None, **kwargs):
         entries = self
         if parsed_variant_ids:
             # although technically redundant, the interval query is applied to the entries table before join and reduces the join size,
@@ -1226,13 +1226,14 @@ class EntriesManager(SearchQuerySet):
                     should_filter_interval = True
                 intervals = [{'chrom': chrom, 'start': MIN_POS, 'end': MAX_POS} for chrom in chromosomes]
 
+        if hasattr(self.model, 'is_annotated_in_any_gene') and (require_any_gene or (genes and not intervals)):
+            entries = entries.filter(is_annotated_in_any_gene=Value(True))
+
         if not (genes or intervals):
             return entries
 
         locus_q = None
         if genes:
-            if hasattr(self.model, 'is_annotated_in_any_gene') and not intervals:
-                entries = entries.filter(is_annotated_in_any_gene=Value(True))
             should_filter_interval |= (not hasattr(self.model, 'geneId_ids')) or exclude_locations or len(genes) < self.model.MAX_XPOS_FILTER_INTERVALS
             if should_filter_interval:
                 intervals = self._format_gene_intervals(genes) + (intervals or [])
