@@ -14,7 +14,7 @@ HGMD_GRCH38_URL = os.environ.get('HGMD_GRCH38_URL', None)
 GCS_NAMED_COLLECTION = 'pipeline_data_access'
 HGMD_INFO_STRUCTURE = 'CHROM String, POS UInt32, ID String, REF String, ALT String, QUAL String, FILTER String, INFO String'
 
-HGMD_VIEW = Template("""
+HGMD_ALL_VARIANTS_MV = Template("""
 CREATE MATERIALIZED VIEW `$reference_genome/SNV_INDEL/reference_data/hgmd/all_variants_mv`
 REFRESH EVERY 10 YEAR
 TO `$reference_genome/SNV_INDEL/reference_data/hgmd/all_variants`
@@ -57,11 +57,28 @@ DISTINCT ON (key) *
 FROM `$reference_genome/SNV_INDEL/reference_data/hgmd/seqr_variants`
 """)
 
-def build_hgmd_view(reference_genome: str, hgmd_url: str):
+def conditionally_refresh_views(reference_genome: str):
+    def inner(apps, schema_editor):
+        if DATABASES['default']['NAME'].startswith('test_'):
+            return
+        with connections['clickhouse_write'].cursor() as cursor:
+            for view in [
+                'all_variants_mv',
+                'all_variants_to_seqr_variants_mv',
+                'seqr_variants_to_search_mv',
+            ]
+                cursor.execute(
+                    f'''
+                    SYSTEM REFRESH VIEW '{reference_genome}/SNV_INDEL/reference_data/pext/{view}'
+                    '''
+                )
+    return inner
+
+def build_hgmd_all_variants_mv(reference_genome: str, hgmd_url: str):
     def inner(apps, schema_editor):
         with connections['clickhouse_write'].cursor() as cursor:
             cursor.execute(
-                HGMD_VIEW.substitute(
+                HGMD_ALL_VARIANTS_MV.substitute(
                     reference_genome=reference_genome,
                     table_structure=
                     (
@@ -210,15 +227,25 @@ class Migration(migrations.Migration):
             hints={"clickhouse": True},
         ),
         migrations.RunPython(
-            build_hgmd_view(
+            build_hgmd_all_variants_mv(
                 reference_genome="GRCh37",
                 hgmd_url=HGMD_GRCH37_URL,
             ),
         ),
         migrations.RunPython(
-            build_hgmd_view(
+            build_hgmd_all_variants_mv(
                 reference_genome="GRCh38",
                 hgmd_url=HGMD_GRCH38_URL,
+            ),
+        ),
+        migrations.RunPython(
+            conditionally_refresh_views(
+                reference_genome="GRCh37",
+            ),
+        ),
+        migrations.RunPython(
+            conditionally_refresh_views(
+                reference_genome="GRCh38",
             ),
         ),
     ]
