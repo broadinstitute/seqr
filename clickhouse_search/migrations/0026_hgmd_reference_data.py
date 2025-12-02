@@ -57,21 +57,16 @@ DISTINCT ON (key) *
 FROM `$reference_genome/SNV_INDEL/reference_data/hgmd/seqr_variants`
 """)
 
-def conditionally_refresh_views(reference_genome: str):
+def conditionally_refresh_view(reference_genome: str):
     def inner(apps, schema_editor):
         if DATABASES['default']['NAME'].startswith('test_'):
             return
         with connections['clickhouse_write'].cursor() as cursor:
-            for view in [
-                'all_variants_mv',
-                'all_variants_to_seqr_variants_mv',
-                'seqr_variants_to_search_mv',
-            ]
-                cursor.execute(
-                    f'''
-                    SYSTEM REFRESH VIEW '{reference_genome}/SNV_INDEL/reference_data/pext/{view}'
-                    '''
-                )
+            cursor.execute(
+                f'''
+                SYSTEM REFRESH VIEW '{reference_genome}/SNV_INDEL/reference_data/hgmd/all_variants_mv'
+                '''
+            )
     return inner
 
 def build_hgmd_all_variants_mv(reference_genome: str, hgmd_url: str):
@@ -239,12 +234,12 @@ class Migration(migrations.Migration):
             ),
         ),
         migrations.RunPython(
-            conditionally_refresh_views(
+            conditionally_refresh_view(
                 reference_genome="GRCh37",
             ),
         ),
         migrations.RunPython(
-            conditionally_refresh_views(
+            conditionally_refresh_view(
                 reference_genome="GRCh38",
             ),
         ),
