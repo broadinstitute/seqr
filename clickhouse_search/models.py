@@ -154,7 +154,7 @@ class BaseAnnotationsSvGcnv(BaseAnnotations):
         ('majorConsequence', models.Enum8Field(null=True, blank=True, return_int=False, choices=SV_CONSEQUENCE_RANKS)),
     ]
     SEQR_POPULATIONS = [
-        ('sv_callset', {'ac': 'ac', 'hom': 'hom'}),
+        ('sv_seqr', {'ac': 'ac', 'hom': 'hom'}),
     ]
 
     chrom = Enum8Field(return_int=False, choices=BaseAnnotations.CHROMOSOME_CHOICES)

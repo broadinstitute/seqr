@@ -266,7 +266,7 @@ const VARIANT_LINKS = [
     getHref: ({ pos, ref, alt }) => `https://www.mitovisualize.org/variant/m-${pos}-${ref}-${alt}`,
   },
   {
-    name: 'google',
+    name: 'Google',
     shouldShow: ({ genes, variations }) => genes.length && variations.length,
     getHref: ({ genes, variations }) => `https://scholar.google.com/scholar?q=${getLitSearch(genes, variations).replaceAll('=', '')}`,
   },
@@ -365,7 +365,7 @@ const variantSearchLinks = (variant, mainTranscript, genesById, user, elasticsea
       to={`/summary_data/variant_lookup?variantId=${variantId}&genomeVersion=${genomeVersion}&sampleType=${getSampleType(genotypes)}`}
       target="_blank"
     >
-      seqr
+      Variant Lookup
     </NavLink>
   )
 

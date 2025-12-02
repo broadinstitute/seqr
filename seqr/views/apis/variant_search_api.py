@@ -572,7 +572,8 @@ def gene_variant_lookup(request):
 def variant_lookup_handler(request):
     variant_id = request.GET.get('variantId')
     genome_version = request.GET.get('genomeVersion') or GENOME_VERSION_GRCh38
-    variants = variant_lookup(request.user, variant_id, genome_version, sample_type=request.GET.get('sampleType'))
+    bool_kwargs = {_to_snake_case(field): bool(request.GET.get(field)) for field in ['affectedOnly', 'homOnly']}
+    variants = variant_lookup(request.user, variant_id, genome_version, sample_type=request.GET.get('sampleType'), **bool_kwargs)
 
     family_guids = set()
     for variant in variants:

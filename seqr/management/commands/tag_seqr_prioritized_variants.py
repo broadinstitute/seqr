@@ -9,8 +9,8 @@ from clickhouse_backend.models import ArrayField, StringField
 
 from clickhouse_search.backend.fields import NamedTupleField
 from clickhouse_search.backend.functions import ArrayFilter, ArrayMap
-from clickhouse_search.search import get_search_queryset, get_transcripts_queryset, clickhouse_genotypes_json, \
-    get_data_type_comp_het_results_queryset, get_multi_data_type_comp_het_results_queryset, SAMPLE_DATA_FIELDS, SELECTED_GENE_FIELD
+from clickhouse_search.search import get_search_queryset, get_transcripts_queryset, add_individual_guids, \
+    get_data_type_comp_het_results_queryset, get_multi_data_type_comp_het_results_queryset, SELECTED_GENE_FIELD
 from panelapp.models import PaLocusListGene
 from reference_data.models import GENOME_VERSION_GRCh38
 from seqr.models import Project, Family, Individual, Sample, LocusList
@@ -56,7 +56,7 @@ SEARCHES = {
         'Clinvar Pathogenic -  Compound Heterozygous': {
             'gene_list_moi': 'R',
             'inheritance_mode': 'compound_het',
-            'no_secondary_annotations': True,
+            'split_pathogenicity_annotations': True,
             'pathogenicity': {
                 'clinvar': ['pathogenic', 'likely_pathogenic', 'conflicting_p_lp'],
                 'clinvarMinStars': 1,
@@ -80,6 +80,23 @@ SEARCHES = {
                     'extended_intronic_splice_region_variant',
                     'non_coding_transcript_exon_variant',
                 ]
+            },
+            'freqs': {
+                'callset': {'ac': 2000},
+                'gnomad_exomes': {'af': 0.03},
+                'gnomad_genomes': {'af': 0.03}
+            },
+            'qualityFilter': {
+                'min_gq': 30,
+                'min_ab': 20
+            },
+        },
+        'Clinvar Both Pathogenic -  Compound Heterozygous': {
+            'gene_list_moi': 'R',
+            'inheritance_mode': 'compound_het',
+            'pathogenicity': {
+                'clinvar': ['pathogenic', 'likely_pathogenic', 'conflicting_p_lp'],
+                'clinvarMinStars': 1,
             },
             'freqs': {
                 'callset': {'ac': 2000},
@@ -369,7 +386,7 @@ SEARCHES = {
             },
             'freqs': {
                 'sv_callset': {'ac': 500},
-                'gnomad_svs': {'ac': 0.01},
+                'gnomad_svs': {'af': 0.01},
             },
             'qualityFilter': {
                 'min_gq_sv': 90,
@@ -387,7 +404,7 @@ SEARCHES = {
             },
             'freqs': {
                 'sv_callset': {'ac': 100},
-                'gnomad_svs': {'ac': 0.001},
+                'gnomad_svs': {'af': 0.001},
             },
             'qualityFilter': {
                 'vcf_filter': 'PASS',
@@ -402,7 +419,7 @@ SEARCHES = {
             },
             'freqs': {
                 'sv_callset': {'ac': 500},
-                'gnomad_svs': {'ac': 0.01},
+                'gnomad_svs': {'af': 0.01},
             },
             'qualityFilter': {
                 'min_gq_sv': 90,
@@ -419,6 +436,10 @@ MULTI_DATA_TYPE_SEARCHES = {
                 'INTRAGENIC_EXON_DUP',
             ],
             'vep_consequences': [
+                'splice_donor_variant',
+                'splice_acceptor_variant',
+                'stop_gained',
+                'frameshift_variant',
                 'stop_lost',
                 'start_lost',
                 'inframe_insertion',
@@ -441,7 +462,7 @@ MULTI_DATA_TYPE_SEARCHES = {
             'sv_callset': {'ac': 500},
             'gnomad_exomes': {'af': 0.01, 'hh': 2},
             'gnomad_genomes': {'af': 0.01, 'hh': 2},
-            'gnomad_svs': {'ac': 0.01}
+            'gnomad_svs': {'af': 0.01}
         },
         'qualityFilter': {
             'min_gq_sv': 90,
@@ -473,14 +494,15 @@ class Command(BaseCommand):
         family_variant_data = defaultdict(lambda: {'matched_searches': set(), 'matched_comp_het_searches': set(), 'support_vars': set()})
         search_counts = {}
         samples_by_dataset_type = {}
+        sample_qs = get_search_samples([project])
         for dataset_type, searches in SEARCHES.items():
             self._run_dataset_type_searches(
-                dataset_type, searches, family_variant_data, search_counts, samples_by_dataset_type, family_guid_map,
+                dataset_type, searches, sample_qs, family_variant_data, search_counts, samples_by_dataset_type, family_guid_map,
                 project, exclude_genes, gene_by_moi,
             )
 
         self._run_multi_data_type_comp_het_search(
-            family_variant_data, search_counts, samples_by_dataset_type, family_guid_map, project, genes=gene_by_moi['R'],
+            family_variant_data, search_counts, samples_by_dataset_type, family_guid_map, project, sample_qs, genes=gene_by_moi['R'],
         )
 
         today = datetime.now().strftime('%Y-%m-%d')
@@ -514,11 +536,13 @@ class Command(BaseCommand):
         )
 
     @classmethod
-    def _run_dataset_type_searches(cls, dataset_type, searches, family_variant_data, search_counts, samples_by_dataset_type, family_guid_map, project, exclude_genes, gene_by_moi):
+    def _run_dataset_type_searches(cls, dataset_type, searches, sample_qs, family_variant_data, search_counts, samples_by_dataset_type, family_guid_map, project, exclude_genes, gene_by_moi):
         is_sv = dataset_type == Sample.DATASET_TYPE_SV_CALLS
-        sample_qs = get_search_samples([project]).filter(dataset_type=dataset_type)
+        sample_qs = sample_qs.filter(dataset_type=dataset_type)
         if is_sv:
-            sample_qs = sample_qs.exclude(individual__sv_flags__contains=['outlier_num._calls'])
+            sample_qs = sample_qs.exclude(
+                individual__sv_flags__contains=['outlier_num._calls'], individual__affected=Individual.AFFECTED_STATUS_AFFECTED,
+            )
         sample_types = list(sample_qs.values_list('sample_type', flat=True).distinct())
         if len(sample_types) > 1:
             raise CommandError('Variant prioritization not supported for projects with multiple sample types')
@@ -526,10 +550,13 @@ class Command(BaseCommand):
         if is_sv:
             dataset_type = f'{dataset_type}_{sample_type}'
         samples_by_family = {
-            family_guid: samples for family_guid, samples in sample_qs.values('individual__family__guid').annotate(
-                samples=ArrayAgg(JSONObject(**SAMPLE_DATA_FIELDS, maternal_guid='individual__mother__guid', paternal_guid='individual__father__guid'))
-            ).values_list('individual__family__guid', 'samples')
-            if any(s['affected'] == Individual.AFFECTED_STATUS_AFFECTED for s in samples)
+            agg['individual__family__guid']: agg for agg in sample_qs.values('individual__family__guid').annotate(
+                affecteds=ArrayAgg(
+                    JSONObject(maternal_guid='individual__mother__guid', paternal_guid='individual__father__guid'),
+                    filter=Q(individual__affected=Individual.AFFECTED_STATUS_AFFECTED),
+                ),
+                unaffected_guids=ArrayAgg('individual__guid', filter=Q(individual__affected=Individual.AFFECTED_STATUS_UNAFFECTED)),
+            ).filter(affecteds__len__gt=0)
         }
         samples_by_dataset_type[dataset_type] = samples_by_family
 
@@ -542,7 +569,7 @@ class Command(BaseCommand):
             )
             run_search_func = cls._run_comp_het_search if config_search['inheritance_mode'] == COMPOUND_HET else cls._run_search
             num_results = run_search_func(
-                search_name, config_search, family_variant_data, family_guid_map, dataset_type, sample_data,
+                search_name, config_search, family_variant_data, family_guid_map, dataset_type, sample_data, sample_qs,
                 exclude_locations=exclude_locations, genes=search_genes, **config_search, **ALL_SEARCHES_CRITERIA,
             )
             logger.info(f'Found {num_results} variants for criteria: {search_name}')
@@ -552,29 +579,27 @@ class Command(BaseCommand):
     def _get_valid_family_sample_data(cls, project, sample_type, samples_by_family, family_filter=None):
         if family_filter:
             samples_by_family = {
-                family_guid: samples for family_guid, samples in samples_by_family.items()
-                if cls._family_passes_filter(samples, family_filter)
+                family_guid: sample_data for family_guid, sample_data in samples_by_family.items()
+                if cls._family_passes_filter(sample_data, family_filter)
             }
         return {
             'project_guids': [project.guid],
-            'family_guids': samples_by_family.keys(),
+            'num_families': len(samples_by_family),
+            'num_unaffected': sum(len(s['unaffected_guids']) for s in samples_by_family.values()),
             'sample_type_families': {sample_type: samples_by_family.keys()},
-            'samples': [s for family_samples in samples_by_family.values() for s in family_samples],
         }
 
     @staticmethod
-    def _family_passes_filter(samples, family_filter):
-        affected = [s for s in samples if s['affected'] == Individual.AFFECTED_STATUS_AFFECTED]
-        if family_filter.get('min_affected') and len(affected) < family_filter['min_affected']:
+    def _family_passes_filter(sample_data, family_filter):
+        if family_filter.get('min_affected') and len(sample_data['affecteds']) < family_filter['min_affected']:
             return False
-        if family_filter.get('max_affected') and len(affected) > family_filter['max_affected']:
+        if family_filter.get('max_affected') and len(sample_data['affecteds']) > family_filter['max_affected']:
             return False
         if 'confirmed_inheritance' in family_filter:
-            proband = next((s for s in affected if s['maternal_guid'] and s['paternal_guid']), None)
+            proband = next((s for s in sample_data['affecteds'] if s['maternal_guid'] and s['paternal_guid']), None)
             if not proband:
                 return False
-            loaded_unaffected_guids = {s['individual_guid'] for s in samples if s['affected'] == Individual.AFFECTED_STATUS_UNAFFECTED}
-            is_confirmed = proband['maternal_guid'] in loaded_unaffected_guids and proband['paternal_guid'] in loaded_unaffected_guids
+            is_confirmed = proband['maternal_guid'] in sample_data['unaffected_guids'] and proband['paternal_guid'] in sample_data['unaffected_guids']
             return (not is_confirmed) if family_filter['confirmed_inheritance'] == False else is_confirmed
         return True
 
@@ -585,24 +610,22 @@ class Command(BaseCommand):
         return wrapped
 
     @classmethod
-    def _run_search(cls, search_name, config_search, family_variant_data, family_guid_map, dataset_type, sample_data, **kwargs):
+    def _run_search(cls, search_name, config_search, family_variant_data, family_guid_map, dataset_type, sample_data, samples, **kwargs):
         variant_fields = ['pos', 'end'] if dataset_type.startswith('SV') else ['ref', 'alt']
         variant_values = {'endChrom': F('end_chrom')} if dataset_type == 'SV_WGS' else {}
 
         results_qs = get_search_queryset(GENOME_VERSION_GRCh38, dataset_type, sample_data, **kwargs)
         genotype_overrides_expressions = results_qs.genotype_override_values(results_qs)
         if genotype_overrides_expressions:
-            variant_values.update({k: genotype_overrides_expressions[k] for k in ['genotypes', 'transcripts']})
+            variant_values.update({k: genotype_overrides_expressions[k] for k in ['familyGenotypes', 'transcripts']})
         else:
             results_qs = gene_ids_annotated_queryset(results_qs)
-            variant_fields += ['genotypes', 'gene_ids']
+            variant_fields += ['familyGenotypes', 'gene_ids']
 
-        results = [
-            {**variant, 'genotypes': clickhouse_genotypes_json(variant['genotypes'])}
-            for variant in results_qs.values(
-                *variant_fields, 'key', 'xpos', 'variant_id', 'familyGuids', **variant_values,
-            )
-        ]
+        results = results_qs.values(
+            *variant_fields, 'key', 'xpos', 'variant_id', 'familyGuids', **variant_values,
+        )
+        add_individual_guids(results, samples, encode_genotypes_json=True)
         require_mane_consequences = config_search.get('annotations', {}).get('vep_consequences')
         if results and require_mane_consequences:
             allowed_key_genes = cls._valid_mane_keys([v['key'] for v in results], require_mane_consequences)
@@ -617,24 +640,25 @@ class Command(BaseCommand):
         return len(results)
 
     @classmethod
-    def _run_comp_het_search(cls, search_name, config_search, family_variant_data, family_guid_map, dataset_type, sample_data, **kwargs):
+    def _run_comp_het_search(cls, search_name, config_search, family_variant_data, family_guid_map, dataset_type, sample_data, samples, **kwargs):
         queryset = get_data_type_comp_het_results_queryset(
             GENOME_VERSION_GRCh38, dataset_type, sample_data, **kwargs,
         )
         return cls._execute_comp_het_search(
-            queryset, search_name, config_search, family_variant_data, family_guid_map, config_search.get('no_secondary_annotations'),
+            queryset, search_name, config_search, family_variant_data, family_guid_map, samples,
+            no_secondary_annotations=config_search.get('split_pathogenicity_annotations'),
         )
 
     @classmethod
-    def _run_multi_data_type_comp_het_search(cls, family_variant_data, search_counts, samples_by_dataset_type, family_guid_map, project, genes):
+    def _run_multi_data_type_comp_het_search(cls, family_variant_data, search_counts, samples_by_dataset_type, family_guid_map, project, samples, genes):
         sv_dataset_type = next(dt for dt in samples_by_dataset_type.keys() if dt.startswith('SV'))
         sample_type = sv_dataset_type.split('_')[-1]
         families = set(samples_by_dataset_type[sv_dataset_type].keys()).intersection(samples_by_dataset_type[Sample.DATASET_TYPE_VARIANT_CALLS].keys())
         sv_sample_data = cls._get_valid_family_sample_data(project, sample_type, {
-            guid: samples for guid, samples in samples_by_dataset_type[sv_dataset_type].items() if guid in families
+            guid: sample_data for guid, sample_data in samples_by_dataset_type[sv_dataset_type].items() if guid in families
         })
         snv_indel_sample_data = cls._get_valid_family_sample_data(project, sample_type, {
-            guid: samples for guid, samples in samples_by_dataset_type[Sample.DATASET_TYPE_VARIANT_CALLS].items() if guid in families
+            guid: sample_data for guid, sample_data in samples_by_dataset_type[Sample.DATASET_TYPE_VARIANT_CALLS].items() if guid in families
         })
         logger.info(f'Searching for prioritized multi data type variants in {len(families)} families in project {project.name}')
         for search_name, config_search in MULTI_DATA_TYPE_SEARCHES.items():
@@ -642,13 +666,13 @@ class Command(BaseCommand):
                 GENOME_VERSION_GRCh38, sv_dataset_type, sv_sample_data, snv_indel_sample_data, num_families=len(families),
                 genes=genes, **config_search, **ALL_SEARCHES_CRITERIA,
             )
-            num_results = cls._execute_comp_het_search(queryset, search_name, config_search, family_variant_data, family_guid_map)
+            num_results = cls._execute_comp_het_search(queryset, search_name, config_search, family_variant_data, family_guid_map, samples)
             logger.info(f'Found {num_results} variants for criteria: {search_name}')
             search_counts[search_name] = num_results
 
     @classmethod
-    def _execute_comp_het_search(cls, queryset, search_name, config_search, family_variant_data, family_guid_map, no_secondary_annotations=True):
-        results = [v[1:] for v in queryset]
+    def _execute_comp_het_search(cls, queryset, search_name, config_search, family_variant_data, family_guid_map, samples, no_secondary_annotations=True):
+        results = [list(v[1:]) for v in queryset]
 
         primary_consequences = config_search.get('annotations', {}).get('vep_consequences')
         secondary_consequences = config_search.get('annotations_secondary', {}).get('vep_consequences')
@@ -667,12 +691,12 @@ class Command(BaseCommand):
                 )
             ]
 
+        add_individual_guids(results, samples, encode_genotypes_json=True)
         for pair in results:
             for family_guid in pair[0]['familyGuids']:
                 for variant, support_id in [(pair[0], pair[1]['variantId']), (pair[1], pair[0]['variantId'])]:
                     variant_data = family_variant_data[(family_guid_map[family_guid], variant['variantId'])]
                     variant_data.update(variant)
-                    variant_data['genotypes'] = clickhouse_genotypes_json(variant['genotypes'])
                     if 'transcripts' not in variant_data:
                         variant_data['gene_ids'] = list(dict.fromkeys([csq['geneId'] for csq in variant['sortedTranscriptConsequences']]))
                     variant_data['support_vars'].add(support_id)

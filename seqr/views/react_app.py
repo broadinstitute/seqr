@@ -1,6 +1,5 @@
 import json
 import re
-from datetime import datetime
 from django.contrib.auth.models import User
 from django.core.serializers.json import DjangoJSONEncoder
 from django.middleware.csrf import rotate_token
@@ -12,7 +11,6 @@ from settings import (
     DEBUG,
     LOGIN_URL,
     GA_TOKEN_ID,
-    ANVIL_LOADING_DELAY_EMAIL_START_DATE,
     SOCIAL_AUTH_PROVIDER,
     VLM_CLIENT_ID,
 )
@@ -53,9 +51,6 @@ def render_app_html(request, additional_json=None, include_user=True, status=200
         ui_version = 'local'
         html = html.replace('</head>', '<script defer="defer" src="/app.js"></script></head>')
 
-    should_show_loading_delay = bool(ANVIL_LOADING_DELAY_EMAIL_START_DATE)
-    if should_show_loading_delay:
-        should_show_loading_delay = datetime.strptime(ANVIL_LOADING_DELAY_EMAIL_START_DATE, '%Y-%m-%d') < datetime.now()
     initial_json = {'meta':  {
         'version': '{}-{}'.format(SEQR_VERSION, ui_version),
         'hijakEnabled': DEBUG or False,
@@ -63,7 +58,6 @@ def render_app_html(request, additional_json=None, include_user=True, status=200
         'elasticsearchEnabled': backend_specific_call(True, False),
         'vlmEnabled': bool(VLM_CLIENT_ID),
         'warningMessages': [message.json() for message in WarningMessage.objects.all()],
-        'anvilLoadingDelayDate': ANVIL_LOADING_DELAY_EMAIL_START_DATE if should_show_loading_delay else None,
     }}
     if include_user:
         initial_json['user'] = get_json_for_current_user(request.user)

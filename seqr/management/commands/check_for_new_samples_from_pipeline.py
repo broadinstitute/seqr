@@ -19,7 +19,7 @@ from seqr.views.utils.export_utils import write_multiple_files
 from seqr.views.utils.permissions_utils import is_internal_anvil_project, project_has_anvil
 from seqr.views.utils.variant_utils import reset_cached_search_results, update_projects_saved_variant_json, \
     get_saved_variants
-from settings import SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, PIPELINE_DATA_DIR, ANVIL_UI_URL, \
+from settings import SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, PIPELINE_DATA_DIR, ANVIL_UI_URL, IS_ANVIL_LOADING_DELAY, \
     SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL
 
 logger = logging.getLogger(__name__)
@@ -161,7 +161,7 @@ class Command(BaseCommand):
     def _report_anvil_project_validation_error(cls, project, error_messages):
         workspace_name = f'{project.workspace_namespace}/{project.workspace_name}'
         error_list = [f'- {error}' for error in error_messages]
-        email_body = '\n'.join([
+        email_rows = [
             f'We are following up on the request to load data from AnVIL workspace '
             f'<a href={ANVIL_UI_URL}#workspaces/{workspace_name}>{workspace_name}</a> on {project.created_date.date().strftime("%B %d, %Y")}. '
             f'This request could not be loaded due to the following error(s):'
@@ -170,8 +170,14 @@ class Command(BaseCommand):
             '<a href=https://storage.googleapis.com/seqr-reference-data/seqr-vcf-info.pdf>documentation</a> for more '
             'information about supported calling pipelines and file formats. If you believe this error is incorrect '
             'and would like to request a manual review, please respond to this email.',
-        ])
-        recipients = send_project_email(project, email_body, 'Error loading seqr data')
+        ]
+        if IS_ANVIL_LOADING_DELAY:
+            email_rows.append(
+                'Please note that our team is currently away for our winter break, and therefore all responses will be '
+                'delayed until we return in mid-January. We appreciate your understanding and support of our research '
+                'team taking some well-deserved time off and hope you also have a nice break.'
+            )
+        recipients = send_project_email(project, '\n'.join(email_rows), 'Error loading seqr data')
 
         slack_message = '\n'.join([
             f'Request to load data from *{workspace_name}* failed with the following error(s):',

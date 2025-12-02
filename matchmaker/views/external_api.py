@@ -163,7 +163,7 @@ matchbox on {insertion_date}, with seqr link
         query_institution=institution,
         number_of_results=len(results),
         incoming_query_genes=', '.join(sorted([gene['geneSymbol'] for gene in genes_by_id.values()])),
-        incoming_query_phenotypes=', '.join(['{} ({})'.format(hpo_id, term) for hpo_id, term in hpo_terms_by_id.items()]),
+        incoming_query_phenotypes=', '.join(['{} ({})'.format(hpo_id, term) for hpo_id, term in sorted(hpo_terms_by_id.items())]),
         incoming_query_contact_url=contact_href,
         incoming_query_contact_name=incoming_patient['patient']['contact'].get('name', '(sorry I was not able to read the information given for name'),
     )

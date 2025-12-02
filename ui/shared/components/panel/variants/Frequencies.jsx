@@ -249,14 +249,10 @@ const SEQR_POP = { ...CALLSET_POP, field: 'seqr', fieldTitle: 'seqr' }
 const POPULATIONS = [
   SV_CALLSET_POP,
   { ...SV_CALLSET_POP, field: 'sv_seqr', fieldTitle: 'seqr' },
+  { ...SEQR_POP, field: 'sv_seqr_affected', fieldTitle: 'seqr affected' },
   CALLSET_POP,
   SEQR_POP,
-  {
-    field: 'exac',
-    fieldTitle: 'ExAC',
-    urls: { [GENOME_VERSION_37]: 'gnomad.broadinstitute.org' },
-    queryParams: { [GENOME_VERSION_37]: 'dataset=exac' },
-  },
+  { ...SEQR_POP, field: 'seqr_affected', fieldTitle: 'seqr affected' },
   {
     field: 'gnomad_exomes',
     fieldTitle: 'gnomAD exomes',
@@ -305,6 +301,12 @@ const CALLSET_HET_POP = {
   section: HET_SECTION,
 }
 
+const SEQR_HOM_POP = {
+  ...SEQR_POP,
+  titleContainer: sectionTitle,
+  section: HOM_SECTION,
+}
+
 const MITO_POPULATIONS = [
   {
     ...CALLSET_POP,
@@ -316,8 +318,10 @@ const MITO_POPULATIONS = [
     titleContainer: sectionTitle,
     section: HOM_SECTION,
   },
+  { ...SEQR_HOM_POP, field: 'seqr_affected', fieldTitle: 'seqr affected' },
   CALLSET_HET_POP,
   { ...CALLSET_HET_POP, field: 'seqr_heteroplasmy', fieldTitle: 'seqr' },
+  { ...CALLSET_HET_POP, field: 'seqr_heteroplasmy_affected', fieldTitle: 'seqr affected' },
   {
     field: 'gnomad_mito',
     fieldTitle: 'gnomAD mito',
@@ -385,7 +389,7 @@ const getValueDisplay = (pop, valueField, precision) => (valueField === 'ac' ?
 const Frequencies = React.memo(({ variant, totalSampleCounts }) => {
   const { populations = {}, svType } = variant
   const callsetHetPop = populations.callset_heteroplasmy || populations.seqr_heteroplasmy
-  const isMito = callsetHetPop && callsetHetPop.af !== null && callsetHetPop.af !== undefined
+  const isMito = callsetHetPop && callsetHetPop.ac !== null && callsetHetPop.ac !== undefined
   const popConfigs = isMito ? MITO_POPULATIONS : POPULATIONS
   let datasetType = isMito ? DATASET_TYPE_MITO_CALLS : DATASET_TYPE_SNV_INDEL_CALLS
   datasetType = svType ? DATASET_TYPE_SV_CALLS : datasetType
