@@ -67,9 +67,9 @@ class SearchUtilsTests(SearchTestHelper):
 
     def test_variant_lookup(self, mock_variant_lookup):
         mock_variant_lookup.return_value = [VARIANT_LOOKUP_VARIANT]
-        variants = variant_lookup(self.user, '1-10439-AC-A', '38')
+        variants = variant_lookup(self.user, '1-10439-AC-A', '38', affected_only=True)
         self.assertListEqual(variants, [VARIANT_LOOKUP_VARIANT])
-        mock_variant_lookup.assert_called_with(self.user, ('1', 10439, 'AC', 'A'), 'SNV_INDEL', None, '38')
+        mock_variant_lookup.assert_called_with(self.user, ('1', 10439, 'AC', 'A'), 'SNV_INDEL', None, '38', True, False)
         cache_key = "variant_lookup_results__1-10439-AC-A__38"
         self.assert_cached_results(variants, cache_key=cache_key)
 
@@ -91,10 +91,10 @@ class SearchUtilsTests(SearchTestHelper):
         self.assertEqual(str(cm.exception), 'Sample type must be specified to look up a structural variant')
 
         mock_variant_lookup.return_value = [SV_LOOKUP_VARIANT, GCNV_LOOKUP_VARIANT]
-        variants = variant_lookup(self.user, 'phase2_DEL_chr14_4640', '38', sample_type='WGS')
+        variants = variant_lookup(self.user, 'phase2_DEL_chr14_4640', '38', sample_type='WGS', hom_only=True)
         self.assertListEqual(variants, [SV_LOOKUP_VARIANT, GCNV_LOOKUP_VARIANT])
         mock_variant_lookup.assert_called_with(
-            self.user, 'phase2_DEL_chr14_4640', 'SV', 'WGS', '38')
+            self.user, 'phase2_DEL_chr14_4640', 'SV', 'WGS', '38', False, True)
         cache_key = 'variant_lookup_results__phase2_DEL_chr14_4640__38'
         self.assert_cached_results(variants, cache_key=cache_key)
 

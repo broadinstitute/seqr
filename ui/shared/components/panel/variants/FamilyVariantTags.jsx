@@ -52,23 +52,28 @@ const ANALYST_VARIANT_NOTE_FIELDS = [{
 
 const DEPRECATED_MME_TAG = 'seqr MME (old)'
 const AIP_TAG_TYPE = 'AIP'
-const NO_EDIT_TAG_TYPES = [AIP_TAG_TYPE, GREGOR_FINDING_TAG_NAME]
+const SEQR_TAG_TYPE = 'seqr Prioritized'
+const NO_EDIT_TAG_TYPES = [AIP_TAG_TYPE, GREGOR_FINDING_TAG_NAME, SEQR_TAG_TYPE]
 const TAG_TYPE_TILES = {
   [AIP_TAG_TYPE]: 'Categories',
+  [SEQR_TAG_TYPE]: 'Matched Criteria',
   [GREGOR_FINDING_TAG_NAME]: 'Finding Detail',
 }
+const TAG_TYPE_DETAIL = {
+  [AIP_TAG_TYPE]: ({ date }) => `(${new Date(date).toLocaleDateString()})`,
+  [SEQR_TAG_TYPE]: date => `(${new Date(date).toLocaleDateString()})`,
+}
 
-const aipCategoryContent = (key, { name, date }) => ([
-  <Table.HeaderCell key="name" content={`${key} - ${name} `} />,
-  <Table.Cell key="date" disabled content={`(${new Date(date).toLocaleDateString()})`} />,
-])
-
-const structuredMetadataRow = ([key, value]) => (
+const structuredMetadataRow = tagName => ([key, value]) => (
   <Table.Row key={key}>
-    {typeof value === 'string' ? [
-      <Table.HeaderCell key="key" textAlign="right" content={snakecaseToTitlecase(key)} />,
-      <Table.Cell key="value" content={value} />,
-    ] : aipCategoryContent(key, value)}
+    <Table.HeaderCell
+      textAlign="right"
+      content={tagName === AIP_TAG_TYPE ? `${key} - ${value.name} ` : snakecaseToTitlecase(key)}
+    />
+    <Table.Cell
+      disabled={!!TAG_TYPE_DETAIL[tagName]}
+      content={TAG_TYPE_DETAIL[tagName] ? TAG_TYPE_DETAIL[tagName](value) : value}
+    />
   </Table.Row>
 )
 
@@ -85,7 +90,7 @@ export const taggedByPopup = (tag, title) => (trigger, hideMetadata) => (
         {tag.structuredMetadata ? (
           <NoBorderTable basic="very" compact="very">
             <Table.Body>
-              {Object.entries(tag.structuredMetadata).filter(e => e[0] !== 'removed').map(structuredMetadataRow)}
+              {Object.entries(tag.structuredMetadata).filter(e => e[0] !== 'removed').map(structuredMetadataRow(tag.name))}
               {tag.structuredMetadata.removed && [
                 <Table.Row key="removedHeader"><Table.HeaderCell colSpan={2} content="Removed Categories" /></Table.Row>,
                 ...Object.entries(tag.structuredMetadata.removed).map(structuredMetadataRow),

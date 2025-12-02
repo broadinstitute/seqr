@@ -265,5 +265,128 @@
       "mode_of_pathogenicity": null,
       "mode_of_inheritance": "BIALLELIC, autosomal or pseudoautosomal"
     }
+  },
+  {
+    "model": "seqr.locuslist",
+    "pk": 5,
+    "fields": {
+      "guid": "LL00005_mendeliome",
+      "projects": [],
+      "created_date": "2017-02-07T12:55:30.700Z",
+      "created_by": null,
+      "last_modified_date": "2018-05-01T00:02:38.733Z",
+      "name": "Mendeliome",
+      "description": "PanelApp_1234_0.2_Mendeliome",
+      "is_public": true
+    }
+  },
+  {
+    "model": "seqr.locuslistgene",
+    "pk": 50,
+    "fields": {
+      "guid": "LL00005_ENSG00000275023",
+      "created_date": "2018-04-28T00:03:25.341Z",
+      "created_by": null,
+      "last_modified_date": "2018-04-28T00:03:25.341Z",
+      "locus_list": 5,
+      "gene_id": "ENSG00000275023"
+    }
+  },
+  {
+    "model": "seqr.locuslistgene",
+    "pk": 51,
+    "fields": {
+      "guid": "LL00005_ENSG00000277258",
+      "created_date": "2018-04-28T00:03:25.347Z",
+      "created_by": null,
+      "last_modified_date": "2018-04-28T00:03:25.347Z",
+      "locus_list": 5,
+      "gene_id": "ENSG00000277258"
+    }
+  },
+  {
+    "model": "panelapp.palocuslist",
+    "pk": 5,
+    "fields": {
+      "panel_app_id": "1234",
+      "disease_group": null,
+      "disease_sub_group": "2017-02-07T12:55:30.700Z",
+      "status": "public",
+      "version": "0.2",
+      "version_created": "2017-02-07T12:55:30.700Z",
+      "url": "https://test-panelapp.url.au/api/v1/panels/1234/genes"
+    }
+  },
+  {
+    "model": "panelapp.palocuslistgene",
+    "pk": 50,
+    "fields": {
+      "confidence_level": "2",
+      "biotype": null,
+      "penetrance": "complete",
+      "mode_of_pathogenicity": "Other",
+      "mode_of_inheritance": "BIALLELIC, autosomal or pseudoautosomal"
+    }
+  },
+  {
+    "model": "panelapp.palocuslistgene",
+    "pk": 51,
+    "fields": {
+      "confidence_level": "3",
+      "biotype": null,
+      "penetrance": "complete",
+      "mode_of_pathogenicity": "Other",
+      "mode_of_inheritance": "X-LINKED, biallelic or monoallelic mutations"
+    }
+  },
+  {
+    "model": "seqr.locuslist",
+    "pk": 6,
+    "fields": {
+      "guid": "LL00006_incidentalome",
+      "projects": [],
+      "created_date": "2017-02-07T12:55:30.700Z",
+      "created_by": null,
+      "last_modified_date": "2018-05-01T00:02:38.733Z",
+      "name": "Incidentalome",
+      "description": "PanelApp_9876_0.2_Incidentalome",
+      "is_public": true
+    }
+  },
+  {
+    "model": "seqr.locuslistgene",
+    "pk": 52,
+    "fields": {
+      "guid": "LL00006_ENSG00000097046",
+      "created_date": "2018-04-28T00:03:25.347Z",
+      "created_by": null,
+      "last_modified_date": "2018-04-28T00:03:25.347Z",
+      "locus_list": 6,
+      "gene_id": "ENSG00000097046"
+    }
+  },
+  {
+    "model": "panelapp.palocuslist",
+    "pk": 6,
+    "fields": {
+      "panel_app_id": "9876",
+      "disease_group": null,
+      "disease_sub_group": "2017-02-07T12:55:30.700Z",
+      "status": "public",
+      "version": "0.2",
+      "version_created": "2017-02-07T12:55:30.700Z",
+      "url": "https://test-panelapp.url.au/api/v1/panels/9876/genes"
+    }
+  },
+  {
+    "model": "panelapp.palocuslistgene",
+    "pk": 52,
+    "fields": {
+      "confidence_level": "4",
+      "biotype": null,
+      "penetrance": "complete",
+      "mode_of_pathogenicity": "Other",
+      "mode_of_inheritance": "BOTH, autosomal or pseudoautosomal"
+    }
   }
 ]

@@ -53,6 +53,7 @@ const TAG_OPTIONS = [
   'Confident AR one hit',
   'Analyst high priority',
   'AIP',
+  'seqr Prioritized',
   'seqr MME (old)',
   'Submit to Clinvar',
   'Share with KOMP',

@@ -5,7 +5,9 @@ from django.test import TransactionTestCase
 from django.urls.base import reverse
 import json
 import mock
+import responses
 
+from clickhouse_search.models import EntriesSnvIndel, ProjectGtStatsSnvIndel, AnnotationsSnvIndel
 from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4, CACHED_CONSEQUENCES_BY_KEY, \
     VARIANT_ID_SEARCH, VARIANT_IDS, LOCATION_SEARCH, GENE_IDS, SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT, \
     SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3, COMP_HET_ALL_PASS_FILTERS, \
@@ -22,6 +24,7 @@ from reference_data.models import Omim
 from seqr.models import Project, Family, Sample, VariantSearch, VariantSearchResults
 from seqr.utils.search.search_utils_tests import SearchTestHelper
 from seqr.utils.search.utils import query_variants, variant_lookup, get_variant_query_gene_counts, get_single_variant, InvalidSearchException
+from seqr.views.apis.data_manager_api import trigger_delete_project
 from seqr.views.utils.json_utils import DjangoJSONEncoderWithSets
 from seqr.views.utils.test_utils import AnvilAuthenticationTestMixin
 from seqr.views.apis.variant_search_api import gene_variant_lookup
@@ -429,24 +432,6 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
             ],
         )
 
-        self.results_model.families.set(Family.objects.filter(guid__in=['F000002_2', 'F000014_14']))
-        self._assert_expected_search(
-            [[SV_VARIANT1, SV_VARIANT2], [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], [VARIANT3, VARIANT4], [GCNV_VARIANT3, GCNV_VARIANT4]], inheritance_mode=inheritance_mode,
-            **COMP_HET_ALL_PASS_FILTERS, gene_counts={
-                'ENSG00000171621': {'total': 2, 'families': {'F000014_14': 2}},
-                'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
-                'ENSG00000177000': {'total': 2, 'families': {'F000002_2': 2}},
-                'ENSG00000275023': {'total': 3, 'families': {'F000002_2': 3}},
-                'ENSG00000277258': {'total': 3, 'families': {'F000002_2': 3}},
-                'ENSG00000277972': {'total': 2, 'families': {'F000002_2': 2}},
-            }, cached_variant_fields=[
-                [{'selectedGeneId': 'ENSG00000171621'}, {'selectedGeneId': 'ENSG00000171621'}],
-                [{'selectedGeneId': 'ENSG00000277258'}, {'selectedGeneId': 'ENSG00000277258'}],
-                [{'selectedGeneId': 'ENSG00000097046'}, {'selectedGeneId': 'ENSG00000097046'}],
-                [{'selectedGeneId': 'ENSG00000275023'}, {'selectedGeneId': 'ENSG00000275023'}],
-            ],
-        )
-
         inheritance_mode = 'recessive'
         self._set_multi_project_search()
         self._assert_expected_search(
@@ -765,11 +750,39 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
         }
         self._assert_expected_variants(variants, [grch37_lookup_variant])
 
+        variants = variant_lookup(self.user, '7-143270172-A-G', '37', hom_only=True, affected_only=True)
+        self._assert_expected_variants(variants, [grch37_lookup_variant])
+
         # Lookup works if variant is only present on a different build
         variants = variant_lookup(self.user, '7-143260172-A-G', '38')
         self._assert_expected_variants(variants, [grch37_lookup_variant])
         mock_liftover.assert_called_with('hg38', 'hg19')
         mock_convert_coordinate.assert_called_with('chr7', 143260172)
+
+        liftover_variant = {
+            **VARIANT_LOOKUP_VARIANT,
+            'familyGenotypes': {
+                family_guid: gts
+                for family_guid, gts in VARIANT_LOOKUP_VARIANT['familyGenotypes'].items() if family_guid != 'F000014_14'
+            },
+        }
+        del liftover_variant['liftedFamilyGuids']
+        variants = variant_lookup(self.user, '1-439-AC-A', '37')
+        self._assert_expected_variants(variants, [liftover_variant])
+        mock_liftover.assert_called_with('hg19', 'hg38')
+        mock_convert_coordinate.assert_called_with('chr1', 439)
+
+        hom_only_lookup_variant = {
+            **liftover_variant,
+            'familyGenotypes': {
+                **liftover_variant['familyGenotypes'],
+                'F000002_2': [gt for gt in liftover_variant['familyGenotypes']['F000002_2'] if gt['sampleType'] == 'WGS'],
+            },
+        }
+        variants = variant_lookup(self.user, '1-10439-AC-A', '38', hom_only=True)
+        self._assert_expected_variants(variants, [hom_only_lookup_variant])
+        variants = variant_lookup(self.user, '1-439-AC-A', '37', hom_only=True)
+        self._assert_expected_variants(variants, [hom_only_lookup_variant])
 
         variants = variant_lookup(self.user, 'M-4429-G-A', '38')
         self._assert_expected_variants(variants, [{
@@ -779,12 +792,28 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
             ]},
         }])
 
+        with self.assertRaises(ObjectDoesNotExist) as cm:
+            variant_lookup(self.user, 'M-4429-G-A', '38', hom_only=True)
+        self.assertEqual(str(cm.exception), 'Variant not present in seqr')
+
         variants = variant_lookup(self.user, 'phase2_DEL_chr14_4640', '38', sample_type='WGS')
         self._assert_expected_variants(variants, [SV_LOOKUP_VARIANT, GCNV_LOOKUP_VARIANT])
+
+        affected_only_lookup_variant = {
+            **GCNV_LOOKUP_VARIANT,
+            'familyGenotypes': {
+                family_guid: gts for family_guid, gts in GCNV_LOOKUP_VARIANT['familyGenotypes'].items() if family_guid != 'F000002_2_x'
+            },
+        }
+        variants = variant_lookup(self.user, 'phase2_DEL_chr14_4640', '38', sample_type='WGS', affected_only=True)
+        self._assert_expected_variants(variants, [SV_LOOKUP_VARIANT, affected_only_lookup_variant])
 
         # reciprocal overlap does not meet the threshold for smaller events
         variants = variant_lookup(self.user, 'suffix_140608_DUP', '38', sample_type='WES')
         self._assert_expected_variants(variants, [GCNV_LOOKUP_VARIANT])
+
+        variants = variant_lookup(self.user, 'suffix_140608_DUP', '38', sample_type='WES', affected_only=True)
+        self._assert_expected_variants(variants, [affected_only_lookup_variant])
 
         variants = variant_lookup(self.user, 'suffix_140593_DUP', '38', sample_type='WES')
         self._assert_expected_variants(variants, [GCNV_LOOKUP_VARIANT_3])
@@ -1576,3 +1605,39 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
             'searchedVariants': [],
             'genesById': {},
         })
+
+    @responses.activate
+    def test_trigger_delete_project(self):
+        url = reverse(trigger_delete_project)
+        self.check_data_manager_login(url)
+
+        Project.objects.filter(guid='R0001_1kg').update(genome_version='38')
+        response = self.client.post(
+            url, content_type='application/json', data=json.dumps({'project': 'R0001_1kg', 'datasetType': 'SNV_INDEL'})
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {
+            'info': [
+                'Deactivated search for 7 individuals',
+                'Deleted all SNV_INDEL search data for project 1kg project n\xe5me with uni\xe7\xf8de',
+            ],
+        })
+        self.assertEqual(EntriesSnvIndel.objects.filter(project_guid='R0001_1kg').count(), 0)
+        self.assertEqual(ProjectGtStatsSnvIndel.objects.filter(project_guid='R0001_1kg').count(), 0)
+
+        updated_seqr_pops_by_key = dict(AnnotationsSnvIndel.objects.all().join_seqr_pop().values_list('key', 'seqrPop'))
+        self.assertDictEqual(updated_seqr_pops_by_key, {
+            1: (2, 2, 1, 1, 4, 2),
+            2: (1, 1, 0, 0, 2, 0),
+            3: (0, 0, 0, 0, 0, 0),
+            4: (0, 0, 0, 0, 0, 0),
+            5: (1, 1, 0, 0, 2, 0),
+            6: (0, 0, 0, 0, 0, 0),
+            22: (0, 3, 0, 1, 3, 1),
+        })
+
+        project_samples = Sample.objects.filter(individual__family__project__guid='R0001_1kg', is_active=True)
+        self.assertEqual(project_samples.filter(dataset_type='SNV_INDEL').count(), 0)
+        self.assertEqual(project_samples.count(), 4)
+
+

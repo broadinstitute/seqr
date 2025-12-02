@@ -147,7 +147,7 @@ def _get_clickhouse_variant_by_id(parsed_variant_id, variant_id, samples, genome
 
 
 @clickhouse_only
-def variant_lookup(user, variant_id, genome_version, sample_type=None):
+def variant_lookup(user, variant_id, genome_version, sample_type=None, affected_only=False, hom_only=False):
     cache_key = f'variant_lookup_results__{variant_id}__{genome_version}'
     variants = safe_redis_get_json(cache_key)
     if variants:
@@ -157,7 +157,7 @@ def variant_lookup(user, variant_id, genome_version, sample_type=None):
     dataset_type = DATASET_TYPES_LOOKUP[_variant_ids_dataset_type([parsed_variant_id])][0]
     _validate_dataset_type_genome_version(dataset_type, sample_type, genome_version)
 
-    variants = clickhouse_variant_lookup(user, parsed_variant_id or variant_id, dataset_type, sample_type, genome_version)
+    variants = clickhouse_variant_lookup(user, parsed_variant_id or variant_id, dataset_type, sample_type, genome_version, affected_only, hom_only)
 
     safe_redis_set_json(cache_key, variants, expire=timedelta(weeks=2))
     return variants

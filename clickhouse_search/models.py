@@ -154,7 +154,7 @@ class BaseAnnotationsSvGcnv(BaseAnnotations):
         ('majorConsequence', models.Enum8Field(null=True, blank=True, return_int=False, choices=SV_CONSEQUENCE_RANKS)),
     ]
     SEQR_POPULATIONS = [
-        ('sv_callset', {'ac': 'ac', 'hom': 'hom'}),
+        ('sv_seqr', {'ac': 'ac', 'hom': 'hom'}),
     ]
 
     chrom = Enum8Field(return_int=False, choices=BaseAnnotations.CHROMOSOME_CHOICES)
@@ -859,7 +859,7 @@ class BaseProjectGtStats(models.ClickhouseModel):
     class Meta:
         abstract = True
         engine = models.SummingMergeTree(
-            order_by=('project_guid', 'key'),
+            order_by=('project_guid', 'key', 'affected'),
             partition_by='project_guid',
             index_granularity=8192,
         )
@@ -870,7 +870,7 @@ class BaseProjectGtStatsMitoSnvIndel(BaseProjectGtStats):
     class Meta:
         abstract = True
         engine = models.SummingMergeTree(
-            order_by=('project_guid', 'key', 'sample_type'),
+            order_by=('project_guid', 'key', 'sample_type', 'affected'),
             partition_by='project_guid',
             index_granularity=8192,
         )

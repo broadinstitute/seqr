@@ -98,6 +98,7 @@ CREATE_VARIANT_JSON = {
     'mainTranscriptId': 'ENST00000450625',
     'populations': {
         'seqr': {'ac': 0, 'hom': 0, 'ac_wes': 0, 'ac_wgs': 0, 'hom_wes': 0, 'hom_wgs': 0},
+        'seqr_affected': {'ac': 0, 'hom': 0},
         'exac': {'ac': 0, 'af': 0.0, 'an': 0, 'filter_af': 0.0, 'hemi': 0, 'het': 0, 'hom': 0},
         'gnomad_exomes': {'ac': 0, 'af': 0.0, 'an': 0, 'filter_af': 0.0, 'hemi': 0, 'hom': 0},
         'gnomad_genomes': {'ac': 0, 'af': 0.0, 'an': 0, 'filter_af': 0.0, 'hemi': 0, 'hom': 0},
