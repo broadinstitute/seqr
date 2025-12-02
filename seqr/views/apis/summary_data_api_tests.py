@@ -404,7 +404,7 @@ class SummaryDataAPITest(AirtableTest):
             {'projectGuid', 'name', 'variantTagTypes', 'variantFunctionalTagTypes'},
         )
         if 'totalSampleCounts' in response_json:
-            self.assertDictEqual(response_json['totalSampleCounts'], {'MITO': {'WES': 1}, 'SNV_INDEL': {'WES': 7}, 'SV': {'WES': 3, 'WGS': 3}})
+            self.assertDictEqual(response_json['totalSampleCounts'], {'MITO': {'WES': 1}, 'SNV_INDEL': {'WES': 7}, 'SV': {'WES': 3}})
 
         all_tag_url = reverse(saved_variants_page, args=['ALL'])
         response = self.client.get('{}?gene=ENSG00000135953'.format(all_tag_url))
