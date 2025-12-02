@@ -6,11 +6,10 @@ import mock
 from requests import HTTPError
 import responses
 
-from clickhouse_search.models import EntriesSnvIndel, ProjectGtStatsSnvIndel, AnnotationsSnvIndel
 from seqr.utils.communication_utils import _set_bulk_notification_stream
 from seqr.views.apis.data_manager_api import elasticsearch_status, delete_index, \
     update_rna_seq, load_phenotype_prioritization_data, validate_callset, loading_vcfs, \
-    get_loaded_projects, load_data, trigger_delete_project, trigger_delete_family
+    get_loaded_projects, load_data, trigger_delete_family
 from seqr.views.utils.orm_to_json_utils import _get_json_for_models
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, AirtableTest
 from seqr.utils.search.elasticsearch.es_utils_tests import urllib3_responses
@@ -1499,17 +1498,6 @@ class DataManagerAPITest(AirtableTest):
         Individual.objects.filter(guid='I000009_na20874').update(affected='A')
 
     @responses.activate
-    def test_trigger_delete_project(self):
-        url = reverse(trigger_delete_project)
-        self.check_data_manager_login(url)
-
-        Project.objects.filter(guid=PROJECT_GUID).update(genome_version='38')
-        response = self.client.post(
-            url, content_type='application/json', data=json.dumps({'project': PROJECT_GUID, 'datasetType': 'SNV_INDEL'})
-        )
-        self._assert_expected_delete_project(response)
-
-    @responses.activate
     def test_trigger_delete_family(self):
         responses.add(responses.POST, f'{PIPELINE_RUNNER_HOST}/delete_families_enqueue', status=200)
 
@@ -1519,10 +1507,6 @@ class DataManagerAPITest(AirtableTest):
         Project.objects.filter(guid=PROJECT_GUID).update(genome_version='38')
         response = self.client.post(url, content_type='application/json', data=json.dumps({'family': 'F000002_2'}))
         self._assert_expected_delete_family(response)
-
-    def _assert_expected_delete_project(self, response):
-        self.assertEqual(response.status_code, 500)
-        self.assertDictEqual(response.json(), {'error': 'trigger_delete_project is disabled without the clickhouse backend'})
 
     def _assert_expected_delete_family(self, response):
         self.assertEqual(response.status_code, 500)
@@ -1977,32 +1961,6 @@ Loading pipeline should be triggered with:
         self.assertListEqual(response.json()['errors'], ['Missing required FORMAT field(s) GQ, GT'])
 
         self._set_file_not_found()
-
-    def _assert_expected_delete_project(self, response):
-        self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {
-            'info': [
-                'Deactivated search for 7 individuals',
-                'Deleted all SNV_INDEL search data for project 1kg project n\xe5me with uni\xe7\xf8de',
-            ],
-        })
-        self.assertEqual(EntriesSnvIndel.objects.filter(project_guid=PROJECT_GUID).count(), 0)
-        self.assertEqual(ProjectGtStatsSnvIndel.objects.filter(project_guid=PROJECT_GUID).count(), 0)
-
-        updated_seqr_pops_by_key = dict(AnnotationsSnvIndel.objects.all().join_seqr_pop().values_list('key', 'seqrPop'))
-        self.assertDictEqual(updated_seqr_pops_by_key, {
-            1: (2, 2, 1, 1),
-            2: (1, 1, 0, 0),
-            3: (0, 0, 0, 0),
-            4: (0, 0, 0, 0),
-            5: (1, 1, 0, 0),
-            6: (0, 0, 0, 0),
-            22: (0, 3, 0, 1),
-        })
-
-        project_samples = Sample.objects.filter(individual__family__project__guid=PROJECT_GUID, is_active=True)
-        self.assertEqual(project_samples.filter(dataset_type='SNV_INDEL').count(), 0)
-        self.assertEqual(project_samples.count(), 4)
 
     def _assert_expected_delete_family(self, response):
         self.assertEqual(response.status_code, 200)

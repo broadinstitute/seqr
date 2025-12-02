@@ -12,6 +12,7 @@ PROJECT_GUID = 'R0001_1kg'
 SNV_INDEL_MATCHES = {
     'Clinvar Pathogenic': 0,
     'Clinvar Pathogenic -  Compound Heterozygous': 0,
+    'Clinvar Both Pathogenic -  Compound Heterozygous': 0,
     'Clinvar Pathogenic - Recessive': 1,
     'Compound Heterozygous': 1,
     'Compound Heterozygous - Confirmed': 0,

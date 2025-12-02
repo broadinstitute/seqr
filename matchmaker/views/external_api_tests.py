@@ -373,7 +373,7 @@ be found found at https://seqr.broadinstitute.org/matchmaker/disclaimer."""
     in matchbox. The following information was included with the query,
 
     genes: 
-    phenotypes: HP:0002017 (Nausea and vomiting), HP:0012469 (Infantile spasms), HP:0001252 (Muscular hypotonia), HP:0001263 (Global developmental delay)
+    phenotypes: HP:0001252 (Muscular hypotonia), HP:0001263 (Global developmental delay), HP:0002017 (Nausea and vomiting), HP:0012469 (Infantile spasms)
     contact: PI
     email: test@test.com
 

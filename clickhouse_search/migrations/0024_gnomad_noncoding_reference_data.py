@@ -62,7 +62,7 @@ def conditionally_refresh_view(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('clickhouse_search', '0023_screen_reference_data'),
+        ('clickhouse_search', '0024_screen_reference_data'),
     ]
 
     operations = [

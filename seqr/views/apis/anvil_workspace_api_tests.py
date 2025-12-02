@@ -574,10 +574,6 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase, AirtableTest):
         self.mock_datetime = patcher.start()
         self.mock_datetime.now.side_effect = lambda: datetime(2021, 3, 1, 0, 0, 0)
         self.addCleanup(patcher.stop)
-        self.addCleanup(patcher.stop)
-        patcher = mock.patch('seqr.views.apis.anvil_workspace_api.send_html_email')
-        self.mock_send_email = patcher.start()
-        self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.utils.search.add_data_utils.safe_post_to_slack')
         self.mock_slack = patcher.start()
         self.addCleanup(patcher.stop)
@@ -839,7 +835,6 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase, AirtableTest):
             SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL,
             self._success_slack_message(project, sample_summary, genome_version, variables),
         )
-        self.mock_send_email.assert_not_called()
 
         # test database models
         family_model_data = list(Family.objects.filter(project=project).values('family_id', 'familynote__note'))
@@ -942,57 +937,9 @@ Loading pipeline should be triggered with:
                 project, '3 new' if sample_type == 'WES' else '5 new and 1 re-loaded', genome_version, variables, sample_type,
             )),
         ])
-        self.mock_send_email.assert_not_called()
         self._assert_expected_requests(
             variables, project, num_samples=num_samples or len(sample_data), status='Loading Requested',
         )
-
-    @mock.patch('seqr.views.apis.anvil_workspace_api.ANVIL_LOADING_DELAY_EMAIL_START_DATE', '2021-06-01')
-    @responses.activate
-    def test_create_project_from_workspace_loading_delay_email(self):
-        url = reverse(create_project_from_workspace, args=[TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME])
-        self.check_manager_login(url, login_redirect_url='/login/google-oauth2')
-
-        self._test_not_yet_email_date(url, REQUEST_BODY)
-
-        # Remove created project to allow future requests
-        project = Project.objects.get(
-            workspace_namespace=TEST_WORKSPACE_NAMESPACE, workspace_name=TEST_NO_PROJECT_WORKSPACE_NAME)
-        project.workspace_name = None
-        project.save()
-
-        self._test_after_email_date(url, REQUEST_BODY)
-
-    @mock.patch('seqr.views.apis.anvil_workspace_api.ANVIL_LOADING_DELAY_EMAIL_START_DATE', '2021-06-01')
-    @responses.activate
-    def test_add_workspace_data_loading_delay_email(self):
-        url = reverse(add_workspace_data, args=[PROJECT1_GUID])
-        self.check_manager_login(url, login_redirect_url='/login/google-oauth2')
-
-        self.mock_load_file.return_value = LOAD_SAMPLE_DATA_ALL_PENDING
-        self._test_not_yet_email_date(url, REQUEST_BODY_ADD_DATA)
-
-        self.mock_load_file.return_value = LOAD_SAMPLE_DATA_ALL_PENDING_PROJECT_2
-        url = reverse(add_workspace_data, args=[PROJECT2_GUID])
-        self._test_after_email_date(url, REQUEST_BODY_ADD_DATA2)
-
-    def _test_not_yet_email_date(self, url, request_body):
-        self.mock_send_email.side_effect = ValueError('Unable to send email')
-        self.mock_datetime.strptime.side_effect = datetime.strptime
-
-        response = self.client.post(url, content_type='application/json', data=json.dumps(request_body))
-        self.assertEqual(response.status_code, 200)
-        self.mock_send_email.assert_not_called()
-
-    def _test_after_email_date(self, url, request_body):
-        self.mock_datetime.now.side_effect = lambda: datetime(2021, 9, 1, 0, 0, 0)
-        response = self.client.post(url, content_type='application/json', data=json.dumps(request_body))
-        self.assertEqual(response.status_code, 200)
-        self.mock_send_email.assert_called_with("""Hi Test Manager User,
-We have received your request to load data to seqr from AnVIL. Currently, the Broad Institute is holding an internal retreat or closed for the winter break so we may not be able to load data until mid-January 2022. We appreciate your understanding and support of our research team taking some well-deserved time off and hope you also have a nice break.
-- The seqr team""", subject='Delay in loading AnVIL in seqr', to=['test_user_manager@test.com'])
-        self.mock_api_logger.error.assert_called_with(
-            'AnVIL loading delay email error: Unable to send email', self.manager_user)
 
 
 class NoGoogleAnvilWorkspaceAPITest(AuthenticationTestCase):

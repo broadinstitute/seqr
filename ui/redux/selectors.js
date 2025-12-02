@@ -42,7 +42,6 @@ export const getElasticsearchEnabled = state => state.meta.elasticsearchEnabled
 export const getVlmEnabled = state => state.meta.vlmEnabled
 export const getHijakEnabled = state => state.meta.hijakEnabled
 export const getWarningMessages = state => state.meta.warningMessages
-export const getAnvilLoadingDelayDate = state => state.meta.anvilLoadingDelayDate
 export const getSavedVariantsIsLoading = state => state.savedVariantsLoading.isLoading
 export const getSavedVariantsLoadingError = state => state.savedVariantsLoading.errorMessage
 export const getSearchesByHash = state => state.searchesByHash

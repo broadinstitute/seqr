@@ -63,7 +63,7 @@ def conditionally_refresh_view(dataset_type: str):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('clickhouse_search', '0021_affected_status_orderby'),
+        ('clickhouse_search', '0022_db_gene_id'),
     ]
 
     operations = [

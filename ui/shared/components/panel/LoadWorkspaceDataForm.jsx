@@ -1,6 +1,6 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import { Header, Segment, Message, List } from 'semantic-ui-react'
+import { Header, Segment, List } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 
 import {
@@ -26,7 +26,6 @@ import { validators } from 'shared/components/form/FormHelpers'
 import { BooleanCheckbox, RadioGroup } from 'shared/components/form/Inputs'
 import PhiWarningUploadField from 'shared/components/form/PhiWarningUploadField'
 import { RECEIVE_DATA } from 'redux/utils/reducerUtils'
-import { getAnvilLoadingDelayDate } from 'redux/selectors'
 import AnvilFileSelector from 'shared/components/form/AnvilFileSelector'
 
 export const WORKSPACE_REQUIREMENTS = [
@@ -212,36 +211,13 @@ const ADD_DATA_WIZARD_PAGES = [
   { fields: [UPLOAD_PEDIGREE_FIELD] },
 ]
 
-const LoadWorkspaceDataForm = React.memo(({ params, onAddData, createProject, anvilLoadingDelayDate, ...props }) => (
+const LoadWorkspaceDataForm = React.memo(({ params, onAddData, createProject, ...props }) => (
   <div>
     <Header size="large" textAlign="center">
       {`Load data to seqr from AnVIL Workspace "${params.workspaceNamespace}/${params.workspaceName}"`}
     </Header>
     <Segment basic textAlign="center">
       <LoadDataVCFMessage isAnvil />
-      {anvilLoadingDelayDate ? (
-        <Message
-          error
-          compact
-          header="Planned Data Loading Delay"
-          content={
-            <span>
-              The Broad Institute is currently having an internal retreat or is closed for winter break.
-              <br />
-              As a result, any requests for data to be loaded as of &nbsp;
-              <b>{new Date(`${anvilLoadingDelayDate}T00:00`).toDateString()}</b>
-              &nbsp; may be delayed until the &nbsp;
-              <b>
-                2nd week of January &nbsp;
-                {new Date(`${anvilLoadingDelayDate}T00:00`).getFullYear() + 1}
-              </b>
-              <br />
-              We appreciate your understanding and support of our research team taking some well-deserved time off
-              and hope you also have a nice break.
-            </span>
-          }
-        />
-      ) : null}
     </Segment>
     <FormWizard
       {...props}
@@ -266,17 +242,12 @@ const LoadWorkspaceDataForm = React.memo(({ params, onAddData, createProject, an
 
 LoadWorkspaceDataForm.propTypes = {
   params: PropTypes.object.isRequired,
-  anvilLoadingDelayDate: PropTypes.string,
   createProject: PropTypes.bool,
   onAddData: PropTypes.func,
 }
-
-const mapStateToProps = state => ({
-  anvilLoadingDelayDate: getAnvilLoadingDelayDate(state),
-})
 
 const mapDispatchToProps = {
   onAddData: onAddDataFromWorkspace,
 }
 
-export default connect(mapStateToProps, mapDispatchToProps)(LoadWorkspaceDataForm)
+export default connect(null, mapDispatchToProps)(LoadWorkspaceDataForm)

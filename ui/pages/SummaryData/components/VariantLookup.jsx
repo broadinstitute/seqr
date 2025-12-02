@@ -10,7 +10,7 @@ import StateDataLoader from 'shared/components/StateDataLoader'
 import SendEmailButton from 'shared/components/buttons/SendEmailButton'
 import FormWrapper from 'shared/components/form/FormWrapper'
 import { helpLabel } from 'shared/components/form/FormHelpers'
-import { BaseSemanticInput } from 'shared/components/form/Inputs'
+import { BaseSemanticInput, InlineToggle } from 'shared/components/form/Inputs'
 import FamilyReads from 'shared/components/panel/family/FamilyReads'
 import FamilyVariantTags from 'shared/components/panel/variants/FamilyVariantTags'
 import Variants, { Variant, StyledVariantRow } from 'shared/components/panel/variants/Variants'
@@ -36,6 +36,24 @@ const FIELDS = [
     inputType: 'Input',
   },
   { required: true, ...GENOME_VERSION_FIELD },
+  {
+    name: 'homOnly',
+    label: 'Homozygotes Only',
+    labelHelp: 'Only return cases where at least one call is homozygous',
+    component: InlineToggle,
+    asFormInput: true,
+    fullHeight: true,
+    color: 'grey',
+  },
+  {
+    name: 'affectedOnly',
+    label: 'Affected Only',
+    labelHelp: 'Only return cases where the variant is present for at least one affected individual',
+    component: InlineToggle,
+    asFormInput: true,
+    fullHeight: true,
+    color: 'grey',
+  },
 ]
 
 const VlmDisplay = ({ vlmMatches }) => (
