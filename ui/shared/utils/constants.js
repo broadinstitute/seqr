@@ -1537,16 +1537,16 @@ const SPLICING_IN_SILICO_GROUP = 'Splicing'
 export const SV_IN_SILICO_GROUP = 'Structural'
 export const NO_SV_IN_SILICO_GROUPS = [MISSENSE_IN_SILICO_GROUP, CODING_IN_SILICO_GROUP]
 export const SPLICE_AI_FIELD = 'splice_ai'
-export const ALPHAMISSENSE_THRESHHOLDS = [0.071, 0.170, 0.792, 0.906, 0.990]
+export const ALPHAMISSENSE_THRESHHOLDS = [0.071, 0.17, 0.792, 0.906, 0.990]
 
-const CLINGEN_CITATION = { name: '2022 ClinGen', pmid: 36413997 }
+const CLINGEN_CITATION = { name: '2022 ClinGen', pmid: '36413997' }
 const PRED_COLOR_MAP = ['green', 'olive', 'grey', 'yellow', 'red', '#8b0000']
 const REVERSE_PRED_COLOR_MAP = [...PRED_COLOR_MAP].reverse()
 
 export const ORDERED_PREDICTOR_FIELDS = [
   { field: 'cadd', group: CODING_IN_SILICO_GROUP, thresholds: [0.151, 22.8, 25.3, 28.1, undefined], min: 1, max: 99, fieldTitle: 'CADD', citation: CLINGEN_CITATION },
   { field: 'revel', group: MISSENSE_IN_SILICO_GROUP, thresholds: [0.0161, 0.291, 0.644, 0.773, 0.932], fieldTitle: 'REVEL', citation: CLINGEN_CITATION },
-  { field: 'alphamissense', fieldTitle: 'AlphaMissense', group: MISSENSE_IN_SILICO_GROUP, thresholds: ALPHAMISSENSE_THRESHHOLDS, citation: { name: '2025 ClinGen SVI', pmid: 40084623 } },
+  { field: 'alphamissense', fieldTitle: 'AlphaMissense', group: MISSENSE_IN_SILICO_GROUP, thresholds: ALPHAMISSENSE_THRESHHOLDS, citation: { name: '2025 ClinGen SVI', pmid: '40084623' } },
   { field: 'vest', thresholds: [undefined, 0.45, 0.764, 0.861, 0.965], fieldTitle: 'VEST', citation: CLINGEN_CITATION },
   { field: 'mpc', group: MISSENSE_IN_SILICO_GROUP, thresholds: [undefined, undefined, 1.36, 1.828, undefined], max: 5, fieldTitle: 'MPC' },
   {
