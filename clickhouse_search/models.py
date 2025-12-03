@@ -697,6 +697,56 @@ class HgmdSnvIndel(BaseHgmd):
         db_table = 'GRCh38/SNV_INDEL/reference_data/hgmd'
         engine = Join('ALL', 'LEFT', 'key', join_use_nulls=1, flatten_nested=0)
 
+class BaseTopmed(models.ClickhouseModel):
+    ac = models.UInt32Field()
+    af = models.DecimalField(max_digits=9, decimal_places=8)
+    an = models.UInt32Field()
+    het = models.UInt32Field()
+    hom = models.UInt32Field()
+
+    class Meta:
+        abstract = True
+
+class TopmedAllVariantsGRCh37SnvIndel(BaseTopmed):
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
+
+    class Meta:
+        db_table = 'GRCh37/SNV_INDEL/reference_data/topmed/all_variants'
+        engine = models.MergeTree(
+            primary_key=('variant_id'),
+            order_by=('variant_id'),
+        )
+
+class TopmedAllVariantsSnvIndel(BaseTopmed):
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
+
+    class Meta:
+        db_table = 'GRCh38/SNV_INDEL/reference_data/topmed/all_variants'
+        engine = models.MergeTree(
+            primary_key=('variant_id'),
+            order_by=('variant_id'),
+        )
+
+class TopmedSeqrVariantsGRCh37SnvIndel(BaseTopmed):
+    key = OneToOneField('AnnotationsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+
+    class Meta:
+        db_table = 'GRCh37/SNV_INDEL/reference_data/topmed/seqr_variants'
+        engine = models.MergeTree(
+            primary_key=('key'),
+            order_by=('key'),
+        )
+
+class TopmedSeqrVariantsSnvIndel(BaseTopmed):
+    key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+
+    class Meta:
+        db_table = 'GRCh38/SNV_INDEL/reference_data/topmed/seqr_variants'
+        engine = models.MergeTree(
+            primary_key=('key'),
+            order_by=('key'),
+        )
+
 
 class BaseEntries(FixtureLoadableClickhouseModel):
     MAX_XPOS_FILTER_INTERVALS = 500
