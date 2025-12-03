@@ -1537,7 +1537,7 @@ const SPLICING_IN_SILICO_GROUP = 'Splicing'
 export const SV_IN_SILICO_GROUP = 'Structural'
 export const NO_SV_IN_SILICO_GROUPS = [MISSENSE_IN_SILICO_GROUP, CODING_IN_SILICO_GROUP]
 export const SPLICE_AI_FIELD = 'splice_ai'
-export const ALPHAMISSENSE_THRESHHOLDS = [0.071, 0.17, 0.792, 0.906, 0.990]
+export const ALPHAMISSENSE_THRESHHOLDS = [0.071, 0.17, 0.792, 0.906, 0.99]
 
 const CLINGEN_CITATION = { name: '2022 ClinGen', pmid: '36413997' }
 const PRED_COLOR_MAP = ['green', 'olive', 'grey', 'yellow', 'red', '#8b0000']
