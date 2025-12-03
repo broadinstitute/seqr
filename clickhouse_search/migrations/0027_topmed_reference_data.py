@@ -28,12 +28,12 @@ SOURCE(CLICKHOUSE(
 ))
 LIFETIME(MIN 0 MAX 0)
 LAYOUT(FLAT(MAX_ARRAY_SIZE 1000000000))
-""")).safe_substitute(
+""").safe_substitute(
     # Note the nested Template-ing that allows
     # double substitution these shared values
     clickhouse_writer_user=CLICKHOUSE_WRITER_USER,
     clickhouse_writer_password=CLICKHOUSE_WRITER_PASSWORD,
-)
+))
 
 TOPMED_ALL_VARIANTS_MV = Template("""
 CREATE MATERIALIZED VIEW `$reference_genome/SNV_INDEL/reference_data/topmed/all_variants_mv`
