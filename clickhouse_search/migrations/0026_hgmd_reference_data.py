@@ -8,6 +8,8 @@ from django.db import migrations, models, connections
 import django.db.models.deletion
 import django.db.models.manager
 
+from settings import DATABASES
+
 HGMD_GRCH37_URL = os.environ.get('HGMD_GRCH37_URL', None)
 HGMD_GRCH38_URL = os.environ.get('HGMD_GRCH38_URL', None)
 
