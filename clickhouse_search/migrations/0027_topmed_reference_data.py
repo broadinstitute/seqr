@@ -22,8 +22,7 @@ SOURCE(CLICKHOUSE(
     TABLE `$reference_genome/SNV_INDEL/reference_data/topmed/seqr_variants`
 ))
 LIFETIME(MIN 0 MAX 0)
-LAYOUT(RANGE_HASHED())
-RANGE(MIN start MAX end)
+LAYOUT(FLAT(MAX_ARRAY_SIZE 1000000000))
 """).substitute(
     # Note the nested Template-ing that allows
     # double substitution these shared values
@@ -37,17 +36,13 @@ REFRESH EVERY 10 YEAR
 TO `$reference_genome/SNV_INDEL/reference_data/topmed/all_variants`
 EMPTY
 AS SELECT
-    arrayStringConcat([
-        replaceOne(replaceOne(CHROM, 'chr', ''), 'MT', 'M'),
-        toString(POS),
-        REF,
-        ALT
-    ], '-') AS variantId,
-    ID as accession,
-    extract(INFO, 'CLASS=([^;]+)') as classification
-FROM $table_structure
-WHERE ALT != '<DEL>'
-SETTINGS input_format_allow_errors_ratio = 0.01, input_format_allow_errors_num = 25
+    variant_id as variantId,
+    AC as ac,
+    AF as af,
+    AN as an,
+    Hom as hom,
+    Het as het,
+FROM gcs('https://storage.googleapis.com/seqr-reference-data/v3.1/$reference_genome/topmed/1.1.parquet/*.parquet')
 """)
 
 TOPMED_ALL_TO_SEQR_MV = Template("""
@@ -146,5 +141,41 @@ class Migration(migrations.Migration):
                 ('objects', django.db.models.manager.Manager()),
                 ('_overwrite_base_manager', django.db.models.manager.Manager()),
             ],
+        ),
+        migrations.RunSQL(
+            TOPMED_ALL_VARIANTS_MV.substitute(
+                reference_genome="GRCh37",
+            ),
+            hints={"clickhouse": True},
+        ),
+        migrations.RunSQL(
+            TOPMED_ALL_VARIANTS_MV.substitute(
+                reference_genome="GRCh38",
+            ),
+            hints={"clickhouse": True},
+        ),
+        migrations.RunSQL(
+            TOPMED_ALL_TO_SEQR_MV.substitute(
+                reference_genome="GRCh37",
+            ),
+            hints={"clickhouse": True},
+        ),
+        migrations.RunSQL(
+            TOPMED_ALL_TO_SEQR_MV.substitute(
+                reference_genome="GRCh38",
+            ),
+            hints={"clickhouse": True},
+        ),
+        migrations.RunSQL(
+            TOPMED_SEARCH.substitute(
+                reference_genome="GRCh37",
+            ),
+            hints={"clickhouse": True},
+        ),
+        migrations.RunSQL(
+            TOPMED_SEARCH.substitute(
+                reference_genome="GRCh38",
+            ),
+            hints={"clickhouse": True},
         ),
     ]
