@@ -20,7 +20,7 @@ CREATE DICTIONARY `$reference_genome/SNV_INDEL/reference_data/topmed`
     `het` UInt32,
     `hom` UInt32
 )
-PRIMARY KEY chrom
+PRIMARY KEY key
 SOURCE(CLICKHOUSE(
     USER '$clickhouse_writer_user'
     PASSWORD '$clickhouse_writer_password'
