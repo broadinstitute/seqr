@@ -5,7 +5,7 @@ import { connect } from 'react-redux'
 import { Icon, Transition, Popup } from 'semantic-ui-react'
 
 import { getGenesById } from 'redux/selectors'
-import { ORDERED_PREDICTOR_FIELDS, coloredIcon, predictorColorRanges, predictionFieldValue, getVariantMainGeneId, getVariantMainTranscript } from 'shared/utils/constants'
+import { ORDERED_PREDICTOR_FIELDS, ALPHAMISSENSE_THRESHHOLDS, coloredIcon, predictorColorRanges, predictionFieldValue, getVariantMainGeneId, getVariantMainTranscript } from 'shared/utils/constants'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 import { HorizontalSpacer } from '../../Spacers'
 import { ButtonLink } from '../../StyledComponents'
@@ -20,7 +20,7 @@ const PredictionValue = styled.span`
 const NUM_TO_SHOW_ABOVE_THE_FOLD = 6 // how many predictors to show immediately
 
 const Prediction = (
-  { field, fieldTitle, value, color, infoValue, infoTitle, thresholds, reverseThresholds, href, requiresCitation },
+  { field, fieldTitle, value, color, infoValue, infoTitle, thresholds, reverseThresholds, href, citation },
 ) => {
   const indicator = infoValue ? (
     <Popup
@@ -34,7 +34,7 @@ const Prediction = (
     <Popup
       header={`${fieldName} Color Ranges`}
       hoverable
-      content={predictorColorRanges(thresholds, requiresCitation, reverseThresholds)}
+      content={predictorColorRanges(thresholds, citation, reverseThresholds)}
       trigger={<span>{fieldName}</span>}
     />
   ) : fieldName
@@ -60,7 +60,7 @@ Prediction.propTypes = {
   thresholds: PropTypes.arrayOf(PropTypes.number),
   reverseThresholds: PropTypes.bool,
   href: PropTypes.string,
-  requiresCitation: PropTypes.bool,
+  citation: PropTypes.object,
 }
 
 const getPredictorFields = (variant, predictions, genePredictors) => {
@@ -72,7 +72,7 @@ const getPredictorFields = (variant, predictions, genePredictors) => {
     field: predictorField.field,
     fieldTitle,
     href: getHref && getHref(variant),
-    requiresCitation: predictorField.requiresCitation,
+    citation: predictorField.citation,
     ...predictionFieldValue(predictions, genePredictors[predictorField.field] || predictorField),
   }))
 
@@ -116,7 +116,7 @@ class Predictions extends React.PureComponent {
       genePredictors.alphamissense = {
         field: 'alphamissense',
         fieldValue: mainTranscript.alphamissense.pathogenicity,
-        thresholds: [0.34, 0.34, 0.564, 0.564],
+        thresholds: ALPHAMISSENSE_THRESHHOLDS,
       }
     }
 
