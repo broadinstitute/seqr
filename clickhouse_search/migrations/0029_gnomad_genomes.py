@@ -7,6 +7,9 @@ from django.db import migrations, models
 import django.db.models.deletion
 import django.db.models.manager
 
+CLICKHOUSE_WRITER_PASSWORD = os.environ.get('CLICKHOUSE_WRITER_PASSWORD', 'clickhouse_test')
+CLICKHOUSE_WRITER_USER = os.environ.get('CLICKHOUSE_WRITER_USER', 'clickhouse')
+
 GNOMAD_GENOMES_SEARCH = Template(Template("""
 CREATE DICTIONARY `$reference_genome/SNV_INDEL/reference_data/gnomad_genomes`
 (
