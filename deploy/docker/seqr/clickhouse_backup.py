@@ -1,6 +1,7 @@
 import datetime
 import os
 import requests
+import sys
 
 from google.cloud import storage
 
@@ -26,7 +27,7 @@ def find_most_recent_success(bucket):
                     successful.append((ts, parts[1]))
             except ValueError:
                 continue
-    latest_ts, latest_prefix = max(successful, key=lambda x: x[0])
+    _, latest_prefix = max(successful, key=lambda x: x[0])
     return latest_prefix
 
 def main():
