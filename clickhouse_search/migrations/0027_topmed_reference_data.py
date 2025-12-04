@@ -15,7 +15,7 @@ CREATE DICTIONARY `$reference_genome/SNV_INDEL/reference_data/topmed`
 (
     `key` UInt32,
     `ac` UInt32,
-    `af` Decimal(9, 5)
+    `af` Decimal(9, 5),
     `an` UInt32,
     `het` UInt32,
     `hom` UInt32
