@@ -46,7 +46,7 @@ AS SELECT
     AF as af,
     AN as an,
     Hom as hom,
-    Het as het,
+    Het as het
 FROM gcs('https://storage.googleapis.com/seqr-reference-data/v3.1/$reference_genome/topmed/1.1.parquet/*.parquet')
 """)
 
