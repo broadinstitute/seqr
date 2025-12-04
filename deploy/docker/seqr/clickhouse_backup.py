@@ -45,7 +45,7 @@ def main():
     if not (response.ok and 'BACKUP_CREATED' in response.text):
         sys.exit(1)
     blob = bucket.blob(f'{DEPLOYMENT_TYPE}/{new_backup_timestamp}/_SUCCESS')
-    blob.upload_from_string("")
+    blob.upload_from_string('')
 
 if __name__ == '__main__':
     main()
