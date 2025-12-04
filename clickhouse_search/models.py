@@ -747,6 +747,97 @@ class TopmedSeqrVariantsSnvIndel(BaseTopmed):
             order_by=('key'),
         )
 
+class BaseGnomad(models.ClickhouseModel):
+    ac = models.UInt32Field()
+    af = models.DecimalField(max_digits=9, decimal_places=8)
+    an = models.UInt32Field()
+    filter_af = models.DecimalField(max_digits=9, decimal_places=8)
+    hemi = models.UInt32Field()
+    hom = models.UInt32Field()
+
+    class Meta:
+        abstract = True
+
+class GnomadExomesAllVariantsGRCh37SnvIndel(BaseGnomad):
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
+
+    class Meta:
+        db_table = 'GRCh37/SNV_INDEL/reference_data/gnomad_exomes/all_variants'
+        engine = models.MergeTree(
+            primary_key=('variant_id'),
+            order_by=('variant_id'),
+        )
+
+class GnomadExomesAllVariantsSnvIndel(BaseGnomad):
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
+
+    class Meta:
+        db_table = 'GRCh38/SNV_INDEL/reference_data/gnomad_exomes/all_variants'
+        engine = models.MergeTree(
+            primary_key=('variant_id'),
+            order_by=('variant_id'),
+        )
+
+class GnomadExomesSeqrVariantsGRCh37SnvIndel(BaseGnomad):
+    key = OneToOneField('AnnotationsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+
+    class Meta:
+        db_table = 'GRCh37/SNV_INDEL/reference_data/gnomad_exomes/seqr_variants'
+        engine = models.MergeTree(
+            primary_key=('key'),
+            order_by=('key'),
+        )
+
+class GnomadExomesSeqrVariantsSnvIndel(BaseGnomad):
+    key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+
+    class Meta:
+        db_table = 'GRCh38/SNV_INDEL/reference_data/gnomad_exomes/seqr_variants'
+        engine = models.MergeTree(
+            primary_key=('key'),
+            order_by=('key'),
+        )
+
+class GnomadGenomesAllVariantsGRCh37SnvIndel(BaseGnomad):
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
+
+    class Meta:
+        db_table = 'GRCh37/SNV_INDEL/reference_data/gnomad_genomes/all_variants'
+        engine = models.MergeTree(
+            primary_key=('variant_id'),
+            order_by=('variant_id'),
+        )
+
+class GnomadGenomesAllVariantsSnvIndel(BaseGnomad):
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
+
+    class Meta:
+        db_table = 'GRCh38/SNV_INDEL/reference_data/gnomad_genomes/all_variants'
+        engine = models.MergeTree(
+            primary_key=('variant_id'),
+            order_by=('variant_id'),
+        )
+
+class GnomadGenomesSeqrVariantsGRCh37SnvIndel(BaseGnomad):
+    key = OneToOneField('AnnotationsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+
+    class Meta:
+        db_table = 'GRCh37/SNV_INDEL/reference_data/gnomad_genomes/seqr_variants'
+        engine = models.MergeTree(
+            primary_key=('key'),
+            order_by=('key'),
+        )
+
+class GnomadGenomesSeqrVariantsSnvIndel(BaseGnomad):
+    key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+
+    class Meta:
+        db_table = 'GRCh38/SNV_INDEL/reference_data/gnomad_genomes/seqr_variants'
+        engine = models.MergeTree(
+            primary_key=('key'),
+            order_by=('key'),
+        )
+
 
 class BaseEntries(FixtureLoadableClickhouseModel):
     MAX_XPOS_FILTER_INTERVALS = 500
