@@ -3,6 +3,7 @@ APIs for retrieving, updating, creating, and deleting Individual records
 """
 from collections import defaultdict
 
+from clickhouse_search.search import reload_clickhouse_sex_dict
 from matchmaker.models import MatchmakerSubmission, MatchmakerResult
 from seqr.models import Sample, IgvSample, RnaSample, Individual, Family, FamilyNote
 from seqr.utils.middleware import ErrorsWarningsException
@@ -40,6 +41,7 @@ def add_or_update_individuals_and_families(project, individual_records, user, ge
     updated_family_ids = set()
     updated_individuals = set()
     updated_affected = set()
+    updated_sex = set()
     updated_note_ids = []
     parent_updates = []
     num_created_families = 0
@@ -71,7 +73,7 @@ def add_or_update_individuals_and_families(project, individual_records, user, ge
 
     for record in individual_records:
         created_individual = _update_from_record(
-            record, user, families_by_id, individual_lookup, updated_family_ids, updated_individuals, updated_affected, parent_updates, updated_note_ids, allow_features_update)
+            record, user, families_by_id, individual_lookup, updated_family_ids, updated_individuals, updated_affected, updated_sex, parent_updates, updated_note_ids, allow_features_update)
         if created_individual:
             num_created_individuals += 1
 
@@ -87,6 +89,8 @@ def add_or_update_individuals_and_families(project, individual_records, user, ge
     _remove_pedigree_images(updated_family_models, user)
     if updated_affected and not skip_gt_stats_rebuild:
         backend_specific_call(lambda *args: True, trigger_rebuild_gt_stats)(project, user)
+    if updated_sex:
+        backend_specific_call(lambda *args: True, reload_clickhouse_sex_dict)()
 
     pedigree_json = None
     if get_update_json:
@@ -101,7 +105,7 @@ def add_or_update_individuals_and_families(project, individual_records, user, ge
     return pedigree_json
 
 
-def _update_from_record(record, user, families_by_id, individual_lookup, updated_family_ids, updated_individuals, updated_affected, parent_updates, updated_note_ids, allow_features_update):
+def _update_from_record(record, user, families_by_id, individual_lookup, updated_family_ids, updated_individuals, updated_affected, updated_sex, parent_updates, updated_note_ids, allow_features_update):
     family_id = _get_record_family_id(record)
     family = families_by_id.get(family_id)
     created_individual = False
@@ -168,6 +172,8 @@ def _update_from_record(record, user, families_by_id, individual_lookup, updated
         updated_individuals.add(individual)
         if 'affected' in updated_fields:
             updated_affected.add(individual)
+        if 'sex' in updated_fields:
+            updated_sex.add(individual)
         if family.pedigree_image:
             updated_family_ids.add(family.id)
 

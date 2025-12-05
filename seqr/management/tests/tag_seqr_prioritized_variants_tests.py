@@ -14,6 +14,7 @@ SNV_INDEL_MATCHES = {
     'Clinvar Pathogenic -  Compound Heterozygous': 0,
     'Clinvar Both Pathogenic -  Compound Heterozygous': 0,
     'Clinvar Pathogenic - Recessive': 1,
+    'Clinvar Pathogenic - X-Linked Recessive': 0,
     'Compound Heterozygous': 1,
     'Compound Heterozygous - Confirmed': 0,
     'De Novo': 0,
@@ -21,11 +22,13 @@ SNV_INDEL_MATCHES = {
     'Dominant': 0,
     'High Splice AI': 0,
     'Recessive': 1,
+    'X-Linked Recessive': 0,
 }
 SV_MATCHES = {
     'SV - Compound Heterozygous': 1,
     'SV - De Novo/ Dominant': 0,
     'SV - Recessive': 1,
+    'SV - X-Linked Recessive': 0,
 }
 MULTI_TYPE_MATCHES = {
     'Compound Heterozygous - One SV': 1,
