@@ -637,8 +637,8 @@ class ScreenAllVariantsSnvIndel(models.ClickhouseModel):
 
 class BaseHgmd(models.ClickhouseModel):
     HGMD_CLASSES = [(0, 'DM'), (1, 'DM?'), (2, 'DP'), (3, 'DFP'), (4, 'FP'), (5, 'R')]
-    accession = models.StringField(null=True, blank=True)
-    classification = models.Enum8Field(null=True, blank=True, return_int=False, choices=HGMD_CLASSES)
+    accession = models.StringField()
+    classification = models.Enum8Field(return_int=False, choices=HGMD_CLASSES)
 
     class Meta:
         abstract = True
@@ -836,6 +836,53 @@ class GnomadGenomesSeqrVariantsSnvIndel(BaseGnomad):
         engine = models.MergeTree(
             primary_key=('key'),
             order_by=('key'),
+        )
+
+class BaseSpliceAi(models.ClickhouseModel):
+    score = models.DecimalField(max_digits=9, decimal_places=5)
+    consequence = models.Enum8Field(return_int=False, choices=[(0, 'Acceptor gain'), (1, 'Acceptor loss'), (2, 'Donor gain'), (3, 'Donor loss'), (4, 'No consequence')])
+
+    class Meta:
+        abstract = True
+
+class SpliceAiAllVariantsGRCh37SnvIndel(BaseSpliceAi):
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
+
+    class Meta:
+        db_table = 'GRCh37/SNV_INDEL/reference_data/splice_ai/all_variants'
+        engine = models.MergeTree(
+            primary_key=('variant_id'),
+            order_by=('variant_id'),
+        )
+
+class SpliceAiAllVariantsSnvIndel(BaseSpliceAi):
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
+
+    class Meta:
+        db_table = 'GRCh38/SNV_INDEL/reference_data/splice_ai/all_variants'
+        engine = models.MergeTree(
+            primary_key=('variant_id'),
+            order_by=('variant_id'),
+        )
+
+class SpliceAiSeqrVariantsGRCh37SnvIndel(BaseSpliceAi):
+    key = OneToOneField('AnnotationsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+
+    class Meta:
+        db_table = 'GRCh37/SNV_INDEL/reference_data/splice_ai/seqr_variants'
+        engine = models.MergeTree(
+            primary_key=('variant_id'),
+            order_by=('variant_id'),
+        )
+
+class SpliceAiSeqrVariantsSnvIndel(BaseSpliceAi):
+    key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+
+    class Meta:
+        db_table = 'GRCh38/SNV_INDEL/reference_data/splice_ai/seqr_variants'
+        engine = models.MergeTree(
+            primary_key=('variant_id'),
+            order_by=('variant_id'),
         )
 
 
