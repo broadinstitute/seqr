@@ -1558,13 +1558,10 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
         url = reverse(query_variants_handler, args=['abc123'])
         self.check_require_login(url)
 
-        # TODO test error when not single gene
-
         body = {
             'allGenomeProjectFamilies': '38',
             'includeNoAccessProjects': True,
             'search': {
-                'locus': {'rawItems': 'ENSG00000097046'},
                 'annotations': {
                     'missense': ['missense_variant'],
                     'other': ['non_coding_transcript_exon_variant'],
@@ -1577,6 +1574,13 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
             }
         }
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {
+            'error': 'Including external projects is only available when searching for a single gene',
+        })
+
+        body['search']['locus'] = {'rawItems': 'ENSG00000097046'}
+        response = self.client.post(url+'1', content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         variant4 = {**VARIANT4, 'selectedMainTranscriptId': 'ENST00000350997'}
         del variant4['familyGuids']
@@ -1607,7 +1611,7 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
         self.assertDictEqual(response.json(), expected_response)
 
         body['search']['freqs'] = {}
-        response = self.client.post(url+'x', content_type='application/json', data=json.dumps(body))
+        response = self.client.post(url+'a', content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         variant3 = {**VARIANT3, 'selectedMainTranscriptId': 'ENST00000497611'}
         del variant3['familyGuids']
@@ -1623,7 +1627,7 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
         # TODO test with access (partial access?)
 
         body['search']['locus']['rawItems'] = 'ENSG00000229905'
-        response = self.client.post(url+'y', content_type='application/json', data=json.dumps(body))
+        response = self.client.post(url+'z', content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {
             'search': {
