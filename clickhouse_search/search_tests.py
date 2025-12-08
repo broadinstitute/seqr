@@ -27,7 +27,6 @@ from seqr.utils.search.utils import query_variants, variant_lookup, get_variant_
 from seqr.views.apis.data_manager_api import trigger_delete_project
 from seqr.views.utils.json_utils import DjangoJSONEncoderWithSets
 from seqr.views.utils.test_utils import AnvilAuthenticationTestMixin
-from seqr.views.apis.variant_search_api import gene_variant_lookup
 
 from settings import DATABASES
 
