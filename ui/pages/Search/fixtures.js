@@ -27,6 +27,7 @@ export const LOCUS_LIST = {
 }
 
 export const STATE = {
+  meta: {},
   savedSearchesLoading: { isLoading: false },
   searchContextLoading: { isLoading: false },
   searchedVariantsLoading: { isLoading: false },
