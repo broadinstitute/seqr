@@ -1606,7 +1606,7 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
         }
         self.assertDictEqual(response.json(), expected_response)
 
-        body['freqs'] = {}
+        body['search']['freqs'] = {}
         response = self.client.post(url+'x', content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         variant3 = {**VARIANT3, 'selectedMainTranscriptId': 'ENST00000497611'}
@@ -1614,19 +1614,24 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
         del variant3['genotypes']
         expected_response['searchedVariants'].insert(0, variant3)
         expected_response['genesById']['ENSG00000177000'] = mock.ANY
+        expected_response['search']['search'].update(body['search'])
+        expected_response['search']['totalResults'] = 2
         self.assertDictEqual(response.json(), expected_response)
 
         # TODO test recessive
 
         # TODO test with access (partial access?)
 
-        body['geneId'] = 'ENSG00000229905'
+        body['search']['locus']['rawItems'] = 'ENSG00000229905'
         response = self.client.post(url+'y', content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {
-            **expected_response,
+            'search': {
+                'search': {**body['search'], 'no_access_project_genome_version': '38'},
+                'projectFamilies': [],
+                'totalResults': 0,
+            },
             'searchedVariants': [],
-            'genesById': {},
         })
 
     @responses.activate
