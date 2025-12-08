@@ -5,7 +5,7 @@ import requests
 
 import clickhouse_backend.models
 import clickhouse_search.backend.fields
-from django.db import connections, migrations
+from django.db import migrations
 import django.db.models.manager
 
 from settings import DATABASES, PIPELINE_RUNNER_SERVER
@@ -54,12 +54,11 @@ FROM url('https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh38/s
 def conditionally_refresh_view(apps, schema_editor):
     if DATABASES['default']['NAME'].startswith('test_'):
         return
-    with connections['clickhouse_write'].cursor() as cursor:
-        response = requests.post(
-            f"{PIPELINE_RUNNER_SERVER}/refresh_clickhouse_reference_dataset_enqueue",
-            json={"reference_dataset": 'screen'},
-            timeout=60,
-        )
+    requests.post(
+        f"{PIPELINE_RUNNER_SERVER}/refresh_clickhouse_reference_dataset_enqueue",
+        json={"reference_dataset": 'screen'},
+        timeout=60,
+    )
 
 class Migration(migrations.Migration):
 

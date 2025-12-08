@@ -5,7 +5,7 @@ import requests
 
 import clickhouse_backend.models
 import clickhouse_search.backend.fields
-from django.db import connections, migrations
+from django.db import migrations
 import django.db.models.manager
 
 from settings import DATABASES, PIPELINE_RUNNER_SERVER
@@ -53,7 +53,7 @@ def conditionally_refresh_view(dataset_type: str):
     def inner(apps, schema_editor):
         if DATABASES['default']['NAME'].startswith('test_'):
             return
-        response = requests.post(
+        requests.post(
             f"{PIPELINE_RUNNER_SERVER}/refresh_clickhouse_reference_dataset_enqueue",
             json={"reference_dataset": 'pext'},
             timeout=60,
