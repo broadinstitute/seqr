@@ -275,6 +275,8 @@ def _query_variants(search_model, user, previous_search_results, genome_version,
     genes, intervals, invalid_items = parse_locus_list_items(locus or exclude, genome_version=genome_version, additional_model_fields=['id'])
     if invalid_items:
         raise InvalidSearchException('Invalid genes/intervals: {}'.format(', '.join(invalid_items)))
+    if search.get('include_no_access_projects') and len(genes or []) != 1:
+        raise InvalidSearchException('Including external projects is only available when searching for a single gene')
     parsed_search.update({'genes': genes, 'intervals': intervals, 'exclude_locations': exclude_locations})
     if not (genes or intervals):
         rs_ids, variant_ids, parsed_variant_ids, invalid_items = _parse_variant_items(locus)

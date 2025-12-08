@@ -12,7 +12,6 @@ from django.shortcuts import redirect
 from math import ceil
 import re
 
-from clickhouse_search.search import clickhouse_variant_gene_lookup
 from reference_data.models import GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38
 from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, ProjectCategory, Sample
 from seqr.utils.gene_utils import get_gene
@@ -117,6 +116,8 @@ def _get_or_create_results_model(search_hash, search_context, user):
         search_dict = search_context.get('search', {})
         if search_context.get('previousSearchHash') and (search_dict.get('exclude') or {}).get('previousSearch'):
             search_dict['exclude']['previousSearchHash'] = search_context['previousSearchHash']
+        if search_context.get('includeNoAccessProjects'):
+            search_dict['include_no_access_projects'] = True
         search_model = VariantSearch.objects.filter(search=search_dict).filter(
             Q(created_by=user) | Q(name__isnull=False)).first()
         if not search_model:
