@@ -14,6 +14,7 @@ PRIORITIZED_GENE_SORT = 'prioritized_gene'
 AFFECTED = Individual.AFFECTED_STATUS_AFFECTED
 UNAFFECTED = Individual.AFFECTED_STATUS_UNAFFECTED
 MALE_SEXES = Individual.MALE_SEXES
+FEMALE_SEXES = Individual.FEMALE_SEXES
 
 ALT_ALT = 'alt_alt'
 REF_REF = 'ref_ref'
@@ -25,7 +26,9 @@ COMPOUND_HET = 'compound_het'
 COMPOUND_HET_ALLOW_HOM_ALTS = 'compound_het_allow_hom_alts'
 RECESSIVE = 'recessive'
 X_LINKED_RECESSIVE = 'x_linked_recessive'
+X_LINKED_RECESSIVE_MALE_AFFECTED = 'x_linked_recessive_male_affected'
 HOMOZYGOUS_RECESSIVE = 'homozygous_recessive'
+DE_NOVO = 'de_novo'
 ANY_AFFECTED = 'any_affected'
 
 RECESSIVE_FILTER = {
@@ -35,12 +38,16 @@ RECESSIVE_FILTER = {
 INHERITANCE_FILTERS = {
     RECESSIVE: RECESSIVE_FILTER,
     X_LINKED_RECESSIVE: RECESSIVE_FILTER,
+    X_LINKED_RECESSIVE_MALE_AFFECTED: {
+        AFFECTED: REF_ALT,
+        UNAFFECTED: HAS_REF,
+    },
     HOMOZYGOUS_RECESSIVE: RECESSIVE_FILTER,
     COMPOUND_HET: {
         AFFECTED: REF_ALT,
         UNAFFECTED: HAS_REF,
     },
-    'de_novo': {
+    DE_NOVO: {
         AFFECTED: HAS_ALT,
         UNAFFECTED: REF_REF,
     },

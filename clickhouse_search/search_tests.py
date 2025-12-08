@@ -45,7 +45,8 @@ class ClickhouseSearchTestCase(AnvilAuthenticationTestMixin, TransactionTestCase
         # Django is updated, our pattern here must be re-visited.
         super()._fixture_setup()
         with connections['clickhouse_write'].cursor() as cursor:
-            cursor.execute('SYSTEM RELOAD DICTIONARY "seqrdb_affected_status_dict"')
+            for dictionary in ['seqrdb_affected_status_dict', 'seqrdb_sex_dict']:
+                cursor.execute(f'SYSTEM RELOAD DICTIONARY "{dictionary}"')
         for db in DATABASES.keys():
             call_command("loaddata", 'clickhouse_search', database=db)
         with connections['clickhouse_write'].cursor() as cursor:

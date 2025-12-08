@@ -20,7 +20,6 @@ from seqr.views.utils.terra_api_utils import add_service_account, has_service_ac
     TerraRefreshTokenFailedException
 from seqr.views.utils.pedigree_info_utils import parse_basic_pedigree_table, JsonConstants
 from seqr.views.utils.individual_utils import add_or_update_individuals_and_families
-from seqr.utils.communication_utils import send_html_email
 from seqr.utils.file_utils import list_files
 from seqr.utils.search.add_data_utils import get_missing_family_samples, get_loaded_individual_ids, trigger_data_loading
 from seqr.utils.vcf_utils import validate_vcf_and_get_samples, get_vcf_list
@@ -28,7 +27,7 @@ from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.views.utils.permissions_utils import is_anvil_authenticated, check_workspace_perm, login_and_policies_required
 from settings import BASE_URL, GOOGLE_LOGIN_REQUIRED_URL, POLICY_REQUIRED_URL, API_POLICY_REQUIRED_URL,\
-    SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, ANVIL_LOADING_DELAY_EMAIL_START_DATE
+    SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL
 logger = SeqrLogger(__name__)
 
 anvil_auth_required = user_passes_test(is_anvil_authenticated, login_url=GOOGLE_LOGIN_REQUIRED_URL)
@@ -315,19 +314,6 @@ def _trigger_add_workspace_data(project, pedigree_records, user, data_path, samp
             'Number of Samples': len(individual_ids),
             'Status': 'Loading' if trigger_success else 'Loading Requested'
         }])
-
-    loading_warning_date = ANVIL_LOADING_DELAY_EMAIL_START_DATE and datetime.strptime(ANVIL_LOADING_DELAY_EMAIL_START_DATE, '%Y-%m-%d')
-    if loading_warning_date and loading_warning_date <= datetime.now():
-        try:
-            email_body = (f"Hi {user.get_full_name() or user.email},\n"
-            "We have received your request to load data to seqr from AnVIL. Currently, the Broad Institute is holding an " 
-            "internal retreat or closed for the winter break so we may not be able to load data until mid-January "
-            f"{loading_warning_date.year + 1}. We appreciate your understanding and support of our research team taking "
-            "some well-deserved time off and hope you also have a nice break.\n"
-            "- The seqr team")
-            send_html_email(email_body, subject='Delay in loading AnVIL in seqr', to=[user.email])
-        except Exception as e:
-            logger.error('AnVIL loading delay email error: {}'.format(e), user)
 
     return pedigree_json
 

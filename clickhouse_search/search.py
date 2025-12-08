@@ -16,7 +16,8 @@ from reference_data.models import GeneConstraint, Omim, GENOME_VERSION_LOOKUP
 from seqr.models import Sample, PhenotypePrioritization, Individual
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.search.constants import MAX_VARIANTS, XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, \
-    PRIORITIZED_GENE_SORT, COMPOUND_HET, COMPOUND_HET_ALLOW_HOM_ALTS, RECESSIVE
+    PRIORITIZED_GENE_SORT, COMPOUND_HET, COMPOUND_HET_ALLOW_HOM_ALTS, RECESSIVE, AFFECTED, MALE_SEXES, \
+    X_LINKED_RECESSIVE, X_LINKED_RECESSIVE_MALE_AFFECTED
 from seqr.views.utils.json_utils import DjangoJSONEncoderWithSets
 
 logger = SeqrLogger(__name__)
@@ -31,10 +32,12 @@ SELECTED_TRANSCRIPT_FIELD = 'selectedTranscript'
 def get_clickhouse_variants(samples, search, user, previous_search_results, genome_version,page=1, num_results=100, sort=None, **kwargs):
     inheritance_mode = search.get('inheritance_mode')
     has_comp_het = inheritance_mode in {RECESSIVE, COMPOUND_HET}
+    has_x_chrom_comp_het = has_comp_het and _is_x_chrom_only(genome_version, **search)
+    has_x_linked = inheritance_mode in {RECESSIVE, X_LINKED_RECESSIVE} and _has_x_chrom(genome_version, **search)
     sample_data_by_dataset_type = _get_sample_data(
         samples,
         skip_multi_project_individual_guid=True,
-        has_x_chrom_comp_het=has_comp_het and _is_x_chrom_only(genome_version, **search),
+        annotate_affected_males=has_x_chrom_comp_het or has_x_linked,
     )
     results = []
     family_guid = None
@@ -49,9 +52,24 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
         dataset_results = []
         if inheritance_mode != COMPOUND_HET:
             dataset_results += _get_search_results(genome_version, dataset_type, sample_data, exclude_keys=exclude_keys.get(dataset_type), **search)
+
+        run_x_linked_male_search = has_x_linked and not (inheritance_mode == X_LINKED_RECESSIVE and sample_data.get('samples'))
+        if run_x_linked_male_search:
+            affected_male_family_guids = {
+                s['family_guid'] for s in sample_data['samples'] if s['affected'] == AFFECTED and s['sex'] in MALE_SEXES
+            } if 'samples' in sample_data else sample_data['affected_male_family_guids']
+            if affected_male_family_guids:
+                x_linked_sample_data = _affected_male_families(sample_data, affected_male_family_guids)
+                x_linked_search = {**search, 'inheritance_mode': X_LINKED_RECESSIVE_MALE_AFFECTED}
+                logger.info(f'Loading {dataset_type} X-linked male data for {x_linked_sample_data["num_families"]} families', user)
+                dataset_results += _get_search_results(
+                    genome_version, dataset_type, x_linked_sample_data, exclude_keys=exclude_keys.get(dataset_type),
+                    **x_linked_search,
+                )
+
         if has_comp_het:
             comp_het_sample_data = sample_data
-            if 'affected_male_family_guids' in sample_data and dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
+            if has_x_chrom_comp_het and 'affected_male_family_guids' in sample_data and dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
                 comp_het_sample_data = _no_affected_male_families(sample_data, user)
             result_q = get_data_type_comp_het_results_queryset(genome_version, dataset_type, comp_het_sample_data, exclude_key_pairs=exclude_key_pairs.get(dataset_type), **search)
             dataset_results += _evaluate_results(result_q, is_comp_het=True)
@@ -370,7 +388,7 @@ def _is_matched_minimal_transcript(transcript, minimal_transcript):
      and transcript.get('spliceregion', {}).get('extended_intronic_splice_region_variant') == minimal_transcript.get('extendedIntronicSpliceRegionVariant'))
 
 
-def _get_sample_data(samples, skip_multi_project_individual_guid=False, has_x_chrom_comp_het=False):
+def _get_sample_data(samples, skip_multi_project_individual_guid=False, annotate_affected_males=False):
     mismatch_affected_samples = samples.values('sample_id', 'dataset_type').annotate(
         projects=ArrayAgg('individual__family__project__name', distinct=True),
         affected=ArrayAgg('individual__affected', distinct=True),
@@ -393,9 +411,9 @@ def _get_sample_data(samples, skip_multi_project_individual_guid=False, has_x_ch
         annotations['num_unaffected'] = Count(
             'individual_id', distinct=True, filter=Q(individual__affected=Individual.AFFECTED_STATUS_UNAFFECTED),
         )
-        if has_x_chrom_comp_het:
+        if annotate_affected_males:
             annotations['affected_male_family_guids'] = ArrayAgg('individual__family__guid', distinct=True, filter=Q(
-                individual__affected=Individual.AFFECTED_STATUS_AFFECTED, individual__sex=Individual.SEX_MALE,
+                individual__affected=Individual.AFFECTED_STATUS_AFFECTED, individual__sex__in=Individual.MALE_SEXES,
             ))
     else:
         annotations['samples'] = ArrayAgg(JSONObject(
@@ -474,10 +492,30 @@ def _no_affected_male_families(sample_data, user):
     }
 
 
+def _affected_male_families(sample_data, affected_male_family_guids):
+    if len(affected_male_family_guids) == sample_data['num_families']:
+        return sample_data
+    sample_type_families = {
+        sample_type: families.intersection(affected_male_family_guids)
+        for sample_type, families in sample_data['sample_type_families'].items()
+    }
+    return {
+        **sample_data,
+        'num_families': len(set().union(*sample_type_families.values())),
+        'sample_type_families': {sample_type: families for sample_type, families in sample_type_families.items() if families},
+    }
+
+
 def _is_x_chrom_only(genome_version, genes=None, intervals=None, **kwargs):
     if not (genes or intervals):
         return False
     return all('X' in gene[f'chromGrch{genome_version}'] for gene in (genes or {}).values()) and all('X' in interval['chrom'] for interval in (intervals or []))
+
+
+def _has_x_chrom(genome_version, genes=None, intervals=None, **kwargs):
+    if not (genes or intervals):
+        return True
+    return any('X' in gene[f'chromGrch{genome_version}'] for gene in (genes or {}).values()) or any('X' in interval['chrom'] for interval in (intervals or []))
 
 
 OMIM_SORT = 'in_omim'
@@ -784,6 +822,11 @@ def delete_clickhouse_project(project, dataset_type, sample_type=None):
             cursor.execute(f'SYSTEM WAIT VIEW "{view_name}"')
             cursor.execute(f'SYSTEM RELOAD DICTIONARY "{table_base}/gt_stats_dict"')
     return f'Deleted all {dataset_type} search data for project {project.name}'
+
+
+def reload_clickhouse_sex_dict():
+    with connections['clickhouse_write'].cursor() as cursor:
+        cursor.execute('SYSTEM RELOAD DICTIONARY "seqrdb_sex_dict"')
 
 
 SV_DATASET_TYPES = {

@@ -16,7 +16,8 @@ from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFEC
     EXTENDED_SPLICE_KEY, MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY, CLINVAR_KEY, HGMD_KEY, NEW_SV_FIELD, \
     EXTENDED_SPLICE_REGION_CONSEQUENCE, CLINVAR_PATH_RANGES, CLINVAR_PATH_SIGNIFICANCES, CLINVAR_LIKELY_PATH_FILTER, \
     CLINVAR_CONFLICTING_P_LP, CLINVAR_CONFLICTING_NO_P, CLINVAR_CONFLICTING, PATH_FREQ_OVERRIDE_CUTOFF, \
-    HGMD_CLASS_FILTERS, SV_TYPE_FILTER_FIELD, SV_CONSEQUENCES_FIELD, COMPOUND_HET, COMPOUND_HET_ALLOW_HOM_ALTS
+    HGMD_CLASS_FILTERS, SV_TYPE_FILTER_FIELD, SV_CONSEQUENCES_FIELD, COMPOUND_HET, COMPOUND_HET_ALLOW_HOM_ALTS, \
+    X_LINKED_RECESSIVE_MALE_AFFECTED, FEMALE_SEXES
 from seqr.utils.xpos_utils import get_xpos, MIN_POS, MAX_POS
 
 
@@ -871,7 +872,7 @@ class EntriesManager(SearchQuerySet):
 
        entries = entries.filter(family_q)
 
-       if inheritance_mode == X_LINKED_RECESSIVE:
+       if inheritance_mode in {X_LINKED_RECESSIVE, X_LINKED_RECESSIVE_MALE_AFFECTED}:
            entries = entries.filter(self._interval_query('X', start=MIN_POS, end=MAX_POS))
 
        inheritance_q = None
@@ -922,8 +923,11 @@ class EntriesManager(SearchQuerySet):
                 samples_by_genotype[genotype].append(sample['sample_id'])
             elif inheritance_mode and inheritance_mode != ANY_AFFECTED:
                 genotype = self.INHERITANCE_FILTERS.get(inheritance_mode, {}).get(affected)
-                if (inheritance_mode == X_LINKED_RECESSIVE and affected == UNAFFECTED and sample['sex'] in MALE_SEXES):
-                    genotype = REF_REF
+                if inheritance_mode in {X_LINKED_RECESSIVE, X_LINKED_RECESSIVE_MALE_AFFECTED} and sample['sex'] in MALE_SEXES:
+                    if affected == UNAFFECTED:
+                        genotype = REF_REF
+                    elif affected == AFFECTED:
+                        genotype = REF_ALT
                 samples_by_genotype[genotype].append(sample['sample_id'])
 
         gt_filter = None
@@ -957,9 +961,16 @@ class EntriesManager(SearchQuerySet):
             inheritance_mode_filters = self.INHERITANCE_FILTERS.get(inheritance_mode, {})
             affected_gts = genotype_lookup.get(inheritance_mode_filters.get(AFFECTED), [])
             unaffected_gts = genotype_lookup.get(inheritance_mode_filters.get(UNAFFECTED), [])
-            affected_gt_map = f"map('A', {affected_gts}, 'N', {unaffected_gts}, 'U', [-1, 0, 1, 2])"
+            gt_map = f"map('A', {affected_gts}, 'N', {unaffected_gts}, 'U', [-1, 0, 1, 2])"
             affected_lookup = self.GET_AFFECTED_TEMPLATE.format(field='x.sampleId')
-            gt_filter = (affected_gt_map, f'has({{value}}[{affected_lookup}], ifNull({{field}}, -1))')
+            if inheritance_mode == X_LINKED_RECESSIVE_MALE_AFFECTED:
+                male_unaffected_gts = [gt for gt in unaffected_gts if gt < 1]
+                male_gt_map = f"map('A', {affected_gts}, 'N', {male_unaffected_gts}, 'U', [-1, 0, 1, 2])"
+                sex_map = [
+                    f"'{sex}', {gt_map}" for sex in FEMALE_SEXES + [UNAFFECTED]
+                ] + [f"'{sex}', {male_gt_map}" for sex in MALE_SEXES]
+                gt_map = f"map({', '.join(sex_map)})[dictGetOrDefault('seqrdb_sex_dict', 'sex', (family_guid, x.sampleId), 'U')]"
+            gt_filter = (gt_map, f'has({{value}}[{affected_lookup}], ifNull({{field}}, -1))')
 
         return self._affected_condition(), unaffected_condition, gt_filter
 
@@ -973,10 +984,10 @@ class EntriesManager(SearchQuerySet):
             unaffected_genotype = self.INHERITANCE_FILTERS.get(inheritance_mode, {}).get(UNAFFECTED)
             if unaffected_genotype and -1 not in genotype_lookup[unaffected_genotype]:
                 genotype_lookup = {**genotype_lookup, unaffected_genotype: [-1] + genotype_lookup[unaffected_genotype]}
-            if inheritance_mode == X_LINKED_RECESSIVE and -1 not in genotype_lookup[REF_REF]:
+            if inheritance_mode in {X_LINKED_RECESSIVE, X_LINKED_RECESSIVE_MALE_AFFECTED} and -1 not in genotype_lookup[REF_REF]:
                 genotype_lookup = {**genotype_lookup, REF_REF: [-1] + genotype_lookup[REF_REF]}
 
-        is_single_family = sample_data['num_families'] == 1 and sample_data.get('samples')
+        is_single_family = sample_data.get('samples') and (sample_data['num_families'] == 1 or (inheritance_mode in {X_LINKED_RECESSIVE, X_LINKED_RECESSIVE_MALE_AFFECTED}))
         get_conditions = self._single_family_affected_filters if is_single_family else self._multi_family_affected_filters
         affected_condition, unaffected_condition, gt_filter = get_conditions(
             sample_data, inheritance_mode, inheritance_filter, genotype_lookup,

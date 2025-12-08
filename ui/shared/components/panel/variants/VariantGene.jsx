@@ -621,7 +621,7 @@ export const BaseVariantGene = React.memo(({
         </a>
         &nbsp; | &nbsp;
         <Popup
-          trigger={<NavLink to={`/summary_data/saved_variants/ALL/${gene.geneId}`} target="_blank">seqr</NavLink>}
+          trigger={<NavLink to={`/summary_data/saved_variants/ALL/${gene.geneId}`} target="_blank">Saved Variants</NavLink>}
           content="Show all previously saved variants in this gene across all your seqr projects"
           size="tiny"
         />
