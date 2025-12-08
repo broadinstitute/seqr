@@ -1622,11 +1622,12 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
         expected_response['search']['totalResults'] = 2
         self.assertDictEqual(response.json(), expected_response)
 
-        body['search']['inheritance'] = {'mode': 'de_novo'}
+        body['search']['inheritance'] = {'mode': 'recessive'}
         response = self.client.post(url + '3', content_type='application/json', data=json.dumps(body))
-        self.assertEqual(response.status_code, 200)
-        expected_response['search']['search'].update(body['search'])
-        self.assertDictEqual(response.json(), expected_response)
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {
+            'error': 'Compound heterozygous search is not supported when including external projects',
+        })
 
         body['search']['inheritance']['mode'] = 'homozygous_recessive'
         response = self.client.post(url + '4', content_type='application/json', data=json.dumps(body))
@@ -1640,23 +1641,50 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
             'searchedVariants': [],
         })
 
-        body['search']['inheritance']['mode'] = 'recessive'
+        body['search']['inheritance']['mode'] = 'de_novo'
         response = self.client.post(url + '5', content_type='application/json', data=json.dumps(body))
-        self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {
-            'error': 'Compound heterozygous search is not supported when including external projects',
-        })
+        self.assertEqual(response.status_code, 200)
+        expected_response['search']['search'].update(body['search'])
+        self.assertDictEqual(response.json(), expected_response)
 
-        # TODO test with access (partial access?)
+        self.login_collaborator()
+        response = self.client.post(url + '6', content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 200)
+        project_families = [{'projectGuid': 'R0001_1kg', 'familyGuids': mock.ANY}]
+        expected_response['search']['projectFamilies'] = project_families
+        expected_response.update({
+            'searchedVariants': [
+                {**FAMILY_3_VARIANT, 'selectedMainTranscriptId': 'ENST00000497611'},
+                {**VARIANT4, 'selectedMainTranscriptId': 'ENST00000350997'},
+            ],
+            'locusListsByGuid': {'LL00049_pid_genes_autosomal_do': mock.ANY},
+            'phenotypeGeneScores': {'I000004_hg00731': mock.ANY, 'I000005_hg00732': mock.ANY},
+        })
+        self.assertDictEqual(response.json(), expected_response)
+
+        body['search']['locus']['rawItems'] = 'ENSG00000171621'
+        response = self.client.post(url + '7', content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 200)
+        expected_response['search']['search'].update(body['search'])
+        expected_response['search']['totalResults'] = 1
+        other_project_variant = PROJECT_4_COMP_HET_VARIANT
+        del other_project_variant['familyGuids']
+        del other_project_variant['genotypes']
+        expected_response.update({
+            'searchedVariants': [other_project_variant],
+            'genesById': {'ENSG00000171621': mock.ANY},
+            'locusListsByGuid': {},
+            'phenotypeGeneScores': {},
+        })
+        self.assertDictEqual(response.json(), expected_response)
 
         body['search']['locus']['rawItems'] = 'ENSG00000229905'
-        del body['search']['inheritance']
-        response = self.client.post(url+'z', content_type='application/json', data=json.dumps(body))
+        response = self.client.post(url+'8', content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {
             'search': {
                 'search': {**body['search'], 'no_access_project_genome_version': '38'},
-                'projectFamilies': [],
+                'projectFamilies': project_families,
                 'totalResults': 0,
             },
             'searchedVariants': [],
