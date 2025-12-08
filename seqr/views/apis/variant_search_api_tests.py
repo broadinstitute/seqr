@@ -14,7 +14,7 @@ from seqr.utils.search.utils import InvalidSearchException
 from seqr.utils.search.elasticsearch.es_utils import InvalidIndexException
 from seqr.views.apis.variant_search_api import query_variants_handler, query_single_variant_handler, vlm_lookup_handler, \
     export_variants_handler, search_context_handler, get_saved_search_handler, create_saved_search_handler, \
-    update_saved_search_handler, delete_saved_search_handler, get_variant_gene_breakdown, variant_lookup_handler, gene_variant_lookup
+    update_saved_search_handler, delete_saved_search_handler, get_variant_gene_breakdown, variant_lookup_handler
 from seqr.views.utils.test_utils import AuthenticationTestCase, VARIANTS, AnvilAuthenticationTestCase,\
     GENE_VARIANT_FIELDS, GENE_VARIANT_DISPLAY_FIELDS, LOCUS_LIST_FIELDS, FAMILY_FIELDS, \
     PA_LOCUS_LIST_FIELDS, INDIVIDUAL_FIELDS, FUNCTIONAL_FIELDS, IGV_SAMPLE_FIELDS, FAMILY_NOTE_FIELDS, ANALYSIS_GROUP_FIELDS, \
@@ -717,9 +717,26 @@ class VariantSearchAPITest(object):
                                              skip_genotype_filter=True, user=self.collaborator_user)
 
         result_model.delete()
+        body['includeNoAccessProjects'] = True
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        expected_no_access_resonse = deepcopy(self.EXPECTED_SEARCH_RESPONSE)
+        expected_no_access_resonse['search']['search']['include_no_access_projects'] = True
+        self.assertDictEqual(response_json, expected_no_access_resonse)
+        self._assert_expected_results_context(response_json)
+        self.assertSetEqual(set(response_json['search']['projectFamilies'][0]['familyGuids']), expected_searched_families)
+        result_model = VariantSearchResults.objects.get(search_hash=SEARCH_HASH)
+        self.assertSetEqual(expected_searched_families, {f.guid for f in result_model.families.all()})
+        mock_get_variants.assert_called_with(
+            result_model, sort='xpos', page=1, num_results=100, skip_genotype_filter=True, user=self.collaborator_user,
+        )
+
+        result_model.delete()
         expected_searched_families.remove('F000007_7')
         expected_searched_families.remove('F000010_10')
         body['unsolvedFamiliesOnly'] = True
+        del body['includeNoAccessProjects']
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
@@ -1363,12 +1380,6 @@ class LocalVariantSearchAPITest(AuthenticationTestCase, VariantSearchAPITest):
         **EXPECTED_TRANSCRIPTS_RESPONSE,
     }
 
-    def test_gene_variant_lookup(self, *args, **kwargs):
-        url = reverse(gene_variant_lookup)
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 500)
-        self.assertDictEqual(response.json(), {'error': 'gene_variant_lookup is disabled without the clickhouse backend'})
-
 
 def assert_no_list_ws_has_al(self, acl_call_count, group_call_count, workspace_name=None):
     self.mock_list_workspaces.assert_not_called()
@@ -1426,7 +1437,7 @@ class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, VariantSearchAPITes
 
     def test_query_all_projects_variants(self, *args):
         super(AnvilVariantSearchAPITest, self).test_query_all_projects_variants(*args)
-        assert_no_al_has_list_ws(self, group_count=3, has_data_manager=True)
+        assert_no_al_has_list_ws(self, group_count=4, has_data_manager=True)
 
     def test_query_all_project_families_variants(self, *args):
         super(AnvilVariantSearchAPITest, self).test_query_all_project_families_variants(*args)
