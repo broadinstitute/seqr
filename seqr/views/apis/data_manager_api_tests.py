@@ -926,10 +926,11 @@ class DataManagerAPITest(AirtableTest):
                 tissue_type='M', is_active_sample=False,
             )
             self.assertTrue(new_sample_guid in response_json['sampleGuids'])
-            additional_logs = [(f'create {num_created_samples} RnaSamples', {'dbUpdate': {
+
+            additional_logs = (additional_logs or []) + [(f'create {num_created_samples} RnaSamples', {'dbUpdate': {
                 'dbEntity': 'RnaSample', 'updateType': 'bulk_create',
                 'entityIds': response_json['sampleGuids'] if num_created_samples > 1 else [new_sample_guid],
-            }})] + (additional_logs or [])
+            }})]
             self._has_expected_file_loading_logs(
                 'gs://rna_data/new_muscle_samples.tsv.gz', info=info, warnings=warnings, user=self.data_manager_user,
                 additional_logs=additional_logs, additional_logs_offset=6, include_airtable_logs=True)

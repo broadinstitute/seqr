@@ -832,16 +832,16 @@ class ProjectAPITest(object):
             mock_subprocess, 'new_samples.tsv.gz', additional_command=mv_command,
         )
         self.assert_json_logs(self.manager_user, subprocess_logs + [
-            (f'create {1 if single_sample_file else 2} RnaSamples', {'dbUpdate': {
-                'dbEntity': 'RnaSample', 'updateType': 'bulk_create',
-                'entityIds': response_json['sampleGuids'],
-            }}),
             ('update 1 RnaSamples', {'dbUpdate': {
                 'dbEntity': 'RnaSample', 'entityIds': [sample_guid],
                 'updateType': 'bulk_update', 'updateFields': ['is_active']}}),
             (f'delete {model_cls.__name__}s', {'dbUpdate': {
                 'dbEntity': model_cls.__name__, 'numEntities': initial_sample_model_count,
                 'parentEntityIds': [sample_guid], 'updateType': 'bulk_delete'}}),
+            (f'create {1 if single_sample_file else 2} RnaSamples', {'dbUpdate': {
+                'dbEntity': 'RnaSample', 'updateType': 'bulk_create',
+                'entityIds': response_json['sampleGuids'],
+            }}),
         ] + [
             (info_log, None) for info_log in info] + [
             (warn_log, {'severity': 'WARNING'}) for warn_log in warnings
