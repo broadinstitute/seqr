@@ -1667,9 +1667,7 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
         self.assertEqual(response.status_code, 200)
         expected_response['search']['search'].update(body['search'])
         expected_response['search']['totalResults'] = 1
-        other_project_variant = PROJECT_4_COMP_HET_VARIANT
-        del other_project_variant['familyGuids']
-        del other_project_variant['genotypes']
+        other_project_variant = {k: v for k, v in PROJECT_4_COMP_HET_VARIANT.items() if k not in {'familyGuids', 'genotypes'}}
         expected_response.update({
             'searchedVariants': [other_project_variant],
             'genesById': {'ENSG00000171621': mock.ANY},
