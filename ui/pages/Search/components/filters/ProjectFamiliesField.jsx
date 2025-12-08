@@ -3,6 +3,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { FormSpy } from 'react-final-form'
 
+import { getElasticsearchEnabled } from 'redux/selectors'
 import { configuredField } from 'shared/components/form/FormHelpers'
 import { ButtonRadioGroup, BooleanCheckbox } from 'shared/components/form/Inputs'
 import { HorizontalSpacer } from 'shared/components/Spacers'
@@ -34,6 +35,14 @@ const TRIO_ONLY_FIELD = {
   name: 'trioFamiliesOnly',
   component: BooleanCheckbox,
   label: 'Trio+ Families Only',
+  inline: true,
+}
+
+const NO_ACCESS_PROJECTS_FIELD = {
+  name: 'includeNoAccessProjects',
+  component: BooleanCheckbox,
+  label: 'Include External Projects',
+  labelHelp: 'Include variants that are present in seqr in projects that you do not have access to. Only available for single gene searches.',
   inline: true,
 }
 
@@ -79,7 +88,7 @@ class AllProjectFamiliesField extends React.PureComponent {
 
 const SUBSCRIPTION = { values: true }
 
-export default props => (
+const ProjectFamiliesField = ({ esEnabled, ...props }) => (
   <div>
     <InlineHeader content="Include All Projects: " />
     {configuredField(INCLUDE_ALL_PROJECTS_FIELD)}
@@ -87,6 +96,8 @@ export default props => (
     {configuredField(UNSOLVED_ONLY_FIELD)}
     <HorizontalSpacer width={20} />
     {configuredField(TRIO_ONLY_FIELD)}
+    {!esEnabled && <HorizontalSpacer width={20} />}
+    {!esEnabled && configuredField(NO_ACCESS_PROJECTS_FIELD)}
     <FormSpy subscription={SUBSCRIPTION}>
       {({ values }) => (
         !values[INCLUDE_ALL_PROJECTS] &&
@@ -95,3 +106,13 @@ export default props => (
     </FormSpy>
   </div>
 )
+
+ProjectFamiliesField.propTypes = {
+  esEnabled: PropTypes.bool,
+}
+
+const mapStateToProps = state => ({
+  esEnabled: getElasticsearchEnabled(state),
+})
+
+export default connect(mapStateToProps)(ProjectFamiliesField)
