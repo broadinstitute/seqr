@@ -339,7 +339,7 @@ def _requires_transcript_metadata(variant):
     return variant.get('genomeVersion') != GENOME_VERSION_GRCh38 or variant.get('chrom', '').startswith('M')
 
 
-def get_variants_reference_data_response(variants, genome_versions, get_family_genes=False):
+def _get_variants_reference_data_response(variants, genome_versions, get_family_genes=False):
     response = {}
     if get_family_genes:
         response['family_genes'] = defaultdict(set)
@@ -487,7 +487,7 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
     projects = Project.objects.filter(family__guid__in=family_guids).distinct()
     project = list(projects)[0] if len(projects) == 1 else None
 
-    response.update(get_variants_reference_data_response(
+    response.update(_get_variants_reference_data_response(
         variants, genome_versions={p.genome_version for p in projects}, get_family_genes=include_individual_gene_scores,
     ))
 
