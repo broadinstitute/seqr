@@ -251,6 +251,7 @@ def query_variants(search_model, sort=XPOS_SORT_KEY, skip_genotype_filter=False,
         _get_clickhouse_previous_search_results,
     )(search_model, sort, page, num_results, load_all, genome_version=genome_version)
     if cached_page is not None:
+        import pdb; pdb.set_trace()
         return cached_page, previous_search_results.get('total_results')
 
     variants, total_results = _query_variants(
