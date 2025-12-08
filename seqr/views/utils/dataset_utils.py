@@ -350,7 +350,7 @@ def _validate_rna_header(header, allowed_column_map, optional_columns, sample_id
 
 def _load_rna_seq_file(
         file_path, data_source, user, data_type, model_cls, potential_samples, sample_files, file_dir, individual_data_by_id,
-        allowed_column_map, allow_missing_gene=False, ignore_extra_samples=False, optional_columns=None, sample_id_header_col_config=None,
+        allowed_column_map, allow_missing_gene=False, ignore_extra_samples=False, skip_new_sample_validation=False, optional_columns=None, sample_id_header_col_config=None,
 ):
     f = file_iter(file_path, user=user)
     parsed_f = parse_file(file_path.replace('.gz', ''), f, iter_file=True)
@@ -378,13 +378,6 @@ def _load_rna_seq_file(
             has_errors=missing_required_fields or (unmatched_samples and not ignore_extra_samples),
         )
 
-    errors, warnings = _process_rna_errors(
-        gene_ids, missing_required_fields, unmatched_samples, ignore_extra_samples, loaded_samples,
-    )
-
-    if errors:
-        raise ErrorsWarningsException(errors)
-
     potential_inactivate_samples_by_key = _get_rna_sample_data_by_key(
         individual_id__in=samples_to_create.keys(), data_type=data_type, is_active=True,
     )
@@ -392,6 +385,15 @@ def _load_rna_seq_file(
         sample['guid']: key[0] for key, sample in potential_inactivate_samples_by_key.items()
         if key in set(samples_to_create.items()) and sample['guid'] not in loaded_samples
     }
+
+    errors, warnings = _process_rna_errors(
+        gene_ids, missing_required_fields, unmatched_samples, ignore_extra_samples, loaded_samples,
+        skip_new_sample_validation, num_new=len(samples_to_create) - len(inactivate_samples),
+    )
+
+    if errors:
+        raise ErrorsWarningsException(errors)
+
     prev_loaded_individual_ids = _update_existing_sample_models(model_cls, user, inactivate_samples)
 
     if samples_to_create:
@@ -440,7 +442,8 @@ def _get_sample_file_path(file_dir, sample_guid):
     return os.path.join(file_dir, f'{sample_guid}.json.gz')
 
 
-def _process_rna_errors(gene_ids, missing_required_fields, unmatched_samples, ignore_extra_samples, loaded_samples):
+def _process_rna_errors(gene_ids, missing_required_fields, unmatched_samples, ignore_extra_samples, loaded_samples,
+                        skip_new_sample_validation, num_new):
     errors = []
     warnings = []
 
@@ -463,6 +466,10 @@ def _process_rna_errors(gene_ids, missing_required_fields, unmatched_samples, ig
 
     if loaded_samples:
         warnings.append(f'Skipped loading for {len(loaded_samples)} samples already loaded from this file')
+
+    if num_new < 1:
+        err_list = warnings if skip_new_sample_validation else errors
+        err_list.append('No new samples detected')
 
     return errors, warnings
 
@@ -488,6 +495,7 @@ def load_rna_seq(request_json, user, **kwargs):
         sample_guids, file_name_prefix, info, warnings = _load_rna_seq(
             data_type, file_path, user, **kwargs,
             tissue=request_json.get('tissue'), ignore_extra_samples=request_json.get('ignoreExtraSamples'),
+            skip_new_sample_validation=request_json.get('skipNewSampleValidation'),
         )
     except FileNotFoundError:
         return {'error': f'File not found: {file_path}'}, 400
