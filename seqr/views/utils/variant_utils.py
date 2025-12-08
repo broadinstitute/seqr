@@ -354,7 +354,7 @@ def _get_variants_reference_data_response(variants, genome_versions, get_family_
                 if backend_specific_call(lambda v: True, _requires_transcript_metadata)(variant):
                     transcript_ids.update([t['transcriptId'] for t in transcripts if t.get('transcriptId')])
             if get_family_genes:
-                for family_guid in var['familyGuids']:
+                for family_guid in var.get('familyGuids', []):
                     response['family_genes'][family_guid].update(var.get('transcripts', {}).keys())
 
     genome_version = list(genome_versions)[0] if len(genome_versions) == 1 else None
@@ -483,12 +483,12 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
     if not variants:
         return response
 
-    family_guids = {family_guid for variant in variants for family_guid in variant['familyGuids']}
+    family_guids = {family_guid for variant in variants for family_guid in variant.get('familyGuids', [])}
     projects = Project.objects.filter(family__guid__in=family_guids).distinct()
     project = list(projects)[0] if len(projects) == 1 else None
 
     response.update(_get_variants_reference_data_response(
-        variants, genome_versions={p.genome_version for p in projects}, get_family_genes=include_individual_gene_scores,
+        variants, genome_versions={genome_version} if genome_version else {p.genome_version for p in projects}, get_family_genes=include_individual_gene_scores,
     ))
 
     discovery_tags = None

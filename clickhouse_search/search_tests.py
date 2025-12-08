@@ -1558,6 +1558,8 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
         url = reverse(query_variants_handler, args=['abc123'])
         self.check_require_login(url)
 
+        # TODO test error when not single gene
+
         body = {
             'allGenomeProjectFamilies': '38',
             'includeNoAccessProjects': True,
@@ -1600,6 +1602,8 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
         expected_response['searchedVariants'].insert(0, variant3)
         expected_response['genesById']['ENSG00000177000'] = mock.ANY
         self.assertDictEqual(response.json(), expected_response)
+
+        # TODO test comp het
 
         body['geneId'] = 'ENSG00000229905'
         response = self.client.post(url+'y', content_type='application/json', data=json.dumps(body))

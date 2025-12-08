@@ -67,7 +67,8 @@ def query_variants_handler(request, search_hash):
     variants, total_results = query_variants(results_model, sort=sort, page=page, num_results=per_page,
                                              skip_genotype_filter=skip_genotype_filter, user=request.user)
 
-    response = _process_variants(variants or [], results_model.families.all(), request)
+    response = _process_variants(variants or [], results_model.families.all(), request,
+                                 genome_version=results_model.variant_search.search.get('no_access_project_genome_version'))
     response['search'] = _get_search_context(results_model)
     response['search']['totalResults'] = total_results
 
@@ -149,7 +150,7 @@ def query_single_variant_handler(request, variant_id):
     return create_json_response(response)
 
 
-def _process_variants(variants, families, request, add_all_context=False, add_locus_list_detail=False):
+def _process_variants(variants, families, request, add_all_context=False, add_locus_list_detail=False, genome_version=None):
     if not variants:
         return {'searchedVariants': variants}
 
@@ -158,7 +159,7 @@ def _process_variants(variants, families, request, add_all_context=False, add_lo
 
     response_json = get_variants_response(
         request, saved_variants, response_variants=flat_variants, add_all_context=add_all_context,
-        add_locus_list_detail=add_locus_list_detail, genome_version=families[0].project.genome_version)
+        add_locus_list_detail=add_locus_list_detail, genome_version=genome_version or families[0].project.genome_version)
     response_json['searchedVariants'] = variants
 
     for saved_variant in response_json['savedVariantsByGuid'].values():
@@ -522,26 +523,34 @@ def _get_saved_searches(user):
 def _get_saved_variant_models(variants, families):
     hg37_family_guids = families.filter(project__genome_version=GENOME_VERSION_GRCh37).values_list('guid', flat=True) if families else []
 
-    variant_q = Q()
+    variant_qs = []
     variants_by_id = {}
     variant_ids_by_family = defaultdict(set)
     for variant in variants:
         variants_by_id[get_variant_key(**variant)] = variant
-        for family_guid in variant['familyGuids']:
+        for family_guid in variant.get('familyGuids', []):
             variant_ids_by_family[family_guid].add(variant['variantId'])
         if variant.get('liftedOverGenomeVersion') == GENOME_VERSION_GRCh37 and hg37_family_guids:
             variant_hg37_families = [family_guid for family_guid in variant['familyGuids'] if family_guid in hg37_family_guids]
             if variant_hg37_families:
                 lifted_xpos = get_xpos(variant['liftedOverChrom'], variant['liftedOverPos'])
-                variant_q |= Q(xpos=lifted_xpos, ref=variant['ref'], alt=variant['alt'], family__guid__in=variant_hg37_families)
+                variant_qs.append(Q(xpos=lifted_xpos, ref=variant['ref'], alt=variant['alt'], family__guid__in=variant_hg37_families))
                 variants_by_id[get_variant_key(
                     xpos=lifted_xpos, ref=variant['ref'], alt=variant['alt'], genomeVersion=variant['liftedOverGenomeVersion']
                 )] = variant
 
     for family_guid, variant_ids in variant_ids_by_family.items():
-        variant_q |= Q(variant_id__in=variant_ids, family__guid=family_guid)
+        variant_qs.append(Q(variant_id__in=variant_ids, family__guid=family_guid))
 
-    return SavedVariant.objects.filter(variant_q), variants_by_id
+    if variant_qs:
+        variant_q = variant_qs[0]
+        for q in variant_qs[1:]:
+            variant_q |= q
+        saved_variants = SavedVariant.objects.filter(variant_q)
+    else:
+        saved_variants = SavedVariant.objects.none()
+
+    return saved_variants, variants_by_id
 
 def _flatten_variants(variants):
     flattened_variants = []

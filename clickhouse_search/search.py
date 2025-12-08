@@ -83,11 +83,11 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
     ):
         results += _get_multi_data_type_comp_het_results(genome_version, samples, sample_data_by_dataset_type, user, exclude_key_pairs, **search)
 
-    if search.get('include_no_access_projects'):
+    if search.get('no_access_project_genome_version'):
         logger.info('Looking up variants in projects with no user access', user)
         results += _get_search_results(
-        genome_version, Sample.DATASET_TYPE_VARIANT_CALLS, sample_data=None, skip_entry_fields=True,
-            exclude_projects=sample_data_by_dataset_type[Sample.DATASET_TYPE_VARIANT_CALLS]['project_guids'], **search,
+        genome_version, Sample.DATASET_TYPE_VARIANT_CALLS, sample_data=None, skip_entry_fields=True, **search,
+            exclude_projects=sample_data_by_dataset_type.get(Sample.DATASET_TYPE_VARIANT_CALLS, {}).get('project_guids'),
         )
 
     cache_results = get_clickhouse_cache_results(results, sort, family_guid)
