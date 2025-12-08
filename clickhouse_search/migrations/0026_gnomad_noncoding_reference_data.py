@@ -8,7 +8,7 @@ import clickhouse_search.backend.fields
 from django.db import connections, migrations
 import django.db.models.manager
 
-from settings import DATABASES
+from settings import DATABASES, PIPELINE_RUNNER_SERVER
 
 CLICKHOUSE_WRITER_PASSWORD = os.environ.get('CLICKHOUSE_WRITER_PASSWORD', 'clickhouse_test')
 CLICKHOUSE_WRITER_USER = os.environ.get('CLICKHOUSE_WRITER_USER', 'clickhouse')
