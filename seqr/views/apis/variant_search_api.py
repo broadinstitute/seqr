@@ -556,6 +556,7 @@ def _flatten_variants(variants):
 @clickhouse_only
 @login_and_policies_required
 def gene_variant_lookup(request):
+    #  TODO deprecated
     search_json = json.loads(request.body)
     genome_version = search_json.pop('genomeVersion')
     gene_id = search_json.pop('geneId')
