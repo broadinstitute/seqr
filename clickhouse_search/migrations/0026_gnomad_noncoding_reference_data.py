@@ -53,7 +53,7 @@ FROM url('https://storage.googleapis.com/gcp-public-data--gnomad/release/3.1/sec
 def conditionally_refresh_view(apps, schema_editor):
     if DATABASES['default']['NAME'].startswith('test_'):
         return
-    response = requests.post(
+    requests.post(
         f"{PIPELINE_RUNNER_SERVER}/refresh_clickhouse_reference_dataset_enqueue",
         json={"reference_dataset": 'gnomad_non_coding_constraint'},
         timeout=60,
