@@ -99,7 +99,7 @@ const UPLOAD_IGV_FIELDS = [
 ]
 
 const PROJECT_LOAD_RNA_FIELDS = [
-  ...LOAD_RNA_FIELDS.slice(0, -1),
+  ...LOAD_RNA_FIELDS.slice(0, -2),
   {
     name: 'tissue',
     label: 'Tissue',
@@ -107,7 +107,7 @@ const PROJECT_LOAD_RNA_FIELDS = [
     options: Object.entries(TISSUE_DISPLAY).map(([value, name]) => ({ value, name })),
     validate: validators.required,
   },
-  ...LOAD_RNA_FIELDS.slice(-1),
+  ...LOAD_RNA_FIELDS.slice(-2),
 ]
 
 const BaseRnaUpdateForm = ({ onSubmit, uploadStats }) => (
