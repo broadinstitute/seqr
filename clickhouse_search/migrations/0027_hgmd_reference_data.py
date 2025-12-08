@@ -64,7 +64,7 @@ def conditionally_refresh_view(reference_genome: str):
     def inner(apps, schema_editor):
         if DATABASES['default']['NAME'].startswith('test_'):
             return
-        response = requests.post(
+        requests.post(
             f"{PIPELINE_RUNNER_SERVER}/refresh_clickhouse_reference_dataset_enqueue",
             json={"reference_dataset": 'hgmd'},
             timeout=60,

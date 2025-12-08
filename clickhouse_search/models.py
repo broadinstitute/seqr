@@ -871,8 +871,8 @@ class SpliceAiSeqrVariantsGRCh37SnvIndel(BaseSpliceAi):
     class Meta:
         db_table = 'GRCh37/SNV_INDEL/reference_data/splice_ai/seqr_variants'
         engine = models.MergeTree(
-            primary_key=('variant_id'),
-            order_by=('variant_id'),
+            primary_key=('key'),
+            order_by=('key'),
         )
 
 class SpliceAiSeqrVariantsSnvIndel(BaseSpliceAi):
@@ -881,8 +881,8 @@ class SpliceAiSeqrVariantsSnvIndel(BaseSpliceAi):
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/reference_data/splice_ai/seqr_variants'
         engine = models.MergeTree(
-            primary_key=('variant_id'),
-            order_by=('variant_id'),
+            primary_key=('key'),
+            order_by=('key'),
         )
 
 
