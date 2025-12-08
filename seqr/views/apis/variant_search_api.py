@@ -117,7 +117,7 @@ def _get_or_create_results_model(search_hash, search_context, user):
         if search_context.get('previousSearchHash') and (search_dict.get('exclude') or {}).get('previousSearch'):
             search_dict['exclude']['previousSearchHash'] = search_context['previousSearchHash']
         if search_context.get('includeNoAccessProjects'):
-            search_dict['include_no_access_projects'] = True
+            search_dict['no_access_project_genome_version'] = all_project_genome_version
         search_model = VariantSearch.objects.filter(search=search_dict).filter(
             Q(created_by=user) | Q(name__isnull=False)).first()
         if not search_model:

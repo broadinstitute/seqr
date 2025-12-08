@@ -27,6 +27,7 @@ from seqr.utils.search.utils import query_variants, variant_lookup, get_variant_
 from seqr.views.apis.data_manager_api import trigger_delete_project
 from seqr.views.utils.json_utils import DjangoJSONEncoderWithSets
 from seqr.views.utils.test_utils import AnvilAuthenticationTestMixin
+from seqr.views.apis.variant_search_api import query_variants_handler
 
 from settings import DATABASES
 
@@ -1554,21 +1555,24 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
         )
 
     def test_gene_variant_lookup(self):
-        url = reverse(gene_variant_lookup)
+        url = reverse(query_variants_handler, args=['abc123'])
         self.check_require_login(url)
 
         body = {
-            'genomeVersion': '38',
-            'geneId': 'ENSG00000097046',
-            'annotations': {
-                'missense': ['missense_variant'],
-                'other': ['non_coding_transcript_exon_variant'],
-            },
-            'freqs': {
-                'callset': {'ac': 3000},
-                'gnomad_genomes': {'af': 0.003},
-                'gnomad_exomes': {'af': 0.003},
-            },
+            'allGenomeProjectFamilies': '38',
+            'includeNoAccessProjects': True,
+            'search': {
+                'locus': {'rawItems': 'ENSG00000097046'},
+                'annotations': {
+                    'missense': ['missense_variant'],
+                    'other': ['non_coding_transcript_exon_variant'],
+                },
+                'freqs': {
+                    'callset': {'ac': 3000},
+                    'gnomad_genomes': {'af': 0.003},
+                    'gnomad_exomes': {'af': 0.003},
+                },
+            }
         }
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
@@ -1588,7 +1592,7 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
         self.assertDictEqual(response.json(), expected_response)
 
         body['freqs'] = {}
-        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        response = self.client.post(url+'x', content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         variant3 = {**VARIANT3, 'selectedMainTranscriptId': 'ENST00000497611'}
         del variant3['familyGuids']
@@ -1598,7 +1602,7 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
         self.assertDictEqual(response.json(), expected_response)
 
         body['geneId'] = 'ENSG00000229905'
-        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        response = self.client.post(url+'y', content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {
             **expected_response,

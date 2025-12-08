@@ -93,9 +93,11 @@ def get_search_samples(projects, active_only=True):
     return _get_filtered_search_samples({'individual__family__project__in': projects}, active_only=active_only)
 
 
-def _get_families_search_data(families, dataset_type, sample_filter=None):
+def _get_families_search_data(families, dataset_type, include_no_access_projects=False, sample_filter=None):
     samples = _get_filtered_search_samples(sample_filter or {'individual__family__in': families})
     if len(samples) < 1:
+        if include_no_access_projects:
+            return samples
         raise InvalidSearchException('No search data found for families {}'.format(
             ', '.join([f.family_id for f in families])))
 
@@ -107,8 +109,8 @@ def _get_families_search_data(families, dataset_type, sample_filter=None):
     return samples
 
 
-def _get_search_genome_version(families):
-    projects = Project.objects.filter(family__in=families).values_list('genome_version', 'name').distinct()
+def _get_search_genome_version(search_model):
+    projects = Project.objects.filter(family__in=search_model.families.all()).values_list('genome_version', 'name').distinct()
     project_versions = defaultdict(set)
     for genome_version, project_name in projects:
         project_versions[genome_version].add(project_name)
@@ -118,6 +120,9 @@ def _get_search_genome_version(families):
             [f"{build} - {', '.join(sorted(projects))}" for build, projects in sorted(project_versions.items())])
         raise InvalidSearchException(
             f'Searching across multiple genome builds is not supported. Remove projects with differing genome builds from search: {summary}')
+
+    if not project_versions:
+        return search_model.variant_search.search.get('no_access_project_genome_version')
 
     return next(iter(project_versions.keys()))
 
@@ -240,7 +245,7 @@ def _get_result_range(page, num_results, total_results, load_all):
 
 
 def query_variants(search_model, sort=XPOS_SORT_KEY, skip_genotype_filter=False, load_all=False, user=None, page=1, num_results=100):
-    genome_version = _get_search_genome_version(search_model.families.all())
+    genome_version = _get_search_genome_version(search_model)
     previous_search_results, cached_page, num_results = backend_specific_call(
         _get_elasticsearch_previous_search_results,
         _get_clickhouse_previous_search_results,
@@ -264,6 +269,7 @@ def _query_variants(search_model, user, previous_search_results, genome_version,
     families = search_model.families.all()
     _validate_sort(sort, families)
 
+    no_access_project_genome_version = search.get('no_access_project_genome_version')
     locus = search.pop('locus', None) or {}
     exclude = search.get('exclude', None) or {}
     exclude_locations = bool(exclude.get('rawItems'))
@@ -275,7 +281,7 @@ def _query_variants(search_model, user, previous_search_results, genome_version,
     genes, intervals, invalid_items = parse_locus_list_items(locus or exclude, genome_version=genome_version, additional_model_fields=['id'])
     if invalid_items:
         raise InvalidSearchException('Invalid genes/intervals: {}'.format(', '.join(invalid_items)))
-    if search.get('include_no_access_projects') and len(genes or []) != 1:
+    if no_access_project_genome_version and len(genes or []) != 1:
         raise InvalidSearchException('Including external projects is only available when searching for a single gene')
     parsed_search.update({'genes': genes, 'intervals': intervals, 'exclude_locations': exclude_locations})
     if not (genes or intervals):
@@ -315,7 +321,7 @@ def _query_variants(search_model, user, previous_search_results, genome_version,
         elif dataset_type == Sample.DATASET_TYPE_SV_CALLS:
             search_dataset_type = DATASET_TYPE_NO_MITO
 
-    samples = _get_families_search_data(families, dataset_type=search_dataset_type)
+    samples = _get_families_search_data(families, dataset_type=search_dataset_type, include_no_access_projects=bool(no_access_project_genome_version))
     if parsed_search.get('inheritance'):
         samples = _parse_inheritance(parsed_search, samples)
 
@@ -385,7 +391,7 @@ def _get_es_variant_query_gene_counts(search_model, user):
     if previously_loaded_results is not None:
         return previously_loaded_results
 
-    genome_version = _get_search_genome_version(search_model.families.all())
+    genome_version = _get_search_genome_version(search_model)
     gene_counts, _ = _query_variants(search_model, user, previous_search_results, genome_version, gene_agg=True)
     return gene_counts
 
@@ -393,7 +399,7 @@ def _get_es_variant_query_gene_counts(search_model, user):
 def _get_clickhouse_variant_query_gene_counts(search_model, user):
     previous_search_results = _get_any_sort_cached_results(search_model) or {}
     if len(previous_search_results.get('all_results', [])) != previous_search_results.get('total_results'):
-        genome_version = _get_search_genome_version(search_model.families.all())
+        genome_version = _get_search_genome_version(search_model)
         _query_variants(search_model, user, previous_search_results, genome_version)
 
     return _get_gene_aggs_for_cached_variants([
@@ -452,7 +458,7 @@ def _parse_valid_variant_id(variant_id):
 
 
 def _validate_sort(sort, families):
-    if sort == PRIORITIZED_GENE_SORT and len(families) > 1:
+    if sort == PRIORITIZED_GENE_SORT and len(families) != 1:
         raise InvalidSearchException('Phenotype sort is only supported for single-family search.')
 
 

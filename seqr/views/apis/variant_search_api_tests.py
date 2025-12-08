@@ -722,7 +722,7 @@ class VariantSearchAPITest(object):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         expected_no_access_resonse = deepcopy(self.EXPECTED_SEARCH_RESPONSE)
-        expected_no_access_resonse['search']['search']['include_no_access_projects'] = True
+        expected_no_access_resonse['search']['search']['no_access_project_genome_version'] = '37'
         self.assertDictEqual(response_json, expected_no_access_resonse)
         self._assert_expected_results_context(response_json)
         self.assertSetEqual(set(response_json['search']['projectFamilies'][0]['familyGuids']), expected_searched_families)
