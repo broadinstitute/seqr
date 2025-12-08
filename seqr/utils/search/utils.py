@@ -560,6 +560,9 @@ def _validate_search(search, samples, previous_search_results):
                     f'Unable to search for comp-het pairs with dataset type "{invalid_type}". This may be because inheritance based search is disabled in families with no loaded affected individuals'
                 )
 
+        if search.get('no_access_project_genome_version'):
+            raise InvalidSearchException('Compound heterozygous search is not supported when including external projects')
+
     if not has_location_filter:
         backend_specific_call(lambda *args: None, _validate_no_location_search)(samples)
 

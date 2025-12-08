@@ -1628,7 +1628,24 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
         expected_response['search']['search'].update(body['search'])
         self.assertDictEqual(response.json(), expected_response)
 
-        # TODO test recessive
+        body['search']['inheritance']['mode'] = 'homozygous_recessive'
+        response = self.client.post(url + '4', content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {
+            'search': {
+                'search': {**body['search'], 'no_access_project_genome_version': '38'},
+                'projectFamilies': [],
+                'totalResults': 0,
+            },
+            'searchedVariants': [],
+        })
+
+        body['search']['inheritance']['mode'] = 'recessive'
+        response = self.client.post(url + '5', content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {
+            'error': 'Compound heterozygous search is not supported when including external projects',
+        })
 
         # TODO test with access (partial access?)
 

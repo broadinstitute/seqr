@@ -1000,6 +1000,8 @@ class EntriesManager(SearchQuerySet):
             inheritance_q = self.any_affected_q(affected_condition)
         elif gt_filter:
             inheritance_q = Q(calls__array_all={'gt': gt_filter})
+            if not sample_data:
+                inheritance_q &= Q(calls__array_exists={'sampleId': affected_condition})
 
         quality_q = self._quality_q(quality_filter, allow_no_call, affected_condition, clinvar_override_q)
 
