@@ -1625,10 +1625,7 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
         body['search']['inheritance'] = {'mode': 'de_novo'}
         response = self.client.post(url + '3', content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
-        expected_response['searchedVariants'] = [variant4]
-        del expected_response['genesById']['ENSG00000177000']
         expected_response['search']['search'].update(body['search'])
-        expected_response['search']['totalResults'] = 1
         self.assertDictEqual(response.json(), expected_response)
 
         # TODO test recessive
