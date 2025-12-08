@@ -529,10 +529,11 @@ def _parse_inheritance(search, samples):
         samples = samples.exclude(dataset_type=Sample.DATASET_TYPE_MITO_CALLS)
 
     samples = samples.select_related('individual')
-    skipped_samples = _filter_inheritance_family_samples(samples, inheritance_filter)
-    if skipped_samples:
-        search['skipped_samples'] = skipped_samples
-        samples = samples.exclude(id__in=[s.id for s in skipped_samples])
+    if samples:
+        skipped_samples = _filter_inheritance_family_samples(samples, inheritance_filter)
+        if skipped_samples:
+            search['skipped_samples'] = skipped_samples
+            samples = samples.exclude(id__in=[s.id for s in skipped_samples])
 
     return samples
 
