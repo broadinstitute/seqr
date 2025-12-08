@@ -1584,12 +1584,25 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
         expected_response = {
             'searchedVariants': [variant4],
             'genesById': {'ENSG00000097046': mock.ANY},
-            'omimIntervals': {},
+            'search': {
+                'search': {**body['search'], 'no_access_project_genome_version': '38'},
+                'projectFamilies': [],
+                'totalResults': 1,
+            },
             'totalSampleCounts': {
                 'MITO': {'WES': 1},
                 'SNV_INDEL': {'WES': 7},
                 'SV': {'WES': 3, 'WGS': 3},
             },
+            'locusListsByGuid': {},
+            'mmeSubmissionsByGuid': {},
+            'omimIntervals': {},
+            'phenotypeGeneScores': {},
+            'rnaSeqData': {},
+            'savedVariantsByGuid': {},
+            'variantFunctionalDataByGuid': {},
+            'variantNotesByGuid': {},
+            'variantTagsByGuid': {},
         }
         self.assertDictEqual(response.json(), expected_response)
 
@@ -1603,7 +1616,9 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
         expected_response['genesById']['ENSG00000177000'] = mock.ANY
         self.assertDictEqual(response.json(), expected_response)
 
-        # TODO test comp het
+        # TODO test recessive
+
+        # TODO test with access (partial access?)
 
         body['geneId'] = 'ENSG00000229905'
         response = self.client.post(url+'y', content_type='application/json', data=json.dumps(body))
