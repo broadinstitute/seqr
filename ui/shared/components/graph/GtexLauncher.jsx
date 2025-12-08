@@ -49,7 +49,7 @@ class GtexLauncher extends React.PureComponent {
   load = () => {
     const { geneId, fetchAdditionalData } = this.props
     this.setState({ loading: true })
-    fetchAdditionalData(additionalData => queryGtex('reference/gene', { geneId },
+    fetchAdditionalData(additionalData => queryGtex('reference/gene', { geneId, gencodeVersion: 'v39' },
       (responseJson) => {
         this.loadGeneExpression(responseJson.data[0].gencodeId, additionalData)
       },
