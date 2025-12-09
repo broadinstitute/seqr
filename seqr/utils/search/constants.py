@@ -28,6 +28,7 @@ RECESSIVE = 'recessive'
 X_LINKED_RECESSIVE = 'x_linked_recessive'
 X_LINKED_RECESSIVE_MALE_AFFECTED = 'x_linked_recessive_male_affected'
 HOMOZYGOUS_RECESSIVE = 'homozygous_recessive'
+DE_NOVO = 'de_novo'
 ANY_AFFECTED = 'any_affected'
 
 RECESSIVE_FILTER = {
@@ -46,7 +47,7 @@ INHERITANCE_FILTERS = {
         AFFECTED: REF_ALT,
         UNAFFECTED: HAS_REF,
     },
-    'de_novo': {
+    DE_NOVO: {
         AFFECTED: HAS_ALT,
         UNAFFECTED: REF_REF,
     },

@@ -218,7 +218,7 @@ const GlobalAcDisclaimer = () => (
   <i>
     The seqr allele count (AC) and homozygote count (Hom) reflect all observed occurrences of a variant in seqr.
     While not all sites may be captured in the loaded callsets, an upper bound for the total allele number (AN)
-    can be estimated based on the total number of samples loaded in seqr:
+    can be estimated based on the total number of samples loaded in seqr on the same genome build:
   </i>
 )
 
