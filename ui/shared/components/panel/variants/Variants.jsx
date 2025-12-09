@@ -177,6 +177,7 @@ export const Variant = React.memo((
         <Grid.Row>
           <Grid.Column width={16}>
             {variant.familyGuids && <VariantIndividuals variant={variant} />}
+            {variant.numFamilies && `Variant present in ${variant.numFamilies} families in external projects`}
             {showReads}
           </Grid.Column>
         </Grid.Row>

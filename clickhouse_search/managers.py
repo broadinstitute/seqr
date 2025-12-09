@@ -1,7 +1,7 @@
 from clickhouse_backend import models
 from collections import OrderedDict, defaultdict
 
-from django.db.models import F, QuerySet, Q, Value
+from django.db.models import Count, F, QuerySet, Q, Value
 from django.db.models.expressions import Col
 from django.db.models.functions import Cast
 from django.db.models.sql.constants import INNER
@@ -301,14 +301,11 @@ class AnnotationsQuerySet(SearchQuerySet):
             values.update(self.genotype_override_values(self))
         initial_values = {k: v for k, v in  values.items() if k not in override_model_annotations}
 
-        fields = [*self.annotation_fields]
-        if self.has_annotation('familyGenotypes'):
-            fields.append('familyGenotypes')
-        elif not skip_entry_fields:
+        fields = [*self.annotation_fields] + [
+            field for field in ['clinvar', 'familyGenotypes', 'numFamilies'] if self.has_annotation(field)
+        ]
+        if 'familyGenotypes' not in fields and not skip_entry_fields:
             fields += self.ENTRY_FIELDS
-
-        if self.has_annotation('clinvar'):
-            fields.append('clinvar')
 
         fields = [field for field in fields if field not in values]
         return self.values(*fields, **initial_values).annotate(
@@ -1087,7 +1084,7 @@ class EntriesManager(SearchQuerySet):
             )
         return entries
 
-    def _annotate_calls(self, entries, sample_data=None, annotate_hom_alts=False, multi_sample_type_families=None, skip_entry_fields=False, **kwargs):
+    def _annotate_calls(self, entries, sample_data=None, annotate_hom_alts=False, multi_sample_type_families=None, skip_entry_fields=False, annotate_num_families=False, **kwargs):
         if annotate_hom_alts:
             entries = entries.annotate(has_hom_alt=Q(calls__array_exists={'gt': (2,)}))
 
@@ -1107,7 +1104,9 @@ class EntriesManager(SearchQuerySet):
              fields += ['clinvar', 'clinvar_key']
         if multi_sample_type_families or sample_data is None or sample_data['num_families'] > 1:
             entries = entries.values(*fields)
-            if skip_entry_fields:
+            if annotate_num_families:
+                entries = entries.annotate(numFamilies=Count('family_guid'))
+            elif skip_entry_fields:
                 entries = entries.distinct('key')
             else:
                 gt_field, gt_expression = self.genotype_expression(sample_data)
