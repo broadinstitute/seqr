@@ -551,28 +551,21 @@ class Command(BaseCommand):
         ll = LocusList.objects.get(name=name, palocuslist__isnull=False)
         moi_gene_ids = ll.locuslistgene_set.exclude(gene_id__in=exclude_gene_ids).annotate(
             is_dominant=Q(
-                palocuslistgene__mode_of_inheritance__startswith='BOTH'
-            ) | Q(
-                palocuslistgene__mode_of_inheritance__startswith='X-LINKED',
-                palocuslistgene__mode_of_inheritance__contains='monoallelic mutations',
-            ) | Q(
                 Q(palocuslistgene__mode_of_inheritance__startswith='MONOALLELIC') &
                 ~Q(palocuslistgene__mode_of_inheritance__contains=' paternally imprinted') &
                 ~Q(palocuslistgene__mode_of_inheritance__contains=' maternally imprinted')
             ),
             is_recessive=Q(
-                palocuslistgene__mode_of_inheritance__startswith='BOTH'
-            ) | Q(
                 palocuslistgene__mode_of_inheritance__startswith='BIALLELIC'
             ) | Q(
-                palocuslistgene__mode_of_inheritance__startswith='X-LINKED'
+                palocuslistgene__mode_of_inheritance__startswith='X-LINKED',
+                palocuslistgene__mode_of_inheritance__contains='biallelic mutations',
             ),
-        ).filter(Q(is_dominant=True) | Q(is_recessive=True)).filter(palocuslistgene__confidence_level__in=[
+        ).filter(palocuslistgene__confidence_level__in=[
             level for level, name in PaLocusListGene.CONFIDENCE_LEVEL_CHOICES if name in confidences
         ]).values('gene_id', 'is_dominant', 'is_recessive')
 
-        dominant_gene_ids = [g['gene_id'] for g in moi_gene_ids if g['is_dominant']]
-        recessive_gene_ids = [g['gene_id'] for g in moi_gene_ids if g['is_recessive']]
-        genes_by_id = get_genes(dominant_gene_ids + recessive_gene_ids, genome_version=GENOME_VERSION_GRCh38, additional_model_fields=['id'])
-        gene_by_moi[DOMINANT_MOI].update({gene_id: gene for gene_id, gene in genes_by_id.items() if gene_id in set(dominant_gene_ids)})
-        gene_by_moi[RECESSIVE_MOI].update({gene_id: gene for gene_id, gene in genes_by_id.items() if gene_id in set(recessive_gene_ids)})
+        gene_id_mois = {g['gene_id']: g for g in moi_gene_ids}
+        genes_by_id = get_genes(gene_id_mois.keys(), genome_version=GENOME_VERSION_GRCh38, additional_model_fields=['id'])
+        gene_by_moi[DOMINANT_MOI].update({gene_id: gene for gene_id, gene in genes_by_id.items() if not gene_id_mois[gene_id]['is_recessive']})
+        gene_by_moi[RECESSIVE_MOI].update({gene_id: gene for gene_id, gene in genes_by_id.items() if not gene_id_mois[gene_id]['is_dominant']})
