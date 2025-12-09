@@ -885,6 +885,202 @@ class SpliceAiSeqrVariantsSnvIndel(BaseSpliceAi):
             order_by=('key'),
         )
 
+class HelixMitoAllVariants(models.ClickhouseModel):
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
+    ac = models.UInt32Field()
+    af = models.DecimalField(max_digits=9, decimal_places=8)
+    an = models.UInt32Field()
+
+    class Meta:
+        db_table = 'GRCh38/MITO/reference_data/helix_mito/all_variants'
+        engine = models.MergeTree(
+            primary_key=('variant_id'),
+            order_by=('variant_id'),
+        )
+
+class HelixMitoHeteroplasmyAllVariants(models.ClickhouseModel):
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
+    ac = models.UInt32Field()
+    af = models.DecimalField(max_digits=9, decimal_places=8)
+    an = models.UInt32Field()
+    max_hl = models.DecimalField(max_digits=9, decimal_places=5)
+
+    class Meta:
+        db_table = 'GRCh38/MITO/reference_data/helix_mito/all_variants'
+        engine = models.MergeTree(
+            primary_key=('variant_id'),
+            order_by=('variant_id'),
+        )
+
+class HelixMitoSeqrVariants(models.ClickhouseModel):
+    key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
+    ac = models.UInt32Field()
+    af = models.DecimalField(max_digits=9, decimal_places=8)
+    an = models.UInt32Field()
+
+    class Meta:
+        db_table = 'GRCh38/MITO/reference_data/helix_mito_heteroplasmy/seqr_variants'
+        engine = models.MergeTree(
+            primary_key=('key'),
+            order_by=('key'),
+        )
+
+class HelixMitoHeteroplasmySeqrVariants(models.ClickhouseModel):
+    key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
+    ac = models.UInt32Field()
+    af = models.DecimalField(max_digits=9, decimal_places=8)
+    an = models.UInt32Field()
+    max_hl = models.DecimalField(max_digits=9, decimal_places=5)
+
+    class Meta:
+        db_table = 'GRCh38/MITO/reference_data/helix_mito_heteroplasmy/seqr_variants'
+        engine = models.MergeTree(
+            primary_key=('key'),
+            order_by=('key'),
+        )
+
+class GnomadMitoAllVariants(models.ClickhouseModel):
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
+    ac = models.UInt32Field()
+    af = models.DecimalField(max_digits=9, decimal_places=8)
+    an = models.UInt32Field()
+
+    class Meta:
+        db_table = 'GRCh38/MITO/reference_data/gnomad_mito/all_variants'
+        engine = models.MergeTree(
+            primary_key=('variant_id'),
+            order_by=('variant_id'),
+        )
+
+class GnomadMitoHeteroplasmyAllVariants(models.ClickhouseModel):
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
+    ac = models.UInt32Field()
+    af = models.DecimalField(max_digits=9, decimal_places=8)
+    an = models.UInt32Field()
+    max_hl = models.DecimalField(max_digits=9, decimal_places=5)
+
+    class Meta:
+        db_table = 'GRCh38/MITO/reference_data/gnomad_mito_heteroplasmy/all_variants'
+        engine = models.MergeTree(
+            primary_key=('variant_id'),
+            order_by=('variant_id'),
+        )
+
+class GnomadMitoSeqrVariants(models.ClickhouseModel):
+    key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
+    ac = models.UInt32Field()
+    af = models.DecimalField(max_digits=9, decimal_places=8)
+    an = models.UInt32Field()
+
+    class Meta:
+        db_table = 'GRCh38/MITO/reference_data/gnomad_mito/seqr_variants'
+        engine = models.MergeTree(
+            primary_key=('key'),
+            order_by=('key'),
+        )
+
+class GnomadMitoHeteroplasmySeqrVariants(models.ClickhouseModel):
+    key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
+    ac = models.UInt32Field()
+    af = models.DecimalField(max_digits=9, decimal_places=8)
+    an = models.UInt32Field()
+    max_hl = models.DecimalField(max_digits=9, decimal_places=5)
+
+    class Meta:
+        db_table = 'GRCh38/MITO/reference_data/gnomad_mito_heteroplasmy/seqr_variants'
+        engine = models.MergeTree(
+            primary_key=('key'),
+            order_by=('key'),
+        )
+
+class HmtvarMitoAllVariants(models.ClickhouseModel):
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
+    score = models.DecimalField(max_digits=9, decimal_places=5)
+
+    class Meta:
+        db_table = 'GRCh38/MITO/reference_data/hmtvar/all_variants'
+        engine = models.MergeTree(
+            primary_key=('variant_id'),
+            order_by=('variant_id'),
+        )
+
+class HmtvarMitoSeqrVariants(models.ClickhouseModel):
+    key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
+    score = models.DecimalField(max_digits=9, decimal_places=5)
+
+    class Meta:
+        db_table = 'GRCh38/MITO/reference_data/hmtvar/seqr_variants'
+        engine = models.MergeTree(
+            primary_key=('key'),
+            order_by=('key'),
+        )
+
+class MitimpactMitoAllVariants(models.ClickhouseModel):
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
+    score = models.DecimalField(max_digits=9, decimal_places=5)
+
+    class Meta:
+        db_table = 'GRCh38/MITO/reference_data/mitimpact/all_variants'
+        engine = models.MergeTree(
+            primary_key=('variant_id'),
+            order_by=('variant_id'),
+        )
+
+class MitimpactMitoSeqrVariants(models.ClickhouseModel):
+    key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
+    score = models.DecimalField(max_digits=9, decimal_places=5)
+
+    class Meta:
+        db_table = 'GRCh38/MITO/reference_data/mitimpact/seqr_variants'
+        engine = models.MergeTree(
+            primary_key=('key'),
+            order_by=('key'),
+        )
+
+class LocalconstraintmitoMitoAllVariants(models.ClickhouseModel):
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
+    score = models.DecimalField(max_digits=9, decimal_places=5)
+
+    class Meta:
+        db_table = 'GRCh38/MITO/reference_data/local_constraint_mito/all_variants'
+        engine = models.MergeTree(
+            primary_key=('variant_id'),
+            order_by=('variant_id'),
+        )
+
+class LocalconstraintmitoMitoSeqrVariants(models.ClickhouseModel):
+    key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
+    score = models.DecimalField(max_digits=9, decimal_places=5)
+
+    class Meta:
+        db_table = 'GRCh38/MITO/reference_data/local_constraint_mito/seqr_variants'
+        engine = models.MergeTree(
+            primary_key=('key'),
+            order_by=('key'),
+        )
+
+class MitomapMitoAllVariants(models.ClickhouseModel):
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
+    pathogenic = models.BoolField()
+
+    class Meta:
+        db_table = 'GRCh38/MITO/reference_data/mitomap/all_variants'
+        engine = models.MergeTree(
+            primary_key=('variant_id'),
+            order_by=('variant_id'),
+        )
+
+class MitomapMitoSeqrVariants(models.ClickhouseModel):
+    key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
+    pathogenic = models.BoolField()
+
+    class Meta:
+        db_table = 'GRCh38/MITO/reference_data/mitomap/seqr_variants'
+        engine = models.MergeTree(
+            primary_key=('key'),
+            order_by=('key'),
+        )
+
 
 class BaseEntries(FixtureLoadableClickhouseModel):
     MAX_XPOS_FILTER_INTERVALS = 500
