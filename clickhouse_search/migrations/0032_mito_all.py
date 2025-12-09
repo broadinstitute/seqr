@@ -281,6 +281,71 @@ AS SELECT
 FROM url('https://helix-research-public.s3.amazonaws.com/mito/HelixMTdb_20200327.tsv')
 """
 
+HMTVAR_ALL_VARIANTS_MV = """
+CREATE MATERIALIZED VIEW `GRCh38/MITO/reference_data/hmtvar/all_variants_mv`
+REFRESH EVERY 10 YEAR
+TO `GRCh38/MITO/reference_data/hmtvar/all_variants`
+EMPTY
+AS SELECT
+    variantId,
+    max(score) AS score
+FROM
+(
+    SELECT
+        concat('M', '-', nt_start, '-', ref_rCRS, '-', alt) AS variantId,
+        CAST(disease_score AS Decimal(9, 5)) AS score
+    FROM url('https://storage.googleapis.com/seqr-reference-data/GRCh38/mitochondrial/HmtVar/HmtVar%20Jan.%2010%202022.json')
+    WHERE match(alt, '^[ACTG]+$') AND (disease_score IS NOT NULL)
+)
+GROUP BY variantId
+"""
+
+MITIMPACT_ALL_VARIANTS_MV = """
+CREATE MATERIALIZED VIEW `GRCh38/MITO/reference_data/mitimpact/all_variants_mv`
+REFRESH EVERY 10 YEAR
+TO `GRCh38/MITO/reference_data/mitimpact/all_variants`
+EMPTY AS SELECT 
+    variantId,
+    max(score)
+FROM (
+    SELECT
+        concat('M', '-', Start, '-', Ref, '-', Alt) as variantId,
+        CAST(APOGEE2_score AS Decimal(9, 5)) AS score
+    FROM url('https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh38/mitimpact/MitImpact_db_3.1.3.txt', 'TSV')
+)
+GROUP BY variantId
+SETTINGS input_format_tsv_crlf_end_of_line = 1
+"""
+
+LOCAL_CONSTRAINT_MITO_ALL_VARIANTS_MV = """
+CREATE MATERIALIZED VIEW `GRCh38/MITO/reference_data/mitimpact/all_variants_mv`
+REFRESH EVERY 10 YEAR
+TO `GRCh38/MITO/reference_data/mitimpact/all_variants`
+EMPTY AS SELECT 
+    concat('M', '-', Position, '-', Reference, '-', Alternate) as variantId,
+    CAST(MLC_score, Decimal(9, 5)) AS score
+FROM url('https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh38/local_constraint_mito/supplementary_dataset_7.tsv')
+"""
+
+MITOMAP_ALL_VARIANTS_MV = """
+CREATE MATERIALIZED VIEW `GRCh38/MITO/reference_data/mitomap/all_variants_mv`
+REFRESH EVERY 10 YEAR
+TO `GRCh38/MITO/reference_data/mitomap/all_variants`
+SELECT
+    concat(
+        'M',
+        '-',
+        Position,
+        '-',
+        extract(assumeNotNull(Allele), 'm\\.[0-9]+([ATGC]+)>[ATGC]+'),
+        '-',
+        extract(assumeNotNull(Allele), 'm\\.[0-9]+[ATGC]+>([ATGC]+)')
+    ) as variantId,
+    true as pathogenic
+FROM url('https://storage.googleapis.com/seqr-reference-data/GRCh38/mitochondrial/MITOMAP/mitomap_confirmed_mutations_nov_2024.csv', 'CsvWithNames')
+WHERE variantId NOT LIKE '%--'
+"""
+
 def conditionally_refresh_view(reference_dataset: str):
     def inner(apps, schema_editor):
         if DATABASES['default']['NAME'].startswith('test_'):
@@ -611,11 +676,19 @@ class Migration(migrations.Migration):
             ALL_TO_SEQR_MV.substitute(reference_dataset='hmtvar'),
         ),
         migrations.RunSQL(
+            HMTVAR_ALL_VARIANTS_MV,
+            hints={"clickhouse": True},
+        ),
+        migrations.RunSQL(
             MITIMPACT_SEARCH,
             hints={"clickhouse": True},
         ),
         migrations.RunSQL(
             ALL_TO_SEQR_MV.substitute(reference_dataset='mitimpact'),
+        ),
+        migrations.RunSQL(
+            MITIMPACT_ALL_VARIANTS_MV,
+            hints={"clickhouse": True},
         ),
         migrations.RunSQL(
             LOCAL_CONSTRAINT_MITO_SEARCH,
@@ -625,12 +698,20 @@ class Migration(migrations.Migration):
             ALL_TO_SEQR_MV.substitute(reference_dataset='local_constraint_mito'),
         ),
         migrations.RunSQL(
+            LOCAL_CONSTRAINT_MITO_ALL_VARIANTS_MV,
+            hints={"clickhouse": True},
+        )
+        migrations.RunSQL(
             MITOMAP_SEARCH,
             hints={"clickhouse": True},
         ),
         migrations.RunSQL(
             ALL_TO_SEQR_MV.substitute(reference_dataset='mitomap'),
         ),
+        migrations.RunSQL(
+            MITOMAP_ALL_VARIANTS_MV,
+            hints={"clickhouse": True},
+        )
         migrations.RunPython(
             conditionally_refresh_view(
                 reference_dataset="gnomad_mito",
