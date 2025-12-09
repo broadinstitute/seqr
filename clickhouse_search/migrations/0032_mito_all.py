@@ -42,7 +42,7 @@ CREATE DICTIONARY `GRCh38/MITO/reference_data/gnomad_mito_heteroplasmy`
     `key` UInt32,
     `ac` UInt32,
     `af` Decimal(9, 8),
-    `an` UInt32
+    `an` UInt32,
     `max_hl` Decimal(9, 5)
 )
 PRIMARY KEY key
@@ -89,7 +89,7 @@ CREATE DICTIONARY `GRCh38/MITO/reference_data/helix_mito_heteroplasmy`
     `key` UInt32,
     `ac` UInt32,
     `af` Decimal(9, 8),
-    `an` UInt32
+    `an` UInt32,
     `max_hl` Decimal(9, 5)
 )
 PRIMARY KEY key
