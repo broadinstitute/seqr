@@ -945,43 +945,44 @@ class VariantSearchAPITest(object):
             },
         }
         del expected_variant['familyGenotypes']
-        expected_body = self._expected_lookup_body({
-                'I0_F0_1-10439-AC-A': {
-                    'affected': 'N', 'familyGuid': 'F0_1-10439-AC-A', 'features': [],
-                    'individualGuid': 'I0_F0_1-10439-AC-A', 'sex': 'F',
-                    'vlmContactEmail': 'test@broadinstitute.org,vlm@broadinstitute.org',
-                },
-                'I0_F1_1-10439-AC-A': {
-                    'affected': 'A', 'familyGuid': 'F1_1-10439-AC-A', 'individualGuid': 'I0_F1_1-10439-AC-A', 'sex': 'M',
-                    'features': [{'category': 'HP:0001626', 'label': '1 terms'}, {'category': 'Other', 'label': '1 terms'}],
-                    'vlmContactEmail': 'seqr-test@gmail.com,test@broadinstitute.org',
-                },
-                'I0_F2_1-10439-AC-A': {
-                    'affected': 'A', 'familyGuid': 'F2_1-10439-AC-A', 'features': [],
-                    'individualGuid': 'I0_F2_1-10439-AC-A', 'sex': 'F',
-                    'vlmContactEmail': 'vlm@broadinstitute.org',
-                },
-                'I1_F0_1-10439-AC-A': {
-                    'affected': 'N', 'familyGuid': 'F0_1-10439-AC-A', 'features': [],
-                    'individualGuid': 'I1_F0_1-10439-AC-A', 'sex': 'M',
-                    'vlmContactEmail': 'test@broadinstitute.org,vlm@broadinstitute.org',
-                },
-                'I2_F0_1-10439-AC-A': {
-                    'affected': 'A', 'familyGuid': 'F0_1-10439-AC-A', 'individualGuid': 'I2_F0_1-10439-AC-A', 'sex': 'X0',
-                    'features': [{'category': 'HP:0000707', 'label': '1 terms'}, {'category': 'HP:0001626', 'label': '1 terms'}],
-                    'vlmContactEmail': 'test@broadinstitute.org,vlm@broadinstitute.org',
-                },
+        expected_individuals = {
+            'I0_F0_1-10439-AC-A': {
+                'affected': 'N', 'familyGuid': 'F0_1-10439-AC-A', 'features': [],
+                'individualGuid': 'I0_F0_1-10439-AC-A', 'sex': 'F',
+                'vlmContactEmail': 'test@broadinstitute.org,vlm@broadinstitute.org',
             },
-            [expected_variant],
-        )
+            'I0_F1_1-10439-AC-A': {
+                'affected': 'A', 'familyGuid': 'F1_1-10439-AC-A', 'individualGuid': 'I0_F1_1-10439-AC-A', 'sex': 'M',
+                'features': [{'category': 'HP:0001626', 'label': '1 terms'}, {'category': 'Other', 'label': '1 terms'}],
+                'vlmContactEmail': 'seqr-test@gmail.com,test@broadinstitute.org',
+            },
+            'I0_F2_1-10439-AC-A': {
+                'affected': 'A', 'familyGuid': 'F2_1-10439-AC-A', 'features': [],
+                'individualGuid': 'I0_F2_1-10439-AC-A', 'sex': 'F',
+                'vlmContactEmail': 'vlm@broadinstitute.org',
+            },
+            'I1_F0_1-10439-AC-A': {
+                'affected': 'N', 'familyGuid': 'F0_1-10439-AC-A', 'features': [],
+                'individualGuid': 'I1_F0_1-10439-AC-A', 'sex': 'M',
+                'vlmContactEmail': 'test@broadinstitute.org,vlm@broadinstitute.org',
+            },
+            'I2_F0_1-10439-AC-A': {
+                'affected': 'A', 'familyGuid': 'F0_1-10439-AC-A', 'individualGuid': 'I2_F0_1-10439-AC-A', 'sex': 'X0',
+                'features': [{'category': 'HP:0000707', 'label': '1 terms'},
+                             {'category': 'HP:0001626', 'label': '1 terms'}],
+                'vlmContactEmail': 'test@broadinstitute.org,vlm@broadinstitute.org',
+            },
+        }
+        expected_body = self._expected_lookup_body(expected_individuals, [expected_variant], is_build_38=True)
         self.assertDictEqual(response.json(), expected_body)
         mock_variant_lookup.assert_called_with(self.no_access_user, '1-10439-AC-A', '38', sample_type=None, affected_only=True, hom_only=False)
 
         response_variant['transcripts'] = VARIANTS[0]['transcripts']
         expected_variant['transcripts'] = VARIANTS[0]['transcripts']
-        expected_body.update({
+        expected_gene_body = {
             'genesById': {'ENSG00000227232': EXPECTED_GENE, 'ENSG00000268903': EXPECTED_GENE},
-        })
+        }
+        expected_body.update(expected_gene_body)
         if 'transcriptsById' in self.EXPECTED_SEARCH_RESPONSE:
             expected_body['transcriptsById'] = self.EXPECTED_SEARCH_RESPONSE['transcriptsById']
 
@@ -1015,10 +1016,18 @@ class VariantSearchAPITest(object):
             'genomeVersion': '37',
             'variantId': '1-248367227-TC-T',
         })
-        expected_body.update(self._expected_lookup_context(
-            [PROJECT_GUID, 'R0003_test', 'R0004_non_analyst_project'],
-            ['F000002_2', 'F000011_11', 'F000014_14'],
-            [i[0] for i in individual_guid_map] + ['I000019_na21987', 'I000021_na21654']),
+        expected_individuals = {
+            individual_guid: {
+                **{k: mock.ANY for k in [*INDIVIDUAL_FIELDS, 'igvSampleGuids']},
+                **{k: v for k, v in expected_individuals[anon_individual_guid].items()
+                   if k not in {'individualGuid', 'familyGuid', 'features', 'vlmContactEmail'}},
+            } for individual_guid, anon_individual_guid, _ in individual_guid_map
+        }
+        expected_individuals.update({individual_guid: mock.ANY for individual_guid in ['I000019_na21987', 'I000021_na21654']})
+        expected_body = self._expected_lookup_body(
+            expected_individuals, [expected_variant], include_context=True,
+            project_guids=[PROJECT_GUID, 'R0003_test', 'R0004_non_analyst_project'],
+            family_guids=['F000002_2', 'F000011_11', 'F000014_14'],
         )
         expected_body.update({
             k: {**EXPECTED_SEARCH_RESPONSE[k]} for k in {'mmeSubmissionsByGuid', 'variantTagsByGuid', 'variantNotesByGuid'}
@@ -1026,6 +1035,7 @@ class VariantSearchAPITest(object):
         expected_body['savedVariantsByGuid']= {
             k: v for k, v in self.EXPECTED_SEARCH_RESPONSE['savedVariantsByGuid'].items() if k in ['SV0000002_1248367227_r0390_100']
         }
+        expected_body.update(expected_gene_body)
         expected_body['genesById']['ENSG00000227232'] = expected_pa_gene
         expected_body['mmeSubmissionsByGuid']['MS000018_P0004517'] = expected_body['mmeSubmissionsByGuid'].pop('MS000001_na19675')
         expected_body['savedVariantsByGuid']['SV0000006_1248367227_r0004_non'] = mock.ANY
@@ -1040,37 +1050,32 @@ class VariantSearchAPITest(object):
             self.manager_user, '1-10439-AC-A', '37', sample_type=None, affected_only=True, hom_only=True,
         )
 
-    def _expected_lookup_body(self, individuals_by_guid, variants):
+    def _expected_lookup_body(self, individuals_by_guid, variants, is_build_38=False, include_context=False, project_guids=None, family_guids=None):
+        exclude_keys = {'searchedVariants', 'search', 'transcriptsById'}
+        if not include_context:
+            exclude_keys.update({'variantNotesByGuid', 'variantTagsByGuid', 'variantFunctionalDataByGuid'})
         expected_body = {
-            **{k: {} for k in self.EXPECTED_SEARCH_RESPONSE if k not in {
-                'searchedVariants', 'search', 'variantNotesByGuid', 'variantTagsByGuid', 'variantFunctionalDataByGuid',
-                'transcriptsById',
-            }},
+            **{k: {} for k in self.EXPECTED_SEARCH_RESPONSE if k not in exclude_keys},
             **{k: {} for k in EXPECTED_SEARCH_FAMILY_CONTEXT},
-            'projectsByGuid': {},
+            'projectsByGuid': {
+                p: {k: mock.ANY for k in PROJECT_TAG_TYPE_FIELDS} for p in project_guids or []
+            },
+            'familiesByGuid': {
+                f: {k: mock.ANY for k in [*FAMILY_FIELDS, 'individualGuids']} for f in family_guids or []
+            },
             'individualsByGuid': individuals_by_guid,
             'variants': variants,
         }
+        if is_build_38:
+            expected_body['omimIntervals'] = {}
+        if include_context:
+            expected_body.update({
+                **EXPECTED_TRANSCRIPTS_RESPONSE,
+                'locusListsByGuid': EXPECTED_SEARCH_CONTEXT_RESPONSE['locusListsByGuid'],
+            })
         if 'totalSampleCounts' in self.EXPECTED_SEARCH_RESPONSE:
-            expected_body['totalSampleCounts'] = self.EXPECTED_SEARCH_RESPONSE['totalSampleCounts']
+            expected_body['totalSampleCounts'] = {'SV': {'WGS': 3}} if is_build_38 else self.EXPECTED_SEARCH_RESPONSE['totalSampleCounts']
         return expected_body
-
-    def _expected_lookup_context(self, project_guids, family_guids, individual_guids):
-        return {
-            **EXPECTED_TRANSCRIPTS_RESPONSE,
-            'omimIntervals': {},
-            'variantFunctionalDataByGuid': {},
-            'locusListsByGuid': EXPECTED_SEARCH_CONTEXT_RESPONSE['locusListsByGuid'],
-            'projectsByGuid': {
-                p: {k: mock.ANY for k in PROJECT_TAG_TYPE_FIELDS} for p in project_guids
-            },
-            'familiesByGuid': {
-                f: {k: mock.ANY for k in [*FAMILY_FIELDS, 'individualGuids']} for f in family_guids
-            },
-            'individualsByGuid': {
-                i: {k: mock.ANY for k in [*INDIVIDUAL_FIELDS, 'igvSampleGuids']} for i in individual_guids
-            },
-        }
 
     @mock.patch('seqr.views.apis.variant_search_api.variant_lookup')
     def test_sv_variant_lookup(self, mock_variant_lookup):
@@ -1123,7 +1128,7 @@ class VariantSearchAPITest(object):
                 },
             },
         }
-        expected_body = self._expected_lookup_body({
+        expected_individuals = {
             'I0_F0_phase2_DEL_chr14_4640': {
                 'affected': 'A', 'familyGuid': 'F0_phase2_DEL_chr14_4640', 'features': [],
                 'individualGuid': 'I0_F0_phase2_DEL_chr14_4640', 'sex': 'F',
@@ -1152,7 +1157,8 @@ class VariantSearchAPITest(object):
                 'affected': 'N', 'familyGuid': 'F0_suffix_140608_DUP', 'individualGuid': 'I2_F0_suffix_140608_DUP',
                 'sex': 'F', 'features': [], 'vlmContactEmail': 'test@broadinstitute.org,vlm@broadinstitute.org',
             },
-        },[expected_gcnv_variant, expected_sv_variant])
+        }
+        expected_body = self._expected_lookup_body(expected_individuals,[expected_gcnv_variant, expected_sv_variant])
         self.assertDictEqual(response.json(), expected_body)
         mock_variant_lookup.assert_called_with(
             self.no_access_user, 'phase2_DEL_chr14_4640', '37', sample_type='WGS', affected_only=False, hom_only=False,
@@ -1169,12 +1175,18 @@ class VariantSearchAPITest(object):
             'lookupFamilyGuids': SV_VARIANT4['familyGuids'],
             'genotypes': SV_VARIANT4['genotypes'],
         })
-        expected_body.update(self._expected_lookup_context(
-            [PROJECT_GUID, 'R0004_non_analyst_project'],
-            ['F000002_2', 'F000014_14'],
-            ['I000004_hg00731', 'I000005_hg00732', 'I000006_hg00733', 'I000018_na21234', 'I000019_na21987', 'I000021_na21654'],
-        ))
-        expected_body.update({k: {} for k in {'mmeSubmissionsByGuid', 'variantTagsByGuid', 'variantNotesByGuid'}})
+        expected_individuals = {
+            i: {k: mock.ANY for k in [*INDIVIDUAL_FIELDS, 'igvSampleGuids']} for i in [
+                'I000004_hg00731', 'I000005_hg00732', 'I000006_hg00733', 'I000018_na21234', 'I000019_na21987', 'I000021_na21654',
+            ]
+        }
+        expected_body = self._expected_lookup_body(
+            expected_individuals,
+            [expected_gcnv_variant, expected_sv_variant],
+            project_guids=[PROJECT_GUID, 'R0004_non_analyst_project'],
+            family_guids=['F000002_2', 'F000014_14'],
+            include_context=True,
+        )
         del expected_body['transcriptsById']
         self.assertDictEqual(response.json(), expected_body)
         mock_variant_lookup.assert_called_with(self.manager_user, 'phase2_DEL_chr14_4640', '37', sample_type='WGS', affected_only=False, hom_only=False,)
@@ -1413,7 +1425,7 @@ class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, VariantSearchAPITes
 
     EXPECTED_SEARCH_RESPONSE = {
         **EXPECTED_SEARCH_RESPONSE,
-        'totalSampleCounts': {'MITO': {'WES': 1}, 'SNV_INDEL': {'WES': 7}, 'SV': {'WES': 3, 'WGS': 3}},
+        'totalSampleCounts': {'MITO': {'WES': 1}, 'SNV_INDEL': {'WES': 7}, 'SV': {'WES': 3}},
     }
     EXPECTED_SEARCH_RESPONSE['savedVariantsByGuid'] = {
         k: {**v, 'key': mock.ANY, 'mainTranscriptId': mock.ANY} for k, v in EXPECTED_SEARCH_RESPONSE['savedVariantsByGuid'].items()
