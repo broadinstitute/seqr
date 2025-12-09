@@ -1582,7 +1582,7 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
         body['search']['locus'] = {'rawItems': 'ENSG00000097046'}
         response = self.client.post(url+'1', content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
-        variant4 = {**VARIANT4, 'selectedMainTranscriptId': 'ENST00000350997'}
+        variant4 = {**VARIANT4, 'selectedMainTranscriptId': 'ENST00000350997', 'numFamilies': 3}
         del variant4['familyGuids']
         del variant4['genotypes']
         expected_response = {
@@ -1613,7 +1613,7 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
         body['search']['freqs'] = {}
         response = self.client.post(url+'2', content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
-        variant3 = {**VARIANT3, 'selectedMainTranscriptId': 'ENST00000497611'}
+        variant3 = {**VARIANT3, 'selectedMainTranscriptId': 'ENST00000497611', 'numFamilies': 4}
         del variant3['familyGuids']
         del variant3['genotypes']
         expected_response['searchedVariants'].insert(0, variant3)
@@ -1645,6 +1645,8 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
         response = self.client.post(url + '5', content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         expected_response['search']['search'].update(body['search'])
+        variant3['numFamilies'] = 1
+        variant4['numFamilies'] = 1
         self.assertDictEqual(response.json(), expected_response)
 
         self.login_collaborator()
@@ -1667,7 +1669,9 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
         self.assertEqual(response.status_code, 200)
         expected_response['search']['search'].update(body['search'])
         expected_response['search']['totalResults'] = 1
-        other_project_variant = {k: v for k, v in PROJECT_4_COMP_HET_VARIANT.items() if k not in {'familyGuids', 'genotypes'}}
+        other_project_variant = {**PROJECT_4_COMP_HET_VARIANT, 'numFamilies': 1}
+        del other_project_variant['familyGuids']
+        del other_project_variant['genotypes']
         expected_response.update({
             'searchedVariants': [other_project_variant],
             'genesById': {'ENSG00000171621': mock.ANY},
