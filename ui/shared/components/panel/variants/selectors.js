@@ -154,7 +154,8 @@ export const getPairedSelectedSavedVariants = createSelector(
         variantGuids.forEach((variantGuid) => {
           delete acc[variantGuid]
         })
-        acc[key] = variantGuids.map(variantGuid => selectedVariantsByGuid[variantGuid]).sort(sortCompHet)
+        const pairVariants = variantGuids.map(variantGuid => selectedVariantsByGuid[variantGuid])
+        acc[key] = pairVariants.length === 1 ? pairVariants[0] : pairVariants.sort(sortCompHet)
       }
       return acc
     }, {})
