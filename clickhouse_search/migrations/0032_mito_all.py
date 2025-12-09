@@ -205,6 +205,92 @@ INNER JOIN `GRCh38/MITO/key_lookup` dst
 ON assumeNotNull(src.variantId) = dst.variantId
 """)
 
+GNOMAD_MITO_ALL_VARIANTS_MV = """
+CREATE MATERIALIZED VIEW `GRCh38/MITO/reference_data/gnomad_mito/all_variants_mv`
+REFRESH EVERY 10 YEAR
+TO `GRCh38/MITO/reference_data/gnomad_mito/all_variants`
+EMPTY
+AS SELECT
+    variant_id AS variantId,
+    AC_hom as ac,
+    AF_hom as af,
+    AN as an
+FROM gcs('https://storage.googleapis.com/seqr-reference-data/v3.1/GRCh38/gnomad_mito/1.1.parquet/*.parquet')
+"""
+
+GNOMAD_MITO_HETEROPLASMY_ALL_VARIANTS_MV = """
+CREATE MATERIALIZED VIEW `GRCh38/MITO/reference_data/gnomad_mito_heteroplasmy/all_variants_mv`
+REFRESH EVERY 10 YEAR
+TO `GRCh38/MITO/reference_data/gnomad_mito_heteroplasmy/all_variants`
+EMPTY
+AS SELECT
+    variant_id as variantId,
+    AC_het as ac,
+    AF_hom as af,
+    AN as an,
+    max_hl
+FROM gcs('https://storage.googleapis.com/seqr-reference-data/v3.1/GRCh38/gnomad_mito_heteroplasmy/1.1.parquet/*.parquet')
+"""
+
+HELIX_MITO_ALL_VARIANTS_MV = """
+CREATE MATERIALIZED VIEW `GRCh38/MITO/reference_data/helix_mito/all_variants_mv`
+REFRESH EVERY 10 YEAR
+TO `GRCh38/MITO/reference_data/helix_mito/all_variants`
+EMPTY
+AS SELECT
+    concat(
+        'M',
+        '-',
+        replace(locus, 'chrM:', ''), 
+        '-',
+        arrayStringConcat(
+            arrayMap(x -> replaceAll(x, '"', ''), JSONExtractArrayRaw(assumeNotNull(alleles))), '-')
+        ) AS variantId,
+    counts_hom as ac,
+    CAST(AF_hom AS Decimal(9, 8)) as af,
+    if(
+        toFloat64(AF_hom) > 0,
+        CAST(counts_hom / toFloat64(AF_hom) AS Int32),
+        CAST(counts_het / toFloat64(AF_het) AS Int32)
+    ) as an
+FROM url('https://helix-research-public.s3.amazonaws.com/mito/HelixMTdb_20200327.tsv')
+"""
+
+HELIX_MITO_HETEROPLASMY_ALL_VARIANTS_MV = """
+CREATE MATERIALIZED VIEW `GRCh38/MITO/reference_data/helix_mito_heteroplasmy/all_variants_mv`
+REFRESH EVERY 10 YEAR
+TO `GRCh38/MITO/reference_data/helix_mito_heteroplasmy/all_variants`
+EMPTY
+AS SELECT
+    concat(
+        'M',
+        '-',
+        replace(locus, 'chrM:', ''), 
+        '-',
+        arrayStringConcat(
+            arrayMap(x -> replaceAll(x, '"', ''), JSONExtractArrayRaw(assumeNotNull(alleles))), '-')
+        ) AS variantId,
+    counts_het as ac,
+    CAST(AF_het AS Decimal(9, 8)) as af,
+    if(
+        toFloat64(AF_hom) > 0,
+        CAST(counts_hom / toFloat64(AF_hom) AS Int32),
+        CAST(counts_het / toFloat64(AF_het) AS Int32)
+    ) as an,anager
+    max_ARF as max_hl
+FROM url('https://helix-research-public.s3.amazonaws.com/mito/HelixMTdb_20200327.tsv')
+"""
+
+def conditionally_refresh_view(reference_dataset: str):
+    def inner(apps, schema_editor):
+        if DATABASES['default']['NAME'].startswith('test_'):
+            return
+        requests.post(
+            f"{PIPELINE_RUNNER_SERVER}/refresh_clickhouse_reference_dataset_enqueue",
+            json={"reference_dataset": reference_dataset},
+            timeout=60,
+        )
+    return inner
 
 class Migration(migrations.Migration):
 
@@ -481,12 +567,20 @@ class Migration(migrations.Migration):
             ALL_TO_SEQR_MV.substitute(reference_dataset='gnomad_mito'),
         ),
         migrations.RunSQL(
+            GNOMAD_MITO_ALL_VARIANTS_MV,
+            hints={"clickhouse": True},
+        )
+        migrations.RunSQL(
             GNOMAD_MITO_HETEROPLASMY_SEARCH,
             hints={"clickhouse": True},
         ),
         migrations.RunSQL(
             ALL_TO_SEQR_MV.substitute(reference_dataset='gnomad_mito_heteroplasmy'),
         ),
+        migrations.RunSQL(
+            GNOMAD_MITO_HETEROPLASMY_ALL_VARIANTS_MV,
+            hints={"clickhouse": True},
+        )
         migrations.RunSQL(
             HELIX_MITO_SEARCH,
             hints={"clickhouse": True},
@@ -495,12 +589,20 @@ class Migration(migrations.Migration):
             ALL_TO_SEQR_MV.substitute(reference_dataset='helix_mito'),
         ),
         migrations.RunSQL(
+            HELIX_MITO_ALL_VARIANTS_MV,
+            hints={"clickhouse": True},
+        )
+        migrations.RunSQL(
             HELIX_MITO_HETEROPLASMY_SEARCH,
             hints={"clickhouse": True},
         ),
         migrations.RunSQL(
             ALL_TO_SEQR_MV.substitute(reference_dataset='helix_mito_heteroplasmy'),
         ),
+        migrations.RunSQL(
+            HELIX_MITO_HETEROPLASMY_ALL_VARIANTS_MV,
+            hints={"clickhouse": True},
+        )
         migrations.RunSQL(
             HMTVAR_SEARCH,
             hints={"clickhouse": True},
@@ -528,5 +630,45 @@ class Migration(migrations.Migration):
         ),
         migrations.RunSQL(
             ALL_TO_SEQR_MV.substitute(reference_dataset='mitomap'),
+        ),
+        migrations.RunPython(
+            conditionally_refresh_view(
+                reference_genome="gnomad_mito",
+            ),
+        ),
+        migrations.RunPython(
+            conditionally_refresh_view(
+                reference_genome="gnomad_mito_heteroplasmy",
+            ),
+        ),
+        migrations.RunPython(
+            conditionally_refresh_view(
+                reference_genome="helix_mito",
+            ),
+        ),
+        migrations.RunPython(
+            conditionally_refresh_view(
+                reference_genome="helix_mito_heteroplasmy",
+            ),
+        ),
+        migrations.RunPython(
+            conditionally_refresh_view(
+                reference_genome="hmtvar",
+            ),
+        ),
+        migrations.RunPython(
+            conditionally_refresh_view(
+                reference_genome="mitimpact",
+            ),
+        ),
+        migrations.RunPython(
+            conditionally_refresh_view(
+                reference_genome="local_constraint_mito",
+            ),
+        ),
+        migrations.RunPython(
+            conditionally_refresh_view(
+                reference_genome="mitomap",
+            ),
         ),
     ]
