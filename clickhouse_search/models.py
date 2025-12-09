@@ -906,7 +906,7 @@ class HelixMitoHeteroplasmyAllVariants(models.ClickhouseModel):
     max_hl = models.DecimalField(max_digits=9, decimal_places=5)
 
     class Meta:
-        db_table = 'GRCh38/MITO/reference_data/helix_mito/all_variants'
+        db_table = 'GRCh38/MITO/reference_data/helix_mito_heteroplasmy/all_variants'
         engine = models.MergeTree(
             primary_key=('variant_id'),
             order_by=('variant_id'),
@@ -919,7 +919,7 @@ class HelixMitoSeqrVariants(models.ClickhouseModel):
     an = models.UInt32Field()
 
     class Meta:
-        db_table = 'GRCh38/MITO/reference_data/helix_mito_heteroplasmy/seqr_variants'
+        db_table = 'GRCh38/MITO/reference_data/helix_mito/seqr_variants'
         engine = models.MergeTree(
             primary_key=('key'),
             order_by=('key'),

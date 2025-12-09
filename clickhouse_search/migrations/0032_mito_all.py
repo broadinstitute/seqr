@@ -309,7 +309,7 @@ class Migration(migrations.Migration):
                 ('an', clickhouse_backend.models.UInt32Field()),
             ],
             options={
-                'db_table': 'GRCh38/MITO/reference_data/helix_mito_heteroplasmy/seqr_variants',
+                'db_table': 'GRCh38/MITO/reference_data/helix_mito/seqr_variants',
                 'engine': clickhouse_backend.models.MergeTree(order_by='key', primary_key='key'),
             },
             managers=[
@@ -327,7 +327,7 @@ class Migration(migrations.Migration):
                 ('max_hl', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
             ],
             options={
-                'db_table': 'GRCh38/MITO/reference_data/helix_mito/all_variants',
+                'db_table': 'GRCh38/MITO/reference_data/helix_mito_heteroplasmy/all_variants',
                 'engine': clickhouse_backend.models.MergeTree(order_by='variant_id', primary_key='variant_id'),
             },
             managers=[
