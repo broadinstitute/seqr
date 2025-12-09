@@ -276,7 +276,7 @@ AS SELECT
         toFloat64(AF_hom) > 0,
         CAST(counts_hom / toFloat64(AF_hom) AS Int32),
         CAST(counts_het / toFloat64(AF_het) AS Int32)
-    ) as an,anager
+    ) as an,
     max_ARF as max_hl
 FROM url('https://helix-research-public.s3.amazonaws.com/mito/HelixMTdb_20200327.tsv')
 """
