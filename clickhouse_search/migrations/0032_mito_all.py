@@ -633,42 +633,42 @@ class Migration(migrations.Migration):
         ),
         migrations.RunPython(
             conditionally_refresh_view(
-                reference_genome="gnomad_mito",
+                reference_dataset="gnomad_mito",
             ),
         ),
         migrations.RunPython(
             conditionally_refresh_view(
-                reference_genome="gnomad_mito_heteroplasmy",
+                reference_dataset="gnomad_mito_heteroplasmy",
             ),
         ),
         migrations.RunPython(
             conditionally_refresh_view(
-                reference_genome="helix_mito",
+                reference_dataset="helix_mito",
             ),
         ),
         migrations.RunPython(
             conditionally_refresh_view(
-                reference_genome="helix_mito_heteroplasmy",
+                reference_dataset="helix_mito_heteroplasmy",
             ),
         ),
         migrations.RunPython(
             conditionally_refresh_view(
-                reference_genome="hmtvar",
+                reference_dataset="hmtvar",
             ),
         ),
         migrations.RunPython(
             conditionally_refresh_view(
-                reference_genome="mitimpact",
+                reference_dataset="mitimpact",
             ),
         ),
         migrations.RunPython(
             conditionally_refresh_view(
-                reference_genome="local_constraint_mito",
+                reference_dataset="local_constraint_mito",
             ),
         ),
         migrations.RunPython(
             conditionally_refresh_view(
-                reference_genome="mitomap",
+                reference_dataset="mitomap",
             ),
         ),
     ]
