@@ -95,8 +95,8 @@ RESTRICTIVE_FREQ_FILTER = {
 }
 PERMISSIVE_FREQ_FILTER = {
     'callset': {'ac': 1000},
-    'gnomad_exomes': {'af': 0.01, 'hh': 2},
-    'gnomad_genomes': {'af': 0.01, 'hh': 2},
+    'gnomad_exomes': {'af': 0.01, 'hh': 5},
+    'gnomad_genomes': {'af': 0.01, 'hh': 5},
     'sv_callset': {'ac': 500},
     'gnomad_svs': {'af': 0.01},
 }
@@ -104,9 +104,6 @@ PERMISSIVE_FREQ_FILTER = {
 IN_SILICO_FILTER = {
     'cadd': 25,
     'revel': 0.6
-}
-SPLICE_AI_FILTER = {
-    'splice_ai': 0.5,
 }
 
 QUALITY_FILTER = {
@@ -137,14 +134,6 @@ RECESSIVE_SEARCH = {
     'in_silico': IN_SILICO_FILTER,
     'freqs': PERMISSIVE_FREQ_FILTER,
     'qualityFilter': QUALITY_FILTER,
-}
-RECESSIVE_SEARCH_PERMISSIVE_HH_FILTER = {
-    **RECESSIVE_SEARCH,
-    'annotations': HIGH_MODERATE_ANNOTATIONS,
-    'freqs': {
-        pop: {**pop_filter, 'hh': 5} if 'hh' in pop_filter else pop_filter
-        for pop, pop_filter in RECESSIVE_SEARCH['freqs'].items()
-    },
 }
 SV_RECESSIVE_SEARCH = {
     'gene_list_moi': RECESSIVE_MOI,
@@ -238,27 +227,29 @@ SEARCHES = {
             'annotations': HIGH_MODERATE_ANNOTATIONS,
             'in_silico': {
                 **IN_SILICO_FILTER,
-                **SPLICE_AI_FILTER,
+                'splice_ai': 0.5,
             },
             **DE_NOVO_SEARCH,
         },
         'High Splice AI': {
             'in_silico': {
-                **SPLICE_AI_FILTER,
+                'splice_ai': 0.8,
                 'requireScore': True
             },
             **DE_NOVO_SEARCH,
         },
         'Recessive': {
             'inheritance_mode': HOMOZYGOUS_RECESSIVE,
-            **RECESSIVE_SEARCH_PERMISSIVE_HH_FILTER,
+            'annotations': HIGH_MODERATE_ANNOTATIONS,
+            **RECESSIVE_SEARCH,
         },
         'X-Linked Recessive': {
             'inheritance_mode': X_LINKED_RECESSIVE_MALE_AFFECTED,
             'family_filter': {
                 AFFECTED_MALE_FAMILY_FILTER: True
             },
-            **RECESSIVE_SEARCH_PERMISSIVE_HH_FILTER,
+            'annotations': HIGH_MODERATE_ANNOTATIONS,
+            **RECESSIVE_SEARCH,
         },
     },
     'SV': {
@@ -278,6 +269,9 @@ SEARCHES = {
             **DE_NOVO_SEARCH,
         },
         'SV - Recessive': {
+            'family_filter': {
+                CONFIRMED_FAMILY_FILTER: True
+            },
             'inheritance_mode': HOMOZYGOUS_RECESSIVE,
             **SV_RECESSIVE_SEARCH,
         },
