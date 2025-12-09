@@ -168,6 +168,12 @@ export const LOAD_RNA_FIELDS = [
     component: BooleanCheckbox,
     label: 'Ignore extra samples',
   },
+  {
+    name: 'skipNewSampleValidation',
+    component: BooleanCheckbox,
+    label: 'Skip new sample validation',
+    labelHelp: 'Allow loading to proceed if no new samples are included in the loading request',
+  },
 ]
 
 export const DATASET_TITLE_LOOKUP = {

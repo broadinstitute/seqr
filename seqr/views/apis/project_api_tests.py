@@ -793,6 +793,8 @@ class ProjectAPITest(object):
         ]
         if not allow_missing_gene:
             errors.insert(0, 'Samples missing required "gene_id": NA21234')
+        if single_sample_file:
+            errors.append('No new samples detected')
         self.assertDictEqual(response.json(), {'warnings': None, 'errors': errors})
 
         # Test loading new data
@@ -800,7 +802,7 @@ class ProjectAPITest(object):
         mock_subprocess.reset_mock()
         self.reset_logs()
         self._set_file_iter(rows[:-2], mock_subprocess, mock_does_file_exist, mock_open)
-        body.update({'ignoreExtraSamples': True, 'file': file})
+        body.update({'ignoreExtraSamples': True, 'file': file, 'skipNewSampleValidation': single_sample_file})
 
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
@@ -808,7 +810,7 @@ class ProjectAPITest(object):
             f'Parsed {1 if single_sample_file else 3} RNA-seq samples',
             f'Attempted data loading for {1 if single_sample_file else 2} RNA-seq samples',
         ]
-        warnings = [] if single_sample_file else ['Skipped loading for the following 1 unmatched samples: NA21234']
+        warnings = ['No new samples detected'] if single_sample_file else ['Skipped loading for the following 1 unmatched samples: NA21234']
         file_path = f'rna_sample_data__{data_type}__2025-04-15T00:00:00'
         response_json = response.json()
         self.assertDictEqual(response_json, {
@@ -832,16 +834,16 @@ class ProjectAPITest(object):
             mock_subprocess, 'new_samples.tsv.gz', additional_command=mv_command,
         )
         self.assert_json_logs(self.manager_user, subprocess_logs + [
-            (f'create {1 if single_sample_file else 2} RnaSamples', {'dbUpdate': {
-                'dbEntity': 'RnaSample', 'updateType': 'bulk_create',
-                'entityIds': response_json['sampleGuids'],
-            }}),
             ('update 1 RnaSamples', {'dbUpdate': {
                 'dbEntity': 'RnaSample', 'entityIds': [sample_guid],
                 'updateType': 'bulk_update', 'updateFields': ['is_active']}}),
             (f'delete {model_cls.__name__}s', {'dbUpdate': {
                 'dbEntity': model_cls.__name__, 'numEntities': initial_sample_model_count,
                 'parentEntityIds': [sample_guid], 'updateType': 'bulk_delete'}}),
+            (f'create {1 if single_sample_file else 2} RnaSamples', {'dbUpdate': {
+                'dbEntity': 'RnaSample', 'updateType': 'bulk_create',
+                'entityIds': response_json['sampleGuids'],
+            }}),
         ] + [
             (info_log, None) for info_log in info] + [
             (warn_log, {'severity': 'WARNING'}) for warn_log in warnings
