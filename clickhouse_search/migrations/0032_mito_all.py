@@ -569,7 +569,7 @@ class Migration(migrations.Migration):
         migrations.RunSQL(
             GNOMAD_MITO_ALL_VARIANTS_MV,
             hints={"clickhouse": True},
-        )
+        ),
         migrations.RunSQL(
             GNOMAD_MITO_HETEROPLASMY_SEARCH,
             hints={"clickhouse": True},
@@ -580,7 +580,7 @@ class Migration(migrations.Migration):
         migrations.RunSQL(
             GNOMAD_MITO_HETEROPLASMY_ALL_VARIANTS_MV,
             hints={"clickhouse": True},
-        )
+        ),
         migrations.RunSQL(
             HELIX_MITO_SEARCH,
             hints={"clickhouse": True},
@@ -591,7 +591,7 @@ class Migration(migrations.Migration):
         migrations.RunSQL(
             HELIX_MITO_ALL_VARIANTS_MV,
             hints={"clickhouse": True},
-        )
+        ),
         migrations.RunSQL(
             HELIX_MITO_HETEROPLASMY_SEARCH,
             hints={"clickhouse": True},
@@ -602,7 +602,7 @@ class Migration(migrations.Migration):
         migrations.RunSQL(
             HELIX_MITO_HETEROPLASMY_ALL_VARIANTS_MV,
             hints={"clickhouse": True},
-        )
+        ),
         migrations.RunSQL(
             HMTVAR_SEARCH,
             hints={"clickhouse": True},
