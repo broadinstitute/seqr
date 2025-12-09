@@ -13,7 +13,7 @@ class PaLocusList(models.Model):
         primary_key=True,
     )
 
-    url = models.TextField(max_length=2000, null=False, blank=False, unique=True)
+    source = models.CharField(max_length=2, choices=[(source, source) for source in ['AU', 'UK']])
     panel_app_id = models.IntegerField(null=False, blank=False)
     disease_group = models.TextField(null=True, blank=True)
     disease_sub_group = models.TextField(null=True, blank=True)
@@ -22,7 +22,7 @@ class PaLocusList(models.Model):
     version_created = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        """Fields included in JSON in API calls."""
+        unique_together = ('source', 'panel_app_id')
 
         json_fields = ['url', 'panel_app_id']
 
