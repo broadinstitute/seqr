@@ -135,5 +135,4 @@ class Migration(migrations.Migration):
                 dataset_type="MITO",
             ),
         ),
-
     ]
