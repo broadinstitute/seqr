@@ -5,13 +5,13 @@ import sys
 
 from google.cloud import storage
 
-CLICKHOUSE_SERVICE_HOSTNAME =  os.environ.get('CLICKHOUSE_SERVICE_HOSTNAME')
-CLICKHOUSE_SERVICE_PORT = int(os.environ.get('CLICKHOUSE_SERVICE_PORT', '9000'))
-CLICKHOUSE_WRITER_USER = os.environ.get('CLICKHOUSE_WRITER_USER')
-CLICKHOUSE_WRITER_PASSWORD = os.environ.get('CLICKHOUSE_WRITER_PASSWORD')
-DEPLOYMENT_TYPE = os.environ.get('DEPLOYMENT_TYPE')
+CLICKHOUSE_SERVICE_HOSTNAME =  os.environ.get('CLICKHOUSE_SERVICE_HOSTNAME', '')
+CLICKHOUSE_WRITER_USER = os.environ.get('CLICKHOUSE_WRITER_USER', '')
+CLICKHOUSE_WRITER_PASSWORD = os.environ.get('CLICKHOUSE_WRITER_PASSWORD', '')
+DEPLOYMENT_TYPE = os.environ.get('DEPLOYMENT_TYPE', '')
 
 BUCKET = "seqr-clickhouse-backups"
+CLICKHOUSE_SERVICE_PORT = 8123 # http
 TS_FORMAT = "%Y-%m-%d-%H-%M-%S"
 TIMEOUT_S = 5400
 
@@ -41,6 +41,7 @@ def main():
         f"SETTINGS base_backup=Disk('gcs_backups', '{DEPLOYMENT_TYPE}/{base_backup}');"
     )
     url = f"http://{CLICKHOUSE_WRITER_USER}:{CLICKHOUSE_WRITER_PASSWORD}@{CLICKHOUSE_SERVICE_HOSTNAME}:{CLICKHOUSE_SERVICE_PORT}/"
+    print("Backing up with base backup", base_backup)
     response = requests.post(url, data=backup_sql, timeout=TIMEOUT_S)
     if not (response.ok and 'BACKUP_CREATED' in response.text):
         sys.exit(1)
