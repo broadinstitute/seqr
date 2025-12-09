@@ -229,7 +229,7 @@ AS SELECT
     AF_hom as af,
     AN as an,
     max_hl
-FROM gcs('https://storage.googleapis.com/seqr-reference-data/v3.1/GRCh38/gnomad_mito_heteroplasmy/1.1.parquet/*.parquet')
+FROM gcs('https://storage.googleapis.com/seqr-reference-data/v3.1/GRCh38/gnomad_mito/1.1.parquet/*.parquet')
 """
 
 HELIX_MITO_ALL_VARIANTS_MV = """
