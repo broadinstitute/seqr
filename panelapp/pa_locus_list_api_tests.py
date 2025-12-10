@@ -129,7 +129,7 @@ class PaLocusListAPITest(AuthenticationTestCase, BaseLocusListAPITest):
         # and has expected logs
         self.assertEqual(len(responses.calls), 7)
         self.assert_json_logs(None, [
-            ('Starting import of all gene lists from Panel App AU', None),
+            ('Updating PanelAppAU', None),
             ('Found 2 new and 0 existing panels to load', None),
             ('create 2 LocusLists', {'dbUpdate': {
                 'dbEntity': 'LocusList',
@@ -159,8 +159,9 @@ class PaLocusListAPITest(AuthenticationTestCase, BaseLocusListAPITest):
                 'updateFields': ['description'],
                 'updateType': 'bulk_update',
             }}),
-            ('---Done---', None),
-            ('Starting import of all gene lists from Panel App UK', None),
+            ('Done', None),
+            ('Loaded 2 PanelAppAU records', None),
+            ('Updating PanelAppUK', None),
             ('Found 1 new and 0 existing panels to load', None),
             ('create 1 LocusLists', {'dbUpdate': {
                 'dbEntity': 'LocusList',
@@ -181,7 +182,8 @@ class PaLocusListAPITest(AuthenticationTestCase, BaseLocusListAPITest):
                 'updateFields': ['description'],
                 'updateType': 'bulk_update',
             }}),
-            ('---Done---', None),
+            ('Done', None),
+            ('Loaded 1 PanelAppUK records', None),
         ])
 
         # and import is idempotent
@@ -193,12 +195,14 @@ class PaLocusListAPITest(AuthenticationTestCase, BaseLocusListAPITest):
 
         self.assertEqual(len(responses.calls), 3)
         self.assert_json_logs(None, [
-            ('Starting import of all gene lists from Panel App AU', None),
+            ('Updating PanelAppAU', None),
             ('Found 0 new and 0 existing panels to load', None),
-            ('---Done---', None),
-            ('Starting import of all gene lists from Panel App UK', None),
+            ('Done', None),
+            ('Loaded 0 PanelAppAU records', None),
+            ('Updating PanelAppUK', None),
             ('Found 0 new and 0 existing panels to load', None),
-            ('---Done---', None),
+            ('Done', None),
+            ('Loaded 0 PanelAppUK records', None),
         ])
 
     def _assert_lists_imported(self):
