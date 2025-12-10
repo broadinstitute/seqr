@@ -1,5 +1,7 @@
+from datetime import datetime
 from django.db import models
 
+from reference_data.models import LoadableModel
 from seqr.models import LocusList as SeqrLocusList, LocusListGene as SeqrLocusListGene
 
 
@@ -54,3 +56,30 @@ class PaLocusListGene(models.Model):
         """Fields included in JSON in API calls."""
 
         json_fields = ['confidence_level', 'mode_of_inheritance']
+
+
+class PaLoader(LoadableModel):
+
+    class Meta:
+        abstract = True
+
+    @classmethod
+    def get_current_version(cls, **kwargs):
+        # Panel app has no global versioning, so update max once per day
+        return datetime.now().strftime('%Y-%m-%d')
+
+    @classmethod
+    def update_records(cls, **kwargs):
+        raise NotImplementedError
+
+
+class PanelAppAU(PaLoader):
+
+    class Meta:
+        abstract = True
+
+
+class PanelAppUK(PaLoader):
+
+    class Meta:
+        abstract = True
