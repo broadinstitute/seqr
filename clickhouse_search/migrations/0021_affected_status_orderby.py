@@ -22,6 +22,8 @@ def add_affected_status_orderby(reference_genome: str, dataset_type: str):
             elif "ORDER BY (project_guid, key)" in ddl:
                 old_order_by = "ORDER BY (project_guid, key)"
                 new_order_by = "ORDER BY (project_guid, key, affected)"
+            else:
+                return
             ddl = ddl.replace(old_order_by, new_order_by)
             ddl = ddl.replace(old_tbl, tmp_tbl)
             cursor.execute(ddl)
