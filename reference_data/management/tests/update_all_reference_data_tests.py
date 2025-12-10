@@ -3,6 +3,7 @@ import mock
 from django.core.management import call_command
 from django.core.management.base import CommandError
 
+from panelapp.models import PanelAppAU, PanelAppUK
 from reference_data.management.tests.test_utils import ReferenceDataCommandTestCase
 from reference_data.models import Omim, dbNSFPGene, GeneConstraint, GeneCopyNumberSensitivity, GenCC, ClinGen, \
     RefseqTranscript, HumanPhenotypeOntology, MGI, PrimateAI, GeneShet, LoadableModel, DataVersions
@@ -14,11 +15,6 @@ def primate_ai_exception():
 
 def mgi_exception():
     raise Exception('MGI failed')
-
-SKIP_ARGS = [
-    '--skip-gencode', '--skip-dbnsfp-gene', '--skip-gene-constraint', '--skip-primate-ai', '--skip-mgi', '--skip-hpo',
-    '--skip-gene-cn-sensitivity', '--skip-gencc', '--skip-clingen', '--skip-refseq',
-]
 
 class BaseUpdateAllReferenceDataTest(ReferenceDataCommandTestCase):
 
@@ -79,12 +75,14 @@ class NewDbUpdateAllReferenceDataTest(BaseUpdateAllReferenceDataTest):
             (ClinGen, gene_kwargs),
             (GeneShet, gene_kwargs),
             (HumanPhenotypeOntology, kwargs),
+            (PanelAppAU, kwargs),
+            (PanelAppUK, kwargs),
         ])
 
         self.mock_slack.assert_not_called()
         calls = [
             mock.call('Done'),
-            mock.call('Updated: GeneInfo, Omim, dbNSFPGene, GeneConstraint, GeneCopyNumberSensitivity, GenCC, ClinGen, GeneShet, HumanPhenotypeOntology'),
+            mock.call('Updated: GeneInfo, Omim, dbNSFPGene, GeneConstraint, GeneCopyNumberSensitivity, GenCC, ClinGen, GeneShet, HumanPhenotypeOntology, PanelAppAU, PanelAppUK'),
         ]
         self.mock_logger.info.assert_has_calls(calls)
 
@@ -105,6 +103,8 @@ class NewDbUpdateAllReferenceDataTest(BaseUpdateAllReferenceDataTest):
             ('GeneShet', '7939768'),
             ('HumanPhenotypeOntology', '2025-03-03'),
             ('Omim', 'Thu, 20 Mar 2025 20:52:24 GMT'),
+            ('PanelAppAU', '2025-03-12'),
+            ('PanelAppUK', '2025-03-12'),
             ('dbNSFPGene', 'dbNSFP4.0_gene'),
         ])
 

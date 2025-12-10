@@ -40,6 +40,9 @@ class ReferenceDataCommandTestCase(TestCase):
         self.mock_hpo_version_patcher = mock.patch('reference_data.models.HumanPhenotypeOntology.get_current_version')
         self.mock_hpo_version_patcher.start().return_value = '2025-03-03'
         self.addCleanup(self.mock_hpo_version_patcher.stop)
+        self.mock_pa_version_patcher = mock.patch('panelapp.models.PaLoader.get_current_version')
+        self.mock_pa_version_patcher.start().return_value = '2025-03-12'
+        self.addCleanup(self.mock_pa_version_patcher.stop)
 
     @responses.activate
     def _run_command(self, data, head_response=None, command_args=None):
