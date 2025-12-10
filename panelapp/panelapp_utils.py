@@ -83,7 +83,7 @@ def import_all_panels(source):
                     logger.warning('Genes found in panel {} but not in reference data, ignoring genes {}'
                                    .format(panel_app_id, invalid_items), user=None)
                 seqr_locus_list = pa_locus_list.seqr_locus_list
-                _update_locus_list_genes_bulk(pa_locus_list.seqr_locus_list, genes_by_id, panel_genes_by_id)
+                _update_locus_list_genes_bulk(pa_locus_list.seqr_locus_list, genes_by_id.keys(), panel_genes_by_id)
 
                 seqr_locus_list.description = _create_panel_description(panel_app_id, panel, source)
                 updated_seqr_locuslists.append(seqr_locus_list)
@@ -99,7 +99,7 @@ def delete_all_panels(source):
         SeqrLocusList.bulk_delete(user=None, queryset=to_delete_qs)
 
 
-def _update_locus_list_genes_bulk(seqr_locus_list, genes_by_id, panel_genes_by_id):
+def _update_locus_list_genes_bulk(seqr_locus_list, gene_ids, panel_genes_by_id):
     logger.info('Bulk updating genes for list {}'.format(seqr_locus_list), user=None)
     SeqrLocusList.bulk_delete(user=None, queryset=seqr_locus_list.locuslistgene_set.all())
     current_time = timezone.now()
@@ -110,14 +110,14 @@ def _update_locus_list_genes_bulk(seqr_locus_list, genes_by_id, panel_genes_by_i
             gene_id=gene_id,
             created_date=current_time,
             guid='LL%05d_%s' % (seqr_locus_list.id, gene_id)
-        ) for gene_id in genes_by_id.keys()
+        ) for gene_id in gene_ids
     }
     created_locuslistgenes = SeqrLocusListGene.objects.bulk_create(locuslistgenes.values(), batch_size=10000)
     created_locuslistgenes_by_id = {lg.gene_id: lg for lg in created_locuslistgenes}
 
     palocuslistgenes = {
         gene_id: _create_pa_locus_list_gene(created_locuslistgenes_by_id[gene_id], panel_genes_by_id[gene_id])
-        for gene_id in genes_by_id.keys()
+        for gene_id in gene_ids
     }
     PaLocusListGene.objects.bulk_create(palocuslistgenes.values(), batch_size=10000)
 
