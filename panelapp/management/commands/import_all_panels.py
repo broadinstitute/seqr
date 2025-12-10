@@ -2,7 +2,9 @@ import logging
 
 from django.core.management.base import BaseCommand
 
-from panelapp.panelapp_utils import import_all_panels, PANEL_APP_SOURCES
+from panelapp.models import PanelAppAU, PanelAppUK
+from panelapp.panelapp_utils import PANEL_APP_SOURCES
+from reference_data.utils.gene_utils import get_genes_by_id_and_symbol
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +16,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         source = options['source']
-        logger.info(f'Starting import of all gene lists from Panel App {source}')
-        import_all_panels(source)
-
+        data_cls = next(model for model in [PanelAppAU, PanelAppUK] if model.SOURCE == source)
+        gene_ids_to_gene, _ = get_genes_by_id_and_symbol()
+        data_cls.update_records(gene_ids_to_gene=gene_ids_to_gene)
         logger.info('---Done---')

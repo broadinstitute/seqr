@@ -139,6 +139,13 @@ class LoadableModel(models.Model):
                     continue
                 records.append(record)
 
+        num_loaded = cls.update_record_models(records, **kwargs)
+
+        logger.info('Done')
+        logger.info(f'Loaded {num_loaded} {cls.__name__} records')
+
+    @classmethod
+    def update_record_models(cls, records, **kwargs):
         models = cls.get_record_models(records, **kwargs)
 
         with transaction.atomic():
@@ -147,8 +154,7 @@ class LoadableModel(models.Model):
             cls.objects.bulk_create(models)
             logger.info(f'Created {len(models)} {cls.__name__} records')
 
-        logger.info('Done')
-        logger.info(f'Loaded {cls.objects.count()} {cls.__name__} records')
+        return cls.objects.count()
 
 
 class HumanPhenotypeOntology(LoadableModel):

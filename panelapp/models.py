@@ -69,17 +69,23 @@ class PaLoader(LoadableModel):
         return datetime.now().strftime('%Y-%m-%d')
 
     @classmethod
-    def update_records(cls, **kwargs):
+    def load_records(cls, **kwargs):
+        raise NotImplementedError
+
+    @classmethod
+    def update_record_models(cls, records, **kwargs):
         raise NotImplementedError
 
 
 class PanelAppAU(PaLoader):
+    SOURCE = 'AU'
 
     class Meta:
         abstract = True
 
 
 class PanelAppUK(PaLoader):
+    SOURCE = 'UK'
 
     class Meta:
         abstract = True
