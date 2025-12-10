@@ -10,9 +10,10 @@ from requests import Response
 from urllib3.exceptions import MaxRetryError
 
 from panelapp.panelapp_utils import _get_all_genes
+from reference_data.management.tests.test_utils import ReferenceDataCommandTestCase
 from seqr.views.apis.locus_list_api import locus_lists, locus_list_info
 from seqr.views.apis.locus_list_api_tests import BaseLocusListAPITest
-from seqr.views.utils.test_utils import AuthenticationTestCase, LOCUS_LIST_FIELDS
+from seqr.views.utils.test_utils import AuthenticationTestMixin, LOCUS_LIST_FIELDS
 
 PROJECT_GUID = 'R0001_1kg'
 
@@ -41,13 +42,17 @@ def _get_json_from_file(filepath):
     return json.loads(filedata)
 
 
-class PaLocusListAPITest(AuthenticationTestCase, BaseLocusListAPITest):
+class PaLocusListAPITest(AuthenticationTestMixin, ReferenceDataCommandTestCase, BaseLocusListAPITest):
     fixtures = ['users', '1kg_project', 'panelapp', 'reference_data']
 
     EXISTING_LOCUS_LISTS = [EXISTING_AU_PA_LOCUS_LIST_GUID, EXISTING_UK_PA_LOCUS_LIST_GUID, 'LL00005_mendeliome', 'LL00006_incidentalome']
     EXPECTED_LOCUS_LISTS = {LOCUS_LIST_GUID, *EXISTING_LOCUS_LISTS}
     MAIN_LIST_GUID = EXISTING_AU_PA_LOCUS_LIST_GUID
     DETAIL_FIELDS = PA_LOCUS_LIST_DETAIL_FIELDS
+
+    def setUp(self):
+        self.set_up_test()
+        self.set_up_users()
 
     def _test_expected_locus_list(self, locus_lists_dict):
         locus_list = locus_lists_dict[EXISTING_AU_PA_LOCUS_LIST_GUID]
