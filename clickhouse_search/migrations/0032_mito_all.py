@@ -323,7 +323,7 @@ REFRESH EVERY 10 YEAR
 TO `GRCh38/MITO/reference_data/mitimpact/all_variants`
 EMPTY AS SELECT 
     concat('M', '-', Position, '-', Reference, '-', Alternate) as variantId,
-    CAST(MLC_score, Decimal(9, 5)) AS score
+    CAST(MLC_score AS Decimal(9, 5)) AS score
 FROM url('https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh38/local_constraint_mito/supplementary_dataset_7.tsv')
 """
 
