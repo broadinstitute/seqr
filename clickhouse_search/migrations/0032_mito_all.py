@@ -331,7 +331,7 @@ MITOMAP_ALL_VARIANTS_MV = """
 CREATE MATERIALIZED VIEW `GRCh38/MITO/reference_data/mitomap/all_variants_mv`
 REFRESH EVERY 10 YEAR
 TO `GRCh38/MITO/reference_data/mitomap/all_variants`
-SELECT
+EMPTY AS SELECT
     concat(
         'M',
         '-',
