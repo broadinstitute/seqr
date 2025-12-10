@@ -42,12 +42,14 @@ def import_all_panels(source):
 
     genes_by_panel_id = defaultdict(list)
 
+    existing_lists_by_id = {ll.panel_app_id: ll for ll in PaLocusList.objects.filter(source=source)}
+
     for panel in all_panels:
         panel_app_id = panel.get('id')
         logger.info('Importing panel id {}'.format(panel_app_id), user=None)
         try:
             with transaction.atomic():
-                pa_locus_list = _create_or_update_locus_list_from_panel(source, panel)
+                pa_locus_list = _create_or_update_locus_list_from_panel(source, panel, existing_lists_by_id)
                 if not pa_locus_list:
                     logger.info('Panel id {} is up to date, skipping import'.format(panel_app_id), user=None)
                     continue
@@ -156,9 +158,9 @@ def _get_all_genes(panel_app_id: int, genes_url: str, results_by_panel_id: dict)
         return _get_all_genes(panel_app_id, next_page, results_by_panel_id)
 
 
-def _create_or_update_locus_list_from_panel(source, panel_json):
+def _create_or_update_locus_list_from_panel(source, panel_json, existing_lists_by_id):
     panel_app_id = panel_json.get('id')
-    pa_locus_list = _safe_get_locus_list(panel_app_id, source)
+    pa_locus_list = existing_lists_by_id.get(panel_app_id)
     version = panel_json.get('version') or None
     if pa_locus_list and pa_locus_list.version == version:
         return None
@@ -202,9 +204,3 @@ def _create_panel_description(panel_app_id, version, disease_group, disease_sub_
         version=version,
         disease_groups='_{}'.format(';'.join(disease_groups)) if disease_groups else '',
     )
-
-
-def _safe_get_locus_list(panel_app_id, source):
-    result = PaLocusList.objects.filter(panel_app_id=panel_app_id, source=source)
-
-    return result.first() if result else None
