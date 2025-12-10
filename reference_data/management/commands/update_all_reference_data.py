@@ -2,7 +2,6 @@ import logging
 from collections import OrderedDict
 from django.core.management.base import BaseCommand, CommandError
 
-from panelapp.models import PanelAppAU, PanelAppUK
 from reference_data.utils.gene_utils import get_genes_by_id_and_symbol
 from reference_data.models import GeneInfo, TranscriptInfo, HumanPhenotypeOntology, RefseqTranscript, GeneConstraint, \
     GeneCopyNumberSensitivity, GeneShet, Omim, dbNSFPGene, PrimateAI, MGI, GenCC, ClinGen, DataVersions
@@ -24,8 +23,6 @@ REFERENCE_DATA_MODELS = [
     ClinGen,
     GeneShet,
     HumanPhenotypeOntology,
-    PanelAppAU,
-    PanelAppUK,
 ]
 
 class Command(BaseCommand):
