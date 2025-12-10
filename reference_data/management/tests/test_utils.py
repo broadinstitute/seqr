@@ -5,18 +5,21 @@ import responses
 import tempfile
 
 from django.core.management import call_command
-from django.test import TestCase
 
 from reference_data.models import DataVersions
+from seqr.views.utils.test_utils import AuthenticationTestCase
 
-class ReferenceDataCommandTestCase(TestCase):
-    databases = '__all__'
+
+class ReferenceDataCommandTestCase(AuthenticationTestCase):
+    databases = ['default', 'reference_data']
     fixtures = ['users', 'reference_data']
 
     URL = ''
     DATA = None
 
     def setUp(self):
+        super().setUp()
+
         patcher = mock.patch('reference_data.models.logger')
         self.mock_logger = patcher.start()
         self.addCleanup(patcher.stop)

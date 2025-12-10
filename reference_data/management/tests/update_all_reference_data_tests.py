@@ -49,7 +49,7 @@ class BaseUpdateAllReferenceDataTest(ReferenceDataCommandTestCase):
 
 
 class NewDbUpdateAllReferenceDataTest(BaseUpdateAllReferenceDataTest):
-    fixtures = []
+    fixtures = ['users']
 
     def test_empty_db_update_all_reference_data_command(self):
         with self.assertRaises(CommandError) as e:
