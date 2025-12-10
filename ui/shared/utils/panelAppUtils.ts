@@ -41,6 +41,11 @@ export const moiToMoiInitials = (rawMoi: string | undefined | null, initialsOnly
   return initialsOnly ? [] : [OTHER_MOI]
 }
 
+const PANEL_APP_SOURCES: Record<string, string> = {
+  AU: 'https://panelapp-aus.org',
+  UK: 'https://panelapp.genomicsengland.co.uk',
+}
+
 /**
  * Constructs a PanelApp URL based on API URL, panel ID, and gene.
  *
@@ -50,14 +55,14 @@ export const moiToMoiInitials = (rawMoi: string | undefined | null, initialsOnly
  * @returns {string} The constructed PanelApp URL, or an empty string if any of the parameters are falsy.
  */
 export const panelAppUrl = (
-  apiUrl: string | undefined | null,
+  source: string | undefined | null,
   panelId: number | undefined | null,
   gene: string | undefined | null,
 ) => {
-  if (!apiUrl || !panelId || !gene) {
+  if (!source || !panelId || !gene) {
     return ''
   }
-  const baseUrl = apiUrl.split('/api')[0]
+  const baseUrl = PANEL_APP_SOURCES[source]
 
   return `${baseUrl}/panels/${panelId}/gene/${gene}`
 }
