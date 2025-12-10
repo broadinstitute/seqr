@@ -318,9 +318,9 @@ SETTINGS input_format_tsv_crlf_end_of_line = 1
 """
 
 LOCAL_CONSTRAINT_MITO_ALL_VARIANTS_MV = """
-CREATE MATERIALIZED VIEW `GRCh38/MITO/reference_data/mitimpact/all_variants_mv`
+CREATE MATERIALIZED VIEW `GRCh38/MITO/reference_data/local_constraint_mito/all_variants_mv`
 REFRESH EVERY 10 YEAR
-TO `GRCh38/MITO/reference_data/mitimpact/all_variants`
+TO `GRCh38/MITO/reference_data/local_constraint_mito/all_variants`
 EMPTY AS SELECT 
     concat('M', '-', Position, '-', Reference, '-', Alternate) as variantId,
     CAST(MLC_score AS Decimal(9, 5)) AS score
