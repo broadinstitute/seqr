@@ -306,7 +306,7 @@ REFRESH EVERY 10 YEAR
 TO `GRCh38/MITO/reference_data/mitimpact/all_variants`
 EMPTY AS SELECT 
     variantId,
-    max(score)
+    max(score) as score
 FROM (
     SELECT
         concat('M', '-', Start, '-', Ref, '-', Alt) as variantId,
