@@ -93,12 +93,6 @@ def import_all_panels(source):
     SeqrLocusList.bulk_update_models(user=None, models=updated_seqr_locuslists, fields=['description'])
 
 
-def delete_all_panels(source):
-    with transaction.atomic():
-        to_delete_qs = SeqrLocusList.objects.filter(palocuslist__source=source)
-        SeqrLocusList.bulk_delete(user=None, queryset=to_delete_qs)
-
-
 def _update_locus_list_genes_bulk(seqr_locus_list, gene_ids, panel_genes_by_id):
     logger.info('Bulk updating genes for list {}'.format(seqr_locus_list), user=None)
     SeqrLocusList.bulk_delete(user=None, queryset=seqr_locus_list.locuslistgene_set.all())
