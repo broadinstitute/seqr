@@ -38,7 +38,7 @@ def import_all_panels(source):
             return None
 
     existing_lists_by_id = {ll.panel_app_id: ll for ll in PaLocusList.objects.filter(source=source)}
-    
+
     panels_api_url = f'{PANEL_APP_SOURCES[source]}/api/v1/panels'
     panels_url = f'{panels_api_url}/?page=1'
     updated_panels = _get_updated_panels(panels_url, {}, existing_lists_by_id)
