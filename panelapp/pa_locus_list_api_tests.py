@@ -127,6 +127,7 @@ class PaLocusListAPITest(AuthenticationTestCase, BaseLocusListAPITest):
         self.assertEqual(len(responses.calls), 7)
         self.assert_json_logs(None, [
             ('Starting import of all gene lists from Panel App AU', None),
+            ('Found 2 panels to load', None),
             ('Importing panel id 260', None),
             ('create LocusList LL00007_hereditary_haemorrhagi', {'dbUpdate': {
                 'dbEntity': 'LocusList',
@@ -158,6 +159,7 @@ class PaLocusListAPITest(AuthenticationTestCase, BaseLocusListAPITest):
             ('Bulk updating genes for list Hereditary Neuropathy_CMT - isolated', None),
             ('---Done---', None),
             ('Starting import of all gene lists from Panel App UK', None),
+            ('Found 1 panels to load', None),
             ('Importing panel id 260', None),
             ('create LocusList LL00009_auditory_neuropathy_sp', {'dbUpdate': {
                 'dbEntity': 'LocusList',
@@ -185,14 +187,10 @@ class PaLocusListAPITest(AuthenticationTestCase, BaseLocusListAPITest):
         self.assertEqual(len(responses.calls), 3)
         self.assert_json_logs(None, [
             ('Starting import of all gene lists from Panel App AU', None),
-            ('Importing panel id 260', None),
-            ('Panel id 260 is up to date, skipping import', None),
-            ('Importing panel id 3069', None),
-            ('Panel id 3069 is up to date, skipping import', None),
+            ('Found 0 panels to load', None),
             ('---Done---', None),
             ('Starting import of all gene lists from Panel App UK', None),
-            ('Importing panel id 260', None),
-            ('Panel id 260 is up to date, skipping import', None),
+            ('Found 0 panels to load', None),
             ('---Done---', None),
         ])
 

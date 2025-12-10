@@ -36,20 +36,20 @@ def import_all_panels(source):
         else:
             return None
 
+    existing_lists_by_id = {ll.panel_app_id: ll for ll in PaLocusList.objects.filter(source=source)}
+    
     panels_api_url = f'{PANEL_APP_SOURCES[source]}/api/v1/panels'
     panels_url = f'{panels_api_url}/?page=1'
-    all_panels = _get_all_panels(panels_url, [])
+    updated_panels = _get_updated_panels(panels_url, {}, existing_lists_by_id)
+    logger.info(f'Found {len(updated_panels)} panels to load', user=None)
 
     genes_by_panel_id = defaultdict(list)
 
-    existing_lists_by_id = {ll.panel_app_id: ll for ll in PaLocusList.objects.filter(source=source)}
-
-    for panel in all_panels:
-        panel_app_id = panel.get('id')
+    for panel_app_id, panel in updated_panels.items():
         logger.info('Importing panel id {}'.format(panel_app_id), user=None)
         try:
             with transaction.atomic():
-                pa_locus_list = _create_or_update_locus_list_from_panel(source, panel, existing_lists_by_id)
+                pa_locus_list = _create_or_update_locus_list_from_panel(source, panel_app_id, panel, existing_lists_by_id)
                 if not pa_locus_list:
                     logger.info('Panel id {} is up to date, skipping import'.format(panel_app_id), user=None)
                     continue
@@ -118,17 +118,21 @@ def _create_pa_locus_list_gene(seqr_locus_list_gene, panel_gene_json):
     return result
 
 
-def _get_all_panels(panels_url, all_results):
+def _get_updated_panels(panels_url, results, existing_lists_by_id):
     resp = requests.get(panels_url, timeout=REQUEST_TIMEOUT_S)
     resp_json = resp.json()
-    curr_page_results = [r for r in resp_json.get('results', []) if r.get('stats', {}).get('number_of_genes', 0) > 0]
-    all_results += curr_page_results
+    for result in resp_json.get('results', []):
+        panel_app_id = result.get('id')
+        existing_list = existing_lists_by_id.get(panel_app_id)
+        current_version = existing_list.version if existing_list else None
+        if result.get('version') != current_version and result.get('stats', {}).get('number_of_genes', 0) > 0:
+            results[panel_app_id] = result
 
     next_page = resp_json.get('next', None)
     if next_page is None:
-        return all_results
+        return results
     else:
-        return _get_all_panels(next_page, all_results)
+        return _get_updated_panels(next_page, results, existing_lists_by_id)
 
 
 def _get_all_genes(panel_app_id: int, genes_url: str, results_by_panel_id: dict):
@@ -158,13 +162,8 @@ def _get_all_genes(panel_app_id: int, genes_url: str, results_by_panel_id: dict)
         return _get_all_genes(panel_app_id, next_page, results_by_panel_id)
 
 
-def _create_or_update_locus_list_from_panel(source, panel_json, existing_lists_by_id):
-    panel_app_id = panel_json.get('id')
-    pa_locus_list = existing_lists_by_id.get(panel_app_id)
+def _create_or_update_locus_list_from_panel(source, panel_app_id, panel_json, existing_lists_by_id):
     version = panel_json.get('version') or None
-    if pa_locus_list and pa_locus_list.version == version:
-        return None
-
     name = panel_json['name']
     disease_group = panel_json.get('disease_group') or None
     disease_sub_group = panel_json.get('disease_sub_group') or None
@@ -184,6 +183,8 @@ def _create_or_update_locus_list_from_panel(source, panel_json, existing_lists_b
         'version_created': version_created,
         'source': source,
     }
+
+    pa_locus_list = existing_lists_by_id.get(panel_app_id)
     if pa_locus_list:
         update_model_from_json(pa_locus_list.seqr_locus_list, new_seqrlocuslist_json, user=None)
     else:
