@@ -30,8 +30,8 @@ PA_LOCUS_LIST_DETAIL_FIELDS = {'items', 'intervalGenomeVersion'}
 PA_LOCUS_LIST_DETAIL_FIELDS.update(PA_LOCUS_LIST_FIELDS)
 PA_GENE_FIELDS = {'confidenceLevel', 'modeOfInheritance'}
 
-PANEL_APP_API_URL_AU = 'https://test-panelapp.url.au/api'
-PANEL_APP_API_URL_UK = 'https://test-panelapp.url.uk/api'
+PANEL_APP_API_URL_AU = 'https://panelapp-aus.org/api/v1'
+PANEL_APP_API_URL_UK = 'https://panelapp.genomicsengland.co.uk/api/v1'
 
 
 def _get_json_from_file(filepath):
@@ -87,14 +87,17 @@ class PaLocusListAPITest(AuthenticationTestCase, BaseLocusListAPITest):
         responses.add(responses.GET, uk_panels_p1_url, json=uk_panels_p1_json, status=200)
         responses.add(responses.GET, uk_genes_url, json=uk_genes_json, status=200)
 
-        # URl argument is required
+        # test required usage
         with self.assertRaises(CommandError) as err:
             call_command('import_all_panels')
-        self.assertEqual(str(err.exception), 'Error: the following arguments are required: panel_app_url')
+        self.assertEqual(str(err.exception), 'Error: the following arguments are required: source')
+        with self.assertRaises(CommandError) as err:
+            call_command('import_all_panels', 'MY_SOURCE')
+        self.assertEqual(str(err.exception), "Error: argument source: invalid choice: 'MY_SOURCE' (choose from 'AU', 'UK')")
 
         # when import_all_panels()
-        call_command('import_all_panels', PANEL_APP_API_URL_AU)
-        call_command('import_all_panels', PANEL_APP_API_URL_UK, '--label', 'UK')
+        call_command('import_all_panels', 'AU')
+        call_command('import_all_panels', 'UK')
 
         # then lists from PanelApp are created
         self._assert_lists_imported()
@@ -123,7 +126,7 @@ class PaLocusListAPITest(AuthenticationTestCase, BaseLocusListAPITest):
         # and has expected logs
         self.assertEqual(len(responses.calls), 7)
         self.assert_json_logs(None, [
-            ('Starting import of all gene lists from Panel App [https://test-panelapp.url.au/api]', None),
+            ('Starting import of all gene lists from Panel App AU', None),
             ('Importing panel id 260', None),
             ('create LocusList LL00007_hereditary_haemorrhagi', {'dbUpdate': {
                 'dbEntity': 'LocusList',
@@ -135,7 +138,7 @@ class PaLocusListAPITest(AuthenticationTestCase, BaseLocusListAPITest):
                 'dbEntity': 'PaLocusList',
                 'entityId': 7,
                 'updateType': 'update',
-                'updateFields': ['disease_group', 'status', 'url', 'version', 'version_created'],
+                'updateFields': ['disease_group', 'status', 'version', 'version_created'],
             }}),
             ('Bulk updating genes for list Hereditary Haemorrhagic Telangiectasia', None),
             ('Importing panel id 3069', None),
@@ -149,12 +152,12 @@ class PaLocusListAPITest(AuthenticationTestCase, BaseLocusListAPITest):
                 'dbEntity': 'PaLocusList',
                 'entityId': 8,
                 'updateType': 'update',
-                'updateFields': ['disease_group', 'status', 'url', 'version', 'version_created'],
+                'updateFields': ['disease_group', 'status', 'version', 'version_created'],
             }}),
             ("Genes found in panel 3069 but not in reference data, ignoring genes ['ENSG00000104728']", {'severity': 'WARNING'}),
             ('Bulk updating genes for list Hereditary Neuropathy_CMT - isolated', None),
             ('---Done---', None),
-            ('Starting import of all gene lists from Panel App [https://test-panelapp.url.uk/api]', None),
+            ('Starting import of all gene lists from Panel App UK', None),
             ('Importing panel id 260', None),
             ('create LocusList LL00009_auditory_neuropathy_sp', {'dbUpdate': {
                 'dbEntity': 'LocusList',
@@ -166,7 +169,7 @@ class PaLocusListAPITest(AuthenticationTestCase, BaseLocusListAPITest):
                 'dbEntity': 'PaLocusList',
                 'entityId': 9,
                 'updateType': 'update',
-                'updateFields': ['disease_group', 'disease_sub_group', 'status', 'url', 'version', 'version_created'],
+                'updateFields': ['disease_group', 'disease_sub_group', 'status', 'version', 'version_created'],
             }}),
             ('Bulk updating genes for list Auditory Neuropathy Spectrum Disorde', None),
             ('---Done---', None),
@@ -175,19 +178,19 @@ class PaLocusListAPITest(AuthenticationTestCase, BaseLocusListAPITest):
         # and import is idempotent
         self.reset_logs()
         responses.calls.reset()
-        call_command('import_all_panels', PANEL_APP_API_URL_AU)
-        call_command('import_all_panels', PANEL_APP_API_URL_UK, '--label', 'UK')
+        call_command('import_all_panels', 'AU')
+        call_command('import_all_panels', 'UK')
         self._assert_lists_imported()
 
         self.assertEqual(len(responses.calls), 3)
         self.assert_json_logs(None, [
-            ('Starting import of all gene lists from Panel App [https://test-panelapp.url.au/api]', None),
+            ('Starting import of all gene lists from Panel App AU', None),
             ('Importing panel id 260', None),
             ('Panel id 260 is up to date, skipping import', None),
             ('Importing panel id 3069', None),
             ('Panel id 3069 is up to date, skipping import', None),
             ('---Done---', None),
-            ('Starting import of all gene lists from Panel App [https://test-panelapp.url.uk/api]', None),
+            ('Starting import of all gene lists from Panel App UK', None),
             ('Importing panel id 260', None),
             ('Panel id 260 is up to date, skipping import', None),
             ('---Done---', None),
@@ -209,11 +212,11 @@ class PaLocusListAPITest(AuthenticationTestCase, BaseLocusListAPITest):
         self.assertDictEqual(new_au_response.json()['locusListsByGuid'][NEW_AU_PA_LOCUS_LIST_GUID], {
             'locusListGuid': NEW_AU_PA_LOCUS_LIST_GUID,
             'name': 'Hereditary Neuropathy_CMT - isolated',
-            'description': 'PanelApp_3069_0.199_Neurology and neurodevelopmental disorders',
+            'description': 'PanelApp_AU_3069_0.199_Neurology and neurodevelopmental disorders',
             'items': [{'geneId': 'ENSG00000090861', 'pagene': {
                 'confidenceLevel': '3', 'modeOfInheritance': 'MONOALLELIC, autosomal or pseudoautosomal, imprinted status unknown',
             }}],
-            'paLocusList': {'url': 'https://test-panelapp.url.au/api/panels/3069/genes', 'panelAppId': 3069},
+            'paLocusList': {'source': 'AU', 'panelAppId': 3069},
             'numEntries': 1, 'isPublic': True, 'createdBy': None,
             'canEdit': False, 'createdDate': mock.ANY, 'lastModifiedDate': mock.ANY, 'intervalGenomeVersion': None,
         })
@@ -225,14 +228,14 @@ class PaLocusListAPITest(AuthenticationTestCase, BaseLocusListAPITest):
             'items': [{'geneId': 'ENSG00000139734', 'pagene': {
                 'confidenceLevel': '2', 'modeOfInheritance': 'BOTH monoallelic and biallelic, autosomal or pseudoautosomal',
             }}],
-            'paLocusList': {'url': 'https://test-panelapp.url.uk/api/panels/260/genes', 'panelAppId': 260},
+            'paLocusList': {'source': 'UK', 'panelAppId': 260},
             'numEntries': 1, 'isPublic': True, 'createdBy': None,
             'canEdit': False, 'createdDate': mock.ANY, 'lastModifiedDate': mock.ANY, 'intervalGenomeVersion': None,
         })
 
     def test_delete_all_panels(self):
         # when delete all AU panels
-        call_command('import_all_panels', '--delete', PANEL_APP_API_URL_AU)
+        call_command('import_all_panels', '--delete', 'AU')
 
         locuslists_url = reverse(locus_lists)
         self.login_base_user()
@@ -244,13 +247,19 @@ class PaLocusListAPITest(AuthenticationTestCase, BaseLocusListAPITest):
         self.assertSetEqual(set(locus_lists_dict.keys()), {LOCUS_LIST_GUID, EXISTING_UK_PA_LOCUS_LIST_GUID})
 
         # when delete all UK panels
-        call_command('import_all_panels', '--delete', PANEL_APP_API_URL_UK)
+        call_command('import_all_panels', '--delete', 'UK')
 
         # then only non panelapp gene lists remain
         response = self.client.get(locuslists_url)
         self.assertEqual(response.status_code, 200)
         locus_lists_dict = response.json()['locusListsByGuid']
-        self.assertSetEqual(set(locus_lists_dict.keys()), {LOCUS_LIST_GUID})
+        self.assertDictEqual(locus_lists_dict, {})
+
+        self.login_analyst_user()
+        response = self.client.get(locuslists_url)
+        self.assertEqual(response.status_code, 200)
+        locus_lists_dict = response.json()['locusListsByGuid']
+        self.assertSetEqual(set(locus_lists_dict.keys()), {PRIVATE_LOCUS_LIST_GUID})
 
     @mock.patch("panelapp.panelapp_utils.requests.get")
     def test_get_all_genes_exhausts_retries(self, mock_get_request):

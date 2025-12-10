@@ -24,7 +24,7 @@ class PaLocusList(models.Model):
     class Meta:
         unique_together = ('source', 'panel_app_id')
 
-        json_fields = ['url', 'panel_app_id']
+        json_fields = ['source', 'panel_app_id']
 
 
 class PaLocusListGene(models.Model):
