@@ -19,4 +19,3 @@ class Command(BaseCommand):
         data_cls = next(model for model in [PanelAppAU, PanelAppUK] if model.SOURCE == source)
         gene_ids_to_gene, _ = get_genes_by_id_and_symbol()
         data_cls.update_records(gene_ids_to_gene=gene_ids_to_gene)
-        logger.info('---Done---')

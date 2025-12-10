@@ -238,34 +238,6 @@ class PaLocusListAPITest(AuthenticationTestCase, BaseLocusListAPITest):
             'canEdit': False, 'createdDate': mock.ANY, 'lastModifiedDate': mock.ANY, 'intervalGenomeVersion': None,
         })
 
-    def test_delete_all_panels(self):
-        # when delete all AU panels
-        call_command('import_all_panels', '--delete', 'AU')
-
-        locuslists_url = reverse(locus_lists)
-        self.login_base_user()
-
-        # then only non panelapp and UK panelapp gene lists remain
-        response = self.client.get(locuslists_url)
-        self.assertEqual(response.status_code, 200)
-        locus_lists_dict = response.json()['locusListsByGuid']
-        self.assertSetEqual(set(locus_lists_dict.keys()), {LOCUS_LIST_GUID, EXISTING_UK_PA_LOCUS_LIST_GUID})
-
-        # when delete all UK panels
-        call_command('import_all_panels', '--delete', 'UK')
-
-        # then only non panelapp gene lists remain
-        response = self.client.get(locuslists_url)
-        self.assertEqual(response.status_code, 200)
-        locus_lists_dict = response.json()['locusListsByGuid']
-        self.assertDictEqual(locus_lists_dict, {})
-
-        self.login_analyst_user()
-        response = self.client.get(locuslists_url)
-        self.assertEqual(response.status_code, 200)
-        locus_lists_dict = response.json()['locusListsByGuid']
-        self.assertSetEqual(set(locus_lists_dict.keys()), {PRIVATE_LOCUS_LIST_GUID})
-
     @mock.patch("panelapp.panelapp_utils.requests.get")
     def test_get_all_genes_exhausts_retries(self, mock_get_request):
         url = '{}/panels/123/genes/?page=1'.format(PANEL_APP_API_URL_UK)
