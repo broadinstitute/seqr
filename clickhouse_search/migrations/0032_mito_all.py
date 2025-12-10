@@ -700,7 +700,7 @@ class Migration(migrations.Migration):
         migrations.RunSQL(
             LOCAL_CONSTRAINT_MITO_ALL_VARIANTS_MV,
             hints={"clickhouse": True},
-        )
+        ),
         migrations.RunSQL(
             MITOMAP_SEARCH,
             hints={"clickhouse": True},
@@ -711,7 +711,7 @@ class Migration(migrations.Migration):
         migrations.RunSQL(
             MITOMAP_ALL_VARIANTS_MV,
             hints={"clickhouse": True},
-        )
+        ),
         migrations.RunPython(
             conditionally_refresh_view(
                 reference_dataset="gnomad_mito",
