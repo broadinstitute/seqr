@@ -40,10 +40,7 @@ RANGE(MIN start MAX end)
 ))
 
 PEXT_VIEW = Template("""
-CREATE MATERIALIZED VIEW `GRCh38/$dataset_type/reference_data/pext/all_variants_mv`
-REFRESH EVERY 10 YEAR
-TO `GRCh38/$dataset_type/reference_data/pext/all_variants`
-EMPTY
+$mv_header
 AS SELECT
     replaceOne(splitByChar(':', assumeNotNull(locus))[1], 'chr', '') AS chrom,
     toUInt32(splitByChar(':', assumeNotNull(locus))[2]) AS pos,
