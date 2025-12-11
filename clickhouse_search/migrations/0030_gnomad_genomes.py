@@ -10,7 +10,7 @@ import django.db.models.manager
 
 from settings import DATABASES, PIPELINE_RUNNER_SERVER
 
-from clickhouse_search.migration_templates import ALL_TO_SEQR_MV, conditionally_refresh_reference_dataset
+from clickhouse_search.migration_templates import ALL_TO_SEQR_MV, ALL_VARIANTS_MV_HEADER, conditionally_refresh_reference_dataset
 
 CLICKHOUSE_WRITER_PASSWORD = os.environ.get('CLICKHOUSE_WRITER_PASSWORD', 'clickhouse_test')
 CLICKHOUSE_WRITER_USER = os.environ.get('CLICKHOUSE_WRITER_USER', 'clickhouse')
@@ -42,10 +42,7 @@ LAYOUT(FLAT(MAX_ARRAY_SIZE $size))
 ))
 
 GNOMAD_GENOMES_ALL_VARIANTS_MV = Template("""
-CREATE MATERIALIZED VIEW `$reference_genome/SNV_INDEL/reference_data/gnomad_genomes/all_variants_mv`
-REFRESH EVERY 10 YEAR
-TO `$reference_genome/SNV_INDEL/reference_data/gnomad_genomes/all_variants`
-EMPTY
+$mv_header
 AS SELECT
     variant_id as variantId,
     AC as ac,
@@ -146,12 +143,14 @@ class Migration(migrations.Migration):
         ),
         migrations.RunSQL(
             GNOMAD_GENOMES_ALL_VARIANTS_MV.substitute(
+                mv_header=ALL_VARIANTS_MV_HEADER.substitute(reference_genome="GRCh37"),
                 reference_genome="GRCh37",
             ),
             hints={"clickhouse": True},
         ),
         migrations.RunSQL(
             GNOMAD_GENOMES_ALL_VARIANTS_MV.substitute(
+                mv_header=ALL_VARIANTS_MV_HEADER.substitute(reference_genome="GRCh38"),
                 reference_genome="GRCh38",
             ),
             hints={"clickhouse": True},
