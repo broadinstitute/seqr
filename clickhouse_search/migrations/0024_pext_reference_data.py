@@ -8,36 +8,7 @@ import clickhouse_search.backend.fields
 from django.db import migrations
 import django.db.models.manager
 
-from clickhouse_search.migration_templates import ALL_VARIANTS_MV_HEADER, conditionally_refresh_reference_dataset
-
-from settings import DATABASES, PIPELINE_RUNNER_SERVER
-
-CLICKHOUSE_WRITER_PASSWORD = os.environ.get('CLICKHOUSE_WRITER_PASSWORD', 'clickhouse_test')
-CLICKHOUSE_WRITER_USER = os.environ.get('CLICKHOUSE_WRITER_USER', 'clickhouse')
-
-PEXT_SEARCH = Template(Template("""
-CREATE DICTIONARY `GRCh38/$dataset_type/reference_data/pext`
-(
-    chrom String,
-    start UInt32,
-    end UInt32,
-    expPropMean Nullable(Decimal(9, 5))
-)
-PRIMARY KEY chrom
-SOURCE(CLICKHOUSE(
-    USER '$clickhouse_writer_user'
-    PASSWORD '$clickhouse_writer_password'
-    QUERY 'SELECT chrom, pos as start, pos as end, expPropMean FROM `GRCh38/$dataset_type/reference_data/pext/all_variants`'
-))
-LIFETIME(MIN 0 MAX 0)
-LAYOUT(RANGE_HASHED())
-RANGE(MIN start MAX end)
-""").safe_substitute(
-    # Note the nested Template-ing that allows
-    # double substitution these shared values
-    clickhouse_writer_user=CLICKHOUSE_WRITER_USER,
-    clickhouse_writer_password=CLICKHOUSE_WRITER_PASSWORD,
-))
+from clickhouse_search.migration_templates import ALL_VARIANTS_MV_HEADER, conditionally_refresh_reference_dataset, render_search_dictionary
 
 PEXT_VIEW = Template("""
 $mv_header
@@ -90,14 +61,36 @@ class Migration(migrations.Migration):
             ],
         ),
         migrations.RunSQL(
-            PEXT_SEARCH.substitute(
-                dataset_type='SNV_INDEL',
+            render_search_dictionary(
+                reference_genome="GRCh38",
+                dataset_type="SNV_INDEL",
+                reference_dataset="pext",
+                columns="""
+                    chrom String,
+                    start UInt32,
+                    end UInt32,
+                    expPropMean Nullable(Decimal(9, 5))
+                """,
+                primary_key="chrom",
+                source="QUERY 'SELECT chrom, pos as start, pos as end, expPropMean FROM `GRCh38/SNV_INDEL/reference_data/pext/all_variants`'",
+                layout="RANGE_HASHED()"
             ),
             hints={'clickhouse': True},
         ),
         migrations.RunSQL(
-            PEXT_SEARCH.substitute(
-                dataset_type='MITO',
+            render_search_dictionary(
+                reference_genome="GRCh38",
+                dataset_type="MITO",
+                reference_dataset="pext",
+                columns="""
+                    chrom String,
+                    start UInt32,
+                    end UInt32,
+                    expPropMean Nullable(Decimal(9, 5))
+                """,
+                primary_key="chrom",
+                source="QUERY 'SELECT chrom, pos as start, pos as end, expPropMean FROM `GRCh38/SNV_INDEL/reference_data/pext/all_variants`'",
+                layout="RANGE_HASHED()"
             ),
             hints={'clickhouse': True},
         ),
