@@ -151,7 +151,7 @@ class Migration(migrations.Migration):
                 primary_key="key",
                 source="TABLE `GRCh37/SNV_INDEL/reference_data/topmed/seqr_variants`",
                 layout="FLAT(MAX_ARRAY_SIZE 200000000)",
-            )
+            ),
             hints={"clickhouse": True},
         ),
         migrations.RunSQL(
@@ -170,7 +170,7 @@ class Migration(migrations.Migration):
                 primary_key="key",
                 source="TABLE `GRCh38/SNV_INDEL/reference_data/topmed/seqr_variants`",
                 layout="FLAT(MAX_ARRAY_SIZE 1000000000)",
-            )
+            ),
             hints={"clickhouse": True},
         ),
         migrations.RunPython(
