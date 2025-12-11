@@ -50,25 +50,28 @@ class ReferenceDataCommandTestCase(AuthenticationTestCase):
         call_command('update_all_reference_data', *(command_args or []))
 
 
-    def _test_update_command(self, model_name, expected_version, existing_records=1, created_records=1, skipped_records=1, head_response=None, command_args=None, version_check_download=False):
+    def _test_update_command(self, model_name, expected_version, existing_records=1, created_records=1, skipped_records=1, head_response=None, command_args=None, additional_log=None, additional_log_offset=0, version_check_download=False):
         DataVersions.objects.filter(data_model_name=model_name).delete()
 
         # test without a file_path parameter
         self._run_command(self.DATA, head_response=head_response, command_args=command_args)
 
         tmp_file = '{}/{}'.format(self.tmp_dir, self.URL.split('/')[-1])
-        download_log = (f'Downloading {self.URL} to {tmp_file}', None)
+        download_log = [f'Downloading {self.URL} to {tmp_file}', None]
+        deleted_log = [f'Deleted {existing_records} {model_name} records', None]
         log_calls = [
             (f'Updating {model_name}', None),
             download_log,
             (f'Parsing file {tmp_file}', None),
-            (f'Deleted {existing_records} {model_name} records', None),
+            deleted_log,
             (f'Created {created_records} {model_name} records', None),
             ('Done', None),
             (f'Loaded {created_records} {model_name} records', None),
         ]
         if version_check_download:
             log_calls.insert(0, download_log)
+        if additional_log:
+            log_calls.insert(additional_log_offset, additional_log)
         if skipped_records:
             log_calls.append((f'Skipped {skipped_records} records with unrecognized genes.', None))
         log_calls += [
@@ -89,8 +92,6 @@ class ReferenceDataCommandTestCase(AuthenticationTestCase):
             'headers': {**headers, "Content-Length": f"{os.path.getsize(tmp_file)}"},
         }
         self._run_command(data=None, head_response=head_response, command_args=command_args)
-        download_log_indices = [0, 2] if version_check_download else [1]
-        for index in download_log_indices:
-            log_calls[index] = (f'Re-using {tmp_file} previously downloaded from {self.URL}', None)
-        log_calls[download_log_indices[-1] + 2] = (f'Deleted {created_records} {model_name} records', None)
+        download_log[0] = f'Re-using {tmp_file} previously downloaded from {self.URL}'
+        deleted_log[0] = f'Deleted {created_records} {model_name} records'
         self.assert_json_logs(user=None, expected=log_calls)

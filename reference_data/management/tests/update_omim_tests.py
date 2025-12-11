@@ -73,20 +73,18 @@ class UpdateOmimTest(ReferenceDataCommandTestCase):
                 }),
             ])
 
-    @mock.patch('seqr.utils.file_utils.logger')
     @mock.patch('seqr.views.utils.export_utils.open')
     @mock.patch('seqr.views.utils.export_utils.TemporaryDirectory')
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
-    def test_update_omim_command(self, mock_subprocess, mock_temp_dir, mock_open,mock_file_utils_logger):
+    def test_update_omim_command(self, mock_subprocess, mock_temp_dir, mock_open):
         mock_subprocess.return_value.wait.return_value = 0
         mock_temp_dir.return_value.__enter__.return_value = '/mock/tmp'
 
-        self._test_update_omim_command(command_args=['--omim-key=test_key'])
-
-        calls = [
-            mock.call('==> gsutil mv /mock/tmp/* gs://seqr-reference-data/omim/', None),
-        ]
-        mock_file_utils_logger.info.assert_has_calls(calls)
+        self._test_update_omim_command(
+            command_args=['--omim-key=test_key'],
+            additional_log=('==> gsutil mv /mock/tmp/* gs://seqr-reference-data/omim/', None),
+            additional_log_offset=3,
+        )
 
         mock_subprocess.assert_called_with('gsutil mv /mock/tmp/* gs://seqr-reference-data/omim/', stdout=-1, stderr=-2, shell=True)  # nosec
         mock_open.assert_called_with('/mock/tmp/parsed_omim_records__latest.txt', 'w')
