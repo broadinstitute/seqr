@@ -51,7 +51,7 @@ def render_search_dictionary(
     reference_dataset: str,
     columns: str,
     primary_key: str,
-    source: str,,
+    source: str,
     layout: str,
 ):
     range_block = f"RANGE(MIN start MAX end)" if layout == "RANGE_HASHED()" else ""    
