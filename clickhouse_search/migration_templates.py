@@ -75,7 +75,7 @@ def conditionally_refresh_reference_dataset(reference_dataset: str):
             return
         requests.post(
             f"{PIPELINE_RUNNER_SERVER}/refresh_clickhouse_reference_dataset_enqueue",
-            json={"reference_dataset": 'genomad_genomes'},
+            json={"reference_dataset": reference_dataset},
             timeout=60,
         )
     return inner
