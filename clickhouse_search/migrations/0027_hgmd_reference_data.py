@@ -9,7 +9,7 @@ from django.db import migrations, models, connections
 import django.db.models.deletion
 import django.db.models.manager
 
-from clickhouse_search.migration_templates import ALL_TO_SEQR_MV, conditionally_refresh_reference_dataset
+from clickhouse_search.migration_templates import ALL_TO_SEQR_MV, ALL_VARIANTS_MV_HEADER, conditionally_refresh_reference_dataset
 
 from settings import DATABASES, PIPELINE_RUNNER_SERVER
 
@@ -20,10 +20,7 @@ GCS_NAMED_COLLECTION = 'pipeline_data_access'
 HGMD_INFO_STRUCTURE = 'CHROM String, POS UInt32, ID String, REF String, ALT String, QUAL String, FILTER String, INFO String'
 
 HGMD_ALL_VARIANTS_MV = Template("""
-CREATE MATERIALIZED VIEW `$reference_genome/SNV_INDEL/reference_data/hgmd/all_variants_mv`
-REFRESH EVERY 10 YEAR
-TO `$reference_genome/SNV_INDEL/reference_data/hgmd/all_variants`
-EMPTY
+$mv_header
 AS SELECT
     arrayStringConcat([
         replaceOne(replaceOne(CHROM, 'chr', ''), 'MT', 'M'),
@@ -53,6 +50,7 @@ def build_hgmd_all_variants_mv(reference_genome: str, hgmd_url: str):
         with connections['clickhouse_write'].cursor() as cursor:
             cursor.execute(
                 HGMD_ALL_VARIANTS_MV.substitute(
+                    mv_header=ALL_VARIANTS_MV_HEADER.substitute(reference_genome=reference_genome, dataset_type="SNV_INDEL", reference_dataset="hgmd"),
                     reference_genome=reference_genome,
                     table_structure=
                     (

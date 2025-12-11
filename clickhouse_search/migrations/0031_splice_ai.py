@@ -119,14 +119,14 @@ class Migration(migrations.Migration):
         ),
         migrations.RunSQL(
             SPLICE_AI_ALL_VARIANTS_MV.substitute(
-                mv_header=ALL_VARIANTS_MV_HEADER.substitute(reference_genome="GRCh37"),
+                mv_header=ALL_VARIANTS_MV_HEADER.substitute(reference_genome="GRCh37", dataset_type="SNV_INDEL", reference_dataset="splice_ai"),
                 reference_genome="GRCh37",
             ),
             hints={"clickhouse": True},
         ),
         migrations.RunSQL(
             SPLICE_AI_ALL_VARIANTS_MV.substitute(
-                mv_header=ALL_VARIANTS_MV_HEADER.substitute(reference_genome="GRCh38"),
+                mv_header=ALL_VARIANTS_MV_HEADER.substitute(reference_genome="GRCh38", dataset_type="SNV_INDEL", reference_dataset="splice_ai"),
                 reference_genome="GRCh38",
             ),
             hints={"clickhouse": True},

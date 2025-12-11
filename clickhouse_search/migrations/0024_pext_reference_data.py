@@ -8,7 +8,7 @@ import clickhouse_search.backend.fields
 from django.db import migrations
 import django.db.models.manager
 
-from clickhouse_search.migration_templates import conditionally_refresh_reference_dataset
+from clickhouse_search.migration_templates import ALL_VARIANTS_MV_HEADER, conditionally_refresh_reference_dataset
 
 from settings import DATABASES, PIPELINE_RUNNER_SERVER
 
@@ -106,12 +106,14 @@ class Migration(migrations.Migration):
         ),
         migrations.RunSQL(
             PEXT_VIEW.substitute(
+                mv_header=ALL_VARIANTS_MV_HEADER.substitute(reference_genome="GRCh38", dataset_type="SNV_INDEL", reference_dataset="pext"),
                 dataset_type='SNV_INDEL',
             ),
             hints={'clickhouse': True},
         ),
         migrations.RunSQL(
             PEXT_VIEW.substitute(
+                mv_header=ALL_VARIANTS_MV_HEADER.substitute(reference_genome="GRCh38", dataset_type="MITO", reference_dataset="pext"),
                 dataset_type='MITO',
             ),
             hints={'clickhouse': True},

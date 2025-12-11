@@ -8,7 +8,7 @@ import clickhouse_search.backend.fields
 from django.db import migrations
 import django.db.models.manager
 
-from clickhouse_search.migration_templates import conditionally_refresh_reference_dataset
+from clickhouse_search.migration_templates import ALL_VARIANTS_MV_HEADER, conditionally_refresh_reference_dataset
 
 from settings import DATABASES, PIPELINE_RUNNER_SERVER
 
@@ -41,10 +41,7 @@ RANGE(MIN start MAX end)
 
 # Original file sourced from `https://downloads.wenglab.org/V3/GRCh38-cCREs.bed`
 SCREEN_VIEW = """
-CREATE MATERIALIZED VIEW `GRCh38/SNV_INDEL/reference_data/screen/all_variants_mv`
-REFRESH EVERY 10 YEAR
-TO `GRCh38/SNV_INDEL/reference_data/screen/all_variants`
-EMPTY
+$mv_header
 AS SELECT
     replaceOne(c1, 'chr', '') as chrom,
     toUInt32(assumeNotNull(c2)) as start,
@@ -83,7 +80,9 @@ class Migration(migrations.Migration):
             hints={'clickhouse': True},
         ),
         migrations.RunSQL(
-            SCREEN_VIEW,
+            SCREEN_VIEW.substitute(
+                mv_header=ALL_VARIANTS_MV_HEADER.substitute(reference_genome="GRCh38", dataset_type="SNV_INDEL", reference_dataset="screen")
+            ),
             hints={'clickhouse': True},
         ),
         migrations.RunPython(

@@ -41,10 +41,7 @@ LAYOUT(FLAT(MAX_ARRAY_SIZE $size))
 ))
 
 TOPMED_ALL_VARIANTS_MV = Template("""
-CREATE MATERIALIZED VIEW `$reference_genome/SNV_INDEL/reference_data/topmed/all_variants_mv`
-REFRESH EVERY 10 YEAR
-TO `$reference_genome/SNV_INDEL/reference_data/topmed/all_variants`
-EMPTY
+$mv_header
 AS SELECT
     variant_id as variantId,
     AC as ac,
@@ -140,12 +137,14 @@ class Migration(migrations.Migration):
         ),
         migrations.RunSQL(
             TOPMED_ALL_VARIANTS_MV.substitute(
+                mv_header=ALL_VARIANTS_MV_HEADER.substitute(reference_genome="GRCh37", dataset_type="SNV_INDEL", reference_dataset="topmed"),
                 reference_genome="GRCh37",
             ),
             hints={"clickhouse": True},
         ),
         migrations.RunSQL(
             TOPMED_ALL_VARIANTS_MV.substitute(
+                mv_header=ALL_VARIANTS_MV_HEADER.substitute(reference_genome="GRCh38", dataset_type="SNV_INDEL", reference_dataset="topmed"),
                 reference_genome="GRCh38",
             ),
             hints={"clickhouse": True},

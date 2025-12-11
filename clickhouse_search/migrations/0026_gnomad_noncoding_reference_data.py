@@ -8,7 +8,7 @@ import clickhouse_search.backend.fields
 from django.db import migrations
 import django.db.models.manager
 
-from clickhouse_search.migration_templates import conditionally_refresh_reference_dataset
+from clickhouse_search.migration_templates import ALL_VARIANTS_MV_HEADER, conditionally_refresh_reference_dataset
 
 from settings import DATABASES, PIPELINE_RUNNER_SERVER
 
@@ -40,10 +40,7 @@ RANGE(MIN start MAX end)
 )
 
 GNOMAD_NON_CODING_CONSTRAINT_VIEW = """
-CREATE MATERIALIZED VIEW `GRCh38/SNV_INDEL/reference_data/gnomad_non_coding_constraint/all_variants_mv`
-REFRESH EVERY 10 YEAR
-TO `GRCh38/SNV_INDEL/reference_data/gnomad_non_coding_constraint/all_variants`
-EMPTY
+$mv_header
 AS SELECT
     replaceOne(chrom, 'chr', '') as chrom,
     toUInt32(assumeNotNull(start)) as start,
@@ -82,7 +79,9 @@ class Migration(migrations.Migration):
             hints={'clickhouse': True},
         ),
         migrations.RunSQL(
-            GNOMAD_NON_CODING_CONSTRAINT_VIEW,
+            GNOMAD_NON_CODING_CONSTRAINT_VIEW.substitute(
+                mv_header=ALL_VARIANTS_MV_HEADER.substitute(reference_genome='GRCh38', dataset_type="SNV_INDEL", reference_dataset="gnomad_non_coding_constraint")
+            ),
             hints={'clickhouse': True},
         ),
         migrations.RunPython(
