@@ -555,18 +555,10 @@ def _validate_search(search, samples, previous_search_results):
         backend_specific_call(lambda *args: None, _validate_no_location_search)(samples)
 
 
-MAX_FAMILY_COUNTS = {Sample.SAMPLE_TYPE_WES: 200, Sample.SAMPLE_TYPE_WGS: 35}
-
-
 def _validate_no_location_search(samples):
     variant_samples = samples.filter(dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
     if variant_samples.values('individual__family__project_id').distinct().count() > 1:
         raise InvalidSearchException('Location must be specified to search across multiple projects')
-    sample_counts = samples.filter(dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS).values('sample_type').annotate(
-        family_count=Count('individual__family_id', distinct=True),
-    )
-    if any(sample_count['family_count'] > MAX_FAMILY_COUNTS[sample_count['sample_type']] for sample_count in sample_counts):
-        raise InvalidSearchException('Location must be specified to search across multiple families in large projects')
 
 
 def _filter_inheritance_family_samples(samples, inheritance_filter):
