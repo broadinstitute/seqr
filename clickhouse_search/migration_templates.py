@@ -15,9 +15,8 @@ ALL_TO_SEQR_MV = Template("""
 CREATE MATERIALIZED VIEW `$reference_genome/$dataset_type/reference_data/$reference_dataset/all_variants_to_seqr_variants_mv`
 REFRESH EVERY 10 YEAR
 TO `$reference_genome/$dataset_type/reference_data/$reference_dataset/seqr_variants`
-AS
 EMPTY
-SELECT
+AS SELECT
     DISTINCT ON (key)
     key,
     COLUMNS('.*') EXCEPT(version, variantId, key)
