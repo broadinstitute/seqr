@@ -376,7 +376,7 @@ def get_variants_reference_data_response(variants, genome_versions, get_family_g
     if any(genome_version == OMIM_GENOME_VERSION for genome_version in genome_versions):
         response['omimIntervals'] = _get_omim_intervals(variants)
 
-    backend_specific_call(lambda response: response, _add_sample_count_stats)(response)
+    backend_specific_call(lambda *args: None, _add_sample_count_stats)(response, genome_versions)
 
     return response
 
@@ -488,7 +488,7 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
     project = list(projects)[0] if len(projects) == 1 else None
 
     response.update(get_variants_reference_data_response(
-        variants, genome_versions={p.genome_version for p in projects}, get_family_genes=include_individual_gene_scores,
+        variants, genome_versions={genome_version} if genome_version else {p.genome_version for p in projects}, get_family_genes=include_individual_gene_scores,
     ))
 
     discovery_tags = None
@@ -557,9 +557,9 @@ def _set_response_gene_scores(response, family_genes, gene_ids):
     return _get_family_has_rna_tpm(present_family_genes, gene_ids, rna_sample_family_map)
 
 
-def _add_sample_count_stats(response):
+def _add_sample_count_stats(response, genome_versions):
     sample_counts = Sample.objects.filter(
-        is_active=True, individual__family__project__is_demo=False,
+        is_active=True, individual__family__project__is_demo=False, individual__family__project__genome_version__in=genome_versions,
     ).values('sample_type', 'dataset_type').annotate(count=Count('*'))
     counts_by_dataset_type = defaultdict(dict)
     for sample_type, dataset_type, count in sample_counts.values_list('sample_type', 'dataset_type', 'count'):

@@ -140,8 +140,8 @@ function getPaProps({ panelAppDetails, locusListDescription, paLocusList, geneSy
     }
   }
 
-  const { url, panelAppId } = paLocusList
-  const fullUrl = panelAppUrl(url, panelAppId, geneSymbol)
+  const { source, panelAppId } = paLocusList
+  const fullUrl = panelAppUrl(source, panelAppId, geneSymbol)
   const moi = panelAppDetails.moi || 'Unknown'
   const confidence = panelAppDetails.confidence || 'Unknown'
   const initials = moiToMoiInitials(moi).join(', ') || null

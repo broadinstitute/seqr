@@ -16,7 +16,7 @@ from reference_data.models import GENOME_VERSION_GRCh38
 from seqr.models import Project, Family, Individual, Sample, LocusList
 from seqr.utils.communication_utils import send_project_notification
 from seqr.utils.gene_utils import get_genes
-from seqr.utils.search.constants import ANY_AFFECTED, HOMOZYGOUS_RECESSIVE, X_LINKED_RECESSIVE_MALE_AFFECTED
+from seqr.utils.search.constants import ANY_AFFECTED, HOMOZYGOUS_RECESSIVE, X_LINKED_RECESSIVE_MALE_AFFECTED, DE_NOVO
 from seqr.utils.search.utils import clickhouse_only, get_search_samples, COMPOUND_HET
 from seqr.views.utils.orm_to_json_utils import SEQR_TAG_TYPE
 from seqr.views.utils.variant_utils import bulk_create_tagged_variants, gene_ids_annotated_queryset
@@ -39,466 +39,249 @@ ALL_SEARCHES_CRITERIA = {
     'exclude': {'clinvar': ['likely_benign', 'benign']}
 }
 
+DOMINANT_MOI = 'D'
+RECESSIVE_MOI = 'R'
+
+MAX_AFFECTED_FAMILY_FILTER = 'max_affected'
+CONFIRMED_FAMILY_FILTER = 'confirmed_inheritance'
+AFFECTED_MALE_FAMILY_FILTER = 'affected_males'
+
+CLINVAR_FILTER = {
+    'clinvar': ['pathogenic', 'likely_pathogenic', 'conflicting_p_lp'],
+    'clinvarMinStars': 1,
+}
+
+NON_CODING_TRANSCRIPT_EXON_VARIANT = 'non_coding_transcript_exon_variant'
+HIGH_ANNOTATIONS= {
+    'vep_consequences': [
+        'splice_donor_variant',
+        'splice_acceptor_variant',
+        'stop_gained',
+        'frameshift_variant',
+    ],
+}
+MODERATE_ANNOTATIONS = {
+    'vep_consequences': [
+        'stop_lost',
+        'start_lost',
+        'inframe_insertion',
+        'inframe_deletion',
+        'protein_altering_variant',
+        'missense_variant',
+        'splice_donor_5th_base_variant',
+        'splice_region_variant',
+        'splice_donor_region_variant',
+        'splice_polypyrimidine_tract_variant',
+        'extended_intronic_splice_region_variant',
+    ]
+}
+HIGH_MODERATE_ANNOTATIONS = {
+    'vep_consequences': [
+        *HIGH_ANNOTATIONS['vep_consequences'],
+        *MODERATE_ANNOTATIONS['vep_consequences'],
+        NON_CODING_TRANSCRIPT_EXON_VARIANT,
+    ]
+}
+SV_ANNOTATIONS = {
+    'structural_consequence': ['LOF', 'INTRAGENIC_EXON_DUP'],
+}
+
+RESTRICTIVE_FREQ_FILTER = {
+    'callset': {'ac': 100},
+    'gnomad_exomes': {'ac': 100},
+    'gnomad_genomes': {'ac': 100},
+    'sv_callset': {'ac': 100},
+    'gnomad_svs': {'af': 0.001},
+}
+PERMISSIVE_FREQ_FILTER = {
+    'callset': {'ac': 1000},
+    'gnomad_exomes': {'af': 0.01, 'hh': 5},
+    'gnomad_genomes': {'af': 0.01, 'hh': 5},
+    'sv_callset': {'ac': 500},
+    'gnomad_svs': {'af': 0.01},
+}
+
+IN_SILICO_FILTER = {
+    'cadd': 25,
+    'revel': 0.6
+}
+
+QUALITY_FILTER = {
+    'min_gq': 30,
+    'min_ab': 20
+}
+SV_QUALITY_FILTER = {
+    'min_gq_sv': 90,
+}
+PASS_QUALITY_FILTER = {
+    **QUALITY_FILTER,
+    **SV_QUALITY_FILTER,
+    'vcf_filter': 'PASS',
+}
+
+CLINVAR_RECESSIVE_SEARCH = {
+    'gene_list_moi': RECESSIVE_MOI,
+    'pathogenicity': CLINVAR_FILTER,
+    'freqs': {
+        'callset': {'ac': 2000},
+        'gnomad_exomes': {'af': 0.03},
+        'gnomad_genomes': {'af': 0.03}
+    },
+}
+
+RECESSIVE_SEARCH = {
+    'gene_list_moi': RECESSIVE_MOI,
+    'in_silico': IN_SILICO_FILTER,
+    'freqs': PERMISSIVE_FREQ_FILTER,
+    'qualityFilter': QUALITY_FILTER,
+}
+SV_RECESSIVE_SEARCH = {
+    'gene_list_moi': RECESSIVE_MOI,
+    'annotations': SV_ANNOTATIONS,
+    'freqs': PERMISSIVE_FREQ_FILTER,
+    'qualityFilter': SV_QUALITY_FILTER,
+}
+
+NO_PANEL_APP_DE_NOVO_SEARCH = {
+    'inheritance_mode': DE_NOVO,
+    'freqs': RESTRICTIVE_FREQ_FILTER,
+    'qualityFilter': PASS_QUALITY_FILTER,
+}
+DE_NOVO_SEARCH = {
+    'gene_list_moi': DOMINANT_MOI,
+    **NO_PANEL_APP_DE_NOVO_SEARCH,
+}
+
 SEARCHES = {
     'SNV_INDEL': {
         'Clinvar Pathogenic': {
-            'gene_list_moi': 'D',
+            'gene_list_moi': DOMINANT_MOI,
             'inheritance_mode': ANY_AFFECTED,
-            'pathogenicity': {
-                'clinvar': ['pathogenic', 'likely_pathogenic', 'conflicting_p_lp'],
-                'clinvarMinStars': 1,
-            },
-            'freqs': {
-                'callset': {'ac': 100},
-                'gnomad_exomes': {'ac': 100},
-                'gnomad_genomes': {'ac': 100},
-            }
+            'pathogenicity': CLINVAR_FILTER,
+            'freqs': RESTRICTIVE_FREQ_FILTER,
         },
         'Clinvar Pathogenic -  Compound Heterozygous': {
-            'gene_list_moi': 'R',
             'inheritance_mode': COMPOUND_HET,
             'split_pathogenicity_annotations': True,
-            'pathogenicity': {
-                'clinvar': ['pathogenic', 'likely_pathogenic', 'conflicting_p_lp'],
-                'clinvarMinStars': 1,
-            },
-            'annotations': {
-                'vep_consequences': [
-                    'splice_donor_variant',
-                    'splice_acceptor_variant',
-                    'stop_gained',
-                    'frameshift_variant',
-                    'stop_lost',
-                    'start_lost',
-                    'inframe_insertion',
-                    'inframe_deletion',
-                    'protein_altering_variant',
-                    'missense_variant',
-                    'splice_donor_5th_base_variant',
-                    'splice_region_variant',
-                    'splice_donor_region_variant',
-                    'splice_polypyrimidine_tract_variant',
-                    'extended_intronic_splice_region_variant',
-                    'non_coding_transcript_exon_variant',
-                ]
-            },
-            'freqs': {
-                'callset': {'ac': 2000},
-                'gnomad_exomes': {'af': 0.03},
-                'gnomad_genomes': {'af': 0.03}
-            },
-            'qualityFilter': {
-                'min_gq': 30,
-                'min_ab': 20
-            },
+            'annotations': HIGH_MODERATE_ANNOTATIONS,
+            **CLINVAR_RECESSIVE_SEARCH,
         },
         'Clinvar Both Pathogenic -  Compound Heterozygous': {
-            'gene_list_moi': 'R',
             'inheritance_mode': COMPOUND_HET,
-            'pathogenicity': {
-                'clinvar': ['pathogenic', 'likely_pathogenic', 'conflicting_p_lp'],
-                'clinvarMinStars': 1,
-            },
-            'freqs': {
-                'callset': {'ac': 2000},
-                'gnomad_exomes': {'af': 0.03},
-                'gnomad_genomes': {'af': 0.03}
-            },
-            'qualityFilter': {
-                'min_gq': 30,
-                'min_ab': 20
-            },
+            **CLINVAR_RECESSIVE_SEARCH,
         },
         'Clinvar Pathogenic - Recessive': {
-            'gene_list_moi': 'R',
             'inheritance_mode': HOMOZYGOUS_RECESSIVE,
-            'pathogenicity': {
-                'clinvar': ['pathogenic', 'likely_pathogenic', 'conflicting_p_lp'],
-                'clinvarMinStars': 1,
-            },
-            'freqs': {
-                'callset': {'ac': 2000},
-                'gnomad_exomes': {'af': 0.03},
-                'gnomad_genomes': {'af': 0.03}
-            },
+            **CLINVAR_RECESSIVE_SEARCH,
         },
         'Clinvar Pathogenic - X-Linked Recessive': {
-            'gene_list_moi': 'R',
             'inheritance_mode': X_LINKED_RECESSIVE_MALE_AFFECTED,
             'family_filter': {
-                'affected_males': True
+                AFFECTED_MALE_FAMILY_FILTER: True
             },
-            'pathogenicity': {
-                'clinvar': ['pathogenic', 'likely_pathogenic', 'conflicting_p_lp'],
-                'clinvarMinStars': 1,
-            },
-            'freqs': {
-                'callset': {'ac': 2000},
-                'gnomad_exomes': {'af': 0.03},
-                'gnomad_genomes': {'af': 0.03}
-            },
+            **CLINVAR_RECESSIVE_SEARCH,
         },
         'Compound Heterozygous': {
-            'gene_list_moi': 'R',
             'inheritance_mode': COMPOUND_HET,
             'annotations': {
                 'vep_consequences': [
-                    'splice_donor_variant',
-                    'splice_acceptor_variant',
-                    'stop_gained',
-                    'frameshift_variant',
-                    'non_coding_transcript_exon_variant',
+                    *HIGH_ANNOTATIONS['vep_consequences'],
+                    NON_CODING_TRANSCRIPT_EXON_VARIANT,
                 ],
             },
-            'annotations_secondary': {
-                'vep_consequences': [
-                    'splice_donor_variant',
-                    'splice_acceptor_variant',
-                    'stop_gained',
-                    'frameshift_variant',
-                    'stop_lost',
-                    'start_lost',
-                    'inframe_insertion',
-                    'inframe_deletion',
-                    'protein_altering_variant',
-                    'missense_variant',
-                    'splice_donor_5th_base_variant',
-                    'splice_region_variant',
-                    'splice_donor_region_variant',
-                    'splice_polypyrimidine_tract_variant',
-                    'extended_intronic_splice_region_variant',
-                    'non_coding_transcript_exon_variant',
-                ],
-            },
-            'in_silico': {
-                'cadd': 25,
-                'revel': 0.6
-            },
-            'freqs': {
-                'callset': {'ac': 1000},
-                'gnomad_exomes': {'af': 0.01, 'hh': 2},
-                'gnomad_genomes': {'af': 0.01, 'hh': 2},
-            },
-            'qualityFilter': {
-                'min_gq': 30,
-                'min_ab': 20,
-            },
+            'annotations_secondary': HIGH_MODERATE_ANNOTATIONS,
+            **RECESSIVE_SEARCH,
         },
         'Compound Heterozygous - Confirmed': {
             'family_filter': {
-                'max_affected': 1,
-                'confirmed_inheritance': True
+                MAX_AFFECTED_FAMILY_FILTER: 1,
+                CONFIRMED_FAMILY_FILTER: True
             },
-            'gene_list_moi': 'R',
             'inheritance_mode': COMPOUND_HET,
-            'annotations': {
-                'vep_consequences': [
-                    'stop_lost',
-                    'start_lost',
-                    'inframe_insertion',
-                    'inframe_deletion',
-                    'protein_altering_variant',
-                    'missense_variant',
-                    'splice_donor_5th_base_variant',
-                    'splice_region_variant',
-                    'splice_donor_region_variant',
-                    'splice_polypyrimidine_tract_variant',
-                    'extended_intronic_splice_region_variant',
-                ]
-            },
-            'in_silico': {
-                'cadd': 25,
-                'revel': 0.6,
-            },
-            'freqs': {
-                'callset': {'ac': 1000},
-                'gnomad_exomes': {'af': 0.01, 'hh': 2},
-                'gnomad_genomes': {'af': 0.01, 'hh': 2},
-            },
-            'qualityFilter': {
-                'min_gq': 30,
-                'min_ab': 20,
-            }
+            'annotations': MODERATE_ANNOTATIONS,
+            **RECESSIVE_SEARCH,
         },
         'De Novo': {
             'family_filter': {
-              'max_affected': 1,
-              'confirmed_inheritance': True
+                MAX_AFFECTED_FAMILY_FILTER: 1,
+                CONFIRMED_FAMILY_FILTER: True
             },
-            'inheritance_mode': 'de_novo',
-            'annotations': {
-                'vep_consequences': [
-                    'splice_donor_variant',
-                    'splice_acceptor_variant',
-                    'stop_gained',
-                    'frameshift_variant',
-                    'stop_lost',
-                    'start_lost',
-                    'inframe_insertion',
-                    'inframe_deletion',
-                    'protein_altering_variant',
-                    'missense_variant',
-                    'splice_donor_5th_base_variant',
-                    'splice_region_variant',
-                    'splice_donor_region_variant',
-                    'splice_polypyrimidine_tract_variant',
-                    'extended_intronic_splice_region_variant',
-                    'non_coding_transcript_exon_variant',
-                ]
-            },
+            'annotations': HIGH_MODERATE_ANNOTATIONS,
             'require_any_gene': True,
-            'in_silico': {
-                'cadd': 25,
-                'revel': 0.6,
-            },
-            'freqs': {
-                'callset': {'ac': 100},
-                'gnomad_exomes': {'ac': 100},
-                'gnomad_genomes': {'ac': 100}
-            },
-            'qualityFilter': {
-              'vcf_filter': 'PASS',
-              'min_gq': 30,
-              'min_ab': 20
-            }
+            'in_silico': IN_SILICO_FILTER,
+            **NO_PANEL_APP_DE_NOVO_SEARCH,
         },
         'De Novo/ Dominant': {
             'family_filter': {
-                'max_affected': 1,
-                'confirmed_inheritance': False
+                MAX_AFFECTED_FAMILY_FILTER: 1,
+                CONFIRMED_FAMILY_FILTER: False
             },
-            'gene_list_moi': 'D',
-            'inheritance_mode': 'de_novo',
-            'annotations': {
-                'vep_consequences': [
-                    'splice_donor_variant',
-                    'splice_acceptor_variant',
-                    'stop_gained',
-                    'frameshift_variant',
-                ],
-            },
-            'in_silico': {
-                'cadd': 25,
-                'revel': 0.6
-            },
-            'freqs': {
-                'callset': {'ac': 100},
-                'gnomad_exomes': {'ac': 100},
-                'gnomad_genomes': {'ac': 100},
-            },
-            'qualityFilter': {
-                'vcf_filter': 'PASS',
-                'min_gq': 30,
-                'min_ab': 20,
-            }
+            'annotations': HIGH_ANNOTATIONS,
+            'in_silico': IN_SILICO_FILTER,
+            **DE_NOVO_SEARCH,
         },
         'Dominant': {
             'family_filter': {
                 'min_affected': 2
             },
-            'gene_list_moi': 'D',
-            'inheritance_mode': 'de_novo',
-            'annotations': {
-                'vep_consequences': [
-                    'splice_donor_variant',
-                    'splice_acceptor_variant',
-                    'stop_gained',
-                    'frameshift_variant',
-                    'stop_lost',
-                    'start_lost',
-                    'inframe_insertion',
-                    'inframe_deletion',
-                    'protein_altering_variant',
-                    'missense_variant',
-                    'splice_donor_5th_base_variant',
-                    'splice_region_variant',
-                    'splice_donor_region_variant',
-                    'splice_polypyrimidine_tract_variant',
-                    'extended_intronic_splice_region_variant',
-                    'non_coding_transcript_exon_variant',
-                ],
-            },
-            'require_any_gene': True,
+            'annotations': HIGH_MODERATE_ANNOTATIONS,
             'in_silico': {
-                'cadd': 25,
-                'revel': 0.6,
-                'splice_ai': 0.5
+                **IN_SILICO_FILTER,
+                'splice_ai': 0.5,
             },
-            'freqs': {
-                'callset': {'ac': 100},
-                'gnomad_exomes': {'ac': 100},
-                'gnomad_genomes': {'ac': 100},
-            },
-            'qualityFilter': {
-                'vcf_filter': 'PASS',
-                'min_gq': 30,
-                'min_ab': 20,
-            }
+            **DE_NOVO_SEARCH,
         },
         'High Splice AI': {
-            'gene_list_moi': 'D',
-            'inheritance_mode': 'de_novo',
             'in_silico': {
-                'splice_ai': 0.5,
+                'splice_ai': 0.8,
                 'requireScore': True
             },
-            'freqs': {
-                'callset': {'ac': 100},
-                'gnomad_exomes': {'ac': 100},
-                'gnomad_genomes': {'ac': 100}
-            },
-            'qualityFilter': {
-                'vcf_filter': 'PASS',
-                'min_gq': 30,
-                'min_ab': 20,
-            },
+            **DE_NOVO_SEARCH,
         },
         'Recessive': {
-            'gene_list_moi': 'R',
             'inheritance_mode': HOMOZYGOUS_RECESSIVE,
-            'annotations': {
-                'vep_consequences': [
-                    'splice_donor_variant',
-                    'splice_acceptor_variant',
-                    'stop_gained',
-                    'frameshift_variant',
-                    'stop_lost',
-                    'start_lost',
-                    'inframe_insertion',
-                    'inframe_deletion',
-                    'protein_altering_variant',
-                    'missense_variant',
-                    'splice_donor_5th_base_variant',
-                    'splice_region_variant',
-                    'splice_donor_region_variant',
-                    'splice_polypyrimidine_tract_variant',
-                    'extended_intronic_splice_region_variant',
-                    'non_coding_transcript_exon_variant',
-                ],
-            },
-            'in_silico': {
-                'cadd': 25,
-                'revel': 0.6
-            },
-            'freqs': {
-                'callset': {'ac': 1000},
-                'gnomad_exomes': {'af': 0.01, 'hh': 5},
-                'gnomad_genomes': {'af': 0.01,'hh': 5},
-            },
-            'qualityFilter': {
-                'min_gq': 30,
-                'min_ab': 20,
-            },
+            'annotations': HIGH_MODERATE_ANNOTATIONS,
+            **RECESSIVE_SEARCH,
         },
         'X-Linked Recessive': {
-            'gene_list_moi': 'R',
             'inheritance_mode': X_LINKED_RECESSIVE_MALE_AFFECTED,
             'family_filter': {
-                'affected_males': True
+                AFFECTED_MALE_FAMILY_FILTER: True
             },
-            'annotations': {
-                'vep_consequences': [
-                    'splice_donor_variant',
-                    'splice_acceptor_variant',
-                    'stop_gained',
-                    'frameshift_variant',
-                    'stop_lost',
-                    'start_lost',
-                    'inframe_insertion',
-                    'inframe_deletion',
-                    'protein_altering_variant',
-                    'missense_variant',
-                    'splice_donor_5th_base_variant',
-                    'splice_region_variant',
-                    'splice_donor_region_variant',
-                    'splice_polypyrimidine_tract_variant',
-                    'extended_intronic_splice_region_variant',
-                    'non_coding_transcript_exon_variant',
-                ],
-            },
-            'in_silico': {
-                'cadd': 25,
-                'revel': 0.6
-            },
-            'freqs': {
-                'callset': {'ac': 1000},
-                'gnomad_exomes': {'af': 0.01, 'hh': 5},
-                'gnomad_genomes': {'af': 0.01,'hh': 5},
-            },
-            'qualityFilter': {
-                'min_gq': 30,
-                'min_ab': 20,
-            },
+            'annotations': HIGH_MODERATE_ANNOTATIONS,
+            **RECESSIVE_SEARCH,
         },
     },
     'SV': {
         'SV - Compound Heterozygous': {
             'family_filter': {
-                'confirmed_inheritance': True
+                CONFIRMED_FAMILY_FILTER: True
             },
-            'gene_list_moi': 'R',
             'inheritance_mode': COMPOUND_HET,
-            'annotations': {
-                'structural_consequence': ['LOF', 'INTRAGENIC_EXON_DUP'],
-            },
-            'freqs': {
-                'sv_callset': {'ac': 500},
-                'gnomad_svs': {'af': 0.01},
-            },
-            'qualityFilter': {
-                'min_gq_sv': 90,
-                'vcf_filter': 'PASS',
-            },
+            **SV_RECESSIVE_SEARCH,
+            'qualityFilter': PASS_QUALITY_FILTER,
         },
         'SV - De Novo/ Dominant': {
             'family_filter': {
-                'confirmed_inheritance': True
+                CONFIRMED_FAMILY_FILTER: True
             },
-            'gene_list_moi': 'D',
-            'inheritance_mode': 'de_novo',
-            'annotations': {
-                'structural_consequence': ['LOF', 'INTRAGENIC_EXON_DUP'],
-            },
-            'freqs': {
-                'sv_callset': {'ac': 100},
-                'gnomad_svs': {'af': 0.001},
-            },
-            'qualityFilter': {
-                'vcf_filter': 'PASS',
-                'min_gq_sv': 90,
-            }
+            'annotations': SV_ANNOTATIONS,
+            **DE_NOVO_SEARCH,
         },
         'SV - Recessive': {
-            'gene_list_moi': 'R',
+            'family_filter': {
+                CONFIRMED_FAMILY_FILTER: True
+            },
             'inheritance_mode': HOMOZYGOUS_RECESSIVE,
-            'annotations': {
-              'structural_consequence': ['LOF', 'INTRAGENIC_EXON_DUP'],
-            },
-            'freqs': {
-                'sv_callset': {'ac': 500},
-                'gnomad_svs': {'af': 0.01},
-            },
-            'qualityFilter': {
-                'min_gq_sv': 90,
-            }
+            **SV_RECESSIVE_SEARCH,
         },
         'SV - X-Linked Recessive': {
-            'gene_list_moi': 'R',
             'inheritance_mode': X_LINKED_RECESSIVE_MALE_AFFECTED,
             'family_filter': {
-                'affected_males': True,
-                'confirmed_inheritance': True,
+                AFFECTED_MALE_FAMILY_FILTER: True,
+                CONFIRMED_FAMILY_FILTER: True,
             },
-            'annotations': {
-              'structural_consequence': ['LOF', 'INTRAGENIC_EXON_DUP'],
-            },
-            'freqs': {
-                'sv_callset': {'ac': 500},
-                'gnomad_svs': {'af': 0.01},
-            },
-            'qualityFilter': {
-                'min_gq_sv': 90,
-            }
+            **SV_RECESSIVE_SEARCH,
         },
     },
 }
@@ -506,45 +289,12 @@ SEARCHES = {
 MULTI_DATA_TYPE_SEARCHES = {
     'Compound Heterozygous - One SV': {
         'annotations': {
-            'structural_consequence': [
-                'LOF',
-                'INTRAGENIC_EXON_DUP',
-            ],
-            'vep_consequences': [
-                'splice_donor_variant',
-                'splice_acceptor_variant',
-                'stop_gained',
-                'frameshift_variant',
-                'stop_lost',
-                'start_lost',
-                'inframe_insertion',
-                'inframe_deletion',
-                'protein_altering_variant',
-                'missense_variant',
-                'splice_donor_5th_base_variant',
-                'splice_region_variant',
-                'splice_donor_region_variant',
-                'splice_polypyrimidine_tract_variant',
-                'extended_intronic_splice_region_variant',
-            ],
+            **SV_ANNOTATIONS,
+            **HIGH_MODERATE_ANNOTATIONS,
         },
-        'in_silico': {
-            'cadd': 25,
-            'revel': 0.6
-        },
-        'freqs': {
-            'callset': {'ac': 1000},
-            'sv_callset': {'ac': 500},
-            'gnomad_exomes': {'af': 0.01, 'hh': 2},
-            'gnomad_genomes': {'af': 0.01, 'hh': 2},
-            'gnomad_svs': {'af': 0.01}
-        },
-        'qualityFilter': {
-            'min_gq_sv': 90,
-            'min_gq': 30,
-            'min_ab': 20,
-            'vcf_filter': 'PASS',
-        },
+        'in_silico': IN_SILICO_FILTER,
+        'freqs': PERMISSIVE_FREQ_FILTER,
+        'qualityFilter': PASS_QUALITY_FILTER,
     },
 }
 
@@ -577,7 +327,7 @@ class Command(BaseCommand):
             )
 
         self._run_multi_data_type_comp_het_search(
-            family_variant_data, search_counts, samples_by_dataset_type, family_guid_map, project, sample_qs, genes=gene_by_moi['R'],
+            family_variant_data, search_counts, samples_by_dataset_type, family_guid_map, project, sample_qs, genes=gene_by_moi[RECESSIVE_MOI],
         )
 
         today = datetime.now().strftime('%Y-%m-%d')
@@ -668,16 +418,16 @@ class Command(BaseCommand):
     def _family_passes_filter(sample_data, family_filter):
         if family_filter.get('min_affected') and len(sample_data['affecteds']) < family_filter['min_affected']:
             return False
-        if family_filter.get('max_affected') and len(sample_data['affecteds']) > family_filter['max_affected']:
+        if family_filter.get(MAX_AFFECTED_FAMILY_FILTER) and len(sample_data['affecteds']) > family_filter[MAX_AFFECTED_FAMILY_FILTER]:
             return False
-        if family_filter.get('affected_males') and all(s['sex'] not in Individual.MALE_SEXES for s in sample_data['affecteds']):
+        if family_filter.get(AFFECTED_MALE_FAMILY_FILTER) and all(s['sex'] not in Individual.MALE_SEXES for s in sample_data['affecteds']):
             return False
-        if 'confirmed_inheritance' in family_filter:
+        if CONFIRMED_FAMILY_FILTER in family_filter:
             proband = next((s for s in sample_data['affecteds'] if s['maternal_guid'] and s['paternal_guid']), None)
             if not proband:
                 return False
             is_confirmed = proband['maternal_guid'] in sample_data['unaffected_guids'] and proband['paternal_guid'] in sample_data['unaffected_guids']
-            return (not is_confirmed) if family_filter['confirmed_inheritance'] == False else is_confirmed
+            return (not is_confirmed) if family_filter[CONFIRMED_FAMILY_FILTER] == False else is_confirmed
         return True
 
     @staticmethod
@@ -801,28 +551,21 @@ class Command(BaseCommand):
         ll = LocusList.objects.get(name=name, palocuslist__isnull=False)
         moi_gene_ids = ll.locuslistgene_set.exclude(gene_id__in=exclude_gene_ids).annotate(
             is_dominant=Q(
-                palocuslistgene__mode_of_inheritance__startswith='BOTH'
-            ) | Q(
-                palocuslistgene__mode_of_inheritance__startswith='X-LINKED',
-                palocuslistgene__mode_of_inheritance__contains='monoallelic mutations',
-            ) | Q(
                 Q(palocuslistgene__mode_of_inheritance__startswith='MONOALLELIC') &
                 ~Q(palocuslistgene__mode_of_inheritance__contains=' paternally imprinted') &
                 ~Q(palocuslistgene__mode_of_inheritance__contains=' maternally imprinted')
             ),
             is_recessive=Q(
-                palocuslistgene__mode_of_inheritance__startswith='BOTH'
-            ) | Q(
                 palocuslistgene__mode_of_inheritance__startswith='BIALLELIC'
             ) | Q(
-                palocuslistgene__mode_of_inheritance__startswith='X-LINKED'
+                palocuslistgene__mode_of_inheritance__startswith='X-LINKED',
+                palocuslistgene__mode_of_inheritance__contains='biallelic mutations',
             ),
-        ).filter(Q(is_dominant=True) | Q(is_recessive=True)).filter(palocuslistgene__confidence_level__in=[
+        ).filter(palocuslistgene__confidence_level__in=[
             level for level, name in PaLocusListGene.CONFIDENCE_LEVEL_CHOICES if name in confidences
         ]).values('gene_id', 'is_dominant', 'is_recessive')
 
-        dominant_gene_ids = [g['gene_id'] for g in moi_gene_ids if g['is_dominant']]
-        recessive_gene_ids = [g['gene_id'] for g in moi_gene_ids if g['is_recessive']]
-        genes_by_id = get_genes(dominant_gene_ids + recessive_gene_ids, genome_version=GENOME_VERSION_GRCh38, additional_model_fields=['id'])
-        gene_by_moi['D'].update({gene_id: gene for gene_id, gene in genes_by_id.items() if gene_id in set(dominant_gene_ids)})
-        gene_by_moi['R'].update({gene_id: gene for gene_id, gene in genes_by_id.items() if gene_id in set(recessive_gene_ids)})
+        gene_id_mois = {g['gene_id']: g for g in moi_gene_ids}
+        genes_by_id = get_genes(gene_id_mois.keys(), genome_version=GENOME_VERSION_GRCh38, additional_model_fields=['id'])
+        gene_by_moi[DOMINANT_MOI].update({gene_id: gene for gene_id, gene in genes_by_id.items() if not gene_id_mois[gene_id]['is_recessive']})
+        gene_by_moi[RECESSIVE_MOI].update({gene_id: gene for gene_id, gene in genes_by_id.items() if not gene_id_mois[gene_id]['is_dominant']})
