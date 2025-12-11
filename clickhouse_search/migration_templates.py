@@ -4,7 +4,7 @@ from settings import DATABASES, PIPELINE_RUNNER_SERVER
 
 # NOTE THESE ARE CONSIDERED IMMUTABLE
 
-ALL_VARIANTS_MV_HEADER Template("""
+ALL_VARIANTS_MV_HEADER = Template("""
 CREATE MATERIALIZED VIEW `$reference_genome/$dataset_type/reference_data/$reference_dataset/all_variants_mv`
 REFRESH EVERY 10 YEAR
 TO `$reference_genome/$dataset_type/reference_data/$reference_dataset/all_variants`
