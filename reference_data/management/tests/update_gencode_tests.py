@@ -131,38 +131,27 @@ class UpdateGencodeTest(ReferenceDataCommandTestCase):
         # Test initial load for all gencode data
         call_command('update_all_reference_data')
 
-        skipped_logs = [
-            mock.call('genes_skipped: 4'),
-            mock.call('transcripts_skipped: 4'),
-        ]
-        self.mock_logger.info.assert_has_calls([
-            mock.call(f'Parsing file {self.tmp_dir }/gencode.v39lift37.annotation.gtf.gz'),
-            mock.call(f'Parsing file {self.tmp_dir }/gencode.v39.annotation.gtf.gz'),
-            mock.call('Created 2 GeneInfo records'),
-            mock.call(f'Parsing file {self.tmp_dir }/gencode.v31lift37.annotation.gtf.gz'),
-            mock.call(f'Parsing file {self.tmp_dir }/gencode.v31.annotation.gtf.gz'),
-        ] + skipped_logs + [
-            mock.call(f'Parsing file {self.tmp_dir }/gencode.v29lift37.annotation.gtf.gz'),
-            mock.call(f'Parsing file {self.tmp_dir }/gencode.v29.annotation.gtf.gz'),
-        ] + skipped_logs + [
-            mock.call(f'Parsing file {self.tmp_dir }/gencode.v28lift37.annotation.gtf.gz'),
-            mock.call(f'Parsing file {self.tmp_dir }/gencode.v28.annotation.gtf.gz'),
-        ] + skipped_logs + [
-            mock.call(f'Parsing file {self.tmp_dir }/gencode.v27lift37.annotation.gtf.gz'),
-            mock.call(f'Parsing file {self.tmp_dir }/gencode.v27.annotation.gtf.gz'),
-        ] + skipped_logs + [
-            mock.call(f'Parsing file {self.tmp_dir }/gencode.v19.annotation.gtf.gz'),
-            mock.call('genes_skipped: 2'),
-            mock.call('transcripts_skipped: 2'),
-            mock.call('Created 1 GeneInfo records'),
-            mock.call('Created 3 TranscriptInfo records'),
-            mock.call('Updating RefseqTranscript'),
-            mock.call(f'Parsing file {self.tmp_dir}/gencode.v39.metadata.RefSeq.gz'),
-            mock.call('Deleted 0 RefseqTranscript records'),
-            mock.call('Created 2 RefseqTranscript records'),
-            mock.call('Done'),
-            mock.call('Loaded 2 RefseqTranscript records'),
-            mock.call('Skipped 2 records with unrecognized or duplicated transcripts'),
+        skipped_version_logs = [log for version in [31, 29, 28, 27] for log in self._gencode_download_logs(version) + [
+            ('genes_skipped: 4', None),
+            ('transcripts_skipped: 4', None),
+        ]]
+        self.assert_json_logs(user=None, expected=self._gencode_download_logs(39) + [
+            ('Created 2 GeneInfo records', None),
+        ] + skipped_version_logs + [
+            (f'Downloading http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_19/gencode.v19.annotation.gtf.gz to {self.tmp_dir}/gencode.v19.annotation.gtf.gz', None),
+            (f'Parsing file {self.tmp_dir }/gencode.v19.annotation.gtf.gz', None),
+            ('genes_skipped: 2', None),
+            ('transcripts_skipped: 2', None),
+            ('Created 1 GeneInfo records', None),
+            ('Created 3 TranscriptInfo records', None),
+            ('Updating RefseqTranscript', None),
+            (f'Downloading http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_39/gencode.v39.metadata.RefSeq.gz to {self.tmp_dir}/gencode.v39.metadata.RefSeq.gz', None),
+            (f'Parsing file {self.tmp_dir}/gencode.v39.metadata.RefSeq.gz', None),
+            ('Deleted 0 RefseqTranscript records', None),
+            ('Created 2 RefseqTranscript records', None),
+            ('Done', None),
+            ('Loaded 2 RefseqTranscript records', None),
+            ('Skipped 2 records with unrecognized or duplicated transcripts', None),
         ])
         self.mock_subprocess.assert_not_called()
 
@@ -182,6 +171,14 @@ class UpdateGencodeTest(ReferenceDataCommandTestCase):
         self.assertEqual(trans_info.gene.gene_id, 'ENSG00000235249')
         self.assertEqual(trans_info.gene.gencode_release, 19)
 
+    def _gencode_download_logs(self, version):
+        return [
+            (f'Downloading http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_{version}/GRCh37_mapping/gencode.v{version}lift37.annotation.gtf.gz to {self.tmp_dir}/gencode.v{version}lift37.annotation.gtf.gz', None),
+            (f'Parsing file {self.tmp_dir}/gencode.v{version}lift37.annotation.gtf.gz', None),
+            (f'Downloading http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_{version}/gencode.v{version}.annotation.gtf.gz to {self.tmp_dir}/gencode.v{version}.annotation.gtf.gz', None),
+            (f'Parsing file {self.tmp_dir}/gencode.v{version}.annotation.gtf.gz', None),
+        ]
+
     @responses.activate
     def test_update_gencode_latest_command(self):
         # Test only update the latest version
@@ -190,22 +187,23 @@ class UpdateGencodeTest(ReferenceDataCommandTestCase):
         dv.save()
 
         call_command('update_all_reference_data', '--gene-symbol-change-dir', 'gs://seqr-reference-data/gencode')
-        self.mock_command_logger.info.assert_has_calls([
-            mock.call('Dropped 1 existing TranscriptInfo records'),
-            mock.call('Done'),
-            mock.call('Updated: GeneInfo'),
-        ])
-        self.mock_logger.info.assert_has_calls([
-            mock.call(f'Parsing file {self.tmp_dir}/gencode.v39lift37.annotation.gtf.gz'),
-            mock.call(f'Parsing file {self.tmp_dir}/gencode.v39.annotation.gtf.gz'),
-            mock.call('Updated 1 previously loaded GeneInfo records'),
-            mock.call('Created 1 GeneInfo records'),
-            mock.call('Created 2 TranscriptInfo records'),
-            mock.call('Updating RefseqTranscript'),
-            mock.call(f'Parsing file {self.tmp_dir}/gencode.v39.metadata.RefSeq.gz'),
-            mock.call('Deleted 1 RefseqTranscript records'),
-            mock.call('Created 3 RefseqTranscript records'),
-            mock.call('Done'),
+        self.assert_json_logs(user=None, expected=self._gencode_download_logs(39) + [
+            ('Updated 1 previously loaded GeneInfo records', None),
+            ('Created 1 GeneInfo records', None),
+            (f'==> gsutil mv {self.tmp_dir}/* gs://seqr-reference-data/gencode/', None),
+            ('Dropped 1 existing TranscriptInfo records', None),
+            ('Created 2 TranscriptInfo records', None),
+            ('Updating RefseqTranscript', None),
+            (f'Downloading http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_39/gencode.v39.metadata.RefSeq.gz to {self.tmp_dir}/gencode.v39.metadata.RefSeq.gz', None),
+            (f'Parsing file {self.tmp_dir}/gencode.v39.metadata.RefSeq.gz', None),
+            ('Deleted 1 RefseqTranscript records', None),
+            ('Created 3 RefseqTranscript records', None),
+            ('Done', None),
+            ('Loaded 3 RefseqTranscript records', None),
+            ('Skipped 1 records with unrecognized or duplicated transcripts', None),
+            ('Updated GeneInfo reference data from version "31" to version "39"', None),
+            ('Done', None),
+            ('Updated: GeneInfo', None),
         ])
 
         self._has_expected_new_genes()
