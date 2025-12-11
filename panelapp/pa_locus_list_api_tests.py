@@ -10,9 +10,10 @@ from requests import Response
 from urllib3.exceptions import MaxRetryError
 
 from panelapp.panelapp_utils import _get_all_genes
+from reference_data.management.tests.test_utils import ReferenceDataCommandTestCase
 from seqr.views.apis.locus_list_api import locus_lists, locus_list_info
 from seqr.views.apis.locus_list_api_tests import BaseLocusListAPITest
-from seqr.views.utils.test_utils import AuthenticationTestCase, LOCUS_LIST_FIELDS
+from seqr.views.utils.test_utils import LOCUS_LIST_FIELDS
 
 PROJECT_GUID = 'R0001_1kg'
 
@@ -41,7 +42,7 @@ def _get_json_from_file(filepath):
     return json.loads(filedata)
 
 
-class PaLocusListAPITest(AuthenticationTestCase, BaseLocusListAPITest):
+class PaLocusListAPITest(ReferenceDataCommandTestCase, BaseLocusListAPITest):
     fixtures = ['users', '1kg_project', 'panelapp', 'reference_data']
 
     EXISTING_LOCUS_LISTS = [EXISTING_AU_PA_LOCUS_LIST_GUID, EXISTING_UK_PA_LOCUS_LIST_GUID, 'LL00005_mendeliome', 'LL00006_incidentalome']
