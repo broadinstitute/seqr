@@ -144,14 +144,14 @@ class Migration(migrations.Migration):
         ),
         migrations.RunSQL(
             GNOMAD_EXOMES_ALL_VARIANTS_MV.substitute(
-                mv_header=ALL_VARIANTS_MV_HEADER.substitute(reference_genome="GRCh37", dataset_type="SNV_INDEL", reference_dataset="gnomad_exomes"),,
+                mv_header=ALL_VARIANTS_MV_HEADER.substitute(reference_genome="GRCh37", dataset_type="SNV_INDEL", reference_dataset="gnomad_exomes"),
                 reference_genome="GRCh37",
             ),
             hints={"clickhouse": True},
         ),
         migrations.RunSQL(
             GNOMAD_EXOMES_ALL_VARIANTS_MV.substitute(
-                mv_header=ALL_VARIANTS_MV_HEADER.substitute(reference_genome="GRCh38", dataset_type="SNV_INDEL", reference_dataset="gnomad_exomes"),,
+                mv_header=ALL_VARIANTS_MV_HEADER.substitute(reference_genome="GRCh38", dataset_type="SNV_INDEL", reference_dataset="gnomad_exomes"),
                 reference_genome="GRCh38",
             ),
             hints={"clickhouse": True},
