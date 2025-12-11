@@ -1,7 +1,6 @@
 from collections import defaultdict
 from copy import deepcopy
 from datetime import timedelta
-from django.db.models import Count
 from pyliftover.liftover import LiftOver
 
 from clickhouse_search.search import get_clickhouse_variants, format_clickhouse_results, \
@@ -48,6 +47,9 @@ DATASET_TYPE_SNP_INDEL_ONLY = f'{Sample.DATASET_TYPE_VARIANT_CALLS}_only'
 DATASET_TYPES_LOOKUP[DATASET_TYPE_SNP_INDEL_ONLY] = [Sample.DATASET_TYPE_VARIANT_CALLS]
 DATASET_TYPE_NO_MITO = f'{Sample.DATASET_TYPE_MITO_CALLS}_missing'
 DATASET_TYPES_LOOKUP[DATASET_TYPE_NO_MITO] = [Sample.DATASET_TYPE_VARIANT_CALLS, Sample.DATASET_TYPE_SV_CALLS]
+
+MAX_GENES_FOR_FILTER = 10000
+MIN_MULTI_FAMILY_SEQR_AC = 5000
 
 
 def es_only(func):
@@ -275,6 +277,8 @@ def _query_variants(search_model, user, previous_search_results, genome_version,
     genes, intervals, invalid_items = parse_locus_list_items(locus or exclude, genome_version=genome_version, additional_model_fields=['id'])
     if invalid_items:
         raise InvalidSearchException('Invalid genes/intervals: {}'.format(', '.join(invalid_items)))
+    if (genes or intervals) and len(genes) + len(intervals) > MAX_GENES_FOR_FILTER:
+        raise InvalidSearchException('Too many genes/intervals')
     parsed_search.update({'genes': genes, 'intervals': intervals, 'exclude_locations': exclude_locations})
     if not (genes or intervals):
         rs_ids, variant_ids, parsed_variant_ids, invalid_items = _parse_variant_items(locus)
@@ -553,9 +557,6 @@ def _validate_search(search, samples, previous_search_results):
 
 
     backend_specific_call(lambda *args: None, _validate_clickhouse_search)(samples, has_location_filter, search)
-
-
-MIN_MULTI_FAMILY_SEQR_AC = 5000
 
 
 def _validate_clickhouse_search(samples, has_location_filter, search):
