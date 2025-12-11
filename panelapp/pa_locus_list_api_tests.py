@@ -1,16 +1,18 @@
 import json
 from collections import defaultdict
+from datetime import datetime
 
 import mock
 import responses
 import tenacity
-from django.core.management import call_command, CommandError
+from django.core.management import call_command
 from django.urls.base import reverse
 from requests import Response
 from urllib3.exceptions import MaxRetryError
 
 from panelapp.panelapp_utils import _get_all_genes
 from reference_data.management.tests.test_utils import ReferenceDataCommandTestCase
+from reference_data.models import DataVersions
 from seqr.views.apis.locus_list_api import locus_lists, locus_list_info
 from seqr.views.apis.locus_list_api_tests import BaseLocusListAPITest
 from seqr.views.utils.test_utils import LOCUS_LIST_FIELDS
@@ -56,9 +58,11 @@ class PaLocusListAPITest(ReferenceDataCommandTestCase, BaseLocusListAPITest):
         fields.update(PA_LOCUS_LIST_FIELDS)
         self.assertSetEqual(set(locus_list.keys()), fields)
 
+    @mock.patch('seqr.utils.communication_utils._post_to_slack')
     @mock.patch('seqr.models.random.randint')
     @responses.activate
-    def test_import_all_panels(self, mock_random):
+    def test_import_all_panels(self, mock_random, mock_slack):
+        self.mock_pa_now.return_value = datetime(2025, 4, 7)
         mock_random.side_effect = [7, 8, 9]
 
         # Given all PanelApp gene lists and associated genes
@@ -91,17 +95,8 @@ class PaLocusListAPITest(ReferenceDataCommandTestCase, BaseLocusListAPITest):
         responses.add(responses.GET, uk_panels_p1_url, json=uk_panels_p1_json, status=200)
         responses.add(responses.GET, uk_genes_url, json=uk_genes_json, status=200)
 
-        # test required usage
-        with self.assertRaises(CommandError) as err:
-            call_command('import_all_panels')
-        self.assertEqual(str(err.exception), 'Error: the following arguments are required: source')
-        with self.assertRaises(CommandError) as err:
-            call_command('import_all_panels', 'MY_SOURCE')
-        self.assertEqual(str(err.exception), "Error: argument source: invalid choice: 'MY_SOURCE' (choose from 'AU', 'UK')")
-
-        # when import_all_panels()
-        call_command('import_all_panels', 'AU')
-        call_command('import_all_panels', 'UK')
+        # when import all panels
+        call_command('update_all_reference_data')
 
         # then lists from PanelApp are created
         self._assert_lists_imported()
@@ -185,13 +180,24 @@ class PaLocusListAPITest(ReferenceDataCommandTestCase, BaseLocusListAPITest):
             }}),
             ('Done', None),
             ('Loaded 1 PanelAppUK records', None),
+            ('Done', None),
+            ('Updated: PanelAppAU, PanelAppUK', None),
         ])
+
+        # tracking is correct
+        mock_slack.assert_has_calls([mock.call('seqr-data-loading', message) for message in [
+            'Updated PanelAppAU reference data from version "2025-03-12" to version "2025-04-07"',
+            'Updated PanelAppUK reference data from version "2025-03-12" to version "2025-04-07"',
+        ]])
+        self.assertEqual(DataVersions.objects.get(data_model_name='PanelAppAU').version, '2025-04-07')
+        self.assertEqual(DataVersions.objects.get(data_model_name='PanelAppUK').version, '2025-04-07')
 
         # and import is idempotent
         self.reset_logs()
         responses.calls.reset()
-        call_command('import_all_panels', 'AU')
-        call_command('import_all_panels', 'UK')
+        mock_slack.reset_mock()
+        self.mock_pa_now.return_value = datetime(2025, 4, 8)
+        call_command('update_all_reference_data')
         self._assert_lists_imported()
 
         self.assertEqual(len(responses.calls), 3)
@@ -205,6 +211,9 @@ class PaLocusListAPITest(ReferenceDataCommandTestCase, BaseLocusListAPITest):
             ('Done', None),
             ('Loaded 0 PanelAppUK records', None),
         ])
+        self.assertEqual(DataVersions.objects.get(data_model_name='PanelAppAU').version, '2025-04-08')
+        self.assertEqual(DataVersions.objects.get(data_model_name='PanelAppUK').version, '2025-04-08')
+        mock_slack.assert_not_called()
 
     def _assert_lists_imported(self):
         locuslists_url = reverse(locus_lists)
