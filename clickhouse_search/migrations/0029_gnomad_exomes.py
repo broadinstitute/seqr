@@ -8,38 +8,7 @@ from django.db import migrations, models
 import django.db.models.deletion
 import django.db.models.manager
 
-from clickhouse_search.migration_templates import ALL_TO_SEQR_MV, ALL_VARIANTS_MV_HEADER, conditionally_refresh_reference_dataset
-
-from settings import DATABASES, PIPELINE_RUNNER_SERVER
-
-CLICKHOUSE_WRITER_PASSWORD = os.environ.get('CLICKHOUSE_WRITER_PASSWORD', 'clickhouse_test')
-CLICKHOUSE_WRITER_USER = os.environ.get('CLICKHOUSE_WRITER_USER', 'clickhouse')
-
-GNOMAD_EXOMES_SEARCH = Template(Template("""
-CREATE DICTIONARY `$reference_genome/SNV_INDEL/reference_data/gnomad_exomes`
-(
-    `key` UInt32,
-    `ac` UInt32,
-    `af` Decimal(9, 8),
-    `an` UInt32,
-    `filter_af` Decimal(9, 8),
-    `hemi` UInt32,
-    `hom` UInt32
-)
-PRIMARY KEY key
-SOURCE(CLICKHOUSE(
-    USER '$clickhouse_writer_user'
-    PASSWORD '$clickhouse_writer_password'
-    TABLE `$reference_genome/SNV_INDEL/reference_data/gnomad_exomes/seqr_variants`
-))
-LIFETIME(MIN 0 MAX 0)
-LAYOUT(HASHED_ARRAY())
-""").safe_substitute(
-    # Note the nested Template-ing that allows
-    # double substitution these shared values
-    clickhouse_writer_user=CLICKHOUSE_WRITER_USER,
-    clickhouse_writer_password=CLICKHOUSE_WRITER_PASSWORD,
-))
+from clickhouse_search.migration_templates import ALL_TO_SEQR_MV, ALL_VARIANTS_MV_HEADER, conditionally_refresh_reference_dataset, render_search_dictionary
 
 GNOMAD_EXOMES_ALL_VARIANTS_MV = Template("""
 $mv_header
@@ -173,17 +142,43 @@ class Migration(migrations.Migration):
             hints={"clickhouse": True},
         ),
         migrations.RunSQL(
-            GNOMAD_EXOMES_SEARCH.substitute(
+            render_search_dictionary(
                 reference_genome="GRCh37",
-                size=int(2e8),
-            ),
+                dataset_type="SNV_INDEL",
+                reference_dataset="gnomad_exomes",
+                columns="""
+                    `key` UInt32,
+                    `ac` UInt32,
+                    `af` Decimal(9, 8),
+                    `an` UInt32,
+                    `filter_af` Decimal(9, 8),
+                    `hemi` UInt32,
+                    `hom` UInt32
+                """,
+                primary_key="key",
+                source="TABLE `GRCh38/SNV_INDEL/reference_data/gnomad_exomes/seqr_variants`",
+                layout="HASHED_ARRAY()",
+            )
             hints={"clickhouse": True},
         ),
         migrations.RunSQL(
-            GNOMAD_EXOMES_SEARCH.substitute(
+            render_search_dictionary(
                 reference_genome="GRCh38",
-                size=int(1e9),
-            ),
+                dataset_type="SNV_INDEL",
+                reference_dataset="gnomad_exomes",
+                columns="""
+                    `key` UInt32,
+                    `ac` UInt32,
+                    `af` Decimal(9, 8),
+                    `an` UInt32,
+                    `filter_af` Decimal(9, 8),
+                    `hemi` UInt32,
+                    `hom` UInt32
+                """,
+                primary_key="key",
+                source="TABLE `GRCh38/SNV_INDEL/reference_data/gnomad_exomes/seqr_variants`",
+                layout="HASHED_ARRAY()",
+            )
             hints={"clickhouse": True},
         ),
         migrations.RunPython(
