@@ -555,13 +555,18 @@ def _validate_search(search, samples, previous_search_results):
     backend_specific_call(lambda *args: None, _validate_clickhouse_search)(samples, has_location_filter, search)
 
 
+MIN_MULTI_FAMILY_SEQR_AC = 5000
+
+
 def _validate_clickhouse_search(samples, has_location_filter, search):
     variant_samples = samples.filter(dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
     if not has_location_filter and variant_samples.values('individual__family__project_id').distinct().count() > 1:
         raise InvalidSearchException('Location must be specified to search across multiple projects')
-    seqr_ac_filter = search.get('freqs', {}).get('callset', {}).get('ac') or 5001
-    if seqr_ac_filter > 5000 and variant_samples.values('individual__family_id').distinct().count() > 1:
-        raise InvalidSearchException('seqr AC frequency must be specified to search across multiple projects')
+    seqr_ac_filter = search.get('freqs', {}).get('callset', {}).get('ac') or (MIN_MULTI_FAMILY_SEQR_AC + 1)
+    if seqr_ac_filter > MIN_MULTI_FAMILY_SEQR_AC and variant_samples.values('individual__family_id').distinct().count() > 1:
+        raise InvalidSearchException(
+            f'seqr AC frequency of at least {MIN_MULTI_FAMILY_SEQR_AC} must be specified to search across multiple families'
+        )
 
 
 def _filter_inheritance_family_samples(samples, inheritance_filter):
