@@ -55,8 +55,11 @@ class PaLocusListAPITest(AuthenticationTestCase, BaseLocusListAPITest):
         fields.update(PA_LOCUS_LIST_FIELDS)
         self.assertSetEqual(set(locus_list.keys()), fields)
 
+    @mock.patch('seqr.models.random.randint')
     @responses.activate
-    def test_import_all_panels(self):
+    def test_import_all_panels(self, mock_random):
+        mock_random.side_effect = [7, 8, 9]
+
         # Given all PanelApp gene lists and associated genes
         au_panels_p1_url = '{}/panels/?page=1'.format(PANEL_APP_API_URL_AU)
         au_panels_p2_url = '{}/panels/?page=2'.format(PANEL_APP_API_URL_AU)
@@ -127,13 +130,13 @@ class PaLocusListAPITest(AuthenticationTestCase, BaseLocusListAPITest):
         self.assertEqual(len(responses.calls), 7)
         self.assert_json_logs(None, [
             ('Starting import of all gene lists from Panel App AU', None),
-            ('Importing panel id 260', None),
-            ('create LocusList LL00007_hereditary_haemorrhagi', {'dbUpdate': {
+            ('Found 2 new and 0 existing panels to load', None),
+            ('create 2 LocusLists', {'dbUpdate': {
                 'dbEntity': 'LocusList',
-                'entityId': 'LL00007_hereditary_haemorrhagi',
-                'updateType': 'create',
-                'updateFields': ['description', 'is_public', 'name'],
+                'entityIds': ['LL00007_hereditary_haemorrhagi', 'LL00008_hereditary_neuropathy_'],
+                'updateType': 'bulk_create',
             }}),
+            ('Importing panel id 260', None),
             ('update PaLocusList 7', {'dbUpdate': {
                 'dbEntity': 'PaLocusList',
                 'entityId': 7,
@@ -142,12 +145,6 @@ class PaLocusListAPITest(AuthenticationTestCase, BaseLocusListAPITest):
             }}),
             ('Bulk updating genes for list Hereditary Haemorrhagic Telangiectasia', None),
             ('Importing panel id 3069', None),
-            ('create LocusList LL00008_hereditary_neuropathy_', {'dbUpdate': {
-                'dbEntity': 'LocusList',
-                'entityId': 'LL00008_hereditary_neuropathy_',
-                'updateType': 'create',
-                'updateFields': ['description', 'is_public', 'name'],
-            }}),
             ('update PaLocusList 8', {'dbUpdate': {
                 'dbEntity': 'PaLocusList',
                 'entityId': 8,
@@ -156,15 +153,21 @@ class PaLocusListAPITest(AuthenticationTestCase, BaseLocusListAPITest):
             }}),
             ("Genes found in panel 3069 but not in reference data, ignoring genes ['ENSG00000104728']", {'severity': 'WARNING'}),
             ('Bulk updating genes for list Hereditary Neuropathy_CMT - isolated', None),
+            ('update 2 LocusLists', {'dbUpdate': {
+                'dbEntity': 'LocusList',
+                'entityIds': ['LL00007_hereditary_haemorrhagi', 'LL00008_hereditary_neuropathy_'],
+                'updateFields': ['description'],
+                'updateType': 'bulk_update',
+            }}),
             ('---Done---', None),
             ('Starting import of all gene lists from Panel App UK', None),
-            ('Importing panel id 260', None),
-            ('create LocusList LL00009_auditory_neuropathy_sp', {'dbUpdate': {
+            ('Found 1 new and 0 existing panels to load', None),
+            ('create 1 LocusLists', {'dbUpdate': {
                 'dbEntity': 'LocusList',
-                'entityId': 'LL00009_auditory_neuropathy_sp',
-                'updateType': 'create',
-                'updateFields': ['description', 'is_public', 'name'],
+                'entityIds': ['LL00009_auditory_neuropathy_sp'],
+                'updateType': 'bulk_create',
             }}),
+            ('Importing panel id 260', None),
             ('update PaLocusList 9', {'dbUpdate': {
                 'dbEntity': 'PaLocusList',
                 'entityId': 9,
@@ -172,6 +175,12 @@ class PaLocusListAPITest(AuthenticationTestCase, BaseLocusListAPITest):
                 'updateFields': ['disease_group', 'disease_sub_group', 'status', 'version', 'version_created'],
             }}),
             ('Bulk updating genes for list Auditory Neuropathy Spectrum Disorde', None),
+            ('update 1 LocusLists', {'dbUpdate': {
+                'dbEntity': 'LocusList',
+                'entityIds': ['LL00009_auditory_neuropathy_sp'],
+                'updateFields': ['description'],
+                'updateType': 'bulk_update',
+            }}),
             ('---Done---', None),
         ])
 
@@ -185,14 +194,10 @@ class PaLocusListAPITest(AuthenticationTestCase, BaseLocusListAPITest):
         self.assertEqual(len(responses.calls), 3)
         self.assert_json_logs(None, [
             ('Starting import of all gene lists from Panel App AU', None),
-            ('Importing panel id 260', None),
-            ('Panel id 260 is up to date, skipping import', None),
-            ('Importing panel id 3069', None),
-            ('Panel id 3069 is up to date, skipping import', None),
+            ('Found 0 new and 0 existing panels to load', None),
             ('---Done---', None),
             ('Starting import of all gene lists from Panel App UK', None),
-            ('Importing panel id 260', None),
-            ('Panel id 260 is up to date, skipping import', None),
+            ('Found 0 new and 0 existing panels to load', None),
             ('---Done---', None),
         ])
 
