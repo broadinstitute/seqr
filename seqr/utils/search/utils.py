@@ -551,14 +551,17 @@ def _validate_search(search, samples, previous_search_results):
                     f'Unable to search for comp-het pairs with dataset type "{invalid_type}". This may be because inheritance based search is disabled in families with no loaded affected individuals'
                 )
 
-    if not has_location_filter:
-        backend_specific_call(lambda *args: None, _validate_no_location_search)(samples)
+
+    backend_specific_call(lambda *args: None, _validate_clickhouse_search)(samples, has_location_filter, search)
 
 
-def _validate_no_location_search(samples):
+def _validate_clickhouse_search(samples, has_location_filter, search):
     variant_samples = samples.filter(dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
-    if variant_samples.values('individual__family__project_id').distinct().count() > 1:
+    if not has_location_filter and variant_samples.values('individual__family__project_id').distinct().count() > 1:
         raise InvalidSearchException('Location must be specified to search across multiple projects')
+    seqr_ac_filter = search.get('freqs', {}).get('callset', {}).get('ac') or 5001
+    if seqr_ac_filter > 5000 and variant_samples.values('individual__family_id').distinct().count() > 1:
+        raise InvalidSearchException('seqr AC frequency must be specified to search across multiple projects')
 
 
 def _filter_inheritance_family_samples(samples, inheritance_filter):
