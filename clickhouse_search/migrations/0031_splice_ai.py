@@ -142,7 +142,7 @@ class Migration(migrations.Migration):
         ),
         migrations.RunSQL(
             ALL_TO_SEQR_MV.substitute(
-                reference_genome="GRCh37",
+                reference_genome="GRCh38",
                 dataset_type="SNV_INDEL",
                 reference_dataset="splice_ai",
             ),
