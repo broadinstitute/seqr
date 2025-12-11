@@ -40,7 +40,7 @@ RANGE(MIN start MAX end)
 )
 
 # Original file sourced from `https://downloads.wenglab.org/V3/GRCh38-cCREs.bed`
-SCREEN_VIEW = """
+SCREEN_VIEW = Template("""
 $mv_header
 AS SELECT
     replaceOne(c1, 'chr', '') as chrom,
@@ -48,7 +48,7 @@ AS SELECT
     toUInt32(assumeNotNull(c3)) as end,
     splitByChar(',', assumeNotNull(c6))[1] as regionType
 FROM url('https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh38/screen/GRCh38-cCREs.bed')
-"""
+""")
 
 class Migration(migrations.Migration):
 

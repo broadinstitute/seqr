@@ -39,7 +39,7 @@ RANGE(MIN start MAX end)
     clickhouse_writer_password=CLICKHOUSE_WRITER_PASSWORD,
 )
 
-GNOMAD_NON_CODING_CONSTRAINT_VIEW = """
+GNOMAD_NON_CODING_CONSTRAINT_VIEW = Template("""
 $mv_header
 AS SELECT
     replaceOne(chrom, 'chr', '') as chrom,
@@ -47,7 +47,7 @@ AS SELECT
     toUInt32(assumeNotNull(end)) as end,
     z
 FROM url('https://storage.googleapis.com/gcp-public-data--gnomad/release/3.1/secondary_analyses/genomic_constraint/constraint_z_genome_1kb.qc.download.txt.gz')
-"""
+""")
 
 class Migration(migrations.Migration):
 
