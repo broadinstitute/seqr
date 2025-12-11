@@ -7,31 +7,7 @@ from django.db import migrations, models
 import django.db.models.deletion
 import django.db.models.manager
 
-from settings import DATABASES, PIPELINE_RUNNER_SERVER
-
-from clickhouse_search.migration_templates import ALL_TO_SEQR_MV, ALL_VARIANTS_MV_HEADER, conditionally_refresh_reference_dataset
-
-SPLICE_AI_SEARCH = Template(Template("""
-CREATE DICTIONARY `$reference_genome/SNV_INDEL/reference_data/splice_ai`
-(
-    `key` UInt32,
-    `score` Decimal(9, 5),
-    `consequence_id` UInt8
-)
-PRIMARY KEY key
-SOURCE(CLICKHOUSE(
-    USER '$clickhouse_writer_user'
-    PASSWORD '$clickhouse_writer_password'
-    QUERY 'SELECT key, score, toUInt8(consequence) from  `$reference_genome/SNV_INDEL/reference_data/splice_ai/seqr_variants`'
-))
-LIFETIME(MIN 0 MAX 0)
-LAYOUT(FLAT(MAX_ARRAY_SIZE $size))
-""").safe_substitute(
-    # Note the nested Template-ing that allows
-    # double substitution these shared values
-    clickhouse_writer_user=CLICKHOUSE_WRITER_USER,
-    clickhouse_writer_password=CLICKHOUSE_WRITER_PASSWORD,
-))
+from clickhouse_search.migration_templates import ALL_TO_SEQR_MV, ALL_VARIANTS_MV_HEADER, conditionally_refresh_reference_dataset, render_search_dictionary
 
 SPLICE_AI_ALL_VARIANTS_MV = Template("""
 $mv_header
@@ -144,17 +120,35 @@ class Migration(migrations.Migration):
             hints={"clickhouse": True},
         ),
         migrations.RunSQL(
-            SPLICE_AI_SEARCH.substitute(
+            render_search_dictionary(
                 reference_genome="GRCh37",
-                size=int(2e8),
-            ),
+                dataset_type="SNV_INDEL",
+                reference_dataset="splice_ai",
+                columns="""
+                    `key` UInt32,
+                    `score` Decimal(9, 5),
+                    `consequence_id` UInt8
+                """,
+                primary_key="key",
+                source="QUERY 'SELECT key, score, toUInt8(consequence) from  `$reference_genome/SNV_INDEL/reference_data/splice_ai/seqr_variants`'",
+                layout="FLAT(MAX_ARRAY_SIZE 200000000)"
+            )
             hints={"clickhouse": True},
         ),
         migrations.RunSQL(
-            SPLICE_AI_SEARCH.substitute(
+            render_search_dictionary(
                 reference_genome="GRCh38",
-                size=int(1e9),
-            ),
+                dataset_type="SNV_INDEL",
+                reference_dataset="splice_ai",
+                columns="""
+                    `key` UInt32,
+                    `score` Decimal(9, 5),
+                    `consequence_id` UInt8
+                """,
+                primary_key="key",
+                source="QUERY 'SELECT key, score, toUInt8(consequence) from  `$reference_genome/SNV_INDEL/reference_data/splice_ai/seqr_variants`'",
+                layout="FLAT(MAX_ARRAY_SIZE 1000000000)",
+            )
             hints={"clickhouse": True},
         ),
         migrations.RunPython(
