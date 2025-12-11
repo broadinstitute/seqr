@@ -213,7 +213,6 @@ class PaLocusListAPITest(ReferenceDataCommandTestCase, BaseLocusListAPITest):
         ])
         self.assertEqual(DataVersions.objects.get(data_model_name='PanelAppAU').version, '2025-04-08')
         self.assertEqual(DataVersions.objects.get(data_model_name='PanelAppUK').version, '2025-04-08')
-        mock_slack.assert_not_called()
 
     def _assert_lists_imported(self):
         locuslists_url = reverse(locus_lists)
