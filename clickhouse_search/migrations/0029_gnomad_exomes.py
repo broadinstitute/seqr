@@ -158,7 +158,7 @@ class Migration(migrations.Migration):
                 primary_key="key",
                 source="TABLE `GRCh38/SNV_INDEL/reference_data/gnomad_exomes/seqr_variants`",
                 layout="HASHED_ARRAY()",
-            )
+            ),
             hints={"clickhouse": True},
         ),
         migrations.RunSQL(
@@ -178,7 +178,7 @@ class Migration(migrations.Migration):
                 primary_key="key",
                 source="TABLE `GRCh38/SNV_INDEL/reference_data/gnomad_exomes/seqr_variants`",
                 layout="HASHED_ARRAY()",
-            )
+            ),
             hints={"clickhouse": True},
         ),
         migrations.RunPython(
