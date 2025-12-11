@@ -180,7 +180,7 @@ class Migration(migrations.Migration):
             ALL_TO_SEQR_MV.substitute(
                 reference_genome="GRCh37",
                 dataset_type="SNV_INDEL",
-                reference_dataset="topmed",
+                reference_dataset="hgmd",
             ),
             hints={"clickhouse": True},
         ),
@@ -188,7 +188,7 @@ class Migration(migrations.Migration):
             ALL_TO_SEQR_MV.substitute(
                 reference_genome="GRCh38",
                 dataset_type="SNV_INDEL",
-                reference_dataset="topmed",
+                reference_dataset="hgmd",
             ),
             hints={"clickhouse": True},
         ),
