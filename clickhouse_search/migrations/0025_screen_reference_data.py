@@ -8,6 +8,8 @@ import clickhouse_search.backend.fields
 from django.db import migrations
 import django.db.models.manager
 
+from clickhouse_search.migration_templates import conditionally_refresh_reference_dataset
+
 from settings import DATABASES, PIPELINE_RUNNER_SERVER
 
 CLICKHOUSE_WRITER_PASSWORD = os.environ.get('CLICKHOUSE_WRITER_PASSWORD', 'clickhouse_test')
@@ -51,15 +53,6 @@ AS SELECT
 FROM url('https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh38/screen/GRCh38-cCREs.bed')
 """
 
-def conditionally_refresh_view(apps, schema_editor):
-    if DATABASES['default']['NAME'].startswith('test_'):
-        return
-    requests.post(
-        f"{PIPELINE_RUNNER_SERVER}/refresh_clickhouse_reference_dataset_enqueue",
-        json={"reference_dataset": 'screen'},
-        timeout=60,
-    )
-
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -94,6 +87,8 @@ class Migration(migrations.Migration):
             hints={'clickhouse': True},
         ),
         migrations.RunPython(
-            conditionally_refresh_view,
+            conditionally_refresh_reference_dataset(
+                reference_dataset="screen",
+            ),
         ),
     ]

@@ -55,17 +55,6 @@ AS SELECT
 FROM gcs('https://storage.googleapis.com/seqr-reference-data/v3.1/$reference_genome/topmed/1.1.parquet/*.parquet')
 """)
 
-def conditionally_refresh_view(reference_genome: str):
-    def inner(apps, schema_editor):
-        if DATABASES['default']['NAME'].startswith('test_'):
-            return
-        requests.post(
-            f"{PIPELINE_RUNNER_SERVER}/refresh_clickhouse_reference_dataset_enqueue",
-            json={"reference_dataset": 'topmed'},
-            timeout=60,
-        )
-    return inner
-
 class Migration(migrations.Migration):
 
     dependencies = [

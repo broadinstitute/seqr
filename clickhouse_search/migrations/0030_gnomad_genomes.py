@@ -57,9 +57,6 @@ AS SELECT
 FROM gcs('https://storage.googleapis.com/seqr-reference-data/v3.1/$reference_genome/gnomad_genomes/1.0.parquet/*.parquet')
 """)
 
-
-
-
 class Migration(migrations.Migration):
 
     dependencies = [
