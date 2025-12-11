@@ -9,6 +9,8 @@ from django.db import migrations, models, connections
 import django.db.models.deletion
 import django.db.models.manager
 
+from clickhouse_search.migration_templates import ALL_TO_SEQR_MV, conditionally_refresh_reference_dataset
+
 from settings import DATABASES, PIPELINE_RUNNER_SERVER
 
 HGMD_GRCH37_URL = os.environ.get('HGMD_GRCH37_URL', None)
@@ -36,20 +38,6 @@ WHERE ALT != '<DEL>'
 SETTINGS input_format_allow_errors_ratio = 0.01, input_format_allow_errors_num = 25
 """)
 
-HGMD_ALL_TO_SEQR_MV = Template("""
-CREATE MATERIALIZED VIEW `$reference_genome/SNV_INDEL/reference_data/hgmd/all_variants_to_seqr_variants_mv`
-REFRESH EVERY 10 YEAR
-TO `$reference_genome/SNV_INDEL/reference_data/hgmd/seqr_variants`
-AS 
-SELECT
-    DISTINCT ON (key)
-    key,
-    COLUMNS('.*') EXCEPT(version, variantId, key)
-FROM `$reference_genome/SNV_INDEL/reference_data/hgmd/all_variants` src
-INNER JOIN `$reference_genome/SNV_INDEL/key_lookup` dst
-ON assumeNotNull(src.variantId) = dst.variantId
-""")
-
 HGMD_SEQR_TO_SEARCH_MV = Template("""
 CREATE MATERIALIZED VIEW `$reference_genome/SNV_INDEL/reference_data/hgmd/seqr_variants_to_search_mv`
 REFRESH EVERY 10 YEAR
@@ -59,17 +47,6 @@ SELECT
 DISTINCT ON (key) *
 FROM `$reference_genome/SNV_INDEL/reference_data/hgmd/seqr_variants`
 """)
-
-def conditionally_refresh_view(reference_genome: str):
-    def inner(apps, schema_editor):
-        if DATABASES['default']['NAME'].startswith('test_'):
-            return
-        requests.post(
-            f"{PIPELINE_RUNNER_SERVER}/refresh_clickhouse_reference_dataset_enqueue",
-            json={"reference_dataset": 'hgmd'},
-            timeout=60,
-        )
-    return inner
 
 def build_hgmd_all_variants_mv(reference_genome: str, hgmd_url: str):
     def inner(apps, schema_editor):
@@ -200,14 +177,18 @@ class Migration(migrations.Migration):
             ],
         ),
         migrations.RunSQL(
-            HGMD_ALL_TO_SEQR_MV.substitute(
+            ALL_TO_SEQR_MV.substitute(
                 reference_genome="GRCh37",
+                dataset_type="SNV_INDEL",
+                reference_dataset="topmed",
             ),
             hints={"clickhouse": True},
         ),
         migrations.RunSQL(
-            HGMD_ALL_TO_SEQR_MV.substitute(
+            ALL_TO_SEQR_MV.substitute(
                 reference_genome="GRCh38",
+                dataset_type="SNV_INDEL",
+                reference_dataset="topmed",
             ),
             hints={"clickhouse": True},
         ),
@@ -236,13 +217,8 @@ class Migration(migrations.Migration):
             ),
         ),
         migrations.RunPython(
-            conditionally_refresh_view(
-                reference_genome="GRCh37",
-            ),
-        ),
-        migrations.RunPython(
-            conditionally_refresh_view(
-                reference_genome="GRCh38",
+            conditionally_refresh_reference_dataset(
+                reference_dataset="hgmd",
             ),
         ),
     ]

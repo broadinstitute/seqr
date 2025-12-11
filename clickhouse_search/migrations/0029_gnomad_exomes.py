@@ -8,6 +8,8 @@ from django.db import migrations, models
 import django.db.models.deletion
 import django.db.models.manager
 
+from clickhouse_search.migration_templates import ALL_TO_SEQR_MV, conditionally_refresh_reference_dataset
+
 from settings import DATABASES, PIPELINE_RUNNER_SERVER
 
 CLICKHOUSE_WRITER_PASSWORD = os.environ.get('CLICKHOUSE_WRITER_PASSWORD', 'clickhouse_test')
@@ -53,20 +55,6 @@ AS SELECT
     Hemi as hemi,
     Hom as hom
 FROM gcs('https://storage.googleapis.com/seqr-reference-data/v3.1/$reference_genome/gnomad_exomes/1.0.parquet/*.parquet')
-""")
-
-GNOMAD_EXOMES_ALL_TO_SEQR_MV = Template("""
-CREATE MATERIALIZED VIEW `$reference_genome/SNV_INDEL/reference_data/gnomad_exomes/all_variants_to_seqr_variants_mv`
-REFRESH EVERY 10 YEAR
-TO `$reference_genome/SNV_INDEL/reference_data/gnomad_exomes/seqr_variants`
-AS 
-SELECT
-    DISTINCT ON (key)
-    key,
-    COLUMNS('.*') EXCEPT(version, variantId, key)
-FROM `$reference_genome/SNV_INDEL/reference_data/gnomad_exomes/all_variants` src
-INNER JOIN `$reference_genome/SNV_INDEL/key_lookup` dst
-ON assumeNotNull(src.variantId) = dst.variantId
 """)
 
 def conditionally_refresh_view(reference_genome: str):
@@ -181,14 +169,18 @@ class Migration(migrations.Migration):
             hints={"clickhouse": True},
         ),
         migrations.RunSQL(
-            GNOMAD_EXOMES_ALL_TO_SEQR_MV.substitute(
+            ALL_TO_SEQR_MV.substitute(
                 reference_genome="GRCh37",
+                dataset_type="SNV_INDEL",
+                reference_dataset="gnomad_exomes",
             ),
             hints={"clickhouse": True},
         ),
         migrations.RunSQL(
-            GNOMAD_EXOMES_ALL_TO_SEQR_MV.substitute(
+            ALL_TO_SEQR_MV.substitute(
                 reference_genome="GRCh38",
+                dataset_type="SNV_INDEL",
+                reference_dataset="gnomad_exomes",
             ),
             hints={"clickhouse": True},
         ),
@@ -207,13 +199,8 @@ class Migration(migrations.Migration):
             hints={"clickhouse": True},
         ),
         migrations.RunPython(
-            conditionally_refresh_view(
-                reference_genome="GRCh37",
-            ),
-        ),
-        migrations.RunPython(
-            conditionally_refresh_view(
-                reference_genome="GRCh38",
+            conditionally_refresh_reference_dataset(
+                reference_dataset="gnomad_exomes",
             ),
         ),
     ]
