@@ -6,8 +6,6 @@ from django.db import migrations, models
 import django.db.models.deletion
 import django.db.models.manager
 
-from settings import DATABASES, PIPELINE_RUNNER_SERVER
-
 from clickhouse_search.migration_templates import ALL_TO_SEQR_MV, ALL_VARIANTS_MV_HEADER, conditionally_refresh_reference_dataset, render_search_dictionary
 
 GNOMAD_GENOMES_ALL_VARIANTS_MV = Template("""
