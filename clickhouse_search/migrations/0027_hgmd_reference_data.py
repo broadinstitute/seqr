@@ -11,8 +11,6 @@ import django.db.models.manager
 
 from clickhouse_search.migration_templates import ALL_TO_SEQR_MV, ALL_VARIANTS_MV_HEADER, conditionally_refresh_reference_dataset
 
-from settings import DATABASES, PIPELINE_RUNNER_SERVER
-
 HGMD_GRCH37_URL = os.environ.get('HGMD_GRCH37_URL', None)
 HGMD_GRCH38_URL = os.environ.get('HGMD_GRCH38_URL', None)
 
