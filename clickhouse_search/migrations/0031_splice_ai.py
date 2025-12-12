@@ -131,7 +131,7 @@ class Migration(migrations.Migration):
                 """,
                 primary_key="key",
                 source="QUERY 'SELECT key, score, toUInt8(consequence) from  `$reference_genome/SNV_INDEL/reference_data/splice_ai/seqr_variants`'",
-                layout="FLAT(MAX_ARRAY_SIZE 200000000)"
+                layout="HASHED_ARRAY()"
             ),
             hints={"clickhouse": True},
         ),
@@ -147,7 +147,7 @@ class Migration(migrations.Migration):
                 """,
                 primary_key="key",
                 source="QUERY 'SELECT key, score, toUInt8(consequence) from  `$reference_genome/SNV_INDEL/reference_data/splice_ai/seqr_variants`'",
-                layout="FLAT(MAX_ARRAY_SIZE 1000000000)",
+                layout="HASHED_ARRAY()",
             ),
             hints={"clickhouse": True},
         ),
