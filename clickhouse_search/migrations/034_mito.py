@@ -88,7 +88,7 @@ FROM
         concat('M', '-', nt_start, '-', ref_rCRS, '-', alt) AS variantId,
         CAST(disease_score AS Decimal(9, 5)) AS score
     FROM url('https://storage.googleapis.com/seqr-reference-data/GRCh38/mitochondrial/HmtVar/HmtVar%20Jan.%2010%202022.json')
-    WHERE match(alt, '^[ACTG]+$') AND (disease_score IS NOT NULL)
+    WHERE match(alt, '^[ACTG]+$$') AND (disease_score IS NOT NULL)
 )
 GROUP BY variantId
 """)
