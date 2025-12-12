@@ -137,7 +137,7 @@ class Migration(migrations.Migration):
         ),
         migrations.RunSQL(
             render_search_dictionary(
-                reference_genome="GRCh38",
+                reference_genome="GRCh37",
                 dataset_type="SNV_INDEL",
                 reference_dataset="topmed",
                 columns="""
