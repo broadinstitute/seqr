@@ -106,9 +106,9 @@ FROM (
 )
 GROUP BY variantId
 SETTINGS input_format_tsv_crlf_end_of_line = 1
-"""
+""")
 
-LOCAL_CONSTRAINT_MITO_ALL_VARIANTS_MV = """
+LOCAL_CONSTRAINT_MITO_ALL_VARIANTS_MV = Template("""
 $mv_header
 AS SELECT 
     concat('M', '-', Position, '-', Reference, '-', Alternate) as variantId,

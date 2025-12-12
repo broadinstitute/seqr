@@ -56,7 +56,7 @@ def render_search_dictionary(
     source: str,
     layout: str,
 ):
-    range_block = f"RANGE(MIN start MAX end)" if layout == "RANGE_HASHED()" else ""    
+    range_block = "RANGE(MIN start MAX end)" if layout == "RANGE_HASHED()" else ""    
     return DICTIONARY_TEMPLATE.substitute(
         reference_genome=reference_genome,
         dataset_type=dataset_type,

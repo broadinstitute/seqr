@@ -942,7 +942,7 @@ class BaseDbnsfp(models.ClickhouseModel):
     revel = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)
     sift = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)
     vest = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)
-    
+
     class Meta:
         abstract = True
 
