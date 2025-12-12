@@ -75,7 +75,7 @@ def conditionally_refresh_reference_dataset(reference_dataset: str):
     def inner(apps, schema_editor):
         if DATABASES['default']['NAME'].startswith('test_'):
             return
-        requests.post(
+        requests.post( # pragma: no cover
             f"{PIPELINE_RUNNER_SERVER}/refresh_clickhouse_reference_dataset_enqueue",
             json={"reference_dataset": reference_dataset},
             timeout=60,
