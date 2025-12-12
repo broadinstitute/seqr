@@ -643,7 +643,7 @@ class Migration(migrations.Migration):
         ),
         migrations.RunSQL(
             GNOMAD_MITO_ALL_VARIANTS_MV.substitute(
-                mv_header=ALL_VARIANTS_MV_HEADER.substitute(reference_genome="GRCh38", dataset_type="MITO", reference_dataset="gnomad_mito_heteroplasmy"),
+                mv_header=ALL_VARIANTS_MV_HEADER.substitute(reference_genome="GRCh38", dataset_type="MITO", reference_dataset="gnomad_mito"),
             ),
             hints={"clickhouse": True},
         ),
