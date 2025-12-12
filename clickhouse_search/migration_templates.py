@@ -1,6 +1,8 @@
 import os
 from string import Template
 
+import requests
+
 from settings import DATABASES, PIPELINE_RUNNER_SERVER
 
 CLICKHOUSE_WRITER_PASSWORD = os.environ.get('CLICKHOUSE_WRITER_PASSWORD', 'clickhouse_test')

@@ -170,7 +170,7 @@ class Migration(migrations.Migration):
             hints={"clickhouse": True},
         ),
         migrations.RunSQL(
-            DBSNFP_ALL_VARIANTS_MV_GRCh38.substitute(
+            DBNSFP_ALL_VARIANTS_MV_GRCh38.substitute(
                 mv_header=ALL_VARIANTS_MV_HEADER.substitute(reference_genome="GRCh38", dataset_type="SNV_INDEL", reference_dataset="dbnsfp"),
             ),
             hints={"clickhouse": True},
