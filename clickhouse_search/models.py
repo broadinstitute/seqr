@@ -931,6 +931,61 @@ class EigenSeqrVariantsSnvIndel(BaseEigen):
             order_by=('key'),
         )
 
+class BaseDbnsfp(models.ClickhouseModel):
+    cadd = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)
+    fathmm = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)
+    mpc = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)
+    mut_pred = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)
+    mut_tester = models.StringField(blank=True, null=True)
+    polyphen = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)
+    primate_ai = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)
+    revel = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)
+    sift = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)
+    vest = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)
+    
+    class Meta:
+        abstract = True
+
+class DbnsfpAllVariantsGRCh37SnvIndel(BaseDbnsfp):
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
+
+    class Meta:
+        db_table = 'GRCh37/SNV_INDEL/reference_data/dbnsfp/all_variants'
+        engine = models.MergeTree(
+            primary_key=('variant_id'),
+            order_by=('variant_id'),
+        )
+
+class DbnsfpAllVariantsSnvIndel(BaseDbnsfp):
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
+
+    class Meta:
+        db_table = 'GRCh38/SNV_INDEL/reference_data/dbnsfp/all_variants'
+        engine = models.MergeTree(
+            primary_key=('variant_id'),
+            order_by=('variant_id'),
+        )
+
+class DbnsfpSeqrVariantsGRCh37SnvIndel(BaseDbnsfp):
+    key = OneToOneField('AnnotationsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+
+    class Meta:
+        db_table = 'GRCh37/SNV_INDEL/reference_data/dbnsfp/seqr_variants'
+        engine = models.MergeTree(
+            primary_key=('key'),
+            order_by=('key'),
+        )
+
+class DbnsfpSeqrVariantsSnvIndel(BaseDbnsfp):
+    key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+
+    class Meta:
+        db_table = 'GRCh38/SNV_INDEL/reference_data/dbnsfp/seqr_variants'
+        engine = models.MergeTree(
+            primary_key=('key'),
+            order_by=('key'),
+        )
+
 
 class BaseEntries(FixtureLoadableClickhouseModel):
     MAX_XPOS_FILTER_INTERVALS = 500

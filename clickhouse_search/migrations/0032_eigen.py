@@ -156,7 +156,7 @@ class Migration(migrations.Migration):
             render_search_dictionary(
                 reference_genome="GRCh38",
                 dataset_type="SNV_INDEL",
-                reference_dataset="splice_ai",
+                reference_dataset="eigen",
                 columns="""
                     `key` UInt32,
                     `score` Decimal(9, 5)
