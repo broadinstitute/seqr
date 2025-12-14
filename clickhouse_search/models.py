@@ -1182,6 +1182,50 @@ class MitomapMitoSeqrVariants(models.ClickhouseModel):
             order_by=('key'),
         )
 
+class Absplice2AllVariants(models.ClickhouseModel):
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
+    score = models.DecimalField(max_digits=9, decimal_places=5)
+
+    class Meta:
+        db_table = 'GRCh38/SNV_INDEL/reference_data/absplice2/all_variants'
+        engine = models.MergeTree(
+            primary_key=('variant_id'),
+            order_by=('variant_id'),
+        )
+
+class Absplice2SeqrVariants(models.ClickhouseModel):
+    key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
+    score = models.DecimalField(max_digits=9, decimal_places=5)
+
+    class Meta:
+        db_table = 'GRCh38/SNV_INDEL/reference_data/absplice2/seqr_variants'
+        engine = models.MergeTree(
+            primary_key=('key'),
+            order_by=('key'),
+        )
+
+class PromoterAIAllVariants(models.ClickhouseModel):
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
+    score = models.DecimalField(max_digits=9, decimal_places=5)
+
+    class Meta:
+        db_table = 'GRCh38/SNV_INDEL/reference_data/promoterAI/all_variants'
+        engine = models.MergeTree(
+            primary_key=('variant_id'),
+            order_by=('variant_id'),
+        )
+
+class PromoterAISeqrVariants(models.ClickhouseModel):
+    key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
+    score = models.DecimalField(max_digits=9, decimal_places=5)
+
+    class Meta:
+        db_table = 'GRCh38/SNV_INDEL/reference_data/promoterAI/seqr_variants'
+        engine = models.MergeTree(
+            primary_key=('key'),
+            order_by=('key'),
+        )
+
 
 class BaseEntries(FixtureLoadableClickhouseModel):
     MAX_XPOS_FILTER_INTERVALS = 500
