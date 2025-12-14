@@ -20,7 +20,7 @@ AS SELECT
         ref,
         '-',
         alt
-    ),
+    ) as variantId,
     promoterAI
 FROM url('https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh38/promoter_ai/promoterAI.tsv')
 """)

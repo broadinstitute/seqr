@@ -20,7 +20,7 @@ AS SELECT
         ref,
         '-',
         alt
-    ),
+    ) as variantId,
     AbSplice_DNA_max
 FROM url('https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh38/absplice2/absplice2.tsv.gz')
 """)
