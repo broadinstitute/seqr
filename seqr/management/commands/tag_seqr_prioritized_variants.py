@@ -95,8 +95,8 @@ RESTRICTIVE_FREQ_FILTER = {
 }
 PERMISSIVE_FREQ_FILTER = {
     'callset': {'ac': 1000},
-    'gnomad_exomes': {'af': 0.01, 'hh': 2},
-    'gnomad_genomes': {'af': 0.01, 'hh': 2},
+    'gnomad_exomes': {'af': 0.01, 'hh': 5},
+    'gnomad_genomes': {'af': 0.01, 'hh': 5},
     'sv_callset': {'ac': 500},
     'gnomad_svs': {'af': 0.01},
 }
@@ -104,9 +104,6 @@ PERMISSIVE_FREQ_FILTER = {
 IN_SILICO_FILTER = {
     'cadd': 25,
     'revel': 0.6
-}
-SPLICE_AI_FILTER = {
-    'splice_ai': 0.5,
 }
 
 QUALITY_FILTER = {
@@ -137,14 +134,6 @@ RECESSIVE_SEARCH = {
     'in_silico': IN_SILICO_FILTER,
     'freqs': PERMISSIVE_FREQ_FILTER,
     'qualityFilter': QUALITY_FILTER,
-}
-RECESSIVE_SEARCH_PERMISSIVE_HH_FILTER = {
-    **RECESSIVE_SEARCH,
-    'annotations': HIGH_MODERATE_ANNOTATIONS,
-    'freqs': {
-        pop: {**pop_filter, 'hh': 5} if 'hh' in pop_filter else pop_filter
-        for pop, pop_filter in RECESSIVE_SEARCH['freqs'].items()
-    },
 }
 SV_RECESSIVE_SEARCH = {
     'gene_list_moi': RECESSIVE_MOI,
@@ -238,27 +227,29 @@ SEARCHES = {
             'annotations': HIGH_MODERATE_ANNOTATIONS,
             'in_silico': {
                 **IN_SILICO_FILTER,
-                **SPLICE_AI_FILTER,
+                'splice_ai': 0.5,
             },
             **DE_NOVO_SEARCH,
         },
         'High Splice AI': {
             'in_silico': {
-                **SPLICE_AI_FILTER,
+                'splice_ai': 0.8,
                 'requireScore': True
             },
             **DE_NOVO_SEARCH,
         },
         'Recessive': {
             'inheritance_mode': HOMOZYGOUS_RECESSIVE,
-            **RECESSIVE_SEARCH_PERMISSIVE_HH_FILTER,
+            'annotations': HIGH_MODERATE_ANNOTATIONS,
+            **RECESSIVE_SEARCH,
         },
         'X-Linked Recessive': {
             'inheritance_mode': X_LINKED_RECESSIVE_MALE_AFFECTED,
             'family_filter': {
                 AFFECTED_MALE_FAMILY_FILTER: True
             },
-            **RECESSIVE_SEARCH_PERMISSIVE_HH_FILTER,
+            'annotations': HIGH_MODERATE_ANNOTATIONS,
+            **RECESSIVE_SEARCH,
         },
     },
     'SV': {
@@ -278,6 +269,9 @@ SEARCHES = {
             **DE_NOVO_SEARCH,
         },
         'SV - Recessive': {
+            'family_filter': {
+                CONFIRMED_FAMILY_FILTER: True
+            },
             'inheritance_mode': HOMOZYGOUS_RECESSIVE,
             **SV_RECESSIVE_SEARCH,
         },
@@ -557,28 +551,21 @@ class Command(BaseCommand):
         ll = LocusList.objects.get(name=name, palocuslist__isnull=False)
         moi_gene_ids = ll.locuslistgene_set.exclude(gene_id__in=exclude_gene_ids).annotate(
             is_dominant=Q(
-                palocuslistgene__mode_of_inheritance__startswith='BOTH'
-            ) | Q(
-                palocuslistgene__mode_of_inheritance__startswith='X-LINKED',
-                palocuslistgene__mode_of_inheritance__contains='monoallelic mutations',
-            ) | Q(
                 Q(palocuslistgene__mode_of_inheritance__startswith='MONOALLELIC') &
                 ~Q(palocuslistgene__mode_of_inheritance__contains=' paternally imprinted') &
                 ~Q(palocuslistgene__mode_of_inheritance__contains=' maternally imprinted')
             ),
             is_recessive=Q(
-                palocuslistgene__mode_of_inheritance__startswith='BOTH'
-            ) | Q(
                 palocuslistgene__mode_of_inheritance__startswith='BIALLELIC'
             ) | Q(
-                palocuslistgene__mode_of_inheritance__startswith='X-LINKED'
+                palocuslistgene__mode_of_inheritance__startswith='X-LINKED',
+                palocuslistgene__mode_of_inheritance__contains='biallelic mutations',
             ),
-        ).filter(Q(is_dominant=True) | Q(is_recessive=True)).filter(palocuslistgene__confidence_level__in=[
+        ).filter(palocuslistgene__confidence_level__in=[
             level for level, name in PaLocusListGene.CONFIDENCE_LEVEL_CHOICES if name in confidences
         ]).values('gene_id', 'is_dominant', 'is_recessive')
 
-        dominant_gene_ids = [g['gene_id'] for g in moi_gene_ids if g['is_dominant']]
-        recessive_gene_ids = [g['gene_id'] for g in moi_gene_ids if g['is_recessive']]
-        genes_by_id = get_genes(dominant_gene_ids + recessive_gene_ids, genome_version=GENOME_VERSION_GRCh38, additional_model_fields=['id'])
-        gene_by_moi[DOMINANT_MOI].update({gene_id: gene for gene_id, gene in genes_by_id.items() if gene_id in set(dominant_gene_ids)})
-        gene_by_moi[RECESSIVE_MOI].update({gene_id: gene for gene_id, gene in genes_by_id.items() if gene_id in set(recessive_gene_ids)})
+        gene_id_mois = {g['gene_id']: g for g in moi_gene_ids}
+        genes_by_id = get_genes(gene_id_mois.keys(), genome_version=GENOME_VERSION_GRCh38, additional_model_fields=['id'])
+        gene_by_moi[DOMINANT_MOI].update({gene_id: gene for gene_id, gene in genes_by_id.items() if not gene_id_mois[gene_id]['is_recessive']})
+        gene_by_moi[RECESSIVE_MOI].update({gene_id: gene for gene_id, gene in genes_by_id.items() if not gene_id_mois[gene_id]['is_dominant']})
