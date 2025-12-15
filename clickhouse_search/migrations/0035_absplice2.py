@@ -21,7 +21,7 @@ AS SELECT
         '-',
         alt
     ) as variantId,
-    AbSplice_DNA_max
+    AbSplice_DNA_max as score
 FROM url('https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh38/absplice2/absplice2.tsv.gz')
 """)
 
@@ -91,5 +91,10 @@ class Migration(migrations.Migration):
                 layout="HASHED_ARRAY()"
             ),
             hints={"clickhouse": True},
+        ),
+        migrations.RunPython(
+            conditionally_refresh_reference_dataset(
+                reference_dataset="absplice2",
+            ),
         ),
     ]

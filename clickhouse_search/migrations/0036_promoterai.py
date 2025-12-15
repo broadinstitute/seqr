@@ -21,8 +21,8 @@ AS SELECT
         '-',
         alt
     ) as variantId,
-    promoterAI
-FROM url('https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh38/promoter_ai/promoterAI.tsv')
+    promoterAI as score
+FROM url('https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh38/promoterAI/promoterAI.tsv.gz')
 """)
 
 
@@ -91,5 +91,10 @@ class Migration(migrations.Migration):
                 layout="HASHED_ARRAY()"
             ),
             hints={"clickhouse": True},
+        ),
+        migrations.RunPython(
+            conditionally_refresh_reference_dataset(
+                reference_dataset="promoterAI",
+            ),
         ),
     ]
