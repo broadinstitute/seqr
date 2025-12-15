@@ -84,7 +84,7 @@ class Migration(migrations.Migration):
                 reference_dataset="absplice2",
                 columns="""
                     `key` UInt32,
-                    `score` Decimal(9, 5),
+                    `score` Decimal(9, 5)
                 """,
                 primary_key="key",
                 source="TABLE `GRCh38/SNV_INDEL/reference_data/absplice2/seqr_variants`",
