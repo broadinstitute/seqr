@@ -1610,7 +1610,7 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
         }
         self.assertDictEqual(response.json(), expected_response)
 
-        body['search']['freqs'] = {}
+        body['search']['freqs'] = {'callset': body['search']['freqs']['callset']}
         response = self.client.post(url+'2', content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         variant3 = {**VARIANT3, 'selectedMainTranscriptId': 'ENST00000497611', 'numFamilies': 4}
