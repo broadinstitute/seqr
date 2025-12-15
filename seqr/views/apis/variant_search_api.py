@@ -12,12 +12,11 @@ from django.shortcuts import redirect
 from math import ceil
 import re
 
-from clickhouse_search.search import clickhouse_variant_gene_lookup
 from reference_data.models import GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38
 from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, ProjectCategory, Sample
 from seqr.utils.gene_utils import get_gene
 from seqr.utils.search.utils import query_variants, get_single_variant, get_variant_query_gene_counts, get_search_samples, \
-    variant_lookup, parse_variant_id, clickhouse_only
+    variant_lookup, parse_variant_id
 from seqr.utils.search.constants import XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
 from seqr.utils.search.utils import InvalidSearchException
 from seqr.utils.xpos_utils import get_xpos
@@ -31,7 +30,7 @@ from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_
 from seqr.views.utils.permissions_utils import check_project_permissions, get_project_guids_user_can_view, \
     user_is_analyst, login_and_policies_required, check_user_created_object_permissions, check_projects_view_permission
 from seqr.views.utils.project_context_utils import get_projects_child_entities
-from seqr.views.utils.variant_utils import get_variant_key, get_variants_response, get_variants_reference_data_response
+from seqr.views.utils.variant_utils import get_variant_key, get_variants_response
 from seqr.views.utils.vlm_utils import vlm_lookup
 
 
@@ -68,7 +67,8 @@ def query_variants_handler(request, search_hash):
     variants, total_results = query_variants(results_model, sort=sort, page=page, num_results=per_page,
                                              skip_genotype_filter=skip_genotype_filter, user=request.user)
 
-    response = _process_variants(variants or [], results_model.families.all(), request)
+    response = _process_variants(variants or [], results_model.families.all(), request,
+                                 genome_version=results_model.variant_search.search.get('no_access_project_genome_version'))
     response['search'] = _get_search_context(results_model)
     response['search']['totalResults'] = total_results
 
@@ -117,6 +117,8 @@ def _get_or_create_results_model(search_hash, search_context, user):
         search_dict = search_context.get('search', {})
         if search_context.get('previousSearchHash') and (search_dict.get('exclude') or {}).get('previousSearch'):
             search_dict['exclude']['previousSearchHash'] = search_context['previousSearchHash']
+        if search_context.get('includeNoAccessProjects'):
+            search_dict['no_access_project_genome_version'] = all_project_genome_version
         search_model = VariantSearch.objects.filter(search=search_dict).filter(
             Q(created_by=user) | Q(name__isnull=False)).first()
         if not search_model:
@@ -148,7 +150,7 @@ def query_single_variant_handler(request, variant_id):
     return create_json_response(response)
 
 
-def _process_variants(variants, families, request, add_all_context=False, add_locus_list_detail=False):
+def _process_variants(variants, families, request, add_all_context=False, add_locus_list_detail=False, genome_version=None):
     if not variants:
         return {'searchedVariants': variants}
 
@@ -157,7 +159,7 @@ def _process_variants(variants, families, request, add_all_context=False, add_lo
 
     response_json = get_variants_response(
         request, saved_variants, response_variants=flat_variants, add_all_context=add_all_context,
-        add_locus_list_detail=add_locus_list_detail, genome_version=families[0].project.genome_version)
+        add_locus_list_detail=add_locus_list_detail, genome_version=genome_version or families[0].project.genome_version)
     response_json['searchedVariants'] = variants
 
     for saved_variant in response_json['savedVariantsByGuid'].values():
@@ -521,26 +523,34 @@ def _get_saved_searches(user):
 def _get_saved_variant_models(variants, families):
     hg37_family_guids = families.filter(project__genome_version=GENOME_VERSION_GRCh37).values_list('guid', flat=True) if families else []
 
-    variant_q = Q()
+    variant_qs = []
     variants_by_id = {}
     variant_ids_by_family = defaultdict(set)
     for variant in variants:
         variants_by_id[get_variant_key(**variant)] = variant
-        for family_guid in variant['familyGuids']:
+        for family_guid in variant.get('familyGuids', []):
             variant_ids_by_family[family_guid].add(variant['variantId'])
         if variant.get('liftedOverGenomeVersion') == GENOME_VERSION_GRCh37 and hg37_family_guids:
             variant_hg37_families = [family_guid for family_guid in variant['familyGuids'] if family_guid in hg37_family_guids]
             if variant_hg37_families:
                 lifted_xpos = get_xpos(variant['liftedOverChrom'], variant['liftedOverPos'])
-                variant_q |= Q(xpos=lifted_xpos, ref=variant['ref'], alt=variant['alt'], family__guid__in=variant_hg37_families)
+                variant_qs.append(Q(xpos=lifted_xpos, ref=variant['ref'], alt=variant['alt'], family__guid__in=variant_hg37_families))
                 variants_by_id[get_variant_key(
                     xpos=lifted_xpos, ref=variant['ref'], alt=variant['alt'], genomeVersion=variant['liftedOverGenomeVersion']
                 )] = variant
 
     for family_guid, variant_ids in variant_ids_by_family.items():
-        variant_q |= Q(variant_id__in=variant_ids, family__guid=family_guid)
+        variant_qs.append(Q(variant_id__in=variant_ids, family__guid=family_guid))
 
-    return SavedVariant.objects.filter(variant_q), variants_by_id
+    if variant_qs:
+        variant_q = variant_qs[0]
+        for q in variant_qs[1:]:
+            variant_q |= q
+        saved_variants = SavedVariant.objects.filter(variant_q)
+    else:
+        saved_variants = SavedVariant.objects.none()
+
+    return saved_variants, variants_by_id
 
 def _flatten_variants(variants):
     flattened_variants = []
@@ -551,21 +561,6 @@ def _flatten_variants(variants):
         else:
             flattened_variants.append(variant)
     return flattened_variants
-
-
-@clickhouse_only
-@login_and_policies_required
-def gene_variant_lookup(request):
-    search_json = json.loads(request.body)
-    genome_version = search_json.pop('genomeVersion')
-    gene_id = search_json.pop('geneId')
-    gene = get_gene(gene_id, request.user)
-
-    results = clickhouse_variant_gene_lookup(request.user, gene, genome_version, search_json)
-    response = get_variants_reference_data_response(results, [genome_version])
-    response['searchedVariants'] = results
-
-    return create_json_response(response)
 
 
 @login_and_policies_required

@@ -83,6 +83,13 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
     ):
         results += _get_multi_data_type_comp_het_results(genome_version, samples, sample_data_by_dataset_type, user, exclude_key_pairs, **search)
 
+    if search.get('no_access_project_genome_version'):
+        logger.info('Looking up variants in projects with no user access', user)
+        results += _get_search_results(
+        genome_version, Sample.DATASET_TYPE_VARIANT_CALLS, **search, sample_data=None, skip_entry_fields=True, annotate_num_families=True,
+            exclude_projects=sample_data_by_dataset_type.get(Sample.DATASET_TYPE_VARIANT_CALLS, {}).get('project_guids'),
+        )
+
     cache_results = get_clickhouse_cache_results(results, sort, family_guid)
     previous_search_results.update(cache_results)
 
@@ -97,10 +104,8 @@ def get_search_queryset(genome_version, dataset_type, sample_data, **search_kwar
     return annotations_cls.objects.subquery_join(entries).search(**search_kwargs)
 
 
-def _get_search_results(*args, skip_entry_fields=False, order_by=None, **search_kwargs):
+def _get_search_results(*args, skip_entry_fields=False, **search_kwargs):
     results = get_search_queryset(*args, skip_entry_fields=skip_entry_fields, **search_kwargs)
-    if order_by:
-        results = results.order_by(order_by)
     return _evaluate_results(results.result_values(skip_entry_fields=skip_entry_fields))
 
 
@@ -607,7 +612,7 @@ SORT_EXPRESSIONS = {
         lambda x: -max(t.get('alphamissensePathogenicity') or MIN_SORT_RANK for t in x[TRANSCRIPT_CONSEQUENCES_FIELD]) if x.get(TRANSCRIPT_CONSEQUENCES_FIELD) else MIN_SORT_RANK,
     ] + _subfield_sort(SELECTED_TRANSCRIPT_FIELD, 'alphamissensePathogenicity', reverse=True, default=MIN_SORT_RANK),
     'callset_af': _subfield_sort('populations', ('seqr', 'sv_callset'), 'ac'),
-    'family_guid': [lambda x: sorted(x['familyGuids'])[0]],
+    'family_guid': [lambda x: sorted(x.get('familyGuids', ['z']))[0]],
     'gnomad': _subfield_sort('populations', ('gnomad_genomes', 'gnomad_mito', 'gnomad_svs'), 'af'),
     'gnomad_exomes': _subfield_sort('populations', 'gnomad_exomes', 'af'),
     PATHOGENICTY_SORT_KEY: CLINVAR_SORT,
@@ -650,14 +655,6 @@ def _get_sort_key(sort, gene_metadata):
         ]
 
     return lambda x: tuple(expr(x[0] if isinstance(x, list) else x) for expr in [*sort_expressions, lambda x: x[XPOS_SORT_KEY]])
-
-
-def clickhouse_variant_gene_lookup(user, gene, genome_version, search):
-    logger.info(f'Looking up variants in gene {gene["geneId"]}', user)
-    results = _get_search_results(
-        genome_version, Sample.DATASET_TYPE_VARIANT_CALLS, sample_data=None, genes={gene['geneId']: gene}, skip_entry_fields=True, order_by='xpos', **search,
-    )
-    return format_clickhouse_results(results, genome_version)
 
 
 def _clickhouse_variant_lookup(variant_id, genome_version, data_type, samples=None, affected_only=False, hom_only=False):
