@@ -986,7 +986,7 @@ class DbnsfpSeqrVariantsSnvIndel(BaseDbnsfp):
             order_by=('key'),
         )
 
-class HelixMitoAllVariants(models.ClickhouseModel):
+class HelixmitoAllVariantsMito(models.ClickhouseModel):
     variant_id = models.StringField(db_column='variantId', primary_key=True)
     ac = models.UInt32Field()
     af = models.DecimalField(max_digits=9, decimal_places=8)
@@ -999,7 +999,7 @@ class HelixMitoAllVariants(models.ClickhouseModel):
             order_by=('variant_id'),
         )
 
-class HelixMitoHeteroplasmyAllVariants(models.ClickhouseModel):
+class HelixmitoheteroplasmyAllVariantsMito(models.ClickhouseModel):
     variant_id = models.StringField(db_column='variantId', primary_key=True)
     ac = models.UInt32Field()
     af = models.DecimalField(max_digits=9, decimal_places=8)
@@ -1013,7 +1013,7 @@ class HelixMitoHeteroplasmyAllVariants(models.ClickhouseModel):
             order_by=('variant_id'),
         )
 
-class HelixMitoSeqrVariants(models.ClickhouseModel):
+class HelixmitoSeqrVariantsMito(models.ClickhouseModel):
     key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
     ac = models.UInt32Field()
     af = models.DecimalField(max_digits=9, decimal_places=8)
@@ -1026,7 +1026,7 @@ class HelixMitoSeqrVariants(models.ClickhouseModel):
             order_by=('key'),
         )
 
-class HelixMitoHeteroplasmySeqrVariants(models.ClickhouseModel):
+class HelixmitoheteroplasmySeqrVariantsMito(models.ClickhouseModel):
     key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
     ac = models.UInt32Field()
     af = models.DecimalField(max_digits=9, decimal_places=8)
@@ -1040,7 +1040,7 @@ class HelixMitoHeteroplasmySeqrVariants(models.ClickhouseModel):
             order_by=('key'),
         )
 
-class GnomadMitoAllVariants(models.ClickhouseModel):
+class GnomadmitoAllVariantsMito(models.ClickhouseModel):
     variant_id = models.StringField(db_column='variantId', primary_key=True)
     ac = models.UInt32Field()
     af = models.DecimalField(max_digits=9, decimal_places=8)
@@ -1053,7 +1053,7 @@ class GnomadMitoAllVariants(models.ClickhouseModel):
             order_by=('variant_id'),
         )
 
-class GnomadMitoHeteroplasmyAllVariants(models.ClickhouseModel):
+class GnomadmitoheteroplasmyAllVariantsMito(models.ClickhouseModel):
     variant_id = models.StringField(db_column='variantId', primary_key=True)
     ac = models.UInt32Field()
     af = models.DecimalField(max_digits=9, decimal_places=8)
@@ -1067,7 +1067,7 @@ class GnomadMitoHeteroplasmyAllVariants(models.ClickhouseModel):
             order_by=('variant_id'),
         )
 
-class GnomadMitoSeqrVariants(models.ClickhouseModel):
+class GnomadmitoSeqrVariantsMito(models.ClickhouseModel):
     key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
     ac = models.UInt32Field()
     af = models.DecimalField(max_digits=9, decimal_places=8)
@@ -1080,7 +1080,7 @@ class GnomadMitoSeqrVariants(models.ClickhouseModel):
             order_by=('key'),
         )
 
-class GnomadMitoHeteroplasmySeqrVariants(models.ClickhouseModel):
+class GnomadmitoheteroplasmySeqrVariantsMito(models.ClickhouseModel):
     key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
     ac = models.UInt32Field()
     af = models.DecimalField(max_digits=9, decimal_places=8)
@@ -1094,7 +1094,7 @@ class GnomadMitoHeteroplasmySeqrVariants(models.ClickhouseModel):
             order_by=('key'),
         )
 
-class HmtvarMitoAllVariants(models.ClickhouseModel):
+class HmtvarAllVariantsMito(models.ClickhouseModel):
     variant_id = models.StringField(db_column='variantId', primary_key=True)
     score = models.DecimalField(max_digits=9, decimal_places=5)
 
@@ -1105,7 +1105,7 @@ class HmtvarMitoAllVariants(models.ClickhouseModel):
             order_by=('variant_id'),
         )
 
-class HmtvarMitoSeqrVariants(models.ClickhouseModel):
+class HmtvarSeqrVariantsMito(models.ClickhouseModel):
     key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
     score = models.DecimalField(max_digits=9, decimal_places=5)
 
@@ -1116,7 +1116,7 @@ class HmtvarMitoSeqrVariants(models.ClickhouseModel):
             order_by=('key'),
         )
 
-class MitimpactMitoAllVariants(models.ClickhouseModel):
+class MitimpactAllVariantsMito(models.ClickhouseModel):
     variant_id = models.StringField(db_column='variantId', primary_key=True)
     score = models.DecimalField(max_digits=9, decimal_places=5)
 
@@ -1127,7 +1127,7 @@ class MitimpactMitoAllVariants(models.ClickhouseModel):
             order_by=('variant_id'),
         )
 
-class MitimpactMitoSeqrVariants(models.ClickhouseModel):
+class MitimpactSeqrVariantsMito(models.ClickhouseModel):
     key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
     score = models.DecimalField(max_digits=9, decimal_places=5)
 
@@ -1138,7 +1138,7 @@ class MitimpactMitoSeqrVariants(models.ClickhouseModel):
             order_by=('key'),
         )
 
-class LocalconstraintmitoMitoAllVariants(models.ClickhouseModel):
+class LocalconstraintmitoAllVariantsMito(models.ClickhouseModel):
     variant_id = models.StringField(db_column='variantId', primary_key=True)
     score = models.DecimalField(max_digits=9, decimal_places=5)
 
@@ -1149,7 +1149,7 @@ class LocalconstraintmitoMitoAllVariants(models.ClickhouseModel):
             order_by=('variant_id'),
         )
 
-class LocalconstraintmitoMitoSeqrVariants(models.ClickhouseModel):
+class LocalconstraintmitoSeqrVariantsMito(models.ClickhouseModel):
     key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
     score = models.DecimalField(max_digits=9, decimal_places=5)
 
@@ -1160,7 +1160,7 @@ class LocalconstraintmitoMitoSeqrVariants(models.ClickhouseModel):
             order_by=('key'),
         )
 
-class MitomapMitoAllVariants(models.ClickhouseModel):
+class MitomapAllVariantsMito(models.ClickhouseModel):
     variant_id = models.StringField(db_column='variantId', primary_key=True)
     pathogenic = models.BoolField()
 
@@ -1171,7 +1171,7 @@ class MitomapMitoAllVariants(models.ClickhouseModel):
             order_by=('variant_id'),
         )
 
-class MitomapMitoSeqrVariants(models.ClickhouseModel):
+class MitomapSeqrVariantsMito(models.ClickhouseModel):
     key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
     pathogenic = models.BoolField()
 

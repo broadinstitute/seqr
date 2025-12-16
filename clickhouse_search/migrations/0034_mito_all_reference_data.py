@@ -141,7 +141,7 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name="GnomadMitoAllVariants",
+            name="GnomadmitoAllVariantsMito",
             fields=[
                 (
                     "variant_id",
@@ -170,7 +170,7 @@ class Migration(migrations.Migration):
             ],
         ),
         migrations.CreateModel(
-            name="GnomadMitoSeqrVariants",
+            name="GnomadmitoSeqrVariantsMito",
             fields=[
                 (
                     "key",
@@ -203,7 +203,7 @@ class Migration(migrations.Migration):
             ],
         ),
         migrations.CreateModel(
-            name="GnomadMitoHeteroplasmyAllVariants",
+            name="GnomadmitoheteroplasmyAllVariantsMito",
             fields=[
                 (
                     "variant_id",
@@ -238,7 +238,7 @@ class Migration(migrations.Migration):
             ],
         ),
         migrations.CreateModel(
-            name="GnomadMitoHeteroplasmySeqrVariants",
+            name="GnomadmitoheteroplasmySeqrVariantsMito",
             fields=[
                 (
                     "key",
@@ -277,7 +277,7 @@ class Migration(migrations.Migration):
             ],
         ),
         migrations.CreateModel(
-            name="HelixMitoAllVariants",
+            name="HelixmitoAllVariantsMito",
             fields=[
                 (
                     "variant_id",
@@ -306,7 +306,7 @@ class Migration(migrations.Migration):
             ],
         ),
         migrations.CreateModel(
-            name="HelixMitoSeqrVariants",
+            name="HelixmitoSeqrVariantsMito",
             fields=[
                 (
                     "key",
@@ -339,7 +339,7 @@ class Migration(migrations.Migration):
             ],
         ),
         migrations.CreateModel(
-            name="HelixMitoHeteroplasmyAllVariants",
+            name="HelixmitoheteroplasmyAllVariantsMito",
             fields=[
                 (
                     "variant_id",
@@ -374,7 +374,7 @@ class Migration(migrations.Migration):
             ],
         ),
         migrations.CreateModel(
-            name="HelixMitoHeteroplasmySeqrVariants",
+            name="HelixmitoheteroplasmySeqrVariantsMito",
             fields=[
                 (
                     "key",
@@ -413,7 +413,7 @@ class Migration(migrations.Migration):
             ],
         ),
         migrations.CreateModel(
-            name="HmtvarMitoAllVariants",
+            name="HmtvarAllVariantsMito",
             fields=[
                 (
                     "variant_id",
@@ -440,7 +440,7 @@ class Migration(migrations.Migration):
             ],
         ),
         migrations.CreateModel(
-            name="HmtvarMitoSeqrVariants",
+            name="HmtvarSeqrVariantsMito",
             fields=[
                 (
                     "key",
@@ -471,7 +471,7 @@ class Migration(migrations.Migration):
             ],
         ),
         migrations.CreateModel(
-            name="LocalconstraintmitoMitoAllVariants",
+            name="LocalconstraintmitoAllVariantsMito",
             fields=[
                 (
                     "variant_id",
@@ -498,7 +498,7 @@ class Migration(migrations.Migration):
             ],
         ),
         migrations.CreateModel(
-            name="LocalconstraintmitoMitoSeqrVariants",
+            name="LocalconstraintmitoSeqrVariantsMito",
             fields=[
                 (
                     "key",
@@ -529,7 +529,7 @@ class Migration(migrations.Migration):
             ],
         ),
         migrations.CreateModel(
-            name="MitimpactMitoAllVariants",
+            name="MitimpactAllVariantsMito",
             fields=[
                 (
                     "variant_id",
@@ -556,7 +556,7 @@ class Migration(migrations.Migration):
             ],
         ),
         migrations.CreateModel(
-            name="MitimpactMitoSeqrVariants",
+            name="MitimpactSeqrVariantsMito",
             fields=[
                 (
                     "key",
@@ -587,7 +587,7 @@ class Migration(migrations.Migration):
             ],
         ),
         migrations.CreateModel(
-            name="MitomapMitoAllVariants",
+            name="MitomapAllVariantsMito",
             fields=[
                 (
                     "variant_id",
@@ -609,7 +609,7 @@ class Migration(migrations.Migration):
             ],
         ),
         migrations.CreateModel(
-            name="MitomapMitoSeqrVariants",
+            name="MitomapSeqrVariantsMito",
             fields=[
                 (
                     "key",
