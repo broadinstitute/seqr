@@ -908,8 +908,8 @@ class EntriesToProjectGtStatsGRCh37SnvIndel(BaseEntriesToProjectGtStats):
 
     class Meta(EntriesToProjectGtStatsMeta):
         db_table = 'GRCh37/SNV_INDEL/entries_to_project_gt_stats_mv'
-        to_table = ProjectGtStatsGRCh37SnvIndel
-        source_table = EntriesGRCh37SnvIndel
+        to_table = 'ProjectGtStatsGRCh37SnvIndel'
+        source_table = 'EntriesGRCh37SnvIndel'
 
 class ProjectGtStatsSnvIndel(BaseProjectGtStatsMitoSnvIndel):
     key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
@@ -921,8 +921,8 @@ class EntriesToProjectGtStatsSnvIndel(BaseEntriesToProjectGtStats):
 
     class Meta(EntriesToProjectGtStatsMeta):
         db_table = 'GRCh38/SNV_INDEL/entries_to_project_gt_stats_mv'
-        to_table = ProjectGtStatsSnvIndel
-        source_table = EntriesSnvIndel
+        to_table = 'ProjectGtStatsSnvIndel'
+        source_table = 'EntriesSnvIndel'
 
 class ProjectGtStatsMito(BaseProjectGtStatsMitoSnvIndel):
     key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
@@ -934,8 +934,8 @@ class EntriesToProjectGtStatsMito(BaseEntriesToProjectGtStats):
 
     class Meta(EntriesToProjectGtStatsMeta):
         db_table = 'GRCh38/MITO/entries_to_project_gt_stats_mv'
-        to_table = ProjectGtStatsMito
-        source_table = EntriesMito
+        to_table = 'ProjectGtStatsMito'
+        source_table = 'EntriesMito'
         column_selects = {
             'affected': EntriesToProjectGtStatsMeta.column_selects['affected'],
             'ref_samples': "sumIf(sign, calls.hl == '0')",
@@ -959,8 +959,8 @@ class EntriesToProjectGtStatsSv(MaterializedView):
 
     class Meta(EntriesToProjectGtStatsMeta):
         db_table = 'GRCh38/SV/entries_to_project_gt_stats_mv'
-        to_table = ProjectGtStatsSv
-        source_table = EntriesSv
+        to_table = 'ProjectGtStatsSv'
+        source_table = 'EntriesSv'
         source_sql = 'ARRAY JOIN calls GROUP BY project_guid, key, affected'
 
 

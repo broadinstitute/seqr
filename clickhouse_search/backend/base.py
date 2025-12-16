@@ -2,6 +2,7 @@ from clickhouse_backend.backend.base import (
     DatabaseWrapper as BaseDatabaseWrapper,
     DatabaseSchemaEditor as BaseDatabaseSchemaEditor,
 )
+from django.apps import apps
 
 from clickhouse_search.backend.engines import Join
 
@@ -23,7 +24,8 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
             )
         return sql, params
 
-    def _table_name(self, table_model):
+    def _table_name(self, table_model_name):
+        table_model = apps.get_model('clickhouse_search', table_model_name)
         return self.quote_name(table_model._meta.db_table)
 
     def _materialized_view_sql(self, model):

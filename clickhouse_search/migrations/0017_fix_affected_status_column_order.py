@@ -1,7 +1,6 @@
 # Generated manually by the seqr team
 import clickhouse_backend.models
 import clickhouse_search.backend.fields
-import clickhouse_search.models
 from django.db import migrations
 import django.db.models.manager
 
@@ -29,8 +28,8 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'GRCh37/SNV_INDEL/entries_to_project_gt_stats_mv',
-                'to_table': clickhouse_search.models.ProjectGtStatsGRCh37SnvIndel,
-                'source_table': clickhouse_search.models.EntriesGRCh37SnvIndel,
+                'to_table': 'ProjectGtStatsGRCh37SnvIndel',
+                'source_table': 'EntriesGRCh37SnvIndel',
                 'source_sql': 'ARRAY JOIN calls GROUP BY project_guid, key, sample_type, affected',
                 'column_selects': {
                     'affected': "dictGetOrDefault('seqrdb_affected_status_dict', 'affected', (family_guid, calls.sampleId), 'U')",
@@ -60,8 +59,8 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'GRCh38/SNV_INDEL/entries_to_project_gt_stats_mv',
-                'to_table': clickhouse_search.models.ProjectGtStatsSnvIndel,
-                'source_table': clickhouse_search.models.EntriesSnvIndel,
+                'to_table': 'ProjectGtStatsSnvIndel',
+                'source_table': 'EntriesSnvIndel',
                 'source_sql': 'ARRAY JOIN calls GROUP BY project_guid, key, sample_type, affected',
                 'column_selects': {
                     'affected': "dictGetOrDefault('seqrdb_affected_status_dict', 'affected', (family_guid, calls.sampleId), 'U')",
@@ -91,8 +90,8 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'GRCh38/MITO/entries_to_project_gt_stats_mv',
-                'to_table': clickhouse_search.models.ProjectGtStatsMito,
-                'source_table': clickhouse_search.models.EntriesMito,
+                'to_table': 'ProjectGtStatsMito',
+                'source_table': 'EntriesMito',
                 'source_sql': 'ARRAY JOIN calls GROUP BY project_guid, key, sample_type, affected',
                 'column_selects': {
                     'affected': "dictGetOrDefault('seqrdb_affected_status_dict', 'affected', (family_guid, calls.sampleId), 'U')",
@@ -121,8 +120,8 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'GRCh38/SV/entries_to_project_gt_stats_mv',
-                'to_table': clickhouse_search.models.ProjectGtStatsSv,
-                'source_table': clickhouse_search.models.EntriesSv,
+                'to_table': 'ProjectGtStatsSv',
+                'source_table': 'EntriesSv',
                 'source_sql': 'ARRAY JOIN calls GROUP BY project_guid, key, affected',
                 'column_selects': {
                     'affected': "dictGetOrDefault('seqrdb_affected_status_dict', 'affected', (family_guid, calls.sampleId), 'U')",

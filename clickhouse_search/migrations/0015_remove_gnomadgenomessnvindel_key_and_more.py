@@ -4,10 +4,8 @@
 import clickhouse_backend.models
 import clickhouse_search.backend.engines
 import clickhouse_search.backend.fields
-import clickhouse_search.models
 
 from django.db import migrations, models
-import django.db.models.deletion
 import django.db.models.manager
 import os
 from string import Template
@@ -823,8 +821,8 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'GRCh37/SNV_INDEL/entries_to_project_gt_stats_mv',
-                'to_table': clickhouse_search.models.ProjectGtStatsGRCh37SnvIndel,
-                'source_table': clickhouse_search.models.EntriesGRCh37SnvIndel,
+                'to_table': 'ProjectGtStatsGRCh37SnvIndel',
+                'source_table': 'EntriesGRCh37SnvIndel',
                 'source_sql': 'GROUP BY project_guid, key, sample_type',
                 'column_selects': {
                     'ref_samples': "sum(toInt32(arrayCount(s -> (s.gt = 'REF'), calls) * sign))",
@@ -876,8 +874,8 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'GRCh38/SNV_INDEL/entries_to_project_gt_stats_mv',
-                'to_table': clickhouse_search.models.ProjectGtStatsSnvIndel,
-                'source_table': clickhouse_search.models.EntriesSnvIndel,
+                'to_table': 'ProjectGtStatsSnvIndel',
+                'source_table': 'EntriesSnvIndel',
                 'source_sql': 'GROUP BY project_guid, key, sample_type',
                 'column_selects': {
                     'ref_samples': "sum(toInt32(arrayCount(s -> (s.gt = 'REF'), calls) * sign))",
@@ -929,8 +927,8 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'GRCh38/MITO/entries_to_project_gt_stats_mv',
-                'to_table': clickhouse_search.models.ProjectGtStatsMito,
-                'source_table': clickhouse_search.models.EntriesMito,
+                'to_table': 'ProjectGtStatsMito',
+                'source_table': 'EntriesMito',
                 'source_sql': 'GROUP BY project_guid, key, sample_type',
                 'column_selects': {
                     'ref_samples': "sum(toInt32(arrayCount(s -> (s.hl == '0'), calls) * sign))",
@@ -981,8 +979,8 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'GRCh38/SV/entries_to_project_gt_stats_mv',
-                'to_table': clickhouse_search.models.ProjectGtStatsSv,
-                'source_table': clickhouse_search.models.EntriesSv,
+                'to_table': 'ProjectGtStatsSv',
+                'source_table': 'EntriesSv',
                 'source_sql': 'GROUP BY project_guid, key',
                 'column_selects': {
                     'ref_samples': "sum(toInt32(arrayCount(s -> (s.gt = 'REF'), calls) * sign))",
