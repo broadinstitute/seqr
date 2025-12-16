@@ -5,6 +5,7 @@ from django.db.models import options, ForeignKey, OneToOneField, Func, CASCADE, 
 from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocksDB, Join
 from clickhouse_search.backend.fields import Enum8Field, NestedField, UInt32FieldDeltaCodecField, UInt64FieldDeltaCodecField, NamedTupleField, MaterializedUInt8Field
 from clickhouse_search.backend.functions import ArrayDistinct, ArrayFlatten, ArrayMin, ArrayMax
+from clickhouse_search.backend.table_models import MaterializedView, MATERIALIZED_VIEW_META_FIELDS
 from clickhouse_search.managers import EntriesManager, AnnotationsQuerySet
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample
@@ -15,6 +16,7 @@ from settings import CLICKHOUSE_IN_MEMORY_DIR, CLICKHOUSE_DATA_DIR
 options.DEFAULT_NAMES = (
     *options.DEFAULT_NAMES,
     'projection',
+    *MATERIALIZED_VIEW_META_FIELDS,
 )
 state.DEFAULT_NAMES = options.DEFAULT_NAMES
 
@@ -875,6 +877,18 @@ class BaseProjectGtStatsMitoSnvIndel(BaseProjectGtStats):
             index_granularity=8192,
         )
 
+class BaseEntriesToProjectGtStats(MaterializedView):
+    project_guid = models.StringField(low_cardinality=True)
+    key = UInt32FieldDeltaCodecField(primary_key=True)
+    sample_type = models.Enum8Field(choices=[(1, 'WES'), (2, 'WGS')])
+    affected = models.Enum8Field(choices=[(1, 'A'), (2, 'N'), (3, 'U')])
+    ref_samples = models.Int64Field()
+    het_samples = models.Int64Field()
+    hom_samples = models.Int64Field()
+
+    class Meta:
+        abstract = True
+
 class ProjectGtStatsGRCh37SnvIndel(BaseProjectGtStatsMitoSnvIndel):
     key = OneToOneField('AnnotationsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
 
@@ -886,6 +900,12 @@ class ProjectGtStatsSnvIndel(BaseProjectGtStatsMitoSnvIndel):
 
     class Meta(BaseProjectGtStatsMitoSnvIndel.Meta):
         db_table = 'GRCh38/SNV_INDEL/project_gt_stats'
+
+class EntriesToProjectGtStatsSnvIndel(BaseEntriesToProjectGtStats):
+
+    class Meta:
+        db_table = 'GRCh38/SNV_INDEL/entries_to_project_gt_stats_mv'
+        to_table = ProjectGtStatsSnvIndel
 
 class ProjectGtStatsMito(BaseProjectGtStatsMitoSnvIndel):
     key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
