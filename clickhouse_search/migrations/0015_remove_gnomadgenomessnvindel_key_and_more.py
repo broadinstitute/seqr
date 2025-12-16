@@ -21,18 +21,6 @@ CLICKHOUSE_AC_EXCLUDED_PROJECT_GUIDS  = os.environ.get(
 CLICKHOUSE_WRITER_PASSWORD = os.environ.get('CLICKHOUSE_WRITER_PASSWORD', 'clickhouse_test')
 CLICKHOUSE_WRITER_USER = os.environ.get('CLICKHOUSE_WRITER_USER', 'clickhouse')
 
-
-ENTRIES_TO_PROJECT_GT_STATS = Template("""
-CREATE MATERIALIZED VIEW `$reference_genome/$dataset_type/entries_to_project_gt_stats_mv`
-TO `$reference_genome/$dataset_type/project_gt_stats`
-AS SELECT
-    project_guid,
-    key,
-    $columns
-FROM `$reference_genome/$dataset_type/entries`
-GROUP BY $groupby_columns
-""")
-
 PROJECT_GT_STATS_TO_GT_STATS = Template(Template("""
 CREATE MATERIALIZED VIEW `$reference_genome/$dataset_type/project_gt_stats_to_gt_stats_mv`
 REFRESH EVERY 10 YEAR
@@ -823,19 +811,31 @@ class Migration(migrations.Migration):
                 ('_overwrite_base_manager', django.db.models.manager.Manager()),
             ],
         ),
-        migrations.RunSQL(
-            ENTRIES_TO_PROJECT_GT_STATS.substitute(
-                reference_genome='GRCh37',
-                dataset_type='SNV_INDEL',
-                columns=",\n    ".join([
-                    'sample_type',
-                    "sum(toInt32(arrayCount(s -> (s.gt = 'REF'), calls) * sign)) AS ref_samples",
-                    "sum(toInt32(arrayCount(s -> (s.gt = 'HET'), calls) * sign)) AS het_samples",
-                    "sum(toInt32(arrayCount(s -> (s.gt = 'HOM'), calls) * sign)) AS hom_samples",
-                ]),
-                groupby_columns='project_guid, key, sample_type',
-            ),
-            hints={'clickhouse': True},
+        migrations.CreateModel(
+            name='EntriesToProjectGtStatsGRCh37SnvIndel',
+            fields=[
+                ('project_guid', clickhouse_backend.models.StringField(low_cardinality=True)),
+                ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
+                ('sample_type', clickhouse_backend.models.Enum8Field(choices=[(1, 'WES'), (2, 'WGS')])),
+                ('ref_samples', clickhouse_backend.models.Int64Field()),
+                ('het_samples', clickhouse_backend.models.Int64Field()),
+                ('hom_samples', clickhouse_backend.models.Int64Field()),
+            ],
+            options={
+                'db_table': 'GRCh37/SNV_INDEL/entries_to_project_gt_stats_mv',
+                'to_table': clickhouse_search.models.ProjectGtStatsGRCh37SnvIndel,
+                'source_table': clickhouse_search.models.EntriesGRCh37SnvIndel,
+                'source_sql': 'GROUP BY project_guid, key, sample_type',
+                'column_selects': {
+                    'ref_samples': "sum(toInt32(arrayCount(s -> (s.gt = 'REF'), calls) * sign))",
+                    'het_samples': "sum(toInt32(arrayCount(s -> (s.gt = 'HET'), calls) * sign))",
+                    'hom_samples': "sum(toInt32(arrayCount(s -> (s.gt = 'HOM'), calls) * sign))",
+                },
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
         ),
         migrations.RunSQL(
             PROJECT_GT_STATS_TO_GT_STATS.substitute(
@@ -864,19 +864,31 @@ class Migration(migrations.Migration):
             ),
             hints={'clickhouse': True},
         ),
-        migrations.RunSQL(
-            ENTRIES_TO_PROJECT_GT_STATS.substitute(
-                reference_genome='GRCh38',
-                dataset_type='SNV_INDEL',
-                columns=",\n    ".join([
-                    'sample_type',
-                    "sum(toInt32(arrayCount(s -> (s.gt = 'REF'), calls) * sign)) AS ref_samples",
-                    "sum(toInt32(arrayCount(s -> (s.gt = 'HET'), calls) * sign)) AS het_samples",
-                    "sum(toInt32(arrayCount(s -> (s.gt = 'HOM'), calls) * sign)) AS hom_samples",
-                ]),
-                groupby_columns='project_guid, key, sample_type',
-            ),
-            hints={'clickhouse': True},
+        migrations.CreateModel(
+            name='EntriesToProjectGtStatsSnvIndel',
+            fields=[
+                ('project_guid', clickhouse_backend.models.StringField(low_cardinality=True)),
+                ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
+                ('sample_type', clickhouse_backend.models.Enum8Field(choices=[(1, 'WES'), (2, 'WGS')])),
+                ('ref_samples', clickhouse_backend.models.Int64Field()),
+                ('het_samples', clickhouse_backend.models.Int64Field()),
+                ('hom_samples', clickhouse_backend.models.Int64Field()),
+            ],
+            options={
+                'db_table': 'GRCh38/SNV_INDEL/entries_to_project_gt_stats_mv',
+                'to_table': clickhouse_search.models.ProjectGtStatsSnvIndel,
+                'source_table': clickhouse_search.models.EntriesSnvIndel,
+                'source_sql': 'GROUP BY project_guid, key, sample_type',
+                'column_selects': {
+                    'ref_samples': "sum(toInt32(arrayCount(s -> (s.gt = 'REF'), calls) * sign))",
+                    'het_samples': "sum(toInt32(arrayCount(s -> (s.gt = 'HET'), calls) * sign))",
+                    'hom_samples': "sum(toInt32(arrayCount(s -> (s.gt = 'HOM'), calls) * sign))",
+                },
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
         ),
         migrations.RunSQL(
             PROJECT_GT_STATS_TO_GT_STATS.substitute(
@@ -905,19 +917,31 @@ class Migration(migrations.Migration):
             ),
             hints={'clickhouse': True},
         ),
-        migrations.RunSQL(
-            ENTRIES_TO_PROJECT_GT_STATS.substitute(
-                reference_genome='GRCh38',
-                dataset_type='MITO',
-                columns=",\n    ".join([
-                    'sample_type',
-                    "sum(toInt32(arrayCount(s -> (s.hl == '0'), calls) * sign)) AS ref_samples",
-                    "sum(toInt32(arrayCount(s -> (s.hl > '0' AND s.hl < '0.95'), calls) * sign)) AS het_samples",
-                    "sum(toInt32(arrayCount(s -> (s.hl >= '0.95'), calls) * sign)) AS hom_samples",
-                ]),
-                groupby_columns='project_guid, key, sample_type',
-            ),
-            hints={'clickhouse': True},
+        migrations.CreateModel(
+            name='EntriesToProjectGtStatsMito',
+            fields=[
+                ('project_guid', clickhouse_backend.models.StringField(low_cardinality=True)),
+                ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
+                ('sample_type', clickhouse_backend.models.Enum8Field(choices=[(1, 'WES'), (2, 'WGS')])),
+                ('ref_samples', clickhouse_backend.models.Int64Field()),
+                ('het_samples', clickhouse_backend.models.Int64Field()),
+                ('hom_samples', clickhouse_backend.models.Int64Field()),
+            ],
+            options={
+                'db_table': 'GRCh38/MITO/entries_to_project_gt_stats_mv',
+                'to_table': clickhouse_search.models.ProjectGtStatsMito,
+                'source_table': clickhouse_search.models.EntriesMito,
+                'source_sql': 'GROUP BY project_guid, key, sample_type',
+                'column_selects': {
+                    'ref_samples': "sum(toInt32(arrayCount(s -> (s.hl == '0'), calls) * sign))",
+                    'het_samples': "sum(toInt32(arrayCount(s -> (s.hl > '0' AND s.hl < '0.95'), calls) * sign))",
+                    'hom_samples': "sum(toInt32(arrayCount(s -> (s.hl >= '0.95'), calls) * sign))",
+                },
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
         ),
         migrations.RunSQL(
             PROJECT_GT_STATS_TO_GT_STATS.substitute(
@@ -946,18 +970,30 @@ class Migration(migrations.Migration):
             ),
             hints={'clickhouse': True},
         ),
-        migrations.RunSQL(
-            ENTRIES_TO_PROJECT_GT_STATS.substitute(
-                reference_genome='GRCh38',
-                dataset_type='SV',
-                columns=",\n    ".join([
-                    "sum(toInt32(arrayCount(s -> (s.gt = 'REF'), calls) * sign)) AS ref_samples",
-                    "sum(toInt32(arrayCount(s -> (s.gt = 'HET'), calls) * sign)) AS het_samples",
-                    "sum(toInt32(arrayCount(s -> (s.gt = 'HOM'), calls) * sign)) AS hom_samples",
-                ]),
-                groupby_columns='project_guid, key',
-            ),
-            hints={'clickhouse': True},
+        migrations.CreateModel(
+            name='EntriesToProjectGtStatsSv',
+            fields=[
+                ('project_guid', clickhouse_backend.models.StringField(low_cardinality=True)),
+                ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
+                ('ref_samples', clickhouse_backend.models.Int64Field()),
+                ('het_samples', clickhouse_backend.models.Int64Field()),
+                ('hom_samples', clickhouse_backend.models.Int64Field()),
+            ],
+            options={
+                'db_table': 'GRCh38/SV/entries_to_project_gt_stats_mv',
+                'to_table': clickhouse_search.models.ProjectGtStatsSv,
+                'source_table': clickhouse_search.models.EntriesSv,
+                'source_sql': 'GROUP BY project_guid, key',
+                'column_selects': {
+                    'ref_samples': "sum(toInt32(arrayCount(s -> (s.gt = 'REF'), calls) * sign))",
+                    'het_samples': "sum(toInt32(arrayCount(s -> (s.gt = 'HET'), calls) * sign))",
+                    'hom_samples': "sum(toInt32(arrayCount(s -> (s.gt = 'HOM'), calls) * sign))",
+                },
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
         ),
         migrations.RunSQL(
             PROJECT_GT_STATS_TO_GT_STATS.substitute(

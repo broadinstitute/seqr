@@ -13,9 +13,8 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunSQL(
-            'DROP TABLE `GRCh37/SNV_INDEL/entries_to_project_gt_stats_mv`',
-            hints={'clickhouse': True},
+        migrations.DeleteModel(
+            name='EntriesToProjectGtStatsGRCh37SnvIndel',
         ),
         migrations.CreateModel(
             name='EntriesToProjectGtStatsGRCh37SnvIndel',
@@ -45,9 +44,8 @@ class Migration(migrations.Migration):
                 ('_overwrite_base_manager', django.db.models.manager.Manager()),
             ],
         ),
-        migrations.RunSQL(
-            'DROP TABLE `GRCh38/SNV_INDEL/entries_to_project_gt_stats_mv`',
-            hints={'clickhouse': True},
+        migrations.DeleteModel(
+            name='EntriesToProjectGtStatsSnvIndel',
         ),
         migrations.CreateModel(
             name='EntriesToProjectGtStatsSnvIndel',
@@ -67,17 +65,18 @@ class Migration(migrations.Migration):
                 'source_sql': 'ARRAY JOIN calls GROUP BY project_guid, key, sample_type, affected',
                 'column_selects': {
                     'affected': "dictGetOrDefault('seqrdb_affected_status_dict', 'affected', (family_guid, calls.sampleId), 'U')",
-                    'het_samples': "sumIf(sign, calls.gt = 'HET')", 'hom_samples': "sumIf(sign, calls.gt = 'HOM')",
-                    'ref_samples': "sumIf(sign, calls.gt = 'REF')"},
+                    'het_samples': "sumIf(sign, calls.gt = 'HET')",
+                    'hom_samples': "sumIf(sign, calls.gt = 'HOM')",
+                    'ref_samples': "sumIf(sign, calls.gt = 'REF')",
+                },
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
                 ('_overwrite_base_manager', django.db.models.manager.Manager()),
             ],
         ),
-        migrations.RunSQL(
-            'DROP TABLE `GRCh38/MITO/entries_to_project_gt_stats_mv`',
-            hints={'clickhouse': True},
+        migrations.DeleteModel(
+            name='EntriesToProjectGtStatsMito',
         ),
         migrations.CreateModel(
             name='EntriesToProjectGtStatsMito',
@@ -107,9 +106,8 @@ class Migration(migrations.Migration):
                 ('_overwrite_base_manager', django.db.models.manager.Manager()),
             ],
         ),
-        migrations.RunSQL(
-            'DROP TABLE `GRCh38/SV/entries_to_project_gt_stats_mv`',
-            hints={'clickhouse': True},
+        migrations.DeleteModel(
+            name='EntriesToProjectGtStatsSv',
         ),
         migrations.CreateModel(
             name='EntriesToProjectGtStatsSv',
