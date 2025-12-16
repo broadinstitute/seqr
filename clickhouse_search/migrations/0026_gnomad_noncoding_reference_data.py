@@ -14,7 +14,7 @@ AS SELECT
     replaceOne(chrom, 'chr', '') as chrom,
     toUInt32(assumeNotNull(start)) as start,
     toUInt32(assumeNotNull(end)) as end,
-    z
+    z as score
 FROM url('https://storage.googleapis.com/gcp-public-data--gnomad/release/3.1/secondary_analyses/genomic_constraint/constraint_z_genome_1kb.qc.download.txt.gz')
 """)
 
@@ -31,7 +31,7 @@ class Migration(migrations.Migration):
                 ('chrom', clickhouse_search.backend.fields.Enum8Field(choices=[(1, '1'), (2, '2'), (3, '3'), (4, '4'), (5, '5'), (6, '6'), (7, '7'), (8, '8'), (9, '9'), (10, '10'), (11, '11'), (12, '12'), (13, '13'), (14, '14'), (15, '15'), (16, '16'), (17, '17'), (18, '18'), (19, '19'), (20, '20'), (21, '21'), (22, '22'), (23, 'X'), (24, 'Y'), (25, 'M')], primary_key=True, serialize=False)),
                 ('start', clickhouse_backend.models.UInt32Field()),
                 ('end', clickhouse_backend.models.UInt32Field()),
-                ('z', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
+                ('score', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
             ],
             options={
                 'db_table': 'GRCh38/SNV_INDEL/reference_data/gnomad_non_coding_constraint/all_variants',
@@ -52,7 +52,7 @@ class Migration(migrations.Migration):
                     chrom String,
                     start UInt32,
                     end UInt32,
-                    z Decimal(9, 5)
+                    score Decimal(9, 5)
                 """,
                 primary_key="chrom",
                 source="TABLE `GRCh38/SNV_INDEL/reference_data/gnomad_non_coding_constraint/all_variants`",

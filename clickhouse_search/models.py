@@ -584,7 +584,7 @@ class ClinvarMito(BaseClinvarJoin):
 class PextAllVariantsSnvIndel(models.ClickhouseModel):
     chrom = Enum8Field(return_int=False, choices=BaseAnnotations.CHROMOSOME_CHOICES, primary_key=True)
     pos = models.UInt32Field()
-    exp_prop_mean = models.DecimalField(db_column='expPropMean', max_digits=9, decimal_places=5, null=True, blank=True)
+    score = models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)
 
     class Meta:
         unique_together = (('chrom', 'pos'),)
@@ -597,7 +597,7 @@ class PextAllVariantsSnvIndel(models.ClickhouseModel):
 class PextAllVariantsMito(models.ClickhouseModel):
     chrom = Enum8Field(return_int=False, choices=[(1, 'M')], primary_key=True)
     pos = models.UInt32Field()
-    exp_prop_mean = models.DecimalField(db_column='expPropMean', max_digits=9, decimal_places=5, null=True, blank=True)
+    score = models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)
 
     class Meta:
         unique_together = (('chrom', 'pos'),)
@@ -611,7 +611,7 @@ class GnomadNonCodingConstraintAllVariantsSnvIndel(models.ClickhouseModel):
     chrom = Enum8Field(return_int=False, choices=BaseAnnotations.CHROMOSOME_CHOICES, primary_key=True)
     start = models.UInt32Field()
     end = models.UInt32Field()
-    z = models.DecimalField(max_digits=9, decimal_places=5)
+    score = models.DecimalField(max_digits=9, decimal_places=5)
 
     class Meta:
         unique_together = (('chrom', 'start', 'end'),)
