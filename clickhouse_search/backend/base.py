@@ -32,7 +32,7 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
         table_sql, params = super().table_sql(model)
         meta = model._meta
         selects = [
-            f'{meta.column_selects[field.column]} AS {field.column}' if field.column in meta.column_selects else field.column
+            f'{meta.column_selects[field.column]} {field.column}' if field.column in meta.column_selects else field.column
             for field in meta.local_fields
         ]
         sql = f'{table_sql} AS SELECT {", ".join(selects)} FROM {self._table_name(meta.source_table)} {meta.source_sql}'

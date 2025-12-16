@@ -904,6 +904,13 @@ class ProjectGtStatsGRCh37SnvIndel(BaseProjectGtStatsMitoSnvIndel):
     class Meta(BaseProjectGtStatsMitoSnvIndel.Meta):
         db_table = 'GRCh37/SNV_INDEL/project_gt_stats'
 
+class EntriesToProjectGtStatsGRCh37SnvIndel(BaseEntriesToProjectGtStats):
+
+    class Meta(EntriesToProjectGtStatsMeta):
+        db_table = 'GRCh37/SNV_INDEL/entries_to_project_gt_stats_mv'
+        to_table = ProjectGtStatsGRCh37SnvIndel
+        source_table = EntriesGRCh37SnvIndel
+
 class ProjectGtStatsSnvIndel(BaseProjectGtStatsMitoSnvIndel):
     key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
 
@@ -923,11 +930,38 @@ class ProjectGtStatsMito(BaseProjectGtStatsMitoSnvIndel):
     class Meta(BaseProjectGtStatsMitoSnvIndel.Meta):
         db_table = 'GRCh38/MITO/project_gt_stats'
 
+class EntriesToProjectGtStatsMito(BaseEntriesToProjectGtStats):
+
+    class Meta(EntriesToProjectGtStatsMeta):
+        db_table = 'GRCh38/MITO/entries_to_project_gt_stats_mv'
+        to_table = ProjectGtStatsMito
+        source_table = EntriesMito
+        column_selects = {
+            'affected': EntriesToProjectGtStatsMeta.column_selects['affected'],
+            'ref_samples': "sumIf(sign, calls.hl == '0')",
+            'het_samples': "sumIf(sign, calls.hl > '0' AND calls.hl < '0.95')",
+            'hom_samples': "sumIf(sign, calls.hl >= '0.95')",
+        }
+
 class ProjectGtStatsSv(BaseProjectGtStats):
     key = OneToOneField('AnnotationsSv', db_column='key', primary_key=True, on_delete=CASCADE)
 
     class Meta(BaseProjectGtStats.Meta):
         db_table = 'GRCh38/SV/project_gt_stats'
+
+class EntriesToProjectGtStatsSv(MaterializedView):
+    project_guid = models.StringField(low_cardinality=True)
+    key = UInt32FieldDeltaCodecField(primary_key=True)
+    affected = models.Enum8Field(choices=[(1, 'A'), (2, 'N'), (3, 'U')])
+    ref_samples = models.Int64Field()
+    het_samples = models.Int64Field()
+    hom_samples = models.Int64Field()
+
+    class Meta(EntriesToProjectGtStatsMeta):
+        db_table = 'GRCh38/SV/entries_to_project_gt_stats_mv'
+        to_table = ProjectGtStatsSv
+        source_table = EntriesSv
+        source_sql = 'ARRAY JOIN calls GROUP BY project_guid, key, affected'
 
 
 class BaseGtStats(models.ClickhouseModel):
