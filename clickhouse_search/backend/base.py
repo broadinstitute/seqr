@@ -55,7 +55,7 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
     def _get_materialized_view_engine_expression(self, model):
         sql = f'TO {self._table_name(model._meta.to_table)}'
         if getattr(model._meta, 'refresh', None):
-            sql += f' REFRESH {model._meta.refresh}'
+            sql = f'REFRESH {model._meta.refresh} {sql}'
         return sql
 
     def no_quote_value(self, value):
