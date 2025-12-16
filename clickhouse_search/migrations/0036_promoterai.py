@@ -9,7 +9,7 @@ import django.db.models.manager
 from clickhouse_search.migration_templates import ALL_TO_SEQR_MV, ALL_VARIANTS_MV_HEADER, conditionally_refresh_reference_dataset, render_search_dictionary
 
 
-ABSPLICE2_ALL_VARIANTS_MV_GRCh38 = Template("""
+PROMOTERAI_ALL_VARIANTS_MV_GRCh38 = Template("""
 $mv_header
 AS SELECT
     concat(
@@ -63,8 +63,8 @@ class Migration(migrations.Migration):
                 ('_overwrite_base_manager', django.db.models.manager.Manager()),
             ],
         ),
-                migrations.RunSQL(
-            ABSPLICE2_ALL_VARIANTS_MV_GRCh38.substitute(
+        migrations.RunSQL(
+            PROMOTERAI_ALL_VARIANTS_MV_GRCh38.substitute(
                 mv_header=ALL_VARIANTS_MV_HEADER.substitute(reference_genome="GRCh38", dataset_type="SNV_INDEL", reference_dataset="promoterAI"),
             ),
             hints={"clickhouse": True},
