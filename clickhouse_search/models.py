@@ -1013,6 +1013,85 @@ class GtStatsSv(models.ClickhouseModel):
     class Meta(BaseGtStats.Meta):
         db_table = 'GRCh38/SV/gt_stats'
 
+class BaseProjectsToGtStats(MaterializedView):
+    key = UInt32FieldDeltaCodecField(primary_key=True)
+    ac_wes = models.UInt32Field()
+    ac_wgs = models.UInt32Field()
+    ac_affected = models.UInt32Field()
+    hom_wes = models.UInt32Field()
+    hom_wgs = models.UInt32Field()
+    hom_affected = models.UInt32Field()
+
+    class Meta:
+        abstract = True
+
+class ProjectsToGtStatsMeta:
+    column_selects = {
+        'ac_wes': "sumIf((het_samples * 1) + (hom_samples * 2), sample_type = 'WES')",
+        'ac_wgs': "sumIf((het_samples * 1) + (hom_samples * 2), sample_type = 'WGS')",
+        'ac_affected': "sumIf((het_samples * 1) + (hom_samples * 2), affected = 'A')",
+        'hom_wes': "sumIf(hom_samples, sample_type = 'WES')",
+        'hom_wgs': "sumIf(hom_samples, sample_type = 'WGS')",
+        'hom_affected': "sumIf(hom_samples, affected = 'A')",
+    }
+    source_sql = 'WHERE project_guid NOT IN {CLICKHOUSE_AC_EXCLUDED_PROJECT_GUIDS} GROUP BY key'
+    refresh = 'EVERY 10 YEAR'
+
+class ProjectsToGtStatsGRCh37SnvIndel(BaseProjectsToGtStats):
+
+    class Meta(ProjectsToGtStatsMeta):
+        db_table = 'GRCh37/SNV_INDEL/project_gt_stats_to_gt_stats_mv'
+        to_table = 'GtStatsGRCh37SnvIndel'
+        source_table = 'ProjectGtStatsGRCh37SnvIndel'
+
+class ProjectsToGtStatsSnvIndel(BaseProjectsToGtStats):
+
+    class Meta(ProjectsToGtStatsMeta):
+        db_table = 'GRCh38/SNV_INDEL/project_gt_stats_to_gt_stats_mv'
+        to_table = 'GtStatsSnvIndel'
+        source_table = 'ProjectGtStatsSnvIndel'
+
+class ProjectsToGtStatsMito(MaterializedView):
+    key = UInt32FieldDeltaCodecField(primary_key=True)
+    ac_het_wes = models.UInt32Field()
+    ac_het_wgs = models.UInt32Field()
+    ac_het_affected = models.UInt32Field()
+    ac_hom_wes = models.UInt32Field()
+    ac_hom_wgs = models.UInt32Field()
+    ac_hom_affected = models.UInt32Field()
+
+    class Meta(ProjectsToGtStatsMeta):
+        db_table = 'GRCh38/MITO/project_gt_stats_to_gt_stats_mv'
+        to_table = 'GtStatsMito'
+        source_table = 'ProjectGtStatsMito'
+        column_selects = {
+            'ac_het_wes': "sumIf(het_samples, sample_type = 'WES')",
+            'ac_het_wgs': "sumIf(het_samples, sample_type = 'WGS')",
+            'ac_het_affected': "sumIf(het_samples, affected = 'A')",
+            'ac_hom_wes': "sumIf(hom_samples, sample_type = 'WES')",
+            'ac_hom_wgs': "sumIf(hom_samples, sample_type = 'WGS')",
+            'ac_hom_affected': "sumIf(hom_samples, affected = 'A')",
+        }
+
+
+class ProjectsToGtStatsSv(MaterializedView):
+    key = UInt32FieldDeltaCodecField(primary_key=True)
+    ac_wgs = models.UInt32Field()
+    ac_affected = models.UInt32Field()
+    hom_wgs = models.UInt32Field()
+    hom_affected = models.UInt32Field()
+
+    class Meta(ProjectsToGtStatsMeta):
+        db_table = 'GRCh38/SV/project_gt_stats_to_gt_stats_mv'
+        to_table = 'GtStatsSv'
+        source_table = 'ProjectGtStatsSv'
+        column_selects = {
+            'ac_wgs': 'sum((het_samples * 1) + (hom_samples * 2))',
+            'ac_affected': "sumIf((het_samples * 1) + (hom_samples * 2), affected = 'A')",
+            'hom_wgs': 'sum(hom_samples)',
+            'hom_affected': "sumIf(hom_samples, affected = 'A')",
+        }
+
 class ProjectPartitionsSnvIndel(FixtureLoadableClickhouseModel):
     # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
     project_guid = models.StringField(primary_key=True)

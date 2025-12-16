@@ -30,7 +30,7 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
 
     def _materialized_view_sql(self, model):
         original_sql_create_table = self.sql_create_table  # pylint: disable=access-member-before-definition
-        self.sql_create_table = 'CREATE MATERIALIZED VIEW %(table)s TO %(engine)s (%(definition)s)'
+        self.sql_create_table = 'CREATE MATERIALIZED VIEW %(table)s %(engine)s (%(definition)s)'
         table_sql, params = super().table_sql(model)
         meta = model._meta
         selects = [
@@ -43,7 +43,7 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
 
     def _get_engine_expression(self, model, engine):
         if self._is_materialzed_view(model):
-            return self._table_name(model._meta.to_table)
+            return self._get_materialized_view_engine_expression(model)
 
         prev_quote_value = self.quote_value   # pylint: disable=access-member-before-definition
         if isinstance(engine, Join):
@@ -51,6 +51,12 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
         expression = super()._get_engine_expression(model, engine)
         self.quote_value = prev_quote_value
         return expression
+
+    def _get_materialized_view_engine_expression(self, model):
+        sql = f'TO {self._table_name(model._meta.to_table)}'
+        if getattr(model._meta, 'refresh', None):
+            sql += f' REFRESH {model._meta.refresh}'
+        return sql
 
     def no_quote_value(self, value):
         return value

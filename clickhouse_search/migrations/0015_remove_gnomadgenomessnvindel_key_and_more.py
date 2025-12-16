@@ -19,20 +19,6 @@ CLICKHOUSE_AC_EXCLUDED_PROJECT_GUIDS  = os.environ.get(
 CLICKHOUSE_WRITER_PASSWORD = os.environ.get('CLICKHOUSE_WRITER_PASSWORD', 'clickhouse_test')
 CLICKHOUSE_WRITER_USER = os.environ.get('CLICKHOUSE_WRITER_USER', 'clickhouse')
 
-PROJECT_GT_STATS_TO_GT_STATS = Template(Template("""
-CREATE MATERIALIZED VIEW `$reference_genome/$dataset_type/project_gt_stats_to_gt_stats_mv`
-REFRESH EVERY 10 YEAR
-TO `$reference_genome/$dataset_type/gt_stats`
-AS SELECT
-    key,
-    $columns
-FROM `$reference_genome/$dataset_type/project_gt_stats`
-WHERE project_guid NOT IN $clickhouse_ac_excluded_project_guids
-GROUP BY key
-""").safe_substitute(
-    clickhouse_ac_excluded_project_guids=CLICKHOUSE_AC_EXCLUDED_PROJECT_GUIDS
-))
-
 GT_STATS_DICT = Template(Template("""
 CREATE DICTIONARY `$reference_genome/$dataset_type/gt_stats_dict`
 (
@@ -835,18 +821,30 @@ class Migration(migrations.Migration):
                 ('_overwrite_base_manager', django.db.models.manager.Manager()),
             ],
         ),
-        migrations.RunSQL(
-            PROJECT_GT_STATS_TO_GT_STATS.substitute(
-                reference_genome='GRCh37',
-                dataset_type='SNV_INDEL',
-                columns=",\n    ".join([
-                    "sumIf((het_samples * 1) + (hom_samples * 2), sample_type = 'WES') AS ac_wes",
-                    "sumIf((het_samples * 1) + (hom_samples * 2), sample_type = 'WGS') AS ac_wgs",
-                    "sumIf(hom_samples, sample_type = 'WES') AS hom_wes",
-                    "sumIf(hom_samples, sample_type = 'WGS') AS hom_wgs",
-                ])
-            ),
-            hints={'clickhouse': True},
+        migrations.CreateModel(
+            name='ProjectsToGtStatsGRCh37SnvIndel',
+            fields=[
+                ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
+                ('ac_wes', clickhouse_backend.models.UInt32Field()),
+                ('ac_wgs', clickhouse_backend.models.UInt32Field()),
+                ('hom_wes', clickhouse_backend.models.UInt32Field()),
+                ('hom_wgs', clickhouse_backend.models.UInt32Field()),
+            ],
+            options={
+                'db_table': 'GRCh37/SNV_INDEL/project_gt_stats_to_gt_stats_mv',
+                'to_table': 'GtStatsGRCh37SnvIndel',
+                'source_table': 'ProjectGtStatsGRCh37SnvIndel',
+                'source_sql': f'WHERE project_guid NOT IN {CLICKHOUSE_AC_EXCLUDED_PROJECT_GUIDS} GROUP BY key',
+                'column_selects': {'ac_wes': "sumIf((het_samples * 1) + (hom_samples * 2), sample_type = 'WES')",
+                                   'ac_wgs': "sumIf((het_samples * 1) + (hom_samples * 2), sample_type = 'WGS')",
+                                   'hom_wes': "sumIf(hom_samples, sample_type = 'WES')",
+                                   'hom_wgs': "sumIf(hom_samples, sample_type = 'WGS')"},
+                'refresh': 'EVERY 10 YEAR',
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
         ),
         migrations.RunSQL(
             GT_STATS_DICT.substitute(
@@ -888,18 +886,30 @@ class Migration(migrations.Migration):
                 ('_overwrite_base_manager', django.db.models.manager.Manager()),
             ],
         ),
-        migrations.RunSQL(
-            PROJECT_GT_STATS_TO_GT_STATS.substitute(
-                reference_genome='GRCh38',
-                dataset_type='SNV_INDEL',
-                columns=",\n    ".join([
-                    "sumIf((het_samples * 1) + (hom_samples * 2), sample_type = 'WES') AS ac_wes",
-                    "sumIf((het_samples * 1) + (hom_samples * 2), sample_type = 'WGS') AS ac_wgs",
-                    "sumIf(hom_samples, sample_type = 'WES') AS hom_wes",
-                    "sumIf(hom_samples, sample_type = 'WGS') AS hom_wgs",
-                ])
-            ),
-            hints={'clickhouse': True},
+        migrations.CreateModel(
+            name='ProjectsToGtStatsSnvIndel',
+            fields=[
+                ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
+                ('ac_wes', clickhouse_backend.models.UInt32Field()),
+                ('ac_wgs', clickhouse_backend.models.UInt32Field()),
+                ('hom_wes', clickhouse_backend.models.UInt32Field()),
+                ('hom_wgs', clickhouse_backend.models.UInt32Field()),
+            ],
+            options={
+                'db_table': 'GRCh38/SNV_INDEL/project_gt_stats_to_gt_stats_mv',
+                'to_table': 'GtStatsSnvIndel',
+                'source_table': 'ProjectGtStatsSnvIndel',
+                'source_sql': f'WHERE project_guid NOT IN {CLICKHOUSE_AC_EXCLUDED_PROJECT_GUIDS} GROUP BY key',
+                'column_selects': {'ac_wes': "sumIf((het_samples * 1) + (hom_samples * 2), sample_type = 'WES')",
+                                   'ac_wgs': "sumIf((het_samples * 1) + (hom_samples * 2), sample_type = 'WGS')",
+                                   'hom_wes': "sumIf(hom_samples, sample_type = 'WES')",
+                                   'hom_wgs': "sumIf(hom_samples, sample_type = 'WGS')"},
+                'refresh': 'EVERY 10 YEAR',
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
         ),
         migrations.RunSQL(
             GT_STATS_DICT.substitute(
@@ -941,18 +951,30 @@ class Migration(migrations.Migration):
                 ('_overwrite_base_manager', django.db.models.manager.Manager()),
             ],
         ),
-        migrations.RunSQL(
-            PROJECT_GT_STATS_TO_GT_STATS.substitute(
-                reference_genome='GRCh38',
-                dataset_type='MITO',
-                columns=",\n    ".join([
-                    "sumIf(het_samples, sample_type = 'WES') AS ac_het_wes",
-                    "sumIf(het_samples, sample_type = 'WGS') AS ac_het_wgs",
-                    "sumIf(hom_samples, sample_type = 'WES') AS ac_hom_wes",
-                    "sumIf(hom_samples, sample_type = 'WGS') AS ac_hom_wgs",
-                ])
-            ),
-            hints={'clickhouse': True},
+        migrations.CreateModel(
+            name='ProjectsToGtStatsMito',
+            fields=[
+                ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
+                ('ac_het_wes', clickhouse_backend.models.UInt32Field()),
+                ('ac_het_wgs', clickhouse_backend.models.UInt32Field()),
+                ('ac_hom_wes', clickhouse_backend.models.UInt32Field()),
+                ('ac_hom_wgs', clickhouse_backend.models.UInt32Field()),
+            ],
+            options={
+                'db_table': 'GRCh38/MITO/project_gt_stats_to_gt_stats_mv',
+                'to_table': 'GtStatsMito',
+                'source_table': 'ProjectGtStatsMito',
+                'source_sql': f'WHERE project_guid NOT IN {CLICKHOUSE_AC_EXCLUDED_PROJECT_GUIDS} GROUP BY key',
+                'column_selects': {'ac_het_wes': "sumIf(het_samples, sample_type = 'WES')",
+                                   'ac_het_wgs': "sumIf(het_samples, sample_type = 'WGS')",
+                                   'ac_hom_wes': "sumIf(hom_samples, sample_type = 'WES')",
+                                   'ac_hom_wgs': "sumIf(hom_samples, sample_type = 'WGS')"},
+                'refresh': 'EVERY 10 YEAR',
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
         ),
         migrations.RunSQL(
             GT_STATS_DICT.substitute(
@@ -993,16 +1015,26 @@ class Migration(migrations.Migration):
                 ('_overwrite_base_manager', django.db.models.manager.Manager()),
             ],
         ),
-        migrations.RunSQL(
-            PROJECT_GT_STATS_TO_GT_STATS.substitute(
-                reference_genome='GRCh38',
-                dataset_type='SV',
-                columns = ",\n    ".join([
-                    'sum((het_samples * 1) + (hom_samples * 2)) AS ac_wgs',
-                    'sum(hom_samples) AS hom_wgs',
-                ]),
-            ),
-            hints={'clickhouse': True},
+        migrations.CreateModel(
+            name='ProjectsToGtStatsSv',
+            fields=[
+                ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
+                ('ac_wgs', clickhouse_backend.models.UInt32Field()),
+                ('hom_wgs', clickhouse_backend.models.UInt32Field()),
+            ],
+            options={
+                'db_table': 'GRCh38/SV/project_gt_stats_to_gt_stats_mv',
+                'to_table': 'GtStatsSv',
+                'source_table': 'ProjectGtStatsSv',
+                'source_sql': f'WHERE project_guid NOT IN {CLICKHOUSE_AC_EXCLUDED_PROJECT_GUIDS} GROUP BY key',
+                'column_selects': {'ac_wgs': 'sum((het_samples * 1) + (hom_samples * 2))',
+                                   'hom_wgs': 'sum(hom_samples)'},
+                'refresh': 'EVERY 10 YEAR',
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
         ),
         migrations.RunSQL(
             GT_STATS_DICT.substitute(
