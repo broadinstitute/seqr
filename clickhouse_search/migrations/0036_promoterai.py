@@ -22,7 +22,7 @@ AS SELECT
         alt
     ) as variantId,
     promoterAI as score
-FROM url('https://seqr-reference-data.broadinstitute.org/clickhouse/GRCh38/promoterAI/promoterAI.tsv.gz')
+FROM url('https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh38/promoterAI/promoterAI.tsv.gz')
 """)
 
 
