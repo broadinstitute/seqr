@@ -23,9 +23,25 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
             )
         return sql, params
 
+    def _table_name(self, table_model):
+        return self.quote_name(table_model._meta.db_table)
+
+    def _materialized_view_sql(self, model):
+        original_sql_create_table = self.sql_create_table
+        self.sql_create_table = 'CREATE MATERIALIZED VIEW %(table)s TO %(engine)s (%(definition)s)'
+        table_sql, params = super().table_sql(model)
+        meta = model._meta
+        selects = [
+            f'{meta.column_selects[field.column]} AS {field.column}' if field.column in meta.column_selects else field.column
+            for field in meta.local_fields
+        ]
+        sql = f'{table_sql} AS SELECT {", ".join(selects)} FROM {self._table_name(meta.source_table)} {meta.source_sql}'
+        self.sql_create_table = original_sql_create_table
+        return sql, params
+
     def _get_engine_expression(self, model, engine):
         if self._is_materialzed_view(model):
-            return self.quote_name(model._meta.to_table._meta.db_table)
+            return self._table_name(model._meta.to_table)
 
         prev_quote_value = self.quote_value   # pylint: disable=access-member-before-definition
         if isinstance(engine, Join):
@@ -42,45 +58,6 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
             self.sql_delete_table = self.sql_delete_table.replace('TABLE', 'MATERIALIZED VIEW')
         super().delete_model(model)
         self.sql_delete_table = self.sql_delete_table.replace('MATERIALIZED VIEW', 'TABLE')
-
-    def _materialized_view_sql(self, model):
-        """
-         ┌─statement─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-1. │ CREATE MATERIALIZED VIEW test_seqr.`GRCh38/SNV_INDEL/entries_to_project_gt_stats_mv` TO test_seqr.`GRCh38/SNV_INDEL/project_gt_stats`↴│
-   │↳(                                                                                                                                    ↴│
-   │↳    `project_guid` LowCardinality(String),                                                                                           ↴│
-   │↳    `key` UInt32,                                                                                                                    ↴│
-   │↳    `sample_type` Enum8('WES' = 1, 'WGS' = 2),                                                                                       ↴│
-   │↳    `affected` String,                                                                                                               ↴│
-   │↳    `ref_samples` Int64,                                                                                                             ↴│
-   │↳    `het_samples` Int64,                                                                                                             ↴│
-   │↳    `hom_samples` Int64                                                                                                              ↴│
-   │↳)                                                                                                                                    ↴│
-   │↳AS SELECT                                                                                                                            ↴│
-   │↳    project_guid,                                                                                                                    ↴│
-   │↳    key,                                                                                                                             ↴│
-   │↳    sample_type,                                                                                                                     ↴│
-   │↳    dictGetOrDefault('test_seqr.seqrdb_affected_status_dict', 'affected', (family_guid, calls.sampleId), 'U') AS affected,           ↴│
-   │↳    sumIf(sign, calls.gt = 'REF') AS ref_samples,                                                                                    ↴│
-   │↳    sumIf(sign, calls.gt = 'HET') AS het_samples,                                                                                    ↴│
-   │↳    sumIf(sign, calls.gt = 'HOM') AS hom_samples                                                                                     ↴│
-   │↳FROM test_seqr.`GRCh38/SNV_INDEL/entries`                                                                                            ↴│
-   │↳ARRAY JOIN calls                                                                                                                     ↴│
-   │↳GROUP BY                                                                                                                             ↴│
-   │↳    project_guid,                                                                                                                    ↴│
-   │↳    key,                                                                                                                             ↴│
-   │↳    sample_type,                                                                                                                     ↴│
-   │↳    affected                                                                                                                          │
-   └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
-        """
-
-        original_sql_create_table = self.sql_create_table
-        self.sql_create_table = 'CREATE MATERIALIZED VIEW %(table)s TO %(engine)s (%(definition)s)'
-        sql, params = super().table_sql(model)
-
-        import pdb; pdb.set_trace()
-        self.sql_create_table = original_sql_create_table
-        raise NotImplementedError
 
 
 class DatabaseWrapper(BaseDatabaseWrapper):

@@ -889,6 +889,15 @@ class BaseEntriesToProjectGtStats(MaterializedView):
     class Meta:
         abstract = True
 
+class EntriesToProjectGtStatsMeta:
+    column_selects = {
+        'affected': "dictGetOrDefault('seqrdb_affected_status_dict', 'affected', (family_guid, calls.sampleId), 'U')",
+        'ref_samples': "sumIf(sign, calls.gt = 'REF')",
+        'het_samples': "sumIf(sign, calls.gt = 'HET')",
+        'hom_samples': "sumIf(sign, calls.gt = 'HOM')",
+    }
+    source_sql = 'ARRAY JOIN calls GROUP BY project_guid, key, sample_type, affected'
+
 class ProjectGtStatsGRCh37SnvIndel(BaseProjectGtStatsMitoSnvIndel):
     key = OneToOneField('AnnotationsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
 
@@ -903,9 +912,10 @@ class ProjectGtStatsSnvIndel(BaseProjectGtStatsMitoSnvIndel):
 
 class EntriesToProjectGtStatsSnvIndel(BaseEntriesToProjectGtStats):
 
-    class Meta:
+    class Meta(EntriesToProjectGtStatsMeta):
         db_table = 'GRCh38/SNV_INDEL/entries_to_project_gt_stats_mv'
         to_table = ProjectGtStatsSnvIndel
+        source_table = EntriesSnvIndel
 
 class ProjectGtStatsMito(BaseProjectGtStatsMitoSnvIndel):
     key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
