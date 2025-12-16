@@ -37,6 +37,12 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
     def no_quote_value(self, value):
         return value
 
+    def delete_model(self, model):
+        if self._is_materialzed_view(model):
+            self.sql_delete_table = self.sql_delete_table.replace('TABLE', 'MATERIALIZED VIEW')
+        super().delete_model(model)
+        self.sql_delete_table = self.sql_delete_table.replace('MATERIALIZED VIEW', 'TABLE')
+
     def _materialized_view_sql(self, model):
         """
          ┌─statement─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
