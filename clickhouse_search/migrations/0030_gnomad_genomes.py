@@ -18,7 +18,7 @@ AS SELECT
     AF_POPMAX_OR_GLOBAL as filter_af,
     Hemi as hemi,
     Hom as hom
-FROM gcs('https://storage.googleapis.com/seqr-reference-data/v3.1/$reference_genome/gnomad_genomes/1.0.parquet/*.parquet')
+FROM gcs('https://seqr-reference-data.broadinstitute.org/v3.1/$reference_genome/gnomad_genomes/1.0.parquet/*.parquet')
 """)
 
 class Migration(migrations.Migration):

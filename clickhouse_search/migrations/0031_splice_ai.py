@@ -14,7 +14,7 @@ AS SELECT
     variant_id as variantId,
     delta_score as score,
     splice_consequence_id as consequence
-FROM gcs('https://storage.googleapis.com/seqr-reference-data/v3.1/$reference_genome/splice_ai/1.1.parquet/*.parquet')
+FROM gcs('https://seqr-reference-data.broadinstitute.org/v3.1/$reference_genome/splice_ai/1.1.parquet/*.parquet')
 """)
 
 class Migration(migrations.Migration):

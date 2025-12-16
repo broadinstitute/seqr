@@ -30,7 +30,7 @@ AS SELECT
     CAST(`REVEL_score` as Decimal(9, 5)) as revel,
     CAST(`SIFT_score` as Decimal(9, 5)) as sift,
     CAST(`VEST4_score` as Decimal(9, 5)) as vest
-FROM gcs('https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh37/dbnsfp/dbNSFP5.3a_grch37.gz', 'TSV')
+FROM gcs('https://seqr-reference-data.broadinstitute.org/clickhouse/GRCh37/dbnsfp/dbNSFP5.3a_grch37.gz', 'TSV')
 """)
 
 DBNSFP_ALL_VARIANTS_MV_GRCh38 = Template("""
@@ -55,7 +55,7 @@ AS SELECT
     CAST(`REVEL_score` as Decimal(9, 5)) as revel,
     CAST(`SIFT_score` as Decimal(9, 5)) as sift,
     CAST(`VEST4_score` as Decimal(9, 5)) as vest
-FROM gcs('https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh38/dbnsfp/dbNSFP5.3a_grch38.gz', 'TSV')
+FROM gcs('https://seqr-reference-data.broadinstitute.org/clickhouse/GRCh38/dbnsfp/dbNSFP5.3a_grch38.gz', 'TSV')
 """)
 
 

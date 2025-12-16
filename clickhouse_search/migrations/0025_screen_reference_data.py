@@ -16,7 +16,7 @@ AS SELECT
     toUInt32(assumeNotNull(c2)) as start,
     toUInt32(assumeNotNull(c3)) as end,
     splitByChar(',', assumeNotNull(c6))[1] as regionType
-FROM url('https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh38/screen/GRCh38-cCREs.bed')
+FROM url('https://seqr-reference-data.broadinstitute.org/clickhouse/GRCh38/screen/GRCh38-cCREs.bed')
 """)
 
 class Migration(migrations.Migration):

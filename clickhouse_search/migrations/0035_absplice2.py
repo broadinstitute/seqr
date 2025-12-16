@@ -22,7 +22,7 @@ AS SELECT
         alt
     ) as variantId,
     AbSplice_DNA_max as score
-FROM url('https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh38/absplice2/absplice2.tsv.gz')
+FROM url('https://seqr-reference-data.broadinstitute.org/clickhouse/GRCh38/absplice2/absplice2.tsv.gz')
 """)
 
 

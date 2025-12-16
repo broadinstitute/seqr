@@ -20,7 +20,7 @@ AS SELECT
     AC_hom as ac,
     AF_hom as af,
     AN as an
-FROM gcs('https://storage.googleapis.com/seqr-reference-data/v3.1/GRCh38/gnomad_mito/1.1.parquet/*.parquet')
+FROM gcs('https://seqr-reference-data.broadinstitute.org/v3.1/GRCh38/gnomad_mito/1.1.parquet/*.parquet')
 """)
 
 GNOMAD_MITO_HETEROPLASMY_ALL_VARIANTS_MV = Template("""
@@ -31,7 +31,7 @@ AS SELECT
     AF_hom as af,
     AN as an,
     max_hl
-FROM gcs('https://storage.googleapis.com/seqr-reference-data/v3.1/GRCh38/gnomad_mito/1.1.parquet/*.parquet')
+FROM gcs('https://seqr-reference-data.broadinstitute.org/v3.1/GRCh38/gnomad_mito/1.1.parquet/*.parquet')
 """)
 
 HELIX_MITO_ALL_VARIANTS_MV = Template("""
@@ -87,7 +87,7 @@ FROM
     SELECT
         concat('M', '-', nt_start, '-', ref_rCRS, '-', alt) AS variantId,
         CAST(disease_score AS Decimal(9, 5)) AS score
-    FROM url('https://storage.googleapis.com/seqr-reference-data/GRCh38/mitochondrial/HmtVar/HmtVar%20Jan.%2010%202022.json')
+    FROM url('https://seqr-reference-data.broadinstitute.org/GRCh38/mitochondrial/HmtVar/HmtVar%20Jan.%2010%202022.json')
     WHERE match(alt, '^[ACTG]+$$') AND (disease_score IS NOT NULL)
 )
 GROUP BY variantId
@@ -102,7 +102,7 @@ FROM (
     SELECT
         concat('M', '-', Start, '-', Ref, '-', Alt) as variantId,
         CAST(APOGEE2_score AS Decimal(9, 5)) AS score
-    FROM url('https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh38/mitimpact/MitImpact_db_3.1.3.txt', 'TSV')
+    FROM url('https://seqr-reference-data.broadinstitute.org/clickhouse/GRCh38/mitimpact/MitImpact_db_3.1.3.txt', 'TSV')
 )
 GROUP BY variantId
 SETTINGS input_format_tsv_crlf_end_of_line = 1
@@ -113,7 +113,7 @@ $mv_header
 AS SELECT 
     concat('M', '-', Position, '-', Reference, '-', Alternate) as variantId,
     CAST(MLC_score AS Decimal(9, 5)) AS score
-FROM url('https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh38/local_constraint_mito/supplementary_dataset_7.tsv')
+FROM url('https://seqr-reference-data.broadinstitute.org/clickhouse/GRCh38/local_constraint_mito/supplementary_dataset_7.tsv')
 """)
 
 MITOMAP_ALL_VARIANTS_MV = Template("""
@@ -129,7 +129,7 @@ AS SELECT
         extract(assumeNotNull(Allele), 'm\\.[0-9]+[ATGC]+>([ATGC]+)')
     ) as variantId,
     true as pathogenic
-FROM url('https://storage.googleapis.com/seqr-reference-data/GRCh38/mitochondrial/MITOMAP/mitomap_confirmed_mutations_nov_2024.csv', 'CsvWithNames')
+FROM url('https://seqr-reference-data.broadinstitute.org/GRCh38/mitochondrial/MITOMAP/mitomap_confirmed_mutations_nov_2024.csv', 'CsvWithNames')
 WHERE variantId NOT LIKE '%--'
 """)
 

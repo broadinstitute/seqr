@@ -17,7 +17,7 @@ AS SELECT
     AN as an,
     Het as het,
     Hom as hom
-FROM gcs('https://storage.googleapis.com/seqr-reference-data/v3.1/$reference_genome/topmed/1.1.parquet/*.parquet')
+FROM gcs('https://seqr-reference-data.broadinstitute.org/v3.1/$reference_genome/topmed/1.1.parquet/*.parquet')
 """)
 
 class Migration(migrations.Migration):
