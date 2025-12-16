@@ -27,7 +27,7 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
         return self.quote_name(table_model._meta.db_table)
 
     def _materialized_view_sql(self, model):
-        original_sql_create_table = self.sql_create_table
+        original_sql_create_table = self.sql_create_table  # pylint: disable=access-member-before-definition
         self.sql_create_table = 'CREATE MATERIALIZED VIEW %(table)s TO %(engine)s (%(definition)s)'
         table_sql, params = super().table_sql(model)
         meta = model._meta
@@ -35,7 +35,7 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
             f'{meta.column_selects[field.column]} {field.column}' if field.column in meta.column_selects else field.column
             for field in meta.local_fields
         ]
-        sql = f'{table_sql} AS SELECT {", ".join(selects)} FROM {self._table_name(meta.source_table)} {meta.source_sql}'
+        sql = f'{table_sql} AS SELECT {", ".join(selects)} FROM {self._table_name(meta.source_table)} {meta.source_sql}'  # nosec
         self.sql_create_table = original_sql_create_table
         return sql, params
 
