@@ -1,7 +1,7 @@
 from clickhouse_backend import models
 from collections import OrderedDict, defaultdict
 
-from django.db.models import F, QuerySet, Q, Value
+from django.db.models import Count, F, QuerySet, Q, Value
 from django.db.models.expressions import Col
 from django.db.models.functions import Cast
 from django.db.models.sql.constants import INNER
@@ -301,14 +301,11 @@ class AnnotationsQuerySet(SearchQuerySet):
             values.update(self.genotype_override_values(self))
         initial_values = {k: v for k, v in  values.items() if k not in override_model_annotations}
 
-        fields = [*self.annotation_fields]
-        if self.has_annotation('familyGenotypes'):
-            fields.append('familyGenotypes')
-        elif not skip_entry_fields:
+        fields = [*self.annotation_fields] + [
+            field for field in ['clinvar', 'familyGenotypes', 'numFamilies'] if self.has_annotation(field)
+        ]
+        if 'familyGenotypes' not in fields and not skip_entry_fields:
             fields += self.ENTRY_FIELDS
-
-        if self.has_annotation('clinvar'):
-            fields.append('clinvar')
 
         fields = [field for field in fields if field not in values]
         return self.values(*fields, **initial_values).annotate(
@@ -801,8 +798,6 @@ class EntriesManager(SearchQuerySet):
         if (annotations or {}).get(NEW_SV_FIELD) and 'newCall' in self.call_fields:
             entries = entries.filter(calls__array_exists={'newCall': (None, '{field}')})
 
-        if not sample_data:
-            return self._annotate_calls(entries, **kwargs)
         return self._search_call_data(entries, sample_data, **kwargs)
 
     def _join_annotations(self, entries):
@@ -826,9 +821,7 @@ class EntriesManager(SearchQuerySet):
 
     def result_values(self, sample_data=None):
         entries = self._join_annotations(self)
-        if sample_data:
-            return self._search_call_data(entries, sample_data)
-        return self._annotate_calls(entries)
+        return self._search_call_data(entries, sample_data)
 
     def _has_clinvar(self):
         return hasattr(self.model, 'clinvar_join')
@@ -848,17 +841,15 @@ class EntriesManager(SearchQuerySet):
             'clinvar_join__conflicting_pathogenicities__not_empty': True,
         }
 
-    def _search_call_data(self, entries, sample_data, inheritance_mode=None, inheritance_filter=None, qualityFilter=None, pathogenicity=None, annotate_carriers=False, annotate_hom_alts=False, **kwargs):
+    def _filter_project_families(self, entries, sample_data):
        project_guids = sample_data['project_guids']
        project_filter = Q(project_guid__in=project_guids) if len(project_guids) > 1 else Q(project_guid=project_guids[0])
        entries = entries.filter(project_filter)
 
        multi_sample_type_families = sample_data['sample_type_families'].get('multi', [])
        family_q = None
-       multi_sample_type_family_q = None
        if multi_sample_type_families:
            family_q = Q(family_guid__in=multi_sample_type_families)
-           multi_sample_type_family_q = family_q
        for sample_type, families in sample_data['sample_type_families'].items():
            if sample_type == 'multi':
                continue
@@ -870,7 +861,14 @@ class EntriesManager(SearchQuerySet):
            else:
                family_q = sample_family_q
 
-       entries = entries.filter(family_q)
+       return entries.filter(family_q), multi_sample_type_families
+
+    def _search_call_data(self, entries, sample_data, inheritance_mode=None, inheritance_filter=None, qualityFilter=None, pathogenicity=None, exclude_projects=None, annotate_carriers=False, annotate_hom_alts=False, **kwargs):
+       multi_sample_type_families = None
+       if sample_data:
+           entries, multi_sample_type_families = self._filter_project_families(entries, sample_data)
+       elif exclude_projects:
+           entries = entries.exclude(project_guid__in=exclude_projects)
 
        if inheritance_mode in {X_LINKED_RECESSIVE, X_LINKED_RECESSIVE_MALE_AFFECTED}:
            entries = entries.filter(self._interval_query('X', start=MIN_POS, end=MAX_POS))
@@ -895,7 +893,7 @@ class EntriesManager(SearchQuerySet):
 
        if multi_sample_type_families:
            entries, inheritance_q, quality_q = self._get_multi_sample_type_family_call_qs(
-               entries, multi_sample_type_family_q, inheritance_q, quality_q, gt_filter, sample_data['family_missing_type_samples'],
+               entries, multi_sample_type_families, inheritance_q, quality_q, gt_filter, sample_data['family_missing_type_samples'],
            )
 
        if inheritance_q is not None:
@@ -903,7 +901,7 @@ class EntriesManager(SearchQuerySet):
        if quality_q is not None:
            entries = entries.filter(quality_q)
 
-       return self._annotate_calls(entries, sample_data, annotate_hom_alts, multi_sample_type_families)
+       return self._annotate_calls(entries, sample_data, annotate_hom_alts, multi_sample_type_families, **kwargs)
 
     def _single_family_affected_filters(self, sample_data, inheritance_mode, inheritance_filter, genotype_lookup):
         samples_by_genotype = defaultdict(list)
@@ -952,6 +950,7 @@ class EntriesManager(SearchQuerySet):
         return affected_condition, unaffected_condition, gt_filter
 
     def _multi_family_affected_filters(self, sample_data, inheritance_mode, inheritance_filter, genotype_lookup):
+        sample_data = sample_data or {'num_unaffected': 1}
         any_unaffected = any(sample['affected'] == UNAFFECTED for sample in sample_data['samples']) \
             if sample_data.get('samples') else sample_data['num_unaffected'] > 0
         unaffected_condition = (None, self.GET_AFFECTED_TEMPLATE + " = 'N'") if any_unaffected else None
@@ -987,7 +986,7 @@ class EntriesManager(SearchQuerySet):
             if inheritance_mode in {X_LINKED_RECESSIVE, X_LINKED_RECESSIVE_MALE_AFFECTED} and -1 not in genotype_lookup[REF_REF]:
                 genotype_lookup = {**genotype_lookup, REF_REF: [-1] + genotype_lookup[REF_REF]}
 
-        is_single_family = sample_data.get('samples') and (sample_data['num_families'] == 1 or (inheritance_mode in {X_LINKED_RECESSIVE, X_LINKED_RECESSIVE_MALE_AFFECTED}))
+        is_single_family = (sample_data or {}).get('samples') and (sample_data['num_families'] == 1 or (inheritance_mode in {X_LINKED_RECESSIVE, X_LINKED_RECESSIVE_MALE_AFFECTED}))
         get_conditions = self._single_family_affected_filters if is_single_family else self._multi_family_affected_filters
         affected_condition, unaffected_condition, gt_filter = get_conditions(
             sample_data, inheritance_mode, inheritance_filter, genotype_lookup,
@@ -998,6 +997,8 @@ class EntriesManager(SearchQuerySet):
             inheritance_q = self.any_affected_q(affected_condition)
         elif gt_filter:
             inheritance_q = Q(calls__array_all={'gt': gt_filter})
+            if not sample_data:
+                inheritance_q &= Q(calls__array_exists={'sampleId': affected_condition})
 
         quality_q = self._quality_q(quality_filter, allow_no_call, affected_condition, clinvar_override_q)
 
@@ -1043,7 +1044,8 @@ class EntriesManager(SearchQuerySet):
 
         return quality_q
 
-    def _get_multi_sample_type_family_call_qs(self, entries, multi_sample_type_family_q, inheritance_q, quality_q, gt_filter, family_missing_type_samples):
+    def _get_multi_sample_type_family_call_qs(self, entries, multi_sample_type_families, inheritance_q, quality_q, gt_filter, family_missing_type_samples):
+        multi_sample_type_family_q = Q(family_guid__in=multi_sample_type_families)
         if gt_filter:
             inheritance_q |= multi_sample_type_family_q
             entries = self._annotate_failed_family_samples(entries, gt_filter, family_missing_type_samples)
@@ -1082,7 +1084,7 @@ class EntriesManager(SearchQuerySet):
             )
         return entries
 
-    def _annotate_calls(self, entries, sample_data=None, annotate_hom_alts=False, multi_sample_type_families=None, skip_entry_fields=False, **kwargs):
+    def _annotate_calls(self, entries, sample_data=None, annotate_hom_alts=False, multi_sample_type_families=None, skip_entry_fields=False, annotate_num_families=False, **kwargs):
         if annotate_hom_alts:
             entries = entries.annotate(has_hom_alt=Q(calls__array_exists={'gt': (2,)}))
 
@@ -1102,7 +1104,9 @@ class EntriesManager(SearchQuerySet):
              fields += ['clinvar', 'clinvar_key']
         if multi_sample_type_families or sample_data is None or sample_data['num_families'] > 1:
             entries = entries.values(*fields)
-            if skip_entry_fields:
+            if annotate_num_families:
+                entries = entries.annotate(numFamilies=Count('family_guid'))
+            elif skip_entry_fields:
                 entries = entries.distinct('key')
             else:
                 gt_field, gt_expression = self.genotype_expression(sample_data)

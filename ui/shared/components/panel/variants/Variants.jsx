@@ -177,6 +177,7 @@ export const Variant = React.memo((
         <Grid.Row>
           <Grid.Column width={16}>
             {variant.familyGuids && <VariantIndividuals variant={variant} />}
+            {variant.numFamilies && `Variant present in ${variant.numFamilies} families in external projects`}
             {showReads}
           </Grid.Column>
         </Grid.Row>
@@ -272,8 +273,8 @@ CompoundHets.propTypes = {
 const Variants = React.memo(({ variants, compoundHetToggle, ...props }) => (
   <Grid stackable divided="vertically">
     {(variants || []).map(variant => (Array.isArray(variant) ?
-      <CompoundHets variants={variant} key={`${variant.map(v => v.variantId).join()}-${variant[0].familyGuids.join('-')}`} compoundHetToggle={compoundHetToggle} {...props} /> :
-      <VariantWithReads variant={variant} key={`${variant.variantId}-${variant.familyGuids.join('-')}`} {...props} />
+      <CompoundHets variants={variant} key={`${variant.map(v => v.variantId).join()}-${variant[0].familyGuids?.join('-')}`} compoundHetToggle={compoundHetToggle} {...props} /> :
+      <VariantWithReads variant={variant} key={`${variant.variantId}-${variant.familyGuids?.join('-')}`} {...props} />
     ))}
   </Grid>
 ))
