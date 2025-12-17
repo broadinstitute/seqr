@@ -23,9 +23,13 @@ class UpdateMgiTest(ReferenceDataCommandTestCase):
         # Test exception with no dbNSFPGene records
         dbNSFPGene.objects.all().delete()
         DataVersions.objects.get(data_model_name='MGI').delete()
+        self.reset_logs()
         with self.assertRaises(CommandError) as e:
             self._run_command(data=self.DATA)
         self.assertEqual(str(e.exception),'Failed to Update: MGI')
-        self.mock_command_logger.error.assert_called_with(
-            'unable to update MGI: Related data is missing to load MGI: entrez_id_to_gene'
-        )
+        self.assert_json_logs(user=None, expected=[
+            ('unable to update MGI: Related data is missing to load MGI: entrez_id_to_gene', {
+                'severity': 'ERROR',
+                '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent',
+            }),
+        ])
