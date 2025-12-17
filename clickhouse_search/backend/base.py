@@ -13,7 +13,7 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
         return getattr(model._meta, 'to_table', None) is not None
 
     def _is_dictionary(self, model):
-        return not self._is_materialzed_view(model) and getattr(model._meta, 'source_table', None) is not None
+        return getattr(model._meta, 'layout', None) is not None
 
     def table_sql(self, model):
         if self._is_materialzed_view(model):
@@ -72,7 +72,7 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
         CREATE DICTIONARY %(table)s (%(definition)s) %(extra)s
         SOURCE(CLICKHOUSE(USER {CLICKHOUSE_WRITER_USER} PASSWORD {CLICKHOUSE_WRITER_PASSWORD} TABLE {source_table}))
         LIFETIME(MIN 0 MAX 0)
-        LAYOUT(FLAT(MAX_ARRAY_SIZE {meta.size}))
+        LAYOUT({meta.layout})
         """
         sql, params = super().table_sql(model)
         self.sql_create_table = original_sql_create_table

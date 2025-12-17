@@ -259,7 +259,7 @@ class Migration(migrations.Migration):
                 'db_table': 'GRCh37/SNV_INDEL/gt_stats_dict',
                 'engine': clickhouse_backend.models.MergeTree(primary_key='key'),
                 'source_table': 'GtStatsGRCh37SnvIndel',
-                'size': 200000000,
+                'layout': 'FLAT(MAX_ARRAY_SIZE 200000000)',
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
@@ -347,7 +347,7 @@ class Migration(migrations.Migration):
                 'db_table': 'GRCh38/SNV_INDEL/gt_stats_dict',
                 'engine': clickhouse_backend.models.MergeTree(primary_key='key'),
                 'source_table': 'GtStatsSnvIndel',
-                'size': 1000000000,
+                'layout': 'FLAT(MAX_ARRAY_SIZE 1000000000)',
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
@@ -435,7 +435,7 @@ class Migration(migrations.Migration):
                 'db_table': 'GRCh38/MITO/gt_stats_dict',
                 'engine': clickhouse_backend.models.MergeTree(primary_key='key'),
                 'source_table': 'GtStatsMito',
-                'size': 1000000,
+                'layout': 'FLAT(MAX_ARRAY_SIZE 1000000)',
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
@@ -515,7 +515,7 @@ class Migration(migrations.Migration):
                 'db_table': 'GRCh38/SV/gt_stats_dict',
                 'engine': clickhouse_backend.models.MergeTree(primary_key='key'),
                 'source_table': 'GtStatsSv',
-                'size': 5000000,
+                'layout': 'FLAT(MAX_ARRAY_SIZE 5000000)',
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),

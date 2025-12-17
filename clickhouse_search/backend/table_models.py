@@ -3,7 +3,7 @@ from django.db import connections
 
 
 MATERIALIZED_VIEW_META_FIELDS = ['to_table', 'source_table', 'source_sql', 'column_selects', 'refreshable']
-DICTIONARY_META_FIELDS = ['size']
+DICTIONARY_META_FIELDS = ['layout']
 
 
 class MaterializedView(models.ClickhouseModel):
