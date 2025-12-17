@@ -1184,7 +1184,7 @@ class Migration(migrations.Migration):
             options={
                 'db_table': 'GRCh37/SNV_INDEL/clinvar_all_variants_to_clinvar_mv',
                 'to_table': 'ClinvarGRCh37SnvIndel',
-                'source_table': 'ClinvarGRCh37AllVariantsSnvIndel',
+                'source_table': 'ClinvarAllVariantsGRCh37SnvIndel',
                 'source_sql': 'src INNER JOIN `GRCh37/SNV_INDEL/key_lookup` dst on src.variantId = dst.variantId',
                 'column_selects': {'key': 'DISTINCT ON (key) dst.key'},
                 'refreshable': True,
