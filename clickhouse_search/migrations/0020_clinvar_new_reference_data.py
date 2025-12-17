@@ -856,7 +856,7 @@ class Migration(migrations.Migration):
             options={
                 'db_table': 'GRCh37/SNV_INDEL/reference_data/clinvar/seqr_variants_to_search_mv',
                 'to_table': 'ClinvarGRCh37SnvIndel',
-                'source_table': 'ClinvarGRCh37SeqrVariantsSnvIndel',
+                'source_table': 'ClinvarSeqrVariantsGRCh37SnvIndel',
                 'source_sql': '',
                 'column_selects': {'key': 'DISTINCT ON (key)'},
                 'refreshable': True,
