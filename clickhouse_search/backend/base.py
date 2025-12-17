@@ -13,7 +13,7 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
         return getattr(model._meta, 'to_table', None) is not None
 
     def _is_dictionary(self, model):
-        return getattr(model._meta, 'source_table', None) is not None
+        return not self._is_materialzed_view(model) and getattr(model._meta, 'source_table', None) is not None
 
     def table_sql(self, model):
         if self._is_materialzed_view(model):
@@ -77,6 +77,12 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
         sql, params = super().table_sql(model)
         self.sql_create_table = original_sql_create_table
         return sql, params
+
+    def delete_model(self, model):
+        if self._is_dictionary(model):
+            self.sql_delete_table = self.sql_delete_table.replace('TABLE', 'DICTIONARY')
+        super().delete_model(model)
+        self.sql_delete_table = self.sql_delete_table.replace('DICTIONARY', 'TABLE')
 
     def no_quote_value(self, value):
         return value

@@ -178,9 +178,8 @@ class Migration(migrations.Migration):
             SEQRDB_AFFECTED_STATUS_DICT,
             hints={'clickhouse': True},
         ),
-        migrations.RunSQL(
-            'DROP DICTIONARY `GRCh37/SNV_INDEL/gt_stats_dict`',
-            hints={'clickhouse': True},
+        migrations.DeleteModel(
+            name='GtStatsDictGRCh37SnvIndel',
         ),
         migrations.DeleteModel(
             name='ProjectsToGtStatsGRCh37SnvIndel',
@@ -267,9 +266,8 @@ class Migration(migrations.Migration):
                 ('_overwrite_base_manager', django.db.models.manager.Manager()),
             ],
         ),
-        migrations.RunSQL(
-            'DROP DICTIONARY `GRCh38/SNV_INDEL/gt_stats_dict`',
-            hints={'clickhouse': True},
+        migrations.DeleteModel(
+            name='GtStatsDictSnvIndel',
         ),
         migrations.DeleteModel(
             name='ProjectsToGtStatsSnvIndel',
@@ -356,9 +354,8 @@ class Migration(migrations.Migration):
                 ('_overwrite_base_manager', django.db.models.manager.Manager()),
             ],
         ),
-        migrations.RunSQL(
-            'DROP DICTIONARY `GRCh38/MITO/gt_stats_dict`',
-            hints={'clickhouse': True},
+        migrations.DeleteModel(
+            name='GtStatsDictMito',
         ),
         migrations.DeleteModel(
             name='ProjectsToGtStatsMito',
@@ -445,9 +442,8 @@ class Migration(migrations.Migration):
                 ('_overwrite_base_manager', django.db.models.manager.Manager()),
             ],
         ),
-        migrations.RunSQL(
-            'DROP DICTIONARY `GRCh38/SV/gt_stats_dict`',
-            hints={'clickhouse': True},
+        migrations.DeleteModel(
+            name='GtStatsDictSv',
         ),
         migrations.DeleteModel(
             name='ProjectsToGtStatsSv',
