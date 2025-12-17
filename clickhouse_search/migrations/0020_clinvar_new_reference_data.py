@@ -565,7 +565,7 @@ class Migration(migrations.Migration):
                              (15, 'Benign/Likely_benign'), (16, 'Benign')])),
             ],
             options={
-                'db_table': 'GRCh37/SNV_INDEL/clinvar/all_variants_to_seqr_variants_mv',
+                'db_table': 'GRCh37/SNV_INDEL/reference_data/clinvar/all_variants_to_seqr_variants_mv',
                 'to_table': 'ClinvarSeqrVariantsGRCh37SnvIndel',
                 'source_table': 'ClinvarGRCh37AllVariantsSnvIndel',
                 'source_sql': 'src INNER JOIN `GRCh37/SNV_INDEL/key_lookup` dst on assumeNotNull(src.variantId) = dst.variantId',
@@ -669,7 +669,7 @@ class Migration(migrations.Migration):
                              (15, 'Benign/Likely_benign'), (16, 'Benign')])),
             ],
             options={
-                'db_table': 'GRCh38/SNV_INDEL/clinvar/all_variants_to_seqr_variants_mv',
+                'db_table': 'GRCh38/SNV_INDEL/reference_data/clinvar/all_variants_to_seqr_variants_mv',
                 'to_table': 'ClinvarSeqrVariantsSnvIndel',
                 'source_table': 'ClinvarAllVariantsSnvIndel',
                 'source_sql': 'src INNER JOIN `GRCh38/SNV_INDEL/key_lookup` dst on assumeNotNull(src.variantId) = dst.variantId',
@@ -773,7 +773,7 @@ class Migration(migrations.Migration):
                              (15, 'Benign/Likely_benign'), (16, 'Benign')])),
             ],
             options={
-                'db_table': 'GRCh38/MITO/clinvar/all_variants_to_seqr_variants_mv',
+                'db_table': 'GRCh38/MITO/reference_data/clinvar/all_variants_to_seqr_variants_mv',
                 'to_table': 'ClinvarSeqrVariantsMito',
                 'source_table': 'ClinvarAllVariantsMito',
                 'source_sql': 'src INNER JOIN `GRCh38/MITO/key_lookup` dst on assumeNotNull(src.variantId) = dst.variantId',
@@ -877,7 +877,7 @@ class Migration(migrations.Migration):
                              (15, 'Benign/Likely_benign'), (16, 'Benign')])),
             ],
             options={
-                'db_table': 'GRCh37/SNV_INDEL/clinvar/seqr_variants_to_search_mv',
+                'db_table': 'GRCh37/SNV_INDEL/reference_data/clinvar/seqr_variants_to_search_mv',
                 'to_table': 'ClinvarGRCh37SnvIndel',
                 'source_table': 'ClinvarGRCh37SeqrVariantsSnvIndel',
                 'source_sql': '',
@@ -981,7 +981,7 @@ class Migration(migrations.Migration):
                              (15, 'Benign/Likely_benign'), (16, 'Benign')])),
             ],
             options={
-                'db_table': 'GRCh38/SNV_INDEL/clinvar/seqr_variants_to_search_mv',
+                'db_table': 'GRCh38/SNV_INDEL/reference_data/clinvar/seqr_variants_to_search_mv',
                 'to_table': 'ClinvarSnvIndel',
                 'source_table': 'ClinvarSeqrVariantsSnvIndel',
                 'source_sql': '',
@@ -1085,7 +1085,7 @@ class Migration(migrations.Migration):
                              (15, 'Benign/Likely_benign'), (16, 'Benign')])),
             ],
             options={
-                'db_table': 'GRCh38/MITO/clinvar/seqr_variants_to_search_mv',
+                'db_table': 'GRCh38/MITO/reference_data/clinvar/seqr_variants_to_search_mv',
                 'to_table': 'ClinvarMito',
                 'source_table': 'ClinvarSeqrVariantsMito',
                 'source_sql': '',
