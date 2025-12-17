@@ -1,105 +1,55 @@
-from collections import defaultdict
-
 import requests
-from django.db import transaction
-from django.db.models.query import prefetch_related_objects
 from django.utils import timezone
 from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
 from urllib3.exceptions import MaxRetryError
 
-from panelapp.models import PaLocusList, PaLocusListGene
-from reference_data.models import GENOME_VERSION_GRCh38
 from seqr.models import LocusList as SeqrLocusList, LocusListGene as SeqrLocusListGene
-from seqr.utils.gene_utils import parse_locus_list_items
 from seqr.utils.logging_utils import SeqrLogger
-from seqr.views.utils.json_to_orm_utils import update_model_from_json
 
 logger = SeqrLogger(__name__)
 
 REQUEST_TIMEOUT_S = 300
 
-PANEL_APP_SOURCES = {
-    'AU': 'https://panelapp-aus.org',
-    'UK': 'https://panelapp.genomicsengland.co.uk',
-}
-
 class TooManyRequestsError(Exception):
     pass
 
-def import_all_panels(source):
-    def _extract_ensembl_id_from_json(raw_gene_json):
-        ensembl_genes_json = raw_gene_json.get('gene_data', {}).get('ensembl_genes')
-        if ensembl_genes_json and isinstance(ensembl_genes_json, dict):
-            return ensembl_genes_json \
-                .get('GRch38', {}) \
-                .get('90', {}) \
-                .get('ensembl_id')
-        else:
-            return None
 
-    existing_lists_by_id = {ll.panel_app_id: ll for ll in PaLocusList.objects.filter(source=source)}
+def _extract_ensembl_id_from_json(raw_gene_json):
+    ensembl_genes_json = raw_gene_json.get('gene_data', {}).get('ensembl_genes')
+    if ensembl_genes_json and isinstance(ensembl_genes_json, dict):
+        return ensembl_genes_json \
+            .get('GRch38', {}) \
+            .get('90', {}) \
+            .get('ensembl_id')
+    else:
+        return None
 
-    panels_api_url = f'{PANEL_APP_SOURCES[source]}/api/v1/panels'
-    panels_url = f'{panels_api_url}/?page=1'
-    updated_panels = _get_updated_panels(panels_url, {}, existing_lists_by_id)
 
-    new_panels = {
-        panel_id: panel for panel_id, panel in updated_panels.items() if panel_id not in existing_lists_by_id
+def get_valid_panel_genes(panel_app_id, panel, panels_api_url, genes_by_panel_id, gene_ids_to_gene):
+    if len(genes_by_panel_id[panel_app_id]) != panel['stats']['number_of_genes']:
+        panel_genes_url = f'{panels_api_url}/{panel_app_id}/genes'
+        _get_all_genes(panel_app_id, panel_genes_url, genes_by_panel_id)
+
+    all_genes_for_panel = genes_by_panel_id[panel_app_id]
+    if not all_genes_for_panel:
+        return {}
+
+    panel_genes_by_id = {
+        _extract_ensembl_id_from_json(gene): gene for gene in all_genes_for_panel
+        if _extract_ensembl_id_from_json(gene)
     }
-    num_update = len(updated_panels) - len(new_panels)
-    logger.info(f'Found {len(new_panels)} new and {num_update} existing panels to load', user=None)
-    if not updated_panels:
-        return
+    valid_panel_genes = {
+        gene_id: panel_gene for gene_id, panel_gene in panel_genes_by_id.items() if gene_id in gene_ids_to_gene
+    }
+    if len(panel_genes_by_id) > len(valid_panel_genes):
+        invalid_items = sorted(set(panel_genes_by_id.keys()) - set(valid_panel_genes.keys()))
+        logger.warning('Genes found in panel {} but not in reference data, ignoring genes {}'
+                       .format(panel_app_id, invalid_items), user=None)
 
-    if new_panels:
-        existing_lists_by_id.update(_create_new_locus_lists(source, new_panels))
-    prefetch_related_objects(list(existing_lists_by_id.values()), 'seqr_locus_list')
-
-    genes_by_panel_id = defaultdict(list)
-    updated_seqr_locuslists = []
-    for panel_app_id, panel in updated_panels.items():
-        logger.info('Importing panel id {}'.format(panel_app_id), user=None)
-        try:
-            with transaction.atomic():
-                pa_locus_list = existing_lists_by_id[panel_app_id]
-                update_model_from_json(pa_locus_list, {
-                    'source': source,  **{field: panel.get(field) or None for field in [
-                        'disease_group', 'disease_sub_group', 'status', 'version', 'version_created',
-                    ]},
-                }, user=None)
-
-                if len(genes_by_panel_id[panel_app_id]) != panel['stats']['number_of_genes']:
-                    panel_genes_url = f'{panels_api_url}/{panel_app_id}/genes'
-                    _get_all_genes(panel_app_id, panel_genes_url, genes_by_panel_id)
-
-                all_genes_for_panel = genes_by_panel_id[panel_app_id]
-                if not all_genes_for_panel:
-                    continue  # Genes in 'super panels' are associated with sub panels
-                panel_genes_by_id = {_extract_ensembl_id_from_json(gene): gene for gene in all_genes_for_panel
-                                     if _extract_ensembl_id_from_json(gene)}
-                raw_ensbl_38_gene_ids_csv = ','.join(panel_genes_by_id.keys())
-                genes_by_id, _, invalid_items = parse_locus_list_items({'rawItems': raw_ensbl_38_gene_ids_csv}, genome_version=GENOME_VERSION_GRCh38)
-                if len(invalid_items or []) > 0:
-                    logger.warning('Genes found in panel {} but not in reference data, ignoring genes {}'
-                                   .format(panel_app_id, invalid_items), user=None)
-                seqr_locus_list = pa_locus_list.seqr_locus_list
-                _update_locus_list_genes_bulk(pa_locus_list.seqr_locus_list, genes_by_id.keys(), panel_genes_by_id)
-
-                seqr_locus_list.description = _create_panel_description(panel_app_id, panel, source)
-                updated_seqr_locuslists.append(seqr_locus_list)
-        except Exception as e:
-            logger.error('Error occurred when importing gene panel_app_id={}, error={}'.format(panel_app_id, e), user=None)
-
-    SeqrLocusList.bulk_update_models(user=None, models=updated_seqr_locuslists, fields=['description'])
+    return valid_panel_genes
 
 
-def delete_all_panels(source):
-    with transaction.atomic():
-        to_delete_qs = SeqrLocusList.objects.filter(palocuslist__source=source)
-        SeqrLocusList.bulk_delete(user=None, queryset=to_delete_qs)
-
-
-def _update_locus_list_genes_bulk(seqr_locus_list, gene_ids, panel_genes_by_id):
+def update_locus_list_genes_bulk(seqr_locus_list, panel_genes_by_id):
     logger.info('Bulk updating genes for list {}'.format(seqr_locus_list), user=None)
     SeqrLocusList.bulk_delete(user=None, queryset=seqr_locus_list.locuslistgene_set.all())
     current_time = timezone.now()
@@ -110,22 +60,21 @@ def _update_locus_list_genes_bulk(seqr_locus_list, gene_ids, panel_genes_by_id):
             gene_id=gene_id,
             created_date=current_time,
             guid='LL%05d_%s' % (seqr_locus_list.id, gene_id)
-        ) for gene_id in gene_ids
+        ) for gene_id in panel_genes_by_id
     }
     created_locuslistgenes = SeqrLocusListGene.objects.bulk_create(locuslistgenes.values(), batch_size=10000)
     created_locuslistgenes_by_id = {lg.gene_id: lg for lg in created_locuslistgenes}
 
-    palocuslistgenes = {
-        gene_id: _create_pa_locus_list_gene(created_locuslistgenes_by_id[gene_id], panel_genes_by_id[gene_id])
-        for gene_id in gene_ids
-    }
-    PaLocusListGene.objects.bulk_create(palocuslistgenes.values(), batch_size=10000)
+    return [
+        _parse_pa_locus_list_gene(created_locuslistgenes_by_id[gene_id], panel_gene)
+        for gene_id, panel_gene in panel_genes_by_id.items()
+    ]
 
 
-def _create_pa_locus_list_gene(seqr_locus_list_gene, panel_gene_json):
+def _parse_pa_locus_list_gene(seqr_locus_list_gene, panel_gene_json):
     del panel_gene_json['panel']  # No need to keep panel info
     del panel_gene_json['gene_data']  # No need to keep gene info as Seqr already maintain info
-    result = PaLocusListGene(
+    return dict(
         seqr_locus_list_gene=seqr_locus_list_gene,
         confidence_level=panel_gene_json.get('confidence_level'),
         biotype=panel_gene_json.get('biotype') or None,
@@ -134,24 +83,18 @@ def _create_pa_locus_list_gene(seqr_locus_list_gene, panel_gene_json):
         mode_of_inheritance=panel_gene_json.get('mode_of_inheritance') or None,
     )
 
-    return result
 
-
-def _get_updated_panels(panels_url, results, existing_lists_by_id):
+def get_updated_panels(panels_url, existing_list_versions):
     resp = requests.get(panels_url, timeout=REQUEST_TIMEOUT_S)
     resp_json = resp.json()
     for result in resp_json.get('results', []):
-        panel_app_id = result.get('id')
-        existing_list = existing_lists_by_id.get(panel_app_id)
-        current_version = existing_list.version if existing_list else None
+        current_version = existing_list_versions.get(result.get('id'))
         if result.get('version') != current_version and result.get('stats', {}).get('number_of_genes', 0) > 0:
-            results[panel_app_id] = result
+            yield result
 
     next_page = resp_json.get('next', None)
-    if next_page is None:
-        return results
-    else:
-        return _get_updated_panels(next_page, results, existing_lists_by_id)
+    if next_page:
+        yield from get_updated_panels(next_page, existing_list_versions)
 
 
 def _get_all_genes(panel_app_id: int, genes_url: str, results_by_panel_id: dict):
@@ -181,20 +124,7 @@ def _get_all_genes(panel_app_id: int, genes_url: str, results_by_panel_id: dict)
         return _get_all_genes(panel_app_id, next_page, results_by_panel_id)
 
 
-def _create_new_locus_lists(source, panels_by_id):
-    created_locuslists = SeqrLocusList.bulk_create(user=None, new_models=[
-        SeqrLocusList(name=panel['name'], is_public=True) for panel in panels_by_id.values()
-    ])
-    list_id_by_name = {ll.name: ll.id for ll in created_locuslists}
-
-    created_pa_locuslists = PaLocusList.objects.bulk_create([
-        PaLocusList(seqr_locus_list_id=list_id_by_name[panel['name']], panel_app_id=panel_app_id, source=source)
-        for panel_app_id, panel in panels_by_id.items()
-    ])
-    return {ll.panel_app_id: ll for ll in created_pa_locuslists}
-
-
-def _create_panel_description(panel_app_id, panel, source):
+def panel_description(panel_app_id, panel, source):
     disease_groups = [d for d in [panel['disease_group'], panel['disease_sub_group']] if d]
 
     return 'PanelApp_{source}_{panel_app_id}_{version}{disease_groups}'.format(
