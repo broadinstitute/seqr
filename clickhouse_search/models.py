@@ -1035,7 +1035,7 @@ class ProjectsToGtStatsMeta:
         'hom_affected': "sumIf(hom_samples, affected = 'A')",
     }
     source_sql = 'WHERE project_guid NOT IN {CLICKHOUSE_AC_EXCLUDED_PROJECT_GUIDS} GROUP BY key'
-    refresh = 'EVERY 10 YEAR'
+    refreshable = True
 
 class ProjectsToGtStatsGRCh37SnvIndel(BaseProjectsToGtStats):
 
