@@ -54,6 +54,11 @@ class ClickhouseSearchTestCase(AnvilAuthenticationTestMixin, TransactionTestCase
                 cursor.execute(f'SYSTEM REFRESH VIEW "{table_base}/project_gt_stats_to_gt_stats_mv"')
                 cursor.execute(f'SYSTEM WAIT VIEW "{table_base}/project_gt_stats_to_gt_stats_mv"')
                 cursor.execute(f'SYSTEM RELOAD DICTIONARY "{table_base}/gt_stats_dict"')
+            for table_base in ['GRCh38/SNV_INDEL', 'GRCh38/MITO']:
+                cursor.execute(f'SYSTEM REFRESH VIEW "{table_base}/reference_data/clinvar/all_variants_to_seqr_variants_mv"')
+                cursor.execute(f'SYSTEM WAIT VIEW "{table_base}/reference_data/clinvar/all_variants_to_seqr_variants_mv"')
+                cursor.execute(f'SYSTEM REFRESH VIEW "{table_base}/reference_data/clinvar/seqr_variants_to_search_mv"')
+                cursor.execute(f'SYSTEM WAIT VIEW "{table_base}/reference_data/clinvar/seqr_variants_to_search_mv"')
         Project.objects.update(genome_version='38')
         AnvilAuthenticationTestMixin.set_up_users()
 
