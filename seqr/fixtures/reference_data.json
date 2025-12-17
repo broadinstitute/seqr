@@ -1528,5 +1528,19 @@
     "fields": {
         "version": "dbNSFP4.0_gene"
     }
+},
+{
+    "model": "reference_data.dataversions",
+    "pk": "PanelAppAU",
+    "fields": {
+        "version": "2025-03-12"
+    }
+},
+{
+    "model": "reference_data.dataversions",
+    "pk": "PanelAppUK",
+    "fields": {
+        "version": "2025-03-12"
+    }
 }
 ]

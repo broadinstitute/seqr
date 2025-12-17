@@ -4,6 +4,7 @@ import os
 import responses
 import tempfile
 
+from datetime import datetime
 from django.core.management import call_command
 
 from reference_data.models import DataVersions
@@ -36,6 +37,10 @@ class ReferenceDataCommandTestCase(AuthenticationTestCase):
         self.mock_hpo_version_patcher = mock.patch('reference_data.models.HumanPhenotypeOntology.get_current_version')
         self.mock_hpo_version_patcher.start().return_value = '2025-03-03'
         self.addCleanup(self.mock_hpo_version_patcher.stop)
+        patcher = mock.patch('panelapp.models.datetime')
+        self.mock_pa_now = patcher.start().now
+        self.mock_pa_now.return_value = datetime(2025, 3, 12)
+        self.addCleanup(patcher.stop)
 
     @responses.activate
     def _run_command(self, data, head_response=None, command_args=None):
