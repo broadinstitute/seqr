@@ -71,7 +71,7 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
         self.sql_create_table = f"""
         CREATE DICTIONARY %(table)s (%(definition)s) %(extra)s
         SOURCE(CLICKHOUSE(USER {CLICKHOUSE_WRITER_USER} PASSWORD {CLICKHOUSE_WRITER_PASSWORD} TABLE {source_table}))
-        LIFETIME(MIN 0 MAX 0)
+        LIFETIME(MIN 0 MAX {getattr(meta, 'lifetime_max', 0)})
         LAYOUT({meta.layout})
         """
         sql, params = super().table_sql(model)

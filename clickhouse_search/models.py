@@ -1229,6 +1229,17 @@ class ProjectPartitionsSnvIndel(FixtureLoadableClickhouseModel):
             order_by='project_guid',
         )
 
+class ProjectPartitionsDict(Dictionary):
+    project_guid = models.StringField(primary_key=True)
+    n_partitions = models.UInt8Field()
+
+    class Meta:
+        db_table = 'GRCh38/SNV_INDEL/project_partitions_dict'
+        engine = models.MergeTree(primary_key='project_guid')
+        source_table = 'ProjectPartitionsSnvIndel'
+        lifetime_max = 300 # refresh every 5 minutes
+        layout = 'HASHED()' # hashed layout supports string keys
+
 
 ENTRY_CLASS_MAP = {
     GENOME_VERSION_GRCh37: {Sample.DATASET_TYPE_VARIANT_CALLS: EntriesGRCh37SnvIndel},
