@@ -2,7 +2,6 @@ from clickhouse_backend.backend.base import (
     DatabaseWrapper as BaseDatabaseWrapper,
     DatabaseSchemaEditor as BaseDatabaseSchemaEditor,
 )
-from django.apps import apps
 
 from clickhouse_search.backend.engines import Join
 
@@ -24,8 +23,8 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
             )
         return sql, params
 
-    def _table_name(self, table_model_name):
-        table_model = apps.get_model('clickhouse_search', table_model_name)
+    def _table_name(self, meta, table_model_name):
+        table_model = meta.apps.get_model('clickhouse_search', table_model_name)
         return self.quote_name(table_model._meta.db_table)
 
     def _materialized_view_sql(self, model):
@@ -37,7 +36,7 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
             f'{meta.column_selects[field.column]} {field.column}' if field.column in meta.column_selects else field.column
             for field in meta.local_fields
         ]
-        sql = f'{table_sql} AS SELECT {", ".join(selects)} FROM {self._table_name(meta.source_table)} {meta.source_sql}'  # nosec
+        sql = f'{table_sql} AS SELECT {", ".join(selects)} FROM {self._table_name(meta, meta.source_table)} {meta.source_sql}'  # nosec
         self.sql_create_table = original_sql_create_table
         return sql, params
 
@@ -53,7 +52,7 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
         return expression
 
     def _get_materialized_view_engine_expression(self, model):
-        sql = f'TO {self._table_name(model._meta.to_table)}'
+        sql = f'TO {self._table_name(model._meta, model._meta.to_table)}'
         if getattr(model._meta, 'refreshable', False):
             sql = 'REFRESH EVERY 10 YEAR ' + sql
         return sql
