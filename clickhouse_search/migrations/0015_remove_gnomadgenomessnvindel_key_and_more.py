@@ -839,7 +839,7 @@ class Migration(migrations.Migration):
                                    'ac_wgs': "sumIf((het_samples * 1) + (hom_samples * 2), sample_type = 'WGS')",
                                    'hom_wes': "sumIf(hom_samples, sample_type = 'WES')",
                                    'hom_wgs': "sumIf(hom_samples, sample_type = 'WGS')"},
-                'refresh': 'EVERY 10 YEAR',
+                'refreshable': True,
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
@@ -904,7 +904,7 @@ class Migration(migrations.Migration):
                                    'ac_wgs': "sumIf((het_samples * 1) + (hom_samples * 2), sample_type = 'WGS')",
                                    'hom_wes': "sumIf(hom_samples, sample_type = 'WES')",
                                    'hom_wgs': "sumIf(hom_samples, sample_type = 'WGS')"},
-                'refresh': 'EVERY 10 YEAR',
+                'refreshable': True,
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
@@ -969,7 +969,7 @@ class Migration(migrations.Migration):
                                    'ac_het_wgs': "sumIf(het_samples, sample_type = 'WGS')",
                                    'ac_hom_wes': "sumIf(hom_samples, sample_type = 'WES')",
                                    'ac_hom_wgs': "sumIf(hom_samples, sample_type = 'WGS')"},
-                'refresh': 'EVERY 10 YEAR',
+                'refreshable': True,
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
@@ -1029,7 +1029,7 @@ class Migration(migrations.Migration):
                 'source_sql': f'WHERE project_guid NOT IN {CLICKHOUSE_AC_EXCLUDED_PROJECT_GUIDS} GROUP BY key',
                 'column_selects': {'ac_wgs': 'sum((het_samples * 1) + (hom_samples * 2))',
                                    'hom_wgs': 'sum(hom_samples)'},
-                'refresh': 'EVERY 10 YEAR',
+                'refreshable': True,
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
