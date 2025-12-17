@@ -610,7 +610,7 @@ class ClinvarMvGRCh37SnvIndel(BaseClinvarMv):
     class Meta(ClinvarMvMeta):
         db_table = 'GRCh37/SNV_INDEL/reference_data/clinvar/all_variants_to_seqr_variants_mv'
         to_table = 'ClinvarSeqrVariantsGRCh37SnvIndel'
-        source_table = 'ClinvarGRCh37AllVariantsSnvIndel'
+        source_table = 'ClinvarAllVariantsGRCh37SnvIndel'
         source_sql = 'src INNER JOIN `GRCh37/SNV_INDEL/key_lookup` dst on assumeNotNull(src.variantId) = dst.variantId'
 
 class ClinvarMvSnvIndel(BaseClinvarMv):
@@ -634,7 +634,7 @@ class ClinvarSearchMvGRCh37SnvIndel(BaseClinvarMv):
     class Meta(ClinvarMvMeta):
         db_table = 'GRCh37/SNV_INDEL/reference_data/clinvar/seqr_variants_to_search_mv'
         to_table = 'ClinvarGRCh37SnvIndel'
-        source_table = 'ClinvarGRCh37SeqrVariantsSnvIndel'
+        source_table = 'ClinvarSeqrVariantsGRCh37SnvIndel'
         source_sql = ''
 
 class ClinvarSearchMvSnvIndel(BaseClinvarMv):
