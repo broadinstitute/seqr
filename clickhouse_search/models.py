@@ -583,6 +583,75 @@ class ClinvarMito(BaseClinvarJoin):
     class Meta(BaseClinvarJoin.Meta):
         db_table = 'GRCh38/MITO/reference_data/clinvar'
 
+class BaseClinvarMv(MaterializedView):
+    key = UInt32FieldDeltaCodecField(primary_key=True)
+    allele_id = models.UInt32Field(db_column='alleleId', null=True, blank=True)
+    conflicting_pathogenicities = NestedField([
+        ('pathogenicity', models.Enum8Field(choices=BaseClinvar.PATHOGENICITY_CHOICES, return_int=False)),
+        ('count', models.UInt16Field()),
+    ], db_column='conflictingPathogenicities', null_when_empty=True)
+    gold_stars = models.UInt8Field(db_column='goldStars', null=True, blank=True)
+    submitters = models.ArrayField(models.StringField())
+    conditions = models.ArrayField(models.StringField())
+    assertions = models.ArrayField(models.Enum8Field(choices=BaseClinvar.ASSERTIONS_CHOICES, return_int=False))
+    pathogenicity = models.Enum8Field(choices=BaseClinvar.PATHOGENICITY_CHOICES, return_int=False)
+
+    class Meta:
+        abstract = True
+
+class ClinvarMvMeta:
+    column_selects = {
+        'key': "DISTINCT ON (key)",
+    }
+    refreshable = True
+
+class ClinvarMvGRCh37SnvIndel(BaseClinvarMv):
+
+    class Meta(ClinvarMvMeta):
+        db_table = 'GRCh37/SNV_INDEL/clinvar/all_variants_to_seqr_variants_mv'
+        to_table = 'ClinvarSeqrVariantsGRCh37SnvIndel'
+        source_table = 'ClinvarGRCh37AllVariantsSnvIndel'
+        source_sql = 'src INNER JOIN `GRCh37/SNV_INDEL/key_lookup` dst on assumeNotNull(src.variantId) = dst.variantId'
+
+class ClinvarMvSnvIndel(BaseClinvarMv):
+
+    class Meta(ClinvarMvMeta):
+        db_table = 'GRCh38/SNV_INDEL/clinvar/all_variants_to_seqr_variants_mv'
+        to_table = 'ClinvarSeqrVariantsSnvIndel'
+        source_table = 'ClinvarAllVariantsSnvIndel'
+        source_sql = 'src INNER JOIN `GRCh38/SNV_INDEL/key_lookup` dst on assumeNotNull(src.variantId) = dst.variantId'
+
+class ClinvarMvMito(BaseClinvarMv):
+
+    class Meta(ClinvarMvMeta):
+        db_table = 'GRCh38/MITO/clinvar/all_variants_to_seqr_variants_mv'
+        to_table = 'ClinvarSeqrVariantsMito'
+        source_table = 'ClinvarAllVariantsMito'
+        source_sql = 'src INNER JOIN `GRCh38/MITO/key_lookup` dst on assumeNotNull(src.variantId) = dst.variantId'
+
+class ClinvarSearchMvGRCh37SnvIndel(BaseClinvarMv):
+
+    class Meta(ClinvarMvMeta):
+        db_table = 'GRCh37/SNV_INDEL/clinvar/seqr_variants_to_search_mv'
+        to_table = 'ClinvarGRCh37SnvIndel'
+        source_table = 'ClinvarGRCh37SeqrVariantsSnvIndel'
+        source_sql = ''
+
+class ClinvarSearchMvSnvIndel(BaseClinvarMv):
+
+    class Meta(ClinvarMvMeta):
+        db_table = 'GRCh38/SNV_INDEL/clinvar/seqr_variants_to_search_mv'
+        to_table = 'ClinvarSnvIndel'
+        source_table = 'ClinvarSeqrVariantsSnvIndel'
+        source_sql = ''
+
+class ClinvarSearchMvMito(BaseClinvarMv):
+
+    class Meta(ClinvarMvMeta):
+        db_table = 'GRCh38/MITO/clinvar/seqr_variants_to_search_mv'
+        to_table = 'ClinvarMito'
+        source_table = 'ClinvarSeqrVariantsMito'
+        source_sql = ''
 
 class BaseEntries(FixtureLoadableClickhouseModel):
     MAX_XPOS_FILTER_INTERVALS = 500

@@ -4,31 +4,7 @@ import clickhouse_backend.models
 import clickhouse_search.backend.fields
 from django.db import migrations, models, connections
 import django.db.models.manager
-from string import Template
 
-CLINVAR_ALL_TO_SEQR_MV = Template("""
-CREATE MATERIALIZED VIEW `$reference_genome/$dataset_type/reference_data/clinvar/all_variants_to_seqr_variants_mv`
-REFRESH EVERY 10 YEAR
-TO `$reference_genome/$dataset_type/reference_data/clinvar/seqr_variants`
-AS 
-SELECT
-    DISTINCT ON (key)
-    key,
-    COLUMNS('.*') EXCEPT(version, variantId, key)
-FROM `$reference_genome/$dataset_type/reference_data/clinvar/all_variants` src
-INNER JOIN `$reference_genome/$dataset_type/key_lookup` dst
-ON assumeNotNull(src.variantId) = dst.variantId
-""")
-
-CLINVAR_SEQR_TO_SEARCH_MV = Template("""
-CREATE MATERIALIZED VIEW `$reference_genome/$dataset_type/reference_data/clinvar/seqr_variants_to_search_mv`
-REFRESH EVERY 10 YEAR
-TO `$reference_genome/$dataset_type/reference_data/clinvar`
-AS 
-SELECT 
-DISTINCT ON (key) *
-FROM `$reference_genome/$dataset_type/reference_data/clinvar/seqr_variants`
-""")
 
 def build_materialized_view(reference_genome: str, dataset_type: str, materialized_view: str):
     def inner(apps, schema_editor):
@@ -495,24 +471,111 @@ class Migration(migrations.Migration):
             name="clinvarallvariantssnvindel",
             table="GRCh38/SNV_INDEL/reference_data/clinvar/all_variants",
         ),
-        migrations.RunSQL(
-            "DROP TABLE `GRCh37/SNV_INDEL/clinvar_all_variants_to_clinvar_mv`",
-            hints={"clickhouse": True},
+        migrations.DeleteModel(
+            name='ClinvarMvGRCh37SnvIndel',
         ),
-        migrations.RunSQL(
-            "DROP TABLE `GRCh38/SNV_INDEL/clinvar_all_variants_to_clinvar_mv`",
-            hints={"clickhouse": True},
+        migrations.DeleteModel(
+            name='ClinvarMvSnvIndel',
         ),
-        migrations.RunSQL(
-            "DROP TABLE `GRCh38/MITO/clinvar_all_variants_to_clinvar_mv`",
-            hints={"clickhouse": True},
+        migrations.DeleteModel(
+            name='ClinvarMvMito',
         ),
-        migrations.RunSQL(
-            CLINVAR_ALL_TO_SEQR_MV.substitute(
-                reference_genome="GRCh37",
-                dataset_type="SNV_INDEL",
-            ),
-            hints={"clickhouse": True},
+        migrations.CreateModel(
+            name='ClinvarMvGRCh37SnvIndel',
+            fields=[
+                ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
+                ('allele_id', clickhouse_backend.models.UInt32Field(blank=True, db_column='alleleId', null=True)),
+                ('conflicting_pathogenicities', clickhouse_search.backend.fields.NestedField(base_fields=[(
+                                                                                                          'pathogenicity',
+                                                                                                          clickhouse_backend.models.Enum8Field(
+                                                                                                              choices=[(
+                                                                                                                       0,
+                                                                                                                       'Pathogenic'),
+                                                                                                                       (
+                                                                                                                       1,
+                                                                                                                       'Pathogenic/Likely_pathogenic'),
+                                                                                                                       (
+                                                                                                                       2,
+                                                                                                                       'Pathogenic/Likely_pathogenic/Established_risk_allele'),
+                                                                                                                       (
+                                                                                                                       3,
+                                                                                                                       'Pathogenic/Likely_pathogenic/Likely_risk_allele'),
+                                                                                                                       (
+                                                                                                                       4,
+                                                                                                                       'Pathogenic/Likely_risk_allele'),
+                                                                                                                       (
+                                                                                                                       5,
+                                                                                                                       'Likely_pathogenic'),
+                                                                                                                       (
+                                                                                                                       6,
+                                                                                                                       'Likely_pathogenic/Likely_risk_allele'),
+                                                                                                                       (
+                                                                                                                       7,
+                                                                                                                       'Established_risk_allele'),
+                                                                                                                       (
+                                                                                                                       8,
+                                                                                                                       'Likely_risk_allele'),
+                                                                                                                       (
+                                                                                                                       9,
+                                                                                                                       'Conflicting_classifications_of_pathogenicity'),
+                                                                                                                       (
+                                                                                                                       10,
+                                                                                                                       'Uncertain_risk_allele'),
+                                                                                                                       (
+                                                                                                                       11,
+                                                                                                                       'Uncertain_significance/Uncertain_risk_allele'),
+                                                                                                                       (
+                                                                                                                       12,
+                                                                                                                       'Uncertain_significance'),
+                                                                                                                       (
+                                                                                                                       13,
+                                                                                                                       'No_pathogenic_assertion'),
+                                                                                                                       (
+                                                                                                                       14,
+                                                                                                                       'Likely_benign'),
+                                                                                                                       (
+                                                                                                                       15,
+                                                                                                                       'Benign/Likely_benign'),
+                                                                                                                       (
+                                                                                                                       16,
+                                                                                                                       'Benign')])),
+                                                                                                          ('count',
+                                                                                                           clickhouse_backend.models.UInt16Field())],
+                                                                                             db_column='conflictingPathogenicities')),
+                ('gold_stars', clickhouse_backend.models.UInt8Field(blank=True, db_column='goldStars', null=True)),
+                (
+                'submitters', clickhouse_backend.models.ArrayField(base_field=clickhouse_backend.models.StringField())),
+                (
+                'conditions', clickhouse_backend.models.ArrayField(base_field=clickhouse_backend.models.StringField())),
+                ('assertions', clickhouse_backend.models.ArrayField(base_field=clickhouse_backend.models.Enum8Field(
+                    choices=[(0, 'Affects'), (1, 'association'), (2, 'association_not_found'),
+                             (3, 'confers_sensitivity'), (4, 'drug_response'), (5, 'low_penetrance'),
+                             (6, 'not_provided'), (7, 'other'), (8, 'protective'), (9, 'risk_factor'),
+                             (10, 'no_classification_for_the_single_variant'),
+                             (11, 'no_classifications_from_unflagged_records')]))),
+                ('pathogenicity', clickhouse_backend.models.Enum8Field(
+                    choices=[(0, 'Pathogenic'), (1, 'Pathogenic/Likely_pathogenic'),
+                             (2, 'Pathogenic/Likely_pathogenic/Established_risk_allele'),
+                             (3, 'Pathogenic/Likely_pathogenic/Likely_risk_allele'),
+                             (4, 'Pathogenic/Likely_risk_allele'), (5, 'Likely_pathogenic'),
+                             (6, 'Likely_pathogenic/Likely_risk_allele'), (7, 'Established_risk_allele'),
+                             (8, 'Likely_risk_allele'), (9, 'Conflicting_classifications_of_pathogenicity'),
+                             (10, 'Uncertain_risk_allele'), (11, 'Uncertain_significance/Uncertain_risk_allele'),
+                             (12, 'Uncertain_significance'), (13, 'No_pathogenic_assertion'), (14, 'Likely_benign'),
+                             (15, 'Benign/Likely_benign'), (16, 'Benign')])),
+            ],
+            options={
+                'db_table': 'GRCh37/SNV_INDEL/clinvar/all_variants_to_seqr_variants_mv',
+                'to_table': 'ClinvarSeqrVariantsGRCh37SnvIndel',
+                'source_table': 'ClinvarGRCh37AllVariantsSnvIndel',
+                'source_sql': 'src INNER JOIN `GRCh37/SNV_INDEL/key_lookup` dst on assumeNotNull(src.variantId) = dst.variantId',
+                'column_selects': {'key': 'DISTINCT ON (key)'},
+                'refreshable': True,
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
         ),
         migrations.RunPython(
             build_materialized_view(
@@ -521,12 +584,102 @@ class Migration(migrations.Migration):
                 materialized_view="all_variants_to_seqr_variants_mv"
             ),
         ),
-        migrations.RunSQL(
-            CLINVAR_ALL_TO_SEQR_MV.substitute(
-                reference_genome="GRCh38",
-                dataset_type="SNV_INDEL",
-            ),
-            hints={"clickhouse": True},
+        migrations.CreateModel(
+            name='ClinvarMvSnvIndel',
+            fields=[
+                ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
+                ('allele_id', clickhouse_backend.models.UInt32Field(blank=True, db_column='alleleId', null=True)),
+                ('conflicting_pathogenicities', clickhouse_search.backend.fields.NestedField(base_fields=[(
+                                                                                                          'pathogenicity',
+                                                                                                          clickhouse_backend.models.Enum8Field(
+                                                                                                              choices=[(
+                                                                                                                       0,
+                                                                                                                       'Pathogenic'),
+                                                                                                                       (
+                                                                                                                       1,
+                                                                                                                       'Pathogenic/Likely_pathogenic'),
+                                                                                                                       (
+                                                                                                                       2,
+                                                                                                                       'Pathogenic/Likely_pathogenic/Established_risk_allele'),
+                                                                                                                       (
+                                                                                                                       3,
+                                                                                                                       'Pathogenic/Likely_pathogenic/Likely_risk_allele'),
+                                                                                                                       (
+                                                                                                                       4,
+                                                                                                                       'Pathogenic/Likely_risk_allele'),
+                                                                                                                       (
+                                                                                                                       5,
+                                                                                                                       'Likely_pathogenic'),
+                                                                                                                       (
+                                                                                                                       6,
+                                                                                                                       'Likely_pathogenic/Likely_risk_allele'),
+                                                                                                                       (
+                                                                                                                       7,
+                                                                                                                       'Established_risk_allele'),
+                                                                                                                       (
+                                                                                                                       8,
+                                                                                                                       'Likely_risk_allele'),
+                                                                                                                       (
+                                                                                                                       9,
+                                                                                                                       'Conflicting_classifications_of_pathogenicity'),
+                                                                                                                       (
+                                                                                                                       10,
+                                                                                                                       'Uncertain_risk_allele'),
+                                                                                                                       (
+                                                                                                                       11,
+                                                                                                                       'Uncertain_significance/Uncertain_risk_allele'),
+                                                                                                                       (
+                                                                                                                       12,
+                                                                                                                       'Uncertain_significance'),
+                                                                                                                       (
+                                                                                                                       13,
+                                                                                                                       'No_pathogenic_assertion'),
+                                                                                                                       (
+                                                                                                                       14,
+                                                                                                                       'Likely_benign'),
+                                                                                                                       (
+                                                                                                                       15,
+                                                                                                                       'Benign/Likely_benign'),
+                                                                                                                       (
+                                                                                                                       16,
+                                                                                                                       'Benign')])),
+                                                                                                          ('count',
+                                                                                                           clickhouse_backend.models.UInt16Field())],
+                                                                                             db_column='conflictingPathogenicities')),
+                ('gold_stars', clickhouse_backend.models.UInt8Field(blank=True, db_column='goldStars', null=True)),
+                (
+                'submitters', clickhouse_backend.models.ArrayField(base_field=clickhouse_backend.models.StringField())),
+                (
+                'conditions', clickhouse_backend.models.ArrayField(base_field=clickhouse_backend.models.StringField())),
+                ('assertions', clickhouse_backend.models.ArrayField(base_field=clickhouse_backend.models.Enum8Field(
+                    choices=[(0, 'Affects'), (1, 'association'), (2, 'association_not_found'),
+                             (3, 'confers_sensitivity'), (4, 'drug_response'), (5, 'low_penetrance'),
+                             (6, 'not_provided'), (7, 'other'), (8, 'protective'), (9, 'risk_factor'),
+                             (10, 'no_classification_for_the_single_variant'),
+                             (11, 'no_classifications_from_unflagged_records')]))),
+                ('pathogenicity', clickhouse_backend.models.Enum8Field(
+                    choices=[(0, 'Pathogenic'), (1, 'Pathogenic/Likely_pathogenic'),
+                             (2, 'Pathogenic/Likely_pathogenic/Established_risk_allele'),
+                             (3, 'Pathogenic/Likely_pathogenic/Likely_risk_allele'),
+                             (4, 'Pathogenic/Likely_risk_allele'), (5, 'Likely_pathogenic'),
+                             (6, 'Likely_pathogenic/Likely_risk_allele'), (7, 'Established_risk_allele'),
+                             (8, 'Likely_risk_allele'), (9, 'Conflicting_classifications_of_pathogenicity'),
+                             (10, 'Uncertain_risk_allele'), (11, 'Uncertain_significance/Uncertain_risk_allele'),
+                             (12, 'Uncertain_significance'), (13, 'No_pathogenic_assertion'), (14, 'Likely_benign'),
+                             (15, 'Benign/Likely_benign'), (16, 'Benign')])),
+            ],
+            options={
+                'db_table': 'GRCh38/SNV_INDEL/clinvar/all_variants_to_seqr_variants_mv',
+                'to_table': 'ClinvarSeqrVariantsSnvIndel',
+                'source_table': 'ClinvarAllVariantsSnvIndel',
+                'source_sql': 'src INNER JOIN `GRCh38/SNV_INDEL/key_lookup` dst on assumeNotNull(src.variantId) = dst.variantId',
+                'column_selects': {'key': 'DISTINCT ON (key)'},
+                'refreshable': True,
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
         ),
         migrations.RunPython(
             build_materialized_view(
@@ -535,26 +688,206 @@ class Migration(migrations.Migration):
                 materialized_view="all_variants_to_seqr_variants_mv"
             ),
         ),
-        migrations.RunSQL(
-            CLINVAR_ALL_TO_SEQR_MV.substitute(
+        migrations.CreateModel(
+            name='ClinvarMvMito',
+            fields=[
+                ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
+                ('allele_id', clickhouse_backend.models.UInt32Field(blank=True, db_column='alleleId', null=True)),
+                ('conflicting_pathogenicities', clickhouse_search.backend.fields.NestedField(base_fields=[(
+                                                                                                          'pathogenicity',
+                                                                                                          clickhouse_backend.models.Enum8Field(
+                                                                                                              choices=[(
+                                                                                                                       0,
+                                                                                                                       'Pathogenic'),
+                                                                                                                       (
+                                                                                                                       1,
+                                                                                                                       'Pathogenic/Likely_pathogenic'),
+                                                                                                                       (
+                                                                                                                       2,
+                                                                                                                       'Pathogenic/Likely_pathogenic/Established_risk_allele'),
+                                                                                                                       (
+                                                                                                                       3,
+                                                                                                                       'Pathogenic/Likely_pathogenic/Likely_risk_allele'),
+                                                                                                                       (
+                                                                                                                       4,
+                                                                                                                       'Pathogenic/Likely_risk_allele'),
+                                                                                                                       (
+                                                                                                                       5,
+                                                                                                                       'Likely_pathogenic'),
+                                                                                                                       (
+                                                                                                                       6,
+                                                                                                                       'Likely_pathogenic/Likely_risk_allele'),
+                                                                                                                       (
+                                                                                                                       7,
+                                                                                                                       'Established_risk_allele'),
+                                                                                                                       (
+                                                                                                                       8,
+                                                                                                                       'Likely_risk_allele'),
+                                                                                                                       (
+                                                                                                                       9,
+                                                                                                                       'Conflicting_classifications_of_pathogenicity'),
+                                                                                                                       (
+                                                                                                                       10,
+                                                                                                                       'Uncertain_risk_allele'),
+                                                                                                                       (
+                                                                                                                       11,
+                                                                                                                       'Uncertain_significance/Uncertain_risk_allele'),
+                                                                                                                       (
+                                                                                                                       12,
+                                                                                                                       'Uncertain_significance'),
+                                                                                                                       (
+                                                                                                                       13,
+                                                                                                                       'No_pathogenic_assertion'),
+                                                                                                                       (
+                                                                                                                       14,
+                                                                                                                       'Likely_benign'),
+                                                                                                                       (
+                                                                                                                       15,
+                                                                                                                       'Benign/Likely_benign'),
+                                                                                                                       (
+                                                                                                                       16,
+                                                                                                                       'Benign')])),
+                                                                                                          ('count',
+                                                                                                           clickhouse_backend.models.UInt16Field())],
+                                                                                             db_column='conflictingPathogenicities')),
+                ('gold_stars', clickhouse_backend.models.UInt8Field(blank=True, db_column='goldStars', null=True)),
+                (
+                'submitters', clickhouse_backend.models.ArrayField(base_field=clickhouse_backend.models.StringField())),
+                (
+                'conditions', clickhouse_backend.models.ArrayField(base_field=clickhouse_backend.models.StringField())),
+                ('assertions', clickhouse_backend.models.ArrayField(base_field=clickhouse_backend.models.Enum8Field(
+                    choices=[(0, 'Affects'), (1, 'association'), (2, 'association_not_found'),
+                             (3, 'confers_sensitivity'), (4, 'drug_response'), (5, 'low_penetrance'),
+                             (6, 'not_provided'), (7, 'other'), (8, 'protective'), (9, 'risk_factor'),
+                             (10, 'no_classification_for_the_single_variant'),
+                             (11, 'no_classifications_from_unflagged_records')]))),
+                ('pathogenicity', clickhouse_backend.models.Enum8Field(
+                    choices=[(0, 'Pathogenic'), (1, 'Pathogenic/Likely_pathogenic'),
+                             (2, 'Pathogenic/Likely_pathogenic/Established_risk_allele'),
+                             (3, 'Pathogenic/Likely_pathogenic/Likely_risk_allele'),
+                             (4, 'Pathogenic/Likely_risk_allele'), (5, 'Likely_pathogenic'),
+                             (6, 'Likely_pathogenic/Likely_risk_allele'), (7, 'Established_risk_allele'),
+                             (8, 'Likely_risk_allele'), (9, 'Conflicting_classifications_of_pathogenicity'),
+                             (10, 'Uncertain_risk_allele'), (11, 'Uncertain_significance/Uncertain_risk_allele'),
+                             (12, 'Uncertain_significance'), (13, 'No_pathogenic_assertion'), (14, 'Likely_benign'),
+                             (15, 'Benign/Likely_benign'), (16, 'Benign')])),
+            ],
+            options={
+                'db_table': 'GRCh38/MITO/clinvar/all_variants_to_seqr_variants_mv',
+                'to_table': 'ClinvarSeqrVariantsMito',
+                'source_table': 'ClinvarAllVariantsMito',
+                'source_sql': 'src INNER JOIN `GRCh38/MITO/key_lookup` dst on assumeNotNull(src.variantId) = dst.variantId',
+                'column_selects': {'key': 'DISTINCT ON (key)'},
+                'refreshable': True,
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
+        ),
+        migrations.RunPython(
+            build_materialized_view(
                 reference_genome="GRCh38",
                 dataset_type="MITO",
-            ),
-            hints={"clickhouse": True},
-        ),
-        migrations.RunPython(
-            build_materialized_view(
-                reference_genome="GRCh38",
-                dataset_type="MITO",
                 materialized_view="all_variants_to_seqr_variants_mv"
             ),
         ),
-        migrations.RunSQL(
-            CLINVAR_SEQR_TO_SEARCH_MV.substitute(
-                reference_genome="GRCh37",
-                dataset_type="SNV_INDEL",
-            ),
-            hints={"clickhouse": True},
+        migrations.CreateModel(
+            name='ClinvarSearchMvGRCh37SnvIndel',
+            fields=[
+                ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
+                ('allele_id', clickhouse_backend.models.UInt32Field(blank=True, db_column='alleleId', null=True)),
+                ('conflicting_pathogenicities', clickhouse_search.backend.fields.NestedField(base_fields=[(
+                                                                                                          'pathogenicity',
+                                                                                                          clickhouse_backend.models.Enum8Field(
+                                                                                                              choices=[(
+                                                                                                                       0,
+                                                                                                                       'Pathogenic'),
+                                                                                                                       (
+                                                                                                                       1,
+                                                                                                                       'Pathogenic/Likely_pathogenic'),
+                                                                                                                       (
+                                                                                                                       2,
+                                                                                                                       'Pathogenic/Likely_pathogenic/Established_risk_allele'),
+                                                                                                                       (
+                                                                                                                       3,
+                                                                                                                       'Pathogenic/Likely_pathogenic/Likely_risk_allele'),
+                                                                                                                       (
+                                                                                                                       4,
+                                                                                                                       'Pathogenic/Likely_risk_allele'),
+                                                                                                                       (
+                                                                                                                       5,
+                                                                                                                       'Likely_pathogenic'),
+                                                                                                                       (
+                                                                                                                       6,
+                                                                                                                       'Likely_pathogenic/Likely_risk_allele'),
+                                                                                                                       (
+                                                                                                                       7,
+                                                                                                                       'Established_risk_allele'),
+                                                                                                                       (
+                                                                                                                       8,
+                                                                                                                       'Likely_risk_allele'),
+                                                                                                                       (
+                                                                                                                       9,
+                                                                                                                       'Conflicting_classifications_of_pathogenicity'),
+                                                                                                                       (
+                                                                                                                       10,
+                                                                                                                       'Uncertain_risk_allele'),
+                                                                                                                       (
+                                                                                                                       11,
+                                                                                                                       'Uncertain_significance/Uncertain_risk_allele'),
+                                                                                                                       (
+                                                                                                                       12,
+                                                                                                                       'Uncertain_significance'),
+                                                                                                                       (
+                                                                                                                       13,
+                                                                                                                       'No_pathogenic_assertion'),
+                                                                                                                       (
+                                                                                                                       14,
+                                                                                                                       'Likely_benign'),
+                                                                                                                       (
+                                                                                                                       15,
+                                                                                                                       'Benign/Likely_benign'),
+                                                                                                                       (
+                                                                                                                       16,
+                                                                                                                       'Benign')])),
+                                                                                                          ('count',
+                                                                                                           clickhouse_backend.models.UInt16Field())],
+                                                                                             db_column='conflictingPathogenicities')),
+                ('gold_stars', clickhouse_backend.models.UInt8Field(blank=True, db_column='goldStars', null=True)),
+                (
+                'submitters', clickhouse_backend.models.ArrayField(base_field=clickhouse_backend.models.StringField())),
+                (
+                'conditions', clickhouse_backend.models.ArrayField(base_field=clickhouse_backend.models.StringField())),
+                ('assertions', clickhouse_backend.models.ArrayField(base_field=clickhouse_backend.models.Enum8Field(
+                    choices=[(0, 'Affects'), (1, 'association'), (2, 'association_not_found'),
+                             (3, 'confers_sensitivity'), (4, 'drug_response'), (5, 'low_penetrance'),
+                             (6, 'not_provided'), (7, 'other'), (8, 'protective'), (9, 'risk_factor'),
+                             (10, 'no_classification_for_the_single_variant'),
+                             (11, 'no_classifications_from_unflagged_records')]))),
+                ('pathogenicity', clickhouse_backend.models.Enum8Field(
+                    choices=[(0, 'Pathogenic'), (1, 'Pathogenic/Likely_pathogenic'),
+                             (2, 'Pathogenic/Likely_pathogenic/Established_risk_allele'),
+                             (3, 'Pathogenic/Likely_pathogenic/Likely_risk_allele'),
+                             (4, 'Pathogenic/Likely_risk_allele'), (5, 'Likely_pathogenic'),
+                             (6, 'Likely_pathogenic/Likely_risk_allele'), (7, 'Established_risk_allele'),
+                             (8, 'Likely_risk_allele'), (9, 'Conflicting_classifications_of_pathogenicity'),
+                             (10, 'Uncertain_risk_allele'), (11, 'Uncertain_significance/Uncertain_risk_allele'),
+                             (12, 'Uncertain_significance'), (13, 'No_pathogenic_assertion'), (14, 'Likely_benign'),
+                             (15, 'Benign/Likely_benign'), (16, 'Benign')])),
+            ],
+            options={
+                'db_table': 'GRCh37/SNV_INDEL/clinvar/seqr_variants_to_search_mv',
+                'to_table': 'ClinvarGRCh37SnvIndel',
+                'source_table': 'ClinvarGRCh37SeqrVariantsSnvIndel',
+                'source_sql': '',
+                'column_selects': {'key': 'DISTINCT ON (key)'},
+                'refreshable': True,
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
         ),
         migrations.RunPython(
             build_materialized_view(
@@ -563,12 +896,102 @@ class Migration(migrations.Migration):
                 materialized_view="seqr_variants_to_search_mv"
             ),
         ),
-        migrations.RunSQL(
-            CLINVAR_SEQR_TO_SEARCH_MV.substitute(
-                reference_genome="GRCh38",
-                dataset_type="SNV_INDEL",
-            ),
-            hints={"clickhouse": True},
+        migrations.CreateModel(
+            name='ClinvarSearchMvSnvIndel',
+            fields=[
+                ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
+                ('allele_id', clickhouse_backend.models.UInt32Field(blank=True, db_column='alleleId', null=True)),
+                ('conflicting_pathogenicities', clickhouse_search.backend.fields.NestedField(base_fields=[(
+                                                                                                          'pathogenicity',
+                                                                                                          clickhouse_backend.models.Enum8Field(
+                                                                                                              choices=[(
+                                                                                                                       0,
+                                                                                                                       'Pathogenic'),
+                                                                                                                       (
+                                                                                                                       1,
+                                                                                                                       'Pathogenic/Likely_pathogenic'),
+                                                                                                                       (
+                                                                                                                       2,
+                                                                                                                       'Pathogenic/Likely_pathogenic/Established_risk_allele'),
+                                                                                                                       (
+                                                                                                                       3,
+                                                                                                                       'Pathogenic/Likely_pathogenic/Likely_risk_allele'),
+                                                                                                                       (
+                                                                                                                       4,
+                                                                                                                       'Pathogenic/Likely_risk_allele'),
+                                                                                                                       (
+                                                                                                                       5,
+                                                                                                                       'Likely_pathogenic'),
+                                                                                                                       (
+                                                                                                                       6,
+                                                                                                                       'Likely_pathogenic/Likely_risk_allele'),
+                                                                                                                       (
+                                                                                                                       7,
+                                                                                                                       'Established_risk_allele'),
+                                                                                                                       (
+                                                                                                                       8,
+                                                                                                                       'Likely_risk_allele'),
+                                                                                                                       (
+                                                                                                                       9,
+                                                                                                                       'Conflicting_classifications_of_pathogenicity'),
+                                                                                                                       (
+                                                                                                                       10,
+                                                                                                                       'Uncertain_risk_allele'),
+                                                                                                                       (
+                                                                                                                       11,
+                                                                                                                       'Uncertain_significance/Uncertain_risk_allele'),
+                                                                                                                       (
+                                                                                                                       12,
+                                                                                                                       'Uncertain_significance'),
+                                                                                                                       (
+                                                                                                                       13,
+                                                                                                                       'No_pathogenic_assertion'),
+                                                                                                                       (
+                                                                                                                       14,
+                                                                                                                       'Likely_benign'),
+                                                                                                                       (
+                                                                                                                       15,
+                                                                                                                       'Benign/Likely_benign'),
+                                                                                                                       (
+                                                                                                                       16,
+                                                                                                                       'Benign')])),
+                                                                                                          ('count',
+                                                                                                           clickhouse_backend.models.UInt16Field())],
+                                                                                             db_column='conflictingPathogenicities')),
+                ('gold_stars', clickhouse_backend.models.UInt8Field(blank=True, db_column='goldStars', null=True)),
+                (
+                'submitters', clickhouse_backend.models.ArrayField(base_field=clickhouse_backend.models.StringField())),
+                (
+                'conditions', clickhouse_backend.models.ArrayField(base_field=clickhouse_backend.models.StringField())),
+                ('assertions', clickhouse_backend.models.ArrayField(base_field=clickhouse_backend.models.Enum8Field(
+                    choices=[(0, 'Affects'), (1, 'association'), (2, 'association_not_found'),
+                             (3, 'confers_sensitivity'), (4, 'drug_response'), (5, 'low_penetrance'),
+                             (6, 'not_provided'), (7, 'other'), (8, 'protective'), (9, 'risk_factor'),
+                             (10, 'no_classification_for_the_single_variant'),
+                             (11, 'no_classifications_from_unflagged_records')]))),
+                ('pathogenicity', clickhouse_backend.models.Enum8Field(
+                    choices=[(0, 'Pathogenic'), (1, 'Pathogenic/Likely_pathogenic'),
+                             (2, 'Pathogenic/Likely_pathogenic/Established_risk_allele'),
+                             (3, 'Pathogenic/Likely_pathogenic/Likely_risk_allele'),
+                             (4, 'Pathogenic/Likely_risk_allele'), (5, 'Likely_pathogenic'),
+                             (6, 'Likely_pathogenic/Likely_risk_allele'), (7, 'Established_risk_allele'),
+                             (8, 'Likely_risk_allele'), (9, 'Conflicting_classifications_of_pathogenicity'),
+                             (10, 'Uncertain_risk_allele'), (11, 'Uncertain_significance/Uncertain_risk_allele'),
+                             (12, 'Uncertain_significance'), (13, 'No_pathogenic_assertion'), (14, 'Likely_benign'),
+                             (15, 'Benign/Likely_benign'), (16, 'Benign')])),
+            ],
+            options={
+                'db_table': 'GRCh38/SNV_INDEL/clinvar/seqr_variants_to_search_mv',
+                'to_table': 'ClinvarSnvIndel',
+                'source_table': 'ClinvarSeqrVariantsSnvIndel',
+                'source_sql': '',
+                'column_selects': {'key': 'DISTINCT ON (key)'},
+                'refreshable': True,
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
         ),
         migrations.RunPython(
             build_materialized_view(
@@ -577,12 +1000,102 @@ class Migration(migrations.Migration):
                 materialized_view="seqr_variants_to_search_mv"
             ),
         ),
-        migrations.RunSQL(
-            CLINVAR_SEQR_TO_SEARCH_MV.substitute(
-                reference_genome="GRCh38",
-                dataset_type="MITO",
-            ),
-            hints={"clickhouse": True},
+        migrations.CreateModel(
+            name='ClinvarSearchMvMito',
+            fields=[
+                ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
+                ('allele_id', clickhouse_backend.models.UInt32Field(blank=True, db_column='alleleId', null=True)),
+                ('conflicting_pathogenicities', clickhouse_search.backend.fields.NestedField(base_fields=[(
+                                                                                                          'pathogenicity',
+                                                                                                          clickhouse_backend.models.Enum8Field(
+                                                                                                              choices=[(
+                                                                                                                       0,
+                                                                                                                       'Pathogenic'),
+                                                                                                                       (
+                                                                                                                       1,
+                                                                                                                       'Pathogenic/Likely_pathogenic'),
+                                                                                                                       (
+                                                                                                                       2,
+                                                                                                                       'Pathogenic/Likely_pathogenic/Established_risk_allele'),
+                                                                                                                       (
+                                                                                                                       3,
+                                                                                                                       'Pathogenic/Likely_pathogenic/Likely_risk_allele'),
+                                                                                                                       (
+                                                                                                                       4,
+                                                                                                                       'Pathogenic/Likely_risk_allele'),
+                                                                                                                       (
+                                                                                                                       5,
+                                                                                                                       'Likely_pathogenic'),
+                                                                                                                       (
+                                                                                                                       6,
+                                                                                                                       'Likely_pathogenic/Likely_risk_allele'),
+                                                                                                                       (
+                                                                                                                       7,
+                                                                                                                       'Established_risk_allele'),
+                                                                                                                       (
+                                                                                                                       8,
+                                                                                                                       'Likely_risk_allele'),
+                                                                                                                       (
+                                                                                                                       9,
+                                                                                                                       'Conflicting_classifications_of_pathogenicity'),
+                                                                                                                       (
+                                                                                                                       10,
+                                                                                                                       'Uncertain_risk_allele'),
+                                                                                                                       (
+                                                                                                                       11,
+                                                                                                                       'Uncertain_significance/Uncertain_risk_allele'),
+                                                                                                                       (
+                                                                                                                       12,
+                                                                                                                       'Uncertain_significance'),
+                                                                                                                       (
+                                                                                                                       13,
+                                                                                                                       'No_pathogenic_assertion'),
+                                                                                                                       (
+                                                                                                                       14,
+                                                                                                                       'Likely_benign'),
+                                                                                                                       (
+                                                                                                                       15,
+                                                                                                                       'Benign/Likely_benign'),
+                                                                                                                       (
+                                                                                                                       16,
+                                                                                                                       'Benign')])),
+                                                                                                          ('count',
+                                                                                                           clickhouse_backend.models.UInt16Field())],
+                                                                                             db_column='conflictingPathogenicities')),
+                ('gold_stars', clickhouse_backend.models.UInt8Field(blank=True, db_column='goldStars', null=True)),
+                (
+                'submitters', clickhouse_backend.models.ArrayField(base_field=clickhouse_backend.models.StringField())),
+                (
+                'conditions', clickhouse_backend.models.ArrayField(base_field=clickhouse_backend.models.StringField())),
+                ('assertions', clickhouse_backend.models.ArrayField(base_field=clickhouse_backend.models.Enum8Field(
+                    choices=[(0, 'Affects'), (1, 'association'), (2, 'association_not_found'),
+                             (3, 'confers_sensitivity'), (4, 'drug_response'), (5, 'low_penetrance'),
+                             (6, 'not_provided'), (7, 'other'), (8, 'protective'), (9, 'risk_factor'),
+                             (10, 'no_classification_for_the_single_variant'),
+                             (11, 'no_classifications_from_unflagged_records')]))),
+                ('pathogenicity', clickhouse_backend.models.Enum8Field(
+                    choices=[(0, 'Pathogenic'), (1, 'Pathogenic/Likely_pathogenic'),
+                             (2, 'Pathogenic/Likely_pathogenic/Established_risk_allele'),
+                             (3, 'Pathogenic/Likely_pathogenic/Likely_risk_allele'),
+                             (4, 'Pathogenic/Likely_risk_allele'), (5, 'Likely_pathogenic'),
+                             (6, 'Likely_pathogenic/Likely_risk_allele'), (7, 'Established_risk_allele'),
+                             (8, 'Likely_risk_allele'), (9, 'Conflicting_classifications_of_pathogenicity'),
+                             (10, 'Uncertain_risk_allele'), (11, 'Uncertain_significance/Uncertain_risk_allele'),
+                             (12, 'Uncertain_significance'), (13, 'No_pathogenic_assertion'), (14, 'Likely_benign'),
+                             (15, 'Benign/Likely_benign'), (16, 'Benign')])),
+            ],
+            options={
+                'db_table': 'GRCh38/MITO/clinvar/seqr_variants_to_search_mv',
+                'to_table': 'ClinvarMito',
+                'source_table': 'ClinvarSeqrVariantsMito',
+                'source_sql': '',
+                'column_selects': {'key': 'DISTINCT ON (key)'},
+                'refreshable': True,
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
         ),
         migrations.RunPython(
             build_materialized_view(
