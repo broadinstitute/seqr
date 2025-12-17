@@ -9,11 +9,10 @@ class MaterializedView(models.ClickhouseModel):
 
     @classmethod
     def refresh(cls):
-        if not getattr(cls._meta, 'refreshable', False):
-            raise RuntimeError(f'Materialized view "{cls._meta.db_table}" is not refreshable')
-        with connections['clickhouse_write'].cursor() as cursor:
-            cursor.execute(f'SYSTEM REFRESH VIEW "{cls._meta.db_table}"')
-            cursor.execute(f'SYSTEM WAIT VIEW "{cls._meta.db_table}"')
+        if getattr(cls._meta, 'refreshable', False):
+            with connections['clickhouse_write'].cursor() as cursor:
+                cursor.execute(f'SYSTEM REFRESH VIEW "{cls._meta.db_table}"')
+                cursor.execute(f'SYSTEM WAIT VIEW "{cls._meta.db_table}"')
 
     class Meta:
         abstract = True
