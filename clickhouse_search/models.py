@@ -1135,3 +1135,11 @@ KEY_LOOKUP_CLASS_MAP = {
         f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WES}': KeyLookupGcnv,
     },
 }
+PROJECT_GT_STATS_VIEW_CLASS_MAP = {
+    GENOME_VERSION_GRCh37: {Sample.DATASET_TYPE_VARIANT_CALLS: ProjectsToGtStatsGRCh37SnvIndel},
+    GENOME_VERSION_GRCh38: {
+        Sample.DATASET_TYPE_VARIANT_CALLS: ProjectsToGtStatsSnvIndel,
+        Sample.DATASET_TYPE_MITO_CALLS: ProjectsToGtStatsMito,
+        Sample.DATASET_TYPE_SV_CALLS: ProjectsToGtStatsSv,
+    },
+}
