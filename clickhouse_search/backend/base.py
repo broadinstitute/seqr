@@ -4,15 +4,22 @@ from clickhouse_backend.backend.base import (
 )
 
 from clickhouse_search.backend.engines import Join
+from settings import CLICKHOUSE_WRITER_USER, CLICKHOUSE_WRITER_PASSWORD
+
 
 class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
 
     def _is_materialzed_view(self, model):
         return getattr(model._meta, 'to_table', None) is not None
 
+    def _is_dictionary(self, model):
+        return getattr(model._meta, 'source_table', None) is not None
+
     def table_sql(self, model):
         if self._is_materialzed_view(model):
             return self._materialized_view_sql(model)
+        elif self._is_dictionary(model):
+            return self._dictionary_sql(model)
 
         sql, params = super().table_sql(model)
         projection = getattr(model._meta, 'projection', None)
@@ -56,6 +63,20 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
         if getattr(model._meta, 'refreshable', False):
             sql = 'REFRESH EVERY 10 YEAR ' + sql
         return sql
+
+    def _dictionary_sql(self, model):
+        original_sql_create_table = self.sql_create_table  # pylint: disable=access-member-before-definition
+        meta = model._meta
+        source_table = self._table_name(meta, meta.source_table)
+        self.sql_create_table = f"""
+        CREATE DICTIONARY %(table)s (%(definition)s) %(extra)s
+        SOURCE(CLICKHOUSE(USER {CLICKHOUSE_WRITER_USER} PASSWORD {CLICKHOUSE_WRITER_PASSWORD} TABLE {source_table}))
+        LIFETIME(MIN 0 MAX 0)
+        LAYOUT(FLAT(MAX_ARRAY_SIZE {meta.size}))
+        """
+        sql, params = super().table_sql(model)
+        self.sql_create_table = original_sql_create_table
+        return sql, params
 
     def no_quote_value(self, value):
         return value

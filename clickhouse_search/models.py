@@ -5,7 +5,7 @@ from django.db.models import options, ForeignKey, OneToOneField, Func, CASCADE, 
 from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocksDB, Join
 from clickhouse_search.backend.fields import Enum8Field, NestedField, UInt32FieldDeltaCodecField, UInt64FieldDeltaCodecField, NamedTupleField, MaterializedUInt8Field
 from clickhouse_search.backend.functions import ArrayDistinct, ArrayFlatten, ArrayMin, ArrayMax
-from clickhouse_search.backend.table_models import MaterializedView, MATERIALIZED_VIEW_META_FIELDS
+from clickhouse_search.backend.table_models import MaterializedView, Dictionary, MATERIALIZED_VIEW_META_FIELDS, DICTIONARY_META_FIELDS
 from clickhouse_search.managers import EntriesManager, AnnotationsQuerySet
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample
@@ -17,6 +17,7 @@ options.DEFAULT_NAMES = (
     *options.DEFAULT_NAMES,
     'projection',
     *MATERIALIZED_VIEW_META_FIELDS,
+    *DICTIONARY_META_FIELDS,
 )
 state.DEFAULT_NAMES = options.DEFAULT_NAMES
 
@@ -1160,6 +1161,62 @@ class ProjectsToGtStatsSv(MaterializedView):
             'hom_wgs': 'sum(hom_samples)',
             'hom_affected': "sumIf(hom_samples, affected = 'A')",
         }
+
+
+class BaseGtStatsDict(Dictionary):
+    key = models.UInt32Field(primary_key=True)
+    ac_wes = models.UInt32Field()
+    ac_wgs = models.UInt32Field()
+    ac_affected = models.UInt32Field()
+    hom_wes = models.UInt32Field()
+    hom_wgs = models.UInt32Field()
+    hom_affected = models.UInt32Field()
+
+    class Meta:
+        abstract = True
+
+class GtStatsDictMeta:
+    engine = models.MergeTree(primary_key='key')
+
+class GtStatsDictGRCh37SnvIndel(BaseGtStatsDict):
+
+    class Meta(GtStatsDictMeta):
+        db_table = 'GRCh37/SNV_INDEL/gt_stats_dict'
+        source_table = 'GtStatsGRCh37SnvIndel'
+        size = int(2e8)
+
+class GtStatsDictSnvIndel(BaseGtStatsDict):
+
+    class Meta(GtStatsDictMeta):
+        db_table = 'GRCh38/SNV_INDEL/gt_stats_dict'
+        source_table = 'GtStatsSnvIndel'
+        size = int(1e9)
+
+class GtStatsDictMito(Dictionary):
+    key = models.UInt32Field(primary_key=True)
+    ac_het_wes = models.UInt32Field()
+    ac_het_wgs = models.UInt32Field()
+    ac_het_affected = models.UInt32Field()
+    ac_hom_wes = models.UInt32Field()
+    ac_hom_wgs = models.UInt32Field()
+    ac_hom_affected = models.UInt32Field()
+
+    class Meta(GtStatsDictMeta):
+        db_table = 'GRCh38/MITO/gt_stats_dict'
+        source_table = 'GtStatsMito'
+        size = int(1e6)
+
+class GtStatsDictSv(Dictionary):
+    key = models.UInt32Field(primary_key=True)
+    ac_wgs = models.UInt32Field()
+    ac_affected = models.UInt32Field()
+    hom_wgs = models.UInt32Field()
+    hom_affected = models.UInt32Field()
+
+    class Meta(GtStatsDictMeta):
+        db_table = 'GRCh38/SV/gt_stats_dict'
+        source_table = 'GtStatsSv'
+        size = int(5e6)
 
 class ProjectPartitionsSnvIndel(FixtureLoadableClickhouseModel):
     # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
