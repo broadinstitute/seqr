@@ -2,20 +2,18 @@
 
 import clickhouse_backend.models
 import clickhouse_search.backend.fields
-from django.db import migrations, models, connections
+from django.db import migrations, models
 import django.db.models.manager
 
 
-def build_materialized_view(reference_genome: str, dataset_type: str, materialized_view: str):
-    def inner(apps, schema_editor):
-        with connections['clickhouse_write'].cursor() as cursor:
-            cursor.execute(
-                f'SYSTEM REFRESH VIEW `{reference_genome}/{dataset_type}/reference_data/clinvar/{materialized_view}`;'
-            )
-            cursor.execute(
-                f'SYSTEM WAIT VIEW `{reference_genome}/{dataset_type}/reference_data/clinvar/{materialized_view}`;'
-            )
-    return inner
+def refresh_materialized_views(apps, schema_editor):
+    for view_cls_name in [
+        'ClinvarMvGRCh37SnvIndel', 'ClinvarSearchMvGRCh37SnvIndel',
+        'ClinvarMvSnvIndel', 'ClinvarSearchMvSnvIndel',
+        'ClinvarMvMito', 'ClinvarSearchMvMito',
+    ]:
+        view_model = apps.get_model('clickhouse_search', view_cls_name)
+        view_model.refresh()
 
 
 class Migration(migrations.Migration):
@@ -577,13 +575,6 @@ class Migration(migrations.Migration):
                 ('_overwrite_base_manager', django.db.models.manager.Manager()),
             ],
         ),
-        migrations.RunPython(
-            build_materialized_view(
-                reference_genome="GRCh37",
-                dataset_type="SNV_INDEL",
-                materialized_view="all_variants_to_seqr_variants_mv"
-            ),
-        ),
         migrations.CreateModel(
             name='ClinvarMvSnvIndel',
             fields=[
@@ -680,13 +671,6 @@ class Migration(migrations.Migration):
                 ('objects', django.db.models.manager.Manager()),
                 ('_overwrite_base_manager', django.db.models.manager.Manager()),
             ],
-        ),
-        migrations.RunPython(
-            build_materialized_view(
-                reference_genome="GRCh38",
-                dataset_type="SNV_INDEL",
-                materialized_view="all_variants_to_seqr_variants_mv"
-            ),
         ),
         migrations.CreateModel(
             name='ClinvarMvMito',
@@ -785,13 +769,6 @@ class Migration(migrations.Migration):
                 ('_overwrite_base_manager', django.db.models.manager.Manager()),
             ],
         ),
-        migrations.RunPython(
-            build_materialized_view(
-                reference_genome="GRCh38",
-                dataset_type="MITO",
-                materialized_view="all_variants_to_seqr_variants_mv"
-            ),
-        ),
         migrations.CreateModel(
             name='ClinvarSearchMvGRCh37SnvIndel',
             fields=[
@@ -888,13 +865,6 @@ class Migration(migrations.Migration):
                 ('objects', django.db.models.manager.Manager()),
                 ('_overwrite_base_manager', django.db.models.manager.Manager()),
             ],
-        ),
-        migrations.RunPython(
-            build_materialized_view(
-                reference_genome="GRCh37",
-                dataset_type="SNV_INDEL",
-                materialized_view="seqr_variants_to_search_mv"
-            ),
         ),
         migrations.CreateModel(
             name='ClinvarSearchMvSnvIndel',
@@ -993,13 +963,6 @@ class Migration(migrations.Migration):
                 ('_overwrite_base_manager', django.db.models.manager.Manager()),
             ],
         ),
-        migrations.RunPython(
-            build_materialized_view(
-                reference_genome="GRCh38",
-                dataset_type="SNV_INDEL",
-                materialized_view="seqr_variants_to_search_mv"
-            ),
-        ),
         migrations.CreateModel(
             name='ClinvarSearchMvMito',
             fields=[
@@ -1097,11 +1060,5 @@ class Migration(migrations.Migration):
                 ('_overwrite_base_manager', django.db.models.manager.Manager()),
             ],
         ),
-        migrations.RunPython(
-            build_materialized_view(
-                reference_genome="GRCh38",
-                dataset_type="MITO",
-                materialized_view="seqr_variants_to_search_mv"
-            ),
-        ),
+        migrations.RunPython(refresh_materialized_views),
     ]
