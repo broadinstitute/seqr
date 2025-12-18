@@ -69,7 +69,8 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
         meta = model._meta
         postgres_query = getattr(meta, 'postgres_query', None)
         if postgres_query:
-            source = f"POSTGRESQL(NAME 'seqr_postgres_named_collection' DATABASE {DATABASES['default']['NAME']} QUERY '{postgres_query}')"
+            db = DATABASES[getattr(meta, 'postgres_db', 'default')]['NAME']
+            source = f"POSTGRESQL(NAME 'seqr_postgres_named_collection' DATABASE {db} QUERY '{postgres_query}')"
         else:
             source_table = self._table_name(meta, meta.source_table)
             source = f"CLICKHOUSE(USER '{CLICKHOUSE_WRITER_USER}' PASSWORD '{CLICKHOUSE_WRITER_PASSWORD}' TABLE {source_table})"

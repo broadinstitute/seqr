@@ -1265,6 +1265,19 @@ class SexDict(Dictionary):
         postgres_query = 'select f.guid as family_guid, i.individual_id as sample_id, i.sex FROM seqr_individual i INNER JOIN seqr_family f ON i.family_id = f.id'
 
 
+class GeneIdDict(Dictionary):
+    gene_id = models.StringField(primary_key=True)
+    seqrdb_id = models.UInt32Field()
+
+    class Meta:
+        db_table = 'seqrdb_gene_ids'
+        engine = models.MergeTree(primary_key='gene_id')
+        layout = 'HASHED()'
+        postgres_db = 'reference_data'
+        postgres_query = 'SELECT gene_id, id FROM reference_data_geneinfo'
+
+
+
 ENTRY_CLASS_MAP = {
     GENOME_VERSION_GRCh37: {Sample.DATASET_TYPE_VARIANT_CALLS: EntriesGRCh37SnvIndel},
     GENOME_VERSION_GRCh38: {
