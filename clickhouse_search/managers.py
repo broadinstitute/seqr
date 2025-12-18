@@ -107,6 +107,15 @@ class SearchQuerySet(QuerySet):
                 seqr_pop_fields += [f"'{sub_fields['hom']}_{suffix}'" for suffix in suffixes]
         return seqr_pop_fields
 
+    def _seqr_pop_expression(self, seqr_populations):
+        seqr_pop_fields = self._seqr_pop_fields(seqr_populations)
+        return DictGet(
+            'key',
+            dict_name=f"{self.table_basename}/gt_stats_dict",
+            fields=', '.join(seqr_pop_fields),
+            output_field=models.TupleField([models.UInt32Field() for _ in seqr_pop_fields])
+        )
+
     def _format_gene_intervals(self, genes):
         return [
             {field: gene[f'{field}Grch{self.genome_version}'] for field in ['chrom', 'start', 'end']} for gene in genes.values()
@@ -316,16 +325,7 @@ class AnnotationsQuerySet(SearchQuerySet):
         results = self
         seqr_populations = self.model.SEQR_POPULATIONS
         if seqr_populations:
-            seqr_pop_fields = self._seqr_pop_fields(seqr_populations)
-            results = results.annotate(seqrPop=Tuple(
-                *[
-                    DictGet(
-                        'key',
-                        dict_name=f"{self.table_basename}/gt_stats_dict",
-                        fields=seqr_pop_field,
-                    ) for seqr_pop_field in seqr_pop_fields],
-                output_field=models.TupleField([models.UInt32Field() for _ in seqr_pop_fields])
-            ))
+            results = results.annotate(seqrPop=self._seqr_pop_expression(seqr_populations))
 
         return results
 
@@ -807,13 +807,7 @@ class EntriesManager(SearchQuerySet):
 
         seqr_populations = self.annotations_model.SEQR_POPULATIONS
         if seqr_populations:
-            seqr_pop_fields = self._seqr_pop_fields(seqr_populations)
-            entries = entries.annotate(seqrPop=DictGet(
-                'key',
-                dict_name=f"{self.table_basename}/gt_stats_dict",
-                fields=', '.join(seqr_pop_fields),
-                output_field=models.TupleField([models.UInt32Field() for _ in seqr_pop_fields])
-            ))
+            entries = entries.annotate(seqrPop=self._seqr_pop_expression(seqr_populations))
 
         return entries
 
