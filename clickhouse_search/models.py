@@ -1183,14 +1183,14 @@ class GtStatsDictGRCh37SnvIndel(BaseGtStatsDict):
     class Meta(GtStatsDictMeta):
         db_table = 'GRCh37/SNV_INDEL/gt_stats_dict'
         source_table = 'GtStatsGRCh37SnvIndel'
-        layout = f'FLAT(MAX_ARRAY_SIZE {int(2e8)})'
+        layout = 'FLAT(MAX_ARRAY_SIZE 200000000)'
 
 class GtStatsDictSnvIndel(BaseGtStatsDict):
 
     class Meta(GtStatsDictMeta):
         db_table = 'GRCh38/SNV_INDEL/gt_stats_dict'
         source_table = 'GtStatsSnvIndel'
-        layout = f'FLAT(MAX_ARRAY_SIZE {int(1e9)})'
+        layout = 'FLAT(MAX_ARRAY_SIZE 1000000000)'
 
 class GtStatsDictMito(Dictionary):
     key = models.UInt32Field(primary_key=True)
@@ -1204,7 +1204,7 @@ class GtStatsDictMito(Dictionary):
     class Meta(GtStatsDictMeta):
         db_table = 'GRCh38/MITO/gt_stats_dict'
         source_table = 'GtStatsMito'
-        layout = f'FLAT(MAX_ARRAY_SIZE {int(1e6)})'
+        layout = 'FLAT(MAX_ARRAY_SIZE 1000000)'
 
 class GtStatsDictSv(Dictionary):
     key = models.UInt32Field(primary_key=True)
@@ -1216,7 +1216,7 @@ class GtStatsDictSv(Dictionary):
     class Meta(GtStatsDictMeta):
         db_table = 'GRCh38/SV/gt_stats_dict'
         source_table = 'GtStatsSv'
-        layout = f'FLAT(MAX_ARRAY_SIZE {int(5e6)})'
+        layout = 'FLAT(MAX_ARRAY_SIZE 5000000)'
 
 class ProjectPartitionsSnvIndel(FixtureLoadableClickhouseModel):
     # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
