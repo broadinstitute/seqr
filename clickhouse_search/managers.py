@@ -734,8 +734,6 @@ class EntriesManager(SearchQuerySet):
         COMPOUND_HET_ALLOW_HOM_ALTS: {**INHERITANCE_FILTERS[COMPOUND_HET], AFFECTED: HAS_ALT},
     }
 
-    GET_AFFECTED_TEMPLATE = "dictGetOrDefault('seqrdb_affected_status_dict', 'affected', (family_guid, {field}), 'U')"
-
     @property
     def annotations_model(self):
         return self.model.key.field.related_model
@@ -949,11 +947,16 @@ class EntriesManager(SearchQuerySet):
 
         return affected_condition, unaffected_condition, gt_filter
 
+    @staticmethod
+    def _affected_dict_get(sample_id_expression):
+        from clickhouse_search.models import AffectedDict # TODO clean up import once models are split into multiple files
+        return AffectedDict.dict_get_sql(key=f'(family_guid, {sample_id_expression})', fields=['affected'], default='U')
+
     def _multi_family_affected_filters(self, sample_data, inheritance_mode, inheritance_filter, genotype_lookup):
         sample_data = sample_data or {'num_unaffected': 1}
         any_unaffected = any(sample['affected'] == UNAFFECTED for sample in sample_data['samples']) \
             if sample_data.get('samples') else sample_data['num_unaffected'] > 0
-        unaffected_condition = (None, self.GET_AFFECTED_TEMPLATE + " = 'N'") if any_unaffected else None
+        unaffected_condition = (None, self._affected_dict_get('{field}') + " = 'N'") if any_unaffected else None
 
         gt_filter = None
         if inheritance_mode and inheritance_mode != ANY_AFFECTED:
@@ -961,20 +964,22 @@ class EntriesManager(SearchQuerySet):
             affected_gts = genotype_lookup.get(inheritance_mode_filters.get(AFFECTED), [])
             unaffected_gts = genotype_lookup.get(inheritance_mode_filters.get(UNAFFECTED), [])
             gt_map = f"map('A', {affected_gts}, 'N', {unaffected_gts}, 'U', [-1, 0, 1, 2])"
-            affected_lookup = self.GET_AFFECTED_TEMPLATE.format(field='x.sampleId')
+            affected_lookup = self._affected_dict_get('x.sampleId')
             if inheritance_mode == X_LINKED_RECESSIVE_MALE_AFFECTED:
                 male_unaffected_gts = [gt for gt in unaffected_gts if gt < 1]
                 male_gt_map = f"map('A', {affected_gts}, 'N', {male_unaffected_gts}, 'U', [-1, 0, 1, 2])"
                 sex_map = [
                     f"'{sex}', {gt_map}" for sex in FEMALE_SEXES + [UNAFFECTED]
                 ] + [f"'{sex}', {male_gt_map}" for sex in MALE_SEXES]
-                gt_map = f"map({', '.join(sex_map)})[dictGetOrDefault('seqrdb_sex_dict', 'sex', (family_guid, x.sampleId), 'U')]"
+                from clickhouse_search.models import SexDict  # TODO clean up import once models are split into multiple files
+                sex_sql = SexDict.dict_get_sql(key='(family_guid, x.sampleId)', fields=['sex'], default='U')
+                gt_map = f"map({', '.join(sex_map)})[{sex_sql}]"
             gt_filter = (gt_map, f'has({{value}}[{affected_lookup}], ifNull({{field}}, -1))')
 
         return self._affected_condition(), unaffected_condition, gt_filter
 
     def _affected_condition(self):
-        return tuple([None, self.GET_AFFECTED_TEMPLATE + " = 'A'"])
+        return tuple([None, self._affected_dict_get('{field}') + " = 'A'"])
 
     def _get_inheritance_quality_qs(self, sample_data, inheritance_mode, quality_filter, clinvar_override_q, annotate_carriers, inheritance_filter):
         allow_no_call = inheritance_filter.get('allowNoCall')
