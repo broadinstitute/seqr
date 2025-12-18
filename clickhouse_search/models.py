@@ -1317,3 +1317,11 @@ PROJECT_GT_STATS_VIEW_CLASS_MAP = {
         Sample.DATASET_TYPE_SV_CALLS: ProjectsToGtStatsSv,
     },
 }
+GT_STATS_DICT_CLASS_MAP = {
+    GENOME_VERSION_GRCh37: {Sample.DATASET_TYPE_VARIANT_CALLS: GtStatsDictGRCh37SnvIndel},
+    GENOME_VERSION_GRCh38: {
+        Sample.DATASET_TYPE_VARIANT_CALLS: GtStatsDictSnvIndel,
+        Sample.DATASET_TYPE_MITO_CALLS: GtStatsDictMito,
+        Sample.DATASET_TYPE_SV_CALLS: GtStatsDictSv,
+    },
+}

@@ -3,7 +3,7 @@ APIs for retrieving, updating, creating, and deleting Individual records
 """
 from collections import defaultdict
 
-from clickhouse_search.search import reload_clickhouse_sex_dict
+from clickhouse_search.models import SexDict
 from matchmaker.models import MatchmakerSubmission, MatchmakerResult
 from seqr.models import Sample, IgvSample, RnaSample, Individual, Family, FamilyNote
 from seqr.utils.middleware import ErrorsWarningsException
@@ -90,7 +90,7 @@ def add_or_update_individuals_and_families(project, individual_records, user, ge
     if updated_affected and not skip_gt_stats_rebuild:
         backend_specific_call(lambda *args: True, trigger_rebuild_gt_stats)(project, user)
     if updated_sex:
-        backend_specific_call(lambda *args: True, reload_clickhouse_sex_dict)()
+        backend_specific_call(lambda *args: True, SexDict.reload)()
 
     pedigree_json = None
     if get_update_json:

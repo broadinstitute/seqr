@@ -11,7 +11,8 @@ from clickhouse_search.backend.fields import NamedTupleField
 from clickhouse_search.backend.functions import Array, ArrayFilter, ArrayIntersect, ArraySort, GroupArrayArray, If, Tuple, \
     ArrayMap
 from clickhouse_search.models import ENTRY_CLASS_MAP, ANNOTATIONS_CLASS_MAP, TRANSCRIPTS_CLASS_MAP, KEY_LOOKUP_CLASS_MAP, \
-    PROJECT_GT_STATS_VIEW_CLASS_MAP, BaseClinvar, BaseAnnotationsMitoSnvIndel, BaseAnnotationsGRCh37SnvIndel, BaseAnnotationsSvGcnv
+    PROJECT_GT_STATS_VIEW_CLASS_MAP, GT_STATS_DICT_CLASS_MAP, \
+    BaseClinvar, BaseAnnotationsMitoSnvIndel, BaseAnnotationsGRCh37SnvIndel, BaseAnnotationsSvGcnv
 from reference_data.models import GeneConstraint, Omim, GENOME_VERSION_LOOKUP
 from seqr.models import Sample, PhenotypePrioritization, Individual
 from seqr.utils.logging_utils import SeqrLogger
@@ -815,13 +816,8 @@ def delete_clickhouse_project(project, dataset_type, sample_type=None):
         if dataset_type != 'GCNV':
             cursor.execute(f'ALTER TABLE "{table_base}/project_gt_stats" DROP PARTITION %s', [project.guid])
             PROJECT_GT_STATS_VIEW_CLASS_MAP[project.genome_version][dataset_type].refresh()
-            cursor.execute(f'SYSTEM RELOAD DICTIONARY "{table_base}/gt_stats_dict"')
+            GT_STATS_DICT_CLASS_MAP[project.genome_version][dataset_type].reload()
     return f'Deleted all {dataset_type} search data for project {project.name}'
-
-
-def reload_clickhouse_sex_dict():
-    with connections['clickhouse_write'].cursor() as cursor:
-        cursor.execute('SYSTEM RELOAD DICTIONARY "seqrdb_sex_dict"')
 
 
 SV_DATASET_TYPES = {

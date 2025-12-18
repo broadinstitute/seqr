@@ -1,6 +1,5 @@
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.management import call_command
-from django.db import connections
 from django.test import TransactionTestCase
 from django.urls.base import reverse
 import json
@@ -10,7 +9,8 @@ import responses
 from clickhouse_search.models import EntriesSnvIndel, ProjectGtStatsSnvIndel, AnnotationsSnvIndel, \
     ProjectsToGtStatsGRCh37SnvIndel, ProjectsToGtStatsSnvIndel, ProjectsToGtStatsMito, ProjectsToGtStatsSv, \
     ClinvarMvSnvIndel, ClinvarSearchMvSnvIndel, ClinvarMvMito, ClinvarSearchMvMito, ClinvarMvGRCh37SnvIndel,\
-    ClinvarSearchMvGRCh37SnvIndel
+    ClinvarSearchMvGRCh37SnvIndel, GtStatsDictGRCh37SnvIndel, GtStatsDictSnvIndel, GtStatsDictMito, GtStatsDictSv, \
+    AffectedDict, SexDict
 from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4, CACHED_CONSEQUENCES_BY_KEY, \
     VARIANT_ID_SEARCH, VARIANT_IDS, LOCATION_SEARCH, GENE_IDS, SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT, \
     SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3, COMP_HET_ALL_PASS_FILTERS, \
@@ -47,9 +47,8 @@ class ClickhouseSearchTestCase(AnvilAuthenticationTestMixin, TransactionTestCase
         # between versions 4.x and 6.x (alongside several other impactful method changes).  When
         # Django is updated, our pattern here must be re-visited.
         super()._fixture_setup()
-        with connections['clickhouse_write'].cursor() as cursor:
-            for dictionary in ['seqrdb_affected_status_dict', 'seqrdb_sex_dict']:
-                cursor.execute(f'SYSTEM RELOAD DICTIONARY "{dictionary}"')
+        AffectedDict.reload()
+        SexDict.reload()
         for db in DATABASES.keys():
             call_command("loaddata", 'clickhouse_search', database=db)
         for view in [
@@ -58,9 +57,8 @@ class ClickhouseSearchTestCase(AnvilAuthenticationTestMixin, TransactionTestCase
             ClinvarSearchMvGRCh37SnvIndel
         ]:
             view.refresh()
-        with connections['clickhouse_write'].cursor() as cursor:
-            for table_base in ['GRCh38/SNV_INDEL', 'GRCh38/MITO', 'GRCh38/SV', 'GRCh37/SNV_INDEL']:
-                cursor.execute(f'SYSTEM RELOAD DICTIONARY "{table_base}/gt_stats_dict"')
+        for dictionary in [GtStatsDictGRCh37SnvIndel, GtStatsDictSnvIndel, GtStatsDictMito, GtStatsDictSv]:
+            dictionary.reload()
         Project.objects.update(genome_version='38')
         AnvilAuthenticationTestMixin.set_up_users()
 

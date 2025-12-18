@@ -21,5 +21,10 @@ class MaterializedView(models.ClickhouseModel):
 
 class Dictionary(models.ClickhouseModel):
 
+    @classmethod
+    def reload(cls):
+        with connections['clickhouse_write'].cursor() as cursor:
+            cursor.execute(f'SYSTEM RELOAD DICTIONARY "{cls._meta.db_table}"')
+
     class Meta:
         abstract = True
