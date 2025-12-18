@@ -4,7 +4,7 @@ from clickhouse_backend.backend.base import (
 )
 
 from clickhouse_search.backend.engines import Join
-from settings import CLICKHOUSE_WRITER_USER, CLICKHOUSE_WRITER_PASSWORD
+from settings import CLICKHOUSE_WRITER_USER, CLICKHOUSE_WRITER_PASSWORD, DATABASES
 
 
 class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
@@ -67,10 +67,15 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
     def _dictionary_sql(self, model):
         original_sql_create_table = self.sql_create_table  # pylint: disable=access-member-before-definition
         meta = model._meta
-        source_table = self._table_name(meta, meta.source_table)
+        postgres_query = getattr(meta, 'postgres_query', None)
+        if postgres_query:
+            source = f"POSTGRESQL(NAME 'seqr_postgres_named_collection' DATABASE {DATABASES['default']['NAME']} QUERY '{postgres_query}')"
+        else:
+            source_table = self._table_name(meta, meta.source_table)
+            source = f"CLICKHOUSE(USER '{CLICKHOUSE_WRITER_USER}' PASSWORD '{CLICKHOUSE_WRITER_PASSWORD}' TABLE {source_table})"
         self.sql_create_table = f"""
         CREATE DICTIONARY %(table)s (%(definition)s) %(extra)s
-        SOURCE(CLICKHOUSE(USER {CLICKHOUSE_WRITER_USER} PASSWORD {CLICKHOUSE_WRITER_PASSWORD} TABLE {source_table}))
+        SOURCE({source})
         LIFETIME(MIN 0 MAX {getattr(meta, 'lifetime_max', 0)})
         LAYOUT({meta.layout})
         """

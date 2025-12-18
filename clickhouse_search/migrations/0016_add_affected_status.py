@@ -6,28 +6,6 @@ import clickhouse_search.backend.fields
 from django.db import migrations
 import django.db.models.manager
 import os
-from string import Template
-
-from settings import DATABASES
-
-SEQRDB_AFFECTED_STATUS_DICT = Template("""
-CREATE DICTIONARY `seqrdb_affected_status_dict`
-(
-    `family_guid` String,
-    `sampleId` String,
-    `affected` String
-)
-PRIMARY KEY family_guid, sampleId
-SOURCE(POSTGRESQL(
-    NAME 'seqr_postgres_named_collection' 
-    DATABASE $database
-    QUERY 'select f.guid as family_guid, i.individual_id as sample_id, i.affected FROM seqr_individual i INNER JOIN seqr_family f ON i.family_id = f.id'
-))
-LIFETIME(MIN 0 MAX 0)
-LAYOUT(COMPLEX_KEY_HASHED());
-""").substitute(
-    database=DATABASES['default']['NAME'],
-)
 
 CLICKHOUSE_AC_EXCLUDED_PROJECT_GUIDS  = os.environ.get(
     'CLICKHOUSE_AC_EXCLUDED_PROJECT_GUIDS',
@@ -39,6 +17,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('clickhouse_search', '0015_remove_gnomadgenomessnvindel_key_and_more'),
+        ('seqr', '0001_squashed_0067_remove_project_custom_reference_populations'),
     ]
 
     operations = [
@@ -174,9 +153,23 @@ class Migration(migrations.Migration):
                 ),
             ]
         ),
-        migrations.RunSQL(
-            SEQRDB_AFFECTED_STATUS_DICT,
-            hints={'clickhouse': True},
+        migrations.CreateModel(
+            name='AffectedDict',
+            fields=[
+                ('family_guid', clickhouse_backend.models.StringField(primary_key=True, serialize=False)),
+                ('sampleId', clickhouse_backend.models.StringField()),
+                ('affected', clickhouse_backend.models.StringField()),
+            ],
+            options={
+                'db_table': 'seqrdb_affected_status_dict',
+                'engine': clickhouse_backend.models.MergeTree(primary_key=('family_guid', 'sampleId')),
+                'layout': 'COMPLEX_KEY_HASHED()',
+                'postgres_query': 'select f.guid as family_guid, i.individual_id as sample_id, i.affected FROM seqr_individual i INNER JOIN seqr_family f ON i.family_id = f.id',
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
         ),
         migrations.DeleteModel(
             name='GtStatsDictGRCh37SnvIndel',

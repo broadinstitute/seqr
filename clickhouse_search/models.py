@@ -1240,6 +1240,17 @@ class ProjectPartitionsDict(Dictionary):
         lifetime_max = 300 # refresh every 5 minutes
         layout = 'HASHED()' # hashed layout supports string keys
 
+class AffectedDict(Dictionary):
+    family_guid = models.StringField(primary_key=True)
+    sampleId = models.StringField()
+    affected = models.StringField()
+
+    class Meta:
+        db_table = 'seqrdb_affected_status_dict'
+        engine = models.MergeTree(primary_key=('family_guid', 'sampleId'))
+        layout = 'COMPLEX_KEY_HASHED()'
+        postgres_query = 'select f.guid as family_guid, i.individual_id as sample_id, i.affected FROM seqr_individual i INNER JOIN seqr_family f ON i.family_id = f.id'
+
 
 ENTRY_CLASS_MAP = {
     GENOME_VERSION_GRCh37: {Sample.DATASET_TYPE_VARIANT_CALLS: EntriesGRCh37SnvIndel},
