@@ -33,8 +33,8 @@ class Dictionary(models.ClickhouseModel):
         return f'{func_name}({", ".join(args)})'
 
     @classmethod
-    def dict_get(cls, expressions, fields, default=None):
-        dict_get_func = Func(expressions)
+    def dict_get_expression(cls, expressions, fields, default=None, **kwargs):
+        dict_get_func = Func(expressions, **kwargs)
         dict_get_func.template = cls.dict_get_sql('%(expressions)s', fields, default)
         return dict_get_func
 

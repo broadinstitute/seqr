@@ -9,7 +9,7 @@ from django.db.models.sql.constants import INNER
 from clickhouse_search.backend.fields import NestedField, NamedTupleField
 from clickhouse_search.backend.functions import Array, ArrayConcat, ArrayDistinct, ArrayFilter, ArrayFold, \
     ArrayIntersect, ArrayJoin, ArrayMap, ArraySort, ArraySymmetricDifference, CrossJoin, GroupArray, GroupArrayArray, \
-    GroupArrayIntersect, DictGet, If, MapLookup, NullIf, Plus, SubqueryJoin, SubqueryTable, Tuple, TupleConcat
+    GroupArrayIntersect, If, MapLookup, NullIf, Plus, SubqueryJoin, SubqueryTable, Tuple, TupleConcat
 from seqr.models import Sample
 from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFECTED, UNAFFECTED, MALE_SEXES, \
     X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, SCREEN_KEY, UTR_ANNOTATOR_KEY, \
@@ -97,22 +97,19 @@ class SearchQuerySet(QuerySet):
             ([self.single_sample_type] if self.single_sample_type else sorted(Sample.SAMPLE_TYPE_LOOKUP.keys()))
         ]
 
-    def _seqr_pop_fields(self, seqr_populations):
+    def _seqr_pop_expression(self, seqr_populations):
         seqr_pop_fields = []
         pop_configs = [(sub_fields, self.sample_types) for _, sub_fields in seqr_populations]
         pop_configs += [(config[0], ['affected']) for config in pop_configs]
         for sub_fields, suffixes in pop_configs:
-            seqr_pop_fields += [f"'{sub_fields['ac']}_{suffix}'" for suffix in suffixes]
+            seqr_pop_fields += [f"{sub_fields['ac']}_{suffix}" for suffix in suffixes]
             if sub_fields.get('hom'):
-                seqr_pop_fields += [f"'{sub_fields['hom']}_{suffix}'" for suffix in suffixes]
-        return seqr_pop_fields
+                seqr_pop_fields += [f"{sub_fields['hom']}_{suffix}" for suffix in suffixes]
 
-    def _seqr_pop_expression(self, seqr_populations):
-        seqr_pop_fields = self._seqr_pop_fields(seqr_populations)
-        return DictGet(
+        from clickhouse_search.models import GT_STATS_DICT_CLASS_MAP  # TODO clean up import once models are split into multiple files
+        return GT_STATS_DICT_CLASS_MAP[self.genome_version][self.table_basename.split('/')[1]].dict_get_expression(
             'key',
-            dict_name=f"{self.table_basename}/gt_stats_dict",
-            fields=', '.join(seqr_pop_fields),
+            seqr_pop_fields,
             output_field=models.TupleField([models.UInt32Field() for _ in seqr_pop_fields])
         )
 
