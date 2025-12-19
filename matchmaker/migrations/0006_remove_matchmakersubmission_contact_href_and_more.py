@@ -25,7 +25,7 @@ def set_legacy_contacts(apps, schema_editor):
     submissions = list(MatchmakerSubmission.objects.using(db_alias).all())
     for submission in submissions:
         submission.contact_name = ','.join([contact['name'] for contact in submission.contacts])
-        submission.contact_href = f"'mailto:'{','.join([contact['email'] for contact in submission.contacts])}"
+        submission.contact_href = f"mailto:{','.join([contact['email'] for contact in submission.contacts])}"
     MatchmakerSubmission.objects.using(db_alias).bulk_update(submissions, ['contact_name', 'contact_href'])
 
 

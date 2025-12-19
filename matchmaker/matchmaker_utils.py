@@ -155,8 +155,8 @@ def get_submission_json_for_external_match(submission, score=None, genomic_featu
             'id': submission.submission_id,
             'label': submission.label,
             'contact': {
-                'href': submission.contact_href.replace(' ', ''),
-                'name': submission.contact_name,
+                'href': f"mailto:{','.join([contact['email'] for contact in submission.contacts])}",
+                'name': ','.join([contact['name'] for contact in submission.contacts if contact.get('name')]),
                 'institution': MME_DEFAULT_CONTACT_INSTITUTION,
             },
             'species': 'NCBITaxon:9606',
