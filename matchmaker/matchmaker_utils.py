@@ -338,7 +338,7 @@ def get_mme_metrics():
 
     submitters = set()
     for submission in submissions:
-        submitters.update({name.strip() for name in submission.contact_name.split(',')})
+        submitters.update({contact['name'] for contact in submission.contacts if contact.get('name')})
 
     incoming_request_count = MatchmakerIncomingQuery.objects.count()
     matched_incoming_request_count = MatchmakerIncomingQuery.objects.filter(
