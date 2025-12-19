@@ -424,12 +424,14 @@ def update_mme_project_contact(request, project_guid):
     if not contact:
         return create_json_response({'error': 'Contact is required'}, status=400)
 
-    submissions = MatchmakerSubmission.objects.filter(individual__family__project=project).exclude(
-        contact_href__contains=contact)
-    for submission in submissions:
-        submission.contact_href = f'{submission.contact_href},{contact}' if submission.contact_href else contact
-        submission.save()
+    submission_ids = []
+    for submission in MatchmakerSubmission.objects.filter(individual__family__project=project):
+        if not any(c.get('email') == contact for c in submission.contacts):
+            submission.contacts.append({'name': '', 'email': contact})
+            submission.save()
+            submission_ids.append(submission.id)
 
+    submissions = MatchmakerSubmission.objects.filter(id__in=submission_ids)
     return create_json_response({
         'mmeSubmissionsByGuid': {s['submissionGuid']: s for s in get_json_for_matchmaker_submissions(submissions)},
     })
