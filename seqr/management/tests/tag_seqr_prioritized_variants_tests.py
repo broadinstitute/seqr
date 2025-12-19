@@ -88,7 +88,7 @@ class CheckNewSamplesTest(ClickhouseSearchTestCase):
             (18, 19): {"SV - Compound Heterozygous": "2025-11-15"},
         }
         self.assertDictEqual(expected_tags, {
-            tuple(tag.saved_variants.values_list('key', flat=True).order_by('key')): json.loads(tag.metadata)
+            tuple(sorted(tag.saved_variants.values_list('key', flat=True))): json.loads(tag.metadata)
             for tag in VariantTag.objects.filter(variant_tag_type__name='seqr Prioritized')
         })
 
