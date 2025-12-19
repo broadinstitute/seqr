@@ -22,8 +22,9 @@ RESULT_STATUS_GUID = 'MR0003552_SHE_1006P_1'
 
 SUBMISSION_DATA = {
     'individualGuid': NO_SUBMISSION_INDIVIDUAL_GUID,
-    'contactHref': 'mailto:test@broadinstitute.org',
-    'contactName': 'PI',
+    'contacts': [
+        {'name': 'PI', 'email': 'test@broadinstitute.org'},
+    ],
     'phenotypes': [
         {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'yes'}
     ],
@@ -206,8 +207,10 @@ class MatchmakerAPITest(AuthenticationTestCase):
             'createdDate': '2018-05-23T09:07:49.719Z',
             'lastModifiedDate': '2018-05-23T09:07:49.719Z',
             'deletedDate': None,
-            'contactName': 'Sam Baxter',
-            'contactHref': 'mailto:matchmaker@broadinstitute.org,test_user@broadinstitute.org',
+            'contacts': [
+                {'name': 'Sam Baxter', 'email': 'matchmaker@broadinstitute.org'},
+                {'name': '', 'email': 'test_user@broadinstitute.org'},
+            ],
             'submissionId': 'NA19675_1_01',
             'phenotypes': [
                 {'id': 'HP:0001252', 'label': 'Muscular hypotonia', 'observed': 'yes'},
@@ -574,8 +577,9 @@ class MatchmakerAPITest(AuthenticationTestCase):
             'createdDate': mock.ANY,
             'lastModifiedDate': mock.ANY,
             'deletedDate': None,
-            'contactName': 'PI',
-            'contactHref': 'mailto:test@broadinstitute.org',
+            'contacts': [
+                {'name': 'PI', 'email': 'test@broadinstitute.org'},
+            ],
             'submissionId': NO_SUBMISSION_INDIVIDUAL_GUID,
             'phenotypes': [
                 {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'yes'}
@@ -618,8 +622,9 @@ class MatchmakerAPITest(AuthenticationTestCase):
         url = reverse(update_mme_submission, args=[new_submission_guid])
         update_body = {
             'individualGuid': NO_SUBMISSION_INDIVIDUAL_GUID,
-            'contactHref': 'mailto:matchmaker@broadinstitute.org',
-            'contactName': 'Test Name',
+            'contacts': [
+                {'name': 'Test Name', 'email': 'matchmaker@broadinstitute.org'},
+            ],
             'phenotypes': [
                 {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'no'},
                 {'id': 'HP:0002017', 'label': 'Nausea and vomiting', 'observed': 'yes'},
@@ -636,8 +641,9 @@ class MatchmakerAPITest(AuthenticationTestCase):
             'createdDate': mock.ANY,
             'lastModifiedDate': mock.ANY,
             'deletedDate': None,
-            'contactName': 'Test Name',
-            'contactHref': 'mailto:matchmaker@broadinstitute.org',
+            'contacts': [
+                {'name': 'Test Name', 'email': 'matchmaker@broadinstitute.org'},
+            ],
             'submissionId': NO_SUBMISSION_INDIVIDUAL_GUID,
             'phenotypes': [
                 {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'no'},
@@ -702,8 +708,10 @@ class MatchmakerAPITest(AuthenticationTestCase):
             'createdDate': '2018-05-23T09:07:49.719Z',
             'lastModifiedDate': mock.ANY,
             'deletedDate': None,
-            'contactName': 'Sam Baxter',
-            'contactHref': 'mailto:matchmaker@broadinstitute.org,test_user@broadinstitute.org',
+            'contacts': [
+                {'name': 'Sam Baxter', 'email': 'matchmaker@broadinstitute.org'},
+                {'name': '', 'email': 'test_user@broadinstitute.org'},
+            ],
             'submissionId': 'NA19675_1_01',
             'phenotypes': [],
             'geneVariants': [{'geneId': 'ENSG00000235249', 'variantGuid': 'SV0000001_2103343353_r0390_100'}],
