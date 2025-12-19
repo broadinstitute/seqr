@@ -549,7 +549,7 @@ def _generate_notification_for_seqr_match(submission, results):
         host=BASE_URL, project_guid=project.guid, family_guid=submission.individual.family.guid,
     )
     safe_post_to_slack(MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL, message)
-    emails = [s.strip().split('mailto:')[-1] for s in submission.contact_href.split(',')]
+    emails = [contact['email'] for contact in submission.contacts]
     email_message = EmailMessage(
         subject='New matches found for MME submission {} (project: {})'.format(individual.individual_id, project.name),
         body=message,
