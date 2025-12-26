@@ -1,6 +1,8 @@
 # _seqr_ Changes
 
 ## dev
+* Moves PanelApp updates from their own manage command into the main `update_all_reference_data` command.
+May require changes to custom cron jobs (REQUIRES DB MIGRATION)
 
 ## 11/12/25
 * Changes support for RNA loading to accept unprocessed output from RNA callers, and moves loading to the project page. 

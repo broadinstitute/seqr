@@ -47,37 +47,44 @@ class UpdateOmimTest(ReferenceDataCommandTestCase):
         bad_phenotype_data = OMIM_DATA[:2]
         bad_phenotype_data.append('chr1	0	27600000	1p36		605462	BCC1	Basal cell carcinoma, susceptibility to, 1		100307118		associated with rs7538876	{x}, 605462 (5)	\n')
         self._run_error_command(bad_phenotype_data, None)
-        error_message = self.mock_command_logger.error.mock_calls[-1].args[0]
+        self.assert_json_logs(user=None, offset=3, expected=[(mock.ANY, {
+            'severity': 'ERROR',
+            '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent',
+        })])
+        error_message = json.loads(self._log_stream.getvalue().split('\n')[3])['message']
         record = json.loads(re.search(r'unable to update Omim: No phenotypes found: ({.*})', error_message).group(1))
         self.assertDictEqual(record, {"gene_name": "Basal cell carcinoma, susceptibility to, 1", "mim_number": "605462", "comments": "associated with rs7538876", "mouse_gene_symbol/id": "", "phenotypes": "{x}, 605462 (5)", "genomic_position_end": "27600000", "ensembl_gene_id": "", "gene/locus_and_other_related_symbols": "BCC1", "approved_gene_symbol": "", "entrez_gene_id": "100307118", "computed_cyto_location": "", "cyto_location": "1p36", "#_chromosome": "chr1", "genomic_position_start": "0"})
 
         self.assertEqual(Omim.objects.all().count(), 3)
 
         GeneInfo.objects.all().delete()
-        self._run_error_command(self.DATA, 'Related data is missing to load Omim: gene_ids_to_gene, gene_symbols_to_gene')
+        self._run_error_command(self.DATA, 'Related data is missing to load Omim: gene_ids_to_gene, gene_symbols_to_gene', error_offset=0)
 
-    def _run_error_command(self, data, error):
+    def _run_error_command(self, data, error, error_offset=3):
+        self.reset_logs()
         with self.assertRaises(CommandError) as e:
             self._run_command(data, command_args=['--omim-key=test_key'], head_response=HEAD_RESPONSE)
         self.assertEqual(str(e.exception), 'Failed to Update: Omim')
         if error:
-            self.mock_command_logger.error.assert_called_with(f'unable to update Omim: {error}')
+            self.assert_json_logs(user=None, offset=error_offset, expected=[
+                (f'unable to update Omim: {error}', {
+                    'severity': 'ERROR',
+                    '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent',
+                }),
+            ])
 
-
-    @mock.patch('seqr.utils.file_utils.logger')
     @mock.patch('seqr.views.utils.export_utils.open')
     @mock.patch('seqr.views.utils.export_utils.TemporaryDirectory')
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
-    def test_update_omim_command(self, mock_subprocess, mock_temp_dir, mock_open,mock_file_utils_logger):
+    def test_update_omim_command(self, mock_subprocess, mock_temp_dir, mock_open):
         mock_subprocess.return_value.wait.return_value = 0
         mock_temp_dir.return_value.__enter__.return_value = '/mock/tmp'
 
-        self._test_update_omim_command(command_args=['--omim-key=test_key'])
-
-        calls = [
-            mock.call('==> gsutil mv /mock/tmp/* gs://seqr-reference-data/omim/', None),
-        ]
-        mock_file_utils_logger.info.assert_has_calls(calls)
+        self._test_update_omim_command(
+            command_args=['--omim-key=test_key'],
+            additional_log=('==> gsutil mv /mock/tmp/* gs://seqr-reference-data/omim/', None),
+            additional_log_offset=3,
+        )
 
         mock_subprocess.assert_called_with('gsutil mv /mock/tmp/* gs://seqr-reference-data/omim/', stdout=-1, stderr=-2, shell=True)  # nosec
         mock_open.assert_called_with('/mock/tmp/parsed_omim_records__latest.txt', 'w')

@@ -152,8 +152,14 @@ class UpdateHpoTest(ReferenceDataCommandTestCase):
         self.assertDictEqual(records, EXPECTED_DB_DATA)
 
         # test data which causes exception (missing parent hpo id)
+        self.reset_logs()
         head_response['headers']['Location'] = 'https://github.com/obophenotype/human-phenotype-ontology/releases/download/2025-03-13/hp.obo'
         with self.assertRaises(CommandError) as e:
             self._run_command(data=PHO_DATA[:40], head_response=head_response)
         self.assertEqual(str(e.exception), 'Failed to Update: HumanPhenotypeOntology')
-        self.mock_command_logger.error.assert_called_with('unable to update HumanPhenotypeOntology: Strange id: HP:0000003')
+        self.assert_json_logs(user=None, offset=3, expected=[
+            ('unable to update HumanPhenotypeOntology: Strange id: HP:0000003', {
+                'severity': 'ERROR',
+                '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent',
+            }),
+        ])
