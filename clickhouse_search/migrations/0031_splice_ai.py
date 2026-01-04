@@ -130,7 +130,7 @@ class Migration(migrations.Migration):
                     `consequence_id` UInt8
                 """,
                 primary_key="key",
-                source=f"QUERY 'SELECT key, score, toUInt8(consequence) from {DATABASES['clickhouse_write']['NAME']}.`$reference_genome/SNV_INDEL/reference_data/splice_ai/seqr_variants`'",
+                source=f"QUERY 'SELECT key, score, toUInt8(consequence) from {DATABASES['clickhouse_write']['NAME']}.`GRCh37/SNV_INDEL/reference_data/splice_ai/seqr_variants`'",
                 layout="HASHED_ARRAY()"
             ),
             hints={"clickhouse": True},
@@ -146,7 +146,7 @@ class Migration(migrations.Migration):
                     `consequence_id` UInt8
                 """,
                 primary_key="key",
-                source=f"QUERY 'SELECT key, score, toUInt8(consequence) from {DATABASES['clickhouse_write']['NAME']}.`$reference_genome/SNV_INDEL/reference_data/splice_ai/seqr_variants`'",
+                source=f"QUERY 'SELECT key, score, toUInt8(consequence) from {DATABASES['clickhouse_write']['NAME']}.`GRCh38/SNV_INDEL/reference_data/splice_ai/seqr_variants`'",
                 layout="HASHED_ARRAY()",
             ),
             hints={"clickhouse": True},
