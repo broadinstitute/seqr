@@ -40,6 +40,7 @@ PRIMARY KEY $primary_key
 SOURCE(CLICKHOUSE(
     USER '$clickhouse_writer_user'
     PASSWORD '$clickhouse_writer_password'
+    DB '$database'
     $source
 ))
 LIFETIME(MIN 0 MAX 0)
@@ -68,6 +69,7 @@ def render_search_dictionary(
         range_block=range_block,
         clickhouse_writer_user=CLICKHOUSE_WRITER_USER,
         clickhouse_writer_password=CLICKHOUSE_WRITER_PASSWORD,
+        database=DATABASES['default']['NAME'],
     )
 
 
