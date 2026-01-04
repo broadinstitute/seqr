@@ -88,7 +88,7 @@ class Migration(migrations.Migration):
                     score Nullable(Decimal(9, 5))
                 """,
                 primary_key="chrom",
-                source=f"QUERY 'SELECT chrom, pos as start, pos as end, score FROM {DATABASES['clickhouse_write']['NAME']}`GRCh38/SNV_INDEL/reference_data/pext/all_variants`'",
+                source=f"QUERY 'SELECT chrom, pos as start, pos as end, score FROM {DATABASES['clickhouse_write']['NAME']}.`GRCh38/SNV_INDEL/reference_data/pext/all_variants`'",
                 layout="RANGE_HASHED()"
             ),
             hints={'clickhouse': True},
