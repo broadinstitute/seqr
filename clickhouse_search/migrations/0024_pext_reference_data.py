@@ -7,6 +7,7 @@ from django.db import migrations
 import django.db.models.manager
 
 from clickhouse_search.migration_templates import ALL_VARIANTS_MV_HEADER, conditionally_refresh_reference_dataset, render_search_dictionary
+from settings import DATABASES
 
 PEXT_VIEW = Template("""
 $mv_header
@@ -70,7 +71,7 @@ class Migration(migrations.Migration):
                     score Nullable(Decimal(9, 5))
                 """,
                 primary_key="chrom",
-                source="QUERY 'SELECT chrom, pos as start, pos as end, score FROM `GRCh38/SNV_INDEL/reference_data/pext/all_variants`'",
+                source=f"QUERY 'SELECT chrom, pos as start, pos as end, score FROM {DATABASES['clickhouse_write']['NAME']}.`GRCh38/SNV_INDEL/reference_data/pext/all_variants`'",
                 layout="RANGE_HASHED()"
             ),
             hints={'clickhouse': True},
@@ -87,7 +88,7 @@ class Migration(migrations.Migration):
                     score Nullable(Decimal(9, 5))
                 """,
                 primary_key="chrom",
-                source="QUERY 'SELECT chrom, pos as start, pos as end, score FROM `GRCh38/SNV_INDEL/reference_data/pext/all_variants`'",
+                source=f"QUERY 'SELECT chrom, pos as start, pos as end, score FROM {DATABASES['clickhouse_write']['NAME']}`GRCh38/SNV_INDEL/reference_data/pext/all_variants`'",
                 layout="RANGE_HASHED()"
             ),
             hints={'clickhouse': True},
