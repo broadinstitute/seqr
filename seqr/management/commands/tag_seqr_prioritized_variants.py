@@ -223,6 +223,40 @@ SEARCHES = {
             'annotations': MODERATE_ANNOTATIONS,
             **RECESSIVE_SEARCH,
         },
+        'Compound Heterozygous - Both High Splice AI': {
+            'inheritance_mode': COMPOUND_HET,
+            **HIGH_SPLICE_AI_SEARCH,
+            **RECESSIVE_SEARCH,
+        },
+        'Compound Heterozygous - Both High Splice AI - Confirmed': {
+            'inheritance_mode': COMPOUND_HET,
+            **CONFIRMED_HIGH_SPLICE_AI_SEARCH,
+            **RECESSIVE_SEARCH,
+        },
+        'Compound Heterozygous - High Splice AI': {
+            'family_filter': {
+                CONFIRMED_FAMILY_FILTER: False
+            },
+            'inheritance_mode': COMPOUND_HET,
+            'no_secondary_annotations': True,
+            'annotations': HIGH_MODERATE_ANNOTATIONS,
+            'annotations_secondary':{
+                'splice_ai': 0.8,
+            },
+            **RECESSIVE_SEARCH,
+        },
+        'Compound Heterozygous - High Splice AI - Confirmed': {
+            'family_filter': {
+                CONFIRMED_FAMILY_FILTER: True
+            },
+            'inheritance_mode': COMPOUND_HET,
+            'no_secondary_annotations': True,
+            'annotations': HIGH_MODERATE_ANNOTATIONS,
+            'annotations_secondary':{
+                'splice_ai': 0.5,
+            },
+            **RECESSIVE_SEARCH,
+        },
         'De Novo': {
             'family_filter': {
                 MAX_AFFECTED_FAMILY_FILTER: 1,
@@ -506,7 +540,7 @@ class Command(BaseCommand):
         )
         return cls._execute_comp_het_search(
             queryset, search_name, config_search, family_variant_data, family_guid_map, samples,
-            no_secondary_annotations=config_search.get('split_pathogenicity_annotations'),
+            no_secondary_annotations=config_search.get('split_pathogenicity_annotations') or config_search.get('no_secondary_annotations'),
         )
 
     @classmethod
