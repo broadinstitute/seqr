@@ -364,20 +364,14 @@ SEARCHES = {
         },
     },
     'MITO': {
-        'Mitochondrial - Clinvar Pathogenic': {
+        'Mitochondrial - Pathogenic': {
             'inheritance_mode': ANY_AFFECTED,
             'pathogenicity': {'clinvar': CLINVAR_FILTER['clinvar']},
-            'freqs': {
-                'gnomad_mito': {'af': 0.002},
-            },
-        },
-        'Mitochondrial - Mitomap Pathogenic': {
-            'inheritance_mode': ANY_AFFECTED,
             'annotations': {
                 'mitomap_pathogenic': True,
             },
             'freqs': {
-                'gnomad_mito': {'af': 0.002},
+                'gnomad_mito': {'af': 0.05},
             },
         },
         'Mitochondrial - De Novo/ Dominant': {

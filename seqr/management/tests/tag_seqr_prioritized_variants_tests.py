@@ -38,8 +38,7 @@ SV_MATCHES = {
     'SV - X-Linked Recessive': 0,
 }
 MITO_MATCHES = {
-    'Mitochondrial - Clinvar Pathogenic': 1,
-    'Mitochondrial - Mitomap Pathogenic': 0,
+    'Mitochondrial - Pathogenic': 1,
     'Mitochondrial - De Novo/ Dominant': 0,
 }
 MULTI_TYPE_MATCHES = {
@@ -96,7 +95,7 @@ class CheckNewSamplesTest(ClickhouseSearchTestCase):
             (2,): {"Clinvar Pathogenic - Recessive": "2025-11-15", "Recessive": "2025-11-15"},
             (2, 19): {"Compound Heterozygous - One SV": "2025-11-15"},
             (3, 4): {"Compound Heterozygous": "2025-11-15"},
-            (8,): {"Mitochondrial - Clinvar Pathogenic": "2025-11-15"},
+            (8,): {"Mitochondrial - Pathogenic": "2025-11-15"},
             (18,): {"SV - Recessive": "2025-11-15"},
             (18, 19): {"SV - Compound Heterozygous": "2025-11-15"},
         }
