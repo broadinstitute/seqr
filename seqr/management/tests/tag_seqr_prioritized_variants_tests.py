@@ -38,7 +38,7 @@ SV_MATCHES = {
     'SV - X-Linked Recessive': 0,
 }
 MITO_MATCHES = {
-    'Mitochondrial - Clinvar Pathogenic': 0,
+    'Mitochondrial - Clinvar Pathogenic': 1,
     'Mitochondrial - Mitomap Pathogenic': 0,
     'Mitochondrial - De Novo/ Dominant': 0,
 }
@@ -60,15 +60,15 @@ class CheckNewSamplesTest(ClickhouseSearchTestCase):
         call_command('tag_seqr_prioritized_variants', PROJECT_GUID)
 
         self._assert_expected_logs([
-            ('create 5 SavedVariants', {
+            ('create 6 SavedVariants', {
                 'dbUpdate': {'dbEntity': 'SavedVariant', 'entityIds': mock.ANY, 'updateType': 'bulk_create'},
             }),
         ] + [
             (f'create VariantTag VT{db_id}_seqr_prioritized', {'dbUpdate': {
                 'dbEntity': 'VariantTag', 'entityId': f'VT{db_id}_seqr_prioritized', 'updateFields': ['metadata', 'variant_tag_type'], 'updateType': 'create',
-            }}) for db_id in range(1726986, 1726991)
+            }}) for db_id in range(1726986, 1726992)
         ] + [
-            ('Tagged 5 new and 0 previously tagged variants in 1 families, found 0 unchanged tags:', None),
+            ('Tagged 6 new and 0 previously tagged variants in 1 families, found 0 unchanged tags:', None),
         ])
 
         new_saved_variants = SavedVariant.objects.filter(key__in=[2, 3, 4, 18, 19]).order_by('key').values(
@@ -96,6 +96,7 @@ class CheckNewSamplesTest(ClickhouseSearchTestCase):
             (2,): {"Clinvar Pathogenic - Recessive": "2025-11-15", "Recessive": "2025-11-15"},
             (2, 19): {"Compound Heterozygous - One SV": "2025-11-15"},
             (3, 4): {"Compound Heterozygous": "2025-11-15"},
+            (8,): {"Mitochondrial - Clinvar Pathogenic": "2025-11-15"},
             (18,): {"SV - Recessive": "2025-11-15"},
             (18, 19): {"SV - Compound Heterozygous": "2025-11-15"},
         }
@@ -107,18 +108,18 @@ class CheckNewSamplesTest(ClickhouseSearchTestCase):
         # Test notifications
         self.assertEqual(
             str(self.manager_user.notifications.first()),
-            '1kg project nåme with uniçøde Loaded 5 new seqr prioritized variants 0 minutes ago',
+            '1kg project nåme with uniçøde Loaded 6 new seqr prioritized variants 0 minutes ago',
         )
 
         mock_email.assert_called_with(
             subject='New prioritized variants tagged in seqr',
             to=['test_user_manager@test.com'],
-            body='Dear seqr user,\n\nThis is to notify you that 5 new seqr prioritized variants have been tagged in seqr project 1kg project nåme with uniçøde\n\nAll the best,\nThe seqr team',
+            body='Dear seqr user,\n\nThis is to notify you that 6 new seqr prioritized variants have been tagged in seqr project 1kg project nåme with uniçøde\n\nAll the best,\nThe seqr team',
         )
 
         mock_slack.assert_called_with(
             'seqr-data-loading',
-            '5 new seqr prioritized variants are loaded in <https://test-seqr.org/project/R0001_1kg/project_page|1kg project nåme with uniçøde>\n```2: 5 new tags```',
+            '6 new seqr prioritized variants are loaded in <https://test-seqr.org/project/R0001_1kg/project_page|1kg project nåme with uniçøde>\n```2: 6 new tags```',
         )
 
         # Test no new variants to tag
@@ -128,7 +129,7 @@ class CheckNewSamplesTest(ClickhouseSearchTestCase):
         mock_slack.reset_mock()
         call_command('tag_seqr_prioritized_variants', PROJECT_GUID)
         self._assert_expected_logs([
-            ('Tagged 0 new and 0 previously tagged variants in 1 families, found 5 unchanged tags:', None),
+            ('Tagged 0 new and 0 previously tagged variants in 1 families, found 6 unchanged tags:', None),
         ])
         mock_email.assert_not_called()
         mock_slack.assert_not_called()
