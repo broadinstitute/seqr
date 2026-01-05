@@ -141,11 +141,14 @@ CLINVAR_RECESSIVE_SEARCH = {
     },
 }
 
-RECESSIVE_SEARCH = {
+RECESSIVE_SEARCH_NO_IN_SILICO = {
     'gene_list_moi': RECESSIVE_MOI,
-    'in_silico': IN_SILICO_FILTER,
     'freqs': FREQ_FILTER,
     'qualityFilter': QUALITY_FILTER,
+}
+RECESSIVE_SEARCH = {
+    **RECESSIVE_SEARCH_NO_IN_SILICO,
+    'in_silico': IN_SILICO_FILTER,
 }
 SV_RECESSIVE_SEARCH = {
     'gene_list_moi': RECESSIVE_MOI,
@@ -226,12 +229,12 @@ SEARCHES = {
         'Compound Heterozygous - Both High Splice AI': {
             'inheritance_mode': COMPOUND_HET,
             **HIGH_SPLICE_AI_SEARCH,
-            **RECESSIVE_SEARCH,
+            **RECESSIVE_SEARCH_NO_IN_SILICO,
         },
         'Compound Heterozygous - Both High Splice AI - Confirmed': {
             'inheritance_mode': COMPOUND_HET,
             **CONFIRMED_HIGH_SPLICE_AI_SEARCH,
-            **RECESSIVE_SEARCH,
+            **RECESSIVE_SEARCH_NO_IN_SILICO,
         },
         'Compound Heterozygous - High Splice AI': {
             'family_filter': {
@@ -243,7 +246,11 @@ SEARCHES = {
             'annotations_secondary':{
                 'splice_ai': 0.8,
             },
-            **RECESSIVE_SEARCH,
+            'in_silico': {
+                **IN_SILICO_FILTER,
+                'splice_ai': 0.8,
+            },
+            **RECESSIVE_SEARCH_NO_IN_SILICO,
         },
         'Compound Heterozygous - High Splice AI - Confirmed': {
             'family_filter': {
@@ -255,7 +262,11 @@ SEARCHES = {
             'annotations_secondary':{
                 'splice_ai': 0.5,
             },
-            **RECESSIVE_SEARCH,
+            'in_silico': {
+                **IN_SILICO_FILTER,
+                'splice_ai': 0.5,
+            },
+            **RECESSIVE_SEARCH_NO_IN_SILICO,
         },
         'De Novo': {
             'family_filter': {
@@ -298,12 +309,12 @@ SEARCHES = {
         'High Splice AI - Recessive': {
             'inheritance_mode': HOMOZYGOUS_RECESSIVE,
             **HIGH_SPLICE_AI_SEARCH,
-            **RECESSIVE_SEARCH,
+            **RECESSIVE_SEARCH_NO_IN_SILICO,
         },
         'High Splice AI - Recessive Confirmed': {
             'inheritance_mode': HOMOZYGOUS_RECESSIVE,
             **CONFIRMED_HIGH_SPLICE_AI_SEARCH,
-            **RECESSIVE_SEARCH,
+            **RECESSIVE_SEARCH_NO_IN_SILICO,
         },
         'Recessive': {
             'inheritance_mode': HOMOZYGOUS_RECESSIVE,
