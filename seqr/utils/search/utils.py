@@ -155,7 +155,12 @@ def _get_clickhouse_variant_by_id(parsed_variant_id, variant_id, samples, genome
 
 @clickhouse_only
 def variant_lookup(user, variant_id, genome_version, sample_type=None, affected_only=False, hom_only=False):
-    cache_key = f'variant_lookup_results__{variant_id}__{genome_version}'
+    cache_fields = ['variant_lookup_results', variant_id, genome_version]
+    if affected_only:
+        cache_fields.append('affected')
+    if hom_only:
+        cache_fields.append('hom')
+    cache_key = '__'.join(cache_fields)
     variants = safe_redis_get_json(cache_key)
     if variants:
         return variants
