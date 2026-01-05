@@ -355,7 +355,7 @@ export const STATE_WITH_2_FAMILIES = {
       lastModifiedDate: '2017-03-14T17:37:32.712Z',
       mmePrimaryDataOwner: 'PI',
       mmeContactInstitution: 'Broad',
-      mmeContactUrl: 'test@broadinstitute.org',
+      mmeContactUrl: 'test@broadinstitute.org, other_user@broadinstitute.org',
       name: '1000 Genomes Demo',
       projectCategoryGuids: [],
       projectGuid: 'R0237_1000_genomes_demo',
@@ -893,7 +893,7 @@ export const STATE_WITH_2_FAMILIES = {
       individualGuid: 'I021475_na19675_1',
       createdDate: '2018-05-09T10:29:00.000Z',
       submissionId: 'NA19675_1',
-      contactHref: 'mailto:matchmaker@broadinstitute.org,test@test.com',
+      contacts: [{ email: 'matchmaker@broadinstitute.org' }, { email: 'test@test.com' }],
       phenotypes: [
         {id: 'HP:0011405', label: 'Childhood onset short-limb short stature', observed: 'yes'},
         {id: "HP:0012638", label: "Abnormality of nervous system physiology", observed: "no"},

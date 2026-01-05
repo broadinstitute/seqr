@@ -1,8 +1,9 @@
 import React from 'react'
 import PropTypes from 'prop-types'
+import { Field } from 'react-final-form'
 import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
-import { Header, Icon, Popup, Label, Grid } from 'semantic-ui-react'
+import { Header, Icon, Popup, Label, Grid, Form } from 'semantic-ui-react'
 import styled from 'styled-components'
 
 import { loadFamilyDetails } from 'redux/rootReducer'
@@ -16,6 +17,7 @@ import SendEmailButton from 'shared/components/buttons/SendEmailButton'
 import { BooleanCheckbox, BaseSemanticInput } from 'shared/components/form/Inputs'
 import { SubmissionGeneVariants, Phenotypes } from 'shared/components/panel/MatchmakerPanel'
 import BaseFieldView from 'shared/components/panel/view-fields/BaseFieldView'
+import { EDITABLE_LIST_FORM_FIELD_PROPS } from 'shared/components/panel/view-fields/ListFieldView'
 import TextFieldView from 'shared/components/panel/view-fields/TextFieldView'
 import { Alleles } from 'shared/components/panel/variants/VariantIndividuals'
 import Family from 'shared/components/panel/family/Family'
@@ -23,9 +25,7 @@ import DataTable, { SelectableTableFormInput } from 'shared/components/table/Dat
 import DataLoader from 'shared/components/DataLoader'
 import { VerticalSpacer } from 'shared/components/Spacers'
 import { ButtonLink, ColoredLabel } from 'shared/components/StyledComponents'
-import {
-  AFFECTED, MATCHMAKER_CONTACT_NAME_FIELD, MATCHMAKER_CONTACT_URL_FIELD, FAMILY_FIELD_MME_NOTES,
-} from 'shared/utils/constants'
+import { AFFECTED, FAMILY_FIELD_MME_NOTES, isValidMailtoEmail } from 'shared/utils/constants'
 import { camelcaseToTitlecase } from 'shared/utils/stringUtils'
 
 import {
@@ -128,9 +128,30 @@ const mapPhenotypeStateToProps = (state, ownProps) => ({
 
 const EditPhenotypesTable = connect(mapPhenotypeStateToProps)(BaseEditPhenotypesTable)
 
+const ContactFieldItem = ({ icon, name, meta }) => (
+  <Form.Group inline>
+    <Form.Field>{icon}</Form.Field>
+    <Field name={`${name}.email`} placeholder="Contact Email" component={Form.Input} width={6} error={meta.submitFailed && meta.error} />
+    <Field name={`${name}.name`} placeholder="Contact Name" component={Form.Input} />
+  </Form.Group>
+)
+
+ContactFieldItem.propTypes = {
+  icon: PropTypes.node,
+  name: PropTypes.string,
+  meta: PropTypes.object,
+}
+
+const validateContacts = value => (isValidMailtoEmail(`mailto:${value?.email || ''}`) ? undefined : 'Invalid email')
+
 const SUBMISSION_EDIT_FIELDS = [
-  { ...MATCHMAKER_CONTACT_NAME_FIELD, name: 'contactName' },
-  { ...MATCHMAKER_CONTACT_URL_FIELD, name: 'contactHref' },
+  {
+    name: 'contacts',
+    ...EDITABLE_LIST_FORM_FIELD_PROPS,
+    addArrayElementProps: { addElementLabel: 'Add Contact' },
+    itemComponent: ContactFieldItem,
+    validate: validateContacts,
+  },
   {
     name: 'geneVariants',
     component: EditGenotypesTable,

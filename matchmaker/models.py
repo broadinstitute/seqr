@@ -1,9 +1,14 @@
+from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.contrib.auth.models import User
 from django.db.models import JSONField
 
 from seqr.models import ModelWithGUID, Individual
-from settings import MME_DEFAULT_CONTACT_NAME, MME_DEFAULT_CONTACT_HREF
+from settings import MME_DEFAULT_CONTACT_NAME, MME_DEFAULT_CONTACT_EMAIL
+
+
+def get_mme_contact_default():
+    return [{'name': MME_DEFAULT_CONTACT_NAME, 'email': MME_DEFAULT_CONTACT_EMAIL}]
 
 
 class MatchmakerSubmission(ModelWithGUID):
@@ -17,8 +22,7 @@ class MatchmakerSubmission(ModelWithGUID):
 
     submission_id = models.CharField(max_length=255, db_index=True, unique=True)
     label = models.CharField(max_length=255, null=True, blank=True)
-    contact_name = models.TextField(default=MME_DEFAULT_CONTACT_NAME)
-    contact_href = models.TextField(default=MME_DEFAULT_CONTACT_HREF)
+    contacts = ArrayField(models.JSONField(), default=get_mme_contact_default)
     features = JSONField(null=True)
 
     deleted_date = models.DateTimeField(null=True)
