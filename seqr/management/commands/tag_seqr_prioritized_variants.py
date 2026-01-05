@@ -112,6 +112,25 @@ PASS_QUALITY_FILTER = {
     'vcf_filter': 'PASS',
 }
 
+CONFIRMED_HIGH_SPLICE_AI_SEARCH = {
+    'family_filter': {
+        CONFIRMED_FAMILY_FILTER: True
+    },
+    'in_silico': {
+        'splice_ai': 0.5,
+        'requireScore': True
+    },
+}
+HIGH_SPLICE_AI_SEARCH = {
+    'family_filter': {
+        CONFIRMED_FAMILY_FILTER: False
+    },
+    'in_silico': {
+        'splice_ai': 0.8,
+        'requireScore': True
+    },
+}
+
 CLINVAR_RECESSIVE_SEARCH = {
     'gene_list_moi': RECESSIVE_MOI,
     'pathogenicity': CLINVAR_FILTER,
@@ -234,22 +253,23 @@ SEARCHES = {
             },
             **DE_NOVO_SEARCH,
         },
-        'High Splice AI': {
-            'in_silico': {
-                'splice_ai': 0.8,
-                'requireScore': True
-            },
+        'High Splice AI - De Novo/ Dominant': {
+            **HIGH_SPLICE_AI_SEARCH,
             **DE_NOVO_SEARCH,
         },
-        'High Splice AI - Confirmed De Novo': {
-'           family_filter': {
-                CONFIRMED_FAMILY_FILTER: True,
-            },
-            'in_silico': {
-                'splice_ai': 0.5,
-                'requireScore': True
-            },
+        'High Splice AI - De Novo': {
+            **CONFIRMED_HIGH_SPLICE_AI_SEARCH,
             **DE_NOVO_SEARCH,
+        },
+        'High Splice AI - Recessive': {
+            'inheritance_mode': HOMOZYGOUS_RECESSIVE,
+            **HIGH_SPLICE_AI_SEARCH,
+            **RECESSIVE_SEARCH,
+        },
+        'High Splice AI - Recessive Confirmed': {
+            'inheritance_mode': HOMOZYGOUS_RECESSIVE,
+            **CONFIRMED_HIGH_SPLICE_AI_SEARCH,
+            **RECESSIVE_SEARCH,
         },
         'Recessive': {
             'inheritance_mode': HOMOZYGOUS_RECESSIVE,
