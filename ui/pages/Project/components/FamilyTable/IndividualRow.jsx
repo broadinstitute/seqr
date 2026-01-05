@@ -8,7 +8,7 @@ import { Label, Popup, Form, Input, Loader } from 'semantic-ui-react'
 import orderBy from 'lodash/orderBy'
 
 import { SearchInput, YearSelector, RadioButtonGroup, ButtonRadioGroup, Select } from 'shared/components/form/Inputs'
-import { validators } from 'shared/components/form/FormHelpers'
+import { helpLabel, validators } from 'shared/components/form/FormHelpers'
 import LoadOptionsSelect from 'shared/components/form/LoadOptionsSelect'
 import PedigreeIcon from 'shared/components/icons/PedigreeIcon'
 import Modal from 'shared/components/modal/Modal'
@@ -374,6 +374,14 @@ const INDIVIDUAL_FIELD_RENDER_LOOKUP = {
   maternalEthnicity: ETHNICITY_FIELD,
   paternalEthnicity: ETHNICITY_FIELD,
   population: {
+    headerHelp: (
+      <span>
+        Population imputed using the &nbsp;
+        <a target="_blank" rel="noreferrer" href="https://gnomad.broadinstitute.org/news/2023-11-genetic-ancestry/#genetic-ancestry-inference-in-gnomad">
+          gnomAD ancestry inference algorithm
+        </a>
+      </span>
+    ),
     fieldDisplay: population => POPULATION_MAP[population] || population || 'Not Loaded',
   },
   [INDIVIDUAL_FIELD_FEATURES]: { formFields: HPO_FORM_FIELDS },
@@ -395,9 +403,10 @@ const INDIVIDUAL_FIELD_RENDER_LOOKUP = {
 
 const INDIVIDUAL_FIELDS = INDIVIDUAL_DETAIL_FIELDS.map(
   ({ field, header, subFields, isEditable, isCollaboratorEditable, isRequiredInternal, isPrivate }) => {
-    const { subFieldsLookup, subFieldProps, ...fieldProps } = INDIVIDUAL_FIELD_RENDER_LOOKUP[field] || {}
+    const { subFieldsLookup, subFieldProps, headerHelp, ...fieldProps } = INDIVIDUAL_FIELD_RENDER_LOOKUP[field] || {}
+    const fieldName = helpLabel(header, headerHelp)
     const coreField = {
-      field, fieldName: header, isEditable, isCollaboratorEditable, isRequiredInternal, isPrivate,
+      field, fieldName, isEditable, isCollaboratorEditable, isRequiredInternal, isPrivate,
     }
     const formattedField = { ...(INDIVIDUAL_FIELD_LOOKUP[field] || {}), ...coreField, ...fieldProps }
     if (subFields) {

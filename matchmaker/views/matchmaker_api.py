@@ -424,12 +424,14 @@ def update_mme_project_contact(request, project_guid):
     if not contact:
         return create_json_response({'error': 'Contact is required'}, status=400)
 
-    submissions = MatchmakerSubmission.objects.filter(individual__family__project=project).exclude(
-        contact_href__contains=contact)
-    for submission in submissions:
-        submission.contact_href = f'{submission.contact_href},{contact}' if submission.contact_href else contact
-        submission.save()
+    submission_ids = []
+    for submission in MatchmakerSubmission.objects.filter(individual__family__project=project):
+        if not any(c.get('email') == contact for c in submission.contacts):
+            submission.contacts.append({'name': '', 'email': contact})
+            submission.save()
+            submission_ids.append(submission.id)
 
+    submissions = MatchmakerSubmission.objects.filter(id__in=submission_ids)
     return create_json_response({
         'mmeSubmissionsByGuid': {s['submissionGuid']: s for s in get_json_for_matchmaker_submissions(submissions)},
     })
@@ -549,7 +551,7 @@ def _generate_notification_for_seqr_match(submission, results):
         host=BASE_URL, project_guid=project.guid, family_guid=submission.individual.family.guid,
     )
     safe_post_to_slack(MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL, message)
-    emails = [s.strip().split('mailto:')[-1] for s in submission.contact_href.split(',')]
+    emails = [contact['email'] for contact in submission.contacts]
     email_message = EmailMessage(
         subject='New matches found for MME submission {} (project: {})'.format(individual.individual_id, project.name),
         body=message,

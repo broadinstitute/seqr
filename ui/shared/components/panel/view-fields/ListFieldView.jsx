@@ -38,6 +38,13 @@ AddElementButton.propTypes = {
   addElement: PropTypes.func,
 }
 
+export const EDITABLE_LIST_FORM_FIELD_PROPS = {
+  isArrayField: true,
+  addArrayElement: AddElementButton,
+  validate: validators.required,
+  component: RemovableInput,
+}
+
 class ListFieldView extends React.PureComponent {
 
   static propTypes = {
