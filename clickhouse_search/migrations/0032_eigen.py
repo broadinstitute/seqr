@@ -146,7 +146,7 @@ class Migration(migrations.Migration):
                     `score` Decimal(9, 5)
                 """,
                 primary_key="key",
-                source="TABLE `GRCh38/SNV_INDEL/reference_data/eigen/seqr_variants`",
+                source="TABLE `GRCh37/SNV_INDEL/reference_data/eigen/seqr_variants`",
                 layout="FLAT(MAX_ARRAY_SIZE 200000000)"
             ),
             hints={"clickhouse": True},
