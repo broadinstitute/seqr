@@ -16,6 +16,7 @@ AS SELECT
     toUInt32(splitByChar(':', assumeNotNull(locus))[2]) AS pos,
     if(exp_prop_mean IN ('NaN', 'nan', ''), NULL, exp_prop_mean) AS score
 FROM url('https://storage.googleapis.com/gcp-public-data--gnomad/release/4.1/pext/gnomad.pext.gtex_v10.base_level.tsv.gz')
+$condition
 """)
 
 class Migration(migrations.Migration):
@@ -97,6 +98,7 @@ class Migration(migrations.Migration):
             PEXT_VIEW.substitute(
                 mv_header=ALL_VARIANTS_MV_HEADER.substitute(reference_genome="GRCh38", dataset_type="SNV_INDEL", reference_dataset="pext"),
                 dataset_type='SNV_INDEL',
+                condition='',
             ),
             hints={'clickhouse': True},
         ),
@@ -104,6 +106,7 @@ class Migration(migrations.Migration):
             PEXT_VIEW.substitute(
                 mv_header=ALL_VARIANTS_MV_HEADER.substitute(reference_genome="GRCh38", dataset_type="MITO", reference_dataset="pext"),
                 dataset_type='MITO',
+                condition="WHERE startsWith(locus, 'chrM')",
             ),
             hints={'clickhouse': True},
         ),
