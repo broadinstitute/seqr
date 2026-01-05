@@ -37,6 +37,11 @@ SV_MATCHES = {
     'SV - Recessive': 1,
     'SV - X-Linked Recessive': 0,
 }
+MITO_MATCHES = {
+    'Mitochondrial - Clinvar Pathogenic': 0,
+    'Mitochondrial - Mitomap Pathogenic': 0,
+    'Mitochondrial - De Novo/ Dominant': 0,
+}
 MULTI_TYPE_MATCHES = {
     'Compound Heterozygous - One SV': 1,
 }
@@ -138,9 +143,13 @@ class CheckNewSamplesTest(ClickhouseSearchTestCase):
         ] + [(f'Found {count} variants for criteria: {criteria}', None) for criteria, count in SNV_INDEL_MATCHES.items()] + [
             ('Searching for prioritized SV_WES variants in 1 families in project 1kg project n\u00e5me with uni\u00e7\u00f8de', None),
         ] + [(f'Found {count} variants for criteria: {criteria}', None) for criteria, count in SV_MATCHES.items()] + [
+            ('Searching for prioritized MITO variants in 1 families in project 1kg project n\u00e5me with uni\u00e7\u00f8de', None),
+        ] + [(f'Found {count} variants for criteria: {criteria}', None) for criteria, count in MITO_MATCHES.items()] + [
             ('Searching for prioritized multi data type variants in 1 families in project 1kg project n\u00e5me with uni\u00e7\u00f8de', None),
         ] + [(f'Found {count} variants for criteria: {criteria}', None) for criteria, count in MULTI_TYPE_MATCHES.items()] +
         model_creation_logs + [(f'  {criteria}: {count} variants', None) for criteria, count in  SNV_INDEL_MATCHES.items()] + [
             (f'  {criteria}: {count} variants', None) for criteria, count in  SV_MATCHES.items()
-        ] + [(f'  {criteria}: {count} variants', None) for criteria, count in  MULTI_TYPE_MATCHES.items()])
+        ] + [(f'  {criteria}: {count} variants', None) for criteria, count in MITO_MATCHES.items()] + [
+            (f'  {criteria}: {count} variants', None) for criteria, count in MULTI_TYPE_MATCHES.items()
+        ])
 

@@ -41,6 +41,7 @@ ALL_SEARCHES_CRITERIA = {
 
 DOMINANT_MOI = 'D'
 RECESSIVE_MOI = 'R'
+MITO_MOI = 'M'
 
 MAX_AFFECTED_FAMILY_FILTER = 'max_affected'
 CONFIRMED_FAMILY_FILTER = 'confirmed_inheritance'
@@ -362,6 +363,41 @@ SEARCHES = {
             **SV_RECESSIVE_SEARCH,
         },
     },
+    'MITO': {
+        'Mitochondrial - Clinvar Pathogenic': {
+            'inheritance_mode': ANY_AFFECTED,
+            'pathogenicity': {'clinvar': CLINVAR_FILTER['clinvar']},
+            'freqs': {
+                'gnomad_mito': {'af': 0.002},
+            },
+        },
+        'Mitochondrial - Mitomap Pathogenic': {
+            'inheritance_mode': ANY_AFFECTED,
+            'annotations': {
+                'mitomap_pathogenic': True,
+            },
+            'freqs': {
+                'gnomad_mito': {'af': 0.002},
+            },
+        },
+        'Mitochondrial - De Novo/ Dominant': {
+            'gene_list_moi': MITO_MOI,
+            'inheritance_mode': DE_NOVO,
+            'annotations': HIGH_MODERATE_ANNOTATIONS,
+            'freqs': {
+                'gnomad_mito': {'af': 0.001},
+            },
+            'in_silico': {
+                'apogee': 0.5,
+                'hmtvar': 0.35,
+                'mlc': 0.75,
+            },
+            'qualityFilter': {
+                'min_hl': 5,
+                'min_mitoCn': 250,
+            },
+        },
+    },
 }
 
 MULTI_DATA_TYPE_SEARCHES = {
@@ -639,11 +675,15 @@ class Command(BaseCommand):
                 palocuslistgene__mode_of_inheritance__startswith='X-LINKED',
                 palocuslistgene__mode_of_inheritance__contains='biallelic mutations',
             ),
+            is_mito=Q(
+                palocuslistgene__mode_of_inheritance__startswith='MITOCHONDRIAL'
+            ),
         ).filter(palocuslistgene__confidence_level__in=[
             level for level, name in PaLocusListGene.CONFIDENCE_LEVEL_CHOICES if name in confidences
-        ]).values('gene_id', 'is_dominant', 'is_recessive')
+        ]).values('gene_id', 'is_dominant', 'is_recessive', 'is_mito')
 
         gene_id_mois = {g['gene_id']: g for g in moi_gene_ids}
         genes_by_id = get_genes(gene_id_mois.keys(), genome_version=GENOME_VERSION_GRCh38, additional_model_fields=['id'])
         gene_by_moi[DOMINANT_MOI].update({gene_id: gene for gene_id, gene in genes_by_id.items() if not gene_id_mois[gene_id]['is_recessive']})
         gene_by_moi[RECESSIVE_MOI].update({gene_id: gene for gene_id, gene in genes_by_id.items() if not gene_id_mois[gene_id]['is_dominant']})
+        gene_by_moi[MITO_MOI].update({gene_id: gene for gene_id, gene in genes_by_id.items() if gene_id_mois[gene_id]['is_mito']})
