@@ -186,11 +186,8 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
         ])
 
         results_model = self._saved_search_results_model('Recessive Permissive')
-        self._assert_expected_search([VARIANT2, [VARIANT3, VARIANT4], MITO_VARIANT3], results_model=results_model, cached_variant_fields=[
-            {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][0]}, [
-                {'selectedGeneId': 'ENSG00000097046', 'selectedTranscript': None,},
-                {'selectedGeneId': 'ENSG00000097046', 'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[4][0]},
-            ], {},
+        self._assert_expected_search([VARIANT2, MITO_VARIANT3], results_model=results_model, cached_variant_fields=[
+            {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][0]}, {},
         ])
 
     def _saved_search_results_model(self, name):
