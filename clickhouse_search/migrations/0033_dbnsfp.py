@@ -209,7 +209,7 @@ class Migration(migrations.Migration):
                     `vest` Nullable(Decimal(9, 5))
                 """,
                 primary_key="key",
-                source="TABLE `GRCh38/SNV_INDEL/reference_data/dbnsfp/seqr_variants`",
+                source="TABLE `GRCh37/SNV_INDEL/reference_data/dbnsfp/seqr_variants`",
                 layout="HASHED_ARRAY()"
             ),
             hints={"clickhouse": True},

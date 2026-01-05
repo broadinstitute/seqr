@@ -153,7 +153,7 @@ class Migration(migrations.Migration):
                     `hom` UInt32
                 """,
                 primary_key="key",
-                source="TABLE `GRCh38/SNV_INDEL/reference_data/gnomad_genomes/seqr_variants`",
+                source="TABLE `GRCh37/SNV_INDEL/reference_data/gnomad_genomes/seqr_variants`",
                 layout="FLAT(MAX_ARRAY_SIZE 200000000)"
             ),
             hints={"clickhouse": True},
