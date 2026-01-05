@@ -163,13 +163,13 @@ SEARCHES = {
                 'gnomad_genomes': {'ac': 150},
             },
         },
-        'Clinvar Pathogenic -  Compound Heterozygous': {
+        'Clinvar Pathogenic - Compound Heterozygous': {
             'inheritance_mode': COMPOUND_HET,
             'split_pathogenicity_annotations': True,
             'annotations': HIGH_MODERATE_ANNOTATIONS,
             **CLINVAR_RECESSIVE_SEARCH,
         },
-        'Clinvar Both Pathogenic -  Compound Heterozygous': {
+        'Clinvar Both Pathogenic - Compound Heterozygous': {
             'inheritance_mode': COMPOUND_HET,
             **CLINVAR_RECESSIVE_SEARCH,
         },
