@@ -86,14 +86,7 @@ SV_ANNOTATIONS = {
     'structural_consequence': ['LOF', 'INTRAGENIC_EXON_DUP'],
 }
 
-RESTRICTIVE_FREQ_FILTER = {
-    'callset': {'ac': 100},
-    'gnomad_exomes': {'ac': 100},
-    'gnomad_genomes': {'ac': 100},
-    'sv_callset': {'ac': 100},
-    'gnomad_svs': {'af': 0.001},
-}
-PERMISSIVE_FREQ_FILTER = {
+FREQ_FILTER = {
     'callset': {'ac': 1000},
     'gnomad_exomes': {'af': 0.01, 'hh': 5},
     'gnomad_genomes': {'af': 0.01, 'hh': 5},
@@ -102,8 +95,8 @@ PERMISSIVE_FREQ_FILTER = {
 }
 
 IN_SILICO_FILTER = {
-    'cadd': 25,
-    'revel': 0.6
+    'cadd': 22,
+    'revel': 0.2
 }
 
 QUALITY_FILTER = {
@@ -132,19 +125,25 @@ CLINVAR_RECESSIVE_SEARCH = {
 RECESSIVE_SEARCH = {
     'gene_list_moi': RECESSIVE_MOI,
     'in_silico': IN_SILICO_FILTER,
-    'freqs': PERMISSIVE_FREQ_FILTER,
+    'freqs': FREQ_FILTER,
     'qualityFilter': QUALITY_FILTER,
 }
 SV_RECESSIVE_SEARCH = {
     'gene_list_moi': RECESSIVE_MOI,
     'annotations': SV_ANNOTATIONS,
-    'freqs': PERMISSIVE_FREQ_FILTER,
+    'freqs': FREQ_FILTER,
     'qualityFilter': SV_QUALITY_FILTER,
 }
 
 NO_PANEL_APP_DE_NOVO_SEARCH = {
     'inheritance_mode': DE_NOVO,
-    'freqs': RESTRICTIVE_FREQ_FILTER,
+    'freqs': {
+        'callset': {'ac': 100},
+        'gnomad_exomes': {'ac': 100},
+        'gnomad_genomes': {'ac': 100},
+        'sv_callset': {'ac': 100},
+        'gnomad_svs': {'af': 0.001},
+    },
     'qualityFilter': PASS_QUALITY_FILTER,
 }
 DE_NOVO_SEARCH = {
@@ -158,7 +157,11 @@ SEARCHES = {
             'gene_list_moi': DOMINANT_MOI,
             'inheritance_mode': ANY_AFFECTED,
             'pathogenicity': CLINVAR_FILTER,
-            'freqs': RESTRICTIVE_FREQ_FILTER,
+            'freqs': {
+                'callset': {'ac': 150},
+                'gnomad_exomes': {'ac': 150},
+                'gnomad_genomes': {'ac': 150},
+            },
         },
         'Clinvar Pathogenic -  Compound Heterozygous': {
             'inheritance_mode': COMPOUND_HET,
@@ -238,6 +241,16 @@ SEARCHES = {
             },
             **DE_NOVO_SEARCH,
         },
+        'High Splice AI - Confirmed De Novo': {
+'           family_filter': {
+                CONFIRMED_FAMILY_FILTER: True,
+            },
+            'in_silico': {
+                'splice_ai': 0.5,
+                'requireScore': True
+            },
+            **DE_NOVO_SEARCH,
+        },
         'Recessive': {
             'inheritance_mode': HOMOZYGOUS_RECESSIVE,
             'annotations': HIGH_MODERATE_ANNOTATIONS,
@@ -293,7 +306,7 @@ MULTI_DATA_TYPE_SEARCHES = {
             **HIGH_MODERATE_ANNOTATIONS,
         },
         'in_silico': IN_SILICO_FILTER,
-        'freqs': PERMISSIVE_FREQ_FILTER,
+        'freqs': FREQ_FILTER,
         'qualityFilter': PASS_QUALITY_FILTER,
     },
 }
