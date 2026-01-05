@@ -141,7 +141,7 @@ matchbox on {insertion_date}, with seqr link
             individual_id=individual.individual_id, project_guid=project.guid, project_name=project.name,
             family_guid=individual.family.guid, family_id=individual.family.family_id,
             insertion_date=submission.created_date.strftime('%b %d, %Y'), host=BASE_URL)
-        emails = [email.strip() for email in submission.contact_href.replace('mailto:', '').split(',')]
+        emails = [contact['email'] for contact in submission.contacts]
         send_emails = emails if len(emails) < 2 else [email for email in emails if email!= MME_DEFAULT_CONTACT_EMAIL]
         all_emails.update(send_emails)
         match_results.append((result_text, send_emails, submission.submission_id))

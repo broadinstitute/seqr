@@ -18,22 +18,27 @@ class TransferFamiliesTest(TestCase):
 
         call_command(
             'update_mme_contact', 'UDNCC@hms.harvard.edu', '--replace-email', 'test_user@broadinstitute.org',
+            '--replace-name', 'Test User',
         )
         mock_logger.assert_has_calls([
-            mock.call('Updating 1 submissions'),
+            mock.call('Updated 1 submissions'),
             mock.call('Done'),
         ])
+        expected_contacts = [
+            {'name': '', 'email': 'matchmaker@phenomecentral.org'},
+            {'name': 'Test User', 'email': 'test_user@broadinstitute.org'},
+        ]
         self.assertEqual(
-            MatchmakerSubmission.objects.get(id=3).contact_href,
-            'mailto:test_user@broadinstitute.org,matchmaker@phenomecentral.org',
+            MatchmakerSubmission.objects.get(id=3).contacts, expected_contacts,
         )
 
         mock_logger.reset_mock()
         call_command('update_mme_contact', 'test_user@broadinstitute.org')
         mock_logger.assert_has_calls([
-            mock.call('Updating 2 submissions'),
+            mock.call('Updated 1 submissions'),
+            mock.call('Skipped updating submissions with no remaining valid contacts: P0004515'),
             mock.call('Done'),
         ])
-        self.assertEqual( MatchmakerSubmission.objects.get(id=3).contact_href, 'mailto:matchmaker@phenomecentral.org')
-        self.assertEqual(MatchmakerSubmission.objects.get(id=1).contact_href, 'mailto:matchmaker@broadinstitute.org')
+        self.assertEqual( MatchmakerSubmission.objects.get(id=3).contacts, expected_contacts)
+        self.assertEqual(MatchmakerSubmission.objects.get(id=1).contacts, [{'name': 'Sam Baxter', 'email': 'matchmaker@broadinstitute.org'}])
 

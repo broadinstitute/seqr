@@ -36,7 +36,7 @@ class BaseFieldView extends React.PureComponent {
     modalTitle: PropTypes.string,
     addConfirm: PropTypes.string,
     deleteConfirm: PropTypes.string,
-    fieldName: PropTypes.string,
+    fieldName: PropTypes.node,
     field: PropTypes.string.isRequired,
     idField: PropTypes.string,
     initialValues: PropTypes.object,
@@ -203,7 +203,10 @@ class BaseFieldView extends React.PureComponent {
       ),
       isRequired && <Icon key="required" name="asterisk" size="small" />,
       fieldName && [
-        <b key="name">{`${fieldName}${hasValue ? ':' : ''}`}</b>,
+        <b key="name">
+          {fieldName}
+          {hasValue ? ':' : ''}
+        </b>,
         <HorizontalSpacer key="spacer" width={10} />,
         ...buttons,
         compact && (hasButtons ? <HorizontalSpacer width={10} key="hs" /> : null),

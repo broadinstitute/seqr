@@ -593,8 +593,9 @@ export const getAnalysisStatusCounts = createSelector(
 export const getDefaultMmeSubmission = createSelector(
   getCurrentProject,
   project => ({
-    contactName: project.mmePrimaryDataOwner,
-    contactHref: project.mmeContactUrl,
+    contacts: project.mmeContactUrl.replace('mailto:', '').split(',').map((email, i) => (
+      { email: email.trim(), name: (project.mmePrimaryDataOwner.split(',')[i] || '').trim() }
+    )),
     geneVariants: [],
     phenotypes: [],
   }),
@@ -628,7 +629,7 @@ export const getMmeDefaultContactEmail = createSelector(
   (mmeResultsByGuid, mmeSubmissionsByGuid, genesById, savedVariants, user, matchmakerResultGuid) => {
     const { patient, geneVariants, submissionGuid } = mmeResultsByGuid[matchmakerResultGuid]
     const {
-      geneVariants: submissionGeneVariants, phenotypes, individualGuid, contactHref, submissionId,
+      geneVariants: submissionGeneVariants, phenotypes, individualGuid, contacts, submissionId,
     } = mmeSubmissionsByGuid[submissionGuid]
 
     const submittedGenes = [...new Set((submissionGeneVariants || []).map(
@@ -652,15 +653,15 @@ export const getMmeDefaultContactEmail = createSelector(
     }
     const submittedPhenotypes = submittedPhenotypeList.join(numPhenotypes === 2 ? ' and ' : ', ')
 
-    const contacts = [
+    const emailContacts = [
       patient.contact.href.replace('mailto:', ''),
-      contactHref.replace('mailto:', '').replace('matchmaker@broadinstitute.org,', ''),
+      ...contacts.map(({ email }) => email).filter(email => email !== 'matchmaker@broadinstitute.org'),
       user.email,
     ]
     return {
       matchmakerResultGuid,
       patientId: patient.id,
-      to: contacts.filter(val => val).join(','),
+      to: emailContacts.filter(val => val).join(','),
       subject: `${geneName || `Patient ${patient.id}`} Matchmaker Exchange connection (${submissionId})`,
       body: `Dear ${patient.contact.name},\n\nWe recently matched with one of your patients in Matchmaker Exchange harboring ${(submissionGeneVariants || []).length === 1 ? 'a variant' : 'variants'} in ${submittedGenes.join(', ')}. Our patient has ${submittedVariants}${submittedPhenotypes ? ` and presents with ${submittedPhenotypes}` : ''}. Would you be willing to share whether your patient's phenotype and genotype match with ours? We are very grateful for your help and look forward to hearing more.\n\nBest wishes,\n${user.displayName}`,
     }

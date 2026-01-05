@@ -104,8 +104,7 @@ test('getIndividualTaggedVariants', () => {
 test('getDefaultMmeSubmission', () => {
   const defaultSubmissions = getDefaultMmeSubmission(STATE_WITH_2_FAMILIES)
   expect(defaultSubmissions).toEqual({
-    contactName: 'PI',
-    contactHref: 'test@broadinstitute.org',
+    contacts: [{ email: 'test@broadinstitute.org', name: 'PI' }, { email: 'other_user@broadinstitute.org', name: '' }],
     geneVariants: [],
     phenotypes: [],
   })
