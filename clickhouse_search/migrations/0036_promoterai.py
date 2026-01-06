@@ -21,6 +21,7 @@ AS SELECT
         '-',
         alt
     ) as variantId,
+    gene_id as geneId,
     promoterAI as score
 FROM url('https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh38/promoterAI/promoterAI.tsv.gz')
 """)
@@ -37,6 +38,7 @@ class Migration(migrations.Migration):
             name='PromoterAIAllVariants',
             fields=[
                 ('variant_id', clickhouse_backend.models.StringField(db_column='variantId', primary_key=True, serialize=False)),
+                ('gene_id', clickhouse_backend.models.StringField(db_column='geneId')),
                 ('score', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
             ],
             options={
@@ -52,6 +54,7 @@ class Migration(migrations.Migration):
             name='PromoterAISeqrVariants',
             fields=[
                 ('key', models.OneToOneField(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='clickhouse_search.annotationsmito')),
+                ('gene_id', clickhouse_backend.models.StringField(db_column='geneId')),
                 ('score', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
             ],
             options={
@@ -87,7 +90,7 @@ class Migration(migrations.Migration):
                     `score` Decimal(9, 5)
                 """,
                 primary_key="key",
-                source="TABLE `GRCh38/SNV_INDEL/reference_data/promoterAI/seqr_variants`",
+                source=f"QUERY 'SELECT key, max(score) from {DATABASES['clickhouse_write']['NAME']}.`GRCh38/SNV_INDEL/reference_data/promoterAI/seqr_variants`'",
                 layout="HASHED_ARRAY()"
             ),
             hints={"clickhouse": True},

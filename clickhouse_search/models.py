@@ -1256,6 +1256,7 @@ class Absplice2SeqrVariants(models.ClickhouseModel):
 
 class PromoterAIAllVariants(models.ClickhouseModel):
     variant_id = models.StringField(db_column='variantId', primary_key=True)
+    gene_id = models.StringField(db_column='geneId')
     score = models.DecimalField(max_digits=9, decimal_places=5)
 
     class Meta:
@@ -1267,6 +1268,7 @@ class PromoterAIAllVariants(models.ClickhouseModel):
 
 class PromoterAISeqrVariants(models.ClickhouseModel):
     key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
+    gene_id = models.StringField(db_column='geneId')
     score = models.DecimalField(max_digits=9, decimal_places=5)
 
     class Meta:
