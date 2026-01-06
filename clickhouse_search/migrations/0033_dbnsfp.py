@@ -18,9 +18,10 @@ WITH
 """
 
 DBNSFP_ALL_VARIANTS_MV_GRCh37 = Template("""
-$helper_functions
 $mv_header
-AS SELECT
+AS
+$helper_functions
+SELECT
     concat(
         `hg19_chr`,
         '-',
@@ -48,9 +49,10 @@ SETTINGS input_format_tsv_use_best_effort_in_schema_inference=0
 """)
 
 DBNSFP_ALL_VARIANTS_MV_GRCh38 = Template("""
-$helper_functions
 $mv_header
-AS SELECT
+AS
+$helper_functions
+SELECT
     concat(
         `#chr`,
         '-',
@@ -81,9 +83,10 @@ SETTINGS input_format_tsv_use_best_effort_in_schema_inference=0
 """)
 
 DBNSFP_ALL_VARIANTS_MV_MITO = Template("""
-$helper_functions
 $mv_header
-AS SELECT
+AS
+$helper_functions
+SELECT
     concat(
         `#chr`,
         '-',
