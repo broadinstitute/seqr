@@ -90,7 +90,7 @@ class Migration(migrations.Migration):
                     `score` Decimal(9, 5)
                 """,
                 primary_key="key",
-                source=f"QUERY 'SELECT key, max(score) from {DATABASES['clickhouse_write']['NAME']}.`GRCh38/SNV_INDEL/reference_data/promoterAI/seqr_variants`'",  #nosec B608
+                source=f"QUERY 'SELECT key, max(score) from {DATABASES['clickhouse_write']['NAME']}.`GRCh38/SNV_INDEL/reference_data/promoterAI/seqr_variants` GROUP BY key'",  #nosec B608
                 layout="HASHED_ARRAY()"
             ),
             hints={"clickhouse": True},
