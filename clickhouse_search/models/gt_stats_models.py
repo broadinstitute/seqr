@@ -3,6 +3,8 @@ from django.db.models import OneToOneField, CASCADE
 
 from clickhouse_search.backend.fields import UInt32FieldDeltaCodecField
 from clickhouse_search.backend.table_models import MaterializedView, Dictionary
+from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
+from seqr.models import Sample
 
 
 class BaseProjectGtStats(models.ClickhouseModel):
@@ -301,3 +303,20 @@ class GtStatsDictSv(Dictionary):
         db_table = 'GRCh38/SV/gt_stats_dict'
         source_table = 'GtStatsSv'
         layout = 'FLAT(MAX_ARRAY_SIZE 5000000)'
+
+PROJECT_GT_STATS_VIEW_CLASS_MAP = {
+    GENOME_VERSION_GRCh37: {Sample.DATASET_TYPE_VARIANT_CALLS: ProjectsToGtStatsGRCh37SnvIndel},
+    GENOME_VERSION_GRCh38: {
+        Sample.DATASET_TYPE_VARIANT_CALLS: ProjectsToGtStatsSnvIndel,
+        Sample.DATASET_TYPE_MITO_CALLS: ProjectsToGtStatsMito,
+        Sample.DATASET_TYPE_SV_CALLS: ProjectsToGtStatsSv,
+    },
+}
+GT_STATS_DICT_CLASS_MAP = {
+    GENOME_VERSION_GRCh37: {Sample.DATASET_TYPE_VARIANT_CALLS: GtStatsDictGRCh37SnvIndel},
+    GENOME_VERSION_GRCh38: {
+        Sample.DATASET_TYPE_VARIANT_CALLS: GtStatsDictSnvIndel,
+        Sample.DATASET_TYPE_MITO_CALLS: GtStatsDictMito,
+        Sample.DATASET_TYPE_SV_CALLS: GtStatsDictSv,
+    },
+}

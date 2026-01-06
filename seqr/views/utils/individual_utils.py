@@ -3,7 +3,7 @@ APIs for retrieving, updating, creating, and deleting Individual records
 """
 from collections import defaultdict
 
-from clickhouse_search.models import SexDict
+from clickhouse_search.models.postgres_dicts import SexDict
 from matchmaker.models import MatchmakerSubmission, MatchmakerResult
 from seqr.models import Sample, IgvSample, RnaSample, Individual, Family, FamilyNote
 from seqr.utils.middleware import ErrorsWarningsException

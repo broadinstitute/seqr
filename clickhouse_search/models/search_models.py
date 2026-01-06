@@ -671,37 +671,34 @@ class ProjectPartitionsDict(Dictionary):
         layout = 'HASHED()' # hashed layout supports string keys
 
 
-class AffectedDict(Dictionary):
-    family_guid = models.StringField(primary_key=True)
-    sampleId = models.StringField()
-    affected = models.StringField()
-
-    class Meta:
-        db_table = 'seqrdb_affected_status_dict'
-        engine = models.MergeTree(primary_key=('family_guid', 'sampleId'))
-        layout = 'COMPLEX_KEY_HASHED()'
-        postgres_query = 'select f.guid as family_guid, i.individual_id as sample_id, i.affected FROM seqr_individual i INNER JOIN seqr_family f ON i.family_id = f.id'
-
-
-class SexDict(Dictionary):
-    family_guid = models.StringField(primary_key=True)
-    sampleId = models.StringField()
-    sex = models.StringField()
-
-    class Meta:
-        db_table = 'seqrdb_sex_dict'
-        engine = models.MergeTree(primary_key=('family_guid', 'sampleId'))
-        layout = 'COMPLEX_KEY_HASHED()'
-        postgres_query = 'select f.guid as family_guid, i.individual_id as sample_id, i.sex FROM seqr_individual i INNER JOIN seqr_family f ON i.family_id = f.id'
-
-
-class GeneIdDict(Dictionary):
-    gene_id = models.StringField(primary_key=True)
-    seqrdb_id = models.UInt32Field()
-
-    class Meta:
-        db_table = 'seqrdb_gene_ids'
-        engine = models.MergeTree(primary_key='gene_id')
-        layout = 'HASHED()'
-        postgres_db = 'reference_data'
-        postgres_query = 'SELECT gene_id, id FROM reference_data_geneinfo'
+ENTRY_CLASS_MAP = {
+    GENOME_VERSION_GRCh37: {Sample.DATASET_TYPE_VARIANT_CALLS: EntriesGRCh37SnvIndel},
+    GENOME_VERSION_GRCh38: {
+        Sample.DATASET_TYPE_VARIANT_CALLS: EntriesSnvIndel,
+        Sample.DATASET_TYPE_MITO_CALLS: EntriesMito,
+        f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WGS}': EntriesSv,
+        f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WES}': EntriesGcnv,
+    },
+}
+ANNOTATIONS_CLASS_MAP = {
+    GENOME_VERSION_GRCh37: {Sample.DATASET_TYPE_VARIANT_CALLS: AnnotationsGRCh37SnvIndel},
+    GENOME_VERSION_GRCh38: {
+        Sample.DATASET_TYPE_VARIANT_CALLS: AnnotationsSnvIndel,
+        Sample.DATASET_TYPE_MITO_CALLS: AnnotationsMito,
+        f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WGS}': AnnotationsSv,
+        f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WES}': AnnotationsGcnv,
+    },
+}
+TRANSCRIPTS_CLASS_MAP = {
+    GENOME_VERSION_GRCh37: TranscriptsGRCh37SnvIndel,
+    GENOME_VERSION_GRCh38: TranscriptsSnvIndel,
+}
+KEY_LOOKUP_CLASS_MAP = {
+    GENOME_VERSION_GRCh37: {Sample.DATASET_TYPE_VARIANT_CALLS: KeyLookupGRCh37SnvIndel},
+    GENOME_VERSION_GRCh38: {
+        Sample.DATASET_TYPE_VARIANT_CALLS: KeyLookupSnvIndel,
+        Sample.DATASET_TYPE_MITO_CALLS: KeyLookupMito,
+        f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WGS}': KeyLookupSv,
+        f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WES}': KeyLookupGcnv,
+    },
+}

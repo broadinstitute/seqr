@@ -3,8 +3,6 @@ from django.db.migrations import state
 from django.db.models import options
 
 from clickhouse_search.backend.table_models import MATERIALIZED_VIEW_META_FIELDS, DICTIONARY_META_FIELDS
-from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
-from seqr.models import Sample
 
 options.DEFAULT_NAMES = (
     *options.DEFAULT_NAMES,
@@ -56,88 +54,3 @@ class ClickHouseRouter:
         elif db in {'clickhouse', 'clickhouse_write'}:
             return False
         return None
-
-# Import models here to register them for django management as part of the clickhouse_search app
-
-from clickhouse_search.models.gt_stats_models import (
-    ProjectsToGtStatsGRCh37SnvIndel,
-    ProjectsToGtStatsSnvIndel,
-    ProjectsToGtStatsMito,
-    ProjectsToGtStatsSv,
-    GtStatsDictGRCh37SnvIndel,
-    GtStatsDictSnvIndel,
-    GtStatsDictMito,
-    GtStatsDictSv,
-)
-from clickhouse_search.models.search_models import (
-    AnnotationsGRCh37SnvIndel,
-    AnnotationsMito,
-    AnnotationsSnvIndel,
-    AnnotationsSv,
-    AnnotationsGcnv,
-    EntriesGRCh37SnvIndel,
-    EntriesMito,
-    EntriesSnvIndel,
-    EntriesSv,
-    EntriesGcnv,
-    KeyLookupGRCh37SnvIndel,
-    KeyLookupMito,
-    KeyLookupSnvIndel,
-    KeyLookupSv,
-    KeyLookupGcnv,
-    TranscriptsGRCh37SnvIndel,
-    TranscriptsSnvIndel,
-    ProjectPartitionsSnvIndel,
-    ProjectPartitionsDict,
-    SexDict,
-    AffectedDict,
-    GeneIdDict,
-)
-
-ENTRY_CLASS_MAP = {
-    GENOME_VERSION_GRCh37: {Sample.DATASET_TYPE_VARIANT_CALLS: EntriesGRCh37SnvIndel},
-    GENOME_VERSION_GRCh38: {
-        Sample.DATASET_TYPE_VARIANT_CALLS: EntriesSnvIndel,
-        Sample.DATASET_TYPE_MITO_CALLS: EntriesMito,
-        f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WGS}': EntriesSv,
-        f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WES}': EntriesGcnv,
-    },
-}
-ANNOTATIONS_CLASS_MAP = {
-    GENOME_VERSION_GRCh37: {Sample.DATASET_TYPE_VARIANT_CALLS: AnnotationsGRCh37SnvIndel},
-    GENOME_VERSION_GRCh38: {
-        Sample.DATASET_TYPE_VARIANT_CALLS: AnnotationsSnvIndel,
-        Sample.DATASET_TYPE_MITO_CALLS: AnnotationsMito,
-        f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WGS}': AnnotationsSv,
-        f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WES}': AnnotationsGcnv,
-    },
-}
-TRANSCRIPTS_CLASS_MAP = {
-    GENOME_VERSION_GRCh37: TranscriptsGRCh37SnvIndel,
-    GENOME_VERSION_GRCh38: TranscriptsSnvIndel,
-}
-KEY_LOOKUP_CLASS_MAP = {
-    GENOME_VERSION_GRCh37: {Sample.DATASET_TYPE_VARIANT_CALLS: KeyLookupGRCh37SnvIndel},
-    GENOME_VERSION_GRCh38: {
-        Sample.DATASET_TYPE_VARIANT_CALLS: KeyLookupSnvIndel,
-        Sample.DATASET_TYPE_MITO_CALLS: KeyLookupMito,
-        f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WGS}': KeyLookupSv,
-        f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WES}': KeyLookupGcnv,
-    },
-}
-PROJECT_GT_STATS_VIEW_CLASS_MAP = {
-    GENOME_VERSION_GRCh37: {Sample.DATASET_TYPE_VARIANT_CALLS: ProjectsToGtStatsGRCh37SnvIndel},
-    GENOME_VERSION_GRCh38: {
-        Sample.DATASET_TYPE_VARIANT_CALLS: ProjectsToGtStatsSnvIndel,
-        Sample.DATASET_TYPE_MITO_CALLS: ProjectsToGtStatsMito,
-        Sample.DATASET_TYPE_SV_CALLS: ProjectsToGtStatsSv,
-    },
-}
-GT_STATS_DICT_CLASS_MAP = {
-    GENOME_VERSION_GRCh37: {Sample.DATASET_TYPE_VARIANT_CALLS: GtStatsDictGRCh37SnvIndel},
-    GENOME_VERSION_GRCh38: {
-        Sample.DATASET_TYPE_VARIANT_CALLS: GtStatsDictSnvIndel,
-        Sample.DATASET_TYPE_MITO_CALLS: GtStatsDictMito,
-        Sample.DATASET_TYPE_SV_CALLS: GtStatsDictSv,
-    },
-}
