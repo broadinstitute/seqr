@@ -11,8 +11,9 @@ from clickhouse_search.backend.fields import NamedTupleField
 from clickhouse_search.backend.functions import Array, ArrayFilter, ArrayIntersect, ArraySort, GroupArrayArray, If, Tuple, \
     ArrayMap
 from clickhouse_search.models import ENTRY_CLASS_MAP, ANNOTATIONS_CLASS_MAP, TRANSCRIPTS_CLASS_MAP, KEY_LOOKUP_CLASS_MAP, \
-    PROJECT_GT_STATS_VIEW_CLASS_MAP, GT_STATS_DICT_CLASS_MAP, \
-    BaseClinvar, BaseAnnotationsMitoSnvIndel, BaseAnnotationsGRCh37SnvIndel, BaseAnnotationsSvGcnv
+    PROJECT_GT_STATS_VIEW_CLASS_MAP, GT_STATS_DICT_CLASS_MAP
+from clickhouse_search.models.reference_data_models import BaseClinvar
+from clickhouse_search.models.search_models import BaseAnnotationsMitoSnvIndel, BaseAnnotationsGRCh37SnvIndel, BaseAnnotationsSvGcnv
 from reference_data.models import GeneConstraint, Omim, GENOME_VERSION_LOOKUP
 from seqr.models import Sample, PhenotypePrioritization, Individual
 from seqr.utils.logging_utils import SeqrLogger

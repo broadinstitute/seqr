@@ -6,6 +6,27 @@ MATERIALIZED_VIEW_META_FIELDS = ['to_table', 'source_table', 'source_sql', 'colu
 DICTIONARY_META_FIELDS = ['layout', 'lifetime_max', 'postgres_query', 'postgres_db']
 
 
+class FixtureLoadableClickhouseModel(models.ClickhouseModel):
+
+    def _save_table(
+        self,
+        raw=False,
+        cls=None,
+        force_insert=False,
+        force_update=False,
+        using=None,
+        update_fields=None,
+    ):
+        # loaddata attempts to run an ALTER TABLE to update existing rows, but since primary keys can not be altered
+        # and JOIN tables can not be altered this command fails so need to use the force_insert flag to run an INSERT instead
+        return super()._save_table(
+            raw=raw, cls=cls, force_insert=True, force_update=force_update, using=using, update_fields=update_fields,
+        )
+
+    class Meta:
+        abstract = True
+
+
 class MaterializedView(models.ClickhouseModel):
 
     @classmethod

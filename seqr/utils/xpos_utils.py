@@ -35,6 +35,7 @@ CHROMOSOMES = [
     'M',
 ]
 
+CHROMOSOME_CHOICES = [(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES)]
 CHROM_TO_CHROM_NUMBER = {chrom: i for i, chrom in enumerate(CHROMOSOMES)}
 CHROM_NUMBER_TO_CHROM = {i: chrom for i, chrom in enumerate(CHROMOSOMES)}
 MIN_POS = 1
