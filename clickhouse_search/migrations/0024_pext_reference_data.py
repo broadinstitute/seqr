@@ -136,7 +136,7 @@ class Migration(migrations.Migration):
                 """,
                 primary_key="key",
                 source="TABLE `GRCh38/SNV_INDEL/reference_data/pext/seqr_variants`",
-                layout="RANGE_HASHED()"
+                layout="HASHED_ARRAY()"
             ),
             hints={'clickhouse': True},
         ),
@@ -151,7 +151,7 @@ class Migration(migrations.Migration):
                 """,
                 primary_key="key",
                 source="TABLE `GRCh38/MITO/reference_data/pext/seqr_variants`",
-                layout="RANGE_HASHED()"
+                layout="HASHED_ARRAY()"
             ),
             hints={'clickhouse': True},
         ),
