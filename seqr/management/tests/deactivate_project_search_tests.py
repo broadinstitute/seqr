@@ -6,8 +6,6 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.core.management import call_command
 from django.core.management.base import CommandError
 
-from clickhouse_search.models import EntriesSnvIndel, EntriesMito, EntriesGcnv, ProjectGtStatsSnvIndel, \
-    ProjectGtStatsMito, AnnotationsSnvIndel, AnnotationsMito
 from seqr.models import Sample, Project
 from seqr.views.utils.test_utils import AnvilAuthenticationTestCase, AuthenticationTestCase
 
