@@ -3,19 +3,26 @@ from string import Template
 
 import clickhouse_backend.models
 import clickhouse_search.backend.fields
-from django.db import migrations
+from django.db import migrations, models
 import django.db.models.manager
 
-from clickhouse_search.migration_templates import ALL_VARIANTS_MV_HEADER, conditionally_refresh_reference_dataset, render_search_dictionary
+from clickhouse_search.migration_templates import ALL_TO_SEQR_MV, ALL_VARIANTS_MV_HEADER, conditionally_refresh_reference_dataset, render_search_dictionary
 from settings import DATABASES
 
-PEXT_VIEW = Template("""
+PEXT_ALL_VARIANTS_MV = Template("""
 $mv_header
 AS SELECT
-    replaceOne(splitByChar(':', assumeNotNull(locus))[1], 'chr', '') AS chrom,
-    toUInt32(splitByChar(':', assumeNotNull(locus))[2]) AS pos,
+    concat(
+        replaceOne(splitByChar(':', assumeNotNull(locus))[1], 'chr', ''),
+        '-',
+        splitByChar(':', assumeNotNull(locus))[2],
+        '-',
+        JSONExtractArrayRaw(assumeNotNull(alleles))[1],
+        '-',
+        JSONExtractArrayRaw(assumeNotNull(alleles))[2]
+    ) as variantId,
     if(exp_prop_mean IN ('NaN', 'nan', ''), NULL, exp_prop_mean) AS score
-FROM url('https://storage.googleapis.com/gcp-public-data--gnomad/release/4.1/pext/gnomad.pext.gtex_v10.base_level.tsv.gz')
+FROM url('https://storage.googleapis.com/gcp-public-data--gnomad/release/4.1/pext/gnomad.pext.gtex_v10.annotation_level.tsv.gz')
 $condition
 """)
 
@@ -29,14 +36,12 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='PextAllVariantsSnvIndel',
             fields=[
-                ('chrom', clickhouse_search.backend.fields.Enum8Field(choices=[(1, '1'), (2, '2'), (3, '3'), (4, '4'), (5, '5'), (6, '6'), (7, '7'), (8, '8'), (9, '9'), (10, '10'), (11, '11'), (12, '12'), (13, '13'), (14, '14'), (15, '15'), (16, '16'), (17, '17'), (18, '18'), (19, '19'), (20, '20'), (21, '21'), (22, '22'), (23, 'X'), (24, 'Y'), (25, 'M')], primary_key=True, serialize=False)),
-                ('pos', clickhouse_backend.models.UInt32Field()),
+                ('variant_id', clickhouse_backend.models.StringField(db_column='variantId', primary_key=True, serialize=False)),
                 ('score', clickhouse_backend.models.DecimalField(blank=True, decimal_places=5, max_digits=9, null=True)),
             ],
             options={
                 'db_table': 'GRCh38/SNV_INDEL/reference_data/pext/all_variants',
-                'engine': clickhouse_backend.models.MergeTree(order_by=('chrom', 'pos'), primary_key=('chrom', 'pos')),
-                'unique_together': {('chrom', 'pos')},
+                'engine': clickhouse_backend.models.MergeTree(order_by='variant_id', primary_key='variant_id'),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
@@ -46,14 +51,42 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='PextAllVariantsMito',
             fields=[
-                ('chrom', clickhouse_search.backend.fields.Enum8Field(choices=[(1, 'M')], primary_key=True, serialize=False)),
-                ('pos', clickhouse_backend.models.UInt32Field()),
+                ('variant_id', clickhouse_backend.models.StringField(db_column='variantId', primary_key=True, serialize=False)),
                 ('score', clickhouse_backend.models.DecimalField(blank=True, decimal_places=5, max_digits=9, null=True)),
             ],
             options={
                 'db_table': 'GRCh38/MITO/reference_data/pext/all_variants',
-                'engine': clickhouse_backend.models.MergeTree(order_by=('chrom', 'pos'), primary_key=('chrom', 'pos')),
-                'unique_together': {('chrom', 'pos')},
+                'engine': clickhouse_backend.models.MergeTree(order_by='variant_id', primary_key='variant_id'),
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
+        ),
+        migrations.CreateModel(
+            name='PextSeqrVariantsSnvIndel',
+            fields=[
+                ('key', models.OneToOneField(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='clickhouse_search.annotationssnvindel')),
+                ('score', clickhouse_backend.models.DecimalField(blank=True, decimal_places=5, max_digits=9, null=True)),
+            ],
+            options={
+                'db_table': 'GRCh38/SNV_INDEL/reference_data/pext/seqr_variants',
+                'engine': clickhouse_backend.models.MergeTree(order_by='key', primary_key='key'),
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
+        ),
+        migrations.CreateModel(
+            name='PextSeqrVariantsMito',
+            fields=[
+                ('key', models.OneToOneField(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='clickhouse_search.annotationsmito')),
+                ('score', clickhouse_backend.models.DecimalField(blank=True, decimal_places=5, max_digits=9, null=True)),
+            ],
+            options={
+                'db_table': 'GRCh38/MITO/reference_data/pext/seqr_variants',
+                'engine': clickhouse_backend.models.MergeTree(order_by='key', primary_key='key'),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
@@ -61,19 +94,49 @@ class Migration(migrations.Migration):
             ],
         ),
         migrations.RunSQL(
+            PEXT_ALL_VARIANTS_MV.substitute(
+                mv_header=ALL_VARIANTS_MV_HEADER.substitute(reference_genome="GRCh38", dataset_type="SNV_INDEL", reference_dataset="pext"),
+                dataset_type='SNV_INDEL',
+                condition='WHERE score IS NOT NULL',
+            ),
+            hints={'clickhouse': True},
+        ),
+        migrations.RunSQL(
+            PEXT_ALL_VARIANTS_MV.substitute(
+                mv_header=ALL_VARIANTS_MV_HEADER.substitute(reference_genome="GRCh38", dataset_type="MITO", reference_dataset="pext"),
+                dataset_type='MITO',
+                condition="WHERE score IS NOT NULL AND startsWith(locus, 'chrM')",
+            ),
+            hints={'clickhouse': True},
+        ),
+        migrations.RunSQL(
+            ALL_TO_SEQR_MV.substitute(
+                reference_genome="GRCh38",
+                dataset_type="SNV_INDEL",
+                reference_dataset="pext",
+            ),
+            hints={"clickhouse": True},
+        ),
+        migrations.RunSQL(
+            ALL_TO_SEQR_MV.substitute(
+                reference_genome="GRCh38",
+                dataset_type="MITO",
+                reference_dataset="pext",
+            ),
+            hints={"clickhouse": True},
+        ),
+        migrations.RunSQL(
             render_search_dictionary(
                 reference_genome="GRCh38",
                 dataset_type="SNV_INDEL",
                 reference_dataset="pext",
                 columns="""
-                    chrom String,
-                    start UInt32,
-                    end UInt32,
-                    score Nullable(Decimal(9, 5))
+                    key UInt32,
+                    score Decimal(9, 5)
                 """,
-                primary_key="chrom",
-                source=f"QUERY 'SELECT chrom, pos as start, pos as end, score FROM {DATABASES['clickhouse_write']['NAME']}.`GRCh38/SNV_INDEL/reference_data/pext/all_variants`'", # nosec B608
-                layout="RANGE_HASHED()"
+                primary_key="key",
+                source="TABLE `GRCh38/SNV_INDEL/reference_data/pext/seqr_variants`",
+                layout="HASHED_ARRAY()"
             ),
             hints={'clickhouse': True},
         ),
@@ -83,30 +146,12 @@ class Migration(migrations.Migration):
                 dataset_type="MITO",
                 reference_dataset="pext",
                 columns="""
-                    chrom String,
-                    start UInt32,
-                    end UInt32,
-                    score Nullable(Decimal(9, 5))
+                    key UInt32,
+                    score Decimal(9, 5)
                 """,
-                primary_key="chrom",
-                source=f"QUERY 'SELECT chrom, pos as start, pos as end, score FROM {DATABASES['clickhouse_write']['NAME']}.`GRCh38/MITO/reference_data/pext/all_variants`'", # nosec B608
-                layout="RANGE_HASHED()"
-            ),
-            hints={'clickhouse': True},
-        ),
-        migrations.RunSQL(
-            PEXT_VIEW.substitute(
-                mv_header=ALL_VARIANTS_MV_HEADER.substitute(reference_genome="GRCh38", dataset_type="SNV_INDEL", reference_dataset="pext"),
-                dataset_type='SNV_INDEL',
-                condition='',
-            ),
-            hints={'clickhouse': True},
-        ),
-        migrations.RunSQL(
-            PEXT_VIEW.substitute(
-                mv_header=ALL_VARIANTS_MV_HEADER.substitute(reference_genome="GRCh38", dataset_type="MITO", reference_dataset="pext"),
-                dataset_type='MITO',
-                condition="WHERE startsWith(locus, 'chrM')",
+                primary_key="key",
+                source="TABLE `GRCh38/MITO/reference_data/pext/seqr_variants`",
+                layout="HASHED_ARRAY()"
             ),
             hints={'clickhouse': True},
         ),
