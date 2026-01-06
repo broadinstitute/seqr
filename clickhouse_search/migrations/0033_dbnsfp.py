@@ -343,7 +343,7 @@ class Migration(migrations.Migration):
                 columns="""
                     `key` UInt32,
                     `mut_taster` Nullable(String),
-                    `sift` Nullable(Decimal(9, 5)),
+                    `sift` Nullable(Decimal(9, 5))
                 """,
                 primary_key="key",
                 source="TABLE `GRCh38/MITO/reference_data/dbnsfp/seqr_variants`",
