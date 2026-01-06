@@ -21,7 +21,8 @@ AS SELECT
         alt
     ) as variantId,
     CAST(`Eigen-phred_coding` as Decimal(9, 5)) as score
-FROM gcs('https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh37/dbnsfp/dbNSFP5.3a_grch37.gz', 'TSV')
+FROM gcs('https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh37/dbnsfp/dbNSFP5.3a_grch37.gz', 'TabSeparatedWithNames')
+SETTINGS input_format_tsv_use_best_effort_in_schema_inference=0
 """)
 
 EIGEN_ALL_VARIANTS_MV_GRCh38 = Template("""
@@ -37,7 +38,8 @@ AS SELECT
         alt
     ) as variantId,
     CAST(`Eigen-phred_coding` as Decimal(9, 5)) as score
-FROM gcs('https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh38/dbnsfp/dbNSFP5.3a_grch38.gz', 'TSV')
+FROM gcs('https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh38/dbnsfp/dbNSFP5.3a_grch38.gz', 'TabSeparatedWithNames')
+SETTINGS input_format_tsv_use_best_effort_in_schema_inference=0
 """)
 
 
