@@ -9,6 +9,7 @@ import responses
 from clickhouse_search.models.gt_stats_models import ProjectGtStatsSnvIndel, \
     ProjectsToGtStatsGRCh37SnvIndel, ProjectsToGtStatsSnvIndel, ProjectsToGtStatsMito, ProjectsToGtStatsSv, \
     GtStatsDictGRCh37SnvIndel, GtStatsDictSnvIndel, GtStatsDictMito, GtStatsDictSv
+from clickhouse_search.models.postgres_dicts import AffectedDict, SexDict
 from clickhouse_search.models.reference_data_models import ClinvarMvSnvIndel, ClinvarSearchMvSnvIndel, ClinvarMvMito, \
     ClinvarSearchMvMito, ClinvarMvGRCh37SnvIndel, ClinvarSearchMvGRCh37SnvIndel
 from clickhouse_search.models.search_models import EntriesSnvIndel, AnnotationsSnvIndel

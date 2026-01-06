@@ -10,6 +10,8 @@ from clickhouse_search.backend.fields import NestedField, NamedTupleField
 from clickhouse_search.backend.functions import Array, ArrayConcat, ArrayDistinct, ArrayFilter, ArrayFold, \
     ArrayIntersect, ArrayJoin, ArrayMap, ArraySort, ArraySymmetricDifference, CrossJoin, GroupArray, GroupArrayArray, \
     GroupArrayIntersect, If, MapLookup, NullIf, Plus, SubqueryJoin, SubqueryTable, Tuple, TupleConcat
+from clickhouse_search.models.gt_stats_models import GT_STATS_DICT_CLASS_MAP
+from clickhouse_search.models.postgres_dicts import AffectedDict, SexDict
 from seqr.models import Sample
 from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFECTED, UNAFFECTED, MALE_SEXES, \
     X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, SCREEN_KEY, UTR_ANNOTATOR_KEY, \
@@ -106,7 +108,6 @@ class SearchQuerySet(QuerySet):
             if sub_fields.get('hom'):
                 seqr_pop_fields += [f"{sub_fields['hom']}_{suffix}" for suffix in suffixes]
 
-        from clickhouse_search.models import GT_STATS_DICT_CLASS_MAP  # TODO clean up import once models are split into multiple files
         return GT_STATS_DICT_CLASS_MAP[self.genome_version][self.table_basename.split('/')[1]].dict_get_expression(
             'key',
             seqr_pop_fields,
@@ -940,7 +941,6 @@ class EntriesManager(SearchQuerySet):
 
     @staticmethod
     def _affected_dict_get(sample_id_expression):
-        from clickhouse_search.models import AffectedDict # TODO clean up import once models are split into multiple files
         return AffectedDict.dict_get_sql(key=f'(family_guid, {sample_id_expression})', fields=['affected'], default='U')
 
     def _multi_family_affected_filters(self, sample_data, inheritance_mode, inheritance_filter, genotype_lookup):
@@ -962,7 +962,6 @@ class EntriesManager(SearchQuerySet):
                 sex_map = [
                     f"'{sex}', {gt_map}" for sex in FEMALE_SEXES + [UNAFFECTED]
                 ] + [f"'{sex}', {male_gt_map}" for sex in MALE_SEXES]
-                from clickhouse_search.models import SexDict  # TODO clean up import once models are split into multiple files
                 sex_sql = SexDict.dict_get_sql(key='(family_guid, x.sampleId)', fields=['sex'], default='U')
                 gt_map = f"map({', '.join(sex_map)})[{sex_sql}]"
             gt_filter = (gt_map, f'has({{value}}[{affected_lookup}], ifNull({{field}}, -1))')
