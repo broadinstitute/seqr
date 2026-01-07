@@ -29,7 +29,7 @@ FROM url('https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh38/a
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('clickhouse_search', '0034_mito_all_reference_data'),
+        ('clickhouse_search', '0033_mito_all_reference_data'),
     ]
 
     operations = [

@@ -527,52 +527,6 @@ class SpliceAiSeqrVariantsSnvIndel(BaseSpliceAi):
             order_by=('key'),
         )
 
-class BaseEigen(models.ClickhouseModel):
-    score = models.DecimalField(max_digits=9, decimal_places=5)
-
-    class Meta:
-        abstract = True
-
-class EigenAllVariantsGRCh37SnvIndel(BaseEigen):
-    variant_id = models.StringField(db_column='variantId', primary_key=True)
-
-    class Meta:
-        db_table = 'GRCh37/SNV_INDEL/reference_data/eigen/all_variants'
-        engine = models.MergeTree(
-            primary_key=('variant_id'),
-            order_by=('variant_id'),
-        )
-
-class EigenAllVariantsSnvIndel(BaseEigen):
-    variant_id = models.StringField(db_column='variantId', primary_key=True)
-
-    class Meta:
-        db_table = 'GRCh38/SNV_INDEL/reference_data/eigen/all_variants'
-        engine = models.MergeTree(
-            primary_key=('variant_id'),
-            order_by=('variant_id'),
-        )
-
-class EigenSeqrVariantsGRCh37SnvIndel(BaseEigen):
-    key = OneToOneField('AnnotationsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
-
-    class Meta:
-        db_table = 'GRCh37/SNV_INDEL/reference_data/eigen/seqr_variants'
-        engine = models.MergeTree(
-            primary_key=('key'),
-            order_by=('key'),
-        )
-
-class EigenSeqrVariantsSnvIndel(BaseEigen):
-    key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
-
-    class Meta:
-        db_table = 'GRCh38/SNV_INDEL/reference_data/eigen/seqr_variants'
-        engine = models.MergeTree(
-            primary_key=('key'),
-            order_by=('key'),
-        )
-
 class BaseDbnsfp(models.ClickhouseModel):
     MUTATION_TASTER_PREDICTIONS = [(0, 'D'), (1, 'A'), (2, 'N'), (3, 'P')]
 
