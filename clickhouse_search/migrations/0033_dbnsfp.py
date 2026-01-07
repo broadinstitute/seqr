@@ -8,9 +8,20 @@ import django.db.models.manager
 
 from clickhouse_search.migration_templates import ALL_TO_SEQR_MV, ALL_VARIANTS_MV_HEADER, conditionally_refresh_reference_dataset, render_search_dictionary
 
+HELPER_FUNCTIONS = """
+WITH
+    (field) ->
+        arrayFirst(
+            x -> x != '.',
+            splitByChar(';', assumeNotNull(field))
+        ) AS predictor_parse
+"""
+
 DBNSFP_ALL_VARIANTS_MV_GRCh37 = Template("""
 $mv_header
-AS SELECT
+AS
+$helper_functions
+SELECT
     concat(
         `hg19_chr`,
         '-',
@@ -20,22 +31,28 @@ AS SELECT
         '-',
         alt
     ) as variantId,
-    CAST(`CADD_phred` as Decimal(9, 5)) as cadd,
-    CAST(`fathmm-XF_coding_score` as Decimal(9, 5)) as fathmm,
-    CAST(`MPC_score` as Decimal(9, 5)) as mpc,
-    CAST(`MutPred2_score` as Decimal(9, 5)) as mut_pred,
-    arrayFirst(x -> x != '.', splitByChar(';', assumeNotNull(MutationTaster_pred))) as mut_tester,
-    CAST(`Polyphen2_HVAR_score` as Decimal(9, 5)) as polyphen,
-    CAST(`PrimateAI_score` as Decimal(9, 5)) as primate_ai,
-    CAST(`REVEL_score` as Decimal(9, 5)) as revel,
-    CAST(`SIFT_score` as Decimal(9, 5)) as sift,
-    CAST(`VEST4_score` as Decimal(9, 5)) as vest
-FROM gcs('https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh37/dbnsfp/dbNSFP5.3a_grch37.gz', 'TSV')
+    CAST(`CADD_phred` as Nullable(Decimal(9, 5))) as cadd,
+    CAST(`fathmm-XF_coding_score` as Nullable(Decimal(9, 5))) as fathmm,
+    CAST(predictor_parse(`MPC_score`) as Nullable(Decimal(9, 5))) as mpc,
+    CAST(predictor_parse(`MutPred2_score`) as Nullable(Decimal(9, 5))) as mut_pred,
+    if(predictor_parse(`MutationTaster_pred`) = '', NULL, predictor_parse(`MutationTaster_pred`)) as mut_taster,
+    CAST(predictor_parse(`Polyphen2_HVAR_score`) as Nullable(Decimal(9, 5))) as polyphen,
+    CAST(`PrimateAI_score` as Nullable(Decimal(9, 5))) as primate_ai,
+    CAST(predictor_parse(`REVEL_score`) as Nullable(Decimal(9, 5))) as revel,
+    CAST(predictor_parse(`SIFT_score`) as Nullable(Decimal(9, 5))) as sift,
+    CAST(predictor_parse(`VEST4_score`) as Nullable(Decimal(9, 5))) as vest
+FROM gcs('https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh37/dbnsfp/dbNSFP5.3a_grch37.gz', 'TabSeparatedWithNames')
+WHERE (
+    arrayExists(x -> isNotNull(x), [cadd, fathmm, mpc, mut_pred, polyphen, primate_ai, revel, sift, vest]) OR isNotNull(mut_taster)
+)
+SETTINGS input_format_tsv_use_best_effort_in_schema_inference=0
 """)
 
 DBNSFP_ALL_VARIANTS_MV_GRCh38 = Template("""
 $mv_header
-AS SELECT
+AS
+$helper_functions
+SELECT
     concat(
         `#chr`,
         '-',
@@ -45,17 +62,48 @@ AS SELECT
         '-',
         alt
     ) as variantId,
-    CAST(`CADD_phred` as Decimal(9, 5)) as cadd,
-    CAST(`fathmm-XF_coding_score` as Decimal(9, 5)) as fathmm,
-    CAST(`MPC_score` as Decimal(9, 5)) as mpc,
-    CAST(`MutPred2_score` as Decimal(9, 5)) as mut_pred,
-    arrayFirst(x -> x != '.', splitByChar(';', assumeNotNull(MutationTaster_pred))) as mut_tester,
-    CAST(`Polyphen2_HVAR_score` as Decimal(9, 5)) as polyphen,
-    CAST(`PrimateAI_score` as Decimal(9, 5)) as primate_ai,
-    CAST(`REVEL_score` as Decimal(9, 5)) as revel,
-    CAST(`SIFT_score` as Decimal(9, 5)) as sift,
-    CAST(`VEST4_score` as Decimal(9, 5)) as vest
-FROM gcs('https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh38/dbnsfp/dbNSFP5.3a_grch38.gz', 'TSV')
+    CAST(`CADD_phred` as Nullable(Decimal(9, 5))) as cadd,
+    CAST(`fathmm-XF_coding_score` as Nullable(Decimal(9, 5))) as fathmm,
+    CAST(predictor_parse(`MPC_score`) as Nullable(Decimal(9, 5))) as mpc,
+    CAST(predictor_parse(`MutPred2_score`) as Nullable(Decimal(9, 5))) as mut_pred,
+    if(predictor_parse(`MutationTaster_pred`) = '', NULL, predictor_parse(`MutationTaster_pred`)) as mut_taster,
+    CAST(predictor_parse(`Polyphen2_HVAR_score`) as Nullable(Decimal(9, 5))) as polyphen,
+    CAST(`PrimateAI_score` as Nullable(Decimal(9, 5))) as primate_ai,
+    CAST(predictor_parse(`REVEL_score`) as Nullable(Decimal(9, 5))) as revel,
+    CAST(predictor_parse(`SIFT_score`) as Nullable(Decimal(9, 5))) as sift,
+    CAST(predictor_parse(`VEST4_score`) as Nullable(Decimal(9, 5))) as vest
+FROM gcs('https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh38/dbnsfp/dbNSFP5.3a_grch38.gz', 'TabSeparatedWithNames')
+WHERE 
+    `#chr` != 'M'
+AND 
+    (
+        arrayExists(x -> isNotNull(x), [cadd, fathmm, mpc, mut_pred, polyphen, primate_ai, revel, sift, vest]) OR isNotNull(mut_taster)
+    )
+SETTINGS input_format_tsv_use_best_effort_in_schema_inference=0
+""")
+
+DBNSFP_ALL_VARIANTS_MV_MITO = Template("""
+$mv_header
+AS
+$helper_functions
+SELECT
+    concat(
+        `#chr`,
+        '-',
+        `pos(1-based)`,
+        '-',
+        ref,
+        '-',
+        alt
+    ) as variantId,
+    if(predictor_parse(`MutationTaster_pred`) = '', NULL, predictor_parse(`MutationTaster_pred`)) as mut_taster,
+    CAST(predictor_parse(`SIFT_score`) as Nullable(Decimal(9, 5))) as sift
+FROM gcs('https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh38/dbnsfp/dbNSFP5.3a_grch38.gz', 'TabSeparatedWithNames')
+WHERE 
+    `#chr` = 'M'
+AND 
+    isNotNull(sift) OR isNotNull(mut_taster)
+SETTINGS input_format_tsv_use_best_effort_in_schema_inference=0
 """)
 
 
@@ -74,7 +122,7 @@ class Migration(migrations.Migration):
                 ('fathmm', clickhouse_backend.models.DecimalField(blank=True, decimal_places=5, max_digits=9, null=True)),
                 ('mpc', clickhouse_backend.models.DecimalField(blank=True, decimal_places=5, max_digits=9, null=True)),
                 ('mut_pred', clickhouse_backend.models.DecimalField(blank=True, decimal_places=5, max_digits=9, null=True)),
-                ('mut_tester', clickhouse_backend.models.StringField(blank=True, null=True)),
+                ('mut_taster', clickhouse_backend.models.Enum8Field(blank=True, choices=[(0, 'D'), (1, 'A'), (2, 'N'), (3, 'P')], null=True)),
                 ('polyphen', clickhouse_backend.models.DecimalField(blank=True, decimal_places=5, max_digits=9, null=True)),
                 ('primate_ai', clickhouse_backend.models.DecimalField(blank=True, decimal_places=5, max_digits=9, null=True)),
                 ('revel', clickhouse_backend.models.DecimalField(blank=True, decimal_places=5, max_digits=9, null=True)),
@@ -98,7 +146,7 @@ class Migration(migrations.Migration):
                 ('fathmm', clickhouse_backend.models.DecimalField(blank=True, decimal_places=5, max_digits=9, null=True)),
                 ('mpc', clickhouse_backend.models.DecimalField(blank=True, decimal_places=5, max_digits=9, null=True)),
                 ('mut_pred', clickhouse_backend.models.DecimalField(blank=True, decimal_places=5, max_digits=9, null=True)),
-                ('mut_tester', clickhouse_backend.models.StringField(blank=True, null=True)),
+                ('mut_taster', clickhouse_backend.models.Enum8Field(blank=True, choices=[(0, 'D'), (1, 'A'), (2, 'N'), (3, 'P')], null=True)),
                 ('polyphen', clickhouse_backend.models.DecimalField(blank=True, decimal_places=5, max_digits=9, null=True)),
                 ('primate_ai', clickhouse_backend.models.DecimalField(blank=True, decimal_places=5, max_digits=9, null=True)),
                 ('revel', clickhouse_backend.models.DecimalField(blank=True, decimal_places=5, max_digits=9, null=True)),
@@ -115,6 +163,22 @@ class Migration(migrations.Migration):
             ],
         ),
         migrations.CreateModel(
+            name='DbnsfpAllVariantsMito',
+            fields=[
+                ('variant_id', clickhouse_backend.models.StringField(db_column='variantId', primary_key=True, serialize=False)),
+                ('mut_taster', clickhouse_backend.models.Enum8Field(blank=True, choices=[(0, 'D'), (1, 'A'), (2, 'N'), (3, 'P')], null=True)),
+                ('sift', clickhouse_backend.models.DecimalField(blank=True, decimal_places=5, max_digits=9, null=True)),
+            ],
+            options={
+                'db_table': 'GRCh38/MITO/reference_data/dbnsfp/all_variants',
+                'engine': clickhouse_backend.models.MergeTree(order_by='variant_id', primary_key='variant_id'),
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
+        ),
+        migrations.CreateModel(
             name='DbnsfpSeqrVariantsGRCh37SnvIndel',
             fields=[
                 ('key', models.OneToOneField(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='clickhouse_search.annotationsgrch37snvindel')),
@@ -122,7 +186,7 @@ class Migration(migrations.Migration):
                 ('fathmm', clickhouse_backend.models.DecimalField(blank=True, decimal_places=5, max_digits=9, null=True)),
                 ('mpc', clickhouse_backend.models.DecimalField(blank=True, decimal_places=5, max_digits=9, null=True)),
                 ('mut_pred', clickhouse_backend.models.DecimalField(blank=True, decimal_places=5, max_digits=9, null=True)),
-                ('mut_tester', clickhouse_backend.models.StringField(blank=True, null=True)),
+                ('mut_taster', clickhouse_backend.models.Enum8Field(blank=True, choices=[(0, 'D'), (1, 'A'), (2, 'N'), (3, 'P')], null=True)),
                 ('polyphen', clickhouse_backend.models.DecimalField(blank=True, decimal_places=5, max_digits=9, null=True)),
                 ('primate_ai', clickhouse_backend.models.DecimalField(blank=True, decimal_places=5, max_digits=9, null=True)),
                 ('revel', clickhouse_backend.models.DecimalField(blank=True, decimal_places=5, max_digits=9, null=True)),
@@ -146,7 +210,7 @@ class Migration(migrations.Migration):
                 ('fathmm', clickhouse_backend.models.DecimalField(blank=True, decimal_places=5, max_digits=9, null=True)),
                 ('mpc', clickhouse_backend.models.DecimalField(blank=True, decimal_places=5, max_digits=9, null=True)),
                 ('mut_pred', clickhouse_backend.models.DecimalField(blank=True, decimal_places=5, max_digits=9, null=True)),
-                ('mut_tester', clickhouse_backend.models.StringField(blank=True, null=True)),
+                ('mut_taster', clickhouse_backend.models.Enum8Field(blank=True, choices=[(0, 'D'), (1, 'A'), (2, 'N'), (3, 'P')], null=True)),
                 ('polyphen', clickhouse_backend.models.DecimalField(blank=True, decimal_places=5, max_digits=9, null=True)),
                 ('primate_ai', clickhouse_backend.models.DecimalField(blank=True, decimal_places=5, max_digits=9, null=True)),
                 ('revel', clickhouse_backend.models.DecimalField(blank=True, decimal_places=5, max_digits=9, null=True)),
@@ -162,15 +226,40 @@ class Migration(migrations.Migration):
                 ('_overwrite_base_manager', django.db.models.manager.Manager()),
             ],
         ),
+        migrations.CreateModel(
+            name='DbnsfpSeqrVariantsMito',
+            fields=[
+                ('key', models.OneToOneField(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='clickhouse_search.annotationsmito')),
+                ('mut_taster', clickhouse_backend.models.Enum8Field(blank=True, choices=[(0, 'D'), (1, 'A'), (2, 'N'), (3, 'P')], null=True)),
+                ('sift', clickhouse_backend.models.DecimalField(blank=True, decimal_places=5, max_digits=9, null=True)),
+            ],
+            options={
+                'db_table': 'GRCh38/MITO/reference_data/dbnsfp/seqr_variants',
+                'engine': clickhouse_backend.models.MergeTree(order_by='key', primary_key='key'),
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
+        ),
         migrations.RunSQL(
             DBNSFP_ALL_VARIANTS_MV_GRCh37.substitute(
+                helper_functions=HELPER_FUNCTIONS,
                 mv_header=ALL_VARIANTS_MV_HEADER.substitute(reference_genome="GRCh37", dataset_type="SNV_INDEL", reference_dataset="dbnsfp"),
             ),
             hints={"clickhouse": True},
         ),
         migrations.RunSQL(
             DBNSFP_ALL_VARIANTS_MV_GRCh38.substitute(
+                helper_functions=HELPER_FUNCTIONS,
                 mv_header=ALL_VARIANTS_MV_HEADER.substitute(reference_genome="GRCh38", dataset_type="SNV_INDEL", reference_dataset="dbnsfp"),
+            ),
+            hints={"clickhouse": True},
+        ),
+        migrations.RunSQL(
+            DBNSFP_ALL_VARIANTS_MV_MITO.substitute(
+                helper_functions=HELPER_FUNCTIONS,
+                mv_header=ALL_VARIANTS_MV_HEADER.substitute(reference_genome="GRCh38", dataset_type="MITO", reference_dataset="dbnsfp"),
             ),
             hints={"clickhouse": True},
         ),
@@ -191,6 +280,14 @@ class Migration(migrations.Migration):
             hints={"clickhouse": True},
         ),
         migrations.RunSQL(
+            ALL_TO_SEQR_MV.substitute(
+                reference_genome="GRCh38",
+                dataset_type="MITO",
+                reference_dataset="dbnsfp",
+            ),
+            hints={"clickhouse": True},
+        ),
+        migrations.RunSQL(
             render_search_dictionary(
                 reference_genome="GRCh37",
                 dataset_type="SNV_INDEL",
@@ -201,7 +298,7 @@ class Migration(migrations.Migration):
                     `fathmm` Nullable(Decimal(9, 5)),
                     `mpc` Nullable(Decimal(9, 5)),
                     `mut_pred` Nullable(Decimal(9, 5)),
-                    `mut_tester` Nullable(String),
+                    `mut_taster` Nullable(String),
                     `polyphen` Nullable(Decimal(9, 5)),
                     `primate_ai` Nullable(Decimal(9, 5)),
                     `revel` Nullable(Decimal(9, 5)),
@@ -209,7 +306,7 @@ class Migration(migrations.Migration):
                     `vest` Nullable(Decimal(9, 5))
                 """,
                 primary_key="key",
-                source="TABLE `GRCh38/SNV_INDEL/reference_data/dbnsfp/seqr_variants`",
+                source="TABLE `GRCh37/SNV_INDEL/reference_data/dbnsfp/seqr_variants`",
                 layout="HASHED_ARRAY()"
             ),
             hints={"clickhouse": True},
@@ -225,7 +322,7 @@ class Migration(migrations.Migration):
                     `fathmm` Nullable(Decimal(9, 5)),
                     `mpc` Nullable(Decimal(9, 5)),
                     `mut_pred` Nullable(Decimal(9, 5)),
-                    `mut_tester` Nullable(String),
+                    `mut_taster` Nullable(String),
                     `polyphen` Nullable(Decimal(9, 5)),
                     `primate_ai` Nullable(Decimal(9, 5)),
                     `revel` Nullable(Decimal(9, 5)),
@@ -234,6 +331,22 @@ class Migration(migrations.Migration):
                 """,
                 primary_key="key",
                 source="TABLE `GRCh38/SNV_INDEL/reference_data/dbnsfp/seqr_variants`",
+                layout="HASHED_ARRAY()",
+            ),
+            hints={"clickhouse": True},
+        ),
+        migrations.RunSQL(
+            render_search_dictionary(
+                reference_genome="GRCh38",
+                dataset_type="MITO",
+                reference_dataset="dbnsfp",
+                columns="""
+                    `key` UInt32,
+                    `mut_taster` Nullable(String),
+                    `sift` Nullable(Decimal(9, 5))
+                """,
+                primary_key="key",
+                source="TABLE `GRCh38/MITO/reference_data/dbnsfp/seqr_variants`",
                 layout="HASHED_ARRAY()",
             ),
             hints={"clickhouse": True},

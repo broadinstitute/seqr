@@ -193,11 +193,8 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
         ])
 
         results_model = self._saved_search_results_model('Recessive Permissive')
-        self._assert_expected_search([VARIANT2, [VARIANT3, VARIANT4], MITO_VARIANT3], results_model=results_model, cached_variant_fields=[
-            {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][0]}, [
-                {'selectedGeneId': 'ENSG00000097046', 'selectedTranscript': None,},
-                {'selectedGeneId': 'ENSG00000097046', 'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[4][0]},
-            ], {},
+        self._assert_expected_search([VARIANT2, MITO_VARIANT3], results_model=results_model, cached_variant_fields=[
+            {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][0]}, {},
         ])
 
     def _saved_search_results_model(self, name):
@@ -872,11 +869,11 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
 
         self._reset_search_families()
         self._assert_expected_search(
-            [VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2], freqs={'callset': {'ac': 1000}, 'gnomad_genomes': {'af': 0.03}, 'gnomad_mito': {'af': 0.05}},
+            [VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2], freqs={'callset': {'ac': 1000}, 'gnomad_genomes': {'af': 0.03}, 'gnomad_mito': {'af': 0.005}},
         )
 
         self._assert_expected_search(
-            [VARIANT2, VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2], freqs={'callset': {'ac': 1000}, 'gnomad_genomes': {'af': 0.05, 'hh': 0}, 'gnomad_mito': {'af': 0.05}},
+            [VARIANT2, VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2], freqs={'callset': {'ac': 1000}, 'gnomad_genomes': {'af': 0.05, 'hh': 0}, 'gnomad_mito': {'af': 0.005}},
         )
 
         self._assert_expected_search(
@@ -912,12 +909,12 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
         annotations = {'splice_ai': '0.0'}  # Ensures no variants are filtered out by annotation/path filters
         self._assert_expected_search(
             [VARIANT1, VARIANT4, MITO_VARIANT1],
-            freqs={'gnomad_genomes': {'af': 0.002, 'hh': 10}, 'gnomad_mito': {'af': 0.01}},
+            freqs={'gnomad_genomes': {'af': 0.002, 'hh': 10}, 'gnomad_mito': {'ac': 1000}},
             annotations=annotations, pathogenicity={'clinvar': ['pathogenic', 'likely_pathogenic', 'vus']},
         )
 
         self._assert_expected_search(
-            [VARIANT2, VARIANT4, MITO_VARIANT1], freqs={'gnomad_genomes': {'af': 0.002}, 'gnomad_mito': {'af': 0.01}},
+            [VARIANT2, VARIANT4, MITO_VARIANT1], freqs={'gnomad_genomes': {'af': 0.002}, 'gnomad_mito': {'ac': 1000}},
             annotations=annotations, pathogenicity={'clinvar': ['pathogenic', 'conflicting_p_lp', 'vus']},
         )
 
@@ -1390,7 +1387,7 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
         )
 
         self._assert_expected_search(
-            [MITO_VARIANT1, MITO_VARIANT2, VARIANT4, VARIANT2, VARIANT3, VARIANT1, MITO_VARIANT3, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
+            [MITO_VARIANT1, MITO_VARIANT2, VARIANT4, VARIANT2, VARIANT3, MITO_VARIANT3, VARIANT1, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
             sort='gnomad',
         )
 

@@ -595,6 +595,7 @@ class AnnotationsQuerySet(SearchQuerySet):
         **{field: (f'sorted_{field}_consequences', lambda value, _: ('{field}__array_exists', {
             'consequenceTerms': (value, 'hasAny({value}, {field})'),
         })) for field in [MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY]},
+        'mitomap_pathogenic': ('mitomap_pathogenic', lambda value, _: ('{field}', value)),
     }
 
     def _parse_annotation_filters(self, annotations, pathogenicity):
@@ -746,7 +747,7 @@ class EntriesManager(SearchQuerySet):
 
     @property
     def quality_filters(self):
-        return [config for config in [('gq', 1), ('ab', 100, 'x.gt != 1'), ('qs', 1), ('hl', 100)] if config[0] in self.call_fields]
+        return [config for config in [('gq', 1), ('ab', 100, 'x.gt != 1'), ('qs', 1), ('hl', 100), ('mitoCn', 1)] if config[0] in self.call_fields]
 
     @property
     def single_sample_type(self):
