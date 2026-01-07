@@ -136,7 +136,7 @@ WHERE variantId NOT LIKE '%--'
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("clickhouse_search", "0033_dbnsfp"),
+        ("clickhouse_search", "0032_dbnsfp"),
     ]
 
     operations = [
