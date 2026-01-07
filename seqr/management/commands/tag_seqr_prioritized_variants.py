@@ -41,6 +41,7 @@ ALL_SEARCHES_CRITERIA = {
 
 DOMINANT_MOI = 'D'
 RECESSIVE_MOI = 'R'
+MITO_MOI = 'M'
 
 MAX_AFFECTED_FAMILY_FILTER = 'max_affected'
 CONFIRMED_FAMILY_FILTER = 'confirmed_inheritance'
@@ -86,14 +87,7 @@ SV_ANNOTATIONS = {
     'structural_consequence': ['LOF', 'INTRAGENIC_EXON_DUP'],
 }
 
-RESTRICTIVE_FREQ_FILTER = {
-    'callset': {'ac': 100},
-    'gnomad_exomes': {'ac': 100},
-    'gnomad_genomes': {'ac': 100},
-    'sv_callset': {'ac': 100},
-    'gnomad_svs': {'af': 0.001},
-}
-PERMISSIVE_FREQ_FILTER = {
+FREQ_FILTER = {
     'callset': {'ac': 1000},
     'gnomad_exomes': {'af': 0.01, 'hh': 5},
     'gnomad_genomes': {'af': 0.01, 'hh': 5},
@@ -102,8 +96,8 @@ PERMISSIVE_FREQ_FILTER = {
 }
 
 IN_SILICO_FILTER = {
-    'cadd': 25,
-    'revel': 0.6
+    'cadd': 22,
+    'revel': 0.2
 }
 
 QUALITY_FILTER = {
@@ -119,6 +113,25 @@ PASS_QUALITY_FILTER = {
     'vcf_filter': 'PASS',
 }
 
+CONFIRMED_HIGH_SPLICE_AI_SEARCH = {
+    'family_filter': {
+        CONFIRMED_FAMILY_FILTER: True
+    },
+    'in_silico': {
+        'splice_ai': 0.5,
+        'requireScore': True
+    },
+}
+HIGH_SPLICE_AI_SEARCH = {
+    'family_filter': {
+        CONFIRMED_FAMILY_FILTER: False
+    },
+    'in_silico': {
+        'splice_ai': 0.8,
+        'requireScore': True
+    },
+}
+
 CLINVAR_RECESSIVE_SEARCH = {
     'gene_list_moi': RECESSIVE_MOI,
     'pathogenicity': CLINVAR_FILTER,
@@ -129,22 +142,31 @@ CLINVAR_RECESSIVE_SEARCH = {
     },
 }
 
-RECESSIVE_SEARCH = {
+RECESSIVE_SEARCH_NO_IN_SILICO = {
     'gene_list_moi': RECESSIVE_MOI,
-    'in_silico': IN_SILICO_FILTER,
-    'freqs': PERMISSIVE_FREQ_FILTER,
+    'freqs': FREQ_FILTER,
     'qualityFilter': QUALITY_FILTER,
+}
+RECESSIVE_SEARCH = {
+    **RECESSIVE_SEARCH_NO_IN_SILICO,
+    'in_silico': IN_SILICO_FILTER,
 }
 SV_RECESSIVE_SEARCH = {
     'gene_list_moi': RECESSIVE_MOI,
     'annotations': SV_ANNOTATIONS,
-    'freqs': PERMISSIVE_FREQ_FILTER,
+    'freqs': FREQ_FILTER,
     'qualityFilter': SV_QUALITY_FILTER,
 }
 
 NO_PANEL_APP_DE_NOVO_SEARCH = {
     'inheritance_mode': DE_NOVO,
-    'freqs': RESTRICTIVE_FREQ_FILTER,
+    'freqs': {
+        'callset': {'ac': 100},
+        'gnomad_exomes': {'ac': 100},
+        'gnomad_genomes': {'ac': 100},
+        'sv_callset': {'ac': 100},
+        'gnomad_svs': {'af': 0.001},
+    },
     'qualityFilter': PASS_QUALITY_FILTER,
 }
 DE_NOVO_SEARCH = {
@@ -158,15 +180,19 @@ SEARCHES = {
             'gene_list_moi': DOMINANT_MOI,
             'inheritance_mode': ANY_AFFECTED,
             'pathogenicity': CLINVAR_FILTER,
-            'freqs': RESTRICTIVE_FREQ_FILTER,
+            'freqs': {
+                'callset': {'ac': 150},
+                'gnomad_exomes': {'ac': 150},
+                'gnomad_genomes': {'ac': 150},
+            },
         },
-        'Clinvar Pathogenic -  Compound Heterozygous': {
+        'Clinvar Pathogenic - Compound Heterozygous': {
             'inheritance_mode': COMPOUND_HET,
             'split_pathogenicity_annotations': True,
             'annotations': HIGH_MODERATE_ANNOTATIONS,
             **CLINVAR_RECESSIVE_SEARCH,
         },
-        'Clinvar Both Pathogenic -  Compound Heterozygous': {
+        'Clinvar Both Pathogenic - Compound Heterozygous': {
             'inheritance_mode': COMPOUND_HET,
             **CLINVAR_RECESSIVE_SEARCH,
         },
@@ -201,6 +227,48 @@ SEARCHES = {
             'annotations': MODERATE_ANNOTATIONS,
             **RECESSIVE_SEARCH,
         },
+        'Compound Heterozygous - Both High Splice AI': {
+            'inheritance_mode': COMPOUND_HET,
+            **HIGH_SPLICE_AI_SEARCH,
+            **RECESSIVE_SEARCH_NO_IN_SILICO,
+        },
+        'Compound Heterozygous - Both High Splice AI - Confirmed': {
+            'inheritance_mode': COMPOUND_HET,
+            **CONFIRMED_HIGH_SPLICE_AI_SEARCH,
+            **RECESSIVE_SEARCH_NO_IN_SILICO,
+        },
+        'Compound Heterozygous - High Splice AI': {
+            'family_filter': {
+                CONFIRMED_FAMILY_FILTER: False
+            },
+            'inheritance_mode': COMPOUND_HET,
+            'no_secondary_annotations': True,
+            'annotations': HIGH_MODERATE_ANNOTATIONS,
+            'annotations_secondary':{
+                'splice_ai': 0.8,
+            },
+            'in_silico': {
+                **IN_SILICO_FILTER,
+                'splice_ai': 0.8,
+            },
+            **RECESSIVE_SEARCH_NO_IN_SILICO,
+        },
+        'Compound Heterozygous - High Splice AI - Confirmed': {
+            'family_filter': {
+                CONFIRMED_FAMILY_FILTER: True
+            },
+            'inheritance_mode': COMPOUND_HET,
+            'no_secondary_annotations': True,
+            'annotations': HIGH_MODERATE_ANNOTATIONS,
+            'annotations_secondary':{
+                'splice_ai': 0.5,
+            },
+            'in_silico': {
+                **IN_SILICO_FILTER,
+                'splice_ai': 0.5,
+            },
+            **RECESSIVE_SEARCH_NO_IN_SILICO,
+        },
         'De Novo': {
             'family_filter': {
                 MAX_AFFECTED_FAMILY_FILTER: 1,
@@ -231,12 +299,23 @@ SEARCHES = {
             },
             **DE_NOVO_SEARCH,
         },
-        'High Splice AI': {
-            'in_silico': {
-                'splice_ai': 0.8,
-                'requireScore': True
-            },
+        'High Splice AI - De Novo/ Dominant': {
+            **HIGH_SPLICE_AI_SEARCH,
             **DE_NOVO_SEARCH,
+        },
+        'High Splice AI - De Novo': {
+            **CONFIRMED_HIGH_SPLICE_AI_SEARCH,
+            **DE_NOVO_SEARCH,
+        },
+        'High Splice AI - Recessive': {
+            'inheritance_mode': HOMOZYGOUS_RECESSIVE,
+            **HIGH_SPLICE_AI_SEARCH,
+            **RECESSIVE_SEARCH_NO_IN_SILICO,
+        },
+        'High Splice AI - Recessive Confirmed': {
+            'inheritance_mode': HOMOZYGOUS_RECESSIVE,
+            **CONFIRMED_HIGH_SPLICE_AI_SEARCH,
+            **RECESSIVE_SEARCH_NO_IN_SILICO,
         },
         'Recessive': {
             'inheritance_mode': HOMOZYGOUS_RECESSIVE,
@@ -284,6 +363,35 @@ SEARCHES = {
             **SV_RECESSIVE_SEARCH,
         },
     },
+    'MITO': {
+        'Mitochondrial - Pathogenic': {
+            'inheritance_mode': ANY_AFFECTED,
+            'pathogenicity': {'clinvar': CLINVAR_FILTER['clinvar']},
+            'annotations': {
+                'mitomap_pathogenic': True,
+            },
+            'freqs': {
+                'gnomad_mito': {'af': 0.05},
+            },
+        },
+        'Mitochondrial - De Novo/ Dominant': {
+            'gene_list_moi': MITO_MOI,
+            'inheritance_mode': DE_NOVO,
+            'annotations': HIGH_MODERATE_ANNOTATIONS,
+            'freqs': {
+                'gnomad_mito': {'af': 0.001},
+            },
+            'in_silico': {
+                'apogee': 0.5,
+                'hmtvar': 0.35,
+                'mlc': 0.75,
+            },
+            'qualityFilter': {
+                'min_hl': 5,
+                'min_mitoCn': 250,
+            },
+        },
+    },
 }
 
 MULTI_DATA_TYPE_SEARCHES = {
@@ -293,7 +401,7 @@ MULTI_DATA_TYPE_SEARCHES = {
             **HIGH_MODERATE_ANNOTATIONS,
         },
         'in_silico': IN_SILICO_FILTER,
-        'freqs': PERMISSIVE_FREQ_FILTER,
+        'freqs': FREQ_FILTER,
         'qualityFilter': PASS_QUALITY_FILTER,
     },
 }
@@ -473,7 +581,7 @@ class Command(BaseCommand):
         )
         return cls._execute_comp_het_search(
             queryset, search_name, config_search, family_variant_data, family_guid_map, samples,
-            no_secondary_annotations=config_search.get('split_pathogenicity_annotations'),
+            no_secondary_annotations=config_search.get('split_pathogenicity_annotations') or config_search.get('no_secondary_annotations'),
         )
 
     @classmethod
@@ -561,11 +669,15 @@ class Command(BaseCommand):
                 palocuslistgene__mode_of_inheritance__startswith='X-LINKED',
                 palocuslistgene__mode_of_inheritance__contains='biallelic mutations',
             ),
+            is_mito=Q(
+                palocuslistgene__mode_of_inheritance__startswith='MITOCHONDRIAL'
+            ),
         ).filter(palocuslistgene__confidence_level__in=[
             level for level, name in PaLocusListGene.CONFIDENCE_LEVEL_CHOICES if name in confidences
-        ]).values('gene_id', 'is_dominant', 'is_recessive')
+        ]).values('gene_id', 'is_dominant', 'is_recessive', 'is_mito')
 
         gene_id_mois = {g['gene_id']: g for g in moi_gene_ids}
         genes_by_id = get_genes(gene_id_mois.keys(), genome_version=GENOME_VERSION_GRCh38, additional_model_fields=['id'])
         gene_by_moi[DOMINANT_MOI].update({gene_id: gene for gene_id, gene in genes_by_id.items() if not gene_id_mois[gene_id]['is_recessive']})
         gene_by_moi[RECESSIVE_MOI].update({gene_id: gene for gene_id, gene in genes_by_id.items() if not gene_id_mois[gene_id]['is_dominant']})
+        gene_by_moi[MITO_MOI].update({gene_id: gene for gene_id, gene in genes_by_id.items() if gene_id_mois[gene_id]['is_mito']})
