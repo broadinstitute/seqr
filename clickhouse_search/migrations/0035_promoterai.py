@@ -30,7 +30,7 @@ FROM url('https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh38/p
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('clickhouse_search', '0035_absplice2'),
+        ('clickhouse_search', '0034_absplice2'),
     ]
 
     operations = [

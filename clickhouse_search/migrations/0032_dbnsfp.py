@@ -110,7 +110,7 @@ SETTINGS input_format_tsv_use_best_effort_in_schema_inference=0
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('clickhouse_search', '0032_eigen'),
+        ('clickhouse_search', '0031_splice_ai'),
     ]
 
     operations = [
