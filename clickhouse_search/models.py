@@ -653,30 +653,49 @@ class ClinvarSearchMvMito(BaseClinvarMv):
         source_table = 'ClinvarSeqrVariantsMito'
         source_sql = ''
 class PextAllVariantsSnvIndel(models.ClickhouseModel):
-    chrom = Enum8Field(return_int=False, choices=BaseAnnotations.CHROMOSOME_CHOICES, primary_key=True)
-    pos = models.UInt32Field()
-    score = models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
+    score = models.DecimalField(max_digits=9, decimal_places=5)
 
     class Meta:
-        unique_together = (('chrom', 'pos'),)
         db_table = 'GRCh38/SNV_INDEL/reference_data/pext/all_variants'
         engine = models.MergeTree(
-            primary_key=('chrom', 'pos'),
-            order_by=('chrom', 'pos'),
+            primary_key=('variant_id'),
+            order_by=('variant_id'),
         )
 
 class PextAllVariantsMito(models.ClickhouseModel):
-    chrom = Enum8Field(return_int=False, choices=[(1, 'M')], primary_key=True)
-    pos = models.UInt32Field()
-    score = models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
+    score = models.DecimalField(max_digits=9, decimal_places=5)
 
     class Meta:
-        unique_together = (('chrom', 'pos'),)
         db_table = 'GRCh38/MITO/reference_data/pext/all_variants'
         engine = models.MergeTree(
-            primary_key=('chrom', 'pos'),
-            order_by=('chrom', 'pos'),
+            primary_key=('variant_id'),
+            order_by=('variant_id'),
         )
+
+class PextSeqrVariantsSnvIndel(models.ClickhouseModel):
+    key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+    score = models.DecimalField(max_digits=9, decimal_places=5)
+
+    class Meta:
+        db_table = 'GRCh38/SNV_INDEL/reference_data/pext/seqr_variants'
+        engine = models.MergeTree(
+            primary_key=('key'),
+            order_by=('key'),
+        )
+
+class PextSeqrVariantsMito(models.ClickhouseModel):
+    key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
+    score = models.DecimalField(max_digits=9, decimal_places=5)
+
+    class Meta:
+        db_table = 'GRCh38/MITO/reference_data/pext/seqr_variants'
+        engine = models.MergeTree(
+            primary_key=('key'),
+            order_by=('key'),
+        )
+
 
 class GnomadNonCodingConstraintAllVariantsSnvIndel(models.ClickhouseModel):
     chrom = Enum8Field(return_int=False, choices=BaseAnnotations.CHROMOSOME_CHOICES, primary_key=True)
@@ -1003,11 +1022,13 @@ class EigenSeqrVariantsSnvIndel(BaseEigen):
         )
 
 class BaseDbnsfp(models.ClickhouseModel):
+    MUTATION_TASTER_PREDICTIONS = [(0, 'D'), (1, 'A'), (2, 'N'), (3, 'P')]
+
     cadd = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)
     fathmm = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)
     mpc = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)
     mut_pred = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)
-    mut_tester = models.StringField(blank=True, null=True)
+    mut_taster = models.Enum8Field(null=True, blank=True, return_int=False, choices=MUTATION_TASTER_PREDICTIONS)
     polyphen = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)
     primate_ai = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)
     revel = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)
@@ -1253,6 +1274,35 @@ class MitomapSeqrVariantsMito(models.ClickhouseModel):
             order_by=('key'),
         )
 
+class BaseDbnsfpMito(models.ClickhouseModel):
+    MUTATION_TASTER_PREDICTIONS = [(0, 'D'), (1, 'A'), (2, 'N'), (3, 'P')]
+
+    mut_taster = models.Enum8Field(null=True, blank=True, return_int=False, choices=MUTATION_TASTER_PREDICTIONS)
+    sift = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)
+
+    class Meta:
+        abstract = True
+
+class DbnsfpAllVariantsMito(BaseDbnsfpMito):
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
+
+    class Meta:
+        db_table = 'GRCh38/MITO/reference_data/dbnsfp/all_variants'
+        engine = models.MergeTree(
+            primary_key=('variant_id'),
+            order_by=('variant_id'),
+        )
+
+class DbnsfpSeqrVariantsMito(BaseDbnsfpMito):
+    key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
+
+    class Meta:
+        db_table = 'GRCh38/MITO/reference_data/dbnsfp/seqr_variants'
+        engine = models.MergeTree(
+            primary_key=('key'),
+            order_by=('key'),
+        )
+
 class Absplice2AllVariants(models.ClickhouseModel):
     variant_id = models.StringField(db_column='variantId', primary_key=True)
     score = models.DecimalField(max_digits=9, decimal_places=5)
@@ -1277,6 +1327,7 @@ class Absplice2SeqrVariants(models.ClickhouseModel):
 
 class PromoterAIAllVariants(models.ClickhouseModel):
     variant_id = models.StringField(db_column='variantId', primary_key=True)
+    gene_id = models.StringField(db_column='geneId')
     score = models.DecimalField(max_digits=9, decimal_places=5)
 
     class Meta:
@@ -1288,6 +1339,7 @@ class PromoterAIAllVariants(models.ClickhouseModel):
 
 class PromoterAISeqrVariants(models.ClickhouseModel):
     key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
+    gene_id = models.StringField(db_column='geneId')
     score = models.DecimalField(max_digits=9, decimal_places=5)
 
     class Meta:

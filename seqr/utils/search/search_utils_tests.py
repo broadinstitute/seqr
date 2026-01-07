@@ -71,7 +71,7 @@ class SearchUtilsTests(SearchTestHelper):
         self.assertListEqual(variants, [VARIANT_LOOKUP_VARIANT])
         mock_variant_lookup.assert_called_with(self.user, ('1', 10439, 'AC', 'A'), 'SNV_INDEL', None, '38', True, False)
         cache_key = "variant_lookup_results__1-10439-AC-A__38"
-        self.assert_cached_results(variants, cache_key=cache_key)
+        self.assert_cached_results(variants, cache_key=f'{cache_key}__affected')
 
         mock_variant_lookup.reset_mock()
         self.set_cache(variants)
@@ -96,7 +96,7 @@ class SearchUtilsTests(SearchTestHelper):
         mock_variant_lookup.assert_called_with(
             self.user, 'phase2_DEL_chr14_4640', 'SV', 'WGS', '38', False, True)
         cache_key = 'variant_lookup_results__phase2_DEL_chr14_4640__38'
-        self.assert_cached_results(variants, cache_key=cache_key)
+        self.assert_cached_results(variants, cache_key=f'{cache_key}__hom')
 
         mock_variant_lookup.reset_mock()
         self.set_cache(variants)

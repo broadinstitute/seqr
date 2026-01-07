@@ -73,17 +73,24 @@ def update_rna_seq(request):
     request_json = json.loads(request.body)
 
     airtable_samples = _get_dataset_type_samples_for_matched_pdos(
-        ['RNA ready to load'], request.user, RNA, None, sample_fields=[TISSUE_FIELD], skip_invalid_pdos=True,
+        ['RNA ready to load'], request.user, RNA, None, skip_invalid_pdos=True, sample_fields=[
+            TISSUE_FIELD, 'WESSampleID_RNAMapping', 'WGSSampleID_RNAMapping',
+        ],
     )
-    sample_metadata_mapping = {
-        sample['sample_id']: {
-            'tissue': TISSUE_TYPE_MAP[sample[TISSUE_FIELD][0]],
-            'project_guid': sample['pdos'][0]['project_guid'],
-            'sample_id': sample.get('CollaboratorSampleID') or sample['sample_id'],
-        }
-        for sample in airtable_samples if len(sample[TISSUE_FIELD]) == 1 and len(sample['pdos']) == 1
-    }
-    misconfigured_samples = [s['sample_id'] for s in airtable_samples if s['sample_id'] not in sample_metadata_mapping]
+    sample_metadata_mapping = {}
+    misconfigured_samples = []
+    for sample in airtable_samples:
+        if len(sample[TISSUE_FIELD]) == 1 and len(sample['pdos']) == 1:
+            metadata = {
+                'tissue': TISSUE_TYPE_MAP[sample[TISSUE_FIELD][0]],
+                'project_guid': sample['pdos'][0]['project_guid'],
+                'sample_id': sample.get('CollaboratorSampleID') or sample['sample_id'],
+            }
+            for sample_id_field in ['sample_id', 'WESSampleID_RNAMapping', 'WGSSampleID_RNAMapping']:
+                if sample.get(sample_id_field):
+                    sample_metadata_mapping[sample[sample_id_field]] = metadata
+        else:
+            misconfigured_samples.append(sample['sample_id'])
     if misconfigured_samples:
         logger.warning(f'Skipping samples associated with multiple conflicting PDOs in Airtable: {", ".join(sorted(misconfigured_samples))}', request.user)
 

@@ -460,7 +460,7 @@ AIRTABLE_RNA_SAMPLE_RECORDS = [
     {
         'id': 'recW24C2CJW5lT75K',
         'fields': {
-            'SeqrCollaboratorSampleID': 'NA19675_1',
+            'WESSampleID_RNAMapping': 'NA19675_1',
             'CollaboratorSampleID': 'NA19675_D2',
             'SeqrProject': ['https://seqr.broadinstitute.org/project/R0001_1kg/project_page'],
             'PDOStatus': ['RNA ready to load'],
@@ -945,7 +945,7 @@ class DataManagerAPITest(AirtableTest):
             self.assert_expected_airtable_call(
                 call_index=0,
                 filter_formula="AND(LEN({PassingCollaboratorSampleIDs})>0,LEN({TissueOfOrigin})>0,OR(SEARCH('RNA ready to load',ARRAYJOIN(PDOStatus,';'))))",
-                fields=['CollaboratorSampleID', 'SeqrCollaboratorSampleID', 'PDOStatus', 'SeqrProject', 'TissueOfOrigin'],
+                fields=['CollaboratorSampleID', 'SeqrCollaboratorSampleID', 'PDOStatus', 'SeqrProject', 'TissueOfOrigin', 'WESSampleID_RNAMapping', 'WGSSampleID_RNAMapping'],
             )
 
             return response_json, new_sample_guid
