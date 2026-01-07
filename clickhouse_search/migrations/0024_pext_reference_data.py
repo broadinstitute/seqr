@@ -18,7 +18,7 @@ AS SELECT
         '-',
         JSONExtract(assumeNotNull(alleles), 'Array(String)')[1],
         '-',
-        JSONExtract(assumeNotNull(alleles), 'Array(String)')[2],
+        JSONExtract(assumeNotNull(alleles), 'Array(String)')[2]
     ) as variantId,
     if(exp_prop_mean IN ('NaN', 'nan', ''), NULL, exp_prop_mean) AS score
 FROM url('https://storage.googleapis.com/gcp-public-data--gnomad/release/4.1/pext/gnomad.pext.gtex_v10.annotation_level.tsv.gz')
