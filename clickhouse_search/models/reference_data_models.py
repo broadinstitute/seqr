@@ -7,6 +7,10 @@ from clickhouse_search.backend.table_models import FixtureLoadableClickhouseMode
 from seqr.utils.xpos_utils import CHROMOSOME_CHOICES
 
 
+def _all_variants_to_seqr_source_sql(reference_genome, dataset_type):
+    return f'src INNER JOIN `{reference_genome}/{dataset_type}/key_lookup` dst on assumeNotNull(src.variantId) = dst.variantId'
+
+
 class BaseClinvar(FixtureLoadableClickhouseModel):
 
     CLINVAR_ASSERTIONS = [
@@ -163,7 +167,7 @@ class ClinvarMvGRCh37SnvIndel(BaseClinvarMv):
         db_table = 'GRCh37/SNV_INDEL/reference_data/clinvar/all_variants_to_seqr_variants_mv'
         to_table = 'ClinvarSeqrVariantsGRCh37SnvIndel'
         source_table = 'ClinvarAllVariantsGRCh37SnvIndel'
-        source_sql = 'src INNER JOIN `GRCh37/SNV_INDEL/key_lookup` dst on assumeNotNull(src.variantId) = dst.variantId'
+        source_sql = _all_variants_to_seqr_source_sql('GRCh37', 'SNV_INDEL')
 
 class ClinvarMvSnvIndel(BaseClinvarMv):
 
@@ -171,7 +175,7 @@ class ClinvarMvSnvIndel(BaseClinvarMv):
         db_table = 'GRCh38/SNV_INDEL/reference_data/clinvar/all_variants_to_seqr_variants_mv'
         to_table = 'ClinvarSeqrVariantsSnvIndel'
         source_table = 'ClinvarAllVariantsSnvIndel'
-        source_sql = 'src INNER JOIN `GRCh38/SNV_INDEL/key_lookup` dst on assumeNotNull(src.variantId) = dst.variantId'
+        source_sql = _all_variants_to_seqr_source_sql('GRCh38', 'SNV_INDEL')
 
 class ClinvarMvMito(BaseClinvarMv):
 
@@ -179,7 +183,7 @@ class ClinvarMvMito(BaseClinvarMv):
         db_table = 'GRCh38/MITO/reference_data/clinvar/all_variants_to_seqr_variants_mv'
         to_table = 'ClinvarSeqrVariantsMito'
         source_table = 'ClinvarAllVariantsMito'
-        source_sql = 'src INNER JOIN `GRCh38/MITO/key_lookup` dst on assumeNotNull(src.variantId) = dst.variantId'
+        source_sql = _all_variants_to_seqr_source_sql('GRCh38', 'MITO')
 
 class ClinvarSearchMvGRCh37SnvIndel(BaseClinvarMv):
 
@@ -843,6 +847,24 @@ class PromoterAIAllVariants(models.ClickhouseModel):
             order_by=('variant_id'),
         )
 
+class PromoterAIAllMv(MaterializedView):
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
+    gene_id = models.StringField(db_column='geneId')
+    score = models.DecimalField(max_digits=9, decimal_places=5)
+
+    class Meta:
+        db_table = 'GRCh38/SNV_INDEL/reference_data/promoterAI/all_variants_mv'
+        to_table = 'PromoterAIAllVariants'
+        source_url = 'https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh38/promoterAI/promoterAI.tsv.gz'
+        source_sql = ''
+        column_selects = {
+            'variantId': "concat(replaceOne(replaceOne(chrom, 'chr', ''), 'MT', 'M'), '-', pos, '-', ref, '-', alt)",
+            'geneId': 'gene_id',
+            'score': 'promoterAI,'
+        }
+        refreshable = True
+        create_empty = True
+
 class PromoterAISeqrVariants(models.ClickhouseModel):
     key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
     gene_id = models.StringField(db_column='geneId')
@@ -854,3 +876,19 @@ class PromoterAISeqrVariants(models.ClickhouseModel):
             primary_key=('key'),
             order_by=('key'),
         )
+
+class PromoterAIMv(MaterializedView):
+    key = UInt32FieldDeltaCodecField(primary_key=True)
+    gene_id = models.StringField(db_column='geneId')
+    score = models.DecimalField(max_digits=9, decimal_places=5)
+
+    class Meta:
+        db_table = 'GRCh38/SNV_INDEL/reference_data/promoterAI/all_variants_to_seqr_variants_mv'
+        to_table = 'PromoterAISeqrVariants'
+        source_table = 'PromoterAIAllVariants'
+        source_sql = _all_variants_to_seqr_source_sql('GRCh38', 'SNV_INDEL')
+        column_selects = {
+            'key': 'DISTINCT ON (key)',
+        }
+        refreshable = True
+        create_empty = True

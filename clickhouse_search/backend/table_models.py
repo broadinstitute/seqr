@@ -2,7 +2,9 @@ from clickhouse_backend import models
 from django.db import connections
 from django.db.models import Func
 
-MATERIALIZED_VIEW_META_FIELDS = ['to_table', 'source_table', 'source_sql', 'column_selects', 'refreshable']
+MATERIALIZED_VIEW_META_FIELDS = [
+    'to_table', 'source_table', 'source_sql', 'source_url', 'column_selects', 'refreshable', 'create_empty',
+]
 DICTIONARY_META_FIELDS = ['layout', 'lifetime_max', 'postgres_query', 'postgres_db']
 
 

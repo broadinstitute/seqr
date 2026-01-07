@@ -43,7 +43,9 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
             f'{meta.column_selects[field.column]} {field.column}' if field.column in meta.column_selects else field.column
             for field in meta.local_fields
         ]
-        sql = f'{table_sql} AS SELECT {", ".join(selects)} FROM {self._table_name(meta, meta.source_table)} {meta.source_sql}'  # nosec
+        source_url = getattr(meta, 'source_url', None)
+        source = f"url('{source_url}')" if source_url else self._table_name(meta, meta.source_table)
+        sql = f'{table_sql} AS SELECT {", ".join(selects)} FROM {source} {meta.source_sql}'  # nosec
         self.sql_create_table = original_sql_create_table
         return sql, params
 
@@ -62,6 +64,8 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
         sql = f'TO {self._table_name(model._meta, model._meta.to_table)}'
         if getattr(model._meta, 'refreshable', False):
             sql = 'REFRESH EVERY 10 YEAR ' + sql
+        if getattr(model._meta, 'create_empty', False):
+            sql = sql + ' EMPTY'
         return sql
 
     def _dictionary_sql(self, model):
