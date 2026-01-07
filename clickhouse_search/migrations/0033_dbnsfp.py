@@ -35,7 +35,7 @@ SELECT
     CAST(`fathmm-XF_coding_score` as Nullable(Decimal(9, 5))) as fathmm,
     CAST(predictor_parse(`MPC_score`) as Nullable(Decimal(9, 5))) as mpc,
     CAST(predictor_parse(`MutPred2_score`) as Nullable(Decimal(9, 5))) as mut_pred,
-    predictor_parse(`MutationTaster_pred`) as mut_taster,
+    CAST(predictor_parse(`MutationTaster_pred`) as Nullable(String)) as mut_taster,
     CAST(predictor_parse(`Polyphen2_HVAR_score`) as Nullable(Decimal(9, 5))) as polyphen,
     CAST(`PrimateAI_score` as Nullable(Decimal(9, 5))) as primate_ai,
     CAST(predictor_parse(`REVEL_score`) as Nullable(Decimal(9, 5))) as revel,
