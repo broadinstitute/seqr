@@ -7,7 +7,6 @@ from django.db import migrations, models
 import django.db.models.manager
 
 from clickhouse_search.migration_templates import ALL_TO_SEQR_MV, ALL_VARIANTS_MV_HEADER, conditionally_refresh_reference_dataset, render_search_dictionary
-from settings import DATABASES
 
 PEXT_ALL_VARIANTS_MV = Template("""
 $mv_header
