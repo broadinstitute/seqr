@@ -448,7 +448,7 @@ MITO_VARIANT1 = {
     'familyGuids': ['F000002_2'],
     'genotypes': {'I000004_hg00731': {
         'sampleId': 'HG00731', 'sampleType': 'WES', 'individualGuid': 'I000004_hg00731', 'familyGuid': 'F000002_2',
-        'numAlt': 1, 'dp': 3955, 'hl': 0.083, 'mitoCn': 230, 'contamination': 0.0, 'filters': [],
+        'numAlt': 1, 'dp': 3955, 'hl': 0.083, 'mitoCn': 253, 'contamination': 0.0, 'filters': [],
     }},
     'populations': {
         'seqr': {'ac': 0, 'ac_wes': 0, 'ac_wgs': 0},
