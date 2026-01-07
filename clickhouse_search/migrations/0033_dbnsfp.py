@@ -35,7 +35,7 @@ SELECT
     CAST(`fathmm-XF_coding_score` as Nullable(Decimal(9, 5))) as fathmm,
     CAST(predictor_parse(`MPC_score`) as Nullable(Decimal(9, 5))) as mpc,
     CAST(predictor_parse(`MutPred2_score`) as Nullable(Decimal(9, 5))) as mut_pred,
-    CAST(predictor_parse(`MutationTaster_pred`) as Nullable(String)) as mut_taster,
+    if(predictor_parse(`MutationTaster_pred`) = '', NULL, `MutationTaster_pred`) as mut_taster,
     CAST(predictor_parse(`Polyphen2_HVAR_score`) as Nullable(Decimal(9, 5))) as polyphen,
     CAST(`PrimateAI_score` as Nullable(Decimal(9, 5))) as primate_ai,
     CAST(predictor_parse(`REVEL_score`) as Nullable(Decimal(9, 5))) as revel,
@@ -66,7 +66,7 @@ SELECT
     CAST(`fathmm-XF_coding_score` as Nullable(Decimal(9, 5))) as fathmm,
     CAST(predictor_parse(`MPC_score`) as Nullable(Decimal(9, 5))) as mpc,
     CAST(predictor_parse(`MutPred2_score`) as Nullable(Decimal(9, 5))) as mut_pred,
-    CAST(predictor_parse(`MutationTaster_pred`) as Nullable(String)) as mut_taster,
+    if(predictor_parse(`MutationTaster_pred`) = '', NULL, `MutationTaster_pred`) as mut_taster,
     CAST(predictor_parse(`Polyphen2_HVAR_score`) as Nullable(Decimal(9, 5))) as polyphen,
     CAST(`PrimateAI_score` as Nullable(Decimal(9, 5))) as primate_ai,
     CAST(predictor_parse(`REVEL_score`) as Nullable(Decimal(9, 5))) as revel,
@@ -96,7 +96,7 @@ SELECT
         '-',
         alt
     ) as variantId,
-    CAST(predictor_parse(`MutationTaster_pred`) as Nullable(String)) as mut_taster,
+    if(predictor_parse(`MutationTaster_pred`) = '', NULL, `MutationTaster_pred`) as mut_taster,
     CAST(predictor_parse(`SIFT_score`) as Nullable(Decimal(9, 5))) as sift
 FROM gcs('https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh38/dbnsfp/dbNSFP5.3a_grch38.gz', 'TabSeparatedWithNames')
 WHERE 
