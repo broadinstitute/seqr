@@ -2,7 +2,6 @@
 from string import Template
 
 import clickhouse_backend.models
-import clickhouse_search.backend.fields
 from django.db import migrations, models
 import django.db.models.manager
 
