@@ -559,7 +559,7 @@ MITO_VARIANT3 = {
         'seqr_heteroplasmy': {'ac': 0, 'ac_wes': 0, 'ac_wgs': 0},
         'seqr_affected': {'ac': 1},
         'seqr_heteroplasmy_affected': {'ac': 0},
-        'gnomad_mito': {'af': 0.05534649, 'ac': 3118, 'an': 56336},
+        'gnomad_mito': {'af': 0.00553464, 'ac': 3118, 'an': 56336},
         'gnomad_mito_heteroplasmy': {'af': 0.00005325, 'ac': 3, 'an': 56336, 'max_hl': 1.0},
         'helix': {'af': 0.04884607, 'ac': 9573, 'an': 195983},
         'helix_heteroplasmy': {'af': 0.00009184, 'ac': 18, 'an': 195983, 'max_hl': 0.96269},
