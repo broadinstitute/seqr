@@ -557,13 +557,16 @@ class Command(BaseCommand):
             results_qs = gene_ids_annotated_queryset(results_qs)
             variant_fields += ['familyGenotypes', 'gene_ids']
 
+        require_mane_consequences = config_search.get('annotations', {}).get('vep_consequences')
+        if require_mane_consequences:
+            variant_values['canonical_transcripts'] = cls._valid_field_transcripts_expression('sorted_transcript_consequences', 'canonical')
+
         results = results_qs.values(
             *variant_fields, 'key', 'xpos', 'variant_id', 'familyGuids', **variant_values,
         )
         add_individual_guids(results, samples, encode_genotypes_json=True)
-        require_mane_consequences = config_search.get('annotations', {}).get('vep_consequences')
         if results and require_mane_consequences:
-            allowed_key_genes = cls._valid_gene_keys([v['key'] for v in results], require_mane_consequences)
+            allowed_key_genes = cls._valid_gene_keys({v['key']: v['canonical_transcripts'] for v in results}, require_mane_consequences)
             results = [r for r in results if r['key'] in allowed_key_genes]
 
         for variant in results:
@@ -612,10 +615,13 @@ class Command(BaseCommand):
         primary_consequences = config_search.get('annotations', {}).get('vep_consequences')
         secondary_consequences = config_search.get('annotations_secondary', {}).get('vep_consequences')
         if results and (primary_consequences or secondary_consequences):
-            keys = [v['key'] for pair in results for v in pair]
-            allowed_key_genes = cls._valid_gene_keys(keys, primary_consequences)
+            key_canonical_transcripts = {
+                v['key']: [t for t in v['sortedTranscriptConsequences'] if t['canonical']]
+                for pair in results for v in pair if v.get('sortedTranscriptConsequences')
+            }
+            allowed_key_genes = cls._valid_gene_keys(key_canonical_transcripts, primary_consequences)
             if secondary_consequences:
-                allowed_secondary_key_genes = cls._valid_gene_keys(keys, secondary_consequences)
+                allowed_secondary_key_genes = cls._valid_gene_keys(key_canonical_transcripts, secondary_consequences)
             else:
                 allowed_secondary_key_genes = None if no_secondary_annotations else allowed_key_genes
             results = [
@@ -640,26 +646,34 @@ class Command(BaseCommand):
         return len(results)
 
     @classmethod
-    def _valid_gene_keys(cls, keys, allowed_consequences):
-        primary_genes_by_key = cls._primary_gene_keys('maneSelect', keys, allowed_consequences)
-        missing_keys = set(keys) - set(primary_genes_by_key.keys())
-        if missing_keys:
-            primary_genes_by_key.update(cls._primary_gene_keys('canonical', missing_keys, allowed_consequences))
-        return {key: genes for key, genes in primary_genes_by_key.items() if genes}
-
-    @staticmethod
-    def _primary_gene_keys(primary_field, keys, allowed_consequences):
+    def _valid_gene_keys(cls, key_canonical_transcripts, allowed_consequences):
+        keys = set(key_canonical_transcripts.keys())
         mane_transcripts_by_key = get_transcripts_queryset(GENOME_VERSION_GRCh38, keys).values_list(
-            'key', ArrayMap(
-                ArrayFilter('transcripts', conditions=[{primary_field: (None, 'isNotNull({field})')}]),
-                mapped_expression='tuple(x.consequenceTerms, x.geneId)',
-                output_field=ArrayField(NamedTupleField([('consequenceTerms', ArrayField(StringField())), ('geneId', StringField())])),
-            )
+            'key', cls._valid_field_transcripts_expression('transcripts', 'maneSelect'),
         )
-        return {
-            key: {t['geneId'] for t in mane_transcripts if set(allowed_consequences).intersection(t['consequenceTerms'])}
+        mane_transcript_genes = {
+            key: cls._valid_consequence_genes(mane_transcripts, allowed_consequences)
             for key, mane_transcripts in mane_transcripts_by_key if mane_transcripts
         }
+        missing_keys = keys - set(mane_transcript_genes.keys())
+        mane_transcript_genes.update({
+            key: cls._valid_consequence_genes(key_canonical_transcripts[key], allowed_consequences)
+            for key in missing_keys
+        })
+        return {key: genes for key, genes in mane_transcript_genes.items() if genes}
+
+    @staticmethod
+    def _valid_field_transcripts_expression(expression, field):
+        return ArrayMap(
+            ArrayFilter(expression, conditions=[{field: (None, 'isNotNull({field})')}]),
+            mapped_expression='tuple(x.consequenceTerms, x.geneId)',
+            output_field=ArrayField(
+                NamedTupleField([('consequenceTerms', ArrayField(StringField())), ('geneId', StringField())])),
+        )
+
+    @staticmethod
+    def _valid_consequence_genes(transcripts, allowed_consequences):
+        return {t['geneId'] for t in transcripts if set(allowed_consequences).intersection(t['consequenceTerms'])}
 
     @staticmethod
     def _get_gene_list_genes(name, confidences, gene_by_moi, exclude_gene_ids):
