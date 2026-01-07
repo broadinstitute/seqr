@@ -36,7 +36,7 @@ class Migration(migrations.Migration):
             name='PextAllVariantsSnvIndel',
             fields=[
                 ('variant_id', clickhouse_backend.models.StringField(db_column='variantId', primary_key=True, serialize=False)),
-                ('score', clickhouse_backend.models.DecimalField(blank=True, decimal_places=5, max_digits=9, null=True)),
+                ('score', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
             ],
             options={
                 'db_table': 'GRCh38/SNV_INDEL/reference_data/pext/all_variants',
@@ -51,7 +51,7 @@ class Migration(migrations.Migration):
             name='PextAllVariantsMito',
             fields=[
                 ('variant_id', clickhouse_backend.models.StringField(db_column='variantId', primary_key=True, serialize=False)),
-                ('score', clickhouse_backend.models.DecimalField(blank=True, decimal_places=5, max_digits=9, null=True)),
+                ('score', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
             ],
             options={
                 'db_table': 'GRCh38/MITO/reference_data/pext/all_variants',
@@ -66,7 +66,7 @@ class Migration(migrations.Migration):
             name='PextSeqrVariantsSnvIndel',
             fields=[
                 ('key', models.OneToOneField(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='clickhouse_search.annotationssnvindel')),
-                ('score', clickhouse_backend.models.DecimalField(blank=True, decimal_places=5, max_digits=9, null=True)),
+                ('score', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
             ],
             options={
                 'db_table': 'GRCh38/SNV_INDEL/reference_data/pext/seqr_variants',
@@ -81,7 +81,7 @@ class Migration(migrations.Migration):
             name='PextSeqrVariantsMito',
             fields=[
                 ('key', models.OneToOneField(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='clickhouse_search.annotationsmito')),
-                ('score', clickhouse_backend.models.DecimalField(blank=True, decimal_places=5, max_digits=9, null=True)),
+                ('score', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
             ],
             options={
                 'db_table': 'GRCh38/MITO/reference_data/pext/seqr_variants',

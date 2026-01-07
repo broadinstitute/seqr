@@ -583,7 +583,7 @@ class ClinvarMito(BaseClinvarJoin):
 
 class PextAllVariantsSnvIndel(models.ClickhouseModel):
     variant_id = models.StringField(db_column='variantId', primary_key=True)
-    score = models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)
+    score = models.DecimalField(max_digits=9, decimal_places=5)
 
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/reference_data/pext/all_variants'
@@ -594,7 +594,7 @@ class PextAllVariantsSnvIndel(models.ClickhouseModel):
 
 class PextAllVariantsMito(models.ClickhouseModel):
     variant_id = models.StringField(db_column='variantId', primary_key=True)
-    score = models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)
+    score = models.DecimalField(max_digits=9, decimal_places=5)
 
     class Meta:
         db_table = 'GRCh38/MITO/reference_data/pext/all_variants'
@@ -605,7 +605,7 @@ class PextAllVariantsMito(models.ClickhouseModel):
 
 class PextSeqrVariantsSnvIndel(models.ClickhouseModel):
     key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
-    score = models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)
+    score = models.DecimalField(max_digits=9, decimal_places=5)
 
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/reference_data/pext/seqr_variants'
@@ -616,7 +616,7 @@ class PextSeqrVariantsSnvIndel(models.ClickhouseModel):
 
 class PextSeqrVariantsMito(models.ClickhouseModel):
     key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
-    score = models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)
+    score = models.DecimalField(max_digits=9, decimal_places=5)
 
     class Meta:
         db_table = 'GRCh38/MITO/reference_data/pext/seqr_variants'
