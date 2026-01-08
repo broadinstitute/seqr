@@ -460,7 +460,7 @@ AIRTABLE_RNA_SAMPLE_RECORDS = [
     {
         'id': 'recW24C2CJW5lT75K',
         'fields': {
-            'SeqrCollaboratorSampleID': 'NA19675_1',
+            'WESSampleID_RNAMapping': 'NA19675_1',
             'CollaboratorSampleID': 'NA19675_D2',
             'SeqrProject': ['https://seqr.broadinstitute.org/project/R0001_1kg/project_page'],
             'PDOStatus': ['RNA ready to load'],
@@ -854,7 +854,7 @@ class DataManagerAPITest(AirtableTest):
         _set_file_iter_stdout([header, loaded_data_row])
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'errors': [f'Unable to find matches for the following samples: {loaded_data_row[0]}'], 'warnings': None})
+        self.assertDictEqual(response.json(), {'errors': [f'Unable to find matches for the following samples: {loaded_data_row[0]}', 'No new samples detected'], 'warnings': None})
 
         airtable_sample_records = [
             {
@@ -881,18 +881,24 @@ class DataManagerAPITest(AirtableTest):
             self.assertEqual(response.json()['errors'][0], 'Samples missing required "gene_id": NA19675_D2')
 
         # Test already loaded data
+        _set_file_iter_stdout([header, loaded_data_row])
+        body['file'] = 'gs://rna_data/muscle_samples.tsv.gz'
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['errors'][0], 'No new samples detected')
+
         mock_send_slack.reset_mock()
         mock_subprocess.reset_mock()
         self.reset_logs()
         _set_file_iter_stdout([header, loaded_data_row])
-        body['file'] = 'gs://rna_data/muscle_samples.tsv.gz'
+        body['skipNewSampleValidation'] = True
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         info = [
             'Parsed 1 RNA-seq samples',
             'Attempted data loading for 0 RNA-seq samples in the following 0 projects: ',
         ]
-        warnings = ['Skipped loading for 1 samples already loaded from this file']
+        warnings = ['Skipped loading for 1 samples already loaded from this file', 'No new samples detected']
         self.assertDictEqual(response.json(), {'info': info, 'warnings': warnings, 'sampleGuids': [], 'fileName': mock.ANY})
         self._has_expected_file_loading_logs('gs://rna_data/muscle_samples.tsv.gz', info=info, warnings=warnings, user=self.data_manager_user, include_airtable_logs=True)
         self.assertEqual(model_cls.objects.count(), params['initial_model_count'])
@@ -926,10 +932,11 @@ class DataManagerAPITest(AirtableTest):
                 tissue_type='M', is_active_sample=False,
             )
             self.assertTrue(new_sample_guid in response_json['sampleGuids'])
-            additional_logs = [(f'create {num_created_samples} RnaSamples', {'dbUpdate': {
+
+            additional_logs = (additional_logs or []) + [(f'create {num_created_samples} RnaSamples', {'dbUpdate': {
                 'dbEntity': 'RnaSample', 'updateType': 'bulk_create',
                 'entityIds': response_json['sampleGuids'] if num_created_samples > 1 else [new_sample_guid],
-            }})] + (additional_logs or [])
+            }})]
             self._has_expected_file_loading_logs(
                 'gs://rna_data/new_muscle_samples.tsv.gz', info=info, warnings=warnings, user=self.data_manager_user,
                 additional_logs=additional_logs, additional_logs_offset=6, include_airtable_logs=True)
@@ -938,7 +945,7 @@ class DataManagerAPITest(AirtableTest):
             self.assert_expected_airtable_call(
                 call_index=0,
                 filter_formula="AND(LEN({PassingCollaboratorSampleIDs})>0,LEN({TissueOfOrigin})>0,OR(SEARCH('RNA ready to load',ARRAYJOIN(PDOStatus,';'))))",
-                fields=['CollaboratorSampleID', 'SeqrCollaboratorSampleID', 'PDOStatus', 'SeqrProject', 'TissueOfOrigin'],
+                fields=['CollaboratorSampleID', 'SeqrCollaboratorSampleID', 'PDOStatus', 'SeqrProject', 'TissueOfOrigin', 'WESSampleID_RNAMapping', 'WGSSampleID_RNAMapping'],
             )
 
             return response_json, new_sample_guid

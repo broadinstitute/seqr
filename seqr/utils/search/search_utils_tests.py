@@ -34,7 +34,7 @@ class SearchTestHelper(object):
         self.families = Family.objects.filter(guid__in=['F000003_3', 'F000002_2', 'F000005_5'])
         self.user = User.objects.get(username='test_user')
 
-        self.search_model = VariantSearch.objects.create(search={'inheritance': {'mode': 'de_novo'}})
+        self.search_model = VariantSearch.objects.create(search={'inheritance': {'mode': 'de_novo'}, 'freqs': {'callset': {'ac': 1000}}})
         self.results_model = VariantSearchResults.objects.create(variant_search=self.search_model)
         self.results_model.families.set(self.families)
 
@@ -71,7 +71,7 @@ class SearchUtilsTests(SearchTestHelper):
         self.assertListEqual(variants, [VARIANT_LOOKUP_VARIANT])
         mock_variant_lookup.assert_called_with(self.user, ('1', 10439, 'AC', 'A'), 'SNV_INDEL', None, '38', True, False)
         cache_key = "variant_lookup_results__1-10439-AC-A__38"
-        self.assert_cached_results(variants, cache_key=cache_key)
+        self.assert_cached_results(variants, cache_key=f'{cache_key}__affected')
 
         mock_variant_lookup.reset_mock()
         self.set_cache(variants)
@@ -96,7 +96,7 @@ class SearchUtilsTests(SearchTestHelper):
         mock_variant_lookup.assert_called_with(
             self.user, 'phase2_DEL_chr14_4640', 'SV', 'WGS', '38', False, True)
         cache_key = 'variant_lookup_results__phase2_DEL_chr14_4640__38'
-        self.assert_cached_results(variants, cache_key=cache_key)
+        self.assert_cached_results(variants, cache_key=f'{cache_key}__hom')
 
         mock_variant_lookup.reset_mock()
         self.set_cache(variants)
@@ -135,7 +135,7 @@ class SearchUtilsTests(SearchTestHelper):
         )
         self.assertSetEqual(set(mock_get_variants_for_ids.call_args.args[0]), expected_samples)
 
-    @mock.patch('seqr.utils.search.utils.MAX_FAMILY_COUNTS', {'WES': 2, 'WGS': 1})
+    @mock.patch('seqr.utils.search.utils.MAX_GENES_FOR_FILTER', 2)
     @mock.patch('seqr.utils.search.utils.MAX_NO_LOCATION_COMP_HET_FAMILIES', 1)
     def _test_invalid_search_params(self, search_func):
         with self.assertRaises(InvalidSearchException) as cm:
@@ -156,6 +156,11 @@ class SearchUtilsTests(SearchTestHelper):
         with self.assertRaises(InvalidSearchException) as cm:
             search_func(self.results_model, user=self.user)
         self.assertEqual(str(cm.exception), 'Invalid genes/intervals: chr27:1234-5678, chr2:40-400000000, ENSG00012345')
+
+        self.search_model.search['locus']['rawItems'] = '1:1-1000, 2:2000-3000, 3:4000-5000'
+        with self.assertRaises(InvalidSearchException) as cm:
+            search_func(self.results_model, user=self.user)
+        self.assertEqual(str(cm.exception), 'Too many genes/intervals')
 
         build_specific_genes = 'DDX11L1, OR4F29, ENSG00000223972, ENSG00000256186'
         self.search_model.search['locus']['rawItems'] = build_specific_genes
@@ -256,16 +261,18 @@ class SearchUtilsTests(SearchTestHelper):
         self.assertEqual(str(cm.exception), 'Invalid genes/intervals: OR4F29, ENSG00000256186')
 
     def _test_invalid_no_location_search_params(self):
-        self.results_model.families.set(self.families)
         self.search_model.search['inheritance'] = {}
-        with self.assertRaises(InvalidSearchException) as cm:
-            query_variants(self.results_model)
-        self.assertEqual(str(cm.exception), 'Location must be specified to search across multiple families in large projects')
-
         self.results_model.families.set(Family.objects.filter(id__in=[2, 11]))
         with self.assertRaises(InvalidSearchException) as cm:
             query_variants(self.results_model)
         self.assertEqual(str(cm.exception), 'Location must be specified to search across multiple projects')
+
+        self.search_model.search['freqs'] = {}
+        self.results_model.families.set(self.families)
+        with self.assertRaises(InvalidSearchException) as cm:
+            query_variants(self.results_model)
+        self.assertEqual(str(cm.exception), 'seqr AC frequency of at least 5000 must be specified to search across multiple families')
+
 
     def test_invalid_search_query_variants(self):
         with self.assertRaises(InvalidSearchException) as se:
@@ -300,6 +307,7 @@ class SearchUtilsTests(SearchTestHelper):
             'exclude_locations': exclude_locations,
             'genes': genes,
             'intervals': intervals,
+            'freqs': {'callset': {'ac': 1000}},
         }
         if not genes:
             expected_search.update({
@@ -440,6 +448,7 @@ class SearchUtilsTests(SearchTestHelper):
 
         self.search_model.search = {
             'inheritance': {'mode': 'recessive'}, 'annotations': {'frameshift': ['frameshift_variant']},
+            'freqs': self.search_model.search['freqs'],
         }
         query_variants(self.results_model, user=self.user)
         self._test_expected_search_call(
@@ -479,8 +488,9 @@ class SearchUtilsTests(SearchTestHelper):
         self.search_model.search = {
             'inheritance': {'mode': 'any_affected'},
             'exclude': {'previousSearch': True, 'previousSearchHash': 'abc1234', 'clinvar': ['benign']},
+            'freqs': self.search_model.search['freqs'],
         }
-        previous_search_model = VariantSearch.objects.create(search={'inheritance': {'mode': 'de_novo'}})
+        previous_search_model = VariantSearch.objects.create(search={'inheritance': {'mode': 'de_novo'}, 'freqs': self.search_model.search['freqs']})
         previous_results_model = VariantSearchResults.objects.create(variant_search=previous_search_model, search_hash='abc1234')
         previous_results_model.families.set(self.families)
         query_variants(self.results_model, user=self.user)

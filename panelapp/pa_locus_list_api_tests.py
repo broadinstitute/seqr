@@ -1,18 +1,21 @@
 import json
 from collections import defaultdict
+from datetime import datetime
 
 import mock
 import responses
 import tenacity
-from django.core.management import call_command, CommandError
+from django.core.management import call_command
 from django.urls.base import reverse
 from requests import Response
 from urllib3.exceptions import MaxRetryError
 
 from panelapp.panelapp_utils import _get_all_genes
+from reference_data.management.tests.test_utils import ReferenceDataCommandTestCase
+from reference_data.models import DataVersions
 from seqr.views.apis.locus_list_api import locus_lists, locus_list_info
 from seqr.views.apis.locus_list_api_tests import BaseLocusListAPITest
-from seqr.views.utils.test_utils import AuthenticationTestCase, LOCUS_LIST_FIELDS
+from seqr.views.utils.test_utils import LOCUS_LIST_FIELDS
 
 PROJECT_GUID = 'R0001_1kg'
 
@@ -30,8 +33,8 @@ PA_LOCUS_LIST_DETAIL_FIELDS = {'items', 'intervalGenomeVersion'}
 PA_LOCUS_LIST_DETAIL_FIELDS.update(PA_LOCUS_LIST_FIELDS)
 PA_GENE_FIELDS = {'confidenceLevel', 'modeOfInheritance'}
 
-PANEL_APP_API_URL_AU = 'https://test-panelapp.url.au/api'
-PANEL_APP_API_URL_UK = 'https://test-panelapp.url.uk/api'
+PANEL_APP_API_URL_AU = 'https://panelapp-aus.org/api/v1'
+PANEL_APP_API_URL_UK = 'https://panelapp.genomicsengland.co.uk/api/v1'
 
 
 def _get_json_from_file(filepath):
@@ -41,7 +44,7 @@ def _get_json_from_file(filepath):
     return json.loads(filedata)
 
 
-class PaLocusListAPITest(AuthenticationTestCase, BaseLocusListAPITest):
+class PaLocusListAPITest(ReferenceDataCommandTestCase, BaseLocusListAPITest):
     fixtures = ['users', '1kg_project', 'panelapp', 'reference_data']
 
     EXISTING_LOCUS_LISTS = [EXISTING_AU_PA_LOCUS_LIST_GUID, EXISTING_UK_PA_LOCUS_LIST_GUID, 'LL00005_mendeliome', 'LL00006_incidentalome']
@@ -55,8 +58,13 @@ class PaLocusListAPITest(AuthenticationTestCase, BaseLocusListAPITest):
         fields.update(PA_LOCUS_LIST_FIELDS)
         self.assertSetEqual(set(locus_list.keys()), fields)
 
+    @mock.patch('seqr.utils.communication_utils._post_to_slack')
+    @mock.patch('seqr.models.random.randint')
     @responses.activate
-    def test_import_all_panels(self):
+    def test_import_all_panels(self, mock_random, mock_slack):
+        self.mock_pa_now.return_value = datetime(2025, 4, 7)
+        mock_random.side_effect = [7, 8, 9]
+
         # Given all PanelApp gene lists and associated genes
         au_panels_p1_url = '{}/panels/?page=1'.format(PANEL_APP_API_URL_AU)
         au_panels_p2_url = '{}/panels/?page=2'.format(PANEL_APP_API_URL_AU)
@@ -87,14 +95,8 @@ class PaLocusListAPITest(AuthenticationTestCase, BaseLocusListAPITest):
         responses.add(responses.GET, uk_panels_p1_url, json=uk_panels_p1_json, status=200)
         responses.add(responses.GET, uk_genes_url, json=uk_genes_json, status=200)
 
-        # URl argument is required
-        with self.assertRaises(CommandError) as err:
-            call_command('import_all_panels')
-        self.assertEqual(str(err.exception), 'Error: the following arguments are required: panel_app_url')
-
-        # when import_all_panels()
-        call_command('import_all_panels', PANEL_APP_API_URL_AU)
-        call_command('import_all_panels', PANEL_APP_API_URL_UK, '--label', 'UK')
+        # when import all panels
+        call_command('update_all_reference_data')
 
         # then lists from PanelApp are created
         self._assert_lists_imported()
@@ -123,75 +125,94 @@ class PaLocusListAPITest(AuthenticationTestCase, BaseLocusListAPITest):
         # and has expected logs
         self.assertEqual(len(responses.calls), 7)
         self.assert_json_logs(None, [
-            ('Starting import of all gene lists from Panel App [https://test-panelapp.url.au/api]', None),
-            ('Importing panel id 260', None),
-            ('create LocusList LL00007_hereditary_haemorrhagi', {'dbUpdate': {
+            ('Updating PanelAppAU', None),
+            ('Found 2 new and 0 existing panels to load', None),
+            ('create 2 LocusLists', {'dbUpdate': {
                 'dbEntity': 'LocusList',
-                'entityId': 'LL00007_hereditary_haemorrhagi',
-                'updateType': 'create',
-                'updateFields': ['description', 'is_public', 'name'],
+                'entityIds': ['LL00007_hereditary_haemorrhagi', 'LL00008_hereditary_neuropathy_'],
+                'updateType': 'bulk_create',
             }}),
+            ('Importing panel id 260', None),
             ('update PaLocusList 7', {'dbUpdate': {
                 'dbEntity': 'PaLocusList',
                 'entityId': 7,
                 'updateType': 'update',
-                'updateFields': ['disease_group', 'status', 'url', 'version', 'version_created'],
+                'updateFields': ['disease_group', 'status', 'version', 'version_created'],
             }}),
             ('Bulk updating genes for list Hereditary Haemorrhagic Telangiectasia', None),
             ('Importing panel id 3069', None),
-            ('create LocusList LL00008_hereditary_neuropathy_', {'dbUpdate': {
-                'dbEntity': 'LocusList',
-                'entityId': 'LL00008_hereditary_neuropathy_',
-                'updateType': 'create',
-                'updateFields': ['description', 'is_public', 'name'],
-            }}),
             ('update PaLocusList 8', {'dbUpdate': {
                 'dbEntity': 'PaLocusList',
                 'entityId': 8,
                 'updateType': 'update',
-                'updateFields': ['disease_group', 'status', 'url', 'version', 'version_created'],
+                'updateFields': ['disease_group', 'status', 'version', 'version_created'],
             }}),
             ("Genes found in panel 3069 but not in reference data, ignoring genes ['ENSG00000104728']", {'severity': 'WARNING'}),
             ('Bulk updating genes for list Hereditary Neuropathy_CMT - isolated', None),
-            ('---Done---', None),
-            ('Starting import of all gene lists from Panel App [https://test-panelapp.url.uk/api]', None),
-            ('Importing panel id 260', None),
-            ('create LocusList LL00009_auditory_neuropathy_sp', {'dbUpdate': {
+            ('update 2 LocusLists', {'dbUpdate': {
                 'dbEntity': 'LocusList',
-                'entityId': 'LL00009_auditory_neuropathy_sp',
-                'updateType': 'create',
-                'updateFields': ['description', 'is_public', 'name'],
+                'entityIds': ['LL00007_hereditary_haemorrhagi', 'LL00008_hereditary_neuropathy_'],
+                'updateFields': ['description'],
+                'updateType': 'bulk_update',
             }}),
+            ('Done', None),
+            ('Loaded 2 PanelAppAU records', None),
+            ('Updating PanelAppUK', None),
+            ('Found 1 new and 0 existing panels to load', None),
+            ('create 1 LocusLists', {'dbUpdate': {
+                'dbEntity': 'LocusList',
+                'entityIds': ['LL00009_auditory_neuropathy_sp'],
+                'updateType': 'bulk_create',
+            }}),
+            ('Importing panel id 260', None),
             ('update PaLocusList 9', {'dbUpdate': {
                 'dbEntity': 'PaLocusList',
                 'entityId': 9,
                 'updateType': 'update',
-                'updateFields': ['disease_group', 'disease_sub_group', 'status', 'url', 'version', 'version_created'],
+                'updateFields': ['disease_group', 'disease_sub_group', 'status', 'version', 'version_created'],
             }}),
             ('Bulk updating genes for list Auditory Neuropathy Spectrum Disorde', None),
-            ('---Done---', None),
+            ('update 1 LocusLists', {'dbUpdate': {
+                'dbEntity': 'LocusList',
+                'entityIds': ['LL00009_auditory_neuropathy_sp'],
+                'updateFields': ['description'],
+                'updateType': 'bulk_update',
+            }}),
+            ('Done', None),
+            ('Loaded 1 PanelAppUK records', None),
+            ('Done', None),
+            ('Updated: PanelAppAU, PanelAppUK', None),
         ])
+
+        # tracking is correct
+        mock_slack.assert_has_calls([mock.call('seqr-data-loading', message) for message in [
+            'Updated PanelAppAU reference data from version "2025-03-12" to version "2025-04-07"',
+            'Updated PanelAppUK reference data from version "2025-03-12" to version "2025-04-07"',
+        ]])
+        self.assertEqual(DataVersions.objects.get(data_model_name='PanelAppAU').version, '2025-04-07')
+        self.assertEqual(DataVersions.objects.get(data_model_name='PanelAppUK').version, '2025-04-07')
 
         # and import is idempotent
         self.reset_logs()
         responses.calls.reset()
-        call_command('import_all_panels', PANEL_APP_API_URL_AU)
-        call_command('import_all_panels', PANEL_APP_API_URL_UK, '--label', 'UK')
+        mock_slack.reset_mock()
+        self.mock_pa_now.return_value = datetime(2025, 4, 8)
+        call_command('update_all_reference_data')
         self._assert_lists_imported()
 
         self.assertEqual(len(responses.calls), 3)
         self.assert_json_logs(None, [
-            ('Starting import of all gene lists from Panel App [https://test-panelapp.url.au/api]', None),
-            ('Importing panel id 260', None),
-            ('Panel id 260 is up to date, skipping import', None),
-            ('Importing panel id 3069', None),
-            ('Panel id 3069 is up to date, skipping import', None),
-            ('---Done---', None),
-            ('Starting import of all gene lists from Panel App [https://test-panelapp.url.uk/api]', None),
-            ('Importing panel id 260', None),
-            ('Panel id 260 is up to date, skipping import', None),
-            ('---Done---', None),
+            ('Updating PanelAppAU', None),
+            ('Found 0 new and 0 existing panels to load', None),
+            ('Done', None),
+            ('Loaded 0 PanelAppAU records', None),
+            ('Updating PanelAppUK', None),
+            ('Found 0 new and 0 existing panels to load', None),
+            ('Done', None),
+            ('Loaded 0 PanelAppUK records', None),
         ])
+        self.assertEqual(DataVersions.objects.get(data_model_name='PanelAppAU').version, '2025-04-08')
+        self.assertEqual(DataVersions.objects.get(data_model_name='PanelAppUK').version, '2025-04-08')
 
     def _assert_lists_imported(self):
         locuslists_url = reverse(locus_lists)
@@ -209,11 +230,11 @@ class PaLocusListAPITest(AuthenticationTestCase, BaseLocusListAPITest):
         self.assertDictEqual(new_au_response.json()['locusListsByGuid'][NEW_AU_PA_LOCUS_LIST_GUID], {
             'locusListGuid': NEW_AU_PA_LOCUS_LIST_GUID,
             'name': 'Hereditary Neuropathy_CMT - isolated',
-            'description': 'PanelApp_3069_0.199_Neurology and neurodevelopmental disorders',
+            'description': 'PanelApp_AU_3069_0.199_Neurology and neurodevelopmental disorders',
             'items': [{'geneId': 'ENSG00000090861', 'pagene': {
                 'confidenceLevel': '3', 'modeOfInheritance': 'MONOALLELIC, autosomal or pseudoautosomal, imprinted status unknown',
             }}],
-            'paLocusList': {'url': 'https://test-panelapp.url.au/api/panels/3069/genes', 'panelAppId': 3069},
+            'paLocusList': {'source': 'AU', 'panelAppId': 3069},
             'numEntries': 1, 'isPublic': True, 'createdBy': None,
             'canEdit': False, 'createdDate': mock.ANY, 'lastModifiedDate': mock.ANY, 'intervalGenomeVersion': None,
         })
@@ -225,32 +246,10 @@ class PaLocusListAPITest(AuthenticationTestCase, BaseLocusListAPITest):
             'items': [{'geneId': 'ENSG00000139734', 'pagene': {
                 'confidenceLevel': '2', 'modeOfInheritance': 'BOTH monoallelic and biallelic, autosomal or pseudoautosomal',
             }}],
-            'paLocusList': {'url': 'https://test-panelapp.url.uk/api/panels/260/genes', 'panelAppId': 260},
+            'paLocusList': {'source': 'UK', 'panelAppId': 260},
             'numEntries': 1, 'isPublic': True, 'createdBy': None,
             'canEdit': False, 'createdDate': mock.ANY, 'lastModifiedDate': mock.ANY, 'intervalGenomeVersion': None,
         })
-
-    def test_delete_all_panels(self):
-        # when delete all AU panels
-        call_command('import_all_panels', '--delete', PANEL_APP_API_URL_AU)
-
-        locuslists_url = reverse(locus_lists)
-        self.login_base_user()
-
-        # then only non panelapp and UK panelapp gene lists remain
-        response = self.client.get(locuslists_url)
-        self.assertEqual(response.status_code, 200)
-        locus_lists_dict = response.json()['locusListsByGuid']
-        self.assertSetEqual(set(locus_lists_dict.keys()), {LOCUS_LIST_GUID, EXISTING_UK_PA_LOCUS_LIST_GUID})
-
-        # when delete all UK panels
-        call_command('import_all_panels', '--delete', PANEL_APP_API_URL_UK)
-
-        # then only non panelapp gene lists remain
-        response = self.client.get(locuslists_url)
-        self.assertEqual(response.status_code, 200)
-        locus_lists_dict = response.json()['locusListsByGuid']
-        self.assertSetEqual(set(locus_lists_dict.keys()), {LOCUS_LIST_GUID})
 
     @mock.patch("panelapp.panelapp_utils.requests.get")
     def test_get_all_genes_exhausts_retries(self, mock_get_request):

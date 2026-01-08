@@ -27,7 +27,7 @@ from seqr.utils.search.utils import query_variants, variant_lookup, get_variant_
 from seqr.views.apis.data_manager_api import trigger_delete_project
 from seqr.views.utils.json_utils import DjangoJSONEncoderWithSets
 from seqr.views.utils.test_utils import AnvilAuthenticationTestMixin
-from seqr.views.apis.variant_search_api import gene_variant_lookup
+from seqr.views.apis.variant_search_api import query_variants_handler
 
 from settings import DATABASES
 
@@ -186,11 +186,8 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
         ])
 
         results_model = self._saved_search_results_model('Recessive Permissive')
-        self._assert_expected_search([VARIANT2, [VARIANT3, VARIANT4], MITO_VARIANT3], results_model=results_model, cached_variant_fields=[
-            {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][0]}, [
-                {'selectedGeneId': 'ENSG00000097046', 'selectedTranscript': None,},
-                {'selectedGeneId': 'ENSG00000097046', 'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[4][0]},
-            ], {},
+        self._assert_expected_search([VARIANT2, MITO_VARIANT3], results_model=results_model, cached_variant_fields=[
+            {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][0]}, {},
         ])
 
     def _saved_search_results_model(self, name):
@@ -845,19 +842,13 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
 
     def test_frequency_filter(self):
         sv_callset_filter = {'sv_callset': {'af': 0.05}}
-        # seqr af filter is ignored for SNV_INDEL
-        self._assert_expected_search(
-            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
-            freqs={'callset': {'af': 0.2},  **sv_callset_filter},
-        )
-
         self._assert_expected_search(
             [MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
             freqs={'callset': {'ac': 7}, **sv_callset_filter},
         )
 
         self._assert_expected_search(
-            [MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], freqs={'callset': {'hh': 1}},
+            [MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], freqs={'callset': {'ac': 1000, 'hh': 1}},
         )
 
         self._assert_expected_search(
@@ -871,16 +862,16 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
 
         self._reset_search_families()
         self._assert_expected_search(
-            [VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2], freqs={'gnomad_genomes': {'af': 0.03}, 'gnomad_mito': {'af': 0.05}},
+            [VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2], freqs={'callset': {'ac': 1000}, 'gnomad_genomes': {'af': 0.03}, 'gnomad_mito': {'af': 0.005}},
         )
 
         self._assert_expected_search(
-            [VARIANT2, VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2], freqs={'gnomad_genomes': {'af': 0.05, 'hh': 0}, 'gnomad_mito': {'af': 0.05}},
+            [VARIANT2, VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2], freqs={'callset': {'ac': 1000}, 'gnomad_genomes': {'af': 0.05, 'hh': 0}, 'gnomad_mito': {'af': 0.005}},
         )
 
         self._assert_expected_search(
             [VARIANT4, GCNV_VARIANT3, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
-            freqs={'topmed': {'af': 0.05, 'hh': 1}, 'sv_callset': {'ac': 50}},
+            freqs={'callset': {'ac': 1000}, 'topmed': {'af': 0.05, 'hh': 1}, 'sv_callset': {'ac': 50}},
         )
 
         self._set_sv_family_search()
@@ -891,26 +882,32 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
             [SV_VARIANT1, SV_VARIANT3, SV_VARIANT4], freqs={'gnomad_svs': {'ac': 4000}},
         )
 
-        self._reset_search_families()
+        # seqr af filter is ignored for SNV_INDEL
+        self._set_single_family_search()
+        self._assert_expected_search(
+            [VARIANT1, VARIANT2, VARIANT3, VARIANT4, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
+            freqs={'callset': {'af': 0.2},  **sv_callset_filter},
+        )
+
         self._assert_expected_search(
             [VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2],
             freqs={'callset': {'ac': 6}, 'gnomad_genomes': {'ac': 50}, 'gnomad_mito': {'ac': 10}},
         )
 
         self._assert_expected_search(
-            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
+            [VARIANT1, VARIANT2, VARIANT3, VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
             freqs={'callset': {}, 'gnomad_genomes': {'af': None}},
         )
 
         annotations = {'splice_ai': '0.0'}  # Ensures no variants are filtered out by annotation/path filters
         self._assert_expected_search(
             [VARIANT1, VARIANT4, MITO_VARIANT1],
-            freqs={'gnomad_genomes': {'af': 0.002, 'hh': 10}, 'gnomad_mito': {'af': 0.01}},
+            freqs={'gnomad_genomes': {'af': 0.002, 'hh': 10}, 'gnomad_mito': {'ac': 1000}},
             annotations=annotations, pathogenicity={'clinvar': ['pathogenic', 'likely_pathogenic', 'vus']},
         )
 
         self._assert_expected_search(
-            [VARIANT2, VARIANT4, MITO_VARIANT1], freqs={'gnomad_genomes': {'af': 0.002}, 'gnomad_mito': {'af': 0.01}},
+            [VARIANT2, VARIANT4, MITO_VARIANT1], freqs={'gnomad_genomes': {'af': 0.002}, 'gnomad_mito': {'ac': 1000}},
             annotations=annotations, pathogenicity={'clinvar': ['pathogenic', 'conflicting_p_lp', 'vus']},
         )
 
@@ -1383,7 +1380,7 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
         )
 
         self._assert_expected_search(
-            [MITO_VARIANT1, MITO_VARIANT2, VARIANT4, VARIANT2, VARIANT3, VARIANT1, MITO_VARIANT3, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
+            [MITO_VARIANT1, MITO_VARIANT2, VARIANT4, VARIANT2, VARIANT3, MITO_VARIANT3, VARIANT1, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
             sort='gnomad',
         )
 
@@ -1555,56 +1552,141 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
         )
 
     def test_gene_variant_lookup(self):
-        url = reverse(gene_variant_lookup)
+        url = reverse(query_variants_handler, args=['abc123'])
         self.check_require_login(url)
 
         body = {
-            'genomeVersion': '38',
-            'geneId': 'ENSG00000097046',
-            'annotations': {
-                'missense': ['missense_variant'],
-                'other': ['non_coding_transcript_exon_variant'],
-            },
-            'freqs': {
-                'callset': {'ac': 3000},
-                'gnomad_genomes': {'af': 0.003},
-                'gnomad_exomes': {'af': 0.003},
-            },
+            'allGenomeProjectFamilies': '38',
+            'includeNoAccessProjects': True,
+            'search': {
+                'annotations': {
+                    'missense': ['missense_variant'],
+                    'other': ['non_coding_transcript_exon_variant'],
+                },
+                'freqs': {
+                    'callset': {'ac': 3000},
+                    'gnomad_genomes': {'af': 0.003},
+                    'gnomad_exomes': {'af': 0.003},
+                },
+            }
         }
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {
+            'error': 'Including external projects is only available when searching for a single gene',
+        })
+
+        body['search']['locus'] = {'rawItems': 'ENSG00000097046'}
+        response = self.client.post(url+'1', content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
-        variant4 = {**VARIANT4, 'selectedMainTranscriptId': 'ENST00000350997'}
+        variant4 = {**VARIANT4, 'selectedMainTranscriptId': 'ENST00000350997', 'numFamilies': 3}
         del variant4['familyGuids']
         del variant4['genotypes']
         expected_response = {
             'searchedVariants': [variant4],
             'genesById': {'ENSG00000097046': mock.ANY},
-            'omimIntervals': {},
+            'search': {
+                'search': {**body['search'], 'no_access_project_genome_version': '38'},
+                'projectFamilies': [],
+                'totalResults': 1,
+            },
             'totalSampleCounts': {
                 'MITO': {'WES': 1},
                 'SNV_INDEL': {'WES': 7},
                 'SV': {'WES': 3, 'WGS': 3},
             },
+            'locusListsByGuid': {},
+            'mmeSubmissionsByGuid': {},
+            'omimIntervals': {},
+            'phenotypeGeneScores': {},
+            'rnaSeqData': {},
+            'savedVariantsByGuid': {},
+            'variantFunctionalDataByGuid': {},
+            'variantNotesByGuid': {},
+            'variantTagsByGuid': {},
         }
         self.assertDictEqual(response.json(), expected_response)
 
-        body['freqs'] = {}
-        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        body['search']['freqs'] = {'callset': body['search']['freqs']['callset']}
+        response = self.client.post(url+'2', content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
-        variant3 = {**VARIANT3, 'selectedMainTranscriptId': 'ENST00000497611'}
+        variant3 = {**VARIANT3, 'selectedMainTranscriptId': 'ENST00000497611', 'numFamilies': 4}
         del variant3['familyGuids']
         del variant3['genotypes']
         expected_response['searchedVariants'].insert(0, variant3)
         expected_response['genesById']['ENSG00000177000'] = mock.ANY
+        expected_response['search']['search'].update(body['search'])
+        expected_response['search']['totalResults'] = 2
         self.assertDictEqual(response.json(), expected_response)
 
-        body['geneId'] = 'ENSG00000229905'
-        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        body['search']['inheritance'] = {'mode': 'recessive'}
+        response = self.client.post(url + '3', content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {
+            'error': 'Compound heterozygous search is not supported when including external projects',
+        })
+
+        body['search']['inheritance']['mode'] = 'homozygous_recessive'
+        response = self.client.post(url + '4', content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {
-            **expected_response,
+            'search': {
+                'search': {**body['search'], 'no_access_project_genome_version': '38'},
+                'projectFamilies': [],
+                'totalResults': 0,
+            },
             'searchedVariants': [],
-            'genesById': {},
+        })
+
+        body['search']['inheritance']['mode'] = 'de_novo'
+        response = self.client.post(url + '5', content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 200)
+        expected_response['search']['search'].update(body['search'])
+        variant3['numFamilies'] = 1
+        variant4['numFamilies'] = 1
+        self.assertDictEqual(response.json(), expected_response)
+
+        self.login_collaborator()
+        response = self.client.post(url + '6', content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 200)
+        project_families = [{'projectGuid': 'R0001_1kg', 'familyGuids': mock.ANY}]
+        expected_response['search']['projectFamilies'] = project_families
+        expected_response.update({
+            'searchedVariants': [
+                {**FAMILY_3_VARIANT, 'selectedMainTranscriptId': 'ENST00000497611'},
+                {**VARIANT4, 'selectedMainTranscriptId': 'ENST00000350997'},
+            ],
+            'locusListsByGuid': {'LL00049_pid_genes_autosomal_do': mock.ANY},
+            'phenotypeGeneScores': {'I000004_hg00731': mock.ANY, 'I000005_hg00732': mock.ANY},
+        })
+        self.assertDictEqual(response.json(), expected_response)
+
+        body['search']['locus']['rawItems'] = 'ENSG00000171621'
+        response = self.client.post(url + '7', content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 200)
+        expected_response['search']['search'].update(body['search'])
+        expected_response['search']['totalResults'] = 1
+        other_project_variant = {**PROJECT_4_COMP_HET_VARIANT, 'numFamilies': 1}
+        del other_project_variant['familyGuids']
+        del other_project_variant['genotypes']
+        expected_response.update({
+            'searchedVariants': [other_project_variant],
+            'genesById': {'ENSG00000171621': mock.ANY},
+            'locusListsByGuid': {},
+            'phenotypeGeneScores': {},
+        })
+        self.assertDictEqual(response.json(), expected_response)
+
+        body['search']['locus']['rawItems'] = 'ENSG00000229905'
+        response = self.client.post(url+'8', content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {
+            'search': {
+                'search': {**body['search'], 'no_access_project_genome_version': '38'},
+                'projectFamilies': project_families,
+                'totalResults': 0,
+            },
+            'searchedVariants': [],
         })
 
     @responses.activate

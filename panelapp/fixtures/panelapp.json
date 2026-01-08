@@ -189,7 +189,7 @@
       "status": "public",
       "version": "0.2",
       "version_created": "2017-02-07T12:55:30.700Z",
-      "url": "https://test-panelapp.url.au/api/v1/panels/3281/genes"
+      "source": "AU"
     }
   },
   {
@@ -252,7 +252,7 @@
       "status": "public",
       "version": "1.9",
       "version_created": "2017-02-07T12:55:30.700Z",
-      "url": "https://test-panelapp.url.uk/api/v1/panels/557/genes"
+      "source": "UK"
     }
   },
   {
@@ -314,7 +314,7 @@
       "status": "public",
       "version": "0.2",
       "version_created": "2017-02-07T12:55:30.700Z",
-      "url": "https://test-panelapp.url.au/api/v1/panels/1234/genes"
+      "source": "AU"
     }
   },
   {
@@ -366,6 +366,18 @@
     }
   },
   {
+    "model": "seqr.locuslistgene",
+    "pk": 53,
+    "fields": {
+      "guid": "LL00006_ENSG00000210112",
+      "created_date": "2018-04-28T00:03:25.347Z",
+      "created_by": null,
+      "last_modified_date": "2018-04-28T00:03:25.347Z",
+      "locus_list": 6,
+      "gene_id": "ENSG00000210112"
+    }
+  },
+  {
     "model": "panelapp.palocuslist",
     "pk": 6,
     "fields": {
@@ -375,7 +387,7 @@
       "status": "public",
       "version": "0.2",
       "version_created": "2017-02-07T12:55:30.700Z",
-      "url": "https://test-panelapp.url.au/api/v1/panels/9876/genes"
+      "source": "AU"
     }
   },
   {
@@ -387,6 +399,17 @@
       "penetrance": "complete",
       "mode_of_pathogenicity": "Other",
       "mode_of_inheritance": "BOTH, autosomal or pseudoautosomal"
+    }
+  },
+  {
+    "model": "panelapp.palocuslistgene",
+    "pk": 53,
+    "fields": {
+      "confidence_level": "3",
+      "biotype": null,
+      "penetrance": "complete",
+      "mode_of_pathogenicity": "Other",
+      "mode_of_inheritance": "MITOCHONDRIAL"
     }
   }
 ]

@@ -259,11 +259,6 @@
                     "5_prime_UTR_variant",
                     "3_prime_UTR_variant"
                 ],
-                "motif_feature": [
-                    "TFBS_ablation",
-                    "TFBS_amplification",
-                    "TF_binding_site_variant"
-                ],
                 "in_frame": [
                     "inframe_insertion",
                     "inframe_deletion"
@@ -444,16 +439,6 @@
                     "5_prime_UTR_variant",
                     "3_prime_UTR_variant",
                     "non_coding_transcript_exon_variant__canonical"
-                ],
-                "motif_feature": [
-                    "TFBS_ablation",
-                    "TFBS_amplification",
-                    "TF_binding_site_variant"
-                ],
-                "regulatory_feature": [
-                    "regulatory_region_variant",
-                    "regulatory_region_ablation",
-                    "regulatory_region_amplification"
                 ],
                 "in_frame": [
                     "inframe_insertion",

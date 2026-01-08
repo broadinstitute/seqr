@@ -16,7 +16,6 @@ import LocusLists from './components/LocusLists'
 import ExternalAnalysis from './components/ExternalAnalysis'
 import Hpo from './components/Hpo'
 import IndividualMetadata from './components/IndividualMetadata'
-import GeneVariantLookup from './components/GeneVariantLookup'
 import VariantLookup from './components/VariantLookup'
 
 const GenePage = ({ match }) => (
@@ -38,7 +37,6 @@ const SUMMARY_DATA_PAGES = [
 
 const NO_ES_PAGES = [
   { path: 'variant_lookup', component: VariantLookup },
-  { path: 'gene_variant_lookup', component: GeneVariantLookup },
 ]
 
 const SUMMARY_DATA_NO_ES_PAGES = [

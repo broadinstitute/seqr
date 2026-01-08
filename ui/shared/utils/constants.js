@@ -112,12 +112,13 @@ export const FILE_FORMATS = [
 ]
 
 const MAILTO_CONTACT_URL_REGEX = /^mailto:[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}(,\s*[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{1,4})*$/i
+export const isValidMailtoEmail = email => MAILTO_CONTACT_URL_REGEX.test(email)
 export const MATCHMAKER_CONTACT_NAME_FIELD = { label: 'Contact Name' }
 export const MATCHMAKER_CONTACT_URL_FIELD = {
   label: 'Contact URL',
   parse: val => `mailto:${val}`,
   format: val => (val || '').replace('mailto:', ''),
-  validate: val => (MAILTO_CONTACT_URL_REGEX.test(val) ? undefined : 'Invalid contact url'),
+  validate: val => (isValidMailtoEmail(val) ? undefined : 'Invalid contact url'),
 }
 
 // SAMPLES
@@ -167,6 +168,12 @@ export const LOAD_RNA_FIELDS = [
     name: 'ignoreExtraSamples',
     component: BooleanCheckbox,
     label: 'Ignore extra samples',
+  },
+  {
+    name: 'skipNewSampleValidation',
+    component: BooleanCheckbox,
+    label: 'Skip new sample validation',
+    labelHelp: 'Allow loading to proceed if no new samples are included in the loading request',
   },
 ]
 

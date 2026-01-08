@@ -3,6 +3,7 @@ import mock
 from django.core.management import call_command
 from django.core.management.base import CommandError
 
+from panelapp.models import PanelAppAU, PanelAppUK
 from reference_data.management.tests.test_utils import ReferenceDataCommandTestCase
 from reference_data.models import Omim, dbNSFPGene, GeneConstraint, GeneCopyNumberSensitivity, GenCC, ClinGen, \
     RefseqTranscript, HumanPhenotypeOntology, MGI, PrimateAI, GeneShet, LoadableModel, DataVersions
@@ -14,11 +15,6 @@ def primate_ai_exception():
 
 def mgi_exception():
     raise Exception('MGI failed')
-
-SKIP_ARGS = [
-    '--skip-gencode', '--skip-dbnsfp-gene', '--skip-gene-constraint', '--skip-primate-ai', '--skip-mgi', '--skip-hpo',
-    '--skip-gene-cn-sensitivity', '--skip-gencc', '--skip-clingen', '--skip-refseq',
-]
 
 class BaseUpdateAllReferenceDataTest(ReferenceDataCommandTestCase):
 
@@ -40,16 +36,13 @@ class BaseUpdateAllReferenceDataTest(ReferenceDataCommandTestCase):
         self.mock_update_gencode = patcher.start()
         self.mock_update_gencode.return_value = {}
         self.addCleanup(patcher.stop)
-        patcher = mock.patch('reference_data.management.commands.update_all_reference_data.logger')
-        self.mock_logger = patcher.start()
-        self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.utils.communication_utils._post_to_slack')
         self.mock_slack = patcher.start()
         self.addCleanup(patcher.stop)
 
 
 class NewDbUpdateAllReferenceDataTest(BaseUpdateAllReferenceDataTest):
-    fixtures = []
+    fixtures = ['users']
 
     def test_empty_db_update_all_reference_data_command(self):
         with self.assertRaises(CommandError) as e:
@@ -79,20 +72,23 @@ class NewDbUpdateAllReferenceDataTest(BaseUpdateAllReferenceDataTest):
             (ClinGen, gene_kwargs),
             (GeneShet, gene_kwargs),
             (HumanPhenotypeOntology, kwargs),
+            (PanelAppAU, kwargs),
+            (PanelAppUK, kwargs),
         ])
 
         self.mock_slack.assert_not_called()
-        calls = [
-            mock.call('Done'),
-            mock.call('Updated: GeneInfo, Omim, dbNSFPGene, GeneConstraint, GeneCopyNumberSensitivity, GenCC, ClinGen, GeneShet, HumanPhenotypeOntology'),
-        ]
-        self.mock_logger.info.assert_has_calls(calls)
-
-        calls = [
-            mock.call('unable to update PrimateAI: Primate_AI failed'),
-            mock.call('unable to update MGI: MGI failed')
-        ]
-        self.mock_logger.error.assert_has_calls(calls)
+        self.assert_json_logs(user=None, expected=[
+            ('unable to update PrimateAI: Primate_AI failed', {
+                'severity': 'ERROR',
+                '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent',
+            }),
+            ('unable to update MGI: MGI failed', {
+                'severity': 'ERROR',
+                '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent',
+            }),
+            ('Done', None),
+            ('Updated: GeneInfo, Omim, dbNSFPGene, GeneConstraint, GeneCopyNumberSensitivity, GenCC, ClinGen, GeneShet, HumanPhenotypeOntology, PanelAppAU, PanelAppUK', None),
+        ])
 
         self.assertEqual(str(e.exception),'Failed to Update: PrimateAI, MGI')
 
@@ -105,6 +101,8 @@ class NewDbUpdateAllReferenceDataTest(BaseUpdateAllReferenceDataTest):
             ('GeneShet', '7939768'),
             ('HumanPhenotypeOntology', '2025-03-03'),
             ('Omim', 'Thu, 20 Mar 2025 20:52:24 GMT'),
+            ('PanelAppAU', '2025-03-12'),
+            ('PanelAppUK', '2025-03-12'),
             ('dbNSFPGene', 'dbNSFP4.0_gene'),
         ])
 
@@ -116,7 +114,7 @@ class UpdateAllReferenceDataTest(BaseUpdateAllReferenceDataTest):
 
         self.mock_update_gencode.assert_not_called()
         self.assertListEqual(self.mock_update_calls, [])
-        self.mock_logger.info.assert_called_with("Done")
+        self.assert_json_logs(user=None, expected=[('Done', None)])
         self.mock_slack.assert_not_called()
 
     def test_partial_update_reference_data_command(self):
@@ -138,11 +136,10 @@ class UpdateAllReferenceDataTest(BaseUpdateAllReferenceDataTest):
         self.assertEqual(len(self.mock_update_calls[0][1]['gene_ids_to_gene']), 51)
         self.assertEqual(len(self.mock_update_calls[0][1]['gene_symbols_to_gene']), 50)
 
-        self.mock_logger.info.assert_has_calls([
-            mock.call('Done'),
-            mock.call('Updated: Omim, dbNSFPGene, GenCC'),
+        self.assert_json_logs(user=None, expected=[
+            ('Done', None),
+            ('Updated: Omim, dbNSFPGene, GenCC', None),
         ])
-        self.mock_logger.error.assert_not_called()
         self.mock_slack.assert_has_calls([mock.call('seqr-data-loading', message) for message in [
             'Updated Omim reference data from version "Thu, 20 Mar 2025 20:52:24 GMT" to version "Sat, 22 Mar 2025 09:21:17 GMT"',
             'Updated dbNSFPGene reference data from version "dbNSFP3.2_gene" to version "dbNSFP4.0_gene"',

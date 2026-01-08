@@ -55,27 +55,27 @@ describe('Test moiToMoiInitials()', () => {
 })
 
 const panelAppData = [{
-  url: 'https://panelapp-aus.org/api/v1/panels/40/genes',
+  source: 'AU',
   panel: 40,
   gene: 'SLC2A1',
   result: 'https://panelapp-aus.org/panels/40/gene/SLC2A1',
 }, {
-  url: 'https://panelapp-aus.org/api/v1/panels/40/genes',
+  source: 'AU',
   panel: 40,
   gene: 'SLC1A3',
   result: 'https://panelapp-aus.org/panels/40/gene/SLC1A3',
 }, {
-  url: 'https://panelapp.genomicsengland.co.uk/api/v1',
+  source: 'UK',
   panel: 486,
   gene: 'GRIA2',
   result: 'https://panelapp.genomicsengland.co.uk/panels/486/gene/GRIA2',
 }, {
-  url: 'https://panelapp.genomicsengland.co.uk/api/v1',
+  source: 'UK',
   panel: 486,
   gene: 'KIRREL3',
   result: 'https://panelapp.genomicsengland.co.uk/panels/486/gene/KIRREL3',
 }, {
-  url: 'https://panelapp.genomicsengland.co.uk/api/v1',
+  source: 'UK',
   panel: 486,
   gene: 'ACOX1',
   result: 'https://panelapp.genomicsengland.co.uk/panels/486/gene/ACOX1',
@@ -83,8 +83,8 @@ const panelAppData = [{
 
 describe('Test panelAppUrl()', () => {
   test.each(panelAppData)('panelAppUrl for gene: %s', (data) => {
-    const { url, panel, gene } = data
-    expect(panelAppUrl(url, panel, gene)).toEqual(data.result)
+    const { source, panel, gene } = data
+    expect(panelAppUrl(source, panel, gene)).toEqual(data.result)
   })
 })
 
