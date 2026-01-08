@@ -7,11 +7,11 @@ from clickhouse_search.backend.engines import Join
 
 class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
 
-    def _is_materialzed_view(self, model):
+    def _is_materialized_view(self, model):
         return getattr(model._meta, 'to_table', None) is not None
 
     def table_sql(self, model):
-        if self._is_materialzed_view(model):
+        if self._is_materialized_view(model):
             return self._materialized_view_sql(model)
 
         sql, params = super().table_sql(model)
@@ -41,7 +41,7 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
         return sql, params
 
     def _get_engine_expression(self, model, engine):
-        if self._is_materialzed_view(model):
+        if self._is_materialized_view(model):
             return self._get_materialized_view_engine_expression(model)
 
         prev_quote_value = self.quote_value   # pylint: disable=access-member-before-definition
