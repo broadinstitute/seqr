@@ -1,8 +1,14 @@
 # _seqr_ Changes
 
 ## dev
+
+## 1/8/26
 * Moves PanelApp updates from their own manage command into the main `update_all_reference_data` command.
 May require changes to custom cron jobs (REQUIRES DB MIGRATION)
+* Adds variant-level reference data to clickhouse (REQUIRES DB MIGRATION)
+  * Note that for users with Clickhouse already enabled, this migration will enqueue tasks in the loading pipeline. 
+  You may want to monitor the pipeline for any failures and re-trigger them in the event of any failures.
+* Deprecates the "Gene Variant Lookup" page in favor of an "Include External Projects" option on the main search page
 
 ## 11/12/25
 * Changes support for RNA loading to accept unprocessed output from RNA callers, and moves loading to the project page. 
