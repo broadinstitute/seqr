@@ -5,7 +5,8 @@ from django.db.models import options, ForeignKey, OneToOneField, Func, CASCADE, 
 from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocksDB, Join
 from clickhouse_search.backend.fields import Enum8Field, NestedField, UInt32FieldDeltaCodecField, UInt64FieldDeltaCodecField, NamedTupleField, MaterializedUInt8Field
 from clickhouse_search.backend.functions import ArrayDistinct, ArrayFlatten, ArrayMin, ArrayMax
-from clickhouse_search.backend.table_models import MaterializedView, Dictionary, MATERIALIZED_VIEW_META_FIELDS, DICTIONARY_META_FIELDS
+from clickhouse_search.backend.table_models import IncrementalMaterializedView, RefreshableMaterializedView, RefreshableMaterializedViewMeta, \
+    Dictionary, MATERIALIZED_VIEW_META_FIELDS, DICTIONARY_META_FIELDS
 from clickhouse_search.managers import EntriesManager, AnnotationsQuerySet
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample
@@ -584,7 +585,7 @@ class ClinvarMito(BaseClinvarJoin):
     class Meta(BaseClinvarJoin.Meta):
         db_table = 'GRCh38/MITO/reference_data/clinvar'
 
-class BaseClinvarMv(MaterializedView):
+class BaseClinvarMv(RefreshableMaterializedView):
     key = UInt32FieldDeltaCodecField(primary_key=True)
     allele_id = models.UInt32Field(db_column='alleleId', null=True, blank=True)
     conflicting_pathogenicities = NestedField([
@@ -600,11 +601,10 @@ class BaseClinvarMv(MaterializedView):
     class Meta:
         abstract = True
 
-class ClinvarMvMeta:
+class ClinvarMvMeta(RefreshableMaterializedViewMeta):
     column_selects = {
         'key': "DISTINCT ON (key)",
     }
-    refreshable = True
 
 class ClinvarMvGRCh37SnvIndel(BaseClinvarMv):
 
@@ -636,7 +636,6 @@ class ClinvarSearchMvGRCh37SnvIndel(BaseClinvarMv):
         db_table = 'GRCh37/SNV_INDEL/reference_data/clinvar/seqr_variants_to_search_mv'
         to_table = 'ClinvarGRCh37SnvIndel'
         source_table = 'ClinvarSeqrVariantsGRCh37SnvIndel'
-        source_sql = ''
 
 class ClinvarSearchMvSnvIndel(BaseClinvarMv):
 
@@ -644,7 +643,6 @@ class ClinvarSearchMvSnvIndel(BaseClinvarMv):
         db_table = 'GRCh38/SNV_INDEL/reference_data/clinvar/seqr_variants_to_search_mv'
         to_table = 'ClinvarSnvIndel'
         source_table = 'ClinvarSeqrVariantsSnvIndel'
-        source_sql = ''
 
 class ClinvarSearchMvMito(BaseClinvarMv):
 
@@ -652,7 +650,7 @@ class ClinvarSearchMvMito(BaseClinvarMv):
         db_table = 'GRCh38/MITO/reference_data/clinvar/seqr_variants_to_search_mv'
         to_table = 'ClinvarMito'
         source_table = 'ClinvarSeqrVariantsMito'
-        source_sql = ''
+
 class PextAllVariantsSnvIndel(models.ClickhouseModel):
     variant_id = models.StringField(db_column='variantId', primary_key=True)
     score = models.DecimalField(max_digits=9, decimal_places=5)
@@ -1598,7 +1596,7 @@ class BaseProjectGtStatsMitoSnvIndel(BaseProjectGtStats):
             index_granularity=8192,
         )
 
-class BaseEntriesToProjectGtStats(MaterializedView):
+class BaseEntriesToProjectGtStats(IncrementalMaterializedView):
     project_guid = models.StringField(low_cardinality=True)
     key = UInt32FieldDeltaCodecField(primary_key=True)
     sample_type = models.Enum8Field(choices=[(1, 'WES'), (2, 'WGS')])
@@ -1670,7 +1668,7 @@ class ProjectGtStatsSv(BaseProjectGtStats):
     class Meta(BaseProjectGtStats.Meta):
         db_table = 'GRCh38/SV/project_gt_stats'
 
-class EntriesToProjectGtStatsSv(MaterializedView):
+class EntriesToProjectGtStatsSv(IncrementalMaterializedView):
     project_guid = models.StringField(low_cardinality=True)
     key = UInt32FieldDeltaCodecField(primary_key=True)
     affected = models.Enum8Field(choices=[(1, 'A'), (2, 'N'), (3, 'U')])
@@ -1734,7 +1732,7 @@ class GtStatsSv(models.ClickhouseModel):
     class Meta(BaseGtStats.Meta):
         db_table = 'GRCh38/SV/gt_stats'
 
-class BaseProjectsToGtStats(MaterializedView):
+class BaseProjectsToGtStats(RefreshableMaterializedView):
     key = UInt32FieldDeltaCodecField(primary_key=True)
     ac_wes = models.UInt32Field()
     ac_wgs = models.UInt32Field()
@@ -1746,7 +1744,7 @@ class BaseProjectsToGtStats(MaterializedView):
     class Meta:
         abstract = True
 
-class ProjectsToGtStatsMeta:
+class ProjectsToGtStatsMeta(RefreshableMaterializedViewMeta):
     column_selects = {
         'ac_wes': "sumIf((het_samples * 1) + (hom_samples * 2), sample_type = 'WES')",
         'ac_wgs': "sumIf((het_samples * 1) + (hom_samples * 2), sample_type = 'WGS')",
@@ -1756,7 +1754,6 @@ class ProjectsToGtStatsMeta:
         'hom_affected': "sumIf(hom_samples, affected = 'A')",
     }
     source_sql = 'WHERE project_guid NOT IN {CLICKHOUSE_AC_EXCLUDED_PROJECT_GUIDS} GROUP BY key'
-    refreshable = True
 
 class ProjectsToGtStatsGRCh37SnvIndel(BaseProjectsToGtStats):
 
@@ -1772,7 +1769,7 @@ class ProjectsToGtStatsSnvIndel(BaseProjectsToGtStats):
         to_table = 'GtStatsSnvIndel'
         source_table = 'ProjectGtStatsSnvIndel'
 
-class ProjectsToGtStatsMito(MaterializedView):
+class ProjectsToGtStatsMito(RefreshableMaterializedView):
     key = UInt32FieldDeltaCodecField(primary_key=True)
     ac_het_wes = models.UInt32Field()
     ac_het_wgs = models.UInt32Field()
@@ -1795,7 +1792,7 @@ class ProjectsToGtStatsMito(MaterializedView):
         }
 
 
-class ProjectsToGtStatsSv(MaterializedView):
+class ProjectsToGtStatsSv(RefreshableMaterializedView):
     key = UInt32FieldDeltaCodecField(primary_key=True)
     ac_wgs = models.UInt32Field()
     ac_affected = models.UInt32Field()
