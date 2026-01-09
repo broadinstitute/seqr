@@ -5,8 +5,7 @@ from django.db import migrations, models
 import django.db.models.manager
 
 import clickhouse_search.backend.fields
-from clickhouse_search.migration_templates import conditionally_refresh_reference_dataset, render_search_dictionary
-from settings import DATABASES
+from clickhouse_search.migration_templates import conditionally_refresh_reference_dataset
 
 
 class Migration(migrations.Migration):
