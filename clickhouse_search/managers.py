@@ -106,8 +106,7 @@ class SearchQuerySet(QuerySet):
             if sub_fields.get('hom'):
                 seqr_pop_fields += [f"{sub_fields['hom']}_{suffix}" for suffix in suffixes]
 
-        from clickhouse_search.models import GT_STATS_DICT_CLASS_MAP  # TODO clean up import once models are split into multiple files
-        return GT_STATS_DICT_CLASS_MAP[self.genome_version][self.table_basename.split('/')[1]].dict_get_expression(
+        return self.gt_stats_dict.dict_get_expression(
             'key',
             seqr_pop_fields,
             output_field=models.TupleField([models.UInt32Field() for _ in seqr_pop_fields])
@@ -236,6 +235,10 @@ class AnnotationsQuerySet(SearchQuerySet):
     @property
     def clinvar_field_prefix(self):
         return f'{self.entry_field}__clinvar_join'
+
+    @property
+    def gt_stats_dict(self):
+        return self.entry_model.GT_STATS_DICT
 
     @property
     def genome_version(self):
@@ -766,6 +769,10 @@ class EntriesManager(SearchQuerySet):
     @property
     def clinvar_model(self):
         return self.model.clinvar_join.rel.related_model
+
+    @property
+    def gt_stats_dict(self):
+        return self.model.GT_STATS_DICT
 
     @property
     def genome_version(self):

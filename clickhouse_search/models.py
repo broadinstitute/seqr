@@ -1303,8 +1303,65 @@ class PromoterAISeqrVariants(models.ClickhouseModel):
         )
 
 
+class BaseGtStatsDict(Dictionary):
+    key = models.UInt32Field(primary_key=True)
+    ac_wes = models.UInt32Field()
+    ac_wgs = models.UInt32Field()
+    ac_affected = models.UInt32Field()
+    hom_wes = models.UInt32Field()
+    hom_wgs = models.UInt32Field()
+    hom_affected = models.UInt32Field()
+
+    class Meta:
+        abstract = True
+
+class GtStatsDictMeta:
+    engine = models.MergeTree(primary_key='key')
+
+class GtStatsDictGRCh37SnvIndel(BaseGtStatsDict):
+
+    class Meta(GtStatsDictMeta):
+        db_table = 'GRCh37/SNV_INDEL/gt_stats_dict'
+        source_table = 'GtStatsGRCh37SnvIndel'
+        layout = 'FLAT(MAX_ARRAY_SIZE 200000000)'
+
+class GtStatsDictSnvIndel(BaseGtStatsDict):
+
+    class Meta(GtStatsDictMeta):
+        db_table = 'GRCh38/SNV_INDEL/gt_stats_dict'
+        source_table = 'GtStatsSnvIndel'
+        layout = 'FLAT(MAX_ARRAY_SIZE 1000000000)'
+
+class GtStatsDictMito(Dictionary):
+    key = models.UInt32Field(primary_key=True)
+    ac_het_wes = models.UInt32Field()
+    ac_het_wgs = models.UInt32Field()
+    ac_het_affected = models.UInt32Field()
+    ac_hom_wes = models.UInt32Field()
+    ac_hom_wgs = models.UInt32Field()
+    ac_hom_affected = models.UInt32Field()
+
+    class Meta(GtStatsDictMeta):
+        db_table = 'GRCh38/MITO/gt_stats_dict'
+        source_table = 'GtStatsMito'
+        layout = 'FLAT(MAX_ARRAY_SIZE 1000000)'
+
+class GtStatsDictSv(Dictionary):
+    key = models.UInt32Field(primary_key=True)
+    ac_wgs = models.UInt32Field()
+    ac_affected = models.UInt32Field()
+    hom_wgs = models.UInt32Field()
+    hom_affected = models.UInt32Field()
+
+    class Meta(GtStatsDictMeta):
+        db_table = 'GRCh38/SV/gt_stats_dict'
+        source_table = 'GtStatsSv'
+        layout = 'FLAT(MAX_ARRAY_SIZE 5000000)'
+
+
 class BaseEntries(FixtureLoadableClickhouseModel):
     MAX_XPOS_FILTER_INTERVALS = 500
+    GT_STATS_DICT = None
 
     project_guid = models.StringField(low_cardinality=True)
     family_guid = models.StringField()
@@ -1352,6 +1409,7 @@ class BaseEntriesSnvIndel(BaseEntries):
         projection = Projection('xpos_projection', order_by='is_gnomad_gt_5_percent, is_annotated_in_any_gene, xpos')
 
 class EntriesGRCh37SnvIndel(BaseEntriesSnvIndel):
+    GT_STATS_DICT = GtStatsDictGRCh37SnvIndel
 
     # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
     key = ForeignKey('AnnotationsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
@@ -1360,6 +1418,7 @@ class EntriesGRCh37SnvIndel(BaseEntriesSnvIndel):
         db_table = 'GRCh37/SNV_INDEL/entries'
 
 class EntriesSnvIndel(BaseEntriesSnvIndel):
+    GT_STATS_DICT = GtStatsDictSnvIndel
 
     # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
     key = ForeignKey('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
@@ -1396,6 +1455,7 @@ class EntriesSnvIndel(BaseEntriesSnvIndel):
         )
 
 class EntriesMito(BaseEntries):
+    GT_STATS_DICT = GtStatsDictMito
     CALL_FIELDS = [
         ('sampleId', models.StringField()),
         ('gt', models.Enum8Field(null=True, blank=True, choices=[(0, 'REF'), (1, 'HET'), (2, 'HOM')])),
@@ -1423,6 +1483,7 @@ class EntriesMito(BaseEntries):
 class EntriesSv(BaseEntries):
     MAX_XPOS_FILTER_INTERVALS = 0
     SAMPLE_TYPE = Sample.SAMPLE_TYPE_WGS
+    GT_STATS_DICT = GtStatsDictSv
     CALL_FIELDS = [
         ('sampleId', models.StringField()),
         ('gt', models.Enum8Field(null=True, blank=True, choices=[(0, 'REF'), (1, 'HET'), (2, 'HOM')])),
@@ -1810,62 +1871,6 @@ class ProjectsToGtStatsSv(RefreshableMaterializedView):
             'hom_affected': "sumIf(hom_samples, affected = 'A')",
         }
 
-
-class BaseGtStatsDict(Dictionary):
-    key = models.UInt32Field(primary_key=True)
-    ac_wes = models.UInt32Field()
-    ac_wgs = models.UInt32Field()
-    ac_affected = models.UInt32Field()
-    hom_wes = models.UInt32Field()
-    hom_wgs = models.UInt32Field()
-    hom_affected = models.UInt32Field()
-
-    class Meta:
-        abstract = True
-
-class GtStatsDictMeta:
-    engine = models.MergeTree(primary_key='key')
-
-class GtStatsDictGRCh37SnvIndel(BaseGtStatsDict):
-
-    class Meta(GtStatsDictMeta):
-        db_table = 'GRCh37/SNV_INDEL/gt_stats_dict'
-        source_table = 'GtStatsGRCh37SnvIndel'
-        layout = 'FLAT(MAX_ARRAY_SIZE 200000000)'
-
-class GtStatsDictSnvIndel(BaseGtStatsDict):
-
-    class Meta(GtStatsDictMeta):
-        db_table = 'GRCh38/SNV_INDEL/gt_stats_dict'
-        source_table = 'GtStatsSnvIndel'
-        layout = 'FLAT(MAX_ARRAY_SIZE 1000000000)'
-
-class GtStatsDictMito(Dictionary):
-    key = models.UInt32Field(primary_key=True)
-    ac_het_wes = models.UInt32Field()
-    ac_het_wgs = models.UInt32Field()
-    ac_het_affected = models.UInt32Field()
-    ac_hom_wes = models.UInt32Field()
-    ac_hom_wgs = models.UInt32Field()
-    ac_hom_affected = models.UInt32Field()
-
-    class Meta(GtStatsDictMeta):
-        db_table = 'GRCh38/MITO/gt_stats_dict'
-        source_table = 'GtStatsMito'
-        layout = 'FLAT(MAX_ARRAY_SIZE 1000000)'
-
-class GtStatsDictSv(Dictionary):
-    key = models.UInt32Field(primary_key=True)
-    ac_wgs = models.UInt32Field()
-    ac_affected = models.UInt32Field()
-    hom_wgs = models.UInt32Field()
-    hom_affected = models.UInt32Field()
-
-    class Meta(GtStatsDictMeta):
-        db_table = 'GRCh38/SV/gt_stats_dict'
-        source_table = 'GtStatsSv'
-        layout = 'FLAT(MAX_ARRAY_SIZE 5000000)'
-
 class ProjectPartitionsSnvIndel(FixtureLoadableClickhouseModel):
     # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
     project_guid = models.StringField(primary_key=True)
@@ -1963,13 +1968,5 @@ PROJECT_GT_STATS_VIEW_CLASS_MAP = {
         Sample.DATASET_TYPE_VARIANT_CALLS: ProjectsToGtStatsSnvIndel,
         Sample.DATASET_TYPE_MITO_CALLS: ProjectsToGtStatsMito,
         Sample.DATASET_TYPE_SV_CALLS: ProjectsToGtStatsSv,
-    },
-}
-GT_STATS_DICT_CLASS_MAP = {
-    GENOME_VERSION_GRCh37: {Sample.DATASET_TYPE_VARIANT_CALLS: GtStatsDictGRCh37SnvIndel},
-    GENOME_VERSION_GRCh38: {
-        Sample.DATASET_TYPE_VARIANT_CALLS: GtStatsDictSnvIndel,
-        Sample.DATASET_TYPE_MITO_CALLS: GtStatsDictMito,
-        Sample.DATASET_TYPE_SV_CALLS: GtStatsDictSv,
     },
 }
