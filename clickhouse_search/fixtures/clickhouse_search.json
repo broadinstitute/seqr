@@ -222,10 +222,22 @@
       "sorted_regulatory_feature_consequences": []
     }
 }, {
-    "model": "clickhouse_search.clinvarsnvindel",
-    "pk": 1,
+    "model": "clickhouse_search.keylookupsnvindel",
+    "pk": "1-10439-AC-A",
     "fields": {
-      "key": 1,
+      "key": 1
+    }
+}, {
+    "model": "clickhouse_search.keylookupsnvindel",
+    "pk": "1-38724419-T-G",
+    "fields": {
+      "key": 2
+    }
+}, {
+    "model": "clickhouse_search.clinvarallvariantssnvindel",
+    "pk": "1-10439-AC-A",
+    "fields": {
+      "version": "2025-06-23",
       "allele_id": 19473,
       "conflicting_pathogenicities": [],
       "gold_stars": null,
@@ -235,10 +247,10 @@
       "pathogenicity": "Likely_pathogenic"
     }
 }, {
-    "model": "clickhouse_search.clinvarsnvindel",
-    "pk": 2,
+    "model": "clickhouse_search.clinvarallvariantssnvindel",
+    "pk": "1-38724419-T-G",
     "fields": {
-      "key": 2,
+      "version": "2025-06-23",
       "allele_id": 18560,
       "conflicting_pathogenicities": [
         ["Likely_pathogenic", 1],
@@ -795,10 +807,22 @@
       ]
     }
 }, {
-    "model": "clickhouse_search.clinvarmito",
-    "pk": 6,
+    "model": "clickhouse_search.keylookupmito",
+    "pk": "M-4429-G-A",
     "fields": {
-      "key": 6,
+      "key": 6
+    }
+}, {
+    "model": "clickhouse_search.keylookupmito",
+    "pk": "M-14783-T-C",
+    "fields": {
+      "key": 8
+    }
+}, {
+    "model": "clickhouse_search.clinvarallvariantsmito",
+    "pk": "M-4429-G-A",
+    "fields": {
+      "version": "2025-06-23",
       "allele_id": 677748,
       "conflicting_pathogenicities": [],
       "gold_stars": 1,
@@ -808,10 +832,10 @@
       "pathogenicity": "Uncertain_significance"
     }
 }, {
-    "model": "clickhouse_search.clinvarmito",
-    "pk": 8,
+    "model": "clickhouse_search.clinvarallvariantsmito",
+    "pk": "M-14783-T-C",
     "fields": {
-      "key": 8,
+      "version": "2025-06-23",
       "allele_id": 150280,
       "conflicting_pathogenicities": [],
       "gold_stars": 0,

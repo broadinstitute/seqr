@@ -4,10 +4,8 @@
 import clickhouse_backend.models
 import clickhouse_search.backend.engines
 import clickhouse_search.backend.fields
-import clickhouse_search.models
 
 from django.db import migrations, models
-import django.db.models.deletion
 import django.db.models.manager
 import os
 from string import Template
@@ -20,32 +18,6 @@ CLICKHOUSE_AC_EXCLUDED_PROJECT_GUIDS  = os.environ.get(
 ).split(',')
 CLICKHOUSE_WRITER_PASSWORD = os.environ.get('CLICKHOUSE_WRITER_PASSWORD', 'clickhouse_test')
 CLICKHOUSE_WRITER_USER = os.environ.get('CLICKHOUSE_WRITER_USER', 'clickhouse')
-
-
-ENTRIES_TO_PROJECT_GT_STATS = Template("""
-CREATE MATERIALIZED VIEW `$reference_genome/$dataset_type/entries_to_project_gt_stats_mv`
-TO `$reference_genome/$dataset_type/project_gt_stats`
-AS SELECT
-    project_guid,
-    key,
-    $columns
-FROM `$reference_genome/$dataset_type/entries`
-GROUP BY $groupby_columns
-""")
-
-PROJECT_GT_STATS_TO_GT_STATS = Template(Template("""
-CREATE MATERIALIZED VIEW `$reference_genome/$dataset_type/project_gt_stats_to_gt_stats_mv`
-REFRESH EVERY 10 YEAR
-TO `$reference_genome/$dataset_type/gt_stats`
-AS SELECT
-    key,
-    $columns
-FROM `$reference_genome/$dataset_type/project_gt_stats`
-WHERE project_guid NOT IN $clickhouse_ac_excluded_project_guids
-GROUP BY key
-""").safe_substitute(
-    clickhouse_ac_excluded_project_guids=CLICKHOUSE_AC_EXCLUDED_PROJECT_GUIDS
-))
 
 GT_STATS_DICT = Template(Template("""
 CREATE DICTIONARY `$reference_genome/$dataset_type/gt_stats_dict`
@@ -63,26 +35,6 @@ LAYOUT(FLAT(MAX_ARRAY_SIZE $size))
     clickhouse_writer_user=CLICKHOUSE_WRITER_USER,
     clickhouse_writer_password=CLICKHOUSE_WRITER_PASSWORD,
 ))
-
-CLINVAR_ALL_VARIANTS_TO_CLINVAR_MV = Template("""
-CREATE MATERIALIZED VIEW `$reference_genome/$dataset_type/clinvar_all_variants_to_clinvar_mv`
-REFRESH EVERY 10 YEAR
-TO `$reference_genome/$dataset_type/clinvar`
-AS 
-SELECT
-    DISTINCT ON (key)
-    kl.key as key, 
-    alleleId,
-    conflictingPathogenicities,
-    goldStars,
-    submitters,
-    conditions,
-    assertions,
-    pathogenicity
-FROM `$reference_genome/$dataset_type/clinvar_all_variants` c
-INNER JOIN `$reference_genome/$dataset_type/key_lookup` kl
-ON c.variantId = kl.variantId
-""")
 
 
 class Migration(migrations.Migration):
@@ -823,32 +775,56 @@ class Migration(migrations.Migration):
                 ('_overwrite_base_manager', django.db.models.manager.Manager()),
             ],
         ),
-        migrations.RunSQL(
-            ENTRIES_TO_PROJECT_GT_STATS.substitute(
-                reference_genome='GRCh37',
-                dataset_type='SNV_INDEL',
-                columns=",\n    ".join([
-                    'sample_type',
-                    "sum(toInt32(arrayCount(s -> (s.gt = 'REF'), calls) * sign)) AS ref_samples",
-                    "sum(toInt32(arrayCount(s -> (s.gt = 'HET'), calls) * sign)) AS het_samples",
-                    "sum(toInt32(arrayCount(s -> (s.gt = 'HOM'), calls) * sign)) AS hom_samples",
-                ]),
-                groupby_columns='project_guid, key, sample_type',
-            ),
-            hints={'clickhouse': True},
+        migrations.CreateModel(
+            name='EntriesToProjectGtStatsGRCh37SnvIndel',
+            fields=[
+                ('project_guid', clickhouse_backend.models.StringField(low_cardinality=True)),
+                ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
+                ('sample_type', clickhouse_backend.models.Enum8Field(choices=[(1, 'WES'), (2, 'WGS')])),
+                ('ref_samples', clickhouse_backend.models.Int64Field()),
+                ('het_samples', clickhouse_backend.models.Int64Field()),
+                ('hom_samples', clickhouse_backend.models.Int64Field()),
+            ],
+            options={
+                'db_table': 'GRCh37/SNV_INDEL/entries_to_project_gt_stats_mv',
+                'to_table': 'ProjectGtStatsGRCh37SnvIndel',
+                'source_table': 'EntriesGRCh37SnvIndel',
+                'source_sql': 'GROUP BY project_guid, key, sample_type',
+                'column_selects': {
+                    'ref_samples': "sum(toInt32(arrayCount(s -> (s.gt = 'REF'), calls) * sign))",
+                    'het_samples': "sum(toInt32(arrayCount(s -> (s.gt = 'HET'), calls) * sign))",
+                    'hom_samples': "sum(toInt32(arrayCount(s -> (s.gt = 'HOM'), calls) * sign))",
+                },
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
         ),
-        migrations.RunSQL(
-            PROJECT_GT_STATS_TO_GT_STATS.substitute(
-                reference_genome='GRCh37',
-                dataset_type='SNV_INDEL',
-                columns=",\n    ".join([
-                    "sumIf((het_samples * 1) + (hom_samples * 2), sample_type = 'WES') AS ac_wes",
-                    "sumIf((het_samples * 1) + (hom_samples * 2), sample_type = 'WGS') AS ac_wgs",
-                    "sumIf(hom_samples, sample_type = 'WES') AS hom_wes",
-                    "sumIf(hom_samples, sample_type = 'WGS') AS hom_wgs",
-                ])
-            ),
-            hints={'clickhouse': True},
+        migrations.CreateModel(
+            name='ProjectsToGtStatsGRCh37SnvIndel',
+            fields=[
+                ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
+                ('ac_wes', clickhouse_backend.models.UInt32Field()),
+                ('ac_wgs', clickhouse_backend.models.UInt32Field()),
+                ('hom_wes', clickhouse_backend.models.UInt32Field()),
+                ('hom_wgs', clickhouse_backend.models.UInt32Field()),
+            ],
+            options={
+                'db_table': 'GRCh37/SNV_INDEL/project_gt_stats_to_gt_stats_mv',
+                'to_table': 'GtStatsGRCh37SnvIndel',
+                'source_table': 'ProjectGtStatsGRCh37SnvIndel',
+                'source_sql': f'WHERE project_guid NOT IN {CLICKHOUSE_AC_EXCLUDED_PROJECT_GUIDS} GROUP BY key',
+                'column_selects': {'ac_wes': "sumIf((het_samples * 1) + (hom_samples * 2), sample_type = 'WES')",
+                                   'ac_wgs': "sumIf((het_samples * 1) + (hom_samples * 2), sample_type = 'WGS')",
+                                   'hom_wes': "sumIf(hom_samples, sample_type = 'WES')",
+                                   'hom_wgs': "sumIf(hom_samples, sample_type = 'WGS')"},
+                'refreshable': True,
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
         ),
         migrations.RunSQL(
             GT_STATS_DICT.substitute(
@@ -864,32 +840,56 @@ class Migration(migrations.Migration):
             ),
             hints={'clickhouse': True},
         ),
-        migrations.RunSQL(
-            ENTRIES_TO_PROJECT_GT_STATS.substitute(
-                reference_genome='GRCh38',
-                dataset_type='SNV_INDEL',
-                columns=",\n    ".join([
-                    'sample_type',
-                    "sum(toInt32(arrayCount(s -> (s.gt = 'REF'), calls) * sign)) AS ref_samples",
-                    "sum(toInt32(arrayCount(s -> (s.gt = 'HET'), calls) * sign)) AS het_samples",
-                    "sum(toInt32(arrayCount(s -> (s.gt = 'HOM'), calls) * sign)) AS hom_samples",
-                ]),
-                groupby_columns='project_guid, key, sample_type',
-            ),
-            hints={'clickhouse': True},
+        migrations.CreateModel(
+            name='EntriesToProjectGtStatsSnvIndel',
+            fields=[
+                ('project_guid', clickhouse_backend.models.StringField(low_cardinality=True)),
+                ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
+                ('sample_type', clickhouse_backend.models.Enum8Field(choices=[(1, 'WES'), (2, 'WGS')])),
+                ('ref_samples', clickhouse_backend.models.Int64Field()),
+                ('het_samples', clickhouse_backend.models.Int64Field()),
+                ('hom_samples', clickhouse_backend.models.Int64Field()),
+            ],
+            options={
+                'db_table': 'GRCh38/SNV_INDEL/entries_to_project_gt_stats_mv',
+                'to_table': 'ProjectGtStatsSnvIndel',
+                'source_table': 'EntriesSnvIndel',
+                'source_sql': 'GROUP BY project_guid, key, sample_type',
+                'column_selects': {
+                    'ref_samples': "sum(toInt32(arrayCount(s -> (s.gt = 'REF'), calls) * sign))",
+                    'het_samples': "sum(toInt32(arrayCount(s -> (s.gt = 'HET'), calls) * sign))",
+                    'hom_samples': "sum(toInt32(arrayCount(s -> (s.gt = 'HOM'), calls) * sign))",
+                },
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
         ),
-        migrations.RunSQL(
-            PROJECT_GT_STATS_TO_GT_STATS.substitute(
-                reference_genome='GRCh38',
-                dataset_type='SNV_INDEL',
-                columns=",\n    ".join([
-                    "sumIf((het_samples * 1) + (hom_samples * 2), sample_type = 'WES') AS ac_wes",
-                    "sumIf((het_samples * 1) + (hom_samples * 2), sample_type = 'WGS') AS ac_wgs",
-                    "sumIf(hom_samples, sample_type = 'WES') AS hom_wes",
-                    "sumIf(hom_samples, sample_type = 'WGS') AS hom_wgs",
-                ])
-            ),
-            hints={'clickhouse': True},
+        migrations.CreateModel(
+            name='ProjectsToGtStatsSnvIndel',
+            fields=[
+                ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
+                ('ac_wes', clickhouse_backend.models.UInt32Field()),
+                ('ac_wgs', clickhouse_backend.models.UInt32Field()),
+                ('hom_wes', clickhouse_backend.models.UInt32Field()),
+                ('hom_wgs', clickhouse_backend.models.UInt32Field()),
+            ],
+            options={
+                'db_table': 'GRCh38/SNV_INDEL/project_gt_stats_to_gt_stats_mv',
+                'to_table': 'GtStatsSnvIndel',
+                'source_table': 'ProjectGtStatsSnvIndel',
+                'source_sql': f'WHERE project_guid NOT IN {CLICKHOUSE_AC_EXCLUDED_PROJECT_GUIDS} GROUP BY key',
+                'column_selects': {'ac_wes': "sumIf((het_samples * 1) + (hom_samples * 2), sample_type = 'WES')",
+                                   'ac_wgs': "sumIf((het_samples * 1) + (hom_samples * 2), sample_type = 'WGS')",
+                                   'hom_wes': "sumIf(hom_samples, sample_type = 'WES')",
+                                   'hom_wgs': "sumIf(hom_samples, sample_type = 'WGS')"},
+                'refreshable': True,
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
         ),
         migrations.RunSQL(
             GT_STATS_DICT.substitute(
@@ -905,32 +905,56 @@ class Migration(migrations.Migration):
             ),
             hints={'clickhouse': True},
         ),
-        migrations.RunSQL(
-            ENTRIES_TO_PROJECT_GT_STATS.substitute(
-                reference_genome='GRCh38',
-                dataset_type='MITO',
-                columns=",\n    ".join([
-                    'sample_type',
-                    "sum(toInt32(arrayCount(s -> (s.hl == '0'), calls) * sign)) AS ref_samples",
-                    "sum(toInt32(arrayCount(s -> (s.hl > '0' AND s.hl < '0.95'), calls) * sign)) AS het_samples",
-                    "sum(toInt32(arrayCount(s -> (s.hl >= '0.95'), calls) * sign)) AS hom_samples",
-                ]),
-                groupby_columns='project_guid, key, sample_type',
-            ),
-            hints={'clickhouse': True},
+        migrations.CreateModel(
+            name='EntriesToProjectGtStatsMito',
+            fields=[
+                ('project_guid', clickhouse_backend.models.StringField(low_cardinality=True)),
+                ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
+                ('sample_type', clickhouse_backend.models.Enum8Field(choices=[(1, 'WES'), (2, 'WGS')])),
+                ('ref_samples', clickhouse_backend.models.Int64Field()),
+                ('het_samples', clickhouse_backend.models.Int64Field()),
+                ('hom_samples', clickhouse_backend.models.Int64Field()),
+            ],
+            options={
+                'db_table': 'GRCh38/MITO/entries_to_project_gt_stats_mv',
+                'to_table': 'ProjectGtStatsMito',
+                'source_table': 'EntriesMito',
+                'source_sql': 'GROUP BY project_guid, key, sample_type',
+                'column_selects': {
+                    'ref_samples': "sum(toInt32(arrayCount(s -> (s.hl == '0'), calls) * sign))",
+                    'het_samples': "sum(toInt32(arrayCount(s -> (s.hl > '0' AND s.hl < '0.95'), calls) * sign))",
+                    'hom_samples': "sum(toInt32(arrayCount(s -> (s.hl >= '0.95'), calls) * sign))",
+                },
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
         ),
-        migrations.RunSQL(
-            PROJECT_GT_STATS_TO_GT_STATS.substitute(
-                reference_genome='GRCh38',
-                dataset_type='MITO',
-                columns=",\n    ".join([
-                    "sumIf(het_samples, sample_type = 'WES') AS ac_het_wes",
-                    "sumIf(het_samples, sample_type = 'WGS') AS ac_het_wgs",
-                    "sumIf(hom_samples, sample_type = 'WES') AS ac_hom_wes",
-                    "sumIf(hom_samples, sample_type = 'WGS') AS ac_hom_wgs",
-                ])
-            ),
-            hints={'clickhouse': True},
+        migrations.CreateModel(
+            name='ProjectsToGtStatsMito',
+            fields=[
+                ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
+                ('ac_het_wes', clickhouse_backend.models.UInt32Field()),
+                ('ac_het_wgs', clickhouse_backend.models.UInt32Field()),
+                ('ac_hom_wes', clickhouse_backend.models.UInt32Field()),
+                ('ac_hom_wgs', clickhouse_backend.models.UInt32Field()),
+            ],
+            options={
+                'db_table': 'GRCh38/MITO/project_gt_stats_to_gt_stats_mv',
+                'to_table': 'GtStatsMito',
+                'source_table': 'ProjectGtStatsMito',
+                'source_sql': f'WHERE project_guid NOT IN {CLICKHOUSE_AC_EXCLUDED_PROJECT_GUIDS} GROUP BY key',
+                'column_selects': {'ac_het_wes': "sumIf(het_samples, sample_type = 'WES')",
+                                   'ac_het_wgs': "sumIf(het_samples, sample_type = 'WGS')",
+                                   'ac_hom_wes': "sumIf(hom_samples, sample_type = 'WES')",
+                                   'ac_hom_wgs': "sumIf(hom_samples, sample_type = 'WGS')"},
+                'refreshable': True,
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
         ),
         migrations.RunSQL(
             GT_STATS_DICT.substitute(
@@ -946,29 +970,51 @@ class Migration(migrations.Migration):
             ),
             hints={'clickhouse': True},
         ),
-        migrations.RunSQL(
-            ENTRIES_TO_PROJECT_GT_STATS.substitute(
-                reference_genome='GRCh38',
-                dataset_type='SV',
-                columns=",\n    ".join([
-                    "sum(toInt32(arrayCount(s -> (s.gt = 'REF'), calls) * sign)) AS ref_samples",
-                    "sum(toInt32(arrayCount(s -> (s.gt = 'HET'), calls) * sign)) AS het_samples",
-                    "sum(toInt32(arrayCount(s -> (s.gt = 'HOM'), calls) * sign)) AS hom_samples",
-                ]),
-                groupby_columns='project_guid, key',
-            ),
-            hints={'clickhouse': True},
+        migrations.CreateModel(
+            name='EntriesToProjectGtStatsSv',
+            fields=[
+                ('project_guid', clickhouse_backend.models.StringField(low_cardinality=True)),
+                ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
+                ('ref_samples', clickhouse_backend.models.Int64Field()),
+                ('het_samples', clickhouse_backend.models.Int64Field()),
+                ('hom_samples', clickhouse_backend.models.Int64Field()),
+            ],
+            options={
+                'db_table': 'GRCh38/SV/entries_to_project_gt_stats_mv',
+                'to_table': 'ProjectGtStatsSv',
+                'source_table': 'EntriesSv',
+                'source_sql': 'GROUP BY project_guid, key',
+                'column_selects': {
+                    'ref_samples': "sum(toInt32(arrayCount(s -> (s.gt = 'REF'), calls) * sign))",
+                    'het_samples': "sum(toInt32(arrayCount(s -> (s.gt = 'HET'), calls) * sign))",
+                    'hom_samples': "sum(toInt32(arrayCount(s -> (s.gt = 'HOM'), calls) * sign))",
+                },
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
         ),
-        migrations.RunSQL(
-            PROJECT_GT_STATS_TO_GT_STATS.substitute(
-                reference_genome='GRCh38',
-                dataset_type='SV',
-                columns = ",\n    ".join([
-                    'sum((het_samples * 1) + (hom_samples * 2)) AS ac_wgs',
-                    'sum(hom_samples) AS hom_wgs',
-                ]),
-            ),
-            hints={'clickhouse': True},
+        migrations.CreateModel(
+            name='ProjectsToGtStatsSv',
+            fields=[
+                ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
+                ('ac_wgs', clickhouse_backend.models.UInt32Field()),
+                ('hom_wgs', clickhouse_backend.models.UInt32Field()),
+            ],
+            options={
+                'db_table': 'GRCh38/SV/project_gt_stats_to_gt_stats_mv',
+                'to_table': 'GtStatsSv',
+                'source_table': 'ProjectGtStatsSv',
+                'source_sql': f'WHERE project_guid NOT IN {CLICKHOUSE_AC_EXCLUDED_PROJECT_GUIDS} GROUP BY key',
+                'column_selects': {'ac_wgs': 'sum((het_samples * 1) + (hom_samples * 2))',
+                                   'hom_wgs': 'sum(hom_samples)'},
+                'refreshable': True,
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
         ),
         migrations.RunSQL(
             GT_STATS_DICT.substitute(
@@ -1051,25 +1097,295 @@ class Migration(migrations.Migration):
                 ('_overwrite_base_manager', django.db.models.manager.Manager()),
             ],
         ),
-        migrations.RunSQL(
-            CLINVAR_ALL_VARIANTS_TO_CLINVAR_MV.substitute(
-                reference_genome='GRCh37',
-                dataset_type='SNV_INDEL',
-            ),
-            hints={'clickhouse': True},
+        migrations.CreateModel(
+            name='ClinvarMvGRCh37SnvIndel',
+            fields=[
+                ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
+                ('allele_id', clickhouse_backend.models.UInt32Field(blank=True, db_column='alleleId', null=True)),
+                ('conflicting_pathogenicities', clickhouse_search.backend.fields.NestedField(base_fields=[(
+                                                                                                          'pathogenicity',
+                                                                                                          clickhouse_backend.models.Enum8Field(
+                                                                                                              choices=[(
+                                                                                                                       0,
+                                                                                                                       'Pathogenic'),
+                                                                                                                       (
+                                                                                                                       1,
+                                                                                                                       'Pathogenic/Likely_pathogenic'),
+                                                                                                                       (
+                                                                                                                       2,
+                                                                                                                       'Pathogenic/Likely_pathogenic/Established_risk_allele'),
+                                                                                                                       (
+                                                                                                                       3,
+                                                                                                                       'Pathogenic/Likely_pathogenic/Likely_risk_allele'),
+                                                                                                                       (
+                                                                                                                       4,
+                                                                                                                       'Pathogenic/Likely_risk_allele'),
+                                                                                                                       (
+                                                                                                                       5,
+                                                                                                                       'Likely_pathogenic'),
+                                                                                                                       (
+                                                                                                                       6,
+                                                                                                                       'Likely_pathogenic/Likely_risk_allele'),
+                                                                                                                       (
+                                                                                                                       7,
+                                                                                                                       'Established_risk_allele'),
+                                                                                                                       (
+                                                                                                                       8,
+                                                                                                                       'Likely_risk_allele'),
+                                                                                                                       (
+                                                                                                                       9,
+                                                                                                                       'Conflicting_classifications_of_pathogenicity'),
+                                                                                                                       (
+                                                                                                                       10,
+                                                                                                                       'Uncertain_risk_allele'),
+                                                                                                                       (
+                                                                                                                       11,
+                                                                                                                       'Uncertain_significance/Uncertain_risk_allele'),
+                                                                                                                       (
+                                                                                                                       12,
+                                                                                                                       'Uncertain_significance'),
+                                                                                                                       (
+                                                                                                                       13,
+                                                                                                                       'No_pathogenic_assertion'),
+                                                                                                                       (
+                                                                                                                       14,
+                                                                                                                       'Likely_benign'),
+                                                                                                                       (
+                                                                                                                       15,
+                                                                                                                       'Benign/Likely_benign'),
+                                                                                                                       (
+                                                                                                                       16,
+                                                                                                                       'Benign')])),
+                                                                                                          ('count',
+                                                                                                           clickhouse_backend.models.UInt16Field())],
+                                                                                             db_column='conflictingPathogenicities')),
+                ('gold_stars', clickhouse_backend.models.UInt8Field(blank=True, db_column='goldStars', null=True)),
+                (
+                'submitters', clickhouse_backend.models.ArrayField(base_field=clickhouse_backend.models.StringField())),
+                (
+                'conditions', clickhouse_backend.models.ArrayField(base_field=clickhouse_backend.models.StringField())),
+                ('assertions', clickhouse_backend.models.ArrayField(base_field=clickhouse_backend.models.Enum8Field(
+                    choices=[(0, 'Affects'), (1, 'association'), (2, 'association_not_found'),
+                             (3, 'confers_sensitivity'), (4, 'drug_response'), (5, 'low_penetrance'),
+                             (6, 'not_provided'), (7, 'other'), (8, 'protective'), (9, 'risk_factor'),
+                             (10, 'no_classification_for_the_single_variant'),
+                             (11, 'no_classifications_from_unflagged_records')]))),
+                ('pathogenicity', clickhouse_backend.models.Enum8Field(
+                    choices=[(0, 'Pathogenic'), (1, 'Pathogenic/Likely_pathogenic'),
+                             (2, 'Pathogenic/Likely_pathogenic/Established_risk_allele'),
+                             (3, 'Pathogenic/Likely_pathogenic/Likely_risk_allele'),
+                             (4, 'Pathogenic/Likely_risk_allele'), (5, 'Likely_pathogenic'),
+                             (6, 'Likely_pathogenic/Likely_risk_allele'), (7, 'Established_risk_allele'),
+                             (8, 'Likely_risk_allele'), (9, 'Conflicting_classifications_of_pathogenicity'),
+                             (10, 'Uncertain_risk_allele'), (11, 'Uncertain_significance/Uncertain_risk_allele'),
+                             (12, 'Uncertain_significance'), (13, 'No_pathogenic_assertion'), (14, 'Likely_benign'),
+                             (15, 'Benign/Likely_benign'), (16, 'Benign')])),
+            ],
+            options={
+                'db_table': 'GRCh37/SNV_INDEL/clinvar_all_variants_to_clinvar_mv',
+                'to_table': 'ClinvarGRCh37SnvIndel',
+                'source_table': 'ClinvarAllVariantsGRCh37SnvIndel',
+                'source_sql': 'src INNER JOIN `GRCh37/SNV_INDEL/key_lookup` dst on src.variantId = dst.variantId',
+                'column_selects': {'key': 'DISTINCT ON (key) dst.key'},
+                'refreshable': True,
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
         ),
-        migrations.RunSQL(
-            CLINVAR_ALL_VARIANTS_TO_CLINVAR_MV.substitute(
-                reference_genome='GRCh38',
-                dataset_type='SNV_INDEL',
-            ),
-            hints={'clickhouse': True},
+        migrations.CreateModel(
+            name='ClinvarMvSnvIndel',
+            fields=[
+                ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
+                ('allele_id', clickhouse_backend.models.UInt32Field(blank=True, db_column='alleleId', null=True)),
+                ('conflicting_pathogenicities', clickhouse_search.backend.fields.NestedField(base_fields=[(
+                                                                                                          'pathogenicity',
+                                                                                                          clickhouse_backend.models.Enum8Field(
+                                                                                                              choices=[(
+                                                                                                                       0,
+                                                                                                                       'Pathogenic'),
+                                                                                                                       (
+                                                                                                                       1,
+                                                                                                                       'Pathogenic/Likely_pathogenic'),
+                                                                                                                       (
+                                                                                                                       2,
+                                                                                                                       'Pathogenic/Likely_pathogenic/Established_risk_allele'),
+                                                                                                                       (
+                                                                                                                       3,
+                                                                                                                       'Pathogenic/Likely_pathogenic/Likely_risk_allele'),
+                                                                                                                       (
+                                                                                                                       4,
+                                                                                                                       'Pathogenic/Likely_risk_allele'),
+                                                                                                                       (
+                                                                                                                       5,
+                                                                                                                       'Likely_pathogenic'),
+                                                                                                                       (
+                                                                                                                       6,
+                                                                                                                       'Likely_pathogenic/Likely_risk_allele'),
+                                                                                                                       (
+                                                                                                                       7,
+                                                                                                                       'Established_risk_allele'),
+                                                                                                                       (
+                                                                                                                       8,
+                                                                                                                       'Likely_risk_allele'),
+                                                                                                                       (
+                                                                                                                       9,
+                                                                                                                       'Conflicting_classifications_of_pathogenicity'),
+                                                                                                                       (
+                                                                                                                       10,
+                                                                                                                       'Uncertain_risk_allele'),
+                                                                                                                       (
+                                                                                                                       11,
+                                                                                                                       'Uncertain_significance/Uncertain_risk_allele'),
+                                                                                                                       (
+                                                                                                                       12,
+                                                                                                                       'Uncertain_significance'),
+                                                                                                                       (
+                                                                                                                       13,
+                                                                                                                       'No_pathogenic_assertion'),
+                                                                                                                       (
+                                                                                                                       14,
+                                                                                                                       'Likely_benign'),
+                                                                                                                       (
+                                                                                                                       15,
+                                                                                                                       'Benign/Likely_benign'),
+                                                                                                                       (
+                                                                                                                       16,
+                                                                                                                       'Benign')])),
+                                                                                                          ('count',
+                                                                                                           clickhouse_backend.models.UInt16Field())],
+                                                                                             db_column='conflictingPathogenicities')),
+                ('gold_stars', clickhouse_backend.models.UInt8Field(blank=True, db_column='goldStars', null=True)),
+                (
+                'submitters', clickhouse_backend.models.ArrayField(base_field=clickhouse_backend.models.StringField())),
+                (
+                'conditions', clickhouse_backend.models.ArrayField(base_field=clickhouse_backend.models.StringField())),
+                ('assertions', clickhouse_backend.models.ArrayField(base_field=clickhouse_backend.models.Enum8Field(
+                    choices=[(0, 'Affects'), (1, 'association'), (2, 'association_not_found'),
+                             (3, 'confers_sensitivity'), (4, 'drug_response'), (5, 'low_penetrance'),
+                             (6, 'not_provided'), (7, 'other'), (8, 'protective'), (9, 'risk_factor'),
+                             (10, 'no_classification_for_the_single_variant'),
+                             (11, 'no_classifications_from_unflagged_records')]))),
+                ('pathogenicity', clickhouse_backend.models.Enum8Field(
+                    choices=[(0, 'Pathogenic'), (1, 'Pathogenic/Likely_pathogenic'),
+                             (2, 'Pathogenic/Likely_pathogenic/Established_risk_allele'),
+                             (3, 'Pathogenic/Likely_pathogenic/Likely_risk_allele'),
+                             (4, 'Pathogenic/Likely_risk_allele'), (5, 'Likely_pathogenic'),
+                             (6, 'Likely_pathogenic/Likely_risk_allele'), (7, 'Established_risk_allele'),
+                             (8, 'Likely_risk_allele'), (9, 'Conflicting_classifications_of_pathogenicity'),
+                             (10, 'Uncertain_risk_allele'), (11, 'Uncertain_significance/Uncertain_risk_allele'),
+                             (12, 'Uncertain_significance'), (13, 'No_pathogenic_assertion'), (14, 'Likely_benign'),
+                             (15, 'Benign/Likely_benign'), (16, 'Benign')])),
+            ],
+            options={
+                'db_table': 'GRCh38/SNV_INDEL/clinvar_all_variants_to_clinvar_mv',
+                'to_table': 'ClinvarSnvIndel',
+                'source_table': 'ClinvarAllVariantsSnvIndel',
+                'source_sql': 'src INNER JOIN `GRCh38/SNV_INDEL/key_lookup` dst on src.variantId = dst.variantId',
+                'column_selects': {'key': 'DISTINCT ON (key) dst.key'},
+                'refreshable': True,
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
         ),
-        migrations.RunSQL(
-            CLINVAR_ALL_VARIANTS_TO_CLINVAR_MV.substitute(
-                reference_genome='GRCh38',
-                dataset_type='MITO',
-            ),
-            hints={'clickhouse': True},
+        migrations.CreateModel(
+            name='ClinvarMvMito',
+            fields=[
+                ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
+                ('allele_id', clickhouse_backend.models.UInt32Field(blank=True, db_column='alleleId', null=True)),
+                ('conflicting_pathogenicities', clickhouse_search.backend.fields.NestedField(base_fields=[(
+                                                                                                          'pathogenicity',
+                                                                                                          clickhouse_backend.models.Enum8Field(
+                                                                                                              choices=[(
+                                                                                                                       0,
+                                                                                                                       'Pathogenic'),
+                                                                                                                       (
+                                                                                                                       1,
+                                                                                                                       'Pathogenic/Likely_pathogenic'),
+                                                                                                                       (
+                                                                                                                       2,
+                                                                                                                       'Pathogenic/Likely_pathogenic/Established_risk_allele'),
+                                                                                                                       (
+                                                                                                                       3,
+                                                                                                                       'Pathogenic/Likely_pathogenic/Likely_risk_allele'),
+                                                                                                                       (
+                                                                                                                       4,
+                                                                                                                       'Pathogenic/Likely_risk_allele'),
+                                                                                                                       (
+                                                                                                                       5,
+                                                                                                                       'Likely_pathogenic'),
+                                                                                                                       (
+                                                                                                                       6,
+                                                                                                                       'Likely_pathogenic/Likely_risk_allele'),
+                                                                                                                       (
+                                                                                                                       7,
+                                                                                                                       'Established_risk_allele'),
+                                                                                                                       (
+                                                                                                                       8,
+                                                                                                                       'Likely_risk_allele'),
+                                                                                                                       (
+                                                                                                                       9,
+                                                                                                                       'Conflicting_classifications_of_pathogenicity'),
+                                                                                                                       (
+                                                                                                                       10,
+                                                                                                                       'Uncertain_risk_allele'),
+                                                                                                                       (
+                                                                                                                       11,
+                                                                                                                       'Uncertain_significance/Uncertain_risk_allele'),
+                                                                                                                       (
+                                                                                                                       12,
+                                                                                                                       'Uncertain_significance'),
+                                                                                                                       (
+                                                                                                                       13,
+                                                                                                                       'No_pathogenic_assertion'),
+                                                                                                                       (
+                                                                                                                       14,
+                                                                                                                       'Likely_benign'),
+                                                                                                                       (
+                                                                                                                       15,
+                                                                                                                       'Benign/Likely_benign'),
+                                                                                                                       (
+                                                                                                                       16,
+                                                                                                                       'Benign')])),
+                                                                                                          ('count',
+                                                                                                           clickhouse_backend.models.UInt16Field())],
+                                                                                             db_column='conflictingPathogenicities')),
+                ('gold_stars', clickhouse_backend.models.UInt8Field(blank=True, db_column='goldStars', null=True)),
+                (
+                'submitters', clickhouse_backend.models.ArrayField(base_field=clickhouse_backend.models.StringField())),
+                (
+                'conditions', clickhouse_backend.models.ArrayField(base_field=clickhouse_backend.models.StringField())),
+                ('assertions', clickhouse_backend.models.ArrayField(base_field=clickhouse_backend.models.Enum8Field(
+                    choices=[(0, 'Affects'), (1, 'association'), (2, 'association_not_found'),
+                             (3, 'confers_sensitivity'), (4, 'drug_response'), (5, 'low_penetrance'),
+                             (6, 'not_provided'), (7, 'other'), (8, 'protective'), (9, 'risk_factor'),
+                             (10, 'no_classification_for_the_single_variant'),
+                             (11, 'no_classifications_from_unflagged_records')]))),
+                ('pathogenicity', clickhouse_backend.models.Enum8Field(
+                    choices=[(0, 'Pathogenic'), (1, 'Pathogenic/Likely_pathogenic'),
+                             (2, 'Pathogenic/Likely_pathogenic/Established_risk_allele'),
+                             (3, 'Pathogenic/Likely_pathogenic/Likely_risk_allele'),
+                             (4, 'Pathogenic/Likely_risk_allele'), (5, 'Likely_pathogenic'),
+                             (6, 'Likely_pathogenic/Likely_risk_allele'), (7, 'Established_risk_allele'),
+                             (8, 'Likely_risk_allele'), (9, 'Conflicting_classifications_of_pathogenicity'),
+                             (10, 'Uncertain_risk_allele'), (11, 'Uncertain_significance/Uncertain_risk_allele'),
+                             (12, 'Uncertain_significance'), (13, 'No_pathogenic_assertion'), (14, 'Likely_benign'),
+                             (15, 'Benign/Likely_benign'), (16, 'Benign')])),
+            ],
+            options={
+                'db_table': 'GRCh38/MITO/clinvar_all_variants_to_clinvar_mv',
+                'to_table': 'ClinvarMito',
+                'source_table': 'ClinvarAllVariantsMito',
+                'source_sql': 'src INNER JOIN `GRCh38/MITO/key_lookup` dst on src.variantId = dst.variantId',
+                'column_selects': {'key': 'DISTINCT ON (key) dst.key'},
+                'refreshable': True,
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
         ),
     ]

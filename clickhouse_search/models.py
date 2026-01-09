@@ -5,6 +5,8 @@ from django.db.models import options, ForeignKey, OneToOneField, Func, CASCADE, 
 from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocksDB, Join
 from clickhouse_search.backend.fields import Enum8Field, NestedField, UInt32FieldDeltaCodecField, UInt64FieldDeltaCodecField, NamedTupleField, MaterializedUInt8Field
 from clickhouse_search.backend.functions import ArrayDistinct, ArrayFlatten, ArrayMin, ArrayMax
+from clickhouse_search.backend.table_models import IncrementalMaterializedView, RefreshableMaterializedView, RefreshableMaterializedViewMeta, \
+    MATERIALIZED_VIEW_META_FIELDS
 from clickhouse_search.managers import EntriesManager, AnnotationsQuerySet
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample
@@ -15,6 +17,7 @@ from settings import CLICKHOUSE_IN_MEMORY_DIR, CLICKHOUSE_DATA_DIR
 options.DEFAULT_NAMES = (
     *options.DEFAULT_NAMES,
     'projection',
+    *MATERIALIZED_VIEW_META_FIELDS,
 )
 state.DEFAULT_NAMES = options.DEFAULT_NAMES
 
@@ -580,6 +583,72 @@ class ClinvarMito(BaseClinvarJoin):
     key = ForeignKey('EntriesMito', db_column='key', related_name='clinvar_join', primary_key=True, on_delete=PROTECT)
     class Meta(BaseClinvarJoin.Meta):
         db_table = 'GRCh38/MITO/reference_data/clinvar'
+
+class BaseClinvarMv(RefreshableMaterializedView):
+    key = UInt32FieldDeltaCodecField(primary_key=True)
+    allele_id = models.UInt32Field(db_column='alleleId', null=True, blank=True)
+    conflicting_pathogenicities = NestedField([
+        ('pathogenicity', models.Enum8Field(choices=BaseClinvar.PATHOGENICITY_CHOICES, return_int=False)),
+        ('count', models.UInt16Field()),
+    ], db_column='conflictingPathogenicities', null_when_empty=True)
+    gold_stars = models.UInt8Field(db_column='goldStars', null=True, blank=True)
+    submitters = models.ArrayField(models.StringField())
+    conditions = models.ArrayField(models.StringField())
+    assertions = models.ArrayField(models.Enum8Field(choices=BaseClinvar.ASSERTIONS_CHOICES, return_int=False))
+    pathogenicity = models.Enum8Field(choices=BaseClinvar.PATHOGENICITY_CHOICES, return_int=False)
+
+    class Meta:
+        abstract = True
+
+class ClinvarMvMeta(RefreshableMaterializedViewMeta):
+    column_selects = {
+        'key': "DISTINCT ON (key)",
+    }
+
+class ClinvarMvGRCh37SnvIndel(BaseClinvarMv):
+
+    class Meta(ClinvarMvMeta):
+        db_table = 'GRCh37/SNV_INDEL/reference_data/clinvar/all_variants_to_seqr_variants_mv'
+        to_table = 'ClinvarSeqrVariantsGRCh37SnvIndel'
+        source_table = 'ClinvarAllVariantsGRCh37SnvIndel'
+        source_sql = 'src INNER JOIN `GRCh37/SNV_INDEL/key_lookup` dst on assumeNotNull(src.variantId) = dst.variantId'
+
+class ClinvarMvSnvIndel(BaseClinvarMv):
+
+    class Meta(ClinvarMvMeta):
+        db_table = 'GRCh38/SNV_INDEL/reference_data/clinvar/all_variants_to_seqr_variants_mv'
+        to_table = 'ClinvarSeqrVariantsSnvIndel'
+        source_table = 'ClinvarAllVariantsSnvIndel'
+        source_sql = 'src INNER JOIN `GRCh38/SNV_INDEL/key_lookup` dst on assumeNotNull(src.variantId) = dst.variantId'
+
+class ClinvarMvMito(BaseClinvarMv):
+
+    class Meta(ClinvarMvMeta):
+        db_table = 'GRCh38/MITO/reference_data/clinvar/all_variants_to_seqr_variants_mv'
+        to_table = 'ClinvarSeqrVariantsMito'
+        source_table = 'ClinvarAllVariantsMito'
+        source_sql = 'src INNER JOIN `GRCh38/MITO/key_lookup` dst on assumeNotNull(src.variantId) = dst.variantId'
+
+class ClinvarSearchMvGRCh37SnvIndel(BaseClinvarMv):
+
+    class Meta(ClinvarMvMeta):
+        db_table = 'GRCh37/SNV_INDEL/reference_data/clinvar/seqr_variants_to_search_mv'
+        to_table = 'ClinvarGRCh37SnvIndel'
+        source_table = 'ClinvarSeqrVariantsGRCh37SnvIndel'
+
+class ClinvarSearchMvSnvIndel(BaseClinvarMv):
+
+    class Meta(ClinvarMvMeta):
+        db_table = 'GRCh38/SNV_INDEL/reference_data/clinvar/seqr_variants_to_search_mv'
+        to_table = 'ClinvarSnvIndel'
+        source_table = 'ClinvarSeqrVariantsSnvIndel'
+
+class ClinvarSearchMvMito(BaseClinvarMv):
+
+    class Meta(ClinvarMvMeta):
+        db_table = 'GRCh38/MITO/reference_data/clinvar/seqr_variants_to_search_mv'
+        to_table = 'ClinvarMito'
+        source_table = 'ClinvarSeqrVariantsMito'
 
 class PextAllVariantsSnvIndel(models.ClickhouseModel):
     variant_id = models.StringField(db_column='variantId', primary_key=True)
@@ -1526,11 +1595,39 @@ class BaseProjectGtStatsMitoSnvIndel(BaseProjectGtStats):
             index_granularity=8192,
         )
 
+class BaseEntriesToProjectGtStats(IncrementalMaterializedView):
+    project_guid = models.StringField(low_cardinality=True)
+    key = UInt32FieldDeltaCodecField(primary_key=True)
+    sample_type = models.Enum8Field(choices=[(1, 'WES'), (2, 'WGS')])
+    affected = models.Enum8Field(choices=[(1, 'A'), (2, 'N'), (3, 'U')])
+    ref_samples = models.Int64Field()
+    het_samples = models.Int64Field()
+    hom_samples = models.Int64Field()
+
+    class Meta:
+        abstract = True
+
+class EntriesToProjectGtStatsMeta:
+    column_selects = {
+        'affected': "dictGetOrDefault('seqrdb_affected_status_dict', 'affected', (family_guid, calls.sampleId), 'U')",
+        'ref_samples': "sumIf(sign, calls.gt = 'REF')",
+        'het_samples': "sumIf(sign, calls.gt = 'HET')",
+        'hom_samples': "sumIf(sign, calls.gt = 'HOM')",
+    }
+    source_sql = 'ARRAY JOIN calls GROUP BY project_guid, key, sample_type, affected'
+
 class ProjectGtStatsGRCh37SnvIndel(BaseProjectGtStatsMitoSnvIndel):
     key = OneToOneField('AnnotationsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
 
     class Meta(BaseProjectGtStatsMitoSnvIndel.Meta):
         db_table = 'GRCh37/SNV_INDEL/project_gt_stats'
+
+class EntriesToProjectGtStatsGRCh37SnvIndel(BaseEntriesToProjectGtStats):
+
+    class Meta(EntriesToProjectGtStatsMeta):
+        db_table = 'GRCh37/SNV_INDEL/entries_to_project_gt_stats_mv'
+        to_table = 'ProjectGtStatsGRCh37SnvIndel'
+        source_table = 'EntriesGRCh37SnvIndel'
 
 class ProjectGtStatsSnvIndel(BaseProjectGtStatsMitoSnvIndel):
     key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
@@ -1538,17 +1635,51 @@ class ProjectGtStatsSnvIndel(BaseProjectGtStatsMitoSnvIndel):
     class Meta(BaseProjectGtStatsMitoSnvIndel.Meta):
         db_table = 'GRCh38/SNV_INDEL/project_gt_stats'
 
+class EntriesToProjectGtStatsSnvIndel(BaseEntriesToProjectGtStats):
+
+    class Meta(EntriesToProjectGtStatsMeta):
+        db_table = 'GRCh38/SNV_INDEL/entries_to_project_gt_stats_mv'
+        to_table = 'ProjectGtStatsSnvIndel'
+        source_table = 'EntriesSnvIndel'
+
 class ProjectGtStatsMito(BaseProjectGtStatsMitoSnvIndel):
     key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
 
     class Meta(BaseProjectGtStatsMitoSnvIndel.Meta):
         db_table = 'GRCh38/MITO/project_gt_stats'
 
+class EntriesToProjectGtStatsMito(BaseEntriesToProjectGtStats):
+
+    class Meta(EntriesToProjectGtStatsMeta):
+        db_table = 'GRCh38/MITO/entries_to_project_gt_stats_mv'
+        to_table = 'ProjectGtStatsMito'
+        source_table = 'EntriesMito'
+        column_selects = {
+            'affected': EntriesToProjectGtStatsMeta.column_selects['affected'],
+            'ref_samples': "sumIf(sign, calls.hl == '0')",
+            'het_samples': "sumIf(sign, calls.hl > '0' AND calls.hl < '0.95')",
+            'hom_samples': "sumIf(sign, calls.hl >= '0.95')",
+        }
+
 class ProjectGtStatsSv(BaseProjectGtStats):
     key = OneToOneField('AnnotationsSv', db_column='key', primary_key=True, on_delete=CASCADE)
 
     class Meta(BaseProjectGtStats.Meta):
         db_table = 'GRCh38/SV/project_gt_stats'
+
+class EntriesToProjectGtStatsSv(IncrementalMaterializedView):
+    project_guid = models.StringField(low_cardinality=True)
+    key = UInt32FieldDeltaCodecField(primary_key=True)
+    affected = models.Enum8Field(choices=[(1, 'A'), (2, 'N'), (3, 'U')])
+    ref_samples = models.Int64Field()
+    het_samples = models.Int64Field()
+    hom_samples = models.Int64Field()
+
+    class Meta(EntriesToProjectGtStatsMeta):
+        db_table = 'GRCh38/SV/entries_to_project_gt_stats_mv'
+        to_table = 'ProjectGtStatsSv'
+        source_table = 'EntriesSv'
+        source_sql = 'ARRAY JOIN calls GROUP BY project_guid, key, affected'
 
 
 class BaseGtStats(models.ClickhouseModel):
@@ -1600,6 +1731,84 @@ class GtStatsSv(models.ClickhouseModel):
     class Meta(BaseGtStats.Meta):
         db_table = 'GRCh38/SV/gt_stats'
 
+class BaseProjectsToGtStats(RefreshableMaterializedView):
+    key = UInt32FieldDeltaCodecField(primary_key=True)
+    ac_wes = models.UInt32Field()
+    ac_wgs = models.UInt32Field()
+    ac_affected = models.UInt32Field()
+    hom_wes = models.UInt32Field()
+    hom_wgs = models.UInt32Field()
+    hom_affected = models.UInt32Field()
+
+    class Meta:
+        abstract = True
+
+class ProjectsToGtStatsMeta(RefreshableMaterializedViewMeta):
+    column_selects = {
+        'ac_wes': "sumIf((het_samples * 1) + (hom_samples * 2), sample_type = 'WES')",
+        'ac_wgs': "sumIf((het_samples * 1) + (hom_samples * 2), sample_type = 'WGS')",
+        'ac_affected': "sumIf((het_samples * 1) + (hom_samples * 2), affected = 'A')",
+        'hom_wes': "sumIf(hom_samples, sample_type = 'WES')",
+        'hom_wgs': "sumIf(hom_samples, sample_type = 'WGS')",
+        'hom_affected': "sumIf(hom_samples, affected = 'A')",
+    }
+    source_sql = 'WHERE project_guid NOT IN {CLICKHOUSE_AC_EXCLUDED_PROJECT_GUIDS} GROUP BY key'
+
+class ProjectsToGtStatsGRCh37SnvIndel(BaseProjectsToGtStats):
+
+    class Meta(ProjectsToGtStatsMeta):
+        db_table = 'GRCh37/SNV_INDEL/project_gt_stats_to_gt_stats_mv'
+        to_table = 'GtStatsGRCh37SnvIndel'
+        source_table = 'ProjectGtStatsGRCh37SnvIndel'
+
+class ProjectsToGtStatsSnvIndel(BaseProjectsToGtStats):
+
+    class Meta(ProjectsToGtStatsMeta):
+        db_table = 'GRCh38/SNV_INDEL/project_gt_stats_to_gt_stats_mv'
+        to_table = 'GtStatsSnvIndel'
+        source_table = 'ProjectGtStatsSnvIndel'
+
+class ProjectsToGtStatsMito(RefreshableMaterializedView):
+    key = UInt32FieldDeltaCodecField(primary_key=True)
+    ac_het_wes = models.UInt32Field()
+    ac_het_wgs = models.UInt32Field()
+    ac_het_affected = models.UInt32Field()
+    ac_hom_wes = models.UInt32Field()
+    ac_hom_wgs = models.UInt32Field()
+    ac_hom_affected = models.UInt32Field()
+
+    class Meta(ProjectsToGtStatsMeta):
+        db_table = 'GRCh38/MITO/project_gt_stats_to_gt_stats_mv'
+        to_table = 'GtStatsMito'
+        source_table = 'ProjectGtStatsMito'
+        column_selects = {
+            'ac_het_wes': "sumIf(het_samples, sample_type = 'WES')",
+            'ac_het_wgs': "sumIf(het_samples, sample_type = 'WGS')",
+            'ac_het_affected': "sumIf(het_samples, affected = 'A')",
+            'ac_hom_wes': "sumIf(hom_samples, sample_type = 'WES')",
+            'ac_hom_wgs': "sumIf(hom_samples, sample_type = 'WGS')",
+            'ac_hom_affected': "sumIf(hom_samples, affected = 'A')",
+        }
+
+
+class ProjectsToGtStatsSv(RefreshableMaterializedView):
+    key = UInt32FieldDeltaCodecField(primary_key=True)
+    ac_wgs = models.UInt32Field()
+    ac_affected = models.UInt32Field()
+    hom_wgs = models.UInt32Field()
+    hom_affected = models.UInt32Field()
+
+    class Meta(ProjectsToGtStatsMeta):
+        db_table = 'GRCh38/SV/project_gt_stats_to_gt_stats_mv'
+        to_table = 'GtStatsSv'
+        source_table = 'ProjectGtStatsSv'
+        column_selects = {
+            'ac_wgs': 'sum((het_samples * 1) + (hom_samples * 2))',
+            'ac_affected': "sumIf((het_samples * 1) + (hom_samples * 2), affected = 'A')",
+            'hom_wgs': 'sum(hom_samples)',
+            'hom_affected': "sumIf(hom_samples, affected = 'A')",
+        }
+
 class ProjectPartitionsSnvIndel(FixtureLoadableClickhouseModel):
     # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
     project_guid = models.StringField(primary_key=True)
@@ -1641,5 +1850,13 @@ KEY_LOOKUP_CLASS_MAP = {
         Sample.DATASET_TYPE_MITO_CALLS: KeyLookupMito,
         f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WGS}': KeyLookupSv,
         f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WES}': KeyLookupGcnv,
+    },
+}
+PROJECT_GT_STATS_VIEW_CLASS_MAP = {
+    GENOME_VERSION_GRCh37: {Sample.DATASET_TYPE_VARIANT_CALLS: ProjectsToGtStatsGRCh37SnvIndel},
+    GENOME_VERSION_GRCh38: {
+        Sample.DATASET_TYPE_VARIANT_CALLS: ProjectsToGtStatsSnvIndel,
+        Sample.DATASET_TYPE_MITO_CALLS: ProjectsToGtStatsMito,
+        Sample.DATASET_TYPE_SV_CALLS: ProjectsToGtStatsSv,
     },
 }
