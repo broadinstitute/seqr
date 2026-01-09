@@ -843,22 +843,20 @@ class PromoterAIAllVariants(models.ClickhouseModel):
             order_by=('variant_id'),
         )
 
-class PromoterAIAllMv(MaterializedView):
+class PromoterAIAllMv(RefreshableMaterializedView):
     variant_id = models.StringField(db_column='variantId', primary_key=True)
     gene_id = models.StringField(db_column='geneId')
     score = models.DecimalField(max_digits=9, decimal_places=5)
 
-    class Meta:
+    class Meta(RefreshableMaterializedViewMeta):
         db_table = 'GRCh38/SNV_INDEL/reference_data/promoterAI/all_variants_mv'
         to_table = 'PromoterAIAllVariants'
         source_url = 'https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh38/promoterAI/promoterAI.tsv.gz'
-        source_sql = ''
         column_selects = {
             'variantId': "concat(replaceOne(replaceOne(chrom, 'chr', ''), 'MT', 'M'), '-', pos, '-', ref, '-', alt)",
             'geneId': 'gene_id',
             'score': 'promoterAI,'
         }
-        refreshable = True
         create_empty = True
 
 class PromoterAISeqrVariants(models.ClickhouseModel):
@@ -873,12 +871,12 @@ class PromoterAISeqrVariants(models.ClickhouseModel):
             order_by=('key'),
         )
 
-class PromoterAIMv(MaterializedView):
+class PromoterAIMv(RefreshableMaterializedView):
     key = UInt32FieldDeltaCodecField(primary_key=True)
     gene_id = models.StringField(db_column='geneId')
     score = models.DecimalField(max_digits=9, decimal_places=5)
 
-    class Meta:
+    class Meta(RefreshableMaterializedViewMeta):
         db_table = 'GRCh38/SNV_INDEL/reference_data/promoterAI/all_variants_to_seqr_variants_mv'
         to_table = 'PromoterAISeqrVariants'
         source_table = 'PromoterAIAllVariants'
@@ -886,5 +884,4 @@ class PromoterAIMv(MaterializedView):
         column_selects = {
             'key': 'DISTINCT ON (key)',
         }
-        refreshable = True
         create_empty = True
