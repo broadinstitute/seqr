@@ -6,6 +6,7 @@ from clickhouse_search.backend.fields import Enum8Field, NestedField, UInt32Fiel
 from clickhouse_search.backend.functions import ArrayDistinct, ArrayFlatten, ArrayMin, ArrayMax
 from clickhouse_search.backend.table_models import Dictionary, FixtureLoadableClickhouseModel
 from clickhouse_search.managers import EntriesManager, AnnotationsQuerySet
+from clickhouse_search.models.gt_stats_models import GtStatsDictGRCh37SnvIndel, GtStatsDictSnvIndel, GtStatsDictSv, GtStatsDictMito
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample
 from seqr.utils.search.constants import SPLICE_AI_FIELD
@@ -430,6 +431,7 @@ class BaseEntriesSnvIndel(BaseEntries):
         projection = Projection('xpos_projection', order_by='is_gnomad_gt_5_percent, is_annotated_in_any_gene, xpos')
 
 class EntriesGRCh37SnvIndel(BaseEntriesSnvIndel):
+    GT_STATS_DICT = GtStatsDictGRCh37SnvIndel
 
     # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
     key = ForeignKey('AnnotationsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
@@ -438,6 +440,7 @@ class EntriesGRCh37SnvIndel(BaseEntriesSnvIndel):
         db_table = 'GRCh37/SNV_INDEL/entries'
 
 class EntriesSnvIndel(BaseEntriesSnvIndel):
+    GT_STATS_DICT = GtStatsDictSnvIndel
 
     # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
     key = ForeignKey('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
@@ -474,6 +477,7 @@ class EntriesSnvIndel(BaseEntriesSnvIndel):
         )
 
 class EntriesMito(BaseEntries):
+    GT_STATS_DICT = GtStatsDictMito
     CALL_FIELDS = [
         ('sampleId', models.StringField()),
         ('gt', models.Enum8Field(null=True, blank=True, choices=[(0, 'REF'), (1, 'HET'), (2, 'HOM')])),
@@ -501,6 +505,7 @@ class EntriesMito(BaseEntries):
 class EntriesSv(BaseEntries):
     MAX_XPOS_FILTER_INTERVALS = 0
     SAMPLE_TYPE = Sample.SAMPLE_TYPE_WGS
+    GT_STATS_DICT = GtStatsDictSv
     CALL_FIELDS = [
         ('sampleId', models.StringField()),
         ('gt', models.Enum8Field(null=True, blank=True, choices=[(0, 'REF'), (1, 'HET'), (2, 'HOM')])),
