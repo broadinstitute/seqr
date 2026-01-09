@@ -51,15 +51,15 @@ class Migration(migrations.Migration):
             name='PromoterAIAllMv',
             fields=[
                 ('variant_id', clickhouse_backend.models.StringField(db_column='variantId', primary_key=True, serialize=False)),
-                ('gene_id', clickhouse_backend.models.StringField(db_column='geneId')),
-                ('score', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
+                ('gene_id', clickhouse_backend.models.StringField(blank=True, db_column='geneId', null=True)),
+                ('score', clickhouse_backend.models.StringField(blank=True, null=True)),
             ],
             options={
                 'db_table': 'GRCh38/SNV_INDEL/reference_data/promoterAI/all_variants_mv',
                 'to_table': 'PromoterAIAllVariants',
                 'source_sql': '',
                 'source_url': 'https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh38/promoterAI/promoterAI.tsv.gz',
-                'column_selects': {'geneId': 'gene_id', 'score': 'promoterAI,', 'variantId': "concat(replaceOne(replaceOne(chrom, 'chr', ''), 'MT', 'M'), '-', pos, '-', ref, '-', alt)"},
+                'column_selects': {'geneId': 'gene_id', 'score': 'promoterAI', 'variantId': "concat(replaceOne(replaceOne(chrom, 'chr', ''), 'MT', 'M'), '-', pos, '-', ref, '-', alt)"},
                 'refreshable': True,
                 'create_empty': True,
             },
@@ -71,7 +71,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='PromoterAIMv',
             fields=[
-                ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
+                ('key', clickhouse_backend.models.UInt32Field(primary_key=True, serialize=False)),
                 ('gene_id', clickhouse_backend.models.StringField(db_column='geneId')),
                 ('score', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
             ],
@@ -92,7 +92,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='PromoterAIDict',
             fields=[
-                ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
+                ('key', clickhouse_backend.models.UInt32Field(primary_key=True, serialize=False)),
                 ('score', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
             ],
             options={

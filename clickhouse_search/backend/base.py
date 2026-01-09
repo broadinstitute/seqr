@@ -38,6 +38,8 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
         original_sql_create_table = self.sql_create_table  # pylint: disable=access-member-before-definition
         self.sql_create_table = 'CREATE MATERIALIZED VIEW %(table)s %(engine)s (%(definition)s)'
         table_sql, params = super().table_sql(model)
+        if getattr(model._meta, 'create_empty', False):
+            table_sql = table_sql + ' EMPTY'
         meta = model._meta
         selects = [
             f'{meta.column_selects[field.column]} {field.column}' if field.column in meta.column_selects else field.column
@@ -64,8 +66,6 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
         sql = f'TO {self._table_name(model._meta, model._meta.to_table)}'
         if getattr(model._meta, 'refreshable', False):
             sql = 'REFRESH EVERY 10 YEAR ' + sql
-        if getattr(model._meta, 'create_empty', False):
-            sql = sql + ' EMPTY'
         return sql
 
     def _dictionary_sql(self, model):
