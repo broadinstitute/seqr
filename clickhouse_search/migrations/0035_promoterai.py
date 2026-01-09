@@ -4,7 +4,6 @@ import clickhouse_backend.models
 from django.db import migrations, models
 import django.db.models.manager
 
-import clickhouse_search.backend.fields
 from clickhouse_search.migration_templates import conditionally_refresh_reference_dataset
 
 
