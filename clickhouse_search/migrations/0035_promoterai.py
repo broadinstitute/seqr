@@ -90,20 +90,23 @@ class Migration(migrations.Migration):
                 ('_overwrite_base_manager', django.db.models.manager.Manager()),
             ],
         ),
-        migrations.RunSQL(
-            render_search_dictionary(
-                reference_genome="GRCh38",
-                dataset_type="SNV_INDEL",
-                reference_dataset="promoterAI",
-                columns="""
-                    `key` UInt32,
-                    `score` Decimal(9, 5)
-                """,
-                primary_key="key",
-                source=f"QUERY 'SELECT key, max(score) from {DATABASES['clickhouse_write']['NAME']}.`GRCh38/SNV_INDEL/reference_data/promoterAI/seqr_variants` GROUP BY key'",  #nosec B608
-                layout="HASHED_ARRAY()"
-            ),
-            hints={"clickhouse": True},
+        migrations.CreateModel(
+            name='PromoterAIDict',
+            fields=[
+                ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
+                ('score', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
+            ],
+            options={
+                'db_table': 'GRCh38/SNV_INDEL/reference_data/promoterAI',
+                'engine': clickhouse_backend.models.MergeTree(primary_key='key'),
+                'source_table': 'PromoterAISeqrVariants',
+                'layout': 'HASHED_ARRAY()',
+                'clickhouse_query_template': 'SELECT key, max(score) from {table} GROUP BY key',
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
         ),
         migrations.RunPython(
             conditionally_refresh_reference_dataset(

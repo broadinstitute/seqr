@@ -71,18 +71,27 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
     def _dictionary_sql(self, model):
         original_sql_create_table = self.sql_create_table  # pylint: disable=access-member-before-definition
         meta = model._meta
+
         postgres_query = getattr(meta, 'postgres_query', None)
         if postgres_query:
             db = DATABASES[getattr(meta, 'postgres_db', 'default')]['NAME']
             source = f"POSTGRESQL(NAME 'seqr_postgres_named_collection' DATABASE {db} QUERY '{postgres_query}')"
         else:
             source_table = self._table_name(meta, meta.source_table)
-            source = f"CLICKHOUSE(USER '{CLICKHOUSE_WRITER_USER}' PASSWORD '{CLICKHOUSE_WRITER_PASSWORD}' TABLE {source_table})"
+            clickhouse_query_template = getattr(meta, 'clickhouse_query_template', None)
+            table_source = f"QUERY '{clickhouse_query_template.format(table=source_table)}'" \
+                if clickhouse_query_template else f'TABLE {source_table}'
+            source = f"CLICKHOUSE(USER '{CLICKHOUSE_WRITER_USER}' PASSWORD '{CLICKHOUSE_WRITER_PASSWORD}' {table_source})"
+
+        layout = f'LAYOUT({meta.layout})'
+        if meta.layout == 'RANGE_HASHED()':
+            layout += ' RANGE(MIN start MAX end)'
+
         self.sql_create_table = f"""
         CREATE DICTIONARY %(table)s (%(definition)s) %(extra)s
         SOURCE({source})
         LIFETIME(MIN 0 MAX {getattr(meta, 'lifetime_max', 0)})
-        LAYOUT({meta.layout})
+        {layout}
         """
         sql, params = super().table_sql(model)
         self.sql_create_table = original_sql_create_table

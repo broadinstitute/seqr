@@ -3,7 +3,8 @@ from django.db.models import ForeignKey, OneToOneField, CASCADE, PROTECT
 
 from clickhouse_search.backend.engines import Join
 from clickhouse_search.backend.fields import Enum8Field, NestedField, UInt32FieldDeltaCodecField
-from clickhouse_search.backend.table_models import FixtureLoadableClickhouseModel, RefreshableMaterializedView, RefreshableMaterializedViewMeta
+from clickhouse_search.backend.table_models import FixtureLoadableClickhouseModel, Dictionary, \
+    RefreshableMaterializedView, RefreshableMaterializedViewMeta
 from seqr.utils.xpos_utils import CHROMOSOME_CHOICES
 
 
@@ -885,3 +886,15 @@ class PromoterAIMv(RefreshableMaterializedView):
             'key': 'DISTINCT ON (key)',
         }
         create_empty = True
+
+
+class PromoterAIDict(Dictionary):
+    key = UInt32FieldDeltaCodecField(primary_key=True)
+    score = models.DecimalField(max_digits=9, decimal_places=5)
+
+    class Meta:
+        db_table = 'GRCh38/SNV_INDEL/reference_data/promoterAI'
+        source_table = 'PromoterAISeqrVariants'
+        engine = models.MergeTree(primary_key='key')
+        layout = 'HASHED_ARRAY()'
+        clickhouse_query_template = 'SELECT key, max(score) from {table} GROUP BY key'

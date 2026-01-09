@@ -5,7 +5,7 @@ from django.db.models import Func
 MATERIALIZED_VIEW_META_FIELDS = [
     'to_table', 'source_table', 'source_sql', 'source_url', 'column_selects', 'refreshable', 'create_empty',
 ]
-DICTIONARY_META_FIELDS = ['layout', 'lifetime_max', 'postgres_query', 'postgres_db']
+DICTIONARY_META_FIELDS = ['layout', 'lifetime_max', 'postgres_query', 'postgres_db', 'clickhouse_query_template']
 
 
 class FixtureLoadableClickhouseModel(models.ClickhouseModel):
