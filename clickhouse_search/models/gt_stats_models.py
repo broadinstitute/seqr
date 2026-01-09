@@ -2,7 +2,8 @@ from clickhouse_backend import models
 from django.db.models import OneToOneField, CASCADE
 
 from clickhouse_search.backend.fields import UInt32FieldDeltaCodecField
-from clickhouse_search.backend.table_models import MaterializedView, Dictionary
+from clickhouse_search.backend.table_models import RefreshableMaterializedView, RefreshableMaterializedViewMeta, \
+    IncrementalMaterializedView, Dictionary
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample
 
@@ -33,7 +34,7 @@ class BaseProjectGtStatsMitoSnvIndel(BaseProjectGtStats):
             index_granularity=8192,
         )
 
-class BaseEntriesToProjectGtStats(MaterializedView):
+class BaseEntriesToProjectGtStats(IncrementalMaterializedView):
     project_guid = models.StringField(low_cardinality=True)
     key = UInt32FieldDeltaCodecField(primary_key=True)
     sample_type = models.Enum8Field(choices=[(1, 'WES'), (2, 'WGS')])
@@ -105,7 +106,7 @@ class ProjectGtStatsSv(BaseProjectGtStats):
     class Meta(BaseProjectGtStats.Meta):
         db_table = 'GRCh38/SV/project_gt_stats'
 
-class EntriesToProjectGtStatsSv(MaterializedView):
+class EntriesToProjectGtStatsSv(IncrementalMaterializedView):
     project_guid = models.StringField(low_cardinality=True)
     key = UInt32FieldDeltaCodecField(primary_key=True)
     affected = models.Enum8Field(choices=[(1, 'A'), (2, 'N'), (3, 'U')])
@@ -169,7 +170,7 @@ class GtStatsSv(models.ClickhouseModel):
     class Meta(BaseGtStats.Meta):
         db_table = 'GRCh38/SV/gt_stats'
 
-class BaseProjectsToGtStats(MaterializedView):
+class BaseProjectsToGtStats(RefreshableMaterializedView):
     key = UInt32FieldDeltaCodecField(primary_key=True)
     ac_wes = models.UInt32Field()
     ac_wgs = models.UInt32Field()
@@ -181,7 +182,7 @@ class BaseProjectsToGtStats(MaterializedView):
     class Meta:
         abstract = True
 
-class ProjectsToGtStatsMeta:
+class ProjectsToGtStatsMeta(RefreshableMaterializedViewMeta):
     column_selects = {
         'ac_wes': "sumIf((het_samples * 1) + (hom_samples * 2), sample_type = 'WES')",
         'ac_wgs': "sumIf((het_samples * 1) + (hom_samples * 2), sample_type = 'WGS')",
@@ -191,7 +192,6 @@ class ProjectsToGtStatsMeta:
         'hom_affected': "sumIf(hom_samples, affected = 'A')",
     }
     source_sql = 'WHERE project_guid NOT IN {CLICKHOUSE_AC_EXCLUDED_PROJECT_GUIDS} GROUP BY key'
-    refreshable = True
 
 class ProjectsToGtStatsGRCh37SnvIndel(BaseProjectsToGtStats):
 
@@ -207,7 +207,7 @@ class ProjectsToGtStatsSnvIndel(BaseProjectsToGtStats):
         to_table = 'GtStatsSnvIndel'
         source_table = 'ProjectGtStatsSnvIndel'
 
-class ProjectsToGtStatsMito(MaterializedView):
+class ProjectsToGtStatsMito(RefreshableMaterializedView):
     key = UInt32FieldDeltaCodecField(primary_key=True)
     ac_het_wes = models.UInt32Field()
     ac_het_wgs = models.UInt32Field()
@@ -230,7 +230,7 @@ class ProjectsToGtStatsMito(MaterializedView):
         }
 
 
-class ProjectsToGtStatsSv(MaterializedView):
+class ProjectsToGtStatsSv(RefreshableMaterializedView):
     key = UInt32FieldDeltaCodecField(primary_key=True)
     ac_wgs = models.UInt32Field()
     ac_affected = models.UInt32Field()

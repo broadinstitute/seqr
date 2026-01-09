@@ -9,14 +9,14 @@ from settings import CLICKHOUSE_WRITER_USER, CLICKHOUSE_WRITER_PASSWORD, DATABAS
 
 class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
 
-    def _is_materialzed_view(self, model):
+    def _is_materialized_view(self, model):
         return getattr(model._meta, 'to_table', None) is not None
 
     def _is_dictionary(self, model):
         return getattr(model._meta, 'layout', None) is not None
 
     def table_sql(self, model):
-        if self._is_materialzed_view(model):
+        if self._is_materialized_view(model):
             return self._materialized_view_sql(model)
         elif self._is_dictionary(model):
             return self._dictionary_sql(model)
@@ -50,7 +50,7 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
         return sql, params
 
     def _get_engine_expression(self, model, engine):
-        if self._is_materialzed_view(model):
+        if self._is_materialized_view(model):
             return self._get_materialized_view_engine_expression(model)
 
         prev_quote_value = self.quote_value   # pylint: disable=access-member-before-definition

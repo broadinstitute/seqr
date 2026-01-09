@@ -3,7 +3,7 @@ from django.db.models import ForeignKey, OneToOneField, CASCADE, PROTECT
 
 from clickhouse_search.backend.engines import Join
 from clickhouse_search.backend.fields import Enum8Field, NestedField, UInt32FieldDeltaCodecField
-from clickhouse_search.backend.table_models import FixtureLoadableClickhouseModel, MaterializedView
+from clickhouse_search.backend.table_models import FixtureLoadableClickhouseModel, RefreshableMaterializedView, RefreshableMaterializedViewMeta
 from seqr.utils.xpos_utils import CHROMOSOME_CHOICES
 
 
@@ -139,7 +139,7 @@ class ClinvarMito(BaseClinvarJoin):
     class Meta(BaseClinvarJoin.Meta):
         db_table = 'GRCh38/MITO/reference_data/clinvar'
 
-class BaseClinvarMv(MaterializedView):
+class BaseClinvarMv(RefreshableMaterializedView):
     key = UInt32FieldDeltaCodecField(primary_key=True)
     allele_id = models.UInt32Field(db_column='alleleId', null=True, blank=True)
     conflicting_pathogenicities = NestedField([
@@ -155,11 +155,10 @@ class BaseClinvarMv(MaterializedView):
     class Meta:
         abstract = True
 
-class ClinvarMvMeta:
+class ClinvarMvMeta(RefreshableMaterializedViewMeta):
     column_selects = {
         'key': "DISTINCT ON (key)",
     }
-    refreshable = True
 
 class ClinvarMvGRCh37SnvIndel(BaseClinvarMv):
 
@@ -191,7 +190,6 @@ class ClinvarSearchMvGRCh37SnvIndel(BaseClinvarMv):
         db_table = 'GRCh37/SNV_INDEL/reference_data/clinvar/seqr_variants_to_search_mv'
         to_table = 'ClinvarGRCh37SnvIndel'
         source_table = 'ClinvarSeqrVariantsGRCh37SnvIndel'
-        source_sql = ''
 
 class ClinvarSearchMvSnvIndel(BaseClinvarMv):
 
@@ -199,7 +197,6 @@ class ClinvarSearchMvSnvIndel(BaseClinvarMv):
         db_table = 'GRCh38/SNV_INDEL/reference_data/clinvar/seqr_variants_to_search_mv'
         to_table = 'ClinvarSnvIndel'
         source_table = 'ClinvarSeqrVariantsSnvIndel'
-        source_sql = ''
 
 class ClinvarSearchMvMito(BaseClinvarMv):
 
@@ -207,7 +204,6 @@ class ClinvarSearchMvMito(BaseClinvarMv):
         db_table = 'GRCh38/MITO/reference_data/clinvar/seqr_variants_to_search_mv'
         to_table = 'ClinvarMito'
         source_table = 'ClinvarSeqrVariantsMito'
-        source_sql = ''
 
 class PextAllVariantsSnvIndel(models.ClickhouseModel):
     variant_id = models.StringField(db_column='variantId', primary_key=True)
