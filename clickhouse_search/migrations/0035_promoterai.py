@@ -4,6 +4,7 @@ import clickhouse_backend.models
 from django.db import migrations, models
 import django.db.models.manager
 
+import clickhouse_search.backend.fields
 from clickhouse_search.migration_templates import conditionally_refresh_reference_dataset
 
 
@@ -91,7 +92,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='PromoterAIDict',
             fields=[
-                ('key', clickhouse_backend.models.UInt32Field(primary_key=True, serialize=False)),
+                ('key', clickhouse_search.backend.fields.DictKeyForeignKey(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, related_name='promoter_ai', serialize=False, to='clickhouse_search.entriessnvindel')),
                 ('score', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
             ],
             options={

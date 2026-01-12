@@ -2,7 +2,7 @@ from clickhouse_backend import models
 from django.db.models import ForeignKey, OneToOneField, CASCADE, PROTECT
 
 from clickhouse_search.backend.engines import Join
-from clickhouse_search.backend.fields import Enum8Field, NestedField, UInt32FieldDeltaCodecField
+from clickhouse_search.backend.fields import Enum8Field, NestedField, UInt32FieldDeltaCodecField, DictKeyForeignKey
 from clickhouse_search.backend.table_models import FixtureLoadableClickhouseModel, Dictionary, \
     RefreshableMaterializedView, RefreshableMaterializedViewMeta
 from seqr.utils.xpos_utils import CHROMOSOME_CHOICES
@@ -889,7 +889,7 @@ class PromoterAIMv(RefreshableMaterializedView):
 
 
 class PromoterAIDict(Dictionary):
-    key = models.UInt32Field(primary_key=True)
+    key = DictKeyForeignKey('EntriesSnvIndel', related_name='promoter_ai')
     score = models.DecimalField(max_digits=9, decimal_places=5)
 
     class Meta:
