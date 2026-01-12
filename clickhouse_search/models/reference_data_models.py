@@ -11,6 +11,17 @@ from seqr.utils.xpos_utils import CHROMOSOME_CHOICES
 def _all_variants_to_seqr_source_sql(reference_genome, dataset_type):
     return f'src INNER JOIN `{reference_genome}/{dataset_type}/key_lookup` dst on assumeNotNull(src.variantId) = dst.variantId'
 
+class ReferenceDataMvMeta(RefreshableMaterializedViewMeta):
+    source_sql = _all_variants_to_seqr_source_sql('GRCh38', 'SNV_INDEL')
+    column_selects = {
+        'key': 'DISTINCT ON (key)',
+    }
+    create_empty = True
+
+class ReferenceDataDictMeta:
+    engine = models.MergeTree(primary_key='key')
+    layout = 'HASHED_ARRAY()'
+
 
 class BaseClinvar(FixtureLoadableClickhouseModel):
 
@@ -877,24 +888,17 @@ class PromoterAIMv(RefreshableMaterializedView):
     gene_id = models.StringField(db_column='geneId')
     score = models.DecimalField(max_digits=9, decimal_places=5)
 
-    class Meta(RefreshableMaterializedViewMeta):
+    class Meta(ReferenceDataMvMeta):
         db_table = 'GRCh38/SNV_INDEL/reference_data/promoterAI/all_variants_to_seqr_variants_mv'
         to_table = 'PromoterAISeqrVariants'
         source_table = 'PromoterAIAllVariants'
-        source_sql = _all_variants_to_seqr_source_sql('GRCh38', 'SNV_INDEL')
-        column_selects = {
-            'key': 'DISTINCT ON (key)',
-        }
-        create_empty = True
 
 
 class PromoterAIDict(Dictionary):
     key = DictKeyForeignKey('EntriesSnvIndel', related_name='promoter_ai')
     score = models.DecimalField(max_digits=9, decimal_places=5)
 
-    class Meta:
+    class Meta(ReferenceDataDictMeta):
         db_table = 'GRCh38/SNV_INDEL/reference_data/promoterAI'
         source_table = 'PromoterAISeqrVariants'
-        engine = models.MergeTree(primary_key='key')
-        layout = 'HASHED_ARRAY()'
         clickhouse_query_template = 'SELECT key, max(score) from {table} GROUP BY key'
