@@ -98,20 +98,40 @@ class SearchQuerySet(QuerySet):
             ([self.single_sample_type] if self.single_sample_type else sorted(Sample.SAMPLE_TYPE_LOOKUP.keys()))
         ]
 
-    def _seqr_pop_expression(self, seqr_populations):
-        seqr_pop_fields = []
-        pop_configs = [(sub_fields, self.sample_types) for _, sub_fields in seqr_populations]
-        pop_configs += [(config[0], ['affected']) for config in pop_configs]
-        for sub_fields, suffixes in pop_configs:
-            seqr_pop_fields += [f"{sub_fields['ac']}_{suffix}" for suffix in suffixes]
-            if sub_fields.get('hom'):
-                seqr_pop_fields += [f"{sub_fields['hom']}_{suffix}" for suffix in suffixes]
+    @property
+    def gt_stats_dict(self):
+        if self.gt_stats_dict_rel is None:
+            return None
+        return self.gt_stats_dict_rel.rel.related_model
 
-        return self.gt_stats_dict.dict_get_expression(
+    def _seqr_pop_fields(self):
+        if self.gt_stats_dict is None:
+            return []
+        return [field.name for field in self.gt_stats_dict._meta.local_fields if field.name != 'key']
+
+    def _annotate_seqr_pop_expression(self, results):
+        seqr_pop_fields = self._seqr_pop_fields()
+        if not seqr_pop_fields:
+            return results
+        return results.annotate(seqrPop=self.gt_stats_dict.dict_get_expression(
             'key',
             seqr_pop_fields,
             output_field=models.TupleField([models.UInt32Field() for _ in seqr_pop_fields])
-        )
+        ))
+
+    def _seqr_subfield_pop_expressions(self, subfield, subfield_name=None, affected=False):
+        seqr_pop_fields = self._seqr_pop_fields()
+        pop_expressions = [
+            (field, F(f'seqrPop__{seqr_pop_fields.index(field)}')) for field in seqr_pop_fields
+            if field.startswith(subfield) and (field.endswith('affected') == affected)
+        ]
+        if len(pop_expressions) == 1:
+            pop_expressions = [(subfield, pop_expressions[0][1])]
+        elif len(pop_expressions) > 1:
+            pop_expressions = pop_expressions + [(subfield, Plus(*[expr for _, expr in pop_expressions]))]
+        if subfield_name and subfield_name != subfield:
+            pop_expressions = [(name.replace(subfield, subfield_name), expr) for name, expr in pop_expressions]
+        return pop_expressions
 
     def _format_gene_intervals(self, genes):
         return [
@@ -140,15 +160,7 @@ class AnnotationsQuerySet(SearchQuerySet):
     def annotation_values(self):
         seqr_pops = []
         population_fields = [*self.model.POPULATION_FIELDS]
-        index = 0
-        for name, subfields in self.model.SEQR_POPULATIONS:
-            index = self._add_seqr_pop_expression(
-                index, name, subfields, seqr_pops, population_fields, has_multiple_sample_types=len(self.sample_types) > 1,
-            )
-        for name, subfields in self.model.SEQR_POPULATIONS:
-            index = self._add_seqr_pop_expression(
-                index, f'{name}_affected', subfields, seqr_pops, population_fields,
-            )
+        self._get_seqr_pop_expressions(seqr_pops, population_fields)
 
         annotations = {
             **{key: Value(value) for key, value in self.model.ANNOTATION_CONSTANTS.items()},
@@ -166,24 +178,26 @@ class AnnotationsQuerySet(SearchQuerySet):
 
         return annotations
 
-    def _add_seqr_pop_expression(self, index, name, subfields, seqr_pops, population_fields, has_multiple_sample_types=False):
-        exprs, subfield_names, index = self._seqr_pop_expressions(index, 'ac', has_multiple_sample_types)
-        if 'hom' in subfields:
-            hom_exprs, hom_names, index = self._seqr_pop_expressions(index, 'hom', has_multiple_sample_types)
-            exprs += hom_exprs
-            subfield_names += hom_names
-        seqr_pops.append(Tuple(*exprs))
-        population_fields.append((name, NamedTupleField([(name, models.UInt32Field()) for name in subfield_names])))
-        return index
+    def _get_seqr_pop_expressions(self, seqr_pops, population_fields):
+        if self.gt_stats_dict is None:
+            return
 
-    def _seqr_pop_expressions(self, index, subfield_name, has_multiple_sample_types):
-        exprs = [F(f'seqrPop__{index}')]
-        subfield_names = [subfield_name]
-        if has_multiple_sample_types:
-            exprs += [F(f'seqrPop__{index+1}'), Plus(f'seqrPop__{index}', f'seqrPop__{index+1}')]
-            subfield_names = [f'{subfield_name}_{sample_type}' for sample_type in self.sample_types] + subfield_names
-            index += 1
-        return exprs, subfield_names, index + 1
+        seqr_pops_by_name = {}
+        for name, ac_field in self.gt_stats_dict.SEQR_POPULATIONS:
+            seqr_pops_by_name[name] = (
+                self._seqr_subfield_pop_expressions(ac_field, subfield_name='ac') +
+                self._seqr_subfield_pop_expressions('hom')
+            )
+            seqr_pops_by_name[f'{name}_affected'] = (
+                self._seqr_subfield_pop_expressions(ac_field, affected=True, subfield_name='ac') +
+                self._seqr_subfield_pop_expressions('hom', affected=True)
+            )
+
+        for name, pop_subfields in seqr_pops_by_name.items():
+            seqr_pops.append(Tuple(*[expr for _, expr in pop_subfields]))
+            population_fields.append((name, NamedTupleField([(field, models.UInt32Field()) for field, _ in pop_subfields])))
+
+        return seqr_pops
 
     @staticmethod
     def _genotype_override_expression(index, col, cn_index):
@@ -238,8 +252,8 @@ class AnnotationsQuerySet(SearchQuerySet):
         return f'{self.entry_field}__clinvar_join'
 
     @property
-    def gt_stats_dict(self):
-        return self.entry_model.GT_STATS_DICT
+    def gt_stats_dict_rel(self):
+        return getattr(self.entry_model, 'gt_stats', None)
 
     @property
     def genome_version(self):
@@ -323,12 +337,7 @@ class AnnotationsQuerySet(SearchQuerySet):
         )
 
     def join_seqr_pop(self):
-        results = self
-        seqr_populations = self.model.SEQR_POPULATIONS
-        if seqr_populations:
-            results = results.annotate(seqrPop=self._seqr_pop_expression(seqr_populations))
-
-        return results
+        return self._annotate_seqr_pop_expression(self)
 
     def join_clinvar(self, keys):
         results = self
@@ -772,8 +781,8 @@ class EntriesManager(SearchQuerySet):
         return self.model.clinvar_join.rel.related_model
 
     @property
-    def gt_stats_dict(self):
-        return self.model.GT_STATS_DICT
+    def gt_stats_dict_rel(self):
+        return getattr(self.model, 'gt_stats', None)
 
     @property
     def genome_version(self):
@@ -789,7 +798,7 @@ class EntriesManager(SearchQuerySet):
 
         is_sv_class = 'cn' in self.call_fields
         callset_filter_field = 'sv_callset' if is_sv_class else 'callset'
-        if (freqs or {}).get(callset_filter_field) and self.annotations_model.SEQR_POPULATIONS:
+        if (freqs or {}).get(callset_filter_field) and self.gt_stats_dict_rel is not None:
             entries = self._filter_seqr_frequency(entries, **freqs[callset_filter_field])
 
         gnomad_filter = (freqs or {}).get('gnomad_genomes') or {}
@@ -811,9 +820,7 @@ class EntriesManager(SearchQuerySet):
                clinvar=self._clinvar_tuple(),
            )
 
-        seqr_populations = self.annotations_model.SEQR_POPULATIONS
-        if seqr_populations:
-            entries = entries.annotate(seqrPop=self._seqr_pop_expression(seqr_populations))
+        entries = self._annotate_seqr_pop_expression(entries)
 
         return entries
 
@@ -1291,9 +1298,15 @@ class EntriesManager(SearchQuerySet):
 
     def _filter_seqr_frequency(self, entries, ac=None, hh=None, **kwargs):
         if ac is not None:
-            entries = entries.annotate(ac=F('seqrPop__0') if self.single_sample_type else Plus('seqrPop__0', 'seqrPop__1'))
+            ac_field = self.gt_stats_dict.SEQR_POPULATIONS[0][1]
+            ac_expressions = self._seqr_subfield_pop_expressions(ac_field, subfield_name='ac')
+            ac_expression = next(expr for field, expr in ac_expressions if field == 'ac')
+            entries = entries.annotate(ac=ac_expression)
             entries = entries.filter(ac__lte=ac)
-        if hh is not None and 'hom' in self.annotations_model.SEQR_POPULATIONS[0][1]:
-            entries = entries.annotate(hom=F('seqrPop__1') if self.single_sample_type else Plus('seqrPop__2', 'seqrPop__3'))
-            entries = entries.filter(hom__lte=hh)
+        if hh is not None:
+            hom_expressions = self._seqr_subfield_pop_expressions('hom')
+            if hom_expressions:
+                hom_expression = next(expr for field, expr in hom_expressions if field == 'hom')
+                entries = entries.annotate(hom=hom_expression)
+                entries = entries.filter(hom__lte=hh)
         return entries
