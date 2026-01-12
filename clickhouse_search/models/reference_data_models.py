@@ -844,6 +844,18 @@ class PromoterAIAllVariants(models.ClickhouseModel):
             order_by=('variant_id'),
         )
 
+class PromoterAISeqrVariants(models.ClickhouseModel):
+    key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
+    gene_id = models.StringField(db_column='geneId')
+    score = models.DecimalField(max_digits=9, decimal_places=5)
+
+    class Meta:
+        db_table = 'GRCh38/SNV_INDEL/reference_data/promoterAI/seqr_variants'
+        engine = models.MergeTree(
+            primary_key=('key'),
+            order_by=('key'),
+        )
+
 class PromoterAIAllMv(RefreshableMaterializedView):
     variant_id = models.StringField(db_column='variantId', primary_key=True)
     gene_id = models.StringField(db_column='geneId', null=True, blank=True)
@@ -859,18 +871,6 @@ class PromoterAIAllMv(RefreshableMaterializedView):
             'score': 'promoterAI'
         }
         create_empty = True
-
-class PromoterAISeqrVariants(models.ClickhouseModel):
-    key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
-    gene_id = models.StringField(db_column='geneId')
-    score = models.DecimalField(max_digits=9, decimal_places=5)
-
-    class Meta:
-        db_table = 'GRCh38/SNV_INDEL/reference_data/promoterAI/seqr_variants'
-        engine = models.MergeTree(
-            primary_key=('key'),
-            order_by=('key'),
-        )
 
 class PromoterAIMv(RefreshableMaterializedView):
     key = models.UInt32Field(primary_key=True)
