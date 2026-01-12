@@ -114,7 +114,7 @@ class Migration(migrations.Migration):
             hints={'clickhouse': True},
         ),
         migrations.RunPython(
-            optimize_partitions, 
+            optimize_partitions,
             reverse_code=migrations.RunPython.noop
         ),
     ]
