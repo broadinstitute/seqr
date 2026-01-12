@@ -1,7 +1,7 @@
 from clickhouse_backend import models
 from django.db.models import OneToOneField, CASCADE
 
-from clickhouse_search.backend.fields import UInt32FieldDeltaCodecField
+from clickhouse_search.backend.fields import UInt32FieldDeltaCodecField, DictKeyForeignKey
 from clickhouse_search.backend.table_models import RefreshableMaterializedView, RefreshableMaterializedViewMeta, \
     IncrementalMaterializedView, Dictionary
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
@@ -250,7 +250,8 @@ class ProjectsToGtStatsSv(RefreshableMaterializedView):
 
 
 class BaseGtStatsDict(Dictionary):
-    key = models.UInt32Field(primary_key=True)
+    SEQR_POPULATIONS = [('seqr', 'ac')]
+
     ac_wes = models.UInt32Field()
     ac_wgs = models.UInt32Field()
     ac_affected = models.UInt32Field()
@@ -265,6 +266,7 @@ class GtStatsDictMeta:
     engine = models.MergeTree(primary_key='key')
 
 class GtStatsDictGRCh37SnvIndel(BaseGtStatsDict):
+    key = DictKeyForeignKey('EntriesGRCh37SnvIndel', related_name='gt_stats')
 
     class Meta(GtStatsDictMeta):
         db_table = 'GRCh37/SNV_INDEL/gt_stats_dict'
@@ -272,6 +274,7 @@ class GtStatsDictGRCh37SnvIndel(BaseGtStatsDict):
         layout = 'FLAT(MAX_ARRAY_SIZE 200000000)'
 
 class GtStatsDictSnvIndel(BaseGtStatsDict):
+    key = DictKeyForeignKey('EntriesSnvIndel', related_name='gt_stats')
 
     class Meta(GtStatsDictMeta):
         db_table = 'GRCh38/SNV_INDEL/gt_stats_dict'
@@ -279,7 +282,9 @@ class GtStatsDictSnvIndel(BaseGtStatsDict):
         layout = 'FLAT(MAX_ARRAY_SIZE 1000000000)'
 
 class GtStatsDictMito(Dictionary):
-    key = models.UInt32Field(primary_key=True)
+    SEQR_POPULATIONS = [('seqr', 'ac_hom'), ('seqr_heteroplasmy', 'ac_het')]
+
+    key = DictKeyForeignKey('EntriesMito', related_name='gt_stats')
     ac_het_wes = models.UInt32Field()
     ac_het_wgs = models.UInt32Field()
     ac_het_affected = models.UInt32Field()
@@ -293,7 +298,9 @@ class GtStatsDictMito(Dictionary):
         layout = 'FLAT(MAX_ARRAY_SIZE 1000000)'
 
 class GtStatsDictSv(Dictionary):
-    key = models.UInt32Field(primary_key=True)
+    SEQR_POPULATIONS = [('sv_seqr', 'ac')]
+
+    key = DictKeyForeignKey('EntriesSv', related_name='gt_stats')
     ac_wgs = models.UInt32Field()
     ac_affected = models.UInt32Field()
     hom_wgs = models.UInt32Field()

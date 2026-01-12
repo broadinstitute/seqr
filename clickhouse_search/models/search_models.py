@@ -6,7 +6,6 @@ from clickhouse_search.backend.fields import Enum8Field, NestedField, UInt32Fiel
 from clickhouse_search.backend.functions import ArrayDistinct, ArrayFlatten, ArrayMin, ArrayMax
 from clickhouse_search.backend.table_models import Dictionary, FixtureLoadableClickhouseModel
 from clickhouse_search.managers import EntriesManager, AnnotationsQuerySet
-from clickhouse_search.models.gt_stats_models import GtStatsDictGRCh37SnvIndel, GtStatsDictSnvIndel, GtStatsDictSv, GtStatsDictMito
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample
 from seqr.utils.search.constants import SPLICE_AI_FIELD
@@ -24,9 +23,6 @@ class Projection(Func):
 
 class BaseAnnotations(FixtureLoadableClickhouseModel):
 
-    SEQR_POPULATIONS = [
-        ('seqr', {'ac': 'ac', 'hom': 'hom'}),
-    ]
     ANNOTATION_CONSTANTS = {
         'genomeVersion': GENOME_VERSION_GRCh38,
         'liftedOverGenomeVersion': GENOME_VERSION_GRCh37,
@@ -82,9 +78,6 @@ class BaseAnnotationsSvGcnv(BaseAnnotations):
     SORTED_GENE_CONSQUENCES_FIELDS = [
         ('geneId', models.StringField(null=True, blank=True)),
         ('majorConsequence', models.Enum8Field(null=True, blank=True, return_int=False, choices=SV_CONSEQUENCE_RANKS)),
-    ]
-    SEQR_POPULATIONS = [
-        ('sv_seqr', {'ac': 'ac', 'hom': 'hom'}),
     ]
 
     chrom = Enum8Field(return_int=False, choices=CHROMOSOME_CHOICES)
@@ -275,10 +268,6 @@ class BaseAnnotationsMito(BaseAnnotationsMitoSnvIndel):
         ('sift', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
         ('mlc', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
     ]
-    SEQR_POPULATIONS = [
-        ('seqr', {'ac': 'ac_hom'}),
-        ('seqr_heteroplasmy', {'ac': 'ac_het'}),
-    ]
 
     common_low_heteroplasmy = models.BoolField(db_column='commonLowHeteroplasmy', null=True, blank=True)
     mitomap_pathogenic  = models.BoolField(db_column='mitomapPathogenic', null=True, blank=True)
@@ -355,7 +344,6 @@ class BaseAnnotationsGcnv(BaseAnnotationsSvGcnv):
             ('hom', models.UInt32Field()),
         ])),
     ]
-    SEQR_POPULATIONS = []
     SV_TYPE_FILTER_PREFIX = 'gCNV_'
     GENOTYPE_OVERRIDE_FIELDS = {
         'pos': ('start', ArrayMin),
@@ -431,7 +419,6 @@ class BaseEntriesSnvIndel(BaseEntries):
         projection = Projection('xpos_projection', order_by='is_gnomad_gt_5_percent, is_annotated_in_any_gene, xpos')
 
 class EntriesGRCh37SnvIndel(BaseEntriesSnvIndel):
-    GT_STATS_DICT = GtStatsDictGRCh37SnvIndel
 
     # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
     key = ForeignKey('AnnotationsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
@@ -440,7 +427,6 @@ class EntriesGRCh37SnvIndel(BaseEntriesSnvIndel):
         db_table = 'GRCh37/SNV_INDEL/entries'
 
 class EntriesSnvIndel(BaseEntriesSnvIndel):
-    GT_STATS_DICT = GtStatsDictSnvIndel
 
     # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
     key = ForeignKey('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
@@ -477,7 +463,6 @@ class EntriesSnvIndel(BaseEntriesSnvIndel):
         )
 
 class EntriesMito(BaseEntries):
-    GT_STATS_DICT = GtStatsDictMito
     CALL_FIELDS = [
         ('sampleId', models.StringField()),
         ('gt', models.Enum8Field(null=True, blank=True, choices=[(0, 'REF'), (1, 'HET'), (2, 'HOM')])),
@@ -505,7 +490,6 @@ class EntriesMito(BaseEntries):
 class EntriesSv(BaseEntries):
     MAX_XPOS_FILTER_INTERVALS = 0
     SAMPLE_TYPE = Sample.SAMPLE_TYPE_WGS
-    GT_STATS_DICT = GtStatsDictSv
     CALL_FIELDS = [
         ('sampleId', models.StringField()),
         ('gt', models.Enum8Field(null=True, blank=True, choices=[(0, 'REF'), (1, 'HET'), (2, 'HOM')])),
