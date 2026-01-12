@@ -2,6 +2,7 @@ from clickhouse_backend import models
 from clickhouse_backend.models.fields.tuple import IndexTransformFactory as TupleIndexTransform
 from clickhouse_backend.models.fields.array import ArrayField, IndexTransformFactory as ArrayIndexTransform
 from collections import defaultdict
+from django.db.models import ForeignKey, CASCADE
 
 class NestedField(models.TupleField):
 
@@ -87,6 +88,16 @@ class UInt32FieldDeltaCodecField(models.UInt32Field):
 
     def db_type(self, connection):
         return f'{super().db_type(connection)} CODEC(Delta(8), ZSTD(1))'
+
+class DictKeyForeignKey(ForeignKey):
+
+    def __init__(self, to, on_delete=CASCADE, db_column='key', primary_key=True, **kwargs):
+        super().__init__(to, on_delete=on_delete, db_column=db_column, primary_key=primary_key, **kwargs)
+
+    def db_type(self, connection):
+        # ForeignKey fields will always have the same type as the field they point to
+        # Since dictionaries do not the delta codec, set a plain UInt32Field type here
+        return models.UInt32Field().db_type(connection)
 
 class UInt64FieldDeltaCodecField(models.UInt64Field):
 

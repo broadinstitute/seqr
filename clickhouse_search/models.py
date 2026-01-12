@@ -3,7 +3,7 @@ from django.db.migrations import state
 from django.db.models import options, ForeignKey, OneToOneField, Func, CASCADE, PROTECT
 
 from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocksDB, Join
-from clickhouse_search.backend.fields import Enum8Field, NestedField, UInt32FieldDeltaCodecField, UInt64FieldDeltaCodecField, NamedTupleField, MaterializedUInt8Field
+from clickhouse_search.backend.fields import Enum8Field, NestedField, UInt32FieldDeltaCodecField, UInt64FieldDeltaCodecField, NamedTupleField, MaterializedUInt8Field, DictKeyForeignKey
 from clickhouse_search.backend.functions import ArrayDistinct, ArrayFlatten, ArrayMin, ArrayMax
 from clickhouse_search.backend.table_models import IncrementalMaterializedView, RefreshableMaterializedView, RefreshableMaterializedViewMeta, \
     Dictionary, MATERIALIZED_VIEW_META_FIELDS, DICTIONARY_META_FIELDS
@@ -98,9 +98,6 @@ class FixtureLoadableClickhouseModel(models.ClickhouseModel):
 class BaseAnnotations(FixtureLoadableClickhouseModel):
 
     CHROMOSOME_CHOICES = [(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES)]
-    SEQR_POPULATIONS = [
-        ('seqr', {'ac': 'ac', 'hom': 'hom'}),
-    ]
     ANNOTATION_CONSTANTS = {
         'genomeVersion': GENOME_VERSION_GRCh38,
         'liftedOverGenomeVersion': GENOME_VERSION_GRCh37,
@@ -156,9 +153,6 @@ class BaseAnnotationsSvGcnv(BaseAnnotations):
     SORTED_GENE_CONSQUENCES_FIELDS = [
         ('geneId', models.StringField(null=True, blank=True)),
         ('majorConsequence', models.Enum8Field(null=True, blank=True, return_int=False, choices=SV_CONSEQUENCE_RANKS)),
-    ]
-    SEQR_POPULATIONS = [
-        ('sv_seqr', {'ac': 'ac', 'hom': 'hom'}),
     ]
 
     chrom = Enum8Field(return_int=False, choices=BaseAnnotations.CHROMOSOME_CHOICES)
@@ -349,10 +343,6 @@ class BaseAnnotationsMito(BaseAnnotationsMitoSnvIndel):
         ('sift', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
         ('mlc', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
     ]
-    SEQR_POPULATIONS = [
-        ('seqr', {'ac': 'ac_hom'}),
-        ('seqr_heteroplasmy', {'ac': 'ac_het'}),
-    ]
 
     common_low_heteroplasmy = models.BoolField(db_column='commonLowHeteroplasmy', null=True, blank=True)
     mitomap_pathogenic  = models.BoolField(db_column='mitomapPathogenic', null=True, blank=True)
@@ -429,7 +419,6 @@ class BaseAnnotationsGcnv(BaseAnnotationsSvGcnv):
             ('hom', models.UInt32Field()),
         ])),
     ]
-    SEQR_POPULATIONS = []
     SV_TYPE_FILTER_PREFIX = 'gCNV_'
     GENOTYPE_OVERRIDE_FIELDS = {
         'pos': ('start', ArrayMin),
@@ -1304,7 +1293,8 @@ class PromoterAISeqrVariants(models.ClickhouseModel):
 
 
 class BaseGtStatsDict(Dictionary):
-    key = models.UInt32Field(primary_key=True)
+    SEQR_POPULATIONS = [('seqr', 'ac')]
+
     ac_wes = models.UInt32Field()
     ac_wgs = models.UInt32Field()
     ac_affected = models.UInt32Field()
@@ -1319,6 +1309,7 @@ class GtStatsDictMeta:
     engine = models.MergeTree(primary_key='key')
 
 class GtStatsDictGRCh37SnvIndel(BaseGtStatsDict):
+    key = DictKeyForeignKey('EntriesGRCh37SnvIndel', related_name='gt_stats')
 
     class Meta(GtStatsDictMeta):
         db_table = 'GRCh37/SNV_INDEL/gt_stats_dict'
@@ -1326,6 +1317,7 @@ class GtStatsDictGRCh37SnvIndel(BaseGtStatsDict):
         layout = 'FLAT(MAX_ARRAY_SIZE 200000000)'
 
 class GtStatsDictSnvIndel(BaseGtStatsDict):
+    key = DictKeyForeignKey('EntriesSnvIndel', related_name='gt_stats')
 
     class Meta(GtStatsDictMeta):
         db_table = 'GRCh38/SNV_INDEL/gt_stats_dict'
@@ -1333,7 +1325,9 @@ class GtStatsDictSnvIndel(BaseGtStatsDict):
         layout = 'FLAT(MAX_ARRAY_SIZE 1000000000)'
 
 class GtStatsDictMito(Dictionary):
-    key = models.UInt32Field(primary_key=True)
+    SEQR_POPULATIONS = [('seqr', 'ac_hom'), ('seqr_heteroplasmy', 'ac_het')]
+
+    key = DictKeyForeignKey('EntriesMito', related_name='gt_stats')
     ac_het_wes = models.UInt32Field()
     ac_het_wgs = models.UInt32Field()
     ac_het_affected = models.UInt32Field()
@@ -1347,7 +1341,9 @@ class GtStatsDictMito(Dictionary):
         layout = 'FLAT(MAX_ARRAY_SIZE 1000000)'
 
 class GtStatsDictSv(Dictionary):
-    key = models.UInt32Field(primary_key=True)
+    SEQR_POPULATIONS = [('sv_seqr', 'ac')]
+
+    key = DictKeyForeignKey('EntriesSv', related_name='gt_stats')
     ac_wgs = models.UInt32Field()
     ac_affected = models.UInt32Field()
     hom_wgs = models.UInt32Field()
@@ -1361,7 +1357,6 @@ class GtStatsDictSv(Dictionary):
 
 class BaseEntries(FixtureLoadableClickhouseModel):
     MAX_XPOS_FILTER_INTERVALS = 500
-    GT_STATS_DICT = None
 
     project_guid = models.StringField(low_cardinality=True)
     family_guid = models.StringField()
@@ -1409,7 +1404,6 @@ class BaseEntriesSnvIndel(BaseEntries):
         projection = Projection('xpos_projection', order_by='is_gnomad_gt_5_percent, is_annotated_in_any_gene, xpos')
 
 class EntriesGRCh37SnvIndel(BaseEntriesSnvIndel):
-    GT_STATS_DICT = GtStatsDictGRCh37SnvIndel
 
     # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
     key = ForeignKey('AnnotationsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
@@ -1418,7 +1412,6 @@ class EntriesGRCh37SnvIndel(BaseEntriesSnvIndel):
         db_table = 'GRCh37/SNV_INDEL/entries'
 
 class EntriesSnvIndel(BaseEntriesSnvIndel):
-    GT_STATS_DICT = GtStatsDictSnvIndel
 
     # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
     key = ForeignKey('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
@@ -1455,7 +1448,6 @@ class EntriesSnvIndel(BaseEntriesSnvIndel):
         )
 
 class EntriesMito(BaseEntries):
-    GT_STATS_DICT = GtStatsDictMito
     CALL_FIELDS = [
         ('sampleId', models.StringField()),
         ('gt', models.Enum8Field(null=True, blank=True, choices=[(0, 'REF'), (1, 'HET'), (2, 'HOM')])),
@@ -1483,7 +1475,6 @@ class EntriesMito(BaseEntries):
 class EntriesSv(BaseEntries):
     MAX_XPOS_FILTER_INTERVALS = 0
     SAMPLE_TYPE = Sample.SAMPLE_TYPE_WGS
-    GT_STATS_DICT = GtStatsDictSv
     CALL_FIELDS = [
         ('sampleId', models.StringField()),
         ('gt', models.Enum8Field(null=True, blank=True, choices=[(0, 'REF'), (1, 'HET'), (2, 'HOM')])),

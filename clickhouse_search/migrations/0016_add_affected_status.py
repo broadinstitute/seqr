@@ -240,7 +240,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='GtStatsDictGRCh37SnvIndel',
             fields=[
-                ('key', clickhouse_backend.models.UInt32Field(primary_key=True, serialize=False)),
+                ('key', clickhouse_search.backend.fields.DictKeyForeignKey(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, related_name='gt_stats', serialize=False, to='clickhouse_search.entriesgrch37snvindel')),
                 ('ac_wes', clickhouse_backend.models.UInt32Field()),
                 ('ac_wgs', clickhouse_backend.models.UInt32Field()),
                 ('ac_affected', clickhouse_backend.models.UInt32Field()),
@@ -328,7 +328,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='GtStatsDictSnvIndel',
             fields=[
-                ('key', clickhouse_backend.models.UInt32Field(primary_key=True, serialize=False)),
+                ('key', clickhouse_search.backend.fields.DictKeyForeignKey(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, related_name='gt_stats', serialize=False, to='clickhouse_search.entriessnvindel')),
                 ('ac_wes', clickhouse_backend.models.UInt32Field()),
                 ('ac_wgs', clickhouse_backend.models.UInt32Field()),
                 ('ac_affected', clickhouse_backend.models.UInt32Field()),
@@ -416,7 +416,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='GtStatsDictMito',
             fields=[
-                ('key', clickhouse_backend.models.UInt32Field(primary_key=True, serialize=False)),
+                ('key', clickhouse_search.backend.fields.DictKeyForeignKey(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, related_name='gt_stats', serialize=False, to='clickhouse_search.entriesmito')),
                 ('ac_het_wes', clickhouse_backend.models.UInt32Field()),
                 ('ac_het_wgs', clickhouse_backend.models.UInt32Field()),
                 ('ac_het_affected', clickhouse_backend.models.UInt32Field()),
@@ -498,7 +498,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='GtStatsDictSv',
             fields=[
-                ('key', clickhouse_backend.models.UInt32Field(primary_key=True, serialize=False)),
+                ('key', clickhouse_search.backend.fields.DictKeyForeignKey(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, related_name='gt_stats', serialize=False, to='clickhouse_search.entriessv')),
                 ('ac_wgs', clickhouse_backend.models.UInt32Field()),
                 ('ac_affected', clickhouse_backend.models.UInt32Field()),
                 ('hom_wgs', clickhouse_backend.models.UInt32Field()),
