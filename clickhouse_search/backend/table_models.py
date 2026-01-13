@@ -3,7 +3,7 @@ from django.db import connections
 from django.db.models import Func
 
 MATERIALIZED_VIEW_META_FIELDS = [
-    'to_table', 'source_table', 'source_sql', 'source_url', 'gcs_source_args', 'column_selects', 'refreshable', 'create_empty',
+    'to_table', 'source_table', 'source_sql', 'source_url', 'nullable_source_structure', 'column_selects', 'refreshable', 'create_empty',
 ]
 DICTIONARY_META_FIELDS = ['layout', 'lifetime_max', 'postgres_query', 'postgres_db', 'clickhouse_query_template']
 

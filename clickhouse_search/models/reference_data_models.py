@@ -351,6 +351,92 @@ class HgmdSnvIndel(BaseHgmd):
         db_table = 'GRCh38/SNV_INDEL/reference_data/hgmd'
         engine = Join('ALL', 'LEFT', 'key', join_use_nulls=1, flatten_nested=0)
 
+class HgmdMvMeta(RefreshableMaterializedViewMeta):
+    column_selects = {
+        'variantId': "arrayStringConcat([replaceOne(replaceOne(CHROM, 'chr', ''), 'MT', 'M'), toString(POS), REF, ALT], '-')",
+        'accession': 'ID',
+        'classification': "extract(INFO, 'CLASS=([^;]+)')",
+    }
+    source_sql = "WHERE ALT != '<DEL>' SETTINGS input_format_allow_errors_ratio = 0.01, input_format_allow_errors_num = 25"
+    create_empty = True
+
+HGMD_INFO_STRUCTURE = 'CHROM String, POS UInt32, ID String, REF String, ALT String, QUAL String, FILTER String, INFO String'
+
+def _hgmd_source(url):
+    if not url:
+        return f"null('{HGMD_INFO_STRUCTURE}')"
+    return f"gcs(pipeline_data_access, url='{url}', format='TSV', structure='{HGMD_INFO_STRUCTURE}')"
+
+
+class HgmdAllMv(RefreshableMaterializedView):
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
+    accession = models.StringField()
+    classification = models.StringField()
+
+    class Meta(HgmdMvMeta):
+        db_table = 'GRCh38/SNV_INDEL/reference_data/hgmd/all_variants_mv'
+        to_table = 'HgmdAllVariantsSnvIndel'
+        source_url = '{HGMD_GRCH38_URL}'
+        nullable_source_structure = HGMD_INFO_STRUCTURE
+
+class HgmdMv(RefreshableMaterializedView):
+    key = models.UInt32Field(primary_key=True)
+    accession = models.StringField()
+    classification = models.Enum8Field(return_int=False, choices=BaseHgmd.HGMD_CLASSES)
+
+    class Meta(ReferenceDataMvMeta):
+        db_table = 'GRCh38/SNV_INDEL/reference_data/hgmd/all_variants_to_seqr_variants_mv'
+        to_table = 'HgmdSeqrVariantsSnvIndel'
+        source_table = 'HgmdAllVariantsSnvIndel'
+
+class HgmdSearchMv(RefreshableMaterializedView):
+    key = models.UInt32Field(primary_key=True)
+    accession = models.StringField()
+    classification = models.Enum8Field(return_int=False, choices=BaseHgmd.HGMD_CLASSES)
+
+    class Meta(RefreshableMaterializedViewMeta):
+        db_table = 'GRCh38/SNV_INDEL/reference_data/hgmd/seqr_variants_to_search_mv'
+        to_table = 'HgmdSnvIndel'
+        source_table = 'HgmdSeqrVariantsSnvIndel'
+        column_selects = {
+            'key': 'DISTINCT ON (key)',
+        }
+
+class HgmdGRCh37AllMv(RefreshableMaterializedView):
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
+    accession = models.StringField()
+    classification = models.StringField()
+
+    class Meta(HgmdMvMeta):
+        db_table = 'GRCh37/SNV_INDEL/reference_data/hgmd/all_variants_mv'
+        to_table = 'HgmdAllVariantsGRCh37SnvIndel'
+        source_url = '{HGMD_GRCH37_URL}'
+        nullable_source_structure = HGMD_INFO_STRUCTURE
+
+class HgmdGRCh37Mv(RefreshableMaterializedView):
+    key = models.UInt32Field(primary_key=True)
+    accession = models.StringField()
+    classification = models.Enum8Field(return_int=False, choices=BaseHgmd.HGMD_CLASSES)
+
+    class Meta(ReferenceDataMvMeta):
+        db_table = 'GRCh37/SNV_INDEL/reference_data/hgmd/all_variants_to_seqr_variants_mv'
+        to_table = 'HgmdSeqrVariantsGRCh37SnvIndel'
+        source_table = 'HgmdAllVariantsGRCh37SnvIndel'
+        source_sql = _all_variants_to_seqr_source_sql('GRCh37', 'SNV_INDEL')
+
+class HgmdGRCh37SearchMv(RefreshableMaterializedView):
+    key = models.UInt32Field(primary_key=True)
+    accession = models.StringField()
+    classification = models.Enum8Field(return_int=False, choices=BaseHgmd.HGMD_CLASSES)
+
+    class Meta(RefreshableMaterializedViewMeta):
+        db_table = 'GRCh37/SNV_INDEL/reference_data/hgmd/seqr_variants_to_search_mv'
+        to_table = 'HgmdGRCh37SnvIndel'
+        source_table = 'HgmdSeqrVariantsGRCh37SnvIndel'
+        column_selects = {
+            'key': 'DISTINCT ON (key)',
+        }
+
 class BaseTopmed(models.ClickhouseModel):
     ac = models.UInt32Field()
     af = models.DecimalField(max_digits=9, decimal_places=8)
@@ -878,7 +964,6 @@ class BaseDbnsfpMv(RefreshableMaterializedView):
 
 class DbnsfpAllMvMeta(RefreshableMaterializedViewMeta):
 
-    gcs_source_args = ["'TabSeparatedWithNames'"]
     source_url = 'https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh38/dbnsfp/dbNSFP5.3a_grch38.gz'
     column_selects = {
         'variantId': "assumeNotNull(concat(`#chr`, '-', `pos(1-based)`, '-', ref, '-', alt))",

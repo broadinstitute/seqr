@@ -46,11 +46,13 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
             for field in meta.local_fields
         ]
         source_url = getattr(meta, 'source_url', None)
-        if source_url:
-            gcs_source_args = getattr(meta, 'gcs_source_args', [])
-            source_args = ', '.join([f"'{source_url}'"] + gcs_source_args)
-            source_func = 'gcs' if gcs_source_args or source_url.endswith('.parquet') else 'url'
-            source = f"{source_func}({source_args})"
+        nullable_source_structure = getattr(meta, 'nullable_source_structure', None)
+        if nullable_source_structure and source_url:
+            f"gcs(pipeline_data_access, url='{source_url}', format='TSV', structure='{nullable_source_structure}')"
+        elif nullable_source_structure:
+            source = f"null('{nullable_source_structure}')"
+        elif source_url:
+            source = f"{'gcs' if source_url.endswith('.parquet') else 'url'}('{source_url}')"
         else:
             source = self._table_name(meta, meta.source_table)
         sql = f'{table_sql} AS SELECT {", ".join(selects)} FROM {source} {meta.source_sql}'  # nosec
