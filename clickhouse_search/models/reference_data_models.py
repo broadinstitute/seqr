@@ -452,6 +452,92 @@ class GnomadExomesSeqrVariantsSnvIndel(BaseGnomad):
             order_by=('key'),
         )
 
+class BaseGnomadAllMv(RefreshableMaterializedView):
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
+    ac = models.Int32Field(null=True, blank=True)
+    af = models.Float32Field(null=True, blank=True)
+    an = models.Int32Field(null=True, blank=True)
+    filter_af = models.Float32Field(null=True, blank=True)
+    hemi = models.Int32Field(null=True, blank=True)
+    hom = models.Int32Field(null=True, blank=True)
+
+    class Meta:
+        abstract = True
+
+class GnomadMvMeta(RefreshableMaterializedViewMeta):
+    column_selects = {
+        'variantId': 'assumeNotNull(variant_id)',
+        'ac': 'AC',
+        'af': 'AF',
+        'an': 'AN',
+        'filter_af': 'AF_POPMAX_OR_GLOBAL',
+        'hemi': 'Hemi',
+        'hom': 'Hom',
+    }
+    create_empty = True
+
+class BaseGnomadMv(RefreshableMaterializedView):
+    key = models.UInt32Field(primary_key=True)
+    ac = models.UInt32Field()
+    af = models.DecimalField(max_digits=9, decimal_places=5)
+    an = models.UInt32Field()
+    filter_af = models.DecimalField(max_digits=9, decimal_places=5)
+    hemi = models.UInt32Field()
+    hom = models.UInt32Field()
+
+    class Meta:
+        abstract = True
+
+class BaseGnomadDict(Dictionary):
+    ac = models.UInt32Field()
+    af = models.DecimalField(max_digits=9, decimal_places=5)
+    an = models.UInt32Field()
+    filter_af = models.DecimalField(max_digits=9, decimal_places=5)
+    hemi = models.UInt32Field()
+    hom = models.UInt32Field()
+
+    class Meta:
+        abstract = True
+
+class GnomadExomesAllMv(BaseGnomadAllMv):
+    class Meta(GnomadMvMeta):
+        db_table = 'GRCh38/SNV_INDEL/reference_data/gnomad_exomes/all_variants_mv'
+        to_table = 'GnomadExomesAllVariantsSnvIndel'
+        source_url = 'https://storage.googleapis.com/seqr-reference-data/v3.1/GRCh38/gnomad_exomes/1.0.parquet/*.parquet'
+
+class GnomadExomesMv(BaseGnomadMv):
+    class Meta(ReferenceDataMvMeta):
+        db_table = 'GRCh38/SNV_INDEL/reference_data/gnomad_exomes/all_variants_to_seqr_variants_mv'
+        to_table = 'GnomadExomesSeqrVariantsSnvIndel'
+        source_table = 'GnomadExomesAllVariantsSnvIndel'
+
+class GnomadExomesDict(BaseGnomadDict):
+    key = DictKeyForeignKey('EntriesSnvIndel', related_name='gnomad_exomes')
+
+    class Meta(ReferenceDataDictMeta):
+        db_table = 'GRCh38/SNV_INDEL/reference_data/gnomad_exomes'
+        source_table = 'GnomadExomesSeqrVariantsSnvIndel'
+
+class GnomadExomesGRCh37AllMv(BaseGnomadAllMv):
+    class Meta(GnomadMvMeta):
+        db_table = 'GRCh37/SNV_INDEL/reference_data/gnomad_exomes/all_variants_mv'
+        to_table = 'GnomadExomesAllVariantsGRCh37SnvIndel'
+        source_url = 'https://storage.googleapis.com/seqr-reference-data/v3.1/GRCh37/gnomad_exomes/1.0.parquet/*.parquet'
+
+class GnomadExomesGRCh37Mv(BaseGnomadMv):
+    class Meta(ReferenceDataMvMeta):
+        db_table = 'GRCh37/SNV_INDEL/reference_data/gnomad_exomes/all_variants_to_seqr_variants_mv'
+        to_table = 'GnomadExomesSeqrVariantsGRCh37SnvIndel'
+        source_table = 'GnomadExomesAllVariantsGRCh37SnvIndel'
+        source_sql = _all_variants_to_seqr_source_sql('GRCh37', 'SNV_INDEL')
+
+class GnomadExomesGRCh37Dict(BaseGnomadDict):
+    key = DictKeyForeignKey('EntriesGRCh37SnvIndel', related_name='gnomad_exomes')
+
+    class Meta(ReferenceDataDictMeta):
+        db_table = 'GRCh37/SNV_INDEL/reference_data/gnomad_exomes'
+        source_table = 'GnomadExomesSeqrVariantsGRCh37SnvIndel'
+
 class GnomadGenomesAllVariantsGRCh37SnvIndel(BaseGnomad):
     variant_id = models.StringField(db_column='variantId', primary_key=True)
 
@@ -491,6 +577,49 @@ class GnomadGenomesSeqrVariantsSnvIndel(BaseGnomad):
             primary_key=('key'),
             order_by=('key'),
         )
+
+class GnomadGenomesAllMv(BaseGnomadAllMv):
+
+    class Meta(GnomadMvMeta):
+        db_table = 'GRCh38/SNV_INDEL/reference_data/gnomad_genomes/all_variants_mv'
+        to_table = 'GnomadGenomesAllVariantsSnvIndel'
+        source_url = 'https://storage.googleapis.com/seqr-reference-data/v3.1/GRCh38/gnomad_genomes/1.0.parquet/*.parquet'
+
+class GnomadGenomesMv(BaseGnomadMv):
+
+    class Meta(ReferenceDataMvMeta):
+        db_table = 'GRCh38/SNV_INDEL/reference_data/gnomad_genomes/all_variants_to_seqr_variants_mv'
+        to_table = 'GnomadGenomesSeqrVariantsSnvIndel'
+        source_table = 'GnomadGenomesAllVariantsSnvIndel'
+
+class GnomadGenomesDict(BaseGnomadDict):
+    key = DictKeyForeignKey('EntriesSnvIndel', related_name='gnomad_genomes')
+
+    class Meta(ReferenceDataDictMeta):
+        db_table = 'GRCh38/SNV_INDEL/reference_data/gnomad_genomes'
+        source_table = 'GnomadGenomesSeqrVariantsSnvIndel'
+
+class GnomadGenomesGRCh37AllMv(BaseGnomadAllMv):
+
+    class Meta(GnomadMvMeta):
+        db_table = 'GRCh37/SNV_INDEL/reference_data/gnomad_genomes/all_variants_mv'
+        to_table = 'GnomadGenomesAllVariantsGRCh37SnvIndel'
+        source_url = 'https://storage.googleapis.com/seqr-reference-data/v3.1/GRCh37/gnomad_genomes/1.0.parquet/*.parquet'
+
+class GnomadGenomesGRCh37Mv(BaseGnomadMv):
+
+    class Meta(ReferenceDataMvMeta):
+        db_table = 'GRCh37/SNV_INDEL/reference_data/gnomad_genomes/all_variants_to_seqr_variants_mv'
+        to_table = 'GnomadGenomesSeqrVariantsGRCh37SnvIndel'
+        source_table = 'GnomadGenomesAllVariantsGRCh37SnvIndel'
+        source_sql = _all_variants_to_seqr_source_sql('GRCh37', 'SNV_INDEL')
+
+class GnomadGenomesGRCh37Dict(BaseGnomadDict):
+    key = DictKeyForeignKey('EntriesGRCh37SnvIndel', related_name='gnomad_genomes')
+
+    class Meta(ReferenceDataDictMeta):
+        db_table = 'GRCh37/SNV_INDEL/reference_data/gnomad_genomes'
+        source_table = 'GnomadGenomesSeqrVariantsGRCh37SnvIndel'
 
 class BaseSpliceAi(models.ClickhouseModel):
     CONSEQUENCE_CHOICES = [(0, 'Acceptor gain'), (1, 'Acceptor loss'), (2, 'Donor gain'), (3, 'Donor loss'), (4, 'No consequence')]
