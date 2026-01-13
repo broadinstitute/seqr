@@ -557,7 +557,7 @@ class SpliceAiAllMv(RefreshableMaterializedView):
     class Meta(SpliceAiMvMeta):
         db_table = 'GRCh38/SNV_INDEL/reference_data/splice_ai/all_variants_mv'
         to_table = 'SpliceAiAllVariantsSnvIndel'
-        source_url = 'https://storage.googleapis.com/seqr-reference-data/v3.1/GRCh38/splice_ai/1.1.parquet/*.parque'
+        source_url = 'https://storage.googleapis.com/seqr-reference-data/v3.1/GRCh38/splice_ai/1.1.parquet/*.parquet'
 
 class SpliceAiMv(RefreshableMaterializedView):
     key = models.UInt32Field(primary_key=True)
@@ -587,7 +587,7 @@ class SpliceAiGRCh37AllMv(RefreshableMaterializedView):
     class Meta(SpliceAiMvMeta):
         db_table = 'GRCh37/SNV_INDEL/reference_data/splice_ai/all_variants_mv'
         to_table = 'SpliceAiAllVariantsGRCh37SnvIndel'
-        source_url = 'https://storage.googleapis.com/seqr-reference-data/v3.1/GRCh37/splice_ai/1.1.parquet/*.parque'
+        source_url = 'https://storage.googleapis.com/seqr-reference-data/v3.1/GRCh37/splice_ai/1.1.parquet/*.parquet'
 
 class SpliceAiGRCh37Mv(RefreshableMaterializedView):
     key = models.UInt32Field(primary_key=True)
