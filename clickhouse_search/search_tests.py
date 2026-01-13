@@ -1,16 +1,18 @@
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.management import call_command
-from django.db import connections
 from django.test import TransactionTestCase
 from django.urls.base import reverse
 import json
 import mock
 import responses
 
+from clickhouse_search.backend.fields import NamedTupleField
+from clickhouse_search.backend.functions import Tuple
 from clickhouse_search.models import EntriesSnvIndel, ProjectGtStatsSnvIndel, AnnotationsSnvIndel, \
     ProjectsToGtStatsGRCh37SnvIndel, ProjectsToGtStatsSnvIndel, ProjectsToGtStatsMito, ProjectsToGtStatsSv, \
     ClinvarMvSnvIndel, ClinvarSearchMvSnvIndel, ClinvarMvMito, ClinvarSearchMvMito, ClinvarMvGRCh37SnvIndel,\
-    ClinvarSearchMvGRCh37SnvIndel
+    ClinvarSearchMvGRCh37SnvIndel, GtStatsDictGRCh37SnvIndel, GtStatsDictSnvIndel, GtStatsDictMito, GtStatsDictSv, \
+    AffectedDict, SexDict
 from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4, CACHED_CONSEQUENCES_BY_KEY, \
     VARIANT_ID_SEARCH, VARIANT_IDS, LOCATION_SEARCH, GENE_IDS, SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT, \
     SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3, COMP_HET_ALL_PASS_FILTERS, \
@@ -47,9 +49,8 @@ class ClickhouseSearchTestCase(AnvilAuthenticationTestMixin, TransactionTestCase
         # between versions 4.x and 6.x (alongside several other impactful method changes).  When
         # Django is updated, our pattern here must be re-visited.
         super()._fixture_setup()
-        with connections['clickhouse_write'].cursor() as cursor:
-            for dictionary in ['seqrdb_affected_status_dict', 'seqrdb_sex_dict']:
-                cursor.execute(f'SYSTEM RELOAD DICTIONARY "{dictionary}"')
+        AffectedDict.reload()
+        SexDict.reload()
         for db in DATABASES.keys():
             call_command("loaddata", 'clickhouse_search', database=db)
         for view in [
@@ -58,9 +59,8 @@ class ClickhouseSearchTestCase(AnvilAuthenticationTestMixin, TransactionTestCase
             ClinvarSearchMvGRCh37SnvIndel
         ]:
             view.refresh()
-        with connections['clickhouse_write'].cursor() as cursor:
-            for table_base in ['GRCh38/SNV_INDEL', 'GRCh38/MITO', 'GRCh38/SV', 'GRCh37/SNV_INDEL']:
-                cursor.execute(f'SYSTEM RELOAD DICTIONARY "{table_base}/gt_stats_dict"')
+        for dictionary in [GtStatsDictGRCh37SnvIndel, GtStatsDictSnvIndel, GtStatsDictMito, GtStatsDictSv]:
+            dictionary.reload()
         Project.objects.update(genome_version='38')
         AnvilAuthenticationTestMixin.set_up_users()
 
@@ -1715,15 +1715,41 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
         self.assertEqual(EntriesSnvIndel.objects.filter(project_guid='R0001_1kg').count(), 0)
         self.assertEqual(ProjectGtStatsSnvIndel.objects.filter(project_guid='R0001_1kg').count(), 0)
 
-        updated_seqr_pops_by_key = dict(AnnotationsSnvIndel.objects.all().join_seqr_pop().values_list('key', 'seqrPop'))
+        seqr_pops = []
+        seqr_pop_fields = []
+        annotations_qs = AnnotationsSnvIndel.objects.all().join_seqr_pop()
+        annotations_qs._get_seqr_pop_expressions(seqr_pops, seqr_pop_fields)
+        annotations_qs = annotations_qs.annotate(seqr_pop=Tuple(*seqr_pops, output_field=NamedTupleField(seqr_pop_fields)))
+        updated_seqr_pops_by_key = dict(annotations_qs.values_list('key', 'seqr_pop'))
         self.assertDictEqual(updated_seqr_pops_by_key, {
-            1: (2, 2, 1, 1, 4, 2),
-            2: (1, 1, 0, 0, 2, 0),
-            3: (0, 0, 0, 0, 0, 0),
-            4: (0, 0, 0, 0, 0, 0),
-            5: (1, 1, 0, 0, 2, 0),
-            6: (0, 0, 0, 0, 0, 0),
-            22: (0, 3, 0, 1, 3, 1),
+            1: {
+                'seqr': {'ac': 4, 'ac_wes': 2, 'ac_wgs': 2, 'hom': 2,  'hom_wes': 1, 'hom_wgs': 1},
+                'seqr_affected': {'ac': 4, 'hom': 2},
+            },
+            2: {
+                'seqr': {'ac': 2, 'ac_wes': 1, 'ac_wgs': 1, 'hom': 0, 'hom_wes': 0, 'hom_wgs': 0},
+                'seqr_affected': {'ac': 2, 'hom': 0},
+            },
+            3: {
+                'seqr': {'ac': 0, 'ac_wes': 0, 'ac_wgs': 0, 'hom': 0, 'hom_wes': 0, 'hom_wgs': 0},
+                'seqr_affected': {'ac': 0, 'hom': 0},
+            },
+            4: {
+                'seqr': {'ac': 0, 'ac_wes': 0, 'ac_wgs': 0, 'hom': 0, 'hom_wes': 0, 'hom_wgs': 0},
+                'seqr_affected': {'ac': 0, 'hom': 0},
+            },
+            5: {
+                'seqr': {'ac': 2, 'ac_wes': 1, 'ac_wgs': 1, 'hom': 0, 'hom_wes': 0, 'hom_wgs': 0},
+                'seqr_affected': {'ac': 2, 'hom': 0},
+            },
+            6: {
+                'seqr': {'ac': 0, 'ac_wes': 0, 'ac_wgs': 0, 'hom': 0, 'hom_wes': 0, 'hom_wgs': 0},
+                'seqr_affected': {'ac': 0, 'hom': 0},
+            },
+            22: {
+                'seqr': {'ac': 3, 'ac_wes': 0, 'ac_wgs': 3, 'hom': 1, 'hom_wes': 0, 'hom_wgs': 1},
+                'seqr_affected': {'ac': 3, 'hom': 1},
+            },
         })
 
         project_samples = Sample.objects.filter(individual__family__project__guid='R0001_1kg', is_active=True)

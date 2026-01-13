@@ -815,13 +815,8 @@ def delete_clickhouse_project(project, dataset_type, sample_type=None):
         if dataset_type != 'GCNV':
             cursor.execute(f'ALTER TABLE "{table_base}/project_gt_stats" DROP PARTITION %s', [project.guid])
             PROJECT_GT_STATS_VIEW_CLASS_MAP[project.genome_version][dataset_type].refresh()
-            cursor.execute(f'SYSTEM RELOAD DICTIONARY "{table_base}/gt_stats_dict"')
+            ENTRY_CLASS_MAP[project.genome_version][dataset_type].gt_stats.rel.related_model.reload()
     return f'Deleted all {dataset_type} search data for project {project.name}'
-
-
-def reload_clickhouse_sex_dict():
-    with connections['clickhouse_write'].cursor() as cursor:
-        cursor.execute('SYSTEM RELOAD DICTIONARY "seqrdb_sex_dict"')
 
 
 SV_DATASET_TYPES = {

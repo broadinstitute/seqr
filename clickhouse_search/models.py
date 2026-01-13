@@ -3,10 +3,10 @@ from django.db.migrations import state
 from django.db.models import options, ForeignKey, OneToOneField, Func, CASCADE, PROTECT
 
 from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocksDB, Join
-from clickhouse_search.backend.fields import Enum8Field, NestedField, UInt32FieldDeltaCodecField, UInt64FieldDeltaCodecField, NamedTupleField, MaterializedUInt8Field
+from clickhouse_search.backend.fields import Enum8Field, NestedField, UInt32FieldDeltaCodecField, UInt64FieldDeltaCodecField, NamedTupleField, MaterializedUInt8Field, DictKeyForeignKey
 from clickhouse_search.backend.functions import ArrayDistinct, ArrayFlatten, ArrayMin, ArrayMax
 from clickhouse_search.backend.table_models import IncrementalMaterializedView, RefreshableMaterializedView, RefreshableMaterializedViewMeta, \
-    MATERIALIZED_VIEW_META_FIELDS
+    Dictionary, MATERIALIZED_VIEW_META_FIELDS, DICTIONARY_META_FIELDS
 from clickhouse_search.managers import EntriesManager, AnnotationsQuerySet
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample
@@ -18,6 +18,7 @@ options.DEFAULT_NAMES = (
     *options.DEFAULT_NAMES,
     'projection',
     *MATERIALIZED_VIEW_META_FIELDS,
+    *DICTIONARY_META_FIELDS,
 )
 state.DEFAULT_NAMES = options.DEFAULT_NAMES
 
@@ -97,9 +98,6 @@ class FixtureLoadableClickhouseModel(models.ClickhouseModel):
 class BaseAnnotations(FixtureLoadableClickhouseModel):
 
     CHROMOSOME_CHOICES = [(i+1, chrom) for i, chrom in enumerate(CHROMOSOMES)]
-    SEQR_POPULATIONS = [
-        ('seqr', {'ac': 'ac', 'hom': 'hom'}),
-    ]
     ANNOTATION_CONSTANTS = {
         'genomeVersion': GENOME_VERSION_GRCh38,
         'liftedOverGenomeVersion': GENOME_VERSION_GRCh37,
@@ -155,9 +153,6 @@ class BaseAnnotationsSvGcnv(BaseAnnotations):
     SORTED_GENE_CONSQUENCES_FIELDS = [
         ('geneId', models.StringField(null=True, blank=True)),
         ('majorConsequence', models.Enum8Field(null=True, blank=True, return_int=False, choices=SV_CONSEQUENCE_RANKS)),
-    ]
-    SEQR_POPULATIONS = [
-        ('sv_seqr', {'ac': 'ac', 'hom': 'hom'}),
     ]
 
     chrom = Enum8Field(return_int=False, choices=BaseAnnotations.CHROMOSOME_CHOICES)
@@ -348,10 +343,6 @@ class BaseAnnotationsMito(BaseAnnotationsMitoSnvIndel):
         ('sift', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
         ('mlc', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
     ]
-    SEQR_POPULATIONS = [
-        ('seqr', {'ac': 'ac_hom'}),
-        ('seqr_heteroplasmy', {'ac': 'ac_het'}),
-    ]
 
     common_low_heteroplasmy = models.BoolField(db_column='commonLowHeteroplasmy', null=True, blank=True)
     mitomap_pathogenic  = models.BoolField(db_column='mitomapPathogenic', null=True, blank=True)
@@ -428,7 +419,6 @@ class BaseAnnotationsGcnv(BaseAnnotationsSvGcnv):
             ('hom', models.UInt32Field()),
         ])),
     ]
-    SEQR_POPULATIONS = []
     SV_TYPE_FILTER_PREFIX = 'gCNV_'
     GENOTYPE_OVERRIDE_FIELDS = {
         'pos': ('start', ArrayMin),
@@ -1302,6 +1292,69 @@ class PromoterAISeqrVariants(models.ClickhouseModel):
         )
 
 
+class BaseGtStatsDict(Dictionary):
+    SEQR_POPULATIONS = [('seqr', 'ac')]
+
+    ac_wes = models.UInt32Field()
+    ac_wgs = models.UInt32Field()
+    ac_affected = models.UInt32Field()
+    hom_wes = models.UInt32Field()
+    hom_wgs = models.UInt32Field()
+    hom_affected = models.UInt32Field()
+
+    class Meta:
+        abstract = True
+
+class GtStatsDictMeta:
+    engine = models.MergeTree(primary_key='key')
+
+class GtStatsDictGRCh37SnvIndel(BaseGtStatsDict):
+    key = DictKeyForeignKey('EntriesGRCh37SnvIndel', related_name='gt_stats')
+
+    class Meta(GtStatsDictMeta):
+        db_table = 'GRCh37/SNV_INDEL/gt_stats_dict'
+        source_table = 'GtStatsGRCh37SnvIndel'
+        layout = 'FLAT(MAX_ARRAY_SIZE 200000000)'
+
+class GtStatsDictSnvIndel(BaseGtStatsDict):
+    key = DictKeyForeignKey('EntriesSnvIndel', related_name='gt_stats')
+
+    class Meta(GtStatsDictMeta):
+        db_table = 'GRCh38/SNV_INDEL/gt_stats_dict'
+        source_table = 'GtStatsSnvIndel'
+        layout = 'FLAT(MAX_ARRAY_SIZE 1000000000)'
+
+class GtStatsDictMito(Dictionary):
+    SEQR_POPULATIONS = [('seqr', 'ac_hom'), ('seqr_heteroplasmy', 'ac_het')]
+
+    key = DictKeyForeignKey('EntriesMito', related_name='gt_stats')
+    ac_het_wes = models.UInt32Field()
+    ac_het_wgs = models.UInt32Field()
+    ac_het_affected = models.UInt32Field()
+    ac_hom_wes = models.UInt32Field()
+    ac_hom_wgs = models.UInt32Field()
+    ac_hom_affected = models.UInt32Field()
+
+    class Meta(GtStatsDictMeta):
+        db_table = 'GRCh38/MITO/gt_stats_dict'
+        source_table = 'GtStatsMito'
+        layout = 'FLAT(MAX_ARRAY_SIZE 1000000)'
+
+class GtStatsDictSv(Dictionary):
+    SEQR_POPULATIONS = [('sv_seqr', 'ac')]
+
+    key = DictKeyForeignKey('EntriesSv', related_name='gt_stats')
+    ac_wgs = models.UInt32Field()
+    ac_affected = models.UInt32Field()
+    hom_wgs = models.UInt32Field()
+    hom_affected = models.UInt32Field()
+
+    class Meta(GtStatsDictMeta):
+        db_table = 'GRCh38/SV/gt_stats_dict'
+        source_table = 'GtStatsSv'
+        layout = 'FLAT(MAX_ARRAY_SIZE 5000000)'
+
+
 class BaseEntries(FixtureLoadableClickhouseModel):
     MAX_XPOS_FILTER_INTERVALS = 500
 
@@ -1819,6 +1872,54 @@ class ProjectPartitionsSnvIndel(FixtureLoadableClickhouseModel):
             primary_key='project_guid',
             order_by='project_guid',
         )
+
+class ProjectPartitionsDict(Dictionary):
+    project_guid = models.StringField(primary_key=True)
+    n_partitions = models.UInt8Field()
+
+    class Meta:
+        db_table = 'GRCh38/SNV_INDEL/project_partitions_dict'
+        engine = models.MergeTree(primary_key='project_guid')
+        source_table = 'ProjectPartitionsSnvIndel'
+        lifetime_max = 300 # refresh every 5 minutes
+        layout = 'HASHED()' # hashed layout supports string keys
+
+
+class AffectedDict(Dictionary):
+    family_guid = models.StringField(primary_key=True)
+    sampleId = models.StringField()
+    affected = models.StringField()
+
+    class Meta:
+        db_table = 'seqrdb_affected_status_dict'
+        engine = models.MergeTree(primary_key=('family_guid', 'sampleId'))
+        layout = 'COMPLEX_KEY_HASHED()'
+        postgres_query = 'select f.guid as family_guid, i.individual_id as sample_id, i.affected FROM seqr_individual i INNER JOIN seqr_family f ON i.family_id = f.id'
+
+
+class SexDict(Dictionary):
+    family_guid = models.StringField(primary_key=True)
+    sampleId = models.StringField()
+    sex = models.StringField()
+
+    class Meta:
+        db_table = 'seqrdb_sex_dict'
+        engine = models.MergeTree(primary_key=('family_guid', 'sampleId'))
+        layout = 'COMPLEX_KEY_HASHED()'
+        postgres_query = 'select f.guid as family_guid, i.individual_id as sample_id, i.sex FROM seqr_individual i INNER JOIN seqr_family f ON i.family_id = f.id'
+
+
+class GeneIdDict(Dictionary):
+    gene_id = models.StringField(primary_key=True)
+    seqrdb_id = models.UInt32Field()
+
+    class Meta:
+        db_table = 'seqrdb_gene_ids'
+        engine = models.MergeTree(primary_key='gene_id')
+        layout = 'HASHED()'
+        postgres_db = 'reference_data'
+        postgres_query = 'SELECT gene_id, id FROM reference_data_geneinfo'
+
 
 
 ENTRY_CLASS_MAP = {

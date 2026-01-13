@@ -8,7 +8,6 @@ import clickhouse_search.backend.fields
 from django.db import migrations, models
 import django.db.models.manager
 import os
-from string import Template
 
 from settings import CLICKHOUSE_IN_MEMORY_DIR, CLICKHOUSE_DATA_DIR
 
@@ -16,25 +15,6 @@ CLICKHOUSE_AC_EXCLUDED_PROJECT_GUIDS  = os.environ.get(
     'CLICKHOUSE_AC_EXCLUDED_PROJECT_GUIDS',
     ''
 ).split(',')
-CLICKHOUSE_WRITER_PASSWORD = os.environ.get('CLICKHOUSE_WRITER_PASSWORD', 'clickhouse_test')
-CLICKHOUSE_WRITER_USER = os.environ.get('CLICKHOUSE_WRITER_USER', 'clickhouse')
-
-GT_STATS_DICT = Template(Template("""
-CREATE DICTIONARY `$reference_genome/$dataset_type/gt_stats_dict`
-(
-    key UInt32,
-    $columns
-)
-PRIMARY KEY key
-SOURCE(CLICKHOUSE(USER '$clickhouse_writer_user' PASSWORD '$clickhouse_writer_password' TABLE `$reference_genome/$dataset_type/gt_stats`))
-LIFETIME(MIN 0 MAX 0)
-LAYOUT(FLAT(MAX_ARRAY_SIZE $size))
-""").safe_substitute(
-    # Note the nested Template-ing that allows
-    # double substitution these shared values
-    clickhouse_writer_user=CLICKHOUSE_WRITER_USER,
-    clickhouse_writer_password=CLICKHOUSE_WRITER_PASSWORD,
-))
 
 
 class Migration(migrations.Migration):
@@ -826,19 +806,25 @@ class Migration(migrations.Migration):
                 ('_overwrite_base_manager', django.db.models.manager.Manager()),
             ],
         ),
-        migrations.RunSQL(
-            GT_STATS_DICT.substitute(
-                reference_genome='GRCh37',
-                dataset_type='SNV_INDEL',
-                columns= ",\n    ".join([
-                    'ac_wes UInt32',
-                    'ac_wgs UInt32',
-                    'hom_wes UInt32',
-                    'hom_wgs UInt32',
-                ]),
-                size=int(2e8),
-            ),
-            hints={'clickhouse': True},
+        migrations.CreateModel(
+            name='GtStatsDictGRCh37SnvIndel',
+            fields=[
+                ('key', clickhouse_backend.models.UInt32Field(primary_key=True, serialize=False)),
+                ('ac_wes', clickhouse_backend.models.UInt32Field()),
+                ('ac_wgs', clickhouse_backend.models.UInt32Field()),
+                ('hom_wes', clickhouse_backend.models.UInt32Field()),
+                ('hom_wgs', clickhouse_backend.models.UInt32Field()),
+            ],
+            options={
+                'db_table': 'GRCh37/SNV_INDEL/gt_stats_dict',
+                'engine': clickhouse_backend.models.MergeTree(primary_key='key'),
+                'source_table': 'GtStatsGRCh37SnvIndel',
+                'layout': 'FLAT(MAX_ARRAY_SIZE 200000000)',
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
         ),
         migrations.CreateModel(
             name='EntriesToProjectGtStatsSnvIndel',
@@ -891,19 +877,25 @@ class Migration(migrations.Migration):
                 ('_overwrite_base_manager', django.db.models.manager.Manager()),
             ],
         ),
-        migrations.RunSQL(
-            GT_STATS_DICT.substitute(
-                reference_genome='GRCh38',
-                dataset_type='SNV_INDEL',
-                columns= ",\n    ".join([
-                    'ac_wes UInt32',
-                    'ac_wgs UInt32',
-                    'hom_wes  UInt32',
-                    'hom_wgs  UInt32',
-                ]),
-                size=int(1e9),
-            ),
-            hints={'clickhouse': True},
+        migrations.CreateModel(
+            name='GtStatsDictSnvIndel',
+            fields=[
+                ('key', clickhouse_backend.models.UInt32Field(primary_key=True, serialize=False)),
+                ('ac_wes', clickhouse_backend.models.UInt32Field()),
+                ('ac_wgs', clickhouse_backend.models.UInt32Field()),
+                ('hom_wes', clickhouse_backend.models.UInt32Field()),
+                ('hom_wgs', clickhouse_backend.models.UInt32Field()),
+            ],
+            options={
+                'db_table': 'GRCh38/SNV_INDEL/gt_stats_dict',
+                'engine': clickhouse_backend.models.MergeTree(primary_key='key'),
+                'source_table': 'GtStatsSnvIndel',
+                'layout': 'FLAT(MAX_ARRAY_SIZE 1000000000)',
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
         ),
         migrations.CreateModel(
             name='EntriesToProjectGtStatsMito',
@@ -956,19 +948,25 @@ class Migration(migrations.Migration):
                 ('_overwrite_base_manager', django.db.models.manager.Manager()),
             ],
         ),
-        migrations.RunSQL(
-            GT_STATS_DICT.substitute(
-                reference_genome='GRCh38',
-                dataset_type='MITO',
-                columns= ",\n    ".join([
-                    'ac_het_wes UInt32',
-                    'ac_het_wgs UInt32',
-                    'ac_hom_wes UInt32',
-                    'ac_hom_wgs UInt32',
-                ]),
-                size=int(1e6),
-            ),
-            hints={'clickhouse': True},
+        migrations.CreateModel(
+            name='GtStatsDictMito',
+            fields=[
+                ('key', clickhouse_backend.models.UInt32Field(primary_key=True, serialize=False)),
+                ('ac_het_wes', clickhouse_backend.models.UInt32Field()),
+                ('ac_het_wgs', clickhouse_backend.models.UInt32Field()),
+                ('ac_hom_wes', clickhouse_backend.models.UInt32Field()),
+                ('ac_hom_wgs', clickhouse_backend.models.UInt32Field()),
+            ],
+            options={
+                'db_table': 'GRCh38/MITO/gt_stats_dict',
+                'engine': clickhouse_backend.models.MergeTree(primary_key='key'),
+                'source_table': 'GtStatsMito',
+                'layout': 'FLAT(MAX_ARRAY_SIZE 1000000)',
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
         ),
         migrations.CreateModel(
             name='EntriesToProjectGtStatsSv',
@@ -1016,17 +1014,23 @@ class Migration(migrations.Migration):
                 ('_overwrite_base_manager', django.db.models.manager.Manager()),
             ],
         ),
-        migrations.RunSQL(
-            GT_STATS_DICT.substitute(
-                reference_genome='GRCh38',
-                dataset_type='SV',
-                columns= ",\n    ".join([
-                    'ac_wgs UInt32',
-                    'hom_wgs UInt32'
-                ]),
-                size=int(5e6),
-            ),
-            hints={'clickhouse': True},
+        migrations.CreateModel(
+            name='GtStatsDictSv',
+            fields=[
+                ('key', clickhouse_backend.models.UInt32Field(primary_key=True, serialize=False)),
+                ('ac_wgs', clickhouse_backend.models.UInt32Field()),
+                ('hom_wgs', clickhouse_backend.models.UInt32Field()),
+            ],
+            options={
+                'db_table': 'GRCh38/SV/gt_stats_dict',
+                'engine': clickhouse_backend.models.MergeTree(primary_key='key'),
+                'source_table': 'GtStatsSv',
+                'layout': 'FLAT(MAX_ARRAY_SIZE 5000000)',
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
         ),
         migrations.CreateModel(
             name='ClinvarAllVariantsGRCh37SnvIndel',

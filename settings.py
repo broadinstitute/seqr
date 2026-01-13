@@ -245,14 +245,16 @@ DATABASE_ROUTERS = ['reference_data.models.ReferenceDataRouter', 'clickhouse_sea
 CLICKHOUSE_IN_MEMORY_DIR = os.environ.get('CLICKHOUSE_IN_MEMORY_DIR', '/in-memory-dir')
 CLICKHOUSE_DATA_DIR = os.getenv('CLICKHOUSE_DATA_DIR', '/var/seqr/clickhouse-data')
 CLICKHOUSE_SERVICE_HOSTNAME =  os.environ.get('CLICKHOUSE_SERVICE_HOSTNAME')
+CLICKHOUSE_WRITER_USER = os.environ.get('CLICKHOUSE_WRITER_USER', 'clickhouse')
+CLICKHOUSE_WRITER_PASSWORD = os.environ.get('CLICKHOUSE_WRITER_PASSWORD', 'clickhouse_test')
 if CLICKHOUSE_SERVICE_HOSTNAME:
     DATABASES['clickhouse_write'] = {
         'ENGINE': 'clickhouse_search.backend',
         'NAME': 'seqr',
         'HOST': CLICKHOUSE_SERVICE_HOSTNAME,
         'PORT': int(os.environ.get('CLICKHOUSE_SERVICE_PORT', '9000')),
-        'USER': os.environ.get('CLICKHOUSE_WRITER_USER', 'clickhouse'),
-        'PASSWORD': os.environ.get('CLICKHOUSE_WRITER_PASSWORD', 'clickhouse_test'),
+        'USER': CLICKHOUSE_WRITER_USER,
+        'PASSWORD': CLICKHOUSE_WRITER_PASSWORD,
         'OPTIONS': {
             'settings': {
                 'use_client_time_zone': False,
