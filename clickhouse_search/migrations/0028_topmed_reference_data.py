@@ -98,7 +98,7 @@ class Migration(migrations.Migration):
                 ('ac', clickhouse_backend.models.Int32Field(blank=True, null=True)),
                 ('af', clickhouse_backend.models.Float32Field(blank=True, null=True)),
                 ('an', clickhouse_backend.models.Int32Field(blank=True, null=True)),
-                ('hemi', clickhouse_backend.models.Int32Field(blank=True, null=True)),
+                ('het', clickhouse_backend.models.Int32Field(blank=True, null=True)),
                 ('hom', clickhouse_backend.models.Int32Field(blank=True, null=True)),
             ],
             options={
@@ -122,7 +122,7 @@ class Migration(migrations.Migration):
                 ('ac', clickhouse_backend.models.Int32Field(blank=True, null=True)),
                 ('af', clickhouse_backend.models.Float32Field(blank=True, null=True)),
                 ('an', clickhouse_backend.models.Int32Field(blank=True, null=True)),
-                ('hemi', clickhouse_backend.models.Int32Field(blank=True, null=True)),
+                ('het', clickhouse_backend.models.Int32Field(blank=True, null=True)),
                 ('hom', clickhouse_backend.models.Int32Field(blank=True, null=True)),
             ],
             options={
@@ -146,7 +146,7 @@ class Migration(migrations.Migration):
                 ('ac', clickhouse_backend.models.UInt32Field()),
                 ('af', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
                 ('an', clickhouse_backend.models.UInt32Field()),
-                ('hemi', clickhouse_backend.models.UInt32Field()),
+                ('het', clickhouse_backend.models.UInt32Field()),
                 ('hom', clickhouse_backend.models.UInt32Field()),
             ],
             options={
@@ -170,7 +170,7 @@ class Migration(migrations.Migration):
                 ('ac', clickhouse_backend.models.UInt32Field()),
                 ('af', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
                 ('an', clickhouse_backend.models.UInt32Field()),
-                ('hemi', clickhouse_backend.models.UInt32Field()),
+                ('het', clickhouse_backend.models.UInt32Field()),
                 ('hom', clickhouse_backend.models.UInt32Field()),
             ],
             options={
@@ -190,12 +190,12 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='TopmedGRCh37Dict',
             fields=[
+                ('key', clickhouse_search.backend.fields.DictKeyForeignKey(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, related_name='topmed', serialize=False, to='clickhouse_search.entriesgrch37snvindel')),
                 ('ac', clickhouse_backend.models.UInt32Field()),
                 ('af', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
                 ('an', clickhouse_backend.models.UInt32Field()),
-                ('hemi', clickhouse_backend.models.UInt32Field()),
+                ('het', clickhouse_backend.models.UInt32Field()),
                 ('hom', clickhouse_backend.models.UInt32Field()),
-                ('key', clickhouse_search.backend.fields.DictKeyForeignKey(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, related_name='topmed', serialize=False, to='clickhouse_search.entriesgrch37snvindel')),
             ],
             options={
                 'db_table': 'GRCh37/SNV_INDEL/reference_data/topmed',
@@ -211,12 +211,12 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='TopmedDict',
             fields=[
+                ('key', clickhouse_search.backend.fields.DictKeyForeignKey(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, related_name='topmed', serialize=False, to='clickhouse_search.entriessnvindel')),
                 ('ac', clickhouse_backend.models.UInt32Field()),
                 ('af', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
                 ('an', clickhouse_backend.models.UInt32Field()),
-                ('hemi', clickhouse_backend.models.UInt32Field()),
+                ('het', clickhouse_backend.models.UInt32Field()),
                 ('hom', clickhouse_backend.models.UInt32Field()),
-                ('key', clickhouse_search.backend.fields.DictKeyForeignKey(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, related_name='topmed', serialize=False, to='clickhouse_search.entriessnvindel')),
             ],
             options={
                 'db_table': 'GRCh38/SNV_INDEL/reference_data/topmed',

@@ -406,7 +406,6 @@ class BasePopulationAllMv(RefreshableMaterializedView):
     ac = models.Int32Field(null=True, blank=True)
     af = models.Float32Field(null=True, blank=True)
     an = models.Int32Field(null=True, blank=True)
-    hemi = models.Int32Field(null=True, blank=True)
     hom = models.Int32Field(null=True, blank=True)
 
     class Meta:
@@ -417,7 +416,6 @@ class BasePopulationMv(RefreshableMaterializedView):
     ac = models.UInt32Field()
     af = models.DecimalField(max_digits=9, decimal_places=5)
     an = models.UInt32Field()
-    hemi = models.UInt32Field()
     hom = models.UInt32Field()
 
     class Meta:
@@ -427,7 +425,6 @@ class BasePopulationDict(Dictionary):
     ac = models.UInt32Field()
     af = models.DecimalField(max_digits=9, decimal_places=5)
     an = models.UInt32Field()
-    hemi = models.UInt32Field()
     hom = models.UInt32Field()
 
     class Meta:
@@ -447,12 +444,16 @@ class PopulationMvMeta(RefreshableMaterializedViewMeta):
     create_empty = True
 
 class TopmedAllMv(BasePopulationAllMv):
+    het = models.Int32Field(null=True, blank=True)
+
     class Meta(PopulationMvMeta):
         db_table = 'GRCh38/SNV_INDEL/reference_data/topmed/all_variants_mv'
         to_table = 'TopmedAllVariantsSnvIndel'
         source_url = 'https://storage.googleapis.com/seqr-reference-data/v3.1/GRCh38/topmed/1.1.parquet/*.parquet'
 
 class TopmedMv(BasePopulationMv):
+    het = models.UInt32Field()
+
     class Meta(ReferenceDataMvMeta):
         db_table = 'GRCh38/SNV_INDEL/reference_data/topmed/all_variants_to_seqr_variants_mv'
         to_table = 'TopmedSeqrVariantsSnvIndel'
@@ -460,18 +461,23 @@ class TopmedMv(BasePopulationMv):
 
 class TopmedDict(BasePopulationDict):
     key = DictKeyForeignKey('EntriesSnvIndel', related_name='topmed')
+    het = models.UInt32Field()
 
     class Meta(ReferenceDataDictMeta):
         db_table = 'GRCh38/SNV_INDEL/reference_data/topmed'
         source_table = 'TopmedSeqrVariantsSnvIndel'
 
 class TopmedGRCh37AllMv(BasePopulationAllMv):
+    het = models.Int32Field(null=True, blank=True)
+
     class Meta(PopulationMvMeta):
         db_table = 'GRCh37/SNV_INDEL/reference_data/topmed/all_variants_mv'
         to_table = 'TopmedAllVariantsGRCh37SnvIndel'
         source_url = 'https://storage.googleapis.com/seqr-reference-data/v3.1/GRCh37/topmed/1.1.parquet/*.parquet'
 
 class TopmedGRCh37Mv(BasePopulationMv):
+    het = models.UInt32Field()
+
     class Meta(ReferenceDataMvMeta):
         db_table = 'GRCh37/SNV_INDEL/reference_data/gnomad_exomes/all_variants_to_seqr_variants_mv'
         to_table = 'TopmedSeqrVariantsGRCh37SnvIndel'
@@ -480,6 +486,7 @@ class TopmedGRCh37Mv(BasePopulationMv):
 
 class TopmedGRCh37Dict(BasePopulationDict):
     key = DictKeyForeignKey('EntriesGRCh37SnvIndel', related_name='topmed')
+    het = models.UInt32Field()
 
     class Meta(ReferenceDataDictMeta):
         db_table = 'GRCh37/SNV_INDEL/reference_data/topmed'
@@ -538,18 +545,21 @@ class GnomadExomesSeqrVariantsSnvIndel(BaseGnomad):
 
 class BaseGnomadAllMv(BasePopulationAllMv):
     filter_af = models.Float32Field(null=True, blank=True)
+    hemi = models.Int32Field(null=True, blank=True)
 
     class Meta:
         abstract = True
 
 class BaseGnomadMv(BasePopulationMv):
     filter_af = models.DecimalField(max_digits=9, decimal_places=5)
+    hemi = models.UInt32Field()
 
     class Meta:
         abstract = True
 
 class BaseGnomadDict(BasePopulationDict):
     filter_af = models.DecimalField(max_digits=9, decimal_places=5)
+    hemi = models.UInt32Field()
 
     class Meta:
         abstract = True
