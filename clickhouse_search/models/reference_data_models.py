@@ -493,8 +493,10 @@ class GnomadGenomesSeqrVariantsSnvIndel(BaseGnomad):
         )
 
 class BaseSpliceAi(models.ClickhouseModel):
+    CONSEQUENCE_CHOICES = [(0, 'Acceptor gain'), (1, 'Acceptor loss'), (2, 'Donor gain'), (3, 'Donor loss'), (4, 'No consequence')]
+
     score = models.DecimalField(max_digits=9, decimal_places=5)
-    consequence = models.Enum8Field(return_int=False, choices=[(0, 'Acceptor gain'), (1, 'Acceptor loss'), (2, 'Donor gain'), (3, 'Donor loss'), (4, 'No consequence')])
+    consequence = models.Enum8Field(return_int=False, choices=CONSEQUENCE_CHOICES)
 
     class Meta:
         abstract = True
@@ -538,6 +540,75 @@ class SpliceAiSeqrVariantsSnvIndel(BaseSpliceAi):
             primary_key=('key'),
             order_by=('key'),
         )
+
+class SpliceAiMvMeta(RefreshableMaterializedViewMeta):
+    column_selects = {
+        'variantId': 'assumeNotNull(variant_id)',
+        'score': 'delta_score',
+        'consequence': 'splice_consequence_id',
+    }
+    create_empty = True
+
+class SpliceAiAllMv(RefreshableMaterializedView):
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
+    score = models.Float32Field(null=True, blank=True)
+    consequence = models.Int32Field(null=True, blank=True)
+
+    class Meta(SpliceAiMvMeta):
+        db_table = 'GRCh38/SNV_INDEL/reference_data/splice_ai/all_variants_mv'
+        to_table = 'SpliceAiAllVariantsSnvIndel'
+        source_url = 'https://storage.googleapis.com/seqr-reference-data/v3.1/GRCh38/splice_ai/1.1.parquet/*.parque'
+
+class SpliceAiMv(RefreshableMaterializedView):
+    key = models.UInt32Field(primary_key=True)
+    score = models.DecimalField(max_digits=9, decimal_places=5)
+    consequence = models.Enum8Field(return_int=False, choices=BaseSpliceAi.CONSEQUENCE_CHOICES)
+
+    class Meta(ReferenceDataMvMeta):
+        db_table = 'GRCh38/SNV_INDEL/reference_data/splice_ai/all_variants_to_seqr_variants_mv'
+        to_table = 'SpliceAiSeqrVariantsSnvIndel'
+        source_table = 'SpliceAiAllVariantsSnvIndel'
+
+class SpliceAiDict(Dictionary):
+    key = DictKeyForeignKey('EntriesSnvIndel', related_name='splice_ai')
+    score = models.DecimalField(max_digits=9, decimal_places=5)
+    consequence = models.UInt8Field(null=True, blank=True)
+
+    class Meta(ReferenceDataDictMeta):
+        db_table = 'GRCh38/SNV_INDEL/reference_data/splice_ai'
+        source_table = 'SpliceAiSeqrVariantsSnvIndel'
+        clickhouse_query_template = 'SELECT key, score, toUInt8(consequence) from {table}'
+
+class SpliceAiGRCh37AllMv(RefreshableMaterializedView):
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
+    score = models.Float32Field(null=True, blank=True)
+    consequence = models.Int32Field(null=True, blank=True)
+
+    class Meta(SpliceAiMvMeta):
+        db_table = 'GRCh37/SNV_INDEL/reference_data/splice_ai/all_variants_mv'
+        to_table = 'SpliceAiAllVariantsGRCh37SnvIndel'
+        source_url = 'https://storage.googleapis.com/seqr-reference-data/v3.1/GRCh37/splice_ai/1.1.parquet/*.parque'
+
+class SpliceAiGRCh37Mv(RefreshableMaterializedView):
+    key = models.UInt32Field(primary_key=True)
+    score = models.DecimalField(max_digits=9, decimal_places=5)
+    consequence = models.Enum8Field(return_int=False, choices=BaseSpliceAi.CONSEQUENCE_CHOICES)
+
+    class Meta(ReferenceDataMvMeta):
+        db_table = 'GRCh37/SNV_INDEL/reference_data/splice_ai/all_variants_to_seqr_variants_mv'
+        to_table = 'SpliceAiSeqrVariantsGRCh37SnvIndel'
+        source_table = 'SpliceAiAllVariantsGRCh37SnvIndel'
+        source_sql = _all_variants_to_seqr_source_sql('GRCh37', 'SNV_INDEL')
+
+class SpliceAiGRCh37Dict(Dictionary):
+    key = DictKeyForeignKey('EntriesGRCh37SnvIndel', related_name='splice_ai')
+    score = models.DecimalField(max_digits=9, decimal_places=5)
+    consequence = models.UInt8Field(null=True, blank=True)
+
+    class Meta(ReferenceDataDictMeta):
+        db_table = 'GRCh37/SNV_INDEL/reference_data/splice_ai'
+        source_table = 'SpliceAiSeqrVariantsGRCh37SnvIndel'
+        clickhouse_query_template = 'SELECT key, score, toUInt8(consequence) from {table}'
 
 class BaseDbnsfp(models.ClickhouseModel):
     MUTATION_TASTER_PREDICTIONS = [(0, 'D'), (1, 'A'), (2, 'N'), (3, 'P')]
