@@ -93,7 +93,7 @@ class Migration(migrations.Migration):
             options={
                 'db_table': 'GRCh38/SNV_INDEL/reference_data/absplice2',
                 'engine': clickhouse_backend.models.MergeTree(primary_key='key'),
-                'source_table': 'PromoterAISeqrVariants',
+                'source_table': 'Absplice2SeqrVariants',
                 'layout': 'HASHED_ARRAY()',
             },
             managers=[

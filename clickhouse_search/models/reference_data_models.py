@@ -1004,7 +1004,7 @@ class Absplice2Dict(Dictionary):
 
     class Meta(ReferenceDataDictMeta):
         db_table = 'GRCh38/SNV_INDEL/reference_data/absplice2'
-        source_table = 'PromoterAISeqrVariants'
+        source_table = 'Absplice2SeqrVariants'
 
 class PromoterAIAllVariants(models.ClickhouseModel):
     variant_id = models.StringField(db_column='variantId', primary_key=True)
