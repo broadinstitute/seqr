@@ -150,7 +150,7 @@ class Migration(migrations.Migration):
                 ('hom', clickhouse_backend.models.UInt32Field()),
             ],
             options={
-                'db_table': 'GRCh37/SNV_INDEL/reference_data/gnomad_exomes/all_variants_to_seqr_variants_mv',
+                'db_table': 'GRCh37/SNV_INDEL/reference_data/topmed/all_variants_to_seqr_variants_mv',
                 'to_table': 'TopmedSeqrVariantsGRCh37SnvIndel',
                 'source_table': 'TopmedAllVariantsGRCh37SnvIndel',
                 'source_sql': 'src INNER JOIN `GRCh37/SNV_INDEL/key_lookup` dst on assumeNotNull(src.variantId) = dst.variantId',
