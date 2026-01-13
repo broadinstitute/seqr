@@ -596,6 +596,138 @@ class DbnsfpSeqrVariantsSnvIndel(BaseDbnsfp):
             order_by=('key'),
         )
 
+class BaseDbnsfpMv(RefreshableMaterializedView):
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
+    cadd = models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)
+    fathmm = models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)
+    mpc = models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)
+    mut_pred = models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)
+    mut_taster = models.StringField(null=True, blank=True)
+    polyphen = models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)
+    primate_ai = models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)
+    revel = models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)
+    sift = models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)
+    vest = models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)
+
+    class Meta:
+        abstract = True
+
+class DbnsfpAllMvMeta(RefreshableMaterializedViewMeta):
+
+    gcs_source_args = ["'TabSeparatedWithNames'"]
+    source_url = 'https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh38/dbnsfp/dbNSFP5.3a_grch38.gz'
+    column_selects = {
+        'variantId': "assumeNotNull(concat(`#chr`, '-', `pos(1-based)`, '-', ref, '-', alt))",
+        'mut_taster': "nullIf(arrayFirst(x -> (x != '.'), splitByChar(';', assumeNotNull(`{MutationTaster_pred}`)), '')",
+        **{score: f'CAST(`{score_col}` as Nullable(Decimal(9, 5)))' for score, score_col in [
+            ('cadd', 'CADD_phred'),
+            ('fathmm', 'fathmm-XF_coding_score'),
+            ('primate_ai', 'PrimateAI_score'),
+        ]},
+        **{score: f"CAST(arrayFirst(x -> (x != '.'), splitByChar(';', assumeNotNull(`{score_col}`))) as Nullable(Decimal(9, 5)))" for score, score_col in [
+            ('mpc', 'MPC_score'),
+            ('mut_pred', 'MutPred2_score'),
+            ('polyphen', 'Polyphen2_HVAR_score'),
+            ('revel', 'REVEL_score'),
+            ('sift', 'SIFT_score'),
+            ('vest', 'VEST4_score'),
+        ]},
+    }
+    create_empty = True
+
+class BaseDbnsfpDict(Dictionary):
+    cadd = models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)
+    fathmm = models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)
+    mpc = models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)
+    mut_pred = models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)
+    mut_taster = models.StringField(null=True, blank=True)
+    polyphen = models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)
+    primate_ai = models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)
+    revel = models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)
+    sift = models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)
+    vest = models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)
+
+    class Meta:
+        abstract = True
+
+class DbnsfpSnvIndelAllMv(BaseDbnsfpMv):
+
+    class Meta(DbnsfpAllMvMeta):
+        db_table = 'GRCh38/SNV_INDEL/reference_data/dbnsfp/all_variants_mv'
+        to_table = 'DbnsfpAllVariantsSnvIndel'
+        source_sql = "WHERE (`#chr` != 'M') AND (arrayExists(x -> (x IS NOT NULL), [cadd, fathmm, mpc, mut_pred, polyphen, primate_ai, revel, sift, vest]) OR (mut_taster IS NOT NULL)) SETTINGS input_format_tsv_use_best_effort_in_schema_inference = 0"
+
+class DbnsfpSnvIndelMv(BaseDbnsfpMv):
+
+    class Meta(ReferenceDataMvMeta):
+        db_table = 'GRCh38/SNV_INDEL/reference_data/dbnsfp/all_variants_to_seqr_variants_mv'
+        to_table = 'DbnsfpSeqrVariantsSnvIndel'
+        source_table = 'DbnsfpAllVariantsSnvIndel'
+
+class DbnsfpSnvIndelDict(BaseDbnsfpDict):
+    key = DictKeyForeignKey('EntriesSnvIndel', related_name='dbnsfp')
+
+    class Meta(ReferenceDataDictMeta):
+        db_table = 'GRCh38/SNV_INDEL/reference_data/dbnsfp'
+        source_table = 'DbnsfpSeqrVariantsSnvIndel'
+
+class DbnsfpGRCh37SnvIndelAllMv(BaseDbnsfpMv):
+
+    class Meta(DbnsfpAllMvMeta):
+        db_table = 'GRCh37/SNV_INDEL/reference_data/dbnsfp/all_variants_mv'
+        to_table = 'DbnsfpAllVariantsGRCh37SnvIndel'
+        source_url = 'https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh37/dbnsfp/dbNSFP5.3a_grch37.gz'
+        source_sql = "WHERE (arrayExists(x -> isNotNull(x), [cadd, fathmm, mpc, mut_pred, polyphen, primate_ai, revel, sift, vest]) OR isNotNull(mut_taster)) SETTINGS input_format_tsv_use_best_effort_in_schema_inference = 0"
+        column_selects = {
+            **DbnsfpAllMvMeta.column_selects,
+            'variantId': "assumeNotNull(concat(`hg19_chr`, '-', `hg19_pos(1-based)`, '-', ref, '-', alt))",
+        }
+
+class DbnsfpGRCh37SnvIndelMv(BaseDbnsfpMv):
+
+    class Meta(ReferenceDataMvMeta):
+        db_table = 'GRCh37/SNV_INDEL/reference_data/dbnsfp/all_variants_to_seqr_variants_mv'
+        to_table = 'DbnsfpSeqrVariantsGRCh37SnvIndel'
+        source_table = 'DbnsfpAllVariantsGRCh37SnvIndel'
+        source_sql = _all_variants_to_seqr_source_sql('GRCh37', 'SNV_INDEL')
+
+class DbnsfpGRCh37SnvIndelDict(BaseDbnsfpDict):
+    key = DictKeyForeignKey('EntriesGRCh37SnvIndel', related_name='dbnsfp')
+
+    class Meta(ReferenceDataDictMeta):
+        db_table = 'GRCh37/SNV_INDEL/reference_data/dbnsfp'
+        source_table = 'DbnsfpSeqrVariantsGRCh37SnvIndel'
+
+class DbnsfpMitoAllMv(RefreshableMaterializedView):
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
+    mut_taster = models.StringField(null=True, blank=True)
+    sift = models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)
+
+    class Meta(DbnsfpAllMvMeta):
+        db_table = 'GRCh38/MITO/reference_data/dbnsfp/all_variants_mv'
+        to_table = 'DbnsfpAllVariantsMito'
+        source_sql = "WHERE `#chr` = 'M' AND isNotNull(sift) OR isNotNull(mut_taster) SETTINGS input_format_tsv_use_best_effort_in_schema_inference = 0"
+
+class DbnsfpMitoMv(RefreshableMaterializedView):
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
+    mut_taster = models.StringField(null=True, blank=True)
+    sift = models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)
+
+    class Meta(ReferenceDataMvMeta):
+        db_table = 'GRCh38/MITO/reference_data/dbnsfp/all_variants_to_seqr_variants_mv'
+        to_table = 'DbnsfpSeqrVariantsMito'
+        source_table = 'DbnsfpAllVariantsMito'
+        source_sql = _all_variants_to_seqr_source_sql('GRCh38', 'MITO')
+
+class DbnsfpMitoDict(Dictionary):
+    key = DictKeyForeignKey('EntriesMito', related_name='dbnsfp')
+    mut_taster = models.StringField(null=True, blank=True)
+    sift = models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)
+
+    class Meta(ReferenceDataDictMeta):
+        db_table = 'GRCh38/MITO/reference_data/dbnsfp'
+        source_table = 'DbnsfpSeqrVariantsMito'
+
 class HelixmitoAllVariantsMito(models.ClickhouseModel):
     variant_id = models.StringField(db_column='variantId', primary_key=True)
     ac = models.UInt32Field()

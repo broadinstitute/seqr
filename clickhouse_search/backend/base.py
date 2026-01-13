@@ -46,7 +46,13 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
             for field in meta.local_fields
         ]
         source_url = getattr(meta, 'source_url', None)
-        source = f"url('{source_url}')" if source_url else self._table_name(meta, meta.source_table)
+        if source_url:
+            gcs_source_args = getattr(meta, 'gcs_source_args', [])
+            source_args = ', '.join([f"'source_url'"] + gcs_source_args)
+            source_func = 'gcs' if gcs_source_args or source_url.endswith('.parquet') else 'url'
+            source = f"{source_func}({source_args})"
+        else:
+            source = self._table_name(meta, meta.source_table)
         sql = f'{table_sql} AS SELECT {", ".join(selects)} FROM {source} {meta.source_sql}'  # nosec
         self.sql_create_table = original_sql_create_table
         return sql, params
