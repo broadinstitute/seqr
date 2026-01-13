@@ -45,6 +45,7 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
             f'{meta.column_selects[field.column]} {field.column}' if field.column in meta.column_selects else field.column
             for field in meta.local_fields
         ]
+
         source_url = getattr(meta, 'source_url', None)
         nullable_source_structure = getattr(meta, 'nullable_source_structure', None)
         if nullable_source_structure and source_url:
@@ -52,9 +53,13 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
         elif nullable_source_structure:
             source = f"null('{nullable_source_structure}')"
         elif source_url:
-            source = f"{'gcs' if source_url.endswith('.parquet') else 'url'}('{source_url}')"
+            gcs_source_args = getattr(meta, 'gcs_source_args', [])
+            source_args = ', '.join([f"'{source_url}'"] + gcs_source_args)
+            source_func = 'gcs' if gcs_source_args or source_url.endswith('.parquet') else 'url'
+            source = f"{source_func}({source_args})"
         else:
             source = self._table_name(meta, meta.source_table)
+
         sql = f'{table_sql} AS SELECT {", ".join(selects)} FROM {source} {meta.source_sql}'  # nosec
         self.sql_create_table = original_sql_create_table
         return sql, params

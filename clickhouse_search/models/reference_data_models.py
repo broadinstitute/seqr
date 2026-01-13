@@ -963,7 +963,7 @@ class BaseDbnsfpMv(RefreshableMaterializedView):
         abstract = True
 
 class DbnsfpAllMvMeta(RefreshableMaterializedViewMeta):
-
+    gcs_source_args = ["'TabSeparatedWithNames'"]
     source_url = 'https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh38/dbnsfp/dbNSFP5.3a_grch38.gz'
     column_selects = {
         'variantId': "assumeNotNull(concat(`#chr`, '-', `pos(1-based)`, '-', ref, '-', alt))",
