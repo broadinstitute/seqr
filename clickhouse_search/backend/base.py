@@ -48,7 +48,7 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
         source_url = getattr(meta, 'source_url', None)
         nullable_source_structure = getattr(meta, 'nullable_source_structure', None)
         if nullable_source_structure and source_url:
-            f"gcs(pipeline_data_access, url='{source_url}', format='TSV', structure='{nullable_source_structure}')"
+            source = f"gcs(pipeline_data_access, url='{source_url}', format='TSV', structure='{nullable_source_structure}')"
         elif nullable_source_structure:
             source = f"null('{nullable_source_structure}')"
         elif source_url:
