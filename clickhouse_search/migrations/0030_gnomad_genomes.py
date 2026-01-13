@@ -198,13 +198,13 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='GnomadGenomesGRCh37Dict',
             fields=[
+                ('key', clickhouse_search.backend.fields.DictKeyForeignKey(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, related_name='gnomad_genomes', serialize=False, to='clickhouse_search.entriesgrch37snvindel')),
                 ('ac', clickhouse_backend.models.UInt32Field()),
                 ('af', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
                 ('an', clickhouse_backend.models.UInt32Field()),
                 ('filter_af', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
                 ('hemi', clickhouse_backend.models.UInt32Field()),
                 ('hom', clickhouse_backend.models.UInt32Field()),
-                ('key', clickhouse_search.backend.fields.DictKeyForeignKey(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, related_name='gnomad_genomes', serialize=False, to='clickhouse_search.entriesgrch37snvindel')),
             ],
             options={
                 'db_table': 'GRCh37/SNV_INDEL/reference_data/gnomad_genomes',
@@ -220,13 +220,13 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='GnomadGenomesDict',
             fields=[
+                ('key', clickhouse_search.backend.fields.DictKeyForeignKey(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, related_name='gnomad_genomes', serialize=False, to='clickhouse_search.entriessnvindel')),
                 ('ac', clickhouse_backend.models.UInt32Field()),
                 ('af', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
                 ('an', clickhouse_backend.models.UInt32Field()),
                 ('filter_af', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
                 ('hemi', clickhouse_backend.models.UInt32Field()),
                 ('hom', clickhouse_backend.models.UInt32Field()),
-                ('key', clickhouse_search.backend.fields.DictKeyForeignKey(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, related_name='gnomad_genomes', serialize=False, to='clickhouse_search.entriessnvindel')),
             ],
             options={
                 'db_table': 'GRCh38/SNV_INDEL/reference_data/gnomad_genomes',
