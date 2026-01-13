@@ -2,11 +2,12 @@
 from string import Template
 
 import clickhouse_backend.models
+import clickhouse_search.backend.fields
 from django.db import migrations, models
 import django.db.models.deletion
 import django.db.models.manager
 
-from clickhouse_search.migration_templates import ALL_TO_SEQR_MV, ALL_VARIANTS_MV_HEADER, conditionally_refresh_reference_dataset, render_search_dictionary
+from clickhouse_search.migration_templates import conditionally_refresh_reference_dataset
 
 
 ABSPLICE2_ALL_VARIANTS_MV_GRCh38 = Template("""
@@ -63,34 +64,62 @@ class Migration(migrations.Migration):
                 ('_overwrite_base_manager', django.db.models.manager.Manager()),
             ],
         ),
-        migrations.RunSQL(
-            ABSPLICE2_ALL_VARIANTS_MV_GRCh38.substitute(
-                mv_header=ALL_VARIANTS_MV_HEADER.substitute(reference_genome="GRCh38", dataset_type="SNV_INDEL", reference_dataset="absplice2"),
-            ),
-            hints={"clickhouse": True},
+        migrations.CreateModel(
+            name='Absplice2AllMv',
+            fields=[
+                ('variant_id', clickhouse_backend.models.StringField(db_column='variantId', primary_key=True, serialize=False)),
+                ('score', clickhouse_backend.models.StringField(blank=True, null=True)),
+            ],
+            options={
+                'db_table': 'GRCh38/SNV_INDEL/reference_data/absplice2/all_variants_mv',
+                'to_table': 'Absplice2AllVariants',
+                'source_sql': '',
+                'source_url': 'https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh38/absplice2/absplice2.tsv.gz',
+                'column_selects': {'score': 'AbSplice_DNA_max', 'variantId': "assumeNotNull(concat(replaceOne(replaceOne(chrom, 'chr', ''), 'MT', 'M'), '-', pos, '-', ref, '-', alt))"},
+                'refreshable': True,
+                'create_empty': True,
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
         ),
-        migrations.RunSQL(
-            ALL_TO_SEQR_MV.substitute(
-                reference_genome="GRCh38",
-                dataset_type="SNV_INDEL",
-                reference_dataset="absplice2",
-            ),
-            hints={"clickhouse": True},
+        migrations.CreateModel(
+            name='Absplice2Dict',
+            fields=[
+                ('key', clickhouse_search.backend.fields.DictKeyForeignKey(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, related_name='absplice', serialize=False, to='clickhouse_search.entriessnvindel')),
+                ('score', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
+            ],
+            options={
+                'db_table': 'GRCh38/SNV_INDEL/reference_data/absplice2',
+                'engine': clickhouse_backend.models.MergeTree(primary_key='key'),
+                'source_table': 'PromoterAISeqrVariants',
+                'layout': 'HASHED_ARRAY()',
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
         ),
-        migrations.RunSQL(
-            render_search_dictionary(
-                reference_genome="GRCh38",
-                dataset_type="SNV_INDEL",
-                reference_dataset="absplice2",
-                columns="""
-                    `key` UInt32,
-                    `score` Decimal(9, 5)
-                """,
-                primary_key="key",
-                source="TABLE `GRCh38/SNV_INDEL/reference_data/absplice2/seqr_variants`",
-                layout="HASHED_ARRAY()"
-            ),
-            hints={"clickhouse": True},
+        migrations.CreateModel(
+            name='Absplice2Mv',
+            fields=[
+                ('key', clickhouse_backend.models.UInt32Field(primary_key=True, serialize=False)),
+                ('score', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
+            ],
+            options={
+                'db_table': 'GRCh38/SNV_INDEL/reference_data/absplice2/all_variants_to_seqr_variants_mv',
+                'to_table': 'Absplice2SeqrVariants',
+                'source_table': 'Absplice2AllVariants',
+                'source_sql': 'src INNER JOIN `GRCh38/SNV_INDEL/key_lookup` dst on assumeNotNull(src.variantId) = dst.variantId',
+                'column_selects': {'key': 'DISTINCT ON (key)'},
+                'refreshable': True,
+                'create_empty': True,
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
         ),
         migrations.RunPython(
             conditionally_refresh_reference_dataset(

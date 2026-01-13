@@ -843,6 +843,37 @@ class Absplice2SeqrVariants(models.ClickhouseModel):
             order_by=('key'),
         )
 
+class Absplice2AllMv(RefreshableMaterializedView):
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
+    score = models.StringField(null=True, blank=True)
+
+    class Meta(RefreshableMaterializedViewMeta):
+        db_table = 'GRCh38/SNV_INDEL/reference_data/absplice2/all_variants_mv'
+        to_table = 'Absplice2AllVariants'
+        source_url = 'https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh38/absplice2/absplice2.tsv.gz'
+        column_selects = {
+            'variantId': "assumeNotNull(concat(replaceOne(replaceOne(chrom, 'chr', ''), 'MT', 'M'), '-', pos, '-', ref, '-', alt))",
+            'score': 'AbSplice_DNA_max'
+        }
+        create_empty = True
+
+class Absplice2Mv(RefreshableMaterializedView):
+    key = models.UInt32Field(primary_key=True)
+    score = models.DecimalField(max_digits=9, decimal_places=5)
+
+    class Meta(ReferenceDataMvMeta):
+        db_table = 'GRCh38/SNV_INDEL/reference_data/absplice2/all_variants_to_seqr_variants_mv'
+        to_table = 'Absplice2SeqrVariants'
+        source_table = 'Absplice2AllVariants'
+
+class Absplice2Dict(Dictionary):
+    key = DictKeyForeignKey('EntriesSnvIndel', related_name='absplice')
+    score = models.DecimalField(max_digits=9, decimal_places=5)
+
+    class Meta(ReferenceDataDictMeta):
+        db_table = 'GRCh38/SNV_INDEL/reference_data/absplice2'
+        source_table = 'PromoterAISeqrVariants'
+
 class PromoterAIAllVariants(models.ClickhouseModel):
     variant_id = models.StringField(db_column='variantId', primary_key=True)
     gene_id = models.StringField(db_column='geneId')
@@ -892,7 +923,6 @@ class PromoterAIMv(RefreshableMaterializedView):
         db_table = 'GRCh38/SNV_INDEL/reference_data/promoterAI/all_variants_to_seqr_variants_mv'
         to_table = 'PromoterAISeqrVariants'
         source_table = 'PromoterAIAllVariants'
-
 
 class PromoterAIDict(Dictionary):
     key = DictKeyForeignKey('EntriesSnvIndel', related_name='promoter_ai')
