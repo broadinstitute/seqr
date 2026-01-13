@@ -48,7 +48,7 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
         source_url = getattr(meta, 'source_url', None)
         if source_url:
             gcs_source_args = getattr(meta, 'gcs_source_args', [])
-            source_args = ', '.join([f"'source_url'"] + gcs_source_args)
+            source_args = ', '.join([f"'{source_url}'"] + gcs_source_args)
             source_func = 'gcs' if gcs_source_args or source_url.endswith('.parquet') else 'url'
             source = f"{source_func}({source_args})"
         else:

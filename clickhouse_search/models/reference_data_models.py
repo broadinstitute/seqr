@@ -618,7 +618,7 @@ class DbnsfpAllMvMeta(RefreshableMaterializedViewMeta):
     source_url = 'https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh38/dbnsfp/dbNSFP5.3a_grch38.gz'
     column_selects = {
         'variantId': "assumeNotNull(concat(`#chr`, '-', `pos(1-based)`, '-', ref, '-', alt))",
-        'mut_taster': "nullIf(arrayFirst(x -> (x != '.'), splitByChar(';', assumeNotNull(`{MutationTaster_pred}`)), '')",
+        'mut_taster': "nullIf(arrayFirst(x -> (x != '.'), splitByChar(';', assumeNotNull(`{MutationTaster_pred}`))), '')",
         **{score: f'CAST(`{score_col}` as Nullable(Decimal(9, 5)))' for score, score_col in [
             ('cadd', 'CADD_phred'),
             ('fathmm', 'fathmm-XF_coding_score'),
