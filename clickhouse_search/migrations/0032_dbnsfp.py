@@ -229,7 +229,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='DbnsfpGRCh37SnvIndelMv',
             fields=[
-                ('variant_id', clickhouse_backend.models.StringField(db_column='variantId', primary_key=True, serialize=False)),
+                ('key', clickhouse_backend.models.UInt32Field(primary_key=True, serialize=False)),
                 ('cadd', clickhouse_backend.models.DecimalField(blank=True, decimal_places=5, max_digits=9, null=True)),
                 ('fathmm', clickhouse_backend.models.DecimalField(blank=True, decimal_places=5, max_digits=9, null=True)),
                 ('mpc', clickhouse_backend.models.DecimalField(blank=True, decimal_places=5, max_digits=9, null=True)),
@@ -258,7 +258,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='DbnsfpSnvIndelMv',
             fields=[
-                ('variant_id', clickhouse_backend.models.StringField(db_column='variantId', primary_key=True, serialize=False)),
+                ('key', clickhouse_backend.models.UInt32Field(primary_key=True, serialize=False)),
                 ('cadd', clickhouse_backend.models.DecimalField(blank=True, decimal_places=5, max_digits=9, null=True)),
                 ('fathmm', clickhouse_backend.models.DecimalField(blank=True, decimal_places=5, max_digits=9, null=True)),
                 ('mpc', clickhouse_backend.models.DecimalField(blank=True, decimal_places=5, max_digits=9, null=True)),
@@ -287,7 +287,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='DbnsfpMitoMv',
             fields=[
-                ('variant_id', clickhouse_backend.models.StringField(db_column='variantId', primary_key=True, serialize=False)),
+                ('key', clickhouse_backend.models.UInt32Field(primary_key=True, serialize=False)),
                 ('mut_taster', clickhouse_backend.models.StringField(blank=True, null=True)),
                 ('sift', clickhouse_backend.models.DecimalField(blank=True, decimal_places=5, max_digits=9, null=True)),
             ],

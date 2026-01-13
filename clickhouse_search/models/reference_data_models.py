@@ -597,7 +597,6 @@ class DbnsfpSeqrVariantsSnvIndel(BaseDbnsfp):
         )
 
 class BaseDbnsfpMv(RefreshableMaterializedView):
-    variant_id = models.StringField(db_column='variantId', primary_key=True)
     cadd = models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)
     fathmm = models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)
     mpc = models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)
@@ -651,6 +650,7 @@ class BaseDbnsfpDict(Dictionary):
         abstract = True
 
 class DbnsfpSnvIndelAllMv(BaseDbnsfpMv):
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
 
     class Meta(DbnsfpAllMvMeta):
         db_table = 'GRCh38/SNV_INDEL/reference_data/dbnsfp/all_variants_mv'
@@ -658,6 +658,7 @@ class DbnsfpSnvIndelAllMv(BaseDbnsfpMv):
         source_sql = "WHERE (`#chr` != 'M') AND (arrayExists(x -> (x IS NOT NULL), [cadd, fathmm, mpc, mut_pred, polyphen, primate_ai, revel, sift, vest]) OR (mut_taster IS NOT NULL)) SETTINGS input_format_tsv_use_best_effort_in_schema_inference = 0"
 
 class DbnsfpSnvIndelMv(BaseDbnsfpMv):
+    key = models.UInt32Field(primary_key=True)
 
     class Meta(ReferenceDataMvMeta):
         db_table = 'GRCh38/SNV_INDEL/reference_data/dbnsfp/all_variants_to_seqr_variants_mv'
@@ -672,6 +673,7 @@ class DbnsfpSnvIndelDict(BaseDbnsfpDict):
         source_table = 'DbnsfpSeqrVariantsSnvIndel'
 
 class DbnsfpGRCh37SnvIndelAllMv(BaseDbnsfpMv):
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
 
     class Meta(DbnsfpAllMvMeta):
         db_table = 'GRCh37/SNV_INDEL/reference_data/dbnsfp/all_variants_mv'
@@ -684,6 +686,7 @@ class DbnsfpGRCh37SnvIndelAllMv(BaseDbnsfpMv):
         }
 
 class DbnsfpGRCh37SnvIndelMv(BaseDbnsfpMv):
+    key = models.UInt32Field(primary_key=True)
 
     class Meta(ReferenceDataMvMeta):
         db_table = 'GRCh37/SNV_INDEL/reference_data/dbnsfp/all_variants_to_seqr_variants_mv'
@@ -709,7 +712,7 @@ class DbnsfpMitoAllMv(RefreshableMaterializedView):
         source_sql = "WHERE `#chr` = 'M' AND isNotNull(sift) OR isNotNull(mut_taster) SETTINGS input_format_tsv_use_best_effort_in_schema_inference = 0"
 
 class DbnsfpMitoMv(RefreshableMaterializedView):
-    variant_id = models.StringField(db_column='variantId', primary_key=True)
+    key = models.UInt32Field(primary_key=True)
     mut_taster = models.StringField(null=True, blank=True)
     sift = models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)
 
