@@ -1403,6 +1403,42 @@ class MitomapSeqrVariantsMito(models.ClickhouseModel):
             order_by=('key'),
         )
 
+class MitomapAllMv(RefreshableMaterializedView):
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
+    pathogenic = models.BoolField()
+
+    class Meta(RefreshableMaterializedViewMeta):
+        db_table = 'GRCh38/MITO/reference_data/mitomap/all_variants_mv'
+        to_table = 'MitomapAllVariantsMito'
+        url_source_args = ["'CsvWithNames'"]
+        source_url = 'https://storage.googleapis.com/seqr-reference-data/GRCh38/mitochondrial/MITOMAP/mitomap_confirmed_mutations_nov_2024.csv'
+        column_selects = {
+            'variantId': "concat('M', '-', Position, '-', extract(assumeNotNull(Allele), 'm\\.[0-9]+([ATGC]+)>[ATGC]+'), '-', extract(assumeNotNull(Allele), 'm\\.[0-9]+[ATGC]+>([ATGC]+)'))",
+            'pathogenic': 'true',
+        }
+        source_sql = "WHERE variantId NOT LIKE '%--'"
+        create_empty = True
+
+class MitomapMv(RefreshableMaterializedView):
+    key = models.UInt32Field(primary_key=True)
+    pathogenic = models.BoolField()
+
+    class Meta(ReferenceDataMvMeta):
+        db_table = 'GRCh38/MITO/reference_data/mitomap/all_variants_to_seqr_variants_mv'
+        to_table = 'MitomapSeqrVariantsMito'
+        source_table = 'MitomapAllVariantsMito'
+        source_sql = _all_variants_to_seqr_source_sql('GRCh38', 'MITO')
+
+class MitomapDict(Dictionary):
+    key = DictKeyForeignKey('EntriesMito', related_name='pext')
+    pathogenic = models.BoolField()
+
+    class Meta(ReferenceDataDictMeta):
+        db_table = 'GRCh38/MITO/reference_data/mitomap'
+        source_table = 'MitomapSeqrVariantsMito'
+        layout = 'FLAT(MAX_ARRAY_SIZE 1e6)'
+
+
 class BaseDbnsfpMito(models.ClickhouseModel):
     MUTATION_TASTER_PREDICTIONS = [(0, 'D'), (1, 'A'), (2, 'N'), (3, 'P')]
 
