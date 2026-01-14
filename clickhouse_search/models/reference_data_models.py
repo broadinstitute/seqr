@@ -319,6 +319,37 @@ class ScreenAllVariantsSnvIndel(models.ClickhouseModel):
             order_by=('chrom', 'start', 'end'),
         )
 
+class ScreenAllMv(RefreshableMaterializedView):
+    chrom = models.StringField(null=True, blank=True)
+    start = models.UInt32Field(primary_key=True)
+    end = models.UInt32Field()
+    region_type = models.StringField(db_column='regionType')
+
+    class Meta(RefreshableMaterializedViewMeta):
+        db_table = 'GRCh38/SNV_INDEL/reference_data/gnomad_non_coding_constraint/all_variants_mv'
+        to_table = 'ScreenAllVariantsSnvIndel'
+        # Original file sourced from `https://downloads.wenglab.org/V3/GRCh38-cCREs.bed`
+        source_url = 'https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh38/screen/GRCh38-cCREs.bed'
+        column_selects = {
+            'chrom': "replaceOne(c1, 'chr', '')",
+            'start': 'toUInt32(assumeNotNull(c2))',
+            'end': 'toUInt32(assumeNotNull(c3))',
+            'region_type': "splitByChar(',', assumeNotNull(c6))[1]",
+        }
+        create_empty = True
+
+class ScreenDict(Dictionary):
+    chrom = models.StringField(primary_key=True)
+    start = models.UInt32Field()
+    end = models.UInt32Field()
+    region_type = models.StringField(db_column='regionType')
+
+    class Meta:
+        db_table = 'GRCh38/SNV_INDEL/reference_data/screen'
+        source_table = 'ScreenAllVariantsSnvIndel'
+        engine = models.MergeTree(primary_key='chrom')
+        layout = 'RANGE_HASHED()'
+
 class BaseHgmd(models.ClickhouseModel):
     HGMD_CLASSES = [(0, 'DM'), (1, 'DM?'), (2, 'DP'), (3, 'DFP'), (4, 'FP'), (5, 'R')]
     accession = models.StringField()
