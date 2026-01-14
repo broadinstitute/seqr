@@ -7,7 +7,7 @@ from django.db import migrations, models
 import django.db.models.deletion
 import django.db.models.manager
 
-from clickhouse_search.migration_templates import conditionally_refresh_reference_dataset
+from clickhouse_search.models.reference_data_models import conditionally_refresh_reference_dataset
 
 HGMD_GRCH37_URL = os.environ.get('HGMD_GRCH37_URL', None)
 HGMD_GRCH38_URL = os.environ.get('HGMD_GRCH38_URL', None)
