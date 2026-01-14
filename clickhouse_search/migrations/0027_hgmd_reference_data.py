@@ -12,6 +12,14 @@ from clickhouse_search.migration_templates import conditionally_refresh_referenc
 HGMD_GRCH37_URL = os.environ.get('HGMD_GRCH37_URL', None)
 HGMD_GRCH38_URL = os.environ.get('HGMD_GRCH38_URL', None)
 
+HGMD_INFO_STRUCTURE = 'CHROM String, POS UInt32, ID String, REF String, ALT String, QUAL String, FILTER String, INFO String'
+
+def _hgmd_source_url_template(url):
+    if not url:
+        return "null('{source_url}')"
+    return f"gcs(pipeline_data_access, url='{{source_url}}', format='TSV', structure='{HGMD_INFO_STRUCTURE}')"
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -210,8 +218,8 @@ class Migration(migrations.Migration):
                 'db_table': 'GRCh37/SNV_INDEL/reference_data/hgmd/all_variants_mv',
                 'to_table': 'HgmdAllVariantsGRCh37SnvIndel',
                 'source_sql': "WHERE ALT != '<DEL>' SETTINGS input_format_allow_errors_ratio = 0.01, input_format_allow_errors_num = 25",
-                'source_url': HGMD_GRCH37_URL,
-                'nullable_source_structure': 'CHROM String, POS UInt32, ID String, REF String, ALT String, QUAL String, FILTER String, INFO String',
+                'source_url': HGMD_GRCH37_URL or HGMD_INFO_STRUCTURE,
+                'source_url_template': _hgmd_source_url_template(HGMD_GRCH37_URL),
                 'column_selects': {'accession': 'ID', 'classification': "extract(INFO, 'CLASS=([^;]+)')", 'variantId': "arrayStringConcat([replaceOne(replaceOne(CHROM, 'chr', ''), 'MT', 'M'), toString(POS), REF, ALT], '-')"},
                 'refreshable': True,
                 'create_empty': True,
@@ -232,8 +240,8 @@ class Migration(migrations.Migration):
                 'db_table': 'GRCh38/SNV_INDEL/reference_data/hgmd/all_variants_mv',
                 'to_table': 'HgmdAllVariantsSnvIndel',
                 'source_sql': "WHERE ALT != '<DEL>' SETTINGS input_format_allow_errors_ratio = 0.01, input_format_allow_errors_num = 25",
-                'source_url': HGMD_GRCH38_URL,
-                'nullable_source_structure': 'CHROM String, POS UInt32, ID String, REF String, ALT String, QUAL String, FILTER String, INFO String',
+                'source_url': HGMD_GRCH38_URL or HGMD_INFO_STRUCTURE,
+                'source_url_template': _hgmd_source_url_template(HGMD_GRCH38_URL),
                 'column_selects': {'accession': 'ID', 'classification': "extract(INFO, 'CLASS=([^;]+)')", 'variantId': "arrayStringConcat([replaceOne(replaceOne(CHROM, 'chr', ''), 'MT', 'M'), toString(POS), REF, ALT], '-')"},
                 'refreshable': True,
                 'create_empty': True,

@@ -503,7 +503,6 @@ class HgmdAllMv(RefreshableMaterializedView):
         db_table = 'GRCh38/SNV_INDEL/reference_data/hgmd/all_variants_mv'
         to_table = 'HgmdAllVariantsSnvIndel'
         source_url = '{HGMD_GRCH38_URL}'
-        nullable_source_structure = HGMD_INFO_STRUCTURE
 
 class HgmdMv(RefreshableMaterializedView):
     key = models.UInt32Field(primary_key=True)
@@ -537,7 +536,6 @@ class HgmdGRCh37AllMv(RefreshableMaterializedView):
         db_table = 'GRCh37/SNV_INDEL/reference_data/hgmd/all_variants_mv'
         to_table = 'HgmdAllVariantsGRCh37SnvIndel'
         source_url = '{HGMD_GRCH37_URL}'
-        nullable_source_structure = HGMD_INFO_STRUCTURE
 
 class HgmdGRCh37Mv(RefreshableMaterializedView):
     key = models.UInt32Field(primary_key=True)
@@ -1089,8 +1087,8 @@ class BaseDbnsfpMv(RefreshableMaterializedView):
         abstract = True
 
 class DbnsfpAllMvMeta(RefreshableMaterializedViewMeta):
-    gcs_source_args = ["'TabSeparatedWithNames'"]
     source_url = 'https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh38/dbnsfp/dbNSFP5.3a_grch38.gz'
+    source_url_template = "gcs('{source_url}', 'TabSeparatedWithNames')"
     column_selects = {
         'variantId': "assumeNotNull(concat(`#chr`, '-', `pos(1-based)`, '-', ref, '-', alt))",
         'mut_taster': "nullIf(arrayFirst(x -> (x != '.'), splitByChar(';', assumeNotNull(`c`))), '')",
@@ -1359,6 +1357,40 @@ class MitimpactSeqrVariantsMito(models.ClickhouseModel):
             order_by=('key'),
         )
 
+class MitimpactAllMv(RefreshableMaterializedView):
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
+    score = models.DecimalField(max_digits=9, decimal_places=5)
+
+    class Meta(RefreshableMaterializedViewMeta):
+        db_table = 'GRCh38/MITO/reference_data/mitimpact/all_variants_mv'
+        to_table = 'MitimpactAllVariantsMito'
+        source_url_template = "(SELECT concat('M', '-', Start, '-', Ref, '-', Alt) as variantId, CAST(APOGEE2_score AS Decimal(9, 5)) AS score FROM url('{source_url}', 'TSV'))"
+        source_url = 'https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh38/mitimpact/MitImpact_db_3.1.3.txt'
+        column_selects = {
+            'score': 'max(score)',
+        }
+        source_sql = 'GROUP BY variantId SETTINGS input_format_tsv_crlf_end_of_line = 1'
+        create_empty = True
+
+class MitimpactMv(RefreshableMaterializedView):
+    key = models.UInt32Field(primary_key=True)
+    score = models.DecimalField(max_digits=9, decimal_places=5)
+
+    class Meta(ReferenceDataMvMeta):
+        db_table = 'GRCh38/MITO/reference_data/mitimpact/all_variants_to_seqr_variants_mv'
+        to_table = 'MitimpactSeqrVariantsMito'
+        source_table = 'MitimpactAllVariantsMito'
+        source_sql = _all_variants_to_seqr_source_sql('GRCh38', 'MITO')
+
+class MitimpactDict(Dictionary):
+    key = DictKeyForeignKey('EntriesMito', related_name='mitimpact')
+    score = models.DecimalField(max_digits=9, decimal_places=5)
+
+    class Meta(ReferenceDataDictMeta):
+        db_table = 'GRCh38/MITO/reference_data/mitimpact'
+        source_table = 'MitimpactSeqrVariantsMito'
+        layout = 'FLAT(MAX_ARRAY_SIZE 1e6)'
+
 class LocalconstraintmitoAllVariantsMito(models.ClickhouseModel):
     variant_id = models.StringField(db_column='variantId', primary_key=True)
     score = models.DecimalField(max_digits=9, decimal_places=5)
@@ -1443,8 +1475,8 @@ class MitomapAllMv(RefreshableMaterializedView):
     class Meta(RefreshableMaterializedViewMeta):
         db_table = 'GRCh38/MITO/reference_data/mitomap/all_variants_mv'
         to_table = 'MitomapAllVariantsMito'
-        url_source_args = ["'CsvWithNames'"]
         source_url = 'https://storage.googleapis.com/seqr-reference-data/GRCh38/mitochondrial/MITOMAP/mitomap_confirmed_mutations_nov_2024.csv'
+        source_url_template = "url('{source_url}', 'CsvWithNames')"
         column_selects = {
             'variantId': "concat('M', '-', Position, '-', extract(assumeNotNull(Allele), 'm\\.[0-9]+([ATGC]+)>[ATGC]+'), '-', extract(assumeNotNull(Allele), 'm\\.[0-9]+[ATGC]+>([ATGC]+)'))",
             'pathogenic': 'true',

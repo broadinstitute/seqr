@@ -94,20 +94,6 @@ FROM
 GROUP BY variantId
 """)
 
-MITIMPACT_ALL_VARIANTS_MV = Template("""
-$mv_header
-AS SELECT 
-    variantId,
-    max(score) as score
-FROM (
-    SELECT
-        concat('M', '-', Start, '-', Ref, '-', Alt) as variantId,
-        CAST(APOGEE2_score AS Decimal(9, 5)) AS score
-    FROM url('https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh38/mitimpact/MitImpact_db_3.1.3.txt', 'TSV')
-)
-GROUP BY variantId
-SETTINGS input_format_tsv_crlf_end_of_line = 1
-""")
 
 class Migration(migrations.Migration):
     dependencies = [
@@ -674,18 +660,46 @@ class Migration(migrations.Migration):
             ),
             hints={"clickhouse": True},
         ),
-        migrations.RunSQL(
-            ALL_TO_SEQR_MV.substitute(
-                reference_genome="GRCh38",
-                dataset_type="MITO",
-                reference_dataset="mitimpact",
-            ),
+        migrations.CreateModel(
+            name='MitimpactMv',
+            fields=[
+                ('key', clickhouse_backend.models.UInt32Field(primary_key=True, serialize=False)),
+                ('score', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
+            ],
+            options={
+                'db_table': 'GRCh38/MITO/reference_data/mitimpact/all_variants_to_seqr_variants_mv',
+                'to_table': 'MitimpactSeqrVariantsMito',
+                'source_table': 'MitimpactAllVariantsMito',
+                'source_sql': 'src INNER JOIN `GRCh38/MITO/key_lookup` dst on assumeNotNull(src.variantId) = dst.variantId',
+                'column_selects': {'key': 'DISTINCT ON (key)'},
+                'refreshable': True,
+                'create_empty': True,
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
         ),
-        migrations.RunSQL(
-            MITIMPACT_ALL_VARIANTS_MV.substitute(
-                mv_header=ALL_VARIANTS_MV_HEADER.substitute(reference_genome="GRCh38", dataset_type="MITO", reference_dataset="mitimpact"),
-            ),
-            hints={"clickhouse": True},
+        migrations.CreateModel(
+            name='MitimpactAllMv',
+            fields=[
+                ('variant_id', clickhouse_backend.models.StringField(db_column='variantId', primary_key=True, serialize=False)),
+                ('score', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
+            ],
+            options={
+                'db_table': 'GRCh38/MITO/reference_data/mitimpact/all_variants_mv',
+                'to_table': 'MitimpactAllVariantsMito',
+                'source_sql': 'GROUP BY variantId SETTINGS input_format_tsv_crlf_end_of_line = 1',
+                'source_url': 'https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh38/mitimpact/MitImpact_db_3.1.3.txt',
+                'source_url_template': "(SELECT concat('M', '-', Start, '-', Ref, '-', Alt) as variantId, CAST(APOGEE2_score AS Decimal(9, 5)) AS score FROM url('{source_url}', 'TSV'))",
+                'column_selects': {'score': 'max(score)'},
+                'refreshable': True,
+                'create_empty': True,
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
         ),
         migrations.CreateModel(
             name='LocalconstraintmitoMv',
@@ -758,7 +772,7 @@ class Migration(migrations.Migration):
                 'to_table': 'MitomapAllVariantsMito',
                 'source_sql': "WHERE variantId NOT LIKE '%--'",
                 'source_url': 'https://storage.googleapis.com/seqr-reference-data/GRCh38/mitochondrial/MITOMAP/mitomap_confirmed_mutations_nov_2024.csv',
-                'url_source_args': ["'CsvWithNames'"],
+                'source_url_template': "url('{source_url}', 'CsvWithNames')",
                 'column_selects': {'pathogenic': 'true', 'variantId': "concat('M', '-', Position, '-', extract(assumeNotNull(Allele), 'm\\.[0-9]+([ATGC]+)>[ATGC]+'), '-', extract(assumeNotNull(Allele), 'm\\.[0-9]+[ATGC]+>([ATGC]+)'))"},
                 'refreshable': True,
                 'create_empty': True,
@@ -853,20 +867,22 @@ class Migration(migrations.Migration):
             ),
             hints={"clickhouse": True},
         ),
-        migrations.RunSQL(
-            render_search_dictionary(
-                reference_genome="GRCh38",
-                dataset_type="MITO",
-                reference_dataset="mitimpact",
-                columns="""
-                   `key` UInt32,
-                   `score` Decimal(9, 5)
-                """,
-                primary_key="key",
-                source="TABLE `GRCh38/MITO/reference_data/mitimpact/seqr_variants`",
-                layout="FLAT(MAX_ARRAY_SIZE 1e6)",
-            ),
-            hints={"clickhouse": True},
+        migrations.CreateModel(
+            name='MitimpactDict',
+            fields=[
+                ('key', clickhouse_search.backend.fields.DictKeyForeignKey(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, related_name='mitimpact', serialize=False, to='clickhouse_search.entriesmito')),
+                ('score', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
+            ],
+            options={
+                'db_table': 'GRCh38/MITO/reference_data/mitimpact',
+                'engine': clickhouse_backend.models.MergeTree(primary_key='key'),
+                'source_table': 'MitimpactSeqrVariantsMito',
+                'layout': 'FLAT(MAX_ARRAY_SIZE 1e6)',
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
         ),
         migrations.CreateModel(
             name='LocalconstraintmitoDict',
