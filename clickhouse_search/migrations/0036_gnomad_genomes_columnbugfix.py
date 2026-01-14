@@ -9,19 +9,19 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.RunSQL(
-            "ALTER TABLE `GRCh37/SNV_INDEL/reference_data/gnomad_genomes/all_variants` MODIFY COLUMN variantId String FIRST;"
+            "ALTER TABLE `GRCh37/SNV_INDEL/reference_data/gnomad_genomes/all_variants` MODIFY COLUMN variantId String FIRST;",
             hints={'clickhouse': True},
         ),
         migrations.RunSQL(
-            "ALTER TABLE `GRCh38/SNV_INDEL/reference_data/gnomad_genomes/all_variants` MODIFY COLUMN variantId String FIRST;"
+            "ALTER TABLE `GRCh38/SNV_INDEL/reference_data/gnomad_genomes/all_variants` MODIFY COLUMN variantId String FIRST;",
             hints={'clickhouse': True},
         ),
         migrations.RunSQL(
-            "ALTER TABLE `GRCh37/SNV_INDEL/reference_data/gnomad_genomes/seqr_variants` MODIFY COLUMN key UInt32 FIRST;"
+            "ALTER TABLE `GRCh37/SNV_INDEL/reference_data/gnomad_genomes/seqr_variants` MODIFY COLUMN key UInt32 FIRST;",
             hints={'clickhouse': True},
         ),
         migrations.RunSQL(
-            "ALTER TABLE `GRCh38/SNV_INDEL/reference_data/gnomad_genomes/seqr_variants` MODIFY COLUMN key UInt32 FIRST;"
+            "ALTER TABLE `GRCh38/SNV_INDEL/reference_data/gnomad_genomes/seqr_variants` MODIFY COLUMN key UInt32 FIRST;",
             hints={'clickhouse': True},
         ),
     ]
