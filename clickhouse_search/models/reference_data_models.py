@@ -275,6 +275,36 @@ class GnomadNonCodingConstraintAllVariantsSnvIndel(models.ClickhouseModel):
             order_by=('chrom', 'start', 'end'),
         )
 
+class GnomadNonCodingConstraintAllMv(RefreshableMaterializedView):
+    chrom = models.StringField(null=True, blank=True)
+    start = models.UInt32Field(primary_key=True)
+    end = models.UInt32Field()
+    score = models.StringField(null=True, blank=True)
+
+    class Meta(RefreshableMaterializedViewMeta):
+        db_table = 'GRCh38/SNV_INDEL/reference_data/gnomad_non_coding_constraint/all_variants_mv'
+        to_table = 'GnomadNonCodingConstraintAllVariantsSnvIndel'
+        source_url = 'https://storage.googleapis.com/gcp-public-data--gnomad/release/3.1/secondary_analyses/genomic_constraint/constraint_z_genome_1kb.qc.download.txt.gz'
+        column_selects = {
+            'chrom': "replaceOne(chrom, 'chr', '')",
+            'start': 'toUInt32(assumeNotNull(start))',
+            'end': 'toUInt32(assumeNotNull(end))',
+            'score': 'z',
+        }
+        create_empty = True
+
+class GnomadNonCodingConstraintDict(Dictionary):
+    chrom = models.StringField(primary_key=True)
+    start = models.UInt32Field()
+    end = models.UInt32Field()
+    score = models.DecimalField(max_digits=9, decimal_places=5)
+
+    class Meta:
+        db_table = 'GRCh38/SNV_INDEL/reference_data/gnomad_non_coding_constraint'
+        source_table = 'GnomadNonCodingConstraintAllVariantsSnvIndel'
+        engine = models.MergeTree(primary_key='chrom')
+        layout = 'RANGE_HASHED()'
+
 class ScreenAllVariantsSnvIndel(models.ClickhouseModel):
     chrom = Enum8Field(return_int=False, choices=CHROMOSOME_CHOICES, primary_key=True)
     start = models.UInt32Field()
