@@ -45,7 +45,7 @@ class Migration(migrations.Migration):
                 'to_table': 'ScreenAllVariantsSnvIndel',
                 'source_sql': '',
                 'source_url': 'https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh38/screen/GRCh38-cCREs.bed',
-                'column_selects': {'chrom': "replaceOne(c1, 'chr', '')", 'end': 'toUInt32(assumeNotNull(c3))', 'region_type': "splitByChar(',', assumeNotNull(c6))[1]", 'start': 'toUInt32(assumeNotNull(c2))'},
+                'column_selects': {'chrom': "replaceOne(c1, 'chr', '')", 'end': 'toUInt32(assumeNotNull(c3))', 'regionType': "splitByChar(',', assumeNotNull(c6))[1]", 'start': 'toUInt32(assumeNotNull(c2))'},
                 'refreshable': True,
                 'create_empty': True,
             },

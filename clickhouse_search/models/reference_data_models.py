@@ -399,7 +399,7 @@ class ScreenAllMv(RefreshableMaterializedView):
             'chrom': "replaceOne(c1, 'chr', '')",
             'start': 'toUInt32(assumeNotNull(c2))',
             'end': 'toUInt32(assumeNotNull(c3))',
-            'region_type': "splitByChar(',', assumeNotNull(c6))[1]",
+            'regionType': "splitByChar(',', assumeNotNull(c6))[1]",
         }
         create_empty = True
 
