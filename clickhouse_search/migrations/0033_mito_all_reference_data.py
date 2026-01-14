@@ -78,23 +78,6 @@ AS SELECT
 FROM url('https://helix-research-public.s3.amazonaws.com/mito/HelixMTdb_20200327.tsv')
 """)
 
-HMTVAR_ALL_VARIANTS_MV = Template("""
-$mv_header
-AS SELECT
-    variantId,
-    max(score) AS score
-FROM
-(
-    SELECT
-        concat('M', '-', nt_start, '-', ref_rCRS, '-', alt) AS variantId,
-        CAST(disease_score AS Decimal(9, 5)) AS score
-    FROM url('https://storage.googleapis.com/seqr-reference-data/GRCh38/mitochondrial/HmtVar/HmtVar%20Jan.%2010%202022.json')
-    WHERE match(alt, '^[ACTG]+$$') AND (disease_score IS NOT NULL)
-)
-GROUP BY variantId
-""")
-
-
 class Migration(migrations.Migration):
     dependencies = [
         ("clickhouse_search", "0032_dbnsfp"),
@@ -647,18 +630,46 @@ class Migration(migrations.Migration):
             ),
             hints={"clickhouse": True},
         ),
-        migrations.RunSQL(
-            ALL_TO_SEQR_MV.substitute(
-                reference_genome="GRCh38",
-                dataset_type="MITO",
-                reference_dataset="hmtvar",
-            ),
+        migrations.CreateModel(
+            name='HmtvarMv',
+            fields=[
+                ('key', clickhouse_backend.models.UInt32Field(primary_key=True, serialize=False)),
+                ('score', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
+            ],
+            options={
+                'db_table': 'GRCh38/MITO/reference_data/hmtvar/all_variants_to_seqr_variants_mv',
+                'to_table': 'HmtvarSeqrVariantsMito',
+                'source_table': 'HmtvarAllVariantsMito',
+                'source_sql': 'src INNER JOIN `GRCh38/MITO/key_lookup` dst on assumeNotNull(src.variantId) = dst.variantId',
+                'column_selects': {'key': 'DISTINCT ON (key)'},
+                'refreshable': True,
+                'create_empty': True,
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
         ),
-        migrations.RunSQL(
-            HMTVAR_ALL_VARIANTS_MV.substitute(
-                mv_header=ALL_VARIANTS_MV_HEADER.substitute(reference_genome="GRCh38", dataset_type="MITO", reference_dataset="hmtvar"),
-            ),
-            hints={"clickhouse": True},
+        migrations.CreateModel(
+            name='HmtvarAllMv',
+            fields=[
+                ('variant_id', clickhouse_backend.models.StringField(db_column='variantId', primary_key=True, serialize=False)),
+                ('score', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
+            ],
+            options={
+                'db_table': 'GRCh38/MITO/reference_data/hmtvar/all_variants_mv',
+                'to_table': 'HmtvarAllVariantsMito',
+                'source_sql': 'GROUP BY variantId',
+                'source_url': 'https://storage.googleapis.com/seqr-reference-data/GRCh38/mitochondrial/HmtVar/HmtVar%20Jan.%2010%202022.json',
+                'source_url_template': "(SELECT concat('M', '-', nt_start, '-', ref_rCRS, '-', alt) as variantId, CAST(disease_score AS Decimal(9, 5)) AS score FROM url('{source_url}') WHERE match(alt, '^[ACTG]+$$') AND (disease_score IS NOT NULL))",
+                'column_selects': {'score': 'max(score)'},
+                'refreshable': True,
+                'create_empty': True,
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
         ),
         migrations.CreateModel(
             name='MitimpactMv',
@@ -852,20 +863,22 @@ class Migration(migrations.Migration):
             ),
             hints={"clickhouse": True},
         ),
-        migrations.RunSQL(
-            render_search_dictionary(
-                reference_genome="GRCh38",
-                dataset_type="MITO",
-                reference_dataset="hmtvar",
-                columns="""
-                   `key` UInt32,
-                   `score` Decimal(9, 5)
-                """,
-                primary_key="key",
-                source="TABLE `GRCh38/MITO/reference_data/hmtvar/seqr_variants`",
-                layout="FLAT(MAX_ARRAY_SIZE 1e6)",
-            ),
-            hints={"clickhouse": True},
+        migrations.CreateModel(
+            name='HmtvarDict',
+            fields=[
+                ('key', clickhouse_search.backend.fields.DictKeyForeignKey(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, related_name='hmtvar', serialize=False, to='clickhouse_search.entriesmito')),
+                ('score', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
+            ],
+            options={
+                'db_table': 'GRCh38/MITO/reference_data/hmtvar',
+                'engine': clickhouse_backend.models.MergeTree(primary_key='key'),
+                'source_table': 'HmtvarSeqrVariantsMito',
+                'layout': 'FLAT(MAX_ARRAY_SIZE 1e6)',
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
         ),
         migrations.CreateModel(
             name='MitimpactDict',

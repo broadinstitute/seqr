@@ -1335,6 +1335,40 @@ class HmtvarSeqrVariantsMito(models.ClickhouseModel):
             order_by=('key'),
         )
 
+class HmtvarAllMv(RefreshableMaterializedView):
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
+    score = models.DecimalField(max_digits=9, decimal_places=5)
+
+    class Meta(RefreshableMaterializedViewMeta):
+        db_table = 'GRCh38/MITO/reference_data/hmtvar/all_variants_mv'
+        to_table = 'HmtvarAllVariantsMito'
+        source_url_template = "(SELECT concat('M', '-', nt_start, '-', ref_rCRS, '-', alt) as variantId, CAST(disease_score AS Decimal(9, 5)) AS score FROM url('{source_url}') WHERE match(alt, '^[ACTG]+$$') AND (disease_score IS NOT NULL))"
+        source_url = 'https://storage.googleapis.com/seqr-reference-data/GRCh38/mitochondrial/HmtVar/HmtVar%20Jan.%2010%202022.json'
+        column_selects = {
+            'score': 'max(score)',
+        }
+        source_sql = 'GROUP BY variantId'
+        create_empty = True
+
+class HmtvarMv(RefreshableMaterializedView):
+    key = models.UInt32Field(primary_key=True)
+    score = models.DecimalField(max_digits=9, decimal_places=5)
+
+    class Meta(ReferenceDataMvMeta):
+        db_table = 'GRCh38/MITO/reference_data/hmtvar/all_variants_to_seqr_variants_mv'
+        to_table = 'HmtvarSeqrVariantsMito'
+        source_table = 'HmtvarAllVariantsMito'
+        source_sql = _all_variants_to_seqr_source_sql('GRCh38', 'MITO')
+
+class HmtvarDict(Dictionary):
+    key = DictKeyForeignKey('EntriesMito', related_name='hmtvar')
+    score = models.DecimalField(max_digits=9, decimal_places=5)
+
+    class Meta(ReferenceDataDictMeta):
+        db_table = 'GRCh38/MITO/reference_data/hmtvar'
+        source_table = 'HmtvarSeqrVariantsMito'
+        layout = 'FLAT(MAX_ARRAY_SIZE 1e6)'
+
 class MitimpactAllVariantsMito(models.ClickhouseModel):
     variant_id = models.StringField(db_column='variantId', primary_key=True)
     score = models.DecimalField(max_digits=9, decimal_places=5)
