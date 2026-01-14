@@ -1294,7 +1294,7 @@ class BaseMitoPopulationDict(Dictionary):
 class HelixmitoMvMeta(RefreshableMaterializedViewMeta):
     source_url = 'https://helix-research-public.s3.amazonaws.com/mito/HelixMTdb_20200327.tsv'
     column_selects = {
-        'variantId': "assumeNotNull(concat('M', '-', replace(locus, 'chrM:', ''), '-', arrayStringConcat(arrayMap(x -> replaceAll(x, '\"', ''), JSONExtractArrayRaw(assumeNotNull(alleles))), '-'))))",
+        'variantId': "assumeNotNull(concat('M', '-', replace(locus, 'chrM:', ''), '-', arrayStringConcat(arrayMap(x -> replaceAll(x, '\"', ''), JSONExtractArrayRaw(assumeNotNull(alleles))), '-')))",
         'ac': 'counts_hom',
         'af': 'CAST(AF_hom AS Decimal(9, 8))',
         'an': 'if(toFloat64(AF_hom) > 0, CAST(counts_hom / toFloat64(AF_hom) AS Int32), CAST(counts_het / toFloat64(AF_het) AS Int32))',
