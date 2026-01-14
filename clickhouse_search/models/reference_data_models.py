@@ -1259,6 +1259,94 @@ class HelixmitoheteroplasmySeqrVariantsMito(models.ClickhouseModel):
             order_by=('key'),
         )
 
+class BaseMitoPopulationMv(RefreshableMaterializedView):
+    key = models.UInt32Field(primary_key=True)
+    ac = models.UInt32Field()
+    af = models.DecimalField(max_digits=9, decimal_places=8)
+    an = models.UInt32Field()
+
+    class Meta:
+        abstract = True
+
+class BaseMitoPopulationDict(Dictionary):
+    ac = models.UInt32Field()
+    af = models.DecimalField(max_digits=9, decimal_places=8)
+    an = models.UInt32Field()
+
+    class Meta:
+        abstract = True
+
+class HelixmitoMvMeta(RefreshableMaterializedViewMeta):
+    source_url = 'https://helix-research-public.s3.amazonaws.com/mito/HelixMTdb_20200327.tsv'
+    column_selects = {
+        'variantId': "assumeNotNull(concat('M', '-', replace(locus, 'chrM:', ''), '-', arrayStringConcat(arrayMap(x -> replaceAll(x, '\"', ''), JSONExtractArrayRaw(assumeNotNull(alleles))), '-'))))",
+        'ac': 'counts_hom',
+        'af': 'CAST(AF_hom AS Decimal(9, 8))',
+        'an': 'if(toFloat64(AF_hom) > 0, CAST(counts_hom / toFloat64(AF_hom) AS Int32), CAST(counts_het / toFloat64(AF_het) AS Int32))',
+    }
+    create_empty = True
+
+class HelixmitoAllMv(RefreshableMaterializedView):
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
+    ac = models.Int64Field(null=True, blank=True)
+    af = models.DecimalField(max_digits=9, decimal_places=8)
+    an = models.Int32Field()
+
+    class Meta(HelixmitoMvMeta):
+        db_table = 'GRCh38/MITO/reference_data/helix_mito/all_variants_mv'
+        to_table = 'HelixmitoAllVariantsMito'
+
+class HelixmitoheteroplasmyAllMv(RefreshableMaterializedView):
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
+    ac = models.Int64Field(null=True, blank=True)
+    af = models.DecimalField(max_digits=9, decimal_places=8)
+    an = models.Int32Field()
+    max_hl = models.StringField(null=True, blank=True)
+
+    class Meta(HelixmitoMvMeta):
+        db_table = 'GRCh38/MITO/reference_data/helix_mito_heteroplasmy/all_variants_mv'
+        to_table = 'HelixmitoheteroplasmyAllVariantsMito'
+        column_selects = {
+            **HelixmitoMvMeta.column_selects,
+            'ac': 'counts_het',
+            'af': 'CAST(AF_het AS Decimal(9, 8))',
+            'max_hl': 'max_ARF',
+        }
+
+class HelixmitoMv(BaseMitoPopulationMv):
+
+    class Meta(ReferenceDataMvMeta):
+        db_table = 'GRCh38/MITO/reference_data/helix_mito/all_variants_to_seqr_variants_mv'
+        to_table = 'HelixmitoSeqrVariantsMito'
+        source_table = 'HelixmitoAllVariantsMito'
+        source_sql = _all_variants_to_seqr_source_sql('GRCh38', 'MITO')
+
+class HelixmitoheteroplasmyMv(BaseMitoPopulationMv):
+    max_hl = models.DecimalField(max_digits=9, decimal_places=8)
+
+    class Meta(ReferenceDataMvMeta):
+        db_table = 'GRCh38/MITO/reference_data/helix_mito_heteroplasmy/all_variants_to_seqr_variants_mv'
+        to_table = 'HelixmitoheteroplasmySeqrVariantsMito'
+        source_table = 'HelixmitoheteroplasmyAllVariantsMito'
+        source_sql = _all_variants_to_seqr_source_sql('GRCh38', 'MITO')
+
+class HelixmitoDict(BaseMitoPopulationDict):
+    key = DictKeyForeignKey('EntriesMito', related_name='helix_mito')
+
+    class Meta(ReferenceDataDictMeta):
+        db_table = 'GRCh38/MITO/reference_data/helix_mito'
+        source_table = 'HelixmitoSeqrVariantsMito'
+        layout = 'FLAT(MAX_ARRAY_SIZE 1e6)'
+
+class HelixmitoheteroplasmyDict(BaseMitoPopulationDict):
+    key = DictKeyForeignKey('EntriesMito', related_name='helix_mito_heteroplasmy')
+    max_hl = models.DecimalField(max_digits=9, decimal_places=8)
+
+    class Meta(ReferenceDataDictMeta):
+        db_table = 'GRCh38/MITO/reference_data/helix_mito_heteroplasmy'
+        source_table = 'HelixmitoheteroplasmySeqrVariantsMito'
+        layout = 'FLAT(MAX_ARRAY_SIZE 1e6)'
+
 class GnomadmitoAllVariantsMito(models.ClickhouseModel):
     variant_id = models.StringField(db_column='variantId', primary_key=True)
     ac = models.UInt32Field()
@@ -1312,6 +1400,75 @@ class GnomadmitoheteroplasmySeqrVariantsMito(models.ClickhouseModel):
             primary_key=('key'),
             order_by=('key'),
         )
+
+class GnomadmitoMvMeta(RefreshableMaterializedViewMeta):
+    source_url = 'https://storage.googleapis.com/seqr-reference-data/v3.1/GRCh38/gnomad_mito/1.1.parquet/*.parquet'
+    column_selects = {
+        'variantId': 'assumeNotNull(variant_id)',
+        'ac': 'AC_hom',
+        'af': 'AF_hom',
+        'an': 'AN',
+    }
+    create_empty = True
+
+class GnomadmitoAllMv(RefreshableMaterializedView):
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
+    ac = models.Int32Field(null=True, blank=True)
+    af = models.Float32Field(null=True, blank=True)
+    an = models.Int32Field(null=True, blank=True)
+
+    class Meta(GnomadmitoMvMeta):
+        db_table = 'GRCh38/MITO/reference_data/gnomad_mito/all_variants_mv'
+        to_table = 'GnomadmitoAllVariantsMito'
+
+class GnomadmitoheteroplasmyAllMv(RefreshableMaterializedView):
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
+    ac = models.Int32Field(null=True, blank=True)
+    af = models.Float32Field(null=True, blank=True)
+    an = models.Int32Field(null=True, blank=True)
+    max_hl = models.Float32Field(null=True, blank=True)
+
+    class Meta(GnomadmitoMvMeta):
+        db_table = 'GRCh38/MITO/reference_data/gnomad_mito_heteroplasmy/all_variants_mv'
+        to_table = 'GnomadmitoheteroplasmyAllVariantsMito'
+        column_selects = {
+            **GnomadmitoMvMeta.column_selects,
+            'ac': 'AC_het',
+        }
+
+class GnomadmitoMv(BaseMitoPopulationMv):
+
+    class Meta(ReferenceDataMvMeta):
+        db_table = 'GRCh38/MITO/reference_data/gnomad_mito/all_variants_to_seqr_variants_mv'
+        to_table = 'GnomadmitoSeqrVariantsMito'
+        source_table = 'GnomadmitoAllVariantsMito'
+        source_sql = _all_variants_to_seqr_source_sql('GRCh38', 'MITO')
+
+class GnomadmitoheteroplasmyMv(BaseMitoPopulationMv):
+    max_hl = models.DecimalField(max_digits=9, decimal_places=8)
+
+    class Meta(ReferenceDataMvMeta):
+        db_table = 'GRCh38/MITO/reference_data/gnomad_mito_heteroplasmy/all_variants_to_seqr_variants_mv'
+        to_table = 'GnomadmitoheteroplasmySeqrVariantsMito'
+        source_table = 'GnomadmitoheteroplasmyAllVariantsMito'
+        source_sql = _all_variants_to_seqr_source_sql('GRCh38', 'MITO')
+
+class GnomadmitoDict(BaseMitoPopulationDict):
+    key = DictKeyForeignKey('EntriesMito', related_name='gnomad_mito')
+
+    class Meta(ReferenceDataDictMeta):
+        db_table = 'GRCh38/MITO/reference_data/gnomad_mito'
+        source_table = 'GnomadmitoSeqrVariantsMito'
+        layout = 'FLAT(MAX_ARRAY_SIZE 1e6)'
+
+class GnomadmitoheteroplasmyDict(BaseMitoPopulationDict):
+    key = DictKeyForeignKey('EntriesMito', related_name='gnomad_mito_heteroplasmy')
+    max_hl = models.DecimalField(max_digits=9, decimal_places=8)
+
+    class Meta(ReferenceDataDictMeta):
+        db_table = 'GRCh38/MITO/reference_data/gnomad_mito_heteroplasmy'
+        source_table = 'GnomadmitoheteroplasmySeqrVariantsMito'
+        layout = 'FLAT(MAX_ARRAY_SIZE 1e6)'
 
 class HmtvarAllVariantsMito(models.ClickhouseModel):
     variant_id = models.StringField(db_column='variantId', primary_key=True)
