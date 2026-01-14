@@ -261,6 +261,71 @@ class PextSeqrVariantsMito(models.ClickhouseModel):
             order_by=('key'),
         )
 
+class PextSnvIndelAllMv(RefreshableMaterializedView):
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
+    score = models.StringField(null=True, blank=True)
+
+    class Meta(RefreshableMaterializedViewMeta):
+        db_table = 'GRCh38/SNV_INDEL/reference_data/pext/all_variants_mv'
+        to_table = 'PextAllVariantsSnvIndel'
+        source_url = 'https://storage.googleapis.com/gcp-public-data--gnomad/release/4.1/pext/gnomad.pext.gtex_v10.annotation_level.tsv.gz'
+        column_selects = {
+            'variantId': "concat(replaceOne(splitByChar(':', assumeNotNull(locus))[1], 'chr', ''), '-', splitByChar(':', assumeNotNull(locus))[2], '-', JSONExtract(assumeNotNull(alleles), 'Array(String)')[1], '-', JSONExtract(assumeNotNull(alleles), 'Array(String)')[2])",
+            'score': "if(exp_prop_mean IN ('NaN', 'nan', ''), NULL, exp_prop_mean)",
+        }
+        source_sql = 'WHERE score IS NOT NULL'
+        create_empty = True
+
+class PextSnvIndelMv(RefreshableMaterializedView):
+    key = models.UInt32Field(primary_key=True)
+    score = models.DecimalField(max_digits=9, decimal_places=5)
+
+    class Meta(ReferenceDataMvMeta):
+        db_table = 'GRCh38/SNV_INDEL/reference_data/pext/all_variants_to_seqr_variants_mv'
+        to_table = 'PextSeqrVariantsSnvIndel'
+        source_table = 'PextAllVariantsSnvIndel'
+
+class PextSnvIndelDict(Dictionary):
+    key = DictKeyForeignKey('EntriesSnvIndel', related_name='pext')
+    score = models.DecimalField(max_digits=9, decimal_places=5)
+
+    class Meta(ReferenceDataDictMeta):
+        db_table = 'GRCh38/SNV_INDEL/reference_data/pext'
+        source_table = 'PextSeqrVariantsSnvIndel'
+
+class PextMitoAllMv(RefreshableMaterializedView):
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
+    score = models.StringField(null=True, blank=True)
+
+    class Meta(RefreshableMaterializedViewMeta):
+        db_table = 'GRCh38/MITO/reference_data/pext/all_variants_mv'
+        to_table = 'PextAllVariantsMito'
+        source_url = 'https://storage.googleapis.com/gcp-public-data--gnomad/release/4.1/pext/gnomad.pext.gtex_v10.annotation_level.tsv.gz'
+        column_selects = {
+            'variantId': "concat(replaceOne(splitByChar(':', assumeNotNull(locus))[1], 'chr', ''), '-', splitByChar(':', assumeNotNull(locus))[2], '-', JSONExtract(assumeNotNull(alleles), 'Array(String)')[1], '-', JSONExtract(assumeNotNull(alleles), 'Array(String)')[2])",
+            'score': "if(exp_prop_mean IN ('NaN', 'nan', ''), NULL, exp_prop_mean)",
+        }
+        source_sql = "WHERE score IS NOT NULL AND startsWith(locus, 'chrM')"
+        create_empty = True
+
+class PextMitoMv(RefreshableMaterializedView):
+    key = models.UInt32Field(primary_key=True)
+    score = models.DecimalField(max_digits=9, decimal_places=5)
+
+    class Meta(ReferenceDataMvMeta):
+        db_table = 'GRCh38/MITO/reference_data/pext/all_variants_to_seqr_variants_mv'
+        to_table = 'PextSeqrVariantsMito'
+        source_table = 'PextAllVariantsMito'
+        source_sql = _all_variants_to_seqr_source_sql('GRCh38', 'MITO')
+
+class PextMitoDict(Dictionary):
+    key = DictKeyForeignKey('EntriesMito', related_name='pext')
+    score = models.DecimalField(max_digits=9, decimal_places=5)
+
+    class Meta(ReferenceDataDictMeta):
+        db_table = 'GRCh38/MITO/reference_data/pext'
+        source_table = 'PextSeqrVariantsMito'
+
 class GnomadNonCodingConstraintAllVariantsSnvIndel(models.ClickhouseModel):
     chrom = Enum8Field(return_int=False, choices=CHROMOSOME_CHOICES, primary_key=True)
     start = models.UInt32Field()
