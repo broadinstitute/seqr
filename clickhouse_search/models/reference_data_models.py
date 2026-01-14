@@ -1381,6 +1381,39 @@ class LocalconstraintmitoSeqrVariantsMito(models.ClickhouseModel):
             order_by=('key'),
         )
 
+class LocalconstraintmitoAllMv(RefreshableMaterializedView):
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
+    score = models.DecimalField(max_digits=9, decimal_places=5)
+
+    class Meta(RefreshableMaterializedViewMeta):
+        db_table = 'GRCh38/MITO/reference_data/local_constraint_mito/all_variants_mv'
+        to_table = 'LocalconstraintmitoAllVariantsMito'
+        source_url = 'https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh38/local_constraint_mito/supplementary_dataset_7.tsv'
+        column_selects = {
+            'variantId': "concat('M', '-', Position, '-', Reference, '-', Alternate)",
+            'score': 'CAST(MLC_score AS Decimal(9, 5))',
+        }
+        create_empty = True
+
+class LocalconstraintmitoMv(RefreshableMaterializedView):
+    key = models.UInt32Field(primary_key=True)
+    score = models.DecimalField(max_digits=9, decimal_places=5)
+
+    class Meta(ReferenceDataMvMeta):
+        db_table = 'GRCh38/MITO/reference_data/local_constraint_mito/all_variants_to_seqr_variants_mv'
+        to_table = 'LocalconstraintmitoSeqrVariantsMito'
+        source_table = 'LocalconstraintmitoAllVariantsMito'
+        source_sql = _all_variants_to_seqr_source_sql('GRCh38', 'MITO')
+
+class LocalconstraintmitoDict(Dictionary):
+    key = DictKeyForeignKey('EntriesMito', related_name='local_constraint_mito')
+    score = models.DecimalField(max_digits=9, decimal_places=5)
+
+    class Meta(ReferenceDataDictMeta):
+        db_table = 'GRCh38/MITO/reference_data/local_constraint_mito'
+        source_table = 'LocalconstraintmitoSeqrVariantsMito'
+        layout = 'FLAT(MAX_ARRAY_SIZE 1e6)'
+
 class MitomapAllVariantsMito(models.ClickhouseModel):
     variant_id = models.StringField(db_column='variantId', primary_key=True)
     pathogenic = models.BoolField()
@@ -1430,7 +1463,7 @@ class MitomapMv(RefreshableMaterializedView):
         source_sql = _all_variants_to_seqr_source_sql('GRCh38', 'MITO')
 
 class MitomapDict(Dictionary):
-    key = DictKeyForeignKey('EntriesMito', related_name='pext')
+    key = DictKeyForeignKey('EntriesMito', related_name='mitomap')
     pathogenic = models.BoolField()
 
     class Meta(ReferenceDataDictMeta):

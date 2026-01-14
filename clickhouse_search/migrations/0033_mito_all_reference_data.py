@@ -109,15 +109,6 @@ GROUP BY variantId
 SETTINGS input_format_tsv_crlf_end_of_line = 1
 """)
 
-LOCAL_CONSTRAINT_MITO_ALL_VARIANTS_MV = Template("""
-$mv_header
-AS SELECT 
-    concat('M', '-', Position, '-', Reference, '-', Alternate) as variantId,
-    CAST(MLC_score AS Decimal(9, 5)) AS score
-FROM url('https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh38/local_constraint_mito/supplementary_dataset_7.tsv')
-""")
-
-
 class Migration(migrations.Migration):
     dependencies = [
         ("clickhouse_search", "0032_dbnsfp"),
@@ -696,18 +687,45 @@ class Migration(migrations.Migration):
             ),
             hints={"clickhouse": True},
         ),
-        migrations.RunSQL(
-            ALL_TO_SEQR_MV.substitute(
-                reference_genome="GRCh38",
-                dataset_type="MITO",
-                reference_dataset="local_constraint_mito",
-            ),
+        migrations.CreateModel(
+            name='LocalconstraintmitoMv',
+            fields=[
+                ('key', clickhouse_backend.models.UInt32Field(primary_key=True, serialize=False)),
+                ('score', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
+            ],
+            options={
+                'db_table': 'GRCh38/MITO/reference_data/local_constraint_mito/all_variants_to_seqr_variants_mv',
+                'to_table': 'LocalconstraintmitoSeqrVariantsMito',
+                'source_table': 'LocalconstraintmitoAllVariantsMito',
+                'source_sql': 'src INNER JOIN `GRCh38/MITO/key_lookup` dst on assumeNotNull(src.variantId) = dst.variantId',
+                'column_selects': {'key': 'DISTINCT ON (key)'},
+                'refreshable': True,
+                'create_empty': True,
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
         ),
-        migrations.RunSQL(
-            LOCAL_CONSTRAINT_MITO_ALL_VARIANTS_MV.substitute(
-                mv_header=ALL_VARIANTS_MV_HEADER.substitute(reference_genome="GRCh38", dataset_type="MITO", reference_dataset="local_constraint_mito"),
-            ),
-            hints={"clickhouse": True},
+        migrations.CreateModel(
+            name='LocalconstraintmitoAllMv',
+            fields=[
+                ('variant_id', clickhouse_backend.models.StringField(db_column='variantId', primary_key=True, serialize=False)),
+                ('score', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
+            ],
+            options={
+                'db_table': 'GRCh38/MITO/reference_data/local_constraint_mito/all_variants_mv',
+                'to_table': 'LocalconstraintmitoAllVariantsMito',
+                'source_sql': '',
+                'source_url': 'https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh38/local_constraint_mito/supplementary_dataset_7.tsv',
+                'column_selects': {'score': 'CAST(MLC_score AS Decimal(9, 5))', 'variantId': "concat('M', '-', Position, '-', Reference, '-', Alternate)"},
+                'refreshable': True,
+                'create_empty': True,
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
         ),
         migrations.CreateModel(
             name='MitomapMv',
@@ -850,25 +868,27 @@ class Migration(migrations.Migration):
             ),
             hints={"clickhouse": True},
         ),
-        migrations.RunSQL(
-            render_search_dictionary(
-                reference_genome="GRCh38",
-                dataset_type="MITO",
-                reference_dataset="local_constraint_mito",
-                columns="""
-                   `key` UInt32,
-                   `score` Decimal(9, 5)
-                """,
-                primary_key="key",
-                source="TABLE `GRCh38/MITO/reference_data/local_constraint_mito/seqr_variants`",
-                layout="FLAT(MAX_ARRAY_SIZE 1e6)",
-            ),
-            hints={"clickhouse": True},
+        migrations.CreateModel(
+            name='LocalconstraintmitoDict',
+            fields=[
+                ('key', clickhouse_search.backend.fields.DictKeyForeignKey(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, related_name='local_constraint_mito', serialize=False, to='clickhouse_search.entriesmito')),
+                ('score', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
+            ],
+            options={
+                'db_table': 'GRCh38/MITO/reference_data/local_constraint_mito',
+                'engine': clickhouse_backend.models.MergeTree(primary_key='key'),
+                'source_table': 'LocalconstraintmitoSeqrVariantsMito',
+                'layout': 'FLAT(MAX_ARRAY_SIZE 1e6)',
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
         ),
         migrations.CreateModel(
             name='MitomapDict',
             fields=[
-                ('key', clickhouse_search.backend.fields.DictKeyForeignKey(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, related_name='pext', serialize=False, to='clickhouse_search.entriesmito')),
+                ('key', clickhouse_search.backend.fields.DictKeyForeignKey(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, related_name='mitomap', serialize=False, to='clickhouse_search.entriesmito')),
                 ('pathogenic', clickhouse_backend.models.BoolField()),
             ],
             options={
