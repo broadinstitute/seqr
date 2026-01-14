@@ -41,7 +41,7 @@ class Migration(migrations.Migration):
                 ('region_type', clickhouse_backend.models.StringField(db_column='regionType')),
             ],
             options={
-                'db_table': 'GRCh38/SNV_INDEL/reference_data/gnomad_non_coding_constraint/all_variants_mv',
+                'db_table': 'GRCh38/SNV_INDEL/reference_data/screen/all_variants_mv',
                 'to_table': 'ScreenAllVariantsSnvIndel',
                 'source_sql': '',
                 'source_url': 'https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh38/screen/GRCh38-cCREs.bed',
