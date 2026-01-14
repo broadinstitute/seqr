@@ -29,20 +29,20 @@ class SearchQuerySet(QuerySet):
         return self.model._meta.db_table.rsplit('/', 1)[0]
 
     @property
-    def clinvar_field_prefix(self):
-        return 'clinvar_join'
+    def pathogenicity_field_prefix(self):
+        return ''
 
-    @property
-    def clinvar_fields(self):
-        return OrderedDict({
-            f'{self.clinvar_field_prefix}__{field.name}': (field.db_column or field.name, field)
-            for field in reversed(self.clinvar_model._meta.local_fields) if field.name != 'key'
+    def _pathogenicity_tuple(self, pathogenicity_field):
+        pathogenicity_join = self._pathogenicity_join_model(pathogenicity_field)
+        if not pathogenicity_join:
+            return None
+        fields = OrderedDict({
+            f'{self.pathogenicity_field_prefix}{pathogenicity_field}_join__{field.name}': (field.db_column or field.name, field)
+            for field in reversed(pathogenicity_join.rel.related_model._meta.local_fields) if field.name != 'key'
         })
-
-    def _clinvar_tuple(self):
         return Tuple(
-            *self.clinvar_fields.keys(),
-            output_field=NamedTupleField(list(self.clinvar_fields.values()), null_if_empty=True, null_empty_arrays=True),
+            *fields.keys(),
+            output_field=NamedTupleField(list(fields.values()), null_if_empty=True, null_empty_arrays=True),
         )
 
     @classmethod
@@ -241,15 +241,12 @@ class AnnotationsQuerySet(SearchQuerySet):
     def entry_model(self):
          return getattr(self.model, f'{self.entry_field}_set').rel.related_model
 
-    @property
-    def clinvar_model(self):
-        if not hasattr(self.entry_model, 'clinvar_join'):
-            return None
-        return self.entry_model.clinvar_join.rel.related_model
+    def _pathogenicity_join_model(self, pathogenicity_field):
+        return getattr(self.entry_model, f'{pathogenicity_field}_join', None)
 
     @property
-    def clinvar_field_prefix(self):
-        return f'{self.entry_field}__clinvar_join'
+    def pathogenicity_field_prefix(self):
+        return f'{self.entry_field}__'
 
     @property
     def gt_stats_dict_rel(self):
@@ -341,8 +338,9 @@ class AnnotationsQuerySet(SearchQuerySet):
 
     def join_clinvar(self, keys):
         results = self
-        if self.clinvar_model:
-            results = results.annotate(clinvar=self._clinvar_tuple())
+        clinvar_tuple = self._pathogenicity_tuple(CLINVAR_KEY)
+        if clinvar_tuple:
+            results = results.annotate(clinvar=clinvar_tuple)
             # Due to django modeling, adding a clinvar annotation will add a join to the entries table and then to clinvar
             # Manipulating the underlying join removes the entry join entirely
             entry_table = f'{self.table_basename}/entries'
@@ -776,9 +774,8 @@ class EntriesManager(SearchQuerySet):
             **{f'x.{name}': (name, output_field) for name, output_field in self.call_fields.items() if name != 'gt'}
         })
 
-    @property
-    def clinvar_model(self):
-        return self.model.clinvar_join.rel.related_model
+    def _pathogenicity_join_model(self, pathogenicity_field):
+        return getattr(self.model, f'{pathogenicity_field}_join', None)
 
     @property
     def gt_stats_dict_rel(self):
@@ -814,10 +811,11 @@ class EntriesManager(SearchQuerySet):
         return self._search_call_data(entries, sample_data, **kwargs)
 
     def _join_annotations(self, entries):
-        if self._has_clinvar():
+        clinvar_tuple = self._pathogenicity_tuple(CLINVAR_KEY)
+        if clinvar_tuple:
            entries = entries.annotate(
                clinvar_key=F('clinvar_join__key'),
-               clinvar=self._clinvar_tuple(),
+               clinvar=clinvar_tuple,
            )
 
         entries = self._annotate_seqr_pop_expression(entries)
@@ -827,9 +825,6 @@ class EntriesManager(SearchQuerySet):
     def result_values(self, sample_data=None):
         entries = self._join_annotations(self)
         return self._search_call_data(entries, sample_data)
-
-    def _has_clinvar(self):
-        return hasattr(self.model, 'clinvar_join')
 
     @staticmethod
     def _clinvar_range_q(path_range):
@@ -883,7 +878,7 @@ class EntriesManager(SearchQuerySet):
        gt_filter = None
        quality_filter = qualityFilter or {}
        if inheritance_mode or (inheritance_filter or {}).get('genotype') or quality_filter:
-            clinvar_override_q = self._clinvar_path_q(pathogenicity) if self._has_clinvar() else None
+            clinvar_override_q = self._clinvar_path_q(pathogenicity) if self._pathogenicity_join_model(CLINVAR_KEY) else None
             inheritance_q, quality_q, gt_filter, carriers_expression = self._get_inheritance_quality_qs(
                sample_data, inheritance_mode, quality_filter, clinvar_override_q,
                 annotate_carriers, inheritance_filter=inheritance_filter or {},
@@ -1110,7 +1105,7 @@ class EntriesManager(SearchQuerySet):
         fields = ['key']
         if 'seqrPop' in entries.query.annotations:
             fields.append('seqrPop')
-        if self._has_clinvar():
+        if self._pathogenicity_join_model(CLINVAR_KEY):
              fields += ['clinvar', 'clinvar_key']
         if multi_sample_type_families or sample_data is None or sample_data['num_families'] > 1:
             entries = entries.values(*fields)
