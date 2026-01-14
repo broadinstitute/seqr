@@ -17,6 +17,7 @@ class RefreshableMaterializedView(IncrementalMaterializedView):
     @classmethod
     def refresh(cls):
         with connections['clickhouse_write'].cursor() as cursor:
+            cursor.execute(f'SYSTEM START VIEW "{cls._meta.db_table}"')
             cursor.execute(f'SYSTEM REFRESH VIEW "{cls._meta.db_table}"')
             cursor.execute(f'SYSTEM WAIT VIEW "{cls._meta.db_table}"')
 
