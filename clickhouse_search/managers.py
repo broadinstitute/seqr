@@ -168,6 +168,10 @@ class AnnotationsQuerySet(SearchQuerySet):
             'populations': TupleConcat(F('populations'), Tuple(*seqr_pops), output_field=NamedTupleField(population_fields)),
         }
 
+        hgmd_tuple = self._pathogenicity_tuple(HGMD_KEY)
+        if hgmd_tuple:
+            annotations['hgmd'] = hgmd_tuple
+
         if not hasattr(self.model, 'SORTED_TRANSCRIPT_CONSQUENCES_FIELDS'):
             annotations['transcripts'] = annotations.pop(getattr(self.model, self.transcript_field).field.db_column)
             if self.transcript_field == self.TRANSCRIPT_CONSEQUENCE_FIELD:
@@ -315,7 +319,7 @@ class AnnotationsQuerySet(SearchQuerySet):
         return results
 
     def result_values(self, skip_entry_fields=False):
-        override_model_annotations = {'populations', 'pos', 'end'}
+        override_model_annotations = {'populations', 'pos', 'end', 'hgmd'}
         values = {**self.annotation_values}
         values.update(self._conditional_selected_transcript_values(self))
         if not skip_entry_fields:
@@ -635,8 +639,8 @@ class AnnotationsQuerySet(SearchQuerySet):
                 allowed_consequences += value
 
         hgmd_filter = (pathogenicity or {}).get(HGMD_KEY)
-        if hgmd_filter:
-            filters_by_field[HGMD_KEY] = self._hgmd_filter(hgmd_filter)
+        if hgmd_filter and self._pathogenicity_join_model(HGMD_KEY):
+            filter_qs.append(self._hgmd_filter_q(hgmd_filter))
 
         if self.has_annotation(CLINVAR_KEY):
             clinvar_q = self._clinvar_filter_q(pathogenicity)
@@ -676,17 +680,17 @@ class AnnotationsQuerySet(SearchQuerySet):
         return {'consequenceTerms': (consequences, 'hasAny({value}, {field})'), **kwargs}
 
     @staticmethod
-    def _hgmd_filter(hgmd):
+    def _hgmd_filter_q(hgmd):
         min_class = next((class_name for value, class_name in HGMD_CLASS_FILTERS if value in hgmd), None)
         max_class = next((class_name for value, class_name in reversed(HGMD_CLASS_FILTERS) if value in hgmd), None)
         if 'hgmd_other' in hgmd:
             min_class = min_class or 'DP'
             max_class = None
         if min_class == max_class:
-            return ('{field}__classification', min_class)
+            return Q(hgmd_join__classification=min_class)
         elif min_class and max_class:
-            return ('{field}__classification__range', (min_class, max_class))
-        return ('{field}__classification__gt', min_class)
+            return Q(hgmd_join__classification__range=(min_class, max_class))
+        return Q(hgmd_join__classification__gt=min_class)
 
     @staticmethod
     def _clinvar_range_q(path_range):

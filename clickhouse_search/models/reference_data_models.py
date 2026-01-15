@@ -479,14 +479,14 @@ class HgmdSeqrVariantsSnvIndel(BaseHgmd):
         )
 
 class HgmdGRCh37SnvIndel(BaseHgmd):
-    key = ForeignKey('EntriesGRCh37SnvIndel', db_column='key', related_name='hgmd_join', primary_key=True, on_delete=PROTECT)
+    key = ForeignKey('AnnotationsGRCh37SnvIndel', db_column='key', related_name='hgmd_join', primary_key=True, on_delete=PROTECT)
 
     class Meta():
         db_table = 'GRCh37/SNV_INDEL/reference_data/hgmd'
         engine = Join('ALL', 'LEFT', 'key', join_use_nulls=1, flatten_nested=0)
 
 class HgmdSnvIndel(BaseHgmd):
-    key = ForeignKey('EntriesSnvIndel', db_column='key', related_name='hgmd_join', primary_key=True, on_delete=PROTECT)
+    key = ForeignKey('AnnotationsSnvIndel', db_column='key', related_name='hgmd_join', primary_key=True, on_delete=PROTECT)
 
     class Meta():
         db_table = 'GRCh38/SNV_INDEL/reference_data/hgmd'
