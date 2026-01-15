@@ -36,14 +36,14 @@ class SearchQuerySet(QuerySet):
         return self._pathogenicity_tuple(self.clinvar_join_model, self.clinvar_field_prefix)
 
     @staticmethod
-    def _pathogenicity_tuple(model, field_prefix):
+    def _pathogenicity_tuple(model, field_prefix, **kwargs):
         fields = OrderedDict({
             f'{field_prefix}__{field.name}': (field.db_column or field.name, field)
             for field in reversed(model.rel.related_model._meta.local_fields) if field.name != 'key'
         })
         return Tuple(
             *fields.keys(),
-            output_field=NamedTupleField(list(fields.values()), null_if_empty=True, null_empty_arrays=True),
+            output_field=NamedTupleField(list(fields.values()), null_if_empty=True, null_empty_arrays=True, **kwargs),
         )
 
     @classmethod
@@ -170,7 +170,7 @@ class AnnotationsQuerySet(SearchQuerySet):
         }
 
         if self.hgmd_join_model:
-            annotations['hgmd'] = self._pathogenicity_tuple(self.hgmd_join_model, 'hgmd_join')
+            annotations['hgmd'] = self._pathogenicity_tuple(self.hgmd_join_model, 'hgmd_join', rename_fields={'classification': 'class'})
 
         if not hasattr(self.model, 'SORTED_TRANSCRIPT_CONSQUENCES_FIELDS'):
             annotations['transcripts'] = annotations.pop(getattr(self.model, self.transcript_field).field.db_column)
