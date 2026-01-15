@@ -59,7 +59,7 @@ def optimize_partitions(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ('clickhouse_search', '0035_promoterai'),
+        ('clickhouse_search', '0036_gnomad_genomes_columnbugfix'),
     ]
 
     operations = [
