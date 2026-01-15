@@ -42,7 +42,7 @@
       "caid": null,
       "lifted_over_chrom": "1",
       "lifted_over_pos": 11854476,
-      "hgmd": ["CM981315", 4],
+      "hgmd": ["CM981315", 1],
       "screen_region_type": null,
       "predictions": [25.9, 2.001, 0, 5.86851, 0.28205, null, 3, 0.1, 0.46558, 0.197, 0.05, 0, 4, 0.211],
       "populations": [
