@@ -168,7 +168,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('key', clickhouse_search.backend.fields.DictKeyForeignKey(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, related_name='splice_ai', serialize=False, to='clickhouse_search.entriesgrch37snvindel')),
                 ('score', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
-                ('consequence', clickhouse_backend.models.UInt8Field(blank=True, null=True)),
+                ('consequence_id', clickhouse_backend.models.UInt8Field(blank=True, null=True)),
             ],
             options={
                 'db_table': 'GRCh37/SNV_INDEL/reference_data/splice_ai',
@@ -187,7 +187,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('key', clickhouse_search.backend.fields.DictKeyForeignKey(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, related_name='splice_ai', serialize=False, to='clickhouse_search.entriessnvindel')),
                 ('score', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
-                ('consequence', clickhouse_backend.models.UInt8Field(blank=True, null=True)),
+                ('consequence_id', clickhouse_backend.models.UInt8Field(blank=True, null=True)),
             ],
             options={
                 'db_table': 'GRCh38/SNV_INDEL/reference_data/splice_ai',

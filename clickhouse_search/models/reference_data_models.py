@@ -991,7 +991,7 @@ class SpliceAiMv(RefreshableMaterializedView):
 class SpliceAiDict(Dictionary):
     key = DictKeyForeignKey('EntriesSnvIndel', related_name='splice_ai')
     score = models.DecimalField(max_digits=9, decimal_places=5)
-    consequence = models.UInt8Field(null=True, blank=True)
+    consequence_id = models.UInt8Field(null=True, blank=True)
 
     class Meta(ReferenceDataDictMeta):
         db_table = 'GRCh38/SNV_INDEL/reference_data/splice_ai'
@@ -1022,7 +1022,7 @@ class SpliceAiGRCh37Mv(RefreshableMaterializedView):
 class SpliceAiGRCh37Dict(Dictionary):
     key = DictKeyForeignKey('EntriesGRCh37SnvIndel', related_name='splice_ai')
     score = models.DecimalField(max_digits=9, decimal_places=5)
-    consequence = models.UInt8Field(null=True, blank=True)
+    consequence_id = models.UInt8Field(null=True, blank=True)
 
     class Meta(ReferenceDataDictMeta):
         db_table = 'GRCh37/SNV_INDEL/reference_data/splice_ai'
