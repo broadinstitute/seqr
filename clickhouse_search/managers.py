@@ -323,7 +323,7 @@ class AnnotationsQuerySet(SearchQuerySet):
         return results
 
     def result_values(self, skip_entry_fields=False):
-        override_model_annotations = {'populations', 'pos', 'end'}
+        override_model_annotations = {'populations', 'predictions', 'pos', 'end'}
         values = {**self.annotation_values}
         values.update(self._conditional_selected_transcript_values(self))
         if not skip_entry_fields:
