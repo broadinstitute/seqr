@@ -372,6 +372,7 @@ class AnnotationsDiskGcnv(BaseAnnotationsGcnv):
 
 class BaseEntries(FixtureLoadableClickhouseModel):
     MAX_XPOS_FILTER_INTERVALS = 500
+    PREDICTIONS = None
 
     project_guid = models.StringField(low_cardinality=True)
     family_guid = models.StringField()
@@ -400,6 +401,11 @@ class BaseEntriesSnvIndel(BaseEntries):
         ('ab', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
         ('dp', models.UInt16Field(null=True, blank=True)),
     ]
+    PREDICTIONS = {
+        'dbnsfp': {},
+        'splice_ai': {'score': SPLICE_AI_FIELD, 'consequence_id': 'splice_ai_consequence'},
+        # TODO 'eigen'
+    }
 
     sample_type = models.Enum8Field(choices=[(1, 'WES'), (2, 'WGS')])
     is_gnomad_gt_5_percent = models.BoolField()
@@ -427,6 +433,7 @@ class EntriesGRCh37SnvIndel(BaseEntriesSnvIndel):
         db_table = 'GRCh37/SNV_INDEL/entries'
 
 class EntriesSnvIndel(BaseEntriesSnvIndel):
+    # TODO gnomad_noncoding
 
     # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
     key = ForeignKey('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)

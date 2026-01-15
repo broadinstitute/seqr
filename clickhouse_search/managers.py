@@ -12,6 +12,7 @@ from clickhouse_search.backend.functions import Array, ArrayConcat, ArrayDistinc
     GroupArrayIntersect, If, MapLookup, NullIf, Plus, SubqueryJoin, SubqueryTable, Tuple, TupleConcat
 from clickhouse_search.models.postgres_dicts import AffectedDict, SexDict
 from seqr.models import Sample
+from seqr.testrunner import OrderedDatabaseDeletionRunner
 from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFECTED, UNAFFECTED, MALE_SEXES, \
     X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, SCREEN_KEY, UTR_ANNOTATOR_KEY, \
     EXTENDED_SPLICE_KEY, MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY, CLINVAR_KEY, HGMD_KEY, NEW_SV_FIELD, \
@@ -168,6 +169,9 @@ class AnnotationsQuerySet(SearchQuerySet):
             'populations': TupleConcat(F('populations'), Tuple(*seqr_pops), output_field=NamedTupleField(population_fields)),
         }
 
+        if self.has_annotation('preds'):
+            annotations['predictions'] = F('preds')
+
         if not hasattr(self.model, 'SORTED_TRANSCRIPT_CONSQUENCES_FIELDS'):
             annotations['transcripts'] = annotations.pop(getattr(self.model, self.transcript_field).field.db_column)
             if self.transcript_field == self.TRANSCRIPT_CONSEQUENCE_FIELD:
@@ -220,6 +224,7 @@ class AnnotationsQuerySet(SearchQuerySet):
 
     @property
     def prediction_fields(self):
+        # TODO clean up
         return set(dict(self.model.PREDICTION_FIELDS).keys())
 
     @property
@@ -472,6 +477,8 @@ class AnnotationsQuerySet(SearchQuerySet):
         return results
 
     def _filter_in_silico(self, results, in_silico=None, **kwargs):
+        #  TODO move into entries
+        #  TODO simplify for SV only
         in_silico = in_silico or {}
         require_score = in_silico.get('requireScore', False)
 
@@ -498,6 +505,7 @@ class AnnotationsQuerySet(SearchQuerySet):
         return results
 
     def _get_in_silico_score_q(self, score, value):
+        #  TODO clean up
         if not (score in self.prediction_fields and value):
             return None
         score_column = f'predictions__{score}'
@@ -820,6 +828,21 @@ class EntriesManager(SearchQuerySet):
                clinvar=self._clinvar_tuple(),
            )
 
+        if self.model.PREDICTIONS:
+            pred_expressions = []
+            pred_fields = []
+            for pred_source, field_map in self.model.PREDICTIONS.items():
+                pred_model = getattr(self.model, pred_source).rel.related_model
+                source_fields = OrderedDict({
+                    field.db_column or field.name: (field_map.get(field.name, field.name), field)
+                    for field in pred_model._meta.local_fields if field.name != 'key'
+                })
+                pred_expressions.append(pred_model.dict_get_expression('key', source_fields.keys()))
+                pred_fields += list(source_fields.values())
+            entries = entries.annotate(
+                preds=TupleConcat(*pred_expressions, output_field=NamedTupleField(pred_fields)),
+            )
+
         entries = self._annotate_seqr_pop_expression(entries)
 
         return entries
@@ -1108,8 +1131,7 @@ class EntriesManager(SearchQuerySet):
             entries = entries.annotate(**genotype_override_annotations)
 
         fields = ['key']
-        if 'seqrPop' in entries.query.annotations:
-            fields.append('seqrPop')
+        fields += [field for field in ['seqrPop', 'preds'] if field in entries.query.annotations]
         if self._has_clinvar():
              fields += ['clinvar', 'clinvar_key']
         if multi_sample_type_families or sample_data is None or sample_data['num_families'] > 1:
