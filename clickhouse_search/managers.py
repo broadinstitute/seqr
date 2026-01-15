@@ -32,17 +32,18 @@ class SearchQuerySet(QuerySet):
     def clinvar_field_prefix(self):
         return 'clinvar_join'
 
-    @property
-    def clinvar_fields(self):
-        return OrderedDict({
-            f'{self.clinvar_field_prefix}__{field.name}': (field.db_column or field.name, field)
-            for field in reversed(self.clinvar_model._meta.local_fields) if field.name != 'key'
-        })
-
     def _clinvar_tuple(self):
+        return self._pathogenicity_tuple(self.clinvar_join_model, self.clinvar_field_prefix)
+
+    @staticmethod
+    def _pathogenicity_tuple(model, field_prefix):
+        fields = OrderedDict({
+            f'{field_prefix}__{field.name}': (field.db_column or field.name, field)
+            for field in reversed(model.rel.related_model._meta.local_fields) if field.name != 'key'
+        })
         return Tuple(
-            *self.clinvar_fields.keys(),
-            output_field=NamedTupleField(list(self.clinvar_fields.values()), null_if_empty=True, null_empty_arrays=True),
+            *fields.keys(),
+            output_field=NamedTupleField(list(fields.values()), null_if_empty=True, null_empty_arrays=True),
         )
 
     @classmethod
@@ -168,9 +169,8 @@ class AnnotationsQuerySet(SearchQuerySet):
             'populations': TupleConcat(F('populations'), Tuple(*seqr_pops), output_field=NamedTupleField(population_fields)),
         }
 
-        hgmd_tuple = self._pathogenicity_tuple(HGMD_KEY)
-        if hgmd_tuple:
-            annotations['hgmd'] = hgmd_tuple
+        if self.hgmd_join_model:
+            annotations['hgmd'] = self._pathogenicity_tuple(self.hgmd_join_model, 'hgmd_join')
 
         if not hasattr(self.model, 'SORTED_TRANSCRIPT_CONSQUENCES_FIELDS'):
             annotations['transcripts'] = annotations.pop(getattr(self.model, self.transcript_field).field.db_column)
@@ -246,10 +246,12 @@ class AnnotationsQuerySet(SearchQuerySet):
          return getattr(self.model, f'{self.entry_field}_set').rel.related_model
 
     @property
-    def clinvar_model(self):
-        if not hasattr(self.entry_model, 'clinvar_join'):
-            return None
-        return self.entry_model.clinvar_join.rel.related_model
+    def hgmd_join_model(self):
+        return getattr(self.model, 'hgmd_join', None)
+
+    @property
+    def clinvar_join_model(self):
+        return getattr(self.entry_model, 'clinvar_join', None)
 
     @property
     def clinvar_field_prefix(self):
@@ -345,7 +347,7 @@ class AnnotationsQuerySet(SearchQuerySet):
 
     def join_clinvar(self, keys):
         results = self
-        if self.clinvar_model:
+        if self.clinvar_join_model:
             results = results.annotate(clinvar=self._clinvar_tuple())
             # Due to django modeling, adding a clinvar annotation will add a join to the entries table and then to clinvar
             # Manipulating the underlying join removes the entry join entirely
@@ -641,7 +643,7 @@ class AnnotationsQuerySet(SearchQuerySet):
                 allowed_consequences += value
 
         hgmd_filter = (pathogenicity or {}).get(HGMD_KEY)
-        if hgmd_filter and self._pathogenicity_join_model(HGMD_KEY):
+        if hgmd_filter and self.hgmd_join_model:
             filter_qs.append(self._hgmd_filter_q(hgmd_filter))
 
         if self.has_annotation(CLINVAR_KEY):
@@ -781,8 +783,8 @@ class EntriesManager(SearchQuerySet):
         })
 
     @property
-    def clinvar_model(self):
-        return self.model.clinvar_join.rel.related_model
+    def clinvar_join_model(self):
+        return self.model.clinvar_join
 
     @property
     def gt_stats_dict_rel(self):
