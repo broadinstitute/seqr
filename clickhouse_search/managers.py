@@ -158,14 +158,10 @@ class AnnotationsQuerySet(SearchQuerySet):
 
     @property
     def annotation_values(self):
-        seqr_pops = []
-        population_fields = [*self.model.POPULATION_FIELDS]
-        self._get_seqr_pop_expressions(seqr_pops, population_fields)
-
         annotations = {
             **{key: Value(value) for key, value in self.model.ANNOTATION_CONSTANTS.items()},
             **{field.db_column: F(field.name) for field in self.model._meta.local_fields if field.db_column and field.name != field.db_column},
-            'populations': TupleConcat(F('populations'), Tuple(*seqr_pops), output_field=NamedTupleField(population_fields)),
+            'populations': self._get_populations_expression(),
         }
 
         if not hasattr(self.model, 'SORTED_TRANSCRIPT_CONSQUENCES_FIELDS'):
@@ -178,12 +174,22 @@ class AnnotationsQuerySet(SearchQuerySet):
 
         return annotations
 
-    def _get_seqr_pop_expressions(self, seqr_pops, population_fields):
-        if self.gt_stats_dict is None:
-            return
+    def _get_populations_expression(self):
+        if self.model.POPULATION_FIELDS:
+            populations_expression = F('populations')
+            population_fields = [*self.model.POPULATION_FIELDS]
+        else:
+            populations = OrderedDict({
+                pop: (pop.replace('population_', ''), expr.output_field)
+                for pop, expr in self.query.annotations.items() if pop.startswith('population_')
+            })
+            populations_expression = Tuple(*[F(pop) for pop in populations.keys()])
+            population_fields = list(populations.values())
 
+        seqr_pops = []
         seqr_pops_by_name = {}
-        for name, ac_field in self.gt_stats_dict.SEQR_POPULATIONS:
+        seqr_pop_configs = [] if self.gt_stats_dict is None else self.gt_stats_dict.SEQR_POPULATIONS
+        for name, ac_field in seqr_pop_configs:
             seqr_pops_by_name[name] = (
                 self._seqr_subfield_pop_expressions(ac_field, subfield_name='ac') +
                 self._seqr_subfield_pop_expressions('hom')
@@ -197,7 +203,7 @@ class AnnotationsQuerySet(SearchQuerySet):
             seqr_pops.append(Tuple(*[expr for _, expr in pop_subfields]))
             population_fields.append((name, NamedTupleField([(field, models.UInt32Field()) for field, _ in pop_subfields])))
 
-        return seqr_pops
+        return TupleConcat(populations_expression, Tuple(*seqr_pops), output_field=NamedTupleField(population_fields))
 
     @staticmethod
     def _genotype_override_expression(index, col, cn_index):
@@ -422,19 +428,22 @@ class AnnotationsQuerySet(SearchQuerySet):
 
         return results
 
-    @property
-    def populations(self):
-        return {
+    def _filter_frequency(self, results, freqs=None, pathogenicity=None, **kwargs):
+        if not self.model.POPULATION_FIELDS:
+            return results
+
+        # TODO implement for entries/dicts
+        # TODO can be simplified once sv only?
+        populations = {
             population: {subfield for subfield, _ in field.base_fields}
             for population, field in self.model.POPULATION_FIELDS
         }
 
-    def _filter_frequency(self, results, freqs=None, pathogenicity=None, **kwargs):
         frequencies =  freqs or {}
         clinvar_override_q = self._clinvar_path_q(pathogenicity) if self.has_annotation(CLINVAR_KEY) else None
 
         for population, pop_filter in frequencies.items():
-            pop_subfields = self.populations.get(population)
+            pop_subfields = populations.get(population)
             if not pop_subfields:
                 continue
 
@@ -745,6 +754,8 @@ class EntriesManager(SearchQuerySet):
         COMPOUND_HET_ALLOW_HOM_ALTS: {**INHERITANCE_FILTERS[COMPOUND_HET], AFFECTED: HAS_ALT},
     }
 
+    POPULATIONS = ['exac', 'gnomad_exomes', 'gnomad_genomes', 'topmed']
+
     @property
     def annotations_model(self):
         return self.model.key.field.related_model
@@ -821,6 +832,19 @@ class EntriesManager(SearchQuerySet):
            )
 
         entries = self._annotate_seqr_pop_expression(entries)
+
+        # TODO share code with _annotate_seqr_pop_expression and _pathogenicity_tuple?
+        for population in self.POPULATIONS:
+            population_rel = getattr(self.model, population, None)
+            if population_rel:
+                population_dict = population_rel.rel.related_model
+                pop_fields = OrderedDict({
+                    field.name: field
+                    for field in population_dict._meta.local_fields if field.name != 'key'
+                })
+                entries = entries.annotate(**{f'population_{population}':  population_dict.dict_get_expression(
+                    'key', pop_fields.keys(), output_field=NamedTupleField(list(pop_fields.items())),
+                )})
 
         return entries
 
@@ -1108,8 +1132,9 @@ class EntriesManager(SearchQuerySet):
             entries = entries.annotate(**genotype_override_annotations)
 
         fields = ['key']
-        if 'seqrPop' in entries.query.annotations:
-            fields.append('seqrPop')
+        for field in ['seqrPop'] + [f'population_{pop}' for pop in self.POPULATIONS]:
+            if field in entries.query.annotations:
+                fields.append(field)
         if self._has_clinvar():
              fields += ['clinvar', 'clinvar_key']
         if multi_sample_type_families or sample_data is None or sample_data['num_families'] > 1:

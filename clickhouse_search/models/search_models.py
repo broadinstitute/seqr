@@ -61,6 +61,7 @@ class BaseAnnotationsMitoSnvIndel(BaseAnnotations):
         ('transcriptId', models.StringField()),
         ('transcriptRank', models.UInt8Field()),
     ]
+    POPULATION_FIELDS = None
 
     ref = models.StringField()
     alt = models.StringField()
@@ -100,7 +101,37 @@ class BaseAnnotationsGRCh37SnvIndel(BaseAnnotationsMitoSnvIndel):
         'genomeVersion': GENOME_VERSION_GRCh37,
         'liftedOverGenomeVersion': GENOME_VERSION_GRCh38,
     }
-    POPULATION_FIELDS = [
+    PREDICTION_FIELDS = [
+        ('cadd', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('eigen', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('fathmm', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('mpc', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('mut_pred', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('mut_taster', models.Enum8Field(null=True, blank=True, return_int=False, choices=BaseAnnotationsMitoSnvIndel.MUTATION_TASTER_PREDICTIONS)),
+        ('polyphen', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('primate_ai', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('revel', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('sift', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        (SPLICE_AI_FIELD, models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+        ('splice_ai_consequence', models.Enum8Field(null=True, blank=True, return_int=False, choices=[(0, 'Acceptor gain'), (1, 'Acceptor loss'), (2, 'Donor gain'), (3, 'Donor loss'), (4, 'No consequence')])),
+        ('vest', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+    ]
+    HGMD_CLASSES = [(0, 'DM'), (1, 'DM?'), (2, 'DP'), (3, 'DFP'), (4, 'FP'), (5, 'R')]
+    SORTED_TRANSCRIPT_CONSQUENCES_FIELDS = [
+        ('canonical', models.UInt8Field(null=True, blank=True)),
+        ('consequenceTerms', models.ArrayField(models.Enum8Field(null=True, blank=True, return_int=False, choices=BaseAnnotationsMitoSnvIndel.CONSEQUENCE_TERMS))),
+        ('geneId', models.StringField(null=True, blank=True))
+    ]
+
+    chrom = Enum8Field(return_int=False, choices=CHROMOSOME_CHOICES)
+    lifted_over_chrom = Enum8Field(db_column='liftedOverChrom', return_int=False, null=True, blank=True, choices=CHROMOSOME_CHOICES)
+    caid = models.StringField(db_column='CAID', null=True, blank=True)
+    hgmd = NamedTupleField([
+        ('accession', models.StringField(null=True, blank=True)),
+        ('classification', models.Enum8Field(null=True, blank=True, return_int=False, choices=HGMD_CLASSES)),
+    ], null_if_empty=True, rename_fields={'classification': 'class'})
+    predictions = NamedTupleField(PREDICTION_FIELDS)
+    populations = NamedTupleField([
         ('exac', NamedTupleField([
             ('ac', models.UInt32Field()),
             ('af', models.DecimalField(max_digits=9, decimal_places=8)),
@@ -133,38 +164,7 @@ class BaseAnnotationsGRCh37SnvIndel(BaseAnnotationsMitoSnvIndel):
             ('het', models.UInt32Field()),
             ('hom', models.UInt32Field()),
         ])),
-    ]
-    PREDICTION_FIELDS = [
-        ('cadd', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        ('eigen', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        ('fathmm', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        ('mpc', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        ('mut_pred', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        ('mut_taster', models.Enum8Field(null=True, blank=True, return_int=False, choices=BaseAnnotationsMitoSnvIndel.MUTATION_TASTER_PREDICTIONS)),
-        ('polyphen', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        ('primate_ai', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        ('revel', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        ('sift', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        (SPLICE_AI_FIELD, models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-        ('splice_ai_consequence', models.Enum8Field(null=True, blank=True, return_int=False, choices=[(0, 'Acceptor gain'), (1, 'Acceptor loss'), (2, 'Donor gain'), (3, 'Donor loss'), (4, 'No consequence')])),
-        ('vest', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-    ]
-    HGMD_CLASSES = [(0, 'DM'), (1, 'DM?'), (2, 'DP'), (3, 'DFP'), (4, 'FP'), (5, 'R')]
-    SORTED_TRANSCRIPT_CONSQUENCES_FIELDS = [
-        ('canonical', models.UInt8Field(null=True, blank=True)),
-        ('consequenceTerms', models.ArrayField(models.Enum8Field(null=True, blank=True, return_int=False, choices=BaseAnnotationsMitoSnvIndel.CONSEQUENCE_TERMS))),
-        ('geneId', models.StringField(null=True, blank=True))
-    ]
-
-    chrom = Enum8Field(return_int=False, choices=CHROMOSOME_CHOICES)
-    lifted_over_chrom = Enum8Field(db_column='liftedOverChrom', return_int=False, null=True, blank=True, choices=CHROMOSOME_CHOICES)
-    caid = models.StringField(db_column='CAID', null=True, blank=True)
-    hgmd = NamedTupleField([
-        ('accession', models.StringField(null=True, blank=True)),
-        ('classification', models.Enum8Field(null=True, blank=True, return_int=False, choices=HGMD_CLASSES)),
-    ], null_if_empty=True, rename_fields={'classification': 'class'})
-    predictions = NamedTupleField(PREDICTION_FIELDS)
-    populations = NamedTupleField(POPULATION_FIELDS)
+    ])
     sorted_transcript_consequences = NestedField(SORTED_TRANSCRIPT_CONSQUENCES_FIELDS, db_column='sortedTranscriptConsequences')
 
     class Meta:
@@ -235,6 +235,7 @@ class BaseAnnotationsMito(BaseAnnotationsMitoSnvIndel):
         (2, 'possibly_benign'),
         (3, 'likely_benign'),
     ]
+    # TODO move mito to dicts
     POPULATION_FIELDS = [
         ('gnomad_mito', NamedTupleField([
             ('ac', models.UInt32Field()),
