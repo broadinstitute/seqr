@@ -6,48 +6,6 @@ import clickhouse_search.backend.fields
 from django.db import migrations
 import django.db.models.manager
 import os
-from string import Template
-
-from settings import DATABASES
-
-CLICKHOUSE_WRITER_PASSWORD = os.environ.get('CLICKHOUSE_WRITER_PASSWORD', 'clickhouse_test')
-CLICKHOUSE_WRITER_USER = os.environ.get('CLICKHOUSE_WRITER_USER', 'clickhouse')
-
-GT_STATS_DICT = Template(Template("""
-CREATE DICTIONARY `$reference_genome/$dataset_type/gt_stats_dict`
-(
-    key UInt32,
-    $columns
-)
-PRIMARY KEY key
-SOURCE(CLICKHOUSE(USER '$clickhouse_writer_user' PASSWORD '$clickhouse_writer_password' TABLE `$reference_genome/$dataset_type/gt_stats`))
-LIFETIME(MIN 0 MAX 0)
-LAYOUT(FLAT(MAX_ARRAY_SIZE $size))
-""").safe_substitute(
-    # Note the nested Template-ing that allows
-    # double substitution these shared values
-    clickhouse_writer_user=CLICKHOUSE_WRITER_USER,
-    clickhouse_writer_password=CLICKHOUSE_WRITER_PASSWORD,
-))
-
-SEQRDB_AFFECTED_STATUS_DICT = Template("""
-CREATE DICTIONARY `seqrdb_affected_status_dict`
-(
-    `family_guid` String,
-    `sampleId` String,
-    `affected` String
-)
-PRIMARY KEY family_guid, sampleId
-SOURCE(POSTGRESQL(
-    NAME 'seqr_postgres_named_collection' 
-    DATABASE $database
-    QUERY 'select f.guid as family_guid, i.individual_id as sample_id, i.affected FROM seqr_individual i INNER JOIN seqr_family f ON i.family_id = f.id'
-))
-LIFETIME(MIN 0 MAX 0)
-LAYOUT(COMPLEX_KEY_HASHED());
-""").substitute(
-    database=DATABASES['default']['NAME'],
-)
 
 CLICKHOUSE_AC_EXCLUDED_PROJECT_GUIDS  = os.environ.get(
     'CLICKHOUSE_AC_EXCLUDED_PROJECT_GUIDS',
@@ -59,6 +17,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('clickhouse_search', '0015_remove_gnomadgenomessnvindel_key_and_more'),
+        ('seqr', '0001_squashed_0067_remove_project_custom_reference_populations'),
     ]
 
     operations = [
@@ -194,13 +153,26 @@ class Migration(migrations.Migration):
                 ),
             ]
         ),
-        migrations.RunSQL(
-            SEQRDB_AFFECTED_STATUS_DICT,
-            hints={'clickhouse': True},
+        migrations.CreateModel(
+            name='AffectedDict',
+            fields=[
+                ('family_guid', clickhouse_backend.models.StringField(primary_key=True, serialize=False)),
+                ('sampleId', clickhouse_backend.models.StringField()),
+                ('affected', clickhouse_backend.models.StringField()),
+            ],
+            options={
+                'db_table': 'seqrdb_affected_status_dict',
+                'engine': clickhouse_backend.models.MergeTree(primary_key=('family_guid', 'sampleId')),
+                'layout': 'COMPLEX_KEY_HASHED()',
+                'postgres_query': 'select f.guid as family_guid, i.individual_id as sample_id, i.affected FROM seqr_individual i INNER JOIN seqr_family f ON i.family_id = f.id',
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
         ),
-        migrations.RunSQL(
-            'DROP DICTIONARY `GRCh37/SNV_INDEL/gt_stats_dict`',
-            hints={'clickhouse': True},
+        migrations.DeleteModel(
+            name='GtStatsDictGRCh37SnvIndel',
         ),
         migrations.DeleteModel(
             name='ProjectsToGtStatsGRCh37SnvIndel',
@@ -265,25 +237,30 @@ class Migration(migrations.Migration):
                 ('_overwrite_base_manager', django.db.models.manager.Manager()),
             ],
         ),
-        migrations.RunSQL(
-            GT_STATS_DICT.substitute(
-                reference_genome='GRCh37',
-                dataset_type='SNV_INDEL',
-                columns= ",\n    ".join([
-                    'ac_wes UInt32',
-                    'ac_wgs UInt32',
-                    'ac_affected UInt32',
-                    'hom_wes UInt32',
-                    'hom_wgs UInt32',
-                    'hom_affected UInt32',
-                ]),
-                size=int(2e8),
-            ),
-            hints={'clickhouse': True},
+        migrations.CreateModel(
+            name='GtStatsDictGRCh37SnvIndel',
+            fields=[
+                ('key', clickhouse_search.backend.fields.DictKeyForeignKey(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, related_name='gt_stats', serialize=False, to='clickhouse_search.entriesgrch37snvindel')),
+                ('ac_wes', clickhouse_backend.models.UInt32Field()),
+                ('ac_wgs', clickhouse_backend.models.UInt32Field()),
+                ('ac_affected', clickhouse_backend.models.UInt32Field()),
+                ('hom_wes', clickhouse_backend.models.UInt32Field()),
+                ('hom_wgs', clickhouse_backend.models.UInt32Field()),
+                ('hom_affected', clickhouse_backend.models.UInt32Field()),
+            ],
+            options={
+                'db_table': 'GRCh37/SNV_INDEL/gt_stats_dict',
+                'engine': clickhouse_backend.models.MergeTree(primary_key='key'),
+                'source_table': 'GtStatsGRCh37SnvIndel',
+                'layout': 'FLAT(MAX_ARRAY_SIZE 200000000)',
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
         ),
-        migrations.RunSQL(
-            'DROP DICTIONARY `GRCh38/SNV_INDEL/gt_stats_dict`',
-            hints={'clickhouse': True},
+        migrations.DeleteModel(
+            name='GtStatsDictSnvIndel',
         ),
         migrations.DeleteModel(
             name='ProjectsToGtStatsSnvIndel',
@@ -348,25 +325,30 @@ class Migration(migrations.Migration):
                 ('_overwrite_base_manager', django.db.models.manager.Manager()),
             ],
         ),
-        migrations.RunSQL(
-            GT_STATS_DICT.substitute(
-                reference_genome='GRCh38',
-                dataset_type='SNV_INDEL',
-                columns= ",\n    ".join([
-                    'ac_wes UInt32',
-                    'ac_wgs UInt32',
-                    'ac_affected UInt32',
-                    'hom_wes  UInt32',
-                    'hom_wgs  UInt32',
-                    'hom_affected UInt32',
-                ]),
-                size=int(1e9),
-            ),
-            hints={'clickhouse': True},
+        migrations.CreateModel(
+            name='GtStatsDictSnvIndel',
+            fields=[
+                ('key', clickhouse_search.backend.fields.DictKeyForeignKey(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, related_name='gt_stats', serialize=False, to='clickhouse_search.entriessnvindel')),
+                ('ac_wes', clickhouse_backend.models.UInt32Field()),
+                ('ac_wgs', clickhouse_backend.models.UInt32Field()),
+                ('ac_affected', clickhouse_backend.models.UInt32Field()),
+                ('hom_wes', clickhouse_backend.models.UInt32Field()),
+                ('hom_wgs', clickhouse_backend.models.UInt32Field()),
+                ('hom_affected', clickhouse_backend.models.UInt32Field()),
+            ],
+            options={
+                'db_table': 'GRCh38/SNV_INDEL/gt_stats_dict',
+                'engine': clickhouse_backend.models.MergeTree(primary_key='key'),
+                'source_table': 'GtStatsSnvIndel',
+                'layout': 'FLAT(MAX_ARRAY_SIZE 1000000000)',
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
         ),
-        migrations.RunSQL(
-            'DROP DICTIONARY `GRCh38/MITO/gt_stats_dict`',
-            hints={'clickhouse': True},
+        migrations.DeleteModel(
+            name='GtStatsDictMito',
         ),
         migrations.DeleteModel(
             name='ProjectsToGtStatsMito',
@@ -431,25 +413,30 @@ class Migration(migrations.Migration):
                 ('_overwrite_base_manager', django.db.models.manager.Manager()),
             ],
         ),
-        migrations.RunSQL(
-            GT_STATS_DICT.substitute(
-                reference_genome='GRCh38',
-                dataset_type='MITO',
-                columns= ",\n    ".join([
-                    'ac_het_wes UInt32',
-                    'ac_het_wgs UInt32',
-                    'ac_het_affected UInt32',
-                    'ac_hom_wes UInt32',
-                    'ac_hom_wgs UInt32',
-                    'ac_hom_affected UInt32',
-                ]),
-                size=int(1e6),
-            ),
-            hints={'clickhouse': True},
+        migrations.CreateModel(
+            name='GtStatsDictMito',
+            fields=[
+                ('key', clickhouse_search.backend.fields.DictKeyForeignKey(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, related_name='gt_stats', serialize=False, to='clickhouse_search.entriesmito')),
+                ('ac_het_wes', clickhouse_backend.models.UInt32Field()),
+                ('ac_het_wgs', clickhouse_backend.models.UInt32Field()),
+                ('ac_het_affected', clickhouse_backend.models.UInt32Field()),
+                ('ac_hom_wes', clickhouse_backend.models.UInt32Field()),
+                ('ac_hom_wgs', clickhouse_backend.models.UInt32Field()),
+                ('ac_hom_affected', clickhouse_backend.models.UInt32Field()),
+            ],
+            options={
+                'db_table': 'GRCh38/MITO/gt_stats_dict',
+                'engine': clickhouse_backend.models.MergeTree(primary_key='key'),
+                'source_table': 'GtStatsMito',
+                'layout': 'FLAT(MAX_ARRAY_SIZE 1000000)',
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
         ),
-        migrations.RunSQL(
-            'DROP DICTIONARY `GRCh38/SV/gt_stats_dict`',
-            hints={'clickhouse': True},
+        migrations.DeleteModel(
+            name='GtStatsDictSv',
         ),
         migrations.DeleteModel(
             name='ProjectsToGtStatsSv',
@@ -508,19 +495,24 @@ class Migration(migrations.Migration):
                 ('_overwrite_base_manager', django.db.models.manager.Manager()),
             ],
         ),
-        migrations.RunSQL(
-            GT_STATS_DICT.substitute(
-                reference_genome='GRCh38',
-                dataset_type='SV',
-                columns= ",\n    ".join([
-                    'ac_wgs UInt32',
-                    'ac_affected UInt32',
-                    'hom_wgs UInt32',
-                    'hom_affected UInt32',
-                ]),
-                size=int(5e6),
-            ),
-            hints={'clickhouse': True},
+        migrations.CreateModel(
+            name='GtStatsDictSv',
+            fields=[
+                ('key', clickhouse_search.backend.fields.DictKeyForeignKey(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, related_name='gt_stats', serialize=False, to='clickhouse_search.entriessv')),
+                ('ac_wgs', clickhouse_backend.models.UInt32Field()),
+                ('ac_affected', clickhouse_backend.models.UInt32Field()),
+                ('hom_wgs', clickhouse_backend.models.UInt32Field()),
+                ('hom_affected', clickhouse_backend.models.UInt32Field()),
+            ],
+            options={
+                'db_table': 'GRCh38/SV/gt_stats_dict',
+                'engine': clickhouse_backend.models.MergeTree(primary_key='key'),
+                'source_table': 'GtStatsSv',
+                'layout': 'FLAT(MAX_ARRAY_SIZE 5000000)',
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
         ),
-
     ]

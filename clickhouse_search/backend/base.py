@@ -4,15 +4,22 @@ from clickhouse_backend.backend.base import (
 )
 
 from clickhouse_search.backend.engines import Join
+from settings import CLICKHOUSE_WRITER_USER, CLICKHOUSE_WRITER_PASSWORD, DATABASES
+
 
 class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
 
     def _is_materialized_view(self, model):
         return getattr(model._meta, 'to_table', None) is not None
 
+    def _is_dictionary(self, model):
+        return getattr(model._meta, 'layout', None) is not None
+
     def table_sql(self, model):
         if self._is_materialized_view(model):
             return self._materialized_view_sql(model)
+        elif self._is_dictionary(model):
+            return self._dictionary_sql(model)
 
         sql, params = super().table_sql(model)
         projection = getattr(model._meta, 'projection', None)
@@ -56,6 +63,32 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
         if getattr(model._meta, 'refreshable', False):
             sql = 'REFRESH EVERY 10 YEAR ' + sql
         return sql
+
+    def _dictionary_sql(self, model):
+        original_sql_create_table = self.sql_create_table  # pylint: disable=access-member-before-definition
+        meta = model._meta
+        postgres_query = getattr(meta, 'postgres_query', None)
+        if postgres_query:
+            db = DATABASES[getattr(meta, 'postgres_db', 'default')]['NAME']
+            source = f"POSTGRESQL(NAME 'seqr_postgres_named_collection' DATABASE {db} QUERY '{postgres_query}')"
+        else:
+            source_table = self._table_name(meta, meta.source_table)
+            source = f"CLICKHOUSE(USER '{CLICKHOUSE_WRITER_USER}' PASSWORD '{CLICKHOUSE_WRITER_PASSWORD}' TABLE {source_table})"
+        self.sql_create_table = f"""
+        CREATE DICTIONARY %(table)s (%(definition)s) %(extra)s
+        SOURCE({source})
+        LIFETIME(MIN 0 MAX {getattr(meta, 'lifetime_max', 0)})
+        LAYOUT({meta.layout})
+        """
+        sql, params = super().table_sql(model)
+        self.sql_create_table = original_sql_create_table
+        return sql, params
+
+    def delete_model(self, model):
+        if self._is_dictionary(model):
+            self.sql_delete_table = self.sql_delete_table.replace('TABLE', 'DICTIONARY')
+        super().delete_model(model)
+        self.sql_delete_table = self.sql_delete_table.replace('DICTIONARY', 'TABLE')
 
     def no_quote_value(self, value):
         return value

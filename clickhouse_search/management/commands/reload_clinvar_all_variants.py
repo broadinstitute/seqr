@@ -13,7 +13,7 @@ import tempfile
 from typing import Optional, Union
 
 from clickhouse_backend import models
-from clickhouse_search.models import ClinvarAllVariantsGRCh37SnvIndel, ClinvarAllVariantsSnvIndel, ClinvarAllVariantsMito, \
+from clickhouse_search.models.reference_data_models import ClinvarAllVariantsGRCh37SnvIndel, ClinvarAllVariantsSnvIndel, ClinvarAllVariantsMito, \
     ClinvarMvGRCh37SnvIndel, ClinvarMvSnvIndel, ClinvarMvMito, ClinvarSearchMvGRCh37SnvIndel, ClinvarSearchMvSnvIndel, ClinvarSearchMvMito
 from reference_data.models import DataVersions
 from seqr.utils.communication_utils import safe_post_to_slack
