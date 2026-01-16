@@ -95,7 +95,7 @@ class Migration(migrations.Migration):
             SELECT 
             key, project_guid, family_guid, sample_type, 
             xpos, is_gnomad_gt_5_percent, length(geneId_ids) > 0 as is_annotated_in_any_gene,
-            geneId_ids, filters, calls, 1 as sign
+            geneId_ids, filters, calls, 1
             FROM `GRCh37/SNV_INDEL/entries`
             WHERE sign=-1
             """,
@@ -107,7 +107,7 @@ class Migration(migrations.Migration):
             SELECT 
             key, project_guid, family_guid, sample_type, 
             xpos, is_gnomad_gt_5_percent, length(geneId_ids) > 0 as is_annotated_in_any_gene,
-            geneId_ids, filters, calls, 1 as sign
+            geneId_ids, filters, calls, 1
             FROM `GRCh38/SNV_INDEL/entries`
             WHERE sign=-1
             """,
