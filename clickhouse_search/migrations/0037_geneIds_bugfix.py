@@ -14,7 +14,7 @@ def optimize_partitions(apps, schema_editor):
         )
         project_guids = [row[0] for row in cursor.fetchall()]
         for project_guid in project_guids:
-            cursor.execute(f"OPTIMIZE TABLE `GRCh37/SNV_INDEL/entries` PARTITION '{project_guid}' FINAL ASYNC")
+            cursor.execute(f"OPTIMIZE TABLE `GRCh37/SNV_INDEL/entries` PARTITION '{project_guid}'")
 
         # Check if GRCh38 is repartitioned
         cursor.execute(
@@ -38,7 +38,7 @@ def optimize_partitions(apps, schema_editor):
             return
         if 'farmHash64(family_guid)' not in row[0]:
             for project_guid in project_guids:
-                cursor.execute(f"OPTIMIZE TABLE `GRCh38/SNV_INDEL/entries` PARTITION '{project_guid}' FINAL ASYNC")
+                cursor.execute(f"OPTIMIZE TABLE `GRCh38/SNV_INDEL/entries` PARTITION '{project_guid}'")
         else:
             for project_guid in project_guids:
                 cursor.execute(
@@ -55,7 +55,7 @@ def optimize_partitions(apps, schema_editor):
                 else:
                     n_partitions = row[0]
                 for n in range(0, n_partitions):
-                    cursor.execute(f"OPTIMIZE TABLE `GRCh38/SNV_INDEL/entries` PARTITION ('{project_guid}', {n}) FINAL ASYNC")
+                    cursor.execute(f"OPTIMIZE TABLE `GRCh38/SNV_INDEL/entries` PARTITION ('{project_guid}', {n})")
 
 class Migration(migrations.Migration):
     dependencies = [
