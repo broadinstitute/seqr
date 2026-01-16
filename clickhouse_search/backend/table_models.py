@@ -57,7 +57,7 @@ class RefreshableMaterializedViewMeta:
 class Dictionary(models.ClickhouseModel):
 
     @classmethod
-    def dict_get_sql(cls, key, fields, default=None):
+    def dict_get_sql(cls, key, fields, default=None, null_missing=False):
         func_name = 'dictGet'
         fields = [f"'{field}'" for field in fields]
         field = fields[0] if len(fields) == 1 else f"({', '.join(fields)})"
@@ -65,12 +65,14 @@ class Dictionary(models.ClickhouseModel):
         if default is not None:
             func_name = 'dictGetOrDefault'
             args.append(f"'{default}'")
+        elif null_missing:
+            func_name = 'dictGetOrNull'
         return f'{func_name}({", ".join(args)})'
 
     @classmethod
-    def dict_get_expression(cls, expressions, fields, default=None, **kwargs):
+    def dict_get_expression(cls, expressions, fields, default=None, null_missing=False, **kwargs):
         dict_get_func = Func(expressions, **kwargs)
-        dict_get_func.template = cls.dict_get_sql('%(expressions)s', fields, default)
+        dict_get_func.template = cls.dict_get_sql('%(expressions)s', fields, default, null_missing)
         return dict_get_func
 
     @classmethod

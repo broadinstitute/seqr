@@ -13,7 +13,7 @@ from clickhouse_search.models.gt_stats_models import ProjectGtStatsSnvIndel, \
     GtStatsDictGRCh37SnvIndel, GtStatsDictSnvIndel, GtStatsDictMito, GtStatsDictSv
 from clickhouse_search.models.postgres_dicts import AffectedDict, SexDict
 from clickhouse_search.models.reference_data_models import ClinvarMvSnvIndel, ClinvarSearchMvSnvIndel, ClinvarMvMito, \
-    ClinvarSearchMvMito, ClinvarMvGRCh37SnvIndel, ClinvarSearchMvGRCh37SnvIndel
+    ClinvarSearchMvMito, ClinvarMvGRCh37SnvIndel, ClinvarSearchMvGRCh37SnvIndel, DbnsfpSnvIndelMv, DbnsfpSnvIndelDict
 from clickhouse_search.models.search_models import EntriesSnvIndel, AnnotationsSnvIndel
 from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4, CACHED_CONSEQUENCES_BY_KEY, \
     VARIANT_ID_SEARCH, VARIANT_IDS, LOCATION_SEARCH, GENE_IDS, SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT, \
@@ -58,10 +58,10 @@ class ClickhouseSearchTestCase(AnvilAuthenticationTestMixin, TransactionTestCase
         for view in [
             ProjectsToGtStatsGRCh37SnvIndel, ProjectsToGtStatsSnvIndel, ProjectsToGtStatsMito, ProjectsToGtStatsSv,
             ClinvarMvSnvIndel, ClinvarSearchMvSnvIndel, ClinvarMvMito, ClinvarSearchMvMito, ClinvarMvGRCh37SnvIndel,
-            ClinvarSearchMvGRCh37SnvIndel
+            ClinvarSearchMvGRCh37SnvIndel, DbnsfpSnvIndelMv,
         ]:
             view.refresh()
-        for dictionary in [GtStatsDictGRCh37SnvIndel, GtStatsDictSnvIndel, GtStatsDictMito, GtStatsDictSv]:
+        for dictionary in [GtStatsDictGRCh37SnvIndel, GtStatsDictSnvIndel, GtStatsDictMito, GtStatsDictSv, DbnsfpSnvIndelDict]:
             dictionary.reload()
         Project.objects.update(genome_version='38')
         AnvilAuthenticationTestMixin.set_up_users()

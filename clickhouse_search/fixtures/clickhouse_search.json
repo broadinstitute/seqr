@@ -246,6 +246,21 @@
       "assertions": [],
       "pathogenicity": "Likely_pathogenic"
     }
+},{
+    "model": "clickhouse_search.dbnsfpallvariantssnvindel",
+    "pk": "1-10439-AC-A",
+    "fields": {
+      "cadd": 4.668,
+      "fathmm": null,
+      "mpc": null,
+      "mut_pred": null,
+      "mut_taster": null,
+      "primate_ai": null,
+      "polyphen": null,
+      "revel": null,
+      "sift": null,
+      "vest": null
+    }
 }, {
     "model": "clickhouse_search.clinvarallvariantssnvindel",
     "pk": "1-38724419-T-G",

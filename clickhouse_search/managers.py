@@ -837,7 +837,7 @@ class EntriesManager(SearchQuerySet):
                     field.db_column or field.name: (field_map.get(field.name, field.name), field)
                     for field in pred_model._meta.local_fields if field.name != 'key'
                 })
-                pred_expressions.append(pred_model.dict_get_expression('key', source_fields.keys()))
+                pred_expressions.append(pred_model.dict_get_expression('key', source_fields.keys(), null_missing=True))
                 pred_fields += list(source_fields.values())
             entries = entries.annotate(
                 preds=TupleConcat(*pred_expressions, output_field=NamedTupleField(pred_fields)),
