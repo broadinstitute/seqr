@@ -142,11 +142,6 @@ class BitmapHasAny(ArrayLookup):
         return f'bitmapBuild{rhs}', rhs_params
 
 
-class DictGet(Func):
-    function = 'dictGet'
-    template = '%(function)s("%(dict_name)s", (%(fields)s), %(expressions)s)'
-
-
 class If(Func):
     function = 'if'
     template = '%(function)s(%(condition)s%(expressions)s)'

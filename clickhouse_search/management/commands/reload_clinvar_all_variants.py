@@ -9,12 +9,12 @@ from collections import defaultdict
 from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL
 import re
 import shutil
-from string import Template
 import tempfile
 from typing import Optional, Union
 
 from clickhouse_backend import models
-from clickhouse_search.models import ClinvarAllVariantsGRCh37SnvIndel, ClinvarAllVariantsSnvIndel, ClinvarAllVariantsMito
+from clickhouse_search.models.reference_data_models import ClinvarAllVariantsGRCh37SnvIndel, ClinvarAllVariantsSnvIndel, ClinvarAllVariantsMito, \
+    ClinvarMvGRCh37SnvIndel, ClinvarMvSnvIndel, ClinvarMvMito, ClinvarSearchMvGRCh37SnvIndel, ClinvarSearchMvSnvIndel, ClinvarSearchMvMito
 from reference_data.models import DataVersions
 from seqr.utils.communication_utils import safe_post_to_slack
 
@@ -56,15 +56,6 @@ CLINVAR_GOLD_STARS_LOOKUP = {
 WEEKLY_XML_RELEASE = (
     'https://ftp.ncbi.nlm.nih.gov/pub/clinvar/xml/weekly_release/ClinVarVCVRelease_00-latest_weekly.xml.gz'
 )
-
-def clinvar_run_sql(sql: str):
-    with connections['clickhouse_write'].cursor() as cursor:
-        for reference_genome, dataset_type in [
-            ('GRCh37', 'SNV_INDEL'),
-            ('GRCh38', 'SNV_INDEL'),
-            ('GRCh38', 'MITO'),
-        ]:
-            cursor.execute(sql.substitute(reference_genome=reference_genome, dataset_type=dataset_type))
 
 def parse_and_merge_classification_counts(text: str) -> list[tuple[str, int]]:
     #
@@ -300,11 +291,14 @@ class Command(BaseCommand):
                         f"ALTER TABLE `{model._meta.db_table}` DROP PARTITION '{existing_version_obj.version}';"
                     )
         for materialized_view in [
-            'all_variants_to_seqr_variants_mv',
-            'seqr_variants_to_search_mv',
+            ClinvarMvGRCh37SnvIndel,
+            ClinvarMvSnvIndel,
+            ClinvarMvMito,
+            ClinvarSearchMvGRCh37SnvIndel,
+            ClinvarSearchMvSnvIndel,
+            ClinvarSearchMvMito,
         ]:
-            clinvar_run_sql(Template(f'SYSTEM REFRESH VIEW `$reference_genome/$dataset_type/reference_data/clinvar/{materialized_view}`;'))
-            clinvar_run_sql(Template(f'SYSTEM WAIT VIEW `$reference_genome/$dataset_type/reference_data/clinvar/{materialized_view}`;'))
+            materialized_view.refresh()
 
         # Save the new version in Postgres
         if existing_version_obj:
