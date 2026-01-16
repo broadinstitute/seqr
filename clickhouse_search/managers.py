@@ -9,7 +9,7 @@ from django.db.models.sql.constants import INNER
 from clickhouse_search.backend.fields import NestedField, NamedTupleField
 from clickhouse_search.backend.functions import Array, ArrayConcat, ArrayDistinct, ArrayFilter, ArrayFold, \
     ArrayIntersect, ArrayJoin, ArrayMap, ArraySort, ArraySymmetricDifference, CrossJoin, GroupArray, GroupArrayArray, \
-    GroupArrayIntersect, If, MapLookup, NullIf, Plus, SubqueryJoin, SubqueryTable, Tuple, TupleConcat
+    GroupArrayIntersect, If, MapLookup, NullIf, Plus, SubqueryJoin, SubqueryTable, Tuple, TupleConcat, Untuple
 from clickhouse_search.models.postgres_dicts import AffectedDict, SexDict
 from seqr.models import Sample
 from seqr.testrunner import OrderedDatabaseDeletionRunner
@@ -105,34 +105,10 @@ class SearchQuerySet(QuerySet):
             return None
         return self.gt_stats_dict_rel.rel.related_model
 
-    def _seqr_pop_fields(self):
-        if self.gt_stats_dict is None:
-            return []
-        return [field.name for field in self.gt_stats_dict._meta.local_fields if field.name != 'key']
-
     def _annotate_seqr_pop_expression(self, results):
-        seqr_pop_fields = self._seqr_pop_fields()
-        if not seqr_pop_fields:
+        if self.gt_stats_dict is None:
             return results
-        return results.annotate(seqrPop=self.gt_stats_dict.dict_get_expression(
-            'key',
-            seqr_pop_fields,
-            output_field=models.TupleField([models.UInt32Field() for _ in seqr_pop_fields])
-        ))
-
-    def _seqr_subfield_pop_expressions(self, subfield, subfield_name=None, affected=False):
-        seqr_pop_fields = self._seqr_pop_fields()
-        pop_expressions = [
-            (field, F(f'seqrPop__{seqr_pop_fields.index(field)}')) for field in seqr_pop_fields
-            if field.startswith(subfield) and (field.endswith('affected') == affected)
-        ]
-        if len(pop_expressions) == 1:
-            pop_expressions = [(subfield, pop_expressions[0][1])]
-        elif len(pop_expressions) > 1:
-            pop_expressions = pop_expressions + [(subfield, Plus(*[expr for _, expr in pop_expressions]))]
-        if subfield_name and subfield_name != subfield:
-            pop_expressions = [(name.replace(subfield, subfield_name), expr) for name, expr in pop_expressions]
-        return pop_expressions
+        return results.annotate(seqrPop=self.gt_stats_dict.dict_get_expression('key'))
 
     def _format_gene_intervals(self, genes):
         return [
@@ -202,6 +178,20 @@ class AnnotationsQuerySet(SearchQuerySet):
             population_fields.append((name, NamedTupleField([(field, models.UInt32Field()) for field, _ in pop_subfields])))
 
         return seqr_pops
+
+    def _seqr_subfield_pop_expressions(self, subfield, subfield_name=None, affected=False):
+        seqr_pop_fields = [field_name for field_name, _ in self.gt_stats_dict.base_fields()]
+        pop_expressions = [
+            (field, F(f'seqrPop__{seqr_pop_fields.index(field)}')) for field in seqr_pop_fields
+            if field.startswith(subfield) and (field.endswith('affected') == affected)
+        ]
+        if len(pop_expressions) == 1:
+            pop_expressions = [(subfield, pop_expressions[0][1])]
+        elif len(pop_expressions) > 1:
+            pop_expressions = pop_expressions + [(subfield, Plus(*[expr for _, expr in pop_expressions]))]
+        if subfield_name and subfield_name != subfield:
+            pop_expressions = [(name.replace(subfield, subfield_name), expr) for name, expr in pop_expressions]
+        return pop_expressions
 
     @staticmethod
     def _genotype_override_expression(index, col, cn_index):
@@ -1319,16 +1309,20 @@ class EntriesManager(SearchQuerySet):
         return Q(xpos__range=(get_xpos(chrom, start), get_xpos(chrom, end)))
 
     def _filter_seqr_frequency(self, entries, ac=None, hh=None, **kwargs):
-        if ac is not None:
-            ac_field = self.gt_stats_dict.SEQR_POPULATIONS[0][1]
-            ac_expressions = self._seqr_subfield_pop_expressions(ac_field, subfield_name='ac')
-            ac_expression = next(expr for field, expr in ac_expressions if field == 'ac')
-            entries = entries.annotate(ac=ac_expression)
-            entries = entries.filter(ac__lte=ac)
-        if hh is not None:
-            hom_expressions = self._seqr_subfield_pop_expressions('hom')
-            if hom_expressions:
-                hom_expression = next(expr for field, expr in hom_expressions if field == 'hom')
-                entries = entries.annotate(hom=hom_expression)
-                entries = entries.filter(hom__lte=hh)
-        return entries
+        entries = self._filter_seqr_freq_field(entries, self.gt_stats_dict.SEQR_POPULATIONS[0][1], ac)
+        return entries._filter_seqr_freq_field(entries, 'hom', hh)
+
+    def _filter_seqr_freq_field(self, entries, freq_field, value):
+        if value is None:
+            return entries
+        field_names = [
+            field_name for field_name, _ in self.gt_stats_dict.base_fields()
+            if field_name.startswith(freq_field) and not field_name.endswith('affected')
+        ]
+        if not field_names:
+            return entries
+        expression = self.gt_stats_dict.dict_get_expression('key', field_names=field_names)
+        if len(field_names) > 1:
+            expression = Plus(Untuple(expression))
+        entries = entries.annotate(**{freq_field: expression})
+        return entries.filter(**{f'{freq_field}__lte': value})
