@@ -214,7 +214,7 @@ class Migration(migrations.Migration):
                 ('objects', django.db.models.manager.Manager()),
                 ('_overwrite_base_manager', django.db.models.manager.Manager()),
             ],
-        ), 
+        ),
         migrations.CreateModel(
             name='VariantsGcnv',
             fields=[
