@@ -33,7 +33,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Absplice2SeqrVariants',
             fields=[
-                ('key', models.OneToOneField(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='clickhouse_search.annotationsmito')),
+                ('key', models.OneToOneField(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='clickhouse_search.annotationssnvindel')),
                 ('score', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
             ],
             options={
