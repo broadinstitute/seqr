@@ -821,16 +821,15 @@ class EntriesManager(SearchQuerySet):
         if self.model.PREDICTIONS:
             pred_expressions = []
             pred_fields = []
+            rename_fields = {}
             for pred_source, field_map in self.model.PREDICTIONS.items():
                 pred_model = getattr(self.model, pred_source).rel.related_model
-                source_fields = OrderedDict({
-                    field.db_column or field.name: (field_map.get(field.name, field.name), field)
-                    for field in pred_model._meta.local_fields if field.name != 'key'
-                })
-                pred_expressions.append(pred_model.dict_get_expression('key', source_fields.keys(), null_missing=True))
-                pred_fields += list(source_fields.values())
+                pred_expression = pred_model.dict_get_expression('key', null_missing=True)
+                pred_expressions.append(pred_expression)
+                pred_fields += pred_expression.output_field.base_fields
+                rename_fields.update(field_map)
             entries = entries.annotate(
-                preds=TupleConcat(*pred_expressions, output_field=NamedTupleField(pred_fields)),
+                preds=TupleConcat(*pred_expressions, output_field=NamedTupleField(pred_fields, rename_fields=rename_fields)),
             )
 
         entries = self._annotate_seqr_pop_expression(entries)
