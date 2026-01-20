@@ -1195,31 +1195,8 @@ class BaseEntriesManager(SearchQuerySet):
             mapped_expression='x.1', output_field=models.ArrayField(models.StringField()),
         )
 
-    def filter_locus(self, exclude_locations=False, require_gene_filter=False, require_any_gene=False, intervals=None, genes=None, parsed_variant_ids=None, **kwargs):
+    def filter_locus(self, exclude_locations=False, require_gene_filter=False, should_filter_interval=False, intervals=None, genes=None, **kwargs):
         entries = self
-        if parsed_variant_ids:
-            # although technically redundant, the interval query is applied to the entries table before join and reduces the join size,
-            # while the full variant_id filter is applied to the annotation table after the join
-            intervals = [{'chrom': chrom, 'start': pos, 'end': pos} for chrom, pos, _, _ in parsed_variant_ids]
-
-        should_filter_interval = False
-        if 'cn' in self.call_fields:
-            # SV interval filtering occurs after joining on annotations to correctly incorporate end position
-            if exclude_locations:
-                intervals = None
-            else:
-                chromosomes = {i['chrom'] for i in (intervals or [])}
-                if genes and 'geneIds' in self.call_fields:
-                    entries = entries.filter(calls__array_all={'OR': [
-                        {'geneIds': (list(genes.keys()), 'hasAny({value}, {field})')},
-                        {'gt': (None, 'isNull({field})')},
-                    ]})
-                    chromosomes.update({gene[f'chromGrch{self.genome_version}'] for gene in genes.values()})
-                    should_filter_interval = True
-                intervals = [{'chrom': chrom, 'start': MIN_POS, 'end': MAX_POS} for chrom in chromosomes]
-
-        if hasattr(self.model, 'is_annotated_in_any_gene') and (require_any_gene or (genes and not intervals)):
-            entries = entries.filter(is_annotated_in_any_gene=Value(True))
 
         if not (genes or intervals):
             return entries
@@ -1311,9 +1288,22 @@ class EntriesManager(BaseEntriesManager):
     def _join_annotations(self, entries):
         entries = entries.annotate(
             clinvar_key=F('clinvar_join__key'),
-            clinvar=self._clinvar_tuple(),
+            clinvar=self._clinvar_tuple(), # TODO
         )
         return super()._join_annotations(entries)
+
+    def filter_locus(self, require_any_gene=False, parsed_variant_ids=None, intervals=None, genes=None, **kwargs):
+        if parsed_variant_ids:
+            # although technically redundant, the interval query is applied to the entries table before join and reduces the join size,
+            # while the full variant_id filter is applied to the annotation table after the join
+            intervals = [{'chrom': chrom, 'start': pos, 'end': pos} for chrom, pos, _, _ in parsed_variant_ids]
+
+        entries = super().filter_locus(intervals=intervals, genes=genes, **kwargs)
+
+        if hasattr(self.model, 'is_annotated_in_any_gene') and (require_any_gene or (genes and not intervals)):
+            entries = entries.filter(is_annotated_in_any_gene=Value(True))
+
+        return entries
 
     @classmethod
     def annotation_fields(cls, entries):
@@ -1373,5 +1363,29 @@ class SvEntriesManager(BaseEntriesManager):
                 f'sample_{col}': agg(f'sample_{col}', output_field=self.call_fields[field])
                 for col, (field, agg) in self.annotations_model.GENOTYPE_OVERRIDE_FIELDS.items()
             })
+
+        return entries
+
+    def filter_locus(self, exclude_locations=False, should_filter_interval=False, intervals=None, genes=None, **kwargs):
+        # SV interval filtering occurs after joining on annotations to correctly incorporate end position
+        if exclude_locations:
+            intervals = None
+        else:
+            chromosomes = {i['chrom'] for i in (intervals or [])}
+            if genes and 'geneIds' in self.call_fields:
+                chromosomes.update({gene[f'chromGrch{self.genome_version}'] for gene in genes.values()})
+                should_filter_interval = True
+            intervals = [{'chrom': chrom, 'start': MIN_POS, 'end': MAX_POS} for chrom in chromosomes]
+
+        entries = super().filter_locus(
+            exclude_locations=exclude_locations, should_filter_interval=should_filter_interval,
+            intervals=intervals, genes=genes, **kwargs,
+        )
+
+        if should_filter_interval:
+            entries = entries.filter(calls__array_all={'OR': [
+                {'geneIds': (list(genes.keys()), 'hasAny({value}, {field})')},
+                {'gt': (None, 'isNull({field})')},
+            ]})
 
         return entries
