@@ -745,6 +745,13 @@ class BaseEntriesManager(SearchQuerySet):
         COMPOUND_HET_ALLOW_HOM_ALTS: {**INHERITANCE_FILTERS[COMPOUND_HET], AFFECTED: HAS_ALT},
     }
 
+    QUALITY_FILTERS = {
+        'gq': {},
+        'ab': {'scale': 100, 'filters': ['x.gt != 1']},
+        'hl': {'scale': 100},
+        'mitoCn': {},
+    }
+
     @property
     def annotations_model(self):
         return self.model.key.field.related_model
@@ -756,10 +763,6 @@ class BaseEntriesManager(SearchQuerySet):
     @property
     def genotype_lookup(self):
         return self.GENOTYPE_LOOKUP
-
-    @property
-    def quality_filters(self):
-        return [config for config in [('gq', 1), ('ab', 100, 'x.gt != 1'), ('qs', 1), ('hl', 100), ('mitoCn', 1)] if config[0] in self.call_fields]
 
     @property
     def sample_type_expression(self):
@@ -994,16 +997,15 @@ class BaseEntriesManager(SearchQuerySet):
     def _quality_q(self, quality_filter, allow_no_call, affected_condition, clinvar_override_q):
         quality_filter_conditions = {}
 
-        for field, scale, *filters in self.quality_filters:
-            filter_key = f'min_{field}'
-            if field == 'gq' and 'cn' in self.call_fields:
-                filter_key += '_sv'
-            value = quality_filter.get(filter_key)
+        for field, config in self.QUALITY_FILTERS.items():
+            if field not in self.call_fields:
+                continue
+            value = quality_filter.get(config.get('filter_key', f'min_{field}'))
             if value:
-                or_filters = ['isNull({field})', '{field} >= {value}'] + filters
+                or_filters = ['isNull({field})', '{field} >= {value}'] + config.get('filters', [])
                 if allow_no_call:
                     or_filters.append('isNull(x.gt)')
-                quality_filter_conditions[field] = (value / scale, f'or({", ".join(or_filters)})')
+                quality_filter_conditions[field] = (value / config.get('scale', 1), f'or({", ".join(or_filters)})')
 
         if not quality_filter_conditions:
             return None
@@ -1068,18 +1070,9 @@ class BaseEntriesManager(SearchQuerySet):
             fields.append('seqrPop')
         return fields
 
-    def _annotate_calls(self, entries, sample_data=None, annotate_hom_alts=False, multi_sample_type_families=None, skip_entry_fields=False, annotate_num_families=False, **kwargs):
+    def _annotate_calls(self, entries, sample_data=None, annotate_hom_alts=False, multi_sample_type_families=None, skip_entry_fields=False, annotate_num_families=False, override_annotations=None, **kwargs):
         if annotate_hom_alts:
             entries = entries.annotate(has_hom_alt=Q(calls__array_exists={'gt': (2,)}))
-
-        genotype_override_annotations = {
-            f'sample_{col}': ArrayMap(
-                ArrayFilter('calls', conditions=[{'cn': (None, 'isNotNull({field})')}]),
-                mapped_expression=f'x.{field}',
-            ) for col, (field, _) in self.annotations_model.GENOTYPE_OVERRIDE_FIELDS.items()
-        }
-        if genotype_override_annotations:
-            entries = entries.annotate(**genotype_override_annotations)
 
         fields = self.annotation_fields(entries)
 
@@ -1094,7 +1087,7 @@ class BaseEntriesManager(SearchQuerySet):
                 entries = entries.annotate(
                     familyGuids=ArraySort(ArrayDistinct(GroupArray('family_guid'))),
                     **{gt_field: GroupArrayArray(gt_expression)},
-                    **{col: GroupArrayArray(col) for col in genotype_override_annotations}
+                    **{col: GroupArrayArray(col) for col in (override_annotations or [])}
                 )
             if 'carriers' in entries.query.annotations:
                 map_field = models.MapField(models.StringField(), models.ArrayField(models.StringField()))
@@ -1127,12 +1120,6 @@ class BaseEntriesManager(SearchQuerySet):
                 familyGuids=Array('family_guid'),
                 **{gt_field: gt_expression},
             )
-
-        if genotype_override_annotations:
-            entries = entries.annotate(**{
-                f'sample_{col}': agg(f'sample_{col}', output_field=self.call_fields[field])
-                for col, (field, agg) in self.annotations_model.GENOTYPE_OVERRIDE_FIELDS.items()
-            })
 
         return entries
 
@@ -1340,6 +1327,11 @@ class SvEntriesManager(BaseEntriesManager):
         HAS_REF: [-1] + BaseEntriesManager.GENOTYPE_LOOKUP[HAS_REF],
     }
 
+    QUALITY_FILTERS = {
+        'gq': {'filter_key': 'min_gq_sv'},
+        'qs': {},
+    }
+
     @property
     def genotype_lookup(self):
         return self.NULLABLE_GENOTYPE_LOOKUP if self.annotations_model.GENOTYPE_OVERRIDE_FIELDS else self.GENOTYPE_LOOKUP
@@ -1361,5 +1353,25 @@ class SvEntriesManager(BaseEntriesManager):
 
         if (annotations or {}).get(NEW_SV_FIELD):
             entries = entries.filter(calls__array_exists={'newCall': (None, '{field}')})
+
+        return entries
+
+    def _annotate_calls(self, entries, *args, **kwargs):
+        genotype_override_annotations = {
+            f'sample_{col}': ArrayMap(
+                ArrayFilter('calls', conditions=[{'cn': (None, 'isNotNull({field})')}]),
+                mapped_expression=f'x.{field}',
+            ) for col, (field, _) in self.annotations_model.GENOTYPE_OVERRIDE_FIELDS.items()
+        }
+        if genotype_override_annotations:
+            entries = entries.annotate(**genotype_override_annotations)
+
+        entries = super()._annotate_calls(entries, *args, override_annotations=genotype_override_annotations.keys(), **kwargs)
+
+        if genotype_override_annotations:
+            entries = entries.annotate(**{
+                f'sample_{col}': agg(f'sample_{col}', output_field=self.call_fields[field])
+                for col, (field, agg) in self.annotations_model.GENOTYPE_OVERRIDE_FIELDS.items()
+            })
 
         return entries
