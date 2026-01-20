@@ -1926,7 +1926,7 @@ class EigenGRCh37Dict(Dictionary):
 
     class Meta(ReferenceDataDictMeta):
         db_table = 'GRCh37/SNV_INDEL/reference_data/eigen'
-        source_table = 'EigenSeqrVariants'
+        source_table = 'EigenSeqrVariantsGRCh37SnvIndel'
         layout = 'FLAT(MAX_ARRAY_SIZE 200000000)'
 
 class EigenAllMv(RefreshableMaterializedView):

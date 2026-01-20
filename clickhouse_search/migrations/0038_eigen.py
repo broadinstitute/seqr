@@ -103,7 +103,7 @@ class Migration(migrations.Migration):
             options={
                 'db_table': 'GRCh37/SNV_INDEL/reference_data/eigen',
                 'engine': clickhouse_backend.models.MergeTree(primary_key='key'),
-                'source_table': 'EigenSeqrVariants',
+                'source_table': 'EigenSeqrVariantsGRCh37SnvIndel',
                 'layout': 'FLAT(MAX_ARRAY_SIZE 200000000)',
             },
             managers=[
