@@ -776,10 +776,6 @@ class BaseEntriesManager(SearchQuerySet):
         })
 
     @property
-    def clinvar_join_model(self):
-        return self.model.clinvar_join
-
-    @property
     def gt_stats_dict_rel(self):
         return getattr(self.model, 'gt_stats', None)
 
@@ -787,41 +783,29 @@ class BaseEntriesManager(SearchQuerySet):
     def genome_version(self):
         return self.annotations_model.ANNOTATION_CONSTANTS['genomeVersion']
 
-    def search(self, sample_data, freqs=None, annotations=None, exclude_keys=None, **kwargs):
+    @property
+    def callset_filter_field(self):
+        return 'callset'
+
+    def search(self, sample_data, exclude_keys=None, **kwargs):
         entries = self.filter_locus(**kwargs)
 
         if exclude_keys:
             entries = entries.exclude(key__in=exclude_keys)
 
         entries = self._join_annotations(entries)
-
-        is_sv_class = 'cn' in self.call_fields
-        callset_filter_field = 'sv_callset' if is_sv_class else 'callset'
-        if (freqs or {}).get(callset_filter_field) and self.gt_stats_dict_rel is not None:
-            entries = self._filter_seqr_frequency(entries, **freqs[callset_filter_field])
-
-        gnomad_filter = (freqs or {}).get('gnomad_genomes') or {}
-        if hasattr(self.model, 'is_gnomad_gt_5_percent') and ((gnomad_filter.get('af') or 1) <= 0.05 or any(gnomad_filter.get(field) is not None for field in ['ac', 'hh'])):
-            # Passing field=Value(False) to the django filter causes the SQL to evaluate to "field = false",
-            # while passing field=False evaluates to "NOT field".
-            # For fields used for pruning the table based on the order_by for the table, the former is needed
-            entries = entries.filter(is_gnomad_gt_5_percent=Value(False))
-
-        if (annotations or {}).get(NEW_SV_FIELD) and 'newCall' in self.call_fields:
-            entries = entries.filter(calls__array_exists={'newCall': (None, '{field}')})
+        entries = self._prefilter_entries(entries, **kwargs)
 
         return self._search_call_data(entries, sample_data, **kwargs)
 
-    def _join_annotations(self, entries):
-        if self._has_clinvar():
-           entries = entries.annotate(
-               clinvar_key=F('clinvar_join__key'),
-               clinvar=self._clinvar_tuple(),
-           )
-
-        entries = self._annotate_seqr_pop_expression(entries)
+    def _prefilter_entries(self, entries, freqs=None, **kwargs):
+        if (freqs or {}).get(self.callset_filter_field) and self.gt_stats_dict_rel is not None:
+            entries = self._filter_seqr_frequency(entries, **freqs[self.callset_filter_field])
 
         return entries
+
+    def _join_annotations(self, entries):
+        return self._annotate_seqr_pop_expression(entries)
 
     def result_values(self, sample_data=None):
         entries = self._join_annotations(self)
@@ -1315,10 +1299,33 @@ class BaseEntriesManager(SearchQuerySet):
 
 class EntriesManager(BaseEntriesManager):
 
+    @property
+    def clinvar_join_model(self):
+        return self.model.clinvar_join
+
     @classmethod
     def _sample_family_q(cls, sample_type, families):
         sample_family_q = super()._sample_family_q(sample_type, families)
         return sample_family_q & Q(sample_type=sample_type)
+
+    def _prefilter_entries(self, entries, freqs=None, **kwargs):
+        entries = super()._prefilter_entries(entries, freqs=freqs, **kwargs)
+
+        gnomad_filter = (freqs or {}).get('gnomad_genomes') or {}
+        if hasattr(self.model, 'is_gnomad_gt_5_percent') and ((gnomad_filter.get('af') or 1) <= 0.05 or any(gnomad_filter.get(field) is not None for field in ['ac', 'hh'])):
+            # Passing field=Value(False) to the django filter causes the SQL to evaluate to "field = false",
+            # while passing field=False evaluates to "NOT field".
+            # For fields used for pruning the table based on the order_by for the table, the former is needed
+            entries = entries.filter(is_gnomad_gt_5_percent=Value(False))
+
+        return entries
+
+    def _join_annotations(self, entries):
+        entries = entries.annotate(
+            clinvar_key=F('clinvar_join__key'),
+            clinvar=self._clinvar_tuple(),
+        )
+        return super()._join_annotations(entries)
 
 class SvEntriesManager(BaseEntriesManager):
     NULLABLE_GENOTYPE_LOOKUP = {
@@ -1333,5 +1340,17 @@ class SvEntriesManager(BaseEntriesManager):
         return self.NULLABLE_GENOTYPE_LOOKUP if self.annotations_model.GENOTYPE_OVERRIDE_FIELDS else self.GENOTYPE_LOOKUP
 
     @property
+    def callset_filter_field(self):
+        return 'sv_callset'
+
+    @property
     def sample_type_expression(self):
         return f"'{self.model.SAMPLE_TYPE}'"
+
+    def _prefilter_entries(self, entries, annotations=None, **kwargs):
+        entries = super()._prefilter_entries(entries, **kwargs)
+
+        if (annotations or {}).get(NEW_SV_FIELD):
+            entries = entries.filter(calls__array_exists={'newCall': (None, '{field}')})
+
+        return entries
