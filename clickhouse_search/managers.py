@@ -811,24 +811,6 @@ class BaseEntriesManager(SearchQuerySet):
         entries = self._join_annotations(self)
         return self._search_call_data(entries, sample_data)
 
-    def _has_clinvar(self):
-        return hasattr(self.model, 'clinvar_join')
-
-    @staticmethod
-    def _clinvar_range_q(path_range):
-        return Q(clinvar_join__pathogenicity__range=path_range)
-
-    @staticmethod
-    def _clinvar_star_q(min_stars):
-        return Q(clinvar_join__gold_stars__gte=min_stars)
-
-    @staticmethod
-    def _clinvar_conflicting_path_filter(array_func, conflicting_filter):
-        return {
-            f'clinvar_join__conflicting_pathogenicities__{array_func}': conflicting_filter,
-            'clinvar_join__conflicting_pathogenicities__not_empty': True,
-        }
-
     def _filter_project_families(self, entries, sample_data):
        project_guids = sample_data['project_guids']
        project_filter = Q(project_guid__in=project_guids) if len(project_guids) > 1 else Q(project_guid=project_guids[0])
@@ -868,7 +850,7 @@ class BaseEntriesManager(SearchQuerySet):
        gt_filter = None
        quality_filter = qualityFilter or {}
        if inheritance_mode or (inheritance_filter or {}).get('genotype') or quality_filter:
-            clinvar_override_q = self._clinvar_path_q(pathogenicity) if self._has_clinvar() else None
+            clinvar_override_q = self._clinvar_path_q(pathogenicity)
             inheritance_q, quality_q, gt_filter, carriers_expression = self._get_inheritance_quality_qs(
                sample_data, inheritance_mode, quality_filter, clinvar_override_q,
                 annotate_carriers, inheritance_filter=inheritance_filter or {},
@@ -1079,6 +1061,13 @@ class BaseEntriesManager(SearchQuerySet):
             )
         return entries
 
+    @classmethod
+    def annotation_fields(cls, entries):
+        fields = ['key']
+        if 'seqrPop' in entries.query.annotations:
+            fields.append('seqrPop')
+        return fields
+
     def _annotate_calls(self, entries, sample_data=None, annotate_hom_alts=False, multi_sample_type_families=None, skip_entry_fields=False, annotate_num_families=False, **kwargs):
         if annotate_hom_alts:
             entries = entries.annotate(has_hom_alt=Q(calls__array_exists={'gt': (2,)}))
@@ -1092,11 +1081,8 @@ class BaseEntriesManager(SearchQuerySet):
         if genotype_override_annotations:
             entries = entries.annotate(**genotype_override_annotations)
 
-        fields = ['key']
-        if 'seqrPop' in entries.query.annotations:
-            fields.append('seqrPop')
-        if self._has_clinvar():
-             fields += ['clinvar', 'clinvar_key']
+        fields = self.annotation_fields(entries)
+
         if multi_sample_type_families or sample_data is None or sample_data['num_families'] > 1:
             entries = entries.values(*fields)
             if annotate_num_families:
@@ -1303,6 +1289,21 @@ class EntriesManager(BaseEntriesManager):
     def clinvar_join_model(self):
         return self.model.clinvar_join
 
+    @staticmethod
+    def _clinvar_range_q(path_range):
+        return Q(clinvar_join__pathogenicity__range=path_range)
+
+    @staticmethod
+    def _clinvar_star_q(min_stars):
+        return Q(clinvar_join__gold_stars__gte=min_stars)
+
+    @staticmethod
+    def _clinvar_conflicting_path_filter(array_func, conflicting_filter):
+        return {
+            f'clinvar_join__conflicting_pathogenicities__{array_func}': conflicting_filter,
+            'clinvar_join__conflicting_pathogenicities__not_empty': True,
+        }
+
     @classmethod
     def _sample_family_q(cls, sample_type, families):
         sample_family_q = super()._sample_family_q(sample_type, families)
@@ -1327,6 +1328,10 @@ class EntriesManager(BaseEntriesManager):
         )
         return super()._join_annotations(entries)
 
+    @classmethod
+    def annotation_fields(cls, entries):
+        return super().annotation_fields(entries) + ['clinvar', 'clinvar_key']
+
 class SvEntriesManager(BaseEntriesManager):
     NULLABLE_GENOTYPE_LOOKUP = {
         **BaseEntriesManager.GENOTYPE_LOOKUP,
@@ -1346,6 +1351,10 @@ class SvEntriesManager(BaseEntriesManager):
     @property
     def sample_type_expression(self):
         return f"'{self.model.SAMPLE_TYPE}'"
+
+    @classmethod
+    def _clinvar_path_q(cls, pathogenicity):
+        return None
 
     def _prefilter_entries(self, entries, annotations=None, **kwargs):
         entries = super()._prefilter_entries(entries, **kwargs)
