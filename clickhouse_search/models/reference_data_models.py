@@ -1911,7 +1911,7 @@ class EigenGRCh37AllMv(RefreshableMaterializedView):
         }
         create_empty = True
 
-class EigenGRCh37AllMv(RefreshableMaterializedView):
+class EigenGRCh37Mv(RefreshableMaterializedView):
     key = models.UInt32Field(primary_key=True)
     score = models.DecimalField(max_digits=9, decimal_places=5)
 
@@ -1943,7 +1943,7 @@ class EigenAllMv(RefreshableMaterializedView):
         }
         create_empty = True
 
-class EigenAllMv(RefreshableMaterializedView):
+class EigenMv(RefreshableMaterializedView):
     key = models.UInt32Field(primary_key=True)
     score = models.DecimalField(max_digits=9, decimal_places=5)
 
