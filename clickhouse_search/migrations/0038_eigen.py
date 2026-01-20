@@ -10,7 +10,7 @@ import django.db.models.manager
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('clickhouse_search', '0036_gnomad_genomes_columnbugfix'),
+        ('clickhouse_search', '0037_geneIds_bugfix'),
     ]
 
     operations = [
