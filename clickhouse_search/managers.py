@@ -93,13 +93,6 @@ class SearchQuerySet(QuerySet):
         return clinvar_q
 
     @property
-    def sample_types(self):
-        return [
-            sample_type.lower() for sample_type in
-            ([self.single_sample_type] if self.single_sample_type else sorted(Sample.SAMPLE_TYPE_LOOKUP.keys()))
-        ]
-
-    @property
     def gt_stats_dict(self):
         if self.gt_stats_dict_rel is None:
             return None
@@ -745,12 +738,6 @@ class BaseEntriesManager(SearchQuerySet):
     }
     COMP_HET_ALT = 'COMP_HET_ALT'
     GENOTYPE_LOOKUP[COMP_HET_ALT] = GENOTYPE_LOOKUP[REF_ALT]
-    NULLABLE_GENOTYPE_LOOKUP = {
-        **GENOTYPE_LOOKUP,
-        COMP_HET_ALT: GENOTYPE_LOOKUP[HAS_ALT],
-        REF_REF: [-1] + GENOTYPE_LOOKUP[REF_REF],
-        HAS_REF: [-1] + GENOTYPE_LOOKUP[HAS_REF],
-    }
 
     INHERITANCE_FILTERS = {
         **INHERITANCE_FILTERS,
@@ -768,22 +755,21 @@ class BaseEntriesManager(SearchQuerySet):
 
     @property
     def genotype_lookup(self):
-        return self.NULLABLE_GENOTYPE_LOOKUP if self.annotations_model.GENOTYPE_OVERRIDE_FIELDS else self.GENOTYPE_LOOKUP
+        return self.GENOTYPE_LOOKUP
 
     @property
     def quality_filters(self):
         return [config for config in [('gq', 1), ('ab', 100, 'x.gt != 1'), ('qs', 1), ('hl', 100), ('mitoCn', 1)] if config[0] in self.call_fields]
 
     @property
-    def single_sample_type(self):
-        return getattr(self.model, 'SAMPLE_TYPE', None)
+    def sample_type_expression(self):
+        return 'sample_type'
 
     @property
     def genotype_fields(self):
-        sample_type = f"'{self.single_sample_type}'" if self.single_sample_type else 'sample_type'
         return OrderedDict({
             'family_guid': ('familyGuid', models.StringField()),
-            sample_type: ('sampleType', models.StringField()),
+            self.sample_type_expression: ('sampleType', models.StringField()),
             'filters': ('filters', models.ArrayField(models.StringField())),
             'x.gt::Nullable(Int8)': ('numAlt', models.Int8Field(null=True, blank=True)),
             **{f'x.{name}': (name, output_field) for name, output_field in self.call_fields.items() if name != 'gt'}
@@ -871,15 +857,17 @@ class BaseEntriesManager(SearchQuerySet):
        for sample_type, families in sample_data['sample_type_families'].items():
            if sample_type == 'multi':
                continue
-           sample_family_q = Q(family_guid__in=families)
-           if not self.single_sample_type:
-               sample_family_q &= Q(sample_type=sample_type)
+           sample_family_q = self._sample_family_q(sample_type, families)
            if family_q:
                family_q |= sample_family_q
            else:
                family_q = sample_family_q
 
        return entries.filter(family_q), multi_sample_type_families
+
+    @classmethod
+    def _sample_family_q(cls, sample_type, families):
+        return Q(family_guid__in=families)
 
     def _search_call_data(self, entries, sample_data, inheritance_mode=None, inheritance_filter=None, qualityFilter=None, pathogenicity=None, exclude_projects=None, annotate_carriers=False, annotate_hom_alts=False, **kwargs):
        multi_sample_type_families = None
@@ -1326,7 +1314,24 @@ class BaseEntriesManager(SearchQuerySet):
 
 
 class EntriesManager(BaseEntriesManager):
-    pass
+
+    @classmethod
+    def _sample_family_q(cls, sample_type, families):
+        sample_family_q = super()._sample_family_q(sample_type, families)
+        return sample_family_q & Q(sample_type=sample_type)
 
 class SvEntriesManager(BaseEntriesManager):
-    pass
+    NULLABLE_GENOTYPE_LOOKUP = {
+        **BaseEntriesManager.GENOTYPE_LOOKUP,
+        BaseEntriesManager.COMP_HET_ALT: BaseEntriesManager.GENOTYPE_LOOKUP[HAS_ALT],
+        REF_REF: [-1] + BaseEntriesManager.GENOTYPE_LOOKUP[REF_REF],
+        HAS_REF: [-1] + BaseEntriesManager.GENOTYPE_LOOKUP[HAS_REF],
+    }
+
+    @property
+    def genotype_lookup(self):
+        return self.NULLABLE_GENOTYPE_LOOKUP if self.annotations_model.GENOTYPE_OVERRIDE_FIELDS else self.GENOTYPE_LOOKUP
+
+    @property
+    def sample_type_expression(self):
+        return f"'{self.model.SAMPLE_TYPE}'"
