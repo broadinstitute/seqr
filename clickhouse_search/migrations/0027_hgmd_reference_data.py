@@ -94,7 +94,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='HgmdGRCh37SnvIndel',
             fields=[
-                ('key', models.ForeignKey(db_column='key', on_delete=django.db.models.deletion.PROTECT, primary_key=True, related_name='hgmd_join', serialize=False, to='clickhouse_search.entriesgrch37snvindel')),
+                ('key', models.ForeignKey(db_column='key', on_delete=django.db.models.deletion.PROTECT, primary_key=True, related_name='hgmd_join', serialize=False, to='clickhouse_search.annotationsgrch37snvindel')),
                 ('accession', clickhouse_backend.models.StringField()),
                 ('classification', clickhouse_backend.models.Enum8Field(choices=[(0, 'DM'), (1, 'DM?'), (2, 'DP'), (3, 'DFP'), (4, 'FP'), (5, 'R')])),
             ],
@@ -111,7 +111,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='HgmdSnvIndel',
             fields=[
-                ('key', models.ForeignKey(db_column='key', on_delete=django.db.models.deletion.PROTECT, primary_key=True, related_name='hgmd_join', serialize=False, to='clickhouse_search.entriessnvindel')),
+                ('key', models.ForeignKey(db_column='key', on_delete=django.db.models.deletion.PROTECT, primary_key=True, related_name='hgmd_join', serialize=False, to='clickhouse_search.annotationssnvindel')),
                 ('accession', clickhouse_backend.models.StringField()),
                 ('classification', clickhouse_backend.models.Enum8Field(choices=[(0, 'DM'), (1, 'DM?'), (2, 'DP'), (3, 'DFP'), (4, 'FP'), (5, 'R')])),
             ],
