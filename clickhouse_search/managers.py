@@ -127,20 +127,14 @@ class SearchQuerySet(QuerySet):
 
 class BaseAnnotationsQuerySet(SearchQuerySet):
 
-    TRANSCRIPT_CONSEQUENCE_FIELD = 'sorted_transcript_consequences'
-    SORTED_GENE_CONSEQUENCE_FIELD = 'sorted_gene_consequences'
+    TRANSCRIPT_FIELD = 'sorted_transcript_consequences'
     GENOTYPE_GENE_CONSEQUENCE_FIELD = 'genotype_gene_consequences'
     GENE_CONSEQUENCE_FIELD = 'gene_consequences'
     FILTERED_CONSEQUENCE_FIELD = 'filtered_transcript_consequences'
-    TRANSCRIPT_FIELDS = [TRANSCRIPT_CONSEQUENCE_FIELD, SORTED_GENE_CONSEQUENCE_FIELD]
 
     ENTRY_FIELDS = ['familyGuids', 'genotypes']
 
     SELECTED_GENE_FIELD = 'selectedGeneId'
-
-    @property
-    def transcript_field(self):
-        return next(field for field in self.TRANSCRIPT_FIELDS if hasattr(self.model, field))
 
     @property
     def annotation_values(self):
@@ -148,24 +142,11 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
         population_fields = [*self.model.POPULATION_FIELDS]
         self._get_seqr_pop_expressions(seqr_pops, population_fields)
 
-        annotations = {
+        return {
             **{key: Value(value) for key, value in self.model.ANNOTATION_CONSTANTS.items()},
             **{field.db_column: F(field.name) for field in self.model._meta.local_fields if field.db_column and field.name != field.db_column},
             'populations': TupleConcat(F('populations'), Tuple(*seqr_pops), output_field=NamedTupleField(population_fields)),
         }
-
-        if self.hgmd_join_model:
-            annotations['hgmd'] = self._pathogenicity_tuple(self.hgmd_join_model, 'hgmd_join', rename_fields={'classification': 'class'})
-
-        if not hasattr(self.model, 'SORTED_TRANSCRIPT_CONSQUENCES_FIELDS'):
-            annotations['transcripts'] = annotations.pop(getattr(self.model, self.transcript_field).field.db_column)
-            if self.transcript_field == self.TRANSCRIPT_CONSEQUENCE_FIELD:
-                annotations.update({
-                    'mainTranscriptId': F('sorted_transcript_consequences__0__transcriptId'),
-                    'selectedMainTranscriptId': Value(None, output_field=models.StringField(null=True)),
-                })
-
-        return annotations
 
     def _get_seqr_pop_expressions(self, seqr_pops, population_fields):
         if self.gt_stats_dict is None:
@@ -204,7 +185,7 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
     def annotation_fields(self):
         return [
             field.name for field in self.model._meta.local_fields
-            if (field.db_column or field.name) not in self.annotation_values and field.name not in self.TRANSCRIPT_FIELDS
+            if (field.db_column or field.name) not in self.annotation_values and field.name != self.TRANSCRIPT_FIELD
         ]
 
     @property
@@ -342,8 +323,6 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
         return results
 
     def _conditional_selected_transcript_values(self, query, prefix=''):
-        if not hasattr(self.model, self.TRANSCRIPT_CONSEQUENCE_FIELD):
-            return {}
         consequence_field = next((
             field for field in [self.FILTERED_CONSEQUENCE_FIELD, self.GENE_CONSEQUENCE_FIELD] if query.has_annotation(field)
         ), None)
@@ -500,16 +479,16 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
     def _alphamissense_q(self, value, require_score):
         if not ('alphamissensePathogenicity' in self.transcript_fields and value):
             return None
-        q = Q(**{f'{self.transcript_field}__array_exists': {'alphamissensePathogenicity': (value, '{value} <= {field}')}})
+        q = Q(**{f'{self.TRANSCRIPT_FIELD}__array_exists': {'alphamissensePathogenicity': (value, '{value} <= {field}')}})
         if not require_score:
-            q |= Q(**{f'{self.transcript_field}__array_all': {'alphamissensePathogenicity': (None, 'isNull({field})')}})
+            q |= Q(**{f'{self.TRANSCRIPT_FIELD}__array_all': {'alphamissensePathogenicity': (None, 'isNull({field})')}})
         return q
 
     def filter_annotations(self, results, annotations=None, pathogenicity=None, exclude=None, genes=None, intervals=None, exclude_locations=False, padded_interval_end=None,  **kwargs):
-        transcript_field = self.transcript_field
+        transcript_field = self.TRANSCRIPT_FIELD
         if self.model.GENOTYPE_OVERRIDE_FIELDS:
             results = results.annotate(**{
-                self.GENOTYPE_GENE_CONSEQUENCE_FIELD: ArrayFilter(self.SORTED_GENE_CONSEQUENCE_FIELD, conditions=[{
+                self.GENOTYPE_GENE_CONSEQUENCE_FIELD: ArrayFilter(self.TRANSCRIPT_FIELD, conditions=[{
                     'geneId': (None, 'has(sample_geneIds, {field})'),
                 }]),
             })
@@ -694,7 +673,7 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
         return {f'clinvar__5__{array_func}': conflicting_filter, 'clinvar__5__not_empty': True, 'clinvar_key__isnull': False}
 
     def explode_gene_id(self, gene_id_key):
-        consequence_field = self.GENE_CONSEQUENCE_FIELD if self.has_annotation(self.GENE_CONSEQUENCE_FIELD) else self.transcript_field
+        consequence_field = self.GENE_CONSEQUENCE_FIELD if self.has_annotation(self.GENE_CONSEQUENCE_FIELD) else self.TRANSCRIPT_FIELD
         results = self.annotate(
             selectedGeneId=ArrayJoin(ArrayDistinct(ArrayMap(consequence_field, mapped_expression='x.geneId')), output_field=models.StringField())
         )
@@ -713,11 +692,36 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
 
 
 class AnnotationsQuerySet(BaseAnnotationsQuerySet):
-    pass
+
+    @property
+    def annotation_values(self):
+        annotations = super().annotation_values
+
+        if self.hgmd_join_model:
+            annotations['hgmd'] = self._pathogenicity_tuple(self.hgmd_join_model, 'hgmd_join', rename_fields={'classification': 'class'})
+
+        if not hasattr(self.model, 'SORTED_TRANSCRIPT_CONSQUENCES_FIELDS'):
+            annotations.update({
+                'transcripts':  annotations.pop(getattr(self.model, self.TRANSCRIPT_FIELD).field.db_column),
+                'mainTranscriptId': F('sorted_transcript_consequences__0__transcriptId'),
+                'selectedMainTranscriptId': Value(None, output_field=models.StringField(null=True)),
+            })
+
+        return annotations
 
 
 class SvAnnotationsQuerySet(BaseAnnotationsQuerySet):
-    pass
+    TRANSCRIPT_FIELD = 'sorted_gene_consequences'
+
+    @property
+    def annotation_values(self):
+        annotations = super().annotation_values
+        annotations['transcripts'] = annotations.pop(getattr(self.model, self.TRANSCRIPT_FIELD).field.db_column)
+        return annotations
+
+    def _conditional_selected_transcript_values(self, *args, **kwargs):
+        return  {}
+
 
 class BaseEntriesManager(SearchQuerySet):
     GENOTYPE_LOOKUP = {
