@@ -11,7 +11,6 @@ from clickhouse_search.backend.functions import Array, ArrayConcat, ArrayDistinc
     ArrayIntersect, ArrayJoin, ArrayMap, ArraySort, ArraySymmetricDifference, CrossJoin, GroupArray, GroupArrayArray, \
     GroupArrayIntersect, If, MapLookup, NullIf, Plus, SubqueryJoin, SubqueryTable, Tuple, TupleConcat
 from clickhouse_search.models.postgres_dicts import AffectedDict, SexDict
-from seqr.models import Sample
 from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFECTED, UNAFFECTED, MALE_SEXES, \
     X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, SCREEN_KEY, UTR_ANNOTATOR_KEY, \
     EXTENDED_SPLICE_KEY, MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY, CLINVAR_KEY, HGMD_KEY, NEW_SV_FIELD, \
@@ -27,13 +26,6 @@ class SearchQuerySet(QuerySet):
     @property
     def table_basename(self):
         return self.model._meta.db_table.rsplit('/', 1)[0]
-
-    @property
-    def clinvar_field_prefix(self):
-        return 'clinvar_join'
-
-    def _clinvar_tuple(self):
-        return self._pathogenicity_tuple(self.clinvar_join_model, self.clinvar_field_prefix)
 
     @staticmethod
     def _pathogenicity_tuple(model, field_prefix, **kwargs):
@@ -341,7 +333,7 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
     def join_clinvar(self, keys):
         results = self
         if self.clinvar_join_model:
-            results = results.annotate(clinvar=self._clinvar_tuple())
+            results = results.annotate(clinvar=self._pathogenicity_tuple(self.clinvar_join_model, self.clinvar_field_prefix))
             # Due to django modeling, adding a clinvar annotation will add a join to the entries table and then to clinvar
             # Manipulating the underlying join removes the entry join entirely
             entry_table = f'{self.table_basename}/entries'
@@ -1249,10 +1241,6 @@ class BaseEntriesManager(SearchQuerySet):
 
 class EntriesManager(BaseEntriesManager):
 
-    @property
-    def clinvar_join_model(self):
-        return self.model.clinvar_join
-
     @staticmethod
     def _clinvar_range_q(path_range):
         return Q(clinvar_join__pathogenicity__range=path_range)
@@ -1288,7 +1276,7 @@ class EntriesManager(BaseEntriesManager):
     def _join_annotations(self, entries):
         entries = entries.annotate(
             clinvar_key=F('clinvar_join__key'),
-            clinvar=self._clinvar_tuple(), # TODO
+            clinvar=self._pathogenicity_tuple(self.model.clinvar_join, 'clinvar_join'),
         )
         return super()._join_annotations(entries)
 
