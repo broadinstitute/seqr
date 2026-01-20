@@ -82,7 +82,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'GRCh37/SNV_INDEL/reference_data/eigen/all_variants_mv',
-                'to_table': 'EigenAllVariants',
+                'to_table': 'EigenAllVariantsGRCh37SnvIndel',
                 'source_sql': '',
                 'source_url': 'https://storage.googleapis.com/seqr-reference-data/v3.1/GRCh37/eigen/1.1.parquet/*.parquet',
                 'column_selects': {'score': 'Eigen_phred', 'variantId': 'variant_id'},
@@ -102,7 +102,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'GRCh38/SNV_INDEL/reference_data/eigen/all_variants_mv',
-                'to_table': 'EigenAllVariants',
+                'to_table': 'EigenAllVariantsSnvIndel',
                 'source_sql': '',
                 'source_url': 'https://storage.googleapis.com/seqr-reference-data/v3.1/GRCh38/eigen/1.1.parquet/*.parquet',
                 'column_selects': {'score': 'Eigen_phred', 'variantId': 'variant_id'},
