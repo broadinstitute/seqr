@@ -2,8 +2,10 @@ from clickhouse_backend import models
 from django.db import connections
 from django.db.models import Func
 
-MATERIALIZED_VIEW_META_FIELDS = ['to_table', 'source_table', 'source_sql', 'column_selects', 'refreshable']
-DICTIONARY_META_FIELDS = ['layout', 'lifetime_max', 'postgres_query', 'postgres_db']
+MATERIALIZED_VIEW_META_FIELDS = [
+    'to_table', 'source_table', 'source_sql', 'source_url', 'source_url_template', 'column_selects', 'refreshable', 'create_empty',
+]
+DICTIONARY_META_FIELDS = ['layout', 'lifetime_max', 'postgres_query', 'postgres_db', 'clickhouse_query_template']
 
 
 class FixtureLoadableClickhouseModel(models.ClickhouseModel):
