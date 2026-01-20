@@ -1280,13 +1280,13 @@ class EntriesManager(BaseEntriesManager):
         )
         return super()._join_annotations(entries)
 
-    def filter_locus(self, require_any_gene=False, parsed_variant_ids=None, intervals=None, genes=None, **kwargs):
+    def filter_locus(self, *args, require_any_gene=False, parsed_variant_ids=None, intervals=None, genes=None, **kwargs):
         if parsed_variant_ids:
             # although technically redundant, the interval query is applied to the entries table before join and reduces the join size,
             # while the full variant_id filter is applied to the annotation table after the join
             intervals = [{'chrom': chrom, 'start': pos, 'end': pos} for chrom, pos, _, _ in parsed_variant_ids]
 
-        entries = super().filter_locus(intervals=intervals, genes=genes, **kwargs)
+        entries = super().filter_locus(*args, intervals=intervals, genes=genes, **kwargs)
 
         if hasattr(self.model, 'is_annotated_in_any_gene') and (require_any_gene or (genes and not intervals)):
             entries = entries.filter(is_annotated_in_any_gene=Value(True))
@@ -1354,7 +1354,7 @@ class SvEntriesManager(BaseEntriesManager):
 
         return entries
 
-    def filter_locus(self, exclude_locations=False, should_filter_interval=False, intervals=None, genes=None, **kwargs):
+    def filter_locus(self, *args, exclude_locations=False, should_filter_interval=False, intervals=None, genes=None, **kwargs):
         # SV interval filtering occurs after joining on annotations to correctly incorporate end position
         if exclude_locations:
             intervals = None
@@ -1366,7 +1366,7 @@ class SvEntriesManager(BaseEntriesManager):
             intervals = [{'chrom': chrom, 'start': MIN_POS, 'end': MAX_POS} for chrom in chromosomes]
 
         entries = super().filter_locus(
-            exclude_locations=exclude_locations, should_filter_interval=should_filter_interval,
+            *args, exclude_locations=exclude_locations, should_filter_interval=should_filter_interval,
             intervals=intervals, genes=genes, **kwargs,
         )
 
