@@ -5,7 +5,7 @@ from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocks
 from clickhouse_search.backend.fields import Enum8Field, NestedField, UInt32FieldDeltaCodecField, UInt64FieldDeltaCodecField, NamedTupleField, MaterializedUInt8Field
 from clickhouse_search.backend.functions import ArrayDistinct, ArrayFlatten, ArrayMin, ArrayMax
 from clickhouse_search.backend.table_models import Dictionary, FixtureLoadableClickhouseModel
-from clickhouse_search.managers import EntriesManager, AnnotationsQuerySet
+from clickhouse_search.managers import EntriesManager, SvEntriesManager, SvAnnotationsQuerySet, AnnotationsQuerySet
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample
 from seqr.utils.search.constants import SPLICE_AI_FIELD
@@ -90,6 +90,8 @@ class BaseAnnotationsSvGcnv(BaseAnnotations):
     sv_type = Enum8Field(db_column='svType', return_int=False, choices=SV_TYPES)
     predictions = NamedTupleField(PREDICTION_FIELDS)
     sorted_gene_consequences = NestedField(SORTED_GENE_CONSQUENCES_FIELDS, db_column='sortedGeneConsequences', group_by_key='geneId')
+
+    objects = SvAnnotationsQuerySet.as_manager()
 
     class Meta:
         abstract = True
@@ -500,6 +502,8 @@ class EntriesSv(BaseEntries):
         ('prevNumAlt', models.Enum8Field(null=True, blank=True, choices=[(0, 'REF'), (1, 'HET'), (2, 'HOM')])),
     ]
 
+    objects = SvEntriesManager.as_manager()
+
     # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
     key = ForeignKey('AnnotationsSv', db_column='key', primary_key=True, on_delete=CASCADE)
     calls = models.ArrayField(NamedTupleField(CALL_FIELDS))
@@ -528,6 +532,8 @@ class EntriesGcnv(BaseEntries):
     # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
     key = ForeignKey('AnnotationsGcnv', db_column='key', primary_key=True, on_delete=CASCADE)
     calls = models.ArrayField(NamedTupleField(CALL_FIELDS))
+
+    objects = SvEntriesManager.as_manager()
 
     class Meta(BaseEntries.Meta):
         db_table = 'GRCh38/GCNV/entries'

@@ -140,7 +140,7 @@ class SearchQuerySet(QuerySet):
         ]
 
 
-class AnnotationsQuerySet(SearchQuerySet):
+class BaseAnnotationsQuerySet(SearchQuerySet):
 
     TRANSCRIPT_CONSEQUENCE_FIELD = 'sorted_transcript_consequences'
     SORTED_GENE_CONSEQUENCE_FIELD = 'sorted_gene_consequences'
@@ -727,7 +727,14 @@ class AnnotationsQuerySet(SearchQuerySet):
         return field in self.query.annotations
 
 
-class EntriesManager(SearchQuerySet):
+class AnnotationsQuerySet(BaseAnnotationsQuerySet):
+    pass
+
+
+class SvAnnotationsQuerySet(BaseAnnotationsQuerySet):
+    pass
+
+class BaseEntriesManager(SearchQuerySet):
     GENOTYPE_LOOKUP = {
         REF_REF: [0],
         REF_ALT: [1],
@@ -1316,3 +1323,10 @@ class EntriesManager(SearchQuerySet):
                 entries = entries.annotate(hom=hom_expression)
                 entries = entries.filter(hom__lte=hh)
         return entries
+
+
+class EntriesManager(BaseEntriesManager):
+    pass
+
+class SvEntriesManager(BaseEntriesManager):
+    pass
