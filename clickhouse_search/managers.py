@@ -246,8 +246,8 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
 
     def _get_join_query_values(self, query, alias, conditional_selects):
         query_select = query.annotation_values
-        for select_func in (conditional_selects or []):
-            query_select.update(select_func(query, prefix=f'{alias}_'))
+        for select_func_name in (conditional_selects or []):
+            query_select.update(getattr(query, select_func_name)(query, prefix=f'{alias}_'))
         annotation_fields = query.annotation_fields
         return query.values(
             **{f'{alias}_{field}': F(field) for field in annotation_fields if field not in query_select},
@@ -305,20 +305,19 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
         primary_q = primary_q.explode_gene_id(primary_gene_field)
         secondary_q = secondary_q.explode_gene_id(secondary_gene_field)
 
-        conditional_fields = lambda query, **kwargs: {
-            field: F(field) for field in [self.SELECTED_GENE_FIELD, 'clinvar', 'family_carriers', 'carriers', 'has_hom_alt', 'no_hom_alt_families', 'familyGenotypes'] + self.ENTRY_FIELDS
-            if field in query.query.annotations
-        }
-
         results = self.cross_join(
             query=primary_q, alias='primary', join_query=secondary_q, join_alias='secondary',
-            conditional_selects=[
-                conditional_fields, self._conditional_selects,
-            ],
+            conditional_selects=['_comp_het_conditional_fields', '_conditional_selects'],
         )
         return results.filter(
             **{primary_gene_field: F(secondary_gene_field)}
         ).exclude(primary_variantId=F('secondary_variantId'))
+
+    def _comp_het_conditional_fields(self, query, prefix=''):
+        return {
+            field: F(field) for field in [self.SELECTED_GENE_FIELD, 'clinvar', 'family_carriers', 'carriers', 'has_hom_alt', 'no_hom_alt_families', 'familyGenotypes'] + self.ENTRY_FIELDS
+            if field in query.query.annotations
+        }
 
     def filter_variant_ids(self, **kwargs):
         return self
