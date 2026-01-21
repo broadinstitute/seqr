@@ -420,7 +420,8 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
             genes = None
         results = self._filter_locations(results, genes, intervals, exclude_locations=exclude_locations, **kwargs)
 
-        filter_qs, transcript_filters = self._parse_annotation_filters(annotations, pathogenicity) if (annotations or pathogenicity) else ([], [])
+        filter_qs, transcript_filters = self._parse_annotation_filters(annotations) if annotations else ([], [])
+        filter_qs += self._pathogenicity_filters(pathogenicity)
 
         if not (filter_qs or transcript_filters):
             if any(val for key, val in (annotations or {}).items() if key != NEW_SV_FIELD) or any(val for val in (pathogenicity or {}).values()):
@@ -469,6 +470,9 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
             end = min(end + offset_pos, MAX_POS)
         return Q(xpos__range=(get_xpos(chrom, start), get_xpos(chrom, end)))
 
+    def _pathogenicity_filters(self, pathogenicity):
+        return []
+
     TRANSCRIPT_FIELD_FILTERS = {
         UTR_ANNOTATOR_KEY: ('fiveutrConsequence', 'hasAny({value}, [{field}])'),
         SV_CONSEQUENCES_FIELD: ('majorConsequence', 'hasAny({value}, [{field}])'),
@@ -485,7 +489,7 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
         'mitomap_pathogenic': ('mitomap_pathogenic', lambda value, _: ('{field}', value)),
     }
 
-    def _parse_annotation_filters(self, annotations, pathogenicity):
+    def _parse_annotation_filters(self, annotations):
         # TODO clean up
         filter_qs = []
         filters_by_field = {}
@@ -611,8 +615,8 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
 
         return annotations
 
-    def _parse_annotation_filters(self, annotations, pathogenicity):
-        filter_qs, transcript_filters = super()._parse_annotation_filters(annotations, pathogenicity)
+    def _pathogenicity_filters(self, pathogenicity):
+        filter_qs = []
 
         hgmd_filter = (pathogenicity or {}).get(HGMD_KEY)
         if hgmd_filter and self.hgmd_join_model:
@@ -622,7 +626,7 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
         if clinvar_q is not None:
             filter_qs.append(clinvar_q)
 
-        return filter_qs, transcript_filters
+        return filter_qs
 
     def _parse_in_silico_qs(self, in_silico, require_score):
         in_silico_qs, in_silico_missing_qs = super()._parse_in_silico_qs(in_silico, require_score)
