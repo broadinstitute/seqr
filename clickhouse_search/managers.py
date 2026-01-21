@@ -128,7 +128,6 @@ class SearchQuerySet(QuerySet):
 class BaseAnnotationsQuerySet(SearchQuerySet):
 
     TRANSCRIPT_FIELD = 'sorted_transcript_consequences'
-    GENOTYPE_GENE_CONSEQUENCE_FIELD = 'genotype_gene_consequences'
     GENE_CONSEQUENCE_FIELD = 'gene_consequences'
     FILTERED_CONSEQUENCE_FIELD = 'filtered_transcript_consequences'
 
@@ -415,45 +414,13 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
         except ValueError:
             return Q(**{score_column: value})
 
-    def filter_annotations(self, results, annotations=None, pathogenicity=None, exclude=None, genes=None, intervals=None, exclude_locations=False, padded_interval_end=None,  **kwargs):
-        transcript_field = self.TRANSCRIPT_FIELD
-        if self.model.GENOTYPE_OVERRIDE_FIELDS:
-            results = results.annotate(**{
-                self.GENOTYPE_GENE_CONSEQUENCE_FIELD: ArrayFilter(self.TRANSCRIPT_FIELD, conditions=[{
-                    'geneId': (None, 'has(sample_geneIds, {field})'),
-                }]),
-            })
-            transcript_field = self.GENOTYPE_GENE_CONSEQUENCE_FIELD
-        interval_qs = [self._interval_query(**interval) for interval in intervals or []]
+    def filter_annotations(self, results, annotations=None, pathogenicity=None, genes=None, intervals=None, exclude_locations=False, **kwargs):
         if exclude_locations and genes:
-            interval_qs += [self._interval_query(**interval) for interval in self._format_gene_intervals(genes)]
+            intervals = self._format_gene_intervals(genes)
             genes = None
-        if genes:
-            results = results.annotate(**{
-                self.GENE_CONSEQUENCE_FIELD: ArrayFilter(transcript_field, conditions=[{
-                    'geneId': (sorted(genes.keys()), 'has({value}, {field})'),
-                }]),
-            })
-            gene_q = Q(gene_consequences__not_empty=True)
-            for interval_q in interval_qs:
-                gene_q |= interval_q
-            results = results.filter(gene_q)
-        elif (interval_qs or padded_interval_end) and hasattr(self.model, 'end'):
-            if padded_interval_end:
-                end, padding = padded_interval_end
-                interval_qs = [Q(end__range=(end - padding, end + padding))]
-            interval_q = interval_qs[0]
-            for q in interval_qs[1:]:
-                interval_q |= q
-            filter_func = results.exclude if exclude_locations else results.filter
-            results = filter_func(interval_q)
+        results = self._filter_locations(results, genes, intervals, exclude_locations=exclude_locations, **kwargs)
 
         filter_qs, transcript_filters = self._parse_annotation_filters(annotations, pathogenicity) if (annotations or pathogenicity) else ([], [])
-
-        if self.has_annotation(CLINVAR_KEY):
-            exclude_clinvar_q = self._clinvar_filter_q(exclude)
-            if exclude_clinvar_q is not None:
-                results = results.exclude(exclude_clinvar_q)
 
         if not (filter_qs or transcript_filters):
             if any(val for key, val in (annotations or {}).items() if key != NEW_SV_FIELD) or any(val for val in (pathogenicity or {}).values()):
@@ -469,7 +436,7 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
             filter_q = Q(passes_annotation=True)
 
         if transcript_filters:
-            consequence_field = self.GENE_CONSEQUENCE_FIELD if genes else transcript_field
+            consequence_field = self.GENE_CONSEQUENCE_FIELD if genes else self.TRANSCRIPT_FIELD
             results = results.annotate(**{
                 self.FILTERED_CONSEQUENCE_FIELD: ArrayFilter(consequence_field, conditions=transcript_filters),
             })
@@ -481,19 +448,26 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
 
         return results.filter(filter_q)
 
+    def _filter_locations(self, results, genes, intervals, **kwargs):
+        if genes:
+            results = results.annotate(**{
+                self.GENE_CONSEQUENCE_FIELD: ArrayFilter(self.TRANSCRIPT_FIELD, conditions=[{
+                    'geneId': (sorted(genes.keys()), 'has({value}, {field})'),
+                }]),
+            })
+            gene_q = Q(gene_consequences__not_empty=True)
+            for interval in (intervals or []):
+                gene_q |= self._interval_query(**interval)
+            results = results.filter(gene_q)
+
+        return results
+
     def _interval_query(self, chrom, start, end, offset=None, **kwargs):
         if offset:
             offset_pos = int((end - start) * offset)
             start = max(start - offset_pos, MIN_POS)
             end = min(end + offset_pos, MAX_POS)
-        q = Q(xpos__range=(get_xpos(chrom, start), get_xpos(chrom, end)))
-        if hasattr(self.model, 'end_chrom'):
-            q |= Q(end_chrom__isnull=True, chrom=chrom, end__range=(start, end))
-            q |= Q(end_chrom=chrom, end__range=(start, end))
-        elif hasattr(self.model, 'end'):
-            q |= Q(chrom=chrom, end__range=(start, end))
-            q |= Q(chrom=chrom, pos__lte=start, end__gte=end)
-        return q
+        return Q(xpos__range=(get_xpos(chrom, start), get_xpos(chrom, end)))
 
     TRANSCRIPT_FIELD_FILTERS = {
         UTR_ANNOTATOR_KEY: ('fiveutrConsequence', 'hasAny({value}, [{field}])'),
@@ -512,6 +486,7 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
     }
 
     def _parse_annotation_filters(self, annotations, pathogenicity):
+        # TODO clean up
         filter_qs = []
         filters_by_field = {}
         allowed_consequences = []
@@ -675,6 +650,15 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
 
         return results
 
+    def filter_annotations(self, results, exclude=None, **kwargs):
+        results = super().filter_annotations(results, **kwargs)
+
+        exclude_clinvar_q = self._clinvar_filter_q(exclude)
+        if exclude_clinvar_q is not None:
+            results = results.exclude(exclude_clinvar_q)
+
+        return results
+
     def join_clinvar(self, keys):
         results = self.annotate(
             clinvar=self._pathogenicity_tuple(self.entry_model.clinvar_join, f'{self.entry_field}__clinvar_join')
@@ -689,6 +673,7 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
 
 class SvAnnotationsQuerySet(BaseAnnotationsQuerySet):
     TRANSCRIPT_FIELD = 'sorted_gene_consequences'
+    GENOTYPE_GENE_CONSEQUENCE_FIELD = 'genotype_gene_consequences'
 
     @property
     def annotation_values(self):
@@ -735,6 +720,46 @@ class SvAnnotationsQuerySet(BaseAnnotationsQuerySet):
             'transcripts': F(query.GENOTYPE_GENE_CONSEQUENCE_FIELD),
             **{col: F(f'sample_{col}') for col in genotype_override_fields if col != 'geneIds'},
         }
+
+    def filter_annotations(self, results, **kwargs):
+        if self.model.GENOTYPE_OVERRIDE_FIELDS:
+            results = results.annotate(**{
+                self.GENOTYPE_GENE_CONSEQUENCE_FIELD: ArrayFilter(self.TRANSCRIPT_FIELD, conditions=[{
+                    'geneId': (None, 'has(sample_geneIds, {field})'),
+                }]),
+            })
+            self.TRANSCRIPT_FIELD = self.GENOTYPE_GENE_CONSEQUENCE_FIELD
+
+        return super().filter_annotations(results, **kwargs)
+
+    def _filter_locations(self, results, genes, intervals, exclude_locations=False, padded_interval_end=None, **kwargs):
+        results = super()._filter_locations(results, genes, intervals, **kwargs)
+
+        if genes:
+            intervals = None
+        if padded_interval_end:
+            end, padding = padded_interval_end
+            interval_qs = [Q(end__range=(end - padding, end + padding))]
+        else:
+            interval_qs = [self._interval_query(**interval) for interval in (intervals or [])]
+
+        if not interval_qs:
+            return results
+
+        interval_q = interval_qs[0]
+        for q in interval_qs[1:]:
+            interval_q |= q
+        filter_func = results.exclude if exclude_locations else results.filter
+        return filter_func(interval_q)
+
+    def _interval_query(self, chrom, start, end, **kwargs):
+        start_range_q = super()._interval_query(chrom, start, end, **kwargs)
+        end_range_q = Q(chrom=chrom, end__range=(start, end))
+        contains_q = Q(chrom=chrom, pos__lte=start, end__gte=end)
+        if hasattr(self.model, 'end_chrom'):
+            end_range_q &= Q(end_chrom__isnull=True)
+            contains_q  &= Q(end_chrom__isnull=True)
+        return start_range_q | end_range_q | contains_q
 
 
 class BaseEntriesManager(SearchQuerySet):
