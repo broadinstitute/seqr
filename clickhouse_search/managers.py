@@ -292,9 +292,7 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
     def result_values(self, skip_entry_fields=False):
         override_model_annotations = {'populations', 'pos', 'end', 'hgmd'}
         values = {**self.annotation_values}
-        values.update(self._conditional_selected_transcript_values(self))
-        if not skip_entry_fields:
-            values.update(self.genotype_override_values(self))
+        values.update(self._conditional_selects(self, skip_entry_fields=skip_entry_fields))
         initial_values = {k: v for k, v in  values.items() if k not in override_model_annotations}
 
         fields = [*self.annotation_fields] + [
@@ -322,7 +320,7 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
             results.query.alias_refcount[entry_table] = 0
         return results
 
-    def _conditional_selected_transcript_values(self, query, prefix=''):
+    def _conditional_selects(self, query, prefix='', **kwargs):
         consequence_field = next((
             field for field in [self.FILTERED_CONSEQUENCE_FIELD, self.GENE_CONSEQUENCE_FIELD] if query.has_annotation(field)
         ), None)
@@ -336,28 +334,6 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
         if consequence_field == self.FILTERED_CONSEQUENCE_FIELD:
             return {'selectedTranscript':  F(f'{self.FILTERED_CONSEQUENCE_FIELD}__0')}
         return {self.SELECTED_GENE_FIELD: F(f'{self.GENE_CONSEQUENCE_FIELD}__0__geneId')}
-
-    def genotype_override_values(self, query, prefix=''):
-        genotype_override_fields = query.model.GENOTYPE_OVERRIDE_FIELDS
-        if not genotype_override_fields:
-            return {}
-
-        genotype_field = next(field for field in ['genotypes', 'familyGenotypes'] if field in query.query.annotations)
-        index_map = {
-            field: i+1 for i, (field, _) in enumerate(query.query.annotations[genotype_field].output_field.base_fields)
-        }
-        override_field_map = {field: col for col, (field, _) in genotype_override_fields.items()}
-        genotype_fields = [
-            self._genotype_override_expression(index_map[field], override_field_map[field], index_map['cn'])
-            if field in override_field_map else (f'ifNull(x.{index_map[field]}, 0)' if field == 'numAlt' else f'x.{index_map[field]}')
-            for (field, _) in query.query.annotations[genotype_field].output_field.base_fields
-        ]
-
-        return {
-            genotype_field: ArrayMap(genotype_field, mapped_expression=f"tuple({', '.join(genotype_fields)})"),
-            'transcripts': F(query.GENOTYPE_GENE_CONSEQUENCE_FIELD),
-            **{col: F(f'sample_{col}') for col in genotype_override_fields if col != 'geneIds'},
-        }
 
     def search_compound_hets(self, primary_q, secondary_q):
         primary_gene_field = f'primary_{self.SELECTED_GENE_FIELD}'
@@ -373,7 +349,7 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
         results = self.cross_join(
             query=primary_q, alias='primary', join_query=secondary_q, join_alias='secondary',
             conditional_selects=[
-                conditional_fields, self._conditional_selected_transcript_values, self.genotype_override_values,
+                conditional_fields, self._conditional_selects,
             ],
         )
         return results.filter(
@@ -719,9 +695,29 @@ class SvAnnotationsQuerySet(BaseAnnotationsQuerySet):
         annotations['transcripts'] = annotations.pop(getattr(self.model, self.TRANSCRIPT_FIELD).field.db_column)
         return annotations
 
-    #  TODO clean up, only used in other class
-    def _conditional_selected_transcript_values(self, *args, **kwargs):
-        return  {}
+    def _conditional_selects(self,  query, prefix='', skip_entry_fields=False):
+        genotype_override_fields = query.model.GENOTYPE_OVERRIDE_FIELDS
+        if skip_entry_fields or not genotype_override_fields:
+            return {}
+
+        genotype_field = next(field for field in ['genotypes', 'familyGenotypes'] if field in query.query.annotations)
+        index_map = {
+            field: i + 1 for i, (field, _) in
+            enumerate(query.query.annotations[genotype_field].output_field.base_fields)
+        }
+        override_field_map = {field: col for col, (field, _) in genotype_override_fields.items()}
+        genotype_fields = [
+            self._genotype_override_expression(index_map[field], override_field_map[field], index_map['cn'])
+            if field in override_field_map else (
+                f'ifNull(x.{index_map[field]}, 0)' if field == 'numAlt' else f'x.{index_map[field]}')
+            for (field, _) in query.query.annotations[genotype_field].output_field.base_fields
+        ]
+
+        return {
+            genotype_field: ArrayMap(genotype_field, mapped_expression=f"tuple({', '.join(genotype_fields)})"),
+            'transcripts': F(query.GENOTYPE_GENE_CONSEQUENCE_FIELD),
+            **{col: F(f'sample_{col}') for col in genotype_override_fields if col != 'geneIds'},
+        }
 
 
 class BaseEntriesManager(SearchQuerySet):
