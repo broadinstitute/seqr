@@ -17,8 +17,8 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='EigenAllVariantsGRCh37SnvIndel',
             fields=[
-                ('score', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
                 ('variant_id', clickhouse_backend.models.StringField(db_column='variantId', primary_key=True, serialize=False)),
+                ('score', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
             ],
             options={
                 'db_table': 'GRCh37/SNV_INDEL/reference_data/eigen/all_variants',
@@ -32,8 +32,8 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='EigenAllVariantsSnvIndel',
             fields=[
-                ('score', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
                 ('variant_id', clickhouse_backend.models.StringField(db_column='variantId', primary_key=True, serialize=False)),
+                ('score', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
             ],
             options={
                 'db_table': 'GRCh38/SNV_INDEL/reference_data/eigen/all_variants',
@@ -47,8 +47,8 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='EigenSeqrVariantsGRCh37SnvIndel',
             fields=[
-                ('score', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
                 ('key', models.OneToOneField(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='clickhouse_search.annotationsgrch37snvindel')),
+                ('score', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
             ],
             options={
                 'db_table': 'GRCh37/SNV_INDEL/reference_data/eigen/seqr_variants',
@@ -62,8 +62,8 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='EigenSeqrVariantsSnvIndel',
             fields=[
-                ('score', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
                 ('key', models.OneToOneField(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='clickhouse_search.annotationssnvindel')),
+                ('score', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
             ],
             options={
                 'db_table': 'GRCh38/SNV_INDEL/reference_data/eigen/seqr_variants',
