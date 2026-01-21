@@ -1751,7 +1751,7 @@ class Absplice2AllVariants(models.ClickhouseModel):
         )
 
 class Absplice2SeqrVariants(models.ClickhouseModel):
-    key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
     score = models.DecimalField(max_digits=9, decimal_places=5)
 
     class Meta:
@@ -1805,7 +1805,7 @@ class PromoterAIAllVariants(models.ClickhouseModel):
         )
 
 class PromoterAISeqrVariants(models.ClickhouseModel):
-    key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
     gene_id = models.StringField(db_column='geneId')
     score = models.DecimalField(max_digits=9, decimal_places=5)
 
@@ -1850,3 +1850,113 @@ class PromoterAIDict(Dictionary):
         db_table = 'GRCh38/SNV_INDEL/reference_data/promoterAI'
         source_table = 'PromoterAISeqrVariants'
         clickhouse_query_template = 'SELECT key, max(score) from {table} GROUP BY key'
+
+class BaseEigen(models.ClickhouseModel):
+    score = models.DecimalField(max_digits=9, decimal_places=5)
+
+    class Meta:
+        abstract = True
+
+class EigenAllVariantsGRCh37SnvIndel(BaseEigen):
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
+
+    class Meta:
+        db_table = 'GRCh37/SNV_INDEL/reference_data/eigen/all_variants'
+        engine = models.MergeTree(
+            primary_key=('variant_id'),
+            order_by=('variant_id'),
+        )
+
+class EigenAllVariantsSnvIndel(BaseEigen):
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
+
+    class Meta:
+        db_table = 'GRCh38/SNV_INDEL/reference_data/eigen/all_variants'
+        engine = models.MergeTree(
+            primary_key=('variant_id'),
+            order_by=('variant_id'),
+        )
+
+class EigenSeqrVariantsGRCh37SnvIndel(BaseEigen):
+    key = OneToOneField('AnnotationsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+
+    class Meta:
+        db_table = 'GRCh37/SNV_INDEL/reference_data/eigen/seqr_variants'
+        engine = models.MergeTree(
+            primary_key=('key'),
+            order_by=('key'),
+        )
+
+class EigenSeqrVariantsSnvIndel(BaseEigen):
+    key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+
+    class Meta:
+        db_table = 'GRCh38/SNV_INDEL/reference_data/eigen/seqr_variants'
+        engine = models.MergeTree(
+            primary_key=('key'),
+            order_by=('key'),
+        )
+
+class EigenGRCh37AllMv(RefreshableMaterializedView):
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
+    score = models.StringField(null=True, blank=True)
+
+    class Meta(RefreshableMaterializedViewMeta):
+        db_table = 'GRCh37/SNV_INDEL/reference_data/eigen/all_variants_mv'
+        to_table = 'EigenAllVariantsGRCh37SnvIndel'
+        source_url = 'https://storage.googleapis.com/seqr-reference-data/v3.1/GRCh37/eigen/1.1.parquet/*.parquet'
+        column_selects = {
+            'variantId': "variant_id",
+            'score': 'Eigen_phred'
+        }
+        create_empty = True
+
+class EigenGRCh37Mv(RefreshableMaterializedView):
+    key = models.UInt32Field(primary_key=True)
+    score = models.DecimalField(max_digits=9, decimal_places=5)
+
+    class Meta(ReferenceDataMvMeta):
+        db_table = 'GRCh37/SNV_INDEL/reference_data/eigen/all_variants_to_seqr_variants_mv'
+        to_table = 'EigenSeqrVariantsGRCh37SnvIndel'
+        source_table = 'EigenAllVariantsGRCh37SnvIndel'
+
+class EigenGRCh37Dict(Dictionary):
+    key = DictKeyForeignKey('EntriesGRCh37SnvIndel', related_name='eigen')
+    score = models.DecimalField(max_digits=9, decimal_places=5)
+
+    class Meta(ReferenceDataDictMeta):
+        db_table = 'GRCh37/SNV_INDEL/reference_data/eigen'
+        source_table = 'EigenSeqrVariantsGRCh37SnvIndel'
+        layout = 'FLAT(MAX_ARRAY_SIZE 200000000)'
+
+class EigenAllMv(RefreshableMaterializedView):
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
+    score = models.StringField(null=True, blank=True)
+
+    class Meta(RefreshableMaterializedViewMeta):
+        db_table = 'GRCh38/SNV_INDEL/reference_data/eigen/all_variants_mv'
+        to_table = 'EigenAllVariantsSnvIndel'
+        source_url = 'https://storage.googleapis.com/seqr-reference-data/v3.1/GRCh38/eigen/1.1.parquet/*.parquet'
+        column_selects = {
+            'variantId': "variant_id",
+            'score': 'Eigen_phred'
+        }
+        create_empty = True
+
+class EigenMv(RefreshableMaterializedView):
+    key = models.UInt32Field(primary_key=True)
+    score = models.DecimalField(max_digits=9, decimal_places=5)
+
+    class Meta(ReferenceDataMvMeta):
+        db_table = 'GRCh38/SNV_INDEL/reference_data/eigen/all_variants_to_seqr_variants_mv'
+        to_table = 'EigenSeqrVariantsSnvIndel'
+        source_table = 'EigenAllVariantsSnvIndel'
+
+class EigenDict(Dictionary):
+    key = DictKeyForeignKey('EntriesSnvIndel', related_name='eigen')
+    score = models.DecimalField(max_digits=9, decimal_places=5)
+
+    class Meta(ReferenceDataDictMeta):
+        db_table = 'GRCh38/SNV_INDEL/reference_data/eigen'
+        source_table = 'EigenSeqrVariantsSnvIndel'
+        layout = 'FLAT(MAX_ARRAY_SIZE 1000000000)'
