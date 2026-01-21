@@ -332,7 +332,7 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
 
     def _filter_frequency(self, results, freqs=None, pathogenicity=None, **kwargs):
         frequencies =  freqs or {}
-        clinvar_override_q = self._clinvar_path_q(pathogenicity) if self.has_annotation(CLINVAR_KEY) else None
+        clinvar_override_q = self._clinvar_path_q(pathogenicity)
 
         for population, pop_filter in frequencies.items():
             pop_subfields = self.populations.get(population)
@@ -375,28 +375,36 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
     def _filter_in_silico(self, results, in_silico=None, **kwargs):
         in_silico = in_silico or {}
         require_score = in_silico.get('requireScore', False)
+        in_silico_qs, in_silico_missing_qs = self._parse_in_silico_qs(in_silico, require_score)
 
-        in_silico_q = None
-        if in_silico.get('alphamissense'):
-            in_silico_q = self._alphamissense_q(in_silico['alphamissense'], require_score)
+        if not in_silico_qs:
+            if require_score and any(val for val in (in_silico or {}).values()):
+                #  In silico filters restrict search to other dataset types
+                results = results.none()
+            return results
 
+        in_silico_q = in_silico_qs[0]
+        for score_q in in_silico_qs[1:]:
+            in_silico_q |= score_q
+
+        if in_silico_missing_qs:
+            missing_q = in_silico_missing_qs[0]
+            for score_q in in_silico_missing_qs[1:]:
+                missing_q &= score_q
+            in_silico_q |= missing_q
+
+        return results.filter(in_silico_q)
+
+    def _parse_in_silico_qs(self, in_silico, require_score):
+        in_silico_qs = []
+        in_silico_missing_qs = []
         for score, value in in_silico.items():
-            score_q = self._get_in_silico_score_q(score, value)
-            if in_silico_q is None:
-                in_silico_q = score_q
-            elif score_q:
-                in_silico_q |= score_q
+            if value and score in self.prediction_fields:
+                in_silico_qs.append(self._get_in_silico_score_q(score, value))
+                if not require_score:
+                    in_silico_missing_qs.append(Q(**{f'predictions__{score}__isnull': True}))
 
-        if in_silico_q and not require_score:
-            in_silico_q |= Q(**{f'predictions__{score}__isnull': True for score in in_silico.keys() if score in self.prediction_fields})
-
-        if in_silico_q:
-            results = results.filter(in_silico_q)
-        elif any(val for val in (in_silico or {}).values()) and in_silico.get('requireScore'):
-            #  In silico filters restrict search to other dataset types
-            results = results.none()
-
-        return results
+        return in_silico_qs, in_silico_missing_qs
 
     def _get_in_silico_score_q(self, score, value):
         if not (score in self.prediction_fields and value):
@@ -406,14 +414,6 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
             return Q(**{f'{score_column}__gte': float(value)})
         except ValueError:
             return Q(**{score_column: value})
-
-    def _alphamissense_q(self, value, require_score):
-        if not ('alphamissensePathogenicity' in self.transcript_fields and value):
-            return None
-        q = Q(**{f'{self.TRANSCRIPT_FIELD}__array_exists': {'alphamissensePathogenicity': (value, '{value} <= {field}')}})
-        if not require_score:
-            q |= Q(**{f'{self.TRANSCRIPT_FIELD}__array_all': {'alphamissensePathogenicity': (None, 'isNull({field})')}})
-        return q
 
     def filter_annotations(self, results, annotations=None, pathogenicity=None, exclude=None, genes=None, intervals=None, exclude_locations=False, padded_interval_end=None,  **kwargs):
         transcript_field = self.TRANSCRIPT_FIELD
@@ -649,6 +649,20 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
 
         return filter_qs, transcript_filters
 
+    def _parse_in_silico_qs(self, in_silico, require_score):
+        in_silico_qs, in_silico_missing_qs = super()._parse_in_silico_qs(in_silico, require_score)
+
+        if (in_silico or {}).get('alphamissense') and 'alphamissensePathogenicity' in self.transcript_fields:
+            in_silico_qs.append(Q(sorted_transcript_consequences__array_exists={
+                'alphamissensePathogenicity': (in_silico['alphamissense'], '{value} <= {field}'),
+            }))
+            if not require_score:
+                in_silico_missing_qs.append(Q(sorted_transcript_consequences__array_all={
+                    'alphamissensePathogenicity': (None, 'isNull({field})'),
+                }))
+
+        return in_silico_qs, in_silico_missing_qs
+
     def filter_variant_ids(self, parsed_variant_ids=None, rs_ids=None, **kwargs):
         results = self
         if parsed_variant_ids:
@@ -681,6 +695,10 @@ class SvAnnotationsQuerySet(BaseAnnotationsQuerySet):
         annotations = super().annotation_values
         annotations['transcripts'] = annotations.pop(getattr(self.model, self.TRANSCRIPT_FIELD).field.db_column)
         return annotations
+
+    @classmethod
+    def _clinvar_path_q(cls, pathogenicity):
+        return None
 
     @staticmethod
     def _genotype_override_expression(index, col, cn_index):
