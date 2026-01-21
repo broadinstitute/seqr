@@ -122,7 +122,6 @@ class BaseAnnotationsSvGcnv(BaseAnnotations):
         abstract = True
 
 class BaseVariantsSvGcnv(BaseAnnotationsSvGcnv):
-    pass
 
     class Meta:
         abstract = True
