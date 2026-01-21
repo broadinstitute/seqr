@@ -204,6 +204,7 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
     def genome_version(self):
         return self.model.ANNOTATION_CONSTANTS['genomeVersion']
 
+
     def subquery_join(self, subquery, join_key='key'):
         join_field = next(field for field in subquery.model._meta.fields if field.name == join_key)
 
