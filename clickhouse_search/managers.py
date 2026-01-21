@@ -654,8 +654,8 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
 
         return results
 
-    def filter_annotations(self, results, exclude=None, **kwargs):
-        results = super().filter_annotations(results, **kwargs)
+    def filter_annotations(self, *args, exclude=None, **kwargs):
+        results = super().filter_annotations(*args, **kwargs)
 
         exclude_clinvar_q = self._clinvar_filter_q(exclude)
         if exclude_clinvar_q is not None:
@@ -725,7 +725,7 @@ class SvAnnotationsQuerySet(BaseAnnotationsQuerySet):
             **{col: F(f'sample_{col}') for col in genotype_override_fields if col != 'geneIds'},
         }
 
-    def filter_annotations(self, results, **kwargs):
+    def filter_annotations(self, results, *args, **kwargs):
         if self.model.GENOTYPE_OVERRIDE_FIELDS:
             results = results.annotate(**{
                 self.GENOTYPE_GENE_CONSEQUENCE_FIELD: ArrayFilter(self.TRANSCRIPT_FIELD, conditions=[{
@@ -734,7 +734,7 @@ class SvAnnotationsQuerySet(BaseAnnotationsQuerySet):
             })
             self.TRANSCRIPT_FIELD = self.GENOTYPE_GENE_CONSEQUENCE_FIELD
 
-        return super().filter_annotations(results, **kwargs)
+        return super().filter_annotations(results, *args, **kwargs)
 
     def _filter_locations(self, results, genes, intervals, exclude_locations=False, padded_interval_end=None, **kwargs):
         results = super()._filter_locations(results, genes, intervals, **kwargs)
@@ -756,8 +756,8 @@ class SvAnnotationsQuerySet(BaseAnnotationsQuerySet):
         filter_func = results.exclude if exclude_locations else results.filter
         return filter_func(interval_q)
 
-    def _interval_query(self, chrom, start, end, **kwargs):
-        start_range_q = super()._interval_query(chrom, start, end, **kwargs)
+    def _interval_query(self, chrom, start, end, *args, **kwargs):
+        start_range_q = super()._interval_query(chrom, start, end, *args, **kwargs)
         end_range_q = Q(chrom=chrom, end__range=(start, end))
         contains_q = Q(chrom=chrom, pos__lte=start, end__gte=end)
         if hasattr(self.model, 'end_chrom'):
