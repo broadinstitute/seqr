@@ -264,7 +264,7 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
     def result_values(self, skip_entry_fields=False):
         override_model_annotations = {'populations', 'pos', 'end', 'hgmd'}
         values = {**self.annotation_values}
-        values.update(self._conditional_selects(self, skip_entry_fields=skip_entry_fields))
+        values.update(self.conditional_selects(self, skip_entry_fields=skip_entry_fields))
         initial_values = {k: v for k, v in  values.items() if k not in override_model_annotations}
 
         fields = [*self.annotation_fields] + [
@@ -284,7 +284,7 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
     def join_clinvar(self, keys):
         return self
 
-    def _conditional_selects(self, query, prefix='', **kwargs):
+    def conditional_selects(self, query, prefix='', **kwargs):
         consequence_field = next((
             field for field in [self.FILTERED_CONSEQUENCE_FIELD, self.GENE_CONSEQUENCE_FIELD] if query.has_annotation(field)
         ), None)
@@ -307,7 +307,7 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
 
         results = self.cross_join(
             query=primary_q, alias='primary', join_query=secondary_q, join_alias='secondary',
-            conditional_selects=['_comp_het_conditional_fields', '_conditional_selects'],
+            conditional_selects=['_comp_het_conditional_fields', 'conditional_selects'],
         )
         return results.filter(
             **{primary_gene_field: F(secondary_gene_field)}
@@ -711,7 +711,7 @@ class SvAnnotationsQuerySet(BaseAnnotationsQuerySet):
             expression = f'if(isNull(x.{cn_index}), null, {expression})'
         return expression
 
-    def _conditional_selects(self, query, prefix='', skip_entry_fields=False, **kwargs):
+    def conditional_selects(self, query, prefix='', skip_entry_fields=False, **kwargs):
         genotype_override_fields = query.model.GENOTYPE_OVERRIDE_FIELDS
         if skip_entry_fields or not genotype_override_fields:
             return {}
