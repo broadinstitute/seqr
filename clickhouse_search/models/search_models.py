@@ -768,6 +768,16 @@ class TranscriptsGRCh37SnvIndel(models.ClickhouseModel):
         db_table = 'GRCh37/SNV_INDEL/transcripts'
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh37/SNV_INDEL/transcripts', primary_key='key', flatten_nested=0)
 
+class VariantDetailsGRCh37SnvIndel(models.ClickhouseModel):
+    key = OneToOneField('VariantsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+    rsid = models.StringField(null=True, blank=True)
+    caid = models.StringField(db_column='CAID', null=True, blank=True)
+    transcripts = NestedField(BaseVariants.TRANSCRIPTS_FIELDS, group_by_key='geneId')
+
+    class Meta:
+        db_table = 'GRCh37/SNV_INDEL/variants/details'
+        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh37/SNV_INDEL/variants/details', primary_key='key', flatten_nested=0)
+
 class TranscriptsSnvIndel(models.ClickhouseModel):
     key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
     transcripts = NestedField(sorted([
@@ -819,6 +829,16 @@ class TranscriptsSnvIndel(models.ClickhouseModel):
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/transcripts'
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SNV_INDEL/transcripts', primary_key='key', flatten_nested=0)
+
+class VariantDetailsSnvIndel(models.ClickhouseModel):
+    key = OneToOneField('VariantsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+    rsid = models.StringField(null=True, blank=True)
+    caid = models.StringField(db_column='CAID', null=True, blank=True)
+    transcripts = NestedField(BaseVariants.TRANSCRIPTS_FIELDS, group_by_key='geneId')
+
+    class Meta:
+        db_table = 'GRCh38/SNV_INDEL/variants/details'
+        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SNV_INDEL/variants/details', primary_key='key', flatten_nested=0)
 
 class BaseKeyLookup(FixtureLoadableClickhouseModel):
     variant_id = models.StringField(db_column='variantId', primary_key=True)
