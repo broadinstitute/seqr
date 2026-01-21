@@ -320,17 +320,8 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
             **{primary_gene_field: F(secondary_gene_field)}
         ).exclude(primary_variantId=F('secondary_variantId'))
 
-    def filter_variant_ids(self, parsed_variant_ids=None, rs_ids=None, **kwargs):
-        results = self
-        if parsed_variant_ids:
-            results = results.filter(
-                variant_id__in=[f'{chrom}-{pos}-{ref}-{alt}' for chrom, pos, ref, alt in parsed_variant_ids]
-            )
-
-        if rs_ids:
-            results = results.filter(rsid__in=rs_ids)
-
-        return results
+    def filter_variant_ids(self, **kwargs):
+        return self
 
     @property
     def populations(self):
@@ -658,6 +649,18 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
 
         return filter_qs, transcript_filters
 
+    def filter_variant_ids(self, parsed_variant_ids=None, rs_ids=None, **kwargs):
+        results = self
+        if parsed_variant_ids:
+            results = results.filter(
+                variant_id__in=[f'{chrom}-{pos}-{ref}-{alt}' for chrom, pos, ref, alt in parsed_variant_ids]
+            )
+
+        if rs_ids:
+            results = results.filter(rsid__in=rs_ids)
+
+        return results
+
     def join_clinvar(self, keys):
         results = self.annotate(
             clinvar=self._pathogenicity_tuple(self.entry_model.clinvar_join, f'{self.entry_field}__clinvar_join')
@@ -679,7 +682,6 @@ class SvAnnotationsQuerySet(BaseAnnotationsQuerySet):
         annotations['transcripts'] = annotations.pop(getattr(self.model, self.TRANSCRIPT_FIELD).field.db_column)
         return annotations
 
-
     @staticmethod
     def _genotype_override_expression(index, col, cn_index):
         expressions = [f'x.{index}', f'sample_{col}']
@@ -692,7 +694,7 @@ class SvAnnotationsQuerySet(BaseAnnotationsQuerySet):
             expression = f'if(isNull(x.{cn_index}), null, {expression})'
         return expression
 
-    def _conditional_selects(self,  query, prefix='', skip_entry_fields=False):
+    def _conditional_selects(self, query, prefix='', skip_entry_fields=False, **kwargs):
         genotype_override_fields = query.model.GENOTYPE_OVERRIDE_FIELDS
         if skip_entry_fields or not genotype_override_fields:
             return {}
