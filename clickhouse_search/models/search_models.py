@@ -34,6 +34,7 @@ class BaseAnnotations(FixtureLoadableClickhouseModel):
     xpos = models.UInt64Field()
     pos = models.UInt32Field()
     variant_id = models.StringField(db_column='variantId')
+    lifted_over_pos = models.UInt32Field(db_column='liftedOverPos', null=True, blank=True)
 
     objects = AnnotationsQuerySet.as_manager()
 
@@ -63,7 +64,6 @@ class BaseVariants(FixtureLoadableClickhouseModel):
 
     key = UInt32FieldDeltaCodecField(primary_key=True)
     variant_id = models.StringField(db_column='variantId')
-    lifted_over_pos = models.UInt32Field(db_column='liftedOverPos', null=True, blank=True)
 
     class Meta:
         abstract = True
@@ -123,6 +123,9 @@ class BaseAnnotationsSvGcnv(BaseAnnotations):
 
 class BaseVariantsSvGcnv(BaseAnnotationsSvGcnv):
     pass
+
+    class Meta:
+        abstract = True
 
 
 class BaseAnnotationsGRCh37SnvIndel(BaseAnnotationsMitoSnvIndel):
@@ -270,7 +273,6 @@ class BaseAnnotationsSnvIndel(BaseAnnotationsGRCh37SnvIndel):
         abstract = True
 
 class BaseVariantsSnvIndel(BaseVariantsGRCh37SnvIndel):
-    ANNOTATION_CONSTANTS = BaseVariants.ANNOTATION_CONSTANTS
     SORTED_TRANSCRIPT_CONSQUENCES_FIELDS = sorted([
         ('alphamissensePathogenicity', models.DecimalField(null=True, blank=True, max_digits=9, decimal_places=5)),
         ('extendedIntronicSpliceRegionVariant', models.BoolField(null=True, blank=True)),
@@ -372,12 +374,6 @@ class BaseAnnotationsMito(BaseAnnotationsMitoSnvIndel):
         abstract = True
 
 class BaseVariantsMito(BaseVariants):
-    ANNOTATION_CONSTANTS = {
-        'chrom': 'M',
-        'liftedOverChrom': 'MT',
-        **BaseVariants.ANNOTATION_CONSTANTS,
-    }
-
     sorted_transcript_consequences = NestedField(BaseVariants.TRANSCRIPTS_FIELDS, db_column='sortedTranscriptConsequences', group_by_key='geneId')
 
     class Meta:
