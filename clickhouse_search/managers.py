@@ -169,18 +169,6 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
 
         return seqr_pops
 
-    @staticmethod
-    def _genotype_override_expression(index, col, cn_index):
-        expressions = [f'x.{index}', f'sample_{col}']
-        is_gene_ids = col == 'geneIds'
-        if is_gene_ids:
-            expressions = [f'arraySort({expr})::String' for expr in expressions]
-        expression = f'nullIf({", ".join(expressions)})'
-        if is_gene_ids:
-            # If entire genotype is missing, geneIds should be null instead of empty
-            expression = f'if(isNull(x.{cn_index}), null, {expression})'
-        return expression
-
     @property
     def annotation_fields(self):
         return [
@@ -194,14 +182,11 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
 
     @property
     def transcript_fields(self):
+        # TODO clean up after other helpers have been split
         transcript_field_configs = next(getattr(self.model, field) for field in [
             'SORTED_TRANSCRIPT_CONSQUENCES_FIELDS', 'TRANSCRIPTS_FIELDS', 'SORTED_GENE_CONSQUENCES_FIELDS',
         ] if hasattr(self.model, field))
         return set(dict(transcript_field_configs).keys())
-
-    @property
-    def single_sample_type(self):
-        return getattr(self.entry_model, 'SAMPLE_TYPE', None)
 
     @property
     def entry_field(self):
@@ -212,25 +197,12 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
          return getattr(self.model, f'{self.entry_field}_set').rel.related_model
 
     @property
-    def hgmd_join_model(self):
-        return getattr(self.model, 'hgmd_join', None)
-
-    @property
-    def clinvar_join_model(self):
-        return getattr(self.entry_model, 'clinvar_join', None)
-
-    @property
-    def clinvar_field_prefix(self):
-        return f'{self.entry_field}__clinvar_join'
-
-    @property
     def gt_stats_dict_rel(self):
         return getattr(self.entry_model, 'gt_stats', None)
 
     @property
     def genome_version(self):
         return self.model.ANNOTATION_CONSTANTS['genomeVersion']
-
 
     def subquery_join(self, subquery, join_key='key'):
         join_field = next(field for field in subquery.model._meta.fields if field.name == join_key)
@@ -310,15 +282,7 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
         return self._annotate_seqr_pop_expression(self)
 
     def join_clinvar(self, keys):
-        results = self
-        if self.clinvar_join_model:
-            results = results.annotate(clinvar=self._pathogenicity_tuple(self.clinvar_join_model, self.clinvar_field_prefix))
-            # Due to django modeling, adding a clinvar annotation will add a join to the entries table and then to clinvar
-            # Manipulating the underlying join removes the entry join entirely
-            entry_table = f'{self.table_basename}/entries'
-            results.query.alias_map[f'{self.table_basename}/reference_data/clinvar'].parent_alias = results.query.alias_map[entry_table].parent_alias
-            results.query.alias_refcount[entry_table] = 0
-        return results
+        return self
 
     def _conditional_selects(self, query, prefix='', **kwargs):
         consequence_field = next((
@@ -582,15 +546,6 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
             elif field != NEW_SV_FIELD:
                 allowed_consequences += value
 
-        hgmd_filter = (pathogenicity or {}).get(HGMD_KEY)
-        if hgmd_filter and self.hgmd_join_model:
-            filter_qs.append(self._hgmd_filter_q(hgmd_filter))
-
-        if self.has_annotation(CLINVAR_KEY):
-            clinvar_q = self._clinvar_filter_q(pathogenicity)
-            if clinvar_q is not None:
-                filter_qs.append(clinvar_q)
-
         filter_qs += [
             Q(**{lookup_template.format(field=field): value})
             for field, (lookup_template, value) in filters_by_field.items() if hasattr(self.model, field)
@@ -599,6 +554,7 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
             {field: value} for field, value in transcript_field_filters.items() if field in self.transcript_fields
         ]
 
+        #  TODO still needs refactoring
         if allowed_consequences and 'consequenceTerms' in self.transcript_fields:
             transcript_filters += self._allowed_consequences_filters(allowed_consequences)
 
@@ -670,6 +626,10 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
 class AnnotationsQuerySet(BaseAnnotationsQuerySet):
 
     @property
+    def hgmd_join_model(self):
+        return getattr(self.model, 'hgmd_join', None)
+
+    @property
     def annotation_values(self):
         annotations = super().annotation_values
 
@@ -685,6 +645,30 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
 
         return annotations
 
+    def _parse_annotation_filters(self, annotations, pathogenicity):
+        filter_qs, transcript_filters = super()._parse_annotation_filters(annotations, pathogenicity)
+
+        hgmd_filter = (pathogenicity or {}).get(HGMD_KEY)
+        if hgmd_filter and self.hgmd_join_model:
+            filter_qs.append(self._hgmd_filter_q(hgmd_filter))
+
+        clinvar_q = self._clinvar_filter_q(pathogenicity)
+        if clinvar_q is not None:
+            filter_qs.append(clinvar_q)
+
+        return filter_qs, transcript_filters
+
+    def join_clinvar(self, keys):
+        results = self.annotate(
+            clinvar=self._pathogenicity_tuple(self.entry_model.clinvar_join, f'{self.entry_field}__clinvar_join')
+        )
+        # Due to django modeling, adding a clinvar annotation will add a join to the entries table and then to clinvar
+        # Manipulating the underlying join removes the entry join entirely
+        entry_table = f'{self.table_basename}/entries'
+        results.query.alias_map[f'{self.table_basename}/reference_data/clinvar'].parent_alias = results.query.alias_map[entry_table].parent_alias
+        results.query.alias_refcount[entry_table] = 0
+        return results
+
 
 class SvAnnotationsQuerySet(BaseAnnotationsQuerySet):
     TRANSCRIPT_FIELD = 'sorted_gene_consequences'
@@ -694,6 +678,19 @@ class SvAnnotationsQuerySet(BaseAnnotationsQuerySet):
         annotations = super().annotation_values
         annotations['transcripts'] = annotations.pop(getattr(self.model, self.TRANSCRIPT_FIELD).field.db_column)
         return annotations
+
+
+    @staticmethod
+    def _genotype_override_expression(index, col, cn_index):
+        expressions = [f'x.{index}', f'sample_{col}']
+        is_gene_ids = col == 'geneIds'
+        if is_gene_ids:
+            expressions = [f'arraySort({expr})::String' for expr in expressions]
+        expression = f'nullIf({", ".join(expressions)})'
+        if is_gene_ids:
+            # If entire genotype is missing, geneIds should be null instead of empty
+            expression = f'if(isNull(x.{cn_index}), null, {expression})'
+        return expression
 
     def _conditional_selects(self,  query, prefix='', skip_entry_fields=False):
         genotype_override_fields = query.model.GENOTYPE_OVERRIDE_FIELDS
