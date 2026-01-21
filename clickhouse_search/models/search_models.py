@@ -34,7 +34,6 @@ class BaseAnnotations(FixtureLoadableClickhouseModel):
     xpos = models.UInt64Field()
     pos = models.UInt32Field()
     variant_id = models.StringField(db_column='variantId')
-    lifted_over_pos = models.UInt32Field(db_column='liftedOverPos', null=True, blank=True)
 
     objects = AnnotationsQuerySet.as_manager()
 
@@ -42,12 +41,6 @@ class BaseAnnotations(FixtureLoadableClickhouseModel):
         abstract = True
 
 class BaseVariants(FixtureLoadableClickhouseModel):
-    ANNOTATION_CONSTANTS = {
-        'genomeVersion': GENOME_VERSION_GRCh38,
-        'liftedOverGenomeVersion': GENOME_VERSION_GRCh37,
-    }
-    SV_TYPE_FILTER_PREFIX = ''
-    GENOTYPE_OVERRIDE_FIELDS = {}
     CONSEQUENCE_TERMS = [(1, 'transcript_ablation'), (2, 'splice_acceptor_variant'), (3, 'splice_donor_variant'), (4, 'stop_gained'), (5, 'frameshift_variant'), (6, 'stop_lost'), (7, 'start_lost'), (8, 'inframe_insertion'), (9, 'inframe_deletion'), (10, 'missense_variant'), (11, 'protein_altering_variant'), (12, 'splice_donor_5th_base_variant'), (13, 'splice_region_variant'), (14, 'splice_donor_region_variant'), (15, 'splice_polypyrimidine_tract_variant'), (16, 'incomplete_terminal_codon_variant'), (17, 'start_retained_variant'), (18, 'stop_retained_variant'), (19, 'synonymous_variant'), (20, 'coding_sequence_variant'), (21, 'mature_miRNA_variant'), (22, '5_prime_UTR_variant'), (23, '3_prime_UTR_variant'), (24, 'non_coding_transcript_exon_variant'), (25, 'intron_variant'), (26, 'NMD_transcript_variant'), (27, 'non_coding_transcript_variant'), (28, 'coding_transcript_variant'), (29, 'upstream_gene_variant'), (30, 'downstream_gene_variant'), (31, 'intergenic_variant'), (32, 'sequence_variant')]
     MUTATION_TASTER_PREDICTIONS = [(0, 'D'), (1, 'A'), (2, 'N'), (3, 'P')]
     TRANSCRIPTS_FIELDS = [
@@ -71,8 +64,6 @@ class BaseVariants(FixtureLoadableClickhouseModel):
     key = UInt32FieldDeltaCodecField(primary_key=True)
     variant_id = models.StringField(db_column='variantId')
     lifted_over_pos = models.UInt32Field(db_column='liftedOverPos', null=True, blank=True)
-
-    objects = AnnotationsQuerySet.as_manager()
 
     class Meta:
         abstract = True
@@ -130,32 +121,9 @@ class BaseAnnotationsSvGcnv(BaseAnnotations):
     class Meta:
         abstract = True
 
-class BaseVariantsSvGcnv(BaseVariants):
-    SV_CONSEQUENCE_RANKS = [(1,'LOF'), (2,'INTRAGENIC_EXON_DUP'), (3,'PARTIAL_EXON_DUP'), (4,'COPY_GAIN'), (5,'DUP_PARTIAL'), (6,'MSV_EXON_OVERLAP'), (7,'INV_SPAN'), (8,'UTR'), (9,'PROMOTER'), (10,'TSS_DUP'), (11,'BREAKEND_EXONIC'), (12,'INTRONIC'), (13,'NEAREST_TSS'),]
-    SV_TYPES =  [(1,'gCNV_DEL'), (2,'gCNV_DUP'), (3,'BND'), (4,'CPX'), (5,'CTX'), (6,'DEL'), (7,'DUP'), (8,'INS'), (9,'INV'), (10,'CNV')]
-    PREDICTION_FIELDS = [
-        ('strvctvre', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
-    ]
-    SORTED_GENE_CONSQUENCES_FIELDS = [
-        ('geneId', models.StringField(null=True, blank=True)),
-        ('majorConsequence', models.Enum8Field(null=True, blank=True, return_int=False, choices=SV_CONSEQUENCE_RANKS)),
-    ]
+class BaseVariantsSvGcnv(BaseAnnotationsSvGcnv):
+    pass
 
-    xpos = models.UInt64Field()
-    pos = models.UInt32Field()
-    chrom = Enum8Field(return_int=False, choices=CHROMOSOME_CHOICES)
-    end = models.UInt32Field()
-    rg37_locus_end = NamedTupleField([
-        ('contig', models.Enum8Field(return_int=False, choices=CHROMOSOME_CHOICES, null=True, blank=True)),
-        ('position', models.UInt32Field(null=True, blank=True)),
-    ], db_column='rg37LocusEnd', null_if_empty=True)
-    lifted_over_chrom = Enum8Field(db_column='liftedOverChrom', return_int=False, null=True, blank=True, choices=CHROMOSOME_CHOICES)
-    sv_type = Enum8Field(db_column='svType', return_int=False, choices=SV_TYPES)
-    predictions = NamedTupleField(PREDICTION_FIELDS)
-    sorted_gene_consequences = NestedField(SORTED_GENE_CONSQUENCES_FIELDS, db_column='sortedGeneConsequences', group_by_key='geneId')
-
-    class Meta:
-        abstract = True
 
 class BaseAnnotationsGRCh37SnvIndel(BaseAnnotationsMitoSnvIndel):
     ANNOTATION_CONSTANTS = {
@@ -243,7 +211,6 @@ class BaseVariantsGRCh37SnvIndel(BaseVariants):
         ('geneId', models.StringField(null=True, blank=True))
     ]
 
-    lifted_over_chrom = Enum8Field(db_column='liftedOverChrom', return_int=False, null=True, blank=True, choices=CHROMOSOME_CHOICES)
     sorted_transcript_consequences = NestedField(SORTED_TRANSCRIPT_CONSQUENCES_FIELDS, db_column='sortedTranscriptConsequences')
 
     class Meta:
@@ -308,19 +275,19 @@ class BaseVariantsSnvIndel(BaseVariantsGRCh37SnvIndel):
         ('alphamissensePathogenicity', models.DecimalField(null=True, blank=True, max_digits=9, decimal_places=5)),
         ('extendedIntronicSpliceRegionVariant', models.BoolField(null=True, blank=True)),
         ('fiveutrConsequence', models.Enum8Field(null=True, blank=True, return_int=False, choices=[(1, '5_prime_UTR_premature_start_codon_gain_variant'), (2, '5_prime_UTR_premature_start_codon_loss_variant'), (3, '5_prime_UTR_stop_codon_gain_variant'), (4, '5_prime_UTR_stop_codon_loss_variant'), (5, '5_prime_UTR_uORF_frameshift_variant')])),
+        ('hasManeSelect', models.BoolField(null=True, blank=True)),
         *BaseVariantsGRCh37SnvIndel.SORTED_TRANSCRIPT_CONSQUENCES_FIELDS,
+    ])
+    SORTED_MOTIF_FEATURE_CONSEQUENCES_FIELDS = sorted([
+        ('consequenceTerms', models.ArrayField(models.Enum8Field(null=True, blank=True, return_int=False, choices=[(0, 'TFBS_ablation'), (1, 'TFBS_amplification'), (2, 'TF_binding_site_variant'), (3, 'TFBS_fusion'), (4, 'TFBS_translocation')]))),
+    ])
+    SORTED_REGULATORY_FEATURE_CONSEQUENCES_FIELDS = sorted([
+        ('consequenceTerms', models.ArrayField(models.Enum8Field(null=True, blank=True, return_int=False, choices=[(0, 'regulatory_region_ablation'), (1, 'regulatory_region_amplification'), (2, 'regulatory_region_variant'), (3, 'regulatory_region_fusion')]))),
     ])
 
     sorted_transcript_consequences = NestedField(SORTED_TRANSCRIPT_CONSQUENCES_FIELDS, db_column='sortedTranscriptConsequences')
-    sorted_motif_feature_consequences = NestedField([
-        ('consequenceTerms', models.ArrayField(models.Enum8Field(null=True, blank=True, return_int=False, choices=[(0, 'TFBS_ablation'), (1, 'TFBS_amplification'), (2, 'TF_binding_site_variant'), (3, 'TFBS_fusion'), (4, 'TFBS_translocation')]))),
-        ('motifFeatureId', models.StringField(null=True, blank=True)),
-    ], db_column='sortedMotifFeatureConsequences', null_when_empty=True)
-    sorted_regulatory_feature_consequences = NestedField([
-        ('biotype', models.Enum8Field(null=True, blank=True, return_int=False, choices=[(0, 'enhancer'), (1, 'promoter'), (2, 'CTCF_binding_site'), (3, 'TF_binding_site'), (4, 'open_chromatin_region')])),
-        ('consequenceTerms', models.ArrayField(models.Enum8Field(null=True, blank=True, return_int=False, choices=[(0, 'regulatory_region_ablation'), (1, 'regulatory_region_amplification'), (2, 'regulatory_region_variant'), (3, 'regulatory_region_fusion')]))),
-        ('regulatoryFeatureId', models.StringField(null=True, blank=True)),
-    ], db_column='sortedRegulatoryFeatureConsequences', null_when_empty=True)
+    sorted_motif_feature_consequences = NestedField(SORTED_MOTIF_FEATURE_CONSEQUENCES_FIELDS, db_column='sortedMotifFeatureConsequences', null_when_empty=True)
+    sorted_regulatory_feature_consequences = NestedField(SORTED_REGULATORY_FEATURE_CONSEQUENCES_FIELDS, db_column='sortedRegulatoryFeatureConsequences', null_when_empty=True)
 
     class Meta:
         abstract = True
@@ -770,6 +737,8 @@ class TranscriptsGRCh37SnvIndel(models.ClickhouseModel):
 
 class VariantDetailsGRCh37SnvIndel(models.ClickhouseModel):
     key = OneToOneField('VariantsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+    lifted_over_chrom = Enum8Field(db_column='liftedOverChrom', return_int=False, null=True, blank=True, choices=CHROMOSOME_CHOICES)
+    lifted_over_pos = models.UInt32Field(db_column='liftedOverPos', null=True, blank=True)
     rsid = models.StringField(null=True, blank=True)
     caid = models.StringField(db_column='CAID', null=True, blank=True)
     transcripts = NestedField(BaseVariants.TRANSCRIPTS_FIELDS, group_by_key='geneId')
@@ -831,10 +800,23 @@ class TranscriptsSnvIndel(models.ClickhouseModel):
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SNV_INDEL/transcripts', primary_key='key', flatten_nested=0)
 
 class VariantDetailsSnvIndel(models.ClickhouseModel):
+    SORTED_MOTIF_FEATURE_CONSEQUENCES_FIELDS = sorted([
+        ('motifFeatureId', models.StringField(null=True, blank=True)),
+        *BaseVariantsSnvIndel.SORTED_MOTIF_FEATURE_CONSEQUENCES_FIELDS,
+    ])
+    SORTED_REGULATORY_FEATURE_CONSEQUENCES_FIELDS = sorted([
+        ('biotype', models.Enum8Field(null=True, blank=True, return_int=False, choices=[(0, 'enhancer'), (1, 'promoter'), (2, 'CTCF_binding_site'), (3, 'TF_binding_site'), (4, 'open_chromatin_region')])),
+        ('regulatoryFeatureId', models.StringField(null=True, blank=True)),
+        *BaseVariantsSnvIndel.SORTED_REGULATORY_FEATURE_CONSEQUENCES_FIELDS,
+    ])
+
     key = OneToOneField('VariantsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
     rsid = models.StringField(null=True, blank=True)
     caid = models.StringField(db_column='CAID', null=True, blank=True)
     transcripts = NestedField(BaseVariants.TRANSCRIPTS_FIELDS, group_by_key='geneId')
+    sorted_motif_feature_consequences = NestedField(SORTED_MOTIF_FEATURE_CONSEQUENCES_FIELDS, db_column='sortedMotifFeatureConsequences', null_when_empty=True)
+    sorted_regulatory_feature_consequences = NestedField(SORTED_REGULATORY_FEATURE_CONSEQUENCES_FIELDS, db_column='sortedRegulatoryFeatureConsequences', null_when_empty=True)
+
 
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/variants/details'
