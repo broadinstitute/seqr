@@ -719,6 +719,7 @@ class SvAnnotationsQuerySet(BaseAnnotationsQuerySet):
         annotations['transcripts'] = annotations.pop(getattr(self.model, self.TRANSCRIPT_FIELD).field.db_column)
         return annotations
 
+    #  TODO clean up, only used in other class
     def _conditional_selected_transcript_values(self, *args, **kwargs):
         return  {}
 
