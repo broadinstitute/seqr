@@ -5,7 +5,7 @@ from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocks
 from clickhouse_search.backend.fields import Enum8Field, NestedField, UInt32FieldDeltaCodecField, UInt64FieldDeltaCodecField, NamedTupleField, MaterializedUInt8Field
 from clickhouse_search.backend.functions import ArrayDistinct, ArrayFlatten, ArrayMin, ArrayMax
 from clickhouse_search.backend.table_models import Dictionary, FixtureLoadableClickhouseModel
-from clickhouse_search.managers import EntriesManager, AnnotationsQuerySet
+from clickhouse_search.managers import EntriesManager, SvEntriesManager, SvAnnotationsQuerySet, AnnotationsQuerySet
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample
 from seqr.utils.search.constants import SPLICE_AI_FIELD
@@ -90,6 +90,8 @@ class BaseAnnotationsSvGcnv(BaseAnnotations):
     sv_type = Enum8Field(db_column='svType', return_int=False, choices=SV_TYPES)
     predictions = NamedTupleField(PREDICTION_FIELDS)
     sorted_gene_consequences = NestedField(SORTED_GENE_CONSQUENCES_FIELDS, db_column='sortedGeneConsequences', group_by_key='geneId')
+
+    objects = SvAnnotationsQuerySet.as_manager()
 
     class Meta:
         abstract = True
@@ -371,8 +373,6 @@ class AnnotationsDiskGcnv(BaseAnnotationsGcnv):
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/GCNV/annotations', primary_key='key', flatten_nested=0)
 
 class BaseEntries(FixtureLoadableClickhouseModel):
-    MAX_XPOS_FILTER_INTERVALS = 500
-    PREDICTIONS = None
 
     project_guid = models.StringField(low_cardinality=True)
     family_guid = models.StringField()
@@ -478,6 +478,8 @@ class EntriesMito(BaseEntries):
         ('mitoCn', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
         ('contamination', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
     ]
+    # TODO mito
+    PREDICTIONS = {}
 
     # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
     key = ForeignKey('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
@@ -495,7 +497,6 @@ class EntriesMito(BaseEntries):
         )
 
 class EntriesSv(BaseEntries):
-    MAX_XPOS_FILTER_INTERVALS = 0
     SAMPLE_TYPE = Sample.SAMPLE_TYPE_WGS
     CALL_FIELDS = [
         ('sampleId', models.StringField()),
@@ -506,6 +507,8 @@ class EntriesSv(BaseEntries):
         ('prevCall', models.BoolField(null=True, blank=True)),
         ('prevNumAlt', models.Enum8Field(null=True, blank=True, choices=[(0, 'REF'), (1, 'HET'), (2, 'HOM')])),
     ]
+
+    objects = SvEntriesManager.as_manager()
 
     # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
     key = ForeignKey('AnnotationsSv', db_column='key', primary_key=True, on_delete=CASCADE)
@@ -535,6 +538,8 @@ class EntriesGcnv(BaseEntries):
     # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
     key = ForeignKey('AnnotationsGcnv', db_column='key', primary_key=True, on_delete=CASCADE)
     calls = models.ArrayField(NamedTupleField(CALL_FIELDS))
+
+    objects = SvEntriesManager.as_manager()
 
     class Meta(BaseEntries.Meta):
         db_table = 'GRCh38/GCNV/entries'
