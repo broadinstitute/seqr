@@ -800,6 +800,8 @@ class BaseEntriesManager(SearchQuerySet):
         'mitoCn': {},
     }
 
+    MAX_XPOS_FILTER_INTERVALS = 500
+
     @property
     def annotations_model(self):
         return self.model.key.field.related_model
@@ -1243,7 +1245,7 @@ class BaseEntriesManager(SearchQuerySet):
             mapped_expression='x.1', output_field=models.ArrayField(models.StringField()),
         )
 
-    def filter_locus(self, exclude_locations=False, require_gene_filter=False, should_filter_interval=False, intervals=None, genes=None, **kwargs):
+    def filter_locus(self, exclude_locations=False, require_gene_filter=False, intervals=None, genes=None, **kwargs):
         entries = self
 
         if not (genes or intervals):
@@ -1251,8 +1253,7 @@ class BaseEntriesManager(SearchQuerySet):
 
         locus_q = None
         if genes:
-            # TODO clean up
-            should_filter_interval |= (not hasattr(self.model, 'geneId_ids')) or exclude_locations or len(genes) < self.model.MAX_XPOS_FILTER_INTERVALS
+            should_filter_interval = self._can_filter_gene_interval(genes) or exclude_locations
             if should_filter_interval:
                 intervals = self._format_gene_intervals(genes) + (intervals or [])
             if require_gene_filter or (not should_filter_interval):
@@ -1271,6 +1272,9 @@ class BaseEntriesManager(SearchQuerySet):
 
         filter_func = entries.exclude if exclude_locations else entries.filter
         return filter_func(locus_q)
+
+    def _can_filter_gene_interval(self, genes):
+        return (not hasattr(self.model, 'geneId_ids')) or len(genes) < self.MAX_XPOS_FILTER_INTERVALS
 
     def search_padded_interval(self, chrom, pos, padding):
         interval_q = self._interval_query(chrom, start=max(pos - padding, MIN_POS), end=min(pos + padding, MAX_POS))
@@ -1411,26 +1415,28 @@ class SvEntriesManager(BaseEntriesManager):
 
         return entries
 
-    def filter_locus(self, *args, exclude_locations=False, should_filter_interval=False, intervals=None, genes=None, **kwargs):
+    def filter_locus(self, *args, exclude_locations=False, intervals=None, genes=None, **kwargs):
         # SV interval filtering occurs after joining on annotations to correctly incorporate end position
+        can_filter_gene_interval = self._can_filter_gene_interval(genes)
         if exclude_locations:
             intervals = None
         else:
             chromosomes = {i['chrom'] for i in (intervals or [])}
-            if genes and 'geneIds' in self.call_fields:
+            if can_filter_gene_interval:
                 chromosomes.update({gene[f'chromGrch{self.genome_version}'] for gene in genes.values()})
-                should_filter_interval = True
             intervals = [{'chrom': chrom, 'start': MIN_POS, 'end': MAX_POS} for chrom in chromosomes]
 
         entries = super().filter_locus(
-            *args, exclude_locations=exclude_locations, should_filter_interval=should_filter_interval,
-            intervals=intervals, genes=genes, **kwargs,
+            *args, exclude_locations=exclude_locations, intervals=intervals, genes=genes, **kwargs,
         )
 
-        if should_filter_interval:
+        if can_filter_gene_interval and not exclude_locations:
             entries = entries.filter(calls__array_all={'OR': [
                 {'geneIds': (list(genes.keys()), 'hasAny({value}, {field})')},
                 {'gt': (None, 'isNull({field})')},
             ]})
 
         return entries
+
+    def _can_filter_gene_interval(self, genes):
+        return genes and 'geneIds' in self.call_fields

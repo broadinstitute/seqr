@@ -373,7 +373,6 @@ class AnnotationsDiskGcnv(BaseAnnotationsGcnv):
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/GCNV/annotations', primary_key='key', flatten_nested=0)
 
 class BaseEntries(FixtureLoadableClickhouseModel):
-    MAX_XPOS_FILTER_INTERVALS = 500
 
     project_guid = models.StringField(low_cardinality=True)
     family_guid = models.StringField()
@@ -490,7 +489,6 @@ class EntriesMito(BaseEntries):
         )
 
 class EntriesSv(BaseEntries):
-    MAX_XPOS_FILTER_INTERVALS = 0
     SAMPLE_TYPE = Sample.SAMPLE_TYPE_WGS
     CALL_FIELDS = [
         ('sampleId', models.StringField()),
