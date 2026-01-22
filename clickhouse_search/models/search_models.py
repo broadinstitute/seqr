@@ -63,7 +63,6 @@ class BaseVariants(FixtureLoadableClickhouseModel):
     ]
 
     key = UInt32FieldDeltaCodecField(primary_key=True)
-    variant_id = models.StringField(db_column='variantId')
 
     class Meta:
         abstract = True
@@ -721,6 +720,7 @@ class TranscriptsGRCh37SnvIndel(models.ClickhouseModel):
 
 class VariantDetailsGRCh37SnvIndel(models.ClickhouseModel):
     key = OneToOneField('VariantsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+    variant_id = models.StringField(db_column='variantId')
     lifted_over_chrom = Enum8Field(db_column='liftedOverChrom', return_int=False, null=True, blank=True, choices=CHROMOSOME_CHOICES)
     lifted_over_pos = models.UInt32Field(db_column='liftedOverPos', null=True, blank=True)
     rsid = models.StringField(null=True, blank=True)
@@ -795,6 +795,9 @@ class VariantDetailsSnvIndel(models.ClickhouseModel):
     ])
 
     key = OneToOneField('VariantsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+    variant_id = models.StringField(db_column='variantId')
+    lifted_over_chrom = Enum8Field(db_column='liftedOverChrom', return_int=False, null=True, blank=True, choices=CHROMOSOME_CHOICES)
+    lifted_over_pos = models.UInt32Field(db_column='liftedOverPos', null=True, blank=True)
     rsid = models.StringField(null=True, blank=True)
     caid = models.StringField(db_column='CAID', null=True, blank=True)
     transcripts = NestedField(BaseVariants.TRANSCRIPTS_FIELDS, group_by_key='geneId')
