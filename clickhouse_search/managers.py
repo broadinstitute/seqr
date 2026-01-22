@@ -1347,10 +1347,7 @@ class EntriesManager(BaseEntriesManager):
 
         for pred_name, range_dict in self.model.RANGE_PREDICTIONS.items():
             pred_expression = range_dict.dict_get_expression(
-                IntDiv('xpos', 1e9),
-                Cast(Modulo('xpos', 1e9), output_field=models.Int64Field()),
-                field_names=['score'],
-                null_missing=True,
+                IntDiv('xpos', int(1e9)), Modulo('xpos', int(1e9)), field_names=['score'], null_missing=True,
             )
             pred_expressions.append(Tuple(pred_expression))
             all_pred_fields.append((pred_name, pred_expression.output_field))
