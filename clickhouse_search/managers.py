@@ -473,81 +473,8 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
     def _pathogenicity_filters(self, pathogenicity):
         return []
 
-    TRANSCRIPT_FIELD_FILTERS = {
-        UTR_ANNOTATOR_KEY: ('fiveutrConsequence', 'hasAny({value}, [{field}])'),
-        SV_CONSEQUENCES_FIELD: ('majorConsequence', 'hasAny({value}, [{field}])'),
-    }
-    ANNOTATION_FIELD_FILTERS = {
-        SCREEN_KEY: ('screen_region_type',),
-        SV_TYPE_FILTER_FIELD: ('sv_type', lambda value, model: ('{field}__in', [
-            sv_type.replace(model.SV_TYPE_FILTER_PREFIX, '') for sv_type in value
-            if sv_type.startswith(model.SV_TYPE_FILTER_PREFIX)
-        ])),
-        **{field: (f'sorted_{field}_consequences', lambda value, _: ('{field}__array_exists', {
-            'consequenceTerms': (value, 'hasAny({value}, {field})'),
-        })) for field in [MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY]},
-        'mitomap_pathogenic': ('mitomap_pathogenic', lambda value, _: ('{field}', value)),
-    }
-
     def _parse_annotation_filters(self, annotations):
-        # TODO clean up
-        filter_qs = []
-        filters_by_field = {}
-        allowed_consequences = []
-        transcript_field_filters = {}
-        for field, value in (annotations or {}).items():
-            if field in self.TRANSCRIPT_FIELD_FILTERS:
-                filter_field, template = self.TRANSCRIPT_FIELD_FILTERS[field]
-                if value:
-                    transcript_field_filters[filter_field] = (value, template)
-            elif field == EXTENDED_SPLICE_KEY:
-                if EXTENDED_SPLICE_REGION_CONSEQUENCE in value:
-                    transcript_field_filters['extendedIntronicSpliceRegionVariant'] = (1, '{field} = {value}')
-                value = [c for c in value if c != EXTENDED_SPLICE_REGION_CONSEQUENCE]
-                if value:
-                    allowed_consequences += value
-            elif field in self.ANNOTATION_FIELD_FILTERS:
-                filter_field, *format_filter = self.ANNOTATION_FIELD_FILTERS[field]
-                filters_by_field[filter_field] = format_filter[0](value, self.model) if format_filter else ('{field}__in', value)
-            elif field == SPLICE_AI_FIELD:
-                splice_ai_q = self._get_in_silico_score_q(SPLICE_AI_FIELD, value)
-                if splice_ai_q:
-                    filter_qs.append(splice_ai_q)
-            elif field != NEW_SV_FIELD:
-                allowed_consequences += value
-
-        filter_qs += [
-            Q(**{lookup_template.format(field=field): value})
-            for field, (lookup_template, value) in filters_by_field.items() if hasattr(self.model, field)
-        ]
-        transcript_filters = [
-            {field: value} for field, value in transcript_field_filters.items() if field in self.transcript_fields
-        ]
-
-        #  TODO still needs refactoring
-        if allowed_consequences and 'consequenceTerms' in self.transcript_fields:
-            transcript_filters += self._allowed_consequences_filters(allowed_consequences)
-
-        return filter_qs, transcript_filters
-
-    def _allowed_consequences_filters(self, allowed_consequences):
-        csq_filters = []
-        non_canonical_consequences = [c for c in allowed_consequences if not c.endswith('__canonical')]
-        if non_canonical_consequences:
-            csq_filters.append(self._consequence_term_filter(non_canonical_consequences))
-
-        canonical_consequences = [
-            c.replace('__canonical', '') for c in allowed_consequences if c.endswith('__canonical')
-        ]
-        if canonical_consequences and 'canonical' in self.transcript_fields:
-            csq_filters.append(
-                self._consequence_term_filter(canonical_consequences, canonical=(0, '{field} > {value}')),
-            )
-        return csq_filters
-
-    @staticmethod
-    def _consequence_term_filter(consequences, **kwargs):
-        return {'consequenceTerms': (consequences, 'hasAny({value}, {field})'), **kwargs}
+        return [], []
 
     @staticmethod
     def _hgmd_filter_q(hgmd):
@@ -663,6 +590,72 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
 
         return results
 
+    ANNOTATION_FIELD_FILTERS = {
+        SCREEN_KEY: ('screen_region_type', lambda value: ('{field}__in', value)),
+        **{field: (f'sorted_{field}_consequences', lambda value: ('{field}__array_exists', {
+            'consequenceTerms': (value, 'hasAny({value}, {field})'),
+        })) for field in [MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY]},
+        'mitomap_pathogenic': ('mitomap_pathogenic', lambda value: ('{field}', value)),
+    }
+
+    def _parse_annotation_filters(self, annotations):
+        filter_qs = []
+        filters_by_field = {}
+        allowed_consequences = []
+        transcript_field_filters = {}
+        for field, value in annotations.items():
+            if field == UTR_ANNOTATOR_KEY:
+                if value:
+                    transcript_field_filters['fiveutrConsequence'] = (value,  'hasAny({value}, [{field}])')
+            elif field == EXTENDED_SPLICE_KEY:
+                if EXTENDED_SPLICE_REGION_CONSEQUENCE in value:
+                    transcript_field_filters['extendedIntronicSpliceRegionVariant'] = (1, '{field} = {value}')
+                value = [c for c in value if c != EXTENDED_SPLICE_REGION_CONSEQUENCE]
+                if value:
+                    allowed_consequences += value
+            elif field in self.ANNOTATION_FIELD_FILTERS:
+                filter_field, format_filter = self.ANNOTATION_FIELD_FILTERS[field]
+                filters_by_field[filter_field] = format_filter(value)
+            elif field == SPLICE_AI_FIELD:
+                splice_ai_q = self._get_in_silico_score_q(SPLICE_AI_FIELD, value)
+                if splice_ai_q:
+                    filter_qs.append(splice_ai_q)
+            elif field != NEW_SV_FIELD:
+                allowed_consequences += value
+
+        filter_qs += [
+            Q(**{lookup_template.format(field=field): value})
+            for field, (lookup_template, value) in filters_by_field.items() if hasattr(self.model, field)
+        ]
+        transcript_filters = [
+            {field: value} for field, value in transcript_field_filters.items() if field in self.transcript_fields
+        ]
+
+        if allowed_consequences:
+            transcript_filters += self._allowed_consequences_filters(allowed_consequences)
+
+        return filter_qs, transcript_filters
+
+
+    def _allowed_consequences_filters(self, allowed_consequences):
+        csq_filters = []
+        non_canonical_consequences = [c for c in allowed_consequences if not c.endswith('__canonical')]
+        if non_canonical_consequences:
+            csq_filters.append(self._consequence_term_filter(non_canonical_consequences))
+
+        canonical_consequences = [
+            c.replace('__canonical', '') for c in allowed_consequences if c.endswith('__canonical')
+        ]
+        if canonical_consequences:
+            csq_filters.append(
+                self._consequence_term_filter(canonical_consequences, canonical=(0, '{field} > {value}')),
+            )
+        return csq_filters
+
+    @staticmethod
+    def _consequence_term_filter(consequences, **kwargs):
+        return {'consequenceTerms': (consequences, 'hasAny({value}, {field})'), **kwargs}
+
     def join_clinvar(self, keys):
         results = self.annotate(
             clinvar=self._pathogenicity_tuple(self.entry_model.clinvar_join, f'{self.entry_field}__clinvar_join')
@@ -735,6 +728,23 @@ class SvAnnotationsQuerySet(BaseAnnotationsQuerySet):
             self.TRANSCRIPT_FIELD = self.GENOTYPE_GENE_CONSEQUENCE_FIELD
 
         return super().filter_annotations(results, *args, **kwargs)
+
+    def _parse_annotation_filters(self, annotations):
+        filter_qs = []
+        transcript_filters = []
+
+        if annotations.get(SV_CONSEQUENCES_FIELD):
+            transcript_filters.append(
+                {'majorConsequence': (annotations[SV_CONSEQUENCES_FIELD], 'hasAny({value}, [{field}])')}
+            )
+
+        if annotations.get(SV_TYPE_FILTER_FIELD):
+            filter_qs.append(Q(sv_type__in=[
+                sv_type.replace(self.model.SV_TYPE_FILTER_PREFIX, '') for sv_type in annotations[SV_TYPE_FILTER_FIELD]
+                if sv_type.startswith(self.model.SV_TYPE_FILTER_PREFIX)
+            ]))
+
+        return filter_qs, transcript_filters
 
     def _filter_locations(self, results, genes, intervals, exclude_locations=False, padded_interval_end=None, **kwargs):
         results = super()._filter_locations(results, genes, intervals, **kwargs)
