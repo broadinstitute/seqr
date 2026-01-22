@@ -400,8 +400,7 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
             genes = None
         results = self._filter_locations(results, genes, intervals, exclude_locations=exclude_locations, **kwargs)
 
-        filter_qs, transcript_filters = self._parse_annotation_filters(annotations) if annotations else ([], [])
-        filter_qs += self._pathogenicity_filters(pathogenicity)
+        filter_qs, transcript_filters = self._parse_annotation_filters(annotations or {}, pathogenicity) if (annotations or pathogenicity) else ([], [])
 
         if not (filter_qs or transcript_filters):
             if any(val for key, val in (annotations or {}).items() if key != NEW_SV_FIELD) or any(val for val in (pathogenicity or {}).values()):
@@ -450,10 +449,7 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
             end = min(end + offset_pos, MAX_POS)
         return Q(xpos__range=(get_xpos(chrom, start), get_xpos(chrom, end)))
 
-    def _pathogenicity_filters(self, pathogenicity):
-        return []
-
-    def _parse_annotation_filters(self, annotations):
+    def _parse_annotation_filters(self, annotations, pathogenicity):
         return [], []
 
     def explode_gene_id(self, gene_id_key):
@@ -500,19 +496,6 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
             })
 
         return annotations
-
-    def _pathogenicity_filters(self, pathogenicity):
-        filter_qs = []
-
-        hgmd_filter = (pathogenicity or {}).get(HGMD_KEY)
-        if hgmd_filter and self.hgmd_join_model:
-            filter_qs.append(self._hgmd_filter_q(hgmd_filter))
-
-        clinvar_q = self._clinvar_filter_q(pathogenicity)
-        if clinvar_q is not None:
-            filter_qs.append(clinvar_q)
-
-        return filter_qs
 
     @staticmethod
     def _hgmd_filter_q(hgmd):
@@ -582,7 +565,7 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
         'mitomap_pathogenic': ('mitomap_pathogenic', lambda value: ('{field}', value)),
     }
 
-    def _parse_annotation_filters(self, annotations):
+    def _parse_annotation_filters(self, annotations, pathogenicity):
         filter_qs = []
         filters_by_field = {}
         allowed_consequences = []
@@ -606,6 +589,14 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
                     filter_qs.append(splice_ai_q)
             elif field not in SV_ANNOTATION_TYPES:
                 allowed_consequences += value
+
+        hgmd_filter = (pathogenicity or {}).get(HGMD_KEY)
+        if hgmd_filter and self.hgmd_join_model:
+            filter_qs.append(self._hgmd_filter_q(hgmd_filter))
+
+        clinvar_q = self._clinvar_filter_q(pathogenicity)
+        if clinvar_q is not None:
+            filter_qs.append(clinvar_q)
 
         filter_qs += [
             Q(**{lookup_template.format(field=field): value})
@@ -728,7 +719,7 @@ class SvAnnotationsQuerySet(BaseAnnotationsQuerySet):
 
         return super().filter_annotations(results, *args, **kwargs)
 
-    def _parse_annotation_filters(self, annotations):
+    def _parse_annotation_filters(self, annotations, pathogenicity):
         filter_qs = []
         transcript_filters = []
 
