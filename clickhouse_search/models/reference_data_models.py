@@ -6,7 +6,7 @@ from clickhouse_search.backend.engines import Join
 from clickhouse_search.backend.fields import Enum8Field, NestedField, UInt32FieldDeltaCodecField, DictKeyForeignKey
 from clickhouse_search.backend.table_models import FixtureLoadableClickhouseModel, Dictionary, \
     RefreshableMaterializedView, RefreshableMaterializedViewMeta
-from seqr.utils.xpos_utils import CHROMOSOME_CHOICES
+from seqr.utils.xpos_utils import CHROMOSOME_CHOICES, CHROMOSOMES
 from settings import DATABASES, PIPELINE_RUNNER_SERVER
 
 
@@ -374,7 +374,7 @@ class GnomadNonCodingConstraintAllMv(RefreshableMaterializedView):
         create_empty = True
 
 class GnomadNonCodingConstraintDict(Dictionary):
-    chrom = models.StringField(primary_key=True)
+    chrom_id = models.Int8Field(primary_key=True)
     start = models.UInt32Field()
     end = models.UInt32Field()
     score = models.DecimalField(max_digits=9, decimal_places=5)
@@ -382,8 +382,9 @@ class GnomadNonCodingConstraintDict(Dictionary):
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/reference_data/gnomad_non_coding_constraint'
         source_table = 'GnomadNonCodingConstraintAllVariantsSnvIndel'
-        engine = models.MergeTree(primary_key='chrom')
+        engine = models.MergeTree(primary_key='chrom_id')
         layout = 'RANGE_HASHED()'
+        clickhouse_query_template = f'SELECT indexOf({CHROMOSOMES}, chrom) as chrom_id, start, end, score from {{table}}'
 
 class ScreenAllVariantsSnvIndel(models.ClickhouseModel):
     chrom = Enum8Field(return_int=False, choices=CHROMOSOME_CHOICES, primary_key=True)
