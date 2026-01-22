@@ -403,8 +403,8 @@ class BaseEntriesSnvIndel(BaseEntries):
     ]
     PREDICTIONS = {
         'dbnsfp': {},
+        'eigen': {'score': 'eigen'},
         'splice_ai': {'score': SPLICE_AI_FIELD, 'consequence_id': 'splice_ai_consequence'},
-        # TODO 'eigen'
     }
 
     sample_type = models.Enum8Field(choices=[(1, 'WES'), (2, 'WGS')])

@@ -1325,19 +1325,20 @@ class EntriesManager(BaseEntriesManager):
 
     def _join_annotations(self, entries):
         pred_expressions = []
-        pred_fields = []
-        rename_fields = {}
+        all_pred_fields = []
         for pred_source, field_map in self.model.PREDICTIONS.items():
             pred_model = getattr(self.model, pred_source).rel.related_model
-            pred_expression = pred_model.dict_get_expression('key', null_missing=True)
+            pred_expression = pred_model.dict_get_expression('key', null_missing=True, force_tuple=True)
             pred_expressions.append(pred_expression)
-            pred_fields += pred_expression.output_field.base_fields
-            rename_fields.update(field_map)
+            pred_fields = pred_expression.output_field.base_fields
+            if field_map:
+                pred_fields = [(field_map.get(field_name, field_name), *field) for field_name, *field in pred_fields]
+            all_pred_fields += pred_fields
 
         entries = entries.annotate(
             clinvar_key=F('clinvar_join__key'),
             clinvar=self._pathogenicity_tuple(self.model.clinvar_join, 'clinvar_join'),
-            preds=TupleConcat(*pred_expressions, output_field=NamedTupleField(pred_fields, rename_fields=rename_fields)),
+            preds=TupleConcat(*pred_expressions, output_field=NamedTupleField(all_pred_fields)),
         )
 
         return super()._join_annotations(entries)
