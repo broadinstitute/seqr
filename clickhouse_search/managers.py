@@ -12,7 +12,6 @@ from clickhouse_search.backend.functions import Array, ArrayConcat, ArrayDistinc
     GroupArrayIntersect, If, MapLookup, NullIf, Plus, SubqueryJoin, SubqueryTable, Tuple, TupleConcat, Untuple
 from clickhouse_search.models.postgres_dicts import AffectedDict, SexDict
 from seqr.models import Sample
-from seqr.testrunner import OrderedDatabaseDeletionRunner
 from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFECTED, UNAFFECTED, MALE_SEXES, \
     X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, SCREEN_KEY, UTR_ANNOTATOR_KEY, \
     EXTENDED_SPLICE_KEY, MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY, CLINVAR_KEY, HGMD_KEY, NEW_SV_FIELD, \
@@ -33,17 +32,18 @@ class SearchQuerySet(QuerySet):
     def clinvar_field_prefix(self):
         return 'clinvar_join'
 
-    @property
-    def clinvar_fields(self):
-        return OrderedDict({
-            f'{self.clinvar_field_prefix}__{field.name}': (field.db_column or field.name, field)
-            for field in reversed(self.clinvar_model._meta.local_fields) if field.name != 'key'
-        })
-
     def _clinvar_tuple(self):
+        return self._pathogenicity_tuple(self.clinvar_join_model, self.clinvar_field_prefix)
+
+    @staticmethod
+    def _pathogenicity_tuple(model, field_prefix, **kwargs):
+        fields = OrderedDict({
+            f'{field_prefix}__{field.name}': (field.db_column or field.name, field)
+            for field in reversed(model.rel.related_model._meta.local_fields) if field.name != 'key'
+        })
         return Tuple(
-            *self.clinvar_fields.keys(),
-            output_field=NamedTupleField(list(self.clinvar_fields.values()), null_if_empty=True, null_empty_arrays=True),
+            *fields.keys(),
+            output_field=NamedTupleField(list(fields.values()), null_if_empty=True, null_empty_arrays=True, **kwargs),
         )
 
     @classmethod
@@ -145,6 +145,9 @@ class AnnotationsQuerySet(SearchQuerySet):
             'populations': TupleConcat(F('populations'), Tuple(*seqr_pops), output_field=NamedTupleField(population_fields)),
         }
 
+        if self.hgmd_join_model:
+            annotations['hgmd'] = self._pathogenicity_tuple(self.hgmd_join_model, 'hgmd_join', rename_fields={'classification': 'class'})
+
         if self.has_annotation('preds'):
             annotations['predictions'] = F('preds')
 
@@ -237,10 +240,12 @@ class AnnotationsQuerySet(SearchQuerySet):
          return getattr(self.model, f'{self.entry_field}_set').rel.related_model
 
     @property
-    def clinvar_model(self):
-        if not hasattr(self.entry_model, 'clinvar_join'):
-            return None
-        return self.entry_model.clinvar_join.rel.related_model
+    def hgmd_join_model(self):
+        return getattr(self.model, 'hgmd_join', None)
+
+    @property
+    def clinvar_join_model(self):
+        return getattr(self.entry_model, 'clinvar_join', None)
 
     @property
     def clinvar_field_prefix(self):
@@ -313,7 +318,7 @@ class AnnotationsQuerySet(SearchQuerySet):
         return results
 
     def result_values(self, skip_entry_fields=False):
-        override_model_annotations = {'populations', 'predictions', 'pos', 'end'}
+        override_model_annotations = {'populations', 'predictions', 'pos', 'end', 'hgmd'}
         values = {**self.annotation_values}
         values.update(self._conditional_selected_transcript_values(self))
         if not skip_entry_fields:
@@ -336,7 +341,7 @@ class AnnotationsQuerySet(SearchQuerySet):
 
     def join_clinvar(self, keys):
         results = self
-        if self.clinvar_model:
+        if self.clinvar_join_model:
             results = results.annotate(clinvar=self._clinvar_tuple())
             # Due to django modeling, adding a clinvar annotation will add a join to the entries table and then to clinvar
             # Manipulating the underlying join removes the entry join entirely
@@ -635,8 +640,8 @@ class AnnotationsQuerySet(SearchQuerySet):
                 allowed_consequences += value
 
         hgmd_filter = (pathogenicity or {}).get(HGMD_KEY)
-        if hgmd_filter:
-            filters_by_field[HGMD_KEY] = self._hgmd_filter(hgmd_filter)
+        if hgmd_filter and self.hgmd_join_model:
+            filter_qs.append(self._hgmd_filter_q(hgmd_filter))
 
         if self.has_annotation(CLINVAR_KEY):
             clinvar_q = self._clinvar_filter_q(pathogenicity)
@@ -676,17 +681,17 @@ class AnnotationsQuerySet(SearchQuerySet):
         return {'consequenceTerms': (consequences, 'hasAny({value}, {field})'), **kwargs}
 
     @staticmethod
-    def _hgmd_filter(hgmd):
+    def _hgmd_filter_q(hgmd):
         min_class = next((class_name for value, class_name in HGMD_CLASS_FILTERS if value in hgmd), None)
         max_class = next((class_name for value, class_name in reversed(HGMD_CLASS_FILTERS) if value in hgmd), None)
         if 'hgmd_other' in hgmd:
             min_class = min_class or 'DP'
             max_class = None
         if min_class == max_class:
-            return ('{field}__classification', min_class)
+            return Q(hgmd_join__classification=min_class)
         elif min_class and max_class:
-            return ('{field}__classification__range', (min_class, max_class))
-        return ('{field}__classification__gt', min_class)
+            return Q(hgmd_join__classification__range=(min_class, max_class))
+        return Q(hgmd_join__classification__gt=min_class)
 
     @staticmethod
     def _clinvar_range_q(path_range):
@@ -775,8 +780,8 @@ class EntriesManager(SearchQuerySet):
         })
 
     @property
-    def clinvar_model(self):
-        return self.model.clinvar_join.rel.related_model
+    def clinvar_join_model(self):
+        return self.model.clinvar_join
 
     @property
     def gt_stats_dict_rel(self):
