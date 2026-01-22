@@ -17,7 +17,7 @@ from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFEC
     EXTENDED_SPLICE_REGION_CONSEQUENCE, CLINVAR_PATH_RANGES, CLINVAR_PATH_SIGNIFICANCES, CLINVAR_LIKELY_PATH_FILTER, \
     CLINVAR_CONFLICTING_P_LP, CLINVAR_CONFLICTING_NO_P, CLINVAR_CONFLICTING, PATH_FREQ_OVERRIDE_CUTOFF, \
     HGMD_CLASS_FILTERS, SV_TYPE_FILTER_FIELD, SV_CONSEQUENCES_FIELD, COMPOUND_HET, COMPOUND_HET_ALLOW_HOM_ALTS, \
-    X_LINKED_RECESSIVE_MALE_AFFECTED, FEMALE_SEXES
+    X_LINKED_RECESSIVE_MALE_AFFECTED, FEMALE_SEXES, SV_ANNOTATION_TYPES
 from seqr.utils.xpos_utils import get_xpos, MIN_POS, MAX_POS
 
 
@@ -180,14 +180,6 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
         return set(dict(self.model.PREDICTION_FIELDS).keys())
 
     @property
-    def transcript_fields(self):
-        # TODO clean up after other helpers have been split
-        transcript_field_configs = next(getattr(self.model, field) for field in [
-            'SORTED_TRANSCRIPT_CONSQUENCES_FIELDS', 'TRANSCRIPTS_FIELDS', 'SORTED_GENE_CONSQUENCES_FIELDS',
-        ] if hasattr(self.model, field))
-        return set(dict(transcript_field_configs).keys())
-
-    @property
     def entry_field(self):
         return next(obj.name for obj in self.model._meta.related_objects if obj.name.startswith('entries'))
 
@@ -285,19 +277,7 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
         return self
 
     def conditional_selects(self, query, prefix='', **kwargs):
-        consequence_field = next((
-            field for field in [self.FILTERED_CONSEQUENCE_FIELD, self.GENE_CONSEQUENCE_FIELD] if query.has_annotation(field)
-        ), None)
-        if not consequence_field:
-            return {}
-        if not hasattr(self.model, 'SORTED_TRANSCRIPT_CONSQUENCES_FIELDS'):
-            return {'selectedMainTranscriptId': NullIf(
-                NullIf(F(f'{consequence_field}__0__transcriptId'), Value('')), f'{prefix}mainTranscriptId',
-                output_field=models.StringField(null=True),
-            )}
-        if consequence_field == self.FILTERED_CONSEQUENCE_FIELD:
-            return {'selectedTranscript':  F(f'{self.FILTERED_CONSEQUENCE_FIELD}__0')}
-        return {self.SELECTED_GENE_FIELD: F(f'{self.GENE_CONSEQUENCE_FIELD}__0__geneId')}
+        return {}
 
     def search_compound_hets(self, primary_q, secondary_q):
         primary_gene_field = f'primary_{self.SELECTED_GENE_FIELD}'
@@ -476,31 +456,6 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
     def _parse_annotation_filters(self, annotations):
         return [], []
 
-    @staticmethod
-    def _hgmd_filter_q(hgmd):
-        min_class = next((class_name for value, class_name in HGMD_CLASS_FILTERS if value in hgmd), None)
-        max_class = next((class_name for value, class_name in reversed(HGMD_CLASS_FILTERS) if value in hgmd), None)
-        if 'hgmd_other' in hgmd:
-            min_class = min_class or 'DP'
-            max_class = None
-        if min_class == max_class:
-            return Q(hgmd_join__classification=min_class)
-        elif min_class and max_class:
-            return Q(hgmd_join__classification__range=(min_class, max_class))
-        return Q(hgmd_join__classification__gt=min_class)
-
-    @staticmethod
-    def _clinvar_range_q(path_range):
-        return Q(clinvar__0__range=path_range, clinvar_key__isnull=False)
-
-    @staticmethod
-    def _clinvar_star_q(min_stars):
-        return Q(clinvar__4__gte=min_stars, clinvar_key__isnull=False)
-
-    @staticmethod
-    def _clinvar_conflicting_path_filter(array_func, conflicting_filter):
-        return {f'clinvar__5__{array_func}': conflicting_filter, 'clinvar__5__not_empty': True, 'clinvar_key__isnull': False}
-
     def explode_gene_id(self, gene_id_key):
         consequence_field = self.GENE_CONSEQUENCE_FIELD if self.has_annotation(self.GENE_CONSEQUENCE_FIELD) else self.TRANSCRIPT_FIELD
         results = self.annotate(
@@ -527,15 +482,19 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
         return getattr(self.model, 'hgmd_join', None)
 
     @property
+    def sorted_transcript_consequence_fields(self):
+        return set(dict(getattr(self.model, 'SORTED_TRANSCRIPT_CONSQUENCES_FIELDS', [])).keys())
+
+    @property
     def annotation_values(self):
         annotations = super().annotation_values
 
         if self.hgmd_join_model:
             annotations['hgmd'] = self._pathogenicity_tuple(self.hgmd_join_model, 'hgmd_join', rename_fields={'classification': 'class'})
 
-        if not hasattr(self.model, 'SORTED_TRANSCRIPT_CONSQUENCES_FIELDS'):
+        if not self.sorted_transcript_consequence_fields:
             annotations.update({
-                'transcripts':  annotations.pop(getattr(self.model, self.TRANSCRIPT_FIELD).field.db_column),
+                'transcripts':  annotations.pop(self.model.sorted_transcript_consequences.field.db_column),
                 'mainTranscriptId': F('sorted_transcript_consequences__0__transcriptId'),
                 'selectedMainTranscriptId': Value(None, output_field=models.StringField(null=True)),
             })
@@ -555,10 +514,35 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
 
         return filter_qs
 
+    @staticmethod
+    def _hgmd_filter_q(hgmd):
+        min_class = next((class_name for value, class_name in HGMD_CLASS_FILTERS if value in hgmd), None)
+        max_class = next((class_name for value, class_name in reversed(HGMD_CLASS_FILTERS) if value in hgmd), None)
+        if 'hgmd_other' in hgmd:
+            min_class = min_class or 'DP'
+            max_class = None
+        if min_class == max_class:
+            return Q(hgmd_join__classification=min_class)
+        elif min_class and max_class:
+            return Q(hgmd_join__classification__range=(min_class, max_class))
+        return Q(hgmd_join__classification__gt=min_class)
+
+    @staticmethod
+    def _clinvar_range_q(path_range):
+        return Q(clinvar__0__range=path_range, clinvar_key__isnull=False)
+
+    @staticmethod
+    def _clinvar_star_q(min_stars):
+        return Q(clinvar__4__gte=min_stars, clinvar_key__isnull=False)
+
+    @staticmethod
+    def _clinvar_conflicting_path_filter(array_func, conflicting_filter):
+        return {f'clinvar__5__{array_func}': conflicting_filter, 'clinvar__5__not_empty': True, 'clinvar_key__isnull': False}
+
     def _parse_in_silico_qs(self, in_silico, require_score):
         in_silico_qs, in_silico_missing_qs = super()._parse_in_silico_qs(in_silico, require_score)
 
-        if (in_silico or {}).get('alphamissense') and 'alphamissensePathogenicity' in self.transcript_fields:
+        if (in_silico or {}).get('alphamissense') and 'alphamissensePathogenicity' in self.sorted_transcript_consequence_fields:
             in_silico_qs.append(Q(sorted_transcript_consequences__array_exists={
                 'alphamissensePathogenicity': (in_silico['alphamissense'], '{value} <= {field}'),
             }))
@@ -620,7 +604,7 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
                 splice_ai_q = self._get_in_silico_score_q(SPLICE_AI_FIELD, value)
                 if splice_ai_q:
                     filter_qs.append(splice_ai_q)
-            elif field != NEW_SV_FIELD:
+            elif field not in SV_ANNOTATION_TYPES:
                 allowed_consequences += value
 
         filter_qs += [
@@ -628,7 +612,7 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
             for field, (lookup_template, value) in filters_by_field.items() if hasattr(self.model, field)
         ]
         transcript_filters = [
-            {field: value} for field, value in transcript_field_filters.items() if field in self.transcript_fields
+            {field: value} for field, value in transcript_field_filters.items() if field in self.sorted_transcript_consequence_fields
         ]
 
         if allowed_consequences:
@@ -667,6 +651,21 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
         results.query.alias_refcount[entry_table] = 0
         return results
 
+    def conditional_selects(self, query, prefix='', **kwargs):
+        consequence_field = next((
+            field for field in [self.FILTERED_CONSEQUENCE_FIELD, self.GENE_CONSEQUENCE_FIELD] if query.has_annotation(field)
+        ), None)
+        if not consequence_field:
+            return {}
+        if not self.sorted_transcript_consequence_fields:
+            return {'selectedMainTranscriptId': NullIf(
+                NullIf(F(f'{consequence_field}__0__transcriptId'), Value('')), f'{prefix}mainTranscriptId',
+                output_field=models.StringField(null=True),
+            )}
+        if consequence_field == self.FILTERED_CONSEQUENCE_FIELD:
+            return {'selectedTranscript':  F(f'{self.FILTERED_CONSEQUENCE_FIELD}__0')}
+        return {self.SELECTED_GENE_FIELD: F(f'{self.GENE_CONSEQUENCE_FIELD}__0__geneId')}
+
 
 class SvAnnotationsQuerySet(BaseAnnotationsQuerySet):
     TRANSCRIPT_FIELD = 'sorted_gene_consequences'
@@ -675,7 +674,7 @@ class SvAnnotationsQuerySet(BaseAnnotationsQuerySet):
     @property
     def annotation_values(self):
         annotations = super().annotation_values
-        annotations['transcripts'] = annotations.pop(getattr(self.model, self.TRANSCRIPT_FIELD).field.db_column)
+        annotations['transcripts'] = annotations.pop(self.model.sorted_gene_consequences.field.db_column)
         return annotations
 
     @classmethod
@@ -1252,6 +1251,7 @@ class BaseEntriesManager(SearchQuerySet):
 
         locus_q = None
         if genes:
+            # TODO clean up
             should_filter_interval |= (not hasattr(self.model, 'geneId_ids')) or exclude_locations or len(genes) < self.model.MAX_XPOS_FILTER_INTERVALS
             if should_filter_interval:
                 intervals = self._format_gene_intervals(genes) + (intervals or [])
