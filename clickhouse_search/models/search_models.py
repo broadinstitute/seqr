@@ -203,10 +203,6 @@ class BaseAnnotationsGRCh37SnvIndel(BaseAnnotationsMitoSnvIndel):
         abstract = True
 
 class BaseVariantsGRCh37SnvIndel(BaseVariants):
-    ANNOTATION_CONSTANTS = {
-        'genomeVersion': GENOME_VERSION_GRCh37,
-        'liftedOverGenomeVersion': GENOME_VERSION_GRCh38,
-    }
     SORTED_TRANSCRIPT_CONSQUENCES_FIELDS = [
         ('canonical', models.UInt8Field(null=True, blank=True)),
         ('consequenceTerms', models.ArrayField(models.Enum8Field(null=True, blank=True, return_int=False, choices=BaseVariants.CONSEQUENCE_TERMS))),
