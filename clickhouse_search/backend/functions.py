@@ -146,11 +146,17 @@ class If(Func):
     function = 'if'
     template = '%(function)s(%(condition)s%(expressions)s)'
 
+class IntDiv(Func):
+    function = 'intDiv'
 
 class MapLookup(Func):
     function = 'map'
     template = "%(function)s(%(map_values)s)[%(expressions)s]"
     arg_joiner = "]["
+
+
+class Modulo(Func):
+    function = 'modulo'
 
 
 class NullIf(Func):

@@ -9,7 +9,8 @@ from django.db.models.sql.constants import INNER
 from clickhouse_search.backend.fields import NestedField, NamedTupleField
 from clickhouse_search.backend.functions import Array, ArrayConcat, ArrayDistinct, ArrayFilter, ArrayFold, \
     ArrayIntersect, ArrayJoin, ArrayMap, ArraySort, ArraySymmetricDifference, CrossJoin, GroupArray, GroupArrayArray, \
-    GroupArrayIntersect, If, MapLookup, NullIf, Plus, SubqueryJoin, SubqueryTable, Tuple, TupleConcat, Untuple
+    GroupArrayIntersect, If, MapLookup, NullIf, Plus, SubqueryJoin, SubqueryTable, Tuple, TupleConcat, Untuple, \
+    IntDiv, Modulo
 from clickhouse_search.models.postgres_dicts import AffectedDict, SexDict
 from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFECTED, UNAFFECTED, MALE_SEXES, \
     X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, SCREEN_KEY, UTR_ANNOTATOR_KEY, \
@@ -1345,7 +1346,9 @@ class EntriesManager(BaseEntriesManager):
             all_pred_fields += pred_fields
 
         for pred_name, range_dict in self.model.RANGE_PREDICTIONS.items():
-            pred_expression = range_dict.dict_get_expression('xpos', field_names=['score'], null_missing=True)
+            pred_expression = range_dict.dict_get_expression(
+                IntDiv('xpos', 1e9), Modulo('xpos', 1e9), field_names=['score'], null_missing=True,
+            )
             pred_expressions.append(Tuple(pred_expression))
             all_pred_fields.append((pred_name, pred_expression.output_field))
 

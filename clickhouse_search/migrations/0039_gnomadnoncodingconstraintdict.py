@@ -28,7 +28,7 @@ class Migration(migrations.Migration):
                 'engine': clickhouse_backend.models.MergeTree(primary_key='chrom_id'),
                 'source_table': 'GnomadNonCodingConstraintAllVariantsSnvIndel',
                 'layout': 'RANGE_HASHED()',
-                'clickhouse_query_template': "SELECT indexOf(['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', 'X', 'Y', 'M'], chrom) as chrom_id, start, end, score from {table}",
+                'clickhouse_query_template': "SELECT indexOf([\\'1\\', \\'2\\', \\'3\\', \\'4\\', \\'5\\', \\'6\\', \\'7\\', \\'8\\', \\'9\\', \\'10\\', \\'11\\', \\'12\\', \\'13\\', \\'14\\', \\'15\\', \\'16\\', \\'17\\', \\'18\\', \\'19\\', \\'20\\', \\'21\\', \\'22\\', \\'X\\', \\'Y\\', \\'M\\'], chrom) as chrom_id, start, end, score from {table}",
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),

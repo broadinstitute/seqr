@@ -384,7 +384,9 @@ class GnomadNonCodingConstraintDict(Dictionary):
         source_table = 'GnomadNonCodingConstraintAllVariantsSnvIndel'
         engine = models.MergeTree(primary_key='chrom_id')
         layout = 'RANGE_HASHED()'
-        clickhouse_query_template = f'SELECT indexOf({CHROMOSOMES}, chrom) as chrom_id, start, end, score from {{table}}'
+        clickhouse_query_template = 'SELECT indexOf([{chromosomes}], chrom) as chrom_id, start, end, score from {{table}}'.format(
+            chromosomes=', '.join([f"\\'{chrom}\\'" for _, chrom in CHROMOSOME_CHOICES])
+        )
 
 class ScreenAllVariantsSnvIndel(models.ClickhouseModel):
     chrom = Enum8Field(return_int=False, choices=CHROMOSOME_CHOICES, primary_key=True)
