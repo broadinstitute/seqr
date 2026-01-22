@@ -1334,6 +1334,8 @@ class EntriesManager(BaseEntriesManager):
             if field_map:
                 pred_fields = [(field_map.get(field_name, field_name), *field) for field_name, *field in pred_fields]
             all_pred_fields += pred_fields
+        for pred_name, range_dict in self.model.RANGE_PREDICTIONS.items():
+            pred_expression = range_dict.dict_get_expression('xpos', null_missing=True, force_tuple=True)
 
         entries = entries.annotate(
             clinvar_key=F('clinvar_join__key'),
