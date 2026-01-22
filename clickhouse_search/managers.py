@@ -277,7 +277,7 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
         return self
 
     def conditional_selects(self, query, prefix='', **kwargs):
-        return {}
+        raise NotImplementedError
 
     def search_compound_hets(self, primary_q, secondary_q):
         primary_gene_field = f'primary_{self.SELECTED_GENE_FIELD}'
@@ -450,7 +450,7 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
         return Q(xpos__range=(get_xpos(chrom, start), get_xpos(chrom, end)))
 
     def _parse_annotation_filters(self, annotations, pathogenicity):
-        return [], []
+        raise NotImplementedError
 
     def explode_gene_id(self, gene_id_key):
         consequence_field = self.GENE_CONSEQUENCE_FIELD if self.has_annotation(self.GENE_CONSEQUENCE_FIELD) else self.TRANSCRIPT_FIELD
