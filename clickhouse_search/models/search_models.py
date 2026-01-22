@@ -522,13 +522,6 @@ class BaseVariantsGcnv(BaseVariantsSvGcnv):
             ('hom', models.UInt32Field()),
         ])),
     ]
-    SV_TYPE_FILTER_PREFIX = 'gCNV_'
-    GENOTYPE_OVERRIDE_FIELDS = {
-        'pos': ('start', ArrayMin),
-        'end': ('end', ArrayMax),
-        'numExon': ('numExon', ArrayMax),
-        'geneIds': ('geneIds', lambda value, **kwargs: ArrayDistinct(ArrayFlatten(value), **kwargs)),
-    }
 
     num_exon = models.UInt16Field(db_column='numExon')
     populations = NamedTupleField(POPULATION_FIELDS)
