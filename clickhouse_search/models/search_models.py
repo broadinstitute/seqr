@@ -272,7 +272,7 @@ class BaseVariantsSnvIndel(BaseVariantsGRCh37SnvIndel):
         ('alphamissensePathogenicity', models.DecimalField(null=True, blank=True, max_digits=9, decimal_places=5)),
         ('extendedIntronicSpliceRegionVariant', models.BoolField(null=True, blank=True)),
         ('fiveutrConsequence', models.Enum8Field(null=True, blank=True, return_int=False, choices=[(1, '5_prime_UTR_premature_start_codon_gain_variant'), (2, '5_prime_UTR_premature_start_codon_loss_variant'), (3, '5_prime_UTR_stop_codon_gain_variant'), (4, '5_prime_UTR_stop_codon_loss_variant'), (5, '5_prime_UTR_uORF_frameshift_variant')])),
-        ('hasManeSelect', models.BoolField(null=True, blank=True)),
+        ('isManeSelect', models.BoolField(null=True, blank=True)),
         *BaseVariantsGRCh37SnvIndel.SORTED_TRANSCRIPT_CONSQUENCES_FIELDS,
     ])
     SORTED_MOTIF_FEATURE_CONSEQUENCES_FIELDS = sorted([
