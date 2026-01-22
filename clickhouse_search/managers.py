@@ -1324,6 +1324,15 @@ class EntriesManager(BaseEntriesManager):
         return entries
 
     def _join_annotations(self, entries):
+        entries = entries.annotate(
+            clinvar_key=F('clinvar_join__key'),
+            clinvar=self._pathogenicity_tuple(self.model.clinvar_join, 'clinvar_join'),
+            preds=self._prediction_expression(),
+        )
+
+        return super()._join_annotations(entries)
+
+    def _prediction_expression(self):
         pred_expressions = []
         all_pred_fields = []
         for pred_source, field_map in self.model.PREDICTIONS.items():
@@ -1334,16 +1343,13 @@ class EntriesManager(BaseEntriesManager):
             if field_map:
                 pred_fields = [(field_map.get(field_name, field_name), *field) for field_name, *field in pred_fields]
             all_pred_fields += pred_fields
+
         for pred_name, range_dict in self.model.RANGE_PREDICTIONS.items():
-            pred_expression = range_dict.dict_get_expression('xpos', null_missing=True, force_tuple=True)
+            pred_expression = range_dict.dict_get_expression('xpos', field_names=['score'], null_missing=True)
+            pred_expressions.append(Tuple(pred_expression))
+            all_pred_fields.append((pred_name, pred_expression.output_field))
 
-        entries = entries.annotate(
-            clinvar_key=F('clinvar_join__key'),
-            clinvar=self._pathogenicity_tuple(self.model.clinvar_join, 'clinvar_join'),
-            preds=TupleConcat(*pred_expressions, output_field=NamedTupleField(all_pred_fields)),
-        )
-
-        return super()._join_annotations(entries)
+        return TupleConcat(*pred_expressions, output_field=NamedTupleField(all_pred_fields))
 
     def filter_locus(self, *args, require_any_gene=False, parsed_variant_ids=None, intervals=None, genes=None, **kwargs):
         if parsed_variant_ids:
