@@ -6,7 +6,7 @@ from clickhouse_search.backend.fields import Enum8Field, NestedField, UInt32Fiel
 from clickhouse_search.backend.functions import ArrayDistinct, ArrayFlatten, ArrayMin, ArrayMax
 from clickhouse_search.backend.table_models import Dictionary, FixtureLoadableClickhouseModel
 from clickhouse_search.managers import EntriesManager, SvEntriesManager, SvAnnotationsQuerySet, AnnotationsQuerySet
-from clickhouse_search.models.reference_data_models import GnomadNonCodingConstraintDict
+from clickhouse_search.models.reference_data_models import GnomadNonCodingConstraintDict, BaseSpliceAi
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample
 from seqr.utils.search.constants import SPLICE_AI_FIELD
@@ -582,8 +582,10 @@ class BaseEntriesSnvIndel(BaseEntries):
     ]
     PREDICTIONS = {
         'dbnsfp': {},
-        'eigen': {'score': 'eigen'},
-        'splice_ai': {'score': SPLICE_AI_FIELD, 'consequence_id': 'splice_ai_consequence'},
+        'eigen': {},
+        'splice_ai': {
+            'consequence_id': ('splice_ai_consequence', models.Enum8Field(choices=[(csq, csq_id) for csq_id, csq in BaseSpliceAi.CONSEQUENCE_CHOICES])),
+        },
     }
     RANGE_PREDICTIONS = {}
 
