@@ -154,7 +154,8 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
         if len(pop_expressions) == 1:
             pop_expressions = [(subfield, pop_expressions[0][1])]
         elif len(pop_expressions) > 1:
-            pop_expressions = pop_expressions + [(subfield, Plus(*[expr for _, expr in pop_expressions]))]
+            combined = Plus(*[expr for _, expr in pop_expressions])
+            pop_expressions.append((subfield, combined))
         if subfield_name and subfield_name != subfield:
             pop_expressions = [(name.replace(subfield, subfield_name), expr) for name, expr in pop_expressions]
         return pop_expressions
@@ -605,7 +606,6 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
             transcript_filters += self._allowed_consequences_filters(allowed_consequences)
 
         return filter_qs, transcript_filters
-
 
     def _allowed_consequences_filters(self, allowed_consequences):
         csq_filters = []
