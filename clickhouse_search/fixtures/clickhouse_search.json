@@ -809,7 +809,7 @@
       "lifted_over_chrom": "7",
       "lifted_over_pos": 143271368,
       "hgmd": [null, null],
-      "predictions": [13.02, 3.951, null, null, null, null, null, 0.49064, null, null, 0, 4,null],
+      "predictions": [1, 1, null, null, null, null, null, 0.49064, null, null, 0, 4,null],
       "populations": [
         [66593, 0.63, 104352, 0.81987739, 0, 22269, 22162],
         [137532, 0.63542193, 216442, 0.82261163, 0, 45869],
@@ -868,6 +868,40 @@
       "variant_id": "1-10439-AC-A"
     }
 }, {
+    "model": "clickhouse_search.keylookupgrch37snvindel",
+    "pk": "7-143270172-A-G",
+    "fields": {
+      "key": 11
+    }
+}, {
+    "model": "clickhouse_search.dbnsfpallvariantsgrch37snvindel",
+    "pk": "7-143270172-A-G",
+    "fields": {
+      "cadd": 13.02,
+      "fathmm": null,
+      "mpc": null,
+      "mut_pred": null,
+      "mut_taster": null,
+      "primate_ai": 0.49064,
+      "polyphen": null,
+      "revel": null,
+      "sift": null,
+      "vest": null
+    }
+}, {
+    "model": "clickhouse_search.eigenallvariantsgrch37snvindel",
+    "pk": "7-143270172-A-G",
+    "fields": {
+      "score": 3.951
+    }
+}, {
+    "model": "clickhouse_search.spliceaiallvariantsgrch37snvindel",
+    "pk": "7-143270172-A-G",
+    "fields": {
+      "score": 0,
+      "consequence": 4
+    }
+},{
     "model": "clickhouse_search.annotationsmito",
     "pk": 6,
     "fields": {

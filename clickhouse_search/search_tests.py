@@ -13,6 +13,7 @@ from clickhouse_search.models.postgres_dicts import AffectedDict, SexDict
 from clickhouse_search.models.reference_data_models import ClinvarMvSnvIndel, ClinvarSearchMvSnvIndel, ClinvarMvMito, \
     ClinvarSearchMvMito, ClinvarMvGRCh37SnvIndel, ClinvarSearchMvGRCh37SnvIndel, HgmdMv, HgmdSearchMv,  \
     DbnsfpSnvIndelMv, DbnsfpSnvIndelDict, EigenMv, EigenDict, SpliceAiMv, SpliceAiDict, GnomadNonCodingConstraintDict, \
+    DbnsfpGRCh37SnvIndelMv, DbnsfpGRCh37SnvIndelDict, EigenGRCh37Mv, EigenGRCh37Dict, SpliceAiGRCh37Mv, SpliceAiGRCh37Dict, \
     DbnsfpMitoMv, DbnsfpMitoDict, MitimpactMv, MitimpactDict, HmtvarMv, HmtvarDict, LocalconstraintmitoMv, \
     LocalconstraintmitoDict
 from clickhouse_search.models.search_models import EntriesSnvIndel, AnnotationsSnvIndel
@@ -59,14 +60,14 @@ class ClickhouseSearchTestCase(AnvilAuthenticationTestMixin, TransactionTestCase
         for view in [
             ProjectsToGtStatsGRCh37SnvIndel, ProjectsToGtStatsSnvIndel, ProjectsToGtStatsMito, ProjectsToGtStatsSv,
             ClinvarMvSnvIndel, ClinvarSearchMvSnvIndel, ClinvarMvMito, ClinvarSearchMvMito, ClinvarMvGRCh37SnvIndel,
-            ClinvarSearchMvGRCh37SnvIndel, HgmdMv, HgmdSearchMv, DbnsfpSnvIndelMv, EigenMv, SpliceAiMv, DbnsfpMitoMv,
-            MitimpactMv, HmtvarMv, LocalconstraintmitoMv,
+            ClinvarSearchMvGRCh37SnvIndel, HgmdMv, HgmdSearchMv, DbnsfpSnvIndelMv, EigenMv, SpliceAiMv,
+            DbnsfpGRCh37SnvIndelMv, EigenGRCh37Mv, SpliceAiGRCh37Mv, DbnsfpMitoMv, MitimpactMv, HmtvarMv, LocalconstraintmitoMv,
         ]:
             view.refresh()
         for dictionary in [
             GtStatsDictGRCh37SnvIndel, GtStatsDictSnvIndel, GtStatsDictMito, GtStatsDictSv, DbnsfpSnvIndelDict,
-            EigenDict, SpliceAiDict, GnomadNonCodingConstraintDict, DbnsfpMitoDict, MitimpactDict, HmtvarDict,
-            LocalconstraintmitoDict,
+            EigenDict, SpliceAiDict, GnomadNonCodingConstraintDict, DbnsfpGRCh37SnvIndelDict, EigenGRCh37Dict,
+            SpliceAiGRCh37Dict, DbnsfpMitoDict, MitimpactDict, HmtvarDict, LocalconstraintmitoDict,
         ]:
             dictionary.reload()
         Project.objects.update(genome_version='38')
