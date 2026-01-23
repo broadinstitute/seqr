@@ -7,6 +7,8 @@ from django.db import migrations, models
 import django.db.models.deletion
 import django.db.models.manager
 
+from settings import CLICKHOUSE_IN_MEMORY_DIR, CLICKHOUSE_DATA_DIR
+
 
 class Migration(migrations.Migration):
 
@@ -23,7 +25,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'GRCh37/SNV_INDEL/variants_disk',
-                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, '/var/seqr/clickhouse-data/GRCh37/SNV_INDEL/variants', flatten_nested=0, primary_key='key'),
+                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh37/SNV_INDEL/variants', flatten_nested=0, primary_key='key'),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
@@ -38,7 +40,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'GRCh37/SNV_INDEL/variants_memory',
-                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, '/in-memory-dir/GRCh37/SNV_INDEL/variants', flatten_nested=0, primary_key='key'),
+                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, f'{CLICKHOUSE_IN_MEMORY_DIR}/GRCh37/SNV_INDEL/variants', flatten_nested=0, primary_key='key'),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
@@ -55,7 +57,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'GRCh38/SNV_INDEL/variants_disk',
-                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, '/var/seqr/clickhouse-data/GRCh38/SNV_INDEL/variants', flatten_nested=0, primary_key='key'),
+                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SNV_INDEL/variants', flatten_nested=0, primary_key='key'),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
@@ -72,7 +74,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'GRCh38/SNV_INDEL/variants_memory',
-                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, '/in-memory-dir/GRCh38/SNV_INDEL/variants', flatten_nested=0, primary_key='key'),
+                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, f'{CLICKHOUSE_IN_MEMORY_DIR}/GRCh38/SNV_INDEL/variants', flatten_nested=0, primary_key='key'),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
@@ -92,7 +94,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'GRCh37/SNV_INDEL/variants/details',
-                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, '/var/seqr/clickhouse-data/GRCh37/SNV_INDEL/variants/details', flatten_nested=0, primary_key='key'),
+                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh37/SNV_INDEL/variants/details', flatten_nested=0, primary_key='key'),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
@@ -114,7 +116,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'GRCh38/SNV_INDEL/variants/details',
-                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, '/var/seqr/clickhouse-data/GRCh38/SNV_INDEL/variants/details', flatten_nested=0, primary_key='key'),
+                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SNV_INDEL/variants/details', flatten_nested=0, primary_key='key'),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
@@ -129,7 +131,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'GRCh38/MITO/variants_disk',
-                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, '/var/seqr/clickhouse-data/GRCh38/MITO/variants', flatten_nested=0, primary_key='key'),
+                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/MITO/variants', flatten_nested=0, primary_key='key'),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
@@ -161,7 +163,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'GRCh38/SV/variants_disk',
-                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, '/var/seqr/clickhouse-data/GRCh38/SV/variants', flatten_nested=0, primary_key='key'),
+                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SV/variants', flatten_nested=0, primary_key='key'),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
@@ -188,7 +190,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'GRCh38/GCNV/variants_memory',
-                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, '/in-memory-dir/GRCh38/GCNV/variants', flatten_nested=0, primary_key='key'),
+                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, f'{CLICKHOUSE_IN_MEMORY_DIR}/GRCh38/GCNV/variants', flatten_nested=0, primary_key='key'),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
@@ -203,7 +205,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'GRCh38/MITO/variants_memory',
-                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, '/in-memory-dir/GRCh38/MITO/variants', flatten_nested=0, primary_key='key'),
+                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, f'{CLICKHOUSE_IN_MEMORY_DIR}/GRCh38/MITO/variants', flatten_nested=0, primary_key='key'),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
@@ -235,7 +237,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'GRCh38/SV/variants_memory',
-                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, '/in-memory-dir/GRCh38/SV/variants', flatten_nested=0, primary_key='key'),
+                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, f'{CLICKHOUSE_IN_MEMORY_DIR}/GRCh38/SV/variants', flatten_nested=0, primary_key='key'),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
@@ -262,7 +264,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'GRCh38/GCNV/variants_disk',
-                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, '/var/seqr/clickhouse-data/GRCh38/GCNV/variants', flatten_nested=0, primary_key='key'),
+                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/GCNV/variants', flatten_nested=0, primary_key='key'),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
