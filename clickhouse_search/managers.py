@@ -101,6 +101,30 @@ class SearchQuerySet(QuerySet):
             {field: gene[f'{field}Grch{self.genome_version}'] for field in ['chrom', 'start', 'end']} for gene in genes.values()
         ]
 
+    @staticmethod
+    def _prediction_expression(model):
+        pred_expressions = []
+        all_pred_fields = []
+        for pred_source, field_map in model.PREDICTIONS.items():
+            pred_model = getattr(model, pred_source).rel.related_model
+            pred_expression = pred_model.dict_get_expression('key', null_missing=True, force_tuple=True)
+            pred_expressions.append(pred_expression)
+            for field_name, output_field in pred_expression.output_field.base_fields:
+                if field_name in field_map:
+                    field_name, output_field = field_map[field_name]
+                elif field_name == 'score':
+                    field_name = pred_source
+                all_pred_fields.append((field_name, output_field))
+
+        for pred_name, range_dict in model.RANGE_PREDICTIONS.items():
+            pred_expression = range_dict.dict_get_expression(
+                IntDiv('xpos', int(1e9)), Modulo('xpos', int(1e9)), field_names=['score'], null_missing=True,
+            )
+            pred_expressions.append(Tuple(pred_expression))
+            all_pred_fields.append((pred_name, pred_expression.output_field))
+
+        return TupleConcat(*pred_expressions, output_field=NamedTupleField(all_pred_fields))
+
 
 class BaseAnnotationsQuerySet(SearchQuerySet):
 
@@ -263,11 +287,8 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
             **{k: values[k] for k in override_model_annotations if k in values},
         )
 
-    def join_seqr_pop(self):
+    def join_annotations(self):
         return self._annotate_seqr_pop_expression(self)
-
-    def join_clinvar(self, keys):
-        return self
 
     def conditional_selects(self, query, prefix='', **kwargs):
         raise NotImplementedError
@@ -634,8 +655,10 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
     def _consequence_term_filter(consequences, **kwargs):
         return {'consequenceTerms': (consequences, 'hasAny({value}, {field})'), **kwargs}
 
-    def join_clinvar(self, keys):
-        results = self.annotate(
+    def join_annotations(self):
+        results = super().join_annotations()
+        results = results.annotate(
+            preds=self._prediction_expression(self.entry_model),
             clinvar=self._pathogenicity_tuple(self.entry_model.clinvar_join, f'{self.entry_field}__clinvar_join')
         )
         # Due to django modeling, adding a clinvar annotation will add a join to the entries table and then to clinvar
@@ -1336,32 +1359,9 @@ class EntriesManager(BaseEntriesManager):
         entries = entries.annotate(
             clinvar_key=F('clinvar_join__key'),
             clinvar=self._pathogenicity_tuple(self.model.clinvar_join, 'clinvar_join'),
-            preds=self._prediction_expression(),
+            preds=self._prediction_expression(self.model),
         )
         return super()._join_annotations(entries)
-
-    def _prediction_expression(self):
-        pred_expressions = []
-        all_pred_fields = []
-        for pred_source, field_map in self.model.PREDICTIONS.items():
-            pred_model = getattr(self.model, pred_source).rel.related_model
-            pred_expression = pred_model.dict_get_expression('key', null_missing=True, force_tuple=True)
-            pred_expressions.append(pred_expression)
-            for field_name, output_field in pred_expression.output_field.base_fields:
-                if field_name in field_map:
-                    field_name, output_field = field_map[field_name]
-                elif field_name == 'score':
-                    field_name = pred_source
-                all_pred_fields.append((field_name, output_field))
-
-        for pred_name, range_dict in self.model.RANGE_PREDICTIONS.items():
-            pred_expression = range_dict.dict_get_expression(
-                IntDiv('xpos', int(1e9)), Modulo('xpos', int(1e9)), field_names=['score'], null_missing=True,
-            )
-            pred_expressions.append(Tuple(pred_expression))
-            all_pred_fields.append((pred_name, pred_expression.output_field))
-
-        return TupleConcat(*pred_expressions, output_field=NamedTupleField(all_pred_fields))
 
     def filter_locus(self, *args, require_any_gene=False, parsed_variant_ids=None, intervals=None, genes=None, **kwargs):
         if parsed_variant_ids:

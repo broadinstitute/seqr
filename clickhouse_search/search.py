@@ -795,7 +795,7 @@ def get_annotations_queryset(genome_version, dataset_type, keys):
 
 def get_clickhouse_annotations(genome_version, dataset_type, keys):
     qs = get_annotations_queryset(genome_version, dataset_type, keys)
-    results = qs.join_seqr_pop().join_clinvar(keys).result_values(skip_entry_fields=True)
+    results = qs.join_annotations().result_values(skip_entry_fields=True)
     return format_clickhouse_results(results, genome_version)
 
 
