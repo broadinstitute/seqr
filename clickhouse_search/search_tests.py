@@ -1724,7 +1724,7 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
         self.assertEqual(EntriesSnvIndel.objects.filter(project_guid='R0001_1kg').count(), 0)
         self.assertEqual(ProjectGtStatsSnvIndel.objects.filter(project_guid='R0001_1kg').count(), 0)
 
-        annotations_qs = AnnotationsSnvIndel.objects.all().join_seqr_pop()
+        annotations_qs = AnnotationsSnvIndel.objects.all().join_annotations()
         updated_seqr_pops_by_key = dict(annotations_qs.values_list('key', 'seqrPop'))
         self.assertDictEqual(updated_seqr_pops_by_key, {
             1: {'ac_wes': 2, 'ac_wgs': 2, 'hom_wes': 1, 'hom_wgs': 1, 'ac_affected': 4, 'hom_affected': 2},

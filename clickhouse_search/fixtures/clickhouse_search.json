@@ -152,7 +152,7 @@
       "lifted_over_pos": 10146,
       "hgmd": [null, null],
       "screen_region_type": null,
-      "predictions": [4.65299, null, null, null, null, null, null, null, null, null, null, null, null, null],
+      "predictions": [1, null, null, null, null, null, null, null, null, null, null, null, null, null],
       "populations": [
         [0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0],
@@ -244,6 +244,18 @@
     "pk": "1-91511686-T-G",
     "fields": {
       "key": 4
+    }
+}, {
+    "model": "clickhouse_search.keylookupsnvindel",
+    "pk": "1-10146-ACC-A",
+    "fields": {
+      "key": 5
+    }
+}, {
+    "model": "clickhouse_search.keylookupsnvindel",
+    "pk": "1-9310123-T-C",
+    "fields": {
+      "key": 22
     }
 }, {
     "model": "clickhouse_search.clinvarallvariantssnvindel",
@@ -356,6 +368,36 @@
       "vest": 0.858
     }
 }, {
+    "model": "clickhouse_search.dbnsfpallvariantssnvindel",
+    "pk": "1-10146-ACC-A",
+    "fields": {
+      "cadd": 4.65299,
+      "fathmm": null,
+      "mpc": null,
+      "mut_pred": null,
+      "mut_taster": null,
+      "primate_ai": null,
+      "polyphen": null,
+      "revel": null,
+      "sift": null,
+      "vest": null
+    }
+}, {
+    "model": "clickhouse_search.dbnsfpallvariantssnvindel",
+    "pk": "1-9310123-T-C",
+    "fields": {
+      "cadd": 1.92299,
+      "fathmm": null,
+      "mpc": null,
+      "mut_pred": null,
+      "mut_taster": null,
+      "primate_ai": null,
+      "polyphen": null,
+      "revel": null,
+      "sift": null,
+      "vest": null
+    }
+}, {
     "model": "clickhouse_search.eigenallvariantssnvindel",
     "pk": "1-38724419-T-G",
     "fields": {
@@ -372,6 +414,12 @@
     "pk": "1-91511686-T-G",
     "fields": {
       "score": 9.491
+    }
+}, {
+    "model": "clickhouse_search.eigenallvariantssnvindel",
+    "pk": "1-9310123-T-C",
+    "fields": {
+      "score": 2.24799
     }
 }, {
     "model": "clickhouse_search.spliceaiallvariantssnvindel",
@@ -392,6 +440,13 @@
     "pk": "1-91511686-T-G",
     "fields": {
       "score": 0,
+      "consequence": 4
+    }
+}, {
+    "model": "clickhouse_search.spliceaiallvariantssnvindel",
+    "pk": "1-9310123-T-C",
+    "fields": {
+      "score": 0.01,
       "consequence": 4
     }
 }, {
