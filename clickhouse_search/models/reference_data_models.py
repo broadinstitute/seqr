@@ -6,7 +6,7 @@ from clickhouse_search.backend.engines import Join
 from clickhouse_search.backend.fields import Enum8Field, NestedField, UInt32FieldDeltaCodecField, DictKeyForeignKey
 from clickhouse_search.backend.table_models import FixtureLoadableClickhouseModel, Dictionary, \
     RefreshableMaterializedView, RefreshableMaterializedViewMeta
-from seqr.utils.xpos_utils import CHROMOSOME_CHOICES, CHROMOSOMES
+from seqr.utils.xpos_utils import CHROMOSOME_CHOICES
 from settings import DATABASES, PIPELINE_RUNNER_SERVER
 
 
@@ -384,7 +384,7 @@ class GnomadNonCodingConstraintDict(Dictionary):
         source_table = 'GnomadNonCodingConstraintAllVariantsSnvIndel'
         engine = models.MergeTree(primary_key='chrom_id')
         layout = 'RANGE_HASHED()'
-        clickhouse_query_template = 'SELECT indexOf([{chromosomes}], chrom) as chrom_id, start, end, score from {{table}}'.format(
+        clickhouse_query_template = 'SELECT indexOf([{chromosomes}], chrom) as chrom_id, start, end, score from {{table}}'.format( # nosec
             chromosomes=', '.join([f"\\'{chrom}\\'" for _, chrom in CHROMOSOME_CHOICES])
         )
 
