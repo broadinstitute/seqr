@@ -8,7 +8,7 @@ import django.db.models.manager
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('clickhouse_search', '0038_eigen'),
+        ('clickhouse_search', '0039_variantsdiskgcnv_variantsdiskgrch37snvindel_and_more'),
     ]
 
     operations = [

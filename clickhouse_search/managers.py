@@ -1330,7 +1330,6 @@ class EntriesManager(BaseEntriesManager):
             clinvar=self._pathogenicity_tuple(self.model.clinvar_join, 'clinvar_join'),
             preds=self._prediction_expression(),
         )
-
         return super()._join_annotations(entries)
 
     def _prediction_expression(self):
