@@ -1922,6 +1922,7 @@ class EigenGRCh37Mv(RefreshableMaterializedView):
         db_table = 'GRCh37/SNV_INDEL/reference_data/eigen/all_variants_to_seqr_variants_mv'
         to_table = 'EigenSeqrVariantsGRCh37SnvIndel'
         source_table = 'EigenAllVariantsGRCh37SnvIndel'
+        source_sql = _all_variants_to_seqr_source_sql('GRCh37', 'SNV_INDEL')
 
 class EigenGRCh37Dict(Dictionary):
     key = DictKeyForeignKey('EntriesGRCh37SnvIndel', related_name='eigen')

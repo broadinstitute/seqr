@@ -35,8 +35,47 @@ class Migration(migrations.Migration):
                 ('_overwrite_base_manager', django.db.models.manager.Manager()),
             ],
         ),
+        migrations.DeleteModel(
+            name='EigenGRCh37Mv',
+        ),
+        migrations.CreateModel(
+            name='EigenGRCh37Mv',
+            fields=[
+                ('key', clickhouse_backend.models.UInt32Field(primary_key=True, serialize=False)),
+                ('score', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
+            ],
+            options={
+                'db_table': 'GRCh37/SNV_INDEL/reference_data/eigen/all_variants_to_seqr_variants_mv',
+                'to_table': 'EigenSeqrVariantsGRCh37SnvIndel',
+                'source_table': 'EigenAllVariantsGRCh37SnvIndel',
+                'source_sql': 'src INNER JOIN `GRCh37/SNV_INDEL/key_lookup` dst on assumeNotNull(src.variantId) = dst.variantId',
+                'column_selects': {'key': 'DISTINCT ON (key)'},
+                'refreshable': True,
+                'create_empty': True,
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
+        ),
         migrations.RunSQL(
             'SYSTEM RELOAD DICTIONARY "GRCh38/SNV_INDEL/reference_data/gnomad_non_coding_constraint"',
+            hints={'clickhouse': True},
+        ),
+        migrations.RunSQL(
+            'SYSTEM START VIEW "GRCh37/SNV_INDEL/reference_data/eigen/all_variants_to_seqr_variants_mv"',
+            hints={'clickhouse': True},
+        ),
+        migrations.RunSQL(
+            'SYSTEM REFRESH VIEW "GRCh37/SNV_INDEL/reference_data/eigen/all_variants_to_seqr_variants_mv"',
+            hints={'clickhouse': True},
+        ),
+        migrations.RunSQL(
+            'SYSTEM WAIT VIEW "GRCh37/SNV_INDEL/reference_data/eigen/all_variants_to_seqr_variants_mv"',
+            hints={'clickhouse': True},
+        ),
+        migrations.RunSQL(
+            'SYSTEM RELOAD DICTIONARY "GRCh37/SNV_INDEL/reference_data/eigen"',
             hints={'clickhouse': True},
         ),
     ]
