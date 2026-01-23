@@ -125,6 +125,37 @@ class SearchQuerySet(QuerySet):
 
         return TupleConcat(*pred_expressions, output_field=NamedTupleField(all_pred_fields))
 
+    def _filter_in_silico(self, results, in_silico=None, **kwargs):
+        in_silico = in_silico or {}
+        require_score = in_silico.get('requireScore', False)
+
+        results, has_required_filter, in_silico_q, missing_q = self._parse_in_silico_qs(
+            results, in_silico, require_score, [], [],
+        )
+
+        if in_silico_q:
+            if missing_q:
+                in_silico_q |= missing_q
+            results = results.filter(in_silico_q)
+        elif has_required_filter:
+            results = results.none()
+
+        return results
+
+    def _parse_in_silico_qs(self, results, in_silico, require_score, in_silico_qs, in_silico_missing_qs):
+        in_silico_q = in_silico_qs[0] if in_silico_qs else None
+        for score_q in in_silico_qs[1:]:
+            in_silico_q |= score_q
+
+        missing_q = in_silico_missing_qs[0] if in_silico_missing_qs else None
+        for score_q in in_silico_missing_qs[1:]:
+            missing_q &= score_q
+
+        has_required_filter = require_score and any(val for val in (in_silico or {}).values())
+
+        return results, has_required_filter, in_silico_q, missing_q
+
+
 
 class BaseAnnotationsQuerySet(SearchQuerySet):
 
@@ -277,7 +308,8 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
         initial_values = {k: v for k, v in  values.items() if k not in override_model_annotations}
 
         fields = [*self.annotation_fields] + [
-            field for field in ['clinvar', 'familyGenotypes', 'numFamilies'] if self.has_annotation(field)
+            field for field in ['clinvar', 'familyGenotypes', 'numFamilies', 'pass_in_silico', 'missing_in_silico']
+            if self.has_annotation(field)
         ]
         if 'familyGenotypes' not in fields and not skip_entry_fields:
             fields += self.ENTRY_FIELDS
@@ -365,43 +397,18 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
 
         return results
 
-    def _filter_in_silico(self, results, in_silico=None, **kwargs):
-        #  TODO move into entries
+    def _parse_in_silico_qs(self, results, in_silico, require_score, in_silico_qs, in_silico_missing_qs):
         #  TODO simplify for SV only
-        in_silico = in_silico or {}
-        require_score = in_silico.get('requireScore', False)
-        in_silico_qs, in_silico_missing_qs = self._parse_in_silico_qs(in_silico, require_score)
-
-        if not in_silico_qs:
-            if require_score and any(val for val in (in_silico or {}).values()):
-                #  In silico filters restrict search to other dataset types
-                results = results.none()
-            return results
-
-        in_silico_q = in_silico_qs[0]
-        for score_q in in_silico_qs[1:]:
-            in_silico_q |= score_q
-
-        if in_silico_missing_qs:
-            missing_q = in_silico_missing_qs[0]
-            for score_q in in_silico_missing_qs[1:]:
-                missing_q &= score_q
-            in_silico_q |= missing_q
-
-        return results.filter(in_silico_q)
-
-    def _parse_in_silico_qs(self, in_silico, require_score):
-        in_silico_qs = []
-        in_silico_missing_qs = []
         for score, value in in_silico.items():
             if value and score in self.prediction_fields:
                 in_silico_qs.append(self._get_in_silico_score_q(score, value))
                 if not require_score:
                     in_silico_missing_qs.append(Q(**{f'predictions__{score}__isnull': True}))
 
-        return in_silico_qs, in_silico_missing_qs
+        return super()._parse_in_silico_qs(results, in_silico, require_score, in_silico_qs, in_silico_missing_qs)
 
     def _get_in_silico_score_q(self, score, value):
+        #   TODO simplify for SV only
         if not (score in self.prediction_fields and value):
             return None
         score_column = f'predictions__{score}'
@@ -547,19 +554,20 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
     def _clinvar_conflicting_path_filter(array_func, conflicting_filter):
         return {f'clinvar__5__{array_func}': conflicting_filter, 'clinvar__5__not_empty': True, 'clinvar_key__isnull': False}
 
-    def _parse_in_silico_qs(self, in_silico, require_score):
-        in_silico_qs, in_silico_missing_qs = super()._parse_in_silico_qs(in_silico, require_score)
+    def _parse_in_silico_qs(self, results, in_silico, require_score, in_silico_qs, in_silico_missing_qs):
+        in_silico_q = None
+        missing_q = None
 
-        if (in_silico or {}).get('alphamissense') and 'alphamissensePathogenicity' in self.sorted_transcript_consequence_fields:
-            in_silico_qs.append(Q(sorted_transcript_consequences__array_exists={
+        if self.has_annotation('pass_in_silico'):
+            in_silico_q = Q(pass_in_silico=True) | (Q(sorted_transcript_consequences__array_exists={
                 'alphamissensePathogenicity': (in_silico['alphamissense'], '{value} <= {field}'),
             }))
             if not require_score:
-                in_silico_missing_qs.append(Q(sorted_transcript_consequences__array_all={
+                missing_q = Q(missing_in_silico=True, sorted_transcript_consequences__array_all={
                     'alphamissensePathogenicity': (None, 'isNull({field})'),
-                }))
+                })
 
-        return in_silico_qs, in_silico_missing_qs
+        return results, False, in_silico_q, missing_q
 
     def filter_variant_ids(self, parsed_variant_ids=None, rs_ids=None, **kwargs):
         results = self
@@ -1353,7 +1361,50 @@ class EntriesManager(BaseEntriesManager):
             # For fields used for pruning the table based on the order_by for the table, the former is needed
             entries = entries.filter(is_gnomad_gt_5_percent=Value(False))
 
+        entries = self._filter_in_silico(entries, **kwargs)
+
         return entries
+
+    def _parse_in_silico_qs(self, results, in_silico, require_score, in_silico_qs, in_silico_missing_qs):
+        prediction_dicts = {pred: getattr(self.model, pred).rel.related_model for pred in self.model.PREDICTIONS}
+        for score, value in in_silico.items():
+            if not value:
+                continue
+            if score in prediction_dicts:
+                field_name = 'score'
+                dict_model = getattr(self.model, score).rel.related_model
+            else:
+                field_name = score
+                dict_model = next((dm for dm in prediction_dicts.values() if score in dict(dm.base_fields())), None)
+            if not dict_model:
+                continue
+
+            results = results.annotate(**{
+                f'{score}_score': dict_model.dict_get_expression('key', field_names=[field_name], null_missing=True),
+            })
+            try:
+                score_q = Q(**{f'{score}_score__gte': float(value)})
+            except ValueError:
+                score_q = Q(**{f'{score}_score': value})
+
+            in_silico_qs.append(score_q)
+            if not require_score:
+                in_silico_missing_qs.append(Q(**{f'{score}_score__isnull': True}))
+
+        results, has_required_filter, in_silico_q, missing_q = super()._parse_in_silico_qs(
+            results, in_silico, require_score, in_silico_qs, in_silico_missing_qs,
+        )
+
+        has_alphamissense = 'alphamissense' in (in_silico or {}) and 'alphamissensePathogenicity' in set(dict(
+            getattr(self.annotations_model, 'SORTED_TRANSCRIPT_CONSQUENCES_FIELDS', [])
+        ))
+        if has_alphamissense:
+            return results.annotate(
+                pass_in_silico=in_silico_q or Value(False),
+                missing_in_silico=missing_q or Value(True),
+            ), False, None, None
+
+        return results, has_required_filter, in_silico_q, missing_q
 
     def _join_annotations(self, entries):
         entries = entries.annotate(
