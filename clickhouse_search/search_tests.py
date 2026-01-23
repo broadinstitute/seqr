@@ -6,8 +6,6 @@ import json
 import mock
 import responses
 
-from clickhouse_search.backend.fields import NamedTupleField
-from clickhouse_search.backend.functions import Tuple
 from clickhouse_search.models.gt_stats_models import ProjectGtStatsSnvIndel, \
     ProjectsToGtStatsGRCh37SnvIndel, ProjectsToGtStatsSnvIndel, ProjectsToGtStatsMito, ProjectsToGtStatsSv, \
     GtStatsDictGRCh37SnvIndel, GtStatsDictSnvIndel, GtStatsDictMito, GtStatsDictSv
@@ -1717,41 +1715,16 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
         self.assertEqual(EntriesSnvIndel.objects.filter(project_guid='R0001_1kg').count(), 0)
         self.assertEqual(ProjectGtStatsSnvIndel.objects.filter(project_guid='R0001_1kg').count(), 0)
 
-        seqr_pops = []
-        seqr_pop_fields = []
         annotations_qs = AnnotationsSnvIndel.objects.all().join_seqr_pop()
-        annotations_qs._get_seqr_pop_expressions(seqr_pops, seqr_pop_fields)
-        annotations_qs = annotations_qs.annotate(seqr_pop=Tuple(*seqr_pops, output_field=NamedTupleField(seqr_pop_fields)))
-        updated_seqr_pops_by_key = dict(annotations_qs.values_list('key', 'seqr_pop'))
+        updated_seqr_pops_by_key = dict(annotations_qs.values_list('key', 'seqrPop'))
         self.assertDictEqual(updated_seqr_pops_by_key, {
-            1: {
-                'seqr': {'ac': 4, 'ac_wes': 2, 'ac_wgs': 2, 'hom': 2,  'hom_wes': 1, 'hom_wgs': 1},
-                'seqr_affected': {'ac': 4, 'hom': 2},
-            },
-            2: {
-                'seqr': {'ac': 2, 'ac_wes': 1, 'ac_wgs': 1, 'hom': 0, 'hom_wes': 0, 'hom_wgs': 0},
-                'seqr_affected': {'ac': 2, 'hom': 0},
-            },
-            3: {
-                'seqr': {'ac': 0, 'ac_wes': 0, 'ac_wgs': 0, 'hom': 0, 'hom_wes': 0, 'hom_wgs': 0},
-                'seqr_affected': {'ac': 0, 'hom': 0},
-            },
-            4: {
-                'seqr': {'ac': 0, 'ac_wes': 0, 'ac_wgs': 0, 'hom': 0, 'hom_wes': 0, 'hom_wgs': 0},
-                'seqr_affected': {'ac': 0, 'hom': 0},
-            },
-            5: {
-                'seqr': {'ac': 2, 'ac_wes': 1, 'ac_wgs': 1, 'hom': 0, 'hom_wes': 0, 'hom_wgs': 0},
-                'seqr_affected': {'ac': 2, 'hom': 0},
-            },
-            6: {
-                'seqr': {'ac': 0, 'ac_wes': 0, 'ac_wgs': 0, 'hom': 0, 'hom_wes': 0, 'hom_wgs': 0},
-                'seqr_affected': {'ac': 0, 'hom': 0},
-            },
-            22: {
-                'seqr': {'ac': 3, 'ac_wes': 0, 'ac_wgs': 3, 'hom': 1, 'hom_wes': 0, 'hom_wgs': 1},
-                'seqr_affected': {'ac': 3, 'hom': 1},
-            },
+            1: {'ac_wes': 2, 'ac_wgs': 2, 'hom_wes': 1, 'hom_wgs': 1, 'ac_affected': 4, 'hom_affected': 2},
+            2: {'ac_wes': 1, 'ac_wgs': 1, 'hom_wes': 0, 'hom_wgs': 0, 'ac_affected': 2, 'hom_affected': 0},
+            3: {'ac_wes': 0, 'ac_wgs': 0, 'hom_wes': 0, 'hom_wgs': 0, 'ac_affected': 0, 'hom_affected': 0},
+            4: {'ac_wes': 0, 'ac_wgs': 0, 'hom_wes': 0, 'hom_wgs': 0, 'ac_affected': 0, 'hom_affected': 0},
+            5: {'ac_wes': 1, 'ac_wgs': 1, 'hom_wes': 0, 'hom_wgs': 0, 'ac_affected': 2, 'hom_affected': 0},
+            6: {'ac_wes': 0, 'ac_wgs': 0, 'hom_wes': 0, 'hom_wgs': 0, 'ac_affected': 0, 'hom_affected': 0},
+            22: {'ac_wes': 0, 'ac_wgs': 3, 'hom_wes': 0, 'hom_wgs': 1, 'ac_affected': 3, 'hom_affected': 1},
         })
 
         project_samples = Sample.objects.filter(individual__family__project__guid='R0001_1kg', is_active=True)

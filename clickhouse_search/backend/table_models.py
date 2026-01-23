@@ -2,6 +2,8 @@ from clickhouse_backend import models
 from django.db import connections
 from django.db.models import Func
 
+from clickhouse_search.backend.fields import NamedTupleField
+
 MATERIALIZED_VIEW_META_FIELDS = [
     'to_table', 'source_table', 'source_sql', 'source_url', 'source_url_template', 'column_selects', 'refreshable', 'create_empty',
 ]
@@ -68,9 +70,17 @@ class Dictionary(models.ClickhouseModel):
         return f'{func_name}({", ".join(args)})'
 
     @classmethod
-    def dict_get_expression(cls, expressions, fields, default=None, **kwargs):
-        dict_get_func = Func(expressions, **kwargs)
-        dict_get_func.template = cls.dict_get_sql('%(expressions)s', fields, default)
+    def base_fields(cls):
+        return [(field.name, field) for field in cls._meta.local_fields if field.name != 'key']
+
+    @classmethod
+    def dict_get_expression(cls, expressions, field_names=None, **kwargs):
+        base_fields = cls.base_fields()
+        if field_names:
+            base_fields = [f for f in base_fields if f[0] in field_names]
+        output_field = base_fields[0][1] if len(base_fields) == 1 else NamedTupleField(base_fields)
+        dict_get_func = Func(expressions, output_field=output_field)
+        dict_get_func.template = cls.dict_get_sql('%(expressions)s', [field_name for field_name, _  in base_fields], **kwargs)
         return dict_get_func
 
     @classmethod
