@@ -341,7 +341,7 @@ class PextMitoDict(Dictionary):
         db_table = 'GRCh38/MITO/reference_data/pext'
         source_table = 'PextSeqrVariantsMito'
 
-class GnomadNonCodingConstraintAllVariantsSnvIndel(models.ClickhouseModel):
+class GnomadNonCodingConstraintAllVariantsSnvIndel(FixtureLoadableClickhouseModel):
     chrom = Enum8Field(return_int=False, choices=CHROMOSOME_CHOICES, primary_key=True)
     start = models.UInt32Field()
     end = models.UInt32Field()
