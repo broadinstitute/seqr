@@ -88,6 +88,7 @@ class BaseAnnotationsMitoSnvIndel(BaseAnnotations):
         ('transcriptId', models.StringField()),
         ('transcriptRank', models.UInt8Field()),
     ]
+    ANNOTATION_PREDICTIONS = []
 
     ref = models.StringField()
     alt = models.StringField()
@@ -360,6 +361,7 @@ class BaseAnnotationsMito(BaseAnnotationsMitoSnvIndel):
         ('sift', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
         ('mlc', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
     ]
+    ANNOTATION_PREDICTIONS = ['haplogroup_defining', 'mitotip']
 
     common_low_heteroplasmy = models.BoolField(db_column='commonLowHeteroplasmy', null=True, blank=True)
     mitomap_pathogenic  = models.BoolField(db_column='mitomapPathogenic', null=True, blank=True)

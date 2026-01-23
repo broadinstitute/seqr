@@ -479,7 +479,15 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
     @property
     def annotation_values(self):
         annotations = super().annotation_values
-        annotations['predictions'] = F('preds')
+
+        pred_expr = F('preds')
+        if self.model.ANNOTATION_PREDICTIONS:
+            preds = [f'predictions__{field}' for field in self.model.ANNOTATION_PREDICTIONS]
+            output_fields = self.query.annotations['preds'].output_field.base_fields + [
+                field for field in self.model.PREDICTION_FIELDS if field[0] in self.model.ANNOTATION_PREDICTIONS
+            ]
+            pred_expr = TupleConcat(pred_expr, Tuple(*preds), output_field=NamedTupleField(output_fields))
+        annotations['predictions'] = pred_expr
 
         if self.hgmd_join_model:
             annotations['hgmd'] = self._pathogenicity_tuple(self.hgmd_join_model, 'hgmd_join', rename_fields={'classification': 'class'})
