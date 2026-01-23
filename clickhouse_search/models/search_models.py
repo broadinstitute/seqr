@@ -369,6 +369,9 @@ class BaseAnnotationsMito(BaseAnnotationsMitoSnvIndel):
 
 class BaseVariantsMito(BaseVariants):
     sorted_transcript_consequences = NestedField(BaseVariants.TRANSCRIPTS_FIELDS, db_column='sortedTranscriptConsequences', group_by_key='geneId')
+    haplogroup_defining = models.BoolField(null=True, blank=True, db_column='haplogroupDefining')
+    mitotip = models.Enum8Field(null=True, blank=True, return_int=False, choices=BaseAnnotationsMito.MITOTIP_PATHOGENICITIES)
+    common_low_heteroplasmy = models.BoolField(db_column='commonLowHeteroplasmy', null=True, blank=True)
 
     class Meta:
         abstract = True
