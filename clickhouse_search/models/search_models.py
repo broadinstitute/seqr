@@ -662,8 +662,13 @@ class EntriesMito(BaseEntries):
         ('mitoCn', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
         ('contamination', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
     ]
-    # TODO mito
-    PREDICTIONS = {}
+    PREDICTIONS = {
+        'apogee': {},
+        'dbnsfp': {},
+        'hmtvar': {},
+        'mlc': {},
+    }
+    RANGE_PREDICTIONS = {}
 
     # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
     key = ForeignKey('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)

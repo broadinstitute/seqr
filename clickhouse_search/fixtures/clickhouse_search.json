@@ -881,7 +881,7 @@
       "lifted_over_pos": 4429,
       "common_low_heteroplasmy": false,
       "mitomap_pathogenic": null,
-      "predictions": [null, null, 0.05, "likely_pathogenic", null, null, 3.38874],
+      "predictions": [null, null, 0.005, "likely_pathogenic", null, null, 1],
       "populations": [
         [0, 0, 56419],
         [0, 0, 56419, 0],
@@ -909,7 +909,7 @@
       "lifted_over_pos": 11597,
       "common_low_heteroplasmy": false,
       "mitomap_pathogenic": null,
-      "predictions": [0.58, null, 0.75, null, "N", 0, null],
+      "predictions": [0.058, null, 0.075, null, null, 1, null],
       "populations": [
         [0, 0, 0],
         [0, 0, 0, 0],
@@ -937,7 +937,7 @@
       "lifted_over_pos": 14783,
       "common_low_heteroplasmy": true,
       "mitomap_pathogenic": true,
-      "predictions": [null, true, null, null, null, null, 0.7514],
+      "predictions": [null, true, null, null, null, null, 0.0751],
       "populations": [
         [3118, 0.00553464, 56336],
         [3, 0.00005325, 56336, 1],
@@ -956,6 +956,12 @@
     "pk": "M-4429-G-A",
     "fields": {
       "key": 6
+    }
+}, {
+    "model": "clickhouse_search.keylookupmito",
+    "pk": "M-11597-A-G",
+    "fields": {
+      "key": 7
     }
 }, {
     "model": "clickhouse_search.keylookupmito",
@@ -988,6 +994,43 @@
       "conditions": [],
       "assertions": [],
       "pathogenicity": "Likely_pathogenic"
+    }
+}, {
+    "model": "clickhouse_search.dbnsfpallvariantsmito",
+    "pk": "M-11597-A-G",
+    "fields": {
+      "mut_taster": "N",
+      "sift": 0
+    }
+}, {
+    "model": "clickhouse_search.hmtvarallvariantsmito",
+    "pk": "M-4429-G-A",
+    "fields": {
+      "score": 0.05
+    }
+}, {
+    "model": "clickhouse_search.hmtvarallvariantsmito",
+    "pk": "M-11597-A-G",
+    "fields": {
+      "score": 0.75
+    }
+}, {
+    "model": "clickhouse_search.localconstraintmitoallvariantsmito",
+    "pk": "M-4429-G-A",
+    "fields": {
+      "score": 3.38874
+    }
+}, {
+    "model": "clickhouse_search.localconstraintmitoallvariantsmito",
+    "pk": "M-14783-T-C",
+    "fields": {
+      "score": 0.7514
+    }
+},{
+    "model": "clickhouse_search.mitimpactallvariantsmito",
+    "pk": "M-11597-A-G",
+    "fields": {
+      "score": 0.58
     }
 }, {
     "model": "clickhouse_search.entriesmito",
