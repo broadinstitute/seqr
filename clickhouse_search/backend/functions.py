@@ -169,6 +169,10 @@ class TupleConcat(Func):
     function = 'tupleConcat'
 
 
+class Untuple(Func):
+    function = 'untuple'
+
+
 class SubqueryTable(BaseTable):
     def __init__(self, subquery, alias=None):
         self.subquery = Subquery(subquery)
