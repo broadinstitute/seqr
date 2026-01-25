@@ -77,7 +77,7 @@ urllib3==1.26.19
     #   responses
 urllib3-mock==0.3.3
     # via -r requirements-dev.in
-wheel==0.38.4
+wheel==0.46.2
     # via pip-tools
 
 # The following packages are considered to be unsafe in a requirements file:
