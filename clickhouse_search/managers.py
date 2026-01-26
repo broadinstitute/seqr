@@ -621,9 +621,12 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
                 filter_field, format_filter = self.ANNOTATION_FIELD_FILTERS[field]
                 filters_by_field[filter_field] = format_filter(value)
             elif field == SPLICE_AI_FIELD:
-                splice_ai_q = self._get_in_silico_score_q(SPLICE_AI_FIELD, value)
-                if splice_ai_q:
-                    filter_qs.append(splice_ai_q)
+                if value and SPLICE_AI_FIELD in self.entry_model.PREDICTIONS:
+                    pred_index = next (
+                        i for i, (pred_field, _) in enumerate(self.query.annotations['preds'].output_field.base_fields)
+                        if pred_field == SPLICE_AI_FIELD
+                    )
+                    filter_qs.append(Q(**{f'preds__{pred_index}__gte': float(value)}))
             elif field not in SV_ANNOTATION_TYPES:
                 allowed_consequences += value
 
