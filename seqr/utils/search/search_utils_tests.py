@@ -69,7 +69,7 @@ class SearchUtilsTests(SearchTestHelper):
         mock_variant_lookup.return_value = [VARIANT_LOOKUP_VARIANT]
         variants = variant_lookup(self.user, '1-10439-AC-A', '38', affected_only=True)
         self.assertListEqual(variants, [VARIANT_LOOKUP_VARIANT])
-        mock_variant_lookup.assert_called_with(self.user, ('1', 10439, 'AC', 'A'), 'SNV_INDEL', None, '38', True, False)
+        mock_variant_lookup.assert_called_with(self.user, '1-10439-AC-A', ('1', 10439, 'AC', 'A'), 'SNV_INDEL', None, '38', True, False)
         cache_key = "variant_lookup_results__1-10439-AC-A__38"
         self.assert_cached_results(variants, cache_key=f'{cache_key}__affected')
 
@@ -94,7 +94,7 @@ class SearchUtilsTests(SearchTestHelper):
         variants = variant_lookup(self.user, 'phase2_DEL_chr14_4640', '38', sample_type='WGS', hom_only=True)
         self.assertListEqual(variants, [SV_LOOKUP_VARIANT, GCNV_LOOKUP_VARIANT])
         mock_variant_lookup.assert_called_with(
-            self.user, 'phase2_DEL_chr14_4640', 'SV', 'WGS', '38', False, True)
+            self.user, 'phase2_DEL_chr14_4640', None, 'SV', 'WGS', '38', False, True)
         cache_key = 'variant_lookup_results__phase2_DEL_chr14_4640__38'
         self.assert_cached_results(variants, cache_key=f'{cache_key}__hom')
 
@@ -111,7 +111,7 @@ class SearchUtilsTests(SearchTestHelper):
         self.assertDictEqual(variant, PARSED_VARIANTS[0])
         expected_samples = {s for s in self.affected_search_samples if s.guid not in NON_SNP_INDEL_SAMPLES and s.guid != FAMILY_3_SAMPLE}
         self._assert_expected_get_single_variant_call(
-            mock_get_variants_for_ids, ('2', 103343353, 'GAGA', 'G'), expected_samples,
+            mock_get_variants_for_ids, '2-103343353-GAGA-G', expected_samples,
         )
 
         get_single_variant(family, 'prefix_19107_DEL', user=self.user)
