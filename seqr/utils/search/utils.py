@@ -437,7 +437,7 @@ def _parse_variant_items(search_json):
     parsed_variant_ids = []
     rs_ids = []
     for item in raw_items.replace(',', ' ').split():
-        if item.startswith('rs'):
+        if item.startswith('rs') and backend_specific_call(True, False):
             rs_ids.append(item)
         else:
             variant_id = item.lstrip('chr')
