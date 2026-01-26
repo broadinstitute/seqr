@@ -307,8 +307,7 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
         initial_values = {k: v for k, v in  values.items() if k not in override_model_annotations}
 
         fields = [*self.annotation_fields] + [
-            field for field in ['clinvar', 'familyGenotypes', 'numFamilies']
-            if self.has_annotation(field)
+            field for field in ['clinvar', 'familyGenotypes', 'numFamilies'] if self.has_annotation(field)
         ]
         if 'familyGenotypes' not in fields and not skip_entry_fields:
             fields += self.ENTRY_FIELDS
