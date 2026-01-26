@@ -227,11 +227,6 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
         ]
 
     @property
-    def prediction_fields(self):
-        # TODO clean up
-        return set(dict(self.model.PREDICTION_FIELDS).keys())
-
-    @property
     def entry_field(self):
         return next(obj.name for obj in self.model._meta.related_objects if obj.name.startswith('entries'))
 
@@ -400,26 +395,6 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
                     results = results.filter(hh_q)
 
         return results
-
-    def _parse_in_silico_qs(self, results, in_silico, require_score, in_silico_qs, in_silico_missing_qs):
-        #  TODO simplify for SV only
-        for score, value in in_silico.items():
-            if value and score in self.prediction_fields:
-                in_silico_qs.append(self._get_in_silico_score_q(score, value))
-                if not require_score:
-                    in_silico_missing_qs.append(Q(**{f'predictions__{score}__isnull': True}))
-
-        return super()._parse_in_silico_qs(results, in_silico, require_score, in_silico_qs, in_silico_missing_qs)
-
-    def _get_in_silico_score_q(self, score, value):
-        #   TODO simplify for SV only
-        if not (score in self.prediction_fields and value):
-            return None
-        score_column = f'predictions__{score}'
-        try:
-            return Q(**{f'{score_column}__gte': float(value)})
-        except ValueError:
-            return Q(**{score_column: value})
 
     def filter_annotations(self, results, annotations=None, pathogenicity=None, genes=None, intervals=None, exclude_locations=False, **kwargs):
         if exclude_locations and genes:
@@ -805,6 +780,15 @@ class SvAnnotationsQuerySet(BaseAnnotationsQuerySet):
             end_range_q &= Q(end_chrom__isnull=True)
             contains_q  &= Q(end_chrom__isnull=True)
         return start_range_q | end_range_q | contains_q
+
+    def _parse_in_silico_qs(self, results, in_silico, require_score, in_silico_qs, in_silico_missing_qs):
+        for score, _ in self.model.PREDICTION_FIELDS:
+            if in_silico.get(score):
+                in_silico_qs.append(Q(**{f'predictions__{score}__gte': float(in_silico[score])}))
+                if not require_score:
+                    in_silico_missing_qs.append(Q(**{f'predictions__{score}__isnull': True}))
+
+        return super()._parse_in_silico_qs(results, in_silico, require_score, in_silico_qs, in_silico_missing_qs)
 
 
 class BaseEntriesManager(SearchQuerySet):
