@@ -238,8 +238,7 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
         )
 
     def search(self, **kwargs):
-        results = self.filter_variant_ids(**kwargs)
-        results = self._filter_frequency(results, **kwargs)
+        results = self._filter_frequency(self, **kwargs)
         results = self._filter_in_silico(results, **kwargs)
         results = self.filter_annotations(results, **kwargs)
         return results
@@ -289,9 +288,6 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
             field: F(field) for field in [self.SELECTED_GENE_FIELD, 'clinvar', 'family_carriers', 'carriers', 'has_hom_alt', 'no_hom_alt_families', 'familyGenotypes'] + self.ENTRY_FIELDS
             if field in query.query.annotations
         }
-
-    def filter_variant_ids(self, **kwargs):
-        return self
 
     @property
     def populations(self):
@@ -526,19 +522,6 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
                 }))
 
         return in_silico_qs, in_silico_missing_qs
-
-    def filter_variant_ids(self, parsed_variant_ids=None, rs_ids=None, **kwargs):
-        results = self
-        import pdb; pdb.set_trace()
-        if parsed_variant_ids:
-            results = results.filter(
-                variant_id__in=[f'{chrom}-{pos}-{ref}-{alt}' for chrom, pos, ref, alt in parsed_variant_ids]
-            )
-
-        if rs_ids:
-            results = results.filter(rsid__in=rs_ids)
-
-        return results
 
     def filter_annotations(self, *args, exclude=None, **kwargs):
         results = super().filter_annotations(*args, **kwargs)
@@ -787,6 +770,10 @@ class BaseEntriesManager(SearchQuerySet):
     @property
     def annotations_model(self):
         return self.model.key.field.related_model
+
+    @property
+    def key_lookup_model(self):
+        return next(obj.related_model for obj in self.annotations_model._meta.related_objects if obj.name.startswith('keylookup'))
 
     @property
     def call_fields(self):
@@ -1227,8 +1214,12 @@ class BaseEntriesManager(SearchQuerySet):
             mapped_expression='x.1', output_field=models.ArrayField(models.StringField()),
         )
 
-    def filter_locus(self, exclude_locations=False, require_gene_filter=False, intervals=None, genes=None, **kwargs):
+    def filter_locus(self, exclude_locations=False, require_gene_filter=False, intervals=None, genes=None, variant_ids=None, **kwargs):
         entries = self
+
+        if variant_ids:
+            keys = self.key_lookup_model.objects.filter(variant_id__in=variant_ids).values_list('key', flat=True)
+            entries = entries.filter(key__in=keys)
 
         if not (genes or intervals):
             return entries
@@ -1327,12 +1318,7 @@ class EntriesManager(BaseEntriesManager):
         )
         return super()._join_annotations(entries)
 
-    def filter_locus(self, *args, require_any_gene=False, parsed_variant_ids=None, intervals=None, genes=None, **kwargs):
-        if parsed_variant_ids:
-            # although technically redundant, the interval query is applied to the entries table before join and reduces the join size,
-            # while the full variant_id filter is applied to the annotation table after the join
-            intervals = [{'chrom': chrom, 'start': pos, 'end': pos} for chrom, pos, _, _ in parsed_variant_ids]
-
+    def filter_locus(self, *args, require_any_gene=False, intervals=None, genes=None, **kwargs):
         entries = super().filter_locus(*args, intervals=intervals, genes=genes, **kwargs)
 
         if hasattr(self.model, 'is_annotated_in_any_gene') and (require_any_gene or (genes and not intervals)):
