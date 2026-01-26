@@ -703,9 +703,8 @@ def clickhouse_variant_lookup(user, variant_id, parsed_variant_id, dataset_type,
             liftover_results = run_liftover(lifted_genome_version, parsed_variant_id[0], parsed_variant_id[1])
             if liftover_results:
                 lifted_id = (liftover_results[0], liftover_results[1], *parsed_variant_id[2:])
-                lifted_string_id = '-'.join([str(o) for o in lifted_id])
                 variant = _clickhouse_variant_lookup(
-                    lifted_string_id, lifted_id, lifted_genome_version, data_type, affected_only=affected_only, hom_only=hom_only,
+                    None, lifted_id, lifted_genome_version, data_type, affected_only=affected_only, hom_only=hom_only,
                 )
 
     if not variant:
