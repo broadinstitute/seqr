@@ -13,7 +13,7 @@ from clickhouse_search.backend.functions import Array, ArrayFilter, ArrayInterse
 from clickhouse_search.models.gt_stats_models import PROJECT_GT_STATS_VIEW_CLASS_MAP
 from clickhouse_search.models.reference_data_models import BaseClinvar
 from clickhouse_search.models.search_models import BaseAnnotationsMitoSnvIndel, BaseAnnotationsGRCh37SnvIndel, \
-    BaseAnnotationsSvGcnv, ENTRY_CLASS_MAP, ANNOTATIONS_CLASS_MAP, TRANSCRIPTS_CLASS_MAP, KEY_LOOKUP_CLASS_MAP
+    BaseAnnotationsSvGcnv, ENTRY_CLASS_MAP, ANNOTATIONS_CLASS_MAP, TRANSCRIPTS_CLASS_MAP
 from reference_data.models import GeneConstraint, Omim, GENOME_VERSION_LOOKUP
 from seqr.models import Sample, PhenotypePrioritization, Individual
 from seqr.utils.logging_utils import SeqrLogger
@@ -786,8 +786,7 @@ def get_clickhouse_annotations(genome_version, dataset_type, keys):
 
 
 def get_clickhouse_key_lookup(genome_version, dataset_type, variants_ids, reverse=False):
-    # TODO KEY_LOOKUP_CLASS_MAP
-    key_lookup_class = KEY_LOOKUP_CLASS_MAP[genome_version][dataset_type]
+    key_lookup_class = ENTRY_CLASS_MAP[genome_version][dataset_type].key_mookup_model
     lookup = {}
     fields = ('variant_id', 'key') if not reverse else ('key', 'variant_id')
     for i in range(0, len(variants_ids), BATCH_SIZE):
