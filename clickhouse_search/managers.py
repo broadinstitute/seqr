@@ -312,7 +312,7 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
         initial_values = {k: v for k, v in  values.items() if k not in override_model_annotations}
 
         fields = [*self.annotation_fields] + [
-            field for field in ['clinvar', 'familyGenotypes', 'numFamilies', 'pass_in_silico', 'missing_in_silico']
+            field for field in ['clinvar', 'familyGenotypes', 'numFamilies']
             if self.has_annotation(field)
         ]
         if 'familyGenotypes' not in fields and not skip_entry_fields:
@@ -1434,7 +1434,9 @@ class EntriesManager(BaseEntriesManager):
 
     @classmethod
     def annotation_fields(cls, entries):
-        return super().annotation_fields(entries) + ['clinvar', 'clinvar_key', 'preds']
+        return super().annotation_fields(entries) + ['clinvar', 'clinvar_key', 'preds'] + [
+            field for field in ['pass_in_silico', 'missing_in_silico'] if field in entries.query.annotations
+        ]
 
 class SvEntriesManager(BaseEntriesManager):
     NULLABLE_GENOTYPE_LOOKUP = {
