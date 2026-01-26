@@ -529,6 +529,7 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
 
     def filter_variant_ids(self, parsed_variant_ids=None, rs_ids=None, **kwargs):
         results = self
+        import pdb; pdb.set_trace()
         if parsed_variant_ids:
             results = results.filter(
                 variant_id__in=[f'{chrom}-{pos}-{ref}-{alt}' for chrom, pos, ref, alt in parsed_variant_ids]
