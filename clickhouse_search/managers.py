@@ -240,7 +240,7 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
     def search(self, **kwargs):
         results = self._filter_frequency(self, **kwargs)
         results = self._filter_in_silico(results, **kwargs)
-        results = self.filter_annotations(results, **kwargs)
+        results = self._filter_annotations(results, **kwargs)
         return results
 
     def result_values(self, skip_entry_fields=False):
@@ -381,7 +381,7 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
         except ValueError:
             return Q(**{score_column: value})
 
-    def filter_annotations(self, results, annotations=None, pathogenicity=None, genes=None, intervals=None, exclude_locations=False, **kwargs):
+    def _filter_annotations(self, results, annotations=None, pathogenicity=None, genes=None, intervals=None, exclude_locations=False, **kwargs):
         if exclude_locations and genes:
             intervals = self._format_gene_intervals(genes)
             genes = None
@@ -523,8 +523,8 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
 
         return in_silico_qs, in_silico_missing_qs
 
-    def filter_annotations(self, *args, exclude=None, **kwargs):
-        results = super().filter_annotations(*args, **kwargs)
+    def _filter_annotations(self, *args, exclude=None, **kwargs):
+        results = super()._filter_annotations(*args, **kwargs)
 
         exclude_clinvar_q = self._clinvar_filter_q(exclude)
         if exclude_clinvar_q is not None:
@@ -682,7 +682,7 @@ class SvAnnotationsQuerySet(BaseAnnotationsQuerySet):
             **{col: F(f'sample_{col}') for col in genotype_override_fields if col != 'geneIds'},
         }
 
-    def filter_annotations(self, results, *args, **kwargs):
+    def add_genotype_override_annotations(self, results):
         if self.model.GENOTYPE_OVERRIDE_FIELDS:
             results = results.annotate(**{
                 self.GENOTYPE_GENE_CONSEQUENCE_FIELD: ArrayFilter(self.TRANSCRIPT_FIELD, conditions=[{
@@ -690,8 +690,11 @@ class SvAnnotationsQuerySet(BaseAnnotationsQuerySet):
                 }]),
             })
             self.TRANSCRIPT_FIELD = self.GENOTYPE_GENE_CONSEQUENCE_FIELD
+        return results
 
-        return super().filter_annotations(results, *args, **kwargs)
+    def _filter_annotations(self, results, *args, **kwargs):
+        results = self.add_genotype_override_annotations(results)
+        return super()._filter_annotations(results, *args, **kwargs)
 
     def _parse_annotation_filters(self, annotations, pathogenicity):
         filter_qs = []

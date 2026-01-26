@@ -136,20 +136,20 @@ def get_single_variant(family, variant_id, user=None):
     variant = backend_specific_call(
         _get_es_variant_by_id,
         _get_clickhouse_variant_by_id,
-    )(parsed_variant_id, variant_id, samples, family.project.genome_version, dataset_type=dataset_type, user=user)
+    )(variant_id, samples, family.project.genome_version, dataset_type=dataset_type, user=user)
     if not variant:
         raise InvalidSearchException('Variant {} not found'.format(variant_id))
     return variant
 
 
-def _get_es_variant_by_id(parsed_variant_id, variant_id, samples, genome_version, user=None, **kwargs):
+def _get_es_variant_by_id(variant_id, samples, genome_version, user=None, **kwargs):
     variants = get_es_variants_for_variant_ids(samples, genome_version, [variant_id], user)
     return variants[0] if variants else None
 
 
-def _get_clickhouse_variant_by_id(parsed_variant_id, variant_id, samples, genome_version, dataset_type=None, **kwargs):
+def _get_clickhouse_variant_by_id(variant_id, samples, genome_version, dataset_type=None, **kwargs):
     return get_clickhouse_variant_by_id(
-        parsed_variant_id or variant_id, samples, genome_version, DATASET_TYPES_LOOKUP[dataset_type][0],
+        variant_id, samples, genome_version, DATASET_TYPES_LOOKUP[dataset_type][0],
     )
 
 
@@ -169,7 +169,7 @@ def variant_lookup(user, variant_id, genome_version, sample_type=None, affected_
     dataset_type = DATASET_TYPES_LOOKUP[_variant_ids_dataset_type([parsed_variant_id])][0]
     _validate_dataset_type_genome_version(dataset_type, sample_type, genome_version)
 
-    variants = clickhouse_variant_lookup(user, parsed_variant_id or variant_id, dataset_type, sample_type, genome_version, affected_only, hom_only)
+    variants = clickhouse_variant_lookup(user, variant_id, parsed_variant_id, dataset_type, sample_type, genome_version, affected_only, hom_only)
 
     safe_redis_set_json(cache_key, variants, expire=timedelta(weeks=2))
     return variants

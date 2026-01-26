@@ -730,6 +730,12 @@
       "variant_id": "1-10439-AC-A"
     }
 }, {
+    "model": "clickhouse_search.keylookupgrch37snvindel",
+    "pk": "7-143270172-A-G",
+    "fields": {
+      "key": 11
+    }
+}, {
     "model": "clickhouse_search.annotationsmito",
     "pk": 6,
     "fields": {
