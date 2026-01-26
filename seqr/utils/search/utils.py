@@ -136,20 +136,20 @@ def get_single_variant(family, variant_id, user=None):
     variant = backend_specific_call(
         _get_es_variant_by_id,
         _get_clickhouse_variant_by_id,
-    )(variant_id, samples, family.project.genome_version, dataset_type=dataset_type, user=user)
+    )(parsed_variant_id, variant_id, samples, family.project.genome_version, dataset_type=dataset_type, user=user)
     if not variant:
         raise InvalidSearchException('Variant {} not found'.format(variant_id))
     return variant
 
 
-def _get_es_variant_by_id(variant_id, samples, genome_version, user=None, **kwargs):
+def _get_es_variant_by_id(parsed_variant_id, variant_id, samples, genome_version, user=None, **kwargs):
     variants = get_es_variants_for_variant_ids(samples, genome_version, [variant_id], user)
     return variants[0] if variants else None
 
 
-def _get_clickhouse_variant_by_id(variant_id, samples, genome_version, dataset_type=None, **kwargs):
+def _get_clickhouse_variant_by_id(parsed_variant_id, variant_id, samples, genome_version, dataset_type=None, **kwargs):
     return get_clickhouse_variant_by_id(
-        variant_id, samples, genome_version, DATASET_TYPES_LOOKUP[dataset_type][0],
+        variant_id, parsed_variant_id, samples, genome_version, DATASET_TYPES_LOOKUP[dataset_type][0],
     )
 
 

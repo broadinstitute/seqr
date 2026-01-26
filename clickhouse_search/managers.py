@@ -1321,8 +1321,14 @@ class EntriesManager(BaseEntriesManager):
         )
         return super()._join_annotations(entries)
 
-    def filter_locus(self, *args, require_any_gene=False, intervals=None, genes=None, **kwargs):
-        entries = super().filter_locus(*args, intervals=intervals, genes=genes, **kwargs)
+    def filter_locus(self, *args, require_any_gene=False, parsed_variant_ids=None, intervals=None, genes=None, variant_ids=None, **kwargs):
+        if parsed_variant_ids:
+            # although technically redundant, the interval query is applied to the entries table to
+            # improve performance by using the xpos projection
+            intervals = [{'chrom': chrom, 'start': pos, 'end': pos} for chrom, pos, _, _ in parsed_variant_ids]
+            variant_ids = ['-'.join(['-'.join([str(o) for o in variant_id])]) for variant_id in parsed_variant_ids]
+
+        entries = super().filter_locus(*args, intervals=intervals, genes=genes, variant_ids=variant_ids, **kwargs)
 
         if hasattr(self.model, 'is_annotated_in_any_gene') and (require_any_gene or (genes and not intervals)):
             entries = entries.filter(is_annotated_in_any_gene=Value(True))

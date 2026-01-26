@@ -659,13 +659,15 @@ def _get_sort_key(sort, gene_metadata):
     return lambda x: tuple(expr(x[0] if isinstance(x, list) else x) for expr in [*sort_expressions, lambda x: x[XPOS_SORT_KEY]])
 
 
-def _clickhouse_variant_lookup(variant_id, genome_version, data_type, samples=None, affected_only=False, hom_only=False):
+def _clickhouse_variant_lookup(variant_id, parsed_variant_id, genome_version, data_type, samples=None, affected_only=False, hom_only=False):
     entry_cls = ENTRY_CLASS_MAP[genome_version][data_type]
     annotations_cls = ANNOTATIONS_CLASS_MAP[genome_version][data_type]
 
     sample_data = _get_sample_data(samples)[data_type] if samples else None
 
-    entries = entry_cls.objects.filter_locus(variant_ids=[variant_id])
+    entries = entry_cls.objects.filter_locus(
+        variant_ids=[variant_id], parsed_variant_ids=[parsed_variant_id] if parsed_variant_id else [],
+    )
     entries = _filter_lookup_entries(entries, affected_only, hom_only)
     entries = entries.result_values(sample_data)
     results = annotations_cls.objects.subquery_join(entries)
@@ -690,7 +692,7 @@ def clickhouse_variant_lookup(user, variant_id, parsed_variant_id, dataset_type,
     logger.info(f'Looking up variant {variant_id} with data type {data_type}', user)
 
     variant = _clickhouse_variant_lookup(
-        variant_id, genome_version, data_type, affected_only=affected_only, hom_only=hom_only,
+        variant_id, parsed_variant_id, genome_version, data_type, affected_only=affected_only, hom_only=hom_only,
     )
     if variant:
         _add_liftover_genotypes(variant, data_type, parsed_variant_id, affected_only, hom_only)
@@ -700,9 +702,10 @@ def clickhouse_variant_lookup(user, variant_id, parsed_variant_id, dataset_type,
             from seqr.utils.search.utils import run_liftover
             liftover_results = run_liftover(lifted_genome_version, parsed_variant_id[0], parsed_variant_id[1])
             if liftover_results:
-                lifted_id = '-'.join((liftover_results[0], str(liftover_results[1]), *parsed_variant_id[2:]))
+                lifted_id = (liftover_results[0], liftover_results[1], *parsed_variant_id[2:])
+                lifted_string_id = '-'.join([str(o) for o in lifted_id])
                 variant = _clickhouse_variant_lookup(
-                    lifted_id, lifted_genome_version, data_type, affected_only=affected_only, hom_only=hom_only,
+                    lifted_string_id, lifted_id, lifted_genome_version, data_type, affected_only=affected_only, hom_only=hom_only,
                 )
 
     if not variant:
@@ -733,8 +736,8 @@ def _add_liftover_genotypes(variant, data_type, variant_id, affected_only, hom_o
     lifted_entry_cls = ENTRY_CLASS_MAP.get(variant.get('liftedOverGenomeVersion'), {}).get(data_type)
     if not lifted_entry_cls:
         return
-    lifted_id = '-'.join([variant['liftedOverChrom'], str(variant['liftedOverPos']), *variant_id[2:]])
-    lifted_entries = lifted_entry_cls.objects.filter_locus(variant_ids=[lifted_id])
+    lifted_id = (variant['liftedOverChrom'], variant['liftedOverPos'], *variant_id[2:])
+    lifted_entries = lifted_entry_cls.objects.filter_locus(parsed_variant_ids=[lifted_id])
     lifted_entries = _filter_lookup_entries(lifted_entries, affected_only, hom_only)
     gt_field, gt_expr = lifted_entry_cls.objects.genotype_expression()
     lifted_entry_data = lifted_entries.values('key').annotate(**{gt_field: GroupArrayArray(gt_expr)})
@@ -743,7 +746,7 @@ def _add_liftover_genotypes(variant, data_type, variant_id, affected_only, hom_o
         variant['liftedFamilyGuids'] = sorted(lifted_entry_data[0]['familyGenotypes'].keys())
 
 
-def get_clickhouse_variant_by_id(variant_id, samples, genome_version, dataset_type):
+def get_clickhouse_variant_by_id(variant_id, parsed_variant_id, samples, genome_version, dataset_type):
     if dataset_type == Sample.DATASET_TYPE_SV_CALLS:
         data_types  = [
             f'{Sample.DATASET_TYPE_SV_CALLS}_{sample_type}'
@@ -752,7 +755,7 @@ def get_clickhouse_variant_by_id(variant_id, samples, genome_version, dataset_ty
     else:
         data_types = [dataset_type]
     for data_type in data_types:
-        variant = _clickhouse_variant_lookup(variant_id, genome_version, data_type, samples)
+        variant = _clickhouse_variant_lookup(variant_id, parsed_variant_id, genome_version, data_type, samples)
         if variant:
             return variant
     return None
