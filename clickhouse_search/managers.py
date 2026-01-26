@@ -101,8 +101,8 @@ class SearchQuerySet(QuerySet):
             {field: gene[f'{field}Grch{self.genome_version}'] for field in ['chrom', 'start', 'end']} for gene in genes.values()
         ]
 
-    @staticmethod
-    def _prediction_expression(model):
+    @classmethod
+    def _prediction_expression(cls, model):
         pred_expressions = []
         all_pred_fields = []
         for pred_source, field_map in model.PREDICTIONS.items():
@@ -117,13 +117,17 @@ class SearchQuerySet(QuerySet):
                 all_pred_fields.append((field_name, output_field))
 
         for pred_name, range_dict in model.RANGE_PREDICTIONS.items():
-            pred_expression = range_dict.dict_get_expression(
-                IntDiv('xpos', int(1e9)), Modulo('xpos', int(1e9)), field_names=['score'], null_missing=True,
-            )
+            pred_expression = cls._xpos_rage_dict_get_expression(range_dict)
             pred_expressions.append(Tuple(pred_expression))
             all_pred_fields.append((pred_name, pred_expression.output_field))
 
         return TupleConcat(*pred_expressions, output_field=NamedTupleField(all_pred_fields))
+
+    @staticmethod
+    def _xpos_rage_dict_get_expression(range_dict):
+        return range_dict.dict_get_expression(
+            IntDiv('xpos', int(1e9)), Modulo('xpos', int(1e9)), field_names=['score'], null_missing=True,
+        )
 
     def _filter_in_silico(self, results, in_silico=None, **kwargs):
         in_silico = in_silico or {}
@@ -1370,18 +1374,19 @@ class EntriesManager(BaseEntriesManager):
         for score, value in in_silico.items():
             if not value:
                 continue
-            if score in prediction_dicts:
-                field_name = 'score'
-                dict_model = getattr(self.model, score).rel.related_model
+            if score in self.model.RANGE_PREDICTIONS:
+                score_expr = self._xpos_rage_dict_get_expression(self.model.RANGE_PREDICTIONS[score])
+            elif score in prediction_dicts:
+                score_expr = prediction_dicts[score].dict_get_expression('key', field_names=['score'], null_missing=True)
             else:
-                field_name = score
                 dict_model = next((dm for dm in prediction_dicts.values() if score in dict(dm.base_fields())), None)
-            if not dict_model:
+                score_expr = dict_model.dict_get_expression(
+                    'key', field_names=[score], null_missing=True,
+                ) if dict_model else None
+            if not score_expr:
                 continue
 
-            results = results.annotate(**{
-                f'{score}_score': dict_model.dict_get_expression('key', field_names=[field_name], null_missing=True),
-            })
+            results = results.annotate(**{f'{score}_score': score_expr})
             try:
                 score_q = Q(**{f'{score}_score__gte': float(value)})
             except ValueError:
