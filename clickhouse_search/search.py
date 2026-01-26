@@ -187,7 +187,7 @@ def get_multi_data_type_comp_het_results_queryset(genome_version, sv_dataset_typ
     return _get_comp_het_results_queryset(annotations_cls, snv_indel_q, sv_q, num_families, exclude_key_pairs)
 
 
-def get_data_type_comp_het_results_queryset(genome_version, dataset_type, sample_data, annotations=None, annotations_secondary=None, pathogenicity=None, inheritance_mode=None, exclude_key_pairs=None, split_pathogenicity_annotations=False, **search_kwargs):
+def get_data_type_comp_het_results_queryset(genome_version, dataset_type, sample_data, annotations=None, annotations_secondary=None, pathogenicity=None, inheritance_mode=None, exclude_key_pairs=None, split_pathogenicity_annotations=False, deduplicate=True, **search_kwargs):
     entry_cls = ENTRY_CLASS_MAP[genome_version][dataset_type]
     annotations_cls = ANNOTATIONS_CLASS_MAP[genome_version][dataset_type]
     entries = entry_cls.objects.search(
@@ -207,10 +207,10 @@ def get_data_type_comp_het_results_queryset(genome_version, dataset_type, sample
         annotations=annotations_secondary, pathogenicity=pathogenicity_secondary, **search_kwargs,
     )
 
-    return _get_comp_het_results_queryset(annotations_cls, primary_q, secondary_q, sample_data['num_families'], exclude_key_pairs)
+    return _get_comp_het_results_queryset(annotations_cls, primary_q, secondary_q, sample_data['num_families'], exclude_key_pairs, deduplicate)
 
 
-def _get_comp_het_results_queryset(annotations_cls, primary_q, secondary_q, num_families, exclude_key_pairs):
+def _get_comp_het_results_queryset(annotations_cls, primary_q, secondary_q, num_families, exclude_key_pairs, deduplicate=True):
     results = annotations_cls.objects.search_compound_hets(primary_q, secondary_q)
 
     if results.has_annotation('primary_carriers') and results.has_annotation('secondary_carriers'):
@@ -272,7 +272,9 @@ def _get_comp_het_results_queryset(annotations_cls, primary_q, secondary_q, num_
 
     pair_results = results.annotate(
         pair_key=ArraySort(Array('primary_key', 'secondary_key')),
-    ).distinct('pair_key')
+    )
+    if deduplicate:
+        pair_results = pair_results.distinct('pair_key')
     if exclude_key_pairs:
         pair_results = pair_results.exclude(pair_key__in=exclude_key_pairs)
     return pair_results.values_list(
