@@ -368,6 +368,7 @@ class BaseAnnotationsMito(BaseAnnotationsMitoSnvIndel):
         abstract = True
 
 class BaseVariantsMito(BaseVariants):
+    rsid = models.StringField(null=True, blank=True)
     sorted_transcript_consequences = NestedField(BaseVariants.TRANSCRIPTS_FIELDS, db_column='sortedTranscriptConsequences', group_by_key='geneId')
     haplogroup_defining = models.BoolField(null=True, blank=True, db_column='haplogroupDefining')
     mitotip = models.Enum8Field(null=True, blank=True, return_int=False, choices=BaseAnnotationsMito.MITOTIP_PATHOGENICITIES)
