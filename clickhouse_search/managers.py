@@ -368,46 +368,7 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
             for population, field in self.model.POPULATION_FIELDS
         }
 
-    def _filter_frequency(self, results, freqs=None, pathogenicity=None, **kwargs):
-        frequencies =  freqs or {}
-        clinvar_override_q = self._clinvar_path_q(pathogenicity)
-
-        for population, pop_filter in frequencies.items():
-            pop_subfields = self.populations.get(population)
-            if not pop_subfields:
-                continue
-
-            if pop_filter.get('af') is not None and pop_filter['af'] < 1:
-                af_field = next(field for field in ['filter_af', 'af'] if field in pop_subfields)
-                if af_field:
-                    af_q = Q(**{
-                        f'populations__{population}__{af_field}__lte': pop_filter['af'],
-                    })
-                    if clinvar_override_q and pop_filter['af'] < PATH_FREQ_OVERRIDE_CUTOFF:
-                        af_q |= (clinvar_override_q & Q(**{
-                            f'populations__{population}__{af_field}__lte': PATH_FREQ_OVERRIDE_CUTOFF,
-                        }))
-                    results = results.filter(af_q)
-            elif pop_filter.get('ac') is not None:
-                if 'ac' in pop_subfields:
-                    ac_field = f'populations__{population}__ac'
-                else:
-                    ac_field =  f'ac_{population}'
-                    results = results.annotate(**{ac_field: F(f'populations__{population}__het') + (F(f'populations__{population}__hom') * 2)})
-
-                results = results.filter(**{f'{ac_field}__lte': pop_filter['ac']})
-
-            if pop_filter.get('hh') is not None:
-                for subfield in ['hom', 'hemi']:
-                    if subfield not in pop_subfields:
-                        continue
-                    hh_q = Q(**{
-                        f'populations__{population}__{subfield}__lte': pop_filter['hh'],
-                    })
-                    if clinvar_override_q:
-                        hh_q |= clinvar_override_q
-                    results = results.filter(hh_q)
-
+    def _filter_frequency(self, results, **kwargs):
         return results
 
     def filter_annotations(self, results, annotations=None, pathogenicity=None, genes=None, intervals=None, exclude_locations=False, **kwargs):
@@ -808,6 +769,28 @@ class SvAnnotationsQuerySet(BaseAnnotationsQuerySet):
 
         return super()._parse_in_silico_qs(results, in_silico, require_score, in_silico_qs, in_silico_missing_qs)
 
+    def _filter_frequency(self, results, freqs=None, pathogenicity=None, **kwargs):
+        for population, pop_filter in (freqs or {}).items():
+            pop_subfields = self.populations.get(population)
+            if not pop_subfields:
+                continue
+
+            if pop_filter.get('af') is not None and pop_filter['af'] < 1:
+                results = results.filter(**{f'populations__{population}__af__lte': pop_filter['af']})
+            elif pop_filter.get('ac') is not None:
+                if 'ac' in pop_subfields:
+                    ac_field = f'populations__{population}__ac'
+                else:
+                    ac_field =  f'ac_{population}'
+                    results = results.annotate(**{ac_field: F(f'populations__{population}__het') + (F(f'populations__{population}__hom') * 2)})
+
+                results = results.filter(**{f'{ac_field}__lte': pop_filter['ac']})
+
+            if pop_filter.get('hh') is not None:
+                results = results.filter(**{f'populations__{population}__hom__lte': pop_filter['hh']})
+
+        return results
+
 
 class BaseEntriesManager(SearchQuerySet):
     GENOTYPE_LOOKUP = {
@@ -886,9 +869,11 @@ class BaseEntriesManager(SearchQuerySet):
         return self._search_call_data(entries, sample_data, **kwargs)
 
     def _prefilter_entries(self, entries, freqs=None, **kwargs):
-        if (freqs or {}).get(self.callset_filter_field) and self.gt_stats_dict_rel is not None:
-            entries = self._filter_seqr_frequency(entries, **freqs[self.callset_filter_field])
+        return self._filter_frequency(entries, freqs or {}, **kwargs)
 
+    def _filter_frequency(self, entries, frequencies, **kwargs):
+        if frequencies.get(self.callset_filter_field) and self.gt_stats_dict_rel is not None:
+            entries = self._filter_seqr_frequency(entries, **frequencies[self.callset_filter_field])
         return entries
 
     def _join_annotations(self, entries):
@@ -1362,17 +1347,56 @@ class EntriesManager(BaseEntriesManager):
 
     def _prefilter_entries(self, entries, freqs=None, **kwargs):
         entries = super()._prefilter_entries(entries, freqs=freqs, **kwargs)
+        entries = self._filter_in_silico(entries, **kwargs)
+        return entries
 
-        gnomad_filter = (freqs or {}).get('gnomad_genomes') or {}
-        if hasattr(self.model, 'is_gnomad_gt_5_percent') and ((gnomad_filter.get('af') or 1) <= 0.05 or any(gnomad_filter.get(field) is not None for field in ['ac', 'hh'])):
+    def _filter_frequency(self, entries, frequencies, pathogenicity=None, **kwargs):
+        gnomad_filter = frequencies.get('gnomad_genomes') or {}
+        if hasattr(self.model, 'is_gnomad_gt_5_percent') and (
+            (gnomad_filter.get('af') or 1) <= 0.05 or any(gnomad_filter.get(field) is not None for field in ['ac', 'hh'])
+        ):
             # Passing field=Value(False) to the django filter causes the SQL to evaluate to "field = false",
             # while passing field=False evaluates to "NOT field".
             # For fields used for pruning the table based on the order_by for the table, the former is needed
             entries = entries.filter(is_gnomad_gt_5_percent=Value(False))
 
-        entries = self._filter_in_silico(entries, **kwargs)
+        clinvar_override_q = self._clinvar_path_q(pathogenicity)
 
-        return entries
+        for population in self.model.POPULATIONS:
+            pop_filter = frequencies.get(population)
+            if not pop_filter:
+                continue
+
+            pop_dict = getattr(self.model, population).rel.related_model
+            pop_subfields = dict(pop_dict.base_fields())
+            if pop_filter.get('af') is not None and pop_filter['af'] < 1:
+                af_field = next(field for field in ['filter_af', 'af'] if field in pop_subfields)
+                entries = entries.annotate(
+                    **{f'{population}_af': pop_dict.dict_get_expression('key', field_names=[af_field])}
+                )
+                af_q = Q(**{f'{population}_af__lte': pop_filter['af']})
+                if clinvar_override_q and pop_filter['af'] < PATH_FREQ_OVERRIDE_CUTOFF:
+                    af_q |= (clinvar_override_q & Q(**{f'{population}_af__lte': PATH_FREQ_OVERRIDE_CUTOFF}))
+                entries = entries.filter(af_q)
+            elif pop_filter.get('ac') is not None:
+                entries = entries.annotate(
+                    **{f'{population}_ac': pop_dict.dict_get_expression('key', field_names=['ac'])}
+                )
+                entries = entries.filter(**{f'{population}_ac__lte': pop_filter['ac']})
+
+            if pop_filter.get('hh') is not None:
+                for subfield in ['hom', 'hemi']:
+                    if subfield not in pop_subfields:
+                        continue
+                    entries = entries.annotate(
+                        **{f'{population}_{subfield}': pop_dict.dict_get_expression('key', field_names=[subfield])}
+                    )
+                    hh_q = Q(**{f'{population}_{subfield}__lte': pop_filter['hh']})
+                    if clinvar_override_q:
+                        hh_q |= clinvar_override_q
+                    entries = entries.filter(hh_q)
+
+        return super()._filter_frequency(entries, frequencies, **kwargs)
 
     def _parse_in_silico_qs(self, results, in_silico, require_score, in_silico_qs, in_silico_missing_qs):
         prediction_dicts = {pred: getattr(self.model, pred).rel.related_model for pred in self.model.PREDICTIONS}
