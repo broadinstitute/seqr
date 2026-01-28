@@ -52,7 +52,7 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
             source_func = 'gcs' if source_url.endswith('.parquet') else 'url'
             source = source_url_template.format(source_func=source_func, source_url=source_url)
         else:
-            source = f"{DATABASES['clickhouse_write']['NAME']}.{self._table_name(meta, meta.source_table)}"
+            source = self._table_name(meta, meta.source_table)
 
         sql = f'{table_sql} AS SELECT {", ".join(selects)} FROM {source} {meta.source_sql}'  # nosec
         self.sql_create_table = original_sql_create_table
