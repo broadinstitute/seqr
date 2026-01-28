@@ -568,17 +568,8 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
 
         return results
 
-    ANNOTATION_FIELD_FILTERS = {
-        SCREEN_KEY: ('screen_region_type', lambda value: ('{field}__in', value)),
-        **{field: (f'sorted_{field}_consequences', lambda value: ('{field}__array_exists', {
-            'consequenceTerms': (value, 'hasAny({value}, {field})'),
-        })) for field in [MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY]},
-        'mitomap_pathogenic': ('mitomap_pathogenic', lambda value: ('{field}', value)),
-    }
-
     def _parse_annotation_filters(self, annotations, pathogenicity):
         filter_qs = []
-        filters_by_field = {}
         allowed_consequences = []
         transcript_field_filters = {}
         for field, value in annotations.items():
@@ -591,9 +582,18 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
                 value = [c for c in value if c != EXTENDED_SPLICE_REGION_CONSEQUENCE]
                 if value:
                     allowed_consequences += value
-            elif field in self.ANNOTATION_FIELD_FILTERS:
-                filter_field, format_filter = self.ANNOTATION_FIELD_FILTERS[field]
-                filters_by_field[filter_field] = format_filter(value)
+            elif field in [MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY]:
+                filter_field = f'sorted_{field}_consequences'
+                if hasattr(self.model, filter_field):
+                    filter_qs.append(Q(**{
+                        f'{filter_field}__array_exists': {'consequenceTerms': (value, 'hasAny({value}, {field})')},
+                    }))
+            elif field == SCREEN_KEY:
+                if hasattr(self.model, 'screen_region_type'):
+                    filter_qs.append(Q(screen_region_type__in=value))
+            elif field == 'mitomap_pathogenic':
+                if hasattr(self.model, 'mitomap_pathogenic'):
+                    filter_qs.append(Q(mitomap_pathogenic=value))
             elif field == SPLICE_AI_FIELD:
                 if value and SPLICE_AI_FIELD in self.entry_model.PREDICTIONS:
                     pred_index = next (
@@ -612,10 +612,6 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
         if clinvar_q is not None:
             filter_qs.append(clinvar_q)
 
-        filter_qs += [
-            Q(**{lookup_template.format(field=field): value})
-            for field, (lookup_template, value) in filters_by_field.items() if hasattr(self.model, field)
-        ]
         transcript_filters = [
             {field: value} for field, value in transcript_field_filters.items() if field in self.sorted_transcript_consequence_fields
         ]
