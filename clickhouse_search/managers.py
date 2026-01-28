@@ -608,7 +608,7 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
                 if self.model.SCREEN_DICT:
                     filter_qs.append(Q(screen__in=value))
             elif field == 'mitomap_pathogenic':
-                if hasattr(self.model, 'mitomapPathogenic'):
+                if self.has_annotation('mitomapPathogenic'):
                     filter_qs.append(Q(mitomapPathogenic=value))
             elif field == SPLICE_AI_FIELD:
                 if value and SPLICE_AI_FIELD in self.entry_model.PREDICTIONS:
