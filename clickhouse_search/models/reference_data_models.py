@@ -1349,7 +1349,7 @@ class HelixmitoheteroplasmyMv(BaseMitoPopulationMv):
         source_sql = _all_variants_to_seqr_source_sql('GRCh38', 'MITO')
 
 class HelixmitoDict(BaseMitoPopulationDict):
-    key = DictKeyForeignKey('EntriesMito', related_name='helix_mito')
+    key = DictKeyForeignKey('EntriesMito', related_name='helix')
 
     class Meta(ReferenceDataDictMeta):
         db_table = 'GRCh38/MITO/reference_data/helix_mito'
@@ -1357,7 +1357,7 @@ class HelixmitoDict(BaseMitoPopulationDict):
         layout = 'FLAT(MAX_ARRAY_SIZE 1e6)'
 
 class HelixmitoheteroplasmyDict(BaseMitoPopulationDict):
-    key = DictKeyForeignKey('EntriesMito', related_name='helix_mito_heteroplasmy')
+    key = DictKeyForeignKey('EntriesMito', related_name='helix_heteroplasmy')
     max_hl = models.DecimalField(max_digits=9, decimal_places=8)
 
     class Meta(ReferenceDataDictMeta):
