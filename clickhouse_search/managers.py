@@ -129,6 +129,17 @@ class SearchQuerySet(QuerySet):
             IntDiv('xpos', int(1e9)), Modulo('xpos', int(1e9)), field_names=['score'], null_missing=True,
         )
 
+    @staticmethod
+    def _population_expression(model):
+        expressions = []
+        output_fields = []
+        for pop in model.POPULATIONS:
+            expr = getattr(model, pop).rel.related_model.dict_get_expression('key')
+            expressions.append(expr)
+            output_fields.append((pop, expr.output_field))
+
+        return Tuple(*expressions, output_field=NamedTupleField(output_fields))
+
     def _filter_in_silico(self, results, in_silico=None, **kwargs):
         in_silico = in_silico or {}
         require_score = in_silico.get('requireScore', False)
@@ -174,14 +185,18 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
     @property
     def annotation_values(self):
         seqr_pops = []
-        population_fields = [*self.model.POPULATION_FIELDS]
+        population_fields = [*self._population_output_fields()]
         self._get_seqr_pop_expressions(seqr_pops, population_fields)
 
+        pop_field = 'pops' if self.has_annotation('pops') else 'populations'
         return {
             **{key: Value(value) for key, value in self.model.ANNOTATION_CONSTANTS.items()},
             **{field.db_column: F(field.name) for field in self.model._meta.local_fields if field.db_column and field.name != field.db_column},
-            'populations': TupleConcat(F('populations'), Tuple(*seqr_pops), output_field=NamedTupleField(population_fields)),
+            'populations': TupleConcat(F(pop_field), Tuple(*seqr_pops), output_field=NamedTupleField(population_fields)),
         }
+
+    def _population_output_fields(self):
+        return self.model.POPULATION_FIELDS
 
     def _get_seqr_pop_expressions(self, seqr_pops, population_fields):
         if self.gt_stats_dict is None:
@@ -532,6 +547,9 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
     def _clinvar_conflicting_path_filter(array_func, conflicting_filter):
         return {f'clinvar__5__{array_func}': conflicting_filter, 'clinvar__5__not_empty': True, 'clinvar_key__isnull': False}
 
+    def _population_output_fields(self):
+        return self.query.annotations['pops'].output_field.base_fields
+
     def _parse_in_silico_qs(self, results, in_silico, require_score, in_silico_qs, in_silico_missing_qs):
         in_silico_q = None
         missing_q = None
@@ -648,6 +666,7 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
         results = super().join_annotations()
         results = results.annotate(
             preds=self._prediction_expression(self.entry_model),
+            pops=self._population_expression(self.entry_model),
             clinvar=self._pathogenicity_tuple(self.entry_model.clinvar_join, f'{self.entry_field}__clinvar_join')
         )
         # Due to django modeling, adding a clinvar annotation will add a join to the entries table and then to clinvar
@@ -1402,6 +1421,7 @@ class EntriesManager(BaseEntriesManager):
             clinvar_key=F('clinvar_join__key'),
             clinvar=self._pathogenicity_tuple(self.model.clinvar_join, 'clinvar_join'),
             preds=self._prediction_expression(self.model),
+            pops=self._population_expression(self.model),
         )
         return super()._join_annotations(entries)
 
@@ -1420,7 +1440,7 @@ class EntriesManager(BaseEntriesManager):
 
     @classmethod
     def annotation_fields(cls, entries):
-        return super().annotation_fields(entries) + ['clinvar', 'clinvar_key', 'preds'] + [
+        return super().annotation_fields(entries) + ['clinvar', 'clinvar_key', 'preds', 'pops'] + [
             field for field in ['pass_in_silico', 'missing_in_silico'] if field in entries.query.annotations
         ]
 

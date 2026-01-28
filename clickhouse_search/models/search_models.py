@@ -590,6 +590,7 @@ class BaseEntriesSnvIndel(BaseEntries):
         },
     }
     RANGE_PREDICTIONS = {}
+    POPULATIONS = ['gnomad_exomes', 'gnomad_genomes', 'topmed']
 
     sample_type = models.Enum8Field(choices=[(1, 'WES'), (2, 'WGS')])
     is_gnomad_gt_5_percent = models.BoolField()
@@ -671,6 +672,7 @@ class EntriesMito(BaseEntries):
         'mlc': {},
     }
     RANGE_PREDICTIONS = {}
+    POPULATIONS = ['gnomad_mito', 'gnomad_mito_heteroplasmy', 'helix', 'helix_heteroplasmy']
 
     # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
     key = ForeignKey('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
