@@ -1034,7 +1034,7 @@
       "rsid": "rs193302982",
       "lifted_over_pos": 14783,
       "common_low_heteroplasmy": true,
-      "mitomap_pathogenic": true,
+      "mitomap_pathogenic": null,
       "predictions": [null, true, null, null, null, null, 0.0751],
       "populations": [
         [3118, 0.00553464, 56336],
@@ -1129,6 +1129,12 @@
     "pk": "M-11597-A-G",
     "fields": {
       "score": 0.58
+    }
+}, {
+    "model": "clickhouse_search.mitomapallvariantsmito",
+    "pk": "M-14783-T-C",
+    "fields": {
+      "pathogenic": true
     }
 }, {
     "model": "clickhouse_search.entriesmito",
