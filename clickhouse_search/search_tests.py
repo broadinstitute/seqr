@@ -152,6 +152,7 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
         self._set_single_family_search()
 
     def test_single_family_search(self):
+        self.maxDiff = None
         self._set_single_family_search()
         variant_gene_counts = {
             'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
