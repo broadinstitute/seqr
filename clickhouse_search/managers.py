@@ -1353,12 +1353,6 @@ class EntriesManager(BaseEntriesManager):
         sample_family_q = super()._sample_family_q(sample_type, families)
         return sample_family_q & Q(sample_type=sample_type)
 
-    def _mitomap_expression(self):
-        if not hasattr(self.model, 'mitomap'):
-            return None
-        return self.model.mitomap.rel.related_model.dict_get_expression('key', null_missing=True)
-
-
     def _prefilter_entries(self, entries, freqs=None, **kwargs):
         entries = super()._prefilter_entries(entries, freqs=freqs, **kwargs)
 
@@ -1421,9 +1415,10 @@ class EntriesManager(BaseEntriesManager):
             clinvar=self._pathogenicity_tuple(self.model.clinvar_join, 'clinvar_join'),
             preds=self._prediction_expression(self.model),
         )
-        mitomap_expression = self._mitomap_expression()
-        if mitomap_expression:
-            entries = entries.annotate(mitomapPathogenic=mitomap_expression)
+        if hasattr(self.model, 'mitomap'):
+            entries = entries.annotate(
+                mitomapPathogenic=self.model.mitomap.rel.related_model.dict_get_expression('key', null_missing=True),
+            )
         return super()._join_annotations(entries)
 
     def filter_locus(self, *args, require_any_gene=False, parsed_variant_ids=None, intervals=None, genes=None, **kwargs):
