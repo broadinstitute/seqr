@@ -342,7 +342,7 @@ PROJECT_2_VARIANT = {
         'seqr_affected': {'ac': 2, 'hom': 0},
         'topmed': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'het': 0},
         'gnomad_exomes': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'hemi': 0, 'filter_af': 0.0},
-        'gnomad_genomes': {'af': 0.00012, 'ac': 2, 'an': 16090, 'hom': 0, 'hemi': 0, 'filter_af': 0.00233},
+        'gnomad_genomes': {'af': 0.00012, 'ac': 2, 'an': 16090, 'hom': 0, 'hemi': 0, 'filter_af': 0.00234},
     },
     'predictions': {
         'cadd': 4.653,

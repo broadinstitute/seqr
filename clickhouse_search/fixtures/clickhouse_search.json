@@ -529,7 +529,7 @@
       "an": 16090,
       "hom": 0,
       "hemi": 0,
-      "filter_af": 0.00233
+      "filter_af": 0.00234
     }
 }, {
     "model": "clickhouse_search.gnomadgenomesallvariantssnvindel",
