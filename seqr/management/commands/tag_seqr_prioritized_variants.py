@@ -550,8 +550,8 @@ class Command(BaseCommand):
         variant_values = {'endChrom': F('end_chrom')} if dataset_type == 'SV_WGS' else {}
 
         results_qs = get_search_queryset(GENOME_VERSION_GRCh38, dataset_type, sample_data, **kwargs)
-        genotype_overrides_expressions = results_qs.genotype_override_values(results_qs)
-        if genotype_overrides_expressions:
+        if results_qs.model.GENOTYPE_OVERRIDE_FIELDS:
+            genotype_overrides_expressions = results_qs.conditional_selects(results_qs)
             variant_values.update({k: genotype_overrides_expressions[k] for k in ['familyGenotypes', 'transcripts']})
         else:
             results_qs = gene_ids_annotated_queryset(results_qs)

@@ -286,7 +286,7 @@ def _get_clickhouse_variants(samples: Sample.objects, families_by_id: dict[int, 
 
 def gene_ids_annotated_queryset(qs):
     return qs.annotate(gene_ids=ArrayDistinct(
-        ArrayMap(qs.transcript_field, mapped_expression='x.geneId'),
+        ArrayMap(qs.TRANSCRIPT_FIELD, mapped_expression='x.geneId'),
         output_field=ArrayField(StringField())),
     )
 

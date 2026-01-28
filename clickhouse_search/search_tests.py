@@ -1140,7 +1140,7 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
             [[MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4]], inheritance_mode='compound_het',
             annotations=annotations_1, annotations_secondary=gcnv_annotations_2, cached_variant_fields=[[
                 {'selectedGeneId': 'ENSG00000277258', 'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][3]},
-                {'selectedGeneId': 'ENSG00000277258', 'selectedTranscript': {'geneId': 'ENSG00000277258', 'majorConsequence': 'LOF'}},
+                {'selectedGeneId': 'ENSG00000277258'},
             ]],
         )
 
@@ -1150,7 +1150,7 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
             annotations={**annotations_1, **gcnv_annotations_1}, annotations_secondary={**annotations_2, **gcnv_annotations_2}, cached_variant_fields=[
                 {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][0]}, [
                 {'selectedGeneId': 'ENSG00000277258', 'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][3]},
-                {'selectedGeneId': 'ENSG00000277258', 'selectedTranscript': {'geneId': 'ENSG00000277258', 'majorConsequence': 'LOF'}},
+                {'selectedGeneId': 'ENSG00000277258'},
             ], [
                 {'selectedGeneId':  'ENSG00000097046', 'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[3][0]},
                 {'selectedGeneId':  'ENSG00000097046', 'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[4][1]},
@@ -1165,7 +1165,7 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
             locus={'rawItems': 'ENSG00000277258,ENSG00000275023'}, cached_variant_fields=[
                 {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][3]}, [
                 {'selectedGeneId': 'ENSG00000277258', 'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][3]},
-                {'selectedGeneId': 'ENSG00000277258', 'selectedTranscript': None},
+                {'selectedGeneId': 'ENSG00000277258'},
             ], [{'selectedGeneId': 'ENSG00000275023'}, {'selectedGeneId': 'ENSG00000275023'}]],
         )
 
@@ -1175,7 +1175,7 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
             annotations_secondary=gcnv_annotations_2, cached_variant_fields=[
                 {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][3]}, [
                 {'selectedGeneId': 'ENSG00000277258', 'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][3]},
-                {'selectedGeneId': 'ENSG00000277258', 'selectedTranscript': {'geneId': 'ENSG00000277258', 'majorConsequence': 'LOF'}},
+                {'selectedGeneId': 'ENSG00000277258'},
             ]],
         )
 
@@ -1215,7 +1215,7 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
             inheritance_mode='compound_het', pathogenicity=pathogenicity,
             annotations=gcnv_annotations_2, annotations_secondary=gcnv_annotations_1, cached_variant_fields=[[
                 {'selectedGeneId': 'ENSG00000277258'},
-                {'selectedGeneId': 'ENSG00000277258', 'selectedTranscript': {'geneId': 'ENSG00000277258', 'majorConsequence': 'LOF'}},
+                {'selectedGeneId': 'ENSG00000277258'},
             ], [{'selectedGeneId': 'ENSG00000275023'}, {'selectedGeneId': 'ENSG00000275023'}]],
         )
 
@@ -1224,7 +1224,7 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
             inheritance_mode='recessive', pathogenicity=pathogenicity,
             annotations=gcnv_annotations_2, annotations_secondary=gcnv_annotations_1, cached_variant_fields=[{}, [
                 {'selectedGeneId': 'ENSG00000277258'},
-                {'selectedGeneId': 'ENSG00000277258', 'selectedTranscript': {'geneId': 'ENSG00000277258', 'majorConsequence': 'LOF'}},
+                {'selectedGeneId': 'ENSG00000277258'},
             ], {}, [{'selectedGeneId': 'ENSG00000275023'}, {'selectedGeneId': 'ENSG00000275023'}], {}],
         )
 
@@ -1234,7 +1234,7 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
             inheritance_mode='recessive', pathogenicity=pathogenicity,
             annotations=gcnv_annotations_2, annotations_secondary=selected_transcript_annotations, cached_variant_fields=[{}, [
                 {'selectedGeneId': 'ENSG00000277258', 'selectedTranscript': None},
-                {'selectedGeneId': 'ENSG00000277258', 'selectedTranscript': {'geneId': 'ENSG00000277258', 'majorConsequence': 'LOF'}},
+                {'selectedGeneId': 'ENSG00000277258'},
             ], {}, {}],
         )
 
@@ -1288,7 +1288,7 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
             locus={'rawItems': 'ENSG00000277258,ENSG00000275023'}, cached_variant_fields=[
                 {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][3]}, [
                 {'selectedGeneId': 'ENSG00000277258', 'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][3]},
-                {'selectedGeneId': 'ENSG00000277258', 'selectedTranscript': {'geneId': 'ENSG00000277258', 'majorConsequence': 'LOF'}},
+                {'selectedGeneId': 'ENSG00000277258'},
             ], {}, [{'selectedGeneId': 'ENSG00000275023'}, {'selectedGeneId': 'ENSG00000275023'}]],
         )
 
@@ -1311,7 +1311,7 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
             inheritance_mode='compound_het', pathogenicity=pathogenicity, locus=None,
             annotations=gcnv_annotations_2, annotations_secondary=selected_transcript_annotations, cached_variant_fields=[[
                 {'selectedGeneId': 'ENSG00000277258', 'selectedTranscript': None},
-                {'selectedGeneId': 'ENSG00000277258', 'selectedTranscript': {'geneId': 'ENSG00000277258', 'majorConsequence': 'LOF'}},
+                {'selectedGeneId': 'ENSG00000277258'},
             ]],
         )
 
