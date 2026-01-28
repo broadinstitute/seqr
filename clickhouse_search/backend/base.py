@@ -84,11 +84,10 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
             db = DATABASES[getattr(meta, 'postgres_db', 'default')]['NAME']
             source = f"POSTGRESQL(NAME 'seqr_postgres_named_collection' DATABASE {db} QUERY '{postgres_query}')"
         else:
-            source_table = self._table_name(meta, meta.source_table)
+            source_table = f"{DATABASES['clickhouse_write']['NAME']}.{self._table_name(meta, meta.source_table)}"
             clickhouse_query_template = getattr(meta, 'clickhouse_query_template', None)
             if clickhouse_query_template:
-                table = f"{DATABASES['clickhouse_write']['NAME']}.{source_table}"
-                table_source = f"QUERY '{clickhouse_query_template.format(table=table)}'"
+                table_source = f"QUERY '{clickhouse_query_template.format(table=source_table)}'"
             else:
                 table_source = f'TABLE {source_table}'
             source = f"CLICKHOUSE(USER '{CLICKHOUSE_WRITER_USER}' PASSWORD '{CLICKHOUSE_WRITER_PASSWORD}' {table_source})"
