@@ -44,7 +44,7 @@ VARIANT1 = {
         'seqr_affected': {'ac': 7, 'hom': 3},
         'topmed': {'af': 0.07842, 'ac': 20757, 'an': 264690, 'hom': 0, 'het': 20757},
         'gnomad_exomes': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'hemi': 0, 'filter_af': 0.0},
-        'gnomad_genomes': {'af': 0.03444, 'ac': 927, 'an': 26912, 'hom': 48, 'hemi': 0, 'filter_af': 0.04027},
+        'gnomad_genomes': {'af': 0.03444932, 'ac': 927, 'an': 26912, 'hom': 48, 'hemi': 0, 'filter_af': 0.04027665},
     },
     'predictions': {
         'cadd': 4.668,
@@ -126,9 +126,9 @@ VARIANT2 = {
     'populations': {
        'seqr': {'ac': 10, 'hom': 3, 'ac_wes': 7, 'ac_wgs': 3, 'hom_wes': 2, 'hom_wgs': 1},
        'seqr_affected': {'ac': 6, 'hom': 2},
-       'topmed': {'af': 0.24615, 'ac': 65154, 'an': 264690, 'hom': 8775, 'het': 47604},
-       'gnomad_exomes': {'af': 0.00288, 'ac': 72672, 'an': 251462, 'hom': 1, 'hemi': 0, 'filter_af': 0.00411},
-       'gnomad_genomes': {'af': 0.00344, 'ac': 927, 'an': 26912, 'hom': 0, 'hemi': 0, 'filter_af': 0.00402},
+       'topmed': {'af': 0.246152, 'ac': 65154, 'an': 264690, 'hom': 8775, 'het': 47604},
+       'gnomad_exomes': {'af': 0.00288997, 'ac': 72672, 'an': 251462, 'hom': 1, 'hemi': 0, 'filter_af': 0.0041164},
+       'gnomad_genomes': {'af': 0.00344493, 'ac': 927, 'an': 26912, 'hom': 0, 'hemi': 0, 'filter_af': 0.00402766},
     },
     'predictions': {
        'cadd': 25.9,
@@ -205,9 +205,9 @@ VARIANT3 = {
     'populations': {
         'seqr': {'ac': 7, 'hom': 0, 'ac_wes': 5, 'ac_wgs': 2, 'hom_wes': 0, 'hom_wgs': 0},
         'seqr_affected': {'ac': 3, 'hom': 0},
-        'topmed': {'af': 0.36268, 'ac': 95998, 'an': 264690, 'hom': 19369, 'het': 57260},
+        'topmed': {'af': 0.362681, 'ac': 95998, 'an': 264690, 'hom': 19369, 'het': 57260},
         'gnomad_exomes': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'hemi': 0, 'filter_af': 0.0},
-        'gnomad_genomes': {'af': 0.00380, 'ac': 57757, 'an': 151828, 'hom': 1, 'hemi': 0, 'filter_af': 0.00479},
+        'gnomad_genomes': {'af': 0.00380411, 'ac': 57757, 'an': 151828, 'hom': 1, 'hemi': 0, 'filter_af': 0.00479778},
     },
     'predictions': {
         'cadd': 28.754,
@@ -277,7 +277,7 @@ VARIANT4 = {
         'seqr_affected': {'ac': 2, 'hom': 0},
         'topmed': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'het': 0},
         'gnomad_exomes': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'hemi': 0, 'filter_af': 0.0},
-        'gnomad_genomes': {'af': 0.00026, 'ac': 39, 'an': 147062, 'hom': 0, 'hemi': 0, 'filter_af': 0.0015},
+        'gnomad_genomes': {'af': 0.00026519, 'ac': 39, 'an': 147062, 'hom': 0, 'hemi': 0, 'filter_af': 0.00150301},
     },
     'predictions': {
         'cadd': 29.9,
@@ -342,7 +342,7 @@ PROJECT_2_VARIANT = {
         'seqr_affected': {'ac': 2, 'hom': 0},
         'topmed': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'het': 0},
         'gnomad_exomes': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'hemi': 0, 'filter_af': 0.0},
-        'gnomad_genomes': {'af': 0.00012, 'ac': 2, 'an': 16090, 'hom': 0, 'hemi': 0, 'filter_af': 0.00234},
+        'gnomad_genomes': {'af': 0.0001243, 'ac': 2, 'an': 16090, 'hom': 0, 'hemi': 0, 'filter_af': 0.00234},
     },
     'predictions': {
         'cadd': 4.653,
@@ -395,9 +395,9 @@ GRCH37_VARIANT = {
     'populations': {
         'seqr': {'ac': 2, 'hom': 1, 'ac_wes': 2, 'ac_wgs': 0, 'hom_wes': 1, 'hom_wgs': 0},
         'seqr_affected': {'ac': 2, 'hom': 1},
-        'topmed': {'af': 0.52131, 'ac': 65461, 'an': 125568, 'hom': 16156, 'het': 33149},
-        'gnomad_exomes': {'af': 0.63542, 'ac': 137532, 'an': 216442, 'hom': 45869, 'hemi': 0, 'filter_af': 0.82261},
-        'gnomad_genomes': {'af': 0.61364, 'ac': 14649, 'an': 23872, 'hom': 4584, 'hemi': 0, 'filter_af': 0.82843},
+        'topmed': {'af': 0.52131897, 'ac': 65461, 'an': 125568, 'hom': 16156, 'het': 33149},
+        'gnomad_exomes': {'af': 0.63542193, 'ac': 137532, 'an': 216442, 'hom': 45869, 'hemi': 0, 'filter_af': 0.82261163},
+        'gnomad_genomes': {'af': 0.61364776, 'ac': 14649, 'an': 23872, 'hom': 4584, 'hemi': 0, 'filter_af': 0.82843894},
     },
     'predictions': {
         'cadd': 13.02, 'eigen': 3.951, 'primate_ai': 0.49064,
@@ -452,7 +452,7 @@ MITO_VARIANT1 = {
         'gnomad_mito': {'af': 0.0, 'ac': 0, 'an': 56419},
         'gnomad_mito_heteroplasmy': {'af': 0.0, 'ac': 0, 'an': 56419, 'max_hl': 0.0},
         'helix': {'af': 0.0, 'ac': 0, 'an': 195983},
-        'helix_heteroplasmy': {'af': 0.00001, 'ac': 3, 'an': 195983, 'max_hl': 0.20635},
+        'helix_heteroplasmy': {'af': 0.00001531, 'ac': 3, 'an': 195983, 'max_hl': 0.20635},
     },
     'predictions': {
         'apogee': None,
@@ -553,10 +553,10 @@ MITO_VARIANT3 = {
         'seqr_heteroplasmy': {'ac': 0, 'ac_wes': 0, 'ac_wgs': 0},
         'seqr_affected': {'ac': 1},
         'seqr_heteroplasmy_affected': {'ac': 0},
-        'gnomad_mito': {'af': 0.00553, 'ac': 3118, 'an': 56336},
-        'gnomad_mito_heteroplasmy': {'af': 0.00005, 'ac': 3, 'an': 56336, 'max_hl': 1.0},
-        'helix': {'af': 0.04884, 'ac': 9573, 'an': 195983},
-        'helix_heteroplasmy': {'af': 0.00009, 'ac': 18, 'an': 195983, 'max_hl': 0.96269},
+        'gnomad_mito': {'af': 0.00553464, 'ac': 3118, 'an': 56336},
+        'gnomad_mito_heteroplasmy': {'af': 0.00005325, 'ac': 3, 'an': 56336, 'max_hl': 1.0},
+        'helix': {'af': 0.04884607, 'ac': 9573, 'an': 195983},
+        'helix_heteroplasmy': {'af': 0.00009184, 'ac': 18, 'an': 195983, 'max_hl': 0.96269},
     },
     'predictions': {
         'apogee': None,

@@ -480,51 +480,51 @@
     "model": "clickhouse_search.gnomadgenomesallvariantssnvindel",
     "pk": "1-10439-AC-A",
     "fields": {
-      "af": 0.03444,
+      "af": 0.03444932,
       "ac": 927,
       "an": 26912,
       "hom": 48,
       "hemi": 0,
-      "filter_af": 0.04027
+      "filter_af": 0.04027665
     }
 }, {
     "model": "clickhouse_search.gnomadgenomesallvariantssnvindel",
     "pk": "1-38724419-T-G",
     "fields": {
-      "af": 0.00344,
+      "af": 0.00344493,
       "ac": 927,
       "an": 26912,
       "hom": 0,
       "hemi": 0,
-      "filter_af": 0.00402
+      "filter_af": 0.00402766
     }
 }, {
     "model": "clickhouse_search.gnomadgenomesallvariantssnvindel",
     "pk": "1-91502721-G-A",
     "fields": {
-      "af": 0.0038,
+      "af": 0.00380411,
       "ac": 57757,
       "an": 151828,
       "hom": 1,
       "hemi": 0,
-      "filter_af": 0.00479
+      "filter_af": 0.00479778
     }
 }, {
     "model": "clickhouse_search.gnomadgenomesallvariantssnvindel",
     "pk": "1-91511686-T-G",
     "fields": {
-      "af": 0.00026,
+      "af": 0.00026519,
       "ac": 39,
       "an": 147062,
       "hom": 0,
       "hemi": 0,
-      "filter_af": 0.0015
+      "filter_af": 0.00150301
     }
 }, {
     "model": "clickhouse_search.gnomadgenomesallvariantssnvindel",
     "pk": "1-10146-ACC-A",
     "fields": {
-      "af": 0.00012,
+      "af": 0.0001243,
       "ac": 2,
       "an": 16090,
       "hom": 0,
@@ -546,12 +546,12 @@
     "model": "clickhouse_search.gnomadexomesallvariantssnvindel",
     "pk": "1-38724419-T-G",
     "fields": {
-      "af": 0.00288,
+      "af": 0.00288997,
       "ac": 72672,
       "an": 251462,
       "hom": 1,
       "hemi": 0,
-      "filter_af": 0.00411
+      "filter_af": 0.0041164
     }
 }, {
     "model": "clickhouse_search.gnomadexomesallvariantssnvindel",
@@ -578,7 +578,7 @@
     "model": "clickhouse_search.topmedallvariantssnvindel",
     "pk": "1-38724419-T-G",
     "fields": {
-      "af": 0.24615,
+      "af": 0.246152,
       "ac": 65154,
       "an": 264690,
       "hom": 8775,
@@ -588,7 +588,7 @@
     "model": "clickhouse_search.topmedallvariantssnvindel",
     "pk": "1-91502721-G-A",
     "fields": {
-      "af": 0.36268,
+      "af": 0.362681,
       "ac": 95998,
       "an": 264690,
       "hom": 19369,
@@ -1078,29 +1078,29 @@
     "model": "clickhouse_search.gnomadgenomesallvariantsgrch37snvindel",
     "pk": "7-143270172-A-G",
     "fields": {
-      "af": 0.61364,
+      "af": 0.61364776,
       "ac": 14649,
       "an": 23872,
       "hom": 4584,
       "hemi": 0,
-      "filter_af": 0.82843
+      "filter_af": 0.82843894
     }
 }, {
     "model": "clickhouse_search.gnomadexomesallvariantsgrch37snvindel",
     "pk": "7-143270172-A-G",
     "fields": {
-      "af": 0.63542,
+      "af": 0.63542193,
       "ac": 137532,
       "an": 216442,
       "hom": 45869,
       "hemi": 0,
-      "filter_af": 0.82261
+      "filter_af": 0.82261163
     }
 }, {
     "model": "clickhouse_search.topmedallvariantsgrch37snvindel",
     "pk": "7-143270172-A-G",
     "fields": {
-      "af": 0.52131,
+      "af": 0.52131897,
       "ac": 65461,
       "an": 125568,
       "hom": 16156,
@@ -1300,7 +1300,7 @@
     "model": "clickhouse_search.helixmitoheteroplasmyallvariantsmito",
     "pk": "M-4429-G-A",
     "fields": {
-      "af": 0.00001,
+      "af": 0.00001531,
       "ac": 3,
       "an": 195983,
       "max_hl": 0.20635
@@ -1309,7 +1309,7 @@
     "model": "clickhouse_search.gnomadmitoallvariantsmito",
     "pk": "M-14783-T-C",
     "fields": {
-      "af": 0.00553,
+      "af": 0.00553464,
       "ac": 3118,
       "an": 56336
     }
@@ -1317,7 +1317,7 @@
     "model": "clickhouse_search.gnomadmitoheteroplasmyallvariantsmito",
     "pk": "M-14783-T-C",
     "fields": {
-      "af": 0.00005,
+      "af": 0.00005325,
       "ac": 3,
       "an": 56336,
       "max_hl": 1
@@ -1326,7 +1326,7 @@
     "model": "clickhouse_search.helixmitoallvariantsmito",
     "pk": "M-14783-T-C",
     "fields": {
-      "af": 0.04884,
+      "af": 0.04884607,
       "ac": 9573,
       "an": 195983
     }
@@ -1334,7 +1334,7 @@
     "model": "clickhouse_search.helixmitoheteroplasmyallvariantsmito",
     "pk": "M-14783-T-C",
     "fields": {
-      "af": 0.00009,
+      "af": 0.00009184,
       "ac": 18,
       "an": 195983,
       "max_hl": 0.96269
