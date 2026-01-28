@@ -642,7 +642,7 @@ class BasePopulationAllMv(RefreshableMaterializedView):
 class BasePopulationMv(RefreshableMaterializedView):
     key = models.UInt32Field(primary_key=True)
     ac = models.UInt32Field()
-    af = models.DecimalField(max_digits=9, decimal_places=5)
+    af = models.DecimalField(max_digits=9, decimal_places=8)
     an = models.UInt32Field()
     hom = models.UInt32Field()
 
@@ -651,7 +651,7 @@ class BasePopulationMv(RefreshableMaterializedView):
 
 class BasePopulationDict(Dictionary):
     ac = models.UInt32Field()
-    af = models.DecimalField(max_digits=9, decimal_places=5)
+    af = models.DecimalField(max_digits=9, decimal_places=8)
     an = models.UInt32Field()
     hom = models.UInt32Field()
 
@@ -779,14 +779,14 @@ class BaseGnomadAllMv(BasePopulationAllMv):
         abstract = True
 
 class BaseGnomadMv(BasePopulationMv):
-    filter_af = models.DecimalField(max_digits=9, decimal_places=5)
+    filter_af = models.DecimalField(max_digits=9, decimal_places=8)
     hemi = models.UInt32Field()
 
     class Meta:
         abstract = True
 
 class BaseGnomadDict(BasePopulationDict):
-    filter_af = models.DecimalField(max_digits=9, decimal_places=5)
+    filter_af = models.DecimalField(max_digits=9, decimal_places=8)
     hemi = models.UInt32Field()
 
     class Meta:
