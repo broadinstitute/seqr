@@ -73,7 +73,7 @@ class Dictionary(models.ClickhouseModel):
 
     @classmethod
     def base_fields(cls):
-        return [(field.name, field) for field in cls._meta.local_fields if field.name != 'key']
+        return [(field.db_column or field.name, field) for field in cls._meta.local_fields if field.name != 'key']
 
     @classmethod
     def dict_get_expression(cls, *expressions, field_names=None, force_tuple=False, **kwargs):

@@ -114,7 +114,7 @@
       "lifted_over_chrom": "1",
       "lifted_over_pos": 91977243,
       "hgmd": [null, null],
-      "screen_region_type": 1,
+      "screen_region_type": null,
       "predictions": [3, 2, 0, 0.023, 0.08326, 0.0687, 1, 1, 0.06995, 0.0526, 1, 1, 1, 0.0858],
       "populations": [
         [0, 0, 0, 0, 0, 0, 0],
@@ -475,6 +475,15 @@
       "score": 0.23005,
       "start": 91511000,
       "end": 91512000
+    }
+}, {
+    "model": "clickhouse_search.screenallvariantssnvindel",
+    "pk": 3,
+    "fields": {
+      "chrom": "1",
+      "start": 91511000,
+      "end": 91512000,
+      "region_type": "CTCF-only"
     }
 }, {
     "model": "clickhouse_search.entriessnvindel",

@@ -388,7 +388,7 @@ class GnomadNonCodingConstraintDict(Dictionary):
             chromosomes=', '.join([f"\\'{chrom}\\'" for _, chrom in CHROMOSOME_CHOICES])
         )
 
-class ScreenAllVariantsSnvIndel(models.ClickhouseModel):
+class ScreenAllVariantsSnvIndel(FixtureLoadableClickhouseModel):
     chrom = Enum8Field(return_int=False, choices=CHROMOSOME_CHOICES, primary_key=True)
     start = models.UInt32Field()
     end = models.UInt32Field()

@@ -505,6 +505,11 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
                 'selectedMainTranscriptId': Value(None, output_field=models.StringField(null=True)),
             })
 
+        if self.model.SCREEN_DICT:
+            annotations['screenRegionType'] = self.model.SCREEN_DICT.dict_get_expression(
+                'chrom', 'pos', field_names=['regionType'], null_missing=True,
+            )
+
         return annotations
 
     @staticmethod
