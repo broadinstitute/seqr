@@ -505,10 +505,9 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
                 'selectedMainTranscriptId': Value(None, output_field=models.StringField(null=True)),
             })
 
-        if self.model.SCREEN_DICT:
-            annotations['screenRegionType'] = self.model.SCREEN_DICT.dict_get_expression(
-                'chrom', 'pos', field_names=['regionType'], null_missing=True,
-            )
+        screen_expression = self._screen_expression()
+        if screen_expression:
+            annotations['screenRegionType'] = screen_expression
 
         return annotations
 
@@ -537,6 +536,11 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
     def _clinvar_conflicting_path_filter(array_func, conflicting_filter):
         return {f'clinvar__5__{array_func}': conflicting_filter, 'clinvar__5__not_empty': True, 'clinvar_key__isnull': False}
 
+    def _screen_expression(self):
+        if not self.model.SCREEN_DICT:
+            return None
+        return self.model.SCREEN_DICT.dict_get_expression('chrom', 'pos', field_names=['regionType'], null_missing=True)
+
     def _parse_in_silico_qs(self, results, in_silico, require_score, in_silico_qs, in_silico_missing_qs):
         in_silico_q = None
         missing_q = None
@@ -564,8 +568,12 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
 
         return results
 
-    def filter_annotations(self, *args, exclude=None, **kwargs):
-        results = super().filter_annotations(*args, **kwargs)
+    def filter_annotations(self, results, *args, exclude=None, **kwargs):
+        screen_expression = self._screen_expression()
+        if screen_expression:
+            results = results.annotate(screen=self._screen_expression())
+
+        results = super().filter_annotations(results, *args, **kwargs)
 
         exclude_clinvar_q = self._clinvar_filter_q(exclude)
         if exclude_clinvar_q is not None:
@@ -594,8 +602,8 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
                         f'{filter_field}__array_exists': {'consequenceTerms': (value, 'hasAny({value}, {field})')},
                     }))
             elif field == SCREEN_KEY:
-                if hasattr(self.model, 'screen_region_type'):
-                    filter_qs.append(Q(screen_region_type__in=value))
+                if self.model.SCREEN_DICT:
+                    filter_qs.append(Q(screen__in=value))
             elif field == 'mitomap_pathogenic':
                 if hasattr(self.model, 'mitomap_pathogenic'):
                     filter_qs.append(Q(mitomap_pathogenic=value))
