@@ -767,8 +767,7 @@ class VariantDetailsGRCh37SnvIndel(models.ClickhouseModel):
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh37/SNV_INDEL/variants/details', primary_key='key', flatten_nested=0)
 
 class TranscriptsSnvIndel(models.ClickhouseModel):
-    key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
-    transcripts = NestedField(sorted([
+    TRANSCRIPTS_FIELDS = sorted([
         ('alphamissense', NamedTupleField([
             ('pathogenicity', models.DecimalField(null=True, blank=True, max_digits=9, decimal_places=5)),
         ])),
@@ -812,7 +811,9 @@ class TranscriptsSnvIndel(models.ClickhouseModel):
             ('fiveutrConsequence', models.StringField(null=True, blank=True)),
         ])),
         *BaseAnnotationsMitoSnvIndel.TRANSCRIPTS_FIELDS,
-    ]), group_by_key='geneId')
+    ])
+    key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+    transcripts = NestedField(TRANSCRIPTS_FIELDS, group_by_key='geneId')
 
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/transcripts'
@@ -835,7 +836,7 @@ class VariantDetailsSnvIndel(models.ClickhouseModel):
     lifted_over_pos = models.UInt32Field(db_column='liftedOverPos', null=True, blank=True)
     rsid = models.StringField(null=True, blank=True)
     caid = models.StringField(db_column='CAID', null=True, blank=True)
-    transcripts = NestedField(BaseVariants.TRANSCRIPTS_FIELDS, group_by_key='geneId')
+    transcripts = NestedField(TranscriptsSnvIndel.TRANSCRIPTS_FIELDS, group_by_key='geneId')
     sorted_motif_feature_consequences = NestedField(SORTED_MOTIF_FEATURE_CONSEQUENCES_FIELDS, db_column='sortedMotifFeatureConsequences', null_when_empty=True)
     sorted_regulatory_feature_consequences = NestedField(SORTED_REGULATORY_FEATURE_CONSEQUENCES_FIELDS, db_column='sortedRegulatoryFeatureConsequences', null_when_empty=True)
 
