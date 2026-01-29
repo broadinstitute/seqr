@@ -1,6 +1,7 @@
 from aiohttp.web import HTTPBadRequest
 import hail as hl
 import os
+import re
 
 from vlm.clickhouse_utils import get_clickhouse_variant_counts
 
@@ -53,8 +54,8 @@ def get_variant_match(query: dict) -> dict:
 
 
 def _get_contact_url(chrom: str, pos: int, ref: str, alt: str, genome_build: str, liftover_genome_build: str, liftover_locus: hl.LocusExpression) -> str:
-    if VLM_DEFAULT_CONTACT_EMAIL:
-        return f'mailto:{VLM_DEFAULT_CONTACT_EMAIL}'
+    if not SEQR_BASE_URL:
+        return SEQR_BASE_URL
 
     if liftover_locus is not None:
         lifted = hl.eval(liftover_locus)
@@ -87,6 +88,11 @@ def _parse_match_query(query: dict) -> tuple[str, int, str, str, str]:
     if not hl.eval(hl.is_valid_locus(chrom, start, reference_genome=genome_build)):
         raise HTTPBadRequest(reason=f'Invalid start: {start}')
 
+    for allele_field in ['referenceBases', 'alternateBases']:
+        allele = query[allele_field]
+        if not re.fullmatch(r'[ATCG]', allele):
+            raise HTTPBadRequest(reason=f'Invalid {allele_field}: {allele}')
+
     return chrom, start, query['referenceBases'], query['alternateBases'], genome_build
 
 
@@ -95,12 +101,15 @@ def _format_results(ac: int, hom: int, url: str) -> dict:
     result_sets = [
         ('Homozygous', hom),
         ('Heterozygous', total - hom),
+        ('Hemizygous', 0),
+        ('Unknown', 0),
     ] if ac else []
     return {
         'beaconHandovers': [
             {
                 'handoverType': BEACON_HANDOVER_TYPE,
                 'url': url,
+                'email': VLM_DEFAULT_CONTACT_EMAIL,
             }
         ],
         'meta': BEACON_META,
@@ -111,7 +120,7 @@ def _format_results(ac: int, hom: int, url: str) -> dict:
         'response': {
             'resultSets': [
                 {
-                    'exists': True,
+                    'exists': bool(count),
                     'id': f'{NODE_ID} {label}',
                     'results': [],
                     'resultsCount': count,
