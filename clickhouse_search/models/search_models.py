@@ -6,6 +6,7 @@ from clickhouse_search.backend.fields import Enum8Field, NestedField, UInt32Fiel
 from clickhouse_search.backend.functions import ArrayDistinct, ArrayFlatten, ArrayMin, ArrayMax
 from clickhouse_search.backend.table_models import Dictionary, FixtureLoadableClickhouseModel
 from clickhouse_search.managers import EntriesManager, SvEntriesManager, SvAnnotationsQuerySet, AnnotationsQuerySet
+from clickhouse_search.models.reference_data_models import GnomadNonCodingConstraintDict, BaseSpliceAi
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample
 from seqr.utils.search.constants import SPLICE_AI_FIELD
@@ -87,6 +88,7 @@ class BaseAnnotationsMitoSnvIndel(BaseAnnotations):
         ('transcriptId', models.StringField()),
         ('transcriptRank', models.UInt8Field()),
     ]
+    ANNOTATION_PREDICTIONS = []
 
     ref = models.StringField()
     alt = models.StringField()
@@ -359,6 +361,7 @@ class BaseAnnotationsMito(BaseAnnotationsMitoSnvIndel):
         ('sift', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
         ('mlc', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
     ]
+    ANNOTATION_PREDICTIONS = ['haplogroup_defining', 'mitotip']
 
     common_low_heteroplasmy = models.BoolField(db_column='commonLowHeteroplasmy', null=True, blank=True)
     mitomap_pathogenic  = models.BoolField(db_column='mitomapPathogenic', null=True, blank=True)
@@ -584,6 +587,14 @@ class BaseEntriesSnvIndel(BaseEntries):
         ('ab', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
         ('dp', models.UInt16Field(null=True, blank=True)),
     ]
+    PREDICTIONS = {
+        'dbnsfp': {},
+        'eigen': {},
+        'splice_ai': {
+            'consequence_id': ('splice_ai_consequence', models.Enum8Field(choices=[(csq, csq_id) for csq_id, csq in BaseSpliceAi.CONSEQUENCE_CHOICES])),
+        },
+    }
+    RANGE_PREDICTIONS = {}
 
     sample_type = models.Enum8Field(choices=[(1, 'WES'), (2, 'WGS')])
     is_gnomad_gt_5_percent = models.BoolField()
@@ -611,6 +622,9 @@ class EntriesGRCh37SnvIndel(BaseEntriesSnvIndel):
         db_table = 'GRCh37/SNV_INDEL/entries'
 
 class EntriesSnvIndel(BaseEntriesSnvIndel):
+    RANGE_PREDICTIONS = {
+        'gnomad_noncoding': GnomadNonCodingConstraintDict,
+    }
 
     # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
     key = ForeignKey('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
@@ -655,6 +669,13 @@ class EntriesMito(BaseEntries):
         ('mitoCn', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
         ('contamination', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
     ]
+    PREDICTIONS = {
+        'apogee': {},
+        'dbnsfp': {},
+        'hmtvar': {},
+        'mlc': {},
+    }
+    RANGE_PREDICTIONS = {}
 
     # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
     key = ForeignKey('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)

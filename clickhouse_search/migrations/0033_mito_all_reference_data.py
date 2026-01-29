@@ -948,7 +948,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='MitimpactDict',
             fields=[
-                ('key', clickhouse_search.backend.fields.DictKeyForeignKey(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, related_name='mitimpact', serialize=False, to='clickhouse_search.entriesmito')),
+                ('key', clickhouse_search.backend.fields.DictKeyForeignKey(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, related_name='apogee', serialize=False, to='clickhouse_search.entriesmito')),
                 ('score', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
             ],
             options={
@@ -965,7 +965,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='LocalconstraintmitoDict',
             fields=[
-                ('key', clickhouse_search.backend.fields.DictKeyForeignKey(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, related_name='local_constraint_mito', serialize=False, to='clickhouse_search.entriesmito')),
+                ('key', clickhouse_search.backend.fields.DictKeyForeignKey(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, related_name='mlc', serialize=False, to='clickhouse_search.entriesmito')),
                 ('score', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
             ],
             options={

@@ -341,7 +341,7 @@ class PextMitoDict(Dictionary):
         db_table = 'GRCh38/MITO/reference_data/pext'
         source_table = 'PextSeqrVariantsMito'
 
-class GnomadNonCodingConstraintAllVariantsSnvIndel(models.ClickhouseModel):
+class GnomadNonCodingConstraintAllVariantsSnvIndel(FixtureLoadableClickhouseModel):
     chrom = Enum8Field(return_int=False, choices=CHROMOSOME_CHOICES, primary_key=True)
     start = models.UInt32Field()
     end = models.UInt32Field()
@@ -374,7 +374,7 @@ class GnomadNonCodingConstraintAllMv(RefreshableMaterializedView):
         create_empty = True
 
 class GnomadNonCodingConstraintDict(Dictionary):
-    chrom = models.StringField(primary_key=True)
+    chrom_id = models.Int8Field(primary_key=True)
     start = models.UInt32Field()
     end = models.UInt32Field()
     score = models.DecimalField(max_digits=9, decimal_places=5)
@@ -382,8 +382,11 @@ class GnomadNonCodingConstraintDict(Dictionary):
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/reference_data/gnomad_non_coding_constraint'
         source_table = 'GnomadNonCodingConstraintAllVariantsSnvIndel'
-        engine = models.MergeTree(primary_key='chrom')
+        engine = models.MergeTree(primary_key='chrom_id')
         layout = 'RANGE_HASHED()'
+        clickhouse_query_template = 'SELECT indexOf([{chromosomes}], chrom) as chrom_id, start, end, score from {{table}}'.format( # nosec
+            chromosomes=', '.join([f"\\'{chrom}\\'" for _, chrom in CHROMOSOME_CHOICES])
+        )
 
 class ScreenAllVariantsSnvIndel(models.ClickhouseModel):
     chrom = Enum8Field(return_int=False, choices=CHROMOSOME_CHOICES, primary_key=True)
@@ -1589,7 +1592,7 @@ class MitimpactMv(RefreshableMaterializedView):
         source_sql = _all_variants_to_seqr_source_sql('GRCh38', 'MITO')
 
 class MitimpactDict(Dictionary):
-    key = DictKeyForeignKey('EntriesMito', related_name='mitimpact')
+    key = DictKeyForeignKey('EntriesMito', related_name='apogee')
     score = models.DecimalField(max_digits=9, decimal_places=5)
 
     class Meta(ReferenceDataDictMeta):
@@ -1644,7 +1647,7 @@ class LocalconstraintmitoMv(RefreshableMaterializedView):
         source_sql = _all_variants_to_seqr_source_sql('GRCh38', 'MITO')
 
 class LocalconstraintmitoDict(Dictionary):
-    key = DictKeyForeignKey('EntriesMito', related_name='local_constraint_mito')
+    key = DictKeyForeignKey('EntriesMito', related_name='mlc')
     score = models.DecimalField(max_digits=9, decimal_places=5)
 
     class Meta(ReferenceDataDictMeta):
@@ -1919,6 +1922,7 @@ class EigenGRCh37Mv(RefreshableMaterializedView):
         db_table = 'GRCh37/SNV_INDEL/reference_data/eigen/all_variants_to_seqr_variants_mv'
         to_table = 'EigenSeqrVariantsGRCh37SnvIndel'
         source_table = 'EigenAllVariantsGRCh37SnvIndel'
+        source_sql = _all_variants_to_seqr_source_sql('GRCh37', 'SNV_INDEL')
 
 class EigenGRCh37Dict(Dictionary):
     key = DictKeyForeignKey('EntriesGRCh37SnvIndel', related_name='eigen')
