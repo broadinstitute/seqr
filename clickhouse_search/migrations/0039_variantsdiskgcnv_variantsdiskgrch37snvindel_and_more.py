@@ -7,6 +7,8 @@ from django.db import migrations, models
 import django.db.models.deletion
 import django.db.models.manager
 
+from settings import CLICKHOUSE_IN_MEMORY_DIR, CLICKHOUSE_DATA_DIR
+
 
 class Migration(migrations.Migration):
 
@@ -23,7 +25,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'GRCh37/SNV_INDEL/variants_disk',
-                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, '/var/seqr/clickhouse-data/GRCh37/SNV_INDEL/variants', flatten_nested=0, primary_key='key'),
+                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh37/SNV_INDEL/variants', flatten_nested=0, primary_key='key'),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
@@ -38,7 +40,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'GRCh37/SNV_INDEL/variants_memory',
-                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, '/in-memory-dir/GRCh37/SNV_INDEL/variants', flatten_nested=0, primary_key='key'),
+                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, f'{CLICKHOUSE_IN_MEMORY_DIR}/GRCh37/SNV_INDEL/variants', flatten_nested=0, primary_key='key'),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
@@ -55,7 +57,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'GRCh38/SNV_INDEL/variants_disk',
-                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, '/var/seqr/clickhouse-data/GRCh38/SNV_INDEL/variants', flatten_nested=0, primary_key='key'),
+                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SNV_INDEL/variants', flatten_nested=0, primary_key='key'),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
@@ -72,7 +74,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'GRCh38/SNV_INDEL/variants_memory',
-                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, '/in-memory-dir/GRCh38/SNV_INDEL/variants', flatten_nested=0, primary_key='key'),
+                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, f'{CLICKHOUSE_IN_MEMORY_DIR}/GRCh38/SNV_INDEL/variants', flatten_nested=0, primary_key='key'),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
@@ -92,7 +94,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'GRCh37/SNV_INDEL/variants/details',
-                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, '/var/seqr/clickhouse-data/GRCh37/SNV_INDEL/variants/details', flatten_nested=0, primary_key='key'),
+                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh37/SNV_INDEL/variants/details', flatten_nested=0, primary_key='key'),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
@@ -114,7 +116,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'GRCh38/SNV_INDEL/variants/details',
-                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, '/var/seqr/clickhouse-data/GRCh38/SNV_INDEL/variants/details', flatten_nested=0, primary_key='key'),
+                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SNV_INDEL/variants/details', flatten_nested=0, primary_key='key'),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
@@ -125,11 +127,16 @@ class Migration(migrations.Migration):
             name='VariantsDiskMito',
             fields=[
                 ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
+                ('variant_id', clickhouse_backend.models.StringField(db_column='variantId')),
+                ('rsid', clickhouse_backend.models.StringField(blank=True, null=True)),
                 ('sorted_transcript_consequences', clickhouse_search.backend.fields.NestedField(base_fields=[('aminoAcids', clickhouse_backend.models.StringField(blank=True, null=True)), ('biotype', clickhouse_backend.models.StringField(blank=True, null=True)), ('canonical', clickhouse_backend.models.UInt8Field(blank=True, null=True)), ('codons', clickhouse_backend.models.StringField(blank=True, null=True)), ('consequenceTerms', clickhouse_backend.models.ArrayField(base_field=clickhouse_backend.models.Enum8Field(blank=True, choices=[(1, 'transcript_ablation'), (2, 'splice_acceptor_variant'), (3, 'splice_donor_variant'), (4, 'stop_gained'), (5, 'frameshift_variant'), (6, 'stop_lost'), (7, 'start_lost'), (8, 'inframe_insertion'), (9, 'inframe_deletion'), (10, 'missense_variant'), (11, 'protein_altering_variant'), (12, 'splice_donor_5th_base_variant'), (13, 'splice_region_variant'), (14, 'splice_donor_region_variant'), (15, 'splice_polypyrimidine_tract_variant'), (16, 'incomplete_terminal_codon_variant'), (17, 'start_retained_variant'), (18, 'stop_retained_variant'), (19, 'synonymous_variant'), (20, 'coding_sequence_variant'), (21, 'mature_miRNA_variant'), (22, '5_prime_UTR_variant'), (23, '3_prime_UTR_variant'), (24, 'non_coding_transcript_exon_variant'), (25, 'intron_variant'), (26, 'NMD_transcript_variant'), (27, 'non_coding_transcript_variant'), (28, 'coding_transcript_variant'), (29, 'upstream_gene_variant'), (30, 'downstream_gene_variant'), (31, 'intergenic_variant'), (32, 'sequence_variant')], null=True))), ('geneId', clickhouse_backend.models.StringField(blank=True, null=True)), ('hgvsc', clickhouse_backend.models.StringField(blank=True, null=True)), ('hgvsp', clickhouse_backend.models.StringField(blank=True, null=True)), ('loftee', clickhouse_search.backend.fields.NamedTupleField(base_fields=[('isLofNagnag', clickhouse_backend.models.BoolField(blank=True, null=True)), ('lofFilters', clickhouse_backend.models.ArrayField(base_field=clickhouse_backend.models.StringField(blank=True, null=True)))])), ('majorConsequence', clickhouse_backend.models.Enum8Field(blank=True, choices=[(1, 'transcript_ablation'), (2, 'splice_acceptor_variant'), (3, 'splice_donor_variant'), (4, 'stop_gained'), (5, 'frameshift_variant'), (6, 'stop_lost'), (7, 'start_lost'), (8, 'inframe_insertion'), (9, 'inframe_deletion'), (10, 'missense_variant'), (11, 'protein_altering_variant'), (12, 'splice_donor_5th_base_variant'), (13, 'splice_region_variant'), (14, 'splice_donor_region_variant'), (15, 'splice_polypyrimidine_tract_variant'), (16, 'incomplete_terminal_codon_variant'), (17, 'start_retained_variant'), (18, 'stop_retained_variant'), (19, 'synonymous_variant'), (20, 'coding_sequence_variant'), (21, 'mature_miRNA_variant'), (22, '5_prime_UTR_variant'), (23, '3_prime_UTR_variant'), (24, 'non_coding_transcript_exon_variant'), (25, 'intron_variant'), (26, 'NMD_transcript_variant'), (27, 'non_coding_transcript_variant'), (28, 'coding_transcript_variant'), (29, 'upstream_gene_variant'), (30, 'downstream_gene_variant'), (31, 'intergenic_variant'), (32, 'sequence_variant')], null=True)), ('transcriptId', clickhouse_backend.models.StringField()), ('transcriptRank', clickhouse_backend.models.UInt8Field())], db_column='sortedTranscriptConsequences')),
+                ('common_low_heteroplasmy', clickhouse_backend.models.BoolField(blank=True, db_column='commonLowHeteroplasmy', null=True)),
+                ('haplogroup_defining', clickhouse_backend.models.BoolField(blank=True, db_column='haplogroupDefining', null=True)),
+                ('mitotip', clickhouse_backend.models.Enum8Field(blank=True, choices=[(0, 'likely_pathogenic'), (1, 'possibly_pathogenic'), (2, 'possibly_benign'), (3, 'likely_benign')], null=True)),
             ],
             options={
                 'db_table': 'GRCh38/MITO/variants_disk',
-                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, '/var/seqr/clickhouse-data/GRCh38/MITO/variants', flatten_nested=0, primary_key='key'),
+                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/MITO/variants', flatten_nested=0, primary_key='key'),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
@@ -161,7 +168,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'GRCh38/SV/variants_disk',
-                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, '/var/seqr/clickhouse-data/GRCh38/SV/variants', flatten_nested=0, primary_key='key'),
+                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SV/variants', flatten_nested=0, primary_key='key'),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
@@ -188,7 +195,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'GRCh38/GCNV/variants_memory',
-                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, '/in-memory-dir/GRCh38/GCNV/variants', flatten_nested=0, primary_key='key'),
+                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, f'{CLICKHOUSE_IN_MEMORY_DIR}/GRCh38/GCNV/variants', flatten_nested=0, primary_key='key'),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
@@ -199,11 +206,16 @@ class Migration(migrations.Migration):
             name='VariantsMito',
             fields=[
                 ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
+                ('variant_id', clickhouse_backend.models.StringField(db_column='variantId')),
+                ('rsid', clickhouse_backend.models.StringField(blank=True, null=True)),
                 ('sorted_transcript_consequences', clickhouse_search.backend.fields.NestedField(base_fields=[('aminoAcids', clickhouse_backend.models.StringField(blank=True, null=True)), ('biotype', clickhouse_backend.models.StringField(blank=True, null=True)), ('canonical', clickhouse_backend.models.UInt8Field(blank=True, null=True)), ('codons', clickhouse_backend.models.StringField(blank=True, null=True)), ('consequenceTerms', clickhouse_backend.models.ArrayField(base_field=clickhouse_backend.models.Enum8Field(blank=True, choices=[(1, 'transcript_ablation'), (2, 'splice_acceptor_variant'), (3, 'splice_donor_variant'), (4, 'stop_gained'), (5, 'frameshift_variant'), (6, 'stop_lost'), (7, 'start_lost'), (8, 'inframe_insertion'), (9, 'inframe_deletion'), (10, 'missense_variant'), (11, 'protein_altering_variant'), (12, 'splice_donor_5th_base_variant'), (13, 'splice_region_variant'), (14, 'splice_donor_region_variant'), (15, 'splice_polypyrimidine_tract_variant'), (16, 'incomplete_terminal_codon_variant'), (17, 'start_retained_variant'), (18, 'stop_retained_variant'), (19, 'synonymous_variant'), (20, 'coding_sequence_variant'), (21, 'mature_miRNA_variant'), (22, '5_prime_UTR_variant'), (23, '3_prime_UTR_variant'), (24, 'non_coding_transcript_exon_variant'), (25, 'intron_variant'), (26, 'NMD_transcript_variant'), (27, 'non_coding_transcript_variant'), (28, 'coding_transcript_variant'), (29, 'upstream_gene_variant'), (30, 'downstream_gene_variant'), (31, 'intergenic_variant'), (32, 'sequence_variant')], null=True))), ('geneId', clickhouse_backend.models.StringField(blank=True, null=True)), ('hgvsc', clickhouse_backend.models.StringField(blank=True, null=True)), ('hgvsp', clickhouse_backend.models.StringField(blank=True, null=True)), ('loftee', clickhouse_search.backend.fields.NamedTupleField(base_fields=[('isLofNagnag', clickhouse_backend.models.BoolField(blank=True, null=True)), ('lofFilters', clickhouse_backend.models.ArrayField(base_field=clickhouse_backend.models.StringField(blank=True, null=True)))])), ('majorConsequence', clickhouse_backend.models.Enum8Field(blank=True, choices=[(1, 'transcript_ablation'), (2, 'splice_acceptor_variant'), (3, 'splice_donor_variant'), (4, 'stop_gained'), (5, 'frameshift_variant'), (6, 'stop_lost'), (7, 'start_lost'), (8, 'inframe_insertion'), (9, 'inframe_deletion'), (10, 'missense_variant'), (11, 'protein_altering_variant'), (12, 'splice_donor_5th_base_variant'), (13, 'splice_region_variant'), (14, 'splice_donor_region_variant'), (15, 'splice_polypyrimidine_tract_variant'), (16, 'incomplete_terminal_codon_variant'), (17, 'start_retained_variant'), (18, 'stop_retained_variant'), (19, 'synonymous_variant'), (20, 'coding_sequence_variant'), (21, 'mature_miRNA_variant'), (22, '5_prime_UTR_variant'), (23, '3_prime_UTR_variant'), (24, 'non_coding_transcript_exon_variant'), (25, 'intron_variant'), (26, 'NMD_transcript_variant'), (27, 'non_coding_transcript_variant'), (28, 'coding_transcript_variant'), (29, 'upstream_gene_variant'), (30, 'downstream_gene_variant'), (31, 'intergenic_variant'), (32, 'sequence_variant')], null=True)), ('transcriptId', clickhouse_backend.models.StringField()), ('transcriptRank', clickhouse_backend.models.UInt8Field())], db_column='sortedTranscriptConsequences')),
+                ('common_low_heteroplasmy', clickhouse_backend.models.BoolField(blank=True, db_column='commonLowHeteroplasmy', null=True)),
+                ('haplogroup_defining', clickhouse_backend.models.BoolField(blank=True, db_column='haplogroupDefining', null=True)),
+                ('mitotip', clickhouse_backend.models.Enum8Field(blank=True, choices=[(0, 'likely_pathogenic'), (1, 'possibly_pathogenic'), (2, 'possibly_benign'), (3, 'likely_benign')], null=True)),
             ],
             options={
                 'db_table': 'GRCh38/MITO/variants_memory',
-                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, '/in-memory-dir/GRCh38/MITO/variants', flatten_nested=0, primary_key='key'),
+                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, f'{CLICKHOUSE_IN_MEMORY_DIR}/GRCh38/MITO/variants', flatten_nested=0, primary_key='key'),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
@@ -235,7 +247,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'GRCh38/SV/variants_memory',
-                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, '/in-memory-dir/GRCh38/SV/variants', flatten_nested=0, primary_key='key'),
+                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, f'{CLICKHOUSE_IN_MEMORY_DIR}/GRCh38/SV/variants', flatten_nested=0, primary_key='key'),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
@@ -262,7 +274,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'GRCh38/GCNV/variants_disk',
-                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, '/var/seqr/clickhouse-data/GRCh38/GCNV/variants', flatten_nested=0, primary_key='key'),
+                'engine': clickhouse_search.backend.engines.EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/GCNV/variants', flatten_nested=0, primary_key='key'),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),

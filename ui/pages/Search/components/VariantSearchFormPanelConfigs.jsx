@@ -146,7 +146,7 @@ export const LOCATION_FIELDS = [
   {
     name: VARIANT_FIELD_NAME,
     label: 'Variants',
-    labelHelp: 'A list of variants. Can be separated by commas or whitespace. Variants can be represented by rsID or in the form <chrom>-<pos>-<ref>-<alt>',
+    labelHelp: 'A list of variants. Can be separated by commas or whitespace. Variants must be represented in the form <chrom>-<pos>-<ref>-<alt>',
     component: LocusListItemsFilter,
     width: 4,
     shouldDisable: locus => !!locus[LOCUS_LIST_ITEMS_FIELD.name] || !!locus[PANEL_APP_FIELD_NAME],
@@ -522,7 +522,7 @@ export const LOCATION_PANEL = {
   },
   fields: LOCATION_FIELDS,
   fieldLayout: fieldComponents => <Form.Field>{fieldComponents}</Form.Field>,
-  helpText: 'Filter by variant location. Entries can be either gene symbols (e.g. CFTR) or intervals in the form <chrom>:<start>-<end> (e.g. 4:6935002-87141054) or separated by tab. Variant entries can be either rsIDs (e.g. rs61753695) or variants in the form <chrom>-<pos>-<ref>-<alt> (e.g. 10-129958997-T-C). Entries can be separated by commas or whitespace.',
+  helpText: 'Filter by variant location. Entries can be either gene symbols (e.g. CFTR) or intervals in the form <chrom>:<start>-<end> (e.g. 4:6935002-87141054) or separated by tab. Variant entries must be in the form <chrom>-<pos>-<ref>-<alt> (e.g. 10-129958997-T-C). Entries can be separated by commas or whitespace.',
 }
 
 export const IN_SILICO_PANEL = {

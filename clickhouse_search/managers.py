@@ -294,10 +294,9 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
         )
 
     def search(self, **kwargs):
-        results = self.filter_variant_ids(**kwargs)
-        results = self._filter_frequency(results, **kwargs)
+        results = self._filter_frequency(self, **kwargs)
         results = self._filter_in_silico(results, **kwargs)
-        results = self.filter_annotations(results, **kwargs)
+        results = self._filter_annotations(results, **kwargs)
         return results
 
     def result_values(self, skip_entry_fields=False):
@@ -342,9 +341,6 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
             field: F(field) for field in [self.SELECTED_GENE_FIELD, 'clinvar', 'family_carriers', 'carriers', 'has_hom_alt', 'no_hom_alt_families', 'familyGenotypes'] + self.ENTRY_FIELDS
             if field in query.query.annotations
         }
-
-    def filter_variant_ids(self, **kwargs):
-        return self
 
     @property
     def populations(self):
@@ -395,7 +391,7 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
 
         return results
 
-    def filter_annotations(self, results, annotations=None, pathogenicity=None, genes=None, intervals=None, exclude_locations=False, **kwargs):
+    def _filter_annotations(self, results, annotations=None, pathogenicity=None, genes=None, intervals=None, exclude_locations=False, **kwargs):
         if exclude_locations and genes:
             intervals = self._format_gene_intervals(genes)
             genes = None
@@ -559,19 +555,7 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
 
         return results, False, in_silico_q, missing_q
 
-    def filter_variant_ids(self, parsed_variant_ids=None, rs_ids=None, **kwargs):
-        results = self
-        if parsed_variant_ids:
-            results = results.filter(
-                variant_id__in=[f'{chrom}-{pos}-{ref}-{alt}' for chrom, pos, ref, alt in parsed_variant_ids]
-            )
-
-        if rs_ids:
-            results = results.filter(rsid__in=rs_ids)
-
-        return results
-
-    def filter_annotations(self, results, *args, exclude=None, **kwargs):
+    def _filter_annotations(self, results, *args, exclude=None, **kwargs):
         screen_expression = self._screen_expression()
         if screen_expression:
             results = results.annotate(screen=self._screen_expression())
@@ -735,7 +719,7 @@ class SvAnnotationsQuerySet(BaseAnnotationsQuerySet):
             **{col: F(f'sample_{col}') for col in genotype_override_fields if col != 'geneIds'},
         }
 
-    def filter_annotations(self, results, *args, **kwargs):
+    def add_genotype_override_annotations(self, results):
         if self.model.GENOTYPE_OVERRIDE_FIELDS:
             results = results.annotate(**{
                 self.GENOTYPE_GENE_CONSEQUENCE_FIELD: ArrayFilter(self.TRANSCRIPT_FIELD, conditions=[{
@@ -743,8 +727,11 @@ class SvAnnotationsQuerySet(BaseAnnotationsQuerySet):
                 }]),
             })
             self.TRANSCRIPT_FIELD = self.GENOTYPE_GENE_CONSEQUENCE_FIELD
+        return results
 
-        return super().filter_annotations(results, *args, **kwargs)
+    def _filter_annotations(self, results, *args, **kwargs):
+        results = self.add_genotype_override_annotations(results)
+        return super()._filter_annotations(results, *args, **kwargs)
 
     def _parse_annotation_filters(self, annotations, pathogenicity):
         filter_qs = []
@@ -832,6 +819,10 @@ class BaseEntriesManager(SearchQuerySet):
     @property
     def annotations_model(self):
         return self.model.key.field.related_model
+
+    @property
+    def key_lookup_model(self):
+        return next(obj.related_model for obj in self.annotations_model._meta.related_objects if obj.name.startswith('keylookup'))
 
     @property
     def call_fields(self):
@@ -1272,8 +1263,12 @@ class BaseEntriesManager(SearchQuerySet):
             mapped_expression='x.1', output_field=models.ArrayField(models.StringField()),
         )
 
-    def filter_locus(self, exclude_locations=False, require_gene_filter=False, intervals=None, genes=None, **kwargs):
+    def filter_locus(self, exclude_locations=False, require_gene_filter=False, intervals=None, genes=None, variant_ids=None, **kwargs):
         entries = self
+
+        if variant_ids:
+            keys = self.key_lookup_model.objects.filter(variant_id__in=variant_ids).values_list('key', flat=True)
+            entries = entries.filter(key__in=keys)
 
         if not (genes or intervals):
             return entries
@@ -1421,13 +1416,14 @@ class EntriesManager(BaseEntriesManager):
             )
         return super()._join_annotations(entries)
 
-    def filter_locus(self, *args, require_any_gene=False, parsed_variant_ids=None, intervals=None, genes=None, **kwargs):
+    def filter_locus(self, *args, require_any_gene=False, parsed_variant_ids=None, intervals=None, genes=None, variant_ids=None, **kwargs):
         if parsed_variant_ids:
-            # although technically redundant, the interval query is applied to the entries table before join and reduces the join size,
-            # while the full variant_id filter is applied to the annotation table after the join
+            # although technically redundant, the interval query is applied to the entries table to
+            # improve performance by using the xpos projection
             intervals = [{'chrom': chrom, 'start': pos, 'end': pos} for chrom, pos, _, _ in parsed_variant_ids]
+            variant_ids = ['-'.join([str(o) for o in variant_id]) for variant_id in parsed_variant_ids]
 
-        entries = super().filter_locus(*args, intervals=intervals, genes=genes, **kwargs)
+        entries = super().filter_locus(*args, intervals=intervals, genes=genes, variant_ids=variant_ids, **kwargs)
 
         if hasattr(self.model, 'is_annotated_in_any_gene') and (require_any_gene or (genes and not intervals)):
             entries = entries.filter(is_annotated_in_any_gene=Value(True))

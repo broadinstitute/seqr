@@ -717,8 +717,6 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
         self._assert_expected_search([GRCH37_VARIANT], locus={'rawItems': '7:143268894-143271480'})
 
     def test_variant_id_search(self):
-        self._assert_expected_search([VARIANT2], locus={'rawVariantItems': 'rs1801131'})
-
         self._assert_expected_search([VARIANT1], **VARIANT_ID_SEARCH)
 
         self._assert_expected_search(

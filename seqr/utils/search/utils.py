@@ -149,7 +149,7 @@ def _get_es_variant_by_id(parsed_variant_id, variant_id, samples, genome_version
 
 def _get_clickhouse_variant_by_id(parsed_variant_id, variant_id, samples, genome_version, dataset_type=None, **kwargs):
     return get_clickhouse_variant_by_id(
-        parsed_variant_id or variant_id, samples, genome_version, DATASET_TYPES_LOOKUP[dataset_type][0],
+        variant_id, parsed_variant_id, samples, genome_version, DATASET_TYPES_LOOKUP[dataset_type][0],
     )
 
 
@@ -169,7 +169,7 @@ def variant_lookup(user, variant_id, genome_version, sample_type=None, affected_
     dataset_type = DATASET_TYPES_LOOKUP[_variant_ids_dataset_type([parsed_variant_id])][0]
     _validate_dataset_type_genome_version(dataset_type, sample_type, genome_version)
 
-    variants = clickhouse_variant_lookup(user, parsed_variant_id or variant_id, dataset_type, sample_type, genome_version, affected_only, hom_only)
+    variants = clickhouse_variant_lookup(user, variant_id, parsed_variant_id, dataset_type, sample_type, genome_version, affected_only, hom_only)
 
     safe_redis_set_json(cache_key, variants, expire=timedelta(weeks=2))
     return variants
@@ -437,7 +437,7 @@ def _parse_variant_items(search_json):
     parsed_variant_ids = []
     rs_ids = []
     for item in raw_items.replace(',', ' ').split():
-        if item.startswith('rs'):
+        if item.startswith('rs') and backend_specific_call(True, False):
             rs_ids.append(item)
         else:
             variant_id = item.lstrip('chr')
