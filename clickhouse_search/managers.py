@@ -117,16 +117,16 @@ class SearchQuerySet(QuerySet):
                 all_pred_fields.append((field_name, output_field))
 
         for pred_name, range_dict in model.RANGE_PREDICTIONS.items():
-            pred_expression = cls._xpos_rage_dict_get_expression(range_dict)
+            pred_expression = cls._xpos_rage_dict_get_expression(range_dict, 'score')
             pred_expressions.append(Tuple(pred_expression))
             all_pred_fields.append((pred_name, pred_expression.output_field))
 
         return TupleConcat(*pred_expressions, output_field=NamedTupleField(all_pred_fields))
 
     @staticmethod
-    def _xpos_rage_dict_get_expression(range_dict):
+    def _xpos_rage_dict_get_expression(range_dict, field_name):
         return range_dict.dict_get_expression(
-            IntDiv('xpos', int(1e9)), Modulo('xpos', int(1e9)), field_names=['score'], null_missing=True,
+            IntDiv('xpos', int(1e9)), Modulo('xpos', int(1e9)), field_names=[field_name], null_missing=True,
         )
 
     @staticmethod
@@ -172,7 +172,7 @@ class SearchQuerySet(QuerySet):
 
 
 
-class BaseAnnotationsQuerySet(SearchQuerySet):
+class BaseVariantsQuerySet(SearchQuerySet):
 
     TRANSCRIPT_FIELD = 'sorted_transcript_consequences'
     GENE_CONSEQUENCE_FIELD = 'gene_consequences'
@@ -444,7 +444,7 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
         return field in self.query.annotations
 
 
-class AnnotationsQuerySet(BaseAnnotationsQuerySet):
+class VariantsQuerySet(BaseVariantsQuerySet):
 
     @property
     def hgmd_join_model(self):
@@ -517,7 +517,7 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
     def _screen_expression(self):
         if not self.model.SCREEN_DICT:
             return None
-        return self.model.SCREEN_DICT.dict_get_expression('chrom', 'pos', field_names=['regionType'], null_missing=True)
+        return self._xpos_rage_dict_get_expression(self.model.SCREEN_DICT, 'regionType')
 
     def _parse_in_silico_qs(self, results, in_silico, require_score, in_silico_qs, in_silico_missing_qs):
         in_silico_q = None
@@ -649,7 +649,7 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
         return {self.SELECTED_GENE_FIELD: F(f'{self.GENE_CONSEQUENCE_FIELD}__0__geneId')}
 
 
-class SvAnnotationsQuerySet(BaseAnnotationsQuerySet):
+class SvVariantsQuerySet(BaseVariantsQuerySet):
     TRANSCRIPT_FIELD = 'sorted_gene_consequences'
     GENOTYPE_GENE_CONSEQUENCE_FIELD = 'genotype_gene_consequences'
 
@@ -1411,7 +1411,7 @@ class EntriesManager(BaseEntriesManager):
             if not value:
                 continue
             if score in self.model.RANGE_PREDICTIONS:
-                score_expr = self._xpos_rage_dict_get_expression(self.model.RANGE_PREDICTIONS[score])
+                score_expr = self._xpos_rage_dict_get_expression(self.model.RANGE_PREDICTIONS[score], 'score')
             elif score in prediction_dicts:
                 score_expr = prediction_dicts[score].dict_get_expression('key', field_names=['score'], null_missing=True)
             else:
@@ -1476,9 +1476,10 @@ class EntriesManager(BaseEntriesManager):
 
     @classmethod
     def annotation_fields(cls, entries):
-        return super().annotation_fields(entries) + ['clinvar', 'clinvar_key', 'preds', 'pops'] + [field for field in [
-            'pass_in_silico', 'missing_in_silico', 'mitomapPathogenic',
-        ] if field in entries.query.annotations]
+        return super().annotation_fields(entries) + ['clinvar', 'clinvar_key', 'preds', 'pops', 'xpos'] + [
+            field for field in ['pass_in_silico', 'missing_in_silico', 'mitomapPathogenic']
+            if field in entries.query.annotations
+        ]
 
 class SvEntriesManager(BaseEntriesManager):
     NULLABLE_GENOTYPE_LOOKUP = {

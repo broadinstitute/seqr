@@ -5,7 +5,7 @@ from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocks
 from clickhouse_search.backend.fields import Enum8Field, NestedField, UInt32FieldDeltaCodecField, UInt64FieldDeltaCodecField, NamedTupleField, MaterializedUInt8Field
 from clickhouse_search.backend.functions import ArrayDistinct, ArrayFlatten, ArrayMin, ArrayMax
 from clickhouse_search.backend.table_models import Dictionary, FixtureLoadableClickhouseModel
-from clickhouse_search.managers import EntriesManager, SvEntriesManager, SvAnnotationsQuerySet, AnnotationsQuerySet
+from clickhouse_search.managers import EntriesManager, SvEntriesManager, SvVariantsQuerySet, VariantsQuerySet
 from clickhouse_search.models.reference_data_models import GnomadNonCodingConstraintDict, BaseSpliceAi, \
     ScreenDict
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
@@ -25,10 +25,6 @@ class Projection(Func):
 
 class BaseAnnotations(FixtureLoadableClickhouseModel):
 
-    ANNOTATION_CONSTANTS = {
-        'genomeVersion': GENOME_VERSION_GRCh38,
-        'liftedOverGenomeVersion': GENOME_VERSION_GRCh37,
-    }
     SV_TYPE_FILTER_PREFIX = ''
     GENOTYPE_OVERRIDE_FIELDS = {}
 
@@ -37,8 +33,6 @@ class BaseAnnotations(FixtureLoadableClickhouseModel):
     pos = models.UInt32Field()
     variant_id = models.StringField(db_column='variantId')
     lifted_over_pos = models.UInt32Field(db_column='liftedOverPos', null=True, blank=True)
-
-    objects = AnnotationsQuerySet.as_manager()
 
     class Meta:
         abstract = True
@@ -63,8 +57,16 @@ class BaseVariants(FixtureLoadableClickhouseModel):
         ('transcriptId', models.StringField()),
         ('transcriptRank', models.UInt8Field()),
     ]
+    ANNOTATION_CONSTANTS = {
+        'genomeVersion': GENOME_VERSION_GRCh38,
+        'liftedOverGenomeVersion': GENOME_VERSION_GRCh37,
+    }
+    SCREEN_DICT = None
+    ANNOTATION_PREDICTIONS = []  # TODO
 
     key = UInt32FieldDeltaCodecField(primary_key=True)
+
+    objects = VariantsQuerySet.as_manager()
 
     class Meta:
         abstract = True
@@ -90,7 +92,6 @@ class BaseAnnotationsMitoSnvIndel(BaseAnnotations):
         ('transcriptRank', models.UInt8Field()),
     ]
     ANNOTATION_PREDICTIONS = []
-    SCREEN_DICT = None
 
     ref = models.StringField()
     alt = models.StringField()
@@ -121,22 +122,18 @@ class BaseAnnotationsSvGcnv(BaseAnnotations):
     predictions = NamedTupleField(PREDICTION_FIELDS)
     sorted_gene_consequences = NestedField(SORTED_GENE_CONSQUENCES_FIELDS, db_column='sortedGeneConsequences', group_by_key='geneId')
 
-    objects = SvAnnotationsQuerySet.as_manager()
-
     class Meta:
         abstract = True
 
 class BaseVariantsSvGcnv(BaseAnnotationsSvGcnv):
+
+    objects = SvVariantsQuerySet.as_manager()
 
     class Meta:
         abstract = True
 
 
 class BaseAnnotationsGRCh37SnvIndel(BaseAnnotationsMitoSnvIndel):
-    ANNOTATION_CONSTANTS = {
-        'genomeVersion': GENOME_VERSION_GRCh37,
-        'liftedOverGenomeVersion': GENOME_VERSION_GRCh38,
-    }
     POPULATION_FIELDS = [
         ('exac', NamedTupleField([
             ('ac', models.UInt32Field()),
@@ -213,6 +210,10 @@ class BaseVariantsGRCh37SnvIndel(BaseVariants):
         ('consequenceTerms', models.ArrayField(models.Enum8Field(null=True, blank=True, return_int=False, choices=BaseVariants.CONSEQUENCE_TERMS))),
         ('geneId', models.StringField(null=True, blank=True))
     ]
+    ANNOTATION_CONSTANTS = {
+        'genomeVersion': GENOME_VERSION_GRCh37,
+        'liftedOverGenomeVersion': GENOME_VERSION_GRCh38,
+    }
 
     sorted_transcript_consequences = NestedField(SORTED_TRANSCRIPT_CONSQUENCES_FIELDS, db_column='sortedTranscriptConsequences')
 
@@ -244,7 +245,6 @@ class VariantsDiskGRCh37SnvIndel(BaseVariantsGRCh37SnvIndel):
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh37/SNV_INDEL/variants', primary_key='key', flatten_nested=0)
 
 class BaseAnnotationsSnvIndel(BaseAnnotationsGRCh37SnvIndel):
-    ANNOTATION_CONSTANTS = BaseAnnotations.ANNOTATION_CONSTANTS
     PREDICTION_FIELDS = sorted([
         ('gnomad_noncoding', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
         *BaseAnnotationsGRCh37SnvIndel.PREDICTION_FIELDS,
@@ -255,7 +255,6 @@ class BaseAnnotationsSnvIndel(BaseAnnotationsGRCh37SnvIndel):
         ('fiveutrConsequence', models.Enum8Field(null=True, blank=True, return_int=False, choices=[(1, '5_prime_UTR_premature_start_codon_gain_variant'), (2, '5_prime_UTR_premature_start_codon_loss_variant'), (3, '5_prime_UTR_stop_codon_gain_variant'), (4, '5_prime_UTR_stop_codon_loss_variant'), (5, '5_prime_UTR_uORF_frameshift_variant')])),
         *BaseAnnotationsGRCh37SnvIndel.SORTED_TRANSCRIPT_CONSQUENCES_FIELDS,
     ])
-    SCREEN_DICT = ScreenDict
 
     screen_region_type = Enum8Field(db_column='screenRegionType', null=True, blank=True, return_int=False, choices=[(0, 'CTCF-bound'), (1, 'CTCF-only'), (2, 'DNase-H3K4me3'), (3, 'PLS'), (4, 'dELS'), (5, 'pELS'), (6, 'DNase-only'), (7, 'low-DNase')])
     predictions = NamedTupleField(PREDICTION_FIELDS)
@@ -287,6 +286,7 @@ class BaseVariantsSnvIndel(BaseVariantsGRCh37SnvIndel):
     SORTED_REGULATORY_FEATURE_CONSEQUENCES_FIELDS = sorted([
         ('consequenceTerms', models.ArrayField(models.Enum8Field(null=True, blank=True, return_int=False, choices=[(0, 'regulatory_region_ablation'), (1, 'regulatory_region_amplification'), (2, 'regulatory_region_variant'), (3, 'regulatory_region_fusion')]))),
     ])
+    ANNOTATION_CONSTANTS = BaseVariants.ANNOTATION_CONSTANTS
 
     sorted_transcript_consequences = NestedField(SORTED_TRANSCRIPT_CONSQUENCES_FIELDS, db_column='sortedTranscriptConsequences')
     sorted_motif_feature_consequences = NestedField(SORTED_MOTIF_FEATURE_CONSEQUENCES_FIELDS, db_column='sortedMotifFeatureConsequences', null_when_empty=True)
@@ -308,6 +308,7 @@ class AnnotationsDiskSnvIndel(BaseAnnotationsSnvIndel):
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SNV_INDEL/annotations', primary_key='key', flatten_nested=0)
 
 class VariantsSnvIndel(BaseVariantsSnvIndel):
+    SCREEN_DICT = ScreenDict
 
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/variants_memory'
@@ -320,11 +321,6 @@ class VariantsDiskSnvIndel(BaseVariantsSnvIndel):
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SNV_INDEL/variants', primary_key='key', flatten_nested=0)
 
 class BaseAnnotationsMito(BaseAnnotationsMitoSnvIndel):
-    ANNOTATION_CONSTANTS = {
-        'chrom': 'M',
-        'liftedOverChrom': 'MT',
-        **BaseAnnotations.ANNOTATION_CONSTANTS,
-    }
     MITOTIP_PATHOGENICITIES = [
         (0, 'likely_pathogenic'),
         (1, 'possibly_pathogenic'),
@@ -376,6 +372,12 @@ class BaseAnnotationsMito(BaseAnnotationsMitoSnvIndel):
         abstract = True
 
 class BaseVariantsMito(BaseVariants):
+    ANNOTATION_CONSTANTS = {
+        'chrom': 'M',
+        'liftedOverChrom': 'MT',
+        **BaseVariants.ANNOTATION_CONSTANTS,
+    }
+
     variant_id = models.StringField(db_column='variantId')
     rsid = models.StringField(null=True, blank=True)
     sorted_transcript_consequences = NestedField(BaseVariants.TRANSCRIPTS_FIELDS, db_column='sortedTranscriptConsequences', group_by_key='geneId')
@@ -620,7 +622,7 @@ class BaseEntriesSnvIndel(BaseEntries):
 class EntriesGRCh37SnvIndel(BaseEntriesSnvIndel):
 
     # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
-    key = ForeignKey('AnnotationsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = ForeignKey('VariantsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
 
     class Meta(BaseEntriesSnvIndel.Meta):
         db_table = 'GRCh37/SNV_INDEL/entries'
@@ -631,7 +633,7 @@ class EntriesSnvIndel(BaseEntriesSnvIndel):
     }
 
     # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
-    key = ForeignKey('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = ForeignKey('VariantsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
     partition_id = MaterializedUInt8Field(
         expression="farmHash64(family_guid) %% n_partitions", # extra paren to escape within Django.
     )
@@ -683,7 +685,7 @@ class EntriesMito(BaseEntries):
     POPULATIONS = ['gnomad_mito', 'gnomad_mito_heteroplasmy', 'helix', 'helix_heteroplasmy']
 
     # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
-    key = ForeignKey('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = ForeignKey('VariantsMito', db_column='key', primary_key=True, on_delete=CASCADE)
     sample_type = models.Enum8Field(choices=[(1, 'WES'), (2, 'WGS')])
     calls = models.ArrayField(NamedTupleField(CALL_FIELDS))
 
@@ -712,7 +714,7 @@ class EntriesSv(BaseEntries):
     objects = SvEntriesManager.as_manager()
 
     # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
-    key = ForeignKey('AnnotationsSv', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = ForeignKey('VariantsSv', db_column='key', primary_key=True, on_delete=CASCADE)
     calls = models.ArrayField(NamedTupleField(CALL_FIELDS))
     geneId_ids = models.ArrayField(models.UInt32Field())
 
@@ -737,7 +739,7 @@ class EntriesGcnv(BaseEntries):
     ]
 
     # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
-    key = ForeignKey('AnnotationsGcnv', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = ForeignKey('VariantsGcnv', db_column='key', primary_key=True, on_delete=CASCADE)
     calls = models.ArrayField(NamedTupleField(CALL_FIELDS))
 
     objects = SvEntriesManager.as_manager()
@@ -924,15 +926,15 @@ ENTRY_CLASS_MAP = {
 }
 #  TODO update class maps
 ANNOTATIONS_CLASS_MAP = {
-    GENOME_VERSION_GRCh37: {Sample.DATASET_TYPE_VARIANT_CALLS: AnnotationsGRCh37SnvIndel},
+    GENOME_VERSION_GRCh37: {Sample.DATASET_TYPE_VARIANT_CALLS: VariantsGRCh37SnvIndel},
     GENOME_VERSION_GRCh38: {
         Sample.DATASET_TYPE_VARIANT_CALLS: VariantsSnvIndel,
-        Sample.DATASET_TYPE_MITO_CALLS: AnnotationsMito,
-        f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WGS}': AnnotationsSv,
-        f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WES}': AnnotationsGcnv,
+        Sample.DATASET_TYPE_MITO_CALLS: VariantsMito,
+        f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WGS}': VariantsSv,
+        f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WES}': VariantsGcnv,
     },
 }
 TRANSCRIPTS_CLASS_MAP = {
-    GENOME_VERSION_GRCh37: TranscriptsGRCh37SnvIndel,
+    GENOME_VERSION_GRCh37: VariantDetailsGRCh37SnvIndel,
     GENOME_VERSION_GRCh38: VariantDetailsSnvIndel,
 }
