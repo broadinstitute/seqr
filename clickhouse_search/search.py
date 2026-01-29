@@ -338,8 +338,15 @@ def get_transcripts_queryset(genome_version, keys):
     return TRANSCRIPTS_CLASS_MAP[genome_version].objects.filter(key__in=keys)
 
 
+#  TODO rename/ redo
 def get_transcripts_by_key(genome_version, keys):
-    return dict(get_transcripts_queryset(genome_version, keys).values_list('key', 'transcripts'))
+    transcripts = get_transcripts_queryset(genome_version, keys)
+    return {
+        detail['key']: detail for detail in transcripts.values(
+            'key', *[field.name for field in transcripts.model._meta.local_fields if not field.db_column],
+            **{field.db_column: F(field.name) for field in transcripts.model._meta.local_fields if field.db_column and field.name != 'key'},
+        )
+    }
 
 
 def format_clickhouse_results(results, genome_version, **kwargs):
@@ -359,31 +366,31 @@ def format_clickhouse_results(results, genome_version, **kwargs):
     return formatted_results
 
 
-def _format_variant(variant, transcripts_by_key):
+def _format_variant(variant, details_by_key):
     formatted_variant = {**variant}
     selected_gene_id = formatted_variant.pop(SELECTED_GENE_FIELD, None)
     selected_transcript = formatted_variant.pop(SELECTED_TRANSCRIPT_FIELD, None)
     if 'transcripts' in variant:
         return formatted_variant
 
-    transcripts = transcripts_by_key.get(variant['key'], {})
-    formatted_variant['transcripts'] = transcripts
+    details = details_by_key.get(variant['key'], {})
+    formatted_variant.update(details)
     # pop sortedTranscriptConsequences from the formatted result and not the original result to ensure the full value is cached properly
     sorted_minimal_transcripts = formatted_variant.pop(TRANSCRIPT_CONSEQUENCES_FIELD)
     main_transcript_id = None
     selected_main_transcript_id = None
     if sorted_minimal_transcripts:
         main_transcript_id = next(
-            t['transcriptId'] for t in transcripts[sorted_minimal_transcripts[0]['geneId']]
+            t['transcriptId'] for t in details['transcripts'][sorted_minimal_transcripts[0]['geneId']]
             if t['transcriptRank'] == 0
         )
     if selected_transcript:
         selected_main_transcript_id = next(
-            t['transcriptId'] for t in transcripts[selected_transcript['geneId']]
+            t['transcriptId'] for t in details['transcripts'][selected_transcript['geneId']]
             if _is_matched_minimal_transcript(t, selected_transcript)
         )
     elif selected_gene_id:
-        selected_main_transcript_id = transcripts[selected_gene_id][0]['transcriptId']
+        selected_main_transcript_id = details['transcripts'][selected_gene_id][0]['transcriptId']
     return {
         **formatted_variant,
         'mainTranscriptId': main_transcript_id,

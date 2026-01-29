@@ -316,12 +316,13 @@ class BaseVariantsQuerySet(SearchQuerySet):
 
     def result_values(self, skip_entry_fields=False):
         override_model_annotations = {'populations', 'predictions', 'pos', 'end', 'hgmd'}
+        skip_annotations = {'sortedMotifFeatureConsequences', 'sortedRegulatoryFeatureConsequences'}
         values = {**self.annotation_values}
         values.update(self.conditional_selects(self, skip_entry_fields=skip_entry_fields))
-        initial_values = {k: v for k, v in  values.items() if k not in override_model_annotations}
+        initial_values = {k: v for k, v in  values.items() if k not in override_model_annotations and k not in skip_annotations}
 
         fields = [*self.annotation_fields] + [
-            field for field in ['clinvar', 'familyGenotypes', 'numFamilies'] if self.has_annotation(field)
+            field for field in ['clinvar', 'familyGenotypes', 'numFamilies', 'xpos'] if self.has_annotation(field)
         ]
         if 'familyGenotypes' not in fields and not skip_entry_fields:
             fields += self.ENTRY_FIELDS
