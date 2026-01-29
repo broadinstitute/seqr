@@ -156,6 +156,28 @@
       "sorted_transcript_consequences": []
     }
 }, {
+    "model": "clickhouse_search.keylookupgrch37snvindel",
+    "pk": 123,
+    "fields": {
+      "key": 123,
+      "variant_id": "2-61413835-AAAG-A"
+    }
+}, {
+    "model": "clickhouse_search.dbnsfpallvariantsgrch37snvindel",
+    "pk": "2-61413835-AAAG-A",
+    "fields": {
+      "cadd": 21.9,
+      "fathmm": null,
+      "mpc": null,
+      "mut_pred": null,
+      "mut_taster": null,
+      "primate_ai": null,
+      "polyphen": null,
+      "revel": null,
+      "sift": null,
+      "vest": null
+    }
+}, {
     "model": "clickhouse_search.keylookupsnvindel",
     "pk": 100,
     "fields": {

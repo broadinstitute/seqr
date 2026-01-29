@@ -86,8 +86,11 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
         else:
             source_table = self._table_name(meta, meta.source_table)
             clickhouse_query_template = getattr(meta, 'clickhouse_query_template', None)
-            table_source = f"QUERY '{clickhouse_query_template.format(table=source_table)}'" \
-                if clickhouse_query_template else f'TABLE {source_table}'
+            if clickhouse_query_template:
+                table = f"{DATABASES['clickhouse_write']['NAME']}.{source_table}"
+                table_source = f"QUERY '{clickhouse_query_template.format(table=table)}'"
+            else:
+                table_source = f'TABLE {source_table}'
             source = f"CLICKHOUSE(USER '{CLICKHOUSE_WRITER_USER}' PASSWORD '{CLICKHOUSE_WRITER_PASSWORD}' {table_source})"
 
         layout = f'LAYOUT({meta.layout})'

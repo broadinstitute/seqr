@@ -16,7 +16,7 @@
       "lifted_over_pos": 10439,
       "hgmd": [null, null],
       "screen_region_type": null,
-      "predictions": [4.668000221252441, null, null, null, null, null, null, null, null, null, null, null, null, null],
+      "predictions": [1, null, null, null, null, null, null, null, null, null, null, null, null, null],
       "populations": [
         [0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0],
@@ -44,7 +44,7 @@
       "lifted_over_pos": 11854476,
       "hgmd": ["CM981315", 1],
       "screen_region_type": null,
-      "predictions": [25.9, 2.001, 0, 5.86851, 0.28205, null, 3, 0.1, 0.46558, 0.197, 0.05, 0, 4, 0.211],
+      "predictions": [2, 1, 1, 1, 0.028, null, 1, 0.01, 0.04, 0.0197, 0.015, 1, 1, 0.0211],
       "populations": [
         [35805, 0.29499999, 121372, 0.41530353, 0, 24061, 5872],
         [72672, 0.00288997, 251462, 0.0041164, 0, 1],
@@ -80,7 +80,7 @@
       "lifted_over_pos": 91968278,
       "hgmd": [null, null],
       "screen_region_type": null,
-      "predictions": [28.754, 1.378, null, 0.73896, null, null, null, null, null, null, null, 0.01, 2, null],
+      "predictions": [2, 0.1378, null, 0.073896, null, null, null, null, null, null, null, 0.001, 1, null],
       "populations": [
         [0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0],
@@ -115,7 +115,7 @@
       "lifted_over_pos": 91977243,
       "hgmd": [null, null],
       "screen_region_type": 1,
-      "predictions": [29.9, 9.491, 0, 0.23005, 0.83268, 0.687, 2, 0, 0.69959, 0.526, 0, 0, 4, 0.858],
+      "predictions": [3, 2, 0, 0.023, 0.08326, 0.0687, 1, 1, 0.06995, 0.0526, 1, 1, 1, 0.0858],
       "populations": [
         [0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0],
@@ -152,7 +152,7 @@
       "lifted_over_pos": 10146,
       "hgmd": [null, null],
       "screen_region_type": null,
-      "predictions": [4.65299, null, null, null, null, null, null, null, null, null, null, null, null, null],
+      "predictions": [1, null, null, null, null, null, null, null, null, null, null, null, null, null],
       "populations": [
         [0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0],
@@ -234,6 +234,30 @@
       "key": 2
     }
 }, {
+    "model": "clickhouse_search.keylookupsnvindel",
+    "pk": "1-91502721-G-A",
+    "fields": {
+      "key": 3
+    }
+}, {
+    "model": "clickhouse_search.keylookupsnvindel",
+    "pk": "1-91511686-T-G",
+    "fields": {
+      "key": 4
+    }
+}, {
+    "model": "clickhouse_search.keylookupsnvindel",
+    "pk": "1-10146-ACC-A",
+    "fields": {
+      "key": 5
+    }
+}, {
+    "model": "clickhouse_search.keylookupsnvindel",
+    "pk": "1-9310123-T-C",
+    "fields": {
+      "key": 22
+    }
+}, {
     "model": "clickhouse_search.clinvarallvariantssnvindel",
     "pk": "1-10439-AC-A",
     "fields": {
@@ -282,6 +306,175 @@
     "fields": {
       "accession": "CM981315",
       "classification": 3
+    }
+}, {
+    "model": "clickhouse_search.dbnsfpallvariantssnvindel",
+    "pk": "1-10439-AC-A",
+    "fields": {
+      "cadd": 4.668,
+      "fathmm": null,
+      "mpc": null,
+      "mut_pred": null,
+      "mut_taster": null,
+      "primate_ai": null,
+      "polyphen": null,
+      "revel": null,
+      "sift": null,
+      "vest": null
+    }
+}, {
+    "model": "clickhouse_search.dbnsfpallvariantssnvindel",
+    "pk": "1-38724419-T-G",
+    "fields": {
+      "cadd": 25.9,
+      "fathmm": 0,
+      "mpc": 0.28205,
+      "mut_pred": null,
+      "mut_taster": "P",
+      "primate_ai": 0.46558,
+      "polyphen": 0.1,
+      "revel":  0.197,
+      "sift": 0.05,
+      "vest": 0.211
+    }
+}, {
+    "model": "clickhouse_search.dbnsfpallvariantssnvindel",
+    "pk": "1-91502721-G-A",
+    "fields": {
+      "cadd": 28.754,
+      "fathmm": null,
+      "mpc": null,
+      "mut_pred": null,
+      "mut_taster": null,
+      "primate_ai": null,
+      "polyphen": null,
+      "revel":  null,
+      "sift": null,
+      "vest": null
+    }
+}, {
+    "model": "clickhouse_search.dbnsfpallvariantssnvindel",
+    "pk": "1-91511686-T-G",
+    "fields": {
+      "cadd": 29.9,
+      "fathmm": 0,
+      "mpc": 0.83268,
+      "mut_pred": 0.687,
+      "mut_taster": "N",
+      "primate_ai": 0.69959,
+      "polyphen": 0,
+      "revel":  0.526,
+      "sift": 0,
+      "vest": 0.858
+    }
+}, {
+    "model": "clickhouse_search.dbnsfpallvariantssnvindel",
+    "pk": "1-10146-ACC-A",
+    "fields": {
+      "cadd": 4.65299,
+      "fathmm": null,
+      "mpc": null,
+      "mut_pred": null,
+      "mut_taster": null,
+      "primate_ai": null,
+      "polyphen": null,
+      "revel": null,
+      "sift": null,
+      "vest": null
+    }
+}, {
+    "model": "clickhouse_search.dbnsfpallvariantssnvindel",
+    "pk": "1-9310123-T-C",
+    "fields": {
+      "cadd": 1.92299,
+      "fathmm": null,
+      "mpc": null,
+      "mut_pred": null,
+      "mut_taster": null,
+      "primate_ai": null,
+      "polyphen": null,
+      "revel": null,
+      "sift": null,
+      "vest": null
+    }
+}, {
+    "model": "clickhouse_search.eigenallvariantssnvindel",
+    "pk": "1-38724419-T-G",
+    "fields": {
+      "score": 2.001
+    }
+}, {
+    "model": "clickhouse_search.eigenallvariantssnvindel",
+    "pk": "1-91502721-G-A",
+    "fields": {
+      "score": 1.378
+    }
+}, {
+    "model": "clickhouse_search.eigenallvariantssnvindel",
+    "pk": "1-91511686-T-G",
+    "fields": {
+      "score": 9.491
+    }
+}, {
+    "model": "clickhouse_search.eigenallvariantssnvindel",
+    "pk": "1-9310123-T-C",
+    "fields": {
+      "score": 2.24799
+    }
+}, {
+    "model": "clickhouse_search.spliceaiallvariantssnvindel",
+    "pk": "1-38724419-T-G",
+    "fields": {
+      "score": 0,
+      "consequence": 4
+    }
+}, {
+    "model": "clickhouse_search.spliceaiallvariantssnvindel",
+    "pk": "1-91502721-G-A",
+    "fields": {
+      "score": 0.01,
+      "consequence": 2
+    }
+}, {
+    "model": "clickhouse_search.spliceaiallvariantssnvindel",
+    "pk": "1-91511686-T-G",
+    "fields": {
+      "score": 0,
+      "consequence": 4
+    }
+}, {
+    "model": "clickhouse_search.spliceaiallvariantssnvindel",
+    "pk": "1-9310123-T-C",
+    "fields": {
+      "score": 0.01,
+      "consequence": 4
+    }
+}, {
+    "model": "clickhouse_search.gnomadnoncodingconstraintallvariantssnvindel",
+    "pk": 1,
+    "fields": {
+      "chrom": "1",
+      "score": 5.86851,
+      "start": 38720000,
+      "end": 38730000
+    }
+}, {
+    "model": "clickhouse_search.gnomadnoncodingconstraintallvariantssnvindel",
+    "pk": 2,
+    "fields": {
+      "chrom": "1",
+      "score": 0.73896,
+      "start": 91502000,
+      "end": 91503000
+    }
+}, {
+    "model": "clickhouse_search.gnomadnoncodingconstraintallvariantssnvindel",
+    "pk": 3,
+    "fields": {
+      "chrom": "1",
+      "score": 0.23005,
+      "start": 91511000,
+      "end": 91512000
     }
 }, {
     "model": "clickhouse_search.entriessnvindel",
@@ -671,7 +864,7 @@
       "lifted_over_chrom": "7",
       "lifted_over_pos": 143271368,
       "hgmd": [null, null],
-      "predictions": [13.02, 3.951, null, null, null, null, null, 0.49064, null, null, 0, 4,null],
+      "predictions": [1, 1, null, null, null, null, null, 0.49064, null, null, 0, 4,null],
       "populations": [
         [66593, 0.63, 104352, 0.81987739, 0, 22269, 22162],
         [137532, 0.63542193, 216442, 0.82261163, 0, 45869],
@@ -730,6 +923,40 @@
       "variant_id": "1-10439-AC-A"
     }
 }, {
+    "model": "clickhouse_search.keylookupgrch37snvindel",
+    "pk": "7-143270172-A-G",
+    "fields": {
+      "key": 11
+    }
+}, {
+    "model": "clickhouse_search.dbnsfpallvariantsgrch37snvindel",
+    "pk": "7-143270172-A-G",
+    "fields": {
+      "cadd": 13.02,
+      "fathmm": null,
+      "mpc": null,
+      "mut_pred": null,
+      "mut_taster": null,
+      "primate_ai": 0.49064,
+      "polyphen": null,
+      "revel": null,
+      "sift": null,
+      "vest": null
+    }
+}, {
+    "model": "clickhouse_search.eigenallvariantsgrch37snvindel",
+    "pk": "7-143270172-A-G",
+    "fields": {
+      "score": 3.951
+    }
+}, {
+    "model": "clickhouse_search.spliceaiallvariantsgrch37snvindel",
+    "pk": "7-143270172-A-G",
+    "fields": {
+      "score": 0,
+      "consequence": 4
+    }
+},{
     "model": "clickhouse_search.annotationsmito",
     "pk": 6,
     "fields": {
@@ -743,7 +970,7 @@
       "lifted_over_pos": 4429,
       "common_low_heteroplasmy": false,
       "mitomap_pathogenic": null,
-      "predictions": [null, null, 0.05, "likely_pathogenic", null, null, 3.38874],
+      "predictions": [null, null, 0.005, "likely_pathogenic", null, null, 1],
       "populations": [
         [0, 0, 56419],
         [0, 0, 56419, 0],
@@ -771,7 +998,7 @@
       "lifted_over_pos": 11597,
       "common_low_heteroplasmy": false,
       "mitomap_pathogenic": null,
-      "predictions": [0.58, null, 0.75, null, "N", 0, null],
+      "predictions": [0.058, null, 0.075, null, null, 1, null],
       "populations": [
         [0, 0, 0],
         [0, 0, 0, 0],
@@ -799,7 +1026,7 @@
       "lifted_over_pos": 14783,
       "common_low_heteroplasmy": true,
       "mitomap_pathogenic": true,
-      "predictions": [null, true, null, null, null, null, 0.7514],
+      "predictions": [null, true, null, null, null, null, 0.0751],
       "populations": [
         [3118, 0.00553464, 56336],
         [3, 0.00005325, 56336, 1],
@@ -818,6 +1045,12 @@
     "pk": "M-4429-G-A",
     "fields": {
       "key": 6
+    }
+}, {
+    "model": "clickhouse_search.keylookupmito",
+    "pk": "M-11597-A-G",
+    "fields": {
+      "key": 7
     }
 }, {
     "model": "clickhouse_search.keylookupmito",
@@ -850,6 +1083,43 @@
       "conditions": [],
       "assertions": [],
       "pathogenicity": "Likely_pathogenic"
+    }
+}, {
+    "model": "clickhouse_search.dbnsfpallvariantsmito",
+    "pk": "M-11597-A-G",
+    "fields": {
+      "mut_taster": "N",
+      "sift": 0
+    }
+}, {
+    "model": "clickhouse_search.hmtvarallvariantsmito",
+    "pk": "M-4429-G-A",
+    "fields": {
+      "score": 0.05
+    }
+}, {
+    "model": "clickhouse_search.hmtvarallvariantsmito",
+    "pk": "M-11597-A-G",
+    "fields": {
+      "score": 0.75
+    }
+}, {
+    "model": "clickhouse_search.localconstraintmitoallvariantsmito",
+    "pk": "M-4429-G-A",
+    "fields": {
+      "score": 3.38874
+    }
+}, {
+    "model": "clickhouse_search.localconstraintmitoallvariantsmito",
+    "pk": "M-14783-T-C",
+    "fields": {
+      "score": 0.7514
+    }
+},{
+    "model": "clickhouse_search.mitimpactallvariantsmito",
+    "pk": "M-11597-A-G",
+    "fields": {
+      "score": 0.58
     }
 }, {
     "model": "clickhouse_search.entriesmito",
