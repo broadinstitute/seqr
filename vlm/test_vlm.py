@@ -185,6 +185,7 @@ class VlmTestCase(AioHTTPTestCase):
             resp_json = await resp.json()
         self.assertDictEqual(resp_json, only_37_response)
 
+        self.maxDiff = None
         async with self.client.request('GET', '/vlm/match?assemblyId=hg38&referenceName=chr7&start=143270172&referenceBases=A&alternateBases=G', headers=headers) as resp:
             self.assertEqual(resp.status, 200)
             resp_json = await resp.json()
