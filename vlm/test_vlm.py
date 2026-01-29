@@ -53,6 +53,7 @@ class VlmTestCase(AioHTTPTestCase):
                         'label': 'TestVLM browser',
                     },
                     'url': 'https://test-seqr.org/summary_data/variant_lookup?genomeVersion=38&variantId=chr1-38724419-T-G',
+                    'email': None,
                 }
             ],
             'meta': {
@@ -85,6 +86,20 @@ class VlmTestCase(AioHTTPTestCase):
                         'resultsCount': 23,
                         'setType': 'genomicVariant'
                     },
+                    {
+                        'exists': False,
+                        'id': 'TestVLM Hemizygous',
+                        'results': [],
+                        'resultsCount': 0,
+                        'setType': 'genomicVariant'
+                    },
+                    {
+                        'exists': False,
+                        'id': 'TestVLM Unknown',
+                        'results': [],
+                        'resultsCount': 0,
+                        'setType': 'genomicVariant'
+                    },
                 ],
             }
         })
@@ -110,6 +125,7 @@ class VlmTestCase(AioHTTPTestCase):
                         'label': 'TestVLM browser',
                     },
                     'url': 'https://test-seqr.org/summary_data/variant_lookup?genomeVersion=37&variantId=7-143270172-A-G',
+                    'email': None,
                 }
             ],
             'meta': {
@@ -142,6 +158,20 @@ class VlmTestCase(AioHTTPTestCase):
                         'resultsCount': 1695,
                         'setType': 'genomicVariant'
                     },
+                    {
+                        'exists': False,
+                        'id': 'TestVLM Hemizygous',
+                        'results': [],
+                        'resultsCount': 0,
+                        'setType': 'genomicVariant'
+                    },
+                    {
+                        'exists': False,
+                        'id': 'TestVLM Unknown',
+                        'results': [],
+                        'resultsCount': 0,
+                        'setType': 'genomicVariant'
+                    },
                 ],
             }
         }
@@ -166,6 +196,7 @@ class VlmTestCase(AioHTTPTestCase):
                         'label': 'TestVLM browser',
                     },
                     'url': 'https://test-seqr.org/summary_data/variant_lookup?genomeVersion=38&variantId=chr7-143270172-A-G',
+                    'email': None,
                 }
             ],
             'meta': {
@@ -183,7 +214,36 @@ class VlmTestCase(AioHTTPTestCase):
                 'total': 0,
             },
             'response': {
-                'resultSets': [],
+                'resultSets': [
+                    {
+                        'exists': False,
+                        'id': 'TestVLM Homozygous',
+                        'results': [],
+                        'resultsCount': 0,
+                        'setType': 'genomicVariant'
+                    },
+                    {
+                        'exists': False,
+                        'id': 'TestVLM Heterozygous',
+                        'results': [],
+                        'resultsCount': 0,
+                        'setType': 'genomicVariant'
+                    },
+                    {
+                        'exists': False,
+                        'id': 'TestVLM Hemizygous',
+                        'results': [],
+                        'resultsCount': 0,
+                        'setType': 'genomicVariant'
+                    },
+                    {
+                        'exists': False,
+                        'id': 'TestVLM Unknown',
+                        'results': [],
+                        'resultsCount': 0,
+                        'setType': 'genomicVariant'
+                    },
+                ],
             }
         })
 
@@ -265,3 +325,11 @@ class VlmTestCase(AioHTTPTestCase):
         async with self.client.request('GET', '/vlm/match?assemblyId=hg38&referenceName=7&start=999999999&referenceBases=A&alternateBases=G', headers=headers) as resp:
             self.assertEqual(resp.status, 400)
             self.assertEqual(resp.reason,'Invalid start: 999999999')
+
+        async with self.client.request('GET', '/vlm/match?assemblyId=hg38&referenceName=7&start=143270172&referenceBases=ATC&alternateBases=G', headers=headers) as resp:
+            self.assertEqual(resp.status, 400)
+            self.assertEqual(resp.reason,'Invalid referenceBases: ATC')
+
+        async with self.client.request('GET', '/vlm/match?assemblyId=hg38&referenceName=7&start=143270172&referenceBases=A&alternateBases=GAG', headers=headers) as resp:
+            self.assertEqual(resp.status, 400)
+            self.assertEqual(resp.reason,'Invalid alternateBases: GAG')
