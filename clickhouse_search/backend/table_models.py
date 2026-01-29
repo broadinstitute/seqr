@@ -59,7 +59,7 @@ class RefreshableMaterializedViewMeta:
 class Dictionary(models.ClickhouseModel):
 
     @classmethod
-    def dict_get_sql(cls, key, fields, default=None):
+    def dict_get_sql(cls, key, fields, default=None, null_missing=False):
         func_name = 'dictGet'
         fields = [f"'{field}'" for field in fields]
         field = fields[0] if len(fields) == 1 else f"({', '.join(fields)})"
@@ -67,6 +67,8 @@ class Dictionary(models.ClickhouseModel):
         if default is not None:
             func_name = 'dictGetOrDefault'
             args.append(f"'{default}'")
+        elif null_missing:
+            func_name = 'dictGetOrNull'
         return f'{func_name}({", ".join(args)})'
 
     @classmethod
@@ -74,13 +76,15 @@ class Dictionary(models.ClickhouseModel):
         return [(field.name, field) for field in cls._meta.local_fields if field.name != 'key']
 
     @classmethod
-    def dict_get_expression(cls, expressions, field_names=None, **kwargs):
+    def dict_get_expression(cls, *expressions, field_names=None, force_tuple=False, **kwargs):
         base_fields = cls.base_fields()
         if field_names:
             base_fields = [f for f in base_fields if f[0] in field_names]
-        output_field = base_fields[0][1] if len(base_fields) == 1 else NamedTupleField(base_fields)
-        dict_get_func = Func(expressions, output_field=output_field)
+        output_field = base_fields[0][1] if len(base_fields) == 1  and not force_tuple else NamedTupleField(base_fields)
+        dict_get_func = Func(*expressions, output_field=output_field)
         dict_get_func.template = cls.dict_get_sql('%(expressions)s', [field_name for field_name, _  in base_fields], **kwargs)
+        if force_tuple and len(base_fields) == 1:
+            dict_get_func.template = f'tuple({dict_get_func.template})'
         return dict_get_func
 
     @classmethod
