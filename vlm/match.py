@@ -103,7 +103,7 @@ def _format_results(ac: int, hom: int, url: str) -> dict:
         ('Heterozygous', total - hom),
         ('Hemizygous', 0),
         ('Unknown', 0),
-    ] if ac else []
+    ]
     return {
         'beaconHandovers': [
             {
