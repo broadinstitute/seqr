@@ -14,13 +14,13 @@
     "fields": {
       "key": 2,
       "sorted_transcript_consequences": [
-        [0.99779, 1, ["missense_variant"], false, null, "ENSG00000177000"],
-        [null, null, ["5_prime_UTR_variant"], false, "5_prime_UTR_stop_codon_loss_variant", "ENSG00000177000"],
-        [null, null, ["5_prime_UTR_variant"], false, "5_prime_UTR_stop_codon_loss_variant", "ENSG00000177000"],
-        [0.99779, null, ["missense_variant", "NMD_transcript_variant"], false, null, "ENSG00000277258"],
-        [null, null, ["missense_variant"], false, null, "ENSG00000177000"],
-        [null, null, ["non_coding_transcript_exon_variant"], false, null, "ENSG00000177000"],
-        [null, null, ["non_coding_transcript_exon_variant"], false, null, "ENSG00000177000"]
+        [0.99779, 1, ["missense_variant"], false, null, "ENSG00000177000", true],
+        [null, null, ["5_prime_UTR_variant"], false, "5_prime_UTR_stop_codon_loss_variant", "ENSG00000177000", false],
+        [null, null, ["5_prime_UTR_variant"], false, "5_prime_UTR_stop_codon_loss_variant", "ENSG00000177000", false],
+        [0.99779, null, ["missense_variant", "NMD_transcript_variant"], false, null, "ENSG00000277258", true],
+        [null, null, ["missense_variant"], false, null, "ENSG00000177000", false],
+        [null, null, ["non_coding_transcript_exon_variant"], false, null, "ENSG00000177000", false],
+        [null, null, ["non_coding_transcript_exon_variant"], false, null, "ENSG00000177000", false]
       ],
       "sorted_motif_feature_consequences": [],
       "sorted_regulatory_feature_consequences": []
@@ -31,10 +31,10 @@
     "fields": {
       "key": 3,
       "sorted_transcript_consequences": [
-        [null, 1, ["intron_variant"], false, null, "ENSG00000097046"],
-        [null, null, ["intron_variant"], false, null, "ENSG00000177000"],
-        [null, null, ["intron_variant"], false, null, "ENSG00000097046"],
-        [null, null, ["non_coding_transcript_exon_variant"], false, null, "ENSG00000097046"]
+        [null, 1, ["intron_variant"], false, null, "ENSG00000097046", false],
+        [null, null, ["intron_variant"], false, null, "ENSG00000177000", false],
+        [null, null, ["intron_variant"], false, null, "ENSG00000097046", false],
+        [null, null, ["non_coding_transcript_exon_variant"], false, null, "ENSG00000097046", true]
       ],
       "sorted_motif_feature_consequences": [],
       "sorted_regulatory_feature_consequences": [
@@ -47,9 +47,9 @@
     "fields": {
       "key": 4,
       "sorted_transcript_consequences": [
-        [null, null, ["splice_donor_variant"], true, null, "ENSG00000097046"],
-        [0.1, 1, ["missense_variant"], false, null, "ENSG00000097046"],
-        [null, null, ["missense_variant"], false, null, "ENSG00000097046"]
+        [null, null, ["splice_donor_variant"], true, null, "ENSG00000097046", false],
+        [0.1, 1, ["missense_variant"], false, null, "ENSG00000097046", true],
+        [null, null, ["missense_variant"], false, null, "ENSG00000097046", false]
       ],
       "sorted_motif_feature_consequences": [
         [[2]],
@@ -83,7 +83,7 @@
     "fields": {
       "key": 22,
       "sorted_transcript_consequences": [
-        [null, 1, ["missense_variant"], false, null, "ENSG00000171621"]
+        [null, 1, ["missense_variant"], false, null, "ENSG00000171621", false]
       ],
       "sorted_motif_feature_consequences": [],
       "sorted_regulatory_feature_consequences": []

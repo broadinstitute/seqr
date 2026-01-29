@@ -187,7 +187,7 @@
       "caid": null,
       "lifted_over_chrom": "1",
       "lifted_over_pos": 94818,
-      "sorted_transcript_consequences": [],
+      "sorted_regulatory_feature_consequences": [],
       "sorted_motif_feature_consequences": [],
       "transcripts": []
     }
