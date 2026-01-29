@@ -560,7 +560,7 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
         if screen_expression:
             results = results.annotate(screen=self._screen_expression())
 
-        results = super().filter_annotations(results, *args, **kwargs)
+        results = super()._filter_annotations(results, *args, **kwargs)
 
         exclude_clinvar_q = self._clinvar_filter_q(exclude)
         if exclude_clinvar_q is not None:
