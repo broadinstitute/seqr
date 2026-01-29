@@ -921,10 +921,11 @@ ENTRY_CLASS_MAP = {
         f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WES}': EntriesGcnv,
     },
 }
+#  TODO update class maps
 ANNOTATIONS_CLASS_MAP = {
     GENOME_VERSION_GRCh37: {Sample.DATASET_TYPE_VARIANT_CALLS: AnnotationsGRCh37SnvIndel},
     GENOME_VERSION_GRCh38: {
-        Sample.DATASET_TYPE_VARIANT_CALLS: AnnotationsSnvIndel,
+        Sample.DATASET_TYPE_VARIANT_CALLS: VariantsSnvIndel,
         Sample.DATASET_TYPE_MITO_CALLS: AnnotationsMito,
         f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WGS}': AnnotationsSv,
         f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WES}': AnnotationsGcnv,
@@ -932,5 +933,5 @@ ANNOTATIONS_CLASS_MAP = {
 }
 TRANSCRIPTS_CLASS_MAP = {
     GENOME_VERSION_GRCh37: TranscriptsGRCh37SnvIndel,
-    GENOME_VERSION_GRCh38: TranscriptsSnvIndel,
+    GENOME_VERSION_GRCh38: VariantDetailsSnvIndel,
 }
