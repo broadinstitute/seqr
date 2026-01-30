@@ -60,6 +60,7 @@ class ClickhouseSearchTestCase(AnvilAuthenticationTestCase):
         ]:
             dictionary.reload()
         Project.objects.update(genome_version='38')
+        super().setUpTestData()
 
 
 class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
