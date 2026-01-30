@@ -43,9 +43,7 @@ class ClickhouseSearchTestCase(AnvilAuthenticationTestCase):
         super().setUp()
         AffectedDict.reload()
         SexDict.reload()
-        for view in [
-            ProjectsToGtStatsGRCh37SnvIndel, ProjectsToGtStatsSnvIndel, ProjectsToGtStatsMito, ProjectsToGtStatsSv,
-        ]:
+        for view in [ProjectsToGtStatsGRCh37SnvIndel, ProjectsToGtStatsSnvIndel, ProjectsToGtStatsMito, ProjectsToGtStatsSv]:
             view.refresh()
         for dictionary in [GtStatsDictGRCh37SnvIndel, GtStatsDictSnvIndel, GtStatsDictMito, GtStatsDictSv]:
             dictionary.reload()
@@ -59,9 +57,8 @@ class ClickhouseSearchTestCase(AnvilAuthenticationTestCase):
         ]:
             view.refresh()
         for dictionary in [
-            DbnsfpSnvIndelDict,
-            EigenDict, SpliceAiDict, GnomadNonCodingConstraintDict, DbnsfpGRCh37SnvIndelDict, EigenGRCh37Dict,
-            SpliceAiGRCh37Dict, DbnsfpMitoDict, MitimpactDict, HmtvarDict, LocalconstraintmitoDict,
+            DbnsfpSnvIndelDict, EigenDict, SpliceAiDict, GnomadNonCodingConstraintDict, DbnsfpGRCh37SnvIndelDict,
+            EigenGRCh37Dict, SpliceAiGRCh37Dict, DbnsfpMitoDict, MitimpactDict, HmtvarDict, LocalconstraintmitoDict,
         ]:
             dictionary.reload()
         Project.objects.update(genome_version='38')
