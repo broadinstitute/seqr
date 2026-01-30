@@ -10,7 +10,7 @@ from clickhouse_search.backend.fields import NestedField, NamedTupleField
 from clickhouse_search.backend.functions import Array, ArrayConcat, ArrayDistinct, ArrayFilter, ArrayFold, \
     ArrayIntersect, ArrayJoin, ArrayMap, ArraySort, ArraySymmetricDifference, CrossJoin, GroupArray, GroupArrayArray, \
     GroupArrayIntersect, If, MapLookup, NullIf, Plus, SubqueryJoin, SubqueryTable, Tuple, TupleConcat, Untuple, \
-    IntDiv, Modulo
+    IntDiv, Modulo, SplitByString, ArrayIndex
 from clickhouse_search.models.postgres_dicts import AffectedDict, SexDict
 from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFECTED, UNAFFECTED, MALE_SEXES, \
     X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, SCREEN_KEY, UTR_ANNOTATOR_KEY, \
@@ -315,8 +315,10 @@ class BaseVariantsQuerySet(SearchQuerySet):
         return results
 
     def result_values(self, skip_entry_fields=False):
-        override_model_annotations = {'populations', 'predictions', 'pos', 'end', 'hgmd'}
-        skip_annotations = {'sortedMotifFeatureConsequences', 'sortedRegulatoryFeatureConsequences'}
+        override_model_annotations = {'populations', 'predictions', 'pos', 'end', 'hgmd'}  # TODO remove?
+        skip_annotations = {
+            'sortedMotifFeatureConsequences', 'sortedRegulatoryFeatureConsequences', *getattr(self.model, 'VARIANT_PREDICTIONS', []),
+        }
         values = {**self.annotation_values}
         values.update(self.conditional_selects(self, skip_entry_fields=skip_entry_fields))
         initial_values = {k: v for k, v in  values.items() if k not in override_model_annotations and k not in skip_annotations}
@@ -327,7 +329,7 @@ class BaseVariantsQuerySet(SearchQuerySet):
         if 'familyGenotypes' not in fields and not skip_entry_fields:
             fields += self.ENTRY_FIELDS
 
-        fields = [field for field in fields if field not in values]
+        fields = [field for field in fields if field not in values and field not in skip_annotations]
         return self.values(*fields, **initial_values).annotate(
             **{k: values[k] for k in override_model_annotations if k in values},
         )
@@ -460,10 +462,11 @@ class VariantsQuerySet(BaseVariantsQuerySet):
         annotations = super().annotation_values
 
         pred_expr = F('preds')
-        if self.model.ANNOTATION_PREDICTIONS:
-            preds = [f'predictions__{field}' for field in self.model.ANNOTATION_PREDICTIONS]
+        if self.model.VARIANT_PREDICTIONS:
+            preds = [annotations.get(field, F(field)) for field in self.model.VARIANT_PREDICTIONS]
             output_fields = self.query.annotations['preds'].output_field.base_fields + [
-                field for field in self.model.PREDICTION_FIELDS if field[0] in self.model.ANNOTATION_PREDICTIONS
+                (field.name, field) for field in self.model._meta.local_fields
+                if (field.db_column or field.name) in self.model.VARIANT_PREDICTIONS
             ]
             pred_expr = TupleConcat(pred_expr, Tuple(*preds), output_field=NamedTupleField(output_fields))
         annotations['predictions'] = pred_expr
@@ -472,11 +475,14 @@ class VariantsQuerySet(BaseVariantsQuerySet):
             annotations['hgmd'] = self._pathogenicity_tuple(self.hgmd_join_model, 'hgmd_join', rename_fields={'classification': 'class'})
 
         if not self.sorted_transcript_consequence_fields:
+            split_id_expression = SplitByString(Value('-'), 'variant_id', output_field=models.ArrayField(models.StringField()))
             annotations.update({
                 'transcripts':  annotations.pop(self.model.sorted_transcript_consequences.field.db_column),
                 'mainTranscriptId': F('sorted_transcript_consequences__0__transcriptId'),
                 'selectedMainTranscriptId': Value(None, output_field=models.StringField(null=True)),
+                **{field: ArrayIndex(index, split_id_expression) for index, field in enumerate(['chrom', 'pos', 'ref', 'alt'])},
             })
+            annotations['pos'] = Cast(annotations['pos'], models.UInt32Field())
 
         screen_expression = self._screen_expression()
         if screen_expression:

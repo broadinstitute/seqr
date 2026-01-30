@@ -38,6 +38,7 @@ class BaseAnnotations(FixtureLoadableClickhouseModel):
         abstract = True
 
 class BaseVariants(FixtureLoadableClickhouseModel):
+    #  TODO clean up constants
     CONSEQUENCE_TERMS = [(1, 'transcript_ablation'), (2, 'splice_acceptor_variant'), (3, 'splice_donor_variant'), (4, 'stop_gained'), (5, 'frameshift_variant'), (6, 'stop_lost'), (7, 'start_lost'), (8, 'inframe_insertion'), (9, 'inframe_deletion'), (10, 'missense_variant'), (11, 'protein_altering_variant'), (12, 'splice_donor_5th_base_variant'), (13, 'splice_region_variant'), (14, 'splice_donor_region_variant'), (15, 'splice_polypyrimidine_tract_variant'), (16, 'incomplete_terminal_codon_variant'), (17, 'start_retained_variant'), (18, 'stop_retained_variant'), (19, 'synonymous_variant'), (20, 'coding_sequence_variant'), (21, 'mature_miRNA_variant'), (22, '5_prime_UTR_variant'), (23, '3_prime_UTR_variant'), (24, 'non_coding_transcript_exon_variant'), (25, 'intron_variant'), (26, 'NMD_transcript_variant'), (27, 'non_coding_transcript_variant'), (28, 'coding_transcript_variant'), (29, 'upstream_gene_variant'), (30, 'downstream_gene_variant'), (31, 'intergenic_variant'), (32, 'sequence_variant')]
     MUTATION_TASTER_PREDICTIONS = [(0, 'D'), (1, 'A'), (2, 'N'), (3, 'P')]
     TRANSCRIPTS_FIELDS = [
@@ -62,7 +63,7 @@ class BaseVariants(FixtureLoadableClickhouseModel):
         'liftedOverGenomeVersion': GENOME_VERSION_GRCh37,
     }
     SCREEN_DICT = None
-    ANNOTATION_PREDICTIONS = []  # TODO
+    VARIANT_PREDICTIONS = []
 
     key = UInt32FieldDeltaCodecField(primary_key=True)
 
@@ -91,7 +92,6 @@ class BaseAnnotationsMitoSnvIndel(BaseAnnotations):
         ('transcriptId', models.StringField()),
         ('transcriptRank', models.UInt8Field()),
     ]
-    ANNOTATION_PREDICTIONS = []
 
     ref = models.StringField()
     alt = models.StringField()
@@ -360,7 +360,6 @@ class BaseAnnotationsMito(BaseAnnotationsMitoSnvIndel):
         ('sift', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
         ('mlc', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
     ]
-    ANNOTATION_PREDICTIONS = ['haplogroup_defining', 'mitotip']
 
     common_low_heteroplasmy = models.BoolField(db_column='commonLowHeteroplasmy', null=True, blank=True)
     mitomap_pathogenic  = models.BoolField(db_column='mitomapPathogenic', null=True, blank=True)
@@ -377,6 +376,7 @@ class BaseVariantsMito(BaseVariants):
         'liftedOverChrom': 'MT',
         **BaseVariants.ANNOTATION_CONSTANTS,
     }
+    VARIANT_PREDICTIONS = ['haplogroupDefining', 'mitotip']
 
     variant_id = models.StringField(db_column='variantId')
     rsid = models.StringField(null=True, blank=True)

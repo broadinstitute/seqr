@@ -1,4 +1,4 @@
-from clickhouse_backend.models.fields.array import ArrayField, ArrayLookup
+from clickhouse_backend.models.fields.array import ArrayField, ArrayLookup, IndexTransform
 from django.db.models import Func, Subquery, lookups, BooleanField, Aggregate
 from django.db.models.sql.datastructures import BaseTable, Join
 
@@ -116,6 +116,12 @@ class ArrayFilter(lookups.Transform):
     def as_sql(self, compiler, connection, *args, **kwargs):
         lhs, params = compiler.compile(self.lhs)
         return f'arrayFilter(x -> {self.conditions}, {lhs})', params
+
+
+class ArrayIndex(IndexTransform):
+    def __init__(self, index, *args, **kwargs):
+        super().__init__(index+1, None, *args, **kwargs)
+        self.base_field = self.source_expressions[0].output_field.base_field
 
 
 @ArrayField.register_lookup

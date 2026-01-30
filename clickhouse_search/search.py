@@ -341,7 +341,7 @@ def get_transcripts_queryset(genome_version, keys):
 #  TODO rename/ redo
 def get_transcripts_by_key(genome_version, keys):
     transcripts = get_transcripts_queryset(genome_version, keys)
-    # TODO use queryset manager
+    # TODO use queryset manager/ share with MITO
     from clickhouse_search.backend.functions import SplitByString
     from django.db.models import Value
     from django.db.models.functions import Cast

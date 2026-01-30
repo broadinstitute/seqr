@@ -983,26 +983,16 @@
       "het": 33149
     }
 }, {
-    "model": "clickhouse_search.annotationsmito",
+    "model": "clickhouse_search.variantsmito",
     "pk": 6,
     "fields": {
       "key": 6,
-      "xpos": 25000004429,
-      "pos": 4429,
-      "ref": "G",
-      "alt": "A",
       "variant_id": "M-4429-G-A",
       "rsid": "rs1603219456",
       "lifted_over_pos": 4429,
       "common_low_heteroplasmy": false,
-      "mitomap_pathogenic": null,
-      "predictions": [null, null, 0.005, "likely_pathogenic", null, null, 1],
-      "populations": [
-        [0, 0, 56419],
-        [0, 0, 56419, 0],
-        [0, 0, 195983],
-        [3, 0.1531, 195983, 0.635]
-      ],
+      "mitotip": "likely_pathogenic",
+      "haplogroup_defining": null,
       "sorted_transcript_consequences": [
         [
           null, "Mt_tRNA", 1, null, ["non_coding_transcript_exon_variant"], "ENSG00000210112", "ENST00000387377.1:n.28G>A",
@@ -1011,26 +1001,16 @@
       ]
     }
 }, {
-    "model": "clickhouse_search.annotationsmito",
+    "model": "clickhouse_search.variantsmito",
     "pk": 7,
     "fields": {
       "key": 7,
-      "xpos": 25000011597,
-      "pos": 11597,
-      "ref": "A",
-      "alt": "G",
       "variant_id": "M-11597-A-G",
       "rsid": null,
       "lifted_over_pos": 11597,
       "common_low_heteroplasmy": false,
-      "mitomap_pathogenic": null,
-      "predictions": [0.058, null, 0.075, null, null, 1, null],
-      "populations": [
-        [0, 0, 0],
-        [0, 0, 0, 0],
-        [0, 0, 0],
-        [0, 0, 0, 0]
-      ],
+      "mitotip": null,
+      "haplogroup_defining": null,
       "sorted_transcript_consequences": [
         [
           "T/A", "protein_coding", 1, "Aca/Gca", ["missense_variant"], "ENSG00000198886", "ENST00000361381.2:c.838A>G",
@@ -1039,26 +1019,16 @@
       ]
     }
 }, {
-    "model": "clickhouse_search.annotationsmito",
+    "model": "clickhouse_search.variantsmito",
     "pk": 8,
     "fields": {
       "key": 8,
-      "xpos": 25000014783,
-      "pos": 14783,
-      "ref": "T",
-      "alt": "C",
       "variant_id": "M-14783-T-C",
       "rsid": "rs193302982",
       "lifted_over_pos": 14783,
       "common_low_heteroplasmy": true,
-      "mitomap_pathogenic": null,
-      "predictions": [null, true, null, null, null, null, 0.0751],
-      "populations": [
-        [3118, 0.553464, 56336],
-        [3, 0.5325, 56336, 1],
-        [9573, 0.884607, 195983],
-        [18, 0.9184, 195983, 0.6269]
-      ],
+      "mitotip": null,
+      "haplogroup_defining": true,
       "sorted_transcript_consequences": [
         [
           "L", "protein_coding", 1, "Tta/Cta", ["synonymous_variant"], "ENSG00000198727", "ENST00000361789.2:c.37T>C",
