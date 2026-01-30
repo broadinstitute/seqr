@@ -324,7 +324,7 @@ class BaseVariantsQuerySet(SearchQuerySet):
         initial_values = {k: v for k, v in  values.items() if k not in override_model_annotations and k not in skip_annotations}
 
         fields = [*self.annotation_fields] + [
-            field for field in ['clinvar', 'familyGenotypes', 'numFamilies', 'xpos'] if self.has_annotation(field)
+            field for field in ['clinvar', 'familyGenotypes', 'numFamilies'] if self.has_annotation(field)
         ]
         if 'familyGenotypes' not in fields and not skip_entry_fields:
             fields += self.ENTRY_FIELDS
@@ -352,7 +352,7 @@ class BaseVariantsQuerySet(SearchQuerySet):
         )
         return results.filter(
             **{primary_gene_field: F(secondary_gene_field)}
-        ).exclude(primary_variantId=F('secondary_variantId'))
+        ).exclude(primary_key=F('secondary_key'))
 
     def _comp_het_conditional_fields(self, query, prefix=''):
         return {
@@ -456,6 +456,10 @@ class VariantsQuerySet(BaseVariantsQuerySet):
     @property
     def sorted_transcript_consequence_fields(self):
         return set(dict(getattr(self.model, 'SORTED_TRANSCRIPT_CONSQUENCES_FIELDS', [])).keys())
+
+    @property
+    def annotation_fields(self):
+        return super().annotation_fields + ['xpos']
 
     @property
     def annotation_values(self):
