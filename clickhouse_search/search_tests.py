@@ -43,18 +43,23 @@ class ClickhouseSearchTestCase(AnvilAuthenticationTestCase):
         super().setUp()
         AffectedDict.reload()
         SexDict.reload()
+        for view in [
+            ProjectsToGtStatsGRCh37SnvIndel, ProjectsToGtStatsSnvIndel, ProjectsToGtStatsMito, ProjectsToGtStatsSv,
+        ]:
+            view.refresh()
+        for dictionary in [GtStatsDictGRCh37SnvIndel, GtStatsDictSnvIndel, GtStatsDictMito, GtStatsDictSv]:
+            dictionary.reload()
 
     @classmethod
     def setUpTestData(cls):
         for view in [
-            ProjectsToGtStatsGRCh37SnvIndel, ProjectsToGtStatsSnvIndel, ProjectsToGtStatsMito, ProjectsToGtStatsSv,
             ClinvarMvSnvIndel, ClinvarSearchMvSnvIndel, ClinvarMvMito, ClinvarSearchMvMito, ClinvarMvGRCh37SnvIndel,
             ClinvarSearchMvGRCh37SnvIndel, HgmdMv, HgmdSearchMv, DbnsfpSnvIndelMv, EigenMv, SpliceAiMv,
             DbnsfpGRCh37SnvIndelMv, EigenGRCh37Mv, SpliceAiGRCh37Mv, DbnsfpMitoMv, MitimpactMv, HmtvarMv, LocalconstraintmitoMv,
         ]:
             view.refresh()
         for dictionary in [
-            GtStatsDictGRCh37SnvIndel, GtStatsDictSnvIndel, GtStatsDictMito, GtStatsDictSv, DbnsfpSnvIndelDict,
+            DbnsfpSnvIndelDict,
             EigenDict, SpliceAiDict, GnomadNonCodingConstraintDict, DbnsfpGRCh37SnvIndelDict, EigenGRCh37Dict,
             SpliceAiGRCh37Dict, DbnsfpMitoDict, MitimpactDict, HmtvarDict, LocalconstraintmitoDict,
         ]:
