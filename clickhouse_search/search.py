@@ -341,9 +341,11 @@ def get_transcripts_queryset(genome_version, keys):
 #  TODO rename/ redo
 def get_transcripts_by_key(genome_version, keys):
     transcripts = get_transcripts_queryset(genome_version, keys)
+    # TODO use queryset manager
     return {
         detail['key']: detail for detail in transcripts.values(
-            'key', *[field.name for field in transcripts.model._meta.local_fields if not field.db_column],
+            'key',
+            *[field.name for field in transcripts.model._meta.local_fields if not field.db_column],
             **{field.db_column: F(field.name) for field in transcripts.model._meta.local_fields if field.db_column and field.name != 'key'},
         )
     }
