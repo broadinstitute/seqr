@@ -1,6 +1,4 @@
 from django.core.exceptions import ObjectDoesNotExist
-from django.core.management import call_command
-from django.test import TransactionTestCase
 from django.urls.base import reverse
 import json
 import mock
@@ -35,28 +33,19 @@ from seqr.utils.search.search_utils_tests import SearchTestHelper
 from seqr.utils.search.utils import query_variants, variant_lookup, get_variant_query_gene_counts, get_single_variant, InvalidSearchException
 from seqr.views.apis.data_manager_api import trigger_delete_project
 from seqr.views.utils.json_utils import DjangoJSONEncoderWithSets
-from seqr.views.utils.test_utils import AnvilAuthenticationTestMixin
+from seqr.views.utils.test_utils import AnvilAuthenticationTestCase
 from seqr.views.apis.variant_search_api import query_variants_handler
 
-from settings import DATABASES
 
-
-class ClickhouseSearchTestCase(AnvilAuthenticationTestMixin, TransactionTestCase):
+class ClickhouseSearchTestCase(AnvilAuthenticationTestCase):
 
     def setUp(self):
         super().set_up_test()
 
-    def _fixture_setup(self): # pylint: disable=arguments-differ
-        # TransactionTestCase does not call setupTestData in the same way as TestCase
-        # https://github.com/django/django/blob/stable/4.2.x/django/test/testcases.py#L1466
-        # As a warning to a future reader, this method changes from an instance to a class method
-        # between versions 4.x and 6.x (alongside several other impactful method changes).  When
-        # Django is updated, our pattern here must be re-visited.
-        super()._fixture_setup()
+    @classmethod
+    def setUpTestData(cls):
         AffectedDict.reload()
         SexDict.reload()
-        for db in DATABASES.keys():
-            call_command("loaddata", 'clickhouse_search', database=db)
         for view in [
             ProjectsToGtStatsGRCh37SnvIndel, ProjectsToGtStatsSnvIndel, ProjectsToGtStatsMito, ProjectsToGtStatsSv,
             ClinvarMvSnvIndel, ClinvarSearchMvSnvIndel, ClinvarMvMito, ClinvarSearchMvMito, ClinvarMvGRCh37SnvIndel,
@@ -71,12 +60,11 @@ class ClickhouseSearchTestCase(AnvilAuthenticationTestMixin, TransactionTestCase
         ]:
             dictionary.reload()
         Project.objects.update(genome_version='38')
-        AnvilAuthenticationTestMixin.set_up_users()
 
 
 class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
     databases = '__all__'
-    fixtures = ['users', '1kg_project', 'variant_searches', 'reference_data', 'clickhouse_transcripts']
+    fixtures = ['users', '1kg_project', 'variant_searches', 'reference_data', 'clickhouse_search', 'clickhouse_transcripts']
 
     def setUp(self):
         super().set_up()
@@ -1702,6 +1690,10 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
             },
             'searchedVariants': [],
         })
+
+class ClickhouseDeleteDataTests(SearchTestHelper, ClickhouseSearchTestCase):
+    databases = '__all__'
+    fixtures = ['users', '1kg_project', 'clickhouse_search', 'clickhouse_transcripts']
 
     @responses.activate
     def test_trigger_delete_project(self):
