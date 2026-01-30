@@ -134,7 +134,6 @@ class Migration(migrations.Migration):
                 ('common_low_heteroplasmy', clickhouse_backend.models.BoolField(blank=True, db_column='commonLowHeteroplasmy', null=True)),
                 ('haplogroup_defining', clickhouse_backend.models.BoolField(blank=True, db_column='haplogroupDefining', null=True)),
                 ('mitotip', clickhouse_backend.models.Enum8Field(blank=True, choices=[(0, 'likely_pathogenic'), (1, 'possibly_pathogenic'), (2, 'possibly_benign'), (3, 'likely_benign')], null=True)),
-                ('lifted_over_pos', clickhouse_backend.models.UInt32Field(db_column='liftedOverPos', null=True, blank=True)),
             ],
             options={
                 'db_table': 'GRCh38/MITO/variants_disk',
@@ -215,7 +214,6 @@ class Migration(migrations.Migration):
                 ('common_low_heteroplasmy', clickhouse_backend.models.BoolField(blank=True, db_column='commonLowHeteroplasmy', null=True)),
                 ('haplogroup_defining', clickhouse_backend.models.BoolField(blank=True, db_column='haplogroupDefining', null=True)),
                 ('mitotip', clickhouse_backend.models.Enum8Field(blank=True, choices=[(0, 'likely_pathogenic'), (1, 'possibly_pathogenic'), (2, 'possibly_benign'), (3, 'likely_benign')], null=True)),
-                ('lifted_over_pos', clickhouse_backend.models.UInt32Field(db_column='liftedOverPos', null=True, blank=True)),
             ],
             options={
                 'db_table': 'GRCh38/MITO/variants_memory',
