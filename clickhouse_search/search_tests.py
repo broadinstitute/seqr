@@ -39,10 +39,13 @@ from seqr.views.apis.variant_search_api import query_variants_handler
 
 class ClickhouseSearchTestCase(AnvilAuthenticationTestCase):
 
-    @classmethod
-    def setUpTestData(cls):
+    def setUp(self):
+        super().setUp()
         AffectedDict.reload()
         SexDict.reload()
+
+    @classmethod
+    def setUpTestData(cls):
         for view in [
             ProjectsToGtStatsGRCh37SnvIndel, ProjectsToGtStatsSnvIndel, ProjectsToGtStatsMito, ProjectsToGtStatsSv,
             ClinvarMvSnvIndel, ClinvarSearchMvSnvIndel, ClinvarMvMito, ClinvarSearchMvMito, ClinvarMvGRCh37SnvIndel,
@@ -1691,7 +1694,7 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
 
 class ClickhouseDeleteDataTests(ClickhouseSearchTestCase):
     databases = '__all__'
-    fixtures = ['users', '1kg_project', 'clickhouse_search']
+    fixtures = ['users', '1kg_project', 'reference_data', 'clickhouse_search']
 
     @responses.activate
     def test_trigger_delete_project(self):
