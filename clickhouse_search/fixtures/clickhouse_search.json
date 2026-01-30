@@ -843,28 +843,10 @@
       ]
     }
 }, {
-    "model": "clickhouse_search.annotationsgrch37snvindel",
+    "model": "clickhouse_search.variantsgrch37snvindel",
     "pk": 10,
     "fields": {
       "key": 11,
-      "xpos": 7143270172,
-      "chrom": "7",
-      "pos": 143270172,
-      "ref": "A",
-      "alt": "G",
-      "variant_id": "7-143270172-A-G",
-      "rsid": "rs72611576",
-      "caid": "CA4540310",
-      "lifted_over_chrom": "7",
-      "lifted_over_pos": 143271368,
-      "hgmd": [null, null],
-      "predictions": [1, 1, null, null, null, null, null, 0.49064, null, null, 0, 4,null],
-      "populations": [
-        [66593, 0.63, 104352, 0.81987739, 0, 22269, 22162],
-        [137532, 0.3542193, 216442, 0.2261163, 0, 45869],
-        [14649, 0.1364776, 23872, 0.2843894, 0, 4584],
-        [65461, 0.2131897, 125568, 33149, 16156]
-      ],
       "sorted_transcript_consequences": [
         [1, ["missense_variant"], "ENSG00000271079"],
         [1, ["non_coding_transcript_exon_variant", "non_coding_transcript_variant"], "ENSG00000176227"]
@@ -1237,7 +1219,7 @@
       ]
     }
 }, {
-    "model": "clickhouse_search.annotationssv",
+    "model": "clickhouse_search.variantssv",
     "pk": 12,
     "fields": {
       "key": 12,
@@ -1265,7 +1247,7 @@
       "sv_source_detail": [null]
     }
 }, {
-    "model": "clickhouse_search.annotationssv",
+    "model": "clickhouse_search.variantssv",
     "pk": 13,
     "fields": {
       "key": 13,
@@ -1293,7 +1275,7 @@
       "sv_source_detail": [4]
     }
 }, {
-    "model": "clickhouse_search.annotationssv",
+    "model": "clickhouse_search.variantssv",
     "pk": 14,
     "fields": {
       "key": 14,
@@ -1322,7 +1304,7 @@
       "sv_source_detail": [null]
     }
 }, {
-    "model": "clickhouse_search.annotationssv",
+    "model": "clickhouse_search.variantssv",
     "pk": 15,
     "fields": {
       "key": 15,
@@ -1425,7 +1407,7 @@
       "variant_id": "phase2_DEL_chr14_4640"
     }
 }, {
-    "model": "clickhouse_search.annotationsgcnv",
+    "model": "clickhouse_search.variantsgcnv",
     "pk": 16,
     "fields": {
       "key": 16,
@@ -1448,7 +1430,7 @@
       "sv_type": "DUP"
     }
 }, {
-    "model": "clickhouse_search.annotationsgcnv",
+    "model": "clickhouse_search.variantsgcnv",
     "pk": 17,
     "fields": {
       "key": 17,
@@ -1477,7 +1459,7 @@
       "sv_type": "DUP"
     }
 }, {
-    "model": "clickhouse_search.annotationsgcnv",
+    "model": "clickhouse_search.variantsgcnv",
     "pk": 18,
     "fields": {
       "key": 18,
@@ -1500,7 +1482,7 @@
       "sv_type": "DUP"
     }
 }, {
-    "model": "clickhouse_search.annotationsgcnv",
+    "model": "clickhouse_search.variantsgcnv",
     "pk": 19,
     "fields": {
       "key": 19,

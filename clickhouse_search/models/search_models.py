@@ -100,7 +100,9 @@ class BaseAnnotationsMitoSnvIndel(BaseAnnotations):
     class Meta:
         abstract = True
 
-class BaseAnnotationsSvGcnv(BaseAnnotations):
+class BaseAnnotationsSvGcnv(BaseVariants):
+    SV_TYPE_FILTER_PREFIX = ''
+    GENOTYPE_OVERRIDE_FIELDS = {}
     SV_CONSEQUENCE_RANKS = [(1,'LOF'), (2,'INTRAGENIC_EXON_DUP'), (3,'PARTIAL_EXON_DUP'), (4,'COPY_GAIN'), (5,'DUP_PARTIAL'), (6,'MSV_EXON_OVERLAP'), (7,'INV_SPAN'), (8,'UTR'), (9,'PROMOTER'), (10,'TSS_DUP'), (11,'BREAKEND_EXONIC'), (12,'INTRONIC'), (13,'NEAREST_TSS'),]
     SV_TYPES =  [(1,'gCNV_DEL'), (2,'gCNV_DUP'), (3,'BND'), (4,'CPX'), (5,'CTX'), (6,'DEL'), (7,'DUP'), (8,'INS'), (9,'INV'), (10,'CNV')]
     PREDICTION_FIELDS = [
@@ -111,6 +113,10 @@ class BaseAnnotationsSvGcnv(BaseAnnotations):
         ('majorConsequence', models.Enum8Field(null=True, blank=True, return_int=False, choices=SV_CONSEQUENCE_RANKS)),
     ]
 
+    xpos = models.UInt64Field()
+    pos = models.UInt32Field()
+    variant_id = models.StringField(db_column='variantId')
+    lifted_over_pos = models.UInt32Field(db_column='liftedOverPos', null=True, blank=True)
     chrom = Enum8Field(return_int=False, choices=CHROMOSOME_CHOICES)
     end = models.UInt32Field()
     rg37_locus_end = NamedTupleField([
@@ -487,13 +493,13 @@ class AnnotationsDiskSv(BaseAnnotationsSv):
         db_table = 'GRCh38/SV/annotations_disk'
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SV/annotations', primary_key='key', flatten_nested=0)
 
-class VariantsSv(BaseAnnotationsSv):
+class VariantsSv(BaseVariantsSv):
 
     class Meta:
         db_table = 'GRCh38/SV/variants_memory'
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_IN_MEMORY_DIR}/GRCh38/SV/variants', primary_key='key', flatten_nested=0)
 
-class VariantsDiskSv(BaseAnnotationsSv):
+class VariantsDiskSv(BaseVariantsSv):
 
     class Meta:
         db_table = 'GRCh38/SV/variants_disk'
@@ -533,6 +539,13 @@ class BaseVariantsGcnv(BaseVariantsSvGcnv):
             ('hom', models.UInt32Field()),
         ])),
     ]
+    SV_TYPE_FILTER_PREFIX = 'gCNV_'
+    GENOTYPE_OVERRIDE_FIELDS = {
+        'pos': ('start', ArrayMin),
+        'end': ('end', ArrayMax),
+        'numExon': ('numExon', ArrayMax),
+        'geneIds': ('geneIds', lambda value, **kwargs: ArrayDistinct(ArrayFlatten(value), **kwargs)),
+    }
 
     num_exon = models.UInt16Field(db_column='numExon')
     populations = NamedTupleField(POPULATION_FIELDS)

@@ -1296,12 +1296,10 @@ CACHED_CONSEQUENCES_BY_KEY = {1: [], 2: [{
     'canonical': 1,
     'consequenceTerms': ['missense_variant'],
     'geneId': 'ENSG00000271079',
-    'isManeSelect': False,
 }, {
     'canonical': 1,
     'consequenceTerms': ['non_coding_transcript_exon_variant', 'non_coding_transcript_variant'],
     'geneId': 'ENSG00000176227',
-    'isManeSelect': False,
 }],
 22: [{
     'alphamissensePathogenicity': None,

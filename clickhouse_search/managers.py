@@ -317,7 +317,7 @@ class BaseVariantsQuerySet(SearchQuerySet):
     def result_values(self, skip_entry_fields=False):
         override_model_annotations = {'populations', 'predictions', 'pos', 'end', 'hgmd'}  # TODO remove?
         skip_annotations = {
-            'sortedMotifFeatureConsequences', 'sortedRegulatoryFeatureConsequences', *getattr(self.model, 'VARIANT_PREDICTIONS', []),
+            'sortedMotifFeatureConsequences', 'sortedRegulatoryFeatureConsequences', *self.model.VARIANT_PREDICTIONS,
         }
         values = {**self.annotation_values}
         values.update(self.conditional_selects(self, skip_entry_fields=skip_entry_fields))

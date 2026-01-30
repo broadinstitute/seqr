@@ -192,10 +192,15 @@
       "transcripts": []
     }
 }, {
-    "model": "clickhouse_search.transcriptsgrch37snvindel",
+    "model": "clickhouse_search.variantdetailsgrch37snvindel",
     "pk": 10,
     "fields": {
       "key": 11,
+      "variant_id": "7-143270172-A-G",
+      "rsid": "rs72611576",
+      "caid": "CA4540310",
+      "lifted_over_chrom": "7",
+      "lifted_over_pos": 143271368,
       "transcripts": [
         [
           "E/G", "protein_coding", 1, "gAa/gGa", ["missense_variant"], "ENSG00000271079", "ENST00000420911.2:c.1262A>G",
