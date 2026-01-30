@@ -342,11 +342,19 @@ def get_transcripts_queryset(genome_version, keys):
 def get_transcripts_by_key(genome_version, keys):
     transcripts = get_transcripts_queryset(genome_version, keys)
     # TODO use queryset manager
+    from clickhouse_search.backend.functions import SplitByString
+    from django.db.models import Value
+    from django.db.models.functions import Cast
+    from clickhouse_backend import models
+    transcripts = transcripts.annotate(split_id=SplitByString(Value('-'), 'variant_id', output_field=models.ArrayField(models.StringField())))
+    annotations = {field: F(f'split_id__{index}') for index, field in enumerate(['chrom', 'pos', 'ref','alt'])}
+    annotations['pos'] = Cast(annotations['pos'], models.UInt32Field())
     return {
         detail['key']: detail for detail in transcripts.values(
             'key',
             *[field.name for field in transcripts.model._meta.local_fields if not field.db_column],
             **{field.db_column: F(field.name) for field in transcripts.model._meta.local_fields if field.db_column and field.name != 'key'},
+            **annotations,
         )
     }
 

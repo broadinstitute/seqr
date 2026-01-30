@@ -167,6 +167,10 @@ class Plus(Func):
     function = 'plus'
 
 
+class SplitByString(Func):
+    function = 'splitByString'
+
+
 class Tuple(Func):
     function = 'tuple'
 
