@@ -41,14 +41,14 @@ class Migration(migrations.Migration):
                     field=models.ForeignKey(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='clickhouse_search.variantssv'),
                 ),
                 migrations.AlterField(
-                    model_name='hgmdseqrvariantsgrch37snvindel',
+                    model_name='hgmdgrch37snvindel',
                     name='key',
-                    field=models.OneToOneField(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='clickhouse_search.variantsgrch37snvindel'),
+                    field=models.ForeignKey(db_column='key', on_delete=django.db.models.deletion.PROTECT, primary_key=True, related_name='hgmd_join', serialize=False, to='clickhouse_search.variantsgrch37snvindel'),
                 ),
                 migrations.AlterField(
-                    model_name='hgmdseqrvariantssnvindel',
+                    model_name='hgmdsnvindel',
                     name='key',
-                    field=models.OneToOneField(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='clickhouse_search.variantssnvindel'),
+                    field=models.ForeignKey(db_column='key', on_delete=django.db.models.deletion.PROTECT, primary_key=True, related_name='hgmd_join', serialize=False, to='clickhouse_search.variantssnvindel'),
                 ),
             ]
         ),
