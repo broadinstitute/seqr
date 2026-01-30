@@ -183,6 +183,10 @@ class BaseVariantsQuerySet(SearchQuerySet):
     SELECTED_GENE_FIELD = 'selectedGeneId'
 
     @property
+    def skip_annotations(self):
+        return []
+
+    @property
     def annotation_values(self):
         seqr_pops = []
         population_fields = [*self._population_output_fields()]
@@ -191,7 +195,7 @@ class BaseVariantsQuerySet(SearchQuerySet):
         pop_field = 'pops' if self.has_annotation('pops') else 'populations'
         return {
             **{key: Value(value) for key, value in self.model.ANNOTATION_CONSTANTS.items()},
-            **{field.db_column: F(field.name) for field in self.model._meta.local_fields if field.db_column and field.name != field.db_column},
+            **{field.db_column: F(field.name) for field in self.model._meta.local_fields if field.db_column and field.name != field.db_column and field.db_column},
             'populations': TupleConcat(F(pop_field), Tuple(*seqr_pops), output_field=NamedTupleField(population_fields)),
         }
 
@@ -304,8 +308,8 @@ class BaseVariantsQuerySet(SearchQuerySet):
             query_select.update(getattr(query, select_func_name)(query, prefix=f'{alias}_'))
         annotation_fields = query.annotation_fields
         return query.values(
-            **{f'{alias}_{field}': F(field) for field in annotation_fields if field not in query_select},
-            **{f'{alias}_{field}': value for field, value in query_select.items()},
+            **{f'{alias}_{field}': F(field) for field in annotation_fields if field not in query_select and field not in self.skip_annotations},
+            **{f'{alias}_{field}': value for field, value in query_select.items() if field not in self.skip_annotations},
         )
 
     def search(self, **kwargs):
@@ -316,12 +320,9 @@ class BaseVariantsQuerySet(SearchQuerySet):
 
     def result_values(self, skip_entry_fields=False):
         override_model_annotations = {'populations', 'predictions', 'pos', 'end', 'hgmd'}  # TODO remove?
-        skip_annotations = {
-            'sortedMotifFeatureConsequences', 'sortedRegulatoryFeatureConsequences', *self.model.VARIANT_PREDICTIONS,
-        }
         values = {**self.annotation_values}
         values.update(self.conditional_selects(self, skip_entry_fields=skip_entry_fields))
-        initial_values = {k: v for k, v in  values.items() if k not in override_model_annotations and k not in skip_annotations}
+        initial_values = {k: v for k, v in  values.items() if k not in override_model_annotations and k not in self.skip_annotations}
 
         fields = [*self.annotation_fields] + [
             field for field in ['clinvar', 'familyGenotypes', 'numFamilies'] if self.has_annotation(field)
@@ -329,7 +330,7 @@ class BaseVariantsQuerySet(SearchQuerySet):
         if 'familyGenotypes' not in fields and not skip_entry_fields:
             fields += self.ENTRY_FIELDS
 
-        fields = [field for field in fields if field not in values and field not in skip_annotations]
+        fields = [field for field in fields if field not in values and field not in self.skip_annotations]
         return self.values(*fields, **initial_values).annotate(
             **{k: values[k] for k in override_model_annotations if k in values},
         )
@@ -460,6 +461,12 @@ class VariantsQuerySet(BaseVariantsQuerySet):
     @property
     def annotation_fields(self):
         return super().annotation_fields + ['xpos']
+
+    @property
+    def skip_annotations(self):
+        return {
+            'sortedMotifFeatureConsequences', 'sortedRegulatoryFeatureConsequences', *self.model.VARIANT_PREDICTIONS,
+        }
 
     @property
     def annotation_values(self):
