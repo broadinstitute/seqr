@@ -170,7 +170,36 @@ class SearchQuerySet(QuerySet):
 
         return results, has_required_filter, in_silico_q, missing_q
 
+    @property
+    def skip_annotations(self):
+        return []
 
+    @property
+    def annotation_fields(self):
+        return [field.name for field in self.model._meta.local_fields if (field.db_column or field.name) == field.name]
+
+    @property
+    def annotation_values(self):
+        return {
+            field.db_column: F(field.name) for field in self.model._meta.local_fields
+            if field.db_column and field.name != field.db_column and field.db_column
+        }
+
+    def conditional_selects(self, *args, **kwargs):
+        return {}
+
+    def result_values(self, additional_fields=None, **kwargs):
+        fields = [*self.annotation_fields] + (additional_fields or [])
+        values = {**self.annotation_values}
+        values.update(self.conditional_selects(self, **kwargs))
+
+        override_model_annotations = set(values).intersection(fields)
+        initial_values = {k: v for k, v in  values.items() if k not in override_model_annotations and k not in self.skip_annotations}
+        fields = [field for field in fields if field not in values and field not in self.skip_annotations]
+
+        return self.values(*fields, **initial_values).annotate(
+            **{k: values[k] for k in override_model_annotations if k in values},
+        )
 
 class BaseVariantsQuerySet(SearchQuerySet):
 
@@ -183,10 +212,6 @@ class BaseVariantsQuerySet(SearchQuerySet):
     SELECTED_GENE_FIELD = 'selectedGeneId'
 
     @property
-    def skip_annotations(self):
-        return []
-
-    @property
     def annotation_values(self):
         seqr_pops = []
         population_fields = [*self._population_output_fields()]
@@ -194,8 +219,8 @@ class BaseVariantsQuerySet(SearchQuerySet):
 
         pop_field = 'pops' if self.has_annotation('pops') else 'populations'
         return {
+            **super().annotation_values,
             **{key: Value(value) for key, value in self.model.ANNOTATION_CONSTANTS.items()},
-            **{field.db_column: F(field.name) for field in self.model._meta.local_fields if field.db_column and field.name != field.db_column and field.db_column},
             'populations': TupleConcat(F(pop_field), Tuple(*seqr_pops), output_field=NamedTupleField(population_fields)),
         }
 
@@ -240,10 +265,7 @@ class BaseVariantsQuerySet(SearchQuerySet):
 
     @property
     def annotation_fields(self):
-        return [
-            field.name for field in self.model._meta.local_fields
-            if (field.db_column or field.name) not in self.annotation_values and field.name != self.TRANSCRIPT_FIELD
-        ]
+        return [field for field in super().annotation_fields if field != self.TRANSCRIPT_FIELD]
 
     @property
     def entry_field(self):
@@ -318,28 +340,17 @@ class BaseVariantsQuerySet(SearchQuerySet):
         results = self._filter_annotations(results, **kwargs)
         return results
 
-    def result_values(self, skip_entry_fields=False):
-        override_model_annotations = {'populations', 'predictions', 'pos', 'end', 'hgmd'}  # TODO remove?
-        values = {**self.annotation_values}
-        values.update(self.conditional_selects(self, skip_entry_fields=skip_entry_fields))
-        initial_values = {k: v for k, v in  values.items() if k not in override_model_annotations and k not in self.skip_annotations}
-
-        fields = [*self.annotation_fields] + [
+    def result_values(self, *args, skip_entry_fields=False, **kwargs):
+        additional_fields = [
             field for field in ['clinvar', 'familyGenotypes', 'numFamilies'] if self.has_annotation(field)
         ]
-        if 'familyGenotypes' not in fields and not skip_entry_fields:
-            fields += self.ENTRY_FIELDS
+        if 'familyGenotypes' not in additional_fields and not skip_entry_fields:
+            additional_fields += self.ENTRY_FIELDS
 
-        fields = [field for field in fields if field not in values and field not in self.skip_annotations]
-        return self.values(*fields, **initial_values).annotate(
-            **{k: values[k] for k in override_model_annotations if k in values},
-        )
+        return super().result_values(additional_fields=additional_fields, skip_entry_fields=skip_entry_fields, **kwargs)
 
     def join_annotations(self):
         return self._annotate_seqr_pop_expression(self)
-
-    def conditional_selects(self, query, prefix='', **kwargs):
-        raise NotImplementedError
 
     def search_compound_hets(self, primary_q, secondary_q):
         primary_gene_field = f'primary_{self.SELECTED_GENE_FIELD}'
