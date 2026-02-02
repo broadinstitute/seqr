@@ -13,7 +13,7 @@ from clickhouse_search.backend.functions import Array, ArrayFilter, ArrayInterse
 from clickhouse_search.models.gt_stats_models import PROJECT_GT_STATS_VIEW_CLASS_MAP
 from clickhouse_search.models.reference_data_models import BaseClinvar
 from clickhouse_search.models.search_models import BaseAnnotationsMitoSnvIndel, BaseAnnotationsGRCh37SnvIndel, \
-    BaseAnnotationsSvGcnv, ENTRY_CLASS_MAP, ANNOTATIONS_CLASS_MAP, TRANSCRIPTS_CLASS_MAP
+    BaseAnnotationsSvGcnv, ENTRY_CLASS_MAP, VARIANTS_CLASS_MAP, VARIANT_DETAILS_CLASS_MAP
 from reference_data.models import GeneConstraint, Omim, GENOME_VERSION_LOOKUP
 from seqr.models import Sample, PhenotypePrioritization, Individual
 from seqr.utils.logging_utils import SeqrLogger
@@ -101,9 +101,9 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
 
 def get_search_queryset(genome_version, dataset_type, sample_data, **search_kwargs):
     entry_cls = ENTRY_CLASS_MAP[genome_version][dataset_type]
-    annotations_cls = ANNOTATIONS_CLASS_MAP[genome_version][dataset_type]
+    variants_cls = VARIANTS_CLASS_MAP[genome_version][dataset_type]
     entries = entry_cls.objects.search(sample_data, **search_kwargs)
-    return annotations_cls.objects.subquery_join(entries).search(**search_kwargs)
+    return variants_cls.objects.subquery_join(entries).search(**search_kwargs)
 
 
 def _get_search_results(*args, skip_entry_fields=False, **search_kwargs):
@@ -175,21 +175,21 @@ def get_multi_data_type_comp_het_results_queryset(genome_version, sv_dataset_typ
         snv_indel_sample_data, inheritance_mode=COMPOUND_HET_ALLOW_HOM_ALTS, annotate_carriers=True,
         annotate_hom_alts=True, **kwargs,
     )
-    annotations_cls = ANNOTATIONS_CLASS_MAP[genome_version][Sample.DATASET_TYPE_VARIANT_CALLS]
-    snv_indel_q = annotations_cls.objects.subquery_join(entries).search(**kwargs)
+    variants_cls = VARIANTS_CLASS_MAP[genome_version][Sample.DATASET_TYPE_VARIANT_CALLS]
+    snv_indel_q = variants_cls.objects.subquery_join(entries).search(**kwargs)
 
     sv_entries = ENTRY_CLASS_MAP[genome_version][sv_dataset_type].objects.search(
         sv_sample_data, **kwargs, inheritance_mode=COMPOUND_HET, annotate_carriers=True,
     )
-    sv_annotations_cls = ANNOTATIONS_CLASS_MAP[genome_version][sv_dataset_type]
-    sv_q = sv_annotations_cls.objects.subquery_join(sv_entries).search(**kwargs)
+    sv_variants_cls = VARIANTS_CLASS_MAP[genome_version][sv_dataset_type]
+    sv_q = sv_variants_cls.objects.subquery_join(sv_entries).search(**kwargs)
 
-    return _get_comp_het_results_queryset(annotations_cls, snv_indel_q, sv_q, num_families, exclude_key_pairs)
+    return _get_comp_het_results_queryset(variants_cls, snv_indel_q, sv_q, num_families, exclude_key_pairs)
 
 
 def get_data_type_comp_het_results_queryset(genome_version, dataset_type, sample_data, annotations=None, annotations_secondary=None, pathogenicity=None, inheritance_mode=None, exclude_key_pairs=None, split_pathogenicity_annotations=False, deduplicate=True, **search_kwargs):
     entry_cls = ENTRY_CLASS_MAP[genome_version][dataset_type]
-    annotations_cls = ANNOTATIONS_CLASS_MAP[genome_version][dataset_type]
+    variants_cls = VARIANTS_CLASS_MAP[genome_version][dataset_type]
     entries = entry_cls.objects.search(
         sample_data, **search_kwargs, inheritance_mode=COMPOUND_HET, pathogenicity=pathogenicity, annotations=annotations, annotate_carriers=True,
     )
@@ -200,18 +200,18 @@ def get_data_type_comp_het_results_queryset(genome_version, dataset_type, sample
     else:
         annotations_secondary = annotations_secondary or annotations
         pathogenicity_secondary = pathogenicity
-    primary_q = annotations_cls.objects.subquery_join(entries).search(
+    primary_q = variants_cls.objects.subquery_join(entries).search(
         annotations=annotations, pathogenicity=pathogenicity, **search_kwargs,
     )
-    secondary_q = annotations_cls.objects.subquery_join(entries).search(
+    secondary_q = variants_cls.objects.subquery_join(entries).search(
         annotations=annotations_secondary, pathogenicity=pathogenicity_secondary, **search_kwargs,
     )
 
-    return _get_comp_het_results_queryset(annotations_cls, primary_q, secondary_q, sample_data['num_families'], exclude_key_pairs, deduplicate)
+    return _get_comp_het_results_queryset(variants_cls, primary_q, secondary_q, sample_data['num_families'], exclude_key_pairs, deduplicate)
 
 
-def _get_comp_het_results_queryset(annotations_cls, primary_q, secondary_q, num_families, exclude_key_pairs, deduplicate=True):
-    results = annotations_cls.objects.search_compound_hets(primary_q, secondary_q)
+def _get_comp_het_results_queryset(variants_cls, primary_q, secondary_q, num_families, exclude_key_pairs, deduplicate=True):
+    results = variants_cls.objects.search_compound_hets(primary_q, secondary_q)
 
     if results.has_annotation('primary_carriers') and results.has_annotation('secondary_carriers'):
         results = results.annotate(
@@ -337,7 +337,7 @@ def get_clickhouse_cache_results(results, sort, family_guid):
 
 #  TODO rename/ make specific helper function
 def get_transcripts_queryset(genome_version, keys):
-    return TRANSCRIPTS_CLASS_MAP[genome_version].objects.filter(key__in=keys)
+    return VARIANT_DETAILS_CLASS_MAP[genome_version].objects.filter(key__in=keys)
 
 
 def _get_details_by_key(genome_version, keys):
@@ -681,7 +681,7 @@ def _get_sort_key(sort, gene_metadata):
 
 def _clickhouse_variant_lookup(variant_id, parsed_variant_id, genome_version, data_type, samples=None, affected_only=False, hom_only=False):
     entry_cls = ENTRY_CLASS_MAP[genome_version][data_type]
-    annotations_cls = ANNOTATIONS_CLASS_MAP[genome_version][data_type]
+    variants_cls = VARIANTS_CLASS_MAP[genome_version][data_type]
 
     sample_data = _get_sample_data(samples)[data_type] if samples else None
 
@@ -690,7 +690,7 @@ def _clickhouse_variant_lookup(variant_id, parsed_variant_id, genome_version, da
     )
     entries = _filter_lookup_entries(entries, affected_only, hom_only)
     entries = entries.result_values(sample_data)
-    results = annotations_cls.objects.subquery_join(entries)
+    results = variants_cls.objects.subquery_join(entries)
     if hasattr(results, 'add_genotype_override_annotations'):
         results = results.add_genotype_override_annotations(results)
 
@@ -737,12 +737,12 @@ def clickhouse_variant_lookup(user, variant_id, parsed_variant_id, dataset_type,
             (dt, cls) for dt, cls in ENTRY_CLASS_MAP[genome_version].items()
             if dt != data_type and dt.startswith(Sample.DATASET_TYPE_SV_CALLS)
         )
-        other_annotations_cls = ANNOTATIONS_CLASS_MAP[genome_version][other_sample_type]
+        other_variants_cls = VARIANTS_CLASS_MAP[genome_version][other_sample_type]
 
         padding = int((variant['end'] - variant['pos']) * 0.2)
         entries = other_entry_class.objects.search_padded_interval(variant['chrom'], variant['pos'], padding)
         entries = _filter_lookup_entries(entries, affected_only, hom_only)
-        results = other_annotations_cls.objects.subquery_join(entries).search(
+        results = other_variants_cls.objects.subquery_join(entries).search(
             padded_interval_end=(variant['end'], padding),
             annotations={'structural': [variant['svType'], f"gCNV_{variant['svType']}"]},
         )
@@ -796,9 +796,10 @@ def _clickhouse_genotypes_json(genotypes):
     return json.loads(json.dumps(genotypes, cls=DjangoJSONEncoderWithSets))
 
 
+# TODO rename
 def get_annotations_queryset(genome_version, dataset_type, keys):
-    annotations_cls = ANNOTATIONS_CLASS_MAP[genome_version][dataset_type]
-    return annotations_cls.objects.filter(key__in=keys)
+    variants_cls = VARIANTS_CLASS_MAP[genome_version][dataset_type]
+    return variants_cls.objects.filter(key__in=keys)
 
 
 def get_clickhouse_annotations(genome_version, dataset_type, keys):
