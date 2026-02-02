@@ -19,7 +19,7 @@ from clickhouse_search.models.reference_data_models import ClinvarMvSnvIndel, Cl
     GnomadGenomesGRCh37Mv, GnomadGenomesGRCh37Dict, GnomadExomesGRCh37Mv, GnomadExomesGRCh37Dict, TopmedGRCh37Mv, \
     TopmedGRCh37Dict, GnomadmitoMv, GnomadmitoDict, GnomadmitoheteroplasmyMv, GnomadmitoheteroplasmyDict, HelixmitoMv, \
     HelixmitoDict, HelixmitoheteroplasmyMv, HelixmitoheteroplasmyDict, ScreenDict, MitomapMv, MitomapDict
-from clickhouse_search.models.search_models import EntriesSnvIndel, AnnotationsSnvIndel, VariantDetailsSnvIndel, \
+from clickhouse_search.models.search_models import EntriesSnvIndel, VariantsSnvIndel, VariantDetailsSnvIndel, \
     VariantDetailsGRCh37SnvIndel
 from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4, CACHED_CONSEQUENCES_BY_KEY, \
     VARIANT_ID_SEARCH, VARIANT_IDS, LOCATION_SEARCH, GENE_IDS, SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT, \
@@ -1755,7 +1755,7 @@ class ClickhouseDeleteDataTests(ClickhouseSearchTestCase):
         self.assertEqual(EntriesSnvIndel.objects.filter(project_guid='R0001_1kg').count(), 0)
         self.assertEqual(ProjectGtStatsSnvIndel.objects.filter(project_guid='R0001_1kg').count(), 0)
 
-        annotations_qs = AnnotationsSnvIndel.objects.all().join_annotations()
+        annotations_qs = VariantsSnvIndel.objects.all().join_annotations()
         updated_seqr_pops_by_key = dict(annotations_qs.values_list('key', 'seqrPop'))
         self.assertDictEqual(updated_seqr_pops_by_key, {
             1: {'ac_wes': 2, 'ac_wgs': 2, 'hom_wes': 1, 'hom_wgs': 1, 'ac_affected': 4, 'hom_affected': 2},
