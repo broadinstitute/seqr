@@ -10,7 +10,7 @@ from clickhouse_backend.models import ArrayField, StringField
 from clickhouse_search.backend.fields import NamedTupleField
 from clickhouse_search.backend.functions import ArrayFilter, ArrayMap
 from clickhouse_search.search import get_search_queryset, get_transcripts_queryset, add_individual_guids, \
-    get_data_type_comp_het_results_queryset, get_multi_data_type_comp_het_results_queryset, SELECTED_GENE_FIELD
+    get_data_type_comp_het_results_queryset, get_multi_data_type_comp_het_results_queryset
 from panelapp.models import PaLocusListGene
 from reference_data.models import GENOME_VERSION_GRCh38
 from seqr.models import Project, Family, Individual, Sample, LocusList
@@ -502,7 +502,7 @@ class Command(BaseCommand):
             )
             run_search_func = cls._run_comp_het_search if config_search['inheritance_mode'] == COMPOUND_HET else cls._run_search
             num_results = run_search_func(
-                search_name, config_search, family_variant_data, family_guid_map, dataset_type, sample_data, sample_qs,
+                search_name, family_variant_data, family_guid_map, dataset_type, sample_data, sample_qs,
                 exclude_locations=exclude_locations, genes=search_genes, **config_search, **ALL_SEARCHES_CRITERIA,
             )
             logger.info(f'Found {num_results} variants for criteria: {search_name}')
@@ -545,46 +545,43 @@ class Command(BaseCommand):
         return wrapped
 
     @classmethod
-    def _run_search(cls, search_name, config_search, family_variant_data, family_guid_map, dataset_type, sample_data, samples, **kwargs):
-        variant_fields = ['pos', 'end'] if dataset_type.startswith('SV') else ['ref', 'alt']
+    def _run_search(cls, search_name, family_variant_data, family_guid_map, dataset_type, sample_data, samples, **kwargs):
+        variant_fields = ['pos', 'end'] if dataset_type.startswith('SV') else []
         variant_values = {'endChrom': F('end_chrom')} if dataset_type == 'SV_WGS' else {}
 
         results_qs = get_search_queryset(GENOME_VERSION_GRCh38, dataset_type, sample_data, **kwargs)
-        if results_qs.model.GENOTYPE_OVERRIDE_FIELDS:
+        if getattr(results_qs.model, 'GENOTYPE_OVERRIDE_FIELDS', None):
             genotype_overrides_expressions = results_qs.conditional_selects(results_qs)
-            variant_values.update({k: genotype_overrides_expressions[k] for k in ['familyGenotypes', 'transcripts']})
+            variant_values.update( {k: genotype_overrides_expressions[k] for k in ['familyGenotypes', 'transcripts']})
         else:
             results_qs = gene_ids_annotated_queryset(results_qs)
             variant_fields += ['familyGenotypes', 'gene_ids']
 
-        require_mane_consequences = config_search.get('annotations', {}).get('vep_consequences')
-        if require_mane_consequences:
-            variant_values['canonical_transcripts'] = cls._valid_field_transcripts_expression('sorted_transcript_consequences', 'canonical')
+        if dataset_type != Sample.DATASET_TYPE_VARIANT_CALLS:
+            variant_values['variantId'] = F('variant_id')
+        if dataset_type == Sample.DATASET_TYPE_MITO_CALLS:
+            variant_values.update(results_qs.split_variant_id_annotations())
 
-        results = results_qs.values(
-            *variant_fields, 'key', 'xpos', 'variant_id', 'familyGuids', **variant_values,
-        )
+        results = results_qs.values(*variant_fields, 'key', 'familyGuids', **variant_values)
         add_individual_guids(results, samples, encode_genotypes_json=True)
-        if results and require_mane_consequences:
-            allowed_key_genes = cls._valid_gene_keys({v['key']: v['canonical_transcripts'] for v in results}, require_mane_consequences)
-            results = [r for r in results if r['key'] in allowed_key_genes]
+        if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
+            cls._add_id_fields(results)
 
         for variant in results:
             for family_guid in variant.pop('familyGuids'):
-                variant_data = family_variant_data[(family_guid_map[family_guid], variant['variant_id'])]
+                variant_data = family_variant_data[(family_guid_map[family_guid], variant['variantId'])]
                 variant_data.update(variant)
                 variant_data['matched_searches'].add(search_name)
 
         return len(results)
 
     @classmethod
-    def _run_comp_het_search(cls, search_name, config_search, family_variant_data, family_guid_map, dataset_type, sample_data, samples, **kwargs):
+    def _run_comp_het_search(cls, search_name, family_variant_data, family_guid_map, dataset_type, sample_data, samples, **kwargs):
         queryset = get_data_type_comp_het_results_queryset(
             GENOME_VERSION_GRCh38, dataset_type, sample_data, deduplicate=False, **kwargs,
         )
         return cls._execute_comp_het_search(
-            queryset, search_name, config_search, family_variant_data, family_guid_map, samples,
-            no_secondary_annotations=config_search.get('split_pathogenicity_annotations') or config_search.get('no_secondary_annotations'),
+            queryset, search_name, family_variant_data, family_guid_map, samples, dataset_type=dataset_type,
         )
 
     @classmethod
@@ -604,36 +601,18 @@ class Command(BaseCommand):
                 GENOME_VERSION_GRCh38, sv_dataset_type, sv_sample_data, snv_indel_sample_data, num_families=len(families),
                 genes=genes, **config_search, **ALL_SEARCHES_CRITERIA,
             )
-            num_results = cls._execute_comp_het_search(queryset, search_name, config_search, family_variant_data, family_guid_map, samples)
+            num_results = cls._execute_comp_het_search(queryset, search_name, family_variant_data, family_guid_map, samples)
             logger.info(f'Found {num_results} variants for criteria: {search_name}')
             search_counts[search_name] = num_results
 
     @classmethod
-    def _execute_comp_het_search(cls, queryset, search_name, config_search, family_variant_data, family_guid_map, samples, no_secondary_annotations=True):
+    def _execute_comp_het_search(cls, queryset, search_name, family_variant_data, family_guid_map, samples, dataset_type=None):
         results = [list(v) for v in queryset]
-
-        primary_consequences = config_search.get('annotations', {}).get('vep_consequences')
-        secondary_consequences = config_search.get('annotations_secondary', {}).get('vep_consequences')
-        if results and (primary_consequences or secondary_consequences):
-            key_canonical_transcripts = {
-                v['key']: [t for t in v['sortedTranscriptConsequences'] if t['canonical']]
-                for pair in results for v in pair[1:] if v.get('sortedTranscriptConsequences')
-            }
-            allowed_key_genes = cls._valid_gene_keys(key_canonical_transcripts, primary_consequences)
-            if secondary_consequences:
-                allowed_secondary_key_genes = cls._valid_gene_keys(key_canonical_transcripts, secondary_consequences)
-            else:
-                allowed_secondary_key_genes = None if no_secondary_annotations else allowed_key_genes
-            results = [
-                pair for pair in results
-                if pair[1][SELECTED_GENE_FIELD] in allowed_key_genes.get(pair[1]['key'], []) and (
-                    allowed_secondary_key_genes is None or
-                    pair[2][SELECTED_GENE_FIELD] in allowed_secondary_key_genes.get(pair[2]['key'], [])
-                )
-            ]
 
         results = list({tuple(v[0]): v[1:] for v in results}.values())
         add_individual_guids(results, samples, encode_genotypes_json=True)
+        if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS or dataset_type is None:
+            cls._add_id_fields(results, add_primary_only=dataset_type is None)
         for pair in results:
             for family_guid in pair[0]['familyGuids']:
                 for variant, support_id in [(pair[0], pair[1]['variantId']), (pair[1], pair[0]['variantId'])]:
@@ -647,7 +626,27 @@ class Command(BaseCommand):
         return len(results)
 
     @classmethod
+    def _add_id_fields(cls, results, add_primary_only=False):
+        keys = set()
+        for result in results:
+            variants = (result if isinstance(result, list) else [result])
+            if add_primary_only:
+                variants = variants[:1]
+            keys.update(variant['key'] for variant in variants)
+        detail_qs = get_transcripts_queryset(GENOME_VERSION_GRCh38, keys)
+        details_by_key = {detail['key']: detail for detail in detail_qs.values(
+            'key', variantId=F('variant_id'), **detail_qs.split_variant_id_annotations(),
+        )}
+        for result in results:
+            variants = (result if isinstance(result, list) else [result])
+            if add_primary_only:
+                variants = variants[:1]
+            for variant in variants:
+                variant.update(details_by_key[variant['key']])
+
+    @classmethod
     def _valid_gene_keys(cls, key_canonical_transcripts, allowed_consequences):
+        # TODO
         keys = set(key_canonical_transcripts.keys())
         mane_transcripts_by_key = get_transcripts_queryset(GENOME_VERSION_GRCh38, keys).values_list(
             'key', cls._valid_field_transcripts_expression('transcripts', 'maneSelect'),
@@ -665,6 +664,7 @@ class Command(BaseCommand):
 
     @staticmethod
     def _valid_field_transcripts_expression(expression, field):
+        # TODO
         return ArrayMap(
             ArrayFilter(expression, conditions=[{field: (None, 'isNotNull({field})')}]),
             mapped_expression='tuple(x.consequenceTerms, x.geneId)',

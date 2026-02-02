@@ -171,7 +171,7 @@ class SearchQuerySet(QuerySet):
         return results, has_required_filter, in_silico_q, missing_q
 
     @staticmethod
-    def _split_variant_id_annotations():
+    def split_variant_id_annotations():
         split_id_expression = SplitByString(Value('-'), 'variant_id', output_field=models.ArrayField(models.StringField()))
         annotations = {
             field: ArrayIndex(index, split_id_expression)
@@ -511,7 +511,7 @@ class VariantsQuerySet(BaseVariantsQuerySet):
                 'transcripts':  annotations.pop(self.model.sorted_transcript_consequences.field.db_column),
                 'mainTranscriptId': F('sorted_transcript_consequences__0__transcriptId'),
                 'selectedMainTranscriptId': Value(None, output_field=models.StringField(null=True)),
-                **self._split_variant_id_annotations(),
+                **self.split_variant_id_annotations(),
             })
 
         screen_expression = self._screen_expression()
@@ -834,7 +834,7 @@ class VariantDetailsQuerySet(SearchQuerySet):
     def annotation_values(self):
         return {
             **super().annotation_values,
-            **self._split_variant_id_annotations(),
+            **self.split_variant_id_annotations(),
         }
 
 class BaseEntriesManager(SearchQuerySet):
