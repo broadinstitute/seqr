@@ -47,7 +47,7 @@ MULTI_TYPE_MATCHES = {
 
 class CheckNewSamplesTest(ClickhouseSearchTestCase):
     databases = '__all__'
-    fixtures = ['users', '1kg_project', 'reference_data', 'panelapp', 'clickhouse_transcripts']
+    fixtures = ['users', '1kg_project', 'reference_data', 'panelapp', 'clickhouse_search', 'clickhouse_transcripts']
 
     @mock.patch('seqr.utils.communication_utils.BASE_URL', 'https://test-seqr.org/')
     @mock.patch('seqr.utils.communication_utils.EmailMultiAlternatives')
