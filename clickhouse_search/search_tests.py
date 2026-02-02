@@ -39,13 +39,10 @@ from seqr.views.apis.variant_search_api import query_variants_handler
 
 class ClickhouseSearchTestCase(AnvilAuthenticationTestCase):
 
-    def setUp(self):
-        super().setUp()
-        AffectedDict.reload()
-        SexDict.reload()
-
     @classmethod
     def setUpTestData(cls):
+        AffectedDict.reload()
+        SexDict.reload()
         for view in [
             ProjectsToGtStatsGRCh37SnvIndel, ProjectsToGtStatsSnvIndel, ProjectsToGtStatsMito, ProjectsToGtStatsSv,
             ClinvarMvSnvIndel, ClinvarSearchMvSnvIndel, ClinvarMvMito, ClinvarSearchMvMito, ClinvarMvGRCh37SnvIndel,
