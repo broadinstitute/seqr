@@ -117,14 +117,14 @@ class SearchQuerySet(QuerySet):
                 all_pred_fields.append((field_name, output_field))
 
         for pred_name, range_dict in model.RANGE_PREDICTIONS.items():
-            pred_expression = cls._xpos_rage_dict_get_expression(range_dict, 'score')
+            pred_expression = cls._xpos_range_dict_get_expression(range_dict, 'score')
             pred_expressions.append(Tuple(pred_expression))
             all_pred_fields.append((pred_name, pred_expression.output_field))
 
         return TupleConcat(*pred_expressions, output_field=NamedTupleField(all_pred_fields))
 
     @staticmethod
-    def _xpos_rage_dict_get_expression(range_dict, field_name):
+    def _xpos_range_dict_get_expression(range_dict, field_name):
         return range_dict.dict_get_expression(
             IntDiv('xpos', int(1e9)), Modulo('xpos', int(1e9)), field_names=[field_name], null_missing=True,
         )
@@ -535,7 +535,7 @@ class VariantsQuerySet(BaseVariantsQuerySet):
     def _screen_expression(self):
         if not self.model.SCREEN_DICT:
             return None
-        return self._xpos_rage_dict_get_expression(self.model.SCREEN_DICT, 'regionType')
+        return self._xpos_range_dict_get_expression(self.model.SCREEN_DICT, 'regionType')
 
     def _parse_in_silico_qs(self, results, in_silico, require_score, in_silico_qs, in_silico_missing_qs):
         in_silico_q = None
@@ -1429,7 +1429,7 @@ class EntriesManager(BaseEntriesManager):
             if not value:
                 continue
             if score in self.model.RANGE_PREDICTIONS:
-                score_expr = self._xpos_rage_dict_get_expression(self.model.RANGE_PREDICTIONS[score], 'score')
+                score_expr = self._xpos_range_dict_get_expression(self.model.RANGE_PREDICTIONS[score], 'score')
             elif score in prediction_dicts:
                 score_expr = prediction_dicts[score].dict_get_expression('key', field_names=['score'], null_missing=True)
             else:
