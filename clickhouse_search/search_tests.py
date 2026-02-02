@@ -1,7 +1,6 @@
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.management import call_command
 from django.db import connections
-from django.test import TestCase
 from django.urls.base import reverse
 import json
 import mock
@@ -42,33 +41,29 @@ from seqr.views.apis.variant_search_api import query_variants_handler
 
 class ClickhouseSearchTestCase(AnvilAuthenticationTestCase):
 
-
-    @classmethod
-    def _enter_atomics(cls):
-        # Atomic transactions prevent the clickhouse/ postgres connection from working properly, so disable them for this test suite
-        return {}
-
     @classmethod
     def setUpClass(cls):
+        # Atomic transactions prevent the clickhouse/ postgres connection from working properly,
+        # so disable them for the initial fixture loading
+        original_enter_atomics = cls._enter_atomics
+        cls._enter_atomics = lambda: {}
         super().setUpClass()
-        # After fixture data is loaded, run the atomic setup so all non-fixture updates are in a transaction
-        cls.cls_atomics = TestCase._enter_atomics()
+        cls._enter_atomics = original_enter_atomics
 
     @classmethod
     def tearDownClass(cls):
-        super().tearDownClass()
+        for conn in connections.all(initialized_only=True):
+            conn.close()
         for db_name in cls._databases_names():
-            # Need to explicitly tear down data for the databases that would usually be managed with transactions
-            if connections[db_name].features.supports_transactions:
-                call_command(
-                    "flush",
-                    verbosity=0,
-                    interactive=False,
-                    database=db_name,
-                    reset_sequences=False,
-                    allow_cascade=False,
-                    inhibit_post_migrate=False,
-                )
+            call_command(
+                "flush",
+                verbosity=0,
+                interactive=False,
+                database=db_name,
+                reset_sequences=False,
+                allow_cascade=False,
+                inhibit_post_migrate=False,
+            )
 
     @classmethod
     def setUpTestData(cls):
