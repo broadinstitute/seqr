@@ -225,7 +225,7 @@ def _get_comp_het_results_queryset(annotations_cls, primary_q, secondary_q, num_
         )
 
     if results.has_annotation('primary_has_hom_alt') or results.has_annotation('primary_no_hom_alt_families'):
-        results = results.annotate(calc_pos=Modulo('primary_pos', int(1e9)))
+        results = results.annotate(calc_pos=Modulo('primary_xpos', int(1e9)))
         is_overlapped_del = Q(secondary_svType='DEL', calc_pos__gte=F('secondary_pos'),  calc_pos__lte=F('secondary_end'))
         if results.has_annotation('primary_has_hom_alt'):
             results = results.filter(is_overlapped_del | Q(primary_has_hom_alt=False))
