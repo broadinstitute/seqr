@@ -5,7 +5,8 @@ from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocks
 from clickhouse_search.backend.fields import Enum8Field, NestedField, UInt32FieldDeltaCodecField, UInt64FieldDeltaCodecField, NamedTupleField, MaterializedUInt8Field
 from clickhouse_search.backend.functions import ArrayDistinct, ArrayFlatten, ArrayMin, ArrayMax
 from clickhouse_search.backend.table_models import Dictionary, FixtureLoadableClickhouseModel
-from clickhouse_search.managers import EntriesManager, SvEntriesManager, SvVariantsQuerySet, VariantsQuerySet
+from clickhouse_search.managers import EntriesManager, SvEntriesManager, SvVariantsQuerySet, VariantsQuerySet, \
+    VariantDetailsQuerySet
 from clickhouse_search.models.reference_data_models import GnomadNonCodingConstraintDict, BaseSpliceAi, \
     ScreenDict
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
@@ -779,6 +780,8 @@ class VariantDetailsGRCh37SnvIndel(models.ClickhouseModel):
     caid = models.StringField(db_column='CAID', null=True, blank=True)
     transcripts = NestedField(BaseVariants.TRANSCRIPTS_FIELDS, group_by_key='geneId')
 
+    objects = VariantDetailsQuerySet.as_manager()
+
     class Meta:
         db_table = 'GRCh37/SNV_INDEL/variants/details'
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh37/SNV_INDEL/variants/details', primary_key='key', flatten_nested=0)
@@ -857,6 +860,7 @@ class VariantDetailsSnvIndel(models.ClickhouseModel):
     sorted_motif_feature_consequences = NestedField(SORTED_MOTIF_FEATURE_CONSEQUENCES_FIELDS, db_column='sortedMotifFeatureConsequences', null_when_empty=True)
     sorted_regulatory_feature_consequences = NestedField(SORTED_REGULATORY_FEATURE_CONSEQUENCES_FIELDS, db_column='sortedRegulatoryFeatureConsequences', null_when_empty=True)
 
+    objects = VariantDetailsQuerySet.as_manager()
 
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/variants/details'

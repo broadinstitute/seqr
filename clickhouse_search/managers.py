@@ -170,6 +170,16 @@ class SearchQuerySet(QuerySet):
 
         return results, has_required_filter, in_silico_q, missing_q
 
+    @staticmethod
+    def _split_variant_id_annotations():
+        split_id_expression = SplitByString(Value('-'), 'variant_id', output_field=models.ArrayField(models.StringField()))
+        annotations = {
+            field: ArrayIndex(index, split_id_expression)
+            for index, field in  enumerate(['chrom', 'pos', 'ref', 'alt'])
+        }
+        annotations['pos'] = Cast(annotations['pos'], models.UInt32Field())
+        return annotations
+
     @property
     def skip_annotations(self):
         return []
@@ -497,14 +507,12 @@ class VariantsQuerySet(BaseVariantsQuerySet):
             annotations['hgmd'] = self._pathogenicity_tuple(self.hgmd_join_model, 'hgmd_join', rename_fields={'classification': 'class'})
 
         if not self.sorted_transcript_consequence_fields:
-            split_id_expression = SplitByString(Value('-'), 'variant_id', output_field=models.ArrayField(models.StringField()))
             annotations.update({
                 'transcripts':  annotations.pop(self.model.sorted_transcript_consequences.field.db_column),
                 'mainTranscriptId': F('sorted_transcript_consequences__0__transcriptId'),
                 'selectedMainTranscriptId': Value(None, output_field=models.StringField(null=True)),
-                **{field: ArrayIndex(index, split_id_expression) for index, field in enumerate(['chrom', 'pos', 'ref', 'alt'])},
+                **self._split_variant_id_annotations(),
             })
-            annotations['pos'] = Cast(annotations['pos'], models.UInt32Field())
 
         screen_expression = self._screen_expression()
         if screen_expression:
@@ -819,6 +827,15 @@ class SvVariantsQuerySet(BaseVariantsQuerySet):
 
         return results
 
+
+class VariantDetailsQuerySet(SearchQuerySet):
+
+    @property
+    def annotation_values(self):
+        return {
+            **super().annotation_values,
+            **self._split_variant_id_annotations(),
+        }
 
 class BaseEntriesManager(SearchQuerySet):
     GENOTYPE_LOOKUP = {

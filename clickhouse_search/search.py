@@ -340,31 +340,14 @@ def get_transcripts_queryset(genome_version, keys):
     return VARIANT_DETAILS_CLASS_MAP[genome_version].objects.filter(key__in=keys)
 
 
-def _get_details_by_key(genome_version, keys):
-    # TODO use queryset manager/ share with MITO
-    transcripts = get_transcripts_queryset(genome_version, keys)
-    from clickhouse_search.backend.functions import SplitByString
-    from django.db.models import Value
-    from django.db.models.functions import Cast
-    from clickhouse_backend import models
-    transcripts = transcripts.annotate(split_id=SplitByString(Value('-'), 'variant_id', output_field=models.ArrayField(models.StringField())))
-    annotations = {field: F(f'split_id__{index}') for index, field in enumerate(['chrom', 'pos', 'ref','alt'])}
-    annotations['pos'] = Cast(annotations['pos'], models.UInt32Field())
-    return {
-        detail['key']: detail for detail in transcripts.values(
-            'key',
-            *[field.name for field in transcripts.model._meta.local_fields if not field.db_column],
-            **{field.db_column: F(field.name) for field in transcripts.model._meta.local_fields if field.db_column and field.name != 'key'},
-            **annotations,
-        )
-    }
-
-
 def format_clickhouse_results(results, genome_version, **kwargs):
     keys_with_no_details = {
         variant['key'] for result in results for variant in (result if isinstance(result, list) else [result]) if not 'transcripts' in variant
     }
-    details_by_key = _get_details_by_key(genome_version, keys_with_no_details)
+    details_by_key = {
+        detail['key']: detail for detail in
+        get_transcripts_queryset(genome_version, keys_with_no_details).result_values()
+    }
 
     formatted_results = []
     for variant in results:
