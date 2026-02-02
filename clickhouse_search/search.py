@@ -335,14 +335,14 @@ def get_clickhouse_cache_results(results, sort, family_guid):
     return {'all_results': sorted_results, 'total_results': total_results}
 
 
+#  TODO rename/ make specific helper function
 def get_transcripts_queryset(genome_version, keys):
     return TRANSCRIPTS_CLASS_MAP[genome_version].objects.filter(key__in=keys)
 
 
-#  TODO rename/ redo
-def get_transcripts_by_key(genome_version, keys):
-    transcripts = get_transcripts_queryset(genome_version, keys)
+def _get_details_by_key(genome_version, keys):
     # TODO use queryset manager/ share with MITO
+    transcripts = get_transcripts_queryset(genome_version, keys)
     from clickhouse_search.backend.functions import SplitByString
     from django.db.models import Value
     from django.db.models.functions import Cast
@@ -361,17 +361,17 @@ def get_transcripts_by_key(genome_version, keys):
 
 
 def format_clickhouse_results(results, genome_version, **kwargs):
-    keys_with_transcripts = {
+    keys_with_no_details = {
         variant['key'] for result in results for variant in (result if isinstance(result, list) else [result]) if not 'transcripts' in variant
     }
-    transcripts_by_key = get_transcripts_by_key(genome_version, keys_with_transcripts)
+    details_by_key = _get_details_by_key(genome_version, keys_with_no_details)
 
     formatted_results = []
     for variant in results:
         if isinstance(variant, list):
-            formatted_result = [_format_variant(v, transcripts_by_key) for v in variant]
+            formatted_result = [_format_variant(v, details_by_key) for v in variant]
         else:
-            formatted_result = _format_variant(variant, transcripts_by_key)
+            formatted_result = _format_variant(variant, details_by_key)
         formatted_results.append(formatted_result)
 
     return formatted_results

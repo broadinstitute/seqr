@@ -3,7 +3,7 @@ from django.db.models import Count, Q, F, prefetch_related_objects
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.db.models.functions import JSONObject
 
-from clickhouse_search.search import get_transcripts_by_key, get_annotations_queryset
+from clickhouse_search.search import get_transcripts_queryset, get_annotations_queryset
 from seqr.models import Individual, IgvSample, AnalysisGroup, DynamicAnalysisGroup, LocusList, VariantTagType,\
     VariantFunctionalData, FamilyNote, SavedVariant, VariantTag, VariantNote, Sample
 from seqr.utils.gene_utils import get_genes
@@ -173,8 +173,10 @@ def _get_clickhouse_selected_transcript_gene_id(family_discovery_genes, discover
     )
 
     for dataset_type, keys, variants in tags_by_dataset_type.values_list('dataset_type', 'keys', 'variants'):
+        #  TODO better shared helper function/ queryset function
         if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
-            transcripts_by_key = get_transcripts_by_key(genome_version, keys)
+            qs = get_transcripts_queryset(genome_version, keys)
+            transcripts_by_key = dict(qs.values_list('key', 'transcripts'))
         else:
             qs = get_annotations_queryset(genome_version, dataset_type, keys)
             transcripts_by_key = dict(qs.values_list('key', qs.transcript_field))
