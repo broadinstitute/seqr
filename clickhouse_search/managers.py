@@ -481,7 +481,7 @@ class VariantsQuerySet(BaseVariantsQuerySet):
 
     @property
     def annotation_fields(self):
-        return super().annotation_fields + ['xpos']
+        return super().annotation_fields + [field for field in ['xpos'] if self.has_annotation(field)]
 
     @property
     def skip_annotations(self):

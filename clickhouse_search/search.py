@@ -20,6 +20,7 @@ from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.search.constants import MAX_VARIANTS, XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, \
     PRIORITIZED_GENE_SORT, COMPOUND_HET, COMPOUND_HET_ALLOW_HOM_ALTS, RECESSIVE, AFFECTED, MALE_SEXES, \
     X_LINKED_RECESSIVE, X_LINKED_RECESSIVE_MALE_AFFECTED
+from seqr.utils.xpos_utils import get_xpos
 from seqr.views.utils.json_utils import DjangoJSONEncoderWithSets
 
 logger = SeqrLogger(__name__)
@@ -340,7 +341,7 @@ def get_transcripts_queryset(genome_version, keys):
     return VARIANT_DETAILS_CLASS_MAP[genome_version].objects.filter(key__in=keys)
 
 
-def format_clickhouse_results(results, genome_version, **kwargs):
+def format_clickhouse_results(results, genome_version, add_xpos=False, **kwargs):
     keys_with_no_details = {
         variant['key'] for result in results for variant in (result if isinstance(result, list) else [result]) if not 'transcripts' in variant
     }
@@ -352,15 +353,15 @@ def format_clickhouse_results(results, genome_version, **kwargs):
     formatted_results = []
     for variant in results:
         if isinstance(variant, list):
-            formatted_result = [_format_variant(v, details_by_key) for v in variant]
+            formatted_result = [_format_variant(v, details_by_key, add_xpos) for v in variant]
         else:
-            formatted_result = _format_variant(variant, details_by_key)
+            formatted_result = _format_variant(variant, details_by_key, add_xpos)
         formatted_results.append(formatted_result)
 
     return formatted_results
 
 
-def _format_variant(variant, details_by_key):
+def _format_variant(variant, details_by_key, add_xpos):
     formatted_variant = {**variant}
     selected_gene_id = formatted_variant.pop(SELECTED_GENE_FIELD, None)
     selected_transcript = formatted_variant.pop(SELECTED_TRANSCRIPT_FIELD, None)
@@ -369,6 +370,9 @@ def _format_variant(variant, details_by_key):
 
     details = details_by_key.get(variant['key'], {})
     formatted_variant.update(details)
+    if add_xpos:
+        formatted_variant['xpos'] = get_xpos(formatted_variant['chrom'], formatted_variant['pos'])
+
     # pop sortedTranscriptConsequences from the formatted result and not the original result to ensure the full value is cached properly
     sorted_minimal_transcripts = formatted_variant.pop(TRANSCRIPT_CONSEQUENCES_FIELD)
     main_transcript_id = None
@@ -788,7 +792,7 @@ def get_annotations_queryset(genome_version, dataset_type, keys):
 def get_clickhouse_annotations(genome_version, dataset_type, keys):
     qs = get_annotations_queryset(genome_version, dataset_type, keys)
     results = qs.join_annotations().result_values(skip_entry_fields=True)
-    return format_clickhouse_results(results, genome_version)
+    return format_clickhouse_results(results, genome_version, add_xpos=True)
 
 
 def get_clickhouse_key_lookup(genome_version, dataset_type, variants_ids, reverse=False):
