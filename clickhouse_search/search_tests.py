@@ -19,7 +19,8 @@ from clickhouse_search.models.reference_data_models import ClinvarMvSnvIndel, Cl
     GnomadGenomesGRCh37Mv, GnomadGenomesGRCh37Dict, GnomadExomesGRCh37Mv, GnomadExomesGRCh37Dict, TopmedGRCh37Mv, \
     TopmedGRCh37Dict, GnomadmitoMv, GnomadmitoDict, GnomadmitoheteroplasmyMv, GnomadmitoheteroplasmyDict, HelixmitoMv, \
     HelixmitoDict, HelixmitoheteroplasmyMv, HelixmitoheteroplasmyDict, ScreenDict, MitomapMv, MitomapDict
-from clickhouse_search.models.search_models import EntriesSnvIndel, AnnotationsSnvIndel
+from clickhouse_search.models.search_models import EntriesSnvIndel, AnnotationsSnvIndel, VariantDetailsSnvIndel, \
+    VariantDetailsGRCh37SnvIndel
 from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4, CACHED_CONSEQUENCES_BY_KEY, \
     VARIANT_ID_SEARCH, VARIANT_IDS, LOCATION_SEARCH, GENE_IDS, SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT, \
     SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3, COMP_HET_ALL_PASS_FILTERS, \
@@ -48,6 +49,7 @@ class ClickhouseSearchTestCase(AnvilAuthenticationTestCase):
     def setUpClass(cls):
         # Atomic transactions prevent the clickhouse/ postgres connection from working properly,
         # so disable them for the initial fixture loading
+        cls._clean_up_db()
         original_enter_atomics = cls._enter_atomics
         cls._enter_atomics = lambda: {}
         super().setUpClass()
@@ -67,6 +69,14 @@ class ClickhouseSearchTestCase(AnvilAuthenticationTestCase):
                 allow_cascade=False,
                 inhibit_post_migrate=False,
             )
+
+    @classmethod
+    def _clean_up_db(cls):
+        # Due to a known clickhouse issue (https://github.com/ClickHouse/ClickHouse/issues/56288)
+        # these tables are not always properly truncated between test runs, so manually truncate them here
+        with connections['clickhouse_write'].cursor() as cursor:
+            for table in [VariantDetailsGRCh37SnvIndel, VariantDetailsSnvIndel]:
+                cursor.execute(f'TRUNCATE TABLE IF EXISTS "{table._meta.db_table}"')
 
     @classmethod
     def setUpTestData(cls):
