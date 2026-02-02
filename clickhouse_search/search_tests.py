@@ -1,4 +1,6 @@
 from django.core.exceptions import ObjectDoesNotExist
+from django.core.management import call_command
+from django.db import connections
 from django.urls.base import reverse
 import json
 import mock
@@ -38,6 +40,32 @@ from seqr.views.apis.variant_search_api import query_variants_handler
 
 
 class ClickhouseSearchTestCase(AnvilAuthenticationTestCase):
+
+
+    @classmethod
+    def _enter_atomics(cls):
+        # Atomic transactions prevent the clickhouse/ postgres connection from working properly, so disable them for this test suite
+        return {}
+
+    @classmethod
+    def _rollback_atomics(cls, atomics):
+        return
+
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        for db_name in cls._databases_names():
+            # Need to explicitly tear down data for the databases that would usually be managed with transactions
+            if connections[db_name].features.supports_transactions:
+                call_command(
+                    "flush",
+                    verbosity=0,
+                    interactive=False,
+                    database=db_name,
+                    reset_sequences=False,
+                    allow_cascade=False,
+                    inhibit_post_migrate=False,
+                )
 
     @classmethod
     def setUpTestData(cls):
