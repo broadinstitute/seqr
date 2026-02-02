@@ -660,10 +660,6 @@ class VariantsQuerySet(BaseVariantsQuerySet):
         return {'consequenceTerms': (consequences, 'hasAny({value}, {field})'), **kwargs}
 
     def _annotate_filtered_transcripts(self, results, consequence_field, transcript_filters, *args, require_mane_canonical=False, **kwargs):
-        # return results.annotate(**{
-        #     self.FILTERED_CONSEQUENCE_FIELD: ArrayFilter(consequence_field, conditions=transcript_filters),
-        # })
-
         if require_mane_canonical:
             filtered_expr = ArrayFilter(consequence_field, conditions=[{'canonical': (0, '{field} > {value}')}])
             if 'isManeSelect' in self.sorted_transcript_consequence_fields:
