@@ -869,14 +869,14 @@ class BaseKeyLookup(FixtureLoadableClickhouseModel):
         abstract = True
 
 class KeyLookupGRCh37SnvIndel(BaseKeyLookup):
-    key = OneToOneField('AnnotationsGRCh37SnvIndel', db_column='key', on_delete=CASCADE)
+    key = OneToOneField('VariantsGRCh37SnvIndel', db_column='key', on_delete=CASCADE)
 
     class Meta:
         db_table = 'GRCh37/SNV_INDEL/key_lookup'
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh37/SNV_INDEL/key_lookup', primary_key='variant_id', flatten_nested=0)
 
 class KeyLookupSnvIndel(BaseKeyLookup):
-    key = OneToOneField('AnnotationsSnvIndel', db_column='key', on_delete=CASCADE)
+    key = OneToOneField('VariantsSnvIndel', db_column='key', on_delete=CASCADE)
 
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/key_lookup'
@@ -884,7 +884,7 @@ class KeyLookupSnvIndel(BaseKeyLookup):
 
 
 class KeyLookupMito(BaseKeyLookup):
-    key = OneToOneField('AnnotationsMito', db_column='key', on_delete=CASCADE)
+    key = OneToOneField('VariantsMito', db_column='key', on_delete=CASCADE)
 
     class Meta:
         db_table = 'GRCh38/MITO/key_lookup'
@@ -892,7 +892,7 @@ class KeyLookupMito(BaseKeyLookup):
 
 
 class KeyLookupSv(BaseKeyLookup):
-    key = OneToOneField('AnnotationsSv', db_column='key', on_delete=CASCADE)
+    key = OneToOneField('VariantsSv', db_column='key', on_delete=CASCADE)
 
     class Meta:
         db_table = 'GRCh38/SV/key_lookup'
@@ -900,7 +900,7 @@ class KeyLookupSv(BaseKeyLookup):
 
 
 class KeyLookupGcnv(BaseKeyLookup):
-    key = OneToOneField('AnnotationsGcnv', db_column='key', on_delete=CASCADE)
+    key = OneToOneField('VariantsGcnv', db_column='key', on_delete=CASCADE)
 
     class Meta:
         db_table = 'GRCh38/GCNV/key_lookup'

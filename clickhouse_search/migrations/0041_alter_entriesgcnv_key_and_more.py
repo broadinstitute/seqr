@@ -50,6 +50,31 @@ class Migration(migrations.Migration):
                     name='key',
                     field=models.ForeignKey(db_column='key', on_delete=django.db.models.deletion.PROTECT, primary_key=True, related_name='hgmd_join', serialize=False, to='clickhouse_search.variantssnvindel'),
                 ),
+                migrations.AlterField(
+                    model_name='keylookupgcnv',
+                    name='key',
+                    field=models.OneToOneField(db_column='key', on_delete=django.db.models.deletion.CASCADE, to='clickhouse_search.variantsgcnv'),
+                ),
+                migrations.AlterField(
+                    model_name='keylookupgrch37snvindel',
+                    name='key',
+                    field=models.OneToOneField(db_column='key', on_delete=django.db.models.deletion.CASCADE, to='clickhouse_search.variantsgrch37snvindel'),
+                ),
+                migrations.AlterField(
+                    model_name='keylookupmito',
+                    name='key',
+                    field=models.OneToOneField(db_column='key', on_delete=django.db.models.deletion.CASCADE, to='clickhouse_search.variantsmito'),
+                ),
+                migrations.AlterField(
+                    model_name='keylookupsnvindel',
+                    name='key',
+                    field=models.OneToOneField(db_column='key', on_delete=django.db.models.deletion.CASCADE, to='clickhouse_search.variantssnvindel'),
+                ),
+                migrations.AlterField(
+                    model_name='keylookupsv',
+                    name='key',
+                    field=models.OneToOneField(db_column='key', on_delete=django.db.models.deletion.CASCADE, to='clickhouse_search.variantssv'),
+                ),
             ]
         ),
     ]
