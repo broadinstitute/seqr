@@ -45,7 +45,7 @@ jobs:
         ports:
           - 9000:9000   # Native client interface
         volumes:
-          - /tmp:/var/seqr/clickhouse-data
+          - /mnt/tmp:/var/seqr/clickhouse-data
           - /tmp:/in-memory-dir
         options: >-
           --health-cmd "clickhouse-client --query 'SELECT 1'" 
