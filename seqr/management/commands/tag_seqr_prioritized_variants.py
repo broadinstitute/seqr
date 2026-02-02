@@ -5,10 +5,6 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Q, F
 from django.db.models.functions import JSONObject
 
-from clickhouse_backend.models import ArrayField, StringField
-
-from clickhouse_search.backend.fields import NamedTupleField
-from clickhouse_search.backend.functions import ArrayFilter, ArrayMap
 from clickhouse_search.search import get_search_queryset, get_transcripts_queryset, add_individual_guids, \
     get_data_type_comp_het_results_queryset, get_multi_data_type_comp_het_results_queryset
 from panelapp.models import PaLocusListGene
@@ -36,7 +32,8 @@ EXCLUDE_GENE_IDS = [
 ]
 
 ALL_SEARCHES_CRITERIA = {
-    'exclude': {'clinvar': ['likely_benign', 'benign']}
+    'exclude': {'clinvar': ['likely_benign', 'benign']},
+    'require_mane_canonical': True,
 }
 
 DOMINANT_MOI = 'D'
@@ -643,38 +640,6 @@ class Command(BaseCommand):
                 variants = variants[:1]
             for variant in variants:
                 variant.update(details_by_key[variant['key']])
-
-    @classmethod
-    def _valid_gene_keys(cls, key_canonical_transcripts, allowed_consequences):
-        # TODO
-        keys = set(key_canonical_transcripts.keys())
-        mane_transcripts_by_key = get_transcripts_queryset(GENOME_VERSION_GRCh38, keys).values_list(
-            'key', cls._valid_field_transcripts_expression('transcripts', 'maneSelect'),
-        )
-        mane_transcript_genes = {
-            key: cls._valid_consequence_genes(mane_transcripts, allowed_consequences)
-            for key, mane_transcripts in mane_transcripts_by_key if mane_transcripts
-        }
-        missing_keys = keys - set(mane_transcript_genes.keys())
-        mane_transcript_genes.update({
-            key: cls._valid_consequence_genes(key_canonical_transcripts[key], allowed_consequences)
-            for key in missing_keys
-        })
-        return {key: genes for key, genes in mane_transcript_genes.items() if genes}
-
-    @staticmethod
-    def _valid_field_transcripts_expression(expression, field):
-        # TODO
-        return ArrayMap(
-            ArrayFilter(expression, conditions=[{field: (None, 'isNotNull({field})')}]),
-            mapped_expression='tuple(x.consequenceTerms, x.geneId)',
-            output_field=ArrayField(
-                NamedTupleField([('consequenceTerms', ArrayField(StringField())), ('geneId', StringField())])),
-        )
-
-    @staticmethod
-    def _valid_consequence_genes(transcripts, allowed_consequences):
-        return {t['geneId'] for t in transcripts if set(allowed_consequences).intersection(t['consequenceTerms'])}
 
     @staticmethod
     def _get_gene_list_genes(name, confidences, gene_by_moi, exclude_gene_ids):

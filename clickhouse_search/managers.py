@@ -415,9 +415,7 @@ class BaseVariantsQuerySet(SearchQuerySet):
 
         if transcript_filters:
             consequence_field = self.GENE_CONSEQUENCE_FIELD if genes else self.TRANSCRIPT_FIELD
-            results = results.annotate(**{
-                self.FILTERED_CONSEQUENCE_FIELD: ArrayFilter(consequence_field, conditions=transcript_filters),
-            })
+            results = self._annotate_filtered_transcripts(results, consequence_field, transcript_filters, **kwargs)
             transcript_q = Q(filtered_transcript_consequences__not_empty=True)
             if filter_q:
                 filter_q |= transcript_q
@@ -425,6 +423,11 @@ class BaseVariantsQuerySet(SearchQuerySet):
                 filter_q = transcript_q
 
         return results.filter(filter_q)
+
+    def _annotate_filtered_transcripts(self, results, consequence_field, transcript_filters, **kwargs):
+        return results.annotate(**{
+            self.FILTERED_CONSEQUENCE_FIELD: ArrayFilter(consequence_field, conditions=transcript_filters),
+        })
 
     def _filter_locations(self, results, genes, intervals, **kwargs):
         if genes:
@@ -655,6 +658,23 @@ class VariantsQuerySet(BaseVariantsQuerySet):
     @staticmethod
     def _consequence_term_filter(consequences, **kwargs):
         return {'consequenceTerms': (consequences, 'hasAny({value}, {field})'), **kwargs}
+
+    def _annotate_filtered_transcripts(self, results, consequence_field, transcript_filters, *args, require_mane_canonical=False, **kwargs):
+        # return results.annotate(**{
+        #     self.FILTERED_CONSEQUENCE_FIELD: ArrayFilter(consequence_field, conditions=transcript_filters),
+        # })
+
+        if require_mane_canonical:
+            filtered_expr = ArrayFilter(consequence_field, conditions=[{'canonical': (0, '{field} > {value}')}])
+            if 'isManeSelect' in self.sorted_transcript_consequence_fields:
+                filtered_expr = If(
+                    ArrayFilter(consequence_field, conditions=[{'isManeSelect': (True, '{field}')}]),
+                    filtered_expr,
+                    condition='arrayExists(x -> x.isManeSelect, sortedTranscriptConsequences), ',
+                )
+            results = results.annotate(**{self.FILTERED_CONSEQUENCE_FIELD: filtered_expr})
+            consequence_field = self.FILTERED_CONSEQUENCE_FIELD
+        return super()._annotate_filtered_transcripts(results, consequence_field, transcript_filters, **kwargs)
 
     def join_annotations(self):
         results = super().join_annotations()
