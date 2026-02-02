@@ -1,6 +1,7 @@
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.management import call_command
 from django.db import connections
+from django.test import TestCase
 from django.urls.base import reverse
 import json
 import mock
@@ -48,8 +49,10 @@ class ClickhouseSearchTestCase(AnvilAuthenticationTestCase):
         return {}
 
     @classmethod
-    def _rollback_atomics(cls, atomics):
-        return
+    def setUpClass(cls):
+        super().setUpClass()
+        # After fixture data is loaded, run the atomic setup so all non-fixture updates are in a transaction
+        cls.cls_atomics = TestCase._enter_atomics()
 
     @classmethod
     def tearDownClass(cls):
