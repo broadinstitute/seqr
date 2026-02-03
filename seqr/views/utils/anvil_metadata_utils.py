@@ -9,7 +9,7 @@ import requests
 from typing import Callable, Iterable
 
 from clickhouse_search.backend.functions import ArrayFilter
-from clickhouse_search.search import get_annotations_queryset, get_variant_main_transcripts_by_key
+from clickhouse_search.search import get_variants_queryset, get_variant_main_transcripts_by_key
 from matchmaker.models import MatchmakerSubmission
 from reference_data.models import HumanPhenotypeOntology, Omim, GENOME_VERSION_LOOKUP
 from seqr.models import Project, Family, Individual, Sample, SavedVariant, VariantTagType
@@ -440,7 +440,7 @@ def _get_clickhouse_variant_json_by_guid(saved_variants, include_clinvar):
 
 
 def _set_clickhouse_sv_json(variant_json_by_guid, genome_version, dataset_type, key_map, include_clinvar):
-    annotations = get_annotations_queryset(genome_version, dataset_type, key_map.keys()).values(
+    annotations = get_variants_queryset(genome_version, dataset_type, key_map.keys()).values(
         'key', svType=F('sv_type'),
     )
     defaults = {'CAID': None, 'gene_id': None, 'main_transcript': {}}

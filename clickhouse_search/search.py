@@ -779,8 +779,7 @@ def _clickhouse_genotypes_json(genotypes):
     return json.loads(json.dumps(genotypes, cls=DjangoJSONEncoderWithSets))
 
 
-# TODO rename
-def get_annotations_queryset(genome_version, dataset_type, keys):
+def get_variants_queryset(genome_version, dataset_type, keys):
     variants_cls = VARIANTS_CLASS_MAP[genome_version][dataset_type]
     return variants_cls.objects.filter(key__in=keys)
 
@@ -788,7 +787,7 @@ def get_annotations_queryset(genome_version, dataset_type, keys):
 def _get_variant_details_queryset(genome_version, dataset_type, keys):
     if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
         return get_variant_details_queryset(genome_version, keys)
-    return get_annotations_queryset(genome_version, dataset_type, keys)
+    return get_variants_queryset(genome_version, dataset_type, keys)
 
 
 def get_clickhouse_variant_annotations(genome_version, dataset_type, keys):

@@ -8,7 +8,7 @@ import redis
 from tqdm import tqdm
 import traceback
 
-from clickhouse_search.search import get_clickhouse_key_lookup, get_annotations_queryset, get_clickhouse_genotypes
+from clickhouse_search.search import get_clickhouse_key_lookup, get_variants_queryset, get_clickhouse_genotypes
 from matchmaker.models import MatchmakerSubmissionGenes, MatchmakerSubmission
 from reference_data.models import TranscriptInfo, Omim, GENOME_VERSION_GRCh38
 from seqr.models import SavedVariant, VariantSearchResults, Family, LocusList, LocusListInterval, LocusListGene, \
@@ -283,7 +283,7 @@ def _get_clickhouse_variants(samples: Sample.objects, families_by_id: dict[int, 
 
 
 def _get_gene_ids_by_key(genome_version, keys):
-    qs = get_annotations_queryset(genome_version, Sample.DATASET_TYPE_VARIANT_CALLS, keys)
+    qs = get_variants_queryset(genome_version, Sample.DATASET_TYPE_VARIANT_CALLS, keys)
     return dict(qs.annotate_gene_ids().values_list('key', 'gene_ids'))
 
 
