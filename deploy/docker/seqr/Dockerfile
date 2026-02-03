@@ -2,6 +2,7 @@
 # UI build (Node.js 14 only)
 ############################
 FROM node:14-bullseye AS ui-build
+LABEL maintainer="Broad TGG"
 
 WORKDIR /build/ui
 
