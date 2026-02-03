@@ -223,13 +223,16 @@ class BaseVariantsQuerySet(SearchQuerySet):
 
     @property
     def annotation_values(self):
+        return self._process_annotation_values(super().annotation_values)
+
+    def _process_annotation_values(self, annotations):
         seqr_pops = []
         population_fields = [*self._population_output_fields()]
         self._get_seqr_pop_expressions(seqr_pops, population_fields)
 
         pop_field = 'pops' if self.has_annotation('pops') else 'populations'
         return {
-            **super().annotation_values,
+            **annotations,
             **{key: Value(value) for key, value in self.model.ANNOTATION_CONSTANTS.items()},
             'populations': TupleConcat(F(pop_field), Tuple(*seqr_pops), output_field=NamedTupleField(population_fields)),
         }
@@ -492,9 +495,8 @@ class VariantsQuerySet(BaseVariantsQuerySet):
             'sortedMotifFeatureConsequences', 'sortedRegulatoryFeatureConsequences', *self.model.VARIANT_PREDICTIONS,
         }
 
-    @property
-    def annotation_values(self):
-        annotations = super().annotation_values
+    def _process_annotation_values(self, annotations):
+        annotations.update(super()._process_annotation_values(annotations))
 
         pred_expr = F('preds')
         if self.model.VARIANT_PREDICTIONS:
@@ -850,18 +852,21 @@ class SvVariantsQuerySet(BaseVariantsQuerySet):
         return results
 
 
-class VariantDetailsQuerySet(SearchQuerySet):
+class VariantDetailsQuerySet(VariantsQuerySet):
 
     @property
-    def annotation_values(self):
-        return {
-            **super().annotation_values,
-            **self.split_variant_id_annotations(),
-        }
+    def skip_annotations(self):
+        return []
+
+    def _process_annotation_values(self, annotations):
+        return {**annotations, **self.split_variant_id_annotations()}
 
     @property
     def table_basename(self):
         return self.model._meta.db_table.rsplit('/', 2)[0]
+
+    def result_values(self, *args, **kwargs):
+        return super().result_values(*args, skip_entry_fields=True, **kwargs)
 
     def join_annotations(self):
         variant_model = self.model.key.field.related_model
