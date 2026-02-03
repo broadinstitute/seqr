@@ -73,15 +73,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Install gcloud tools
-RUN echo "deb http://packages.cloud.google.com/apt cloud-sdk-bullseye main" \
-      > /etc/apt/sources.list.d/google-cloud-sdk.list \
-    && curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends \
-        google-cloud-sdk \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+# Install Google Cloud SDK
+RUN curl -sSL https://sdk.cloud.google.com | bash
+ENV PATH="/root/google-cloud-sdk/bin:$PATH"
 
 WORKDIR /seqr
 
