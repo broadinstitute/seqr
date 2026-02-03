@@ -23,8 +23,6 @@ RUN npm run build
 ############################
 FROM python:3.11-slim-bullseye AS build
 
-LABEL maintainer="Broad TGG"
-
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN apt-get update && apt-get install -y --no-install-recommends \
     apt-utils \
@@ -54,9 +52,13 @@ RUN pip install --no-cache-dir wheel \
 ############################
 FROM python:3.11-slim-bullseye AS runtime
 
+# Copy Python virtualenv from build stage
+COPY --from=build /opt/venv /opt/venv
+ENV VIRTUAL_ENV=/opt/venv
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    cron \
     curl \
     emacs \
     gnupg \
@@ -81,9 +83,6 @@ RUN echo "deb http://packages.cloud.google.com/apt cloud-sdk-bullseye main" \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy Python virtualenv from build stage
-COPY --from=build /opt/venv /opt/venv
-
 WORKDIR /seqr
 
 # Copy application code
@@ -97,9 +96,6 @@ COPY manage.py settings.py wsgi.py ./
 
 # Copy built UI assets
 COPY --from=ui-build /build/ui/dist /seqr/ui/dist
-
-ENV VIRTUAL_ENV=/opt/venv
-ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
 RUN ./manage.py collectstatic --no-input
 
