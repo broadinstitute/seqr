@@ -9,7 +9,7 @@ import json
 
 from clickhouse_search.backend.fields import NamedTupleField
 from clickhouse_search.backend.functions import Array, ArrayFilter, ArrayIntersect, ArraySort, GroupArrayArray, If, Tuple, \
-    ArrayMap, Modulo
+    ArrayMap, Modulo, ArrayObjectSort
 from clickhouse_search.models.gt_stats_models import PROJECT_GT_STATS_VIEW_CLASS_MAP
 from clickhouse_search.models.reference_data_models import BaseClinvar
 from clickhouse_search.models.search_models import BaseAnnotationsMitoSnvIndel, BaseAnnotationsGRCh37SnvIndel, \
@@ -804,6 +804,49 @@ def get_clickhouse_key_lookup(genome_version, dataset_type, variants_ids, revers
         batch = variants_ids[i:i + BATCH_SIZE]
         lookup.update(dict(key_lookup_class.objects.filter(variant_id__in=batch).values_list(*fields)))
     return lookup
+
+
+def get_variant_main_transcripts_by_key(genome_version, dataset_type, selected_transcripts_by_key, include_clinvar=False, additional_values=None):
+    if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
+        qs = get_transcripts_queryset(genome_version, selected_transcripts_by_key.keys())
+        output_field = qs.model.transcripts.field.clone()
+        output_field.group_by_key = None
+        qs = qs.annotate(sorted_transcript_consequences=ArrayObjectSort(
+            'transcripts', sort_field='transcriptRank', output_field=output_field,
+        ))
+    else:
+        qs = get_annotations_queryset(genome_version, dataset_type, selected_transcripts_by_key.keys())
+
+    fields = ['key', 'sorted_transcript_consequences']
+    if include_clinvar:
+        fields.append('clinvar')
+        qs = qs.join_annotations()
+
+    variants_by_key = {}
+    for variant in qs.values(*fields, **(additional_values or {})):
+        key = variant['key']
+        transcripts = variant.pop('sorted_transcript_consequences')
+        variant['main_transcripts'] = {
+            selected_transcript_id: _main_transcript(selected_transcript_id, transcripts)
+            for selected_transcript_id in selected_transcripts_by_key[key]
+        }
+        variants_by_key[key] = variant
+
+    return variants_by_key
+
+
+def _main_transcript(selected_transcript_id, sorted_transcripts):
+    if not sorted_transcripts:
+        return {}
+    if selected_transcript_id:
+        return next((t for t in sorted_transcripts if t['transcriptId'] == selected_transcript_id), {})
+    return sorted_transcripts[0]
+
+
+def _variant_main_transcript(selected_transcript_id, transcripts):
+    return transcripts[0] if not selected_transcript_id else next(
+        t for t in transcripts if t['transcriptId'] == selected_transcript_id
+    )
 
 
 def delete_clickhouse_project(project, dataset_type, sample_type=None):

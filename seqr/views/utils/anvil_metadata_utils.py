@@ -9,7 +9,7 @@ import requests
 from typing import Callable, Iterable
 
 from clickhouse_search.backend.functions import ArrayFilter
-from clickhouse_search.search import get_annotations_queryset, get_transcripts_queryset
+from clickhouse_search.search import get_annotations_queryset, get_variant_main_transcripts_by_key
 from matchmaker.models import MatchmakerSubmission
 from reference_data.models import HumanPhenotypeOntology, Omim, GENOME_VERSION_LOOKUP
 from seqr.models import Project, Family, Individual, Sample, SavedVariant, VariantTagType
@@ -452,34 +452,19 @@ def _set_clickhouse_sv_json(variant_json_by_guid, genome_version, dataset_type, 
 
 
 def _set_clickhouse_snv_indel_json(variant_json_by_guid, genome_version, dataset_type, key_map, include_clinvar):
-    selected_transcripts = {st for group in key_map.values() for _, st in group if st}
-    annotations_qs = get_annotations_queryset(genome_version, dataset_type, key_map.keys())
     annotation_values = {field: Value(None, output_field=CharField()) for field in ['CAID', 'svType']}
-    transcripts_by_key = {}
-    if dataset_type == Sample.DATASET_TYPE_MITO_CALLS:
-        annotation_values['all_transcripts'] = _get_main_transcripts_expression(
-            'sorted_transcript_consequences', annotations_qs, selected_transcripts,
-        )
-    else:
+    if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
         annotation_values['CAID'] = F('caid')
-        transcripts_qs = get_transcripts_queryset(genome_version, key_map.keys())
-        transcripts_by_key.update(dict(transcripts_qs.values_list(
-            'key', _get_main_transcripts_expression('transcripts', transcripts_qs, selected_transcripts),
-        )))
 
-    fields = ['key']
-    if include_clinvar:
-        fields.append('clinvar')
-        annotations_qs = annotations_qs.join_annotations()
-
-    annotations = annotations_qs.values(*fields, **annotation_values)
-    for anns in annotations:
-        for guid, selected_main_transcript_id in key_map[anns['key']]:
-            all_transcripts = anns.pop('all_transcripts', transcripts_by_key.get(anns['key'])) or []
-            is_main = (lambda t: t['transcriptId'] == selected_main_transcript_id) if selected_main_transcript_id else (
-                lambda t: t['transcriptRank'] == 0
-            )
-            main_transcript = next((t for t in all_transcripts if is_main(t)), {})
+    selected_transcripts_by_key = {
+        key: [transcript_id for (_, transcript_id) in variants] for key, variants in key_map.items()
+    }
+    annotations_by_key = get_variant_main_transcripts_by_key(
+        genome_version, dataset_type, selected_transcripts_by_key, include_clinvar=include_clinvar, additional_values=annotation_values,
+    )
+    for key, anns in annotations_by_key.items():
+        for guid, selected_main_transcript_id in key_map[key]:
+            main_transcript = anns['main_transcripts'][selected_main_transcript_id]
             gene_id = main_transcript.get('geneId')
             variant_json_by_guid[guid].update({
                 **anns,
@@ -488,15 +473,6 @@ def _set_clickhouse_snv_indel_json(variant_json_by_guid, genome_version, dataset
             })
             if gene_id:
                 variant_json_by_guid[guid]['gene_ids'] = [gene_id]
-
-
-def _get_main_transcripts_expression(field_name, qs, selected_transcripts):
-    output_field = getattr(qs.model, field_name).field.clone()
-    output_field.group_by_key = None
-    return ArrayFilter(field_name, conditions=[
-        {'transcriptId': (list(selected_transcripts), 'has({value}, {field})')},
-        {'transcriptRank': (0, '{value} = {field}')},
-    ], output_field=output_field)
 
 
 def _get_variant_main_transcript(variant_model):

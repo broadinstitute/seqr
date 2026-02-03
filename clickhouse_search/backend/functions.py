@@ -56,6 +56,11 @@ class ArraySort(Func):
     function = 'arraySort'
 
 
+class ArrayObjectSort(Func):
+    function = 'arraySort'
+    template = "%(function)s(x -> x.%(sort_field)s, %(expressions)s)"
+
+
 class ArraySymmetricDifference(Func):
     function = 'arraySymmetricDifference'
 

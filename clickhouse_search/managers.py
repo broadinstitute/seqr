@@ -858,6 +858,25 @@ class VariantDetailsQuerySet(SearchQuerySet):
             **self.split_variant_id_annotations(),
         }
 
+    @property
+    def table_basename(self):
+        return self.model._meta.db_table.rsplit('/', 2)[0]
+
+    def join_annotations(self):
+        variant_model = self.model.key.field.related_model
+        entry_field = next(obj.name for obj in variant_model._meta.related_objects if obj.name.startswith('entries'))
+        entry_model = getattr(variant_model, f'{entry_field}_set').rel.related_model
+        results = self.annotate(
+            clinvar=self._pathogenicity_tuple(entry_model.clinvar_join, f'key__{entry_field}__clinvar_join')
+        )
+        # Due to django modeling, adding a clinvar annotation will add joins to the entries and variants tables and then to clinvar
+        # Manipulating the underlying join removes the additional joins entirely
+        variants_table = f'{self.table_basename}/variants_memory'
+        results.query.alias_map[f'{self.table_basename}/reference_data/clinvar'].parent_alias = results.query.alias_map[variants_table].parent_alias
+        results.query.alias_refcount[variants_table] = 0
+        results.query.alias_refcount[f'{self.table_basename}/entries'] = 0
+        return results
+
 class BaseEntriesManager(SearchQuerySet):
     GENOTYPE_LOOKUP = {
         REF_REF: [0],
