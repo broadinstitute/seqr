@@ -406,6 +406,7 @@ class SavedVariantAPITest(object):
         variant_json.update(create_variant_json)
         self._assert_created_variant(saved_variant, variant_json, gene_ids=['ENSG00000277258', 'ENSG00000177000'])
 
+        self.maxDiff = None
         variant_json.update({
             'variantGuid': variant_guid,
             'familyGuids': ['F000001_1'],

@@ -1,10 +1,8 @@
 import logging
 import json
 
-from clickhouse_backend.models import ArrayField, StringField
-from django.db.models import Q, F
+from django.db.models import Q
 
-from clickhouse_search.backend.functions import ArrayFilter, ArrayMap
 from clickhouse_search.search import get_variant_main_transcripts_by_key
 from seqr.models import SavedVariant, VariantTagType, VariantTag, VariantNote, VariantFunctionalData,\
     Family, GeneNote, Project, Sample
