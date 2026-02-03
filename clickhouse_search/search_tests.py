@@ -181,7 +181,6 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
             'ENSG00000177000': {'total': 2, 'families': {'F000002_2': 2}},
             'ENSG00000277258': {'total': 1, 'families': {'F000002_2': 1}}
         }
-        self.maxDiff = None
         self._assert_expected_search(
             [VARIANT1, VARIANT2, VARIANT3, VARIANT4], gene_counts=variant_gene_counts, locus={'rawItems': '1:1-100000000'},
             **ALL_SNV_INDEL_PASS_FILTERS,

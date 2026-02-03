@@ -821,7 +821,7 @@ def get_variant_main_transcripts_by_key(genome_version, dataset_type, selected_t
     fields = ['key', 'sorted_transcript_consequences']
     if include_clinvar:
         fields.append('clinvar')
-        qs = qs.join_annotations()
+        qs = qs.join_clinvar()
 
     variants_by_key = {}
     for variant in qs.values(*fields, **(additional_values or {})):

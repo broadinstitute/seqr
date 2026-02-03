@@ -223,19 +223,23 @@ class BaseVariantsQuerySet(SearchQuerySet):
 
     @property
     def annotation_values(self):
-        return self._process_annotation_values(super().annotation_values)
+        annotations = super().annotation_values
+        pop_field = self._population_annotation_field()
+        if not pop_field:
+            return annotations
 
-    def _process_annotation_values(self, annotations):
         seqr_pops = []
         population_fields = [*self._population_output_fields()]
         self._get_seqr_pop_expressions(seqr_pops, population_fields)
 
-        pop_field = 'pops' if self.has_annotation('pops') else 'populations'
         return {
             **annotations,
             **{key: Value(value) for key, value in self.model.ANNOTATION_CONSTANTS.items()},
             'populations': TupleConcat(F(pop_field), Tuple(*seqr_pops), output_field=NamedTupleField(population_fields)),
         }
+
+    def _population_annotation_field(self):
+        return 'populations'
 
     def _population_output_fields(self):
         return self.model.POPULATION_FIELDS
@@ -495,11 +499,14 @@ class VariantsQuerySet(BaseVariantsQuerySet):
             'sortedMotifFeatureConsequences', 'sortedRegulatoryFeatureConsequences', *self.model.VARIANT_PREDICTIONS,
         }
 
-    def _process_annotation_values(self, annotations):
-        annotations.update(super()._process_annotation_values(annotations))
+    @property
+    def annotation_values(self):
+        annotations = super().annotation_values
+        if not self.has_annotation('preds'):
+            return annotations
 
         pred_expr = F('preds')
-        if self.model.VARIANT_PREDICTIONS:
+        if getattr(self.model, 'VARIANT_PREDICTIONS', None):
             preds = [annotations.get(field, F(field)) for field in self.model.VARIANT_PREDICTIONS]
             output_fields = self.query.annotations['preds'].output_field.base_fields + [
                 (field.name, field) for field in self.model._meta.local_fields
@@ -511,7 +518,7 @@ class VariantsQuerySet(BaseVariantsQuerySet):
         if self.hgmd_join_model:
             annotations['hgmd'] = self._pathogenicity_tuple(self.hgmd_join_model, 'hgmd_join', rename_fields={'classification': 'class'})
 
-        if not self.sorted_transcript_consequence_fields:
+        if not self.sorted_transcript_consequence_fields and hasattr(self.model, 'sorted_transcript_consequences'):
             annotations.update({
                 'transcripts':  annotations.pop(self.model.sorted_transcript_consequences.field.db_column),
                 'mainTranscriptId': F('sorted_transcript_consequences__0__transcriptId'),
@@ -553,11 +560,14 @@ class VariantsQuerySet(BaseVariantsQuerySet):
     def _clinvar_conflicting_path_filter(array_func, conflicting_filter):
         return {f'clinvar__5__{array_func}': conflicting_filter, 'clinvar__5__not_empty': True, 'clinvar_key__isnull': False}
 
+    def _population_annotation_field(self):
+        return 'pops' if self.has_annotation('pops') else None
+
     def _population_output_fields(self):
         return self.query.annotations['pops'].output_field.base_fields
 
     def _screen_expression(self):
-        if not self.model.SCREEN_DICT:
+        if not getattr(self.model, 'SCREEN_DICT', None):
             return None
         return self._xpos_range_dict_get_expression(self.model.SCREEN_DICT, 'regionType')
 
@@ -685,8 +695,14 @@ class VariantsQuerySet(BaseVariantsQuerySet):
         results = results.annotate(
             preds=self._prediction_expression(self.entry_model),
             pops=self._population_expression(self.entry_model),
-            clinvar=self._pathogenicity_tuple(self.entry_model.clinvar_join, f'{self.entry_field}__clinvar_join')
         )
+        return results.join_clinvar()
+
+    def join_clinvar(self, field_prefix=''):
+        results = self.annotate(
+            clinvar=self._pathogenicity_tuple(self.entry_model.clinvar_join, f'{field_prefix}{self.entry_field}__clinvar_join')
+        )
+
         # Due to django modeling, adding a clinvar annotation will add a join to the entries table and then to clinvar
         # Manipulating the underlying join removes the entry join entirely
         entry_table = f'{self.table_basename}/entries'
@@ -855,33 +871,58 @@ class SvVariantsQuerySet(BaseVariantsQuerySet):
 class VariantDetailsQuerySet(VariantsQuerySet):
 
     @property
+    def variant_model(self):
+        return self.model.key.field.related_model
+
+    @property
+    def entry_field(self):
+        return next(obj.name for obj in self.variant_model._meta.related_objects if obj.name.startswith('entries'))
+
+    @property
+    def entry_model(self):
+        return getattr(self.variant_model, f'{self.entry_field}_set').rel.related_model
+
+    @property
     def skip_annotations(self):
         return []
 
-    def _process_annotation_values(self, annotations):
-        return {**annotations, **self.split_variant_id_annotations()}
+    @property
+    def annotation_values(self):
+        annotations = {
+            **super().annotation_values,
+            **self.split_variant_id_annotations(),
+        }
+        if self.has_annotation('hgmd_join'):
+            annotations.update({
+                'mainTranscriptId': F('transcripts__0__transcriptId'),
+                'hgmd': F('hgmd_join'),
+            })
+        return annotations
 
     @property
     def table_basename(self):
         return self.model._meta.db_table.rsplit('/', 2)[0]
 
-    def result_values(self, *args, **kwargs):
-        return super().result_values(*args, skip_entry_fields=True, **kwargs)
+    def result_values(self, *args, skip_entry_fields=True, **kwargs):
+        return super().result_values(*args, skip_entry_fields=skip_entry_fields, **kwargs)
 
     def join_annotations(self):
-        variant_model = self.model.key.field.related_model
-        entry_field = next(obj.name for obj in variant_model._meta.related_objects if obj.name.startswith('entries'))
-        entry_model = getattr(variant_model, f'{entry_field}_set').rel.related_model
-        results = self.annotate(
-            clinvar=self._pathogenicity_tuple(entry_model.clinvar_join, f'key__{entry_field}__clinvar_join')
+        results = super().join_annotations()
+        results = results.annotate(
+            hgmd_join=self._pathogenicity_tuple(self.variant_model.hgmd_join, 'key__hgmd_join', rename_fields={'classification': 'class'}),
         )
-        # Due to django modeling, adding a clinvar annotation will add joins to the entries and variants tables and then to clinvar
-        # Manipulating the underlying join removes the additional joins entirely
-        variants_table = f'{self.table_basename}/variants_memory'
-        results.query.alias_map[f'{self.table_basename}/reference_data/clinvar'].parent_alias = results.query.alias_map[variants_table].parent_alias
-        results.query.alias_refcount[variants_table] = 0
-        results.query.alias_refcount[f'{self.table_basename}/entries'] = 0
+        self._prune_join(results, 'hgmd')
         return results
+
+    def join_clinvar(self):
+        results = super().join_clinvar(field_prefix='key__')
+        self._prune_join(results, 'clinvar')
+        return results
+
+    def _prune_join(self, results, data_source):
+        variants_table = f'{self.table_basename}/variants_memory'
+        results.query.alias_map[f'{self.table_basename}/reference_data/{data_source}'].parent_alias = results.query.alias_map[variants_table].parent_alias
+        results.query.alias_refcount[variants_table] = 0
 
 class BaseEntriesManager(SearchQuerySet):
     GENOTYPE_LOOKUP = {

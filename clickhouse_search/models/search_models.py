@@ -772,6 +772,8 @@ class TranscriptsGRCh37SnvIndel(models.ClickhouseModel):
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh37/SNV_INDEL/transcripts', primary_key='key', flatten_nested=0)
 
 class VariantDetailsGRCh37SnvIndel(models.ClickhouseModel):
+    ANNOTATION_CONSTANTS = VariantsGRCh37SnvIndel.ANNOTATION_CONSTANTS
+
     key = OneToOneField('VariantsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
     variant_id = models.StringField(db_column='variantId')
     lifted_over_chrom = Enum8Field(db_column='liftedOverChrom', return_int=False, null=True, blank=True, choices=CHROMOSOME_CHOICES)
@@ -849,6 +851,8 @@ class VariantDetailsSnvIndel(models.ClickhouseModel):
         ('regulatoryFeatureId', models.StringField(null=True, blank=True)),
         *BaseVariantsSnvIndel.SORTED_REGULATORY_FEATURE_CONSEQUENCES_FIELDS,
     ])
+    ANNOTATION_CONSTANTS = VariantsSnvIndel.ANNOTATION_CONSTANTS
+    SCREEN_DICT = VariantsSnvIndel.SCREEN_DICT
 
     key = OneToOneField('VariantsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
     variant_id = models.StringField(db_column='variantId')
