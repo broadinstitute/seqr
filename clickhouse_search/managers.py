@@ -684,14 +684,13 @@ class VariantsQuerySet(BaseVariantsQuerySet):
             consequence_field = self.FILTERED_CONSEQUENCE_FIELD
         return super()._annotate_filtered_transcripts(results, consequence_field, transcript_filters, **kwargs)
 
-    def join_populations(self, results):
-        return results.annotate(
+    def join_populations(self):
+        return super().join_annotations().annotate(
             pops=self._population_expression(self.entry_model),
         )
 
     def join_annotations(self):
-        results = super().join_annotations()
-        results = results.join_populations(results)
+        results = self.join_populations()
         results = results.annotate(
             preds=self._prediction_expression(self.entry_model),
             pops=self._population_expression(self.entry_model),

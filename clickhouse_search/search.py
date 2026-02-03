@@ -793,9 +793,7 @@ def _get_variant_details_queryset(genome_version, dataset_type, keys):
 
 def get_clickhouse_variant_annotations(genome_version, dataset_type, keys):
     qs = _get_variant_details_queryset(genome_version, dataset_type, keys)
-    results = qs.join_annotations().result_values(skip_entry_fields=True)
-    return results
-    #return format_clickhouse_results(results, genome_version) # TODO? clean up helper?
+    return qs.join_annotations().result_values(skip_entry_fields=True)
 
 
 # TODO not needed, use search?
