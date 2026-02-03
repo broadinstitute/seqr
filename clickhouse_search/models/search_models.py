@@ -39,26 +39,7 @@ class BaseAnnotations(FixtureLoadableClickhouseModel):
         abstract = True
 
 class BaseVariants(FixtureLoadableClickhouseModel):
-    #  TODO clean up constants
     CONSEQUENCE_TERMS = [(1, 'transcript_ablation'), (2, 'splice_acceptor_variant'), (3, 'splice_donor_variant'), (4, 'stop_gained'), (5, 'frameshift_variant'), (6, 'stop_lost'), (7, 'start_lost'), (8, 'inframe_insertion'), (9, 'inframe_deletion'), (10, 'missense_variant'), (11, 'protein_altering_variant'), (12, 'splice_donor_5th_base_variant'), (13, 'splice_region_variant'), (14, 'splice_donor_region_variant'), (15, 'splice_polypyrimidine_tract_variant'), (16, 'incomplete_terminal_codon_variant'), (17, 'start_retained_variant'), (18, 'stop_retained_variant'), (19, 'synonymous_variant'), (20, 'coding_sequence_variant'), (21, 'mature_miRNA_variant'), (22, '5_prime_UTR_variant'), (23, '3_prime_UTR_variant'), (24, 'non_coding_transcript_exon_variant'), (25, 'intron_variant'), (26, 'NMD_transcript_variant'), (27, 'non_coding_transcript_variant'), (28, 'coding_transcript_variant'), (29, 'upstream_gene_variant'), (30, 'downstream_gene_variant'), (31, 'intergenic_variant'), (32, 'sequence_variant')]
-    MUTATION_TASTER_PREDICTIONS = [(0, 'D'), (1, 'A'), (2, 'N'), (3, 'P')]
-    TRANSCRIPTS_FIELDS = [
-        ('aminoAcids', models.StringField(null=True, blank=True)),
-        ('biotype', models.StringField(null=True, blank=True)),
-        ('canonical', models.UInt8Field(null=True, blank=True)),
-        ('codons', models.StringField(null=True, blank=True)),
-        ('consequenceTerms', models.ArrayField(models.Enum8Field(null=True, blank=True, return_int=False, choices=CONSEQUENCE_TERMS))),
-        ('geneId', models.StringField(null=True, blank=True)),
-        ('hgvsc', models.StringField(null=True, blank=True)),
-        ('hgvsp', models.StringField(null=True, blank=True)),
-        ('loftee', NamedTupleField([
-            ('isLofNagnag', models.BoolField(null=True, blank=True)),
-            ('lofFilters', models.ArrayField(models.StringField(null=True, blank=True))),
-        ], null_empty_arrays=True)),
-        ('majorConsequence', models.Enum8Field(null=True, blank=True, return_int=False, choices=CONSEQUENCE_TERMS)),
-        ('transcriptId', models.StringField()),
-        ('transcriptRank', models.UInt8Field()),
-    ]
     ANNOTATION_CONSTANTS = {
         'genomeVersion': GENOME_VERSION_GRCh38,
         'liftedOverGenomeVersion': GENOME_VERSION_GRCh37,
@@ -378,6 +359,23 @@ class BaseAnnotationsMito(BaseAnnotationsMitoSnvIndel):
         abstract = True
 
 class BaseVariantsMito(BaseVariants):
+    TRANSCRIPTS_FIELDS = [
+        ('aminoAcids', models.StringField(null=True, blank=True)),
+        ('biotype', models.StringField(null=True, blank=True)),
+        ('canonical', models.UInt8Field(null=True, blank=True)),
+        ('codons', models.StringField(null=True, blank=True)),
+        ('consequenceTerms', models.ArrayField(models.Enum8Field(null=True, blank=True, return_int=False, choices=BaseVariants.CONSEQUENCE_TERMS))),
+        ('geneId', models.StringField(null=True, blank=True)),
+        ('hgvsc', models.StringField(null=True, blank=True)),
+        ('hgvsp', models.StringField(null=True, blank=True)),
+        ('loftee', NamedTupleField([
+            ('isLofNagnag', models.BoolField(null=True, blank=True)),
+            ('lofFilters', models.ArrayField(models.StringField(null=True, blank=True))),
+        ], null_empty_arrays=True)),
+        ('majorConsequence', models.Enum8Field(null=True, blank=True, return_int=False, choices=BaseVariants.CONSEQUENCE_TERMS)),
+        ('transcriptId', models.StringField()),
+        ('transcriptRank', models.UInt8Field()),
+    ]
     ANNOTATION_CONSTANTS = {
         'chrom': 'M',
         'liftedOverChrom': 'MT',
@@ -388,7 +386,7 @@ class BaseVariantsMito(BaseVariants):
     variant_id = models.StringField(db_column='variantId')
     rsid = models.StringField(null=True, blank=True)
     lifted_over_pos = models.UInt32Field(db_column='liftedOverPos', null=True, blank=True)
-    sorted_transcript_consequences = NestedField(BaseVariants.TRANSCRIPTS_FIELDS, db_column='sortedTranscriptConsequences', group_by_key='geneId')
+    sorted_transcript_consequences = NestedField(TRANSCRIPTS_FIELDS, db_column='sortedTranscriptConsequences', group_by_key='geneId')
     haplogroup_defining = models.BoolField(null=True, blank=True, db_column='haplogroupDefining')
     mitotip = models.Enum8Field(null=True, blank=True, return_int=False, choices=BaseAnnotationsMito.MITOTIP_PATHOGENICITIES)
     common_low_heteroplasmy = models.BoolField(db_column='commonLowHeteroplasmy', null=True, blank=True)
@@ -780,7 +778,7 @@ class VariantDetailsGRCh37SnvIndel(models.ClickhouseModel):
     lifted_over_pos = models.UInt32Field(db_column='liftedOverPos', null=True, blank=True)
     rsid = models.StringField(null=True, blank=True)
     caid = models.StringField(db_column='CAID', null=True, blank=True)
-    transcripts = NestedField(BaseVariants.TRANSCRIPTS_FIELDS, group_by_key='geneId')
+    transcripts = NestedField(BaseVariantsMito.TRANSCRIPTS_FIELDS, group_by_key='geneId')
 
     objects = VariantDetailsQuerySet.as_manager()
 
