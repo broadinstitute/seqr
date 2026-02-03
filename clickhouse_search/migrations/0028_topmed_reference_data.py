@@ -144,7 +144,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('key', clickhouse_backend.models.UInt32Field(primary_key=True, serialize=False)),
                 ('ac', clickhouse_backend.models.UInt32Field()),
-                ('af', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
+                ('af', clickhouse_backend.models.DecimalField(decimal_places=8, max_digits=9)),
                 ('an', clickhouse_backend.models.UInt32Field()),
                 ('het', clickhouse_backend.models.UInt32Field()),
                 ('hom', clickhouse_backend.models.UInt32Field()),
@@ -168,7 +168,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('key', clickhouse_backend.models.UInt32Field(primary_key=True, serialize=False)),
                 ('ac', clickhouse_backend.models.UInt32Field()),
-                ('af', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
+                ('af', clickhouse_backend.models.DecimalField(decimal_places=8, max_digits=9)),
                 ('an', clickhouse_backend.models.UInt32Field()),
                 ('het', clickhouse_backend.models.UInt32Field()),
                 ('hom', clickhouse_backend.models.UInt32Field()),
@@ -192,7 +192,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('key', clickhouse_search.backend.fields.DictKeyForeignKey(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, related_name='topmed', serialize=False, to='clickhouse_search.entriesgrch37snvindel')),
                 ('ac', clickhouse_backend.models.UInt32Field()),
-                ('af', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
+                ('af', clickhouse_backend.models.DecimalField(decimal_places=8, max_digits=9)),
                 ('an', clickhouse_backend.models.UInt32Field()),
                 ('het', clickhouse_backend.models.UInt32Field()),
                 ('hom', clickhouse_backend.models.UInt32Field()),
@@ -213,7 +213,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('key', clickhouse_search.backend.fields.DictKeyForeignKey(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, related_name='topmed', serialize=False, to='clickhouse_search.entriessnvindel')),
                 ('ac', clickhouse_backend.models.UInt32Field()),
-                ('af', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
+                ('af', clickhouse_backend.models.DecimalField(decimal_places=8, max_digits=9)),
                 ('an', clickhouse_backend.models.UInt32Field()),
                 ('het', clickhouse_backend.models.UInt32Field()),
                 ('hom', clickhouse_backend.models.UInt32Field()),
