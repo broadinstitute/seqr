@@ -785,10 +785,17 @@ def get_annotations_queryset(genome_version, dataset_type, keys):
     return variants_cls.objects.filter(key__in=keys)
 
 
-def get_clickhouse_annotations(genome_version, dataset_type, keys):
-    qs = get_annotations_queryset(genome_version, dataset_type, keys)
+def _get_variant_details_queryset(genome_version, dataset_type, keys):
+    if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
+        return get_variant_details_queryset(genome_version, keys)
+    return get_annotations_queryset(genome_version, dataset_type, keys)
+
+
+def get_clickhouse_variant_annotations(genome_version, dataset_type, keys):
+    qs = _get_variant_details_queryset(genome_version, dataset_type, keys)
     results = qs.join_annotations().result_values(skip_entry_fields=True)
-    return format_clickhouse_results(results, genome_version)
+    return results
+    #return format_clickhouse_results(results, genome_version) # TODO? clean up helper?
 
 
 # TODO not needed, use search?
@@ -803,15 +810,13 @@ def get_clickhouse_key_lookup(genome_version, dataset_type, variants_ids, revers
 
 
 def get_variant_main_transcripts_by_key(genome_version, dataset_type, selected_transcripts_by_key, include_clinvar=False, additional_values=None):
-    if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
-        qs = get_variant_details_queryset(genome_version, selected_transcripts_by_key.keys())
+    qs = _get_variant_details_queryset(genome_version, dataset_type, selected_transcripts_by_key.keys())
+    if not hasattr(qs.model, 'sorted_transcript_consequences'):
         output_field = qs.model.transcripts.field.clone()
         output_field.group_by_key = None
         qs = qs.annotate(sorted_transcript_consequences=ArrayObjectSort(
             'transcripts', sort_field='transcriptRank', output_field=output_field,
         ))
-    else:
-        qs = get_annotations_queryset(genome_version, dataset_type, selected_transcripts_by_key.keys())
 
     fields = ['key', 'sorted_transcript_consequences']
     if include_clinvar:

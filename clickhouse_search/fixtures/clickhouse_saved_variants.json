@@ -100,11 +100,16 @@
       ]
     }
 }, {
-    "model": "clickhouse_search.variantsgrch37snvindel",
+    "model": "clickhouse_search.variantdetailsgrch37snvindel",
     "pk": 123,
     "fields": {
       "key": 123,
-      "sorted_transcript_consequences": []
+      "variant_id": "2-61413835-AAAG-A",
+      "rsid": null,
+      "caid": null,
+      "lifted_over_chrom": null,
+      "lifted_over_pos": null,
+      "transcripts": []
     }
 }, {
     "model": "clickhouse_search.keylookupgrch37snvindel",

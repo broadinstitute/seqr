@@ -630,6 +630,7 @@ class Command(BaseCommand):
             if add_primary_only:
                 variants = variants[:1]
             keys.update(variant['key'] for variant in variants)
+        # TODO do with a join? clean up this helper
         detail_qs = get_variant_details_queryset(GENOME_VERSION_GRCh38, keys)
         details_by_key = {detail['key']: detail for detail in detail_qs.values(
             'key', variantId=F('variant_id'), **detail_qs.split_variant_id_annotations(),

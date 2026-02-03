@@ -104,7 +104,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='VariantDetailsSnvIndel',
             fields=[
-                ('key', models.OneToOneField(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='clickhouse_search.variantsgrch37snvindel')),
+                ('key', models.OneToOneField(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='clickhouse_search.variantssnvindel')),
                 ('variant_id', clickhouse_backend.models.StringField(db_column='variantId')),
                 ('lifted_over_chrom', clickhouse_search.backend.fields.Enum8Field(blank=True, choices=[(1, '1'), (2, '2'), (3, '3'), (4, '4'), (5, '5'), (6, '6'), (7, '7'), (8, '8'), (9, '9'), (10, '10'), (11, '11'), (12, '12'), (13, '13'), (14, '14'), (15, '15'), (16, '16'), (17, '17'), (18, '18'), (19, '19'), (20, '20'), (21, '21'), (22, '22'), (23, 'X'), (24, 'Y'), (25, 'M')], db_column='liftedOverChrom', null=True)),
                 ('lifted_over_pos', clickhouse_backend.models.UInt32Field(blank=True, db_column='liftedOverPos', null=True)),
