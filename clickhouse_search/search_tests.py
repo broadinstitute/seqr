@@ -15,7 +15,10 @@ from clickhouse_search.models.reference_data_models import ClinvarMvSnvIndel, Cl
     DbnsfpSnvIndelMv, DbnsfpSnvIndelDict, EigenMv, EigenDict, SpliceAiMv, SpliceAiDict, GnomadNonCodingConstraintDict, \
     DbnsfpGRCh37SnvIndelMv, DbnsfpGRCh37SnvIndelDict, EigenGRCh37Mv, EigenGRCh37Dict, SpliceAiGRCh37Mv, SpliceAiGRCh37Dict, \
     DbnsfpMitoMv, DbnsfpMitoDict, MitimpactMv, MitimpactDict, HmtvarMv, HmtvarDict, LocalconstraintmitoMv, \
-    LocalconstraintmitoDict
+    LocalconstraintmitoDict, GnomadGenomesMv, GnomadGenomesDict, GnomadExomesMv, GnomadExomesDict, TopmedMv, TopmedDict, \
+    GnomadGenomesGRCh37Mv, GnomadGenomesGRCh37Dict, GnomadExomesGRCh37Mv, GnomadExomesGRCh37Dict, TopmedGRCh37Mv, \
+    TopmedGRCh37Dict, GnomadmitoMv, GnomadmitoDict, GnomadmitoheteroplasmyMv, GnomadmitoheteroplasmyDict, HelixmitoMv, \
+    HelixmitoDict, HelixmitoheteroplasmyMv, HelixmitoheteroplasmyDict
 from clickhouse_search.models.search_models import EntriesSnvIndel, AnnotationsSnvIndel
 from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4, CACHED_CONSEQUENCES_BY_KEY, \
     VARIANT_ID_SEARCH, VARIANT_IDS, LOCATION_SEARCH, GENE_IDS, SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT, \
@@ -62,12 +65,16 @@ class ClickhouseSearchTestCase(AnvilAuthenticationTestMixin, TransactionTestCase
             ClinvarMvSnvIndel, ClinvarSearchMvSnvIndel, ClinvarMvMito, ClinvarSearchMvMito, ClinvarMvGRCh37SnvIndel,
             ClinvarSearchMvGRCh37SnvIndel, HgmdMv, HgmdSearchMv, DbnsfpSnvIndelMv, EigenMv, SpliceAiMv,
             DbnsfpGRCh37SnvIndelMv, EigenGRCh37Mv, SpliceAiGRCh37Mv, DbnsfpMitoMv, MitimpactMv, HmtvarMv, LocalconstraintmitoMv,
+            GnomadGenomesMv, GnomadExomesMv, TopmedMv, GnomadGenomesGRCh37Mv, GnomadExomesGRCh37Mv,TopmedGRCh37Mv,
+            GnomadmitoMv, GnomadmitoheteroplasmyMv, HelixmitoMv, HelixmitoheteroplasmyMv,
         ]:
             view.refresh()
         for dictionary in [
             GtStatsDictGRCh37SnvIndel, GtStatsDictSnvIndel, GtStatsDictMito, GtStatsDictSv, DbnsfpSnvIndelDict,
             EigenDict, SpliceAiDict, GnomadNonCodingConstraintDict, DbnsfpGRCh37SnvIndelDict, EigenGRCh37Dict,
-            SpliceAiGRCh37Dict, DbnsfpMitoDict, MitimpactDict, HmtvarDict, LocalconstraintmitoDict,
+            SpliceAiGRCh37Dict, DbnsfpMitoDict, MitimpactDict, HmtvarDict, LocalconstraintmitoDict, GnomadGenomesDict,
+            GnomadExomesDict, TopmedDict, GnomadGenomesGRCh37Dict, GnomadExomesGRCh37Dict, TopmedGRCh37Dict,
+            GnomadmitoDict, GnomadmitoheteroplasmyDict, HelixmitoDict, HelixmitoheteroplasmyDict
         ]:
             dictionary.reload()
         Project.objects.update(genome_version='38')
@@ -145,6 +152,7 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
         self._set_single_family_search()
 
     def test_single_family_search(self):
+        self.maxDiff = None
         self._set_single_family_search()
         variant_gene_counts = {
             'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
