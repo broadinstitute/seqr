@@ -96,7 +96,8 @@ class ClickhouseSearchTestCase(AnvilAuthenticationTestCase):
             EigenDict, SpliceAiDict, GnomadNonCodingConstraintDict, DbnsfpGRCh37SnvIndelDict, EigenGRCh37Dict,
             SpliceAiGRCh37Dict, DbnsfpMitoDict, MitimpactDict, HmtvarDict, LocalconstraintmitoDict, GnomadGenomesDict,
             GnomadExomesDict, TopmedDict, GnomadGenomesGRCh37Dict, GnomadExomesGRCh37Dict, TopmedGRCh37Dict,
-            GnomadmitoDict, GnomadmitoheteroplasmyDict, HelixmitoDict, HelixmitoheteroplasmyDict, ScreenDict, MitomapDict,
+            GnomadmitoDict, GnomadmitoheteroplasmyDict, HelixmitoDict, HelixmitoheteroplasmyDict, ScreenDict,
+            MitomapDict,
         ]:
             dictionary.reload()
         Project.objects.update(genome_version='38')

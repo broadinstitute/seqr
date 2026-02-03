@@ -682,6 +682,7 @@ class VariantsQuerySet(BaseVariantsQuerySet):
         results = results.join_populations(results)
         results = results.annotate(
             preds=self._prediction_expression(self.entry_model),
+            pops=self._population_expression(self.entry_model),
             clinvar=self._pathogenicity_tuple(self.entry_model.clinvar_join, f'{self.entry_field}__clinvar_join')
         )
         # Due to django modeling, adding a clinvar annotation will add a join to the entries table and then to clinvar
@@ -1563,8 +1564,7 @@ class EntriesManager(BaseEntriesManager):
     @classmethod
     def annotation_fields(cls, entries):
         return super().annotation_fields(entries) + ['clinvar', 'clinvar_key', 'preds', 'pops', 'xpos'] + [
-            field for field in ['pass_in_silico', 'missing_in_silico', 'mitomapPathogenic']
-            if field in entries.query.annotations
+            field for field in ['pass_in_silico', 'missing_in_silico','mitomapPathogenic'] if field in entries.query.annotations
         ]
 
 class SvEntriesManager(BaseEntriesManager):
