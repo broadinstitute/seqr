@@ -20,8 +20,8 @@
       "populations": [
         [0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0],
-        [927, 0.03444932, 26912, 0.04027665, 0, 48],
-        [20757, 0.07842, 264690, 20757, 0]
+        [927, 0.3444932, 26912, 0.4027665, 0, 48],
+        [20757, 0.7842, 264690, 20757, 0]
       ],
       "sorted_transcript_consequences": [],
       "sorted_motif_feature_consequences": [],
@@ -46,10 +46,10 @@
       "screen_region_type": null,
       "predictions": [2, 1, 1, 1, 0.028, null, 1, 0.01, 0.04, 0.0197, 0.015, 1, 1, 0.0211],
       "populations": [
-        [35805, 0.29499999, 121372, 0.41530353, 0, 24061, 5872],
-        [72672, 0.00288997, 251462, 0.0041164, 0, 1],
-        [927, 0.00344493, 26912, 0.00402766, 0, 0],
-        [65154, 0.246152, 264690, 47604, 8775]
+        [35805, 0.9499999, 121372, 0.1530353, 0, 24061, 5872],
+        [72672, 0.288997, 251462, 0.41164, 0, 1],
+        [927, 0.344493, 26912, 0.402766, 0, 0],
+        [65154, 0.46152, 264690, 47604, 8775]
       ],
       "sorted_transcript_consequences": [
         [0.99779, 1, ["missense_variant"], false, null, "ENSG00000177000"],
@@ -84,8 +84,8 @@
       "populations": [
         [0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0],
-        [57757, 0.00380411, 151828, 0.00479778, 0, 1],
-        [95998, 0.362681, 264690, 57260, 19369]
+        [57757, 0.380411, 151828, 0.479778, 0, 1],
+        [95998, 0.62681, 264690, 57260, 19369]
       ],
       "sorted_transcript_consequences": [
         [null, 1, ["intron_variant"], false, null, "ENSG00000097046"],
@@ -114,12 +114,12 @@
       "lifted_over_chrom": "1",
       "lifted_over_pos": 91977243,
       "hgmd": [null, null],
-      "screen_region_type": 1,
+      "screen_region_type": null,
       "predictions": [3, 2, 0, 0.023, 0.08326, 0.0687, 1, 1, 0.06995, 0.0526, 1, 1, 1, 0.0858],
       "populations": [
         [0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0],
-        [39, 0.00026519, 147062, 0.00150301, 0, 0],
+        [39, 0.26519, 147062, 0.50301, 0, 0],
         [0, 0, 0, 0, 0]
       ],
       "sorted_transcript_consequences": [
@@ -156,7 +156,7 @@
       "populations": [
         [0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0],
-        [2, 0.0001243, 16090, 0.00233, 0, 0],
+        [2, 0.1243, 16090, 0.33, 0, 0],
         [0, 0, 0, 0, 0]
       ],
       "sorted_transcript_consequences": [],
@@ -184,8 +184,8 @@
       "populations": [
         [0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0],
-        [4, 0.000044254640670260414, 90386, 0.00011118523252662271, 0, 0],
-        [13, 0.00004911409996566363, 264690, 13, 0]
+        [4, 0.44254640670260414, 90386, 0.1118523252662271, 0, 0],
+        [13, 0.4911409996566363, 264690, 13, 0]
       ],
       "sorted_transcript_consequences": [],
       "sorted_motif_feature_consequences": [],
@@ -211,8 +211,8 @@
       "predictions": [1.92299, 2.24799, null, null, null, null, null, null, null, null, null, 0.01, 4, null],
       "populations": [
         [0, 0, 0, 0, 0, 0, 0],
-        [4, 0.00004, 90386, 0.0001, 0, 0],
-        [13, 0.00004, 264690, 0.0002, 0, 13],
+        [4, 0.4, 90386, 0.1, 0, 0],
+        [13, 0.4, 264690, 0.2, 0, 13],
         [0, 0, 0, 0, 0]
       ],
       "sorted_transcript_consequences": [
@@ -475,6 +475,133 @@
       "score": 0.23005,
       "start": 91511000,
       "end": 91512000
+    }
+}, {
+    "model": "clickhouse_search.screenallvariantssnvindel",
+    "pk": 3,
+    "fields": {
+      "chrom": "1",
+      "start": 91511000,
+      "end": 91512000,
+      "region_type": "CTCF-only"
+    }
+}, {
+    "model": "clickhouse_search.gnomadgenomesallvariantssnvindel",
+    "pk": "1-10439-AC-A",
+    "fields": {
+      "af": 0.03444932,
+      "ac": 927,
+      "an": 26912,
+      "hom": 48,
+      "hemi": 0,
+      "filter_af": 0.04027665
+    }
+}, {
+    "model": "clickhouse_search.gnomadgenomesallvariantssnvindel",
+    "pk": "1-38724419-T-G",
+    "fields": {
+      "af": 0.00344493,
+      "ac": 927,
+      "an": 26912,
+      "hom": 0,
+      "hemi": 0,
+      "filter_af": 0.00402766
+    }
+}, {
+    "model": "clickhouse_search.gnomadgenomesallvariantssnvindel",
+    "pk": "1-91502721-G-A",
+    "fields": {
+      "af": 0.00380411,
+      "ac": 57757,
+      "an": 151828,
+      "hom": 1,
+      "hemi": 0,
+      "filter_af": 0.00479778
+    }
+}, {
+    "model": "clickhouse_search.gnomadgenomesallvariantssnvindel",
+    "pk": "1-91511686-T-G",
+    "fields": {
+      "af": 0.00026519,
+      "ac": 39,
+      "an": 147062,
+      "hom": 0,
+      "hemi": 0,
+      "filter_af": 0.00150301
+    }
+}, {
+    "model": "clickhouse_search.gnomadgenomesallvariantssnvindel",
+    "pk": "1-10146-ACC-A",
+    "fields": {
+      "af": 0.0001243,
+      "ac": 2,
+      "an": 16090,
+      "hom": 0,
+      "hemi": 0,
+      "filter_af": 0.00233
+    }
+}, {
+    "model": "clickhouse_search.gnomadgenomesallvariantssnvindel",
+    "pk": "1-9310123-T-C",
+    "fields": {
+      "af": 0.00004,
+      "ac": 13,
+      "an": 264690,
+      "hom": 13,
+      "hemi": 0,
+      "filter_af": 0.0002
+    }
+}, {
+    "model": "clickhouse_search.gnomadexomesallvariantssnvindel",
+    "pk": "1-38724419-T-G",
+    "fields": {
+      "af": 0.00288997,
+      "ac": 72672,
+      "an": 251462,
+      "hom": 1,
+      "hemi": 0,
+      "filter_af": 0.0041164
+    }
+}, {
+    "model": "clickhouse_search.gnomadexomesallvariantssnvindel",
+    "pk": "1-9310123-T-C",
+    "fields": {
+      "af": 0.00004,
+      "ac": 4,
+      "an": 90386,
+      "hom": 0,
+      "hemi": 0,
+      "filter_af": 0.0001
+    }
+}, {
+    "model": "clickhouse_search.topmedallvariantssnvindel",
+    "pk": "1-10439-AC-A",
+    "fields": {
+      "af": 0.07842,
+      "ac": 20757,
+      "an": 264690,
+      "hom": 0,
+      "het": 20757
+    }
+}, {
+    "model": "clickhouse_search.topmedallvariantssnvindel",
+    "pk": "1-38724419-T-G",
+    "fields": {
+      "af": 0.246152,
+      "ac": 65154,
+      "an": 264690,
+      "hom": 8775,
+      "het": 47604
+    }
+}, {
+    "model": "clickhouse_search.topmedallvariantssnvindel",
+    "pk": "1-91502721-G-A",
+    "fields": {
+      "af": 0.362681,
+      "ac": 95998,
+      "an": 264690,
+      "hom": 19369,
+      "het": 57260
     }
 }, {
     "model": "clickhouse_search.entriessnvindel",
@@ -867,9 +994,9 @@
       "predictions": [1, 1, null, null, null, null, null, 0.49064, null, null, 0, 4,null],
       "populations": [
         [66593, 0.63, 104352, 0.81987739, 0, 22269, 22162],
-        [137532, 0.63542193, 216442, 0.82261163, 0, 45869],
-        [14649, 0.61364776, 23872, 0.82843894, 0, 4584],
-        [65461, 0.52131897, 125568, 33149, 16156]
+        [137532, 0.3542193, 216442, 0.2261163, 0, 45869],
+        [14649, 0.1364776, 23872, 0.2843894, 0, 4584],
+        [65461, 0.2131897, 125568, 33149, 16156]
       ],
       "sorted_transcript_consequences": [
         [1, ["missense_variant"], "ENSG00000271079"],
@@ -956,7 +1083,39 @@
       "score": 0,
       "consequence": 4
     }
-},{
+}, {
+    "model": "clickhouse_search.gnomadgenomesallvariantsgrch37snvindel",
+    "pk": "7-143270172-A-G",
+    "fields": {
+      "af": 0.61364776,
+      "ac": 14649,
+      "an": 23872,
+      "hom": 4584,
+      "hemi": 0,
+      "filter_af": 0.82843894
+    }
+}, {
+    "model": "clickhouse_search.gnomadexomesallvariantsgrch37snvindel",
+    "pk": "7-143270172-A-G",
+    "fields": {
+      "af": 0.63542193,
+      "ac": 137532,
+      "an": 216442,
+      "hom": 45869,
+      "hemi": 0,
+      "filter_af": 0.82261163
+    }
+}, {
+    "model": "clickhouse_search.topmedallvariantsgrch37snvindel",
+    "pk": "7-143270172-A-G",
+    "fields": {
+      "af": 0.52131897,
+      "ac": 65461,
+      "an": 125568,
+      "hom": 16156,
+      "het": 33149
+    }
+}, {
     "model": "clickhouse_search.annotationsmito",
     "pk": 6,
     "fields": {
@@ -975,7 +1134,7 @@
         [0, 0, 56419],
         [0, 0, 56419, 0],
         [0, 0, 195983],
-        [3, 0.00001531, 195983, 0.20635]
+        [3, 0.1531, 195983, 0.635]
       ],
       "sorted_transcript_consequences": [
         [
@@ -1025,13 +1184,13 @@
       "rsid": "rs193302982",
       "lifted_over_pos": 14783,
       "common_low_heteroplasmy": true,
-      "mitomap_pathogenic": true,
+      "mitomap_pathogenic": null,
       "predictions": [null, true, null, null, null, null, 0.0751],
       "populations": [
-        [3118, 0.00553464, 56336],
-        [3, 0.00005325, 56336, 1],
-        [9573, 0.04884607, 195983],
-        [18, 0.00009184, 195983, 0.96269]
+        [3118, 0.553464, 56336],
+        [3, 0.5325, 56336, 1],
+        [9573, 0.884607, 195983],
+        [18, 0.9184, 195983, 0.6269]
       ],
       "sorted_transcript_consequences": [
         [
@@ -1120,6 +1279,80 @@
     "pk": "M-11597-A-G",
     "fields": {
       "score": 0.58
+    }
+}, {
+    "model": "clickhouse_search.mitomapallvariantsmito",
+    "pk": "M-14783-T-C",
+    "fields": {
+      "pathogenic": true
+    }
+}, {
+    "model": "clickhouse_search.gnomadmitoallvariantsmito",
+    "pk": "M-4429-G-A",
+    "fields": {
+      "af": 0,
+      "ac": 0,
+      "an": 56419
+    }
+}, {
+    "model": "clickhouse_search.gnomadmitoheteroplasmyallvariantsmito",
+    "pk": "M-4429-G-A",
+    "fields": {
+      "af": 0,
+      "ac": 0,
+      "an": 56419,
+      "max_hl": 0
+    }
+}, {
+    "model": "clickhouse_search.helixmitoallvariantsmito",
+    "pk": "M-4429-G-A",
+    "fields": {
+      "af": 0,
+      "ac": 0,
+      "an": 195983
+    }
+}, {
+    "model": "clickhouse_search.helixmitoheteroplasmyallvariantsmito",
+    "pk": "M-4429-G-A",
+    "fields": {
+      "af": 0.00001531,
+      "ac": 3,
+      "an": 195983,
+      "max_hl": 0.20635
+    }
+}, {
+    "model": "clickhouse_search.gnomadmitoallvariantsmito",
+    "pk": "M-14783-T-C",
+    "fields": {
+      "af": 0.00553464,
+      "ac": 3118,
+      "an": 56336
+    }
+}, {
+    "model": "clickhouse_search.gnomadmitoheteroplasmyallvariantsmito",
+    "pk": "M-14783-T-C",
+    "fields": {
+      "af": 0.00005325,
+      "ac": 3,
+      "an": 56336,
+      "max_hl": 1
+    }
+}, {
+    "model": "clickhouse_search.helixmitoallvariantsmito",
+    "pk": "M-14783-T-C",
+    "fields": {
+      "af": 0.04884607,
+      "ac": 9573,
+      "an": 195983
+    }
+}, {
+    "model": "clickhouse_search.helixmitoheteroplasmyallvariantsmito",
+    "pk": "M-14783-T-C",
+    "fields": {
+      "af": 0.00009184,
+      "ac": 18,
+      "an": 195983,
+      "max_hl": 0.96269
     }
 }, {
     "model": "clickhouse_search.entriesmito",

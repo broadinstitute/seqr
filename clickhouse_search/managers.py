@@ -129,6 +129,17 @@ class SearchQuerySet(QuerySet):
             IntDiv('xpos', int(1e9)), Modulo('xpos', int(1e9)), field_names=['score'], null_missing=True,
         )
 
+    @staticmethod
+    def _population_expression(model):
+        expressions = []
+        output_fields = []
+        for pop in model.POPULATIONS:
+            expr = getattr(model, pop).rel.related_model.dict_get_expression('key')
+            expressions.append(expr)
+            output_fields.append((pop, expr.output_field))
+
+        return Tuple(*expressions, output_field=NamedTupleField(output_fields))
+
     def _filter_in_silico(self, results, in_silico=None, **kwargs):
         in_silico = in_silico or {}
         require_score = in_silico.get('requireScore', False)
@@ -174,14 +185,18 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
     @property
     def annotation_values(self):
         seqr_pops = []
-        population_fields = [*self.model.POPULATION_FIELDS]
+        population_fields = [*self._population_output_fields()]
         self._get_seqr_pop_expressions(seqr_pops, population_fields)
 
+        pop_field = 'pops' if self.has_annotation('pops') else 'populations'
         return {
             **{key: Value(value) for key, value in self.model.ANNOTATION_CONSTANTS.items()},
             **{field.db_column: F(field.name) for field in self.model._meta.local_fields if field.db_column and field.name != field.db_column},
-            'populations': TupleConcat(F('populations'), Tuple(*seqr_pops), output_field=NamedTupleField(population_fields)),
+            'populations': TupleConcat(F(pop_field), Tuple(*seqr_pops), output_field=NamedTupleField(population_fields)),
         }
+
+    def _population_output_fields(self):
+        return self.model.POPULATION_FIELDS
 
     def _get_seqr_pop_expressions(self, seqr_pops, population_fields):
         if self.gt_stats_dict is None:
@@ -349,46 +364,7 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
             for population, field in self.model.POPULATION_FIELDS
         }
 
-    def _filter_frequency(self, results, freqs=None, pathogenicity=None, **kwargs):
-        frequencies =  freqs or {}
-        clinvar_override_q = self._clinvar_path_q(pathogenicity)
-
-        for population, pop_filter in frequencies.items():
-            pop_subfields = self.populations.get(population)
-            if not pop_subfields:
-                continue
-
-            if pop_filter.get('af') is not None and pop_filter['af'] < 1:
-                af_field = next(field for field in ['filter_af', 'af'] if field in pop_subfields)
-                if af_field:
-                    af_q = Q(**{
-                        f'populations__{population}__{af_field}__lte': pop_filter['af'],
-                    })
-                    if clinvar_override_q and pop_filter['af'] < PATH_FREQ_OVERRIDE_CUTOFF:
-                        af_q |= (clinvar_override_q & Q(**{
-                            f'populations__{population}__{af_field}__lte': PATH_FREQ_OVERRIDE_CUTOFF,
-                        }))
-                    results = results.filter(af_q)
-            elif pop_filter.get('ac') is not None:
-                if 'ac' in pop_subfields:
-                    ac_field = f'populations__{population}__ac'
-                else:
-                    ac_field =  f'ac_{population}'
-                    results = results.annotate(**{ac_field: F(f'populations__{population}__het') + (F(f'populations__{population}__hom') * 2)})
-
-                results = results.filter(**{f'{ac_field}__lte': pop_filter['ac']})
-
-            if pop_filter.get('hh') is not None:
-                for subfield in ['hom', 'hemi']:
-                    if subfield not in pop_subfields:
-                        continue
-                    hh_q = Q(**{
-                        f'populations__{population}__{subfield}__lte': pop_filter['hh'],
-                    })
-                    if clinvar_override_q:
-                        hh_q |= clinvar_override_q
-                    results = results.filter(hh_q)
-
+    def _filter_frequency(self, results, **kwargs):
         return results
 
     def _filter_annotations(self, results, annotations=None, pathogenicity=None, genes=None, intervals=None, exclude_locations=False, **kwargs):
@@ -501,6 +477,13 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
                 'selectedMainTranscriptId': Value(None, output_field=models.StringField(null=True)),
             })
 
+        screen_expression = self._screen_expression()
+        if screen_expression:
+            annotations['screenRegionType'] = screen_expression
+
+        if self.has_annotation('mitomapPathogenic'):
+            annotations['mitomapPathogenic'] = F('mitomapPathogenic')
+
         return annotations
 
     @staticmethod
@@ -528,6 +511,14 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
     def _clinvar_conflicting_path_filter(array_func, conflicting_filter):
         return {f'clinvar__5__{array_func}': conflicting_filter, 'clinvar__5__not_empty': True, 'clinvar_key__isnull': False}
 
+    def _population_output_fields(self):
+        return self.query.annotations['pops'].output_field.base_fields
+
+    def _screen_expression(self):
+        if not self.model.SCREEN_DICT:
+            return None
+        return self.model.SCREEN_DICT.dict_get_expression('chrom', 'pos', field_names=['regionType'], null_missing=True)
+
     def _parse_in_silico_qs(self, results, in_silico, require_score, in_silico_qs, in_silico_missing_qs):
         in_silico_q = None
         missing_q = None
@@ -543,8 +534,12 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
 
         return results, False, in_silico_q, missing_q
 
-    def _filter_annotations(self, *args, exclude=None, **kwargs):
-        results = super()._filter_annotations(*args, **kwargs)
+    def _filter_annotations(self, results, *args, exclude=None, **kwargs):
+        screen_expression = self._screen_expression()
+        if screen_expression:
+            results = results.annotate(screen=self._screen_expression())
+
+        results = super()._filter_annotations(results, *args, **kwargs)
 
         exclude_clinvar_q = self._clinvar_filter_q(exclude)
         if exclude_clinvar_q is not None:
@@ -552,17 +547,8 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
 
         return results
 
-    ANNOTATION_FIELD_FILTERS = {
-        SCREEN_KEY: ('screen_region_type', lambda value: ('{field}__in', value)),
-        **{field: (f'sorted_{field}_consequences', lambda value: ('{field}__array_exists', {
-            'consequenceTerms': (value, 'hasAny({value}, {field})'),
-        })) for field in [MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY]},
-        'mitomap_pathogenic': ('mitomap_pathogenic', lambda value: ('{field}', value)),
-    }
-
     def _parse_annotation_filters(self, annotations, pathogenicity):
         filter_qs = []
-        filters_by_field = {}
         allowed_consequences = []
         transcript_field_filters = {}
         for field, value in annotations.items():
@@ -575,9 +561,18 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
                 value = [c for c in value if c != EXTENDED_SPLICE_REGION_CONSEQUENCE]
                 if value:
                     allowed_consequences += value
-            elif field in self.ANNOTATION_FIELD_FILTERS:
-                filter_field, format_filter = self.ANNOTATION_FIELD_FILTERS[field]
-                filters_by_field[filter_field] = format_filter(value)
+            elif field in [MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY]:
+                filter_field = f'sorted_{field}_consequences'
+                if hasattr(self.model, filter_field):
+                    filter_qs.append(Q(**{
+                        f'{filter_field}__array_exists': {'consequenceTerms': (value, 'hasAny({value}, {field})')},
+                    }))
+            elif field == SCREEN_KEY:
+                if self.model.SCREEN_DICT:
+                    filter_qs.append(Q(screen__in=value))
+            elif field == 'mitomap_pathogenic':
+                if self.has_annotation('mitomapPathogenic'):
+                    filter_qs.append(Q(mitomapPathogenic=value))
             elif field == SPLICE_AI_FIELD:
                 if value and SPLICE_AI_FIELD in self.entry_model.PREDICTIONS:
                     pred_index = next (
@@ -596,10 +591,6 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
         if clinvar_q is not None:
             filter_qs.append(clinvar_q)
 
-        filter_qs += [
-            Q(**{lookup_template.format(field=field): value})
-            for field, (lookup_template, value) in filters_by_field.items() if hasattr(self.model, field)
-        ]
         transcript_filters = [
             {field: value} for field, value in transcript_field_filters.items() if field in self.sorted_transcript_consequence_fields
         ]
@@ -632,6 +623,7 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
         results = super().join_annotations()
         results = results.annotate(
             preds=self._prediction_expression(self.entry_model),
+            pops=self._population_expression(self.entry_model),
             clinvar=self._pathogenicity_tuple(self.entry_model.clinvar_join, f'{self.entry_field}__clinvar_join')
         )
         # Due to django modeling, adding a clinvar annotation will add a join to the entries table and then to clinvar
@@ -776,6 +768,28 @@ class SvAnnotationsQuerySet(BaseAnnotationsQuerySet):
 
         return super()._parse_in_silico_qs(results, in_silico, require_score, in_silico_qs, in_silico_missing_qs)
 
+    def _filter_frequency(self, results, freqs=None, pathogenicity=None, **kwargs):
+        for population, pop_filter in (freqs or {}).items():
+            pop_subfields = self.populations.get(population)
+            if not pop_subfields:
+                continue
+
+            if pop_filter.get('af') is not None and pop_filter['af'] < 1:
+                results = results.filter(**{f'populations__{population}__af__lte': pop_filter['af']})
+            elif pop_filter.get('ac') is not None:
+                if 'ac' in pop_subfields:
+                    ac_field = f'populations__{population}__ac'
+                else:
+                    ac_field =  f'ac_{population}'
+                    results = results.annotate(**{ac_field: F(f'populations__{population}__het') + (F(f'populations__{population}__hom') * 2)})
+
+                results = results.filter(**{f'{ac_field}__lte': pop_filter['ac']})
+
+            if pop_filter.get('hh') is not None:
+                results = results.filter(**{f'populations__{population}__hom__lte': pop_filter['hh']})
+
+        return results
+
 
 class BaseEntriesManager(SearchQuerySet):
     GENOTYPE_LOOKUP = {
@@ -858,9 +872,11 @@ class BaseEntriesManager(SearchQuerySet):
         return self._search_call_data(entries, sample_data, **kwargs)
 
     def _prefilter_entries(self, entries, freqs=None, **kwargs):
-        if (freqs or {}).get(self.callset_filter_field) and self.gt_stats_dict_rel is not None:
-            entries = self._filter_seqr_frequency(entries, **freqs[self.callset_filter_field])
+        return self._filter_frequency(entries, freqs or {}, **kwargs)
 
+    def _filter_frequency(self, entries, frequencies, **kwargs):
+        if frequencies.get(self.callset_filter_field) and self.gt_stats_dict_rel is not None:
+            entries = self._filter_seqr_frequency(entries, **frequencies[self.callset_filter_field])
         return entries
 
     def _join_annotations(self, entries):
@@ -1338,17 +1354,56 @@ class EntriesManager(BaseEntriesManager):
 
     def _prefilter_entries(self, entries, freqs=None, **kwargs):
         entries = super()._prefilter_entries(entries, freqs=freqs, **kwargs)
+        entries = self._filter_in_silico(entries, **kwargs)
+        return entries
 
-        gnomad_filter = (freqs or {}).get('gnomad_genomes') or {}
-        if hasattr(self.model, 'is_gnomad_gt_5_percent') and ((gnomad_filter.get('af') or 1) <= 0.05 or any(gnomad_filter.get(field) is not None for field in ['ac', 'hh'])):
+    def _filter_frequency(self, entries, frequencies, pathogenicity=None, **kwargs):
+        gnomad_filter = frequencies.get('gnomad_genomes') or {}
+        if hasattr(self.model, 'is_gnomad_gt_5_percent') and (
+            (gnomad_filter.get('af') or 1) <= 0.05 or any(gnomad_filter.get(field) is not None for field in ['ac', 'hh'])
+        ):
             # Passing field=Value(False) to the django filter causes the SQL to evaluate to "field = false",
             # while passing field=False evaluates to "NOT field".
             # For fields used for pruning the table based on the order_by for the table, the former is needed
             entries = entries.filter(is_gnomad_gt_5_percent=Value(False))
 
-        entries = self._filter_in_silico(entries, **kwargs)
+        clinvar_override_q = self._clinvar_path_q(pathogenicity)
 
-        return entries
+        for population in self.model.POPULATIONS:
+            pop_filter = frequencies.get(population)
+            if not pop_filter:
+                continue
+
+            pop_dict = getattr(self.model, population).rel.related_model
+            pop_subfields = dict(pop_dict.base_fields())
+            if pop_filter.get('af') is not None and pop_filter['af'] < 1:
+                af_field = next(field for field in ['filter_af', 'af'] if field in pop_subfields)
+                entries = entries.annotate(
+                    **{f'{population}_af': pop_dict.dict_get_expression('key', field_names=[af_field])}
+                )
+                af_q = Q(**{f'{population}_af__lte': pop_filter['af']})
+                if clinvar_override_q and pop_filter['af'] < PATH_FREQ_OVERRIDE_CUTOFF:
+                    af_q |= (clinvar_override_q & Q(**{f'{population}_af__lte': PATH_FREQ_OVERRIDE_CUTOFF}))
+                entries = entries.filter(af_q)
+            elif pop_filter.get('ac') is not None:
+                entries = entries.annotate(
+                    **{f'{population}_ac': pop_dict.dict_get_expression('key', field_names=['ac'])}
+                )
+                entries = entries.filter(**{f'{population}_ac__lte': pop_filter['ac']})
+
+            if pop_filter.get('hh') is not None:
+                for subfield in ['hom', 'hemi']:
+                    if subfield not in pop_subfields:
+                        continue
+                    entries = entries.annotate(
+                        **{f'{population}_{subfield}': pop_dict.dict_get_expression('key', field_names=[subfield])}
+                    )
+                    hh_q = Q(**{f'{population}_{subfield}__lte': pop_filter['hh']})
+                    if clinvar_override_q:
+                        hh_q |= clinvar_override_q
+                    entries = entries.filter(hh_q)
+
+        return super()._filter_frequency(entries, frequencies, **kwargs)
 
     def _parse_in_silico_qs(self, results, in_silico, require_score, in_silico_qs, in_silico_missing_qs):
         prediction_dicts = {pred: getattr(self.model, pred).rel.related_model for pred in self.model.PREDICTIONS}
@@ -1397,7 +1452,12 @@ class EntriesManager(BaseEntriesManager):
             clinvar_key=F('clinvar_join__key'),
             clinvar=self._pathogenicity_tuple(self.model.clinvar_join, 'clinvar_join'),
             preds=self._prediction_expression(self.model),
+            pops=self._population_expression(self.model),
         )
+        if hasattr(self.model, 'mitomap'):
+            entries = entries.annotate(
+                mitomapPathogenic=self.model.mitomap.rel.related_model.dict_get_expression('key', null_missing=True),
+            )
         return super()._join_annotations(entries)
 
     def filter_locus(self, *args, require_any_gene=False, parsed_variant_ids=None, intervals=None, genes=None, variant_ids=None, **kwargs):
@@ -1416,8 +1476,8 @@ class EntriesManager(BaseEntriesManager):
 
     @classmethod
     def annotation_fields(cls, entries):
-        return super().annotation_fields(entries) + ['clinvar', 'clinvar_key', 'preds'] + [
-            field for field in ['pass_in_silico', 'missing_in_silico'] if field in entries.query.annotations
+        return super().annotation_fields(entries) + ['clinvar', 'clinvar_key', 'preds', 'pops'] + [
+            field for field in ['pass_in_silico', 'missing_in_silico','mitomapPathogenic'] if field in entries.query.annotations
         ]
 
 class SvEntriesManager(BaseEntriesManager):

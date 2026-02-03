@@ -892,7 +892,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='HelixmitoDict',
             fields=[
-                ('key', clickhouse_search.backend.fields.DictKeyForeignKey(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, related_name='helix_mito', serialize=False, to='clickhouse_search.entriesmito')),
+                ('key', clickhouse_search.backend.fields.DictKeyForeignKey(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, related_name='helix', serialize=False, to='clickhouse_search.entriesmito')),
                 ('ac', clickhouse_backend.models.UInt32Field()),
                 ('af', clickhouse_backend.models.DecimalField(decimal_places=8, max_digits=9)),
                 ('an', clickhouse_backend.models.UInt32Field()),
@@ -911,7 +911,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='HelixmitoheteroplasmyDict',
             fields=[
-                ('key', clickhouse_search.backend.fields.DictKeyForeignKey(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, related_name='helix_mito_heteroplasmy', serialize=False, to='clickhouse_search.entriesmito')),
+                ('key', clickhouse_search.backend.fields.DictKeyForeignKey(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, related_name='helix_heteroplasmy', serialize=False, to='clickhouse_search.entriesmito')),
                 ('ac', clickhouse_backend.models.UInt32Field()),
                 ('af', clickhouse_backend.models.DecimalField(decimal_places=8, max_digits=9)),
                 ('an', clickhouse_backend.models.UInt32Field()),
