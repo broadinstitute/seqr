@@ -795,6 +795,7 @@ def get_clickhouse_annotations(genome_version, dataset_type, keys):
     return format_clickhouse_results(results, genome_version, add_xpos=True)
 
 
+# TODO not needed, use search?
 def get_clickhouse_key_lookup(genome_version, dataset_type, variants_ids, reverse=False):
     key_lookup_class = ENTRY_CLASS_MAP[genome_version][dataset_type].objects.none().key_lookup_model
     lookup = {}

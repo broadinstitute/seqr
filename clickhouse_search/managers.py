@@ -672,11 +672,16 @@ class VariantsQuerySet(BaseVariantsQuerySet):
             consequence_field = self.FILTERED_CONSEQUENCE_FIELD
         return super()._annotate_filtered_transcripts(results, consequence_field, transcript_filters, **kwargs)
 
+    def join_populations(self, results):
+        return results.annotate(
+            pops=self._population_expression(self.entry_model),
+        )
+
     def join_annotations(self):
         results = super().join_annotations()
+        results = results.join_populations(results)
         results = results.annotate(
             preds=self._prediction_expression(self.entry_model),
-            pops=self._population_expression(self.entry_model),
             clinvar=self._pathogenicity_tuple(self.entry_model.clinvar_join, f'{self.entry_field}__clinvar_join')
         )
         # Due to django modeling, adding a clinvar annotation will add a join to the entries table and then to clinvar
