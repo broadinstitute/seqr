@@ -1,5 +1,4 @@
 from collections import defaultdict
-from clickhouse_backend.models import ArrayField, StringField
 from django.contrib.auth.models import User
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.db.models import F, Q, Count, prefetch_related_objects
@@ -9,7 +8,6 @@ import redis
 from tqdm import tqdm
 import traceback
 
-from clickhouse_search.backend.functions import ArrayDistinct, ArrayMap
 from clickhouse_search.search import get_clickhouse_key_lookup, get_annotations_queryset, get_clickhouse_genotypes
 from matchmaker.models import MatchmakerSubmissionGenes, MatchmakerSubmission
 from reference_data.models import TranscriptInfo, Omim, GENOME_VERSION_GRCh38
@@ -284,16 +282,9 @@ def _get_clickhouse_variants(samples: Sample.objects, families_by_id: dict[int, 
     return variants
 
 
-def gene_ids_annotated_queryset(qs):
-    return qs.annotate(gene_ids=ArrayDistinct(
-        ArrayMap(qs.TRANSCRIPT_FIELD, mapped_expression='x.geneId'),
-        output_field=ArrayField(StringField())),
-    )
-
-
 def _get_gene_ids_by_key(genome_version, keys):
     qs = get_annotations_queryset(genome_version, Sample.DATASET_TYPE_VARIANT_CALLS, keys)
-    return dict(gene_ids_annotated_queryset(qs).values_list('key', 'gene_ids'))
+    return dict(qs.annotate_gene_ids().values_list('key', 'gene_ids'))
 
 
 def _get_clickhouse_variant_keys(variant_data: dict[tuple[int, str], dict], genome_version: str) -> dict[tuple[int, str], dict]:

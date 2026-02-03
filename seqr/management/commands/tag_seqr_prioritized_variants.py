@@ -15,7 +15,7 @@ from seqr.utils.gene_utils import get_genes
 from seqr.utils.search.constants import ANY_AFFECTED, HOMOZYGOUS_RECESSIVE, X_LINKED_RECESSIVE_MALE_AFFECTED, DE_NOVO
 from seqr.utils.search.utils import clickhouse_only, get_search_samples, COMPOUND_HET
 from seqr.views.utils.orm_to_json_utils import SEQR_TAG_TYPE
-from seqr.views.utils.variant_utils import bulk_create_tagged_variants, gene_ids_annotated_queryset
+from seqr.views.utils.variant_utils import bulk_create_tagged_variants
 from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL
 
 import logging
@@ -551,7 +551,7 @@ class Command(BaseCommand):
             genotype_overrides_expressions = results_qs.conditional_selects(results_qs)
             variant_values.update( {k: genotype_overrides_expressions[k] for k in ['familyGenotypes', 'transcripts']})
         else:
-            results_qs = gene_ids_annotated_queryset(results_qs)
+            results_qs = results_qs.annotate_gene_ids()
             variant_fields += ['familyGenotypes', 'gene_ids']
 
         if dataset_type != Sample.DATASET_TYPE_VARIANT_CALLS:

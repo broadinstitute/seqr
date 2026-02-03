@@ -796,7 +796,6 @@ def get_clickhouse_variant_annotations(genome_version, dataset_type, keys):
     return qs.join_annotations().result_values(skip_entry_fields=True)
 
 
-# TODO not needed, use search?
 def get_clickhouse_key_lookup(genome_version, dataset_type, variants_ids, reverse=False):
     key_lookup_class = ENTRY_CLASS_MAP[genome_version][dataset_type].objects.none().key_lookup_model
     lookup = {}
