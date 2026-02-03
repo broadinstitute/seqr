@@ -914,7 +914,7 @@ class VariantDetailsQuerySet(VariantsQuerySet):
         self._prune_join(results, 'hgmd')
         return results
 
-    def join_clinvar(self):
+    def join_clinvar(self, *args, **kwargs):
         results = super().join_clinvar(field_prefix='key__')
         self._prune_join(results, 'clinvar')
         return results
