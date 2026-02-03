@@ -5,9 +5,9 @@ from clickhouse_backend.models import ArrayField, StringField
 from django.db.models import Q, F
 
 from clickhouse_search.backend.functions import ArrayFilter, ArrayMap
-from clickhouse_search.search import get_transcripts_queryset
+from clickhouse_search.search import get_variant_main_transcripts_by_key
 from seqr.models import SavedVariant, VariantTagType, VariantTag, VariantNote, VariantFunctionalData,\
-    Family, GeneNote, Project
+    Family, GeneNote, Project, Sample
 from seqr.utils.search.elasticsearch.es_utils import update_project_saved_variant_json
 from seqr.utils.search.utils import backend_specific_call, es_only
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json, \
@@ -18,7 +18,6 @@ from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     login_and_policies_required
 from seqr.views.utils.variant_utils import reset_cached_search_results, get_variants_response, parse_saved_variant_json
-
 
 logger = logging.getLogger(__name__)
 
@@ -147,10 +146,9 @@ def _variant_gene_id(variant, genome_version):
 def _clickhouse_variant_gene_id(variant, genome_version):
     if not (variant.key and variant.selected_main_transcript_id) or len(variant.gene_ids) == 1:
         return _variant_gene_id(variant, genome_version)
-    return get_transcripts_queryset(genome_version, [variant.key]).annotate(gene_ids=ArrayMap(
-        ArrayFilter('transcripts', conditions=[{'transcriptId': (variant.selected_main_transcript_id, "{field} = '{value}'")}]),
-        mapped_expression='x.geneId', output_field=ArrayField(StringField()),
-    )).values_list(F('gene_ids__0'), flat=True)[0]
+    return get_variant_main_transcripts_by_key(
+        genome_version, Sample.DATASET_TYPE_VARIANT_CALLS, {variant.key: [variant.selected_main_transcript_id]},
+    )[variant.key]['main_transcripts'][variant.selected_main_transcript_id].get('geneId')
 
 
 @login_and_policies_required

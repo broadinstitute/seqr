@@ -336,8 +336,7 @@ def get_clickhouse_cache_results(results, sort, family_guid):
     return {'all_results': sorted_results, 'total_results': total_results}
 
 
-#  TODO rename/ make specific helper function
-def get_transcripts_queryset(genome_version, keys):
+def get_variant_details_queryset(genome_version, keys):
     return VARIANT_DETAILS_CLASS_MAP[genome_version].objects.filter(key__in=keys)
 
 
@@ -347,7 +346,7 @@ def format_clickhouse_results(results, genome_version, add_xpos=False, **kwargs)
     }
     details_by_key = {
         detail['key']: detail for detail in
-        get_transcripts_queryset(genome_version, keys_with_no_details).result_values()
+        get_variant_details_queryset(genome_version, keys_with_no_details).result_values()
     }
 
     formatted_results = []
@@ -808,7 +807,7 @@ def get_clickhouse_key_lookup(genome_version, dataset_type, variants_ids, revers
 
 def get_variant_main_transcripts_by_key(genome_version, dataset_type, selected_transcripts_by_key, include_clinvar=False, additional_values=None):
     if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
-        qs = get_transcripts_queryset(genome_version, selected_transcripts_by_key.keys())
+        qs = get_variant_details_queryset(genome_version, selected_transcripts_by_key.keys())
         output_field = qs.model.transcripts.field.clone()
         output_field.group_by_key = None
         qs = qs.annotate(sorted_transcript_consequences=ArrayObjectSort(

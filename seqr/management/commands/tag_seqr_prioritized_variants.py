@@ -5,7 +5,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Q, F
 from django.db.models.functions import JSONObject
 
-from clickhouse_search.search import get_search_queryset, get_transcripts_queryset, add_individual_guids, \
+from clickhouse_search.search import get_search_queryset, get_variant_details_queryset, add_individual_guids, \
     get_data_type_comp_het_results_queryset, get_multi_data_type_comp_het_results_queryset
 from panelapp.models import PaLocusListGene
 from reference_data.models import GENOME_VERSION_GRCh38
@@ -630,7 +630,7 @@ class Command(BaseCommand):
             if add_primary_only:
                 variants = variants[:1]
             keys.update(variant['key'] for variant in variants)
-        detail_qs = get_transcripts_queryset(GENOME_VERSION_GRCh38, keys)
+        detail_qs = get_variant_details_queryset(GENOME_VERSION_GRCh38, keys)
         details_by_key = {detail['key']: detail for detail in detail_qs.values(
             'key', variantId=F('variant_id'), **detail_qs.split_variant_id_annotations(),
         )}
