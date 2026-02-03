@@ -477,6 +477,13 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
                 'selectedMainTranscriptId': Value(None, output_field=models.StringField(null=True)),
             })
 
+        screen_expression = self._screen_expression()
+        if screen_expression:
+            annotations['screenRegionType'] = screen_expression
+
+        if self.has_annotation('mitomapPathogenic'):
+            annotations['mitomapPathogenic'] = F('mitomapPathogenic')
+
         return annotations
 
     @staticmethod
@@ -507,6 +514,11 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
     def _population_output_fields(self):
         return self.query.annotations['pops'].output_field.base_fields
 
+    def _screen_expression(self):
+        if not self.model.SCREEN_DICT:
+            return None
+        return self.model.SCREEN_DICT.dict_get_expression('chrom', 'pos', field_names=['regionType'], null_missing=True)
+
     def _parse_in_silico_qs(self, results, in_silico, require_score, in_silico_qs, in_silico_missing_qs):
         in_silico_q = None
         missing_q = None
@@ -522,8 +534,12 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
 
         return results, False, in_silico_q, missing_q
 
-    def _filter_annotations(self, *args, exclude=None, **kwargs):
-        results = super()._filter_annotations(*args, **kwargs)
+    def _filter_annotations(self, results, *args, exclude=None, **kwargs):
+        screen_expression = self._screen_expression()
+        if screen_expression:
+            results = results.annotate(screen=self._screen_expression())
+
+        results = super()._filter_annotations(results, *args, **kwargs)
 
         exclude_clinvar_q = self._clinvar_filter_q(exclude)
         if exclude_clinvar_q is not None:
@@ -531,17 +547,8 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
 
         return results
 
-    ANNOTATION_FIELD_FILTERS = {
-        SCREEN_KEY: ('screen_region_type', lambda value: ('{field}__in', value)),
-        **{field: (f'sorted_{field}_consequences', lambda value: ('{field}__array_exists', {
-            'consequenceTerms': (value, 'hasAny({value}, {field})'),
-        })) for field in [MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY]},
-        'mitomap_pathogenic': ('mitomap_pathogenic', lambda value: ('{field}', value)),
-    }
-
     def _parse_annotation_filters(self, annotations, pathogenicity):
         filter_qs = []
-        filters_by_field = {}
         allowed_consequences = []
         transcript_field_filters = {}
         for field, value in annotations.items():
@@ -554,9 +561,18 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
                 value = [c for c in value if c != EXTENDED_SPLICE_REGION_CONSEQUENCE]
                 if value:
                     allowed_consequences += value
-            elif field in self.ANNOTATION_FIELD_FILTERS:
-                filter_field, format_filter = self.ANNOTATION_FIELD_FILTERS[field]
-                filters_by_field[filter_field] = format_filter(value)
+            elif field in [MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY]:
+                filter_field = f'sorted_{field}_consequences'
+                if hasattr(self.model, filter_field):
+                    filter_qs.append(Q(**{
+                        f'{filter_field}__array_exists': {'consequenceTerms': (value, 'hasAny({value}, {field})')},
+                    }))
+            elif field == SCREEN_KEY:
+                if self.model.SCREEN_DICT:
+                    filter_qs.append(Q(screen__in=value))
+            elif field == 'mitomap_pathogenic':
+                if self.has_annotation('mitomapPathogenic'):
+                    filter_qs.append(Q(mitomapPathogenic=value))
             elif field == SPLICE_AI_FIELD:
                 if value and SPLICE_AI_FIELD in self.entry_model.PREDICTIONS:
                     pred_index = next (
@@ -575,10 +591,6 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
         if clinvar_q is not None:
             filter_qs.append(clinvar_q)
 
-        filter_qs += [
-            Q(**{lookup_template.format(field=field): value})
-            for field, (lookup_template, value) in filters_by_field.items() if hasattr(self.model, field)
-        ]
         transcript_filters = [
             {field: value} for field, value in transcript_field_filters.items() if field in self.sorted_transcript_consequence_fields
         ]
@@ -1442,6 +1454,10 @@ class EntriesManager(BaseEntriesManager):
             preds=self._prediction_expression(self.model),
             pops=self._population_expression(self.model),
         )
+        if hasattr(self.model, 'mitomap'):
+            entries = entries.annotate(
+                mitomapPathogenic=self.model.mitomap.rel.related_model.dict_get_expression('key', null_missing=True),
+            )
         return super()._join_annotations(entries)
 
     def filter_locus(self, *args, require_any_gene=False, parsed_variant_ids=None, intervals=None, genes=None, variant_ids=None, **kwargs):
@@ -1461,7 +1477,7 @@ class EntriesManager(BaseEntriesManager):
     @classmethod
     def annotation_fields(cls, entries):
         return super().annotation_fields(entries) + ['clinvar', 'clinvar_key', 'preds', 'pops'] + [
-            field for field in ['pass_in_silico', 'missing_in_silico'] if field in entries.query.annotations
+            field for field in ['pass_in_silico', 'missing_in_silico','mitomapPathogenic'] if field in entries.query.annotations
         ]
 
 class SvEntriesManager(BaseEntriesManager):

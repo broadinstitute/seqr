@@ -114,7 +114,7 @@
       "lifted_over_chrom": "1",
       "lifted_over_pos": 91977243,
       "hgmd": [null, null],
-      "screen_region_type": 1,
+      "screen_region_type": null,
       "predictions": [3, 2, 0, 0.023, 0.08326, 0.0687, 1, 1, 0.06995, 0.0526, 1, 1, 1, 0.0858],
       "populations": [
         [0, 0, 0, 0, 0, 0, 0],
@@ -475,6 +475,15 @@
       "score": 0.23005,
       "start": 91511000,
       "end": 91512000
+    }
+}, {
+    "model": "clickhouse_search.screenallvariantssnvindel",
+    "pk": 3,
+    "fields": {
+      "chrom": "1",
+      "start": 91511000,
+      "end": 91512000,
+      "region_type": "CTCF-only"
     }
 }, {
     "model": "clickhouse_search.gnomadgenomesallvariantssnvindel",
@@ -1175,7 +1184,7 @@
       "rsid": "rs193302982",
       "lifted_over_pos": 14783,
       "common_low_heteroplasmy": true,
-      "mitomap_pathogenic": true,
+      "mitomap_pathogenic": null,
       "predictions": [null, true, null, null, null, null, 0.0751],
       "populations": [
         [3118, 0.553464, 56336],
@@ -1270,6 +1279,12 @@
     "pk": "M-11597-A-G",
     "fields": {
       "score": 0.58
+    }
+}, {
+    "model": "clickhouse_search.mitomapallvariantsmito",
+    "pk": "M-14783-T-C",
+    "fields": {
+      "pathogenic": true
     }
 }, {
     "model": "clickhouse_search.gnomadmitoallvariantsmito",

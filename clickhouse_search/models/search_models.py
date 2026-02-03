@@ -6,7 +6,8 @@ from clickhouse_search.backend.fields import Enum8Field, NestedField, UInt32Fiel
 from clickhouse_search.backend.functions import ArrayDistinct, ArrayFlatten, ArrayMin, ArrayMax
 from clickhouse_search.backend.table_models import Dictionary, FixtureLoadableClickhouseModel
 from clickhouse_search.managers import EntriesManager, SvEntriesManager, SvAnnotationsQuerySet, AnnotationsQuerySet
-from clickhouse_search.models.reference_data_models import GnomadNonCodingConstraintDict, BaseSpliceAi
+from clickhouse_search.models.reference_data_models import GnomadNonCodingConstraintDict, BaseSpliceAi, \
+    ScreenDict
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample
 from seqr.utils.search.constants import SPLICE_AI_FIELD
@@ -89,6 +90,7 @@ class BaseAnnotationsMitoSnvIndel(BaseAnnotations):
         ('transcriptRank', models.UInt8Field()),
     ]
     ANNOTATION_PREDICTIONS = []
+    SCREEN_DICT = None
 
     ref = models.StringField()
     alt = models.StringField()
@@ -253,6 +255,7 @@ class BaseAnnotationsSnvIndel(BaseAnnotationsGRCh37SnvIndel):
         ('fiveutrConsequence', models.Enum8Field(null=True, blank=True, return_int=False, choices=[(1, '5_prime_UTR_premature_start_codon_gain_variant'), (2, '5_prime_UTR_premature_start_codon_loss_variant'), (3, '5_prime_UTR_stop_codon_gain_variant'), (4, '5_prime_UTR_stop_codon_loss_variant'), (5, '5_prime_UTR_uORF_frameshift_variant')])),
         *BaseAnnotationsGRCh37SnvIndel.SORTED_TRANSCRIPT_CONSQUENCES_FIELDS,
     ])
+    SCREEN_DICT = ScreenDict
 
     screen_region_type = Enum8Field(db_column='screenRegionType', null=True, blank=True, return_int=False, choices=[(0, 'CTCF-bound'), (1, 'CTCF-only'), (2, 'DNase-H3K4me3'), (3, 'PLS'), (4, 'dELS'), (5, 'pELS'), (6, 'DNase-only'), (7, 'low-DNase')])
     predictions = NamedTupleField(PREDICTION_FIELDS)
