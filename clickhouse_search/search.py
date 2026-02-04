@@ -335,8 +335,7 @@ def get_clickhouse_cache_results(results, sort, family_guid):
     return {'all_results': sorted_results, 'total_results': total_results}
 
 
-#  TODO make private?
-def get_variant_details_queryset(genome_version, keys):
+def _get_variant_details_queryset(genome_version, keys):
     return VARIANT_DETAILS_CLASS_MAP[genome_version].objects.filter(key__in=keys)
 
 
@@ -346,7 +345,7 @@ def format_clickhouse_results(results, genome_version):
     }
     details_by_key = {
         detail['key']: detail for detail in
-        get_variant_details_queryset(genome_version, keys_with_no_details).result_values()
+        _get_variant_details_queryset(genome_version, keys_with_no_details).result_values()
     }
 
     formatted_results = []
@@ -787,7 +786,7 @@ def get_variants_queryset(genome_version, dataset_type, keys):
 
 def _get_variant_details_queryset(genome_version, dataset_type, keys):
     if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
-        return get_variant_details_queryset(genome_version, keys)
+        return _get_variant_details_queryset(genome_version, keys)
     return get_variants_queryset(genome_version, dataset_type, keys)
 
 
