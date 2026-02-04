@@ -803,14 +803,19 @@ def get_clickhouse_key_lookup(genome_version, dataset_type, variants_ids, revers
 
 def get_variant_main_transcripts_by_key(genome_version, dataset_type, selected_transcripts_by_key, include_clinvar=False, additional_values=None):
     qs = _get_variant_details_queryset(genome_version, dataset_type, selected_transcripts_by_key.keys())
-    if not hasattr(qs.model, 'sorted_transcript_consequences'):
-        output_field = qs.model.transcripts.field.clone()
-        output_field.group_by_key = None
-        qs = qs.annotate(sorted_transcript_consequences=ArrayObjectSort(
-            'transcripts', sort_field='transcriptRank', output_field=output_field,
-        ))
+    if hasattr(qs.model, 'transcripts'):
+        transcript_field = 'transcripts'
+        expr = ArrayObjectSort
+        expr_kwargs = {'sort_field': 'transcriptRank'}
+    else:
+        transcript_field = qs.TRANSCRIPT_FIELD
+        expr = ArrayMap
+        expr_kwargs = {'mapped_expression': 'x'}
+    output_field = getattr(qs.model, transcript_field).field.clone()
+    output_field.group_by_key = None
+    qs = qs.annotate(sorted_transcripts=expr(transcript_field, output_field=output_field, **expr_kwargs))
 
-    fields = ['key', 'sorted_transcript_consequences']
+    fields = ['key', 'sorted_transcripts']
     if include_clinvar:
         fields.append('clinvar')
         qs = qs.join_clinvar()
@@ -818,7 +823,7 @@ def get_variant_main_transcripts_by_key(genome_version, dataset_type, selected_t
     variants_by_key = {}
     for variant in qs.values(*fields, **(additional_values or {})):
         key = variant['key']
-        transcripts = variant.pop('sorted_transcript_consequences')
+        transcripts = variant.pop('sorted_transcripts')
         variant['main_transcripts'] = {
             selected_transcript_id: _main_transcript(selected_transcript_id, transcripts)
             for selected_transcript_id in selected_transcripts_by_key[key]

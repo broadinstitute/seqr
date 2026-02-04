@@ -141,11 +141,16 @@
       "variant_id": "1-248367227-TC-T"
     }
 }, {
-    "model": "clickhouse_search.variantssnvindel",
+    "model": "clickhouse_search.variantdetailssnvindel",
     "pk": 100,
     "fields": {
       "key": 100,
-      "sorted_transcript_consequences": [],
+      "variant_id": "1-248367227-TC-T",
+      "rsid": null,
+      "caid": "CA1501729",
+      "lifted_over_chrom": "1",
+      "lifted_over_pos": null,
+      "transcripts": [],
       "sorted_motif_feature_consequences": [],
       "sorted_regulatory_feature_consequences": []
     }
