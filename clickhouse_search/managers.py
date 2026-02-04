@@ -169,7 +169,7 @@ class SearchQuerySet(QuerySet):
         has_required_filter = require_score and any(val for val in (in_silico or {}).values())
 
         return results, has_required_filter, in_silico_q, missing_q
-    
+
     def filter_variant_ids(self, variant_ids):
         keys = self.key_lookup_model.objects.filter(variant_id__in=variant_ids).values_list('key', flat=True)
         return self.filter(key__in=keys)
