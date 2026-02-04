@@ -31,6 +31,21 @@
       ]
     }
 }, {
+    "model": "clickhouse_search.variantdetailsgrch37snvindel",
+    "pk": 101,
+    "fields": {
+      "key": 101,
+      "variant_id": "2-103343353-GAGA-G",
+      "rsid": null,
+      "caid": null,
+      "lifted_over_chrom": null,
+      "lifted_over_pos": null,
+      "transcripts": [
+        [null, "protein_coding", 1,null, ["inframe_deletion"], "ENSG00000135953", "ENST00000262738.3:c.3955G>A", "ENST00000505820.2:c.1586-17C>G", [null, []], "inframe_deletion", "ENST00000505820", 0],
+        [null, "protein_coding", 1, null, ["frameshift_variant"], "ENSG00000228198", null, null, [null, []], null, "ENST00000371839", 1]
+      ]
+    }
+}, {
     "model": "clickhouse_search.clinvargrch37snvindel",
     "pk": 100,
     "fields": {

@@ -285,6 +285,10 @@ class BaseVariantsQuerySet(SearchQuerySet):
         return [field for field in super().annotation_fields if field != self.TRANSCRIPT_FIELD]
 
     @property
+    def variant_detail_field(self):
+        return next(obj.name for obj in self.model._meta.related_objects if obj.name.startswith('variantdetails'))
+
+    @property
     def entry_field(self):
         return next(obj.name for obj in self.model._meta.related_objects if obj.name.startswith('entries'))
 
@@ -356,7 +360,7 @@ class BaseVariantsQuerySet(SearchQuerySet):
         results = self._filter_in_silico(results, **kwargs)
         results = self._filter_annotations(results, **kwargs)
         if join_variant_id and not hasattr(self.model, 'variant_id'):
-            results = results.annotate(variant_id=AssumeNotNull('variantdetailssnvindel__variant_id'))
+            results = results.annotate(variant_id=AssumeNotNull(f'{self.variant_detail_field}__variant_id'))
         return results
 
     def result_values(self, *args, skip_entry_fields=False, **kwargs):

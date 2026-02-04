@@ -8,7 +8,7 @@ import redis
 from tqdm import tqdm
 import traceback
 
-from clickhouse_search.search import get_clickhouse_key_lookup, get_variants_queryset, get_clickhouse_genotypes
+from clickhouse_search.search import get_variants_queryset, get_search_queryset, get_sample_data, clickhouse_genotypes_json
 from matchmaker.models import MatchmakerSubmissionGenes, MatchmakerSubmission
 from reference_data.models import TranscriptInfo, Omim, GENOME_VERSION_GRCh38
 from seqr.models import SavedVariant, VariantSearchResults, Family, LocusList, LocusListInterval, LocusListGene, \
@@ -259,26 +259,18 @@ def _get_es_variants(samples: Sample.objects, families_by_id: dict[int, Family],
 
 
 def _get_clickhouse_variants(samples: Sample.objects, families_by_id: dict[int, Family], variant_ids: list[str], genome_version: str = None, **kwargs) -> list[dict]:
-    variant_key_map = get_clickhouse_key_lookup(genome_version, Sample.DATASET_TYPE_VARIANT_CALLS, variant_ids, reverse=True)
-    families = list(families_by_id.values())
-    prefetch_related_objects(families, 'project')
-    families_by_project = defaultdict(list)
-    for family in families:
-        families_by_project[family.project.guid].append(family.guid)
-    variants = []
-    for project_guid, family_guids in families_by_project.items():
-        genotype_keys = get_clickhouse_genotypes(
-            project_guid, family_guids, genome_version, Sample.DATASET_TYPE_VARIANT_CALLS, variant_key_map.keys(), samples,
-        )
-        gene_ids_by_key = _get_gene_ids_by_key(genome_version, variant_key_map.keys())
-        for key, genotypes in genotype_keys.items():
-            variant_id = variant_key_map[key]
-            chrom, pos, ref, alt = variant_id.split('-')
-            variants.append({
-                'key': key, 'variantId': variant_id, 'chrom': chrom, 'pos': int(pos), 'ref': ref, 'alt': alt,
-                'genotypes': genotypes, 'familyGuids': sorted({g['familyGuid'] for g in genotypes.values()}),
-                'gene_ids': gene_ids_by_key.get(key),
-            })
+    sample_data = get_sample_data(samples.filter(individual__family_id__in=families_by_id))[Sample.DATASET_TYPE_VARIANT_CALLS]
+    qs = get_search_queryset(
+        genome_version, Sample.DATASET_TYPE_VARIANT_CALLS, sample_data, variant_ids=variant_ids, join_variant_id=True,
+    )
+    variants = qs.annotate_gene_ids().values('key', 'gene_ids', 'familyGuids', 'genotypes', 'variant_id')
+    for variant in variants:
+        variant_id = variant.pop('variant_id')
+        chrom, pos, ref, alt = variant_id.split('-')
+        variant.update({
+            'variantId': variant_id, 'chrom': chrom, 'pos': int(pos), 'ref': ref, 'alt': alt,
+            'genotypes': clickhouse_genotypes_json(variant.pop('genotypes')),
+        })
     return variants
 
 
