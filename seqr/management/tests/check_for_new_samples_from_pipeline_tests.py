@@ -762,6 +762,11 @@ class LocalCheckNewSamplesTest(DifferentDbTransactionSupportMixin, Authenticatio
         self.set_up()
         super().setUp()
 
+    @classmethod
+    def setUpClass(cls):
+        AnvilAuthenticationTestCase._clean_up_clickhouse_db()
+        super().setUpClass()
+
     def _set_empty_loading_files(self):
         self.mock_glob.return_value = []
 

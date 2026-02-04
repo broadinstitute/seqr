@@ -626,13 +626,16 @@ class AnvilAuthenticationTestCase(DifferentDbTransactionSupportMixin, AnvilAuthe
 
     @classmethod
     def setUpClass(cls):
+        cls._clean_up_clickhouse_db()
+        super().setUpClass()
+
+    @classmethod
+    def _clean_up_clickhouse_db(cls):
         # Due to a known clickhouse issue (https://github.com/ClickHouse/ClickHouse/issues/56288)
         # these tables are not always properly truncated during test suite tear down, so explicitly truncate them here
         with connections['clickhouse_write'].cursor() as cursor:
             for genome_version in ['GRCh37', 'GRCh38']:
                 cursor.execute(f'TRUNCATE TABLE IF EXISTS "{genome_version}/SNV_INDEL/variants/details"')
-        super().setUpClass()
-
 
 
 @mock.patch('seqr.views.utils.terra_api_utils.SOCIAL_AUTH_PROVIDER', TEST_OAUTH2_PROVIDER)

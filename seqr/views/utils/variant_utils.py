@@ -282,6 +282,7 @@ def _get_clickhouse_variants(samples: Sample.objects, families_by_id: dict[int, 
     return variants
 
 
+# TODO clean up -use joins/ single qs?
 def _get_gene_ids_by_key(genome_version, keys):
     qs = get_variants_queryset(genome_version, Sample.DATASET_TYPE_VARIANT_CALLS, keys)
     return dict(qs.annotate_gene_ids().values_list('key', 'gene_ids'))
