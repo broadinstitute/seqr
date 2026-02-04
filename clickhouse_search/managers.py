@@ -10,7 +10,7 @@ from clickhouse_search.backend.fields import NestedField, NamedTupleField
 from clickhouse_search.backend.functions import Array, ArrayConcat, ArrayDistinct, ArrayFilter, ArrayFold, \
     ArrayIntersect, ArrayJoin, ArrayMap, ArraySort, ArraySymmetricDifference, CrossJoin, GroupArray, GroupArrayArray, \
     GroupArrayIntersect, If, MapLookup, NullIf, Plus, SubqueryJoin, SubqueryTable, Tuple, TupleConcat, Untuple, \
-    IntDiv, Modulo, SplitByString, ArrayIndex, AssumeNotNull
+    IntDiv, Modulo, SplitByString, ArrayIndex
 from clickhouse_search.models.postgres_dicts import AffectedDict, SexDict
 from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFECTED, UNAFFECTED, MALE_SEXES, \
     X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, SCREEN_KEY, UTR_ANNOTATOR_KEY, \
@@ -374,7 +374,9 @@ class BaseVariantsQuerySet(SearchQuerySet):
     def join_variant_id(self):
         if hasattr(self.model, 'variant_id'):
             return self
-        return self.annotate(variant_id=AssumeNotNull(f'{self.variant_detail_field}__variant_id'))
+        return self.filter(**{
+            f'{self.variant_detail_field}__isnull': False,  # Ensures INNER join
+        }).annotate(variant_id=F(f'{self.variant_detail_field}__variant_id'))
 
     def result_values(self, *args, skip_entry_fields=False, **kwargs):
         additional_fields = [

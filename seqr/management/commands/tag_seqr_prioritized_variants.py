@@ -436,6 +436,7 @@ class Command(BaseCommand):
         )
 
         today = datetime.now().strftime('%Y-%m-%d')
+        # TODO use load_new_variant_data option, do not actually fetch full results from backend
         new_tag_keys, num_updated, num_skipped = bulk_create_tagged_variants(
             family_variant_data, tag_name=SEQR_TAG_TYPE, get_metadata=self._get_metadata(today, 'matched_searches'),
             get_comp_het_metadata=self._get_metadata(today, 'matched_comp_het_searches'), user=None, remove_missing_metadata=False,

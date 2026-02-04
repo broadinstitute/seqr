@@ -137,10 +137,6 @@ class ArrayNotEmptyTransform(lookups.Transform):
     output_field = BooleanField()
 
 
-class AssumeNotNull(Func):
-    function = 'assumeNotNull'
-
-
 @ArrayField.register_lookup
 class BitmapHasAny(ArrayLookup):
     lookup_name = "bitmap_has_any"
