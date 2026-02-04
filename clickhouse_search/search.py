@@ -775,8 +775,10 @@ def clickhouse_genotypes_json(genotypes):
     return json.loads(json.dumps(genotypes, cls=DjangoJSONEncoderWithSets))
 
 
-def get_variants_queryset(genome_version, dataset_type, keys):
+def get_variants_queryset(genome_version, dataset_type, keys, variant_ids=None):
     variants_cls = VARIANTS_CLASS_MAP[genome_version][dataset_type]
+    if variant_ids:
+        return variants_cls.objects.filter_variant_ids(variant_ids)
     return variants_cls.objects.filter(key__in=keys)
 
 
@@ -791,11 +793,10 @@ def get_clickhouse_variant_annotations(genome_version, dataset_type, keys):
     return qs.join_annotations().result_values(skip_entry_fields=True)
 
 
-#  TODO remove?
-def get_clickhouse_key_lookup(genome_version, dataset_type, variants_ids, reverse=False):
+def get_clickhouse_key_lookup(genome_version, dataset_type, variants_ids):
     key_lookup_class = ENTRY_CLASS_MAP[genome_version][dataset_type].objects.none().key_lookup_model
     lookup = {}
-    fields = ('variant_id', 'key') if not reverse else ('key', 'variant_id')
+    fields = ('variant_id', 'key')
     for i in range(0, len(variants_ids), BATCH_SIZE):
         batch = variants_ids[i:i + BATCH_SIZE]
         lookup.update(dict(key_lookup_class.objects.filter(variant_id__in=batch).values_list(*fields)))

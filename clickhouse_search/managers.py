@@ -169,6 +169,10 @@ class SearchQuerySet(QuerySet):
         has_required_filter = require_score and any(val for val in (in_silico or {}).values())
 
         return results, has_required_filter, in_silico_q, missing_q
+    
+    def filter_variant_ids(self, variant_ids):
+        keys = self.key_lookup_model.objects.filter(variant_id__in=variant_ids).values_list('key', flat=True)
+        return self.filter(key__in=keys)
 
     @staticmethod
     def split_variant_id_annotations():
@@ -220,6 +224,10 @@ class BaseVariantsQuerySet(SearchQuerySet):
     ENTRY_FIELDS = ['familyGuids', 'genotypes']
 
     SELECTED_GENE_FIELD = 'selectedGeneId'
+
+    @property
+    def key_lookup_model(self):
+        return next(obj.related_model for obj in self.model._meta.related_objects if obj.name.startswith('keylookup'))
 
     @property
     def annotation_values(self):
@@ -360,8 +368,13 @@ class BaseVariantsQuerySet(SearchQuerySet):
         results = self._filter_in_silico(results, **kwargs)
         results = self._filter_annotations(results, **kwargs)
         if join_variant_id and not hasattr(self.model, 'variant_id'):
-            results = results.annotate(variant_id=AssumeNotNull(f'{self.variant_detail_field}__variant_id'))
+            results = results.join_variant_id()
         return results
+
+    def join_variant_id(self):
+        if hasattr(self.model, 'variant_id'):
+            return self
+        return self.annotate(variant_id=AssumeNotNull(f'{self.variant_detail_field}__variant_id'))
 
     def result_values(self, *args, skip_entry_fields=False, **kwargs):
         additional_fields = [
@@ -1420,8 +1433,7 @@ class BaseEntriesManager(SearchQuerySet):
         entries = self
 
         if variant_ids:
-            keys = self.key_lookup_model.objects.filter(variant_id__in=variant_ids).values_list('key', flat=True)
-            entries = entries.filter(key__in=keys)
+            entries = entries.filter_variant_ids(variant_ids)
 
         if not (genes or intervals):
             return entries

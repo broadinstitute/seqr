@@ -274,20 +274,15 @@ def _get_clickhouse_variants(samples: Sample.objects, families_by_id: dict[int, 
     return variants
 
 
-# TODO clean up -use joins/ single qs?
-def _get_gene_ids_by_key(genome_version, keys):
-    qs = get_variants_queryset(genome_version, Sample.DATASET_TYPE_VARIANT_CALLS, keys)
-    return dict(qs.annotate_gene_ids().values_list('key', 'gene_ids'))
-
-
 def _get_clickhouse_variant_keys(variant_data: dict[tuple[int, str], dict], genome_version: str) -> dict[tuple[int, str], dict]:
     variant_ids = {key[1] for key in variant_data}
-    variant_key_map = get_clickhouse_key_lookup(genome_version, Sample.DATASET_TYPE_VARIANT_CALLS, list(variant_ids))
-    gene_ids_by_key = _get_gene_ids_by_key(genome_version, variant_key_map.values())
+    qs = get_variants_queryset(genome_version, Sample.DATASET_TYPE_VARIANT_CALLS, keys=None, variant_ids=variant_ids)
+    variants_by_id = {
+        v.pop('variant_id'): v for v in qs.annotate_gene_ids().join_variant_id().values('variant_id', 'key', 'gene_ids')
+    }
     for (_, variant_id), variant in variant_data.items():
-        if variant_id in variant_key_map:
-            variant['key'] = variant_key_map[variant_id]
-            variant['gene_ids'] = gene_ids_by_key.get(variant['key'])
+        if variant_id in variants_by_id:
+            variant.update(variants_by_id[variant_id])
     return variant_data
 
 
