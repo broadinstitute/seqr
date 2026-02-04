@@ -335,17 +335,13 @@ def get_clickhouse_cache_results(results, sort, family_guid):
     return {'all_results': sorted_results, 'total_results': total_results}
 
 
-def _get_variant_details_queryset(genome_version, keys):
-    return VARIANT_DETAILS_CLASS_MAP[genome_version].objects.filter(key__in=keys)
-
-
 def format_clickhouse_results(results, genome_version):
     keys_with_no_details = {
         variant['key'] for result in results for variant in (result if isinstance(result, list) else [result]) if not 'transcripts' in variant
     }
     details_by_key = {
         detail['key']: detail for detail in
-        _get_variant_details_queryset(genome_version, keys_with_no_details).result_values()
+        _get_variant_details_queryset(genome_version, Sample.DATASET_TYPE_VARIANT_CALLS, keys_with_no_details).result_values()
     }
 
     formatted_results = []
@@ -786,7 +782,7 @@ def get_variants_queryset(genome_version, dataset_type, keys):
 
 def _get_variant_details_queryset(genome_version, dataset_type, keys):
     if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
-        return _get_variant_details_queryset(genome_version, keys)
+        return VARIANT_DETAILS_CLASS_MAP[genome_version].objects.filter(key__in=keys)
     return get_variants_queryset(genome_version, dataset_type, keys)
 
 
