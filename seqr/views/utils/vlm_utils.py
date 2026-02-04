@@ -41,7 +41,7 @@ def vlm_lookup(user, chrom, pos, ref, alt, genome_version=None, **kwargs):
             response.raise_for_status()
             response_json = response.json()
             results[client_name] = {
-                meta['handoverType']['id']: {'url': meta['url'], 'counts': {}}
+                meta['handoverType']['id']: {'url': meta['url'] or f"mailto:{meta['email']}", 'counts': {}}
                 for meta in response_json['beaconHandovers']
             }
             for result in response_json['response']['resultSets']:
