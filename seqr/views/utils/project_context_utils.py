@@ -178,7 +178,7 @@ def _get_clickhouse_selected_transcript_gene_id(family_discovery_genes, discover
             selected_transcripts_by_key[v['key']].append(v['selected_main_transcript_id'])
         transcripts_by_key = get_variant_main_transcripts_by_key(genome_version, dataset_type, selected_transcripts_by_key)
         for v in variants:
-            gene_id = transcripts_by_key[v['key']][v['selected_main_transcript_id']].get('geneId')
+            gene_id = transcripts_by_key[v['key']]['main_transcripts'][v['selected_main_transcript_id']].get('geneId')
             family_discovery_genes.append((v['family_guid'], gene_id))
 
 
