@@ -10,7 +10,7 @@ from clickhouse_search.backend.fields import NestedField, NamedTupleField
 from clickhouse_search.backend.functions import Array, ArrayConcat, ArrayDistinct, ArrayFilter, ArrayFold, \
     ArrayIntersect, ArrayJoin, ArrayMap, ArraySort, ArraySymmetricDifference, CrossJoin, GroupArray, GroupArrayArray, \
     GroupArrayIntersect, If, MapLookup, NullIf, Plus, SubqueryJoin, SubqueryTable, Tuple, TupleConcat, Untuple, \
-    IntDiv, Modulo, SplitByString, ArrayIndex
+    IntDiv, Modulo, SplitByString, ArrayIndex, AssumeNotNull
 from clickhouse_search.models.postgres_dicts import AffectedDict, SexDict
 from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFECTED, UNAFFECTED, MALE_SEXES, \
     X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, SCREEN_KEY, UTR_ANNOTATOR_KEY, \
@@ -351,10 +351,12 @@ class BaseVariantsQuerySet(SearchQuerySet):
             **{f'{alias}_{field}': value for field, value in query_select.items() if field not in self.skip_annotations},
         )
 
-    def search(self, **kwargs):
+    def search(self, join_variant_id=False,  **kwargs):
         results = self._filter_frequency(self, **kwargs)
         results = self._filter_in_silico(results, **kwargs)
         results = self._filter_annotations(results, **kwargs)
+        if join_variant_id and not hasattr(self.model, 'variant_id'):
+            results = results.annotate(variant_id=AssumeNotNull('variantdetailssnvindel__variant_id'))
         return results
 
     def result_values(self, *args, skip_entry_fields=False, **kwargs):
@@ -537,6 +539,12 @@ class VariantsQuerySet(BaseVariantsQuerySet):
 
         if self.has_annotation('mitomapPathogenic'):
             annotations['mitomapPathogenic'] = F('mitomapPathogenic')
+
+        if self.has_annotation('variant_id'):
+            annotations.update({
+                'variantId': F('variant_id'),
+                **self.split_variant_id_annotations(),
+            })
 
         return annotations
 

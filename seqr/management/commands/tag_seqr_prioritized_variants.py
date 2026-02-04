@@ -5,7 +5,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Q, F
 from django.db.models.functions import JSONObject
 
-from clickhouse_search.search import get_search_queryset, get_variant_details_queryset, add_individual_guids, \
+from clickhouse_search.search import get_search_queryset, add_individual_guids, \
     get_data_type_comp_het_results_queryset, get_multi_data_type_comp_het_results_queryset
 from panelapp.models import PaLocusListGene
 from reference_data.models import GENOME_VERSION_GRCh38
@@ -500,7 +500,7 @@ class Command(BaseCommand):
             run_search_func = cls._run_comp_het_search if config_search['inheritance_mode'] == COMPOUND_HET else cls._run_search
             num_results = run_search_func(
                 search_name, family_variant_data, family_guid_map, dataset_type, sample_data, sample_qs,
-                exclude_locations=exclude_locations, genes=search_genes, **config_search, **ALL_SEARCHES_CRITERIA,
+                exclude_locations=exclude_locations, genes=search_genes, join_variant_id=True, **config_search, **ALL_SEARCHES_CRITERIA,
             )
             logger.info(f'Found {num_results} variants for criteria: {search_name}')
             search_counts[search_name] = num_results
@@ -543,10 +543,17 @@ class Command(BaseCommand):
 
     @classmethod
     def _run_search(cls, search_name, family_variant_data, family_guid_map, dataset_type, sample_data, samples, **kwargs):
-        variant_fields = ['pos', 'end'] if dataset_type.startswith('SV') else []
-        variant_values = {'endChrom': F('end_chrom')} if dataset_type == 'SV_WGS' else {}
-
         results_qs = get_search_queryset(GENOME_VERSION_GRCh38, dataset_type, sample_data, **kwargs)
+
+        variant_fields = []
+        variant_values = {}
+        if dataset_type.startswith('SV'):
+            variant_fields += ['pos', 'end']
+            if dataset_type == 'SV_WGS':
+                variant_values['endChrom'] = F('end_chrom')
+        else:
+            variant_values.update(results_qs.split_variant_id_annotations())
+
         if getattr(results_qs.model, 'GENOTYPE_OVERRIDE_FIELDS', None):
             genotype_overrides_expressions = results_qs.conditional_selects(results_qs)
             variant_values.update( {k: genotype_overrides_expressions[k] for k in ['familyGenotypes', 'transcripts']})
@@ -554,15 +561,8 @@ class Command(BaseCommand):
             results_qs = results_qs.annotate_gene_ids()
             variant_fields += ['familyGenotypes', 'gene_ids']
 
-        if dataset_type != Sample.DATASET_TYPE_VARIANT_CALLS:
-            variant_values['variantId'] = F('variant_id')
-        if dataset_type == Sample.DATASET_TYPE_MITO_CALLS:
-            variant_values.update(results_qs.split_variant_id_annotations())
-
-        results = results_qs.values(*variant_fields, 'key', 'familyGuids', **variant_values)
+        results = results_qs.values(*variant_fields, 'key', 'familyGuids', variantId= F('variant_id'), **variant_values)
         add_individual_guids(results, samples, encode_genotypes_json=True)
-        if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
-            cls._add_id_fields(results)
 
         for variant in results:
             for family_guid in variant.pop('familyGuids'):
@@ -578,7 +578,7 @@ class Command(BaseCommand):
             GENOME_VERSION_GRCh38, dataset_type, sample_data, deduplicate=False, **kwargs,
         )
         return cls._execute_comp_het_search(
-            queryset, search_name, family_variant_data, family_guid_map, samples, dataset_type=dataset_type,
+            queryset, search_name, family_variant_data, family_guid_map, samples,
         )
 
     @classmethod
@@ -596,20 +596,18 @@ class Command(BaseCommand):
         for search_name, config_search in MULTI_DATA_TYPE_SEARCHES.items():
             queryset = get_multi_data_type_comp_het_results_queryset(
                 GENOME_VERSION_GRCh38, sv_dataset_type, sv_sample_data, snv_indel_sample_data, num_families=len(families),
-                genes=genes, **config_search, **ALL_SEARCHES_CRITERIA,
+                genes=genes, join_variant_id=True, **config_search, **ALL_SEARCHES_CRITERIA,
             )
             num_results = cls._execute_comp_het_search(queryset, search_name, family_variant_data, family_guid_map, samples)
             logger.info(f'Found {num_results} variants for criteria: {search_name}')
             search_counts[search_name] = num_results
 
     @classmethod
-    def _execute_comp_het_search(cls, queryset, search_name, family_variant_data, family_guid_map, samples, dataset_type=None):
+    def _execute_comp_het_search(cls, queryset, search_name, family_variant_data, family_guid_map, samples):
         results = [list(v) for v in queryset]
 
         results = list({tuple(v[0]): v[1:] for v in results}.values())
         add_individual_guids(results, samples, encode_genotypes_json=True)
-        if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS or dataset_type is None:
-            cls._add_id_fields(results, add_primary_only=dataset_type is None)
         for pair in results:
             for family_guid in pair[0]['familyGuids']:
                 for variant, support_id in [(pair[0], pair[1]['variantId']), (pair[1], pair[0]['variantId'])]:
@@ -621,26 +619,6 @@ class Command(BaseCommand):
                     variant_data['matched_comp_het_searches'].add(search_name)
 
         return len(results)
-
-    @classmethod
-    def _add_id_fields(cls, results, add_primary_only=False):
-        keys = set()
-        for result in results:
-            variants = (result if isinstance(result, list) else [result])
-            if add_primary_only:
-                variants = variants[:1]
-            keys.update(variant['key'] for variant in variants)
-        # TODO do with a join? clean up this helper
-        detail_qs = get_variant_details_queryset(GENOME_VERSION_GRCh38, keys)
-        details_by_key = {detail['key']: detail for detail in detail_qs.values(
-            'key', variantId=F('variant_id'), **detail_qs.split_variant_id_annotations(),
-        )}
-        for result in results:
-            variants = (result if isinstance(result, list) else [result])
-            if add_primary_only:
-                variants = variants[:1]
-            for variant in variants:
-                variant.update(details_by_key[variant['key']])
 
     @staticmethod
     def _get_gene_list_genes(name, confidences, gene_by_moi, exclude_gene_ids):
