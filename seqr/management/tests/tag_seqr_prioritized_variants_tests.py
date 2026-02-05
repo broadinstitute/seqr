@@ -58,9 +58,7 @@ class CheckNewSamplesTest(ClickhouseSearchTestCase):
 
         call_command('tag_seqr_prioritized_variants', PROJECT_GUID)
 
-        # # TODO fix duplicate counting
-        #  ('Tagged 7 new and 0 previously tagged variants in 1 families, found 0 unchanged tags:', None),
-        self._assert_expected_logs(num_new=7, num_unchanged=3, creation_stats={
+        self._assert_expected_logs(num_new=7, creation_stats={
             'SNV_INDEL': {'num_variants': 3, 'tag_id_range': (1726986, 1726988)},
             'SV': {'num_variants': 2, 'tag_id_range': (1726988, 1726990)},
             'MITO': {'num_variants': 2, 'tag_id_range': (1726990, 1726992)},
@@ -126,9 +124,7 @@ class CheckNewSamplesTest(ClickhouseSearchTestCase):
         mock_email.reset_mock()
         mock_slack.reset_mock()
         call_command('tag_seqr_prioritized_variants', PROJECT_GUID)
-        # TODO fix duplicate counting
-        # ('Tagged 0 new and 0 previously tagged variants in 1 families, found 7 unchanged tags:', None),
-        self._assert_expected_logs(num_unchanged=9)
+        self._assert_expected_logs(num_unchanged=7)
         mock_email.assert_not_called()
         mock_slack.assert_not_called()
         self.assertDictEqual(expected_tags, {

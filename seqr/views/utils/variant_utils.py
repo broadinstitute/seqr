@@ -156,8 +156,9 @@ def bulk_create_tagged_variants(family_variant_data, tag_name, get_metadata, use
     }
 
     update_tags = []
+    update_tag_keys = set()
     new_tag_keys = set()
-    skipped = 0
+    skipped_tag_keys = set()
     for key, variant in sorted(family_variant_data.items()):
         metadata = get_metadata(variant)
         comp_het_metadata = get_comp_het_metadata(variant) if get_comp_het_metadata else None
@@ -167,12 +168,13 @@ def bulk_create_tagged_variants(family_variant_data, tag_name, get_metadata, use
         )
         if updated_tag:
             update_tags.append(updated_tag)
+            update_tag_keys.add(key)
         elif key not in new_tag_keys:
-            skipped += 1
+            skipped_tag_keys.add(key)
 
     VariantTag.bulk_update_models(user, update_tags, ['metadata'])
 
-    return new_tag_keys, len(update_tags), skipped
+    return new_tag_keys, update_tag_keys, skipped_tag_keys
 
 
 def _set_updated_tags(key: tuple[int, str], metadata: dict[str, dict], comp_het_metadata: dict[str, dict], support_var_ids: list[str],

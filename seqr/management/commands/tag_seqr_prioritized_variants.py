@@ -421,7 +421,7 @@ class Command(BaseCommand):
         for gene_list in GENE_LISTS:
             self._get_gene_list_genes(gene_list['name'], gene_list['confidences'], gene_by_moi, exclude_genes.keys())
 
-        updates = {'matched_families': set(), 'new_tag_keys': set(), 'num_updated': 0, 'num_skipped': 0}
+        updates = {update: set() for update in ['matched_families', 'new_tag_keys', 'update_tag_keys', 'skipped_tag_keys']}
         search_counts = {}
         samples_by_dataset_type = {}
         sample_qs = get_search_samples([project])
@@ -609,14 +609,14 @@ class Command(BaseCommand):
     @classmethod
     def _bulk_tag_variants(cls, family_variant_data, updates, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS):
         today = datetime.now().strftime('%Y-%m-%d')
-        new_tag_keys, num_updated, num_skipped = bulk_create_tagged_variants(
+        new_tag_keys, update_tag_keys, skipped_tag_keys = bulk_create_tagged_variants(
             family_variant_data, tag_name=SEQR_TAG_TYPE, get_metadata=cls._get_metadata(today, 'matched_searches'),
             get_comp_het_metadata=cls._get_metadata(today, 'matched_comp_het_searches'), user=None,
             remove_missing_metadata=False, primary_id_field='key', dataset_type=dataset_type, genome_version=GENOME_VERSION_GRCh38,
         )
         updates['new_tag_keys'].update(new_tag_keys)
-        updates['num_updated'] += num_updated
-        updates['num_skipped'] += num_skipped
+        updates['update_tag_keys'].update(update_tag_keys - updates['new_tag_keys'])
+        updates['skipped_tag_keys'].update(skipped_tag_keys - updates['update_tag_keys'] - updates['new_tag_keys'])
         updates['matched_families'].update({family_id for family_id, _ in family_variant_data.keys()})
 
     @staticmethod
