@@ -499,6 +499,7 @@ class BaseVariantsQuerySet(SearchQuerySet):
     def has_annotation(self, field):
         return field in self.query.annotations
 
+    # TODO move back to helper method?
     def annotate_gene_ids(self):
         return self.annotate(gene_ids=ArrayDistinct(
         ArrayMap(self.TRANSCRIPT_FIELD, mapped_expression='x.geneId'),

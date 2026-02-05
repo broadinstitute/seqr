@@ -117,13 +117,13 @@ def _transcript_sort(gene_id, saved_variant_json):
     return (not is_main_gene, min(t.get('transcriptRank', 100) for t in gene_transcripts) if gene_transcripts else 100)
 
 
-def bulk_create_tagged_variants(family_variant_data, tag_name, get_metadata, user, project=None, get_comp_het_metadata=None, load_new_variant_data=False, load_new_variant_keys=False, remove_missing_metadata=True):
+def bulk_create_tagged_variants(family_variant_data, tag_name, get_metadata, user, project=None, get_comp_het_metadata=None, load_new_variant_data=False, remove_missing_metadata=True, primary_id_field='variant_id'):
     all_family_ids = {family_id for family_id, _ in family_variant_data.keys()}
     all_variant_ids = {variant_id for _, variant_id in family_variant_data.keys()}
 
     saved_variant_map = {
-        (v.family_id, v.variant_id): v
-        for v in SavedVariant.objects.filter(family_id__in=all_family_ids, variant_id__in=all_variant_ids)
+        (v.family_id, getattr(v, primary_id_field)): v
+        for v in SavedVariant.objects.filter(**{'family_id__in':all_family_ids, f'{primary_id_field}__in': all_variant_ids})
     }
 
     new_variant_keys = set(family_variant_data.keys()) - set(saved_variant_map.keys())
@@ -133,10 +133,9 @@ def bulk_create_tagged_variants(family_variant_data, tag_name, get_metadata, use
             new_variant_data = _search_new_saved_variants(new_variant_keys, user, genome_version)
         else:
             new_variant_data = {k: v for k, v in family_variant_data.items() if k in new_variant_keys}
-            if load_new_variant_keys:
-                new_variant_data = backend_specific_call(
-                    lambda o, _: o, _get_clickhouse_variant_keys,
-                )(new_variant_data, project.genome_version)
+            new_variant_data = backend_specific_call(
+                lambda o, *args: o, _get_clickhouse_variant_annotations,
+            )(new_variant_data, project.genome_version, primary_id_field)
 
         new_variant_models = []
         for (family_id, variant_id), variant in new_variant_data.items():
@@ -144,7 +143,7 @@ def bulk_create_tagged_variants(family_variant_data, tag_name, get_metadata, use
             new_variant_models.append(SavedVariant(**create_json, **update_json))
 
         saved_variant_map.update({
-            (v.family_id, v.variant_id): v for v in SavedVariant.bulk_create(user, new_variant_models)
+            (v.family_id, getattr(v, primary_id_field)): v for v in SavedVariant.bulk_create(user, new_variant_models)
         })
 
     tag_type = VariantTagType.objects.get(name=tag_name, project=project)
@@ -274,11 +273,20 @@ def _get_clickhouse_variants(samples: Sample.objects, families_by_id: dict[int, 
     return variants
 
 
-def _get_clickhouse_variant_keys(variant_data: dict[tuple[int, str], dict], genome_version: str) -> dict[tuple[int, str], dict]:
-    variant_ids = {key[1] for key in variant_data}
-    qs = get_variants_queryset(genome_version, Sample.DATASET_TYPE_VARIANT_CALLS, keys=None, variant_ids=variant_ids)
+def _get_clickhouse_variant_annotations(variant_data: dict[tuple[int, str], dict], genome_version: str, primary_id_field: str) -> dict[tuple[int, str], dict]:
+    variant_ids = {
+        variant_id for (_, variant_id), variant in variant_data.items()
+        if not (variant.get('key') and variant.get('variantId'))
+    }
+    qs = get_variants_queryset(genome_version, Sample.DATASET_TYPE_VARIANT_CALLS, **{
+        'keys': None,
+        f'{primary_id_field}s': variant_ids,
+    })
+    key_field = 'variantId' if primary_id_field == 'variant_id' else primary_id_field
     variants_by_id = {
-        v.pop('variant_id'): v for v in qs.annotate_gene_ids().join_variant_id().values('variant_id', 'key', 'gene_ids')
+        v[key_field]: v for v in qs.annotate_gene_ids().join_variant_id().values(
+            'key', 'gene_ids', variantId=F('variant_id'), **qs.split_variant_id_annotations(),
+        )
     }
     for (_, variant_id), variant in variant_data.items():
         if variant_id in variants_by_id:
