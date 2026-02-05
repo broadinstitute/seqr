@@ -62,7 +62,6 @@ class CheckNewSamplesTest(ClickhouseSearchTestCase):
             'SNV_INDEL': {'num_variants': 3, 'tag_id_range': (1726986, 1726988)},
             'SV': {'num_variants': 2, 'tag_id_range': (1726988, 1726990)},
             'MITO': {'num_variants': 2, 'tag_id_range': (1726990, 1726992)},
-            'SNV_INDEL': {'num_variants': 3, 'tag_id_range': (1726986, 1726988)},
             'MULTI': {'tag_id_range': (1726992, 1726993)},
         })
 
