@@ -17,6 +17,7 @@ from seqr.views.utils.permissions_utils import get_project_and_check_permissions
     login_and_policies_required
 from seqr.views.utils.variant_utils import reset_cached_search_results, get_variants_response, parse_saved_variant_json
 
+
 logger = logging.getLogger(__name__)
 
 INCLUDE_LOCUS_LISTS_PARAM = 'includeLocusLists'

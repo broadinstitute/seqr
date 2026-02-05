@@ -289,8 +289,12 @@ def _get_clickhouse_variant_annotations(variant_data: dict[tuple[int, str], dict
         variant_id for (_, variant_id), variant in variant_data.items()
         if not (variant.get('key') and variant.get('variantId'))
     }
+    keys = None
+    if primary_id_field == 'key':
+        keys = variant_ids
+        variant_ids = None
     qs = get_variants_queryset(
-        genome_version or project.genome_version, dataset_type, **{'keys': None, f'{primary_id_field}s': variant_ids},
+        genome_version or project.genome_version, dataset_type, keys=keys, variant_ids=variant_ids,
     )
     key_field = 'variantId' if primary_id_field == 'variant_id' else primary_id_field
     variant_fields = ['key', 'gene_ids']
