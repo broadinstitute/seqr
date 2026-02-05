@@ -164,7 +164,7 @@ def bulk_create_tagged_variants(family_variant_data, tag_name, get_metadata, use
         comp_het_metadata = get_comp_het_metadata(variant) if get_comp_het_metadata else None
         updated_tag = _set_updated_tags(
             key, metadata, comp_het_metadata, variant.get('support_vars', []), saved_variant_map, existing_tags, tag_type, user,
-            new_tag_keys, remove_missing_metadata,
+            new_tag_keys, remove_missing_metadata, primary_id_field,
         )
         if updated_tag:
             update_tags.append(updated_tag)
@@ -179,7 +179,7 @@ def bulk_create_tagged_variants(family_variant_data, tag_name, get_metadata, use
 
 def _set_updated_tags(key: tuple[int, str], metadata: dict[str, dict], comp_het_metadata: dict[str, dict], support_var_ids: list[str],
                       saved_variant_map: dict[tuple[int, str], SavedVariant], existing_tags: dict[tuple[int, ...], VariantTag],
-                      tag_type: VariantTagType, user: User, new_tag_keys: set[tuple], remove_missing_metadata: bool):
+                      tag_type: VariantTagType, user: User, new_tag_keys: set[tuple], remove_missing_metadata: bool, primary_id_field: str):
     variant = saved_variant_map[key]
     existing_tag = existing_tags.get(tuple([variant.id]))
     updated_tag = None
@@ -216,7 +216,7 @@ def _set_updated_tags(key: tuple[int, str], metadata: dict[str, dict], comp_het_
             }, user)
             tag.saved_variants.set(variants)
             existing_tags[variant_id_key] = True
-            new_tag_keys.add((key[0], support_var.variant_id))
+            new_tag_keys.add((key[0], getattr(support_var, primary_id_field)))
             new_tag_keys.add(key)
 
     return updated_tag

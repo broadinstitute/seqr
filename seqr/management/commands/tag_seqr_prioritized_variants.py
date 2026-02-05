@@ -436,7 +436,7 @@ class Command(BaseCommand):
         )
 
         new_tag_keys = updates['new_tag_keys']
-        logger.info(f'Tagged {len(new_tag_keys)} new and {updates["num_updated"]} previously tagged variants in {len(updates["matched_families"])} families, found {updates["num_skipped"]} unchanged tags:')
+        logger.info(f'Tagged {len(new_tag_keys)} new and {len(updates["update_tag_keys"])} previously tagged variants in {len(updates["matched_families"])} families, found {len(updates["skipped_tag_keys"])} unchanged tags:')
         for search_name, count in search_counts.items():
             logger.info(f'  {search_name}: {count} variants')
         if not new_tag_keys:
