@@ -363,12 +363,10 @@ class BaseVariantsQuerySet(SearchQuerySet):
             **{f'{alias}_{field}': value for field, value in query_select.items() if field not in self.skip_annotations},
         )
 
-    def search(self, join_variant_id=False,  **kwargs):
+    def search(self, **kwargs):
         results = self._filter_frequency(self, **kwargs)
         results = self._filter_in_silico(results, **kwargs)
         results = self._filter_annotations(results, **kwargs)
-        if join_variant_id and not hasattr(self.model, 'variant_id'):
-            results = results.join_variant_id()
         return results
 
     def join_variant_id(self):

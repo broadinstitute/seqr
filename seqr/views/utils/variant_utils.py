@@ -262,21 +262,27 @@ def _get_es_variants(samples: Sample.objects, families_by_id: dict[int, Family],
 
 
 def _get_clickhouse_variants(samples: Sample.objects, families_by_id: dict[int, Family], variant_ids: list[str], genome_version: str = None, **kwargs) -> list[dict]:
-    sample_data = get_sample_data(samples.filter(individual__family_id__in=families_by_id))[Sample.DATASET_TYPE_VARIANT_CALLS]
-    qs = get_search_queryset(
-        genome_version, Sample.DATASET_TYPE_VARIANT_CALLS, sample_data, variant_ids=variant_ids, join_variant_id=True,
-    )
-    variants = _gene_ids_annotated_queryset(qs).values(
-        'key', 'gene_ids', 'familyGuids', 'genotypes', variantId=F('variant_id'), **qs.split_variant_id_annotations(),
-    )
+    dataset_type = Sample.DATASET_TYPE_VARIANT_CALLS
+    sample_data = get_sample_data(samples.filter(individual__family_id__in=families_by_id))[dataset_type]
+    qs = get_search_queryset(genome_version, dataset_type, sample_data, variant_ids=variant_ids)
+    variants = _saved_variant_clickhouse_data(qs, dataset_type, additional_fields=['familyGuids', 'genotypes'])
     return [{**v, 'genotypes': clickhouse_genotypes_json(v.pop('genotypes'))} for v in variants]
 
 
-def _gene_ids_annotated_queryset(qs):
-    return qs.annotate(gene_ids=ArrayDistinct(
-        ArrayMap(qs.TRANSCRIPT_FIELD, mapped_expression='x.geneId'),
-        output_field=ArrayField(StringField())),
-    )
+def _saved_variant_clickhouse_data(qs, dataset_type, additional_fields=None):
+    variant_fields = ['key'] + (additional_fields or [])
+    variant_values = {
+        'variantId': F('variant_id'),
+        'gene_ids': ArrayDistinct(
+            ArrayMap(qs.TRANSCRIPT_FIELD, mapped_expression='x.geneId'),
+            output_field=ArrayField(StringField()),
+        ),
+    }
+    if dataset_type.startswith('SV'):
+        variant_fields += ['chrom', 'pos', 'end']
+    else:
+        variant_values.update(qs.split_variant_id_annotations())
+    return qs.join_variant_id().values(*variant_fields, **variant_values)
 
 
 def _get_clickhouse_variant_annotations(variant_data: dict[tuple[int, str], dict], primary_id_field: str, genome_version: str = None, project: Project = None, dataset_type: str = Sample.DATASET_TYPE_VARIANT_CALLS) -> dict[tuple[int, str], dict]:
@@ -292,15 +298,7 @@ def _get_clickhouse_variant_annotations(variant_data: dict[tuple[int, str], dict
         genome_version or project.genome_version, dataset_type, keys=keys, variant_ids=variant_ids,
     )
     key_field = 'variantId' if primary_id_field == 'variant_id' else primary_id_field
-    variant_fields = ['key', 'gene_ids']
-    variant_values = {'variantId': F('variant_id')}
-    if dataset_type.startswith('SV'):
-        variant_fields += ['chrom', 'pos', 'end']
-    else:
-        variant_values.update(qs.split_variant_id_annotations())
-    variants_by_id = {
-        v[key_field]: v for v in _gene_ids_annotated_queryset(qs.join_variant_id()).values(*variant_fields, **variant_values)
-    }
+    variants_by_id = {v[key_field]: v for v in _saved_variant_clickhouse_data(qs, dataset_type)}
     for (_, variant_id), variant in variant_data.items():
         if variant_id in variants_by_id:
             variant.update(variants_by_id[variant_id])
