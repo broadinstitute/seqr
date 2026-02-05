@@ -582,12 +582,6 @@ class SummaryDataAPITest(AirtableTest):
 
         aip_upload['results']['HG00731']['2-103343353-GAGA-G'] = aip_upload['results']['HG00731'].pop('12-48367227-TC-T')
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
-        self.maxDiff = None
-        from django.db import connections
-        with connections['clickhouse'].cursor() as cursor:
-            cursor.execute("select query FROM system.query_log where query like '%variants/details%' ORDER BY event_time DESC limit 50")
-            rows = cursor.fetchall()
-            self.assertListEqual(rows, [])
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'info': ['Loaded 3 new and 1 updated AIP tags for 2 families']})
 

@@ -266,15 +266,10 @@ def _get_clickhouse_variants(samples: Sample.objects, families_by_id: dict[int, 
     qs = get_search_queryset(
         genome_version, Sample.DATASET_TYPE_VARIANT_CALLS, sample_data, variant_ids=variant_ids, join_variant_id=True,
     )
-    variants = _gene_ids_annotated_queryset(qs).values('key', 'gene_ids', 'familyGuids', 'genotypes', 'variant_id')
-    for variant in variants:
-        variant_id = variant.pop('variant_id')
-        chrom, pos, ref, alt = variant_id.split('-')
-        variant.update({
-            'variantId': variant_id, 'chrom': chrom, 'pos': int(pos), 'ref': ref, 'alt': alt,
-            'genotypes': clickhouse_genotypes_json(variant.pop('genotypes')),
-        })
-    return variants
+    variants = _gene_ids_annotated_queryset(qs).values(
+        'key', 'gene_ids', 'familyGuids', 'genotypes', variantId=F('variant_id'), **qs.split_variant_id_annotations(),
+    )
+    return [{**v, 'genotypes': clickhouse_genotypes_json(v.pop('genotypes'))} for v in variants]
 
 
 def _gene_ids_annotated_queryset(qs):
