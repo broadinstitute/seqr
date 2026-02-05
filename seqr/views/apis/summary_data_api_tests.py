@@ -582,7 +582,6 @@ class SummaryDataAPITest(AirtableTest):
 
         aip_upload['results']['HG00731']['2-103343353-GAGA-G'] = aip_upload['results']['HG00731'].pop('12-48367227-TC-T')
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
-        self.assertEqual()
         self.maxDiff = None
         self.assertEqual(self._log_stream.getvalue(), '')
         self.assertEqual(response.status_code, 200)
