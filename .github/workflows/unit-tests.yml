@@ -41,7 +41,7 @@ jobs:
           # Maps tcp port 5432 on service container to the host
           - 5432:5432
       clickhouse:
-        image: bitnamilegacy/clickhouse:25.4.2
+        image: bitnamilegacy/clickhouse:latest
         ports:
           - 9000:9000   # Native client interface
         volumes:
