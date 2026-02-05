@@ -421,31 +421,22 @@ class Command(BaseCommand):
         for gene_list in GENE_LISTS:
             self._get_gene_list_genes(gene_list['name'], gene_list['confidences'], gene_by_moi, exclude_genes.keys())
 
-        family_variant_data = defaultdict(lambda: {'matched_searches': set(), 'matched_comp_het_searches': set(), 'support_vars': set()})
+        updates = {'matched_families': set(), 'new_tag_keys': set(), 'num_updated': 0, 'num_skipped': 0}
         search_counts = {}
         samples_by_dataset_type = {}
         sample_qs = get_search_samples([project])
         for dataset_type, searches in SEARCHES.items():
             self._run_dataset_type_searches(
-                dataset_type, searches, sample_qs, family_variant_data, search_counts, samples_by_dataset_type, family_guid_map,
+                dataset_type, searches, sample_qs, updates, search_counts, samples_by_dataset_type, family_guid_map,
                 project, exclude_genes, gene_by_moi,
             )
 
         self._run_multi_data_type_comp_het_search(
-            family_variant_data, search_counts, samples_by_dataset_type, family_guid_map, project, sample_qs, genes=gene_by_moi[RECESSIVE_MOI],
+            updates, search_counts, samples_by_dataset_type, family_guid_map, project, sample_qs, genes=gene_by_moi[RECESSIVE_MOI],
         )
 
-        today = datetime.now().strftime('%Y-%m-%d')
-        new_tag_keys, num_updated, num_skipped = bulk_create_tagged_variants(
-            family_variant_data, tag_name=SEQR_TAG_TYPE, get_metadata=self._get_metadata(today, 'matched_searches'),
-            get_comp_het_metadata=self._get_metadata(today, 'matched_comp_het_searches'), user=None, remove_missing_metadata=False,
-            project=project, primary_id_field='key',
-        )
-
-        family_variants = defaultdict(list)
-        for family_id, variant_id in family_variant_data.keys():
-            family_variants[family_id].append(variant_id)
-        logger.info(f'Tagged {len(new_tag_keys)} new and {num_updated} previously tagged variants in {len(family_variants)} families, found {num_skipped} unchanged tags:')
+        new_tag_keys = updates['new_tag_keys']
+        logger.info(f'Tagged {len(new_tag_keys)} new and {updates["num_updated"]} previously tagged variants in {len(updates["matched_families"])} families, found {updates["num_skipped"]} unchanged tags:')
         for search_name, count in search_counts.items():
             logger.info(f'  {search_name}: {count} variants')
         if not new_tag_keys:
@@ -467,7 +458,7 @@ class Command(BaseCommand):
         )
 
     @classmethod
-    def _run_dataset_type_searches(cls, dataset_type, searches, sample_qs, family_variant_data, search_counts, samples_by_dataset_type, family_guid_map, project, exclude_genes, gene_by_moi):
+    def _run_dataset_type_searches(cls, dataset_type, searches, sample_qs, updates, search_counts, samples_by_dataset_type, family_guid_map, project, exclude_genes, gene_by_moi):
         is_sv = dataset_type == Sample.DATASET_TYPE_SV_CALLS
         sample_qs = sample_qs.filter(dataset_type=dataset_type)
         if is_sv:
@@ -491,6 +482,7 @@ class Command(BaseCommand):
         }
         samples_by_dataset_type[dataset_type] = samples_by_family
 
+        family_variant_data = defaultdict(lambda: {'matched_searches': set(), 'matched_comp_het_searches': set(), 'support_vars': set()})
         logger.info(f'Searching for prioritized {dataset_type} variants in {len(samples_by_family)} families in project {project.name}')
         for search_name, config_search in searches.items():
             exclude_locations = not config_search.get('gene_list_moi')
@@ -505,6 +497,8 @@ class Command(BaseCommand):
             )
             logger.info(f'Found {num_results} variants for criteria: {search_name}')
             search_counts[search_name] = num_results
+
+        cls._bulk_tag_variants(family_variant_data, updates, dataset_type)
 
     @classmethod
     def _get_valid_family_sample_data(cls, project, sample_type, samples_by_family, family_filter=None):
@@ -575,7 +569,7 @@ class Command(BaseCommand):
         )
 
     @classmethod
-    def _run_multi_data_type_comp_het_search(cls, family_variant_data, search_counts, samples_by_dataset_type, family_guid_map, project, samples, genes):
+    def _run_multi_data_type_comp_het_search(cls, updates, search_counts, samples_by_dataset_type, family_guid_map, project, samples, genes):
         sv_dataset_type = next(dt for dt in samples_by_dataset_type.keys() if dt.startswith('SV'))
         sample_type = sv_dataset_type.split('_')[-1]
         families = set(samples_by_dataset_type[sv_dataset_type].keys()).intersection(samples_by_dataset_type[Sample.DATASET_TYPE_VARIANT_CALLS].keys())
@@ -585,6 +579,7 @@ class Command(BaseCommand):
         snv_indel_sample_data = cls._get_valid_family_sample_data(project, sample_type, {
             guid: sample_data for guid, sample_data in samples_by_dataset_type[Sample.DATASET_TYPE_VARIANT_CALLS].items() if guid in families
         })
+        family_variant_data = defaultdict(lambda: {'matched_searches': set(), 'matched_comp_het_searches': set(), 'support_vars': set()})
         logger.info(f'Searching for prioritized multi data type variants in {len(families)} families in project {project.name}')
         for search_name, config_search in MULTI_DATA_TYPE_SEARCHES.items():
             queryset = get_multi_data_type_comp_het_results_queryset(
@@ -594,6 +589,8 @@ class Command(BaseCommand):
             num_results = cls._execute_comp_het_search(queryset, search_name, family_variant_data, family_guid_map, samples)
             logger.info(f'Found {num_results} variants for criteria: {search_name}')
             search_counts[search_name] = num_results
+
+        cls._bulk_tag_variants(family_variant_data, updates)
 
     @classmethod
     def _execute_comp_het_search(cls, queryset, search_name, family_variant_data, family_guid_map, samples):
@@ -608,6 +605,19 @@ class Command(BaseCommand):
                     variant_data['matched_comp_het_searches'].add(search_name)
 
         return len(results)
+
+    @classmethod
+    def _bulk_tag_variants(cls, family_variant_data, updates, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS):
+        today = datetime.now().strftime('%Y-%m-%d')
+        new_tag_keys, num_updated, num_skipped = bulk_create_tagged_variants(
+            family_variant_data, tag_name=SEQR_TAG_TYPE, get_metadata=cls._get_metadata(today, 'matched_searches'),
+            get_comp_het_metadata=cls._get_metadata(today, 'matched_comp_het_searches'), user=None,
+            remove_missing_metadata=False, primary_id_field='key', dataset_type=dataset_type, genome_version=GENOME_VERSION_GRCh38,
+        )
+        updates['new_tag_keys'].update(new_tag_keys)
+        updates['num_updated'] += num_updated
+        updates['num_skipped'] += num_skipped
+        updates['matched_families'].update({family_id for family_id, _ in family_variant_data.keys()})
 
     @staticmethod
     def _get_gene_list_genes(name, confidences, gene_by_moi, exclude_gene_ids):

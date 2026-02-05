@@ -1,13 +1,15 @@
 from collections import defaultdict
+from clickhouse_backend.models import ArrayField, StringField
 from django.contrib.auth.models import User
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.db.models import F, Q, Count, prefetch_related_objects
+from django.db.models import F, Q, Count
 import json
 import logging
 import redis
 from tqdm import tqdm
 import traceback
 
+from clickhouse_search.backend.functions import ArrayDistinct, ArrayMap
 from clickhouse_search.search import get_variants_queryset, get_search_queryset, get_sample_data, clickhouse_genotypes_json
 from matchmaker.models import MatchmakerSubmissionGenes, MatchmakerSubmission
 from reference_data.models import TranscriptInfo, Omim, GENOME_VERSION_GRCh38
@@ -117,7 +119,7 @@ def _transcript_sort(gene_id, saved_variant_json):
     return (not is_main_gene, min(t.get('transcriptRank', 100) for t in gene_transcripts) if gene_transcripts else 100)
 
 
-def bulk_create_tagged_variants(family_variant_data, tag_name, get_metadata, user, project=None, get_comp_het_metadata=None, load_new_variant_data=False, remove_missing_metadata=True, primary_id_field='variant_id'):
+def bulk_create_tagged_variants(family_variant_data, tag_name, get_metadata, user, project=None, get_comp_het_metadata=None, load_new_variant_data=False, remove_missing_metadata=True, primary_id_field='variant_id', **kwargs):
     all_family_ids = {family_id for family_id, _ in family_variant_data.keys()}
     all_variant_ids = {variant_id for _, variant_id in family_variant_data.keys()}
 
@@ -134,8 +136,8 @@ def bulk_create_tagged_variants(family_variant_data, tag_name, get_metadata, use
         else:
             new_variant_data = {k: v for k, v in family_variant_data.items() if k in new_variant_keys}
             new_variant_data = backend_specific_call(
-                lambda o, *args: o, _get_clickhouse_variant_annotations,
-            )(new_variant_data, project.genome_version, primary_id_field)
+                lambda o, *args, **kwargs: o, _get_clickhouse_variant_annotations,
+            )(new_variant_data, primary_id_field, project=project, **kwargs)
 
         new_variant_models = []
         for (family_id, variant_id), variant in new_variant_data.items():
@@ -262,7 +264,7 @@ def _get_clickhouse_variants(samples: Sample.objects, families_by_id: dict[int, 
     qs = get_search_queryset(
         genome_version, Sample.DATASET_TYPE_VARIANT_CALLS, sample_data, variant_ids=variant_ids, join_variant_id=True,
     )
-    variants = qs.annotate_gene_ids().values('key', 'gene_ids', 'familyGuids', 'genotypes', 'variant_id')
+    variants = _gene_ids_annotated_queryset(qs).values('key', 'gene_ids', 'familyGuids', 'genotypes', 'variant_id')
     for variant in variants:
         variant_id = variant.pop('variant_id')
         chrom, pos, ref, alt = variant_id.split('-')
@@ -273,20 +275,30 @@ def _get_clickhouse_variants(samples: Sample.objects, families_by_id: dict[int, 
     return variants
 
 
-def _get_clickhouse_variant_annotations(variant_data: dict[tuple[int, str], dict], genome_version: str, primary_id_field: str) -> dict[tuple[int, str], dict]:
+def _gene_ids_annotated_queryset(qs):
+    return qs.annotate(gene_ids=ArrayDistinct(
+        ArrayMap(qs.TRANSCRIPT_FIELD, mapped_expression='x.geneId'),
+        output_field=ArrayField(StringField())),
+    )
+
+
+def _get_clickhouse_variant_annotations(variant_data: dict[tuple[int, str], dict], primary_id_field: str, genome_version: str = None, project: Project = None, dataset_type: str = Sample.DATASET_TYPE_VARIANT_CALLS) -> dict[tuple[int, str], dict]:
     variant_ids = {
         variant_id for (_, variant_id), variant in variant_data.items()
         if not (variant.get('key') and variant.get('variantId'))
     }
-    qs = get_variants_queryset(genome_version, Sample.DATASET_TYPE_VARIANT_CALLS, **{
-        'keys': None,
-        f'{primary_id_field}s': variant_ids,
-    })
+    qs = get_variants_queryset(
+        genome_version or project.genome_version, dataset_type, **{'keys': None, f'{primary_id_field}s': variant_ids},
+    )
     key_field = 'variantId' if primary_id_field == 'variant_id' else primary_id_field
+    variant_fields = ['key', 'gene_ids']
+    variant_values = {'variantId': F('variant_id')}
+    if dataset_type.startswith('SV'):
+        variant_fields += ['chrom', 'pos', 'end']
+    else:
+        variant_values.update(qs.split_variant_id_annotations())
     variants_by_id = {
-        v[key_field]: v for v in qs.annotate_gene_ids().join_variant_id().values(
-            'key', 'gene_ids', variantId=F('variant_id'), **qs.split_variant_id_annotations(),
-        )
+        v[key_field]: v for v in _gene_ids_annotated_queryset(qs.join_variant_id()).values(*variant_fields, **variant_values)
     }
     for (_, variant_id), variant in variant_data.items():
         if variant_id in variants_by_id:
