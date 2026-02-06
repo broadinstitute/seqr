@@ -101,6 +101,21 @@ class Migration(migrations.Migration):
             ],
         ),
         migrations.CreateModel(
+            name='ProjectPartitionsSnvIndel',
+            fields=[
+                ('project_guid', clickhouse_backend.models.StringField(primary_key=True, serialize=False)),
+                ('n_partitions', clickhouse_backend.models.UInt8Field()),
+            ],
+            options={
+                'db_table': 'GRCh38/SNV_INDEL/project_partitions',
+                'engine': clickhouse_backend.models.MergeTree(order_by='project_guid', primary_key='project_guid'),
+            },
+            managers=[
+                ('objects', django.db.models.manager.Manager()),
+                ('_overwrite_base_manager', django.db.models.manager.Manager()),
+            ],
+        ),
+        migrations.CreateModel(
             name='ProjectPartitionsDict',
             fields=[
                 ('project_guid', clickhouse_backend.models.StringField(primary_key=True, serialize=False)),
@@ -1426,21 +1441,6 @@ class Migration(migrations.Migration):
                 'source_table': 'EntriesSv',
                 'source_sql': 'ARRAY JOIN calls GROUP BY project_guid, key, affected',
                 'column_selects': {'affected': "dictGetOrDefault('seqrdb_affected_status_dict', 'affected', (family_guid, calls.sampleId), 'U')", 'het_samples': "sumIf(sign, calls.gt = 'HET')", 'hom_samples': "sumIf(sign, calls.gt = 'HOM')", 'ref_samples': "sumIf(sign, calls.gt = 'REF')"},
-            },
-            managers=[
-                ('objects', django.db.models.manager.Manager()),
-                ('_overwrite_base_manager', django.db.models.manager.Manager()),
-            ],
-        ),
-        migrations.CreateModel(
-            name='ProjectPartitionsSnvIndel',
-            fields=[
-                ('project_guid', clickhouse_backend.models.StringField(primary_key=True, serialize=False)),
-                ('n_partitions', clickhouse_backend.models.UInt8Field()),
-            ],
-            options={
-                'db_table': 'GRCh38/SNV_INDEL/project_partitions',
-                'engine': clickhouse_backend.models.MergeTree(order_by='project_guid', primary_key='project_guid'),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
