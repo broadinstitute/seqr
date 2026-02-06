@@ -3,6 +3,15 @@
 from django.db import migrations
 
 
+def validate_data_migrated(apps, schema_editor):
+    db_alias = schema_editor.connection.alias
+    # If the data migration has been run, then variants should be present in any variant table that had corresponding annotations
+    for table_type in ['SnvIndel', 'GRCh37SnvIndel', 'Mito', 'Sv', 'Gcnv']:
+        variants = apps.get_model('clickhouse_search', f'Variants{table_type}')
+        annotations = apps.get_model('clickhouse_search', f'Variants{table_type}')
+        assert variants.objects.using(db_alias).exists() == annotations.objects.using(db_alias).exists(), 'Data migration has not been run'
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -10,6 +19,7 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        migrations.RunPython(validate_data_migrated, reverse_code=migrations.RunPython.noop),
         migrations.DeleteModel(
             name='TranscriptsGRCh37SnvIndel',
         ),
