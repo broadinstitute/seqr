@@ -31,8 +31,6 @@ def _hgmd_source_url_template(url):
 
 class Migration(migrations.Migration):
 
-    replaces = [('clickhouse_search', '0015_remove_gnomadgenomessnvindel_key_and_more'), ('clickhouse_search', '0016_add_affected_status'), ('clickhouse_search', '0017_fix_affected_status_column_order'), ('clickhouse_search', '0018_queue_rebuild_gt_stats_jobs'), ('clickhouse_search', '0019_projectpartitions'), ('clickhouse_search', '0020_clinvar_new_reference_data'), ('clickhouse_search', '0021_affected_status_orderby'), ('clickhouse_search', '0022_db_gene_id'), ('clickhouse_search', '0023_add_sex_dict'), ('clickhouse_search', '0024_pext_reference_data'), ('clickhouse_search', '0025_screen_reference_data'), ('clickhouse_search', '0026_gnomad_noncoding_reference_data'), ('clickhouse_search', '0027_hgmd_reference_data'), ('clickhouse_search', '0028_topmed_reference_data'), ('clickhouse_search', '0029_gnomad_exomes'), ('clickhouse_search', '0030_gnomad_genomes'), ('clickhouse_search', '0031_splice_ai'), ('clickhouse_search', '0032_dbnsfp'), ('clickhouse_search', '0033_mito_all_reference_data'), ('clickhouse_search', '0034_absplice2'), ('clickhouse_search', '0035_promoterai'), ('clickhouse_search', '0036_gnomad_genomes_columnbugfix'), ('clickhouse_search', '0037_geneIds_bugfix'), ('clickhouse_search', '0038_eigen'), ('clickhouse_search', '0039_variantsdiskgcnv_variantsdiskgrch37snvindel_and_more'), ('clickhouse_search', '0040_gnomadnoncodingconstraintdict')]
-
     initial = True
 
     dependencies = [
