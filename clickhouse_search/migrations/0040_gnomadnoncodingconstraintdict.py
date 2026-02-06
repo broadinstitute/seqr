@@ -1089,7 +1089,7 @@ class Migration(migrations.Migration):
             options={
                 'db_table': 'GRCh37/SNV_INDEL/project_gt_stats',
                 'abstract': False,
-                'engine': clickhouse_backend.models.SummingMergeTree(index_granularity=8192, order_by=('project_guid', 'key', 'sample_type'), partition_by='project_guid'),
+                'engine': clickhouse_backend.models.SummingMergeTree(index_granularity=8192, order_by=('project_guid', 'key', 'sample_type', 'affected'), partition_by='project_guid'),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
@@ -1110,7 +1110,7 @@ class Migration(migrations.Migration):
             options={
                 'db_table': 'GRCh38/SNV_INDEL/project_gt_stats',
                 'abstract': False,
-                'engine': clickhouse_backend.models.SummingMergeTree(index_granularity=8192, order_by=('project_guid', 'key', 'sample_type'), partition_by='project_guid'),
+                'engine': clickhouse_backend.models.SummingMergeTree(index_granularity=8192, order_by=('project_guid', 'key', 'sample_type', 'affected'), partition_by='project_guid'),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
@@ -1131,7 +1131,7 @@ class Migration(migrations.Migration):
             options={
                 'db_table': 'GRCh38/MITO/project_gt_stats',
                 'abstract': False,
-                'engine': clickhouse_backend.models.SummingMergeTree(index_granularity=8192, order_by=('project_guid', 'key', 'sample_type'), partition_by='project_guid'),
+                'engine': clickhouse_backend.models.SummingMergeTree(index_granularity=8192, order_by=('project_guid', 'key', 'sample_type', 'affected'), partition_by='project_guid'),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
@@ -1151,7 +1151,7 @@ class Migration(migrations.Migration):
             options={
                 'db_table': 'GRCh38/SV/project_gt_stats',
                 'abstract': False,
-                'engine': clickhouse_backend.models.SummingMergeTree(index_granularity=8192, order_by=('project_guid', 'key'), partition_by='project_guid'),
+                'engine': clickhouse_backend.models.SummingMergeTree(index_granularity=8192, order_by=('project_guid', 'key', 'affected'), partition_by='project_guid'),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
