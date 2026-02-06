@@ -36,7 +36,7 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
     has_comp_het = inheritance_mode in {RECESSIVE, COMPOUND_HET}
     has_x_chrom_comp_het = has_comp_het and _is_x_chrom_only(genome_version, **search)
     has_x_linked = inheritance_mode in {RECESSIVE, X_LINKED_RECESSIVE} and _has_x_chrom(genome_version, **search)
-    sample_data_by_dataset_type = get_sample_data(
+    sample_data_by_dataset_type = _get_sample_data(
         samples,
         skip_multi_project_individual_guid=True,
         annotate_affected_males=has_x_chrom_comp_het or has_x_linked,
@@ -319,7 +319,7 @@ def _set_individual_guids(result, sample_map, encode_genotypes_json):
             individual_genotypes[individual_guid].append({**genotype, 'individualGuid': individual_guid})
     genotypes = {k: v[0] if len(v) == 1 else v for k, v in individual_genotypes.items()}
     if encode_genotypes_json:
-        genotypes = clickhouse_genotypes_json(genotypes)
+        genotypes = _clickhouse_genotypes_json(genotypes)
     result['genotypes'] = genotypes
 
 
@@ -392,7 +392,7 @@ def _is_matched_minimal_transcript(transcript, minimal_transcript):
      and transcript.get('spliceregion', {}).get('extended_intronic_splice_region_variant') == minimal_transcript.get('extendedIntronicSpliceRegionVariant'))
 
 
-def get_sample_data(samples, skip_multi_project_individual_guid=False, annotate_affected_males=False):
+def _get_sample_data(samples, skip_multi_project_individual_guid=False, annotate_affected_males=False):
     mismatch_affected_samples = samples.values('sample_id', 'dataset_type').annotate(
         projects=ArrayAgg('individual__family__project__name', distinct=True),
         affected=ArrayAgg('individual__affected', distinct=True),
@@ -660,7 +660,7 @@ def _clickhouse_variant_lookup(variant_id, parsed_variant_id, genome_version, da
     entry_cls = ENTRY_CLASS_MAP[genome_version][data_type]
     variants_cls = VARIANTS_CLASS_MAP[genome_version][data_type]
 
-    sample_data = get_sample_data(samples)[data_type] if samples else None
+    sample_data = _get_sample_data(samples)[data_type] if samples else None
 
     entries = entry_cls.objects.filter_locus(
         variant_ids=[variant_id], parsed_variant_ids=[parsed_variant_id] if parsed_variant_id else [],
@@ -757,19 +757,19 @@ def get_clickhouse_variant_by_id(variant_id, parsed_variant_id, samples, genome_
     return None
 
 
-def get_clickhouse_genotypes(project_guid, family_guid, genome_version, dataset_type, keys, samples):
-    sample_data = get_sample_data(samples.filter(individual__family__guid=family_guid))[dataset_type]
+def get_clickhouse_genotypes(project_guid, family_guids, genome_version, dataset_type, keys, samples):
+    sample_data = _get_sample_data(samples.filter(individual__family__guid__in=family_guids))[dataset_type]
     entries = ENTRY_CLASS_MAP[genome_version][dataset_type].objects.filter(
-        project_guid=project_guid, family_guid=family_guid, key__in=keys,
+        project_guid=project_guid, family_guid__in=family_guids, key__in=keys,
     )
     gt_field, gt_expr = entries.genotype_expression(sample_data)
     return {
-        key: clickhouse_genotypes_json(genotypes) for key, genotypes in
+        key: _clickhouse_genotypes_json(genotypes) for key, genotypes in
         entries.annotate(**{gt_field: gt_expr}).values_list('key', 'genotypes')
     }
 
 
-def clickhouse_genotypes_json(genotypes):
+def _clickhouse_genotypes_json(genotypes):
     return json.loads(json.dumps(genotypes, cls=DjangoJSONEncoderWithSets))
 
 
