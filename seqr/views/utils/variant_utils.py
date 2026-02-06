@@ -10,7 +10,7 @@ from tqdm import tqdm
 import traceback
 
 from clickhouse_search.backend.functions import ArrayDistinct, ArrayMap
-from clickhouse_search.search import get_variants_queryset, get_search_queryset, get_clickhouse_genotypes
+from clickhouse_search.search import get_variants_queryset, get_clickhouse_genotypes
 from matchmaker.models import MatchmakerSubmissionGenes, MatchmakerSubmission
 from reference_data.models import TranscriptInfo, Omim, GENOME_VERSION_GRCh38
 from seqr.models import SavedVariant, VariantSearchResults, Family, LocusList, LocusListInterval, LocusListGene, \
@@ -263,9 +263,9 @@ def _get_es_variants(samples: Sample.objects, families_by_id: dict[int, Family],
 
 def _get_clickhouse_variants(samples: Sample.objects, families_by_id: dict[int, Family], family_variant_ids: set[tuple[int, str]], genome_version: str = None, **kwargs) -> list[dict]:
     variant_data = _get_clickhouse_variant_annotations(
-        {variant_id: {} for  variant_id in family_variant_ids}, genome_version=genome_version,
+        {variant_id: {'genotypes': {}, 'familyGuids': []} for  variant_id in family_variant_ids}, genome_version=genome_version,
     )
-    variants_by_key = {variant['key']: variant for variant in variant_data.values() if variant}
+    variants_by_key = {variant['key']: variant for variant in variant_data.values() if variant.get('key')}
 
     families = list(families_by_id.values())
     prefetch_related_objects(families, 'project')
@@ -278,9 +278,8 @@ def _get_clickhouse_variants(samples: Sample.objects, families_by_id: dict[int, 
             samples,
         )
         for key, genotypes in genotype_keys.items():
-            variants_by_key[key].update({
-                'genotypes': genotypes, 'familyGuids': sorted({g['familyGuid'] for g in genotypes.values()}),
-            })
+            variants_by_key[key]['genotypes'].update(genotypes)
+            variants_by_key[key]['familyGuids'] += sorted({g['familyGuid'] for g in genotypes.values()})
 
     return list(variants_by_key.values())
 
