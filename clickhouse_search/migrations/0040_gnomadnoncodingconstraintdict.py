@@ -999,9 +999,9 @@ class Migration(migrations.Migration):
                 ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
                 ('ac_wes', clickhouse_backend.models.UInt32Field()),
                 ('ac_wgs', clickhouse_backend.models.UInt32Field()),
+                ('ac_affected', clickhouse_backend.models.UInt32Field()),
                 ('hom_wes', clickhouse_backend.models.UInt32Field()),
                 ('hom_wgs', clickhouse_backend.models.UInt32Field()),
-                ('ac_affected', clickhouse_backend.models.UInt32Field()),
                 ('hom_affected', clickhouse_backend.models.UInt32Field()),
             ],
             options={
@@ -1020,9 +1020,9 @@ class Migration(migrations.Migration):
                 ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
                 ('ac_wes', clickhouse_backend.models.UInt32Field()),
                 ('ac_wgs', clickhouse_backend.models.UInt32Field()),
+                ('ac_affected', clickhouse_backend.models.UInt32Field()),
                 ('hom_wes', clickhouse_backend.models.UInt32Field()),
                 ('hom_wgs', clickhouse_backend.models.UInt32Field()),
-                ('ac_affected', clickhouse_backend.models.UInt32Field()),
                 ('hom_affected', clickhouse_backend.models.UInt32Field()),
             ],
             options={
@@ -1041,9 +1041,9 @@ class Migration(migrations.Migration):
                 ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
                 ('ac_het_wes', clickhouse_backend.models.UInt32Field()),
                 ('ac_het_wgs', clickhouse_backend.models.UInt32Field()),
+                ('ac_het_affected', clickhouse_backend.models.UInt32Field()),
                 ('ac_hom_wes', clickhouse_backend.models.UInt32Field()),
                 ('ac_hom_wgs', clickhouse_backend.models.UInt32Field()),
-                ('ac_het_affected', clickhouse_backend.models.UInt32Field()),
                 ('ac_hom_affected', clickhouse_backend.models.UInt32Field()),
             ],
             options={
@@ -1061,8 +1061,8 @@ class Migration(migrations.Migration):
             fields=[
                 ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
                 ('ac_wgs', clickhouse_backend.models.UInt32Field()),
-                ('hom_wgs', clickhouse_backend.models.UInt32Field()),
                 ('ac_affected', clickhouse_backend.models.UInt32Field()),
+                ('hom_wgs', clickhouse_backend.models.UInt32Field()),
                 ('hom_affected', clickhouse_backend.models.UInt32Field()),
             ],
             options={
@@ -1081,10 +1081,10 @@ class Migration(migrations.Migration):
                 ('project_guid', clickhouse_backend.models.StringField(low_cardinality=True)),
                 ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
                 ('sample_type', clickhouse_backend.models.Enum8Field(choices=[(1, 'WES'), (2, 'WGS')])),
+                ('affected', clickhouse_backend.models.Enum8Field(choices=[(1, 'A'), (2, 'N'), (3, 'U')])),
                 ('ref_samples', clickhouse_backend.models.UInt32Field()),
                 ('het_samples', clickhouse_backend.models.UInt32Field()),
                 ('hom_samples', clickhouse_backend.models.UInt32Field()),
-                ('affected', clickhouse_backend.models.Enum8Field(choices=[(1, 'A'), (2, 'N'), (3, 'U')])),
             ],
             options={
                 'db_table': 'GRCh37/SNV_INDEL/project_gt_stats',
@@ -1102,10 +1102,10 @@ class Migration(migrations.Migration):
                 ('project_guid', clickhouse_backend.models.StringField(low_cardinality=True)),
                 ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
                 ('sample_type', clickhouse_backend.models.Enum8Field(choices=[(1, 'WES'), (2, 'WGS')])),
+                ('affected', clickhouse_backend.models.Enum8Field(choices=[(1, 'A'), (2, 'N'), (3, 'U')])),
                 ('ref_samples', clickhouse_backend.models.UInt32Field()),
                 ('het_samples', clickhouse_backend.models.UInt32Field()),
                 ('hom_samples', clickhouse_backend.models.UInt32Field()),
-                ('affected', clickhouse_backend.models.Enum8Field(choices=[(1, 'A'), (2, 'N'), (3, 'U')])),
             ],
             options={
                 'db_table': 'GRCh38/SNV_INDEL/project_gt_stats',
@@ -1123,10 +1123,10 @@ class Migration(migrations.Migration):
                 ('project_guid', clickhouse_backend.models.StringField(low_cardinality=True)),
                 ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
                 ('sample_type', clickhouse_backend.models.Enum8Field(choices=[(1, 'WES'), (2, 'WGS')])),
+                ('affected', clickhouse_backend.models.Enum8Field(choices=[(1, 'A'), (2, 'N'), (3, 'U')])),
                 ('ref_samples', clickhouse_backend.models.UInt32Field()),
                 ('het_samples', clickhouse_backend.models.UInt32Field()),
                 ('hom_samples', clickhouse_backend.models.UInt32Field()),
-                ('affected', clickhouse_backend.models.Enum8Field(choices=[(1, 'A'), (2, 'N'), (3, 'U')])),
             ],
             options={
                 'db_table': 'GRCh38/MITO/project_gt_stats',
@@ -1143,10 +1143,10 @@ class Migration(migrations.Migration):
             fields=[
                 ('project_guid', clickhouse_backend.models.StringField(low_cardinality=True)),
                 ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
+                ('affected', clickhouse_backend.models.Enum8Field(choices=[(1, 'A'), (2, 'N'), (3, 'U')])),
                 ('ref_samples', clickhouse_backend.models.UInt32Field()),
                 ('het_samples', clickhouse_backend.models.UInt32Field()),
                 ('hom_samples', clickhouse_backend.models.UInt32Field()),
-                ('affected', clickhouse_backend.models.Enum8Field(choices=[(1, 'A'), (2, 'N'), (3, 'U')])),
             ],
             options={
                 'db_table': 'GRCh38/SV/project_gt_stats',
