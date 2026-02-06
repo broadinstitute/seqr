@@ -199,9 +199,6 @@ class SearchQuerySet(QuerySet):
             if field.db_column and field.name != field.db_column and field.db_column
         }
 
-    def conditional_selects(self, *args, **kwargs):
-        return {}
-
     def result_values(self, additional_fields=None, **kwargs):
         fields = [*self.annotation_fields] + (additional_fields or [])
         values = {**self.annotation_values}
@@ -388,6 +385,9 @@ class BaseVariantsQuerySet(SearchQuerySet):
     def join_annotations(self):
         return self._annotate_seqr_pop_expression(self)
 
+    def conditional_selects(self, query, prefix='', **kwargs):
+        raise NotImplementedError
+
     def search_compound_hets(self, primary_q, secondary_q):
         primary_gene_field = f'primary_{self.SELECTED_GENE_FIELD}'
         secondary_gene_field = f'secondary_{self.SELECTED_GENE_FIELD}'
@@ -551,12 +551,6 @@ class VariantsQuerySet(BaseVariantsQuerySet):
 
         if self.has_annotation('mitomapPathogenic'):
             annotations['mitomapPathogenic'] = F('mitomapPathogenic')
-
-        if self.has_annotation('variant_id'):
-            annotations.update({
-                'variantId': F('variant_id'),
-                **self.split_variant_id_annotations(),
-            })
 
         return annotations
 

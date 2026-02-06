@@ -841,12 +841,6 @@ def _main_transcript(selected_transcript_id, sorted_transcripts):
     return sorted_transcripts[0]
 
 
-def _variant_main_transcript(selected_transcript_id, transcripts):
-    return transcripts[0] if not selected_transcript_id else next(
-        t for t in transcripts if t['transcriptId'] == selected_transcript_id
-    )
-
-
 def delete_clickhouse_project(project, dataset_type, sample_type=None):
     dataset_type = _clickhouse_dataset_type(dataset_type, sample_type)
     table_base = f'{GENOME_VERSION_LOOKUP[project.genome_version]}/{dataset_type}'
