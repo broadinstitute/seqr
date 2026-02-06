@@ -938,7 +938,7 @@ class Migration(migrations.Migration):
                 ('pathogenicity', clickhouse_backend.models.Enum8Field(choices=[(0, 'Pathogenic'), (1, 'Pathogenic/Likely_pathogenic'), (2, 'Pathogenic/Likely_pathogenic/Established_risk_allele'), (3, 'Pathogenic/Likely_pathogenic/Likely_risk_allele'), (4, 'Pathogenic/Likely_risk_allele'), (5, 'Likely_pathogenic'), (6, 'Likely_pathogenic/Likely_risk_allele'), (7, 'Established_risk_allele'), (8, 'Likely_risk_allele'), (9, 'Conflicting_classifications_of_pathogenicity'), (10, 'Uncertain_risk_allele'), (11, 'Uncertain_significance/Uncertain_risk_allele'), (12, 'Uncertain_significance'), (13, 'No_pathogenic_assertion'), (14, 'Likely_benign'), (15, 'Benign/Likely_benign'), (16, 'Benign')])),
             ],
             options={
-                'db_table': 'GRCh37/SNV_INDEL/reference_data/clinvar_all_variants',
+                'db_table': 'GRCh37/SNV_INDEL/reference_data/clinvar/all_variants',
                 'abstract': False,
                 'engine': clickhouse_backend.models.MergeTree(order_by=('version', 'variant_id'), partition_by='version', primary_key=('version', 'variant_id')),
             },
@@ -961,7 +961,7 @@ class Migration(migrations.Migration):
                 ('pathogenicity', clickhouse_backend.models.Enum8Field(choices=[(0, 'Pathogenic'), (1, 'Pathogenic/Likely_pathogenic'), (2, 'Pathogenic/Likely_pathogenic/Established_risk_allele'), (3, 'Pathogenic/Likely_pathogenic/Likely_risk_allele'), (4, 'Pathogenic/Likely_risk_allele'), (5, 'Likely_pathogenic'), (6, 'Likely_pathogenic/Likely_risk_allele'), (7, 'Established_risk_allele'), (8, 'Likely_risk_allele'), (9, 'Conflicting_classifications_of_pathogenicity'), (10, 'Uncertain_risk_allele'), (11, 'Uncertain_significance/Uncertain_risk_allele'), (12, 'Uncertain_significance'), (13, 'No_pathogenic_assertion'), (14, 'Likely_benign'), (15, 'Benign/Likely_benign'), (16, 'Benign')])),
             ],
             options={
-                'db_table': 'GRCh38/MITO/reference_data/clinvar_all_variants',
+                'db_table': 'GRCh38/MITO/reference_data/clinvar/all_variants',
                 'abstract': False,
                 'engine': clickhouse_backend.models.MergeTree(order_by=('version', 'variant_id'), partition_by='version', primary_key=('version', 'variant_id')),
             },
@@ -984,7 +984,7 @@ class Migration(migrations.Migration):
                 ('pathogenicity', clickhouse_backend.models.Enum8Field(choices=[(0, 'Pathogenic'), (1, 'Pathogenic/Likely_pathogenic'), (2, 'Pathogenic/Likely_pathogenic/Established_risk_allele'), (3, 'Pathogenic/Likely_pathogenic/Likely_risk_allele'), (4, 'Pathogenic/Likely_risk_allele'), (5, 'Likely_pathogenic'), (6, 'Likely_pathogenic/Likely_risk_allele'), (7, 'Established_risk_allele'), (8, 'Likely_risk_allele'), (9, 'Conflicting_classifications_of_pathogenicity'), (10, 'Uncertain_risk_allele'), (11, 'Uncertain_significance/Uncertain_risk_allele'), (12, 'Uncertain_significance'), (13, 'No_pathogenic_assertion'), (14, 'Likely_benign'), (15, 'Benign/Likely_benign'), (16, 'Benign')])),
             ],
             options={
-                'db_table': 'GRCh38/SNV_INDEL/reference_data/clinvar_all_variants',
+                'db_table': 'GRCh38/SNV_INDEL/reference_data/clinvar/all_variants',
                 'abstract': False,
                 'engine': clickhouse_backend.models.MergeTree(order_by=('version', 'variant_id'), partition_by='version', primary_key=('version', 'variant_id')),
             },
