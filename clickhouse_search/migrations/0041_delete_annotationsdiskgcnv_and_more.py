@@ -9,7 +9,8 @@ def validate_data_migrated(apps, schema_editor):
     for table_type in ['SnvIndel', 'GRCh37SnvIndel', 'Mito', 'Sv', 'Gcnv']:
         variants = apps.get_model('clickhouse_search', f'Variants{table_type}')
         annotations = apps.get_model('clickhouse_search', f'Annotations{table_type}')
-        assert variants.objects.using(db_alias).exists() == annotations.objects.using(db_alias).exists(), 'Data migration has not been run'
+        if variants.objects.using(db_alias).exists() != annotations.objects.using(db_alias).exists():
+            raise Exception('Data migration has not been run')
 
 
 class Migration(migrations.Migration):
