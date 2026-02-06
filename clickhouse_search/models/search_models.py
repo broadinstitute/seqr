@@ -343,7 +343,7 @@ class EntriesSnvIndel(BaseEntriesSnvIndel):
     # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
     key = ForeignKey('VariantsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
     partition_id = MaterializedUInt8Field(
-        expression="farmHash64(family_guid) %% n_partitions", # extra paren to escape within Django.
+        expression="farmHash64(family_guid) % n_partitions",
     )
     n_partitions = MaterializedUInt8Field(
         expression="dictGetOrDefault('GRCh38/SNV_INDEL/project_partitions_dict', 'n_partitions', project_guid, 1)",

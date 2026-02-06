@@ -414,7 +414,7 @@ class Migration(migrations.Migration):
                 ('calls', clickhouse_backend.models.ArrayField(base_field=clickhouse_search.backend.fields.NamedTupleField(base_fields=[('sampleId', clickhouse_backend.models.StringField()), ('gt', clickhouse_backend.models.Enum8Field(blank=True, choices=[(0, 'REF'), (1, 'HET'), (2, 'HOM')], null=True)), ('gq', clickhouse_backend.models.UInt8Field(blank=True, null=True)), ('ab', clickhouse_backend.models.DecimalField(blank=True, decimal_places=5, max_digits=9, null=True)), ('dp', clickhouse_backend.models.UInt16Field(blank=True, null=True))]))),
                 ('sign', clickhouse_backend.models.Int8Field()),
                 ('n_partitions', clickhouse_search.backend.fields.MaterializedUInt8Field(expression="dictGetOrDefault('GRCh38/SNV_INDEL/project_partitions_dict', 'n_partitions', project_guid, 1)"),),
-                ('partition_id', clickhouse_search.backend.fields.MaterializedUInt8Field(expression='farmHash64(family_guid) %% n_partitions')),
+                ('partition_id', clickhouse_search.backend.fields.MaterializedUInt8Field(expression='farmHash64(family_guid) % n_partitions')),
             ],
             options={
                 'db_table': 'GRCh38/SNV_INDEL/entries',
@@ -4423,26 +4423,6 @@ class Migration(migrations.Migration):
                 'source_sql': '',
                 'source_url': 'https://storage.googleapis.com/seqr-reference-data/v3.1/GRCh38/eigen/1.1.parquet/*.parquet',
                 'column_selects': {'score': 'Eigen_phred', 'variantId': 'variant_id'},
-                'refreshable': True,
-                'create_empty': True,
-            },
-            managers=[
-                ('objects', django.db.models.manager.Manager()),
-                ('_overwrite_base_manager', django.db.models.manager.Manager()),
-            ],
-        ),
-        migrations.CreateModel(
-            name='EigenGRCh37Mv',
-            fields=[
-                ('key', clickhouse_backend.models.UInt32Field(primary_key=True, serialize=False)),
-                ('score', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
-            ],
-            options={
-                'db_table': 'GRCh37/SNV_INDEL/reference_data/eigen/all_variants_to_seqr_variants_mv',
-                'to_table': 'EigenSeqrVariantsGRCh37SnvIndel',
-                'source_table': 'EigenAllVariantsGRCh37SnvIndel',
-                'source_sql': 'src INNER JOIN `GRCh37/SNV_INDEL/key_lookup` dst on assumeNotNull(src.variantId) = dst.variantId',
-                'column_selects': {'key': 'DISTINCT ON (key)'},
                 'refreshable': True,
                 'create_empty': True,
             },
