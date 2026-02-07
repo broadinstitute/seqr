@@ -5,7 +5,7 @@ import requests
 from requests.adapters import HTTPAdapter
 from requests.exceptions import HTTPError
 import time
-from typing import Literal, Union
+from typing import Literal, Union, Optional
 from urllib3.util.retry import Retry
 
 from django.core.management.base import BaseCommand, CommandError
@@ -99,7 +99,7 @@ class AlleleRegistryError:
     error_type: str
     description: str
     message: str
-    input_line: str | None
+    input_line: Optional[str]
 
     @classmethod
     def from_api_response(cls, response: dict):
