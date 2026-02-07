@@ -147,7 +147,7 @@ def build_url(
 
 
 def handle_api_response(
-    genome_version: Union[Literal[GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38]],
+    genome_version: Literal[GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38],
     res: requests.Response,
 ) -> dict[str, str]:
     response = res.json()
@@ -213,9 +213,11 @@ def handle_api_response(
 
 
 def register_caids(
-    genome_version: Union[Literal[GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38]],
+    genome_version: Literal[GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38],
     variants: Union[list[VariantDetailsGRCh37SnvIndel], list[VariantDetailsSnvIndel]],
 ) -> int:
+    if not variants:
+        raise CommandError("register_caids must be passed a non-empty list of variants")
     rows = [
         ALLELE_REGISTRY_HEADERS[genome_version],
     ]
@@ -245,8 +247,12 @@ def register_caids(
         data=data,
         timeout=HTTP_REQUEST_TIMEOUT_S,
     )
-    handle_api_response(genome_version, variants, res)
-    return max(v.key_id for v in variants)
+    mapped_variants = handle_api_response(genome_version, res)
+    max_key_id = -1
+    for variant in variants:
+        variant.CAID = mapped_variants.get(variant.variant_id)
+        max_key_id = max(max_key_id, variant.key_id)
+    return max_key_id
 
 
 class Command(BaseCommand):
