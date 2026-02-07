@@ -126,6 +126,7 @@ def requests_retry_session():
         total=5,
         backoff_factor=1,
         status_forcelist=[500, 502, 503, 504],
+        allowed_methods={"PUT"},
     )
     s.mount("http://", HTTPAdapter(max_retries=retries))
     s.mount("https://", HTTPAdapter(max_retries=retries))
@@ -148,16 +149,18 @@ def build_url(
 
 def handle_api_response(
     genome_version: Literal[GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38],
-    res: requests.Response,
+    response: requests.Response,
 ) -> dict[str, str]:
-    response = res.json()
-    if not res.ok or "errorType" in response:
-        error = AlleleRegistryError.from_api_response(response)
+    response_json = response.json()
+    if not response.ok or "errorType" in response_json:
+        error = AlleleRegistryError.from_api_response(response_json)
         logger.error(error)
         raise HTTPError(error.message)
+    elif not isinstance(response_json, list):
+        raise HTTPError(f"Unexpected AR response type: {type(response_json)}")
 
     mapped_variants, errors, unmapped_variants = {}, [], []
-    for allele_response in response:
+    for allele_response in response_json:
         if "errorType" in allele_response:
             errors.append(
                 AlleleRegistryError.from_api_response(allele_response),
@@ -186,19 +189,26 @@ def handle_api_response(
                 gnomad_id = allele_response["externalRecords"][
                     ALLELE_REGISTRY_GNOMAD_IDS[genome_version]
                 ][0]["id"]
-                chrom, pos, ref, alt = gnomad_id.split("-")
+                parts = gnomad_id.split("-")
+                if len(parts) != 4:
+                    unmapped_variants.append(allele_response)
+                    continue
+                chrom, pos, ref, alt = parts
             else:
                 unmapped_variants.append(allele_response)
                 continue
 
-        formatted_chromosome = chrom
         if genome_version == GENOME_VERSION_GRCh38:
-            formatted_chromosome = f"chr{chrom}"
-            if chrom == "MT":
+            if chrom in {"MT", "M"}:
                 formatted_chromosome = "chrM"
+            else:
+                formatted_chromosome = f"chr{chrom}"
+        else:
+            formatted_chromosome = chrom
+
         mapped_variants[f"{formatted_chromosome}-{pos}-{ref}-{alt}"] = caid
     logger.info(
-        f"{len(response) - len(errors)} out of {len(response)} variants returned CAID(s)",
+        f"{len(response_json) - len(errors)} out of {len(response_json)} variants returned CAID(s)",
     )
     if unmapped_variants:
         logger.info(
@@ -218,9 +228,7 @@ def register_caids(
 ) -> int:
     if not variants:
         raise CommandError("register_caids must be passed a non-empty list of variants")
-    rows = [
-        ALLELE_REGISTRY_HEADERS[genome_version],
-    ]
+    rows = list(ALLELE_REGISTRY_HEADERS[genome_version])
     for variant in variants:
         chrom, pos, ref, alt = variant.variant_id.split("-")
         chrom = chrom.replace(
@@ -250,14 +258,14 @@ def register_caids(
     mapped_variants = handle_api_response(genome_version, res)
     max_key_id = -1
     for variant in variants:
-        variant.CAID = mapped_variants.get(variant.variant_id)
+        variant.CAID = mapped_variants.get(variant.variant_id, None)
         max_key_id = max(max_key_id, variant.key_id)
     return max_key_id
 
 
 class Command(BaseCommand):
     help = "Register newly loaded seqr variants with the Clingen Allele Registry"
-    batch_size = 20_000
+    batch_size = 25_000
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -303,6 +311,7 @@ class Command(BaseCommand):
 
                 try:
                     max_key = register_caids(genome_version, variants)
+                    variant_details_model.objects.bulk_update(variants, ["CAID"])
                 except Exception:
                     logger.exception(
                         f"Failed in {genome_version}/ClingenAlleleRegistry batch {curr_key}"
