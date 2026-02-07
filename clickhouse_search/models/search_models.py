@@ -5,7 +5,7 @@ from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocks
 from clickhouse_search.backend.fields import Enum8Field, NestedField, UInt32FieldDeltaCodecField, UInt64FieldDeltaCodecField, NamedTupleField, MaterializedUInt8Field
 from clickhouse_search.backend.functions import ArrayDistinct, ArrayFlatten, ArrayMin, ArrayMax
 from clickhouse_search.backend.table_models import Dictionary, FixtureLoadableClickhouseModel
-from clickhouse_search.managers import EntriesManager, SvEntriesManager, SvAnnotationsQuerySet, AnnotationsQuerySet
+from clickhouse_search.managers import EntriesManager, SvEntriesManager, SvAnnotationsQuerySet, AnnotationsQuerySet, VariantDetailsQuerySet
 from clickhouse_search.models.reference_data_models import GnomadNonCodingConstraintDict, BaseSpliceAi, \
     ScreenDict
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
@@ -754,7 +754,7 @@ class TranscriptsGRCh37SnvIndel(models.ClickhouseModel):
         db_table = 'GRCh37/SNV_INDEL/transcripts'
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh37/SNV_INDEL/transcripts', primary_key='key', flatten_nested=0)
 
-class VariantDetailsGRCh37SnvIndel(models.ClickhouseModel):
+class VariantDetailsGRCh37SnvIndel(FixtureLoadableClickhouseModel):
     key = OneToOneField('VariantsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
     variant_id = models.StringField(db_column='variantId')
     lifted_over_chrom = Enum8Field(db_column='liftedOverChrom', return_int=False, null=True, blank=True, choices=CHROMOSOME_CHOICES)
@@ -762,6 +762,8 @@ class VariantDetailsGRCh37SnvIndel(models.ClickhouseModel):
     rsid = models.StringField(null=True, blank=True)
     caid = models.StringField(db_column='CAID', null=True, blank=True)
     transcripts = NestedField(BaseVariants.TRANSCRIPTS_FIELDS, group_by_key='geneId')
+
+    objects = VariantDetailsQuerySet.as_manager()
 
     class Meta:
         db_table = 'GRCh37/SNV_INDEL/variants/details'
@@ -820,7 +822,7 @@ class TranscriptsSnvIndel(models.ClickhouseModel):
         db_table = 'GRCh38/SNV_INDEL/transcripts'
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SNV_INDEL/transcripts', primary_key='key', flatten_nested=0)
 
-class VariantDetailsSnvIndel(models.ClickhouseModel):
+class VariantDetailsSnvIndel(FixtureLoadableClickhouseModel):
     SORTED_MOTIF_FEATURE_CONSEQUENCES_FIELDS = sorted([
         ('motifFeatureId', models.StringField(null=True, blank=True)),
         *BaseVariantsSnvIndel.SORTED_MOTIF_FEATURE_CONSEQUENCES_FIELDS,
@@ -831,7 +833,7 @@ class VariantDetailsSnvIndel(models.ClickhouseModel):
         *BaseVariantsSnvIndel.SORTED_REGULATORY_FEATURE_CONSEQUENCES_FIELDS,
     ])
 
-    key = OneToOneField('VariantsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = OneToOneField('VariantsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
     variant_id = models.StringField(db_column='variantId')
     lifted_over_chrom = Enum8Field(db_column='liftedOverChrom', return_int=False, null=True, blank=True, choices=CHROMOSOME_CHOICES)
     lifted_over_pos = models.UInt32Field(db_column='liftedOverPos', null=True, blank=True)
@@ -841,6 +843,7 @@ class VariantDetailsSnvIndel(models.ClickhouseModel):
     sorted_motif_feature_consequences = NestedField(SORTED_MOTIF_FEATURE_CONSEQUENCES_FIELDS, db_column='sortedMotifFeatureConsequences', null_when_empty=True)
     sorted_regulatory_feature_consequences = NestedField(SORTED_REGULATORY_FEATURE_CONSEQUENCES_FIELDS, db_column='sortedRegulatoryFeatureConsequences', null_when_empty=True)
 
+    objects = VariantDetailsQuerySet.as_manager()
 
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/variants/details'

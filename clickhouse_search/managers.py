@@ -171,7 +171,6 @@ class SearchQuerySet(QuerySet):
         return results, has_required_filter, in_silico_q, missing_q
 
 
-
 class BaseAnnotationsQuerySet(SearchQuerySet):
 
     TRANSCRIPT_FIELD = 'sorted_transcript_consequences'
@@ -1562,3 +1561,15 @@ class SvEntriesManager(BaseEntriesManager):
 
     def _can_filter_gene_interval(self, genes):
         return genes and 'geneIds' in self.call_fields
+
+class VariantDetailsQuerySet(QuerySet):
+    def join_series(self, min_: int, max_: int):
+        return self.raw(
+            f"""
+            SELECT vd.*
+            FROM generate_series(%s, %s) AS gs
+            INNER JOIN `{self.model._meta.db_table}` vd
+            ON toUInt32(gs.generate_series) = vd.key
+            """,
+            [min_, max_]
+        )

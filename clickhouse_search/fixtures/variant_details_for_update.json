@@ -1,0 +1,136 @@
+[
+  {
+      "model": "clickhouse_search.variantdetailssnvindel",
+      "pk": 1,
+      "fields": {
+        "key": 1,
+        "variant_id": "1-10439-AC-A",
+        "rsid": "rs112766696",
+        "caid": "CA16717152",
+        "lifted_over_chrom": "1",
+        "lifted_over_pos": 10439,
+        "sorted_motif_feature_consequences": [],
+        "sorted_regulatory_feature_consequences": [],
+        "transcripts": []
+      }
+  }, {
+      "model": "clickhouse_search.variantdetailssnvindel",
+      "pk": 2,
+      "fields": {
+        "key": 2,
+        "variant_id": "1-38724419-T-G",
+        "rsid": "rs1801131",
+        "caid": null,
+        "lifted_over_chrom": "1",
+        "lifted_over_pos": 11854476,
+        "sorted_motif_feature_consequences": [],
+        "sorted_regulatory_feature_consequences": [],
+        "transcripts": []
+      }
+  }, {
+      "model": "clickhouse_search.variantdetailssnvindel",
+      "pk": 3,
+      "fields": {
+        "key": 3,
+        "variant_id": "1-91502721-G-A",
+        "rsid": "rs13447464",
+        "caid": "CA10960369",
+        "lifted_over_chrom": "1",
+        "lifted_over_pos": 91968278,
+        "sorted_motif_feature_consequences": [],
+        "sorted_regulatory_feature_consequences": [
+          [1, [2], "ENSR00000009706"]
+        ],
+        "transcripts": []
+      }
+  }, {
+      "model": "clickhouse_search.variantdetailssnvindel",
+      "pk": 4,
+      "fields": {
+        "key": 4,
+        "variant_id": "1-91511686-T-G",
+        "rsid": null,
+        "caid": "CA341062623",
+        "lifted_over_chrom": "1",
+        "lifted_over_pos": 91977243,
+        "sorted_motif_feature_consequences": [
+          [[2], "ENSM00093424674"],
+          [[2], "ENSM00036268032"]
+        ],
+        "sorted_regulatory_feature_consequences": [
+          [1, [2], "ENSR00000040341"]
+        ],
+        "transcripts": []
+      }
+  }, {
+      "model": "clickhouse_search.variantdetailssnvindel",
+      "pk": 5,
+      "fields": {
+        "key": 5,
+        "variant_id": "1-10146-ACC-A",
+        "rsid": "rs375931351",
+        "caid": "CA520798130",
+        "lifted_over_chrom": "1",
+        "lifted_over_pos": 10146,
+        "sorted_motif_feature_consequences": [],
+        "sorted_regulatory_feature_consequences": [],
+        "transcripts": []
+      }
+  }, {
+      "model": "clickhouse_search.variantdetailssnvindel",
+      "pk": 6,
+      "fields": {
+        "key": 6,
+        "variant_id": "1-94818-T-C",
+        "rsid": null,
+        "caid": null,
+        "lifted_over_chrom": "1",
+        "lifted_over_pos": 94818,
+        "sorted_regulatory_feature_consequences": [],
+        "sorted_motif_feature_consequences": [],
+        "transcripts": []
+      }
+  }, {
+      "model": "clickhouse_search.variantdetailssnvindel",
+      "pk": 7,
+      "fields": {
+        "key": 8,
+        "variant_id": "7-143270172-A-G",
+        "rsid": null,
+        "caid": null,
+        "lifted_over_chrom": "1",
+        "lifted_over_pos": 9310113,
+        "sorted_motif_feature_consequences": [],
+        "sorted_regulatory_feature_consequences": [],
+        "transcripts": []
+      }
+  }, {
+      "model": "clickhouse_search.variantdetailssnvindel",
+      "pk": 8,
+      "fields": {
+        "key": 10,
+        "variant_id": "7-9310123-T-C",
+        "rsid": null,
+        "caid": null,
+        "lifted_over_chrom": "1",
+        "lifted_over_pos": 9310113,
+        "sorted_motif_feature_consequences": [],
+        "sorted_regulatory_feature_consequences": [],
+        "transcripts": []
+    }
+  },
+  {
+    "model": "reference_data.dataversions",
+    "pk": "37/ClingenAlleleRegistry",
+    "fields": {
+      "version": "0"
+    }
+  },
+  {
+    "model": "reference_data.dataversions",
+    "pk": "38/ClingenAlleleRegistry",
+    "fields": {
+      "version": "3"
+    }
+  }
+]
