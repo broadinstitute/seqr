@@ -143,7 +143,7 @@ class RegisterCaidsTest(TestCase):
             mock.call(SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, "Successfully called 38/ClingenAlleleRegistry for variants 3 -> 10."),
         ])
         dv = DataVersions.objects.get(data_model_name='37/ClingenAlleleRegistry')
-        self.assertEqual(dv.version, '0')
+        self.assertEqual(dv.version, '11')
         dv = DataVersions.objects.get(data_model_name='38/ClingenAlleleRegistry')
         self.assertEqual(dv.version, '10')
         mock_logger.info.assert_called_with(

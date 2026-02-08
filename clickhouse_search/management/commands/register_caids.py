@@ -8,9 +8,12 @@ import time
 from typing import Literal, Union, Optional
 from urllib3.util.retry import Retry
 
+from django.db.models import Max
 from django.core.management.base import BaseCommand, CommandError
 
 from clickhouse_search.models.search_models import (
+    EntriesGRCh37SnvIndel,
+    EntriesSnvIndel,
     VariantDetailsGRCh37SnvIndel,
     VariantDetailsSnvIndel,
 )
@@ -271,19 +274,21 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         batch_size = options["batch_size"]
-        for genome_version, variant_details_model in [
-            (GENOME_VERSION_GRCh37, VariantDetailsGRCh37SnvIndel),
-            (GENOME_VERSION_GRCh38, VariantDetailsSnvIndel),
+        for genome_version, variant_details_model, entries_model in [
+            (GENOME_VERSION_GRCh37, VariantDetailsGRCh37SnvIndel, EntriesGRCh37SnvIndel),
+            (GENOME_VERSION_GRCh38, VariantDetailsSnvIndel, EntriesSnvIndel),
         ]:
             version_obj = DataVersions.objects.filter(
                 data_model_name=f"{genome_version}/ClingenAlleleRegistry"
             ).first()
 
-            # Key must exist
             if not version_obj:
-                raise CommandError(
-                    f"An existing ClingenAlleleRegistry data version is required for genome version {genome_version}"
+                max_key_id = entries_model.objects.aggregate(max_key=Max("key_id"))["max_key"] or 0
+                version_obj = DataVersions(
+                    data_model_name=f"{genome_version}/ClingenAlleleRegistry",
+                    version=max_key_id,
                 )
+                version_obj.save()
 
             # Key must be integer
             try:
@@ -305,6 +310,7 @@ class Command(BaseCommand):
 
                 try:
                     max_key = register_caids(genome_version, variants)
+                    # ALTER TABLE "GRCh38/SNV_INDEL/variants/details" UPDATE "CAID" = CASE WHEN ("key" = 4) THEN 'CA997563840' WHEN ("key" = 5) THEN 'CA997563845' WHEN ("key" = 6) THEN NULL ELSE NULL END::Nullable(String) WHERE "key" IN (4, 5, 6)
                     variant_details_model.objects.bulk_update(variants, ["caid"])
                 except Exception as e:
                     logger.exception(
@@ -312,7 +318,7 @@ class Command(BaseCommand):
                     )
                     break
 
-                # Save curr on every iteration
+                # Save current key on every iteration
                 curr_key = max_key
                 version_obj.version = curr_key
                 version_obj.save()
