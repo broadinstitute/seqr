@@ -3,6 +3,7 @@ import responses
 from django.core.management import call_command
 from django.test import TestCase
 from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL
+from clickhouse_search.management.commands.register_caids import ALLELE_REGISTRY_HEADERS
 
 from reference_data.models import DataVersions
 
@@ -73,13 +74,47 @@ MOCK_RESPONSE = [
 @mock.patch('clickhouse_search.management.commands.register_caids.logger')
 @mock.patch("clickhouse_search.management.commands.register_caids.safe_post_to_slack")
 class RegisterCaidsTest(TestCase):
+    maxDiff = None
+
     databases = "__all__"
     fixtures = ["variant_details_for_update"]
 
     @responses.activate
     def test_register_caids(self, mock_safe_post_to_slack, mock_logger):
-        responses.add(responses.GET, MOCK_RESPONSE, status=200, json=MOCK_RESPONSE)
+        responses.add(
+            responses.PUT, 
+            "https://reg.genome.network/alleles",
+            match=[
+                responses.matchers.query_param_matcher({
+                    "file": "vcf",
+                    "fields": "none @id genomicAlleles externalRecords.gnomAD_4.id",
+                }, strict_match=False),
+            ],
+            status=200,
+            json=MOCK_RESPONSE
+        )
         call_command("register_caids", batch_size=3)
+        self.assertEqual(len(responses.calls), 2)
+        self.assertEqual(
+            [call.request.body for call in responses.calls],
+            [
+                "\n".join(
+                    [
+                        *ALLELE_REGISTRY_HEADERS['38'],
+                        '1\t91511686\t.\tT\tG\t.\t.\t.'
+                        '1\t10146\t.\tACC\tA\t.\t.\t.',
+                        '1\t94818\t.\tT\tC\t.\t.\t.',
+                    ]
+                ) + "",
+                "\n".join(
+                    [
+                        *ALLELE_REGISTRY_HEADERS['38'],
+                        '7\t143270172\t.\tA\tG\t.\t.\t.',
+                        '7\t9310123\t.\tT\tC\t.\t.\t.'
+                    ]
+                ) + "\n",
+            ],
+        )
         mock_safe_post_to_slack.assert_has_calls([
             mock.call(SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, "Successfully called 38/ClingenAlleleRegistry for variants 3 -> 10."),
         ])

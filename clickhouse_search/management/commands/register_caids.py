@@ -31,62 +31,62 @@ ALLELE_REGISTRY_GNOMAD_IDS = {
 }
 ALLELE_REGISTRY_HEADERS = {
     GENOME_VERSION_GRCh37: [
-        "##fileformat=VCFv4.2\n",
-        "##contig=<ID=1,length=249250621,assembly=GRCh37>\n",
-        "##contig=<ID=2,length=243199373,assembly=GRCh37>\n",
-        "##contig=<ID=3,length=198022430,assembly=GRCh37>\n",
-        "##contig=<ID=4,length=191154276,assembly=GRCh37>\n",
-        "##contig=<ID=5,length=180915260,assembly=GRCh37>\n",
-        "##contig=<ID=6,length=171115067,assembly=GRCh37>\n",
-        "##contig=<ID=7,length=159138663,assembly=GRCh37>\n",
-        "##contig=<ID=8,length=146364022,assembly=GRCh37>\n",
-        "##contig=<ID=9,length=141213431,assembly=GRCh37>\n",
-        "##contig=<ID=10,length=135534747,assembly=GRCh37>\n",
-        "##contig=<ID=11,length=135006516,assembly=GRCh37>\n",
-        "##contig=<ID=12,length=133851895,assembly=GRCh37>\n",
-        "##contig=<ID=13,length=115169878,assembly=GRCh37>\n",
-        "##contig=<ID=14,length=107349540,assembly=GRCh37>\n",
-        "##contig=<ID=15,length=102531392,assembly=GRCh37>\n",
-        "##contig=<ID=16,length=90354753,assembly=GRCh37>\n",
-        "##contig=<ID=17,length=81195210,assembly=GRCh37>\n",
-        "##contig=<ID=18,length=78077248,assembly=GRCh37>\n",
-        "##contig=<ID=19,length=59128983,assembly=GRCh37>\n",
-        "##contig=<ID=20,length=63025520,assembly=GRCh37>\n",
-        "##contig=<ID=21,length=48129895,assembly=GRCh37>\n",
-        "##contig=<ID=22,length=51304566,assembly=GRCh37>\n",
-        "##contig=<ID=X,length=155270560,assembly=GRCh37>\n",
-        "##contig=<ID=Y,length=59373566,assembly=GRCh37>\n",
-        "##contig=<ID=MT,length=16569,assembly=GRCh37>\n",
-        "#CHROM POS ID  REF ALT QUAL    FILTER  INFO\n",
+        "##fileformat=VCFv4.2",
+        "##contig=<ID=1,length=249250621,assembly=GRCh37>",
+        "##contig=<ID=2,length=243199373,assembly=GRCh37>",
+        "##contig=<ID=3,length=198022430,assembly=GRCh37>",
+        "##contig=<ID=4,length=191154276,assembly=GRCh37>",
+        "##contig=<ID=5,length=180915260,assembly=GRCh37>",
+        "##contig=<ID=6,length=171115067,assembly=GRCh37>",
+        "##contig=<ID=7,length=159138663,assembly=GRCh37>",
+        "##contig=<ID=8,length=146364022,assembly=GRCh37>",
+        "##contig=<ID=9,length=141213431,assembly=GRCh37>",
+        "##contig=<ID=10,length=135534747,assembly=GRCh37>",
+        "##contig=<ID=11,length=135006516,assembly=GRCh37>",
+        "##contig=<ID=12,length=133851895,assembly=GRCh37>",
+        "##contig=<ID=13,length=115169878,assembly=GRCh37>",
+        "##contig=<ID=14,length=107349540,assembly=GRCh37>",
+        "##contig=<ID=15,length=102531392,assembly=GRCh37>",
+        "##contig=<ID=16,length=90354753,assembly=GRCh37>",
+        "##contig=<ID=17,length=81195210,assembly=GRCh37>",
+        "##contig=<ID=18,length=78077248,assembly=GRCh37>",
+        "##contig=<ID=19,length=59128983,assembly=GRCh37>",
+        "##contig=<ID=20,length=63025520,assembly=GRCh37>",
+        "##contig=<ID=21,length=48129895,assembly=GRCh37>",
+        "##contig=<ID=22,length=51304566,assembly=GRCh37>",
+        "##contig=<ID=X,length=155270560,assembly=GRCh37>",
+        "##contig=<ID=Y,length=59373566,assembly=GRCh37>",
+        "##contig=<ID=MT,length=16569,assembly=GRCh37>",
+        "#CHROM POS ID  REF ALT QUAL    FILTER  INFO",
     ],
     GENOME_VERSION_GRCh38: [
-        "##fileformat=VCFv4.2\n",
-        "##contig=<ID=1,length=248956422,assembly=GRCh38>\n",
-        "##contig=<ID=2,length=242193529,assembly=GRCh38>\n",
-        "##contig=<ID=3,length=198295559,assembly=GRCh38>\n",
-        "##contig=<ID=4,length=190214555,assembly=GRCh38>\n",
-        "##contig=<ID=5,length=181538259,assembly=GRCh38>\n",
-        "##contig=<ID=6,length=170805979,assembly=GRCh38>\n",
-        "##contig=<ID=7,length=159345973,assembly=GRCh38>\n",
-        "##contig=<ID=8,length=145138636,assembly=GRCh38>\n",
-        "##contig=<ID=9,length=138394717,assembly=GRCh38>\n",
-        "##contig=<ID=10,length=133797422,assembly=GRCh38>\n",
-        "##contig=<ID=11,length=135086622,assembly=GRCh38>\n",
-        "##contig=<ID=12,length=133275309,assembly=GRCh38>\n",
-        "##contig=<ID=13,length=114364328,assembly=GRCh38>\n",
-        "##contig=<ID=14,length=107043718,assembly=GRCh38>\n",
-        "##contig=<ID=15,length=101991189,assembly=GRCh38>\n",
-        "##contig=<ID=16,length=90338345,assembly=GRCh38>\n",
-        "##contig=<ID=17,length=83257441,assembly=GRCh38>\n",
-        "##contig=<ID=18,length=80373285,assembly=GRCh38>\n",
-        "##contig=<ID=19,length=58617616,assembly=GRCh38>\n",
-        "##contig=<ID=20,length=64444167,assembly=GRCh38>\n",
-        "##contig=<ID=21,length=46709983,assembly=GRCh38>\n",
-        "##contig=<ID=22,length=50818468,assembly=GRCh38>\n",
-        "##contig=<ID=X,length=156040895,assembly=GRCh38>\n",
-        "##contig=<ID=Y,length=57227415,assembly=GRCh38>\n",
-        "##contig=<ID=M,length=16569,assembly=GRCh38>\n",
-        "#CHROM POS ID  REF ALT QUAL    FILTER  INFO\n",
+        "##fileformat=VCFv4.2",
+        "##contig=<ID=1,length=248956422,assembly=GRCh38>",
+        "##contig=<ID=2,length=242193529,assembly=GRCh38>",
+        "##contig=<ID=3,length=198295559,assembly=GRCh38>",
+        "##contig=<ID=4,length=190214555,assembly=GRCh38>",
+        "##contig=<ID=5,length=181538259,assembly=GRCh38>",
+        "##contig=<ID=6,length=170805979,assembly=GRCh38>",
+        "##contig=<ID=7,length=159345973,assembly=GRCh38>",
+        "##contig=<ID=8,length=145138636,assembly=GRCh38>",
+        "##contig=<ID=9,length=138394717,assembly=GRCh38>",
+        "##contig=<ID=10,length=133797422,assembly=GRCh38>",
+        "##contig=<ID=11,length=135086622,assembly=GRCh38>",
+        "##contig=<ID=12,length=133275309,assembly=GRCh38>",
+        "##contig=<ID=13,length=114364328,assembly=GRCh38>",
+        "##contig=<ID=14,length=107043718,assembly=GRCh38>",
+        "##contig=<ID=15,length=101991189,assembly=GRCh38>",
+        "##contig=<ID=16,length=90338345,assembly=GRCh38>",
+        "##contig=<ID=17,length=83257441,assembly=GRCh38>",
+        "##contig=<ID=18,length=80373285,assembly=GRCh38>",
+        "##contig=<ID=19,length=58617616,assembly=GRCh38>",
+        "##contig=<ID=20,length=64444167,assembly=GRCh38>",
+        "##contig=<ID=21,length=46709983,assembly=GRCh38>",
+        "##contig=<ID=22,length=50818468,assembly=GRCh38>",
+        "##contig=<ID=X,length=156040895,assembly=GRCh38>",
+        "##contig=<ID=Y,length=57227415,assembly=GRCh38>",
+        "##contig=<ID=M,length=16569,assembly=GRCh38>",
+        "#CHROM POS ID  REF ALT QUAL    FILTER  INFO",
     ],
 }
 ALLELE_REGISTRY_URL = "https://reg.genome.network/alleles?file=vcf&fields=none+@id+genomicAlleles+externalRecords.{}.id"
@@ -228,7 +228,7 @@ def register_caids(
 ) -> int:
     if not variants:
         raise CommandError("register_caids must be passed a non-empty list of variants")
-    rows = list(ALLELE_REGISTRY_HEADERS[genome_version])
+    rows = list(ALLELE_REGISTRY_HEADERS[genome_version]) # NB: new copy of the list
     for variant in variants:
         chrom, pos, ref, alt = variant.variant_id.split("-")
         chrom = chrom.replace(
@@ -258,7 +258,7 @@ def register_caids(
     mapped_variants = handle_api_response(genome_version, res)
     max_key_id = -1
     for variant in variants:
-        variant.CAID = mapped_variants.get(variant.variant_id, None)
+        variant.caid = mapped_variants.get(variant.variant_id, None)
         max_key_id = max(max_key_id, variant.key_id)
     return max_key_id
 
@@ -288,7 +288,7 @@ class Command(BaseCommand):
             # Key must exist
             if not version_obj:
                 raise CommandError(
-                    f"An existing CAID data version is required for genome version {genome_version}"
+                    f"An existing ClingenAlleleRegistry data version is required for genome version {genome_version}"
                 )
 
             # Key must be integer
@@ -311,8 +311,8 @@ class Command(BaseCommand):
 
                 try:
                     max_key = register_caids(genome_version, variants)
-                    variant_details_model.objects.bulk_update(variants, ["CAID"])
-                except Exception:
+                    variant_details_model.objects.bulk_update(variants, ["caid"])
+                except Exception as e:
                     logger.exception(
                         f"Failed in {genome_version}/ClingenAlleleRegistry batch {curr_key}"
                     )
