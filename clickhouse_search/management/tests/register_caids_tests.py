@@ -7,7 +7,6 @@ from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL
 
 from clickhouse_search.management.commands.register_caids import ALLELE_REGISTRY_HEADERS
 from clickhouse_search.models.search_models import (
-    VariantDetailsGRCh37SnvIndel,
     VariantDetailsSnvIndel,
 )
 from reference_data.models import DataVersions
@@ -85,7 +84,7 @@ class RegisterCaidsTest(TestCase):
     @responses.activate
     def test_failure(self, mock_safe_post_to_slack, mock_logger):
         responses.add(
-            responses.PUT, 
+            responses.PUT,
             "https://reg.genome.network/alleles",
             match=[
                 responses.matchers.query_param_matcher({
@@ -106,7 +105,7 @@ class RegisterCaidsTest(TestCase):
     @responses.activate
     def test_register_caids(self, mock_safe_post_to_slack, mock_logger):
         responses.add(
-            responses.PUT, 
+            responses.PUT,
             "https://reg.genome.network/alleles",
             match=[
                 responses.matchers.query_param_matcher({

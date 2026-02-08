@@ -1564,7 +1564,7 @@ class SvEntriesManager(BaseEntriesManager):
 
 class VariantDetailsQuerySet(QuerySet):
     def join_series(self, min_: int, max_: int):
-        return self.raw(
+        return self.raw( # nosec
             f"""
             SELECT vd.*
             FROM generate_series(%s, %s) AS gs

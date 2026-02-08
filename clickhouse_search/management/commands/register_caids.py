@@ -144,9 +144,9 @@ def build_url(
     base_url = ALLELE_REGISTRY_URL.format(ALLELE_REGISTRY_GNOMAD_IDS[genome_version])
 
     # Adapted from https://reg.clinicalgenome.org/doc/scripts/request_with_payload.py
-    identity = hashlib.sha1(f"{login}{password}".encode("utf-8")).hexdigest()  # noqa: S324
+    identity = hashlib.sha1(f"{login}{password}".encode("utf-8")).hexdigest()  # nosec
     gb_time = str(int(time.time()))
-    token = hashlib.sha1(f"{base_url}{identity}{gb_time}".encode("utf-8")).hexdigest()  # noqa: S324
+    token = hashlib.sha1(f"{base_url}{identity}{gb_time}".encode("utf-8")).hexdigest()  # nosec
     return f"{base_url}&gbLogin={login}&gbTime={gb_time}&gbToken={token}"
 
 
@@ -312,7 +312,7 @@ class Command(BaseCommand):
                     max_key = register_caids(genome_version, variants)
                     # ALTER TABLE "GRCh38/SNV_INDEL/variants/details" UPDATE "CAID" = CASE WHEN ("key" = 4) THEN 'CA997563840' WHEN ("key" = 5) THEN 'CA997563845' WHEN ("key" = 6) THEN NULL ELSE NULL END::Nullable(String) WHERE "key" IN (4, 5, 6)
                     variant_details_model.objects.bulk_update(variants, ["caid"])
-                except Exception as e:
+                except Exception:
                     logger.exception(
                         f"Failed in {genome_version}/ClingenAlleleRegistry curr_key: {curr_key}"
                     )
