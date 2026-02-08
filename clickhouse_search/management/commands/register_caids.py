@@ -112,7 +112,7 @@ class AlleleRegistryError:
 
     def __str__(self) -> str:
         msg = (
-            f"\nAPI URL: {ALLELE_REGISTRY_URL}\nTYPE: {self.error_type}"
+            f"\nTYPE: {self.error_type}"
             f"\nDESCRIPTION: {self.description}\nMESSAGE: {self.message}"
         )
         return (
@@ -198,15 +198,9 @@ def handle_api_response(
                 unmapped_variants.append(allele_response)
                 continue
 
-        if genome_version == GENOME_VERSION_GRCh38:
-            if chrom in {"MT", "M"}:
-                formatted_chromosome = "chrM"
-            else:
-                formatted_chromosome = f"chr{chrom}"
-        else:
-            formatted_chromosome = chrom
-
-        mapped_variants[f"{formatted_chromosome}-{pos}-{ref}-{alt}"] = caid
+        if chrom == 'MT':
+            chrom = 'M'
+        mapped_variants[f"{chrom}-{pos}-{ref}-{alt}"] = caid
     logger.info(
         f"{len(response_json) - len(errors)} out of {len(response_json)} variants returned CAID(s)",
     )
@@ -314,7 +308,7 @@ class Command(BaseCommand):
                     variant_details_model.objects.bulk_update(variants, ["caid"])
                 except Exception as e:
                     logger.exception(
-                        f"Failed in {genome_version}/ClingenAlleleRegistry batch {curr_key}"
+                        f"Failed in {genome_version}/ClingenAlleleRegistry curr_key: {curr_key}"
                     )
                     break
 

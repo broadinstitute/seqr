@@ -3,8 +3,13 @@ import responses
 from django.core.management import call_command
 from django.test import TestCase
 from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL
-from clickhouse_search.management.commands.register_caids import ALLELE_REGISTRY_HEADERS
 
+
+from clickhouse_search.management.commands.register_caids import ALLELE_REGISTRY_HEADERS
+from clickhouse_search.models.search_models import (
+    VariantDetailsGRCh37SnvIndel,
+    VariantDetailsSnvIndel,
+)
 from reference_data.models import DataVersions
 
 MOCK_RESPONSE = [
@@ -16,16 +21,16 @@ MOCK_RESPONSE = [
                 'coordinates': [
                     {
                         'allele': '',  # alt allele is ''
-                        'end': 91502721,
-                        'referenceAllele': 'A',
-                        'start': 91502721,
+                        'end': 91511686,
+                        'referenceAllele': 'T',
+                        'start': 91511686,
                     },
                 ],
                 'referenceGenome': 'GRCh38',
             },
         ],
         'externalRecords': {
-            'gnomAD_4': [{'id': '1-91502721-G-A'}],
+            'gnomAD_4': [{'id': '1-91511686-T-G'}],
         },  # has gnomad ID
     },
     {
@@ -52,10 +57,10 @@ MOCK_RESPONSE = [
                 'chromosome': '1',
                 'coordinates': [
                     {
-                        'allele': 'G',
-                        'end': 10128,
+                        'allele': 'A',
+                        'end': 10146,
                         'referenceAllele': 'ACC',
-                        'start': 10127,
+                        'start': 10146,
                     },
                 ],
                 'referenceGenome': 'GRCh38',
@@ -67,17 +72,36 @@ MOCK_RESPONSE = [
         'description': 'Given allele cannot be mapped in consistent way to reference genome.',
         'errorType': 'InternalServerError',
         'inputLine': 'Cannot align NC_000001.10 [10468,10469).',
-        'message': '1   10469   rs370233998 C   G   .   .   .',
+        'message': '1\t10469\trs370233998\tC\tG\t.\t.\t.',
     },
 ]
 
 @mock.patch('clickhouse_search.management.commands.register_caids.logger')
 @mock.patch("clickhouse_search.management.commands.register_caids.safe_post_to_slack")
 class RegisterCaidsTest(TestCase):
-    maxDiff = None
-
     databases = "__all__"
     fixtures = ["variant_details_for_update"]
+
+    @responses.activate
+    def test_failure(self, mock_safe_post_to_slack, mock_logger):
+        responses.add(
+            responses.PUT, 
+            "https://reg.genome.network/alleles",
+            match=[
+                responses.matchers.query_param_matcher({
+                    "file": "vcf",
+                    "fields": "none @id genomicAlleles externalRecords.gnomAD_4.id",
+                }, strict_match=False),
+            ],
+            status=500,
+        )
+        call_command("register_caids", batch_size=5)
+        mock_safe_post_to_slack.assert_not_called()
+        mock_logger.exception.assert_called_with(
+            'Failed in 38/ClingenAlleleRegistry curr_key: 3'
+        )
+        dv = DataVersions.objects.get(data_model_name='38/ClingenAlleleRegistry')
+        self.assertEqual(dv.version, '3')
 
     @responses.activate
     def test_register_caids(self, mock_safe_post_to_slack, mock_logger):
@@ -101,16 +125,16 @@ class RegisterCaidsTest(TestCase):
                 "\n".join(
                     [
                         *ALLELE_REGISTRY_HEADERS['38'],
-                        '1\t91511686\t.\tT\tG\t.\t.\t.'
+                        '1\t91511686\t.\tT\tG\t.\t.\t.',
                         '1\t10146\t.\tACC\tA\t.\t.\t.',
                         '1\t94818\t.\tT\tC\t.\t.\t.',
                     ]
-                ) + "",
+                ) + "\n",
                 "\n".join(
                     [
                         *ALLELE_REGISTRY_HEADERS['38'],
                         '7\t143270172\t.\tA\tG\t.\t.\t.',
-                        '7\t9310123\t.\tT\tC\t.\t.\t.'
+                        '7\t9310123\t.\tT\tC\t.\t.\t.',
                     ]
                 ) + "\n",
             ],
@@ -123,14 +147,15 @@ class RegisterCaidsTest(TestCase):
         dv = DataVersions.objects.get(data_model_name='38/ClingenAlleleRegistry')
         self.assertEqual(dv.version, '10')
         mock_logger.info.assert_called_with(
-            "1 registered variant(s) cannot be mapped back to ours. "
-            f"\nFirst unmappable variant:\n XXX",
+            "1 registered variant(s) cannot be mapped back to ours. \n"
+            "First unmappable variant:\n{'@id': 'http://reg.genome.network/allele/CA16716503', 'genomicAlleles': [{'chromosome': '1', 'coordinates': [{'allele': 'C', 'end': 10131, 'referenceAllele': '', 'start': 10131}], 'referenceGenome': 'GRCh38'}]}"
         )
         mock_logger.warning.assert_called_with(
             '1 failed. First error: \n'
-            'API URL: https://reg.genome.network/alleles?file=vcf&fields=none+@id+genomicAlleles+externalRecords.gnomAD_4.id\n'
             'TYPE: InternalServerError\n'
             'DESCRIPTION: Given allele cannot be mapped in consistent way to reference genome.\n'
             'MESSAGE: 1\t10469\trs370233998\tC\tG\t.\t.\t.\n'
             'INPUT_LINE: Cannot align NC_000001.10 [10468,10469).',
         )
+        vd = VariantDetailsSnvIndel.objects.filter(variant_id='1-91511686-T-G').first()
+        self.assertEqual(vd.caid, 'CA997563840')
