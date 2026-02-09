@@ -55,7 +55,6 @@ def render_app_html(request, additional_json=None, include_user=True, status=200
         'version': '{}-{}'.format(SEQR_VERSION, ui_version),
         'hijakEnabled': DEBUG or False,
         'oauthLoginProvider': SOCIAL_AUTH_PROVIDER,
-        'elasticsearchEnabled': backend_specific_call(True, False),
         'vlmEnabled': bool(VLM_CLIENT_ID),
         'warningMessages': [message.json() for message in WarningMessage.objects.all()],
     }}
