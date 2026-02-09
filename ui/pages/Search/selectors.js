@@ -286,6 +286,8 @@ export const getSearchGeneBreakdownValues = createSelector(
       ([familyGuid, count]) => ({ family: familiesByGuid[familyGuid], count }),
     ),
     search: searchesByHash[searchHash].search,
-    ...(genesById[geneId] || { geneId, geneSymbol: geneId, omimPhenotypes: [], constraints: {} }),
+    ...(genesById[geneId] || {
+      geneId, geneSymbol: geneId, omimPhenotypes: [], constraints: {}, cnSensitivity: {}, sHet: {},
+    }),
   })),
 )
