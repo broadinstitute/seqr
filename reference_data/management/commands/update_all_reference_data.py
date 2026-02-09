@@ -36,14 +36,21 @@ class Command(BaseCommand):
         parser.add_argument('--gene-symbol-change-dir', help='Directory to upload tracked gene symbol changes')
 
     def handle(self, *args, **options):
+        latest_versions = {}
+        update_failed = []
+        for model in REFERENCE_DATA_MODELS:
+            try:
+                latest_versions[model] = model.get_current_version(**options)
+            except Exception as e:
+                logger.error("unable to get current version for {}: {}".format(model.__name__, e))
+                update_failed.append(model.__name__)
+
         current_versions ={dv.data_model_name: dv for dv in DataVersions.objects.all()}
-        latest_versions = {model: model.get_current_version(**options) for model in REFERENCE_DATA_MODELS}
         to_update = OrderedDict([
             (model, version) for model, version in latest_versions.items()
             if not current_versions.get(model.__name__) or current_versions[model.__name__].version != version
         ])
         updated = []
-        update_failed = []
 
         if GeneInfo in to_update:
             latest_version = to_update.pop(GeneInfo)
