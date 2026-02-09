@@ -1508,22 +1508,6 @@ export const VARIANT_TAGGED_DATE_FIELD = {
   inline: true,
 }
 
-const INDICATOR_MAP = {
-  D: { color: 'red', value: 'damaging' },
-  T: { color: 'green', value: 'tolerated' },
-}
-
-const FATHMM_MAP = {
-  ...INDICATOR_MAP,
-  N: { color: 'green', value: 'neutral' },
-}
-
-const POLYPHEN_MAP = {
-  D: { color: 'red', value: 'probably damaging' },
-  P: { color: 'yellow', value: 'possibly damaging' },
-  B: { color: 'green', value: 'benign' },
-}
-
 const MUTTASTER_MAP = {
   D: { color: 'red', value: 'disease causing' },
   A: { color: 'red', value: 'disease causing automatic' },
@@ -1573,10 +1557,10 @@ export const ORDERED_PREDICTOR_FIELDS = [
   { field: 'eigen', group: CODING_IN_SILICO_GROUP, thresholds: [undefined, undefined, 1, 2, undefined], max: 99 },
   { field: 'dann', displayOnly: true, thresholds: [undefined, undefined, 0.93, 0.96, undefined] },
   { field: 'strvctvre', group: SV_IN_SILICO_GROUP, thresholds: [undefined, undefined, 0.5, 0.75, undefined] },
-  { field: 'polyphen', group: MISSENSE_IN_SILICO_GROUP, thresholds: [undefined, 0.114, 0.978, 0.999, undefined], indicatorMap: POLYPHEN_MAP, fieldTitle: 'PolyPhen', citation: CLINGEN_CITATION },
-  { field: 'sift', reverseThresholds: true, thresholds: [undefined, 0, 0.002, 0.081, undefined], group: MISSENSE_IN_SILICO_GROUP, indicatorMap: INDICATOR_MAP, fieldTitle: 'SIFT', citation: CLINGEN_CITATION },
+  { field: 'polyphen', group: MISSENSE_IN_SILICO_GROUP, thresholds: [undefined, 0.114, 0.978, 0.999, undefined], fieldTitle: 'PolyPhen', citation: CLINGEN_CITATION },
+  { field: 'sift', reverseThresholds: true, thresholds: [undefined, 0, 0.002, 0.081, undefined], group: MISSENSE_IN_SILICO_GROUP, fieldTitle: 'SIFT', citation: CLINGEN_CITATION },
   { field: 'mut_taster', group: MISSENSE_IN_SILICO_GROUP, indicatorMap: MUTTASTER_MAP, fieldTitle: 'MutTaster' },
-  { field: 'fathmm', reverseThresholds: true, thresholds: [undefined, -5.041, -4.14, 3.32, undefined], group: MISSENSE_IN_SILICO_GROUP, indicatorMap: FATHMM_MAP, fieldTitle: 'FATHMM', citation: CLINGEN_CITATION },
+  { field: 'fathmm', reverseThresholds: true, thresholds: [undefined, -5.041, -4.14, 3.32, undefined], group: MISSENSE_IN_SILICO_GROUP, fieldTitle: 'FATHMM', citation: CLINGEN_CITATION },
   { field: 'apogee', thresholds: [undefined, undefined, 0.5, 0.5, undefined] },
   {
     field: 'gnomad_noncoding',
@@ -1603,7 +1587,7 @@ export const predictionFieldValue = (
   const infoValue = predictions[infoField]
 
   const floatValue = parseFloat(value)
-  if (thresholds && !(indicatorMap && Number.isNaN(floatValue))) {
+  if (thresholds && Number.isNaN(floatValue)) {
     value = floatValue.toPrecision(3)
     const color = (reverseThresholds ? REVERSE_PRED_COLOR_MAP : PRED_COLOR_MAP).find(
       (clr, i) => (thresholds[i - 1] || thresholds[i]) &&
@@ -1613,7 +1597,7 @@ export const predictionFieldValue = (
     return { value, color, infoValue, infoTitle, thresholds, reverseThresholds }
   }
 
-  return indicatorMap[value[0]] || indicatorMap[value]
+  return indicatorMap && (indicatorMap[value[0]] || indicatorMap[value])
 }
 export const predictorColorRanges = (thresholds, citation, reverseThresholds) => (
   <div>
@@ -1712,10 +1696,10 @@ export const VARIANT_EXPORT_DATA = [
   { header: 'revel', getVal: variant => (variant.predictions || {}).revel },
   { header: 'eigen', getVal: variant => (variant.predictions || {}).eigen },
   { header: 'splice_ai', getVal: variant => (variant.predictions || {}).splice_ai },
-  { header: 'polyphen', getVal: variant => (POLYPHEN_MAP[(variant.predictions || {}).polyphen] || {}).value || (variant.predictions || {}).polyphen },
-  { header: 'sift', getVal: variant => (INDICATOR_MAP[(variant.predictions || {}).sift] || {}).value || (variant.predictions || {}).sift },
+  { header: 'polyphen', getVal: variant => (variant.predictions || {}).polyphen },
+  { header: 'sift', getVal: variant => (variant.predictions || {}).sift },
   { header: 'muttaster', getVal: variant => (MUTTASTER_MAP[(variant.predictions || {}).mut_taster] || {}).value },
-  { header: 'fathmm', getVal: variant => (INDICATOR_MAP[(variant.predictions || {}).fathmm] || {}).value || (variant.predictions || {}).fathmm },
+  { header: 'fathmm', getVal: variant => (variant.predictions || {}).fathmm },
   { header: 'rsid', getVal: variant => variant.rsid },
   { header: 'hgvsc', getVal: variant => getVariantMainTranscript(variant).hgvsc },
   { header: 'hgvsp', getVal: variant => getVariantMainTranscript(variant).hgvsp },
