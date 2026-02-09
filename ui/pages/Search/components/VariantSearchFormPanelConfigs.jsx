@@ -16,8 +16,6 @@ import {
   SNP_FREQUENCIES,
   MITO_FREQUENCIES,
   SV_FREQUENCIES,
-  SV_CALLSET_CRITERIA_MESSAGE,
-  THIS_CALLSET_FREQUENCY,
   SPLICE_AI_FIELD,
   SV_IN_SILICO_GROUP,
   NO_SV_IN_SILICO_GROUPS,
@@ -452,27 +450,6 @@ export const ANNOTATION_SECONDARY_PANEL = {
   },
 }
 
-const NO_ES_SNP_FREQUENCIES = [
-  ...SNP_FREQUENCIES.slice(0, -1),
-  {
-    name: THIS_CALLSET_FREQUENCY,
-    label: 'seqr',
-    homHemi: true,
-    skipAf: true,
-    labelHelp: 'Filter by allele count (AC) across all the samples in seqr.',
-  },
-]
-
-const NO_ES_SV_FREQUENCIES = [
-  SV_FREQUENCIES[0],
-  {
-    ...SV_FREQUENCIES[1],
-    label: 'seqr SV',
-    skipAf: true,
-    labelHelp: `Filter by allele count (AC) across all samples in seqr with Structural Variant (SV) calling. ${SV_CALLSET_CRITERIA_MESSAGE}`,
-  },
-]
-
 export const FREQUENCY_PANEL = {
   name: 'freqs',
   headerProps: {
@@ -483,14 +460,8 @@ export const FREQUENCY_PANEL = {
       format: val => val || {},
     },
   },
-  esEnabledFields: FREQUENCIES, // TODO
-  fields: [...NO_ES_SNP_FREQUENCIES, ...MITO_FREQUENCIES, ...NO_ES_SV_FREQUENCIES],
+  fields: FREQUENCIES,
   datasetTypeFields: {
-    [DATASET_TYPE_SNV_INDEL_CALLS]: NO_ES_SNP_FREQUENCIES,
-    [DATASET_TYPE_VARIANT_MITO]: NO_ES_SNP_FREQUENCIES.concat(MITO_FREQUENCIES),
-    [DATASET_TYPE_VARIANT_SV]: NO_ES_SNP_FREQUENCIES.concat(NO_ES_SV_FREQUENCIES),
-  },
-  esEnabledDatasetTypeFields: { // TODO
     [DATASET_TYPE_SNV_INDEL_CALLS]: SNP_FREQUENCIES,
     [DATASET_TYPE_VARIANT_MITO]: SNP_FREQUENCIES.concat(MITO_FREQUENCIES),
     [DATASET_TYPE_VARIANT_SV]: SNP_FREQUENCIES.concat(SV_FREQUENCIES),

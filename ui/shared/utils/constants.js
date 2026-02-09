@@ -1744,9 +1744,10 @@ export const SNP_FREQUENCIES = [
   },
   {
     name: THIS_CALLSET_FREQUENCY,
-    label: 'This Callset',
+    label: 'seqr',
     homHemi: true,
-    labelHelp: 'Filter by allele count (AC) or by allele frequency (AF) among the samples in this family plus the rest of the samples that were joint-called as part of variant calling for this project.',
+    skipAf: true,
+    labelHelp: 'Filter by allele count (AC) across all the samples in seqr.',
   },
 ]
 
@@ -1769,9 +1770,10 @@ export const SV_FREQUENCIES = [
   },
   {
     name: SV_CALLSET_FREQUENCY,
-    label: 'This SV Callset',
+    label: 'seqr SV',
+    skipAf: true,
     homHemi: false,
-    labelHelp: `Filter by allele count (AC) or by allele frequency (AF) among all the jointly genotyped samples that were part of the Structural Variant (SV) calling for this project. ${SV_CALLSET_CRITERIA_MESSAGE}`,
+    labelHelp: `Filter by allele count (AC) across all samples in seqr with Structural Variant (SV) calling. ${SV_CALLSET_CRITERIA_MESSAGE}`,
   },
 ]
 
