@@ -40,7 +40,6 @@ import {
   NUM_ALT_OPTIONS,
   PANEL_APP_FIELD_NAME,
   CLINVAR_FIELD,
-  ES_CLINVAR_FIELD,
   PATHOGENICITY_FILTER_OPTIONS, QUALITY_FILTER_OPTIONS, SV_GROUPS, SV_GROUPS_NO_NEW, VARIANT_ANNOTATION_LAYOUT_GROUPS,
 } from '../constants'
 import LocusListItemsFilter from './filters/LocusListItemsFilter'
@@ -345,7 +344,6 @@ export const PATHOGENICITY_PANEL = {
     inputProps: JsonSelectPropsWithAll(PATHOGENICITY_FILTER_OPTIONS, ANY_PATHOGENICITY_FILTER),
   },
   fields: PATHOGENICITY_FIELDS,
-  esEnabledFields: [ES_CLINVAR_FIELD],
   fieldProps: PATHOGENICITY_FIELD_PROPS,
   helpText: 'Filter by reported pathogenicity.  This overrides the annotation filter, the frequency filter, and the call quality filter.  Variants will be returned if they have the specified transcript consequence AND the specified frequencies AND all individuals pass all specified quality filters OR if the variant has the specified pathogenicity and a frequency up to 0.05.',
 }
@@ -492,14 +490,14 @@ export const FREQUENCY_PANEL = {
       format: val => val || {},
     },
   },
-  esEnabledFields: FREQUENCIES,
+  esEnabledFields: FREQUENCIES, // TODO
   fields: [...NO_ES_SNP_FREQUENCIES, ...MITO_FREQUENCIES, ...NO_ES_SV_FREQUENCIES],
   datasetTypeFields: {
     [DATASET_TYPE_SNV_INDEL_CALLS]: NO_ES_SNP_FREQUENCIES,
     [DATASET_TYPE_VARIANT_MITO]: NO_ES_SNP_FREQUENCIES.concat(MITO_FREQUENCIES),
     [DATASET_TYPE_VARIANT_SV]: NO_ES_SNP_FREQUENCIES.concat(NO_ES_SV_FREQUENCIES),
   },
-  esEnabledDatasetTypeFields: {
+  esEnabledDatasetTypeFields: { // TODO
     [DATASET_TYPE_SNV_INDEL_CALLS]: SNP_FREQUENCIES,
     [DATASET_TYPE_VARIANT_MITO]: SNP_FREQUENCIES.concat(MITO_FREQUENCIES),
     [DATASET_TYPE_VARIANT_SV]: SNP_FREQUENCIES.concat(SV_FREQUENCIES),
@@ -529,7 +527,7 @@ export const IN_SILICO_PANEL = {
   name: 'in_silico',
   headerProps: { title: 'In Silico Filters' },
   fields: IN_SILICO_FIELDS,
-  esEnabledFields: ES_ENABLED_IN_SILICO_FIELDS,
+  esEnabledFields: ES_ENABLED_IN_SILICO_FIELDS, // TODO
   fieldLayout: inSilicoFieldLayout,
   fieldLayoutInput: [...NO_SV_IN_SILICO_GROUPS, SV_IN_SILICO_GROUP],
   datasetTypeFieldLayoutInput: {
@@ -561,13 +559,6 @@ const ExcludeSearchToggle = props => (
   </FormSpy>
 )
 
-const ES_EXCLUDE_FIELDS = [
-  {
-    ...BASE_LOCUS_FIELD,
-    component: Form.TextArea,
-    rows: 8,
-  },
-]
 const EXCLUDE_FIELDS = [
   {
     name: 'previousSearch',
@@ -582,13 +573,16 @@ const EXCLUDE_FIELDS = [
     ...PATHOGENICITY_FIELD_PROPS,
     width: 8,
   },
-  ...ES_EXCLUDE_FIELDS,
+  {
+    ...BASE_LOCUS_FIELD,
+    component: Form.TextArea,
+    rows: 8,
+  },
 ]
 
 export const EXCLUDE_PANEL = {
   name: 'exclude',
   headerProps: { title: 'Exclude' },
   fields: EXCLUDE_FIELDS,
-  esEnabledFields: ES_EXCLUDE_FIELDS,
   helpText: 'Exclude variants from the search results based on the specified criteria. This filter will override any other filters applied.',
 }
