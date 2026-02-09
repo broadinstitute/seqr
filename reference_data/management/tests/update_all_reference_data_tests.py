@@ -122,8 +122,12 @@ class UpdateAllReferenceDataTest(BaseUpdateAllReferenceDataTest):
         dbnsfp_version = DataVersions.objects.get(data_model_name='dbNSFPGene')
         dbnsfp_version.version = 'dbNSFP3.2_gene'
         dbnsfp_version.save()
+        self.mock_clingen_version.side_effect = Exception('version check failed')
 
-        call_command('update_all_reference_data')
+        with self.assertRaises(CommandError) as e:
+            call_command('update_all_reference_data')
+
+        self.assertEqual(str(e.exception),'Failed to Update: ClinGen')
 
         self.mock_update_gencode.assert_not_called()
         kwargs = {'gene_ids_to_gene': mock.ANY, 'gene_symbols_to_gene': mock.ANY}
@@ -137,6 +141,10 @@ class UpdateAllReferenceDataTest(BaseUpdateAllReferenceDataTest):
         self.assertEqual(len(self.mock_update_calls[0][1]['gene_symbols_to_gene']), 50)
 
         self.assert_json_logs(user=None, expected=[
+            ('unable to get current version for ClinGen: version check failed', {
+                'severity': 'ERROR',
+                '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent',
+            }),
             ('Done', None),
             ('Updated: Omim, dbNSFPGene, GenCC', None),
         ])
