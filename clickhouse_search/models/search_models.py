@@ -627,6 +627,12 @@ class EntriesGRCh37SnvIndel(BaseEntriesSnvIndel):
         db_table = 'GRCh37/SNV_INDEL/entries'
 
 class EntriesSnvIndel(BaseEntriesSnvIndel):
+    PREDICTIONS = {
+        **BaseEntriesSnvIndel.PREDICTIONS,
+        'absplice': {},
+        'pext': {},
+        'promoter_ai': {},
+    }
     RANGE_PREDICTIONS = {
         'gnomad_noncoding': GnomadNonCodingConstraintDict,
     }
@@ -679,6 +685,7 @@ class EntriesMito(BaseEntries):
         'dbnsfp': {},
         'hmtvar': {},
         'mlc': {},
+        'pext': {},
     }
     RANGE_PREDICTIONS = {}
     POPULATIONS = ['gnomad_mito', 'gnomad_mito_heteroplasmy', 'helix', 'helix_heteroplasmy']
