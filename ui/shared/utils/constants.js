@@ -1546,15 +1546,14 @@ export const NO_SV_IN_SILICO_GROUPS = [MISSENSE_IN_SILICO_GROUP, CODING_IN_SILIC
 export const SPLICE_AI_FIELD = 'splice_ai'
 export const ALPHAMISSENSE_THRESHHOLDS = [0.071, 0.17, 0.792, 0.906, 0.99]
 
-const CLINGEN_CITATION = { name: '2022 ClinGen', pmid: '36413997' }
+const CLINGEN_CITATION = { name: '2022 ClinGen recommendations', pmid: '36413997' }
 const PRED_COLOR_MAP = ['green', 'olive', 'grey', 'yellow', 'red', '#8b0000']
 const REVERSE_PRED_COLOR_MAP = [...PRED_COLOR_MAP].reverse()
 
 export const ORDERED_PREDICTOR_FIELDS = [
   { field: 'cadd', group: CODING_IN_SILICO_GROUP, thresholds: [0.151, 22.8, 25.3, 28.1, undefined], min: 1, max: 99, fieldTitle: 'CADD', citation: CLINGEN_CITATION },
   { field: 'revel', group: MISSENSE_IN_SILICO_GROUP, thresholds: [0.0161, 0.291, 0.644, 0.773, 0.932], fieldTitle: 'REVEL', citation: CLINGEN_CITATION },
-  { field: 'alphamissense', fieldTitle: 'AlphaMissense', group: MISSENSE_IN_SILICO_GROUP, thresholds: ALPHAMISSENSE_THRESHHOLDS, citation: { name: '2025 ClinGen SVI', pmid: '40084623' } },
-  { field: 'vest', thresholds: [undefined, 0.45, 0.764, 0.861, 0.965], fieldTitle: 'VEST', citation: CLINGEN_CITATION },
+  { field: 'alphamissense', fieldTitle: 'AlphaMissense', group: MISSENSE_IN_SILICO_GROUP, thresholds: ALPHAMISSENSE_THRESHHOLDS, citation: { name: '2025 ClinGen SVI recommendations', pmid: '40084623' } },
   { field: 'mpc', group: MISSENSE_IN_SILICO_GROUP, thresholds: [undefined, undefined, 1.36, 1.828, undefined], max: 5, fieldTitle: 'MPC' },
   {
     field: SPLICE_AI_FIELD,
@@ -1568,6 +1567,17 @@ export const ORDERED_PREDICTOR_FIELDS = [
     ),
     defaultValue: '?',
   },
+  { field: 'absplice', thresholds: [0.05, 0.05, 0.1, 0.2, undefined], fieldTitle: 'AbSplice', citation: { name: '"Aberrant splicing prediction across human tissues"', pmid: '37142848' } },
+  { field: 'promoter_ai', thresholds: [undefined, undefined, 0.2, 0.5, undefined], absValue: true, fieldTitle: 'PromoterAI', citation: { name: '"Predicting expression-altering promoter mutations with deep learning"', pmid: '40440429' } },
+  {
+    field: 'pext',
+    thresholds: [0, 0.2, undefined],
+    colorOverride: { 0: 'green' },
+    thresholdMap: { green: 'Not Expressed', olive: 'Low Expression', grey: 'Expressed' },
+    fieldTitle: 'PEXT',
+    citation: { name: 'Cummings, Beryl B et al. "Transcript expression-aware annotation improves rare variant interpretation."', pmid: '32461655' },
+  },
+  { field: 'vest', thresholds: [undefined, 0.45, 0.764, 0.861, 0.965], fieldTitle: 'VEST', citation: CLINGEN_CITATION },
   { field: 'mut_pred', thresholds: [0.0101, 0.392, 0.737, 0.829, 0.932], fieldTitle: 'MutPred', citation: CLINGEN_CITATION },
   { field: 'primate_ai', group: MISSENSE_IN_SILICO_GROUP, thresholds: [undefined, 0.484, 0.79, 0.867, undefined], fieldTitle: 'PrimateAI', citation: CLINGEN_CITATION },
   { field: 'eigen', group: CODING_IN_SILICO_GROUP, thresholds: [undefined, undefined, 1, 2, undefined], max: 99 },
@@ -1592,30 +1602,34 @@ export const ORDERED_PREDICTOR_FIELDS = [
 ]
 
 export const coloredIcon = color => React.createElement(color.startsWith('#') ? ColoredIcon : Icon, { name: 'circle', size: 'small', color })
+const thresholdPredictionFieldValue = (floatValue, props) => {
+  const { thresholds, reverseThresholds, absValue, thresholdMap = {}, colorOverride = {} } = props
+  const threshholdValue = absValue ? Math.abs(floatValue) : floatValue
+  const color = colorOverride[threshholdValue] || (reverseThresholds ? REVERSE_PRED_COLOR_MAP : PRED_COLOR_MAP).find(
+    (clr, i) => (thresholds[i - 1] || thresholds[i]) &&
+      (thresholds[i - 1] === undefined || threshholdValue >= thresholds[i - 1]) &&
+      (thresholds[i] === undefined || threshholdValue < thresholds[i]),
+  )
+  return { value: thresholdMap[color] || floatValue.toPrecision(3), color, ...props }
+}
 export const predictionFieldValue = (
-  predictions, { field, fieldValue, thresholds, reverseThresholds, indicatorMap, infoField, infoTitle, defaultValue },
+  predictions, { field, fieldValue, thresholds, indicatorMap, defaultValue, ...props },
 ) => {
-  let value = fieldValue || predictions[field]
+  const value = fieldValue || predictions[field]
   if (value === null || value === undefined) {
     return { value: defaultValue || value, color: 'grey' }
   }
 
-  const infoValue = predictions[infoField]
-
   const floatValue = parseFloat(value)
   if (thresholds && !(indicatorMap && Number.isNaN(floatValue))) {
-    value = floatValue.toPrecision(3)
-    const color = (reverseThresholds ? REVERSE_PRED_COLOR_MAP : PRED_COLOR_MAP).find(
-      (clr, i) => (thresholds[i - 1] || thresholds[i]) &&
-        (thresholds[i - 1] === undefined || value >= thresholds[i - 1]) &&
-        (thresholds[i] === undefined || value < thresholds[i]),
+    return thresholdPredictionFieldValue(
+      floatValue, { thresholds, infoValue: predictions[props.infoField], ...props },
     )
-    return { value, color, infoValue, infoTitle, thresholds, reverseThresholds }
   }
 
   return indicatorMap[value[0]] || indicatorMap[value]
 }
-export const predictorColorRanges = (thresholds, citation, reverseThresholds) => (
+export const predictorColorRanges = (thresholds, { citation, reverseThresholds, thresholdMap, absValue }) => (
   <div>
     {(reverseThresholds ? REVERSE_PRED_COLOR_MAP : PRED_COLOR_MAP).map((c, i) => {
       const prevUndefined = thresholds[i - 1] === undefined
@@ -1625,12 +1639,25 @@ export const predictorColorRanges = (thresholds, citation, reverseThresholds) =>
           return null
         }
         range = ` >= ${thresholds[i - 1]}`
+        if (absValue) {
+          range = `${range}, <= -${thresholds[i - 1]}`
+        }
       } else if (prevUndefined) {
-        range = ` < ${thresholds[i]}`
+        if (absValue) {
+          range = ` -${thresholds[i]} - ${thresholds[i]}`
+        } else {
+          range = thresholdMap ? ` ${thresholds[i]}` : ` < ${thresholds[i]}`
+        }
       } else if (thresholds[i - 1] === thresholds[i]) {
         return null
       } else {
         range = ` ${thresholds[i - 1]} - ${thresholds[i]}`
+        if (absValue) {
+          range = `${range}, -${thresholds[i]} - -${thresholds[i - 1]}`
+        }
+      }
+      if (thresholdMap) {
+        range = ` ${thresholdMap[c]}:${range}`
       }
       return (
         <div key={c}>
@@ -1641,7 +1668,7 @@ export const predictorColorRanges = (thresholds, citation, reverseThresholds) =>
     })}
     {citation && (
       <small>
-        {`Based on ${citation.name} recommendations (PMID: `}
+        {`Based on ${citation.name} (PMID: `}
         <a href={`https://pubmed.ncbi.nlm.nih.gov/${citation.pmid}`} target="_blank" rel="noreferrer">{citation.pmid}</a>
         )
       </small>
