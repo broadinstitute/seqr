@@ -284,19 +284,11 @@ class Command(BaseCommand):
                 max_key_id = entries_model.objects.aggregate(max_key=Max("key_id"))["max_key"] or 0
                 version_obj = DataVersions(
                     data_model_name=f"{genome_version}/ClingenAlleleRegistry",
-                    version=max_key_id,
+                    version=str(max_key_id),
                 )
                 version_obj.save()
 
-            # Key must be integer
-            try:
-                min_key = curr_key = max_key = int(version_obj.version)
-            except (TypeError, ValueError):
-                raise CommandError(
-                    f"DataVersions.version for {genome_version}/ClingenAlleleRegistry "
-                    f"must be an integer, got {version_obj.version!r}"
-                )
-
+            min_key = curr_key = max_key = int(version_obj.version)
             while True:
                 qs = variant_details_model.objects.join_series(
                     curr_key + 1,
@@ -310,7 +302,7 @@ class Command(BaseCommand):
                     max_key = register_caids(genome_version, variants)
                     # ALTER TABLE "GRCh38/SNV_INDEL/variants/details" UPDATE "CAID" = CASE WHEN ("key" = 4) THEN 'CA997563840' WHEN ("key" = 5) THEN 'CA997563845' WHEN ("key" = 6) THEN NULL ELSE NULL END::Nullable(String) WHERE "key" IN (4, 5, 6)
                     variant_details_model.objects.using('clickhouse_write').bulk_update(variants, ["caid"])
-                except Exception as e:
+                except Exception:
                     logger.exception(
                         f"Failed in {genome_version}/ClingenAlleleRegistry curr_key: {curr_key}"
                     )
