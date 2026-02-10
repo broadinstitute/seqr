@@ -12,9 +12,9 @@ from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_get_wildcard_
 from seqr.utils.search.constants import XPOS_SORT_KEY, PRIORITIZED_GENE_SORT, RECESSIVE, COMPOUND_HET, \
     MAX_NO_LOCATION_COMP_HET_FAMILIES, SV_ANNOTATION_TYPES, ALL_DATA_TYPES, MAX_EXPORT_VARIANTS, X_LINKED_RECESSIVE, \
     MAX_VARIANTS
-from seqr.utils.search.elasticsearch.es_utils import ping_elasticsearch, \
+from seqr.utils.search.elasticsearch.es_utils import \
     get_es_variants, get_es_variants_for_variant_ids, process_es_previously_loaded_results, process_es_previously_loaded_gene_aggs, \
-    es_backend_enabled, ping_kibana, ES_EXCEPTION_ERROR_MAP, ES_EXCEPTION_MESSAGE_MAP, ES_ERROR_LOG_EXCEPTIONS
+    es_backend_enabled, ES_EXCEPTION_ERROR_MAP, ES_EXCEPTION_MESSAGE_MAP, ES_ERROR_LOG_EXCEPTIONS
 from seqr.utils.gene_utils import parse_locus_list_items
 from seqr.utils.xpos_utils import get_xpos, format_chrom
 
@@ -73,15 +73,6 @@ def backend_specific_call(es_func, clickhouse_func):
         return es_func
     else:
         return clickhouse_func
-
-
-def ping_search_backend():
-    # Clickhouse backend does not need special uptime testing, will be checked with the other database connection pings
-    backend_specific_call(ping_elasticsearch, lambda: None)()
-
-
-def ping_search_backend_admin():
-    backend_specific_call(ping_kibana, lambda: True)()
 
 
 def _get_filtered_search_samples(search_filter, active_only=True):
