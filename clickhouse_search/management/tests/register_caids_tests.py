@@ -73,6 +73,22 @@ MOCK_RESPONSE = [
         'inputLine': 'Cannot align NC_000001.10 [10468,10469).',
         'message': '1\t10469\trs370233998\tC\tG\t.\t.\t.',
     },
+    {
+        '@id': 'http://reg.genome.network/allele/CAXXX',
+        'genomicAlleles': [
+            {
+                'chromosome': '1',
+                'coordinates': [
+                    {
+                        # missing allele and referenceAllele
+                        'end': 10131,
+                        'start': 10131,
+                    },
+                ],
+                'referenceGenome': 'GRCh38',
+            },
+        ],
+    },
 ]
 
 @mock.patch('clickhouse_search.management.commands.register_caids.logger')
@@ -80,6 +96,48 @@ MOCK_RESPONSE = [
 class RegisterCaidsTest(TestCase):
     databases = "__all__"
     fixtures = ["variant_details_for_update"]
+
+    @responses.activate
+    def test_bad_responses(self, mock_safe_post_to_slack, mock_logger):
+        responses.add(
+            responses.PUT,
+            "https://reg.genome.network/alleles",
+            match=[
+                responses.matchers.query_param_matcher({
+                    "file": "vcf",
+                    "fields": "none @id genomicAlleles externalRecords.gnomAD_4.id",
+                }, strict_match=False),
+            ],
+            status=200,
+            json={'errorType': 'InternalServerError'}
+        )
+        call_command("register_caids", batch_size=5)
+        mock_safe_post_to_slack.assert_not_called()
+        mock_logger.exception.assert_called_with(
+            'Failed in 38/ClingenAlleleRegistry curr_key: 3'
+        )
+
+        responses.reset()
+        mock_safe_post_to_slack.reset()
+        mock_logger.reset_mock()
+
+        responses.add(
+            responses.PUT,
+            "https://reg.genome.network/alleles",
+            match=[
+                responses.matchers.query_param_matcher({
+                    "file": "vcf",
+                    "fields": "none @id genomicAlleles externalRecords.gnomAD_4.id",
+                }, strict_match=False),
+            ],
+            status=200,
+            json={'non': 'list'}
+        )
+        call_command("register_caids", batch_size=5)
+        mock_safe_post_to_slack.assert_not_called()
+        mock_logger.exception.assert_called_with(
+            'Failed in 38/ClingenAlleleRegistry curr_key: 3'
+        )
 
     @responses.activate
     def test_failure(self, mock_safe_post_to_slack, mock_logger):
@@ -146,7 +204,7 @@ class RegisterCaidsTest(TestCase):
         dv = DataVersions.objects.get(data_model_name='38/ClingenAlleleRegistry')
         self.assertEqual(dv.version, '10')
         mock_logger.info.assert_called_with(
-            "1 registered variant(s) cannot be mapped back to ours. \n"
+            "2 registered variant(s) cannot be mapped back to ours. \n"
             "First unmappable variant:\n{'@id': 'http://reg.genome.network/allele/CA16716503', 'genomicAlleles': [{'chromosome': '1', 'coordinates': [{'allele': 'C', 'end': 10131, 'referenceAllele': '', 'start': 10131}], 'referenceGenome': 'GRCh38'}]}"
         )
         mock_logger.warning.assert_called_with(

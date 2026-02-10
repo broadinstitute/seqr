@@ -223,8 +223,6 @@ def register_caids(
     genome_version: Literal[GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38],
     variants: Union[list[VariantDetailsGRCh37SnvIndel], list[VariantDetailsSnvIndel]],
 ) -> int:
-    if not variants:
-        raise CommandError("register_caids must be passed a non-empty list of variants")
     rows = list(ALLELE_REGISTRY_HEADERS[genome_version]) # NB: new copy of the list
     for variant in variants:
         chrom, pos, ref, alt = variant.variant_id.split("-")
