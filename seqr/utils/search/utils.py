@@ -233,7 +233,7 @@ def query_variants(search_model, sort=XPOS_SORT_KEY, skip_genotype_filter=False,
     return variants, total_results
 
 
-def _query_variants(search_model, user, previous_search_results, genome_version, sort=None, num_results=100, page=1, **kwargs):
+def _query_variants(search_model, user, previous_search_results, genome_version, sort=None, num_results=100, **kwargs):
     search = deepcopy(search_model.variant_search.search)
 
     families = search_model.families.all()

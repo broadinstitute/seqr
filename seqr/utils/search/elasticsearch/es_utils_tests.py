@@ -12,8 +12,9 @@ from urllib3.exceptions import ReadTimeoutError
 from urllib3_mock import Responses
 
 from seqr.models import Project, Family, Sample, VariantSearch, VariantSearchResults
+from seqr.utils.search.elasticsearch.es_utils import get_es_variants_for_variant_ids
 from seqr.utils.search.utils import get_single_variant, query_variants, \
-    get_variant_query_gene_counts, get_es_variants_for_variant_ids, InvalidSearchException
+    get_variant_query_gene_counts, InvalidSearchException
 from seqr.utils.search.elasticsearch.es_search import _get_family_affected_status
 from seqr.utils.search.elasticsearch.es_utils import InvalidIndexException
 from seqr.utils.search.utils import _get_liftover
