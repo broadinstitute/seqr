@@ -305,7 +305,6 @@ class Command(BaseCommand):
                     curr_key + 1 + batch_size,
                 )
                 variants = list(qs)
-                print('debug', curr_key, batch_size, len(variants))
                 if not variants:
                     break
 
@@ -313,7 +312,8 @@ class Command(BaseCommand):
                     max_key = register_caids(genome_version, variants)
                     # ALTER TABLE "GRCh38/SNV_INDEL/variants/details" UPDATE "CAID" = CASE WHEN ("key" = 4) THEN 'CA997563840' WHEN ("key" = 5) THEN 'CA997563845' WHEN ("key" = 6) THEN NULL ELSE NULL END::Nullable(String) WHERE "key" IN (4, 5, 6)
                     variant_details_model.objects.bulk_update(variants, ["caid"])
-                except Exception:
+                except Exception as e:
+                    print('debug', e)
                     logger.exception(
                         f"Failed in {genome_version}/ClingenAlleleRegistry curr_key: {curr_key}"
                     )
