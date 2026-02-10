@@ -13,7 +13,7 @@ from seqr.utils.search.constants import XPOS_SORT_KEY, PRIORITIZED_GENE_SORT, RE
     MAX_NO_LOCATION_COMP_HET_FAMILIES, SV_ANNOTATION_TYPES, ALL_DATA_TYPES, MAX_EXPORT_VARIANTS, X_LINKED_RECESSIVE, \
     MAX_VARIANTS
 from seqr.utils.search.elasticsearch.es_utils import ping_elasticsearch, \
-    get_es_variants, get_es_variants_for_variant_ids, process_es_previously_loaded_results, process_es_previously_loaded_gene_aggs, \
+    get_es_variants, process_es_previously_loaded_results, \
     es_backend_enabled, ping_kibana, ES_EXCEPTION_ERROR_MAP, ES_EXCEPTION_MESSAGE_MAP, ES_ERROR_LOG_EXCEPTIONS
 from seqr.utils.gene_utils import parse_locus_list_items
 from seqr.utils.xpos_utils import get_xpos, format_chrom
@@ -360,50 +360,17 @@ def variant_dataset_type(variant):
 
 
 def get_variant_query_gene_counts(search_model, user):
-    return backend_specific_call(
-        _get_es_variant_query_gene_counts,
-        _get_clickhouse_variant_query_gene_counts,
-    )(search_model, user)
-
-
-def _get_es_variant_query_gene_counts(search_model, user):
-    previous_search_results = _get_cached_search_results(search_model)
-    if previous_search_results.get('gene_aggs'):
-        return previous_search_results['gene_aggs']
-
-    if len(previous_search_results.get('all_results', [])) == previous_search_results.get('total_results'):
-        return _get_gene_aggs_for_cached_variants(
-            previous_search_results['all_results'],
-            lambda v: next((
-                [gene_id] for gene_id, transcripts in v['transcripts'].items()
-                if any(t['transcriptId'] == v['mainTranscriptId'] for t in transcripts)
-            ), []) if v['mainTranscriptId'] else [],
-        )
-
-    previously_loaded_results = process_es_previously_loaded_gene_aggs(previous_search_results)
-    if previously_loaded_results is not None:
-        return previously_loaded_results
-
-    genome_version = _get_search_genome_version(search_model)
-    gene_counts, _ = _query_variants(search_model, user, previous_search_results, genome_version, gene_agg=True)
-    return gene_counts
-
-
-def _get_clickhouse_variant_query_gene_counts(search_model, user):
     previous_search_results = _get_any_sort_cached_results(search_model) or {}
     if len(previous_search_results.get('all_results', [])) != previous_search_results.get('total_results'):
         genome_version = _get_search_genome_version(search_model)
         _query_variants(search_model, user, previous_search_results, genome_version)
 
-    return _get_gene_aggs_for_cached_variants([
+    flat_variants = [
         v for variants in previous_search_results['all_results'] for v in (variants if isinstance(variants, list) else [variants])
-    ], lambda v: v['transcripts'].keys() if 'transcripts' in v else {t['geneId'] for t in v['sortedTranscriptConsequences']})
-
-
-def _get_gene_aggs_for_cached_variants(variants, get_variant_genes):
+    ]
     gene_aggs = defaultdict(lambda: {'total': 0, 'families': defaultdict(int)})
-    for var in variants:
-        gene_ids = get_variant_genes(var)
+    for var in flat_variants:
+        gene_ids = var['transcripts'].keys() if 'transcripts' in var else {t['geneId'] for t in var['sortedTranscriptConsequences']}
         for gene_id in gene_ids:
             gene_aggs[gene_id]['total'] += 1
             for family_guid in var['familyGuids']:
