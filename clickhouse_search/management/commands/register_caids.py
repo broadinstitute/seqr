@@ -9,7 +9,7 @@ from typing import Literal, Union, Optional
 from urllib3.util.retry import Retry
 
 from django.db.models import Max
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import BaseCommand
 
 from clickhouse_search.models.search_models import (
     EntriesGRCh37SnvIndel,
