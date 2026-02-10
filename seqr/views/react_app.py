@@ -15,7 +15,6 @@ from settings import (
     VLM_CLIENT_ID,
 )
 from seqr.models import WarningMessage
-from seqr.utils.search.utils import backend_specific_call
 from seqr.views.utils.orm_to_json_utils import get_json_for_user, get_json_for_current_user
 from seqr.views.utils.permissions_utils import login_active_required
 
