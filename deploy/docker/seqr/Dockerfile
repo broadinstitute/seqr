@@ -44,7 +44,7 @@ COPY ./requirements.txt .
 
 # Install seqr Python dependencies
 RUN pip install --no-cache-dir wheel \
-    && pip install --no-cache-dir -U setuptools \
+    && pip install --no-cache-dir -U setuptools==81.0.0 \
     && pip install --no-cache-dir -r requirements.txt
 
 
@@ -92,17 +92,17 @@ COPY manage.py settings.py wsgi.py ./
 # Copy built UI assets
 COPY --from=ui-build /build/ui/dist /seqr/ui/dist
 
-RUN ./manage.py collectstatic --no-input
-
-EXPOSE 8000
-ENV TERM=xterm
-
-COPY deploy/docker/seqr/readiness_probe /
-COPY deploy/docker/seqr/wait_for_routes /
-COPY deploy/docker/seqr/clickhouse_backup.py /
-COPY deploy/docker/seqr/bin/*.sh /usr/local/bin/
-COPY deploy/docker/seqr/config/*.py ./
-COPY deploy/docker/seqr/bashrc /root/.bashrc
-COPY deploy/docker/seqr/entrypoint.sh /
-
-CMD ["/entrypoint.sh"]
+#RUN ./manage.py collectstatic --no-input
+#
+#EXPOSE 8000
+#ENV TERM=xterm
+#
+#COPY deploy/docker/seqr/readiness_probe /
+#COPY deploy/docker/seqr/wait_for_routes /
+#COPY deploy/docker/seqr/clickhouse_backup.py /
+#COPY deploy/docker/seqr/bin/*.sh /usr/local/bin/
+#COPY deploy/docker/seqr/config/*.py ./
+#COPY deploy/docker/seqr/bashrc /root/.bashrc
+#COPY deploy/docker/seqr/entrypoint.sh /
+#
+#CMD ["/entrypoint.sh"]
