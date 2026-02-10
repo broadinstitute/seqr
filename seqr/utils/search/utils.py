@@ -13,7 +13,7 @@ from seqr.utils.search.constants import XPOS_SORT_KEY, PRIORITIZED_GENE_SORT, RE
     MAX_NO_LOCATION_COMP_HET_FAMILIES, SV_ANNOTATION_TYPES, ALL_DATA_TYPES, MAX_EXPORT_VARIANTS, X_LINKED_RECESSIVE, \
     MAX_VARIANTS
 from seqr.utils.search.elasticsearch.es_utils import ping_elasticsearch, \
-    get_es_variants, process_es_previously_loaded_results, \
+    get_es_variants, \
     es_backend_enabled, ping_kibana, ES_EXCEPTION_ERROR_MAP, ES_EXCEPTION_MESSAGE_MAP, ES_ERROR_LOG_EXCEPTIONS
 from seqr.utils.gene_utils import parse_locus_list_items
 from seqr.utils.xpos_utils import get_xpos, format_chrom
@@ -179,33 +179,14 @@ def _get_any_sort_cached_results(search_model):
     return safe_redis_get_wildcard_json(cache_key)
 
 
-def _get_cached_search_results(search_model, sort=None):
-    cache_key = _get_search_cache_key(search_model, sort=sort)
-    return safe_redis_get_json(cache_key) or {}
-
-
 def _validate_export_variant_count(total_variants):
     if total_variants > MAX_EXPORT_VARIANTS:
         raise InvalidSearchException(f'Unable to export more than {MAX_EXPORT_VARIANTS} variants ({total_variants} requested)')
 
 
-def _get_elasticsearch_previous_search_results(search_model, sort, page, num_results, load_all, **kwargs):
-    previous_search_results = _get_cached_search_results(search_model, sort=sort)
-    start_index, end_index, num_results = _get_result_range(page, num_results, previous_search_results.get('total_results'), load_all)
-
-    cached_page = None
-    loaded_results = previous_search_results.get('all_results') or []
-    if len(loaded_results) >= end_index:
-        cached_page = loaded_results[start_index:end_index]
-
-    if not cached_page:
-        cached_page = process_es_previously_loaded_results(previous_search_results, start_index, end_index)
-
-    return previous_search_results, cached_page, num_results
-
-
-def _get_clickhouse_previous_search_results(search_model, sort, page, num_results, load_all, genome_version=None):
-    previous_search_results = _get_cached_search_results(search_model, sort=sort)
+def _get_previous_search_results(search_model, sort, page, num_results, load_all, genome_version):
+    cache_key = _get_search_cache_key(search_model, sort=sort)
+    previous_search_results = safe_redis_get_json(cache_key) or {}
     if not previous_search_results:
         unsorted_results = _get_any_sort_cached_results(search_model)
         if unsorted_results:
@@ -215,16 +196,7 @@ def _get_clickhouse_previous_search_results(search_model, sort, page, num_result
             cache_key = _get_search_cache_key(search_model, sort=sort)
             safe_redis_set_json(cache_key, previous_search_results, expire=timedelta(weeks=2))
 
-    start_index, end_index, num_results = _get_result_range(page, num_results, previous_search_results.get('total_results'), load_all)
-    cached_page = None
-    loaded_results = previous_search_results.get('all_results') or []
-    if len(loaded_results) >= end_index:
-        cached_page = format_clickhouse_results(loaded_results[start_index:end_index], genome_version)
-
-    return previous_search_results, cached_page, num_results
-
-
-def _get_result_range(page, num_results, total_results, load_all):
+    total_results = previous_search_results.get('total_results')
     if load_all:
         num_results = total_results or MAX_EXPORT_VARIANTS
         _validate_export_variant_count(num_results)
@@ -236,15 +208,19 @@ def _get_result_range(page, num_results, total_results, load_all):
     if end_index > MAX_VARIANTS:
         raise InvalidSearchException(f'Unable to load more than {MAX_VARIANTS} variants ({end_index} requested)')
 
-    return start_index, end_index, num_results
+    cached_page = None
+    loaded_results = previous_search_results.get('all_results') or []
+    if len(loaded_results) >= end_index:
+        cached_page = format_clickhouse_results(loaded_results[start_index:end_index], genome_version)
+
+    return previous_search_results, cached_page, num_results
 
 
 def query_variants(search_model, sort=XPOS_SORT_KEY, skip_genotype_filter=False, load_all=False, user=None, page=1, num_results=100):
     genome_version = _get_search_genome_version(search_model)
-    previous_search_results, cached_page, num_results = backend_specific_call(
-        _get_elasticsearch_previous_search_results,
-        _get_clickhouse_previous_search_results,
-    )(search_model, sort, page, num_results, load_all, genome_version=genome_version)
+    previous_search_results, cached_page, num_results = _get_previous_search_results(
+        search_model, sort, page, num_results, load_all, genome_version,
+    )
     if cached_page is not None:
         return cached_page, previous_search_results.get('total_results')
 
