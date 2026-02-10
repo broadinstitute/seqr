@@ -767,7 +767,7 @@ class VariantDetailsGRCh37SnvIndel(FixtureLoadableClickhouseModel):
 
     class Meta:
         db_table = 'GRCh37/SNV_INDEL/variants/details'
-        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh37/SNV_INDEL/variants/details', primary_key='key', flatten_nested=0)
+        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh37/SNV_INDEL/variants_details', primary_key='key', flatten_nested=0)
 
 class TranscriptsSnvIndel(models.ClickhouseModel):
     TRANSCRIPTS_FIELDS = sorted([
@@ -847,7 +847,7 @@ class VariantDetailsSnvIndel(FixtureLoadableClickhouseModel):
 
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/variants/details'
-        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SNV_INDEL/variants/details', primary_key='key', flatten_nested=0)
+        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SNV_INDEL/variants_details', primary_key='key', flatten_nested=0)
 
 class BaseKeyLookup(FixtureLoadableClickhouseModel):
     variant_id = models.StringField(db_column='variantId', primary_key=True)
