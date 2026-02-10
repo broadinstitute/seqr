@@ -13,7 +13,6 @@ from seqr.utils.search.constants import XPOS_SORT_KEY, PRIORITIZED_GENE_SORT, RE
     MAX_NO_LOCATION_COMP_HET_FAMILIES, SV_ANNOTATION_TYPES, ALL_DATA_TYPES, MAX_EXPORT_VARIANTS, X_LINKED_RECESSIVE, \
     MAX_VARIANTS
 from seqr.utils.search.elasticsearch.es_utils import ping_elasticsearch, \
-    get_es_variants, \
     es_backend_enabled, ping_kibana, ES_EXCEPTION_ERROR_MAP, ES_EXCEPTION_MESSAGE_MAP, ES_ERROR_LOG_EXCEPTIONS
 from seqr.utils.gene_utils import parse_locus_list_items
 from seqr.utils.xpos_utils import get_xpos, format_chrom
@@ -234,7 +233,7 @@ def query_variants(search_model, sort=XPOS_SORT_KEY, skip_genotype_filter=False,
     return variants, total_results
 
 
-def _query_variants(search_model, user, previous_search_results, genome_version, sort=None, num_results=100, **kwargs):
+def _query_variants(search_model, user, previous_search_results, genome_version, sort=None, num_results=100, page=1, **kwargs):
     search = deepcopy(search_model.variant_search.search)
 
     families = search_model.families.all()
@@ -296,7 +295,7 @@ def _query_variants(search_model, user, previous_search_results, genome_version,
 
     _validate_search(parsed_search, samples, previous_search_results)
 
-    variant_results = backend_specific_call(get_es_variants, get_clickhouse_variants)(
+    variant_results = get_clickhouse_variants(
         samples, parsed_search, user, previous_search_results, genome_version,
         sort=sort, num_results=num_results, **kwargs,
     )
