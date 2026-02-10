@@ -428,13 +428,13 @@ class SavedVariantAPITest(object):
         self.assertListEqual(list(response.json()['savedVariantsByGuid'].keys()), [variant_guid])
 
     def _assert_created_basic_variant(self, saved_variant, variant_json, gene_ids):
-        for field in ['xpos', 'ref', 'alt', 'genotypes']:
+        for field in ['xpos', 'ref', 'alt', 'key']:
             self.assertEqual(variant_json.get(field), getattr(saved_variant, field, None))
         self.assertEqual(saved_variant.gene_ids, gene_ids or [])
 
     def _assert_created_variant(self, saved_variant, variant_json, gene_ids=None, dataset_type='SNV_INDEL'):
         self._assert_created_basic_variant(saved_variant, variant_json, gene_ids)
-        self.assertEqual(variant_json['key'], saved_variant.key)
+        self.assertDictEqual(variant_json['genotypes'], saved_variant.genotypes)
         self.assertEqual(dataset_type, saved_variant.dataset_type)
         self.assertDictEqual({}, saved_variant.saved_variant_json)
 
@@ -565,8 +565,100 @@ class SavedVariantAPITest(object):
             saved_variants__guid__contains=new_compound_het_4_guid)])
 
     def test_create_manual_variant(self):
-        # TODO no longer have code coverage for creating variant with no key, add a real test using a representative manual variant body
-        self.assertEqual(1, 2)
+        create_saved_variant_url = reverse(create_saved_variant_handler)
+        self.check_collaborator_login(create_saved_variant_url, request_data={'familyGuid': 'F000001_1'})
+
+        manual_variant_request_body = {
+            'familyGuid': 'F000001_1',
+            'tags': [{'name': 'Review'}],
+            'variant': [{
+                'alt': 'A',
+                'ref': 'GAG',
+                'chrom': '7',
+                'pos': 53417465,
+                'genomeVersion': '37',
+                'variantId': '7-53417465-GAG-A',
+                'mainTranscriptId': 'ENST00000459627',
+                'transcripts': {
+                    'ENSG00000277258': [{'transcriptId': 'ENST00000459627', 'hgvsc':'c.156GAG>A', 'hgvsp': 'p.Leu52Phe'}],
+                },
+                'genotypes': {
+                    'I000001_na19675': {'numAlt': 1},
+                    'I000002_na19678': {'numAlt': 0},
+                    'I000003_na19679': {'numAlt': 0},
+                },
+            }],
+        }
+        response = self.client.post(create_saved_variant_url, content_type='application/json', data=json.dumps(manual_variant_request_body))
+        self.assertEqual(response.status_code, 200)
+
+        self.assertEqual(len(response.json()['savedVariantsByGuid']), 1)
+        variant_guid = next(iter(response.json()['savedVariantsByGuid']))
+
+        saved_variant = SavedVariant.objects.get(guid=variant_guid, family__guid='F000001_1')
+        variant_json = {'xpos': 7053417465}
+        variant_json.update(manual_variant_request_body['variant'][0])
+        self._assert_created_basic_variant(saved_variant, variant_json, gene_ids=['ENSG00000277258'])
+        self.assertDictEqual(variant_json, saved_variant.saved_variant_json)
+        self.assertDictEqual({}, saved_variant.genotypes)
+
+        base_variant_json = {
+            'variantGuid': variant_guid,
+            'familyGuids': ['F000001_1'],
+            'acmgClassification': None,
+            'selectedMainTranscriptId': None,
+            'key': None,
+            'noteGuids': [],
+            'functionalDataGuids': [],
+        }
+        variant_json.update(base_variant_json)
+        response_json = response.json()
+        response_variant_json = response_json['savedVariantsByGuid'][variant_guid]
+        tag_guids = response_variant_json.pop('tagGuids')
+        self.assertEqual(len(tag_guids), 1)
+        tag = response_json['variantTagsByGuid'][tag_guids[0]]
+        self.assertEqual('Review', tag['name'])
+        self.assertDictEqual(variant_json, response_variant_json)
+
+        # Create manual SV
+        manual_variant_request_body['variant'] = [{
+            'chrom': '7',
+            'pos': 10417443,
+            'end': 11719832,
+            'genomeVersion': '37',
+            'variantId': 'Deletion:chr7:(?_10417443)_(11719832_?)',
+            'svName': 'Deletion:chr7:(?_10417443)_(11719832_?)',
+            'svType': 'DEL',
+            'transcripts': {'ENSG00000240361': []},
+            'genotypes': {
+                'I000001_na19675': {'cn': 1},
+                'I000002_na19678': {'cn': 2},
+                'I000003_na19679': {'cn': 2},
+            },
+        }]
+        response = self.client.post(create_saved_variant_url, content_type='application/json', data=json.dumps(manual_variant_request_body))
+        self.assertEqual(response.status_code, 200)
+
+        self.assertEqual(len(response.json()['savedVariantsByGuid']), 1)
+        sv_variant_guid = next(iter(response.json()['savedVariantsByGuid']))
+
+        saved_sv_variant = SavedVariant.objects.get(guid=sv_variant_guid, family__guid='F000001_1')
+        sv_variant_json = {'xpos': 7010417443}
+        sv_variant_json.update(manual_variant_request_body['variant'][0])
+        self._assert_created_basic_variant(saved_sv_variant, sv_variant_json, gene_ids=['ENSG00000240361'])
+        self.assertDictEqual(sv_variant_json, saved_sv_variant.saved_variant_json)
+        self.assertDictEqual({}, saved_sv_variant.genotypes)
+
+        sv_variant_json.update(base_variant_json)
+        sv_variant_json.update({
+            'variantGuid': sv_variant_guid,
+            'tagGuids': [mock.ANY],
+            'ref': None,
+            'alt': None,
+        })
+        response_json = response.json()
+        response_variant_json = response_json['savedVariantsByGuid'][sv_variant_guid]
+        self.assertDictEqual(sv_variant_json, response_variant_json)
 
     def test_create_update_and_delete_variant_note(self):
         create_variant_note_url = reverse(create_variant_note_handler, args=[VARIANT_GUID])
