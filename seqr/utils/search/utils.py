@@ -13,7 +13,7 @@ from seqr.utils.search.constants import XPOS_SORT_KEY, PRIORITIZED_GENE_SORT, RE
     MAX_NO_LOCATION_COMP_HET_FAMILIES, SV_ANNOTATION_TYPES, ALL_DATA_TYPES, MAX_EXPORT_VARIANTS, X_LINKED_RECESSIVE, \
     MAX_VARIANTS
 from seqr.utils.search.elasticsearch.es_utils import ping_elasticsearch, \
-    es_backend_enabled, ping_kibana, ES_EXCEPTION_ERROR_MAP, ES_EXCEPTION_MESSAGE_MAP, ES_ERROR_LOG_EXCEPTIONS
+    es_backend_enabled, ping_kibana
 from seqr.utils.gene_utils import parse_locus_list_items
 from seqr.utils.xpos_utils import get_xpos, format_chrom
 
@@ -26,13 +26,6 @@ class InvalidSearchException(Exception):
 SEARCH_EXCEPTION_ERROR_MAP = {
     InvalidSearchException: 400,
 }
-SEARCH_EXCEPTION_ERROR_MAP.update(ES_EXCEPTION_ERROR_MAP)
-
-SEARCH_EXCEPTION_MESSAGE_MAP = {}
-SEARCH_EXCEPTION_MESSAGE_MAP.update(ES_EXCEPTION_MESSAGE_MAP)
-
-ERROR_LOG_EXCEPTIONS = set()
-ERROR_LOG_EXCEPTIONS.update(ES_ERROR_LOG_EXCEPTIONS)
 
 DATASET_TYPES_LOOKUP = {
     data_types[0]: data_types for data_types in [
