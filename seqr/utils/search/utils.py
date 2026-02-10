@@ -282,12 +282,10 @@ def _query_variants(search_model, user, previous_search_results, genome_version,
         raise InvalidSearchException('Too many genes/intervals')
     parsed_search.update({'genes': genes, 'intervals': intervals, 'exclude_locations': exclude_locations})
     if not (genes or intervals):
-        rs_ids, variant_ids, parsed_variant_ids, invalid_items = _parse_variant_items(locus)
+        variant_ids, parsed_variant_ids, invalid_items = _parse_variant_items(locus)
         if invalid_items:
             raise InvalidSearchException('Invalid variants: {}'.format(', '.join(invalid_items)))
-        if rs_ids and variant_ids:
-            raise InvalidSearchException('Invalid variant notation: found both variant IDs and rsIDs')
-        parsed_search.update({'rs_ids': rs_ids, 'variant_ids': variant_ids, 'parsed_variant_ids': parsed_variant_ids})
+        parsed_search.update({'variant_ids': variant_ids, 'parsed_variant_ids': parsed_variant_ids})
 
     if variant_ids:
         num_results = len(variant_ids)
@@ -301,9 +299,7 @@ def _query_variants(search_model, user, previous_search_results, genome_version,
     exclude.pop('previousSearch', None)
     exclude_previous_hash = exclude.pop('previousSearchHash', None)
     if exclude_previous_hash:
-        parsed_search.update(backend_specific_call(
-            lambda *args: {}, _get_clickhouse_exclude_keys,
-        )(exclude_previous_hash, user, genome_version))
+        parsed_search.update(_get_clickhouse_exclude_keys(exclude_previous_hash, user, genome_version))
 
     for annotation_key in ['annotations', 'annotations_secondary']:
         if parsed_search.get(annotation_key):
@@ -418,25 +414,21 @@ def _get_gene_aggs_for_cached_variants(variants, get_variant_genes):
 def _parse_variant_items(search_json):
     raw_items = search_json.get('rawVariantItems')
     if not raw_items:
-        return None, None, None, None
+        return None, None, None
 
     invalid_items = []
     variant_ids = []
     parsed_variant_ids = []
-    rs_ids = []
     for item in raw_items.replace(',', ' ').split():
-        if item.startswith('rs') and backend_specific_call(True, False):
-            rs_ids.append(item)
+        variant_id = item.lstrip('chr')
+        parsed_variant_id = parse_variant_id(variant_id)
+        if parsed_variant_id:
+            parsed_variant_ids.append(parsed_variant_id)
+            variant_ids.append(variant_id)
         else:
-            variant_id = item.lstrip('chr')
-            parsed_variant_id = parse_variant_id(variant_id)
-            if parsed_variant_id:
-                parsed_variant_ids.append(parsed_variant_id)
-                variant_ids.append(variant_id)
-            else:
-                invalid_items.append(item)
+            invalid_items.append(item)
 
-    return rs_ids, variant_ids, parsed_variant_ids, invalid_items
+    return variant_ids, parsed_variant_ids, invalid_items
 
 
 def parse_variant_id(variant_id):
@@ -560,10 +552,6 @@ def _validate_search(search, samples, previous_search_results):
         if search.get('no_access_project_genome_version'):
             raise InvalidSearchException('Compound heterozygous search is not supported when including external projects')
 
-    backend_specific_call(lambda *args: None, _validate_clickhouse_search)(samples, has_location_filter, search)
-
-
-def _validate_clickhouse_search(samples, has_location_filter, search):
     variant_samples = samples.filter(dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
     if not has_location_filter and variant_samples.values('individual__family__project_id').distinct().count() > 1:
         raise InvalidSearchException('Location must be specified to search across multiple projects')
@@ -576,7 +564,6 @@ def _validate_clickhouse_search(samples, has_location_filter, search):
 
 def _filter_inheritance_family_samples(samples, inheritance_filter):
     family_groups = defaultdict(set)
-    sample_group_field = backend_specific_call('elasticsearch_index', 'dataset_type')
     individual_affected_status = inheritance_filter.get('affected') or {}
     genotype_filter = None if inheritance_filter.get(Individual.AFFECTED_STATUS_AFFECTED) else inheritance_filter.get('genotype')
     for sample in samples:
@@ -587,7 +574,7 @@ def _filter_inheritance_family_samples(samples, inheritance_filter):
             is_filtered_family = affected_status == Individual.AFFECTED_STATUS_AFFECTED
 
         if is_filtered_family:
-            family_groups[sample.individual.family_id].add(getattr(sample, sample_group_field))
+            family_groups[sample.individual.family_id].add(sample.dataset_type)
 
     if not family_groups:
         raise InvalidSearchException(
@@ -596,7 +583,7 @@ def _filter_inheritance_family_samples(samples, inheritance_filter):
         )
 
     return [
-        s for s in samples if getattr(s, sample_group_field) not in family_groups[s.individual.family_id]
+        s for s in samples if s.dataset_type not in family_groups[s.individual.family_id]
     ]
 
 
