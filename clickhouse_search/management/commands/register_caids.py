@@ -305,6 +305,7 @@ class Command(BaseCommand):
                     curr_key + 1 + batch_size,
                 )
                 variants = list(qs)
+                print('debug', curr_key, batch_size, len(variants))
                 if not variants:
                     break
 
