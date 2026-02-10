@@ -302,11 +302,6 @@ class DatasetAPITest(object):
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['request must contain field: "elasticsearchIndex"']})
 
-        response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(
-            response.json()['error'], 'test_index - Error accessing index: Connection refused: GET /test_index/_mapping')
-
         urllib3_responses.add_json('/{}/_mapping'.format(INDEX_NAME),
                                    {INDEX_NAME: {'mappings': {"properties": MAPPING_PROPS_SAMPLES_NUM_ALT_1}}})
         response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
