@@ -470,7 +470,7 @@ def _set_clickhouse_snv_indel_json(variant_json_by_guid, genome_version, dataset
     fields = ['key']
     if include_clinvar:
         fields.append('clinvar')
-        annotations_qs = annotations_qs.join_clinvar(key_map.keys())
+        annotations_qs = annotations_qs.join_annotations()
 
     annotations = annotations_qs.values(*fields, **annotation_values)
     for anns in annotations:

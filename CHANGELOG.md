@@ -2,6 +2,12 @@
 
 ## dev
 
+## 2/11/26
+* Adds eigen reference data to clickhouse (REQUIRES DB MIGRATION)
+  * Note that for users with Clickhouse already enabled, this migration will enqueue tasks in the loading pipeline. 
+  You may want to monitor the pipeline for any failures and re-trigger them in the event of any failures.
+* Updates VLM to the finalized v1 schema
+
 ## 1/8/26
 * Moves PanelApp updates from their own manage command into the main `update_all_reference_data` command.
 May require changes to custom cron jobs (REQUIRES DB MIGRATION)

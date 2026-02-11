@@ -38,12 +38,23 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
         original_sql_create_table = self.sql_create_table  # pylint: disable=access-member-before-definition
         self.sql_create_table = 'CREATE MATERIALIZED VIEW %(table)s %(engine)s (%(definition)s)'
         table_sql, params = super().table_sql(model)
+        if getattr(model._meta, 'create_empty', False):
+            table_sql = table_sql + ' EMPTY'
         meta = model._meta
         selects = [
             f'{meta.column_selects[field.column]} {field.column}' if field.column in meta.column_selects else field.column
             for field in meta.local_fields
         ]
-        sql = f'{table_sql} AS SELECT {", ".join(selects)} FROM {self._table_name(meta, meta.source_table)} {meta.source_sql}'  # nosec
+
+        source_url = getattr(meta, 'source_url', None)
+        if source_url:
+            source_url_template = getattr(meta, 'source_url_template', "{source_func}('{source_url}')")
+            source_func = 'gcs' if source_url.endswith('.parquet') else 'url'
+            source = source_url_template.format(source_func=source_func, source_url=source_url)
+        else:
+            source = self._table_name(meta, meta.source_table)
+
+        sql = f'{table_sql} AS SELECT {", ".join(selects)} FROM {source} {meta.source_sql}'  # nosec
         self.sql_create_table = original_sql_create_table
         return sql, params
 
@@ -67,18 +78,30 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
     def _dictionary_sql(self, model):
         original_sql_create_table = self.sql_create_table  # pylint: disable=access-member-before-definition
         meta = model._meta
+
         postgres_query = getattr(meta, 'postgres_query', None)
         if postgres_query:
             db = DATABASES[getattr(meta, 'postgres_db', 'default')]['NAME']
             source = f"POSTGRESQL(NAME 'seqr_postgres_named_collection' DATABASE {db} QUERY '{postgres_query}')"
         else:
             source_table = self._table_name(meta, meta.source_table)
-            source = f"CLICKHOUSE(USER '{CLICKHOUSE_WRITER_USER}' PASSWORD '{CLICKHOUSE_WRITER_PASSWORD}' TABLE {source_table})"
+            clickhouse_query_template = getattr(meta, 'clickhouse_query_template', None)
+            if clickhouse_query_template:
+                table = f"{DATABASES['clickhouse_write']['NAME']}.{source_table}"
+                table_source = f"QUERY '{clickhouse_query_template.format(table=table)}'"
+            else:
+                table_source = f'TABLE {source_table}'
+            source = f"CLICKHOUSE(USER '{CLICKHOUSE_WRITER_USER}' PASSWORD '{CLICKHOUSE_WRITER_PASSWORD}' {table_source})"
+
+        layout = f'LAYOUT({meta.layout})'
+        if meta.layout == 'RANGE_HASHED()':
+            layout += ' RANGE(MIN start MAX end)'
+
         self.sql_create_table = f"""
         CREATE DICTIONARY %(table)s (%(definition)s) %(extra)s
         SOURCE({source})
         LIFETIME(MIN 0 MAX {getattr(meta, 'lifetime_max', 0)})
-        LAYOUT({meta.layout})
+        {layout}
         """
         sql, params = super().table_sql(model)
         self.sql_create_table = original_sql_create_table

@@ -9,16 +9,16 @@ from django.db.models.sql.constants import INNER
 from clickhouse_search.backend.fields import NestedField, NamedTupleField
 from clickhouse_search.backend.functions import Array, ArrayConcat, ArrayDistinct, ArrayFilter, ArrayFold, \
     ArrayIntersect, ArrayJoin, ArrayMap, ArraySort, ArraySymmetricDifference, CrossJoin, GroupArray, GroupArrayArray, \
-    GroupArrayIntersect, If, MapLookup, NullIf, Plus, SubqueryJoin, SubqueryTable, Tuple, TupleConcat
+    GroupArrayIntersect, If, MapLookup, NullIf, Plus, SubqueryJoin, SubqueryTable, Tuple, TupleConcat, Untuple, \
+    IntDiv, Modulo
 from clickhouse_search.models.postgres_dicts import AffectedDict, SexDict
-from seqr.models import Sample
 from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFECTED, UNAFFECTED, MALE_SEXES, \
     X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, SCREEN_KEY, UTR_ANNOTATOR_KEY, \
     EXTENDED_SPLICE_KEY, MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY, CLINVAR_KEY, HGMD_KEY, NEW_SV_FIELD, \
     EXTENDED_SPLICE_REGION_CONSEQUENCE, CLINVAR_PATH_RANGES, CLINVAR_PATH_SIGNIFICANCES, CLINVAR_LIKELY_PATH_FILTER, \
     CLINVAR_CONFLICTING_P_LP, CLINVAR_CONFLICTING_NO_P, CLINVAR_CONFLICTING, PATH_FREQ_OVERRIDE_CUTOFF, \
     HGMD_CLASS_FILTERS, SV_TYPE_FILTER_FIELD, SV_CONSEQUENCES_FIELD, COMPOUND_HET, COMPOUND_HET_ALLOW_HOM_ALTS, \
-    X_LINKED_RECESSIVE_MALE_AFFECTED, FEMALE_SEXES
+    X_LINKED_RECESSIVE_MALE_AFFECTED, FEMALE_SEXES, SV_ANNOTATION_TYPES
 from seqr.utils.xpos_utils import get_xpos, MIN_POS, MAX_POS
 
 
@@ -28,21 +28,15 @@ class SearchQuerySet(QuerySet):
     def table_basename(self):
         return self.model._meta.db_table.rsplit('/', 1)[0]
 
-    @property
-    def clinvar_field_prefix(self):
-        return 'clinvar_join'
-
-    @property
-    def clinvar_fields(self):
-        return OrderedDict({
-            f'{self.clinvar_field_prefix}__{field.name}': (field.db_column or field.name, field)
-            for field in reversed(self.clinvar_model._meta.local_fields) if field.name != 'key'
+    @staticmethod
+    def _pathogenicity_tuple(model, field_prefix, **kwargs):
+        fields = OrderedDict({
+            f'{field_prefix}__{field.name}': (field.db_column or field.name, field)
+            for field in reversed(model.rel.related_model._meta.local_fields) if field.name != 'key'
         })
-
-    def _clinvar_tuple(self):
         return Tuple(
-            *self.clinvar_fields.keys(),
-            output_field=NamedTupleField(list(self.clinvar_fields.values()), null_if_empty=True, null_empty_arrays=True),
+            *fields.keys(),
+            output_field=NamedTupleField(list(fields.values()), null_if_empty=True, null_empty_arrays=True, **kwargs),
         )
 
     @classmethod
@@ -92,91 +86,117 @@ class SearchQuerySet(QuerySet):
         return clinvar_q
 
     @property
-    def sample_types(self):
-        return [
-            sample_type.lower() for sample_type in
-            ([self.single_sample_type] if self.single_sample_type else sorted(Sample.SAMPLE_TYPE_LOOKUP.keys()))
-        ]
-
-    @property
     def gt_stats_dict(self):
         if self.gt_stats_dict_rel is None:
             return None
         return self.gt_stats_dict_rel.rel.related_model
 
-    def _seqr_pop_fields(self):
-        if self.gt_stats_dict is None:
-            return []
-        return [field.name for field in self.gt_stats_dict._meta.local_fields if field.name != 'key']
-
     def _annotate_seqr_pop_expression(self, results):
-        seqr_pop_fields = self._seqr_pop_fields()
-        if not seqr_pop_fields:
+        if self.gt_stats_dict is None:
             return results
-        return results.annotate(seqrPop=self.gt_stats_dict.dict_get_expression(
-            'key',
-            seqr_pop_fields,
-            output_field=models.TupleField([models.UInt32Field() for _ in seqr_pop_fields])
-        ))
-
-    def _seqr_subfield_pop_expressions(self, subfield, subfield_name=None, affected=False):
-        seqr_pop_fields = self._seqr_pop_fields()
-        pop_expressions = [
-            (field, F(f'seqrPop__{seqr_pop_fields.index(field)}')) for field in seqr_pop_fields
-            if field.startswith(subfield) and (field.endswith('affected') == affected)
-        ]
-        if len(pop_expressions) == 1:
-            pop_expressions = [(subfield, pop_expressions[0][1])]
-        elif len(pop_expressions) > 1:
-            pop_expressions = pop_expressions + [(subfield, Plus(*[expr for _, expr in pop_expressions]))]
-        if subfield_name and subfield_name != subfield:
-            pop_expressions = [(name.replace(subfield, subfield_name), expr) for name, expr in pop_expressions]
-        return pop_expressions
+        return results.annotate(seqrPop=self.gt_stats_dict.dict_get_expression('key'))
 
     def _format_gene_intervals(self, genes):
         return [
             {field: gene[f'{field}Grch{self.genome_version}'] for field in ['chrom', 'start', 'end']} for gene in genes.values()
         ]
 
+    @classmethod
+    def _prediction_expression(cls, model):
+        pred_expressions = []
+        all_pred_fields = []
+        for pred_source, field_map in model.PREDICTIONS.items():
+            pred_model = getattr(model, pred_source).rel.related_model
+            pred_expression = pred_model.dict_get_expression('key', null_missing=True, force_tuple=True)
+            pred_expressions.append(pred_expression)
+            for field_name, output_field in pred_expression.output_field.base_fields:
+                if field_name in field_map:
+                    field_name, output_field = field_map[field_name]
+                elif field_name == 'score':
+                    field_name = pred_source
+                all_pred_fields.append((field_name, output_field))
 
-class AnnotationsQuerySet(SearchQuerySet):
+        for pred_name, range_dict in model.RANGE_PREDICTIONS.items():
+            pred_expression = cls._xpos_rage_dict_get_expression(range_dict)
+            pred_expressions.append(Tuple(pred_expression))
+            all_pred_fields.append((pred_name, pred_expression.output_field))
 
-    TRANSCRIPT_CONSEQUENCE_FIELD = 'sorted_transcript_consequences'
-    SORTED_GENE_CONSEQUENCE_FIELD = 'sorted_gene_consequences'
-    GENOTYPE_GENE_CONSEQUENCE_FIELD = 'genotype_gene_consequences'
+        return TupleConcat(*pred_expressions, output_field=NamedTupleField(all_pred_fields))
+
+    @staticmethod
+    def _xpos_rage_dict_get_expression(range_dict):
+        return range_dict.dict_get_expression(
+            IntDiv('xpos', int(1e9)), Modulo('xpos', int(1e9)), field_names=['score'], null_missing=True,
+        )
+
+    @staticmethod
+    def _population_expression(model):
+        expressions = []
+        output_fields = []
+        for pop in model.POPULATIONS:
+            expr = getattr(model, pop).rel.related_model.dict_get_expression('key')
+            expressions.append(expr)
+            output_fields.append((pop, expr.output_field))
+
+        return Tuple(*expressions, output_field=NamedTupleField(output_fields))
+
+    def _filter_in_silico(self, results, in_silico=None, **kwargs):
+        in_silico = in_silico or {}
+        require_score = in_silico.get('requireScore', False)
+
+        results, has_required_filter, in_silico_q, missing_q = self._parse_in_silico_qs(
+            results, in_silico, require_score, [], [],
+        )
+
+        if in_silico_q:
+            if missing_q:
+                in_silico_q |= missing_q
+            results = results.filter(in_silico_q)
+        elif has_required_filter:
+            results = results.none()
+
+        return results
+
+    def _parse_in_silico_qs(self, results, in_silico, require_score, in_silico_qs, in_silico_missing_qs):
+        in_silico_q = in_silico_qs[0] if in_silico_qs else None
+        for score_q in in_silico_qs[1:]:
+            in_silico_q |= score_q
+
+        missing_q = in_silico_missing_qs[0] if in_silico_missing_qs else None
+        for score_q in in_silico_missing_qs[1:]:
+            missing_q &= score_q
+
+        has_required_filter = require_score and any(val for val in (in_silico or {}).values())
+
+        return results, has_required_filter, in_silico_q, missing_q
+
+
+
+class BaseAnnotationsQuerySet(SearchQuerySet):
+
+    TRANSCRIPT_FIELD = 'sorted_transcript_consequences'
     GENE_CONSEQUENCE_FIELD = 'gene_consequences'
     FILTERED_CONSEQUENCE_FIELD = 'filtered_transcript_consequences'
-    TRANSCRIPT_FIELDS = [TRANSCRIPT_CONSEQUENCE_FIELD, SORTED_GENE_CONSEQUENCE_FIELD]
 
     ENTRY_FIELDS = ['familyGuids', 'genotypes']
 
     SELECTED_GENE_FIELD = 'selectedGeneId'
 
     @property
-    def transcript_field(self):
-        return next(field for field in self.TRANSCRIPT_FIELDS if hasattr(self.model, field))
-
-    @property
     def annotation_values(self):
         seqr_pops = []
-        population_fields = [*self.model.POPULATION_FIELDS]
+        population_fields = [*self._population_output_fields()]
         self._get_seqr_pop_expressions(seqr_pops, population_fields)
 
-        annotations = {
+        pop_field = 'pops' if self.has_annotation('pops') else 'populations'
+        return {
             **{key: Value(value) for key, value in self.model.ANNOTATION_CONSTANTS.items()},
             **{field.db_column: F(field.name) for field in self.model._meta.local_fields if field.db_column and field.name != field.db_column},
-            'populations': TupleConcat(F('populations'), Tuple(*seqr_pops), output_field=NamedTupleField(population_fields)),
+            'populations': TupleConcat(F(pop_field), Tuple(*seqr_pops), output_field=NamedTupleField(population_fields)),
         }
 
-        if not hasattr(self.model, 'SORTED_TRANSCRIPT_CONSQUENCES_FIELDS'):
-            annotations['transcripts'] = annotations.pop(getattr(self.model, self.transcript_field).field.db_column)
-            if self.transcript_field == self.TRANSCRIPT_CONSEQUENCE_FIELD:
-                annotations.update({
-                    'mainTranscriptId': F('sorted_transcript_consequences__0__transcriptId'),
-                    'selectedMainTranscriptId': Value(None, output_field=models.StringField(null=True)),
-                })
-
-        return annotations
+    def _population_output_fields(self):
+        return self.model.POPULATION_FIELDS
 
     def _get_seqr_pop_expressions(self, seqr_pops, population_fields):
         if self.gt_stats_dict is None:
@@ -199,39 +219,27 @@ class AnnotationsQuerySet(SearchQuerySet):
 
         return seqr_pops
 
-    @staticmethod
-    def _genotype_override_expression(index, col, cn_index):
-        expressions = [f'x.{index}', f'sample_{col}']
-        is_gene_ids = col == 'geneIds'
-        if is_gene_ids:
-            expressions = [f'arraySort({expr})::String' for expr in expressions]
-        expression = f'nullIf({", ".join(expressions)})'
-        if is_gene_ids:
-            # If entire genotype is missing, geneIds should be null instead of empty
-            expression = f'if(isNull(x.{cn_index}), null, {expression})'
-        return expression
+    def _seqr_subfield_pop_expressions(self, subfield, subfield_name=None, affected=False):
+        seqr_pop_fields = [field_name for field_name, _ in self.gt_stats_dict.base_fields()]
+        pop_expressions = [
+            (field, F(f'seqrPop__{seqr_pop_fields.index(field)}')) for field in seqr_pop_fields
+            if field.startswith(subfield) and (field.endswith('affected') == affected)
+        ]
+        if len(pop_expressions) == 1:
+            pop_expressions = [(subfield, pop_expressions[0][1])]
+        elif len(pop_expressions) > 1:
+            combined = Plus(*[expr for _, expr in pop_expressions])
+            pop_expressions.append((subfield, combined))
+        if subfield_name and subfield_name != subfield:
+            pop_expressions = [(name.replace(subfield, subfield_name), expr) for name, expr in pop_expressions]
+        return pop_expressions
 
     @property
     def annotation_fields(self):
         return [
             field.name for field in self.model._meta.local_fields
-            if (field.db_column or field.name) not in self.annotation_values and field.name not in self.TRANSCRIPT_FIELDS
+            if (field.db_column or field.name) not in self.annotation_values and field.name != self.TRANSCRIPT_FIELD
         ]
-
-    @property
-    def prediction_fields(self):
-        return set(dict(self.model.PREDICTION_FIELDS).keys())
-
-    @property
-    def transcript_fields(self):
-        transcript_field_configs = next(getattr(self.model, field) for field in [
-            'SORTED_TRANSCRIPT_CONSQUENCES_FIELDS', 'TRANSCRIPTS_FIELDS', 'SORTED_GENE_CONSQUENCES_FIELDS',
-        ] if hasattr(self.model, field))
-        return set(dict(transcript_field_configs).keys())
-
-    @property
-    def single_sample_type(self):
-        return getattr(self.entry_model, 'SAMPLE_TYPE', None)
 
     @property
     def entry_field(self):
@@ -240,16 +248,6 @@ class AnnotationsQuerySet(SearchQuerySet):
     @property
     def entry_model(self):
          return getattr(self.model, f'{self.entry_field}_set').rel.related_model
-
-    @property
-    def clinvar_model(self):
-        if not hasattr(self.entry_model, 'clinvar_join'):
-            return None
-        return self.entry_model.clinvar_join.rel.related_model
-
-    @property
-    def clinvar_field_prefix(self):
-        return f'{self.entry_field}__clinvar_join'
 
     @property
     def gt_stats_dict_rel(self):
@@ -302,8 +300,8 @@ class AnnotationsQuerySet(SearchQuerySet):
 
     def _get_join_query_values(self, query, alias, conditional_selects):
         query_select = query.annotation_values
-        for select_func in (conditional_selects or []):
-            query_select.update(select_func(query, prefix=f'{alias}_'))
+        for select_func_name in (conditional_selects or []):
+            query_select.update(getattr(query, select_func_name)(query, prefix=f'{alias}_'))
         annotation_fields = query.annotation_fields
         return query.values(
             **{f'{alias}_{field}': F(field) for field in annotation_fields if field not in query_select},
@@ -311,18 +309,15 @@ class AnnotationsQuerySet(SearchQuerySet):
         )
 
     def search(self, **kwargs):
-        results = self.filter_variant_ids(**kwargs)
-        results = self._filter_frequency(results, **kwargs)
+        results = self._filter_frequency(self, **kwargs)
         results = self._filter_in_silico(results, **kwargs)
-        results = self.filter_annotations(results, **kwargs)
+        results = self._filter_annotations(results, **kwargs)
         return results
 
     def result_values(self, skip_entry_fields=False):
-        override_model_annotations = {'populations', 'pos', 'end'}
+        override_model_annotations = {'populations', 'predictions', 'pos', 'end', 'hgmd'}
         values = {**self.annotation_values}
-        values.update(self._conditional_selected_transcript_values(self))
-        if not skip_entry_fields:
-            values.update(self.genotype_override_values(self))
+        values.update(self.conditional_selects(self, skip_entry_fields=skip_entry_fields))
         initial_values = {k: v for k, v in  values.items() if k not in override_model_annotations}
 
         fields = [*self.annotation_fields] + [
@@ -336,58 +331,11 @@ class AnnotationsQuerySet(SearchQuerySet):
             **{k: values[k] for k in override_model_annotations if k in values},
         )
 
-    def join_seqr_pop(self):
+    def join_annotations(self):
         return self._annotate_seqr_pop_expression(self)
 
-    def join_clinvar(self, keys):
-        results = self
-        if self.clinvar_model:
-            results = results.annotate(clinvar=self._clinvar_tuple())
-            # Due to django modeling, adding a clinvar annotation will add a join to the entries table and then to clinvar
-            # Manipulating the underlying join removes the entry join entirely
-            entry_table = f'{self.table_basename}/entries'
-            results.query.alias_map[f'{self.table_basename}/reference_data/clinvar'].parent_alias = results.query.alias_map[entry_table].parent_alias
-            results.query.alias_refcount[entry_table] = 0
-        return results
-
-    def _conditional_selected_transcript_values(self, query, prefix=''):
-        if not hasattr(self.model, self.TRANSCRIPT_CONSEQUENCE_FIELD):
-            return {}
-        consequence_field = next((
-            field for field in [self.FILTERED_CONSEQUENCE_FIELD, self.GENE_CONSEQUENCE_FIELD] if query.has_annotation(field)
-        ), None)
-        if not consequence_field:
-            return {}
-        if not hasattr(self.model, 'SORTED_TRANSCRIPT_CONSQUENCES_FIELDS'):
-            return {'selectedMainTranscriptId': NullIf(
-                NullIf(F(f'{consequence_field}__0__transcriptId'), Value('')), f'{prefix}mainTranscriptId',
-                output_field=models.StringField(null=True),
-            )}
-        if consequence_field == self.FILTERED_CONSEQUENCE_FIELD:
-            return {'selectedTranscript':  F(f'{self.FILTERED_CONSEQUENCE_FIELD}__0')}
-        return {self.SELECTED_GENE_FIELD: F(f'{self.GENE_CONSEQUENCE_FIELD}__0__geneId')}
-
-    def genotype_override_values(self, query, prefix=''):
-        genotype_override_fields = query.model.GENOTYPE_OVERRIDE_FIELDS
-        if not genotype_override_fields:
-            return {}
-
-        genotype_field = next(field for field in ['genotypes', 'familyGenotypes'] if field in query.query.annotations)
-        index_map = {
-            field: i+1 for i, (field, _) in enumerate(query.query.annotations[genotype_field].output_field.base_fields)
-        }
-        override_field_map = {field: col for col, (field, _) in genotype_override_fields.items()}
-        genotype_fields = [
-            self._genotype_override_expression(index_map[field], override_field_map[field], index_map['cn'])
-            if field in override_field_map else (f'ifNull(x.{index_map[field]}, 0)' if field == 'numAlt' else f'x.{index_map[field]}')
-            for (field, _) in query.query.annotations[genotype_field].output_field.base_fields
-        ]
-
-        return {
-            genotype_field: ArrayMap(genotype_field, mapped_expression=f"tuple({', '.join(genotype_fields)})"),
-            'transcripts': F(query.GENOTYPE_GENE_CONSEQUENCE_FIELD),
-            **{col: F(f'sample_{col}') for col in genotype_override_fields if col != 'geneIds'},
-        }
+    def conditional_selects(self, query, prefix='', **kwargs):
+        raise NotImplementedError
 
     def search_compound_hets(self, primary_q, secondary_q):
         primary_gene_field = f'primary_{self.SELECTED_GENE_FIELD}'
@@ -395,32 +343,19 @@ class AnnotationsQuerySet(SearchQuerySet):
         primary_q = primary_q.explode_gene_id(primary_gene_field)
         secondary_q = secondary_q.explode_gene_id(secondary_gene_field)
 
-        conditional_fields = lambda query, **kwargs: {
-            field: F(field) for field in [self.SELECTED_GENE_FIELD, 'clinvar', 'family_carriers', 'carriers', 'has_hom_alt', 'no_hom_alt_families', 'familyGenotypes'] + self.ENTRY_FIELDS
-            if field in query.query.annotations
-        }
-
         results = self.cross_join(
             query=primary_q, alias='primary', join_query=secondary_q, join_alias='secondary',
-            conditional_selects=[
-                conditional_fields, self._conditional_selected_transcript_values, self.genotype_override_values,
-            ],
+            conditional_selects=['_comp_het_conditional_fields', 'conditional_selects'],
         )
         return results.filter(
             **{primary_gene_field: F(secondary_gene_field)}
         ).exclude(primary_variantId=F('secondary_variantId'))
 
-    def filter_variant_ids(self, parsed_variant_ids=None, rs_ids=None, **kwargs):
-        results = self
-        if parsed_variant_ids:
-            results = results.filter(
-                variant_id__in=[f'{chrom}-{pos}-{ref}-{alt}' for chrom, pos, ref, alt in parsed_variant_ids]
-            )
-
-        if rs_ids:
-            results = results.filter(rsid__in=rs_ids)
-
-        return results
+    def _comp_het_conditional_fields(self, query, prefix=''):
+        return {
+            field: F(field) for field in [self.SELECTED_GENE_FIELD, 'clinvar', 'family_carriers', 'carriers', 'has_hom_alt', 'no_hom_alt_families', 'familyGenotypes'] + self.ENTRY_FIELDS
+            if field in query.query.annotations
+        }
 
     @property
     def populations(self):
@@ -429,130 +364,16 @@ class AnnotationsQuerySet(SearchQuerySet):
             for population, field in self.model.POPULATION_FIELDS
         }
 
-    def _filter_frequency(self, results, freqs=None, pathogenicity=None, **kwargs):
-        frequencies =  freqs or {}
-        clinvar_override_q = self._clinvar_path_q(pathogenicity) if self.has_annotation(CLINVAR_KEY) else None
-
-        for population, pop_filter in frequencies.items():
-            pop_subfields = self.populations.get(population)
-            if not pop_subfields:
-                continue
-
-            if pop_filter.get('af') is not None and pop_filter['af'] < 1:
-                af_field = next(field for field in ['filter_af', 'af'] if field in pop_subfields)
-                if af_field:
-                    af_q = Q(**{
-                        f'populations__{population}__{af_field}__lte': pop_filter['af'],
-                    })
-                    if clinvar_override_q and pop_filter['af'] < PATH_FREQ_OVERRIDE_CUTOFF:
-                        af_q |= (clinvar_override_q & Q(**{
-                            f'populations__{population}__{af_field}__lte': PATH_FREQ_OVERRIDE_CUTOFF,
-                        }))
-                    results = results.filter(af_q)
-            elif pop_filter.get('ac') is not None:
-                if 'ac' in pop_subfields:
-                    ac_field = f'populations__{population}__ac'
-                else:
-                    ac_field =  f'ac_{population}'
-                    results = results.annotate(**{ac_field: F(f'populations__{population}__het') + (F(f'populations__{population}__hom') * 2)})
-
-                results = results.filter(**{f'{ac_field}__lte': pop_filter['ac']})
-
-            if pop_filter.get('hh') is not None:
-                for subfield in ['hom', 'hemi']:
-                    if subfield not in pop_subfields:
-                        continue
-                    hh_q = Q(**{
-                        f'populations__{population}__{subfield}__lte': pop_filter['hh'],
-                    })
-                    if clinvar_override_q:
-                        hh_q |= clinvar_override_q
-                    results = results.filter(hh_q)
-
+    def _filter_frequency(self, results, **kwargs):
         return results
 
-    def _filter_in_silico(self, results, in_silico=None, **kwargs):
-        in_silico = in_silico or {}
-        require_score = in_silico.get('requireScore', False)
-
-        in_silico_q = None
-        if in_silico.get('alphamissense'):
-            in_silico_q = self._alphamissense_q(in_silico['alphamissense'], require_score)
-
-        for score, value in in_silico.items():
-            score_q = self._get_in_silico_score_q(score, value)
-            if in_silico_q is None:
-                in_silico_q = score_q
-            elif score_q:
-                in_silico_q |= score_q
-
-        if in_silico_q and not require_score:
-            in_silico_q |= Q(**{f'predictions__{score}__isnull': True for score in in_silico.keys() if score in self.prediction_fields})
-
-        if in_silico_q:
-            results = results.filter(in_silico_q)
-        elif any(val for val in (in_silico or {}).values()) and in_silico.get('requireScore'):
-            #  In silico filters restrict search to other dataset types
-            results = results.none()
-
-        return results
-
-    def _get_in_silico_score_q(self, score, value):
-        if not (score in self.prediction_fields and value):
-            return None
-        score_column = f'predictions__{score}'
-        try:
-            return Q(**{f'{score_column}__gte': float(value)})
-        except ValueError:
-            return Q(**{score_column: value})
-
-    def _alphamissense_q(self, value, require_score):
-        if not ('alphamissensePathogenicity' in self.transcript_fields and value):
-            return None
-        q = Q(**{f'{self.transcript_field}__array_exists': {'alphamissensePathogenicity': (value, '{value} <= {field}')}})
-        if not require_score:
-            q |= Q(**{f'{self.transcript_field}__array_all': {'alphamissensePathogenicity': (None, 'isNull({field})')}})
-        return q
-
-    def filter_annotations(self, results, annotations=None, pathogenicity=None, exclude=None, genes=None, intervals=None, exclude_locations=False, padded_interval_end=None,  **kwargs):
-        transcript_field = self.transcript_field
-        if self.model.GENOTYPE_OVERRIDE_FIELDS:
-            results = results.annotate(**{
-                self.GENOTYPE_GENE_CONSEQUENCE_FIELD: ArrayFilter(self.SORTED_GENE_CONSEQUENCE_FIELD, conditions=[{
-                    'geneId': (None, 'has(sample_geneIds, {field})'),
-                }]),
-            })
-            transcript_field = self.GENOTYPE_GENE_CONSEQUENCE_FIELD
-        interval_qs = [self._interval_query(**interval) for interval in intervals or []]
+    def _filter_annotations(self, results, annotations=None, pathogenicity=None, genes=None, intervals=None, exclude_locations=False, **kwargs):
         if exclude_locations and genes:
-            interval_qs += [self._interval_query(**interval) for interval in self._format_gene_intervals(genes)]
+            intervals = self._format_gene_intervals(genes)
             genes = None
-        if genes:
-            results = results.annotate(**{
-                self.GENE_CONSEQUENCE_FIELD: ArrayFilter(transcript_field, conditions=[{
-                    'geneId': (sorted(genes.keys()), 'has({value}, {field})'),
-                }]),
-            })
-            gene_q = Q(gene_consequences__not_empty=True)
-            for interval_q in interval_qs:
-                gene_q |= interval_q
-            results = results.filter(gene_q)
-        elif (interval_qs or padded_interval_end) and hasattr(self.model, 'end'):
-            if padded_interval_end:
-                end, padding = padded_interval_end
-                interval_qs = [Q(end__range=(end - padding, end + padding))]
-            interval_q = interval_qs[0]
-            for q in interval_qs[1:]:
-                interval_q |= q
-            filter_func = results.exclude if exclude_locations else results.filter
-            results = filter_func(interval_q)
+        results = self._filter_locations(results, genes, intervals, exclude_locations=exclude_locations, **kwargs)
 
-        filter_qs, transcript_filters = self._parse_annotation_filters(annotations, pathogenicity) if (annotations or pathogenicity) else ([], [])
-
-        if self.has_annotation(CLINVAR_KEY):
-            exclude_clinvar_q = self._clinvar_filter_q(exclude)
-            if exclude_clinvar_q is not None:
-                results = results.exclude(exclude_clinvar_q)
+        filter_qs, transcript_filters = self._parse_annotation_filters(annotations or {}, pathogenicity) if (annotations or pathogenicity) else ([], [])
 
         if not (filter_qs or transcript_filters):
             if any(val for key, val in (annotations or {}).items() if key != NEW_SV_FIELD) or any(val for val in (pathogenicity or {}).values()):
@@ -568,7 +389,7 @@ class AnnotationsQuerySet(SearchQuerySet):
             filter_q = Q(passes_annotation=True)
 
         if transcript_filters:
-            consequence_field = self.GENE_CONSEQUENCE_FIELD if genes else transcript_field
+            consequence_field = self.GENE_CONSEQUENCE_FIELD if genes else self.TRANSCRIPT_FIELD
             results = results.annotate(**{
                 self.FILTERED_CONSEQUENCE_FIELD: ArrayFilter(consequence_field, conditions=transcript_filters),
             })
@@ -580,130 +401,32 @@ class AnnotationsQuerySet(SearchQuerySet):
 
         return results.filter(filter_q)
 
+    def _filter_locations(self, results, genes, intervals, **kwargs):
+        if genes:
+            results = results.annotate(**{
+                self.GENE_CONSEQUENCE_FIELD: ArrayFilter(self.TRANSCRIPT_FIELD, conditions=[{
+                    'geneId': (sorted(genes.keys()), 'has({value}, {field})'),
+                }]),
+            })
+            gene_q = Q(gene_consequences__not_empty=True)
+            for interval in (intervals or []):
+                gene_q |= self._interval_query(**interval)
+            results = results.filter(gene_q)
+
+        return results
+
     def _interval_query(self, chrom, start, end, offset=None, **kwargs):
         if offset:
             offset_pos = int((end - start) * offset)
             start = max(start - offset_pos, MIN_POS)
             end = min(end + offset_pos, MAX_POS)
-        q = Q(xpos__range=(get_xpos(chrom, start), get_xpos(chrom, end)))
-        if hasattr(self.model, 'end_chrom'):
-            q |= Q(end_chrom__isnull=True, chrom=chrom, end__range=(start, end))
-            q |= Q(end_chrom=chrom, end__range=(start, end))
-        elif hasattr(self.model, 'end'):
-            q |= Q(chrom=chrom, end__range=(start, end))
-            q |= Q(chrom=chrom, pos__lte=start, end__gte=end)
-        return q
-
-    TRANSCRIPT_FIELD_FILTERS = {
-        UTR_ANNOTATOR_KEY: ('fiveutrConsequence', 'hasAny({value}, [{field}])'),
-        SV_CONSEQUENCES_FIELD: ('majorConsequence', 'hasAny({value}, [{field}])'),
-    }
-    ANNOTATION_FIELD_FILTERS = {
-        SCREEN_KEY: ('screen_region_type',),
-        SV_TYPE_FILTER_FIELD: ('sv_type', lambda value, model: ('{field}__in', [
-            sv_type.replace(model.SV_TYPE_FILTER_PREFIX, '') for sv_type in value
-            if sv_type.startswith(model.SV_TYPE_FILTER_PREFIX)
-        ])),
-        **{field: (f'sorted_{field}_consequences', lambda value, _: ('{field}__array_exists', {
-            'consequenceTerms': (value, 'hasAny({value}, {field})'),
-        })) for field in [MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY]},
-        'mitomap_pathogenic': ('mitomap_pathogenic', lambda value, _: ('{field}', value)),
-    }
+        return Q(xpos__range=(get_xpos(chrom, start), get_xpos(chrom, end)))
 
     def _parse_annotation_filters(self, annotations, pathogenicity):
-        filter_qs = []
-        filters_by_field = {}
-        allowed_consequences = []
-        transcript_field_filters = {}
-        for field, value in (annotations or {}).items():
-            if field in self.TRANSCRIPT_FIELD_FILTERS:
-                filter_field, template = self.TRANSCRIPT_FIELD_FILTERS[field]
-                if value:
-                    transcript_field_filters[filter_field] = (value, template)
-            elif field == EXTENDED_SPLICE_KEY:
-                if EXTENDED_SPLICE_REGION_CONSEQUENCE in value:
-                    transcript_field_filters['extendedIntronicSpliceRegionVariant'] = (1, '{field} = {value}')
-                value = [c for c in value if c != EXTENDED_SPLICE_REGION_CONSEQUENCE]
-                if value:
-                    allowed_consequences += value
-            elif field in self.ANNOTATION_FIELD_FILTERS:
-                filter_field, *format_filter = self.ANNOTATION_FIELD_FILTERS[field]
-                filters_by_field[filter_field] = format_filter[0](value, self.model) if format_filter else ('{field}__in', value)
-            elif field == SPLICE_AI_FIELD:
-                splice_ai_q = self._get_in_silico_score_q(SPLICE_AI_FIELD, value)
-                if splice_ai_q:
-                    filter_qs.append(splice_ai_q)
-            elif field != NEW_SV_FIELD:
-                allowed_consequences += value
-
-        hgmd_filter = (pathogenicity or {}).get(HGMD_KEY)
-        if hgmd_filter:
-            filters_by_field[HGMD_KEY] = self._hgmd_filter(hgmd_filter)
-
-        if self.has_annotation(CLINVAR_KEY):
-            clinvar_q = self._clinvar_filter_q(pathogenicity)
-            if clinvar_q is not None:
-                filter_qs.append(clinvar_q)
-
-        filter_qs += [
-            Q(**{lookup_template.format(field=field): value})
-            for field, (lookup_template, value) in filters_by_field.items() if hasattr(self.model, field)
-        ]
-        transcript_filters = [
-            {field: value} for field, value in transcript_field_filters.items() if field in self.transcript_fields
-        ]
-
-        if allowed_consequences and 'consequenceTerms' in self.transcript_fields:
-            transcript_filters += self._allowed_consequences_filters(allowed_consequences)
-
-        return filter_qs, transcript_filters
-
-    def _allowed_consequences_filters(self, allowed_consequences):
-        csq_filters = []
-        non_canonical_consequences = [c for c in allowed_consequences if not c.endswith('__canonical')]
-        if non_canonical_consequences:
-            csq_filters.append(self._consequence_term_filter(non_canonical_consequences))
-
-        canonical_consequences = [
-            c.replace('__canonical', '') for c in allowed_consequences if c.endswith('__canonical')
-        ]
-        if canonical_consequences and 'canonical' in self.transcript_fields:
-            csq_filters.append(
-                self._consequence_term_filter(canonical_consequences, canonical=(0, '{field} > {value}')),
-            )
-        return csq_filters
-
-    @staticmethod
-    def _consequence_term_filter(consequences, **kwargs):
-        return {'consequenceTerms': (consequences, 'hasAny({value}, {field})'), **kwargs}
-
-    @staticmethod
-    def _hgmd_filter(hgmd):
-        min_class = next((class_name for value, class_name in HGMD_CLASS_FILTERS if value in hgmd), None)
-        max_class = next((class_name for value, class_name in reversed(HGMD_CLASS_FILTERS) if value in hgmd), None)
-        if 'hgmd_other' in hgmd:
-            min_class = min_class or 'DP'
-            max_class = None
-        if min_class == max_class:
-            return ('{field}__classification', min_class)
-        elif min_class and max_class:
-            return ('{field}__classification__range', (min_class, max_class))
-        return ('{field}__classification__gt', min_class)
-
-    @staticmethod
-    def _clinvar_range_q(path_range):
-        return Q(clinvar__0__range=path_range, clinvar_key__isnull=False)
-
-    @staticmethod
-    def _clinvar_star_q(min_stars):
-        return Q(clinvar__4__gte=min_stars, clinvar_key__isnull=False)
-
-    @staticmethod
-    def _clinvar_conflicting_path_filter(array_func, conflicting_filter):
-        return {f'clinvar__5__{array_func}': conflicting_filter, 'clinvar__5__not_empty': True, 'clinvar_key__isnull': False}
+        raise NotImplementedError
 
     def explode_gene_id(self, gene_id_key):
-        consequence_field = self.GENE_CONSEQUENCE_FIELD if self.has_annotation(self.GENE_CONSEQUENCE_FIELD) else self.transcript_field
+        consequence_field = self.GENE_CONSEQUENCE_FIELD if self.has_annotation(self.GENE_CONSEQUENCE_FIELD) else self.TRANSCRIPT_FIELD
         results = self.annotate(
             selectedGeneId=ArrayJoin(ArrayDistinct(ArrayMap(consequence_field, mapped_expression='x.geneId')), output_field=models.StringField())
         )
@@ -721,7 +444,354 @@ class AnnotationsQuerySet(SearchQuerySet):
         return field in self.query.annotations
 
 
-class EntriesManager(SearchQuerySet):
+class AnnotationsQuerySet(BaseAnnotationsQuerySet):
+
+    @property
+    def hgmd_join_model(self):
+        return getattr(self.model, 'hgmd_join', None)
+
+    @property
+    def sorted_transcript_consequence_fields(self):
+        return set(dict(getattr(self.model, 'SORTED_TRANSCRIPT_CONSQUENCES_FIELDS', [])).keys())
+
+    @property
+    def annotation_values(self):
+        annotations = super().annotation_values
+
+        pred_expr = F('preds')
+        if self.model.ANNOTATION_PREDICTIONS:
+            preds = [f'predictions__{field}' for field in self.model.ANNOTATION_PREDICTIONS]
+            output_fields = self.query.annotations['preds'].output_field.base_fields + [
+                field for field in self.model.PREDICTION_FIELDS if field[0] in self.model.ANNOTATION_PREDICTIONS
+            ]
+            pred_expr = TupleConcat(pred_expr, Tuple(*preds), output_field=NamedTupleField(output_fields))
+        annotations['predictions'] = pred_expr
+
+        if self.hgmd_join_model:
+            annotations['hgmd'] = self._pathogenicity_tuple(self.hgmd_join_model, 'hgmd_join', rename_fields={'classification': 'class'})
+
+        if not self.sorted_transcript_consequence_fields:
+            annotations.update({
+                'transcripts':  annotations.pop(self.model.sorted_transcript_consequences.field.db_column),
+                'mainTranscriptId': F('sorted_transcript_consequences__0__transcriptId'),
+                'selectedMainTranscriptId': Value(None, output_field=models.StringField(null=True)),
+            })
+
+        screen_expression = self._screen_expression()
+        if screen_expression:
+            annotations['screenRegionType'] = screen_expression
+
+        if self.has_annotation('mitomapPathogenic'):
+            annotations['mitomapPathogenic'] = F('mitomapPathogenic')
+
+        return annotations
+
+    @staticmethod
+    def _hgmd_filter_q(hgmd):
+        min_class = next((class_name for value, class_name in HGMD_CLASS_FILTERS if value in hgmd), None)
+        max_class = next((class_name for value, class_name in reversed(HGMD_CLASS_FILTERS) if value in hgmd), None)
+        if 'hgmd_other' in hgmd:
+            min_class = min_class or 'DP'
+            max_class = None
+        if min_class == max_class:
+            return Q(hgmd_join__classification=min_class)
+        elif min_class and max_class:
+            return Q(hgmd_join__classification__range=(min_class, max_class))
+        return Q(hgmd_join__classification__gt=min_class)
+
+    @staticmethod
+    def _clinvar_range_q(path_range):
+        return Q(clinvar__0__range=path_range, clinvar_key__isnull=False)
+
+    @staticmethod
+    def _clinvar_star_q(min_stars):
+        return Q(clinvar__4__gte=min_stars, clinvar_key__isnull=False)
+
+    @staticmethod
+    def _clinvar_conflicting_path_filter(array_func, conflicting_filter):
+        return {f'clinvar__5__{array_func}': conflicting_filter, 'clinvar__5__not_empty': True, 'clinvar_key__isnull': False}
+
+    def _population_output_fields(self):
+        return self.query.annotations['pops'].output_field.base_fields
+
+    def _screen_expression(self):
+        if not self.model.SCREEN_DICT:
+            return None
+        return self.model.SCREEN_DICT.dict_get_expression('chrom', 'pos', field_names=['regionType'], null_missing=True)
+
+    def _parse_in_silico_qs(self, results, in_silico, require_score, in_silico_qs, in_silico_missing_qs):
+        in_silico_q = None
+        missing_q = None
+
+        if self.has_annotation('pass_in_silico'):
+            in_silico_q = Q(pass_in_silico=True) | (Q(sorted_transcript_consequences__array_exists={
+                'alphamissensePathogenicity': (in_silico['alphamissense'], '{value} <= {field}'),
+            }))
+            if not require_score:
+                missing_q = Q(missing_in_silico=True, sorted_transcript_consequences__array_all={
+                    'alphamissensePathogenicity': (None, 'isNull({field})'),
+                })
+
+        return results, False, in_silico_q, missing_q
+
+    def _filter_annotations(self, results, *args, exclude=None, **kwargs):
+        screen_expression = self._screen_expression()
+        if screen_expression:
+            results = results.annotate(screen=self._screen_expression())
+
+        results = super()._filter_annotations(results, *args, **kwargs)
+
+        exclude_clinvar_q = self._clinvar_filter_q(exclude)
+        if exclude_clinvar_q is not None:
+            results = results.exclude(exclude_clinvar_q)
+
+        return results
+
+    def _parse_annotation_filters(self, annotations, pathogenicity):
+        filter_qs = []
+        allowed_consequences = []
+        transcript_field_filters = {}
+        for field, value in annotations.items():
+            if field == UTR_ANNOTATOR_KEY:
+                if value:
+                    transcript_field_filters['fiveutrConsequence'] = (value,  'hasAny({value}, [{field}])')
+            elif field == EXTENDED_SPLICE_KEY:
+                if EXTENDED_SPLICE_REGION_CONSEQUENCE in value:
+                    transcript_field_filters['extendedIntronicSpliceRegionVariant'] = (1, '{field} = {value}')
+                value = [c for c in value if c != EXTENDED_SPLICE_REGION_CONSEQUENCE]
+                if value:
+                    allowed_consequences += value
+            elif field in [MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY]:
+                filter_field = f'sorted_{field}_consequences'
+                if hasattr(self.model, filter_field):
+                    filter_qs.append(Q(**{
+                        f'{filter_field}__array_exists': {'consequenceTerms': (value, 'hasAny({value}, {field})')},
+                    }))
+            elif field == SCREEN_KEY:
+                if self.model.SCREEN_DICT:
+                    filter_qs.append(Q(screen__in=value))
+            elif field == 'mitomap_pathogenic':
+                if self.has_annotation('mitomapPathogenic'):
+                    filter_qs.append(Q(mitomapPathogenic=value))
+            elif field == SPLICE_AI_FIELD:
+                if value and SPLICE_AI_FIELD in self.entry_model.PREDICTIONS:
+                    pred_index = next (
+                        i for i, (pred_field, _) in enumerate(self.query.annotations['preds'].output_field.base_fields)
+                        if pred_field == SPLICE_AI_FIELD
+                    )
+                    filter_qs.append(Q(**{f'preds__{pred_index}__gte': float(value)}))
+            elif field not in SV_ANNOTATION_TYPES:
+                allowed_consequences += value
+
+        hgmd_filter = (pathogenicity or {}).get(HGMD_KEY)
+        if hgmd_filter and self.hgmd_join_model:
+            filter_qs.append(self._hgmd_filter_q(hgmd_filter))
+
+        clinvar_q = self._clinvar_filter_q(pathogenicity)
+        if clinvar_q is not None:
+            filter_qs.append(clinvar_q)
+
+        transcript_filters = [
+            {field: value} for field, value in transcript_field_filters.items() if field in self.sorted_transcript_consequence_fields
+        ]
+
+        if allowed_consequences:
+            transcript_filters += self._allowed_consequences_filters(allowed_consequences)
+
+        return filter_qs, transcript_filters
+
+    def _allowed_consequences_filters(self, allowed_consequences):
+        csq_filters = []
+        non_canonical_consequences = [c for c in allowed_consequences if not c.endswith('__canonical')]
+        if non_canonical_consequences:
+            csq_filters.append(self._consequence_term_filter(non_canonical_consequences))
+
+        canonical_consequences = [
+            c.replace('__canonical', '') for c in allowed_consequences if c.endswith('__canonical')
+        ]
+        if canonical_consequences:
+            csq_filters.append(
+                self._consequence_term_filter(canonical_consequences, canonical=(0, '{field} > {value}')),
+            )
+        return csq_filters
+
+    @staticmethod
+    def _consequence_term_filter(consequences, **kwargs):
+        return {'consequenceTerms': (consequences, 'hasAny({value}, {field})'), **kwargs}
+
+    def join_annotations(self):
+        results = super().join_annotations()
+        results = results.annotate(
+            preds=self._prediction_expression(self.entry_model),
+            pops=self._population_expression(self.entry_model),
+            clinvar=self._pathogenicity_tuple(self.entry_model.clinvar_join, f'{self.entry_field}__clinvar_join')
+        )
+        # Due to django modeling, adding a clinvar annotation will add a join to the entries table and then to clinvar
+        # Manipulating the underlying join removes the entry join entirely
+        entry_table = f'{self.table_basename}/entries'
+        results.query.alias_map[f'{self.table_basename}/reference_data/clinvar'].parent_alias = results.query.alias_map[entry_table].parent_alias
+        results.query.alias_refcount[entry_table] = 0
+        return results
+
+    def conditional_selects(self, query, prefix='', **kwargs):
+        consequence_field = next((
+            field for field in [self.FILTERED_CONSEQUENCE_FIELD, self.GENE_CONSEQUENCE_FIELD] if query.has_annotation(field)
+        ), None)
+        if not consequence_field:
+            return {}
+        if not self.sorted_transcript_consequence_fields:
+            return {'selectedMainTranscriptId': NullIf(
+                NullIf(F(f'{consequence_field}__0__transcriptId'), Value('')), f'{prefix}mainTranscriptId',
+                output_field=models.StringField(null=True),
+            )}
+        if consequence_field == self.FILTERED_CONSEQUENCE_FIELD:
+            return {'selectedTranscript':  F(f'{self.FILTERED_CONSEQUENCE_FIELD}__0')}
+        return {self.SELECTED_GENE_FIELD: F(f'{self.GENE_CONSEQUENCE_FIELD}__0__geneId')}
+
+
+class SvAnnotationsQuerySet(BaseAnnotationsQuerySet):
+    TRANSCRIPT_FIELD = 'sorted_gene_consequences'
+    GENOTYPE_GENE_CONSEQUENCE_FIELD = 'genotype_gene_consequences'
+
+    @property
+    def annotation_values(self):
+        annotations = super().annotation_values
+        annotations['transcripts'] = annotations.pop(self.model.sorted_gene_consequences.field.db_column)
+        return annotations
+
+    @classmethod
+    def _clinvar_path_q(cls, pathogenicity):
+        return None
+
+    @staticmethod
+    def _genotype_override_expression(index, col, cn_index):
+        expressions = [f'x.{index}', f'sample_{col}']
+        is_gene_ids = col == 'geneIds'
+        if is_gene_ids:
+            expressions = [f'arraySort({expr})::String' for expr in expressions]
+        expression = f'nullIf({", ".join(expressions)})'
+        if is_gene_ids:
+            # If entire genotype is missing, geneIds should be null instead of empty
+            expression = f'if(isNull(x.{cn_index}), null, {expression})'
+        return expression
+
+    def conditional_selects(self, query, prefix='', skip_entry_fields=False, **kwargs):
+        genotype_override_fields = query.model.GENOTYPE_OVERRIDE_FIELDS
+        if skip_entry_fields or not genotype_override_fields:
+            return {}
+
+        genotype_field = next(field for field in ['genotypes', 'familyGenotypes'] if field in query.query.annotations)
+        index_map = {
+            field: i + 1 for i, (field, _) in
+            enumerate(query.query.annotations[genotype_field].output_field.base_fields)
+        }
+        override_field_map = {field: col for col, (field, _) in genotype_override_fields.items()}
+        genotype_fields = [
+            self._genotype_override_expression(index_map[field], override_field_map[field], index_map['cn'])
+            if field in override_field_map else (
+                f'ifNull(x.{index_map[field]}, 0)' if field == 'numAlt' else f'x.{index_map[field]}')
+            for (field, _) in query.query.annotations[genotype_field].output_field.base_fields
+        ]
+
+        return {
+            genotype_field: ArrayMap(genotype_field, mapped_expression=f"tuple({', '.join(genotype_fields)})"),
+            'transcripts': F(query.GENOTYPE_GENE_CONSEQUENCE_FIELD),
+            **{col: F(f'sample_{col}') for col in genotype_override_fields if col != 'geneIds'},
+        }
+
+    def add_genotype_override_annotations(self, results):
+        if self.model.GENOTYPE_OVERRIDE_FIELDS:
+            results = results.annotate(**{
+                self.GENOTYPE_GENE_CONSEQUENCE_FIELD: ArrayFilter(self.TRANSCRIPT_FIELD, conditions=[{
+                    'geneId': (None, 'has(sample_geneIds, {field})'),
+                }]),
+            })
+            self.TRANSCRIPT_FIELD = self.GENOTYPE_GENE_CONSEQUENCE_FIELD
+        return results
+
+    def _filter_annotations(self, results, *args, **kwargs):
+        results = self.add_genotype_override_annotations(results)
+        return super()._filter_annotations(results, *args, **kwargs)
+
+    def _parse_annotation_filters(self, annotations, pathogenicity):
+        filter_qs = []
+        transcript_filters = []
+
+        if annotations.get(SV_CONSEQUENCES_FIELD):
+            transcript_filters.append(
+                {'majorConsequence': (annotations[SV_CONSEQUENCES_FIELD], 'hasAny({value}, [{field}])')}
+            )
+
+        if annotations.get(SV_TYPE_FILTER_FIELD):
+            filter_qs.append(Q(sv_type__in=[
+                sv_type.replace(self.model.SV_TYPE_FILTER_PREFIX, '') for sv_type in annotations[SV_TYPE_FILTER_FIELD]
+                if sv_type.startswith(self.model.SV_TYPE_FILTER_PREFIX)
+            ]))
+
+        return filter_qs, transcript_filters
+
+    def _filter_locations(self, results, genes, intervals, exclude_locations=False, padded_interval_end=None, **kwargs):
+        results = super()._filter_locations(results, genes, intervals, **kwargs)
+
+        if genes:
+            intervals = None
+        if padded_interval_end:
+            end, padding = padded_interval_end
+            interval_qs = [Q(end__range=(end - padding, end + padding))]
+        else:
+            interval_qs = [self._interval_query(**interval) for interval in (intervals or [])]
+
+        if not interval_qs:
+            return results
+
+        interval_q = interval_qs[0]
+        for q in interval_qs[1:]:
+            interval_q |= q
+        filter_func = results.exclude if exclude_locations else results.filter
+        return filter_func(interval_q)
+
+    def _interval_query(self, chrom, start, end, *args, **kwargs):
+        start_range_q = super()._interval_query(chrom, start, end, *args, **kwargs)
+        end_range_q = Q(chrom=chrom, end__range=(start, end))
+        contains_q = Q(chrom=chrom, pos__lte=start, end__gte=end)
+        if hasattr(self.model, 'end_chrom'):
+            end_range_q &= Q(end_chrom__isnull=True)
+            contains_q  &= Q(end_chrom__isnull=True)
+        return start_range_q | end_range_q | contains_q
+
+    def _parse_in_silico_qs(self, results, in_silico, require_score, in_silico_qs, in_silico_missing_qs):
+        for score, _ in self.model.PREDICTION_FIELDS:
+            if in_silico.get(score):
+                in_silico_qs.append(Q(**{f'predictions__{score}__gte': float(in_silico[score])}))
+                if not require_score:
+                    in_silico_missing_qs.append(Q(**{f'predictions__{score}__isnull': True}))
+
+        return super()._parse_in_silico_qs(results, in_silico, require_score, in_silico_qs, in_silico_missing_qs)
+
+    def _filter_frequency(self, results, freqs=None, pathogenicity=None, **kwargs):
+        for population, pop_filter in (freqs or {}).items():
+            pop_subfields = self.populations.get(population)
+            if not pop_subfields:
+                continue
+
+            if pop_filter.get('af') is not None and pop_filter['af'] < 1:
+                results = results.filter(**{f'populations__{population}__af__lte': pop_filter['af']})
+            elif pop_filter.get('ac') is not None:
+                if 'ac' in pop_subfields:
+                    ac_field = f'populations__{population}__ac'
+                else:
+                    ac_field =  f'ac_{population}'
+                    results = results.annotate(**{ac_field: F(f'populations__{population}__het') + (F(f'populations__{population}__hom') * 2)})
+
+                results = results.filter(**{f'{ac_field}__lte': pop_filter['ac']})
+
+            if pop_filter.get('hh') is not None:
+                results = results.filter(**{f'populations__{population}__hom__lte': pop_filter['hh']})
+
+        return results
+
+
+class BaseEntriesManager(SearchQuerySet):
     GENOTYPE_LOOKUP = {
         REF_REF: [0],
         REF_ALT: [1],
@@ -732,12 +802,6 @@ class EntriesManager(SearchQuerySet):
     }
     COMP_HET_ALT = 'COMP_HET_ALT'
     GENOTYPE_LOOKUP[COMP_HET_ALT] = GENOTYPE_LOOKUP[REF_ALT]
-    NULLABLE_GENOTYPE_LOOKUP = {
-        **GENOTYPE_LOOKUP,
-        COMP_HET_ALT: GENOTYPE_LOOKUP[HAS_ALT],
-        REF_REF: [-1] + GENOTYPE_LOOKUP[REF_REF],
-        HAS_REF: [-1] + GENOTYPE_LOOKUP[HAS_REF],
-    }
 
     INHERITANCE_FILTERS = {
         **INHERITANCE_FILTERS,
@@ -745,9 +809,22 @@ class EntriesManager(SearchQuerySet):
         COMPOUND_HET_ALLOW_HOM_ALTS: {**INHERITANCE_FILTERS[COMPOUND_HET], AFFECTED: HAS_ALT},
     }
 
+    QUALITY_FILTERS = {
+        'gq': {},
+        'ab': {'scale': 100, 'filters': ['x.gt != 1']},
+        'hl': {'scale': 100},
+        'mitoCn': {},
+    }
+
+    MAX_XPOS_FILTER_INTERVALS = 500
+
     @property
     def annotations_model(self):
         return self.model.key.field.related_model
+
+    @property
+    def key_lookup_model(self):
+        return next(obj.related_model for obj in self.annotations_model._meta.related_objects if obj.name.startswith('keylookup'))
 
     @property
     def call_fields(self):
@@ -755,30 +832,21 @@ class EntriesManager(SearchQuerySet):
 
     @property
     def genotype_lookup(self):
-        return self.NULLABLE_GENOTYPE_LOOKUP if self.annotations_model.GENOTYPE_OVERRIDE_FIELDS else self.GENOTYPE_LOOKUP
+        return self.GENOTYPE_LOOKUP
 
     @property
-    def quality_filters(self):
-        return [config for config in [('gq', 1), ('ab', 100, 'x.gt != 1'), ('qs', 1), ('hl', 100), ('mitoCn', 1)] if config[0] in self.call_fields]
-
-    @property
-    def single_sample_type(self):
-        return getattr(self.model, 'SAMPLE_TYPE', None)
+    def sample_type_expression(self):
+        return 'sample_type'
 
     @property
     def genotype_fields(self):
-        sample_type = f"'{self.single_sample_type}'" if self.single_sample_type else 'sample_type'
         return OrderedDict({
             'family_guid': ('familyGuid', models.StringField()),
-            sample_type: ('sampleType', models.StringField()),
+            self.sample_type_expression: ('sampleType', models.StringField()),
             'filters': ('filters', models.ArrayField(models.StringField())),
             'x.gt::Nullable(Int8)': ('numAlt', models.Int8Field(null=True, blank=True)),
             **{f'x.{name}': (name, output_field) for name, output_field in self.call_fields.items() if name != 'gt'}
         })
-
-    @property
-    def clinvar_model(self):
-        return self.model.clinvar_join.rel.related_model
 
     @property
     def gt_stats_dict_rel(self):
@@ -788,63 +856,35 @@ class EntriesManager(SearchQuerySet):
     def genome_version(self):
         return self.annotations_model.ANNOTATION_CONSTANTS['genomeVersion']
 
-    def search(self, sample_data, freqs=None, annotations=None, exclude_keys=None, **kwargs):
+    @property
+    def callset_filter_field(self):
+        return 'callset'
+
+    def search(self, sample_data, exclude_keys=None, **kwargs):
         entries = self.filter_locus(**kwargs)
 
         if exclude_keys:
             entries = entries.exclude(key__in=exclude_keys)
 
         entries = self._join_annotations(entries)
-
-        is_sv_class = 'cn' in self.call_fields
-        callset_filter_field = 'sv_callset' if is_sv_class else 'callset'
-        if (freqs or {}).get(callset_filter_field) and self.gt_stats_dict_rel is not None:
-            entries = self._filter_seqr_frequency(entries, **freqs[callset_filter_field])
-
-        gnomad_filter = (freqs or {}).get('gnomad_genomes') or {}
-        if hasattr(self.model, 'is_gnomad_gt_5_percent') and ((gnomad_filter.get('af') or 1) <= 0.05 or any(gnomad_filter.get(field) is not None for field in ['ac', 'hh'])):
-            # Passing field=Value(False) to the django filter causes the SQL to evaluate to "field = false",
-            # while passing field=False evaluates to "NOT field".
-            # For fields used for pruning the table based on the order_by for the table, the former is needed
-            entries = entries.filter(is_gnomad_gt_5_percent=Value(False))
-
-        if (annotations or {}).get(NEW_SV_FIELD) and 'newCall' in self.call_fields:
-            entries = entries.filter(calls__array_exists={'newCall': (None, '{field}')})
+        entries = self._prefilter_entries(entries, **kwargs)
 
         return self._search_call_data(entries, sample_data, **kwargs)
 
-    def _join_annotations(self, entries):
-        if self._has_clinvar():
-           entries = entries.annotate(
-               clinvar_key=F('clinvar_join__key'),
-               clinvar=self._clinvar_tuple(),
-           )
+    def _prefilter_entries(self, entries, freqs=None, **kwargs):
+        return self._filter_frequency(entries, freqs or {}, **kwargs)
 
-        entries = self._annotate_seqr_pop_expression(entries)
-
+    def _filter_frequency(self, entries, frequencies, **kwargs):
+        if frequencies.get(self.callset_filter_field) and self.gt_stats_dict_rel is not None:
+            entries = self._filter_seqr_frequency(entries, **frequencies[self.callset_filter_field])
         return entries
+
+    def _join_annotations(self, entries):
+        return self._annotate_seqr_pop_expression(entries)
 
     def result_values(self, sample_data=None):
         entries = self._join_annotations(self)
         return self._search_call_data(entries, sample_data)
-
-    def _has_clinvar(self):
-        return hasattr(self.model, 'clinvar_join')
-
-    @staticmethod
-    def _clinvar_range_q(path_range):
-        return Q(clinvar_join__pathogenicity__range=path_range)
-
-    @staticmethod
-    def _clinvar_star_q(min_stars):
-        return Q(clinvar_join__gold_stars__gte=min_stars)
-
-    @staticmethod
-    def _clinvar_conflicting_path_filter(array_func, conflicting_filter):
-        return {
-            f'clinvar_join__conflicting_pathogenicities__{array_func}': conflicting_filter,
-            'clinvar_join__conflicting_pathogenicities__not_empty': True,
-        }
 
     def _filter_project_families(self, entries, sample_data):
        project_guids = sample_data['project_guids']
@@ -858,15 +898,17 @@ class EntriesManager(SearchQuerySet):
        for sample_type, families in sample_data['sample_type_families'].items():
            if sample_type == 'multi':
                continue
-           sample_family_q = Q(family_guid__in=families)
-           if not self.single_sample_type:
-               sample_family_q &= Q(sample_type=sample_type)
+           sample_family_q = self._sample_family_q(sample_type, families)
            if family_q:
                family_q |= sample_family_q
            else:
                family_q = sample_family_q
 
        return entries.filter(family_q), multi_sample_type_families
+
+    @classmethod
+    def _sample_family_q(cls, sample_type, families):
+        return Q(family_guid__in=families)
 
     def _search_call_data(self, entries, sample_data, inheritance_mode=None, inheritance_filter=None, qualityFilter=None, pathogenicity=None, exclude_projects=None, annotate_carriers=False, annotate_hom_alts=False, **kwargs):
        multi_sample_type_families = None
@@ -883,7 +925,7 @@ class EntriesManager(SearchQuerySet):
        gt_filter = None
        quality_filter = qualityFilter or {}
        if inheritance_mode or (inheritance_filter or {}).get('genotype') or quality_filter:
-            clinvar_override_q = self._clinvar_path_q(pathogenicity) if self._has_clinvar() else None
+            clinvar_override_q = self._clinvar_path_q(pathogenicity)
             inheritance_q, quality_q, gt_filter, carriers_expression = self._get_inheritance_quality_qs(
                sample_data, inheritance_mode, quality_filter, clinvar_override_q,
                 annotate_carriers, inheritance_filter=inheritance_filter or {},
@@ -1027,16 +1069,15 @@ class EntriesManager(SearchQuerySet):
     def _quality_q(self, quality_filter, allow_no_call, affected_condition, clinvar_override_q):
         quality_filter_conditions = {}
 
-        for field, scale, *filters in self.quality_filters:
-            filter_key = f'min_{field}'
-            if field == 'gq' and 'cn' in self.call_fields:
-                filter_key += '_sv'
-            value = quality_filter.get(filter_key)
+        for field, config in self.QUALITY_FILTERS.items():
+            if field not in self.call_fields:
+                continue
+            value = quality_filter.get(config.get('filter_key', f'min_{field}'))
             if value:
-                or_filters = ['isNull({field})', '{field} >= {value}'] + filters
+                or_filters = ['isNull({field})', '{field} >= {value}'] + config.get('filters', [])
                 if allow_no_call:
                     or_filters.append('isNull(x.gt)')
-                quality_filter_conditions[field] = (value / scale, f'or({", ".join(or_filters)})')
+                quality_filter_conditions[field] = (value / config.get('scale', 1), f'or({", ".join(or_filters)})')
 
         if not quality_filter_conditions:
             return None
@@ -1094,24 +1135,19 @@ class EntriesManager(SearchQuerySet):
             )
         return entries
 
-    def _annotate_calls(self, entries, sample_data=None, annotate_hom_alts=False, multi_sample_type_families=None, skip_entry_fields=False, annotate_num_families=False, **kwargs):
-        if annotate_hom_alts:
-            entries = entries.annotate(has_hom_alt=Q(calls__array_exists={'gt': (2,)}))
-
-        genotype_override_annotations = {
-            f'sample_{col}': ArrayMap(
-                ArrayFilter('calls', conditions=[{'cn': (None, 'isNotNull({field})')}]),
-                mapped_expression=f'x.{field}',
-            ) for col, (field, _) in self.annotations_model.GENOTYPE_OVERRIDE_FIELDS.items()
-        }
-        if genotype_override_annotations:
-            entries = entries.annotate(**genotype_override_annotations)
-
+    @classmethod
+    def annotation_fields(cls, entries):
         fields = ['key']
         if 'seqrPop' in entries.query.annotations:
             fields.append('seqrPop')
-        if self._has_clinvar():
-             fields += ['clinvar', 'clinvar_key']
+        return fields
+
+    def _annotate_calls(self, entries, sample_data=None, annotate_hom_alts=False, multi_sample_type_families=None, skip_entry_fields=False, annotate_num_families=False, override_annotations=None, **kwargs):
+        if annotate_hom_alts:
+            entries = entries.annotate(has_hom_alt=Q(calls__array_exists={'gt': (2,)}))
+
+        fields = self.annotation_fields(entries)
+
         if multi_sample_type_families or sample_data is None or sample_data['num_families'] > 1:
             entries = entries.values(*fields)
             if annotate_num_families:
@@ -1123,7 +1159,7 @@ class EntriesManager(SearchQuerySet):
                 entries = entries.annotate(
                     familyGuids=ArraySort(ArrayDistinct(GroupArray('family_guid'))),
                     **{gt_field: GroupArrayArray(gt_expression)},
-                    **{col: GroupArrayArray(col) for col in genotype_override_annotations}
+                    **{col: GroupArrayArray(col) for col in (override_annotations or [])}
                 )
             if 'carriers' in entries.query.annotations:
                 map_field = models.MapField(models.StringField(), models.ArrayField(models.StringField()))
@@ -1156,12 +1192,6 @@ class EntriesManager(SearchQuerySet):
                 familyGuids=Array('family_guid'),
                 **{gt_field: gt_expression},
             )
-
-        if genotype_override_annotations:
-            entries = entries.annotate(**{
-                f'sample_{col}': agg(f'sample_{col}', output_field=self.call_fields[field])
-                for col, (field, agg) in self.annotations_model.GENOTYPE_OVERRIDE_FIELDS.items()
-            })
 
         return entries
 
@@ -1237,38 +1267,19 @@ class EntriesManager(SearchQuerySet):
             mapped_expression='x.1', output_field=models.ArrayField(models.StringField()),
         )
 
-    def filter_locus(self, exclude_locations=False, require_gene_filter=False, require_any_gene=False, intervals=None, genes=None, parsed_variant_ids=None, **kwargs):
+    def filter_locus(self, exclude_locations=False, require_gene_filter=False, intervals=None, genes=None, variant_ids=None, **kwargs):
         entries = self
-        if parsed_variant_ids:
-            # although technically redundant, the interval query is applied to the entries table before join and reduces the join size,
-            # while the full variant_id filter is applied to the annotation table after the join
-            intervals = [{'chrom': chrom, 'start': pos, 'end': pos} for chrom, pos, _, _ in parsed_variant_ids]
 
-        should_filter_interval = False
-        if 'cn' in self.call_fields:
-            # SV interval filtering occurs after joining on annotations to correctly incorporate end position
-            if exclude_locations:
-                intervals = None
-            else:
-                chromosomes = {i['chrom'] for i in (intervals or [])}
-                if genes and 'geneIds' in self.call_fields:
-                    entries = entries.filter(calls__array_all={'OR': [
-                        {'geneIds': (list(genes.keys()), 'hasAny({value}, {field})')},
-                        {'gt': (None, 'isNull({field})')},
-                    ]})
-                    chromosomes.update({gene[f'chromGrch{self.genome_version}'] for gene in genes.values()})
-                    should_filter_interval = True
-                intervals = [{'chrom': chrom, 'start': MIN_POS, 'end': MAX_POS} for chrom in chromosomes]
-
-        if hasattr(self.model, 'is_annotated_in_any_gene') and (require_any_gene or (genes and not intervals)):
-            entries = entries.filter(is_annotated_in_any_gene=Value(True))
+        if variant_ids:
+            keys = self.key_lookup_model.objects.filter(variant_id__in=variant_ids).values_list('key', flat=True)
+            entries = entries.filter(key__in=keys)
 
         if not (genes or intervals):
             return entries
 
         locus_q = None
         if genes:
-            should_filter_interval |= (not hasattr(self.model, 'geneId_ids')) or exclude_locations or len(genes) < self.model.MAX_XPOS_FILTER_INTERVALS
+            should_filter_interval = self._can_filter_gene_interval(genes) or exclude_locations
             if should_filter_interval:
                 intervals = self._format_gene_intervals(genes) + (intervals or [])
             if require_gene_filter or (not should_filter_interval):
@@ -1288,6 +1299,9 @@ class EntriesManager(SearchQuerySet):
         filter_func = entries.exclude if exclude_locations else entries.filter
         return filter_func(locus_q)
 
+    def _can_filter_gene_interval(self, genes):
+        return (not hasattr(self.model, 'geneId_ids')) or len(genes) < self.MAX_XPOS_FILTER_INTERVALS
+
     def search_padded_interval(self, chrom, pos, padding):
         interval_q = self._interval_query(chrom, start=max(pos - padding, MIN_POS), end=min(pos + padding, MAX_POS))
         return self.filter(interval_q).result_values()
@@ -1297,16 +1311,254 @@ class EntriesManager(SearchQuerySet):
         return Q(xpos__range=(get_xpos(chrom, start), get_xpos(chrom, end)))
 
     def _filter_seqr_frequency(self, entries, ac=None, hh=None, **kwargs):
-        if ac is not None:
-            ac_field = self.gt_stats_dict.SEQR_POPULATIONS[0][1]
-            ac_expressions = self._seqr_subfield_pop_expressions(ac_field, subfield_name='ac')
-            ac_expression = next(expr for field, expr in ac_expressions if field == 'ac')
-            entries = entries.annotate(ac=ac_expression)
-            entries = entries.filter(ac__lte=ac)
-        if hh is not None:
-            hom_expressions = self._seqr_subfield_pop_expressions('hom')
-            if hom_expressions:
-                hom_expression = next(expr for field, expr in hom_expressions if field == 'hom')
-                entries = entries.annotate(hom=hom_expression)
-                entries = entries.filter(hom__lte=hh)
+        entries = self._filter_seqr_freq_field(entries, self.gt_stats_dict.SEQR_POPULATIONS[0][1], ac)
+        return entries._filter_seqr_freq_field(entries, 'hom', hh)
+
+    def _filter_seqr_freq_field(self, entries, freq_field, value):
+        if value is None:
+            return entries
+        field_names = [
+            field_name for field_name, _ in self.gt_stats_dict.base_fields()
+            if field_name.startswith(freq_field) and not field_name.endswith('affected')
+        ]
+        if not field_names:
+            return entries
+        expression = self.gt_stats_dict.dict_get_expression('key', field_names=field_names)
+        if len(field_names) > 1:
+            expression = Plus(Untuple(expression))
+        entries = entries.annotate(**{freq_field: expression})
+        return entries.filter(**{f'{freq_field}__lte': value})
+
+
+class EntriesManager(BaseEntriesManager):
+
+    @staticmethod
+    def _clinvar_range_q(path_range):
+        return Q(clinvar_join__pathogenicity__range=path_range)
+
+    @staticmethod
+    def _clinvar_star_q(min_stars):
+        return Q(clinvar_join__gold_stars__gte=min_stars)
+
+    @staticmethod
+    def _clinvar_conflicting_path_filter(array_func, conflicting_filter):
+        return {
+            f'clinvar_join__conflicting_pathogenicities__{array_func}': conflicting_filter,
+            'clinvar_join__conflicting_pathogenicities__not_empty': True,
+        }
+
+    @classmethod
+    def _sample_family_q(cls, sample_type, families):
+        sample_family_q = super()._sample_family_q(sample_type, families)
+        return sample_family_q & Q(sample_type=sample_type)
+
+    def _prefilter_entries(self, entries, freqs=None, **kwargs):
+        entries = super()._prefilter_entries(entries, freqs=freqs, **kwargs)
+        entries = self._filter_in_silico(entries, **kwargs)
         return entries
+
+    def _filter_frequency(self, entries, frequencies, pathogenicity=None, **kwargs):
+        gnomad_filter = frequencies.get('gnomad_genomes') or {}
+        if hasattr(self.model, 'is_gnomad_gt_5_percent') and (
+            (gnomad_filter.get('af') or 1) <= 0.05 or any(gnomad_filter.get(field) is not None for field in ['ac', 'hh'])
+        ):
+            # Passing field=Value(False) to the django filter causes the SQL to evaluate to "field = false",
+            # while passing field=False evaluates to "NOT field".
+            # For fields used for pruning the table based on the order_by for the table, the former is needed
+            entries = entries.filter(is_gnomad_gt_5_percent=Value(False))
+
+        clinvar_override_q = self._clinvar_path_q(pathogenicity)
+
+        for population in self.model.POPULATIONS:
+            pop_filter = frequencies.get(population)
+            if not pop_filter:
+                continue
+
+            pop_dict = getattr(self.model, population).rel.related_model
+            pop_subfields = dict(pop_dict.base_fields())
+            if pop_filter.get('af') is not None and pop_filter['af'] < 1:
+                af_field = next(field for field in ['filter_af', 'af'] if field in pop_subfields)
+                entries = entries.annotate(
+                    **{f'{population}_af': pop_dict.dict_get_expression('key', field_names=[af_field])}
+                )
+                af_q = Q(**{f'{population}_af__lte': pop_filter['af']})
+                if clinvar_override_q and pop_filter['af'] < PATH_FREQ_OVERRIDE_CUTOFF:
+                    af_q |= (clinvar_override_q & Q(**{f'{population}_af__lte': PATH_FREQ_OVERRIDE_CUTOFF}))
+                entries = entries.filter(af_q)
+            elif pop_filter.get('ac') is not None:
+                entries = entries.annotate(
+                    **{f'{population}_ac': pop_dict.dict_get_expression('key', field_names=['ac'])}
+                )
+                entries = entries.filter(**{f'{population}_ac__lte': pop_filter['ac']})
+
+            if pop_filter.get('hh') is not None:
+                for subfield in ['hom', 'hemi']:
+                    if subfield not in pop_subfields:
+                        continue
+                    entries = entries.annotate(
+                        **{f'{population}_{subfield}': pop_dict.dict_get_expression('key', field_names=[subfield])}
+                    )
+                    hh_q = Q(**{f'{population}_{subfield}__lte': pop_filter['hh']})
+                    if clinvar_override_q:
+                        hh_q |= clinvar_override_q
+                    entries = entries.filter(hh_q)
+
+        return super()._filter_frequency(entries, frequencies, **kwargs)
+
+    def _parse_in_silico_qs(self, results, in_silico, require_score, in_silico_qs, in_silico_missing_qs):
+        prediction_dicts = {pred: getattr(self.model, pred).rel.related_model for pred in self.model.PREDICTIONS}
+        for score, value in in_silico.items():
+            if not value:
+                continue
+            if score in self.model.RANGE_PREDICTIONS:
+                score_expr = self._xpos_rage_dict_get_expression(self.model.RANGE_PREDICTIONS[score])
+            elif score in prediction_dicts:
+                score_expr = prediction_dicts[score].dict_get_expression('key', field_names=['score'], null_missing=True)
+            else:
+                dict_model = next((dm for dm in prediction_dicts.values() if score in dict(dm.base_fields())), None)
+                score_expr = dict_model.dict_get_expression(
+                    'key', field_names=[score], null_missing=True,
+                ) if dict_model else None
+            if not score_expr:
+                continue
+
+            results = results.annotate(**{f'{score}_score': score_expr})
+            try:
+                score_q = Q(**{f'{score}_score__gte': float(value)})
+            except ValueError:
+                score_q = Q(**{f'{score}_score': value})
+
+            in_silico_qs.append(score_q)
+            if not require_score:
+                in_silico_missing_qs.append(Q(**{f'{score}_score__isnull': True}))
+
+        results, has_required_filter, in_silico_q, missing_q = super()._parse_in_silico_qs(
+            results, in_silico, require_score, in_silico_qs, in_silico_missing_qs,
+        )
+
+        has_alphamissense = 'alphamissense' in (in_silico or {}) and 'alphamissensePathogenicity' in set(dict(
+            getattr(self.annotations_model, 'SORTED_TRANSCRIPT_CONSQUENCES_FIELDS', [])
+        ))
+        if has_alphamissense:
+            return results.annotate(
+                pass_in_silico=in_silico_q or Value(False),
+                missing_in_silico=missing_q or Value(True),
+            ), False, None, None
+
+        return results, has_required_filter, in_silico_q, missing_q
+
+    def _join_annotations(self, entries):
+        entries = entries.annotate(
+            clinvar_key=F('clinvar_join__key'),
+            clinvar=self._pathogenicity_tuple(self.model.clinvar_join, 'clinvar_join'),
+            preds=self._prediction_expression(self.model),
+            pops=self._population_expression(self.model),
+        )
+        if hasattr(self.model, 'mitomap'):
+            entries = entries.annotate(
+                mitomapPathogenic=self.model.mitomap.rel.related_model.dict_get_expression('key', null_missing=True),
+            )
+        return super()._join_annotations(entries)
+
+    def filter_locus(self, *args, require_any_gene=False, parsed_variant_ids=None, intervals=None, genes=None, variant_ids=None, **kwargs):
+        if parsed_variant_ids:
+            # although technically redundant, the interval query is applied to the entries table to
+            # improve performance by using the xpos projection
+            intervals = [{'chrom': chrom, 'start': pos, 'end': pos} for chrom, pos, _, _ in parsed_variant_ids]
+            variant_ids = ['-'.join([str(o) for o in variant_id]) for variant_id in parsed_variant_ids]
+
+        entries = super().filter_locus(*args, intervals=intervals, genes=genes, variant_ids=variant_ids, **kwargs)
+
+        if hasattr(self.model, 'is_annotated_in_any_gene') and (require_any_gene or (genes and not intervals)):
+            entries = entries.filter(is_annotated_in_any_gene=Value(True))
+
+        return entries
+
+    @classmethod
+    def annotation_fields(cls, entries):
+        return super().annotation_fields(entries) + ['clinvar', 'clinvar_key', 'preds', 'pops'] + [
+            field for field in ['pass_in_silico', 'missing_in_silico','mitomapPathogenic'] if field in entries.query.annotations
+        ]
+
+class SvEntriesManager(BaseEntriesManager):
+    NULLABLE_GENOTYPE_LOOKUP = {
+        **BaseEntriesManager.GENOTYPE_LOOKUP,
+        BaseEntriesManager.COMP_HET_ALT: BaseEntriesManager.GENOTYPE_LOOKUP[HAS_ALT],
+        REF_REF: [-1] + BaseEntriesManager.GENOTYPE_LOOKUP[REF_REF],
+        HAS_REF: [-1] + BaseEntriesManager.GENOTYPE_LOOKUP[HAS_REF],
+    }
+
+    QUALITY_FILTERS = {
+        'gq': {'filter_key': 'min_gq_sv'},
+        'qs': {},
+    }
+
+    @property
+    def genotype_lookup(self):
+        return self.NULLABLE_GENOTYPE_LOOKUP if self.annotations_model.GENOTYPE_OVERRIDE_FIELDS else self.GENOTYPE_LOOKUP
+
+    @property
+    def callset_filter_field(self):
+        return 'sv_callset'
+
+    @property
+    def sample_type_expression(self):
+        return f"'{self.model.SAMPLE_TYPE}'"
+
+    @classmethod
+    def _clinvar_path_q(cls, pathogenicity):
+        return None
+
+    def _prefilter_entries(self, entries, annotations=None, **kwargs):
+        entries = super()._prefilter_entries(entries, **kwargs)
+
+        if (annotations or {}).get(NEW_SV_FIELD):
+            entries = entries.filter(calls__array_exists={'newCall': (None, '{field}')})
+
+        return entries
+
+    def _annotate_calls(self, entries, *args, **kwargs):
+        genotype_override_annotations = {
+            f'sample_{col}': ArrayMap(
+                ArrayFilter('calls', conditions=[{'cn': (None, 'isNotNull({field})')}]),
+                mapped_expression=f'x.{field}',
+            ) for col, (field, _) in self.annotations_model.GENOTYPE_OVERRIDE_FIELDS.items()
+        }
+        if genotype_override_annotations:
+            entries = entries.annotate(**genotype_override_annotations)
+
+        entries = super()._annotate_calls(entries, *args, override_annotations=genotype_override_annotations.keys(), **kwargs)
+
+        if genotype_override_annotations:
+            entries = entries.annotate(**{
+                f'sample_{col}': agg(f'sample_{col}', output_field=self.call_fields[field])
+                for col, (field, agg) in self.annotations_model.GENOTYPE_OVERRIDE_FIELDS.items()
+            })
+
+        return entries
+
+    def filter_locus(self, *args, exclude_locations=False, intervals=None, genes=None, **kwargs):
+        # SV interval filtering occurs after joining on annotations to correctly incorporate end position
+        can_filter_gene_interval = self._can_filter_gene_interval(genes)
+        if exclude_locations:
+            intervals = None
+        else:
+            chromosomes = {i['chrom'] for i in (intervals or [])}
+            if can_filter_gene_interval:
+                chromosomes.update({gene[f'chromGrch{self.genome_version}'] for gene in genes.values()})
+            intervals = [{'chrom': chrom, 'start': MIN_POS, 'end': MAX_POS} for chrom in chromosomes]
+
+        entries = super().filter_locus(
+            *args, exclude_locations=exclude_locations, intervals=intervals, genes=genes, **kwargs,
+        )
+
+        if can_filter_gene_interval and not exclude_locations:
+            entries = entries.filter(calls__array_all={'OR': [
+                {'geneIds': (list(genes.keys()), 'hasAny({value}, {field})')},
+                {'gt': (None, 'isNull({field})')},
+            ]})
+
+        return entries
+
+    def _can_filter_gene_interval(self, genes):
+        return genes and 'geneIds' in self.call_fields

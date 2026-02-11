@@ -550,8 +550,8 @@ class Command(BaseCommand):
         variant_values = {'endChrom': F('end_chrom')} if dataset_type == 'SV_WGS' else {}
 
         results_qs = get_search_queryset(GENOME_VERSION_GRCh38, dataset_type, sample_data, **kwargs)
-        genotype_overrides_expressions = results_qs.genotype_override_values(results_qs)
-        if genotype_overrides_expressions:
+        if results_qs.model.GENOTYPE_OVERRIDE_FIELDS:
+            genotype_overrides_expressions = results_qs.conditional_selects(results_qs)
             variant_values.update({k: genotype_overrides_expressions[k] for k in ['familyGenotypes', 'transcripts']})
         else:
             results_qs = gene_ids_annotated_queryset(results_qs)
@@ -580,7 +580,7 @@ class Command(BaseCommand):
     @classmethod
     def _run_comp_het_search(cls, search_name, config_search, family_variant_data, family_guid_map, dataset_type, sample_data, samples, **kwargs):
         queryset = get_data_type_comp_het_results_queryset(
-            GENOME_VERSION_GRCh38, dataset_type, sample_data, **kwargs,
+            GENOME_VERSION_GRCh38, dataset_type, sample_data, deduplicate=False, **kwargs,
         )
         return cls._execute_comp_het_search(
             queryset, search_name, config_search, family_variant_data, family_guid_map, samples,
@@ -610,14 +610,14 @@ class Command(BaseCommand):
 
     @classmethod
     def _execute_comp_het_search(cls, queryset, search_name, config_search, family_variant_data, family_guid_map, samples, no_secondary_annotations=True):
-        results = [list(v[1:]) for v in queryset]
+        results = [list(v) for v in queryset]
 
         primary_consequences = config_search.get('annotations', {}).get('vep_consequences')
         secondary_consequences = config_search.get('annotations_secondary', {}).get('vep_consequences')
         if results and (primary_consequences or secondary_consequences):
             key_canonical_transcripts = {
                 v['key']: [t for t in v['sortedTranscriptConsequences'] if t['canonical']]
-                for pair in results for v in pair if v.get('sortedTranscriptConsequences')
+                for pair in results for v in pair[1:] if v.get('sortedTranscriptConsequences')
             }
             allowed_key_genes = cls._valid_gene_keys(key_canonical_transcripts, primary_consequences)
             if secondary_consequences:
@@ -626,12 +626,13 @@ class Command(BaseCommand):
                 allowed_secondary_key_genes = None if no_secondary_annotations else allowed_key_genes
             results = [
                 pair for pair in results
-                if pair[0][SELECTED_GENE_FIELD] in allowed_key_genes.get(pair[0]['key'], []) and (
+                if pair[1][SELECTED_GENE_FIELD] in allowed_key_genes.get(pair[1]['key'], []) and (
                     allowed_secondary_key_genes is None or
-                    pair[1][SELECTED_GENE_FIELD] in allowed_secondary_key_genes.get(pair[1]['key'], [])
+                    pair[2][SELECTED_GENE_FIELD] in allowed_secondary_key_genes.get(pair[2]['key'], [])
                 )
             ]
 
+        results = list({tuple(v[0]): v[1:] for v in results}.values())
         add_individual_guids(results, samples, encode_genotypes_json=True)
         for pair in results:
             for family_guid in pair[0]['familyGuids']:

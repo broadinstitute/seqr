@@ -4,6 +4,7 @@ import mock
 
 from django.urls.base import reverse
 
+from clickhouse_search.models.reference_data_models import DbnsfpGRCh37SnvIndelMv, DbnsfpGRCh37SnvIndelDict
 from seqr.models import SavedVariant, VariantNote, VariantTag, VariantFunctionalData, Sample, Project
 from seqr.views.apis.saved_variant_api import saved_variant_data, create_variant_note_handler, create_saved_variant_handler, \
     update_variant_note_handler, delete_variant_note_handler, update_variant_tags_handler, update_saved_variant_json, \
@@ -99,7 +100,6 @@ CREATE_VARIANT_JSON = {
     'populations': {
         'seqr': {'ac': 0, 'hom': 0, 'ac_wes': 0, 'ac_wgs': 0, 'hom_wes': 0, 'hom_wgs': 0},
         'seqr_affected': {'ac': 0, 'hom': 0},
-        'exac': {'ac': 0, 'af': 0.0, 'an': 0, 'filter_af': 0.0, 'hemi': 0, 'het': 0, 'hom': 0},
         'gnomad_exomes': {'ac': 0, 'af': 0.0, 'an': 0, 'filter_af': 0.0, 'hemi': 0, 'hom': 0},
         'gnomad_genomes': {'ac': 0, 'af': 0.0, 'an': 0, 'filter_af': 0.0, 'hemi': 0, 'hom': 0},
         'topmed': {'ac': 0, 'af': 0.0, 'an': 0, 'het': 0, 'hom': 0},
@@ -1070,6 +1070,12 @@ class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, SavedVariantAPITest)
 
     SAVED_VARIANT_RESPONSE_KEYS = {*SAVED_VARIANT_RESPONSE_KEYS, 'totalSampleCounts'}
     SAVED_VARIANT_DETAIL_FIELDS = {*SAVED_VARIANT_DETAIL_FIELDS, 'key', 'mainTranscriptId'}
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        DbnsfpGRCh37SnvIndelMv.refresh()
+        DbnsfpGRCh37SnvIndelDict.reload()
 
     def test_saved_variant_data(self, *args):
         super(AnvilSavedVariantAPITest, self).test_saved_variant_data(*args)

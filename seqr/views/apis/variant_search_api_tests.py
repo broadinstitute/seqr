@@ -223,7 +223,8 @@ VLM_MATCH_RESPONSE_2 = {
     'beaconHandovers': [
         {
             'handoverType': {'id': 'Node2', 'label': ''},
-            'url': VLM_MATCH_URL,
+            'url': None,
+            'email': 'vlm_test@node2.org',
         }
     ],
     'meta': {
@@ -527,12 +528,12 @@ class VariantSearchAPITest(object):
             ['12', '48367227', 'TC', 'T', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
              '', '2', 'AIP (None)|Known gene for phenotype (None)|Excluded (None)', 'a later note (None)|test n\xf8te (None)', '', '', '', '', '', '',
              '', '', '', '', '', '', '', '',  '', '', '', ''],
-            ['1', '38724419', 'T', 'G', 'ENSG00000177000', 'missense_variant', '10', '0.29499999', '0.00344493',
+            ['1', '38724419', 'T', 'G', 'ENSG00000177000', 'missense_variant', '10', '', '0.00344493',
              '0.00288997', '0.246152', '25.9', '0.197',
              '2.001', '0.0', '0.1', '0.05', '', '', 'rs1801131', 'ENST00000383791.8:c.156A>C',
              'ENSP00000373301.3:p.Leu52Phe', 'Conflicting_classifications_of_pathogenicity', '1', '2', '', '', '', '', '', 'HG00731', '2', '', '99', '1.0',
              'HG00732', '1', '', '99', '0.625', 'HG00733', '0', '', '40', '0.0'],
-            ['1', '91502721', 'G', 'A', 'ENSG00000097046', 'intron_variant', '7', '0.0', '0.00380411', '0.0',
+            ['1', '91502721', 'G', 'A', 'ENSG00000097046', 'intron_variant', '7', '', '0.00380411', '0.0',
              '0.362681', '28.754', '', '1.378', '0.01', '', '', '',
              '', 'rs13447464', 'ENST00000234626.11:c.-63-251G>A', '', '', '', '2', '', '', '', '', '', 'HG00731',
              '1', '', '99', '1.0', 'HG00732', '0', '', '99', '0.45946', 'HG00733', '1', '', '99', '0.40741'],
@@ -561,12 +562,12 @@ class VariantSearchAPITest(object):
                 ['12', '48367227', 'TC', 'T', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
                  '2', 'AIP (None)|Known gene for phenotype (None)|Excluded (None)', 'a later note (None)|test n\xf8te (None)',
                  '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',],
-                ['1', '38724419', 'T', 'G', 'ENSG00000177000', 'missense_variant', '10', '0.29499999', '0.00344493',
+                ['1', '38724419', 'T', 'G', 'ENSG00000177000', 'missense_variant', '10', '', '0.00344493',
                  '0.00288997', '0.246152', '25.9', '0.197',
                  '2.001', '0.0', '0.1', '0.05', '', '', 'rs1801131', 'ENST00000383791.8:c.156A>C',
                  'ENSP00000373301.3:p.Leu52Phe', 'Conflicting_classifications_of_pathogenicity', '1', '2', '', '', 'HG00731', '2', '', '99', '1.0',
                  'HG00732', '1', '', '99', '0.625', 'HG00733', '0', '', '40', '0.0'],
-                ['1', '91502721', 'G', 'A', 'ENSG00000097046', 'intron_variant', '7', '0.0', '0.00380411', '0.0',
+                ['1', '91502721', 'G', 'A', 'ENSG00000097046', 'intron_variant', '7', '', '0.00380411', '0.0',
                  '0.362681', '28.754', '', '1.378', '0.01', '', '',
                  '', '', 'rs13447464', 'ENST00000234626.11:c.-63-251G>A', '', '', '', '2', '', '', 'HG00731',
                  '1', '', '99', '1.0', 'HG00732', '0', '', '99', '0.45946', 'HG00733', '1', '', '99',
@@ -1223,14 +1224,14 @@ class VariantSearchAPITest(object):
             responses.GET, 'https://vlm-auth.us.auth0.com/api/v2/clients?fields=client_id,name,client_metadata&is_global=false',
             json=VLM_CLIENTS_RESPONSE,
         )
-        match_url_template = 'https://{}.com/?assemblyId=GRCh38&referenceName=1&start=10439&referenceBases=AC&alternateBases=A'
+        match_url_template = 'https://{}.com/?assemblyId=GRCh38&referenceName=1&start=10439&referenceBases=C&alternateBases=A'
         node_1_url = match_url_template.format('node1')
         responses.add(responses.GET, node_1_url, json=VLM_MATCH_RESPONSE)
         node_2_url = match_url_template.format('node2')
         responses.add(responses.GET, node_2_url, status=400)
 
         base_url = reverse(vlm_lookup_handler)
-        url = f'{base_url}?variantId=1-10439-AC-A&genomeVersion=38'
+        url = f'{base_url}?variantId=1-10439-C-A&genomeVersion=38'
         self.check_require_login(url)
 
         response = self.client.get(f'{base_url}?variantId=phase2_DEL_chr14_464')
@@ -1240,6 +1241,10 @@ class VariantSearchAPITest(object):
         response = self.client.get(f'{base_url}?variantId=8-10439--ATGS')
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'error': 'Unable to search VLM for invalid allele(s): "", "ATGS"'})
+
+        response = self.client.get(f'{base_url}?variantId=1-10439-AC-A')
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'error': 'VLM lookup is not supported for InDels'})
 
         self.reset_logs()
         response = self.client.get(url)
@@ -1259,7 +1264,7 @@ class VariantSearchAPITest(object):
         expected_params = {
             'assemblyId': 'GRCh38',
             'alternateBases': 'A',
-            'referenceBases': 'AC',
+            'referenceBases': 'C',
             'referenceName': '1',
             'start': 10439,
         }
@@ -1279,7 +1284,7 @@ class VariantSearchAPITest(object):
         responses.calls.reset()
         responses.add(responses.GET, node_2_url, json=VLM_MATCH_RESPONSE_2)
         expected_body['vlmMatches']['Node 2'] = {
-            'Node2': {'url': VLM_MATCH_URL, 'counts': {'Heterozygous': 0, 'Homozygous': 1}}
+            'Node2': {'url': 'mailto:vlm_test@node2.org', 'counts': {'Heterozygous': 0, 'Homozygous': 1}}
         }
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)

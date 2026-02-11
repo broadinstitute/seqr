@@ -62,7 +62,7 @@ def update_locus_list_genes_bulk(seqr_locus_list, panel_genes_by_id):
             guid='LL%05d_%s' % (seqr_locus_list.id, gene_id)
         ) for gene_id in panel_genes_by_id
     }
-    created_locuslistgenes = SeqrLocusListGene.objects.bulk_create(locuslistgenes.values(), batch_size=10000)
+    created_locuslistgenes = SeqrLocusListGene.objects.bulk_create(locuslistgenes.values(), batch_size=1000)
     created_locuslistgenes_by_id = {lg.gene_id: lg for lg in created_locuslistgenes}
 
     return [

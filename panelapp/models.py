@@ -128,7 +128,7 @@ class PaLoader(LoadableModel):
                         parsed_pa_genes = update_locus_list_genes_bulk(seqr_locus_list, panel_genes_by_id)
                         PaLocusListGene.objects.bulk_create(
                             [PaLocusListGene(**record) for record in parsed_pa_genes],
-                            batch_size=10000,
+                            batch_size=1000,
                         )
 
                     seqr_locus_list.description = panel_description(panel_app_id, panel, cls.SOURCE)
