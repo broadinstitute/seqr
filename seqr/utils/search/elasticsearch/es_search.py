@@ -133,16 +133,12 @@ class EsSearch(object):
         is_single_search = self._is_single_search()
         num_loaded = len(self.previous_search_results.get('all_results', []))
 
-        if is_single_search and not self.previous_search_results.get('grouped_results'):
-            start_index = None
-        elif not self._index_searches:
+        if not self._index_searches:
             # If doing all project-families all inheritance search, do it as a single query
             # Load all variants, do not skip pages
             num_loaded += self.previous_search_results.get('duplicate_doc_count', 0)
             if num_loaded >= (page - 1) * num_results:
                 start_index = num_loaded
-            else:
-                start_index = 0
             return True, {'page': page, 'num_results': num_results, 'start_index': start_index, 'deduplicate': True}
 
     def _execute_single_search(self, page=1, num_results=100, start_index=None, deduplicate=False, **kwargs):
@@ -301,8 +297,6 @@ class EsSearch(object):
             search = search.index(index_name.split(','))
 
             if search.aggs.to_dict():
-                # For compound het search get results from aggregation instead of top level hits
-                search = search[:1]
                 log_messages.append('Loading {}s for {}'.format(self.AGGREGATION_NAME, index_name))
             else:
                 end_index = page * num_results
@@ -340,8 +334,6 @@ def _parse_es_sort(sort, sort_config):
     if sort in {'Infinity', '-Infinity', None}:
         # ES returns these values for sort when a sort field is missing, using the correct value for the given direction
         sort = maxsize
-    elif hasattr(sort_config, 'values') and any(cfg.get('order') == 'desc' for cfg in sort_config.values()):
-        sort = float(sort) * -1
 
     return sort
 

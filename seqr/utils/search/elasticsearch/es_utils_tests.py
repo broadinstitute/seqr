@@ -1183,8 +1183,6 @@ def mock_hits(hits, increment_sort=False, include_matched_queries=True, sort=Non
             '_type': 'structural_variant' if SV_INDEX_NAME in index or SV_WGS_INDEX_NAME in index else 'variant',
         })
         matched_queries = hit.pop('matched_queries')
-        if include_matched_queries:
-            hit['matched_queries'] = []
 
         if sort or increment_sort:
             sort_key = sort[0] if sort else 'xpos'
@@ -1223,35 +1221,6 @@ def create_mock_response(search, index=INDEX_NAME):
     except (KeyError, TypeError):
         pass
 
-    if search.get('aggs'):
-        index_vars = COMPOUND_HET_INDEX_VARIANTS.get(index, {})
-        buckets = [{'key': gene_id, 'doc_count': 3} for gene_id in ['ENSG00000135953', 'ENSG00000228198']]
-        if search['aggs']['genes']['aggs'].get('vars_by_gene'):
-            for bucket in buckets:
-                bucket['vars_by_gene'] = {
-                    'hits': {
-                        'hits': mock_hits(index_vars.get(bucket['key'], ES_VARIANTS), increment_sort=True, index=index)
-                    }}
-        else:
-            for bucket in buckets:
-                doc_count = 0
-                for sample_field in ['samples', 'samples_num_alt_1', 'samples_num_alt_2']:
-                    gene_samples = defaultdict(int)
-                    for var in index_vars.get(bucket['key'], ES_VARIANTS):
-                        for sample in var['_source'].get(sample_field, []):
-                            gene_samples[sample] += 1
-                    bucket[sample_field] = {'buckets': [{'key': k, 'doc_count': v} for k, v in gene_samples.items()]}
-                    doc_count += sum(gene_samples.values())
-                bucket['doc_count'] = doc_count
-
-        response_dict['aggregations'] = {'genes': {'buckets': buckets}}
-
-    if len(response_dict['hits']['hits']) == 0:
-        response_dict['hits']['total']['value'] = 0
-    elif gene_ids_filters == {'ENSG00000186092'}:
-        response_dict['hits']['total']['value'] = 1
-
-
     return response_dict
 
 def get_indices_from_url(url):
@@ -1271,7 +1240,7 @@ def get_msearch_callback(request):
     body = parse_msearch_body(request.body)
     response = {
         'responses': [
-            create_mock_response(exec_search, index=','.join(body[i-1]['index']))
+            create_mock_response(exec_search, index=','.join(body[i - 1]['index']))
             for i, exec_search in enumerate(body) if not exec_search.get('index')]
     }
     return 200, {}, json.dumps(response)
@@ -1325,9 +1294,6 @@ class EsUtilsTest(TestCase):
                 }
             }
 
-        if expected_search_params.get('query'):
-            expected_search['query']['bool']['must'] = expected_search_params['query']
-
         if not expected_search_params.get('unsorted'):
             expected_search['sort'] = expected_search_params.get('sort') or ['xpos', 'variantId']
 
@@ -1338,12 +1304,6 @@ class EsUtilsTest(TestCase):
                         'top_hits': {'sort': expected_search['sort'], '_source': mock.ANY, 'size': 100}
                     }
                 }}}
-        elif expected_search_params.get('gene_count_aggs'):
-            expected_search['aggs'] = {'genes': {
-                'terms': {'field': 'mainTranscript_gene_id', 'size': 1001},
-                'aggs': expected_search_params['gene_count_aggs']
-            }}
-            del expected_search['sort']
         else:
             expected_search['_source'] = mock.ANY
         self.assertDictEqual(executed_search, expected_search)
