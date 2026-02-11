@@ -22,7 +22,7 @@ charset-normalizer==3.0.1
     # via requests
 clickhouse-driver==0.2.9
     # via django-clickhouse-backend
-cryptography==44.0.1
+cryptography==46.0.5
     # via social-auth-core
 defusedxml==0.7.1
     # via
