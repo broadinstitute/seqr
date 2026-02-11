@@ -10,6 +10,9 @@ def build_materialized_view(reference_genome: str, dataset_type: str, materializ
     def inner(apps, schema_editor):
         with connections['clickhouse_write'].cursor() as cursor:
             cursor.execute(
+                f'SYSTEM START VIEW `{reference_genome}/{dataset_type}/reference_data/clinvar/{materialized_view}`;'
+            )
+            cursor.execute(
                 f'SYSTEM REFRESH VIEW `{reference_genome}/{dataset_type}/reference_data/clinvar/{materialized_view}`;'
             )
             cursor.execute(
