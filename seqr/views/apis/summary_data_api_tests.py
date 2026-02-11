@@ -30,7 +30,7 @@ VARIANT_TAG_RESPONSE_KEYS = {
     'variantTagsByGuid', 'variantNotesByGuid', 'variantFunctionalDataByGuid', 'savedVariantsByGuid',
 }
 SAVED_VARIANT_RESPONSE_KEYS = {
-    *VARIANT_TAG_RESPONSE_KEYS, 'projectsByGuid', 'locusListsByGuid', 'genesById',
+    *VARIANT_TAG_RESPONSE_KEYS, 'projectsByGuid', 'locusListsByGuid', 'genesById', 'totalSampleCounts',
     'individualsByGuid', 'familiesByGuid', 'familyNotesByGuid', 'mmeSubmissionsByGuid', 'transcriptsById',
 }
 
@@ -394,7 +394,7 @@ class SummaryDataAPITest(AirtableTest):
         response = self.client.get(gene_url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), self.SAVED_VARIANT_RESPONSE_KEYS)
+        self.assertSetEqual(set(response_json.keys()), SAVED_VARIANT_RESPONSE_KEYS)
         expected_variant_guids = {
             'SV0000001_2103343353_r0390_100', 'SV0000007_prefix_19107_DEL_r00', 'SV0000006_1248367227_r0003_tes',
         }
@@ -419,7 +419,7 @@ class SummaryDataAPITest(AirtableTest):
         response = self.client.get(gene_url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), self.SAVED_VARIANT_RESPONSE_KEYS)
+        self.assertSetEqual(set(response_json.keys()), SAVED_VARIANT_RESPONSE_KEYS)
         self.assertSetEqual(set(response_json['savedVariantsByGuid'].keys()), expected_variant_guids)
 
         multi_tag_url = reverse(saved_variants_page, args=['Review;Tier 1 - Novel gene and phenotype'])
@@ -848,7 +848,6 @@ class LocalSummaryDataAPITest(AuthenticationTestCase, SummaryDataAPITest):
     NUM_MANAGER_SUBMISSIONS = 4
     ADDITIONAL_SAMPLES = ['NA21234', 'NA21987', 'NA21654']
     HAS_AIRTABLE = False
-    SAVED_VARIANT_RESPONSE_KEYS = SAVED_VARIANT_RESPONSE_KEYS
 
     def _test_metadata_airtable_responses(self, include_airtable_url, expected_individuals):
         # Returns successfully without airtable data when disabled
@@ -872,7 +871,6 @@ class AnvilSummaryDataAPITest(AnvilAuthenticationTestCase, SummaryDataAPITest):
     NUM_MANAGER_SUBMISSIONS = 4
     ADDITIONAL_SAMPLES = []
     HAS_AIRTABLE = True
-    SAVED_VARIANT_RESPONSE_KEYS = {*SAVED_VARIANT_RESPONSE_KEYS, 'totalSampleCounts'}
 
     def test_mme_details(self, *args):
         super(AnvilSummaryDataAPITest, self).test_mme_details(*args)
