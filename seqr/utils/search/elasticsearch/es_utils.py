@@ -7,8 +7,7 @@ from urllib3.connectionpool import connection_from_url
 from seqr.models import Sample, SavedVariant
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.search.constants import VCF_FILE_EXTENSIONS, XPOS_SORT_KEY
-from seqr.utils.search.elasticsearch.es_gene_agg_search import EsGeneAggSearch
-from seqr.utils.search.elasticsearch.es_search import EsSearch, get_compound_het_page
+from seqr.utils.search.elasticsearch.es_search import EsSearch
 from seqr.views.utils.json_utils import  _to_camel_case
 from settings import ELASTICSEARCH_SERVICE_HOSTNAME, ELASTICSEARCH_SERVICE_PORT, ELASTICSEARCH_CREDENTIALS, \
     ELASTICSEARCH_PROTOCOL, ES_SSL_CONTEXT, KIBANA_SERVER
@@ -30,21 +29,6 @@ ES_EXCEPTION_MESSAGE_MAP = {
 ES_ERROR_LOG_EXCEPTIONS = {InvalidIndexException}
 
 MAX_VARIANTS_FETCH = 1000
-
-
-def _get_transport_error_type(error):
-    error_type = 'no detail'
-    if isinstance(error, dict):
-        root_cause = error.get('root_cause')
-        error_info = error.get('error')
-        if (not root_cause) and isinstance(error_info, dict):
-            root_cause = error_info.get('root_cause')
-
-        if root_cause:
-            error_type = root_cause[0].get('type') or root_cause[0].get('reason')
-        elif error_info and not isinstance(error_info, dict):
-            error_type = repr(error_info)
-    return error_type
 
 
 def es_backend_enabled():
@@ -271,68 +255,6 @@ def get_es_variants_for_variant_ids(samples, genome_version, variant_ids, user):
         samples, genome_version, user=user, sort=XPOS_SORT_KEY,
     ).filter_by_variant_ids(variant_ids)
     return variants.search(num_results=len(variant_ids))
-
-
-def get_es_variants(samples, search, user, previous_search_results, genome_version, sort=None, page=None, num_results=None,
-                    gene_agg=False, skip_genotype_filter=False):
-    es_search_cls = EsGeneAggSearch if gene_agg else EsSearch
-
-    es_search = es_search_cls(
-        samples,
-        genome_version,
-        previous_search_results=previous_search_results,
-        user=user,
-        sort=sort,
-        skipped_samples=search.get('skipped_samples'),
-    )
-
-    es_search.filter_variants(
-        inheritance_mode=search.get('inheritance_mode'), inheritance_filter=search.get('inheritance_filter'),
-        frequencies=search.get('freqs'), pathogenicity=search.get('pathogenicity'),
-        annotations=search.get('annotations'), annotations_secondary=search.get('annotations_secondary'),
-        in_silico=search.get('in_silico'), quality_filter=search.get('qualityFilter'),
-        custom_query=search.get('customQuery'), locus=search.get('locus'), skip_genotype_filter=skip_genotype_filter,
-        dataset_type=search.get('dataset_type'), secondary_dataset_type=search.get('secondary_dataset_type'),
-        genes=search.get('genes'), intervals=search.get('intervals'), rs_ids=search.get('rs_ids'),
-        variant_ids=search.get('variant_ids'), exclude_locations=search.get('exclude_locations'),
-    )
-
-    return es_search.search(page=page, num_results=num_results)
-
-
-def process_es_previously_loaded_results(previous_search_results, start_index, end_index):
-    grouped_results = previous_search_results.get('grouped_results')
-    results = None
-    if grouped_results:
-        results = get_compound_het_page(grouped_results, start_index, end_index)
-
-    return results
-
-
-def process_es_previously_loaded_gene_aggs(previous_search_results):
-    total_results = previous_search_results.get('total_results')
-    if total_results is None or 'all_results' in previous_search_results or 'grouped_results' not in previous_search_results:
-        return None
-
-    loaded = sum(counts.get('loaded', 0) for counts in previous_search_results.get('loaded_variant_counts', {}).values())
-    if loaded != total_results:
-        return None
-
-    gene_aggs = defaultdict(lambda: {'total': 0, 'families': defaultdict(int)})
-
-    for group in previous_search_results['grouped_results']:
-        variants = next(iter(group.values()))
-        gene_id = next(iter(group))
-        if not gene_id or gene_id == 'null':
-            gene_id = next((
-                gene_id for gene_id, transcripts in variants[0]['transcripts'].items()
-                if any(t['transcriptId'] == variants[0]['mainTranscriptId'] for t in transcripts)
-            ), None) if variants[0]['mainTranscriptId'] else None
-        if gene_id:
-            gene_aggs[gene_id]['total'] += len(variants)
-            for family_guid in variants[0]['familyGuids']:
-                gene_aggs[gene_id]['families'][family_guid] += len(variants)
-    return gene_aggs
 
 
 def update_project_saved_variant_json(project_id, genome_version, family_guids=None, user=None, **kwargs):

@@ -1288,9 +1288,6 @@ def get_search_callback(request):
     response = create_mock_response(body, get_indices_from_url(request.url))
     return 200, {}, json.dumps(response)
 
-def parse_msearch_body(body):
-    return [json.loads(row) for row in body.decode().split('\n') if row]
-
 def get_msearch_callback(request):
     body = parse_msearch_body(request.body)
     response = {
@@ -1336,13 +1333,6 @@ class EsUtilsTest(TestCase):
             expected_source_fields=expected_source_fields,
         )
 
-    def assertExecutedSearches(self, searches):
-        executed_search = parse_msearch_body(urllib3_responses.calls[-1].request.body)
-        self.assertEqual(len(executed_search), len(searches) * 2)
-        for i, expected_search in enumerate(searches):
-            self.assertDictEqual(executed_search[i * 2], {'index': expected_search.get('index', INDEX_NAME).split(',')})
-            self.assertSameSearch(executed_search[(i * 2) + 1], expected_search)
-
     def assertSameSearch(self, executed_search, expected_search_params, expected_source_fields=SOURCE_FIELDS):
         expected_search = {
             'from': expected_search_params['start_index'],
@@ -1383,12 +1373,6 @@ class EsUtilsTest(TestCase):
             source = executed_search['aggs']['genes']['aggs']['vars_by_gene']['top_hits']['_source'] \
                 if expected_search_params.get('gene_aggs')  else executed_search['_source']
             self.assertSetEqual(expected_source_fields, set(source))
-
-    def assertCachedResults(self, results_model, expected_results, sort='xpos'):
-        cache_key = 'search_results__{}__{}'.format(results_model.guid, sort)
-        self.assertIn(cache_key, REDIS_CACHE.keys())
-        self.assertDictEqual(json.loads(REDIS_CACHE[cache_key]), expected_results)
-        MOCK_REDIS.expire.assert_called_with(cache_key, timedelta(weeks=2))
 
     @urllib3_responses.activate
     def test_get_es_variants_for_variant_ids(self):
