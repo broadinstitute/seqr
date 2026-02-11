@@ -70,7 +70,7 @@ const REQUIRE_SCORE_FIELD = {
 }
 
 const FORMATTED_IN_SILICO_FIELDS = [...ORDERED_PREDICTOR_FIELDS.filter(({ displayOnly }) => !displayOnly).map(
-  ({ field, fieldTitle, thresholds, reverseThresholds, indicatorMap, group, min, max, citation }) => {
+  ({ field, fieldTitle, thresholds, indicatorMap, group, min, max, ...props }) => {
     const label = fieldTitle || snakecaseToTitlecase(field)
     const filterField = { name: field, label, group }
 
@@ -88,7 +88,7 @@ const FORMATTED_IN_SILICO_FIELDS = [...ORDERED_PREDICTOR_FIELDS.filter(({ displa
       labelHelp: (
         <div>
           {`Enter a numeric cutoff for ${label}`}
-          {thresholds && predictorColorRanges(thresholds, citation, reverseThresholds)}
+          {thresholds && predictorColorRanges(thresholds, props)}
         </div>
       ),
       control: Form.Input,
