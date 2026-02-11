@@ -107,7 +107,7 @@ openpyxl==3.1.1
     # via -r requirements.in
 packaging==24.0
     # via gunicorn
-pillow==10.3.0
+pillow==12.1.1
     # via -r requirements.in
 protobuf==4.25.8
     # via
