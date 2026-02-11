@@ -44,21 +44,10 @@ class EsSearch(object):
         self._set_indices(sorted(list(self.samples_by_family_index.keys())))
         self._set_index_metadata()
 
-        if len(self.samples_by_family_index) > len(self.index_metadata):
-            raise InvalidIndexException('Could not find expected indices: {}'.format(
-                ', '.join(sorted(set(self._indices) - set(self.index_metadata.keys()), reverse = True))
-            ))
-        elif len(self.index_metadata) > len(self.samples_by_family_index):
-            # Some of the indices are an alias
-            self._update_alias_metadata()
-
         invalid_genome_indices = [
             f"{index} ({meta['genomeVersion']})" for index, meta in self.index_metadata.items()
             if meta['genomeVersion'] != genome_version
         ]
-        if invalid_genome_indices:
-            raise InvalidSearchException(
-                f'The following indices do not have the expected genome version {genome_version}: {", ".join(invalid_genome_indices)}')
         self._genome_version = genome_version
         self._skipped_samples = skipped_samples
 
@@ -96,8 +85,6 @@ class EsSearch(object):
     @staticmethod
     def get_index_metadata_dataset_type(index_metadata):
         data_type = index_metadata.get('datasetType', Sample.DATASET_TYPE_VARIANT_CALLS)
-        if data_type == 'VARIANTS':
-            data_type = Sample.DATASET_TYPE_VARIANT_CALLS
         return data_type
 
     def _set_indices(self, indices):
@@ -113,9 +100,6 @@ class EsSearch(object):
 
     def _sort_variants(self, sample_data):
         main_sort_dict = self._sort[0] if len(self._sort) and isinstance(self._sort[0], dict) else None
-
-        if XPOS_SORT_KEY not in self._sort:
-            self._sort.append(XPOS_SORT_KEY)
 
         # always final sort on variant ID to keep different variants at the same position grouped properly
         if 'variantId' not in self._sort:
@@ -151,9 +135,6 @@ class EsSearch(object):
 
         if is_single_search and not self.previous_search_results.get('grouped_results'):
             start_index = None
-            if (page - 1) * num_results < num_loaded:
-                start_index = num_loaded
-            return True, {'page': page, 'num_results': num_results, 'start_index': start_index}
         elif not self._index_searches:
             # If doing all project-families all inheritance search, do it as a single query
             # Load all variants, do not skip pages
@@ -163,13 +144,9 @@ class EsSearch(object):
             else:
                 start_index = 0
             return True, {'page': page, 'num_results': num_results, 'start_index': start_index, 'deduplicate': True}
-        else:
-            return False, {'page': page, 'num_results': num_results}
 
     def _execute_single_search(self, page=1, num_results=100, start_index=None, deduplicate=False, **kwargs):
         num_results_for_search = num_results * len(self._indices) if deduplicate else num_results
-        if num_results_for_search > MAX_VARIANTS and deduplicate:
-            num_results_for_search = MAX_VARIANTS
         searches, log_messages = self._get_paginated_searches(
             self.index_name, page=page, num_results=num_results_for_search, start_index=start_index
         )
@@ -221,14 +198,8 @@ class EsSearch(object):
             result['_sort'] = [_parse_es_sort(sort, self._sort[i]) for i, sort in enumerate(raw_hit.meta.sort)]
 
         result['genomeVersion'] = self._genome_version
-        if self._genome_version == GENOME_VERSION_GRCh38:
-            self._add_liftover(result, hit)
         self._parse_xstop(result)
         result[CLINVAR_KEY]['version'] = self.index_metadata[index_name].get('clinvar_version')
-
-        # If an SV has genotype-specific coordinates that differ from the main coordinates, use those
-        if data_type == Sample.DATASET_TYPE_SV_CALLS and genotypes:
-            self._set_sv_genotype_coords(genotypes, result)
 
         populations = {
             population: _get_field_values(
@@ -246,21 +217,11 @@ class EsSearch(object):
             for transcript in hit[SORTED_TRANSCRIPTS_FIELD_KEY] or []
         ]
 
-        # Temporary code, remove it after all the SV indices are reloaded
-        for trans in sorted_transcripts:
-            if trans.get('majorConsequence'):
-                if trans['majorConsequence'] == 'MSV_EXON_OVR':
-                    trans['majorConsequence'] = 'MSV_EXON_OVERLAP'
-                elif trans['majorConsequence'] == 'DUP_LOF':
-                    trans['majorConsequence'] = 'INTRAGENIC_EXON_DUP'
-
         transcripts = defaultdict(list)
         for transcript in sorted_transcripts:
             if transcript['geneId']:
                 transcripts[transcript['geneId']].append(transcript)
         gene_ids = result.pop('geneIds', None)
-        if gene_ids:
-            transcripts = {gene_id: ts for gene_id, ts in transcripts.items() if gene_id in gene_ids}
         main_transcript_id, selected_main_transcript_id = self._get_main_transcript(sorted_transcripts)
 
         result.update({
@@ -280,8 +241,6 @@ class EsSearch(object):
     def _parse_genotypes(self, raw_hit, hit, index_family_samples, data_type):
         if hasattr(raw_hit.meta, 'matched_queries'):
             family_guids = list(raw_hit.meta.matched_queries)
-        elif self._return_all_queried_families:
-            family_guids = list(index_family_samples.keys())
         else:
             # Searches for all inheritance and all families do not filter on inheritance so there are no matched_queries
             alt_allele_samples = set()
@@ -290,10 +249,7 @@ class EsSearch(object):
                     alt_allele_samples.update(hit[alt_samples_field])
 
             if self._any_affected_sample_filters:
-                # If using the any inheritance filter only include matched families
-                def _is_matched_sample(family_guid, sample):
-                    return self._family_individual_affected_status[family_guid][sample.individual.guid] == \
-                           Individual.AFFECTED_STATUS_AFFECTED
+                pass
             else:
                 _is_matched_sample = lambda *args: True
 
@@ -350,8 +306,6 @@ class EsSearch(object):
                 log_messages.append('Loading {}s for {}'.format(self.AGGREGATION_NAME, index_name))
             else:
                 end_index = page * num_results
-                if start_index is None:
-                    start_index = end_index - num_results
 
                 search = search[start_index:end_index]
                 search = search.source(QUERY_FIELD_NAMES)
@@ -365,11 +319,6 @@ class EsSearch(object):
         try:
             return search.using(self._client).execute()
         except elasticsearch.exceptions.ConnectionTimeout as e:
-            tasks = self._get_long_running_tasks()
-            if tasks:
-                logger.error('ES Query Timeout: Found {} long running searches'.format(len(tasks)), self._user, detail=tasks)
-            else:
-                logger.warning('ES Query Timeout. No long running searches found', self._user)
             raise e
 
 
