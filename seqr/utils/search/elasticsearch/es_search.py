@@ -89,16 +89,6 @@ class EsSearch(object):
     @staticmethod
     def _parse_xstop(result):
         xstop = result.pop(XSTOP_FIELD, None)
-        if xstop:
-            end_chrom, end = get_chrom_pos(xstop)
-            if end_chrom != result['chrom'] or end != result['end']:
-                if result['svType'] == 'INS':
-                    result['svSourceDetail'] = {'chrom': end_chrom}
-                else:
-                    result.update({
-                        'endChrom': end_chrom,
-                        'end': end,
-                    })
 
     def _get_index_dataset_type(self, index):
         return self.get_index_metadata_dataset_type(self.index_metadata[index])
@@ -116,15 +106,6 @@ class EsSearch(object):
 
     def _set_index_name(self):
         self.index_name = ','.join(sorted(self._indices))
-        if len(self.index_name) > MAX_INDEX_NAME_LENGTH:
-            alias = hashlib.md5(self.index_name.encode('utf-8')).hexdigest() # nosec
-            cache_key = 'index_alias__{}'.format(alias)
-            if safe_redis_get_json(cache_key) != self.index_name:
-                self._client.indices.update_aliases(body={'actions': [
-                    {'add': {'indices': self._indices, 'alias': alias}}
-                ]})
-                safe_redis_set_json(cache_key, self.index_name)
-            self.index_name = alias
 
     def _set_index_metadata(self):
         from seqr.utils.search.elasticsearch.es_utils import get_index_metadata
@@ -132,29 +113,6 @@ class EsSearch(object):
 
     def _sort_variants(self, sample_data):
         main_sort_dict = self._sort[0] if len(self._sort) and isinstance(self._sort[0], dict) else None
-
-        # Add parameters to scripts
-        if main_sort_dict and main_sort_dict.get('_script', {}).get('script', {}).get('params'):
-            called_params = None
-            for key, val_func in self._sort[0]['_script']['script']['params'].items():
-                if callable(val_func):
-                    self._sort[0]['_script']['script']['params'][key] = val_func(sample_data)
-                    called_params = self._sort[0]['_script']['script']['params']
-            if called_params:
-                for sort_dict in self._sort[1:]:
-                    sort_dict['_script']['script']['params'] = called_params
-
-
-        # Add unmapped_type
-        if main_sort_dict and 'unmapped_type' in list(main_sort_dict.values())[0]:
-            sort_field = list(main_sort_dict.keys())[0]
-            field_type = next((
-                metadata['fields'][sort_field] for metadata in self.index_metadata.values()
-                if metadata['fields'].get(sort_field)
-            ), 'double')
-            if field_type == 'keyword':
-                self._sort[0][sort_field]['unmapped_type'] = field_type
-                self._sort[0][sort_field].pop('numeric_type')
 
         if XPOS_SORT_KEY not in self._sort:
             self._sort.append(XPOS_SORT_KEY)
@@ -182,10 +140,6 @@ class EsSearch(object):
 
         if is_single_search:
             return self._execute_single_search(**search_kwargs)
-        elif not self._index_searches:
-            return self._execute_single_search(**search_kwargs)
-        else:
-            return self._execute_multi_search(**search_kwargs)
 
     def _is_single_search(self):
         return len(self._indices) == 1 and len(self._index_searches) < 2 and \
@@ -231,11 +185,6 @@ class EsSearch(object):
         self.previous_search_results['total_results'] = total_results
 
         results_start_index = (page - 1) * num_results
-        if is_compound_het:
-            variant_results = _sort_compound_hets(variant_results)
-            self.previous_search_results['grouped_results'] = variant_results
-            end_index = min(results_start_index + num_results, total_results)
-            return get_compound_het_page(variant_results, results_start_index, end_index)
 
         if deduplicate:
             variant_results = self._deduplicate_results(variant_results)
@@ -250,9 +199,6 @@ class EsSearch(object):
 
     def _parse_response(self, response):
         index_name = response.hits[0].meta.index if response.hits else None
-        if hasattr(response.aggregations, 'genes') and response.hits:
-            response_hits, response_total = self._parse_compound_het_response(response)
-            return response_hits, response_total, True, index_name
 
         response_total = response.hits.total['value']
         logger.info('Total hits: {} ({} seconds)'.format(response_total, response.took / 1000.0), self._user)
@@ -365,16 +311,6 @@ class EsSearch(object):
                     genotype_hit['sample_type'] = sample.sample_type
                     genotypes[sample.individual.guid] = _get_field_values(genotype_hit, genotype_fields_config)
 
-            if len(samples_by_id) != len(genotypes) and data_type == Sample.DATASET_TYPE_SV_CALLS:
-                # Family members with no variants are not included in the SV index
-                for sample_id, sample in samples_by_id.items():
-                    if sample.individual.guid not in genotypes:
-                        genotypes[sample.individual.guid] = _get_field_values(
-                            {'sample_id': sample_id}, genotype_fields_config)
-                        genotypes[sample.individual.guid]['isRef'] = True
-                        genotypes[sample.individual.guid]['cn'] = \
-                            1 if hit['contig'] == 'X' and sample.individual.sex == Individual.SEX_MALE else 2
-
         return family_guids, genotypes
 
     def _get_main_transcript(self, sorted_transcripts):
@@ -382,23 +318,6 @@ class EsSearch(object):
             if len(sorted_transcripts) and 'transcriptRank' in sorted_transcripts[0] else None
 
         selected_main_transcript_id = None
-        if main_transcript_id and (self._filtered_gene_ids or self._allowed_consequences):
-            gene_transcripts = [
-                t for t in sorted_transcripts if t.get('geneId') in self._filtered_gene_ids
-            ] if  self._filtered_gene_ids else sorted_transcripts
-
-            selected_main_transcript_id = gene_transcripts[0].get('transcriptId')
-            if self._allowed_consequences:
-                consequence_transcript_id = next((
-                    t.get('transcriptId') for t in gene_transcripts if
-                    self._is_matched_transcript(t, self._allowed_consequences)), None)
-                if not consequence_transcript_id and self._allowed_consequences_secondary:
-                    consequence_transcript_id = next((
-                        t.get('transcriptId') for t in gene_transcripts if self._is_matched_transcript(t, self._allowed_consequences_secondary)
-                    ), None)
-                selected_main_transcript_id = consequence_transcript_id or selected_main_transcript_id
-            if selected_main_transcript_id == main_transcript_id:
-                selected_main_transcript_id = None
 
         return main_transcript_id, selected_main_transcript_id
 

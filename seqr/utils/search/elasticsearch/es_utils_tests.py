@@ -1185,23 +1185,10 @@ def mock_hits(hits, increment_sort=False, include_matched_queries=True, sort=Non
         matched_queries = hit.pop('matched_queries')
         if include_matched_queries:
             hit['matched_queries'] = []
-            for subindex in index.split(','):
-                if subindex in matched_queries:
-                    hit['_index'] = subindex
-                    hit['matched_queries'] += matched_queries[subindex]
 
         if sort or increment_sort:
             sort_key = sort[0] if sort else 'xpos'
-            if isinstance(sort_key, dict):
-                if '_script' in sort_key:
-                    sort_key = sort_key['_script']['script']['params'].get('field', 'xpos') # pylint: disable=invalid-sequence-index
-                else:
-                    sort_key = next(iter(sort_key.keys()))
             sort_value = jmespath.search(sort_key, hit['_source'])
-            if sort_value is None:
-                sort_value = 'Infinity'
-            if increment_sort:
-                sort_value += 100
             hit['_sort'] = [sort_value]
     return parsed_hits
 
@@ -1218,10 +1205,6 @@ def create_mock_response(search, index=INDEX_NAME):
                 variant_id_filters = search_filter.get('terms', {}).get('variantId')
             if not gene_ids_filters and not search.get('aggs'):
                 gene_ids_filters.update(search_filter.get('terms', {}).get('geneIds') or [])
-            possible_inheritance_filters = search_filter.get('bool', {}).get('should', []) + [search_filter]
-            if any('_name' in possible_filter.get('bool', {}) for possible_filter in possible_inheritance_filters):
-                include_matched_queries = True
-                break
 
     response_dict = {
         'took': 1,
@@ -1233,10 +1216,6 @@ def create_mock_response(search, index=INDEX_NAME):
             index=index_name)
         if variant_id_filters:
             index_hits = [hit for hit in index_hits if hit['_id'] in variant_id_filters]
-        elif gene_ids_filters:
-            index_hits = [hit for hit in index_hits if any(
-                gene_ids_filters.intersection({t['gene_id'] for t in hit['_source']['sortedTranscriptConsequences']})
-            )]
         response_dict['hits']['hits'] += index_hits
 
     try:
