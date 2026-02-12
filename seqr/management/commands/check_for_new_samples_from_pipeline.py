@@ -3,12 +3,14 @@ from collections import defaultdict
 
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.management.base import BaseCommand, CommandError
+from django.db.models import Q
 import json
 import logging
 import re
 
+from clickhouse_search.search import get_clickhouse_genotypes
 from reference_data.models import GENOME_VERSION_LOOKUP
-from seqr.models import Family, Sample, Project, Individual
+from seqr.models import Family, Sample, Project, Individual, SavedVariant
 from seqr.utils.communication_utils import safe_post_to_slack, send_project_email
 from seqr.utils.file_utils import file_iter, list_files, is_google_bucket_file_path
 from seqr.utils.search.add_data_utils import notify_search_data_loaded, update_airtable_loading_tracking_status
@@ -16,7 +18,7 @@ from seqr.views.utils.airtable_utils import AirtableSession, LOADABLE_PDO_STATUS
 from seqr.views.utils.dataset_utils import match_and_update_search_samples
 from seqr.views.utils.export_utils import write_multiple_files
 from seqr.views.utils.permissions_utils import is_internal_anvil_project, project_has_anvil
-from seqr.views.utils.variant_utils import reset_cached_search_results, update_projects_saved_variant_json
+from seqr.views.utils.variant_utils import reset_cached_search_results
 from settings import SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, PIPELINE_DATA_DIR, ANVIL_UI_URL, IS_ANVIL_LOADING_DELAY, \
     SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL
 
@@ -256,7 +258,7 @@ class Command(BaseCommand):
                 logger.error(f'Error updating individuals sample qc {run_version}: {e}')
 
         # Reload saved variant JSON
-        update_projects_saved_variant_json(families_by_project, clickhouse_dataset_type, updated_samples)
+        cls._update_projects_saved_variant_json(families_by_project, clickhouse_dataset_type, updated_samples)
 
     @classmethod
     def _is_internal_project(cls, project):
@@ -389,6 +391,64 @@ class Command(BaseCommand):
                 models=updated_individuals,
                 fields=['filter_flags', 'pop_platform_filters', 'population'],
             )
+
+    @staticmethod
+    def _update_project_saved_variant_genotypes(project, family_guids, dataset_type, samples):
+        updates = {}
+        for family_guid in family_guids:
+            variant_models_by_key = {
+                v.key: v for v in
+                SavedVariant.objects.filter(dataset_type=dataset_type, family__guid=family_guid).filter(
+                    Q(saved_variant_json__genomeVersion__isnull=True) |
+                    Q(saved_variant_json__genomeVersion=project.genome_version.replace('GRCh', ''))
+                )
+            }
+            if not variant_models_by_key:
+                continue
+            variants = []
+            genotypes_by_key = get_clickhouse_genotypes(
+                project.guid, [family_guid], project.genome_version, dataset_type, variant_models_by_key.keys(),
+                samples,
+            )
+            for key, genotypes in genotypes_by_key.items():
+                variant = variant_models_by_key[key]
+                variant.genotypes = genotypes
+                variants.append(variant)
+            logger.info(f'Reloading genotypes for {len(variants)} {dataset_type} variants in family {family_guid}')
+            SavedVariant.bulk_update_models(None, variants, ['genotypes'])
+            updates.update({v.id: v for v in variants})
+        return updates
+
+    @classmethod
+    def _update_projects_saved_variant_json(cls, families_by_project, dataset_type, samples):
+        success = {}
+        skipped = {}
+        error = {}
+        logger.info(f'Reloading saved variants in {len(families_by_project)} projects')
+        for project, family_guids in families_by_project.items():
+            project_name = project.name
+            try:
+                updated_saved_variants = cls._update_project_saved_variant_genotypes(project, family_guids, dataset_type, samples)
+                if updated_saved_variants is None:
+                    skipped[project_name] = True
+                else:
+                    success[project_name] = len(updated_saved_variants)
+                    family_summary = f' in {len(family_guids)} families' if family_guids else ''
+                    logger.info(f'Updated {len(updated_saved_variants)} variants{family_summary} for project {project_name}')
+            except Exception as e:
+                logger.error(f'Error reloading variants in {project_name}: {e}')
+                error[project_name] = e
+
+        logger.info('Reload Summary: ')
+        for k, v in success.items():
+            if v > 0:
+                logger.info(f'  {k}: Updated {v} variants')
+        if skipped:
+            logger.info(f'Skipped the following {len(skipped)} project with no saved variants: {", ".join(skipped)}')
+        if len(error):
+            logger.info(f'{len(error)} failed projects')
+        for k, v in error.items():
+            logger.info(f'  {k}: {v}')
 
 
 update_individuals_sample_qc = Command._update_individuals_sample_qc
