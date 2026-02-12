@@ -10,7 +10,8 @@ from seqr.models import Project, Family, Sample, VariantSearch, VariantSearchRes
 from seqr.views.utils.json_utils import DjangoJSONEncoderWithSets
 from seqr.utils.search.utils import get_single_variant, get_variant_query_gene_counts, \
     query_variants, variant_lookup, InvalidSearchException
-from seqr.views.utils.test_utils import DifferentDbTransactionSupportMixin, PARSED_VARIANTS, PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT, GENE_FIELDS
+from seqr.views.utils.test_utils import DifferentDbTransactionSupportMixin, AnvilAuthenticationTestCase, \
+    PARSED_VARIANTS, PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT, GENE_FIELDS
 
 
 SV_SAMPLES = ['S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733']
@@ -659,6 +660,11 @@ class ClickhouseSearchUtilsTests(DifferentDbTransactionSupportMixin, TestCase, S
 
     def setUp(self):
         self.set_up()
+
+    @classmethod
+    def setUpClass(cls):
+        AnvilAuthenticationTestCase._clean_up_clickhouse_db()
+        super().setUpClass()
 
     def _assert_expected_cached_variants(self, variants, num_results):
         self.assertListEqual(

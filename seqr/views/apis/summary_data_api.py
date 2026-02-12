@@ -214,14 +214,14 @@ def _load_aip_data(data: dict, user: User):
         })
 
     today = datetime.now().strftime('%Y-%m-%d')
-    new_keys, num_updated, num_skipped = bulk_create_tagged_variants(
+    new_keys, update_keys, skipped_keys = bulk_create_tagged_variants(
         family_variant_data, tag_name=AIP_TAG_TYPE, user=user, load_new_variant_data=True,
         get_metadata=lambda pred:  {category: {'name': category_map[category], 'date': today} for category in pred['categories']},
     )
 
-    summary_message = f'Loaded {len(new_keys)} new and {num_updated} updated AIP tags for {len(family_id_map)} families'
-    if num_skipped:
-        summary_message += f' (skipped {num_skipped} unchanged tags)'
+    summary_message = f'Loaded {len(new_keys)} new and {len(update_keys)} updated AIP tags for {len(family_id_map)} families'
+    if skipped_keys:
+        summary_message += f' (skipped {len(skipped_keys)} unchanged tags)'
     safe_post_to_slack(
         SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL,
         f'{summary_message}:\n```{", ".join(sorted(family_id_map.keys()))}```',

@@ -5,7 +5,7 @@ import django.contrib.postgres.fields
 from django.db import migrations, models
 
 from clickhouse_search.backend.functions import ArrayDistinct, ArrayMap
-from clickhouse_search.search import get_annotations_queryset
+from clickhouse_search.search import get_variants_queryset
 
 BATCH_SIZE = 10000
 
@@ -36,9 +36,9 @@ def populate_variant_gene_ids(apps, schema_editor):
             print(f'Populating gene_ids for {len(all_keys)} {dataset_type} ({genome_version}) clickhouse variants')
             for i in range(0, len(all_keys), BATCH_SIZE):
                 batch_keys = all_keys[i:i + BATCH_SIZE]
-                clickhouse_qs = get_annotations_queryset(genome_version, dataset_type, batch_keys)
+                clickhouse_qs = get_variants_queryset(genome_version, dataset_type, batch_keys)
                 gene_ids_expr = ArrayDistinct(ArrayMap(
-                    clickhouse_qs.transcript_field, mapped_expression='x.geneId',
+                    clickhouse_qs.TRANSCRIPT_FIELD, mapped_expression='x.geneId',
                     output_field=django.contrib.postgres.fields.ArrayField(base_field=models.CharField(max_length=20)),
                 ))
                 to_update = []

@@ -1,16 +1,30 @@
 [
 {
-    "model": "clickhouse_search.transcriptssnvindel",
+    "model": "clickhouse_search.variantdetailssnvindel",
     "pk": 1,
     "fields": {
       "key": 1,
+      "variant_id": "1-10439-AC-A",
+      "rsid": "rs112766696",
+      "caid": "CA16717152",
+      "lifted_over_chrom": "1",
+      "lifted_over_pos": 10439,
+      "sorted_motif_feature_consequences": [],
+      "sorted_regulatory_feature_consequences": [],
       "transcripts": []
     }
 }, {
-    "model": "clickhouse_search.transcriptssnvindel",
+    "model": "clickhouse_search.variantdetailssnvindel",
     "pk": 2,
     "fields": {
       "key": 2,
+      "variant_id": "1-38724419-T-G",
+      "rsid": "rs1801131",
+      "caid": null,
+      "lifted_over_chrom": "1",
+      "lifted_over_pos": 11854476,
+      "sorted_motif_feature_consequences": [],
+      "sorted_regulatory_feature_consequences": [],
       "transcripts": [
         [
           [0.9978], "L/F", "protein_coding", 1, "ttA/ttC", ["missense_variant"], [2, 9], "ENSG00000177000",
@@ -64,10 +78,19 @@
       ]
     }
 }, {
-    "model": "clickhouse_search.transcriptssnvindel",
+    "model": "clickhouse_search.variantdetailssnvindel",
     "pk": 3,
     "fields": {
       "key": 3,
+      "variant_id": "1-91502721-G-A",
+      "rsid": "rs13447464",
+      "caid": "CA10960369",
+      "lifted_over_chrom": "1",
+      "lifted_over_pos": 91968278,
+      "sorted_motif_feature_consequences": [],
+      "sorted_regulatory_feature_consequences": [
+        [1, [2], "ENSR00000009706"]
+      ],
       "transcripts": [
         [
           [null], null, "protein_coding", 1, null, ["intron_variant"], [null, null], "ENSG00000097046",
@@ -100,10 +123,22 @@
       ]
     }
 }, {
-    "model": "clickhouse_search.transcriptssnvindel",
+    "model": "clickhouse_search.variantdetailssnvindel",
     "pk": 4,
     "fields": {
       "key": 4,
+      "variant_id": "1-91511686-T-G",
+      "rsid": null,
+      "caid": "CA341062623",
+      "lifted_over_chrom": "1",
+      "lifted_over_pos": 91977243,
+      "sorted_motif_feature_consequences": [
+        [[2], "ENSM00093424674"],
+        [[2], "ENSM00036268032"]
+      ],
+      "sorted_regulatory_feature_consequences": [
+        [1, [2], "ENSR00000040341"]
+      ],
       "transcripts": [
         [
           [null], null, "protein_coding", null, null, ["splice_donor_variant"], [null, null], "ENSG00000097046",
@@ -129,24 +164,43 @@
       ]
     }
 }, {
-    "model": "clickhouse_search.transcriptssnvindel",
+    "model": "clickhouse_search.variantdetailssnvindel",
     "pk": 5,
     "fields": {
       "key": 5,
+      "variant_id": "1-10146-ACC-A",
+      "rsid": "rs375931351",
+      "caid": "CA520798130",
+      "lifted_over_chrom": "1",
+      "lifted_over_pos": 10146,
+      "sorted_motif_feature_consequences": [],
+      "sorted_regulatory_feature_consequences": [],
       "transcripts": []
     }
 }, {
-    "model": "clickhouse_search.transcriptssnvindel",
+    "model": "clickhouse_search.variantdetailssnvindel",
     "pk": 6,
     "fields": {
       "key": 6,
+      "variant_id": "1-94818-T-C",
+      "rsid": null,
+      "caid": null,
+      "lifted_over_chrom": "1",
+      "lifted_over_pos": 94818,
+      "sorted_regulatory_feature_consequences": [],
+      "sorted_motif_feature_consequences": [],
       "transcripts": []
     }
 }, {
-    "model": "clickhouse_search.transcriptsgrch37snvindel",
+    "model": "clickhouse_search.variantdetailsgrch37snvindel",
     "pk": 10,
     "fields": {
       "key": 11,
+      "variant_id": "7-143270172-A-G",
+      "rsid": "rs72611576",
+      "caid": "CA4540310",
+      "lifted_over_chrom": "7",
+      "lifted_over_pos": 143271368,
       "transcripts": [
         [
           "E/G", "protein_coding", 1, "gAa/gGa", ["missense_variant"], "ENSG00000271079", "ENST00000420911.2:c.1262A>G",
@@ -160,10 +214,17 @@
       ]
     }
 }, {
-    "model": "clickhouse_search.transcriptssnvindel",
+    "model": "clickhouse_search.variantdetailssnvindel",
     "pk": 22,
     "fields": {
       "key": 22,
+      "variant_id": "1-9310123-T-C",
+      "rsid": null,
+      "caid": null,
+      "lifted_over_chrom": "1",
+      "lifted_over_pos": 9310113,
+      "sorted_motif_feature_consequences": [],
+      "sorted_regulatory_feature_consequences": [],
       "transcripts": [
         [
           [null], "T/I", "protein_coding", 1, "aCc/aTc", ["missense_variant"], [1, 12], "ENSG00000171621",
