@@ -252,8 +252,11 @@ class Command(BaseCommand):
             except Exception as e:
                 logger.error(f'Error updating individuals sample qc {run_version}: {e}')
 
-        # Reload saved variant JSON
-        cls._update_projects_saved_variant_json(families_by_project, clickhouse_dataset_type)
+        logger.info(f'Reloading saved variants in {len(families_by_project)} projects')
+        samples = Sample.objects.filter(is_active=True)
+        for project, family_guids in families_by_project.items():
+            updated_saved_variants = cls._update_project_saved_variant_genotypes(project, family_guids, dataset_type, samples)
+            logger.info(f'Updated {len(updated_saved_variants)} variants in {len(family_guids)} families for project {project.name}')
 
     @classmethod
     def _is_internal_project(cls, project):
@@ -413,15 +416,6 @@ class Command(BaseCommand):
             SavedVariant.bulk_update_models(None, variants, ['genotypes'])
             updates.update({v.id: v for v in variants})
         return updates
-
-    @classmethod
-    def _update_projects_saved_variant_json(cls, families_by_project, dataset_type):
-        logger.info(f'Reloading saved variants in {len(families_by_project)} projects')
-        for project, family_guids in families_by_project.items():
-            project_name = project.name
-            updated_saved_variants = cls._update_project_saved_variant_genotypes(project, family_guids, dataset_type, Sample.objects.filter(is_active=True))
-            family_summary = f' in {len(family_guids)} families' if family_guids else ''
-            logger.info(f'Updated {len(updated_saved_variants)} variants{family_summary} for project {project_name}')
 
     @classmethod
     def _match_and_update_search_samples(cls, sample_project_tuples, sample_type, dataset_type, **sample_data):

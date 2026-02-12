@@ -1,15 +1,12 @@
 from collections import defaultdict
 from elasticsearch import Elasticsearch
 from elasticsearch.exceptions import ConnectionError as EsConnectionError, TransportError
-import elasticsearch_dsl
 from urllib3.connectionpool import connection_from_url
 
-from seqr.models import Sample
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.search.constants import VCF_FILE_EXTENSIONS, XPOS_SORT_KEY
 from seqr.utils.search.elasticsearch.es_gene_agg_search import EsGeneAggSearch
 from seqr.utils.search.elasticsearch.es_search import EsSearch, get_compound_het_page
-from seqr.views.utils.json_utils import  _to_camel_case
 from settings import ELASTICSEARCH_SERVICE_HOSTNAME, ELASTICSEARCH_SERVICE_PORT, ELASTICSEARCH_CREDENTIALS, \
     ELASTICSEARCH_PROTOCOL, ES_SSL_CONTEXT, KIBANA_SERVER
 
