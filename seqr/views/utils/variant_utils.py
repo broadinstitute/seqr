@@ -72,8 +72,10 @@ def _update_project_saved_variant_genotypes(project, family_guids, dataset_type,
     updates = {}
     for family_guid in family_guids:
         variant_models_by_key = {
-            # TODO
-            v.key: v for v in get_saved_variants(project.genome_version, project.id, [family_guid], clickhouse_dataset_type=dataset_type)
+            v.key: v for v in SavedVariant.objects.filter(dataset_type=dataset_type, family__guid=family_guid).filter(
+                Q(saved_variant_json__genomeVersion__isnull=True) |
+                Q(saved_variant_json__genomeVersion=project.genome_version.replace('GRCh', ''))
+            )
         }
         if not variant_models_by_key:
             continue
@@ -89,20 +91,6 @@ def _update_project_saved_variant_genotypes(project, family_guids, dataset_type,
         SavedVariant.bulk_update_models(None, variants, ['genotypes'])
         updates.update({v.id: v for v in variants})
     return updates
-
-
-def get_saved_variants(genome_version, project_id=None, family_guids=None, clickhouse_dataset_type=None):
-    saved_variants = SavedVariant.objects.filter(
-        Q(saved_variant_json__genomeVersion__isnull=True) |
-        Q(saved_variant_json__genomeVersion=genome_version.replace('GRCh', ''))
-    )
-    if project_id:
-        saved_variants = saved_variants.filter(family__project_id=project_id)
-    if family_guids:
-        saved_variants = saved_variants.filter(family__guid__in=family_guids)
-    if clickhouse_dataset_type:
-        saved_variants = saved_variants.filter(dataset_type=clickhouse_dataset_type)
-    return saved_variants
 
 
 def parse_saved_variant_json(variant_json, family_id, variant_id=None,):

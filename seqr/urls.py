@@ -59,8 +59,7 @@ from seqr.views.apis.saved_variant_api import \
     create_variant_note_handler, \
     update_variant_note_handler, \
     delete_variant_note_handler, \
-    update_variant_main_transcript, \
-    update_saved_variant_json
+    update_variant_main_transcript
 
 from seqr.views.apis.dashboard_api import dashboard_page_data
 
@@ -254,7 +253,6 @@ api_endpoints = {
     'project/(?P<project_guid>[^/]+)/dynamic_analysis_groups/create': update_dynamic_analysis_group_handler,
     'project/(?P<project_guid>[^/]+)/dynamic_analysis_groups/(?P<analysis_group_guid>[^/]+)/update': update_dynamic_analysis_group_handler,
     'project/(?P<project_guid>[^/]+)/dynamic_analysis_groups/(?P<analysis_group_guid>[^/]+)/delete': delete_dynamic_analysis_group_handler,
-    'project/(?P<project_guid>[^/]+)/update_saved_variant_json': update_saved_variant_json,
     'project/(?P<project_guid>[^/]+)/add_workspace_data': add_workspace_data,
 
     'search/variant/(?P<variant_id>[^/]+)': query_single_variant_handler,

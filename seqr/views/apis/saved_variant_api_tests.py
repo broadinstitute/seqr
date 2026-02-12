@@ -7,7 +7,7 @@ from django.urls.base import reverse
 from clickhouse_search.models.reference_data_models import DbnsfpGRCh37SnvIndelMv, DbnsfpGRCh37SnvIndelDict
 from seqr.models import SavedVariant, VariantNote, VariantTag, VariantFunctionalData, Sample, Project
 from seqr.views.apis.saved_variant_api import saved_variant_data, create_variant_note_handler, create_saved_variant_handler, \
-    update_variant_note_handler, delete_variant_note_handler, update_variant_tags_handler, update_saved_variant_json, \
+    update_variant_note_handler, delete_variant_note_handler, update_variant_tags_handler, \
     update_variant_main_transcript, update_variant_functional_data_handler, update_variant_acmg_classification_handler
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants
 from seqr.views.utils.test_utils import AuthenticationTestCase, SAVED_VARIANT_DETAIL_FIELDS, TAG_FIELDS, GENE_VARIANT_FIELDS, \
@@ -975,42 +975,6 @@ class SavedVariantAPITest(object):
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'error': 'Unable to find the following variant(s): not_variant'})
 
-    @mock.patch('seqr.utils.search.elasticsearch.es_utils.MAX_VARIANTS_FETCH', 2)
-    @mock.patch('seqr.views.apis.saved_variant_api.logger')
-    @mock.patch('seqr.utils.search.elasticsearch.es_utils.get_es_variants_for_variant_ids')
-    def test_update_saved_variant_json(self, mock_get_variants, mock_logger):
-        mock_get_variants.side_effect = lambda samples, genome_version, variant_ids, user: \
-            [{'variantId': variant_id, 'familyGuids': sorted({sample.individual.family.guid for sample in samples})}
-             for variant_id in variant_ids]
-
-        url = reverse(update_saved_variant_json, args=['R0001_1kg'])
-        self.check_manager_login(url)
-
-        response = self.client.post(url)
-
-        self.assertEqual(response.status_code, 200)
-
-        self.assertDictEqual(
-            response.json(),
-            {'SV0000002_1248367227_r0390_100': None, 'SV0000001_2103343353_r0390_100': None,
-            'SV0059956_11560662_f019313_1': None}
-        )
-
-        mock_get_variants.assert_has_calls([
-            mock.call(mock.ANY, '37', ['1-248367227-TC-T', '1-46859832-G-A'], self.manager_user),
-            mock.call(mock.ANY, '37', ['21-3343353-GAGA-G'], self.manager_user),
-        ])
-        samples = set(Sample.objects.filter(individual__family_id__in=[1, 2], is_active=True).values_list('id', flat=True))
-        self.assertSetEqual(set(mock_get_variants.call_args_list[0].args[0].values_list('id', flat=True)), samples)
-        self.assertSetEqual(set(mock_get_variants.call_args_list[1].args[0].values_list('id', flat=True)), samples)
-        mock_logger.error.assert_not_called()
-
-        # Test handles update error
-        mock_get_variants.side_effect = Exception('Unable to fetch variants')
-        response = self.client.post(url)
-        self.assertEqual(response.status_code, 200)
-        mock_logger.error.assert_called_with('Unable to reset saved variant json for R0001_1kg: Unable to fetch variants')
-
     def test_update_variant_main_transcript(self):
         transcript_id = 'ENST00000438943'
         update_main_transcript_url = reverse(update_variant_main_transcript, args=[VARIANT_GUID, transcript_id])
@@ -1129,13 +1093,6 @@ class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, SavedVariantAPITest)
     def test_update_compound_hets_variant_functional_data(self):
         super(AnvilSavedVariantAPITest, self).test_update_compound_hets_variant_functional_data()
         assert_no_list_ws_has_al(self, 3)
-
-    def test_update_saved_variant_json(self, *args):
-        url = reverse(update_saved_variant_json, args=['R0001_1kg'])
-        self.check_require_login(url)
-        response = self.client.post(url)
-        self.assertEqual(response.status_code, 500)
-        self.assertDictEqual(response.json(), {'error': 'update_saved_variant_json is disabled without the elasticsearch backend'})
 
     def test_update_variant_main_transcript(self):
         super(AnvilSavedVariantAPITest, self).test_update_variant_main_transcript()
