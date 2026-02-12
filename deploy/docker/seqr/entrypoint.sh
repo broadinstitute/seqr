@@ -2,18 +2,23 @@
 
 set -eux
 
-env
+# ----------------------------
+# Required environment vars
+# ----------------------------
+: "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}"
+: "${POSTGRES_USERNAME:?POSTGRES_USERNAME is required}"
+: "${POSTGRES_SERVICE_HOSTNAME:?POSTGRES_SERVICE_HOSTNAME is required}"
 
-echo SHELL: "$SHELL"
-echo PATH: "$PATH"
-echo PYTHONPATH: "$PYTHONPATH"
 
-# init gcloud
-if [ "$GCLOUD_PROJECT" ]; then
+echo "SHELL: ${SHELL:-}"
+echo "PATH: ${PATH:-}"
+echo "PYTHONPATH: ${PYTHONPATH:-}"
+
+if [ -n "${GCLOUD_PROJECT:-}" ]; then
     gcloud config set project "$GCLOUD_PROJECT"
 fi
 
-if [ "$GCLOUD_ZONE" ]; then
+if [ -n "${GCLOUD_ZONE:-}" ]; then
     gcloud config set compute/zone "$GCLOUD_ZONE"
 fi
 
@@ -44,7 +49,8 @@ python -u manage.py migrate
 python -u manage.py migrate --database=reference_data
 python -u manage.py loaddata variant_searches
 python -u manage.py loaddata variant_tag_types
-if [ "$CLICKHOUSE_SERVICE_HOSTNAME" ]; then
+
+if [ -n "${CLICKHOUSE_SERVICE_HOSTNAME:-}" ]; then
     python -u manage.py migrate --database=clickhouse_write
 fi
 

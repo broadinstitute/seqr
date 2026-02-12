@@ -1,16 +1,35 @@
-FROM python:3.11-slim-bullseye as build
-
+############################
+# UI build (Node.js 14 only)
+############################
+FROM node:14-bullseye AS ui-build
 LABEL maintainer="Broad TGG"
 
-# install commmon utilities, database clients for debugging
+WORKDIR /build/ui
+
+# Copy package metadata first for better caching
+COPY ./ui/package.json .
+COPY ./ui/package-lock.json .
+
+# npm v7 for lockfile v2 compatibility
+RUN npm install -g npm@7.24.2 \
+    && npm ci
+
+# Copy the rest of the UI source and build
+COPY ./ui/ .
+RUN npm run build
+
+
+############################
+# Python build stage
+############################
+FROM python:3.11-slim-bullseye AS build
+
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN apt-get update && apt-get install -y --no-install-recommends \
     apt-utils \
     bzip2 \
     curl \
     gcc \
-    # git needed for the nodejs install
-    git \
     libc6-dev \
     libpq-dev \
     && apt-get clean \
@@ -20,41 +39,28 @@ ENV VIRTUAL_ENV=/opt/venv
 RUN python3 -m venv $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
-# install nodejs14 repo since debian is still on node 12.x
-RUN curl -fsSL https://deb.nodesource.com/setup_14.x | bash -
-# installs the nodejs and npm packages
-RUN apt-get install -y --no-install-recommends \
-    nodejs \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-# upgrade npm to v7 to fix lockfile resolution
-RUN npm install -g npm@7.24.2
-
 WORKDIR /opt
-
 COPY ./requirements.txt .
 
-# install seqr python dependencies
-RUN pip install --no-cache-dir wheel && \
-    pip install --no-cache-dir -U setuptools && \
-    pip install --no-cache-dir -r requirements.txt
+# Install seqr Python dependencies
+# setuptools pin to address: https://github.com/pypa/setuptools/issues/5174
+RUN pip install --no-cache-dir wheel \
+    && pip install --no-cache-dir -U setuptools==81.0.0 \
+    && pip install --no-cache-dir -r requirements.txt
 
-# install seqr nodejs dependencies
-WORKDIR /build/ui
-# Copy the package configs from the build context -> the temporary build container, for generating node_modules
-COPY ./ui/package.json .
-COPY ./ui/package-lock.json .
-RUN npm ci
 
-COPY ./ui/ .
+############################
+# Runtime stage
+############################
+FROM python:3.11-slim-bullseye AS runtime
 
-RUN npm run build
-
-FROM python:3.11-slim-bullseye as runtime
+# Copy Python virtualenv from build stage
+COPY --from=build /opt/venv /opt/venv
+ENV VIRTUAL_ENV=/opt/venv
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    cron \
     curl \
     emacs \
     gnupg \
@@ -69,17 +75,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# install gcloud tools
-RUN echo "deb http://packages.cloud.google.com/apt cloud-sdk-bullseye main" > /etc/apt/sources.list.d/google-cloud-sdk.list \
-    && curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - \
-    && apt-get update && apt-get install -y --no-install-recommends \
-    google-cloud-sdk \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-COPY --from=build /opt/venv /opt/venv
+# Install Google Cloud SDK
+RUN curl -sSL https://sdk.cloud.google.com | bash
+ENV PATH="/root/google-cloud-sdk/bin:$PATH"
 
 WORKDIR /seqr
+
+# Copy application code
 COPY admin/ ./admin
 COPY clickhouse_search/ ./clickhouse_search
 COPY matchmaker/ ./matchmaker
@@ -87,15 +89,13 @@ COPY panelapp/ ./panelapp
 COPY reference_data/ ./reference_data
 COPY seqr/ ./seqr
 COPY manage.py settings.py wsgi.py ./
-COPY --from=build /build/ui/dist /seqr/ui/dist
 
-ENV VIRTUAL_ENV=/opt/venv
-ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+# Copy built UI assets
+COPY --from=ui-build /build/ui/dist /seqr/ui/dist
 
 RUN ./manage.py collectstatic --no-input
 
 EXPOSE 8000
-
 ENV TERM=xterm
 
 COPY deploy/docker/seqr/readiness_probe /
@@ -104,7 +104,6 @@ COPY deploy/docker/seqr/clickhouse_backup.py /
 COPY deploy/docker/seqr/bin/*.sh /usr/local/bin/
 COPY deploy/docker/seqr/config/*.py ./
 COPY deploy/docker/seqr/bashrc /root/.bashrc
-
 COPY deploy/docker/seqr/entrypoint.sh /
 
-CMD [ "/entrypoint.sh" ]
+CMD ["/entrypoint.sh"]
