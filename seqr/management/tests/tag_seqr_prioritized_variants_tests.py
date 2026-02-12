@@ -58,17 +58,12 @@ class CheckNewSamplesTest(ClickhouseSearchTestCase):
 
         call_command('tag_seqr_prioritized_variants', PROJECT_GUID)
 
-        self._assert_expected_logs([
-            ('create 7 SavedVariants', {
-                'dbUpdate': {'dbEntity': 'SavedVariant', 'entityIds': mock.ANY, 'updateType': 'bulk_create'},
-            }),
-        ] + [
-            (f'create VariantTag VT{db_id}_seqr_prioritized', {'dbUpdate': {
-                'dbEntity': 'VariantTag', 'entityId': f'VT{db_id}_seqr_prioritized', 'updateFields': ['metadata', 'variant_tag_type'], 'updateType': 'create',
-            }}) for db_id in range(1726986, 1726993)
-        ] + [
-            ('Tagged 7 new and 0 previously tagged variants in 1 families, found 0 unchanged tags:', None),
-        ])
+        self._assert_expected_logs(num_new=7, creation_stats={
+            'SNV_INDEL': {'num_variants': 3, 'tag_id_range': (1726986, 1726988)},
+            'SV': {'num_variants': 2, 'tag_id_range': (1726988, 1726990)},
+            'MITO': {'num_variants': 2, 'tag_id_range': (1726990, 1726992)},
+            'MULTI': {'tag_id_range': (1726992, 1726993)},
+        })
 
         new_saved_variants = SavedVariant.objects.filter(key__in=[2, 3, 4, 18, 19]).order_by('key').values(
             'key', 'variant_id', 'family_id', 'dataset_type', 'xpos', 'xpos_end', 'ref', 'alt', 'gene_ids', 'genotypes', 'saved_variant_json',
@@ -84,7 +79,7 @@ class CheckNewSamplesTest(ClickhouseSearchTestCase):
             'xpos_end': 1091511686, 'ref': 'T', 'alt': 'G', 'gene_ids': ['ENSG00000097046'],
             'genotypes': VARIANT4['genotypes'], 'saved_variant_json': {},
         }, {'key': 18, 'variant_id': 'suffix_140593_DUP', 'family_id': 2, 'dataset_type': 'SV_WES', 'xpos': 17038717327,
-            'xpos_end': 17038719993, 'ref': None, 'alt': None, 'gene_ids': ['ENSG00000275023'],
+            'xpos_end': 17038719636, 'ref': None, 'alt': None, 'gene_ids': ['ENSG00000275023'],
             'genotypes': GCNV_VARIANT3['genotypes'], 'saved_variant_json': {},
         }, {'key': 19, 'variant_id': 'suffix_140608_DUP', 'family_id': 2, 'dataset_type': 'SV_WES', 'xpos': 17038721781,
             'xpos_end': 17038735703, 'ref': None, 'alt': None, 'gene_ids': ['ENSG00000275023', 'ENSG00000277258', 'ENSG00000277972'],
@@ -128,9 +123,7 @@ class CheckNewSamplesTest(ClickhouseSearchTestCase):
         mock_email.reset_mock()
         mock_slack.reset_mock()
         call_command('tag_seqr_prioritized_variants', PROJECT_GUID)
-        self._assert_expected_logs([
-            ('Tagged 0 new and 0 previously tagged variants in 1 families, found 7 unchanged tags:', None),
-        ])
+        self._assert_expected_logs(num_unchanged=7)
         mock_email.assert_not_called()
         mock_slack.assert_not_called()
         self.assertDictEqual(expected_tags, {
@@ -138,19 +131,38 @@ class CheckNewSamplesTest(ClickhouseSearchTestCase):
             for tag in VariantTag.objects.filter(variant_tag_type__name='seqr Prioritized')
         })
 
-    def _assert_expected_logs(self, model_creation_logs):
-        self.assert_json_logs(user=None, expected=[
-            ('Searching for prioritized SNV_INDEL variants in 3 families in project 1kg project n\u00e5me with uni\u00e7\u00f8de', None),
-        ] + [(f'Found {count} variants for criteria: {criteria}', None) for criteria, count in SNV_INDEL_MATCHES.items()] + [
-            ('Searching for prioritized SV_WES variants in 1 families in project 1kg project n\u00e5me with uni\u00e7\u00f8de', None),
-        ] + [(f'Found {count} variants for criteria: {criteria}', None) for criteria, count in SV_MATCHES.items()] + [
-            ('Searching for prioritized MITO variants in 1 families in project 1kg project n\u00e5me with uni\u00e7\u00f8de', None),
-        ] + [(f'Found {count} variants for criteria: {criteria}', None) for criteria, count in MITO_MATCHES.items()] + [
-            ('Searching for prioritized multi data type variants in 1 families in project 1kg project n\u00e5me with uni\u00e7\u00f8de', None),
-        ] + [(f'Found {count} variants for criteria: {criteria}', None) for criteria, count in MULTI_TYPE_MATCHES.items()] +
-        model_creation_logs + [(f'  {criteria}: {count} variants', None) for criteria, count in  SNV_INDEL_MATCHES.items()] + [
+    def _assert_expected_logs(self, num_new=0, num_unchanged=0, creation_stats=None):
+        creation_stats = creation_stats or {}
+        self.assert_json_logs(user=None, expected=self._dataset_type_logs(
+            'SNV_INDEL', 3, SNV_INDEL_MATCHES, **creation_stats.get('SNV_INDEL', {}),
+        ) + self._dataset_type_logs(
+            'SV_WES', 1, SV_MATCHES, **creation_stats.get('SV', {}),
+        ) + self._dataset_type_logs(
+            'MITO', 1, MITO_MATCHES, **creation_stats.get('MITO', {}),
+        ) + self._dataset_type_logs(
+            'multi data type', 1, MULTI_TYPE_MATCHES, **creation_stats.get('MULTI', {}),
+        ) + [
+            (f'Tagged {num_new} new and 0 previously tagged variants in 1 families, found {num_unchanged} unchanged tags:', None)
+        ] + [(f'  {criteria}: {count} variants', None) for criteria, count in  SNV_INDEL_MATCHES.items()] + [
             (f'  {criteria}: {count} variants', None) for criteria, count in  SV_MATCHES.items()
         ] + [(f'  {criteria}: {count} variants', None) for criteria, count in MITO_MATCHES.items()] + [
             (f'  {criteria}: {count} variants', None) for criteria, count in MULTI_TYPE_MATCHES.items()
         ])
+
+    @staticmethod
+    def _dataset_type_logs(dataset_type, num_families, matches, num_variants=0, tag_id_range=None):
+        create_variants_logs = [
+            (f'create {num_variants} SavedVariants', {
+                'dbUpdate': {'dbEntity': 'SavedVariant', 'entityIds': mock.ANY, 'updateType': 'bulk_create'},
+            }),
+        ] if num_variants > 0 else []
+        return  [
+            (f'Searching for prioritized {dataset_type} variants in {num_families} families in project 1kg project n\u00e5me with uni\u00e7\u00f8de', None),
+        ] + [
+            (f'Found {count} variants for criteria: {criteria}', None) for criteria, count in matches.items()
+        ] + create_variants_logs + [
+            (f'create VariantTag VT{db_id}_seqr_prioritized', {'dbUpdate': {
+                'dbEntity': 'VariantTag', 'entityId': f'VT{db_id}_seqr_prioritized', 'updateFields': ['metadata', 'variant_tag_type'], 'updateType': 'create',
+            }}) for db_id in range(*(tag_id_range or [0]))
+        ]
 

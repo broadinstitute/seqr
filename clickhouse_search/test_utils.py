@@ -1204,6 +1204,7 @@ CACHED_CONSEQUENCES_BY_KEY = {1: [], 2: [{
     'extendedIntronicSpliceRegionVariant': False,
     'fiveutrConsequence': None,
     'geneId': 'ENSG00000177000',
+    'isManeSelect': True,
 }, {
     'alphamissensePathogenicity': None,
     'canonical': None,
@@ -1211,6 +1212,7 @@ CACHED_CONSEQUENCES_BY_KEY = {1: [], 2: [{
     'extendedIntronicSpliceRegionVariant': False,
     'fiveutrConsequence': '5_prime_UTR_stop_codon_loss_variant',
     'geneId': 'ENSG00000177000',
+    'isManeSelect': False,
 }, {
     'alphamissensePathogenicity': None,
     'canonical': None,
@@ -1218,6 +1220,7 @@ CACHED_CONSEQUENCES_BY_KEY = {1: [], 2: [{
     'extendedIntronicSpliceRegionVariant': False,
     'fiveutrConsequence': '5_prime_UTR_stop_codon_loss_variant',
     'geneId': 'ENSG00000177000',
+    'isManeSelect': False,
 }, {
     'alphamissensePathogenicity': 0.99779,
     'canonical': None,
@@ -1225,6 +1228,7 @@ CACHED_CONSEQUENCES_BY_KEY = {1: [], 2: [{
     'extendedIntronicSpliceRegionVariant': False,
     'fiveutrConsequence': None,
     'geneId': 'ENSG00000277258',
+    'isManeSelect': True,
 }, {
     'alphamissensePathogenicity': None,
     'canonical': None,
@@ -1232,6 +1236,7 @@ CACHED_CONSEQUENCES_BY_KEY = {1: [], 2: [{
     'extendedIntronicSpliceRegionVariant': False,
     'fiveutrConsequence': None,
     'geneId': 'ENSG00000177000',
+    'isManeSelect': False,
 }, {
     'alphamissensePathogenicity': None,
     'canonical': None,
@@ -1239,6 +1244,7 @@ CACHED_CONSEQUENCES_BY_KEY = {1: [], 2: [{
     'extendedIntronicSpliceRegionVariant': False,
     'fiveutrConsequence': None,
     'geneId': 'ENSG00000177000',
+    'isManeSelect': False,
 }, {
     'alphamissensePathogenicity': None,
     'canonical': None,
@@ -1246,6 +1252,7 @@ CACHED_CONSEQUENCES_BY_KEY = {1: [], 2: [{
     'extendedIntronicSpliceRegionVariant': False,
     'fiveutrConsequence': None,
     'geneId': 'ENSG00000177000',
+    'isManeSelect': False,
 }],
 3: [{
     'alphamissensePathogenicity': None,
@@ -1254,6 +1261,7 @@ CACHED_CONSEQUENCES_BY_KEY = {1: [], 2: [{
     'extendedIntronicSpliceRegionVariant': False,
     'fiveutrConsequence': None,
     'geneId': 'ENSG00000097046',
+    'isManeSelect': False,
 }, {
     'alphamissensePathogenicity': None,
     'canonical': None,
@@ -1261,6 +1269,7 @@ CACHED_CONSEQUENCES_BY_KEY = {1: [], 2: [{
     'extendedIntronicSpliceRegionVariant': False,
     'fiveutrConsequence': None,
     'geneId': 'ENSG00000177000',
+    'isManeSelect': False,
 }, {
     'alphamissensePathogenicity': None,
     'canonical': None,
@@ -1268,6 +1277,7 @@ CACHED_CONSEQUENCES_BY_KEY = {1: [], 2: [{
     'extendedIntronicSpliceRegionVariant': False,
     'fiveutrConsequence': None,
     'geneId': 'ENSG00000097046',
+    'isManeSelect': False,
 }, {
     'alphamissensePathogenicity': None,
     'canonical': None,
@@ -1275,6 +1285,7 @@ CACHED_CONSEQUENCES_BY_KEY = {1: [], 2: [{
     'extendedIntronicSpliceRegionVariant': False,
     'fiveutrConsequence': None,
     'geneId': 'ENSG00000097046',
+    'isManeSelect': True,
 }],
 4: [{
     'alphamissensePathogenicity': None,
@@ -1283,6 +1294,7 @@ CACHED_CONSEQUENCES_BY_KEY = {1: [], 2: [{
     'extendedIntronicSpliceRegionVariant': True,
     'fiveutrConsequence': None,
     'geneId': 'ENSG00000097046',
+    'isManeSelect': False,
 }, {
     'alphamissensePathogenicity': 0.1,
     'canonical': 1,
@@ -1290,6 +1302,7 @@ CACHED_CONSEQUENCES_BY_KEY = {1: [], 2: [{
     'extendedIntronicSpliceRegionVariant': False,
     'fiveutrConsequence': None,
     'geneId': 'ENSG00000097046',
+    'isManeSelect': True,
 }, {
     'alphamissensePathogenicity': None,
     'canonical': None,
@@ -1297,6 +1310,7 @@ CACHED_CONSEQUENCES_BY_KEY = {1: [], 2: [{
     'extendedIntronicSpliceRegionVariant': False,
     'fiveutrConsequence': None,
     'geneId': 'ENSG00000097046',
+    'isManeSelect': False,
 }],
 5: [],
 11: [{
@@ -1315,6 +1329,7 @@ CACHED_CONSEQUENCES_BY_KEY = {1: [], 2: [{
     'extendedIntronicSpliceRegionVariant': False,
     'fiveutrConsequence': None,
     'geneId': 'ENSG00000171621',
+    'isManeSelect': False,
 }],
 }
 
@@ -1322,7 +1337,11 @@ def format_cached_variant(variant):
     if variant['key'] not in CACHED_CONSEQUENCES_BY_KEY:
         return variant
     return {
-        **{k: v for k, v in variant.items() if k not in ['mainTranscriptId', 'selectedMainTranscriptId', 'transcripts']},
+        **{k: v for k, v in variant.items() if k not in [
+            'mainTranscriptId', 'selectedMainTranscriptId', 'transcripts', 'CAID', 'chrom', 'pos', 'ref', 'alt',
+            'liftedOverChrom', 'liftedOverPos', 'rsid', 'variantId', 'sortedMotifFeatureConsequences',
+            'sortedRegulatoryFeatureConsequences',
+        ]},
         'sortedTranscriptConsequences': CACHED_CONSEQUENCES_BY_KEY[variant['key']],
     }
 
