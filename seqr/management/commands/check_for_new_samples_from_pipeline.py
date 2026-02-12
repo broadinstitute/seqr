@@ -228,9 +228,13 @@ class Command(BaseCommand):
 
         sample_type = metadata['sample_type']
         logger.info(f'Loading {len(sample_project_tuples)} {sample_type} {dataset_type} samples in {len(samples_by_project)} projects')
-        new_samples_by_project = cls._match_and_update_search_samples(
+        new_samples = cls._match_and_update_search_samples(
             sample_project_tuples, sample_type, dataset_type, data_source=run_version, elasticsearch_index=';'.join(metadata['callsets']),
         )
+
+        new_samples_by_project = dict(new_samples.values('individual__family__project').annotate(
+            samples=ArrayAgg('sample_id', distinct=True),
+        ).values_list('individual__family__project', 'samples'))
 
         split_project_pdos = cls._report_loading_success(
             dataset_type, sample_type, run_version, samples_by_project, new_samples_by_project,
@@ -475,13 +479,7 @@ class Command(BaseCommand):
         )
 
         previous_loaded_individuals = set(Sample.objects.filter(guid__in=inactivated_sample_guids).values_list('individual_id', flat=True))
-        return dict(Sample.objects.filter(
-            guid__in=activated_sample_guids
-        ).exclude(individual_id__in=previous_loaded_individuals).values(
-            'individual__family__project'
-        ).annotate(samples=ArrayAgg('sample_id', distinct=True)).values_list(
-            'individual__family__project', 'samples',
-        ))
+        return Sample.objects.filter(guid__in=activated_sample_guids).exclude(individual_id__in=previous_loaded_individuals)
 
     @staticmethod
     def _get_matched_individuals(sample_project_tuples):
