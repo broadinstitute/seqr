@@ -10,7 +10,7 @@ from django.contrib.auth.models import User
 from guardian.shortcuts import get_users_with_perms, get_groups_with_perms
 import json
 
-from clickhouse_search.search import get_clickhouse_annotations
+from clickhouse_search.search import get_clickhouse_variant_annotations
 from panelapp.models import PaLocusList
 from reference_data.models import HumanPhenotypeOntology
 from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant, Family, CAN_VIEW, CAN_EDIT, \
@@ -457,7 +457,7 @@ def _add_clickhouse_annotations(results, genome_version):
             keys = {result['key'] for result in gv_results}
             annotations_by_key = {
                 annotations['key']: {k: v for k, v in annotations.items() if k not in gv_results[0]}
-                for annotations in get_clickhouse_annotations(gv, dataset_type, keys)
+                for annotations in get_clickhouse_variant_annotations(gv, dataset_type, keys)
             }
             for result in gv_results:
                 if result['key']:

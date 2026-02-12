@@ -1,4 +1,4 @@
-from clickhouse_backend.models.fields.array import ArrayField, ArrayLookup
+from clickhouse_backend.models.fields.array import ArrayField, ArrayLookup, IndexTransform
 from django.db.models import Func, Subquery, lookups, BooleanField, Aggregate
 from django.db.models.sql.datastructures import BaseTable, Join
 
@@ -54,6 +54,11 @@ class ArrayMin(Func):
 
 class ArraySort(Func):
     function = 'arraySort'
+
+
+class ArrayObjectSort(Func):
+    function = 'arraySort'
+    template = "%(function)s(x -> x.%(sort_field)s, %(expressions)s)"
 
 
 class ArraySymmetricDifference(Func):
@@ -118,6 +123,12 @@ class ArrayFilter(lookups.Transform):
         return f'arrayFilter(x -> {self.conditions}, {lhs})', params
 
 
+class ArrayIndex(IndexTransform):
+    def __init__(self, index, *args, **kwargs):
+        super().__init__(index+1, None, *args, **kwargs)
+        self.base_field = self.source_expressions[0].output_field.base_field
+
+
 @ArrayField.register_lookup
 @NestedField.register_lookup
 class ArrayNotEmptyTransform(lookups.Transform):
@@ -165,6 +176,10 @@ class NullIf(Func):
 
 class Plus(Func):
     function = 'plus'
+
+
+class SplitByString(Func):
+    function = 'splitByString'
 
 
 class Tuple(Func):
