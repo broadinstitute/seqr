@@ -416,35 +416,12 @@ class Command(BaseCommand):
 
     @classmethod
     def _update_projects_saved_variant_json(cls, families_by_project, dataset_type):
-        success = {}
-        skipped = {}
-        error = {}
         logger.info(f'Reloading saved variants in {len(families_by_project)} projects')
         for project, family_guids in families_by_project.items():
             project_name = project.name
-            try:
-                updated_saved_variants = cls._update_project_saved_variant_genotypes(project, family_guids, dataset_type, Sample.objects.filter(is_active=True))
-                if updated_saved_variants is None:
-                    skipped[project_name] = True
-                else:
-                    success[project_name] = len(updated_saved_variants)
-                    family_summary = f' in {len(family_guids)} families' if family_guids else ''
-                    logger.info(f'Updated {len(updated_saved_variants)} variants{family_summary} for project {project_name}')
-            except Exception as e:
-                logger.error(f'Error reloading variants in {project_name}: {e}')
-                error[project_name] = e
-
-        logger.info('Reload Summary: ')
-        for k, v in success.items():
-            if v > 0:
-                logger.info(f'  {k}: Updated {v} variants')
-        # TODO all un tested, refactor summary
-        if skipped:
-            logger.info(f'Skipped the following {len(skipped)} project with no saved variants: {", ".join(skipped)}')
-        if len(error):
-            logger.info(f'{len(error)} failed projects')
-        for k, v in error.items():
-            logger.info(f'  {k}: {v}')
+            updated_saved_variants = cls._update_project_saved_variant_genotypes(project, family_guids, dataset_type, Sample.objects.filter(is_active=True))
+            family_summary = f' in {len(family_guids)} families' if family_guids else ''
+            logger.info(f'Updated {len(updated_saved_variants)} variants{family_summary} for project {project_name}')
 
     @classmethod
     def _match_and_update_search_samples(cls, sample_project_tuples, sample_type, dataset_type, **sample_data):

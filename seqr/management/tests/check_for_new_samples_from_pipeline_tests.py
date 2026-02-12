@@ -369,8 +369,6 @@ class CheckNewSamplesTest(object):
         ('Reloading genotypes for 1 SNV_INDEL variants in family F000014_14', None),
         ('update 1 SavedVariants', {'dbUpdate': mock.ANY}),
         ('Updated 1 variants in 1 families for project Non-Analyst Project', None),
-        ('Reload Summary: ', None),
-        ('  Non-Analyst Project: Updated 1 variants', None),
     ]
 
     def set_up(self):
@@ -490,7 +488,6 @@ class CheckNewSamplesTest(object):
                 ('Reloading saved variants in 2 projects', None),
                 ('Updated 0 variants in 1 families for project 1kg project nåme with uniçøde', None),
                 ('Updated 0 variants in 1 families for project Test Reprocessed Project', None),
-                ('Reload Summary: ', None),
             ],
         }, error_logs={
             'manual__2023-11-02': 'Invalid families in run metadata GRCh37/SNV_INDEL: manual__2023-11-02 - F0000123_ABC',
