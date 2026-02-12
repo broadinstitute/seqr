@@ -16,13 +16,11 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunSQL(
-            "DROP TABLE `GRCh37/SNV_INDEL/variants/details`;",
-            hints={'clickhouse': True},
+        migrations.DeleteModel(
+            name='VariantDetailsGRCh37SnvIndel',
         ),
-        migrations.RunSQL(
-            "DROP TABLE `GRCh38/SNV_INDEL/variants/details`;",
-            hints={'clickhouse': True},
+        migrations.DeleteModel(
+            name='VariantDetailsSnvIndel',
         ),
         migrations.CreateModel(
             name='VariantDetailsGRCh37SnvIndel',
