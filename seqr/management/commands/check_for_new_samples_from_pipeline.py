@@ -438,6 +438,7 @@ class Command(BaseCommand):
         for k, v in success.items():
             if v > 0:
                 logger.info(f'  {k}: Updated {v} variants')
+        # TODO all un tested, refactor summary
         if skipped:
             logger.info(f'Skipped the following {len(skipped)} project with no saved variants: {", ".join(skipped)}')
         if len(error):
