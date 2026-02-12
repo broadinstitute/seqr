@@ -145,42 +145,6 @@ def _validate_index_metadata(index_metadata, elasticsearch_index, project=None, 
         ))
 
 
-def delete_es_index(index):
-    client = get_es_client()
-    client.indices.delete(index)
-    updated_indices, _ = _get_es_indices(client)
-    return updated_indices
-
-
-def get_elasticsearch_status():
-    client = get_es_client()
-
-    disk_status = {
-        disk['node']: disk for disk in
-        _get_es_meta(client, 'allocation', ['node', 'shards', 'disk.avail', 'disk.used', 'disk.percent'])
-    }
-
-    node_stats = {}
-    for node in _get_es_meta(client, 'nodes', ['name', 'heap.percent']):
-        if node['name'] in disk_status:
-            disk_status[node.pop('name')].update(node)
-        else:
-            node_stats[node['name']] = node
-
-    indices, seqr_index_projects = _get_es_indices(client)
-
-    errors = ['{} does not exist and is used by project(s) {}'.format(
-        index, ', '.join(['{} ({} samples)'.format(p.name, len(indivs)) for p, indivs in project_individuals.items()])
-    ) for index, project_individuals in sorted(seqr_index_projects.items()) if project_individuals]
-
-    return {
-        'indices': indices,
-        'diskStats': list(disk_status.values()),
-        'nodeStats': list(node_stats.values()),
-        'errors': errors,
-    }
-
-
 def _get_es_meta(client, meta_type, fields, filter_rows=None):
     return [{
         _to_camel_case(field.replace('.', '_')): o[field] for field in fields

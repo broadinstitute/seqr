@@ -120,8 +120,7 @@ from seqr.views.apis.users_api import \
     update_user, \
     forgot_password
 
-from seqr.views.apis.data_manager_api import elasticsearch_status, delete_index, \
-    update_rna_seq, proxy_to_kibana, load_phenotype_prioritization_data, \
+from seqr.views.apis.data_manager_api import update_rna_seq, proxy_to_kibana, load_phenotype_prioritization_data, \
     validate_callset, get_loaded_projects, load_data, loading_vcfs, proxy_to_luigi, \
     trigger_delete_project, trigger_delete_family
 from seqr.views.apis.report_api import \
@@ -329,8 +328,6 @@ api_endpoints = {
     'report/gregor': gregor_export,
     'report/seqr_stats': seqr_stats,
 
-    'data_management/elasticsearch_status': elasticsearch_status,
-    'data_management/delete_index': delete_index,
     'data_management/get_all_users': get_all_users,
     'data_management/update_rna_seq': update_rna_seq,
     'data_management/load_phenotype_prioritization_data': load_phenotype_prioritization_data,
