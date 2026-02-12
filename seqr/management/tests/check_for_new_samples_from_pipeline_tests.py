@@ -165,6 +165,7 @@ LOCAL_RUN_PATHS = [
     '/seqr/seqr-hail-search-data/GRCh38/SNV_INDEL/runs/auto__2023-08-09/_CLICKHOUSE_LOAD_SUCCESS',
     '/seqr/seqr-hail-search-data/GRCh37/SNV_INDEL/runs/manual__2023-11-02/_CLICKHOUSE_LOAD_SUCCESS',
     '/seqr/seqr-hail-search-data/GRCh38/MITO/runs/auto__2024-08-12/_CLICKHOUSE_LOAD_SUCCESS',
+    '/seqr/seqr-hail-search-data/GRCh38/MITO/runs/auto__2025-12-02/_CLICKHOUSE_LOAD_SUCCESS',
     '/seqr/seqr-hail-search-data/GRCh38/GCNV/runs/auto__2024-09-14/_CLICKHOUSE_LOAD_SUCCESS',
     '/seqr/seqr-hail-search-data/GRCh38/SNV_INDEL/runs/manual__2025-01-24/validation_errors.json',
     '/seqr/seqr-hail-search-data/GRCh38/SNV_INDEL/runs/hail_search_to_clickhouse_migration_WGS_R0877_neptune/_CLICKHOUSE_LOAD_SUCCESS',
@@ -184,6 +185,9 @@ RUN_PATHS = [
     b'gs://seqr-hail-search-data/v3.1/GRCh38/MITO/runs/auto__2024-08-12/',
     b'gs://seqr-hail-search-data/v3.1/GRCh38/MITO/runs/auto__2024-08-12/_SUCCESS',
     b'gs://seqr-hail-search-data/v3.1/GRCh38/MITO/runs/auto__2024-08-12/_CLICKHOUSE_LOAD_SUCCESS',
+    b'gs://seqr-hail-search-data/v3.1/GRCh38/MITO/runs/auto__2025-12-02/',
+    b'gs://seqr-hail-search-data/v3.1/GRCh38/MITO/runs/auto__2025-12-02/_SUCCESS',
+    b'gs://seqr-hail-search-data/v3.1/GRCh38/MITO/runs/auto__2025-12-02/_CLICKHOUSE_LOAD_SUCCESS',
     b'gs://seqr-hail-search-data/v3.1/GRCh38/GCNV/runs/auto__2024-09-14/',
     b'gs://seqr-hail-search-data/v3.1/GRCh38/GCNV/runs/auto__2024-09-14/_SUCCESS',
     b'gs://seqr-hail-search-data/v3.1/GRCh38/GCNV/runs/auto__2024-09-14/_CLICKHOUSE_LOAD_SUCCESS',
@@ -325,8 +329,12 @@ OPENED_RUN_JSON_FILES = [{
     'family_samples': {'F0000123_ABC': ['NA22882', 'NA20885']},
 }, {
     'callsets': ['invalid_sample.vcf'],
-    'sample_type': 'WGS',
+    'sample_type': 'WES',
     'family_samples': {'F000003_3': ['NA22882', 'NA20885']},
+}, {
+    'callsets': ['invalid_sample.vcf'],
+    'sample_type': 'WES',
+    'family_samples': {'F000002_2': ['HG00732', 'HG00733']},
 }, {
     'callsets': ['gcnv.bed.gz'],
     'sample_type': 'WES',
@@ -417,7 +425,7 @@ class CheckNewSamplesTest(object):
 
         Sample.objects.filter(guid=OLD_DATA_SAMPLE_GUID).update(sample_type='WES')
 
-    def _test_call(self, error_logs=None, run_loading_logs=None, num_runs=5):
+    def _test_call(self, error_logs=None, run_loading_logs=None, num_runs=6):
         self._set_loading_files()
         self.reset_logs()
 
@@ -429,7 +437,7 @@ class CheckNewSamplesTest(object):
         logs = self.LIST_FILE_LOGS[:1] + [(f'Loading new samples from {num_runs} run(s)', None)]
         runs = [
             ('GRCh38/SNV_INDEL', 'auto__2023-08-09'), ('GRCh37/SNV_INDEL', 'manual__2023-11-02'),
-            ('GRCh38/MITO', 'auto__2024-08-12'), ('GRCh38/SV', 'auto__2024-09-14'),
+            ('GRCh38/MITO', 'auto__2024-08-12'), ('GRCh38/MITO', 'auto__2025-12-02'), ('GRCh38/SV', 'auto__2024-09-14'),
             ('GRCh38/SNV_INDEL', 'hail_search_to_clickhouse_migration_WGS_R0877_neptune'),
         ]
         if single_call:
@@ -471,7 +479,7 @@ class CheckNewSamplesTest(object):
                 ('update 3 Familys', {'dbUpdate': mock.ANY}),
             ] + self.UPDATE_SAMPLE_LOGS,
             'GRCh38/MITO': [
-                ('Loading 2 WGS MITO samples in 1 projects', None)
+                ('Loading 2 WES MITO samples in 1 projects', None)
             ],
             'GRCh38/SV': [
                 ('Loading 4 WES SV samples in 2 projects', None),
@@ -487,6 +495,7 @@ class CheckNewSamplesTest(object):
         }, error_logs={
             'manual__2023-11-02': 'Invalid families in run metadata GRCh37/SNV_INDEL: manual__2023-11-02 - F0000123_ABC',
             'auto__2024-08-12': 'Matches not found for sample ids: NA20885, NA22882',
+            'auto__2025-12-02': 'The following families are included in the callset but are missing some family members: 2 (HG00731)',
         })
 
         # Test notifications
@@ -586,6 +595,7 @@ The following 1 families failed sex check:
             'auto__2023-08-09': 'Data has genome version GRCh38 but the following projects have conflicting versions: R0003_test (GRCh37)',
             'manual__2023-11-02': 'Invalid families in run metadata GRCh37/SNV_INDEL: manual__2023-11-02 - F0000123_ABC',
             'auto__2024-08-12': 'Data has genome version GRCh38 but the following projects have conflicting versions: R0001_1kg (GRCh37)',
+            'auto__2025-12-02': 'Data has genome version GRCh38 but the following projects have conflicting versions: R0001_1kg (GRCh37)',
             'auto__2024-09-14': 'Data has genome version GRCh38 but the following projects have conflicting versions: R0001_1kg (GRCh37), R0003_test (GRCh37)',
         }
         self._test_call(error_logs=error_logs)
@@ -771,7 +781,7 @@ class LocalCheckNewSamplesTest(DifferentDbTransactionSupportMixin, Authenticatio
         self.mock_glob.assert_called_with('/seqr/seqr-hail-search-data/GRCh37/MITO/runs/*/*', recursive=False)
 
     def _set_reloading_loading_files(self):
-        self.mock_glob.return_value = [LOCAL_RUN_PATHS[3], LOCAL_RUN_PATHS[6]]
+        self.mock_glob.return_value = [LOCAL_RUN_PATHS[3], LOCAL_RUN_PATHS[7]]
 
     def _set_loading_files(self):
         if not self.mock_glob.return_value:
@@ -790,7 +800,7 @@ class LocalCheckNewSamplesTest(DifferentDbTransactionSupportMixin, Authenticatio
         self.assertEqual(self.mock_mkdir.call_count, 0 if single_call else 2)
         self.assertEqual(list(self.mock_written_files.keys()), [
             file.replace('validation_errors.json', '_ERRORS_REPORTED')
-            for file in [LOCAL_RUN_PATHS[2], LOCAL_RUN_PATHS[7]]
+            for file in [LOCAL_RUN_PATHS[2], LOCAL_RUN_PATHS[8]]
         ])
 
     def _assert_expected_airtable_calls(self, *args, **kwargs):
@@ -918,7 +928,7 @@ The following users have been notified: test_user_manager@test.com""")
         )
 
     def _set_reloading_loading_files(self):
-        self.mock_ls_process.communicate.return_value = b'\n'.join(RUN_PATHS[6:8] + RUN_PATHS[15:17]), b''
+        self.mock_ls_process.communicate.return_value = b'\n'.join(RUN_PATHS[6:8] + RUN_PATHS[18:20]), b''
         self.mock_subprocess.side_effect = [self.mock_ls_process]
 
     def _set_loading_files(self):
@@ -942,6 +952,8 @@ The following users have been notified: test_user_manager@test.com""")
                 ('gsutil cat gs://seqr-hail-search-data/v3.1/GRCh37/SNV_INDEL/runs/manual__2023-11-02/metadata.json', -2),
                 ('gsutil ls gs://seqr-hail-search-data/v3.1/GRCh38/MITO/runs/auto__2024-08-12/metadata.json', -2),
                 ('gsutil cat gs://seqr-hail-search-data/v3.1/GRCh38/MITO/runs/auto__2024-08-12/metadata.json', -2),
+                ('gsutil ls gs://seqr-hail-search-data/v3.1/GRCh38/MITO/runs/auto__2025-12-02/metadata.json', -2),
+                ('gsutil cat gs://seqr-hail-search-data/v3.1/GRCh38/MITO/runs/auto__2025-12-02/metadata.json', -2),
                 ('gsutil ls gs://seqr-hail-search-data/v3.1/GRCh38/GCNV/runs/auto__2024-09-14/metadata.json', -2),
                 ('gsutil cat gs://seqr-hail-search-data/v3.1/GRCh38/GCNV/runs/auto__2024-09-14/metadata.json', -2),
                 ('gsutil ls gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-14/validation_errors.json', -2),

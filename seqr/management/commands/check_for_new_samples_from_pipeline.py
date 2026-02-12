@@ -512,12 +512,11 @@ class Command(BaseCommand):
             'individual__family__family_id',
         ).annotate(individual_ids=ArrayAgg('individual__individual_id', ordering='individual__individual_id'))
         if missing_individuals:
-            # TODO test
             missing_summary = ', '.join(sorted([
-                f"{agg['individual__family__family_id']} ({', '.join(agg['individual_ids'])}" for agg in missing_individuals
+                f"{agg['individual__family__family_id']} ({', '.join(agg['individual_ids'])})" for agg in missing_individuals
             ]))
             raise ValueError(
-                f'The following families are included in the callset but are missing some family members: {missing_summary}.'
+                f'The following families are included in the callset but are missing some family members: {missing_summary}'
             )
 
         family_ids_to_update = [
