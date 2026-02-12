@@ -35,6 +35,7 @@ DISCOVERY_CATEGORY = 'CMG Discovery Tags'
 OMIM_GENOME_VERSION = GENOME_VERSION_GRCh38
 
 
+# TODO
 def update_projects_saved_variant_json(projects, update_function, **kwargs):
     success = {}
     skipped = {}
