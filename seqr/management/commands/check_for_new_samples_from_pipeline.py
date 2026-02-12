@@ -4,6 +4,7 @@ from collections import defaultdict
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Q
+from django.utils import timezone
 import json
 import logging
 import re
@@ -15,7 +16,6 @@ from seqr.utils.communication_utils import safe_post_to_slack, send_project_emai
 from seqr.utils.file_utils import file_iter, list_files, is_google_bucket_file_path
 from seqr.utils.search.add_data_utils import notify_search_data_loaded, update_airtable_loading_tracking_status
 from seqr.views.utils.airtable_utils import AirtableSession, LOADABLE_PDO_STATUSES, AVAILABLE_PDO_STATUS
-from seqr.views.utils.dataset_utils import match_and_update_search_samples
 from seqr.views.utils.export_utils import write_multiple_files
 from seqr.views.utils.permissions_utils import is_internal_anvil_project, project_has_anvil
 from seqr.views.utils.variant_utils import reset_cached_search_results
@@ -228,13 +228,14 @@ class Command(BaseCommand):
 
         sample_type = metadata['sample_type']
         logger.info(f'Loading {len(sample_project_tuples)} {sample_type} {dataset_type} samples in {len(samples_by_project)} projects')
-        new_samples, updated_samples, *args = match_and_update_search_samples(
+        # TODO clean up args
+        new_samples, updated_samples = cls._match_and_update_search_samples(
             projects=samples_by_project.keys(),
             sample_project_tuples=sample_project_tuples,
-            sample_data={'data_source': run_version, 'elasticsearch_index': ';'.join(metadata['callsets'])},
             sample_type=sample_type,
             dataset_type=dataset_type,
-            user=None,
+            data_source=run_version,
+            elasticsearch_index=';'.join(metadata['callsets']),
         )
 
         new_samples_by_project = dict(new_samples.values('individual__family__project').annotate(
@@ -449,6 +450,116 @@ class Command(BaseCommand):
             logger.info(f'{len(error)} failed projects')
         for k, v in error.items():
             logger.info(f'  {k}: {v}')
+
+    @classmethod
+    def _match_and_update_search_samples(cls, projects, sample_project_tuples, sample_type, dataset_type, **sample_data):
+        loaded_date = timezone.now()
+        samples_guids, individual_ids = cls._find_or_create_samples(
+            sample_project_tuples, projects, loaded_date, sample_type=sample_type, dataset_type=dataset_type, **sample_data,
+        )
+
+        included_families = dict(Family.objects.filter(individual__id__in=individual_ids).values_list('id', 'analysis_status'))
+        matched_samples = Sample.objects.filter(
+            individual__family_id__in=included_families,
+            is_active=True,
+            dataset_type=dataset_type,
+            sample_type=sample_type,
+        ).exclude(guid__in=samples_guids)
+
+        missing_individuals = matched_samples.exclude(individual_id__in=individual_ids).values(
+            'individual__family__family_id',
+        ).annotate(individual_ids=ArrayAgg('individual__individual_id', ordering='individual__individual_id'))
+        if missing_individuals:
+            # TODO test
+            missing_summary = ', '.join(sorted([
+                f"{agg['individual__family__family_id']} ({', '.join(agg['individual_ids'])}" for agg in missing_individuals
+            ]))
+            raise ValueError(
+                f'The following families are included in the callset but are missing some family members: {missing_summary}.'
+            )
+
+        activated_sample_guids = Sample.bulk_update(user=None, update_json={
+            'is_active': True,
+            'loaded_date': loaded_date,
+            **sample_data,
+        }, guid__in=samples_guids, is_active=False)
+        updated_samples = Sample.objects.filter(guid__in=activated_sample_guids)
+
+        inactivated_sample_guids = Sample.bulk_update(
+            user=None, update_json={'is_active': False}, queryset=matched_samples.filter(individual_id__in=individual_ids),
+        )
+
+        family_ids_to_update = [
+            family_id for family_id, analysis_status in included_families.items()
+            if analysis_status in {Family.ANALYSIS_STATUS_WAITING_FOR_DATA, Family.ANALYSIS_STATUS_LOADING_FAILED}
+        ]
+        Family.bulk_update(
+            user=None, update_json={'analysis_status': Family.ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS}, id__in=family_ids_to_update,
+        )
+
+        previous_loaded_individuals = set(Sample.objects.filter(guid__in=inactivated_sample_guids).values_list('individual_id', flat=True))
+        new_samples = updated_samples.exclude(individual_id__in=previous_loaded_individuals)
+
+        return new_samples, updated_samples
+
+    @staticmethod
+    def _find_or_create_samples(sample_project_tuples, projects, loaded_date, **sample_params):
+        samples_by_key = {
+            (s.pop('sample_id'), s.pop('individual__family__project__name')): s
+            for s in Sample.objects.filter(
+                individual__family__project__in=projects,
+                sample_id__in={sample_id for sample_id, _ in sample_project_tuples},
+                **sample_params
+            ).values('guid', 'individual_id', 'sample_id', 'individual__family__project__name')
+        }
+        existing_samples = {
+            key: s for key, s in samples_by_key.items() if key in sample_project_tuples
+        }
+        remaining_sample_keys = set(sample_project_tuples) - set(existing_samples.keys())
+
+        matched_individual_ids = {sample['individual_id'] for sample in existing_samples.values()}
+        samples_guids = [sample['guid'] for sample in existing_samples.values()]
+        individual_ids = {sample['individual_id'] for sample in existing_samples.values()}
+        if len(remaining_sample_keys) > 0:
+            individuals = Individual.objects.filter(family__project__in=projects)
+            if matched_individual_ids:
+                individuals = individuals.exclude(id__in=matched_individual_ids)
+            remaining_individuals_dict = {
+                (i['individual_id'], i.pop('family__project__name')): i
+                for i in individuals.values('id', 'individual_id', 'family__project__name')
+            }
+
+            # find Individual records with exactly-matching individual_ids
+            sample_id_to_individual_record = {}
+            for sample_key in remaining_sample_keys:
+                if sample_key not in remaining_individuals_dict:
+                    continue
+                sample_id_to_individual_record[sample_key] = remaining_individuals_dict[sample_key]
+                del remaining_individuals_dict[sample_key]
+
+            remaining_sample_keys -= set(sample_id_to_individual_record.keys())
+            if remaining_sample_keys:
+                sample_ids = ', '.join(sorted([sample_id for sample_id, _ in remaining_sample_keys]))
+                raise ValueError(f'Matches not found for sample ids: {sample_ids}')
+
+            # create new Sample records for Individual records that matches
+            new_sample_args = {
+                sample_key: {
+                    'individual_id': individual['id'],
+                    'sample_id': sample_key[0],
+                } for sample_key, individual in sample_id_to_individual_record.items()
+            }
+            individual_ids.update({sample['individual_id'] for sample in new_sample_args.values()})
+            new_samples = [
+                Sample(
+                    loaded_date=loaded_date,
+                    **created_sample_data,
+                    **sample_params,
+                ) for created_sample_data in new_sample_args.values()]
+            new_sample_models = Sample.bulk_create(user=None, new_models=new_samples)
+            samples_guids += [s.guid for s in new_sample_models]
+
+        return samples_guids, individual_ids
 
 
 update_individuals_sample_qc = Command._update_individuals_sample_qc
