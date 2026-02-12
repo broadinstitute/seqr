@@ -1055,7 +1055,7 @@ ANVIL_COLLABORATORS = [
 
 # Tests for AnVIL access disabled
 class LocalProjectAPITest(AuthenticationTestCase, ProjectAPITest):
-    fixtures = ['users', '1kg_project', 'reference_data']
+    fixtures = ['users', '1kg_project', 'reference_data', 'clickhouse_saved_variants']
     PROJECT_COLLABORATORS = BASE_COLLABORATORS
     CREATE_PROJECT_JSON = BASE_CREATE_PROJECT_JSON
     PROJECT_COLLABORATOR_GROUPS = [{'name': 'analysts', 'hasViewPermissions': True, 'hasEditPermissions': True}]
