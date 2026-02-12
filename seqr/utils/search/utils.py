@@ -52,14 +52,6 @@ MAX_GENES_FOR_FILTER = 10000
 MIN_MULTI_FAMILY_SEQR_AC = 5000
 
 
-def es_only(func):
-    def _wrapped(*args, **kwargs):
-        if not es_backend_enabled():
-            raise ValueError(f'{func.__name__} is disabled without the elasticsearch backend')
-        return func(*args, **kwargs)
-    return _wrapped
-
-
 def backend_specific_call(es_func, clickhouse_func):
     if es_backend_enabled():
         return es_func
