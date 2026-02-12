@@ -7,9 +7,8 @@ import json
 import logging
 import re
 
-from clickhouse_search.search import get_clickhouse_genotypes
 from reference_data.models import GENOME_VERSION_LOOKUP
-from seqr.models import Family, Sample, SavedVariant, Project, Individual
+from seqr.models import Family, Sample, Project, Individual
 from seqr.utils.communication_utils import safe_post_to_slack, send_project_email
 from seqr.utils.file_utils import file_iter, list_files, is_google_bucket_file_path
 from seqr.utils.search.add_data_utils import notify_search_data_loaded, update_airtable_loading_tracking_status
@@ -17,8 +16,7 @@ from seqr.views.utils.airtable_utils import AirtableSession, LOADABLE_PDO_STATUS
 from seqr.views.utils.dataset_utils import match_and_update_search_samples
 from seqr.views.utils.export_utils import write_multiple_files
 from seqr.views.utils.permissions_utils import is_internal_anvil_project, project_has_anvil
-from seqr.views.utils.variant_utils import reset_cached_search_results, update_projects_saved_variant_json, \
-    get_saved_variants
+from seqr.views.utils.variant_utils import reset_cached_search_results, update_projects_saved_variant_json
 from settings import SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, PIPELINE_DATA_DIR, ANVIL_UI_URL, IS_ANVIL_LOADING_DELAY, \
     SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL
 
@@ -258,9 +256,7 @@ class Command(BaseCommand):
                 logger.error(f'Error updating individuals sample qc {run_version}: {e}')
 
         # Reload saved variant JSON
-        update_projects_saved_variant_json([
-            (project.id, project.guid, project.name, project.genome_version, families) for project, families in families_by_project.items()
-        ], dataset_type=dataset_type, update_function=cls._update_project_saved_variant_genotypes, samples=updated_samples, clickhouse_dataset_type=clickhouse_dataset_type)
+        update_projects_saved_variant_json(families_by_project, clickhouse_dataset_type, updated_samples)
 
     @classmethod
     def _is_internal_project(cls, project):
@@ -393,28 +389,6 @@ class Command(BaseCommand):
                 models=updated_individuals,
                 fields=['filter_flags', 'pop_platform_filters', 'population'],
             )
-
-    @classmethod
-    def _update_project_saved_variant_genotypes(cls, project_id, genome_version, family_guids, project_guid, samples=None, clickhouse_dataset_type=None, **kwargs):
-        updates = {}
-        for family_guid in family_guids:
-            variant_models_by_key = {
-                v.key: v for v in get_saved_variants(genome_version, project_id, [family_guid], clickhouse_dataset_type=clickhouse_dataset_type)
-            }
-            if not variant_models_by_key:
-                continue
-            variants = []
-            genotypes_by_key = get_clickhouse_genotypes(
-                project_guid, [family_guid], genome_version, clickhouse_dataset_type, variant_models_by_key.keys(), samples,
-            )
-            for key, genotypes in genotypes_by_key.items():
-                variant = variant_models_by_key[key]
-                variant.genotypes = genotypes
-                variants.append(variant)
-            logger.info(f'Reloading genotypes for {len(variants)} {clickhouse_dataset_type} variants in family {family_guid}')
-            SavedVariant.bulk_update_models(None, variants, ['genotypes'])
-            updates.update({v.id: v for v in variants})
-        return updates
 
 
 update_individuals_sample_qc = Command._update_individuals_sample_qc

@@ -35,16 +35,15 @@ DISCOVERY_CATEGORY = 'CMG Discovery Tags'
 OMIM_GENOME_VERSION = GENOME_VERSION_GRCh38
 
 
-# TODO
-def update_projects_saved_variant_json(projects, update_function, **kwargs):
+def update_projects_saved_variant_json(families_by_project, dataset_type, samples):
     success = {}
     skipped = {}
     error = {}
-    logger.info(f'Reloading saved variants in {len(projects)} projects')
-    for project_id, project_guid, project_name, genome_version, family_guids in tqdm(projects, unit=' project'):
+    logger.info(f'Reloading saved variants in {len(families_by_project)} projects')
+    for project, family_guids in tqdm(families_by_project.items(), unit=' project'):
+        project_name = project.name
         try:
-            updated_saved_variants = update_function(
-                project_id, genome_version, family_guids=family_guids, project_guid=project_guid, **kwargs)
+            updated_saved_variants = _update_project_saved_variant_genotypes(project, family_guids, dataset_type, samples)
             if updated_saved_variants is None:
                 skipped[project_name] = True
             else:
@@ -67,6 +66,29 @@ def update_projects_saved_variant_json(projects, update_function, **kwargs):
         logger.info(f'{len(error)} failed projects')
     for k, v in error.items():
         logger.info(f'  {k}: {v}')
+
+
+def _update_project_saved_variant_genotypes(project, family_guids, dataset_type, samples):
+    updates = {}
+    for family_guid in family_guids:
+        variant_models_by_key = {
+            # TODO
+            v.key: v for v in get_saved_variants(project.genome_version, project.id, [family_guid], clickhouse_dataset_type=dataset_type)
+        }
+        if not variant_models_by_key:
+            continue
+        variants = []
+        genotypes_by_key = get_clickhouse_genotypes(
+            project.guid, [family_guid], project.genome_version, dataset_type, variant_models_by_key.keys(), samples,
+        )
+        for key, genotypes in genotypes_by_key.items():
+            variant = variant_models_by_key[key]
+            variant.genotypes = genotypes
+            variants.append(variant)
+        logger.info(f'Reloading genotypes for {len(variants)} {dataset_type} variants in family {family_guid}')
+        SavedVariant.bulk_update_models(None, variants, ['genotypes'])
+        updates.update({v.id: v for v in variants})
+    return updates
 
 
 def get_saved_variants(genome_version, project_id=None, family_guids=None, clickhouse_dataset_type=None):
