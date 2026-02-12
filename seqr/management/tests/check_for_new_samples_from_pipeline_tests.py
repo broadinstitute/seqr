@@ -349,11 +349,6 @@ def mock_opened_file(index):
 @mock.patch('seqr.utils.file_utils.os.path.isfile', lambda *args: True)
 class CheckNewSamplesTest(object):
 
-    CREATE_SNV_INDEL_SAMPLES_LOGS = [
-        ('Loading 4 WES SNV_INDEL samples in 2 projects', None),
-        ('create 4 Samples', {'dbUpdate': mock.ANY}),
-        ('update 4 Samples', {'dbUpdate': mock.ANY}),
-    ]
     UPDATE_SAMPLE_LOGS = [
         ('update 2 Individuals', {'dbUpdate': {
             'dbEntity': 'Individual', 'entityIds': ['I000001_na19675', 'I000015_na20885'],
@@ -466,9 +461,12 @@ class CheckNewSamplesTest(object):
         Project.objects.filter(id__in=[1, 3]).update(genome_version=38)
 
         self._test_call(run_loading_logs={
-            'GRCh38/SNV_INDEL': self.CREATE_SNV_INDEL_SAMPLES_LOGS + [
-                ('update 1 Samples', {'dbUpdate': mock.ANY}),
+            'GRCh38/SNV_INDEL': [
+                ('Loading 4 WES SNV_INDEL samples in 2 projects', None),
                 ('update 2 Familys', {'dbUpdate': mock.ANY}),
+                ('create 4 Samples', {'dbUpdate': mock.ANY}),
+                ('update 4 Samples', {'dbUpdate': mock.ANY}),
+                ('update 1 Samples', {'dbUpdate': mock.ANY}),
             ] + self.AIRTABLE_LOGS + [
                 ('update 3 Familys', {'dbUpdate': mock.ANY}),
             ] + self.UPDATE_SAMPLE_LOGS,
@@ -477,10 +475,10 @@ class CheckNewSamplesTest(object):
             ],
             'GRCh38/SV': [
                 ('Loading 4 WES SV samples in 2 projects', None),
+                ('update 1 Familys', {'dbUpdate': mock.ANY}),
                 ('create 4 Samples', {'dbUpdate': mock.ANY}),
                 ('update 4 Samples', {'dbUpdate': mock.ANY}),
                 ('update 3 Samples', {'dbUpdate': mock.ANY}),
-                ('update 1 Familys', {'dbUpdate': mock.ANY}),
                 ('Reloading saved variants in 2 projects', None),
                 ('Updated 0 variants in 1 families for project 1kg project nåme with uniçøde', None),
                 ('Updated 0 variants in 1 families for project Test Reprocessed Project', None),
@@ -718,7 +716,11 @@ The following 1 families failed sex check:
         if self.AIRTABLE_LOGS:
             airtable_logs.append(('Fetched 1 AnVIL Seqr Loading Requests Tracking records from airtable', None))
         self._test_call(num_runs=2, run_loading_logs={
-            'GRCh38/SNV_INDEL': self.CREATE_SNV_INDEL_SAMPLES_LOGS + airtable_logs + self.UPDATE_SAMPLE_LOGS,
+            'GRCh38/SNV_INDEL': [
+                ('Loading 4 WES SNV_INDEL samples in 2 projects', None),
+                ('create 4 Samples', {'dbUpdate': mock.ANY}),
+                ('update 4 Samples', {'dbUpdate': mock.ANY}),
+            ] + airtable_logs + self.UPDATE_SAMPLE_LOGS,
         })
 
 
