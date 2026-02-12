@@ -6,6 +6,8 @@ from django.db import migrations, models
 import django.db.models.deletion
 import django.db.models.manager
 
+from settings import CLICKHOUSE_DATA_DIR
+
 
 class Migration(migrations.Migration):
 
