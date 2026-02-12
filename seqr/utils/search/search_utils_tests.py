@@ -65,6 +65,7 @@ class SearchUtilsTests(SearchTestHelper):
         ])
         self.search_samples = list(self.affected_search_samples) + list(self.non_affected_search_samples)
 
+    @mock.patch('seqr.utils.search.utils.clickhouse_variant_lookup')
     def test_variant_lookup(self, mock_variant_lookup):
         mock_variant_lookup.return_value = [VARIANT_LOOKUP_VARIANT]
         variants = variant_lookup(self.user, '1-10439-AC-A', '38', affected_only=True)
@@ -565,11 +566,6 @@ class ElasticsearchSearchUtilsTests(TestCase, SearchUtilsTests):
     def _assert_expected_search_samples(self, mock_get_variants, omitted_sample_guids, has_gene_search):
         return super()._assert_expected_search_samples(mock_get_variants, omitted_sample_guids, False)
 
-    def test_variant_lookup(self, *args, **kwargs):
-        with self.assertRaises(ValueError) as cm:
-            super().test_variant_lookup(mock.MagicMock())
-        self.assertEqual(str(cm.exception), 'variant_lookup is disabled without the clickhouse backend')
-
     @mock.patch('seqr.utils.search.utils.get_es_variants_for_variant_ids')
     def test_get_single_variant(self, mock_get_variants_for_ids):
         mock_get_variants_for_ids.return_value = [PARSED_VARIANTS[0]]
@@ -742,7 +738,3 @@ class ClickhouseSearchUtilsTests(DifferentDbTransactionSupportMixin, TestCase, S
             'ENSG00000277258': {'total': 1, 'families': {'F000002_2': 1}},
             'ENSG00000171621': {'total': 1, 'families': {'F000014_14': 1}},
         })
-
-    @mock.patch('seqr.utils.search.utils.clickhouse_variant_lookup')
-    def test_variant_lookup(self, mock_call):
-        super().test_variant_lookup(mock_call)

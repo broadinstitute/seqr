@@ -1513,11 +1513,22 @@ class DataManagerAPITest(AirtableTest):
 
         Project.objects.filter(guid=PROJECT_GUID).update(genome_version='38')
         response = self.client.post(url, content_type='application/json', data=json.dumps({'family': 'F000002_2'}))
-        self._assert_expected_delete_family(response)
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {
+            'info': [
+                'Disabled search for 7 samples in the following 1 families: 2',
+                'Triggered delete family data',
+            ],
+        })
 
-    def _assert_expected_delete_family(self, response):
-        self.assertEqual(response.status_code, 500)
-        self.assertDictEqual(response.json(), {'error': 'trigger_delete_family is disabled without the clickhouse backend'})
+        family_samples = Sample.objects.filter(individual__family_id=2, is_active=True)
+        self.assertEqual(family_samples.count(), 0)
+
+        self.assertEqual(len(responses.calls), 1)
+        self.assertDictEqual(json.loads(responses.calls[-1].request.body), {
+            'project_guid': 'R0001_1kg',
+            'family_guids': ['F000002_2'],
+        })
 
 
 class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
@@ -1968,24 +1979,6 @@ Loading pipeline should be triggered with:
         self.assertListEqual(response.json()['errors'], ['Missing required FORMAT field(s) GQ, GT'])
 
         self._set_file_not_found()
-
-    def _assert_expected_delete_family(self, response):
-        self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {
-            'info': [
-                'Disabled search for 7 samples in the following 1 families: 2',
-                'Triggered delete family data',
-            ],
-        })
-
-        family_samples = Sample.objects.filter(individual__family_id=2, is_active=True)
-        self.assertEqual(family_samples.count(),0)
-
-        self.assertEqual(len(responses.calls), 1)
-        self.assertDictEqual(json.loads(responses.calls[-1].request.body), {
-            'project_guid': 'R0001_1kg',
-            'family_guids': ['F000002_2'],
-        })
 
     def _assert_expected_airtable_errors(self, url):
         responses.replace(

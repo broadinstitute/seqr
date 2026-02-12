@@ -15,7 +15,7 @@ from clickhouse_search.search import delete_clickhouse_project
 from seqr.utils.communication_utils import send_project_notification
 from seqr.utils.search.add_data_utils import trigger_data_loading, get_missing_family_samples, get_loaded_individual_ids, trigger_delete_families_search
 from seqr.utils.search.elasticsearch.es_utils import get_elasticsearch_status, delete_es_index
-from seqr.utils.search.utils import clickhouse_only, es_only, InvalidSearchException
+from seqr.utils.search.utils import es_only, InvalidSearchException
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.vcf_utils import validate_vcf_and_get_samples, get_vcf_list
@@ -404,7 +404,6 @@ def _get_valid_search_individuals(project, airtable_samples, vcf_samples, datase
 
 
 @data_manager_required
-@clickhouse_only
 def trigger_delete_project(request):
     request_json = json.loads(request.body)
     project_guid = request_json.pop('project')
@@ -422,7 +421,6 @@ def trigger_delete_project(request):
 
 
 @data_manager_required
-@clickhouse_only
 def trigger_delete_family(request):
     request_json = json.loads(request.body)
     family_guid = request_json.pop('family')

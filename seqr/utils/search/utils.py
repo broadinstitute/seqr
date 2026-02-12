@@ -60,14 +60,6 @@ def es_only(func):
     return _wrapped
 
 
-def clickhouse_only(func):
-    def _wrapped(*args, **kwargs):
-        if es_backend_enabled():
-            raise ValueError(f'{func.__name__} is disabled without the clickhouse backend')
-        return func(*args, **kwargs)
-    return _wrapped
-
-
 def backend_specific_call(es_func, clickhouse_func):
     if es_backend_enabled():
         return es_func
@@ -153,7 +145,6 @@ def _get_clickhouse_variant_by_id(parsed_variant_id, variant_id, samples, genome
     )
 
 
-@clickhouse_only
 def variant_lookup(user, variant_id, genome_version, sample_type=None, affected_only=False, hom_only=False):
     cache_fields = ['variant_lookup_results', variant_id, genome_version]
     if affected_only:

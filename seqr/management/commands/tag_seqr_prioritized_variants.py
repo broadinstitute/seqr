@@ -17,7 +17,7 @@ from seqr.models import Project, Family, Individual, Sample, LocusList
 from seqr.utils.communication_utils import send_project_notification
 from seqr.utils.gene_utils import get_genes
 from seqr.utils.search.constants import ANY_AFFECTED, HOMOZYGOUS_RECESSIVE, X_LINKED_RECESSIVE_MALE_AFFECTED, DE_NOVO
-from seqr.utils.search.utils import clickhouse_only, get_search_samples, COMPOUND_HET
+from seqr.utils.search.utils import get_search_samples, COMPOUND_HET
 from seqr.views.utils.orm_to_json_utils import SEQR_TAG_TYPE
 from seqr.views.utils.variant_utils import bulk_create_tagged_variants, gene_ids_annotated_queryset
 from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL
@@ -410,7 +410,6 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('project')
 
-    @clickhouse_only
     def handle(self, *args, **options):
         family_guid_map = {}
         family_name_map = {}
