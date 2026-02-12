@@ -22,20 +22,6 @@ from reference_data.models import GeneInfo
 logger = SeqrLogger(__name__)
 
 
-def load_mapping_file(mapping_file_path, user):
-    file_content = parse_file(mapping_file_path, file_iter(mapping_file_path, user=user))
-    return load_mapping_file_content(file_content)
-
-
-def load_mapping_file_content(file_content):
-    id_mapping = {}
-    for line in file_content:
-        if len(line) != 2:
-            raise ValueError("Must contain 2 columns: " + ', '.join(line))
-        id_mapping[line[0]] = line[1]
-    return id_mapping
-
-
 def _find_or_create_samples(
         sample_project_tuples,
         projects,
@@ -199,6 +185,7 @@ def _update_variant_samples(samples_guids, individual_ids, user, dataset_type, s
     return activated_sample_guids, inactivate_sample_guids
 
 
+# TODO
 def match_and_update_search_samples(
         projects, sample_project_tuples, sample_type, dataset_type, sample_data, user, expected_families=None,
         sample_id_to_individual_id_mapping=None, raise_unmatched_error_template='Matches not found for sample ids: {sample_ids}',

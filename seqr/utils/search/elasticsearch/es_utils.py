@@ -107,43 +107,6 @@ def get_index_metadata(index_name, client, include_fields=False, use_cache=True)
     return index_metadata
 
 
-def validate_es_index_metadata_and_get_samples(request_json, project):
-    if 'elasticsearchIndex' not in request_json:
-        raise ValueError('request must contain field: "elasticsearchIndex"')
-
-    elasticsearch_index = request_json['elasticsearchIndex'].strip()
-    kwargs = {
-        'project': project,
-        'dataset_type': request_json['datasetType'],
-        'genome_version': request_json.get('genomeVersion'),
-    }
-
-    es_client = get_es_client()
-
-    all_index_metadata = get_index_metadata(elasticsearch_index, es_client, include_fields=True)
-    if elasticsearch_index in all_index_metadata:
-        index_metadata = all_index_metadata.get(elasticsearch_index)
-        _validate_index_metadata(index_metadata, elasticsearch_index, **kwargs)
-        sample_field = _get_samples_field(index_metadata)
-        sample_type = index_metadata['sampleType']
-    else:
-        # Aliases return the mapping for all indices in the alias
-        metadatas = list(all_index_metadata.values())
-        sample_field = _get_samples_field(metadatas[0])
-        sample_type = metadatas[0]['sampleType']
-        for metadata in metadatas[1:]:
-            _validate_index_metadata(metadata, elasticsearch_index, **kwargs)
-            if sample_field != _get_samples_field(metadata):
-                raise ValueError('Found mismatched sample fields for indices in alias')
-            if sample_type != metadata['sampleType']:
-                raise ValueError('Found mismatched sample types for indices in alias')
-
-    sample_ids = _get_es_sample_ids(elasticsearch_index, sample_field, es_client)
-    sample_data = {'elasticsearch_index': elasticsearch_index}
-
-    return sample_ids, sample_type, sample_data
-
-
 def _get_es_sample_ids(elasticsearch_index, sample_field, es_client):
     s = elasticsearch_dsl.Search(using=es_client, index=elasticsearch_index)
     s = s.params(size=0)
