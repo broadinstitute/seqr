@@ -215,7 +215,7 @@ class Command(BaseCommand):
         sample_project_tuples = []
         invalid_genome_version_projects = []
         for project, sample_ids in samples_by_project.items():
-            sample_project_tuples += [(sample_id, project.name) for sample_id in sample_ids]
+            sample_project_tuples += [(sample_id, project.id) for sample_id in sample_ids]
             project_genome_version = GENOME_VERSION_LOOKUP.get(project.genome_version, project.genome_version)
             if project_genome_version != genome_version:
                 invalid_genome_version_projects.append((project.guid, project_genome_version))
@@ -228,15 +228,10 @@ class Command(BaseCommand):
 
         sample_type = metadata['sample_type']
         logger.info(f'Loading {len(sample_project_tuples)} {sample_type} {dataset_type} samples in {len(samples_by_project)} projects')
-        # TODO clean up args
         new_samples, updated_samples = cls._match_and_update_search_samples(
-            projects=samples_by_project.keys(),
-            sample_project_tuples=sample_project_tuples,
-            sample_type=sample_type,
-            dataset_type=dataset_type,
-            data_source=run_version,
-            elasticsearch_index=';'.join(metadata['callsets']),
+            sample_project_tuples, sample_type, dataset_type, data_source=run_version, elasticsearch_index=';'.join(metadata['callsets']),
         )
+        # TIODo clea nup return val usage
 
         new_samples_by_project = dict(new_samples.values('individual__family__project').annotate(
             samples=ArrayAgg('sample_id', distinct=True),
@@ -452,10 +447,10 @@ class Command(BaseCommand):
             logger.info(f'  {k}: {v}')
 
     @classmethod
-    def _match_and_update_search_samples(cls, projects, sample_project_tuples, sample_type, dataset_type, **sample_data):
+    def _match_and_update_search_samples(cls, sample_project_tuples, sample_type, dataset_type, **sample_data):
         loaded_date = timezone.now()
         samples_guids, individual_ids = cls._find_or_create_samples(
-            sample_project_tuples, projects, loaded_date, sample_type=sample_type, dataset_type=dataset_type, **sample_data,
+            sample_project_tuples, loaded_date, sample_type=sample_type, dataset_type=dataset_type, **sample_data,
         )
 
         included_families = dict(Family.objects.filter(individual__id__in=individual_ids).values_list('id', 'analysis_status'))
@@ -503,30 +498,30 @@ class Command(BaseCommand):
         return new_samples, updated_samples
 
     @staticmethod
-    def _find_or_create_samples(sample_project_tuples, projects, loaded_date, **sample_params):
+    def _find_or_create_samples(sample_project_tuples, loaded_date, **sample_params):
         samples_by_key = {
-            (s.pop('sample_id'), s.pop('individual__family__project__name')): s
+            (s.pop('sample_id'), s.pop('individual__family__project_id')): s
             for s in Sample.objects.filter(
-                individual__family__project__in=projects,
+                individual__family__project_id__in={project_id for _, project_id in sample_project_tuples},
                 sample_id__in={sample_id for sample_id, _ in sample_project_tuples},
                 **sample_params
-            ).values('guid', 'individual_id', 'sample_id', 'individual__family__project__name')
+            ).values('guid', 'sample_id', 'individual__family__project_id')
         }
         existing_samples = {
-            key: s for key, s in samples_by_key.items() if key in sample_project_tuples
+            key: s['guid'] for key, s in samples_by_key.items() if key in sample_project_tuples
         }
         remaining_sample_keys = set(sample_project_tuples) - set(existing_samples.keys())
 
-        matched_individual_ids = {sample['individual_id'] for sample in existing_samples.values()}
-        samples_guids = [sample['guid'] for sample in existing_samples.values()]
-        individual_ids = {sample['individual_id'] for sample in existing_samples.values()}
+        samples_guids = list(existing_samples.values())
+        individual_ids = {sample_id for sample_id, _  in existing_samples.keys()}
         if len(remaining_sample_keys) > 0:
-            individuals = Individual.objects.filter(family__project__in=projects)
-            if matched_individual_ids:
-                individuals = individuals.exclude(id__in=matched_individual_ids)
+            remaining_projects = {project_id for _, project_id in remaining_sample_keys}
+            individuals = Individual.objects.filter(family__project_id__in=remaining_projects)
+            if individual_ids:
+                individuals = individuals.exclude(id__in=individual_ids)
             remaining_individuals_dict = {
-                (i['individual_id'], i.pop('family__project__name')): i
-                for i in individuals.values('id', 'individual_id', 'family__project__name')
+                (i['individual_id'], i.pop('family__project_id')): i
+                for i in individuals.values('id', 'individual_id', 'family__project_id')
             }
 
             # find Individual records with exactly-matching individual_ids
