@@ -12,7 +12,6 @@ import {
   getSearchFamiliesByHash,
   getGenesById,
   getSearchesByHash,
-  getSamplesGroupedByProjectGuid,
   getActiveDatasetsByFamily,
 } from 'redux/selectors'
 import { FAMILY_ANALYSIS_STATUS_LOOKUP } from 'shared/utils/constants'
@@ -202,14 +201,14 @@ const getActiveDatasetTypes = datasets => ([
 
 export const getProjectDatasetTypes = createSelector(
   getProjectsByGuid,
-  getSamplesGroupedByProjectGuid,
-  (projectsByGuid, samplesByProjectGuid) => Object.values(projectsByGuid).reduce(
+  getFamiliesGroupedByProjectGuid,
+  getActiveDatasetsByFamily,
+  (projectsByGuid, familiesByProjectGuid, datasetsByFamily) => Object.values(projectsByGuid).reduce(
     (acc, { projectGuid, datasetTypes }) => ({
       ...acc,
-      [projectGuid]: datasetTypes || getActiveDatasetTypes(
-        // TODO clean up
-        Object.values(samplesByProjectGuid[projectGuid] || {}).filter(({ isActive }) => isActive),
-      ),
+      [projectGuid]: datasetTypes || getActiveDatasetTypes(Object.keys(familiesByProjectGuid[projectGuid] || {}).reduce(
+        (projectAcc, familyGuid) => [...projectAcc, ...(datasetsByFamily[familyGuid] || [])], [],
+      )),
     }), {},
   ),
 )

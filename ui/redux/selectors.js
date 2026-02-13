@@ -57,8 +57,6 @@ const groupEntitiesByProjectGuid = entities => Object.entries(entities).reduce((
 }, {})
 export const getFamiliesGroupedByProjectGuid = createSelector(getFamiliesByGuid, groupEntitiesByProjectGuid)
 export const getAnalysisGroupsGroupedByProjectGuid = createSelector(getAnalysisGroupsByGuid, groupEntitiesByProjectGuid)
-// TODO
-export const getSamplesGroupedByProjectGuid = createSelector(getSamplesByGuid, groupEntitiesByProjectGuid)
 
 const groupByFamilyGuid = objs => objs.reduce((acc, o) => {
   if (!acc[o.familyGuid]) {
