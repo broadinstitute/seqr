@@ -16,7 +16,7 @@ def validate_data_migrated(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('clickhouse_search', '0040_gnomadnoncodingconstraintdict'),
+        ('clickhouse_search', '0041_delete_annotationsdiskgcnv_and_more'),
     ]
 
     operations = [

@@ -653,12 +653,14 @@ def vlm_lookup_handler(request):
     kwargs = {_to_snake_case(k): v for k, v in request.GET.items()}
     variant_id = kwargs.pop('variant_id')
     parsed_variant_id = parse_variant_id(variant_id)
-    if parsed_variant_id:
-        invalid_alleles = [f'"{allele}"' for allele in parsed_variant_id[2:] if not re.fullmatch(r'[ATCG]+', allele)]
-        if invalid_alleles:
-            raise InvalidSearchException(f'Unable to search VLM for invalid allele(s): {", ".join(invalid_alleles)}')
     if not parsed_variant_id:
         raise InvalidSearchException('VLM lookup is not supported for SVs')
+    invalid_alleles = [f'"{allele}"' for allele in parsed_variant_id[2:] if not re.fullmatch(r'[ATCG]+', allele)]
+    if invalid_alleles:
+        raise InvalidSearchException(f'Unable to search VLM for invalid allele(s): {", ".join(invalid_alleles)}')
+    if any(len(allele) > 1 for allele in parsed_variant_id[2:]):
+        raise InvalidSearchException('VLM lookup is not supported for InDels')
+
     return create_json_response({'vlmMatches': vlm_lookup(request.user, *parsed_variant_id, **kwargs)})
 
 def search_results_redirect(request):

@@ -116,6 +116,9 @@ def parse_pathogenicity_and_assertions(classified_record_node: xml.etree.Element
     ).replace(
         'Likely pathogenic/Likely pathogenic',
         'Likely pathogenic'
+    ).replace(
+        'VUS-mid',
+        'Uncertain significance',
     )
 
     pathogenicity = pathogenicity_string.split(';')[0].strip()

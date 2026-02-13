@@ -317,6 +317,24 @@
       "consequence": 4
     }
 }, {
+    "model": "clickhouse_search.pextallvariantssnvindel",
+    "pk": "1-38724419-T-G",
+    "fields": {
+      "score": 0.03
+    }
+}, {
+    "model": "clickhouse_search.promoteraiallvariants",
+    "pk": "1-38724419-T-G",
+    "fields": {
+      "score": 0.64
+    }
+}, {
+    "model": "clickhouse_search.absplice2allvariants",
+    "pk": "1-38724419-T-G",
+    "fields": {
+      "score": 0.11
+    }
+}, {
     "model": "clickhouse_search.gnomadnoncodingconstraintallvariantssnvindel",
     "pk": 1,
     "fields": {
@@ -1080,6 +1098,12 @@
     "pk": "M-11597-A-G",
     "fields": {
       "score": 0.75
+    }
+}, {
+    "model": "clickhouse_search.pextallvariantsmito",
+    "pk": "M-11597-A-G",
+    "fields": {
+      "score": 0.13
     }
 }, {
     "model": "clickhouse_search.localconstraintmitoallvariantsmito",
