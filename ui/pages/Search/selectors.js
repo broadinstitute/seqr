@@ -13,7 +13,7 @@ import {
   getGenesById,
   getSearchesByHash,
   getSamplesGroupedByProjectGuid,
-  getSamplesByFamily,
+  getActiveDatasetsByFamily,
 } from 'redux/selectors'
 import { FAMILY_ANALYSIS_STATUS_LOOKUP } from 'shared/utils/constants'
 import { compareObjects } from 'shared/utils/sortUtils'
@@ -196,8 +196,8 @@ export const getLocusListOptions = createListEqualSelector(
   },
 )
 
-const getSampleDatasetTypes = samples => ([
-  ...new Set((samples || []).filter(({ isActive }) => isActive).map(({ datasetType }) => datasetType)),
+const getActiveDatasetTypes = datasets => ([
+  ...new Set((datasets || []).map(({ datasetType }) => datasetType)),
 ])
 
 export const getProjectDatasetTypes = createSelector(
@@ -206,7 +206,10 @@ export const getProjectDatasetTypes = createSelector(
   (projectsByGuid, samplesByProjectGuid) => Object.values(projectsByGuid).reduce(
     (acc, { projectGuid, datasetTypes }) => ({
       ...acc,
-      [projectGuid]: datasetTypes || getSampleDatasetTypes(Object.values(samplesByProjectGuid[projectGuid] || {})),
+      [projectGuid]: datasetTypes || getActiveDatasetTypes(
+        // TODO clean up
+        Object.values(samplesByProjectGuid[projectGuid] || {}).filter(({ isActive }) => isActive),
+      ),
     }), {},
   ),
 )
@@ -214,10 +217,10 @@ export const getProjectDatasetTypes = createSelector(
 export const getDatasetTypes = createSelector(
   (state, props) => props.projectFamilies,
   getProjectDatasetTypes,
-  getSamplesByFamily,
-  (projectFamilies, projectDatasetTypes, samplesByFamily) => {
+  getActiveDatasetsByFamily,
+  (projectFamilies, projectDatasetTypes, datasetsByFamily) => {
     const isSingleFamily = (projectFamilies || []).length === 1 && projectFamilies[0].familyGuids?.length === 1
-    const datasetTypes = isSingleFamily ? getSampleDatasetTypes(samplesByFamily[projectFamilies[0].familyGuids[0]]) : (
+    const datasetTypes = isSingleFamily ? getActiveDatasetTypes(datasetsByFamily[projectFamilies[0].familyGuids[0]]) : (
       projectFamilies || []
     ).reduce((acc, { projectGuid }) => new Set([
       ...acc, ...(projectDatasetTypes[projectGuid] || [])]), new Set())
