@@ -85,7 +85,7 @@ export const getActiveDatasetsByIndividual = createSelector(
   datasetsByIndividual => Object.entries(datasetsByIndividual).reduce((acc, [individualGuid, datasets]) => ({
     ...acc,
     [individualGuid]: datasets.filter(({ isActive }) => isActive).map(
-      ({ sampleType, datasetType, loadedDate }) => ({ sampleType, datasetType, loadedDate }),
+      ({ sampleType, datasetType, loadedDate }) => ({ sampleType, datasetType, loadedDate, individualGuid }),
     ),
   }), {}),
 )

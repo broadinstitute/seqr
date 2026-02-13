@@ -20,7 +20,7 @@ import {
   getProjectsByGuid, getFamiliesGroupedByProjectGuid, getIndividualsByGuid, getGenesById, getUser,
   getAnalysisGroupsGroupedByProjectGuid, getSavedVariantsByGuid, getSortedIndividualsByFamily,
   getMmeResultsByGuid, getMmeSubmissionsByGuid, getHasActiveSearchSampleByFamily, getSelectableTagTypesByProject,
-  getVariantTagsByGuid, getUserOptionsByUsername, getSamplesByFamily, getNotesByFamilyType,
+  getVariantTagsByGuid, getUserOptionsByUsername, getSamplesByFamily, getNotesByFamilyType, getActiveDatasetsByFamily,
   getVariantTagNotesByFamilyVariants, getPhenotypeGeneScoresByIndividual, getActiveDatasetsByIndividual,
   getRnaSeqDataByIndividual, familyPassesFilters, getAnalysisGroupGuid, getCurrentAnalysisGroupFamilyGuids,
 } from 'redux/selectors'
@@ -134,11 +134,9 @@ export const getProjectAnalysisGroupFamilySizeHistogram = createSelector(
 
 export const getProjectAnalysisGroupDataLoadedFamilySizeHistogram = createSelector(
   getProjectAnalysisGroupFamiliesByGuid,
-  getSamplesByFamily,
-  (familiesByGuid, samplesByFamily) => getFamilySizeHistogram(Object.values(familiesByGuid).map(((family) => {
-    const sampleIndividuals = new Set((samplesByFamily[family.familyGuid] || []).filter(
-      sample => sample.isActive,
-    ).map(sample => sample.individualGuid))
+  getActiveDatasetsByFamily,
+  (familiesByGuid, datasetsByFamily) => getFamilySizeHistogram(Object.values(datasetsByFamily).map(((family) => {
+    const sampleIndividuals = new Set((datasetsByFamily[family.familyGuid] || []).map(sample => sample.individualGuid))
     const hasSampleParents = (family.parents || []).reduce(
       (acc, { individualGuid, maternalGuid, paternalGuid }) => {
         const hasSampleMaternal = sampleIndividuals.has(maternalGuid)
