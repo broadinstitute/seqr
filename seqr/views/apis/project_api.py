@@ -265,25 +265,19 @@ def project_families(request, project_guid):
 def project_overview(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user)
 
-    sample_load_counts, sample_models = _sample_load_counts(
-        Sample, project, 'sample_type', 'dataset_type', loadedDate=TruncDate('loaded_date'),
-    )
-    rna_sample_load_counts, _ = _sample_load_counts(
-        RnaSample, project, sample_type=Value('RNA'), dataset_type=F('data_type'), loadedDate=TruncDate('created_date'),
+    datasets = _sample_datasets(
+        Sample, project, sampleType=F('sample_type'), datasetType=F('dataset_type'), loadedDate=TruncDate('created_date'),
     )
 
-    first_loaded_samples = sample_models.order_by('individual__family', 'loaded_date').distinct('individual__family').values_list('id', flat=True)
-    samples = sample_models.filter(Q(is_active=True) | Q(id__in=first_loaded_samples))
-    samples_by_guid = {s['sampleGuid']: s for s in get_json_for_samples(samples, project_guid=project_guid)}
+    rna_datasets = _sample_datasets(
+        RnaSample, project, sampleType=Value('RNA'), datasetType=F('data_type'), loadedDate=TruncDate('created_date'),
+    )
 
-    grouped_sample_counts = defaultdict(list)
-    for s in sample_load_counts + rna_sample_load_counts:
-        s['familyCounts'] = {f: s['familyCounts'].count(f) for f in s['familyCounts']}
-        grouped_sample_counts[f'{s.pop("sample_type")}__{s.pop("dataset_type")}'].append(s)
-
-    project_json = {'projectGuid': project_guid, 'sampleCounts': grouped_sample_counts}
+    project_json = {'projectGuid': project_guid}
     response = {
-        'samplesByGuid': samples_by_guid,
+        'datasetsById': {
+            f"{d['datasetType']}-{d['sampleType']}-{d['loadedDate']}": d for d in list(datasets) + list(rna_datasets)
+        },
     }
 
     add_project_tag_type_counts(project, response, project_json=project_json)
@@ -299,11 +293,11 @@ def project_overview(request, project_guid):
     return create_json_response(response)
 
 
-def _sample_load_counts(sample_cls, project, *args, **kwargs):
-    sample_models = sample_cls.objects.filter(individual__family__project=project)
-    return list(sample_models.values(*args, **kwargs).order_by('loadedDate').annotate(
-        familyCounts=ArrayAgg('individual__family__guid'))
-    ), sample_models
+def _sample_datasets(sample_cls, project, **kwargs):
+    return sample_cls.objects.filter(individual__family__project=project).values(**kwargs).annotate(
+        activeIndividuals=ArrayAgg('individual__guid', filter=Q(is_active=True), distinct=True),
+        inactiveIndividuals=ArrayAgg('individual__guid', filter=Q(is_active=False), distinct=True),
+    )
 
 
 @login_and_policies_required
