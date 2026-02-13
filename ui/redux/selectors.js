@@ -457,8 +457,8 @@ const isAnalysedBy = (family, analysedByFilter, user, analysedByOptions) => {
 
 export const familyPassesFilters = createSelector(
   getUser,
-  getSamplesByFamily,
-  (user, samplesByFamily) => (
+  getDatasetsByFamily,
+  (user, datasetsByFamily) => (
     family, groupedFilters, analysedByOptions, categoryFilters = CATEGORY_FAMILY_FILTERS,
   ) => {
     if (groupedFilters.analysedBy && !isAnalysedBy(family, groupedFilters.analysedBy, user, analysedByOptions)) {
@@ -468,7 +468,7 @@ export const familyPassesFilters = createSelector(
       const filters = categoryFilters[key]?.filter(
         opt => groupVals.includes(opt.value) && opt.createFilter,
       ).map(opt => opt.createFilter)
-      return !filters?.length || filters.some(filter => filter(family, user, samplesByFamily))
+      return !filters?.length || filters.some(filter => filter(family, user, datasetsByFamily))
     })
   },
 )
