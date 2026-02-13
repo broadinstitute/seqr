@@ -67,6 +67,18 @@ const groupByFamilyGuid = objs => objs.reduce((acc, o) => {
   return acc
 }, {})
 
+export const getDatasetsByIndividual = createSelector(
+  getSamplesByGuid,
+  samplesByGuid => Object.values(samplesByGuid).reduce((acc, sample) => {
+    const { individualGuid, isActive, sampleType, datasetType, loadedDate } = sample
+    if (!acc[individualGuid]) {
+      acc[individualGuid] = []
+    }
+    acc[individualGuid].push({ isActive, sampleType, datasetType, loadedDate: loadedDate.split('T')[0] })
+    return acc
+  }, {}),
+)
+
 export const getNotesByFamilyType = createSelector(
   getFamilyNotesByGuid,
   notesByGuid => Object.values(notesByGuid).reduce((acc, note) => {
