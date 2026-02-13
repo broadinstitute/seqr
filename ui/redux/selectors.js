@@ -80,6 +80,16 @@ export const getDatasetsByIndividual = createSelector(
   }, {}),
 )
 
+export const getActiveDatasetsByIndividual = createSelector(
+  getDatasetsByIndividual,
+  datasetsByIndividual => Object.entries(datasetsByIndividual).reduce((acc, [individualGuid, datasets]) => ({
+    ...acc,
+    [individualGuid]: datasets.filter(({ isActive }) => isActive).map(
+      ({ sampleType, datasetType, loadedDate }) => ({ sampleType, datasetType, loadedDate }),
+    ),
+  }), {}),
+)
+
 export const getNotesByFamilyType = createSelector(
   getFamilyNotesByGuid,
   notesByGuid => Object.values(notesByGuid).reduce((acc, note) => {
@@ -156,6 +166,21 @@ export const getSamplesByFamily = createSelector(
   sortedSamples => groupByFamilyGuid(sortedSamples || []),
 )
 
+export const getActiveDatasetsByFamily = createSelector(
+  getFamiliesByGuid,
+  getActiveDatasetsByIndividual,
+  (familiesByGuid, activeDatasetsByIndividual) => Object.entries(familiesByGuid).reduce(
+    (acc, [familyGuid, { individualGuids }]) => ({
+      ...acc,
+      [familyGuid]: individualGuids.reduce(
+        (familyAcc, individualGuid) => [...familyAcc, ...(activeDatasetsByIndividual[individualGuid] || [])], [],
+      ),
+    }),
+    {},
+  ),
+)
+
+// TODO current usage: firstFamilyDataset
 export const getDatasetsByFamily = createSelector(
   getFamiliesByGuid,
   getDatasetsByIndividual,
@@ -171,12 +196,9 @@ export const getDatasetsByFamily = createSelector(
 )
 
 export const getHasActiveSearchSampleByFamily = createSelector(
-  getDatasetsByFamily,
-  datasetsByFamily => Object.entries(datasetsByFamily).reduce(
-    (acc, [familyGuid, familyDatasets]) => ({
-      ...acc,
-      [familyGuid]: familyDatasets.some(({ isActive }) => isActive),
-    }), {},
+  getActiveDatasetsByFamily,
+  activeDatasetsByFamily => Object.entries(activeDatasetsByFamily).reduce(
+    (acc, [familyGuid, familyDatasets]) => ({ ...acc, [familyGuid]: familyDatasets.length > 0 }), {},
   ),
 )
 
@@ -457,8 +479,8 @@ const isAnalysedBy = (family, analysedByFilter, user, analysedByOptions) => {
 
 export const familyPassesFilters = createSelector(
   getUser,
-  getDatasetsByFamily,
-  (user, datasetsByFamily) => (
+  getActiveDatasetsByFamily,
+  (user, activeDatasetsByFamily) => (
     family, groupedFilters, analysedByOptions, categoryFilters = CATEGORY_FAMILY_FILTERS,
   ) => {
     if (groupedFilters.analysedBy && !isAnalysedBy(family, groupedFilters.analysedBy, user, analysedByOptions)) {
@@ -468,7 +490,7 @@ export const familyPassesFilters = createSelector(
       const filters = categoryFilters[key]?.filter(
         opt => groupVals.includes(opt.value) && opt.createFilter,
       ).map(opt => opt.createFilter)
-      return !filters?.length || filters.some(filter => filter(family, user, datasetsByFamily))
+      return !filters?.length || filters.some(filter => filter(family, user, activeDatasetsByFamily))
     })
   },
 )

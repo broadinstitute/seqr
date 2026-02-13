@@ -373,9 +373,9 @@ const SHOW_ANALYSED_BY_ME = 'SHOW_ANALYSED_BY_ME'
 const SHOW_ANALYSED = 'SHOW_ANALYSED'
 const SHOW_NOT_ANALYSED = 'SHOW_NOT_ANALYSED'
 
-const hasMatchingDatasetFilter = isMatchingDataset => (family, user, datasetsByFamily) => (
-  (family.sampleTypes || datasetsByFamily[family.familyGuid] || []).some(
-    sample => sample.isActive && isMatchingDataset(sample),
+const hasMatchingDatasetFilter = isMatchingDataset => (family, user, activeDatasetsByFamily) => (
+  (family.sampleTypes || activeDatasetsByFamily[family.familyGuid] || []).some(
+    sample => isMatchingDataset(sample),
   ))
 
 export const ASSIGNED_TO_ME_FILTER = {

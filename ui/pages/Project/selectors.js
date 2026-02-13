@@ -21,7 +21,7 @@ import {
   getAnalysisGroupsGroupedByProjectGuid, getSavedVariantsByGuid, getSortedIndividualsByFamily,
   getMmeResultsByGuid, getMmeSubmissionsByGuid, getHasActiveSearchSampleByFamily, getSelectableTagTypesByProject,
   getVariantTagsByGuid, getUserOptionsByUsername, getSamplesByFamily, getNotesByFamilyType,
-  getVariantTagNotesByFamilyVariants, getPhenotypeGeneScoresByIndividual, getDatasetsByIndividual,
+  getVariantTagNotesByFamilyVariants, getPhenotypeGeneScoresByIndividual, getActiveDatasetsByIndividual,
   getRnaSeqDataByIndividual, familyPassesFilters, getAnalysisGroupGuid, getCurrentAnalysisGroupFamilyGuids,
 } from 'redux/selectors'
 
@@ -494,13 +494,12 @@ const getFamiliesExportData = createSelector(
 const getIndividualsExportData = createSelector(
   getVisibleFamiliesInSortedOrder,
   getSortedIndividualsByFamily,
-  getDatasetsByIndividual,
-  (families, individualsByFamily, datasetsByIndividual) => families.reduce((acc, family) => [
+  getActiveDatasetsByIndividual,
+  (families, individualsByFamily, activeDatasetsByIndividual) => families.reduce((acc, family) => [
     ...acc, ...(individualsByFamily[family.familyGuid] || []).map(individual => ({
       ...individual,
       [FAMILY_FIELD_ID]: family.familyId,
-      [INDIVIDUAL_HAS_DATA_FIELD]: (
-        datasetsByIndividual[individual.individualGuid] || []).some(({ isActive }) => isActive),
+      [INDIVIDUAL_HAS_DATA_FIELD]: (activeDatasetsByIndividual[individual.individualGuid] || []).length > 0,
     }))], []),
 )
 
