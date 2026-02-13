@@ -506,9 +506,9 @@ export const CASE_REVIEW_INDIVIDUAL_EXPORT_DATA = [
 export const SAMPLE_EXPORT_DATA = [
   { header: 'Family ID', field: 'familyId' },
   { header: 'Individual ID', field: 'individualId' },
-  { header: 'Sample ID', field: 'sampleId' },
   { header: 'Loaded Date', field: 'loadedDate' },
   { header: 'Sample Type', field: 'sampleType' },
+  { header: 'Dataset Type', field: 'datasetType' },
 ]
 
 export const TAG_FIELD_NAME = 'tags'

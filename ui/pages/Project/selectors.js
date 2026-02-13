@@ -18,9 +18,9 @@ import { toCamelcase, toSnakecase, snakecaseToTitlecase } from 'shared/utils/str
 
 import {
   getProjectsByGuid, getFamiliesGroupedByProjectGuid, getIndividualsByGuid, getGenesById, getUser,
-  getAnalysisGroupsGroupedByProjectGuid, getSavedVariantsByGuid, getSortedIndividualsByFamily,
+  getAnalysisGroupsGroupedByProjectGuid, getSavedVariantsByGuid, getSortedIndividualsByFamily, getDatasetsByIndividual,
   getMmeResultsByGuid, getMmeSubmissionsByGuid, getHasActiveSearchSampleByFamily, getSelectableTagTypesByProject,
-  getVariantTagsByGuid, getUserOptionsByUsername, getSamplesByFamily, getNotesByFamilyType, getDatasetsByFamily, getActiveDatasetsByFamily,
+  getVariantTagsByGuid, getUserOptionsByUsername, getNotesByFamilyType, getDatasetsByFamily, getActiveDatasetsByFamily,
   getVariantTagNotesByFamilyVariants, getPhenotypeGeneScoresByIndividual, getActiveDatasetsByIndividual,
   getRnaSeqDataByIndividual, familyPassesFilters, getAnalysisGroupGuid, getCurrentAnalysisGroupFamilyGuids,
 } from 'redux/selectors'
@@ -503,14 +503,16 @@ const getIndividualsExportData = createSelector(
 
 const getSamplesExportData = createSelector(
   getVisibleFamiliesInSortedOrder,
-  getIndividualsByGuid,
-  getSamplesByFamily,
-  (visibleFamilies, individualsByGuid, samplesByFamily) => visibleFamilies.reduce((acc, family) => [
-    ...acc, ...(samplesByFamily[family.familyGuid] || []).map(sample => ({
-      ...sample,
-      [FAMILY_FIELD_ID]: family.familyId,
-      [INDIVIDUAL_FIELD_ID]: individualsByGuid[sample.individualGuid]?.individualId,
-    }))], []),
+  getSortedIndividualsByFamily,
+  getDatasetsByIndividual,
+  (visibleFamilies, individualsByFamily, datasetsByIndividual) => visibleFamilies.reduce((acc, family) => [
+    ...acc, ...(individualsByFamily[family.familyGuid] || []).reduce((indivAcc, { individualGuid, individualId }) => ([
+      ...indivAcc, ...(datasetsByIndividual[individualGuid] || []).map(sample => ({
+        ...sample,
+        [FAMILY_FIELD_ID]: family.familyId,
+        [INDIVIDUAL_FIELD_ID]: individualId,
+      })),
+    ]), [])], []),
 )
 
 export const getProjectExportUrls = createSelector(

@@ -155,17 +155,6 @@ export const getSortedIndividualsByFamily = createSelector(
   groupByFamilyGuid,
 )
 
-const getSortedSamples = createSelector(
-  getSamplesByGuid,
-  samplesByGuid => Object.values(samplesByGuid).sort((a, b) => a.loadedDate.localeCompare(b.loadedDate)),
-)
-
-// TODO
-export const getSamplesByFamily = createSelector(
-  getSortedSamples,
-  sortedSamples => groupByFamilyGuid(sortedSamples || []),
-)
-
 export const getActiveDatasetsByFamily = createSelector(
   getFamiliesByGuid,
   getActiveDatasetsByIndividual,
