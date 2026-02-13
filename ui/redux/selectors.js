@@ -177,6 +177,9 @@ export const getMinMaxDatasetsByFamily = createSelector(
       ...acc,
       [familyGuid]: individualGuids.reduce(([minLoaded, maxLoaded], individualGuid) => {
         const individualDatasets = datasetsByIndividual[individualGuid] || []
+        if (individualDatasets.length === 0) {
+          return [minLoaded, maxLoaded]
+        }
         const endIndex = individualDatasets.length - 1
         return [
           minLoaded?.loadedDate < individualDatasets[0]?.loadedDate ? minLoaded : individualDatasets[0],
