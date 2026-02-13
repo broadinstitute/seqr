@@ -56,7 +56,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='TopmedSeqrVariantsGRCh37SnvIndel',
             fields=[
-                ('key', models.OneToOneField(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='clickhouse_search.annotationsgrch37snvindel')),
+                ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
                 ('ac', clickhouse_backend.models.UInt32Field()),
                 ('af', clickhouse_backend.models.DecimalField(decimal_places=8, max_digits=9)),
                 ('an', clickhouse_backend.models.UInt32Field()),
@@ -75,7 +75,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='TopmedSeqrVariantsSnvIndel',
             fields=[
-                ('key', models.OneToOneField(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='clickhouse_search.annotationssnvindel')),
+                ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
                 ('ac', clickhouse_backend.models.UInt32Field()),
                 ('af', clickhouse_backend.models.DecimalField(decimal_places=8, max_digits=9)),
                 ('an', clickhouse_backend.models.UInt32Field()),

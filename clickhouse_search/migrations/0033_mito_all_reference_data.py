@@ -47,13 +47,7 @@ class Migration(migrations.Migration):
             fields=[
                 (
                     "key",
-                    models.OneToOneField(
-                        db_column="key",
-                        on_delete=django.db.models.deletion.CASCADE,
-                        primary_key=True,
-                        serialize=False,
-                        to="clickhouse_search.annotationsmito",
-                    ),
+                    clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False),
                 ),
                 ("ac", clickhouse_backend.models.UInt32Field()),
                 (
@@ -115,13 +109,7 @@ class Migration(migrations.Migration):
             fields=[
                 (
                     "key",
-                    models.OneToOneField(
-                        db_column="key",
-                        on_delete=django.db.models.deletion.CASCADE,
-                        primary_key=True,
-                        serialize=False,
-                        to="clickhouse_search.annotationsmito",
-                    ),
+                    clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False),
                 ),
                 ("ac", clickhouse_backend.models.UInt32Field()),
                 (
@@ -183,13 +171,7 @@ class Migration(migrations.Migration):
             fields=[
                 (
                     "key",
-                    models.OneToOneField(
-                        db_column="key",
-                        on_delete=django.db.models.deletion.CASCADE,
-                        primary_key=True,
-                        serialize=False,
-                        to="clickhouse_search.annotationsmito",
-                    ),
+                    clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False),
                 ),
                 ("ac", clickhouse_backend.models.UInt32Field()),
                 (
@@ -251,13 +233,7 @@ class Migration(migrations.Migration):
             fields=[
                 (
                     "key",
-                    models.OneToOneField(
-                        db_column="key",
-                        on_delete=django.db.models.deletion.CASCADE,
-                        primary_key=True,
-                        serialize=False,
-                        to="clickhouse_search.annotationsmito",
-                    ),
+                    clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False),
                 ),
                 ("ac", clickhouse_backend.models.UInt32Field()),
                 (
@@ -317,13 +293,7 @@ class Migration(migrations.Migration):
             fields=[
                 (
                     "key",
-                    models.OneToOneField(
-                        db_column="key",
-                        on_delete=django.db.models.deletion.CASCADE,
-                        primary_key=True,
-                        serialize=False,
-                        to="clickhouse_search.annotationsmito",
-                    ),
+                    clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False),
                 ),
                 (
                     "score",
@@ -375,13 +345,7 @@ class Migration(migrations.Migration):
             fields=[
                 (
                     "key",
-                    models.OneToOneField(
-                        db_column="key",
-                        on_delete=django.db.models.deletion.CASCADE,
-                        primary_key=True,
-                        serialize=False,
-                        to="clickhouse_search.annotationsmito",
-                    ),
+                    clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False),
                 ),
                 (
                     "score",
@@ -433,13 +397,7 @@ class Migration(migrations.Migration):
             fields=[
                 (
                     "key",
-                    models.OneToOneField(
-                        db_column="key",
-                        on_delete=django.db.models.deletion.CASCADE,
-                        primary_key=True,
-                        serialize=False,
-                        to="clickhouse_search.annotationsmito",
-                    ),
+                    clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False),
                 ),
                 (
                     "score",
@@ -486,13 +444,7 @@ class Migration(migrations.Migration):
             fields=[
                 (
                     "key",
-                    models.OneToOneField(
-                        db_column="key",
-                        on_delete=django.db.models.deletion.CASCADE,
-                        primary_key=True,
-                        serialize=False,
-                        to="clickhouse_search.annotationsmito",
-                    ),
+                    clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False),
                 ),
                 ("pathogenic", clickhouse_backend.models.BoolField()),
             ],
