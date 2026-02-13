@@ -5,7 +5,6 @@ import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
 import { Field } from 'react-final-form'
 import { Label, Popup, Form, Input, Loader } from 'semantic-ui-react'
-import orderBy from 'lodash/orderBy'
 
 import { SearchInput, YearSelector, RadioButtonGroup, ButtonRadioGroup, Select } from 'shared/components/form/Inputs'
 import { helpLabel, validators } from 'shared/components/form/FormHelpers'
@@ -581,7 +580,7 @@ class IndividualRow extends React.PureComponent {
     const { displayName, sex, affected, createdDate } = individual
 
     // only show active or first/ last inactive samples
-    const loadedDatasets = orderBy(datasets, [s => s.loadedDate], 'desc').filter(
+    const loadedDatasets = datasets.reverse().filter(
       ({ isActive }, i) => isActive || i === 0 || i === datasets.length - 1,
     )
 

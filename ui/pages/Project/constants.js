@@ -367,18 +367,16 @@ export const FAMILY_SORT_OPTIONS = [
   {
     value: SORT_BY_DATA_LOADED_DATE,
     name: 'Date Loaded',
-    createSortKeyGetter: (individualsByGuid, datasetsByFamily) => (family) => {
-      const loadedDatasets = datasetsByFamily[family.familyGuid] || []
-      return loadedDatasets.length ? loadedDatasets[loadedDatasets.length - 1].loadedDate : '2000-01-01T01:00:00.000Z'
-    },
+    createSortKeyGetter: (individualsByGuid, minMaxDatasetsByFamily) => family => (
+      minMaxDatasetsByFamily[family.familyGuid][1]?.loadedDate || '2000-01-01T01:00:00.000Z'
+    ),
   },
   {
     value: SORT_BY_DATA_FIRST_LOADED_DATE,
     name: 'Date First Loaded',
-    createSortKeyGetter: (individualsByGuid, datasetsByFamily) => (family) => {
-      const loadedDatasets = datasetsByFamily[family.familyGuid] || []
-      return loadedDatasets.length ? loadedDatasets[0].loadedDate : '2000-01-01T01:00:00.000Z'
-    },
+    createSortKeyGetter: (individualsByGuid, minMaxDatasetsByFamily) => family => (
+      minMaxDatasetsByFamily[family.familyGuid][0]?.loadedDate || '2000-01-01T01:00:00.000Z'
+    ),
   },
   {
     value: SORT_BY_ANALYSIS_STATUS,

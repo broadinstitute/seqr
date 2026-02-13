@@ -18,11 +18,12 @@ import { toCamelcase, toSnakecase, snakecaseToTitlecase } from 'shared/utils/str
 
 import {
   getProjectsByGuid, getFamiliesGroupedByProjectGuid, getIndividualsByGuid, getGenesById, getUser,
-  getAnalysisGroupsGroupedByProjectGuid, getSavedVariantsByGuid, getSortedIndividualsByFamily, getDatasetsByIndividual,
+  getAnalysisGroupsGroupedByProjectGuid, getSavedVariantsByGuid, getSortedIndividualsByFamily,
   getMmeResultsByGuid, getMmeSubmissionsByGuid, getHasActiveSearchSampleByFamily, getSelectableTagTypesByProject,
-  getVariantTagsByGuid, getUserOptionsByUsername, getNotesByFamilyType, getDatasetsByFamily, getActiveDatasetsByFamily,
+  getVariantTagsByGuid, getUserOptionsByUsername, getNotesByFamilyType,
   getVariantTagNotesByFamilyVariants, getPhenotypeGeneScoresByIndividual, getActiveDatasetsByIndividual,
   getRnaSeqDataByIndividual, familyPassesFilters, getAnalysisGroupGuid, getCurrentAnalysisGroupFamilyGuids,
+  getDatasetsByIndividual, getActiveDatasetsByFamily, getMinMaxDatasetsByFamily,
 } from 'redux/selectors'
 
 import {
@@ -454,16 +455,16 @@ export const getVisibleFamilies = createSelector(
 export const getVisibleFamiliesInSortedOrder = createSelector(
   getVisibleFamilies,
   getIndividualsByGuid,
-  getDatasetsByFamily,
+  getMinMaxDatasetsByFamily,
   getFamiliesSortOrder,
   getFamiliesSortDirection,
-  (visibleFamilies, individualsByGuid, datasetsByFamily, familiesSortOrder, familiesSortDirection) => {
+  (visibleFamilies, individualsByGuid, minMaxDatasetsByFamily, familiesSortOrder, familiesSortDirection) => {
     if (!familiesSortOrder || !FAMILY_SORT_LOOKUP[familiesSortOrder] ||
       visibleFamilies.some(({ familyId }) => !familyId)) { // families have been loaded without any core fields
       return visibleFamilies
     }
 
-    const getSortKey = FAMILY_SORT_LOOKUP[familiesSortOrder](individualsByGuid, datasetsByFamily)
+    const getSortKey = FAMILY_SORT_LOOKUP[familiesSortOrder](individualsByGuid, minMaxDatasetsByFamily)
     return visibleFamilies.slice(0).sort((a, b) => getSortKey(a).localeCompare(getSortKey(b)) * familiesSortDirection)
   },
 )
@@ -479,13 +480,13 @@ export const getEntityExportConfig = ({ projectName, tableName, fileName, fields
 
 const getFamiliesExportData = createSelector(
   getVisibleFamiliesInSortedOrder,
-  getDatasetsByFamily,
+  getMinMaxDatasetsByFamily,
   getNotesByFamilyType,
-  (visibleFamilies, datasetsByFamily, notesByFamilyType) => visibleFamilies.reduce((acc, family) => [...acc, {
+  (visibleFamilies, minMaxDatasetsByFamily, notesByFamilyType) => visibleFamilies.reduce((acc, family) => [...acc, {
     ...family,
     ...FAMILY_NOTES_FIELDS.reduce((noteAcc, { id, noteType }) => (
       { ...noteAcc, [id]: (notesByFamilyType[family.familyGuid] || {})[noteType] }), {}),
-    [FAMILY_FIELD_FIRST_SAMPLE]: (datasetsByFamily[family.familyGuid] || [])[0],
+    [FAMILY_FIELD_FIRST_SAMPLE]: (minMaxDatasetsByFamily[family.familyGuid] || [])[0],
   }], []),
 )
 

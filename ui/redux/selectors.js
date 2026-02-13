@@ -70,7 +70,9 @@ const groupByFamilyGuid = objs => objs.reduce((acc, o) => {
 
 export const getDatasetsByIndividual = createSelector(
   getSamplesByGuid,
-  samplesByGuid => Object.values(samplesByGuid).reduce((acc, sample) => {
+  samplesByGuid => Object.values(samplesByGuid).sort(
+    (a, b) => a.loadedDate.localeCompare(b.loadedDate),
+  ).reduce((acc, sample) => {
     const { individualGuid, isActive, sampleType, datasetType, loadedDate } = sample
     if (!acc[individualGuid]) {
       acc[individualGuid] = []
@@ -169,16 +171,20 @@ export const getActiveDatasetsByFamily = createSelector(
   ),
 )
 
-// TODO current usage: firstFamilyDataset and last loaded date
-export const getDatasetsByFamily = createSelector(
+export const getMinMaxDatasetsByFamily = createSelector(
   getFamiliesByGuid,
   getDatasetsByIndividual,
   (familiesByGuid, datasetsByIndividual) => Object.entries(familiesByGuid).reduce(
     (acc, [familyGuid, { individualGuids }]) => ({
       ...acc,
-      [familyGuid]: individualGuids.reduce(
-        (familyAcc, individualGuid) => [...familyAcc, ...(datasetsByIndividual[individualGuid] || [])], [],
-      ).sort((a, b) => a.loadedDate.localeCompare(b.loadedDate)),
+      [familyGuid]: individualGuids.reduce(([minLoaded, maxLoaded], individualGuid) => {
+        const individualDatasets = datasetsByIndividual[individualGuid] || []
+        const endIndex = individualDatasets.length - 1
+        return [
+          minLoaded?.loadedDate < individualDatasets[0]?.loadedDate ? minLoaded : individualDatasets[0],
+          maxLoaded?.loadedDate > individualDatasets[endIndex]?.loadedDate ? maxLoaded : individualDatasets[endIndex],
+        ]
+      }, [null, null]),
     }),
     {},
   ),

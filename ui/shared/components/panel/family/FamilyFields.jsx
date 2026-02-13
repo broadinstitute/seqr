@@ -7,7 +7,7 @@ import styled from 'styled-components'
 import { loadUserOptions, updateFamily } from 'redux/rootReducer'
 import { loadProjectAnalysisGroups } from 'redux/utils/reducerUtils'
 import {
-  getDatasetsByFamily,
+  getMinMaxDatasetsByFamily,
   getUserOptionsIsLoading,
   getHasActiveSearchSampleByFamily,
   getUserOptions,
@@ -43,7 +43,7 @@ BaseFirstSample.propTypes = {
 }
 
 const mapSampleDispatchToProps = (state, ownProps) => ({
-  firstFamilyDataset: (getDatasetsByFamily(state)[ownProps.familyGuid] || [])[0],
+  firstFamilyDataset: (getMinMaxDatasetsByFamily(state)[ownProps.familyGuid] || [])[0],
   hasActiveVariantSample: getHasActiveSearchSampleByFamily(state)[ownProps.familyGuid],
 })
 
