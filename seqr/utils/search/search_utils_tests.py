@@ -665,11 +665,6 @@ class ClickhouseSearchUtilsTests(DifferentDbTransactionSupportMixin, TestCase, S
     def setUp(self):
         self.set_up()
 
-    @classmethod
-    def setUpClass(cls):
-        AnvilAuthenticationTestCase._clean_up_clickhouse_db()
-        super().setUpClass()
-
     def _assert_expected_cached_variants(self, variants, num_results):
         self.assertListEqual(
             json.loads(json.dumps(variants, cls=DjangoJSONEncoderWithSets)),
