@@ -20,7 +20,7 @@ import {
   getProjectsByGuid, getFamiliesGroupedByProjectGuid, getIndividualsByGuid, getGenesById, getUser,
   getAnalysisGroupsGroupedByProjectGuid, getSavedVariantsByGuid, getSortedIndividualsByFamily,
   getMmeResultsByGuid, getMmeSubmissionsByGuid, getHasActiveSearchSampleByFamily, getSelectableTagTypesByProject,
-  getVariantTagsByGuid, getUserOptionsByUsername, getSamplesByFamily, getNotesByFamilyType, getActiveDatasetsByFamily,
+  getVariantTagsByGuid, getUserOptionsByUsername, getSamplesByFamily, getNotesByFamilyType, getDatasetsByFamily, getActiveDatasetsByFamily,
   getVariantTagNotesByFamilyVariants, getPhenotypeGeneScoresByIndividual, getActiveDatasetsByIndividual,
   getRnaSeqDataByIndividual, familyPassesFilters, getAnalysisGroupGuid, getCurrentAnalysisGroupFamilyGuids,
 } from 'redux/selectors'
@@ -454,16 +454,16 @@ export const getVisibleFamilies = createSelector(
 export const getVisibleFamiliesInSortedOrder = createSelector(
   getVisibleFamilies,
   getIndividualsByGuid,
-  getSamplesByFamily,
+  getDatasetsByFamily,
   getFamiliesSortOrder,
   getFamiliesSortDirection,
-  (visibleFamilies, individualsByGuid, samplesByFamily, familiesSortOrder, familiesSortDirection) => {
+  (visibleFamilies, individualsByGuid, datasetsByFamily, familiesSortOrder, familiesSortDirection) => {
     if (!familiesSortOrder || !FAMILY_SORT_LOOKUP[familiesSortOrder] ||
       visibleFamilies.some(({ familyId }) => !familyId)) { // families have been loaded without any core fields
       return visibleFamilies
     }
 
-    const getSortKey = FAMILY_SORT_LOOKUP[familiesSortOrder](individualsByGuid, samplesByFamily)
+    const getSortKey = FAMILY_SORT_LOOKUP[familiesSortOrder](individualsByGuid, datasetsByFamily)
     return visibleFamilies.slice(0).sort((a, b) => getSortKey(a).localeCompare(getSortKey(b)) * familiesSortDirection)
   },
 )
@@ -479,13 +479,13 @@ export const getEntityExportConfig = ({ projectName, tableName, fileName, fields
 
 const getFamiliesExportData = createSelector(
   getVisibleFamiliesInSortedOrder,
-  getSamplesByFamily,
+  getDatasetsByFamily,
   getNotesByFamilyType,
-  (visibleFamilies, samplesByFamily, notesByFamilyType) => visibleFamilies.reduce((acc, family) => [...acc, {
+  (visibleFamilies, datasetsByFamily, notesByFamilyType) => visibleFamilies.reduce((acc, family) => [...acc, {
     ...family,
     ...FAMILY_NOTES_FIELDS.reduce((noteAcc, { id, noteType }) => (
       { ...noteAcc, [id]: (notesByFamilyType[family.familyGuid] || {})[noteType] }), {}),
-    [FAMILY_FIELD_FIRST_SAMPLE]: (samplesByFamily[family.familyGuid] || [])[0],
+    [FAMILY_FIELD_FIRST_SAMPLE]: (datasetsByFamily[family.familyGuid] || [])[0],
   }], []),
 )
 

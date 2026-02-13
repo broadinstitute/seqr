@@ -180,7 +180,7 @@ export const getActiveDatasetsByFamily = createSelector(
   ),
 )
 
-// TODO current usage: firstFamilyDataset
+// TODO current usage: firstFamilyDataset and last loaded date
 export const getDatasetsByFamily = createSelector(
   getFamiliesByGuid,
   getDatasetsByIndividual,
