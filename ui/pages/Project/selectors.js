@@ -17,11 +17,11 @@ import {
 import { toCamelcase, toSnakecase, snakecaseToTitlecase } from 'shared/utils/stringUtils'
 
 import {
-  getProjectsByGuid, getFamiliesGroupedByProjectGuid, getIndividualsByGuid, getSamplesByGuid, getGenesById, getUser,
+  getProjectsByGuid, getFamiliesGroupedByProjectGuid, getIndividualsByGuid, getGenesById, getUser,
   getAnalysisGroupsGroupedByProjectGuid, getSavedVariantsByGuid, getSortedIndividualsByFamily,
   getMmeResultsByGuid, getMmeSubmissionsByGuid, getHasActiveSearchSampleByFamily, getSelectableTagTypesByProject,
   getVariantTagsByGuid, getUserOptionsByUsername, getSamplesByFamily, getNotesByFamilyType,
-  getVariantTagNotesByFamilyVariants, getPhenotypeGeneScoresByIndividual,
+  getVariantTagNotesByFamilyVariants, getPhenotypeGeneScoresByIndividual, getDatasetsByIndividual,
   getRnaSeqDataByIndividual, familyPassesFilters, getAnalysisGroupGuid, getCurrentAnalysisGroupFamilyGuids,
 } from 'redux/selectors'
 
@@ -491,27 +491,16 @@ const getFamiliesExportData = createSelector(
   }], []),
 )
 
-const getSamplesByIndividual = createSelector(
-  getSamplesByGuid,
-  samplesByGuid => Object.values(samplesByGuid).reduce((acc, sample) => {
-    if (!acc[sample.individualGuid]) {
-      acc[sample.individualGuid] = []
-    }
-    acc[sample.individualGuid].push(sample)
-    return acc
-  }, {}),
-)
-
 const getIndividualsExportData = createSelector(
   getVisibleFamiliesInSortedOrder,
   getSortedIndividualsByFamily,
-  getSamplesByIndividual,
-  (families, individualsByFamily, samplesByIndividual) => families.reduce((acc, family) => [
+  getDatasetsByIndividual,
+  (families, individualsByFamily, datasetsByIndividual) => families.reduce((acc, family) => [
     ...acc, ...(individualsByFamily[family.familyGuid] || []).map(individual => ({
       ...individual,
       [FAMILY_FIELD_ID]: family.familyId,
       [INDIVIDUAL_HAS_DATA_FIELD]: (
-        samplesByIndividual[individual.individualGuid] || []).some(({ isActive }) => isActive),
+        datasetsByIndividual[individual.individualGuid] || []).some(({ isActive }) => isActive),
     }))], []),
 )
 

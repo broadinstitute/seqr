@@ -11,7 +11,7 @@ export const getFamiliesByGuid = state => state.familiesByGuid
 export const getFamilyNotesByGuid = state => state.familyNotesByGuid
 export const getFamilyDetailsLoading = state => state.familyDetailsLoading
 export const getIndividualsByGuid = state => state.individualsByGuid
-export const getSamplesByGuid = state => state.samplesByGuid
+const getSamplesByGuid = state => state.samplesByGuid
 export const getIgvSamplesByGuid = state => state.igvSamplesByGuid
 export const getAnalysisGroupsByGuid = state => state.analysisGroupsByGuid
 export const getAnalysisGroupIsLoading = state => state.analysisGroupsLoading.isLoading
@@ -57,6 +57,7 @@ const groupEntitiesByProjectGuid = entities => Object.entries(entities).reduce((
 }, {})
 export const getFamiliesGroupedByProjectGuid = createSelector(getFamiliesByGuid, groupEntitiesByProjectGuid)
 export const getAnalysisGroupsGroupedByProjectGuid = createSelector(getAnalysisGroupsByGuid, groupEntitiesByProjectGuid)
+// TODO
 export const getSamplesGroupedByProjectGuid = createSelector(getSamplesByGuid, groupEntitiesByProjectGuid)
 
 const groupByFamilyGuid = objs => objs.reduce((acc, o) => {
@@ -149,17 +150,32 @@ const getSortedSamples = createSelector(
   samplesByGuid => Object.values(samplesByGuid).sort((a, b) => a.loadedDate.localeCompare(b.loadedDate)),
 )
 
+// TODO
 export const getSamplesByFamily = createSelector(
   getSortedSamples,
   sortedSamples => groupByFamilyGuid(sortedSamples || []),
 )
 
-export const getHasActiveSearchSampleByFamily = createSelector(
-  getSamplesByFamily,
-  samplesByFamily => Object.entries(samplesByFamily).reduce(
-    (acc, [familyGuid, familySamples]) => ({
+export const getDatasetsByFamily = createSelector(
+  getFamiliesByGuid,
+  getDatasetsByIndividual,
+  (familiesByGuid, datasetsByIndividual) => Object.entries(familiesByGuid).reduce(
+    (acc, [familyGuid, { individualGuids }]) => ({
       ...acc,
-      [familyGuid]: familySamples.some(({ isActive }) => isActive),
+      [familyGuid]: individualGuids.reduce(
+        (familyAcc, individualGuid) => [...familyAcc, ...(datasetsByIndividual[individualGuid] || [])], [],
+      ).sort((a, b) => a.loadedDate.localeCompare(b.loadedDate)),
+    }),
+    {},
+  ),
+)
+
+export const getHasActiveSearchSampleByFamily = createSelector(
+  getDatasetsByFamily,
+  datasetsByFamily => Object.entries(datasetsByFamily).reduce(
+    (acc, [familyGuid, familyDatasets]) => ({
+      ...acc,
+      [familyGuid]: familyDatasets.some(({ isActive }) => isActive),
     }), {},
   ),
 )
