@@ -5,7 +5,7 @@ from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocks
 from clickhouse_search.backend.fields import Enum8Field, NestedField, UInt32FieldDeltaCodecField, UInt64FieldDeltaCodecField, NamedTupleField, MaterializedUInt8Field
 from clickhouse_search.backend.functions import ArrayDistinct, ArrayFlatten, ArrayMin, ArrayMax
 from clickhouse_search.backend.table_models import Dictionary, FixtureLoadableClickhouseModel
-from clickhouse_search.managers import EntriesManager, SvEntriesManager, SvAnnotationsQuerySet, AnnotationsQuerySet \
+from clickhouse_search.managers import EntriesManager, SvEntriesManager, SvVariantsQuerySet, VariantsQuerySet, \
     VariantDetailsQuerySet
 from clickhouse_search.models.reference_data_models import GnomadNonCodingConstraintDict, BaseSpliceAi, \
     ScreenDict
