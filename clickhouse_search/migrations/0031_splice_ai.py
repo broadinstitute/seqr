@@ -50,7 +50,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='SpliceAiSeqrVariantsGRCh37SnvIndel',
             fields=[
-                ('key', models.OneToOneField(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='clickhouse_search.annotationsgrch37snvindel')),
+                ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
                 ('score', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
                 ('consequence', clickhouse_backend.models.Enum8Field(choices=[(0, 'Acceptor gain'), (1, 'Acceptor loss'), (2, 'Donor gain'), (3, 'Donor loss'), (4, 'No consequence')])),
             ],
@@ -66,7 +66,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='SpliceAiSeqrVariantsSnvIndel',
             fields=[
-                ('key', models.OneToOneField(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='clickhouse_search.annotationssnvindel')),
+                ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
                 ('score', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
                 ('consequence', clickhouse_backend.models.Enum8Field(choices=[(0, 'Acceptor gain'), (1, 'Acceptor loss'), (2, 'Donor gain'), (3, 'Donor loss'), (4, 'No consequence')])),
             ],

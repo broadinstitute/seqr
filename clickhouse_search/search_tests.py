@@ -1,6 +1,6 @@
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.management import call_command
-from django.test import TransactionTestCase
+from django.db import connections
 from django.urls.base import reverse
 import json
 import mock
@@ -18,8 +18,9 @@ from clickhouse_search.models.reference_data_models import ClinvarMvSnvIndel, Cl
     LocalconstraintmitoDict, GnomadGenomesMv, GnomadGenomesDict, GnomadExomesMv, GnomadExomesDict, TopmedMv, TopmedDict, \
     GnomadGenomesGRCh37Mv, GnomadGenomesGRCh37Dict, GnomadExomesGRCh37Mv, GnomadExomesGRCh37Dict, TopmedGRCh37Mv, \
     TopmedGRCh37Dict, GnomadmitoMv, GnomadmitoDict, GnomadmitoheteroplasmyMv, GnomadmitoheteroplasmyDict, HelixmitoMv, \
-    HelixmitoDict, HelixmitoheteroplasmyMv, HelixmitoheteroplasmyDict, ScreenDict, MitomapMv, MitomapDict
-from clickhouse_search.models.search_models import EntriesSnvIndel, AnnotationsSnvIndel
+    HelixmitoDict, HelixmitoheteroplasmyMv, HelixmitoheteroplasmyDict, ScreenDict, MitomapMv, MitomapDict, Absplice2Mv, \
+    Absplice2Dict, PromoterAIMv, PromoterAIDict, PextSnvIndelMv, PextSnvIndelDict, PextMitoMv, PextMitoDict
+from clickhouse_search.models.search_models import EntriesSnvIndel, VariantsSnvIndel
 from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4, CACHED_CONSEQUENCES_BY_KEY, \
     VARIANT_ID_SEARCH, VARIANT_IDS, LOCATION_SEARCH, GENE_IDS, SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT, \
     SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3, COMP_HET_ALL_PASS_FILTERS, \
@@ -38,35 +39,48 @@ from seqr.utils.search.search_utils_tests import SearchTestHelper
 from seqr.utils.search.utils import query_variants, variant_lookup, get_variant_query_gene_counts, get_single_variant, InvalidSearchException
 from seqr.views.apis.data_manager_api import trigger_delete_project
 from seqr.views.utils.json_utils import DjangoJSONEncoderWithSets
-from seqr.views.utils.test_utils import AnvilAuthenticationTestMixin
+from seqr.views.utils.test_utils import AnvilAuthenticationTestCase
 from seqr.views.apis.variant_search_api import query_variants_handler
 
-from settings import DATABASES
 
+class ClickhouseSearchTestCase(AnvilAuthenticationTestCase):
 
-class ClickhouseSearchTestCase(AnvilAuthenticationTestMixin, TransactionTestCase):
+    @classmethod
+    def setUpClass(cls):
+        # Atomic transactions prevent the clickhouse/ postgres connection from working properly,
+        # so disable them for the initial fixture loading
+        original_enter_atomics = cls._enter_atomics
+        cls._enter_atomics = lambda: {}
+        super().setUpClass()
+        cls._enter_atomics = original_enter_atomics
 
-    def setUp(self):
-        super().set_up_test()
+    @classmethod
+    def tearDownClass(cls):
+        for conn in connections.all(initialized_only=True):
+            conn.close()
+        for db_name in cls._databases_names():
+            call_command(
+                "flush",
+                verbosity=0,
+                interactive=False,
+                database=db_name,
+                reset_sequences=False,
+                allow_cascade=False,
+                inhibit_post_migrate=False,
+            )
 
-    def _fixture_setup(self): # pylint: disable=arguments-differ
-        # TransactionTestCase does not call setupTestData in the same way as TestCase
-        # https://github.com/django/django/blob/stable/4.2.x/django/test/testcases.py#L1466
-        # As a warning to a future reader, this method changes from an instance to a class method
-        # between versions 4.x and 6.x (alongside several other impactful method changes).  When
-        # Django is updated, our pattern here must be re-visited.
-        super()._fixture_setup()
+    @classmethod
+    def setUpTestData(cls):
         AffectedDict.reload()
         SexDict.reload()
-        for db in DATABASES.keys():
-            call_command("loaddata", 'clickhouse_search', database=db)
         for view in [
             ProjectsToGtStatsGRCh37SnvIndel, ProjectsToGtStatsSnvIndel, ProjectsToGtStatsMito, ProjectsToGtStatsSv,
             ClinvarMvSnvIndel, ClinvarSearchMvSnvIndel, ClinvarMvMito, ClinvarSearchMvMito, ClinvarMvGRCh37SnvIndel,
             ClinvarSearchMvGRCh37SnvIndel, HgmdMv, HgmdSearchMv, DbnsfpSnvIndelMv, EigenMv, SpliceAiMv,
             DbnsfpGRCh37SnvIndelMv, EigenGRCh37Mv, SpliceAiGRCh37Mv, DbnsfpMitoMv, MitimpactMv, HmtvarMv, LocalconstraintmitoMv,
             GnomadGenomesMv, GnomadExomesMv, TopmedMv, GnomadGenomesGRCh37Mv, GnomadExomesGRCh37Mv,TopmedGRCh37Mv,
-            GnomadmitoMv, GnomadmitoheteroplasmyMv, HelixmitoMv, HelixmitoheteroplasmyMv, MitomapMv,
+            GnomadmitoMv, GnomadmitoheteroplasmyMv, HelixmitoMv, HelixmitoheteroplasmyMv, MitomapMv, Absplice2Mv,
+            PromoterAIMv, PextSnvIndelMv, PextMitoMv
         ]:
             view.refresh()
         for dictionary in [
@@ -75,16 +89,16 @@ class ClickhouseSearchTestCase(AnvilAuthenticationTestMixin, TransactionTestCase
             SpliceAiGRCh37Dict, DbnsfpMitoDict, MitimpactDict, HmtvarDict, LocalconstraintmitoDict, GnomadGenomesDict,
             GnomadExomesDict, TopmedDict, GnomadGenomesGRCh37Dict, GnomadExomesGRCh37Dict, TopmedGRCh37Dict,
             GnomadmitoDict, GnomadmitoheteroplasmyDict, HelixmitoDict, HelixmitoheteroplasmyDict, ScreenDict,
-            MitomapDict,
+            MitomapDict, Absplice2Dict, PromoterAIDict, PextSnvIndelDict, PextMitoDict
         ]:
             dictionary.reload()
         Project.objects.update(genome_version='38')
-        AnvilAuthenticationTestMixin.set_up_users()
+        super().setUpTestData()
 
 
 class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
     databases = '__all__'
-    fixtures = ['users', '1kg_project', 'variant_searches', 'reference_data', 'clickhouse_transcripts']
+    fixtures = ['users', '1kg_project', 'variant_searches', 'reference_data', 'clickhouse_search', 'clickhouse_transcripts']
 
     def setUp(self):
         super().set_up()
@@ -1711,6 +1725,10 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
             'searchedVariants': [],
         })
 
+class ClickhouseDeleteDataTests(ClickhouseSearchTestCase):
+    databases = '__all__'
+    fixtures = ['users', '1kg_project', 'reference_data', 'clickhouse_search']
+
     @responses.activate
     def test_trigger_delete_project(self):
         url = reverse(trigger_delete_project)
@@ -1730,7 +1748,7 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
         self.assertEqual(EntriesSnvIndel.objects.filter(project_guid='R0001_1kg').count(), 0)
         self.assertEqual(ProjectGtStatsSnvIndel.objects.filter(project_guid='R0001_1kg').count(), 0)
 
-        annotations_qs = AnnotationsSnvIndel.objects.all().join_annotations()
+        annotations_qs = VariantsSnvIndel.objects.all().join_populations()
         updated_seqr_pops_by_key = dict(annotations_qs.values_list('key', 'seqrPop'))
         self.assertDictEqual(updated_seqr_pops_by_key, {
             1: {'ac_wes': 2, 'ac_wgs': 2, 'hom_wes': 1, 'hom_wgs': 1, 'ac_affected': 4, 'hom_affected': 2},

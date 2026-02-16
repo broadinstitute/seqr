@@ -10,7 +10,7 @@ from clickhouse_search.backend.fields import NestedField, NamedTupleField
 from clickhouse_search.backend.functions import Array, ArrayConcat, ArrayDistinct, ArrayFilter, ArrayFold, \
     ArrayIntersect, ArrayJoin, ArrayMap, ArraySort, ArraySymmetricDifference, CrossJoin, GroupArray, GroupArrayArray, \
     GroupArrayIntersect, If, MapLookup, NullIf, Plus, SubqueryJoin, SubqueryTable, Tuple, TupleConcat, Untuple, \
-    IntDiv, Modulo
+    IntDiv, Modulo, SplitByString, ArrayIndex
 from clickhouse_search.models.postgres_dicts import AffectedDict, SexDict
 from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFECTED, UNAFFECTED, MALE_SEXES, \
     X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, SCREEN_KEY, UTR_ANNOTATOR_KEY, \
@@ -117,16 +117,16 @@ class SearchQuerySet(QuerySet):
                 all_pred_fields.append((field_name, output_field))
 
         for pred_name, range_dict in model.RANGE_PREDICTIONS.items():
-            pred_expression = cls._xpos_rage_dict_get_expression(range_dict)
+            pred_expression = cls._xpos_range_dict_get_expression(range_dict, 'score')
             pred_expressions.append(Tuple(pred_expression))
             all_pred_fields.append((pred_name, pred_expression.output_field))
 
         return TupleConcat(*pred_expressions, output_field=NamedTupleField(all_pred_fields))
 
     @staticmethod
-    def _xpos_rage_dict_get_expression(range_dict):
+    def _xpos_range_dict_get_expression(range_dict, field_name):
         return range_dict.dict_get_expression(
-            IntDiv('xpos', int(1e9)), Modulo('xpos', int(1e9)), field_names=['score'], null_missing=True,
+            IntDiv('xpos', int(1e9)), Modulo('xpos', int(1e9)), field_names=[field_name], null_missing=True,
         )
 
     @staticmethod
@@ -170,8 +170,50 @@ class SearchQuerySet(QuerySet):
 
         return results, has_required_filter, in_silico_q, missing_q
 
+    def filter_variant_ids(self, variant_ids):
+        keys = self.key_lookup_model.objects.filter(variant_id__in=variant_ids).values_list('key', flat=True)
+        return self.filter(key__in=keys)
 
 class BaseAnnotationsQuerySet(SearchQuerySet):
+    @staticmethod
+    def split_variant_id_annotations():
+        split_id_expression = SplitByString(Value('-'), 'variant_id', output_field=models.ArrayField(models.StringField()))
+        annotations = {
+            field: ArrayIndex(index, split_id_expression)
+            for index, field in  enumerate(['chrom', 'pos', 'ref', 'alt'])
+        }
+        annotations['pos'] = Cast(annotations['pos'], models.UInt32Field())
+        return annotations
+
+    @property
+    def skip_annotations(self):
+        return []
+
+    @property
+    def annotation_fields(self):
+        return [field.name for field in self.model._meta.local_fields if (field.db_column or field.name) == field.name]
+
+    @property
+    def annotation_values(self):
+        return {
+            field.db_column: F(field.name) for field in self.model._meta.local_fields
+            if field.db_column and field.name != field.db_column and field.db_column
+        }
+
+    def result_values(self, additional_fields=None, **kwargs):
+        fields = [*self.annotation_fields] + (additional_fields or [])
+        values = {**self.annotation_values}
+        values.update(self.conditional_selects(self, **kwargs))
+
+        override_model_annotations = set(values).intersection(fields)
+        initial_values = {k: v for k, v in  values.items() if k not in override_model_annotations and k not in self.skip_annotations}
+        fields = [field for field in fields if field not in values and field not in self.skip_annotations]
+
+        return self.values(*fields, **initial_values).annotate(
+            **{k: values[k] for k in override_model_annotations if k in values},
+        )
+
+class BaseVariantsQuerySet(SearchQuerySet):
 
     TRANSCRIPT_FIELD = 'sorted_transcript_consequences'
     GENE_CONSEQUENCE_FIELD = 'gene_consequences'
@@ -182,17 +224,28 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
     SELECTED_GENE_FIELD = 'selectedGeneId'
 
     @property
+    def key_lookup_model(self):
+        return next(obj.related_model for obj in self.model._meta.related_objects if obj.name.startswith('keylookup'))
+
+    @property
     def annotation_values(self):
+        annotations = super().annotation_values
+        pop_field = self._population_annotation_field()
+        if not pop_field:
+            return annotations
+
         seqr_pops = []
         population_fields = [*self._population_output_fields()]
         self._get_seqr_pop_expressions(seqr_pops, population_fields)
 
-        pop_field = 'pops' if self.has_annotation('pops') else 'populations'
         return {
+            **annotations,
             **{key: Value(value) for key, value in self.model.ANNOTATION_CONSTANTS.items()},
-            **{field.db_column: F(field.name) for field in self.model._meta.local_fields if field.db_column and field.name != field.db_column},
             'populations': TupleConcat(F(pop_field), Tuple(*seqr_pops), output_field=NamedTupleField(population_fields)),
         }
+
+    def _population_annotation_field(self):
+        return 'populations'
 
     def _population_output_fields(self):
         return self.model.POPULATION_FIELDS
@@ -235,10 +288,11 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
 
     @property
     def annotation_fields(self):
-        return [
-            field.name for field in self.model._meta.local_fields
-            if (field.db_column or field.name) not in self.annotation_values and field.name != self.TRANSCRIPT_FIELD
-        ]
+        return [field for field in super().annotation_fields if field != self.TRANSCRIPT_FIELD]
+
+    @property
+    def variant_detail_field(self):
+        return next(obj.name for obj in self.model._meta.related_objects if obj.name.startswith('variantdetails'))
 
     @property
     def entry_field(self):
@@ -303,8 +357,8 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
             query_select.update(getattr(query, select_func_name)(query, prefix=f'{alias}_'))
         annotation_fields = query.annotation_fields
         return query.values(
-            **{f'{alias}_{field}': F(field) for field in annotation_fields if field not in query_select},
-            **{f'{alias}_{field}': value for field, value in query_select.items()},
+            **{f'{alias}_{field}': F(field) for field in annotation_fields if field not in query_select and field not in self.skip_annotations},
+            **{f'{alias}_{field}': value for field, value in query_select.items() if field not in self.skip_annotations},
         )
 
     def search(self, **kwargs):
@@ -313,22 +367,21 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
         results = self._filter_annotations(results, **kwargs)
         return results
 
-    def result_values(self, skip_entry_fields=False):
-        override_model_annotations = {'populations', 'predictions', 'pos', 'end', 'hgmd'}
-        values = {**self.annotation_values}
-        values.update(self.conditional_selects(self, skip_entry_fields=skip_entry_fields))
-        initial_values = {k: v for k, v in  values.items() if k not in override_model_annotations}
+    def join_variant_id(self):
+        if hasattr(self.model, 'variant_id'):
+            return self
+        return self.filter(**{
+            f'{self.variant_detail_field}__isnull': False,  # Ensures INNER join
+        }).annotate(variant_id=F(f'{self.variant_detail_field}__variant_id'))
 
-        fields = [*self.annotation_fields] + [
+    def result_values(self, *args, skip_entry_fields=False, **kwargs):
+        additional_fields = [
             field for field in ['clinvar', 'familyGenotypes', 'numFamilies'] if self.has_annotation(field)
         ]
-        if 'familyGenotypes' not in fields and not skip_entry_fields:
-            fields += self.ENTRY_FIELDS
+        if 'familyGenotypes' not in additional_fields and not skip_entry_fields:
+            additional_fields += self.ENTRY_FIELDS
 
-        fields = [field for field in fields if field not in values]
-        return self.values(*fields, **initial_values).annotate(
-            **{k: values[k] for k in override_model_annotations if k in values},
-        )
+        return super().result_values(additional_fields=additional_fields, skip_entry_fields=skip_entry_fields, **kwargs)
 
     def join_annotations(self):
         return self._annotate_seqr_pop_expression(self)
@@ -348,7 +401,7 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
         )
         return results.filter(
             **{primary_gene_field: F(secondary_gene_field)}
-        ).exclude(primary_variantId=F('secondary_variantId'))
+        ).exclude(primary_key=F('secondary_key'))
 
     def _comp_het_conditional_fields(self, query, prefix=''):
         return {
@@ -389,9 +442,7 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
 
         if transcript_filters:
             consequence_field = self.GENE_CONSEQUENCE_FIELD if genes else self.TRANSCRIPT_FIELD
-            results = results.annotate(**{
-                self.FILTERED_CONSEQUENCE_FIELD: ArrayFilter(consequence_field, conditions=transcript_filters),
-            })
+            results = self._annotate_filtered_transcripts(results, consequence_field, transcript_filters, **kwargs)
             transcript_q = Q(filtered_transcript_consequences__not_empty=True)
             if filter_q:
                 filter_q |= transcript_q
@@ -399,6 +450,11 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
                 filter_q = transcript_q
 
         return results.filter(filter_q)
+
+    def _annotate_filtered_transcripts(self, results, consequence_field, transcript_filters, **kwargs):
+        return results.annotate(**{
+            self.FILTERED_CONSEQUENCE_FIELD: ArrayFilter(consequence_field, conditions=transcript_filters),
+        })
 
     def _filter_locations(self, results, genes, intervals, **kwargs):
         if genes:
@@ -443,7 +499,7 @@ class BaseAnnotationsQuerySet(SearchQuerySet):
         return field in self.query.annotations
 
 
-class AnnotationsQuerySet(BaseAnnotationsQuerySet):
+class VariantsQuerySet(BaseVariantsQuerySet):
 
     @property
     def hgmd_join_model(self):
@@ -454,14 +510,27 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
         return set(dict(getattr(self.model, 'SORTED_TRANSCRIPT_CONSQUENCES_FIELDS', [])).keys())
 
     @property
+    def annotation_fields(self):
+        return super().annotation_fields + [field for field in ['xpos'] if self.has_annotation(field)]
+
+    @property
+    def skip_annotations(self):
+        return {
+            'sortedMotifFeatureConsequences', 'sortedRegulatoryFeatureConsequences', *self.model.VARIANT_PREDICTIONS,
+        }
+
+    @property
     def annotation_values(self):
         annotations = super().annotation_values
+        if not self.has_annotation('preds'):
+            return annotations
 
         pred_expr = F('preds')
-        if self.model.ANNOTATION_PREDICTIONS:
-            preds = [f'predictions__{field}' for field in self.model.ANNOTATION_PREDICTIONS]
+        if getattr(self.model, 'VARIANT_PREDICTIONS', None):
+            preds = [annotations.get(field, F(field)) for field in self.model.VARIANT_PREDICTIONS]
             output_fields = self.query.annotations['preds'].output_field.base_fields + [
-                field for field in self.model.PREDICTION_FIELDS if field[0] in self.model.ANNOTATION_PREDICTIONS
+                (field.name, field) for field in self.model._meta.local_fields
+                if (field.db_column or field.name) in self.model.VARIANT_PREDICTIONS
             ]
             pred_expr = TupleConcat(pred_expr, Tuple(*preds), output_field=NamedTupleField(output_fields))
         annotations['predictions'] = pred_expr
@@ -469,11 +538,12 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
         if self.hgmd_join_model:
             annotations['hgmd'] = self._pathogenicity_tuple(self.hgmd_join_model, 'hgmd_join', rename_fields={'classification': 'class'})
 
-        if not self.sorted_transcript_consequence_fields:
+        if not self.sorted_transcript_consequence_fields and hasattr(self.model, 'sorted_transcript_consequences'):
             annotations.update({
                 'transcripts':  annotations.pop(self.model.sorted_transcript_consequences.field.db_column),
                 'mainTranscriptId': F('sorted_transcript_consequences__0__transcriptId'),
                 'selectedMainTranscriptId': Value(None, output_field=models.StringField(null=True)),
+                **self.split_variant_id_annotations(),
             })
 
         screen_expression = self._screen_expression()
@@ -510,13 +580,16 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
     def _clinvar_conflicting_path_filter(array_func, conflicting_filter):
         return {f'clinvar__5__{array_func}': conflicting_filter, 'clinvar__5__not_empty': True, 'clinvar_key__isnull': False}
 
+    def _population_annotation_field(self):
+        return 'pops' if self.has_annotation('pops') else None
+
     def _population_output_fields(self):
         return self.query.annotations['pops'].output_field.base_fields
 
     def _screen_expression(self):
-        if not self.model.SCREEN_DICT:
+        if not getattr(self.model, 'SCREEN_DICT', None):
             return None
-        return self.model.SCREEN_DICT.dict_get_expression('chrom', 'pos', field_names=['regionType'], null_missing=True)
+        return self._xpos_range_dict_get_expression(self.model.SCREEN_DICT, 'regionType')
 
     def _parse_in_silico_qs(self, results, in_silico, require_score, in_silico_qs, in_silico_missing_qs):
         in_silico_q = None
@@ -618,13 +691,37 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
     def _consequence_term_filter(consequences, **kwargs):
         return {'consequenceTerms': (consequences, 'hasAny({value}, {field})'), **kwargs}
 
+    def _annotate_filtered_transcripts(self, results, consequence_field, transcript_filters, *args, require_mane_canonical=False, **kwargs):
+        if require_mane_canonical:
+            filtered_expr = ArrayFilter(consequence_field, conditions=[{'canonical': (0, '{field} > {value}')}])
+            if 'isManeSelect' in self.sorted_transcript_consequence_fields:
+                filtered_expr = If(
+                    ArrayFilter(consequence_field, conditions=[{'isManeSelect': (True, '{field}')}]),
+                    filtered_expr,
+                    condition='arrayExists(x -> x.isManeSelect, sortedTranscriptConsequences), ',
+                )
+            results = results.annotate(**{self.FILTERED_CONSEQUENCE_FIELD: filtered_expr})
+            consequence_field = self.FILTERED_CONSEQUENCE_FIELD
+        return super()._annotate_filtered_transcripts(results, consequence_field, transcript_filters, **kwargs)
+
+    def join_populations(self):
+        return super().join_annotations().annotate(
+            pops=self._population_expression(self.entry_model),
+        )
+
     def join_annotations(self):
-        results = super().join_annotations()
+        results = self.join_populations()
         results = results.annotate(
             preds=self._prediction_expression(self.entry_model),
             pops=self._population_expression(self.entry_model),
-            clinvar=self._pathogenicity_tuple(self.entry_model.clinvar_join, f'{self.entry_field}__clinvar_join')
         )
+        return results.join_clinvar()
+
+    def join_clinvar(self, field_prefix=''):
+        results = self.annotate(
+            clinvar=self._pathogenicity_tuple(self.entry_model.clinvar_join, f'{field_prefix}{self.entry_field}__clinvar_join')
+        )
+
         # Due to django modeling, adding a clinvar annotation will add a join to the entries table and then to clinvar
         # Manipulating the underlying join removes the entry join entirely
         entry_table = f'{self.table_basename}/entries'
@@ -648,7 +745,7 @@ class AnnotationsQuerySet(BaseAnnotationsQuerySet):
         return {self.SELECTED_GENE_FIELD: F(f'{self.GENE_CONSEQUENCE_FIELD}__0__geneId')}
 
 
-class SvAnnotationsQuerySet(BaseAnnotationsQuerySet):
+class SvVariantsQuerySet(BaseVariantsQuerySet):
     TRANSCRIPT_FIELD = 'sorted_gene_consequences'
     GENOTYPE_GENE_CONSEQUENCE_FIELD = 'genotype_gene_consequences'
 
@@ -789,6 +886,65 @@ class SvAnnotationsQuerySet(BaseAnnotationsQuerySet):
 
         return results
 
+
+class VariantDetailsQuerySet(VariantsQuerySet):
+    def join_series(self, min_: int, max_: int):
+        query = f"SELECT vd.* FROM generate_series(%s, %s) AS gs INNER JOIN `{self.model._meta.db_table}` vd ON toUInt32(gs.generate_series) = vd.key" # nosec
+        return self.raw(query, [min_, max_])
+
+    @property
+    def variant_model(self):
+        return self.model.key.field.related_model
+
+    @property
+    def entry_field(self):
+        return next(obj.name for obj in self.variant_model._meta.related_objects if obj.name.startswith('entries'))
+
+    @property
+    def entry_model(self):
+        return getattr(self.variant_model, f'{self.entry_field}_set').rel.related_model
+
+    @property
+    def skip_annotations(self):
+        return []
+
+    @property
+    def annotation_values(self):
+        annotations = {
+            **super().annotation_values,
+            **self.split_variant_id_annotations(),
+        }
+        if self.has_annotation('hgmd_join'):
+            annotations.update({
+                'mainTranscriptId': F('transcripts__0__transcriptId'),
+                'hgmd': F('hgmd_join'),
+            })
+        return annotations
+
+    @property
+    def table_basename(self):
+        return self.model._meta.db_table.rsplit('/', 2)[0]
+
+    def result_values(self, *args, skip_entry_fields=True, **kwargs):
+        return super().result_values(*args, skip_entry_fields=skip_entry_fields, **kwargs)
+
+    def join_annotations(self):
+        results = super().join_annotations()
+        results = results.annotate(
+            hgmd_join=self._pathogenicity_tuple(self.variant_model.hgmd_join, 'key__hgmd_join', rename_fields={'classification': 'class'}),
+        )
+        self._prune_join(results, 'hgmd')
+        return results
+
+    def join_clinvar(self, *args, **kwargs):
+        results = super().join_clinvar(field_prefix='key__')
+        self._prune_join(results, 'clinvar')
+        return results
+
+    def _prune_join(self, results, data_source):
+        variants_table = f'{self.table_basename}/variants_memory'
+        results.query.alias_map[f'{self.table_basename}/reference_data/{data_source}'].parent_alias = results.query.alias_map[variants_table].parent_alias
+        results.query.alias_refcount[variants_table] = 0
 
 class BaseEntriesManager(SearchQuerySet):
     GENOTYPE_LOOKUP = {
@@ -1270,8 +1426,7 @@ class BaseEntriesManager(SearchQuerySet):
         entries = self
 
         if variant_ids:
-            keys = self.key_lookup_model.objects.filter(variant_id__in=variant_ids).values_list('key', flat=True)
-            entries = entries.filter(key__in=keys)
+            entries = entries.filter_variant_ids(variant_ids)
 
         if not (genes or intervals):
             return entries
@@ -1410,7 +1565,7 @@ class EntriesManager(BaseEntriesManager):
             if not value:
                 continue
             if score in self.model.RANGE_PREDICTIONS:
-                score_expr = self._xpos_rage_dict_get_expression(self.model.RANGE_PREDICTIONS[score])
+                score_expr = self._xpos_range_dict_get_expression(self.model.RANGE_PREDICTIONS[score], 'score')
             elif score in prediction_dicts:
                 score_expr = prediction_dicts[score].dict_get_expression('key', field_names=['score'], null_missing=True)
             else:
@@ -1475,7 +1630,7 @@ class EntriesManager(BaseEntriesManager):
 
     @classmethod
     def annotation_fields(cls, entries):
-        return super().annotation_fields(entries) + ['clinvar', 'clinvar_key', 'preds', 'pops'] + [
+        return super().annotation_fields(entries) + ['clinvar', 'clinvar_key', 'preds', 'pops', 'xpos'] + [
             field for field in ['pass_in_silico', 'missing_in_silico','mitomapPathogenic'] if field in entries.query.annotations
         ]
 
@@ -1561,8 +1716,3 @@ class SvEntriesManager(BaseEntriesManager):
 
     def _can_filter_gene_interval(self, genes):
         return genes and 'geneIds' in self.call_fields
-
-class VariantDetailsQuerySet(QuerySet):
-    def join_series(self, min_: int, max_: int):
-        query = f"SELECT vd.* FROM generate_series(%s, %s) AS gs INNER JOIN `{self.model._meta.db_table}` vd ON toUInt32(gs.generate_series) = vd.key" # nosec
-        return self.raw(query, [min_, max_])

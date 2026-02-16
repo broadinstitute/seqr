@@ -624,7 +624,6 @@ class AnvilAuthenticationTestCase(DifferentDbTransactionSupportMixin, AnvilAuthe
         super().setUpTestData()
         cls.set_up_users()
 
-
 @mock.patch('seqr.views.utils.terra_api_utils.SOCIAL_AUTH_PROVIDER', TEST_OAUTH2_PROVIDER)
 class AirtableTest(object):
 

@@ -61,6 +61,9 @@ VARIANT1 = {
         'polyphen': None,
         'revel': None,
         'sift': None,
+        'absplice': None,
+        'pext': None,
+        'promoter_ai': None,
     },
     'transcripts': {},
     'sortedMotifFeatureConsequences': None,
@@ -145,6 +148,9 @@ VARIANT2 = {
        'polyphen': 0.1,
        'revel': 0.197,
        'sift': 0.05,
+       'absplice': 0.11,
+       'pext': 0.03,
+       'promoter_ai': 0.64,
     },
     'transcripts': {
        'ENSG00000177000': [
@@ -224,6 +230,9 @@ VARIANT3 = {
         'polyphen': None,
         'revel': None,
         'sift': None,
+        'absplice': None,
+        'pext': None,
+        'promoter_ai': None,
     },
     'transcripts': {
         'ENSG00000097046': [
@@ -294,6 +303,9 @@ VARIANT4 = {
         'polyphen': 0,
         'revel': 0.526,
         'sift': 0,
+        'absplice': None,
+        'pext': None,
+        'promoter_ai': None,
     },
     'transcripts': {
         'ENSG00000097046': [
@@ -359,6 +371,9 @@ PROJECT_2_VARIANT = {
         'polyphen': None,
         'revel': None,
         'sift': None,
+        'absplice': None,
+        'pext': None,
+        'promoter_ai': None,
     },
     'transcripts': {},
     'mainTranscriptId': None,
@@ -462,6 +477,7 @@ MITO_VARIANT1 = {
         'mut_taster': None,
         'sift': None,
         'mlc': 3.38874,
+        'pext': None,
     },
     'commonLowHeteroplasmy': False,
     'mitomapPathogenic': None,
@@ -518,6 +534,7 @@ MITO_VARIANT2 = {
         'mut_taster': 'N',
         'sift': 0,
         'mlc': None,
+        'pext': 0.13,
     },
     'commonLowHeteroplasmy': False,
     'mitomapPathogenic': None,
@@ -566,6 +583,7 @@ MITO_VARIANT3 = {
         'mut_taster': None,
         'sift': None,
         'mlc': 0.7514,
+        'pext': None,
     },
     'commonLowHeteroplasmy': True,
     'mitomapPathogenic': True,
@@ -1159,6 +1177,9 @@ PROJECT_4_COMP_HET_VARIANT = {
         'polyphen': None,
         'revel': None,
         'sift': None,
+        'absplice': None,
+        'pext': None,
+        'promoter_ai': None,
     },
     'transcripts': {'ENSG00000171621': [{
         'alphamissense': {'pathogenicity': None}, 'aminoAcids': 'T/I', 'canonical': 1, 'codons': 'aCc/aTc',
@@ -1183,6 +1204,7 @@ CACHED_CONSEQUENCES_BY_KEY = {1: [], 2: [{
     'extendedIntronicSpliceRegionVariant': False,
     'fiveutrConsequence': None,
     'geneId': 'ENSG00000177000',
+    'isManeSelect': True,
 }, {
     'alphamissensePathogenicity': None,
     'canonical': None,
@@ -1190,6 +1212,7 @@ CACHED_CONSEQUENCES_BY_KEY = {1: [], 2: [{
     'extendedIntronicSpliceRegionVariant': False,
     'fiveutrConsequence': '5_prime_UTR_stop_codon_loss_variant',
     'geneId': 'ENSG00000177000',
+    'isManeSelect': False,
 }, {
     'alphamissensePathogenicity': None,
     'canonical': None,
@@ -1197,6 +1220,7 @@ CACHED_CONSEQUENCES_BY_KEY = {1: [], 2: [{
     'extendedIntronicSpliceRegionVariant': False,
     'fiveutrConsequence': '5_prime_UTR_stop_codon_loss_variant',
     'geneId': 'ENSG00000177000',
+    'isManeSelect': False,
 }, {
     'alphamissensePathogenicity': 0.99779,
     'canonical': None,
@@ -1204,6 +1228,7 @@ CACHED_CONSEQUENCES_BY_KEY = {1: [], 2: [{
     'extendedIntronicSpliceRegionVariant': False,
     'fiveutrConsequence': None,
     'geneId': 'ENSG00000277258',
+    'isManeSelect': True,
 }, {
     'alphamissensePathogenicity': None,
     'canonical': None,
@@ -1211,6 +1236,7 @@ CACHED_CONSEQUENCES_BY_KEY = {1: [], 2: [{
     'extendedIntronicSpliceRegionVariant': False,
     'fiveutrConsequence': None,
     'geneId': 'ENSG00000177000',
+    'isManeSelect': False,
 }, {
     'alphamissensePathogenicity': None,
     'canonical': None,
@@ -1218,6 +1244,7 @@ CACHED_CONSEQUENCES_BY_KEY = {1: [], 2: [{
     'extendedIntronicSpliceRegionVariant': False,
     'fiveutrConsequence': None,
     'geneId': 'ENSG00000177000',
+    'isManeSelect': False,
 }, {
     'alphamissensePathogenicity': None,
     'canonical': None,
@@ -1225,6 +1252,7 @@ CACHED_CONSEQUENCES_BY_KEY = {1: [], 2: [{
     'extendedIntronicSpliceRegionVariant': False,
     'fiveutrConsequence': None,
     'geneId': 'ENSG00000177000',
+    'isManeSelect': False,
 }],
 3: [{
     'alphamissensePathogenicity': None,
@@ -1233,6 +1261,7 @@ CACHED_CONSEQUENCES_BY_KEY = {1: [], 2: [{
     'extendedIntronicSpliceRegionVariant': False,
     'fiveutrConsequence': None,
     'geneId': 'ENSG00000097046',
+    'isManeSelect': False,
 }, {
     'alphamissensePathogenicity': None,
     'canonical': None,
@@ -1240,6 +1269,7 @@ CACHED_CONSEQUENCES_BY_KEY = {1: [], 2: [{
     'extendedIntronicSpliceRegionVariant': False,
     'fiveutrConsequence': None,
     'geneId': 'ENSG00000177000',
+    'isManeSelect': False,
 }, {
     'alphamissensePathogenicity': None,
     'canonical': None,
@@ -1247,6 +1277,7 @@ CACHED_CONSEQUENCES_BY_KEY = {1: [], 2: [{
     'extendedIntronicSpliceRegionVariant': False,
     'fiveutrConsequence': None,
     'geneId': 'ENSG00000097046',
+    'isManeSelect': False,
 }, {
     'alphamissensePathogenicity': None,
     'canonical': None,
@@ -1254,6 +1285,7 @@ CACHED_CONSEQUENCES_BY_KEY = {1: [], 2: [{
     'extendedIntronicSpliceRegionVariant': False,
     'fiveutrConsequence': None,
     'geneId': 'ENSG00000097046',
+    'isManeSelect': True,
 }],
 4: [{
     'alphamissensePathogenicity': None,
@@ -1262,6 +1294,7 @@ CACHED_CONSEQUENCES_BY_KEY = {1: [], 2: [{
     'extendedIntronicSpliceRegionVariant': True,
     'fiveutrConsequence': None,
     'geneId': 'ENSG00000097046',
+    'isManeSelect': False,
 }, {
     'alphamissensePathogenicity': 0.1,
     'canonical': 1,
@@ -1269,6 +1302,7 @@ CACHED_CONSEQUENCES_BY_KEY = {1: [], 2: [{
     'extendedIntronicSpliceRegionVariant': False,
     'fiveutrConsequence': None,
     'geneId': 'ENSG00000097046',
+    'isManeSelect': True,
 }, {
     'alphamissensePathogenicity': None,
     'canonical': None,
@@ -1276,6 +1310,7 @@ CACHED_CONSEQUENCES_BY_KEY = {1: [], 2: [{
     'extendedIntronicSpliceRegionVariant': False,
     'fiveutrConsequence': None,
     'geneId': 'ENSG00000097046',
+    'isManeSelect': False,
 }],
 5: [],
 11: [{
@@ -1294,6 +1329,7 @@ CACHED_CONSEQUENCES_BY_KEY = {1: [], 2: [{
     'extendedIntronicSpliceRegionVariant': False,
     'fiveutrConsequence': None,
     'geneId': 'ENSG00000171621',
+    'isManeSelect': False,
 }],
 }
 
@@ -1301,7 +1337,11 @@ def format_cached_variant(variant):
     if variant['key'] not in CACHED_CONSEQUENCES_BY_KEY:
         return variant
     return {
-        **{k: v for k, v in variant.items() if k not in ['mainTranscriptId', 'selectedMainTranscriptId', 'transcripts']},
+        **{k: v for k, v in variant.items() if k not in [
+            'mainTranscriptId', 'selectedMainTranscriptId', 'transcripts', 'CAID', 'chrom', 'pos', 'ref', 'alt',
+            'liftedOverChrom', 'liftedOverPos', 'rsid', 'variantId', 'sortedMotifFeatureConsequences',
+            'sortedRegulatoryFeatureConsequences',
+        ]},
         'sortedTranscriptConsequences': CACHED_CONSEQUENCES_BY_KEY[variant['key']],
     }
 
