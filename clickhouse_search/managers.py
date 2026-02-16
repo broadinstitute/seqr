@@ -174,7 +174,6 @@ class SearchQuerySet(QuerySet):
         keys = self.key_lookup_model.objects.filter(variant_id__in=variant_ids).values_list('key', flat=True)
         return self.filter(key__in=keys)
 
-class BaseAnnotationsQuerySet(SearchQuerySet):
     @staticmethod
     def split_variant_id_annotations():
         split_id_expression = SplitByString(Value('-'), 'variant_id', output_field=models.ArrayField(models.StringField()))
