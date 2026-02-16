@@ -260,7 +260,7 @@ def register_caids(
 
 class Command(BaseCommand):
     help = "Register newly loaded seqr variants with the Clingen Allele Registry"
-    batch_size = 25_000
+    batch_size = 10_000
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -300,7 +300,6 @@ class Command(BaseCommand):
 
                 try:
                     max_key = register_caids(genome_version, variants)
-                    # ALTER TABLE "GRCh38/SNV_INDEL/variants/details" UPDATE "CAID" = CASE WHEN ("key" = 4) THEN 'CA997563840' WHEN ("key" = 5) THEN 'CA997563845' WHEN ("key" = 6) THEN NULL ELSE NULL END::Nullable(String) WHERE "key" IN (4, 5, 6)
                     variant_details_model.objects.using('clickhouse_write').bulk_update(variants, ["caid"])
                 except Exception:
                     logger.exception(
