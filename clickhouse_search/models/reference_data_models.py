@@ -118,7 +118,7 @@ class ClinvarAllVariantsMito(BaseClinvarAllVariants):
         db_table = 'GRCh38/MITO/reference_data/clinvar/all_variants'
 
 class ClinvarSeqrVariantsGRCh37SnvIndel(BaseClinvar):
-    key = OneToOneField('AnnotationsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = UInt32FieldDeltaCodecField(primary_key=True)
     class Meta(BaseClinvar.Meta):
         db_table = 'GRCh37/SNV_INDEL/reference_data/clinvar/seqr_variants'
         engine = models.MergeTree(
@@ -127,7 +127,7 @@ class ClinvarSeqrVariantsGRCh37SnvIndel(BaseClinvar):
         )
 
 class ClinvarSeqrVariantsSnvIndel(BaseClinvar):
-    key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = UInt32FieldDeltaCodecField(primary_key=True)
     class Meta(BaseClinvar.Meta):
         db_table = 'GRCh38/SNV_INDEL/reference_data/clinvar/seqr_variants'
         engine = models.MergeTree(
@@ -136,7 +136,7 @@ class ClinvarSeqrVariantsSnvIndel(BaseClinvar):
         )
 
 class ClinvarSeqrVariantsMito(BaseClinvar):
-    key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = UInt32FieldDeltaCodecField(primary_key=True)
     class Meta(BaseClinvar.Meta):
         db_table = 'GRCh38/MITO/reference_data/clinvar/seqr_variants'
         engine = models.MergeTree(
@@ -255,7 +255,7 @@ class PextAllVariantsMito(models.ClickhouseModel):
         )
 
 class PextSeqrVariantsSnvIndel(models.ClickhouseModel):
-    key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = UInt32FieldDeltaCodecField(primary_key=True)
     score = models.DecimalField(max_digits=9, decimal_places=5)
 
     class Meta:
@@ -266,7 +266,7 @@ class PextSeqrVariantsSnvIndel(models.ClickhouseModel):
         )
 
 class PextSeqrVariantsMito(models.ClickhouseModel):
-    key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = UInt32FieldDeltaCodecField(primary_key=True)
     score = models.DecimalField(max_digits=9, decimal_places=5)
 
     class Meta:
@@ -462,7 +462,7 @@ class HgmdAllVariantsSnvIndel(BaseHgmd):
         )
 
 class HgmdSeqrVariantsGRCh37SnvIndel(BaseHgmd):
-    key = OneToOneField('AnnotationsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = UInt32FieldDeltaCodecField(primary_key=True)
 
     class Meta:
         db_table = 'GRCh37/SNV_INDEL/reference_data/hgmd/seqr_variants'
@@ -472,7 +472,7 @@ class HgmdSeqrVariantsGRCh37SnvIndel(BaseHgmd):
         )
 
 class HgmdSeqrVariantsSnvIndel(BaseHgmd):
-    key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = UInt32FieldDeltaCodecField(primary_key=True)
 
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/reference_data/hgmd/seqr_variants'
@@ -610,7 +610,7 @@ class TopmedAllVariantsSnvIndel(BaseTopmed):
         )
 
 class TopmedSeqrVariantsGRCh37SnvIndel(BaseTopmed):
-    key = OneToOneField('AnnotationsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = UInt32FieldDeltaCodecField(primary_key=True)
 
     class Meta:
         db_table = 'GRCh37/SNV_INDEL/reference_data/topmed/seqr_variants'
@@ -620,7 +620,7 @@ class TopmedSeqrVariantsGRCh37SnvIndel(BaseTopmed):
         )
 
 class TopmedSeqrVariantsSnvIndel(BaseTopmed):
-    key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = UInt32FieldDeltaCodecField(primary_key=True)
 
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/reference_data/topmed/seqr_variants'
@@ -752,7 +752,7 @@ class GnomadExomesAllVariantsSnvIndel(BaseGnomad):
         )
 
 class GnomadExomesSeqrVariantsGRCh37SnvIndel(BaseGnomad):
-    key = OneToOneField('AnnotationsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = UInt32FieldDeltaCodecField(primary_key=True)
 
     class Meta:
         db_table = 'GRCh37/SNV_INDEL/reference_data/gnomad_exomes/seqr_variants'
@@ -762,7 +762,7 @@ class GnomadExomesSeqrVariantsGRCh37SnvIndel(BaseGnomad):
         )
 
 class GnomadExomesSeqrVariantsSnvIndel(BaseGnomad):
-    key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = UInt32FieldDeltaCodecField(primary_key=True)
 
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/reference_data/gnomad_exomes/seqr_variants'
@@ -852,7 +852,7 @@ class GnomadGenomesAllVariantsSnvIndel(BaseGnomad):
         )
 
 class GnomadGenomesSeqrVariantsGRCh37SnvIndel(BaseGnomad):
-    key = OneToOneField('AnnotationsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = UInt32FieldDeltaCodecField(primary_key=True)
 
     class Meta:
         db_table = 'GRCh37/SNV_INDEL/reference_data/gnomad_genomes/seqr_variants'
@@ -862,7 +862,7 @@ class GnomadGenomesSeqrVariantsGRCh37SnvIndel(BaseGnomad):
         )
 
 class GnomadGenomesSeqrVariantsSnvIndel(BaseGnomad):
-    key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = UInt32FieldDeltaCodecField(primary_key=True)
 
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/reference_data/gnomad_genomes/seqr_variants'
@@ -944,7 +944,7 @@ class SpliceAiAllVariantsSnvIndel(BaseSpliceAi):
         )
 
 class SpliceAiSeqrVariantsGRCh37SnvIndel(BaseSpliceAi):
-    key = OneToOneField('AnnotationsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = UInt32FieldDeltaCodecField(primary_key=True)
 
     class Meta:
         db_table = 'GRCh37/SNV_INDEL/reference_data/splice_ai/seqr_variants'
@@ -954,7 +954,7 @@ class SpliceAiSeqrVariantsGRCh37SnvIndel(BaseSpliceAi):
         )
 
 class SpliceAiSeqrVariantsSnvIndel(BaseSpliceAi):
-    key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = UInt32FieldDeltaCodecField(primary_key=True)
 
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/reference_data/splice_ai/seqr_variants'
@@ -1070,7 +1070,7 @@ class DbnsfpAllVariantsSnvIndel(BaseDbnsfp):
         )
 
 class DbnsfpSeqrVariantsGRCh37SnvIndel(BaseDbnsfp):
-    key = OneToOneField('AnnotationsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = UInt32FieldDeltaCodecField(primary_key=True)
 
     class Meta:
         db_table = 'GRCh37/SNV_INDEL/reference_data/dbnsfp/seqr_variants'
@@ -1080,7 +1080,7 @@ class DbnsfpSeqrVariantsGRCh37SnvIndel(BaseDbnsfp):
         )
 
 class DbnsfpSeqrVariantsSnvIndel(BaseDbnsfp):
-    key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = UInt32FieldDeltaCodecField(primary_key=True)
 
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/reference_data/dbnsfp/seqr_variants'
@@ -1251,7 +1251,7 @@ class HelixmitoheteroplasmyAllVariantsMito(models.ClickhouseModel):
         )
 
 class HelixmitoSeqrVariantsMito(models.ClickhouseModel):
-    key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = UInt32FieldDeltaCodecField(primary_key=True)
     ac = models.UInt32Field()
     af = models.DecimalField(max_digits=9, decimal_places=8)
     an = models.UInt32Field()
@@ -1264,7 +1264,7 @@ class HelixmitoSeqrVariantsMito(models.ClickhouseModel):
         )
 
 class HelixmitoheteroplasmySeqrVariantsMito(models.ClickhouseModel):
-    key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = UInt32FieldDeltaCodecField(primary_key=True)
     ac = models.UInt32Field()
     af = models.DecimalField(max_digits=9, decimal_places=8)
     an = models.UInt32Field()
@@ -1393,7 +1393,7 @@ class GnomadmitoheteroplasmyAllVariantsMito(models.ClickhouseModel):
         )
 
 class GnomadmitoSeqrVariantsMito(models.ClickhouseModel):
-    key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = UInt32FieldDeltaCodecField(primary_key=True)
     ac = models.UInt32Field()
     af = models.DecimalField(max_digits=9, decimal_places=8)
     an = models.UInt32Field()
@@ -1406,7 +1406,7 @@ class GnomadmitoSeqrVariantsMito(models.ClickhouseModel):
         )
 
 class GnomadmitoheteroplasmySeqrVariantsMito(models.ClickhouseModel):
-    key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = UInt32FieldDeltaCodecField(primary_key=True)
     ac = models.UInt32Field()
     af = models.DecimalField(max_digits=9, decimal_places=8)
     an = models.UInt32Field()
@@ -1500,7 +1500,7 @@ class HmtvarAllVariantsMito(models.ClickhouseModel):
         )
 
 class HmtvarSeqrVariantsMito(models.ClickhouseModel):
-    key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = UInt32FieldDeltaCodecField(primary_key=True)
     score = models.DecimalField(max_digits=9, decimal_places=5)
 
     class Meta:
@@ -1556,7 +1556,7 @@ class MitimpactAllVariantsMito(models.ClickhouseModel):
         )
 
 class MitimpactSeqrVariantsMito(models.ClickhouseModel):
-    key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = UInt32FieldDeltaCodecField(primary_key=True)
     score = models.DecimalField(max_digits=9, decimal_places=5)
 
     class Meta:
@@ -1612,7 +1612,7 @@ class LocalconstraintmitoAllVariantsMito(models.ClickhouseModel):
         )
 
 class LocalconstraintmitoSeqrVariantsMito(models.ClickhouseModel):
-    key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = UInt32FieldDeltaCodecField(primary_key=True)
     score = models.DecimalField(max_digits=9, decimal_places=5)
 
     class Meta:
@@ -1667,7 +1667,7 @@ class MitomapAllVariantsMito(models.ClickhouseModel):
         )
 
 class MitomapSeqrVariantsMito(models.ClickhouseModel):
-    key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = UInt32FieldDeltaCodecField(primary_key=True)
     pathogenic = models.BoolField()
 
     class Meta:
@@ -1733,7 +1733,7 @@ class DbnsfpAllVariantsMito(BaseDbnsfpMito):
         )
 
 class DbnsfpSeqrVariantsMito(BaseDbnsfpMito):
-    key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = UInt32FieldDeltaCodecField(primary_key=True)
 
     class Meta:
         db_table = 'GRCh38/MITO/reference_data/dbnsfp/seqr_variants'
@@ -1754,7 +1754,7 @@ class Absplice2AllVariants(models.ClickhouseModel):
         )
 
 class Absplice2SeqrVariants(models.ClickhouseModel):
-    key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = UInt32FieldDeltaCodecField(primary_key=True)
     score = models.DecimalField(max_digits=9, decimal_places=5)
 
     class Meta:
@@ -1808,7 +1808,7 @@ class PromoterAIAllVariants(models.ClickhouseModel):
         )
 
 class PromoterAISeqrVariants(models.ClickhouseModel):
-    key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = UInt32FieldDeltaCodecField(primary_key=True)
     gene_id = models.StringField(db_column='geneId')
     score = models.DecimalField(max_digits=9, decimal_places=5)
 
@@ -1881,7 +1881,7 @@ class EigenAllVariantsSnvIndel(BaseEigen):
         )
 
 class EigenSeqrVariantsGRCh37SnvIndel(BaseEigen):
-    key = OneToOneField('AnnotationsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = UInt32FieldDeltaCodecField(primary_key=True)
 
     class Meta:
         db_table = 'GRCh37/SNV_INDEL/reference_data/eigen/seqr_variants'
@@ -1891,7 +1891,7 @@ class EigenSeqrVariantsGRCh37SnvIndel(BaseEigen):
         )
 
 class EigenSeqrVariantsSnvIndel(BaseEigen):
-    key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = UInt32FieldDeltaCodecField(primary_key=True)
 
     class Meta:
         db_table = 'GRCh38/SNV_INDEL/reference_data/eigen/seqr_variants'

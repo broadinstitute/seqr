@@ -32,13 +32,7 @@ class Migration(migrations.Migration):
             fields=[
                 (
                     "key",
-                    models.OneToOneField(
-                        db_column="key",
-                        on_delete=django.db.models.deletion.CASCADE,
-                        primary_key=True,
-                        serialize=False,
-                        to="clickhouse_search.annotationsgrch37snvindel",
-                    ),
+                    clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False),
                 ),
                 (
                     "allele_id",
@@ -173,13 +167,7 @@ class Migration(migrations.Migration):
             fields=[
                 (
                     "key",
-                    models.OneToOneField(
-                        db_column="key",
-                        on_delete=django.db.models.deletion.CASCADE,
-                        primary_key=True,
-                        serialize=False,
-                        to="clickhouse_search.annotationsmito",
-                    ),
+                    clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False),
                 ),
                 (
                     "allele_id",
@@ -314,13 +302,7 @@ class Migration(migrations.Migration):
             fields=[
                 (
                     "key",
-                    models.OneToOneField(
-                        db_column="key",
-                        on_delete=django.db.models.deletion.CASCADE,
-                        primary_key=True,
-                        serialize=False,
-                        to="clickhouse_search.annotationssnvindel",
-                    ),
+                    clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False),
                 ),
                 (
                     "allele_id",
