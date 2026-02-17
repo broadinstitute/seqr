@@ -373,6 +373,17 @@ class SavedVariantAPITest(object):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), empty_response)
 
+        # Test GRCh38 variants
+        Project.objects.filter(guid=PROJECT_GUID).update(genome_version='38')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertSetEqual(set(response_json.keys()), self.SAVED_VARIANT_RESPONSE_KEYS)
+        self.assertSetEqual(
+            set(response_json['savedVariantsByGuid']['SV0000002_1248367227_r0390_100'].keys()),
+            self.SAVED_VARIANT_DETAIL_FIELDS,
+        )
+
     def test_create_saved_variant(self):
         create_saved_variant_url = reverse(create_saved_variant_handler)
         self.check_collaborator_login(create_saved_variant_url, request_data={'familyGuid': 'F000001_1'})
