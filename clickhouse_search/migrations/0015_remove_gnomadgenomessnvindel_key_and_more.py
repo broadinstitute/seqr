@@ -606,7 +606,7 @@ class Migration(migrations.Migration):
             name='ProjectGtStatsGRCh37SnvIndel',
             fields=[
                 ('project_guid', clickhouse_backend.models.StringField(low_cardinality=True)),
-                ('key', models.OneToOneField(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='clickhouse_search.annotationsgrch37snvindel')),
+                ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
                 ('sample_type', clickhouse_backend.models.Enum8Field(choices=[(1, 'WES'), (2, 'WGS')])),
                 ('ref_samples', clickhouse_backend.models.UInt32Field()),
                 ('het_samples', clickhouse_backend.models.UInt32Field()),
@@ -626,7 +626,7 @@ class Migration(migrations.Migration):
             name='ProjectGtStatsMito',
             fields=[
                 ('project_guid', clickhouse_backend.models.StringField(low_cardinality=True)),
-                ('key', models.OneToOneField(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='clickhouse_search.annotationsmito')),
+                ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
                 ('sample_type', clickhouse_backend.models.Enum8Field(choices=[(1, 'WES'), (2, 'WGS')])),
                 ('ref_samples', clickhouse_backend.models.UInt32Field()),
                 ('het_samples', clickhouse_backend.models.UInt32Field()),
@@ -646,7 +646,7 @@ class Migration(migrations.Migration):
             name='ProjectGtStatsSnvIndel',
             fields=[
                 ('project_guid', clickhouse_backend.models.StringField(low_cardinality=True)),
-                ('key', models.OneToOneField(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='clickhouse_search.annotationssnvindel')),
+                ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
                 ('sample_type', clickhouse_backend.models.Enum8Field(choices=[(1, 'WES'), (2, 'WGS')])),
                 ('ref_samples', clickhouse_backend.models.UInt32Field()),
                 ('het_samples', clickhouse_backend.models.UInt32Field()),
@@ -666,7 +666,7 @@ class Migration(migrations.Migration):
             name='ProjectGtStatsSv',
             fields=[
                 ('project_guid', clickhouse_backend.models.StringField(low_cardinality=True)),
-                ('key', models.OneToOneField(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='clickhouse_search.annotationssv')),
+                ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
                 ('ref_samples', clickhouse_backend.models.UInt32Field()),
                 ('het_samples', clickhouse_backend.models.UInt32Field()),
                 ('hom_samples', clickhouse_backend.models.UInt32Field()),
@@ -684,7 +684,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='GtStatsGRCh37SnvIndel',
             fields=[
-                ('key', models.OneToOneField(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='clickhouse_search.annotationsgrch37snvindel')),
+                ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
                 ('ac_wes', clickhouse_backend.models.UInt32Field()),
                 ('ac_wgs', clickhouse_backend.models.UInt32Field()),
                 ('hom_wes', clickhouse_backend.models.UInt32Field()),
@@ -703,7 +703,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='GtStatsMito',
             fields=[
-                ('key', models.OneToOneField(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='clickhouse_search.annotationsmito')),
+                ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
                 ('ac_het_wes', clickhouse_backend.models.UInt32Field()),
                 ('ac_het_wgs', clickhouse_backend.models.UInt32Field()),
                 ('ac_hom_wes', clickhouse_backend.models.UInt32Field()),
@@ -722,7 +722,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='GtStatsSnvIndel',
             fields=[
-                ('key', models.OneToOneField(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='clickhouse_search.annotationssnvindel')),
+                ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
                 ('ac_wes', clickhouse_backend.models.UInt32Field()),
                 ('ac_wgs', clickhouse_backend.models.UInt32Field()),
                 ('hom_wes', clickhouse_backend.models.UInt32Field()),
@@ -741,7 +741,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='GtStatsSv',
             fields=[
-                ('key', models.OneToOneField(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='clickhouse_search.annotationssv')),
+                ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
                 ('ac_wgs', clickhouse_backend.models.UInt32Field()),
                 ('hom_wgs', clickhouse_backend.models.UInt32Field()),
             ],

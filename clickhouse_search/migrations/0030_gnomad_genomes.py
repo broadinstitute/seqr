@@ -58,13 +58,13 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='GnomadGenomesSeqrVariantsGRCh37SnvIndel',
             fields=[
+                ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
                 ('ac', clickhouse_backend.models.UInt32Field()),
                 ('af', clickhouse_backend.models.DecimalField(decimal_places=8, max_digits=9)),
                 ('an', clickhouse_backend.models.UInt32Field()),
                 ('filter_af', clickhouse_backend.models.DecimalField(decimal_places=8, max_digits=9)),
                 ('hemi', clickhouse_backend.models.UInt32Field()),
                 ('hom', clickhouse_backend.models.UInt32Field()),
-                ('key', models.OneToOneField(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='clickhouse_search.annotationsgrch37snvindel')),
             ],
             options={
                 'db_table': 'GRCh37/SNV_INDEL/reference_data/gnomad_genomes/seqr_variants',
@@ -78,13 +78,13 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='GnomadGenomesSeqrVariantsSnvIndel',
             fields=[
+                ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
                 ('ac', clickhouse_backend.models.UInt32Field()),
                 ('af', clickhouse_backend.models.DecimalField(decimal_places=8, max_digits=9)),
                 ('an', clickhouse_backend.models.UInt32Field()),
                 ('filter_af', clickhouse_backend.models.DecimalField(decimal_places=8, max_digits=9)),
                 ('hemi', clickhouse_backend.models.UInt32Field()),
                 ('hom', clickhouse_backend.models.UInt32Field()),
-                ('key', models.OneToOneField(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='clickhouse_search.annotationssnvindel')),
             ],
             options={
                 'db_table': 'GRCh38/SNV_INDEL/reference_data/gnomad_genomes/seqr_variants',

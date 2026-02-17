@@ -83,7 +83,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='DbnsfpSeqrVariantsGRCh37SnvIndel',
             fields=[
-                ('key', models.OneToOneField(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='clickhouse_search.annotationsgrch37snvindel')),
+                ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
                 ('cadd', clickhouse_backend.models.DecimalField(blank=True, decimal_places=5, max_digits=9, null=True)),
                 ('fathmm', clickhouse_backend.models.DecimalField(blank=True, decimal_places=5, max_digits=9, null=True)),
                 ('mpc', clickhouse_backend.models.DecimalField(blank=True, decimal_places=5, max_digits=9, null=True)),
@@ -107,7 +107,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='DbnsfpSeqrVariantsSnvIndel',
             fields=[
-                ('key', models.OneToOneField(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='clickhouse_search.annotationssnvindel')),
+                ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
                 ('cadd', clickhouse_backend.models.DecimalField(blank=True, decimal_places=5, max_digits=9, null=True)),
                 ('fathmm', clickhouse_backend.models.DecimalField(blank=True, decimal_places=5, max_digits=9, null=True)),
                 ('mpc', clickhouse_backend.models.DecimalField(blank=True, decimal_places=5, max_digits=9, null=True)),
@@ -131,7 +131,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='DbnsfpSeqrVariantsMito',
             fields=[
-                ('key', models.OneToOneField(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='clickhouse_search.annotationsmito')),
+                ('key', clickhouse_search.backend.fields.UInt32FieldDeltaCodecField(primary_key=True, serialize=False)),
                 ('mut_taster', clickhouse_backend.models.Enum8Field(blank=True, choices=[(0, 'D'), (1, 'A'), (2, 'N'), (3, 'P')], null=True)),
                 ('sift', clickhouse_backend.models.DecimalField(blank=True, decimal_places=5, max_digits=9, null=True)),
             ],
