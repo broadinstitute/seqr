@@ -66,6 +66,24 @@ const groupByFamilyGuid = objs => objs.reduce((acc, o) => {
   return acc
 }, {})
 
+export const getProjectDatasetTypes = createSelector(
+  getProjectsByGuid,
+  getSamplesByGuid,
+  (projectsByGuid, samplesByGuid) => Object.values(samplesByGuid).reduce(
+    (acc, { projectGuid, datasetType }) => {
+      const { datasetTypes } = projectsByGuid[projectGuid] || {}
+      if (datasetTypes) {
+        return { ...acc, [projectGuid]: datasetTypes }
+      }
+      if (!acc[projectGuid]) {
+        acc[projectGuid] = new Set()
+      }
+      acc[projectGuid].add()(datasetType)
+      return acc
+    }, {},
+  ),
+)
+
 export const getDatasetsByIndividual = createSelector(
   getSamplesByGuid,
   samplesByGuid => Object.values(samplesByGuid).sort(

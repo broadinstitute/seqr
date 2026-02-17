@@ -12,6 +12,7 @@ import {
   getSearchFamiliesByHash,
   getGenesById,
   getSearchesByHash,
+  getProjectDatasetTypes,
   getActiveDatasetsByFamily,
 } from 'redux/selectors'
 import { FAMILY_ANALYSIS_STATUS_LOOKUP } from 'shared/utils/constants'
@@ -195,31 +196,15 @@ export const getLocusListOptions = createListEqualSelector(
   },
 )
 
-const getActiveDatasetTypes = datasets => ([
-  ...new Set((datasets || []).map(({ datasetType }) => datasetType)),
-])
-
-export const getProjectDatasetTypes = createSelector(
-  getProjectsByGuid,
-  getFamiliesGroupedByProjectGuid,
-  getActiveDatasetsByFamily,
-  (projectsByGuid, familiesByProjectGuid, datasetsByFamily) => Object.values(projectsByGuid).reduce(
-    (acc, { projectGuid, datasetTypes }) => ({
-      ...acc,
-      [projectGuid]: datasetTypes || getActiveDatasetTypes(Object.keys(familiesByProjectGuid[projectGuid] || {}).reduce(
-        (projectAcc, familyGuid) => [...projectAcc, ...(datasetsByFamily[familyGuid] || [])], [],
-      )),
-    }), {},
-  ),
-)
-
 export const getDatasetTypes = createSelector(
   (state, props) => props.projectFamilies,
   getProjectDatasetTypes,
   getActiveDatasetsByFamily,
   (projectFamilies, projectDatasetTypes, datasetsByFamily) => {
     const isSingleFamily = (projectFamilies || []).length === 1 && projectFamilies[0].familyGuids?.length === 1
-    const datasetTypes = isSingleFamily ? getActiveDatasetTypes(datasetsByFamily[projectFamilies[0].familyGuids[0]]) : (
+    const datasetTypes = isSingleFamily ? [
+      ...new Set((datasetsByFamily[projectFamilies[0].familyGuids[0]] || []).map(({ datasetType }) => datasetType)),
+    ] : (
       projectFamilies || []
     ).reduce((acc, { projectGuid }) => new Set([
       ...acc, ...(projectDatasetTypes[projectGuid] || [])]), new Set())
