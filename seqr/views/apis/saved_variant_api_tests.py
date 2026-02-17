@@ -378,11 +378,10 @@ class SavedVariantAPITest(object):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), self.SAVED_VARIANT_RESPONSE_KEYS)
-        self.assertSetEqual(
-            set(response_json['savedVariantsByGuid']['SV0000002_1248367227_r0390_100'].keys()),
-            self.SAVED_VARIANT_DETAIL_FIELDS,
-        )
+        self.assertSetEqual(set(response_json.keys()), self.SAVED_VARIANT_RESPONSE_KEYS - {'omimIntervals'})
+        self.assertSetEqual(set(response_json['savedVariantsByGuid']['SV0000002_1248367227_r0390_100'].keys()), {
+            'discoveryTags',  *self.SAVED_VARIANT_DETAIL_FIELDS, *self.SAVED_VARIANT_38_DETAIL_FIELDS,
+        })
 
     def test_create_saved_variant(self):
         create_saved_variant_url = reverse(create_saved_variant_handler)
@@ -1061,6 +1060,7 @@ class LocalSavedVariantAPITest(AuthenticationTestCase, SavedVariantAPITest):
 
     SAVED_VARIANT_RESPONSE_KEYS = SAVED_VARIANT_RESPONSE_KEYS
     SAVED_VARIANT_DETAIL_FIELDS = SAVED_VARIANT_DETAIL_FIELDS
+    SAVED_VARIANT_38_DETAIL_FIELDS = {}
 
     def _assert_created_variant(self, saved_variant, variant_json, **kwargs):
         super()._assert_created_variant(saved_variant, variant_json, **kwargs)
@@ -1081,6 +1081,7 @@ class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, SavedVariantAPITest)
 
     SAVED_VARIANT_RESPONSE_KEYS = {*SAVED_VARIANT_RESPONSE_KEYS, 'totalSampleCounts'}
     SAVED_VARIANT_DETAIL_FIELDS = {*SAVED_VARIANT_DETAIL_FIELDS, 'key', 'mainTranscriptId'}
+    SAVED_VARIANT_38_DETAIL_FIELDS = {'screenRegionType', 'sortedRegulatoryFeatureConsequences', 'sortedMotifFeatureConsequences'}
 
     @classmethod
     def setUpTestData(cls):
@@ -1091,13 +1092,13 @@ class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, SavedVariantAPITest)
     def test_saved_variant_data(self, *args):
         super(AnvilSavedVariantAPITest, self).test_saved_variant_data(*args)
         self.mock_list_workspaces.assert_called_with(self.analyst_user)
-        self.mock_get_ws_access_level.assert_called_with(
-            mock.ANY, 'ext-data', 'empty')
         self.mock_get_ws_access_level.assert_any_call(
+            mock.ANY, 'ext-data', 'empty')
+        self.mock_get_ws_access_level.assert_called_with(
             mock.ANY, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
-        self.assertEqual(self.mock_get_ws_access_level.call_count, 17)
+        self.assertEqual(self.mock_get_ws_access_level.call_count, 18)
         self.mock_get_groups.assert_has_calls([mock.call(self.collaborator_user), mock.call(self.analyst_user)])
-        self.assertEqual(self.mock_get_groups.call_count, 11)
+        self.assertEqual(self.mock_get_groups.call_count, 12)
         self.mock_get_ws_acl.assert_not_called()
         self.mock_get_group_members.assert_not_called()
 
