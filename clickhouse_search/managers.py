@@ -10,7 +10,7 @@ from clickhouse_search.backend.fields import NestedField, NamedTupleField
 from clickhouse_search.backend.functions import Array, ArrayConcat, ArrayDistinct, ArrayFilter, ArrayFold, \
     ArrayIntersect, ArrayJoin, ArrayMap, ArraySort, ArraySymmetricDifference, CrossJoin, GroupArray, GroupArrayArray, \
     GroupArrayIntersect, If, MapLookup, NullIf, Plus, SubqueryJoin, SubqueryTable, Tuple, TupleConcat, Untuple, \
-    IntDiv, Modulo, SplitByString, ArrayIndex
+    IntDiv, Modulo, SplitByString, ArrayIndex, Multiply, IndexOf
 from clickhouse_search.models.postgres_dicts import AffectedDict, SexDict
 from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFECTED, UNAFFECTED, MALE_SEXES, \
     X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, SCREEN_KEY, UTR_ANNOTATOR_KEY, \
@@ -19,7 +19,7 @@ from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFEC
     CLINVAR_CONFLICTING_P_LP, CLINVAR_CONFLICTING_NO_P, CLINVAR_CONFLICTING, PATH_FREQ_OVERRIDE_CUTOFF, \
     HGMD_CLASS_FILTERS, SV_TYPE_FILTER_FIELD, SV_CONSEQUENCES_FIELD, COMPOUND_HET, COMPOUND_HET_ALLOW_HOM_ALTS, \
     X_LINKED_RECESSIVE_MALE_AFFECTED, FEMALE_SEXES, SV_ANNOTATION_TYPES
-from seqr.utils.xpos_utils import get_xpos, MIN_POS, MAX_POS
+from seqr.utils.xpos_utils import get_xpos, MIN_POS, MAX_POS, CHROMOSOME_CHOICES
 
 
 class SearchQuerySet(QuerySet):
@@ -708,8 +708,15 @@ class VariantsQuerySet(BaseVariantsQuerySet):
             pops=self._population_expression(self.entry_model),
         )
 
-    def join_annotations(self):
+    def join_annotations(self, annotate_xpos=False):
         results = self.join_populations()
+        if annotate_xpos:
+            results = results.annotate(**self.split_variant_id_annotations())
+            results = results.annotate(xpos=Plus(
+                Multiply(IndexOf('chrom', array=[chrom for _, chrom in CHROMOSOME_CHOICES]), Value(int(1e9))),
+                F('pos'),
+                output_field=models.UInt64Field(),
+            ))
         results = results.annotate(
             preds=self._prediction_expression(self.entry_model),
             pops=self._population_expression(self.entry_model),
@@ -925,7 +932,7 @@ class VariantDetailsQuerySet(VariantsQuerySet):
         return super().result_values(*args, skip_entry_fields=skip_entry_fields, **kwargs)
 
     def join_annotations(self):
-        results = super().join_annotations()
+        results = super().join_annotations(annotate_xpos=bool(self.entry_model.RANGE_PREDICTIONS))
         results = results.annotate(
             hgmd_join=self._pathogenicity_tuple(self.variant_model.hgmd_join, 'key__hgmd_join', rename_fields={'classification': 'class'}),
         )
