@@ -113,12 +113,11 @@ class RegisterCaidsTest(TestCase):
             json={'errorType': 'InternalServerError'}
         )
         with self.assertRaisesMessage(CommandError, 'Failed in 38/ClingenAlleleRegistry curr_key: 3'):
-            call_command('reload_clinvar_all_variants')
             call_command("register_caids", batch_size=5)
             mock_safe_post_to_slack.assert_not_called()
 
         responses.reset()
-        mock_safe_post_to_slack.reset()
+        mock_safe_post_to_slack.reset_mock()
         mock_logger.reset_mock()
 
         responses.add(
@@ -133,11 +132,12 @@ class RegisterCaidsTest(TestCase):
             status=200,
             json={'non': 'list'}
         )
-        call_command("register_caids", batch_size=5)
-        mock_safe_post_to_slack.assert_not_called()
-        mock_logger.exception.assert_called_with(
-            'Failed in 38/ClingenAlleleRegistry curr_key: 3'
-        )
+        with self.assertRaisesMessage(CommandError, 'Failed in 38/ClingenAlleleRegistry curr_key: 3'):
+            call_command("register_caids", batch_size=5)
+            mock_safe_post_to_slack.assert_not_called()
+            mock_logger.exception.assert_called_with(
+                'Failed in 38/ClingenAlleleRegistry curr_key: 3'
+            )
 
     @responses.activate
     def test_failure(self, mock_safe_post_to_slack, mock_logger):
@@ -152,13 +152,14 @@ class RegisterCaidsTest(TestCase):
             ],
             status=500,
         )
-        call_command("register_caids", batch_size=5)
-        mock_safe_post_to_slack.assert_not_called()
-        mock_logger.exception.assert_called_with(
-            'Failed in 38/ClingenAlleleRegistry curr_key: 3'
-        )
-        dv = DataVersions.objects.get(data_model_name='38/ClingenAlleleRegistry')
-        self.assertEqual(dv.version, '3')
+        with self.assertRaisesMessage(CommandError, 'Failed in 38/ClingenAlleleRegistry curr_key: 3'):
+            call_command("register_caids", batch_size=5)
+            mock_safe_post_to_slack.assert_not_called()
+            mock_logger.exception.assert_called_with(
+                'Failed in 38/ClingenAlleleRegistry curr_key: 3'
+            )
+            dv = DataVersions.objects.get(data_model_name='38/ClingenAlleleRegistry')
+            self.assertEqual(dv.version, '3')
 
     @responses.activate
     def test_register_caids(self, mock_safe_post_to_slack, mock_logger):
@@ -218,7 +219,7 @@ class RegisterCaidsTest(TestCase):
         self.assertEqual(vd.caid, 'CA997563840')
 
         # Ensure re-calling is a no-op
-        mock_safe_post_to_slack.reset()
+        mock_safe_post_to_slack.reset_mock()
         mock_logger.reset_mock()
         call_command("register_caids", batch_size=3)
         mock_logger.info.assert_not_called()
