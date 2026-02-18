@@ -108,14 +108,13 @@ class RegisterCaidsTest(TestCase):
                     "fields": "none @id genomicAlleles externalRecords.gnomAD_4.id",
                 }, strict_match=False),
             ],
-            status=200,
+            status=500,
             json={'errorType': 'InternalServerError'}
         )
-        call_command("register_caids", batch_size=5)
-        mock_safe_post_to_slack.assert_not_called()
-        mock_logger.exception.assert_called_with(
-            'Failed in 38/ClingenAlleleRegistry curr_key: 3'
-        )
+        with self.assertRaisesMessage(CommandError, 'Failed in 38/ClingenAlleleRegistry curr_key: 3'):
+            call_command('reload_clinvar_all_variants')
+            call_command("register_caids", batch_size=5)
+            mock_safe_post_to_slack.assert_not_called()
 
         responses.reset()
         mock_safe_post_to_slack.reset()
