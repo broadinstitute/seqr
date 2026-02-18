@@ -142,7 +142,7 @@ class RegisterCaidsTest(TestCase):
         )
         with self.assertRaisesMessage(CommandError, 'Failed in 38/ClingenAlleleRegistry curr_key: 3'):
             call_command("register_caids", batch_size=5)
-            mock_safe_post_to_slack.assert_not_called()
+        mock_safe_post_to_slack.assert_not_called()
 
         responses.reset()
         mock_safe_post_to_slack.reset_mock()
@@ -162,10 +162,10 @@ class RegisterCaidsTest(TestCase):
         )
         with self.assertRaisesMessage(CommandError, 'Failed in 38/ClingenAlleleRegistry curr_key: 3'):
             call_command("register_caids", batch_size=5)
-            mock_safe_post_to_slack.assert_not_called()
-            mock_logger.exception.assert_called_with(
-                'Failed in 38/ClingenAlleleRegistry curr_key: 3'
-            )
+        mock_safe_post_to_slack.assert_not_called()
+        mock_logger.exception.assert_called_with(
+            'Failed in 38/ClingenAlleleRegistry curr_key: 3'
+        )
 
     @responses.activate
     def test_failure(self, mock_safe_post_to_slack, mock_logger):
@@ -182,12 +182,12 @@ class RegisterCaidsTest(TestCase):
         )
         with self.assertRaisesMessage(CommandError, 'Failed in 38/ClingenAlleleRegistry curr_key: 3'):
             call_command("register_caids", batch_size=5)
-            mock_safe_post_to_slack.assert_not_called()
-            mock_logger.exception.assert_called_with(
-                'Failed in 38/ClingenAlleleRegistry curr_key: 3'
-            )
-            dv = DataVersions.objects.get(data_model_name='38/ClingenAlleleRegistry')
-            self.assertEqual(dv.version, '3')
+        mock_safe_post_to_slack.assert_not_called()
+        mock_logger.exception.assert_called_with(
+            'Failed in 38/ClingenAlleleRegistry curr_key: 3'
+        )
+        dv = DataVersions.objects.get(data_model_name='38/ClingenAlleleRegistry')
+        self.assertEqual(dv.version, '3')
 
     @responses.activate
     def test_register_caids(self, mock_safe_post_to_slack, mock_logger):
