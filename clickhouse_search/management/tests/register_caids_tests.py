@@ -94,6 +94,34 @@ MOCK_RESPONSE = [
 
 @mock.patch('clickhouse_search.management.commands.register_caids.logger')
 @mock.patch("clickhouse_search.management.commands.register_caids.safe_post_to_slack")
+class RegisterCaidsEmptyDatabaseTest(TestCase):
+    databases = "__all__"
+    fixtures = []
+
+    @responses.activate
+    def test_register_caids(self, mock_safe_post_to_slack, mock_logger):
+        responses.add(
+            responses.PUT,
+            "https://reg.genome.network/alleles",
+            match=[
+                responses.matchers.query_param_matcher({
+                    "file": "vcf",
+                    "fields": "none @id genomicAlleles externalRecords.gnomAD_4.id",
+                }, strict_match=False),
+            ],
+            status=200,
+            json=MOCK_RESPONSE
+        )
+        call_command("register_caids", batch_size=3)
+        mock_logger.info.assert_called_with(
+            'Attempting to register caids from key: 0'
+        )
+        mock_logger.warning.assert_not_called()
+
+
+
+@mock.patch('clickhouse_search.management.commands.register_caids.logger')
+@mock.patch("clickhouse_search.management.commands.register_caids.safe_post_to_slack")
 class RegisterCaidsTest(TestCase):
     databases = "__all__"
     fixtures = ["variant_details_for_update"]
@@ -222,6 +250,8 @@ class RegisterCaidsTest(TestCase):
         mock_safe_post_to_slack.reset_mock()
         mock_logger.reset_mock()
         call_command("register_caids", batch_size=3)
-        mock_logger.info.assert_not_called()
+        mock_logger.info.assert_called_with(
+            'Attempting to register caids from key: 10',
+        )
         mock_logger.warning.assert_not_called()
         mock_safe_post_to_slack.assert_not_called()

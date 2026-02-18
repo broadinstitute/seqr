@@ -300,6 +300,9 @@ class Command(BaseCommand):
                 version_obj.save()
 
             min_key = curr_key = max_key = int(version_obj.version)
+            logger.info(
+                f'Attempting to register caids from key: {min_key}'
+            )
             while True:
                 qs = join_series(
                     variant_details_model,
