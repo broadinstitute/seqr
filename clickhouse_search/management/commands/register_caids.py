@@ -317,7 +317,7 @@ class Command(BaseCommand):
                     curr_key = max_key
                     version_obj.version = curr_key
                     version_obj.save()
-                except Exception:
+                except Exception as e:
                     logger.exception(
                         f"Failed in {genome_version}/ClingenAlleleRegistry curr_key: {curr_key}"
                     )
