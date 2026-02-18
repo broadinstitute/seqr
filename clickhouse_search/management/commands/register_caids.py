@@ -9,7 +9,7 @@ from typing import Literal, Union, Optional
 from urllib3.util.retry import Retry
 
 from django.db.models import Max
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 
 from clickhouse_search.models.search_models import (
     EntriesGRCh37SnvIndel,
@@ -257,6 +257,17 @@ def register_caids(
         max_key_id = max(max_key_id, variant.key_id)
     return max_key_id
 
+def join_series(model: VariantDetailsSnvIndel | VariantDetailsGRCh37SnvIndel, min_: int, max_: int):
+    table = model._meta.db_table
+    query = f"""
+        SELECT vd.*
+        FROM generate_series(%s, %s) AS gs
+        INNER JOIN `{table}` vd
+            ON toUInt32(gs.generate_series) = vd.key
+    """  # nosec
+
+    return model.objects.raw(query, [min_, max_])
+
 
 class Command(BaseCommand):
     help = "Register newly loaded seqr variants with the Clingen Allele Registry"
@@ -290,7 +301,8 @@ class Command(BaseCommand):
 
             min_key = curr_key = max_key = int(version_obj.version)
             while True:
-                qs = variant_details_model.objects.join_series(
+                qs = join_series(
+                    variant_details_model,
                     curr_key + 1,
                     curr_key + 1 + batch_size,
                 )
@@ -301,16 +313,18 @@ class Command(BaseCommand):
                 try:
                     max_key = register_caids(genome_version, variants)
                     variant_details_model.objects.using('clickhouse_write').bulk_update(variants, ["caid"])
+                    # Save current key on every iteration
+                    curr_key = max_key
+                    version_obj.version = curr_key
+                    version_obj.save()
                 except Exception:
                     logger.exception(
                         f"Failed in {genome_version}/ClingenAlleleRegistry curr_key: {curr_key}"
                     )
-                    break
+                    raise CommandError(
+                        f"Failed in {genome_version}/ClingenAlleleRegistry curr_key: {curr_key}"
+                    ) from e
 
-                # Save current key on every iteration
-                curr_key = max_key
-                version_obj.version = curr_key
-                version_obj.save()
 
             if min_key != max_key:
                 slack_message = (

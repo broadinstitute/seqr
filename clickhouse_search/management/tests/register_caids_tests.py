@@ -214,5 +214,13 @@ class RegisterCaidsTest(TestCase):
             'MESSAGE: 1\t10469\trs370233998\tC\tG\t.\t.\t.\n'
             'INPUT_LINE: Cannot align NC_000001.10 [10468,10469).',
         )
-        vd = VariantDetailsSnvIndel.objects.filter(variant_id='1-91511686-T-G').first()
+        vd = VariantDetailsSnvIndel.objects.get(variant_id='1-91511686-T-G')
         self.assertEqual(vd.caid, 'CA997563840')
+
+        # Ensure re-calling is a no-op
+        mock_safe_post_to_slack.reset()
+        mock_logger.reset_mock()
+        call_command("register_caids", batch_size=3)
+        mock_logger.info.assert_not_called()
+        mock_logger.warning.assert_not_called()
+        mock_safe_post_to_slack.assert_not_called()
