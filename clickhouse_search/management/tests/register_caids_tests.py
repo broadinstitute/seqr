@@ -109,7 +109,7 @@ class RegisterCaidsTest(TestCase):
                     "fields": "none @id genomicAlleles externalRecords.gnomAD_4.id",
                 }, strict_match=False),
             ],
-            status=500,
+            status=200,
             json={'errorType': 'InternalServerError'}
         )
         with self.assertRaisesMessage(CommandError, 'Failed in 38/ClingenAlleleRegistry curr_key: 3'):

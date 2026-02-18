@@ -257,7 +257,7 @@ def register_caids(
         max_key_id = max(max_key_id, variant.key_id)
     return max_key_id
 
-def join_series(model: VariantDetailsSnvIndel | VariantDetailsGRCh37SnvIndel, min_: int, max_: int):
+def join_series(model: Union[VariantDetailsSnvIndel, VariantDetailsGRCh37SnvIndel], min_: int, max_: int):
     table = model._meta.db_table
     query = f"""
         SELECT vd.*
