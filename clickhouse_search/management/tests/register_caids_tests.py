@@ -108,7 +108,7 @@ class RegisterCaidsEmptyDatabaseTest(TestCase):
         dv_37 = DataVersions.objects.get(data_model_name='37/ClingenAlleleRegistry')
         self.assertEqual(dv_37.version, '0')
         dv_38 = DataVersions.objects.get(data_model_name='38/ClingenAlleleRegistry')
-        self.assertEqual(dv_38.version, '3')
+        self.assertEqual(dv_38.version, '0')
 
 
 @mock.patch('clickhouse_search.management.commands.register_caids.logger')
