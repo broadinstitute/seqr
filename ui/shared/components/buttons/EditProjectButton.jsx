@@ -3,7 +3,7 @@ import { connect } from 'react-redux'
 import PropTypes from 'prop-types'
 
 import { updateProject } from 'redux/rootReducer'
-import { BaseSemanticInput, BooleanCheckbox } from '../form/Inputs'
+import { BaseSemanticInput } from '../form/Inputs'
 import { validators } from '../form/FormHelpers'
 import UpdateButton from './UpdateButton'
 import {
@@ -51,16 +51,8 @@ const VLM_CONTACT_FIELD = {
   validate: value => (!value ? undefined : validators.requiredEmail(value)),
   component: VlmContactInput,
 }
-const RESTRICT_HPO_SHARING_FIELD = {
-  name: 'restrictHpoSharing',
-  label: 'Only share high-level HPO terms',
-  labelHelp: 'On the Variant Lookup page, all seqr users are able to see the HPO terms associated with individuals ' +
-    'that have a matched variant of interest. Selecting this option will restrict the HPO terms that are shared to ' +
-    'only the top-level categories.',
-  component: BooleanCheckbox,
-}
 
-const MATCHMAKER_PROJECT_FIELDS = [VLM_CONTACT_FIELD, RESTRICT_HPO_SHARING_FIELD, ...[
+const MATCHMAKER_PROJECT_FIELDS = [VLM_CONTACT_FIELD, ...[
   { ...MATCHMAKER_CONTACT_NAME_FIELD, name: 'mmePrimaryDataOwner' },
   { ...MATCHMAKER_CONTACT_URL_FIELD, name: 'mmeContactUrl' },
 ].map(({ label, ...field }) => ({ ...field, label: `Matchmaker ${label}` }))]

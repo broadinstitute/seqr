@@ -73,6 +73,14 @@ const CONSENT_CODE_FIELD = {
 export const EDITABLE_PROJECT_FIELDS = [
   { name: 'name', label: 'Project Name', placeholder: 'Name', validate: validators.required, autoFocus: true },
   PROJECT_DESC_FIELD,
+  {
+    name: 'restrictHpoSharing',
+    label: 'Only share high-level HPO terms',
+    labelHelp: 'On the Variant Lookup page, all seqr users are able to see the HPO terms associated with individuals ' +
+      'that have a matched variant of interest. Selecting this option will restrict the HPO terms that are shared to ' +
+      'only the top-level categories.',
+    component: BooleanCheckbox,
+  },
 ]
 
 export const PM_EDITABLE_PROJECT_FIELDS = [
