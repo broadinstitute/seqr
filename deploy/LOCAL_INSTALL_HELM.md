@@ -46,15 +46,17 @@ have been added to.
 ## Enabling Clingen Allele Registration
 - Turning on this feature will register your variants within the Clingen Allele Registry during VCF ingestion. The [Registry](https://reg.clinicalgenome.org/redmine/projects/registry/genboree_registry/landing) provides and maintains unique variant identifiers; enabling this feature will toggle several small features.
 - You will first need to [register](https://reg.clinicalgenome.org/cg-prof/new) and receive a login and password.
-- Create a kubernetes secret called `pipeline-secrets` with your login and password embedded:
+- When you create the [required secrets](https://github.com/broadinstitute/seqr-helm?tab=readme-ov-file#required-secrets) 
+during setup, include your login and password in the `seqr-secrets`:
 ```bash
-kubectl create secret generic pipeline-secrets \
+kubectl create secret generic seqr-secrets \
+  --from-literal=django_key='securely-generated-key'
   --from-literal=clingen_allele_registry_login='my-login'
   --from-literal=clingen_allele_registry_password='my-password'
 ```
 - Add secret references in your [values overrides](https://github.com/broadinstitute/seqr-helm?tab=readme-ov-file#valuesenvironment-overrides):
 ```yaml
-pipeline-runner:
+seqr:
   additionalSecrets:
     - name: CLINGEN_ALLELE_REGISTRY_LOGIN
       valueFrom:
