@@ -100,24 +100,15 @@ class RegisterCaidsEmptyDatabaseTest(TestCase):
 
     @responses.activate
     def test_register_caids(self, mock_safe_post_to_slack, mock_logger):
-        responses.add(
-            responses.PUT,
-            "https://reg.genome.network/alleles",
-            match=[
-                responses.matchers.query_param_matcher({
-                    "file": "vcf",
-                    "fields": "none @id genomicAlleles externalRecords.gnomAD_4.id",
-                }, strict_match=False),
-            ],
-            status=200,
-            json=MOCK_RESPONSE
-        )
         call_command("register_caids", batch_size=3)
         mock_logger.info.assert_called_with(
             'Attempting to register caids from key: 0'
         )
         mock_logger.warning.assert_not_called()
-
+        dv_37 = DataVersions.objects.get(data_model_name='37/ClingenAlleleRegistry')
+        self.assertEqual(dv_37.version, '0')
+        dv_38 = DataVersions.objects.get(data_model_name='38/ClingenAlleleRegistry')
+        self.assertEqual(dv_38.version, '3')
 
 
 @mock.patch('clickhouse_search.management.commands.register_caids.logger')
@@ -128,6 +119,18 @@ class RegisterCaidsTest(TestCase):
 
     @responses.activate
     def test_bad_responses(self, mock_safe_post_to_slack, mock_logger):
+        responses.add(
+            responses.PUT,
+            "https://reg.genome.network/alleles",
+            match=[
+                responses.matchers.query_param_matcher({
+                    "file": "vcf",
+                    "fields": "none @id genomicAlleles externalRecords.gnomAD_4.id",
+                }, strict_match=False),
+            ],
+            status=200,
+            json={'errorType': 'InternalServerError'}
+        )
         with self.assertRaisesMessage(CommandError, 'Failed in 38/ClingenAlleleRegistry curr_key: 3'):
             call_command("register_caids", batch_size=5)
         mock_safe_post_to_slack.assert_not_called()
@@ -135,10 +138,6 @@ class RegisterCaidsTest(TestCase):
         responses.reset()
         mock_safe_post_to_slack.reset_mock()
         mock_logger.reset_mock()
-        dv_37 = DataVersions.objects.get(data_model_name='37/ClingenAlleleRegistry')
-        self.assertEqual(dv_37.version, '0')
-        dv_38 = DataVersions.objects.get(data_model_name='38/ClingenAlleleRegistry')
-        self.assertEqual(dv_38.version, '0')
 
         responses.add(
             responses.PUT,
