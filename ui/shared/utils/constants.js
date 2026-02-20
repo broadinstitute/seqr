@@ -56,8 +56,6 @@ export const GENOME_VERSION_DISPLAY_LOOKUP = {
 
 export const FILE_FIELD_NAME = 'uploadedFile'
 
-export const PROJECT_DESC_FIELD = { name: 'description', label: 'Project Description', placeholder: 'Description' }
-
 export const CONSENT_CODES = ['HMB', 'GRU']
 const CONSENT_CODE_OPTIONS = [...CONSENT_CODES, 'Other'].map(text => ({ text, value: text[0] }))
 export const CONSENT_CODE_LOOKUP = CONSENT_CODE_OPTIONS.reduce(
@@ -70,9 +68,8 @@ const CONSENT_CODE_FIELD = {
   options: CONSENT_CODE_OPTIONS,
 }
 
-export const EDITABLE_PROJECT_FIELDS = [
-  { name: 'name', label: 'Project Name', placeholder: 'Name', validate: validators.required, autoFocus: true },
-  PROJECT_DESC_FIELD,
+export const OPTIONAL_PROJECT_FIELDS = [
+  { name: 'description', label: 'Project Description', placeholder: 'Description' },
   {
     name: 'recoveryEmail',
     label: 'Recovery Email',
@@ -88,6 +85,11 @@ export const EDITABLE_PROJECT_FIELDS = [
       'only the top-level categories.',
     component: BooleanCheckbox,
   },
+]
+
+export const EDITABLE_PROJECT_FIELDS = [
+  { name: 'name', label: 'Project Name', placeholder: 'Name', validate: validators.required, autoFocus: true },
+  ...OPTIONAL_PROJECT_FIELDS,
 ]
 
 export const PM_EDITABLE_PROJECT_FIELDS = [
