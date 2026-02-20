@@ -128,18 +128,6 @@ class RegisterCaidsTest(TestCase):
 
     @responses.activate
     def test_bad_responses(self, mock_safe_post_to_slack, mock_logger):
-        responses.add(
-            responses.PUT,
-            "https://reg.genome.network/alleles",
-            match=[
-                responses.matchers.query_param_matcher({
-                    "file": "vcf",
-                    "fields": "none @id genomicAlleles externalRecords.gnomAD_4.id",
-                }, strict_match=False),
-            ],
-            status=200,
-            json={'errorType': 'InternalServerError'}
-        )
         with self.assertRaisesMessage(CommandError, 'Failed in 38/ClingenAlleleRegistry curr_key: 3'):
             call_command("register_caids", batch_size=5)
         mock_safe_post_to_slack.assert_not_called()
@@ -147,6 +135,10 @@ class RegisterCaidsTest(TestCase):
         responses.reset()
         mock_safe_post_to_slack.reset_mock()
         mock_logger.reset_mock()
+        dv_37 = DataVersions.objects.get(data_model_name='37/ClingenAlleleRegistry')
+        self.assertEqual(dv_37.version, '0')
+        dv_38 = DataVersions.objects.get(data_model_name='38/ClingenAlleleRegistry')
+        self.assertEqual(dv_38.version, '0')
 
         responses.add(
             responses.PUT,
@@ -228,10 +220,10 @@ class RegisterCaidsTest(TestCase):
         mock_safe_post_to_slack.assert_has_calls([
             mock.call(SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, "Successfully called 38/ClingenAlleleRegistry for variants 3 -> 10."),
         ])
-        dv = DataVersions.objects.get(data_model_name='37/ClingenAlleleRegistry')
-        self.assertEqual(dv.version, '11')
-        dv = DataVersions.objects.get(data_model_name='38/ClingenAlleleRegistry')
-        self.assertEqual(dv.version, '10')
+        dv_37 = DataVersions.objects.get(data_model_name='37/ClingenAlleleRegistry')
+        self.assertEqual(dv_37.version, '11')
+        dv_38 = DataVersions.objects.get(data_model_name='38/ClingenAlleleRegistry')
+        self.assertEqual(dv_38.version, '10')
         mock_logger.info.assert_called_with(
             "2 registered variant(s) cannot be mapped back to ours. \n"
             "First unmappable variant:\n{'@id': 'http://reg.genome.network/allele/CA16716503', 'genomicAlleles': [{'chromosome': '1', 'coordinates': [{'allele': 'C', 'end': 10131, 'referenceAllele': '', 'start': 10131}], 'referenceGenome': 'GRCh38'}]}"
@@ -247,6 +239,7 @@ class RegisterCaidsTest(TestCase):
         self.assertEqual(vd.caid, 'CA997563840')
 
         # Ensure re-calling is a no-op
+        responses.reset()
         mock_safe_post_to_slack.reset_mock()
         mock_logger.reset_mock()
         call_command("register_caids", batch_size=3)
@@ -255,3 +248,9 @@ class RegisterCaidsTest(TestCase):
         )
         mock_logger.warning.assert_not_called()
         mock_safe_post_to_slack.assert_not_called()
+        self.assertEqual(len(responses.calls), 0)
+        dv_37 = DataVersions.objects.get(data_model_name='37/ClingenAlleleRegistry')
+        self.assertEqual(dv_37.version, '11')
+        dv_38 = DataVersions.objects.get(data_model_name='38/ClingenAlleleRegistry')
+        self.assertEqual(dv_38.version, '10')
+
