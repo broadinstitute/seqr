@@ -217,7 +217,7 @@ class RegisterCaidsTest(TestCase):
             ],
         )
         mock_safe_post_to_slack.assert_has_calls([
-            mock.call(SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, "Successfully called 38/ClingenAlleleRegistry for variants 3 -> 10."),
+            mock.call(SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, "Registered Clingen Allele IDs for 7 recently loaded GRCh38 variants"),
         ])
         dv_37 = DataVersions.objects.get(data_model_name='37/ClingenAlleleRegistry')
         self.assertEqual(dv_37.version, '11')

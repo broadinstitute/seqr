@@ -330,10 +330,7 @@ class Command(BaseCommand):
 
 
             if min_key != max_key:
-                slack_message = (
-                    f"Successfully called {genome_version}/ClingenAlleleRegistry "
-                    f"for variants {min_key} -> {max_key}."
-                )
+                slack_message = f"Registered Clingen Allele IDs for {max_key - min_key} recently loaded {genome_version} variants"
                 safe_post_to_slack(
                     SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL,
                     slack_message,
