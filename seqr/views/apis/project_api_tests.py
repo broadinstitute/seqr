@@ -155,6 +155,7 @@ class ProjectAPITest(object):
             'mme_contact_url': 'mailto:matchmaker@broadinstitute.org',
             'vlm_contact_email': 'vlm@broadinstitute.org',
             'restrict_hpo_sharing': False,
+            'recovery_email': None,
         })
         self._check_created_project_groups(new_project)
 

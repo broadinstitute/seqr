@@ -623,6 +623,7 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase, AirtableTest):
             'mme_contact_url': 'mailto:test_user_manager@test.com',
             'vlm_contact_email': 'test_user_manager@test.com',
             'restrict_hpo_sharing': False,
+            'recovery_email': None,
         })
 
         self._assert_valid_operation(project, test_add_data=False)
