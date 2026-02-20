@@ -74,6 +74,13 @@ export const EDITABLE_PROJECT_FIELDS = [
   { name: 'name', label: 'Project Name', placeholder: 'Name', validate: validators.required, autoFocus: true },
   PROJECT_DESC_FIELD,
   {
+    name: 'recoveryEmail',
+    label: 'Recovery Email',
+    labelHelp: 'An email the seqr team can contact in the event that the project owner is no longer reachable. ' +
+      'Note that this account does not need to be granted access to the project, and may be a group or shared email.',
+    validate: value => (!value ? undefined : validators.requiredEmail(value)),
+  },
+  {
     name: 'restrictHpoSharing',
     label: 'Only share high-level HPO terms',
     labelHelp: 'On the Variant Lookup page, all seqr users are able to see the HPO terms associated with individuals ' +
