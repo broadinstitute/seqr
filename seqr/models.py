@@ -198,7 +198,9 @@ class Project(ModelWithGUID):
     mme_contact_institution = models.TextField(null=True, blank=True, default=MME_DEFAULT_CONTACT_INSTITUTION)
 
     vlm_contact_email = models.TextField(null=True, blank=True, default=VLM_DEFAULT_CONTACT_EMAIL)
+    recovery_email = models.TextField(null=True, blank=True)
 
+    restrict_hpo_sharing = models.BooleanField(default=False)
     has_case_review = models.BooleanField(default=False)
     enable_hgmd = models.BooleanField(default=False)
     all_user_demo = models.BooleanField(default=False)
@@ -264,7 +266,7 @@ class Project(ModelWithGUID):
             'name', 'description', 'created_date', 'last_modified_date', 'genome_version', 'mme_contact_institution',
             'last_accessed_date', 'is_mme_enabled', 'mme_primary_data_owner', 'mme_contact_url', 'guid', 'consent_code',
             'workspace_namespace', 'workspace_name', 'has_case_review', 'enable_hgmd', 'is_demo', 'all_user_demo',
-            'vlm_contact_email',
+            'vlm_contact_email', 'recovery_email', 'restrict_hpo_sharing',
         ]
 
 

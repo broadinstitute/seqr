@@ -154,6 +154,8 @@ class ProjectAPITest(object):
             'mme_primary_data_owner': 'Samantha Baxter',
             'mme_contact_url': 'mailto:matchmaker@broadinstitute.org',
             'vlm_contact_email': 'vlm@broadinstitute.org',
+            'restrict_hpo_sharing': False,
+            'recovery_email': None,
         })
         self._check_created_project_groups(new_project)
 
@@ -195,11 +197,12 @@ class ProjectAPITest(object):
         self.assertEqual(project.consent_code, 'H')
 
         response = self.client.post(update_project_url, content_type='application/json', data=json.dumps(
-            {'description': 'updated project description', 'genomeVersion': '38', 'workspaceName': 'test update name'}
+            {'description': 'updated project description', 'restrictHpoSharing': True, 'genomeVersion': '38', 'workspaceName': 'test update name'}
         ))
         self.assertEqual(response.status_code, 200)
         updated_json = response.json()['projectsByGuid'][PROJECT_GUID]
         self.assertEqual(updated_json['description'], 'updated project description')
+        self.assertEqual(updated_json['restrictHpoSharing'], True)
         # genome version and workspace should not update
         self.assertEqual(updated_json['genomeVersion'], '37')
         self.assertEqual(updated_json['workspaceName'], expected_workspace_name)
