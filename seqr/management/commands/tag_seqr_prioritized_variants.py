@@ -73,11 +73,16 @@ MODERATE_ANNOTATIONS = {
         'extended_intronic_splice_region_variant',
     ]
 }
+MODERATE_ANNOTATIONS_TRANSCRIPT_EXON_VARIANT = {
+    'vep_consequences': [
+        *MODERATE_ANNOTATIONS['vep_consequences'],
+        NON_CODING_TRANSCRIPT_EXON_VARIANT,
+    ]
+}
 HIGH_MODERATE_ANNOTATIONS = {
     'vep_consequences': [
         *HIGH_ANNOTATIONS['vep_consequences'],
-        *MODERATE_ANNOTATIONS['vep_consequences'],
-        NON_CODING_TRANSCRIPT_EXON_VARIANT,
+        *MODERATE_ANNOTATIONS_TRANSCRIPT_EXON_VARIANT['vep_consequences'],
     ]
 }
 SV_ANNOTATIONS = {
@@ -271,29 +276,39 @@ SEARCHES = {
                 MAX_AFFECTED_FAMILY_FILTER: 1,
                 CONFIRMED_FAMILY_FILTER: True
             },
-            'annotations': HIGH_MODERATE_ANNOTATIONS,
+            'annotations': {
+                'vep_consequences': [
+                    *HIGH_ANNOTATIONS['vep_consequences'],
+                    *MODERATE_ANNOTATIONS_TRANSCRIPT_EXON_VARIANT['vep_consequences'],
+                ]
+            },
             'require_any_gene': True,
             'in_silico': IN_SILICO_FILTER,
             **NO_PANEL_APP_DE_NOVO_SEARCH,
         },
-        'De Novo/ Dominant': {
+        'De Novo - Non-coding Transcript Exon Variant': {
             'family_filter': {
                 MAX_AFFECTED_FAMILY_FILTER: 1,
-                CONFIRMED_FAMILY_FILTER: False
+                CONFIRMED_FAMILY_FILTER: True
             },
+            'annotations': {
+                'vep_consequences': [NON_CODING_TRANSCRIPT_EXON_VARIANT],
+            },
+            'in_silico': IN_SILICO_FILTER,
+            **DE_NOVO_SEARCH,
+        },
+        'De Novo/ Dominant': {
             'annotations': HIGH_ANNOTATIONS,
             'in_silico': IN_SILICO_FILTER,
             **DE_NOVO_SEARCH,
         },
         'Dominant': {
             'family_filter': {
-                'min_affected': 2
+                'min_affected': 2,
+                CONFIRMED_FAMILY_FILTER: True,
             },
-            'annotations': HIGH_MODERATE_ANNOTATIONS,
-            'in_silico': {
-                **IN_SILICO_FILTER,
-                'splice_ai': 0.5,
-            },
+            'annotations': MODERATE_ANNOTATIONS_TRANSCRIPT_EXON_VARIANT,
+            'in_silico': IN_SILICO_FILTER,
             **DE_NOVO_SEARCH,
         },
         'High Splice AI - De Novo/ Dominant': {
