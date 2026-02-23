@@ -279,7 +279,7 @@ SEARCHES = {
             'annotations': {
                 'vep_consequences': [
                     *HIGH_ANNOTATIONS['vep_consequences'],
-                    *MODERATE_ANNOTATIONS_TRANSCRIPT_EXON_VARIANT['vep_consequences'],
+                    *MODERATE_ANNOTATIONS['vep_consequences'],
                 ]
             },
             'require_any_gene': True,
@@ -389,7 +389,12 @@ SEARCHES = {
         'Mitochondrial - De Novo/ Dominant': {
             'gene_list_moi': MITO_MOI,
             'inheritance_mode': DE_NOVO,
-            'annotations': HIGH_MODERATE_ANNOTATIONS,
+            'annotations': {
+                'vep_consequences': [
+                    *HIGH_ANNOTATIONS['vep_consequences'],
+                    *MODERATE_ANNOTATIONS['vep_consequences'],
+                ]
+            },
             'freqs': {
                 'gnomad_mito': {'af': 0.001},
             },
