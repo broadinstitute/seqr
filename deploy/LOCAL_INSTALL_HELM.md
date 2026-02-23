@@ -54,7 +54,7 @@ kubectl create secret generic pipeline-secrets \
 ```
 - Add secret references in your [values overrides](https://github.com/broadinstitute/seqr-helm?tab=readme-ov-file#valuesenvironment-overrides):
 ```yaml
-pipeline-runner:
+seqr:
   additionalSecrets:
     - name: CLINGEN_ALLELE_REGISTRY_LOGIN
       valueFrom:
