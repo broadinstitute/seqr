@@ -389,12 +389,7 @@ SEARCHES = {
         'Mitochondrial - De Novo/ Dominant': {
             'gene_list_moi': MITO_MOI,
             'inheritance_mode': DE_NOVO,
-            'annotations': {
-                'vep_consequences': [
-                    *HIGH_ANNOTATIONS['vep_consequences'],
-                    *MODERATE_ANNOTATIONS['vep_consequences'],
-                ]
-            },
+            'annotations': HIGH_MODERATE_ANNOTATIONS,
             'freqs': {
                 'gnomad_mito': {'af': 0.001},
             },
