@@ -528,7 +528,7 @@ class Command(BaseCommand):
         cls._bulk_tag_variants(family_variant_data, updates, dataset_type)
 
     @classmethod
-    def _get_valid_family_sample_data(cls, project, sample_type, samples_by_family, family_filter=None):
+    def _get_valid_family_sample_data(cls, project, sample_type, samples_by_family, family_filter):
         if family_filter:
             samples_by_family = {
                 family_guid: sample_data for family_guid, sample_data in samples_by_family.items()
@@ -600,15 +600,22 @@ class Command(BaseCommand):
         sv_dataset_type = next(dt for dt in samples_by_dataset_type.keys() if dt.startswith('SV'))
         sample_type = sv_dataset_type.split('_')[-1]
         families = set(samples_by_dataset_type[sv_dataset_type].keys()).intersection(samples_by_dataset_type[Sample.DATASET_TYPE_VARIANT_CALLS].keys())
-        sv_sample_data = cls._get_valid_family_sample_data(project, sample_type, {
+        sv_samples_by_family = {
             guid: sample_data for guid, sample_data in samples_by_dataset_type[sv_dataset_type].items() if guid in families
-        })
-        snv_indel_sample_data = cls._get_valid_family_sample_data(project, sample_type, {
-            guid: sample_data for guid, sample_data in samples_by_dataset_type[Sample.DATASET_TYPE_VARIANT_CALLS].items() if guid in families
-        })
+        }
+        snv_indel_samples_by_family = {
+            guid: sample_data for guid, sample_data in samples_by_dataset_type[Sample.DATASET_TYPE_VARIANT_CALLS].items()
+            if guid in families
+        }
         family_variant_data = defaultdict(lambda: {'matched_searches': set(), 'matched_comp_het_searches': set(), 'support_vars': set()})
         logger.info(f'Searching for prioritized multi data type variants in {len(families)} families in project {project.name}')
         for search_name, config_search in MULTI_DATA_TYPE_SEARCHES.items():
+            sv_sample_data = cls._get_valid_family_sample_data(
+                project, sample_type, sv_samples_by_family, config_search.get('family_filter'),
+            )
+            snv_indel_sample_data = cls._get_valid_family_sample_data(
+                project, sample_type, snv_indel_samples_by_family, config_search.get('family_filter'),
+            )
             queryset = get_multi_data_type_comp_het_results_queryset(
                 GENOME_VERSION_GRCh38, sv_dataset_type, sv_sample_data, snv_indel_sample_data, num_families=len(families),
                 genes=genes, **config_search, **ALL_SEARCHES_CRITERIA,
