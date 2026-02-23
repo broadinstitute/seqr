@@ -634,7 +634,7 @@ class Command(BaseCommand):
         return len(results)
 
     @classmethod
-    def _bulk_tag_variants(cls, family_variant_data, updates, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS):
+    def _bulk_tag_variants(cls, family_variant_data, updates, dataset_type=None):
         today = datetime.now().strftime('%Y-%m-%d')
         new_tag_keys, update_tag_keys, skipped_tag_keys = bulk_create_tagged_variants(
             family_variant_data, tag_name=SEQR_TAG_TYPE, get_metadata=cls._get_metadata(today, 'matched_searches'),
