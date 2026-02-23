@@ -2,7 +2,7 @@ from collections import defaultdict
 from datetime import datetime
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.management.base import BaseCommand, CommandError
-from django.db.models import Q, F
+from django.db.models import Q, Count
 from django.db.models.functions import JSONObject
 
 from clickhouse_search.search import get_search_queryset, add_individual_guids, \
@@ -509,7 +509,8 @@ class Command(BaseCommand):
                     JSONObject(maternal_guid='individual__mother__guid', paternal_guid='individual__father__guid', sex='individual__sex'),
                     filter=Q(individual__affected=Individual.AFFECTED_STATUS_AFFECTED),
                 ),
-                unaffected_guids=ArrayAgg('individual__guid', filter=Q(individual__affected=Individual.AFFECTED_STATUS_UNAFFECTED)),
+                individual_guids=ArrayAgg('individual__guid', filter=Q(individual__affected=Individual.AFFECTED_STATUS_AFFECTED) | Q(individual__affected=Individual.AFFECTED_STATUS_UNAFFECTED)),
+                num_unaffected=Count('individual_id', filter=Q(individual__affected=Individual.AFFECTED_STATUS_UNAFFECTED), distinct=True),
             ).filter(affecteds__len__gt=0)
         }
         samples_by_dataset_type[dataset_type] = samples_by_family
@@ -542,7 +543,7 @@ class Command(BaseCommand):
         return {
             'project_guids': [project.guid],
             'num_families': len(samples_by_family),
-            'num_unaffected': sum(len(s['unaffected_guids']) for s in samples_by_family.values()),
+            'num_unaffected': sum(s['num_unaffected'] for s in samples_by_family.values()),
             'sample_type_families': {sample_type: samples_by_family.keys()},
         }
 
@@ -558,7 +559,7 @@ class Command(BaseCommand):
             proband = next((s for s in sample_data['affecteds'] if s['maternal_guid'] and s['paternal_guid']), None)
             if not proband:
                 return False
-            is_confirmed = proband['maternal_guid'] in sample_data['unaffected_guids'] and proband['paternal_guid'] in sample_data['unaffected_guids']
+            is_confirmed = proband['maternal_guid'] in sample_data['individual_guids'] and proband['paternal_guid'] in sample_data['individual_guids']
             return (not is_confirmed) if family_filter[CONFIRMED_FAMILY_FILTER] == False else is_confirmed
         return True
 
