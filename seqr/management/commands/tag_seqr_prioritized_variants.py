@@ -93,8 +93,8 @@ FREQ_FILTER = {
 }
 
 IN_SILICO_FILTER = {
-    'cadd': 22,
-    'revel': 0.2
+    'cadd': 22.8,
+    'revel': 0.291,
 }
 
 QUALITY_FILTER = {
