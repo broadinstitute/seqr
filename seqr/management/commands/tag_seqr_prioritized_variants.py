@@ -410,7 +410,19 @@ MULTI_DATA_TYPE_SEARCHES = {
     'Compound Heterozygous - One SV': {
         'annotations': {
             **SV_ANNOTATIONS,
-            **HIGH_MODERATE_ANNOTATIONS,
+            **HIGH_ANNOTATIONS,
+        },
+        'in_silico': IN_SILICO_FILTER,
+        'freqs': FREQ_FILTER,
+        'qualityFilter': PASS_QUALITY_FILTER,
+    },
+    'Compound Heterozygous - One SV - Confirmed': {
+        'family_filter': {
+            CONFIRMED_FAMILY_FILTER: True,
+        },
+        'annotations': {
+            **SV_ANNOTATIONS,
+            **MODERATE_ANNOTATIONS_TRANSCRIPT_EXON_VARIANT,
         },
         'in_silico': IN_SILICO_FILTER,
         'freqs': FREQ_FILTER,
