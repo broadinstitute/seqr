@@ -211,12 +211,7 @@ SEARCHES = {
         },
         'Compound Heterozygous': {
             'inheritance_mode': COMPOUND_HET,
-            'annotations': {
-                'vep_consequences': [
-                    *HIGH_ANNOTATIONS['vep_consequences'],
-                    NON_CODING_TRANSCRIPT_EXON_VARIANT,
-                ],
-            },
+            'annotations': HIGH_ANNOTATIONS,
             'annotations_secondary': HIGH_MODERATE_ANNOTATIONS,
             **RECESSIVE_SEARCH,
         },
