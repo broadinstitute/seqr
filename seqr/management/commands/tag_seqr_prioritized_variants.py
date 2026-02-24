@@ -312,7 +312,7 @@ SEARCHES = {
         },
         'High Splice AI - De Novo': {
             **CONFIRMED_HIGH_SPLICE_AI_SEARCH,
-            **DE_NOVO_SEARCH,
+            **NO_PANEL_APP_DE_NOVO_SEARCH,
         },
         'High Splice AI - Recessive': {
             'inheritance_mode': HOMOZYGOUS_RECESSIVE,
