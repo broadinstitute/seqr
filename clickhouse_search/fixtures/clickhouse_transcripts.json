@@ -142,15 +142,15 @@
       "transcripts": [
         [
           [null], null, "protein_coding", null, null, ["splice_donor_variant"], [null, null], "ENSG00000097046",
-          "ENST00000466716.5:c.-264+1G>A", null, [1, 3], [null, ["5UTR_SPLICE"]], "splice_donor_variant", null, null,
-          null, [true], "ENST00000466716", 0, [null, null, null, [
+          "ENST00000466716.5:c.-264+1G>A", null, [1, 3], [null, ["5UTR_SPLICE"]], "splice_donor_variant", null, "NM_013402.7",
+          "NM_013402.7", [true], "ENST00000466716", 0, [null, null, null, [
             null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
           ], null]
         ],
         [
           [0.1], null, "protein_coding", 1, null, ["missense_variant"], [null, null], "ENSG00000097046",
-          "ENST00000350997.12:c.375+139G>A", null, [1, 11], [null, []], "missense_variant", null, "NM_013402.7",
-          "NM_013402.7", [false], "ENST00000350997", 1, [null, null, null, [
+          "ENST00000350997.12:c.375+139G>A", null, [1, 11], [null, []], "missense_variant", null, null,
+          null, [false], "ENST00000350997", 1, [null, null, null, [
             null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
           ], null]
         ],

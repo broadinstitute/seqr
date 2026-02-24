@@ -19,9 +19,11 @@ SNV_INDEL_MATCHES = {
     'Compound Heterozygous - Confirmed': 0,
     'Compound Heterozygous - Both High Splice AI': 0,
     'Compound Heterozygous - Both High Splice AI - Confirmed': 0,
+    'Compound Heterozygous - Clinvar Pathogenic/ High Splice AI': 0,
     'Compound Heterozygous - High Splice AI': 0,
     'Compound Heterozygous - High Splice AI - Confirmed': 0,
     'De Novo': 0,
+    'De Novo - Non-coding Transcript Exon Variant': 0,
     'De Novo/ Dominant': 0,
     'Dominant': 0,
     'High Splice AI - De Novo/ Dominant': 0,
@@ -42,7 +44,8 @@ MITO_MATCHES = {
     'Mitochondrial - De Novo/ Dominant': 1,
 }
 MULTI_TYPE_MATCHES = {
-    'Compound Heterozygous - One SV': 1,
+    'Compound Heterozygous - One SV': 0,
+    'Compound Heterozygous - One SV - Confirmed': 1,
 }
 
 class CheckNewSamplesTest(ClickhouseSearchTestCase):
@@ -88,7 +91,7 @@ class CheckNewSamplesTest(ClickhouseSearchTestCase):
 
         expected_tags = {
             (2,): {"Clinvar Pathogenic - Recessive": "2025-11-15", "Recessive": "2025-11-15"},
-            (2, 19): {"Compound Heterozygous - One SV": "2025-11-15"},
+            (2, 19): {"Compound Heterozygous - One SV - Confirmed": "2025-11-15"},
             (3, 4): {"Compound Heterozygous": "2025-11-15"},
             (6,): {'Mitochondrial - De Novo/ Dominant': '2025-11-15'},
             (8,): {"Mitochondrial - Pathogenic": "2025-11-15"},
