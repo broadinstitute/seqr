@@ -29,6 +29,10 @@ class ReloadSavedVariantGenotypesTest(AnvilAuthenticationTestCase):
             'ab': 0.0, 'dp': 49, 'gq': 99, 'numAlt': 2, 'filters': [],
             'sampleId': 'NA21234', 'familyGuid': 'F000014_14', 'sampleType': 'WGS', 'individualGuid': 'I000018_na21234',
         }})
+        unchanged_saved_variant = SavedVariant.objects.get(guid='SV0000009_25000014783_r0004_no')
+        self.assertDictEqual(unchanged_saved_variant.genotypes, {'I000018_na21234': {
+            'sampleId': 'NA20885', 'numAlt': 2, 'dp': 3943, 'hl': 1.0, 'mitoCn': 214, 'contamination': 0.0, 'filters': ['artifact_prone_site'],
+        }})
 
         self.reset_logs()
         call_command('reload_saved_variant_genotypes', 'R0001_1kg', '--family-guid=F000002_2')
