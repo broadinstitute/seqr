@@ -27,7 +27,7 @@ class Command(BaseCommand):
             f'{dataset_type}_{sample_type}' if dataset_type == Sample.DATASET_TYPE_SV_CALLS else dataset_type: dataset_type
             for dataset_type, sample_type in samples.values_list('dataset_type', 'sample_type').distinct()
         }
-        for clickhouse_dataset_type, dataset_type in dataset_types.items():
+        for clickhouse_dataset_type, dataset_type in sorted(dataset_types.items()):
             update_project_saved_variant_genotypes(
                 project.id, project.genome_version, family_guids, project.guid,
                 samples=samples.filter(dataset_type=dataset_type), clickhouse_dataset_type=clickhouse_dataset_type,
