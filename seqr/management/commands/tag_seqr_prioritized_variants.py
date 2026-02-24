@@ -234,6 +234,14 @@ SEARCHES = {
             **CONFIRMED_HIGH_SPLICE_AI_SEARCH,
             **RECESSIVE_SEARCH_NO_IN_SILICO,
         },
+        'Compound Heterozygous - Clinvar Pathogenic/ High Splice AI': {
+            'inheritance_mode': COMPOUND_HET,
+            'split_pathogenicity_annotations': True,
+            'annotations': {
+                'splice_ai': 0.5,
+            },
+            **CLINVAR_RECESSIVE_SEARCH,
+        },
         'Compound Heterozygous - High Splice AI': {
             'family_filter': {
                 CONFIRMED_FAMILY_FILTER: False
