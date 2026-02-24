@@ -1294,7 +1294,7 @@ CACHED_CONSEQUENCES_BY_KEY = {1: [], 2: [{
     'extendedIntronicSpliceRegionVariant': True,
     'fiveutrConsequence': None,
     'geneId': 'ENSG00000097046',
-    'isManeSelect': False,
+    'isManeSelect': True,
 }, {
     'alphamissensePathogenicity': 0.1,
     'canonical': 1,
@@ -1302,7 +1302,7 @@ CACHED_CONSEQUENCES_BY_KEY = {1: [], 2: [{
     'extendedIntronicSpliceRegionVariant': False,
     'fiveutrConsequence': None,
     'geneId': 'ENSG00000097046',
-    'isManeSelect': True,
+    'isManeSelect': False,
 }, {
     'alphamissensePathogenicity': None,
     'canonical': None,
