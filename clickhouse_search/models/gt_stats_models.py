@@ -10,6 +10,7 @@ from seqr.models import Sample
 
 class BaseProjectGtStats(models.ClickhouseModel):
     project_guid = models.StringField(low_cardinality=True)
+    key = UInt32FieldDeltaCodecField(primary_key=True)
     affected = models.Enum8Field(choices=[(1, 'A'), (2, 'N'), (3, 'U')])
     ref_samples = models.UInt32Field()
     het_samples = models.UInt32Field()
@@ -56,7 +57,6 @@ class EntriesToProjectGtStatsMeta:
     source_sql = 'ARRAY JOIN calls GROUP BY project_guid, key, sample_type, affected'
 
 class ProjectGtStatsGRCh37SnvIndel(BaseProjectGtStatsMitoSnvIndel):
-    key = OneToOneField('AnnotationsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
 
     class Meta(BaseProjectGtStatsMitoSnvIndel.Meta):
         db_table = 'GRCh37/SNV_INDEL/project_gt_stats'
@@ -69,7 +69,6 @@ class EntriesToProjectGtStatsGRCh37SnvIndel(BaseEntriesToProjectGtStats):
         source_table = 'EntriesGRCh37SnvIndel'
 
 class ProjectGtStatsSnvIndel(BaseProjectGtStatsMitoSnvIndel):
-    key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
 
     class Meta(BaseProjectGtStatsMitoSnvIndel.Meta):
         db_table = 'GRCh38/SNV_INDEL/project_gt_stats'
@@ -82,7 +81,6 @@ class EntriesToProjectGtStatsSnvIndel(BaseEntriesToProjectGtStats):
         source_table = 'EntriesSnvIndel'
 
 class ProjectGtStatsMito(BaseProjectGtStatsMitoSnvIndel):
-    key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
 
     class Meta(BaseProjectGtStatsMitoSnvIndel.Meta):
         db_table = 'GRCh38/MITO/project_gt_stats'
@@ -101,7 +99,6 @@ class EntriesToProjectGtStatsMito(BaseEntriesToProjectGtStats):
         }
 
 class ProjectGtStatsSv(BaseProjectGtStats):
-    key = OneToOneField('AnnotationsSv', db_column='key', primary_key=True, on_delete=CASCADE)
 
     class Meta(BaseProjectGtStats.Meta):
         db_table = 'GRCh38/SV/project_gt_stats'
@@ -122,6 +119,7 @@ class EntriesToProjectGtStatsSv(IncrementalMaterializedView):
 
 
 class BaseGtStats(models.ClickhouseModel):
+    key = UInt32FieldDeltaCodecField(primary_key=True)
     ac_wes = models.UInt32Field()
     ac_wgs = models.UInt32Field()
     ac_affected = models.UInt32Field()
@@ -137,19 +135,17 @@ class BaseGtStats(models.ClickhouseModel):
         )
 
 class GtStatsGRCh37SnvIndel(BaseGtStats):
-    key = OneToOneField('AnnotationsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
 
     class Meta(BaseGtStats.Meta):
         db_table = 'GRCh37/SNV_INDEL/gt_stats'
 
 class GtStatsSnvIndel(BaseGtStats):
-    key = OneToOneField('AnnotationsSnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
 
     class Meta(BaseGtStats.Meta):
         db_table = 'GRCh38/SNV_INDEL/gt_stats'
 
 class GtStatsMito(models.ClickhouseModel):
-    key = OneToOneField('AnnotationsMito', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = UInt32FieldDeltaCodecField(primary_key=True)
     ac_het_wes = models.UInt32Field()
     ac_het_wgs = models.UInt32Field()
     ac_het_affected = models.UInt32Field()
@@ -161,7 +157,7 @@ class GtStatsMito(models.ClickhouseModel):
         db_table = 'GRCh38/MITO/gt_stats'
 
 class GtStatsSv(models.ClickhouseModel):
-    key = OneToOneField('AnnotationsSv', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = UInt32FieldDeltaCodecField(primary_key=True)
     ac_wgs = models.UInt32Field()
     ac_affected = models.UInt32Field()
     hom_wgs = models.UInt32Field()

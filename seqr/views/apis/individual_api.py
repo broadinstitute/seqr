@@ -863,13 +863,13 @@ def import_gregor_metadata(request, project_guid):
     if missing_genes:
         warnings.append(f'The following unknown genes were omitted in the findings tags: {", ".join(sorted(missing_genes))}')
 
-    new_keys, num_updated, num_skipped = bulk_create_tagged_variants(
+    new_keys, update_keys, skipped_keys = bulk_create_tagged_variants(
         family_variant_data, tag_name=GREGOR_FINDING_TAG_TYPE, user=request.user, project=project,
-        get_metadata=lambda v: {k: v[k] for k in FINDING_METADATA_COLUMNS if k in v}, load_new_variant_keys=True,
+        get_metadata=lambda v: {k: v[k] for k in FINDING_METADATA_COLUMNS if k in v},
     )
-    loaded_info = f'Loaded {len(new_keys)} new and {num_updated} updated findings tags'
-    if num_skipped:
-        loaded_info += f' (skipped {num_skipped} unchanged tags)'
+    loaded_info = f'Loaded {len(new_keys)} new and {len(update_keys)} updated findings tags'
+    if skipped_keys:
+        loaded_info += f' (skipped {len(skipped_keys)} unchanged tags)'
     info.append(loaded_info)
 
     add_project_tag_type_counts(project, response_json)
