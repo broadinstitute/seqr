@@ -918,9 +918,9 @@ class ProjectAPITest(object):
         models = self._test_load_rna_seq_sample_data('S', **RNA_DATA_TYPE_PARAMS['S'])
 
         expected_models = [
-            ('ENSG00000233750', '2', 167254166, 167258349, '*', 'psi3', 1.56e-25, -4.9, -0.46, 166, 1, 20),
-            ('ENSG00000240361', '2', 167254166, 167258349, '*', 'psi3', 1.56e-25, -4.9, -0.46, 166, 1, 20),
-            ('ENSG00000240361', '7', 132885746, 132975168, '*', 'psi5', 1.08e-56, -6.53, -0.85, 231, 1, 20)
+            ('ENSG00000233750', '2', 167254166, 167258349, '*', 'psi3', 1.56e-25, -4.9, -0.46, 166, None, None),
+            ('ENSG00000240361', '2', 167254166, 167258349, '*', 'psi3', 1.56e-25, -4.9, -0.46, 166, None, None),
+            ('ENSG00000240361', '7', 132885746, 132975168, '*', 'psi5', 1.08e-56, -6.53, -0.85, 231, None, None)
         ]
         self.assertEqual(models.count(), len(expected_models))
         self.assertListEqual(expected_models, list(models.values_list(
