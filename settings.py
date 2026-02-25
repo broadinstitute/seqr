@@ -342,6 +342,9 @@ SLACK_TOKEN = os.environ.get("SLACK_TOKEN")
 AIRTABLE_URL = 'https://api.airtable.com/v0'
 AIRTABLE_API_KEY = os.environ.get("AIRTABLE_API_KEY")
 
+CLINGEN_ALLELE_REGISTRY_LOGIN = os.environ.get('CLINGEN_ALLELE_REGISTRY_LOGIN')
+CLINGEN_ALLELE_REGISTRY_PASSWORD = os.environ.get('CLINGEN_ALLELE_REGISTRY_PASSWORD')
+
 GREGOR_DATA_MODEL_URL = os.environ.get('GREGOR_DATA_MODEL_URL', 'https://raw.githubusercontent.com/UW-GAC/gregor_data_models/main/GREGoR_data_model.json')
 
 API_LOGIN_REQUIRED_URL = '/api/login-required-error'

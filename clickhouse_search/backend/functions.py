@@ -157,6 +157,13 @@ class If(Func):
     function = 'if'
     template = '%(function)s(%(condition)s%(expressions)s)'
 
+class IndexOf(Func):
+    function = 'indexOf'
+    template = '%(function)s([%(array)s], %(expressions)s)'
+
+    def __init__(self, *args, array=None, **kwargs):
+        super().__init__(*args, array=', '.join([f"'{s}'" for s in array]), **kwargs)
+
 class IntDiv(Func):
     function = 'intDiv'
 
@@ -169,6 +176,8 @@ class MapLookup(Func):
 class Modulo(Func):
     function = 'modulo'
 
+class Multiply(Func):
+    function = 'multiply'
 
 class NullIf(Func):
     function = 'nullIf'

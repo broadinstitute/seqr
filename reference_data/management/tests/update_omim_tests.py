@@ -32,9 +32,6 @@ class UpdateOmimTest(ReferenceDataCommandTestCase):
     def setUp(self):
         super().setUp()
         self.mock_get_file_last_modified_patcher.stop()
-        patcher = mock.patch('reference_data.models.GenCC.get_current_version')
-        patcher.start().return_value = self.mock_get_file_last_modified.return_value
-        self.addCleanup(patcher.stop)
 
     def test_update_omim_command_exceptions(self):
         # Test omim account expired

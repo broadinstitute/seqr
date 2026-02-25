@@ -56,8 +56,6 @@ export const GENOME_VERSION_DISPLAY_LOOKUP = {
 
 export const FILE_FIELD_NAME = 'uploadedFile'
 
-export const PROJECT_DESC_FIELD = { name: 'description', label: 'Project Description', placeholder: 'Description' }
-
 export const CONSENT_CODES = ['HMB', 'GRU']
 const CONSENT_CODE_OPTIONS = [...CONSENT_CODES, 'Other'].map(text => ({ text, value: text[0] }))
 export const CONSENT_CODE_LOOKUP = CONSENT_CODE_OPTIONS.reduce(
@@ -70,9 +68,28 @@ const CONSENT_CODE_FIELD = {
   options: CONSENT_CODE_OPTIONS,
 }
 
+export const OPTIONAL_PROJECT_FIELDS = [
+  { name: 'description', label: 'Project Description', placeholder: 'Description' },
+  {
+    name: 'recoveryEmail',
+    label: 'Recovery Email',
+    labelHelp: 'An email the seqr team can contact in the event that the project owner is no longer reachable. ' +
+      'Note that this account does not need to be granted access to the project, and may be a group or shared email.',
+    validate: value => (!value ? undefined : validators.requiredEmail(value)),
+  },
+  {
+    name: 'restrictHpoSharing',
+    label: 'Only share high-level HPO terms',
+    labelHelp: 'On the Variant Lookup page, all seqr users are able to see the HPO terms associated with individuals ' +
+      'that have a matched variant of interest. Selecting this option will restrict the HPO terms that are shared to ' +
+      'only the top-level categories.',
+    component: BooleanCheckbox,
+  },
+]
+
 export const EDITABLE_PROJECT_FIELDS = [
   { name: 'name', label: 'Project Name', placeholder: 'Name', validate: validators.required, autoFocus: true },
-  PROJECT_DESC_FIELD,
+  ...OPTIONAL_PROJECT_FIELDS,
 ]
 
 export const PM_EDITABLE_PROJECT_FIELDS = [
@@ -158,8 +175,8 @@ export const LOAD_RNA_FIELDS = [
     label: 'Data Type',
     component: Select,
     options: [
-      { text: 'Expression Outlier', value: DATA_TYPE_EXPRESSION_OUTLIER, description: 'FRASER2' },
-      { text: 'Splice Outlier', value: DATA_TYPE_SPLICE_OUTLIER, description: 'OUTRIDER' },
+      { text: 'Expression Outlier', value: DATA_TYPE_EXPRESSION_OUTLIER, description: 'OUTRIDER' },
+      { text: 'Splice Outlier', value: DATA_TYPE_SPLICE_OUTLIER, description: 'FRASER2' },
       { text: 'TPM', value: DATA_TYPE_TPM },
     ],
     validate: validators.required,

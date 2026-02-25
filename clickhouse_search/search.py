@@ -11,9 +11,9 @@ from clickhouse_search.backend.fields import NamedTupleField
 from clickhouse_search.backend.functions import Array, ArrayFilter, ArrayIntersect, ArraySort, GroupArrayArray, If, Tuple, \
     ArrayMap, Modulo, ArrayObjectSort
 from clickhouse_search.models.gt_stats_models import PROJECT_GT_STATS_VIEW_CLASS_MAP
-from clickhouse_search.models.reference_data_models import BaseClinvar
-from clickhouse_search.models.search_models import BaseAnnotationsMitoSnvIndel, BaseAnnotationsGRCh37SnvIndel, \
-    BaseAnnotationsSvGcnv, ENTRY_CLASS_MAP, VARIANTS_CLASS_MAP, VARIANT_DETAILS_CLASS_MAP
+from clickhouse_search.models.reference_data_models import BaseClinvar, BaseHgmd
+from clickhouse_search.models.search_models import BaseVariants, BaseVariantsSvGcnv, \
+    ENTRY_CLASS_MAP, VARIANTS_CLASS_MAP, VARIANT_DETAILS_CLASS_MAP
 from reference_data.models import GeneConstraint, Omim, GENOME_VERSION_LOOKUP
 from seqr.models import Sample, PhenotypePrioritization, Individual
 from seqr.utils.logging_utils import SeqrLogger
@@ -598,10 +598,10 @@ def _sv_size(x):
 MIN_SORT_RANK = 0
 MIN_PRED_SORT_RANK = -1
 CLINVAR_RANK_LOOKUP = {path: rank for rank, path in BaseClinvar.PATHOGENICITY_CHOICES}
-HGMD_RANK_LOOKUP = {class_: rank for rank, class_ in BaseAnnotationsGRCh37SnvIndel.HGMD_CLASSES}
+HGMD_RANK_LOOKUP = {class_: rank for rank, class_ in BaseHgmd.HGMD_CLASSES}
 ABSENT_CLINVAR_SORT_OFFSET = 12.5
-CONSEQUENCE_RANK_LOOKUP = {csq: rank for rank, csq in BaseAnnotationsMitoSnvIndel.CONSEQUENCE_TERMS}
-SV_CONSEQUENCE_LOOKUP = {csq: rank for rank, csq in BaseAnnotationsSvGcnv.SV_CONSEQUENCE_RANKS}
+CONSEQUENCE_RANK_LOOKUP = {csq: rank for rank, csq in BaseVariants.CONSEQUENCE_TERMS}
+SV_CONSEQUENCE_LOOKUP = {csq: rank for rank, csq in BaseVariantsSvGcnv.SV_CONSEQUENCE_RANKS}
 PREDICTION_SORTS = {'cadd', 'revel', 'splice_ai', 'eigen', 'mpc', 'primate_ai'}
 CLINVAR_SORT =  _subfield_sort(
     'clinvar', 'pathogenicity', rank_lookup=CLINVAR_RANK_LOOKUP, default=ABSENT_CLINVAR_SORT_OFFSET,
