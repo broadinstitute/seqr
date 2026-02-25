@@ -2,6 +2,12 @@
 
 ## dev
 
+## 2/25/26
+* Switches clickhouse to use new variant tables and deprecate old annotations tables (REQUIRES DB MIGRATION)
+  * Note that for users with Clickhouse already enabled, this requires a manual intervention. 
+See the [seqr-helm documentation](https://github.com/broadinstitute/seqr-helm/blob/main/README.md#migrating-seqr-from-the-annotations-and-transcripts-schema-to-the-reference_data-variants-and-variantsdetails-schema-2xx---3xx-breaking-release)
+for more details.
+
 ## 2/11/26
 * Adds eigen reference data to clickhouse (REQUIRES DB MIGRATION)
   * Note that for users with Clickhouse already enabled, this migration will enqueue tasks in the loading pipeline. 

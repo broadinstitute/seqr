@@ -104,22 +104,23 @@ def parse_pathogenicity_and_assertions(classified_record_node: xml.etree.Element
     if pathogenicity_node is None:
         return CLINVAR_DEFAULT_PATHOGENICITY, []
 
-    pathogenicity_string = pathogenicity_node.text.replace(
-        '/Pathogenic, low penetrance/Established risk allele',
-        '/Established risk allele; low penetrance',
-    ).replace(
-        '/Pathogenic, low penetrance',
-        '; low penetrance',
-    ).replace(
-        ', low penetrance',
-        '; low penetrance'
-    ).replace(
-        'Likely pathogenic/Likely pathogenic',
-        'Likely pathogenic'
-    ).replace(
-        'VUS-mid',
-        'Uncertain significance',
-    )
+    if 'VUS' in pathogenicity_node.text:
+        # Handles VUS-mid, VUS-high, and Uncertain_significance/VUS-high
+        pathogenicity_string = 'Uncertain significance'
+    else:
+        pathogenicity_string = pathogenicity_node.text.replace(
+            '/Pathogenic, low penetrance/Established risk allele',
+            '/Established risk allele; low penetrance',
+        ).replace(
+            '/Pathogenic, low penetrance',
+            '; low penetrance',
+        ).replace(
+            ', low penetrance',
+            '; low penetrance'
+        ).replace(
+            'Likely pathogenic/Likely pathogenic',
+            'Likely pathogenic'
+        )
 
     pathogenicity = pathogenicity_string.split(';')[0].strip()
 

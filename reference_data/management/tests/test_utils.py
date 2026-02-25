@@ -31,6 +31,10 @@ class ReferenceDataCommandTestCase(AuthenticationTestCase):
         self.mock_get_file_last_modified = self.mock_get_file_last_modified_patcher.start()
         self.mock_get_file_last_modified.return_value = 'Thu, 20 Mar 2025 20:52:24 GMT'
         self.addCleanup(self.mock_get_file_last_modified_patcher.stop)
+        self.mock_gencc_version_patcher = mock.patch('reference_data.models.GenCC.get_current_version')
+        self.mock_gencc_version = self.mock_gencc_version_patcher.start()
+        self.mock_gencc_version.return_value = '2025-03-20'
+        self.addCleanup(self.mock_gencc_version_patcher.stop)
         self.mock_clingen_version_patcher = mock.patch('reference_data.models.ClinGen.get_current_version')
         self.mock_clingen_version = self.mock_clingen_version_patcher.start()
         self.mock_clingen_version.return_value = '2025-02-05'

@@ -1,222 +1,89 @@
 [
 {
-    "model": "clickhouse_search.annotationssnvindel",
+    "model": "clickhouse_search.variantssnvindel",
     "pk": 1,
     "fields": {
       "key": 1,
-      "xpos": 1000010439,
-      "chrom": "1",
-      "pos": 10439,
-      "ref": "AC",
-      "alt": "A",
-      "variant_id": "1-10439-AC-A",
-      "rsid": "rs112766696",
-      "caid": "CA16717152",
-      "lifted_over_chrom": "1",
-      "lifted_over_pos": 10439,
-      "hgmd": [null, null],
-      "screen_region_type": null,
-      "predictions": [1, null, null, null, null, null, null, null, null, null, null, null, null, null],
-      "populations": [
-        [0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0],
-        [927, 0.3444932, 26912, 0.4027665, 0, 48],
-        [20757, 0.7842, 264690, 20757, 0]
-      ],
       "sorted_transcript_consequences": [],
       "sorted_motif_feature_consequences": [],
       "sorted_regulatory_feature_consequences": []
     }
 }, {
-    "model": "clickhouse_search.annotationssnvindel",
+    "model": "clickhouse_search.variantssnvindel",
     "pk": 2,
     "fields": {
       "key": 2,
-      "xpos": 1038724419,
-      "chrom": "1",
-      "pos": 38724419,
-      "ref": "T",
-      "alt": "G",
-      "variant_id": "1-38724419-T-G",
-      "rsid": "rs1801131",
-      "caid": null,
-      "lifted_over_chrom": "1",
-      "lifted_over_pos": 11854476,
-      "hgmd": ["CM981315", 1],
-      "screen_region_type": null,
-      "predictions": [2, 1, 1, 1, 0.028, null, 1, 0.01, 0.04, 0.0197, 0.015, 1, 1, 0.0211],
-      "populations": [
-        [35805, 0.9499999, 121372, 0.1530353, 0, 24061, 5872],
-        [72672, 0.288997, 251462, 0.41164, 0, 1],
-        [927, 0.344493, 26912, 0.402766, 0, 0],
-        [65154, 0.46152, 264690, 47604, 8775]
-      ],
       "sorted_transcript_consequences": [
-        [0.99779, 1, ["missense_variant"], false, null, "ENSG00000177000"],
-        [null, null, ["5_prime_UTR_variant"], false, "5_prime_UTR_stop_codon_loss_variant", "ENSG00000177000"],
-        [null, null, ["5_prime_UTR_variant"], false, "5_prime_UTR_stop_codon_loss_variant", "ENSG00000177000"],
-        [0.99779, null, ["missense_variant", "NMD_transcript_variant"], false, null, "ENSG00000277258"],
-        [null, null, ["missense_variant"], false, null, "ENSG00000177000"],
-        [null, null, ["non_coding_transcript_exon_variant"], false, null, "ENSG00000177000"],
-        [null, null, ["non_coding_transcript_exon_variant"], false, null, "ENSG00000177000"]
+        [0.99779, 1, ["missense_variant"], false, null, "ENSG00000177000", true],
+        [null, null, ["5_prime_UTR_variant"], false, "5_prime_UTR_stop_codon_loss_variant", "ENSG00000177000", false],
+        [null, null, ["5_prime_UTR_variant"], false, "5_prime_UTR_stop_codon_loss_variant", "ENSG00000177000", false],
+        [0.99779, null, ["missense_variant", "NMD_transcript_variant"], false, null, "ENSG00000277258", true],
+        [null, null, ["missense_variant"], false, null, "ENSG00000177000", false],
+        [null, null, ["non_coding_transcript_exon_variant"], false, null, "ENSG00000177000", false],
+        [null, null, ["non_coding_transcript_exon_variant"], false, null, "ENSG00000177000", false]
       ],
       "sorted_motif_feature_consequences": [],
       "sorted_regulatory_feature_consequences": []
     }
 }, {
-    "model": "clickhouse_search.annotationssnvindel",
+    "model": "clickhouse_search.variantssnvindel",
     "pk": 3,
     "fields": {
       "key": 3,
-      "xpos": 1091502721,
-      "chrom": "1",
-      "pos": 91502721,
-      "ref": "G",
-      "alt": "A",
-      "variant_id": "1-91502721-G-A",
-      "rsid": "rs13447464",
-      "caid": "CA10960369",
-      "lifted_over_chrom": "1",
-      "lifted_over_pos": 91968278,
-      "hgmd": [null, null],
-      "screen_region_type": null,
-      "predictions": [2, 0.1378, null, 0.073896, null, null, null, null, null, null, null, 0.001, 1, null],
-      "populations": [
-        [0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0],
-        [57757, 0.380411, 151828, 0.479778, 0, 1],
-        [95998, 0.62681, 264690, 57260, 19369]
-      ],
       "sorted_transcript_consequences": [
-        [null, 1, ["intron_variant"], false, null, "ENSG00000097046"],
-        [null, null, ["intron_variant"], false, null, "ENSG00000177000"],
-        [null, null, ["intron_variant"], false, null, "ENSG00000097046"],
-        [null, null, ["non_coding_transcript_exon_variant"], false, null, "ENSG00000097046"]
+        [null, 1, ["intron_variant"], false, null, "ENSG00000097046", false],
+        [null, null, ["intron_variant"], false, null, "ENSG00000177000", false],
+        [null, null, ["intron_variant"], false, null, "ENSG00000097046", false],
+        [null, null, ["non_coding_transcript_exon_variant"], false, null, "ENSG00000097046", true]
       ],
       "sorted_motif_feature_consequences": [],
       "sorted_regulatory_feature_consequences": [
-        [1, [2], "ENSR00000009706"]
+        [[2]]
       ]
     }
 }, {
-    "model": "clickhouse_search.annotationssnvindel",
+    "model": "clickhouse_search.variantssnvindel",
     "pk": 4,
     "fields": {
       "key": 4,
-      "xpos": 1091511686,
-      "chrom": "1",
-      "pos": 91511686,
-      "ref": "T",
-      "alt": "G",
-      "variant_id": "1-91511686-T-G",
-      "rsid": null,
-      "caid": "CA341062623",
-      "lifted_over_chrom": "1",
-      "lifted_over_pos": 91977243,
-      "hgmd": [null, null],
-      "screen_region_type": null,
-      "predictions": [3, 2, 0, 0.023, 0.08326, 0.0687, 1, 1, 0.06995, 0.0526, 1, 1, 1, 0.0858],
-      "populations": [
-        [0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0],
-        [39, 0.26519, 147062, 0.50301, 0, 0],
-        [0, 0, 0, 0, 0]
-      ],
       "sorted_transcript_consequences": [
-        [null, null, ["splice_donor_variant"], true, null, "ENSG00000097046"],
-        [0.1, 1, ["missense_variant"], false, null, "ENSG00000097046"],
-        [null, null, ["missense_variant"], false, null, "ENSG00000097046"]
+        [null, null, ["splice_donor_variant"], true, null, "ENSG00000097046", false],
+        [0.1, 1, ["missense_variant"], false, null, "ENSG00000097046", true],
+        [null, null, ["missense_variant"], false, null, "ENSG00000097046", false]
       ],
       "sorted_motif_feature_consequences": [
-        [[2], "ENSM00093424674"],
-        [[2], "ENSM00036268032"]
+        [[2]],
+        [[2]]
       ],
       "sorted_regulatory_feature_consequences": [
-        [1, [2], "ENSR00000040341"]
+        [[2]]
       ]
     }
 }, {
-    "model": "clickhouse_search.annotationssnvindel",
+    "model": "clickhouse_search.variantssnvindel",
     "pk": 5,
     "fields": {
       "key": 5,
-      "xpos": 1000010146,
-      "chrom": "1",
-      "pos": 10146,
-      "ref": "ACC",
-      "alt": "A",
-      "variant_id": "1-10146-ACC-A",
-      "rsid": "rs375931351",
-      "caid": "CA520798130",
-      "lifted_over_chrom": "1",
-      "lifted_over_pos": 10146,
-      "hgmd": [null, null],
-      "screen_region_type": null,
-      "predictions": [1, null, null, null, null, null, null, null, null, null, null, null, null, null],
-      "populations": [
-        [0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0],
-        [2, 0.1243, 16090, 0.33, 0, 0],
-        [0, 0, 0, 0, 0]
-      ],
       "sorted_transcript_consequences": [],
       "sorted_motif_feature_consequences": [],
       "sorted_regulatory_feature_consequences": []
     }
 }, {
-    "model": "clickhouse_search.annotationssnvindel",
+    "model": "clickhouse_search.variantssnvindel",
     "pk": 6,
     "fields": {
       "key": 6,
-      "xpos": 1000094818,
-      "chrom": "1",
-      "pos": 94818,
-      "ref": "T",
-      "alt": "C",
-      "variant_id": "1-94818-T-C",
-      "rsid": null,
-      "caid": null,
-      "lifted_over_chrom": "1",
-      "lifted_over_pos": 94818,
-      "hgmd": [null, null],
-      "screen_region_type": null,
-      "predictions": [1.92299, 2.24799, null, null, null, null, null, null, null, null, null, null, null, null],
-      "populations": [
-        [0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0],
-        [4, 0.44254640670260414, 90386, 0.1118523252662271, 0, 0],
-        [13, 0.4911409996566363, 264690, 13, 0]
-      ],
       "sorted_transcript_consequences": [],
       "sorted_motif_feature_consequences": [],
       "sorted_regulatory_feature_consequences": []
     }
 },  {
-    "model": "clickhouse_search.annotationssnvindel",
+    "model": "clickhouse_search.variantssnvindel",
     "pk": 22,
     "fields": {
       "key": 22,
-      "xpos": 1009310123,
-      "chrom": "1",
-      "pos": 9310123,
-      "ref": "T",
-      "alt": "C",
-      "variant_id": "1-9310123-T-C",
-      "rsid": null,
-      "caid": null,
-      "lifted_over_chrom": "1",
-      "lifted_over_pos": 9310113,
-      "hgmd": [null, null],
-      "screen_region_type": null,
-      "predictions": [1.92299, 2.24799, null, null, null, null, null, null, null, null, null, 0.01, 4, null],
-      "populations": [
-        [0, 0, 0, 0, 0, 0, 0],
-        [4, 0.4, 90386, 0.1, 0, 0],
-        [13, 0.4, 264690, 0.2, 0, 13],
-        [0, 0, 0, 0, 0]
-      ],
       "sorted_transcript_consequences": [
-        [null, 1, ["missense_variant"], false, null, "ENSG00000171621"]
+        [null, 1, ["missense_variant"], false, null, "ENSG00000171621", false]
       ],
       "sorted_motif_feature_consequences": [],
       "sorted_regulatory_feature_consequences": []
@@ -994,28 +861,10 @@
       ]
     }
 }, {
-    "model": "clickhouse_search.annotationsgrch37snvindel",
+    "model": "clickhouse_search.variantsgrch37snvindel",
     "pk": 10,
     "fields": {
       "key": 11,
-      "xpos": 7143270172,
-      "chrom": "7",
-      "pos": 143270172,
-      "ref": "A",
-      "alt": "G",
-      "variant_id": "7-143270172-A-G",
-      "rsid": "rs72611576",
-      "caid": "CA4540310",
-      "lifted_over_chrom": "7",
-      "lifted_over_pos": 143271368,
-      "hgmd": [null, null],
-      "predictions": [1, 1, null, null, null, null, null, 0.49064, null, null, 0, 4,null],
-      "populations": [
-        [66593, 0.63, 104352, 0.81987739, 0, 22269, 22162],
-        [137532, 0.3542193, 216442, 0.2261163, 0, 45869],
-        [14649, 0.1364776, 23872, 0.2843894, 0, 4584],
-        [65461, 0.2131897, 125568, 33149, 16156]
-      ],
       "sorted_transcript_consequences": [
         [1, ["missense_variant"], "ENSG00000271079"],
         [1, ["non_coding_transcript_exon_variant", "non_coding_transcript_variant"], "ENSG00000176227"]
@@ -1134,26 +983,16 @@
       "het": 33149
     }
 }, {
-    "model": "clickhouse_search.annotationsmito",
+    "model": "clickhouse_search.variantsmito",
     "pk": 6,
     "fields": {
       "key": 6,
-      "xpos": 25000004429,
-      "pos": 4429,
-      "ref": "G",
-      "alt": "A",
       "variant_id": "M-4429-G-A",
       "rsid": "rs1603219456",
       "lifted_over_pos": 4429,
       "common_low_heteroplasmy": false,
-      "mitomap_pathogenic": null,
-      "predictions": [null, null, 0.005, "likely_pathogenic", null, null, 1],
-      "populations": [
-        [0, 0, 56419],
-        [0, 0, 56419, 0],
-        [0, 0, 195983],
-        [3, 0.1531, 195983, 0.635]
-      ],
+      "mitotip": "likely_pathogenic",
+      "haplogroup_defining": null,
       "sorted_transcript_consequences": [
         [
           null, "Mt_tRNA", 1, null, ["non_coding_transcript_exon_variant"], "ENSG00000210112", "ENST00000387377.1:n.28G>A",
@@ -1162,26 +1001,16 @@
       ]
     }
 }, {
-    "model": "clickhouse_search.annotationsmito",
+    "model": "clickhouse_search.variantsmito",
     "pk": 7,
     "fields": {
       "key": 7,
-      "xpos": 25000011597,
-      "pos": 11597,
-      "ref": "A",
-      "alt": "G",
       "variant_id": "M-11597-A-G",
       "rsid": null,
       "lifted_over_pos": 11597,
       "common_low_heteroplasmy": false,
-      "mitomap_pathogenic": null,
-      "predictions": [0.058, null, 0.075, null, null, 1, null],
-      "populations": [
-        [0, 0, 0],
-        [0, 0, 0, 0],
-        [0, 0, 0],
-        [0, 0, 0, 0]
-      ],
+      "mitotip": null,
+      "haplogroup_defining": null,
       "sorted_transcript_consequences": [
         [
           "T/A", "protein_coding", 1, "Aca/Gca", ["missense_variant"], "ENSG00000198886", "ENST00000361381.2:c.838A>G",
@@ -1190,26 +1019,16 @@
       ]
     }
 }, {
-    "model": "clickhouse_search.annotationsmito",
+    "model": "clickhouse_search.variantsmito",
     "pk": 8,
     "fields": {
       "key": 8,
-      "xpos": 25000014783,
-      "pos": 14783,
-      "ref": "T",
-      "alt": "C",
       "variant_id": "M-14783-T-C",
       "rsid": "rs193302982",
       "lifted_over_pos": 14783,
       "common_low_heteroplasmy": true,
-      "mitomap_pathogenic": null,
-      "predictions": [null, true, null, null, null, null, 0.0751],
-      "populations": [
-        [3118, 0.553464, 56336],
-        [3, 0.5325, 56336, 1],
-        [9573, 0.884607, 195983],
-        [18, 0.9184, 195983, 0.6269]
-      ],
+      "mitotip": null,
+      "haplogroup_defining": true,
       "sorted_transcript_consequences": [
         [
           "L", "protein_coding", 1, "Tta/Cta", ["synonymous_variant"], "ENSG00000198727", "ENST00000361789.2:c.37T>C",
@@ -1424,7 +1243,7 @@
       ]
     }
 }, {
-    "model": "clickhouse_search.annotationssv",
+    "model": "clickhouse_search.variantssv",
     "pk": 12,
     "fields": {
       "key": 12,
@@ -1452,7 +1271,7 @@
       "sv_source_detail": [null]
     }
 }, {
-    "model": "clickhouse_search.annotationssv",
+    "model": "clickhouse_search.variantssv",
     "pk": 13,
     "fields": {
       "key": 13,
@@ -1480,7 +1299,7 @@
       "sv_source_detail": [4]
     }
 }, {
-    "model": "clickhouse_search.annotationssv",
+    "model": "clickhouse_search.variantssv",
     "pk": 14,
     "fields": {
       "key": 14,
@@ -1509,7 +1328,7 @@
       "sv_source_detail": [null]
     }
 }, {
-    "model": "clickhouse_search.annotationssv",
+    "model": "clickhouse_search.variantssv",
     "pk": 15,
     "fields": {
       "key": 15,
@@ -1612,7 +1431,7 @@
       "variant_id": "phase2_DEL_chr14_4640"
     }
 }, {
-    "model": "clickhouse_search.annotationsgcnv",
+    "model": "clickhouse_search.variantsgcnv",
     "pk": 16,
     "fields": {
       "key": 16,
@@ -1635,7 +1454,7 @@
       "sv_type": "DUP"
     }
 }, {
-    "model": "clickhouse_search.annotationsgcnv",
+    "model": "clickhouse_search.variantsgcnv",
     "pk": 17,
     "fields": {
       "key": 17,
@@ -1664,7 +1483,7 @@
       "sv_type": "DUP"
     }
 }, {
-    "model": "clickhouse_search.annotationsgcnv",
+    "model": "clickhouse_search.variantsgcnv",
     "pk": 18,
     "fields": {
       "key": 18,
@@ -1687,7 +1506,7 @@
       "sv_type": "DUP"
     }
 }, {
-    "model": "clickhouse_search.annotationsgcnv",
+    "model": "clickhouse_search.variantsgcnv",
     "pk": 19,
     "fields": {
       "key": 19,

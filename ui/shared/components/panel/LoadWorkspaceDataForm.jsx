@@ -5,7 +5,7 @@ import { connect } from 'react-redux'
 
 import {
   FILE_FIELD_NAME,
-  PROJECT_DESC_FIELD,
+  OPTIONAL_PROJECT_FIELDS,
   GENOME_VERSION_FIELD,
   FAMILY_FIELD_ID,
   INDIVIDUAL_FIELD_ID,
@@ -199,10 +199,14 @@ const VALIDATE_VCF_PAGE = {
   formatSubmitUrl: formatWorkspaceUrl('validate_vcf'),
 }
 
+const CREATE_PROJECT_FIELDS = OPTIONAL_PROJECT_FIELDS.map(
+  ({ validate, ...field }) => ({ validate: validate && validators.requiredEmail, ...field }),
+)
+
 const NEW_PROJECT_WIZARD_PAGES = [
   GRANT_ACCESS_PAGE,
   VALIDATE_VCF_PAGE,
-  { fields: [PROJECT_DESC_FIELD, UPLOAD_PEDIGREE_FIELD] },
+  { fields: [...CREATE_PROJECT_FIELDS, UPLOAD_PEDIGREE_FIELD] },
 ]
 
 const ADD_DATA_WIZARD_PAGES = [
