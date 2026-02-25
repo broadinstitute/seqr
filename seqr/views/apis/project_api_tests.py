@@ -82,7 +82,13 @@ RNA_DATA_TYPE_PARAMS = {
     'S': {
         'model_cls': RnaSeqSpliceOutlier,
         'sample_guid': RNA_SPLICE_SAMPLE_GUID,
-        'parsed_file_data': RNA_SPLICE_SAMPLE_DATA,
+        'parsed_file_data': {
+            sample_guid: '\n'.join([
+                json.dumps({k: v.replace('e', 'E') for k, v in json.loads(row).items()
+                if k not in {'rare_disease_samples_total', 'rare_disease_samples_with_this_junction'}})
+                for row in data.split('\n') if row]
+            ) + '\n' for sample_guid, data in RNA_SPLICE_SAMPLE_DATA.items()
+        },
         'required_columns': RNA_SPLICE_OUTLIER_REQUIRED_COLUMNS,
         'row_id': 'ENSG00000233750-2-167254166-167258349-*-psi3',
         'rows': [
@@ -726,21 +732,7 @@ class ProjectAPITest(object):
         self._test_update_project_rna('T', **RNA_DATA_TYPE_PARAMS['T'], single_sample_file=True)
 
     def test_update_project_rna_splice_outlier(self):
-        kwargs = {
-            **RNA_DATA_TYPE_PARAMS['S'],
-            'tissue': 'F',
-            'allow_missing_gene': True,
-        }
-        # Parsed data does not include optional internal-only columns
-        internal_cols =  {'rare_disease_samples_total', 'rare_disease_samples_with_this_junction'}
-        kwargs['parsed_file_data'] = {
-            sample_guid: '\n'.join([
-                json.dumps({k: v.replace('e', 'E') for k, v in json.loads(row).items() if k not in internal_cols})
-                for row in data.split('\n') if row]
-            ) + '\n' for sample_guid, data in kwargs['parsed_file_data'].items()
-        }
-
-        self._test_update_project_rna('S', **kwargs)
+        self._test_update_project_rna('S', **RNA_DATA_TYPE_PARAMS['S'], tissue='F', allow_missing_gene=True)
 
     @mock.patch('seqr.utils.communication_utils.BASE_URL', 'https://test-seqr.org/')
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
