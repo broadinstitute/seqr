@@ -175,8 +175,8 @@ export const LOAD_RNA_FIELDS = [
     label: 'Data Type',
     component: Select,
     options: [
-      { text: 'Expression Outlier', value: DATA_TYPE_EXPRESSION_OUTLIER, description: 'FRASER2' },
-      { text: 'Splice Outlier', value: DATA_TYPE_SPLICE_OUTLIER, description: 'OUTRIDER' },
+      { text: 'Expression Outlier', value: DATA_TYPE_EXPRESSION_OUTLIER, description: 'OUTRIDER' },
+      { text: 'Splice Outlier', value: DATA_TYPE_SPLICE_OUTLIER, description: 'FRASER2' },
       { text: 'TPM', value: DATA_TYPE_TPM },
     ],
     validate: validators.required,

@@ -1259,8 +1259,8 @@ class RnaSeqSpliceOutlier(DeletableRnaSampleMetadataModel):
     mean_counts = models.FloatField()
     total_counts = models.IntegerField()
     mean_total_counts = models.FloatField()
-    rare_disease_samples_with_this_junction = models.IntegerField()
-    rare_disease_samples_total = models.IntegerField()
+    rare_disease_samples_with_this_junction = models.IntegerField(null=True, blank=True)
+    rare_disease_samples_total = models.IntegerField(null=True, blank=True)
 
     class Meta:
         unique_together = ('sample', 'gene_id', 'chrom', 'start', 'end', 'strand', 'type')
