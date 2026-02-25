@@ -91,6 +91,7 @@ RNA_DATA_TYPE_PARAMS = {
         },
         'required_columns': RNA_SPLICE_OUTLIER_REQUIRED_COLUMNS,
         'row_id': 'ENSG00000233750-2-167254166-167258349-*-psi3',
+        'invalid_format_field': 'p_value',
         'rows': [
             'hgncSymbol\tseqnames\tstart\tend\tstrand\tsampleID\ttype\tpValue\tpadjust\tdeltaPsi\tcounts\tmeanCounts\ttotalCounts\tmeanTotalCounts\tnonsplitCounts',
             'ENSG00000233750;ENSG00000240361\tchr2\t167254166\t167258349\t*\tNA19675_1\tpsi3\t1.56E-25\t-4.9\t-0.46\t166\t16.6\t1660\t1.66\t1',
@@ -932,7 +933,7 @@ class ProjectAPITest(object):
     @mock.patch('seqr.utils.file_utils.gzip.open')
     @mock.patch('seqr.utils.file_utils.os.path.isfile')
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
-    def _test_load_rna_seq_sample_data(self, data_type, mock_subprocess, mock_does_file_exist, mock_open, mock_pm_group, sample_guid=None, parsed_file_data=None, model_cls=None,  mismatch_field='p_value', row_id=None, **kwargs):
+    def _test_load_rna_seq_sample_data(self, data_type, mock_subprocess, mock_does_file_exist, mock_open, mock_pm_group, sample_guid=None, parsed_file_data=None, model_cls=None,  mismatch_field='p_value', invalid_format_field=None, row_id=None, **kwargs):
         url = reverse(load_rna_seq_sample_data, args=[sample_guid])
         self.check_manager_login(url)
 
@@ -986,6 +987,13 @@ class ProjectAPITest(object):
         self.assertDictEqual(response.json(), {
             'error': f'Error in {sample_guid.split("_", 1)[-1].upper()}: mismatched entries for {row_id or mismatch_row["gene_id"]}'
         })
+
+        if invalid_format_field:
+            invalid_row = {**json.loads(parsed_file_lines[0]), invalid_format_field: 'Unknown'}
+            self._set_file_iter([json.dumps(invalid_row)], mock_subprocess, mock_does_file_exist, mock_open)
+            response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+            self.assertEqual(response.status_code, 400)
+            self.assertDictEqual(response.json(), {'error': f'Invalid "{invalid_format_field}" values: Unknown'})
 
         # Test manager access to AnVIL external projects
         self._set_file_iter([], mock_subprocess, mock_does_file_exist, mock_open)
