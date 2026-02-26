@@ -625,7 +625,6 @@ class AnvilAuthenticationTestCase(DifferentDbTransactionSupportMixin, AnvilAuthe
         super().setUpTestData()
         cls.set_up_users()
 
-
 @mock.patch('seqr.views.utils.terra_api_utils.SOCIAL_AUTH_PROVIDER', TEST_OAUTH2_PROVIDER)
 class AirtableTest(object):
 
@@ -659,7 +658,7 @@ PROJECT_FIELDS = {
     'projectGuid', 'projectCategoryGuids', 'canEdit', 'name', 'description', 'createdDate', 'lastModifiedDate',
     'lastAccessedDate',  'mmeContactUrl', 'genomeVersion', 'mmePrimaryDataOwner', 'mmeContactInstitution',
     'isMmeEnabled', 'workspaceName', 'workspaceNamespace', 'hasCaseReview', 'enableHgmd', 'isDemo', 'allUserDemo',
-    'userIsCreator', 'consentCode', 'isAnalystProject', 'vlmContactEmail',
+    'userIsCreator', 'consentCode', 'isAnalystProject', 'vlmContactEmail', 'recoveryEmail', 'restrictHpoSharing',
 }
 
 ANALYSIS_GROUP_FIELDS = {'analysisGroupGuid', 'description', 'name', 'projectGuid', 'familyGuids'}

@@ -3,7 +3,7 @@ from django.db.models import Count, Q, F, prefetch_related_objects
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.db.models.functions import JSONObject
 
-from clickhouse_search.search import get_transcripts_by_key, get_annotations_queryset
+from clickhouse_search.search import get_variant_main_transcripts_by_key
 from seqr.models import Individual, IgvSample, AnalysisGroup, DynamicAnalysisGroup, LocusList, VariantTagType,\
     VariantFunctionalData, FamilyNote, SavedVariant, VariantTag, VariantNote, Sample
 from seqr.utils.gene_utils import get_genes
@@ -168,13 +168,12 @@ def _get_clickhouse_selected_transcript_gene_id(family_discovery_genes, discover
     )
 
     for dataset_type, keys, variants in tags_by_dataset_type.values_list('dataset_type', 'keys', 'variants'):
-        if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
-            transcripts_by_key = get_transcripts_by_key(genome_version, keys)
-        else:
-            qs = get_annotations_queryset(genome_version, dataset_type, keys)
-            transcripts_by_key = dict(qs.values_list('key', qs.transcript_field))
+        selected_transcripts_by_key = defaultdict(list)
         for v in variants:
-            gene_id = _get_transcripts_selected_gene(v['selected_main_transcript_id'], transcripts_by_key[v['key']])
+            selected_transcripts_by_key[v['key']].append(v['selected_main_transcript_id'])
+        transcripts_by_key = get_variant_main_transcripts_by_key(genome_version, dataset_type, selected_transcripts_by_key)
+        for v in variants:
+            gene_id = transcripts_by_key[v['key']]['main_transcripts'][v['selected_main_transcript_id']].get('geneId')
             family_discovery_genes.append((v['family_guid'], gene_id))
 
 

@@ -598,7 +598,8 @@ def post_process_rna_data(sample_guid, data, get_unique_key=None, format_fields=
         is_valid = True
         for key, format_func in (format_fields or {}).items():
             try:
-                row[key] = format_func(row[key])
+                if key in row:
+                    row[key] = format_func(row[key])
             except Exception:
                 is_valid = False
                 invalid_format_fields[key].add(row[key])

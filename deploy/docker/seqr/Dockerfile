@@ -43,8 +43,9 @@ WORKDIR /opt
 COPY ./requirements.txt .
 
 # Install seqr Python dependencies
+# setuptools pin to address: https://github.com/pypa/setuptools/issues/5174
 RUN pip install --no-cache-dir wheel \
-    && pip install --no-cache-dir -U setuptools \
+    && pip install --no-cache-dir -U setuptools==81.0.0 \
     && pip install --no-cache-dir -r requirements.txt
 
 
