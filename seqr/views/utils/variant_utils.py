@@ -229,9 +229,7 @@ def _search_new_saved_variants(family_variant_ids: set[tuple[int, str]], genome_
 
     samples = Sample.objects.filter(is_active=True, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
     search_variants_by_id = {
-        v['variantId']: v for v in  _get_clickhouse_variants(
-            samples, families_by_id=families_by_id, variant_ids=list(variant_families.keys()), family_variant_ids=family_variant_ids, user=user, genome_version=genome_version,
-        )
+        v['variantId']: v for v in  _get_clickhouse_variants(samples, families_by_id, family_variant_ids, genome_version)
     }
 
     new_variants = {}
@@ -254,7 +252,7 @@ def _search_new_saved_variants(family_variant_ids: set[tuple[int, str]], genome_
     return new_variants
 
 
-def _get_clickhouse_variants(samples: Sample.objects, families_by_id: dict[int, Family], family_variant_ids: set[tuple[int, str]], genome_version: str = None, **kwargs) -> list[dict]:
+def _get_clickhouse_variants(samples: Sample.objects, families_by_id: dict[int, Family], family_variant_ids: set[tuple[int, str]], genome_version: str) -> list[dict]:
     variant_data = _get_clickhouse_variant_annotations(
         {variant_id: {'genotypes': {}, 'familyGuids': []} for  variant_id in family_variant_ids}, genome_version=genome_version,
     )
