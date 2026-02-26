@@ -134,8 +134,7 @@ def bulk_create_tagged_variants(family_variant_data, tag_name, get_metadata, use
             new_variant_data = _search_new_saved_variants(new_variant_keys, genome_version)
         else:
             new_variant_data = {k: v for k, v in family_variant_data.items() if k in new_variant_keys}
-            # TODO fix call args
-            new_variant_data = _get_clickhouse_variant_keys(new_variant_data, primary_id_field, project=project, **kwargs)
+            new_variant_data = _get_clickhouse_variant_annotations(new_variant_data, primary_id_field, project=project, **kwargs)
 
         new_variant_models = []
         for (family_id, variant_id), variant in new_variant_data.items():
