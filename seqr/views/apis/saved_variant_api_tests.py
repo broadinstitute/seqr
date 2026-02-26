@@ -40,7 +40,7 @@ COMPOUND_HET_3_JSON = {
     'chrom': '15',
     'genotypes': {},
     'genomeVersion': '37',
-    'mainTranscriptId': None,
+    'mainTranscriptId': '',
     'populations': {'callset': {'ac': 17, 'af': 0.607, 'an': 28}},
     'pos': 62456358,
     'predictions': {'cadd': 12.34},
@@ -65,7 +65,7 @@ COMPOUND_HET_4_JSON = {
     'chrom': '15',
     'genotypes': {},
     'genomeVersion': '37',
-    'mainTranscriptId': None,
+    'mainTranscriptId': '',
     'populations': {'callset': {'ac': 1, 'af': 0.033, 'an': 8686}},
     'pos': 62456406,
     'predictions': {'cadd': 13.56},
@@ -163,8 +163,7 @@ class SavedVariantAPITest(object):
         variant = variants[VARIANT_GUID]
         fields = {*SAVED_VARIANT_DETAIL_FIELDS, 'key', 'mainTranscriptId'}
         self.assertSetEqual(set(variants['SV0000002_1248367227_r0390_100'].keys()), fields)
-        fields.update({'mainTranscriptId', 'mmeSubmissions'})
-        self.assertSetEqual(set(variant.keys()), fields)
+        self.assertSetEqual(set(variant.keys()), {*fields, 'mmeSubmissions'})
         self.assertListEqual(variant['familyGuids'], ['F000001_1'])
         self.assertSetEqual(set(variant['genotypes'].keys()), {'I000003_na19679', 'I000001_na19675', 'I000002_na19678'})
         self.assertSetEqual(
@@ -372,9 +371,9 @@ class SavedVariantAPITest(object):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), self.SAVED_VARIANT_RESPONSE_KEYS - {'omimIntervals'})
+        self.assertSetEqual(set(response_json.keys()), SAVED_VARIANT_RESPONSE_KEYS - {'omimIntervals'})
         self.assertSetEqual(set(response_json['savedVariantsByGuid']['SV0000002_1248367227_r0390_100'].keys()), {
-            'discoveryTags', 'screenRegionType', 'sortedRegulatoryFeatureConsequences', 'sortedMotifFeatureConsequences', *self.SAVED_VARIANT_38_DETAIL_FIELDS,
+            *fields, 'discoveryTags', 'screenRegionType', 'sortedRegulatoryFeatureConsequences', 'sortedMotifFeatureConsequences',
         })
 
     def test_create_saved_variant(self):
