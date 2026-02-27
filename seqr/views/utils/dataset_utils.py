@@ -406,7 +406,7 @@ def _load_rna_seq_file(
 def _parse_rna_row(sample_id, row_dict, potential_samples, loaded_samples, gene_ids, sample_guid_ids_to_load, samples_to_create,
                    unmatched_samples, individual_data_by_id, sample_files, file_dir, has_errors):
 
-    row_gene_ids = row_dict[GENE_ID_COL].split(';')
+    row_gene_ids = [None if gene_id == 'NA' else gene_id for gene_id in row_dict[GENE_ID_COL].split(';')]
     if any(row_gene_ids):
         gene_ids.update(row_gene_ids)
 
