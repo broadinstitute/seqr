@@ -463,7 +463,7 @@ def _process_rna_errors(gene_ids, missing_required_fields, unmatched_samples, ig
             (unmatched_samples.intersection(set((sample_metadata_mapping or {}).keys())), 'from Airtable with no corresponding seqr ID'),
         ]
         misconfigured = defaultdict(set)
-        for sample_id in unmatched_samples.intersection(set((misconfigured_samples or {}).keys())):
+        for sample_id in sorted(unmatched_samples.intersection(set((misconfigured_samples or {}).keys()))):
             misconfigured[misconfigured_samples[sample_id]].add(sample_id)
         unmatched += [
             (samples, f'that are improperly configured in Airtable with {error}') for error, samples in misconfigured.items()
@@ -472,13 +472,13 @@ def _process_rna_errors(gene_ids, missing_required_fields, unmatched_samples, ig
             unmatched_samples -= samples
         unmatched.append((unmatched_samples, 'with no match'))
         if ignore_extra_samples:
-            errors += [
-                f'Skipped loading for the following {len(unmatched_sample_set)} samples {unmatched_desc}: {", ".join(unmatched_sample_set)}'
+            warnings += [
+                f'Skipped loading for the following {len(unmatched_sample_set)} samples {unmatched_desc}: {", ".join(sorted(unmatched_sample_set))}'
                 for unmatched_sample_set, unmatched_desc in unmatched if unmatched_sample_set
             ]
         else:
             errors += [
-                f'Unable to load the following samples {unmatched_desc}: {", ".join(unmatched_sample_set)}'
+                f'Unable to load the following samples {unmatched_desc}: {", ".join(sorted(unmatched_sample_set))}'
                 for unmatched_sample_set, unmatched_desc in unmatched if unmatched_sample_set
             ]
 
