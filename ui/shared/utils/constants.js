@@ -78,11 +78,11 @@ export const OPTIONAL_PROJECT_FIELDS = [
     validate: value => (!value ? undefined : validators.requiredEmail(value)),
   },
   {
-    name: 'restrictHpoSharing',
-    label: 'Only share high-level HPO terms',
-    labelHelp: 'On the Variant Lookup page, all seqr users are able to see the HPO terms associated with individuals ' +
-      'that have a matched variant of interest. Selecting this option will restrict the HPO terms that are shared to ' +
-      'only the top-level categories.',
+    name: 'restrictSharing',
+    label: 'Do not share detailed metadata in variant lookup',
+    labelHelp: 'On the Variant Lookup page, all seqr users are able to see details about individuals that have a matched ' +
+      'variant of interest. While high-level details such as affected status, sex, and top-level HPO categories must be ' +
+      'shared, sharing detailed metadata such as full HPO terms can be restricted by selecting this option.',
     component: BooleanCheckbox,
   },
 ]
