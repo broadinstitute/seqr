@@ -351,6 +351,7 @@ def _validate_rna_header(header, allowed_column_map, optional_columns, sample_id
 def _load_rna_seq_file(
         file_path, data_source, user, data_type, model_cls, potential_samples, sample_files, file_dir, individual_data_by_id,
         allowed_column_map, allow_missing_gene=False, ignore_extra_samples=False, skip_new_sample_validation=False, optional_columns=None, sample_id_header_col_config=None,
+        misconfigured_sample_ids=None,
 ):
     f = file_iter(file_path, user=user)
     parsed_f = parse_file(file_path.replace('.gz', ''), f, iter_file=True)
@@ -387,7 +388,7 @@ def _load_rna_seq_file(
     }
 
     errors, warnings = _process_rna_errors(
-        gene_ids, missing_required_fields, unmatched_samples, ignore_extra_samples, loaded_samples,
+        gene_ids, missing_required_fields, unmatched_samples, ignore_extra_samples, loaded_samples, misconfigured_sample_ids,
         skip_new_sample_validation, num_new=len(samples_to_create) - len(inactivate_samples),
     )
 
@@ -443,7 +444,7 @@ def _get_sample_file_path(file_dir, sample_guid):
 
 
 def _process_rna_errors(gene_ids, missing_required_fields, unmatched_samples, ignore_extra_samples, loaded_samples,
-                        skip_new_sample_validation, num_new):
+                        misconfigured_sample_ids, skip_new_sample_validation, num_new):
     errors = []
     warnings = []
 
@@ -458,11 +459,20 @@ def _process_rna_errors(gene_ids, missing_required_fields, unmatched_samples, ig
         errors.append(f'Unknown Gene IDs: {", ".join(sorted(unknown_gene_ids))}')
 
     if unmatched_samples:
+        unmatched_misconfigured_samples = unmatched_samples.intersection(misconfigured_sample_ids or set())
+        unmatched_misconfigured_sample_ids = ', '.join(sorted(unmatched_samples))
+        unmatched_samples -= unmatched_misconfigured_samples
         unmatched_sample_ids = ', '.join(sorted(unmatched_samples))
         if ignore_extra_samples:
-            warnings.append(f'Skipped loading for the following {len(unmatched_samples)} unmatched samples: {unmatched_sample_ids}')
+            if unmatched_misconfigured_samples:
+                warnings.append(f'Skipped loading for the following {len(unmatched_misconfigured_samples)} samples improperly configured in Airtable: {unmatched_misconfigured_sample_ids}')
+            if unmatched_samples:
+                warnings.append(f'Skipped loading for the following {len(unmatched_samples)} unmatched samples: {unmatched_sample_ids}')
         else:
-            errors.append(f'Unable to find matches for the following samples: {unmatched_sample_ids}')
+            if unmatched_misconfigured_samples:
+                errors.append(f'The following samples are improperly configured in Airtable: {unmatched_misconfigured_sample_ids}')
+            if unmatched_samples:
+                errors.append(f'Unable to find matches for the following samples: {unmatched_sample_ids}')
 
     if loaded_samples:
         warnings.append(f'Skipped loading for {len(loaded_samples)} samples already loaded from this file')
