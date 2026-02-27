@@ -79,13 +79,22 @@ def update_rna_seq(request):
         ],
     )
     sample_metadata_mapping = {}
-    misconfigured_sample_ids = set()
+    misconfigured_samples = {}
     for sample in airtable_samples:
         sample_ids = [
             sample[sample_id_field] for sample_id_field in ['sample_id', 'WESSampleID_RNAMapping', 'WGSSampleID_RNAMapping']
             if sample.get(sample_id_field)
         ]
-        if len(sample[TISSUE_FIELD]) == 1 and len(sample['pdos']) == 1 and sample['pdos'][0]['project_guid'] is not None:
+        error_message = None
+        if len(sample.get(TISSUE_FIELD, [])) != 1:
+            error_message = 'no tissue specified' if not sample.get(TISSUE_FIELD) else 'multiple tissues specified'
+        elif len(sample['pdos']) != 1:
+            error_message = 'multiple conflicting PDOs'
+        elif sample['pdos'][0]['project_guid'] is None:
+            error_message = 'no project specified'
+        if error_message:
+            misconfigured_samples.update({sample_id: error_message for sample_id in sample_ids})
+        else:
             metadata = {
                 'tissue': TISSUE_TYPE_MAP[sample[TISSUE_FIELD][0]],
                 'project_guid': sample['pdos'][0]['project_guid'],
@@ -93,11 +102,9 @@ def update_rna_seq(request):
             }
             for sample_id in sample_ids:
                 sample_metadata_mapping[sample_id] = metadata
-        else:
-            misconfigured_sample_ids.update(sample_ids)
 
     response_json, status = load_rna_seq(
-        request_json, request.user, sample_metadata_mapping=sample_metadata_mapping, misconfigured_sample_ids=misconfigured_sample_ids,
+        request_json, request.user, sample_metadata_mapping=sample_metadata_mapping, misconfigured_samples=misconfigured_samples,
     )
     return create_json_response(response_json, status=status)
 
@@ -255,7 +262,6 @@ AIRTABLE_CALLSET_FIELDS = {
     (Sample.DATASET_TYPE_MITO_CALLS, Sample.SAMPLE_TYPE_WGS): 'MITO_WGS_CallsetPath',
     (Sample.DATASET_TYPE_SV_CALLS, Sample.SAMPLE_TYPE_WES): 'gCNV_CallsetPath',
     (Sample.DATASET_TYPE_SV_CALLS, Sample.SAMPLE_TYPE_WGS): 'SV_CallsetPath',
-    (RNA, None): TISSUE_FIELD,
 }
 
 
