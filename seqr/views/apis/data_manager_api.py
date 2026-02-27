@@ -74,28 +74,31 @@ def update_rna_seq(request):
     request_json = json.loads(request.body)
 
     airtable_samples = _get_dataset_type_samples_for_matched_pdos(
-        ['RNA ready to load'], request.user, RNA, None, skip_invalid_pdos=True, sample_fields=[
+        ['RNA ready to load'], request.user, RNA, None, allow_invalid_pdos=True, sample_fields=[
             TISSUE_FIELD, 'WESSampleID_RNAMapping', 'WGSSampleID_RNAMapping',
         ],
     )
     sample_metadata_mapping = {}
-    misconfigured_samples = []
+    misconfigured_sample_ids = set()
     for sample in airtable_samples:
-        if len(sample[TISSUE_FIELD]) == 1 and len(sample['pdos']) == 1:
+        sample_ids = [
+            sample[sample_id_field] for sample_id_field in ['sample_id', 'WESSampleID_RNAMapping', 'WGSSampleID_RNAMapping']
+            if sample.get(sample_id_field)
+        ]
+        if len(sample[TISSUE_FIELD]) == 1 and len(sample['pdos']) == 1 and sample['pdos'][0]['project_guid'] is not None:
             metadata = {
                 'tissue': TISSUE_TYPE_MAP[sample[TISSUE_FIELD][0]],
                 'project_guid': sample['pdos'][0]['project_guid'],
                 'sample_id': sample.get('CollaboratorSampleID') or sample['sample_id'],
             }
-            for sample_id_field in ['sample_id', 'WESSampleID_RNAMapping', 'WGSSampleID_RNAMapping']:
-                if sample.get(sample_id_field):
-                    sample_metadata_mapping[sample[sample_id_field]] = metadata
+            for sample_id in sample_ids:
+                sample_metadata_mapping[sample_id] = metadata
         else:
-            misconfigured_samples.append(sample['sample_id'])
-    if misconfigured_samples:
-        logger.warning(f'Skipping samples associated with multiple conflicting PDOs in Airtable: {", ".join(sorted(misconfigured_samples))}', request.user)
+            misconfigured_sample_ids.update(sample_ids)
 
-    response_json, status = load_rna_seq(request_json, request.user, sample_metadata_mapping=sample_metadata_mapping)
+    response_json, status = load_rna_seq(
+        request_json, request.user, sample_metadata_mapping=sample_metadata_mapping, misconfigured_sample_ids=misconfigured_sample_ids,
+    )
     return create_json_response(response_json, status=status)
 
 
