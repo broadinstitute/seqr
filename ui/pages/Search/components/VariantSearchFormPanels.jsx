@@ -5,7 +5,6 @@ import { FormSpy } from 'react-final-form'
 import styled from 'styled-components'
 import { Form, Accordion, Header, Segment, Grid, Icon } from 'semantic-ui-react'
 
-import { getElasticsearchEnabled } from 'redux/selectors'
 import { VerticalSpacer } from 'shared/components/Spacers'
 import { ButtonLink } from 'shared/components/StyledComponents'
 import { configuredField, configuredFields } from 'shared/components/form/FormHelpers'
@@ -101,13 +100,13 @@ const PANELS = [
 
 const stopPropagation = e => e.stopPropagation()
 
-const HeaderContent = React.memo(({ name, title, inputSize, inputProps, esEnabled }) => (
+const HeaderContent = React.memo(({ name, title, inputSize, inputProps }) => (
   <Grid>
     <Grid.Row>
       <Grid.Column width={inputSize ? 16 - inputSize : 8} verticalAlign="middle">{title}</Grid.Column>
       {inputProps && (
         <ToggleHeaderFieldColumn width={inputSize || 3} floated="right" textAlign="right" onClick={stopPropagation}>
-          {configuredField({ ...inputProps, name: `search.${name}`, esEnabled })}
+          {configuredField({ ...inputProps, name: `search.${name}` })}
         </ToggleHeaderFieldColumn>
       )}
     </Grid.Row>
@@ -119,18 +118,16 @@ HeaderContent.propTypes = {
   name: PropTypes.string,
   inputSize: PropTypes.number,
   inputProps: PropTypes.object,
-  esEnabled: PropTypes.bool,
 }
 
 const searchFieldName = (name, field) => (field.fullFieldValue ? `search.${name}` : `search.${name}.${field.name}`)
 
 const PanelContent = React.memo(({
-  name, fields, fieldProps, helpText, fieldLayout, fieldLayoutInput, esEnabled, noPadding, datasetTypes,
-  datasetTypeFields, datasetTypeFieldLayoutInput, esEnabledFields, esEnabledDatasetTypeFields,
+  name, fields, fieldProps, helpText, fieldLayout, fieldLayoutInput, noPadding, datasetTypes,
+  datasetTypeFields, datasetTypeFieldLayoutInput,
 }) => {
   const layoutInput = (datasetTypeFieldLayoutInput || {})[datasetTypes] || fieldLayoutInput
-  const currentDatasetTypeFields = esEnabled ? (esEnabledDatasetTypeFields || datasetTypeFields) : datasetTypeFields
-  const panelFields = (currentDatasetTypeFields || {})[datasetTypes] || (esEnabled && esEnabledFields) || fields
+  const panelFields = (datasetTypeFields || {})[datasetTypes] || fields
   const fieldComponents = panelFields && configuredFields(
     { fields: panelFields.map(field => ({ ...(fieldProps || {}), ...field, name: searchFieldName(name, field) })) },
   )
@@ -161,9 +158,6 @@ PanelContent.propTypes = {
   fieldLayout: PropTypes.func,
   fieldLayoutInput: PropTypes.arrayOf(PropTypes.string),
   datasetTypeFieldLayoutInput: PropTypes.object,
-  esEnabled: PropTypes.bool,
-  esEnabledFields: PropTypes.arrayOf(PropTypes.object),
-  esEnabledDatasetTypeFields: PropTypes.object,
   noPadding: PropTypes.bool,
 }
 
@@ -174,7 +168,6 @@ const HGMD_PATHOGENICITY_FIELDS = [...PATHOGENICITY_FIELDS, HGMD_FIELD]
 class VariantSearchFormPanels extends React.PureComponent {
 
   static propTypes = {
-    esEnabled: PropTypes.bool,
     hasHgmdPermission: PropTypes.bool,
     inheritance: PropTypes.string,
     datasetTypes: PropTypes.string,
@@ -198,7 +191,7 @@ class VariantSearchFormPanels extends React.PureComponent {
   }
 
   render() {
-    const { esEnabled, hasHgmdPermission, inheritance, datasetTypes } = this.props
+    const { hasHgmdPermission, inheritance, datasetTypes } = this.props
     const { active } = this.state
     return (
       <div>
@@ -239,7 +232,6 @@ class VariantSearchFormPanels extends React.PureComponent {
                 <Icon name="dropdown" />
                 <HeaderContent
                   name={name}
-                  esEnabled={esEnabled}
                   inputProps={showHgmd ? HGMD_HEADER_INPUT_PROPS : headerProps.inputProps}
                   {...headerProps}
                 />
@@ -254,7 +246,6 @@ class VariantSearchFormPanels extends React.PureComponent {
               >
                 <PanelContent
                   name={name}
-                  esEnabled={esEnabled}
                   datasetTypes={datasetTypes}
                   fields={showHgmd ? HGMD_PATHOGENICITY_FIELDS : fields}
                   {...panelContentProps}
@@ -272,7 +263,6 @@ class VariantSearchFormPanels extends React.PureComponent {
 const mapStateToProps = (state, ownProps) => ({
   hasHgmdPermission: getHasHgmdPermission(state, ownProps),
   datasetTypes: getDatasetTypes(state, ownProps),
-  esEnabled: getElasticsearchEnabled(state),
 })
 
 const ConnectedVariantSearchFormPanels = connect(mapStateToProps)(VariantSearchFormPanels)
