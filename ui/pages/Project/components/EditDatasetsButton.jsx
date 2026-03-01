@@ -9,21 +9,19 @@ import { validators } from 'shared/components/form/FormHelpers'
 import FormWrapper from 'shared/components/form/FormWrapper'
 import { UPLOAD_PROJECT_IGV_FIELD } from 'shared/components/form/IGVUploadField'
 import FileUploadField from 'shared/components/form/XHRUploaderField'
-import { BooleanCheckbox, Select } from 'shared/components/form/Inputs'
+import { Select } from 'shared/components/form/Inputs'
 import AddWorkspaceDataForm from 'shared/components/panel/LoadWorkspaceDataForm'
-import { DATASET_TYPE_SNV_INDEL_CALLS, DATASET_TYPE_SV_CALLS, DATASET_TYPE_MITO_CALLS, LOAD_RNA_FIELDS, TISSUE_DISPLAY } from 'shared/utils/constants'
+import { LOAD_RNA_FIELDS, TISSUE_DISPLAY } from 'shared/utils/constants'
 
-import { addVariantsDataset, addIGVDataset, uploadRnaSeq } from '../reducers'
+import { addIGVDataset, uploadRnaSeq } from '../reducers'
 import { getCurrentProject, getProjectGuid, getRnaSeqUploadStats } from '../selectors'
 
 const MODAL_NAME = 'Datasets'
 
-const ADD_VARIANT_FORM = 'variants'
 const ADD_IGV_FORM = 'igv'
 const ADD_RNA_FORM = 'rna'
 
 const SUBMIT_FUNCTIONS = {
-  [ADD_VARIANT_FORM]: addVariantsDataset,
   [ADD_IGV_FORM]: addIGVDataset,
   [ADD_RNA_FORM]: uploadRnaSeq,
 }
@@ -52,39 +50,6 @@ const mapDispatchToProps = (dispatch, ownProps) => ({
 })
 
 const UpdateDatasetForm = connect(null, mapDispatchToProps)(BaseUpdateDatasetForm)
-
-const UPLOAD_CALLSET_FIELDS = [
-  {
-    name: 'elasticsearchIndex',
-    label: 'Elasticsearch Index*',
-    labelHelp: 'The elasticsearch index where the callset has already been loaded.',
-    validate: value => (value ? undefined : 'Specify the Elasticsearch Index where this callset has been loaded'),
-  },
-  {
-    name: 'datasetType',
-    label: 'Caller Type*',
-    labelHelp: 'The caller used to generate the raw data for this index',
-    component: Select,
-    options: [
-      { value: DATASET_TYPE_SNV_INDEL_CALLS, name: 'Haplotypecaller' },
-      { value: DATASET_TYPE_SV_CALLS, name: 'SV Caller' },
-      { value: DATASET_TYPE_MITO_CALLS, name: 'Mitochondria Caller' },
-    ],
-    validate: value => (value ? undefined : 'Specify the caller type'),
-  },
-  {
-    name: 'mappingFilePath',
-    label: 'ID Mapping File Path',
-    labelHelp: 'Optional path to a file that maps VCF Sample Ids (column 1) to their corresponding Seqr Individual Ids (column 2). It can either be on the server filesystem or on Google cloud storage.',
-    placeholder: 'gs:// Google bucket path or server filesystem path',
-  },
-  {
-    name: 'ignoreExtraSamplesInCallset',
-    component: BooleanCheckbox,
-    label: 'Ignore extra samples in callset',
-    labelHelp: 'If the callset contains sample ids that don\'t match individuals in this project, ignore them instead of reporting an error.',
-  },
-]
 
 const mapStateToProps = state => ({
   url: `/api/project/${getProjectGuid(state)}/upload_igv_dataset`,
@@ -137,8 +102,6 @@ const mapRnaDispatchToProps = {
 
 const RnaUpdateForm = connect(mapRnaStateToProps, mapRnaDispatchToProps)(BaseRnaUpdateForm)
 
-const DEFAULT_UPLOAD_CALLSET_VALUE = { datasetType: DATASET_TYPE_SNV_INDEL_CALLS }
-
 const ADD_RNA_DATA_PANE = {
   menuItem: 'Add RNA Data',
   render: () => (
@@ -148,32 +111,20 @@ const ADD_RNA_DATA_PANE = {
   ),
 }
 
-const ES_ENABLED_PANES = [...[
+const PANES = [
   {
-    title: 'Upload New Callset',
-    formType: ADD_VARIANT_FORM,
-    formFields: UPLOAD_CALLSET_FIELDS,
-    initialValues: DEFAULT_UPLOAD_CALLSET_VALUE,
+    menuItem: 'Add IGV Paths',
+    render: () => (
+      <Tab.Pane key={ADD_IGV_FORM}>
+        <UpdateDatasetForm
+          formType={ADD_IGV_FORM}
+          formFields={UPLOAD_IGV_FIELDS}
+        />
+      </Tab.Pane>
+    ),
   },
-  {
-    title: 'Add IGV Paths',
-    formType: ADD_IGV_FORM,
-    formFields: UPLOAD_IGV_FIELDS,
-  },
-].map(({ title, formType, formFields, initialValues }) => ({
-  menuItem: title,
-  render: () => (
-    <Tab.Pane key={formType}>
-      <UpdateDatasetForm
-        formType={formType}
-        formFields={formFields}
-        initialValues={initialValues}
-      />
-    </Tab.Pane>
-  ),
-})), ADD_RNA_DATA_PANE]
-
-const PANES = ES_ENABLED_PANES.slice(1)
+  ADD_RNA_DATA_PANE,
+]
 
 const WORKSPACE_DATA_PANES = [
   {
@@ -186,7 +137,7 @@ const WORKSPACE_DATA_PANES = [
       </Tab.Pane>
     ),
   },
-  ES_ENABLED_PANES[2],
+  ADD_RNA_DATA_PANE,
 ]
 
 const mapAddDataStateToProps = state => ({
@@ -195,12 +146,11 @@ const mapAddDataStateToProps = state => ({
 
 const AddProjectWorkspaceDataForm = connect(mapAddDataStateToProps)(AddWorkspaceDataForm)
 
-const EditDatasetsButton = React.memo(({ showLoadWorkspaceData, elasticsearchEnabled, user }) => {
+const EditDatasetsButton = React.memo(({ showLoadWorkspaceData, user }) => {
   const showEditDatasets = user.isDataManager || user.isPm
-  const showAddCallset = user.isDataManager && elasticsearchEnabled
   let panes = null
   if (showEditDatasets) {
-    panes = showAddCallset ? ES_ENABLED_PANES : PANES
+    panes = PANES
   } else if (showLoadWorkspaceData) {
     panes = WORKSPACE_DATA_PANES
   }
@@ -218,7 +168,6 @@ const EditDatasetsButton = React.memo(({ showLoadWorkspaceData, elasticsearchEna
 
 EditDatasetsButton.propTypes = {
   showLoadWorkspaceData: PropTypes.bool,
-  elasticsearchEnabled: PropTypes.bool,
   user: PropTypes.object,
 }
 

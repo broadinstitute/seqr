@@ -3,11 +3,11 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 
 import { navigateSavedHashedSearch } from 'redux/rootReducer'
-import { VEP_GROUP_SV, ANY_AFFECTED, GENE_SEARCH_FREQUENCIES } from 'shared/utils/constants'
+import { ANY_AFFECTED, GENE_SEARCH_FREQUENCIES } from 'shared/utils/constants'
 import { ButtonLink } from '../StyledComponents'
 
 const SearchResultsLink = ({
-  buttonText = 'Gene Search', openSearchResults, initialSearch, variantId, location, genomeVersion, svType,
+  buttonText = 'Gene Search', openSearchResults, initialSearch, location, genomeVersion,
   familyGuids, familyGuid, ...props
 }) => <ButtonLink {...props} content={buttonText} onClick={openSearchResults} />
 
@@ -15,9 +15,7 @@ SearchResultsLink.propTypes = {
   buttonText: PropTypes.string,
   initialSearch: PropTypes.object,
   location: PropTypes.string,
-  variantId: PropTypes.string,
   genomeVersion: PropTypes.string,
-  svType: PropTypes.string,
   familyGuid: PropTypes.string,
   familyGuids: PropTypes.arrayOf(PropTypes.string),
   openSearchResults: PropTypes.func,
@@ -28,11 +26,8 @@ const mapDispatchToProps = (dispatch, ownProps) => ({
     const search = {
       ...(ownProps.initialSearch || {}),
       locus: {
-        rawItems: ownProps.location, rawVariantItems: ownProps.variantId,
+        rawItems: ownProps.location,
       },
-    }
-    if (ownProps.svType) {
-      search.annotations = { [VEP_GROUP_SV]: [ownProps.svType, `gCNV_${ownProps.svType}`] }
     }
     if (ownProps.excludeSvs) {
       search.exclude_svs = ownProps.excludeSvs
