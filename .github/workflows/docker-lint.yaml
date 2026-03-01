@@ -11,7 +11,6 @@ on:
       - deploy/docker/seqr/Dockerfile
       - vlm/deploy/Dockerfile
       - .hadolint.yaml
-      - .docker-compose.yaml
       - .github/workflows/docker-lint.yaml
   pull_request:
     types: [opened, synchronize, reopened]
@@ -22,7 +21,6 @@ on:
       - deploy/docker/seqr/Dockerfile
       - vlm/deploy/Dockerfile
       - .hadolint.yaml
-      - .docker-compose.yaml
       - .github/workflows/docker-lint.yaml
 
 jobs:
@@ -30,8 +28,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Validate docker compose
-        run: docker compose -f docker-compose.yml config
       - uses: hadolint/hadolint-action@v1.5.0
         with:
           dockerfile: deploy/docker/seqr/Dockerfile

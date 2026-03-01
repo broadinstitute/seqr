@@ -143,15 +143,6 @@ export const loadSavedVariants = ({ familyGuids, variantGuid, tag }) => (dispatc
 
 export const loadFamilySavedVariants = familyGuid => loadSavedVariants({ familyGuids: [familyGuid] })
 
-const unloadSavedVariants = (dispatch, getState) => {
-  const state = getState()
-  const variantsToDelete = Object.keys(state.savedVariantsByGuid).reduce((acc, o) => ({ ...acc, [o]: null }), {})
-  const variantFamiliesToDelete = Object.keys(state.savedVariantFamilies).reduce((acc, o) => (
-    { ...acc, [o]: { loaded: false } }), {})
-  dispatch({ type: RECEIVE_DATA, updatesById: { savedVariantsByGuid: variantsToDelete } })
-  dispatch({ type: RECEIVE_SAVED_VARIANT_FAMILIES, updates: variantFamiliesToDelete })
-}
-
 export const unloadProject = () => dispatch => dispatch({ type: UPDATE_CURRENT_PROJECT, newValue: null })
 
 export const updateFamilies = values => (dispatch, getState) => {
@@ -187,17 +178,6 @@ export const updateIndividualsMetadata = ({ uploadedFileId }) => (dispatch, getS
     dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
   },
 ).post()
-
-export const addVariantsDataset = values => (dispatch, getState) => new HttpRequestHelper(
-  `/api/project/${getState().currentProjectGuid}/add_dataset/variants`,
-  (responseJson) => {
-    dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
-
-    // Clear all loaded variants and update the saved variant json. This should happen asynchronously
-    unloadSavedVariants(dispatch, getState)
-    new HttpRequestHelper(`/api/project/${getState().currentProjectGuid}/update_saved_variant_json`, () => {}).post()
-  },
-).post(values)
 
 export const updateIndividualIGV = (values, onError) => dispatch => (
   new HttpRequestHelper(

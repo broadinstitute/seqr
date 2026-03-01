@@ -60,7 +60,7 @@ ALLELE_REGISTRY_HEADERS = {
         "##contig=<ID=X,length=155270560,assembly=GRCh37>",
         "##contig=<ID=Y,length=59373566,assembly=GRCh37>",
         "##contig=<ID=MT,length=16569,assembly=GRCh37>",
-        "#CHROM POS ID  REF ALT QUAL    FILTER  INFO",
+        "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO",
     ],
     GENOME_VERSION_GRCh38: [
         "##fileformat=VCFv4.2",
@@ -89,7 +89,7 @@ ALLELE_REGISTRY_HEADERS = {
         "##contig=<ID=X,length=156040895,assembly=GRCh38>",
         "##contig=<ID=Y,length=57227415,assembly=GRCh38>",
         "##contig=<ID=M,length=16569,assembly=GRCh38>",
-        "#CHROM POS ID  REF ALT QUAL    FILTER  INFO",
+        "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO",
     ],
 }
 ALLELE_REGISTRY_URL = "https://reg.genome.network/alleles?file=vcf&fields=none+@id+genomicAlleles+externalRecords.{}.id"

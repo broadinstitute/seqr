@@ -1,11 +1,9 @@
 import { combineReducers } from 'redux'
 
-import { loadingReducer, createSingleValueReducer, createSingleObjectReducer } from 'redux/utils/reducerFactories'
+import { loadingReducer, createSingleValueReducer } from 'redux/utils/reducerFactories'
 import { HttpRequestHelper, loadMultipleData } from 'shared/utils/httpRequestHelper'
 
 // action creators and reducers in one file as suggested by https://github.com/erikras/ducks-modular-redux
-const REQUEST_ELASTICSEARCH_STATUS = 'REQUEST_ELASTICSEARCH_STATUS'
-const RECEIVE_ELASTICSEARCH_STATUS = 'RECEIVE_ELASTICSEARCH_STATUS'
 const RECEIVE_RNA_SEQ_UPLOAD_STATS = 'RECEIVE_RNA_SEQ_UPLOAD_STATS'
 const RECEIVE_PHE_PRI_UPLOAD_STATS = 'RECEIVE_PHE_PRI_UPLOAD_STATS'
 const RECEIVE_IGV_UPLOAD_STATS = 'RECEIVE_IGV_UPLOAD_STATS'
@@ -13,17 +11,6 @@ const REQUEST_ALL_USERS = 'REQUEST_ALL_USERS'
 const RECEIVE_ALL_USERS = 'RECEIVE_ALL_USERS'
 
 // Data actions
-export const loadElasticsearchStatus = () => (dispatch) => {
-  dispatch({ type: REQUEST_ELASTICSEARCH_STATUS })
-  new HttpRequestHelper('/api/data_management/elasticsearch_status',
-    (responseJson) => {
-      dispatch({ type: RECEIVE_ELASTICSEARCH_STATUS, updates: responseJson })
-    },
-    (e) => {
-      dispatch({ type: RECEIVE_ELASTICSEARCH_STATUS, error: e.message, updates: { errors: [e.message] } })
-    }).get()
-}
-
 export const loadAllUsers = () => (dispatch, getState) => {
   const { allUsers } = getState()
   if (allUsers && allUsers.length) {
@@ -46,8 +33,6 @@ const submitRequest = (urlPath, receiveDataAction, values) => dispatch => new Ht
     dispatch({ type: receiveDataAction, newValue: responseJson })
   },
 ).post(values)
-
-export const deleteEsIndex = index => submitRequest('delete_index', RECEIVE_ELASTICSEARCH_STATUS, { index })
 
 export const uploadRnaSeq = loadMultipleData(
   '/api/data_management/update_rna_seq',
@@ -73,8 +58,6 @@ export const uploadPhenotypePrioritization = values => submitRequest(
 )
 
 export const reducers = {
-  elasticsearchStatusLoading: loadingReducer(REQUEST_ELASTICSEARCH_STATUS, RECEIVE_ELASTICSEARCH_STATUS),
-  elasticsearchStatus: createSingleObjectReducer(RECEIVE_ELASTICSEARCH_STATUS),
   rnaSeqUploadStats: createSingleValueReducer(RECEIVE_RNA_SEQ_UPLOAD_STATS, {}),
   phePriUploadStats: createSingleValueReducer(RECEIVE_PHE_PRI_UPLOAD_STATS, {}),
   igvUploadStats: createSingleValueReducer(RECEIVE_IGV_UPLOAD_STATS, {}),
