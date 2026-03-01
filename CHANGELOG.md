@@ -2,6 +2,9 @@
 
 ## dev
 
+## 3/1/26
+* Deprecate Elasticsearch support
+
 ## 2/25/26
 * Switches clickhouse to use new variant tables and deprecate old annotations tables (REQUIRES DB MIGRATION)
   * Note that for users with Clickhouse already enabled, this requires a manual intervention. 
