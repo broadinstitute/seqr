@@ -355,7 +355,7 @@ def _load_rna_seq_file(
         misconfigured_samples=None, sample_metadata_mapping=None,
 ):
     f = file_iter(file_path, user=user)
-    parsed_f = parse_file(file_path.replace('.gz', ''), f, iter_file=True)
+    parsed_f = parse_file(file_path.split('/')[-1].replace('.gz', ''), f, iter_file=True)
     header = next(parsed_f)
     file_sample_id, column_map = _validate_rna_header(header, allowed_column_map, optional_columns, sample_id_header_col_config)
 
@@ -556,7 +556,11 @@ def _load_rna_seq(data_type, file_path, user, sample_metadata_mapping=None, proj
     file_dir = get_temp_file_path(file_name_prefix, is_local=True)
     os.mkdir(file_dir)
     if is_google_bucket_file_path(file_path):
-        run_gsutil_with_wait('cp', file_path, additional_args=f' {file_dir}', user=user)
+        try:
+            run_gsutil_with_wait('cp', file_path, additional_args=f' {file_dir}', user=user)
+        except Exception as e:
+            # re-raise so error is properly handled upstream
+            raise ValueError(e)
         file_path = f'{file_dir}/{file_name}'
 
     warnings, not_loaded_count, sample_guid_ids_to_load, prev_loaded_individual_ids = _load_rna_seq_file(
