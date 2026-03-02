@@ -594,7 +594,7 @@ def _load_rna_seq(data_type, file_path, user, sample_metadata_mapping=None, proj
         )
 
     if sample_guid_ids_to_load:
-        persist_temp_file(file_name_prefix, user)
+        persist_temp_file(file_name_prefix, user, src_suffix='/*.json.gz')
 
     return sorted(sample_guid_ids_to_load.keys()), file_name_prefix, info, warnings
 

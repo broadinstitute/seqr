@@ -1058,10 +1058,9 @@ class DataManagerAPITest(AirtableTest):
         self.assertSetEqual(set(response_json['sampleGuids']), {sample_guid, new_sample_guid})
 
         # test correct file interactions
-        # TODO fix this behavior!
         expected_subprocess_calls = [
             f'gsutil cp {RNA_FILE_ID} tmp/temp_uploads/{file_path}',
-            f'gsutil mv tmp/temp_uploads/{file_path} gs://seqr-scratch-temp/{file_path}',
+            f'gsutil mv tmp/temp_uploads/{file_path}/*.json.gz gs://seqr-scratch-temp/{file_path}',
         ]
         self.assertEqual(mock_subprocess.call_count, len(expected_subprocess_calls))
         mock_subprocess.assert_has_calls([call for calls in [
