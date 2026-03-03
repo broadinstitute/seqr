@@ -5,7 +5,7 @@ import mock
 from django.urls.base import reverse
 
 from clickhouse_search.models.reference_data_models import DbnsfpGRCh37SnvIndelMv, DbnsfpGRCh37SnvIndelDict
-from seqr.models import SavedVariant, VariantNote, VariantTag, VariantFunctionalData, Sample, Project
+from seqr.models import SavedVariant, VariantNote, VariantTag, VariantFunctionalData, Project
 from seqr.views.apis.saved_variant_api import saved_variant_data, create_variant_note_handler, create_saved_variant_handler, \
     update_variant_note_handler, delete_variant_note_handler, update_variant_tags_handler, \
     update_variant_main_transcript, update_variant_functional_data_handler, update_variant_acmg_classification_handler
