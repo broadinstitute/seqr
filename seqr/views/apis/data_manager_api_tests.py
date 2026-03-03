@@ -1163,8 +1163,8 @@ class DataManagerAPITest(AirtableTest):
         ]
         self.assertEqual(response.json()['info'], info)
         self.assert_json_logs(self.data_manager_user, [
-            (f'==> gsutil ls gs://seqr_data/lirical_data.tsv.gz', None),
-            (f'==> gsutil cat gs://seqr_data/lirical_data.tsv.gz | gunzip -c -q - ', None),
+            ('==> gsutil ls gs://seqr_data/lirical_data.tsv.gz', None),
+            ('==> gsutil cat gs://seqr_data/lirical_data.tsv.gz | gunzip -c -q - ', None),
             ('delete 1 PhenotypePrioritizations', {'dbUpdate': {
                 'dbEntity': 'PhenotypePrioritization', 'updateType': 'bulk_delete',
                 'entityIds': ['PP000003_NA19678_ENSG000002689'],
@@ -1197,8 +1197,8 @@ class DataManagerAPITest(AirtableTest):
         ]
         self.assertEqual(response.json()['info'], info)
         self.assert_json_logs(self.data_manager_user, [
-            (f'==> gsutil ls gs://seqr_data/lirical_data.tsv.gz', None),
-            (f'==> gsutil cat gs://seqr_data/lirical_data.tsv.gz | gunzip -c -q - ', None),
+            ('==> gsutil ls gs://seqr_data/lirical_data.tsv.gz', None),
+            ('==> gsutil cat gs://seqr_data/lirical_data.tsv.gz | gunzip -c -q - ', None),
             ('delete 1 PhenotypePrioritizations', {'dbUpdate': {
                 'dbEntity': 'PhenotypePrioritization', 'updateType': 'bulk_delete',
                 'entityIds': ['PP256989491_na19678ensg0000010'],
