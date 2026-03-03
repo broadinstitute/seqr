@@ -253,9 +253,8 @@ class Command(BaseCommand):
                 logger.error(f'Error updating individuals sample qc {run_version}: {e}')
 
         logger.info(f'Reloading saved variants in {len(families_by_project)} projects')
-        samples = Sample.objects.filter(is_active=True)
         for project, family_guids in families_by_project.items():
-            updated_saved_variants = cls._update_project_saved_variant_genotypes(project, family_guids, dataset_type, samples)
+            updated_saved_variants = cls._update_project_saved_variant_genotypes(project, family_guids, clickhouse_dataset_type)
             logger.info(f'Updated {len(updated_saved_variants)} variants in {len(family_guids)} families for project {project.name}')
 
     @classmethod
@@ -391,7 +390,7 @@ class Command(BaseCommand):
             )
 
     @staticmethod
-    def _update_project_saved_variant_genotypes(project, family_guids, dataset_type, samples):
+    def _update_project_saved_variant_genotypes(project, family_guids, dataset_type):
         updates = {}
         for family_guid in family_guids:
             variant_models_by_key = {
@@ -406,7 +405,7 @@ class Command(BaseCommand):
             variants = []
             genotypes_by_key = get_clickhouse_genotypes(
                 project.guid, [family_guid], project.genome_version, dataset_type, variant_models_by_key.keys(),
-                samples,
+                samples=Sample.objects.filter(is_active=True),
             )
             for key, genotypes in genotypes_by_key.items():
                 variant = variant_models_by_key[key]
