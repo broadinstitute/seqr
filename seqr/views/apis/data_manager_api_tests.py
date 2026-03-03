@@ -966,7 +966,7 @@ class DataManagerAPITest(AirtableTest):
         mock_send_slack.assert_not_called()
         mock_send_email.assert_not_called()
         self.assertEqual(mock_subprocess.call_count, 1)
-        mock_subprocess.assert_called_with(f'gsutil cp {body["file"]} tmp/temp_uploads/{file_path}', stdout=-1, stderr=-2, shell=True)
+        mock_subprocess.assert_called_with(f'gsutil cp {body["file"]} tmp/temp_uploads/{file_path}', stdout=-1, stderr=-2, shell=True) # nosec
 
         def _test_basic_data_loading(data, num_parsed_samples, num_loaded_samples, new_sample_individual_id, body,
                                      project_names, num_created_samples=1, warnings=None, additional_logs=None):
