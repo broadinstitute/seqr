@@ -785,12 +785,10 @@ class ProjectAPITest(object):
         self.assertEqual(response.status_code, 400)
         errors = [
             'Unknown Gene IDs: NOT_A_GENE_ID1',
-            'Unable to find matches for the following samples: NA21234',
+            'Unable to load the following samples with no match: NA21234',
         ]
         if not allow_missing_gene:
             errors.insert(0, 'Samples missing required "gene_id": NA21234')
-        if single_sample_file:
-            errors.append('No new samples detected')
         self.assertDictEqual(response.json(), {'warnings': None, 'errors': errors})
 
         # Test loading new data
@@ -806,7 +804,7 @@ class ProjectAPITest(object):
             f'Parsed {1 if single_sample_file else 3} RNA-seq samples',
             f'Attempted data loading for {1 if single_sample_file else 2} RNA-seq samples',
         ]
-        warnings = ['No new samples detected'] if single_sample_file else ['Skipped loading for the following 1 unmatched samples: NA21234']
+        warnings = ['No new samples detected'] if single_sample_file else ['Skipped loading for the following 1 samples with no match: NA21234']
         file_path = f'rna_sample_data__{data_type}__2025-04-15T00:00:00'
         response_json = response.json()
         self.assertDictEqual(response_json, {

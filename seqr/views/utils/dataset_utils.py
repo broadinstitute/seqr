@@ -351,6 +351,7 @@ def _validate_rna_header(header, allowed_column_map, optional_columns, sample_id
 def _load_rna_seq_file(
         file_path, data_source, user, data_type, model_cls, potential_samples, sample_files, file_dir, individual_data_by_id,
         allowed_column_map, allow_missing_gene=False, ignore_extra_samples=False, skip_new_sample_validation=False, optional_columns=None, sample_id_header_col_config=None,
+        misconfigured_samples=None, sample_metadata_mapping=None,
 ):
     f = file_iter(file_path, user=user)
     parsed_f = parse_file(file_path.replace('.gz', ''), f, iter_file=True)
@@ -387,8 +388,8 @@ def _load_rna_seq_file(
     }
 
     errors, warnings = _process_rna_errors(
-        gene_ids, missing_required_fields, unmatched_samples, ignore_extra_samples, loaded_samples,
-        skip_new_sample_validation, num_new=len(samples_to_create) - len(inactivate_samples),
+        gene_ids, missing_required_fields, unmatched_samples, ignore_extra_samples, loaded_samples, misconfigured_samples,
+        sample_metadata_mapping, skip_new_sample_validation, num_new=len(samples_to_create) - len(inactivate_samples),
     )
 
     if errors:
@@ -443,7 +444,7 @@ def _get_sample_file_path(file_dir, sample_guid):
 
 
 def _process_rna_errors(gene_ids, missing_required_fields, unmatched_samples, ignore_extra_samples, loaded_samples,
-                        skip_new_sample_validation, num_new):
+                        misconfigured_samples, sample_metadata_mapping, skip_new_sample_validation, num_new):
     errors = []
     warnings = []
 
@@ -458,16 +459,33 @@ def _process_rna_errors(gene_ids, missing_required_fields, unmatched_samples, ig
         errors.append(f'Unknown Gene IDs: {", ".join(sorted(unknown_gene_ids))}')
 
     if unmatched_samples:
-        unmatched_sample_ids = ', '.join(sorted(unmatched_samples))
+        unmatched = [
+            (unmatched_samples.intersection(set((sample_metadata_mapping or {}).keys())), 'from Airtable with no corresponding seqr ID'),
+        ]
+        misconfigured = defaultdict(set)
+        for sample_id in sorted(unmatched_samples.intersection(set((misconfigured_samples or {}).keys()))):
+            misconfigured[misconfigured_samples[sample_id]].add(sample_id)
+        unmatched += [
+            (samples, f'that are improperly configured in Airtable with {error}') for error, samples in misconfigured.items()
+        ]
+        for samples, _ in unmatched:
+            unmatched_samples -= samples
+        unmatched.append((unmatched_samples, 'with no match'))
         if ignore_extra_samples:
-            warnings.append(f'Skipped loading for the following {len(unmatched_samples)} unmatched samples: {unmatched_sample_ids}')
+            warnings += [
+                f'Skipped loading for the following {len(unmatched_sample_set)} samples {unmatched_desc}: {", ".join(sorted(unmatched_sample_set))}'
+                for unmatched_sample_set, unmatched_desc in unmatched if unmatched_sample_set
+            ]
         else:
-            errors.append(f'Unable to find matches for the following samples: {unmatched_sample_ids}')
+            errors += [
+                f'Unable to load the following samples {unmatched_desc}: {", ".join(sorted(unmatched_sample_set))}'
+                for unmatched_sample_set, unmatched_desc in unmatched if unmatched_sample_set
+            ]
 
     if loaded_samples:
         warnings.append(f'Skipped loading for {len(loaded_samples)} samples already loaded from this file')
 
-    if num_new < 1:
+    if num_new < 1 and not errors:
         err_list = warnings if skip_new_sample_validation else errors
         err_list.append('No new samples detected')
 
@@ -538,7 +556,7 @@ def _load_rna_seq(data_type, file_path, user, sample_metadata_mapping=None, proj
 
     warnings, not_loaded_count, sample_guid_ids_to_load, prev_loaded_individual_ids = _load_rna_seq_file(
         file_path, data_source, user, data_type, model_cls, potential_samples, sample_files, file_dir, individual_data_by_id,
-        config['columns'], **config['additional_kwargs'], **kwargs)
+        config['columns'], **config['additional_kwargs'], sample_metadata_mapping=sample_metadata_mapping, **kwargs)
     message = f'Parsed {len(sample_guid_ids_to_load) + not_loaded_count} RNA-seq samples'
     info = [message]
     logger.info(message, user)
