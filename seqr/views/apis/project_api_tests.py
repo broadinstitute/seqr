@@ -88,8 +88,7 @@ RNA_DATA_TYPE_PARAMS = {
         'model_cls': RnaSeqSpliceOutlier,
         'sample_guid': RNA_SPLICE_SAMPLE_GUID,
         'parsed_file_data': {
-            sample_guid: '\n'.join([
-                json.dumps(row) for row in rows]
+            sample_guid: '\n'.join([json.dumps(row) for row in rows]
             ) + '\n' for sample_guid, rows in PARSED_RNA_SPLICE_ROWS.items()
         },
         'required_columns': RNA_SPLICE_OUTLIER_REQUIRED_COLUMNS,
@@ -917,7 +916,15 @@ class ProjectAPITest(object):
         self.assertListEqual(list(models.values_list('gene_id', 'tpm')), expected_models)
 
     def test_load_rna_splice_outlier_sample_data(self):
-        models = self._test_load_rna_seq_sample_data('S', **RNA_DATA_TYPE_PARAMS['S'])
+        kwargs = {
+            k: {
+                sample_guid: f"{data}{json.dumps({**PARSED_RNA_SPLICE_ROWS[sample_guid][0], 'chrom': 'chr_alt_2_a'})}\n"
+                for sample_guid, data in v.items()
+            } if k == 'parsed_file_data' else v for k, v in RNA_DATA_TYPE_PARAMS['S'].items()
+        }
+        models = self._test_load_rna_seq_sample_data('S', **kwargs, additional_logs=[
+            ('Skipped rows with invalid "chrom" values: chr_alt_2_a', None)
+        ])
 
         expected_models = [
             ('ENSG00000233750', '2', 167254166, 167258349, '*', 'psi3', 1.56e-25, -4.9, -0.46, 166, None, None),
@@ -934,7 +941,7 @@ class ProjectAPITest(object):
     @mock.patch('seqr.utils.file_utils.gzip.open')
     @mock.patch('seqr.utils.file_utils.os.path.isfile')
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
-    def _test_load_rna_seq_sample_data(self, data_type, mock_subprocess, mock_does_file_exist, mock_open, mock_pm_group, sample_guid=None, parsed_file_data=None, model_cls=None,  mismatch_field='p_value', invalid_format_field=None, row_id=None, **kwargs):
+    def _test_load_rna_seq_sample_data(self, data_type, mock_subprocess, mock_does_file_exist, mock_open, mock_pm_group, sample_guid=None, parsed_file_data=None, model_cls=None,  mismatch_field='p_value', invalid_format_field=None, row_id=None, additional_logs=None, **kwargs):
         url = reverse(load_rna_seq_sample_data, args=[sample_guid])
         self.check_manager_login(url)
 
@@ -980,6 +987,7 @@ class ProjectAPITest(object):
         self.assert_json_logs(self.manager_user, [
             ('Loading outlier data for NA19675_1', None),
             *subprocess_logs,
+            *(additional_logs or []),
             (f'create {model_cls.__name__}s', {'dbUpdate': {
                 'dbEntity': model_cls.__name__, 'numEntities': models.count(), 'parentEntityIds': [sample_guid],
                 'updateType': 'bulk_create',
