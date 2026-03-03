@@ -56,8 +56,6 @@ export const GENOME_VERSION_DISPLAY_LOOKUP = {
 
 export const FILE_FIELD_NAME = 'uploadedFile'
 
-export const PROJECT_DESC_FIELD = { name: 'description', label: 'Project Description', placeholder: 'Description' }
-
 export const CONSENT_CODES = ['HMB', 'GRU']
 const CONSENT_CODE_OPTIONS = [...CONSENT_CODES, 'Other'].map(text => ({ text, value: text[0] }))
 export const CONSENT_CODE_LOOKUP = CONSENT_CODE_OPTIONS.reduce(
@@ -70,9 +68,28 @@ const CONSENT_CODE_FIELD = {
   options: CONSENT_CODE_OPTIONS,
 }
 
+export const OPTIONAL_PROJECT_FIELDS = [
+  { name: 'description', label: 'Project Description', placeholder: 'Description' },
+  {
+    name: 'recoveryEmail',
+    label: 'Recovery Email',
+    labelHelp: 'An email the seqr team can contact in the event that the project owner is no longer reachable. ' +
+      'Note that this account does not need to be granted access to the project, and may be a group or shared email.',
+    validate: value => (!value ? undefined : validators.requiredEmail(value)),
+  },
+  {
+    name: 'restrictHpoSharing',
+    label: 'Only share high-level HPO terms',
+    labelHelp: 'On the Variant Lookup page, all seqr users are able to see the HPO terms associated with individuals ' +
+      'that have a matched variant of interest. Selecting this option will restrict the HPO terms that are shared to ' +
+      'only the top-level categories.',
+    component: BooleanCheckbox,
+  },
+]
+
 export const EDITABLE_PROJECT_FIELDS = [
   { name: 'name', label: 'Project Name', placeholder: 'Name', validate: validators.required, autoFocus: true },
-  PROJECT_DESC_FIELD,
+  ...OPTIONAL_PROJECT_FIELDS,
 ]
 
 export const PM_EDITABLE_PROJECT_FIELDS = [
@@ -158,8 +175,8 @@ export const LOAD_RNA_FIELDS = [
     label: 'Data Type',
     component: Select,
     options: [
-      { text: 'Expression Outlier', value: DATA_TYPE_EXPRESSION_OUTLIER, description: 'FRASER2' },
-      { text: 'Splice Outlier', value: DATA_TYPE_SPLICE_OUTLIER, description: 'OUTRIDER' },
+      { text: 'Expression Outlier', value: DATA_TYPE_EXPRESSION_OUTLIER, description: 'OUTRIDER' },
+      { text: 'Splice Outlier', value: DATA_TYPE_SPLICE_OUTLIER, description: 'FRASER2' },
       { text: 'TPM', value: DATA_TYPE_TPM },
     ],
     validate: validators.required,
@@ -1508,22 +1525,6 @@ export const VARIANT_TAGGED_DATE_FIELD = {
   inline: true,
 }
 
-const INDICATOR_MAP = {
-  D: { color: 'red', value: 'damaging' },
-  T: { color: 'green', value: 'tolerated' },
-}
-
-const FATHMM_MAP = {
-  ...INDICATOR_MAP,
-  N: { color: 'green', value: 'neutral' },
-}
-
-const POLYPHEN_MAP = {
-  D: { color: 'red', value: 'probably damaging' },
-  P: { color: 'yellow', value: 'possibly damaging' },
-  B: { color: 'green', value: 'benign' },
-}
-
 const MUTTASTER_MAP = {
   D: { color: 'red', value: 'disease causing' },
   A: { color: 'red', value: 'disease causing automatic' },
@@ -1546,15 +1547,14 @@ export const NO_SV_IN_SILICO_GROUPS = [MISSENSE_IN_SILICO_GROUP, CODING_IN_SILIC
 export const SPLICE_AI_FIELD = 'splice_ai'
 export const ALPHAMISSENSE_THRESHHOLDS = [0.071, 0.17, 0.792, 0.906, 0.99]
 
-const CLINGEN_CITATION = { name: '2022 ClinGen', pmid: '36413997' }
+const CLINGEN_CITATION = { name: '2022 ClinGen recommendations', pmid: '36413997' }
 const PRED_COLOR_MAP = ['green', 'olive', 'grey', 'yellow', 'red', '#8b0000']
 const REVERSE_PRED_COLOR_MAP = [...PRED_COLOR_MAP].reverse()
 
 export const ORDERED_PREDICTOR_FIELDS = [
   { field: 'cadd', group: CODING_IN_SILICO_GROUP, thresholds: [0.151, 22.8, 25.3, 28.1, undefined], min: 1, max: 99, fieldTitle: 'CADD', citation: CLINGEN_CITATION },
   { field: 'revel', group: MISSENSE_IN_SILICO_GROUP, thresholds: [0.0161, 0.291, 0.644, 0.773, 0.932], fieldTitle: 'REVEL', citation: CLINGEN_CITATION },
-  { field: 'alphamissense', fieldTitle: 'AlphaMissense', group: MISSENSE_IN_SILICO_GROUP, thresholds: ALPHAMISSENSE_THRESHHOLDS, citation: { name: '2025 ClinGen SVI', pmid: '40084623' } },
-  { field: 'vest', thresholds: [undefined, 0.45, 0.764, 0.861, 0.965], fieldTitle: 'VEST', citation: CLINGEN_CITATION },
+  { field: 'alphamissense', fieldTitle: 'AlphaMissense', group: MISSENSE_IN_SILICO_GROUP, thresholds: ALPHAMISSENSE_THRESHHOLDS, citation: { name: '2025 ClinGen SVI recommendations', pmid: '40084623' } },
   { field: 'mpc', group: MISSENSE_IN_SILICO_GROUP, thresholds: [undefined, undefined, 1.36, 1.828, undefined], max: 5, fieldTitle: 'MPC' },
   {
     field: SPLICE_AI_FIELD,
@@ -1568,15 +1568,26 @@ export const ORDERED_PREDICTOR_FIELDS = [
     ),
     defaultValue: '?',
   },
+  { field: 'absplice', thresholds: [0.05, 0.05, 0.1, 0.2, undefined], fieldTitle: 'AbSplice', citation: { name: '"Aberrant splicing prediction across human tissues"', pmid: '37142848' } },
+  { field: 'promoter_ai', thresholds: [undefined, undefined, 0.2, 0.5, undefined], absValue: true, fieldTitle: 'PromoterAI', citation: { name: '"Predicting expression-altering promoter mutations with deep learning"', pmid: '40440429' } },
+  {
+    field: 'pext',
+    thresholds: [0, 0.2, undefined],
+    colorOverride: { 0: 'green' },
+    thresholdMap: { green: 'Not Expressed', olive: 'Low Expression', grey: 'Expressed' },
+    fieldTitle: 'PEXT',
+    citation: { name: 'Cummings, Beryl B et al. "Transcript expression-aware annotation improves rare variant interpretation."', pmid: '32461655' },
+  },
+  { field: 'vest', thresholds: [undefined, 0.45, 0.764, 0.861, 0.965], fieldTitle: 'VEST', citation: CLINGEN_CITATION },
   { field: 'mut_pred', thresholds: [0.0101, 0.392, 0.737, 0.829, 0.932], fieldTitle: 'MutPred', citation: CLINGEN_CITATION },
   { field: 'primate_ai', group: MISSENSE_IN_SILICO_GROUP, thresholds: [undefined, 0.484, 0.79, 0.867, undefined], fieldTitle: 'PrimateAI', citation: CLINGEN_CITATION },
   { field: 'eigen', group: CODING_IN_SILICO_GROUP, thresholds: [undefined, undefined, 1, 2, undefined], max: 99 },
   { field: 'dann', displayOnly: true, thresholds: [undefined, undefined, 0.93, 0.96, undefined] },
   { field: 'strvctvre', group: SV_IN_SILICO_GROUP, thresholds: [undefined, undefined, 0.5, 0.75, undefined] },
-  { field: 'polyphen', group: MISSENSE_IN_SILICO_GROUP, thresholds: [undefined, 0.114, 0.978, 0.999, undefined], indicatorMap: POLYPHEN_MAP, fieldTitle: 'PolyPhen', citation: CLINGEN_CITATION },
-  { field: 'sift', reverseThresholds: true, thresholds: [undefined, 0, 0.002, 0.081, undefined], group: MISSENSE_IN_SILICO_GROUP, indicatorMap: INDICATOR_MAP, fieldTitle: 'SIFT', citation: CLINGEN_CITATION },
+  { field: 'polyphen', group: MISSENSE_IN_SILICO_GROUP, thresholds: [undefined, 0.114, 0.978, 0.999, undefined], fieldTitle: 'PolyPhen', citation: CLINGEN_CITATION },
+  { field: 'sift', reverseThresholds: true, thresholds: [undefined, 0, 0.002, 0.081, undefined], group: MISSENSE_IN_SILICO_GROUP, fieldTitle: 'SIFT', citation: CLINGEN_CITATION },
   { field: 'mut_taster', group: MISSENSE_IN_SILICO_GROUP, indicatorMap: MUTTASTER_MAP, fieldTitle: 'MutTaster' },
-  { field: 'fathmm', reverseThresholds: true, thresholds: [undefined, -5.041, -4.14, 3.32, undefined], group: MISSENSE_IN_SILICO_GROUP, indicatorMap: FATHMM_MAP, fieldTitle: 'FATHMM', citation: CLINGEN_CITATION },
+  { field: 'fathmm', reverseThresholds: true, thresholds: [undefined, -5.041, -4.14, 3.32, undefined], group: MISSENSE_IN_SILICO_GROUP, fieldTitle: 'FATHMM', citation: CLINGEN_CITATION },
   { field: 'apogee', thresholds: [undefined, undefined, 0.5, 0.5, undefined] },
   {
     field: 'gnomad_noncoding',
@@ -1592,30 +1603,34 @@ export const ORDERED_PREDICTOR_FIELDS = [
 ]
 
 export const coloredIcon = color => React.createElement(color.startsWith('#') ? ColoredIcon : Icon, { name: 'circle', size: 'small', color })
+const thresholdPredictionFieldValue = (floatValue, props) => {
+  const { thresholds, reverseThresholds, absValue, thresholdMap = {}, colorOverride = {} } = props
+  const threshholdValue = absValue ? Math.abs(floatValue) : floatValue
+  const color = colorOverride[threshholdValue] || (reverseThresholds ? REVERSE_PRED_COLOR_MAP : PRED_COLOR_MAP).find(
+    (clr, i) => (thresholds[i - 1] || thresholds[i]) &&
+      (thresholds[i - 1] === undefined || threshholdValue >= thresholds[i - 1]) &&
+      (thresholds[i] === undefined || threshholdValue < thresholds[i]),
+  )
+  return { value: thresholdMap[color] || floatValue.toPrecision(3), color, ...props }
+}
 export const predictionFieldValue = (
-  predictions, { field, fieldValue, thresholds, reverseThresholds, indicatorMap, infoField, infoTitle, defaultValue },
+  predictions, { field, fieldValue, thresholds, indicatorMap, defaultValue, ...props },
 ) => {
-  let value = fieldValue || predictions[field]
+  const value = fieldValue || predictions[field]
   if (value === null || value === undefined) {
     return { value: defaultValue || value, color: 'grey' }
   }
 
-  const infoValue = predictions[infoField]
-
   const floatValue = parseFloat(value)
-  if (thresholds && !(indicatorMap && Number.isNaN(floatValue))) {
-    value = floatValue.toPrecision(3)
-    const color = (reverseThresholds ? REVERSE_PRED_COLOR_MAP : PRED_COLOR_MAP).find(
-      (clr, i) => (thresholds[i - 1] || thresholds[i]) &&
-        (thresholds[i - 1] === undefined || value >= thresholds[i - 1]) &&
-        (thresholds[i] === undefined || value < thresholds[i]),
+  if (thresholds && !Number.isNaN(floatValue)) {
+    return thresholdPredictionFieldValue(
+      floatValue, { thresholds, infoValue: predictions[props.infoField], ...props },
     )
-    return { value, color, infoValue, infoTitle, thresholds, reverseThresholds }
   }
 
-  return indicatorMap[value[0]] || indicatorMap[value]
+  return indicatorMap && (indicatorMap[value[0]] || indicatorMap[value])
 }
-export const predictorColorRanges = (thresholds, citation, reverseThresholds) => (
+export const predictorColorRanges = (thresholds, { citation, reverseThresholds, thresholdMap, absValue }) => (
   <div>
     {(reverseThresholds ? REVERSE_PRED_COLOR_MAP : PRED_COLOR_MAP).map((c, i) => {
       const prevUndefined = thresholds[i - 1] === undefined
@@ -1625,12 +1640,21 @@ export const predictorColorRanges = (thresholds, citation, reverseThresholds) =>
           return null
         }
         range = ` >= ${thresholds[i - 1]}`
+        if (absValue) {
+          range = `${range}, <= -${thresholds[i - 1]}`
+        }
       } else if (prevUndefined) {
         range = ` < ${thresholds[i]}`
       } else if (thresholds[i - 1] === thresholds[i]) {
         return null
       } else {
         range = ` ${thresholds[i - 1]} - ${thresholds[i]}`
+        if (absValue) {
+          range = `${range}, -${thresholds[i]} - -${thresholds[i - 1]}`
+        }
+      }
+      if (thresholdMap) {
+        range = ` ${thresholdMap[c]}:${range}`
       }
       return (
         <div key={c}>
@@ -1641,7 +1665,7 @@ export const predictorColorRanges = (thresholds, citation, reverseThresholds) =>
     })}
     {citation && (
       <small>
-        {`Based on ${citation.name} recommendations (PMID: `}
+        {`Based on ${citation.name} (PMID: `}
         <a href={`https://pubmed.ncbi.nlm.nih.gov/${citation.pmid}`} target="_blank" rel="noreferrer">{citation.pmid}</a>
         )
       </small>
@@ -1712,10 +1736,10 @@ export const VARIANT_EXPORT_DATA = [
   { header: 'revel', getVal: variant => (variant.predictions || {}).revel },
   { header: 'eigen', getVal: variant => (variant.predictions || {}).eigen },
   { header: 'splice_ai', getVal: variant => (variant.predictions || {}).splice_ai },
-  { header: 'polyphen', getVal: variant => (POLYPHEN_MAP[(variant.predictions || {}).polyphen] || {}).value || (variant.predictions || {}).polyphen },
-  { header: 'sift', getVal: variant => (INDICATOR_MAP[(variant.predictions || {}).sift] || {}).value || (variant.predictions || {}).sift },
+  { header: 'polyphen', getVal: variant => (variant.predictions || {}).polyphen },
+  { header: 'sift', getVal: variant => (variant.predictions || {}).sift },
   { header: 'muttaster', getVal: variant => (MUTTASTER_MAP[(variant.predictions || {}).mut_taster] || {}).value },
-  { header: 'fathmm', getVal: variant => (INDICATOR_MAP[(variant.predictions || {}).fathmm] || {}).value || (variant.predictions || {}).fathmm },
+  { header: 'fathmm', getVal: variant => (variant.predictions || {}).fathmm },
   { header: 'rsid', getVal: variant => variant.rsid },
   { header: 'hgvsc', getVal: variant => getVariantMainTranscript(variant).hgvsc },
   { header: 'hgvsp', getVal: variant => getVariantMainTranscript(variant).hgvsp },
@@ -1760,9 +1784,10 @@ export const SNP_FREQUENCIES = [
   },
   {
     name: THIS_CALLSET_FREQUENCY,
-    label: 'This Callset',
+    label: 'seqr',
     homHemi: true,
-    labelHelp: 'Filter by allele count (AC) or by allele frequency (AF) among the samples in this family plus the rest of the samples that were joint-called as part of variant calling for this project.',
+    skipAf: true,
+    labelHelp: 'Filter by allele count (AC) across all the samples in seqr.',
   },
 ]
 
@@ -1785,9 +1810,10 @@ export const SV_FREQUENCIES = [
   },
   {
     name: SV_CALLSET_FREQUENCY,
-    label: 'This SV Callset',
+    label: 'seqr SV',
+    skipAf: true,
     homHemi: false,
-    labelHelp: `Filter by allele count (AC) or by allele frequency (AF) among all the jointly genotyped samples that were part of the Structural Variant (SV) calling for this project. ${SV_CALLSET_CRITERIA_MESSAGE}`,
+    labelHelp: `Filter by allele count (AC) across all samples in seqr with Structural Variant (SV) calling. ${SV_CALLSET_CRITERIA_MESSAGE}`,
   },
 ]
 

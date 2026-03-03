@@ -770,7 +770,7 @@ class MGI(GeneMetadataModel):
 
 class GenCC(GeneMetadataModel):
 
-    URL = 'https://search.thegencc.org/download/action/submissions-export-csv'
+    URL = 'https://thegencc.org/download/action/submissions-export-csv'
     CLASSIFICATION_FIELDS = {
         'disease_title': 'disease',
         'classification_title': 'classification',
@@ -787,7 +787,11 @@ class GenCC(GeneMetadataModel):
 
     @classmethod
     def get_current_version(cls, **kwargs):
-        return cls._get_file_last_modified(**kwargs)
+        file_path = download_file(cls.get_url(**kwargs))
+        with open(file_path, 'r') as f:
+            header = cls.get_file_header(f)
+            date_col_index = header.index('submitted_run_date')
+            return max(row[date_col_index] for row in cls.get_file_iterator(f))
 
     @staticmethod
     def get_file_header(f):
