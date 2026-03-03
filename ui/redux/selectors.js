@@ -80,7 +80,7 @@ export const getProjectDatasetTypes = createSelector(
         if (!acc[projectGuid]) {
           acc[projectGuid] = new Set()
         }
-        acc[projectGuid].add()(datasetType)
+        acc[projectGuid].add(datasetType)
         return acc
       }, {},
     )
