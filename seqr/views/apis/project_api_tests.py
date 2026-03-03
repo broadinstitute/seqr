@@ -46,6 +46,11 @@ MOCK_RECORDS = {'records': [
     {'id': 'recSgwrXNkmlIB5eM', 'fields': {'Status': 'Available in Seqr'}},
 ]}
 
+PARSED_RNA_SPLICE_ROWS = {sample_guid: [
+    {k: v.replace('e', 'E') for k, v in json.loads(row).items()
+    if k not in {'rare_disease_samples_total', 'rare_disease_samples_with_this_junction'}}
+    for row in data.split('\n') if row
+] for sample_guid, data in RNA_SPLICE_SAMPLE_DATA.items()}
 RNA_DATA_TYPE_PARAMS = {
     'E': {
         'model_cls': RnaSeqOutlier,
@@ -84,10 +89,8 @@ RNA_DATA_TYPE_PARAMS = {
         'sample_guid': RNA_SPLICE_SAMPLE_GUID,
         'parsed_file_data': {
             sample_guid: '\n'.join([
-                json.dumps({k: v.replace('e', 'E') for k, v in json.loads(row).items()
-                if k not in {'rare_disease_samples_total', 'rare_disease_samples_with_this_junction'}})
-                for row in data.split('\n') if row]
-            ) + '\n' for sample_guid, data in RNA_SPLICE_SAMPLE_DATA.items()
+                json.dumps(row) for row in rows]
+            ) + '\n' for sample_guid, rows in PARSED_RNA_SPLICE_ROWS.items()
         },
         'required_columns': RNA_SPLICE_OUTLIER_REQUIRED_COLUMNS,
         'row_id': 'ENSG00000233750-2-167254166-167258349-*-psi3',
