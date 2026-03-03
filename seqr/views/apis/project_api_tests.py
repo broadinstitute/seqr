@@ -765,22 +765,23 @@ class ProjectAPITest(object):
         self.reset_logs()
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'error': f'File not found: {file}'})
+        self.assertDictEqual(response.json(), {'error': self._not_found_error(file)})
 
-        self._set_file_iter([], mock_subprocess, mock_does_file_exist, mock_open)
+        mock_subprocess.return_value.wait.return_value = 0
+        self._set_local_file_iter([], mock_does_file_exist, mock_open)
         invalid_file_ext = file.replace('tsv.gz', 'xlsx')
         invalid_body = {**body, 'file': invalid_file_ext}
         response = self.client.post(url, content_type='application/json', data=json.dumps(invalid_body))
         self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'error': f'Unexpected iterated file type: {invalid_file_ext}'})
+        self.assertDictEqual(response.json(), {'error': f'Unexpected iterated file type: {invalid_file_ext.split("/")[-1]}'})
 
-        self._set_file_iter([''], mock_subprocess, mock_does_file_exist, mock_open)
+        self._set_local_file_iter([''], mock_does_file_exist, mock_open)
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'error': f'Invalid file: missing column(s): {required_columns}'})
 
         error_rows = [rows[0].replace('NA19675_1', 'NA21234')] + rows[1:] if single_sample_file else rows
-        self._set_file_iter(error_rows, mock_subprocess, mock_does_file_exist, mock_open)
+        self._set_local_file_iter(error_rows, mock_does_file_exist, mock_open)
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         errors = [
@@ -795,7 +796,7 @@ class ProjectAPITest(object):
         mock_open.reset_mock()
         mock_subprocess.reset_mock()
         self.reset_logs()
-        self._set_file_iter(rows[:-2], mock_subprocess, mock_does_file_exist, mock_open)
+        self._set_local_file_iter(rows[:-2], mock_does_file_exist, mock_open)
         body.update({'ignoreExtraSamples': True, 'file': file, 'skipNewSampleValidation': single_sample_file})
 
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
@@ -823,11 +824,11 @@ class ProjectAPITest(object):
         self.assertSetEqual(set(response_json['sampleGuids']), set(guid_map.values()))
 
         # test notifications
-        mv_command = f'gsutil mv tmp/temp_uploads/{file_path} gs://seqr-scratch-temp/{file_path}'
-        subprocess_logs = self._get_expected_read_file_subprocess_calls(
-            mock_subprocess, 'new_samples.tsv.gz', additional_command=mv_command,
-        )
-        self.assert_json_logs(self.manager_user, subprocess_logs + [
+        subprocess_logs = self._get_expected_read_file_subprocess_calls([
+            f'gsutil cp gs://seqr-scratch-temp/new_samples.tsv.gz tmp/temp_uploads/{file_path}',
+            f'gsutil mv tmp/temp_uploads/{file_path}/*.json.gz gs://seqr-scratch-temp/{file_path}',
+        ], mock_subprocess, wait_command=True)
+        self.assert_json_logs(self.manager_user, subprocess_logs[:1] + [
             ('update 1 RnaSamples', {'dbUpdate': {
                 'dbEntity': 'RnaSample', 'entityIds': [sample_guid],
                 'updateType': 'bulk_update', 'updateFields': ['is_active']}}),
@@ -841,7 +842,7 @@ class ProjectAPITest(object):
         ] + [
             (info_log, None) for info_log in info] + [
             (warn_log, {'severity': 'WARNING'}) for warn_log in warnings
-        ] )
+        ] + subprocess_logs[1:])
 
         self.assertEqual(mock_send_slack.call_count, 1)
         new_samples = '' if single_sample_file else '\n```HG00731```'
@@ -863,7 +864,7 @@ class ProjectAPITest(object):
         )
 
         # test correct file interactions
-        open_call_count = 1
+        open_call_count = 2
         open_calls = [mock.call(f'tmp/temp_uploads/{file_path}/NA19675_1.json.gz', 'at')] + [
             mock.call().write(row + '\n') for row in parsed_file_data[sample_guid].split('\n') if row
         ]
@@ -873,7 +874,6 @@ class ProjectAPITest(object):
                 mock.call().write(row + '\n') for row in parsed_file_data[PLACEHOLDER_GUID].split('\n') if row
             ]
         if mock_subprocess.call_count == 0:
-            open_call_count += 1
             open_calls = [
                 mock.call(file, 'r'), mock.call().__enter__(), mock.call().__enter__().__iter__()
             ] + open_calls
@@ -885,7 +885,7 @@ class ProjectAPITest(object):
         ], any_order=True)
 
         # test anvil external project access
-        self._set_file_iter([row.replace('NA19675_1', 'NA21234') for row in rows[:2]], mock_subprocess, mock_does_file_exist, mock_open)
+        self._set_local_file_iter([row.replace('NA19675_1', 'NA21234') for row in rows[:2]], mock_does_file_exist, mock_open)
         external_project_url = url.replace(PROJECT_GUID, 'R0004_non_analyst_project')
         response = self.client.post(external_project_url, content_type='application/json', data=json.dumps(body))
         if self.CLICKHOUSE_HOSTNAME:
@@ -956,6 +956,8 @@ class ProjectAPITest(object):
             }),
         ])
 
+        mock_subprocess.reset_mock()
+        mock_subprocess.return_value.wait.return_value = 0
         self._set_file_iter(parsed_file_lines, mock_subprocess, mock_does_file_exist, mock_open)
 
         self.reset_logs()
@@ -967,7 +969,10 @@ class ProjectAPITest(object):
         self.assertSetEqual({model.sample.guid for model in models}, {sample_guid})
         self.assertTrue(all(model.sample.is_active for model in models))
 
-        subprocess_logs = self._get_expected_read_file_subprocess_calls(mock_subprocess, f'{file_name}/{sample_guid}.json.gz')
+        subprocess_logs = self._get_expected_read_file_subprocess_calls([
+            f'gsutil ls gs://seqr-scratch-temp/{file_name}/{sample_guid}.json.gz',
+            f'gsutil cat gs://seqr-scratch-temp/{file_name}/{sample_guid}.json.gz | gunzip -c -q - ',
+        ], mock_subprocess)
 
         self.assert_json_logs(self.manager_user, [
             ('Loading outlier data for NA19675_1', None),
@@ -1028,16 +1033,29 @@ class ProjectAPITest(object):
         mock_open.return_value.__enter__.return_value.__iter__.return_value = []
         return []
 
-    @staticmethod
-    def _set_file_iter(stdout, mock_subprocess, mock_does_file_exist, mock_open):
+    @classmethod
+    def _set_local_file_iter(cls, stdout, mock_does_file_exist, mock_open):
         mock_does_file_exist.return_value = True
         file_iter = mock_open.return_value.__enter__.return_value.__iter__
-        file_iter.return_value = stdout
+        file_iter.return_value = [row.encode('utf-8') for row in stdout]
+
+    @classmethod
+    def _set_file_iter(cls, stdout, mock_subprocess, mock_does_file_exist, mock_open):
+        cls._set_local_file_iter(stdout, mock_does_file_exist, mock_open)
+
+    def _get_expected_read_file_subprocess_calls(self, commands, mock_subprocess, wait_command=False):
+        self.assertEqual(mock_subprocess.call_count, len(commands))
+        calls = []
+        for command in commands:
+            calls.append(mock.call(command, stdout=-1, stderr=-2, shell=True)) # nosec
+            if wait_command:
+                calls.append(mock.call().wait())
+        mock_subprocess.assert_has_calls(calls)
+        return [(f'==> {cmd}', None) for cmd in commands]
 
     @staticmethod
-    def _get_expected_read_file_subprocess_calls(mock_subprocess, file_name, additional_command=None):
-        mock_subprocess.assert_not_called()
-        return []
+    def _not_found_error(file):
+        return f'File not found: {file}'
 
 
 BASE_COLLABORATORS = [
@@ -1080,6 +1098,9 @@ class LocalProjectAPITest(AuthenticationTestCase, ProjectAPITest):
 
     def _assert_expected_airtable_requests(self, *args, **kwargs):
         self.assertEqual(len(responses.calls), 0)
+
+    def _get_expected_read_file_subprocess_calls(self, commands, mock_subprocess, wait_command=False):
+        return super()._get_expected_read_file_subprocess_calls([], mock_subprocess, wait_command=wait_command)
 
 
 # Test for permissions from AnVIL only
@@ -1179,17 +1200,15 @@ class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
 
     @staticmethod
     def _set_file_not_found(file_name, mock_subprocess, mock_does_file_exist, mock_open):
-        mock_does_file_exist = mock.MagicMock()
-        mock_does_file_exist.stdout = [b'CommandException: One or more URLs matched no objects']
-        mock_does_file_exist.wait.return_value = 1
-        mock_subprocess.side_effect = [mock_does_file_exist]
+        mock_subprocess.return_value.stdout = [b'CommandException: One or more URLs matched no objects']
+        mock_subprocess.return_value.wait.return_value = 1
         return [
             (f'==> gsutil ls gs://seqr-scratch-temp/{file_name}', None),
             ('CommandException: One or more URLs matched no objects', {'severity': 'WARNING'}),
         ]
 
-    @staticmethod
-    def _set_file_iter(stdout, mock_subprocess, mock_does_file_exist, mock_open):
+    @classmethod
+    def _set_file_iter(cls, stdout, mock_subprocess, mock_does_file_exist, mock_open):
         mock_does_file_exist = mock.MagicMock()
         mock_does_file_exist.wait.return_value = 0
         mock_file_iter = mock.MagicMock()
@@ -1197,10 +1216,5 @@ class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
         mock_subprocess.side_effect = [mock_does_file_exist, mock_file_iter, mock_does_file_exist]
 
     @staticmethod
-    def _get_expected_read_file_subprocess_calls(mock_subprocess, file_name, additional_command=False):
-        commands = [
-            f'gsutil ls gs://seqr-scratch-temp/{file_name}',
-            f'gsutil cat gs://seqr-scratch-temp/{file_name} | gunzip -c -q - ',
-        ]
-        mock_subprocess.assert_has_calls([mock.call(cmd, stdout=-1, stderr=-2, shell=True) for cmd in commands])  # nosec
-        return [(f'==> {cmd}', None) for cmd in commands]
+    def _not_found_error(file):
+        return 'Run command failed: CommandException: One or more URLs matched no objects'
