@@ -94,7 +94,7 @@ class NewDbUpdateAllReferenceDataTest(BaseUpdateAllReferenceDataTest):
 
         self.assertListEqual(sorted(DataVersions.objects.values_list('data_model_name', 'version')), [
             ('ClinGen', '2025-02-05'),
-            ('GenCC', 'Thu, 20 Mar 2025 20:52:24 GMT'),
+            ('GenCC', '2025-03-20'),
             ('GeneConstraint', 'gnomad.v2.1.1.lof_metrics.by_gene'),
             ('GeneCopyNumberSensitivity', 'Collins_rCNV_2022'),
             ('GeneInfo', '39'),
@@ -119,6 +119,7 @@ class UpdateAllReferenceDataTest(BaseUpdateAllReferenceDataTest):
 
     def test_partial_update_reference_data_command(self):
         self.mock_get_file_last_modified.return_value = 'Sat, 22 Mar 2025 09:21:17 GMT'
+        self.mock_gencc_version.return_value = '2025-04-08'
         dbnsfp_version = DataVersions.objects.get(data_model_name='dbNSFPGene')
         dbnsfp_version.version = 'dbNSFP3.2_gene'
         dbnsfp_version.save()
@@ -151,9 +152,9 @@ class UpdateAllReferenceDataTest(BaseUpdateAllReferenceDataTest):
         self.mock_slack.assert_has_calls([mock.call('seqr-data-loading', message) for message in [
             'Updated Omim reference data from version "Thu, 20 Mar 2025 20:52:24 GMT" to version "Sat, 22 Mar 2025 09:21:17 GMT"',
             'Updated dbNSFPGene reference data from version "dbNSFP3.2_gene" to version "dbNSFP4.0_gene"',
-            'Updated GenCC reference data from version "Thu, 20 Mar 2025 20:52:24 GMT" to version "Sat, 22 Mar 2025 09:21:17 GMT"',
+            'Updated GenCC reference data from version "2025-03-20" to version "2025-04-08"',
         ]])
 
         self.assertEqual(DataVersions.objects.get(data_model_name='Omim').version, 'Sat, 22 Mar 2025 09:21:17 GMT')
         self.assertEqual(DataVersions.objects.get(data_model_name='dbNSFPGene').version, 'dbNSFP4.0_gene')
-        self.assertEqual(DataVersions.objects.get(data_model_name='GenCC').version, 'Sat, 22 Mar 2025 09:21:17 GMT')
+        self.assertEqual(DataVersions.objects.get(data_model_name='GenCC').version, '2025-04-08')

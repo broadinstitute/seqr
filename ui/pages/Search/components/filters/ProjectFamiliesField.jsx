@@ -3,7 +3,6 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { FormSpy } from 'react-final-form'
 
-import { getElasticsearchEnabled } from 'redux/selectors'
 import { configuredField } from 'shared/components/form/FormHelpers'
 import { ButtonRadioGroup, BooleanCheckbox } from 'shared/components/form/Inputs'
 import { HorizontalSpacer } from 'shared/components/Spacers'
@@ -88,7 +87,7 @@ class AllProjectFamiliesField extends React.PureComponent {
 
 const SUBSCRIPTION = { values: true }
 
-const ProjectFamiliesField = ({ esEnabled, ...props }) => (
+const ProjectFamiliesField = props => (
   <div>
     <InlineHeader content="Include All Projects: " />
     {configuredField(INCLUDE_ALL_PROJECTS_FIELD)}
@@ -96,8 +95,8 @@ const ProjectFamiliesField = ({ esEnabled, ...props }) => (
     {configuredField(UNSOLVED_ONLY_FIELD)}
     <HorizontalSpacer width={20} />
     {configuredField(TRIO_ONLY_FIELD)}
-    {!esEnabled && <HorizontalSpacer width={20} />}
-    {!esEnabled && configuredField(NO_ACCESS_PROJECTS_FIELD)}
+    {<HorizontalSpacer width={20} />}
+    {configuredField(NO_ACCESS_PROJECTS_FIELD)}
     <FormSpy subscription={SUBSCRIPTION}>
       {({ values }) => (
         !values[INCLUDE_ALL_PROJECTS] &&
@@ -107,12 +106,4 @@ const ProjectFamiliesField = ({ esEnabled, ...props }) => (
   </div>
 )
 
-ProjectFamiliesField.propTypes = {
-  esEnabled: PropTypes.bool,
-}
-
-const mapStateToProps = state => ({
-  esEnabled: getElasticsearchEnabled(state),
-})
-
-export default connect(mapStateToProps)(ProjectFamiliesField)
+export default ProjectFamiliesField
