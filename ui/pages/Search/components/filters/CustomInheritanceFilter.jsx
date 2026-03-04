@@ -5,7 +5,7 @@ import { FormSpy } from 'react-final-form'
 import { Table, Header, Popup, Loader, Divider } from 'semantic-ui-react'
 
 import { loadFamilyDetails } from 'redux/rootReducer'
-import { getFamiliesByGuid, getIndividualsByGuid, getFamilyDetailsLoading, getElasticsearchEnabled } from 'redux/selectors'
+import { getFamiliesByGuid, getIndividualsByGuid, getFamilyDetailsLoading } from 'redux/selectors'
 import DataLoader from 'shared/components/DataLoader'
 import { helpLabel } from 'shared/components/form/FormHelpers'
 import { Select, InlineToggle } from 'shared/components/form/Inputs'
@@ -128,15 +128,12 @@ NoCallToggle.propTypes = {
   onChange: PropTypes.func.isRequired,
 }
 
-const CustomInheritanceFilter = React.memo(({ load, loading, family, esEnabled, individualsByGuid, ...props }) => {
+const CustomInheritanceFilter = React.memo(({ load, loading, family, individualsByGuid, ...props }) => {
   const content = family ? (
     <DataLoader load={load} contentId={family.familyGuid} content={family && family.detailsLoaded} loading={loading}>
       <CustomInheritanceFilterContent family={family} individualsByGuid={individualsByGuid} {...props} />
     </DataLoader>
   ) : <Header disabled content="Custom inheritance search is disabled for multi-family searches" />
-  if (esEnabled) {
-    return content
-  }
   return (
     <div>
       {content}
@@ -150,7 +147,6 @@ const mapStateToProps = (state, ownProps) => ({
   family: getFamiliesByGuid(state)[ownProps.familyGuid],
   individualsByGuid: getIndividualsByGuid(state),
   loading: !!getFamilyDetailsLoading(state)[ownProps.familyGuid],
-  esEnabled: getElasticsearchEnabled(state),
 })
 
 const mapDispatchToProps = {
@@ -162,7 +158,6 @@ CustomInheritanceFilter.propTypes = {
   family: PropTypes.object,
   individualsByGuid: PropTypes.object,
   loading: PropTypes.bool,
-  esEnabled: PropTypes.bool,
 }
 
 const ConnectedCustomInheritanceFilter = connect(mapStateToProps, mapDispatchToProps)(CustomInheritanceFilter)

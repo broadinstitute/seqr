@@ -2,7 +2,6 @@ steps:
 - name: 'gcr.io/kaniko-project/executor:v1.3.0'
   args:
   - --destination=gcr.io/seqr-project/seqr-vlm:${COMMIT_SHA}
-  - --destination=gcr.io/seqr-project/seqr-vlm:${_CUSTOM_BRANCH_TAG}
   - --destination=gcr.io/seqr-project/seqr-vlm:latest
   - --dockerfile=vlm/deploy/Dockerfile
   - --cache=true

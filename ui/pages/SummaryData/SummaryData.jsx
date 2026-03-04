@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Route, Switch } from 'react-router-dom'
 
-import { getUser, getElasticsearchEnabled } from 'redux/selectors'
+import { getUser } from 'redux/selectors'
 import { Error404 } from 'shared/components/page/Errors'
 import { SimplePageHeader } from 'shared/components/page/PageHeaderLayout'
 import GeneDetail from 'shared/components/panel/genes/GeneDetail'
@@ -27,6 +27,7 @@ GenePage.propTypes = {
 }
 
 const SUMMARY_DATA_PAGES = [
+  { path: 'variant_lookup', component: VariantLookup },
   { path: 'gene_info', params: '/:geneId?', component: GenePage },
   { path: 'gene_lists', component: LocusLists },
   { path: 'saved_variants', component: SavedVariants },
@@ -35,32 +36,15 @@ const SUMMARY_DATA_PAGES = [
   { path: 'matchmaker', component: Matchmaker },
 ]
 
-const NO_ES_PAGES = [
-  { path: 'variant_lookup', component: VariantLookup },
-]
-
-const SUMMARY_DATA_NO_ES_PAGES = [
-  ...NO_ES_PAGES,
-  ...SUMMARY_DATA_PAGES,
-]
-
 const ANALYST_SUMMARY_DATA_PAGES = [
   ...SUMMARY_DATA_PAGES,
   { path: 'success_story', params: '/:successStoryTypes?', component: SuccessStory },
   { path: 'external_analysis', component: ExternalAnalysis },
 ]
 
-const ANALYST_SUMMARY_DATA_NO_ES_PAGES = [
-  ...NO_ES_PAGES,
-  ...ANALYST_SUMMARY_DATA_PAGES,
-]
-
-const getPages = ({ user, elasticsearchEnabled }) => {
-  if (elasticsearchEnabled) {
-    return user.isAnalyst ? ANALYST_SUMMARY_DATA_PAGES : SUMMARY_DATA_PAGES
-  }
-  return user.isAnalyst ? ANALYST_SUMMARY_DATA_NO_ES_PAGES : SUMMARY_DATA_NO_ES_PAGES
-}
+const getPages = ({ user }) => (
+  user.isAnalyst ? ANALYST_SUMMARY_DATA_PAGES : SUMMARY_DATA_PAGES
+)
 
 const BaseSummaryDataPageHeader = ({ match, ...props }) => (
   <SimplePageHeader page="summary_data" subPage={match.params.subPage} pages={getPages(props)} />)
@@ -72,7 +56,6 @@ BaseSummaryDataPageHeader.propTypes = {
 
 const mapStateToProps = state => ({
   user: getUser(state),
-  elasticsearchEnabled: getElasticsearchEnabled(state),
 })
 
 export const SummaryDataPageHeader = connect(mapStateToProps)(BaseSummaryDataPageHeader)

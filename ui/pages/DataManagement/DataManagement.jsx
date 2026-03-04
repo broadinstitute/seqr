@@ -3,11 +3,10 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Route, Switch } from 'react-router-dom'
 
-import { getUser, getElasticsearchEnabled } from 'redux/selectors'
+import { getUser } from 'redux/selectors'
 import { Error404, Error401 } from 'shared/components/page/Errors'
 
 import AddIGV from './components/AddIGV'
-import ElasticsearchStatus from './components/ElasticsearchStatus'
 import LoadData from './components/LoadData'
 import RnaSeq from './components/RnaSeq'
 import Users from './components/Users'
@@ -43,15 +42,6 @@ IframePage.propTypes = {
   src: PropTypes.string,
 }
 
-const ES_DATA_MANAGEMENT_PAGES = [
-  { path: 'elasticsearch_status', component: ElasticsearchStatus },
-  {
-    path: 'kibana',
-    component: () => <IframePage title="Kibana" src="/app/kibana" />,
-  },
-  ...DATA_MANAGEMENT_PAGES,
-]
-
 const LOCAL_CLICKHOUSE_DATA_MANAGEMENT_PAGES = [
   ...DATA_MANAGEMENT_PAGES,
   { path: 'pipeline_status', component: () => <IframePage title="Loading UI" src="/luigi_ui/static/visualiser/index.html" /> },
@@ -63,12 +53,9 @@ const CLICKHOUSE_DATA_MANAGEMENT_PAGES = [
   ...NON_LOCAL_PAGES,
 ]
 
-const dataManagementPages = (user, elasticsearchEnabled) => {
+const dataManagementPages = (user) => {
   if (!user.isDataManager) {
     return user.isAnvil ? LOCAL_PM_DATA_MANAGEMENT_PAGES : PM_DATA_MANAGEMENT_PAGES
-  }
-  if (elasticsearchEnabled) {
-    return ES_DATA_MANAGEMENT_PAGES
   }
   return user.isAnvil ? CLICKHOUSE_DATA_MANAGEMENT_PAGES : LOCAL_CLICKHOUSE_DATA_MANAGEMENT_PAGES
 }
@@ -94,7 +81,7 @@ export const mapStateToProps = (state) => {
   const user = getUser(state)
   return {
     user,
-    pages: dataManagementPages(user, getElasticsearchEnabled(state)),
+    pages: dataManagementPages(user),
   }
 }
 
