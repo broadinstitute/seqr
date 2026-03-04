@@ -174,12 +174,18 @@ def bulk_create_tagged_variants(family_variant_data, tag_name, get_metadata, use
 
     VariantTag.bulk_update_models(user, update_tags, ['metadata'])
 
-    return {key for key, is_unshared in new_tag_keys.items() if is_unshared}, update_tag_keys, skipped_tag_keys
+    deduped_new_tags = set()
+    for key, support_key in new_tag_keys.items():
+        is_dup = new_tag_keys.get(support_key) and support_key in deduped_new_tags
+        if not is_dup:
+            deduped_new_tags.add(key)
+
+    return deduped_new_tags, update_tag_keys, skipped_tag_keys
 
 
 def _set_updated_tags(key: tuple[int, str], metadata: dict[str, dict], comp_het_metadata: dict[str, dict], support_var_ids: list[str],
                       saved_variant_map: dict[tuple[int, str], SavedVariant], existing_tags: dict[tuple[int, ...], VariantTag],
-                      tag_type: VariantTagType, user: User, new_tag_keys: dict[tuple, bool], remove_missing_metadata: bool, primary_id_field: str):
+                      tag_type: VariantTagType, user: User, new_tag_keys: dict[tuple, tuple], remove_missing_metadata: bool, primary_id_field: str):
     variant = saved_variant_map[key]
     existing_tag = existing_tags.get(tuple([variant.id]))
     updated_tag = None
@@ -198,7 +204,7 @@ def _set_updated_tags(key: tuple[int, str], metadata: dict[str, dict], comp_het_
         tag = create_model_from_json(
             VariantTag, {'variant_tag_type': tag_type, 'metadata': json.dumps(metadata)}, user)
         tag.saved_variants.add(variant)
-        new_tag_keys[key] = True
+        new_tag_keys[key] = None
 
     variant_genes = set(variant.gene_ids or [])
     support_vars = []
@@ -216,8 +222,9 @@ def _set_updated_tags(key: tuple[int, str], metadata: dict[str, dict], comp_het_
             }, user)
             tag.saved_variants.set(variants)
             existing_tags[variant_id_key] = True
-            new_tag_keys[(key[0], getattr(support_var, primary_id_field))] = True
-            new_tag_keys[key] = new_tag_keys.get(key, False)
+            support_key = (key[0], getattr(support_var, primary_id_field))
+            new_tag_keys[support_key] = new_tag_keys.get(support_key, key)
+            new_tag_keys[key] = new_tag_keys.get(key, support_key)
 
     return updated_tag
 
