@@ -127,7 +127,7 @@ class ReloadClinvarAllVariantsTest(TestCase):
                     {'pathogenicity': 'Likely_pathogenic', 'count': 9},
                     {'pathogenicity': 'Established_risk_allele', 'count': 1},
                     {'pathogenicity': 'Likely_risk_allele', 'count': 1},
-                    {'pathogenicity': 'Uncertain_significance', 'count': 1},
+                    {'pathogenicity': 'Uncertain_significance', 'count': 2},
                 ],
                 'gold_stars': 1,
                 'key': 12,
