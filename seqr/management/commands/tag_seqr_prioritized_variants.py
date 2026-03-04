@@ -2,7 +2,7 @@ from collections import defaultdict
 from datetime import datetime
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.management.base import BaseCommand, CommandError
-from django.db.models import Q, Count
+from django.db.models import Q
 from django.db.models.functions import JSONObject
 
 from clickhouse_search.search import get_search_queryset, add_individual_guids, \
