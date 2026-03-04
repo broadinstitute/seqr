@@ -29,7 +29,7 @@ WEEKLY_XML_RELEASE_DATA = WEEKLY_XML_RELEASE_HEADER + '''
                 <GermlineClassification>
                     <ReviewStatus>criteria provided, conflicting classifications</ReviewStatus>
                     <Description>Conflicting classifications of pathogenicity; association; risk factor</Description>
-                    <Explanation DataSource="ClinVar" Type="public">Pathogenic(18); Likely pathogenic(9); Pathogenic, low penetrance(1); Established risk allele(1); Likely risk allele(1); Uncertain significance(1)</Explanation>
+                    <Explanation DataSource="ClinVar" Type="public">Pathogenic(18); Likely pathogenic(9); Pathogenic, low penetrance(1); Established risk allele(1); Likely risk allele(1); Uncertain significance(1); VUS-high(1)</Explanation>
                 </GermlineClassification>
             </Classifications>
             <ClinicalAssertionList>
@@ -85,12 +85,6 @@ WEEKLY_XML_RELEASE_DATA = WEEKLY_XML_RELEASE_HEADER + '''
 class ReloadClinvarAllVariantsTest(TestCase):
     databases = '__all__'
     fixtures = ['clinvar_all_variants']
-
-    def test_parse_and_merge_vus(self):
-        self.assertListEqual(
-            parse_and_merge_classification_counts('Uncertain significance(7); VUS-high(1); Likely benign(3)'),
-            [('Uncertain significance', 8), ('Likely benign', 3)],
-        )
 
     @responses.activate
     def test_update_with_no_previous_version(self, mock_logger, mock_safe_post_to_slack):
