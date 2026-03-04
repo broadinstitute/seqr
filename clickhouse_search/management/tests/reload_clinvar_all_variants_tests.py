@@ -83,7 +83,6 @@ WEEKLY_XML_RELEASE_DATA = WEEKLY_XML_RELEASE_HEADER + '''
 @mock.patch('clickhouse_search.management.commands.reload_clinvar_all_variants.safe_post_to_slack')
 @mock.patch('clickhouse_search.management.commands.reload_clinvar_all_variants.logger.info')
 class ReloadClinvarAllVariantsTest(TestCase):
-    maxDiff = None
     databases = '__all__'
     fixtures = ['clinvar_all_variants']
 
@@ -126,9 +125,9 @@ class ReloadClinvarAllVariantsTest(TestCase):
                 'conflicting_pathogenicities': [
                     {'pathogenicity': 'Pathogenic', 'count': 19},
                     {'pathogenicity': 'Likely_pathogenic', 'count': 9},
+                    {'pathogenicity': 'Uncertain_significance', 'count': 2},
                     {'pathogenicity': 'Established_risk_allele', 'count': 1},
                     {'pathogenicity': 'Likely_risk_allele', 'count': 1},
-                    {'pathogenicity': 'Uncertain_significance', 'count': 2},
                 ],
                 'gold_stars': 1,
                 'key': 12,
