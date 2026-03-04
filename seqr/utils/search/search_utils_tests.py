@@ -68,47 +68,6 @@ class SearchUtilsTests(DifferentDbTransactionSupportMixin, TestCase, SearchTestH
         ])
         self.search_samples = list(self.affected_search_samples) + list(self.non_affected_search_samples)
 
-    @mock.patch('seqr.utils.search.utils.clickhouse_variant_lookup')
-    def test_variant_lookup(self, mock_variant_lookup):
-        mock_variant_lookup.return_value = [VARIANT_LOOKUP_VARIANT]
-        variants = variant_lookup(self.user, '1-10439-AC-A', '38', affected_only=True)
-        self.assertListEqual(variants, [VARIANT_LOOKUP_VARIANT])
-        mock_variant_lookup.assert_called_with(self.user, '1-10439-AC-A', ('1', 10439, 'AC', 'A'), 'SNV_INDEL', None, '38', True, False)
-        cache_key = "variant_lookup_results__1-10439-AC-A__38"
-        self.assert_cached_results(variants, cache_key=f'{cache_key}__affected')
-
-        mock_variant_lookup.reset_mock()
-        self.set_cache(variants)
-        cached_variant = variant_lookup(self.user, '1-10439-AC-A', '38')
-        self.assertListEqual(variants, cached_variant)
-        mock_variant_lookup.assert_not_called()
-        self.mock_redis.get.assert_called_with(cache_key)
-
-        self.set_cache(None)
-        mock_variant_lookup.reset_mock()
-        with self.assertRaises(InvalidSearchException) as cm:
-            variant_lookup(self.user, 'phase2_DEL_chr14_4640', '37')
-        self.assertEqual(str(cm.exception), 'SV variants are not available for GRCh37')
-
-        with self.assertRaises(InvalidSearchException) as cm:
-            variant_lookup(self.user, 'phase2_DEL_chr14_4640', '38')
-        self.assertEqual(str(cm.exception), 'Sample type must be specified to look up a structural variant')
-
-        mock_variant_lookup.return_value = [SV_LOOKUP_VARIANT, GCNV_LOOKUP_VARIANT]
-        variants = variant_lookup(self.user, 'phase2_DEL_chr14_4640', '38', sample_type='WGS', hom_only=True)
-        self.assertListEqual(variants, [SV_LOOKUP_VARIANT, GCNV_LOOKUP_VARIANT])
-        mock_variant_lookup.assert_called_with(
-            self.user, 'phase2_DEL_chr14_4640', None, 'SV', 'WGS', '38', False, True)
-        cache_key = 'variant_lookup_results__phase2_DEL_chr14_4640__38'
-        self.assert_cached_results(variants, cache_key=f'{cache_key}__hom')
-
-        mock_variant_lookup.reset_mock()
-        self.set_cache(variants)
-        cached_variant = variant_lookup(self.user, 'phase2_DEL_chr14_4640', '38', sample_type='WGS')
-        self.assertListEqual(variants, cached_variant)
-        mock_variant_lookup.assert_not_called()
-        self.mock_redis.get.assert_called_with(cache_key)
-
     @mock.patch('seqr.utils.search.utils.get_clickhouse_variant_by_id')
     def test_get_single_variant(self, mock_get_variants_for_ids):
         mock_get_variants_for_ids.return_value = PARSED_VARIANTS[0]
