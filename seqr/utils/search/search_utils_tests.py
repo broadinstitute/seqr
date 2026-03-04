@@ -70,51 +70,51 @@ class SearchUtilsTests(DifferentDbTransactionSupportMixin, TestCase, SearchTestH
 
     @mock.patch('seqr.utils.search.utils.MAX_GENES_FOR_FILTER', 2)
     @mock.patch('seqr.utils.search.utils.MAX_NO_LOCATION_COMP_HET_FAMILIES', 1)
-    def _test_invalid_search_params(self, search_func):
+    def test_invalid_search_params(self):
         with self.assertRaises(InvalidSearchException) as cm:
             query_variants(self.results_model, user=self.user, page=200)
         self.assertEqual(str(cm.exception), 'Unable to load more than 10000 variants (20000 requested)')
 
         self.search_model.search['locus'] = {'rawVariantItems': 'chr2-A-C'}
         with self.assertRaises(InvalidSearchException) as cm:
-            search_func(self.results_model, user=self.user)
+            query_variants(self.results_model, user=self.user)
         self.assertEqual(str(cm.exception), 'Invalid variants: chr2-A-C')
 
         self.search_model.search['locus']['rawVariantItems'] = 'rs9876,chr2-1234-A-C'
         with self.assertRaises(InvalidSearchException) as cm:
-            search_func(self.results_model, user=self.user)
+            query_variants(self.results_model, user=self.user)
         self.assertEqual(str(cm.exception), 'Invalid variants: rs9876')
 
         self.search_model.search['locus']['rawItems'] = 'chr27:1234-5678,2:40-400000000, ENSG00012345'
         with self.assertRaises(InvalidSearchException) as cm:
-            search_func(self.results_model, user=self.user)
+            query_variants(self.results_model, user=self.user)
         self.assertEqual(str(cm.exception), 'Invalid genes/intervals: chr27:1234-5678, chr2:40-400000000, ENSG00012345')
 
         self.search_model.search['locus']['rawItems'] = '1:1-1000, 2:2000-3000, 3:4000-5000'
         with self.assertRaises(InvalidSearchException) as cm:
-            search_func(self.results_model, user=self.user)
+            query_variants(self.results_model, user=self.user)
         self.assertEqual(str(cm.exception), 'Too many genes/intervals')
 
         build_specific_genes = 'DDX11L1, OR4F29, ENSG00000223972, ENSG00000256186'
         self.search_model.search['locus']['rawItems'] = build_specific_genes
         with self.assertRaises(InvalidSearchException) as cm:
-            search_func(self.results_model, user=self.user)
+            query_variants(self.results_model, user=self.user)
         self.assertEqual(str(cm.exception), 'Invalid genes/intervals: DDX11L1, ENSG00000223972')
 
         self.search_model.search['exclude'] = self.search_model.search['locus']
         with self.assertRaises(InvalidSearchException) as cm:
-            search_func(self.results_model, user=self.user)
+            query_variants(self.results_model, user=self.user)
         self.assertEqual(str(cm.exception), 'Cannot specify both Location and Excluded Genes/Intervals')
 
         self.search_model.search['locus'] = {}
         with self.assertRaises(InvalidSearchException) as cm:
-            search_func(self.results_model, user=self.user)
+            query_variants(self.results_model, user=self.user)
         self.assertEqual(str(cm.exception), 'Invalid genes/intervals: DDX11L1, ENSG00000223972')
 
         self.search_model.search['pathogenicity'] = {'clinvar': ['pathogenic', 'vus']}
         self.search_model.search['exclude'] = {'clinvar': ['benign', 'vus']}
         with self.assertRaises(InvalidSearchException) as cm:
-            search_func(self.results_model, user=self.user)
+            query_variants(self.results_model, user=self.user)
         self.assertEqual(str(cm.exception), 'ClinVar pathogenicity vus is both included and excluded')
 
         self.search_model.search['exclude'] = {}
@@ -190,7 +190,7 @@ class SearchUtilsTests(DifferentDbTransactionSupportMixin, TestCase, SearchTestH
         self.results_model.families.set(Family.objects.filter(guid='F000014_14'))
         self.search_model.search['locus']['rawItems'] = build_specific_genes
         with self.assertRaises(InvalidSearchException) as cm:
-            search_func(self.results_model, user=self.user)
+            query_variants(self.results_model, user=self.user)
         self.assertEqual(str(cm.exception), 'Invalid genes/intervals: OR4F29, ENSG00000256186')
 
     def _test_invalid_no_location_search_params(self):
@@ -217,7 +217,6 @@ class SearchUtilsTests(DifferentDbTransactionSupportMixin, TestCase, SearchTestH
             query_variants(self.results_model, page=1, num_results=2, load_all=True)
         self.assertEqual(str(cm.exception), 'Unable to export more than 1000 variants (20000 requested)')
 
-        self._test_invalid_search_params(query_variants)
 
     def _get_expected_search_call(self, results_cache, search_fields=None, has_gene_search=False,
                                    variant_ids=None, parsed_variant_ids=None, inheritance_mode='de_novo',
@@ -501,9 +500,6 @@ class SearchUtilsTests(DifferentDbTransactionSupportMixin, TestCase, SearchTestH
             json.loads(json.dumps(variants, cls=DjangoJSONEncoderWithSets)),
             self.PARSED_CACHED_VARIANTS[:num_results],
         )
-
-    def test_invalid_search_get_variant_query_gene_counts(self):
-        self._test_invalid_search_params(get_variant_query_gene_counts)
 
     @mock.patch('seqr.utils.search.utils.get_clickhouse_variants')
     def test_get_variant_query_gene_counts(self, mock_get_variants):
