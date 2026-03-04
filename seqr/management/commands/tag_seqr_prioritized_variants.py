@@ -274,9 +274,8 @@ SEARCHES = {
             },
             **RECESSIVE_SEARCH_NO_IN_SILICO,
         },
-        'De Novo': {
+        'De Novo/ Dominant - Confirmed': {
             'family_filter': {
-                MAX_AFFECTED_FAMILY_FILTER: 1,
                 CONFIRMED_FAMILY_FILTER: True
             },
             'annotations': {
@@ -289,9 +288,8 @@ SEARCHES = {
             'in_silico': IN_SILICO_FILTER,
             **NO_PANEL_APP_DE_NOVO_SEARCH,
         },
-        'De Novo - Non-coding Transcript Exon Variant': {
+        'De Novo/ Dominant - Non-coding Transcript Exon Variant': {
             'family_filter': {
-                MAX_AFFECTED_FAMILY_FILTER: 1,
                 CONFIRMED_FAMILY_FILTER: True
             },
             'annotations': {
@@ -305,20 +303,11 @@ SEARCHES = {
             'in_silico': IN_SILICO_FILTER,
             **DE_NOVO_SEARCH,
         },
-        'Dominant': {
-            'family_filter': {
-                'min_affected': 2,
-                CONFIRMED_FAMILY_FILTER: True,
-            },
-            'annotations': MODERATE_ANNOTATIONS_TRANSCRIPT_EXON_VARIANT,
-            'in_silico': IN_SILICO_FILTER,
-            **DE_NOVO_SEARCH,
-        },
         'High Splice AI - De Novo/ Dominant': {
             **HIGH_SPLICE_AI_SEARCH,
             **DE_NOVO_SEARCH,
         },
-        'High Splice AI - De Novo': {
+        'High Splice AI - De Novo/ Dominant Confirmed': {
             **CONFIRMED_HIGH_SPLICE_AI_SEARCH,
             **NO_PANEL_APP_DE_NOVO_SEARCH,
         },
@@ -507,8 +496,7 @@ class Command(BaseCommand):
                     JSONObject(maternal_guid='individual__mother__guid', paternal_guid='individual__father__guid', sex='individual__sex'),
                     filter=Q(individual__affected=Individual.AFFECTED_STATUS_AFFECTED),
                 ),
-                individual_guids=ArrayAgg('individual__guid', filter=Q(individual__affected=Individual.AFFECTED_STATUS_AFFECTED) | Q(individual__affected=Individual.AFFECTED_STATUS_UNAFFECTED)),
-                num_unaffected=Count('individual_id', filter=Q(individual__affected=Individual.AFFECTED_STATUS_UNAFFECTED), distinct=True),
+                unaffected_guids=ArrayAgg('individual__guid', filter=Q(individual__affected=Individual.AFFECTED_STATUS_UNAFFECTED)),
             ).filter(affecteds__len__gt=0)
         }
         samples_by_dataset_type[dataset_type] = samples_by_family
@@ -541,14 +529,12 @@ class Command(BaseCommand):
         return {
             'project_guids': [project.guid],
             'num_families': len(samples_by_family),
-            'num_unaffected': sum(s['num_unaffected'] for s in samples_by_family.values()),
+            'num_unaffected': sum(len(s['unaffected_guids']) for s in samples_by_family.values()),
             'sample_type_families': {sample_type: samples_by_family.keys()},
         }
 
     @staticmethod
     def _family_passes_filter(sample_data, family_filter):
-        if family_filter.get('min_affected') and len(sample_data['affecteds']) < family_filter['min_affected']:
-            return False
         if family_filter.get(MAX_AFFECTED_FAMILY_FILTER) and len(sample_data['affecteds']) > family_filter[MAX_AFFECTED_FAMILY_FILTER]:
             return False
         if family_filter.get(AFFECTED_MALE_FAMILY_FILTER) and all(s['sex'] not in Individual.MALE_SEXES for s in sample_data['affecteds']):
@@ -557,7 +543,7 @@ class Command(BaseCommand):
             proband = next((s for s in sample_data['affecteds'] if s['maternal_guid'] and s['paternal_guid']), None)
             if not proband:
                 return False
-            is_confirmed = proband['maternal_guid'] in sample_data['individual_guids'] and proband['paternal_guid'] in sample_data['individual_guids']
+            is_confirmed = proband['maternal_guid'] in sample_data['unaffected_guids'] and proband['paternal_guid'] in sample_data['unaffected_guids']
             return (not is_confirmed) if family_filter[CONFIRMED_FAMILY_FILTER] == False else is_confirmed
         return True
 
