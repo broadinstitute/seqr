@@ -499,6 +499,47 @@ AIRTABLE_RNA_SAMPLE_RECORDS = [
             'TissueOfOrigin': ['Muscle', 'Brain'],
         }
     },
+    {
+        'id': 'rec2B6OGmVpAkQW4s',
+        'fields': {
+            'CollaboratorSampleID': 'NA12346',
+            'SeqrProject': [
+                'https://seqr.broadinstitute.org/project/R0002_empty/project_page',
+                'https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page',
+            ],
+            'PDOStatus': ['RNA ready to load', 'RNA ready to load'],
+        }
+    },
+    {
+        'id': 'rec2B6OGmVpAkQW5s',
+        'fields': {
+            'CollaboratorSampleID': 'NA12347',
+            'SeqrProject': [
+                'https://seqr.broadinstitute.org/project/R0002_empty/project_page',
+                'https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page',
+            ],
+            'PDOStatus': ['RNA ready to load', 'RNA ready to load'],
+            'TissueOfOrigin': ['Muscle'],
+        }
+    },
+    {
+        'id': 'recW56C2CJW5lT77x',
+        'fields': {
+            'CollaboratorSampleID': 'NA12348',
+            'SeqrProject': ['R0003_test'],
+            'PDOStatus': ['RNA ready to load'],
+            'TissueOfOrigin': ['Muscle'],
+        }
+    },
+    {
+        'id': 'recW56C2CJW5lT78x',
+        'fields': {
+            'CollaboratorSampleID': 'NA11111',
+            'SeqrProject': ['https://seqr.broadinstitute.org/project/R0003_test/project_page'],
+            'PDOStatus': ['RNA ready to load'],
+            'TissueOfOrigin': ['Muscle'],
+        }
+    },
     *INVALID_AIRTABLE_SAMPLE_RECORDS['records'],
 ]
 
@@ -679,6 +720,7 @@ class DataManagerAPITest(AirtableTest):
                 ['NA19675_D2', 'ENSG00000233750', 'detail1', 0.064, '0.0000057', 7.8],
                 ['NA19675_D3', 'ENSG00000233750', 'detail1', 0.064, '0.0000057', 7.8],
                 ['NA20888', 'ENSG00000240361', '', 0.04, 0.112, 1.9],
+                ['NA12345', 'ENSG00000240361', '', 0.04, 0.112, 1.9],
             ],
             'skipped_samples': 'NA19675_D3',
             'sample_tissue_type': 'Muscle',
@@ -704,6 +746,8 @@ class DataManagerAPITest(AirtableTest):
                 ['NA20888', 'ENSG00000240361', 0.112, ''],
                 # a project mismatched sample NA20878
                 ['NA20878', 'ENSG00000233750', 0.064, ''],
+                # invalid airtable sample
+                ['NA12345', 'ENSG00000233750', 0.064, ''],
             ],
             'skipped_samples': 'NA19675_D3, NA20878',
             'sample_tissue_type': 'Muscle',
@@ -739,6 +783,9 @@ class DataManagerAPITest(AirtableTest):
                 # a project mismatched sample NA20878
                 ['NA20878', 'ENSG00000233750', 'chr2', 167258096, 167258349, '*', 'psi3',
                  1.56E-25, 6.33, 0.45, 143, 14.3, 1433, 143.3, 1, 20],
+                # invalid airtable samples
+                ['NA12345', 'ENSG00000233750', 'chr2', 167258096, 167258349, '*', 'psi3',
+                 1.56E-25, 6.33, 0.45, 143, 14.3, 1433, 143.3, 1, 20],
             ],
             'skipped_samples': 'NA19675_D3, NA20878',
             'sample_tissue_type': 'Fibroblast',
@@ -761,9 +808,7 @@ class DataManagerAPITest(AirtableTest):
         if include_airtable_logs:
             expected_logs = [
                 ('Fetching Samples records 0-1 from airtable', None),
-                ('Fetched 6 Samples records from airtable', None),
-                ('Skipping samples associated with misconfigured PDOs in Airtable: HG00731, NA21234', {'severity': 'WARNING'}),
-                ('Skipping samples associated with multiple conflicting PDOs in Airtable: NA12345', {'severity': 'WARNING'}),
+                ('Fetched 10 Samples records from airtable', None),
             ] + expected_logs
         if additional_logs:
             if additional_logs_offset:
@@ -854,7 +899,7 @@ class DataManagerAPITest(AirtableTest):
         _set_file_iter_stdout([header, loaded_data_row])
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'errors': [f'Unable to find matches for the following samples: {loaded_data_row[0]}', 'No new samples detected'], 'warnings': None})
+        self.assertDictEqual(response.json(), {'errors': [f'Unable to load the following samples with no match: {loaded_data_row[0]}'], 'warnings': None})
 
         airtable_sample_records = [
             {
@@ -879,6 +924,20 @@ class DataManagerAPITest(AirtableTest):
             response = self.client.post(url, content_type='application/json', data=json.dumps(body))
             self.assertEqual(response.status_code, 400)
             self.assertEqual(response.json()['errors'][0], 'Samples missing required "gene_id": NA19675_D2')
+
+        # Test invalid airtable samples
+        _set_file_iter_stdout([header, *[[sample_id] + loaded_data_row[1:] for sample_id in [
+            'NA12345', 'NA12346', 'NA12347', 'NA12348', 'NA11111',
+        ]]])
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(response.json()['errors'], [
+            'Unable to load the following samples from Airtable with no corresponding seqr ID: NA11111',
+            'Unable to load the following samples that are improperly configured in Airtable with multiple tissues specified: NA12345',
+            'Unable to load the following samples that are improperly configured in Airtable with no tissue specified: NA12346',
+            'Unable to load the following samples that are improperly configured in Airtable with multiple conflicting PDOs: NA12347',
+            'Unable to load the following samples that are improperly configured in Airtable with no project specified: NA12348',
+        ])
 
         # Test already loaded data
         _set_file_iter_stdout([header, loaded_data_row])
@@ -939,12 +998,12 @@ class DataManagerAPITest(AirtableTest):
             }})]
             self._has_expected_file_loading_logs(
                 'gs://rna_data/new_muscle_samples.tsv.gz', info=info, warnings=warnings, user=self.data_manager_user,
-                additional_logs=additional_logs, additional_logs_offset=6, include_airtable_logs=True)
+                additional_logs=additional_logs, additional_logs_offset=4, include_airtable_logs=True)
 
             self.assertEqual(len(responses.calls), 1)
             self.assert_expected_airtable_call(
                 call_index=0,
-                filter_formula="AND(LEN({PassingCollaboratorSampleIDs})>0,LEN({TissueOfOrigin})>0,OR(SEARCH('RNA ready to load',ARRAYJOIN(PDOStatus,';'))))",
+                filter_formula="AND(LEN({PassingCollaboratorSampleIDs})>0,OR(SEARCH('RNA ready to load',ARRAYJOIN(PDOStatus,';'))))",
                 fields=['CollaboratorSampleID', 'SeqrCollaboratorSampleID', 'PDOStatus', 'SeqrProject', 'TissueOfOrigin', 'WESSampleID_RNAMapping', 'WGSSampleID_RNAMapping'],
             )
 
@@ -958,8 +1017,9 @@ class DataManagerAPITest(AirtableTest):
         mock_open.side_effect = lambda file_name, *args: mock_files[file_name]
         body.update({'ignoreExtraSamples': True, 'file': RNA_FILE_ID})
         warnings = [
+            'Skipped loading for the following 1 samples that are improperly configured in Airtable with multiple tissues specified: NA12345',
             f'Skipped loading for the following {len(params["skipped_samples"].split(","))} '
-            f'unmatched samples: {params["skipped_samples"]}']
+            f'samples with no match: {params["skipped_samples"]}']
         deleted_count = params.get('deleted_count', params['initial_model_count'])
         response_json, new_sample_guid = _test_basic_data_loading(
             params['new_data'], params["num_parsed_samples"], 2, 16, body,

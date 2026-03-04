@@ -171,7 +171,7 @@ Desired update:
             records_by_id.update(self._get_samples_for_id_field(missing, 'SeqrCollaboratorSampleID', fields))
         return records_by_id
 
-    def get_samples_for_matched_pdos(self, pdo_statuses, pdo_fields=None, sample_fields=None, additional_sample_filters=None, project_guid=None, required_sample_fields=None, skip_invalid_pdos=False):
+    def get_samples_for_matched_pdos(self, pdo_statuses, pdo_fields=None, sample_fields=None, additional_sample_filters=None, project_guid=None, required_sample_fields=None, allow_invalid_pdos=False):
         pdo_fields = pdo_fields or []
         additional_and_filters = [
             f'LEN({{{required_sample_field}}})>0' for required_sample_field in required_sample_fields or []
@@ -198,10 +198,13 @@ Desired update:
                 for url in sample.get('SeqrProject', []) if url
             ]
             if any(pm is None for pm in project_matches) or (len(project_matches) < len(sample['PDOStatus']) and len(project_matches) != 1):
-                invalid_pdo_samples.append(sample_id)
-                continue
+                if allow_invalid_pdos:
+                    project_matches = [None]
+                else:
+                    invalid_pdo_samples.append(sample_id)
+                    continue
 
-            project_guids = [match.group(1) for match in project_matches]
+            project_guids = [match and match.group(1) for match in project_matches]
             pdos = [{
                 'project_guid': project_guids[i] if len(project_guids) > 1 else project_guids[0],
                 **{field: sample[field][i] for field in pdo_fields}
@@ -215,10 +218,6 @@ Desired update:
 
         if invalid_pdo_samples:
             samples = ', '.join(sorted(invalid_pdo_samples))
-            error = f'associated with misconfigured PDOs in Airtable: {samples}'
-            if skip_invalid_pdos:
-                logger.warning(f'Skipping samples {error}', self._user)
-            else:
-                raise ValueError(f'The following samples are {error}')
+            raise ValueError(f'The following samples are associated with misconfigured PDOs in Airtable: {samples}')
 
         return {record_id: sample for record_id, sample in sample_records.items() if sample.get('pdos')}

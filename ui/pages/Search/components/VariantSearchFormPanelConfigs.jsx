@@ -16,8 +16,6 @@ import {
   SNP_FREQUENCIES,
   MITO_FREQUENCIES,
   SV_FREQUENCIES,
-  SV_CALLSET_CRITERIA_MESSAGE,
-  THIS_CALLSET_FREQUENCY,
   SPLICE_AI_FIELD,
   SV_IN_SILICO_GROUP,
   NO_SV_IN_SILICO_GROUPS,
@@ -40,7 +38,6 @@ import {
   NUM_ALT_OPTIONS,
   PANEL_APP_FIELD_NAME,
   CLINVAR_FIELD,
-  ES_CLINVAR_FIELD,
   PATHOGENICITY_FILTER_OPTIONS, QUALITY_FILTER_OPTIONS, SV_GROUPS, SV_GROUPS_NO_NEW, VARIANT_ANNOTATION_LAYOUT_GROUPS,
 } from '../constants'
 import LocusListItemsFilter from './filters/LocusListItemsFilter'
@@ -69,22 +66,26 @@ const REQUIRE_SCORE_FIELD = {
   labelHelp: 'Only return variants where at least one filtered predictor is present. By default, variants are returned if a predictor meets the filtered value or is missing entirely',
 }
 
-const FORMATTED_IN_SILICO_FIELDS = [...ORDERED_PREDICTOR_FIELDS.filter(({ displayOnly }) => !displayOnly).map(
+const IN_SILICO_FIELDS = [REQUIRE_SCORE_FIELD, ...ORDERED_PREDICTOR_FIELDS.filter(
+  ({ displayOnly }) => !displayOnly,
+).map(
   ({ field, fieldTitle, thresholds, indicatorMap, group, min, max, ...props }) => {
     const label = fieldTitle || snakecaseToTitlecase(field)
     const filterField = { name: field, label, group }
 
-    const enumField = (indicatorMap) ? {
-      labelHelp: `Select a value for ${label}`,
-      component: Select,
-      options: [
-        { text: '', value: null },
-        ...Object.entries(indicatorMap).map(([val, { value, ...opt }]) => ({ value: val, text: value, ...opt })),
-      ],
-      ...filterField,
-    } : null
+    if (indicatorMap) {
+      return {
+        labelHelp: `Select a value for ${label}`,
+        component: Select,
+        options: [
+          { text: '', value: null },
+          ...Object.entries(indicatorMap).map(([val, { value, ...opt }]) => ({ value: val, text: value, ...opt })),
+        ],
+        ...filterField,
+      }
+    }
 
-    const decimalField = thresholds ? {
+    return {
       labelHelp: (
         <div>
           {`Enter a numeric cutoff for ${label}`}
@@ -97,20 +98,9 @@ const FORMATTED_IN_SILICO_FIELDS = [...ORDERED_PREDICTOR_FIELDS.filter(({ displa
       max: max || 1,
       step: max ? 1 : 0.05,
       ...filterField,
-    } : null
-    return [enumField, decimalField]
+    }
   },
 )]
-
-const IN_SILICO_FIELDS = [
-  REQUIRE_SCORE_FIELD,
-  ...FORMATTED_IN_SILICO_FIELDS.map(([enumField, decimalField]) => decimalField || enumField),
-]
-
-const ES_ENABLED_IN_SILICO_FIELDS = [
-  REQUIRE_SCORE_FIELD,
-  ...FORMATTED_IN_SILICO_FIELDS.map(([enumField, decimalField]) => enumField || decimalField),
-]
 
 const VARIANT_FIELD_NAME = 'rawVariantItems'
 const SELECTED_MOIS_FIELD_NAME = 'selectedMOIs'
@@ -345,7 +335,6 @@ export const PATHOGENICITY_PANEL = {
     inputProps: JsonSelectPropsWithAll(PATHOGENICITY_FILTER_OPTIONS, ANY_PATHOGENICITY_FILTER),
   },
   fields: PATHOGENICITY_FIELDS,
-  esEnabledFields: [ES_CLINVAR_FIELD],
   fieldProps: PATHOGENICITY_FIELD_PROPS,
   helpText: 'Filter by reported pathogenicity.  This overrides the annotation filter, the frequency filter, and the call quality filter.  Variants will be returned if they have the specified transcript consequence AND the specified frequencies AND all individuals pass all specified quality filters OR if the variant has the specified pathogenicity and a frequency up to 0.05.',
 }
@@ -461,27 +450,6 @@ export const ANNOTATION_SECONDARY_PANEL = {
   },
 }
 
-const NO_ES_SNP_FREQUENCIES = [
-  ...SNP_FREQUENCIES.slice(0, -1),
-  {
-    name: THIS_CALLSET_FREQUENCY,
-    label: 'seqr',
-    homHemi: true,
-    skipAf: true,
-    labelHelp: 'Filter by allele count (AC) across all the samples in seqr.',
-  },
-]
-
-const NO_ES_SV_FREQUENCIES = [
-  SV_FREQUENCIES[0],
-  {
-    ...SV_FREQUENCIES[1],
-    label: 'seqr SV',
-    skipAf: true,
-    labelHelp: `Filter by allele count (AC) across all samples in seqr with Structural Variant (SV) calling. ${SV_CALLSET_CRITERIA_MESSAGE}`,
-  },
-]
-
 export const FREQUENCY_PANEL = {
   name: 'freqs',
   headerProps: {
@@ -492,14 +460,8 @@ export const FREQUENCY_PANEL = {
       format: val => val || {},
     },
   },
-  esEnabledFields: FREQUENCIES,
-  fields: [...NO_ES_SNP_FREQUENCIES, ...MITO_FREQUENCIES, ...NO_ES_SV_FREQUENCIES],
+  fields: FREQUENCIES,
   datasetTypeFields: {
-    [DATASET_TYPE_SNV_INDEL_CALLS]: NO_ES_SNP_FREQUENCIES,
-    [DATASET_TYPE_VARIANT_MITO]: NO_ES_SNP_FREQUENCIES.concat(MITO_FREQUENCIES),
-    [DATASET_TYPE_VARIANT_SV]: NO_ES_SNP_FREQUENCIES.concat(NO_ES_SV_FREQUENCIES),
-  },
-  esEnabledDatasetTypeFields: {
     [DATASET_TYPE_SNV_INDEL_CALLS]: SNP_FREQUENCIES,
     [DATASET_TYPE_VARIANT_MITO]: SNP_FREQUENCIES.concat(MITO_FREQUENCIES),
     [DATASET_TYPE_VARIANT_SV]: SNP_FREQUENCIES.concat(SV_FREQUENCIES),
@@ -529,7 +491,6 @@ export const IN_SILICO_PANEL = {
   name: 'in_silico',
   headerProps: { title: 'In Silico Filters' },
   fields: IN_SILICO_FIELDS,
-  esEnabledFields: ES_ENABLED_IN_SILICO_FIELDS,
   fieldLayout: inSilicoFieldLayout,
   fieldLayoutInput: [...NO_SV_IN_SILICO_GROUPS, SV_IN_SILICO_GROUP],
   datasetTypeFieldLayoutInput: {
@@ -561,13 +522,6 @@ const ExcludeSearchToggle = props => (
   </FormSpy>
 )
 
-const ES_EXCLUDE_FIELDS = [
-  {
-    ...BASE_LOCUS_FIELD,
-    component: Form.TextArea,
-    rows: 8,
-  },
-]
 const EXCLUDE_FIELDS = [
   {
     name: 'previousSearch',
@@ -582,13 +536,16 @@ const EXCLUDE_FIELDS = [
     ...PATHOGENICITY_FIELD_PROPS,
     width: 8,
   },
-  ...ES_EXCLUDE_FIELDS,
+  {
+    ...BASE_LOCUS_FIELD,
+    component: Form.TextArea,
+    rows: 8,
+  },
 ]
 
 export const EXCLUDE_PANEL = {
   name: 'exclude',
   headerProps: { title: 'Exclude' },
   fields: EXCLUDE_FIELDS,
-  esEnabledFields: ES_EXCLUDE_FIELDS,
   helpText: 'Exclude variants from the search results based on the specified criteria. This filter will override any other filters applied.',
 }

@@ -13,11 +13,10 @@ import {
   getFamiliesByGuid,
   getUser,
   getSpliceOutliersByChromFamily,
-  getElasticsearchEnabled,
 } from 'redux/selectors'
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
 import CopyToClipboardButton from '../../buttons/CopyToClipboardButton'
-import SearchResultsLink, { PermissiveGeneSearchLink } from '../../buttons/SearchResultsLink'
+import { PermissiveGeneSearchLink } from '../../buttons/SearchResultsLink'
 import Modal from '../../modal/Modal'
 import { ButtonLink, HelpIcon } from '../../StyledComponents'
 import RnaSeqJunctionOutliersTable from '../../table/RnaSeqJunctionOutliersTable'
@@ -316,8 +315,8 @@ const getSampleType = (genotypes) => {
   return sampleTypes.length === 1 ? sampleTypes[0] : ''
 }
 
-const variantSearchLinks = (variant, mainTranscript, genesById, user, elasticsearchEnabled) => {
-  const { chrom, endChrom, pos, end, ref, alt, genomeVersion, genotypes, svType, variantId, transcripts } = variant
+const variantSearchLinks = (variant, mainTranscript, genesById, user) => {
+  const { chrom, pos, ref, alt, genomeVersion, genotypes, svType, variantId, transcripts } = variant
 
   const mainGene = genesById[mainTranscript.geneId]
   let genes
@@ -351,16 +350,7 @@ const variantSearchLinks = (variant, mainTranscript, genesById, user, elasticsea
 
   const linkVariant = { genes, variations, hgvsc, ...variant }
 
-  const seqrSearchLink = elasticsearchEnabled ? (
-    <SearchResultsLink
-      buttonText="seqr"
-      genomeVersion={genomeVersion}
-      svType={svType}
-      variantId={svType ? null : variantId}
-      location={svType && (
-        (endChrom && endChrom !== chrom) ? `${chrom}:${pos - 50}-${pos + 50}` : `${chrom}:${pos}-${end}%20`)}
-    />
-  ) : (
+  const seqrSearchLink = (
     <NavLink
       to={`/summary_data/variant_lookup?variantId=${variantId}&genomeVersion=${genomeVersion}&sampleType=${getSampleType(genotypes)}`}
       target="_blank"
@@ -397,7 +387,6 @@ class BaseSearchLinks extends React.PureComponent {
     mainTranscript: PropTypes.object,
     genesById: PropTypes.object,
     user: PropTypes.object,
-    elasticsearchEnabled: PropTypes.bool,
   }
 
   state = { showAll: false }
@@ -407,10 +396,10 @@ class BaseSearchLinks extends React.PureComponent {
   }
 
   render() {
-    const { variant, mainTranscript, genesById, user, elasticsearchEnabled } = this.props
+    const { variant, mainTranscript, genesById, user } = this.props
     const { showAll } = this.state
 
-    const links = variantSearchLinks(variant, mainTranscript, genesById, user, elasticsearchEnabled)
+    const links = variantSearchLinks(variant, mainTranscript, genesById, user)
     if (links.length < 5) {
       return links
     }
@@ -429,7 +418,6 @@ class BaseSearchLinks extends React.PureComponent {
 const mapStateToProps = state => ({
   genesById: getGenesById(state),
   user: getUser(state),
-  elasticsearchEnabled: getElasticsearchEnabled(state),
 })
 
 const SearchLinks = connect(mapStateToProps)(BaseSearchLinks)

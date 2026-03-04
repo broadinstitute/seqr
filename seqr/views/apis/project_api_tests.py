@@ -82,9 +82,16 @@ RNA_DATA_TYPE_PARAMS = {
     'S': {
         'model_cls': RnaSeqSpliceOutlier,
         'sample_guid': RNA_SPLICE_SAMPLE_GUID,
-        'parsed_file_data': RNA_SPLICE_SAMPLE_DATA,
+        'parsed_file_data': {
+            sample_guid: '\n'.join([
+                json.dumps({k: v.replace('e', 'E') for k, v in json.loads(row).items()
+                if k not in {'rare_disease_samples_total', 'rare_disease_samples_with_this_junction'}})
+                for row in data.split('\n') if row]
+            ) + '\n' for sample_guid, data in RNA_SPLICE_SAMPLE_DATA.items()
+        },
         'required_columns': RNA_SPLICE_OUTLIER_REQUIRED_COLUMNS,
         'row_id': 'ENSG00000233750-2-167254166-167258349-*-psi3',
+        'invalid_format_field': 'p_value',
         'rows': [
             'hgncSymbol\tseqnames\tstart\tend\tstrand\tsampleID\ttype\tpValue\tpadjust\tdeltaPsi\tcounts\tmeanCounts\ttotalCounts\tmeanTotalCounts\tnonsplitCounts',
             'ENSG00000233750;ENSG00000240361\tchr2\t167254166\t167258349\t*\tNA19675_1\tpsi3\t1.56E-25\t-4.9\t-0.46\t166\t16.6\t1660\t1.66\t1',
@@ -154,7 +161,7 @@ class ProjectAPITest(object):
             'mme_primary_data_owner': 'Samantha Baxter',
             'mme_contact_url': 'mailto:matchmaker@broadinstitute.org',
             'vlm_contact_email': 'vlm@broadinstitute.org',
-            'restrict_hpo_sharing': False,
+            'restrict_sharing': False,
             'recovery_email': None,
         })
         self._check_created_project_groups(new_project)
@@ -197,12 +204,12 @@ class ProjectAPITest(object):
         self.assertEqual(project.consent_code, 'H')
 
         response = self.client.post(update_project_url, content_type='application/json', data=json.dumps(
-            {'description': 'updated project description', 'restrictHpoSharing': True, 'genomeVersion': '38', 'workspaceName': 'test update name'}
+            {'description': 'updated project description', 'restrictSharing': True, 'genomeVersion': '38', 'workspaceName': 'test update name'}
         ))
         self.assertEqual(response.status_code, 200)
         updated_json = response.json()['projectsByGuid'][PROJECT_GUID]
         self.assertEqual(updated_json['description'], 'updated project description')
-        self.assertEqual(updated_json['restrictHpoSharing'], True)
+        self.assertEqual(updated_json['restrictSharing'], True)
         # genome version and workspace should not update
         self.assertEqual(updated_json['genomeVersion'], '37')
         self.assertEqual(updated_json['workspaceName'], expected_workspace_name)
@@ -726,21 +733,7 @@ class ProjectAPITest(object):
         self._test_update_project_rna('T', **RNA_DATA_TYPE_PARAMS['T'], single_sample_file=True)
 
     def test_update_project_rna_splice_outlier(self):
-        kwargs = {
-            **RNA_DATA_TYPE_PARAMS['S'],
-            'tissue': 'F',
-            'allow_missing_gene': True,
-        }
-        # Parsed data does not include optional internal-only columns
-        internal_cols =  {'rare_disease_samples_total', 'rare_disease_samples_with_this_junction'}
-        kwargs['parsed_file_data'] = {
-            sample_guid: '\n'.join([
-                json.dumps({k: v.replace('e', 'E') for k, v in json.loads(row).items() if k not in internal_cols})
-                for row in data.split('\n') if row]
-            ) + '\n' for sample_guid, data in kwargs['parsed_file_data'].items()
-        }
-
-        self._test_update_project_rna('S', **kwargs)
+        self._test_update_project_rna('S', **RNA_DATA_TYPE_PARAMS['S'], tissue='F', allow_missing_gene=True)
 
     @mock.patch('seqr.utils.communication_utils.BASE_URL', 'https://test-seqr.org/')
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
@@ -792,12 +785,10 @@ class ProjectAPITest(object):
         self.assertEqual(response.status_code, 400)
         errors = [
             'Unknown Gene IDs: NOT_A_GENE_ID1',
-            'Unable to find matches for the following samples: NA21234',
+            'Unable to load the following samples with no match: NA21234',
         ]
         if not allow_missing_gene:
             errors.insert(0, 'Samples missing required "gene_id": NA21234')
-        if single_sample_file:
-            errors.append('No new samples detected')
         self.assertDictEqual(response.json(), {'warnings': None, 'errors': errors})
 
         # Test loading new data
@@ -813,7 +804,7 @@ class ProjectAPITest(object):
             f'Parsed {1 if single_sample_file else 3} RNA-seq samples',
             f'Attempted data loading for {1 if single_sample_file else 2} RNA-seq samples',
         ]
-        warnings = ['No new samples detected'] if single_sample_file else ['Skipped loading for the following 1 unmatched samples: NA21234']
+        warnings = ['No new samples detected'] if single_sample_file else ['Skipped loading for the following 1 samples with no match: NA21234']
         file_path = f'rna_sample_data__{data_type}__2025-04-15T00:00:00'
         response_json = response.json()
         self.assertDictEqual(response_json, {
@@ -926,9 +917,9 @@ class ProjectAPITest(object):
         models = self._test_load_rna_seq_sample_data('S', **RNA_DATA_TYPE_PARAMS['S'])
 
         expected_models = [
-            ('ENSG00000233750', '2', 167254166, 167258349, '*', 'psi3', 1.56e-25, -4.9, -0.46, 166, 1, 20),
-            ('ENSG00000240361', '2', 167254166, 167258349, '*', 'psi3', 1.56e-25, -4.9, -0.46, 166, 1, 20),
-            ('ENSG00000240361', '7', 132885746, 132975168, '*', 'psi5', 1.08e-56, -6.53, -0.85, 231, 1, 20)
+            ('ENSG00000233750', '2', 167254166, 167258349, '*', 'psi3', 1.56e-25, -4.9, -0.46, 166, None, None),
+            ('ENSG00000240361', '2', 167254166, 167258349, '*', 'psi3', 1.56e-25, -4.9, -0.46, 166, None, None),
+            ('ENSG00000240361', '7', 132885746, 132975168, '*', 'psi5', 1.08e-56, -6.53, -0.85, 231, None, None)
         ]
         self.assertEqual(models.count(), len(expected_models))
         self.assertListEqual(expected_models, list(models.values_list(
@@ -940,7 +931,7 @@ class ProjectAPITest(object):
     @mock.patch('seqr.utils.file_utils.gzip.open')
     @mock.patch('seqr.utils.file_utils.os.path.isfile')
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
-    def _test_load_rna_seq_sample_data(self, data_type, mock_subprocess, mock_does_file_exist, mock_open, mock_pm_group, sample_guid=None, parsed_file_data=None, model_cls=None,  mismatch_field='p_value', row_id=None, **kwargs):
+    def _test_load_rna_seq_sample_data(self, data_type, mock_subprocess, mock_does_file_exist, mock_open, mock_pm_group, sample_guid=None, parsed_file_data=None, model_cls=None,  mismatch_field='p_value', invalid_format_field=None, row_id=None, **kwargs):
         url = reverse(load_rna_seq_sample_data, args=[sample_guid])
         self.check_manager_login(url)
 
@@ -994,6 +985,13 @@ class ProjectAPITest(object):
         self.assertDictEqual(response.json(), {
             'error': f'Error in {sample_guid.split("_", 1)[-1].upper()}: mismatched entries for {row_id or mismatch_row["gene_id"]}'
         })
+
+        if invalid_format_field:
+            invalid_row = {**json.loads(parsed_file_lines[0]), invalid_format_field: 'Unknown'}
+            self._set_file_iter([json.dumps(invalid_row)], mock_subprocess, mock_does_file_exist, mock_open)
+            response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+            self.assertEqual(response.status_code, 400)
+            self.assertDictEqual(response.json(), {'error': f'Invalid "{invalid_format_field}" values: Unknown'})
 
         # Test manager access to AnVIL external projects
         self._set_file_iter([], mock_subprocess, mock_does_file_exist, mock_open)

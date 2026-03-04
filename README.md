@@ -20,28 +20,12 @@ The seqr production instance runs on Google Kubernetes Engine (GKE) and data is 
 
 On-prem installs can be created using **[helm](deploy/LOCAL_INSTALL_HELM.md)**
 
-To set up seqr for local development, see instructions **[here](deploy/LOCAL_DEVELOPMENT_INSTALL.md)**  
-
-### Legacy installs
-
-Historically, on-prem installs can use docker-compose to run a version of seqr with an elasticsearch backend.
-This backend will be supported through **March 1, 2026**.
-If you are setting up a new installation of seqr, do not use this method. However, if you have an existing installation 
-you can find documentation for this method here:
- **[Local installs using docker-compose](deploy/LOCAL_INSTALL.md)**
+To set up seqr for local development, see instructions **[here](deploy/LOCAL_DEVELOPMENT_INSTALL.md)**
 
 ## Updating / Migrating a  seqr Instance	
 
 Instructions for updating an existing seqr instance to the latest version are found 
 **[here](https://github.com/broadinstitute/seqr-helm?tab=readme-ov-file#updating-seqr)**
-
-### Legacy installs
-
-Instructions for migrating application data from a docker-compose installation to a helm installation are found
-**[here](https://github.com/broadinstitute/seqr-helm?tab=readme-ov-file#migrating-application-data-from-docker-composeyaml)**
-
-Instructions for updating a docker-compose installation to the latest version still using docker-compose are found
-**[here](deploy/MIGRATE.md)**
 
 ## Contributing to seqr
 
