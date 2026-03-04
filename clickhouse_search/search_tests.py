@@ -124,11 +124,15 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
             gene_counts_json = get_variant_query_gene_counts(results_model, self.user)
             self.assertDictEqual(gene_counts_json, gene_counts)
 
-    def _assert_expected_variants(self, variants, expected_results, cache_key, format_cached_variants=None, sort='xpos', **kwargs):
+    def _assert_expected_variants(self, variants, expected_results, cache_key=None, format_cached_variants=None, sort='xpos', **kwargs):
         encoded_variants = json.loads(json.dumps(variants, cls=DjangoJSONEncoderWithSets))
         self.assertListEqual(encoded_variants, expected_results)
-        cached_variants = format_cached_variants(encoded_variants, **kwargs) if format_cached_variants else encoded_variants
-        self.assert_cached_results(cached_variants, sort=sort, cache_key=cache_key)
+        if cache_key:
+            cached_variants = format_cached_variants(encoded_variants, **kwargs) if format_cached_variants else encoded_variants
+            self.assert_cached_results(cached_variants, sort=sort, cache_key=cache_key)
+        else:
+            self.mock_redis.get.assert_not_called()
+            self.mock_redis.set.assert_not_called()
 
     def _format_cached_variants(self, variants, cached_variant_fields=None):
         cached_variants = [

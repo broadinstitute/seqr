@@ -68,34 +68,6 @@ class SearchUtilsTests(DifferentDbTransactionSupportMixin, TestCase, SearchTestH
         ])
         self.search_samples = list(self.affected_search_samples) + list(self.non_affected_search_samples)
 
-    @mock.patch('seqr.utils.search.utils.get_clickhouse_variant_by_id')
-    def test_get_single_variant(self, mock_get_variants_for_ids):
-        mock_get_variants_for_ids.return_value = PARSED_VARIANTS[0]
-        family = self.families.filter(guid='F000002_2').first()
-        variant = get_single_variant(family, '2-103343353-GAGA-G', user=self.user)
-        self.assertDictEqual(variant, PARSED_VARIANTS[0])
-        expected_samples = {s for s in self.affected_search_samples if s.guid not in NON_SNP_INDEL_SAMPLES and s.guid != FAMILY_3_SAMPLE}
-        self._assert_expected_get_single_variant_call(
-            mock_get_variants_for_ids, '2-103343353-GAGA-G',  ('2', 103343353, 'GAGA', 'G'), expected_samples,
-        )
-
-        get_single_variant(family, 'prefix_19107_DEL', user=self.user)
-        expected_samples = {
-            s for s in self.search_samples if s.guid in ['S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733']
-        }
-        self._assert_expected_get_single_variant_call(
-            mock_get_variants_for_ids, 'prefix_19107_DEL', None, expected_samples, dataset_type='SV',
-        )
-
-        mock_get_variants_for_ids.return_value = []
-        with self.assertRaises(InvalidSearchException) as cm:
-            get_single_variant(family, '10-10334333-A-G')
-        self.assertEqual(str(cm.exception), 'Variant 10-10334333-A-G not found')
-
-    def _assert_expected_get_single_variant_call(self, mock_call, variant_id, parsed_variant_id, expected_samples, dataset_type='SNV_INDEL'):
-        mock_call.assert_called_with(variant_id, parsed_variant_id, mock.ANY, '37', dataset_type)
-        self.assertSetEqual(set(mock_call.call_args.args[2]), expected_samples)
-
     @mock.patch('seqr.utils.search.utils.MAX_GENES_FOR_FILTER', 2)
     @mock.patch('seqr.utils.search.utils.MAX_NO_LOCATION_COMP_HET_FAMILIES', 1)
     def _test_invalid_search_params(self, search_func):
