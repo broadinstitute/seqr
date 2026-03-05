@@ -15,7 +15,6 @@ from settings import (
     VLM_CLIENT_ID,
 )
 from seqr.models import WarningMessage
-from seqr.utils.search.utils import backend_specific_call
 from seqr.views.utils.orm_to_json_utils import get_json_for_user, get_json_for_current_user
 from seqr.views.utils.permissions_utils import login_active_required
 
@@ -55,7 +54,6 @@ def render_app_html(request, additional_json=None, include_user=True, status=200
         'version': '{}-{}'.format(SEQR_VERSION, ui_version),
         'hijakEnabled': DEBUG or False,
         'oauthLoginProvider': SOCIAL_AUTH_PROVIDER,
-        'elasticsearchEnabled': backend_specific_call(True, False),
         'vlmEnabled': bool(VLM_CLIENT_ID),
         'warningMessages': [message.json() for message in WarningMessage.objects.all()],
     }}

@@ -8,7 +8,6 @@ from seqr.models import Individual, IgvSample, AnalysisGroup, DynamicAnalysisGro
     VariantFunctionalData, FamilyNote, SavedVariant, VariantTag, VariantNote, Sample
 from seqr.utils.gene_utils import get_genes
 from seqr.utils.logging_utils import SeqrLogger
-from seqr.utils.search.utils import backend_specific_call
 from seqr.views.utils.orm_to_json_utils import _get_json_for_families, _get_json_for_individuals, get_json_for_queryset, \
     get_json_for_analysis_groups, get_json_for_samples, get_json_for_locus_lists, \
     get_json_for_family_notes
@@ -129,10 +128,10 @@ def families_discovery_tags(families, genome_version, project=None):
         Q(gene_ids__len=1) | (Q(selected_main_transcript_id__isnull=True) & ~Q(dataset_type__startswith='SV'))
     ).values_list('family_guid', F('gene_ids__0')))
     try:
-         backend_specific_call(_get_no_key_selected_transcript_gene_id, _get_clickhouse_selected_transcript_gene_id)(
+         _get_clickhouse_selected_transcript_gene_id(
             family_discovery_genes,
             discovery_variants.filter(selected_main_transcript_id__isnull=False, gene_ids__len__gt=1),
-            genome_version=genome_version,
+            genome_version,
         )
     except Exception as e:
         logger.error(f'Error loading discovery genes from clickhouse: {e}', None)
@@ -155,17 +154,13 @@ def _get_transcripts_selected_gene(selected_main_transcript_id, transcripts):
     ), None)
 
 
-def _get_no_key_selected_transcript_gene_id(family_discovery_genes, discovery_variants, **kwargs):
+def _get_clickhouse_selected_transcript_gene_id(family_discovery_genes, discovery_variants, genome_version):
     family_discovery_genes += [
         (family_guid, _get_transcripts_selected_gene(selected_main_transcript_id, transcripts))
-        for family_guid, selected_main_transcript_id, transcripts in discovery_variants.values_list(
+        for family_guid, selected_main_transcript_id, transcripts in discovery_variants.filter(key__isnull=True).values_list(
             'family_guid', 'selected_main_transcript_id', 'saved_variant_json__transcripts',
         )
     ]
-
-
-def _get_clickhouse_selected_transcript_gene_id(family_discovery_genes, discovery_variants, genome_version):
-    _get_no_key_selected_transcript_gene_id(family_discovery_genes, discovery_variants.filter(key__isnull=True))
 
     tags_by_dataset_type = discovery_variants.filter(key__isnull=False).values('dataset_type').annotate(
         keys=ArrayAgg('key', distinct=True),

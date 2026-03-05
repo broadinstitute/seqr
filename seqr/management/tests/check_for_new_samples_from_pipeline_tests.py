@@ -731,7 +731,7 @@ The following 1 families failed sex check:
         })
 
 
-class LocalCheckNewSamplesTest(DifferentDbTransactionSupportMixin, AuthenticationTestCase, CheckNewSamplesTest):
+class LocalCheckNewSamplesTest(AuthenticationTestCase, CheckNewSamplesTest):
     fixtures = ['users', '1kg_project', 'clickhouse_saved_variants']
     databases = '__all__'
 

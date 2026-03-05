@@ -16,7 +16,7 @@ from seqr.models import Project, Family, Individual, Sample, SavedVariant, Varia
 from seqr.views.utils.airtable_utils import AirtableSession
 from seqr.utils.gene_utils import get_genes
 from seqr.utils.middleware import ErrorsWarningsException
-from seqr.utils.search.utils import get_search_samples, backend_specific_call
+from seqr.utils.search.utils import get_search_samples
 from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.utils.variant_utils import DISCOVERY_CATEGORY
 
@@ -345,9 +345,7 @@ def _get_parsed_saved_discovery_variants_by_family(
         variant_json_fields.append('clinvar')
     variants = []
     gene_ids = set()
-    variant_json_by_guid = backend_specific_call(
-        _get_variant_json_by_guid, _get_clickhouse_variant_json_by_guid,
-    )(project_saved_variants, include_clinvar)
+    variant_json_by_guid = _get_variant_json_by_guid(project_saved_variants, include_clinvar)
     for variant in project_saved_variants:
         chrom, pos = get_chrom_pos(variant.xpos)
 
@@ -405,31 +403,21 @@ def _get_parsed_saved_discovery_variants_by_family(
     return saved_variants_by_family
 
 
-def _get_variant_json_by_guid(saved_variants, *args, **kwargs):
-    variant_json_by_guid = {}
-    for v in saved_variants:
-        main_transcript = _get_variant_main_transcript(v)
-        gene_id = main_transcript.get('geneId')
-        gene_ids = [gene_id] if gene_id else v.gene_ids
-        variant_json_by_guid[v.guid] = {
-            **v.saved_variant_json, 'main_transcript': main_transcript, 'gene_id': gene_id, 'gene_ids': gene_ids,
-        }
-
-    return variant_json_by_guid
-
-
-def _get_clickhouse_variant_json_by_guid(saved_variants, include_clinvar):
+def _get_variant_json_by_guid(saved_variants, include_clinvar):
     variant_json_by_guid = {}
     variant_keys_by_search_type = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
-    no_key_variants = []
     for v in saved_variants:
         if v.key:
             end_chrom, end = get_chrom_pos(v.xpos_end)
             variant_json_by_guid[v.guid] = {'genotypes': v.genotypes, 'endChrom': end_chrom, 'end': end, 'gene_ids': v.gene_ids}
             variant_keys_by_search_type[v.genome_version][v.dataset_type][v.key].append((v.guid, v.selected_main_transcript_id))
         else:
-            no_key_variants.append(v)
-    variant_json_by_guid.update(_get_variant_json_by_guid(no_key_variants))
+            main_transcript = _get_variant_main_transcript(v)
+            gene_id = main_transcript.get('geneId')
+            gene_ids = [gene_id] if gene_id else v.gene_ids
+            variant_json_by_guid[v.guid] = {
+                **v.saved_variant_json, 'main_transcript': main_transcript, 'gene_id': gene_id, 'gene_ids': gene_ids,
+            }
 
     for genome_version, keys_by_dataset_type in variant_keys_by_search_type.items():
         for dataset_type, key_map in keys_by_dataset_type.items():
