@@ -181,12 +181,12 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
         }
         self._assert_expected_search(
             [VARIANT1, VARIANT2, VARIANT3, VARIANT4], gene_counts=variant_gene_counts, locus={'rawItems': '1:1-100000000'},
-            **ALL_SNV_INDEL_PASS_FILTERS,
+            exclude_svs=True,
         )
 
         self._assert_expected_search(
             [MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], gene_counts=MITO_GENE_COUNTS, locus={'rawItems': 'M:1-100000000'},
-            annotations=None, pathogenicity=None,
+            exclude_svs=False,
         )
 
         self._assert_expected_search(

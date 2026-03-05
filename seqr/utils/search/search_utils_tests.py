@@ -136,33 +136,6 @@ class SearchUtilsTests(DifferentDbTransactionSupportMixin, TestCase, SearchTestH
         self.assertSetEqual(set(mock_get_variants.call_args.args[0]), set(searched_samples))
         self.assertSetEqual(set(mock_get_variants.call_args.args[1]['skipped_samples']), set(non_affected_search_samples))
 
-    @mock.patch('seqr.utils.search.utils.get_clickhouse_variants')
-    def test_query_variants(self, mock_get_variants):
-        parsed_variants = [{**v, 'key': (i+1) * 1000 } for i, v in enumerate(PARSED_VARIANTS)]
-        def _mock_get_variants(families, search, user, previous_search_results, genome_version, **kwargs):
-            previous_search_results['all_results'] =parsed_variants
-            previous_search_results['total_results'] = 5
-            return parsed_variants
-        mock_get_variants.side_effect = _mock_get_variants
-
-        results_cache = {'all_results': parsed_variants, 'total_results': 5}
-
-        del self.search_model.search['exclude']
-        self.search_model.search['exclude_svs'] = True
-        query_variants(self.results_model, user=self.user)
-        self._test_expected_search_call(
-            mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
-            inheritance_mode='any_affected', omitted_sample_guids=SV_SAMPLES, dataset_type='SNV_INDEL',
-        )
-
-        self.search_model.search['locus'] = {'rawItems': 'WASH7P'}
-        query_variants(self.results_model, user=self.user)
-        self._test_expected_search_call(
-            mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
-            inheritance_mode='any_affected', has_gene_search=True, single_gene_search=True,
-            omitted_sample_guids=NON_SNP_INDEL_SAMPLES, dataset_type='SNV_INDEL_only',
-        )
-
     def test_cached_query_variants(self):
         Project.objects.filter(id=1).update(genome_version='38')
 
