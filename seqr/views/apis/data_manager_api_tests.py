@@ -7,227 +7,15 @@ from requests import HTTPError
 import responses
 
 from seqr.utils.communication_utils import _set_bulk_notification_stream
-from seqr.views.apis.data_manager_api import elasticsearch_status, delete_index, \
-    update_rna_seq, load_phenotype_prioritization_data, validate_callset, loading_vcfs, \
+from seqr.views.apis.data_manager_api import update_rna_seq, load_phenotype_prioritization_data, validate_callset, loading_vcfs, \
     get_loaded_projects, load_data, trigger_delete_family
 from seqr.views.utils.orm_to_json_utils import _get_json_for_models
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, AirtableTest
-from seqr.utils.search.elasticsearch.es_utils_tests import urllib3_responses
 from seqr.models import Individual, Sample, RnaSeqOutlier, RnaSeqTpm, RnaSeqSpliceOutlier, RnaSample, Project, PhenotypePrioritization
 from settings import SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
 
 PROJECT_GUID = 'R0001_1kg'
 NON_ANALYST_PROJECT_GUID = 'R0004_non_analyst_project'
-
-ES_CAT_ALLOCATION=[{
-    'node': 'node-1',
-    'shards': '113',
-    'disk.used': '67.2gb',
-    'disk.avail': '188.6gb',
-    'disk.percent': '26'
-},
-    {'node': 'UNASSIGNED',
-     'shards': '2',
-     'disk.used': None,
-     'disk.avail': None,
-     'disk.percent': None
-     }]
-
-ES_CAT_NODES=[{
-    'name': 'node-1',
-    'heap.percent': '57',
-},
-    {'name': 'no-disk-node',
-     'heap.percent': '83',
-     }]
-
-EXPECTED_DISK_ALLOCATION = [{
-    'node': 'node-1',
-    'shards': '113',
-    'diskUsed': '67.2gb',
-    'diskAvail': '188.6gb',
-    'diskPercent': '26',
-    'heapPercent': '57',
-},
-    {'node': 'UNASSIGNED',
-     'shards': '2',
-     'diskUsed': None,
-     'diskAvail': None,
-     'diskPercent': None
-     }]
-
-EXPECTED_NODE_STATS = [{'name': 'no-disk-node', 'heapPercent': '83'}]
-
-ES_CAT_INDICES = [{
-    "index": "test_index",
-    "docs.count": "122674997",
-    "store.size": "14.9gb",
-    "creation.date.string": "2019-11-04T19:33:47.522Z"
-},
-    {
-        "index": "test_index_alias_1",
-        "docs.count": "672312",
-        "store.size": "233.4mb",
-        "creation.date.string": "2019-10-03T19:53:53.846Z"
-    },
-    {
-        "index": "test_index_alias_2",
-        "docs.count": "672312",
-        "store.size": "233.4mb",
-        "creation.date.string": "2019-10-03T19:53:53.846Z"
-    },
-    {
-        "index": "test_index_no_project",
-        "docs.count": "672312",
-        "store.size": "233.4mb",
-        "creation.date.string": "2019-10-03T19:53:53.846Z"
-    },
-    {
-        "index": "test_index_sv",
-        "docs.count": "672312",
-        "store.size": "233.4mb",
-        "creation.date.string": "2019-10-03T19:53:53.846Z"
-    },
-    {
-        "index": "test_index_sv_wgs",
-        "docs.count": "672312",
-        "store.size": "233.4mb",
-        "creation.date.string": "2019-10-03T19:53:53.846Z"
-    },
-]
-
-ES_CAT_ALIAS = [
-    {
-        "alias": "test_index_second",
-        "index": "test_index_alias_1"
-    },
-    {
-        "alias": "test_index_second",
-        "index": "test_index_alias_2"
-    }]
-
-ES_INDEX_MAPPING = {
-    "test_index": {
-        "mappings": {
-            "_meta": {
-                "gencodeVersion": "25",
-                "genomeVersion": "38",
-                "sampleType": "WES",
-                "sourceFilePath": "test_index_file_path",
-            },
-            "_all": {
-                "enabled": False
-            }
-        }
-    },
-    "test_index_alias_1": {
-        "mappings": {
-            "_meta": {
-                "gencodeVersion": "25",
-                "hail_version": "0.2.24",
-                "genomeVersion": "37",
-                "sampleType": "WGS",
-                "sourceFilePath": "test_index_alias_1_path",
-            },
-            "_all": {
-                "enabled": False
-            },
-        }
-    },
-    "test_index_alias_2": {
-        "mappings": {
-            "_meta": {
-                "gencodeVersion": "19",
-                "genomeVersion": "37",
-                "sampleType": "WES",
-                "datasetType": "VARIANTS",
-                "sourceFilePath": "test_index_alias_2_path"
-            },
-            "_all": {
-                "enabled": False
-            },
-        }
-    },
-    "test_index_no_project": {
-        "mappings": {
-            "_meta": {
-                "gencodeVersion": "19",
-                "genomeVersion": "37",
-                "sampleType": "WGS",
-                "datasetType": "VARIANTS",
-                "sourceFilePath": "test_index_no_project_path"
-            },
-            "_all": {
-                "enabled": False
-            },
-        }
-    },
-    "test_index_sv": {
-        "mappings": {
-            "_meta": {
-                "gencodeVersion": "29",
-                "genomeVersion": "38",
-                "sampleType": "WES",
-                "datasetType": "SV",
-                "sourceFilePath": "test_sv_index_path"
-            },
-        }
-    },
-    "test_index_sv_wgs": {
-        "mappings": {
-            "_meta": {
-                "gencodeVersion": "29",
-                "genomeVersion": "38",
-                "sampleType": "WGS",
-                "datasetType": "SV",
-                "sourceFilePath": "test_sv_wgs_index_path"
-            },
-        }
-    },
-}
-
-TEST_INDEX_EXPECTED_DICT = {
-    "index": "test_index",
-    "sampleType": "WES",
-    "genomeVersion": "38",
-    "sourceFilePath": "test_index_file_path",
-    "docsCount": "122674997",
-    "storeSize": "14.9gb",
-    "creationDateString": "2019-11-04T19:33:47.522Z",
-    "gencodeVersion": "25",
-    "projects": [{'projectName': '1kg project n\xe5me with uni\xe7\xf8de', 'projectGuid': 'R0001_1kg'}]
-}
-
-TEST_SV_INDEX_EXPECTED_DICT = {
-    "index": "test_index_sv",
-    "sampleType": "WES",
-    "genomeVersion": "38",
-    "sourceFilePath": "test_sv_index_path",
-    "docsCount": "672312",
-    "storeSize": "233.4mb",
-    "creationDateString": "2019-10-03T19:53:53.846Z",
-    "gencodeVersion": "29",
-    "datasetType": "SV",
-    "projects": [{'projectName': '1kg project n\xe5me with uni\xe7\xf8de', 'projectGuid': 'R0001_1kg'}]
-}
-
-TEST_INDEX_NO_PROJECT_EXPECTED_DICT = {
-    "index": "test_index_no_project",
-    "sampleType": "WGS",
-    "genomeVersion": "37",
-    "sourceFilePath": "test_index_no_project_path",
-    "docsCount": "672312",
-    "storeSize": "233.4mb",
-    "creationDateString": "2019-10-03T19:53:53.846Z",
-    "datasetType": "VARIANTS",
-    "gencodeVersion": "19",
-    "projects": []
-}
-
-EXPECTED_ERRORS = [
-    'test_index_mito_wgs does not exist and is used by project(s) 1kg project n\xe5me with uni\xe7\xf8de (1 samples)',
-    'test_index_old does not exist and is used by project(s) 1kg project n\xe5me with uni\xe7\xf8de (1 samples)',
-]
 
 RNA_TPM_MUSCLE_SAMPLE_GUID = 'RS000162_T_na19675_d2'
 RNA_OUTLIER_MUSCLE_SAMPLE_GUID = 'RS000172_E_na19675_d2'
@@ -559,72 +347,6 @@ class DataManagerAPITest(AirtableTest):
     VCF_SAMPLES = VCF_SAMPLES
     SKIP_TDR = False
 
-    @urllib3_responses.activate
-    def test_elasticsearch_status(self):
-        url = reverse(elasticsearch_status)
-        self.check_data_manager_login(url)
-
-        urllib3_responses.add_json(
-            '/_cat/allocation?format=json&h=node,shards,disk.avail,disk.used,disk.percent', ES_CAT_ALLOCATION)
-        urllib3_responses.add_json(
-            '/_cat/nodes?format=json&h=name,heap.percent', ES_CAT_NODES)
-        urllib3_responses.add_json(
-           '/_cat/indices?format=json&h=index,docs.count,store.size,creation.date.string', ES_CAT_INDICES)
-        urllib3_responses.add_json('/_cat/aliases?format=json&h=alias,index', ES_CAT_ALIAS)
-        urllib3_responses.add_json('/_all/_mapping', ES_INDEX_MAPPING)
-
-        response = self.client.get(url)
-        self._assert_expected_es_status(response)
-
-    def _assert_expected_es_status(self, response):
-        self.assertEqual(response.status_code, 200)
-        response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), {'indices', 'errors', 'diskStats', 'nodeStats'})
-
-        self.assertEqual(len(response_json['indices']), 6)
-        self.assertDictEqual(response_json['indices'][0], TEST_INDEX_EXPECTED_DICT)
-        self.assertDictEqual(response_json['indices'][3], TEST_INDEX_NO_PROJECT_EXPECTED_DICT)
-        self.assertDictEqual(response_json['indices'][4], TEST_SV_INDEX_EXPECTED_DICT)
-
-        self.assertListEqual(response_json['errors'], EXPECTED_ERRORS)
-
-        self.assertListEqual(response_json['diskStats'], EXPECTED_DISK_ALLOCATION)
-        self.assertListEqual(response_json['nodeStats'], EXPECTED_NODE_STATS)
-
-    @urllib3_responses.activate
-    def test_delete_index(self):
-        url = reverse(delete_index)
-        self.check_data_manager_login(url)
-
-        response = self.client.post(url, content_type='application/json', data=json.dumps({'index': 'test_index'}))
-        self._assert_expected_delete_active_index_response(response)
-
-        urllib3_responses.add_json(
-            '/_cat/indices?format=json&h=index,docs.count,store.size,creation.date.string', ES_CAT_INDICES)
-        urllib3_responses.add_json('/_cat/aliases?format=json&h=alias,index', ES_CAT_ALIAS)
-        urllib3_responses.add_json('/_all/_mapping', ES_INDEX_MAPPING)
-        urllib3_responses.add(urllib3_responses.DELETE, '/unused_index')
-
-        response = self.client.post(url, content_type='application/json', data=json.dumps({'index': 'unused_index'}))
-        self._assert_expected_delete_index_response(response)
-
-    def _assert_expected_delete_active_index_response(self, response):
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(
-            response.json()['error'], '"test_index" is still used by: 1kg project n\xe5me with uni\xe7\xf8de')
-        self.assertEqual(len(urllib3_responses.calls), 0)
-
-    def _assert_expected_delete_index_response(self, response):
-        self.assertEqual(response.status_code, 200)
-        response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), {'indices'})
-        self.assertEqual(len(response_json['indices']), 6)
-        self.assertDictEqual(response_json['indices'][0], TEST_INDEX_EXPECTED_DICT)
-        self.assertDictEqual(response_json['indices'][3], TEST_INDEX_NO_PROJECT_EXPECTED_DICT)
-        self.assertDictEqual(response_json['indices'][4], TEST_SV_INDEX_EXPECTED_DICT)
-
-        self.assertEqual(urllib3_responses.calls[0].request.method, 'DELETE')
-
     @mock.patch('seqr.views.apis.data_manager_api.KIBANA_ELASTICSEARCH_PASSWORD', 'abc123')
     @responses.activate
     def test_kibana_proxy(self):
@@ -778,7 +500,7 @@ class DataManagerAPITest(AirtableTest):
                 ['NA19675_D3', 'ENSG00000233750', 'chr2', 167258096, 167258349, '*',
                  'psi3', 1.56E-25, 6.33, 0.45, 143, 14.3, 1433, 143.3, 1, 20],
                 # a new sample NA20888
-                ['NA20888', '', 'chr2', 167258096, 167258349, '*',
+                ['NA20888', 'NA', 'chr2', 167258096, 167258349, '*',
                  'psi3', 1.56E-25, 6.33, 0.45, 143, 14.3, 1433, 143.3, 1, 20],
                 # a project mismatched sample NA20878
                 ['NA20878', 'ENSG00000233750', 'chr2', 167258096, 167258349, '*', 'psi3',
@@ -798,18 +520,14 @@ class DataManagerAPITest(AirtableTest):
         },
     }
 
-    def _has_expected_file_loading_logs(self, file, user, info=None, warnings=None, additional_logs=None, additional_logs_offset=None, include_airtable_logs=False):
+    def _has_expected_file_loading_logs(self, file, file_path, user, info=None, warnings=None, additional_logs=None, additional_logs_offset=None):
         expected_logs = [
-            (f'==> gsutil ls {file}', None),
-            (f'==> gsutil cat {file} | gunzip -c -q - ', None),
+            ('Fetching Samples records 0-1 from airtable', None),
+            ('Fetched 10 Samples records from airtable', None),
+            (f'==> gsutil cp {file} tmp/temp_uploads/{file_path}', None),
         ] + [(info_log, None) for info_log in info or []] + [
             (warn_log, {'severity': 'WARNING'}) for warn_log in warnings or []
         ]
-        if include_airtable_logs:
-            expected_logs = [
-                ('Fetching Samples records 0-1 from airtable', None),
-                ('Fetched 10 Samples records from airtable', None),
-            ] + expected_logs
         if additional_logs:
             if additional_logs_offset:
                 for log in reversed(additional_logs):
@@ -843,15 +561,17 @@ class DataManagerAPITest(AirtableTest):
     @mock.patch('seqr.utils.communication_utils.BASE_URL', 'https://test-seqr.org/')
     @mock.patch('seqr.utils.search.add_data_utils.SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL', 'seqr-data-loading')
     @mock.patch('seqr.views.utils.file_utils.tempfile.gettempdir', lambda: 'tmp/')
+    @mock.patch('seqr.views.utils.dataset_utils.os.path.isfile', lambda *args: True)
     @mock.patch('seqr.utils.communication_utils.send_html_email')
     @mock.patch('seqr.utils.communication_utils.safe_post_to_slack')
     @mock.patch('seqr.views.utils.dataset_utils.datetime')
     @mock.patch('seqr.views.utils.dataset_utils.os.mkdir')
     @mock.patch('seqr.views.utils.dataset_utils.os.rename')
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
-    @mock.patch('seqr.views.utils.dataset_utils.gzip.open')
+    @mock.patch('seqr.utils.file_utils.open')
+    @mock.patch('seqr.utils.file_utils.gzip.open')
     @responses.activate
-    def _test_update_rna_seq(self, data_type, mock_open, mock_subprocess,
+    def _test_update_rna_seq(self, data_type, mock_open, mock_unzipped_open, mock_subprocess,
                             mock_rename, mock_mkdir, mock_datetime, mock_send_slack, mock_send_email):
         url = reverse(update_rna_seq)
         self.check_pm_login(url)
@@ -866,28 +586,34 @@ class DataManagerAPITest(AirtableTest):
         # Test errors
         body = {'dataType': data_type, 'file': 'gs://rna_data/muscle_samples.tsv'}
         mock_datetime.now.return_value = datetime(2020, 4, 15)
-        mock_does_file_exist = mock.MagicMock()
-        mock_does_file_exist.wait.return_value = 1
-        mock_subprocess.side_effect = [mock_does_file_exist]
+        mock_subprocess.return_value.wait.return_value = 1
+        mock_subprocess.return_value.stdout = [b'CommandException: No URLs matched gs://rna_data/muscle_samples.tsv']
         self.reset_logs()
         response = self._assert_expected_pm_access(
             lambda: self.client.post(url, content_type='application/json', data=json.dumps(body)), status_code=400,
         )
-        self.assertDictEqual(response.json(), {'error': 'File not found: gs://rna_data/muscle_samples.tsv'})
+        self.assertDictEqual(response.json(), {'error': 'Run command failed: CommandException: No URLs matched gs://rna_data/muscle_samples.tsv'})
 
-        mock_does_file_exist.wait.return_value = 0
-        mock_file_iter = mock.MagicMock()
+        mock_subprocess.return_value.wait.return_value = 0
         def _set_file_iter_stdout(rows):
-            mock_file_iter.wait.return_value = 0
-            mock_file_iter.stdout = [('\t'.join([str(col) for col in row]) + '\n').encode() for row in rows]
-            mock_subprocess.side_effect = [mock_does_file_exist, mock_file_iter, mock_does_file_exist]
+            mock_unzipped_open.return_value.__enter__.return_value.__iter__.return_value = [
+                ('\t'.join([str(col) for col in row]) + '\n') for row in rows
+            ]
+
+        file_path = RNA_FILENAME_TEMPLATE.format(data_type)
+        mock_files = defaultdict(mock.MagicMock)
+        mock_open.side_effect = lambda file_name, *args: mock_files[file_name]
+        def _set_gzip_file_iter_stdout(mock_file, rows):
+            mock_file.__enter__.return_value.__iter__.return_value = [
+                ('\t'.join([str(col) for col in row]) + '\n').encode() for row in rows
+            ]
 
         _set_file_iter_stdout([])
         invalid_body = {**body, 'file': body['file'].replace('tsv', 'xlsx')}
         response = self.client.post(url, content_type='application/json', data=json.dumps(invalid_body))
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(
-            response.json(), {'error': 'Unexpected iterated file type: gs://rna_data/muscle_samples.xlsx'})
+            response.json(), {'error': 'Unexpected iterated file type: muscle_samples.xlsx'})
 
         _set_file_iter_stdout([['']])
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
@@ -939,8 +665,7 @@ class DataManagerAPITest(AirtableTest):
             'Unable to load the following samples that are improperly configured in Airtable with no project specified: NA12348',
         ])
 
-        # Test already loaded data
-        _set_file_iter_stdout([header, loaded_data_row])
+        _set_gzip_file_iter_stdout(mock_files[f'tmp/temp_uploads/{file_path}/muscle_samples.tsv.gz'], [header, loaded_data_row])
         body['file'] = 'gs://rna_data/muscle_samples.tsv.gz'
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
@@ -949,7 +674,6 @@ class DataManagerAPITest(AirtableTest):
         mock_send_slack.reset_mock()
         mock_subprocess.reset_mock()
         self.reset_logs()
-        _set_file_iter_stdout([header, loaded_data_row])
         body['skipNewSampleValidation'] = True
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
@@ -959,21 +683,18 @@ class DataManagerAPITest(AirtableTest):
         ]
         warnings = ['Skipped loading for 1 samples already loaded from this file', 'No new samples detected']
         self.assertDictEqual(response.json(), {'info': info, 'warnings': warnings, 'sampleGuids': [], 'fileName': mock.ANY})
-        self._has_expected_file_loading_logs('gs://rna_data/muscle_samples.tsv.gz', info=info, warnings=warnings, user=self.data_manager_user, include_airtable_logs=True)
+        self._has_expected_file_loading_logs('gs://rna_data/muscle_samples.tsv.gz', file_path, info=info, warnings=warnings, user=self.data_manager_user)
         self.assertEqual(model_cls.objects.count(), params['initial_model_count'])
         mock_send_slack.assert_not_called()
         mock_send_email.assert_not_called()
-        self.assertEqual(mock_subprocess.call_count, 2)
-        mock_subprocess.assert_has_calls([mock.call(command, stdout=-1, stderr=-2, shell=True) for command in [  # nosec
-            f'gsutil ls {body["file"]}',
-            f'gsutil cat {body["file"]} | gunzip -c -q - ',
-        ]])
+        self.assertEqual(mock_subprocess.call_count, 1)
+        mock_subprocess.assert_called_with(f'gsutil cp {body["file"]} tmp/temp_uploads/{file_path}', stdout=-1, stderr=-2, shell=True) # nosec
 
         def _test_basic_data_loading(data, num_parsed_samples, num_loaded_samples, new_sample_individual_id, body,
                                      project_names, num_created_samples=1, warnings=None, additional_logs=None):
             self.reset_logs()
             responses.calls.reset()
-            _set_file_iter_stdout([header] + data)
+            _set_gzip_file_iter_stdout(mock_files[f'tmp/temp_uploads/{file_path}/new_muscle_samples.tsv.gz'], [header] + data)
             response = self.client.post(url, content_type='application/json', data=json.dumps(body))
             self.assertEqual(response.status_code, 200)
             num_projects = len(project_names.split(','))
@@ -997,8 +718,8 @@ class DataManagerAPITest(AirtableTest):
                 'entityIds': response_json['sampleGuids'] if num_created_samples > 1 else [new_sample_guid],
             }})]
             self._has_expected_file_loading_logs(
-                'gs://rna_data/new_muscle_samples.tsv.gz', info=info, warnings=warnings, user=self.data_manager_user,
-                additional_logs=additional_logs, additional_logs_offset=4, include_airtable_logs=True)
+                'gs://rna_data/new_muscle_samples.tsv.gz', file_path, info=info, warnings=warnings, user=self.data_manager_user,
+                additional_logs=additional_logs, additional_logs_offset=3)
 
             self.assertEqual(len(responses.calls), 1)
             self.assert_expected_airtable_call(
@@ -1011,10 +732,10 @@ class DataManagerAPITest(AirtableTest):
 
         # Test loading new data
         mock_open.reset_mock()
+        for mock_file in mock_files.values():
+            mock_file.reset_mock()
         mock_subprocess.reset_mock()
         self.reset_logs()
-        mock_files = defaultdict(mock.MagicMock)
-        mock_open.side_effect = lambda file_name, *args: mock_files[file_name]
         body.update({'ignoreExtraSamples': True, 'file': RNA_FILE_ID})
         warnings = [
             'Skipped loading for the following 1 samples that are improperly configured in Airtable with multiple tissues specified: NA12345',
@@ -1059,17 +780,14 @@ class DataManagerAPITest(AirtableTest):
         self.assertSetEqual(set(response_json['sampleGuids']), {sample_guid, new_sample_guid})
 
         # test correct file interactions
-        file_path = RNA_FILENAME_TEMPLATE.format(data_type)
         expected_subprocess_calls = [
-            f'gsutil ls {RNA_FILE_ID}',
-            f'gsutil cat {RNA_FILE_ID} | gunzip -c -q - ',
-            f'gsutil mv tmp/temp_uploads/{file_path} gs://seqr-scratch-temp/{file_path}',
-
+            f'gsutil cp {RNA_FILE_ID} tmp/temp_uploads/{file_path}',
+            f'gsutil mv tmp/temp_uploads/{file_path}/*.json.gz gs://seqr-scratch-temp/{file_path}',
         ]
         self.assertEqual(mock_subprocess.call_count, len(expected_subprocess_calls))
-        mock_subprocess.assert_has_calls([
-            mock.call(command, stdout=-1, stderr=-2, shell=True) for command in expected_subprocess_calls  # nosec
-        ])
+        mock_subprocess.assert_has_calls([call for calls in [
+            [mock.call(command, stdout=-1, stderr=-2, shell=True), mock.call().wait()] for command in expected_subprocess_calls  # nosec
+        ] for call in calls])
         mock_mkdir.assert_any_call(f'tmp/temp_uploads/{file_path}')
         filename = f'tmp/temp_uploads/{file_path}/{new_sample_guid}.json.gz'
         expected_files = {
@@ -1166,7 +884,9 @@ class DataManagerAPITest(AirtableTest):
             'Project Test Reprocessed Project: loaded 1 record(s)'
         ]
         self.assertEqual(response.json()['info'], info)
-        self._has_expected_file_loading_logs('gs://seqr_data/lirical_data.tsv.gz', user=self.data_manager_user, additional_logs=[
+        self.assert_json_logs(self.data_manager_user, [
+            ('==> gsutil ls gs://seqr_data/lirical_data.tsv.gz', None),
+            ('==> gsutil cat gs://seqr_data/lirical_data.tsv.gz | gunzip -c -q - ', None),
             ('delete 1 PhenotypePrioritizations', {'dbUpdate': {
                 'dbEntity': 'PhenotypePrioritization', 'updateType': 'bulk_delete',
                 'entityIds': ['PP000003_NA19678_ENSG000002689'],
@@ -1198,7 +918,9 @@ class DataManagerAPITest(AirtableTest):
             'Project 1kg project nåme with uniçøde: deleted 1 record(s), loaded 2 record(s)'
         ]
         self.assertEqual(response.json()['info'], info)
-        self._has_expected_file_loading_logs('gs://seqr_data/lirical_data.tsv.gz', user=self.data_manager_user, additional_logs=[
+        self.assert_json_logs(self.data_manager_user, [
+            ('==> gsutil ls gs://seqr_data/lirical_data.tsv.gz', None),
+            ('==> gsutil cat gs://seqr_data/lirical_data.tsv.gz | gunzip -c -q - ', None),
             ('delete 1 PhenotypePrioritizations', {'dbUpdate': {
                 'dbEntity': 'PhenotypePrioritization', 'updateType': 'bulk_delete',
                 'entityIds': ['PP256989491_na19678ensg0000010'],
@@ -1573,11 +1295,22 @@ class DataManagerAPITest(AirtableTest):
 
         Project.objects.filter(guid=PROJECT_GUID).update(genome_version='38')
         response = self.client.post(url, content_type='application/json', data=json.dumps({'family': 'F000002_2'}))
-        self._assert_expected_delete_family(response)
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {
+            'info': [
+                'Disabled search for 7 samples in the following 1 families: 2',
+                'Triggered delete family data',
+            ],
+        })
 
-    def _assert_expected_delete_family(self, response):
-        self.assertEqual(response.status_code, 500)
-        self.assertDictEqual(response.json(), {'error': 'trigger_delete_family is disabled without the clickhouse backend'})
+        family_samples = Sample.objects.filter(individual__family_id=2, is_active=True)
+        self.assertEqual(family_samples.count(), 0)
+
+        self.assertEqual(len(responses.calls), 1)
+        self.assertDictEqual(json.loads(responses.calls[-1].request.body), {
+            'project_guid': 'R0001_1kg',
+            'family_guids': ['F000002_2'],
+        })
 
 
 class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
@@ -1790,25 +1523,6 @@ class AnvilDataManagerAPITest(AnvilAuthenticationTestCase, DataManagerAPITest):
         self.mock_subprocess.side_effect = [
             self.mock_does_file_exist, self.mock_does_file_exist,  self.mock_file_iter, self.mock_does_file_exist, self.mock_does_file_exist, self.mock_file_iter,
         ]
-
-    def _get_expected_read_file_subprocess_calls(self, file_name, sample_guid):
-        gsutil_cat = f'gsutil cat gs://seqr-scratch-temp/{file_name}/{sample_guid}.json.gz | gunzip -c -q - '
-        self.mock_subprocess.assert_called_with(gsutil_cat, stdout=-1, stderr=-2, shell=True)  # nosec
-        return [
-            (f'==> gsutil ls gs://seqr-scratch-temp/{file_name}/{sample_guid}.json.gz', None),
-            (f'==> {gsutil_cat}', None),
-        ]
-
-    def _assert_expected_es_status(self, response):
-        self.assertEqual(response.status_code, 500)
-        self.assertEqual(response.json()['error'], 'elasticsearch_status is disabled without the elasticsearch backend')
-
-    def _assert_expected_delete_index_response(self, response):
-        self.assertEqual(response.status_code, 500)
-        self.assertEqual(response.json()['error'], 'delete_index is disabled without the elasticsearch backend')
-
-    def _assert_expected_delete_active_index_response(self, response):
-        self._assert_expected_delete_index_response(response)
 
     def _assert_expected_get_projects_requests(self):
         pdo_filter = "OR(SEARCH('Methods (Loading)',ARRAYJOIN(PDOStatus,';')),SEARCH('On hold for phenotips, but ready to load',ARRAYJOIN(PDOStatus,';')))"
@@ -2028,24 +1742,6 @@ Loading pipeline should be triggered with:
         self.assertListEqual(response.json()['errors'], ['Missing required FORMAT field(s) GQ, GT'])
 
         self._set_file_not_found()
-
-    def _assert_expected_delete_family(self, response):
-        self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {
-            'info': [
-                'Disabled search for 7 samples in the following 1 families: 2',
-                'Triggered delete family data',
-            ],
-        })
-
-        family_samples = Sample.objects.filter(individual__family_id=2, is_active=True)
-        self.assertEqual(family_samples.count(),0)
-
-        self.assertEqual(len(responses.calls), 1)
-        self.assertDictEqual(json.loads(responses.calls[-1].request.body), {
-            'project_guid': 'R0001_1kg',
-            'family_guids': ['F000002_2'],
-        })
 
     def _assert_expected_airtable_errors(self, url):
         responses.replace(

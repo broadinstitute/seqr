@@ -16,7 +16,7 @@ from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticat
     FAMILY_NOTE_FIELDS, FAMILY_FIELDS, IGV_SAMPLE_FIELDS, \
     SAMPLE_FIELDS, INDIVIDUAL_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INTERNAL_FAMILY_FIELDS, CASE_REVIEW_FAMILY_FIELDS, \
     MATCHMAKER_SUBMISSION_FIELDS, TAG_TYPE_FIELDS, CASE_REVIEW_INDIVIDUAL_FIELDS
-from seqr.models import FamilyAnalysedBy, AnalysisGroup
+from seqr.models import FamilyAnalysedBy, AnalysisGroup, Sample
 
 FAMILY_GUID = 'F000001_1'
 FAMILY_GUID2 = 'F000002_2'
@@ -312,11 +312,6 @@ class FamilyAPITest(object):
         }
         response = self.client.post(url, content_type='application/json', data=json.dumps(req_values))
         self.assertEqual(response.status_code, 400)
-        self.assertListEqual(response.json()['errors'], ['Unable to delete individuals with active MME submission: NA19675_1'])
-
-        with mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', ''):
-            response = self.client.post(url, content_type='application/json', data=json.dumps(req_values))
-        self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], [
             'Unable to delete individuals with active MME submission: NA19675_1',
             'Unable to delete individuals with active search sample: HG00731, HG00732, HG00733, NA19675_1, NA19678',
@@ -324,6 +319,7 @@ class FamilyAPITest(object):
 
         # Test success
         MatchmakerSubmission.objects.update(deleted_date=datetime.now())
+        Sample.objects.update(is_active=False)
 
         response = self.client.post(url, content_type='application/json', data=json.dumps(req_values))
         self.assertEqual(response.status_code, 200)

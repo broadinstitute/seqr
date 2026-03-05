@@ -12,7 +12,6 @@ from matchmaker.models import MatchmakerSubmission
 from reference_data.models import Omim
 from seqr.utils.gene_utils import get_genes_for_variant_display
 from seqr.utils.logging_utils import SeqrLogger
-from seqr.utils.search.utils import backend_specific_call
 from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
 from seqr.views.utils.individual_utils import delete_individuals
 from seqr.views.utils.json_to_orm_utils import update_family_from_json, update_model_from_json, create_model_from_json
@@ -57,9 +56,8 @@ def family_page_data(request, family_guid):
     add_families_context(response, families, project.guid, request.user, is_analyst, has_case_review_perm)
     family_response = response['familiesByGuid'][family_guid]
 
-    additional_fields = backend_specific_call([],['key', 'dataset_type'])
     discovery_variants = family.savedvariant_set.filter(varianttag__variant_tag_type__category=DISCOVERY_CATEGORY).values(
-        'xpos', 'xpos_end', 'gene_ids', *additional_fields,
+        'xpos', 'xpos_end', 'gene_ids', 'key', 'dataset_type',
         svType=F('saved_variant_json__svType')
     )
     gene_ids = {gene_id for variant in discovery_variants for gene_id in variant['gene_ids']}

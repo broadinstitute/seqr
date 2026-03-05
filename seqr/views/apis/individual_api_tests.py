@@ -364,13 +364,18 @@ class IndividualAPITest(object):
         }))
         self.assertEqual(response.status_code, 400)
 
+        response = self.client.post(individuals_url, content_type='application/json', data=json.dumps({
+            'individuals': [INDIVIDUAL_IDS_UPDATE_DATA]
+        }))
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(response.json()['errors'], ['Unable to delete individuals with active search sample: NA19678'])
+        Sample.objects.filter(guid__in=['S000130_na19678', 'S000143_na20885', 'S000173_na21987']).update(is_active=False)
+
         # send valid requests
         response = self.client.post(individuals_url, content_type='application/json', data=json.dumps({
             'individuals': [INDIVIDUAL_IDS_UPDATE_DATA]
         }))
-        self._assert_expected_delete_individuals(response, mock_pm_group)
 
-    def _assert_expected_delete_individuals(self, response, mock_pm_group):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {'individualsByGuid', 'familiesByGuid'})
@@ -613,7 +618,8 @@ class IndividualAPITest(object):
         self.assertEqual(response.status_code, 200)
 
     def _assert_expected_reload_calls(self, project_guid):
-        self.assertEqual(len(responses.calls), 0)
+        self.assertEqual(len(responses.calls), 1)
+        self.assertDictEqual(json.loads(responses.calls[0].request.body), {'project_guids': [project_guid]})
 
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
     @mock.patch('seqr.views.utils.pedigree_info_utils.NO_VALIDATE_MANIFEST_PROJECT_CATEGORIES')
@@ -1454,11 +1460,3 @@ class AnvilIndividualAPITest(AnvilAuthenticationTestCase, IndividualAPITest):
         else:
             self.mock_subprocess.stdout.__iter__.return_value = self.gs_files[file_name]
         return self.mock_subprocess
-
-    def _assert_expected_delete_individuals(self, response, mock_pm_group):
-        self.assertEqual(response.status_code, 400)
-        self.assertListEqual(response.json()['errors'], ['Unable to delete individuals with active search sample: NA19678'])
-
-    def _assert_expected_reload_calls(self, project_guid):
-        self.assertEqual(len(responses.calls), 1)
-        self.assertDictEqual(json.loads(responses.calls[0].request.body), {'project_guids': [project_guid]})

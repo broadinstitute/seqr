@@ -95,6 +95,30 @@
       ]
     }
 }, {
+    "model": "clickhouse_search.variantdetailsgrch37snvindel",
+    "pk": 113,
+    "fields": {
+      "key": 113,
+      "variant_id": "15-62456358-A-C",
+      "rsid": null,
+      "caid": null,
+      "lifted_over_chrom": null,
+      "lifted_over_pos": null,
+      "transcripts": []
+    }
+}, {
+    "model": "clickhouse_search.variantdetailsgrch37snvindel",
+    "pk": 114,
+    "fields": {
+      "key": 114,
+      "variant_id": "15-62456406-G-A",
+      "rsid": null,
+      "caid": null,
+      "lifted_over_chrom": null,
+      "lifted_over_pos": null,
+      "transcripts": []
+    }
+}, {
     "model": "clickhouse_search.entriesgrch37snvindel",
     "pk": 101,
     "fields": {
