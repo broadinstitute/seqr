@@ -6,7 +6,7 @@ import { Grid, Icon, Popup, Loader, Dimmer } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 import { NavLink } from 'react-router-dom'
 
-import { getUser, getElasticsearchEnabled } from 'redux/selectors'
+import { getUser } from 'redux/selectors'
 import DataLoader from 'shared/components/DataLoader'
 import { VerticalSpacer } from 'shared/components/Spacers'
 import UpdateButton from 'shared/components/buttons/UpdateButton'
@@ -303,7 +303,7 @@ class DatasetSection extends React.PureComponent {
 
 }
 
-const Dataset = React.memo(({ showLoadWorkspaceData, hasAnvil, samplesByType, user, elasticsearchEnabled }) => {
+const Dataset = React.memo(({ showLoadWorkspaceData, hasAnvil, samplesByType, user }) => {
   const datasetSections = samplesByType.map(([sampleTypeKey, loadedSampleCounts]) => {
     const [sampleType, datasetType] = sampleTypeKey.split('__')
     return {
@@ -350,7 +350,6 @@ const Dataset = React.memo(({ showLoadWorkspaceData, hasAnvil, samplesByType, us
         <EditDatasetsButton
           showLoadWorkspaceData={showLoadWorkspaceData && !noLoadedData}
           user={user}
-          elasticsearchEnabled={elasticsearchEnabled}
         />
       ) : null}
     />
@@ -361,13 +360,11 @@ Dataset.propTypes = {
   samplesByType: PropTypes.object.isRequired,
   hasAnvil: PropTypes.bool,
   showLoadWorkspaceData: PropTypes.bool,
-  elasticsearchEnabled: PropTypes.bool,
   user: PropTypes.object.isRequired,
 }
 
 const mapDatasetStateToProps = (state, ownProps) => ({
   user: getUser(state),
-  elasticsearchEnabled: getElasticsearchEnabled(state),
   samplesByType: getProjectAnalysisGroupSamplesByTypes(state, ownProps),
 })
 

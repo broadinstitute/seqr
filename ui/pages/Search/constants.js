@@ -138,7 +138,6 @@ const CLINVAR_LIKELY_PATH = 'likely_pathogenic'
 const CLINVAR_CONFLICTING_P_LP = 'conflicting_p_lp'
 const CLINVAR_CONFLICTING_NO_P = 'conflicting_no_p'
 const CLINVAR_VUS = 'vus'
-const CLINVAR_UNCERTAIN = 'vus_or_conflicting'
 const CLINVAR_OPTIONS = [
   {
     text: 'Pathogenic (P)',
@@ -173,13 +172,6 @@ const CLINVAR_OPTIONS = [
   },
 ]
 
-const ES_CLINVAR_OPTIONS = [...CLINVAR_OPTIONS]
-ES_CLINVAR_OPTIONS.splice(2, 3, {
-  description: 'ClinVar variant of uncertain significance or variant with conflicting interpretations',
-  text: 'VUS or Conflicting',
-  value: CLINVAR_UNCERTAIN,
-})
-
 const HGMD_NAME = 'hgmd'
 const HGMD_DM = 'disease_causing'
 const HGMD_OPTIONS = [ // see https://portal.biobase-international.com/hgmd/pro/global.php#cats
@@ -205,11 +197,6 @@ export const CLINVAR_FIELD = {
   options: CLINVAR_OPTIONS,
   groupLabel: 'ClinVar',
   width: 1,
-}
-
-export const ES_CLINVAR_FIELD = {
-  ...CLINVAR_FIELD,
-  options: ES_CLINVAR_OPTIONS,
 }
 
 export const HGMD_FIELD = {
@@ -245,7 +232,6 @@ export const HGMD_PATHOGENICITY_FILTER_OPTIONS = [
         CLINVAR_CONFLICTING_P_LP,
         CLINVAR_CONFLICTING_NO_P,
         CLINVAR_VUS,
-        CLINVAR_UNCERTAIN,
       ],
       [HGMD_NAME]: HGMD_OPTIONS.map(({ value }) => value),
     },
