@@ -72,25 +72,6 @@ class SearchUtilsTests(DifferentDbTransactionSupportMixin, TestCase, SearchTestH
     @mock.patch('seqr.utils.search.utils.MAX_NO_LOCATION_COMP_HET_FAMILIES', 1)
     def test_invalid_search_params(self):
 
-        self.search_model.search['pathogenicity'] = {'clinvar': ['pathogenic', 'vus']}
-        self.search_model.search['exclude'] = {'clinvar': ['benign', 'vus']}
-        with self.assertRaises(InvalidSearchException) as cm:
-            query_variants(self.results_model, user=self.user)
-        self.assertEqual(str(cm.exception), 'ClinVar pathogenicity vus is both included and excluded')
-
-        self.search_model.search['exclude'] = {}
-        self.search_model.search['inheritance'] = {'mode': 'recessive'}
-        with self.assertRaises(InvalidSearchException) as cm:
-            query_variants(self.results_model)
-        self.assertEqual(str(cm.exception), 'Annotations must be specified to search for compound heterozygous variants')
-
-        self.search_model.search['annotations'] = {'frameshift': ['frameshift_variant']}
-        with self.assertRaises(InvalidSearchException) as cm:
-            query_variants(self.results_model)
-        self.assertEqual(
-            str(cm.exception),
-            'Location must be specified to search for compound heterozygous variants across many families')
-
         self.results_model.families.set([family for family in self.families if family.guid == 'F000005_5'])
         with self.assertRaises(InvalidSearchException) as cm:
             query_variants(self.results_model)

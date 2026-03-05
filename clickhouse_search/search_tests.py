@@ -789,6 +789,18 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
             self._assert_expected_search([], exclude=None)
         self.assertEqual(str(cm.exception),'This search returned too many results')
 
+        with self.assertRaises(InvalidSearchException) as cm:
+            self._assert_expected_search([], pathogenicity={'clinvar': ['pathogenic', 'vus']}, exclude={'clinvar': ['benign', 'vus']})
+        self.assertEqual(str(cm.exception),'ClinVar pathogenicity vus is both included and excluded')
+
+        with self.assertRaises(InvalidSearchException) as cm:
+            self._assert_expected_search([], exclude=None, inheritance_mode='recessive')
+        self.assertEqual(str(cm.exception),'Annotations must be specified to search for compound heterozygous variants')
+
+        with self.assertRaises(InvalidSearchException) as cm:
+            self._assert_expected_search([], annotations={'frameshift': ['frameshift_variant']}, inheritance_mode='recessive')
+        self.assertEqual(str(cm.exception),'Location must be specified to search for compound heterozygous variants across many families')
+
         Sample.objects.filter(guid='S000143_na20885').update(sample_id='HG00732')
         self._set_multi_project_search()
         with self.assertRaises(InvalidSearchException) as cm:
