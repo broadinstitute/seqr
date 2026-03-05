@@ -10,8 +10,7 @@ from seqr.models import Sample, Individual, Project, VariantSearchResults
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_get_wildcard_json, safe_redis_set_json
 from seqr.utils.search.constants import XPOS_SORT_KEY, PRIORITIZED_GENE_SORT, RECESSIVE, COMPOUND_HET, \
-    MAX_NO_LOCATION_COMP_HET_FAMILIES, SV_ANNOTATION_TYPES, ALL_DATA_TYPES, MAX_EXPORT_VARIANTS, X_LINKED_RECESSIVE, \
-    MAX_VARIANTS
+    MAX_NO_LOCATION_COMP_HET_FAMILIES, SV_ANNOTATION_TYPES, ALL_DATA_TYPES, MAX_EXPORT_VARIANTS, X_LINKED_RECESSIVE
 from seqr.utils.search.elasticsearch.es_utils import ping_elasticsearch, \
     es_backend_enabled, ping_kibana
 from seqr.utils.gene_utils import parse_locus_list_items
@@ -196,9 +195,6 @@ def _get_previous_search_results(search_model, sort, page, num_results, load_all
     end_index = page * num_results
     if total_results is not None:
         end_index = min(end_index, total_results)
-
-    if end_index > MAX_VARIANTS:
-        raise InvalidSearchException(f'Unable to load more than {MAX_VARIANTS} variants ({end_index} requested)')
 
     cached_page = None
     loaded_results = previous_search_results.get('all_results') or []

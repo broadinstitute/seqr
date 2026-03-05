@@ -752,10 +752,41 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
             [],locus={'rawVariantItems': VARIANT_IDS[1]},
         )
 
+    @mock.patch('seqr.utils.search.utils.MAX_GENES_FOR_FILTER', 2)
+    @mock.patch('seqr.utils.search.utils.MAX_NO_LOCATION_COMP_HET_FAMILIES', 1)
     @mock.patch('clickhouse_search.search.MAX_VARIANTS', 3)
     def test_invalid_search(self):
         with self.assertRaises(InvalidSearchException) as cm:
-            self._assert_expected_search([])
+            self._assert_expected_search([], locus={'rawVariantItems': 'chr2-A-C'})
+        self.assertEqual(str(cm.exception), 'Invalid variants: chr2-A-C')
+
+        with self.assertRaises(InvalidSearchException) as cm:
+            self._assert_expected_search([], locus={'rawVariantItems': 'rs9876,chr2-1234-A-C'})
+        self.assertEqual(str(cm.exception), 'Invalid variants: rs9876')
+
+        with self.assertRaises(InvalidSearchException) as cm:
+            self._assert_expected_search([], locus={'rawItems': 'chr27:1234-5678,2:40-400000000, ENSG00012345'})
+        self.assertEqual(str(cm.exception), 'Invalid genes/intervals: chr27:1234-5678, chr2:40-400000000, ENSG00012345')
+
+        with self.assertRaises(InvalidSearchException) as cm:
+            self._assert_expected_search([], locus={'rawItems': '1:1-1000, 2:2000-3000, 3:4000-5000'})
+        self.assertEqual(str(cm.exception), 'Too many genes/intervals')
+
+        build_specific_genes = 'DDX11L1, OR4F29, ENSG00000223972, ENSG00000256186'
+        with self.assertRaises(InvalidSearchException) as cm:
+            self._assert_expected_search([], locus={'rawItems': build_specific_genes})
+        self.assertEqual(str(cm.exception), 'Invalid genes/intervals: OR4F29, ENSG00000256186')
+
+        with self.assertRaises(InvalidSearchException) as cm:
+            self._assert_expected_search([], exclude={'rawItems': build_specific_genes})
+        self.assertEqual(str(cm.exception), 'Cannot specify both Location and Excluded Genes/Intervals')
+
+        with self.assertRaises(InvalidSearchException) as cm:
+            self._assert_expected_search([], locus=None)
+        self.assertEqual(str(cm.exception), 'Invalid genes/intervals: OR4F29, ENSG00000256186')
+
+        with self.assertRaises(InvalidSearchException) as cm:
+            self._assert_expected_search([], exclude=None)
         self.assertEqual(str(cm.exception),'This search returned too many results')
 
         Sample.objects.filter(guid='S000143_na20885').update(sample_id='HG00732')
