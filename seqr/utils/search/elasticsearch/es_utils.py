@@ -62,17 +62,6 @@ def get_es_client(timeout=60, **kwargs):
     return Elasticsearch(**client_kwargs, **kwargs)
 
 
-def ping_elasticsearch():
-    if not get_es_client(timeout=3, max_retries=0).ping():
-        raise ValueError('No response from elasticsearch ping')
-
-
-def ping_kibana():
-    resp = connection_from_url('http://{}'.format(KIBANA_SERVER)).urlopen('HEAD', '/status', timeout=3, retries=3)
-    if resp.status >= 400:
-        raise ValueError('Kibana Error {}: {}'.format(resp.status, resp.reason))
-
-
 SAMPLE_FIELDS_LIST = ['samples', 'samples_num_alt_1']
 #  support .bgz instead of requiring .vcf.bgz due to issues with DSP delivery of large callsets
 DATASET_FILE_EXTENSIONS = VCF_FILE_EXTENSIONS[:-1] + ('.bgz', '.bed', '.mt')
