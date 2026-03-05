@@ -801,6 +801,14 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
             self._assert_expected_search([], annotations={'frameshift': ['frameshift_variant']}, inheritance_mode='recessive')
         self.assertEqual(str(cm.exception),'Location must be specified to search for compound heterozygous variants across many families')
 
+        with self.assertRaises(InvalidSearchException) as se:
+            query_variants(self.results_model, sort='prioritized_gene', num_results=2)
+        self.assertEqual(str(se.exception), 'Phenotype sort is only supported for single-family search.')
+
+        with self.assertRaises(InvalidSearchException) as cm:
+            self._assert_expected_search([], freqs={})
+        self.assertEqual(str(cm.exception),'seqr AC frequency of at least 5000 must be specified to search across multiple families')
+
         self.results_model.families.set(Family.objects.filter(guid='F000005_5'))
         with self.assertRaises(InvalidSearchException) as cm:
             self._assert_expected_search([], inheritance_mode='recessive')
@@ -816,15 +824,52 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
             self._assert_expected_search([], inheritance_mode='recessive', annotations_secondary={'frameshift': ['frameshift_variant']})
         self.assertEqual(str(cm.exception),'Unable to search for comp-het pairs with dataset type "SV". This may be because inheritance based search is disabled in families with no loaded affected individuals')
 
-        Sample.objects.filter(guid='S000143_na20885').update(sample_id='HG00732')
+        with self.assertRaises(InvalidSearchException) as cm:
+            self._assert_expected_search([], inheritance_mode='recessive', inheritance_filter={'affected': {'I000007_na20870': 'N'}})
+        self.assertEqual(str(cm.exception),'Inheritance based search is disabled in families with no data loaded for affected individuals')
+
+        with self.assertRaises(InvalidSearchException) as cm:
+            self._assert_expected_search([])
+        self.assertEqual(str(cm.exception), 'Inheritance must be specified if custom affected status is set')
+
+        with self.assertRaises(InvalidSearchException) as cm:
+            self._assert_expected_search([], inheritance_filter={'genotype': {'I000004_hg00731': 'ref_ref'}})
+        self.assertEqual(str(cm.exception), 'Invalid custom inheritance')
+
+        self.results_model.families.set(Family.objects.filter(family_id='no_individuals'))
+        with self.assertRaises(InvalidSearchException) as cm:
+            self._assert_expected_search([], inheritance_filter={})
+        self.assertEqual(str(cm.exception), 'No search data found for families no_individuals')
+
         self._set_multi_project_search()
         with self.assertRaises(InvalidSearchException) as cm:
-            self._assert_expected_search([], locus={'rawItems': GENE_IDS[0]})
+            self._assert_expected_search([])
+        self.assertEqual(str(cm.exception), 'Location must be specified to search across multiple projects')
+
+        Sample.objects.filter(guid='S000143_na20885').update(sample_id='HG00732')
+        with self.assertRaises(InvalidSearchException) as cm:
+            self._assert_expected_search([], locus={'rawItems': GENE_IDS[0]}, freqs={'callset': {'ac': 1000}})
         self.assertEqual(
             str(cm.exception),
             'The following samples are incorrectly configured and have different affected statuses in different projects: '
             'HG00732 (1kg project nåme with uniçøde/ Test Reprocessed Project)',
         )
+
+        self._set_grch37_search()
+        with self.assertRaises(InvalidSearchException) as cm:
+            self._assert_expected_search([], locus={'rawItems': build_specific_genes})
+        self.assertEqual(str(cm.exception), 'Invalid genes/intervals: DDX11L1, ENSG00000223972')
+
+        self._set_multi_project_search()
+        with self.assertRaises(InvalidSearchException) as cm:
+            self._assert_expected_search([], locus=None)
+        self.assertEqual(str(cm.exception),'Searching across multiple genome builds is not supported. Remove projects with differing genome builds from search: 37 - 1kg project nåme with uniçøde; 38 - Test Reprocessed Project')
+
+        self._set_single_family_search()
+        self.set_cache({'total_results': 20000})
+        with self.assertRaises(InvalidSearchException) as cm:
+            query_variants(self.results_model, page=1, num_results=2, load_all=True)
+        self.assertEqual(str(cm.exception), 'Unable to export more than 1000 variants (20000 requested)')
 
     @mock.patch('seqr.utils.search.utils.LiftOver')
     def test_variant_lookup(self, mock_liftover):
