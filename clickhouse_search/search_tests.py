@@ -105,7 +105,7 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
         super().setUp()
         self.mock_redis.get.return_value = None
 
-    def _assert_expected_search(self, expected_results, gene_counts=None, inheritance_mode=None, inheritance_filter=None, quality_filter=None, cached_variant_fields=None, sort='xpos', results_model=None, **search_kwargs):
+    def _assert_expected_search(self, expected_results, results_page=None, gene_counts=None, inheritance_mode=None, inheritance_filter=None, quality_filter=None, cached_variant_fields=None, sort='xpos', load_all=False, page=1, num_results=100, results_model=None, **search_kwargs):
         results_model = results_model or self.results_model
         self.search_model.search.update(search_kwargs or {})
         self.search_model.search['qualityFilter'] = quality_filter
@@ -113,22 +113,23 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
         if inheritance_filter is not None:
             self.search_model.search['inheritance']['filter'] = inheritance_filter
 
-        variants, total = query_variants(results_model, user=self.user, sort=sort)
+        variants, total = query_variants(results_model, user=self.user, sort=sort, load_all=load_all, page=page, num_results=num_results)
         self.assertEqual(total, len(expected_results))
         self._assert_expected_variants(
             variants, expected_results, cache_key=f'search_results__{results_model.guid}__{sort}', sort=sort,
             format_cached_variants=self._format_cached_variants, cached_variant_fields=cached_variant_fields,
+            results_page=results_page,
         )
 
         if gene_counts:
             gene_counts_json = get_variant_query_gene_counts(results_model, self.user)
             self.assertDictEqual(gene_counts_json, gene_counts)
 
-    def _assert_expected_variants(self, variants, expected_results, cache_key=None, format_cached_variants=None, sort='xpos', **kwargs):
+    def _assert_expected_variants(self, variants, expected_results, results_page=None, cache_key=None, format_cached_variants=None, sort='xpos', **kwargs):
         encoded_variants = json.loads(json.dumps(variants, cls=DjangoJSONEncoderWithSets))
-        self.assertListEqual(encoded_variants, expected_results)
+        self.assertListEqual(encoded_variants, results_page or expected_results)
         if cache_key:
-            cached_variants = format_cached_variants(encoded_variants, **kwargs) if format_cached_variants else encoded_variants
+            cached_variants = format_cached_variants(expected_results, **kwargs) if format_cached_variants else expected_results
             self.assert_cached_results(cached_variants, sort=sort, cache_key=cache_key)
         else:
             self.mock_redis.get.assert_not_called()
@@ -802,7 +803,7 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
         self.assertEqual(str(cm.exception),'Location must be specified to search for compound heterozygous variants across many families')
 
         with self.assertRaises(InvalidSearchException) as se:
-            query_variants(self.results_model, sort='prioritized_gene', num_results=2)
+            self._assert_expected_search([], sort='prioritized_gene', num_results=2)
         self.assertEqual(str(se.exception), 'Phenotype sort is only supported for single-family search.')
 
         with self.assertRaises(InvalidSearchException) as cm:
@@ -868,7 +869,7 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
         self._set_single_family_search()
         self.set_cache({'total_results': 20000})
         with self.assertRaises(InvalidSearchException) as cm:
-            query_variants(self.results_model, page=1, num_results=2, load_all=True)
+            self._assert_expected_search([], page=1, num_results=2, load_all=True)
         self.assertEqual(str(cm.exception), 'Unable to export more than 1000 variants (20000 requested)')
 
     @mock.patch('seqr.utils.search.utils.LiftOver')
@@ -1541,10 +1542,16 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
             sort='pathogenicity_hgmd',
         )
 
+        sorted_variants = [MITO_VARIANT1, MITO_VARIANT2, VARIANT4, VARIANT2, VARIANT3, MITO_VARIANT3, VARIANT1, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4]
+        self._assert_expected_search(sorted_variants, sort='gnomad')
+
         self._assert_expected_search(
-            [MITO_VARIANT1, MITO_VARIANT2, VARIANT4, VARIANT2, VARIANT3, MITO_VARIANT3, VARIANT1, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
-            sort='gnomad',
+            sorted_variants, results_page=[VARIANT3, MITO_VARIANT3, VARIANT1, GCNV_VARIANT1], sort='gnomad', page=2, num_results=4,
         )
+        self._assert_expected_search(
+            sorted_variants, results_page=[GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4], sort='gnomad', page=3,  num_results=4,
+        )
+        self._assert_expected_search(sorted_variants, sort='gnomad', load_all=True, num_results=4)
 
         self._reset_search_families()
         self._assert_expected_search(

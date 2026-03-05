@@ -147,32 +147,6 @@ class SearchUtilsTests(DifferentDbTransactionSupportMixin, TestCase, SearchTestH
 
         results_cache = {'all_results': parsed_variants, 'total_results': 5}
 
-        query_variants(
-            self.results_model, user=self.user,  page=3, num_results=10,
-        )
-        self._test_expected_search_call(
-            mock_get_variants, results_cache, page=3, num_results=10,
-        )
-
-        query_variants(self.results_model, user=self.user, load_all=True)
-        self._test_expected_search_call(
-            mock_get_variants, results_cache, sort='xpos', page=1, num_results=1000, skip_genotype_filter=False,
-        )
-
-        with mock.patch('seqr.utils.search.utils.MAX_EXPORT_VARIANTS', 4):
-            with self.assertRaises(InvalidSearchException) as cm:
-                query_variants(self.results_model, user=self.user, load_all=True)
-        self.assertEqual(str(cm.exception), 'Unable to export more than 4 variants (5 requested)')
-        self._test_expected_search_call(
-            mock_get_variants, results_cache, sort='xpos', page=1, num_results=4, skip_genotype_filter=False,
-        )
-
-        self.set_cache({'total_results': 22})
-        query_variants(self.results_model, user=self.user, load_all=True)
-        self._test_expected_search_call(
-            mock_get_variants, results_cache, sort='xpos', page=1, num_results=22, skip_genotype_filter=False,
-        )
-
         self._test_locus_query_variants(mock_get_variants, results_cache)
 
         locus_items = self.search_model.search['locus']['rawItems']
