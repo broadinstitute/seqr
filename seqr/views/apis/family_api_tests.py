@@ -291,7 +291,6 @@ class FamilyAPITest(object):
             'families': [{'familyGuid': 'F000012_12'}]}))
         self.assertEqual(response.status_code, 200)
 
-    @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', 'testhost')
     @mock.patch('seqr.views.utils.permissions_utils.INTERNAL_NAMESPACES')
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP')
     def test_delete_families_handler(self, mock_pm_group, mock_internal_namespaces):
@@ -491,7 +490,7 @@ class FamilyAPITest(object):
         self.assertEqual(response_json['F000014_14']['displayName'], expected_id)
 
     def _anvil_enabled(self):
-        return not self.ES_HOSTNAME
+        return bool(self.MOCK_AIRTABLE_KEY)
 
     @mock.patch('seqr.views.utils.file_utils.anvil_enabled', lambda: False)
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP')

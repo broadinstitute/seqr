@@ -735,8 +735,6 @@ class LocalCheckNewSamplesTest(AuthenticationTestCase, CheckNewSamplesTest):
     fixtures = ['users', '1kg_project', 'clickhouse_saved_variants']
     databases = '__all__'
 
-    ES_HOSTNAME = ''
-
     MOCK_DATA_DIR = '/seqr/seqr-hail-search-data'
     PROJECT_EMAIL_TEXT = TEXT_EMAIL_TEMPLATE.format(1, 'WES', 'Non-Analyst Project')
     PROJECT_EMAIL_HTML = HTML_EMAIL_TEMAPLTE.format(1, 'WES', EXTERNAL_PROJECT_GUID, 'Non-Analyst Project')
