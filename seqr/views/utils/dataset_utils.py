@@ -9,7 +9,7 @@ import os
 from tqdm import tqdm
 
 from seqr.models import Sample, Individual, Family, Project, RnaSample, RnaSeqOutlier, RnaSeqTpm, RnaSeqSpliceOutlier
-from seqr.utils.file_utils import file_iter
+from seqr.utils.file_utils import file_iter, is_google_bucket_file_path, run_gsutil_with_wait
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.search.add_data_utils import basic_notify_search_data_loaded
@@ -318,6 +318,7 @@ RNA_DATA_TYPE_CONFIGS = {
         'post_process_kwargs': {
             'get_unique_key': _get_splice_id,
             'format_fields': SPLICE_OUTLIER_FORMATTER,
+            'skip_invalid_format_fields': [CHROM_COL],
         },
     },
 }
@@ -354,7 +355,7 @@ def _load_rna_seq_file(
         misconfigured_samples=None, sample_metadata_mapping=None,
 ):
     f = file_iter(file_path, user=user)
-    parsed_f = parse_file(file_path.replace('.gz', ''), f, iter_file=True)
+    parsed_f = parse_file(file_path.split('/')[-1].replace('.gz', ''), f, iter_file=True)
     header = next(parsed_f)
     file_sample_id, column_map = _validate_rna_header(header, allowed_column_map, optional_columns, sample_id_header_col_config)
 
@@ -406,7 +407,7 @@ def _load_rna_seq_file(
 def _parse_rna_row(sample_id, row_dict, potential_samples, loaded_samples, gene_ids, sample_guid_ids_to_load, samples_to_create,
                    unmatched_samples, individual_data_by_id, sample_files, file_dir, has_errors):
 
-    row_gene_ids = row_dict[GENE_ID_COL].split(';')
+    row_gene_ids = ['' if gene_id == 'NA' else gene_id for gene_id in row_dict[GENE_ID_COL].split(';')]
     if any(row_gene_ids):
         gene_ids.update(row_gene_ids)
 
@@ -531,7 +532,8 @@ def load_rna_seq(request_json, user, **kwargs):
 def _load_rna_seq(data_type, file_path, user, sample_metadata_mapping=None, project_guid=None, tissue=None, **kwargs):
     config = RNA_DATA_TYPE_CONFIGS[data_type]
     model_cls = config['model_class']
-    data_source = file_path.split('/')[-1].split('_-_')[-1]
+    file_name = file_path.split('/')[-1]
+    data_source = file_name.split('_-_')[-1]
 
     project_guids = [project_guid] if project_guid else {
         metadata['project_guid'] for metadata in sample_metadata_mapping.values()
@@ -553,6 +555,13 @@ def _load_rna_seq(data_type, file_path, user, sample_metadata_mapping=None, proj
     file_name_prefix = f'rna_sample_data__{data_type}__{datetime.now().isoformat()}'
     file_dir = get_temp_file_path(file_name_prefix, is_local=True)
     os.mkdir(file_dir)
+    if is_google_bucket_file_path(file_path):
+        try:
+            run_gsutil_with_wait('cp', file_path, additional_args=f' {file_dir}', user=user)
+        except Exception as e:
+            # re-raise so error is properly handled upstream
+            raise ValueError(e)
+        file_path = f'{file_dir}/{file_name}'
 
     warnings, not_loaded_count, sample_guid_ids_to_load, prev_loaded_individual_ids = _load_rna_seq_file(
         file_path, data_source, user, data_type, model_cls, potential_samples, sample_files, file_dir, individual_data_by_id,
@@ -585,7 +594,7 @@ def _load_rna_seq(data_type, file_path, user, sample_metadata_mapping=None, proj
         )
 
     if sample_guid_ids_to_load:
-        persist_temp_file(file_name_prefix, user)
+        persist_temp_file(file_name_prefix, user, src_suffix='/*.json.gz')
 
     return sorted(sample_guid_ids_to_load.keys()), file_name_prefix, info, warnings
 
@@ -607,7 +616,7 @@ def _get_individual_metadata_mapping(sample_metadata_mapping, individuals):
     return individual_data_by_id
 
 
-def post_process_rna_data(sample_guid, data, get_unique_key=None, format_fields=None):
+def post_process_rna_data(sample_guid, data, user, get_unique_key=None, format_fields=None, skip_invalid_format_fields=None):
     mismatches = set()
     invalid_format_fields = defaultdict(set)
 
@@ -630,6 +639,11 @@ def post_process_rna_data(sample_guid, data, get_unique_key=None, format_fields=
             mismatches.add(gene_or_unique_id)
         data_by_key[gene_or_unique_id] = row
 
+    if data_by_key and invalid_format_fields and skip_invalid_format_fields:
+        for col in skip_invalid_format_fields:
+            values = invalid_format_fields.pop(col, None)
+            if values:
+                logger.info(f'Skipped rows with invalid "{col}" values: {", ".join(sorted(values))}', user)
     errors = [
         f'Invalid "{col}" values: {", ".join(sorted(values))}' for col, values in invalid_format_fields.items()
     ]
