@@ -358,29 +358,6 @@ PM_USER_GROUP = os.environ.get('PM_USER_GROUP')
 IS_ANVIL_LOADING_DELAY = bool(os.environ.get('IS_ANVIL_LOADING_DELAY'))
 
 # External service settings
-ELASTICSEARCH_SERVICE_HOSTNAME = os.environ.get('ELASTICSEARCH_SERVICE_HOSTNAME')
-ELASTICSEARCH_SERVICE_PORT = os.environ.get('ELASTICSEARCH_SERVICE_PORT', '9200')
-ELASTICSEARCH_SERVER = '{host}:{port}'.format(
-    host=ELASTICSEARCH_SERVICE_HOSTNAME, port=ELASTICSEARCH_SERVICE_PORT)
-
-SEQR_ELASTICSEARCH_PASSWORD = os.environ.get('SEQR_ES_PASSWORD')
-ELASTICSEARCH_USER = os.environ.get('ELASTICSEARCH_USER', 'seqr')
-ELASTICSEARCH_CREDENTIALS = (ELASTICSEARCH_USER, SEQR_ELASTICSEARCH_PASSWORD) if SEQR_ELASTICSEARCH_PASSWORD else None
-ELASTICSEARCH_PROTOCOL = os.environ.get('ELASTICSEARCH_PROTOCOL', 'http')
-ELASTICSEARCH_CA_PATH = os.environ.get('ELASTICSEARCH_CA_PATH')
-# if we have a custom CA certificate for elasticsearch, add it to the verification path for connections
-if ELASTICSEARCH_CA_PATH:
-    ES_SSL_CONTEXT = create_default_context(cafile=ELASTICSEARCH_CA_PATH)
-else:
-    ES_SSL_CONTEXT = None
-
-KIBANA_SERVER = '{host}:{port}'.format(
-    host=os.environ.get('KIBANA_SERVICE_HOSTNAME', 'localhost'),
-    port=os.environ.get('KIBANA_SERVICE_PORT', 5601)
-)
-KIBANA_ELASTICSEARCH_USER = os.environ.get('KIBANA_ELASTICSEARCH_USER', 'kibana')
-KIBANA_ELASTICSEARCH_PASSWORD = os.environ.get('KIBANA_ES_PASSWORD')
-
 REDIS_SERVICE_HOSTNAME = os.environ.get('REDIS_SERVICE_HOSTNAME', 'localhost')
 REDIS_SERVICE_PORT = int(os.environ.get('REDIS_SERVICE_PORT', '6379'))
 
