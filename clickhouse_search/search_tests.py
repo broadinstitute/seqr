@@ -1153,6 +1153,13 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
             ]
         )
 
+        annotations['missense'] = []
+        annotations['in_frame'] = []
+        del annotations['splice_ai']
+        self._assert_expected_search(
+            [GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4], annotations=annotations,
+        )
+
         self._set_sv_family_search()
         self._assert_expected_search([SV_VARIANT1, SV_VARIANT4], annotations=annotations)
 

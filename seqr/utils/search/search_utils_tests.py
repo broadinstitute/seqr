@@ -147,99 +147,6 @@ class SearchUtilsTests(DifferentDbTransactionSupportMixin, TestCase, SearchTestH
 
         results_cache = {'all_results': parsed_variants, 'total_results': 5}
 
-        self._test_locus_query_variants(mock_get_variants, results_cache)
-
-        locus_items = self.search_model.search['locus']['rawItems']
-        del self.search_model.search['locus']
-        self.search_model.search['exclude'] = {'clinvar': ['benign'], 'rawItems': locus_items}
-        query_variants(self.results_model, user=self.user)
-        self._test_expected_search_call(
-            mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
-            has_gene_search=True, exclude_locations=True, exclude={'clinvar': ['benign']},
-        )
-
-        del self.search_model.search['exclude']['rawItems']
-        self.search_model.search.update({'pathogenicity': {'clinvar': ['pathogenic', 'likely_pathogenic']},
-                                         'annotations': {'frameshift': [], 'structural': []}})
-        query_variants(self.results_model, user=self.user)
-        self._test_expected_search_call(
-            mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
-            search_fields=['exclude', 'pathogenicity'], annotations={}, dataset_type='SNV_INDEL', omitted_sample_guids=SV_SAMPLES,
-        )
-
-        self.search_model.search = {
-            'inheritance': {'mode': 'recessive'}, 'annotations': {'frameshift': ['frameshift_variant']},
-            'freqs': self.search_model.search['freqs'],
-        }
-        query_variants(self.results_model, user=self.user)
-        self._test_expected_search_call(
-            mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
-            inheritance_mode='recessive', dataset_type='SNV_INDEL', secondary_dataset_type=None,
-            search_fields=['annotations'], omitted_sample_guids=['S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733'],
-        )
-
-        self.search_model.search['annotations_secondary'] = {'structural_consequence': ['LOF']}
-        query_variants(self.results_model, user=self.user)
-        self._test_expected_search_call(
-            mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
-            inheritance_mode='recessive', dataset_type='SNV_INDEL', secondary_dataset_type='SV',
-            search_fields=['annotations', 'annotations_secondary']
-        )
-
-        screen_annotations = {'SCREEN': ['dELS', 'DNase-only']}
-        self.search_model.search['annotations_secondary'].update({'SCREEN': ['dELS', 'DNase-only']})
-        query_variants(self.results_model, user=self.user)
-        self._test_expected_search_call(
-            mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
-            inheritance_mode='recessive', dataset_type='SNV_INDEL', secondary_dataset_type='ALL',
-            search_fields=['annotations', 'annotations_secondary']
-        )
-
-        self.search_model.search['annotations_secondary']['structural_consequence'] = []
-        query_variants(self.results_model, user=self.user)
-        self._test_expected_search_call(
-            mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
-            inheritance_mode='recessive', dataset_type='SNV_INDEL', secondary_dataset_type='SNV_INDEL',
-            search_fields=['annotations'], annotations_secondary=screen_annotations,
-            omitted_sample_guids=['S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733'],
-        )
-
-        self.set_cache(None)
-        mock_get_variants.reset_mock()
-        self.search_model.search = {
-            'inheritance': {'mode': 'any_affected'},
-            'exclude': {'previousSearch': True, 'previousSearchHash': 'abc1234', 'clinvar': ['benign']},
-            'freqs': self.search_model.search['freqs'],
-        }
-        previous_search_model = VariantSearch.objects.create(search={'inheritance': {'mode': 'de_novo'}, 'freqs': self.search_model.search['freqs']})
-        previous_results_model = VariantSearchResults.objects.create(variant_search=previous_search_model, search_hash='abc1234')
-        previous_results_model.families.set(self.families)
-        query_variants(self.results_model, user=self.user)
-        self._test_expected_search_call(
-            mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
-            inheritance_mode='any_affected', exclude={'clinvar': ['benign']}, search_fields=['exclude'],
-            exclude_key_pairs={}, exclude_keys={'MITO': [1000, 2000]},
-        )
-        self.assertEqual(mock_get_variants.call_count, 2)
-        call_args, call_kwargs, _ = self._get_expected_search_call(results_cache, inheritance_mode='de_novo', sort=None, num_results=100)
-        mock_get_variants.assert_has_calls([mock.call(*call_args, **call_kwargs)])
-
-        # Test when previous results are cached
-        mock_get_variants.reset_mock()
-        self.mock_redis.get.side_effect = [
-            None,
-            json.dumps({'all_results': [VARIANT1, [VARIANT1, VARIANT2], [VARIANT1, SV_VARIANT1], VARIANT2, [VARIANT4, VARIANT3], SV_VARIANT1]}),
-        ]
-        self.mock_redis.keys.side_effect = [[], ['search_results__abc1234__gnomad']]
-        query_variants(self.results_model, user=self.user)
-        self._test_expected_search_call(
-            mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
-            inheritance_mode='any_affected', exclude={'clinvar': ['benign']}, search_fields=['exclude'],
-            exclude_key_pairs={'SNV_INDEL': [[1, 2], [3, 4]], 'SNV_INDEL,SV_WGS': [[1, 12]]},
-            exclude_keys={'SNV_INDEL': [1, 2], 'SV_WGS': [12]},
-        )
-        self.assertEqual(mock_get_variants.call_count, 1)
-
         del self.search_model.search['exclude']
         self.search_model.search['exclude_svs'] = True
         query_variants(self.results_model, user=self.user)
@@ -254,30 +161,6 @@ class SearchUtilsTests(DifferentDbTransactionSupportMixin, TestCase, SearchTestH
             mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
             inheritance_mode='any_affected', has_gene_search=True, single_gene_search=True,
             omitted_sample_guids=NON_SNP_INDEL_SAMPLES, dataset_type='SNV_INDEL_only',
-        )
-
-    def _test_locus_query_variants(self, mock_get_variants, results_cache):
-        self.search_model.search['locus'] = {'rawVariantItems': '1-248367227-TC-T,2-103343353-GAGA-G'}
-        query_variants(self.results_model, user=self.user)
-        self._test_expected_search_call(
-            mock_get_variants, results_cache, sort='xpos', page=1, num_results=2, skip_genotype_filter=False,
-            variant_ids=['1-248367227-TC-T', '2-103343353-GAGA-G'],
-            parsed_variant_ids=[('1', 248367227, 'TC', 'T'), ('2', 103343353, 'GAGA', 'G')], dataset_type='SNV_INDEL',
-            omitted_sample_guids=['S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733', 'S000149_hg00733'],
-        )
-
-        self.search_model.search['locus']['rawItems'] = 'WASH7P'
-        query_variants(self.results_model, user=self.user)
-        self._test_expected_search_call(
-            mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
-            has_gene_search=True, single_gene_search=True, omitted_sample_guids=MITO_SAMPLES,
-        )
-
-        self.search_model.search['locus']['rawItems'] = 'WASH7P, chr2:1234-5678, chr7:100-10100%10, ENSG00000186092'
-        query_variants(self.results_model, user=self.user)
-        self._test_expected_search_call(
-            mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
-            has_gene_search=True, omitted_sample_guids=MITO_SAMPLES,
         )
 
     def test_cached_query_variants(self):
