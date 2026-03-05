@@ -801,6 +801,21 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
             self._assert_expected_search([], annotations={'frameshift': ['frameshift_variant']}, inheritance_mode='recessive')
         self.assertEqual(str(cm.exception),'Location must be specified to search for compound heterozygous variants across many families')
 
+        self.results_model.families.set(Family.objects.filter(guid='F000005_5'))
+        with self.assertRaises(InvalidSearchException) as cm:
+            self._assert_expected_search([], inheritance_mode='recessive')
+        self.assertEqual(str(cm.exception),'Inheritance based search is disabled in families with no data loaded for affected individuals')
+
+        self.results_model.families.set(Family.objects.filter(guid='F000003_3'))
+        with self.assertRaises(InvalidSearchException) as cm:
+            self._assert_expected_search([], pathogenicity={}, annotations={'structural': ['DEL']})
+        self.assertEqual(str(cm.exception), 'Unable to search against dataset type "SV"')
+
+        self.search_model.search['annotations_secondary'] = {'frameshift': ['frameshift_variant']}
+        with self.assertRaises(InvalidSearchException) as cm:
+            self._assert_expected_search([], inheritance_mode='recessive', annotations_secondary={'frameshift': ['frameshift_variant']})
+        self.assertEqual(str(cm.exception),'Unable to search for comp-het pairs with dataset type "SV". This may be because inheritance based search is disabled in families with no loaded affected individuals')
+
         Sample.objects.filter(guid='S000143_na20885').update(sample_id='HG00732')
         self._set_multi_project_search()
         with self.assertRaises(InvalidSearchException) as cm:

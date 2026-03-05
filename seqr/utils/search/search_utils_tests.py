@@ -72,28 +72,6 @@ class SearchUtilsTests(DifferentDbTransactionSupportMixin, TestCase, SearchTestH
     @mock.patch('seqr.utils.search.utils.MAX_NO_LOCATION_COMP_HET_FAMILIES', 1)
     def test_invalid_search_params(self):
 
-        self.results_model.families.set([family for family in self.families if family.guid == 'F000005_5'])
-        with self.assertRaises(InvalidSearchException) as cm:
-            query_variants(self.results_model)
-        self.assertEqual(
-            str(cm.exception),
-            'Inheritance based search is disabled in families with no data loaded for affected individuals',
-        )
-
-        self.results_model.families.set([family for family in self.families if family.guid == 'F000003_3'])
-        self.search_model.search['annotations'] = {'structural': ['DEL']}
-        self.search_model.search['pathogenicity'] = {}
-        with self.assertRaises(InvalidSearchException) as cm:
-            query_variants(self.results_model)
-        self.assertEqual(str(cm.exception), 'Unable to search against dataset type "SV"')
-
-        self.search_model.search['annotations_secondary'] = {'frameshift': ['frameshift_variant']}
-        with self.assertRaises(InvalidSearchException) as cm:
-            query_variants(self.results_model)
-        self.assertEqual(
-            str(cm.exception),
-            'Unable to search for comp-het pairs with dataset type "SV". This may be because inheritance based search is disabled in families with no loaded affected individuals',
-        )
 
         self.search_model.search['inheritance']['filter'] = {'affected': {'I000007_na20870': 'N'}}
         with self.assertRaises(InvalidSearchException) as cm:
