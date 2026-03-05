@@ -63,8 +63,10 @@ def parse_and_merge_classification_counts(text: str) -> list[tuple[str, int]]:
     # 'Pathogenic(18); Likely pathogenic(9); Pathogenic, low penetrance(1); Established risk allele(1); Likely risk allele(1); Uncertain significance(1)'
     # 'Uncertain significance(1), Likely benign (1)'
     counts = defaultdict(int)
-    for label, count in re.findall(r'([\w\s,]+?)\s?\((\d+)\)[;,]?\s?', text):
+    for label, count in re.findall(r'([\w\s,-]+?)\s?\((\d+)\)[;,]?\s?', text):
         label = label.strip().replace(', low penetrance', '')
+        if label.startswith('VUS-'):
+            label = 'Uncertain significance'
         counts[label] += int(count)
     if not counts:
         raise CommandError(f'Failed to correctly parse conflicting pathogenicity counts: {text}')
