@@ -309,8 +309,8 @@ VARIANT4 = {
     },
     'transcripts': {
         'ENSG00000097046': [
-            {'aminoAcids': None, 'canonical': None, 'codons': None, 'geneId': 'ENSG00000097046', 'hgvsc': 'ENST00000466716.5:c.-264+1G>A', 'hgvsp': None, 'transcriptId': 'ENST00000466716', 'maneSelect': None, 'manePlusClinical': None, 'exon': None, 'intron': {'index': 1, 'total': 3}, 'alphamissense': {'pathogenicity': None}, 'loftee': {'isLofNagnag': None, 'lofFilters': ['5UTR_SPLICE']}, 'spliceregion': {'extended_intronic_splice_region_variant': True}, 'utrannotator': {'existingInframeOorfs': None, 'existingOutofframeOorfs': None, 'existingUorfs': None, 'fiveutrAnnotation': None, 'fiveutrConsequence': None}, 'refseqTranscriptId': None, 'biotype': 'protein_coding', 'majorConsequence': 'splice_donor_variant', 'consequenceTerms': ['splice_donor_variant'],  'transcriptRank': 0},
-            {'aminoAcids': None, 'canonical': 1, 'codons': None, 'geneId': 'ENSG00000097046', 'hgvsc': 'ENST00000350997.12:c.375+139G>A', 'hgvsp': None, 'transcriptId': 'ENST00000350997', 'maneSelect': 'NM_013402.7', 'manePlusClinical': None, 'exon': None, 'intron': {'index': 1, 'total': 11}, 'alphamissense': {'pathogenicity': 0.1}, 'loftee': {'isLofNagnag': None, 'lofFilters': None}, 'spliceregion': {'extended_intronic_splice_region_variant': False}, 'utrannotator': {'existingInframeOorfs': None, 'existingOutofframeOorfs': None, 'existingUorfs': None, 'fiveutrAnnotation': None, 'fiveutrConsequence': None}, 'refseqTranscriptId': 'NM_013402.7', 'biotype': 'protein_coding', 'majorConsequence': 'missense_variant', 'consequenceTerms': ['missense_variant'], 'transcriptRank': 1},
+            {'aminoAcids': None, 'canonical': None, 'codons': None, 'geneId': 'ENSG00000097046', 'hgvsc': 'ENST00000466716.5:c.-264+1G>A', 'hgvsp': None, 'transcriptId': 'ENST00000466716', 'maneSelect': 'NM_013402.7', 'manePlusClinical': None, 'exon': None, 'intron': {'index': 1, 'total': 3}, 'alphamissense': {'pathogenicity': None}, 'loftee': {'isLofNagnag': None, 'lofFilters': ['5UTR_SPLICE']}, 'spliceregion': {'extended_intronic_splice_region_variant': True}, 'utrannotator': {'existingInframeOorfs': None, 'existingOutofframeOorfs': None, 'existingUorfs': None, 'fiveutrAnnotation': None, 'fiveutrConsequence': None}, 'refseqTranscriptId': 'NM_013402.7', 'biotype': 'protein_coding', 'majorConsequence': 'splice_donor_variant', 'consequenceTerms': ['splice_donor_variant'],  'transcriptRank': 0},
+            {'aminoAcids': None, 'canonical': 1, 'codons': None, 'geneId': 'ENSG00000097046', 'hgvsc': 'ENST00000350997.12:c.375+139G>A', 'hgvsp': None, 'transcriptId': 'ENST00000350997', 'maneSelect': None, 'manePlusClinical': None, 'exon': None, 'intron': {'index': 1, 'total': 11}, 'alphamissense': {'pathogenicity': 0.1}, 'loftee': {'isLofNagnag': None, 'lofFilters': None}, 'spliceregion': {'extended_intronic_splice_region_variant': False}, 'utrannotator': {'existingInframeOorfs': None, 'existingOutofframeOorfs': None, 'existingUorfs': None, 'fiveutrAnnotation': None, 'fiveutrConsequence': None}, 'refseqTranscriptId': None, 'biotype': 'protein_coding', 'majorConsequence': 'missense_variant', 'consequenceTerms': ['missense_variant'], 'transcriptRank': 1},
             {'aminoAcids': 'T/I', 'canonical': None, 'codons': 'aCc/aTc', 'geneId': 'ENSG00000097046', 'hgvsc': 'ENST00000257261.10:c.131C>T', 'hgvsp': 'ENSP00000257261.6:p.Thr44Ile', 'transcriptId': 'ENST00000257261', 'maneSelect': None, 'manePlusClinical': None, 'exon': {'index': 1, 'total': 12}, 'intron': None, 'alphamissense': {'pathogenicity': None}, 'loftee': {'isLofNagnag': None, 'lofFilters': None}, 'spliceregion': {'extended_intronic_splice_region_variant': False}, 'utrannotator': {'existingInframeOorfs': None, 'existingOutofframeOorfs': None, 'existingUorfs': None, 'fiveutrAnnotation': None, 'fiveutrConsequence': None}, 'refseqTranscriptId': 'NM_001281501.1', 'biotype': 'protein_coding', 'majorConsequence': 'missense_variant', 'consequenceTerms': ['missense_variant'], 'transcriptRank': 2},
         ],
     },
@@ -1294,7 +1294,7 @@ CACHED_CONSEQUENCES_BY_KEY = {1: [], 2: [{
     'extendedIntronicSpliceRegionVariant': True,
     'fiveutrConsequence': None,
     'geneId': 'ENSG00000097046',
-    'isManeSelect': False,
+    'isManeSelect': True,
 }, {
     'alphamissensePathogenicity': 0.1,
     'canonical': 1,
@@ -1302,7 +1302,7 @@ CACHED_CONSEQUENCES_BY_KEY = {1: [], 2: [{
     'extendedIntronicSpliceRegionVariant': False,
     'fiveutrConsequence': None,
     'geneId': 'ENSG00000097046',
-    'isManeSelect': True,
+    'isManeSelect': False,
 }, {
     'alphamissensePathogenicity': None,
     'canonical': None,

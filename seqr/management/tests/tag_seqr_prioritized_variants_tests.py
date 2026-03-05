@@ -19,13 +19,14 @@ SNV_INDEL_MATCHES = {
     'Compound Heterozygous - Confirmed': 0,
     'Compound Heterozygous - Both High Splice AI': 0,
     'Compound Heterozygous - Both High Splice AI - Confirmed': 0,
+    'Compound Heterozygous - Clinvar Pathogenic/ High Splice AI': 0,
     'Compound Heterozygous - High Splice AI': 0,
     'Compound Heterozygous - High Splice AI - Confirmed': 0,
-    'De Novo': 0,
+    'De Novo/ Dominant - Confirmed': 0,
+    'De Novo/ Dominant - Non-coding Transcript Exon Variant': 0,
     'De Novo/ Dominant': 0,
-    'Dominant': 0,
     'High Splice AI - De Novo/ Dominant': 0,
-    'High Splice AI - De Novo': 0,
+    'High Splice AI - De Novo/ Dominant Confirmed': 0,
     'High Splice AI - Recessive': 0,
     'High Splice AI - Recessive Confirmed': 0,
     'Recessive': 1,
@@ -42,7 +43,8 @@ MITO_MATCHES = {
     'Mitochondrial - De Novo/ Dominant': 1,
 }
 MULTI_TYPE_MATCHES = {
-    'Compound Heterozygous - One SV': 1,
+    'Compound Heterozygous - One SV': 0,
+    'Compound Heterozygous - One SV - Confirmed': 1,
 }
 
 class CheckNewSamplesTest(ClickhouseSearchTestCase):
@@ -58,7 +60,7 @@ class CheckNewSamplesTest(ClickhouseSearchTestCase):
 
         call_command('tag_seqr_prioritized_variants', PROJECT_GUID)
 
-        self._assert_expected_logs(num_new=7, creation_stats={
+        self._assert_expected_logs(num_new=6, creation_stats={
             'SNV_INDEL': {'num_variants': 3, 'tag_id_range': (1726986, 1726988)},
             'SV': {'num_variants': 2, 'tag_id_range': (1726988, 1726990)},
             'MITO': {'num_variants': 2, 'tag_id_range': (1726990, 1726992)},
@@ -88,7 +90,7 @@ class CheckNewSamplesTest(ClickhouseSearchTestCase):
 
         expected_tags = {
             (2,): {"Clinvar Pathogenic - Recessive": "2025-11-15", "Recessive": "2025-11-15"},
-            (2, 19): {"Compound Heterozygous - One SV": "2025-11-15"},
+            (2, 19): {"Compound Heterozygous - One SV - Confirmed": "2025-11-15"},
             (3, 4): {"Compound Heterozygous": "2025-11-15"},
             (6,): {'Mitochondrial - De Novo/ Dominant': '2025-11-15'},
             (8,): {"Mitochondrial - Pathogenic": "2025-11-15"},
@@ -103,18 +105,18 @@ class CheckNewSamplesTest(ClickhouseSearchTestCase):
         # Test notifications
         self.assertEqual(
             str(self.manager_user.notifications.first()),
-            '1kg project nåme with uniçøde Loaded 7 new seqr prioritized variants 0 minutes ago',
+            '1kg project nåme with uniçøde Loaded 6 new seqr prioritized variants 0 minutes ago',
         )
 
         mock_email.assert_called_with(
             subject='New prioritized variants tagged in seqr',
             to=['test_user_manager@test.com'],
-            body='Dear seqr user,\n\nThis is to notify you that 7 new seqr prioritized variants have been tagged in seqr project 1kg project nåme with uniçøde\n\nAll the best,\nThe seqr team',
+            body='Dear seqr user,\n\nThis is to notify you that 6 new seqr prioritized variants have been tagged in seqr project 1kg project nåme with uniçøde\n\nAll the best,\nThe seqr team',
         )
 
         mock_slack.assert_called_with(
             'seqr-data-loading',
-            '7 new seqr prioritized variants are loaded in <https://test-seqr.org/project/R0001_1kg/project_page|1kg project nåme with uniçøde>\n```2: 7 new tags```',
+            '6 new seqr prioritized variants are loaded in <https://test-seqr.org/project/R0001_1kg/project_page|1kg project nåme with uniçøde>\n```2: 6 new tags```',
         )
 
         # Test no new variants to tag
