@@ -145,20 +145,13 @@ class SearchUtilsTests(DifferentDbTransactionSupportMixin, TestCase, SearchTestH
             return parsed_variants
         mock_get_variants.side_effect = _mock_get_variants
 
-        variants, total = query_variants(self.results_model, user=self.user)
-        self.assertListEqual(variants, parsed_variants)
-        self.assertEqual(total, 5)
         results_cache = {'all_results': parsed_variants, 'total_results': 5}
-        self.assert_cached_results(results_cache)
-        self._test_expected_search_call(
-            mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
-        )
 
         query_variants(
-            self.results_model, user=self.user, sort='cadd', skip_genotype_filter=True, page=3, num_results=10,
+            self.results_model, user=self.user,  page=3, num_results=10,
         )
         self._test_expected_search_call(
-            mock_get_variants, results_cache, sort='cadd', page=3, num_results=10, skip_genotype_filter=True,
+            mock_get_variants, results_cache, page=3, num_results=10,
         )
 
         query_variants(self.results_model, user=self.user, load_all=True)

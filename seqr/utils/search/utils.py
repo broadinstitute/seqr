@@ -169,7 +169,7 @@ def _get_previous_search_results(search_model, sort, page, num_results, load_all
     return previous_search_results, cached_page, num_results
 
 
-def query_variants(search_model, sort=XPOS_SORT_KEY, skip_genotype_filter=False, load_all=False, user=None, page=1, num_results=100):
+def query_variants(search_model, sort=XPOS_SORT_KEY, load_all=False, user=None, page=1, num_results=100):
     genome_version = _get_search_genome_version(search_model)
     previous_search_results, cached_page, num_results = _get_previous_search_results(
         search_model, sort, page, num_results, load_all, genome_version,
@@ -179,7 +179,7 @@ def query_variants(search_model, sort=XPOS_SORT_KEY, skip_genotype_filter=False,
 
     variants, total_results = _query_variants(
         search_model, user, previous_search_results, genome_version, sort=sort, page=page, num_results=num_results,
-        skip_genotype_filter=skip_genotype_filter)
+    )
 
     if load_all:
         _validate_export_variant_count(total_results)
