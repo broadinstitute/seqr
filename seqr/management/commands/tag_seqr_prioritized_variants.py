@@ -2,7 +2,7 @@ from collections import defaultdict
 from datetime import datetime
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.management.base import BaseCommand, CommandError
-from django.db.models import Q, F
+from django.db.models import Q
 from django.db.models.functions import JSONObject
 
 from clickhouse_search.search import get_search_queryset, add_individual_guids, \
@@ -13,7 +13,7 @@ from seqr.models import Project, Family, Individual, Sample, LocusList
 from seqr.utils.communication_utils import send_project_notification
 from seqr.utils.gene_utils import get_genes
 from seqr.utils.search.constants import ANY_AFFECTED, HOMOZYGOUS_RECESSIVE, X_LINKED_RECESSIVE_MALE_AFFECTED, DE_NOVO
-from seqr.utils.search.utils import clickhouse_only, get_search_samples, COMPOUND_HET
+from seqr.utils.search.utils import get_search_samples, COMPOUND_HET
 from seqr.views.utils.orm_to_json_utils import SEQR_TAG_TYPE
 from seqr.views.utils.variant_utils import bulk_create_tagged_variants
 from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL
@@ -73,11 +73,16 @@ MODERATE_ANNOTATIONS = {
         'extended_intronic_splice_region_variant',
     ]
 }
+MODERATE_ANNOTATIONS_TRANSCRIPT_EXON_VARIANT = {
+    'vep_consequences': [
+        *MODERATE_ANNOTATIONS['vep_consequences'],
+        NON_CODING_TRANSCRIPT_EXON_VARIANT,
+    ]
+}
 HIGH_MODERATE_ANNOTATIONS = {
     'vep_consequences': [
         *HIGH_ANNOTATIONS['vep_consequences'],
-        *MODERATE_ANNOTATIONS['vep_consequences'],
-        NON_CODING_TRANSCRIPT_EXON_VARIANT,
+        *MODERATE_ANNOTATIONS_TRANSCRIPT_EXON_VARIANT['vep_consequences'],
     ]
 }
 SV_ANNOTATIONS = {
@@ -93,8 +98,8 @@ FREQ_FILTER = {
 }
 
 IN_SILICO_FILTER = {
-    'cadd': 22,
-    'revel': 0.2
+    'cadd': 22.8,
+    'revel': 0.291,
 }
 
 QUALITY_FILTER = {
@@ -206,12 +211,7 @@ SEARCHES = {
         },
         'Compound Heterozygous': {
             'inheritance_mode': COMPOUND_HET,
-            'annotations': {
-                'vep_consequences': [
-                    *HIGH_ANNOTATIONS['vep_consequences'],
-                    NON_CODING_TRANSCRIPT_EXON_VARIANT,
-                ],
-            },
+            'annotations': HIGH_ANNOTATIONS,
             'annotations_secondary': HIGH_MODERATE_ANNOTATIONS,
             **RECESSIVE_SEARCH,
         },
@@ -233,6 +233,14 @@ SEARCHES = {
             'inheritance_mode': COMPOUND_HET,
             **CONFIRMED_HIGH_SPLICE_AI_SEARCH,
             **RECESSIVE_SEARCH_NO_IN_SILICO,
+        },
+        'Compound Heterozygous - Clinvar Pathogenic/ High Splice AI': {
+            'inheritance_mode': COMPOUND_HET,
+            'split_pathogenicity_annotations': True,
+            'annotations': {
+                'splice_ai': 0.5,
+            },
+            **CLINVAR_RECESSIVE_SEARCH,
         },
         'Compound Heterozygous - High Splice AI': {
             'family_filter': {
@@ -266,43 +274,42 @@ SEARCHES = {
             },
             **RECESSIVE_SEARCH_NO_IN_SILICO,
         },
-        'De Novo': {
+        'De Novo/ Dominant - Confirmed': {
             'family_filter': {
-                MAX_AFFECTED_FAMILY_FILTER: 1,
                 CONFIRMED_FAMILY_FILTER: True
             },
-            'annotations': HIGH_MODERATE_ANNOTATIONS,
+            'annotations': {
+                'vep_consequences': [
+                    *HIGH_ANNOTATIONS['vep_consequences'],
+                    *MODERATE_ANNOTATIONS['vep_consequences'],
+                ]
+            },
             'require_any_gene': True,
             'in_silico': IN_SILICO_FILTER,
             **NO_PANEL_APP_DE_NOVO_SEARCH,
         },
-        'De Novo/ Dominant': {
+        'De Novo/ Dominant - Non-coding Transcript Exon Variant': {
             'family_filter': {
-                MAX_AFFECTED_FAMILY_FILTER: 1,
-                CONFIRMED_FAMILY_FILTER: False
+                CONFIRMED_FAMILY_FILTER: True
             },
-            'annotations': HIGH_ANNOTATIONS,
+            'annotations': {
+                'vep_consequences': [NON_CODING_TRANSCRIPT_EXON_VARIANT],
+            },
             'in_silico': IN_SILICO_FILTER,
             **DE_NOVO_SEARCH,
         },
-        'Dominant': {
-            'family_filter': {
-                'min_affected': 2
-            },
-            'annotations': HIGH_MODERATE_ANNOTATIONS,
-            'in_silico': {
-                **IN_SILICO_FILTER,
-                'splice_ai': 0.5,
-            },
+        'De Novo/ Dominant': {
+            'annotations': HIGH_ANNOTATIONS,
+            'in_silico': IN_SILICO_FILTER,
             **DE_NOVO_SEARCH,
         },
         'High Splice AI - De Novo/ Dominant': {
             **HIGH_SPLICE_AI_SEARCH,
             **DE_NOVO_SEARCH,
         },
-        'High Splice AI - De Novo': {
+        'High Splice AI - De Novo/ Dominant Confirmed': {
             **CONFIRMED_HIGH_SPLICE_AI_SEARCH,
-            **DE_NOVO_SEARCH,
+            **NO_PANEL_APP_DE_NOVO_SEARCH,
         },
         'High Splice AI - Recessive': {
             'inheritance_mode': HOMOZYGOUS_RECESSIVE,
@@ -395,7 +402,19 @@ MULTI_DATA_TYPE_SEARCHES = {
     'Compound Heterozygous - One SV': {
         'annotations': {
             **SV_ANNOTATIONS,
-            **HIGH_MODERATE_ANNOTATIONS,
+            **HIGH_ANNOTATIONS,
+        },
+        'in_silico': IN_SILICO_FILTER,
+        'freqs': FREQ_FILTER,
+        'qualityFilter': PASS_QUALITY_FILTER,
+    },
+    'Compound Heterozygous - One SV - Confirmed': {
+        'family_filter': {
+            CONFIRMED_FAMILY_FILTER: True,
+        },
+        'annotations': {
+            **SV_ANNOTATIONS,
+            **MODERATE_ANNOTATIONS_TRANSCRIPT_EXON_VARIANT,
         },
         'in_silico': IN_SILICO_FILTER,
         'freqs': FREQ_FILTER,
@@ -407,7 +426,6 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('project')
 
-    @clickhouse_only
     def handle(self, *args, **options):
         family_guid_map = {}
         family_name_map = {}
@@ -501,7 +519,7 @@ class Command(BaseCommand):
         cls._bulk_tag_variants(family_variant_data, updates, dataset_type)
 
     @classmethod
-    def _get_valid_family_sample_data(cls, project, sample_type, samples_by_family, family_filter=None):
+    def _get_valid_family_sample_data(cls, project, sample_type, samples_by_family, family_filter):
         if family_filter:
             samples_by_family = {
                 family_guid: sample_data for family_guid, sample_data in samples_by_family.items()
@@ -516,8 +534,6 @@ class Command(BaseCommand):
 
     @staticmethod
     def _family_passes_filter(sample_data, family_filter):
-        if family_filter.get('min_affected') and len(sample_data['affecteds']) < family_filter['min_affected']:
-            return False
         if family_filter.get(MAX_AFFECTED_FAMILY_FILTER) and len(sample_data['affecteds']) > family_filter[MAX_AFFECTED_FAMILY_FILTER]:
             return False
         if family_filter.get(AFFECTED_MALE_FAMILY_FILTER) and all(s['sex'] not in Individual.MALE_SEXES for s in sample_data['affecteds']):
@@ -573,15 +589,22 @@ class Command(BaseCommand):
         sv_dataset_type = next(dt for dt in samples_by_dataset_type.keys() if dt.startswith('SV'))
         sample_type = sv_dataset_type.split('_')[-1]
         families = set(samples_by_dataset_type[sv_dataset_type].keys()).intersection(samples_by_dataset_type[Sample.DATASET_TYPE_VARIANT_CALLS].keys())
-        sv_sample_data = cls._get_valid_family_sample_data(project, sample_type, {
+        sv_samples_by_family = {
             guid: sample_data for guid, sample_data in samples_by_dataset_type[sv_dataset_type].items() if guid in families
-        })
-        snv_indel_sample_data = cls._get_valid_family_sample_data(project, sample_type, {
-            guid: sample_data for guid, sample_data in samples_by_dataset_type[Sample.DATASET_TYPE_VARIANT_CALLS].items() if guid in families
-        })
+        }
+        snv_indel_samples_by_family = {
+            guid: sample_data for guid, sample_data in samples_by_dataset_type[Sample.DATASET_TYPE_VARIANT_CALLS].items()
+            if guid in families
+        }
         family_variant_data = defaultdict(lambda: {'matched_searches': set(), 'matched_comp_het_searches': set(), 'support_vars': set()})
         logger.info(f'Searching for prioritized multi data type variants in {len(families)} families in project {project.name}')
         for search_name, config_search in MULTI_DATA_TYPE_SEARCHES.items():
+            sv_sample_data = cls._get_valid_family_sample_data(
+                project, sample_type, sv_samples_by_family, config_search.get('family_filter'),
+            )
+            snv_indel_sample_data = cls._get_valid_family_sample_data(
+                project, sample_type, snv_indel_samples_by_family, config_search.get('family_filter'),
+            )
             queryset = get_multi_data_type_comp_het_results_queryset(
                 GENOME_VERSION_GRCh38, sv_dataset_type, sv_sample_data, snv_indel_sample_data, num_families=len(families),
                 genes=genes, **config_search, **ALL_SEARCHES_CRITERIA,
@@ -607,7 +630,7 @@ class Command(BaseCommand):
         return len(results)
 
     @classmethod
-    def _bulk_tag_variants(cls, family_variant_data, updates, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS):
+    def _bulk_tag_variants(cls, family_variant_data, updates, dataset_type=None):
         today = datetime.now().strftime('%Y-%m-%d')
         new_tag_keys, update_tag_keys, skipped_tag_keys = bulk_create_tagged_variants(
             family_variant_data, tag_name=SEQR_TAG_TYPE, get_metadata=cls._get_metadata(today, 'matched_searches'),

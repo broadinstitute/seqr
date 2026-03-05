@@ -14,8 +14,6 @@ from requests.exceptions import ConnectionError as RequestConnectionError
 from clickhouse_search.search import delete_clickhouse_project
 from seqr.utils.communication_utils import send_project_notification
 from seqr.utils.search.add_data_utils import trigger_data_loading, get_missing_family_samples, get_loaded_individual_ids, trigger_delete_families_search
-from seqr.utils.search.elasticsearch.es_utils import get_elasticsearch_status, delete_es_index
-from seqr.utils.search.utils import clickhouse_only, es_only, InvalidSearchException
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.vcf_utils import validate_vcf_and_get_samples, get_vcf_list
@@ -33,26 +31,6 @@ from settings import KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD, KIBANA_ELASTI
     LOADING_DATASETS_DIR, LUIGI_UI_SERVICE_HOSTNAME, LUIGI_UI_SERVICE_PORT
 
 logger = SeqrLogger(__name__)
-
-
-@data_manager_required
-@es_only
-def elasticsearch_status(request):
-    return create_json_response(get_elasticsearch_status())
-
-
-@data_manager_required
-@es_only
-def delete_index(request):
-    index = json.loads(request.body)['index']
-    active_samples = Sample.objects.filter(is_active=True, elasticsearch_index=index)
-    if active_samples:
-        projects = set(active_samples.values_list('individual__family__project__name', flat=True))
-        raise InvalidSearchException(f'"{index}" is still used by: {", ".join(projects)}')
-
-    updated_indices =  delete_es_index(index)
-
-    return create_json_response({'indices': updated_indices})
 
 RNA = 'RNA'
 TISSUE_FIELD = 'TissueOfOrigin'
@@ -413,7 +391,6 @@ def _get_valid_search_individuals(project, airtable_samples, vcf_samples, datase
 
 
 @data_manager_required
-@clickhouse_only
 def trigger_delete_project(request):
     request_json = json.loads(request.body)
     project_guid = request_json.pop('project')
@@ -431,7 +408,6 @@ def trigger_delete_project(request):
 
 
 @data_manager_required
-@clickhouse_only
 def trigger_delete_family(request):
     request_json = json.loads(request.body)
     family_guid = request_json.pop('family')

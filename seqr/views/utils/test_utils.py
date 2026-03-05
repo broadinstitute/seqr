@@ -19,6 +19,36 @@ from seqr.models import Project, SavedVariant, CAN_VIEW, CAN_EDIT
 WINDOW_REGEX_TEMPLATE = 'window\.{key}=(?P<value>[^)<]+)'
 
 
+class DifferentDbTransactionSupportMixin(object):
+
+    @classmethod
+    def _databases_support_transactions(cls):
+        return True
+
+    @classmethod
+    def _rollback_atomics(cls, atomics):
+        """Django testcases asssume either all database support transactions or none do. This properly cleans up transaction blocks on a per-db basis"""
+        for db_name in reversed(cls._databases_names()):
+            if connections[db_name].features.supports_transactions:
+                transaction.set_rollback(True, using=db_name)
+            atomics[db_name].__exit__(None, None, None)
+
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        for db_name in cls._databases_names():
+            if not connections[db_name].features.supports_transactions:
+                call_command(
+                    "flush",
+                    verbosity=0,
+                    interactive=False,
+                    database=db_name,
+                    reset_sequences=False,
+                    allow_cascade=False,
+                    inhibit_post_migrate=False,
+                )
+
+
 class AuthenticationTestMixin(object):
     SUPERUSER = 'superuser'
     ANALYST = 'analyst'
@@ -29,7 +59,6 @@ class AuthenticationTestMixin(object):
     AUTHENTICATED_USER = 'authenticated'
     NO_POLICY_USER = 'no_policy'
 
-    ES_HOSTNAME = 'testhost'
     MOCK_AIRTABLE_KEY = ''
     CLICKHOUSE_HOSTNAME = ''
 
@@ -44,9 +73,6 @@ class AuthenticationTestMixin(object):
     no_policy_user = None
 
     def set_up_test(self):
-        patcher = mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', self.ES_HOSTNAME)
-        patcher.start()
-        self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.utils.airtable_utils.AIRTABLE_API_KEY', self.MOCK_AIRTABLE_KEY)
         patcher.start()
         self.addCleanup(patcher.stop)
@@ -271,8 +297,8 @@ class AuthenticationTestMixin(object):
     def assert_no_logs(self):
         self.assertEqual(self._log_stream.getvalue(), '')
 
-class AuthenticationTestCase(AuthenticationTestMixin, TestCase):
-    databases = ['default', 'reference_data']
+class AuthenticationTestCase(DifferentDbTransactionSupportMixin, AuthenticationTestMixin, TestCase):
+    databases = '__all__'
 
     def setUp(self):
         self.set_up_test()
@@ -520,39 +546,8 @@ def get_group_members_side_effect(user, group, use_sa_credentials=False):
     return {}
 
 
-class DifferentDbTransactionSupportMixin(object):
-
-    @classmethod
-    def _databases_support_transactions(cls):
-        return True
-
-    @classmethod
-    def _rollback_atomics(cls, atomics):
-        """Django testcases asssume either all database support transactions or none do. This properly cleans up transaction blocks on a per-db basis"""
-        for db_name in reversed(cls._databases_names()):
-            if connections[db_name].features.supports_transactions:
-                transaction.set_rollback(True, using=db_name)
-            atomics[db_name].__exit__(None, None, None)
-
-    @classmethod
-    def tearDownClass(cls):
-        super().tearDownClass()
-        for db_name in cls._databases_names():
-            if not connections[db_name].features.supports_transactions:
-                call_command(
-                    "flush",
-                    verbosity=0,
-                    interactive=False,
-                    database=db_name,
-                    reset_sequences=False,
-                    allow_cascade=False,
-                    inhibit_post_migrate=False,
-                )
-
-
 class AnvilAuthenticationTestMixin(AuthenticationTestMixin):
 
-    ES_HOSTNAME = ''
     CLICKHOUSE_HOSTNAME = 'testhost'
     MOCK_AIRTABLE_KEY = 'airflow_access'
     SKIP_RESET_VARIANT_JSON = False
@@ -599,6 +594,7 @@ class AnvilAuthenticationTestMixin(AuthenticationTestMixin):
         self.addCleanup(patcher.stop)
         super().set_up_test()
         if self.CLICKHOUSE_HOSTNAME and not self.SKIP_RESET_VARIANT_JSON:
+            # TODO update fixture data to match
             SavedVariant.objects.filter(key__isnull=False).update(saved_variant_json={})
 
     @classmethod

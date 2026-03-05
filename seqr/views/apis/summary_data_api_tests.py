@@ -30,7 +30,7 @@ VARIANT_TAG_RESPONSE_KEYS = {
     'variantTagsByGuid', 'variantNotesByGuid', 'variantFunctionalDataByGuid', 'savedVariantsByGuid',
 }
 SAVED_VARIANT_RESPONSE_KEYS = {
-    *VARIANT_TAG_RESPONSE_KEYS, 'projectsByGuid', 'locusListsByGuid', 'genesById',
+    *VARIANT_TAG_RESPONSE_KEYS, 'projectsByGuid', 'locusListsByGuid', 'genesById', 'totalSampleCounts',
     'individualsByGuid', 'familiesByGuid', 'familyNotesByGuid', 'mmeSubmissionsByGuid', 'transcriptsById',
 }
 
@@ -394,7 +394,7 @@ class SummaryDataAPITest(AirtableTest):
         response = self.client.get(gene_url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), self.SAVED_VARIANT_RESPONSE_KEYS)
+        self.assertSetEqual(set(response_json.keys()), SAVED_VARIANT_RESPONSE_KEYS)
         expected_variant_guids = {
             'SV0000001_2103343353_r0390_100', 'SV0000007_prefix_19107_DEL_r00', 'SV0000006_1248367227_r0003_tes',
         }
@@ -419,7 +419,7 @@ class SummaryDataAPITest(AirtableTest):
         response = self.client.get(gene_url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), self.SAVED_VARIANT_RESPONSE_KEYS)
+        self.assertSetEqual(set(response_json.keys()), SAVED_VARIANT_RESPONSE_KEYS)
         self.assertSetEqual(set(response_json['savedVariantsByGuid'].keys()), expected_variant_guids)
 
         multi_tag_url = reverse(saved_variants_page, args=['Review;Tier 1 - Novel gene and phenotype'])
@@ -629,6 +629,22 @@ class SummaryDataAPITest(AirtableTest):
         self.assertEqual(new_saved_variant.ref, 'GAGA')
         self.assertEqual(new_saved_variant.alt, 'G')
         self.assertListEqual(new_saved_variant.gene_ids, ['ENSG00000135953', 'ENSG00000228198'])
+        self.assertEqual(new_saved_variant.key, 101)
+        self.assertEqual(new_saved_variant.dataset_type, 'SNV_INDEL')
+        self.assertDictEqual(new_saved_variant.genotypes, {
+            'I000004_hg00731': {
+                'ab': 0, 'gq': 99, 'sampleId': 'HG00731', 'numAlt': 2, 'dp': 67, 'filters': [],
+                'familyGuid': 'F000002_2', 'individualGuid': 'I000004_hg00731', 'sampleType': 'WES',
+            },
+            'I000005_hg00732': {
+                'ab': 0, 'gq': 96, 'sampleId': 'HG00732', 'numAlt': 1, 'dp': 42, 'filters': [],
+                'familyGuid': 'F000002_2', 'individualGuid': 'I000005_hg00732', 'sampleType': 'WES',
+            },
+            'I000006_hg00733': {
+                'ab': 0, 'gq': 96, 'sampleId': 'HG00733', 'numAlt': 0, 'dp': 42, 'filters': [],
+                'familyGuid': 'F000002_2', 'individualGuid': 'I000006_hg00733', 'sampleType': 'WES',
+            },
+        })
 
     def _has_expected_metadata_response(self, response, expected_individuals, has_airtable=False, has_duplicate=False):
         self.assertEqual(response.status_code, 200)
@@ -828,25 +844,16 @@ class SummaryDataAPITest(AirtableTest):
 
 # Tests for AnVIL access disabled
 class LocalSummaryDataAPITest(AuthenticationTestCase, SummaryDataAPITest):
-    fixtures = ['users', '1kg_project', 'reference_data', 'report_variants']
+    fixtures = ['users', '1kg_project', 'reference_data', 'report_variants', 'clickhouse_saved_variants']
     NUM_MANAGER_SUBMISSIONS = 4
     ADDITIONAL_SAMPLES = ['NA21234', 'NA21987', 'NA21654']
     HAS_AIRTABLE = False
-    SAVED_VARIANT_RESPONSE_KEYS = SAVED_VARIANT_RESPONSE_KEYS
 
     def _test_metadata_airtable_responses(self, include_airtable_url, expected_individuals):
         # Returns successfully without airtable data when disabled
         response = self.client.get(include_airtable_url)
         self.assertEqual(response.status_code, 200)
         self._has_expected_metadata_response(response, expected_individuals)
-
-    @mock.patch('seqr.views.utils.variant_utils.get_es_variants_for_variant_ids', lambda *args, **kwargs: PARSED_VARIANTS)
-    def test_bulk_update_family_external_analysis(self, *args, **kwargs):
-        super().test_bulk_update_family_external_analysis(*args, **kwargs)
-
-    def _assert_expected_new_saved_variant(self, new_saved_variant):
-        super()._assert_expected_new_saved_variant(new_saved_variant)
-        self.assertDictEqual(new_saved_variant.saved_variant_json, PARSED_VARIANTS[1])
 
 
 def assert_has_expected_calls(self, users, skip_group_call_idxs=None):
@@ -864,7 +871,6 @@ class AnvilSummaryDataAPITest(AnvilAuthenticationTestCase, SummaryDataAPITest):
     NUM_MANAGER_SUBMISSIONS = 4
     ADDITIONAL_SAMPLES = []
     HAS_AIRTABLE = True
-    SAVED_VARIANT_RESPONSE_KEYS = {*SAVED_VARIANT_RESPONSE_KEYS, 'totalSampleCounts'}
 
     def test_mme_details(self, *args):
         super(AnvilSummaryDataAPITest, self).test_mme_details(*args)
@@ -878,22 +884,3 @@ class AnvilSummaryDataAPITest(AnvilAuthenticationTestCase, SummaryDataAPITest):
         ], skip_group_call_idxs=[2])
         self.mock_get_ws_access_level.assert_called_with(
             self.analyst_user, 'my-seqr-billing', 'anvil-1kg project nåme with uniçøde')
-
-    def _assert_expected_new_saved_variant(self, new_saved_variant):
-        super()._assert_expected_new_saved_variant(new_saved_variant)
-        self.assertEqual(new_saved_variant.key, 101)
-        self.assertEqual(new_saved_variant.dataset_type, 'SNV_INDEL')
-        self.assertDictEqual(new_saved_variant.genotypes, {
-            'I000004_hg00731': {
-                'ab': 0, 'gq': 99, 'sampleId': 'HG00731', 'numAlt': 2, 'dp': 67, 'filters': [],
-                'familyGuid': 'F000002_2', 'individualGuid': 'I000004_hg00731', 'sampleType': 'WES',
-            },
-            'I000005_hg00732': {
-                'ab': 0, 'gq': 96, 'sampleId': 'HG00732', 'numAlt': 1, 'dp': 42, 'filters': [],
-                'familyGuid': 'F000002_2', 'individualGuid': 'I000005_hg00732', 'sampleType': 'WES',
-            },
-            'I000006_hg00733': {
-                'ab': 0, 'gq': 96, 'sampleId': 'HG00733', 'numAlt': 0, 'dp': 42, 'filters': [],
-                'familyGuid': 'F000002_2', 'individualGuid': 'I000006_hg00733', 'sampleType': 'WES',
-            },
-        })

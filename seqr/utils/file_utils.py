@@ -13,16 +13,14 @@ def run_command(command, user=None, pipe_errors=False):
     return subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE if pipe_errors else subprocess.STDOUT, shell=True) # nosec
 
 
-def _run_gsutil_command(command, gs_path, gunzip=False, user=None, pipe_errors=False, no_project=False):
+def _run_gsutil_command(command, gs_path, gunzip=False, user=None, pipe_errors=False, no_project=False, additional_args=''):
     if not is_google_bucket_file_path(gs_path):
         raise Exception('A Google Storage path is expected.')
 
     #  Anvil buckets are requester-pays and we bill them to the anvil project
     google_project = get_google_project(gs_path) if not no_project else None
     project_arg = '-u {} '.format(google_project) if google_project else ''
-    command = 'gsutil {project_arg}{command} {gs_path}'.format(
-        project_arg=project_arg, command=command, gs_path=gs_path,
-    )
+    command = f'gsutil {project_arg}{command} {gs_path}{additional_args}'
     if gunzip:
         command += " | gunzip -c -q - "
 
@@ -75,9 +73,12 @@ def file_iter(file_path, byte_range=None, raw_content=False, user=None, **kwargs
             yield line
     else:
         mode = 'rb' if raw_content else 'r'
-        open_func = gzip.open if file_path.endswith("gz") else open
+        is_gz = file_path.endswith("gz")
+        open_func = gzip.open if is_gz else open
         with open_func(file_path, mode) as f:
             for line in f:
+                if is_gz and not raw_content:
+                    line = line.decode('utf-8')
                 yield line
 
 

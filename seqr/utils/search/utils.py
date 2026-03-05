@@ -10,9 +10,8 @@ from seqr.models import Sample, Individual, Project, VariantSearchResults
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_get_wildcard_json, safe_redis_set_json
 from seqr.utils.search.constants import XPOS_SORT_KEY, PRIORITIZED_GENE_SORT, RECESSIVE, COMPOUND_HET, \
-    MAX_NO_LOCATION_COMP_HET_FAMILIES, SV_ANNOTATION_TYPES, ALL_DATA_TYPES, MAX_EXPORT_VARIANTS, X_LINKED_RECESSIVE
-from seqr.utils.search.elasticsearch.es_utils import ping_elasticsearch, \
-    es_backend_enabled, ping_kibana
+    MAX_NO_LOCATION_COMP_HET_FAMILIES, SV_ANNOTATION_TYPES, ALL_DATA_TYPES, MAX_EXPORT_VARIANTS, X_LINKED_RECESSIVE, \
+    MAX_VARIANTS
 from seqr.utils.gene_utils import parse_locus_list_items
 from seqr.utils.xpos_utils import get_xpos, format_chrom
 
@@ -41,38 +40,6 @@ DATASET_TYPES_LOOKUP[DATASET_TYPE_NO_MITO] = [Sample.DATASET_TYPE_VARIANT_CALLS,
 
 MAX_GENES_FOR_FILTER = 10000
 MIN_MULTI_FAMILY_SEQR_AC = 5000
-
-
-def es_only(func):
-    def _wrapped(*args, **kwargs):
-        if not es_backend_enabled():
-            raise ValueError(f'{func.__name__} is disabled without the elasticsearch backend')
-        return func(*args, **kwargs)
-    return _wrapped
-
-
-def clickhouse_only(func):
-    def _wrapped(*args, **kwargs):
-        if es_backend_enabled():
-            raise ValueError(f'{func.__name__} is disabled without the clickhouse backend')
-        return func(*args, **kwargs)
-    return _wrapped
-
-
-def backend_specific_call(es_func, clickhouse_func):
-    if es_backend_enabled():
-        return es_func
-    else:
-        return clickhouse_func
-
-
-def ping_search_backend():
-    # Clickhouse backend does not need special uptime testing, will be checked with the other database connection pings
-    backend_specific_call(ping_elasticsearch, lambda: None)()
-
-
-def ping_search_backend_admin():
-    backend_specific_call(ping_kibana, lambda: True)()
 
 
 def _get_filtered_search_samples(search_filter, active_only=True):
@@ -132,7 +99,6 @@ def get_single_variant(family, variant_id, user=None):
     return variant
 
 
-@clickhouse_only
 def variant_lookup(user, variant_id, genome_version, sample_type=None, affected_only=False, hom_only=False):
     cache_fields = ['variant_lookup_results', variant_id, genome_version]
     if affected_only:
