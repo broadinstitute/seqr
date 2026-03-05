@@ -7,7 +7,7 @@ from clickhouse_search.search import get_variant_main_transcripts_by_key
 from seqr.models import SavedVariant, VariantTagType, VariantTag, VariantNote, VariantFunctionalData,\
     Family, GeneNote, Project, Sample
 from seqr.utils.search.elasticsearch.es_utils import update_project_saved_variant_json
-from seqr.utils.search.utils import backend_specific_call, es_only
+from seqr.utils.search.utils import es_only
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json, \
     create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
@@ -125,7 +125,7 @@ def _create_variant_note(saved_variants, note_json, user, genome_version):
 
     response = {}
     if note_json.get('saveAsGeneNote'):
-        gene_id = backend_specific_call(_variant_gene_id, _clickhouse_variant_gene_id)(saved_variants[0], genome_version)
+        gene_id = _variant_gene_id(saved_variants[0], genome_version)
         create_model_from_json(GeneNote, {'note': note_json.get('note'), 'gene_id': gene_id}, user)
         response['genesById'] = {gene_id: {
             'notes': get_json_for_gene_notes_by_gene_id([gene_id], user)[gene_id],
@@ -135,16 +135,8 @@ def _create_variant_note(saved_variants, note_json, user, genome_version):
 
 
 def _variant_gene_id(variant, genome_version):
-    if variant.selected_main_transcript_id and len(variant.gene_ids) > 1:
-        return next(
-            gene_id for gene_id, transcripts in variant.saved_variant_json['transcripts'].items()
-            if any(t['transcriptId'] == variant.selected_main_transcript_id for t in transcripts))
-    return variant.gene_ids[0]
-
-
-def _clickhouse_variant_gene_id(variant, genome_version):
-    if not (variant.key and variant.selected_main_transcript_id) or len(variant.gene_ids) == 1:
-        return _variant_gene_id(variant, genome_version)
+    if len(variant.gene_ids) == 1 or not variant.selected_main_transcript_id:
+        return variant.gene_ids[0]
     return get_variant_main_transcripts_by_key(
         genome_version, Sample.DATASET_TYPE_VARIANT_CALLS, {variant.key: [variant.selected_main_transcript_id]},
     )[variant.key]['main_transcripts'][variant.selected_main_transcript_id].get('geneId')
