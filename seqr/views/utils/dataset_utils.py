@@ -465,9 +465,10 @@ def _process_rna_errors(gene_ids, missing_required_fields, unmatched_samples, ig
         ]
         misconfigured = defaultdict(set)
         for sample_id in sorted(unmatched_samples.intersection(set((misconfigured_samples or {}).keys()))):
-            misconfigured[misconfigured_samples[sample_id]].add(sample_id)
+            for error in misconfigured_samples[sample_id]:
+                misconfigured[error].add(sample_id)
         unmatched += [
-            (samples, f'that are improperly configured in Airtable with {error}') for error, samples in misconfigured.items()
+            (samples, f'that are improperly configured in Airtable with {error}') for error, samples in sorted(misconfigured.items())
         ]
         for samples, _ in unmatched:
             unmatched_samples -= samples
