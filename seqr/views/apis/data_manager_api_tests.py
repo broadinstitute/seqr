@@ -287,6 +287,47 @@ AIRTABLE_RNA_SAMPLE_RECORDS = [
             'TissueOfOrigin': ['Muscle', 'Brain'],
         }
     },
+    {
+        'id': 'rec2B6OGmVpAkQW4s',
+        'fields': {
+            'CollaboratorSampleID': 'NA12346',
+            'SeqrProject': [
+                'https://seqr.broadinstitute.org/project/R0002_empty/project_page',
+                'https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page',
+            ],
+            'PDOStatus': ['RNA ready to load', 'RNA ready to load'],
+        }
+    },
+    {
+        'id': 'rec2B6OGmVpAkQW5s',
+        'fields': {
+            'CollaboratorSampleID': 'NA12347',
+            'SeqrProject': [
+                'https://seqr.broadinstitute.org/project/R0002_empty/project_page',
+                'https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page',
+            ],
+            'PDOStatus': ['RNA ready to load', 'RNA ready to load'],
+            'TissueOfOrigin': ['Muscle'],
+        }
+    },
+    {
+        'id': 'recW56C2CJW5lT77x',
+        'fields': {
+            'CollaboratorSampleID': 'NA12348',
+            'SeqrProject': ['R0003_test'],
+            'PDOStatus': ['RNA ready to load'],
+            'TissueOfOrigin': ['Muscle'],
+        }
+    },
+    {
+        'id': 'recW56C2CJW5lT78x',
+        'fields': {
+            'CollaboratorSampleID': 'NA11111',
+            'SeqrProject': ['https://seqr.broadinstitute.org/project/R0003_test/project_page'],
+            'PDOStatus': ['RNA ready to load'],
+            'TissueOfOrigin': ['Muscle'],
+        }
+    },
     *INVALID_AIRTABLE_SAMPLE_RECORDS['records'],
 ]
 
@@ -401,6 +442,7 @@ class DataManagerAPITest(AirtableTest):
                 ['NA19675_D2', 'ENSG00000233750', 'detail1', 0.064, '0.0000057', 7.8],
                 ['NA19675_D3', 'ENSG00000233750', 'detail1', 0.064, '0.0000057', 7.8],
                 ['NA20888', 'ENSG00000240361', '', 0.04, 0.112, 1.9],
+                ['NA12345', 'ENSG00000240361', '', 0.04, 0.112, 1.9],
             ],
             'skipped_samples': 'NA19675_D3',
             'sample_tissue_type': 'Muscle',
@@ -426,6 +468,8 @@ class DataManagerAPITest(AirtableTest):
                 ['NA20888', 'ENSG00000240361', 0.112, ''],
                 # a project mismatched sample NA20878
                 ['NA20878', 'ENSG00000233750', 0.064, ''],
+                # invalid airtable sample
+                ['NA12345', 'ENSG00000233750', 0.064, ''],
             ],
             'skipped_samples': 'NA19675_D3, NA20878',
             'sample_tissue_type': 'Muscle',
@@ -456,10 +500,13 @@ class DataManagerAPITest(AirtableTest):
                 ['NA19675_D3', 'ENSG00000233750', 'chr2', 167258096, 167258349, '*',
                  'psi3', 1.56E-25, 6.33, 0.45, 143, 14.3, 1433, 143.3, 1, 20],
                 # a new sample NA20888
-                ['NA20888', '', 'chr2', 167258096, 167258349, '*',
+                ['NA20888', 'NA', 'chr2', 167258096, 167258349, '*',
                  'psi3', 1.56E-25, 6.33, 0.45, 143, 14.3, 1433, 143.3, 1, 20],
                 # a project mismatched sample NA20878
                 ['NA20878', 'ENSG00000233750', 'chr2', 167258096, 167258349, '*', 'psi3',
+                 1.56E-25, 6.33, 0.45, 143, 14.3, 1433, 143.3, 1, 20],
+                # invalid airtable samples
+                ['NA12345', 'ENSG00000233750', 'chr2', 167258096, 167258349, '*', 'psi3',
                  1.56E-25, 6.33, 0.45, 143, 14.3, 1433, 143.3, 1, 20],
             ],
             'skipped_samples': 'NA19675_D3, NA20878',
@@ -473,20 +520,14 @@ class DataManagerAPITest(AirtableTest):
         },
     }
 
-    def _has_expected_file_loading_logs(self, file, user, info=None, warnings=None, additional_logs=None, additional_logs_offset=None, include_airtable_logs=False):
+    def _has_expected_file_loading_logs(self, file, file_path, user, info=None, warnings=None, additional_logs=None, additional_logs_offset=None):
         expected_logs = [
-            (f'==> gsutil ls {file}', None),
-            (f'==> gsutil cat {file} | gunzip -c -q - ', None),
+            ('Fetching Samples records 0-1 from airtable', None),
+            ('Fetched 10 Samples records from airtable', None),
+            (f'==> gsutil cp {file} tmp/temp_uploads/{file_path}', None),
         ] + [(info_log, None) for info_log in info or []] + [
             (warn_log, {'severity': 'WARNING'}) for warn_log in warnings or []
         ]
-        if include_airtable_logs:
-            expected_logs = [
-                ('Fetching Samples records 0-1 from airtable', None),
-                ('Fetched 6 Samples records from airtable', None),
-                ('Skipping samples associated with misconfigured PDOs in Airtable: HG00731, NA21234', {'severity': 'WARNING'}),
-                ('Skipping samples associated with multiple conflicting PDOs in Airtable: NA12345', {'severity': 'WARNING'}),
-            ] + expected_logs
         if additional_logs:
             if additional_logs_offset:
                 for log in reversed(additional_logs):
@@ -520,15 +561,17 @@ class DataManagerAPITest(AirtableTest):
     @mock.patch('seqr.utils.communication_utils.BASE_URL', 'https://test-seqr.org/')
     @mock.patch('seqr.utils.search.add_data_utils.SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL', 'seqr-data-loading')
     @mock.patch('seqr.views.utils.file_utils.tempfile.gettempdir', lambda: 'tmp/')
+    @mock.patch('seqr.views.utils.dataset_utils.os.path.isfile', lambda *args: True)
     @mock.patch('seqr.utils.communication_utils.send_html_email')
     @mock.patch('seqr.utils.communication_utils.safe_post_to_slack')
     @mock.patch('seqr.views.utils.dataset_utils.datetime')
     @mock.patch('seqr.views.utils.dataset_utils.os.mkdir')
     @mock.patch('seqr.views.utils.dataset_utils.os.rename')
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
-    @mock.patch('seqr.views.utils.dataset_utils.gzip.open')
+    @mock.patch('seqr.utils.file_utils.open')
+    @mock.patch('seqr.utils.file_utils.gzip.open')
     @responses.activate
-    def _test_update_rna_seq(self, data_type, mock_open, mock_subprocess,
+    def _test_update_rna_seq(self, data_type, mock_open, mock_unzipped_open, mock_subprocess,
                             mock_rename, mock_mkdir, mock_datetime, mock_send_slack, mock_send_email):
         url = reverse(update_rna_seq)
         self.check_pm_login(url)
@@ -543,28 +586,34 @@ class DataManagerAPITest(AirtableTest):
         # Test errors
         body = {'dataType': data_type, 'file': 'gs://rna_data/muscle_samples.tsv'}
         mock_datetime.now.return_value = datetime(2020, 4, 15)
-        mock_does_file_exist = mock.MagicMock()
-        mock_does_file_exist.wait.return_value = 1
-        mock_subprocess.side_effect = [mock_does_file_exist]
+        mock_subprocess.return_value.wait.return_value = 1
+        mock_subprocess.return_value.stdout = [b'CommandException: No URLs matched gs://rna_data/muscle_samples.tsv']
         self.reset_logs()
         response = self._assert_expected_pm_access(
             lambda: self.client.post(url, content_type='application/json', data=json.dumps(body)), status_code=400,
         )
-        self.assertDictEqual(response.json(), {'error': 'File not found: gs://rna_data/muscle_samples.tsv'})
+        self.assertDictEqual(response.json(), {'error': 'Run command failed: CommandException: No URLs matched gs://rna_data/muscle_samples.tsv'})
 
-        mock_does_file_exist.wait.return_value = 0
-        mock_file_iter = mock.MagicMock()
+        mock_subprocess.return_value.wait.return_value = 0
         def _set_file_iter_stdout(rows):
-            mock_file_iter.wait.return_value = 0
-            mock_file_iter.stdout = [('\t'.join([str(col) for col in row]) + '\n').encode() for row in rows]
-            mock_subprocess.side_effect = [mock_does_file_exist, mock_file_iter, mock_does_file_exist]
+            mock_unzipped_open.return_value.__enter__.return_value.__iter__.return_value = [
+                ('\t'.join([str(col) for col in row]) + '\n') for row in rows
+            ]
+
+        file_path = RNA_FILENAME_TEMPLATE.format(data_type)
+        mock_files = defaultdict(mock.MagicMock)
+        mock_open.side_effect = lambda file_name, *args: mock_files[file_name]
+        def _set_gzip_file_iter_stdout(mock_file, rows):
+            mock_file.__enter__.return_value.__iter__.return_value = [
+                ('\t'.join([str(col) for col in row]) + '\n').encode() for row in rows
+            ]
 
         _set_file_iter_stdout([])
         invalid_body = {**body, 'file': body['file'].replace('tsv', 'xlsx')}
         response = self.client.post(url, content_type='application/json', data=json.dumps(invalid_body))
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(
-            response.json(), {'error': 'Unexpected iterated file type: gs://rna_data/muscle_samples.xlsx'})
+            response.json(), {'error': 'Unexpected iterated file type: muscle_samples.xlsx'})
 
         _set_file_iter_stdout([['']])
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
@@ -576,7 +625,7 @@ class DataManagerAPITest(AirtableTest):
         _set_file_iter_stdout([header, loaded_data_row])
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'errors': [f'Unable to find matches for the following samples: {loaded_data_row[0]}', 'No new samples detected'], 'warnings': None})
+        self.assertDictEqual(response.json(), {'errors': [f'Unable to load the following samples with no match: {loaded_data_row[0]}'], 'warnings': None})
 
         airtable_sample_records = [
             {
@@ -602,8 +651,21 @@ class DataManagerAPITest(AirtableTest):
             self.assertEqual(response.status_code, 400)
             self.assertEqual(response.json()['errors'][0], 'Samples missing required "gene_id": NA19675_D2')
 
-        # Test already loaded data
-        _set_file_iter_stdout([header, loaded_data_row])
+        # Test invalid airtable samples
+        _set_file_iter_stdout([header, *[[sample_id] + loaded_data_row[1:] for sample_id in [
+            'NA12345', 'NA12346', 'NA12347', 'NA12348', 'NA11111',
+        ]]])
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(response.json()['errors'], [
+            'Unable to load the following samples from Airtable with no corresponding seqr ID: NA11111',
+            'Unable to load the following samples that are improperly configured in Airtable with multiple tissues specified: NA12345',
+            'Unable to load the following samples that are improperly configured in Airtable with no tissue specified: NA12346',
+            'Unable to load the following samples that are improperly configured in Airtable with multiple conflicting PDOs: NA12347',
+            'Unable to load the following samples that are improperly configured in Airtable with no project specified: NA12348',
+        ])
+
+        _set_gzip_file_iter_stdout(mock_files[f'tmp/temp_uploads/{file_path}/muscle_samples.tsv.gz'], [header, loaded_data_row])
         body['file'] = 'gs://rna_data/muscle_samples.tsv.gz'
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
@@ -612,7 +674,6 @@ class DataManagerAPITest(AirtableTest):
         mock_send_slack.reset_mock()
         mock_subprocess.reset_mock()
         self.reset_logs()
-        _set_file_iter_stdout([header, loaded_data_row])
         body['skipNewSampleValidation'] = True
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
@@ -622,21 +683,18 @@ class DataManagerAPITest(AirtableTest):
         ]
         warnings = ['Skipped loading for 1 samples already loaded from this file', 'No new samples detected']
         self.assertDictEqual(response.json(), {'info': info, 'warnings': warnings, 'sampleGuids': [], 'fileName': mock.ANY})
-        self._has_expected_file_loading_logs('gs://rna_data/muscle_samples.tsv.gz', info=info, warnings=warnings, user=self.data_manager_user, include_airtable_logs=True)
+        self._has_expected_file_loading_logs('gs://rna_data/muscle_samples.tsv.gz', file_path, info=info, warnings=warnings, user=self.data_manager_user)
         self.assertEqual(model_cls.objects.count(), params['initial_model_count'])
         mock_send_slack.assert_not_called()
         mock_send_email.assert_not_called()
-        self.assertEqual(mock_subprocess.call_count, 2)
-        mock_subprocess.assert_has_calls([mock.call(command, stdout=-1, stderr=-2, shell=True) for command in [  # nosec
-            f'gsutil ls {body["file"]}',
-            f'gsutil cat {body["file"]} | gunzip -c -q - ',
-        ]])
+        self.assertEqual(mock_subprocess.call_count, 1)
+        mock_subprocess.assert_called_with(f'gsutil cp {body["file"]} tmp/temp_uploads/{file_path}', stdout=-1, stderr=-2, shell=True) # nosec
 
         def _test_basic_data_loading(data, num_parsed_samples, num_loaded_samples, new_sample_individual_id, body,
                                      project_names, num_created_samples=1, warnings=None, additional_logs=None):
             self.reset_logs()
             responses.calls.reset()
-            _set_file_iter_stdout([header] + data)
+            _set_gzip_file_iter_stdout(mock_files[f'tmp/temp_uploads/{file_path}/new_muscle_samples.tsv.gz'], [header] + data)
             response = self.client.post(url, content_type='application/json', data=json.dumps(body))
             self.assertEqual(response.status_code, 200)
             num_projects = len(project_names.split(','))
@@ -660,13 +718,13 @@ class DataManagerAPITest(AirtableTest):
                 'entityIds': response_json['sampleGuids'] if num_created_samples > 1 else [new_sample_guid],
             }})]
             self._has_expected_file_loading_logs(
-                'gs://rna_data/new_muscle_samples.tsv.gz', info=info, warnings=warnings, user=self.data_manager_user,
-                additional_logs=additional_logs, additional_logs_offset=6, include_airtable_logs=True)
+                'gs://rna_data/new_muscle_samples.tsv.gz', file_path, info=info, warnings=warnings, user=self.data_manager_user,
+                additional_logs=additional_logs, additional_logs_offset=3)
 
             self.assertEqual(len(responses.calls), 1)
             self.assert_expected_airtable_call(
                 call_index=0,
-                filter_formula="AND(LEN({PassingCollaboratorSampleIDs})>0,LEN({TissueOfOrigin})>0,OR(SEARCH('RNA ready to load',ARRAYJOIN(PDOStatus,';'))))",
+                filter_formula="AND(LEN({PassingCollaboratorSampleIDs})>0,OR(SEARCH('RNA ready to load',ARRAYJOIN(PDOStatus,';'))))",
                 fields=['CollaboratorSampleID', 'SeqrCollaboratorSampleID', 'PDOStatus', 'SeqrProject', 'TissueOfOrigin', 'WESSampleID_RNAMapping', 'WGSSampleID_RNAMapping'],
             )
 
@@ -674,14 +732,15 @@ class DataManagerAPITest(AirtableTest):
 
         # Test loading new data
         mock_open.reset_mock()
+        for mock_file in mock_files.values():
+            mock_file.reset_mock()
         mock_subprocess.reset_mock()
         self.reset_logs()
-        mock_files = defaultdict(mock.MagicMock)
-        mock_open.side_effect = lambda file_name, *args: mock_files[file_name]
         body.update({'ignoreExtraSamples': True, 'file': RNA_FILE_ID})
         warnings = [
+            'Skipped loading for the following 1 samples that are improperly configured in Airtable with multiple tissues specified: NA12345',
             f'Skipped loading for the following {len(params["skipped_samples"].split(","))} '
-            f'unmatched samples: {params["skipped_samples"]}']
+            f'samples with no match: {params["skipped_samples"]}']
         deleted_count = params.get('deleted_count', params['initial_model_count'])
         response_json, new_sample_guid = _test_basic_data_loading(
             params['new_data'], params["num_parsed_samples"], 2, 16, body,
@@ -721,17 +780,14 @@ class DataManagerAPITest(AirtableTest):
         self.assertSetEqual(set(response_json['sampleGuids']), {sample_guid, new_sample_guid})
 
         # test correct file interactions
-        file_path = RNA_FILENAME_TEMPLATE.format(data_type)
         expected_subprocess_calls = [
-            f'gsutil ls {RNA_FILE_ID}',
-            f'gsutil cat {RNA_FILE_ID} | gunzip -c -q - ',
-            f'gsutil mv tmp/temp_uploads/{file_path} gs://seqr-scratch-temp/{file_path}',
-
+            f'gsutil cp {RNA_FILE_ID} tmp/temp_uploads/{file_path}',
+            f'gsutil mv tmp/temp_uploads/{file_path}/*.json.gz gs://seqr-scratch-temp/{file_path}',
         ]
         self.assertEqual(mock_subprocess.call_count, len(expected_subprocess_calls))
-        mock_subprocess.assert_has_calls([
-            mock.call(command, stdout=-1, stderr=-2, shell=True) for command in expected_subprocess_calls  # nosec
-        ])
+        mock_subprocess.assert_has_calls([call for calls in [
+            [mock.call(command, stdout=-1, stderr=-2, shell=True), mock.call().wait()] for command in expected_subprocess_calls  # nosec
+        ] for call in calls])
         mock_mkdir.assert_any_call(f'tmp/temp_uploads/{file_path}')
         filename = f'tmp/temp_uploads/{file_path}/{new_sample_guid}.json.gz'
         expected_files = {
@@ -828,7 +884,9 @@ class DataManagerAPITest(AirtableTest):
             'Project Test Reprocessed Project: loaded 1 record(s)'
         ]
         self.assertEqual(response.json()['info'], info)
-        self._has_expected_file_loading_logs('gs://seqr_data/lirical_data.tsv.gz', user=self.data_manager_user, additional_logs=[
+        self.assert_json_logs(self.data_manager_user, [
+            ('==> gsutil ls gs://seqr_data/lirical_data.tsv.gz', None),
+            ('==> gsutil cat gs://seqr_data/lirical_data.tsv.gz | gunzip -c -q - ', None),
             ('delete 1 PhenotypePrioritizations', {'dbUpdate': {
                 'dbEntity': 'PhenotypePrioritization', 'updateType': 'bulk_delete',
                 'entityIds': ['PP000003_NA19678_ENSG000002689'],
@@ -860,7 +918,9 @@ class DataManagerAPITest(AirtableTest):
             'Project 1kg project nåme with uniçøde: deleted 1 record(s), loaded 2 record(s)'
         ]
         self.assertEqual(response.json()['info'], info)
-        self._has_expected_file_loading_logs('gs://seqr_data/lirical_data.tsv.gz', user=self.data_manager_user, additional_logs=[
+        self.assert_json_logs(self.data_manager_user, [
+            ('==> gsutil ls gs://seqr_data/lirical_data.tsv.gz', None),
+            ('==> gsutil cat gs://seqr_data/lirical_data.tsv.gz | gunzip -c -q - ', None),
             ('delete 1 PhenotypePrioritizations', {'dbUpdate': {
                 'dbEntity': 'PhenotypePrioritization', 'updateType': 'bulk_delete',
                 'entityIds': ['PP256989491_na19678ensg0000010'],

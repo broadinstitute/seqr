@@ -622,7 +622,7 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase, AirtableTest):
             'mme_primary_data_owner': 'Test Manager User',
             'mme_contact_url': 'mailto:test_user_manager@test.com',
             'vlm_contact_email': 'test_user_manager@test.com',
-            'restrict_hpo_sharing': False,
+            'restrict_sharing': False,
             'recovery_email': None,
         })
 
