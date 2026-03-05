@@ -82,7 +82,7 @@ def get_saved_variants(genome_version, project_id=None, family_guids=None, click
     return saved_variants
 
 
-def parse_saved_variant_json(variant_json, family_id, variant_id=None,):
+def parse_saved_variant_json(variant_json, family_id, variant_id=None, dataset_type=None):
     if 'xpos' not in variant_json:
         variant_json['xpos'] = get_xpos(variant_json['chrom'], variant_json['pos'])
     xpos = variant_json['xpos']
@@ -94,7 +94,7 @@ def parse_saved_variant_json(variant_json, family_id, variant_id=None,):
         update_json = {
             'key': variant_json['key'],
             'genotypes': variant_json.get('genotypes', {}),
-            'dataset_type': variant_dataset_type({'variantId': variant_id, **variant_json}),
+            'dataset_type': dataset_type or variant_dataset_type({'variantId': variant_id, **variant_json}),
         }
     else:
         update_json = {'saved_variant_json': variant_json}
@@ -119,7 +119,7 @@ def _transcript_sort(gene_id, saved_variant_json):
     return (not is_main_gene, min(t.get('transcriptRank', 100) for t in gene_transcripts) if gene_transcripts else 100)
 
 
-def bulk_create_tagged_variants(family_variant_data, tag_name, get_metadata, user, project=None, get_comp_het_metadata=None, load_new_variant_data=False, remove_missing_metadata=True, primary_id_field='variant_id', **kwargs):
+def bulk_create_tagged_variants(family_variant_data, tag_name, get_metadata, user, project=None, get_comp_het_metadata=None, load_new_variant_data=False, remove_missing_metadata=True, primary_id_field='variant_id', dataset_type=None, **kwargs):
     all_family_ids = {family_id for family_id, _ in family_variant_data.keys()}
     all_variant_ids = {variant_id for _, variant_id in family_variant_data.keys()}
 
@@ -137,11 +137,11 @@ def bulk_create_tagged_variants(family_variant_data, tag_name, get_metadata, use
             new_variant_data = {k: v for k, v in family_variant_data.items() if k in new_variant_keys}
             new_variant_data = backend_specific_call(
                 lambda o, *args, **kwargs: o, _get_clickhouse_variant_annotations,
-            )(new_variant_data, primary_id_field, project=project, **kwargs)
+            )(new_variant_data, primary_id_field, project=project, dataset_type=dataset_type, **kwargs)
 
         new_variant_models = []
         for (family_id, variant_id), variant in new_variant_data.items():
-            create_json, update_json = parse_saved_variant_json(variant, family_id, variant_id=variant_id)
+            create_json, update_json = parse_saved_variant_json(variant, family_id, variant_id=variant_id, dataset_type=dataset_type)
             new_variant_models.append(SavedVariant(**create_json, **update_json))
 
         saved_variant_map.update({
@@ -157,7 +157,7 @@ def bulk_create_tagged_variants(family_variant_data, tag_name, get_metadata, use
 
     update_tags = []
     update_tag_keys = set()
-    new_tag_keys = set()
+    new_tag_keys = {}
     skipped_tag_keys = set()
     for key, variant in sorted(family_variant_data.items()):
         metadata = get_metadata(variant)
@@ -174,12 +174,18 @@ def bulk_create_tagged_variants(family_variant_data, tag_name, get_metadata, use
 
     VariantTag.bulk_update_models(user, update_tags, ['metadata'])
 
-    return new_tag_keys, update_tag_keys, skipped_tag_keys
+    deduped_new_tags = set()
+    for key, support_key in new_tag_keys.items():
+        is_dup = new_tag_keys.get(support_key) and support_key in deduped_new_tags
+        if not is_dup:
+            deduped_new_tags.add(key)
+
+    return deduped_new_tags, update_tag_keys, skipped_tag_keys
 
 
 def _set_updated_tags(key: tuple[int, str], metadata: dict[str, dict], comp_het_metadata: dict[str, dict], support_var_ids: list[str],
                       saved_variant_map: dict[tuple[int, str], SavedVariant], existing_tags: dict[tuple[int, ...], VariantTag],
-                      tag_type: VariantTagType, user: User, new_tag_keys: set[tuple], remove_missing_metadata: bool, primary_id_field: str):
+                      tag_type: VariantTagType, user: User, new_tag_keys: dict[tuple, tuple], remove_missing_metadata: bool, primary_id_field: str):
     variant = saved_variant_map[key]
     existing_tag = existing_tags.get(tuple([variant.id]))
     updated_tag = None
@@ -198,7 +204,7 @@ def _set_updated_tags(key: tuple[int, str], metadata: dict[str, dict], comp_het_
         tag = create_model_from_json(
             VariantTag, {'variant_tag_type': tag_type, 'metadata': json.dumps(metadata)}, user)
         tag.saved_variants.add(variant)
-        new_tag_keys.add(key)
+        new_tag_keys[key] = None
 
     variant_genes = set(variant.gene_ids or [])
     support_vars = []
@@ -216,8 +222,9 @@ def _set_updated_tags(key: tuple[int, str], metadata: dict[str, dict], comp_het_
             }, user)
             tag.saved_variants.set(variants)
             existing_tags[variant_id_key] = True
-            new_tag_keys.add((key[0], getattr(support_var, primary_id_field)))
-            new_tag_keys.add(key)
+            support_key = (key[0], getattr(support_var, primary_id_field))
+            new_tag_keys[support_key] = new_tag_keys.get(support_key, key)
+            new_tag_keys[key] = new_tag_keys.get(key, support_key)
 
     return updated_tag
 
@@ -284,7 +291,8 @@ def _get_clickhouse_variants(samples: Sample.objects, families_by_id: dict[int, 
     return list(variants_by_key.values())
 
 
-def _get_clickhouse_variant_annotations(variant_data: dict[tuple[int, str], dict], primary_id_field: str = 'variant_id', genome_version: str = None, project: Project = None, dataset_type: str = Sample.DATASET_TYPE_VARIANT_CALLS) -> dict[tuple[int, str], dict]:
+def _get_clickhouse_variant_annotations(variant_data: dict[tuple[int, str], dict], primary_id_field: str = 'variant_id', genome_version: str = None, project: Project = None, dataset_type: str = None) -> dict[tuple[int, str], dict]:
+    dataset_type = dataset_type or Sample.DATASET_TYPE_VARIANT_CALLS
     variant_ids = {
         variant_id for (_, variant_id), variant in variant_data.items()
         if not (variant.get('key') and variant.get('variantId'))

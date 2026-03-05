@@ -419,3 +419,4 @@ class Command(BaseCommand):
 
 update_individuals_sample_qc = Command._update_individuals_sample_qc
 get_pipeline_runs = Command._get_runs
+update_project_saved_variant_genotypes = Command._update_project_saved_variant_genotypes

@@ -29,7 +29,7 @@ WEEKLY_XML_RELEASE_DATA = WEEKLY_XML_RELEASE_HEADER + '''
                 <GermlineClassification>
                     <ReviewStatus>criteria provided, conflicting classifications</ReviewStatus>
                     <Description>Conflicting classifications of pathogenicity; association; risk factor</Description>
-                    <Explanation DataSource="ClinVar" Type="public">Pathogenic(18); Likely pathogenic(9); Pathogenic, low penetrance(1); Established risk allele(1); Likely risk allele(1); Uncertain significance(1)</Explanation>
+                    <Explanation DataSource="ClinVar" Type="public">Pathogenic(18); Likely pathogenic(9); Pathogenic, low penetrance(1); Established risk allele(1); Likely risk allele(1); Uncertain significance(1); VUS-high(1)</Explanation>
                 </GermlineClassification>
             </Classifications>
             <ClinicalAssertionList>
@@ -125,9 +125,9 @@ class ReloadClinvarAllVariantsTest(TestCase):
                 'conflicting_pathogenicities': [
                     {'pathogenicity': 'Pathogenic', 'count': 19},
                     {'pathogenicity': 'Likely_pathogenic', 'count': 9},
+                    {'pathogenicity': 'Uncertain_significance', 'count': 2},
                     {'pathogenicity': 'Established_risk_allele', 'count': 1},
                     {'pathogenicity': 'Likely_risk_allele', 'count': 1},
-                    {'pathogenicity': 'Uncertain_significance', 'count': 1},
                 ],
                 'gold_stars': 1,
                 'key': 12,
