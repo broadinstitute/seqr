@@ -6,8 +6,6 @@ from django.db.models import Q
 from clickhouse_search.search import get_variant_main_transcripts_by_key
 from seqr.models import SavedVariant, VariantTagType, VariantTag, VariantNote, VariantFunctionalData,\
     Family, GeneNote, Project, Sample
-from seqr.utils.search.elasticsearch.es_utils import update_project_saved_variant_json
-from seqr.utils.search.utils import es_only
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json, \
     create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
@@ -15,7 +13,7 @@ from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_
     get_json_for_saved_variants_child_entities, get_json_for_gene_notes_by_gene_id, STRUCTURED_METADATA_TAG_TYPES
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     login_and_policies_required
-from seqr.views.utils.variant_utils import reset_cached_search_results, get_variants_response, parse_saved_variant_json
+from seqr.views.utils.variant_utils import get_variants_response, parse_saved_variant_json
 
 
 logger = logging.getLogger(__name__)
@@ -299,20 +297,6 @@ def _update_tags(saved_variants, tags_json, user, tag_key='tags', model_cls=Vari
             })
             model = create_model_from_json(model_cls, create_data, user)
             model.saved_variants.set(saved_variants)
-
-
-@login_and_policies_required
-@es_only
-def update_saved_variant_json(request, project_guid):
-    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
-    reset_cached_search_results(project)
-    try:
-        updated_saved_variant_guids = update_project_saved_variant_json(project.id, project.genome_version, user=request.user)
-    except Exception as e:
-        logger.error('Unable to reset saved variant json for {}: {}'.format(project_guid, e))
-        updated_saved_variant_guids = []
-
-    return create_json_response({variant_guid: None for variant_guid in updated_saved_variant_guids or []})
 
 
 @login_and_policies_required

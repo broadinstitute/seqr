@@ -6,8 +6,6 @@ from django.db.models import F, Q, Count, prefetch_related_objects
 import json
 import logging
 import redis
-from tqdm import tqdm
-import traceback
 
 from clickhouse_search.backend.functions import ArrayDistinct, ArrayMap
 from clickhouse_search.search import get_variants_queryset, get_clickhouse_genotypes
@@ -32,53 +30,6 @@ logger = logging.getLogger(__name__)
 
 DISCOVERY_CATEGORY = 'CMG Discovery Tags'
 OMIM_GENOME_VERSION = GENOME_VERSION_GRCh38
-
-
-def update_projects_saved_variant_json(projects, update_function, **kwargs):
-    success = {}
-    skipped = {}
-    error = {}
-    logger.info(f'Reloading saved variants in {len(projects)} projects')
-    for project_id, project_guid, project_name, genome_version, family_guids in tqdm(projects, unit=' project'):
-        try:
-            updated_saved_variants = update_function(
-                project_id, genome_version, family_guids=family_guids, project_guid=project_guid, **kwargs)
-            if updated_saved_variants is None:
-                skipped[project_name] = True
-            else:
-                success[project_name] = len(updated_saved_variants)
-                family_summary = f' in {len(family_guids)} families' if family_guids else ''
-                logger.info(f'Updated {len(updated_saved_variants)} variants{family_summary} for project {project_name}')
-        except Exception as e:
-            traceback_message = traceback.format_exc()
-            logger.error(traceback_message)
-            logger.error(f'Error reloading variants in {project_name}: {e}')
-            error[project_name] = e
-
-    logger.info('Reload Summary: ')
-    for k, v in success.items():
-        if v > 0:
-            logger.info(f'  {k}: Updated {v} variants')
-    if skipped:
-        logger.info(f'Skipped the following {len(skipped)} project with no saved variants: {", ".join(skipped)}')
-    if len(error):
-        logger.info(f'{len(error)} failed projects')
-    for k, v in error.items():
-        logger.info(f'  {k}: {v}')
-
-
-def get_saved_variants(genome_version, project_id=None, family_guids=None, clickhouse_dataset_type=None):
-    saved_variants = SavedVariant.objects.filter(
-        Q(saved_variant_json__genomeVersion__isnull=True) |
-        Q(saved_variant_json__genomeVersion=genome_version.replace('GRCh', ''))
-    )
-    if project_id:
-        saved_variants = saved_variants.filter(family__project_id=project_id)
-    if family_guids:
-        saved_variants = saved_variants.filter(family__guid__in=family_guids)
-    if clickhouse_dataset_type:
-        saved_variants = saved_variants.filter(dataset_type=clickhouse_dataset_type)
-    return saved_variants
 
 
 def parse_saved_variant_json(variant_json, family_id, variant_id=None, dataset_type=None):

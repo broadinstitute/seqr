@@ -12,9 +12,6 @@ from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_get_wildcard_
 from seqr.utils.search.constants import XPOS_SORT_KEY, PRIORITIZED_GENE_SORT, RECESSIVE, COMPOUND_HET, \
     MAX_NO_LOCATION_COMP_HET_FAMILIES, SV_ANNOTATION_TYPES, ALL_DATA_TYPES, MAX_EXPORT_VARIANTS, X_LINKED_RECESSIVE, \
     MAX_VARIANTS
-from seqr.utils.search.elasticsearch.es_utils import \
-    get_es_variants, get_es_variants_for_variant_ids, process_es_previously_loaded_results, process_es_previously_loaded_gene_aggs, \
-    es_backend_enabled, ES_EXCEPTION_ERROR_MAP, ES_EXCEPTION_MESSAGE_MAP, ES_ERROR_LOG_EXCEPTIONS
 from seqr.utils.gene_utils import parse_locus_list_items
 from seqr.utils.xpos_utils import get_xpos, format_chrom
 
@@ -27,13 +24,6 @@ class InvalidSearchException(Exception):
 SEARCH_EXCEPTION_ERROR_MAP = {
     InvalidSearchException: 400,
 }
-SEARCH_EXCEPTION_ERROR_MAP.update(ES_EXCEPTION_ERROR_MAP)
-
-SEARCH_EXCEPTION_MESSAGE_MAP = {}
-SEARCH_EXCEPTION_MESSAGE_MAP.update(ES_EXCEPTION_MESSAGE_MAP)
-
-ERROR_LOG_EXCEPTIONS = set()
-ERROR_LOG_EXCEPTIONS.update(ES_ERROR_LOG_EXCEPTIONS)
 
 DATASET_TYPES_LOOKUP = {
     data_types[0]: data_types for data_types in [
@@ -50,29 +40,6 @@ DATASET_TYPES_LOOKUP[DATASET_TYPE_NO_MITO] = [Sample.DATASET_TYPE_VARIANT_CALLS,
 
 MAX_GENES_FOR_FILTER = 10000
 MIN_MULTI_FAMILY_SEQR_AC = 5000
-
-
-def es_only(func):
-    def _wrapped(*args, **kwargs):
-        if not es_backend_enabled():
-            raise ValueError(f'{func.__name__} is disabled without the elasticsearch backend')
-        return func(*args, **kwargs)
-    return _wrapped
-
-
-def clickhouse_only(func):
-    def _wrapped(*args, **kwargs):
-        if es_backend_enabled():
-            raise ValueError(f'{func.__name__} is disabled without the clickhouse backend')
-        return func(*args, **kwargs)
-    return _wrapped
-
-
-def backend_specific_call(es_func, clickhouse_func):
-    if es_backend_enabled():
-        return es_func
-    else:
-        return clickhouse_func
 
 
 def _get_filtered_search_samples(search_filter, active_only=True):
@@ -124,27 +91,14 @@ def get_single_variant(family, variant_id, user=None):
     parsed_variant_id = parse_variant_id(variant_id)
     dataset_type = _variant_ids_dataset_type([parsed_variant_id])
     samples = _get_families_search_data([family], dataset_type, sample_filter={'individual__family_id': family.id})
-    variant = backend_specific_call(
-        _get_es_variant_by_id,
-        _get_clickhouse_variant_by_id,
-    )(parsed_variant_id, variant_id, samples, family.project.genome_version, dataset_type=dataset_type, user=user)
+    variant = get_clickhouse_variant_by_id(
+        variant_id, parsed_variant_id, samples, family.project.genome_version, DATASET_TYPES_LOOKUP[dataset_type][0],
+    )
     if not variant:
         raise InvalidSearchException('Variant {} not found'.format(variant_id))
     return variant
 
 
-def _get_es_variant_by_id(parsed_variant_id, variant_id, samples, genome_version, user=None, **kwargs):
-    variants = get_es_variants_for_variant_ids(samples, genome_version, [variant_id], user)
-    return variants[0] if variants else None
-
-
-def _get_clickhouse_variant_by_id(parsed_variant_id, variant_id, samples, genome_version, dataset_type=None, **kwargs):
-    return get_clickhouse_variant_by_id(
-        variant_id, parsed_variant_id, samples, genome_version, DATASET_TYPES_LOOKUP[dataset_type][0],
-    )
-
-
-@clickhouse_only
 def variant_lookup(user, variant_id, genome_version, sample_type=None, affected_only=False, hom_only=False):
     cache_fields = ['variant_lookup_results', variant_id, genome_version]
     if affected_only:
@@ -182,33 +136,14 @@ def _get_any_sort_cached_results(search_model):
     return safe_redis_get_wildcard_json(cache_key)
 
 
-def _get_cached_search_results(search_model, sort=None):
-    cache_key = _get_search_cache_key(search_model, sort=sort)
-    return safe_redis_get_json(cache_key) or {}
-
-
 def _validate_export_variant_count(total_variants):
     if total_variants > MAX_EXPORT_VARIANTS:
         raise InvalidSearchException(f'Unable to export more than {MAX_EXPORT_VARIANTS} variants ({total_variants} requested)')
 
 
-def _get_elasticsearch_previous_search_results(search_model, sort, page, num_results, load_all, **kwargs):
-    previous_search_results = _get_cached_search_results(search_model, sort=sort)
-    start_index, end_index, num_results = _get_result_range(page, num_results, previous_search_results.get('total_results'), load_all)
-
-    cached_page = None
-    loaded_results = previous_search_results.get('all_results') or []
-    if len(loaded_results) >= end_index:
-        cached_page = loaded_results[start_index:end_index]
-
-    if not cached_page:
-        cached_page = process_es_previously_loaded_results(previous_search_results, start_index, end_index)
-
-    return previous_search_results, cached_page, num_results
-
-
-def _get_clickhouse_previous_search_results(search_model, sort, page, num_results, load_all, genome_version=None):
-    previous_search_results = _get_cached_search_results(search_model, sort=sort)
+def _get_previous_search_results(search_model, sort, page, num_results, load_all, genome_version):
+    cache_key = _get_search_cache_key(search_model, sort=sort)
+    previous_search_results = safe_redis_get_json(cache_key) or {}
     if not previous_search_results:
         unsorted_results = _get_any_sort_cached_results(search_model)
         if unsorted_results:
@@ -218,16 +153,7 @@ def _get_clickhouse_previous_search_results(search_model, sort, page, num_result
             cache_key = _get_search_cache_key(search_model, sort=sort)
             safe_redis_set_json(cache_key, previous_search_results, expire=timedelta(weeks=2))
 
-    start_index, end_index, num_results = _get_result_range(page, num_results, previous_search_results.get('total_results'), load_all)
-    cached_page = None
-    loaded_results = previous_search_results.get('all_results') or []
-    if len(loaded_results) >= end_index:
-        cached_page = format_clickhouse_results(loaded_results[start_index:end_index], genome_version)
-
-    return previous_search_results, cached_page, num_results
-
-
-def _get_result_range(page, num_results, total_results, load_all):
+    total_results = previous_search_results.get('total_results')
     if load_all:
         num_results = total_results or MAX_EXPORT_VARIANTS
         _validate_export_variant_count(num_results)
@@ -239,15 +165,19 @@ def _get_result_range(page, num_results, total_results, load_all):
     if end_index > MAX_VARIANTS:
         raise InvalidSearchException(f'Unable to load more than {MAX_VARIANTS} variants ({end_index} requested)')
 
-    return start_index, end_index, num_results
+    cached_page = None
+    loaded_results = previous_search_results.get('all_results') or []
+    if len(loaded_results) >= end_index:
+        cached_page = format_clickhouse_results(loaded_results[start_index:end_index], genome_version)
+
+    return previous_search_results, cached_page, num_results
 
 
 def query_variants(search_model, sort=XPOS_SORT_KEY, skip_genotype_filter=False, load_all=False, user=None, page=1, num_results=100):
     genome_version = _get_search_genome_version(search_model)
-    previous_search_results, cached_page, num_results = backend_specific_call(
-        _get_elasticsearch_previous_search_results,
-        _get_clickhouse_previous_search_results,
-    )(search_model, sort, page, num_results, load_all, genome_version=genome_version)
+    previous_search_results, cached_page, num_results = _get_previous_search_results(
+        search_model, sort, page, num_results, load_all, genome_version,
+    )
     if cached_page is not None:
         return cached_page, previous_search_results.get('total_results')
 
@@ -285,12 +215,10 @@ def _query_variants(search_model, user, previous_search_results, genome_version,
         raise InvalidSearchException('Too many genes/intervals')
     parsed_search.update({'genes': genes, 'intervals': intervals, 'exclude_locations': exclude_locations})
     if not (genes or intervals):
-        rs_ids, variant_ids, parsed_variant_ids, invalid_items = _parse_variant_items(locus)
+        variant_ids, parsed_variant_ids, invalid_items = _parse_variant_items(locus)
         if invalid_items:
             raise InvalidSearchException('Invalid variants: {}'.format(', '.join(invalid_items)))
-        if rs_ids and variant_ids:
-            raise InvalidSearchException('Invalid variant notation: found both variant IDs and rsIDs')
-        parsed_search.update({'rs_ids': rs_ids, 'variant_ids': variant_ids, 'parsed_variant_ids': parsed_variant_ids})
+        parsed_search.update({'variant_ids': variant_ids, 'parsed_variant_ids': parsed_variant_ids})
 
     if variant_ids:
         num_results = len(variant_ids)
@@ -304,9 +232,7 @@ def _query_variants(search_model, user, previous_search_results, genome_version,
     exclude.pop('previousSearch', None)
     exclude_previous_hash = exclude.pop('previousSearchHash', None)
     if exclude_previous_hash:
-        parsed_search.update(backend_specific_call(
-            lambda *args: {}, _get_clickhouse_exclude_keys,
-        )(exclude_previous_hash, user, genome_version))
+        parsed_search.update(_get_clickhouse_exclude_keys(exclude_previous_hash, user, genome_version))
 
     for annotation_key in ['annotations', 'annotations_secondary']:
         if parsed_search.get(annotation_key):
@@ -327,7 +253,7 @@ def _query_variants(search_model, user, previous_search_results, genome_version,
 
     _validate_search(parsed_search, samples, previous_search_results)
 
-    variant_results = backend_specific_call(get_es_variants, get_clickhouse_variants)(
+    variant_results = get_clickhouse_variants(
         samples, parsed_search, user, previous_search_results, genome_version,
         sort=sort, num_results=num_results, **kwargs,
     )
@@ -367,50 +293,17 @@ def variant_dataset_type(variant):
 
 
 def get_variant_query_gene_counts(search_model, user):
-    return backend_specific_call(
-        _get_es_variant_query_gene_counts,
-        _get_clickhouse_variant_query_gene_counts,
-    )(search_model, user)
-
-
-def _get_es_variant_query_gene_counts(search_model, user):
-    previous_search_results = _get_cached_search_results(search_model)
-    if previous_search_results.get('gene_aggs'):
-        return previous_search_results['gene_aggs']
-
-    if len(previous_search_results.get('all_results', [])) == previous_search_results.get('total_results'):
-        return _get_gene_aggs_for_cached_variants(
-            previous_search_results['all_results'],
-            lambda v: next((
-                [gene_id] for gene_id, transcripts in v['transcripts'].items()
-                if any(t['transcriptId'] == v['mainTranscriptId'] for t in transcripts)
-            ), []) if v['mainTranscriptId'] else [],
-        )
-
-    previously_loaded_results = process_es_previously_loaded_gene_aggs(previous_search_results)
-    if previously_loaded_results is not None:
-        return previously_loaded_results
-
-    genome_version = _get_search_genome_version(search_model)
-    gene_counts, _ = _query_variants(search_model, user, previous_search_results, genome_version, gene_agg=True)
-    return gene_counts
-
-
-def _get_clickhouse_variant_query_gene_counts(search_model, user):
     previous_search_results = _get_any_sort_cached_results(search_model) or {}
     if len(previous_search_results.get('all_results', [])) != previous_search_results.get('total_results'):
         genome_version = _get_search_genome_version(search_model)
         _query_variants(search_model, user, previous_search_results, genome_version)
 
-    return _get_gene_aggs_for_cached_variants([
+    flat_variants = [
         v for variants in previous_search_results['all_results'] for v in (variants if isinstance(variants, list) else [variants])
-    ], lambda v: v['transcripts'].keys() if 'transcripts' in v else {t['geneId'] for t in v['sortedTranscriptConsequences']})
-
-
-def _get_gene_aggs_for_cached_variants(variants, get_variant_genes):
+    ]
     gene_aggs = defaultdict(lambda: {'total': 0, 'families': defaultdict(int)})
-    for var in variants:
-        gene_ids = get_variant_genes(var)
+    for var in flat_variants:
+        gene_ids = var['transcripts'].keys() if 'transcripts' in var else {t['geneId'] for t in var['sortedTranscriptConsequences']}
         for gene_id in gene_ids:
             gene_aggs[gene_id]['total'] += 1
             for family_guid in var['familyGuids']:
@@ -421,25 +314,21 @@ def _get_gene_aggs_for_cached_variants(variants, get_variant_genes):
 def _parse_variant_items(search_json):
     raw_items = search_json.get('rawVariantItems')
     if not raw_items:
-        return None, None, None, None
+        return None, None, None
 
     invalid_items = []
     variant_ids = []
     parsed_variant_ids = []
-    rs_ids = []
     for item in raw_items.replace(',', ' ').split():
-        if item.startswith('rs') and backend_specific_call(True, False):
-            rs_ids.append(item)
+        variant_id = item.lstrip('chr')
+        parsed_variant_id = parse_variant_id(variant_id)
+        if parsed_variant_id:
+            parsed_variant_ids.append(parsed_variant_id)
+            variant_ids.append(variant_id)
         else:
-            variant_id = item.lstrip('chr')
-            parsed_variant_id = parse_variant_id(variant_id)
-            if parsed_variant_id:
-                parsed_variant_ids.append(parsed_variant_id)
-                variant_ids.append(variant_id)
-            else:
-                invalid_items.append(item)
+            invalid_items.append(item)
 
-    return rs_ids, variant_ids, parsed_variant_ids, invalid_items
+    return variant_ids, parsed_variant_ids, invalid_items
 
 
 def parse_variant_id(variant_id):
@@ -563,10 +452,6 @@ def _validate_search(search, samples, previous_search_results):
         if search.get('no_access_project_genome_version'):
             raise InvalidSearchException('Compound heterozygous search is not supported when including external projects')
 
-    backend_specific_call(lambda *args: None, _validate_clickhouse_search)(samples, has_location_filter, search)
-
-
-def _validate_clickhouse_search(samples, has_location_filter, search):
     variant_samples = samples.filter(dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
     if not has_location_filter and variant_samples.values('individual__family__project_id').distinct().count() > 1:
         raise InvalidSearchException('Location must be specified to search across multiple projects')
@@ -579,7 +464,6 @@ def _validate_clickhouse_search(samples, has_location_filter, search):
 
 def _filter_inheritance_family_samples(samples, inheritance_filter):
     family_groups = defaultdict(set)
-    sample_group_field = backend_specific_call('elasticsearch_index', 'dataset_type')
     individual_affected_status = inheritance_filter.get('affected') or {}
     genotype_filter = None if inheritance_filter.get(Individual.AFFECTED_STATUS_AFFECTED) else inheritance_filter.get('genotype')
     for sample in samples:
@@ -590,7 +474,7 @@ def _filter_inheritance_family_samples(samples, inheritance_filter):
             is_filtered_family = affected_status == Individual.AFFECTED_STATUS_AFFECTED
 
         if is_filtered_family:
-            family_groups[sample.individual.family_id].add(getattr(sample, sample_group_field))
+            family_groups[sample.individual.family_id].add(sample.dataset_type)
 
     if not family_groups:
         raise InvalidSearchException(
@@ -599,7 +483,7 @@ def _filter_inheritance_family_samples(samples, inheritance_filter):
         )
 
     return [
-        s for s in samples if getattr(s, sample_group_field) not in family_groups[s.individual.family_id]
+        s for s in samples if s.dataset_type not in family_groups[s.individual.family_id]
     ]
 
 

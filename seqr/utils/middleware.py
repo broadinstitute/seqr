@@ -11,7 +11,7 @@ from social_core.exceptions import AuthException
 import json
 import traceback
 
-from seqr.utils.search.utils import ERROR_LOG_EXCEPTIONS, SEARCH_EXCEPTION_ERROR_MAP, SEARCH_EXCEPTION_MESSAGE_MAP
+from seqr.utils.search.utils import SEARCH_EXCEPTION_ERROR_MAP
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.terra_api_utils import TerraAPIException
@@ -47,7 +47,6 @@ EXCEPTION_JSON_MAP = {
 EXCEPTION_MESSAGE_MAP = {
     TerraAPIException: lambda e: LOGIN_URL if e.status_code == 401 else str(e),
 }
-EXCEPTION_MESSAGE_MAP.update(SEARCH_EXCEPTION_MESSAGE_MAP)
 
 
 def _get_exception_status_code(exception):
@@ -75,8 +74,6 @@ class JsonErrorMiddleware(MiddlewareMixin):
     def process_exception(request, exception):
         exception_json =  _get_core_exception_json(exception)
         status = _get_exception_status_code(exception)
-        if exception.__class__ in ERROR_LOG_EXCEPTIONS:
-            exception_json['log_error'] = True
         if DEBUG or status == 500:
             traceback_message = traceback.format_exc()
             exception_json['traceback'] = traceback_message
