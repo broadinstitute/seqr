@@ -120,7 +120,7 @@ from seqr.views.apis.users_api import \
     update_user, \
     forgot_password
 
-from seqr.views.apis.data_manager_api import update_rna_seq, proxy_to_kibana, load_phenotype_prioritization_data, \
+from seqr.views.apis.data_manager_api import update_rna_seq, load_phenotype_prioritization_data, \
     validate_callset, get_loaded_projects, load_data, loading_vcfs, proxy_to_luigi, \
     trigger_delete_project, trigger_delete_family
 from seqr.views.apis.report_api import \
@@ -388,17 +388,6 @@ urlpatterns += [
 ]
 
 handler401 = 'seqr.views.apis.auth_api.app_login_required_error'
-
-kibana_urls = '^(?:{})'.format('|'.join([
-    'app', '\d+/built_assets', '\d+/bundles', 'bundles', 'elasticsearch', 'es_admin', 'node_modules/@kbn', 'internal',
-    'plugins', 'translations', 'ui', 'api/apm', 'api/console', 'api/core', 'api/index_management', 'api/index_patterns',
-    'api/kibana', 'api/licensing', 'api/monitoring', 'api/reporting', 'api/saved_objects', 'api/telemetry',
-    'api/timelion', 'api/ui_metric', 'api/xpack', 'bootstrap',
-]))
-
-urlpatterns += [
-    re_path(kibana_urls, proxy_to_kibana, name='proxy_to_kibana'),
-]
 
 urlpatterns += [
     re_path(r'^admin/login/$', RedirectView.as_view(url=LOGIN_URL, permanent=True, query_string=True)),

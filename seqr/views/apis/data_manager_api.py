@@ -1,4 +1,3 @@
-import base64
 from collections import defaultdict
 import json
 import os
@@ -8,7 +7,6 @@ import urllib3
 from django.core.exceptions import PermissionDenied
 from django.db.models import Max, F, Q
 from django.http.response import HttpResponse
-from django.views.decorators.csrf import csrf_exempt
 from requests.exceptions import ConnectionError as RequestConnectionError
 
 from clickhouse_search.search import delete_clickhouse_project
@@ -27,8 +25,7 @@ from seqr.views.utils.terra_api_utils import anvil_enabled
 
 from seqr.models import Sample, RnaSample, Individual, Project, PhenotypePrioritization
 
-from settings import KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD, KIBANA_ELASTICSEARCH_USER, \
-    LOADING_DATASETS_DIR, LUIGI_UI_SERVICE_HOSTNAME, LUIGI_UI_SERVICE_PORT
+from settings import LOADING_DATASETS_DIR, LUIGI_UI_SERVICE_HOSTNAME, LUIGI_UI_SERVICE_PORT
 
 logger = SeqrLogger(__name__)
 
@@ -426,25 +423,16 @@ EXCLUDE_HTTP_RESPONSE_HEADERS = {
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-
 @data_manager_required
-@csrf_exempt
-def proxy_to_kibana(request):
-    headers = {}
-    if KIBANA_ELASTICSEARCH_PASSWORD:
-        token = base64.b64encode('{}:{}'.format(KIBANA_ELASTICSEARCH_USER, KIBANA_ELASTICSEARCH_PASSWORD).encode('utf-8'))
-        headers['Authorization'] = 'Basic {}'.format(token.decode('utf-8'))
-    return _proxy_iframe_page(request, 'Kibana', KIBANA_SERVER, additional_headers=headers)
+def proxy_to_luigi(request):
+    if not LUIGI_UI_SERVICE_HOSTNAME:
+        return HttpResponse('Loading Pipeline UI is not configured', status=404)
 
-
-def _proxy_iframe_page(request, page_name, host, additional_headers=None, path_prefix=None):
     headers = convert_django_meta_to_http_headers(request)
+    host = f'{LUIGI_UI_SERVICE_HOSTNAME}:{LUIGI_UI_SERVICE_PORT}'
     headers['Host'] = host
-    headers.update(additional_headers or {})
 
-    path = request.get_full_path()
-    if path_prefix:
-        path = path.replace(path_prefix, '')
+    path = request.get_full_path().replace('/luigi_ui', '')
     url = f'http://{host}{path}'
 
     request_method = getattr(requests.Session(), request.method.lower())
@@ -472,13 +460,4 @@ def _proxy_iframe_page(request, page_name, host, additional_headers=None, path_p
         return proxy_response
     except (ConnectionError, RequestConnectionError) as e:
         logger.error(str(e), request.user)
-        return HttpResponse(f'Error: Unable to connect to {page_name} {e}', status=400)
-
-
-@data_manager_required
-def proxy_to_luigi(request):
-    if not LUIGI_UI_SERVICE_HOSTNAME:
-        return HttpResponse('Loading Pipeline UI is not configured', status=404)
-    return _proxy_iframe_page(
-        request, 'Luigi UI', f'{LUIGI_UI_SERVICE_HOSTNAME}:{LUIGI_UI_SERVICE_PORT}', path_prefix='/luigi_ui',
-    )
+        return HttpResponse(f'Error: Unable to connect to Luigi UI {e}', status=400)

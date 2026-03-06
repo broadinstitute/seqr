@@ -347,30 +347,14 @@ class DataManagerAPITest(AirtableTest):
     VCF_SAMPLES = VCF_SAMPLES
     SKIP_TDR = False
 
-    @mock.patch('seqr.views.apis.data_manager_api.KIBANA_ELASTICSEARCH_PASSWORD', 'abc123')
-    @responses.activate
-    def test_kibana_proxy(self):
-        url = '/api/kibana/random/path'
-        self.check_data_manager_login(url)
-
-        self._test_request_proxy('localhost:5601', url, auth_header='Basic a2liYW5hOmFiYzEyMw==')
-
-        # Test with error response
-        response = self.client.get('{}/bad_response'.format(url))
-        self.assertEqual(response.status_code, 500)
-
-        # Test with connection error
-        response = self.client.get('{}/bad_path'.format(url))
-        self.assertContains(response, 'Error: Unable to connect to Kibana', status_code=400)
-
-    def _test_request_proxy(self, host, url, auth_header=None, proxy_path=None):
+    def _test_request_proxy(self, host, url, proxy_path):
         response_args = {
             'stream': True,
             'body': 'Test response',
             'content_type': 'text/custom',
             'headers': {'x-test-header': 'test', 'keep-alive': 'true'},
         }
-        proxy_url = f'http://{host}{proxy_path or url}'
+        proxy_url = f'http://{host}{proxy_path}'
         responses.add(responses.GET, proxy_url, status=200, **response_args)
         responses.add(responses.POST, proxy_url, status=201, **response_args)
         responses.add(responses.GET, '{}/bad_response'.format(proxy_url), body=HTTPError())
@@ -391,20 +375,14 @@ class DataManagerAPITest(AirtableTest):
         get_request = responses.calls[0].request
         self.assertEqual(get_request.headers['Host'], host)
         self.assertEqual(get_request.headers['Test-Header'], 'some/value')
-        if auth_header:
-            self.assertEqual(get_request.headers['Authorization'], auth_header)
-        else:
-            self.assertFalse('Authorization' in get_request.headers)
+        self.assertFalse('Authorization' in get_request.headers)
 
         post_request = responses.calls[1].request
         self.assertEqual(post_request.headers['Host'], host)
         self.assertEqual(post_request.headers['Content-Type'], 'application/json')
         self.assertEqual(post_request.headers['Content-Length'], '26')
         self.assertEqual(post_request.body, data.encode('utf-8'))
-        if auth_header:
-            self.assertEqual(get_request.headers['Authorization'], auth_header)
-        else:
-            self.assertFalse('Authorization' in get_request.headers)
+        self.assertFalse('Authorization' in get_request.headers)
 
     @mock.patch('seqr.views.apis.data_manager_api.LUIGI_UI_SERVICE_HOSTNAME')
     @responses.activate
