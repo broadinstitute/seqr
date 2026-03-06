@@ -145,7 +145,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             gene_counts_json = get_variant_query_gene_counts(results_model, self.user)
             self.assertDictEqual(gene_counts_json, gene_counts)
 
-    def _assert_expected_variants(self, variants, expected_results, results_page=None, cache_key=None, format_cached_variants=None, sort='xpos', **kwargs):
+    def _assert_expected_variants(self, variants, expected_results, cache_key=None, results_page=None, format_cached_variants=None, sort='xpos', **kwargs):
         encoded_variants = self._encode_variants(variants)
         self.assertListEqual(encoded_variants, results_page or expected_results)
         if cache_key:

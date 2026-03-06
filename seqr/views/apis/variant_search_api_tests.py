@@ -433,7 +433,7 @@ class VariantSearchAPITest(AuthenticationTestCase):
         self._assert_expected_results_context(response_json)
 
         results_model = VariantSearchResults.objects.get(search_hash=SEARCH_HASH)
-        mock_get_variants.assert_called_with(results_model, sort='xpos', page=1, num_results=100, skip_genotype_filter=False, user=self.collaborator_user)
+        mock_get_variants.assert_called_with(results_model, sort='xpos', page=1, num_results=100, user=self.collaborator_user)
         mock_error_logger.assert_not_called()
 
         # include project context info
@@ -462,13 +462,13 @@ class VariantSearchAPITest(AuthenticationTestCase):
         # Test pagination
         response = self.client.get('{}?page=3'.format(url))
         self.assertEqual(response.status_code, 200)
-        mock_get_variants.assert_called_with(results_model, sort='xpos', page=3, num_results=100, skip_genotype_filter=False, user=self.collaborator_user)
+        mock_get_variants.assert_called_with(results_model, sort='xpos', page=3, num_results=100, user=self.collaborator_user)
         mock_error_logger.assert_not_called()
 
         # Test sort
         response = self.client.get('{}?sort=pathogenicity'.format(url))
         self.assertEqual(response.status_code, 200)
-        mock_get_variants.assert_called_with(results_model, sort='pathogenicity', page=1, num_results=100, skip_genotype_filter=False, user=self.collaborator_user)
+        mock_get_variants.assert_called_with(results_model, sort='pathogenicity', page=1, num_results=100, user=self.collaborator_user)
         mock_error_logger.assert_not_called()
 
         # Test export
@@ -599,7 +599,7 @@ class VariantSearchAPITest(AuthenticationTestCase):
         self.assertDictEqual(response_json, expected_search_results)
         self._assert_expected_results_context(response_json)
 
-        mock_get_variants.assert_called_with(results_model, sort='pathogenicity_hgmd', page=1, num_results=100, skip_genotype_filter=False, user=self.analyst_user)
+        mock_get_variants.assert_called_with(results_model, sort='pathogenicity_hgmd', page=1, num_results=100, user=self.analyst_user)
         mock_error_logger.assert_not_called()
 
         # Test no results
@@ -652,7 +652,7 @@ class VariantSearchAPITest(AuthenticationTestCase):
         }}
         self.assertDictEqual(response_json, empty_search_response)
         results_model = VariantSearchResults.objects.get(search_hash=SEARCH_HASH)
-        mock_get_variants.assert_called_with(results_model, sort='xpos', page=1, num_results=100, skip_genotype_filter=True, user=self.no_access_user)
+        mock_get_variants.assert_called_with(results_model, sort='xpos', page=1, num_results=100, user=self.no_access_user)
 
         VariantSearchResults.objects.filter(search_hash=SEARCH_HASH).delete()
         self.login_data_manager_user()
@@ -677,7 +677,7 @@ class VariantSearchAPITest(AuthenticationTestCase):
         result_model = VariantSearchResults.objects.get(search_hash=SEARCH_HASH)
         self.assertSetEqual(expected_searched_families, {f.guid for f in result_model.families.all()})
         mock_get_variants.assert_called_with(result_model, sort='xpos', page=1, num_results=100,
-                                             skip_genotype_filter=True, user=self.collaborator_user)
+                                              user=self.collaborator_user)
 
         result_model.delete()
         body['includeNoAccessProjects'] = True
@@ -692,7 +692,7 @@ class VariantSearchAPITest(AuthenticationTestCase):
         result_model = VariantSearchResults.objects.get(search_hash=SEARCH_HASH)
         self.assertSetEqual(expected_searched_families, {f.guid for f in result_model.families.all()})
         mock_get_variants.assert_called_with(
-            result_model, sort='xpos', page=1, num_results=100, skip_genotype_filter=True, user=self.collaborator_user,
+            result_model, sort='xpos', page=1, num_results=100, user=self.collaborator_user,
         )
 
         result_model.delete()
@@ -759,7 +759,7 @@ class VariantSearchAPITest(AuthenticationTestCase):
 
         mock_get_variants.assert_called_with(
             VariantSearchResults.objects.get(search_hash=SEARCH_HASH), sort='xpos', page=1, num_results=100,
-            skip_genotype_filter=False, user=self.collaborator_user)
+            user=self.collaborator_user)
 
         # Test export disabled in demo projects
         export_url = reverse(export_variants_handler, args=[SEARCH_HASH])
