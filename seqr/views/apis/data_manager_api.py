@@ -86,14 +86,20 @@ def update_rna_seq(request):
             if sample.get(sample_id_field)
         ]
         error_messages = []
-        if len(sample.get(TISSUE_FIELD, [])) != 1:
-            error_messages.append('no tissue specified' if not sample.get(TISSUE_FIELD) else 'multiple tissues specified')
-        elif sample[TISSUE_FIELD][0] not in TISSUE_TYPE_MAP:
+        tissues = sample.get(TISSUE_FIELD, [])
+        if not tissues:
+            error_messages.append('no tissue specified')
+        elif len(tissues) > 1:
+            error_messages.append('multiple tissues specified')
+        elif tissues[0] not in TISSUE_TYPE_MAP:
             error_messages.append('invalid tissue specified')
-        if len(sample['pdos']) != 1:
+
+        pdos = sample.get('pdos', [])
+        if len(pdos) > 1:
             error_messages.append('multiple conflicting PDOs')
-        elif sample['pdos'][0]['project_guid'] is None:
+        elif not pdos or pdos[0]['project_guid'] is None:
             error_messages.append('no project specified')
+
         if error_messages:
             for sample_id in sample_ids:
                 misconfigured_samples[sample_id].extend(error_messages)
