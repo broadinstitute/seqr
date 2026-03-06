@@ -47,8 +47,10 @@ test('getProjectExportUrls', () => {
   expect(exportFamilies.length).toEqual(2)
   expect(exportFamilies[0].familyGuid).toEqual('F011652_2')
   expect(exportFamilies[1].familyGuid).toEqual('F011652_1')
-  expect(exportFamilies[0].firstSample.sampleGuid).toEqual('S2310656_wal_mc16200_mc16203')
-  expect(exportFamilies[1].firstSample).toEqual(undefined)
+  expect(exportFamilies[0].firstSample.datasetType).toEqual('SNV_INDEL')
+  expect(exportFamilies[0].firstSample.sampleType).toEqual('WES')
+  expect(exportFamilies[0].firstSample.loadedDate).toEqual('2018-03-13')
+  expect(exportFamilies[1].firstSample).toEqual(null)
   expect(exportFamilies[0].analysisNotes.length).toEqual(2)
   expect(exportFamilies[0].caseNotes).toEqual(undefined)
 
