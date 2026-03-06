@@ -59,7 +59,6 @@ class AuthenticationTestMixin(object):
     AUTHENTICATED_USER = 'authenticated'
     NO_POLICY_USER = 'no_policy'
 
-    ES_HOSTNAME = 'testhost'
     MOCK_AIRTABLE_KEY = ''
     CLICKHOUSE_HOSTNAME = ''
 
@@ -74,9 +73,6 @@ class AuthenticationTestMixin(object):
     no_policy_user = None
 
     def set_up_test(self):
-        patcher = mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', self.ES_HOSTNAME)
-        patcher.start()
-        self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.utils.airtable_utils.AIRTABLE_API_KEY', self.MOCK_AIRTABLE_KEY)
         patcher.start()
         self.addCleanup(patcher.stop)
@@ -552,7 +548,6 @@ def get_group_members_side_effect(user, group, use_sa_credentials=False):
 
 class AnvilAuthenticationTestMixin(AuthenticationTestMixin):
 
-    ES_HOSTNAME = ''
     CLICKHOUSE_HOSTNAME = 'testhost'
     MOCK_AIRTABLE_KEY = 'airflow_access'
     SKIP_RESET_VARIANT_JSON = False

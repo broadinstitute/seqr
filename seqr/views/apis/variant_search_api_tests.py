@@ -5,13 +5,11 @@ from copy import deepcopy
 
 from django.db import transaction
 from django.urls.base import reverse
-from elasticsearch.exceptions import ConnectionTimeout, TransportError
 
 from clickhouse_search.test_utils import VARIANT2, VARIANT3, VARIANT_LOOKUP_VARIANT, GCNV_LOOKUP_VARIANT, \
     SV_LOOKUP_VARIANT, SV_VARIANT4, GCNV_VARIANT4
 from seqr.models import VariantSearchResults, LocusList, Project, VariantSearch
 from seqr.utils.search.utils import InvalidSearchException
-from seqr.utils.search.elasticsearch.es_utils import InvalidIndexException
 from seqr.views.apis.variant_search_api import query_variants_handler, query_single_variant_handler, vlm_lookup_handler, \
     export_variants_handler, search_context_handler, get_saved_search_handler, create_saved_search_handler, \
     update_saved_search_handler, delete_saved_search_handler, get_variant_gene_breakdown, variant_lookup_handler
@@ -411,16 +409,6 @@ class VariantSearchAPITest(AuthenticationTestCase):
         self.assertEqual(response.reason_phrase, 'Invalid search: no projects/ families specified')
         mock_error_logger.assert_not_called()
 
-        mock_get_variants.side_effect = InvalidIndexException('Invalid index')
-        response = self.client.post(url, content_type='application/json', data=json.dumps({
-            'projectFamilies': PROJECT_FAMILIES, 'search': SEARCH
-        }))
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()['error'], 'Invalid index')
-        self.assertFalse('traceback' in response.json())
-        mock_error_logger.assert_called_with(
-            'Invalid index', self.collaborator_user, http_request_json=mock.ANY, traceback=mock.ANY, request_body=mock.ANY, detail=None)
-
         mock_get_variants.side_effect = InvalidSearchException('Invalid search')
         mock_error_logger.reset_mock()
         response = self.client.post(url, content_type='application/json', data=json.dumps({
@@ -428,35 +416,6 @@ class VariantSearchAPITest(AuthenticationTestCase):
         }))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['error'], 'Invalid search')
-        mock_error_logger.assert_not_called()
-
-        mock_get_variants.side_effect = ConnectionTimeout('', '', ValueError('Timeout'))
-        response = self.client.post(url, content_type='application/json', data=json.dumps({
-            'projectFamilies': PROJECT_FAMILIES, 'search': SEARCH
-        }))
-        self.assertEqual(response.status_code, 504)
-        self.assertEqual(response.json()['error'], 'ConnectionTimeout caused by - ValueError(Timeout)')
-        mock_error_logger.assert_not_called()
-
-        mock_get_variants.side_effect = TransportError('N/A', 'search_phase_execution_exception', {'error': 'Invalid'})
-        response = self.client.post(url, content_type='application/json', data=json.dumps({
-            'projectFamilies': PROJECT_FAMILIES, 'search': SEARCH
-        }))
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()['error'], "TransportError: N/A - 'search_phase_execution_exception' - 'Invalid'")
-        self.assertEqual(response.json()['detail'], {'error': 'Invalid'})
-        mock_error_logger.assert_not_called()
-
-        error_info_json = {'error': {'root_cause': [{'type': 'response_handler_failure_transport_exception'}]}}
-        mock_get_variants.side_effect = TransportError('401', 'search_phase_execution_exception', error_info_json)
-        response = self.client.post(url, content_type='application/json', data=json.dumps({
-            'projectFamilies': PROJECT_FAMILIES, 'search': SEARCH
-        }))
-        self.assertEqual(response.status_code, 401)
-        self.assertEqual(
-            response.json()['error'],
-            "TransportError: 401 - 'search_phase_execution_exception' - response_handler_failure_transport_exception")
-        self.assertEqual(response.json()['detail'], error_info_json)
         mock_error_logger.assert_not_called()
 
         mock_get_variants.side_effect = _get_es_variants
@@ -896,7 +855,7 @@ class VariantSearchAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         self._assert_expected_single_variant_results_context(response.json(), searchedVariants=[SINGLE_FAMILY_VARIANT])
 
-        mock_get_variant.assert_called_with(mock.ANY, '21-3343353-GAGA-G', user=self.collaborator_user)
+        mock_get_variant.assert_called_with(mock.ANY, '21-3343353-GAGA-G')
         searched_family = mock_get_variant.call_args.args[0]
         self.assertEqual(searched_family.guid, 'F000001_1')
 
