@@ -1,3 +1,5 @@
+from datetime import timedelta
+from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.management import call_command
 from django.db import connections
@@ -35,7 +37,6 @@ from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4,
     format_cached_variant
 from reference_data.models import Omim
 from seqr.models import Project, Family, Sample, VariantSearch, VariantSearchResults
-from seqr.utils.search.search_utils_tests import SearchTestHelper
 from seqr.utils.search.utils import query_variants, variant_lookup, get_variant_query_gene_counts, get_single_variant, InvalidSearchException
 from seqr.views.apis.data_manager_api import trigger_delete_project
 from seqr.views.utils.json_utils import DjangoJSONEncoderWithSets
@@ -96,14 +97,33 @@ class ClickhouseSearchTestCase(AnvilAuthenticationTestCase):
         super().setUpTestData()
 
 
-class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
+class ClickhouseSearchTests(ClickhouseSearchTestCase):
     databases = '__all__'
     fixtures = ['users', '1kg_project', 'variant_searches', 'reference_data', 'clickhouse_search', 'clickhouse_transcripts']
 
     def setUp(self):
-        super().set_up()
-        super().setUp()
+        patcher = mock.patch('seqr.utils.redis_utils.redis.StrictRedis')
+        self.mock_redis = patcher.start().return_value
         self.mock_redis.get.return_value = None
+        self.addCleanup(patcher.stop)
+
+        self.families = Family.objects.filter(guid__in=['F000003_3', 'F000002_2', 'F000005_5'])
+        self.user = User.objects.get(username='test_user')
+
+        self.search_model = VariantSearch.objects.create(search={'inheritance': {'mode': 'de_novo'}, 'freqs': {'callset': {'ac': 1000}}})
+        self.results_model = VariantSearchResults.objects.create(variant_search=self.search_model)
+        self.results_model.families.set(self.families)
+
+        super().setUp()
+
+    def set_cache(self, cached):
+        self.mock_redis.get.return_value = json.dumps(cached)
+
+    def assert_cached_results(self, expected_results, sort='xpos', cache_key=None):
+        cache_key = cache_key or f'search_results__{self.results_model.guid}__{sort}'
+        self.mock_redis.set.assert_called_with(cache_key, mock.ANY)
+        self.assertEqual(json.loads(self.mock_redis.set.call_args.args[1]), expected_results)
+        self.mock_redis.expire.assert_called_with(cache_key, timedelta(weeks=2))
 
     def _assert_expected_search(self, expected_results, results_page=None, gene_counts=None, inheritance_mode=None, inheritance_filter=None, quality_filter=None, cached_variant_fields=None, sort='xpos', load_all=False, page=1, num_results=100, results_model=None, **search_kwargs):
         results_model = results_model or self.results_model
