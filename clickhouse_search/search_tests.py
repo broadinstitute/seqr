@@ -6,6 +6,7 @@ from django.db import connections
 from django.urls.base import reverse
 import json
 import mock
+import random
 import responses
 
 from clickhouse_search.models.gt_stats_models import ProjectGtStatsSnvIndel, \
@@ -114,6 +115,9 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self.results_model = VariantSearchResults.objects.create(variant_search=self.search_model)
         self.results_model.families.set(self.families)
 
+        url = reverse(query_variants_handler, args=['abc123'])
+        self.check_require_login(url)
+
         super().setUp()
 
     def set_cache(self, cached):
@@ -125,7 +129,57 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self.assertEqual(json.loads(self.mock_redis.set.call_args.args[1]), expected_results)
         self.mock_redis.expire.assert_called_with(cache_key, timedelta(weeks=2))
 
-    def _assert_expected_search(self, expected_results, results_page=None, gene_counts=None, inheritance_mode=None, inheritance_filter=None, quality_filter=None, cached_variant_fields=None, sort='xpos', load_all=False, page=1, num_results=100, results_model=None, **search_kwargs):
+    def _assert_expected_search(self, expected_results, results_page=None, gene_counts=None, inheritance_mode=None, inheritance_filter=None, quality_filter=None, cached_variant_fields=None, sort='xpos', load_all=False, page=1, num_results=100, results_model=None, request_body=None, format_response_body=None, format_cache_key=None, **search_kwargs):
+        search_hash = str(random.randint(1000, 10000))
+        url = reverse(query_variants_handler, args=[search_hash])
+
+        search_body = {
+            'inheritance': {'mode': inheritance_mode},
+            'freqs': {'callset': {'ac': 1000}},
+            'qualityFilter': quality_filter,
+            **(search_kwargs or {}),
+        }
+        if inheritance_filter is not None:
+            search_body['inheritance']['filter'] = inheritance_filter
+
+        response = self.client.post(url, content_type='application/json', data=json.dumps({
+            **request_body, 'search': search_body,
+        }))
+        self.assertEqual(response.status_code, 200)
+        expected_response = {
+            'searchedVariants': results_page or expected_results,
+            'genesById': mock.ANY,
+            'search': {
+                'search': format_response_body(search_body) if format_response_body else search_body,
+                'projectFamilies': [],
+                'totalResults': len(expected_results),
+            },
+            'totalSampleCounts': {
+                'MITO': {'WES': 1},
+                'SNV_INDEL': {'WES': 7},
+                'SV': {'WES': 3, 'WGS': 3},
+            },
+            'locusListsByGuid': {},
+            'mmeSubmissionsByGuid': {},
+            'omimIntervals': {},
+            'phenotypeGeneScores': {},
+            'rnaSeqData': {},
+            'savedVariantsByGuid': {},
+            'variantFunctionalDataByGuid': {},
+            'variantNotesByGuid': {},
+            'variantTagsByGuid': {},
+        }
+        self.assertDictEqual(response.json(), expected_response)
+
+        cache_key = format_cache_key() if format_cache_key else f'search_results__{search_hash}__{sort}'
+        if cache_key:
+            cached_variants = self._format_cached_variants(expected_results, cached_variant_fields=cached_variant_fields)
+            self.assert_cached_results(cached_variants, sort=sort, cache_key=cache_key)
+        else:
+            self.mock_redis.get.assert_not_called()
+            self.mock_redis.set.assert_not_called()
+
+    def _assert_expected_search_old(self, expected_results, results_page=None, gene_counts=None, inheritance_mode=None, inheritance_filter=None, quality_filter=None, cached_variant_fields=None, sort='xpos', load_all=False, page=1, num_results=100, results_model=None, **search_kwargs):
         results_model = results_model or self.results_model
         self.search_model.search.update(search_kwargs or {})
         self.search_model.search['qualityFilter'] = quality_filter
@@ -1753,8 +1807,36 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
 
     def test_gene_variant_lookup(self):
         url = reverse(query_variants_handler, args=['abc123'])
-        self.check_require_login(url)
 
+        request_body = {
+            'allGenomeProjectFamilies': '38',
+            'includeNoAccessProjects': True,
+        }
+        response = self.client.post(url, content_type='application/json', data=json.dumps(request_body))
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {
+            'error': 'Including external projects is only available when searching for a single gene',
+        })
+
+        format_response_body = lambda search_body: {**search_body, 'no_access_project_genome_version': '38'}
+        variant4 = {**VARIANT4, 'selectedMainTranscriptId': 'ENST00000350997', 'numFamilies': 3}
+        del variant4['familyGuids']
+        del variant4['genotypes']
+        self._assert_expected_search(
+            [variant4], request_body=request_body, format_response_body=format_response_body,
+            annotations={
+                'missense': ['missense_variant'],
+                'other': ['non_coding_transcript_exon_variant'],
+            },
+            freqs={
+                'callset': {'ac': 3000},
+                'gnomad_genomes': {'af': 0.003},
+                'gnomad_exomes': {'af': 0.003},
+            },
+            locus={'rawItems': 'ENSG00000097046'},
+        )
+
+        #  TODO
         body = {
             'allGenomeProjectFamilies': '38',
             'includeNoAccessProjects': True,
@@ -1770,43 +1852,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
                 },
             }
         }
-        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
-        self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {
-            'error': 'Including external projects is only available when searching for a single gene',
-        })
-
         body['search']['locus'] = {'rawItems': 'ENSG00000097046'}
-        response = self.client.post(url+'1', content_type='application/json', data=json.dumps(body))
-        self.assertEqual(response.status_code, 200)
-        variant4 = {**VARIANT4, 'selectedMainTranscriptId': 'ENST00000350997', 'numFamilies': 3}
-        del variant4['familyGuids']
-        del variant4['genotypes']
-        expected_response = {
-            'searchedVariants': [variant4],
-            'genesById': {'ENSG00000097046': mock.ANY},
-            'search': {
-                'search': {**body['search'], 'no_access_project_genome_version': '38'},
-                'projectFamilies': [],
-                'totalResults': 1,
-            },
-            'totalSampleCounts': {
-                'MITO': {'WES': 1},
-                'SNV_INDEL': {'WES': 7},
-                'SV': {'WES': 3, 'WGS': 3},
-            },
-            'locusListsByGuid': {},
-            'mmeSubmissionsByGuid': {},
-            'omimIntervals': {},
-            'phenotypeGeneScores': {},
-            'rnaSeqData': {},
-            'savedVariantsByGuid': {},
-            'variantFunctionalDataByGuid': {},
-            'variantNotesByGuid': {},
-            'variantTagsByGuid': {},
-        }
-        self.assertDictEqual(response.json(), expected_response)
-
         body['search']['freqs'] = {'callset': body['search']['freqs']['callset']}
         response = self.client.post(url+'2', content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
