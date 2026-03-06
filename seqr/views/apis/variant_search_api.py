@@ -62,10 +62,8 @@ def query_variants_handler(request, search_hash):
         return create_json_response({'error': str(e)}, status=400, reason=str(e))
 
     _check_results_permission(results_model, request.user)
-    skip_genotype_filter = bool(_all_project_family_search_genome(search_context))
 
-    variants, total_results = query_variants(results_model, sort=sort, page=page, num_results=per_page,
-                                             skip_genotype_filter=skip_genotype_filter, user=request.user)
+    variants, total_results = query_variants(results_model, sort=sort, page=page, num_results=per_page, user=request.user)
 
     response = _process_variants(variants or [], results_model.families.all(), request,
                                  genome_version=results_model.variant_search.search.get('no_access_project_genome_version'))
