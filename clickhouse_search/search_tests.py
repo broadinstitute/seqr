@@ -126,7 +126,7 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
             self.assertDictEqual(gene_counts_json, gene_counts)
 
     def _assert_expected_variants(self, variants, expected_results, results_page=None, cache_key=None, format_cached_variants=None, sort='xpos', **kwargs):
-        encoded_variants = json.loads(json.dumps(variants, cls=DjangoJSONEncoderWithSets))
+        encoded_variants = self._encode_variants(variants)
         self.assertListEqual(encoded_variants, results_page or expected_results)
         if cache_key:
             cached_variants = format_cached_variants(expected_results, **kwargs) if format_cached_variants else expected_results
@@ -134,6 +134,10 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
         else:
             self.mock_redis.get.assert_not_called()
             self.mock_redis.set.assert_not_called()
+
+    @staticmethod
+    def _encode_variants(variants):
+        return json.loads(json.dumps(variants, cls=DjangoJSONEncoderWithSets))
 
     def _format_cached_variants(self, variants, cached_variant_fields=None):
         cached_variants = [
@@ -1864,6 +1868,46 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
             },
             'searchedVariants': [],
         })
+
+    def test_cached_query_variants(self):
+        cache_key_prefix = f'search_results__{self.results_model.guid}'
+        cached_variants = [VARIANT1, SV_VARIANT1, GCNV_VARIANT1, MITO_VARIANT1, VARIANT2]
+        cache_result = self._format_cached_variants(cached_variants)
+        self.set_cache(cache_result)
+
+        variants, total = query_variants(self.results_model, user=self.user)
+        self.assertEqual(total, 5)
+        self.assertListEqual(self._encode_variants(variants), cached_variants)
+        self.mock_redis.get.assert_called_with(f'{cache_key_prefix}__xpos')
+        self.mock_redis.set.assert_not_called()
+
+        variants, _ = query_variants(self.results_model, user=self.user, num_results=2, page=2)
+        self.assertListEqual(variants, [GCNV_VARIANT1, MITO_VARIANT1])
+
+        gene_counts = get_variant_query_gene_counts(self.results_model, self.user)
+        self.assertDictEqual(gene_counts, {
+            'ENSG00000177000': {'total': 1, 'families': {'F000002_2': 1}},
+            'ENSG00000277258': {'total': 1, 'families': {'F000002_2': 1}},
+            'ENSG00000210112': {'total': 1, 'families': {'F000002_2': 1}},
+            'ENSG00000171621': {'total': 1, 'families': {'F000014_14': 1}},
+        })
+
+        self.mock_redis.get.side_effect = [None, json.dumps(cache_result)]
+        self.mock_redis.keys.return_value = [f'{cache_key_prefix}__xpos', f'{cache_key_prefix}__gnomad']
+
+        variants, total = query_variants(self.results_model, user=self.user, sort='cadd')
+        self.assertEqual(total, 5)
+        sorted_variants = [VARIANT2, VARIANT1, SV_VARIANT1, GCNV_VARIANT1, MITO_VARIANT1]
+        self.assertListEqual(self._encode_variants(variants), sorted_variants)
+        self.mock_redis.get.assert_has_calls([
+            mock.call(f'{cache_key_prefix}__cadd'),
+            mock.call(f'{cache_key_prefix}__xpos'),
+        ])
+        self.mock_redis.keys.assert_called_with(pattern=f'{cache_key_prefix}__*')
+        self.assert_cached_results(
+            {'all_results': [format_cached_variant(v) for v in sorted_variants], 'total_results': 5},
+            sort='cadd',
+        )
 
 class ClickhouseDeleteDataTests(ClickhouseSearchTestCase):
     databases = '__all__'

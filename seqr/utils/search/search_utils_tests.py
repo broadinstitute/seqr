@@ -136,38 +136,7 @@ class SearchUtilsTests(DifferentDbTransactionSupportMixin, TestCase, SearchTestH
         self.assertSetEqual(set(mock_get_variants.call_args.args[0]), set(searched_samples))
         self.assertSetEqual(set(mock_get_variants.call_args.args[1]['skipped_samples']), set(non_affected_search_samples))
 
-    def test_cached_query_variants(self):
-        Project.objects.filter(id=1).update(genome_version='38')
 
-        self.set_cache({'total_results': 4, 'all_results': self.CACHED_VARIANTS})
-        variants, total = query_variants(self.results_model, user=self.user)
-        self._assert_expected_cached_variants(variants, 4)
-        self.assertEqual(total, 4)
-
-        variants, total = query_variants(self.results_model, user=self.user, num_results=2)
-        self._assert_expected_cached_variants(variants, 2)
-        self.assertEqual(total, 4)
-
-        cache_key_prefix = f'search_results__{self.results_model.guid}'
-        self.mock_redis.get.side_effect = [None, json.dumps({'total_results': 4, 'all_results': self.CACHED_VARIANTS})]
-        self.mock_redis.keys.return_value = [f'{cache_key_prefix}__xpos', f'{cache_key_prefix}__gnomad']
-
-        variants, total = query_variants(self.results_model, user=self.user, sort='cadd')
-        self.assertEqual(total, 4)
-        self.assertListEqual(
-            json.loads(json.dumps(variants, cls=DjangoJSONEncoderWithSets)),
-            [VARIANT4, VARIANT3, VARIANT2, VARIANT1]
-        )
-        self.mock_redis.get.assert_has_calls([
-            mock.call(f'{cache_key_prefix}__cadd'),
-            mock.call(f'{cache_key_prefix}__xpos'),
-        ])
-        self.mock_redis.keys.assert_called_with(pattern=f'{cache_key_prefix}__*')
-        self.assert_cached_results(
-            {'all_results': [format_cached_variant(v) for v in [VARIANT4, VARIANT3, VARIANT2, VARIANT1]],
-             'total_results': 4},
-            sort='cadd',
-        )
 
     def _assert_expected_cached_variants(self, variants, num_results):
         self.assertListEqual(
@@ -192,13 +161,3 @@ class SearchUtilsTests(DifferentDbTransactionSupportMixin, TestCase, SearchTestH
         self._test_expected_search_call(
             mock_get_variants, results_cache, **kwargs,
         )
-
-    def test_cached_get_variant_query_gene_counts(self):
-        self.set_cache({'all_results': self.CACHED_VARIANTS + [SV_VARIANT1], 'total_results': 5})
-        gene_counts = get_variant_query_gene_counts(self.results_model, self.user)
-        self.assertDictEqual(gene_counts, {
-            'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
-            'ENSG00000177000': {'total': 2, 'families': {'F000002_2': 2}},
-            'ENSG00000277258': {'total': 1, 'families': {'F000002_2': 1}},
-            'ENSG00000171621': {'total': 1, 'families': {'F000014_14': 1}},
-        })
