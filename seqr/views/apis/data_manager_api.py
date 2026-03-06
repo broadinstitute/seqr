@@ -54,21 +54,30 @@ def update_rna_seq(request):
         ],
     )
     sample_metadata_mapping = {}
-    misconfigured_samples = {}
+    misconfigured_samples = defaultdict(list)
     for sample in airtable_samples:
         sample_ids = [
             sample[sample_id_field] for sample_id_field in ['sample_id', 'WESSampleID_RNAMapping', 'WGSSampleID_RNAMapping']
             if sample.get(sample_id_field)
         ]
-        error_message = None
-        if len(sample.get(TISSUE_FIELD, [])) != 1:
-            error_message = 'no tissue specified' if not sample.get(TISSUE_FIELD) else 'multiple tissues specified'
-        elif len(sample['pdos']) != 1:
-            error_message = 'multiple conflicting PDOs'
-        elif sample['pdos'][0]['project_guid'] is None:
-            error_message = 'no project specified'
-        if error_message:
-            misconfigured_samples.update({sample_id: error_message for sample_id in sample_ids})
+        error_messages = []
+        tissues = sample.get(TISSUE_FIELD, [])
+        if not tissues:
+            error_messages.append('no tissue specified')
+        elif len(tissues) > 1:
+            error_messages.append('multiple tissues specified')
+        elif tissues[0] not in TISSUE_TYPE_MAP:
+            error_messages.append('invalid tissue specified')
+
+        pdos = sample.get('pdos', [])
+        if len(pdos) > 1:
+            error_messages.append('multiple conflicting PDOs')
+        elif not pdos or pdos[0]['project_guid'] is None:
+            error_messages.append('no project specified')
+
+        if error_messages:
+            for sample_id in sample_ids:
+                misconfigured_samples[sample_id].extend(error_messages)
         else:
             metadata = {
                 'tissue': TISSUE_TYPE_MAP[sample[TISSUE_FIELD][0]],
