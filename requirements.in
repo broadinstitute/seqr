@@ -9,8 +9,6 @@ django-cors-headers               # allows CORS requests for client-side develop
 django-storages[google]           # alternative GCS storage backend for the django media_root
 social-auth-app-django>5.0.0      # the package for Django to authenticate users with social medieas
 social-auth-core                  # the Python social authentication package. Required by social-auth-app-django
-elasticsearch==7.9.1              # elasticsearch client
-elasticsearch-dsl==7.2.1          # elasticsearch query utilities
 gunicorn                          # web server
 jmespath
 openpyxl                          # library for reading/writing Excel files
