@@ -1,5 +1,6 @@
 from collections import defaultdict
 from datetime import datetime
+
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Q
@@ -112,6 +113,10 @@ PASS_QUALITY_FILTER = {
     **QUALITY_FILTER,
     **SV_QUALITY_FILTER,
     'vcf_filter': 'PASS',
+}
+PERMISSIVE_PASS_QUALITY_FILTER = {
+    **PASS_QUALITY_FILTER,
+    'min_gq_sv': 50,
 }
 
 CONFIRMED_HIGH_SPLICE_AI_SEARCH = {
@@ -404,13 +409,13 @@ MULTI_DATA_TYPE_SEARCHES = {
         },
         'in_silico': IN_SILICO_FILTER,
         'freqs': FREQ_FILTER,
-        'qualityFilter': PASS_QUALITY_FILTER,
+        'qualityFilter': PERMISSIVE_PASS_QUALITY_FILTER,
     },
     'Compound Heterozygous - Clinvar Pathogenic/ SV': {
         'annotations': SV_ANNOTATIONS,
         'pathogenicity': CLINVAR_FILTER,
         'freqs': FREQ_FILTER,
-        'qualityFilter': PASS_QUALITY_FILTER,
+        'qualityFilter': PERMISSIVE_PASS_QUALITY_FILTER,
     },
     'Compound Heterozygous - High Splice AI/ SV': {
         'annotations': {
@@ -418,7 +423,7 @@ MULTI_DATA_TYPE_SEARCHES = {
             'splice_ai': 0.8,
         },
         'freqs': FREQ_FILTER,
-        'qualityFilter': PASS_QUALITY_FILTER,
+        'qualityFilter': PERMISSIVE_PASS_QUALITY_FILTER,
     },
     'Compound Heterozygous - One SV - Confirmed': {
         'family_filter': {
@@ -430,7 +435,7 @@ MULTI_DATA_TYPE_SEARCHES = {
         },
         'in_silico': IN_SILICO_FILTER,
         'freqs': FREQ_FILTER,
-        'qualityFilter': PASS_QUALITY_FILTER,
+        'qualityFilter': PERMISSIVE_PASS_QUALITY_FILTER,
     },
 }
 
