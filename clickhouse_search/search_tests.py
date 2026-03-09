@@ -153,14 +153,14 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             **request_body, 'search': search_body,
         })), result_guid, search_body
 
-    def _assert_expected_search(self, expected_results, results_page=None, gene_counts=None, cached_variant_fields=None, sort='xpos', load_all=False, page=1, num_results=100, results_model=None, format_response_body=None, format_cache_key=None, **kwargs):
+    def _assert_expected_search(self, expected_results, results_page=None, gene_counts=None, cached_variant_fields=None, sort='xpos', load_all=False, page=1, num_results=100, results_model=None, response_search=None, format_cache_key=None, project_families=None, **kwargs):
         response, result_guid, search_body = self._execute_search(**kwargs)
         self.assertEqual(response.status_code, 200)
         expected_response = {
             'searchedVariants': results_page or expected_results,
             'search': {
-                'search': format_response_body(search_body) if format_response_body else search_body,
-                'projectFamilies': [],
+                'search': {**search_body, **(response_search or {})},
+                'projectFamilies': project_families or [],
                 'totalResults': len(expected_results),
             },
 
@@ -168,10 +168,10 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         if expected_results:
             expected_response.update({
                 'genesById': mock.ANY,
-                'locusListsByGuid': {},
+                'locusListsByGuid': mock.ANY,
                 'mmeSubmissionsByGuid': {},
                 'omimIntervals': {},
-                'phenotypeGeneScores': {},
+                'phenotypeGeneScores': mock.ANY,
                 'rnaSeqData': {},
                 'savedVariantsByGuid': {},
                 'variantFunctionalDataByGuid': {},
@@ -192,6 +192,11 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         else:
             self.mock_redis.get.assert_not_called()
             self.mock_redis.set.assert_not_called()
+
+        if gene_counts:
+            raise NotImplementedError
+
+        return response.json()
 
     def _assert_expected_search_error(self, error, **kwargs):
         response, _, _ = self._execute_search(**kwargs)
@@ -1825,8 +1830,6 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         )
 
     def test_gene_variant_lookup(self):
-        url = reverse(query_variants_handler, args=['abc123'])
-
         request_body = {
             'allGenomeProjectFamilies': '38',
             'includeNoAccessProjects': True,
@@ -1845,28 +1848,30 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             'gnomad_exomes': {'af': 0.003},
         }
         locus = {'rawItems': 'ENSG00000097046'}
-        format_response_body = lambda search_body: {**search_body, 'no_access_project_genome_version': '38'}
+        response_search = {'no_access_project_genome_version': '38'}
         variant4 = {**VARIANT4, 'selectedMainTranscriptId': 'ENST00000350997', 'numFamilies': 3}
         del variant4['familyGuids']
         del variant4['genotypes']
-        self._assert_expected_search(
-            [variant4], request_body=request_body, format_response_body=format_response_body,
+        response_json = self._assert_expected_search(
+            [variant4], request_body=request_body, response_search=response_search,
             cached_variant_fields=[{'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[4][1]}],
             annotations=annotations, freqs=freqs, locus=locus,
         )
+        self.assertEqual(response_json['genesById'], {'ENSG00000097046': mock.ANY})
 
         freqs = {'callset': freqs['callset']}
         variant3 = {**VARIANT3, 'selectedMainTranscriptId': 'ENST00000497611', 'numFamilies': 4}
         del variant3['familyGuids']
         del variant3['genotypes']
-        self._assert_expected_search(
-            [variant3, variant4], request_body=request_body, format_response_body=format_response_body,
+        response_json = self._assert_expected_search(
+            [variant3, variant4], request_body=request_body, response_search=response_search,
             cached_variant_fields=[
                 {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[3][3]},
                 {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[4][1]},
             ],
             annotations=annotations, freqs=freqs, locus=locus,
         )
+        self.assertEqual(response_json['genesById'], {'ENSG00000097046': mock.ANY, 'ENSG00000177000': mock.ANY})
 
         self._assert_expected_search_error(
             'Compound heterozygous search is not supported when including external projects',
@@ -1874,60 +1879,51 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         )
 
         self._assert_expected_search(
-            [], request_body=request_body, format_response_body=format_response_body,
+            [], request_body=request_body, response_search=response_search,
             annotations=annotations, freqs=freqs, locus=locus, inheritance_mode='homozygous_recessive',
         )
 
-        body['search']['inheritance']['mode'] = 'de_novo'
-        response = self.client.post(url + '5', content_type='application/json', data=json.dumps(body))
-        self.assertEqual(response.status_code, 200)
-        expected_response['search']['search'].update(body['search'])
         variant3['numFamilies'] = 1
         variant4['numFamilies'] = 1
-        self.assertDictEqual(response.json(), expected_response)
+        self._assert_expected_search(
+            [variant3, variant4], request_body=request_body, response_search=response_search,
+            cached_variant_fields=[
+                {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[3][3]},
+                {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[4][1]},
+            ],
+            annotations=annotations, freqs=freqs, locus=locus, inheritance_mode='de_novo',
+        )
 
         self.login_collaborator()
-        response = self.client.post(url + '6', content_type='application/json', data=json.dumps(body))
-        self.assertEqual(response.status_code, 200)
         project_families = [{'projectGuid': 'R0001_1kg', 'familyGuids': mock.ANY}]
-        expected_response['search']['projectFamilies'] = project_families
-        expected_response.update({
-            'searchedVariants': [
+        response_json = self._assert_expected_search([
                 {**FAMILY_3_VARIANT, 'selectedMainTranscriptId': 'ENST00000497611'},
                 {**VARIANT4, 'selectedMainTranscriptId': 'ENST00000350997'},
+            ], request_body=request_body, response_search=response_search, project_families=project_families,
+            cached_variant_fields=[
+                {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[3][3]},
+                {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[4][1]},
             ],
-            'locusListsByGuid': {'LL00049_pid_genes_autosomal_do': mock.ANY},
-            'phenotypeGeneScores': {'I000004_hg00731': mock.ANY, 'I000005_hg00732': mock.ANY},
-        })
-        self.assertDictEqual(response.json(), expected_response)
+            annotations=annotations, freqs=freqs, locus=locus, inheritance_mode='de_novo',
+        )
+        self.assertEqual(response_json['locusListsByGuid'], {'LL00049_pid_genes_autosomal_do': mock.ANY})
+        self.assertEqual(response_json['phenotypeGeneScores'], {'I000004_hg00731': mock.ANY, 'I000005_hg00732': mock.ANY})
 
-        body['search']['locus']['rawItems'] = 'ENSG00000171621'
-        response = self.client.post(url + '7', content_type='application/json', data=json.dumps(body))
-        self.assertEqual(response.status_code, 200)
-        expected_response['search']['search'].update(body['search'])
-        expected_response['search']['totalResults'] = 1
+        locus['rawItems'] = 'ENSG00000171621'
         other_project_variant = {**PROJECT_4_COMP_HET_VARIANT, 'numFamilies': 1}
         del other_project_variant['familyGuids']
         del other_project_variant['genotypes']
-        expected_response.update({
-            'searchedVariants': [other_project_variant],
-            'genesById': {'ENSG00000171621': mock.ANY},
-            'locusListsByGuid': {},
-            'phenotypeGeneScores': {},
-        })
-        self.assertDictEqual(response.json(), expected_response)
+        self._assert_expected_search(
+            [other_project_variant], request_body=request_body, response_search=response_search,
+            project_families=project_families, cached_variant_fields=[{'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[22][0]}],
+            annotations=annotations, freqs=freqs, locus=locus, inheritance_mode='de_novo',
+        )
 
-        body['search']['locus']['rawItems'] = 'ENSG00000229905'
-        response = self.client.post(url+'8', content_type='application/json', data=json.dumps(body))
-        self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {
-            'search': {
-                'search': {**body['search'], 'no_access_project_genome_version': '38'},
-                'projectFamilies': project_families,
-                'totalResults': 0,
-            },
-            'searchedVariants': [],
-        })
+        locus['rawItems'] = 'ENSG00000229905'
+        self._assert_expected_search(
+            [], request_body=request_body, response_search=response_search,
+            project_families=project_families, annotations=annotations, freqs=freqs, locus=locus, inheritance_mode='de_novo',
+        )
 
     def test_cached_query_variants(self):
         cache_key_prefix = f'search_results__{self.results_model.guid}'
