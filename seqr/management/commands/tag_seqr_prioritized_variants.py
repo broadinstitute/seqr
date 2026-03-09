@@ -1,6 +1,5 @@
 from collections import defaultdict
 from datetime import datetime
-
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Q
