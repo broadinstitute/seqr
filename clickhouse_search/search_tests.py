@@ -108,6 +108,11 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self.mock_redis.get.return_value = None
         self.addCleanup(patcher.stop)
 
+        patcher = mock.patch('seqr.models.VariantSearchResults._compute_guid')
+        self.mock_results_guid = patcher.start()
+        self.mock_results_guid.return_value = random.randint(1000, 10000)
+        self.addCleanup(patcher.stop)
+
         self.families = Family.objects.filter(guid__in=['F000003_3', 'F000002_2', 'F000005_5'])
         self.user = User.objects.get(username='test_user')
 
@@ -129,8 +134,10 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self.assertEqual(json.loads(self.mock_redis.set.call_args.args[1]), expected_results)
         self.mock_redis.expire.assert_called_with(cache_key, timedelta(weeks=2))
 
-    def _assert_expected_search(self, expected_results, results_page=None, gene_counts=None, inheritance_mode=None, inheritance_filter=None, quality_filter=None, cached_variant_fields=None, sort='xpos', load_all=False, page=1, num_results=100, results_model=None, request_body=None, format_response_body=None, format_cache_key=None, **search_kwargs):
-        search_hash = str(random.randint(1000, 10000))
+    def _execute_search(self, inheritance_mode=None, inheritance_filter=None, quality_filter=None, request_body=None, **search_kwargs):
+        search_hash = random.randint(1000, 10000)
+        result_guid = f'VRS{search_hash:07d}'
+        self.mock_results_guid.return_value = result_guid
         url = reverse(query_variants_handler, args=[search_hash])
 
         search_body = {
@@ -142,9 +149,12 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         if inheritance_filter is not None:
             search_body['inheritance']['filter'] = inheritance_filter
 
-        response = self.client.post(url, content_type='application/json', data=json.dumps({
+        return self.client.post(url, content_type='application/json', data=json.dumps({
             **request_body, 'search': search_body,
-        }))
+        })), result_guid, search_body
+
+    def _assert_expected_search(self, expected_results, results_page=None, gene_counts=None, cached_variant_fields=None, sort='xpos', load_all=False, page=1, num_results=100, results_model=None, format_response_body=None, format_cache_key=None, **kwargs):
+        response, result_guid, search_body = self._execute_search(**kwargs)
         self.assertEqual(response.status_code, 200)
         expected_response = {
             'searchedVariants': results_page or expected_results,
@@ -171,13 +181,18 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         }
         self.assertDictEqual(response.json(), expected_response)
 
-        cache_key = format_cache_key() if format_cache_key else f'search_results__{search_hash}__{sort}'
+        cache_key = format_cache_key() if format_cache_key else f'search_results__{result_guid}__{sort}'
         if cache_key:
             cached_variants = self._format_cached_variants(expected_results, cached_variant_fields=cached_variant_fields)
             self.assert_cached_results(cached_variants, sort=sort, cache_key=cache_key)
         else:
             self.mock_redis.get.assert_not_called()
             self.mock_redis.set.assert_not_called()
+
+    def _assert_expected_search_error(self, error, **kwargs):
+        response, _, _ = self._execute_search(**kwargs)
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'error': error})
 
     def _assert_expected_search_old(self, expected_results, results_page=None, gene_counts=None, inheritance_mode=None, inheritance_filter=None, quality_filter=None, cached_variant_fields=None, sort='xpos', load_all=False, page=1, num_results=100, results_model=None, **search_kwargs):
         results_model = results_model or self.results_model
@@ -1812,46 +1827,29 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             'allGenomeProjectFamilies': '38',
             'includeNoAccessProjects': True,
         }
-        response = self.client.post(url, content_type='application/json', data=json.dumps(request_body))
-        self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {
-            'error': 'Including external projects is only available when searching for a single gene',
-        })
+        self._assert_expected_search_error(
+            'Including external projects is only available when searching for a single gene', request_body=request_body,
+        )
 
+        annotations = {
+            'missense': ['missense_variant'],
+            'other': ['non_coding_transcript_exon_variant'],
+        }
+        freqs = {
+            'callset': {'ac': 3000},
+            'gnomad_genomes': {'af': 0.003},
+            'gnomad_exomes': {'af': 0.003},
+        }
         format_response_body = lambda search_body: {**search_body, 'no_access_project_genome_version': '38'}
         variant4 = {**VARIANT4, 'selectedMainTranscriptId': 'ENST00000350997', 'numFamilies': 3}
         del variant4['familyGuids']
         del variant4['genotypes']
         self._assert_expected_search(
             [variant4], request_body=request_body, format_response_body=format_response_body,
-            annotations={
-                'missense': ['missense_variant'],
-                'other': ['non_coding_transcript_exon_variant'],
-            },
-            freqs={
-                'callset': {'ac': 3000},
-                'gnomad_genomes': {'af': 0.003},
-                'gnomad_exomes': {'af': 0.003},
-            },
-            locus={'rawItems': 'ENSG00000097046'},
+            cached_variant_fields=[{'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[4][1]}],
+            annotations=annotations, freqs=freqs, locus={'rawItems': 'ENSG00000097046'},
         )
 
-        #  TODO
-        body = {
-            'allGenomeProjectFamilies': '38',
-            'includeNoAccessProjects': True,
-            'search': {
-                'annotations': {
-                    'missense': ['missense_variant'],
-                    'other': ['non_coding_transcript_exon_variant'],
-                },
-                'freqs': {
-                    'callset': {'ac': 3000},
-                    'gnomad_genomes': {'af': 0.003},
-                    'gnomad_exomes': {'af': 0.003},
-                },
-            }
-        }
         body['search']['locus'] = {'rawItems': 'ENSG00000097046'}
         body['search']['freqs'] = {'callset': body['search']['freqs']['callset']}
         response = self.client.post(url+'2', content_type='application/json', data=json.dumps(body))
