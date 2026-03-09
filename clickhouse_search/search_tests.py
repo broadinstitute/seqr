@@ -158,27 +158,31 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self.assertEqual(response.status_code, 200)
         expected_response = {
             'searchedVariants': results_page or expected_results,
-            'genesById': mock.ANY,
             'search': {
                 'search': format_response_body(search_body) if format_response_body else search_body,
                 'projectFamilies': [],
                 'totalResults': len(expected_results),
             },
-            'totalSampleCounts': {
-                'MITO': {'WES': 1},
-                'SNV_INDEL': {'WES': 7},
-                'SV': {'WES': 3, 'WGS': 3},
-            },
-            'locusListsByGuid': {},
-            'mmeSubmissionsByGuid': {},
-            'omimIntervals': {},
-            'phenotypeGeneScores': {},
-            'rnaSeqData': {},
-            'savedVariantsByGuid': {},
-            'variantFunctionalDataByGuid': {},
-            'variantNotesByGuid': {},
-            'variantTagsByGuid': {},
+
         }
+        if expected_results:
+            expected_response.update({
+                'genesById': mock.ANY,
+                'locusListsByGuid': {},
+                'mmeSubmissionsByGuid': {},
+                'omimIntervals': {},
+                'phenotypeGeneScores': {},
+                'rnaSeqData': {},
+                'savedVariantsByGuid': {},
+                'variantFunctionalDataByGuid': {},
+                'variantNotesByGuid': {},
+                'variantTagsByGuid': {},
+                'totalSampleCounts': {
+                    'MITO': {'WES': 1},
+                    'SNV_INDEL': {'WES': 7},
+                    'SV': {'WES': 3, 'WGS': 3},
+                },
+            })
         self.assertDictEqual(response.json(), expected_response)
 
         cache_key = format_cache_key() if format_cache_key else f'search_results__{result_guid}__{sort}'
@@ -1840,6 +1844,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             'gnomad_genomes': {'af': 0.003},
             'gnomad_exomes': {'af': 0.003},
         }
+        locus = {'rawItems': 'ENSG00000097046'}
         format_response_body = lambda search_body: {**search_body, 'no_access_project_genome_version': '38'}
         variant4 = {**VARIANT4, 'selectedMainTranscriptId': 'ENST00000350997', 'numFamilies': 3}
         del variant4['familyGuids']
@@ -1847,40 +1852,31 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self._assert_expected_search(
             [variant4], request_body=request_body, format_response_body=format_response_body,
             cached_variant_fields=[{'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[4][1]}],
-            annotations=annotations, freqs=freqs, locus={'rawItems': 'ENSG00000097046'},
+            annotations=annotations, freqs=freqs, locus=locus,
         )
 
-        body['search']['locus'] = {'rawItems': 'ENSG00000097046'}
-        body['search']['freqs'] = {'callset': body['search']['freqs']['callset']}
-        response = self.client.post(url+'2', content_type='application/json', data=json.dumps(body))
-        self.assertEqual(response.status_code, 200)
+        freqs = {'callset': freqs['callset']}
         variant3 = {**VARIANT3, 'selectedMainTranscriptId': 'ENST00000497611', 'numFamilies': 4}
         del variant3['familyGuids']
         del variant3['genotypes']
-        expected_response['searchedVariants'].insert(0, variant3)
-        expected_response['genesById']['ENSG00000177000'] = mock.ANY
-        expected_response['search']['search'].update(body['search'])
-        expected_response['search']['totalResults'] = 2
-        self.assertDictEqual(response.json(), expected_response)
+        self._assert_expected_search(
+            [variant3, variant4], request_body=request_body, format_response_body=format_response_body,
+            cached_variant_fields=[
+                {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[3][3]},
+                {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[4][1]},
+            ],
+            annotations=annotations, freqs=freqs, locus=locus,
+        )
 
-        body['search']['inheritance'] = {'mode': 'recessive'}
-        response = self.client.post(url + '3', content_type='application/json', data=json.dumps(body))
-        self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {
-            'error': 'Compound heterozygous search is not supported when including external projects',
-        })
+        self._assert_expected_search_error(
+            'Compound heterozygous search is not supported when including external projects',
+            request_body=request_body, locus=locus, annotations=annotations, inheritance_mode='recessive',
+        )
 
-        body['search']['inheritance']['mode'] = 'homozygous_recessive'
-        response = self.client.post(url + '4', content_type='application/json', data=json.dumps(body))
-        self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {
-            'search': {
-                'search': {**body['search'], 'no_access_project_genome_version': '38'},
-                'projectFamilies': [],
-                'totalResults': 0,
-            },
-            'searchedVariants': [],
-        })
+        self._assert_expected_search(
+            [], request_body=request_body, format_response_body=format_response_body,
+            annotations=annotations, freqs=freqs, locus=locus, inheritance_mode='homozygous_recessive',
+        )
 
         body['search']['inheritance']['mode'] = 'de_novo'
         response = self.client.post(url + '5', content_type='application/json', data=json.dumps(body))
