@@ -111,7 +111,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
 
         patcher = mock.patch('seqr.models.VariantSearchResults._compute_guid')
         self.mock_results_guid = patcher.start()
-        self.mock_results_guid.return_value = random.randint(1000, 10000)
+        self.mock_results_guid.return_value = random.randint(1000, 10000)  # nosec
         self.addCleanup(patcher.stop)
 
         # TODO remove
@@ -133,7 +133,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self.assertEqual(json.loads(self.mock_redis.set.call_args.args[1]), expected_results)
         self.mock_redis.expire.assert_called_with(cache_key, timedelta(weeks=2))
 
-    def _execute_search(self, inheritance_mode=None, inheritance_filter=None, quality_filter=None, project_families=DEFAULT_PROJECT_FAMILIES, request_body=None, check_login=None, sort='xpos', **search_kwargs):
+    def _execute_search(self, inheritance_mode=None, inheritance_filter=None, quality_filter=None, project_families=None, request_body=None, check_login=None, sort='xpos', **search_kwargs):
         search_hash = random.randint(1000, 10000)
         self.mock_results_guid.return_value = f'VRS{search_hash:07d}'
         url = reverse(query_variants_handler, args=[search_hash])
@@ -148,7 +148,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             search_body['inheritance']['filter'] = inheritance_filter
 
         request_data = {
-            **(request_body or {'projectFamilies': project_families}), 'search': search_body,
+            **(request_body or {'projectFamilies': project_families or DEFAULT_PROJECT_FAMILIES}), 'search': search_body,
         }
 
         if check_login:
@@ -158,14 +158,14 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
 
         return response, search_hash, search_body
 
-    def _assert_expected_search(self, expected_results, results_page=None, gene_counts=None, cached_variant_fields=None, sort='xpos', response_search=None, format_cache_key=None, project_families=DEFAULT_PROJECT_FAMILIES, is_37=False, **kwargs):
+    def _assert_expected_search(self, expected_results, results_page=None, gene_counts=None, cached_variant_fields=None, sort='xpos', response_search=None, format_cache_key=None, project_families=None, is_37=False, **kwargs):
         response, search_hash, search_body = self._execute_search(project_families=project_families, sort=sort, **kwargs)
         self.assertEqual(response.status_code, 200)
         expected_response = {
             'searchedVariants': results_page or expected_results,
             'search': {
                 'search': {**search_body, **(response_search or {})},
-                'projectFamilies': project_families or [],
+                'projectFamilies': DEFAULT_PROJECT_FAMILIES if project_families is None else project_families,
                 'totalResults': len(expected_results),
             },
 
@@ -913,6 +913,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
 
     @mock.patch('seqr.utils.search.utils.LiftOver')
     def test_variant_lookup(self, mock_liftover):
+        # TODO
         mock_convert_coordinate = mock_liftover.return_value.convert_coordinate
         mock_convert_coordinate.side_effect = lambda chrom, pos: [(chrom, pos + 10000)]
 
@@ -1019,6 +1020,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self._assert_expected_variants(variants, [GCNV_LOOKUP_VARIANT_3], 'variant_lookup_results__suffix_140593_DUP__38')
 
     def test_get_single_variant(self):
+        #  TODO
         self._set_single_family_search()
         variant = get_single_variant(self.results_model.families.first(), VARIANT_IDS[0])
         self._assert_expected_variants([variant], [VARIANT1])
@@ -1112,14 +1114,13 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         )
 
     def test_annotations_filter(self):
-        self._assert_expected_search([VARIANT2], pathogenicity={'hgmd': ['hgmd_other']})
+        self._assert_expected_search([VARIANT2], pathogenicity={'hgmd': ['hgmd_other']}, check_login=self.check_collaborator_login)
         self._assert_expected_search([], pathogenicity={'hgmd': ['disease_causing', 'likely_disease_causing']})
 
         clinvar_paths = ['likely_pathogenic', 'conflicting_p_lp', 'conflicting_no_p', 'vus', 'benign']
         pathogenicity = {'clinvar': clinvar_paths, 'hgmd': []}
         self._assert_expected_search(
             [VARIANT1, VARIANT2, MITO_VARIANT1, MITO_VARIANT3], pathogenicity=pathogenicity,
-            check_login=self.check_collaborator_login,
         )
 
         self._assert_expected_search(
@@ -1210,9 +1211,10 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             ], project_families=SINGLE_FAMILY_PROJECT_FAMILIES,
         )
 
+        locus = {'rawItems': f'{GENE_IDS[1]}\n1:11785723-91525764'}
         self._assert_expected_search(
             [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2],
-            locus={'rawItems': f'{GENE_IDS[1]}\n1:11785723-91525764'}, pathogenicity=None, annotations=annotations,
+            locus=locus, pathogenicity=None, annotations=annotations,
             cached_variant_fields=[{
                 'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][5],
             }],
@@ -1221,7 +1223,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         annotations['other'].append('intron_variant')
         self._assert_expected_search(
             [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT],
-            annotations=annotations,  cached_variant_fields=[
+            annotations=annotations, locus=locus, cached_variant_fields=[
                 {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][5]},
                 {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[3][1]},
             ],
@@ -1354,12 +1356,13 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             ], {}, [{'selectedGeneId': 'ENSG00000275023'}, {'selectedGeneId': 'ENSG00000275023'}]],
         )
 
+        locus = {'rawItems': 'ENSG00000277258,ENSG00000275023'}
         self._assert_expected_search(
             [MULTI_DATA_TYPE_COMP_HET_VARIANT2, [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], [GCNV_VARIANT3, GCNV_VARIANT4]],
             inheritance_mode='recessive',
             annotations={**annotations_1, 'structural': ['gCNV_DEL'], 'structural_consequence': ['INTRONIC']},
             annotations_secondary={**annotations_2, **gcnv_annotations_1},
-            locus={'rawItems': 'ENSG00000277258,ENSG00000275023'}, cached_variant_fields=[
+            locus=locus, cached_variant_fields=[
                 {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][3]}, [
                 {'selectedGeneId': 'ENSG00000277258', 'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][3]},
                 {'selectedGeneId': 'ENSG00000277258'},
@@ -1369,7 +1372,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self._assert_expected_search(
             [MULTI_DATA_TYPE_COMP_HET_VARIANT2, [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4]],
             inheritance_mode='recessive', annotations={**annotations_1, 'structural': [], 'structural_consequence': []},
-            annotations_secondary=gcnv_annotations_2, cached_variant_fields=[
+            annotations_secondary=gcnv_annotations_2, locus=locus, cached_variant_fields=[
                 {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][3]}, [
                 {'selectedGeneId': 'ENSG00000277258', 'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][3]},
                 {'selectedGeneId': 'ENSG00000277258'},
@@ -1380,20 +1383,20 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         sv_annotations_2 = {'structural': ['DEL', 'gCNV_DUP'], 'structural_consequence': ['INTRONIC']}
 
         self.login_manager()
+        inheritance_filter = {'affected': {'I000019_na21987': 'N'}}
         self._assert_expected_search(
             [[SV_VARIANT1, SV_VARIANT2]], inheritance_mode='compound_het', locus=None,
-            annotations=sv_annotations_1, annotations_secondary=sv_annotations_2, inheritance_filter={'affected': {
-                'I000019_na21987': 'N',
-            }}, cached_variant_fields=[
+            annotations=sv_annotations_1, annotations_secondary=sv_annotations_2, inheritance_filter=inheritance_filter,
+            project_families=SV_PROJECT_FAMILIES, cached_variant_fields=[
                 [{'selectedGeneId': 'ENSG00000171621'}, {'selectedGeneId': 'ENSG00000171621'}],
-            ], project_families=SV_PROJECT_FAMILIES,
+            ],
         )
 
         self._assert_expected_search(
             [[SV_VARIANT1, SV_VARIANT2], SV_VARIANT4], inheritance_mode='recessive',
             annotations=sv_annotations_2, annotations_secondary=sv_annotations_1, cached_variant_fields=[
                 [{'selectedGeneId': 'ENSG00000171621'}, {'selectedGeneId': 'ENSG00000171621'}], {},
-            ], project_families=SV_PROJECT_FAMILIES,
+            ], inheritance_filter=inheritance_filter, project_families=SV_PROJECT_FAMILIES,
         )
 
         pathogenicity = {'clinvar': ['likely_pathogenic', 'conflicting_p_lp', 'conflicting_no_p', 'vus']}
@@ -1467,7 +1470,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self._assert_expected_search(
             [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, [VARIANT3, VARIANT4], MITO_VARIANT3],
             annotations={**selected_transcript_annotations, **screen_annotations}, annotations_secondary=annotations_2,
-            inheritance_mode='recessive', cached_variant_fields=[
+            inheritance_mode='recessive', pathogenicity=pathogenicity, cached_variant_fields=[
                 {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][5]}, [
                     {'selectedGeneId': 'ENSG00000097046', 'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[3][0]},
                     {'selectedGeneId': 'ENSG00000097046', 'selectedTranscript': None},
@@ -1476,20 +1479,19 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         )
 
         self._add_sample_type_samples('WES', individual__family__guid='F000014_14')
-        self.results_model.families.set(Family.objects.filter(guid__in=['F000002_2', 'F000011_11', 'F000014_14']))
         self._assert_expected_search(
             [MULTI_DATA_TYPE_COMP_HET_VARIANT2, [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], MULTI_PROJECT_GCNV_VARIANT3, [GCNV_VARIANT3, GCNV_VARIANT4]],
             inheritance_mode='recessive',
             annotations={**annotations_1, **gcnv_annotations_1}, annotations_secondary={**annotations_2, **gcnv_annotations_2},
-            locus={'rawItems': 'ENSG00000277258,ENSG00000275023'}, cached_variant_fields=[
+            locus={'rawItems': 'ENSG00000277258,ENSG00000275023'}, pathogenicity=pathogenicity, cached_variant_fields=[
                 {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][3]}, [
                 {'selectedGeneId': 'ENSG00000277258', 'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][3]},
                 {'selectedGeneId': 'ENSG00000277258'},
             ], {}, [{'selectedGeneId': 'ENSG00000275023'}, {'selectedGeneId': 'ENSG00000275023'}]],
+            project_families=[*MULTI_PROJECT_PROJECT_FAMILIES, *SV_PROJECT_FAMILIES],
         )
 
         # Search works with a different number of samples within the family
-        self._reset_search_families()
         missing_gt_gcnv_variant = {
             **GCNV_VARIANT4,
             'familyGuids': ['F000002_2_x'],
@@ -1508,7 +1510,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             annotations=gcnv_annotations_2, annotations_secondary=selected_transcript_annotations, cached_variant_fields=[[
                 {'selectedGeneId': 'ENSG00000277258', 'selectedTranscript': None},
                 {'selectedGeneId': 'ENSG00000277258'},
-            ]],
+            ]], project_families=[{**DEFAULT_PROJECT_FAMILIES[0], 'familyGuids': ['F000002_2_x', *DEFAULT_PROJECT_FAMILIES[0]['familyGuids'][1:]]}],
         )
 
     def test_in_silico_filter(self):
@@ -1780,7 +1782,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         response_json = self._assert_expected_search(
             [variant4], request_body=request_body, response_search=response_search,
             cached_variant_fields=[{'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[4][1]}],
-            annotations=annotations, freqs=freqs, locus=locus, project_families=None,
+            annotations=annotations, freqs=freqs, locus=locus, project_families=[],
         )
         self.assertEqual(response_json['genesById'], {'ENSG00000097046': mock.ANY})
         self.assertEqual(response_json['totalSampleCounts'], {
@@ -1799,7 +1801,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
                 {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[3][3]},
                 {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[4][1]},
             ],
-            annotations=annotations, freqs=freqs, locus=locus, project_families=None,
+            annotations=annotations, freqs=freqs, locus=locus, project_families=[],
         )
         self.assertEqual(response_json['genesById'], {'ENSG00000097046': mock.ANY, 'ENSG00000177000': mock.ANY})
 
@@ -1809,7 +1811,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         )
 
         self._assert_expected_search(
-            [], request_body=request_body, response_search=response_search, project_families=None,
+            [], request_body=request_body, response_search=response_search, project_families=[],
             annotations=annotations, freqs=freqs, locus=locus, inheritance_mode='homozygous_recessive',
         )
 
@@ -1821,7 +1823,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
                 {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[3][3]},
                 {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[4][1]},
             ],
-            annotations=annotations, freqs=freqs, locus=locus, inheritance_mode='de_novo', project_families=None,
+            annotations=annotations, freqs=freqs, locus=locus, inheritance_mode='de_novo', project_families=[],
         )
 
         self.login_collaborator()
