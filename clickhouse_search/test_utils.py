@@ -1396,4 +1396,7 @@ GCNV_GENE_COUNTS = {
 
 DEFAULT_PROJECT_FAMILIES = [{'projectGuid': 'R0001_1kg', 'familyGuids': ['F000002_2', 'F000003_3', 'F000005_5']}]
 SINGLE_FAMILY_PROJECT_FAMILIES = [{'projectGuid': 'R0001_1kg', 'familyGuids': ['F000002_2']}]
+MULTI_PROJECT_PROJECT_FAMILIES = [
+    *SINGLE_FAMILY_PROJECT_FAMILIES, {'projectGuid': 'R0003_test', 'familyGuids': ['F000011_11']}
+]
 SV_PROJECT_FAMILIES = [{'projectGuid': 'R0004_non_analyst_project', 'familyGuids': ['F000014_14']}]
