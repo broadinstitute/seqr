@@ -293,9 +293,8 @@ AIRTABLE_RNA_SAMPLE_RECORDS = [
             'CollaboratorSampleID': 'NA12346',
             'SeqrProject': [
                 'https://seqr.broadinstitute.org/project/R0002_empty/project_page',
-                'https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page',
             ],
-            'PDOStatus': ['RNA ready to load', 'RNA ready to load'],
+            'PDOStatus': ['RNA ready to load'],
         }
     },
     {
@@ -316,7 +315,7 @@ AIRTABLE_RNA_SAMPLE_RECORDS = [
             'CollaboratorSampleID': 'NA12348',
             'SeqrProject': ['R0003_test'],
             'PDOStatus': ['RNA ready to load'],
-            'TissueOfOrigin': ['Muscle'],
+            'TissueOfOrigin': ['Custom Tissue'],
         }
     },
     {
@@ -637,10 +636,11 @@ class DataManagerAPITest(AirtableTest):
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], [
             'Unable to load the following samples from Airtable with no corresponding seqr ID: NA11111',
+            'Unable to load the following samples that are improperly configured in Airtable with invalid tissue specified: NA12348',
+            'Unable to load the following samples that are improperly configured in Airtable with multiple conflicting PDOs: NA12345, NA12347',
             'Unable to load the following samples that are improperly configured in Airtable with multiple tissues specified: NA12345',
-            'Unable to load the following samples that are improperly configured in Airtable with no tissue specified: NA12346',
-            'Unable to load the following samples that are improperly configured in Airtable with multiple conflicting PDOs: NA12347',
             'Unable to load the following samples that are improperly configured in Airtable with no project specified: NA12348',
+            'Unable to load the following samples that are improperly configured in Airtable with no tissue specified: NA12346',
         ])
 
         _set_gzip_file_iter_stdout(mock_files[f'tmp/temp_uploads/{file_path}/muscle_samples.tsv.gz'], [header, loaded_data_row])
@@ -716,6 +716,7 @@ class DataManagerAPITest(AirtableTest):
         self.reset_logs()
         body.update({'ignoreExtraSamples': True, 'file': RNA_FILE_ID})
         warnings = [
+            'Skipped loading for the following 1 samples that are improperly configured in Airtable with multiple conflicting PDOs: NA12345',
             'Skipped loading for the following 1 samples that are improperly configured in Airtable with multiple tissues specified: NA12345',
             f'Skipped loading for the following {len(params["skipped_samples"].split(","))} '
             f'samples with no match: {params["skipped_samples"]}']
