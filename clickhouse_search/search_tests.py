@@ -133,7 +133,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self.assertEqual(json.loads(self.mock_redis.set.call_args.args[1]), expected_results)
         self.mock_redis.expire.assert_called_with(cache_key, timedelta(weeks=2))
 
-    def _execute_search(self, inheritance_mode=None, inheritance_filter=None, quality_filter=None, project_families=None, request_body=None, check_login=None, **search_kwargs):
+    def _execute_search(self, inheritance_mode=None, inheritance_filter=None, quality_filter=None, project_families=DEFAULT_PROJECT_FAMILIES, request_body=None, check_login=None, sort='xpos', **search_kwargs):
         search_hash = random.randint(1000, 10000)
         self.mock_results_guid.return_value = f'VRS{search_hash:07d}'
         url = reverse(query_variants_handler, args=[search_hash])
@@ -154,12 +154,12 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         if check_login:
             check_login(url, request_data=request_data)
 
-        response = self.client.post(url, content_type='application/json', data=json.dumps(request_data))
+        response = self.client.post(f'{url}?sort={sort}', content_type='application/json', data=json.dumps(request_data))
 
         return response, search_hash, search_body
 
     def _assert_expected_search(self, expected_results, results_page=None, gene_counts=None, cached_variant_fields=None, sort='xpos', response_search=None, format_cache_key=None, project_families=DEFAULT_PROJECT_FAMILIES, is_37=False, **kwargs):
-        response, search_hash, search_body = self._execute_search(project_families=project_families, **kwargs)
+        response, search_hash, search_body = self._execute_search(project_families=project_families, sort=sort, **kwargs)
         self.assertEqual(response.status_code, 200)
         expected_response = {
             'searchedVariants': results_page or expected_results,
@@ -813,117 +813,103 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
     @mock.patch('seqr.utils.search.utils.MAX_NO_LOCATION_COMP_HET_FAMILIES', 1)
     @mock.patch('clickhouse_search.search.MAX_VARIANTS', 3)
     def test_invalid_search(self):
-        with self.assertRaises(InvalidSearchException) as cm:
-            self._assert_expected_search([], locus={'rawVariantItems': 'chr2-A-C'})
-        self.assertEqual(str(cm.exception), 'Invalid variants: chr2-A-C')
+        self._assert_expected_search_error(
+            'Invalid variants: chr2-A-C', locus={'rawVariantItems': 'chr2-A-C'}, check_login=self.check_collaborator_login,
+        )
 
-        with self.assertRaises(InvalidSearchException) as cm:
-            self._assert_expected_search([], locus={'rawVariantItems': 'rs9876,chr2-1234-A-C'})
-        self.assertEqual(str(cm.exception), 'Invalid variants: rs9876')
+        self._assert_expected_search_error('Invalid variants: rs9876', locus={'rawVariantItems': 'rs9876'})
 
-        with self.assertRaises(InvalidSearchException) as cm:
-            self._assert_expected_search([], locus={'rawItems': 'chr27:1234-5678,2:40-400000000, ENSG00012345'})
-        self.assertEqual(str(cm.exception), 'Invalid genes/intervals: chr27:1234-5678, chr2:40-400000000, ENSG00012345')
+        self._assert_expected_search_error(
+            'Invalid genes/intervals: chr27:1234-5678, chr2:40-400000000, ENSG00012345',
+            locus={'rawItems': 'chr27:1234-5678,2:40-400000000, ENSG00012345'},
+        )
 
-        with self.assertRaises(InvalidSearchException) as cm:
-            self._assert_expected_search([], locus={'rawItems': '1:1-1000, 2:2000-3000, 3:4000-5000'})
-        self.assertEqual(str(cm.exception), 'Too many genes/intervals')
+        self._assert_expected_search_error('Too many genes/intervals', locus={'rawItems': '1:1-1000, 2:2000-3000, 3:4000-5000'})
 
         build_specific_genes = 'DDX11L1, OR4F29, ENSG00000223972, ENSG00000256186'
-        with self.assertRaises(InvalidSearchException) as cm:
-            self._assert_expected_search([], locus={'rawItems': build_specific_genes})
-        self.assertEqual(str(cm.exception), 'Invalid genes/intervals: OR4F29, ENSG00000256186')
+        self._assert_expected_search_error('Invalid genes/intervals: OR4F29, ENSG00000256186', locus={'rawItems': build_specific_genes})
 
-        with self.assertRaises(InvalidSearchException) as cm:
-            self._assert_expected_search([], exclude={'rawItems': build_specific_genes})
-        self.assertEqual(str(cm.exception), 'Cannot specify both Location and Excluded Genes/Intervals')
+        self._assert_expected_search_error(
+            'Cannot specify both Location and Excluded Genes/Intervals',
+            locus={'rawItems': build_specific_genes}, exclude={'rawItems': build_specific_genes},
+        )
 
-        with self.assertRaises(InvalidSearchException) as cm:
-            self._assert_expected_search([], locus=None)
-        self.assertEqual(str(cm.exception), 'Invalid genes/intervals: OR4F29, ENSG00000256186')
+        self._assert_expected_search_error('Invalid genes/intervals: OR4F29, ENSG00000256186', exclude={'rawItems': build_specific_genes})
 
-        with self.assertRaises(InvalidSearchException) as cm:
-            self._assert_expected_search([], exclude=None)
-        self.assertEqual(str(cm.exception),'This search returned too many results')
+        self._assert_expected_search_error('This search returned too many results')
 
-        with self.assertRaises(InvalidSearchException) as cm:
-            self._assert_expected_search([], pathogenicity={'clinvar': ['pathogenic', 'vus']}, exclude={'clinvar': ['benign', 'vus']})
-        self.assertEqual(str(cm.exception),'ClinVar pathogenicity vus is both included and excluded')
+        self._assert_expected_search_error(
+            'ClinVar pathogenicity vus is both included and excluded',
+            pathogenicity={'clinvar': ['pathogenic', 'vus']}, exclude={'clinvar': ['benign', 'vus']},
+        )
 
-        with self.assertRaises(InvalidSearchException) as cm:
-            self._assert_expected_search([], exclude=None, inheritance_mode='recessive')
-        self.assertEqual(str(cm.exception),'Annotations must be specified to search for compound heterozygous variants')
+        self._assert_expected_search_error('Annotations must be specified to search for compound heterozygous variants', inheritance_mode='recessive')
 
-        with self.assertRaises(InvalidSearchException) as cm:
-            self._assert_expected_search([], annotations={'frameshift': ['frameshift_variant']}, inheritance_mode='recessive')
-        self.assertEqual(str(cm.exception),'Location must be specified to search for compound heterozygous variants across many families')
+        self._assert_expected_search_error(
+            'Location must be specified to search for compound heterozygous variants across many families',
+            annotations={'frameshift': ['frameshift_variant']}, inheritance_mode='recessive',
+        )
 
-        with self.assertRaises(InvalidSearchException) as se:
-            self._assert_expected_search([], sort='prioritized_gene', num_results=2)
-        self.assertEqual(str(se.exception), 'Phenotype sort is only supported for single-family search.')
+        self._assert_expected_search_error(
+            'Phenotype sort is only supported for single-family search.',
+            sort='prioritized_gene', annotations={'frameshift': ['frameshift_variant']},
+        )
 
-        with self.assertRaises(InvalidSearchException) as cm:
-            self._assert_expected_search([], freqs={})
-        self.assertEqual(str(cm.exception),'seqr AC frequency of at least 5000 must be specified to search across multiple families')
+        self._assert_expected_search_error('seqr AC frequency of at least 5000 must be specified to search across multiple families', freqs={})
 
-        self.results_model.families.set(Family.objects.filter(guid='F000005_5'))
-        with self.assertRaises(InvalidSearchException) as cm:
-            self._assert_expected_search([], inheritance_mode='recessive')
-        self.assertEqual(str(cm.exception),'Inheritance based search is disabled in families with no data loaded for affected individuals')
+        self._assert_expected_search_error(
+            'Inheritance based search is disabled in families with no data loaded for affected individuals',
+            inheritance_mode='recessive', project_families=[{'projectGuid': 'R0001_1kg', 'familyGuids': ['F000005_5']}],
+        )
 
-        self.results_model.families.set(Family.objects.filter(guid='F000003_3'))
-        with self.assertRaises(InvalidSearchException) as cm:
-            self._assert_expected_search([], pathogenicity={}, annotations={'structural': ['DEL']})
-        self.assertEqual(str(cm.exception), 'Unable to search against dataset type "SV"')
+        no_sv_project_families = [{'projectGuid': 'R0001_1kg', 'familyGuids': ['F000003_3']}]
+        self._assert_expected_search_error(
+            'Unable to search against dataset type "SV"', pathogenicity={}, annotations={'structural': ['DEL']},
+            project_families=no_sv_project_families,
+        )
 
-        self.search_model.search['annotations_secondary'] = {'frameshift': ['frameshift_variant']}
-        with self.assertRaises(InvalidSearchException) as cm:
-            self._assert_expected_search([], inheritance_mode='recessive', annotations_secondary={'frameshift': ['frameshift_variant']})
-        self.assertEqual(str(cm.exception),'Unable to search for comp-het pairs with dataset type "SV". This may be because inheritance based search is disabled in families with no loaded affected individuals')
+        self._assert_expected_search_error(
+            'Unable to search for comp-het pairs with dataset type "SV". This may be because inheritance based search is disabled in families with no loaded affected individuals',
+            inheritance_mode='recessive', annotations={'structural': ['DEL']}, annotations_secondary={'frameshift': ['frameshift_variant']}, project_families=no_sv_project_families,
+        )
 
-        with self.assertRaises(InvalidSearchException) as cm:
-            self._assert_expected_search([], inheritance_mode='recessive', inheritance_filter={'affected': {'I000007_na20870': 'N'}})
-        self.assertEqual(str(cm.exception),'Inheritance based search is disabled in families with no data loaded for affected individuals')
+        self._assert_expected_search_error(
+            'Inheritance based search is disabled in families with no data loaded for affected individuals',
+            inheritance_mode='recessive', inheritance_filter={'affected': {'I000007_na20870': 'N'}}, project_families=no_sv_project_families,
+        )
 
-        with self.assertRaises(InvalidSearchException) as cm:
-            self._assert_expected_search([])
-        self.assertEqual(str(cm.exception), 'Inheritance must be specified if custom affected status is set')
+        self._assert_expected_search_error('Inheritance must be specified if custom affected status is set', inheritance_filter={'affected': {'I000007_na20870': 'N'}})
 
-        with self.assertRaises(InvalidSearchException) as cm:
-            self._assert_expected_search([], inheritance_filter={'genotype': {'I000004_hg00731': 'ref_ref'}})
-        self.assertEqual(str(cm.exception), 'Invalid custom inheritance')
+        self._assert_expected_search_error(
+            'Invalid custom inheritance', project_families=no_sv_project_families, inheritance_filter={'genotype': {'I000004_hg00731': 'ref_ref'}},
+        )
 
-        self.results_model.families.set(Family.objects.filter(family_id='no_individuals'))
-        with self.assertRaises(InvalidSearchException) as cm:
-            self._assert_expected_search([], inheritance_filter={})
-        self.assertEqual(str(cm.exception), 'No search data found for families no_individuals')
+        self._assert_expected_search_error(
+            'No search data found for families no_individuals', project_families=[{'projectGuid': 'R0001_1kg', 'familyGuids': ['F000013_13']}],
+        )
 
-        with self.assertRaises(InvalidSearchException) as cm:
-            self._assert_expected_search([], project_families=MULTI_PROJECT_PROJECT_FAMILIES,)
-        self.assertEqual(str(cm.exception), 'Location must be specified to search across multiple projects')
+        self._assert_expected_search_error('Location must be specified to search across multiple projects', project_families=MULTI_PROJECT_PROJECT_FAMILIES)
 
         Sample.objects.filter(guid='S000143_na20885').update(sample_id='HG00732')
-        with self.assertRaises(InvalidSearchException) as cm:
-            self._assert_expected_search([], locus={'rawItems': GENE_IDS[0]}, freqs={'callset': {'ac': 1000}}, project_families=MULTI_PROJECT_PROJECT_FAMILIES)
-        self.assertEqual(
-            str(cm.exception),
+        self._assert_expected_search_error(
             'The following samples are incorrectly configured and have different affected statuses in different projects: '
             'HG00732 (1kg project nåme with uniçøde/ Test Reprocessed Project)',
+            locus={'rawItems': GENE_IDS[0]}, freqs={'callset': {'ac': 1000}}, project_families=MULTI_PROJECT_PROJECT_FAMILIES,
         )
 
         self._set_grch37_search()
-        with self.assertRaises(InvalidSearchException) as cm:
-            self._assert_expected_search([], locus={'rawItems': build_specific_genes})
-        self.assertEqual(str(cm.exception), 'Invalid genes/intervals: DDX11L1, ENSG00000223972')
+        self._assert_expected_search_error('Invalid genes/intervals: DDX11L1, ENSG00000223972', locus={'rawItems': build_specific_genes})
 
-        with self.assertRaises(InvalidSearchException) as cm:
-            self._assert_expected_search([], locus=None, project_families=MULTI_PROJECT_PROJECT_FAMILIES)
-        self.assertEqual(str(cm.exception),'Searching across multiple genome builds is not supported. Remove projects with differing genome builds from search: 37 - 1kg project nåme with uniçøde; 38 - Test Reprocessed Project')
+        self._assert_expected_search_error(
+            'Searching across multiple genome builds is not supported. Remove projects with differing genome builds from search: 37 - 1kg project nåme with uniçøde; 38 - Test Reprocessed Project',
+            project_families=MULTI_PROJECT_PROJECT_FAMILIES,
+        )
 
+        #  TODO test once have export tests in this file
         self.set_cache({'total_results': 20000})
         with self.assertRaises(InvalidSearchException) as cm:
             self._assert_expected_search([], page=1, num_results=2, load_all=True, project_families=SINGLE_FAMILY_PROJECT_FAMILIES)
-        self.assertEqual(str(cm.exception), 'Unable to export more than 1000 variants (20000 requested)')
+        self._assert_expected_search_error('Unable to export more than 1000 variants (20000 requested)')
 
     @mock.patch('seqr.utils.search.utils.LiftOver')
     def test_variant_lookup(self, mock_liftover):
