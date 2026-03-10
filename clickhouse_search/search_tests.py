@@ -305,34 +305,26 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self._assert_expected_search([GRCH37_VARIANT], project_families=SINGLE_FAMILY_PROJECT_FAMILIES, is_37=True)
 
     def test_standard_searches(self):
-        results_model = self._saved_search_results_model('De Novo/Dominant Restrictive')
         self._assert_expected_search(
-            [VARIANT1, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], results_model=results_model, cached_variant_fields=[
+            [VARIANT1, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], cached_variant_fields=[
                 {'selectedTranscript': None}, {}, {}, {},
-            ],
+            ], project_families=SINGLE_FAMILY_PROJECT_FAMILIES, **VariantSearch.objects.get(name='De Novo/Dominant Restrictive').search,
+            check_login=self.check_collaborator_login,
         )
 
-        results_model = self._saved_search_results_model('De Novo/Dominant Permissive')
         self._assert_expected_search(
-            [VARIANT1, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], results_model=results_model, cached_variant_fields=[
+            [VARIANT1, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], cached_variant_fields=[
                 {'selectedTranscript': None}, {}, {}, {},
-            ],
+            ], project_families=SINGLE_FAMILY_PROJECT_FAMILIES, **VariantSearch.objects.get(name='De Novo/Dominant Permissive').search,
         )
 
-        results_model = self._saved_search_results_model('Recessive Restrictive')
-        self._assert_expected_search([VARIANT2, MITO_VARIANT3], results_model=results_model, cached_variant_fields=[
+        self._assert_expected_search([VARIANT2, MITO_VARIANT3], cached_variant_fields=[
             {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][0]}, {},
-        ])
+        ], project_families=SINGLE_FAMILY_PROJECT_FAMILIES, **VariantSearch.objects.get(name='Recessive Restrictive').search)
 
-        results_model = self._saved_search_results_model('Recessive Permissive')
-        self._assert_expected_search([VARIANT2, MITO_VARIANT3], results_model=results_model, cached_variant_fields=[
+        self._assert_expected_search([VARIANT2, MITO_VARIANT3], cached_variant_fields=[
             {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][0]}, {},
-        ])
-
-    def _saved_search_results_model(self, name):
-        results_model = VariantSearchResults.objects.create(variant_search=VariantSearch.objects.get(name=name), search_hash=name)
-        results_model.families.set(self.families.filter(guid='F000002_2'))
-        return results_model
+        ], project_families=SINGLE_FAMILY_PROJECT_FAMILIES, **VariantSearch.objects.get(name='Recessive Permissive').search)
 
     def test_single_project_search(self):
         variant_gene_counts = {
