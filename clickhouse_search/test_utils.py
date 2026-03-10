@@ -1394,5 +1394,6 @@ GCNV_GENE_COUNTS = {
     'ENSG00000277972': {'total': 1, 'families': {'F000002_2': 1}},
 }
 
+DEFAULT_PROJECT_FAMILIES = [{'projectGuid': 'R0001_1kg', 'familyGuids': ['F000002_2', 'F000003_3', 'F000005_5']}]
 SINGLE_FAMILY_PROJECT_FAMILIES = [{'projectGuid': 'R0001_1kg', 'familyGuids': ['F000002_2']}]
 SV_PROJECT_FAMILIES = [{'projectGuid': 'R0004_non_analyst_project', 'familyGuids': ['F000014_14']}]
