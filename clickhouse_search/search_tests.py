@@ -1,3 +1,5 @@
+from datetime import timedelta
+from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.management import call_command
 from django.db import connections
@@ -35,7 +37,6 @@ from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4,
     format_cached_variant
 from reference_data.models import Omim
 from seqr.models import Project, Family, Sample, VariantSearch, VariantSearchResults
-from seqr.utils.search.search_utils_tests import SearchTestHelper
 from seqr.utils.search.utils import query_variants, variant_lookup, get_variant_query_gene_counts, get_single_variant, InvalidSearchException
 from seqr.views.apis.data_manager_api import trigger_delete_project
 from seqr.views.utils.json_utils import DjangoJSONEncoderWithSets
@@ -96,16 +97,35 @@ class ClickhouseSearchTestCase(AnvilAuthenticationTestCase):
         super().setUpTestData()
 
 
-class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
+class ClickhouseSearchTests(ClickhouseSearchTestCase):
     databases = '__all__'
     fixtures = ['users', '1kg_project', 'variant_searches', 'reference_data', 'clickhouse_search', 'clickhouse_transcripts']
 
     def setUp(self):
-        super().set_up()
-        super().setUp()
+        patcher = mock.patch('seqr.utils.redis_utils.redis.StrictRedis')
+        self.mock_redis = patcher.start().return_value
         self.mock_redis.get.return_value = None
+        self.addCleanup(patcher.stop)
 
-    def _assert_expected_search(self, expected_results, gene_counts=None, inheritance_mode=None, inheritance_filter=None, quality_filter=None, cached_variant_fields=None, sort='xpos', results_model=None, **search_kwargs):
+        self.families = Family.objects.filter(guid__in=['F000003_3', 'F000002_2', 'F000005_5'])
+        self.user = User.objects.get(username='test_user')
+
+        self.search_model = VariantSearch.objects.create(search={'inheritance': {'mode': 'de_novo'}, 'freqs': {'callset': {'ac': 1000}}})
+        self.results_model = VariantSearchResults.objects.create(variant_search=self.search_model)
+        self.results_model.families.set(self.families)
+
+        super().setUp()
+
+    def set_cache(self, cached):
+        self.mock_redis.get.return_value = json.dumps(cached)
+
+    def assert_cached_results(self, expected_results, sort='xpos', cache_key=None):
+        cache_key = cache_key or f'search_results__{self.results_model.guid}__{sort}'
+        self.mock_redis.set.assert_called_with(cache_key, mock.ANY)
+        self.assertEqual(json.loads(self.mock_redis.set.call_args.args[1]), expected_results)
+        self.mock_redis.expire.assert_called_with(cache_key, timedelta(weeks=2))
+
+    def _assert_expected_search(self, expected_results, results_page=None, gene_counts=None, inheritance_mode=None, inheritance_filter=None, quality_filter=None, cached_variant_fields=None, sort='xpos', load_all=False, page=1, num_results=100, results_model=None, **search_kwargs):
         results_model = results_model or self.results_model
         self.search_model.search.update(search_kwargs or {})
         self.search_model.search['qualityFilter'] = quality_filter
@@ -113,28 +133,38 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
         if inheritance_filter is not None:
             self.search_model.search['inheritance']['filter'] = inheritance_filter
 
-        variants, total = query_variants(results_model, user=self.user, sort=sort)
-        encoded_variants = self._assert_expected_variants(variants, expected_results)
-
+        variants, total = query_variants(results_model, user=self.user, sort=sort, load_all=load_all, page=page, num_results=num_results)
         self.assertEqual(total, len(expected_results))
-        self._assert_expected_search_cache(encoded_variants, total, cached_variant_fields, sort, results_model)
+        self._assert_expected_variants(
+            variants, expected_results, cache_key=f'search_results__{results_model.guid}__{sort}', sort=sort,
+            format_cached_variants=self._format_cached_variants, cached_variant_fields=cached_variant_fields,
+            results_page=results_page,
+        )
 
         if gene_counts:
             gene_counts_json = get_variant_query_gene_counts(results_model, self.user)
             self.assertDictEqual(gene_counts_json, gene_counts)
 
-    def _assert_expected_variants(self, variants, expected_results):
-        encoded_variants = json.loads(json.dumps(variants, cls=DjangoJSONEncoderWithSets))
-        self.assertListEqual(encoded_variants, expected_results)
-        return encoded_variants
+    def _assert_expected_variants(self, variants, expected_results, cache_key=None, results_page=None, format_cached_variants=None, sort='xpos', **kwargs):
+        encoded_variants = self._encode_variants(variants)
+        self.assertListEqual(encoded_variants, results_page or expected_results)
+        if cache_key:
+            cached_variants = format_cached_variants(expected_results, **kwargs) if format_cached_variants else expected_results
+            self.assert_cached_results(cached_variants, sort=sort, cache_key=cache_key)
+        else:
+            self.mock_redis.get.assert_not_called()
+            self.mock_redis.set.assert_not_called()
 
-    def _assert_expected_search_cache(self, variants, total, cached_variant_fields, sort, results_model):
+    @staticmethod
+    def _encode_variants(variants):
+        return json.loads(json.dumps(variants, cls=DjangoJSONEncoderWithSets))
+
+    def _format_cached_variants(self, variants, cached_variant_fields=None):
         cached_variants = [
             self._get_cached_variant(variant, (cached_variant_fields[i] if cached_variant_fields else None))
             for i, variant in enumerate(variants)
         ]
-        results_cache = {'all_results': cached_variants, 'total_results': total}
-        self.assert_cached_results(results_cache, sort=sort, cache_key=f'search_results__{results_model.guid}__{sort}')
+        return {'all_results': cached_variants, 'total_results': len(variants)}
 
     @classmethod
     def _get_cached_variant(cls, variant, cached_variant_fields):
@@ -175,12 +205,12 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
         }
         self._assert_expected_search(
             [VARIANT1, VARIANT2, VARIANT3, VARIANT4], gene_counts=variant_gene_counts, locus={'rawItems': '1:1-100000000'},
-            **ALL_SNV_INDEL_PASS_FILTERS,
+            exclude_svs=True,
         )
 
         self._assert_expected_search(
             [MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], gene_counts=MITO_GENE_COUNTS, locus={'rawItems': 'M:1-100000000'},
-            annotations=None, pathogenicity=None,
+            exclude_svs=False,
         )
 
         self._assert_expected_search(
@@ -747,21 +777,124 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
             [],locus={'rawVariantItems': VARIANT_IDS[1]},
         )
 
+    @mock.patch('seqr.utils.search.utils.MAX_GENES_FOR_FILTER', 2)
+    @mock.patch('seqr.utils.search.utils.MAX_NO_LOCATION_COMP_HET_FAMILIES', 1)
     @mock.patch('clickhouse_search.search.MAX_VARIANTS', 3)
     def test_invalid_search(self):
         with self.assertRaises(InvalidSearchException) as cm:
-            self._assert_expected_search([])
+            self._assert_expected_search([], locus={'rawVariantItems': 'chr2-A-C'})
+        self.assertEqual(str(cm.exception), 'Invalid variants: chr2-A-C')
+
+        with self.assertRaises(InvalidSearchException) as cm:
+            self._assert_expected_search([], locus={'rawVariantItems': 'rs9876,chr2-1234-A-C'})
+        self.assertEqual(str(cm.exception), 'Invalid variants: rs9876')
+
+        with self.assertRaises(InvalidSearchException) as cm:
+            self._assert_expected_search([], locus={'rawItems': 'chr27:1234-5678,2:40-400000000, ENSG00012345'})
+        self.assertEqual(str(cm.exception), 'Invalid genes/intervals: chr27:1234-5678, chr2:40-400000000, ENSG00012345')
+
+        with self.assertRaises(InvalidSearchException) as cm:
+            self._assert_expected_search([], locus={'rawItems': '1:1-1000, 2:2000-3000, 3:4000-5000'})
+        self.assertEqual(str(cm.exception), 'Too many genes/intervals')
+
+        build_specific_genes = 'DDX11L1, OR4F29, ENSG00000223972, ENSG00000256186'
+        with self.assertRaises(InvalidSearchException) as cm:
+            self._assert_expected_search([], locus={'rawItems': build_specific_genes})
+        self.assertEqual(str(cm.exception), 'Invalid genes/intervals: OR4F29, ENSG00000256186')
+
+        with self.assertRaises(InvalidSearchException) as cm:
+            self._assert_expected_search([], exclude={'rawItems': build_specific_genes})
+        self.assertEqual(str(cm.exception), 'Cannot specify both Location and Excluded Genes/Intervals')
+
+        with self.assertRaises(InvalidSearchException) as cm:
+            self._assert_expected_search([], locus=None)
+        self.assertEqual(str(cm.exception), 'Invalid genes/intervals: OR4F29, ENSG00000256186')
+
+        with self.assertRaises(InvalidSearchException) as cm:
+            self._assert_expected_search([], exclude=None)
         self.assertEqual(str(cm.exception),'This search returned too many results')
 
-        Sample.objects.filter(guid='S000143_na20885').update(sample_id='HG00732')
+        with self.assertRaises(InvalidSearchException) as cm:
+            self._assert_expected_search([], pathogenicity={'clinvar': ['pathogenic', 'vus']}, exclude={'clinvar': ['benign', 'vus']})
+        self.assertEqual(str(cm.exception),'ClinVar pathogenicity vus is both included and excluded')
+
+        with self.assertRaises(InvalidSearchException) as cm:
+            self._assert_expected_search([], exclude=None, inheritance_mode='recessive')
+        self.assertEqual(str(cm.exception),'Annotations must be specified to search for compound heterozygous variants')
+
+        with self.assertRaises(InvalidSearchException) as cm:
+            self._assert_expected_search([], annotations={'frameshift': ['frameshift_variant']}, inheritance_mode='recessive')
+        self.assertEqual(str(cm.exception),'Location must be specified to search for compound heterozygous variants across many families')
+
+        with self.assertRaises(InvalidSearchException) as se:
+            self._assert_expected_search([], sort='prioritized_gene', num_results=2)
+        self.assertEqual(str(se.exception), 'Phenotype sort is only supported for single-family search.')
+
+        with self.assertRaises(InvalidSearchException) as cm:
+            self._assert_expected_search([], freqs={})
+        self.assertEqual(str(cm.exception),'seqr AC frequency of at least 5000 must be specified to search across multiple families')
+
+        self.results_model.families.set(Family.objects.filter(guid='F000005_5'))
+        with self.assertRaises(InvalidSearchException) as cm:
+            self._assert_expected_search([], inheritance_mode='recessive')
+        self.assertEqual(str(cm.exception),'Inheritance based search is disabled in families with no data loaded for affected individuals')
+
+        self.results_model.families.set(Family.objects.filter(guid='F000003_3'))
+        with self.assertRaises(InvalidSearchException) as cm:
+            self._assert_expected_search([], pathogenicity={}, annotations={'structural': ['DEL']})
+        self.assertEqual(str(cm.exception), 'Unable to search against dataset type "SV"')
+
+        self.search_model.search['annotations_secondary'] = {'frameshift': ['frameshift_variant']}
+        with self.assertRaises(InvalidSearchException) as cm:
+            self._assert_expected_search([], inheritance_mode='recessive', annotations_secondary={'frameshift': ['frameshift_variant']})
+        self.assertEqual(str(cm.exception),'Unable to search for comp-het pairs with dataset type "SV". This may be because inheritance based search is disabled in families with no loaded affected individuals')
+
+        with self.assertRaises(InvalidSearchException) as cm:
+            self._assert_expected_search([], inheritance_mode='recessive', inheritance_filter={'affected': {'I000007_na20870': 'N'}})
+        self.assertEqual(str(cm.exception),'Inheritance based search is disabled in families with no data loaded for affected individuals')
+
+        with self.assertRaises(InvalidSearchException) as cm:
+            self._assert_expected_search([])
+        self.assertEqual(str(cm.exception), 'Inheritance must be specified if custom affected status is set')
+
+        with self.assertRaises(InvalidSearchException) as cm:
+            self._assert_expected_search([], inheritance_filter={'genotype': {'I000004_hg00731': 'ref_ref'}})
+        self.assertEqual(str(cm.exception), 'Invalid custom inheritance')
+
+        self.results_model.families.set(Family.objects.filter(family_id='no_individuals'))
+        with self.assertRaises(InvalidSearchException) as cm:
+            self._assert_expected_search([], inheritance_filter={})
+        self.assertEqual(str(cm.exception), 'No search data found for families no_individuals')
+
         self._set_multi_project_search()
         with self.assertRaises(InvalidSearchException) as cm:
-            self._assert_expected_search([], locus={'rawItems': GENE_IDS[0]})
+            self._assert_expected_search([])
+        self.assertEqual(str(cm.exception), 'Location must be specified to search across multiple projects')
+
+        Sample.objects.filter(guid='S000143_na20885').update(sample_id='HG00732')
+        with self.assertRaises(InvalidSearchException) as cm:
+            self._assert_expected_search([], locus={'rawItems': GENE_IDS[0]}, freqs={'callset': {'ac': 1000}})
         self.assertEqual(
             str(cm.exception),
             'The following samples are incorrectly configured and have different affected statuses in different projects: '
             'HG00732 (1kg project nåme with uniçøde/ Test Reprocessed Project)',
         )
+
+        self._set_grch37_search()
+        with self.assertRaises(InvalidSearchException) as cm:
+            self._assert_expected_search([], locus={'rawItems': build_specific_genes})
+        self.assertEqual(str(cm.exception), 'Invalid genes/intervals: DDX11L1, ENSG00000223972')
+
+        self._set_multi_project_search()
+        with self.assertRaises(InvalidSearchException) as cm:
+            self._assert_expected_search([], locus=None)
+        self.assertEqual(str(cm.exception),'Searching across multiple genome builds is not supported. Remove projects with differing genome builds from search: 37 - 1kg project nåme with uniçøde; 38 - Test Reprocessed Project')
+
+        self._set_single_family_search()
+        self.set_cache({'total_results': 20000})
+        with self.assertRaises(InvalidSearchException) as cm:
+            self._assert_expected_search([], page=1, num_results=2, load_all=True)
+        self.assertEqual(str(cm.exception), 'Unable to export more than 1000 variants (20000 requested)')
 
     @mock.patch('seqr.utils.search.utils.LiftOver')
     def test_variant_lookup(self, mock_liftover):
@@ -769,12 +902,18 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
         mock_convert_coordinate.side_effect = lambda chrom, pos: [(chrom, pos + 10000)]
 
         variants = variant_lookup(self.user, '1-10439-AC-A', '38')
-        self._assert_expected_variants(variants, [VARIANT_LOOKUP_VARIANT])
+        self._assert_expected_variants(variants, [VARIANT_LOOKUP_VARIANT], 'variant_lookup_results__1-10439-AC-A__38')
 
         with self.assertRaises(ObjectDoesNotExist) as cm:
             variant_lookup(self.user, '1-91511686-TCA-G', '38')
         self.assertEqual(str(cm.exception), 'Variant not present in seqr')
 
+        self.set_cache([VARIANT_LOOKUP_VARIANT])
+        cached_variants = variant_lookup(self.user, '1-91511686-TCA-G', '38')
+        self.assertListEqual([VARIANT_LOOKUP_VARIANT], cached_variants)
+        self.mock_redis.get.assert_called_with('variant_lookup_results__1-91511686-TCA-G__38')
+
+        self.set_cache(None)
         variants = variant_lookup(self.user, '7-143270172-A-G', '37')
         grch37_lookup_variant = {
             **{k: v for k, v in GRCH37_VARIANT.items() if k not in {'familyGuids', 'genotypes'}},
@@ -782,14 +921,15 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
                 {k: v for k, v in g.items() if k != 'individualGuid'} for g in GRCH37_VARIANT['genotypes'].values()
             ], key=lambda x: x['sampleId'], reverse=True)},
         }
-        self._assert_expected_variants(variants, [grch37_lookup_variant])
+        cache_key = 'variant_lookup_results__7-143270172-A-G__37'
+        self._assert_expected_variants(variants, [grch37_lookup_variant], cache_key)
 
         variants = variant_lookup(self.user, '7-143270172-A-G', '37', hom_only=True, affected_only=True)
-        self._assert_expected_variants(variants, [grch37_lookup_variant])
+        self._assert_expected_variants(variants, [grch37_lookup_variant], f'{cache_key}__affected__hom')
 
         # Lookup works if variant is only present on a different build
         variants = variant_lookup(self.user, '7-143260172-A-G', '38')
-        self._assert_expected_variants(variants, [grch37_lookup_variant])
+        self._assert_expected_variants(variants, [grch37_lookup_variant], 'variant_lookup_results__7-143260172-A-G__38')
         mock_liftover.assert_called_with('hg38', 'hg19')
         mock_convert_coordinate.assert_called_with('chr7', 143260172)
 
@@ -802,7 +942,8 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
         }
         del liftover_variant['liftedFamilyGuids']
         variants = variant_lookup(self.user, '1-439-AC-A', '37')
-        self._assert_expected_variants(variants, [liftover_variant])
+        cache_key = 'variant_lookup_results__1-439-AC-A__37'
+        self._assert_expected_variants(variants, [liftover_variant], cache_key)
         mock_liftover.assert_called_with('hg19', 'hg38')
         mock_convert_coordinate.assert_called_with('chr1', 439)
 
@@ -814,9 +955,9 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
             },
         }
         variants = variant_lookup(self.user, '1-10439-AC-A', '38', hom_only=True)
-        self._assert_expected_variants(variants, [hom_only_lookup_variant])
+        self._assert_expected_variants(variants, [hom_only_lookup_variant], 'variant_lookup_results__1-10439-AC-A__38__hom')
         variants = variant_lookup(self.user, '1-439-AC-A', '37', hom_only=True)
-        self._assert_expected_variants(variants, [hom_only_lookup_variant])
+        self._assert_expected_variants(variants, [hom_only_lookup_variant], f'{cache_key}__hom')
 
         variants = variant_lookup(self.user, 'M-4429-G-A', '38')
         self._assert_expected_variants(variants, [{
@@ -824,14 +965,23 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
             'familyGenotypes': {MITO_VARIANT1['familyGuids'][0]: [
                 {k: v for k, v in g.items() if k != 'individualGuid'} for g in MITO_VARIANT1['genotypes'].values()
             ]},
-        }])
+        }], 'variant_lookup_results__M-4429-G-A__38')
 
         with self.assertRaises(ObjectDoesNotExist) as cm:
             variant_lookup(self.user, 'M-4429-G-A', '38', hom_only=True)
         self.assertEqual(str(cm.exception), 'Variant not present in seqr')
 
+        with self.assertRaises(InvalidSearchException) as cm:
+            variant_lookup(self.user, 'phase2_DEL_chr14_4640', '37')
+        self.assertEqual(str(cm.exception), 'SV variants are not available for GRCh37')
+
+        with self.assertRaises(InvalidSearchException) as cm:
+            variant_lookup(self.user, 'phase2_DEL_chr14_4640', '38')
+        self.assertEqual(str(cm.exception), 'Sample type must be specified to look up a structural variant')
+
         variants = variant_lookup(self.user, 'phase2_DEL_chr14_4640', '38', sample_type='WGS')
-        self._assert_expected_variants(variants, [SV_LOOKUP_VARIANT, GCNV_LOOKUP_VARIANT])
+        cache_key = 'variant_lookup_results__phase2_DEL_chr14_4640__38'
+        self._assert_expected_variants(variants, [SV_LOOKUP_VARIANT, GCNV_LOOKUP_VARIANT], cache_key)
 
         affected_only_lookup_variant = {
             **GCNV_LOOKUP_VARIANT,
@@ -840,17 +990,18 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
             },
         }
         variants = variant_lookup(self.user, 'phase2_DEL_chr14_4640', '38', sample_type='WGS', affected_only=True)
-        self._assert_expected_variants(variants, [SV_LOOKUP_VARIANT, affected_only_lookup_variant])
+        self._assert_expected_variants(variants, [SV_LOOKUP_VARIANT, affected_only_lookup_variant], f'{cache_key}__affected')
 
         # reciprocal overlap does not meet the threshold for smaller events
         variants = variant_lookup(self.user, 'suffix_140608_DUP', '38', sample_type='WES')
-        self._assert_expected_variants(variants, [GCNV_LOOKUP_VARIANT])
+        cache_key = 'variant_lookup_results__suffix_140608_DUP__38'
+        self._assert_expected_variants(variants, [GCNV_LOOKUP_VARIANT], cache_key)
 
         variants = variant_lookup(self.user, 'suffix_140608_DUP', '38', sample_type='WES', affected_only=True)
-        self._assert_expected_variants(variants, [affected_only_lookup_variant])
+        self._assert_expected_variants(variants, [affected_only_lookup_variant], f'{cache_key}__affected')
 
         variants = variant_lookup(self.user, 'suffix_140593_DUP', '38', sample_type='WES')
-        self._assert_expected_variants(variants, [GCNV_LOOKUP_VARIANT_3])
+        self._assert_expected_variants(variants, [GCNV_LOOKUP_VARIANT_3], 'variant_lookup_results__suffix_140593_DUP__38')
 
     def test_get_single_variant(self):
         self._set_single_family_search()
@@ -1024,6 +1175,13 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
                 {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[4][1]},
                 {}, {}, {}, {}, {},
             ]
+        )
+
+        annotations['missense'] = []
+        annotations['in_frame'] = []
+        del annotations['splice_ai']
+        self._assert_expected_search(
+            [GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4], annotations=annotations,
         )
 
         self._set_sv_family_search()
@@ -1415,10 +1573,16 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
             sort='pathogenicity_hgmd',
         )
 
+        sorted_variants = [MITO_VARIANT1, MITO_VARIANT2, VARIANT4, VARIANT2, VARIANT3, MITO_VARIANT3, VARIANT1, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4]
+        self._assert_expected_search(sorted_variants, sort='gnomad')
+
         self._assert_expected_search(
-            [MITO_VARIANT1, MITO_VARIANT2, VARIANT4, VARIANT2, VARIANT3, MITO_VARIANT3, VARIANT1, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
-            sort='gnomad',
+            sorted_variants, results_page=[VARIANT3, MITO_VARIANT3, VARIANT1, GCNV_VARIANT1], sort='gnomad', page=2, num_results=4,
         )
+        self._assert_expected_search(
+            sorted_variants, results_page=[GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4], sort='gnomad', page=3,  num_results=4,
+        )
+        self._assert_expected_search(sorted_variants, sort='gnomad', load_all=True, num_results=4)
 
         self._reset_search_families()
         self._assert_expected_search(
@@ -1724,6 +1888,46 @@ class ClickhouseSearchTests(SearchTestHelper, ClickhouseSearchTestCase):
             },
             'searchedVariants': [],
         })
+
+    def test_cached_query_variants(self):
+        cache_key_prefix = f'search_results__{self.results_model.guid}'
+        cached_variants = [VARIANT1, SV_VARIANT1, GCNV_VARIANT1, MITO_VARIANT1, VARIANT2]
+        cache_result = self._format_cached_variants(cached_variants)
+        self.set_cache(cache_result)
+
+        variants, total = query_variants(self.results_model, user=self.user)
+        self.assertEqual(total, 5)
+        self.assertListEqual(self._encode_variants(variants), cached_variants)
+        self.mock_redis.get.assert_called_with(f'{cache_key_prefix}__xpos')
+        self.mock_redis.set.assert_not_called()
+
+        variants, _ = query_variants(self.results_model, user=self.user, num_results=2, page=2)
+        self.assertListEqual(variants, [GCNV_VARIANT1, MITO_VARIANT1])
+
+        gene_counts = get_variant_query_gene_counts(self.results_model, self.user)
+        self.assertDictEqual(gene_counts, {
+            'ENSG00000177000': {'total': 1, 'families': {'F000002_2': 1}},
+            'ENSG00000277258': {'total': 1, 'families': {'F000002_2': 1}},
+            'ENSG00000210112': {'total': 1, 'families': {'F000002_2': 1}},
+            'ENSG00000171621': {'total': 1, 'families': {'F000014_14': 1}},
+        })
+
+        self.mock_redis.get.side_effect = [None, json.dumps(cache_result)]
+        self.mock_redis.keys.return_value = [f'{cache_key_prefix}__xpos', f'{cache_key_prefix}__gnomad']
+
+        variants, total = query_variants(self.results_model, user=self.user, sort='cadd')
+        self.assertEqual(total, 5)
+        sorted_variants = [VARIANT2, VARIANT1, SV_VARIANT1, GCNV_VARIANT1, MITO_VARIANT1]
+        self.assertListEqual(self._encode_variants(variants), sorted_variants)
+        self.mock_redis.get.assert_has_calls([
+            mock.call(f'{cache_key_prefix}__cadd'),
+            mock.call(f'{cache_key_prefix}__xpos'),
+        ])
+        self.mock_redis.keys.assert_called_with(pattern=f'{cache_key_prefix}__*')
+        self.assert_cached_results(
+            {'all_results': [format_cached_variant(v) for v in sorted_variants], 'total_results': 5},
+            sort='cadd',
+        )
 
 class ClickhouseDeleteDataTests(ClickhouseSearchTestCase):
     databases = '__all__'
