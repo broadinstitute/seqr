@@ -748,7 +748,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         quality_filter = {'min_gq': 1, 'min_ab': 10}
         self._assert_expected_search([], quality_filter=quality_filter, annotations=None, pathogenicity=None)
         self._assert_expected_search(
-            [GRCH37_VARIANT], quality_filter=quality_filter, inheritance_filter={'allowNoCall': True},
+            [GRCH37_VARIANT], quality_filter=quality_filter, inheritance_filter={'allowNoCall': True}, is_37=True,
         )
 
     def test_location_search(self):
@@ -790,13 +790,13 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         )
 
         self._add_sample_type_samples('WES', individual__family__guid='F000014_14')
-        self.results_model.families.set(Family.objects.filter(guid__in=['F000002_2', 'F000014_14']))
         self._assert_expected_search(
             [SV_VARIANT1, SV_VARIANT2, MULTI_PROJECT_GCNV_VARIANT3, GCNV_VARIANT4], locus=sv_locus,
+            project_families=[*SINGLE_FAMILY_PROJECT_FAMILIES, *SV_PROJECT_FAMILIES],
         )
 
         self._set_grch37_search()
-        self._assert_expected_search([GRCH37_VARIANT], locus={'rawItems': '7:143268894-143271480'})
+        self._assert_expected_search([GRCH37_VARIANT], locus={'rawItems': '7:143268894-143271480'}, is_37=True)
 
     def test_variant_id_search(self):
         self._assert_expected_search([VARIANT1], **VARIANT_ID_SEARCH, check_login=self.check_collaborator_login)
@@ -1286,7 +1286,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         annotations['missense'] = ['missense_variant']
         self._assert_expected_search(
             [GRCH37_VARIANT], pathogenicity=None, annotations=annotations,
-            cached_variant_fields=[{'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[11][0]}],
+            cached_variant_fields=[{'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[11][0]}], is_37=True,
         )
 
     def test_secondary_annotations_filter(self):
@@ -1559,7 +1559,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         )
 
         self._set_grch37_search()
-        self._assert_expected_search([GRCH37_VARIANT], in_silico=main_in_silico)
+        self._assert_expected_search([GRCH37_VARIANT], in_silico=main_in_silico, is_37=True)
 
     def test_sort(self):
         self._assert_expected_search(
