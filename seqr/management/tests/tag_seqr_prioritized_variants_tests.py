@@ -44,6 +44,8 @@ MITO_MATCHES = {
 }
 MULTI_TYPE_MATCHES = {
     'Compound Heterozygous - One SV': 0,
+    'Compound Heterozygous - Clinvar Pathogenic/ SV': 1,
+    'Compound Heterozygous - High Splice AI/ SV': 0,
     'Compound Heterozygous - One SV - Confirmed': 1,
 }
 
@@ -90,7 +92,7 @@ class CheckNewSamplesTest(ClickhouseSearchTestCase):
 
         expected_tags = {
             (2,): {"Clinvar Pathogenic - Recessive": "2025-11-15", "Recessive": "2025-11-15"},
-            (2, 19): {"Compound Heterozygous - One SV - Confirmed": "2025-11-15"},
+            (2, 19): {"Compound Heterozygous - One SV - Confirmed": "2025-11-15", "Compound Heterozygous - Clinvar Pathogenic/ SV": "2025-11-15"},
             (3, 4): {"Compound Heterozygous": "2025-11-15"},
             (6,): {'Mitochondrial - De Novo/ Dominant': '2025-11-15'},
             (8,): {"Mitochondrial - Pathogenic": "2025-11-15"},

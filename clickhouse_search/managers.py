@@ -692,14 +692,15 @@ class VariantsQuerySet(BaseVariantsQuerySet):
 
     def _annotate_filtered_transcripts(self, results, consequence_field, transcript_filters, *args, require_mane_canonical=False, **kwargs):
         if require_mane_canonical:
-            filtered_expr = ArrayFilter(consequence_field, conditions=[{'canonical': (0, '{field} > {value}')}])
             if 'isManeSelect' in self.sorted_transcript_consequence_fields:
-                filtered_expr = If(
-                    ArrayFilter(consequence_field, conditions=[{'isManeSelect': (True, '{field}')}]),
-                    filtered_expr,
-                    condition='arrayExists(x -> x.isManeSelect, sortedTranscriptConsequences), ',
-                )
-            results = results.annotate(**{self.FILTERED_CONSEQUENCE_FIELD: filtered_expr})
+                mane_genes_expression = 'arrayMap(a -> a.geneId, arrayFilter(b -> b.isManeSelect, sortedTranscriptConsequences))'
+                conditions=[
+                    {'isManeSelect': (True, '{field}')},
+                    {'canonical': (mane_genes_expression, 'and({field} > 0, not has({value}, x.geneId))')},
+                ]
+            else:
+                conditions = [{'canonical': (0, '{field} > {value}')}]
+            results = results.annotate(**{self.FILTERED_CONSEQUENCE_FIELD: ArrayFilter(consequence_field, conditions=conditions)})
             consequence_field = self.FILTERED_CONSEQUENCE_FIELD
         return super()._annotate_filtered_transcripts(results, consequence_field, transcript_filters, **kwargs)
 

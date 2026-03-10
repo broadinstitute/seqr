@@ -40,7 +40,6 @@ DOMINANT_MOI = 'D'
 RECESSIVE_MOI = 'R'
 MITO_MOI = 'M'
 
-MAX_AFFECTED_FAMILY_FILTER = 'max_affected'
 CONFIRMED_FAMILY_FILTER = 'confirmed_inheritance'
 AFFECTED_MALE_FAMILY_FILTER = 'affected_males'
 
@@ -113,6 +112,10 @@ PASS_QUALITY_FILTER = {
     **QUALITY_FILTER,
     **SV_QUALITY_FILTER,
     'vcf_filter': 'PASS',
+}
+PERMISSIVE_PASS_QUALITY_FILTER = {
+    **PASS_QUALITY_FILTER,
+    'min_gq_sv': 50,
 }
 
 CONFIRMED_HIGH_SPLICE_AI_SEARCH = {
@@ -217,7 +220,6 @@ SEARCHES = {
         },
         'Compound Heterozygous - Confirmed': {
             'family_filter': {
-                MAX_AFFECTED_FAMILY_FILTER: 1,
                 CONFIRMED_FAMILY_FILTER: True
             },
             'inheritance_mode': COMPOUND_HET,
@@ -392,7 +394,7 @@ SEARCHES = {
             },
             'qualityFilter': {
                 'min_hl': 5,
-                'min_mitoCn': 250,
+                'min_mitoCn': 150,
             },
         },
     },
@@ -406,7 +408,21 @@ MULTI_DATA_TYPE_SEARCHES = {
         },
         'in_silico': IN_SILICO_FILTER,
         'freqs': FREQ_FILTER,
-        'qualityFilter': PASS_QUALITY_FILTER,
+        'qualityFilter': PERMISSIVE_PASS_QUALITY_FILTER,
+    },
+    'Compound Heterozygous - Clinvar Pathogenic/ SV': {
+        'annotations': SV_ANNOTATIONS,
+        'pathogenicity': CLINVAR_FILTER,
+        'freqs': FREQ_FILTER,
+        'qualityFilter': PERMISSIVE_PASS_QUALITY_FILTER,
+    },
+    'Compound Heterozygous - High Splice AI/ SV': {
+        'annotations': {
+            **SV_ANNOTATIONS,
+            'splice_ai': 0.8,
+        },
+        'freqs': FREQ_FILTER,
+        'qualityFilter': PERMISSIVE_PASS_QUALITY_FILTER,
     },
     'Compound Heterozygous - One SV - Confirmed': {
         'family_filter': {
@@ -418,7 +434,7 @@ MULTI_DATA_TYPE_SEARCHES = {
         },
         'in_silico': IN_SILICO_FILTER,
         'freqs': FREQ_FILTER,
-        'qualityFilter': PASS_QUALITY_FILTER,
+        'qualityFilter': PERMISSIVE_PASS_QUALITY_FILTER,
     },
 }
 
@@ -534,8 +550,6 @@ class Command(BaseCommand):
 
     @staticmethod
     def _family_passes_filter(sample_data, family_filter):
-        if family_filter.get(MAX_AFFECTED_FAMILY_FILTER) and len(sample_data['affecteds']) > family_filter[MAX_AFFECTED_FAMILY_FILTER]:
-            return False
         if family_filter.get(AFFECTED_MALE_FAMILY_FILTER) and all(s['sex'] not in Individual.MALE_SEXES for s in sample_data['affecteds']):
             return False
         if CONFIRMED_FAMILY_FILTER in family_filter:
