@@ -133,7 +133,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self.assertEqual(json.loads(self.mock_redis.set.call_args.args[1]), expected_results)
         self.mock_redis.expire.assert_called_with(cache_key, timedelta(weeks=2))
 
-    def _execute_search(self, inheritance_mode=None, inheritance_filter=None, quality_filter=None, project_families=None, request_body=None, check_login=None, sort='xpos', **search_kwargs):
+    def _execute_search(self, sort='xpos', inheritance_mode=None, inheritance_filter=None, quality_filter=None, project_families=None, request_body=None, check_login=None, query_params=None, **search_kwargs):
         search_hash = random.randint(1000, 10000)
         self.mock_results_guid.return_value = f'VRS{search_hash:07d}'
         url = reverse(query_variants_handler, args=[search_hash])
@@ -154,7 +154,8 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         if check_login:
             check_login(url, request_data=request_data)
 
-        response = self.client.post(f'{url}?sort={sort}', content_type='application/json', data=json.dumps(request_data))
+        query_string = '&'.join([f'{key}={value}' for key, value in {'sort': sort, **(query_params or {})}.items()])
+        response = self.client.post(f'{url}?{query_string}', content_type='application/json', data=json.dumps(request_data))
 
         return response, search_hash, search_body
 
@@ -1584,14 +1585,12 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         sorted_variants = [MITO_VARIANT1, MITO_VARIANT2, VARIANT4, VARIANT2, VARIANT3, MITO_VARIANT3, VARIANT1, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4]
         self._assert_expected_search(sorted_variants, sort='gnomad', project_families=SINGLE_FAMILY_PROJECT_FAMILIES)
 
-        # TODO test pagination!
-        # self._assert_expected_search(
-        #     sorted_variants, results_page=[VARIANT3, MITO_VARIANT3, VARIANT1, GCNV_VARIANT1], sort='gnomad', page=2, num_results=4, project_families=SINGLE_FAMILY_PROJECT_FAMILIES,
-        # )
-        # self._assert_expected_search(
-        #     sorted_variants, results_page=[GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4], sort='gnomad', page=3,  num_results=4, project_families=SINGLE_FAMILY_PROJECT_FAMILIES,
-        # )
-        # self._assert_expected_search(sorted_variants, sort='gnomad', load_all=True, num_results=4, project_families=SINGLE_FAMILY_PROJECT_FAMILIES)
+        self._assert_expected_search(
+            sorted_variants, results_page=[VARIANT3, MITO_VARIANT3, VARIANT1, GCNV_VARIANT1], sort='gnomad', query_params={'page': 2, 'per_page': 4}, project_families=SINGLE_FAMILY_PROJECT_FAMILIES,
+        )
+        self._assert_expected_search(
+            sorted_variants, results_page=[GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4], sort='gnomad', query_params={'page': 3, 'per_page': 4}, project_families=SINGLE_FAMILY_PROJECT_FAMILIES,
+        )
 
         self._assert_expected_search(
             [VARIANT1, MULTI_FAMILY_VARIANT, VARIANT4, VARIANT2, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
