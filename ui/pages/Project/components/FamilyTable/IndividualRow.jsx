@@ -547,7 +547,7 @@ class IndividualRow extends React.PureComponent {
     project: PropTypes.object.isRequired,
     individual: PropTypes.object.isRequired,
     mmeSubmission: PropTypes.object,
-    datasets: PropTypes.arrayOf(PropTypes.object).isRequired,
+    datasets: PropTypes.arrayOf(PropTypes.object),
     alignmentSample: PropTypes.object,
     dispatchUpdateIndividual: PropTypes.func,
     dispatchUpdateIndividualIGV: PropTypes.func,
@@ -580,7 +580,7 @@ class IndividualRow extends React.PureComponent {
     const { displayName, sex, affected, createdDate } = individual
 
     // only show active or first/ last inactive samples
-    const loadedDatasets = datasets.reverse().filter(
+    const loadedDatasets = (datasets || []).reverse().filter(
       ({ isActive }, i) => isActive || i === 0 || i === datasets.length - 1,
     )
 
