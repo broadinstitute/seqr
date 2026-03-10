@@ -35,7 +35,7 @@ from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4,
     GCNV_VARIANT3, GCNV_VARIANT4, GCNV_MULTI_FAMILY_VARIANT1, GCNV_MULTI_FAMILY_VARIANT2, GCNV_GENE_COUNTS, \
     MULTI_DATA_TYPE_COMP_HET_VARIANT2, ALL_SNV_INDEL_PASS_FILTERS, MULTI_PROJECT_GCNV_VARIANT3, VARIANT_LOOKUP_VARIANT, \
     MITO_GENE_COUNTS, PROJECT_4_COMP_HET_VARIANT, SV_LOOKUP_VARIANT, GCNV_LOOKUP_VARIANT, GCNV_LOOKUP_VARIANT_3, \
-    format_cached_variant
+    SINGLE_FAMILY_PROJECT_FAMILIES, SV_PROJECT_FAMILIES, format_cached_variant
 from reference_data.models import Omim
 from seqr.models import Project, Family, Sample, VariantSearch, VariantSearchResults
 from seqr.utils.search.utils import query_variants, variant_lookup, get_variant_query_gene_counts, get_single_variant, InvalidSearchException
@@ -43,8 +43,6 @@ from seqr.views.apis.data_manager_api import trigger_delete_project
 from seqr.views.utils.json_utils import DjangoJSONEncoderWithSets
 from seqr.views.utils.test_utils import AnvilAuthenticationTestCase
 from seqr.views.apis.variant_search_api import query_variants_handler, get_variant_gene_breakdown
-
-SINGLE_FAMILY_PROJECT_FAMILIES = [{'projectGuid': 'R0001_1kg', 'familyGuids': ['F000002_2']}]
 
 
 class ClickhouseSearchTestCase(AnvilAuthenticationTestCase):
@@ -159,7 +157,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
 
         return response, search_hash, search_body
 
-    def _assert_expected_search(self, expected_results, results_page=None, gene_counts=None, cached_variant_fields=None, sort='xpos', load_all=False, page=1, num_results=100, results_model=None, response_search=None, format_cache_key=None, project_families=None, **kwargs):
+    def _assert_expected_search(self, expected_results, results_page=None, gene_counts=None, cached_variant_fields=None, sort='xpos', response_search=None, format_cache_key=None, project_families=None, is_37=False, **kwargs):
         response, search_hash, search_body = self._execute_search(project_families=project_families, **kwargs)
         self.assertEqual(response.status_code, 200)
         expected_response = {
@@ -175,20 +173,29 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             expected_response.update({
                 'genesById': mock.ANY,
                 'locusListsByGuid': mock.ANY,
-                'mmeSubmissionsByGuid': {},
-                'omimIntervals': {},
+                'mmeSubmissionsByGuid': mock.ANY,
                 'phenotypeGeneScores': mock.ANY,
-                'rnaSeqData': {},
-                'savedVariantsByGuid': {},
-                'variantFunctionalDataByGuid': {},
-                'variantNotesByGuid': {},
-                'variantTagsByGuid': {},
-                'totalSampleCounts': {
-                    'MITO': {'WES': 1},
-                    'SNV_INDEL': {'WES': 7},
-                    'SV': {'WES': 3, 'WGS': 3},
-                },
+                'rnaSeqData': mock.ANY,
+                'savedVariantsByGuid': mock.ANY,
+                'variantFunctionalDataByGuid': mock.ANY,
+                'variantNotesByGuid': mock.ANY,
+                'variantTagsByGuid': mock.ANY,
             })
+            if is_37:
+                expected_response.update({
+                    'totalSampleCounts': {
+                        'SNV_INDEL': {'WES': 6},
+                    }
+                })
+            else:
+                expected_response.update({
+                    'omimIntervals': mock.ANY,
+                    'totalSampleCounts': {
+                        'MITO': {'WES': 1},
+                        'SNV_INDEL': {'WES': 7},
+                        'SV': {'WES': 3, 'WGS': 3},
+                    }
+                })
         self.assertDictEqual(response.json(), expected_response)
 
         cache_key = format_cache_key() if format_cache_key else f'search_results__VRS{search_hash:07d}__{sort}'
@@ -251,9 +258,6 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
     def _set_multi_project_search(self):
         self.results_model.families.set(Family.objects.filter(guid__in=['F000002_2', 'F000011_11']))
 
-    def _set_sv_family_search(self):
-        self.results_model.families.set(Family.objects.filter(guid__in=['F000014_14']))
-
     def _reset_search_families(self):
         self.results_model.families.set(self.families)
 
@@ -284,21 +288,21 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             project_families=SINGLE_FAMILY_PROJECT_FAMILIES,
         )
 
-        self._set_sv_family_search()
+        self.login_manager()
         self._assert_expected_search(
-            [SV_VARIANT1, SV_VARIANT2, SV_VARIANT3, SV_VARIANT4], gene_counts=SV_GENE_COUNTS, annotations=None,
+            [SV_VARIANT1, SV_VARIANT2, SV_VARIANT3, SV_VARIANT4], gene_counts=SV_GENE_COUNTS,
+            project_families=SV_PROJECT_FAMILIES,
         )
 
-        self.results_model.families.set(Family.objects.filter(guid__in=['F000002_2', 'F000014_14']))
         self._assert_expected_search(
             [VARIANT1, SV_VARIANT1, SV_VARIANT2, VARIANT2, VARIANT3, VARIANT4, SV_VARIANT3, GCNV_VARIANT1,
                          GCNV_VARIANT2, GCNV_VARIANT3, SV_VARIANT4, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
             gene_counts={**variant_gene_counts, **MITO_GENE_COUNTS, **GCNV_GENE_COUNTS, **SV_GENE_COUNTS, 'ENSG00000277258': {'total': 2, 'families': {'F000002_2': 2}}},
-            project_families=SINGLE_FAMILY_PROJECT_FAMILIES,
+            project_families=[*SINGLE_FAMILY_PROJECT_FAMILIES, *SV_PROJECT_FAMILIES],
         )
 
         self._set_grch37_search()
-        self._assert_expected_search([GRCH37_VARIANT], project_families=SINGLE_FAMILY_PROJECT_FAMILIES)
+        self._assert_expected_search([GRCH37_VARIANT], project_families=SINGLE_FAMILY_PROJECT_FAMILIES, is_37=True)
 
     def test_standard_searches(self):
         results_model = self._saved_search_results_model('De Novo/Dominant Restrictive')
