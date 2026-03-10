@@ -622,28 +622,30 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         )
 
     def test_exclude_previous_search_results(self):
+        self.mock_results_guid.return_value = 'VRS00079516'
         VariantSearchResults.objects.create(variant_search_id=79516, search_hash='abc1234')
-        self.mock_redis.get.side_effect = [None, json.dumps({'all_results': [
+        self.mock_redis.get.side_effect = [None, None, None, json.dumps({'all_results': [
             VARIANT1, VARIANT2, [VARIANT3, VARIANT2], [GCNV_VARIANT4, GCNV_VARIANT3],
         ]})]
         self.mock_redis.keys.side_effect = [[], ['search_results__abc1234__gnomad']]
 
+        exclude = {'previousSearch': True, 'previousSearchHash': 'abc1234'}
         self._assert_expected_search(
             [[MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], [VARIANT3, VARIANT4], GCNV_VARIANT3, MITO_VARIANT3],
             inheritance_mode='recessive', **COMP_HET_ALL_PASS_FILTERS,
-            exclude={'previousSearch': True, 'previousSearchHash': 'abc1234'}, cached_variant_fields=[
+            exclude=exclude, cached_variant_fields=[
                 [{'selectedGeneId': 'ENSG00000277258'}, {'selectedGeneId': 'ENSG00000277258'}],
                 [{'selectedGeneId': 'ENSG00000097046'}, {'selectedGeneId': 'ENSG00000097046'}],
                 {}, {},
             ], check_login=self.check_collaborator_login,
         )
 
-        self.mock_redis.get.side_effect = [None, json.dumps({'all_results': [
+        self.mock_redis.get.side_effect = [None, None, json.dumps({'all_results': [
             [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], [VARIANT3, VARIANT4], GCNV_VARIANT3, MITO_VARIANT3,
         ]})]
         self.mock_redis.keys.side_effect = [[], ['search_results__abc1234__gnomad']]
         self._assert_expected_search(
-            [VARIANT2, [GCNV_VARIANT3, GCNV_VARIANT4]],
+            [VARIANT2, [GCNV_VARIANT3, GCNV_VARIANT4]], exclude=exclude, **COMP_HET_ALL_PASS_FILTERS,
             inheritance_mode='recessive', cached_variant_fields=[
                 {}, [{'selectedGeneId': 'ENSG00000275023'}, {'selectedGeneId': 'ENSG00000275023'}],
             ],
