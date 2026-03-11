@@ -137,6 +137,12 @@
       "key": 22
     }
 }, {
+    "model": "clickhouse_search.keylookupsnvindel",
+    "pk": "21-3343353-GAGA-G",
+    "fields": {
+      "key": 23
+    }
+},{
     "model": "clickhouse_search.clinvarallvariantssnvindel",
     "pk": "1-10439-AC-A",
     "fields": {

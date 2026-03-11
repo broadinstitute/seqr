@@ -44,8 +44,15 @@ from seqr.views.apis.data_manager_api import trigger_delete_project
 from seqr.views.utils.json_utils import DjangoJSONEncoderWithSets
 from seqr.views.utils.test_utils import AnvilAuthenticationTestCase, GENE_VARIANT_FIELDS, MATCHMAKER_SUBMISSION_FIELDS, \
     SAVED_VARIANT_DETAIL_FIELDS, FUNCTIONAL_FIELDS, TAG_FIELDS, FAMILY_FIELDS, INDIVIDUAL_FIELDS, IGV_SAMPLE_FIELDS, \
-    FAMILY_NOTE_FIELDS, GENE_VARIANT_DISPLAY_FIELDS
-from seqr.views.apis.variant_search_api import query_variants_handler, get_variant_gene_breakdown, export_variants_handler
+    FAMILY_NOTE_FIELDS, GENE_VARIANT_DISPLAY_FIELDS, LOCUS_LIST_FIELDS
+from seqr.views.apis.variant_search_api import query_variants_handler, get_variant_gene_breakdown, export_variants_handler, \
+    query_single_variant_handler
+
+
+SEARCH_RESPONSE_KEYS = {
+    'genesById', 'locusListsByGuid', 'mmeSubmissionsByGuid', 'phenotypeGeneScores', 'rnaSeqData', 'savedVariantsByGuid',
+    'variantFunctionalDataByGuid', 'variantNotesByGuid', 'variantTagsByGuid', 'totalSampleCounts',
+}
 
 
 class ClickhouseSearchTestCase(AnvilAuthenticationTestCase):
@@ -176,16 +183,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         }
         if expected_results:
             expected_response.update({
-                'genesById': mock.ANY,
-                'locusListsByGuid': mock.ANY,
-                'mmeSubmissionsByGuid': mock.ANY,
-                'phenotypeGeneScores': mock.ANY,
-                'rnaSeqData': mock.ANY,
-                'savedVariantsByGuid': mock.ANY,
-                'variantFunctionalDataByGuid': mock.ANY,
-                'variantNotesByGuid': mock.ANY,
-                'variantTagsByGuid': mock.ANY,
-                'totalSampleCounts': mock.ANY,
+                **{key: mock.ANY for key in SEARCH_RESPONSE_KEYS},
                 **(additional_response or {}),
             })
             if not is_37:
@@ -1094,29 +1092,48 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self._assert_expected_variants(variants, [GCNV_LOOKUP_VARIANT_3], 'variant_lookup_results__suffix_140593_DUP__38')
 
     def test_get_single_variant(self):
-        #  TODO
-        self._set_single_family_search()
-        variant = get_single_variant(self.results_model.families.first(), VARIANT_IDS[0])
-        self._assert_expected_variants([variant], [VARIANT1])
+        url_template = (reverse(query_single_variant_handler, args=['variant_id']) + '?familyGuid={}').replace('variant_id', '{}')
+        url = url_template.format('21-3343353-GAGA-G', 'F000001_1')
+        self.check_collaborator_login(url)
 
-        with self.assertRaises(InvalidSearchException) as cm:
-            get_single_variant(self.results_model.families.first(), VARIANT_IDS[1])
-        self.assertEqual(str(cm.exception), 'Variant 1-91511686-TCA-G not found')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {
+            'searchedVariants': [FAMILY_1_VARIANT],
+            'familiesByGuid': {'F000001_1': mock.ANY},
+            'projectsByGuid': {'R0001_1kg': mock.ANY},
+            'locusListsByGuid': {'LL00049_pid_genes_autosomal_do': {
+                key: mock.ANY for key in ['paLocusList', 'intervals', *LOCUS_LIST_FIELDS]
+            }},
+            **{key: mock.ANY for key in [
+                'omimIntervals', 'individualsByGuid', 'igvSamplesByGuid', 'familyNotesByGuid', *SEARCH_RESPONSE_KEYS,
+            ]},
+        })
 
-        variant = get_single_variant(self.results_model.families.first(), 'M-4429-G-A')
-        self._assert_expected_variants([variant], [MITO_VARIANT1])
+        response = self.client.get(url_template.format(VARIANT_IDS[1], 'F000002_2'))
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'error': 'Variant 1-91511686-TCA-G not found'})
 
-        variant = get_single_variant(self.results_model.families.first(), 'suffix_140608_DUP')
-        self._assert_expected_variants([variant], [GCNV_VARIANT4])
+        response = self.client.get(url_template.format('M-4429-G-A', 'F000002_2'))
+        self.assertEqual(response.status_code, 200)
+        self.assertListEqual(response.json()['searchedVariants'], [MITO_VARIANT1])
 
-        self._set_sv_family_search()
-        variant = get_single_variant(self.results_model.families.first(), 'phase2_DEL_chr14_4640')
-        self._assert_expected_variants([variant], [SV_VARIANT4])
+        response = self.client.get(url_template.format('suffix_140608_DUP', 'F000002_2'))
+        self.assertEqual(response.status_code, 200)
+        self.assertListEqual(response.json()['searchedVariants'], [GCNV_VARIANT4])
+
+        self.login_manager()
+        response = self.client.get(url_template.format('phase2_DEL_chr14_4640', 'F000014_14'))
+        self.assertEqual(response.status_code, 200)
+        self.assertListEqual(response.json()['searchedVariants'], [SV_VARIANT4])
 
         self._set_grch37_search()
-        variant = get_single_variant(self.results_model.families.first(), '7-143270172-A-G')
-        self._assert_expected_variants([variant], [GRCH37_VARIANT])
+        response = self.client.get(url_template.format('7-143270172-A-G', 'F000002_2'))
+        self.assertEqual(response.status_code, 200)
+        self.assertListEqual(response.json()['searchedVariants'], [GRCH37_VARIANT])
 
+        self.mock_redis.get.assert_not_called()
+        self.mock_redis.set.assert_not_called()
 
     def test_frequency_filter(self):
         sv_callset_filter = {'sv_callset': {'af': 0.05}}

@@ -306,46 +306,6 @@ class VariantSearchAPITest(AuthenticationTestCase):
             'analysedBy': [{'createdBy': 'Test No Access User', 'dataType': 'SNP', 'lastModifiedDate': '2022-07-22T19:27:08.563+00:00'}],
         })
 
-    def _assert_expected_results_family_context(self, response_json, locus_list_detail=False):
-        self._assert_expected_results_context(response_json, locus_list_detail=locus_list_detail)
-
-        family_fields = {'individualGuids'}
-        family_fields.update(FAMILY_FIELDS)
-        if len(response_json['familiesByGuid']) > 1:
-            self.assertSetEqual(set(response_json['familiesByGuid']['F000002_2'].keys()), family_fields)
-
-        family_fields.add('tpmGenes')
-        self.assertSetEqual(set(response_json['familiesByGuid']['F000001_1'].keys()), family_fields)
-        self.assertSetEqual(set(response_json['familiesByGuid']['F000001_1']['tpmGenes']), {'ENSG00000227232'})
-
-        self.assertEqual(len(response_json['individualsByGuid']), len(response_json['familiesByGuid'])*3)
-        individual_fields = {'igvSampleGuids'}
-        individual_fields.update(INDIVIDUAL_FIELDS)
-        self.assertSetEqual(set(response_json['individualsByGuid']['I000001_na19675'].keys()), individual_fields)
-
-        self.assertEqual(len(response_json['igvSamplesByGuid']), 1)
-        self.assertSetEqual(set(response_json['igvSamplesByGuid']['S000145_na19675'].keys()), IGV_SAMPLE_FIELDS)
-
-        self.assertEqual(len(response_json['familyNotesByGuid']), 3)
-        self.assertSetEqual(set(response_json['familyNotesByGuid']['FAN000001_1'].keys()), FAMILY_NOTE_FIELDS)
-
-        self._assert_expected_rnaseq_response(response_json)
-
-    def _assert_expected_results_context(self, response_json, has_pa_detail=True, locus_list_detail=False, rnaseq=True):
-        # TODO used in single variant context
-        locus_list_fields = {'intervals'}
-        if locus_list_detail:
-            locus_list_fields.update(LOCUS_LIST_FIELDS)
-            if has_pa_detail:
-                locus_list_fields.update({'paLocusList'})
-        self.assertSetEqual(set(response_json['locusListsByGuid'][LOCUS_LIST_GUID].keys()), locus_list_fields)
-        intervals = response_json['locusListsByGuid'][LOCUS_LIST_GUID]['intervals']
-        self.assertEqual(len(intervals), 2)
-        self.assertSetEqual(
-            set(intervals[0].keys()),
-            {'locusListGuid', 'locusListIntervalGuid', 'genomeVersion', 'chrom', 'start', 'end'}
-        )
-
     def test_search_context(self):
         search_context_url = reverse(search_context_handler)
         self.check_collaborator_login(search_context_url, request_data={'familyGuid': 'F000001_1'})
@@ -422,52 +382,6 @@ class VariantSearchAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self._assert_expected_search_context(response_json)
-
-
-    @mock.patch('seqr.views.apis.variant_search_api.get_single_variant')
-    def test_query_single_variant(self, mock_get_variant):
-        mock_get_variant.return_value = SINGLE_FAMILY_VARIANT
-
-        url = '{}?familyGuid=F000001_1'.format(reverse(query_single_variant_handler, args=['21-3343353-GAGA-G']))
-        self.check_collaborator_login(url)
-
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-        self._assert_expected_single_variant_results_context(response.json(), searchedVariants=[SINGLE_FAMILY_VARIANT])
-
-        mock_get_variant.assert_called_with(mock.ANY, '21-3343353-GAGA-G')
-        searched_family = mock_get_variant.call_args.args[0]
-        self.assertEqual(searched_family.guid, 'F000001_1')
-
-        mock_get_variant.side_effect = InvalidSearchException('Variant not found')
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()['error'], 'Variant not found')
-
-    def _assert_expected_single_variant_results_context(self, response_json, omit_fields=None, **expected_response):
-        omit_fields = {'search', *(omit_fields or [])}
-
-        expected_search_response = deepcopy({**EXPECTED_SEARCH_RESPONSE, **EXPECTED_SEARCH_FAMILY_CONTEXT})
-        expected_search_response.update(expected_response)
-        expected_search_response.update({
-            k: EXPECTED_SEARCH_CONTEXT_RESPONSE[k] for k in ['projectsByGuid', 'familiesByGuid', 'locusListsByGuid']
-        })
-        for k in omit_fields:
-            expected_search_response.pop(k)
-        expected_search_response['savedVariantsByGuid'].pop('SV0000002_1248367227_r0390_100')
-        expected_search_response['variantTagsByGuid'] = {
-            k: EXPECTED_SEARCH_RESPONSE['variantTagsByGuid'][k]
-            for k in {'VT1708633_2103343353_r0390_100', 'VT1726961_2103343353_r0390_100'}
-        }
-        expected_search_response['variantNotesByGuid'] = {}
-        expected_search_response['genesById'] = {
-            k: v for k, v in expected_search_response['genesById'].items() if k in {'ENSG00000227232', 'ENSG00000268903'}
-        }
-        self.assertSetEqual(set(response_json.keys()), set(expected_search_response.keys()))
-        self.assertDictEqual(response_json, expected_search_response)
-        self._assert_expected_results_family_context(response_json, locus_list_detail=True)
-        self.assertSetEqual(set(response_json['projectsByGuid'][PROJECT_GUID].keys()), PROJECT_TAG_TYPE_FIELDS)
-        self.assertSetEqual(set(response_json['familiesByGuid'].keys()), {'F000001_1'})
 
     @mock.patch('seqr.views.apis.variant_search_api.variant_lookup')
     def test_variant_lookup(self, mock_variant_lookup):
