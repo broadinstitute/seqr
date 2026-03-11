@@ -238,43 +238,64 @@ class ReloadClinvarAllVariantsTest(TestCase):
                 call_command('reload_clinvar_all_variants')
 
         # Test that unenumerated values are now collected instead of raising
-        for description, conflicting_pathogenicities, allele_id in [
-            ("Pathogenic-ey", None, 1),
-            ("Pathogenic; but unknown assertion", None, 2),
-            ("Conflicting classifications of pathogenicity", "Pathogenic(18); unhandled(1)", 3),
-        ]:
-            data = f'''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-            <ClinVarVariationRelease xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-                                     xsi:noNamespaceSchemaLocation="http://ftp.ncbi.nlm.nih.gov/pub/clinvar/xsd_public/ClinVar_VCV_2.4.xsd"
-                                     ReleaseDate="2025-06-30">
-                <VariationArchive>
-                    <ClassifiedRecord>
-                        <SimpleAllele AlleleID="{allele_id}" VariationID="5603">
-                            <Location>
-                                <SequenceLocation Assembly="GRCh38" Chr="1" positionVCF="{allele_id}" referenceAlleleVCF="G" alternateAlleleVCF="A"/>
-                            </Location>
-                        </SimpleAllele>
-                        <Classifications>
-                            <GermlineClassification>
-                                <Description>{description}</Description>
-                                {f"<Explanation>{conflicting_pathogenicities}</Explanation>" if conflicting_pathogenicities else ""}
-                            </GermlineClassification>
-                        </Classifications>
-                    </ClassifiedRecord>
-                </VariationArchive>
-            </ClinVarVariationRelease>'''
-            responses.add(
-                responses.GET,
-                WEEKLY_XML_RELEASE,
-                status=200,
-                body=gzip.compress(data.encode()),
-                stream=True,
-            )
-            DataVersions.objects.all().delete()
-            ClinvarAllVariantsSnvIndel.objects.using('clickhouse_write').all().delete()
-            call_command('reload_clinvar_all_variants')
-            # Command should succeed and collect the unenumerated values
-            self.assertIn('unenumerated value', mock_safe_post_to_slack.call_args[0][1])
+        unenumerated_test_cases = [
+            {
+                'allele_id': 1,
+                'description': 'Pathogenic-ey',
+                'explanation': None,
+                'alert_type': 'Assertion',
+                'alert_value': 'Pathogenic-ey',
+            },
+            {
+                'allele_id': 2,
+                'description': 'Pathogenic; but unknown assertion',
+                'explanation': None,
+                'alert_type': 'Assertion',
+                'alert_value': 'but unknown assertion',
+            },
+            {
+                'allele_id': 3,
+                'description': 'Conflicting classifications of pathogenicity',
+                'explanation': 'Pathogenic(18); unhandled(1)',
+                'alert_type': 'Conflicting Pathogenicity',
+                'alert_value': 'unhandled',
+            },
+        ]
+        data = WEEKLY_XML_RELEASE_HEADER
+        for case in unenumerated_test_cases:
+            data += f'''
+            <VariationArchive>
+                <ClassifiedRecord>
+                    <SimpleAllele AlleleID="{case['allele_id']}" VariationID="5603">
+                        <Location>
+                            <SequenceLocation Assembly="GRCh38" Chr="1" positionVCF="{case['allele_id']}" referenceAlleleVCF="G" alternateAlleleVCF="A"/>
+                        </Location>
+                    </SimpleAllele>
+                    <Classifications>
+                        <GermlineClassification>
+                            <Description>{case['description']}</Description>
+                            {f"<Explanation>{case['explanation']}</Explanation>" if case['explanation'] else ""}
+                        </GermlineClassification>
+                    </Classifications>
+                </ClassifiedRecord>
+            </VariationArchive>
+            '''
+        data += '</ClinVarVariationRelease>'
+        responses.add(
+            responses.GET,
+            WEEKLY_XML_RELEASE,
+            status=200,
+            body=gzip.compress(data.encode()),
+            stream=True,
+        )
+        DataVersions.objects.all().delete()
+        ClinvarAllVariantsSnvIndel.objects.using('clickhouse_write').all().delete()
+        call_command('reload_clinvar_all_variants')
+        # Command should succeed and collect all unenumerated values in single slack message
+        slack_message = mock_safe_post_to_slack.call_args[0][1]
+        self.assertIn(f'Found {len(unenumerated_test_cases)} unenumerated value(s) during parsing:', slack_message)
+        for case in unenumerated_test_cases:
+            self.assertIn(f"- {case['alert_type']}: '{case['alert_value']}' (Allele ID: {case['allele_id']})", slack_message)
 
         # Variants with missing/equivalent alleles and positions are skipped
         for simple_allele_attrs, sequence_location_attrs in [
