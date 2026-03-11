@@ -346,28 +346,6 @@ class VariantSearchAPITest(AuthenticationTestCase):
             {'locusListGuid', 'locusListIntervalGuid', 'genomeVersion', 'chrom', 'start', 'end'}
         )
 
-    @mock.patch('seqr.utils.middleware.logger.error')
-    @mock.patch('seqr.views.apis.variant_search_api.get_variant_query_gene_counts')
-    @mock.patch('seqr.views.apis.variant_search_api.query_variants')
-    def test_query_variants(self, mock_get_variants, mock_get_gene_counts, mock_error_logger):
-        url = reverse(query_variants_handler, args=['abc'])
-        self.check_collaborator_login(url, request_data={'projectFamilies': PROJECT_FAMILIES})
-        url = reverse(query_variants_handler, args=[SEARCH_HASH])
-
-        # Test cross-project discovery for analyst users
-        self.login_analyst_user()
-        mock_get_variants.side_effect = _get_es_variants
-        response = self.client.get('{}?sort=pathogenicity'.format(url))
-        self.assertEqual(response.status_code, 200)
-        response_json = response.json()
-        expected_search_results = deepcopy(EXPECTED_SEARCH_RESPONSE)
-        expected_search_results['searchedVariants'] = VARIANTS_WITH_DISCOVERY_TAGS
-        expected_search_results['savedVariantsByGuid']['SV0000002_1248367227_r0390_100']['discoveryTags'] = DISCOVERY_TAGS
-        expected_search_results['familiesByGuid'].update({'F000012_12': mock.ANY})
-        self.assertSetEqual(set(response_json.keys()), set(expected_search_results.keys()))
-        self.assertDictEqual(response_json, expected_search_results)
-        self._assert_expected_results_context(response_json)
-
     @mock.patch('seqr.views.apis.variant_search_api.query_variants')
     def test_query_all_projects_variants(self, mock_get_variants):
         url = reverse(query_variants_handler, args=[SEARCH_HASH])

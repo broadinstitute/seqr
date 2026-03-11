@@ -103,7 +103,7 @@ class ClickhouseSearchTestCase(AnvilAuthenticationTestCase):
 
 class ClickhouseSearchTests(ClickhouseSearchTestCase):
     databases = '__all__'
-    fixtures = ['users', '1kg_project', 'variant_searches', 'reference_data', 'clickhouse_search', 'clickhouse_transcripts']
+    fixtures = ['users', 'social_auth', '1kg_project', 'variant_searches', 'reference_data', 'clickhouse_search', 'clickhouse_transcripts']
 
     def setUp(self):
         self.MOCK_CACHE = {}
@@ -136,8 +136,8 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self.assertEqual(json.loads(self.mock_redis.set.call_args.args[1]), expected_results)
         self.mock_redis.expire.assert_called_with(cache_key, timedelta(weeks=2))
 
-    def _execute_search(self, sort='xpos', inheritance_mode=None, inheritance_filter=None, quality_filter=None, project_families=None, request_body=None, check_login=None, query_params=None, **search_kwargs):
-        search_hash = random.randint(1000, 10000)  # nosec
+    def _execute_search(self, sort='xpos', inheritance_mode=None, inheritance_filter=None, quality_filter=None, project_families=None, request_body=None, check_login=None, query_params=None, search_hash=None, **search_kwargs):
+        search_hash = search_hash or random.randint(1000, 10000)  # nosec
         self.mock_results_guid.return_value = f'VRS{search_hash:07d}'
         url = reverse(query_variants_handler, args=[search_hash])
 
@@ -1998,6 +1998,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             },
         )
 
+        # Test OMIM intervals
         self.login_manager()
         response_json = self._assert_expected_search(
             [SV_VARIANT1, SV_VARIANT2, SV_VARIANT3, SV_VARIANT4], gene_counts=SV_GENE_COUNTS,
@@ -2006,6 +2007,38 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self.assertDictEqual(response_json['omimIntervals'], {
             '3': {'chrom': '1', 'end': 249055991, 'mimNumber': 600315, 'phenotypeDescription': '?Immunodeficiency 16', 'phenotypeInheritance': 'Autosomal recessive', 'phenotypeMimNumber': 615120, 'start': 249044482},
         })
+
+        # Test cross-project discovery for analyst users
+        self.set_cache('search_results__VRS0009876__xpos',{'total_results': 1, 'all_results': [{
+            'key': 100, 'familyGuids': ['F000002_2'], 'xpos': 1248367227, 'genomeVersion': '38', 'sortedTranscriptConsequences': [],
+        }]})
+        response, _, _ = self._execute_search(search_hash=9876)
+        self.assertEqual(response.status_code, 200)
+        variants = response.json()['searchedVariants']
+        self.assertEqual(len(variants), 1)
+        self.assertFalse('discoveryTags' in variants[0])
+
+        self.login_analyst_user()
+        response, _, _ = self._execute_search(search_hash=9876)
+        self.assertEqual(response.status_code, 200)
+        variants = response.json()['searchedVariants']
+        self.assertEqual(len(variants), 1)
+        self.assertListEqual(variants[0]['discoveryTags'], [{
+            'savedVariant': {
+                'variantGuid': 'SV0000006_1248367227_r0003_tes',
+                'familyGuid': 'F000012_12',
+                'projectGuid': 'R0003_test',
+            },
+            'tagGuid': 'VT1726961_2103343353_r0003_tes',
+            'name': 'Tier 1 - Novel gene and phenotype',
+            'category': 'CMG Discovery Tags',
+            'color': '#03441E',
+            'searchHash': None,
+            'metadata': None,
+            'lastModifiedDate': '2018-05-29T16:32:51.449Z',
+            'createdBy': None,
+        }])
+        self.assertDictEqual(response.json()['familiesByGuid'], {'F000012_12': mock.ANY})
 
     def test_cached_query_variants(self):
         # TODO

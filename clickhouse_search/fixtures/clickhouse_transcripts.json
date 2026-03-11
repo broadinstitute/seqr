@@ -264,5 +264,19 @@
         ]
       ]
     }
+}, {
+    "model": "clickhouse_search.variantdetailssnvindel",
+    "pk": 100,
+    "fields": {
+      "key": 100,
+      "variant_id": "1-248367227-TC-T",
+      "rsid": null,
+      "caid": null,
+      "lifted_over_chrom": null,
+      "lifted_over_pos": null,
+      "sorted_motif_feature_consequences": [],
+      "sorted_regulatory_feature_consequences": [],
+      "transcripts": []
+    }
 }
 ]
