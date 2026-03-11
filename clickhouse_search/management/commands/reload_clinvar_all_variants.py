@@ -99,7 +99,7 @@ def parse_positions(classified_record_node: xml.etree.ElementTree.Element) -> di
                 }
     return positions
 
-def parse_pathogenicity_and_assertions(classified_record_node: xml.etree.ElementTree.Element) -> [str, list[str]]:
+def parse_pathogenicity_and_assertions(classified_record_node: xml.etree.ElementTree.Element, allele_id: int, unenumerated_value_alerts: list) -> [str, list[str]]:
     pathogenicity_node = classified_record_node.find(
         'Classifications/GermlineClassification/Description',
     )
@@ -133,15 +133,23 @@ def parse_pathogenicity_and_assertions(classified_record_node: xml.etree.Element
         assertions = [a.strip() for a in pathogenicity_string.split(';')]
 
     enumerated_assertions = set(CLINVAR_ASSERTIONS)
+    filtered_assertions = []
     for assertion in assertions:
         if assertion not in enumerated_assertions:
-            raise CommandError(f'Found an un-enumerated clinvar assertion: {assertion}')
-
-    return pathogenicity, assertions
+            unenumerated_value_alerts.append({
+                'type': 'Assertion',
+                'allele_id': allele_id,
+                'value': assertion,
+            })
+        else:
+            filtered_assertions.append(assertion)
+    return pathogenicity, filtered_assertions
 
 def parse_conflicting_pathogenicities(
     classified_record_node: xml.etree.ElementTree.Element,
     pathogenicity: str,
+    allele_id: int,
+    unenumerated_value_alerts: list,
 ) -> list[[str, int]]:
     if pathogenicity == CLINVAR_CONFLICTING_CLASSICATIONS_OF_PATHOGENICITY:
         conflicting_pathogenicities_node = classified_record_node.find(
@@ -159,10 +167,17 @@ def parse_conflicting_pathogenicities(
         conflicting_pathogenicities_node.text
     )
     enumerated_pathogenicities = set(CLINVAR_PATHOGENICITIES)
-    for (pathogenicity, _) in conflicting_pathogenicities:
+    filtered_pathogenicities = []
+    for (pathogenicity, count) in conflicting_pathogenicities:
         if pathogenicity not in enumerated_pathogenicities:
-            raise CommandError(f'Found an un-enumerated conflicting pathogenicity: {pathogenicity}')
-    return conflicting_pathogenicities
+            unenumerated_value_alerts.append({
+                'type': 'Conflicting Pathogenicity',
+                'allele_id': allele_id,
+                'value': pathogenicity,
+            })
+        else:
+            filtered_pathogenicities.append((pathogenicity, count))
+    return filtered_pathogenicities
 
 def parse_gold_stars(classified_record_node: xml) -> Optional[int]:
     review_status_node = classified_record_node.find(
@@ -189,7 +204,7 @@ def parse_submitters_and_conditions(classified_record_node: xml) -> [list[str], 
     })
     return submitters, conditions
 
-def extract_variant_info(elem: xml.etree.ElementTree.Element, new_version: str) -> tuple[models.ClickhouseModel, models.ClickhouseModel, models.ClickhouseModel]:
+def extract_variant_info(elem: xml.etree.ElementTree.Element, new_version: str, unenumerated_value_alerts: Optional[list] = None) -> tuple[models.ClickhouseModel, models.ClickhouseModel, models.ClickhouseModel]:
     # Cannot use regular bool-falseyness here, as:
     # "An element with no child elements (even if it exists and has text) will be falsey."
     classified_record_node = elem.find('ClassifiedRecord')
@@ -202,8 +217,8 @@ def extract_variant_info(elem: xml.etree.ElementTree.Element, new_version: str) 
     if not positions:
         return None, None, None
 
-    pathogenicity, assertions = parse_pathogenicity_and_assertions(classified_record_node)
-    conflicting_pathogenicities = parse_conflicting_pathogenicities(classified_record_node, pathogenicity)
+    pathogenicity, assertions = parse_pathogenicity_and_assertions(classified_record_node, allele_id, unenumerated_value_alerts)
+    conflicting_pathogenicities = parse_conflicting_pathogenicities(classified_record_node, pathogenicity, allele_id, unenumerated_value_alerts)
     gold_stars = parse_gold_stars(classified_record_node)
     submitters, conditions = parse_submitters_and_conditions(classified_record_node)
     # Note: this manipulation to an enumerated pathogenicty happens after we parse conflicting pathogenicities.
@@ -247,6 +262,7 @@ class Command(BaseCommand):
             ClinvarAllVariantsSnvIndel: [],
             ClinvarAllVariantsMito: [],
         }
+        unenumerated_value_alerts = []
         new_version = None
         with tempfile.TemporaryDirectory() as tmpdir:
             with requests.get(WEEKLY_XML_RELEASE, stream=True, timeout=10) as r, \
@@ -276,7 +292,7 @@ class Command(BaseCommand):
                                     )
                     # Handle parsing variants
                     if event == 'end' and elem.tag == 'VariationArchive' and new_version:
-                        for obj in extract_variant_info(elem, new_version):
+                        for obj in extract_variant_info(elem, new_version, unenumerated_value_alerts):
                             for model, batch in model_to_batch.items():
                                 if isinstance(obj, model):
                                     batch.append(obj)
@@ -316,4 +332,10 @@ class Command(BaseCommand):
                 version=new_version
             )
         slack_message = f'Successfully updated Clinvar ClickHouse tables to {new_version}.'
+        if unenumerated_value_alerts:
+            slack_message += f'\n\nFound {len(unenumerated_value_alerts)} unenumerated value(s) during parsing:'
+            for alert in unenumerated_value_alerts[:10]:
+                slack_message += f"\n- {alert['type']}: '{alert['value']}' (Allele ID: {alert['allele_id']})"
+            if len(unenumerated_value_alerts) > 10:
+                slack_message += f"\n• ... and {len(unenumerated_value_alerts) - 10} more"
         safe_post_to_slack(SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, slack_message)
