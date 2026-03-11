@@ -38,7 +38,7 @@ from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4,
     FAMILY_1_VARIANT, EXPORT_DATA, SPLIT_FAMILY_EXPORT_DATA, DEFAULT_PROJECT_FAMILIES, SINGLE_FAMILY_PROJECT_FAMILIES, \
     SV_PROJECT_FAMILIES, MULTI_PROJECT_PROJECT_FAMILIES, format_cached_variant
 from reference_data.models import Omim
-from seqr.models import Project, Family, Sample, VariantSearch, VariantSearchResults
+from seqr.models import Project, Family, Sample, VariantSearch, VariantSearchResults, SavedVariant
 from seqr.utils.search.utils import query_variants, variant_lookup, get_variant_query_gene_counts, get_single_variant, InvalidSearchException
 from seqr.views.apis.data_manager_api import trigger_delete_project
 from seqr.views.utils.json_utils import DjangoJSONEncoderWithSets
@@ -1875,6 +1875,10 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         )
 
     def test_search_context(self):
+        sv = SavedVariant.objects.get(guid='SV0000001_2103343353_r0390_100')
+        sv.saved_variant_json['genomeVersion'] = '38'
+        sv.save()
+
         expected_results = [
             VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3,
             GCNV_VARIANT4, FAMILY_1_VARIANT, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3,
@@ -1936,7 +1940,10 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
               'start': 132885746, 'strand': '*', 'tissueType': 'F', 'type': 'psi5', 'deltaIntronJaccardIndex': 12.34}]
         )
         self.assertDictEqual(response_json['savedVariantsByGuid'], {'SV0000001_2103343353_r0390_100': {
-            **{k: mock.ANY for k in [*SAVED_VARIANT_DETAIL_FIELDS, 'key', 'mainTranscriptId']},
+            **{k: mock.ANY for k in [
+                *SAVED_VARIANT_DETAIL_FIELDS, 'key', 'mainTranscriptId', 'screenRegionType',
+                'sortedMotifFeatureConsequences', 'sortedRegulatoryFeatureConsequences',
+            ]},
             'mmeSubmissions': [{'geneId': 'ENSG00000135953', 'submissionGuid': 'MS000001_na19675', 'variantGuid': 'SV0000001_2103343353_r0390_100'}],
         }})
         self.assertDictEqual(response_json['totalSampleCounts'], {
