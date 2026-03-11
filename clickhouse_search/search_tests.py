@@ -1892,7 +1892,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             {'locusListGuid', 'locusListIntervalGuid', 'genomeVersion', 'chrom', 'start', 'end'}
         )
         self.assertDictEqual(response_json['mmeSubmissionsByGuid'], {'MS000001_na19675': {k: mock.ANY for k in MATCHMAKER_SUBMISSION_FIELDS}})
-        self.assertDictEqual(response_json['omimIntervals'], {}) # TODO fix!
+        self.assertDictEqual(response_json['omimIntervals'], {})
         self.assertDictEqual(response_json['phenotypeGeneScores'],{
             'I000001_na19675': {'ENSG00000268903': mock.ANY},
             'I000002_na19678': {'ENSG00000268903': mock.ANY},
@@ -1973,6 +1973,15 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
                 'familyNotesByGuid': {guid: expected_note for guid in ['FAN000001_1', 'FAN000001_2', 'FAN000001_3']},
             },
         )
+
+        self.login_manager()
+        response_json = self._assert_expected_search(
+            [SV_VARIANT1, SV_VARIANT2, SV_VARIANT3, SV_VARIANT4], gene_counts=SV_GENE_COUNTS,
+            project_families=SV_PROJECT_FAMILIES,
+        )
+        self.assertDictEqual(response_json['omimIntervals'], {
+            '3': {'chrom': '1', 'end': 249055991, 'mimNumber': 600315, 'phenotypeDescription': '?Immunodeficiency 16', 'phenotypeInheritance': 'Autosomal recessive', 'phenotypeMimNumber': 615120, 'start': 249044482},
+        })
 
     def test_cached_query_variants(self):
         # TODO
