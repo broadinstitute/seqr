@@ -383,6 +383,44 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             ]
         )
 
+    def test_all_project_search(self):
+        self.login_collaborator()
+        request_body = {'allGenomeProjectFamilies': '38'}
+        project_families = [{'projectGuid': 'R0001_1kg', 'familyGuids': [
+            'F000001_1', 'F000002_2', 'F000003_3', 'F000004_4', 'F000005_5', 'F000006_6', 'F000007_7', 'F000008_8',
+            'F000009_9', 'F000010_10', 'F000013_13',
+        ]}]
+        additional_response = {'familiesByGuid': {'F000001_1': mock.ANY}}
+        self._assert_expected_search(
+            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2,
+             GCNV_VARIANT3, GCNV_VARIANT4, FAMILY_1_VARIANT, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
+            request_body=request_body, project_families=project_families, additional_response=additional_response,
+        )
+
+        self.login_manager()
+        project_families += SV_PROJECT_FAMILIES
+        results = [
+            VARIANT1, SV_VARIANT1, SV_VARIANT2, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, SV_VARIANT3, GCNV_VARIANT1,
+            GCNV_VARIANT2, GCNV_VARIANT3, SV_VARIANT4, GCNV_VARIANT4, FAMILY_1_VARIANT, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3,
+        ]
+        self._assert_expected_search(
+            results, request_body=request_body, project_families=project_families, additional_response=additional_response,
+        )
+
+        request_body['unsolvedFamiliesOnly'] = True
+        project_families[0]['familyGuids'].remove('F000007_7')
+        project_families[0]['familyGuids'].remove('F000010_10')
+        self._assert_expected_search(
+            results, request_body=request_body, project_families=project_families, additional_response=additional_response,
+        )
+
+        request_body['trioFamiliesOnly'] = True
+        self._assert_expected_search(
+            [VARIANT1, VARIANT2, VARIANT3, VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3,
+             GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
+            request_body=request_body, project_families=SINGLE_FAMILY_PROJECT_FAMILIES,
+        )
+
     def test_both_sample_types_search(self):
         Sample.objects.filter(dataset_type='MITO').update(is_active=False)
 

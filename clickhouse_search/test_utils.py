@@ -397,13 +397,16 @@ FAMILY_1_VARIANT = {
     'xpos': 21003343353,
     'rsid': None,
     'familyGuids': ['F000001_1'],
-    'genotypes': {},
+    'genotypes':  {'I000001_na19675': {
+        'ab': 0.16, 'dp': 45, 'familyGuid': 'F000001_1', 'filters': [], 'gq': 0, 'individualGuid': 'I000001_na19675',
+        'numAlt': 1, 'sampleId': 'NA19675', 'sampleType': 'WES',
+    }},
     'clinvar': None,
     'hgmd': None,
     'screenRegionType': None,
     'populations': {
         'seqr': {'ac': 1, 'hom': 0, 'ac_wes': 1, 'ac_wgs': 0, 'hom_wes': 0, 'hom_wgs': 0},
-        'seqr_affected': {'ac': 1, 'hom': 0},
+        'seqr_affected': {'ac': 0, 'hom': 0},
         'topmed': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'het': 0},
         'gnomad_exomes': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'hemi': 0, 'filter_af': 0.0},
         'gnomad_genomes': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'hemi': 0, 'filter_af': 0.0},
