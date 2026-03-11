@@ -169,7 +169,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
 
         return response, search_hash, search_body
 
-    def _assert_expected_search(self, expected_results, results_page=None, gene_counts=None, cached_variant_fields=None, sort='xpos', is_37=False, response_search=None, format_cache_key=None, project_families=None, additional_response=None, export_data=None, **kwargs):
+    def _assert_expected_search(self, expected_results, results_page=None, gene_counts=None, cached_variant_fields=None, sort='xpos', is_37=False, response_search=None, project_families=None, additional_response=None, export_data=None, **kwargs):
         response, search_hash, search_body = self._execute_search(project_families=project_families, sort=sort, **kwargs)
         self.assertEqual(response.status_code, 200)
         expected_response = {
@@ -190,13 +190,9 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
                 expected_response['omimIntervals'] = mock.ANY
         self.assertDictEqual(response.json(), expected_response)
 
-        cache_key = format_cache_key() if format_cache_key else f'search_results__VRS{search_hash:07d}__{sort}'
-        if cache_key:
-            cached_variants = self._format_cached_variants(expected_results, cached_variant_fields=cached_variant_fields)
-            self.assert_cached_results(cached_variants, sort=sort, cache_key=cache_key)
-        else:
-            self.mock_redis.get.assert_not_called()
-            self.mock_redis.set.assert_not_called()
+        cache_key = f'search_results__VRS{search_hash:07d}__{sort}'
+        cached_variants = self._format_cached_variants(expected_results, cached_variant_fields=cached_variant_fields)
+        self.assert_cached_results(cached_variants, sort=sort, cache_key=cache_key)
 
         if gene_counts:
             self._assert_expected_gene_counts(search_hash, gene_counts)
