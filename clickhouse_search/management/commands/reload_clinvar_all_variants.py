@@ -133,6 +133,7 @@ def parse_pathogenicity_and_assertions(classified_record_node: xml.etree.Element
         assertions = [a.strip() for a in pathogenicity_string.split(';')]
 
     enumerated_assertions = set(CLINVAR_ASSERTIONS)
+    filtered_assertions = []
     for assertion in assertions:
         if assertion not in enumerated_assertions:
             unenumerated_value_alerts.append({
@@ -140,8 +141,9 @@ def parse_pathogenicity_and_assertions(classified_record_node: xml.etree.Element
                 'allele_id': allele_id,
                 'value': assertion,
             })
-
-    return pathogenicity, assertions
+        else:
+            filtered_assertions.append(assertion)
+    return pathogenicity, filtered_assertions
 
 def parse_conflicting_pathogenicities(
     classified_record_node: xml.etree.ElementTree.Element,
@@ -165,15 +167,17 @@ def parse_conflicting_pathogenicities(
         conflicting_pathogenicities_node.text
     )
     enumerated_pathogenicities = set(CLINVAR_PATHOGENICITIES)
-    for (pathogenicity, _) in conflicting_pathogenicities:
+    filtered_pathogenicities = []
+    for (pathogenicity, count) in conflicting_pathogenicities:
         if pathogenicity not in enumerated_pathogenicities:
-            if unenumerated_value_alerts is not None:
-                unenumerated_value_alerts.append({
-                    'type': 'Conflicting Pathogenicity',
-                    'allele_id': allele_id,
-                    'value': pathogenicity,
-                })
-    return conflicting_pathogenicities
+            unenumerated_value_alerts.append({
+                'type': 'Conflicting Pathogenicity',
+                'allele_id': allele_id,
+                'value': pathogenicity,
+            })
+        else:
+            filtered_pathogenicities.append((pathogenicity, count))
+    return filtered_pathogenicities
 
 def parse_gold_stars(classified_record_node: xml) -> Optional[int]:
     review_status_node = classified_record_node.find(
