@@ -306,28 +306,6 @@ class VariantSearchAPITest(AuthenticationTestCase):
             'analysedBy': [{'createdBy': 'Test No Access User', 'dataType': 'SNP', 'lastModifiedDate': '2022-07-22T19:27:08.563+00:00'}],
         })
 
-    def _assert_expected_rnaseq_response(self, response_json):
-        self.assertDictEqual(
-            response_json['rnaSeqData']['I000001_na19675']['outliers']['ENSG00000268903'][0],
-            {'geneId': 'ENSG00000268903', 'isSignificant': True, 'pAdjust': 1.39e-09, 'pValue': 5.88e-10,
-             'tissueType': 'M', 'zScore': 7.08}
-        )
-        self.assertListEqual(
-            sorted(response_json['rnaSeqData']['I000001_na19675']['spliceOutliers']['ENSG00000268903'], key=lambda d: d['start']),
-            [{'chrom': '7', 'counts': 1297, 'end': 4000, 'geneId': 'ENSG00000268903', 'isSignificant': True,
-              'meanCounts': 0.85,  'meanTotalCounts': 0.85, 'pAdjust': 0.0003,
-              'pValue': 0.0001, 'rareDiseaseSamplesTotal': 20, 'rareDiseaseSamplesWithThisJunction': 1, 'totalCounts': 1297,
-              'start': 3000, 'strand': '*', 'tissueType': 'F', 'type': 'psi5', 'deltaIntronJaccardIndex': -12.34},
-             {'chrom': '7', 'counts': 1297, 'end': 8000, 'geneId': 'ENSG00000268903', 'isSignificant': True,
-              'meanCounts': 0.85, 'meanTotalCounts': 0.85, 'pAdjust': 0.003,
-              'pValue': 0.001, 'rareDiseaseSamplesTotal': 20, 'rareDiseaseSamplesWithThisJunction': 1, 'totalCounts': 1297,
-              'start': 7000, 'strand': '*', 'tissueType': 'M', 'type': 'psi5', 'deltaIntronJaccardIndex': 12.34},
-             {'chrom': '7', 'counts': 1297, 'end': 132886973, 'geneId': 'ENSG00000268903', 'isSignificant': True,
-              'meanCounts': 0.85, 'meanTotalCounts': 0.85, 'pAdjust': 3.08e-56,
-              'pValue': 1.08e-56, 'rareDiseaseSamplesTotal': 20, 'rareDiseaseSamplesWithThisJunction': 1, 'totalCounts': 1297,
-              'start': 132885746, 'strand': '*', 'tissueType': 'F', 'type': 'psi5', 'deltaIntronJaccardIndex': 12.34}]
-        )
-
     def _assert_expected_results_family_context(self, response_json, locus_list_detail=False):
         self._assert_expected_results_context(response_json, locus_list_detail=locus_list_detail)
 
@@ -368,15 +346,6 @@ class VariantSearchAPITest(AuthenticationTestCase):
             {'locusListGuid', 'locusListIntervalGuid', 'genomeVersion', 'chrom', 'start', 'end'}
         )
 
-        self.assertSetEqual(set(next(iter(response_json['variantTagsByGuid'].values())).keys()), TAG_FIELDS)
-        if response_json['variantNotesByGuid']:
-            self.assertSetEqual(set(next(iter(response_json['variantNotesByGuid'].values())).keys()), VARIANT_NOTE_FIELDS)
-        if response_json['variantFunctionalDataByGuid']:
-            self.assertSetEqual(set(next(iter(response_json['variantFunctionalDataByGuid'].values())).keys()), FUNCTIONAL_FIELDS)
-
-        if rnaseq:
-            self._assert_expected_rnaseq_response(response_json)
-
     @mock.patch('seqr.utils.middleware.logger.error')
     @mock.patch('seqr.views.apis.variant_search_api.get_variant_query_gene_counts')
     @mock.patch('seqr.views.apis.variant_search_api.query_variants')
@@ -386,17 +355,6 @@ class VariantSearchAPITest(AuthenticationTestCase):
         url = reverse(query_variants_handler, args=[SEARCH_HASH])
 
         mock_get_variants.side_effect = _get_es_variants
-
-        # include project context info
-        response = self.client.get('{}?loadProjectTagTypes=true'.format(url))
-        self.assertEqual(response.status_code, 200)
-        response_json = response.json()
-        expected_search_response = {'projectsByGuid': EXPECTED_SEARCH_CONTEXT_RESPONSE['projectsByGuid']}
-        expected_search_responsernaSeqData.update(EXPECTED_SEARCH_RESPONSE)
-        self.assertSetEqual(set(response_json.keys()), set(expected_search_response.keys()))
-        self.assertDictEqual(response_json, expected_search_response)
-        self._assert_expected_results_context(response_json)
-        self.assertSetEqual(set(response_json['projectsByGuid'][PROJECT_GUID].keys()), PROJECT_TAG_TYPE_FIELDS)
 
         # include family context info
         response = self.client.get('{}?loadFamilyContext=true'.format(url))

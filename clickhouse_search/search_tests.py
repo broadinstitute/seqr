@@ -43,7 +43,8 @@ from seqr.utils.search.utils import query_variants, variant_lookup, get_variant_
 from seqr.views.apis.data_manager_api import trigger_delete_project
 from seqr.views.utils.json_utils import DjangoJSONEncoderWithSets
 from seqr.views.utils.test_utils import AnvilAuthenticationTestCase, GENE_VARIANT_FIELDS, MATCHMAKER_SUBMISSION_FIELDS, \
-    SAVED_VARIANT_DETAIL_FIELDS, FUNCTIONAL_FIELDS, TAG_FIELDS
+    SAVED_VARIANT_DETAIL_FIELDS, FUNCTIONAL_FIELDS, TAG_FIELDS, FAMILY_FIELDS, INDIVIDUAL_FIELDS, IGV_SAMPLE_FIELDS, \
+    FAMILY_NOTE_FIELDS
 from seqr.views.apis.variant_search_api import query_variants_handler, get_variant_gene_breakdown
 
 
@@ -1861,11 +1862,15 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         )
 
     def test_search_context(self):
+        expected_results = [
+            VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3,
+            GCNV_VARIANT4, FAMILY_1_VARIANT, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3,
+        ]
+        project_families = [{**DEFAULT_PROJECT_FAMILIES[0], 'familyGuids': ['F000001_1', *DEFAULT_PROJECT_FAMILIES[0]['familyGuids']]}]
+        additional_response = {'familiesByGuid': {'F000001_1': {'tpmGenes': ['ENSG00000227232']}}}
         response_json = self._assert_expected_search(
-            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2,
-             GCNV_VARIANT3, GCNV_VARIANT4, FAMILY_1_VARIANT, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
-            project_families=[{**DEFAULT_PROJECT_FAMILIES[0], 'familyGuids': ['F000001_1', *DEFAULT_PROJECT_FAMILIES[0]['familyGuids']]}],
-            check_login=self.check_collaborator_login, additional_response={'familiesByGuid': {'F000001_1': {'tpmGenes': ['ENSG00000227232']}}},
+            expected_results, project_families=project_families, additional_response=additional_response,
+            check_login=self.check_collaborator_login,
         )
 
         expected_gene = {k: mock.ANY for k in GENE_VARIANT_FIELDS}
@@ -1887,6 +1892,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             {'locusListGuid', 'locusListIntervalGuid', 'genomeVersion', 'chrom', 'start', 'end'}
         )
         self.assertDictEqual(response_json['mmeSubmissionsByGuid'], {'MS000001_na19675': {k: mock.ANY for k in MATCHMAKER_SUBMISSION_FIELDS}})
+        self.assertDictEqual(response_json['omimIntervals'], {}) # TODO fix!
         self.assertDictEqual(response_json['phenotypeGeneScores'],{
             'I000001_na19675': {'ENSG00000268903': mock.ANY},
             'I000002_na19678': {'ENSG00000268903': mock.ANY},
@@ -1896,6 +1902,26 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self.assertDictEqual(response_json['rnaSeqData'], {
             'I000001_na19675': {'outliers': {'ENSG00000268903': mock.ANY}, 'spliceOutliers': {'ENSG00000268903': mock.ANY}},
         })
+        self.assertDictEqual(
+            response_json['rnaSeqData']['I000001_na19675']['outliers']['ENSG00000268903'][0],
+            {'geneId': 'ENSG00000268903', 'isSignificant': True, 'pAdjust': 1.39e-09, 'pValue': 5.88e-10,
+             'tissueType': 'M', 'zScore': 7.08}
+        )
+        self.assertListEqual(
+            sorted(response_json['rnaSeqData']['I000001_na19675']['spliceOutliers']['ENSG00000268903'], key=lambda d: d['start']),
+            [{'chrom': '7', 'counts': 1297, 'end': 4000, 'geneId': 'ENSG00000268903', 'isSignificant': True,
+              'meanCounts': 0.85,  'meanTotalCounts': 0.85, 'pAdjust': 0.0003,
+              'pValue': 0.0001, 'rareDiseaseSamplesTotal': 20, 'rareDiseaseSamplesWithThisJunction': 1, 'totalCounts': 1297,
+              'start': 3000, 'strand': '*', 'tissueType': 'F', 'type': 'psi5', 'deltaIntronJaccardIndex': -12.34},
+             {'chrom': '7', 'counts': 1297, 'end': 8000, 'geneId': 'ENSG00000268903', 'isSignificant': True,
+              'meanCounts': 0.85, 'meanTotalCounts': 0.85, 'pAdjust': 0.003,
+              'pValue': 0.001, 'rareDiseaseSamplesTotal': 20, 'rareDiseaseSamplesWithThisJunction': 1, 'totalCounts': 1297,
+              'start': 7000, 'strand': '*', 'tissueType': 'M', 'type': 'psi5', 'deltaIntronJaccardIndex': 12.34},
+             {'chrom': '7', 'counts': 1297, 'end': 132886973, 'geneId': 'ENSG00000268903', 'isSignificant': True,
+              'meanCounts': 0.85, 'meanTotalCounts': 0.85, 'pAdjust': 3.08e-56,
+              'pValue': 1.08e-56, 'rareDiseaseSamplesTotal': 20, 'rareDiseaseSamplesWithThisJunction': 1, 'totalCounts': 1297,
+              'start': 132885746, 'strand': '*', 'tissueType': 'F', 'type': 'psi5', 'deltaIntronJaccardIndex': 12.34}]
+        )
         self.assertDictEqual(response_json['savedVariantsByGuid'], {'SV0000001_2103343353_r0390_100': {
             **{k: mock.ANY for k in [*SAVED_VARIANT_DETAIL_FIELDS, 'key', 'mainTranscriptId']},
             'mmeSubmissions': [{'geneId': 'ENSG00000135953', 'submissionGuid': 'MS000001_na19675', 'variantGuid': 'SV0000001_2103343353_r0390_100'}],
@@ -1914,6 +1940,39 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self.assertDictEqual(response_json['variantTagsByGuid'], {
             'VT1708633_2103343353_r0390_100': expected_tag, 'VT1726961_2103343353_r0390_100': expected_tag,
         })
+
+        # test project context info
+        self._assert_expected_search(
+            expected_results, project_families=project_families, query_params={'loadProjectTagTypes': 'true'}, additional_response={
+                **additional_response,
+                'projectsByGuid': {'R0001_1kg': {field: mock.ANY for field in {
+                    'projectGuid', 'genomeVersion', 'variantTagTypes', 'variantFunctionalTagTypes',
+                }}},
+            },
+        )
+
+        # test family context info
+        expected_family = {field: mock.ANY for field in [*FAMILY_FIELDS, 'individualGuids']}
+        expected_individual = {field: mock.ANY for field in [*INDIVIDUAL_FIELDS, 'igvSampleGuids']}
+        expected_igv = {field: mock.ANY for field in IGV_SAMPLE_FIELDS}
+        expected_note = {field: mock.ANY for field in FAMILY_NOTE_FIELDS}
+        self._assert_expected_search(
+            expected_results, project_families=project_families, query_params={'loadFamilyContext': 'true'},
+            additional_response={
+                **additional_response,
+                'familiesByGuid': {
+                    'F000001_1': {**expected_family, 'tpmGenes': ['ENSG00000227232']},
+                    'F000002_2': expected_family,
+                    'F000003_3': expected_family,
+                },
+                'individualsByGuid': {guid: expected_individual for guid in [
+                    'I000001_na19675', 'I000002_na19678', 'I000003_na19679', 'I000004_hg00731', 'I000005_hg00732',
+                    'I000006_hg00733', 'I000007_na20870',
+                ]},
+                'igvSamplesByGuid': {guid: expected_igv for guid in ['S000145_na19675', 'S000146_na20870', 'S000147_na20870']},
+                'familyNotesByGuid': {guid: expected_note for guid in ['FAN000001_1', 'FAN000001_2', 'FAN000001_3']},
+            },
+        )
 
     def test_cached_query_variants(self):
         # TODO
