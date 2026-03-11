@@ -136,7 +136,7 @@ def parse_pathogenicity_and_assertions(classified_record_node: xml.etree.Element
     for assertion in assertions:
         if assertion not in enumerated_assertions:
             unenumerated_value_alerts.append({
-                'type': 'unenumerated_assertion',
+                'type': 'Assertion',
                 'allele_id': allele_id,
                 'value': assertion,
             })
@@ -169,7 +169,7 @@ def parse_conflicting_pathogenicities(
         if pathogenicity not in enumerated_pathogenicities:
             if unenumerated_value_alerts is not None:
                 unenumerated_value_alerts.append({
-                    'type': 'unenumerated_conflicting_pathogenicity',
+                    'type': 'Conflicting Pathogenicity',
                     'allele_id': allele_id,
                     'value': pathogenicity,
                 })
@@ -330,9 +330,8 @@ class Command(BaseCommand):
         slack_message = f'Successfully updated Clinvar ClickHouse tables to {new_version}.'
         if unenumerated_value_alerts:
             slack_message += f'\n\nFound {len(unenumerated_value_alerts)} unenumerated value(s) during parsing:'
-            for alert in unenumerated_value_alerts[:10]:  # Show first 10
-                alert_type = 'Assertion' if alert['type'] == 'unenumerated_assertion' else 'Pathogenicity'
-                slack_message += f"\n• {alert_type}: '{alert['value']}' (Allele ID: {alert['allele_id']})"
+            for alert in unenumerated_value_alerts[:10]:
+                slack_message += f"\n- {alert['type']}: '{alert['value']}' (Allele ID: {alert['allele_id']})"
             if len(unenumerated_value_alerts) > 10:
                 slack_message += f"\n• ... and {len(unenumerated_value_alerts) - 10} more"
         safe_post_to_slack(SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, slack_message)
