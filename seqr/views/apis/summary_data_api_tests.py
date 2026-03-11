@@ -7,7 +7,7 @@ import responses
 
 from seqr.views.apis.summary_data_api import mme_details, success_story, saved_variants_page, hpo_summary_data, \
     bulk_update_family_external_analysis, individual_metadata, send_vlm_email
-from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, AirtableTest, PARSED_VARIANTS, SAVED_VARIANT_FIELDS
+from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, AirtableTest, SAVED_VARIANT_FIELDS
 from seqr.models import FamilyAnalysedBy, SavedVariant, VariantTag
 from settings import AIRTABLE_URL
 
