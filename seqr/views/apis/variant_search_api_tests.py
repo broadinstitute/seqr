@@ -363,43 +363,6 @@ class VariantSearchAPITest(AuthenticationTestCase):
         }
         mock_get_gene_counts.return_value = gene_counts
 
-        gene_breakdown_url = reverse(get_variant_gene_breakdown, args=[SEARCH_HASH])
-        response = self.client.get(gene_breakdown_url)
-        self.assertEqual(response.status_code, 200)
-        response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), {'searchGeneBreakdown', 'genesById'})
-        self.assertDictEqual(response_json['searchGeneBreakdown'], {SEARCH_HASH: gene_counts})
-        self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000227232', 'ENSG00000268903'})
-        self.assertSetEqual(set(response_json['genesById']['ENSG00000227232'].keys()), GENE_VARIANT_DISPLAY_FIELDS)
-
-        # Test compound hets
-        mock_get_variants.side_effect = _get_compound_het_es_variants
-        response = self.client.post(url, content_type='application/json', data=json.dumps({
-            'projectFamilies': PROJECT_FAMILIES, 'search': SEARCH
-        }))
-        self.assertEqual(response.status_code, 200)
-        response_json = response.json()
-        expected_search_response = deepcopy(EXPECTED_SEARCH_RESPONSE)
-        expected_search_response.update({
-            'searchedVariants': COMP_HET_VARAINTS,
-            'savedVariantsByGuid': {k: v for k, v in EXPECTED_SEARCH_RESPONSE['savedVariantsByGuid'].items() if k in ['SV0000002_1248367227_r0390_100']},
-            'genesById': {'ENSG00000233653': EXPECTED_GENE},
-            'variantTagsByGuid': {
-                'VT1726970_2103343353_r0004_tes': EXPECTED_TAG, 'VT1726945_2103343353_r0390_100': EXPECTED_TAG,
-                'VT1726985_2103343353_r0390_100': expected_aip_tag,
-            },
-            'variantFunctionalDataByGuid': {},
-            'phenotypeGeneScores': {},
-            'rnaSeqData': {},
-            'mmeSubmissionsByGuid': {},
-        })
-        expected_search_response['search']['totalResults'] = 1
-        del expected_search_response['familiesByGuid']
-        expected_search_response.pop('transcriptsById', None)
-        self.assertSetEqual(set(response_json.keys()), set(expected_search_response.keys()))
-        self.assertDictEqual(response_json, expected_search_response)
-        self._assert_expected_results_context(response_json, has_pa_detail=False, rnaseq=False)
-
         # Test cross-project discovery for analyst users
         self.login_analyst_user()
         mock_get_variants.side_effect = _get_es_variants

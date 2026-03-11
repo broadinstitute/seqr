@@ -44,7 +44,7 @@ from seqr.views.apis.data_manager_api import trigger_delete_project
 from seqr.views.utils.json_utils import DjangoJSONEncoderWithSets
 from seqr.views.utils.test_utils import AnvilAuthenticationTestCase, GENE_VARIANT_FIELDS, MATCHMAKER_SUBMISSION_FIELDS, \
     SAVED_VARIANT_DETAIL_FIELDS, FUNCTIONAL_FIELDS, TAG_FIELDS, FAMILY_FIELDS, INDIVIDUAL_FIELDS, IGV_SAMPLE_FIELDS, \
-    FAMILY_NOTE_FIELDS
+    FAMILY_NOTE_FIELDS, GENE_VARIANT_DISPLAY_FIELDS
 from seqr.views.apis.variant_search_api import query_variants_handler, get_variant_gene_breakdown, export_variants_handler
 
 
@@ -211,11 +211,13 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         url = reverse(get_variant_gene_breakdown, args=[search_hash])
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {
+        response_json = response.json()
+        self.assertDictEqual(response_json, {
             'searchGeneBreakdown': {str(search_hash): gene_counts},
             'genesById': mock.ANY,
         })
-        # TODO test genesById context
+        for gene in response_json['genesById'].values():
+            self.assertSetEqual(set(gene.keys()), GENE_VARIANT_DISPLAY_FIELDS)
 
     def _assert_expected_export_data(self, search_hash, export_data):
         url = reverse(export_variants_handler, args=[search_hash])
@@ -2077,6 +2079,7 @@ class ClickhouseDeleteDataTests(ClickhouseSearchTestCase):
             5: {'ac_wes': 1, 'ac_wgs': 1, 'hom_wes': 0, 'hom_wgs': 0, 'ac_affected': 2, 'hom_affected': 0},
             6: {'ac_wes': 0, 'ac_wgs': 0, 'hom_wes': 0, 'hom_wgs': 0, 'ac_affected': 0, 'hom_affected': 0},
             22: {'ac_wes': 0, 'ac_wgs': 3, 'hom_wes': 0, 'hom_wgs': 1, 'ac_affected': 3, 'hom_affected': 1},
+            23: {'ac_wes': 0, 'ac_wgs': 0, 'hom_wes': 0, 'hom_wgs': 0, 'ac_affected': 0, 'hom_affected': 0},
         })
 
         project_samples = Sample.objects.filter(individual__family__project__guid='R0001_1kg', is_active=True)
