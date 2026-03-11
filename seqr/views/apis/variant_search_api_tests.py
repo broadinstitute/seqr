@@ -385,6 +385,7 @@ class VariantSearchAPITest(AuthenticationTestCase):
 
     @mock.patch('seqr.views.apis.variant_search_api.variant_lookup')
     def test_variant_lookup(self, mock_variant_lookup):
+        # TODO
         response_variant = deepcopy(VARIANT_LOOKUP_VARIANT)
         mock_variant_lookup.side_effect = lambda *args, **kwargs: [deepcopy(response_variant)]
 
@@ -553,6 +554,7 @@ class VariantSearchAPITest(AuthenticationTestCase):
 
     @mock.patch('seqr.views.apis.variant_search_api.variant_lookup')
     def test_sv_variant_lookup(self, mock_variant_lookup):
+        # TODO
         lookup_variants = [
             {**GCNV_LOOKUP_VARIANT, 'familyGenotypes': {k: v for k, v in GCNV_LOOKUP_VARIANT['familyGenotypes'].items() if k != 'F000002_2_x'}},
             SV_LOOKUP_VARIANT,
