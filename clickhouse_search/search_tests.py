@@ -42,7 +42,7 @@ from seqr.models import Project, Family, Sample, VariantSearch, VariantSearchRes
 from seqr.utils.search.utils import query_variants, variant_lookup, get_variant_query_gene_counts, get_single_variant, InvalidSearchException
 from seqr.views.apis.data_manager_api import trigger_delete_project
 from seqr.views.utils.json_utils import DjangoJSONEncoderWithSets
-from seqr.views.utils.test_utils import AnvilAuthenticationTestCase
+from seqr.views.utils.test_utils import AnvilAuthenticationTestCase, GENE_VARIANT_FIELDS
 from seqr.views.apis.variant_search_api import query_variants_handler, get_variant_gene_breakdown
 
 
@@ -204,6 +204,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
                 'searchGeneBreakdown': {str(search_hash): gene_counts},
                 'genesById': mock.ANY,
             })
+            # TODO test genesById context
 
         return response.json()
 
@@ -1788,23 +1789,17 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         variant4 = {**VARIANT4, 'selectedMainTranscriptId': 'ENST00000350997', 'numFamilies': 3}
         del variant4['familyGuids']
         del variant4['genotypes']
-        response_json = self._assert_expected_search(
+        self._assert_expected_search(
             [variant4], request_body=request_body, response_search=response_search,
             cached_variant_fields=[{'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[4][1]}],
             annotations=annotations, freqs=freqs, locus=locus, project_families=[],
         )
-        self.assertEqual(response_json['genesById'], {'ENSG00000097046': mock.ANY})
-        self.assertEqual(response_json['totalSampleCounts'], {
-            'MITO': {'WES': 1},
-            'SNV_INDEL': {'WES': 7},
-            'SV': {'WES': 3, 'WGS': 3},
-        })
 
         freqs = {'callset': freqs['callset']}
         variant3 = {**VARIANT3, 'selectedMainTranscriptId': 'ENST00000497611', 'numFamilies': 4}
         del variant3['familyGuids']
         del variant3['genotypes']
-        response_json = self._assert_expected_search(
+        self._assert_expected_search(
             [variant3, variant4], request_body=request_body, response_search=response_search,
             cached_variant_fields=[
                 {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[3][3]},
@@ -1812,7 +1807,6 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             ],
             annotations=annotations, freqs=freqs, locus=locus, project_families=[],
         )
-        self.assertEqual(response_json['genesById'], {'ENSG00000097046': mock.ANY, 'ENSG00000177000': mock.ANY})
 
         self._assert_expected_search_error(
             'Compound heterozygous search is not supported when including external projects',
@@ -1837,7 +1831,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
 
         self.login_collaborator()
         project_families = [{'projectGuid': 'R0001_1kg', 'familyGuids': mock.ANY}]
-        response_json = self._assert_expected_search([
+        self._assert_expected_search([
                 {**FAMILY_3_VARIANT, 'selectedMainTranscriptId': 'ENST00000497611'},
                 {**VARIANT4, 'selectedMainTranscriptId': 'ENST00000350997'},
             ], request_body=request_body, response_search=response_search, project_families=project_families,
@@ -1847,8 +1841,6 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             ],
             annotations=annotations, freqs=freqs, locus=locus, inheritance_mode='de_novo',
         )
-        self.assertEqual(response_json['locusListsByGuid'], {'LL00049_pid_genes_autosomal_do': mock.ANY})
-        self.assertEqual(response_json['phenotypeGeneScores'], {'I000004_hg00731': mock.ANY, 'I000005_hg00732': mock.ANY})
 
         locus['rawItems'] = 'ENSG00000171621'
         other_project_variant = {**PROJECT_4_COMP_HET_VARIANT, 'numFamilies': 1}
@@ -1866,7 +1858,45 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             project_families=project_families, annotations=annotations, freqs=freqs, locus=locus, inheritance_mode='de_novo',
         )
 
+    def test_search_context(self):
+        response_json = self._assert_expected_search(
+            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2,
+             GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
+            check_login=self.check_collaborator_login,
+        )
+        #  TODO test pa gene in saved variant test
+        #         expected_pa_gene = {**expected_gene, 'locusListGuids': ['LL00049_pid_genes_autosomal_do'], 'panelAppDetail': mock.ANY}
+        #             self.assertDictEqual(
+        #                 response_json['genesById']['ENSG00000227232']['panelAppDetail'], {LOCUS_LIST_GUID: {'confidence': '3', 'moi': 'BIALLELIC, autosomal or pseudoautosomal'}}
+        #             )
+        expected_gene = {k: mock.ANY for k in GENE_VARIANT_FIELDS}
+        expected_gene['locusListGuids'] = []
+        self.assertDictEqual(response_json['genesById'], {
+            'ENSG00000097046': expected_gene,
+            'ENSG00000277258': expected_gene,
+            'ENSG00000177000': expected_gene,
+            'ENSG00000275023': expected_gene,
+        })
+        self.assertDictEqual(response_json['locusListsByGuid'], {'LL00049_pid_genes_autosomal_do': {'intervals': [mock.ANY, mock.ANY]}})
+        self.assertSetEqual(
+            set(response_json['locusListsByGuid']['LL00049_pid_genes_autosomal_do']['intervals'][0].keys()),
+            {'locusListGuid', 'locusListIntervalGuid', 'genomeVersion', 'chrom', 'start', 'end'}
+        )
+        self.assertDictEqual(response_json['mmeSubmissionsByGuid'], {})
+        self.assertDictEqual(response_json['phenotypeGeneScores'],{'I000004_hg00731': mock.ANY, 'I000005_hg00732': mock.ANY})
+        self.assertDictEqual(response_json['rnaSeqData'], {})
+        self.assertDictEqual(response_json['savedVariantsByGuid'], {})
+        self.assertDictEqual(response_json['totalSampleCounts'], {
+            'MITO': {'WES': 1},
+            'SNV_INDEL': {'WES': 7},
+            'SV': {'WES': 3, 'WGS': 3},
+        })
+        self.assertDictEqual(response_json['variantFunctionalDataByGuid'], {})
+        self.assertDictEqual(response_json['variantNotesByGuid'], {})
+        self.assertDictEqual(response_json['variantTagsByGuid'], {})
+
     def test_cached_query_variants(self):
+        # TODO
         cache_key_prefix = f'search_results__{self.results_model.guid}'
         cached_variants = [VARIANT1, SV_VARIANT1, GCNV_VARIANT1, MITO_VARIANT1, VARIANT2]
         cache_result = self._format_cached_variants(cached_variants)

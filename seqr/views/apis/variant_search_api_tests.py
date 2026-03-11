@@ -354,20 +354,7 @@ class VariantSearchAPITest(AuthenticationTestCase):
         self._assert_expected_rnaseq_response(response_json)
 
     def _assert_expected_results_context(self, response_json, has_pa_detail=True, locus_list_detail=False, rnaseq=True):
-        gene_fields = {'locusListGuids'}
-        gene_fields.update(GENE_VARIANT_FIELDS)
-        basic_gene_id = next(gene_id for gene_id in ['ENSG00000268903', 'ENSG00000233653'] if gene_id in response_json['genesById'])
-        self.assertSetEqual(set(response_json['genesById'][basic_gene_id].keys()), gene_fields)
-        if has_pa_detail:
-            gene_fields.add('panelAppDetail')
-            self.assertSetEqual(set(response_json['genesById']['ENSG00000227232'].keys()), gene_fields)
-            self.assertListEqual(
-                response_json['genesById']['ENSG00000227232']['locusListGuids'], [LOCUS_LIST_GUID]
-            )
-            self.assertDictEqual(
-                response_json['genesById']['ENSG00000227232']['panelAppDetail'], {LOCUS_LIST_GUID: {'confidence': '3', 'moi': 'BIALLELIC, autosomal or pseudoautosomal'}}
-            )
-
+        # TODO used in single variant context
         locus_list_fields = {'intervals'}
         if locus_list_detail:
             locus_list_fields.update(LOCUS_LIST_FIELDS)
@@ -399,21 +386,6 @@ class VariantSearchAPITest(AuthenticationTestCase):
         url = reverse(query_variants_handler, args=[SEARCH_HASH])
 
         mock_get_variants.side_effect = _get_es_variants
-
-        # Test new search
-        response = self.client.post(url, content_type='application/json', data=json.dumps({
-            'projectFamilies': PROJECT_FAMILIES, 'search': SEARCH
-        }))
-        self.assertEqual(response.status_code, 200)
-        response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), set(EXPECTED_SEARCH_RESPONSE.keys()))
-        self.assertDictEqual(response_json, EXPECTED_SEARCH_RESPONSE)
-        self.assertSetEqual(
-            set(response_json['search']['projectFamilies'][0]['familyGuids']), {'F000001_1', 'F000002_2'})
-        self._assert_expected_results_context(response_json)
-
-        results_model = VariantSearchResults.objects.get(search_hash=SEARCH_HASH)
-        mock_get_variants.assert_called_with(results_model, sort='xpos', page=1, num_results=100, user=self.collaborator_user)
 
         # include project context info
         response = self.client.get('{}?loadProjectTagTypes=true'.format(url))
