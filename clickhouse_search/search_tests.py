@@ -975,10 +975,15 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self._set_grch37_search()
         self._assert_expected_search_error('Invalid genes/intervals: DDX11L1, ENSG00000223972', locus={'rawItems': build_specific_genes})
 
-        self._assert_expected_search_error(
+        search_hash = self._assert_expected_search_error(
             'Searching across multiple genome builds is not supported. Remove projects with differing genome builds from search: 37 - 1kg project nåme with uniçøde; 38 - Test Reprocessed Project',
             project_families=MULTI_PROJECT_PROJECT_FAMILIES,
         )
+
+        # Test export disabled in demo projects
+        export_url = reverse(export_variants_handler, args=[search_hash])
+        response = self.client.get(export_url)
+        self.assertEqual(response.status_code, 403)
 
     @mock.patch('seqr.utils.search.utils.LiftOver')
     def test_variant_lookup(self, mock_liftover):
