@@ -35,8 +35,8 @@ from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4,
     GCNV_VARIANT3, GCNV_VARIANT4, GCNV_MULTI_FAMILY_VARIANT1, GCNV_MULTI_FAMILY_VARIANT2, GCNV_GENE_COUNTS, \
     MULTI_DATA_TYPE_COMP_HET_VARIANT2, ALL_SNV_INDEL_PASS_FILTERS, MULTI_PROJECT_GCNV_VARIANT3, VARIANT_LOOKUP_VARIANT, \
     MITO_GENE_COUNTS, PROJECT_4_COMP_HET_VARIANT, SV_LOOKUP_VARIANT, GCNV_LOOKUP_VARIANT, GCNV_LOOKUP_VARIANT_3, \
-    FAMILY_1_VARIANT, DEFAULT_PROJECT_FAMILIES, SINGLE_FAMILY_PROJECT_FAMILIES, SV_PROJECT_FAMILIES, MULTI_PROJECT_PROJECT_FAMILIES, \
-    format_cached_variant
+    FAMILY_1_VARIANT, EXPORT_DATA, SPLIT_FAMILY_EXPORT_DATA, DEFAULT_PROJECT_FAMILIES, SINGLE_FAMILY_PROJECT_FAMILIES, \
+    SV_PROJECT_FAMILIES, MULTI_PROJECT_PROJECT_FAMILIES, format_cached_variant
 from reference_data.models import Omim
 from seqr.models import Project, Family, Sample, VariantSearch, VariantSearchResults
 from seqr.utils.search.utils import query_variants, variant_lookup, get_variant_query_gene_counts, get_single_variant, InvalidSearchException
@@ -45,7 +45,7 @@ from seqr.views.utils.json_utils import DjangoJSONEncoderWithSets
 from seqr.views.utils.test_utils import AnvilAuthenticationTestCase, GENE_VARIANT_FIELDS, MATCHMAKER_SUBMISSION_FIELDS, \
     SAVED_VARIANT_DETAIL_FIELDS, FUNCTIONAL_FIELDS, TAG_FIELDS, FAMILY_FIELDS, INDIVIDUAL_FIELDS, IGV_SAMPLE_FIELDS, \
     FAMILY_NOTE_FIELDS
-from seqr.views.apis.variant_search_api import query_variants_handler, get_variant_gene_breakdown
+from seqr.views.apis.variant_search_api import query_variants_handler, get_variant_gene_breakdown, export_variants_handler
 
 
 class ClickhouseSearchTestCase(AnvilAuthenticationTestCase):
@@ -161,7 +161,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
 
         return response, search_hash, search_body
 
-    def _assert_expected_search(self, expected_results, results_page=None, gene_counts=None, cached_variant_fields=None, sort='xpos', is_37=False, response_search=None, format_cache_key=None, project_families=None, additional_response=None, **kwargs):
+    def _assert_expected_search(self, expected_results, results_page=None, gene_counts=None, cached_variant_fields=None, sort='xpos', is_37=False, response_search=None, format_cache_key=None, project_families=None, additional_response=None, export_data=None, **kwargs):
         response, search_hash, search_body = self._execute_search(project_families=project_families, sort=sort, **kwargs)
         self.assertEqual(response.status_code, 200)
         expected_response = {
@@ -200,16 +200,28 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             self.mock_redis.set.assert_not_called()
 
         if gene_counts:
-            gene_breakdown_url = reverse(get_variant_gene_breakdown, args=[search_hash])
-            gene_breakdown_response = self.client.get(gene_breakdown_url)
-            self.assertEqual(gene_breakdown_response.status_code, 200)
-            self.assertDictEqual(gene_breakdown_response.json(), {
-                'searchGeneBreakdown': {str(search_hash): gene_counts},
-                'genesById': mock.ANY,
-            })
-            # TODO test genesById context
+            self._assert_expected_gene_counts(search_hash, gene_counts)
+
+        if export_data:
+            self._assert_expected_export_data(search_hash, export_data)
 
         return response.json()
+
+    def _assert_expected_gene_counts(self, search_hash, gene_counts):
+        url = reverse(get_variant_gene_breakdown, args=[search_hash])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {
+            'searchGeneBreakdown': {str(search_hash): gene_counts},
+            'genesById': mock.ANY,
+        })
+        # TODO test genesById context
+
+    def _assert_expected_export_data(self, search_hash, export_data):
+        url = reverse(export_variants_handler, args=[search_hash])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertListEqual([line.split('\t') for line in response.content.decode().strip().split('\n')], export_data)
 
     def _assert_expected_search_error(self, error, **kwargs):
         response, _, _ = self._execute_search(**kwargs)
@@ -756,11 +768,12 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             [GRCH37_VARIANT], quality_filter=quality_filter, inheritance_filter={'allowNoCall': True}, is_37=True,
         )
 
+    @mock.patch('seqr.views.apis.variant_search_api.MAX_FAMILIES_PER_ROW', 1)
     def test_location_search(self):
         self._assert_expected_search(
             [MULTI_FAMILY_VARIANT, VARIANT4], **LOCATION_SEARCH, cached_variant_fields=[
                 {'selectedGeneId': 'ENSG00000097046'}, {'selectedGeneId': 'ENSG00000097046'}
-            ], check_login=self.check_collaborator_login,
+            ], check_login=self.check_collaborator_login, export_data=SPLIT_FAMILY_EXPORT_DATA,
         )
 
         sv_locus = {'rawItems': 'ENSG00000275023, ENSG00000171621'}
@@ -1870,7 +1883,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         additional_response = {'familiesByGuid': {'F000001_1': {'tpmGenes': ['ENSG00000227232']}}}
         response_json = self._assert_expected_search(
             expected_results, project_families=project_families, additional_response=additional_response,
-            check_login=self.check_collaborator_login,
+            check_login=self.check_collaborator_login, export_data=EXPORT_DATA,
         )
 
         expected_gene = {k: mock.ANY for k in GENE_VARIANT_FIELDS}
