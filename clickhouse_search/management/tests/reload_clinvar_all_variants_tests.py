@@ -200,12 +200,10 @@ class ReloadClinvarAllVariantsTest(TestCase):
 
     @responses.activate
     def test_malformed_variants(self, mock_logger, mock_safe_post_to_slack):
+        # Test errors that should still raise (not unenumerated values)
         for description, review_status, conflicting_pathogenicities, error_message in [
-            ("Pathogenic-ey", None, None, 'Found an un-enumerated clinvar assertion: Pathogenic-ey'),
-            ("Pathogenic; but unknown assertion", None, None, 'Found an un-enumerated clinvar assertion: but unknown assertion'),
             ("Pathogenic", "unhandled", None, 'Found unexpected review status unhandled'),
             ("Conflicting classifications of pathogenicity", None, "Pathogenic;", 'Failed to correctly parse conflicting pathogenicity counts: Pathogenic;'),
-            ("Conflicting classifications of pathogenicity", None, "Pathogenic(18); unhandled(1)", 'Found an un-enumerated conflicting pathogenicity: unhandled'),
             ("Conflicting classifications of pathogenicity", None, None, 'Failed to find the conflicting pathogenicities node'),
         ]:
             data = f'''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -238,6 +236,45 @@ class ReloadClinvarAllVariantsTest(TestCase):
             )
             with self.assertRaisesMessage(CommandError, error_message):
                 call_command('reload_clinvar_all_variants')
+
+        # Test that unenumerated values are now collected instead of raising
+        for description, conflicting_pathogenicities, allele_id in [
+            ("Pathogenic-ey", None, 1),
+            ("Pathogenic; but unknown assertion", None, 2),
+            ("Conflicting classifications of pathogenicity", "Pathogenic(18); unhandled(1)", 3),
+        ]:
+            data = f'''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+            <ClinVarVariationRelease xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                                     xsi:noNamespaceSchemaLocation="http://ftp.ncbi.nlm.nih.gov/pub/clinvar/xsd_public/ClinVar_VCV_2.4.xsd"
+                                     ReleaseDate="2025-06-30">
+                <VariationArchive>
+                    <ClassifiedRecord>
+                        <SimpleAllele AlleleID="{allele_id}" VariationID="5603">
+                            <Location>
+                                <SequenceLocation Assembly="GRCh38" Chr="1" positionVCF="{allele_id}" referenceAlleleVCF="G" alternateAlleleVCF="A"/>
+                            </Location>
+                        </SimpleAllele>
+                        <Classifications>
+                            <GermlineClassification>
+                                <Description>{description}</Description>
+                                {f"<Explanation>{conflicting_pathogenicities}</Explanation>" if conflicting_pathogenicities else ""}
+                            </GermlineClassification>
+                        </Classifications>
+                    </ClassifiedRecord>
+                </VariationArchive>
+            </ClinVarVariationRelease>'''
+            responses.add(
+                responses.GET,
+                WEEKLY_XML_RELEASE,
+                status=200,
+                body=gzip.compress(data.encode()),
+                stream=True,
+            )
+            DataVersions.objects.all().delete()
+            ClinvarAllVariantsSnvIndel.objects.using('clickhouse_write').all().delete()
+            call_command('reload_clinvar_all_variants')
+            # Command should succeed and collect the unenumerated values
+            self.assertIn('unenumerated value', mock_safe_post_to_slack.call_args[0][1])
 
         # Variants with missing/equivalent alleles and positions are skipped
         for simple_allele_attrs, sequence_location_attrs in [
