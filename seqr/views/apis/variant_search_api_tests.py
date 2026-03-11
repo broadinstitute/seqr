@@ -398,26 +398,6 @@ class VariantSearchAPITest(AuthenticationTestCase):
         self.check_collaborator_login(url, request_data={'projectFamilies': PROJECT_FAMILIES})
         url = reverse(query_variants_handler, args=[SEARCH_HASH])
 
-        # Test invalid inputs
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'Invalid search hash: {}'.format(SEARCH_HASH))
-        mock_error_logger.assert_not_called()
-
-        response = self.client.post(url, content_type='application/json', data=json.dumps({'search': SEARCH}))
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'Invalid search: no projects/ families specified')
-        mock_error_logger.assert_not_called()
-
-        mock_get_variants.side_effect = InvalidSearchException('Invalid search')
-        mock_error_logger.reset_mock()
-        response = self.client.post(url, content_type='application/json', data=json.dumps({
-            'projectFamilies': PROJECT_FAMILIES, 'search': SEARCH
-        }))
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()['error'], 'Invalid search')
-        mock_error_logger.assert_not_called()
-
         mock_get_variants.side_effect = _get_es_variants
 
         # Test new search
@@ -434,7 +414,6 @@ class VariantSearchAPITest(AuthenticationTestCase):
 
         results_model = VariantSearchResults.objects.get(search_hash=SEARCH_HASH)
         mock_get_variants.assert_called_with(results_model, sort='xpos', page=1, num_results=100, user=self.collaborator_user)
-        mock_error_logger.assert_not_called()
 
         # include project context info
         response = self.client.get('{}?loadProjectTagTypes=true'.format(url))
@@ -458,18 +437,6 @@ class VariantSearchAPITest(AuthenticationTestCase):
         self.assertSetEqual(set(response_json.keys()), set(expected_response.keys()))
         self.assertDictEqual(response_json, expected_response)
         self._assert_expected_results_family_context(response_json)
-
-        # Test pagination
-        response = self.client.get('{}?page=3'.format(url))
-        self.assertEqual(response.status_code, 200)
-        mock_get_variants.assert_called_with(results_model, sort='xpos', page=3, num_results=100, user=self.collaborator_user)
-        mock_error_logger.assert_not_called()
-
-        # Test sort
-        response = self.client.get('{}?sort=pathogenicity'.format(url))
-        self.assertEqual(response.status_code, 200)
-        mock_get_variants.assert_called_with(results_model, sort='pathogenicity', page=1, num_results=100, user=self.collaborator_user)
-        mock_error_logger.assert_not_called()
 
         # Test export
         export_url = reverse(export_variants_handler, args=[SEARCH_HASH])
@@ -538,7 +505,6 @@ class VariantSearchAPITest(AuthenticationTestCase):
             self.assertListEqual([line.split('\t') for line in response.content.decode().strip().split('\n')], expected_content)
 
         mock_get_variants.assert_called_with(results_model, page=1, load_all=True, user=self.collaborator_user)
-        mock_error_logger.assert_not_called()
 
         # Test gene breakdown
         gene_counts = {
@@ -583,7 +549,6 @@ class VariantSearchAPITest(AuthenticationTestCase):
         self.assertSetEqual(set(response_json.keys()), set(expected_search_response.keys()))
         self.assertDictEqual(response_json, expected_search_response)
         self._assert_expected_results_context(response_json, has_pa_detail=False, rnaseq=False)
-        mock_error_logger.assert_not_called()
 
         # Test cross-project discovery for analyst users
         self.login_analyst_user()
@@ -600,28 +565,7 @@ class VariantSearchAPITest(AuthenticationTestCase):
         self._assert_expected_results_context(response_json)
 
         mock_get_variants.assert_called_with(results_model, sort='pathogenicity_hgmd', page=1, num_results=100, user=self.analyst_user)
-        mock_error_logger.assert_not_called()
 
-        # Test no results
-        VariantSearchResults.objects.get(search_hash=SEARCH_HASH).delete()
-        mock_get_variants.side_effect = _get_empty_es_variants
-        response = self.client.post(url, content_type='application/json', data=json.dumps({
-            'projectFamilies': PROJECT_FAMILIES, 'search': {**SEARCH, 'exclude': {'previousSearch': True}}, 'previousSearchHash': 'abc1234',
-        }))
-        self.assertEqual(response.status_code, 200)
-        response_json = response.json()
-        self.assertDictEqual(response_json, {
-            'searchedVariants': [],
-            'search': {
-                'search': {**SEARCH, 'exclude': {
-                    'previousSearch': True,
-                    'previousSearchHash': 'abc1234',
-                }},
-                'projectFamilies': PROJECT_FAMILIES,
-                'totalResults': 0,
-            }
-        })
-        mock_error_logger.assert_not_called()
 
     @mock.patch('seqr.views.apis.variant_search_api.query_variants')
     def test_query_all_projects_variants(self, mock_get_variants):

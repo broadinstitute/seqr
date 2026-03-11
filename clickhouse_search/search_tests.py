@@ -148,7 +148,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             search_body['inheritance']['filter'] = inheritance_filter
 
         request_data = {
-            **(request_body or {'projectFamilies': project_families or DEFAULT_PROJECT_FAMILIES}), 'search': search_body,
+            **(request_body or {'projectFamilies': DEFAULT_PROJECT_FAMILIES if project_families is None else project_families }), 'search': search_body,
         }
 
         if check_login:
@@ -814,8 +814,17 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
     @mock.patch('seqr.utils.search.utils.MAX_NO_LOCATION_COMP_HET_FAMILIES', 1)
     @mock.patch('clickhouse_search.search.MAX_VARIANTS', 3)
     def test_invalid_search(self):
+        url = reverse(query_variants_handler, args=['not_a_hash'])
+        self.check_require_login(url)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'error': 'Invalid search hash: not_a_hash'})
+        self.login_collaborator()
+
+        self._assert_expected_search_error('Invalid search: no projects/ families specified', project_families=[])
+
         self._assert_expected_search_error(
-            'Invalid variants: chr2-A-C', locus={'rawVariantItems': 'chr2-A-C'}, check_login=self.check_collaborator_login,
+            'Invalid variants: chr2-A-C', locus={'rawVariantItems': 'chr2-A-C'},
         )
 
         self._assert_expected_search_error('Invalid variants: rs9876', locus={'rawVariantItems': 'rs9876'})
