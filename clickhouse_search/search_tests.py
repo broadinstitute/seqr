@@ -35,14 +35,15 @@ from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4,
     GCNV_VARIANT3, GCNV_VARIANT4, GCNV_MULTI_FAMILY_VARIANT1, GCNV_MULTI_FAMILY_VARIANT2, GCNV_GENE_COUNTS, \
     MULTI_DATA_TYPE_COMP_HET_VARIANT2, ALL_SNV_INDEL_PASS_FILTERS, MULTI_PROJECT_GCNV_VARIANT3, VARIANT_LOOKUP_VARIANT, \
     MITO_GENE_COUNTS, PROJECT_4_COMP_HET_VARIANT, SV_LOOKUP_VARIANT, GCNV_LOOKUP_VARIANT, GCNV_LOOKUP_VARIANT_3, \
-    DEFAULT_PROJECT_FAMILIES, SINGLE_FAMILY_PROJECT_FAMILIES, SV_PROJECT_FAMILIES, MULTI_PROJECT_PROJECT_FAMILIES, \
+    FAMILY_1_VARIANT, DEFAULT_PROJECT_FAMILIES, SINGLE_FAMILY_PROJECT_FAMILIES, SV_PROJECT_FAMILIES, MULTI_PROJECT_PROJECT_FAMILIES, \
     format_cached_variant
 from reference_data.models import Omim
 from seqr.models import Project, Family, Sample, VariantSearch, VariantSearchResults
 from seqr.utils.search.utils import query_variants, variant_lookup, get_variant_query_gene_counts, get_single_variant, InvalidSearchException
 from seqr.views.apis.data_manager_api import trigger_delete_project
 from seqr.views.utils.json_utils import DjangoJSONEncoderWithSets
-from seqr.views.utils.test_utils import AnvilAuthenticationTestCase, GENE_VARIANT_FIELDS
+from seqr.views.utils.test_utils import AnvilAuthenticationTestCase, GENE_VARIANT_FIELDS, MATCHMAKER_SUBMISSION_FIELDS, \
+    SAVED_VARIANT_DETAIL_FIELDS, FUNCTIONAL_FIELDS, TAG_FIELDS
 from seqr.views.apis.variant_search_api import query_variants_handler, get_variant_gene_breakdown
 
 
@@ -159,7 +160,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
 
         return response, search_hash, search_body
 
-    def _assert_expected_search(self, expected_results, results_page=None, gene_counts=None, cached_variant_fields=None, sort='xpos', response_search=None, format_cache_key=None, project_families=None, is_37=False, **kwargs):
+    def _assert_expected_search(self, expected_results, results_page=None, gene_counts=None, cached_variant_fields=None, sort='xpos', is_37=False, response_search=None, format_cache_key=None, project_families=None, additional_response=None, **kwargs):
         response, search_hash, search_body = self._execute_search(project_families=project_families, sort=sort, **kwargs)
         self.assertEqual(response.status_code, 200)
         expected_response = {
@@ -183,6 +184,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
                 'variantNotesByGuid': mock.ANY,
                 'variantTagsByGuid': mock.ANY,
                 'totalSampleCounts': mock.ANY,
+                **(additional_response or {}),
             })
             if not is_37:
                 expected_response['omimIntervals'] = mock.ANY
@@ -1861,39 +1863,57 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
     def test_search_context(self):
         response_json = self._assert_expected_search(
             [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2,
-             GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
-            check_login=self.check_collaborator_login,
+             GCNV_VARIANT3, GCNV_VARIANT4, FAMILY_1_VARIANT, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
+            project_families=[{**DEFAULT_PROJECT_FAMILIES[0], 'familyGuids': ['F000001_1', *DEFAULT_PROJECT_FAMILIES[0]['familyGuids']]}],
+            check_login=self.check_collaborator_login, additional_response={'familiesByGuid': {'F000001_1': {'tpmGenes': ['ENSG00000227232']}}},
         )
-        #  TODO test pa gene in saved variant test
-        #         expected_pa_gene = {**expected_gene, 'locusListGuids': ['LL00049_pid_genes_autosomal_do'], 'panelAppDetail': mock.ANY}
-        #             self.assertDictEqual(
-        #                 response_json['genesById']['ENSG00000227232']['panelAppDetail'], {LOCUS_LIST_GUID: {'confidence': '3', 'moi': 'BIALLELIC, autosomal or pseudoautosomal'}}
-        #             )
+
         expected_gene = {k: mock.ANY for k in GENE_VARIANT_FIELDS}
         expected_gene['locusListGuids'] = []
+        expected_pa_gene = {**expected_gene, 'locusListGuids': ['LL00049_pid_genes_autosomal_do'], 'panelAppDetail': mock.ANY}
         self.assertDictEqual(response_json['genesById'], {
-            'ENSG00000097046': expected_gene,
-            'ENSG00000277258': expected_gene,
-            'ENSG00000177000': expected_gene,
-            'ENSG00000275023': expected_gene,
+            **{gene_id: expected_gene for gene_id in [
+                'ENSG00000097046', 'ENSG00000277258', 'ENSG00000177000', 'ENSG00000275023', 'ENSG00000268903',
+            ]},
+            'ENSG00000227232': expected_pa_gene,
         })
+        self.assertDictEqual(
+            response_json['genesById']['ENSG00000227232']['panelAppDetail'],
+            {'LL00049_pid_genes_autosomal_do': {'confidence': '3', 'moi': 'BIALLELIC, autosomal or pseudoautosomal'}},
+        )
         self.assertDictEqual(response_json['locusListsByGuid'], {'LL00049_pid_genes_autosomal_do': {'intervals': [mock.ANY, mock.ANY]}})
         self.assertSetEqual(
             set(response_json['locusListsByGuid']['LL00049_pid_genes_autosomal_do']['intervals'][0].keys()),
             {'locusListGuid', 'locusListIntervalGuid', 'genomeVersion', 'chrom', 'start', 'end'}
         )
-        self.assertDictEqual(response_json['mmeSubmissionsByGuid'], {})
-        self.assertDictEqual(response_json['phenotypeGeneScores'],{'I000004_hg00731': mock.ANY, 'I000005_hg00732': mock.ANY})
-        self.assertDictEqual(response_json['rnaSeqData'], {})
-        self.assertDictEqual(response_json['savedVariantsByGuid'], {})
+        self.assertDictEqual(response_json['mmeSubmissionsByGuid'], {'MS000001_na19675': {k: mock.ANY for k in MATCHMAKER_SUBMISSION_FIELDS}})
+        self.assertDictEqual(response_json['phenotypeGeneScores'],{
+            'I000001_na19675': {'ENSG00000268903': mock.ANY},
+            'I000002_na19678': {'ENSG00000268903': mock.ANY},
+            'I000004_hg00731': {'ENSG00000177000': mock.ANY},
+            'I000005_hg00732': {'ENSG00000177000': mock.ANY},
+        })
+        self.assertDictEqual(response_json['rnaSeqData'], {
+            'I000001_na19675': {'outliers': {'ENSG00000268903': mock.ANY}, 'spliceOutliers': {'ENSG00000268903': mock.ANY}},
+        })
+        self.assertDictEqual(response_json['savedVariantsByGuid'], {'SV0000001_2103343353_r0390_100': {
+            **{k: mock.ANY for k in [*SAVED_VARIANT_DETAIL_FIELDS, 'key', 'mainTranscriptId']},
+            'mmeSubmissions': [{'geneId': 'ENSG00000135953', 'submissionGuid': 'MS000001_na19675', 'variantGuid': 'SV0000001_2103343353_r0390_100'}],
+        }})
         self.assertDictEqual(response_json['totalSampleCounts'], {
             'MITO': {'WES': 1},
             'SNV_INDEL': {'WES': 7},
             'SV': {'WES': 3, 'WGS': 3},
         })
-        self.assertDictEqual(response_json['variantFunctionalDataByGuid'], {})
+        expected_functional_tag = {k: mock.ANY for k in FUNCTIONAL_FIELDS}
+        self.assertDictEqual(response_json['variantFunctionalDataByGuid'], {guid: expected_functional_tag for guid in [
+            'VFD0000023_1248367227_r0390_10', 'VFD0000024_1248367227_r0390_10', 'VFD0000025_1248367227_r0390_10', 'VFD0000026_1248367227_r0390_10',
+        ]})
         self.assertDictEqual(response_json['variantNotesByGuid'], {})
-        self.assertDictEqual(response_json['variantTagsByGuid'], {})
+        expected_tag = {k: mock.ANY for k in TAG_FIELDS}
+        self.assertDictEqual(response_json['variantTagsByGuid'], {
+            'VT1708633_2103343353_r0390_100': expected_tag, 'VT1726961_2103343353_r0390_100': expected_tag,
+        })
 
     def test_cached_query_variants(self):
         # TODO

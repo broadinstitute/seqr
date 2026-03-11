@@ -392,7 +392,7 @@ class VariantSearchAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         expected_search_response = {'projectsByGuid': EXPECTED_SEARCH_CONTEXT_RESPONSE['projectsByGuid']}
-        expected_search_response.update(EXPECTED_SEARCH_RESPONSE)
+        expected_search_responsernaSeqData.update(EXPECTED_SEARCH_RESPONSE)
         self.assertSetEqual(set(response_json.keys()), set(expected_search_response.keys()))
         self.assertDictEqual(response_json, expected_search_response)
         self._assert_expected_results_context(response_json)
