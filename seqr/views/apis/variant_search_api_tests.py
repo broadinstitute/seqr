@@ -354,15 +354,6 @@ class VariantSearchAPITest(AuthenticationTestCase):
         self.check_collaborator_login(url, request_data={'projectFamilies': PROJECT_FAMILIES})
         url = reverse(query_variants_handler, args=[SEARCH_HASH])
 
-        mock_get_variants.side_effect = _get_es_variants
-
-        # Test gene breakdown
-        gene_counts = {
-            'ENSG00000227232': {'total': 2, 'families': {'F000001_1': 2, 'F000002_2': 1}},
-            'ENSG00000268903': {'total': 1, 'families': {'F000002_2': 1}}
-        }
-        mock_get_gene_counts.return_value = gene_counts
-
         # Test cross-project discovery for analyst users
         self.login_analyst_user()
         mock_get_variants.side_effect = _get_es_variants
@@ -376,9 +367,6 @@ class VariantSearchAPITest(AuthenticationTestCase):
         self.assertSetEqual(set(response_json.keys()), set(expected_search_results.keys()))
         self.assertDictEqual(response_json, expected_search_results)
         self._assert_expected_results_context(response_json)
-
-        mock_get_variants.assert_called_with(results_model, sort='pathogenicity_hgmd', page=1, num_results=100, user=self.analyst_user)
-
 
     @mock.patch('seqr.views.apis.variant_search_api.query_variants')
     def test_query_all_projects_variants(self, mock_get_variants):

@@ -106,9 +106,10 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
     fixtures = ['users', '1kg_project', 'variant_searches', 'reference_data', 'clickhouse_search', 'clickhouse_transcripts']
 
     def setUp(self):
+        self.MOCK_CACHE = {}
         patcher = mock.patch('seqr.utils.redis_utils.redis.StrictRedis')
         self.mock_redis = patcher.start().return_value
-        self.mock_redis.get.return_value = None
+        self.mock_redis.get.side_effect = self.MOCK_CACHE.get
         self.addCleanup(patcher.stop)
 
         patcher = mock.patch('seqr.models.VariantSearchResults._compute_guid')
@@ -126,8 +127,8 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
 
         super().setUp()
 
-    def set_cache(self, cached):
-        self.mock_redis.get.return_value = json.dumps(cached)
+    def set_cache(self, cache_key, cached):
+        self.MOCK_CACHE[cache_key] = json.dumps(cached)
 
     def assert_cached_results(self, expected_results, sort='xpos', cache_key=None):
         cache_key = cache_key or f'search_results__{self.results_model.guid}__{sort}'
@@ -226,9 +227,10 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self.assertListEqual([line.split('\t') for line in response.content.decode().strip().split('\n')], export_data)
 
     def _assert_expected_search_error(self, error, **kwargs):
-        response, _, _ = self._execute_search(**kwargs)
+        response, search_hash, _ = self._execute_search(**kwargs)
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'error': error})
+        return search_hash
 
     def _assert_expected_variants(self, variants, expected_results, cache_key=None, results_page=None, format_cached_variants=None, sort='xpos', **kwargs):
         encoded_variants = self._encode_variants(variants)
@@ -643,9 +645,9 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
     def test_exclude_previous_search_results(self):
         self.mock_results_guid.return_value = 'VRS00079516'
         VariantSearchResults.objects.create(variant_search_id=79516, search_hash='abc1234')
-        self.mock_redis.get.side_effect = [None, None, None, json.dumps({'all_results': [
+        self.set_cache('search_results__abc1234__gnomad', {'all_results': [
             VARIANT1, VARIANT2, [VARIANT3, VARIANT2], [GCNV_VARIANT4, GCNV_VARIANT3],
-        ]})]
+        ]})
         self.mock_redis.keys.side_effect = [[], ['search_results__abc1234__gnomad']]
 
         exclude = {'previousSearch': True, 'previousSearchHash': 'abc1234'}
@@ -659,9 +661,9 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             ], check_login=self.check_collaborator_login,
         )
 
-        self.mock_redis.get.side_effect = [None, None, json.dumps({'all_results': [
+        self.set_cache('search_results__abc1234__gnomad', {'all_results': [
             [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], [VARIANT3, VARIANT4], GCNV_VARIANT3, MITO_VARIANT3,
-        ]})]
+        ]})
         self.mock_redis.keys.side_effect = [[], ['search_results__abc1234__gnomad']]
         self._assert_expected_search(
             [VARIANT2, [GCNV_VARIANT3, GCNV_VARIANT4]], exclude=exclude, **COMP_HET_ALL_PASS_FILTERS,
@@ -842,9 +844,15 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
 
         self._assert_expected_search_error('Invalid search: no projects/ families specified', project_families=[])
 
-        self._assert_expected_search_error(
+        search_hash = self._assert_expected_search_error(
             'Invalid variants: chr2-A-C', locus={'rawVariantItems': 'chr2-A-C'},
         )
+
+        self.set_cache(f'search_results__VRS{search_hash:07d}__xpos', {'total_results': 20000})
+        export_url = reverse(export_variants_handler, args=[search_hash])
+        response = self.client.get(export_url)
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'error': 'Unable to export more than 1000 variants (20000 requested)'})
 
         self._assert_expected_search_error('Invalid variants: rs9876', locus={'rawVariantItems': 'rs9876'})
 
@@ -933,12 +941,6 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             'Searching across multiple genome builds is not supported. Remove projects with differing genome builds from search: 37 - 1kg project nåme with uniçøde; 38 - Test Reprocessed Project',
             project_families=MULTI_PROJECT_PROJECT_FAMILIES,
         )
-
-        #  TODO test once have export tests in this file
-        self.set_cache({'total_results': 20000})
-        with self.assertRaises(InvalidSearchException) as cm:
-            self._assert_expected_search([], page=1, num_results=2, load_all=True, project_families=SINGLE_FAMILY_PROJECT_FAMILIES)
-        self._assert_expected_search_error('Unable to export more than 1000 variants (20000 requested)')
 
     @mock.patch('seqr.utils.search.utils.LiftOver')
     def test_variant_lookup(self, mock_liftover):
