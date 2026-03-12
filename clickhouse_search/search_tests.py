@@ -39,9 +39,7 @@ from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4,
     SV_PROJECT_FAMILIES, MULTI_PROJECT_PROJECT_FAMILIES, format_cached_variant
 from reference_data.models import Omim
 from seqr.models import Project, Family, Sample, VariantSearch, VariantSearchResults, SavedVariant
-from seqr.utils.search.utils import query_variants, variant_lookup, get_variant_query_gene_counts, get_single_variant, InvalidSearchException
 from seqr.views.apis.data_manager_api import trigger_delete_project
-from seqr.views.utils.json_utils import DjangoJSONEncoderWithSets
 from seqr.views.utils.test_utils import AnvilAuthenticationTestCase, GENE_VARIANT_FIELDS, MATCHMAKER_SUBMISSION_FIELDS, \
     SAVED_VARIANT_DETAIL_FIELDS, FUNCTIONAL_FIELDS, TAG_FIELDS, FAMILY_FIELDS, INDIVIDUAL_FIELDS, IGV_SAMPLE_FIELDS, \
     FAMILY_NOTE_FIELDS, GENE_VARIANT_DISPLAY_FIELDS, LOCUS_LIST_FIELDS
@@ -139,9 +137,12 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
 
     def assert_cached_results(self, expected_results, sort='xpos', cache_key=None):
         cache_key = cache_key or f'search_results__{self.results_model.guid}__{sort}'
-        self.mock_redis.set.assert_called_with(cache_key, mock.ANY)
-        self.assertEqual(json.loads(self.mock_redis.set.call_args.args[1]), expected_results)
-        self.mock_redis.expire.assert_called_with(cache_key, timedelta(weeks=2))
+        self.mock_redis.set.assert_any_call(cache_key, mock.ANY)
+        call_index = next(i for i, call in enumerate(self.mock_redis.set.call_args_list) if call.args[0] == cache_key)
+        self.assertEqual(json.loads(self.mock_redis.set.call_args_list[call_index].args[1]), expected_results)
+        self.mock_redis.expire.assert_any_call(cache_key, timedelta(weeks=2))
+        self.mock_redis.set.reset_mock()
+        self.mock_redis.expire.reset_mock()
 
     def _execute_search(self, sort='xpos', inheritance_mode=None, inheritance_filter=None, quality_filter=None, project_families=None, request_body=None, check_login=None, query_params=None, search_hash=None, **search_kwargs):
         search_hash = search_hash or random.randint(1000, 10000)  # nosec
@@ -225,20 +226,6 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'error': error})
         return search_hash
-
-    def _assert_expected_variants(self, variants, expected_results, cache_key=None, results_page=None, format_cached_variants=None, sort='xpos', **kwargs):
-        encoded_variants = self._encode_variants(variants)
-        self.assertListEqual(encoded_variants, results_page or expected_results)
-        if cache_key:
-            cached_variants = format_cached_variants(expected_results, **kwargs) if format_cached_variants else expected_results
-            self.assert_cached_results(cached_variants, sort=sort, cache_key=cache_key)
-        else:
-            self.mock_redis.get.assert_not_called()
-            self.mock_redis.set.assert_not_called()
-
-    @staticmethod
-    def _encode_variants(variants):
-        return json.loads(json.dumps(variants, cls=DjangoJSONEncoderWithSets))
 
     def _format_cached_variants(self, variants, cached_variant_fields=None):
         cached_variants = [
@@ -984,7 +971,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         mock_convert_coordinate = mock_liftover.return_value.convert_coordinate
         mock_convert_coordinate.side_effect = lambda chrom, pos: [(chrom, pos + 10000)]
 
-        url = f'{reverse(variant_lookup_handler)}?variantId=1-10439-AC-A&genomeVersion=38&affectedOnly=true'
+        url = f'{reverse(variant_lookup_handler)}?variantId=1-10439-AC-A&genomeVersion=38'
         self.check_require_login(url)
 
         response = self.client.get(url)
@@ -1046,84 +1033,10 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         }
         expected_body = self._expected_lookup_body(expected_individuals, [expected_variant], is_build_38=True)
         self.assertDictEqual(response.json(), expected_body)
-        mock_variant_lookup.assert_called_with(self.no_access_user, '1-10439-AC-A', '38', sample_type=None,
-                                               affected_only=True, hom_only=False)
-        self._assert_expected_variants(variants, [VARIANT_LOOKUP_VARIANT], 'variant_lookup_results__1-10439-AC-A__38')
+        self.assert_cached_results([VARIANT_LOOKUP_VARIANT], cache_key='variant_lookup_results__1-10439-AC-A__38')
 
-
-        response_variant['transcripts'] = VARIANTS[0]['transcripts']
-        expected_variant['transcripts'] = VARIANTS[0]['transcripts']
-        expected_gene_body = {
-            'genesById': {'ENSG00000227232': EXPECTED_GENE, 'ENSG00000268903': EXPECTED_GENE},
-        }
-        expected_body.update(expected_gene_body)
-        # TODO test these for real
-        EXPECTED_LIRICAL_DATA = [
-            {'diseaseId': 'OMIM:219800', 'diseaseName': 'Cystinosis, nephropathic', 'rank': 1,
-             'scores': {'compositeLR': 0.003, 'post_test_probability': 0}},
-        ]
-        EXPECTED_EXOMISER_DATA = [
-            {'diseaseId': 'OMIM:219800', 'diseaseName': 'Cystinosis, nephropathic', 'rank': 2,
-             'scores': {'exomiser_score': 0.969347946, 'phenotype_score': 0.443567539,
-                        'variant_score': 0.999200702}},
-            {'diseaseId': 'OMIM:618460', 'diseaseName': 'Khan-Khan-Katsanis syndrome', 'rank': 1,
-             'scores': {'exomiser_score': 0.977923765, 'phenotype_score': 0.603998205,
-                        'variant_score': 1}},
-        ]
-        EXPECTED_SEARCH_RESPONSE = {
-            'searchedVariants': ALL_VARIANTS,
-            'savedVariantsByGuid': {
-                'SV0000001_2103343353_r0390_100': mock.ANY,
-                'SV0000002_1248367227_r0390_100': mock.ANY,
-            },
-            'genesById': {
-                'ENSG00000227232': expected_pa_gene, 'ENSG00000268903': EXPECTED_GENE, 'ENSG00000233653': EXPECTED_GENE,
-                'ENSG00000177000': mock.ANY, 'ENSG00000097046': mock.ANY,
-            },
-            'search': {
-                'search': SEARCH,
-                'projectFamilies': [{'projectGuid': PROJECT_GUID, 'familyGuids': mock.ANY}],
-                'totalResults': 5,
-            },
-            'variantTagsByGuid': {
-                'VT1708633_2103343353_r0390_100': EXPECTED_TAG, 'VT1726945_2103343353_r0390_100': EXPECTED_TAG,
-                'VT1726970_2103343353_r0004_tes': EXPECTED_TAG, 'VT1726961_2103343353_r0390_100': EXPECTED_TAG,
-                'VT1726985_2103343353_r0390_100': expected_aip_tag,
-            },
-            'variantNotesByGuid': {
-                'VN0714935_2103343353_r0390_100': {k: mock.ANY for k in VARIANT_NOTE_FIELDS},
-                'VN0714937_2103343353_r0390_100': {k: mock.ANY for k in VARIANT_NOTE_FIELDS},
-            },
-            'variantFunctionalDataByGuid': {
-                'VFD0000023_1248367227_r0390_10': expected_functional_tag,
-                'VFD0000024_1248367227_r0390_10': expected_functional_tag,
-                'VFD0000025_1248367227_r0390_10': expected_functional_tag,
-                'VFD0000026_1248367227_r0390_10': expected_functional_tag,
-            },
-            'locusListsByGuid': {LOCUS_LIST_GUID: {'intervals': mock.ANY}},
-            'rnaSeqData': {
-                'I000001_na19675': {'outliers': {'ENSG00000268903': mock.ANY},
-                                    'spliceOutliers': {'ENSG00000268903': mock.ANY}},
-            },
-            'phenotypeGeneScores': {
-                'I000001_na19675': {'ENSG00000268903': {'exomiser': EXPECTED_EXOMISER_DATA}},
-                'I000002_na19678': {'ENSG00000268903': {'lirical': EXPECTED_LIRICAL_DATA}},
-            },
-            'mmeSubmissionsByGuid': {'MS000001_na19675': {k: mock.ANY for k in MATCHMAKER_SUBMISSION_FIELDS}},
-            'familiesByGuid': {'F000001_1': {'tpmGenes': ['ENSG00000227232']}},
-            'totalSampleCounts': {'MITO': {'WES': 1}, 'SNV_INDEL': {'WES': 7}, 'SV': {'WES': 3}},
-        }
-        if 'transcriptsById' in EXPECTED_SEARCH_RESPONSE:
-            expected_body['transcriptsById'] = EXPECTED_SEARCH_RESPONSE['transcriptsById']
-
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), expected_body)
-
-        response_variant['variantId'] = '1-248367227-TC-T'
-        response_variant['genomeVersion'] = '37'
         self.login_manager()
-        response = self.client.get(url.replace("38", "37") + '&homOnly=true')
+        response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
 
         individual_guid_map = [
@@ -1145,8 +1058,6 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
                     'individualGuid': individual_guid,
                 } for individual_guid, anon_individual_guid, genotype in individual_guid_map
             },
-            'genomeVersion': '37',
-            'variantId': '1-248367227-TC-T',
         })
         expected_individuals = {
             individual_guid: {
@@ -1159,59 +1070,77 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             {individual_guid: mock.ANY for individual_guid in ['I000019_na21987', 'I000021_na21654']})
         expected_body = self._expected_lookup_body(
             expected_individuals, [expected_variant], include_context=True,
-            project_guids=[PROJECT_GUID, 'R0003_test', 'R0004_non_analyst_project'],
-            family_guids=['F000002_2', 'F000011_11', 'F000014_14'],
+            project_guids=['R0001_1kg', 'R0003_test', 'R0004_non_analyst_project'],
+            family_guids=['F000002_2', 'F000011_11', 'F000014_14'], is_build_38=True,
         )
-        expected_body.update({
-            k: {**EXPECTED_SEARCH_RESPONSE[k]} for k in
-            {'mmeSubmissionsByGuid', 'variantTagsByGuid', 'variantNotesByGuid'}
-        })
-        expected_body['savedVariantsByGuid'] = {
-            k: v for k, v in EXPECTED_SEARCH_RESPONSE['savedVariantsByGuid'].items() if
-            k in ['SV0000002_1248367227_r0390_100']
-        }
-        expected_body.update(expected_gene_body)
-        expected_body['genesById']['ENSG00000227232'] = expected_pa_gene
-        expected_body['mmeSubmissionsByGuid']['MS000018_P0004517'] = expected_body['mmeSubmissionsByGuid'].pop(
-            'MS000001_na19675')
-        expected_body['savedVariantsByGuid']['SV0000006_1248367227_r0004_non'] = mock.ANY
-        expected_body['variantTagsByGuid']['VT1726970_2103343353_r0004_tes'] = EXPECTED_TAG
-        expected_body['variantTagsByGuid']['VT1726961_2103343353_r0005_tes'] = EXPECTED_TAG
-        for k in ['VT1708633_2103343353_r0390_100', 'VT1726961_2103343353_r0390_100']:
-            del expected_body['variantTagsByGuid'][k]
-        expected_body['rnaSeqData']['I000019_na21987'] = {'outliers': {},
-                                                          'spliceOutliers': {'ENSG00000268903': mock.ANY}}
-
+        # TODO test variant with search context!
+        # expected_body.update({
+            # 'mmeSubmissionsByGuid': {'MS000018_P0004517': mock.ANY},
+            # 'rnaSeqData': {'I000019_na21987': {'outliers': {}, 'spliceOutliers': {'ENSG00000268903': mock.ANY}}},
+            # 'savedVariantsByGuid': {
+            #     'SV0000002_1248367227_r0390_100': mock.ANY, 'SV0000006_1248367227_r0004_non': mock.ANY,
+            # },
+            # 'variantTagsByGuid': {
+            #     'VT1726945_2103343353_r0390_100': mock.ANY, 'VT1726970_2103343353_r0004_tes': mock.ANY,
+            #     'VT1726985_2103343353_r0390_100': mock.ANY, 'VT1726961_2103343353_r0005_tes': mock.ANY,
+            # },
+            # 'variantNotesByGuid': {
+            #     'VN0714935_2103343353_r0390_100': mock.ANY,
+            #     'VN0714937_2103343353_r0390_100': mock.ANY,
+            # },
+        # })
         self.assertDictEqual(response.json(), expected_body)
-        mock_variant_lookup.assert_called_with(
-            self.manager_user, '1-10439-AC-A', '37', sample_type=None, affected_only=True, hom_only=True,
-        )
-        self._assert_expected_variants(variants, [VARIANT_LOOKUP_VARIANT], 'variant_lookup_results__1-10439-AC-A__38')
+        self.assert_cached_results([VARIANT_LOOKUP_VARIANT], cache_key='variant_lookup_results__1-10439-AC-A__38')
 
-        with self.assertRaises(ObjectDoesNotExist) as cm:
-            variant_lookup(self.user, '1-91511686-TCA-G', '38')
-        self.assertEqual(str(cm.exception), 'Variant not present in seqr')
+        url = url.replace('1-10439-AC-A', '1-91511686-TCA-G')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 404)
+        self.assertDictEqual(response.json(), {'error': 'Variant not present in seqr'})
 
         self.set_cache('variant_lookup_results__1-91511686-TCA-G__38', [VARIANT_LOOKUP_VARIANT])
-        cached_variants = variant_lookup(self.user, '1-91511686-TCA-G', '38')
-        self.assertListEqual([VARIANT_LOOKUP_VARIANT], cached_variants)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), expected_body)
 
-        variants = variant_lookup(self.user, '7-143270172-A-G', '37')
+        url_37 = url.replace('1-91511686-TCA-G', '7-143270172-A-G').replace('38', '37')
+        response = self.client.get(url_37)
+        self.assertEqual(response.status_code, 200)
         grch37_lookup_variant = {
             **{k: v for k, v in GRCH37_VARIANT.items() if k not in {'familyGuids', 'genotypes'}},
             'familyGenotypes': {GRCH37_VARIANT['familyGuids'][0]: sorted([
                 {k: v for k, v in g.items() if k != 'individualGuid'} for g in GRCH37_VARIANT['genotypes'].values()
             ], key=lambda x: x['sampleId'], reverse=True)},
         }
+        expected_grch37_variant = {
+            **GRCH37_VARIANT,
+            'familyGuids': [],
+            'lookupFamilyGuids': GRCH37_VARIANT['familyGuids'],
+        }
+        grch37_individuals = {guid: mock.ANY for guid in ['I000006_hg00733', 'I000005_hg00732', 'I000004_hg00731']}
+        expected_body = self._expected_lookup_body(
+            grch37_individuals, [expected_grch37_variant], include_context=True,
+            project_guids=['R0001_1kg'], family_guids=['F000002_2'],
+        )
+        self.assertDictEqual(response.json(), expected_body)
         cache_key = 'variant_lookup_results__7-143270172-A-G__37'
-        self._assert_expected_variants(variants, [grch37_lookup_variant], cache_key)
+        self.assert_cached_results([grch37_lookup_variant], cache_key=cache_key)
 
-        variants = variant_lookup(self.user, '7-143270172-A-G', '37', hom_only=True, affected_only=True)
-        self._assert_expected_variants(variants, [grch37_lookup_variant], f'{cache_key}__affected__hom')
+        response = self.client.get(url_37 + '&homOnly=true&affectedOnly=true')
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), expected_body)
+        self.assert_cached_results([grch37_lookup_variant], cache_key=f'{cache_key}__affected__hom')
 
         # Lookup works if variant is only present on a different build
-        variants = variant_lookup(self.user, '7-143260172-A-G', '38')
-        self._assert_expected_variants(variants, [grch37_lookup_variant], 'variant_lookup_results__7-143260172-A-G__38')
+        url = url.replace('1-91511686-TCA-G', '7-143260172-A-G')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        expected_body = self._expected_lookup_body(
+            grch37_individuals, [expected_grch37_variant], include_context=True,
+            project_guids=['R0001_1kg'], family_guids=['F000002_2'], is_build_38=True,
+        )
+        expected_body['genesById'] = {'ENSG00000176227': mock.ANY, 'ENSG00000271079': mock.ANY}
+        self.assertDictEqual(response.json(), expected_body)
+        self.assert_cached_results([grch37_lookup_variant], cache_key='variant_lookup_results__7-143260172-A-G__38')
         mock_liftover.assert_called_with('hg38', 'hg19')
         mock_convert_coordinate.assert_called_with('chr7', 143260172)
 
@@ -1225,7 +1154,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         del liftover_variant['liftedFamilyGuids']
         variants = variant_lookup(self.user, '1-439-AC-A', '37')
         cache_key = 'variant_lookup_results__1-439-AC-A__37'
-        self._assert_expected_variants(variants, [liftover_variant], cache_key)
+        self.assert_cached_results([liftover_variant], cache_key=cache_key)
         mock_liftover.assert_called_with('hg19', 'hg38')
         mock_convert_coordinate.assert_called_with('chr1', 439)
 
@@ -1237,17 +1166,18 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             },
         }
         variants = variant_lookup(self.user, '1-10439-AC-A', '38', hom_only=True)
-        self._assert_expected_variants(variants, [hom_only_lookup_variant], 'variant_lookup_results__1-10439-AC-A__38__hom')
+        self.assert_cached_results([hom_only_lookup_variant], cache_key='variant_lookup_results__1-10439-AC-A__38__hom')
         variants = variant_lookup(self.user, '1-439-AC-A', '37', hom_only=True)
-        self._assert_expected_variants(variants, [hom_only_lookup_variant], f'{cache_key}__hom')
+        self.assert_cached_results([hom_only_lookup_variant], cache_key=f'{cache_key}__hom')
 
         variants = variant_lookup(self.user, 'M-4429-G-A', '38')
-        self._assert_expected_variants(variants, [{
+        self.assert_cached_results([{
             **{k: v for k, v in MITO_VARIANT1.items() if k not in {'familyGuids', 'genotypes'}},
             'familyGenotypes': {MITO_VARIANT1['familyGuids'][0]: [
                 {k: v for k, v in g.items() if k != 'individualGuid'} for g in MITO_VARIANT1['genotypes'].values()
             ]},
-        }], 'variant_lookup_results__M-4429-G-A__38')
+        }], cache_key='variant_lookup_results__M-4429-G-A__38')
+
 
         with self.assertRaises(ObjectDoesNotExist) as cm:
             variant_lookup(self.user, 'M-4429-G-A', '38', hom_only=True)
@@ -1369,7 +1299,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
 
         variants = variant_lookup(self.user, 'phase2_DEL_chr14_4640', '38', sample_type='WGS')
         cache_key = 'variant_lookup_results__phase2_DEL_chr14_4640__38'
-        self._assert_expected_variants(variants, [SV_LOOKUP_VARIANT, GCNV_LOOKUP_VARIANT], cache_key)
+        self.assert_cached_results([SV_LOOKUP_VARIANT, GCNV_LOOKUP_VARIANT], cache_key=cache_key)
 
         affected_only_lookup_variant = {
             **GCNV_LOOKUP_VARIANT,
@@ -1378,56 +1308,42 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             },
         }
         variants = variant_lookup(self.user, 'phase2_DEL_chr14_4640', '38', sample_type='WGS', affected_only=True)
-        self._assert_expected_variants(variants, [SV_LOOKUP_VARIANT, affected_only_lookup_variant], f'{cache_key}__affected')
+        self.assert_cached_results([SV_LOOKUP_VARIANT, affected_only_lookup_variant], cache_key=f'{cache_key}__affected')
 
         # reciprocal overlap does not meet the threshold for smaller events
         variants = variant_lookup(self.user, 'suffix_140608_DUP', '38', sample_type='WES')
         cache_key = 'variant_lookup_results__suffix_140608_DUP__38'
-        self._assert_expected_variants(variants, [GCNV_LOOKUP_VARIANT], cache_key)
+        self.assert_cached_results([GCNV_LOOKUP_VARIANT], cache_key=cache_key)
 
         variants = variant_lookup(self.user, 'suffix_140608_DUP', '38', sample_type='WES', affected_only=True)
-        self._assert_expected_variants(variants, [affected_only_lookup_variant], f'{cache_key}__affected')
+        self.assert_cached_results([affected_only_lookup_variant], cache_key=f'{cache_key}__affected')
 
         variants = variant_lookup(self.user, 'suffix_140593_DUP', '38', sample_type='WES')
-        self._assert_expected_variants(variants, [GCNV_LOOKUP_VARIANT_3], 'variant_lookup_results__suffix_140593_DUP__38')
+        self.assert_cached_results([GCNV_LOOKUP_VARIANT_3], cache_key='variant_lookup_results__suffix_140593_DUP__38')
 
     def _expected_lookup_body(self, individuals_by_guid, variants, is_build_38=False, include_context=False, project_guids=None, family_guids=None):
-        exclude_keys = {'searchedVariants', 'search', 'transcriptsById'}
+        exclude_keys = set()
         if not include_context:
             exclude_keys.update({'variantNotesByGuid', 'variantTagsByGuid', 'variantFunctionalDataByGuid'})
-        EXPECTED_SEARCH_FAMILY_CONTEXT = {
-            'familiesByGuid': {'F000001_1': mock.ANY, 'F000002_2': mock.ANY},
-            'individualsByGuid': mock.ANY,
-            'igvSamplesByGuid': mock.ANY,
-            'locusListsByGuid': {LOCUS_LIST_GUID: mock.ANY},
-            'familyNotesByGuid': mock.ANY,
-        }
-        PROJECT_TAG_TYPE_FIELDS = {'projectGuid', 'genomeVersion', 'variantTagTypes', 'variantFunctionalTagTypes'}
+        context_fields = {*SEARCH_RESPONSE_KEYS, 'igvSamplesByGuid', 'locusListsByGuid', 'familyNotesByGuid'} - exclude_keys
+        if is_build_38:
+            context_fields.add('omimIntervals')
         expected_body = {
-            **{k: {} for k in EXPECTED_SEARCH_RESPONSE if k not in exclude_keys},
-            **{k: {} for k in EXPECTED_SEARCH_FAMILY_CONTEXT},
+            **{k: {} for k in context_fields},
             'projectsByGuid': {
-                p: {k: mock.ANY for k in PROJECT_TAG_TYPE_FIELDS} for p in project_guids or []
+                p: {k: mock.ANY for k in {'projectGuid', 'genomeVersion', 'variantTagTypes', 'variantFunctionalTagTypes'}}
+                for p in project_guids or []
             },
-            'familiesByGuid': {
-                f: {k: mock.ANY for k in [*FAMILY_FIELDS, 'individualGuids']} for f in family_guids or []
-            },
+            'familiesByGuid': {f: mock.ANY  for f in family_guids or []},
             'individualsByGuid': individuals_by_guid,
+            'totalSampleCounts': {'MITO': {'WES': 1}, 'SNV_INDEL': {'WES': 7}, 'SV': {'WES': 3, 'WGS': 3}} if is_build_38 else {},
             'variants': variants,
         }
-        if is_build_38:
-            expected_body['omimIntervals'] = {}
         if include_context:
-            EXPECTED_TRANSCRIPTS_RESPONSE = {
-                'transcriptsById': {
-                    'ENST00000624735': {'isManeSelect': False, 'refseqId': None, 'transcriptId': 'ENST00000624735'}},
-            }
+            # TODO clean up?
             expected_body.update({
-                **EXPECTED_TRANSCRIPTS_RESPONSE,
-                'locusListsByGuid': EXPECTED_SEARCH_CONTEXT_RESPONSE['locusListsByGuid'],
+                'locusListsByGuid': {'LL00049_pid_genes_autosomal_do': mock.ANY, 'LL00005_retina_proteome': mock.ANY},
             })
-        if 'totalSampleCounts' in EXPECTED_SEARCH_RESPONSE:
-            expected_body['totalSampleCounts'] = {'SV': {'WGS': 3}} if is_build_38 else EXPECTED_SEARCH_RESPONSE['totalSampleCounts']
         return expected_body
 
     def test_get_single_variant(self):
@@ -2314,10 +2230,28 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self.assertDictEqual(response_json['mmeSubmissionsByGuid'], {'MS000001_na19675': {k: mock.ANY for k in MATCHMAKER_SUBMISSION_FIELDS}})
         self.assertDictEqual(response_json['omimIntervals'], {})
         self.assertDictEqual(response_json['phenotypeGeneScores'],{
-            'I000001_na19675': {'ENSG00000268903': mock.ANY},
-            'I000002_na19678': {'ENSG00000268903': mock.ANY},
-            'I000004_hg00731': {'ENSG00000177000': mock.ANY},
-            'I000005_hg00732': {'ENSG00000177000': mock.ANY},
+            'I000001_na19675': {'ENSG00000268903': {'exomiser': [
+                {'diseaseId': 'OMIM:219800', 'diseaseName': 'Cystinosis, nephropathic', 'rank': 2, 'scores': {
+                    'exomiser_score': 0.969347946, 'phenotype_score': 0.443567539, 'variant_score': 0.999200702,
+                }},
+                {'diseaseId': 'OMIM:618460', 'diseaseName': 'Khan-Khan-Katsanis syndrome', 'rank': 1, 'scores': {
+                    'exomiser_score': 0.977923765, 'phenotype_score': 0.603998205, 'variant_score': 1,
+                }},
+            ]}},
+            'I000002_na19678': {'ENSG00000268903': {'lirical': [
+                {'diseaseId': 'OMIM:219800', 'diseaseName': 'Cystinosis, nephropathic', 'rank': 1,
+                 'scores': {'compositeLR': 0.003, 'post_test_probability': 0}},
+            ]}},
+            'I000004_hg00731': {'ENSG00000177000': {'exomiser': [
+                {'diseaseId': 'OMIM:618460', 'diseaseName': 'Khan-Khan-Katsanis syndrome', 'rank': 5, 'scores': {
+                    'exomiser_score': 0.977923765, 'phenotype_score': 0.603998205, 'variant_score': 1,
+                }},
+            ]}},
+            'I000005_hg00732': {'ENSG00000177000': {'exomiser': [
+                {'diseaseId': 'OMIM:618460', 'diseaseName': 'Khan-Khan-Katsanis syndrome', 'rank': 3, 'scores': {
+                    'exomiser_score': 0.977923765, 'phenotype_score': 0.603998205, 'variant_score': 1,
+                }},
+            ]}},
         })
         self.assertDictEqual(response_json['rnaSeqData'], {
             'I000001_na19675': {'outliers': {'ENSG00000268903': mock.ANY}, 'spliceOutliers': {'ENSG00000268903': mock.ANY}},

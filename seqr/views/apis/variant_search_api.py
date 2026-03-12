@@ -617,7 +617,7 @@ def _update_lookup_variant(variant, response, individual_guid_map):
                 genotype = [variant['genotypes'][individual_guid], genotype]
             variant['genotypes'][individual_guid] = genotype
 
-    for i, (unmapped_family_guid, genotypes) in enumerate(variant.pop('familyGenotypes').items()):
+    for i, (unmapped_family_guid, genotypes) in enumerate(sorted(variant.pop('familyGenotypes').items())):
         family_guid = f'F{i}_{variant["variantId"]}'
         variant['lookupFamilyGuids'].append(family_guid)
         if unmapped_family_guid in variant.get('liftedFamilyGuids', []):
