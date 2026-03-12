@@ -1,3 +1,4 @@
+from collections import defaultdict
 from datetime import timedelta
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
@@ -972,7 +973,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         mock_convert_coordinate.side_effect = lambda chrom, pos: [(chrom, pos + 10000)]
 
         url = f'{reverse(variant_lookup_handler)}?variantId=1-10439-AC-A&genomeVersion=38'
-        self.check_require_login(url)
+        self.check_require_login(reverse(variant_lookup_handler))
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
@@ -1033,7 +1034,8 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         }
         expected_body = self._expected_lookup_body(expected_individuals, [expected_variant], is_build_38=True)
         self.assertDictEqual(response.json(), expected_body)
-        self.assert_cached_results([VARIANT_LOOKUP_VARIANT], cache_key='variant_lookup_results__1-10439-AC-A__38')
+        cache_key = 'variant_lookup_results__1-10439-AC-A__38'
+        self.assert_cached_results([VARIANT_LOOKUP_VARIANT], cache_key=cache_key)
 
         self.login_manager()
         response = self.client.get(url)
@@ -1090,7 +1092,38 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             # },
         # })
         self.assertDictEqual(response.json(), expected_body)
-        self.assert_cached_results([VARIANT_LOOKUP_VARIANT], cache_key='variant_lookup_results__1-10439-AC-A__38')
+        self.assert_cached_results([VARIANT_LOOKUP_VARIANT], cache_key=cache_key)
+
+        hom_only_lookup_variant = {
+            **VARIANT_LOOKUP_VARIANT,
+            'familyGenotypes': {
+                'F000002_2': [gt for gt in VARIANT_LOOKUP_VARIANT['familyGenotypes']['F000002_2'] if gt['sampleType'] == 'WGS'],
+                'F000011_11': VARIANT_LOOKUP_VARIANT['familyGenotypes']['F000011_11'],
+            },
+        }
+        del hom_only_lookup_variant['liftedFamilyGuids']
+        hom_only_expected_variant = {
+            **expected_variant,
+            'lookupFamilyGuids': expected_variant['lookupFamilyGuids'][:-1],
+            'genotypes': {
+                **expected_variant['genotypes'],
+                **{guid: next(gt for gt in expected_variant['genotypes'][guid] if gt['sampleType'] == 'WGS')
+                   for guid in ['I000004_hg00731', 'I000005_hg00732', 'I000006_hg00733']},
+            }
+        }
+        del hom_only_expected_variant['genotypes']['I000018_na21234']
+        del hom_only_expected_variant['liftedFamilyGuids']
+        expected_individuals = {guid: individual for guid, individual in expected_individuals.items() if guid not in {
+            'I000018_na21234', 'I000019_na21987', 'I000021_na21654',
+        }}
+        hom_only_expected_body = self._expected_lookup_body(
+            expected_individuals, [hom_only_expected_variant], include_context=True,
+            project_guids=['R0001_1kg', 'R0003_test'], family_guids=['F000002_2', 'F000011_11'], is_build_38=True,
+        )
+        response = self.client.get(url + '&homOnly=true')
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), hom_only_expected_body)
+        self.assert_cached_results([hom_only_lookup_variant], cache_key=f'{cache_key}__hom')
 
         url = url.replace('1-10439-AC-A', '1-91511686-TCA-G')
         response = self.client.get(url)
@@ -1102,82 +1135,63 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), expected_body)
 
-        url_37 = url.replace('1-91511686-TCA-G', '7-143270172-A-G').replace('38', '37')
-        response = self.client.get(url_37)
-        self.assertEqual(response.status_code, 200)
-        grch37_lookup_variant = {
-            **{k: v for k, v in GRCH37_VARIANT.items() if k not in {'familyGuids', 'genotypes'}},
-            'familyGenotypes': {GRCH37_VARIANT['familyGuids'][0]: sorted([
-                {k: v for k, v in g.items() if k != 'individualGuid'} for g in GRCH37_VARIANT['genotypes'].values()
-            ], key=lambda x: x['sampleId'], reverse=True)},
-        }
-        expected_grch37_variant = {
-            **GRCH37_VARIANT,
-            'familyGuids': [],
-            'lookupFamilyGuids': GRCH37_VARIANT['familyGuids'],
-        }
-        grch37_individuals = {guid: mock.ANY for guid in ['I000006_hg00733', 'I000005_hg00732', 'I000004_hg00731']}
-        expected_body = self._expected_lookup_body(
-            grch37_individuals, [expected_grch37_variant], include_context=True,
-            project_guids=['R0001_1kg'], family_guids=['F000002_2'],
-        )
-        self.assertDictEqual(response.json(), expected_body)
         cache_key = 'variant_lookup_results__7-143270172-A-G__37'
-        self.assert_cached_results([grch37_lookup_variant], cache_key=cache_key)
+        self._assert_expected_lookup(
+            '7-143270172-A-G', GRCH37_VARIANT, cache_key, genome_version='37',
+            project_guids=['R0001_1kg'], family_guids=['F000002_2'],
+            individual_guids=['I000006_hg00733', 'I000005_hg00732', 'I000004_hg00731']
+        )
 
-        response = self.client.get(url_37 + '&homOnly=true&affectedOnly=true')
-        self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), expected_body)
-        self.assert_cached_results([grch37_lookup_variant], cache_key=f'{cache_key}__affected__hom')
+        self._assert_expected_lookup(
+            '7-143270172-A-G', GRCH37_VARIANT, f'{cache_key}__affected__hom', genome_version='37',
+            hom_only=True, affected_only=True, project_guids=['R0001_1kg'], family_guids=['F000002_2'],
+            individual_guids=['I000006_hg00733', 'I000005_hg00732', 'I000004_hg00731']
+        )
 
         # Lookup works if variant is only present on a different build
-        url = url.replace('1-91511686-TCA-G', '7-143260172-A-G')
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-        expected_body = self._expected_lookup_body(
-            grch37_individuals, [expected_grch37_variant], include_context=True,
-            project_guids=['R0001_1kg'], family_guids=['F000002_2'], is_build_38=True,
+        self._assert_expected_lookup(
+            '7-143260172-A-G', GRCH37_VARIANT, 'variant_lookup_results__7-143260172-A-G__38',
+            project_guids=['R0001_1kg'], family_guids=['F000002_2'],
+            individual_guids=['I000006_hg00733', 'I000005_hg00732', 'I000004_hg00731'], genesById={
+                'ENSG00000176227': mock.ANY, 'ENSG00000271079': mock.ANY,
+            },
         )
-        expected_body['genesById'] = {'ENSG00000176227': mock.ANY, 'ENSG00000271079': mock.ANY}
-        self.assertDictEqual(response.json(), expected_body)
-        self.assert_cached_results([grch37_lookup_variant], cache_key='variant_lookup_results__7-143260172-A-G__38')
         mock_liftover.assert_called_with('hg38', 'hg19')
         mock_convert_coordinate.assert_called_with('chr7', 143260172)
 
+        # TODO do as part of VARIANT_LOOKUP_VARIANT creation
         liftover_variant = {
-            **VARIANT_LOOKUP_VARIANT,
-            'familyGenotypes': {
-                family_guid: gts
-                for family_guid, gts in VARIANT_LOOKUP_VARIANT['familyGenotypes'].items() if family_guid != 'F000014_14'
+            **VARIANT1,
+            'familyGuids': [VARIANT1['familyGuids'][0], 'F000011_11'],
+            'genotypes': {
+                **VARIANT1_BOTH_SAMPLE_TYPES['genotypes'],
+                'I000015_na20885': [
+                    {**PROJECT_2_VARIANT1['genotypes']['I000015_na20885'], 'sampleType': 'WES'},
+                    PROJECT_2_VARIANT1['genotypes']['I000015_na20885'],
+                ],
             },
         }
-        del liftover_variant['liftedFamilyGuids']
-        variants = variant_lookup(self.user, '1-439-AC-A', '37')
-        cache_key = 'variant_lookup_results__1-439-AC-A__37'
-        self.assert_cached_results([liftover_variant], cache_key=cache_key)
+        self._assert_expected_lookup(
+            '1-439-AC-A', liftover_variant, 'variant_lookup_results__1-439-AC-A__37', genome_version='37',
+            project_guids=['R0001_1kg', 'R0003_test'], family_guids=['F000002_2', 'F000011_11'],
+            individual_guids=[guid for guid, _, _ in individual_guid_map if guid != 'I000018_na21234'],
+        )
         mock_liftover.assert_called_with('hg19', 'hg38')
         mock_convert_coordinate.assert_called_with('chr1', 439)
 
-        hom_only_lookup_variant = {
-            **liftover_variant,
-            'familyGenotypes': {
-                **liftover_variant['familyGenotypes'],
-                'F000002_2': [gt for gt in liftover_variant['familyGenotypes']['F000002_2'] if gt['sampleType'] == 'WGS'],
-            },
-        }
-        variants = variant_lookup(self.user, '1-10439-AC-A', '38', hom_only=True)
-        self.assert_cached_results([hom_only_lookup_variant], cache_key='variant_lookup_results__1-10439-AC-A__38__hom')
-        variants = variant_lookup(self.user, '1-439-AC-A', '37', hom_only=True)
-        self.assert_cached_results([hom_only_lookup_variant], cache_key=f'{cache_key}__hom')
+        self._assert_expected_lookup(
+            '1-439-AC-A', {
+                **liftover_variant, 'genotypes': hom_only_expected_variant['genotypes'],
+            }, 'variant_lookup_results__1-439-AC-A__37__hom', genome_version='37', hom_only=True,
+            project_guids=['R0001_1kg', 'R0003_test'], family_guids=['F000002_2', 'F000011_11'],
+            individual_guids=[guid for guid, _, _ in individual_guid_map if guid != 'I000018_na21234'],
+        )
 
-        variants = variant_lookup(self.user, 'M-4429-G-A', '38')
-        self.assert_cached_results([{
-            **{k: v for k, v in MITO_VARIANT1.items() if k not in {'familyGuids', 'genotypes'}},
-            'familyGenotypes': {MITO_VARIANT1['familyGuids'][0]: [
-                {k: v for k, v in g.items() if k != 'individualGuid'} for g in MITO_VARIANT1['genotypes'].values()
-            ]},
-        }], cache_key='variant_lookup_results__M-4429-G-A__38')
-
+        self._assert_expected_lookup(
+            'M-4429-G-A', MITO_VARIANT1, 'variant_lookup_results__M-4429-G-A__38',
+            project_guids=['R0001_1kg'], family_guids=['F000002_2'],
+            individual_guids=['I000004_hg00731', 'I000005_hg00732', 'I000006_hg00733',],
+        )
 
         with self.assertRaises(ObjectDoesNotExist) as cm:
             variant_lookup(self.user, 'M-4429-G-A', '38', hom_only=True)
@@ -1320,6 +1334,50 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
 
         variants = variant_lookup(self.user, 'suffix_140593_DUP', '38', sample_type='WES')
         self.assert_cached_results([GCNV_LOOKUP_VARIANT_3], cache_key='variant_lookup_results__suffix_140593_DUP__38')
+
+    def _assert_expected_lookup(self, variant_id, variant, cache_key, genome_version='38', hom_only=False, affected_only=False, project_guids=None, family_guids=None, individual_guids=None, **kwargs):
+        url = f'{reverse(variant_lookup_handler)}?variantId={variant_id}&genomeVersion={genome_version}'
+        if hom_only:
+            url += '&homOnly=true'
+        if affected_only:
+            url += '&affectedOnly=true'
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+        context_fields = {*SEARCH_RESPONSE_KEYS, 'igvSamplesByGuid', 'locusListsByGuid', 'familyNotesByGuid'}
+        if genome_version == '38':
+            context_fields.add('omimIntervals')
+        expected_body = {
+            **{k: {} for k in context_fields},
+            'projectsByGuid': {p: mock.ANY for p in project_guids or []},
+            'familiesByGuid': {f: mock.ANY for f in family_guids or []},
+            'individualsByGuid': {i: mock.ANY for i in individual_guids or []},
+            'locusListsByGuid': {'LL00049_pid_genes_autosomal_do': mock.ANY, 'LL00005_retina_proteome': mock.ANY},
+            'totalSampleCounts': {'MITO': {'WES': 1}, 'SNV_INDEL': {'WES': 7}, 'SV': {'WES': 3, 'WGS': 3}} if genome_version == '38' else {},
+            'variants': [{
+                **variant,
+                'familyGuids': [],
+                'lookupFamilyGuids': variant['familyGuids'],
+            }],
+            **kwargs,
+        }
+        self.assertDictEqual(response.json(), expected_body)
+
+        family_genotypes = defaultdict(list)
+        for gts in variant['genotypes'].values():
+            if not isinstance(gts, list):
+                gts = [gts]
+            for gt in gts:
+                family_genotypes[gt['familyGuid']].append({k: v for k, v in gt.items() if k != 'individualGuid'})
+        lookup_variant = {
+            **{k: v for k, v in variant.items() if k not in {'familyGuids', 'genotypes'}},
+            'familyGenotypes': {
+                family_guid: sorted(gts, key=lambda x: (x['sampleType'] == 'WES', x['sampleId']), reverse=True)
+                for family_guid, gts in family_genotypes.items()
+            },
+        }
+        self.assert_cached_results([lookup_variant], cache_key=cache_key)
 
     def _expected_lookup_body(self, individuals_by_guid, variants, is_build_38=False, include_context=False, project_guids=None, family_guids=None):
         exclude_keys = set()
