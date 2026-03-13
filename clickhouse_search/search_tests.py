@@ -1,3 +1,4 @@
+import re
 from collections import defaultdict
 from datetime import timedelta
 from django.contrib.auth.models import User
@@ -125,7 +126,6 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         # TODO remove
         self.families = Family.objects.filter(guid__in=['F000003_3', 'F000002_2', 'F000005_5'])
         self.user = User.objects.get(username='test_user')
-
         self.search_model = VariantSearch.objects.create(search={'inheritance': {'mode': 'de_novo'}, 'freqs': {'callset': {'ac': 1000}}})
         self.results_model = VariantSearchResults.objects.create(variant_search=self.search_model)
         self.results_model.families.set(self.families)
@@ -134,6 +134,9 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
 
     def set_cache(self, cache_key, cached):
         self.MOCK_CACHE[cache_key] = json.dumps(cached)
+        self.mock_redis.keys.side_effect = lambda pattern: [
+            key for key in list(self.MOCK_CACHE.keys()) if re.match(pattern, key)
+        ]
 
     def assert_cached_results(self, expected_results, sort='xpos', cache_key=None):
         cache_key = cache_key or f'search_results__{self.results_model.guid}__{sort}'
@@ -170,7 +173,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
 
         return response, search_hash, search_body
 
-    def _assert_expected_search(self, expected_results, results_page=None, gene_counts=None, cached_variant_fields=None, sort='xpos', is_37=False, response_search=None, project_families=None, additional_response=None, export_data=None, **kwargs):
+    def _assert_expected_search(self, expected_results, results_page=None, gene_counts=None, cached_variant_fields=None, sort='xpos', is_37=False, skip_cache_check=False, response_search=None, project_families=None, additional_response=None, export_data=None, **kwargs):
         response, search_hash, search_body = self._execute_search(project_families=project_families, sort=sort, **kwargs)
         self.assertEqual(response.status_code, 200)
         expected_response = {
@@ -191,9 +194,10 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
                 expected_response['omimIntervals'] = mock.ANY
         self.assertDictEqual(response.json(), expected_response)
 
-        cache_key = f'search_results__VRS{search_hash:07d}__{sort}'
-        cached_variants = self._format_cached_variants(expected_results, cached_variant_fields=cached_variant_fields)
-        self.assert_cached_results(cached_variants, sort=sort, cache_key=cache_key)
+        if not skip_cache_check:
+            cache_key = f'search_results__VRS{search_hash:07d}__{sort}'
+            cached_variants = self._format_cached_variants(expected_results, cached_variant_fields=cached_variant_fields)
+            self.assert_cached_results(cached_variants, sort=sort, cache_key=cache_key)
 
         if gene_counts:
             self._assert_expected_gene_counts(search_hash, gene_counts)
@@ -663,11 +667,11 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
 
     def test_exclude_previous_search_results(self):
         self.mock_results_guid.return_value = 'VRS00079516'
-        VariantSearchResults.objects.create(variant_search_id=79516, search_hash='abc1234')
-        self.set_cache('search_results__abc1234__gnomad', {'all_results': [
+        vsr = VariantSearchResults.objects.create(variant_search_id=79516, search_hash='abc1234')
+        cache_key = f'search_results__{vsr.guid}__gnomad'
+        self.set_cache(cache_key, {'all_results': [
             VARIANT1, VARIANT2, [VARIANT3, VARIANT2], [GCNV_VARIANT4, GCNV_VARIANT3],
         ]})
-        self.mock_redis.keys.side_effect = [[], ['search_results__abc1234__gnomad']]
 
         exclude = {'previousSearch': True, 'previousSearchHash': 'abc1234'}
         self._assert_expected_search(
@@ -680,10 +684,9 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             ], check_login=self.check_collaborator_login,
         )
 
-        self.set_cache('search_results__abc1234__gnomad', {'all_results': [
+        self.set_cache(cache_key, {'all_results': [
             [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], [VARIANT3, VARIANT4], GCNV_VARIANT3, MITO_VARIANT3,
         ]})
-        self.mock_redis.keys.side_effect = [[], ['search_results__abc1234__gnomad']]
         self._assert_expected_search(
             [VARIANT2, [GCNV_VARIANT3, GCNV_VARIANT4]], exclude=exclude, **COMP_HET_ALL_PASS_FILTERS,
             inheritance_mode='recessive', cached_variant_fields=[
@@ -2365,44 +2368,28 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self.assertDictEqual(response.json()['familiesByGuid'], {'F000012_12': mock.ANY})
 
     def test_cached_query_variants(self):
-        # TODO
-        cache_key_prefix = f'search_results__{self.results_model.guid}'
+        search_hash = 987
+        cache_key_prefix = 'search_results__VRS0000987'
         cached_variants = [VARIANT1, SV_VARIANT1, GCNV_VARIANT1, MITO_VARIANT1, VARIANT2]
         cache_result = self._format_cached_variants(cached_variants)
-        self.set_cache(cache_result)
+        self.set_cache(f'{cache_key_prefix}__xpos', cache_result)
 
-        variants, total = query_variants(self.results_model, user=self.user)
-        self.assertEqual(total, 5)
-        self.assertListEqual(self._encode_variants(variants), cached_variants)
-        self.mock_redis.get.assert_called_with(f'{cache_key_prefix}__xpos')
-        self.mock_redis.set.assert_not_called()
+        self._assert_expected_search(
+            cached_variants, search_hash=search_hash, skip_cache_check=True, check_login=self.check_collaborator_login,
+        )
 
-        variants, _ = query_variants(self.results_model, user=self.user, num_results=2, page=2)
-        self.assertListEqual(variants, [GCNV_VARIANT1, MITO_VARIANT1])
+        self._assert_expected_search(
+            cached_variants,  search_hash=search_hash, skip_cache_check=True,
+            results_page=[GCNV_VARIANT1, MITO_VARIANT1], query_params={'page': 2, 'per_page': 2}, gene_counts={
+                'ENSG00000177000': {'total': 1, 'families': {'F000002_2': 1}},
+                'ENSG00000277258': {'total': 1, 'families': {'F000002_2': 1}},
+                'ENSG00000210112': {'total': 1, 'families': {'F000002_2': 1}},
+                'ENSG00000171621': {'total': 1, 'families': {'F000014_14': 1}},
+            },
+        )
 
-        gene_counts = get_variant_query_gene_counts(self.results_model, self.user)
-        self.assertDictEqual(gene_counts, {
-            'ENSG00000177000': {'total': 1, 'families': {'F000002_2': 1}},
-            'ENSG00000277258': {'total': 1, 'families': {'F000002_2': 1}},
-            'ENSG00000210112': {'total': 1, 'families': {'F000002_2': 1}},
-            'ENSG00000171621': {'total': 1, 'families': {'F000014_14': 1}},
-        })
-
-        self.mock_redis.get.side_effect = [None, json.dumps(cache_result)]
-        self.mock_redis.keys.return_value = [f'{cache_key_prefix}__xpos', f'{cache_key_prefix}__gnomad']
-
-        variants, total = query_variants(self.results_model, user=self.user, sort='cadd')
-        self.assertEqual(total, 5)
-        sorted_variants = [VARIANT2, VARIANT1, SV_VARIANT1, GCNV_VARIANT1, MITO_VARIANT1]
-        self.assertListEqual(self._encode_variants(variants), sorted_variants)
-        self.mock_redis.get.assert_has_calls([
-            mock.call(f'{cache_key_prefix}__cadd'),
-            mock.call(f'{cache_key_prefix}__xpos'),
-        ])
-        self.mock_redis.keys.assert_called_with(pattern=f'{cache_key_prefix}__*')
-        self.assert_cached_results(
-            {'all_results': [format_cached_variant(v) for v in sorted_variants], 'total_results': 5},
-            sort='cadd',
+        self._assert_expected_search(
+            [VARIANT2, VARIANT1, SV_VARIANT1, GCNV_VARIANT1, MITO_VARIANT1], search_hash=search_hash, sort='cadd',
         )
 
 class ClickhouseDeleteDataTests(ClickhouseSearchTestCase):
