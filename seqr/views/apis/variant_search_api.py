@@ -173,19 +173,6 @@ def _process_variants(variants, families, request, add_all_context=False, add_lo
     return response_json
 
 
-PREDICTION_MAP = {
-    'D': 'damaging',
-    'T': 'tolerated',
-}
-
-
-POLYPHEN_MAP = {
-    'D': 'probably_damaging',
-    'P': 'possibly_damaging',
-    'B': 'benign',
-}
-
-
 MUTTASTR_MAP = {
     'A': 'disease_causing',
     'D': 'disease_causing',
@@ -194,14 +181,8 @@ MUTTASTR_MAP = {
 }
 
 
-def _get_prediction_val(prediction):
-    try:
-        return float(prediction or '')
-    except ValueError:
-        return PREDICTION_MAP.get(prediction[0]) if prediction else None
-
-
 def _get_variant_main_transcript_field_val(parsed_variant):
+    # TODO
     return next(
         (t for t in parsed_variant['transcripts'] if t['transcriptId'] == parsed_variant['mainTranscriptId']), {}
     ).get('value')
@@ -214,8 +195,8 @@ VARIANT_EXPORT_DATA = [
     {'header': 'alt'},
     {'header': 'gene', 'value_path': '{transcripts: transcripts.*[].{value: geneSymbol || geneId, transcriptId: transcriptId}, mainTranscriptId: mainTranscriptId}', 'process': _get_variant_main_transcript_field_val},
     {'header': 'worst_consequence', 'value_path': '{transcripts: transcripts.*[].{value: majorConsequence, transcriptId: transcriptId}, mainTranscriptId: mainTranscriptId}', 'process': _get_variant_main_transcript_field_val},
-    {'header': 'callset_freq', 'value_path': 'populations.callset.af || populations.seqr.ac'},
-    {'header': 'exac_freq', 'value_path': 'populations.exac.af'},
+    {'header': 'callset_freq', 'value_path': 'populations.seqr.ac'}, #TODO rename
+    {'header': 'exac_freq', 'value_path': 'populations.exac.af'},  # TODO remove
     {'header': 'gnomad_genomes_freq', 'value_path': 'populations.gnomad_genomes.af'},
     {'header': 'gnomad_exomes_freq', 'value_path': 'populations.gnomad_exomes.af'},
     {'header': 'topmed_freq', 'value_path': 'populations.topmed.af'},
@@ -223,14 +204,14 @@ VARIANT_EXPORT_DATA = [
     {'header': 'revel', 'value_path': 'predictions.revel'},
     {'header': 'eigen', 'value_path': 'predictions.eigen'},
     {'header': 'splice_ai', 'value_path': 'predictions.splice_ai'},
-    {'header': 'polyphen', 'value_path': 'predictions.polyphen', 'process': _get_prediction_val},
-    {'header': 'sift', 'value_path': 'predictions.sift', 'process': _get_prediction_val},
-    {'header': 'muttaster', 'value_path': 'predictions.mut_taster', 'process': _get_prediction_val},
-    {'header': 'fathmm', 'value_path': 'predictions.fathmm', 'process': _get_prediction_val},
+    {'header': 'polyphen', 'value_path': 'predictions.polyphen'},
+    {'header': 'sift', 'value_path': 'predictions.sift'},
+    {'header': 'muttaster', 'value_path': 'predictions.mut_taster', 'process': MUTTASTR_MAP.get},
+    {'header': 'fathmm', 'value_path': 'predictions.fathmm'},
     {'header': 'rsid', 'value_path': 'rsid'},
     {'header': 'hgvsc', 'value_path': '{transcripts: transcripts.*[].{value: hgvsc, transcriptId: transcriptId}, mainTranscriptId: mainTranscriptId}', 'process': _get_variant_main_transcript_field_val},
     {'header': 'hgvsp', 'value_path': '{transcripts: transcripts.*[].{value: hgvsp, transcriptId: transcriptId}, mainTranscriptId: mainTranscriptId}', 'process': _get_variant_main_transcript_field_val},
-    {'header': 'clinvar_clinical_significance', 'value_path': 'clinvar.clinicalSignificance || clinvar.pathogenicity'},
+    {'header': 'clinvar_clinical_significance', 'value_path': 'clinvar.pathogenicity'},
     {'header': 'clinvar_gold_stars', 'value_path': 'clinvar.goldStars'},
 ]
 
