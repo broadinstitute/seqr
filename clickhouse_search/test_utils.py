@@ -1132,56 +1132,6 @@ MULTI_PROJECT_GCNV_VARIANT3 = {
     },
 }
 
-LOOKUP_GENOTYPE = {k: v for k, v in PROJECT_2_VARIANT1['genotypes']['I000015_na20885'].items() if k != 'individualGuid'}
-VARIANT_LOOKUP_VARIANT = {
-    **VARIANT1,
-    'liftedFamilyGuids': ['F000014_14'],
-    'familyGenotypes': {
-        VARIANT1['familyGuids'][0]: sorted([
-            {k: v for k, v in g.items() if k != 'individualGuid'} for gs in VARIANT1_BOTH_SAMPLE_TYPES['genotypes'].values() for g in gs
-        ], key=lambda x: (x['sampleType'] == 'WES', x['sampleId']), reverse=True),
-        'F000011_11': [{**LOOKUP_GENOTYPE, 'sampleType': 'WES'}, LOOKUP_GENOTYPE],
-        'F000014_14': [{
-            'sampleId': 'NA21234', 'sampleType': 'WGS', 'familyGuid': 'F000014_14',
-            'numAlt': 1, 'dp': 27, 'gq': 87, 'ab': 0.531, 'filters': [],
-        }],
-    }
-}
-SV_LOOKUP_VARIANT = {
-    **SV_VARIANT4,
-    'familyGenotypes': {
-        SV_VARIANT4['familyGuids'][0]: [{k: v for k, v in g.items() if k != 'individualGuid'} for g in SV_VARIANT4['genotypes'].values()],
-    },
-}
-GCNV_LOOKUP_VARIANT = {
-    **GCNV_VARIANT4,
-    'familyGenotypes': {
-        GCNV_VARIANT4['familyGuids'][0]: [{k: v for k, v in g.items() if k != 'individualGuid'} for g in GCNV_VARIANT4['genotypes'].values()],
-        'F000002_2_x': [
-            {**{k: v for k, v in g.items() if k != 'individualGuid'}, 'familyGuid': 'F000002_2_x'}
-            for individual_guid, g in GCNV_VARIANT4['genotypes'].items() if individual_guid != 'I000005_hg00732'
-        ],
-    },
-}
-GCNV_LOOKUP_VARIANT_3 = {
-    **MULTI_PROJECT_GCNV_VARIANT3,
-    'familyGenotypes': {
-        **{family_guid: [
-            {k: v for k, v in g.items() if k != 'individualGuid'} for g in MULTI_PROJECT_GCNV_VARIANT3['genotypes'].values()
-            if g['familyGuid'] == family_guid] for family_guid in MULTI_PROJECT_GCNV_VARIANT3['familyGuids']
-        },
-        'F000002_2_x': [
-            {**{k: v for k, v in g.items() if k != 'individualGuid'}, 'familyGuid': 'F000002_2_x'}
-            for individual_guid, g in GCNV_VARIANT3['genotypes'].items() if individual_guid != 'I000005_hg00732'
-        ],
-    },
-}
-for k in {'familyGuids', 'genotypes'}:
-    VARIANT_LOOKUP_VARIANT.pop(k)
-    SV_LOOKUP_VARIANT.pop(k)
-    GCNV_LOOKUP_VARIANT.pop(k)
-    GCNV_LOOKUP_VARIANT_3.pop(k)
-
 PROJECT_4_COMP_HET_VARIANT = {
     'key': 22,
     'variantId': '1-9310123-T-C',

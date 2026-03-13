@@ -33,10 +33,10 @@ from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4,
     VARIANT3_BOTH_SAMPLE_TYPES, VARIANT4_BOTH_SAMPLE_TYPES, GRCH37_VARIANT, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3, \
     SV_VARIANT1, SV_VARIANT2, SV_VARIANT3, SV_VARIANT4, SV_GENE_COUNTS, NEW_SV_FILTER, GCNV_VARIANT1, GCNV_VARIANT2, \
     GCNV_VARIANT3, GCNV_VARIANT4, GCNV_MULTI_FAMILY_VARIANT1, GCNV_MULTI_FAMILY_VARIANT2, GCNV_GENE_COUNTS, \
-    MULTI_DATA_TYPE_COMP_HET_VARIANT2, ALL_SNV_INDEL_PASS_FILTERS, MULTI_PROJECT_GCNV_VARIANT3, VARIANT_LOOKUP_VARIANT, \
-    MITO_GENE_COUNTS, PROJECT_4_COMP_HET_VARIANT, SV_LOOKUP_VARIANT, GCNV_LOOKUP_VARIANT, GCNV_LOOKUP_VARIANT_3, \
-    FAMILY_1_VARIANT, EXPORT_DATA, SPLIT_FAMILY_EXPORT_DATA, DEFAULT_PROJECT_FAMILIES, SINGLE_FAMILY_PROJECT_FAMILIES, \
-    SV_PROJECT_FAMILIES, MULTI_PROJECT_PROJECT_FAMILIES, format_cached_variant
+    MULTI_DATA_TYPE_COMP_HET_VARIANT2, ALL_SNV_INDEL_PASS_FILTERS, MULTI_PROJECT_GCNV_VARIANT3, \
+    MITO_GENE_COUNTS, PROJECT_4_COMP_HET_VARIANT, FAMILY_1_VARIANT, EXPORT_DATA, SPLIT_FAMILY_EXPORT_DATA, \
+    DEFAULT_PROJECT_FAMILIES, SINGLE_FAMILY_PROJECT_FAMILIES, SV_PROJECT_FAMILIES, MULTI_PROJECT_PROJECT_FAMILIES, \
+    format_cached_variant
 from reference_data.models import Omim
 from seqr.models import Project, Family, Sample, VariantSearch, VariantSearchResults, SavedVariant
 from seqr.views.apis.data_manager_api import trigger_delete_project
@@ -975,7 +975,6 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
 
         self.check_require_login(reverse(variant_lookup_handler))
 
-        # TODO do with/ replace VARIANT_LOOKUP_VARIANT
         lookup_variant = {
             **VARIANT1,
             'liftedFamilyGuids': ['F000014_14'],
@@ -1240,20 +1239,10 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         mock_liftover.assert_called_with('hg38', 'hg19')
         mock_convert_coordinate.assert_called_with('chr7', 143260172)
 
-        # TODO do as part of VARIANT_LOOKUP_VARIANT creation
-        liftover_variant = {
-            **VARIANT1,
-            'familyGuids': [VARIANT1['familyGuids'][0], 'F000011_11'],
-            'genotypes': {
-                **VARIANT1_BOTH_SAMPLE_TYPES['genotypes'],
-                'I000015_na20885': [
-                    {**PROJECT_2_VARIANT1['genotypes']['I000015_na20885'], 'sampleType': 'WES'},
-                    PROJECT_2_VARIANT1['genotypes']['I000015_na20885'],
-                ],
-            },
-        }
+        del lookup_variant['liftedFamilyGuids']
+        del lookup_variant['genotypes']['I000018_na21234']
         self._assert_expected_lookup(
-            '1-439-AC-A', liftover_variant, 'variant_lookup_results__1-439-AC-A__37', genome_version='37',
+            '1-439-AC-A', lookup_variant, 'variant_lookup_results__1-439-AC-A__37', genome_version='37',
             project_guids=['R0001_1kg', 'R0003_test'], family_guids=['F000002_2', 'F000011_11'],
             individual_guids=[guid for guid, _, _ in individual_guid_map if guid != 'I000018_na21234'],
         )
@@ -1262,7 +1251,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
 
         self._assert_expected_lookup(
             '1-439-AC-A', {
-                **liftover_variant, 'genotypes': hom_only_lookup_variant['genotypes'],
+                **lookup_variant, 'genotypes': hom_only_lookup_variant['genotypes'],
             }, 'variant_lookup_results__1-439-AC-A__37__hom', genome_version='37', hom_only=True,
             project_guids=['R0001_1kg', 'R0003_test'], family_guids=['F000002_2', 'F000011_11'],
             individual_guids=[guid for guid, _, _ in individual_guid_map if guid != 'I000018_na21234'],
@@ -1271,7 +1260,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         url = self._assert_expected_lookup(
             'M-4429-G-A', MITO_VARIANT1, 'variant_lookup_results__M-4429-G-A__38',
             project_guids=['R0001_1kg'], family_guids=['F000002_2'],
-            individual_guids=['I000004_hg00731', 'I000005_hg00732', 'I000006_hg00733',],
+            individual_guids=['I000004_hg00731', 'I000005_hg00732', 'I000006_hg00733'],
         )
 
         url = url.replace('38', '37')
