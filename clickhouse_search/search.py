@@ -14,7 +14,7 @@ from clickhouse_search.models.gt_stats_models import PROJECT_GT_STATS_VIEW_CLASS
 from clickhouse_search.models.reference_data_models import BaseClinvar, BaseHgmd
 from clickhouse_search.models.search_models import BaseVariants, BaseVariantsSvGcnv, \
     ENTRY_CLASS_MAP, VARIANTS_CLASS_MAP, VARIANT_DETAILS_CLASS_MAP
-from reference_data.models import GeneConstraint, Omim, GENOME_VERSION_LOOKUP
+from reference_data.models import GeneInfo, GeneConstraint, Omim, GENOME_VERSION_LOOKUP
 from seqr.models import Sample, PhenotypePrioritization, Individual
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.search.constants import MAX_VARIANTS, XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, \
@@ -341,11 +341,20 @@ def format_clickhouse_export_results(results, genome_version):
             **detail_qs.split_variant_id_annotations(),
         )
     }
+
+    gene_ids = set()
     for result in formatted_results:
         if 'transcripts' in result:
             result['mainTranscript'] = next((gene_transcripts[0] for gene_transcripts in result['transcripts'].values()), {})
         else:
             result.update(details_by_key.get(result['key'], {}))
+        if result.get('mainTranscript'):
+            gene_ids.add(result['mainTranscript']['geneId'])
+
+    gene_id_map = dict(GeneInfo.objects.filter(gene_id__in=gene_ids).values_list('gene_id', 'gene_symbol'))
+    for result in formatted_results:
+        if result.get('mainTranscript'):
+            result['geneSymbol'] = gene_id_map.get(result['mainTranscript']['geneId'])
 
     return formatted_results
 

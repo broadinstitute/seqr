@@ -187,6 +187,7 @@ VARIANT_EXPORT_DATA = [
     {'header': 'ref'},
     {'header': 'alt'},
     {'header': 'gene', 'value_path': 'mainTranscript.geneId'},
+    {'header': 'gene_symbol', 'value_path': 'geneSymbol'},
     {'header': 'worst_consequence', 'value_path': 'mainTranscript.majorConsequence'},
     {'header': 'seqr_ac', 'value_path': 'populations.seqr.ac'},
     {'header': 'gnomad_genomes_freq', 'value_path': 'populations.gnomad_genomes.af'},
@@ -324,7 +325,7 @@ def export_variants_handler(request, search_hash):
 
 def _get_field_value(value, config, variant=None):
     field_value = jmespath.search(config.get('value_path', config['header']), value)
-    if config.get('variant_value_path') and not field_value:
+    if config.get('variant_value_path') and not field_value: # TODO clean up this special case
         field_value = jmespath.search(config['variant_value_path'], variant)
     if config.get('process'):
         field_value = config['process'](field_value)
