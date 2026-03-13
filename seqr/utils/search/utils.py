@@ -175,23 +175,10 @@ def _query_variants(search_model, user, sort=None, **kwargs):
     _validate_sort(sort, families)
 
     parsed_search = _parse_search(search, genome_version, user)
-
-    dataset_type, secondary_dataset_type, lookup_dataset_type = _search_dataset_type(parsed_search, genome_version)
-    parsed_search.update({'dataset_type': None if dataset_type == DATASET_TYPE_NO_MITO else dataset_type, 'secondary_dataset_type': secondary_dataset_type})
-    search_dataset_type = None
-    if dataset_type and dataset_type != ALL_DATA_TYPES:
-        if secondary_dataset_type is None or secondary_dataset_type == dataset_type:
-            search_dataset_type = lookup_dataset_type or dataset_type
-        elif dataset_type == Sample.DATASET_TYPE_SV_CALLS:
-            search_dataset_type = DATASET_TYPE_NO_MITO
-
-    samples = _get_families_search_data(
-        families, dataset_type=search_dataset_type, include_no_access_projects=bool(search.get('no_access_project_genome_version')),
-    )
-    if parsed_search.get('inheritance'):
-        samples = _parse_inheritance(parsed_search, samples)
-
+    search_dataset_type = _parse_dataset_type(parsed_search, genome_version)
+    samples = _get_search_samples(parsed_search, families, search_dataset_type)
     _validate_search(parsed_search, samples, previous_search_results)
+
     get_clickhouse_variants(samples, parsed_search, user, previous_search_results, genome_version, sort=sort, **kwargs)
 
     cache_key = _get_search_cache_key(search_model, sort=sort)
@@ -201,6 +188,7 @@ def _query_variants(search_model, user, sort=None, **kwargs):
 
 
 def _parse_search(search, genome_version, user):
+    no_access_project_genome_version = search.get('no_access_project_genome_version')
     locus = search.pop('locus', None) or {}
     exclude = search.get('exclude', None) or {}
     exclude_locations = bool(exclude.get('rawItems'))
@@ -211,7 +199,7 @@ def _parse_search(search, genome_version, user):
     genes, intervals, invalid_items = parse_locus_list_items(locus or exclude, genome_version=genome_version, additional_model_fields=['id'])
     if invalid_items:
         raise InvalidSearchException('Invalid genes/intervals: {}'.format(', '.join(invalid_items)))
-    if search.get('no_access_project_genome_version') and len(genes or []) != 1:
+    if no_access_project_genome_version and len(genes or []) != 1:
         raise InvalidSearchException('Including external projects is only available when searching for a single gene')
     if (genes or intervals) and len(genes) + len(intervals) > MAX_GENES_FOR_FILTER:
         raise InvalidSearchException('Too many genes/intervals')
@@ -238,6 +226,24 @@ def _parse_search(search, genome_version, user):
             parsed_search[annotation_key] = {k: v for k, v in parsed_search[annotation_key].items() if v}
 
     return parsed_search
+
+def _parse_dataset_type(parsed_search, genome_version):
+    dataset_type, secondary_dataset_type, lookup_dataset_type = _search_dataset_type(parsed_search, genome_version)
+    parsed_search.update({'dataset_type': None if dataset_type == DATASET_TYPE_NO_MITO else dataset_type, 'secondary_dataset_type': secondary_dataset_type})
+    search_dataset_type = None
+    if dataset_type and dataset_type != ALL_DATA_TYPES:
+        if secondary_dataset_type is None or secondary_dataset_type == dataset_type:
+            search_dataset_type = lookup_dataset_type or dataset_type
+        elif dataset_type == Sample.DATASET_TYPE_SV_CALLS:
+            search_dataset_type = DATASET_TYPE_NO_MITO
+    return search_dataset_type
+
+
+def _get_search_samples(parsed_search, families, search_dataset_type):
+    samples = _get_families_search_data(families, dataset_type=search_dataset_type, include_no_access_projects=bool(parsed_search.get('no_access_project_genome_version')))
+    if parsed_search.get('inheritance'):
+        samples = _parse_inheritance(parsed_search, samples)
+    return samples
 
 
 def _get_clickhouse_exclude_keys(search_hash, user):
