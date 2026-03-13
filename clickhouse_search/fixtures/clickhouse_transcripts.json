@@ -235,5 +235,48 @@
         ]
       ]
     }
+}, {
+    "model": "clickhouse_search.variantdetailssnvindel",
+    "pk": 23,
+    "fields": {
+      "key": 23,
+      "variant_id": "21-3343353-GAGA-G",
+      "rsid": null,
+      "caid": null,
+      "lifted_over_chrom": null,
+      "lifted_over_pos": null,
+      "sorted_motif_feature_consequences": [],
+      "sorted_regulatory_feature_consequences": [],
+      "transcripts": [
+        [
+          [null], "T/I", "protein_coding", 1, "aCc/aTc", ["missense_variant"], [1, 12], "ENSG00000227232",
+          "ENST00000257261.10:c.131C>T", "ENSP00000257261.6:p.Thr44Ile", [null, null], [null, []], "missense_variant",
+          null, null, "NM_001281501.1", [false], "ENST00000257261", 0, [null, null, null, [
+            null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
+          ], null]
+        ],
+        [
+          [null], null, "protein_coding", null, null, ["intron_variant"], [null, null], "ENSG00000268903",
+          "ENST00000426137.1:c.-64+100G>A", null, [1, 5], [null, []], "intron_variant", null, null, null, [false],
+          "ENST00000426137", 0, [null, null, null, [
+            null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
+          ], null]
+        ]
+      ]
+    }
+}, {
+    "model": "clickhouse_search.variantdetailssnvindel",
+    "pk": 100,
+    "fields": {
+      "key": 100,
+      "variant_id": "1-248367227-TC-T",
+      "rsid": null,
+      "caid": null,
+      "lifted_over_chrom": null,
+      "lifted_over_pos": null,
+      "sorted_motif_feature_consequences": [],
+      "sorted_regulatory_feature_consequences": [],
+      "transcripts": []
+    }
 }
 ]

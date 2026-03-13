@@ -306,7 +306,7 @@ def export_variants_handler(request, search_hash):
 
             num_split = ceil(len(variant['familyGuids']) / MAX_FAMILIES_PER_ROW)
             gens_per_row = ceil(len(variant['genotypes']) / num_split)
-            gen_keys = list(variant['genotypes'].keys())
+            gen_keys = sorted(variant['genotypes'].keys())
             for i in range(num_split):
                 split_var = deepcopy(variant)
                 split_var['familyGuids'] = variant['familyGuids'][i*MAX_FAMILIES_PER_ROW:(i+1)*MAX_FAMILIES_PER_ROW]
@@ -334,7 +334,7 @@ def export_variants_handler(request, search_hash):
             row += [_get_field_value(family_tags, config) for config in VARIANT_FAMILY_EXPORT_DATA]
         row += ['' for i in range(len(VARIANT_FAMILY_EXPORT_DATA) * (max_families_per_variant - len(variant['familyGuids'])))]
 
-        genotypes = list(variant['genotypes'].values())
+        genotypes = [genotype for _, genotype in sorted(variant['genotypes'].items())]
         for genotype in genotypes:
             row += [_get_field_value(genotype, config, variant=variant) for config in VARIANT_SAMPLE_DATA]
         row += ['' for i in range(len(VARIANT_SAMPLE_DATA) * (max_samples_per_variant - len(genotypes)))]
@@ -617,7 +617,7 @@ def _update_lookup_variant(variant, response, individual_guid_map):
                 genotype = [variant['genotypes'][individual_guid], genotype]
             variant['genotypes'][individual_guid] = genotype
 
-    for i, (unmapped_family_guid, genotypes) in enumerate(variant.pop('familyGenotypes').items()):
+    for i, (unmapped_family_guid, genotypes) in enumerate(sorted(variant.pop('familyGenotypes').items())):
         family_guid = f'F{i}_{variant["variantId"]}'
         variant['lookupFamilyGuids'].append(family_guid)
         if unmapped_family_guid in variant.get('liftedFamilyGuids', []):
